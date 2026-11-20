@@ -1,12 +1,14 @@
 # The generator's whole suite, its C++ tests included: python3 gen/kairn-gen test with each
-# GCC-style compiler of the hosted runners (docs/developer/testing.md). The quick tier (ctest, in
-# build.yml) runs the suite without its C++ tests, which compile the generated code at -O0 and
-# -O2, with and without -frounding-math, under every contraction setting, and require every
-# build, scalar and packed, to be bit-identical to the interpreter, and without its four longest
-# test classes, which compare the interpreter with the machine's own arithmetic and judge the
-# statements on thousands of cases (the full tier's full.kairn-gen.test): here all of it runs, one
-# job per compiler, and on Windows, which has no GCC-style compiler here, everything but the C++
-# tests, so that the comparison with the machine's arithmetic runs on every operating system.
+# GCC-style compiler of the hosted runners (docs/developer/testing.md). The full tier (ctest in
+# build/tests/full) registers the suite without its C++ tests, which compile the generated code at
+# -O0 and -O2, with and without -frounding-math, under every contraction setting, and require
+# every build, scalar and packed, to be bit-identical to the interpreter, in two tests labelled
+# generator, which full.yml leaves to this workflow: its four longest test classes, which compare
+# the interpreter with the machine's own arithmetic and judge the statements on thousands of cases
+# (full.kairn-gen.test), and the rest (full.tools.kairn-gen.test). Here all of it runs, one job
+# per compiler, and on Windows, which has no GCC-style compiler here, everything but the C++ tests,
+# so that the tests without C++, which compare with the machine's arithmetic, run on every
+# operating system.
 name: Generator's full suite
 
 on:

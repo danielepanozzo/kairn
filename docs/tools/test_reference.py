@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The tests of docs/tools/reference.py and of its table, docs/tools/reference_operations.py.
 
-  python3 docs/tools/test_reference.py      (ctest: docs.reference.test)
+  python3 docs/tools/test_reference.py      (ctest's full tier: full.tools.docs.reference.test)
 
 - The table against the data: every kernel it names is in gen/claims.json, every public
   operation of include/kairn/*.hpp whose comment names a kernel (`(kernel add_2_2)`,

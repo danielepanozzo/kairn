@@ -2,9 +2,10 @@
 # (docs/developer/testing.md). The same three commands as in docs/getting-started/index.md, with
 # Ninja everywhere, Release, warnings as errors, and the compiler named. The packed kernels are
 # tested with the backend of each runner: AVX2 on the x86-64 ones (whose CPUs have it), NEON on
-# the arm64 ones (Linux and macOS). ctest in the build directory runs the quick tier only; the full tier, everything
-# that left it, runs beside these jobs in full.yml, and the generator's whole suite, its C++ tests
-# included, in generator.yml.
+# the arm64 ones (Linux and macOS). ctest in the build directory runs the quick tier only, the
+# tests of the library with each compiler; the full tier, everything that left it (the tools' own
+# tests among them), runs beside these jobs in full.yml, and the generator's whole suite, its C++
+# tests included, in generator.yml.
 name: Build and test
 
 on:
@@ -55,16 +56,16 @@ jobs:
         with:
           persist-credentials: false
 
-      # Python 3.13 or later, so that the oracle's selftest also checks its rounding against the
-      # machine (rounding_hardware needs math.fma). The action sets Python3_ROOT_DIR, which CMake's
+      # Python for the oracle, which judges the quick tier's runs, and the other Python tools it
+      # runs; the version of the other workflows. The action sets Python3_ROOT_DIR, which CMake's
       # FindPython3 follows.
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
 
-      # cl, clang-cl and the oracle's selftest, which runs the compiler itself, need the variables
-      # of a Visual Studio developer prompt: those that vcvars64.bat sets or changes go into
-      # GITHUB_ENV for the steps that follow.
+      # cl, clang-cl and the tests that run the compiler themselves (the object code, what must not
+      # compile, api.k1.zero_cost) need the variables of a Visual Studio developer prompt: those
+      # that vcvars64.bat sets or changes go into GITHUB_ENV for the steps that follow.
       - name: Visual Studio developer environment
         if: runner.os == 'Windows'
         shell: pwsh

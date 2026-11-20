@@ -4,16 +4,19 @@
 #   ctest --test-dir build --output-on-failure               the quick tier
 #   ctest --test-dir build/tests/full --output-on-failure    the full tier
 #
-# The quick tier is the tests of this directory and of api/. The full tier is what left it to keep
-# it quick: the same cross-checks on more cases, the interpreter's enumerations of toy formats, and
-# the longest parts of the generator's and the oracle's own tests. Its tests are registered in
-# full/ and named full.*; the file CTestCustom.cmake written at the top of the build tree leaves
-# them out of a ctest run there (CTEST_CUSTOM_TESTS_IGNORE), and both tiers say which they are
-# when ctest starts and ends. A ctest run in tests/ of the build tree runs both.
+# The quick tier is the tests of this directory and of api/: the library, with this build's
+# compiler and flags. The full tier is what left it to keep it quick: the same cross-checks on more
+# cases, the interpreter's enumerations of toy formats, and the tools' own tests (the generator's,
+# the oracle's, those of the cross-checks' guards, of the script of the reference pages and of the
+# brute-force driver). Its tests are registered in full/ and named full.*; the file
+# CTestCustom.cmake written at the top of the build tree leaves them out of a ctest run there
+# (CTEST_CUSTOM_TESTS_IGNORE), and both tiers say which they are when ctest starts and ends. A
+# ctest run in tests/ of the build tree runs both.
 #
 # - The entry points of docs/developer/architecture.md that run tests, each registered only if its
-#   script exists when CMake runs (configure again after one is added). They need Python 3; without
-#   it they are left out, as are the cross-checks and the full tier, and nothing else changes.
+#   script exists when CMake runs (configure again after one is added): two here, two in the full
+#   tier (full/). They need Python 3; without it they are left out, as are the cross-checks and the
+#   full tier, and nothing else changes.
 # - The cross-checks: the oracle judges every kernel of gen/claims.json as compiled with this
 #   build's compiler and flags, on random binary64 and binary32 cases, once as the flags stand and
 #   once per contraction setting that matters to this compiler: the scalar kernels
@@ -49,23 +52,19 @@ endif()
 # --- The entry points ---------------------------------------------------------------------------
 #
 # Each is "SCRIPT COMMAND" from the repository root, run as python3 SCRIPT COMMAND ARGS:
-# - gen/kairn-gen test runs here without its C++ tests (--no-cxx), which build the generated code
-#   at -O0 and -O2, with and without -frounding-math, under every contraction setting, and
-#   compare it bit for bit with the interpreter: about two thirds of the suite's time, and what
-#   the cross-checks below cover for this build's compiler and flags. The whole suite runs in the
-#   workflow .github/workflows/generator.yml, and by hand: python3 gen/kairn-gen test. The quick
-#   tier also leaves out the four test classes of _gen_full, which judge the interpreter and the
-#   statements on thousands of cases per kernel, about 95% of the time of the rest (266 of 277
-#   seconds of processor time on an Apple M3 Max); full.kairn-gen.test runs only them. Both fail
-#   if a name below matches no test.
-# - oracle/kairn-oracle selftest compiles its own C++ runner with this build's compiler, in the
-#   build tree. It skips the tests that need it, with a SKIP line, if the compiler does not work;
-#   with a compiler given that is a failure here. (Its other skip, of rounding_hardware on Python
-#   older than 3.13, which has no math.fma, is not.) The quick tier leaves out the six tests of
-#   _oracle_full, the enumerations of toy formats through its Python runner, three quarters of
-#   its time (62 of 82 seconds on one core of the Mac above), none of which compiles anything;
-#   full.kairn-oracle.selftest runs only them. Both fail if a name below is not one of its tests.
-# - oracle/kairn-oracle check --claims-only reads every claim of gen/claims.json.
+# - gen/kairn-gen check (kairn-gen.check): every committed generated file is what the generator
+#   writes.
+# - oracle/kairn-oracle check --claims-only (kairn-oracle.claims) reads every claim of
+#   gen/claims.json.
+# - gen/kairn-gen test and oracle/kairn-oracle selftest, the generator's and the oracle's own
+#   tests, are in the full tier, each in two parts (full/, "The tools' own tests"): the names below
+#   are those of their longest parts, full.kairn-gen.test and full.kairn-oracle.selftest, which the
+#   other parts leave out. The four test classes of _gen_full judge the interpreter and the
+#   statements on thousands of cases per kernel, about 95% of the time of the generator's tests
+#   without C++ (266 of 277 seconds of processor time on an Apple M3 Max); the six tests of
+#   _oracle_full are the oracle's enumerations of toy formats through its Python runner, three
+#   quarters of its time (62 of 82 seconds on one core of the same Mac). Both tools fail if a name
+#   given matches no test.
 set(_gen_full test_interp.ToyRounding. test_interp.AgainstHardware. test_statements.Statements.
   test_nonfinite.NonFinite.)
 set(_oracle_full correct_runner_toy_exhaustive injected_exhaustive exhaustive_wave2
@@ -73,7 +72,9 @@ set(_oracle_full correct_runner_toy_exhaustive injected_exhaustive exhaustive_wa
 list(JOIN _oracle_full "," _oracle_full_names)
 set(_entries "gen/kairn-gen check" "gen/kairn-gen test" "oracle/kairn-oracle selftest"
   "oracle/kairn-oracle claims")
+set(_full_entries "gen/kairn-gen test" "oracle/kairn-oracle selftest")
 set(_present "")
+set(_present_full "")
 set(_absent "")
 foreach(_entry IN LISTS _entries)
   separate_arguments(_words UNIX_COMMAND "${_entry}")
@@ -83,42 +84,41 @@ foreach(_entry IN LISTS _entries)
     list(APPEND _absent "${_entry}")
     continue()
   endif()
+  if(_entry IN_LIST _full_entries)
+    list(APPEND _present_full "${_entry}")
+    continue()
+  endif()
   list(APPEND _present "${_entry}")
   if(NOT Python3_Interpreter_FOUND)
     continue()
   endif()
   get_filename_component(_name "${_script}" NAME)
   set(_args "${_command}")
-  if(_entry STREQUAL "gen/kairn-gen test")
-    list(APPEND _args --no-cxx)
-    foreach(_pattern IN LISTS _gen_full)
-      list(APPEND _args --skip "${_pattern}")
-    endforeach()
-  elseif(_entry STREQUAL "oracle/kairn-oracle selftest")
-    list(APPEND _args --quick --skip "${_oracle_full_names}" --cxx "${CMAKE_CXX_COMPILER}"
-      --workdir "${CMAKE_CURRENT_BINARY_DIR}/oracle-selftest")
-  elseif(_entry STREQUAL "oracle/kairn-oracle claims")
+  if(_entry STREQUAL "oracle/kairn-oracle claims")
     set(_args check --claims gen/claims.json --claims-only)
   endif()
   add_test(NAME "${_name}.${_command}"
     COMMAND "${Python3_EXECUTABLE}" "${_script}" ${_args}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  if(_entry STREQUAL "gen/kairn-gen test")
-    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 600)
-  elseif(_entry STREQUAL "oracle/kairn-oracle selftest")
-    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 600
-      FAIL_REGULAR_EXPRESSION "SKIP [^\n]*(no C\\+\\+ compiler|compiling the C\\+\\+ runner)")
-  endif()
 endforeach()
 list(JOIN _present ", " _present)
+list(JOIN _present_full ", " _present_full)
 list(JOIN _absent ", " _absent)
 if(NOT _present)
   set(_present "none")
 endif()
-if(Python3_Interpreter_FOUND)
-  set(_line "Kairn tests: registered: ${_present}")
-else()
+if(NOT Python3_Interpreter_FOUND)
   set(_line "Kairn tests: Python 3 not found, so not registered: ${_present}, nor the cross-checks")
+  if(_present_full)
+    string(APPEND _line ", nor the full tier's ${_present_full}")
+  endif()
+else()
+  set(_line "Kairn tests: registered: ${_present}")
+  if(_present_full AND _full_tier)
+    string(APPEND _line "; in the full tier: ${_present_full}")
+  elseif(_present_full)
+    string(APPEND _line "; not registered, as the full tier is not: ${_present_full}")
+  endif()
 endif()
 if(_absent)
   string(APPEND _line "; not present yet: ${_absent}")
@@ -130,27 +130,12 @@ message(STATUS "${_line}")
 # docs.reference.check: the pages under docs/reference/ and the Reference part of the nav in
 # mkdocs.yml are what docs/tools/reference.py writes from gen/claims.json, the kernel
 # descriptions and the stored brute-force results, as kairn-gen.check is for the generated code.
-# docs.reference.test: that script's own tests (docs/tools/test_reference.py). Python only.
+# The script's own tests are in the full tier (full.tools.docs.reference.test). Python only.
 if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/docs/tools/reference.py")
   add_test(NAME docs.reference.check
     COMMAND "${Python3_EXECUTABLE}" docs/tools/reference.py --check
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  add_test(NAME docs.reference.test
-    COMMAND "${Python3_EXECUTABLE}" docs/tools/test_reference.py
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(docs.reference.check docs.reference.test PROPERTIES LABELS docs)
-endif()
-
-# --- The brute-force driver ---------------------------------------------------------------------
-#
-# brute.driver.test: the own tests of tests/brute/brute.py (the plan of the enumerations, the
-# forms of the fix-ups, widen.py on one small format). Python only; under a second. The driver
-# itself runs by hand, never here (tests/brute/README.md).
-if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/tests/brute/test_brute.py")
-  add_test(NAME brute.driver.test
-    COMMAND "${Python3_EXECUTABLE}" tests/brute/test_brute.py
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(brute.driver.test PROPERTIES LABELS python)
+  set_tests_properties(docs.reference.check PROPERTIES LABELS docs)
 endif()
 
 # --- The compiled runners -----------------------------------------------------------------------
@@ -606,13 +591,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       endforeach()
     endif()
   endforeach()
-  # The guards of crosscheck.cmake fail the runs they are there to fail: a partial or restricted
-  # enumeration, a missing stratum, nothing judged, a comparison seen one way only.
-  add_test(NAME crosscheck.guards
-    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_crosscheck_guards.py"
-      "${CMAKE_COMMAND}"
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(crosscheck.guards PROPERTIES TIMEOUT 300 LABELS crosscheck)
+  # That the guards of crosscheck.cmake fail the runs they are there to fail is tested in the full
+  # tier (full.tools.crosscheck.guards).
 
   set(_packed "no packed runners (no packed backend for this target)")
   if(_packed_backend)

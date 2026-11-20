@@ -3,12 +3,15 @@
 # registers it; a label says what each test depends on, and each runs where that changes:
 #
 # - the compiled runners' cross-checks and the public interface against the oracle on more cases
-#   (labelled neither python nor generator) depend on the compiler: one job per platform and compiler, as in
-#   build.yml, with the same configuration and build;
+#   (labelled neither python nor generator) depend on the compiler: one job per platform and
+#   compiler, as in build.yml, with the same configuration and build; with them, the tools' own
+#   tests that were in the quick tier (label tools: the oracle's, which compiles its own runner
+#   with the build's compiler, those of the cross-checks' guards, of the script of the reference
+#   pages and of the brute-force driver), so that they run where build.yml ran them;
 # - the interpreter's enumerations of toy formats and the oracle's own enumerations (label
 #   python) compute in exact arithmetic, in Python alone: once, on Linux, in two jobs that only
 #   configure (they run no compiled program);
-# - the generator's longest tests (label generator) compare the interpreter with the machine's
+# - the generator's tests without C++ (label generator) compare the interpreter with the machine's
 #   arithmetic: they run inside the generator's whole suite in generator.yml, on every operating
 #   system, and not here.
 name: Full tier
@@ -61,12 +64,14 @@ jobs:
         with:
           persist-credentials: false
 
-      # As in build.yml.
+      # As in build.yml; 3.13 or later also so that the oracle's selftest checks its rounding
+      # against the machine (rounding_hardware needs math.fma).
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
 
-      # As in build.yml: the variables of a Visual Studio developer prompt for the steps that follow.
+      # As in build.yml: the variables of a Visual Studio developer prompt for the steps that
+      # follow, the oracle's selftest among them, which runs the compiler itself.
       - name: Visual Studio developer environment
         if: runner.os == 'Windows'
         shell: pwsh
@@ -100,7 +105,7 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
-      - name: Full tier, the tests that depend on the compiler
+      - name: Full tier, the tests that depend on the compiler, and the tools' own tests
         run: ctest --test-dir build/tests/full --output-on-failure --parallel 4 -LE "python|generator"
 
   # Two shards, so that neither job takes much more than ten minutes on a hosted runner: the
