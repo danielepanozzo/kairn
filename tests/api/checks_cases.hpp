@@ -75,6 +75,9 @@ struct Corpus {
     std::vector<kairn::Expansion<T, 2>> two;
     std::vector<kairn::Ball<T, 1>> balls1;
     std::vector<kairn::Ball<T, 2>> balls2;
+    // The results of two_sum on every pair of finite values of one, and on two NaN: what converts
+    // to Expansion<T, 2>.
+    std::vector<kairn::SumAndError<T>> sums;
 };
 template <class T>
 inline T opaque(T x) {
@@ -109,6 +112,13 @@ inline Corpus<T> make_corpus() {
             for (T r : finite_radii) c.balls2.push_back(kairn::Ball<T, 2>(unverified(center), r));
     c.balls2.push_back(kairn::Ball<T, 2>::whole());
     c.balls2.push_back(kairn::Ball<T, 2>::empty());
+    for (T a : c.one)
+        for (T b : c.one) {
+            if (!std::isfinite(a) || !std::isfinite(b)) continue;
+            const kairn::SumAndError<T> r = kairn::two_sum(a, b);
+            if (std::isfinite(r.sum) && std::isfinite(r.error)) c.sums.push_back(r);
+        }
+    c.sums.push_back(kairn::two_sum(nan, nan));
     return c;
 }
 inline Corpus<double> corpus_d;
@@ -146,6 +156,16 @@ inline void put(Bits& out, T x) {
     }
 }
 inline void put(Bits& out, bool b) { out.push_back(b ? 1 : 0); }
+template <class T>
+inline void put(Bits& out, const kairn::SumAndError<T>& r) {
+    put(out, r.sum);
+    put(out, r.error);
+}
+template <class T>
+inline void put(Bits& out, const kairn::ProductAndError<T>& r) {
+    put(out, r.product);
+    put(out, r.error);
+}
 inline void put(Bits& out, int i) { out.push_back(std::uint64_t(std::int64_t(i))); }
 template <class T, int K>
 inline void put(Bits& out, const kairn::Expansion<T, K>& x) {
@@ -293,6 +313,24 @@ inline const Operation operations[] = {
          z *= unverified(o.bq);
          put(b, z);
      }},
+    {"ball1.ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::ldexp(unverified(o.p), -3)); }},
+    {"ball1.half", Kind::rounds, [](Bits& b) { put(b, kairn::half(unverified(o.p))); }},
+    {"ball2.ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::ldexp(unverified(o.bp), 2000)); }},
+    {"ball2.half", Kind::rounds, [](Bits& b) { put(b, kairn::half(unverified(o.bp))); }},
+    // The building blocks that round (kairn/blocks.hpp), on the operands above.
+    {"blocks.two_sum", Kind::rounds, [](Bits& b) { put(b, kairn::two_sum(unverified(double(v_a)), double(v_b))); }},
+    {"blocks.fast_two_sum", Kind::rounds,
+     [](Bits& b) { put(b, kairn::fast_two_sum(unverified(double(v_a)), double(v_b))); }},
+    {"blocks.two_prod", Kind::rounds, [](Bits& b) { put(b, kairn::two_prod(unverified(double(v_a)), double(v_c))); }},
+    {"blocks.radd", Kind::rounds, [](Bits& b) { put(b, kairn::radd(unverified(double(v_a)), double(v_b))); }},
+    {"blocks.rmul", Kind::rounds, [](Bits& b) { put(b, kairn::rmul(unverified(double(v_a)), double(v_r))); }},
+    {"blocks.add_down", Kind::rounds, [](Bits& b) { put(b, kairn::add_down(unverified(double(v_a)), double(v_b))); }},
+    {"blocks.add_up", Kind::rounds, [](Bits& b) { put(b, kairn::add_up(unverified(double(v_a)), double(v_b))); }},
+    {"blocks.sub_down", Kind::rounds, [](Bits& b) { put(b, kairn::sub_down(unverified(double(v_a)), double(v_b))); }},
+    {"blocks.sub_up", Kind::rounds, [](Bits& b) { put(b, kairn::sub_up(unverified(double(v_a)), double(v_b))); }},
+    {"blocks.mul_down", Kind::rounds, [](Bits& b) { put(b, kairn::mul_down(unverified(double(v_a)), double(v_r))); }},
+    {"blocks.mul_up", Kind::rounds, [](Bits& b) { put(b, kairn::mul_up(unverified(double(v_a)), double(v_r))); }},
+    {"blocks.float_add_up", Kind::rounds, [](Bits& b) { put(b, kairn::add_up(unverified(float(v_fa)), float(v_fb))); }},
     // The constructors that check what they are given, on the canonical pairs above, and whose
     // checks round: a canonical pair, a canonical center of two limbs.
     {"from_limbs.upward", Kind::rounds, [](Bits& b) { put(b, pair(v_a, v_b)); }},
@@ -300,6 +338,10 @@ inline const Operation operations[] = {
     {"ball2.make", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.x), v_r)); }},
     {"ball2.make_downward", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.y), v_r)); }},
     {"ball2.center", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.y))); }},
+    // The ball of a constant of kairn::rational, two limbs: the test of a canonical center rounds.
+    // The constant is integer arithmetic, made here under the state, which does not change it.
+    {"ball2.constant", Kind::rounds,
+     [](Bits& b) { put(b, B2(kairn::rational<E2>(1, static_cast<long long>(opaque(3.0))))); }},
 
     // The functions that do not round, each on its whole corpus, for double and float.
     {"e1.neg", Kind::exact, [](Bits& b) {
@@ -421,6 +463,44 @@ inline const Operation operations[] = {
              for (auto a : c.one) put_value(out, X(unverified(a)));
          });
      }},
+    // The ball of a constant, one limb: its center and radius given to the constructor, as any
+    // Constant of the corpus's values and radii, and a constant of kairn::rational.
+    {"ball1.constant", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             using X = kairn::Expansion<T, 1>;
+             for (auto a : c.one)
+                 for (auto r : c.radii) put_value(out, kairn::Ball<T, 1>(kairn::Constant<X>{X(a), r, false}));
+             put_value(out, kairn::Ball<T, 1>(kairn::rational<X>(1, static_cast<long long>(opaque(3.0)))));
+         });
+     }},
+    // The sign predicates of a ball: comparisons of the radius with the center.
+    {"ball1.certainly", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.balls1) {
+                 put(out, x.certainly_positive());
+                 put(out, x.certainly_negative());
+                 put(out, x.certainly_zero());
+             }
+         });
+     }},
+    {"ball2.certainly", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.balls2) {
+                 put(out, x.certainly_positive());
+                 put(out, x.certainly_negative());
+                 put(out, x.certainly_zero());
+             }
+         });
+     }},
+    // The conversion of a SumAndError to a two-limb number: its guards, a + 0, as from_limbs_unchecked
+    // (the same values, zeros without their sign), and its check of the pair, which does not round.
+    {"blocks.to_expansion", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (const auto& r : c.sums) put_value(out, kairn::Expansion<T, 2>(r));
+         });
+     }},
     // The functions that do not round and have no check at all.
     {"e2.make", Kind::unchecked, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
@@ -435,6 +515,16 @@ inline const Operation operations[] = {
          for_both(b, [](Bits& out, const auto& c) {
              using T = std::decay_t<decltype(c.one[0])>;
              for (const auto& x : c.two) put_value(out, kairn::Expansion<T, 2>::from_limbs_unchecked(x.limb));
+         });
+     }},
+    // The neighbors of a number: integer operations on the bit pattern, checked for nothing.
+    {"blocks.next", Kind::unchecked, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (auto a : c.one) {
+                 put(out, kairn::next_up(a));
+                 put(out, kairn::next_down(a));
+                 put(out, kairn::next_up(unverified(a)));
+             }
          });
      }},
     {"e1.make", Kind::unchecked, [](Bits& b) {

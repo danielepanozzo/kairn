@@ -67,9 +67,7 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
   sub_up_1)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2
-  two_prod rmul next_up next_down mul_down_1 mul_up_1 two_sum_entry fast_two_sum_entry radd_entry add_down_entry
-  add_up_entry sub_down_entry sub_up_entry ball_mul_pow2_1 ball_mul_pow2_2 ball_mul_pow2_1_full
-  ball_mul_pow2_2_full)
+  ball_mul_pow2_1 ball_mul_pow2_2)
 set(KAIRN_API_CASES 10000 CACHE STRING
   "Random cases per kernel, format and form of the public interface judged by the oracle, in the full tier")
 set(KAIRN_API_QUICK_CASES 2000 CACHE STRING
@@ -500,7 +498,8 @@ else()
 endif()
 foreach(_case_name IN ITEMS 1:sub_2_2_full 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_1 6:ball_add_2_full
                             7:sub_2_2_full_assign 8:mul_pow2_2_full 9:ball_scale_2_full 10:traits_constant
-                            12:to_nearest_2_narrowing 13:make_2 14:ball_make_2)
+                            12:to_nearest_2_narrowing 13:make_2 14:ball_make_2 29:two_sum_entry 30:next_up
+                            31:ball_mul_pow2_2_full)
   string(REPLACE ":" ";" _pair "${_case_name}")
   list(GET _pair 0 _case)
   list(GET _pair 1 _name)
@@ -524,6 +523,11 @@ foreach(_case_name IN ITEMS 20:add_2_1_full:limb 21:add_2_1_full:one_limb 22:sub
     "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/only-${_kernel}-${_what}"
     "-DUNVERIFIED_ONLY=${_kernel}")
 endforeach()
+# mul_down and mul_up are not constexpr (include/kairn/blocks.hpp says why): a constant expression
+# that calls one must not compile, so that a change cannot make them constexpr by accident; the
+# control is the same call at run time.
+_kairn_api_reject(not_constexpr.mul_down 27 "constant|constexpr")
+_kairn_api_reject(not_constexpr.mul_up 28 "constant|constexpr")
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
 _kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")
@@ -605,8 +609,12 @@ add_test(NAME api.example.troubleshooting COMMAND kairn-example-troubleshooting)
 # The example of "Constants from fractions" in Getting started.
 _kairn_api_program(kairn-example-constants "${PROJECT_SOURCE_DIR}/docs/examples/cpp/constants.cpp")
 add_test(NAME api.example.constants COMMAND kairn-example-constants)
+# The example of "Building blocks" in Getting started: the functions of blocks.hpp, the exact
+# scaling of a ball, the ball of a constant and the sign predicates.
+_kairn_api_program(kairn-example-building-blocks "${PROJECT_SOURCE_DIR}/docs/examples/cpp/building_blocks.cpp")
+add_test(NAME api.example.building_blocks COMMAND kairn-example-building-blocks)
 set_tests_properties(api.example.first_steps api.example.choosing api.example.troubleshooting api.example.constants
-  PROPERTIES LABELS "api;example")
+  api.example.building_blocks PROPERTIES LABELS "api;example")
 
 # The tutorial's program prints the same text on every platform and under every contraction
 # setting (its data are chosen so that even its double loops give one answer), and the tutorial

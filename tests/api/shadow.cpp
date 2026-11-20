@@ -175,6 +175,32 @@ double use_every_operation(UseT use_a, UseT use_b) {
     use_j2 -= unverified(use_b2);
     use_j2 *= unverified(use_a);
     use_add(use_j1.radius() + use_j2.radius());
+    // The scaling by a power of two, the sign predicates and the ball of a constant.
+    use_add(kairn::ldexp(use_b1, 3).radius() + kairn::ldexp(use_b2, -3000).radius() + kairn::half(use_b1).radius() +
+            kairn::half(use_b2).radius() + kairn::ldexp(unverified(use_b2), 2).radius() +
+            kairn::half(unverified(use_b1)).radius());
+    use_add(use_b1.certainly_positive() + use_b1.certainly_negative() + use_b1.certainly_zero() +
+            use_b2.certainly_positive() + use_b2.certainly_negative() + use_b2.certainly_zero());
+    const B1 use_k1(kairn::rational<E1>(1, 3));
+    const B2 use_k2(kairn::integer<E2>(7));
+    use_add(use_k1.radius() + use_k2.center().limb[0]);
+
+    // The building blocks on T, each with and without the marker, and the conversion of a sum.
+    const kairn::SumAndError<UseT> use_sum2 = kairn::two_sum(use_a, use_b);
+    const auto [use_fs, use_fe] = kairn::fast_two_sum(use_a, use_b);
+    const kairn::ProductAndError<UseT> use_prod = kairn::two_prod(use_a, use_b);
+    use_add(use_sum2.sum + use_sum2.error + use_fs + use_fe + use_prod.product + use_prod.error +
+            E2(use_sum2).limb[1]);
+    use_add(kairn::next_up(use_a) + kairn::next_down(use_a) + kairn::radd(use_a, use_b) + kairn::rmul(use_a, use_b) +
+            kairn::add_down(use_a, use_b) + kairn::add_up(use_a, use_b) + kairn::sub_down(use_a, use_b) +
+            kairn::sub_up(use_a, use_b) + kairn::mul_down(use_a, use_b) + kairn::mul_up(use_a, use_b));
+    use_add(kairn::two_sum(unverified(use_a), use_b).sum + kairn::fast_two_sum(use_a, unverified(use_b)).sum +
+            kairn::two_prod(unverified(use_a), use_b).error + kairn::next_up(unverified(use_a)) +
+            kairn::next_down(unverified(use_a)) + kairn::radd(unverified(use_a), use_b) +
+            kairn::rmul(use_a, unverified(use_b)) + kairn::add_down(unverified(use_a), use_b) +
+            kairn::add_up(unverified(use_a), use_b) + kairn::sub_down(unverified(use_a), use_b) +
+            kairn::sub_up(unverified(use_a), use_b) + kairn::mul_down(unverified(use_a), use_b) +
+            kairn::mul_up(unverified(use_a), use_b));
 
     // The traits, and the markers of a limb.
     using TE1 = kairn::traits<E1>;

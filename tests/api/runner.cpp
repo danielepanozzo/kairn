@@ -21,9 +21,19 @@
 //
 // Some forms can compute only some lines of their kernel: ldexp needs a power of two among the
 // operands of mul_1_1, half needs an operand it can halve back exactly, a point form needs a ball
-// of radius zero. On the other lines such a form computes the plain operation (written beside
-// it), and it fails at the end of a stream of at least 1000 lines in which it computed none: a pass
-// must mean that the form itself was judged.
+// of radius zero, a sign predicate of a ball a line whose two operands are a ball's center and
+// radius, the conversion of a SumAndError to a two-limb number a finite error term. On the other
+// lines such a form computes the plain operation (written beside it), and it fails at the end of a
+// stream of at least 1000 lines in which it computed none: a pass must mean that the form itself
+// was judged.
+//
+// The scalings of a ball by a power of two, ball_mul_pow2_K_full, are reached through ldexp(X, n)
+// with n = ilogb(c): every c of the oracle's cases is a positive power of two of T, so 2^n is c and
+// ldexp calls the kernel once, on the line's own operands. Through half(Y), with Y = X 2^(n + 1)
+// exactly where there is such a ball, and through ldexp(Y, n - k) with Y = X 2^k exactly and n - k
+// beyond the powers of two of T (the steps), the form computes c X as well, and the line's claims,
+// containment of c X and its exactness when c times each limb and the radius is zero or above N,
+// are those of the scaling of Y it computes.
 //
 // binary64 requests run on double limbs, binary32 requests on float limbs; a mask is 0 or 1.
 // KAIRN_CHECKS is off: the oracle sends what the checks would stop (negative radii given to a
@@ -196,6 +206,58 @@ FORM(mul_1_1_ldexp_far, int m = 0, n = 0; T y[1];
      if (!power_of_two(in[1], m) || !far_split(in, 1, m, y, n)) { put(out, one(in) * one(in + 1)); return; } ++reached;
      const E1<T> z = kairn::ldexp(AS(mul_1_1, one(y)), n); put(out, in[1] > 0 ? z : -z))
 
+// The building blocks on T (kairn/blocks.hpp): each the function itself, and with the marker.
+template <class T>
+void put_pair(T* out, const kairn::SumAndError<T>& r) {
+    out[0] = r.sum;
+    out[1] = r.error;
+}
+template <class T>
+void put_pair(T* out, const kairn::ProductAndError<T>& r) {
+    out[0] = r.product;
+    out[1] = r.error;
+}
+// The conversion of a SumAndError to Expansion<T, 2>, on the lines where both members are finite
+// (SumAndError says when it is valid); the members as they are otherwise.
+template <class T>
+void put_converted(T* out, const kairn::SumAndError<T>& r) {
+    if (!std::isfinite(r.sum) || !std::isfinite(r.error)) {
+        put_pair(out, r);
+        return;
+    }
+    ++reached;
+    put(out, E2<T>(r));
+}
+FORM(two_sum_entry_two_sum, put_pair(out, kairn::two_sum(AS(two_sum_entry, in[0]), in[1])))
+FORM(two_sum_entry_marked, put_pair(out, kairn::two_sum(in[0], kairn::unverified(in[1]))))
+FORM(two_sum_entry_to_expansion, put_converted(out, kairn::two_sum(AS(two_sum_entry, in[0]), in[1])))
+FORM(fast_two_sum_entry_fast_two_sum, put_pair(out, kairn::fast_two_sum(AS(fast_two_sum_entry, in[0]), in[1])))
+FORM(fast_two_sum_entry_marked, put_pair(out, kairn::fast_two_sum(kairn::unverified(in[0]), in[1])))
+FORM(fast_two_sum_entry_to_expansion,
+     put_converted(out, kairn::fast_two_sum(AS(fast_two_sum_entry, in[0]), in[1])))
+FORM(two_prod_two_prod, put_pair(out, kairn::two_prod(AS(two_prod, in[0]), in[1])))
+FORM(two_prod_marked, put_pair(out, kairn::two_prod(kairn::unverified(in[0]), in[1])))
+FORM(next_up_next_up, out[0] = kairn::next_up(AS(next_up, in[0])))
+FORM(next_up_marked, out[0] = kairn::next_up(kairn::unverified(in[0])))
+FORM(next_down_next_down, out[0] = kairn::next_down(AS(next_down, in[0])))
+FORM(next_down_marked, out[0] = kairn::next_down(kairn::unverified(in[0])))
+FORM(radd_entry_radd, out[0] = kairn::radd(AS(radd_entry, in[0]), in[1]))
+FORM(radd_entry_marked, out[0] = kairn::radd(in[0], kairn::unverified(in[1])))
+FORM(rmul_rmul, out[0] = kairn::rmul(AS(rmul, in[0]), in[1]))
+FORM(rmul_marked, out[0] = kairn::rmul(in[0], kairn::unverified(in[1])))
+FORM(add_down_entry_add_down, out[0] = kairn::add_down(AS(add_down_entry, in[0]), in[1]))
+FORM(add_down_entry_marked, out[0] = kairn::add_down(kairn::unverified(in[0]), in[1]))
+FORM(add_up_entry_add_up, out[0] = kairn::add_up(AS(add_up_entry, in[0]), in[1]))
+FORM(add_up_entry_marked, out[0] = kairn::add_up(kairn::unverified(in[0]), in[1]))
+FORM(sub_down_entry_sub_down, out[0] = kairn::sub_down(AS(sub_down_entry, in[0]), in[1]))
+FORM(sub_down_entry_marked, out[0] = kairn::sub_down(in[0], kairn::unverified(in[1])))
+FORM(sub_up_entry_sub_up, out[0] = kairn::sub_up(AS(sub_up_entry, in[0]), in[1]))
+FORM(sub_up_entry_marked, out[0] = kairn::sub_up(in[0], kairn::unverified(in[1])))
+FORM(mul_down_1_mul_down, out[0] = kairn::mul_down(AS(mul_down_1, in[0]), in[1]))
+FORM(mul_down_1_marked, out[0] = kairn::mul_down(kairn::unverified(in[0]), in[1]))
+FORM(mul_up_1_mul_up, out[0] = kairn::mul_up(AS(mul_up_1, in[0]), in[1]))
+FORM(mul_up_1_marked, out[0] = kairn::mul_up(kairn::unverified(in[0]), in[1]))
+
 // Two limbs: construction.
 FORM(make_2_from_limb, put(out, E2<T>(AS(make_2, in[0]))))
 FORM(make_2_from_one, put(out, E2<T>(AS(make_2, one(in)))))
@@ -335,6 +397,12 @@ FORM(ball_make_1_limb_radius, if (stopped_by_checks(in[1])) { put(out, B1<T>::em
      put(out, B1<T>(in[0], in[1])))
 FORM(ball_make_2_center_radius, if (stopped_by_checks(in[2])) { put(out, B2<T>::empty()); return; }
      put(out, B2<T>(AS(ball_make_2, two(in)), in[2])))
+// The ball of a constant of kairn::rational, with the line's center as its value and its radius as
+// its error: what the constructor makes of any Constant.
+FORM(ball_make_1_constant, if (stopped_by_checks(in[1])) { put(out, B1<T>::empty()); return; }
+     put(out, B1<T>(kairn::Constant<E1<T>>{one(in), in[1], false})))
+FORM(ball_make_2_constant, if (stopped_by_checks(in[2])) { put(out, B2<T>::empty()); return; }
+     put(out, B2<T>(kairn::Constant<E2<T>>{two(in), in[2], false})))
 
 // Balls: arithmetic. Operands are (center limbs, radius); a scaling's last operand is a T. A point
 // form takes the other ball of the line as a point when its radius is zero (and, for a point of
@@ -357,6 +425,56 @@ FORM(ball_make_2_center_radius, if (stopped_by_checks(in[2])) { put(out, B2<T>::
     FORM(ball_neg_##K##_marked, put(out, -kairn::unverified(BALL(in))))
 BALL_FORMS(1, ball1)
 BALL_FORMS(2, ball2)
+
+// The scaling of a ball by a power of two c = 2^m: ldexp(X, m), its marked form, half(Y) with
+// Y = X 2^(m + 1) exactly, and ldexp(Y, m - k) with Y = X 2^k exactly and m - k beyond the powers
+// of two of T (see the top of the file). A ball scaled exactly: its center by exact_scale, and its
+// radius, finite, scaled and back.
+template <class T, int K>
+bool exact_ball_scale(const T* x, int k, T* y) {
+    if (!exact_scale(x, K, k, y)) return false;
+    y[K] = std::ldexp(x[K], k);
+    return std::isfinite(y[K]) && std::ldexp(y[K], -k) == x[K];
+}
+template <class T, int K>
+bool far_ball_split(const T* x, int m, T* y, int& n) {
+    constexpr int lo = std::numeric_limits<T>::min_exponent - std::numeric_limits<T>::digits;
+    constexpr int hi = std::numeric_limits<T>::max_exponent - 1;
+    for (int k : {m - hi - 1, m - lo + 1, m - hi - 1 - 2 * std::numeric_limits<T>::digits, m - lo + 1 + hi}) {
+        if (exact_ball_scale<T, K>(x, k, y)) {
+            n = m - k;
+            return true;
+        }
+    }
+    return false;
+}
+#define POW2_FORMS(K, BALL)                                                                                        \
+    FORM(ball_mul_pow2_##K##_full_ldexp,                                                                           \
+         put(out, kairn::ldexp(AS(ball_mul_pow2_##K##_full, BALL(in)), std::ilogb(in[K + 1]))))                    \
+    FORM(ball_mul_pow2_##K##_full_marked, put(out, kairn::ldexp(kairn::unverified(BALL(in)), std::ilogb(in[K + 1])))) \
+    FORM(ball_mul_pow2_##K##_full_half, const int m = std::ilogb(in[K + 1]); T y[K + 1];                          \
+         if (!exact_ball_scale<T, K>(in, m + 1, y)) { put(out, kairn::ldexp(BALL(in), m)); return; } ++reached;    \
+         put(out, kairn::half(AS(ball_mul_pow2_##K##_full, BALL(y)))))                                             \
+    FORM(ball_mul_pow2_##K##_full_ldexp_far, int n = 0; T y[K + 1];                                                \
+         if (!far_ball_split<T, K>(in, std::ilogb(in[K + 1]), y, n)) {                                             \
+             put(out, kairn::ldexp(BALL(in), std::ilogb(in[K + 1])));                                              \
+             return;                                                                                               \
+         }                                                                                                         \
+         ++reached; put(out, kairn::ldexp(AS(ball_mul_pow2_##K##_full, BALL(y)), n)))
+POW2_FORMS(1, ball1)
+POW2_FORMS(2, ball2)
+
+// The sign predicates of a ball of two limbs, whose kernels are comparisons of the radius with the
+// center: on a line of lt_1_2 (a, y), the ball of center y and radius a, when a is not negative
+// and y is finite (a +inf radius makes the whole line, a NaN the empty set, and the comparison is
+// then false too); on a line of lt_2_1 (x, a), the ball of center x and radius -a; on a line of
+// eq_2_1 (x, a) whose a is zero, the ball of center x and radius 0. The comparison otherwise.
+FORM(lt_1_2_certainly_positive, if (0 > in[0] || !std::isfinite(in[1])) { mo[0] = in[0] < two(in + 1); return; }
+     ++reached; mo[0] = B2<T>(two(in + 1), in[0]).certainly_positive())
+FORM(lt_2_1_certainly_negative, if (in[2] > 0 || !std::isfinite(in[0])) { mo[0] = two(in) < in[2]; return; }
+     ++reached; mo[0] = B2<T>(two(in), -in[2]).certainly_negative())
+FORM(eq_2_1_certainly_zero, if (in[2] != 0) { mo[0] = two(in) == in[2]; return; }
+     ++reached; mo[0] = B2<T>(two(in), T(0)).certainly_zero())
 
 // Points: the radius of the point's ball is zero, and for a point of type T with two limbs so is
 // its second limb.
@@ -458,6 +576,34 @@ struct Form {
 
 // The first form of each kernel is its canonical one.
 const Form forms[] = {
+    ROW(two_sum_entry, two_sum, "ll", "ll")
+    ROW(two_sum_entry, marked, "ll", "ll")
+    SOME(two_sum_entry, to_expansion, "ll", "ll")
+    ROW(fast_two_sum_entry, fast_two_sum, "ll", "ll")
+    ROW(fast_two_sum_entry, marked, "ll", "ll")
+    SOME(fast_two_sum_entry, to_expansion, "ll", "ll")
+    ROW(two_prod, two_prod, "ll", "ll")
+    ROW(two_prod, marked, "ll", "ll")
+    ROW(next_up, next_up, "l", "l")
+    ROW(next_up, marked, "l", "l")
+    ROW(next_down, next_down, "l", "l")
+    ROW(next_down, marked, "l", "l")
+    ROW(radd_entry, radd, "ll", "l")
+    ROW(radd_entry, marked, "ll", "l")
+    ROW(rmul, rmul, "ll", "l")
+    ROW(rmul, marked, "ll", "l")
+    ROW(add_down_entry, add_down, "ll", "l")
+    ROW(add_down_entry, marked, "ll", "l")
+    ROW(add_up_entry, add_up, "ll", "l")
+    ROW(add_up_entry, marked, "ll", "l")
+    ROW(sub_down_entry, sub_down, "ll", "l")
+    ROW(sub_down_entry, marked, "ll", "l")
+    ROW(sub_up_entry, sub_up, "ll", "l")
+    ROW(sub_up_entry, marked, "ll", "l")
+    ROW(mul_down_1, mul_down, "ll", "l")
+    ROW(mul_down_1, marked, "ll", "l")
+    ROW(mul_up_1, mul_up, "ll", "l")
+    ROW(mul_up_1, marked, "ll", "l")
     ROW(add_1_1, plus, "ll", "l")
     ROW(add_1_1, plus_limb, "ll", "l")
     ROW(add_1_1, limb_plus, "ll", "l")
@@ -557,6 +703,7 @@ const Form forms[] = {
     ROW(lt_2_1, greater, "lll", "m")
     ROW(lt_2_1, less_one, "lll", "m")
     ROW(lt_2_1, greater_one, "lll", "m")
+    SOME(lt_2_1, certainly_negative, "lll", "m")
     ROW(le_2_1, less_equal, "lll", "m")
     ROW(le_2_1, greater_equal, "lll", "m")
     ROW(le_2_1, less_equal_one, "lll", "m")
@@ -569,10 +716,12 @@ const Form forms[] = {
     ROW(eq_2_1, equal_one_rev, "lll", "m")
     ROW(eq_2_1, not_unequal_one, "lll", "m")
     ROW(eq_2_1, not_unequal_one_rev, "lll", "m")
+    SOME(eq_2_1, certainly_zero, "lll", "m")
     ROW(lt_1_2, less, "lll", "m")
     ROW(lt_1_2, greater, "lll", "m")
     ROW(lt_1_2, less_one, "lll", "m")
     ROW(lt_1_2, greater_one, "lll", "m")
+    SOME(lt_1_2, certainly_positive, "lll", "m")
     ROW(le_1_2, less_equal, "lll", "m")
     ROW(le_1_2, greater_equal, "lll", "m")
     ROW(le_1_2, less_equal_one, "lll", "m")
@@ -586,12 +735,22 @@ const Form forms[] = {
     ROW(ball_make_1, center_radius, "ll", "ll")
     ROW(ball_make_1, limb_radius, "ll", "ll")
     ROW(ball_make_2, center_radius, "lll", "lll")
+    ROW(ball_make_1, constant, "ll", "ll")
+    ROW(ball_make_2, constant, "lll", "lll")
     BALL_ROWS(1, "llll", "ll", "lll", "ll")
     BALL_ROWS(2, "llllll", "lll", "llll", "lll")
     SOME(ball_mul_2_full, times_center, "llllll", "lll")
     SOME(ball_mul_2_full, center_times, "llllll", "lll")
     ROW(ball_scale_1_full, scale_one, "lll", "ll")
     ROW(ball_scale_1_full, one_scale, "lll", "ll")
+    ROW(ball_mul_pow2_1_full, ldexp, "lll", "ll")
+    ROW(ball_mul_pow2_1_full, marked, "lll", "ll")
+    SOME(ball_mul_pow2_1_full, half, "lll", "ll")
+    SOME(ball_mul_pow2_1_full, ldexp_far, "lll", "ll")
+    ROW(ball_mul_pow2_2_full, ldexp, "llll", "lll")
+    ROW(ball_mul_pow2_2_full, marked, "llll", "lll")
+    SOME(ball_mul_pow2_2_full, half, "llll", "lll")
+    SOME(ball_mul_pow2_2_full, ldexp_far, "llll", "lll")
 };
 
 // Kernels that are parts of other kernels and that no public operation calls on its own. Every
@@ -610,18 +769,10 @@ struct NotPublic {
 };
 const char* const ball_core = "the finite core of a Ball operation: the operators call the full kernel, and "
                               "kairn::finite has no Ball forms (decision D5 names the Expansion arithmetic)";
-const char* const block = "a building block that Milestone 2 makes public (milestone2.md, \"Building blocks on "
-                          "T\"), whose function comes with the public headers of the milestone";
-const char* const scaling = "the scaling of a Ball by a power of two (milestone2.md), for ldexp and half on Ball, "
-                            "which come with the public headers of the milestone";
 const NotPublic not_public[] = {
     {"ball_add_1", ball_core}, {"ball_sub_1", ball_core}, {"ball_mul_1", ball_core}, {"ball_scale_1", ball_core},
     {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core}, {"ball_scale_2", ball_core},
-    {"two_prod", block}, {"rmul", block}, {"next_up", block}, {"next_down", block}, {"mul_down_1", block},
-    {"mul_up_1", block}, {"two_sum_entry", block}, {"fast_two_sum_entry", block}, {"radd_entry", block},
-    {"add_down_entry", block}, {"add_up_entry", block}, {"sub_down_entry", block}, {"sub_up_entry", block},
-    {"ball_mul_pow2_1", scaling}, {"ball_mul_pow2_2", scaling}, {"ball_mul_pow2_1_full", scaling},
-    {"ball_mul_pow2_2_full", scaling},
+    {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
 };
 
 constexpr int max_limbs = 16;
