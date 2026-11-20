@@ -1096,6 +1096,8 @@ class Printers(unittest.TestCase):
         fd = ks.folds['axpy_1']
         self.assertTrue(fd.is_map)
         self.assertIn('Definition axpy_1_spec : Prop :=', rocq.fold_statements(ks))
+        fd.status, fd.theorem = 'unverified', None      # the maps of the library are proved (FoldMaps.v)
+        without = rocq.audit(ks)
         fd.status = 'proved'
         fd.theorem = 'proofs/theories/FoldAxpy.v'
         audit = rocq.audit(ks)
@@ -1106,7 +1108,7 @@ class Printers(unittest.TestCase):
         for order in fd.orders:
             self.assertNotIn(f'axpy_1_{ir.ORDER_SUFFIX[order]}', audit)
         # Exactly the one theorem of the map is audited among the folds.
-        self.assertEqual(audit.count('_audit : '), rocq.audit(self.ks).count('_audit : ') + 1)
+        self.assertEqual(audit.count('_audit : '), without.count('_audit : ') + 1)
 
     def test_the_counts_of_the_loops(self):
         """gen/objcode.json gives each fold's functions as parts (objcode.py): the step at least

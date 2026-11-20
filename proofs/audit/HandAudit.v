@@ -2,18 +2,21 @@
 
    proofs/gen/Audit.v lists the theorem of every real-model statement, and
    proofs/gen/IeeeAudit.v the theorem of the IEEE-model statement of every kernel of the
-   extended domain (the kernels with an ieee_theorem line). This file lists the rest:
+   extended domain (the kernels with an ieee_theorem line), then the theorem of every
+   other generated IEEE-model statement that a description names. This file lists the
+   rest:
 
    - theorems about generated statements that no kernel description names: the IEEE-model
-     statements of the kernels of the finite domain, printed in
-     proofs/gen/IeeeStatements.v (K_ieee_bridge_spec: the bridge to the real model;
-     K_ieee_spec: correctness; K_ieee_finite_spec and K_ieee_finite_result_spec: no
-     overflow below a threshold), the steps of the folds among them; and the statements
-     of proofs/gen/IeeeFoldStatements.v, whose theorems no description of a kernel or of
-     a fold names either: the folds in the IEEE model (F_seq_ieee_spec and
-     F_lanes_ieee_spec, for the generated models of proofs/gen/IeeeFoldModel.v), and
-     the leading limb of the result of each step and combination of a fold
-     (K_ieee_lead_spec);
+     statements of the kernels of the finite domain of Milestone 1 and of the first
+     building blocks of Milestone 2, printed in proofs/gen/IeeeStatements.v
+     (K_ieee_bridge_spec: the bridge to the real model; K_ieee_spec: correctness;
+     K_ieee_finite_spec and K_ieee_finite_result_spec: no overflow below a threshold).
+     A description can name the first two (ieee_bridge_theorem, ieee_spec_theorem), and
+     those of the steps of the folds do, with the theorems of the leading limbs
+     (ieee_lead_theorem) and of the folds in the IEEE model (ieee_theorem):
+     proofs/gen/IeeeAudit.v lists these, and this file no longer does. The descriptions
+     of the kernels of Milestone 1 and of the first building blocks do not name theirs
+     yet, and nothing names the theorem of a threshold;
    - theorems whose statements are written by hand because the generator does not print
      them: two_sum in the IEEE model (the exact condition under which its error term is
      finite is not a claim), the guard (an operation, not a kernel), the threshold of
@@ -49,20 +52,27 @@
    - the arithmetic of the steps of the maps (theories/MapSteps.v), beside their theorems,
      which proofs/gen/Audit.v lists: the error of a product followed by a sum, and its
      three instances, with the constants of the steps of axpy;
-   - the theorems of the maps (theories/FoldMaps.v). Their types are generated
-     statements, F_spec of proofs/gen/FoldStatements.v, and they are checked here by a
-     definition of the same form as in the generated audit. They are here because the
-     description of a map cannot name its theorem yet: for a fold marked proved the
-     generator lists F_seq_correct and F_lanes_correct against F_seq_spec and
-     F_lanes_spec, and a map has one statement, without an order. With them, the lemmas
-     of theories/Folds.v about a loop that writes an array.
+   - the lemmas of theories/Folds.v about a loop that writes an array, beside the
+     theorems of the maps (theories/FoldMaps.v), which the descriptions of the maps
+     name and proofs/gen/Audit.v lists;
+   - the folds of maxima, beside the theorems of their generated statements, which the
+     generated audits list: the lemma of theories/Folds.v they rest on, that a
+     combination which is associative and commutative on the states of a loop makes the
+     lane order return the state of the sequential order; in the real model
+     (theories/FoldNorm.v), that the two orders return the same state, what that state
+     is, and the facts about a normalized pair behind the bound of two limbs; in the
+     IEEE model (theories/IeeeFoldNorm.v), that the two orders return the same result
+     and the same flag on every input, the statements of the sequential order with the
+     elements as finite normalized pairs, and when the flag is true;
+   - the convolutions (theories/FoldConv.v), beside their theorems, which
+     proofs/gen/Audit.v lists: what the terms of a coefficient are, which the generated
+     statements name and do not describe, how many there are, and that one answer of
+     the bound kernel of the dot product covers every coefficient.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
    the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements IeeeStatements.
-From Kairn.Gen Require Import FoldStatements.
-From Kairn.Gen Require Import IeeeFoldStatements.
 From Kairn Require Import IeeeVocabulary IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore IeeeSub IeeeFinite.
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeOps.
@@ -71,8 +81,9 @@ From Kairn Require Import DirectedSum DirectedProd BallPow2 Rectangle IeeeProduc
 From Kairn Require Import IeeeDirected IeeeDirectedProd IeeeEntry.
 From Kairn Require Import IeeeTwoExecutions.
 From Kairn Require Import StepKernels FoldTransfer BoundKernels FoldGuarantee.
-From Kairn Require Import MapSteps FoldMaps.
-From Kairn Require Import IeeeSteps IeeeFolds.
+From Kairn Require Import MapSteps.
+From Kairn Require Import IeeeFolds.
+From Kairn Require Import FoldNorm IeeeFoldNorm FoldConv.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -587,128 +598,13 @@ Print Assumptions dot_1_lanes_bound.
 Print Assumptions dot_2_seq_bound.
 Print Assumptions dot_2_lanes_bound.
 
-(* The steps of the folds in the IEEE model (theories/IeeeSteps.v): the generated statements
-   of proofs/gen/IeeeStatements.v, the bridge to the real model and, for the steps of two
-   limbs, correctness. *)
-Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
-Print Assumptions dot_step_1_ieee_bridge.
-
-Definition sum_entry_step_1_ieee_bridge_audit : sum_entry_step_1_ieee_bridge_spec :=
-  sum_entry_step_1_ieee_bridge.
-Print Assumptions sum_entry_step_1_ieee_bridge.
-
-Definition dot_step_2_ieee_bridge_audit : dot_step_2_ieee_bridge_spec := dot_step_2_ieee_bridge.
-Print Assumptions dot_step_2_ieee_bridge.
-
-Definition dot_step_2_ieee_audit : dot_step_2_ieee_spec := dot_step_2_ieee_correct.
-Print Assumptions dot_step_2_ieee_correct.
-
-Definition sum_entry_step_2_ieee_bridge_audit : sum_entry_step_2_ieee_bridge_spec :=
-  sum_entry_step_2_ieee_bridge.
-Print Assumptions sum_entry_step_2_ieee_bridge.
-
-Definition sum_entry_step_2_ieee_audit : sum_entry_step_2_ieee_spec :=
-  sum_entry_step_2_ieee_correct.
-Print Assumptions sum_entry_step_2_ieee_correct.
-
-Definition sum_fast_entry_step_2_ieee_bridge_audit : sum_fast_entry_step_2_ieee_bridge_spec :=
-  sum_fast_entry_step_2_ieee_bridge.
-Print Assumptions sum_fast_entry_step_2_ieee_bridge.
-
-Definition sum_fast_entry_step_2_ieee_audit : sum_fast_entry_step_2_ieee_spec :=
-  sum_fast_entry_step_2_ieee_correct.
-Print Assumptions sum_fast_entry_step_2_ieee_correct.
-
-(* The leading limb of the result of each step and combination of a fold
-   (theories/IeeeFolds.v): the generated statements of proofs/gen/IeeeFoldStatements.v. If it
-   is finite, so is the leading limb of each operand. *)
-Definition add_1_1_ieee_lead_audit : add_1_1_ieee_lead_spec := add_1_1_ieee_lead.
-Print Assumptions add_1_1_ieee_lead.
-
-Definition dot_step_1_ieee_lead_audit : dot_step_1_ieee_lead_spec := dot_step_1_ieee_lead.
-Print Assumptions dot_step_1_ieee_lead.
-
-Definition sum_entry_step_1_ieee_lead_audit : sum_entry_step_1_ieee_lead_spec :=
-  sum_entry_step_1_ieee_lead.
-Print Assumptions sum_entry_step_1_ieee_lead.
-
-Definition add_2_2_ieee_lead_audit : add_2_2_ieee_lead_spec := add_2_2_ieee_lead.
-Print Assumptions add_2_2_ieee_lead.
-
-Definition add_fast_2_2_ieee_lead_audit : add_fast_2_2_ieee_lead_spec := add_fast_2_2_ieee_lead.
-Print Assumptions add_fast_2_2_ieee_lead.
-
-Definition dot_step_2_ieee_lead_audit : dot_step_2_ieee_lead_spec := dot_step_2_ieee_lead.
-Print Assumptions dot_step_2_ieee_lead.
-
-Definition sum_entry_step_2_ieee_lead_audit : sum_entry_step_2_ieee_lead_spec :=
-  sum_entry_step_2_ieee_lead.
-Print Assumptions sum_entry_step_2_ieee_lead.
-
-Definition sum_fast_entry_step_2_ieee_lead_audit : sum_fast_entry_step_2_ieee_lead_spec :=
-  sum_fast_entry_step_2_ieee_lead.
-Print Assumptions sum_fast_entry_step_2_ieee_lead.
-
-(* The folds in the IEEE model (theories/IeeeFolds.v): the generated statements of
-   proofs/gen/IeeeFoldStatements.v, about the generated models of
-   proofs/gen/IeeeFoldModel.v. If the flag is true, every element is finite and the result
-   is that of the real model, valid and within its bound; otherwise every limb is a NaN. *)
-Definition sum_1_seq_ieee_audit : sum_1_seq_ieee_spec := sum_1_seq_ieee_correct.
-Print Assumptions sum_1_seq_ieee_correct.
-
-Definition sum_1_lanes_ieee_audit : sum_1_lanes_ieee_spec := sum_1_lanes_ieee_correct.
-Print Assumptions sum_1_lanes_ieee_correct.
-
-Definition sum_1_entry_seq_ieee_audit : sum_1_entry_seq_ieee_spec := sum_1_entry_seq_ieee_correct.
-Print Assumptions sum_1_entry_seq_ieee_correct.
-
-Definition sum_1_entry_lanes_ieee_audit : sum_1_entry_lanes_ieee_spec :=
-  sum_1_entry_lanes_ieee_correct.
-Print Assumptions sum_1_entry_lanes_ieee_correct.
-
-Definition dot_1_seq_ieee_audit : dot_1_seq_ieee_spec := dot_1_seq_ieee_correct.
-Print Assumptions dot_1_seq_ieee_correct.
-
-Definition dot_1_lanes_ieee_audit : dot_1_lanes_ieee_spec := dot_1_lanes_ieee_correct.
-Print Assumptions dot_1_lanes_ieee_correct.
-
-Definition sum_2_seq_ieee_audit : sum_2_seq_ieee_spec := sum_2_seq_ieee_correct.
-Print Assumptions sum_2_seq_ieee_correct.
-
-Definition sum_2_lanes_ieee_audit : sum_2_lanes_ieee_spec := sum_2_lanes_ieee_correct.
-Print Assumptions sum_2_lanes_ieee_correct.
-
-Definition sum_2_entry_seq_ieee_audit : sum_2_entry_seq_ieee_spec := sum_2_entry_seq_ieee_correct.
-Print Assumptions sum_2_entry_seq_ieee_correct.
-
-Definition sum_2_entry_lanes_ieee_audit : sum_2_entry_lanes_ieee_spec :=
-  sum_2_entry_lanes_ieee_correct.
-Print Assumptions sum_2_entry_lanes_ieee_correct.
-
-Definition sum_fast_2_seq_ieee_audit : sum_fast_2_seq_ieee_spec := sum_fast_2_seq_ieee_correct.
-Print Assumptions sum_fast_2_seq_ieee_correct.
-
-Definition sum_fast_2_lanes_ieee_audit : sum_fast_2_lanes_ieee_spec :=
-  sum_fast_2_lanes_ieee_correct.
-Print Assumptions sum_fast_2_lanes_ieee_correct.
-
-Definition sum_fast_2_entry_seq_ieee_audit : sum_fast_2_entry_seq_ieee_spec :=
-  sum_fast_2_entry_seq_ieee_correct.
-Print Assumptions sum_fast_2_entry_seq_ieee_correct.
-
-Definition sum_fast_2_entry_lanes_ieee_audit : sum_fast_2_entry_lanes_ieee_spec :=
-  sum_fast_2_entry_lanes_ieee_correct.
-Print Assumptions sum_fast_2_entry_lanes_ieee_correct.
-
-Definition dot_2_seq_ieee_audit : dot_2_seq_ieee_spec := dot_2_seq_ieee_correct.
-Print Assumptions dot_2_seq_ieee_correct.
-
-Definition dot_2_lanes_ieee_audit : dot_2_lanes_ieee_spec := dot_2_lanes_ieee_correct.
-Print Assumptions dot_2_lanes_ieee_correct.
-
-(* What theories/IeeeFolds.v proves beyond those statements, written by hand about the same
-   generated models. The steps: a leading limb that is not finite stays not finite, and from
-   finite operands a finite leading limb gives the values of the real model. *)
+(* What theories/IeeeFolds.v proves beyond the generated statements of the folds in the IEEE
+   model, written by hand about the same generated models. (The theorems of the generated
+   statements themselves, F_seq_ieee_correct and F_lanes_ieee_correct, K_ieee_lead, and
+   K_ieee_bridge and K_ieee_correct of the steps, are named by the descriptions and
+   listed by proofs/gen/IeeeAudit.v.) The steps: a leading limb that is not finite stays
+   not finite, and from finite operands a finite leading limb gives the values of the
+   real model. *)
 Print Assumptions add_1_1_dead.
 Print Assumptions add_1_1_live.
 Print Assumptions sum_entry_step_1_dead.
@@ -755,59 +651,64 @@ Print Assumptions axpy_step_1_arith.
 Print Assumptions axpy_step_2_arith.
 Print Assumptions axpy_step_2_1_arith.
 
-(* The maps (theories/FoldMaps.v): the generated statements of proofs/gen/FoldStatements.v,
-   about the generated models of proofs/gen/FoldModel.v. Every element written satisfies
-   the statement of the step for its own element and the scalars. *)
-Definition add_1_audit : add_1_spec := add_1_correct.
-Print Assumptions add_1_correct.
+(* A combination that is associative and commutative on the states of a loop
+   (theories/Folds.v): lists only. The sequential order is the combination of the images
+   of the elements, and the lane order returns its state, for every number of lanes; the
+   second theorem is the case of a step that is the combination after a function of the
+   element. *)
+Print Assumptions fold_seq_combined.
+Print Assumptions fold_lanes_aci_step.
+Print Assumptions fold_lanes_aci.
 
-Definition add_1_entry_audit : add_1_entry_spec := add_1_entry_correct.
-Print Assumptions add_1_entry_correct.
+(* The folds of maxima in the real model (theories/FoldNorm.v): the theorems of their
+   generated statements are listed by proofs/gen/Audit.v; these are beside them. The two
+   orders return the same state; the final state is the largest magnitude (of the leading
+   limbs, for two limbs) with a true mask; a normalized pair is below the successor of
+   the magnitude of its leading limb, and a number of the format above the pair is above
+   that limb; and the bound of two limbs on the two largest magnitudes, the first
+   inequality strictly. *)
+Print Assumptions norm_upper_1_lanes_seq.
+Print Assumptions norm_upper_2_lanes_seq.
+Print Assumptions norm_upper_1_seq_value.
+Print Assumptions norm_upper_2_seq_value.
+Print Assumptions normalized_2_abs_lt_succ.
+Print Assumptions normalized_2_lead_le.
+Print Assumptions norm_upper_2_bound.
+Print Assumptions norm_upper_2_strict.
 
-Definition add_2_audit : add_2_spec := add_2_correct.
-Print Assumptions add_2_correct.
+(* The folds of maxima in the IEEE model (theories/IeeeFoldNorm.v): the theorems of the
+   generated statements of the finishes and of the folds are listed by
+   proofs/gen/IeeeAudit.v; these are beside them. The lane order returns the state, the
+   result and the flag of the sequential order on every list, NaN and infinities
+   included; the sequential order with what its generated statement does not say (for two
+   limbs, the elements are finite normalized pairs); and the flag is true exactly when
+   every element is finite (one limb), or every leading limb is finite and the step up
+   from the final state is (two limbs). *)
+Print Assumptions norm_upper_1_lanes_seq_state.
+Print Assumptions norm_upper_2_lanes_seq_state.
+Print Assumptions norm_upper_1_lanes_seq_ieee.
+Print Assumptions norm_upper_2_lanes_seq_ieee.
+Print Assumptions norm_upper_1_seq_ieee_facts.
+Print Assumptions norm_upper_2_seq_ieee_facts.
+Print Assumptions norm_upper_1_seq_ieee_flag.
+Print Assumptions norm_upper_2_seq_ieee_flag.
 
-Definition add_2_entry_audit : add_2_entry_spec := add_2_entry_correct.
-Print Assumptions add_2_entry_correct.
-
-Definition sub_1_audit : sub_1_spec := sub_1_correct.
-Print Assumptions sub_1_correct.
-
-Definition sub_1_entry_audit : sub_1_entry_spec := sub_1_entry_correct.
-Print Assumptions sub_1_entry_correct.
-
-Definition sub_2_audit : sub_2_spec := sub_2_correct.
-Print Assumptions sub_2_correct.
-
-Definition sub_2_entry_audit : sub_2_entry_spec := sub_2_entry_correct.
-Print Assumptions sub_2_entry_correct.
-
-Definition axpy_1_audit : axpy_1_spec := axpy_1_correct.
-Print Assumptions axpy_1_correct.
-
-Definition axpy_1_entry_audit : axpy_1_entry_spec := axpy_1_entry_correct.
-Print Assumptions axpy_1_entry_correct.
-
-Definition axpy_2_audit : axpy_2_spec := axpy_2_correct.
-Print Assumptions axpy_2_correct.
-
-Definition axpy_2_entry_audit : axpy_2_entry_spec := axpy_2_entry_correct.
-Print Assumptions axpy_2_entry_correct.
-
-Definition axpy_2_1_audit : axpy_2_1_spec := axpy_2_1_correct.
-Print Assumptions axpy_2_1_correct.
-
-Definition axpy_2_1_entry_audit : axpy_2_1_entry_spec := axpy_2_1_entry_correct.
-Print Assumptions axpy_2_1_entry_correct.
-
-Definition scale_1_audit : scale_1_spec := scale_1_correct.
-Print Assumptions scale_1_correct.
-
-Definition scale_2_audit : scale_2_spec := scale_2_correct.
-Print Assumptions scale_2_correct.
-
-Definition mul_pow2_map_1_audit : mul_pow2_map_1_spec := mul_pow2_map_1_correct.
-Print Assumptions mul_pow2_map_1_correct.
-
-Definition mul_pow2_map_2_audit : mul_pow2_map_2_spec := mul_pow2_map_2_correct.
-Print Assumptions mul_pow2_map_2_correct.
+(* The convolutions (theories/FoldConv.v): the theorems of their generated statements are
+   listed by proofs/gen/Audit.v; these are beside them. The terms of coefficient j, the
+   list conv_terms xs ys j of proofs/gen/FoldModel.v: they satisfy the requirements of
+   the coefficients of the two polynomials; there are at most min (n_x, n_y) of them, at
+   least one, and min (j + 1, n_x) - (j - (n_y - 1)) with at least one y; term k is
+   (x_i, y_(j-i)) with i = j - (n_y - 1) + k, and the list is exactly those pairs in
+   increasing i. A statement in the form of a convolution's, read index by index. And the
+   exported bound of the dot product, for a count of at least min (n_x, n_y), on every
+   coefficient. *)
+Print Assumptions conv_terms_Forall.
+Print Assumptions conv_terms_length_eq.
+Print Assumptions conv_terms_length.
+Print Assumptions conv_terms_count.
+Print Assumptions conv_terms_nonempty.
+Print Assumptions conv_terms_nth.
+Print Assumptions conv_terms_eq.
+Print Assumptions Forall2_seq_nth.
+Print Assumptions conv_1_bound.
+Print Assumptions conv_2_bound.

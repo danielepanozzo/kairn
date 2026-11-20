@@ -12,6 +12,7 @@ ensures:       normalized z
 ensures:       error z A c=3 k=2 t=0
 min_precision: 2
 theorem:       proofs/theories/AddFast22.v add_fast_2_2_correct
+ieee_lead_theorem: proofs/theories/IeeeFolds.v add_fast_2_2_ieee_lead
 source:        JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here
 license:       algorithm: published; proof: MIT
 status:        proved

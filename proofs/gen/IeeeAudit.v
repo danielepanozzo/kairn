@@ -4,6 +4,7 @@
    exactly the generated statement as its type, and the axioms it depends on are printed,
    for the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import IeeeStatements.
+From Kairn.Gen Require Import IeeeFoldStatements.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeBallPow2.
@@ -12,8 +13,11 @@ From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
 From Kairn Require Import IeeeExt.
 From Kairn Require Import IeeeFoldFinish.
+From Kairn Require Import IeeeFoldNorm.
+From Kairn Require Import IeeeFolds.
 From Kairn Require Import IeeeFull.
 From Kairn Require Import IeeeMake.
+From Kairn Require Import IeeeSteps.
 
 Definition add_down_1_ieee_audit : add_down_1_ieee_spec := add_down_1_ieee_correct.
 Print Assumptions add_down_1_ieee_correct.
@@ -71,6 +75,12 @@ Print Assumptions next_down_ieee_correct.
 
 Definition next_up_ieee_audit : next_up_ieee_spec := next_up_ieee_correct.
 Print Assumptions next_up_ieee_correct.
+
+Definition norm_finish_1_audit : norm_finish_1_spec := norm_finish_1_correct.
+Print Assumptions norm_finish_1_correct.
+
+Definition norm_finish_2_audit : norm_finish_2_spec := norm_finish_2_correct.
+Print Assumptions norm_finish_2_correct.
 
 Definition radd_ieee_audit : radd_ieee_spec := radd_ieee_correct.
 Print Assumptions radd_ieee_correct.
@@ -182,3 +192,116 @@ Print Assumptions sub_2_2_full_correct.
 
 Definition to_nearest_2_ieee_audit : to_nearest_2_ieee_spec := to_nearest_2_ieee_correct.
 Print Assumptions to_nearest_2_ieee_correct.
+
+(* The statements of the kernels of the finite domain (IeeeStatements.v), and those of the
+   steps and combinations of the folds and of the folds (IeeeFoldStatements.v), whose
+   theorems are named (ieee_bridge_theorem, ieee_spec_theorem, ieee_lead_theorem; the
+   ieee_theorem of a fold). *)
+
+Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
+Print Assumptions dot_step_1_ieee_bridge.
+
+Definition sum_entry_step_1_ieee_bridge_audit : sum_entry_step_1_ieee_bridge_spec := sum_entry_step_1_ieee_bridge.
+Print Assumptions sum_entry_step_1_ieee_bridge.
+
+Definition dot_step_2_ieee_bridge_audit : dot_step_2_ieee_bridge_spec := dot_step_2_ieee_bridge.
+Print Assumptions dot_step_2_ieee_bridge.
+
+Definition dot_step_2_ieee_audit : dot_step_2_ieee_spec := dot_step_2_ieee_correct.
+Print Assumptions dot_step_2_ieee_correct.
+
+Definition sum_entry_step_2_ieee_bridge_audit : sum_entry_step_2_ieee_bridge_spec := sum_entry_step_2_ieee_bridge.
+Print Assumptions sum_entry_step_2_ieee_bridge.
+
+Definition sum_entry_step_2_ieee_audit : sum_entry_step_2_ieee_spec := sum_entry_step_2_ieee_correct.
+Print Assumptions sum_entry_step_2_ieee_correct.
+
+Definition sum_fast_entry_step_2_ieee_bridge_audit : sum_fast_entry_step_2_ieee_bridge_spec := sum_fast_entry_step_2_ieee_bridge.
+Print Assumptions sum_fast_entry_step_2_ieee_bridge.
+
+Definition sum_fast_entry_step_2_ieee_audit : sum_fast_entry_step_2_ieee_spec := sum_fast_entry_step_2_ieee_correct.
+Print Assumptions sum_fast_entry_step_2_ieee_correct.
+
+Definition add_1_1_ieee_lead_audit : add_1_1_ieee_lead_spec := add_1_1_ieee_lead.
+Print Assumptions add_1_1_ieee_lead.
+
+Definition dot_step_1_ieee_lead_audit : dot_step_1_ieee_lead_spec := dot_step_1_ieee_lead.
+Print Assumptions dot_step_1_ieee_lead.
+
+Definition sum_entry_step_1_ieee_lead_audit : sum_entry_step_1_ieee_lead_spec := sum_entry_step_1_ieee_lead.
+Print Assumptions sum_entry_step_1_ieee_lead.
+
+Definition add_2_2_ieee_lead_audit : add_2_2_ieee_lead_spec := add_2_2_ieee_lead.
+Print Assumptions add_2_2_ieee_lead.
+
+Definition add_fast_2_2_ieee_lead_audit : add_fast_2_2_ieee_lead_spec := add_fast_2_2_ieee_lead.
+Print Assumptions add_fast_2_2_ieee_lead.
+
+Definition dot_step_2_ieee_lead_audit : dot_step_2_ieee_lead_spec := dot_step_2_ieee_lead.
+Print Assumptions dot_step_2_ieee_lead.
+
+Definition sum_entry_step_2_ieee_lead_audit : sum_entry_step_2_ieee_lead_spec := sum_entry_step_2_ieee_lead.
+Print Assumptions sum_entry_step_2_ieee_lead.
+
+Definition sum_fast_entry_step_2_ieee_lead_audit : sum_fast_entry_step_2_ieee_lead_spec := sum_fast_entry_step_2_ieee_lead.
+Print Assumptions sum_fast_entry_step_2_ieee_lead.
+
+Definition dot_1_seq_ieee_audit : dot_1_seq_ieee_spec := dot_1_seq_ieee_correct.
+Print Assumptions dot_1_seq_ieee_correct.
+
+Definition dot_1_lanes_ieee_audit : dot_1_lanes_ieee_spec := dot_1_lanes_ieee_correct.
+Print Assumptions dot_1_lanes_ieee_correct.
+
+Definition dot_2_seq_ieee_audit : dot_2_seq_ieee_spec := dot_2_seq_ieee_correct.
+Print Assumptions dot_2_seq_ieee_correct.
+
+Definition dot_2_lanes_ieee_audit : dot_2_lanes_ieee_spec := dot_2_lanes_ieee_correct.
+Print Assumptions dot_2_lanes_ieee_correct.
+
+Definition norm_upper_1_seq_ieee_audit : norm_upper_1_seq_ieee_spec := norm_upper_1_seq_ieee_correct.
+Print Assumptions norm_upper_1_seq_ieee_correct.
+
+Definition norm_upper_1_lanes_ieee_audit : norm_upper_1_lanes_ieee_spec := norm_upper_1_lanes_ieee_correct.
+Print Assumptions norm_upper_1_lanes_ieee_correct.
+
+Definition norm_upper_2_seq_ieee_audit : norm_upper_2_seq_ieee_spec := norm_upper_2_seq_ieee_correct.
+Print Assumptions norm_upper_2_seq_ieee_correct.
+
+Definition norm_upper_2_lanes_ieee_audit : norm_upper_2_lanes_ieee_spec := norm_upper_2_lanes_ieee_correct.
+Print Assumptions norm_upper_2_lanes_ieee_correct.
+
+Definition sum_1_seq_ieee_audit : sum_1_seq_ieee_spec := sum_1_seq_ieee_correct.
+Print Assumptions sum_1_seq_ieee_correct.
+
+Definition sum_1_lanes_ieee_audit : sum_1_lanes_ieee_spec := sum_1_lanes_ieee_correct.
+Print Assumptions sum_1_lanes_ieee_correct.
+
+Definition sum_1_entry_seq_ieee_audit : sum_1_entry_seq_ieee_spec := sum_1_entry_seq_ieee_correct.
+Print Assumptions sum_1_entry_seq_ieee_correct.
+
+Definition sum_1_entry_lanes_ieee_audit : sum_1_entry_lanes_ieee_spec := sum_1_entry_lanes_ieee_correct.
+Print Assumptions sum_1_entry_lanes_ieee_correct.
+
+Definition sum_2_seq_ieee_audit : sum_2_seq_ieee_spec := sum_2_seq_ieee_correct.
+Print Assumptions sum_2_seq_ieee_correct.
+
+Definition sum_2_lanes_ieee_audit : sum_2_lanes_ieee_spec := sum_2_lanes_ieee_correct.
+Print Assumptions sum_2_lanes_ieee_correct.
+
+Definition sum_2_entry_seq_ieee_audit : sum_2_entry_seq_ieee_spec := sum_2_entry_seq_ieee_correct.
+Print Assumptions sum_2_entry_seq_ieee_correct.
+
+Definition sum_2_entry_lanes_ieee_audit : sum_2_entry_lanes_ieee_spec := sum_2_entry_lanes_ieee_correct.
+Print Assumptions sum_2_entry_lanes_ieee_correct.
+
+Definition sum_fast_2_seq_ieee_audit : sum_fast_2_seq_ieee_spec := sum_fast_2_seq_ieee_correct.
+Print Assumptions sum_fast_2_seq_ieee_correct.
+
+Definition sum_fast_2_lanes_ieee_audit : sum_fast_2_lanes_ieee_spec := sum_fast_2_lanes_ieee_correct.
+Print Assumptions sum_fast_2_lanes_ieee_correct.
+
+Definition sum_fast_2_entry_seq_ieee_audit : sum_fast_2_entry_seq_ieee_spec := sum_fast_2_entry_seq_ieee_correct.
+Print Assumptions sum_fast_2_entry_seq_ieee_correct.
+
+Definition sum_fast_2_entry_lanes_ieee_audit : sum_fast_2_entry_lanes_ieee_spec := sum_fast_2_entry_lanes_ieee_correct.
+Print Assumptions sum_fast_2_entry_lanes_ieee_correct.

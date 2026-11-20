@@ -15,12 +15,9 @@
    add_2_2 and sub_2_2, the steps of add_1, add_2 and sub_2, in OneLimb.v, Add22.v and
    Sign.v.
 
-   The descriptions of the maps still say unverified. For a fold marked proved the
-   generated audit lists one theorem per order, F_seq_correct and F_lanes_correct,
-   against F_seq_spec and F_lanes_spec, and a map has one statement, F_spec, without an
-   order: a description cannot name these theorems until the generator lists F_correct
-   against F_spec. Until then proofs/audit/HandAudit.v checks each of them against its
-   generated statement, by a definition of the same form.
+   The description of each map names this file (theorem:, status: proved), and the
+   generated audit (proofs/gen/Audit.v) checks F_correct against F_spec: a map has one
+   statement, without an order, where a fold has one per order.
 
    What these statements do not say, because the real model of a map has none of it:
    - No order. A map of the library runs in the sequential order and in the lane order,

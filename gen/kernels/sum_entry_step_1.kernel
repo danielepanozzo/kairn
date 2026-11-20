@@ -11,6 +11,8 @@ ensures:       rounded t nearest
 ensures:       error t R c=1/(1+u) k=1 t=0
 min_precision: 1
 theorem:       proofs/theories/StepKernels.v sum_entry_step_1_correct
+ieee_bridge_theorem: proofs/theories/IeeeSteps.v sum_entry_step_1_ieee_bridge
+ieee_lead_theorem: proofs/theories/IeeeFolds.v sum_entry_step_1_ieee_lead
 source:        add_1_1 on a guarded element (rule R3)
 license:       proof: MIT
 status:        proved

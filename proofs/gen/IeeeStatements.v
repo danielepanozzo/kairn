@@ -296,7 +296,7 @@ Definition ball_upper_as_1_spec : Prop :=
   (ball_empty_1 c r -> h = infinity prec emax true) /\
   (~ ball_empty_1 c r -> forall hi : xreal, range_upper (in_ball_1 c r) hi -> xval h = xru prec emax hi).
 
-(* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). IEEE-model status: unverified. *)
+(* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). IEEE-model status: proved. *)
 Definition dot_step_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -663,7 +663,7 @@ Definition next_up_ieee_spec : Prop :=
   let r := IeeeModel.next_up prec emax a in
   xval r = xsucc prec emax (xval a).
 
-(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
 Definition norm_finish_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -675,7 +675,7 @@ Definition norm_finish_1_spec : Prop :=
   (flag = true -> r = m) /\
   (flag = false -> nan r).
 
-(* norm_finish_2: the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+(* norm_finish_2: the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
 Definition norm_finish_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -758,7 +758,7 @@ Definition sub_up_entry_ieee_spec : Prop :=
   let r := IeeeModel.sub_up_entry prec emax nan_plus nan_minus nan_opp nan_abs a b in
   xval r = xru prec emax (xadd (xval a) (xopp (xval b))).
 
-(* sum_entry_step_1: add_1_1 on a guarded element (rule R3). IEEE-model status: unverified. *)
+(* sum_entry_step_1: add_1_1 on a guarded element (rule R3). IEEE-model status: proved. *)
 Definition sum_entry_step_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1391,7 +1391,7 @@ Definition ball_upper_as_2_spec : Prop :=
   (finite c0 /\ finite c1 /\ finite r -> finite h ->
    Rabs (val h - ((val c0 + val c1) + val r)) <= 5 * u prec ^ 1 * (Rabs (val c0 + val c1) + Rabs (val r)) + 3 * eta (ieee_emin prec emax)).
 
-(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. IEEE-model status: unverified. *)
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. IEEE-model status: proved. *)
 Definition dot_step_2_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1410,7 +1410,7 @@ Definition dot_step_2_ieee_bridge_spec : Prop :=
   (val t0, val t1)
   = dot_step_2 (ieee_emin prec emax) prec tie_even (val s0) (val s1) (val x0) (val x1) (val y0) (val y1).
 
-(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. IEEE-model status: unverified. *)
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. IEEE-model status: proved. *)
 Definition dot_step_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2139,7 +2139,7 @@ Definition sub_2_2_full_spec : Prop :=
    w0 = infinity prec emax (Rlt_bool ((val x0 + val x1) - (val y0 + val y1)) 0) /\ w1 = pos_zero prec emax) /\
   (~ (finite x0 /\ finite y0) -> canonical_of t w0 w1).
 
-(* sum_entry_step_2: add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. IEEE-model status: unverified. *)
+(* sum_entry_step_2: add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. IEEE-model status: proved. *)
 Definition sum_entry_step_2_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2157,7 +2157,7 @@ Definition sum_entry_step_2_ieee_bridge_spec : Prop :=
   (val t0, val t1)
   = sum_entry_step_2 (ieee_emin prec emax) prec tie_even (val s0) (val s1) (val x0) (val x1).
 
-(* sum_entry_step_2: add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. IEEE-model status: unverified. *)
+(* sum_entry_step_2: add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. IEEE-model status: proved. *)
 Definition sum_entry_step_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2173,7 +2173,7 @@ Definition sum_entry_step_2_ieee_spec : Prop :=
   normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
   Rabs ((val t0 + val t1) - ((val s0 + val s1) + (val x0 + val x1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((val s0 + val s1) + (val x0 + val x1)).
 
-(* sum_fast_entry_step_2: add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. IEEE-model status: unverified. *)
+(* sum_fast_entry_step_2: add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. IEEE-model status: proved. *)
 Definition sum_fast_entry_step_2_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2191,7 +2191,7 @@ Definition sum_fast_entry_step_2_ieee_bridge_spec : Prop :=
   (val t0, val t1)
   = sum_fast_entry_step_2 (ieee_emin prec emax) prec tie_even (val s0) (val s1) (val x0) (val x1).
 
-(* sum_fast_entry_step_2: add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. IEEE-model status: unverified. *)
+(* sum_fast_entry_step_2: add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. IEEE-model status: proved. *)
 Definition sum_fast_entry_step_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

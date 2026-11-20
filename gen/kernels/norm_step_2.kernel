@@ -11,9 +11,10 @@ output:        mask okr
 requires:      normalized x
 ensures:       maximum r m abs(x[0])
 min_precision: 1
+theorem:       proofs/theories/FoldNorm.v norm_step_2_correct
 source:        the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k)
 license:       proof: MIT
-status:        unverified
+status:        proved
 unused:        x1 the second limb of a normalized pair is within the neighbors of the first; the finish's one step covers it
 cone_exempt:   a maximum is a select after a comparison (norm_combine); a NaN leading limb is kept in the mask okr, and an infinite one in r, which the finish of the fold tests
 

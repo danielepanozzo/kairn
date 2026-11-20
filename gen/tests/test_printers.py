@@ -874,9 +874,18 @@ class Rocq(unittest.TestCase):
     # rounding down of z1 - dd written as minus the rounding up of dd - z1 (no fused result negated
     # through a select); then the kernels of stage B1, which have no real-model statement, changed
     # the order of the files only. The files are the regeneration of the merged descriptions.
+    # Then the eighteen maps were proved (FoldMaps.v): Audit.v lists their theorems, one per map,
+    # among those of the folds, every earlier line kept, in its order; Model.v and Statements.v
+    # are the same.
+    # Then the combination and the steps of the folds of maxima were proved, and the two folds
+    # (FoldNorm.v): in Statements.v only the comments above the three statements changed, and
+    # Audit.v lists the three theorems and those of the two folds in their two orders, every
+    # earlier line kept, in its order.
+    # Then the two convolutions were proved (FoldConv.v): Audit.v lists their theorems, one each,
+    # every earlier line kept, in its order.
     DIGESTS = {'Model.v': '87fb181c8e6c93c1f4464b97b919af311fa8a00a9a9d941c3db262f8489375ee',
-               'Statements.v': '675c18903ea873185a280693d013a2174b88eb1b13e0d4d09b0764a39baff226',
-               'Audit.v': 'ec73e848723879724134adf9a1b35f25d195b5773d0288cf07499f201a53f655'}
+               'Statements.v': '2e4e840dd6d829557bd29c8de4dda3d04bc2968382d771f41ffb8da3bf7717c7',
+               'Audit.v': 'bf7fa40c7144bdb2dc40415465e5f16e0fc8d446e853bce9247129dc91f11a01'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

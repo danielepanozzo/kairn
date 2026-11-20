@@ -11,9 +11,10 @@ ensures:       finite_or_nan r flag=flag if=ok
 min_precision: 1
 source:        the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md)
 license:       proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeFoldNorm.v norm_finish_1_correct
 cone_exempt:   the outputs are selects after the mask ok and an explicit test that the maximum is finite (fold_finish_1), which is what the kernel claims
 
 t         = select(ok, m, const nan)

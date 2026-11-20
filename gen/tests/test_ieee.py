@@ -371,9 +371,12 @@ class Statements(unittest.TestCase):
 
     def test_audit(self):
         text = ieee.audit(self.ks)
-        # Every kernel of the extended domain names its theorem, the two finishes of the folds
-        # among them.
-        self.assertEqual(text.count('Print Assumptions'), 56)
+        # Every kernel of the extended domain names its theorem, the finishes of the folds and
+        # of the folds of maxima among them (58); then the theorems that the descriptions of the
+        # folds' first stage name: 5 bridges and 3 correctness statements of the steps, 8 leading
+        # limbs, and the 8 folds in their two orders (32); and the two folds of maxima in their
+        # two orders (4).
+        self.assertEqual(text.count('Print Assumptions'), 94)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -406,8 +409,12 @@ class CheckedFiles(unittest.TestCase):
     # add_down_2_2 negates no fused result through a select). The files are the regeneration of
     # the merged descriptions; up(2), which ball_from_interval_2 shares with bound_dot_1, is
     # up_bound_dot_1_2 in both (gen/constant_names.json).
+    # Then the descriptions of the steps of the folds named the theorems of their bridge and
+    # correctness statements (IeeeSteps.v): the comments above those eight statements say proved,
+    # and nothing else changed. Then the two finishes of the folds of maxima were proved
+    # (IeeeFoldNorm.v): the two comments above their statements say so, and nothing else changed.
     DIGESTS = {'proofs/gen/IeeeModel.v': '023e54103864b7cc3157ba5ccdaf9d32d5733e2424a17605bd5324e6026b4af5',
-               'proofs/gen/IeeeStatements.v': '0705ee979af0468877aeb249ebbf0fc1b9b326b7a592380101fc3ed601e066ee'}
+               'proofs/gen/IeeeStatements.v': 'd5bbe42f635db9d0bd67d9f36b9bbfdbe90003605d0a4204d83afd7f28e7caae'}
 
 
     def test_the_checked_files(self):
