@@ -91,6 +91,29 @@ VARIANTS = {
     "ball2-G-pred": "second radius design with G one unit in the last place smaller (not an "
                     "error with respect to the claim where the listing has slack)",
     "ball2-H-half": "second radius design with half of H, rounded up (likewise)",
+    # Milestone 2: the building blocks on T and the scaling of a ball by a power of two.
+    "next-up-neg-away": "next_up of a negative finite number moves away from zero",
+    "next-up-ninf": "next_up(-inf) is -inf instead of -Omega",
+    "next-down-zero": "next_down of a zero is -0 (no step) instead of -eta",
+    "dir-sum-nearest": "the directed sums return the sum rounded to nearest",
+    "dir-sum-overflow-inf": "the directed sums return the infinity of the rounded sum on finite "
+                            "operands that overflow (+inf for rounding down above the range)",
+    "mul-bound-wrong-side": "the directed products step the other way: one number on the wrong "
+                            "side",
+    "mul-bound-two-beyond": "the directed products step twice where they cannot decide (below P, "
+                            "computed error zero)",
+    "mul-large-step": "the directed products step whenever the computed error is zero, above P "
+                      "too",
+    "pow2-radius-small": "the scaling of a ball by a power of two returns a radius one number "
+                         "smaller",
+    "pow2-grow-exact": "the scaling of a ball by a power of two grows the radius by two steps even "
+                       "where it is exact",
+    "pow2-zero-radius-grows": "the scaling of a ball by a power of two takes a zero radius as not "
+                              "exact",
+    "pow2-center-off": "the scaling of a ball by a power of two moves the center by one unit where "
+                       "it is exact, and widens the radius to keep the set enclosed",
+    "pow2-scale-eta": "mul_pow2_2 adds eta to its second limb where both limb products are zero "
+                      "or at least N, keeping the error within eta",
     # kairn::rational<X>(num, den) (rational_1, rational_2).
     "rat-lead-ulp": "rational: the first limb one unit in the last place too large, in about 1 "
                     "line in 4",
@@ -686,7 +709,15 @@ class Kernels:
         if self.v == "trace-mul-pow2" and type(h) is int and type(l) is int and A.add(h, l) != h:
             self.trace.append("mul_pow2_2: (h, l) = (%s, %s) is not normalized"
                               % (A.write(h), A.write(l)))
-        return self.fast_two_sum(h, l, "final")
+        z = self.fast_two_sum(h, l, "final")
+        # A rounded product above N comes from an exact one above N, which was exact: the result
+        # is exact there, and eta more is within the bound of eta.
+        if (self.v == "pow2-scale-eta" and self._finite(h, l, *z) and z[0]
+                and abs(h) > A.lam and (x1 == 0 or abs(l) > A.lam)):
+            t = z[1] + 1
+            if A.member(t) and A.add(z[0], t) == z[0]:
+                z = (z[0], t)
+        return z
 
     # -- Ball kernels ---------------------------------------------------------------------------
     def consts(self, kname):
@@ -999,6 +1030,174 @@ class Kernels:
     def ball_make_2(self, c0, c1, r):
         return self._ball_make((c0, c1), r)
 
+    # -- Milestone 2 (milestone2.md, "Building blocks on T", "Scaling a ball by a power of two"),
+    # as listed, on IEEE values: the neighbors, the directed sums and products, the entry forms,
+    # the scaling of a ball by a power of two and its full form -------------------------------
+    def next_up(self, a):
+        A = self.A
+        if self.v == "next-up-ninf" and a == -INF:
+            return (-INF,)
+        if self.v == "next-up-neg-away" and type(a) is int and a < 0:
+            return (A.next_down(a),)
+        return (A.next_up(a),)
+
+    def next_down(self, a):
+        if self.v == "next-down-zero" and a == 0:
+            return (NEG_ZERO,)
+        return (self.A.next_down(a),)
+
+    # The same kernels as claims of the finite domain (the oracle's fixture only).
+    next_up_real = next_up
+    next_down_real = next_down
+
+    def two_sum_ord(self, a, b):
+        """Fast2Sum on the operands ordered by magnitude, the comparison as two selects."""
+        m = abs(a) < abs(b)
+        h = b if m else a
+        l = a if m else b
+        return self.fast_two_sum(h, l)
+
+    def _directed_sum(self, a, b, up):
+        A = self.A
+        s, e = self.two_sum_ord(a, b)
+        if self.v == "dir-sum-nearest":
+            return (s,)
+        n = (0 < e) if up else (e < 0)
+        t = A.next_up(s) if up else A.next_down(s)
+        r = t if n else s
+        if self.v == "dir-sum-overflow-inf" and self._finite(a, b) and type(s) is float:
+            r = s
+        return (r,)
+
+    def add_down_1(self, a, b):
+        return self._directed_sum(a, b, False)
+
+    def add_up_1(self, a, b):
+        return self._directed_sum(a, b, True)
+
+    def sub_down_1(self, a, b):
+        return self._directed_sum(a, -b, False)
+
+    def sub_up_1(self, a, b):
+        return self._directed_sum(a, -b, True)
+
+    def _const_P(self):
+        """const up(eta/(2*u^2)) = 2^(2p-1) eta, rounded up to the format (+inf beyond Omega)."""
+        return self.A.round_up_fraction(Fraction(1 << (2 * self.A.p - 1)))
+
+    def _directed_prod(self, a, b, up):
+        A = self.A
+        p, e = self.two_prod(a, b)
+        ap = abs(p)
+        bd = ap < self._const_P()
+        if self.v == "mul-large-step":
+            bd = True
+        ez = e == 0
+        un = bd and ez
+        n = (0 < e) if up else (e < 0)
+        sd = n or un
+        out = A.next_up if up else A.next_down
+        if self.v == "mul-bound-wrong-side":
+            out = A.next_down if up else A.next_up
+        step = out(p)
+        if self.v == "mul-bound-two-beyond" and un:
+            step = out(step)
+        d = step if sd else p
+        zz = a == 0 or b == 0
+        return (p if zz else d,)
+
+    def mul_down_1(self, a, b):
+        return self._directed_prod(a, b, False)
+
+    def mul_up_1(self, a, b):
+        return self._directed_prod(a, b, True)
+
+    mul_down_real = mul_down_1
+    mul_up_real = mul_up_1
+
+    # The entry forms: both operands guarded, then the kernel of the same name.
+    def two_sum_entry(self, a, b):
+        return self.two_sum(self.guard(a), self.guard(b))
+
+    def fast_two_sum_entry(self, a, b):
+        return self.fast_two_sum(self.guard(a), self.guard(b))
+
+    def radd_entry(self, a, b):
+        return self.radd(self.guard(a), self.guard(b))
+
+    def add_down_entry(self, a, b):
+        return self.add_down_1(self.guard(a), self.guard(b))
+
+    def add_up_entry(self, a, b):
+        return self.add_up_1(self.guard(a), self.guard(b))
+
+    def sub_down_entry(self, a, b):
+        return self.sub_down_1(self.guard(a), self.guard(b))
+
+    def sub_up_entry(self, a, b):
+        return self.sub_up_1(self.guard(a), self.guard(b))
+
+    def _ball_mul_pow2(self, cx, rx, c):
+        A = self.A
+        N = A.lam                                  # const up(eta/(2*u)), exact
+        h = A.prod(cx[0], c)
+        if len(cx) == 2:
+            l = A.prod(cx[1], c)
+            cz = self.fast_two_sum(h, l)
+            m = h if cx[1] == 0 else l             # the scaled last nonzero limb
+        else:
+            cz = (h,)
+            m = h
+        rr = A.prod(rx, c)
+        ec = N < abs(m) or cx[0] == 0              # the center was scaled exactly
+        zr = rx == 0
+        if self.v == "pow2-zero-radius-grows":
+            zr = False
+        er = N < rr or zr                          # the radius was scaled exactly
+        ex = ec and er
+        if self.v == "pow2-grow-exact":
+            ex = False
+        rz = rr if ex else A.next_up(A.next_up(rr))
+        if self.v == "pow2-radius-small" and type(rz) is int and rz > 0:
+            rz = A.next_down(rz)
+        if self.v == "pow2-center-off" and ex and self._finite(rz, *cz):
+            cz, rz = self._center_off(cz, rz)
+        return cz + (rz,)
+
+    def _center_off(self, cz, rz):
+        """The center moved by one unit (eta in the second limb of a pair, when the pair stays
+        normalized; the next number for one limb) and the radius widened by as much, rounded
+        up, so that the set stays enclosed."""
+        A = self.A
+        if len(cz) == 2:
+            t = cz[1] + 1
+            if not (A.member(t) and A.add(cz[0], t) == cz[0]):
+                return cz, rz
+            new, shift = (cz[0], t), 1
+        else:
+            n = A.next_up(cz[0])
+            if type(n) is not int:
+                return cz, rz
+            new, shift = (n,), n - cz[0]
+        r = A.round_up_fraction(Fraction(rz + shift))
+        return (new, r) if type(r) is int else (cz, rz)
+
+    def ball_mul_pow2_1(self, cx, rx, c):
+        return self._ball_mul_pow2((cx,), rx, c)
+
+    def ball_mul_pow2_2(self, cx0, cx1, rx, c):
+        return self._ball_mul_pow2((cx0, cx1), rx, c)
+
+    def ball_mul_pow2_1_full(self, cx, rx, c):
+        return self._ball_fixup(self.ball_mul_pow2_1(cx, rx, c), 1, rx)
+
+    def ball_mul_pow2_2_full(self, cx0, cx1, rx, c):
+        return self._ball_fixup(self.ball_mul_pow2_2(cx0, cx1, rx, c), 2, rx)
+
+
+# A negative zero as an output (next-down-zero): the fixed values have one zero.
+NEG_ZERO = "-0x0p+0"
+
 
 ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "split": 1,
          "add_2_2": 4, "add_2_1": 3, "mul_2_2": 4, "mul_2_1": 3, "add_fast_2_2": 4,
@@ -1015,7 +1214,14 @@ ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "
          "mul_pow2_2_full": 3, "ball_add_1_full": 4, "ball_add_2_full": 6, "ball_sub_1_full": 4,
          "ball_sub_2_full": 6, "ball_mul_1_full": 4, "ball_mul_2_full": 6, "ball_scale_1_full": 3,
          "ball_scale_2_full": 4, "make_2": 1, "make_2_limbs": 2, "ball_make_1": 2,
-         "ball_make_2": 3, "add_1_1": 2, "mul_1_1": 2}
+         "ball_make_2": 3, "add_1_1": 2, "mul_1_1": 2,
+         # Milestone 2.
+         "next_up": 1, "next_down": 1, "next_up_real": 1, "next_down_real": 1, "two_sum_ord": 2,
+         "add_down_1": 2, "add_up_1": 2, "sub_down_1": 2, "sub_up_1": 2, "mul_down_1": 2,
+         "mul_up_1": 2, "mul_down_real": 2, "mul_up_real": 2, "two_sum_entry": 2,
+         "fast_two_sum_entry": 2, "radd_entry": 2, "add_down_entry": 2, "add_up_entry": 2,
+         "sub_down_entry": 2, "sub_up_entry": 2, "ball_mul_pow2_1": 3, "ball_mul_pow2_2": 4,
+         "ball_mul_pow2_1_full": 3, "ball_mul_pow2_2_full": 4}
 FIRST_WAVE = frozenset(("two_sum", "fast_two_sum", "two_prod", "two_prod_dekker", "split",
                         "add_2_2", "add_2_1", "mul_2_2", "mul_2_1", "add_fast_2_2"))
 # kairn::rational<X>(num, den), with its number of limbs.
@@ -1087,7 +1293,8 @@ class Runner:
                 if type(n) is int and A.member(z1 - (n - z0)):
                     out = [n, z1 - (n - z0)]
         return pre + [line + " -> " + " ".join(
-            ("1" if v else "0") if type(v) is bool else A.write(v) for v in out)]
+            ("1" if v else "0") if type(v) is bool else v if v is NEG_ZERO else A.write(v)
+            for v in out)]
 
     def corrupt(self, kname, A, args):
         args = list(args)

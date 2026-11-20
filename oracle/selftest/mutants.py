@@ -175,6 +175,85 @@ MUTANTS = {
         "    pinned = False"),
     "claims: lead not compared with the value": (
         "claims.py", "        if (t[0] != LEADS[self.lead] or", "        if False and (t[0] != LEADS[self.lead] or"),
+    # The kinds of Milestone 2.
+    "neighbor: up and down swapped": (
+        "directed.py", "    return F.succ(fmt, a) if up else F.pred(fmt, a)",
+        "    return F.pred(fmt, a) if up else F.succ(fmt, a)"),
+    "neighbor: next_up(-inf) is -inf": (
+        "directed.py", "        return -fmt.omega if up else NINF", "        return NINF"),
+    "neighbor: next_down(+inf) is +inf": (
+        "directed.py", "        return INF if up else fmt.omega", "        return INF"),
+    "neighbor: output not compared (extended domain)": (
+        "extended.py", '    if z[c["first"]] != r:\n        return ["neighbor:',
+        '    if False:\n        return ["neighbor:'),
+    "neighbor: output not compared (finite domain)": (
+        "check.py", '        if z[e["first"]] != r:\n            return "output is not the next number',
+        '        if False:\n            return "output is not the next number'),
+    "neighbor: the row of eta miscounted": (
+        "directed.py", "    if a == 1:\n        return ROW_ETA", "    if a == 2:\n        return ROW_ETA"),
+    "neighbor: a step from N counted as from a power of two above it": (
+        "directed.py", "if toward_zero and m > fmt.lam and", "if toward_zero and m >= fmt.lam and"),
+    # (The test of the side alone is redundant: an output on the wrong side is not reached by the
+    # steps outward from the directed rounding, and fails there.)
+    "bound: the steps taken toward the value (extended domain)": (
+        "extended.py", "        t = D.neighbor(fmt, t, not below)", "        t = D.neighbor(fmt, t, below)"),
+    "bound: the steps taken toward the value (finite domain)": (
+        "check.py", "            t = D.step_unbounded(fmt, t, below)",
+        "            t = D.step_unbounded(fmt, t, not below)"),
+    "bound: one step more allowed (extended domain)": (
+        "extended.py", '        if k == c["steps"]:', '        if k == c["steps"] + 1:'),
+    "bound: one step more allowed (finite domain)": (
+        "check.py", '            if k == e["steps"]:', '            if k == e["steps"] + 1:'),
+    "bound: rounded up above Omega kept finite": (
+        "directed.py", "    return INF if r > om else -om if r < -om else r",
+        "    return om if r > om else -om if r < -om else r"),
+    "bound: an infinite or NaN value not compared": (
+        "extended.py", "        if o != v:\n            return [\"bound: the output is not",
+        "        if False:\n            return [\"bound: the output is not"),
+    "bound: steps of the finite domain taken above a power of two": (
+        "directed.py", "        return t - F.gap_below(fmt, t)", "        return t - F.ulp(fmt, t)"),
+    "rounded when: the condition ignored (extended domain)": (
+        "extended.py", "            if not (v == 0 or abs(v) >= pl.pl_thr):\n                es.count(D.WHEN_FAILS)",
+        "            if False:\n                es.count(D.WHEN_FAILS)"),
+    "rounded when: the condition ignored (finite domain)": (
+        "check.py", 'if pl.entries[i]["when"] == "product_large" and not', "if False and not"),
+    "rounded when: the threshold P halved": (
+        "check.py", "self.pl_thr = 1 << max(2 * fmt.p - 1 + q - self.sv, 0)",
+        "self.pl_thr = 1 << max(2 * fmt.p - 2 + q - self.sv, 0)"),
+    "rounded of two operands: the overflow classes swapped": (
+        "directed.py", "    return OVER_ABOVE if v > 0 else OVER_BELOW",
+        "    return OVER_BELOW if v > 0 else OVER_ABOVE"),
+    "rounded of two operands: a NaN operand never counted": (
+        "extended.py", "    if NAN in ops:\n        es.count(D.NAN_OPERAND)",
+        "    if False:\n        es.count(D.NAN_OPERAND)"),
+    "exact_when: encloses not judged": (
+        "check.py", '        if "exact" not in e or self._exact_failing(e, es, x):', "        if True:"),
+    "exact_when: error not judged": (
+        "check.py", "        if (O << pl.sh_out) != (V << pl.sh_val):\n            return \"exact_when holds",
+        "        if False:\n            return \"exact_when holds"),
+    "exact_when: a strict condition read as >=": (
+        "check.py", "                return a > b if strict else a >= b", "                return a >= b"),
+    "exact_when: a zero does not satisfy a condition": (
+        "check.py", "                if v == 0:\n                    return True",
+        "                if v == 0:\n                    return False"),
+    "exact_when: a limb reference reads the leading limb": (
+        "check.py", '            return "x[%d]" % (self.in_slices[n][0] + i), self.fmt.qmin',
+        '            return "x[%d]" % (self.in_slices[n][0]), self.fmt.qmin'),
+    "exact_when: eta read as u in a threshold": (
+        "claims.py", '            elif m.group(3) == "eta":\n                toks.append(("num", eta))',
+        '            elif m.group(3) == "eta":\n                toks.append(("num", u))'),
+    "exact_when: a threshold that is not positive accepted": (
+        "claims.py", "            if eval_const(k, u, eta) <= 0:", "            if False:"),
+    "claims: the value of neighbor not checked": (
+        "claims.py", '            if t[0] != "name" or kernel.limbs_of(t[1]) != 1:',
+        "            if False:"),
+    "gen: the products around P aimed three binades higher": (
+        "gen4.py", "    ep = _p_exponent(fmt)\n    P2", "    ep = _p_exponent(fmt) + 3\n    P2"),
+    "gen: the scaled values at N aimed at 2N": (
+        "gen4.py", "    x0 = lam >> k if k >= 0 else lam << -k",
+        "    x0 = (lam >> k if k >= 0 else lam << -k) * 2"),
+    "gen: the special values without Omega": (
+        "gen4.py", "2 * lam, 2 * lam - 1, om, F.pred(fmt, om),", "2 * lam, 2 * lam - 1, F.pred(fmt, om),"),
     # rational_1 and rational_2 (kairn::rational).
     "rational: the naive pair": (
         "rational.py", "        z0 = F.rn_fixed(fmt, v)\n", "        z0 = a\n"),

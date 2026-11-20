@@ -899,12 +899,14 @@ def brute_driver(ctx):
 
 
 # The tests of the second wave register themselves after the first wave's, those of the
-# non-finite layer after them, those of the search and the shrinker next, and those of
-# rational_1 and rational_2 (kairn::rational) last.
+# non-finite layer after them, those of the search and the shrinker next, those of
+# rational_1 and rational_2 (kairn::rational) after them, and those of the kinds of Milestone 2
+# last.
 from . import selftest2  # noqa: E402,F401
 from . import selftest3  # noqa: E402,F401
 from . import selftest4  # noqa: E402,F401
 from . import selftest5  # noqa: E402,F401
+from . import selftest6  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------
