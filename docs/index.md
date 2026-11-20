@@ -5,8 +5,9 @@ and ball arithmetic. Its aim is that every error bound it states carries a machi
 and that the code it ships is generated from the same description the proofs are about.
 
 **Status: pre-release. Milestone 1 is complete
-([report](developer/results/milestone1.md)), Milestone 2 is next, and nothing in this repository
-should be relied on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them,
+([report](developer/results/milestone1.md)), Milestone 2 is in progress
+([what each milestone adds](developer/design/phase0/plan.md#milestones)), and nothing in this
+repository should be relied on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them,
 and the statement of each of their operations has a checked proof in a model where nothing
 overflows; the [reference](reference/index.md) has each statement and its theorem. One exception:
 `ldexp` by a power of two outside the limb type's range is composed from proved steps by an

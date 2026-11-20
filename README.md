@@ -5,8 +5,8 @@ header-only C++20. Every error bound is meant to carry a machine-checked proof, 
 code is generated from the same source the proofs are about.
 
 **Status: pre-release. Phase 0 (specification and feasibility) and Milestone 1 are complete
-([report](docs/developer/results/milestone1.md)); Milestone 2 is next. Nothing here should be
-relied on yet.** The documentation is at <https://danielepanozzo.github.io/kairn/>. The first public headers exist: `kairn/kairn.hpp`, with
+([report](docs/developer/results/milestone1.md)); Milestone 2 is in progress
+([what each milestone adds](#milestones)). Nothing here should be relied on yet.** The documentation is at <https://danielepanozzo.github.io/kairn/>. The first public headers exist: `kairn/kairn.hpp`, with
 `kairn::Expansion<T, 1>`, `kairn::Expansion<T, 2>` and `kairn::Ball<T, 1>`, `kairn::Ball<T, 2>` for
 `T` = `float` or `double`. Every operation has a proved error bound or containment, except `ldexp`
 by a power of two that the limb type cannot represent, whose steps are proved and whose composition
@@ -23,6 +23,31 @@ says what is proved, in which model, and what is not yet.
   and the decisions taken at its review.
 - [Experiments](experiments/phase0/README.md) behind the report.
 - [The original brief](docs/developer/design/brief.md).
+
+## Milestones
+
+Kairn is built in milestones. Each ends with a short report (what is done, which bounds are proved,
+what the brute-force runs found, benchmarks, documentation added, open issues) and ships the
+documentation for what it added. The table with each milestone's exit criteria and main risk is in
+[the plan](docs/developer/design/phase0/plan.md#milestones); what was decided since is in
+[the decisions log](docs/developer/design/phase0/decisions.md#decisions-log).
+
+| # | What it adds | State |
+|---|---|---|
+| 0 | Specification and feasibility: what Kairn will be, the experiments behind it, the decisions taken at its review | done ([report](docs/developer/design/phase0/index.md)) |
+| 1 | The vertical slice: numbers of one and two limbs (`double`, and `float`, which came with the proofs); addition, subtraction, multiplication, operations with a `T` operand, `ldexp`, comparisons, conversions; scalar, AVX2 and NEON; `Ball`; the generator; the Rocq proofs, with gradual underflow; the oracle with its quick and brute-force tiers; CI with the matrix of compiler flags and the object-code check; the self-test and the check of the floating-point environment; the documentation site | done ([report](docs/developer/results/milestone1.md)) |
+| 2 | `Interval`; one enclosure interface shared by `Interval` and `Ball` (predicates, comparisons, hull, intersection, midpoint and radius, conversions, split); the building blocks as public functions (`two_sum`, `two_prod`, sums and products rounded down and up without changing the rounding mode); numbers built at compile time from an integer or a rational; `BallVector`, arrays of centers with one radius, and the functions on arrays (sum, dot product, `axpy`, convolution, an upper bound of the norm, the accumulator) with their bounds as functions of the length; containers in structure-of-arrays form and the packed SIMD type; exhaustive tests on small emulated formats; each cross-check of the quick tier in one process. It ends when the first client's ball path can be written against it | in progress ([design](docs/developer/design/milestone2.md)) |
+| 3 | The GPU backends, CUDA and Metal: device code, helpers for a warp, self-tests on the device, the proofs for flush-to-zero arithmetic, and benchmarks of `float` against `double` on the GPUs | planned |
+| 4 | Numbers of three and four limbs: the networks first, marked unverified, then their Rocq proofs. The highest proof risk of the plan | planned |
+| 5 | Division and square root (two limbs from the existing proofs; three and four limbs by Newton iteration); matrix-vector and matrix-matrix products; dispatch to AVX-512 | planned |
+| 6 | Eight limbs, and a number of limbs chosen at run time. Research: it ends with an algorithm that has an induction proof, or with a documented negative result | planned |
+| 7 | Decimal input and output; the elementary functions; a C interface and bindings | planned |
+| 8 | Release hardening: benchmarks against QD, CAMPARY, MultiFloats.jl, CCCL fpmp2, MPFR and Arb; the full tutorials and the gallery | planned |
+
+Milestones 2 and 3 do not depend on 4, so balls with two-limb centers on the CPU and on the GPU
+come before the risky proofs. No release happens before every public operation is proved,
+documented and exercised by a tutorial example in CI; the milestones before that are development
+snapshots.
 
 ## Build and test
 
