@@ -294,6 +294,65 @@
       }
     },
     {
+      "name": "add_entry_step_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "value": "x+y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "z",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_1_1 on guarded operands (rule R3); one rounding to nearest",
+        "license": "bound: published; proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
       "name": "add_up_1",
       "domain": "extended",
       "inputs": [
@@ -389,6 +448,184 @@
       "instances": {
         "binary64": [],
         "binary32": []
+      }
+    },
+    {
+      "name": "mul_1_1",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "p",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "p",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "p",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "1/2",
+          "when": null
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/OneLimb.v",
+        "name": "mul_1_1_correct"
+      },
+      "source": {
+        "cite": "one rounding to nearest",
+        "license": "bound: published; proof: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
+            "abs": "1/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "axpy_entry_step_1",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "T",
+          "c": "(2+3*u)/((1+u)*(1+u))",
+          "k": 1,
+          "t": "2/3",
+          "when": null
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "18014398509481987/81129638414606699710187514626049",
+            "abs": "1/303603379960965927528743020078375960574334974646213177535352037041145509351993020337940575552155686742780616796475217867084713106078690215300520099911107764882276136414849542046700361613139824511859651517709117602843011225137039047927155033473739334511215084768538154328500121922845753798279491262969009394961561611640242176"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "33554435/281475010265089",
+            "abs": "1/1070435769529469910793714477087121352287059968"
+          }
+        ]
+      }
+    },
+    {
+      "name": "axpy_step_1",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "T",
+          "c": "(2+3*u)/((1+u)*(1+u))",
+          "k": 1,
+          "t": "2/3",
+          "when": null
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_1_1 then add_1_1",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "18014398509481987/81129638414606699710187514626049",
+            "abs": "1/303603379960965927528743020078375960574334974646213177535352037041145509351993020337940575552155686742780616796475217867084713106078690215300520099911107764882276136414849542046700361613139824511859651517709117602843011225137039047927155033473739334511215084768538154328500121922845753798279491262969009394961561611640242176"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "33554435/281475010265089",
+            "abs": "1/1070435769529469910793714477087121352287059968"
+          }
+        ]
       }
     },
     {
@@ -1683,68 +1920,6 @@
       }
     },
     {
-      "name": "mul_1_1",
-      "inputs": [
-        {
-          "name": "a",
-          "limbs": 1
-        },
-        {
-          "name": "b",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "p",
-          "limbs": 1
-        }
-      ],
-      "value": "a*b",
-      "requires": [],
-      "ensures": [
-        {
-          "kind": "rounded",
-          "of": "p",
-          "mode": "nearest"
-        },
-        {
-          "kind": "error",
-          "of": "p",
-          "form": "R",
-          "c": "1/(1+u)",
-          "k": 1,
-          "t": "1/2",
-          "when": null
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/OneLimb.v",
-        "name": "mul_1_1_correct"
-      },
-      "source": {
-        "cite": "one rounding to nearest",
-        "license": "bound: published; proof: MIT"
-      },
-      "flops": 1,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "1/9007199254740993",
-            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "1/16777217",
-            "abs": "1/1427247692705959881058285969449495136382746624"
-          }
-        ]
-      }
-    },
-    {
       "name": "two_prod",
       "inputs": [
         {
@@ -1876,6 +2051,67 @@
       "instances": {
         "binary64": [],
         "binary32": []
+      }
+    },
+    {
+      "name": "mul_pow2_step_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "z",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 1,
+          "t": "1/2",
+          "when": null
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "one rounding to nearest of a product by a power of two",
+        "license": "bound: published; proof: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "1/1427247692705959881058285969449495136382746624"
+          }
+        ]
       }
     },
     {
@@ -2181,6 +2417,65 @@
       }
     },
     {
+      "name": "scale_step_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "value": "x*a",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "z",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "1/2",
+          "when": null
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_1_1, one rounding to nearest",
+        "license": "bound: published; proof: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
+            "abs": "1/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
       "name": "split",
       "inputs": [
         {
@@ -2228,6 +2523,65 @@
         "binary32": [
           {
             "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sub_1_1",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        }
+      ],
+      "value": "a-b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "s",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "s",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "one rounding to nearest",
+        "license": "bound: published; proof: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
             "abs": "0"
           }
         ]
@@ -2329,6 +2683,65 @@
       "instances": {
         "binary64": [],
         "binary32": []
+      }
+    },
+    {
+      "name": "sub_entry_step_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "value": "x-y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "z",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_1_1 on guarded operands (rule R3); one rounding to nearest",
+        "license": "bound: published; proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
+            "abs": "0"
+          }
+        ]
       }
     },
     {
@@ -3103,6 +3516,67 @@
       }
     },
     {
+      "name": "add_entry_step_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "3/(1-4*u)",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 on guarded operands (rule R3); JMP17 Alg. 6, bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 24,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "3/81129638414606645666991986180096",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/93824969867264",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
       "name": "add_fast_2_2",
       "inputs": [
         {
@@ -3225,6 +3699,395 @@
       "instances": {
         "binary64": [],
         "binary32": []
+      }
+    },
+    {
+      "name": "mul_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "4",
+          "k": 2,
+          "t": "3/2",
+          "when": null
+        }
+      ],
+      "min_precision": 4,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Mul22.v",
+        "name": "mul_2_2_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 12 (DWTimesDW3); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 9,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/20282409603651670423947251286016",
+            "abs": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/70368744177664",
+            "abs": "3/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "axpy_entry_step_2",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 2
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [
+        "normalized(a)",
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "T",
+          "c": "3*(1+4*u*u)/(1-4*u)+4",
+          "k": 2,
+          "t": "2",
+          "when": null
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 31,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "141976867225561656938833740038147/1645504557321205311404150517105891403140319507492070035382337536",
+            "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "164193714044929/6602345302066533842913591296",
+            "abs": "1/356811923176489970264571492362373784095686656"
+          }
+        ]
+      }
+    },
+    {
+      "name": "mul_2_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "2",
+          "k": 2,
+          "t": "1",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Mul21.v",
+        "name": "mul_2_1_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 9 (DWTimesFP3); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/40564819207303340847894502572032",
+            "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/140737488355328",
+            "abs": "1/713623846352979940529142984724747568191373312"
+          }
+        ]
+      }
+    },
+    {
+      "name": "axpy_entry_step_2_1",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "T",
+          "c": "3*(1+2*u*u)/(1-4*u)+2",
+          "k": 2,
+          "t": "5/4",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 28,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "202824096036516668210675493896195/3291009114642410622808301034211782806280639014984140070764675072",
+            "abs": "5/809609013229242473409981386875669228198226599056568473427605432109721358271981387567841534805748497980748311457267247645559234949543173907468053599762954039686069697106265445457867630968372865364959070713890980274248029933698770794472413422596638225363240226049435078209333658460922010128745310034584025053230830964373979136"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "234562458222593/13204690604133067685827182592",
+            "abs": "5/2854495385411919762116571938898990272765493248"
+          }
+        ]
+      }
+    },
+    {
+      "name": "axpy_step_2",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 2
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [
+        "normalized(a)",
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "T",
+          "c": "3*(1+4*u*u)/(1-4*u)+4",
+          "k": 2,
+          "t": "2",
+          "when": null
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 29,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "141976867225561656938833740038147/1645504557321205311404150517105891403140319507492070035382337536",
+            "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "164193714044929/6602345302066533842913591296",
+            "abs": "1/356811923176489970264571492362373784095686656"
+          }
+        ]
+      }
+    },
+    {
+      "name": "axpy_step_2_1",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "T",
+          "c": "3*(1+2*u*u)/(1-4*u)+2",
+          "k": 2,
+          "t": "5/4",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 26,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "202824096036516668210675493896195/3291009114642410622808301034211782806280639014984140070764675072",
+            "abs": "5/809609013229242473409981386875669228198226599056568473427605432109721358271981387567841534805748497980748311457267247645559234949543173907468053599762954039686069697106265445457867630968372865364959070713890980274248029933698770794472413422596638225363240226049435078209333658460922010128745310034584025053230830964373979136"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "234562458222593/13204690604133067685827182592",
+            "abs": "5/2854495385411919762116571938898990272765493248"
+          }
+        ]
       }
     },
     {
@@ -3435,70 +4298,6 @@
       "instances": {
         "binary64": [],
         "binary32": []
-      }
-    },
-    {
-      "name": "mul_2_2",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "z",
-          "limbs": 2
-        }
-      ],
-      "value": "x*y",
-      "requires": [
-        "normalized(x)",
-        "normalized(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "z"
-        },
-        {
-          "kind": "error",
-          "of": "z",
-          "form": "R",
-          "c": "4",
-          "k": 2,
-          "t": "3/2",
-          "when": null
-        }
-      ],
-      "min_precision": 4,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Mul22.v",
-        "name": "mul_2_2_correct"
-      },
-      "source": {
-        "cite": "JMP17 Alg. 12 (DWTimesDW3); bound from MR22",
-        "license": "algorithm: published; proof: MIT"
-      },
-      "flops": 9,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "1/20282409603651670423947251286016",
-            "abs": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "1/70368744177664",
-            "abs": "3/1427247692705959881058285969449495136382746624"
-          }
-        ]
       }
     },
     {
@@ -3954,69 +4753,6 @@
       "instances": {
         "binary64": [],
         "binary32": []
-      }
-    },
-    {
-      "name": "mul_2_1",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "a",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "z",
-          "limbs": 2
-        }
-      ],
-      "value": "x*a",
-      "requires": [
-        "normalized(x)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "z"
-        },
-        {
-          "kind": "error",
-          "of": "z",
-          "form": "R",
-          "c": "2",
-          "k": 2,
-          "t": "1",
-          "when": null
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Mul21.v",
-        "name": "mul_2_1_correct"
-      },
-      "source": {
-        "cite": "JMP17 Alg. 9 (DWTimesFP3); bound from MR22",
-        "license": "algorithm: published; proof: MIT"
-      },
-      "flops": 6,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "1/40564819207303340847894502572032",
-            "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "1/140737488355328",
-            "abs": "1/713623846352979940529142984724747568191373312"
-          }
-        ]
       }
     },
     {
@@ -5155,6 +5891,127 @@
       }
     },
     {
+      "name": "mul_pow2_step_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "normalized(x)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "1",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_pow2_2, the two limbs scaled and renormalized",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "1/713623846352979940529142984724747568191373312"
+          }
+        ]
+      }
+    },
+    {
+      "name": "scale_step_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "2",
+          "k": 2,
+          "t": "1",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/40564819207303340847894502572032",
+            "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/140737488355328",
+            "abs": "1/713623846352979940529142984724747568191373312"
+          }
+        ]
+      }
+    },
+    {
       "name": "sub_1_2",
       "inputs": [
         {
@@ -5526,6 +6383,67 @@
       }
     },
     {
+      "name": "sub_entry_step_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "3/(1-4*u)",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_2_2 on guarded operands (rule R3); add_2_2 (JMP17 Alg. 6) on -y, bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 24,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "3/81129638414606645666991986180096",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/93824969867264",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
       "name": "sum_entry_step_2",
       "inputs": [
         {
@@ -5750,6 +6668,788 @@
   ],
   "folds": [
     {
+      "name": "add_1",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x+y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "add_1_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "add_1_1",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_1_1 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "add_1_entry",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x+y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "add_entry_step_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "add_entry_step_1",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_1_1 on each element, guarded",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "add_2",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "add_2_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "add_2_2",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "add_2_entry",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "add_entry_step_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "add_entry_step_2",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 on each element, guarded",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "axpy_1",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "a",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "axpy_step_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "axpy_step_1",
+      "step_args": [
+        "a",
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "axpy_step_1 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "axpy_1_entry",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "a",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "axpy_entry_step_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "axpy_entry_step_1",
+      "step_args": [
+        "a",
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "axpy_entry_step_1 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "axpy_2",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "a",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [
+        "canonical(a)",
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "axpy_step_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "axpy_step_2",
+      "step_args": [
+        "a",
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "axpy_step_2 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "axpy_2_1",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "a",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "axpy_step_2_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "axpy_step_2_1",
+      "step_args": [
+        "a",
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "axpy_step_2_1 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "axpy_2_1_entry",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "a",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "axpy_entry_step_2_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "axpy_entry_step_2_1",
+      "step_args": [
+        "a",
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "axpy_entry_step_2_1 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "axpy_2_entry",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "a",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "a*x+y",
+      "requires": [
+        "canonical(a)",
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "axpy_entry_step_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "axpy_entry_step_2",
+      "step_args": [
+        "a",
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "axpy_entry_step_2 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
       "name": "dot_1",
       "domain": "extended",
       "arrays": [
@@ -5958,6 +7658,599 @@
             "tau": "3/1427247692705959881058285969449495136382746624"
           }
         ]
+      }
+    },
+    {
+      "name": "mul_pow2_map_1",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "c",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "mul_pow2_step_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "mul_pow2_step_1",
+      "step_args": [
+        "x",
+        "c"
+      ],
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "a product by a power of two on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "mul_pow2_map_2",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "c",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "canonical(x)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "mul_pow2_step_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "mul_pow2_step_2",
+      "step_args": [
+        "x",
+        "c"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_pow2_2 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "scale_1",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "a",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*a",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "scale_step_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "scale_step_1",
+      "step_args": [
+        "x",
+        "a"
+      ],
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_1_1 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "scale_2",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "a",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "scale_step_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "scale_step_2",
+      "step_args": [
+        "x",
+        "a"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_2_1 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "sub_1",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "sub_1_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "sub_1_1",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_1_1 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "sub_1_entry",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "sub_entry_step_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "sub_entry_step_1",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_1_1 on each element, guarded",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "sub_2",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "sub_2_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "sub_2_2",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_2_2 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "sub_2_entry",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "sub_entry_step_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "sub_entry_step_2",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_2_2 on each element, guarded",
+        "license": "algorithm: published; proof: MIT"
       }
     },
     {

@@ -417,6 +417,25 @@ its own, or packed.
 
 ### The rule
 
+**The compiler's own vectorization is off** in every compilation of the check: with Clang and
+Apple clang `-fno-vectorize -fno-slp-vectorize`, with clang-cl the same through `/clang:`, with GCC
+`-fno-tree-vectorize` (which covers loop and SLP vectorization). Automatic vectorization packs
+independent operations into one instruction without changing any of them, so a count of
+instructions cannot see through it. Clang 18 on x86-64 vectorizes the loop of the map `axpy_2`,
+and in its scalar rest packs two of the step's five independent FMAs into one 128-bit
+`vfmadd231pd`: nine fused instructions for two copies of a five-FMA step, with exactly the step's
+operations. Clang 18 packs two independent scalar FMAs of a straight-line kernel into one
+`vfmadd213ps` too, two live lanes in a four-lane register, so the number of lanes an instruction
+computes cannot be read off the instruction either. The check exists to catch a compiler fusing
+or splitting operations, and a compiler decides that independently of the packing. Whether results
+change when the compiler vectorizes is the business of the cross-checks, which run with the
+compiler's defaults and compare bits ([Cross-checks](#cross-checks)). The explicit SIMD
+forms (`F_packed`, the AVX2 and NEON kernels) are intrinsics, which these options leave as they
+are written, and are checked as before. MSVC has no option that turns its vectorizer off: the
+check compiles with `/Qvec-report:1`, under which MSVC names every loop it vectorized (`info
+C5001: loop vectorized`), and fails on any, naming them. The vectorization control below shows
+what the options are for.
+
 For each kernel, form and limb type:
 
 - **Fused multiply-adds**: one per FMA node of the flattened IR (`fma`, `fms`, `fnma`, `prod`),
@@ -450,7 +469,12 @@ For each kernel, form and limb type:
   step has five FMAs, may have 5, 10, 15, ... in `F_seq` and 10, 15, ... in `F_lanes`, never 4
   or 11; a contraction in a loop body adds one that no number of copies makes, unless it is
   repeated in exactly a step's worth of copies, which the check cannot tell from an unrolled
-  step. The sums ask for none at all.
+  step. The sums ask for none at all. A map's parts are its step and its check (the kernel that
+  tests each written element): `F_seq` the step once and the check twice (the first pass and the
+  second), `F_lanes` the step twice and the check three times, `F_packed` the packed step and the
+  packed check once and the scalar step once and the check twice. The copies are those of
+  unrolling and peeling: with the compiler's vectorization off, every copy is a scalar copy, and in
+  `F_packed` the packed step is the one the intrinsics write.
 - **Nothing else**: every kernel has its function and every function of the unit its counts; it
   calls nothing outside the object but the stack protector's routines and the stack probes of
   Windows and of Darwin, which do no arithmetic (Ubuntu's GCC protects functions by default; Apple
@@ -474,7 +498,9 @@ computed as a product and a sum, or an opaque product folded back into a plain o
 library's `fma` for example, is arithmetic that the check cannot see.
 
 What it does not check: the order of the operations and what they compute (the cross-checks and
-the generator's comparison with the interpreter do); instructions of other kinds; a kernel inlined
+the generator's comparison with the interpreter do); the code a compiler makes when it vectorizes
+on its own (the cross-checks run it, with the compiler's defaults, and compare bits); instructions
+of other kinds; a kernel inlined
 into a caller, which a compiler may optimize differently (the unit's functions are not inlined; R1
 and R2 are what make that harmless for contraction,
 [Environment](design/phase0/environment.md#the-self-test)); the public headers' operators, which
@@ -544,6 +570,23 @@ of the format, says independently where the compiler fused it. The test requires
 in every configuration of the tier, and at least one configuration to fuse. It also judges the
 unit against counts changed on purpose (one FMA more for `mul_2_2`, one multiplication fewer for
 `add_2_2_full`) and requires exactly those two kernels to fail.
+
+The fixture has a loop too, the step of a map: `t = fma_rn(x[i], a, y[i]); z[i] = t * b + c`, its
+first product written as the generator writes every product and its second as the textbook
+product and sum, compiled like the unit (vectorization off), with contraction allowed where the
+configuration allows it. The check judges it by the rule of the loops of folds, its step one FMA
+and one product per element, so a contraction shows as an FMA more and a multiplication fewer in
+every copy, which no number of copies of the step makes; its program, on 67 elements, says where
+the compiler fused it (all of them, none, or some). The test requires the two to agree, and at
+least one configuration of the tier to fuse the loop.
+
+The vectorization control compiles the unit once more, in the first optimized configuration of
+the quick tier, *with* the compiler's own vectorization, and judges it by the same rule. It
+records what the check then finds per compiler: with Clang on x86-64 (clang++ and clang-cl), the
+packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for `double`; with every
+other compiler measured (GCC 13 on x86-64, Apple clang 21 and GCC 16 on AArch64), nothing, their
+vectorized loops holding whole copies of the step. A compiler that stops packing, or one that
+starts, fails the control, so that we learn it.
 
 Where each compiler fused the textbook product in the configurations of the full tier, measured on
 2026-11-19; it fused nowhere else, and the check failed on exactly these:
@@ -1318,6 +1361,17 @@ python3 gen/kairn-gen test --cxx clang++    # another compiler
 python3 gen/kairn-gen test --full           # a few hundred thousand cases per kernel
 python3 gen/kairn-gen test --no-cxx --skip test_statements.   # without C++, without a module
 ```
+
+**The maps, and their steps, are tested here only for now** too (`KAIRN_NOT_YET_CROSS_CHECKED_MAPS`
+and `KAIRN_NOT_YET_CROSS_CHECKED_MAP_STEPS`, which `tests/CMakeLists.txt` adds to the two lists).
+`gen/tests/test_maps.py` checks the rules of a map; that the interpreter writes the step of each
+element, the same elements and mask in both orders for every number of lanes, the canonical NaN
+for an element that is not finite and keeps the others; the compiled `F_seq`, `F_lanes` (0 to 8
+lanes) and `F_packed` of every build bit for bit against the interpreter, on the lengths of the
+folds, with non-finite elements; every map in place (the array written being one of those read,
+with each form, at `-O0` and `-O2` with each compiler); and rule R3 on a supplied `y` of `add`,
+`sub` and `axpy`, the maps of stored arrays as the control (fused under `-ffp-contract=fast` by
+Apple clang and GCC 16 on the Mac, and GCC 13 and Clang 18 on x86-64).
 
 **The folds, and the kernels of their stage, are tested here only for now** (they are in
 `KAIRN_NOT_YET_CROSS_CHECKED`, [above](#cross-checks)). `gen/tests/test_folds.py` checks:

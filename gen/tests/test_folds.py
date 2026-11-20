@@ -33,6 +33,10 @@ import test_simd as simd_tests
 from kairn_gen import cpp, interp, ir, objcode, rocq, rules
 
 FOLDS = ('sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2', 'sum_fast_2_entry', 'dot_1', 'dot_2')
+# The maps, the folds that write an array, have tests of their own (test_maps.py).
+MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 'sub_2', 'sub_2_entry', 'axpy_1',
+        'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2',
+        'mul_pow2_map_1', 'mul_pow2_map_2'}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -93,7 +97,8 @@ c        = add(a0, const up(eta))
 class Rules(unittest.TestCase):
     def test_the_folds_are_accepted(self):
         ks = common.kernels()
-        self.assertEqual(set(ks.folds), set(FOLDS))
+        self.assertEqual(set(ks.folds), set(FOLDS) | MAPS)
+        self.assertEqual({n for n, fd in ks.folds.items() if fd.is_map}, MAPS)
         for fd in ks.folds.values():
             self.assertEqual(rules.fold_rules(fd, ks), [], fd.name)
         self.assertEqual(refusals(BASE), [])
@@ -126,7 +131,8 @@ class Rules(unittest.TestCase):
                      'nope is not a kernel')
         self.refused(BASE.replace('combine:       s = add_2_2(s, s)\n', ''),
                      'the lane order combines the lanes')
-        self.refused(BASE.replace('writes:        none', 'writes:        z'), 'not in this stage')
+        # A fold that writes an array is a map, with a state of one mask (test_maps.py).
+        self.refused(BASE.replace('writes:        none', 'writes:        z'), 'the state of a map is one mask')
         self.refused(BASE.replace('orders:        sequential, lanes', 'orders:        sequential, sideways'),
                      'orders: some of sequential, lanes')
 
@@ -734,7 +740,7 @@ class Printers(unittest.TestCase):
         self.assertIn('    (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * '
                       '((3 / 2) * eta emin)).', s)
         self.assertIn('    ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs', s)
-        self.assertEqual(s.count('_spec : Prop'), 2 * len(FOLDS))
+        self.assertEqual(s.count('_spec : Prop'), 2 * len(FOLDS) + len(MAPS))
 
     def test_the_ieee_model(self):
         """IeeeFoldModel.v: every fold in both orders, in the shape of FoldModel.v over floats, the
@@ -813,7 +819,7 @@ class Printers(unittest.TestCase):
         of its kernel's listing, the step's fused operations those of the step kernel."""
         doc = json.loads(objcode.objcode(self.ks))
         self.assertEqual(doc['fold_forms'], ['seq', 'lanes', 'packed'])
-        self.assertEqual(set(doc['folds']), set(FOLDS))
+        self.assertEqual(set(doc['folds']), set(FOLDS) | MAPS)
         names = doc['fold_parts']
         for name in FOLDS:
             fd = self.ks.folds[name]

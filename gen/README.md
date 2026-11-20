@@ -26,6 +26,7 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/IeeeAudit.v` | For each kernel whose IEEE-model status is not unverified, checks that its theorem has the generated statement as its type and prints its assumptions |
 | `proofs/gen/IeeeFoldModel.v` | Per fold, its step and combination over tuples of floats (the IEEE models of IeeeModel.v) and its two orders with the finish, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v` |
 | `proofs/gen/IeeeFoldStatements.v` | `F_seq_ieee_spec` and `F_lanes_ieee_spec` per fold (the flag, and the real model's result when it is true), and `K_ieee_lead_spec` per step and combination of a fold |
+| `proofs/gen/IeeeWith.v` | Per kernel `constexpr` by the rule of the product, `K_with p_`: its IEEE-model definition with the product as an argument (`ieee.with_model`), for the theorems of its two executions |
 | `proofs/gen/FoldModel.v` | Per fold, its step and combination over tuples of reals and its two orders, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v` |
 | `proofs/gen/FoldStatements.v` | `Definition F_seq_spec : Prop` and `F_lanes_spec` per fold, from its claims; the proofs `F_seq_correct` and `F_lanes_correct` must have these types |
 | `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up_bits`, `next_down_bits`, the form of the scalar fix-ups per compiler (`KAIRN_GEN_FIXUP_CALL`), the pragmas that every header puts around its declarations so that a program's globals of the same names raise no warning (`KAIRN_GEN_PUSH_WARNINGS`, `KAIRN_GEN_POP_WARNINGS`); refuses x86 without hardware FMA |
@@ -152,7 +153,7 @@ state:         s = s0 s1                         starts at zero, every limb +0
 step:          s = sum_entry_step_2(s, x)        a kernel: the state and one element, to the next state
 combine:       s = add_2_2(s, s)                 a kernel: two states into one (the lane order)
 orders:        sequential, lanes
-writes:        none                              a map's written arrays: not in this stage
+writes:        none                              a map's written array (below)
 output:        r = r0 r1
 output:        mask flag
 finish:        (r, flag) = fold_finish_2(s)      a kernel on the final state, or none
@@ -181,6 +182,19 @@ combination, `rules.ZERO_LEMMAS`), its claims, and `eps` against the combination
 (`F_packed`), `rocq.fold_model` and `rocq.fold_statements`, `claims.fold_claims` and
 `objcode.fold_counts`; the interpreter evaluates a fold with `Machine.run_fold` in either order and
 any number of lanes, and completes its requests (architecture.md, "The line protocol").
+
+A map (architecture.md, "Maps") writes one array, `writes: z = z0 z1`; its step takes the scalars
+(`scalars: supplied a = a0 a1`, given once) and one element of each array, never the state, and
+returns the element written; its state is `mask finite`, combined by
+`combine: finite = and(finite, finite)`; `check: fold_finish_k` names the kernel that tests each
+element written and gives its canonical NaN; it has no finish and claims `entries z` (the step's
+claims, element by element) and `finite_or_nan z flag=finite`. `rules.map_rules` checks it;
+`cpp.map_seq`, `cpp.map_lanes` and `simd.map_packed` print it, with the second pass that makes an
+element that is not finite the canonical NaN; `rocq.map_model` and `rocq.map_statement` give it a
+model, `map` of its step, and a statement, `Forall2` of the elements and the elements written;
+`claims.map_claims`, its entry of `"folds"`, with `"map": true`; the interpreter runs it with the
+scalars after the length (`Machine.run_fold`), and the runners complete its requests
+(`KAIRN_RUNNER_MAP` of `runner_kernels.inc`).
 
 ## The operations
 
@@ -332,7 +346,14 @@ rule:
    that selects, steps to a neighbor, returns a mask, or computes a radius).
 5. Every kernel names its theorem, source and license, or is marked `unverified`. A kernel of the
    extended domain also gives `ieee_status` (and `ieee_theorem` once that is proved); a kernel
-   without a real-model statement has no `theorem`, and its `status` is its `ieee_status`.
+   without a real-model statement has no `theorem`, and its `status` is its `ieee_status`. A
+   kernel of the finite domain names the theorems of its IEEE-model statements once each is
+   proved: `ieee_bridge_theorem: FILE K_ieee_bridge` (with `ieee: bridge`), `ieee_spec_theorem:
+   FILE K_ieee_correct` (with `ieee: spec`), `ieee_lead_theorem: FILE K_ieee_lead` (the step or
+   the combination of a fold); a fold that is not a map, `ieee_theorem: FILE`, the file of
+   `F_seq_ieee_correct` and `F_lanes_ieee_correct`. Each names only a statement that is printed,
+   by its conventional name, in `proofs/theories/`; a statement whose theorem is not named is
+   printed as unverified, and only those that are named are in `proofs/gen/IeeeAudit.v`.
 6. R3: in a kernel marked `entry`, an input that enters from the program (a one-limb input not
    declared `stored`, or the limbs of an input declared `supplied`), and whatever `neg`, `abs`,
    `select` or `copy` alone make of it, is never an operand of `add` or `sub` nor the addend of an
@@ -415,6 +436,10 @@ computed constants (above). A kernel has no real-model statement when it claims 
   listing once, the counts of known kernels, the kernels where forms differ, the numbering of
   identical operations on a toy kernel (factors swapped, `fms` and `fnma` written as FMAs, constants
   equal in one format only), and the committed `gen/objcode.json`;
+- the maps (`test_maps.py`): the rules of a map; the interpreter, each element the step and every
+  order the same, the canonical NaN and a false flag for what is not finite; the compiled `F_seq`,
+  `F_lanes` and `F_packed` bit for bit against the interpreter; each map in place; rule R3 on a
+  supplied array with each compiler; the printers;
 - the folds (`test_folds.py`; [Testing](../docs/developer/testing.md#the-generators-tier) says
   what it covers, these being tested by this suite only for now): the rules of a fold, the
   interpreter in exact arithmetic on toy formats in both orders and against an implementation of

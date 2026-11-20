@@ -280,8 +280,11 @@ def not_yet_cross_checked():
     """The kernels the oracle does not judge yet: the list KAIRN_NOT_YET_CROSS_CHECKED of
     tests/CMakeLists.txt, the one place that says which (the folds' stage of Milestone 2)."""
     with open(os.path.join(REPO, "tests", "CMakeLists.txt"), encoding="utf-8") as f:
-        m = re.search(r"^set\(KAIRN_NOT_YET_CROSS_CHECKED\s([^)]*)\)", f.read(), re.M)
-    return set(m.group(1).split()) if m else set()
+        text = f.read()
+    m = re.search(r"^set\(KAIRN_NOT_YET_CROSS_CHECKED\s([^)]*)\)", text, re.M)
+    # and the steps of the maps, which the list takes in too (KAIRN_NOT_YET_CROSS_CHECKED_MAP_STEPS)
+    s = re.search(r"^set\(KAIRN_NOT_YET_CROSS_CHECKED_MAP_STEPS\s([^)]*)\)", text, re.M)
+    return (set(m.group(1).split()) if m else set()) | (set(s.group(1).split()) if s else set())
 
 
 def load_claims():

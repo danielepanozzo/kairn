@@ -558,7 +558,7 @@ def statement(k, kernels):
     """
     s = _Shared(k, kernels)
     hyps = _hypotheses(k, s.ins)
-    claims = _output_formats(k) + [CLAIMS[e['kind']](e, s) for e in k.ensures if e['kind'] != 'represents']
+    claims = conclusion(k, kernels)
     sites = ir.muladd_sites(k, kernels)
     outl = k.output_limbs
     pattern = outl[0] if len(outl) == 1 else "'(" + ', '.join(outl) + ')'
@@ -579,6 +579,14 @@ def statement(k, kernels):
     lines.append(f'  let {pattern} := {call} in')
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return lines
+
+
+def conclusion(k, kernels):
+    """The conclusion of a kernel's statement, as a list of conjuncts over its limb names: the
+    formats of the output limbs, then the claims (statement; a map's statement uses it entry by
+    entry)."""
+    s = _Shared(k, kernels)
+    return _output_formats(k) + [CLAIMS[e['kind']](e, s) for e in k.ensures if e['kind'] != 'represents']
 
 
 def statements(kernels):
@@ -677,6 +685,9 @@ def fold_model(kernels):
              'Variable emin prec : Z.',
              'Variable choice : Z -> bool.']
     for fd in folds.values():
+        if fd.is_map:
+            lines += map_model(fd, kernels)
+            continue
         step, combine = kernels[fd.step[0]], kernels[fd.combine[0]] if fd.combine else None
         st, el, _ = _fold_binders(fd)
         stype = tuple_type(len(fd.state.limbs))
@@ -806,10 +817,102 @@ def fold_statements(kernels):
              f'From {THEORIES_PATH} Require Import Folds Summation.',
              'Open Scope R_scope.']
     for fd in getattr(kernels, 'folds', {}).values():
+        if fd.is_map:
+            lines += [''] + map_statement(fd, kernels)
+            continue
         for order in ir.ORDERS:
             if order in fd.orders:
                 lines += [''] + fold_statement(fd, kernels, order)
     return '\n'.join(lines) + '\n'
+
+
+# --- Maps --------------------------------------------------------------------------------------------
+#
+# A map (rules.py, "Maps") is in the real model the function `map` of its step on the list of
+# elements: no state, since every written element depends on its element and the scalars alone,
+# and the mask that says what is finite has no real-model meaning (nothing is infinite there). The
+# lane order and the sequential one write the same elements, so the model has no order. Its
+# statement says, entry by entry (Forall2 of the list of elements and the list written), what the
+# step's statement concludes, under the map's requirements on every element and on the scalars.
+
+def map_model(fd, kernels):
+    """The step of a map, as a function of its scalars and of one element, and the map."""
+    step = kernels[fd.step[0]]
+    _, el, xs = _fold_binders(fd)
+    etype = fold_element_type(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    groups = fold_groups(fd, el)
+    sizes = {g.name: len(g.limbs) for g in fd.arrays + fd.scalars}
+    groups.update({g.name: g.name for g in fd.scalars})
+    args = [p for a in fd.step[1] for p in tuple_parts(groups[a], sizes[a])]
+    params = ''.join(f' ({g.name} : {tuple_type(len(g.limbs))})' for g in fd.scalars)
+    written = fd.writes[0]
+    wtype = tuple_type(len(written.limbs))
+    arrays = ', '.join(f'{fd.roles[g.name]} {g.name}' for g in fd.arrays)
+    scalars = ', '.join(f'{fd.roles[g.name]} {g.name}' for g in fd.scalars)
+    return ['', f'(* {fd.name}: a map; arrays {arrays}' + (f'; scalars {scalars}' if scalars else '') +
+            f'; it writes {written.name} by the step {step.name}. *)',
+            f'Definition {fd.name}_step{params} ({el} : {etype}) : {wtype} :=',
+            f'  {_apply(step, kernels, args)}.',
+            '',
+            f'Definition {fd.name}_map{params} ({xs} : {lt}) : list {_paren(wtype)} :=',
+            f'  map ({fd.name}_step{"".join(" " + g.name for g in fd.scalars)}) {xs}.']
+
+
+def _pattern(parts):
+    """The pattern of a left-nested tuple of names or patterns: a name alone, or (a, b, c), which
+    Rocq reads as ((a, b), c)."""
+    return parts[0] if len(parts) == 1 else '(' + ', '.join(parts) + ')'
+
+
+def _let(pattern, term):
+    return f"let '{pattern} := {term} in" if pattern.startswith('(') else f'let {pattern} := {term} in'
+
+
+def map_statement(fd, kernels):
+    """The Definition F_spec : Prop of a map: for all scalars and lists of elements that satisfy
+    the map's requirements, every limb a number of the format, each written element satisfies the
+    conclusion of the step's statement for its element (Forall2)."""
+    step = kernels[fd.step[0]]
+    _, el, xs = _fold_binders(fd)
+    section = [{'choice': 'tie_even'}.get(v, v) for v in fold_section_args([step], kernels)]
+    etype = fold_element_type(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    # The step's own names for what the map passes it: its input groups, in the order of the call.
+    kgroup = dict(zip(fd.step[1], step.inputs))
+    normalized = {r[1] for r in fd.requires if r[0] in ('normalized', 'canonical')}
+    pow2 = {r[1] for r in fd.requires if r[0] == 'power_of_two'}
+
+    def valid(g, limbs):
+        if g.name in normalized:
+            return [f'normalized_{len(limbs)} emin prec {" ".join(_paren(x) for x in limbs)}']
+        return [f'fmt emin prec {_paren(x)}' for x in limbs] + \
+            [f'(exists n : Z, {limbs[0]} = bpow radix2 n)' for _ in [0] if g.name in pow2]
+
+    scalar_limbs = [v for g in fd.scalars for v in kgroup[g.name].limbs]
+    hyps = [h for g in fd.scalars for h in valid(g, list(kgroup[g.name].limbs))]
+    groups = fold_groups(fd, el)
+    element = [h for g in fd.arrays for h in valid(g, tuple_parts(groups[g.name], len(g.limbs)))]
+    pattern = _pattern([_pattern(list(kgroup[g.name].limbs)) for g in fd.arrays])
+    outs = step.outputs[0].limbs
+    claims = conclusion(step, kernels)
+    scalars = ' '.join('(' + ', '.join(kgroup[g.name].limbs) + ')' if len(g.limbs) > 1 else kgroup[g.name].limbs[0]
+                       for g in fd.scalars)
+    call = ' '.join([f'{fd.name}_map'] + section + ([scalars] if scalars else []) + [xs])
+    binders = (f'forall ({" ".join(scalar_limbs)} : R) ({xs} : {lt}),' if scalar_limbs
+               else f'forall {xs} : {lt},')
+    lines = [f'(* {fd.name}, each element it writes: {fd.source or "no source given"}. Status: {fd.status}. *)',
+             f'Definition {fd.name}_spec : Prop :=',
+             f'  forall emin prec : Z, ({fd.min_precision} <= prec)%Z ->',
+             f'  {binders}']
+    lines += [f'  {h} ->' for h in hyps]
+    lines += [f'  Forall (fun {el} => {" /\\ ".join(element)}) {xs} ->',
+              f'  Forall2 (fun {el} w_ =>']
+    lines += [f'    {_let(pattern, el)}'] if pattern != el else []
+    lines += [f'    {_let(_pattern(list(outs)), "w_")}',
+              '    ' + ' /\\\n    '.join(claims) + ')',
+              f'    {xs} ({call}).']
+    return lines
 
 
 def theory_module(path):

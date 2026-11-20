@@ -634,11 +634,130 @@ def fold_lanes(fd, kernels, ctype):
     return lines + fold_finish_lines(fd, kernels, ctype, state) + ['}']
 
 
+# --- Maps -----------------------------------------------------------------------------------------
+#
+# A map (rules.py, "Maps") writes one element of an array per element it reads: z[i] is the step
+# on the scalars and element i, whatever the order. The mask starts true and is the and of the
+# check's flag on every element written; when it is false at the end, a second pass rewrites every
+# element as the check returns it (the canonical NaN for one that is not finite), and the mask is
+# returned. Aliasing: each array written may be exactly one of the arrays read (the same pointer:
+# z = x or z = y, in place), since an element is read whole before it is written and nothing else
+# reads it; otherwise it overlaps no array read or written. An array that partly overlaps another
+# is not supported.
+
+CHECK = 'chk'
+
+
+def needed(items, outs):
+    """The items of an inlined call that the values `outs` need, in order: what is computed and not
+    used (the canonical NaN of the check, in the first pass) is left out, as an unused value would
+    be a warning."""
+    need = set(outs)
+    keep = []
+    for it in reversed(items):
+        if isinstance(it, ir.CallMark):
+            if set(it.dsts) & need:
+                keep.append(it)
+            continue
+        if it.dst in need:
+            keep.append(it)
+            need.update(a.name for a in it.args if not a.const)
+    return list(reversed(keep))
+
+
+def map_parameters(fd, limb, mask, lanes):
+    """One pointer per limb array read, the length, the number of lanes (F_lanes), the scalars by
+    value, one pointer per limb array written, the mask by reference."""
+    ps = [f'const {limb}* {v}_in' for v in fd.array_limbs()] + ['std::size_t n']
+    if lanes:
+        ps.append('std::size_t lanes')
+    ps += [f'{limb} {v}' for v in fd.scalar_limbs()]
+    ps += [f'{limb}* {v}_out' for v in fd.write_limbs()]
+    return ps + [f'{mask}& {v}_out' for v in fd.state.limbs]
+
+
+def map_arguments(fd, elements):
+    """The step's operands, value by value: the scalars' limbs and the elements' (`elements`)."""
+    groups = dict(elements)
+    groups.update({g.name: list(g.limbs) for g in fd.scalars})
+    return [v for a in fd.step[1] for v in groups[a]]
+
+
+def map_element(fd, kernels, ctype, mask, pad, state):
+    """The statements for element i_: its limbs loaded, the step, the element written, the check's
+    flag and-ed into the mask variable `state`."""
+    step, check = kernels[fd.step[0]], kernels[fd.check]
+    lines = [f'{pad}const {ctype} {v} = {v}_in[i_];' for v in fd.array_limbs()]
+    body, outs = _call(step, kernels, ctype, map_arguments(fd, {g.name: list(g.limbs) for g in fd.arrays}),
+                       STEP, pad)
+    lines += body + [f'{pad}{v}_out[i_] = {o};' for v, o in zip(fd.write_limbs(), outs)]
+    items, couts = ir.inline_call(check, kernels, [ir.Operand(o) for o in outs], CHECK)
+    lines += _statements(needed(items, couts[-1:]), kernels, ctype, SPELL, pad)
+    return lines + [f'{pad}{state} = {SPELL["and"].format(state, couts[-1])};']
+
+
+def map_second_pass(fd, kernels, ctype, pad='    '):
+    """When the mask is false: every element written, again, as the check returns it."""
+    check = kernels[fd.check]
+    state = fd.state.limbs[0]
+    inner = pad + '        '
+    lines = [f'{pad}if (!{state}) {{', f'{pad}    for (std::size_t i_ = 0; i_ < n; ++i_) {{']
+    lines += [f'{inner}const {ctype} {v} = {v}_out[i_];' for v in fd.write_limbs()]
+    body, outs = _call(check, kernels, ctype, fd.write_limbs(), CHECK, inner)
+    lines += [x for x in body] + [f'{inner}{v}_out[i_] = {o};' for v, o in zip(fd.write_limbs(), outs[:-1])]
+    return lines + [f'{pad}    }}', f'{pad}}}', f'{pad}{state}_out = {state};']
+
+
+def map_description(fd, kernels, order):
+    step, check = kernels[fd.step[0]], kernels[fd.check]
+    def part(g):
+        return f'{fd.roles[g.name]} {g.name}' + (f' = ({", ".join(g.limbs)})' if len(g.limbs) > 1 else '')
+    what = {'seq': 'element after element', 'lanes': 'in the lane order with `lanes` lanes, one lane after '
+            'another', 'packed': 'in the lane order with the lanes of a register'}[order]
+    reads = ', '.join(part(g) for g in fd.arrays + fd.scalars)
+    w = fd.writes[0]
+    return [f'// map {fd.name}({reads}) -> {w.name}' + (f' = ({", ".join(w.limbs)})' if len(w.limbs) > 1 else '')
+            + f', step {step.name}, check {check.name}: {what}. A written array is exactly one of the',
+            '// arrays read (in place) or overlaps none of them, nor another written one. Status: '
+            f'{fd.status}.']
+
+
+def map_seq(fd, kernels, ctype):
+    state = fd.state.limbs[0]
+    lines = map_description(fd, kernels, 'seq')
+    lines.append(f'inline void {fd.name}_seq({", ".join(map_parameters(fd, ctype, "bool", False))}) noexcept {{')
+    lines += [f'    bool {state} = true;', '    for (std::size_t i_ = 0; i_ < n; ++i_) {']
+    lines += map_element(fd, kernels, ctype, 'bool', ' ' * 8, state) + ['    }']
+    return lines + map_second_pass(fd, kernels, ctype) + ['}']
+
+
+def map_lanes(fd, kernels, ctype):
+    """The lane order, as fold_lanes: lane j_ the elements j_, j_ + lanes, ... of the first
+    lanes (n / lanes), its mask from true; the masks of the lanes and-ed from lane 0 upward; then
+    the rest. The elements written are those of the sequential order, and so is the mask."""
+    state = fd.state.limbs[0]
+    lane = f'{state}_lane_'
+    lines = map_description(fd, kernels, 'lanes')
+    lines.append(f'inline void {fd.name}_lanes({", ".join(map_parameters(fd, ctype, "bool", True))}) noexcept {{')
+    lines += ['    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;',
+              f'    bool {state} = true;',
+              '    for (std::size_t j_ = 0; j_ < lanes; ++j_) {',
+              f'        bool {lane} = true;',
+              '        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {']
+    lines += map_element(fd, kernels, ctype, 'bool', ' ' * 12, lane)
+    lines += ['        }', f'        {state} = j_ == 0 ? {lane} : {SPELL["and"].format(state, lane)};', '    }',
+              '    for (std::size_t i_ = full_; i_ < n; ++i_) {']
+    lines += map_element(fd, kernels, ctype, 'bool', ' ' * 8, state) + ['    }']
+    return lines + map_second_pass(fd, kernels, ctype) + ['}']
+
+
 def folds(kernels):
     """The scalar functions of every fold, for both limb types."""
     lines = []
     for fd in getattr(kernels, 'folds', {}).values():
-        for order, printer in (('sequential', fold_seq), ('lanes', fold_lanes)):
+        printers = ((('sequential', map_seq), ('lanes', map_lanes)) if fd.is_map else
+                    (('sequential', fold_seq), ('lanes', fold_lanes)))
+        for order, printer in printers:
             if order in fd.orders:
                 lines.append('')
                 for i, ctype in enumerate(TYPES):
@@ -705,6 +824,8 @@ def runner_table(kernels):
                   '// out[i] and mo[i] the outputs by position, as above.',
                   '#if defined(KAIRN_RUNNER_FOLD)']
         for fd in folds.values():
+            if fd.is_map:
+                continue
             args = [f'in[{i}]' for i in range(len(fd.array_limbs()))]
             outs = [f'{"mo" if g.kind == ir.MASK else "out"}[{i}]'
                     for i, g in enumerate(g for g in fd.results() for _ in g.limbs)]
@@ -716,5 +837,24 @@ def runner_table(kernels):
                              if order in fd.orders else '(void)0')
             lines.append(f'KAIRN_RUNNER_FOLD({fd.name}, "{"".join(str(len(g.limbs)) for g in fd.arrays)}", '
                          f'"{kinds}", {", ".join(calls)})')
+        lines.append('#endif')
+    maps = [fd for fd in folds.values() if fd.is_map]
+    if maps:
+        lines += ['// The maps, for a runner that defines KAIRN_RUNNER_MAP: name, the limbs of each array read, the',
+                  '// number of scalar limbs, the number of limb arrays written, the calls of the sequential order,',
+                  '// the lane order and its packed form. in[i] is limb array i read (const T*), n the length, sc[i]',
+                  '// scalar limb i (T), w[i] limb array i written (T*), mo[0] the mask.',
+                  '#if defined(KAIRN_RUNNER_MAP)']
+        for fd in maps:
+            args = [f'in[{i}]' for i in range(len(fd.array_limbs()))]
+            rest = [f'sc[{i}]' for i in range(len(fd.scalar_limbs()))] + \
+                [f'w[{i}]' for i in range(len(fd.write_limbs()))] + ['mo[0]']
+            calls = []
+            for order, suffix, extra in (('sequential', 'seq', []), ('lanes', 'lanes', ['lanes']),
+                                         ('lanes', 'packed', [])):
+                calls.append(f'kairn::gen::{fd.name}_{suffix}({", ".join(args + ["n"] + extra + rest)})'
+                             if order in fd.orders else '(void)0')
+            lines.append(f'KAIRN_RUNNER_MAP({fd.name}, "{"".join(str(len(g.limbs)) for g in fd.arrays)}", '
+                         f'{len(fd.scalar_limbs())}, {len(fd.write_limbs())}, {", ".join(calls)})')
         lines.append('#endif')
     return '\n'.join(lines) + '\n'

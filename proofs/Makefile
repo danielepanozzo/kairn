@@ -52,7 +52,7 @@ audit: build
 # The generated model and statement files and the files they import. (gen/Audit.v and
 # gen/IeeeAudit.v name the theorems, so they need the whole build: the audit compiles them.)
 GENERATED := gen/Model.vo gen/Statements.vo gen/IeeeModel.vo gen/IeeeStatements.vo gen/FoldModel.vo \
-             gen/FoldStatements.vo gen/IeeeFoldModel.vo gen/IeeeFoldStatements.vo
+             gen/FoldStatements.vo gen/IeeeFoldModel.vo gen/IeeeFoldStatements.vo gen/IeeeWith.vo
 
 gen: Makefile.rocq
 	+$(MAKE) --no-print-directory -f Makefile.rocq $(GENERATED)

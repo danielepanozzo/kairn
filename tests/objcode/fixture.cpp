@@ -7,11 +7,21 @@
 // intrinsics when KAIRN_OBJCODE_PACKED is defined. Its source is one product and one sum, and
 // objcode.py judges the object code of each function against that.
 //
+// The loop, the step of a map: z_i = RN(RN(x_i a + y_i) b + c), its first product written as the
+// generator writes every product, a fused multiply-add (fma_rn), and its second as the textbook
+// product and sum, which a compiler that contracts fuses. Its source is one FMA, one product and
+// one sum per element, and objcode.py judges it by the rule of the loops of folds, compiled as the
+// check compiles the unit: without the compiler's own vectorization.
+//
 // The program calls each function on operands whose product is not a number of the format, so
-// that RN(a b + c) and RN(RN(a b) + c) differ, and prints for each "NAME fused" or "NAME unfused":
-// what the compiler did, seen without looking at its code. objcode.py requires the check to fail
-// exactly on the functions that print "fused".
+// that RN(a b + c) and RN(RN(a b) + c) differ, and prints for each "NAME fused" or "NAME unfused"
+// ("mixed" for a loop with some elements of each): what the compiler did, seen without looking at
+// its code. objcode.py requires the check to fail exactly on the functions that print "fused" or
+// "mixed".
+#include <cstddef>
 #include <cstdio>
+
+#include <kairn/gen/prelude.hpp>
 
 #if defined(KAIRN_OBJCODE_PACKED)
 #if defined(__AVX2__)
@@ -39,6 +49,17 @@
     }
 KAIRN_OBJCODE_SCALAR(double)
 KAIRN_OBJCODE_SCALAR(float)
+
+#define KAIRN_OBJCODE_LOOP(T)                                                                       \
+    extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_fixture_loop_##T(const T* x, const T* y, T a, T b, \
+                                                                       T c, T* z, std::size_t n) {   \
+        for (std::size_t i = 0; i < n; ++i) {                                                       \
+            const T t = kairn::gen::fma_rn(x[i], a, y[i]);                                          \
+            z[i] = t * b + c;                                                                       \
+        }                                                                                           \
+    }
+KAIRN_OBJCODE_LOOP(double)
+KAIRN_OBJCODE_LOOP(float)
 
 #if defined(KAIRN_OBJCODE_PACKED) && defined(__AVX2__)
 #define KAIRN_OBJCODE_PACKED_FIXTURE(T, V, MUL, ADD)                                                    \
@@ -84,6 +105,29 @@ const char* verdict(double r, double fused) {
     return r == fused ? "fused" : r == 0 ? "unfused" : "neither";
 }
 
+// The loop on 67 elements (some left over after any unrolling by a power of two): x_i = a', a = 1
+// and y_i = 0, so that t_i = a' exactly, and then b = b', c = c' as above.
+constexpr std::size_t loop_n = 67;
+
+template <class T>
+const char* loop_verdict(void (*f)(const T*, const T*, T, T, T, T*, std::size_t), const T* ops, T fused) {
+    T x[loop_n], y[loop_n], z[loop_n];
+    for (std::size_t i = 0; i < loop_n; ++i) {
+        x[i] = ops[0];
+        y[i] = 0;
+        z[i] = 1;
+    }
+    static volatile T one = 1;
+    f(x, y, one, ops[1], ops[2], z, loop_n);
+    std::size_t nf = 0, nu = 0;
+    for (std::size_t i = 0; i < loop_n; ++i) {
+        nf += z[i] == fused;
+        nu += z[i] == 0;
+    }
+    if (nf + nu != loop_n) return "neither";
+    return nu == 0 ? "fused" : nf == 0 ? "unfused" : "mixed";
+}
+
 }  // namespace
 
 int main() {
@@ -99,6 +143,10 @@ int main() {
     std::printf("kairn_objcode_fixture_scalar_float_statements %s\n", verdict(rf, -0x1p-26));
     kairn_objcode_fixture_scalar_float_expression(f, &rf);
     std::printf("kairn_objcode_fixture_scalar_float_expression %s\n", verdict(rf, -0x1p-26));
+    std::printf("kairn_objcode_fixture_loop_double %s\n",
+                loop_verdict<double>(kairn_objcode_fixture_loop_double, d, -0x1p-54));
+    std::printf("kairn_objcode_fixture_loop_float %s\n",
+                loop_verdict<float>(kairn_objcode_fixture_loop_float, f, -0x1p-26f));
 #if defined(KAIRN_OBJCODE_PACKED_D)
     const KAIRN_OBJCODE_PACKED_D vd[3] = {KAIRN_OBJCODE_SET_D(d[0]), KAIRN_OBJCODE_SET_D(d[1]),
                                           KAIRN_OBJCODE_SET_D(d[2])};

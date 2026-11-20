@@ -1,0 +1,22 @@
+# The step of the map add_2 on arrays of two limbs that the program supplies: every limb of both
+# operands passes through guard, rule R3, then add_2_2. Its claims are those of add_2_2.
+kernel:        add_entry_step_2
+input:         supplied x = x0 x1
+input:         supplied y = y0 y1
+output:        z = z0 z1
+value:         x+y
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized z
+ensures:       error z R c=3/(1-4*u) k=2 t=0
+min_precision: 3
+source:        add_2_2 on guarded operands (rule R3); JMP17 Alg. 6, bound from MR22
+license:       algorithm: published; proof: MIT
+status:        unverified
+entry:         yes
+
+gx0      = guard(x0)
+gx1      = guard(x1)
+gy0      = guard(y0)
+gy1      = guard(y1)
+(z0, z1) = add_2_2(gx0, gx1, gy0, gy1)

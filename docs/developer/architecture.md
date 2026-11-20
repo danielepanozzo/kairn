@@ -274,8 +274,8 @@ license:       bound: published; proof: MIT
   state and one element of each array, in the order the line gives them, and whose one output is
   the next state. **The combination** takes two states, the accumulated one first, and returns
   one. **The finish** takes the final state and returns the fold's outputs (or `finish: none`,
-  and the fold returns its state). `writes: none`: a map, whose step also returns elements of
-  arrays it writes, is not in this stage of the generator.
+  and the fold returns its state). `writes: none`: a fold that writes an array is a map
+  ([Maps](#maps), below).
 - **The orders**, those of `proofs/theories/Folds.v`. *Sequential* (`fold_seq`): the step
   applied element after element. *Lanes* with $W$ lanes (`fold_lanes`): the first
   $W\lfloor n/W\rfloor$ elements dealt to $W$ lanes, element $i$ to lane $i \bmod W$; each lane
@@ -367,6 +367,88 @@ generated text can be one of the fold's, which have no underscore. A guard in a 
 The model of a fold in Rocq, its statements and its claims are below ([The formal
 model](#the-formal-model), [Claims of Milestone 2](#claims-of-milestone-2)); its requests in the
 line protocol too ([The line protocol](#the-line-protocol)).
+
+### Maps
+
+A map is a fold that writes an array: $z_i$ is the step on element $i$ and on scalars given once,
+$z = a\,x + y$ entry by entry for `axpy_2`. `axpy_2` in full:
+
+```
+fold:          axpy_2
+arrays:        supplied x = x0 x1, stored y = y0 y1
+scalars:       supplied a = a0 a1
+state:         mask finite
+step:          z = axpy_step_2(a, x, y)
+combine:       finite = and(finite, finite)
+orders:        sequential, lanes
+writes:        z = z0 z1
+check:         fold_finish_2
+finish:        none
+value:         a*x+y
+requires:      canonical a
+requires:      canonical x
+requires:      canonical y
+ensures:       entries z
+ensures:       finite_or_nan z flag=finite
+min_precision: 4
+status:        unverified
+domain:        extended
+```
+
+- **The scalars** are groups given once, each declared `stored` or `supplied` as an array is, and
+  passed to every step.
+- **The step** takes the scalars and one element of each array, in the order of the line, and
+  never the state, so that no written element depends on the order; it returns one element of the
+  array written (`writes`, one array). It is an ordinary kernel with a real-model statement.
+- **The state** is one mask, true at the start; **the combination** is the operation `and`, exact,
+  associative and commutative; its left identity and its own conjunction, `true`, stand for the
+  zero state (`andb_true_l` of Rocq's `Bool`). **The check** is a kernel such as `fold_finish_k`,
+  which takes a written element and returns it, or its canonical NaN, with the mask that its
+  leading limb is finite: the state is the `and` of the check's mask on every element written.
+  When it is false at the end, a second pass rewrites every element as the check returns it: an
+  element that is not finite becomes the canonical NaN, the others stay ([When something is not
+  finite](design/milestone2.md#sum-dot-axpy-convolution)). The map returns the mask.
+- **What the generator checks** besides the names (`rules.map_rules`): one array written, the shapes
+  of the step's operands and result, a state of one mask combined by `and`, a check of the shape of
+  `fold_finish_k`, no finish and no output; rule R3 on the supplied arrays and scalars, as for a
+  fold (`_map_r3`: the step takes them as values of the program, guards what it adds of them, and
+  writes none of them as it is); its value is the step's, with the step's inputs renamed to what
+  the map passes; every requirement of the step on what the map passes (`normalized`,
+  `power_of_two`) is a requirement of the map (`canonical`, `power_of_two`); its claims are
+  `entries` and `finite_or_nan` with the state as the flag; the extended domain; the minimum
+  precision; the status.
+
+The maps of this stage are `add_k`, `sub_k` (on stored arrays: `add_1_1`, `sub_1_1`, `add_2_2`,
+`sub_2_2`) and their `_entry` forms on supplied arrays (`add_entry_step_k`, `sub_entry_step_k`,
+which guard every limb of both operands); `axpy_1` ($a$ of `T`, `mul_1_1` then `add_1_1`),
+`axpy_2` ($a$ of two limbs, `mul_2_2` then `add_2_2`) and `axpy_2_1` ($a$ of `T`, `mul_2_1`), with
+`x` supplied (only multiplied, so unguarded) and `y` stored, and their `_entry` forms with `y`
+supplied and guarded; `scale_1` and `scale_2` (by $a$ of `T`: `mul_1_1`, `mul_2_1`); and
+`mul_pow2_map_1`, `mul_pow2_map_2` (by a power of two; the name `mul_pow2_2` is a kernel's). The
+steps of `axpy` claim an error of form `T`, relative to $\lvert a x\rvert + \lvert y\rvert$, the
+form in which the page exports the bound of `axpy`.
+
+**In C++** a map has the three functions of a fold, with the scalars by value and one pointer per
+limb array written:
+
+```
+void axpy_2_seq(const T* x0_in, const T* x1_in, const T* y0_in, const T* y1_in, std::size_t n,
+                T a0, T a1, T* z0_out, T* z1_out, bool& finite_out)
+void axpy_2_lanes(..., std::size_t n, std::size_t lanes, T a0, T a1, T* z0_out, T* z1_out, bool& finite_out)
+void axpy_2_packed(..., std::size_t n, T a0, T a1, T* z0_out, T* z1_out, bool& finite_out)
+```
+
+`F_seq` loops over the elements: the step, the element written, the check's mask and-ed into the
+state. `F_lanes` is the lane order, lane after lane, and writes the same elements. `F_packed`
+loads blocks of $W$ elements, computes the packed step with the scalars broadcast, stores the
+elements, ands the packed check's mask into a lane mask, reduces it (`movemask` on AVX2, `vminvq`
+on NEON) and does the rest with the scalar step. All three end with the same second pass. Only
+what the check's mask needs of the check is printed in the first pass. **Aliasing**: an array
+written may be exactly one of the arrays read (the same pointer, $z = x$ or $z = y$, in place),
+since every element is read whole before it is written and nothing else reads it; otherwise it
+overlaps no array read or written, nor the other arrays written. A partial overlap is not
+supported. The generated comment of each map says so, and `test_maps.Aliasing` runs every map in
+place in each of its forms.
 
 ## Kernels of the first wave
 
@@ -514,6 +596,25 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   limb 0 of each operand, the non-finite cone of the rules as a statement. The steps of the folds
   have the bridge of their cores (`ieee: bridge`, and `spec` for those of two limbs), which the
   proof of a fold uses step by step.
+- **Their theorems.** A kernel of the finite domain names the theorem of each IEEE-model
+  statement once it is proved: `ieee_bridge_theorem` (`K_ieee_bridge`, of `K_ieee_bridge_spec`),
+  `ieee_spec_theorem` (`K_ieee_correct`, of `K_ieee_spec`) and `ieee_lead_theorem`
+  (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`; a fold, `ieee_theorem: FILE`, whose
+  theorems are `F_seq_ieee_correct` and `F_lanes_ieee_correct`. The comment above a statement
+  says `proved` when its theorem is named and `unverified` otherwise, and `IeeeAudit.v` checks
+  every named theorem against its statement (`Definition S_audit : S := theorem.` and `Print
+  Assumptions`), after the theorems of the extended domain, importing `IeeeFoldStatements` only
+  when one of them is about a fold. Without any of these fields every generated file is what it
+  was before they existed.
+- `IeeeWith.v`: the kernels that `build` lists as `constexpr` by the rule of the product, in the
+  IEEE model with the product as an argument. `K_with p_` is the definition of `IeeeModel.K` with
+  every `prod a b` written `p_ a b` and every call of another such kernel written as its
+  `K_with p_`; any other call stays a call of `IeeeModel`. With `p_` the fused product it is
+  `IeeeModel.K` by conversion; with the plain product of constant evaluation it is the listing
+  that constant evaluation runs, which the theorems `K_two_executions`
+  (`proofs/theories/IeeeTwoExecutions.v`) compare with the run-time one. The definitions of
+  `IeeeModel.v` are not changed by it, and the argument's name has an underscore, which no value
+  of a listing has.
 - `Audit.v`: for every kernel not marked `unverified`, a silent definition
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The
@@ -542,6 +643,31 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   The finish has no real-model statement (it is a kernel of the extended domain, like a full
   kernel) and is not in the model: in the real model nothing is infinite, and a fold's statement
   is about its final state.
+- `FoldModel.v` has, for a map, `F_step`, the step on the scalars and one element, and
+  `F_map`, `map` of it on the list of elements: in the real model a map has no state and no
+  order. `FoldStatements.v` has its `F_spec`: for all scalars and lists of elements that satisfy
+  the map's requirements, every limb a number of the format, `Forall2` of the elements and of
+  `F_map` of them says, entry by entry, what the step's statement concludes (the formats of the
+  output limbs and the step's claims), with the step's own names for the limbs:
+
+  ```coq
+  Definition axpy_2_spec : Prop :=
+    forall emin prec : Z, (4 <= prec)%Z ->
+    forall (a0 a1 : R) (xys : list ((R * R) * (R * R))),
+    normalized_2 emin prec a0 a1 ->
+    Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\
+                      normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+    Forall2 (fun xy w_ =>
+      let '((x0, x1), (y0, y1)) := xy in
+      let '(z0, z1) := w_ in
+      normalized_2 emin prec z0 z1 /\
+      Rabs ((z0 + z1) - (((a0 + a1) * (x0 + x1)) + (y0 + y1))) <= ...)
+      xys (axpy_2_map emin prec tie_even (a0, a1) xys).
+  ```
+
+  Its proof is the step's theorem on each element, through a lemma that `Folds.v` does not have
+  yet: `Forall2_map_r : forall (A B : Type) (P : A -> B -> Prop) (f : A -> B) (xs : list A),
+  Forall (fun x => P x (f x)) xs -> Forall2 P xs (map f xs)`.
 - `FoldStatements.v`: `<fold>_seq_spec` and `<fold>_lanes_spec`, the second for every number of
   lanes `W`. For every list of elements whose limbs are numbers of the format and that satisfy the
   fold's requirements (`normalized_2` for `canonical`), the final state is valid (`fmt`, or
@@ -1051,6 +1177,40 @@ short here):
   overflow anywhere, makes the flag false. When the flag is true every element is finite, and
   `normalized` and `fold_error` hold of the result. The sign of a zero is not part of a claim.
 
+**Maps** are in the same list, with `"map": true`:
+
+```json
+{
+  "name": "axpy_2", "map": true, "domain": "extended",
+  "arrays": [{"name": "x", "limbs": 2, "role": "supplied"}, {"name": "y", "limbs": 2, "role": "stored"}],
+  "scalars": [{"name": "a", "limbs": 2, "role": "supplied"}],
+  "writes": [{"name": "z", "limbs": 2}],
+  "outputs": [{"name": "finite", "limbs": 1, "type": "mask"}],
+  "value": "a*x+y",
+  "requires": ["canonical(a)", "canonical(x)", "canonical(y)"],
+  "ensures": [{"kind": "entries", "of": "z", "kernel": "axpy_step_2"},
+              {"kind": "finite_or_nan", "of": "z", "flag": "finite"}],
+  "orders": ["sequential", "lanes"],
+  "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
+  "step": "axpy_step_2", "step_args": ["a", "x", "y"], "check": "fold_finish_2",
+  "min_precision": 4, "status": "unverified", "theorem": null,
+  "source": {"cite": "axpy_step_2 on each element", "license": "algorithm: published; proof: MIT"}
+}
+```
+
+- `entries`, the claim kind of a map: every written element $z_i$ satisfies every `ensures` entry
+  of the kernel `kernel` (the step), whose inputs are given, in order, the groups of `step_args`:
+  the scalars, and element $i$ of each array. `value` is the step's value of those.
+- `finite_or_nan` of a written array: the flag is true exactly when the leading limb of every
+  written element is finite; when it is false, every element whose leading limb is not finite has
+  every limb a NaN, and the others are as computed.
+- **Reading, in the extended domain.** An element or a scalar is any value that satisfies
+  `requires`: for one limb any value of the format, for two limbs a canonical pair. A written
+  element whose leading limb is finite comes from finite operands and satisfies `entries`; one
+  that is not finite (an operand not finite, or an overflow) is the canonical NaN. The order makes
+  no difference: `F_seq`, `F_lanes` with any $W$ and `F_packed` write the same elements and the
+  same flag.
+
 ## The line protocol
 
 Runners and the oracle exchange text lines, the same on every platform and for every format.
@@ -1097,6 +1257,14 @@ runner (`gen/tests/runner.cpp`) completes `seq` with `F_seq` and `lanes:W` with 
 any $W$, in `binary64` and `binary32`; the packed runner completes `lanes:W` with `F_packed` for
 the one $W$ of its register and format (`packed_lanes`), and refuses any other order. The same
 request gives the same bits from all three.
+
+**Maps** have the requests of folds, with the limbs of the scalars, in the order of the map's
+`scalars`, between the length and the arrays: `MAP FORMAT ORDER N SCALAR... LIMB...`. The result
+is, for each limb array written, most significant first, its N entries, then the mask: for
+`axpy_1 fp:5:-12:6 lanes:2 3 0x1p+1 0x1p+0 0x1p+1 0x1p+2 0x1p-1 0x1p-1 0x1p-1` (a = 2, x = 1, 2, 4,
+y = 1/2, 1/2, 1/2) the completion ` -> 0x1.4p+1 0x1.2p+2 0x1.1p+3 1`. The interpreter, the
+compiled runner (`F_seq`, `F_lanes` for any W) and the packed runner (`F_packed`, its register's W
+only) complete them, with the same bits.
 
 The constants of `include/kairn/rational.hpp`, which are not kernels, have lines of their own
 ([Constants from fractions](../reference/rational.md)): `rational_K FORMAT NUM DEN [#TAG]`, with K

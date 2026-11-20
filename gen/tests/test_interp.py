@@ -503,7 +503,9 @@ class TwoExecutionsOfAProduct(unittest.TestCase):
     # m = -0, a zero that count(m) admits, their outputs are exact zero products.
     ZERO_SIGN = {'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full',
                  'ball_mul_pow2_2_full', 'mul_1_1', 'two_prod_dekker',
-                 'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2'}
+                 'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2',
+                 # the steps of the maps whose products are those of mul_1_1 or mul_pow2_2
+                 'scale_step_1', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1', 'axpy_entry_step_1'}
 
     def test_the_kernels(self):
         from kairn_gen import cpp

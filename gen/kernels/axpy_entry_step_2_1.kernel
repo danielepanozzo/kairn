@@ -1,0 +1,25 @@
+# The step of axpy_2_1_entry: axpy_step_2_1 on an array y that the program supplies, whose limbs
+# pass through guard before they are added (rule R3).
+# Its bound, relative to the terms |a x| + |y|, from those of mul_2_1 (2u^2, eta) and add_2_2, with
+# eps+ = 3u^2/(1-4u): |z - (a x + y)| <= (eps+ (1 + 2u^2) + 2u^2) |a x| + eps+ |y| + (1 + eps+) eta,
+# and 1 + eps+ <= 5/4 from precision 3.
+kernel:        axpy_entry_step_2_1
+input:         a
+input:         supplied x = x0 x1
+input:         supplied y = y0 y1
+output:        z = z0 z1
+value:         a*x+y
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized z
+ensures:       error z T c=3*(1+2*u*u)/(1-4*u)+2 k=2 t=5/4
+min_precision: 3
+source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22
+license:       algorithm: published; proof: MIT
+status:        unverified
+entry:         yes
+
+(p0, p1) = mul_2_1(x0, x1, a)
+gy0      = guard(y0)
+gy1      = guard(y1)
+(z0, z1) = add_2_2(p0, p1, gy0, gy1)

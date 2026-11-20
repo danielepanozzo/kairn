@@ -1,0 +1,16 @@
+# The difference of two numbers of one limb, rounded to nearest: the step of the map sub_1
+# (milestone2.md, "sum, dot, axpy, convolution": add_k, sub_k ... "the scalar operation"), as
+# add_1_1 is the step of add_1. Its claims are those of add_1_1, for a - b.
+kernel:        sub_1_1
+input:         a
+input:         b
+output:        s
+value:         a-b
+ensures:       rounded s nearest
+ensures:       error s R c=1/(1+u) k=1 t=0
+min_precision: 1
+source:        one rounding to nearest
+license:       bound: published; proof: MIT
+status:        unverified
+
+s = sub(a, b)

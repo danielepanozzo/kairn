@@ -100,6 +100,11 @@ template <> struct add_down_entry<float> {
     static constexpr bool proved = true;
 };
 
+// add_entry_step_1: UNVERIFIED. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0.
+template <class T> struct add_entry_step_1;
+template <> struct add_entry_step_1<double> { static constexpr bool proved = false; };
+template <> struct add_entry_step_1<float> { static constexpr bool proved = false; };
+
 // add_up_1: proved. Claims: rounded.
 template <class T> struct add_up_1;
 template <> struct add_up_1<double> {
@@ -117,6 +122,35 @@ template <> struct add_up_entry<double> {
 template <> struct add_up_entry<float> {
     static constexpr bool proved = true;
 };
+
+// mul_1_1: proved. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 1/2.
+template <class T> struct mul_1_1;
+template <> struct mul_1_1<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1p-53;
+    static constexpr double tiny = 0x1p-1074;
+    static constexpr double unit_computed = 0x1p-53;
+    static constexpr double tiny_computed = 0x1p-1074;
+};
+template <> struct mul_1_1<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1p-24f;
+    static constexpr float tiny = 0x1p-149f;
+    static constexpr float unit_computed = 0x1p-24f;
+    static constexpr float tiny_computed = 0x1p-149f;
+};
+
+// axpy_entry_step_1: UNVERIFIED. Claims: error, form T, c = (2+3*u)/((1+u)*(1+u)), k = 1, t = 2/3.
+template <class T> struct axpy_entry_step_1;
+template <> struct axpy_entry_step_1<double> { static constexpr bool proved = false; };
+template <> struct axpy_entry_step_1<float> { static constexpr bool proved = false; };
+
+// axpy_step_1: UNVERIFIED. Claims: error, form T, c = (2+3*u)/((1+u)*(1+u)), k = 1, t = 2/3.
+template <class T> struct axpy_step_1;
+template <> struct axpy_step_1<double> { static constexpr bool proved = false; };
+template <> struct axpy_step_1<float> { static constexpr bool proved = false; };
 
 // ball_add_1: proved. Claims: encloses.
 template <class T> struct ball_add_1;
@@ -308,25 +342,6 @@ template <> struct make_2<float> {
     static constexpr bool proved = true;
 };
 
-// mul_1_1: proved. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 1/2.
-template <class T> struct mul_1_1;
-template <> struct mul_1_1<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr double unit = 0x1p-53;
-    static constexpr double tiny = 0x1p-1074;
-    static constexpr double unit_computed = 0x1p-53;
-    static constexpr double tiny_computed = 0x1p-1074;
-};
-template <> struct mul_1_1<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr float unit = 0x1p-24f;
-    static constexpr float tiny = 0x1p-149f;
-    static constexpr float unit_computed = 0x1p-24f;
-    static constexpr float tiny_computed = 0x1p-149f;
-};
-
 // two_prod: proved. Claims: leading_rounded; error, form R, c = 0, k = 2, t = 1/2; error, form R, c = 0, k = 2, t = 0 when product_large.
 template <class T> struct two_prod;
 template <> struct two_prod<double> {
@@ -354,6 +369,11 @@ template <> struct mul_down_1<double> {
 template <> struct mul_down_1<float> {
     static constexpr bool proved = true;
 };
+
+// mul_pow2_step_1: UNVERIFIED. Claims: rounded; error, form R, c = 0, k = 1, t = 1/2.
+template <class T> struct mul_pow2_step_1;
+template <> struct mul_pow2_step_1<double> { static constexpr bool proved = false; };
+template <> struct mul_pow2_step_1<float> { static constexpr bool proved = false; };
 
 // mul_up_1: proved. Claims: bound; rounded.
 template <class T> struct mul_up_1;
@@ -409,6 +429,11 @@ template <> struct rmul<float> {
     static constexpr bool proved = true;
 };
 
+// scale_step_1: UNVERIFIED. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 1/2.
+template <class T> struct scale_step_1;
+template <> struct scale_step_1<double> { static constexpr bool proved = false; };
+template <> struct scale_step_1<float> { static constexpr bool proved = false; };
+
 // split: proved. Claims: error, form R, c = 0, k = 2, t = 0.
 template <class T> struct split;
 template <> struct split<double> {
@@ -428,6 +453,11 @@ template <> struct split<float> {
     static constexpr float tiny_computed = 0.0f;
 };
 
+// sub_1_1: UNVERIFIED. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0.
+template <class T> struct sub_1_1;
+template <> struct sub_1_1<double> { static constexpr bool proved = false; };
+template <> struct sub_1_1<float> { static constexpr bool proved = false; };
+
 // sub_down_1: proved. Claims: rounded.
 template <class T> struct sub_down_1;
 template <> struct sub_down_1<double> {
@@ -445,6 +475,11 @@ template <> struct sub_down_entry<double> {
 template <> struct sub_down_entry<float> {
     static constexpr bool proved = true;
 };
+
+// sub_entry_step_1: UNVERIFIED. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0.
+template <class T> struct sub_entry_step_1;
+template <> struct sub_entry_step_1<double> { static constexpr bool proved = false; };
+template <> struct sub_entry_step_1<float> { static constexpr bool proved = false; };
 
 // sub_up_1: proved. Claims: rounded.
 template <class T> struct sub_up_1;
@@ -633,6 +668,11 @@ template <> struct add_2_2_full<float> {
     static constexpr bool proved = true;
 };
 
+// add_entry_step_2: UNVERIFIED. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0.
+template <class T> struct add_entry_step_2;
+template <> struct add_entry_step_2<double> { static constexpr bool proved = false; };
+template <> struct add_entry_step_2<float> { static constexpr bool proved = false; };
+
 // add_fast_2_2: proved. Claims: normalized; error, form A, c = 3, k = 2, t = 0.
 template <class T> struct add_fast_2_2;
 template <> struct add_fast_2_2<double> {
@@ -656,6 +696,64 @@ template <> struct add_fast_2_2_full<double> {
 template <> struct add_fast_2_2_full<float> {
     static constexpr bool proved = true;
 };
+
+// mul_2_2: proved. Claims: normalized; error, form R, c = 4, k = 2, t = 3/2.
+template <class T> struct mul_2_2;
+template <> struct mul_2_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1p-104;
+    static constexpr double tiny = 0x1p-1073;
+    static constexpr double unit_computed = 0x1.0000000000001p-104;
+    static constexpr double tiny_computed = 0x1p-1073;
+};
+template <> struct mul_2_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1p-46f;
+    static constexpr float tiny = 0x1p-148f;
+    static constexpr float unit_computed = 0x1.000002p-46f;
+    static constexpr float tiny_computed = 0x1p-148f;
+};
+
+// axpy_entry_step_2: UNVERIFIED. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
+template <class T> struct axpy_entry_step_2;
+template <> struct axpy_entry_step_2<double> { static constexpr bool proved = false; };
+template <> struct axpy_entry_step_2<float> { static constexpr bool proved = false; };
+
+// mul_2_1: proved. Claims: normalized; error, form R, c = 2, k = 2, t = 1.
+template <class T> struct mul_2_1;
+template <> struct mul_2_1<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1p-105;
+    static constexpr double tiny = 0x1p-1074;
+    static constexpr double unit_computed = 0x1.0000000000001p-105;
+    static constexpr double tiny_computed = 0x1p-1073;
+};
+template <> struct mul_2_1<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1p-47f;
+    static constexpr float tiny = 0x1p-149f;
+    static constexpr float unit_computed = 0x1.000002p-47f;
+    static constexpr float tiny_computed = 0x1p-148f;
+};
+
+// axpy_entry_step_2_1: UNVERIFIED. Claims: normalized; error, form T, c = 3*(1+2*u*u)/(1-4*u)+2, k = 2, t = 5/4.
+template <class T> struct axpy_entry_step_2_1;
+template <> struct axpy_entry_step_2_1<double> { static constexpr bool proved = false; };
+template <> struct axpy_entry_step_2_1<float> { static constexpr bool proved = false; };
+
+// axpy_step_2: UNVERIFIED. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
+template <class T> struct axpy_step_2;
+template <> struct axpy_step_2<double> { static constexpr bool proved = false; };
+template <> struct axpy_step_2<float> { static constexpr bool proved = false; };
+
+// axpy_step_2_1: UNVERIFIED. Claims: normalized; error, form T, c = 3*(1+2*u*u)/(1-4*u)+2, k = 2, t = 5/4.
+template <class T> struct axpy_step_2_1;
+template <> struct axpy_step_2_1<double> { static constexpr bool proved = false; };
+template <> struct axpy_step_2_1<float> { static constexpr bool proved = false; };
 
 // ball_add_2: proved. Claims: normalized; encloses.
 template <class T> struct ball_add_2;
@@ -682,25 +780,6 @@ template <> struct ball_make_2<double> {
 };
 template <> struct ball_make_2<float> {
     static constexpr bool proved = true;
-};
-
-// mul_2_2: proved. Claims: normalized; error, form R, c = 4, k = 2, t = 3/2.
-template <class T> struct mul_2_2;
-template <> struct mul_2_2<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr double unit = 0x1p-104;
-    static constexpr double tiny = 0x1p-1073;
-    static constexpr double unit_computed = 0x1.0000000000001p-104;
-    static constexpr double tiny_computed = 0x1p-1073;
-};
-template <> struct mul_2_2<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr float unit = 0x1p-46f;
-    static constexpr float tiny = 0x1p-148f;
-    static constexpr float unit_computed = 0x1.000002p-46f;
-    static constexpr float tiny_computed = 0x1p-148f;
 };
 
 // ball_mul_2: proved. Claims: normalized; encloses.
@@ -765,25 +844,6 @@ template <> struct ball_neg_2<double> {
 };
 template <> struct ball_neg_2<float> {
     static constexpr bool proved = true;
-};
-
-// mul_2_1: proved. Claims: normalized; error, form R, c = 2, k = 2, t = 1.
-template <class T> struct mul_2_1;
-template <> struct mul_2_1<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr double unit = 0x1p-105;
-    static constexpr double tiny = 0x1p-1074;
-    static constexpr double unit_computed = 0x1.0000000000001p-105;
-    static constexpr double tiny_computed = 0x1p-1073;
-};
-template <> struct mul_2_1<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr float unit = 0x1p-47f;
-    static constexpr float tiny = 0x1p-149f;
-    static constexpr float unit_computed = 0x1.000002p-47f;
-    static constexpr float tiny_computed = 0x1p-148f;
 };
 
 // ball_scale_2: proved. Claims: normalized; encloses.
@@ -973,6 +1033,16 @@ template <> struct mul_pow2_2_full<float> {
     static constexpr bool proved = true;
 };
 
+// mul_pow2_step_2: UNVERIFIED. Claims: normalized; error, form R, c = 0, k = 2, t = 1.
+template <class T> struct mul_pow2_step_2;
+template <> struct mul_pow2_step_2<double> { static constexpr bool proved = false; };
+template <> struct mul_pow2_step_2<float> { static constexpr bool proved = false; };
+
+// scale_step_2: UNVERIFIED. Claims: normalized; error, form R, c = 2, k = 2, t = 1.
+template <class T> struct scale_step_2;
+template <> struct scale_step_2<double> { static constexpr bool proved = false; };
+template <> struct scale_step_2<float> { static constexpr bool proved = false; };
+
 // sub_1_2: proved. Claims: normalized; error, form R, c = 2, k = 2, t = 0.
 template <class T> struct sub_1_2;
 template <> struct sub_1_2<double> {
@@ -1056,6 +1126,11 @@ template <> struct sub_2_2_full<double> {
 template <> struct sub_2_2_full<float> {
     static constexpr bool proved = true;
 };
+
+// sub_entry_step_2: UNVERIFIED. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0.
+template <class T> struct sub_entry_step_2;
+template <> struct sub_entry_step_2<double> { static constexpr bool proved = false; };
+template <> struct sub_entry_step_2<float> { static constexpr bool proved = false; };
 
 // sum_entry_step_2: proved. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0.
 template <class T> struct sum_entry_step_2;

@@ -87,7 +87,7 @@ Definition sum_fast_entry_step_2_ieee_lead_spec : Prop :=
   let '(t0, t1) := IeeeModel.sum_fast_entry_step_2 prec emax nan_plus nan_minus s0 s1 x0 x1 in
   finite t0 -> finite s0 /\ finite x0.
 
-(* dot_1, the sequential order, in the IEEE model. Status: proved. *)
+(* dot_1, the sequential order, in the IEEE model. Status: unverified. *)
 Definition dot_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -107,7 +107,7 @@ Definition dot_1_seq_ieee_spec : Prop :=
       (1 + (u prec / (1 + u prec))) ^ (length vs - 1) * (INR (length vs) * (eta (ieee_emin prec emax) / 2))) /\
   (flag = false -> nan r).
 
-(* dot_1, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
+(* dot_1, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
 Definition dot_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -127,7 +127,7 @@ Definition dot_1_lanes_ieee_spec : Prop :=
       (1 + (u prec / (1 + u prec))) ^ (length vs - 1) * (INR (length vs) * (eta (ieee_emin prec emax) / 2))) /\
   (flag = false -> nan r).
 
-(* dot_2, the sequential order, in the IEEE model. Status: proved. *)
+(* dot_2, the sequential order, in the IEEE model. Status: unverified. *)
 Definition dot_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -148,7 +148,7 @@ Definition dot_2_seq_ieee_spec : Prop :=
       (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) * (INR (length vs) * ((3 / 2) * eta (ieee_emin prec emax)))) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* dot_2, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
+(* dot_2, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
 Definition dot_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -169,7 +169,7 @@ Definition dot_2_lanes_ieee_spec : Prop :=
       (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) * (INR (length vs) * ((3 / 2) * eta (ieee_emin prec emax)))) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* sum_1, the sequential order, in the IEEE model. Status: proved. *)
+(* sum_1, the sequential order, in the IEEE model. Status: unverified. *)
 Definition sum_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -188,7 +188,7 @@ Definition sum_1_seq_ieee_spec : Prop :=
       ((1 + (u prec / (1 + u prec))) ^ (length vs - 1) - 1) * sumabs (map (fun x => x) vs)) /\
   (flag = false -> nan r).
 
-(* sum_1, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
+(* sum_1, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
 Definition sum_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -207,7 +207,7 @@ Definition sum_1_lanes_ieee_spec : Prop :=
       ((1 + (u prec / (1 + u prec))) ^ (length vs - 1) - 1) * sumabs (map (fun x => x) vs)) /\
   (flag = false -> nan r).
 
-(* sum_1_entry, the sequential order, in the IEEE model. Status: proved. *)
+(* sum_1_entry, the sequential order, in the IEEE model. Status: unverified. *)
 Definition sum_1_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -226,7 +226,7 @@ Definition sum_1_entry_seq_ieee_spec : Prop :=
       ((1 + (u prec / (1 + u prec))) ^ (length vs - 1) - 1) * sumabs (map (fun x => x) vs)) /\
   (flag = false -> nan r).
 
-(* sum_1_entry, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
+(* sum_1_entry, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
 Definition sum_1_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -245,7 +245,7 @@ Definition sum_1_entry_lanes_ieee_spec : Prop :=
       ((1 + (u prec / (1 + u prec))) ^ (length vs - 1) - 1) * sumabs (map (fun x => x) vs)) /\
   (flag = false -> nan r).
 
-(* sum_2, the sequential order, in the IEEE model. Status: proved. *)
+(* sum_2, the sequential order, in the IEEE model. Status: unverified. *)
 Definition sum_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -265,7 +265,7 @@ Definition sum_2_seq_ieee_spec : Prop :=
       ((1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* sum_2, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
+(* sum_2, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
 Definition sum_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -285,7 +285,7 @@ Definition sum_2_lanes_ieee_spec : Prop :=
       ((1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* sum_2_entry, the sequential order, in the IEEE model. Status: proved. *)
+(* sum_2_entry, the sequential order, in the IEEE model. Status: unverified. *)
 Definition sum_2_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -305,7 +305,7 @@ Definition sum_2_entry_seq_ieee_spec : Prop :=
       ((1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* sum_2_entry, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
+(* sum_2_entry, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
 Definition sum_2_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -325,7 +325,7 @@ Definition sum_2_entry_lanes_ieee_spec : Prop :=
       ((1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* sum_fast_2, the sequential order, in the IEEE model. Status: proved. *)
+(* sum_fast_2, the sequential order, in the IEEE model. Status: unverified. *)
 Definition sum_fast_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -345,7 +345,7 @@ Definition sum_fast_2_seq_ieee_spec : Prop :=
       ((1 + (3 * (u prec ^ 2))) ^ (length vs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* sum_fast_2, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
+(* sum_fast_2, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
 Definition sum_fast_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -365,7 +365,7 @@ Definition sum_fast_2_lanes_ieee_spec : Prop :=
       ((1 + (3 * (u prec ^ 2))) ^ (length vs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* sum_fast_2_entry, the sequential order, in the IEEE model. Status: proved. *)
+(* sum_fast_2_entry, the sequential order, in the IEEE model. Status: unverified. *)
 Definition sum_fast_2_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -385,7 +385,7 @@ Definition sum_fast_2_entry_seq_ieee_spec : Prop :=
       ((1 + (3 * (u prec ^ 2))) ^ (length vs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* sum_fast_2_entry, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
+(* sum_fast_2_entry, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
 Definition sum_fast_2_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

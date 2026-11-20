@@ -1,0 +1,21 @@
+# The step of axpy_1 (milestone2.md, "sum, dot, axpy, convolution"): z = (a x) + y, the operations
+# of T, each rounded to nearest. The program supplies a and x, which are only multiplied (rule R3
+# asks no guard of them); y is a stored array, written through Kairn.
+# Its bound, relative to the terms |a x| + |y|, from those of mul_1_1 and add_1_1, eps = u/(1+u):
+#   |z - (a x + y)| <= eps (2 + eps) |a x| + eps |y| + (1 + eps) eta/2,
+# and eps (2 + eps) = u (2 + 3u)/(1 + u)^2, (1 + eps)/2 = (1 + 2u)/(2 + 2u) <= 2/3.
+kernel:        axpy_step_1
+input:         a
+input:         x
+input:         stored y
+output:        z
+value:         a*x+y
+ensures:       error z T c=(2+3*u)/((1+u)*(1+u)) k=1 t=2/3
+min_precision: 1
+source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1
+license:       algorithm: published; proof: MIT
+status:        unverified
+entry:         yes
+
+p = mul_1_1(a, x)
+z = add_1_1(p, y)

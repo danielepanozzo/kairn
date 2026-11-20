@@ -110,6 +110,27 @@ const Fold folds[] = {
 #include "runner_kernels.inc"
     {nullptr, nullptr, nullptr, nullptr, nullptr},
 };
+#undef KAIRN_RUNNER_FOLD
+
+// The maps, by their packed form F_packed only, as the folds.
+struct Map {
+    const char* name;
+    const char* arrays;
+    int scalars;
+    int writes;
+    void (*binary64)(const double* const* in, std::size_t n, const double* sc, double* const* w, bool* mo);
+    void (*binary32)(const float* const* in, std::size_t n, const float* sc, float* const* w, bool* mo);
+};
+#define KAIRN_RUNNER_MAP_ARGS(T)                                                                     \
+    [[maybe_unused]] const T* const* in, [[maybe_unused]] std::size_t n, [[maybe_unused]] const T* sc, \
+        [[maybe_unused]] T* const* w, [[maybe_unused]] bool* mo
+#define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)
+#define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED) \
+    {#NAME, ARRAYS, SCALARS, WRITES, [](KAIRN_RUNNER_MAP_ARGS(double)) { PACKED; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { PACKED; }},
+const Map maps[] = {
+#include "runner_kernels.inc"
+    {nullptr, nullptr, 0, 0, nullptr, nullptr},
+};
 
 long lineno = 0;
 
@@ -258,6 +279,53 @@ void complete_fold(const Fold& f, const Request& r, void (*fn)(const T* const*, 
     std::fwrite(text.data(), 1, text.size(), stdout);
 }
 
+// A limb of the format T, from its text.
+template <class T>
+T packed_limb(const std::string& text) {
+    const double v = parse(text);
+    const double top = std::numeric_limits<float>::max();
+    if (sizeof(T) == sizeof(float) && v == v && v - v == 0 && (v > top || v < -top))
+        fail(text + " is not a binary32 number");
+    const T x = static_cast<T>(v);
+    if (v == v && static_cast<double>(x) != v) fail(text + " is not a binary32 number");
+    return x;
+}
+
+// A request of a map, MAP FORMAT lanes:W N SCALAR... LIMB..., computed at once.
+template <class T>
+void complete_map(const Map& m, const Request& r, void (*fn)(const T* const*, std::size_t, const T*, T* const*, bool*)) {
+    const std::vector<std::string>& fields = r.fields;
+    if (fields.size() < 4) fail(std::string("expected ") + m.name + " FORMAT ORDER N SCALAR ... LIMB ... [#TAG]");
+    const std::string head = "lanes:";
+    if (fields[2].compare(0, head.size(), head) != 0 ||
+        decimal(fields[2].substr(head.size()), "an order") != std::size_t(Lanes<T>::lanes))
+        fail("the packed runner computes the lane order with the lanes of its register only, lanes:" +
+             std::to_string(Lanes<T>::lanes) + " for this format, not " + fields[2]);
+    const std::size_t n = decimal(fields[3], "a length");
+    std::size_t arrays = 0;
+    for (const char* a = m.arrays; *a; ++a) arrays += std::size_t(*a - '0');
+    const std::size_t scalars = std::size_t(m.scalars);
+    if (fields.size() - 4 != scalars + arrays * n)
+        fail(std::string(m.name) + " of length " + fields[3] + " takes " + std::to_string(scalars + arrays * n) + " limbs");
+    std::vector<T> sc(scalars + 1), data(arrays * n + 1);
+    for (std::size_t i = 0; i < scalars; ++i) sc[i] = packed_limb<T>(fields[4 + i]);
+    for (std::size_t i = 0; i < arrays * n; ++i) data[i] = packed_limb<T>(fields[4 + scalars + i]);
+    std::vector<const T*> in(arrays + 1);
+    for (std::size_t l = 0; l < arrays; ++l) in[l] = data.data() + l * n;
+    std::vector<T> written(std::size_t(m.writes) * n + 1);
+    std::vector<T*> w(std::size_t(m.writes) + 1);
+    for (int l = 0; l < m.writes; ++l) w[std::size_t(l)] = written.data() + std::size_t(l) * n;
+    bool mo[1] = {};
+    fn(in.data(), n, sc.data(), w.data(), mo);
+    std::string text = r.line + " ->";
+    for (std::size_t i = 0; i < std::size_t(m.writes) * n; ++i) {
+        text += ' ';
+        put(static_cast<double>(written[i]), text);
+    }
+    text += mo[0] ? " 1\n" : " 0\n";
+    std::fwrite(text.data(), 1, text.size(), stdout);
+}
+
 }  // namespace
 
 int main() {
@@ -282,6 +350,16 @@ int main() {
         }
         if (r.fields.back()[0] == '#') r.fields.pop_back();  // the tag
         if (r.fields.size() < 2) fail("expected KERNEL FORMAT LIMB ... [#TAG]");
+        const Map* ma = nullptr;
+        for (const Map* c = maps; c->name; ++c)
+            if (r.fields[0] == c->name) ma = c;
+        if (ma) {
+            flush();
+            if (r.fields[1] == "binary64") complete_map<double>(*ma, r, ma->binary64);
+            else if (r.fields[1] == "binary32") complete_map<float>(*ma, r, ma->binary32);
+            else fail("this runner knows binary64 and binary32, not " + r.fields[1]);
+            continue;
+        }
         const Fold* fo = nullptr;
         for (const Fold* c = folds; c->name; ++c)
             if (r.fields[0] == c->name) fo = c;

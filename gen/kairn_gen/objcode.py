@@ -160,7 +160,19 @@ def _part(name, k, minimum, kernels, ctype):
 
 
 def fold_counts(fd, kernels):
-    """{form: {limb type: [[part, least number of times, counts...], ...]}} of one fold."""
+    """{form: {limb type: [[part, least number of times, counts...], ...]}} of one fold. A map
+    has its step and its check (the first pass and the second; the and of the masks is no
+    kernel): F_seq the step once and the check twice, F_lanes the step twice (the lanes and the
+    rest) and the check three times, F_packed the packed step and check once, and the scalar step
+    once and check twice."""
+    if fd.is_map:
+        step, check = kernels[fd.step[0]], kernels[fd.check]
+        forms = {'seq': [('step', step, 1), ('check', check, 2)],
+                 'lanes': [('step', step, 2), ('check', check, 3)],
+                 'packed': [('packed step', step, 1), ('packed check', check, 1), ('step', step, 1),
+                            ('check', check, 2)]}
+        return {form: {t: [_part(name, k, m, kernels, t) for name, k, m in parts] for t in LIMB_TYPES}
+                for form, parts in forms.items()}
     step, combine, finish = cpp.fold_kernels(fd, kernels)
     forms = {}
     if 'sequential' in fd.orders:

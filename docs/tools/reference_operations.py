@@ -60,6 +60,10 @@ GROUPS = [
      "The kernels of the loops over arrays (the folds of Milestone 2): their steps, the finish of their "
      "result, and the bounds of a sum and of a dot product as a function of the number of terms. The "
      "functions on arrays of the public headers come later."),
+    ("maps", "Operations on arrays, entry by entry",
+     "The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the "
+     "operation of one entry, on an array the program supplies where it says so. The functions on arrays of "
+     "the public headers come later."),
 ]
 
 
@@ -477,6 +481,21 @@ KERNELS = {
     "bound_sum_2": page("arrays", "The bound of a sum of two limbs, as a function of the number of additions"),
     "bound_dot_1": page("arrays", "The bound of a dot product of one limb, as a function of the number of terms"),
     "bound_dot_2": page("arrays", "The bound of a dot product of two limbs, as a function of the number of terms"),
+    "sub_1_1": page("maps", "The difference of two numbers of one limb, rounded to nearest"),
+    "add_entry_step_1": page("maps", "x + y of one limb, on arrays of the program"),
+    "sub_entry_step_1": page("maps", "x - y of one limb, on arrays of the program"),
+    "add_entry_step_2": page("maps", "x + y of two limbs, on arrays of the program"),
+    "sub_entry_step_2": page("maps", "x - y of two limbs, on arrays of the program"),
+    "scale_step_1": page("maps", "x a of one limb, a of T"),
+    "scale_step_2": page("maps", "x a of two limbs, a of T"),
+    "mul_pow2_step_1": page("maps", "x c of one limb, c a power of two"),
+    "mul_pow2_step_2": page("maps", "x c of two limbs, c a power of two"),
+    "axpy_step_1": page("maps", "a x + y of one limb, y stored"),
+    "axpy_entry_step_1": page("maps", "a x + y of one limb, y of the program"),
+    "axpy_step_2": page("maps", "a x + y of two limbs, y stored"),
+    "axpy_entry_step_2": page("maps", "a x + y of two limbs, y of the program"),
+    "axpy_step_2_1": page("maps", "a x + y of two limbs, a of T, y stored"),
+    "axpy_entry_step_2_1": page("maps", "a x + y of two limbs, a of T, y of the program"),
 }
 
 
