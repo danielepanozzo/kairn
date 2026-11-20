@@ -42,6 +42,7 @@ gen/FoldModel.v
 gen/FoldStatements.v
 theories/IeeeOperations.v
 gen/IeeeModel.v
+gen/IeeeWith.v
 theories/IeeeBridge.v
 theories/IeeeVocabulary.v
 theories/IeeeEFT.v

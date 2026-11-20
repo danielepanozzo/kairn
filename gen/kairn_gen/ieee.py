@@ -809,6 +809,113 @@ def statements(kernels):
     return '\n'.join(lines) + '\n'
 
 
+# ---------------------------------------------------------------------------------------------
+# IeeeWith.v: the kernels of the rule of the product, with the product as an argument
+
+def with_kernels(kernels):
+    """The kernels constexpr by the rule of the product (cpp.product_rule) that the IEEE model
+    defines, callees first."""
+    from . import cpp
+    return [k for k in in_model(kernels).values() if cpp.product_rule(k, kernels)]
+
+
+def _with_definition(k, kernels, cnames, rule):
+    """K_with: the definition of IeeeModel.K with every prod the argument p_, and every call of a
+    kernel of `rule` that kernel's K_with p_; any other call stays a call of IeeeModel. The
+    argument's name has an underscore, which no value of a listing has (ir.py), so that no value
+    hides it (mul_1_1, rmul and two_prod_dekker have a value p)."""
+    lines = [f'(* {k.name}: {k.source or "no source given"}. *)',
+             f'Definition {k.name}_with (p_ : float -> float -> float)'
+             f'{_params(k.input_limbs, k.input_kinds)} : {" * ".join(map(_type, k.output_kinds))} :=']
+    for st in k.body:
+        args = [_operand(a, cnames) for a in st.args]
+        if st.is_call:
+            callee = f'{st.op}_with p_' if st.op in rule else st.op
+            pattern = st.dsts[0] if len(st.dsts) == 1 else "'(" + ', '.join(st.dsts) + ')'
+            lines.append(f'  let {pattern} := {" ".join([callee] + args)} in')
+        elif st.op == 'prod':
+            lines.append(f'  let {st.dsts[0]} := p_ {args[0]} {args[1]} in')
+        else:
+            if st.op not in SPELL:
+                raise PrintError(f'kernel {k.name}: the IEEE model has no {st.op}')
+            lines.append(f'  let {st.dsts[0]} := {SPELL[st.op].format(*args)} in')
+    outs = k.output_limbs
+    lines.append(f'  {outs[0]}.' if len(outs) == 1 else f'  ({", ".join(outs)}).')
+    return lines
+
+
+def with_model(kernels):
+    """proofs/gen/IeeeWith.v (docs/developer/architecture.md, "The formal model")."""
+    real = rocq.real(kernels)
+    model_kernels = in_model(kernels)
+    cnames = _const_names(model_kernels, real)
+    rule = with_kernels(kernels)
+    names = {k.name for k in rule}
+    lines = [HEADER, '',
+             '(* The kernels constexpr by the rule of the product (docs/developer/design/milestone2.md, "The',
+             '   two executions of a product"), in the IEEE model, with the product as an argument: K_with p_',
+             '   is the definition of IeeeModel.K with every `prod a b` written p_ a b, and every call of',
+             '   another such kernel written as its K_with p_. With p_ the fused product IeeeOperations.prod',
+             '   it is IeeeModel.K, by conversion; with the plain product of constant evaluation it is the',
+             '   listing that constant evaluation runs. The section has the variables of IeeeModel.v, in',
+             '   the same order, and the names of the values are those of the kernel descriptions. *)',
+             'From Stdlib Require Import Reals ZArith.',
+             'From Flocq Require Import Core Binary.',
+             f'From {THEORIES_PATH} Require IeeeOperations.',
+             f'From {GEN_PATH} Require IeeeModel.',
+             '',
+             'Section IeeeWith.',
+             'Variable prec emax : Z.',
+             'Context {prec_gt_0_ : Prec_gt_0 prec}.',
+             'Context {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}.',
+             '',
+             'Notation float := (binary_float prec emax).',
+             'Notation nan_of := {x : float | is_nan prec emax x = true}.',
+             '']
+    lines += [f'Variable {n} : {t}.' for n, t in (
+        ('nan_plus', 'float -> float -> nan_of'), ('nan_minus', 'float -> float -> nan_of'),
+        ('nan_opp', 'float -> nan_of'), ('nan_abs', 'float -> nan_of'),
+        ('nan_fma', 'float -> float -> float -> nan_of'), ('nan_mult', 'float -> float -> nan_of'),
+        ('nan_const', 'nan_of'))]
+    lines += ['',
+              '(* The operations of IeeeOperations.v, applied to the variables of this section, as in',
+              '   IeeeModel.v. *)',
+              'Local Notation pzero := (IeeeOperations.pzero prec emax).',
+              'Local Notation pinf := (IeeeOperations.pinf prec emax).',
+              'Local Notation cnan := (IeeeOperations.cnan prec emax nan_const).',
+              'Local Notation add := (IeeeOperations.add prec emax nan_plus).',
+              'Local Notation sub := (IeeeOperations.sub prec emax nan_minus).',
+              'Local Notation neg := (IeeeOperations.neg prec emax nan_opp).',
+              'Local Notation abs := (IeeeOperations.abs prec emax nan_abs).',
+              'Local Notation fma := (IeeeOperations.fma prec emax nan_fma).',
+              'Local Notation fms := (IeeeOperations.fms prec emax nan_opp nan_fma).',
+              'Local Notation times_inf := (IeeeOperations.times_inf prec emax nan_mult).',
+              'Local Notation lt := (IeeeOperations.lt prec emax).',
+              'Local Notation le := (IeeeOperations.le prec emax).',
+              'Local Notation eq := (IeeeOperations.eq prec emax).',
+              'Local Notation succ := (IeeeOperations.succ prec emax).',
+              'Local Notation pred := (IeeeOperations.pred prec emax).',
+              'Local Notation guard := (IeeeOperations.guard prec emax nan_plus).']
+    # The constants and the kernels of IeeeModel.v that these listings use, as there.
+    consts, callees = [], []
+    for k in rule:
+        for st in k.body:
+            for a in st.args:
+                if a.const and a.name not in (ir.ZERO,) + ir.SPECIAL and cnames[a.name] not in consts:
+                    consts.append(cnames[a.name])
+            if st.is_call and st.op not in names and st.op not in callees:
+                callees.append(st.op)
+    if consts or callees:
+        lines += ['', '(* The constants and the other kernels of IeeeModel.v that the listings use. *)']
+    lines += [f'Local Notation {c} := (IeeeModel.{c} prec emax).' for c in consts]
+    for c in callees:
+        lines.append(f'Local Notation {c} := (IeeeModel.{c} prec emax{"".join(" " + n for n in _used_nans(kernels[c], kernels))}).')
+    for k in rule:
+        lines += [''] + _with_definition(k, kernels, cnames, names)
+    lines += ['', 'End IeeeWith.']
+    return '\n'.join(lines) + '\n'
+
+
 def audit(kernels):
     """For every IEEE-model statement with a theorem (ieee_theorem:), the check that the theorem
     has exactly that statement as its type, and its assumptions; nothing else is printed."""

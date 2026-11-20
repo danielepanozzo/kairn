@@ -514,6 +514,15 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   limb 0 of each operand, the non-finite cone of the rules as a statement. The steps of the folds
   have the bridge of their cores (`ieee: bridge`, and `spec` for those of two limbs), which the
   proof of a fold uses step by step.
+- `IeeeWith.v`: the kernels that `build` lists as `constexpr` by the rule of the product, in the
+  IEEE model with the product as an argument. `K_with p_` is the definition of `IeeeModel.K` with
+  every `prod a b` written `p_ a b` and every call of another such kernel written as its
+  `K_with p_`; any other call stays a call of `IeeeModel`. With `p_` the fused product it is
+  `IeeeModel.K` by conversion; with the plain product of constant evaluation it is the listing
+  that constant evaluation runs, which the theorems `K_two_executions`
+  (`proofs/theories/IeeeTwoExecutions.v`) compare with the run-time one. The definitions of
+  `IeeeModel.v` are not changed by it, and the argument's name has an underscore, which no value
+  of a listing has.
 - `Audit.v`: for every kernel not marked `unverified`, a silent definition
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The

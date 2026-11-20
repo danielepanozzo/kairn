@@ -25,6 +25,7 @@ def outputs(kernels):
         'proofs/gen/IeeeAudit.v': ieee.audit(kernels),
         'proofs/gen/IeeeFoldModel.v': ieee.fold_model(kernels),
         'proofs/gen/IeeeFoldStatements.v': ieee.fold_statements(kernels),
+        'proofs/gen/IeeeWith.v': ieee.with_model(kernels),
         'include/kairn/gen/prelude.hpp': cpp.prelude(kernels),
         'include/kairn/gen/scalar.hpp': cpp.scalar(kernels),
         'include/kairn/gen/avx2.hpp': simd.header(simd.AVX2, kernels),

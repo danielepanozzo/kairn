@@ -297,6 +297,58 @@ class CheckedFiles(unittest.TestCase):
             self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), digest, path)
 
 
+class WithProduct(unittest.TestCase):
+    """proofs/gen/IeeeWith.v: the kernels constexpr by the rule of the product with the product as
+    an argument. Each K_with is the definition of IeeeModel.v with `prod a b` written `p_ a b` and
+    a call of another such kernel written as its K_with p_, line for line; the section has the
+    variables of IeeeModel.v; the kernels are those build lists as constexpr by the rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+        cls.text = read('proofs/gen/IeeeWith.v')
+        cls.model = read('proofs/gen/IeeeModel.v')
+
+    @staticmethod
+    def block(text, name):
+        m = re.search(r'^Definition ' + re.escape(name) + r'\b.*?\.\n(?=\n|End )', text, flags=re.M | re.S)
+        return m.group(0) if m else None
+
+    def test_the_kernels(self):
+        from kairn_gen import build, cpp
+        rule = [k.name for k in self.ks.values() if cpp.product_rule(k, self.ks)]
+        self.assertEqual(definitions(self.text), [f'{n}_with' for n in rule])
+        line = next(x for x in build.summary(self.ks) if x.startswith('constexpr by the rule of the product'))
+        self.assertEqual(sorted(line.split(': ', 1)[1].split(', ')), sorted(rule))
+        self.assertGreaterEqual(set(rule), {'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full',
+                                            'ball_mul_pow2_1', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2',
+                                            'ball_mul_pow2_2_full'})
+
+    def test_each_is_the_model_with_the_product_as_argument(self):
+        rule = {k.name for k in ieee.with_kernels(self.ks)}
+        for name in rule:
+            with self.subTest(kernel=name):
+                mine = self.block(self.text, f'{name}_with')
+                model = self.block(self.model, name)
+                self.assertIsNotNone(mine)
+                self.assertIsNotNone(model)
+                back = mine.replace(f'Definition {name}_with (p_ : float -> float -> float)', f'Definition {name}')
+                back = re.sub(r':= p_ ', ':= prod ', back)
+                for callee in rule:
+                    back = back.replace(f' {callee}_with p_ ', f' {callee} ')
+                self.assertIsNone(re.search(r'\bp_\b', back))
+                self.assertEqual(back, model)
+
+    def test_the_section(self):
+        section = self.text.split('Section IeeeWith.\n', 1)[1].split('\n\n(*', 1)[0]
+        self.assertEqual([x for x in section.splitlines() if x.startswith(('Variable', 'Context'))], SECTION)
+        self.assertIn('From Kairn.Gen Require IeeeModel.', self.text)
+        # The constants and the other kernels are IeeeModel's, by local notations.
+        for m in re.finditer(r'^Local Notation (\w+) := \(IeeeModel\.(\w+) prec emax', self.text, flags=re.M):
+            self.assertEqual(m.group(1), m.group(2))
+            self.assertIn(f'Definition {m.group(2)} ', self.model)
+
+
 class Fields(unittest.TestCase):
     HEAD = '''
 kernel:  k
