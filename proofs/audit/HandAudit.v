@@ -29,7 +29,8 @@
    - the theorems of the interval kernels of Milestone 2, on models of their listings
      written by hand (the kernels are not generated yet): the interval kernels with
      bounds of one limb in the IEEE model, with the lemmas about the bounds of the exact
-     range of an operation.
+     range of an operation, and the bounds of two limbs in the real model (a sum, a
+     difference and a product moved outward by a bound of their own error).
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -458,3 +459,32 @@ Print Assumptions range_add_upper.
 Print Assumptions range_sub_lower.
 Print Assumptions range_sub_upper.
 Print Assumptions interval_tail.
+
+(* The bounds of two limbs, in the real model (theories/Directed2.v), on models of the
+   listings written by hand (the kernels are not generated yet): add_ball_2_2 and
+   mul_ball_2_2, which are the ball kernels with radii zero; one rounding to nearest from
+   above, the radius from above and the closed form of the outward move; the rule of the
+   zero sum; and the directed sums, differences and product, in the values of the kernel
+   and in the shape of a generated statement. *)
+From Kairn Require Import Directed2.
+Print Assumptions add_ball_2_2_listing_eq.
+Print Assumptions mul_ball_2_2_listing_eq.
+Print Assumptions add_ball_2_2_listing_correct.
+Print Assumptions mul_ball_2_2_listing_correct.
+Print Assumptions rnd_upper.
+Print Assumptions rnd_upper_normal.
+Print Assumptions radius_upper.
+Print Assumptions outward_closed.
+Print Assumptions add_2_2_zero_sum.
+Print Assumptions outward_down.
+Print Assumptions outward_up.
+Print Assumptions add_down_2_2_listing_values.
+Print Assumptions add_up_2_2_listing_values.
+Print Assumptions add_down_2_2_listing_correct.
+Print Assumptions add_up_2_2_listing_correct.
+Print Assumptions sub_down_2_2_listing_values.
+Print Assumptions sub_up_2_2_listing_values.
+Print Assumptions sub_down_2_2_listing_correct.
+Print Assumptions sub_up_2_2_listing_correct.
+Print Assumptions mul_dir_2_2_listing_values.
+Print Assumptions mul_dir_2_2_listing_correct.

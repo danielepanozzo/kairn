@@ -57,9 +57,12 @@ lists:
   ball, with overflow, infinities and NaN (`IeeeBallPow2.v`), the lemma that the product of two
   intervals rests on (`Rectangle.v`), the comparison of the two ways a product is executed
   (`IeeeProduct.v`), with what follows for the kernels whose only fused operations are products
-  (`IeeeTwoExecutions.v`), and the interval kernels with bounds of one limb, on all values:
+  (`IeeeTwoExecutions.v`), the interval kernels with bounds of one limb, on all values:
   the constructor, the negation, the sum, the difference and the product (`IeeeInterval1.v`,
-  with the definitions their statements use in `IeeeIntervalVocabulary.v`);
+  with the definitions their statements use in `IeeeIntervalVocabulary.v`), and the bounds of
+  two limbs over the real numbers: a sum, a difference and a product of two 2-limb numbers,
+  moved down or up by a bound of their own error, with how far that moves them
+  (`Directed2.v`);
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -85,9 +88,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
    not generated statements, among them those about `mul_dir_1`, whose kernel is not generated
    yet, those about the two executions of a product, whose plain-product listings are
-   written by hand, and the theorems of the interval kernels with bounds of one limb, which are
-   not generated yet either: they are proved on models of their listings written by hand in the
-   text the generator prints.
+   written by hand, and the theorems of the interval kernels with bounds of one limb and of the
+   bounds of two limbs, which are not generated yet either: they are proved on models of their
+   listings written by hand in the text the generator prints.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -97,7 +100,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  62 files: no Admitted, admit, Axiom or Parameter
+  63 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
