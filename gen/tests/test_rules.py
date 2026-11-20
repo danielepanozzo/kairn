@@ -752,9 +752,10 @@ p = prod(a, b)
 
 class R3OfTheKernels(unittest.TestCase):
     """Rule R3 on gen/kernels: which kernels are entry kernels; no guard is pending."""
-    # What the public headers call (include/kairn/expansion.hpp and ball.hpp): the cores, through
-    # kairn::finite and the kernels that need no fix-up, and the full kernels and constructors
-    # (milestone1.md).
+    # What the public headers of Milestone 1 call (include/kairn/expansion.hpp, ball.hpp and
+    # ball_operations.hpp): the cores, through kairn::finite and the kernels that need no fix-up,
+    # and the full kernels and constructors (milestone1.md). Three of these comparisons, lt_1_2,
+    # lt_2_1 and eq_2_1, also decide the signs of a ball of two limbs (ball.hpp, Milestone 2).
     CORES = {'add_2_2', 'add_2_1', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_2_2', 'mul_2_1', 'neg_2', 'abs_2',
              'add_fast_2_2', 'mul_pow2_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2',
              'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'ball_neg_1', 'ball_neg_2'}
@@ -766,14 +767,23 @@ class R3OfTheKernels(unittest.TestCase):
     # no value of the program reaches it, and milestone1.md names it a building block, not an entry
     # kernel.
     NOT_ENTRY_BUT_CALLED = {'two_sum'}
-    # The building blocks that milestone2.md makes public ("Building blocks on T"), for the public
-    # headers of Milestone 2, which do not call them yet: the entry forms of the blocks that add
-    # their operands, the blocks that only multiply, compare or step theirs (entry kernels as they
-    # are: two_prod, rmul, the directed products, next_up, next_down), and the scalings of a ball by
-    # a power of two, core and full form ("Scaling a ball by a power of two").
+    # The building blocks that milestone2.md makes public ("Building blocks on T"): the entry forms
+    # of the blocks that add their operands, the blocks that only multiply, compare or step theirs
+    # (entry kernels as they are: two_prod, rmul, the directed products, next_up, next_down), and the
+    # scalings of a ball by a power of two, core and full form ("Scaling a ball by a power of two").
     WAVE_1 = {'two_sum_entry', 'fast_two_sum_entry', 'radd_entry', 'add_down_entry', 'add_up_entry', 'sub_down_entry',
               'sub_up_entry', 'two_prod', 'rmul', 'mul_down_1', 'mul_up_1', 'next_up', 'next_down',
               'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
+    # What the public headers of Milestone 2 call of them: each block of include/kairn/blocks.hpp
+    # calls its one kernel (two_sum, fast_two_sum, radd and the four directed sums the entry form;
+    # two_prod, rmul, mul_down, mul_up, next_up and next_down the kernel as it is), and ldexp and half
+    # of a ball call the full scalings, through detail::scale_pow2 (ball_operations.hpp).
+    WAVE_1_CALLED = {'two_sum_entry', 'fast_two_sum_entry', 'radd_entry', 'add_down_entry', 'add_up_entry',
+                     'sub_down_entry', 'sub_up_entry', 'two_prod', 'rmul', 'mul_down_1', 'mul_up_1', 'next_up',
+                     'next_down', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
+    # The cores of those scalings are entry kernels, but, like BALL_CORES, the headers call them only
+    # inside their full form: they have no kairn::finite form yet.
+    POW2_CORES = {'ball_mul_pow2_1', 'ball_mul_pow2_2'}
 
     # The steps of the folds whose arrays the program supplies (milestone2.md, "Arrays that the
     # program fills"): those of the sums guard the element, those of the dot products only multiply
@@ -796,11 +806,14 @@ class R3OfTheKernels(unittest.TestCase):
                 called |= set(re.findall(r'\bgen::(\w+)\(', text)) & set(ks)
                 for macro in re.findall(r'gen::NAME##(_\w+)\(', text):        # gen::NAME##_2_2(...)
                     called |= {n for n in ks if n.endswith(macro) and n[:-len(macro)] in ('lt', 'le', 'eq')}
-        self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED, self.CORES | TheKernels.NON_FINITE)
+        # Of wave 1, the headers call every kernel but the two cores of the scalings.
+        self.assertEqual(self.WAVE_1, self.WAVE_1_CALLED | self.POW2_CORES)
+        self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED, self.CORES | TheKernels.NON_FINITE | self.WAVE_1_CALLED)
         self.assertTrue(all(ks[n].entry for n in called - self.NOT_ENTRY_BUT_CALLED))
         self.assertFalse(any(ks[n].entry for n in self.NOT_ENTRY_BUT_CALLED))
-        # Not called yet: the headers of Milestone 2 come with their own change of this test.
-        self.assertEqual(called & self.WAVE_1, set())
+        # The cores of the Ball operations and of the scalings by a power of two are reached only
+        # through their full forms: never called directly.
+        self.assertEqual(called & (self.BALL_CORES | self.POW2_CORES), set())
 
     def test_no_pending_guard(self):
         # add_2_1 guards its scalar in its first line (milestone1.md), and nothing is left pending.
