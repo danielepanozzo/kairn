@@ -24,15 +24,17 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/IeeeModel.v` | One Rocq `Definition` per kernel that has an IEEE-model statement, over Flocq's binary floating-point numbers (signed zeros, infinities, NaN), each operation the one of `proofs/theories/IeeeOperations.v` |
 | `proofs/gen/IeeeStatements.v` | `Definition K_ieee_spec : Prop` (and the finite-domain forms) per such kernel, from its claims, in the vocabulary of `proofs/theories/IeeeVocabulary.v` |
 | `proofs/gen/IeeeAudit.v` | For each kernel whose IEEE-model status is not unverified, checks that its theorem has the generated statement as its type and prints its assumptions |
+| `proofs/gen/FoldModel.v` | Per fold, its step and combination over tuples of reals and its two orders, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v` |
+| `proofs/gen/FoldStatements.v` | `Definition F_seq_spec : Prop` and `F_lanes_spec` per fold, from its claims; the proofs `F_seq_correct` and `F_lanes_correct` must have these types |
 | `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up_bits`, `next_down_bits`, the form of the scalar fix-ups per compiler (`KAIRN_GEN_FIXUP_CALL`), the pragmas that every header puts around its declarations so that a program's globals of the same names raise no warning (`KAIRN_GEN_PUSH_WARNINGS`, `KAIRN_GEN_POP_WARNINGS`); refuses x86 without hardware FMA |
-| `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen`; where the fix-up is a function of its own, that function, in `kairn::gen::fixup` |
-| `include/kairn/gen/avx2.hpp` | Every kernel for `__m256d` and `__m256` (4 doubles, 8 floats); refuses a target without AVX2 and FMA |
-| `include/kairn/gen/neon.hpp` | Every kernel for `float64x2_t` and `float32x4_t` (2 doubles, 4 floats); AArch64 only |
+| `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen`; where the fix-up is a function of its own, that function, in `kairn::gen::fixup`; then every fold, `F_seq` and `F_lanes` |
+| `include/kairn/gen/avx2.hpp` | Every kernel for `__m256d` and `__m256` (4 doubles, 8 floats), then every fold's `F_packed`; refuses a target without AVX2 and FMA |
+| `include/kairn/gen/neon.hpp` | Every kernel for `float64x2_t` and `float32x4_t` (2 doubles, 4 floats), then every fold's `F_packed`; AArch64 only |
 | `include/kairn/gen/bounds.hpp` | Per kernel and limb type, whether it is proved and, only then, the constants of its error claim rounded up (`unit`, `tiny`, `unit_computed`, `tiny_computed`) and its form; what the public headers gate on and export through `kairn::traits` |
 | `include/kairn/gen/selftest.hpp` | Every kernel on fixed operands, with the results the interpreter computes: the stored bit patterns of `kairn::self_test()` |
-| `gen/claims.json` | What every kernel claims, with the constants per format as exact fractions |
-| `gen/objcode.json` | Per kernel, form of its C++ (scalar with the fix-up inline, scalar with the fix-up a function of its own, packed) and limb type, the fused multiply-adds and plain multiplications its code asks for: the expectations of the object-code check (`tests/objcode/`) |
-| `gen/tests/runner_kernels.inc` | The table of kernels of the C++ runners `gen/tests/runner.cpp` and `packed_runner.cpp` |
+| `gen/claims.json` | What every kernel and every fold claims, with the constants per format as exact fractions |
+| `gen/objcode.json` | Per kernel, form of its C++ (scalar with the fix-up inline, scalar with the fix-up a function of its own, packed) and limb type, the fused multiply-adds and plain multiplications its code asks for; per fold, form and limb type, those of each part of its loop: the expectations of the object-code check (`tests/objcode/`) |
+| `gen/tests/runner_kernels.inc` | The table of kernels and folds of the C++ runners `gen/tests/runner.cpp` and `packed_runner.cpp` |
 
 `Model.v`, `Statements.v` and `Audit.v` are the real model only. The full kernels and the
 constructors of the non-finite layer have no real-model statement and are not in them; a kernel of
@@ -41,9 +43,9 @@ the extended domain that has one (the comparisons, the conversions, `neg_2`, `ab
 
 `build` also lists the kernels that are unverified (in the real model, and in the IEEE model), those
 without a real-model statement, those that are not `constexpr`, those exempt from the non-finite
-cone, the entry kernels, the guards of rule R3 that are pending, and the kernels accepted only
-through a pending guard. `proofs/gen` is mapped to the logical path `Kairn.Gen`, and
-`proofs/theories` to `Kairn`.
+cone, the entry kernels, the guards of rule R3 that are pending, the kernels accepted only
+through a pending guard, the folds and those of them that are unverified. `proofs/gen` is mapped
+to the logical path `Kairn.Gen`, and `proofs/theories` to `Kairn`.
 
 ## The code
 
@@ -129,6 +131,54 @@ t        = add(x0, y0)
   `exact_when=zero_or_abs_gt(cx[0]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))`.
 - `guard_pending: a REASON`: an input of an entry kernel whose guard is not written yet (only
   `add_2_1`, whose guard changes the formal model of a proved kernel and lands with its proof).
+- The folds' stage (architecture.md, "Claims of Milestone 2"): `requires: count m` ($m = 0$ or
+  $m \ge 1$) and `requires: format half` ($\eta \le \tfrac12$); `error t T c=... k=2 t=2`, the
+  form relative to the terms of `value`; `upper g value=EXPR if=ok`, the output at least EXPR when
+  the mask `ok` is true, EXPR over the inputs, the one-limb outputs, `u`, `eta`, `unit(K)` and
+  `tiny(K)`, with `^`; `holds le EXPR EXPR if=ok`; and `finite_or_nan r flag=f`, a fold's finish.
+  A kernel whose every entry has its own value (`bound_sum_k`, `bound_dot_k`) has no `value:`.
+
+## A fold description
+
+One file per fold, `gen/kernels/NAME.fold`, beside the kernels; the format is documented at the top
+of `ir.py`, and what it means in architecture.md, "Folds".
+
+```
+fold:          sum_2_entry
+arrays:        supplied x = x0 x1                one array per limb; stored or supplied (rule R3)
+state:         s = s0 s1                         starts at zero, every limb +0
+step:          s = sum_entry_step_2(s, x)        a kernel: the state and one element, to the next state
+combine:       s = add_2_2(s, s)                 a kernel: two states into one (the lane order)
+orders:        sequential, lanes
+writes:        none                              a map's written arrays: not in this stage
+output:        r = r0 r1
+output:        mask flag
+finish:        (r, flag) = fold_finish_2(s)      a kernel on the final state, or none
+value:         x                                 the value of one element; the fold's is their sum
+requires:      canonical x                       of every element
+ensures:       normalized r
+ensures:       fold_error r eps=3*u^2/(1-4*u) rel=n-1     abs= is rel's when left out
+ensures:       finite_or_nan r flag=flag
+min_precision: 3
+status:        unverified                        or proved, with theorem: FILE
+domain:        extended
+source:        Higham's bound for summation over any tree, with the bound of add_2_2 (MR22)
+license:       bound: published; proof: MIT
+```
+
+`fold_error r eps=E term=T tau=A rel=H abs=H'` claims
+$\lvert r - \sum_i v_i\rvert \le ((1 + T)(1 + E)^{H} - 1)\sum_i\lvert v_i\rvert + (1 + E)^{H'}\,n\,A$,
+$H$ and $H'$ being `n` or `n-1`, natural numbers; `term` and `tau` are 0 when left out, and
+`abs` is `rel`. A fold has
+no listing: its step, combination and finish are kernels, checked by every rule of a kernel, and
+the generator checks the fold itself as architecture.md, "Folds", says (`rules.fold_rules`): its
+names, the shapes of its parts, rule R3 on a supplied array (`rules._fold_r3`), the four
+properties of the zero state (`rules.zero_state`, with a lemma of `SummationKernels.v` per
+combination, `rules.ZERO_LEMMAS`), its claims, and `eps` against the combination's bound
+(`rules._eps_of_combination`). The printers are `cpp.folds` (`F_seq`, `F_lanes`), `simd.fold_packed`
+(`F_packed`), `rocq.fold_model` and `rocq.fold_statements`, `claims.fold_claims` and
+`objcode.fold_counts`; the interpreter evaluates a fold with `Machine.run_fold` in either order and
+any number of lanes, and completes its requests (architecture.md, "The line protocol").
 
 ## The operations
 
@@ -238,6 +288,15 @@ numbers, in the order of the file's `counts`:
   `prod` (one per prod), which a compiler that does not optimize may emit although no execution
   takes it.
 - `muladd`: the declared contractable multiply-adds (none so far; the check has no rule for them).
+
+For a fold, `gen/objcode.json` has `"fold_forms"` (`seq`, `lanes`, `packed`), `"fold_parts"` and
+`"folds"`: per fold, form and limb type, a list of parts, each `[part, least, counts...]`, the
+counts those of the part's kernel inlined (`step`, `combine`, `finish`, and `packed step`, the
+step in packed code), and `least` the number of times the printed function holds that part: the
+step once in `seq`, twice in `lanes` (the loop over the lanes and the loop over the remainder) with
+the combination once, and in `packed` the packed step, the combination and the scalar step once
+each; every form holds the finish once. What the check makes of them, a loop being unrolled or
+not, is in [Testing](../docs/developer/testing.md#the-rule).
 
 The forms differ for three kernels, `mul_2_1_full`, `mul_2_2_full` and `mul_pow2_2_full`, whose
 fix-up computes the core's leading product again (`t = prod(x0, y0)`): one FMA node more than
@@ -351,7 +410,13 @@ computed constants (above). A kernel has no real-model statement when it claims 
 - the counts of the object-code check (`test_objcode.py`): each form counts every operation of the
   listing once, the counts of known kernels, the kernels where forms differ, the numbering of
   identical operations on a toy kernel (factors swapped, `fms` and `fnma` written as FMAs, constants
-  equal in one format only), and the committed `gen/objcode.json`.
+  equal in one format only), and the committed `gen/objcode.json`;
+- the folds (`test_folds.py`; [Testing](../docs/developer/testing.md#the-generators-tier) says
+  what it covers, these being tested by this suite only for now): the rules of a fold, the
+  interpreter in exact arithmetic on toy formats in both orders and against an implementation of
+  the lane order of its own, the compiled `F_seq`, `F_lanes` and `F_packed` bit for bit against the
+  interpreter on lengths around every packed width and up to a few thousand, non-finite elements
+  included, rule R3 on a supplied array with each compiler, and the printers.
 
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.

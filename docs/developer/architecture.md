@@ -198,7 +198,8 @@ constant evaluation is that listing: the generator's tests check that the two ex
 the same bits, or for the kernels whose outputs can be an exact zero product the same values
 (`gen/tests/test_interp.py`, `TwoExecutionsOfAProduct`; `test_cxx.py` ties the C++ to them). The
 kernels `constexpr` by this rule are `rmul`, `mul_1_1`, `split`, `two_prod_dekker`, `mul_pow2_2`,
-`mul_pow2_2_full`, and `ball_mul_pow2_k` with its full form; `build` lists them.
+`mul_pow2_2_full`, `ball_mul_pow2_k` with its full form, and the bound kernels of the folds,
+`bound_sum_k` and `bound_dot_k`; `build` lists them.
 
 C++ emission rules: non-template functions, one overload per limb type; one operation per
 statement; kernels of at most two limbs are force-inlined. The public operations of `Ball` that
@@ -212,7 +213,8 @@ fused operations are `prod` or it names a constant-evaluation variant; a kernel 
 are `constexpr`; the products of two limbs, the Ball cores and their full kernels are not, because
 they contain FMAs with an addend that is not zero, and so are not the directed products of one
 limb, `mul_down_1` and `mul_up_1`, which must not be evaluated through `two_prod`'s variant
-([Building blocks on T](design/milestone2.md#building-blocks-on-t)).
+([Building blocks on T](design/milestone2.md#building-blocks-on-t)), nor the steps of the dot
+products, `dot_step_1` (an FMA with the state as addend) and `dot_step_2` (`mul_2_2`).
 
 The operations of the IR have no side effects. Kairn does not specify the floating-point
 exception flags that a kernel raises, so a printer may leave out of a path of execution any
@@ -228,6 +230,139 @@ listing and nothing else, so R1 holds of it as it holds of the listing; an outpu
 path is the first arm of a select of the listing, the result of an addition, a subtraction, a
 fused operation or a guard, or in `ball_make_2` a limb of the center it was given, which R3
 already counts as safe to add.
+
+### Folds
+
+A fold ([Folds, the extension of the IR](design/milestone2.md#folds-the-extension-of-the-ir)) is
+a loop of kernels along arrays: a sum, a dot product. It is a description of its own,
+`gen/kernels/NAME.fold`, beside the kernels, and has no listing: its step, its combination and its
+finish are kernels, with their own descriptions, listings, models and statements, and every rule
+above applies to them as to any kernel. `dot_2` in full:
+
+```
+fold:          dot_2
+arrays:        supplied x = x0 x1, supplied y = y0 y1
+state:         s = s0 s1
+step:          s = dot_step_2(s, x, y)
+combine:       s = add_2_2(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r = r0 r1
+output:        mask flag
+finish:        (r, flag) = fold_finish_2(s)
+value:         x*y
+requires:      canonical x
+requires:      canonical y
+ensures:       normalized r
+ensures:       fold_error r eps=3*u^2/(1-4*u) term=4*u^2 tau=3/2*eta rel=n-1 abs=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 4
+status:        unverified
+domain:        extended
+source:        Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22)
+license:       bound: published; proof: MIT
+```
+
+- **The arrays** are read one array per limb (`x0`, `x1`, ...), each declared `stored`, a container
+  whose elements were written through Kairn, or `supplied`, the program's own array. An *element*
+  is one entry of every array.
+- **The state** starts at zero, every limb $+0$. **The step** is a kernel whose inputs are the
+  state and one element of each array, in the order the line gives them, and whose one output is
+  the next state. **The combination** takes two states, the accumulated one first, and returns
+  one. **The finish** takes the final state and returns the fold's outputs (or `finish: none`,
+  and the fold returns its state). `writes: none`: a map, whose step also returns elements of
+  arrays it writes, is not in this stage of the generator.
+- **The orders**, those of `proofs/theories/Folds.v`. *Sequential* (`fold_seq`): the step
+  applied element after element. *Lanes* with $W$ lanes (`fold_lanes`): the first
+  $W\lfloor n/W\rfloor$ elements dealt to $W$ lanes, element $i$ to lane $i \bmod W$; each lane
+  folded sequentially from the zero state; the lane states combined from lane 0 upward,
+  $((l_0 \oplus l_1) \oplus l_2) \oplus \dots$; the remaining $n \bmod W$ elements folded into
+  the result. With $W = 0$, or one lane, or fewer elements than lanes, that is the sequential
+  order (with fewer elements than lanes because $0 \oplus 0$ is the zero state).
+
+The folds of this stage are the sums and dot products of the page: `sum_1`, `sum_2` and
+`sum_fast_2` (the fast addition) on stored arrays, their `_entry` forms on supplied ones, whose
+steps (`sum_entry_step_1`, `sum_entry_step_2`, `sum_fast_entry_step_2`) pass each limb of the
+element through `guard`, and `dot_1` (the fused step `dot_step_1`, `t = fma(x, y, s)`) and `dot_2`
+(`dot_step_2`: `p = mul_2_2(x, y); t = add_2_2(s, p)`), whose arrays are supplied and need no
+guard: their steps only multiply their elements. The finishes `fold_finish_1` and
+`fold_finish_2` return the state with the flag true when its leading limb is finite, and
+otherwise the canonical NaN, every limb a NaN, with the flag false
+([When something is not finite](design/milestone2.md#sum-dot-axpy-convolution)).
+
+**What the generator checks of a fold**, and refuses it otherwise:
+
+1. Its names: no name it prints (`F_step`, `F_combine`, `F_seq`, `F_lanes`, `F_packed`, the
+   statements and theorems) is a kernel's; its groups and limbs are distinct names, none one the
+   printers use.
+2. The shapes: the step takes the state and every array once, each with the number of limbs of
+   the group passed, and returns one group of the shape of the state; the combination takes two
+   groups of that shape and returns one; the finish takes one and returns the fold's outputs.
+   The step and the combination have real-model statements (the finish need not). The lane
+   order needs a combination.
+3. Rule R3 on a supplied array: the step is an entry kernel that takes the element's limbs as
+   values of the program (one-limb inputs not `stored`, or a multi-limb input `supplied`), and
+   the analysis of an entry kernel, `rules.r3_analysis`, run on the step with exactly those
+   limbs as values of the program, finds no addition or FMA addend reached before `guard`, and
+   no next state that is such a limb as it is. A limb the step only multiplies or compares needs
+   no guard (`dot_k`). The state is not a value of the program. A stored array is asked nothing.
+4. The zero state, with the combination of the lane order, has the four properties that the
+   theorems take as one hypothesis (`zero_identity`, `proofs/theories/Summation.v`):
+   (1) it is valid; (2) its value is 0; (3) $0 \oplus x$ has the value of $x$ for every valid
+   $x$; (4) $0 \oplus 0$ is the zero state, limb for limb. That they hold in every format is a
+   lemma about the combination, proved once (`add_1_1_zero`, `add_2_2_zero`,
+   `add_fast_2_2_zero` of `proofs/theories/SummationKernels.v`): a combination without such a
+   lemma is refused (`rules.ZERO_LEMMAS`). The generator then checks property 2 syntactically
+   (every limb of the zero state is the literal $+0$) and properties 1, 3 and 4 by evaluation,
+   with the interpreter, in `binary64`, `binary32` and five small formats (precision 1 to 5):
+   (1) against the combination's requirements on its operands, (4) exactly, (3) on every number
+   of the small formats and, for two limbs, every number with the second limbs at the ends of
+   what a normalized pair allows; the generator's tests also try property 3 on every normalized
+   pair of three formats. What holds for every format and every operand is the proof's.
+5. The claims: `value` over the arrays' names, `requires` of each element (`canonical` of an
+   array of two limbs), `ensures` of the kinds `normalized`, `fold_error` and `finite_or_nan`
+   (the last only with a finish that claims it); the constants of `fold_error` in the language
+   of `const up(EXPR)`, `eps` positive, `term` and `tau` nonnegative in both formats of the
+   library, the heights `n` or `n-1`; and `eps` is the relative error of the combination,
+   $c\,u^k$ of its error entry (of form R or A, without an absolute term), compared exactly at
+   every precision from the fold's minimum to 64. The minimum precision is at least the step's
+   and the combination's.
+6. The status: `unverified`, or `proved` with `theorem: FILE`, `source` and `license`; the file
+   then holds `F_seq_correct` and `F_lanes_correct`.
+
+What a fold's proof establishes beyond these: that the generated step and combination are those
+the theorems of `SummationKernels.v` name (`add22`, `dot_step_2`, `dot_step_1`) on every state
+and element, and from there the bound in both orders, for every width.
+
+**In C++** a fold is three ordinary inline functions per limb type, not forced inline
+([Inlining and compile time](design/milestone2.md#inlining-and-compile-time)), none `constexpr`:
+
+```
+void F_seq(const T* x0_in, const T* x1_in, ..., std::size_t n, T& r0_out, ..., bool& flag_out)    scalar.hpp
+void F_lanes(const T* x0_in, ..., std::size_t n, std::size_t lanes, T& r0_out, ..., bool& flag_out) scalar.hpp
+void F_packed(const T* x0_in, ..., std::size_t n, T& r0_out, ..., bool& flag_out)      avx2.hpp, neon.hpp
+```
+
+One pointer per limb array and a length; nothing is allocated; `n = 0` gives the finish of the
+zero state, every limb $+0$ and the flag true. `F_seq` is a loop over the scalar step. `F_lanes`
+is the lane order for any number of lanes, computed one lane after the other: lane $j$ folded from
+the zero state over elements $j, j + W, \dots$ of the first $W\lfloor n/W\rfloor$, combined into
+the result as soon as it is done (the result is lane 0's at $j = 0$), then a loop over the rest:
+the operations of the definition, in its order, with no storage but two states. It is the
+reference. `F_packed` is the lane order with $W$ the lanes of the register (AVX2: 4 doubles, 8
+floats; NEON: 2 and 4): a loop over the packed step on blocks of $W$ elements, the $W$ lane states
+stored and combined in scalar code from lane 0 upward, the scalar step on the remainder, the
+finish. In every lane the packed step computes what the scalar step computes, so `F_packed` is,
+bit for bit, `F_lanes` with that $W$; for $n < W$ both combine $W$ zero states. The step, the
+combination and the finish are inlined as calls are in a kernel, one operation per statement,
+their values named `step_V`, `comb_V` and `fin_V`; the loop's own variables end with an
+underscore, and the parameters are the limbs' names with `_in` and `_out`, so that no name of the
+generated text can be one of the fold's, which have no underscore. A guard in a fold is
+`a + 0.0`, as in a kernel that is not `constexpr`.
+
+The model of a fold in Rocq, its statements and its claims are below ([The formal
+model](#the-formal-model), [Claims of Milestone 2](#claims-of-milestone-2)); its requests in the
+line protocol too ([The line protocol](#the-line-protocol)).
 
 ## Kernels of the first wave
 
@@ -363,6 +498,55 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The
   file prints nothing else, so that the audit script can refuse any output it does not understand.
+  A fold marked `proved` adds the same two lines for each of its orders (`<fold>_seq_correct`,
+  `<fold>_lanes_correct`); `FoldStatements.v` is imported only then, so that the file does not
+  change while every fold is `unverified`.
+- `FoldModel.v`: inside a section with the variables of `Model.v`, four definitions per fold, over
+  tuples of reals: an element is one entry of every array (for `dot_2`, `(R * R) * (R * R)`, read
+  with `fst` and `snd`), the state the tuple of its limbs. `F_step` and `F_combine` apply the
+  models of the step and the combination to those limbs; `F_seq xs` is
+  `fold_seq F_step zero xs` and `F_lanes W xs` is `fold_lanes F_step F_combine zero W xs`, with the
+  zero state `(0, 0)` (`0` for one limb) and the functions of `proofs/theories/Folds.v`:
+
+  ```coq
+  Definition dot_2_step (s : R * R) (xy : (R * R) * (R * R)) : R * R :=
+    dot_step_2 emin prec choice (fst s) (snd s) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+  Definition dot_2_combine (a b : R * R) : R * R :=
+    add_2_2 emin prec choice (fst a) (snd a) (fst b) (snd b).
+  Definition dot_2_seq (xs : list ((R * R) * (R * R))) : R * R :=
+    fold_seq dot_2_step (0, 0) xs.
+  Definition dot_2_lanes (W : nat) (xs : list ((R * R) * (R * R))) : R * R :=
+    fold_lanes dot_2_step dot_2_combine (0, 0) W xs.
+  ```
+
+  The finish has no real-model statement (it is a kernel of the extended domain, like a full
+  kernel) and is not in the model: in the real model nothing is infinite, and a fold's statement
+  is about its final state.
+- `FoldStatements.v`: `<fold>_seq_spec` and `<fold>_lanes_spec`, the second for every number of
+  lanes `W`. For every list of elements whose limbs are numbers of the format and that satisfy the
+  fold's requirements (`normalized_2` for `canonical`), the final state is valid (`fmt`, or
+  `normalized_2` for two limbs) and within the bound of `fold_error`, written with `sumR` and
+  `sumabs` of `proofs/theories/Summation.v`, in the form with powers of the page:
+
+  ```coq
+  Definition dot_2_seq_spec : Prop :=
+    forall emin prec : Z, (4 <= prec)%Z ->
+    forall xys : list ((R * R) * (R * R)),
+    Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\
+                      normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+    let s := dot_2_seq emin prec tie_even xys in
+    normalized_2 emin prec (fst s) (snd s) /\
+    Rabs ((fst s + snd s) - sumR (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys)) <=
+      ((1 + (4 * (u prec ^ 2))) * (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) - 1) *
+        sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys) +
+      (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * ((3 / 2) * eta emin)).
+  ```
+
+  (The generated text has each conjunct on one line.) The heights are natural numbers
+  (`length xys - 1` is 0 for the empty list). The statements do not use $\gamma$: the form with
+  $\gamma_{n-1}(\varepsilon)$ is a corollary when $(n-1)\,\varepsilon < 1$
+  (`pow_minus_1_le_gamma` of `Summation.v`), and the exported bounds below are stated against the
+  power form's constants.
 
 `make -C proofs` fails if any theorem depends on anything other than the four allowed axioms
 (`ClassicalDedekindReals.sig_forall_dec`, `ClassicalDedekindReals.sig_not_dec`,
@@ -580,7 +764,9 @@ whole line (the empty set if the ball operand is empty). `make_2_limbs` takes it
 ### Claims of Milestone 2
 
 The kernels of [Milestone 2 statements](design/milestone2.md) that are written so far (its first
-wave: "Building blocks on T" and "Scaling a ball by a power of two") need the additions below.
+wave: "Building blocks on T" and "Scaling a ball by a power of two"; and the folds' stage of "Batch
+kernels": the sums and dot products, their steps and finishes, and the bounds as functions of $n$)
+need the additions below.
 Everything above keeps its meaning and its JSON shape: a field that is new to a kind that exists
 is written only in an entry that uses it, so that no entry without it changes.
 
@@ -730,6 +916,118 @@ the claims). `mul_pow2_2` keeps its claims and its statement: an `exact_when` on
 would change the generated statement `mul_pow2_2_spec` that `mul_pow2_2_correct` proves, so its
 exactness stays the hand-written `mul_pow2_2_exact` ([Milestone 1](design/milestone1.md#second-wave-kernels)).
 
+**The kernels of the folds' stage.** Their claims need the following, in the same way (a field
+exists only in an entry that uses it):
+
+- **`requires`** gains `count(NAME)`: the one-limb input is $0$ or at least $1$ (a number of terms
+  or of additions; it need not be an integer), and `format(half)`, which names no input: the
+  format contains $\tfrac12$, that is $\eta \le \tfrac12$, as `binary64`, `binary32` and every
+  toy format with $q_{\min} \le -1$ do.
+- **`error`** gains the form `T`: $\rho$ is the sum of the magnitudes of the *terms* of `value`;
+  for `s+x*y` (`dot_step_2`), $\lvert s\rvert + \lvert x y\rvert$. `instances` are as for the
+  forms `R` and `A`.
+- **`upper`** may carry `value` and `if` in place of `gaps`: `value` is an exact expression over
+  the inputs, the one-limb outputs, `u`, `eta`, integers, `^` and the constants `unit(K)` and
+  `tiny(K)` of kernel K's bound ($c\,u^k$ and $t\,\eta$ of its `error` entry), and replaces the
+  kernel's `value` for this entry; `if` names a mask output. When the mask is true, the output is
+  at least the exact value of `value`; nothing is said of how far above, and nothing at all when
+  the mask is false.
+- **`holds`**, `{"kind": "holds", "rel": "lt" | "le" | "eq", "args": [A, B], "if": MASK}`: when the
+  mask output is true, the relation holds between the exact values of A and B, expressions as in
+  `value` of `upper`.
+- **`finite_or_nan`**, `{"kind": "finite_or_nan", "of": R, "flag": F}`, the extended domain only:
+  the mask F is true exactly when limb 0 of `value` (the kernel's input) is finite, and the output
+  R is then `value`, limb for limb; otherwise every limb of R is a NaN.
+
+The kernels are `dot_step_1` (`rounded` of `s+x*y` to nearest, in the finite domain, as
+`fma(x, y, s)` computes it), `dot_step_2` (`normalized`, and `error` of form `T`), the steps of
+the sums of supplied arrays `sum_entry_step_1`, `sum_entry_step_2` and `sum_fast_entry_step_2`
+(the claims of `add_1_1`, `add_2_2` and `add_fast_2_2`, which they call after their guards), the
+finishes `fold_finish_1` and `fold_finish_2` (`finite_or_nan`, `ieee_only`), and the bounds:
+
+```json
+{
+  "name": "bound_dot_2",
+  "inputs": [{"name": "m", "limbs": 1}],
+  "outputs": [{"name": "g", "limbs": 1}, {"name": "t", "limbs": 1}, {"name": "ok", "limbs": 1, "type": "mask"}],
+  "requires": ["count(m)", "format(half)"],
+  "ensures": [{"kind": "upper", "of": "g", "value": "m*unit(mul_2_2)/(1-m*unit(mul_2_2))", "if": "ok"},
+              {"kind": "upper", "of": "t", "value": "m*tiny(mul_2_2)*(1+g)", "if": "ok"}],
+  "min_precision": 4, "status": "unverified",
+  "instances": {"binary64": [], "binary32": []}
+},
+{
+  "name": "bound_sum_1",
+  "inputs": [{"name": "m", "limbs": 1}],
+  "outputs": [{"name": "g", "limbs": 1}, {"name": "ok", "limbs": 1, "type": "mask"}],
+  "requires": ["count(m)", "format(half)"],
+  "ensures": [{"kind": "holds", "rel": "le", "args": ["m*unit(add_1_1)", "1/2"], "if": "ok"},
+              {"kind": "upper", "of": "g", "value": "m*unit(add_1_1)/(1-m*unit(add_1_1))", "if": "ok"}],
+  "min_precision": 1, "status": "unverified",
+  "instances": {"binary64": [], "binary32": []}
+}
+```
+
+`bound_sum_2` is `bound_sum_1` with `add_2_2` (minimum precision 3), and `bound_dot_1` is
+`bound_dot_2` with `mul_1_1` (minimum precision 1). These kernels have no `value`: every entry has
+its own. In the formal model `count(m)` is `(m = 0 \/ 1 <= m)`, `format(half)` is
+`eta emin <= / 2`, and an entry with `if` is `(ok = true -> ...)`. The statements are the first
+link of the page's chain only, that the outputs cover these exact values; that $g$ then covers
+$\gamma_m$ of the bound of the fold, for $m$ the number of terms, is a lemma about natural numbers
+left to the proofs.
+
+**Folds.** `gen/claims.json` has a second list, `"folds"`, absent when there is no fold (so that a
+reader of the kernels alone sees nothing new). Each entry, as the generator writes it (`tau` cut
+short here):
+
+```json
+{
+  "name": "dot_2", "domain": "extended",
+  "arrays": [{"name": "x", "limbs": 2, "role": "supplied"}, {"name": "y", "limbs": 2, "role": "supplied"}],
+  "outputs": [{"name": "r", "limbs": 2}, {"name": "flag", "limbs": 1, "type": "mask"}],
+  "value": "x*y",
+  "requires": ["canonical(x)", "canonical(y)"],
+  "ensures": [{"kind": "normalized", "of": "r"},
+              {"kind": "fold_error", "of": "r", "eps": "3*u^2/(1-4*u)", "term": "4*u^2", "tau": "3/2*eta",
+               "heights": {"sequential": {"rel": "n-1", "abs": "n-1"}, "lanes": {"rel": "n-1", "abs": "n-1"}}},
+              {"kind": "finite_or_nan", "of": "r", "flag": "flag"}],
+  "orders": ["sequential", "lanes"],
+  "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
+  "step": "dot_step_2", "combine": "add_2_2", "finish": "fold_finish_2",
+  "min_precision": 4, "status": "unverified", "theorems": {"sequential": null, "lanes": null},
+  "source": {"cite": "Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22)",
+             "license": "bound: published; proof: MIT"},
+  "instances": {"binary64": [{"eps": "3/81129638414606645666991986180096",
+                              "term": "1/20282409603651670423947251286016", "tau": "3/4048...9568"}],
+                "binary32": [{"eps": "1/93824969867264", "term": "1/70368744177664",
+                              "tau": "3/1427247692705959881058285969449495136382746624"}]}
+}
+```
+
+- `arrays` are the arrays an element is read from, in order, each with its limbs and its role
+  (`stored` or `supplied`, which matters to rule R3 only); `outputs` are the fold's results, as
+  the outputs of a kernel. `value` is the exact value of one element, over the arrays' names (the
+  value of a multi-limb entry is the sum of its limbs); the fold approximates $\sum_i v_i$ over
+  its $n$ elements, and `requires` applies to every element.
+- `fold_error`: with $v_i$ the value of element $i$,
+  $\bigl\lvert r - \sum_i v_i\bigr\rvert \le \bigl((1 + \mathit{term})(1 + \varepsilon)^{h_r} - 1\bigr)\sum_i\lvert v_i\rvert + (1 + \varepsilon)^{h_a}\,n\,\tau$,
+  where $\varepsilon$ is `eps`, and $h_r$ and $h_a$ are `rel` and `abs` of the order's `heights`:
+  `n` or `n-1`, natural numbers ($0 - 1$ is $0$). `eps`, `term` and `tau` are exact expressions
+  in the language of `const up( )` (over `u`, `eta`, integers and `^`), and `instances` gives them
+  per named format as exact fractions, one object per `fold_error` entry.
+- `orders`: `sequential`, and `lanes`, whose claims hold for every number of lanes $W$;
+  `packed_lanes` is the $W$ of the packed form, per format and backend.
+- `step`, `combine` and `finish` are kernels of the list `"kernels"` (`combine` and `finish` may
+  be `null`); `theorems` is, per order, `{"file": ..., "name": ...}` once the fold is proved and
+  `null` before.
+- **Reading, in the extended domain** (every fold of this stage). An element is any value that
+  satisfies `requires` there: for one limb any value of the format, $\pm\infty$ or NaN; for two
+  limbs a canonical pair. The flag is true exactly when limb 0 of the result is finite, and when
+  it is false every limb of the result is a NaN ([When something is not
+  finite](design/milestone2.md#sum-dot-axpy-convolution)). An element that is not finite, or an
+  overflow anywhere, makes the flag false. When the flag is true every element is finite, and
+  `normalized` and `fold_error` hold of the result. The sign of a zero is not part of a claim.
+
 ## The line protocol
 
 Runners and the oracle exchange text lines, the same on every platform and for every format.
@@ -751,6 +1049,31 @@ completed:  KERNEL FORMAT LIMB ... [#TAG] -> LIMB ...
   detect dropped or added lines.
 - The sign of a zero is never compared: Kairn leaves it unspecified.
 - Which backend or variant a runner uses is chosen on its command line, never in the stream.
+
+**Folds** have requests of their own, with the arrays in the line:
+
+```
+request:    FOLD FORMAT ORDER N LIMB ... [#TAG]
+completed:  FOLD FORMAT ORDER N LIMB ... [#TAG] -> RESULT ...
+```
+
+- `ORDER` is `seq` (the sequential order) or `lanes:W`, the lane order with $W$ lanes, $W$ a
+  decimal number without leading zeros, `0` and `1` included (both are the sequential order).
+- `N` is the number of elements, a decimal number; `0` is allowed.
+- Then, for each array of the fold in the order of its `arrays`, and for each limb of that array,
+  most significant first, the N entries of that limb: for `dot_2` of length 3,
+  `x0[0] x0[1] x0[2] x1[0] x1[1] x1[2] y0[0] y0[1] y0[2] y1[0] y1[1] y1[2]`, $4N$ limbs in all,
+  written as above.
+- The results are the fold's `outputs` in order, limbs as above and a mask as `0` or `1`: for
+  `dot_2` the two limbs of `r`, then `flag`.
+
+For example, `dot_1 fp:5:-12:6 lanes:2 3 0x1p+0 0x1p+1 0x1p+2 0x1p+0 0x1p+0 0x1p+0` is completed
+with ` -> 0x1.cp+2 1`, and `sum_2 binary64 seq 0` with ` -> 0x0p+0 0x0p+0 1`. The interpreter
+(`kairn-gen interp`) completes every order in every format, toy formats included. The compiled
+runner (`gen/tests/runner.cpp`) completes `seq` with `F_seq` and `lanes:W` with `F_lanes`, for
+any $W$, in `binary64` and `binary32`; the packed runner completes `lanes:W` with `F_packed` for
+the one $W$ of its register and format (`packed_lanes`), and refuses any other order. The same
+request gives the same bits from all three.
 
 The constants of `include/kairn/rational.hpp`, which are not kernels, have lines of their own
 ([Constants from fractions](../reference/rational.md)): `rational_K FORMAT NUM DEN [#TAG]`, with K

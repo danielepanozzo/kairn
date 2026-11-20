@@ -136,6 +136,16 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
 `ctest -V -R NAME` prints its command.
 
 - **Every kernel** in `gen/claims.json` gets its tests: adding a kernel to the generator adds them.
+  The exceptions are listed in one place, `KAIRN_NOT_YET_CROSS_CHECKED` of `tests/CMakeLists.txt`:
+  the kernels of the folds' stage of Milestone 2 (the bounds `bound_sum_k` and `bound_dot_k`, the
+  steps `dot_step_k`, `sum_entry_step_k` and `sum_fast_entry_step_2`, the finishes
+  `fold_finish_k`), whose claims (`upper` with a value of its own, `holds`, the error of form `T`,
+  `finite_or_nan`) the oracle does not judge yet. With them, `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS`
+  names the folds, which are not in the list `"kernels"` and have requests of their own
+  ([the line protocol](architecture.md#the-line-protocol)). **For now these are tested by the
+  generator's tier only** ([below](#the-generators-tier)): no cross-check, no enumeration of a toy
+  format, no brute-force run and no test of the public interface is registered for them, and
+  configuring says how many are left out. A name leaves the list when the oracle judges it.
 - **Random cases**: 6 000 per kernel and format in the quick tier (`KAIRN_CROSSCHECK_QUICK_CASES`)
   and 20 000 in the full tier (`KAIRN_CROSSCHECK_CASES`), seed 0 (`KAIRN_CROSSCHECK_SEED`), so
   that a run is the same everywhere and can be repeated. The oracle's generator chooses the strata
@@ -427,6 +437,20 @@ For each kernel, form and limb type:
   the product ([Architecture](architecture.md#the-kernel-ir)) have the same kind of branch per
   `prod`, `__builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0)`, and the same allowance:
   one plain product per `prod`, where a compiler emits the first arm.
+- **Folds**: `unit.cpp` has a function per fold, form (`F_seq`, `F_lanes`, `F_packed`) and limb
+  type, and `gen/objcode.json` gives, under `"folds"`, the counts of each *part* of that form (the
+  step, the combination, the packed step, the finish) with the number of times the printed
+  function holds it at least: `F_seq` the step once, `F_lanes` the step twice (lanes and
+  remainder) and the combination once, `F_packed` the packed step, the combination and the scalar
+  step once each, and every form the finish once. A compiler may unroll a loop, or peel it, and so
+  hold a part more often: the rule is that the function's fused multiply-adds, and its plain
+  multiplications, are a sum of each part's counts (`fma`, or `fma_distinct` for a copy whose
+  identical operations were merged) taken at least that number of times and at most 64 times,
+  and nothing else. A part that asks for none may appear any number of times. So `dot_2`, whose
+  step has five FMAs, may have 5, 10, 15, ... in `F_seq` and 10, 15, ... in `F_lanes`, never 4
+  or 11; a contraction in a loop body adds one that no number of copies makes, unless it is
+  repeated in exactly a step's worth of copies, which the check cannot tell from an unrolled
+  step. The sums ask for none at all.
 - **Nothing else**: every kernel has its function and every function of the unit its counts; it
   calls nothing outside the object but the stack protector's routines and the stack probes of
   Windows and of Darwin, which do no arithmetic (Ubuntu's GCC protects functions by default; Apple
@@ -1285,6 +1309,39 @@ python3 gen/kairn-gen test --full           # a few hundred thousand cases per k
 python3 gen/kairn-gen test --no-cxx --skip test_statements.   # without C++, without a module
 ```
 
+**The folds, and the kernels of their stage, are tested here only for now** (they are in
+`KAIRN_NOT_YET_CROSS_CHECKED`, [above](#cross-checks)). `gen/tests/test_folds.py` checks:
+
+- the rules: the folds of `gen/kernels` are accepted, and each check of a fold refuses what it is
+  for (shapes, names, the zero state, rule R3 on a supplied array, the claims, `eps` against the
+  combination's bound); property 3 of the zero state on every normalized pair of three small
+  formats;
+- the interpreter: the lane order is its definition in `proofs/theories/Folds.v`, written again
+  in the test (deal, fold each lane, combine from lane 0, the remainder), for several widths; a
+  list shorter than the lanes, one lane and none give the sequential order; the empty list gives
+  the zero state with the flag true; an infinite or NaN element, or an overflow, gives the
+  canonical NaN with the flag false; every fold in both orders, on toy formats of precision 3 to
+  6, holds its claims in exact arithmetic (`fold_error` with the heights of the order, validity,
+  the flag), more than 10 000 cases, with the exponent range widened as the Rocq statements are
+  and in the format itself; the line protocol of arrays;
+- the compiled C++: `F_seq` and `F_lanes` of every build of the runner (the matrix above) are bit
+  for bit the interpreter's, on the lengths 0, 1, $W - 1$, $W$, $W + 1$, $2W$ for every packed
+  width ($W$ = 2, 4, 8) and random lengths up to a few thousand (`--full`: twenty thousand), with
+  non-finite elements in some, in the sequential order and with 0, 1, 2, 3, 4 and 8 lanes; `F_packed` of every
+  packed build prints what `F_lanes` with its register's lanes prints, and the packed runner
+  refuses another width;
+- rule R3 on a supplied array: a program that writes `a * b + c` into the array of a sum, built
+  at `-O2` with each contraction setting and every compiler, gets from the `_entry` folds the sum
+  of the rounded products in every case; the folds of stored arrays, whose steps do not guard,
+  are the control, and must differ in some case where a compiler fuses (GCC and Apple clang with
+  `-ffp-contract=fast`, measured);
+- the printers: the model, the statements and the audit of a fold made `proved`, the C++ text and
+  the counts of the loops.
+
+The kernels of the stage (the steps, the finishes, the bounds) are in the suite's other tests like
+every kernel: the interpreter against the host, the claims in exact arithmetic on toy formats
+(`test_statements.py`; `upper` with its own value, `holds`, the form `T`), the non-finite reading
+of the finishes (`test_nonfinite.py`), the compiled runners bit for bit, and the self-test.
 ## A cross-check by hand
 
 From the repository root, a toy format with the interpreter, and binary64 with a compiled runner
