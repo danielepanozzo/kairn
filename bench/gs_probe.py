@@ -17,9 +17,11 @@ stack cookie"). Run from the repository root in a Visual Studio x64 developer pr
   gs_probe.py fix --json FILE
       Compiles bench/gs_probe.cpp against a copy of include/ in the work directory in which every
       parameter of type Expansion<T, 1> of kairn/expansion.hpp is passed by const reference instead
-      of by value (the repository's headers are not changed), and reports as probe does. The
-      headers have passed it so since they were fixed: there the copy changes nothing, and probe
-      measures what fix measured before.
+      of by value (the repository's headers are not changed), and reports as probe does. Since the
+      fix the operators of Expansion<T, 1> (22 parameters) take it by const reference and the
+      functions of detail by value: the copy changes those 59 parameters of detail and of the
+      mixed forms, so fix measures the variant that passes all 81 by const reference ("A" on
+      docs/developer/results/costs-milestone1.md), and probe the headers as they are.
   gs_probe.py listing --cxx COMPILER --json FILE [--flags "..."]
       For GCC and Clang: compiles bench/gs_probe.cpp (with GS_PLAIN) to assembly at --level
       (default -O2) and records, for every function of the listing, its number of instructions and
@@ -28,8 +30,9 @@ stack cookie"). Run from the repository root in a Visual Studio x64 developer pr
       of --lines (default: one operation, a loop and Horner, on double and Expansion<double, 1>).
 
 probe, fix, isolate and listing take --include DIR, the headers to compile against (default:
-include/ of this tree); probe and listing take --level (/O2 or /Od; -O2, -O0, ...), and probe
---all, which reports every function of the object, those of Kairn that are not inlined included.
+include/ of this tree). probe takes --level, the options in place of /O2 (/Od, or "/O2 /Ob0"),
+and --all, which reports every function of the object, those of Kairn that are not inlined
+included; listing takes --level=-O0 and the like (default -O2).
 Every compilation and disassembly has a timeout; on a timeout only the process this script started
 is terminated, by its handle.
 """
@@ -119,7 +122,7 @@ def functions(disasm, prefix=''):
 
 
 def compile_and_read(src, obj, flags, env, prefix, include=os.path.join(ROOT, 'include'), level='/O2'):
-    base = [level if f == '/O2' else f for f in FLAGS]
+    base = [g for f in FLAGS for g in (level.split() if f == '/O2' else [f])]
     run([tool('cl', env)] + base + ['/I', include] + flags + ['/c', src, '/Fo' + obj], env)
     return functions(run([tool('dumpbin', env), '/disasm:nobytes', obj], env), prefix)
 
@@ -217,7 +220,7 @@ def main():
     p.add_argument('--prefix', default='')
     p.add_argument('--labels', help='objects: the names of the objects in the report, comma-separated')
     p.add_argument('--include', default=os.path.join(ROOT, 'include'), help='the headers to compile against')
-    p.add_argument('--level', help='probe: /O2 (default) or /Od; listing: -O2 (default), -O0, ...')
+    p.add_argument('--level', help='probe: the options in place of /O2 (/Od, "/O2 /Ob0"); listing: -O2, -O0, ...')
     p.add_argument('--all', action='store_true', help="probe: every function of the object, not only the probe's")
     p.add_argument('--cxx', help='listing: the compiler, GCC or Clang')
     p.add_argument('--flags', default='', help='listing: more options (the FMA option)')
@@ -248,7 +251,8 @@ def main():
     args.level = args.level or '/O2'
     data = {'schema': 1, 'what': args.what, 'date': datetime.date.today().isoformat(), 'commit': args.commit,
             'machine': args.machine, 'compiler': compiler(env),
-            'flags': [args.level if f == '/O2' else f for f in FLAGS] + ['/I', 'include'], 'results': {}}
+            'flags': [g for f in FLAGS for g in (args.level.split() if f == '/O2' else [f])] + ['/I', 'include'],
+            'results': {}}
     if args.what == 'probe':
         src = os.path.join(ROOT, 'bench', 'gs_probe.cpp')
         for label, flags in (('/GS', ['/DGS_PLAIN']), ('/GS-', ['/DGS_PLAIN', '/GS-'])):

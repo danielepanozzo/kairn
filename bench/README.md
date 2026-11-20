@@ -201,21 +201,27 @@ taskset -c 40 build-bench/bench/kairn-bench-costs-checks-O2 --cpu 40 --reps 31 \
     --machine "..." --commit "$(git rev-parse --short HEAD)" --json results/milestone1/costs/checks/...
 ```
 
-`gs_probe.py` (MSVC only, in a developer prompt) says which functions MSVC protects with a `/GS`
-stack cookie: `probe` compiles `gs_probe.cpp`, the same shapes of code (one operation, a loop, a
-chain, a dot product, `axpy`, Horner) on `double`, `Expansion<double, 1>`, `Expansion<double, 2>`,
-`Ball<double, 1>` and `Ball<double, 2>`, with `/GS` and `/GS-`, and reads `dumpbin /disasm` for
-`__security_cookie` and `__security_check_cookie`; `objects` does the same on objects built
-elsewhere (`kairn-bench`'s `api.cpp.obj`); `isolate` compiles `gs_isolate.cpp`, one-limb types
-that differ from `Expansion<double, 1>` in one thing each; `fix` compiles `gs_probe.cpp` against a
-copy of the headers in the work directory in which `Expansion<T, 1>` is passed by const reference.
+`gs_probe.py` (in a developer prompt) says which functions MSVC protects with a `/GS` stack
+cookie: `probe` compiles `gs_probe.cpp`, the same shapes of code (one operation, a loop, a chain, a
+dot product, `axpy`, Horner) on `double`, `Expansion<double, 1>`, `Expansion<double, 2>`,
+`Ball<double, 1>` and `Ball<double, 2>`, and the same with `float` limbs, with `/GS` and `/GS-`,
+and reads `dumpbin /disasm` for `__security_cookie` and `__security_check_cookie` (`--level`
+replaces `/O2`, `--all` reports the functions of Kairn that are not inlined too, `--include` names
+other headers); `objects` does the same on objects built elsewhere (`kairn-bench`'s
+`api.cpp.obj`); `isolate` compiles `gs_isolate.cpp`, one-limb types that differ from
+`Expansion<double, 1>` in one thing each; `fix` compiles `gs_probe.cpp` against a copy of the
+headers in the work directory in which every parameter `Expansion<T, 1>` of `expansion.hpp` is
+passed by const reference (the variant A of the results page; the headers pass it so in the
+operators only). `listing`, with GCC or Clang, compiles `gs_probe.cpp` to assembly and records
+each function's number of instructions and a hash of them, to compare two versions of the headers.
 
 ```sh
 python3 bench/costs_report.py results/milestone1/costs/checks results/milestone1/costs/gs
 ```
 
 prints the tables of the results page from the stored runs of `costs.cpp` and `kairn-bench`
-(named `MACHINE-COMPILER[-GS]-PROGRAM-LEVEL-rN.json`) and of `gs_probe.py`.
+(named `MACHINE-COMPILER[-GS]-PROGRAM-LEVEL-rN.json`) and of `gs_probe.py`, and those of the fix of
+the cookie from `results/milestone1/costs/gs/fix/`.
 
 ### The quick tier on the hosted runners
 
