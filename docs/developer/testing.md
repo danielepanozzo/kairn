@@ -8,7 +8,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | 31 to 54 seconds on the Mac and the Linux machine and 63 to 71 on the Windows machine with `--parallel 4`; on the hosted Windows runners an estimated 108 to 116 seconds, elsewhere under a minute ([Time](#the-tools-tests-leave-the-quick-tier)) |
+| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | 25 to 34 seconds on the Mac, 37 to 47 on the Linux machine and 52 to 58 on the Windows machine (73 on 4 logical processors) with `--parallel 4`; on the hosted runners, measured before each cross-check ran in one process, 31 to 45 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest runner seen ([Time](#each-cross-check-in-one-process)) |
 | Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | five to eleven minutes with `--parallel 4` |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
@@ -91,7 +91,7 @@ front:
 | `full.search.compiled` | The adversarial search ([below](#the-adversarial-search)) on every kernel with an `error`, `upper`, `encloses` or `extends` entry, `binary64` and `binary32`, through the scalar runner with the build's flags, 5 000 cases per kernel and format from its seeds; fails on any violated claim. With four worker processes. |
 | `full.tools.kairn-gen.test` | The generator's own tests, without those that compile C++ (`--no-cxx`, see [the generator's tier](#the-generators-tier)) and without the four test classes of `full.kairn-gen.test` (`--skip`). |
 | `full.tools.kairn-oracle.selftest` | The oracle's own tests (`--quick`), including injected errors it must catch, without the six enumerations of toy formats of `full.kairn-oracle.selftest` (`--skip`). It compiles its own C++ reference runner with the build's compiler; if that fails, the test fails. |
-| `full.tools.crosscheck.guards` | The cross-checks' guards fail the runs they are there to fail ([What a pass requires](#what-a-pass-requires), `tests/test_crosscheck_guards.py`). |
+| `full.tools.crosscheck.guards` | The cross-checks' guards fail the runs they are there to fail, and so do the drivers of the cross-checks with them ([What a pass requires](#what-a-pass-requires), `tests/test_crosscheck_guards.py`). |
 | `full.tools.docs.reference.test` | The tests of `docs/tools/reference.py`, the script of the reference pages ([Documentation](documentation.md#reference-pages)). |
 | `full.tools.brute.driver.test` | The tests of the [brute-force](#the-tiers) driver `tests/brute/brute.py`: the plan of its enumerations, the forms of the fix-ups, `widen.py` on one small format (`tests/brute/test_brute.py`). |
 
@@ -118,6 +118,18 @@ judges every completed line against the kernel's claims in exact arithmetic
 ([the line protocol](architecture.md#the-line-protocol)). The test prints the oracle's report,
 pass or fail; on failure it also prints the command that reruns one case (below).
 
+The tests of the compiled runners and of the public interface run that pipeline in one Python
+process, `tests/crosscheck.py`: the oracle's `gen` and `check` run in it, through the oracle's
+own command line (`kairn_oracle.cli.main`, the code, options and exit status of
+`kairn-oracle gen` and `kairn-oracle check`), and so do the guards
+([below](#what-a-pass-requires)); each runner runs in a process of its own and sees nothing but
+the requests, which are generated once, into a file with the bytes `gen` writes (lines that end
+with CR LF on Windows), and read by each runner in turn. The oracle reads each output as its
+standard input would read the same bytes. The interpreter's enumerations of the full tier stay
+three processes at once (`tests/crosscheck.cmake`, `gen | kairn-gen interp | check`), so that the
+oracle's work overlaps the interpreter's. A test's whole cross-check runs by hand as ctest runs it:
+`ctest -V -R NAME` prints its command.
+
 - **Every kernel** in `gen/claims.json` gets its tests: adding a kernel to the generator adds them.
 - **Random cases**: 6 000 per kernel and format in the quick tier (`KAIRN_CROSSCHECK_QUICK_CASES`)
   and 20 000 in the full tier (`KAIRN_CROSSCHECK_CASES`), seed 0 (`KAIRN_CROSSCHECK_SEED`), so
@@ -130,8 +142,8 @@ pass or fail; on failure it also prints the command that reruns one case (below)
   every sample longer than the schedule has cases of each; the quick tier's 6 000 cases have 261 to
   1 500 per stratum, of 7 to 16 strata.
 - **Every compiled runner on the same cases**: a test of the compiled runners
-  (`tests/crosscheck.cmake`) generates the requests once, into a file, and has each runner of the
-  build complete that file (`tests/run_runners.py`). Every output is judged, but one that is the
+  (`tests/crosscheck.py compiled`) generates the requests once and has each runner of the build
+  complete them. Every output is judged, but one that is the
   same, byte for byte, as an output judged before is not judged again: the oracle's verdict and
   summary depend on nothing but the lines it reads and the claims, so the first runner's verdict
   is that of every runner that wrote the same bytes, and the report says which runners share it.
@@ -140,7 +152,7 @@ pass or fail; on failure it also prints the command that reruns one case (below)
   MSVC, four kernels (`make_2`, `make_2_limbs`, `ball_make_1`, `ball_make_2`) have two: the
   packed runner, or the one built with `/fp:strict`, returns a zero of the other sign on some
   lines, which the claims allow. `api.oracle.K.F` does the same with its two runners and the
-  forms of each (`tests/api/pipeline.cmake`): one output per test there too, but for
+  forms of each (`tests/crosscheck.py api`): one output per test there too, but for
   `mul_pow2_2`, whose two forms differ on the lines where one computes the plain operation, and,
   with MSVC, a few forms that return a zero of the other sign (`mul_2_1_full`, `to_nearest_2`,
   and on the full tier's cases `mul_2_2_full` and `ball_mul_2_full`).
@@ -229,9 +241,14 @@ pass or fail; on failure it also prints the command that reruns one case (below)
 
 ## What a pass requires
 
-Beyond the oracle's verdict (no claim violated, no invalid case, no line dropped or added), a
-cross-check passes only if the run checked what it set out to check. `tests/crosscheck_guards.py`
-decides that from the oracle's summary (`check --json`):
+Beyond the oracle's verdict (no claim violated, no line dropped or added, and with
+`--fail-on-suspicious` no suspicious non-finite result), a cross-check passes only if the run
+checked what it set out to check. An invalid case, one whose operands are outside the kernel's
+requirements, is counted and shown in the report (`INVALID`) and never judged, but it does not fail
+the run: the cross-checks do not pass `check --expect-valid`, and the oracle's generator writes
+none (in the quick tier's 952 000 cases, none). `tests/crosscheck_guards.py` decides from the
+oracle's summary (`check --json`) whether the run checked what it set out to; `tests/crosscheck.py`
+calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
 
 - **The stream is the one asked for**: one generator header, for this kernel, format and mode (and
   seed), and every index of it seen.
@@ -282,7 +299,11 @@ or where `finite_when` never holds, one of `ball_add_1_full` whose radius makes 
 finite operands the whole line, random runs without non-finite operands, without the empty set or
 without one of a constructor's outcomes, headers without the strata of the layer), and summaries
 altered where no stream can produce the fault (entries that are not those of the claims, claims
-that cannot be read).
+that cannot be read); and both drivers on such runs, which they must fail with the guards'
+reason, and on good ones: `tests/crosscheck.py compiled` with the interpreter as its runner
+(`--interp`), `tests/crosscheck.py api` with the build's runner of the public interface (a good
+run, one of 5 cases, which misses strata, and a kernel it maps no form to), and
+`tests/crosscheck.cmake`.
 
 ## Packed kernels
 
@@ -765,11 +786,13 @@ machine with GCC 13:
   122 seconds (`full.api.oracle`).
 - *Runner outputs written line by line to a file.* On the Windows machine, a file as the scalar
   runner's standard output, or cmake's `OUTPUT_FILE`, cost 0.09 to 0.1 seconds per run on 2 000
-  requests against 0.02 through a pipe; `tests/run_runners.py` reads the outputs through pipes,
-  which brought a test of the full tier's compiled runners there from 6.2 to 1.9 seconds.
-- *Python processes.* The two groups above started about 4 500 Python processes per run; now 794
+  requests against 0.02 through a pipe; the driver of the tests (then `tests/run_runners.py`, now
+  `tests/crosscheck.py`) reads the outputs through pipes, which brought a test of the full tier's
+  compiled runners there from 6.2 to 1.9 seconds.
+- *Python processes.* The two groups above started about 4 500 Python processes per run; then 794
   in the quick tier (four per test of the compiled runners, three per test of the public
-  interface, and the second output of `mul_pow2_2`).
+  interface, and the second output of `mul_pow2_2`), and since each cross-check runs in one
+  process ([below](#each-cross-check-in-one-process)), one per test: 222.
 - *Suites that used every core beside three other tests.* The generator's tests and the oracle's
   started one worker process per processor while ctest ran three more tests beside them: on a
   hosted runner, four workers and three other tests on four cores. The parts with a pool are now
@@ -939,13 +962,157 @@ compiled cross-check would save about 8 seconds of the ctest step with MSVC and 
 each 1 000 fewer per test of the public interface 7 and 4 (by the fixed and per-case costs of the
 same page); the samples are those that the planted faults chose ([above](#time)). Fewer
 processes would not change what is checked: on the Windows machine one compiled cross-check
-(`add_2_2`, `binary64`, eight runners) takes 1.6 to 1.7 seconds, of which the oracle's generator
+(`add_2_2`, `binary64`, eight runners) took 1.6 to 1.7 seconds, of which the oracle's generator
 0.36 (0.11 for one case), the eight runners through `run_runners.py` 0.66 to 0.69 (0.05 to 0.08
-each, most of it starting the process, on 6 000 lines), the oracle's check 0.36 and the guards
-0.08, and a Python process starts in 0.05. Generating, checking and guarding in the process of
-`run_runners.py` would save about a quarter of a second per compiled cross-check there and a
-fifth per test of the public interface, by the ratios above 15 to 20 seconds of the hosted ctest
-step; it is not done.
+each, on 6 000 lines), the oracle's check 0.36 and the guards 0.08, and a Python process started
+in 0.05. Generating, checking and guarding in the process of `run_runners.py` would save about a
+quarter of a second per compiled cross-check there and a fifth per test of the public interface,
+by the ratios above 15 to 20 seconds of the hosted ctest step. It was done next
+([below](#each-cross-check-in-one-process)).
+
+### Each cross-check in one process
+
+After the tools' tests left the quick tier, its ctest step on the hosted Windows runners took 71
+to 154 seconds with MSVC and 70 to 96 with clang-cl in the first three runs (`1bd3182`, `eed45fe`,
+`d31a81a`): over two minutes on one of the six, and the whole job over two minutes on five; 44 to
+45 on Linux x86-64, 31 to 35 on arm64, 69 to 75 on macOS. On 2026-11-20 the owner chose to run each
+cross-check in one process, which loses no check, rather than fewer cases. Since then each test
+`crosscheck.compiled.K.F` and `api.oracle.K.F`, and each of the full tier's tests of the same
+families, is one Python process, `tests/crosscheck.py` ([Cross-checks](#cross-checks)); before, it
+was a CMake script that started the oracle's `gen`, `tests/run_runners.py` (which ran the
+runners), the oracle's `check` for each distinct output and the guards, each a Python process.
+
+**Where the time went**, before the change: each stage of `crosscheck.compiled.add_2_2.binary64`
+(eight runners on 6 000 cases) and of `api.oracle.add_2_2.binary64` (two runners, two forms each,
+on 2 000 cases) alone, on each test machine, the median of seven runs; and the whole tests and
+those of the full tier through ctest, alone, before and after alternating, four times. The Linux
+machine on 16 of its threads, the Windows machine held to 8 logical processors. Seconds:
+
+| Stage | Mac, Apple clang 21 | Linux, GCC 13 | Windows, MSVC |
+|---|---:|---:|---:|
+| Starting Python (`python3 -c pass`) | 0.013 | 0.031 | 0.030 |
+| Starting cmake (`cmake -P` of an empty file) | 0.006 | 0.007 | 0.023 |
+| The oracle's `gen` of one case: its start, imports and claims | 0.041 | 0.086 | 0.095 |
+| `gen` of the test's 6 000 cases, into a file | 0.121 | 0.289 | 0.213 |
+| A runner on no input: starting it | 0.003 to 0.006 | 0.004 to 0.005 | 0.013 to 0.017 |
+| A runner on the 6 000 lines | 0.050 to 0.054 | 0.022 to 0.033 | 0.041 to 0.044 |
+| `run_runners.py` with the eight runners | 0.440 | 0.278 | 0.395 |
+| The oracle's `check` of no input: its start, imports and claims | 0.045 | 0.088 | 0.094 |
+| `check --json` of the 6 000 lines | 0.135 | 0.326 | 0.224 |
+| The guards | 0.025 | 0.055 | 0.063 |
+| In one process: importing the oracle's modules | 0.023 | 0.046 | 0.047 |
+| In one process: generating the 6 000 cases; judging them | 0.079; 0.076 | 0.215; 0.209 | 0.117; 0.112 |
+| `crosscheck.compiled.add_2_2.binary64`, before; after | 0.77 to 0.78; 0.69 to 0.70 | 0.98 to 0.99; 0.85 to 0.87 | 0.93 to 0.99; 0.73 to 0.77 |
+| `api.oracle.add_2_2.binary64`, before; after | 0.33 to 0.34; 0.22 | 0.58 to 0.59; 0.35 to 0.40 | 0.54 to 0.63; 0.35 to 0.36 |
+| `full.crosscheck.compiled.add_2_2.binary64` (twelve runners, 20 000 cases), before; after | 3.38 to 3.39; 3.31 to 3.32 | 2.79 to 2.84; 2.66 to 2.69 | 3.11 to 3.29; 2.94 to 3.13 |
+| `full.api.oracle.add_2_2.binary64` (three runners, 10 000 cases), before; after | 1.23 to 1.24; 0.97 | 1.55 to 1.59; 1.20 to 1.22 | 1.43 to 1.49; 1.07 to 1.13 |
+
+The earlier profile ([above](#the-tools-tests-leave-the-quick-tier)) holds in its shape; its times
+were those of the test beside three others, as in a run of the quick tier, where held to 8 logical
+processors it takes 1.3 to 1.7 seconds on the Windows machine, and alone three fifths of that.
+One correction: starting a runner is a third of its time there (0.013 to 0.017 seconds of 0.041
+to 0.044), not most of it; the rest is reading its 6 000 lines and printing its results.
+One process removes what is fixed per test: the start of cmake and of three Python processes (two
+for the public interface), the second import of the oracle's modules and reading of the claims,
+and the guards' process. It leaves generating, the runners and judging: 75 to 90% of a compiled
+cross-check, 60 to 70% of one of the public interface, alone.
+
+**Before and after**, the builds of the commit before and of the change, one after the other on the
+same machine, alternating; seconds, the first run of a build, then the later ones, which read
+ctest's times of the first. The Mac was loaded by other jobs (load average 4 to 10), the Linux
+machine by other users (7 to 15):
+
+| Where | Quick tier, before | Quick tier, after | Full tier, before and after |
+|---|---|---|---|
+| Mac, Apple clang 21 | 34.6; 33.0, 33.0 | 34.2; 28.6, 28.6 | 358 and 359 |
+| Mac, GCC 16 | 34.1; 29.5, 29.2 | 28.0; 24.8, 24.7 | 299 and 293 |
+| Linux, 16 threads, GCC 13 | 53.7; 47.8, 47.4 | 45.3; 40.1, 39.5 | 564 and 556 |
+| Linux, 16 threads, Clang 18 | 55.0; 48.6, 48.5 | 47.2; 40.2, 40.5 | 561 and 554 |
+| Linux, 4 threads, GCC 13 | 44.3 | 36.8 | |
+| Linux, 4 threads, Clang 18 | 45.0 | 38.0 | |
+| Windows, MSVC, 8 logical processors | 68.5, 69.0, 71.4 | 58.2, 57.4, 58.4 | 648 and 637 |
+| Windows, MSVC, 4 logical processors | 89.9, 87.4 | 73.8, 73.2 | |
+| Windows, MSVC, all 20 logical processors | 66.7; 66.6, 64.0, 64.5 | 55.7; 53.3, 52.4, 52.2 | 664 and 653 |
+
+The runs on 4 threads and on 8 and 4 logical processors followed others of the same builds, and
+read their times; the first runs of the Windows machine read ctest's times of a run of two tests.
+
+The tests of the two families, summed over a run of the quick tier (each test the median of its
+runs above), and what each test gained:
+
+| Where | `crosscheck.compiled.*`, 126 tests | `api.oracle.*`, 96 tests | The quick tier's test time |
+|---|---|---|---|
+| Mac, Apple clang 21 | 84.1 to 73.7 s, 0.08 a test | 35.0 to 27.3 s, 0.08 a test | 129.9 to 111.8 s |
+| Mac, GCC 16 | 57.8 to 47.4 s, 0.08 | 34.4 to 26.5 s, 0.08 | 112.7 to 94.2 s |
+| Linux, 16 threads, GCC 13 | 106.3 to 89.3 s, 0.13 | 51.5 to 36.1 s, 0.16 | 182.9 to 150.2 s |
+| Linux, 16 threads, Clang 18 | 105.8 to 88.8 s, 0.13 | 51.5 to 36.2 s, 0.16 | 186.8 to 154.7 s |
+| Windows, MSVC, 8 logical processors | 152.5 to 124.9 s, 0.22 | 77.1 to 58.3 s, 0.20 | 271.6 to 223.9 s |
+| Windows, MSVC, 4 logical processors | 195.7 to 161.8 s, 0.27 | 95.7 to 71.7 s, 0.25 | 347.0 to 286.8 s |
+| Windows, MSVC, all 20 logical processors | 139.2 to 110.3 s, 0.23 | 72.8 to 54.2 s, 0.19 | 250.6 to 202.9 s |
+
+The full tier's wall time is set by its longest tests, the oracle's and the generator's pools and
+the interpreter's enumerations, which did not change: it gained 0 to 2%. Its tests of the public
+interface gained 0.12 to 0.25 seconds a test (`full.api.oracle.*`, and 0.08 to 0.28 for
+`full.api.flags.oracle.*`, which runs every flag set's runner) on the Mac with GCC 16, the Linux
+machine and the Windows machine on 8 logical processors, and its compiled cross-checks 0.08 to
+0.11, a smaller share of their 1 to 4.5 seconds; in these single runs beside the longest tests the
+noise is of the same size (with Apple clang the compiled cross-checks took 0.03 seconds more a
+test, alone 0.07 less).
+
+**On the hosted runners**, estimated as the cost page estimates (`bench/ci_times.py`,
+[Costs, Milestone 1](results/costs-milestone1.md#the-tests-that-take-the-time)): the per-test
+times of each of the three runs, read from their logs, each test of the two families scaled by
+its ratio of after to before on the Windows machine held to 4 logical processors (the median of
+its runs), replayed in the order ctest started them on four slots. Scaling each family by its
+ratio of sums instead gives the same within 0.1 second, and the ratios of 8 or 20 logical
+processors within 2 seconds; clang-cl takes MSVC's ratios (the Windows machine has no clang-cl).
+Seconds of the ctest step:
+
+| Run | MSVC: ctest's total; the replay; after | clang-cl: ctest's total; the replay; after |
+|---|---|---|
+| `1bd3182` | 153.2; 150.9; 126.4 (-24.5) | 89.0; 88.5; 73.8 (-14.7) |
+| `eed45fe` | 69.8; 68.6; 57.7 (-10.9) | 94.9; 92.5; 77.5 (-14.9) |
+| `d31a81a` | 96.3; 94.7; 79.6 (-15.1) | 68.1; 66.6; 55.8 (-10.9) |
+
+The estimate is 56 to 80 seconds on five of the six runners and 126 on the slowest, whose runner
+took 2.2 times as long as the fastest for the same tests: the saving is 11 to 25 seconds, a sixth
+of the step, as the profile of the earlier estimate (15 to 20) had it. On such a runner the step
+would stay at about two minutes; on the others it has a margin of 40 seconds or more.
+
+**Nothing was lost.** On each machine and compiler (the Mac with Apple clang 21 and GCC 16, the
+Linux machine with GCC 13 and Clang 18, the Windows machine with MSVC), on the builds of before and
+after: the lists of tests of both tiers are identical (names, order, labels, timeouts); the
+oracle's summaries of every output judged are identical but for the path of the claims, which is
+the source tree's (the cases, the strata, every count and extreme the guards read: per build on
+the Mac and the Linux machine 224 summaries of the quick tier, 952 000 cases, and 389 of the full
+tier, 12.2 million cases, the interpreter's among them; on the Windows machine, whose runners
+give two outputs for four kernels, 234 and 419); and in ctest's logs every test of the two
+families has the same result and the same lines
+of verdict (the guards' line with the cases judged, the strata and the counts of the extended
+domain; which runners and forms share an output). On the Mac, 32 runs with broken runners fail, or
+pass, alike under both drivers: a runner that crashes, exits with an error, prints a line of
+garbage, drops, repeats or cuts lines, prints nothing, returns a wrong result, or a non-finite one
+on small operands, changes a tag, prints bytes that are not ASCII, ends its lines with CR LF,
+leaves out the generator's headers, or does not exist; a stratum missing; for the public
+interface, a list of forms that fails or is empty, a form that crashes, and the like. A runner
+that changes an operand so that a case is outside the kernel's requirements passes under both,
+the case shown as invalid ([What a pass requires](#what-a-pass-requires)). Of the faults planted
+by `tests/kernel_mutants.py`, 42 (40 that the quick tier caught, of 36 kernels and every kind of
+change, and the 2 that only the full tier caught) fail the same tests of each tier with both
+drivers, as in the stored run of the whole experiment, on the Linux machine with GCC 13. The
+oracle's own injected faults do not go through the drivers; `kairn-oracle selftest` passes.
+
+**What is left** of a compiled cross-check is mostly its runners: on the Windows machine about
+0.36 of its 0.75 seconds, on the Mac 0.43 of 0.70, beyond starting each runner 3 to 8
+microseconds a line, which is handling text (splitting the line, parsing each limb with `strtod`
+and printing each result with `printf`'s `%a`); the kernels themselves take nanoseconds
+([Benchmarks](results/bench-milestone1.md)). A runner
+that read and wrote its limbs itself would shorten every compiled cross-check without changing
+what is checked; it would change the runners' code, and their output, which only has to be the
+same among the runners of one build. Smaller: one process per runner of the public interface for
+all of its forms, instead of one per form (0.013 to 0.017 seconds a process on the Windows
+machine), and a cache of the oracle's compiled modules in the build tree (their import from
+source takes 0.04 to 0.07 seconds a process, 0.01 to 0.03 from a cache).
 
 ## The generator's tier
 
@@ -1000,11 +1167,29 @@ python3 oracle/kairn-oracle gen ball_mul_2 fp:4:-5:1 --exhaustive \
   | python3 gen/kairn-gen interp | python3 oracle/kairn-oracle check
 ```
 
-`check` exits with 1 on any violated claim, invalid case or broken stream, and its report lists
+`check` exits with 1 on any violated claim or broken stream (with `--fail-on-suspicious`, on a
+suspicious non-finite result; with `--expect-valid`, on an invalid case), and its report lists
 the worst cases with their tags. `--verbose` adds the profile of the error by distance from the
 underflow range; `--json FILE` writes everything, which `tests/crosscheck_guards.py` reads. A toy
 format below a kernel's minimum precision is not judged unless `check` is given
 `--ignore-min-precision`.
+
+A test's whole cross-check, every runner and the guards, as ctest runs it in one process
+(`ctest -V -R NAME` prints its command):
+
+```sh
+python3 tests/crosscheck.py compiled --kernel mul_2_2 --format binary64 --seed 0 --count 6000 \
+  --fail-on-suspicious --summary build/by-hand/mul_2_2.json \
+  --runner cxx build/tests/kairn-gen-runner --runner packed build/tests/kairn-gen-packed-runner
+
+python3 tests/crosscheck.py api --kernel mul_2_2 --format binary64 --seed 1 --count 2000 \
+  --summary-dir build/by-hand --runner build build/tests/api/kairn-api-runner
+```
+
+The first writes the oracle's summary of each distinct output next to `--summary`, named with
+the label of the first runner that wrote it, the second `K.F.LABEL.FORM.json` in `--summary-dir`;
+`--interp` adds the generator's interpreter as one more runner, and `--exhaustive` with
+`--restrict` an enumeration, as for `gen`.
 
 ## Rerunning one case
 
@@ -1025,7 +1210,10 @@ python3 oracle/kairn-oracle gen add_2_2 binary64 --seed 0 --start 462 --count 1 
 ```
 
 and for an exhaustive case, `--exhaustive --start INDEX --count 1` (with the same restrictions,
-if any). A failing cross-check prints this command with its own runner and arguments filled in.
+if any). A failing cross-check of the compiled runners prints this command with its own runner and
+arguments filled in, and one of the public interface with `RUNNER --form F` for the runner, the
+list of its runners, and the forms that failed; both keep the work directory with the requests and
+the outputs that failed, and say where it is.
 The request line alone is also a valid input: `echo 'add_2_2 binary64 ... #extreme:462' |
 build/tests/kairn-gen-runner` shows the result without the oracle, and `python3 gen/kairn-gen
 interp` the exact one. The packed runner evaluates a lone line in every lane.
