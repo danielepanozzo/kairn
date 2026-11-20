@@ -14,7 +14,10 @@
      finite is not a claim), the guard (an operation, not a kernel), the threshold of
      mul_pow2_2 for a scalar that is not a power of two, and statements that say more
      about a kernel than its generated statement does (the parts of a split, the
-     exactness of mul_pow2_2, further bounds on radd and rmul).
+     exactness of mul_pow2_2, further bounds on radd and rmul);
+   - the theorems of summation, which are about no single kernel and have no generated
+     statement: the tree theorem, the bounds of a sum and of a dot product in the two
+     orders of a loop, and the kernels to which they apply.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -23,6 +26,7 @@ From Kairn.Gen Require Import Statements IeeeStatements.
 From Kairn Require Import IeeeVocabulary IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore IeeeSub IeeeFinite.
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeOps.
+From Kairn Require Import Folds Summation SummationKernels.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -180,3 +184,64 @@ Print Assumptions mul_pow2_2_ieee_finite.
 Definition mul_pow2_2_ieee_finite_any_audit : mul_pow2_2_ieee_finite_any_spec :=
   mul_pow2_2_ieee_finite_any.
 Print Assumptions mul_pow2_2_ieee_finite_any.
+
+(* Summation: the two orders of a loop over arrays as functions on lists
+   (theories/Folds.v), then the tree theorem, its closed forms, and the bounds of the two
+   orders (theories/Summation.v). Real arithmetic about an addition of which only an
+   error bound is known; no kernel is named. *)
+Print Assumptions lane_nth.
+Print Assumptions fold_lanes_short.
+Print Assumptions fold_seq_map.
+Print Assumptions fold_lanes_map.
+Print Assumptions height_le_leaves.
+Print Assumptions pow_minus_1_le_gamma.
+Print Assumptions div_one_minus_le.
+Print Assumptions tree_sum_general.
+Print Assumptions tree_sum.
+Print Assumptions tree_sum_tau.
+Print Assumptions tree_sum_weighted.
+Print Assumptions tree_sum_approx.
+Print Assumptions tree_sum_approx_gamma.
+Print Assumptions fold_seq_tree_zero.
+Print Assumptions fold_lanes_tree_zero.
+Print Assumptions fold_seq_tree.
+Print Assumptions fold_lanes_tree.
+Print Assumptions fold_seq_sum.
+Print Assumptions fold_lanes_sum_height.
+Print Assumptions fold_lanes_sum.
+Print Assumptions fold_seq_sum_gamma.
+Print Assumptions fold_lanes_sum_gamma.
+Print Assumptions fold_seq_sum_approx.
+Print Assumptions fold_lanes_sum_approx.
+Print Assumptions fold_seq_weighted.
+Print Assumptions fold_lanes_weighted.
+
+(* The additions and the product of Kairn in the summation theorems, and the sums and
+   dot products of one and two limbs in the two orders (theories/SummationKernels.v). *)
+Print Assumptions add_1_1_adds.
+Print Assumptions add_1_1_zero.
+Print Assumptions add_2_2_adds.
+Print Assumptions add_2_2_zero.
+Print Assumptions add_2_2_zero_l.
+Print Assumptions add_2_2_zero_r.
+Print Assumptions add_fast_2_2_adds.
+Print Assumptions add_fast_2_2_zero.
+Print Assumptions add_fast_2_2_zero_l.
+Print Assumptions add_fast_2_2_zero_r.
+Print Assumptions mul_2_2_leaf.
+Print Assumptions fused_add_tau.
+Print Assumptions fused_add_weighted.
+Print Assumptions sum_1_seq.
+Print Assumptions sum_1_lanes.
+Print Assumptions sum_2_seq.
+Print Assumptions sum_2_lanes.
+Print Assumptions sum_fast_2_seq.
+Print Assumptions sum_fast_2_lanes.
+Print Assumptions dot_2_seq.
+Print Assumptions dot_2_lanes.
+Print Assumptions dot_2_seq_gamma.
+Print Assumptions dot_2_lanes_gamma.
+Print Assumptions dot_1_seq.
+Print Assumptions dot_1_lanes.
+Print Assumptions dot_1_seq_gamma.
+Print Assumptions dot_1_lanes_gamma.

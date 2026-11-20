@@ -47,7 +47,8 @@ lists:
   function of Flocq's binary floating-point numbers, where operations overflow and operands may
   be infinite or NaN, and its statements there;
 - `proofs/theories/`, the proofs written by hand, one theorem `K_correct` per kernel `K` and the
-  lemmas they share;
+  lemmas they share, and the theorems about sums and dot products of arrays, which bound a sum
+  made in any order of its additions (`Folds.v`, `Summation.v`, `SummationKernels.v`);
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -67,9 +68,10 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    understand.
 3. **The theorems that the generated audits do not list**, the same way, from
    `proofs/audit/HandAudit.v`: the IEEE-model theorems of the kernels that also have a
-   real-model statement of their own domain (they have generated statements as their types), and
+   real-model statement of their own domain (they have generated statements as their types),
    a few facts whose statements are written by hand because they say more about a kernel than
-   its claims can express.
+   its claims can express, and the theorems about sums and dot products of arrays, which are
+   about no single kernel.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -79,7 +81,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  46 files: no Admitted, admit, Axiom or Parameter
+  49 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -102,8 +104,10 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 Each theorem gets a line `ok` or `REJECTED`, with the axioms its proof depends on, each marked
 `allowed` or `NOT ALLOWED`; in the control, the admitted theorem `wrong` shows up as an axiom named
-after itself, which is how an unfinished proof is caught. In this version every audited theorem
-depends on the same four axioms.
+after itself, which is how an unfinished proof is caught. In this version most audited theorems
+depend on all four axioms. Some depend on two of them only, among them the summation theorems
+that use real numbers and nothing of Flocq; the theorems about lists and trees alone depend on
+none, and the audit prints `closed under the global context` for them.
 
 A kernel's status in `gen/claims.json` is `proved` only when this audit passes for its theorem,
 and the CI runs it on every push and pull request. It keeps what the audit printed as the

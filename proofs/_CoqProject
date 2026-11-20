@@ -31,6 +31,9 @@ theories/OneLimb.v
 theories/MulPow2.v
 theories/Ball2.v
 theories/Program.v
+theories/Folds.v
+theories/Summation.v
+theories/SummationKernels.v
 theories/IeeeOperations.v
 gen/IeeeModel.v
 theories/IeeeBridge.v
