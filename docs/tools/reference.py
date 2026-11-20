@@ -1858,7 +1858,8 @@ class Site:
     def extended_set_bound(self, k, x):
         b = next(iter(x["balls"]))
         cr = x["balls"][b]
-        o, below = name_tex(x["of"]), x["side"] == "below"
+        x_of, below = x["of"], x["side"] == "below"
+        o = name_tex(x_of)
         s = tex(k.expr(x["set"], "set_bound", set(x["balls"]) | set(k.inputs)))
         ball = "the ball $%s$ of center $%s$ and radius $%s$" % (name_tex(b).upper(), name_tex(cr["center"]),
                                                                  name_tex(cr["radius"]))
@@ -1873,6 +1874,22 @@ class Site:
                                                                          name_tex(cr["radius"])),
                              "lower" if below else "upper", "down" if below else "up",
                              "" if not steps else ", or at most %d step%s beyond it" % (steps, "" if steps == 1 else "s")))
+        elif len(k.limbs(cr["center"])) > 1:
+            # Why no number of steps is claimed (ball_lower_as_2, ball_upper_as_2): the center is
+            # rounded to T first, and one gap of T at c can be many gaps at c -+ r.
+            c, r = name_tex(cr["center"]), name_tex(cr["radius"])
+            v = "%s %s %s" % (c, "-" if below else "+", r)
+            errors = [x for x in k.errors if x["of"] == x_of]
+            lines.append("No number of steps of `T` from $\\mathrm{%s}(%s)$ is claimed: the center, of %s limbs, is "
+                         "rounded to `T` before the radius is %s, which moves the bound by up to one gap of `T` at "
+                         "$%s$, and when $%s$ is much smaller than $%s$ in magnitude (a radius close to "
+                         "$\\lvert %s\\rvert$) that is many gaps of `T` at the result. %s" % (
+                             "RD" if below else "RU", v,
+                             {2: "two", 3: "three", 4: "four"}.get(len(k.limbs(cr["center"])), len(k.limbs(cr["center"]))),
+                             "subtracted" if below else "added", c, v, c, c,
+                             ("What is claimed of the distance is that $%s$ is on its side of every member and "
+                              "within the bound above: %s." % (o, k.finite_bullet(errors[0]))) if errors else
+                             "Nothing is claimed of the distance."))
         return lines
 
     def extended_makes_ball(self, k, x):

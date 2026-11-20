@@ -30,6 +30,7 @@ For operands that satisfy the requirements, finite, infinite or NaN:
     - $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$.
 - If the ball $X$ of center $c$ and radius $r$ is empty: $h = -\infty$.
 - Otherwise $h \ge x$ for every $x \in X$: the whole line gives $h = +\infty$.
+- No number of steps of `T` from $\mathrm{RU}(c + r)$ is claimed: the center, of two limbs, is rounded to `T` before the radius is added, which moves the bound by up to one gap of `T` at $c$, and when $c + r$ is much smaller than $c$ in magnitude (a radius close to $\lvert c\rvert$) that is many gaps of `T` at the result. What is claimed of the distance is that $h$ is on its side of every member and within the bound above: $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$.
 
 The constants of the bound (a target, not a guarantee), for each limb type, from `gen/claims.json`:
 

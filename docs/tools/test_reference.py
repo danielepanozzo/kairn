@@ -473,6 +473,14 @@ class Tool(unittest.TestCase):
         self.assertIn("for the lower bound when $x_l + y_l = 0$", page)
         self.assertIn("$\\lvert l - (x + y)\\rvert \\le A\\,\\lvert x + y\\rvert + B$", self.page("add_down_2_2"))
         self.assertIn("If the ball $X$ of center $c$ and radius $r$ is empty: $l = +\\infty$", self.page("ball_lower_as_1"))
+        # Why a bound of a ball with a two-limb center claims no number of steps, and what it claims.
+        for name, side in (("ball_lower_as_2", "RD}(c - r)"), ("ball_upper_as_2", "RU}(c + r)")):
+            page = self.page(name)
+            self.assertIn("No number of steps of `T` from $\\mathrm{%s$ is claimed" % side, page)
+            self.assertIn("much smaller than $c$ in magnitude", page)
+            self.assertIn("within the bound above: $\\lvert", page)
+            self.assertIn("\\le 5\\,u\\,(\\lvert c\\rvert + \\lvert r\\rvert) + 3\\,\\eta$.", page)
+        self.assertNotIn("No number of steps", self.page("ball_lower_as_1"))
         self.assertIn("$Z$ is the whole line, $[-\\infty, +\\infty]$", self.page("interval_make_1"))
         self.assertIn("If an operand is a zero: $d$ is a zero", self.page("mul_dir_1"))
         # A constant of a claim this script cannot read is an error, never a guess.
