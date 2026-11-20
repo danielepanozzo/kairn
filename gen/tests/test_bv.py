@@ -29,10 +29,10 @@ import test_simd as simd_tests
 import test_statements as st
 from kairn_gen import claims, cpp, expr, interp, ir, objcode, rocq, rules
 
-BVS = ('bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2')
+BVS = ('bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_neg_1', 'bv_neg_2')
 # The Ball kernel each one applies entry by entry, whose radius the one radius is the largest of.
 BALL = {'bv_add_1': 'ball_add_1', 'bv_add_2': 'ball_add_2', 'bv_sub_1': 'ball_sub_1', 'bv_sub_2': 'ball_sub_2',
-        'bv_scale_1': 'ball_scale_1', 'bv_scale_2': 'ball_scale_2'}
+        'bv_scale_1': 'ball_scale_1', 'bv_scale_2': 'ball_scale_2', 'bv_neg_1': 'ball_neg_1', 'bv_neg_2': 'ball_neg_2'}
 ZERO = (interp.NUM, False, 0, 0)
 PINF = (interp.INF, False)
 exact, finite = writers.exact, writers.finite
@@ -133,6 +133,10 @@ def judge_bv(m, ks, fd, f, scalars, elements, out):
             c, rad = sum(exact(x) for x in z), exact(r)
             if not (c - rad <= lo and hi <= c + rad):
                 bad.append(('V2', i))
+            # exact (bv_neg_k): every real within the radius of the center is a value of the set: the
+            # set, an interval, is the ball.
+            if 'exact_when' in entry and not entry['exact_when'] and (c - rad, c + rad) != (lo, hi):
+                bad.append(('exact', i))
         # V3: every operand finite, the centers the step's, the radius the radius kernel's on the largest
         # magnitude of a leading limb written.
         if not operands_finite:
@@ -245,9 +249,12 @@ def empty_cases(fd, f):
     scalar 1, 2, -2, the number after 2 or 4."""
     c = fd.ensures[0]['radii_when'][0]
     L = f.qmax + f.p + c['exp']
-    half = interp.canon(False, 1, L - 1)
-    radii = [ZERO, half, interp.pred(f, half), interp.succ(f, half), interp.canon(False, 1, L),
-             interp.succ(f, interp.canon(False, 1, L)), interp.largest(f, False)]
+    big = [interp.canon(False, 1, L - 1), interp.canon(False, 1, L)]
+    radii = [ZERO, interp.largest(f, False)]
+    for v in big:
+        if v[2].bit_length() + v[3] <= f.qmax + f.p:          # a number of the format
+            radii += [v, interp.pred(f, v), interp.succ(f, v)]
+    radii = [v for v in radii if finite(v)]
     two = interp.canon(False, 1, 1)
     others = [interp.canon(False, 1, 0), two, interp.neg(two), interp.succ(f, two), interp.canon(False, 1, 2)]
     radius_names = set(vectors(fd).values())
@@ -497,9 +504,13 @@ class Interp(unittest.TestCase):
                     at_limit += within and value == top and outs[0][-1]
                     beyond += not within
                     whole += not outs[0][-1]
-            self.assertGreater(at_limit, 0, name)       # exactly at the limit, and finite
-            self.assertGreater(beyond, 0, name)
-            self.assertGreater(whole, 0, name)
+            if fd.ensures[0]['radii_when'][0]['exp'] < 0:
+                self.assertGreater(at_limit, 0, name)       # exactly at the limit, and finite
+                self.assertGreater(beyond, 0, name)
+                self.assertGreater(whole, 0, name)
+            else:
+                # bv_neg_k: every finite radius is within the limit, and the result is finite.
+                self.assertEqual((beyond, whole), (0, 0), name)
 
     def test_radii_when_is_implied_by_finite_when(self):
         """At any entry, the conditions of finite_when imply radii_when: V4 of a vector with entries is
@@ -815,7 +826,7 @@ class Printers(unittest.TestCase):
                     self.assertEqual({k: v['least'] for k, v in parts.items()}, least, (name, form))
                     radius = self.ks[self.ks.folds[name].radius[0]]
                     self.assertEqual(parts['radius']['fma'], objcode.kernel_counts(radius, self.ks)['packed'][t]['fma'])
-                    self.assertEqual(parts['radius']['fma'], 3 if 'scale' in name else 2)
+                    self.assertEqual(parts['radius']['fma'], 3 if 'scale' in name else 0 if 'neg' in name else 2)
                     self.assertEqual(parts['record']['fma'], 0)
 
 

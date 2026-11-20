@@ -78,6 +78,15 @@ Definition mul_pow2_step_1_ieee_lead_spec : Prop :=
   let z := IeeeModel.mul_pow2_step_1 prec emax nan_fma x c in
   finite z -> finite x /\ finite c.
 
+(* neg_1, the leading limb of its result: finite only if those of its operands are. *)
+Definition neg_1_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp : nan1 prec emax),
+  forall x : binary_float prec emax,
+  let z := IeeeModel.neg_1 prec emax nan_opp x in
+  finite z -> finite x.
+
 (* scale_step_1, the leading limb of its result: finite only if those of its operands are. *)
 Definition scale_step_1_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -185,6 +194,15 @@ Definition axpy_step_2_1_ieee_lead_spec : Prop :=
   forall a x0 x1 y0 y1 : binary_float prec emax,
   let '(z0, z1) := IeeeModel.axpy_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
   finite z0 -> finite a /\ finite x0 /\ finite y0.
+
+(* neg_2, the leading limb of its result: finite only if those of its operands are. *)
+Definition neg_2_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp : nan1 prec emax),
+  forall x0 x1 : binary_float prec emax,
+  let '(z0, z1) := IeeeModel.neg_2 prec emax nan_opp x0 x1 in
+  finite z0 -> finite x0.
 
 (* bv_center_2, the leading limb of its result: finite only if those of its operands are. *)
 Definition bv_center_2_ieee_lead_spec : Prop :=
@@ -1652,6 +1670,146 @@ Definition bv_make_2_lanes_ieee_spec : Prop :=
     let '(z0, z1) := w_ in
     flag_ = true -> val z0 = val c0 /\ val z1 = val c1) cs ws_ /\
   (flag_ = true -> val r_ = val r).
+
+(* bv_neg_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+Definition bv_neg_1_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (rx : binary_float prec emax) (xs : list (binary_float prec emax)),
+  ((finite rx /\ 0 <= val rx /\ Forall (fun x => ball_finite_1 x rx) xs) \/
+  (rx = infinity prec emax false /\ Forall (fun x => ball_whole_1 x rx) xs)) ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_neg_1_seq prec emax nan_opp nan_abs nan_const rx xs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_1 w_ r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_1 w_ r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  Forall2 (fun x w_ =>
+    let z := w_ in
+    forall x_ : R, in_ball_1 x rx x_ -> in_ball_1 z r_ (- x_))
+    xs ws_ /\
+  (finite r_ ->
+   Forall2 (fun x w_ =>
+     let z := w_ in
+     forall v_ : R, in_ball_1 z r_ v_ -> exists x_ : R, in_ball_1 x rx x_ /\ v_ = (- x_)) xs ws_) /\
+  (finite r_ ->
+   finite rx /\
+   Forall2 (fun x w_ =>
+     let z := w_ in
+     val z = neg_1 (val x)) xs ws_ /\
+   val r_ = FoldModel.bv_neg_1_radius (val rx) (map (fun x => val x) xs)) /\
+  (finite rx ->
+   Rabs (val rx) <= bpow radix2 (emax + 1) ->
+   Forall (fun x =>
+     Rabs ((Rabs (val x)) + val rx) <= bpow radix2 (emax + 1)) xs ->
+   finite r_).
+
+(* bv_neg_1, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+Definition bv_neg_1_lanes_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (W : nat) (rx : binary_float prec emax) (xs : list (binary_float prec emax)),
+  ((finite rx /\ 0 <= val rx /\ Forall (fun x => ball_finite_1 x rx) xs) \/
+  (rx = infinity prec emax false /\ Forall (fun x => ball_whole_1 x rx) xs)) ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_neg_1_lanes prec emax nan_opp nan_abs nan_const W rx xs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_1 w_ r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_1 w_ r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  Forall2 (fun x w_ =>
+    let z := w_ in
+    forall x_ : R, in_ball_1 x rx x_ -> in_ball_1 z r_ (- x_))
+    xs ws_ /\
+  (finite r_ ->
+   Forall2 (fun x w_ =>
+     let z := w_ in
+     forall v_ : R, in_ball_1 z r_ v_ -> exists x_ : R, in_ball_1 x rx x_ /\ v_ = (- x_)) xs ws_) /\
+  (finite r_ ->
+   finite rx /\
+   Forall2 (fun x w_ =>
+     let z := w_ in
+     val z = neg_1 (val x)) xs ws_ /\
+   val r_ = FoldModel.bv_neg_1_radius (val rx) (map (fun x => val x) xs)) /\
+  (finite rx ->
+   Rabs (val rx) <= bpow radix2 (emax + 1) ->
+   Forall (fun x =>
+     Rabs ((Rabs (val x)) + val rx) <= bpow radix2 (emax + 1)) xs ->
+   finite r_).
+
+(* bv_neg_2, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+Definition bv_neg_2_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (rx : binary_float prec emax) (xs : list (binary_float prec emax * binary_float prec emax)),
+  ((finite rx /\ 0 <= val rx /\ Forall (fun x => ball_finite_2 (fst x) (snd x) rx) xs) \/
+  (rx = infinity prec emax false /\ Forall (fun x => ball_whole_2 (fst x) (snd x) rx) xs)) ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_neg_2_seq prec emax nan_opp nan_abs nan_const rx xs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  Forall2 (fun x w_ =>
+    let '(x0, x1) := x in
+    let '(z0, z1) := w_ in
+    forall x_ : R, in_ball_2 x0 x1 rx x_ -> in_ball_2 z0 z1 r_ (- x_))
+    xs ws_ /\
+  (finite r_ ->
+   Forall2 (fun x w_ =>
+     let '(x0, x1) := x in
+     let '(z0, z1) := w_ in
+     forall v_ : R, in_ball_2 z0 z1 r_ v_ -> exists x_ : R, in_ball_2 x0 x1 rx x_ /\ v_ = (- x_)) xs ws_) /\
+  (finite r_ ->
+   finite rx /\
+   Forall2 (fun x w_ =>
+     let '(x0, x1) := x in
+     let '(z0, z1) := w_ in
+     (val z0, val z1) = neg_2 (val x0) (val x1)) xs ws_ /\
+   val r_ = FoldModel.bv_neg_2_radius (val rx) (map (fun x => (val (fst x), val (snd x))) xs)) /\
+  (finite rx ->
+   Rabs (val rx) <= bpow radix2 (emax + 1) ->
+   Forall (fun x =>
+     let '(x0, x1) := x in
+     Rabs ((Rabs (val x0 + val x1)) + val rx) <= bpow radix2 (emax + 1)) xs ->
+   finite r_).
+
+(* bv_neg_2, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+Definition bv_neg_2_lanes_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (W : nat) (rx : binary_float prec emax) (xs : list (binary_float prec emax * binary_float prec emax)),
+  ((finite rx /\ 0 <= val rx /\ Forall (fun x => ball_finite_2 (fst x) (snd x) rx) xs) \/
+  (rx = infinity prec emax false /\ Forall (fun x => ball_whole_2 (fst x) (snd x) rx) xs)) ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_neg_2_lanes prec emax nan_opp nan_abs nan_const W rx xs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  Forall2 (fun x w_ =>
+    let '(x0, x1) := x in
+    let '(z0, z1) := w_ in
+    forall x_ : R, in_ball_2 x0 x1 rx x_ -> in_ball_2 z0 z1 r_ (- x_))
+    xs ws_ /\
+  (finite r_ ->
+   Forall2 (fun x w_ =>
+     let '(x0, x1) := x in
+     let '(z0, z1) := w_ in
+     forall v_ : R, in_ball_2 z0 z1 r_ v_ -> exists x_ : R, in_ball_2 x0 x1 rx x_ /\ v_ = (- x_)) xs ws_) /\
+  (finite r_ ->
+   finite rx /\
+   Forall2 (fun x w_ =>
+     let '(x0, x1) := x in
+     let '(z0, z1) := w_ in
+     (val z0, val z1) = neg_2 (val x0) (val x1)) xs ws_ /\
+   val r_ = FoldModel.bv_neg_2_radius (val rx) (map (fun x => (val (fst x), val (snd x))) xs)) /\
+  (finite rx ->
+   Rabs (val rx) <= bpow radix2 (emax + 1) ->
+   Forall (fun x =>
+     let '(x0, x1) := x in
+     Rabs ((Rabs (val x0 + val x1)) + val rx) <= bpow radix2 (emax + 1)) xs ->
+   finite r_).
 
 (* bv_scale_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
 Definition bv_scale_1_seq_ieee_spec : Prop :=

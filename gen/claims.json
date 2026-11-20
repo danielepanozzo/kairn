@@ -2666,6 +2666,46 @@
       }
     },
     {
+      "name": "bv_neg_radius",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "rx",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "rz",
+          "mode": "nearest"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "bv_scale_radius_1",
       "inputs": [
         {
@@ -3950,6 +3990,42 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "neg_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "value": "-x",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "z",
+          "mode": "nearest"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "a change of sign (milestone2.md, BallVector, bv_neg_k)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -11297,6 +11373,208 @@
       "theorem": null,
       "source": {
         "cite": "the constructor of a BallVector: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_neg_1",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "-x",
+      "requires": [
+        "ball_vector(x, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "-x",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "abs(x)+rx",
+              "exp": 1
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx",
+              "exp": 1
+            }
+          ],
+          "exact_when": []
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "neg_1",
+      "step_args": [
+        "x"
+      ],
+      "record": "norm_step_1",
+      "combine": "norm_combine",
+      "radius": "bv_neg_radius",
+      "radius_args": [
+        "m",
+        "rx"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the negation of each center, the radius of ball_neg_1 (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_neg_2",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "-x",
+      "requires": [
+        "ball_vector(x, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "-x",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "abs(x)+rx",
+              "exp": 1
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx",
+              "exp": 1
+            }
+          ],
+          "exact_when": []
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "neg_2",
+      "step_args": [
+        "x"
+      ],
+      "record": "norm_step_2",
+      "combine": "norm_combine",
+      "radius": "bv_neg_radius",
+      "radius_args": [
+        "m",
+        "rx"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "neg_2 on each center, the radius of ball_neg_2 (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
       }
     },

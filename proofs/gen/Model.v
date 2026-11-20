@@ -409,6 +409,11 @@ Definition bv_make_radius (m r : R) : R :=
   let rz := rnd (g + d) in
   rz.
 
+(* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). *)
+Definition bv_neg_radius (m rx : R) : R :=
+  let rz := rx in
+  rz.
+
 (* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
 Definition bv_scale_radius_1 (m rx a : R) : R :=
   let aa := Rabs a in
@@ -509,6 +514,11 @@ Definition mul_up_1 (a b : R) : R :=
   let zz := orb za zb in
   let r := if zz then p else v in
   r.
+
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). *)
+Definition neg_1 (x : R) : R :=
+  let z := - x in
+  z.
 
 (* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). *)
 Definition next_down (a : R) : R :=

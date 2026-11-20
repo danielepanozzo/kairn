@@ -1251,9 +1251,20 @@ def bv_statement(fd, kernels):
               '  fmt emin prec r_ /\\',
               f'  Forall2 (fun {el} w_ =>']
     lines += [f'    {_let(pattern, el)}'] if pattern != el else []
+    contain = f'    forall {" ".join(members)} : R, ' + ' -> '.join(near) + f' -> Rabs ({setv} - {_sum(w)}) <= r_'
+    if 'exact_when' in entry:
+        # Exact (bv_neg_k): every real within the radius of a center written is a value of the set
+        # with members of the operands' balls.
+        lines += [f'    {_let(_pattern(w), "w_")}',
+                  f'    {center} /\\',
+                  f'    ({contain.strip()}) /\\',
+                  f'    (forall v_ : R, Rabs (v_ - {_sum(w)}) <= r_ -> exists {" ".join(members)} : R, ' +
+                  ' /\\ '.join(near) + f' /\\ v_ = {setv}))',
+                  f'    {xs} ({call_map}).']
+        return lines
     lines += [f'    {_let(_pattern(w), "w_")}',
               f'    {center} /\\',
-              f'    forall {" ".join(members)} : R, ' + ' -> '.join(near) + f' -> Rabs ({setv} - {_sum(w)}) <= r_)',
+              contain + ')',
               f'    {xs} ({call_map}).']
     return lines
 

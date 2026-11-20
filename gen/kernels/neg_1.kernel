@@ -1,0 +1,14 @@
+# The negation of a number of T: exact. The step of bv_neg_1, the negation of a BallVector with
+# one-limb centers (milestone2.md, "BallVector": bv_neg_k), whose two-limb step is neg_2.
+kernel:        neg_1
+input:         x
+output:        z
+value:         -x
+ensures:       rounded z nearest
+min_precision: 1
+source:        a change of sign (milestone2.md, BallVector, bv_neg_k)
+license:       algorithm and proof: MIT
+status:        unverified
+ieee:          bridge
+
+z = neg(x)

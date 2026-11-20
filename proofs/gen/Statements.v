@@ -433,6 +433,16 @@ Definition bv_make_radius_spec : Prop :=
   fmt emin prec rz /\
   rz = RN emin prec r.
 
+(* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_neg_radius_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m rx : R,
+  fmt emin prec m ->
+  fmt emin prec rx ->
+  let rz := bv_neg_radius m rx in
+  fmt emin prec rz /\
+  rz = RN emin prec rx.
+
 (* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
 Definition bv_scale_radius_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -552,6 +562,15 @@ Definition mul_up_1_spec : Prop :=
   fmt emin prec r /\
   (a * b) <= r /\ r <= succ radix2 (FLT_exp emin prec) (RU emin prec (a * b)) /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> r = RU emin prec (a * b)).
+
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). Status: unverified. *)
+Definition neg_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x : R,
+  fmt emin prec x ->
+  let z := neg_1 x in
+  fmt emin prec z /\
+  z = RN emin prec (- x).
 
 (* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). Status: proved. *)
 Definition next_down_spec : Prop :=

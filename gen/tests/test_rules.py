@@ -1096,7 +1096,7 @@ class R3OfTheKernels(unittest.TestCase):
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
                                          'conv_1', 'conv_2'} | MAPS |
                          {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
-                          'bv_make_1', 'bv_make_2'})
+                          'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2'})
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
         self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)
@@ -1428,6 +1428,8 @@ class TheKernels(unittest.TestCase):
     # And the kernels of the constructor of a BallVector: its steps, its radius (finite domain; the copy
     # bv_center_2 of the extended domain with a real-model statement, as neg_2) and its finish.
     BV |= {'bv_center_entry_1', 'bv_center_2', 'bv_make_radius', 'bv_make_finish'}
+    # And the step of one limb and the radius of the negation of a BallVector (finite domain).
+    BV |= {'neg_1', 'bv_neg_radius'}
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # unverified until their proofs are pointed at the generated text: the interval kernels of one
@@ -1546,6 +1548,8 @@ class TheKernels(unittest.TestCase):
             'bv_add_radius_1': 1, 'bv_add_radius_2': 3, 'bv_scale_radius_1': 1, 'bv_scale_radius_2': 2,
             # and the kernels of its constructor that have a real-model statement, from 1.
             'bv_center_entry_1': 1, 'bv_center_2': 1, 'bv_make_radius': 1,
+            # and of the negation.
+            'neg_1': 1, 'bv_neg_radius': 1,
             # Wave 2 (as the proofs found them): mul_dir_1 from 2, the sums of two limbs from 3, the
             # products from 4.
             'mul_dir_1': 2, 'add_ball_2_2': 3, 'add_down_2_2': 3, 'add_up_2_2': 3, 'sub_down_2_2': 3,

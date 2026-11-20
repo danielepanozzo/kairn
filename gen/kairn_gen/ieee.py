@@ -2067,8 +2067,15 @@ def bv_statement(fd, kernels, order):
     lines += [f'    {rocq._let(pattern, el)}'] if pattern != el else []
     lines += [f'    {rocq._let(wp, "w_")}',
               f'    forall {" ".join(members)} : R, ' + ' -> '.join(inb) + f' -> in_ball_{k} {" ".join(w)} r_ {setv})',
-              f'    {xs} ws_ /\\',
-              '  (finite r_ ->',
+              f'    {xs} ws_ /\\']
+    if 'exact_when' in entry:
+        # Exact (bv_neg_k): a finite result is exactly the set, entry by entry.
+        lines += ['  (finite r_ ->', f'   Forall2 (fun {el} w_ =>']
+        lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
+        lines += [f'     {rocq._let(wp, "w_")}',
+                  f'     forall v_ : R, in_ball_{k} {" ".join(w)} r_ v_ -> exists {" ".join(members)} : R, ' +
+                  ' /\\ '.join(inb) + f' /\\ v_ = {setv}) {xs} ws_) /\\']
+    lines += ['  (finite r_ ->',
               '   ' + ' /\\ '.join(f'finite {v}' for v in scalar_limbs) + ' /\\',
               f'   Forall2 (fun {el} w_ =>']
     lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []

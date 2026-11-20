@@ -40,6 +40,8 @@ PROGRAMS += ['add_1_1', 'sub_1_1', 'add_entry_step_1', 'sub_entry_step_1', 'scal
              'mul_pow2_step_2', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1']
 # And the step of the constructor of a BallVector of one limb (ieee: bridge).
 PROGRAMS += ['bv_center_entry_1']
+# And the step of the negation of a BallVector of one limb.
+PROGRAMS += ['neg_1']
 
 
 def read(rel):
@@ -425,9 +427,10 @@ class CheckedFiles(unittest.TestCase):
     # line kept. Then the radius kernels of BallVector (unverified): their definitions were added,
     # every earlier line kept. Then the four kernels of the constructor of BallVector (unverified):
     # their definitions, the program of bv_center_entry_1 and their statements were added, every
-    # earlier line kept.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '0777485c3a9ca3ea4dcd9be0ce511a9762764e1e259e77a8fc00cda803fa6450',
-               'proofs/gen/IeeeStatements.v': 'b686c804770bb690542c803ec59344017a39f24ae65f18fdc49e63b3d65873c9'}
+    # earlier line kept. Then neg_1 and bv_neg_radius, of the negation of a BallVector (unverified),
+    # in the same way.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'bfd4393854f666b4669779ba745cc111ed4150ba2e660d81ed128097267a8c77',
+               'proofs/gen/IeeeStatements.v': 'f60f5ea60d65b028ec0c70546f75038dbb93bf68f92c419f4e8462b3d25fdb43'}
 
 
     def test_the_checked_files(self):

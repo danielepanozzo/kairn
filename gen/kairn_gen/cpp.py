@@ -900,8 +900,10 @@ def bv_end_function(fd, kernels, ctype, packed=False):
     # The largest magnitude through a volatile copy, which computes nothing: a compiler may still
     # specialize the function for the +0 of the zero state (a clone for a constant argument) and fold
     # the radius's fused product by it.
+    # A radius kernel that ignores the largest magnitude (bv_neg_radius) leaves the copy unused.
+    unused = '[[maybe_unused]] ' if radius.input_limbs[0] in radius.unused else ''
     lines = [f'KAIRN_GEN_NOINLINE void {bv_end_name(fd, packed)}({", ".join(params)}) noexcept {{',
-             f'    volatile {ctype} {m}_v_ = {m};', f'    const {ctype} {m}_e_ = {m}_v_;']
+             f'    volatile {ctype} {m}_v_ = {m};', f'    {unused}const {ctype} {m}_e_ = {m}_v_;']
     body, rout = _call(radius, kernels, ctype, [f'{m}_e_'] + scalars, RAD, '    ')
     lines += body
     body, fouts = _call(finish, kernels, ctype, rout + [ok], FIN, '    ')

@@ -588,6 +588,11 @@ Definition bv_make_radius (m r : float) : float :=
   let rz := add g d in
   rz.
 
+(* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). *)
+Definition bv_neg_radius (m rx : float) : float :=
+  let rz := rx in
+  rz.
+
 (* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
 Definition bv_scale_radius_1 (m rx a : float) : float :=
   let aa := abs a in
@@ -838,6 +843,11 @@ Definition mul_up_1 (a b : float) : float :=
   let zz := orb za zb in
   let r := if zz then p else v in
   r.
+
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). *)
+Definition neg_1 (x : float) : float :=
+  let z := neg x in
+  z.
 
 (* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). *)
 Definition next_down (a : float) : float :=
@@ -1875,6 +1885,11 @@ Definition two_prod_prog : list instr :=
 (* inputs: 0 x, 1 c *)
 Definition mul_pow2_step_1_prog : list instr :=
   [ Iprod 0 1  (*  2 z *)
+  ].
+
+(* inputs: 0 x *)
+Definition neg_1_prog : list instr :=
+  [ Ineg 0  (*  1 z *)
   ].
 
 (* inputs: 0 x, 1 a *)

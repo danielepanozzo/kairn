@@ -1155,6 +1155,24 @@ inline const char* bv_make_radius_float() noexcept {
     return !same(o0, 0x1.c38014p+1f) ? "bv_make_radius (float)" : nullptr;
 }
 
+// bv_neg_radius (double)
+inline const char* bv_neg_radius_double() noexcept {
+    volatile double i0 = 0x1.3d0149ca897c5p+3;
+    volatile double i1 = 0x1.5e19577f065aep-1;
+    double o0;
+    bv_neg_radius(i0, i1, o0);
+    return !same(o0, 0x1.5e19577f065aep-1) ? "bv_neg_radius (double)" : nullptr;
+}
+
+// bv_neg_radius (float)
+inline const char* bv_neg_radius_float() noexcept {
+    volatile float i0 = 0x1.29488cp+0f;
+    volatile float i1 = 0x1.419924p+2f;
+    float o0;
+    bv_neg_radius(i0, i1, o0);
+    return !same(o0, 0x1.419924p+2f) ? "bv_neg_radius (float)" : nullptr;
+}
+
 // bv_scale_radius_1 (double)
 inline const char* bv_scale_radius_1_double() noexcept {
     volatile double i0 = 0x1.4e34ac745a4dp-17;
@@ -1785,6 +1803,22 @@ inline const char* mul_up_1_float() noexcept {
     float o0;
     mul_up_1(i0, i1, o0);
     return !same(o0, 0x1.4d47ep+2f) ? "mul_up_1 (float)" : nullptr;
+}
+
+// neg_1 (double)
+inline const char* neg_1_double() noexcept {
+    volatile double i0 = 0x1.ac2597d15f562p+2;
+    double o0;
+    neg_1(i0, o0);
+    return !same(o0, -0x1.ac2597d15f562p+2) ? "neg_1 (double)" : nullptr;
+}
+
+// neg_1 (float)
+inline const char* neg_1_float() noexcept {
+    volatile float i0 = 0x1.d1721p+0f;
+    float o0;
+    neg_1(i0, o0);
+    return !same(o0, -0x1.d1721p+0f) ? "neg_1 (float)" : nullptr;
 }
 
 // next_down (double)
@@ -4865,6 +4899,8 @@ inline const char* run() noexcept {
         bv_make_finish_nonfinite_float,
         bv_make_radius_double,
         bv_make_radius_float,
+        bv_neg_radius_double,
+        bv_neg_radius_float,
         bv_scale_radius_1_double,
         bv_scale_radius_1_float,
         bv_scale_radius_2_double,
@@ -4929,6 +4965,8 @@ inline const char* run() noexcept {
         mul_pow2_step_1_float,
         mul_up_1_double,
         mul_up_1_float,
+        neg_1_double,
+        neg_1_float,
         next_down_double,
         next_down_float,
         next_up_double,

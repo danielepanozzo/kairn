@@ -1103,10 +1103,36 @@ and the combination (as for every ball vector), of `bv_make_radius` in the IEEE 
 for a finite $m$ and a NaN otherwise, and the guarded radius plus $+0$ is the radius, a $-0$ made
 $+0$), and of `bv_make_finish` (`finite_or_nan` with `nonneg`).
 
-**Not yet generated.** `bv_neg_k`, `bv_mul_pow2_k` (its radius needs the exactness of every
-entry, a state that is not a maximum), `bv_axpy_k` (two maxima, of the scaled centers and of the
-results), and `bv_conv_k` with `conv_radius` (a convolution with the maxima of its two operands)
-come later.
+**The negation**, `bv_neg_1` and `bv_neg_2`, is a ball vector of the same kind: the step `neg_1`
+(`z = neg(x)`, value `-x`, `rounded z nearest`) or `neg_2`, the radius kernel `bv_neg_radius`
+(`rz = copy(rx)`, value `rx`, `m` unused), the finish `norm_finish_1`. It is exact, which its claim
+says with the word `exact` (`"exact_when": []`, [below](#claims-of-milestone-2)): the result is exactly
+the set of the negated members, entry by entry. Its `finite_when` is `abs_le(abs(x)+rx,1)` and its
+`radii_when` `abs_le(rx,1)`, which every finite operand satisfies ($\lvert x\rvert + r_x \le 2\Omega
+< 2^{q_{\max} + p + 1}$): a finite operand gives a finite result. The statements of an exact ball
+vector have one more conjunct: in the real model, entry by entry, every real within `r_` of the center
+written is the set's value at some members of the operands' balls (`exists x_ : R, Rabs (x_ - (x0 +
+x1)) <= rx /\ v_ = (- x_)`); in the IEEE model the same under `finite r_`, with `in_ball_k`.
+
+**Not yet generated: proposals.** Three kernels of the page do not fit the ball vectors of the
+generator, whose step returns the center and whose state is one fold of maxima of the centers written;
+each is proposed in `experiments/milestone2/kernels/` and checked there:
+
+- `bv_mul_pow2_k` (`bv_mul_pow2_2.fold`, `bv_mul_pow2_step_k`, `bv_mul_pow2_radius`; checked by
+  `bv_proposals.py`): its radius needs the exactness of every entry ("with `ec` over all entries"),
+  which the written center cannot tell (a second limb scaled to zero leaves a pair that looks exact).
+  The step returns the center and a mask, `ec` of `ball_mul_pow2_k`, and-ed into a third group of the
+  state; the radius kernel's claim ("at least $c\,r_x$, and at least $c\,r_x + \eta$ unless every entry
+  and the radius were exact, then exactly $c\,r_x$") is not in the vocabulary, and nor is an
+  `exact_when` of `encloses_entries` with conditions, which it would claim.
+- `bv_axpy_k` (`bv_axpy_2.fold`, `bv_axpy_step_k`, `bv_axpy_radius_k`; `bv_proposals.py`): the page's
+  radius $\mathrm{bv\_add\_radius}_k(M, \mathrm{bv\_scale\_radius}_k(M', r_x, a), r_y)$ needs a second
+  maximum, of the scaled centers, a second output of the step and a second fold of maxima in the state.
+  The check finds it bit for bit the composition `bv_add_k(bv_scale_k(X, a), Y)` of two ball vectors
+  that are generated, which a header can call today with a temporary array (or in place, the second
+  pass on the array written by the first: the centers written may be exactly the array read).
+- `bv_conv_k` with `conv_radius` (a convolution with the maxima of its two operands, the count
+  $\min(n_x, n_y)$ as a number of `T` and the bound of `dot` for it): [below](#the-product-of-polynomials-proposed).
 
 ### The accumulator
 
@@ -2068,6 +2094,13 @@ true` (and no `"map"`):
       $\lvert x + y\rvert + r_x + r_y \ge r_x + r_y$, and for `bv_scale_1`,
       $(\lvert x\rvert + r_x)\lvert a\rvert \ge r_x\lvert a\rvert$. (Until 2026-11-20 V4 was stated
       for $n \ge 1$ only and `radii_when` did not exist.)
+
+    - **Exact**, with `"exact_when": []` (written last, only in an entry that has it: `bv_neg_k`, the
+      word `exact` of the description): if the result is a finite ball vector, it is exactly the set,
+      entry by entry: besides V2, every real within `radius` of entry $i$ written is a value of `set`
+      with each ball name at some real within its radius of entry $i$ of its center. The list is
+      that of the conditions of `exact_when` of `encloses`, and the empty list always holds; an entry
+      with conditions is not generated yet (`bv_mul_pow2_k`, proposed below, would have them).
 
     What is claimed of the one radius is that and nothing more: containment (V2) and when it is
     finite (V4). That it is the largest of the $n$ radii the entrywise Ball kernel (`ball_add_k`,

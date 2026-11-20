@@ -154,6 +154,32 @@ Definition bv_make_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
 Definition bv_make_2_radius (r : R) (cs : list (R * R)) : R :=
   bv_make_radius emin prec choice (fst (fold_seq bv_make_2_record (0, true) (bv_make_2_map cs))) r.
 
+(* bv_neg_1: a ball vector; arrays stored x; scalars stored rx; it writes z by the step neg_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_neg_radius. *)
+Definition bv_neg_1_step (x : R) : R :=
+  neg_1 x.
+
+Definition bv_neg_1_map (xs : list R) : list R :=
+  map bv_neg_1_step xs.
+
+Definition bv_neg_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_neg_1_radius (rx : R) (xs : list R) : R :=
+  bv_neg_radius (fst (fold_seq bv_neg_1_record (0, true) (bv_neg_1_map xs))) rx.
+
+(* bv_neg_2: a ball vector; arrays stored x; scalars stored rx; it writes z by the step neg_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_neg_radius. *)
+Definition bv_neg_2_step (x : R * R) : R * R :=
+  neg_2 (fst x) (snd x).
+
+Definition bv_neg_2_map (xs : list (R * R)) : list (R * R) :=
+  map bv_neg_2_step xs.
+
+Definition bv_neg_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_neg_2_radius (rx : R) (xs : list (R * R)) : R :=
+  bv_neg_radius (fst (fold_seq bv_neg_2_record (0, true) (bv_neg_2_map xs))) rx.
+
 (* bv_scale_1: a ball vector; arrays stored x; scalars stored rx, supplied a; it writes z by the step scale_step_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_scale_radius_1. *)
 Definition bv_scale_1_step (a : R) (x : R) : R :=
   scale_step_1 emin prec choice x a.

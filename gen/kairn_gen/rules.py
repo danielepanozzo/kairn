@@ -1921,7 +1921,9 @@ def _bv_claims(fd, kernels, step, radius, host):
     # The step's requirements are what a canonical BallVector gives: a normalized center (two limbs).
     passed = dict(zip((g.name for g in step.inputs), fd.step[1]))
     for r in step.requires:
-        if r[0] != 'normalized' or passed.get(r[1]) not in vectors:
+        # canonical: a step of the extended domain with a real-model statement (neg_2), where it is
+        # normalized; a finite center of a canonical BallVector is either.
+        if r[0] not in ('normalized', 'canonical') or passed.get(r[1]) not in vectors:
             err(f'the step {step.name} requires {" ".join(r)}, which no requirement of the fold gives')
     rpassed = dict(zip((g.name for g in radius.inputs), fd.radius[1]))
     for r in radius.requires:
@@ -1962,6 +1964,10 @@ def _bv_claims(fd, kernels, step, radius, host):
                 err(f'radii_when {c["abs_le"]!r}: an expression of the scalars\' names only')
         except expr.ExprError as x:
             err(f'radii_when: {x}')
+    # exact_when: the result is exactly the set, entry by entry. Only the empty list (the word exact,
+    # always: bv_neg_k) is printed today; conditions (bv_mul_pow2_k, proposed) are refused.
+    if e.get('exact_when'):
+        err('encloses_entries exact_when: only "exact" (always) is supported; conditions are not printed yet')
     if fd.min_precision is None or fd.min_precision < 1:
         err('min_precision: an integer, at least 1')
     else:

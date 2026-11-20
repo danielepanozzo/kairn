@@ -423,6 +423,11 @@ template <class T> struct bv_make_radius;
 template <> struct bv_make_radius<double> { static constexpr bool proved = false; };
 template <> struct bv_make_radius<float> { static constexpr bool proved = false; };
 
+// bv_neg_radius: UNVERIFIED. Claims: rounded.
+template <class T> struct bv_neg_radius;
+template <> struct bv_neg_radius<double> { static constexpr bool proved = false; };
+template <> struct bv_neg_radius<float> { static constexpr bool proved = false; };
+
 // bv_scale_radius_1: UNVERIFIED. Claims: upper.
 template <class T> struct bv_scale_radius_1;
 template <> struct bv_scale_radius_1<double> { static constexpr bool proved = false; };
@@ -589,6 +594,11 @@ template <> struct mul_up_1<double> {
 template <> struct mul_up_1<float> {
     static constexpr bool proved = true;
 };
+
+// neg_1: UNVERIFIED. Claims: rounded.
+template <class T> struct neg_1;
+template <> struct neg_1<double> { static constexpr bool proved = false; };
+template <> struct neg_1<float> { static constexpr bool proved = false; };
 
 // next_down: proved. Claims: neighbor.
 template <class T> struct next_down;

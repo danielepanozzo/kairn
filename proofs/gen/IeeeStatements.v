@@ -842,6 +842,21 @@ Definition mul_up_1_ieee_spec : Prop :=
     (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
    xval r = xru prec emax (xmul (xval a) (xval b))).
 
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). IEEE-model status: unverified. *)
+Definition neg_1_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (1 <= prec)%Z ->
+  forall x : binary_float prec emax,
+  finite x ->
+  let z := IeeeModel.neg_1 prec emax nan_opp x in
+  finite z ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.neg_1_prog [x]) /\
+  (val z)
+  = neg_1 (val x).
+
 (* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). IEEE-model status: proved. *)
 Definition next_down_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)

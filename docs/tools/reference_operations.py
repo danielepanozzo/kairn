@@ -564,6 +564,8 @@ KERNELS = {
     "bv_center_2": page("ball-vectors", "A center of two limbs given to the constructor of a BallVector"),
     "bv_make_radius": page("ball-vectors", "The radius given to the constructor of a BallVector"),
     "bv_make_finish": page("ball-vectors", "The result of the constructor of a BallVector: the radius given, or NaN"),
+    "neg_1": page("ball-vectors", "The negation of a number of T, the step of the negation of a BallVector"),
+    "bv_neg_radius": page("ball-vectors", "The radius of the negation of a BallVector: the radius given"),
 }
 
 

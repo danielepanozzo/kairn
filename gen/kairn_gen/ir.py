@@ -857,13 +857,18 @@ def _ensures(words, where):
         # radius (a scalar). radii_when: the conditions of V4 on the scalars alone, which make it
         # a statement of every length, the empty vector included (finite_when at any entry implies
         # them).
-        balls, finite_when, radii_when, flag = {}, None, None, None
+        balls, finite_when, radii_when, flag, exact = {}, None, None, None, False
         for w in words[4:]:
             if w.startswith('finite_when=') and finite_when is None:
                 finite_when = _finite_when(w[len('finite_when='):], where)
                 continue
             if w.startswith('radii_when=') and radii_when is None:
                 radii_when = _finite_when(w[len('radii_when='):], where)
+                continue
+            if w == 'exact' and not exact:
+                # Exact (bv_neg_k): the result is exactly the set, entry by entry, always (the empty
+                # list of conditions of exact_when).
+                exact = True
                 continue
             if w.startswith('flag=') and flag is None:
                 flag = w[len('flag='):]
@@ -878,6 +883,8 @@ def _ensures(words, where):
                  'balls': balls, 'finite_when': finite_when or []}
         if radii_when is not None:
             entry['radii_when'] = radii_when
+        if exact:
+            entry['exact_when'] = []
         return entry
     if kind == 'error' and len(words) >= 3:
         entry = {'kind': 'error', 'of': words[1], 'form': words[2],

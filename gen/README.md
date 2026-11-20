@@ -267,7 +267,8 @@ ok)` tests it; when the flag is false a second pass writes every center zero and
 +infinity, the whole space. Each array is required `ball_vector ARRAY RADIUS`, and the fold claims
 `encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=... radii_when=...]`, `radii_when`
 the conditions of V4 on the scalars alone, so that V4 holds of every length, the empty vector
-included (it comes with `finite_when`). A constructor (`bv_make_k`) reads the centers and the radius
+included (it comes with `finite_when`), and the word `exact` (`"exact_when": []`) for a ball vector that
+is exactly the set (`bv_neg_k`). A constructor (`bv_make_k`) reads the centers and the radius
 given and claims `makes_ball_vector z rr from=c,r flag=F`; its finish claims
 `finite_or_nan r flag=flag if=ok nonneg`, the value also not negative (`rules._bv_make_claims`).
 `rules.bv_rules` checks

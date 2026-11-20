@@ -1429,6 +1429,16 @@ KAIRN_GEN_FORCEINLINE void bv_make_radius(__m256 m, __m256 r, __m256& rz_out) no
     rz_out = rz;
 }
 
+// bv_neg_radius(m, rx) -> rz
+KAIRN_GEN_FORCEINLINE void bv_neg_radius([[maybe_unused]] __m256d m, __m256d rx, __m256d& rz_out) noexcept {
+    const __m256d rz = rx;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void bv_neg_radius([[maybe_unused]] __m256 m, __m256 rx, __m256& rz_out) noexcept {
+    const __m256 rz = rx;
+    rz_out = rz;
+}
+
 // bv_scale_radius_1(m, rx, a) -> rz
 KAIRN_GEN_FORCEINLINE void bv_scale_radius_1(__m256d m, __m256d rx, __m256d a, __m256d& rz_out) noexcept {
     const __m256d aa = _mm256_andnot_pd(_mm256_set1_pd(-0.0), a);
@@ -2561,6 +2571,16 @@ KAIRN_GEN_FORCEINLINE void mul_up_1(__m256 a, __m256 b, __m256& r_out) noexcept 
     const __m256 zz = _mm256_or_ps(za, zb);
     const __m256 r = _mm256_blendv_ps(v, p, zz);
     r_out = r;
+}
+
+// neg_1(x) -> z
+KAIRN_GEN_FORCEINLINE void neg_1(__m256d x, __m256d& z_out) noexcept {
+    const __m256d z = _mm256_xor_pd(x, _mm256_set1_pd(-0.0));
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE void neg_1(__m256 x, __m256& z_out) noexcept {
+    const __m256 z = _mm256_xor_ps(x, _mm256_set1_ps(-0.0f));
+    z_out = z;
 }
 
 // next_down(a) -> r
@@ -11084,6 +11104,332 @@ inline void bv_make_2_packed(const float* c0_in, const float* c1_in, std::size_t
         }
     }
     rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_neg_1_packed_end(double m, bool ok, double rx, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    [[maybe_unused]] const double m_e_ = m_v_;
+    // (rad_rz) = bv_neg_radius(m_e_, rx)
+    const double rad_rz = rx;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_neg_1(stored x, stored rx) -> z, r, finite: step neg_1, record norm_step_1, radius bv_neg_radius: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_neg_1_packed(const double* x_in, std::size_t n, double rx, double* z_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d m_lane_ = _mm256_setzero_pd();
+    __m256d ok_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x = _mm256_loadu_pd(x_in + i_);
+        // (step_z) = neg_1(x)
+        const __m256d step_z = _mm256_xor_pd(x, _mm256_set1_pd(-0.0));
+        _mm256_storeu_pd(z_out + i_, step_z);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+        const __m256d rec_a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), step_z);
+        const __m256d rec_e = _mm256_cmp_pd(rec_a, rec_a, _CMP_EQ_OQ);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const __m256d rec_r_c = _mm256_cmp_pd(m_lane_, rec_a, _CMP_LT_OQ);
+        const __m256d rec_r = _mm256_blendv_pd(m_lane_, rec_a, rec_r_c);
+        const __m256d rec_okr = _mm256_and_pd(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[4];
+    _mm256_storeu_pd(m_lanes_, m_lane_);
+    const int ok_lanes_ = _mm256_movemask_pd(ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ((ok_lanes_ >> 0) & 1) != 0;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ((ok_lanes_ >> j_) & 1) != 0;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z) = neg_1(x)
+        const double step_z = -x;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_neg_1_packed_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_neg_1_packed_end(float m, bool ok, float rx, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    [[maybe_unused]] const float m_e_ = m_v_;
+    // (rad_rz) = bv_neg_radius(m_e_, rx)
+    const float rad_rz = rx;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_neg_1_packed(const float* x_in, std::size_t n, float rx, float* z_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 m_lane_ = _mm256_setzero_ps();
+    __m256 ok_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x = _mm256_loadu_ps(x_in + i_);
+        // (step_z) = neg_1(x)
+        const __m256 step_z = _mm256_xor_ps(x, _mm256_set1_ps(-0.0f));
+        _mm256_storeu_ps(z_out + i_, step_z);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+        const __m256 rec_a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), step_z);
+        const __m256 rec_e = _mm256_cmp_ps(rec_a, rec_a, _CMP_EQ_OQ);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const __m256 rec_r_c = _mm256_cmp_ps(m_lane_, rec_a, _CMP_LT_OQ);
+        const __m256 rec_r = _mm256_blendv_ps(m_lane_, rec_a, rec_r_c);
+        const __m256 rec_okr = _mm256_and_ps(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[8];
+    _mm256_storeu_ps(m_lanes_, m_lane_);
+    const int ok_lanes_ = _mm256_movemask_ps(ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ((ok_lanes_ >> 0) & 1) != 0;
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ((ok_lanes_ >> j_) & 1) != 0;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z) = neg_1(x)
+        const float step_z = -x;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_neg_1_packed_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_neg_2_packed_end(double m, bool ok, double rx, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    [[maybe_unused]] const double m_e_ = m_v_;
+    // (rad_rz) = bv_neg_radius(m_e_, rx)
+    const double rad_rz = rx;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_neg_2(stored x = (x0, x1), stored rx) -> z = (z0, z1), r, finite: step neg_2, record norm_step_2, radius bv_neg_radius: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_neg_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d m_lane_ = _mm256_setzero_pd();
+    __m256d ok_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x0 = _mm256_loadu_pd(x0_in + i_);
+        const __m256d x1 = _mm256_loadu_pd(x1_in + i_);
+        // (step_z0, step_z1) = neg_2(x0, x1)
+        const __m256d step_z0 = _mm256_xor_pd(x0, _mm256_set1_pd(-0.0));
+        const __m256d step_z1 = _mm256_xor_pd(x1, _mm256_set1_pd(-0.0));
+        _mm256_storeu_pd(z0_out + i_, step_z0);
+        _mm256_storeu_pd(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const __m256d rec_r_a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), step_z0);
+        const __m256d rec_r_e = _mm256_cmp_pd(rec_r_a, rec_r_a, _CMP_EQ_OQ);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const __m256d rec_r_c = _mm256_cmp_pd(m_lane_, rec_r_a, _CMP_LT_OQ);
+        const __m256d rec_r = _mm256_blendv_pd(m_lane_, rec_r_a, rec_r_c);
+        const __m256d rec_okr = _mm256_and_pd(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[4];
+    _mm256_storeu_pd(m_lanes_, m_lane_);
+    const int ok_lanes_ = _mm256_movemask_pd(ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ((ok_lanes_ >> 0) & 1) != 0;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ((ok_lanes_ >> j_) & 1) != 0;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = neg_2(x0, x1)
+        const double step_z0 = -x0;
+        const double step_z1 = -x1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_neg_2_packed_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_neg_2_packed_end(float m, bool ok, float rx, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    [[maybe_unused]] const float m_e_ = m_v_;
+    // (rad_rz) = bv_neg_radius(m_e_, rx)
+    const float rad_rz = rx;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_neg_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 m_lane_ = _mm256_setzero_ps();
+    __m256 ok_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x0 = _mm256_loadu_ps(x0_in + i_);
+        const __m256 x1 = _mm256_loadu_ps(x1_in + i_);
+        // (step_z0, step_z1) = neg_2(x0, x1)
+        const __m256 step_z0 = _mm256_xor_ps(x0, _mm256_set1_ps(-0.0f));
+        const __m256 step_z1 = _mm256_xor_ps(x1, _mm256_set1_ps(-0.0f));
+        _mm256_storeu_ps(z0_out + i_, step_z0);
+        _mm256_storeu_ps(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const __m256 rec_r_a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), step_z0);
+        const __m256 rec_r_e = _mm256_cmp_ps(rec_r_a, rec_r_a, _CMP_EQ_OQ);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const __m256 rec_r_c = _mm256_cmp_ps(m_lane_, rec_r_a, _CMP_LT_OQ);
+        const __m256 rec_r = _mm256_blendv_ps(m_lane_, rec_r_a, rec_r_c);
+        const __m256 rec_okr = _mm256_and_ps(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[8];
+    _mm256_storeu_ps(m_lanes_, m_lane_);
+    const int ok_lanes_ = _mm256_movemask_ps(ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ((ok_lanes_ >> 0) & 1) != 0;
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ((ok_lanes_ >> j_) & 1) != 0;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = neg_2(x0, x1)
+        const float step_z0 = -x0;
+        const float step_z1 = -x1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_neg_2_packed_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
     finite_out = rad_f_;
 }
 

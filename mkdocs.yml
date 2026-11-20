@@ -280,6 +280,8 @@ nav:
           - A center of two limbs given to the constructor of a BallVector: reference/bv_center_2.md
           - The radius given to the constructor of a BallVector: reference/bv_make_radius.md
           - "The result of the constructor of a BallVector: the radius given, or NaN": reference/bv_make_finish.md
+          - The negation of a number of T, the step of the negation of a BallVector: reference/neg_1.md
+          - "The radius of the negation of a BallVector: the radius given": reference/bv_neg_radius.md
   # END reference
   - Proofs: proofs/index.md
   - Developer guide:
