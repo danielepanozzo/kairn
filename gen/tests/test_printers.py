@@ -48,8 +48,10 @@ def functions(text, fixups=False):
             m = re.match(r'KAIRN_GEN_COLD (constexpr )?result<(double|float), [0-9]+> (\w+)\(', line)
             key = (m.group(3), m.group(2)) if m else None
         else:
-            m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((double|float) ', line) or \
-                re.match(r'inline (constexpr )?void (\w+)\((double|float) ', line)
+            # (A first input that the kernel ignores is [[maybe_unused]]: bv_neg_radius.)
+            m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ',
+                         line) or \
+                re.match(r'inline (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ', line)
             key = (m.group(2), m.group(3)) if m else None
         if m:
             current = out.setdefault(key, {'constexpr': bool(m.group(1)), 'lines': [], 'head': line})

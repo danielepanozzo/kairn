@@ -110,6 +110,14 @@ NONFINITE_CE_CASES = [
     ('norm_finish_2', 'double', [0.0, True]),
     ('norm_finish_2', 'float', [float.fromhex('0x1.fffffep+127'), True]),
     ('norm_finish_2', 'float', [3.0, False]),
+    # The finish of the constructors of a BallVector: the radius when the mask is true and it is
+    # finite and not negative (either zero), the canonical NaN otherwise.
+    ('bv_make_finish', 'double', [2.0, True]),
+    ('bv_make_finish', 'float', [0.0, True]),
+    ('bv_make_finish', 'double', [-0.0, True]),
+    ('bv_make_finish', 'float', [-1.0, True]),
+    ('bv_make_finish', 'double', [math.inf, True]),
+    ('bv_make_finish', 'double', [2.0, False]),
     # Milestone 2: the interval kernels and the functions of a Ball that are constexpr, on finite
     # operands where they compute (an infinite bound would make TwoSum compute inf - inf, and a NaN
     # bound of ball_from_interval_2 be halved, which constant evaluation refuses: a compile error,
