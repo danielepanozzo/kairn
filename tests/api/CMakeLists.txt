@@ -5,10 +5,10 @@
 #   that calls KERNEL (runner.cpp), computed through the constructors, operators and functions a
 #   client calls, on random binary64 and binary32 cases (in the extended domain, infinities, NaN
 #   and the special balls included, for the kernels that have it); with this build's flags and
-#   with contraction forced on, two runners on the same cases, and the debug build's runner
-#   (flags/) on the first form of each kernel. full.api.oracle.KERNEL.FORMAT, in the full tier
-#   (../full/), does the same on more cases, and full.api.flags.oracle.KERNEL.FORMAT every form
-#   through the runner of every flag set of flags/.
+#   with contraction forced on, two runners on the same cases. full.api.oracle.KERNEL.FORMAT, in
+#   the full tier (../full/), does the same on more cases, with the debug build's runner (flags/)
+#   on the first form of each kernel, and full.api.flags.oracle.KERNEL.FORMAT every form through
+#   the runner of every flag set of flags/.
 # - api.oracle.coverage: every kernel of gen/claims.json is reached by a public form of the
 #   runner, or is a building block, or is an entry kernel on the runner's short list of those not
 #   public yet; no entry kernel is a building block; and the lists below agree.
@@ -70,24 +70,26 @@ endif()
 _kairn_api_program(kairn-api-runner-contract-fast runner.cpp ${_api_contract})
 
 # Each test runs the runners, the one with the build's flags and the one with contraction forced
-# on (and the debug build's, below), on the same requests, generated once (pipeline.cmake). The
-# quick tier's KAIRN_API_QUICK_CASES are at least 1000, the length of stream at which a form that
-# computes only some lines of its kernel must have computed one (runner.cpp); 2000, because with
-# 1000 three more of the faults planted in the kernels that the full tier caught went unseen
-# (docs/developer/testing.md, "Time").
+# on (in the full tier, the debug build's too, below), on the same requests, generated once
+# (pipeline.cmake). The quick tier's KAIRN_API_QUICK_CASES are at least 1000, the length of stream
+# at which a form that computes only some lines of its kernel must have computed one (runner.cpp);
+# 2000, because with 1000 three more of the faults planted in the kernels that the full tier caught
+# went unseen (docs/developer/testing.md, "Time").
 set(_api_claims "${PROJECT_SOURCE_DIR}/gen/claims.json")
 # --- The flag sets (flags/) -------------------------------------------------------------------
 #
 # flags/ builds the public interface's runner and programs once per flag set of
 # docs/developer/testing.md ("Flag sets"), and the kernels' runners for two of them, each with
-# exactly the options of its set. In the quick tier the debug build's runner joins the two above in
-# api.oracle.*, on the first form of each kernel only (FIRST_FORM): built without optimization and
-# with the checks, it takes two to three times as long. The full tier runs every form of every
-# set's runner on KAIRN_API_QUICK_CASES cases (full.api.flags.oracle.*) and the kernels' runners
-# in its cross-checks (../full/CMakeLists.txt, from the variables _flags_* passed up below).
+# exactly the options of its set. In the full tier the debug build's runner (_api_debug_runner)
+# joins the two above in full.api.oracle.*, on the first form of each kernel only (FIRST_FORM):
+# built without optimization and with the checks, it takes two to three times as long, and the
+# quick tier leaves it out (docs/developer/testing.md, "Time"). The full tier also runs every form
+# of every set's runner, the debug build's included, on the quick tier's KAIRN_API_QUICK_CASES
+# cases (full.api.flags.oracle.*) and the kernels' runners in its cross-checks
+# (../full/CMakeLists.txt, from the variables _flags_* passed up below).
 add_subdirectory(flags)
 set(_api_runners "build|$<TARGET_FILE:kairn-api-runner>|contract-fast|$<TARGET_FILE:kairn-api-runner-contract-fast>")
-string(APPEND _api_runners "|debug|$<TARGET_FILE:kairn-api-runner-debug>")
+set(_api_debug_runner "debug|$<TARGET_FILE:kairn-api-runner-debug>" PARENT_SCOPE)
 set(_flags_runners "")
 foreach(_set IN LISTS _flags_names)
   list(APPEND _flags_runners "${_set}|$<TARGET_FILE:kairn-api-runner-${_set}>")
@@ -99,7 +101,7 @@ set(_flags_gen_labels ${_flags_gen_labels} PARENT_SCOPE)
 # --- The end of the flag sets' runners ---------------------------------------------------------
 if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    "-DRUNNERS=${_api_runners}" "-DFIRST_FORM=debug" "-DSEED=${KAIRN_API_SEED}")
+    "-DRUNNERS=${_api_runners}" "-DSEED=${KAIRN_API_SEED}")
   file(READ "${_api_claims}" _api_json)
   string(JSON _api_count LENGTH "${_api_json}" kernels)
   math(EXPR _api_last "${_api_count} - 1")
@@ -132,8 +134,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set_tests_properties(api.oracle.coverage PROPERTIES LABELS "api;oracle")
   list(LENGTH _api_mapped _n)
   list(LENGTH _flags_names _n_flags)
-  message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with 2 runners "
-    "and the debug build's on the first form of each, and in the full tier the runners of ${_n_flags} flag sets")
+  message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with 2 runners, "
+    "and in the full tier the debug build's on the first form of each and the runners of ${_n_flags} flag sets")
 endif()
 
 # --- Products of the program passed into Kairn ------------------------------------------------

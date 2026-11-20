@@ -9,7 +9,7 @@
 #         [-DFIRST_FORM=LABEL|LABEL...] -P pipeline.cmake
 #
 # The runners named in FIRST_FORM complete the requests with the kernel's first form only, its
-# canonical one, and the others with every form (the debug build in the quick tier, whose runner
+# canonical one, and the others with every form (the debug build in full.api.oracle.*, whose runner
 # takes two to three times as long: tests/api/CMakeLists.txt).
 #
 # The requests are generated once, into a file, and every runner completes the same file with

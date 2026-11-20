@@ -206,12 +206,16 @@ endif()
 # --- The public interface against the oracle ----------------------------------------------------
 #
 # Every public form of every kernel api/CMakeLists.txt maps, with both of its runners, on
-# KAIRN_API_CASES cases (the quick tier has KAIRN_API_QUICK_CASES of the same seed).
+# KAIRN_API_CASES cases (the quick tier has KAIRN_API_QUICK_CASES of the same seed), and the
+# debug build's runner, which the quick tier leaves out, on the first form of each kernel.
+set(_api_full_common ${_api_oracle_common})
+list(TRANSFORM _api_full_common APPEND "|${_api_debug_runner}" REGEX "^-DRUNNERS=")
+list(APPEND _api_full_common -DFIRST_FORM=debug)
 foreach(_kernel IN LISTS _api_oracle_kernels)
   foreach(_format binary64 binary32)
     set(_name full.api.oracle.${_kernel}.${_format})
     add_test(NAME ${_name}
-      COMMAND "${CMAKE_COMMAND}" ${_api_oracle_common} "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
+      COMMAND "${CMAKE_COMMAND}" ${_api_full_common} "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
         "-DCOUNT=${KAIRN_API_CASES}" "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/api-oracle"
         -P "${PROJECT_SOURCE_DIR}/tests/api/pipeline.cmake")
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle")
@@ -221,8 +225,8 @@ endforeach()
 # --- The flag sets (api/flags/) -----------------------------------------------------------------
 #
 # full.api.flags.oracle.KERNEL.FORMAT: every public form of the kernel, through the runner of each
-# flag set, on KAIRN_API_QUICK_CASES cases (the quick tier's, which judge the debug build's runner
-# on the first form only). For each set but the debug build, which the quick tier has:
+# flag set, on KAIRN_API_QUICK_CASES cases (the quick tier's cases). For each set but the debug
+# build, which the quick tier has:
 # full.api.flags.SET.self_test, kairn::self_test() and kairn::environment_ok() compiled with the
 # set's flags (tests/api/runner.cpp --self-test), and full.api.flags.SET.constexpr,
 # tests/api/constexpr.cpp built with them.
