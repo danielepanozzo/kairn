@@ -1,0 +1,17 @@
+# RD(a - b), through add_down_1 on a and -b (milestone2.md, "Rounding a sum down and up").
+kernel:        sub_down_1
+input:         a
+input:         b
+output:        r
+value:         a-b
+ensures:       rounded r down
+min_precision: 2
+source:        add_down_1 on a and -b (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+cone_exempt:   through add_down_1, whose result is selected
+
+nb = neg(b)
+r  = add_down_1(a, nb)

@@ -72,7 +72,13 @@ class Fmt(ts.Format):
 
     def ieee_round(self, x, mode):
         """x rounded in the format with overflow: a result beyond the largest number is the
-        infinity of that sign (architecture.md, "Number formats")."""
+        infinity of that sign (architecture.md, "Number formats"), except toward zero: rounded down,
+        a value above the largest number is that number, and rounded up, a value below the most
+        negative one is that one (milestone2.md, "Notation and vocabulary")."""
+        if mode == 'down' and x > self.top:
+            return make(self.top)
+        if mode == 'up' and x < -self.top:
+            return make(-self.top)
         r = self.round(x, mode)
         if abs(r) > self.top:
             return PINF if r > 0 else NINF
@@ -310,9 +316,13 @@ def judge_ball(k, ks, fmt, e, ins, outs, values):
             bad.append('B3 (operands)')
         else:
             exact = {g.name: sum(fr(v) for v in ins[g.name]) for g in k.inputs}
+            limbs = {expr.limb_key(g.name, i): fr(v) for g in k.inputs for i, v in enumerate(ins[g.name])}
             got = {e['center']: [fr(v) for v in outs[e['center']]], e['radius']: [fr(outs[e['radius']][0])]}
-            if not ts.holds(e, k, fmt, exact, got):
+            containment = {x: y for x, y in e.items() if x != 'exact_when'}
+            if not ts.holds(containment, k, fmt, exact, got):
                 bad.append('B3 (containment)')
+            elif 'exact_when' in e and not ts.holds(e, k, fmt, exact, got, limbs):
+                bad.append('E (exact)')
     # B4 claims something only when the kernel has conditions (the eight full kernels; not
     # ball_neg_k): finite operands under every condition give a finite ball.
     if every_finite and state != 'finite' and e['finite_when']:
@@ -390,10 +400,49 @@ def judge_no_fix_up(k, ks, fmt, e, ins, outs, values):
             ok = t[0] == NAN
         elif x in (PINF, NINF):
             ok = t == x
+        elif e.get('when') == 'product_large' and not ts.product_large(fmt, x):
+            ok = True                   # no claim on finite operands outside the condition
         else:
             want = fmt.ieee_round(x, e['mode'])
             ok = t == want if not finite(want) else (finite(t) and fr(t) == fr(want))
         return [] if ok else ['rounded']
+    if kind == 'neighbor':
+        # milestone2.md, the table of "next_up and next_down on every input".
+        x, t, up = vals[k.value], outs[e['of']][0], e['side'] == 'up'
+        if x == NaN:
+            ok = t[0] == NAN
+        elif x == (PINF if up else NINF):
+            ok = t == x
+        elif x in (PINF, NINF):
+            ok = finite(t) and fr(t) == (fmt.top if x == PINF else -fmt.top)
+        else:
+            want = fmt.succ(x) if up else fmt.pred(x)
+            ok = (t == (PINF if up else NINF)) if abs(want) > fmt.top else (finite(t) and fr(t) == want)
+        return [] if ok else ['neighbor']
+    if kind == 'bound':
+        x, t, below = extended(k.value, vals), outs[e['of']][0], e['side'] == 'below'
+        if not all_finite:              # the value of IEEE 754
+            ok = (t[0] == NAN) if x == NaN else (t == x) if x in (PINF, NINF) else \
+                (finite(t) and fr(t) == x)
+            return [] if ok else ['bound (non-finite operand)']
+        # The directed rounding in the format with overflow, then `steps` steps beyond it, as
+        # extended reals: a step beyond the largest number is the infinity.
+        limit = fmt.ieee_round(x, 'down' if below else 'up')
+        for _ in range(e['steps']):
+            if finite(limit):
+                y = fmt.pred(fr(limit)) if below else fmt.succ(fr(limit))
+                limit = make(y) if abs(y) <= fmt.top else (NINF if below else PINF)
+        if t[0] == NAN:
+            return ['bound']
+        rank = {NINF: -1, PINF: 1}
+
+        def le(a, b):           # a <= b over extended values (a Fraction for a finite one)
+            ra, rb = rank.get(a, 0), rank.get(b, 0)
+            return ra < rb or (ra == rb and (ra != 0 or a <= b))
+        tv = t if t in (PINF, NINF) else fr(t)
+        lv = limit if limit in (PINF, NINF) else fr(limit)
+        ok = le(lv, tv) and le(tv, x) if below else le(x, tv) and le(tv, lv)
+        return [] if ok else ['bound']
     if kind == 'upper':
         a, b = (vals[g.name] for g in k.inputs)
         x = ieee('add' if '+' in k.value else 'mul', a, b)
@@ -517,8 +566,9 @@ class NonFinite(unittest.TestCase):
         judged = {name for name, _, count, _, _ in self.results if count}
         self.assertEqual(judged, set(self.names))
         # Full kernels, full Ball kernels, constructors, and the kernels that need no fix-up
-        # (ball_neg_k among them).
-        self.assertEqual(len(self.names), 39)
+        # (ball_neg_k among them): 39 of Milestone 1, and 15 of wave 1 of Milestone 2 (the steps,
+        # the directed sums and products, five entry forms, the full scalings by a power of two).
+        self.assertEqual(len(self.names), 54)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite

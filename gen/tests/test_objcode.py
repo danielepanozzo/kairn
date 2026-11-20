@@ -89,13 +89,23 @@ class Counts(unittest.TestCase):
             # inline form and in packed code, in the fix-up function's own in the other form.
             'mul_2_2_full': [('scalar', 6, 5, 1, 0), ('scalar_call', 6, 6, 1, 0), ('packed', 6, 5, 1, 0)],
             'mul_2_1_full': [('scalar', 4, 3, 1, 0), ('scalar_call', 4, 4, 1, 0), ('packed', 4, 3, 1, 0)],
-            'mul_pow2_2_full': [('scalar', 3, 2, 1, 0), ('scalar_call', 3, 3, 1, 0), ('packed', 3, 2, 1, 0)],
+            # constexpr by the rule of the product: each of its three prods has a plain product in
+            # the arm that only constant evaluation takes, in the scalar forms.
+            'mul_pow2_2_full': [('scalar', 3, 2, 1, 3), ('scalar_call', 3, 3, 1, 3), ('packed', 3, 2, 1, 0)],
             'add_2_2_full': [('scalar', 0, 0, 1, 0), ('scalar_call', 0, 0, 1, 0), ('packed', 0, 0, 1, 0)],
             # Dekker's product in the branch of constant evaluation: two splits by a plain product
             # with the splitter, and five products.
             'two_prod': [('scalar', 2, 2, 0, 7), ('scalar_call', 2, 2, 0, 7), ('packed', 2, 2, 0, 0)],
-            'two_prod_dekker': [('scalar', 7, 7, 0, 0), ('packed', 7, 7, 0, 0)],
+            # The variant itself is constexpr by the rule of the product: its seven prods.
+            'two_prod_dekker': [('scalar', 7, 7, 0, 7), ('packed', 7, 7, 0, 0)],
             'ball_mul_2_full': [('scalar', 10, 10, 0, 0), ('scalar_call', 10, 10, 0, 0)],
+            'rmul': [('scalar', 1, 1, 0, 1), ('packed', 1, 1, 0, 0)],
+            'mul_pow2_2': [('scalar', 2, 2, 0, 2), ('packed', 2, 2, 0, 0)],
+            'ball_mul_pow2_1': [('scalar', 2, 2, 0, 2), ('packed', 2, 2, 0, 0)],
+            'ball_mul_pow2_2_full': [('scalar', 3, 3, 0, 3), ('scalar_call', 3, 3, 0, 3), ('packed', 3, 3, 0, 0)],
+            # The directed products are not constexpr: two_prod's fms, and no plain product.
+            'mul_down_1': [('scalar', 2, 2, 0, 0), ('packed', 2, 2, 0, 0)],
+            'next_up': [('scalar', 0, 0, 0, 0), ('packed', 0, 0, 0, 0)],
         }
         for name, rows in known.items():
             for form, fma, distinct, mul, ce in rows:
@@ -106,15 +116,25 @@ class Counts(unittest.TestCase):
 
     def test_where_the_counts_differ(self):
         """The generator says where the forms or the limb types differ: today the three kernels
-        whose fix-up recomputes the core's product, and two_prod's branch of constant
-        evaluation."""
+        whose fix-up recomputes the core's product, two_prod's branch of constant evaluation, and
+        the kernels constexpr by the rule of the product, whose scalar forms have a plain product
+        for constant evaluation per prod and whose packed form has none."""
         differ = set()
         for name in self.ks:
             rows = {(f, t): tuple(counts(name, f, t, self.ks).values())
                     for f in objcode.FORMS for t in objcode.LIMB_TYPES}
             if len(set(rows.values())) > 1:
                 differ.add(name)
-        self.assertEqual(differ, {'mul_2_1_full', 'mul_2_2_full', 'mul_pow2_2_full', 'two_prod'})
+        product_rule = {n for n, k in self.ks.items() if cpp.product_rule(k, self.ks)}
+        self.assertEqual(product_rule, {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full',
+                                        'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full',
+                                        'ball_mul_pow2_2_full'})
+        self.assertEqual(differ, {'mul_2_1_full', 'mul_2_2_full', 'mul_pow2_2_full', 'two_prod'} | product_rule)
+        for name in product_rule:
+            prods = sum(1 for p in ir.prims(self.ks[name], self.ks) if p.op == 'prod')
+            for t in objcode.LIMB_TYPES:
+                self.assertEqual([counts(name, f, t, self.ks)['consteval_mul'] for f in objcode.FORMS],
+                                 [prods, prods, 0], name)
 
     def test_numbering(self):
         k = ir.parse_kernel(TOY, 'toy_numbering.kernel')

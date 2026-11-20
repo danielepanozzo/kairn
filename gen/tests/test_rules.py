@@ -745,11 +745,19 @@ class R3OfTheKernels(unittest.TestCase):
     # no value of the program reaches it, and milestone1.md names it a building block, not an entry
     # kernel.
     NOT_ENTRY_BUT_CALLED = {'two_sum'}
+    # The building blocks that milestone2.md makes public ("Building blocks on T"), for the public
+    # headers of Milestone 2, which do not call them yet: the entry forms of the blocks that add
+    # their operands, the blocks that only multiply, compare or step theirs (entry kernels as they
+    # are: two_prod, rmul, the directed products, next_up, next_down), and the scalings of a ball by
+    # a power of two, core and full form ("Scaling a ball by a power of two").
+    WAVE_1 = {'two_sum_entry', 'fast_two_sum_entry', 'radd_entry', 'add_down_entry', 'add_up_entry', 'sub_down_entry',
+              'sub_up_entry', 'two_prod', 'rmul', 'mul_down_1', 'mul_up_1', 'next_up', 'next_down',
+              'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
 
     def test_entry_kernels(self):
         ks = common.kernels()
         self.assertEqual({n for n, k in ks.items() if k.entry},
-                         self.CORES | self.BALL_CORES | TheKernels.NON_FINITE)
+                         self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1)
 
     def test_every_kernel_the_public_headers_call_is_an_entry_kernel(self):
         ks = common.kernels()
@@ -765,6 +773,8 @@ class R3OfTheKernels(unittest.TestCase):
         self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED, self.CORES | TheKernels.NON_FINITE)
         self.assertTrue(all(ks[n].entry for n in called - self.NOT_ENTRY_BUT_CALLED))
         self.assertFalse(any(ks[n].entry for n in self.NOT_ENTRY_BUT_CALLED))
+        # Not called yet: the headers of Milestone 2 come with their own change of this test.
+        self.assertEqual(called & self.WAVE_1, set())
 
     def test_no_pending_guard(self):
         # add_2_1 guards its scalar in its first line (milestone1.md), and nothing is left pending.
@@ -963,6 +973,47 @@ class Claims(unittest.TestCase):
         self.refused(HEAD.replace('ensures: error r R c=0 k=2 t=0', 'ensures: normalized r'),
                      'says nothing about the value')
 
+    def test_milestone2_vocabulary(self):
+        # neighbor, bound, rounded with when, exact_when on error and on encloses (architecture.md,
+        # "Claims of Milestone 2"), accepted and refused.
+        one = ('kernel:  bad\ninput:   a\ninput:   b\ninput:   x = x0 x1\noutput:  r\nvalue:   {value}\n'
+               'requires: normalized x\nstatus:  unverified\ncone_exempt: what the claims say\n')
+        body = 'h = add(b, x0)\nk = add(h, x1)\nd = succ(a)\nr = select(w, d, k)\n'
+        head = one.replace('input:   x = x0 x1', 'input:   x = x0 x1\ninput:   mask w')
+
+        def errors(extra, value='a'):
+            return [e for e in check(head.format(value=value) + extra + '\n' + body) if e.rule == rules.CLAIMS]
+
+        for extra, value in (('ensures: neighbor r up', 'a'), ('ensures: neighbor r down', 'a'),
+                             ('ensures: bound r below steps=1', 'a*b'), ('ensures: bound r above steps=0', 'a-b'),
+                             ('ensures: rounded r down when=product_large', 'a*b'),
+                             ('ensures: encloses r r y y=a,b exact_when=zero_or_abs_gt(a*x[1],eta/(2*u))', 'a'),
+                             ('ensures: encloses r r y y=a,b exact_when=zero_or_abs_ge(x[0],eta);zero_or_abs_gt(b,1)', 'a'),
+                             ('ensures: error r R c=1 k=1 t=0 exact_when=zero_or_abs_ge(a*b,2^-3*eta)', 'a*b')):
+            self.assertEqual(errors(extra, value), [], extra)
+        for extra, value, words in (
+                ('ensures: neighbor r left', 'a', 'neighbor side'),
+                ('ensures: neighbor r up', 'a+b', 'the one-limb operand'),
+                ('ensures: neighbor r up', 'x', 'the one-limb operand'),
+                ('ensures: bound r over steps=1', 'a*b', 'bound side'),
+                ('ensures: rounded r down when=tiny', 'a*b', 'product_large'),
+                ('ensures: encloses r r y y=a,b exact_when=zero_or_abs_gt(q,eta)', 'a', 'unknown name q'),
+                ('ensures: encloses r r y y=a,b exact_when=zero_or_abs_gt(x[2],eta)', 'a', 'no limb x[2]'),
+                ('ensures: encloses r r y y=a,b exact_when=zero_or_abs_gt(w,eta)', 'a', 'unknown name w'),
+                ('ensures: encloses r r y y=a,b exact_when=zero_or_abs_gt(a,a)', 'a', 'over u, eta and integers'),
+                ('ensures: encloses r r y y=a,b exact_when=zero_or_abs_gt(a,unit(two_sum))', 'a', 'over u, eta'),
+                ('ensures: encloses r r y y=a,b exact_when=zero_or_abs_gt(a,-eta)', 'a', 'positive'),
+                ('ensures: encloses r r y y=a,b exact_when=zero_or_abs_gt(a,0)', 'a', 'positive'),
+                ('ensures: error r R c=1 k=1 t=0 exact_when=zero_or_abs_gt(a/b,eta)', 'a*b', 'only + - *')):
+            got = errors(extra, value)
+            self.assertTrue(any(words in str(e) for e in got), f'{extra}: {got}')
+        for extra in ('ensures: bound r below steps=x', 'ensures: bound r below', 'ensures: neighbor r',
+                      'ensures: encloses r r y y=a,b exact_when=zero_or_abs(a,eta)',
+                      'ensures: encloses r r y y=a,b exact_when=zero_or_abs_gt(a)',
+                      'ensures: error r R c=1 k=1 t=0 exact_when=abs_le(a,1)'):
+            with self.assertRaises(ir.DescriptionError, msg=extra):
+                check(head.format(value='a') + extra + '\n' + body)
+
     def test_second_wave_vocabulary_is_accepted(self):
         head = HEAD.replace('output:  r = s e', 'output:  r = s e\noutput:  t\noutput:  mask m')
         body = GOOD + 't = add(a, b)\nh = lt(a, b)\nl = le(0, a)\nm = and(h, l)\n'
@@ -1052,10 +1103,21 @@ class TheKernels(unittest.TestCase):
     # listing changed after their first proof, and whose theorems are those of the new listing.
     BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
     REPROVE = BALL_CORES | {'add_2_1'}
+    MILESTONE1 = FIRST_WAVE | SECOND_WAVE | NON_FINITE
+    # docs/developer/design/milestone2.md, "Building blocks on T" and "Scaling a ball by a power of
+    # two" (wave 1 of its order of implementation), unverified until their proofs land: the
+    # kernels of the extended domain, with both statements; two_sum_ord, two_sum_entry and
+    # fast_two_sum_entry, and the cores of the scalings of a ball, of the finite domain; and the
+    # full forms of the scalings, with the IEEE-model statement only.
+    WAVE_1_EXTENDED = {'next_up', 'next_down', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mul_down_1',
+                       'mul_up_1', 'radd_entry', 'add_down_entry', 'add_up_entry', 'sub_down_entry', 'sub_up_entry'}
+    WAVE_1_FINITE = {'two_sum_ord', 'two_sum_entry', 'fast_two_sum_entry', 'ball_mul_pow2_1', 'ball_mul_pow2_2'}
+    WAVE_1_FULL = {'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
+    WAVE_1 = WAVE_1_EXTENDED | WAVE_1_FINITE | WAVE_1_FULL
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
-        self.assertEqual(set(ks), self.FIRST_WAVE | self.SECOND_WAVE | self.NON_FINITE)
+        self.assertEqual(set(ks), self.MILESTONE1 | self.WAVE_1)
         body = {name: [(st.dsts, st.op, tuple(map(str, st.args))) for st in k.body] for name, k in ks.items()}
         self.assertEqual(body['two_sum'], [
             (('s',), 'add', ('a', 'b')), (('bb',), 'sub', ('s', 'a')), (('t0',), 'sub', ('s', 'bb')),
@@ -1074,25 +1136,26 @@ class TheKernels(unittest.TestCase):
         # the real model, the Ball cores of the second radius design and add_2_1 with its guard
         # among them (Ball2.v, Add21.v), by their real-model theorems; the full kernels and the
         # constructors, which have no real-model statement, by their IEEE-model theorems.
-        self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.FIRST_WAVE | self.SECOND_WAVE | self.NON_FINITE)
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, set())
+        self.assertEqual({name for name, k in ks.items() if k.status == 'proved'}, self.MILESTONE1)
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.WAVE_1)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
-        self.assertEqual({name for name, k in ks.items() if not k.real_model}, self.NON_FINITE)
+        self.assertEqual({name for name, k in ks.items() if not k.real_model}, self.NON_FINITE | self.WAVE_1_FULL)
         self.assertEqual({name for name, k in ks.items() if k.extended},
-                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG)
+                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
-                         dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG, 'proved'))
-        # Every kernel of the extended domain names its IEEE-model theorem, and no other kernel does.
+                         dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG, 'proved'),
+                              **dict.fromkeys(self.WAVE_1_EXTENDED | self.WAVE_1_FULL, 'unverified')))
+        # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
+        # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG)
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
         # of the radius are below the overflow threshold (IeeeExtStatementsDraft.v). A
         # constructor's is 1.
-        for name in self.FULL | self.FULL_BALL:
+        for name in self.FULL | self.FULL_BALL | self.WAVE_1_FULL:
             core = name[:-len('_full')]
             want = 2 if name.endswith('_1_full') and name.startswith('ball_') else ks[core].min_precision
             self.assertEqual(ks[name].min_precision, want, name)
@@ -1107,7 +1170,58 @@ class TheKernels(unittest.TestCase):
             'le_1_2': 1, 'to_nearest_2': 1, 'to_down_2': 1, 'to_up_2': 1, 'abs_upper_2': 1,
             'radd': 2, 'rmul': 2, 'mul_pow2_2': 2, 'add_1_1': 1, 'mul_1_1': 1,
             'ball_add_1': 1, 'ball_sub_1': 1, 'ball_neg_1': 1, 'ball_mul_1': 1, 'ball_scale_1': 1,
-            'ball_add_2': 3, 'ball_sub_2': 3, 'ball_neg_2': 1, 'ball_mul_2': 4, 'ball_scale_2': 2})
+            'ball_add_2': 3, 'ball_sub_2': 3, 'ball_neg_2': 1, 'ball_mul_2': 4, 'ball_scale_2': 2,
+            # milestone2.md, the table "Every new kernel".
+            'next_up': 1, 'next_down': 1, 'two_sum_ord': 2, 'add_down_1': 2, 'add_up_1': 2, 'sub_down_1': 2,
+            'sub_up_1': 2, 'mul_down_1': 2, 'mul_up_1': 2, 'two_sum_entry': 2, 'fast_two_sum_entry': 2,
+            'radd_entry': 2, 'add_down_entry': 2, 'add_up_entry': 2, 'sub_down_entry': 2, 'sub_up_entry': 2,
+            'ball_mul_pow2_1': 2, 'ball_mul_pow2_2': 2})
+
+    def test_milestone2_bodies_are_those_of_milestone2_md(self):
+        """The listings of wave 1, line for line as the page writes them ("Building blocks on T",
+        "Scaling a ball by a power of two"), with const P = up(eta/(2*u^2)), const N = up(eta/(2*u))
+        and const eta = up(eta) spelled out, and one operation per line."""
+        ks = common.kernels()
+
+        def body(name):
+            return [f'{", ".join(st.dsts)} = {st.op}({", ".join(map(str, st.args))})' for st in ks[name].body]
+
+        self.assertEqual(body('next_up'), ['r = succ(a)'])
+        self.assertEqual(body('next_down'), ['r = pred(a)'])
+        self.assertEqual(body('two_sum_ord'), ['aa = abs(a)', 'ab = abs(b)', 'm = lt(aa, ab)', 'h = select(m, b, a)',
+                                               'l = select(m, a, b)', 's, e = fast_two_sum(h, l)'])
+        self.assertEqual(body('add_down_1'), ['s, e = two_sum_ord(a, b)', 'n = lt(e, 0)', 'p = pred(s)',
+                                              'r = select(n, p, s)'])
+        self.assertEqual(body('add_up_1'), ['s, e = two_sum_ord(a, b)', 'n = lt(0, e)', 'q = succ(s)',
+                                            'r = select(n, q, s)'])
+        self.assertEqual(body('sub_down_1'), ['nb = neg(b)', 'r = add_down_1(a, nb)'])
+        self.assertEqual(body('sub_up_1'), ['nb = neg(b)', 'r = add_up_1(a, nb)'])
+        p = 'const up(eta/(2*u^2))'
+        common_lines = ['p, e = two_prod(a, b)', 'ap = abs(p)', f'bd = lt(ap, {p})', 'ez = eq(e, 0)', 'un = and(bd, ez)']
+        self.assertEqual(body('mul_down_1'), common_lines + [
+            'n = lt(e, 0)', 'sd = or(n, un)', 'pp = pred(p)', 'd = select(sd, pp, p)', 'za = eq(a, 0)',
+            'zb = eq(b, 0)', 'zz = or(za, zb)', 'r = select(zz, p, d)'])
+        self.assertEqual(body('mul_up_1'), common_lines + [
+            'n = lt(0, e)', 'su = or(n, un)', 'sp = succ(p)', 'v = select(su, sp, p)', 'za = eq(a, 0)',
+            'zb = eq(b, 0)', 'zz = or(za, zb)', 'r = select(zz, p, v)'])
+        for name, core in (('two_sum_entry', 'two_sum'), ('fast_two_sum_entry', 'fast_two_sum'), ('radd_entry', 'radd'),
+                           ('add_down_entry', 'add_down_1'), ('add_up_entry', 'add_up_1'),
+                           ('sub_down_entry', 'sub_down_1'), ('sub_up_entry', 'sub_up_1')):
+            outs = ', '.join(ks[core].output_limbs)
+            self.assertEqual(body(name), ['ga = guard(a)', 'gb = guard(b)', f'{outs} = {core}(ga, gb)'], name)
+        n, eta = 'const up(eta/(2*u))', 'const up(eta)'
+        radius = ['su = succ(rr)', f'sw = add(su, {eta})', 'rw = succ(sw)', 'rz = select(ex, rr, rw)']
+        self.assertEqual(body('ball_mul_pow2_2'), [
+            'h = prod(cx0, c)', 'l = prod(cx1, c)', 'cz0, cz1 = fast_two_sum(h, l)', 'rr = prod(rx, c)',
+            'ze = eq(cx1, 0)', 'm = select(ze, h, l)', 'am = abs(m)', f'bc = lt({n}, am)', 'zc = eq(cx0, 0)',
+            'ec = or(bc, zc)', f'br = lt({n}, rr)', 'zr = eq(rx, 0)', 'er = or(br, zr)', 'ex = and(ec, er)'] + radius)
+        # The same with one product for the center.
+        self.assertEqual(body('ball_mul_pow2_1'), [
+            'cz = prod(cx, c)', 'rr = prod(rx, c)', 'am = abs(cz)', f'bc = lt({n}, am)', 'zc = eq(cx, 0)',
+            'ec = or(bc, zc)', f'br = lt({n}, rr)', 'zr = eq(rx, 0)', 'er = or(br, zr)', 'ex = and(ec, er)'] + radius)
+        # The full forms: the fix-up of ball_scale_k_full after the core.
+        for k in (1, 2):
+            self.assertEqual(body(f'ball_mul_pow2_{k}_full')[1:], body(f'ball_scale_{k}_full')[1:], k)
 
     def test_second_wave_bodies_are_those_of_milestone1_md(self):
         ks = common.kernels()

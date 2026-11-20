@@ -390,15 +390,19 @@ class Specials(unittest.TestCase):
         least H, and normal too. (In a toy format with few exponents the other constants need not
         be: u itself is below the smallest normal number of fp:4:-6:3.)"""
         ks = common.kernels()
-        seen = 0
+        seen, subnormal = 0, []
         for p, qmin, qmax in ((53, -1074, 971), (24, -149, 104)):
             normal = Fraction(2) ** (qmin + p - 1)
             for name, k in ks.items():
                 for c in ir.constants(k):
                     if c not in (ir.ZERO, 'inf', 'nan'):
-                        self.assertGreaterEqual(consts.value(c, ks, p, qmin, qmax), normal, (name, c, p))
+                        if consts.value(c, ks, p, qmin, qmax) < normal:
+                            subnormal.append((name, c, p))
                         seen += 1
-        self.assertEqual(seen, 2 * (3 * 6 + 1))        # E, G, H of the six cores, and the splitter
+        self.assertEqual(subnormal, [])
+        # E, G, H of the six cores, and the splitter; P of the two directed products, and N and eta
+        # of the two scalings of a ball by a power of two.
+        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 * 2))
         cores = {'ball_add_1': 2, 'ball_add_2': 2, 'ball_scale_1': 3, 'ball_scale_2': 3, 'ball_mul_1': 4,
                  'ball_mul_2': 5}
         for name, more in cores.items():
@@ -475,6 +479,45 @@ class AgainstHardware(unittest.TestCase):
         self.compare(common.TEST_KERNELS, consteval=True, only=lambda k: k.name in ('ops_muladd', 'ops_one'))
 
 
+class TwoExecutionsOfAProduct(unittest.TestCase):
+    """The rule of the product (milestone2.md, "The two executions of a product"): a kernel whose
+    only fused operations are prod is constexpr, and runs in constant evaluation with each prod a
+    plain product. There it gives the bits it gives at run time; or, for the kernels whose outputs
+    can be an exact zero product (mul_pow2_2 and the exact scalings of a ball, as the page says;
+    mul_1_1 and two_prod_dekker, whose first output is the product, which the page does not name),
+    the same values, a zero possibly of the other sign. On the corpus of the interpreter's tests
+    against the host: random cases of every stratum, the edge values in every limb, and the
+    non-finite operands of the extended domain (all NaNs being the same). The C++ is tied to these
+    results by test_cxx (constant evaluation: ConstantEvaluation; run time: Kernels.test_matrix)."""
+    N = common.size(4000, 100000)
+    ZERO_SIGN = {'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full',
+                 'ball_mul_pow2_2_full', 'mul_1_1', 'two_prod_dekker'}
+
+    def test_the_kernels(self):
+        from kairn_gen import cpp
+        ks = common.kernels()
+        names = [n for n, k in ks.items() if cpp.product_rule(k, ks)]
+        self.assertEqual(set(names), self.ZERO_SIGN | {'rmul', 'split'})
+        for name in names:
+            k = ks[name]
+            differ = 0
+            for fmt in ('binary64', 'binary32'):
+                cases = common.requests(fmt, k, self.N, 'two') + edge_cases(fmt, k, 2000) + \
+                    common.nonfinite_cases(fmt, k, self.N // 4, 'two')
+                ce = common.interpret(None, name, fmt, cases, consteval=True)
+                rt = common.interpret(None, name, fmt, cases)
+                bits = [(c, a, b) for c, a, b in zip(cases, ce, rt) if not all(map(common.same, a, b))]
+                values = [(c, a, b) for c, a, b in bits
+                          if not all(common.same(x, y) or x == y == 0 for x, y in zip(a, b))]
+                with self.subTest(kernel=name, fmt=fmt):
+                    self.assertEqual(values[:3], [], f'{len(values)} of {len(cases)} differ in value')
+                    if name not in self.ZERO_SIGN:
+                        self.assertEqual(bits[:3], [], f'{len(bits)} of {len(cases)} differ in bits')
+                differ += len(bits)
+            # Every kernel allowed a zero of the other sign has one somewhere in the corpus.
+            self.assertEqual(differ > 0, name in self.ZERO_SIGN, name)
+
+
 class Machine(unittest.TestCase):
     def test_structured_and_inlined_evaluation_agree(self):
         # The interpreter keeps calls, as the Rocq model does; ir.flatten inlines them, as the
@@ -502,13 +545,21 @@ class Machine(unittest.TestCase):
         one = common.to_value(1.0)
         with self.assertRaises(interp.InterpError):
             m.run('mul_2_2', f, [one] * 4)
-        with self.assertRaises(interp.InterpError):
-            m.run('split', f, [one])
+        # mul_down_1 and mul_up_1 trust the sign of two_prod's error term, which only its FMA
+        # computes: they have no constant-evaluation path (milestone2.md, "Building blocks on T").
+        for name in ('mul_down_1', 'mul_up_1'):
+            with self.assertRaises(interp.InterpError):
+                m.run(name, f, [one] * 2)
         # two_prod runs Dekker's product with plain products: -0 * 1 is -0 there, +0 at run time.
         nzero = common.to_value(-0.0)
         self.assertEqual(m.run('two_prod', f, [nzero, one])[0], nzero)
         self.assertEqual(interp.Machine(common.kernels()).run('two_prod', f, [nzero, one])[0],
                          common.to_value(0.0))
+        # A kernel whose only fused operations are prod runs with plain products (the rule of the
+        # product): mul_1_1 gives -0 for -0 * 1 there, +0 at run time; split computes the same.
+        self.assertEqual(m.run('mul_1_1', f, [nzero, one]), [nzero])
+        self.assertEqual(interp.Machine(common.kernels()).run('mul_1_1', f, [nzero, one]), [common.to_value(0.0)])
+        self.assertEqual(m.run('split', f, [one]), interp.Machine(common.kernels()).run('split', f, [one]))
 
     def test_inputs_must_be_numbers_of_the_format(self):
         m = interp.Machine(common.kernels())

@@ -17,11 +17,16 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     requires:      normalized x       or: abs_ge a b, power_of_two c, nonneg r
     requires:      canonical x        (domain extended) or: ball cx rx
     ensures:       normalized z       or: leading_rounded z
-    ensures:       error z R c=3/(1-4*u) k=2 t=0 [when=product_large]
-    ensures:       rounded t down     the mode: nearest, down or up
+    ensures:       error z R c=3/(1-4*u) k=2 t=0 [when=product_large] [exact_when=CONDITIONS]
+    ensures:       rounded t down [when=product_large]
+                                      the mode: nearest, down or up
     ensures:       upper r gaps=2
+    ensures:       neighbor r up      the next number of the format above (down: below) the value
+    ensures:       bound r below steps=1
+                                      on that side of the value (below or above), and at most
+                                      that many steps beyond its directed rounding
     ensures:       predicate m lt x y the relation lt, le or eq between two expressions
-    ensures:       encloses cz rz x+y x=cx,rx y=cy,ry [finite_when=CONDITIONS]
+    ensures:       encloses cz rz x+y x=cx,rx y=cy,ry [finite_when=CONDITIONS] [exact_when=CONDITIONS]
                                       center, radius, the set, and each ball's center and radius
     ensures:       extends w core=add_2_2 lead=add [finite_when=abs_le(x,-2);abs_le(y,-2)]
                                       a full kernel: its core, the operation of T on the leading
@@ -74,8 +79,11 @@ kernel is described in one file, gen/kernels/NAME.kernel:
 
 Expressions in `ensures` are written without spaces. A condition of finite_when is
 abs_le(EXPR,E), meaning |EXPR| <= 2^(qmax + p + E); several are separated by `;`, and none is
-written by leaving finite_when out. This module only reads and represents descriptions; rules.py
-decides whether they are acceptable.
+written by leaving finite_when out. A condition of exact_when is zero_or_abs_gt(EXPR,K) or
+zero_or_abs_ge(EXPR,K), meaning EXPR = 0 or |EXPR| > K (>= K), with EXPR over the input names
+and their limbs (`cx[1]`, limb 1 of the input cx) and K an exact expression over u, eta and
+integers (`eta/(2*u)`); several are separated by `;`, and all must hold. This module only reads
+and represents descriptions; rules.py decides whether they are acceptable.
 """
 import os
 import re
@@ -319,6 +327,23 @@ def _finite_when(text, where):
     return out
 
 
+# The conditions of exact_when: EXPR = 0 or |EXPR| > K, and EXPR = 0 or |EXPR| >= K.
+EXACT_CONDITIONS = ('zero_or_abs_gt', 'zero_or_abs_ge')
+
+
+def _exact_when(text, where):
+    """zero_or_abs_gt(EXPR,K);zero_or_abs_ge(EXPR,K) as [{'zero_or_abs_gt': EXPR, 'than': K}, ...]."""
+    out = []
+    for part in text.split(';'):
+        m = re.fullmatch(r'([a-z_]+)\((.+)\)', part)
+        args = _arguments(m.group(2), where) if m else []
+        if not m or m.group(1) not in EXACT_CONDITIONS or len(args) != 2 or not all(args):
+            raise DescriptionError(f'{where}: a condition of exact_when is zero_or_abs_gt(EXPR,K) or '
+                                   f'zero_or_abs_ge(EXPR,K), got {part!r}')
+        out.append({m.group(1): args[0], 'than': args[1]})
+    return out
+
+
 def _ensures(words, where):
     kind = words[0] if words else None
     if kind in ('normalized', 'leading_rounded', 'represents') and len(words) == 2:
@@ -344,15 +369,29 @@ def _ensures(words, where):
                 'from': {'center': m.group(1), 'radius': m.group(2)}}
     if kind == 'rounded' and len(words) == 3:
         return {'kind': kind, 'of': words[1], 'mode': words[2]}
+    if kind == 'rounded' and len(words) == 4 and words[3].startswith('when='):
+        # The condition is written only when there is one: a rounded entry without it has the
+        # shape it always had.
+        return {'kind': kind, 'of': words[1], 'mode': words[2], 'when': words[3][len('when='):]}
     if kind == 'upper' and len(words) == 3 and words[2].startswith('gaps='):
         return {'kind': kind, 'of': words[1], 'gaps': words[2][len('gaps='):]}
+    if kind == 'neighbor' and len(words) == 3:
+        return {'kind': kind, 'of': words[1], 'side': words[2]}
+    if kind == 'bound' and len(words) == 4 and words[3].startswith('steps='):
+        steps = words[3][len('steps='):]
+        if not re.fullmatch(r'[0-9]+', steps):
+            raise DescriptionError(f'{where}: steps must be an integer, got {steps!r}')
+        return {'kind': kind, 'of': words[1], 'side': words[2], 'steps': int(steps)}
     if kind == 'predicate' and len(words) == 5:
         return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
     if kind == 'encloses' and len(words) >= 5:
-        balls, finite_when = {}, None
+        balls, finite_when, exact_when = {}, None, None
         for w in words[4:]:
             if w.startswith('finite_when=') and finite_when is None:
                 finite_when = _finite_when(w[len('finite_when='):], where)
+                continue
+            if w.startswith('exact_when=') and exact_when is None:
+                exact_when = _exact_when(w[len('exact_when='):], where)
                 continue
             m = re.fullmatch(r'([a-z][a-z0-9]*)=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', w)
             if not m or m.group(1) in balls:
@@ -361,12 +400,18 @@ def _ensures(words, where):
         entry = {'kind': kind, 'center': words[1], 'radius': words[2], 'set': words[3], 'balls': balls}
         if finite_when is not None:
             entry['finite_when'] = finite_when
+        if exact_when is not None:
+            entry['exact_when'] = exact_when
         return entry
     if kind == 'error' and len(words) >= 3:
         entry = {'kind': 'error', 'of': words[1], 'form': words[2],
                  'c': None, 'k': None, 't': None, 'when': None}
         for w in words[3:]:
             key, eq, val = w.partition('=')
+            if key == 'exact_when' and eq and 'exact_when' not in entry:
+                # Only when there is one: an error entry without it has the shape it always had.
+                entry['exact_when'] = _exact_when(val, where)
+                continue
             if not eq or key not in ('c', 'k', 't', 'when') or entry[key] is not None:
                 raise DescriptionError(f'{where}: bad or repeated field {w!r} in error entry')
             entry[key] = val

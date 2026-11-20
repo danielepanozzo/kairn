@@ -3,6 +3,8 @@
 Each rule is a short traversal of the kernel's dataflow graph and refuses with a message that
 names the kernel, the value and the rule. Nothing is printed for any kernel while one is refused.
 """
+from fractions import Fraction
+
 from . import consts, cpp, expr, ieee, ir, rocq, simd
 
 RULE1 = 'rule 1 (static single assignment)'
@@ -42,14 +44,22 @@ REQUIRES_EXTENDED = ('canonical', 'ball', 'power_of_two', 'nonneg')
 ROUNDING_MODES = ('nearest', 'down', 'up')
 RELATIONS = ('lt', 'le', 'eq')
 LEADS = ('add', 'sub', 'mul')
+SIDES = {'neighbor': ('up', 'down'), 'bound': ('below', 'above')}
+# The conditions of `when` (error, rounded): a closed vocabulary.
+WHEN = ('product_large',)
 VALUE_TREES = {'name', 'add', 'sub', 'mul', 'neg', 'abs'}
+# The expression of a condition of exact_when: a value expression that may also name limbs; and
+# its threshold, an exact expression over u, eta and integers.
+EXACT_TREES = VALUE_TREES | {'limb'}
+THRESHOLD_TREES = {'int', 'name', 'add', 'sub', 'mul', 'div', 'neg', 'pow'}
 # The kinds of ensures entries in each domain.
-ENSURES_FINITE = ('normalized', 'leading_rounded', 'error', 'rounded', 'upper', 'predicate', 'encloses')
+ENSURES_FINITE = ('normalized', 'leading_rounded', 'error', 'rounded', 'upper', 'predicate', 'encloses',
+                  'neighbor', 'bound')
 ENSURES_EXTENDED = ('normalized', 'error', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
-                    'represents', 'makes_ball')
+                    'represents', 'makes_ball', 'neighbor', 'bound')
 # Entries that say something about the value: a kernel needs at least one.
 ABOUT_THE_VALUE = ('error', 'leading_rounded', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
-                   'represents', 'makes_ball')
+                   'represents', 'makes_ball', 'neighbor', 'bound')
 
 
 class RuleError(Exception):
@@ -513,6 +523,53 @@ def claims(k, kernels):
         elif one and len(g.limbs) != 1:
             err(f'ensures {what} of {name!r}: the output must have one limb')
 
+    def exact_when(e):
+        """The conditions of an exact_when: each EXPR = 0 or |EXPR| > K (or >= K), EXPR over the
+        input names and their limbs, K an exact positive expression over u, eta and integers."""
+        conds = e.get('exact_when')
+        if conds is None:
+            return
+        if not conds:
+            err(f'ensures {e["kind"]}: exact_when needs at least one condition')
+        for c in conds:
+            keys = set(c) - {'than'}
+            if 'than' not in c or len(keys) != 1 or not keys <= set(ir.EXACT_CONDITIONS):
+                err(f'exact_when {c!r}: a condition is {{"zero_or_abs_gt" or "zero_or_abs_ge": EXPR, "than": K}}')
+                continue
+            text = c[keys.pop()]
+            try:
+                tree = expr.parse(text)
+            except expr.ExprError as x:
+                err(f'exact_when: {x}')
+                continue
+            extra = expr.names(tree) - limb_ins
+            if extra:
+                err(f'exact_when: unknown name {", ".join(sorted(extra))} in {text!r}')
+                continue
+            if not _only(tree, EXACT_TREES):
+                err(f'exact_when {text!r}: only + - *, unary minus, abs( ), names and limbs NAME[I]')
+                continue
+            for g, i in sorted(expr.limbs(tree)):
+                if i >= len(ins[g].limbs):
+                    err(f'exact_when {text!r}: {g} has {len(ins[g].limbs)} limbs, so no limb {g}[{i}]')
+            try:
+                bound = expr.parse(c['than'])
+            except expr.ExprError as x:
+                err(f'exact_when: {x}')
+                continue
+            if expr.names(bound) - {'u', 'eta'} or not _only(bound, THRESHOLD_TREES):
+                err(f'exact_when than={c["than"]!r}: an exact expression over u, eta and integers')
+                continue
+            for p, qmin in ((53, -1074), (24, -149)):
+                try:
+                    positive = expr.evaluate(bound, {'u': Fraction(1, 2 ** p), 'eta': Fraction(2) ** qmin}) > 0
+                except expr.ExprError as x:
+                    err(f'exact_when than={c["than"]!r}: {x}')
+                    break
+                if not positive:
+                    err(f'exact_when than={c["than"]!r}: the threshold is positive')
+                    break
+
     makes_balls = bool(k.ensures) and all(e['kind'] == 'makes_ball' for e in k.ensures)
     if makes_balls:
         if k.value:
@@ -562,12 +619,21 @@ def claims(k, kernels):
                 parsed(e['c'], {'u'}, 'c')
             if e['t'] is not None:
                 parsed(e['t'], set(), 't')
-            if e['when'] not in (None, 'product_large'):
-                err(f'when={e["when"]!r}: the vocabulary is product_large')
+            if e['when'] is not None and e['when'] not in WHEN:
+                err(f'when={e["when"]!r}: the vocabulary is {", ".join(WHEN)}')
+            exact_when(e)
         elif kind == 'rounded':
             output(e['of'], kind, one=True)
             if e['mode'] not in ROUNDING_MODES:
                 err(f'rounded mode {e["mode"]!r}: it is {", ".join(ROUNDING_MODES)}')
+            if 'when' in e and e['when'] not in WHEN:
+                err(f'when={e["when"]!r}: the vocabulary is {", ".join(WHEN)}')
+        elif kind in SIDES:
+            output(e['of'], kind, one=True)
+            if e['side'] not in SIDES[kind]:
+                err(f'{kind} side {e["side"]!r}: it is {" or ".join(SIDES[kind])}')
+            if kind == 'neighbor' and k.value not in one_limb_ins:
+                err(f'neighbor: the value is the one-limb operand whose neighbor is the output, not {k.value!r}')
         elif kind == 'upper':
             output(e['of'], kind, one=True)
             tree = parsed(e['gaps'], set(), 'gaps')
@@ -581,6 +647,7 @@ def claims(k, kernels):
                 parsed(a, limb_ins, 'predicate argument', VALUE_TREES)
         elif kind == 'encloses':
             _encloses(e, k, ins, outs, output, parsed, err)
+            exact_when(e)
             if 'finite_when' in e:
                 for c in e['finite_when']:
                     parsed(c['abs_le'], limb_ins, 'finite_when', VALUE_TREES)

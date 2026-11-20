@@ -49,6 +49,69 @@ Definition add_1_1_spec : Prop :=
   s = RN emin prec (a + b) /\
   Rabs (s - (a + b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a + b).
 
+(* fast_two_sum: Fast2Sum (Dekker 1971). Status: proved. *)
+Definition fast_two_sum_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  Rabs b <= Rabs a ->
+  let '(s, e) := fast_two_sum emin prec tie_even a b in
+  s = RN emin prec (a + b) /\
+  (s + e) = (a + b) /\
+  normalized_2 emin prec s e.
+
+(* two_sum_ord: Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17). Status: unverified. *)
+Definition two_sum_ord_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let '(s, e) := two_sum_ord emin prec tie_even a b in
+  s = RN emin prec (a + b) /\
+  (s + e) = (a + b) /\
+  normalized_2 emin prec s e.
+
+(* add_down_1: the rounded sum and the sign of its exact error (Milestone 2 listing). Status: unverified. *)
+Definition add_down_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := add_down_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RD emin prec (a + b).
+
+(* add_down_entry: add_down_1 on its guarded operands (Milestone 2 listing). Status: unverified. *)
+Definition add_down_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := add_down_entry emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RD emin prec (a + b).
+
+(* add_up_1: the rounded sum and the sign of its exact error (Milestone 2 listing). Status: unverified. *)
+Definition add_up_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := add_up_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RU emin prec (a + b).
+
+(* add_up_entry: add_up_1 on its guarded operands (Milestone 2 listing). Status: unverified. *)
+Definition add_up_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := add_up_entry emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RU emin prec (a + b).
+
 (* ball_add_1: midpoint-radius sum (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_add_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -78,6 +141,23 @@ Definition ball_mul_1_spec : Prop :=
   fmt emin prec cz /\
   fmt emin prec rz /\
   (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x * y) - cz) <= rz).
+
+(* ball_mul_pow2_1: midpoint-radius scaling by a power of two (Milestone 2 listing). Status: unverified. *)
+Definition ball_mul_pow2_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall cx rx c : R,
+  fmt emin prec cx ->
+  fmt emin prec rx ->
+  fmt emin prec c ->
+  0 <= rx ->
+  (exists n : Z, c = bpow radix2 n) ->
+  let '(cz, rz) := ball_mul_pow2_1 emin prec tie_even cx rx c in
+  fmt emin prec cz /\
+  fmt emin prec rz /\
+  (forall x : R, Rabs (x - cx) <= rx -> Rabs ((x * c) - cz) <= rz) /\
+  (((cx * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (cx * c)) /\ ((rx * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (rx * c)) ->
+   forall s_ : R, Rabs (s_ - cz) <= rz ->
+   exists x : R, Rabs (x - cx) <= rx /\ s_ = (x * c)).
 
 (* ball_neg_1: midpoint-radius negation (Milestone 1 listing). Status: proved. *)
 Definition ball_neg_1_spec : Prop :=
@@ -119,14 +199,14 @@ Definition ball_sub_1_spec : Prop :=
   fmt emin prec rz /\
   (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x - y) - cz) <= rz).
 
-(* fast_two_sum: Fast2Sum (Dekker 1971). Status: proved. *)
-Definition fast_two_sum_spec : Prop :=
+(* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). Status: unverified. *)
+Definition fast_two_sum_entry_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
   fmt emin prec a ->
   fmt emin prec b ->
   Rabs b <= Rabs a ->
-  let '(s, e) := fast_two_sum emin prec tie_even a b in
+  let '(s, e) := fast_two_sum_entry emin prec tie_even a b in
   s = RN emin prec (a + b) /\
   (s + e) = (a + b) /\
   normalized_2 emin prec s e.
@@ -142,6 +222,59 @@ Definition mul_1_1_spec : Prop :=
   p = RN emin prec (a * b) /\
   Rabs (p - (a * b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a * b) + (1 / 2) * eta emin.
 
+(* two_prod: TwoProd with an FMA (folklore; see JMP17). Status: proved. *)
+Definition two_prod_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let '(p, e) := two_prod emin prec tie_even a b in
+  fmt emin prec p /\
+  fmt emin prec e /\
+  p = RN emin prec (a * b) /\
+  Rabs ((p + e) - (a * b)) <= (1 / 2) * eta emin /\
+  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
+
+(* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). Status: unverified. *)
+Definition mul_down_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := mul_down_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  r <= (a * b) /\ pred radix2 (FLT_exp emin prec) (RD emin prec (a * b)) <= r /\
+  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> r = RD emin prec (a * b)).
+
+(* mul_up_1: two_prod and the sign of its error term (Milestone 2 listing). Status: unverified. *)
+Definition mul_up_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := mul_up_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  (a * b) <= r /\ r <= succ radix2 (FLT_exp emin prec) (RU emin prec (a * b)) /\
+  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> r = RU emin prec (a * b)).
+
+(* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). Status: unverified. *)
+Definition next_down_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall a : R,
+  fmt emin prec a ->
+  let r := next_down emin prec a in
+  fmt emin prec r /\
+  r = pred radix2 (FLT_exp emin prec) a.
+
+(* next_up: IEEE 754 nextUp on the bit pattern (Milestone 2 listing). Status: unverified. *)
+Definition next_up_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall a : R,
+  fmt emin prec a ->
+  let r := next_up emin prec a in
+  fmt emin prec r /\
+  r = succ radix2 (FLT_exp emin prec) a.
+
 (* radd: one step up from the rounded sum (Milestone 1 listing). Status: proved. *)
 Definition radd_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -151,6 +284,18 @@ Definition radd_spec : Prop :=
   0 <= a ->
   0 <= b ->
   let r := radd emin prec tie_even a b in
+  fmt emin prec r /\
+  (a + b) <= r /\ r - (a + b) <= (3 / 2) * (r - pred radix2 (FLT_exp emin prec) r).
+
+(* radd_entry: radd on its guarded operands (Milestone 2 listing). Status: unverified. *)
+Definition radd_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  0 <= a ->
+  0 <= b ->
+  let r := radd_entry emin prec tie_even a b in
   fmt emin prec r /\
   (a + b) <= r /\ r - (a + b) <= (3 / 2) * (r - pred radix2 (FLT_exp emin prec) r).
 
@@ -176,18 +321,45 @@ Definition split_spec : Prop :=
   fmt emin prec al /\
   (ah + al) = a.
 
-(* two_prod: TwoProd with an FMA (folklore; see JMP17). Status: proved. *)
-Definition two_prod_spec : Prop :=
+(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). Status: unverified. *)
+Definition sub_down_1_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
   fmt emin prec a ->
   fmt emin prec b ->
-  let '(p, e) := two_prod emin prec tie_even a b in
-  fmt emin prec p /\
-  fmt emin prec e /\
-  p = RN emin prec (a * b) /\
-  Rabs ((p + e) - (a * b)) <= (1 / 2) * eta emin /\
-  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
+  let r := sub_down_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RD emin prec (a - b).
+
+(* sub_down_entry: sub_down_1 on its guarded operands (Milestone 2 listing). Status: unverified. *)
+Definition sub_down_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := sub_down_entry emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RD emin prec (a - b).
+
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). Status: unverified. *)
+Definition sub_up_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := sub_up_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RU emin prec (a - b).
+
+(* sub_up_entry: sub_up_1 on its guarded operands (Milestone 2 listing). Status: unverified. *)
+Definition sub_up_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := sub_up_entry emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RU emin prec (a - b).
 
 (* two_prod_dekker: Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. Status: proved. *)
 Definition two_prod_dekker_spec : Prop :=
@@ -209,6 +381,18 @@ Definition two_sum_spec : Prop :=
   fmt emin prec a ->
   fmt emin prec b ->
   let '(s, e) := two_sum emin prec tie_even a b in
+  fmt emin prec s /\
+  fmt emin prec e /\
+  s = RN emin prec (a + b) /\
+  (s + e) = (a + b).
+
+(* two_sum_entry: two_sum on its guarded operands (Milestone 2 listing). Status: unverified. *)
+Definition two_sum_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let '(s, e) := two_sum_entry emin prec tie_even a b in
   fmt emin prec s /\
   fmt emin prec e /\
   s = RN emin prec (a + b) /\
@@ -310,6 +494,23 @@ Definition ball_mul_2_spec : Prop :=
   fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x * y) - (cz0 + cz1)) <= rz).
+
+(* ball_mul_pow2_2: midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing). Status: unverified. *)
+Definition ball_mul_pow2_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall cx0 cx1 rx c : R,
+  normalized_2 emin prec cx0 cx1 ->
+  fmt emin prec rx ->
+  fmt emin prec c ->
+  0 <= rx ->
+  (exists n : Z, c = bpow radix2 n) ->
+  let '(cz0, cz1, rz) := ball_mul_pow2_2 emin prec tie_even cx0 cx1 rx c in
+  fmt emin prec rz /\
+  normalized_2 emin prec cz0 cz1 /\
+  (forall x : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs ((x * c) - (cz0 + cz1)) <= rz) /\
+  (((cx0 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (cx0 * c)) /\ ((cx1 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (cx1 * c)) /\ ((rx * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (rx * c)) ->
+   forall s_ : R, Rabs (s_ - (cz0 + cz1)) <= rz ->
+   exists x : R, Rabs (x - (cx0 + cx1)) <= rx /\ s_ = (x * c)).
 
 (* neg_2: limb by limb (Milestone 1 listing). Status: proved. *)
 Definition neg_2_spec : Prop :=

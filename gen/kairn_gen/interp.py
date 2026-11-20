@@ -263,9 +263,9 @@ def format_limb(v):
 
 class Machine:
     """Evaluates kernels. fused: how muladd executes. consteval: as in C++ constant evaluation,
-    where a kernel with a variant runs the variant, prod is a plain product, muladd is unfused,
-    guard returns its operand, and a kernel without a variant must contain no fused operation at
-    all."""
+    where a kernel with a variant runs the variant, prod is a plain product (also in a kernel
+    without a variant: the rule of the product), muladd is unfused, guard returns its operand, and
+    a kernel without a variant must contain no fused operation but prod."""
 
     def __init__(self, kernels, fused=True, consteval=False):
         self.kernels, self.fused, self.consteval = kernels, fused and not consteval, consteval
@@ -284,16 +284,18 @@ class Machine:
             elif isinstance(v, bool) or not member(f, v):
                 raise InterpError(f'{format_limb(v) if not isinstance(v, bool) else v} is not a '
                                   f'number of format {f.name}')
-        in_variant = False
+        # plain: every prod is the plain product, as in constant evaluation.
+        plain = False
         if self.consteval:
             if k.ce_variant:
-                k, in_variant = self.kernels[k.ce_variant], True
+                k = self.kernels[k.ce_variant]
             else:
-                fused = [p.dst for p in ir.prims(k, self.kernels) if p.op in ir.FUSED]
+                fused = [p.dst for p in ir.prims(k, self.kernels) if p.op in ir.FUSED - {'prod'}]
                 if fused:
                     raise InterpError(f'{name} has no constant-evaluation path: {fused[0]} is a '
-                                      'fused operation and the kernel names no variant')
-        return self._eval(k, f, list(inputs), in_variant)
+                                      'fused operation other than prod and the kernel names no variant')
+            plain = True
+        return self._eval(k, f, list(inputs), plain)
 
     def _const(self, f, name):
         if name == 'inf':
@@ -313,25 +315,27 @@ class Machine:
             self._consts[key] = v
         return self._consts[key]
 
-    def _eval(self, k, f, args, in_variant):
+    def _eval(self, k, f, args, plain):
+        """The outputs of kernel k on args; with `plain`, every prod is the plain product a * b
+        (constant evaluation) and no other fused operation may occur."""
         env = dict(zip(k.input_limbs, args))
         for st in k.body:
             a = [self._const(f, x.name) if x.const else env[x.name] for x in st.args]
             if st.is_call:
-                env.update(zip(st.dsts, self._eval(self.kernels[st.op], f, a, in_variant)))
+                env.update(zip(st.dsts, self._eval(self.kernels[st.op], f, a, plain)))
             else:
-                env[st.dsts[0]] = self._op(st.op, f, a, in_variant)
+                env[st.dsts[0]] = self._op(st.op, f, a, plain)
         return [env[v] for v in k.output_limbs]
 
-    def _op(self, op, f, a, in_variant):
+    def _op(self, op, f, a, plain):
         if op == 'add':
             return add(f, a[0], a[1])
         if op == 'sub':
             return sub(f, a[0], a[1])
         if op == 'prod':
-            return mul(f, a[0], a[1]) if in_variant else fma(f, a[0], a[1], (NUM, False, 0, 0))
-        if op in ('fma', 'fms', 'fnma') and in_variant:
-            raise InterpError(f'{op} in a constant-evaluation variant')
+            return mul(f, a[0], a[1]) if plain else fma(f, a[0], a[1], (NUM, False, 0, 0))
+        if op in ('fma', 'fms', 'fnma') and plain:
+            raise InterpError(f'{op} in constant evaluation')
         if op == 'fma':
             return fma(f, a[0], a[1], a[2])
         if op == 'fms':

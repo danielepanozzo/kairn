@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, mul_1_1, rmul, split, two_prod_dekker, ball_add_2, ball_add_2_full, mul_2_2, ball_mul_2, ball_mul_2_full, mul_2_1, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, mul_2_1_full, mul_2_2_full, mul_pow2_2, mul_pow2_2_full.
+// Not constexpr: ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, mul_down_1, mul_up_1, ball_add_2, ball_add_2_full, mul_2_2, ball_mul_2, ball_mul_2_full, mul_2_1, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, mul_2_1_full, mul_2_2_full.
 #pragma once
 
 #include "prelude.hpp"
@@ -28,8 +28,206 @@ KAIRN_GEN_FORCEINLINE constexpr void add_1_1(float a, float b, float& s_out) noe
     s_out = s;
 }
 
+// fast_two_sum(a, b) -> r = (s, e)
+// Fast2Sum (Dekker 1971). Status: proved; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(double a, double b, double& s_out, double& e_out) noexcept {
+    const double s = a + b;
+    const double z = s - a;
+    const double e = b - z;
+    s_out = s;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(float a, float b, float& s_out, float& e_out) noexcept {
+    const float s = a + b;
+    const float z = s - a;
+    const float e = b - z;
+    s_out = s;
+    e_out = e;
+}
+
+// two_sum_ord(a, b) -> r = (s, e)
+// Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void two_sum_ord(double a, double b, double& s_out, double& e_out) noexcept {
+    const double aa = abs_bits(a);
+    const double ab = abs_bits(b);
+    const bool m = ab > aa;
+    const double h = m ? b : a;
+    const double l = m ? a : b;
+    // (s, e) = fast_two_sum(h, l)
+    const double s = h + l;
+    const double s_z = s - h;
+    const double e = l - s_z;
+    s_out = s;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE constexpr void two_sum_ord(float a, float b, float& s_out, float& e_out) noexcept {
+    const float aa = abs_bits(a);
+    const float ab = abs_bits(b);
+    const bool m = ab > aa;
+    const float h = m ? b : a;
+    const float l = m ? a : b;
+    // (s, e) = fast_two_sum(h, l)
+    const float s = h + l;
+    const float s_z = s - h;
+    const float e = l - s_z;
+    s_out = s;
+    e_out = e;
+}
+
+// add_down_1(a, b) -> r
+// the rounded sum and the sign of its exact error (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_down_1(double a, double b, double& r_out) noexcept {
+    // (s, e) = two_sum_ord(a, b)
+    const double s_aa = abs_bits(a);
+    const double s_ab = abs_bits(b);
+    const bool s_m = s_ab > s_aa;
+    const double s_h = s_m ? b : a;
+    const double s_l = s_m ? a : b;
+    // (s, e) = fast_two_sum(s_h, s_l)
+    const double s = s_h + s_l;
+    const double s_z = s - s_h;
+    const double e = s_l - s_z;
+    const bool n = 0.0 > e;
+    const double p = next_down_bits(s);
+    const double r = n ? p : s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void add_down_1(float a, float b, float& r_out) noexcept {
+    // (s, e) = two_sum_ord(a, b)
+    const float s_aa = abs_bits(a);
+    const float s_ab = abs_bits(b);
+    const bool s_m = s_ab > s_aa;
+    const float s_h = s_m ? b : a;
+    const float s_l = s_m ? a : b;
+    // (s, e) = fast_two_sum(s_h, s_l)
+    const float s = s_h + s_l;
+    const float s_z = s - s_h;
+    const float e = s_l - s_z;
+    const bool n = 0.0f > e;
+    const float p = next_down_bits(s);
+    const float r = n ? p : s;
+    r_out = r;
+}
+
+// add_down_entry(a, b) -> r
+// add_down_1 on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_down_entry(double a, double b, double& r_out) noexcept {
+    const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
+    const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
+    // (r) = add_down_1(ga, gb)
+    // (r_s, r_e) = two_sum_ord(ga, gb)
+    const double r_s_aa = abs_bits(ga);
+    const double r_s_ab = abs_bits(gb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const double r_s_h = r_s_m ? gb : ga;
+    const double r_s_l = r_s_m ? ga : gb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const double r_s = r_s_h + r_s_l;
+    const double r_s_z = r_s - r_s_h;
+    const double r_e = r_s_l - r_s_z;
+    const bool r_n = 0.0 > r_e;
+    const double r_p = next_down_bits(r_s);
+    const double r = r_n ? r_p : r_s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void add_down_entry(float a, float b, float& r_out) noexcept {
+    const float ga = __builtin_is_constant_evaluated() ? a : a + 0.0f;
+    const float gb = __builtin_is_constant_evaluated() ? b : b + 0.0f;
+    // (r) = add_down_1(ga, gb)
+    // (r_s, r_e) = two_sum_ord(ga, gb)
+    const float r_s_aa = abs_bits(ga);
+    const float r_s_ab = abs_bits(gb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const float r_s_h = r_s_m ? gb : ga;
+    const float r_s_l = r_s_m ? ga : gb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float r_s = r_s_h + r_s_l;
+    const float r_s_z = r_s - r_s_h;
+    const float r_e = r_s_l - r_s_z;
+    const bool r_n = 0.0f > r_e;
+    const float r_p = next_down_bits(r_s);
+    const float r = r_n ? r_p : r_s;
+    r_out = r;
+}
+
+// add_up_1(a, b) -> r
+// the rounded sum and the sign of its exact error (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_up_1(double a, double b, double& r_out) noexcept {
+    // (s, e) = two_sum_ord(a, b)
+    const double s_aa = abs_bits(a);
+    const double s_ab = abs_bits(b);
+    const bool s_m = s_ab > s_aa;
+    const double s_h = s_m ? b : a;
+    const double s_l = s_m ? a : b;
+    // (s, e) = fast_two_sum(s_h, s_l)
+    const double s = s_h + s_l;
+    const double s_z = s - s_h;
+    const double e = s_l - s_z;
+    const bool n = e > 0.0;
+    const double q = next_up_bits(s);
+    const double r = n ? q : s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void add_up_1(float a, float b, float& r_out) noexcept {
+    // (s, e) = two_sum_ord(a, b)
+    const float s_aa = abs_bits(a);
+    const float s_ab = abs_bits(b);
+    const bool s_m = s_ab > s_aa;
+    const float s_h = s_m ? b : a;
+    const float s_l = s_m ? a : b;
+    // (s, e) = fast_two_sum(s_h, s_l)
+    const float s = s_h + s_l;
+    const float s_z = s - s_h;
+    const float e = s_l - s_z;
+    const bool n = e > 0.0f;
+    const float q = next_up_bits(s);
+    const float r = n ? q : s;
+    r_out = r;
+}
+
+// add_up_entry(a, b) -> r
+// add_up_1 on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_up_entry(double a, double b, double& r_out) noexcept {
+    const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
+    const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
+    // (r) = add_up_1(ga, gb)
+    // (r_s, r_e) = two_sum_ord(ga, gb)
+    const double r_s_aa = abs_bits(ga);
+    const double r_s_ab = abs_bits(gb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const double r_s_h = r_s_m ? gb : ga;
+    const double r_s_l = r_s_m ? ga : gb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const double r_s = r_s_h + r_s_l;
+    const double r_s_z = r_s - r_s_h;
+    const double r_e = r_s_l - r_s_z;
+    const bool r_n = r_e > 0.0;
+    const double r_q = next_up_bits(r_s);
+    const double r = r_n ? r_q : r_s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void add_up_entry(float a, float b, float& r_out) noexcept {
+    const float ga = __builtin_is_constant_evaluated() ? a : a + 0.0f;
+    const float gb = __builtin_is_constant_evaluated() ? b : b + 0.0f;
+    // (r) = add_up_1(ga, gb)
+    // (r_s, r_e) = two_sum_ord(ga, gb)
+    const float r_s_aa = abs_bits(ga);
+    const float r_s_ab = abs_bits(gb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const float r_s_h = r_s_m ? gb : ga;
+    const float r_s_l = r_s_m ? ga : gb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float r_s = r_s_h + r_s_l;
+    const float r_s_z = r_s - r_s_h;
+    const float r_e = r_s_l - r_s_z;
+    const bool r_n = r_e > 0.0f;
+    const float r_q = next_up_bits(r_s);
+    const float r = r_n ? r_q : r_s;
+    r_out = r;
+}
+
 // ball_add_1(cx, rx, cy, ry) -> cz, rz
-// midpoint-radius sum (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius sum (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_add_1(double cx, double rx, double cy, double ry, double& cz_out, double& rz_out) noexcept {
     const double cz = cx + cy;
     const double az = abs_bits(cz);
@@ -50,7 +248,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1(float cx, float rx, float cy, float ry, fl
 }
 
 // ball_add_1_full(cx, rx, cy, ry) -> cw, rw
-// ball_add_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_add_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 2> ball_add_1_full(double cz, double rz, double q, bool e, bool f) noexcept {
@@ -206,7 +404,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(float c, float r, float& cw_out
 }
 
 // ball_mul_1(cx, rx, cy, ry) -> cz, rz
-// midpoint-radius product (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius product (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_mul_1(double cx, double rx, double cy, double ry, double& cz_out, double& rz_out) noexcept {
     const double cz = fma_rn(cx, cy, 0.0);
     const double ax = abs_bits(cx);
@@ -235,7 +433,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1(float cx, float rx, float cy, float ry, fl
 }
 
 // ball_mul_1_full(cx, rx, cy, ry) -> cw, rw
-// ball_mul_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_mul_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 2> ball_mul_1_full(double cz, double rz, double q, bool e, bool f) noexcept {
@@ -325,6 +523,144 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1_full(float cx, float rx, float cy, float r
     }
 }
 
+// ball_mul_pow2_1(cx, rx, c) -> cz, rz
+// midpoint-radius scaling by a power of two (Milestone 2 listing). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1(double cx, double rx, double c, double& cz_out, double& rz_out) noexcept {
+    const double cz = __builtin_is_constant_evaluated() ? cx * c : fma_rn(cx, c, 0.0);
+    const double rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0);
+    const double am = abs_bits(cz);
+    const bool bc = am > 0x1p-1022;
+    const bool zc = cx == 0.0;
+    const bool ec = bc | zc;
+    const bool br = rr > 0x1p-1022;
+    const bool zr = rx == 0.0;
+    const bool er = br | zr;
+    const bool ex = ec & er;
+    const double su = next_up_bits(rr);
+    const double sw = su + 0x1p-1074;
+    const double rw = next_up_bits(sw);
+    const double rz = ex ? rr : rw;
+    cz_out = cz;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1(float cx, float rx, float c, float& cz_out, float& rz_out) noexcept {
+    const float cz = __builtin_is_constant_evaluated() ? cx * c : fma_rn(cx, c, 0.0f);
+    const float rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0f);
+    const float am = abs_bits(cz);
+    const bool bc = am > 0x1p-126f;
+    const bool zc = cx == 0.0f;
+    const bool ec = bc | zc;
+    const bool br = rr > 0x1p-126f;
+    const bool zr = rx == 0.0f;
+    const bool er = br | zr;
+    const bool ex = ec & er;
+    const float su = next_up_bits(rr);
+    const float sw = su + 0x1p-149f;
+    const float rw = next_up_bits(sw);
+    const float rz = ex ? rr : rw;
+    cz_out = cz;
+    rz_out = rz;
+}
+
+// ball_mul_pow2_1_full(cx, rx, c) -> cw, rw
+// ball_mul_pow2_1, then the fix-up of the special states of a ball (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 2> ball_mul_pow2_1_full(double rx, double cz, double rz, bool e, bool f) noexcept {
+    const double c0 = f ? cz : 0.0;
+    const double r = f ? rz : std::numeric_limits<double>::infinity();
+    const double cw = e ? c0 : rx;
+    const double rw = e ? r : rx;
+    return {{cw, rw}};
+}
+KAIRN_GEN_COLD constexpr result<float, 2> ball_mul_pow2_1_full(float rx, float cz, float rz, bool e, bool f) noexcept {
+    const float c0 = f ? cz : 0.0f;
+    const float r = f ? rz : std::numeric_limits<float>::infinity();
+    const float cw = e ? c0 : rx;
+    const float rw = e ? r : rx;
+    return {{cw, rw}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1_full(double cx, double rx, double c, double& cw_out, double& rw_out) noexcept {
+    // (cz, rz) = ball_mul_pow2_1(cx, rx, c)
+    const double cz = __builtin_is_constant_evaluated() ? cx * c : fma_rn(cx, c, 0.0);
+    const double cz_rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0);
+    const double cz_am = abs_bits(cz);
+    const bool cz_bc = cz_am > 0x1p-1022;
+    const bool cz_zc = cx == 0.0;
+    const bool cz_ec = cz_bc | cz_zc;
+    const bool cz_br = cz_rr > 0x1p-1022;
+    const bool cz_zr = rx == 0.0;
+    const bool cz_er = cz_br | cz_zr;
+    const bool cz_ex = cz_ec & cz_er;
+    const double cz_su = next_up_bits(cz_rr);
+    const double cz_sw = cz_su + 0x1p-1074;
+    const double cz_rw = next_up_bits(cz_sw);
+    const double rz = cz_ex ? cz_rr : cz_rw;
+    const bool e = rx == rx;
+    const double az = abs_bits(cz);
+    const bool f1 = std::numeric_limits<double>::infinity() > az;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
+    const bool f = f1 & f2;
+    if (e & f) [[likely]] {
+        cw_out = cz;
+        rw_out = rz;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 2> fixed_ = fixup::ball_mul_pow2_1_full(rx, cz, rz, e, f);
+        cw_out = fixed_.limb[0];
+        rw_out = fixed_.limb[1];
+#else
+        const double c0 = f ? cz : 0.0;
+        const double r = f ? rz : std::numeric_limits<double>::infinity();
+        const double cw = e ? c0 : rx;
+        const double rw = e ? r : rx;
+        cw_out = cw;
+        rw_out = rw;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1_full(float cx, float rx, float c, float& cw_out, float& rw_out) noexcept {
+    // (cz, rz) = ball_mul_pow2_1(cx, rx, c)
+    const float cz = __builtin_is_constant_evaluated() ? cx * c : fma_rn(cx, c, 0.0f);
+    const float cz_rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0f);
+    const float cz_am = abs_bits(cz);
+    const bool cz_bc = cz_am > 0x1p-126f;
+    const bool cz_zc = cx == 0.0f;
+    const bool cz_ec = cz_bc | cz_zc;
+    const bool cz_br = cz_rr > 0x1p-126f;
+    const bool cz_zr = rx == 0.0f;
+    const bool cz_er = cz_br | cz_zr;
+    const bool cz_ex = cz_ec & cz_er;
+    const float cz_su = next_up_bits(cz_rr);
+    const float cz_sw = cz_su + 0x1p-149f;
+    const float cz_rw = next_up_bits(cz_sw);
+    const float rz = cz_ex ? cz_rr : cz_rw;
+    const bool e = rx == rx;
+    const float az = abs_bits(cz);
+    const bool f1 = std::numeric_limits<float>::infinity() > az;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
+    const bool f = f1 & f2;
+    if (e & f) [[likely]] {
+        cw_out = cz;
+        rw_out = rz;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 2> fixed_ = fixup::ball_mul_pow2_1_full(rx, cz, rz, e, f);
+        cw_out = fixed_.limb[0];
+        rw_out = fixed_.limb[1];
+#else
+        const float c0 = f ? cz : 0.0f;
+        const float r = f ? rz : std::numeric_limits<float>::infinity();
+        const float cw = e ? c0 : rx;
+        const float rw = e ? r : rx;
+        cw_out = cw;
+        rw_out = rw;
+#endif
+    }
+}
+
 // ball_neg_1(cx, rx) -> cz, rz
 // midpoint-radius negation (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_neg_1(double cx, double rx, double& cz_out, double& rz_out) noexcept {
@@ -341,7 +677,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_neg_1(float cx, float rx, float& cz_ou
 }
 
 // ball_scale_1(cx, rx, a) -> cz, rz
-// midpoint-radius scaling (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius scaling (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_scale_1(double cx, double rx, double a, double& cz_out, double& rz_out) noexcept {
     const double cz = fma_rn(cx, a, 0.0);
     const double aa = abs_bits(a);
@@ -364,7 +700,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1(float cx, float rx, float a, float& cz_o
 }
 
 // ball_scale_1_full(cx, rx, a) -> cw, rw
-// ball_scale_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_scale_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 2> ball_scale_1_full(double rx, double cz, double rz, bool e, bool f) noexcept {
@@ -447,7 +783,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(float cx, float rx, float a, float&
 }
 
 // ball_sub_1(cx, rx, cy, ry) -> cz, rz
-// midpoint-radius difference (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius difference (Milestone 1 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_sub_1(double cx, double rx, double cy, double ry, double& cz_out, double& rz_out) noexcept {
     const double n = -cy;
     // (cz, rz) = ball_add_1(cx, rx, n, ry)
@@ -472,7 +808,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1(float cx, float rx, float cy, float ry, fl
 }
 
 // ball_sub_1_full(cx, rx, cy, ry) -> cw, rw
-// ball_sub_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_sub_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 2> ball_sub_1_full(double cz, double rz, double q, bool e, bool f) noexcept {
@@ -558,19 +894,25 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
     }
 }
 
-// fast_two_sum(a, b) -> r = (s, e)
-// Fast2Sum (Dekker 1971). Status: proved; constexpr.
-KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(double a, double b, double& s_out, double& e_out) noexcept {
-    const double s = a + b;
-    const double z = s - a;
-    const double e = b - z;
+// fast_two_sum_entry(a, b) -> r = (s, e)
+// fast_two_sum on its guarded operands (Milestone 2 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
+    const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
+    const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
+    // (s, e) = fast_two_sum(ga, gb)
+    const double s = ga + gb;
+    const double s_z = s - ga;
+    const double e = gb - s_z;
     s_out = s;
     e_out = e;
 }
-KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(float a, float b, float& s_out, float& e_out) noexcept {
-    const float s = a + b;
-    const float z = s - a;
-    const float e = b - z;
+KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(float a, float b, float& s_out, float& e_out) noexcept {
+    const float ga = __builtin_is_constant_evaluated() ? a : a + 0.0f;
+    const float gb = __builtin_is_constant_evaluated() ? b : b + 0.0f;
+    // (s, e) = fast_two_sum(ga, gb)
+    const float s = ga + gb;
+    const float s_z = s - ga;
+    const float e = gb - s_z;
     s_out = s;
     e_out = e;
 }
@@ -593,59 +935,14 @@ KAIRN_GEN_FORCEINLINE constexpr void make_2(float a, float& x0_out, float& x1_ou
 }
 
 // mul_1_1(a, b) -> p
-// one rounding to nearest. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void mul_1_1(double a, double b, double& p_out) noexcept {
-    const double p = fma_rn(a, b, 0.0);
+// one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(double a, double b, double& p_out) noexcept {
+    const double p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0);
     p_out = p;
 }
-KAIRN_GEN_FORCEINLINE void mul_1_1(float a, float b, float& p_out) noexcept {
-    const float p = fma_rn(a, b, 0.0f);
+KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(float a, float b, float& p_out) noexcept {
+    const float p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0f);
     p_out = p;
-}
-
-// radd(a, b) -> r
-// one step up from the rounded sum (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
-KAIRN_GEN_FORCEINLINE constexpr void radd(double a, double b, double& r_out) noexcept {
-    const double s = a + b;
-    const double r = next_up(s);
-    r_out = r;
-}
-KAIRN_GEN_FORCEINLINE constexpr void radd(float a, float b, float& r_out) noexcept {
-    const float s = a + b;
-    const float r = next_up(s);
-    r_out = r;
-}
-
-// rmul(a, b) -> r
-// one step up from the rounded product (Milestone 1 listing). Status: proved (real model), proved (IEEE model); not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void rmul(double a, double b, double& r_out) noexcept {
-    const double p = fma_rn(a, b, 0.0);
-    const double r = next_up(p);
-    r_out = r;
-}
-KAIRN_GEN_FORCEINLINE void rmul(float a, float b, float& r_out) noexcept {
-    const float p = fma_rn(a, b, 0.0f);
-    const float r = next_up(p);
-    r_out = r;
-}
-
-// split(a) -> r = (ah, al)
-// Veltkamp's split (Dekker 1971). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void split(double a, double& ah_out, double& al_out) noexcept {
-    const double g = fma_rn(0x1.0000002p+27, a, 0.0);
-    const double d = a - g;
-    const double ah = g + d;
-    const double al = a - ah;
-    ah_out = ah;
-    al_out = al;
-}
-KAIRN_GEN_FORCEINLINE void split(float a, float& ah_out, float& al_out) noexcept {
-    const float g = fma_rn(0x1.001p+12f, a, 0.0f);
-    const float d = a - g;
-    const float ah = g + d;
-    const float al = a - ah;
-    ah_out = ah;
-    al_out = al;
 }
 
 // two_prod(a, b) -> r = (p, e)
@@ -713,50 +1010,382 @@ KAIRN_GEN_FORCEINLINE constexpr void two_prod(float a, float b, float& p_out, fl
     e_out = e;
 }
 
+// mul_down_1(a, b) -> r
+// two_prod and the sign of its error term (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_down_1(double a, double b, double& r_out) noexcept {
+    // (p, e) = two_prod(a, b)
+    const double p = fma_rn(a, b, 0.0);
+    const double e = fma_rn(a, b, -p);
+    const double ap = abs_bits(p);
+    const bool bd = 0x1p-969 > ap;
+    const bool ez = e == 0.0;
+    const bool un = bd & ez;
+    const bool n = 0.0 > e;
+    const bool sd = n | un;
+    const double pp = next_down_bits(p);
+    const double d = sd ? pp : p;
+    const bool za = a == 0.0;
+    const bool zb = b == 0.0;
+    const bool zz = za | zb;
+    const double r = zz ? p : d;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void mul_down_1(float a, float b, float& r_out) noexcept {
+    // (p, e) = two_prod(a, b)
+    const float p = fma_rn(a, b, 0.0f);
+    const float e = fma_rn(a, b, -p);
+    const float ap = abs_bits(p);
+    const bool bd = 0x1p-102f > ap;
+    const bool ez = e == 0.0f;
+    const bool un = bd & ez;
+    const bool n = 0.0f > e;
+    const bool sd = n | un;
+    const float pp = next_down_bits(p);
+    const float d = sd ? pp : p;
+    const bool za = a == 0.0f;
+    const bool zb = b == 0.0f;
+    const bool zz = za | zb;
+    const float r = zz ? p : d;
+    r_out = r;
+}
+
+// mul_up_1(a, b) -> r
+// two_prod and the sign of its error term (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_up_1(double a, double b, double& r_out) noexcept {
+    // (p, e) = two_prod(a, b)
+    const double p = fma_rn(a, b, 0.0);
+    const double e = fma_rn(a, b, -p);
+    const double ap = abs_bits(p);
+    const bool bd = 0x1p-969 > ap;
+    const bool ez = e == 0.0;
+    const bool un = bd & ez;
+    const bool n = e > 0.0;
+    const bool su = n | un;
+    const double sp = next_up_bits(p);
+    const double v = su ? sp : p;
+    const bool za = a == 0.0;
+    const bool zb = b == 0.0;
+    const bool zz = za | zb;
+    const double r = zz ? p : v;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void mul_up_1(float a, float b, float& r_out) noexcept {
+    // (p, e) = two_prod(a, b)
+    const float p = fma_rn(a, b, 0.0f);
+    const float e = fma_rn(a, b, -p);
+    const float ap = abs_bits(p);
+    const bool bd = 0x1p-102f > ap;
+    const bool ez = e == 0.0f;
+    const bool un = bd & ez;
+    const bool n = e > 0.0f;
+    const bool su = n | un;
+    const float sp = next_up_bits(p);
+    const float v = su ? sp : p;
+    const bool za = a == 0.0f;
+    const bool zb = b == 0.0f;
+    const bool zz = za | zb;
+    const float r = zz ? p : v;
+    r_out = r;
+}
+
+// next_down(a) -> r
+// IEEE 754 nextDown on the bit pattern (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void next_down(double a, double& r_out) noexcept {
+    const double r = next_down_bits(a);
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void next_down(float a, float& r_out) noexcept {
+    const float r = next_down_bits(a);
+    r_out = r;
+}
+
+// next_up(a) -> r
+// IEEE 754 nextUp on the bit pattern (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void next_up(double a, double& r_out) noexcept {
+    const double r = next_up_bits(a);
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void next_up(float a, float& r_out) noexcept {
+    const float r = next_up_bits(a);
+    r_out = r;
+}
+
+// radd(a, b) -> r
+// one step up from the rounded sum (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void radd(double a, double b, double& r_out) noexcept {
+    const double s = a + b;
+    const double r = next_up_bits(s);
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void radd(float a, float b, float& r_out) noexcept {
+    const float s = a + b;
+    const float r = next_up_bits(s);
+    r_out = r;
+}
+
+// radd_entry(a, b) -> r
+// radd on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void radd_entry(double a, double b, double& r_out) noexcept {
+    const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
+    const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
+    // (r) = radd(ga, gb)
+    const double r_s = ga + gb;
+    const double r = next_up_bits(r_s);
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void radd_entry(float a, float b, float& r_out) noexcept {
+    const float ga = __builtin_is_constant_evaluated() ? a : a + 0.0f;
+    const float gb = __builtin_is_constant_evaluated() ? b : b + 0.0f;
+    // (r) = radd(ga, gb)
+    const float r_s = ga + gb;
+    const float r = next_up_bits(r_s);
+    r_out = r;
+}
+
+// rmul(a, b) -> r
+// one step up from the rounded product (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void rmul(double a, double b, double& r_out) noexcept {
+    const double p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0);
+    const double r = next_up_bits(p);
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void rmul(float a, float b, float& r_out) noexcept {
+    const float p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0f);
+    const float r = next_up_bits(p);
+    r_out = r;
+}
+
+// split(a) -> r = (ah, al)
+// Veltkamp's split (Dekker 1971). Status: proved; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void split(double a, double& ah_out, double& al_out) noexcept {
+    const double g = __builtin_is_constant_evaluated() ? 0x1.0000002p+27 * a : fma_rn(0x1.0000002p+27, a, 0.0);
+    const double d = a - g;
+    const double ah = g + d;
+    const double al = a - ah;
+    ah_out = ah;
+    al_out = al;
+}
+KAIRN_GEN_FORCEINLINE constexpr void split(float a, float& ah_out, float& al_out) noexcept {
+    const float g = __builtin_is_constant_evaluated() ? 0x1.001p+12f * a : fma_rn(0x1.001p+12f, a, 0.0f);
+    const float d = a - g;
+    const float ah = g + d;
+    const float al = a - ah;
+    ah_out = ah;
+    al_out = al;
+}
+
+// sub_down_1(a, b) -> r
+// add_down_1 on a and -b (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(double a, double b, double& r_out) noexcept {
+    const double nb = -b;
+    // (r) = add_down_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const double r_s_aa = abs_bits(a);
+    const double r_s_ab = abs_bits(nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const double r_s_h = r_s_m ? nb : a;
+    const double r_s_l = r_s_m ? a : nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const double r_s = r_s_h + r_s_l;
+    const double r_s_z = r_s - r_s_h;
+    const double r_e = r_s_l - r_s_z;
+    const bool r_n = 0.0 > r_e;
+    const double r_p = next_down_bits(r_s);
+    const double r = r_n ? r_p : r_s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(float a, float b, float& r_out) noexcept {
+    const float nb = -b;
+    // (r) = add_down_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const float r_s_aa = abs_bits(a);
+    const float r_s_ab = abs_bits(nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const float r_s_h = r_s_m ? nb : a;
+    const float r_s_l = r_s_m ? a : nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float r_s = r_s_h + r_s_l;
+    const float r_s_z = r_s - r_s_h;
+    const float r_e = r_s_l - r_s_z;
+    const bool r_n = 0.0f > r_e;
+    const float r_p = next_down_bits(r_s);
+    const float r = r_n ? r_p : r_s;
+    r_out = r;
+}
+
+// sub_down_entry(a, b) -> r
+// sub_down_1 on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_down_entry(double a, double b, double& r_out) noexcept {
+    const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
+    const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
+    // (r) = sub_down_1(ga, gb)
+    const double r_nb = -gb;
+    // (r) = add_down_1(ga, r_nb)
+    // (r_s, r_e) = two_sum_ord(ga, r_nb)
+    const double r_s_aa = abs_bits(ga);
+    const double r_s_ab = abs_bits(r_nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const double r_s_h = r_s_m ? r_nb : ga;
+    const double r_s_l = r_s_m ? ga : r_nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const double r_s = r_s_h + r_s_l;
+    const double r_s_z = r_s - r_s_h;
+    const double r_e = r_s_l - r_s_z;
+    const bool r_n = 0.0 > r_e;
+    const double r_p = next_down_bits(r_s);
+    const double r = r_n ? r_p : r_s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_down_entry(float a, float b, float& r_out) noexcept {
+    const float ga = __builtin_is_constant_evaluated() ? a : a + 0.0f;
+    const float gb = __builtin_is_constant_evaluated() ? b : b + 0.0f;
+    // (r) = sub_down_1(ga, gb)
+    const float r_nb = -gb;
+    // (r) = add_down_1(ga, r_nb)
+    // (r_s, r_e) = two_sum_ord(ga, r_nb)
+    const float r_s_aa = abs_bits(ga);
+    const float r_s_ab = abs_bits(r_nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const float r_s_h = r_s_m ? r_nb : ga;
+    const float r_s_l = r_s_m ? ga : r_nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float r_s = r_s_h + r_s_l;
+    const float r_s_z = r_s - r_s_h;
+    const float r_e = r_s_l - r_s_z;
+    const bool r_n = 0.0f > r_e;
+    const float r_p = next_down_bits(r_s);
+    const float r = r_n ? r_p : r_s;
+    r_out = r;
+}
+
+// sub_up_1(a, b) -> r
+// add_up_1 on a and -b (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(double a, double b, double& r_out) noexcept {
+    const double nb = -b;
+    // (r) = add_up_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const double r_s_aa = abs_bits(a);
+    const double r_s_ab = abs_bits(nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const double r_s_h = r_s_m ? nb : a;
+    const double r_s_l = r_s_m ? a : nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const double r_s = r_s_h + r_s_l;
+    const double r_s_z = r_s - r_s_h;
+    const double r_e = r_s_l - r_s_z;
+    const bool r_n = r_e > 0.0;
+    const double r_q = next_up_bits(r_s);
+    const double r = r_n ? r_q : r_s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(float a, float b, float& r_out) noexcept {
+    const float nb = -b;
+    // (r) = add_up_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const float r_s_aa = abs_bits(a);
+    const float r_s_ab = abs_bits(nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const float r_s_h = r_s_m ? nb : a;
+    const float r_s_l = r_s_m ? a : nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float r_s = r_s_h + r_s_l;
+    const float r_s_z = r_s - r_s_h;
+    const float r_e = r_s_l - r_s_z;
+    const bool r_n = r_e > 0.0f;
+    const float r_q = next_up_bits(r_s);
+    const float r = r_n ? r_q : r_s;
+    r_out = r;
+}
+
+// sub_up_entry(a, b) -> r
+// sub_up_1 on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_up_entry(double a, double b, double& r_out) noexcept {
+    const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
+    const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
+    // (r) = sub_up_1(ga, gb)
+    const double r_nb = -gb;
+    // (r) = add_up_1(ga, r_nb)
+    // (r_s, r_e) = two_sum_ord(ga, r_nb)
+    const double r_s_aa = abs_bits(ga);
+    const double r_s_ab = abs_bits(r_nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const double r_s_h = r_s_m ? r_nb : ga;
+    const double r_s_l = r_s_m ? ga : r_nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const double r_s = r_s_h + r_s_l;
+    const double r_s_z = r_s - r_s_h;
+    const double r_e = r_s_l - r_s_z;
+    const bool r_n = r_e > 0.0;
+    const double r_q = next_up_bits(r_s);
+    const double r = r_n ? r_q : r_s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_up_entry(float a, float b, float& r_out) noexcept {
+    const float ga = __builtin_is_constant_evaluated() ? a : a + 0.0f;
+    const float gb = __builtin_is_constant_evaluated() ? b : b + 0.0f;
+    // (r) = sub_up_1(ga, gb)
+    const float r_nb = -gb;
+    // (r) = add_up_1(ga, r_nb)
+    // (r_s, r_e) = two_sum_ord(ga, r_nb)
+    const float r_s_aa = abs_bits(ga);
+    const float r_s_ab = abs_bits(r_nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const float r_s_h = r_s_m ? r_nb : ga;
+    const float r_s_l = r_s_m ? ga : r_nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float r_s = r_s_h + r_s_l;
+    const float r_s_z = r_s - r_s_h;
+    const float r_e = r_s_l - r_s_z;
+    const bool r_n = r_e > 0.0f;
+    const float r_q = next_up_bits(r_s);
+    const float r = r_n ? r_q : r_s;
+    r_out = r;
+}
+
 // two_prod_dekker(a, b) -> r = (p, e)
-// Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void two_prod_dekker(double a, double b, double& p_out, double& e_out) noexcept {
+// Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. Status: proved; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void two_prod_dekker(double a, double b, double& p_out, double& e_out) noexcept {
     // (ah, al) = split(a)
-    const double ah_g = fma_rn(0x1.0000002p+27, a, 0.0);
+    const double ah_g = __builtin_is_constant_evaluated() ? 0x1.0000002p+27 * a : fma_rn(0x1.0000002p+27, a, 0.0);
     const double ah_d = a - ah_g;
     const double ah = ah_g + ah_d;
     const double al = a - ah;
     // (bh, bl) = split(b)
-    const double bh_g = fma_rn(0x1.0000002p+27, b, 0.0);
+    const double bh_g = __builtin_is_constant_evaluated() ? 0x1.0000002p+27 * b : fma_rn(0x1.0000002p+27, b, 0.0);
     const double bh_d = b - bh_g;
     const double bh = bh_g + bh_d;
     const double bl = b - bh;
-    const double p = fma_rn(a, b, 0.0);
-    const double q0 = fma_rn(ah, bh, 0.0);
+    const double p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0);
+    const double q0 = __builtin_is_constant_evaluated() ? ah * bh : fma_rn(ah, bh, 0.0);
     const double t1 = q0 - p;
-    const double q1 = fma_rn(ah, bl, 0.0);
+    const double q1 = __builtin_is_constant_evaluated() ? ah * bl : fma_rn(ah, bl, 0.0);
     const double t2 = t1 + q1;
-    const double q2 = fma_rn(al, bh, 0.0);
+    const double q2 = __builtin_is_constant_evaluated() ? al * bh : fma_rn(al, bh, 0.0);
     const double t3 = t2 + q2;
-    const double q3 = fma_rn(al, bl, 0.0);
+    const double q3 = __builtin_is_constant_evaluated() ? al * bl : fma_rn(al, bl, 0.0);
     const double e = t3 + q3;
     p_out = p;
     e_out = e;
 }
-KAIRN_GEN_FORCEINLINE void two_prod_dekker(float a, float b, float& p_out, float& e_out) noexcept {
+KAIRN_GEN_FORCEINLINE constexpr void two_prod_dekker(float a, float b, float& p_out, float& e_out) noexcept {
     // (ah, al) = split(a)
-    const float ah_g = fma_rn(0x1.001p+12f, a, 0.0f);
+    const float ah_g = __builtin_is_constant_evaluated() ? 0x1.001p+12f * a : fma_rn(0x1.001p+12f, a, 0.0f);
     const float ah_d = a - ah_g;
     const float ah = ah_g + ah_d;
     const float al = a - ah;
     // (bh, bl) = split(b)
-    const float bh_g = fma_rn(0x1.001p+12f, b, 0.0f);
+    const float bh_g = __builtin_is_constant_evaluated() ? 0x1.001p+12f * b : fma_rn(0x1.001p+12f, b, 0.0f);
     const float bh_d = b - bh_g;
     const float bh = bh_g + bh_d;
     const float bl = b - bh;
-    const float p = fma_rn(a, b, 0.0f);
-    const float q0 = fma_rn(ah, bh, 0.0f);
+    const float p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0f);
+    const float q0 = __builtin_is_constant_evaluated() ? ah * bh : fma_rn(ah, bh, 0.0f);
     const float t1 = q0 - p;
-    const float q1 = fma_rn(ah, bl, 0.0f);
+    const float q1 = __builtin_is_constant_evaluated() ? ah * bl : fma_rn(ah, bl, 0.0f);
     const float t2 = t1 + q1;
-    const float q2 = fma_rn(al, bh, 0.0f);
+    const float q2 = __builtin_is_constant_evaluated() ? al * bh : fma_rn(al, bh, 0.0f);
     const float t3 = t2 + q2;
-    const float q3 = fma_rn(al, bl, 0.0f);
+    const float q3 = __builtin_is_constant_evaluated() ? al * bl : fma_rn(al, bl, 0.0f);
     const float e = t3 + q3;
     p_out = p;
     e_out = e;
@@ -781,6 +1410,35 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum(float a, float b, float& s_out, flo
     const float t1 = a - t0;
     const float t2 = b - bb;
     const float e = t1 + t2;
+    s_out = s;
+    e_out = e;
+}
+
+// two_sum_entry(a, b) -> r = (s, e)
+// two_sum on its guarded operands (Milestone 2 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
+    const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
+    const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
+    // (s, e) = two_sum(ga, gb)
+    const double s = ga + gb;
+    const double s_bb = s - ga;
+    const double s_t0 = s - s_bb;
+    const double s_t1 = ga - s_t0;
+    const double s_t2 = gb - s_bb;
+    const double e = s_t1 + s_t2;
+    s_out = s;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE constexpr void two_sum_entry(float a, float b, float& s_out, float& e_out) noexcept {
+    const float ga = __builtin_is_constant_evaluated() ? a : a + 0.0f;
+    const float gb = __builtin_is_constant_evaluated() ? b : b + 0.0f;
+    // (s, e) = two_sum(ga, gb)
+    const float s = ga + gb;
+    const float s_bb = s - ga;
+    const float s_t0 = s - s_bb;
+    const float s_t1 = ga - s_t0;
+    const float s_t2 = gb - s_bb;
+    const float e = s_t1 + s_t2;
     s_out = s;
     e_out = e;
 }
@@ -810,13 +1468,13 @@ KAIRN_GEN_FORCEINLINE constexpr void abs_2(float x0, float x1, float& z0_out, fl
 // the sign of x1 (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_up_2(double x0, double x1, double& t_out) noexcept {
     const bool m = x1 > 0.0;
-    const double s = next_up(x0);
+    const double s = next_up_bits(x0);
     const double t = m ? s : x0;
     t_out = t;
 }
 KAIRN_GEN_FORCEINLINE constexpr void to_up_2(float x0, float x1, float& t_out) noexcept {
     const bool m = x1 > 0.0f;
-    const float s = next_up(x0);
+    const float s = next_up_bits(x0);
     const float t = m ? s : x0;
     t_out = t;
 }
@@ -832,7 +1490,7 @@ KAIRN_GEN_FORCEINLINE constexpr void abs_upper_2(double x0, double x1, double& t
     const double a1 = a0_m ? a0_n1 : x1;
     // (t) = to_up_2(a0, a1)
     const bool t_m = a1 > 0.0;
-    const double t_s = next_up(a0);
+    const double t_s = next_up_bits(a0);
     const double t = t_m ? t_s : a0;
     t_out = t;
 }
@@ -845,7 +1503,7 @@ KAIRN_GEN_FORCEINLINE constexpr void abs_upper_2(float x0, float x1, float& t_ou
     const float a1 = a0_m ? a0_n1 : x1;
     // (t) = to_up_2(a0, a1)
     const bool t_m = a1 > 0.0f;
-    const float t_s = next_up(a0);
+    const float t_s = next_up_bits(a0);
     const float t = t_m ? t_s : a0;
     t_out = t;
 }
@@ -1307,7 +1965,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(float x0, float x1, float
 }
 
 // ball_add_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// midpoint-radius sum (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius sum (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_add_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (cz0, cz1) = add_2_2(cx0, cx1, cy0, cy1)
     // (cz0_sh, cz0_sl) = two_sum(cx0, cy0)
@@ -1378,7 +2036,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2(float cx0, float cx1, float rx, float cy0,
 }
 
 // ball_add_2_full(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cw = (cw0, cw1), rw
-// ball_add_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_add_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> ball_add_2_full(double cz0, double cz1, double rz, double q, bool e, bool f) noexcept {
@@ -1608,7 +2266,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(float c0, float c1, float r, fl
 }
 
 // mul_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     // (ch, cl1) = two_prod(x0, y0)
     const double ch = fma_rn(x0, y0, 0.0);
@@ -1641,7 +2299,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_2(float x0, float x1, float y0, float y1, float
 }
 
 // ball_mul_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// midpoint-radius product (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius product (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_mul_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (cz0, cz1) = mul_2_2(cx0, cx1, cy0, cy1)
     // (cz0_ch, cz0_cl1) = two_prod(cx0, cy0)
@@ -1694,7 +2352,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(float cx0, float cx1, float rx, float cy0,
 }
 
 // ball_mul_2_full(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cw = (cw0, cw1), rw
-// ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> ball_mul_2_full(double cz0, double cz1, double rz, double q, bool e, bool f) noexcept {
@@ -1820,6 +2478,188 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(float cx0, float cx1, float rx, float
     }
 }
 
+// ball_mul_pow2_2(cx = (cx0, cx1), rx, c) -> cz = (cz0, cz1), rz
+// midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2(double cx0, double cx1, double rx, double c, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
+    const double h = __builtin_is_constant_evaluated() ? cx0 * c : fma_rn(cx0, c, 0.0);
+    const double l = __builtin_is_constant_evaluated() ? cx1 * c : fma_rn(cx1, c, 0.0);
+    // (cz0, cz1) = fast_two_sum(h, l)
+    const double cz0 = h + l;
+    const double cz0_z = cz0 - h;
+    const double cz1 = l - cz0_z;
+    const double rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0);
+    const bool ze = cx1 == 0.0;
+    const double m = ze ? h : l;
+    const double am = abs_bits(m);
+    const bool bc = am > 0x1p-1022;
+    const bool zc = cx0 == 0.0;
+    const bool ec = bc | zc;
+    const bool br = rr > 0x1p-1022;
+    const bool zr = rx == 0.0;
+    const bool er = br | zr;
+    const bool ex = ec & er;
+    const double su = next_up_bits(rr);
+    const double sw = su + 0x1p-1074;
+    const double rw = next_up_bits(sw);
+    const double rz = ex ? rr : rw;
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2(float cx0, float cx1, float rx, float c, float& cz0_out, float& cz1_out, float& rz_out) noexcept {
+    const float h = __builtin_is_constant_evaluated() ? cx0 * c : fma_rn(cx0, c, 0.0f);
+    const float l = __builtin_is_constant_evaluated() ? cx1 * c : fma_rn(cx1, c, 0.0f);
+    // (cz0, cz1) = fast_two_sum(h, l)
+    const float cz0 = h + l;
+    const float cz0_z = cz0 - h;
+    const float cz1 = l - cz0_z;
+    const float rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0f);
+    const bool ze = cx1 == 0.0f;
+    const float m = ze ? h : l;
+    const float am = abs_bits(m);
+    const bool bc = am > 0x1p-126f;
+    const bool zc = cx0 == 0.0f;
+    const bool ec = bc | zc;
+    const bool br = rr > 0x1p-126f;
+    const bool zr = rx == 0.0f;
+    const bool er = br | zr;
+    const bool ex = ec & er;
+    const float su = next_up_bits(rr);
+    const float sw = su + 0x1p-149f;
+    const float rw = next_up_bits(sw);
+    const float rz = ex ? rr : rw;
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+
+// ball_mul_pow2_2_full(cx = (cx0, cx1), rx, c) -> cw = (cw0, cw1), rw
+// ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 3> ball_mul_pow2_2_full(double rx, double cz0, double cz1, double rz, bool e, bool f) noexcept {
+    const double c0 = f ? cz0 : 0.0;
+    const double c1 = f ? cz1 : 0.0;
+    const double r = f ? rz : std::numeric_limits<double>::infinity();
+    const double cw0 = e ? c0 : rx;
+    const double cw1 = e ? c1 : rx;
+    const double rw = e ? r : rx;
+    return {{cw0, cw1, rw}};
+}
+KAIRN_GEN_COLD constexpr result<float, 3> ball_mul_pow2_2_full(float rx, float cz0, float cz1, float rz, bool e, bool f) noexcept {
+    const float c0 = f ? cz0 : 0.0f;
+    const float c1 = f ? cz1 : 0.0f;
+    const float r = f ? rz : std::numeric_limits<float>::infinity();
+    const float cw0 = e ? c0 : rx;
+    const float cw1 = e ? c1 : rx;
+    const float rw = e ? r : rx;
+    return {{cw0, cw1, rw}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2_full(double cx0, double cx1, double rx, double c, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
+    // (cz0, cz1, rz) = ball_mul_pow2_2(cx0, cx1, rx, c)
+    const double cz0_h = __builtin_is_constant_evaluated() ? cx0 * c : fma_rn(cx0, c, 0.0);
+    const double cz0_l = __builtin_is_constant_evaluated() ? cx1 * c : fma_rn(cx1, c, 0.0);
+    // (cz0, cz1) = fast_two_sum(cz0_h, cz0_l)
+    const double cz0 = cz0_h + cz0_l;
+    const double cz0_z = cz0 - cz0_h;
+    const double cz1 = cz0_l - cz0_z;
+    const double cz0_rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0);
+    const bool cz0_ze = cx1 == 0.0;
+    const double cz0_m = cz0_ze ? cz0_h : cz0_l;
+    const double cz0_am = abs_bits(cz0_m);
+    const bool cz0_bc = cz0_am > 0x1p-1022;
+    const bool cz0_zc = cx0 == 0.0;
+    const bool cz0_ec = cz0_bc | cz0_zc;
+    const bool cz0_br = cz0_rr > 0x1p-1022;
+    const bool cz0_zr = rx == 0.0;
+    const bool cz0_er = cz0_br | cz0_zr;
+    const bool cz0_ex = cz0_ec & cz0_er;
+    const double cz0_su = next_up_bits(cz0_rr);
+    const double cz0_sw = cz0_su + 0x1p-1074;
+    const double cz0_rw = next_up_bits(cz0_sw);
+    const double rz = cz0_ex ? cz0_rr : cz0_rw;
+    const bool e = rx == rx;
+    const double az = abs_bits(cz0);
+    const bool f1 = std::numeric_limits<double>::infinity() > az;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
+    const bool f = f1 & f2;
+    if (e & f) [[likely]] {
+        cw0_out = cz0;
+        cw1_out = cz1;
+        rw_out = rz;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 3> fixed_ = fixup::ball_mul_pow2_2_full(rx, cz0, cz1, rz, e, f);
+        cw0_out = fixed_.limb[0];
+        cw1_out = fixed_.limb[1];
+        rw_out = fixed_.limb[2];
+#else
+        const double c0 = f ? cz0 : 0.0;
+        const double c1 = f ? cz1 : 0.0;
+        const double r = f ? rz : std::numeric_limits<double>::infinity();
+        const double cw0 = e ? c0 : rx;
+        const double cw1 = e ? c1 : rx;
+        const double rw = e ? r : rx;
+        cw0_out = cw0;
+        cw1_out = cw1;
+        rw_out = rw;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2_full(float cx0, float cx1, float rx, float c, float& cw0_out, float& cw1_out, float& rw_out) noexcept {
+    // (cz0, cz1, rz) = ball_mul_pow2_2(cx0, cx1, rx, c)
+    const float cz0_h = __builtin_is_constant_evaluated() ? cx0 * c : fma_rn(cx0, c, 0.0f);
+    const float cz0_l = __builtin_is_constant_evaluated() ? cx1 * c : fma_rn(cx1, c, 0.0f);
+    // (cz0, cz1) = fast_two_sum(cz0_h, cz0_l)
+    const float cz0 = cz0_h + cz0_l;
+    const float cz0_z = cz0 - cz0_h;
+    const float cz1 = cz0_l - cz0_z;
+    const float cz0_rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0f);
+    const bool cz0_ze = cx1 == 0.0f;
+    const float cz0_m = cz0_ze ? cz0_h : cz0_l;
+    const float cz0_am = abs_bits(cz0_m);
+    const bool cz0_bc = cz0_am > 0x1p-126f;
+    const bool cz0_zc = cx0 == 0.0f;
+    const bool cz0_ec = cz0_bc | cz0_zc;
+    const bool cz0_br = cz0_rr > 0x1p-126f;
+    const bool cz0_zr = rx == 0.0f;
+    const bool cz0_er = cz0_br | cz0_zr;
+    const bool cz0_ex = cz0_ec & cz0_er;
+    const float cz0_su = next_up_bits(cz0_rr);
+    const float cz0_sw = cz0_su + 0x1p-149f;
+    const float cz0_rw = next_up_bits(cz0_sw);
+    const float rz = cz0_ex ? cz0_rr : cz0_rw;
+    const bool e = rx == rx;
+    const float az = abs_bits(cz0);
+    const bool f1 = std::numeric_limits<float>::infinity() > az;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
+    const bool f = f1 & f2;
+    if (e & f) [[likely]] {
+        cw0_out = cz0;
+        cw1_out = cz1;
+        rw_out = rz;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 3> fixed_ = fixup::ball_mul_pow2_2_full(rx, cz0, cz1, rz, e, f);
+        cw0_out = fixed_.limb[0];
+        cw1_out = fixed_.limb[1];
+        rw_out = fixed_.limb[2];
+#else
+        const float c0 = f ? cz0 : 0.0f;
+        const float c1 = f ? cz1 : 0.0f;
+        const float r = f ? rz : std::numeric_limits<float>::infinity();
+        const float cw0 = e ? c0 : rx;
+        const float cw1 = e ? c1 : rx;
+        const float rw = e ? r : rx;
+        cw0_out = cw0;
+        cw1_out = cw1;
+        rw_out = rw;
+#endif
+    }
+}
+
 // neg_2(x = (x0, x1)) -> z = (z0, z1)
 // limb by limb (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void neg_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
@@ -1857,7 +2697,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_neg_2(float cx0, float cx1, float rx, 
 }
 
 // mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
-// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
     // (ch, cl1) = two_prod(x0, a)
     const double ch = fma_rn(x0, a, 0.0);
@@ -1884,7 +2724,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, f
 }
 
 // ball_scale_2(cx = (cx0, cx1), rx, a) -> cz = (cz0, cz1), rz
-// midpoint-radius scaling (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius scaling (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_scale_2(double cx0, double cx1, double rx, double a, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (cz0, cz1) = mul_2_1(cx0, cx1, a)
     // (cz0_ch, cz0_cl1) = two_prod(cx0, a)
@@ -1925,7 +2765,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2(float cx0, float cx1, float rx, float a,
 }
 
 // ball_scale_2_full(cx = (cx0, cx1), rx, a) -> cw = (cw0, cw1), rw
-// ball_scale_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_scale_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> ball_scale_2_full(double rx, double cz0, double cz1, double rz, bool e, bool f) noexcept {
@@ -2038,7 +2878,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float cx0, float cx1, float rx, flo
 }
 
 // ball_sub_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// midpoint-radius difference (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius difference (Milestone 1 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_sub_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (n0, n1) = neg_2(cy0, cy1)
     const double n0 = -cy0;
@@ -2117,7 +2957,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2(float cx0, float cx1, float rx, float cy0,
 }
 
 // ball_sub_2_full(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cw = (cw0, cw1), rw
-// ball_sub_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_sub_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> ball_sub_2_full(double cz0, double cz1, double rz, double q, bool e, bool f) noexcept {
@@ -2429,7 +3269,7 @@ KAIRN_GEN_FORCEINLINE constexpr void make_2_limbs(float h, float l, float& x0_ou
 }
 
 // mul_2_1_full(x = (x0, x1), a) -> w = (w0, w1)
-// mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 2> mul_2_1_full(double x0, double a, double z0, double z1, bool f) noexcept {
@@ -2518,7 +3358,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(float x0, float x1, float a, float& w0_o
 }
 
 // mul_2_2_full(x = (x0, x1), y = (y0, y1)) -> w = (w0, w1)
-// mul_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// mul_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 2> mul_2_2_full(double x0, double y0, double z0, double z1, bool f) noexcept {
@@ -2613,10 +3453,10 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full(float x0, float x1, float y0, float y1, 
 }
 
 // mul_pow2_2(x = (x0, x1), c) -> z = (z0, z1)
-// both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void mul_pow2_2(double x0, double x1, double c, double& z0_out, double& z1_out) noexcept {
-    const double h = fma_rn(x0, c, 0.0);
-    const double l = fma_rn(x1, c, 0.0);
+// both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_2(double x0, double x1, double c, double& z0_out, double& z1_out) noexcept {
+    const double h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);
+    const double l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0);
     // (z0, z1) = fast_two_sum(h, l)
     const double z0 = h + l;
     const double z0_z = z0 - h;
@@ -2624,9 +3464,9 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2(double x0, double x1, double c, double& z0
     z0_out = z0;
     z1_out = z1;
 }
-KAIRN_GEN_FORCEINLINE void mul_pow2_2(float x0, float x1, float c, float& z0_out, float& z1_out) noexcept {
-    const float h = fma_rn(x0, c, 0.0f);
-    const float l = fma_rn(x1, c, 0.0f);
+KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_2(float x0, float x1, float c, float& z0_out, float& z1_out) noexcept {
+    const float h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0f);
+    const float l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0f);
     // (z0, z1) = fast_two_sum(h, l)
     const float z0 = h + l;
     const float z0_z = z0 - h;
@@ -2636,21 +3476,21 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2(float x0, float x1, float c, float& z0_out
 }
 
 // mul_pow2_2_full(x = (x0, x1), c) -> w = (w0, w1)
-// mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
-KAIRN_GEN_COLD result<double, 2> mul_pow2_2_full(double x0, double c, double z0, double z1, bool f) noexcept {
-    const double t = fma_rn(x0, c, 0.0);
-    const double r0 = t * std::numeric_limits<double>::infinity();
+KAIRN_GEN_COLD constexpr result<double, 2> mul_pow2_2_full(double x0, double c, double z0, double z1, bool f) noexcept {
+    const double t = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);
+    const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
     const double w1 = f ? z1 : r1;
     return {{w0, w1}};
 }
-KAIRN_GEN_COLD result<float, 2> mul_pow2_2_full(float x0, float c, float z0, float z1, bool f) noexcept {
-    const float t = fma_rn(x0, c, 0.0f);
-    const float r0 = t * std::numeric_limits<float>::infinity();
+KAIRN_GEN_COLD constexpr result<float, 2> mul_pow2_2_full(float x0, float c, float z0, float z1, bool f) noexcept {
+    const float t = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0f);
+    const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
@@ -2659,10 +3499,10 @@ KAIRN_GEN_COLD result<float, 2> mul_pow2_2_full(float x0, float c, float z0, flo
 }
 }  // namespace fixup
 #endif
-KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(double x0, double x1, double c, double& w0_out, double& w1_out) noexcept {
+KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_2_full(double x0, double x1, double c, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = mul_pow2_2(x0, x1, c)
-    const double z0_h = fma_rn(x0, c, 0.0);
-    const double z0_l = fma_rn(x1, c, 0.0);
+    const double z0_h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);
+    const double z0_l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0);
     // (z0, z1) = fast_two_sum(z0_h, z0_l)
     const double z0 = z0_h + z0_l;
     const double z0_z = z0 - z0_h;
@@ -2678,8 +3518,8 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(double x0, double x1, double c, doubl
         w0_out = fixed_.limb[0];
         w1_out = fixed_.limb[1];
 #else
-        const double t = fma_rn(x0, c, 0.0);
-        const double r0 = t * std::numeric_limits<double>::infinity();
+        const double t = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);
+        const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
         const bool n = r0 == r0;
         const double r1 = n ? 0.0 : r0;
         const double w0 = f ? z0 : r0;
@@ -2689,10 +3529,10 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(double x0, double x1, double c, doubl
 #endif
     }
 }
-KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(float x0, float x1, float c, float& w0_out, float& w1_out) noexcept {
+KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_2_full(float x0, float x1, float c, float& w0_out, float& w1_out) noexcept {
     // (z0, z1) = mul_pow2_2(x0, x1, c)
-    const float z0_h = fma_rn(x0, c, 0.0f);
-    const float z0_l = fma_rn(x1, c, 0.0f);
+    const float z0_h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0f);
+    const float z0_l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0f);
     // (z0, z1) = fast_two_sum(z0_h, z0_l)
     const float z0 = z0_h + z0_l;
     const float z0_z = z0 - z0_h;
@@ -2708,8 +3548,8 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(float x0, float x1, float c, float& w
         w0_out = fixed_.limb[0];
         w1_out = fixed_.limb[1];
 #else
-        const float t = fma_rn(x0, c, 0.0f);
-        const float r0 = t * std::numeric_limits<float>::infinity();
+        const float t = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0f);
+        const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
         const bool n = r0 == r0;
         const float r1 = n ? 0.0f : r0;
         const float w0 = f ? z0 : r0;
@@ -3216,13 +4056,13 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, 
 // the sign of x1 (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_down_2(double x0, double x1, double& t_out) noexcept {
     const bool m = 0.0 > x1;
-    const double p = next_down(x0);
+    const double p = next_down_bits(x0);
     const double t = m ? p : x0;
     t_out = t;
 }
 KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out) noexcept {
     const bool m = 0.0f > x1;
-    const float p = next_down(x0);
+    const float p = next_down_bits(x0);
     const float t = m ? p : x0;
     t_out = t;
 }

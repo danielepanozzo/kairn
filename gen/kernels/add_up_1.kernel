@@ -1,0 +1,23 @@
+# RU(a + b), the smallest number of the format not below the exact sum, for every pair of finite
+# numbers (milestone2.md, "Rounding a sum down and up"): the rounded sum, one step up when its
+# exact error is positive. At an overflow the error term is the infinity of the opposite sign:
+# +inf for a sum that overflows upward, -Omega for one that overflows downward (the format with
+# overflow). An infinite or NaN operand gives the sum of IEEE 754.
+kernel:        add_up_1
+input:         a
+input:         b
+output:        r
+value:         a+b
+ensures:       rounded r up
+min_precision: 2
+source:        the rounded sum and the sign of its exact error (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+cone_exempt:   r is s or succ(s), chosen by select, and succ(-inf) is finite; the rounded claim states the output for infinite and NaN operands
+
+(s, e) = two_sum_ord(a, b)
+n      = lt(0, e)
+q      = succ(s)
+r      = select(n, q, s)

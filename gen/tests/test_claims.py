@@ -1,6 +1,7 @@
 """The expression parser and gen/claims.json."""
 import json
 import os
+import re
 import unittest
 from fractions import Fraction
 
@@ -55,6 +56,18 @@ class Parser(unittest.TestCase):
         self.assertEqual(expr.names(expr.parse('3/(1-4*u)')), {'u'})
         self.assertEqual(expr.names(expr.parse('abs(x-y)')), {'x', 'y'})
 
+    def test_limbs(self):
+        # A limb of a group, in the conditions of exact_when: cx[1] is the second limb of cx.
+        self.assertEqual(expr.parse('cx[1]*c'), ('mul', ('limb', 'cx', 1), ('name', 'c')))
+        self.assertEqual(expr.names(expr.parse('cx[0]*c+rx')), {'cx', 'c', 'rx'})
+        self.assertEqual(expr.limbs(expr.parse('abs(cx[0])+cx[1]')), {('cx', 0), ('cx', 1)})
+        self.assertEqual(expr.evaluate(expr.parse('cx[1]*2'), {'cx[1]': Fraction(3)}), 6)
+        for text in ('cx[]', 'cx[a]', 'cx[1', 'cx]', '[0]', 'cx[-1]'):
+            with self.assertRaises(expr.ExprError, msg=text):
+                expr.parse(text)
+        with self.assertRaises(expr.ExprError):
+            expr.evaluate(expr.parse('cx[2]'), {'cx[1]': Fraction(1)})
+
     def test_abs(self):
         self.assertEqual(expr.parse('abs(x)'), ('abs', ('name', 'x')))
         self.assertEqual(expr.parse('-abs(-x)*y'), ('mul', ('neg', ('abs', ('neg', ('name', 'x')))), ('name', 'y')))
@@ -77,13 +90,18 @@ class Claims(unittest.TestCase):
             self.assertEqual(json.load(f), self.doc)
 
     # The fields of each kind of ensures entry, in order (architecture.md, "Claims", "Claims of the
-    # second wave" and "Claims of the non-finite layer").
+    # second wave", "Claims of the non-finite layer" and "Claims of Milestone 2").
     FIELDS = {'normalized': ['kind', 'of'], 'leading_rounded': ['kind', 'of'],
               'error': ['kind', 'of', 'form', 'c', 'k', 't', 'when'], 'rounded': ['kind', 'of', 'mode'],
               'upper': ['kind', 'of', 'gaps'], 'predicate': ['kind', 'of', 'rel', 'args'],
               'encloses': ['kind', 'center', 'radius', 'set', 'balls'],
               'extends': ['kind', 'of', 'core', 'lead', 'finite_when'], 'represents': ['kind', 'of'],
-              'makes_ball': ['kind', 'center', 'radius', 'from']}
+              'makes_ball': ['kind', 'center', 'radius', 'from'],
+              'neighbor': ['kind', 'of', 'side'], 'bound': ['kind', 'of', 'side', 'steps']}
+    # The fields that some entries of a kind have, after the others, and only when they say
+    # something: a rounding under a condition, and an exactness condition (Milestone 2). Every
+    # entry without them has the shape it had before.
+    OPTIONAL = {'rounded': ['when'], 'error': ['exact_when'], 'encloses': ['exact_when']}
 
     def test_schema(self):
         self.assertEqual(self.doc['schema'], 1)
@@ -117,10 +135,17 @@ class Claims(unittest.TestCase):
             errors = [e for e in k['ensures'] if e['kind'] == 'error']
             for e in k['ensures']:
                 fields = self.FIELDS[e['kind']] + (['finite_when'] if e['kind'] == 'encloses' and extended else [])
+                fields += [f for f in self.OPTIONAL.get(e['kind'], []) if f in e]
                 self.assertEqual(list(e), fields, k['name'])
                 for c in e.get('finite_when', []):
                     self.assertEqual(list(c), ['abs_le', 'exp'], k['name'])
                     self.assertIsInstance(c['exp'], int)
+                for c in e.get('exact_when', []):
+                    self.assertIn(list(c), (['zero_or_abs_gt', 'than'], ['zero_or_abs_ge', 'than']), k['name'])
+                if 'when' in e and e['kind'] == 'rounded':
+                    self.assertEqual(e['when'], 'product_large', k['name'])
+                if e['kind'] == 'bound':
+                    self.assertIsInstance(e['steps'], int)
             for inst in k['instances'].values():
                 # Always a list, one object per error entry (second wave; it was an object when
                 # there was one entry).
@@ -218,6 +243,8 @@ class Claims(unittest.TestCase):
                 'ball_mul_2_full': [bound('(abs(cx)+rx)*(abs(cy)+ry)', -2)],
                 'ball_scale_1_full': [bound('(abs(cx)+rx)*a', -2)],
                 'ball_scale_2_full': [bound('(abs(cx)+rx)*a', -2)],
+                'ball_mul_pow2_1_full': [bound('(abs(cx)+rx)*c', -2)],
+                'ball_mul_pow2_2_full': [bound('(abs(cx)+rx)*c', -2)],
                 'add_2_2_full': [bound('x', -2), bound('y', -2)],
                 'sub_2_2_full': [bound('x', -2), bound('y', -2)],
                 'add_fast_2_2_full': [bound('x', -2), bound('y', -2)],
@@ -260,13 +287,61 @@ class Claims(unittest.TestCase):
             self.assertNotIn('domain', self.by[name])
             self.assertNotIn('ieee_status', self.by[name])
 
+    def test_the_entries_of_milestone2_in_architecture_md(self):
+        # The entries of the claims of Milestone 2, wave 1, as architecture.md writes them out
+        # ("Claims of Milestone 2"), field for field.
+        self.assertEqual(self.by['next_up']['ensures'], [{'kind': 'neighbor', 'of': 'r', 'side': 'up'}])
+        self.assertEqual(self.by['next_down']['ensures'], [{'kind': 'neighbor', 'of': 'r', 'side': 'down'}])
+        self.assertEqual(self.by['next_up']['value'], 'a')
+        self.assertEqual(self.by['add_down_1']['ensures'], [{'kind': 'rounded', 'of': 'r', 'mode': 'down'}])
+        self.assertEqual((self.by['add_down_1']['domain'], self.by['sub_up_1']['value']), ('extended', 'a-b'))
+        self.assertEqual(self.by['mul_down_1']['ensures'], [
+            {'kind': 'bound', 'of': 'r', 'side': 'below', 'steps': 1},
+            {'kind': 'rounded', 'of': 'r', 'mode': 'down', 'when': 'product_large'}])
+        self.assertEqual(self.by['mul_up_1']['ensures'], [
+            {'kind': 'bound', 'of': 'r', 'side': 'above', 'steps': 1},
+            {'kind': 'rounded', 'of': 'r', 'mode': 'up', 'when': 'product_large'}])
+        n = 'eta/(2*u)'
+        self.assertEqual(self.by['ball_mul_pow2_2']['ensures'], [
+            {'kind': 'normalized', 'of': 'cz'},
+            {'kind': 'encloses', 'center': 'cz', 'radius': 'rz', 'set': 'x*c',
+             'balls': {'x': {'center': 'cx', 'radius': 'rx'}},
+             'exact_when': [{'zero_or_abs_gt': 'cx[0]*c', 'than': n}, {'zero_or_abs_gt': 'cx[1]*c', 'than': n},
+                            {'zero_or_abs_gt': 'rx*c', 'than': n}]}])
+        self.assertEqual(self.by['ball_mul_pow2_1_full']['ensures'], [
+            {'kind': 'encloses', 'center': 'cw', 'radius': 'rw', 'set': 'x*c',
+             'balls': {'x': {'center': 'cx', 'radius': 'rx'}},
+             'finite_when': [{'abs_le': '(abs(cx)+rx)*c', 'exp': -2}],
+             'exact_when': [{'zero_or_abs_gt': 'cx*c', 'than': n}, {'zero_or_abs_gt': 'rx*c', 'than': n}]}])
+        # The entry forms claim what the kernel they call claims.
+        for entry, core in (('two_sum_entry', 'two_sum'), ('fast_two_sum_entry', 'fast_two_sum'),
+                            ('radd_entry', 'radd'), ('add_down_entry', 'add_down_1'), ('add_up_entry', 'add_up_1'),
+                            ('sub_down_entry', 'sub_down_1'), ('sub_up_entry', 'sub_up_1')):
+            for key in ('inputs', 'outputs', 'value', 'requires', 'ensures', 'min_precision', 'instances'):
+                self.assertEqual(self.by[entry][key], self.by[core][key], (entry, key))
+            self.assertEqual(self.by[entry].get('domain'), self.by[core].get('domain'), entry)
+        # An error entry without exact_when, and a rounded entry without when, are as before.
+        self.assertNotIn('exact_when', self.by['mul_pow2_2']['ensures'][1])
+        self.assertEqual(self.by['to_down_2']['ensures'], [{'kind': 'rounded', 'of': 't', 'mode': 'down'}])
+        # The four entries that architecture.md writes out in full are these, field for field.
+        with open(os.path.join(common.ROOT, 'docs', 'developer', 'architecture.md'), encoding='utf-8') as f:
+            text = f.read()
+        section = text.split('### Claims of Milestone 2')[1].split('\n## ')[0]
+        blocks = re.findall(r'```json\n(.*?)```', section, re.S)
+        shown = json.loads('[' + blocks[1] + ']')
+        self.assertEqual([e['name'] for e in shown], ['next_up', 'mul_down_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full'])
+        for e in shown:
+            want = [(key, v) for key, v in self.by[e['name']].items()
+                    if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
+            self.assertEqual(list(e.items()), want, e['name'])
+
     def test_ieee_only(self):
         # Exactly the kernels without a real-model statement say so: the nine full kernels, the
-        # eight full Ball kernels and the four constructors; ball_neg_k, which also requires a ball
+        # ten full Ball kernels and the four constructors; ball_neg_k, which also requires a ball
         # and claims encloses, has a real-model statement and no such field.
         full = {f'{op}_full' for op in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
                                         'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
-        full_ball = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+        full_ball = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
         constructors = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
         self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k}, full | full_ball | constructors)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))

@@ -1,0 +1,46 @@
+# A ball with a 2-limb center times a positive power of two c (milestone2.md, "Scaling a ball by a
+# power of two"): exact whenever nothing underflows. The center is scaled as mul_pow2_2 does. When
+# the scaled last nonzero limb of the center is above the smallest normal number N = eta / (2u) in
+# magnitude (or the center is zero) and so is the scaled radius (or the radius is zero), both
+# scalings are exact and the radius is c rx itself: the result is c X. Otherwise the radius is the
+# number after RN(succ(RN(c rx)) + eta), which covers the eta that the center may have lost.
+# The condition of exactness is written limb by limb, each limb times c zero or above N: for a
+# normalized center that is the page's "the center is zero or its last nonzero limb times c is
+# above N", because a nonzero second limb makes the first one nonzero and larger in magnitude.
+kernel:        ball_mul_pow2_2
+input:         cx = cx0 cx1
+input:         stored rx
+input:         c
+output:        cz = cz0 cz1
+output:        rz
+value:         cx*c
+requires:      normalized cx
+requires:      nonneg rx
+requires:      power_of_two c
+ensures:       normalized cz
+ensures:       encloses cz rz x*c x=cx,rx exact_when=zero_or_abs_gt(cx[0]*c,eta/(2*u));zero_or_abs_gt(cx[1]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))
+min_precision: 2
+source:        midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+entry:         yes
+cone_exempt:   the radius is selected and stepped; the special states of the ball layer test the center and the radius
+
+h          = prod(cx0, c)
+l          = prod(cx1, c)
+(cz0, cz1) = fast_two_sum(h, l)
+rr         = prod(rx, c)
+ze         = eq(cx1, 0)
+m          = select(ze, h, l)
+am         = abs(m)
+bc         = lt(const up(eta/(2*u)), am)
+zc         = eq(cx0, 0)
+ec         = or(bc, zc)
+br         = lt(const up(eta/(2*u)), rr)
+zr         = eq(rx, 0)
+er         = or(br, zr)
+ex         = and(ec, er)
+su         = succ(rr)
+sw         = add(su, const up(eta))
+rw         = succ(sw)
+rz         = select(ex, rr, rw)

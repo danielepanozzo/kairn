@@ -84,6 +84,12 @@ Definition up_ball_mul_2_1 : float := const_of (Model.up_ball_mul_2_1 (3 - emax 
 (* up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_mul_2_2 : float := const_of (Model.up_ball_mul_2_2 (3 - emax - prec) prec).
 
+(* up(eta/(2*u)), as a number of the format. *)
+Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).
+
+(* up(eta), as a number of the format. *)
+Definition up_ball_mul_pow2_1_1 : float := const_of (Model.up_ball_mul_pow2_1_1 (3 - emax - prec) prec).
+
 (* up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_scale_1_2 : float := const_of (Model.up_ball_scale_1_2 (3 - emax - prec) prec).
 
@@ -93,10 +99,60 @@ Definition up_ball_scale_2_0 : float := const_of (Model.up_ball_scale_2_0 (3 - e
 (* up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_scale_2_2 : float := const_of (Model.up_ball_scale_2_2 (3 - emax - prec) prec).
 
+(* up(eta/(2*u^2)), as a number of the format. *)
+Definition up_mul_down_1_0 : float := const_of (Model.up_mul_down_1_0 (3 - emax - prec) prec).
+
 (* add_1_1: one rounding to nearest. *)
 Definition add_1_1 (a b : float) : float :=
   let s := add a b in
   s.
+
+(* fast_two_sum: Fast2Sum (Dekker 1971). *)
+Definition fast_two_sum (a b : float) : float * float :=
+  let s := add a b in
+  let z := sub s a in
+  let e := sub b z in
+  (s, e).
+
+(* two_sum_ord: Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17). *)
+Definition two_sum_ord (a b : float) : float * float :=
+  let aa := abs a in
+  let ab := abs b in
+  let m := lt aa ab in
+  let h := if m then b else a in
+  let l := if m then a else b in
+  let '(s, e) := fast_two_sum h l in
+  (s, e).
+
+(* add_down_1: the rounded sum and the sign of its exact error (Milestone 2 listing). *)
+Definition add_down_1 (a b : float) : float :=
+  let '(s, e) := two_sum_ord a b in
+  let n := lt e pzero in
+  let p := pred s in
+  let r := if n then p else s in
+  r.
+
+(* add_down_entry: add_down_1 on its guarded operands (Milestone 2 listing). *)
+Definition add_down_entry (a b : float) : float :=
+  let ga := guard a in
+  let gb := guard b in
+  let r := add_down_1 ga gb in
+  r.
+
+(* add_up_1: the rounded sum and the sign of its exact error (Milestone 2 listing). *)
+Definition add_up_1 (a b : float) : float :=
+  let '(s, e) := two_sum_ord a b in
+  let n := lt pzero e in
+  let q := succ s in
+  let r := if n then q else s in
+  r.
+
+(* add_up_entry: add_up_1 on its guarded operands (Milestone 2 listing). *)
+Definition add_up_entry (a b : float) : float :=
+  let ga := guard a in
+  let gb := guard b in
+  let r := add_up_1 ga gb in
+  r.
 
 (* ball_add_1: midpoint-radius sum (Milestone 1 listing, second radius design). *)
 Definition ball_add_1 (cx rx cy ry : float) : float * float :=
@@ -165,6 +221,38 @@ Definition ball_mul_1_full (cx rx cy ry : float) : float * float :=
   let rw := if e then r else q in
   (cw, rw).
 
+(* ball_mul_pow2_1: midpoint-radius scaling by a power of two (Milestone 2 listing). *)
+Definition ball_mul_pow2_1 (cx rx c : float) : float * float :=
+  let cz := prod cx c in
+  let rr := prod rx c in
+  let am := abs cz in
+  let bc := lt up_ball_mul_pow2_1_0 am in
+  let zc := eq cx pzero in
+  let ec := orb bc zc in
+  let br := lt up_ball_mul_pow2_1_0 rr in
+  let zr := eq rx pzero in
+  let er := orb br zr in
+  let ex := andb ec er in
+  let su := succ rr in
+  let sw := add su up_ball_mul_pow2_1_1 in
+  let rw := succ sw in
+  let rz := if ex then rr else rw in
+  (cz, rz).
+
+(* ball_mul_pow2_1_full: ball_mul_pow2_1, then the fix-up of the special states of a ball (Milestone 2 listing). *)
+Definition ball_mul_pow2_1_full (cx rx c : float) : float * float :=
+  let '(cz, rz) := ball_mul_pow2_1 cx rx c in
+  let e := eq rx rx in
+  let az := abs cz in
+  let f1 := lt az pinf in
+  let f2 := lt rz pinf in
+  let f := andb f1 f2 in
+  let c0 := if f then cz else pzero in
+  let r := if f then rz else pinf in
+  let cw := if e then c0 else rx in
+  let rw := if e then r else rx in
+  (cw, rw).
+
 (* ball_neg_1: midpoint-radius negation (Milestone 1 listing). *)
 Definition ball_neg_1 (cx rx : float) : float * float :=
   let cz := neg cx in
@@ -216,11 +304,11 @@ Definition ball_sub_1_full (cx rx cy ry : float) : float * float :=
   let rw := if e then r else q in
   (cw, rw).
 
-(* fast_two_sum: Fast2Sum (Dekker 1971). *)
-Definition fast_two_sum (a b : float) : float * float :=
-  let s := add a b in
-  let z := sub s a in
-  let e := sub b z in
+(* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). *)
+Definition fast_two_sum_entry (a b : float) : float * float :=
+  let ga := guard a in
+  let gb := guard b in
+  let '(s, e) := fast_two_sum ga gb in
   (s, e).
 
 (* make_2: constructors (Milestone 1 listing). *)
@@ -235,10 +323,67 @@ Definition mul_1_1 (a b : float) : float :=
   let p := prod a b in
   p.
 
+(* two_prod: TwoProd with an FMA (folklore; see JMP17). *)
+Definition two_prod (a b : float) : float * float :=
+  let p := prod a b in
+  let e := fms a b p in
+  (p, e).
+
+(* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). *)
+Definition mul_down_1 (a b : float) : float :=
+  let '(p, e) := two_prod a b in
+  let ap := abs p in
+  let bd := lt ap up_mul_down_1_0 in
+  let ez := eq e pzero in
+  let un := andb bd ez in
+  let n := lt e pzero in
+  let sd := orb n un in
+  let pp := pred p in
+  let d := if sd then pp else p in
+  let za := eq a pzero in
+  let zb := eq b pzero in
+  let zz := orb za zb in
+  let r := if zz then p else d in
+  r.
+
+(* mul_up_1: two_prod and the sign of its error term (Milestone 2 listing). *)
+Definition mul_up_1 (a b : float) : float :=
+  let '(p, e) := two_prod a b in
+  let ap := abs p in
+  let bd := lt ap up_mul_down_1_0 in
+  let ez := eq e pzero in
+  let un := andb bd ez in
+  let n := lt pzero e in
+  let su := orb n un in
+  let sp := succ p in
+  let v := if su then sp else p in
+  let za := eq a pzero in
+  let zb := eq b pzero in
+  let zz := orb za zb in
+  let r := if zz then p else v in
+  r.
+
+(* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). *)
+Definition next_down (a : float) : float :=
+  let r := pred a in
+  r.
+
+(* next_up: IEEE 754 nextUp on the bit pattern (Milestone 2 listing). *)
+Definition next_up (a : float) : float :=
+  let r := succ a in
+  r.
+
 (* radd: one step up from the rounded sum (Milestone 1 listing). *)
 Definition radd (a b : float) : float :=
   let s := add a b in
   let r := succ s in
+  r.
+
+(* radd_entry: radd on its guarded operands (Milestone 2 listing). *)
+Definition radd_entry (a b : float) : float :=
+  let ga := guard a in
+  let gb := guard b in
+  let r := radd ga gb in
   r.
 
 (* rmul: one step up from the rounded product (Milestone 1 listing). *)
@@ -255,11 +400,31 @@ Definition split (a : float) : float * float :=
   let al := sub a ah in
   (ah, al).
 
-(* two_prod: TwoProd with an FMA (folklore; see JMP17). *)
-Definition two_prod (a b : float) : float * float :=
-  let p := prod a b in
-  let e := fms a b p in
-  (p, e).
+(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). *)
+Definition sub_down_1 (a b : float) : float :=
+  let nb := neg b in
+  let r := add_down_1 a nb in
+  r.
+
+(* sub_down_entry: sub_down_1 on its guarded operands (Milestone 2 listing). *)
+Definition sub_down_entry (a b : float) : float :=
+  let ga := guard a in
+  let gb := guard b in
+  let r := sub_down_1 ga gb in
+  r.
+
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
+Definition sub_up_1 (a b : float) : float :=
+  let nb := neg b in
+  let r := add_up_1 a nb in
+  r.
+
+(* sub_up_entry: sub_up_1 on its guarded operands (Milestone 2 listing). *)
+Definition sub_up_entry (a b : float) : float :=
+  let ga := guard a in
+  let gb := guard b in
+  let r := sub_up_1 ga gb in
+  r.
 
 (* two_prod_dekker: Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. *)
 Definition two_prod_dekker (a b : float) : float * float :=
@@ -284,6 +449,13 @@ Definition two_sum (a b : float) : float * float :=
   let t1 := sub a t0 in
   let t2 := sub b bb in
   let e := add t1 t2 in
+  (s, e).
+
+(* two_sum_entry: two_sum on its guarded operands (Milestone 2 listing). *)
+Definition two_sum_entry (a b : float) : float * float :=
+  let ga := guard a in
+  let gb := guard b in
+  let '(s, e) := two_sum ga gb in
   (s, e).
 
 (* abs_2: the sign of x0 (Milestone 1 listing). *)
@@ -454,6 +626,44 @@ Definition ball_mul_2_full (cx0 cx1 rx cy0 cy1 ry : float) : float * float * flo
   let cw0 := if e then c0 else q in
   let cw1 := if e then c1 else q in
   let rw := if e then r else q in
+  (cw0, cw1, rw).
+
+(* ball_mul_pow2_2: midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing). *)
+Definition ball_mul_pow2_2 (cx0 cx1 rx c : float) : float * float * float :=
+  let h := prod cx0 c in
+  let l := prod cx1 c in
+  let '(cz0, cz1) := fast_two_sum h l in
+  let rr := prod rx c in
+  let ze := eq cx1 pzero in
+  let m := if ze then h else l in
+  let am := abs m in
+  let bc := lt up_ball_mul_pow2_1_0 am in
+  let zc := eq cx0 pzero in
+  let ec := orb bc zc in
+  let br := lt up_ball_mul_pow2_1_0 rr in
+  let zr := eq rx pzero in
+  let er := orb br zr in
+  let ex := andb ec er in
+  let su := succ rr in
+  let sw := add su up_ball_mul_pow2_1_1 in
+  let rw := succ sw in
+  let rz := if ex then rr else rw in
+  (cz0, cz1, rz).
+
+(* ball_mul_pow2_2_full: ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing). *)
+Definition ball_mul_pow2_2_full (cx0 cx1 rx c : float) : float * float * float :=
+  let '(cz0, cz1, rz) := ball_mul_pow2_2 cx0 cx1 rx c in
+  let e := eq rx rx in
+  let az := abs cz0 in
+  let f1 := lt az pinf in
+  let f2 := lt rz pinf in
+  let f := andb f1 f2 in
+  let c0 := if f then cz0 else pzero in
+  let c1 := if f then cz1 else pzero in
+  let r := if f then rz else pinf in
+  let cw0 := if e then c0 else rx in
+  let cw1 := if e then c1 else rx in
+  let rw := if e then r else rx in
   (cw0, cw1, rw).
 
 (* neg_2: limb by limb (Milestone 1 listing). *)
@@ -729,6 +939,15 @@ Definition fast_two_sum_prog : list instr :=
   [ Iadd 0 1  (*  2 s *)
   ; Isub 2 0  (*  3 z *)
   ; Isub 1 3  (*  4 e *)
+  ].
+
+(* inputs: 0 a, 1 b *)
+Definition fast_two_sum_entry_prog : list instr :=
+  [ Iguard 0  (*  2 ga *)
+  ; Iguard 1  (*  3 gb *)
+  ; Iadd 2 3  (*  4 s *)
+  ; Isub 4 2  (*  5 s_z *)
+  ; Isub 3 5  (*  6 e *)
   ].
 
 (* inputs: 0 a, 1 b *)

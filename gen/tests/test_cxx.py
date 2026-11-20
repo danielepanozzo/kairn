@@ -74,6 +74,14 @@ NONFINITE_CE_CASES = [
     ('add_2_1_full', 'double', [1.0, 2.0 ** -60, 0.75]),
     ('sub_2_1_full', 'double', [1.0, 2.0 ** -60, 1.0]),
     ('sub_1_2_full', 'float', [2.0, 1.0, -2.0 ** -25]),
+    # constexpr by the rule of the product (milestone2.md): the scalings by a power of two, of a
+    # number and of a ball, on finite operands, exactly and in the underflow range.
+    ('mul_pow2_2_full', 'double', [1.5, 2.0 ** -60, 0.5]),
+    ('mul_pow2_2_full', 'float', [-0.0, 0.0, 2.0]),
+    ('ball_mul_pow2_1_full', 'double', [1.0, 2.0 ** -60, 0.5]),
+    ('ball_mul_pow2_1_full', 'float', [3.0, 2.0 ** -140, 2.0 ** -8]),
+    ('ball_mul_pow2_2_full', 'float', [1.0, 2.0 ** -30, 2.0 ** -40, 4.0]),
+    ('ball_mul_pow2_2_full', 'double', [2.0 ** -1060, 0.0, 0.0, 0.5]),
     ('make_2', 'double', [math.nan]),
     ('make_2', 'float', [-math.inf]),
     ('make_2', 'double', [-0.0]),
@@ -497,6 +505,21 @@ class EveryOperation(unittest.TestCase):
                   'from the interpreter in the sign of a zero only', file=sys.stderr)
 
 
+def arithmetic_finite(ks, k, fmt, case):
+    """Whether every operation of arithmetic of a kernel (calls inlined) gives a finite value in
+    constant evaluation, each prod a plain product. GCC refuses an overflow there and Clang a NaN,
+    so a case where one occurs is not a constant expression even when the outputs are finite (a sum
+    rounded down that overflows is Omega: add_down_1)."""
+    m = interp.Machine(ks, consteval=True)
+    env = dict(zip(k.input_limbs, (common.to_value(x) for x in case)))
+    for p in ir.prims(k, ks):
+        args = [m._const(fmt, a.name) if a.const else env[a.name] for a in p.args]
+        env[p.dst] = m._op(p.op, fmt, args, True)
+        if p.op in ('add', 'sub', 'prod', 'muladd') and env[p.dst][0] != interp.NUM:
+            return False
+    return True
+
+
 def bits(x, ctype):
     return struct.unpack('<Q', struct.pack('<d', x))[0] if ctype == 'double' else \
         struct.unpack('<I', struct.pack('<f', x))[0]
@@ -546,10 +569,13 @@ class ConstantEvaluation(unittest.TestCase):
                 lines.append(f'static_assert([] {{ {ctype} p = 0, e = 0; kairn::gen::two_prod({literal(a, ctype)}, '
                              f'{literal(b, ctype)}, p, e); return std::bit_cast<{utype[ctype]}>(p) == {bits(p, ctype)}u '
                              f'&& std::bit_cast<{utype[ctype]}>(e) == {bits(e, ctype)}u; }}());')
-            # The kernels without fused operations give in constant evaluation the bits that the
-            # interpreter computes there: their run-time bits, except that a guard leaves a -0 as
-            # it is; succ and pred (std::bit_cast) also on zeros of both signs, subnormals and the
-            # largest finite numbers; the full kernels of the additions included.
+            # The kernels without fused operations, and those whose only fused operations are prod
+            # (the rule of the product: each a plain product here), give in constant evaluation the
+            # bits that the interpreter computes there: their run-time values, except that a guard
+            # leaves a -0 as it is and a plain product of an exact zero keeps its sign
+            # (test_interp.TwoExecutionsOfAProduct says which kernels have the same bits); succ and
+            # pred (std::bit_cast) also on zeros of both signs, subnormals and the largest finite
+            # numbers; the full kernels of the additions included.
             edge = [x for x in common.edges(fmt.name) if math.isfinite(x)]
             for name, k in self.ks.items():
                 if cpp.constexpr_kind(k, self.ks) != 'plain':
@@ -562,7 +588,7 @@ class ConstantEvaluation(unittest.TestCase):
                     if not all(isinstance(x, bool) or math.isfinite(x) for x in case):
                         continue
                     outs = [common.to_float(v) for v in ce.run(name, fmt, [common.to_value(x) for x in case])]
-                    if not all(math.isfinite(x) for x in outs):
+                    if not all(math.isfinite(x) for x in outs) or not arithmetic_finite(self.ks, k, fmt, case):
                         continue   # not a constant expression: tested apart
                     rt_outs = [common.to_float(v) for v in rt.run(name, fmt, [common.to_value(x) for x in case])]
                     self.assertEqual(outs, rt_outs, (name, case))     # the same values, zeros aside
@@ -630,9 +656,16 @@ class ConstantEvaluation(unittest.TestCase):
             self.assertNotEqual(status, 0, cxx)
             self.assertIn('constant', err)
 
+    # Usable in constant evaluation: the controls (two_sum; radd through succ) and the kernels whose
+    # only fused operations are prod (the rule of the product).
+    CONSTEXPR = ('two_sum', 'radd', 'split', 'two_prod_dekker', 'rmul', 'mul_pow2_2', 'mul_pow2_2_full',
+                 'ball_mul_pow2_1', 'ball_mul_pow2_2_full')
+
     def test_kernels_with_fused_operations_are_not_constexpr(self):
-        for name in ('mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker', 'rmul', 'mul_pow2_2', 'ball_add_1',
-                     'mul_2_2_full', 'mul_2_1_full', 'mul_pow2_2_full', 'ball_add_2_full', 'two_sum', 'radd'):
+        # Those with a fused operation other than prod and no variant, the directed products of
+        # one limb among them (two_prod's fms, never its variant: milestone2.md).
+        for name in ('mul_2_2', 'mul_2_1', 'ball_add_1', 'mul_2_2_full', 'mul_2_1_full', 'ball_add_2_full',
+                     'mul_down_1', 'mul_up_1') + self.CONSTEXPR:
             k = self.ks[name]
             path = os.path.join(self.dir, f'not_constexpr_{name}.cpp')
             args = ', '.join(['1.0'] * len(k.input_limbs) + [f'o[{i}]' for i in range(len(k.output_limbs))])
@@ -643,8 +676,8 @@ class ConstantEvaluation(unittest.TestCase):
                         'static_assert(ok);\nint main() {}\n')
             for cxx in COMPILERS:
                 status, err = compile_([cxx] + BASE + ['-I', INCLUDE, '-fsyntax-only', path])
-                if name in ('two_sum', 'radd'):
-                    self.assertEqual(status, 0, err)       # the controls, radd through succ
+                if name in self.CONSTEXPR:
+                    self.assertEqual(status, 0, err)
                 else:
                     self.assertNotEqual(status, 0, f'{cxx}: {name} is usable in constant evaluation')
                     self.assertIn('constant', err)

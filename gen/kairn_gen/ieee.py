@@ -329,8 +329,8 @@ class _Terms:
         return self.term(self.k.value)
 
     def xterm(self, text, top=False):
-        """An expression of the claims over extended real numbers (names, neg, abs only), in
-        parentheses unless `top`."""
+        """An expression of the claims over extended real numbers (names, neg, abs, and the sum,
+        difference and product of IEEE 754 on the values), in parentheses unless `top`."""
         def x(t):
             if t[0] == 'name':
                 g = _limbs(self.k, self.ins[t[1]].limbs, f'the value of {t[1]}', (1, 2))
@@ -339,9 +339,22 @@ class _Terms:
                 return f'xopp ({x(t[1])})'
             if t[0] == 'abs':
                 return f'xabs ({x(t[1])})'
+            if t[0] == 'add':
+                return f'xadd ({x(t[1])}) ({x(t[2])})'
+            if t[0] == 'sub':
+                return f'xadd ({x(t[1])}) (xopp ({x(t[2])}))'
+            if t[0] == 'mul':
+                return f'xmul ({x(t[1])}) ({x(t[2])})'
             raise PrintError(f'kernel {self.k.name}: {t[0]} has no extended reading')
         term = x(expr.parse(text))
         return term if top else f'({term})'
+
+    def exact_condition(self, conditions):
+        """The conditions of an exact_when over the values of finite operands."""
+        return rocq.exact_condition(
+            conditions,
+            lambda text: rocq._term(expr.parse(text), self.name, limb=lambda g, i: f'val {self.ins[g].limbs[i]}'),
+            lambda text: rocq._term(expr.parse(text), lambda n: {'u': 'u prec', 'eta': f'eta {EMIN}'}[n]))
 
 
 EMIN = '(ieee_emin prec emax)'
@@ -391,6 +404,8 @@ def _claim(e, k, t, outs):
         if e['when'] == 'product_large':
             bound = (f'(({value} = 0 \\/ bpow radix2 (2 * prec - 1) * eta {EMIN} <= Rabs {value}) ->'
                      f' {bound})')
+        if 'exact_when' in e:
+            bound += f' /\\\n  ({t.exact_condition(e["exact_when"])} ->\n   {_val_sum(limbs)} = {value})'
         return bound
     raise PrintError(f'kernel {k.name}: no IEEE reading of {kind}')
 
@@ -580,6 +595,13 @@ def _ball_spec(k, kernels, e):
     finite_ops = [f'ball_finite_{len(c)} {_ball_args(c, r)}' for _, c, r in balls] + [f'finite {v}' for v in scalars]
     lines.append(f'  (ball_finite_{n} {out} ->\n   ' + ' /\\ '.join(finite_ops) + ' /\\\n'
                  f'   (forall {names} : R, {inside}\n    Rabs ({set_term()} - {_val_sum(c_out)}) <= val {r_out})) /\\')
+    if 'exact_when' in e:
+        # A finite result under the conditions is the set exactly: it contains nothing else.
+        member = rocq.MEMBER
+        within = ' /\\ '.join(f'Rabs ({b} - {_val_sum(c)}) <= val {r}' for b, c, r in balls)
+        lines.append(f'  (ball_finite_{n} {out} -> {t.exact_condition(e["exact_when"])} ->\n'
+                     f'   forall {member} : R, Rabs ({member} - {_val_sum(c_out)}) <= val {r_out} ->\n'
+                     f'   exists {names} : R, {within} /\\ {member} = {set_term()}) /\\')
     conds = [_condition(c, t) for c in e.get('finite_when', [])]
     if conds:
         lines.append('  (' + ' -> '.join(finite_ops) + ' ->\n   ' +
@@ -637,29 +659,68 @@ ROUNDING = {'nearest': 'RN', 'down': 'RD', 'up': 'RU'}
 RELATION = {'lt': 'xlt', 'le': 'xle', 'eq': 'xeq'}
 
 
+def _binary(tree):
+    """Whether an expression has a sum, a difference or a product: the value of two operands."""
+    return tree[0] in ('add', 'sub', 'mul') or any(_binary(x) for x in tree[1:] if isinstance(x, tuple))
+
+
+def _operands_finite(k):
+    """That every operand is finite, as one proposition."""
+    return ' /\\ '.join(f'finite {v}' for v in k.input_limbs)
+
+
+def _extended_claim(e, k, t):
+    """One claim of a kernel that needs no fix-up, read over extended real numbers."""
+    kind = e['kind']
+    if kind == 'predicate':
+        a, b = (t.xterm(x) for x in e['args'])
+        return f'{e["of"]} = {RELATION[e["rel"]]} {a} {b}'
+    if kind == 'rounded':
+        value = t.xterm(k.value)
+        if not _binary(expr.parse(k.value)) or e['mode'] == 'nearest':
+            # A one-operand value (a canonical number, below 2^emax in magnitude), or a rounding to
+            # nearest, whose overflow overflow_of says.
+            claim = f'xval {e["of"]} = xround emax ({ROUNDING[e["mode"]]} {EMIN} prec) {value}'
+        else:
+            # The value of two operands, rounded in the format with overflow: RD of a result
+            # beyond the largest number is that number, RU of one below the most negative that
+            # number (xrd, xru).
+            claim = f'xval {e["of"]} = {"xrd" if e["mode"] == "down" else "xru"} prec emax {value}'
+        if e.get('when') == 'product_large':
+            v = t.value()
+            claim = (f'(({_operands_finite(k)} ->\n    {v} = 0 \\/ bpow radix2 (2 * prec - 1) * eta {EMIN} '
+                     f'<= Rabs {v}) ->\n   {claim})')
+        return claim
+    if kind == 'upper':
+        r = e['of']
+        value = t.value()
+        gaps = rocq._term(expr.parse(e['gaps']), None)
+        ops = _operands_finite(k)
+        return (f'nonneg_ext {r} /\\\n  (finite {r} ->\n   {ops} /\\\n   {value} <= val {r} /\\\n'
+                f'   val {r} - {value}\n   <= {gaps} * (val {r} - Ulp.pred radix2 (FLT_exp {EMIN} prec) '
+                f'(val {r})))')
+    if kind == 'neighbor':
+        return f'xval {e["of"]} = {"xsucc" if e["side"] == "up" else "xpred"} prec emax {t.xterm(k.value)}'
+    if kind == 'bound':
+        # On its side of the value and at most `steps` steps beyond its directed rounding, for
+        # finite operands; the value of IEEE 754 otherwise.
+        r, value = e['of'], t.xterm(k.value)
+        below = e['side'] == 'below'
+        limit = f'{"xrd" if below else "xru"} prec emax {value}'
+        for _ in range(e['steps']):
+            limit = f'{"xpred" if below else "xsucc"} prec emax ({limit})'
+        side = (f'xle (xval {r}) {value} = true /\\ xle ({limit}) (xval {r}) = true' if below else
+                f'xle {value} (xval {r}) = true /\\ xle (xval {r}) ({limit}) = true')
+        ops = _operands_finite(k)
+        return f'({ops} ->\n   {side}) /\\\n  (~ ({ops}) -> xval {r} = {value})'
+    raise PrintError(f'kernel {k.name}: no IEEE-model statement for the claim {kind}')
+
+
 def _no_fix_up_spec(k, kernels):
     """A kernel of the extended domain that needs no fix-up: its claims over extended reals."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels)) + _hyps_extended(k, t) + [_let(k, kernels)]
-    kinds = [e['kind'] for e in k.ensures]
-    if kinds == ['predicate']:
-        e = k.ensures[0]
-        a, b = (t.xterm(x) for x in e['args'])
-        lines.append(f'  {e["of"]} = {RELATION[e["rel"]]} {a} {b}.')
-    elif kinds == ['rounded']:
-        e = k.ensures[0]
-        lines.append(f'  xval {e["of"]} = xround emax ({ROUNDING[e["mode"]]} {EMIN} prec) {t.xterm(k.value)}.')
-    elif kinds == ['upper']:
-        e = k.ensures[0]
-        r = e['of']
-        value = t.value()
-        gaps = rocq._term(expr.parse(e['gaps']), None)
-        ops = ' /\\ '.join(f'finite {v}' for v in k.input_limbs)
-        lines.append(f'  nonneg_ext {r} /\\\n  (finite {r} ->\n   {ops} /\\\n   {value} <= val {r} /\\\n'
-                     f'   val {r} - {value}\n   <= {gaps} * (val {r} - Ulp.pred radix2 (FLT_exp {EMIN} prec) '
-                     f'(val {r}))).')
-    else:
-        raise PrintError(f'kernel {k.name}: no IEEE-model statement for the claims {kinds}')
+    lines.append('  ' + ' /\\\n  '.join(_extended_claim(e, k, t) for e in k.ensures) + '.')
     return _statement(f'{k.name}_ieee_spec', _comment(k), lines)
 
 

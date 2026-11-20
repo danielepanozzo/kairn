@@ -28,6 +28,7 @@ import bisect
 import itertools
 import os
 import random
+import re
 import unittest
 from concurrent.futures import ProcessPoolExecutor
 from fractions import Fraction as F
@@ -89,6 +90,22 @@ class Format:
             assert x == -self.top, (self.name, x)
             return x - F(2) ** self.qmax
         return self.line[i - 1]
+
+    def succ(self, x):
+        """The smallest number of the format above x, which is top or below; above top as if the
+        exponent range went on, 2^(qmax + p)."""
+        return -self.pred(-x)
+
+    def directed(self, x, mode):
+        """x rounded down or up in the format with overflow (milestone2.md, "Notation and
+        vocabulary"): RD of a value above top is top, RU of one below -top is -top. (RD of one
+        below -top is -infinity, which no finite output equals.) To nearest: round."""
+        r = self.round(x, mode)
+        if mode == 'down' and x > self.top:
+            return self.top
+        if mode == 'up' and x < -self.top:
+            return -self.top
+        return r
 
 
 # ---------------------------------------------------------------------------------------------
@@ -235,7 +252,26 @@ def interval(tree, env):
     raise AssertionError(kind)
 
 
-def holds(e, k, fmt, ins, outs):
+def exact_conditions(e, fmt, ins, limbs):
+    """Whether every condition of the entry's exact_when holds: EXPR = 0 or |EXPR| > K (>= K),
+    EXPR over the inputs' values and limbs, K over u and eta."""
+    env = dict(ins, **limbs)
+    for c in e['exact_when']:
+        kind = next(x for x in ('zero_or_abs_gt', 'zero_or_abs_ge') if x in c)
+        x = expr.evaluate(expr.parse(c[kind]), env)
+        bound = expr.evaluate(expr.parse(c['than']), {'u': fmt.u, 'eta': fmt.eta})
+        if not (x == 0 or (abs(x) > bound if kind == 'zero_or_abs_gt' else abs(x) >= bound)):
+            return False
+    return True
+
+
+def product_large(fmt, value):
+    return value == 0 or abs(value) >= F(2) ** (2 * fmt.p - 1) * fmt.eta
+
+
+def holds(e, k, fmt, ins, outs, limbs=None):
+    """Whether the entry holds; `limbs` gives each input limb's value under expr.limb_key, for the
+    conditions of exact_when."""
     value = expr.evaluate(expr.parse(k.value), ins)
     kind = e['kind']
     if kind == 'encloses':
@@ -248,7 +284,11 @@ def holds(e, k, fmt, ins, outs):
                for b, cr in e['balls'].items()}
         env.update({n: (v, v) for n, v in ins.items() if n not in env and not isinstance(v, bool)})
         lo, hi = interval(expr.parse(e['set']), env)
-        return sum(c) - r <= lo and hi <= sum(c) + r
+        if not (sum(c) - r <= lo and hi <= sum(c) + r):
+            return False
+        # Exact: the ball is the set, which contains it as well.
+        return 'exact_when' not in e or not exact_conditions(e, fmt, ins, limbs) or \
+            (sum(c) - r == lo and hi == sum(c) + r)
     out = outs[e['of']]
     if kind == 'predicate':
         a, b = (expr.evaluate(expr.parse(x), ins) for x in e['args'])
@@ -263,13 +303,25 @@ def holds(e, k, fmt, ins, outs):
     if kind == 'leading_rounded':
         return out[0] == fmt.round(value, 'nearest')
     if kind == 'rounded':
-        return out[0] == fmt.round(value, e['mode'])
+        if e.get('when') == 'product_large' and not product_large(fmt, value):
+            return True
+        return out[0] == fmt.directed(value, e['mode'])
+    if kind == 'neighbor':
+        return out[0] == (fmt.succ(value) if e['side'] == 'up' else fmt.pred(value))
+    if kind == 'bound':
+        r, below = out[0], e['side'] == 'below'
+        limit = fmt.directed(value, 'down' if below else 'up')
+        for _ in range(e['steps']):
+            limit = fmt.pred(limit) if below else fmt.succ(limit)
+        return limit <= r <= value if below else value <= r <= limit
     if kind == 'upper':
         r = out[0]
         gaps = expr.evaluate(expr.parse(e['gaps']), {})
         return value <= r and r - value <= gaps * (r - fmt.pred(r))
     if kind == 'error':
-        if e['when'] == 'product_large' and not (value == 0 or abs(value) >= F(2) ** (2 * fmt.p - 1) * fmt.eta):
+        if 'exact_when' in e and exact_conditions(e, fmt, ins, limbs) and sum(out) != value:
+            return False
+        if e['when'] == 'product_large' and not product_large(fmt, value):
             return True
         c = expr.evaluate(expr.parse(e['c']), {'u': fmt.u}) * fmt.u ** e['k']
         t = expr.evaluate(expr.parse(e['t']), {}) * fmt.eta
@@ -289,10 +341,12 @@ def judge(job):
     m = interp.Machine(ks)
     bad = []
     for case in cases(fmt, k, seed):
-        values, ins = [], {}
+        values, ins, limbs = [], {}, {}
         for g, group in zip(k.inputs, case):
             values += [group[0]] if g.kind == ir.MASK else [value_of(v) for v in group]
             ins[g.name] = group[0] if g.kind == ir.MASK else sum(signed(v) for v in group)
+            if g.kind != ir.MASK:
+                limbs.update({expr.limb_key(g.name, i): signed(v) for i, v in enumerate(group)})
         for reading, judged in (('statement', wide), ('claims file', fmt)):
             f = interp.Format(judged.name, judged.p, judged.qmin, judged.qmax)
             try:
@@ -310,7 +364,7 @@ def judge(job):
                 if reading == 'statement':
                     bad.append((reading, case, 'overflow', 'output limb 0 is not finite'))
                 continue    # the claims hold whenever output limb 0 is finite
-            failed = [e['kind'] for e in k.ensures if not holds(e, k, judged, ins, outs)]
+            failed = [e['kind'] for e in k.ensures if not holds(e, k, judged, ins, outs, limbs)]
             # What a statement says of every output limb besides its claims, so that statements
             # compose (rocq.py, _output_formats): it is a number of the format.
             if reading == 'statement' and not all(x in judged.members for g in k.outputs if g.kind == ir.LIMB
@@ -353,6 +407,11 @@ def case_text(k, case):
 KNOWN_OVERFLOW_CORNERS = set()
 FIRST_WAVE = {'two_sum', 'fast_two_sum', 'two_prod', 'split', 'two_prod_dekker', 'add_2_2', 'add_2_1',
               'mul_2_2', 'mul_2_1', 'add_fast_2_2'}
+# two_sum_entry is two_sum on guarded operands and claims what two_sum claims, so it has the same
+# corner: an operand of magnitude Omega gives a NaN error term with a finite sum (milestone2.md,
+# "Building blocks on T", "Outside the domain"; milestone1.md, "The error-free transformations at
+# the top of the range"). Judged in the first reading like every kernel; in the second, with two_sum.
+TWO_SUM_CORNER = {'two_sum_entry'}
 
 
 class Statements(unittest.TestCase):
@@ -380,8 +439,20 @@ class Statements(unittest.TestCase):
     def test_the_claims_hold_in_the_format(self):
         """In the format itself, whenever output limb 0 is finite: what the oracle checks."""
         bad = self.failures('claims file')
-        unexpected = {n: v[:3] for n, v in bad.items() if n not in KNOWN_OVERFLOW_CORNERS | FIRST_WAVE}
+        unexpected = {n: v[:3] for n, v in bad.items() if n not in KNOWN_OVERFLOW_CORNERS | FIRST_WAVE | TWO_SUM_CORNER}
         self.assertEqual(unexpected, {})
+        # two_sum_entry fails there only where two_sum does: an operand of magnitude Omega, a finite
+        # sum and a NaN error term.
+        for name in TWO_SUM_CORNER:
+            for fmt, case, _, out in self.results_of(name):
+                f = Format(*[int(x) for x in fmt.split(':')[1:]])
+                operands = [abs(F(float.fromhex(x))) for x in re.findall(r'-?0x[0-9a-f.]+p[-+][0-9]+', case)]
+                self.assertEqual((max(operands), out[1]), (f.top, 'nan'), (name, fmt, case, out))
+                self.assertNotIn(out[0], ('inf', '-inf', 'nan'), (name, fmt, case, out))
+
+    def results_of(self, name):
+        return [(fmt, case_text(self.ks[name], case), entry, got) for n, fmt, bad in self.results if n == name
+                for r, case, entry, got in bad if r == 'claims file']
 
     def test_overflow_corners(self):
         bad = self.failures('claims file')
@@ -417,6 +488,34 @@ class Statements(unittest.TestCase):
         ins = {'cx': -one, 'rx': half, 'cy': F(2), 'ry': half}   # x y over [-3/2, -1/2] x [3/2, 5/2]
         self.assertTrue(holds(mul, k['ball_mul_1'], fmt, ins, {'cz': [F(-2)], 'rz': [F(7, 4)]}))
         self.assertFalse(holds(mul, k['ball_mul_1'], fmt, ins, {'cz': [F(-2)], 'rz': [F(3, 2)]}))
+        # The claims of Milestone 2: a neighbor, a bound one step wide, a rounding under a
+        # condition (P = 2^(2p-1) eta = 2 here), and the exactness of a ball.
+        nu = k['next_up'].ensures[0]
+        self.assertTrue(holds(nu, k['next_up'], fmt, {'a': one}, {'r': [F(5, 4)]}))
+        self.assertFalse(holds(nu, k['next_up'], fmt, {'a': one}, {'r': [F(3, 2)]}))
+        self.assertTrue(holds(k['next_down'].ensures[0], k['next_down'], fmt, {'a': F(0)}, {'r': [-tiny]}))
+        self.assertTrue(holds(k['next_down'].ensures[0], k['next_down'], fmt, {'a': one}, {'r': [F(7, 8)]}))
+        md = k['mul_down_1']
+        ab = {'a': F(5, 4), 'b': F(5, 4)}                         # 25/16: RD 3/2, and 5/4 before it
+        self.assertTrue(holds(md.ensures[0], md, fmt, ab, {'r': [F(3, 2)]}))
+        self.assertTrue(holds(md.ensures[0], md, fmt, ab, {'r': [F(5, 4)]}))
+        self.assertFalse(holds(md.ensures[0], md, fmt, ab, {'r': [one]}))         # two steps
+        self.assertFalse(holds(md.ensures[0], md, fmt, ab, {'r': [F(7, 4)]}))     # above
+        self.assertTrue(holds(md.ensures[1], md, fmt, ab, {'r': [F(5, 4)]}))      # below P: no claim
+        large = {'a': F(3, 2), 'b': F(3, 2)}                      # 9/4 >= P: exactly RD, 2
+        self.assertTrue(holds(md.ensures[1], md, fmt, large, {'r': [F(2)]}))
+        self.assertFalse(holds(md.ensures[1], md, fmt, large, {'r': [F(7, 4)]}))
+        self.assertEqual(fmt.directed(F(100), 'down'), F(56))         # beyond the top, toward zero
+        self.assertEqual(fmt.directed(F(-100), 'up'), F(-56))
+        self.assertEqual(fmt.succ(F(56)), F(64))
+        bm = k['ball_mul_pow2_1']
+        enc = bm.ensures[0]
+        ins = {'cx': one, 'rx': F(1, 4), 'c': F(2)}               # N = 1/4: both scalings are above it
+        limbs = {'cx[0]': one, 'rx[0]': F(1, 4), 'c[0]': F(2)}
+        self.assertTrue(holds(enc, bm, fmt, ins, {'cz': [F(2)], 'rz': [half]}, limbs))
+        self.assertFalse(holds(enc, bm, fmt, ins, {'cz': [F(2)], 'rz': [F(3, 4)]}, limbs))  # encloses, not exact
+        ins = {'cx': one, 'rx': tiny, 'c': F(2)}                  # rx c = 1/8 is below N: no exactness
+        self.assertTrue(holds(enc, bm, fmt, ins, {'cz': [F(2)], 'rz': [half]}, dict(limbs, **{'rx[0]': tiny})))
         self.assertEqual(fmt.round(F(9, 8), 'nearest'), one)          # ties to the even significand
         self.assertEqual(fmt.round(F(11, 8), 'nearest'), F(3, 2))
         self.assertEqual(fmt.round(-F(9, 8), 'nearest'), -one)

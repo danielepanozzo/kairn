@@ -1,0 +1,21 @@
+# RU(a - b) for the public building block kairn::sub_up (milestone2.md, "Values that enter from
+# the program"): both operands pass through guard, then sub_up_1. The statement is sub_up_1's, in
+# both models; not claimed: the sign of a zero result, which the guard can change.
+kernel:        sub_up_entry
+input:         a
+input:         b
+output:        r
+value:         a-b
+ensures:       rounded r up
+min_precision: 2
+source:        sub_up_1 on its guarded operands (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   through sub_up_1, whose result is selected; the rounded claim states the output for infinite and NaN operands
+
+ga = guard(a)
+gb = guard(b)
+r  = sub_up_1(ga, gb)

@@ -18,6 +18,7 @@ status:        proved
 domain:        extended
 ieee_status:   proved
 ieee_theorem:  proofs/theories/IeeeExt.v rmul_ieee_correct
+entry:         yes
 cone_exempt:   r = succ(p), and succ(-inf) is finite; r is a radius, and the ball layer tests radii for non-finite values (Milestone 1 statements, Ball kernels)
 
 p = prod(a, b)

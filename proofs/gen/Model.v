@@ -58,6 +58,14 @@ Definition up_ball_mul_2_1 : R :=
 Definition up_ball_mul_2_2 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * ((((2 * ((1 + bpow radix2 (- prec)) ^ 5)) * bpow radix2 emin) + (((3 / 2) * bpow radix2 emin) / (1 - (4 * bpow radix2 (- prec) ^ 2)))) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
 
+(* up(eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_ball_mul_pow2_1_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin / (2 * bpow radix2 (- prec))).
+
+(* up(eta): the smallest number of the format not below it. *)
+Definition up_ball_mul_pow2_1_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin).
+
 (* up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)): the smallest number of the format not below it. *)
 Definition up_ball_scale_1_2 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + (((1 / 2) * bpow radix2 emin) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1)))) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
@@ -70,10 +78,61 @@ Definition up_ball_scale_2_0 : R :=
 Definition up_ball_scale_2_2 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + ((1 * bpow radix2 emin) / (1 - (2 * bpow radix2 (- prec) ^ 2)))) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
 
+(* up(eta/(2*u^2)): the smallest number of the format not below it. *)
+Definition up_mul_down_1_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin / (2 * (bpow radix2 (- prec) ^ 2))).
+
 (* add_1_1: one rounding to nearest. *)
 Definition add_1_1 (a b : R) : R :=
   let s := rnd (a + b) in
   s.
+
+(* fast_two_sum: Fast2Sum (Dekker 1971). *)
+Definition fast_two_sum (a b : R) : R * R :=
+  let s := rnd (a + b) in
+  let z := rnd (s - a) in
+  let e := rnd (b - z) in
+  (s, e).
+
+(* two_sum_ord: Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17). *)
+Definition two_sum_ord (a b : R) : R * R :=
+  let aa := Rabs a in
+  let ab := Rabs b in
+  let m := Rlt_bool aa ab in
+  let h := if m then b else a in
+  let l := if m then a else b in
+  let '(s, e) := fast_two_sum h l in
+  (s, e).
+
+(* add_down_1: the rounded sum and the sign of its exact error (Milestone 2 listing). *)
+Definition add_down_1 (a b : R) : R :=
+  let '(s, e) := two_sum_ord a b in
+  let n := Rlt_bool e 0 in
+  let p := pred radix2 (FLT_exp emin prec) s in
+  let r := if n then p else s in
+  r.
+
+(* add_down_entry: add_down_1 on its guarded operands (Milestone 2 listing). *)
+Definition add_down_entry (a b : R) : R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let r := add_down_1 ga gb in
+  r.
+
+(* add_up_1: the rounded sum and the sign of its exact error (Milestone 2 listing). *)
+Definition add_up_1 (a b : R) : R :=
+  let '(s, e) := two_sum_ord a b in
+  let n := Rlt_bool 0 e in
+  let q := succ radix2 (FLT_exp emin prec) s in
+  let r := if n then q else s in
+  r.
+
+(* add_up_entry: add_up_1 on its guarded operands (Milestone 2 listing). *)
+Definition add_up_entry (a b : R) : R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let r := add_up_1 ga gb in
+  r.
 
 (* ball_add_1: midpoint-radius sum (Milestone 1 listing, second radius design). *)
 Definition ball_add_1 (cx rx cy ry : R) : R * R :=
@@ -95,6 +154,24 @@ Definition ball_mul_1 (cx rx cy ry : R) : R * R :=
   let w := rnd (ax * ry + q) in
   let t := rnd (az * up_ball_mul_1_0 + w) in
   let rz := rnd (t * up_ball_mul_1_1 + up_ball_mul_1_2) in
+  (cz, rz).
+
+(* ball_mul_pow2_1: midpoint-radius scaling by a power of two (Milestone 2 listing). *)
+Definition ball_mul_pow2_1 (cx rx c : R) : R * R :=
+  let cz := rnd (cx * c + 0) in
+  let rr := rnd (rx * c + 0) in
+  let am := Rabs cz in
+  let bc := Rlt_bool up_ball_mul_pow2_1_0 am in
+  let zc := Req_bool cx 0 in
+  let ec := orb bc zc in
+  let br := Rlt_bool up_ball_mul_pow2_1_0 rr in
+  let zr := Req_bool rx 0 in
+  let er := orb br zr in
+  let ex := andb ec er in
+  let su := succ radix2 (FLT_exp emin prec) rr in
+  let sw := rnd (su + up_ball_mul_pow2_1_1) in
+  let rw := succ radix2 (FLT_exp emin prec) sw in
+  let rz := if ex then rr else rw in
   (cz, rz).
 
 (* ball_neg_1: midpoint-radius negation (Milestone 1 listing). *)
@@ -119,11 +196,11 @@ Definition ball_sub_1 (cx rx cy ry : R) : R * R :=
   let '(cz, rz) := ball_add_1 cx rx n ry in
   (cz, rz).
 
-(* fast_two_sum: Fast2Sum (Dekker 1971). *)
-Definition fast_two_sum (a b : R) : R * R :=
-  let s := rnd (a + b) in
-  let z := rnd (s - a) in
-  let e := rnd (b - z) in
+(* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). *)
+Definition fast_two_sum_entry (a b : R) : R * R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let '(s, e) := fast_two_sum ga gb in
   (s, e).
 
 (* mul_1_1: one rounding to nearest. *)
@@ -131,10 +208,67 @@ Definition mul_1_1 (a b : R) : R :=
   let p := rnd (a * b + 0) in
   p.
 
+(* two_prod: TwoProd with an FMA (folklore; see JMP17). *)
+Definition two_prod (a b : R) : R * R :=
+  let p := rnd (a * b + 0) in
+  let e := rnd (a * b + - p) in
+  (p, e).
+
+(* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). *)
+Definition mul_down_1 (a b : R) : R :=
+  let '(p, e) := two_prod a b in
+  let ap := Rabs p in
+  let bd := Rlt_bool ap up_mul_down_1_0 in
+  let ez := Req_bool e 0 in
+  let un := andb bd ez in
+  let n := Rlt_bool e 0 in
+  let sd := orb n un in
+  let pp := pred radix2 (FLT_exp emin prec) p in
+  let d := if sd then pp else p in
+  let za := Req_bool a 0 in
+  let zb := Req_bool b 0 in
+  let zz := orb za zb in
+  let r := if zz then p else d in
+  r.
+
+(* mul_up_1: two_prod and the sign of its error term (Milestone 2 listing). *)
+Definition mul_up_1 (a b : R) : R :=
+  let '(p, e) := two_prod a b in
+  let ap := Rabs p in
+  let bd := Rlt_bool ap up_mul_down_1_0 in
+  let ez := Req_bool e 0 in
+  let un := andb bd ez in
+  let n := Rlt_bool 0 e in
+  let su := orb n un in
+  let sp := succ radix2 (FLT_exp emin prec) p in
+  let v := if su then sp else p in
+  let za := Req_bool a 0 in
+  let zb := Req_bool b 0 in
+  let zz := orb za zb in
+  let r := if zz then p else v in
+  r.
+
+(* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). *)
+Definition next_down (a : R) : R :=
+  let r := pred radix2 (FLT_exp emin prec) a in
+  r.
+
+(* next_up: IEEE 754 nextUp on the bit pattern (Milestone 2 listing). *)
+Definition next_up (a : R) : R :=
+  let r := succ radix2 (FLT_exp emin prec) a in
+  r.
+
 (* radd: one step up from the rounded sum (Milestone 1 listing). *)
 Definition radd (a b : R) : R :=
   let s := rnd (a + b) in
   let r := succ radix2 (FLT_exp emin prec) s in
+  r.
+
+(* radd_entry: radd on its guarded operands (Milestone 2 listing). *)
+Definition radd_entry (a b : R) : R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let r := radd ga gb in
   r.
 
 (* rmul: one step up from the rounded product (Milestone 1 listing). *)
@@ -151,11 +285,31 @@ Definition split (a : R) : R * R :=
   let al := rnd (a - ah) in
   (ah, al).
 
-(* two_prod: TwoProd with an FMA (folklore; see JMP17). *)
-Definition two_prod (a b : R) : R * R :=
-  let p := rnd (a * b + 0) in
-  let e := rnd (a * b + - p) in
-  (p, e).
+(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). *)
+Definition sub_down_1 (a b : R) : R :=
+  let nb := - b in
+  let r := add_down_1 a nb in
+  r.
+
+(* sub_down_entry: sub_down_1 on its guarded operands (Milestone 2 listing). *)
+Definition sub_down_entry (a b : R) : R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let r := sub_down_1 ga gb in
+  r.
+
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
+Definition sub_up_1 (a b : R) : R :=
+  let nb := - b in
+  let r := add_up_1 a nb in
+  r.
+
+(* sub_up_entry: sub_up_1 on its guarded operands (Milestone 2 listing). *)
+Definition sub_up_entry (a b : R) : R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let r := sub_up_1 ga gb in
+  r.
 
 (* two_prod_dekker: Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. *)
 Definition two_prod_dekker (a b : R) : R * R :=
@@ -180,6 +334,13 @@ Definition two_sum (a b : R) : R * R :=
   let t1 := rnd (a - t0) in
   let t2 := rnd (b - bb) in
   let e := rnd (t1 + t2) in
+  (s, e).
+
+(* two_sum_entry: two_sum on its guarded operands (Milestone 2 listing). *)
+Definition two_sum_entry (a b : R) : R * R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let '(s, e) := two_sum ga gb in
   (s, e).
 
 (* abs_2: the sign of x0 (Milestone 1 listing). *)
@@ -260,6 +421,28 @@ Definition ball_mul_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let w := rnd (ax * ry + q) in
   let t := rnd (az * up_ball_mul_2_0 + w) in
   let rz := rnd (t * up_ball_mul_2_1 + up_ball_mul_2_2) in
+  (cz0, cz1, rz).
+
+(* ball_mul_pow2_2: midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing). *)
+Definition ball_mul_pow2_2 (cx0 cx1 rx c : R) : R * R * R :=
+  let h := rnd (cx0 * c + 0) in
+  let l := rnd (cx1 * c + 0) in
+  let '(cz0, cz1) := fast_two_sum h l in
+  let rr := rnd (rx * c + 0) in
+  let ze := Req_bool cx1 0 in
+  let m := if ze then h else l in
+  let am := Rabs m in
+  let bc := Rlt_bool up_ball_mul_pow2_1_0 am in
+  let zc := Req_bool cx0 0 in
+  let ec := orb bc zc in
+  let br := Rlt_bool up_ball_mul_pow2_1_0 rr in
+  let zr := Req_bool rx 0 in
+  let er := orb br zr in
+  let ex := andb ec er in
+  let su := succ radix2 (FLT_exp emin prec) rr in
+  let sw := rnd (su + up_ball_mul_pow2_1_1) in
+  let rw := succ radix2 (FLT_exp emin prec) sw in
+  let rz := if ex then rr else rw in
   (cz0, cz1, rz).
 
 (* neg_2: limb by limb (Milestone 1 listing). *)

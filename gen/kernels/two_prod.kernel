@@ -15,6 +15,7 @@ license:       algorithm: published; proof: MIT
 status:        proved
 ieee:          spec
 ce_variant:    two_prod_dekker
+entry:         yes
 
 p = prod(a, b)
 e = fms(a, b, p)

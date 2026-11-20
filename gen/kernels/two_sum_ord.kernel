@@ -1,0 +1,28 @@
+# TwoSum by ordering: Fast2Sum of the operands ordered by magnitude, the comparison as two selects
+# (milestone2.md, "Rounding a sum down and up"). Unlike two_sum, its error term is finite whenever
+# its sum is, so the sign of e can be trusted at the top of the range (decisions.md, the log of
+# 2026-11-18). Its IEEE-model statement is that of a finite core: finite operands and a finite
+# sum give a finite error term and the claims below. What it returns at an overflow, (inf, -inf)
+# with the infinity of the opposite sign, and for infinite and NaN operands (the table of the page)
+# is not a claim: the vocabulary has no word for a pair that is not canonical.
+kernel:        two_sum_ord
+input:         a
+input:         b
+output:        r = s e
+value:         a+b
+ensures:       leading_rounded r
+ensures:       error r R c=0 k=2 t=0
+ensures:       normalized r
+min_precision: 2
+source:        Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17)
+license:       algorithm: published; proof: MIT
+status:        unverified
+ieee:          spec
+cone_exempt:   the operands are ordered by select; the IEEE-model statement says that a finite sum has a finite error term
+
+aa     = abs(a)
+ab     = abs(b)
+m      = lt(aa, ab)
+h      = select(m, b, a)
+l      = select(m, a, b)
+(s, e) = fast_two_sum(h, l)

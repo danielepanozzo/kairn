@@ -23,6 +23,9 @@ From Kairn Require Import TwoProdDekker.
 Definition add_1_1_audit : add_1_1_spec := add_1_1_correct.
 Print Assumptions add_1_1_correct.
 
+Definition fast_two_sum_audit : fast_two_sum_spec := fast_two_sum_correct.
+Print Assumptions fast_two_sum_correct.
+
 Definition ball_add_1_audit : ball_add_1_spec := ball_add_1_correct.
 Print Assumptions ball_add_1_correct.
 
@@ -38,11 +41,11 @@ Print Assumptions ball_scale_1_correct.
 Definition ball_sub_1_audit : ball_sub_1_spec := ball_sub_1_correct.
 Print Assumptions ball_sub_1_correct.
 
-Definition fast_two_sum_audit : fast_two_sum_spec := fast_two_sum_correct.
-Print Assumptions fast_two_sum_correct.
-
 Definition mul_1_1_audit : mul_1_1_spec := mul_1_1_correct.
 Print Assumptions mul_1_1_correct.
+
+Definition two_prod_audit : two_prod_spec := two_prod_correct.
+Print Assumptions two_prod_correct.
 
 Definition radd_audit : radd_spec := radd_correct.
 Print Assumptions radd_correct.
@@ -52,9 +55,6 @@ Print Assumptions rmul_correct.
 
 Definition split_audit : split_spec := split_correct.
 Print Assumptions split_correct.
-
-Definition two_prod_audit : two_prod_spec := two_prod_correct.
-Print Assumptions two_prod_correct.
 
 Definition two_prod_dekker_audit : two_prod_dekker_spec := two_prod_dekker_correct.
 Print Assumptions two_prod_dekker_correct.

@@ -116,7 +116,7 @@ KAIRN_GEN_FORCEINLINE constexpr double abs_bits(double a) noexcept {
 // all ones or all zeros, each from one comparison: written with ?: or ||, GCC
 // and Clang emit branches on the data. m + (s ^ 1) exceeds inf exactly for NaN
 // and +inf (it is m + 1 for a positive pattern, m for a negative one).
-KAIRN_GEN_FORCEINLINE constexpr double next_up(double a) noexcept {
+KAIRN_GEN_FORCEINLINE constexpr double next_up_bits(double a) noexcept {
     const std::uint64_t b = std::bit_cast<std::uint64_t>(a);
     const std::uint64_t m = b & 0x7fffffffffffffffu;
     const std::uint64_t s = b >> 63;
@@ -126,7 +126,22 @@ KAIRN_GEN_FORCEINLINE constexpr double next_up(double a) noexcept {
     const std::uint64_t r = (zero & 1) | (~zero & step);
     return std::bit_cast<double>((keep & b) | (~keep & r));
 }
-KAIRN_GEN_FORCEINLINE constexpr double next_down(double a) noexcept { return -next_up(-a); }
+// nextDown mirrors it, with no negation of a value of the type: written as
+// -next_up_bits(-a), a compiler folds the negation of an FMA result into a negated
+// FMA (fnmadd), one fused operation more than the listing has (pred(p) in
+// mul_down_1). The pattern of a positive number moves towards zero, that of a
+// negative one down; either zero becomes -eta; NaN and -inf stay (m + s exceeds inf
+// exactly for them).
+KAIRN_GEN_FORCEINLINE constexpr double next_down_bits(double a) noexcept {
+    const std::uint64_t b = std::bit_cast<std::uint64_t>(a);
+    const std::uint64_t m = b & 0x7fffffffffffffffu;
+    const std::uint64_t s = b >> 63;
+    const std::uint64_t step = b - 1 + (s << 1);  // b - 1, or b + 1 for a negative pattern
+    const std::uint64_t zero = std::uint64_t{0} - std::uint64_t(m == 0);
+    const std::uint64_t keep = std::uint64_t{0} - std::uint64_t(m + s > 0x7ff0000000000000u);
+    const std::uint64_t r = (zero & 0x8000000000000001u) | (~zero & step);
+    return std::bit_cast<double>((keep & b) | (~keep & r));
+}
 
 // t times +infinity in constant evaluation, from comparisons alone: GCC and Clang
 // refuse an operation that produces a NaN there, 0 times infinity among them, even
@@ -148,7 +163,7 @@ KAIRN_GEN_FORCEINLINE constexpr float abs_bits(float a) noexcept {
 // all ones or all zeros, each from one comparison: written with ?: or ||, GCC
 // and Clang emit branches on the data. m + (s ^ 1) exceeds inf exactly for NaN
 // and +inf (it is m + 1 for a positive pattern, m for a negative one).
-KAIRN_GEN_FORCEINLINE constexpr float next_up(float a) noexcept {
+KAIRN_GEN_FORCEINLINE constexpr float next_up_bits(float a) noexcept {
     const std::uint32_t b = std::bit_cast<std::uint32_t>(a);
     const std::uint32_t m = b & 0x7fffffffu;
     const std::uint32_t s = b >> 31;
@@ -158,7 +173,22 @@ KAIRN_GEN_FORCEINLINE constexpr float next_up(float a) noexcept {
     const std::uint32_t r = (zero & 1) | (~zero & step);
     return std::bit_cast<float>((keep & b) | (~keep & r));
 }
-KAIRN_GEN_FORCEINLINE constexpr float next_down(float a) noexcept { return -next_up(-a); }
+// nextDown mirrors it, with no negation of a value of the type: written as
+// -next_up_bits(-a), a compiler folds the negation of an FMA result into a negated
+// FMA (fnmadd), one fused operation more than the listing has (pred(p) in
+// mul_down_1). The pattern of a positive number moves towards zero, that of a
+// negative one down; either zero becomes -eta; NaN and -inf stay (m + s exceeds inf
+// exactly for them).
+KAIRN_GEN_FORCEINLINE constexpr float next_down_bits(float a) noexcept {
+    const std::uint32_t b = std::bit_cast<std::uint32_t>(a);
+    const std::uint32_t m = b & 0x7fffffffu;
+    const std::uint32_t s = b >> 31;
+    const std::uint32_t step = b - 1 + (s << 1);  // b - 1, or b + 1 for a negative pattern
+    const std::uint32_t zero = std::uint32_t{0} - std::uint32_t(m == 0);
+    const std::uint32_t keep = std::uint32_t{0} - std::uint32_t(m + s > 0x7f800000u);
+    const std::uint32_t r = (zero & 0x80000001u) | (~zero & step);
+    return std::bit_cast<float>((keep & b) | (~keep & r));
+}
 
 // t times +infinity in constant evaluation, from comparisons alone: GCC and Clang
 // refuse an operation that produces a NaN there, 0 times infinity among them, even

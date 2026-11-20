@@ -22,9 +22,11 @@ SECTION = ['Variable prec emax : Z.', 'Context {prec_gt_0_ : Prec_gt_0 prec}.',
            'Variable nan_fma : float -> float -> float -> nan_of.', 'Variable nan_mult : float -> float -> nan_of.',
            'Variable nan_const : nan_of.']
 
-# The kernels that the proofs use as programs.
+# The kernels that the proofs use as programs, and fast_two_sum_entry, which has an IEEE-model
+# statement of the finite domain as fast_two_sum has (two_sum_ord has one too, and is no program:
+# it selects).
 PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_1', 'mul_2_1', 'add_fast_2_2',
-            'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_pow2_2']
+            'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_pow2_2', 'fast_two_sum_entry']
 
 
 def read(rel):
@@ -82,7 +84,10 @@ class Model(unittest.TestCase):
         self.assertIn('Definition splitter : float := const_of (Model.splitter prec).', m)
         ups = {n for n in definitions(m) if n.startswith('up_')}
         self.assertEqual(ups, {n for n in definitions(read('proofs/gen/Model.v')) if n.startswith('up_')})
-        self.assertEqual(len(ups), 13)
+        # The thirteen of the Ball cores, and N, P and eta of Milestone 2 (eta / (2u), eta / (2u^2),
+        # eta: the scalings of a ball and the directed products).
+        self.assertEqual(len(ups), 16)
+        self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
         self.assertEqual([k.name for k in ieee.program_kernels(self.ks)], [n for n in self.ks if n in PROGRAMS])
@@ -218,6 +223,33 @@ class Statements(unittest.TestCase):
         self.assertEqual(rocq._term(tree, real_names.get),
                          '(((Rabs a) * (Rabs (x0 + x1))) + (Rabs (a + (x0 + x1))))')
 
+    def test_milestone2(self):
+        # The claims of Milestone 2 over extended reals (IeeeVocabulary.v: xsucc, xpred, xrd, xru,
+        # xadd, xmul), and the exactness of a full scaling of a ball, between B3 and B4.
+        self.assertTrue(self.statement('next_up_ieee_spec').endswith('  xval r = xsucc prec emax (xval a)'))
+        self.assertTrue(self.statement('next_down_ieee_spec').endswith('  xval r = xpred prec emax (xval a)'))
+        self.assertTrue(self.statement('add_down_1_ieee_spec').endswith(
+            '  xval r = xrd prec emax (xadd (xval a) (xval b))'))
+        self.assertTrue(self.statement('sub_up_1_ieee_spec').endswith(
+            '  xval r = xru prec emax (xadd (xval a) (xopp (xval b)))'))
+        s = self.statement('mul_down_1_ieee_spec')
+        self.assertIn('  (finite a /\\ finite b ->\n   xle (xval r) (xmul (xval a) (xval b)) = true /\\ '
+                      'xle (xpred prec emax (xrd prec emax (xmul (xval a) (xval b)))) (xval r) = true) /\\\n'
+                      '  (~ (finite a /\\ finite b) -> xval r = (xmul (xval a) (xval b))) /\\\n', s)
+        self.assertTrue(s.endswith('<= Rabs (val a * val b)) ->\n   xval r = xrd prec emax (xmul (xval a) (xval b)))'))
+        s = self.statement('ball_mul_pow2_1_full_spec')
+        b3 = s.index('  (ball_finite_1 cw rw ->\n   ball_finite_1 cx rx')
+        exact = s.index('  (ball_finite_1 cw rw -> ((val cx * val c) = 0 \\/ (eta (ieee_emin prec emax) / (2 * u prec)) '
+                        '< Rabs (val cx * val c)) /\\ ((val rx * val c) = 0 \\/')
+        b4 = s.index('  (ball_finite_1 cx rx -> finite c ->\n   Rabs (((Rabs (val cx)) + val rx) * val c)')
+        self.assertLess(b3, exact)
+        self.assertLess(exact, b4)
+        self.assertIn('   forall s_ : R, Rabs (s_ - val cw) <= val rw ->\n'
+                      '   exists x : R, Rabs (x - val cx) <= val rx /\\ s_ = (x * val c)) /\\\n', s)
+        # The rounding of a value of one operand is printed as before.
+        self.assertTrue(self.statement('to_down_2_ieee_spec').endswith(
+            '  xval t = xround emax (RD (ieee_emin prec emax) prec) (xval_2 x0 x1)'))
+
     def test_constructors(self):
         s = self.statement('ball_make_1_spec')
         self.assertIn('ball_finite_1 cw rw /\\ val cw = val c /\\ val rw = val r', s)
@@ -244,8 +276,10 @@ class CheckedFiles(unittest.TestCase):
     # The generated files that make -C proofs passed on: every theorem of the IEEE model is about
     # these definitions and has one of these statements as its type. A change of either file needs
     # that build again, and new digests here.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '2376d5d56677eaea43aaa7fe2d038df7af50f532ffe91bb37038326dfb95d4ef',
-               'proofs/gen/IeeeStatements.v': '8f5601ab00378de9ac0d6415f287717305fe71faae46d66bf9caa1ab80aca055'}
+    # With the kernels of wave 1 of Milestone 2 (unverified), whose definitions and statements were
+    # added: every earlier one is the same, byte for byte.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '3532a2dcc2532be750def088297f35ba6a9355f685cf01bfba77fbb13cddbd19',
+               'proofs/gen/IeeeStatements.v': 'b303e0a683508405d84746aa26b5fe67e15daa63ef4cc5628d69903cbe26273b'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

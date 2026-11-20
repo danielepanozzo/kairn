@@ -26,12 +26,14 @@ For each form and limb type:
   `fnma` one of the negated product, a `prod` one with the addend +0; and constants are the same
   when their literals of the limb type are. In `scalar_call` the kernel and its fix-up are two
   functions, numbered apart: the fix-up receives what it uses as parameters.
-- `consteval_mul`: the plain multiplications of the branch that a kernel with a
-  constant-evaluation variant takes in constant evaluation (`if (__builtin_is_constant_evaluated())`,
-  the variant's body with each prod a plain product: two_prod's Dekker product). That branch is
-  never taken at run time, but a compiler that does not optimize may still emit it. Such a branch
-  has no fused operation (the generator refuses a variant that has one). Zero in packed code, which
-  has no constant evaluation.
+- `consteval_mul`: the plain multiplications of what a kernel computes only in constant
+  evaluation: for a kernel with a constant-evaluation variant, the branch
+  `if (__builtin_is_constant_evaluated())`, the variant's body with each prod a plain product
+  (two_prod's Dekker product); for a kernel constexpr by the rule of the product, the first arm of
+  each `__builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0)`, one per prod. Neither is
+  taken at run time, but a compiler that does not optimize may still emit it. Such a branch has no
+  fused operation (the generator refuses a variant that has one). Zero in packed code, which has no
+  constant evaluation.
 - `muladd`: the declared contractable multiply-adds (`muladd`), printed `a * b + c`, which a
   compiler may emit fused or not; none so far, and the check has no rule for them yet.
 
@@ -106,9 +108,12 @@ def _counts(prims, kernels, ctype):
 
 
 def _consteval(k, kernels):
-    """(plain multiplications, muladds) of the constant-evaluation branch of a kernel's scalar C++
-    (cpp.function: the variant's body, spelled with cpp.SPELL_CONSTEVAL, where prod is a plain
-    product, times_inf a comparison and guard no operation)."""
+    """(plain multiplications, muladds) of what a kernel's scalar C++ computes only in constant
+    evaluation (cpp.function): the variant's body, spelled with cpp.SPELL_CONSTEVAL, where prod is a
+    plain product, times_inf a comparison and guard no operation; or, for a kernel constexpr by the
+    rule of the product (cpp.SPELL_PLAIN), the plain product of the first arm of each prod."""
+    if cpp.product_rule(k, kernels):
+        return sum(1 for p in ir.prims(k, kernels) if p.op == 'prod'), 0
     if not k.ce_variant:
         return 0, 0
     prims = ir.prims(kernels[k.ce_variant], kernels)

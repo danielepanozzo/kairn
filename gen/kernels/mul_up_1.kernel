@@ -1,0 +1,34 @@
+# An upper bound of a b, for every pair of finite numbers (milestone2.md, "Rounding a product down
+# and up"): RU(a b) when a b = 0 or |a b| >= P = 2^(2p-1) eta; below it, RU(a b) or the number of
+# the format after it. The listing of mul_down_1 on the other side; like it, evaluated with the
+# FMA of two_prod only, and not constexpr in this milestone. An infinite or NaN operand gives the
+# product of IEEE 754.
+kernel:        mul_up_1
+input:         a
+input:         b
+output:        r
+value:         a*b
+ensures:       bound r above steps=1
+ensures:       rounded r up when=product_large
+min_precision: 2
+source:        two_prod and the sign of its error term (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   r is p or succ(p), chosen by select, and succ(-inf) is finite; the bound and rounded claims state the output for infinite and NaN operands
+
+(p, e) = two_prod(a, b)
+ap     = abs(p)
+bd     = lt(ap, const up(eta/(2*u^2)))
+ez     = eq(e, 0)
+un     = and(bd, ez)
+n      = lt(0, e)
+su     = or(n, un)
+sp     = succ(p)
+v      = select(su, sp, p)
+za     = eq(a, 0)
+zb     = eq(b, 0)
+zz     = or(za, zb)
+r      = select(zz, p, v)

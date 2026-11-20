@@ -1,0 +1,23 @@
+# fast_two_sum for the public building block kairn::fast_two_sum (milestone2.md, "Values that
+# enter from the program"): both operands pass through guard, then fast_two_sum. guard(a) has the
+# value of a: the statement is fast_two_sum's, in both models. Not claimed: the sign of a zero
+# result, which the guard can change.
+kernel:        fast_two_sum_entry
+input:         a
+input:         b
+output:        r = s e
+value:         a+b
+requires:      abs_ge a b
+ensures:       leading_rounded r
+ensures:       error r R c=0 k=2 t=0
+ensures:       normalized r
+min_precision: 2
+source:        fast_two_sum on its guarded operands (Milestone 2 listing)
+license:       algorithm: published; proof: MIT
+status:        unverified
+ieee:          spec
+entry:         yes
+
+ga     = guard(a)
+gb     = guard(b)
+(s, e) = fast_two_sum(ga, gb)

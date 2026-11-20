@@ -92,7 +92,7 @@ of the format) or masks.
 | `add a b`, `sub a b` | $\mathrm{RN}(a \pm b)$ | `a + b`, `a - b` |
 | `neg a`, `abs a` | exact | `-a`, a sign-bit operation |
 | `fma a b c`, `fms a b c`, `fnma a b c` | $\mathrm{RN}(ab + c)$, $\mathrm{RN}(ab - c)$, $\mathrm{RN}(-ab + c)$: one rounding | always a fused operation |
-| `prod a b` | $\mathrm{RN}(ab)$ | `fma(a, b, +0.0)`: the *opaque product* |
+| `prod a b` | $\mathrm{RN}(ab)$ | `fma(a, b, +0.0)`: the *opaque product*; in constant evaluation `a * b` (below) |
 | `muladd a b c` | $\mathrm{RN}(ab + c)$ **or** $\mathrm{RN}(\mathrm{RN}(ab) + c)$, the compiler's choice | `a * b + c`; its theorem covers both |
 | `lt`, `le`, `eq` | comparison, giving a mask | comparison; `lt(a, b)` and `le(a, b)` are written `b > a` and `b >= a`, which one compiler's constant evaluator gets right on a NaN where it gets `<` and `<=` wrong |
 | `and`, `or`, `not` | on masks | |
@@ -177,17 +177,34 @@ function then dispatches on `__builtin_is_constant_evaluated()`. Inside such a v
 emitted as `a * b`, because there is no FMA in constant evaluation and no contraction either. The
 variant has its own statement and proof.
 
+**The rule of the product** ([Milestone 2 statements](design/milestone2.md#the-two-executions-of-a-product)).
+A kernel whose only fused operations are `prod` is `constexpr` without a variant: each `prod` is
+emitted as `__builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, +0.0)`, the plain product in
+constant evaluation and the opaque product at run time. As real numbers both are
+$\mathrm{RN}(ab)$, so the real model is one definition for both (`rnd (a * b + 0)`) and every
+real-model theorem holds of both. As values of `T` they differ in one case only: an exact zero
+product of negative sign is $-0$ as `a * b` and $+0$ as `fma(a, b, +0)`. The IEEE model
+(`proofs/theories/IeeeOperations.v`) defines `prod` as the FMA; that its statements, which never
+mention the sign of a zero, hold of the plain product too is the lemma the page names, left to the
+proofs. The generator's tests check that the two executions give the same bits, or for the
+kernels whose outputs can be an exact zero product the same values
+(`gen/tests/test_interp.py`, `TwoExecutionsOfAProduct`; `test_cxx.py` ties the C++ to them). The
+kernels `constexpr` by this rule are `rmul`, `mul_1_1`, `split`, `two_prod_dekker`, `mul_pow2_2`,
+`mul_pow2_2_full`, and `ball_mul_pow2_k` with its full form; `build` lists them.
+
 C++ emission rules: non-template functions, one overload per limb type; one operation per
 statement; kernels of at most two limbs are force-inlined. The public operations of `Ball` that
 round are functions of `ball_operations.hpp` that force-inline their kernel and are themselves
 forced inline (the default), outlined or external, as `KAIRN_ENCLOSURE_CODE` says
 ([Getting started](../getting-started/index.md#compile-time-and-the-operations-of-ball)); the code
-of the kernel is the same in each, and the generated files do not depend on the setting. A kernel is `constexpr` when it
-contains no fused operation or names a constant-evaluation variant; a kernel that is not yet
+of the kernel is the same in each, and the generated files do not depend on the setting. A kernel is `constexpr` when its only
+fused operations are `prod` or it names a constant-evaluation variant; a kernel that is not
 `constexpr` is listed as such in the generator's output. `guard` and `times_inf` dispatch on
-`__builtin_is_constant_evaluated()`, so the full kernels of the additions and the constructors
-are `constexpr`; the product kernels are not yet, because their cores contain fused operations
-and only `two_prod` has a constant-evaluation variant.
+`__builtin_is_constant_evaluated()` too, so the full kernels of the additions and the constructors
+are `constexpr`; the products of two limbs, the Ball cores and their full kernels are not, because
+they contain FMAs with an addend that is not zero, and so are not the directed products of one
+limb, `mul_down_1` and `mul_up_1`, which must not be evaluated through `two_prod`'s variant
+([Building blocks on T](design/milestone2.md#building-blocks-on-t)).
 
 The operations of the IR have no side effects. Kairn does not specify the floating-point
 exception flags that a kernel raises, so a printer may leave out of a path of execution any
@@ -317,8 +334,9 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
 
 - `Model.v`: inside a section with `Variable emin prec : Z` and `Variable choice : Z -> bool`,
   with `rnd := round radix2 (FLT_exp emin prec) (Znearest choice)`, one `Definition` per kernel
-  over `R`. `prod a b` is `rnd (a * b + 0)`, `fms a b c` is `rnd (a * b + - c)`; a `call` stays a
-  call (`let '(sh, sl) := two_sum x0 y0 in`), so that a proof can use the callee's theorem.
+  over `R`. `prod a b` is `rnd (a * b + 0)`, for both of its executions in C++ (the rule of the
+  product, above), `fms a b c` is `rnd (a * b + - c)`; a `call` stays a call
+  (`let '(sh, sl) := two_sum x0 y0 in`), so that a proof can use the callee's theorem.
 - `Statements.v`: one `Definition <kernel>_spec : Prop` per kernel, built from the kernel's
   claims. A hand-written proof must have exactly this type. A statement quantifies over every
   `emin` and every `prec` from the kernel's minimum on, and fixes the tie rule to ties-to-even.
@@ -550,6 +568,159 @@ kernels, whose constants must stay below the overflow threshold). In the extende
 `ball_scale` is any value of the format, $\pm\infty$ or NaN, and one that is not finite gives the
 whole line (the empty set if the ball operand is empty). `make_2_limbs` takes its two limbs as one
 2-limb input with `canonical`.
+
+### Claims of Milestone 2
+
+The kernels of [Milestone 2 statements](design/milestone2.md) that are written so far (its first
+wave: "Building blocks on T" and "Scaling a ball by a power of two") need the additions below.
+Everything above keeps its meaning and its JSON shape: a field that is new to a kind that exists
+is written only in an entry that uses it, so that no entry without it changes.
+
+Two definitions that the readings use, from the page's
+[notation](design/milestone2.md#notation-and-vocabulary). A *step* is to the next number of the
+format above or below. A finite $t$ *rounded down in the format with overflow* is the largest
+number of the format not above $t$, except that it is $\Omega$ when $t > \Omega$ and $-\infty$ when
+$t < -\Omega$; *rounded up*, symmetrically, the smallest not below $t$, $+\infty$ when
+$t > \Omega$ and $-\Omega$ when $t < -\Omega$. Rounded to nearest it is $\mathrm{RN}(t)$, the
+infinity of its sign when the rounding in unbounded range reaches $2^{q_{\max} + p}$, as before.
+In the extended domain a step from $\pm\Omega$ outward is the infinity, and a step from an
+infinity is the one of the table of `neighbor` below.
+
+| Kind | Fields | Finite domain, and finite operands in the extended domain | With an infinite or NaN operand, in the extended domain |
+|---|---|---|---|
+| `neighbor` | `of` (a one-limb output), `side`: `up` or `down` | `value` is the name of a one-limb input; the output is the next number of the format above it (`up`) or below it (`down`) | the table below |
+| `bound` | `of` (a one-limb output), `side`: `below` or `above`, `steps`: an integer $\ge 0$ | `below`: the output is at most `value`, and at least `value` rounded down, then stepped down `steps` times; `above`: at least `value`, and at most `value` rounded up, then stepped up `steps` times. In the extended domain the roundings are in the format with overflow, and the output may be an infinity | the output is `value` as IEEE 754 defines it on the operands (below) |
+| `rounded`, with `when` | as before, and `when`: `product_large` | when the condition holds (`value` $= 0$ or $\lvert\text{value}\rvert \ge 2^{2p-1}\eta$, as for `error`), the output is `value` rounded that way, in the format with overflow in the extended domain; nothing is claimed otherwise | as `rounded` without `when` |
+| `rounded`, of the value of two operands | as before | in the extended domain, `value` rounded in the format with overflow; for `down` a sum beyond $\Omega$ gives $\Omega$, not $+\infty$ | the output is `value` as IEEE 754 defines it on the operands |
+| `exact_when`, a field of `error` | a list of conditions (below) | when every condition holds, the output equals `value` exactly (in the extended domain: when every operand and the output are finite, as for `error`) | nothing more |
+| `exact_when`, a field of `encloses` | a list of conditions | when every condition holds, the output ball is exactly the set: besides containing every value of `set` (the claim of `encloses`), every number within `radius` of `center` is a value of `set`, with each ball name ranging over its ball. With containment this says that center $-$ radius and center $+$ radius are the least and the greatest value of `set`. In the extended domain it applies when the output is a finite ball (every operand is then finite) | nothing more |
+
+`value` *as IEEE 754 defines it on the operands*, for `value` an expression of one or two input
+names: a NaN when an operand is a NaN, for the sum of $+\infty$ and $-\infty$ (or the difference of
+two equal infinities) and for the product of a zero and an infinity; otherwise an infinity when an
+operand is one, the infinity of the sum, or of the product of the signs; `neg` and `abs` of an
+infinity are the infinities they give. As always, the sign of a zero is not part of a claim and a
+NaN is any NaN.
+
+The table of `neighbor` ([next_up and next_down on every input](design/milestone2.md#next_up-and-next_down-on-every-input)),
+which in the extended domain covers every value of the format:
+
+| `value` | `side` `up` | `side` `down` |
+|---|---|---|
+| a NaN | a NaN | a NaN |
+| $+\infty$ | $+\infty$ | $\Omega$ |
+| $\Omega$ | $+\infty$ | the number before $\Omega$ |
+| a finite number $x$ | the smallest number of the format above $x$ | the largest number of the format below $x$ |
+| $-\Omega$ | the number after $-\Omega$ | $-\infty$ |
+| $-\infty$ | $-\Omega$ | $-\infty$ |
+
+Either zero is followed by $\eta$ and preceded by $-\eta$; $-\eta$ is followed by a zero and
+$\eta$ preceded by one.
+
+**A condition of `exact_when`** is one of
+
+- `{"zero_or_abs_gt": EXPR, "than": K}`: EXPR $= 0$ or $\lvert\mathrm{EXPR}\rvert > K$;
+- `{"zero_or_abs_ge": EXPR, "than": K}`: EXPR $= 0$ or $\lvert\mathrm{EXPR}\rvert \ge K$;
+
+and the list holds when every condition does. EXPR is an expression of the language of `value`
+(input names, `+`, `-`, `*`, unary minus, `abs( )`, parentheses) in which, besides an input's
+name (the exact sum of its limbs), `NAME[I]` is limb I of the input NAME, the leading limb being
+`NAME[0]`. K is an exact expression over `u`, `eta` and integers, with `+`, `-`, `*`, `/`,
+parentheses and integer powers `^` (possibly negative, `2^-3`), positive in every format: the
+language of `const up(EXPR)` without `unit( )`, `tiny( )` or a rounding. Both are evaluated
+exactly, with $u = 2^{-p}$ and $\eta = 2^{q_{\min}}$ of the format; `eta/(2*u)` is $N$, the
+smallest normal number.
+
+The fields of each new entry, in this order (`instances` is unchanged: one object per `error`
+entry, `exact_when` or not):
+
+```json
+{"kind": "neighbor", "of": "r", "side": "up"}
+{"kind": "bound", "of": "r", "side": "below", "steps": 1}
+{"kind": "rounded", "of": "r", "mode": "down", "when": "product_large"}
+{"kind": "error", "of": "z", "form": "R", "c": "0", "k": 2, "t": "1", "when": null,
+ "exact_when": [{"zero_or_abs_ge": "x[0]*c", "than": "eta/(2*u)"}]}
+{"kind": "encloses", "center": "cz", "radius": "rz", "set": "x*c",
+ "balls": {"x": {"center": "cx", "radius": "rx"}}, "finite_when": [...],
+ "exact_when": [{"zero_or_abs_gt": "cx[0]*c", "than": "eta/(2*u)"}]}
+```
+
+`steps` is a JSON integer; `when` of `rounded` is absent when there is no condition (an `error`
+entry keeps its `"when": null`); `exact_when` is absent when there is none; `finite_when` is
+written, as before, for an `encloses` entry of the extended domain only. Four entries in full, as
+the generator writes them (`source`, `flops` and the theorem fields left out):
+
+```json
+{
+  "name": "next_up", "domain": "extended",
+  "inputs": [{"name": "a", "limbs": 1}], "outputs": [{"name": "r", "limbs": 1}],
+  "value": "a", "requires": [],
+  "ensures": [{"kind": "neighbor", "of": "r", "side": "up"}],
+  "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+  "instances": {"binary64": [], "binary32": []}
+},
+{
+  "name": "mul_down_1", "domain": "extended",
+  "inputs": [{"name": "a", "limbs": 1}, {"name": "b", "limbs": 1}], "outputs": [{"name": "r", "limbs": 1}],
+  "value": "a*b", "requires": [],
+  "ensures": [{"kind": "bound", "of": "r", "side": "below", "steps": 1},
+              {"kind": "rounded", "of": "r", "mode": "down", "when": "product_large"}],
+  "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+  "instances": {"binary64": [], "binary32": []}
+},
+{
+  "name": "ball_mul_pow2_2",
+  "inputs": [{"name": "cx", "limbs": 2}, {"name": "rx", "limbs": 1}, {"name": "c", "limbs": 1}],
+  "outputs": [{"name": "cz", "limbs": 2}, {"name": "rz", "limbs": 1}],
+  "value": "cx*c", "requires": ["normalized(cx)", "nonneg(rx)", "power_of_two(c)"],
+  "ensures": [{"kind": "normalized", "of": "cz"},
+              {"kind": "encloses", "center": "cz", "radius": "rz", "set": "x*c",
+               "balls": {"x": {"center": "cx", "radius": "rx"}},
+               "exact_when": [{"zero_or_abs_gt": "cx[0]*c", "than": "eta/(2*u)"},
+                              {"zero_or_abs_gt": "cx[1]*c", "than": "eta/(2*u)"},
+                              {"zero_or_abs_gt": "rx*c", "than": "eta/(2*u)"}]}],
+  "min_precision": 2, "status": "unverified",
+  "instances": {"binary64": [], "binary32": []}
+},
+{
+  "name": "ball_mul_pow2_1_full", "domain": "extended", "ieee_only": true,
+  "inputs": [{"name": "cx", "limbs": 1}, {"name": "rx", "limbs": 1}, {"name": "c", "limbs": 1}],
+  "outputs": [{"name": "cw", "limbs": 1}, {"name": "rw", "limbs": 1}],
+  "value": "cx*c", "requires": ["ball(cx, rx)", "power_of_two(c)"],
+  "ensures": [{"kind": "encloses", "center": "cw", "radius": "rw", "set": "x*c",
+               "balls": {"x": {"center": "cx", "radius": "rx"}},
+               "finite_when": [{"abs_le": "(abs(cx)+rx)*c", "exp": -2}],
+               "exact_when": [{"zero_or_abs_gt": "cx*c", "than": "eta/(2*u)"},
+                              {"zero_or_abs_gt": "rx*c", "than": "eta/(2*u)"}]}],
+  "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+  "instances": {"binary64": [], "binary32": []}
+}
+```
+
+The other kernels of the wave use kinds that exist: `two_sum_ord` claims `leading_rounded`, an
+exact `error` and `normalized`, as `fast_two_sum` does, in the finite domain; `add_down_1`,
+`add_up_1`, `sub_down_1`, `sub_up_1` claim `rounded` of the value of two operands, in the extended
+domain; and each entry form claims exactly what the kernel it calls claims, in the same domain
+(`two_sum_entry` and `fast_two_sum_entry` in the finite one, `radd_entry` and the four directed
+sums in the extended one).
+
+How they are stated in the formal models: in the real model `neighbor` is Flocq's `succ` or `pred`
+of `value`, `bound` brackets the output between `value` and `RD` (or `RU`) of `value` stepped by
+`pred` (or `succ`), and `exact_when` adds a conjunct to the claim it belongs to: `error` then says
+that the output limbs sum to `value`, `encloses` that every real within the radius of the center
+is a value of the set. In the IEEE model the claims of a kernel that needs no fix-up are read over
+extended reals (`proofs/theories/IeeeVocabulary.v`: `xsucc`, `xpred`, `xrd`, `xru`, `xadd`, `xmul`),
+and a full Ball kernel's statement has the exactness between B3 and B4. `rounded` of a value of one
+operand is printed as before (`xround`), which is the same thing for a value below $2^{q_{\max}+p}$
+in magnitude, as a canonical one is.
+
+**Not expressible, and so not claimed, in this wave:** what `two_sum_ord` returns at an overflow
+and for infinite or NaN operands (the page's table of its IEEE model: $(+\infty, -\infty)$ and
+$(\pm\infty, \mathrm{NaN})$, pairs that are not canonical); its IEEE-model statement is that of a
+finite core, as `fast_two_sum`'s (finite operands and a finite sum give a finite error term and
+the claims). `mul_pow2_2` keeps its claims and its statement: an `exact_when` on its `error` entry
+would change the generated statement `mul_pow2_2_spec` that `mul_pow2_2_correct` proves, so its
+exactness stays the hand-written `mul_pow2_2_exact` ([Milestone 1](design/milestone1.md#second-wave-kernels)).
 
 ## The line protocol
 

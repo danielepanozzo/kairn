@@ -94,6 +94,8 @@ def summary(kernels):
         f'not constexpr: {names(lambda k: cpp.constexpr_kind(k, kernels) is None)}',
         f'constexpr through a constant-evaluation variant: '
         f'{", ".join(f"{k.name} ({k.ce_variant})" for k in kernels.values() if k.ce_variant) or "none"}',
+        f'constexpr by the rule of the product (each prod a plain product in constant evaluation): '
+        f'{names(lambda k: cpp.product_rule(k, kernels))}',
         f'exempt from the non-finite cone: {names(lambda k: bool(k.cone_exempt))}',
         f'entry kernels (rule R3): {names(lambda k: k.entry)}',
         f'R3 GUARD PENDING: {pending_text or "none"}',

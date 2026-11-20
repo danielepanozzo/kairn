@@ -7,7 +7,7 @@ for the same reasons: raw intrinsics are contracted by the same compilers under 
 (docs/developer/design/phase0/environment.md), so a rounded product is again an FMA with a +0
 addend and nothing else is multiplied. A mask is a lane mask (every bit of a lane set or clear),
 select a blend, and succ and pred step the bit pattern with integer lane operations, as the
-scalar next_up does. Nothing here is constexpr: intrinsics are not constant expressions.
+scalar next_up_bits does. Nothing here is constexpr: intrinsics are not constant expressions.
 
 Each backend is a table of spellings and a few helpers; the loop over the statements is shared.
 {s} is the floating-point suffix of the intrinsics, {u} the integer one of masks, {f} the suffix
@@ -48,8 +48,8 @@ AVX2 = {
         'or': '_mm256_or_{u}({0}, {1})',
         'not': 'not_mask({0})',
         'select': '_mm256_blendv_{s}({2}, {1}, {0})',               # {1} where the mask is set
-        'succ': 'next_up({0})',
-        'pred': 'next_down({0})',
+        'succ': 'next_up_bits({0})',
+        'pred': 'next_down_bits({0})',
         'copy': '{0}',
         'guard': '_mm256_add_{s}({0}, _mm256_setzero_{s}())',      # RN(a + 0), with a zero vector
         'times_inf': '_mm256_mul_{s}({0}, _mm256_set1_{s}({inf}))',  # exact; only compared or selected
@@ -85,8 +85,8 @@ NEON = {
         'or': 'vorrq_{u}({0}, {1})',
         'not': 'not_mask({0})',
         'select': 'vbslq_{s}({0}, {1}, {2})',              # bits of {1} where the mask is set
-        'succ': 'next_up({0})',
-        'pred': 'next_down({0})',
+        'succ': 'next_up_bits({0})',
+        'pred': 'next_down_bits({0})',
         'copy': '{0}',
         'guard': 'vaddq_{s}({0}, vdupq_n_{s}(0.0{f}))',             # RN(a + 0), with a zero vector
         'times_inf': 'vmulq_{s}({0}, vdupq_n_{s}({inf}))',          # exact; only compared or selected
@@ -96,11 +96,12 @@ NEON = {
 BACKENDS = (AVX2, NEON)
 
 # Names the helpers take, on top of the scalar printer's.
-RESERVED = frozenset({'not_mask', 'next_up', 'next_down'})
+RESERVED = frozenset({'not_mask', 'next_up_bits', 'next_down_bits'})
 
 # The helpers: the complement of a lane mask, and nextUp / nextDown lane by lane, written as the
-# scalar next_up (cpp.py) is: the pattern of a positive lane moves up and that of a negative one
-# towards zero, either zero becomes the smallest subnormal, NaN and +inf stay.
+# scalar next_up_bits and next_down_bits (cpp.py) are: for nextUp the pattern of a positive lane
+# moves up and that of a negative one towards zero, either zero becomes the smallest subnormal, NaN
+# and +inf stay; nextDown the same on the other side, without a negation of the value.
 _AVX2_HELPERS = '''\
 KAIRN_GEN_FORCEINLINE __m256d not_mask(__m256d m) noexcept {
     return _mm256_xor_pd(m, _mm256_castsi256_pd(_mm256_set1_epi64x(-1)));
@@ -108,7 +109,7 @@ KAIRN_GEN_FORCEINLINE __m256d not_mask(__m256d m) noexcept {
 KAIRN_GEN_FORCEINLINE __m256 not_mask(__m256 m) noexcept {
     return _mm256_xor_ps(m, _mm256_castsi256_ps(_mm256_set1_epi32(-1)));
 }
-KAIRN_GEN_FORCEINLINE __m256d next_up(__m256d a) noexcept {
+KAIRN_GEN_FORCEINLINE __m256d next_up_bits(__m256d a) noexcept {
     const __m256i b = _mm256_castpd_si256(a);
     const __m256i m = _mm256_and_si256(b, _mm256_set1_epi64x(0x7fffffffffffffffLL));
     const __m256i inf = _mm256_set1_epi64x(0x7ff0000000000000LL);
@@ -120,7 +121,7 @@ KAIRN_GEN_FORCEINLINE __m256d next_up(__m256d a) noexcept {
     const __m256i r = _mm256_blendv_epi8(_mm256_add_epi64(b, step), one, zero);
     return _mm256_castsi256_pd(_mm256_blendv_epi8(r, b, keep));
 }
-KAIRN_GEN_FORCEINLINE __m256 next_up(__m256 a) noexcept {
+KAIRN_GEN_FORCEINLINE __m256 next_up_bits(__m256 a) noexcept {
     const __m256i b = _mm256_castps_si256(a);
     const __m256i m = _mm256_and_si256(b, _mm256_set1_epi32(0x7fffffff));
     const __m256i inf = _mm256_set1_epi32(0x7f800000);
@@ -131,13 +132,31 @@ KAIRN_GEN_FORCEINLINE __m256 next_up(__m256 a) noexcept {
     const __m256i r = _mm256_blendv_epi8(_mm256_add_epi32(b, step), one, zero);
     return _mm256_castsi256_ps(_mm256_blendv_epi8(r, b, keep));
 }
-KAIRN_GEN_FORCEINLINE __m256d next_down(__m256d a) noexcept {
-    const __m256d sign = _mm256_set1_pd(-0.0);
-    return _mm256_xor_pd(next_up(_mm256_xor_pd(a, sign)), sign);
+// nextDown, with no sign flip of a floating-point value, which a compiler can fold into an FMA
+// that computes the operand: a positive lane moves towards zero, a negative one down, either zero
+// becomes -eta (0x8000...01), NaN and -inf (0xfff0...0) stay.
+KAIRN_GEN_FORCEINLINE __m256d next_down_bits(__m256d a) noexcept {
+    const __m256i b = _mm256_castpd_si256(a);
+    const __m256i m = _mm256_and_si256(b, _mm256_set1_epi64x(0x7fffffffffffffffLL));
+    const __m256i inf = _mm256_set1_epi64x(0x7ff0000000000000LL);
+    const __m256i one = _mm256_set1_epi64x(1);
+    const __m256i keep = _mm256_or_si256(_mm256_cmpgt_epi64(m, inf),
+                                         _mm256_cmpeq_epi64(b, _mm256_set1_epi64x(-0x10000000000000LL)));
+    const __m256i zero = _mm256_cmpeq_epi64(m, _mm256_setzero_si256());
+    const __m256i step = _mm256_or_si256(_mm256_cmpgt_epi64(_mm256_setzero_si256(), b), one);  // -1 or +1
+    const __m256i r = _mm256_blendv_epi8(_mm256_sub_epi64(b, step), _mm256_set1_epi64x(-0x7fffffffffffffffLL), zero);
+    return _mm256_castsi256_pd(_mm256_blendv_epi8(r, b, keep));
 }
-KAIRN_GEN_FORCEINLINE __m256 next_down(__m256 a) noexcept {
-    const __m256 sign = _mm256_set1_ps(-0.0f);
-    return _mm256_xor_ps(next_up(_mm256_xor_ps(a, sign)), sign);
+KAIRN_GEN_FORCEINLINE __m256 next_down_bits(__m256 a) noexcept {
+    const __m256i b = _mm256_castps_si256(a);
+    const __m256i m = _mm256_and_si256(b, _mm256_set1_epi32(0x7fffffff));
+    const __m256i inf = _mm256_set1_epi32(0x7f800000);
+    const __m256i one = _mm256_set1_epi32(1);
+    const __m256i keep = _mm256_or_si256(_mm256_cmpgt_epi32(m, inf), _mm256_cmpeq_epi32(b, _mm256_set1_epi32(-0x800000)));
+    const __m256i zero = _mm256_cmpeq_epi32(m, _mm256_setzero_si256());
+    const __m256i step = _mm256_or_si256(_mm256_cmpgt_epi32(_mm256_setzero_si256(), b), one);
+    const __m256i r = _mm256_blendv_epi8(_mm256_sub_epi32(b, step), _mm256_set1_epi32(-0x7fffffff), zero);
+    return _mm256_castsi256_ps(_mm256_blendv_epi8(r, b, keep));
 }
 '''
 
@@ -146,7 +165,7 @@ KAIRN_GEN_FORCEINLINE uint64x2_t not_mask(uint64x2_t m) noexcept {
     return vreinterpretq_u64_u32(vmvnq_u32(vreinterpretq_u32_u64(m)));   // there is no vmvnq_u64
 }
 KAIRN_GEN_FORCEINLINE uint32x4_t not_mask(uint32x4_t m) noexcept { return vmvnq_u32(m); }
-KAIRN_GEN_FORCEINLINE float64x2_t next_up(float64x2_t a) noexcept {
+KAIRN_GEN_FORCEINLINE float64x2_t next_up_bits(float64x2_t a) noexcept {
     const uint64x2_t b = vreinterpretq_u64_f64(a);
     const uint64x2_t m = vandq_u64(b, vdupq_n_u64(0x7fffffffffffffffu));
     const uint64x2_t inf = vdupq_n_u64(0x7ff0000000000000u);
@@ -156,7 +175,7 @@ KAIRN_GEN_FORCEINLINE float64x2_t next_up(float64x2_t a) noexcept {
     const uint64x2_t r = vbslq_u64(vceqq_u64(m, vdupq_n_u64(0)), one, step);
     return vreinterpretq_f64_u64(vbslq_u64(keep, b, r));
 }
-KAIRN_GEN_FORCEINLINE float32x4_t next_up(float32x4_t a) noexcept {
+KAIRN_GEN_FORCEINLINE float32x4_t next_up_bits(float32x4_t a) noexcept {
     const uint32x4_t b = vreinterpretq_u32_f32(a);
     const uint32x4_t m = vandq_u32(b, vdupq_n_u32(0x7fffffffu));
     const uint32x4_t inf = vdupq_n_u32(0x7f800000u);
@@ -166,8 +185,29 @@ KAIRN_GEN_FORCEINLINE float32x4_t next_up(float32x4_t a) noexcept {
     const uint32x4_t r = vbslq_u32(vceqq_u32(m, vdupq_n_u32(0)), one, step);
     return vreinterpretq_f32_u32(vbslq_u32(keep, b, r));
 }
-KAIRN_GEN_FORCEINLINE float64x2_t next_down(float64x2_t a) noexcept { return vnegq_f64(next_up(vnegq_f64(a))); }
-KAIRN_GEN_FORCEINLINE float32x4_t next_down(float32x4_t a) noexcept { return vnegq_f32(next_up(vnegq_f32(a))); }
+// nextDown, with no negation of a floating-point value, which a compiler can fold into an FMA
+// that computes the operand: a positive lane moves towards zero, a negative one down, either zero
+// becomes -eta (0x8000...01), NaN and -inf (0xfff0...0) stay.
+KAIRN_GEN_FORCEINLINE float64x2_t next_down_bits(float64x2_t a) noexcept {
+    const uint64x2_t b = vreinterpretq_u64_f64(a);
+    const uint64x2_t m = vandq_u64(b, vdupq_n_u64(0x7fffffffffffffffu));
+    const uint64x2_t inf = vdupq_n_u64(0x7ff0000000000000u);
+    const uint64x2_t one = vdupq_n_u64(1);
+    const uint64x2_t keep = vorrq_u64(vcgtq_u64(m, inf), vceqq_u64(b, vdupq_n_u64(0xfff0000000000000u)));
+    const uint64x2_t step = vbslq_u64(vceqq_u64(b, m), vsubq_u64(b, one), vaddq_u64(b, one));
+    const uint64x2_t r = vbslq_u64(vceqq_u64(m, vdupq_n_u64(0)), vdupq_n_u64(0x8000000000000001u), step);
+    return vreinterpretq_f64_u64(vbslq_u64(keep, b, r));
+}
+KAIRN_GEN_FORCEINLINE float32x4_t next_down_bits(float32x4_t a) noexcept {
+    const uint32x4_t b = vreinterpretq_u32_f32(a);
+    const uint32x4_t m = vandq_u32(b, vdupq_n_u32(0x7fffffffu));
+    const uint32x4_t inf = vdupq_n_u32(0x7f800000u);
+    const uint32x4_t one = vdupq_n_u32(1);
+    const uint32x4_t keep = vorrq_u32(vcgtq_u32(m, inf), vceqq_u32(b, vdupq_n_u32(0xff800000u)));
+    const uint32x4_t step = vbslq_u32(vceqq_u32(b, m), vsubq_u32(b, one), vaddq_u32(b, one));
+    const uint32x4_t r = vbslq_u32(vceqq_u32(m, vdupq_n_u32(0)), vdupq_n_u32(0x80000001u), step);
+    return vreinterpretq_f32_u32(vbslq_u32(keep, b, r));
+}
 '''
 
 HELPERS = {'avx2.hpp': _AVX2_HELPERS, 'neon.hpp': _NEON_HELPERS}
@@ -216,7 +256,7 @@ def header(b, kernels, prelude_name='prelude.hpp'):
              'KAIRN_GEN_PUSH_WARNINGS',
              'namespace kairn::gen {', '',
              '// The complement of a lane mask, and IEEE 754 nextUp and nextDown in every lane by',
-             '// stepping the bit pattern, as next_up of prelude.hpp does for one number.',
+             '// stepping the bit pattern, as next_up_bits of prelude.hpp does for one number.',
              HELPERS[b['file']].rstrip('\n')]
     for k in kernels.values():
         lines += [''] + cpp._description(k, kernels)[:1]

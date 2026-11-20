@@ -1,0 +1,38 @@
+# A ball with a one-limb center times a positive power of two c (milestone2.md, "Scaling a ball by
+# a power of two"): exact whenever nothing underflows. When the scaled center is above the
+# smallest normal number N = eta / (2u) in magnitude (or the center is zero) and so is the scaled
+# radius (or the radius is zero), both scalings are exact and the radius is c rx itself: the
+# result is c X. Otherwise the radius is the number after RN(succ(RN(c rx)) + eta), which covers
+# the eta / 2 that the center may have lost and the rounding of the scaled radius. N and eta are
+# exact constants of every format.
+kernel:        ball_mul_pow2_1
+input:         stored cx
+input:         stored rx
+input:         c
+output:        cz
+output:        rz
+value:         cx*c
+requires:      nonneg rx
+requires:      power_of_two c
+ensures:       encloses cz rz x*c x=cx,rx exact_when=zero_or_abs_gt(cx*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))
+min_precision: 2
+source:        midpoint-radius scaling by a power of two (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+entry:         yes
+cone_exempt:   the radius is selected and stepped; the special states of the ball layer test the center and the radius
+
+cz = prod(cx, c)
+rr = prod(rx, c)
+am = abs(cz)
+bc = lt(const up(eta/(2*u)), am)
+zc = eq(cx, 0)
+ec = or(bc, zc)
+br = lt(const up(eta/(2*u)), rr)
+zr = eq(rx, 0)
+er = or(br, zr)
+ex = and(ec, er)
+su = succ(rr)
+sw = add(su, const up(eta))
+rw = succ(sw)
+rz = select(ex, rr, rw)

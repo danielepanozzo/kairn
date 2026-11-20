@@ -24,7 +24,7 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/IeeeModel.v` | One Rocq `Definition` per kernel that has an IEEE-model statement, over Flocq's binary floating-point numbers (signed zeros, infinities, NaN), each operation the one of `proofs/theories/IeeeOperations.v` |
 | `proofs/gen/IeeeStatements.v` | `Definition K_ieee_spec : Prop` (and the finite-domain forms) per such kernel, from its claims, in the vocabulary of `proofs/theories/IeeeVocabulary.v` |
 | `proofs/gen/IeeeAudit.v` | For each kernel whose IEEE-model status is not unverified, checks that its theorem has the generated statement as its type and prints its assumptions |
-| `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up`, `next_down`, the form of the scalar fix-ups per compiler (`KAIRN_GEN_FIXUP_CALL`), the pragmas that every header puts around its declarations so that a program's globals of the same names raise no warning (`KAIRN_GEN_PUSH_WARNINGS`, `KAIRN_GEN_POP_WARNINGS`); refuses x86 without hardware FMA |
+| `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up_bits`, `next_down_bits`, the form of the scalar fix-ups per compiler (`KAIRN_GEN_FIXUP_CALL`), the pragmas that every header puts around its declarations so that a program's globals of the same names raise no warning (`KAIRN_GEN_PUSH_WARNINGS`, `KAIRN_GEN_POP_WARNINGS`); refuses x86 without hardware FMA |
 | `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen`; where the fix-up is a function of its own, that function, in `kairn::gen::fixup` |
 | `include/kairn/gen/avx2.hpp` | Every kernel for `__m256d` and `__m256` (4 doubles, 8 floats); refuses a target without AVX2 and FMA |
 | `include/kairn/gen/neon.hpp` | Every kernel for `float64x2_t` and `float32x4_t` (2 doubles, 4 floats); AArch64 only |
@@ -120,6 +120,13 @@ t        = add(x0, y0)
   `ensures: represents x`; `ensures: makes_ball cw rw from=c,r`.
 - A condition of `finite_when` is `abs_le(EXPR,E)`, meaning $|EXPR| \le 2^{q_{\max} + p + E}$;
   several are separated by `;`, and an empty list is written by leaving `finite_when` out.
+- Milestone 2 (architecture.md, "Claims of Milestone 2"): `ensures: neighbor r up` (or `down`);
+  `ensures: bound r below steps=1` (or `above`); `ensures: rounded r down when=product_large`; and
+  `exact_when=CONDITIONS` after an `error` or an `encloses` entry, a condition being
+  `zero_or_abs_gt(EXPR,K)` or `zero_or_abs_ge(EXPR,K)` (EXPR $= 0$ or $|EXPR| > K$, or $\ge K$),
+  with EXPR over the input names and their limbs, `cx[1]` the second limb of `cx`, and K an exact
+  expression over `u`, `eta` and integers; several are separated by `;`, as in
+  `exact_when=zero_or_abs_gt(cx[0]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))`.
 - `guard_pending: a REASON`: an input of an entry kernel whose guard is not written yet (only
   `add_2_1`, whose guard changes the formal model of a proved kernel and lands with its proof).
 
@@ -132,12 +139,12 @@ t        = add(x0, y0)
 | `fma a b c` | RN(ab + c) | `rnd (a * b + c)` | `fma_rn(a, b, c)` | `_mm256_fmadd_pd` | `vfmaq(c, a, b)` |
 | `fms a b c` | RN(ab − c) | `rnd (a * b + - c)` | `fma_rn(a, b, -c)` | `_mm256_fmsub_pd` | `vfmaq(vnegq(c), a, b)` |
 | `fnma a b c` | RN(−ab + c) | `rnd (- (a * b) + c)` | `fma_rn(-a, b, c)` | `_mm256_fnmadd_pd` | `vfmsq(c, a, b)` |
-| `prod a b` | RN(ab + 0) | `rnd (a * b + 0)` | `fma_rn(a, b, 0.0)` | `fmadd` with `setzero` | `vfmaq` with `+0.0` |
+| `prod a b` | RN(ab + 0); RN(ab), the plain product, in constant evaluation | `rnd (a * b + 0)` | `fma_rn(a, b, 0.0)`; in a kernel `constexpr` by the rule of the product `__builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0)` | `fmadd` with `setzero` | `vfmaq` with `+0.0` |
 | `muladd a b c` | RN(ab + c) or RN(RN(ab) + c), by `--muladd` | `if fuse_V then … else …` | `a * b + c` | `add(mul(a, b), c)` | `vaddq(vmulq(a, b), c)` |
 | `lt`, `le`, `eq` | IEEE comparisons | `Rlt_bool`, `Rle_bool`, `Req_bool` | `lt(a, b)` as `b > a`, `le(a, b)` as `b >= a` (MSVC's constant evaluator takes `<`, `<=` with a NaN for true), `==` | `_mm256_cmp_pd`, `_CMP_*_OQ` | `vcltq`, `vcleq`, `vceqq` |
 | `and`, `or`, `not` | on masks | `andb`, `orb`, `negb` | `&`, `\|`, `!` | `and`, `or`, `not_mask` | `vandq_u64`, `vorrq_u64`, `not_mask` |
 | `select m a b` | a if m else b | `if m then a else b` | `m ? a : b` | `_mm256_blendv_pd(b, a, m)` | `vbslq(m, a, b)` |
-| `succ a`, `pred a` | IEEE nextUp, nextDown | Flocq's `succ`, `pred` | `next_up(a)`, `next_down(a)` | `next_up`, `next_down` on integer lanes | the same |
+| `succ a`, `pred a` | IEEE nextUp, nextDown | Flocq's `succ`, `pred` | `next_up_bits(a)`, `next_down_bits(a)` | `next_up_bits`, `next_down_bits` on integer lanes | the same |
 | `copy a` | a | `a` | `a` | `a` | `a` |
 | `guard a` | RN(a + 0): a, with −0 made +0; a itself in constant evaluation | `rnd (a + 0)` | `a + 0.0` (never `a - 0`); in a `constexpr` kernel `__builtin_is_constant_evaluated() ? a : a + 0.0` | `_mm256_add_pd(a, _mm256_setzero_pd())` | `vaddq_f64(a, vdupq_n_f64(0.0))` |
 | `times_inf t` | t · (+∞), exact: NaN for a NaN or a zero, else ±∞ with t's sign | none (no infinity in the real model) | `t * std::numeric_limits<double>::infinity()`; in a `constexpr` kernel `times_inf_ce(t)` (comparisons) in constant evaluation | `_mm256_mul_pd(t, _mm256_set1_pd(` +∞ `))` | `vmulq_f64(t, vdupq_n_f64(` +∞ `))` |
@@ -181,11 +188,20 @@ computed that limb provides it. A mask output gets nothing.
 
 A kernel with a constant-evaluation variant (`ce_variant:`) is `constexpr` and dispatches on
 `__builtin_is_constant_evaluated()`: in constant evaluation it runs the variant's body with each
-`prod` a plain product. `interp --ce` does the same. In constant evaluation `guard` returns its
+`prod` a plain product. A kernel whose only fused operations are `prod` is `constexpr` without a
+variant, by the rule of the product (milestone2.md, "The two executions of a product"): each
+`prod` is the plain product in constant evaluation and the opaque product otherwise, which as real
+numbers are the same rounding, so that the real model is one definition for both; as values of T
+they differ only in the sign of an exact zero product. `interp --ce` does the same, and the tests
+check that the two executions give the same bits, or the same values where a zero product can be an
+output (`test_interp.TwoExecutionsOfAProduct`). `build` lists the kernels constexpr by the rule. A
+kernel with an `fma`, `fms` or `fnma` and no variant is not constexpr: the products of two limbs,
+the Ball cores, and `mul_down_1` and `mul_up_1`, which trust the sign of two_prod's error term and
+must not run through its variant. In constant evaluation `guard` returns its
 operand and `times_inf` compares instead of multiplying (`times_inf_ce`): GCC and Clang refuse an
 operation that produces a NaN there (NaN + 0, 0 · ∞), even one whose result is not selected. The
-full kernels are then constexpr where their cores are (the additions; not the products, whose cores
-and `t = prod(x0, y0)` are fused operations, nor the full Ball kernels). Constant evaluation still
+full kernels are then constexpr where their cores are (the additions and the scalings by a power of
+two; not the products of two limbs, nor the other full Ball kernels). Constant evaluation still
 stops at what the core cannot compute there: an overflow (GCC) or the NaN that TwoSum then makes
 (Clang) is a compile error, never a wrong constant.
 
@@ -216,16 +232,20 @@ numbers, in the order of the file's `counts`:
   the operands of a sum, an `fms` being an FMA of the negated addend, an `fnma` one of a negated
   factor and a `prod` one with the addend +0; constants are the same when their literals of the
   limb type are. In `scalar_call` the kernel and its fix-up are numbered apart.
-- `consteval_mul`: the plain products of the branch that a kernel with a constant-evaluation
-  variant takes in constant evaluation (two_prod: 7, Dekker's product), which a compiler that does
-  not optimize may emit although no execution takes it.
+- `consteval_mul`: the plain products of what the scalar code computes only in constant
+  evaluation: the branch that a kernel with a constant-evaluation variant takes there (two_prod: 7,
+  Dekker's product), and in a kernel constexpr by the rule of the product the first arm of each
+  `prod` (one per prod), which a compiler that does not optimize may emit although no execution
+  takes it.
 - `muladd`: the declared contractable multiply-adds (none so far; the check has no rule for them).
 
 The forms differ for three kernels, `mul_2_1_full`, `mul_2_2_full` and `mul_pow2_2_full`, whose
 fix-up computes the core's leading product again (`t = prod(x0, y0)`): one FMA node more than
 `fma_distinct` in the inline form and in packed code, and as many in `scalar_call`, where the
-recomputation is in the fix-up function; and for `two_prod`, whose scalar forms have the branch of
-constant evaluation. The limb types differ for no kernel today, but they could: two constants of
+recomputation is in the fix-up function; for `two_prod`, whose scalar forms have the branch of
+constant evaluation; and for the kernels constexpr by the rule of the product, whose scalar forms
+have a plain product for constant evaluation per `prod` and whose packed form has none. The limb
+types differ for no kernel today, but they could: two constants of
 different expressions can be one number in binary32 and two in binary64. What the check makes of
 these numbers is in [Testing](../docs/developer/testing.md#object-code).
 
@@ -261,8 +281,8 @@ rule:
    lists, and the declaration is refused once the input is guarded.
 
 There are also checks of names (none may shadow what the printers use), kinds, arity, the closed
-vocabulary of the claims (that of architecture.md, "Claims of the second wave" and "Claims of the
-non-finite layer" included, each kind in its domain), of the two models (a kernel with a
+vocabulary of the claims (that of architecture.md, "Claims of the second wave", "Claims of the
+non-finite layer" and "Claims of Milestone 2" included, each kind in its domain), of the two models (a kernel with a
 real-model statement names no `const inf` or `const nan`, has no `times_inf`, and calls no kernel
 without one), of
 `extends` (its core has the same inputs, value, minimum precision, and requirements with
@@ -288,7 +308,13 @@ computed constants (above). A kernel has no real-model statement when it claims 
   extended domain, and the operands of `SPECIAL_CASES`, which tell faults planted by
   `tests/kernel_mutants.py` apart that the random cases miss (`results/milestone1/mutants/`);
   `static_assert`s check two_prod in constant evaluation, and every kernel without a
-  fused operation (succ and pred included) against its run-time bits, in both forms;
+  fused operation (succ and pred included) or whose only fused operations are `prod` (the rule of
+  the product) against the bits the interpreter computes in constant evaluation, in both forms;
+- the two executions of a product (`test_interp.py`, `TwoExecutionsOfAProduct`): every kernel
+  constexpr by the rule of the product gives in constant evaluation the bits it gives at run time,
+  or, for those whose outputs can be an exact zero product (`mul_pow2_2`, the scalings of a ball,
+  `mul_1_1`, `two_prod_dekker`), the same values, on the corpus of the interpreter's comparison with
+  the host;
 - the branch over a fix-up (`test_printers.py`, `FixupBranch`): the kernels it applies to and the
   masks it tests, each case of the rule on the toy kernel `ops_branch` and on variants of it (one
   mask, two, an arm that is no select, outputs on different masks, a kernel with a real-model

@@ -1,0 +1,20 @@
+# IEEE 754 nextUp: the next number of the format above a, on every input (milestone2.md, "next_up
+# and next_down on every input"). A NaN gives a NaN; +inf gives +inf; the largest finite number
+# gives +inf; a positive number the next one away from zero, a negative one the next one toward
+# zero; either zero the smallest positive number; -inf the most negative finite number. Computed
+# on the bit pattern, without a floating-point operation.
+kernel:        next_up
+input:         a
+output:        r
+value:         a
+ensures:       neighbor r up
+min_precision: 1
+source:        IEEE 754 nextUp on the bit pattern (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   r = succ(a), and succ(-inf) is finite; the neighbor claim states the output for every input, infinities and NaN included
+
+r = succ(a)

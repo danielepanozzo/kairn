@@ -24,9 +24,16 @@
      xreal, xval a, xval_2 x0 x1  an extended real number (a real, +-infinity or NaN),
                                   and the one a limb or a canonical 2-limb value stands for
      xlt, xle, xeq, xopp, xabs    comparisons and sign changes of extended real numbers
+     xadd, xmul                   the sum and the product of IEEE 754 on extended real
+                                  numbers: a NaN for a NaN operand, inf - inf and 0 inf
      overflow_of r, xround g x    a real result as an operation of T returns it: itself
                                   below 2^emax in magnitude, the infinity of its sign
                                   otherwise; and g applied that way to a finite x
+     xrd x, xru x                 x rounded down and up in the format with overflow: beyond
+                                  the largest finite number, that number on the side
+                                  toward zero and the infinity on the other
+     xsucc x, xpred x             the next number of the format above and below x, as
+                                  IEEE 754's nextUp and nextDown on the values
      nonneg_ext r                 nonnegative, +infinity or NaN: what a radius may be
      ball_finite_k, ball_whole_k, ball_empty_k, ball_k
                                   the three states of a canonical ball with a center of
@@ -77,11 +84,17 @@
      C    for all real x, y in the operands, x o y is in the result (whole line included)
 
    B4 is printed only for a kernel whose claims give conditions (finite_when): ball_neg_k,
-   whose result is as finite as its operand, has none and its statement has no B4.
+   whose result is as finite as its operand, has none and its statement has no B4. A kernel
+   whose containment claim is exact under conditions (exact_when) has one more conjunct,
+   between B3 and B4:
+
+     E    the result is a finite ball -> the conditions hold of the operands' values ->
+          every member of the result is x o y for some x, y in the operands
 
    A kernel that needs no fix-up has its claims read over extended real numbers (xval,
-   xval_2, xround), on canonical operands; a constructor says which canonical object
-   comes out for every operand. *)
+   xval_2, xround; for a value of two operands xadd, xmul, xrd, xru; for the steps xsucc,
+   xpred), on canonical operands; a constructor says which canonical object comes out for
+   every operand. *)
 From Stdlib Require Import Reals ZArith.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements.
@@ -168,6 +181,29 @@ Definition xabs (a : xreal) : xreal :=
   | XFin r => XFin (Rabs r)
   end.
 
+(* The sum and the product of two extended real numbers, as IEEE 754 defines the operations on
+   the values of their operands: a NaN when an operand is a NaN, for the sum of the two infinities
+   and for the product of a zero and an infinity; otherwise an infinity when an operand is one
+   (for a product, with the sign of the product of the signs); otherwise the exact real result,
+   before any rounding. *)
+Definition xadd (a b : xreal) : xreal :=
+  match a, b with
+  | XNaN, _ | _, XNaN => XNaN
+  | XInf s, XInf s' => if Bool.eqb s s' then XInf s else XNaN
+  | XInf s, XFin _ => XInf s
+  | XFin _, XInf s => XInf s
+  | XFin x, XFin y => XFin (x + y)
+  end.
+
+Definition xmul (a b : xreal) : xreal :=
+  match a, b with
+  | XNaN, _ | _, XNaN => XNaN
+  | XInf s, XInf s' => XInf (xorb s s')
+  | XInf s, XFin y => if Req_bool y 0 then XNaN else XInf (xorb s (Rlt_bool y 0))
+  | XFin x, XInf s => if Req_bool x 0 then XNaN else XInf (xorb (Rlt_bool x 0) s)
+  | XFin x, XFin y => XFin (x * y)
+  end.
+
 Section ExtVocabulary.
 Variable prec emax : Z.
 Notation float := (binary_float prec emax).
@@ -215,6 +251,32 @@ Definition xround (g : R -> R) (a : xreal) : xreal :=
   | XFin r => overflow_of (g r)
   | _ => a
   end.
+
+(* Rounding down in the format with overflow (docs/developer/design/milestone2.md, "Notation and
+   vocabulary"): a real r becomes RD r, except that it is the largest finite number when r is
+   above it, and -infinity when r is below the most negative one (where RD r is beyond 2^emax in
+   magnitude). Rounding up is the same on the other side. An infinity or a NaN is unchanged. On a
+   real r below 2^emax in magnitude, xrd is xround of RD (and xru of RU). *)
+Definition xrd (a : xreal) : xreal :=
+  match a with
+  | XFin r => if Rlt_bool (omega prec emax) r then XFin (omega prec emax)
+              else overflow_of (RD (ieee_emin prec emax) prec r)
+  | _ => a
+  end.
+Definition xru (a : xreal) : xreal := xopp (xrd (xopp a)).
+
+(* The next number of the format above a and the one below, as IEEE 754's nextUp and nextDown
+   define them on the values: above the largest finite number is +infinity, above -infinity the
+   most negative finite number, above +infinity +infinity, and a NaN stays a NaN; a step that
+   arrives at zero gives a zero, whose sign does not exist here. *)
+Definition xsucc (a : xreal) : xreal :=
+  match a with
+  | XNaN => XNaN
+  | XInf false => XInf false
+  | XInf true => XFin (- omega prec emax)
+  | XFin r => overflow_of (Ulp.succ radix2 (FLT_exp (ieee_emin prec emax) prec) r)
+  end.
+Definition xpred (a : xreal) : xreal := xopp (xsucc (xopp a)).
 
 (* What a radius may be: a nonnegative number, +infinity, or a NaN. *)
 Definition nonneg_ext (r : float) : Prop :=

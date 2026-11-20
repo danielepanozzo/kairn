@@ -64,6 +64,303 @@
       }
     },
     {
+      "name": "fast_two_sum",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a+b",
+      "requires": [
+        "abs_ge(a, b)"
+      ],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "normalized",
+          "of": "r"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EFT.v",
+        "name": "fast_two_sum_correct"
+      },
+      "source": {
+        "cite": "Fast2Sum (Dekker 1971)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "two_sum_ord",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a+b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "normalized",
+          "of": "r"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "add_down_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a+b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "down"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the rounded sum and the sign of its exact error (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "add_down_entry",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a+b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "down"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_down_1 on its guarded operands (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "add_up_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a+b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "up"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the rounded sum and the sign of its exact error (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "add_up_entry",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a+b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "up"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_up_1 on its guarded operands (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_add_1",
       "inputs": [
         {
@@ -414,6 +711,151 @@
       }
     },
     {
+      "name": "ball_mul_pow2_1",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 1
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*c",
+      "requires": [
+        "nonneg(rx)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x*c",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          },
+          "exact_when": [
+            {
+              "zero_or_abs_gt": "cx*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "rx*c",
+              "than": "eta/(2*u)"
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius scaling by a power of two (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_mul_pow2_1_full",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 1
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*c",
+      "requires": [
+        "ball(cx, rx)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x*c",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "(abs(cx)+rx)*c",
+              "exp": -2
+            }
+          ],
+          "exact_when": [
+            {
+              "zero_or_abs_gt": "cx*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "rx*c",
+              "than": "eta/(2*u)"
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_mul_pow2_1, then the fix-up of the special states of a ball (Milestone 2 listing)",
+        "license": "core: as ball_mul_pow2_1; fix-up: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_neg_1",
       "domain": "extended",
       "inputs": [
@@ -755,7 +1197,7 @@
       }
     },
     {
-      "name": "fast_two_sum",
+      "name": "fast_two_sum_entry",
       "inputs": [
         {
           "name": "a",
@@ -796,16 +1238,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/EFT.v",
-        "name": "fast_two_sum_correct"
-      },
+      "status": "unverified",
+      "theorem": null,
       "source": {
-        "cite": "Fast2Sum (Dekker 1971)",
+        "cite": "fast_two_sum on its guarded operands (Milestone 2 listing)",
         "license": "algorithm: published; proof: MIT"
       },
-      "flops": 3,
+      "flops": 5,
       "instances": {
         "binary64": [
           {
@@ -926,6 +1365,258 @@
       }
     },
     {
+      "name": "two_prod",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "1/2",
+          "when": null
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": "product_large"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EFT.v",
+        "name": "two_prod_correct"
+      },
+      "source": {
+        "cite": "TwoProd with an FMA (folklore; see JMP17)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "1/1427247692705959881058285969449495136382746624"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "mul_down_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "bound",
+          "of": "r",
+          "side": "below",
+          "steps": 1
+        },
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "down",
+          "when": "product_large"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "two_prod and the sign of its error term (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "mul_up_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "bound",
+          "of": "r",
+          "side": "above",
+          "steps": 1
+        },
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "up",
+          "when": "product_large"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "two_prod and the sign of its error term (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "next_down",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "neighbor",
+          "of": "r",
+          "side": "down"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "IEEE 754 nextDown on the bit pattern (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "next_up",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "neighbor",
+          "of": "r",
+          "side": "up"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "IEEE 754 nextUp on the bit pattern (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "radd",
       "domain": "extended",
       "inputs": [
@@ -972,6 +1663,51 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 1,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "radd_entry",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a+b",
+      "requires": [
+        "nonneg(a)",
+        "nonneg(b)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "r",
+          "gaps": "3/2"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "radd on its guarded operands (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -1083,7 +1819,8 @@
       }
     },
     {
-      "name": "two_prod",
+      "name": "sub_down_1",
+      "domain": "extended",
       "inputs": [
         {
           "name": "a",
@@ -1097,67 +1834,156 @@
       "outputs": [
         {
           "name": "r",
-          "limbs": 2
+          "limbs": 1
         }
       ],
-      "value": "a*b",
+      "value": "a-b",
       "requires": [],
       "ensures": [
         {
-          "kind": "leading_rounded",
-          "of": "r"
-        },
-        {
-          "kind": "error",
+          "kind": "rounded",
           "of": "r",
-          "form": "R",
-          "c": "0",
-          "k": 2,
-          "t": "1/2",
-          "when": null
-        },
-        {
-          "kind": "error",
-          "of": "r",
-          "form": "R",
-          "c": "0",
-          "k": 2,
-          "t": "0",
-          "when": "product_large"
+          "mode": "down"
         }
       ],
       "min_precision": 2,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/EFT.v",
-        "name": "two_prod_correct"
-      },
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
       "source": {
-        "cite": "TwoProd with an FMA (folklore; see JMP17)",
-        "license": "algorithm: published; proof: MIT"
+        "cite": "add_down_1 on a and -b (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
       },
-      "flops": 2,
+      "flops": 3,
       "instances": {
-        "binary64": [
-          {
-            "rel": "0",
-            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
-          },
-          {
-            "rel": "0",
-            "abs": "0"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "0",
-            "abs": "1/1427247692705959881058285969449495136382746624"
-          },
-          {
-            "rel": "0",
-            "abs": "0"
-          }
-        ]
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "sub_down_entry",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a-b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "down"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_down_1 on its guarded operands (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "sub_up_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a-b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "up"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_up_1 on a and -b (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "sub_up_entry",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a-b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "up"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_up_1 on its guarded operands (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -1284,6 +2110,64 @@
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 6,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "two_sum_entry",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a+b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "two_sum on its guarded operands (Milestone 2 listing)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 8,
       "instances": {
         "binary64": [
           {
@@ -2258,6 +3142,164 @@
         "license": "core: as ball_mul_2; fix-up: MIT"
       },
       "flops": 15,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_mul_pow2_2",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 2
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*c",
+      "requires": [
+        "normalized(cx)",
+        "nonneg(rx)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "cz"
+        },
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x*c",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          },
+          "exact_when": [
+            {
+              "zero_or_abs_gt": "cx[0]*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "cx[1]*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "rx*c",
+              "than": "eta/(2*u)"
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 7,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_mul_pow2_2_full",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*c",
+      "requires": [
+        "ball(cx, rx)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x*c",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "(abs(cx)+rx)*c",
+              "exp": -2
+            }
+          ],
+          "exact_when": [
+            {
+              "zero_or_abs_gt": "cx[0]*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "cx[1]*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "rx*c",
+              "than": "eta/(2*u)"
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing)",
+        "license": "core: as ball_mul_pow2_2; fix-up: MIT"
+      },
+      "flops": 7,
       "instances": {
         "binary64": [],
         "binary32": []

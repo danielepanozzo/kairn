@@ -1,0 +1,21 @@
+# two_sum for the public building block kairn::two_sum (milestone2.md, "Values that enter from the
+# program"): both operands pass through guard, then two_sum. The program may pass a product, which
+# a contracting compiler would otherwise fuse into the first addition, so that the error term
+# would be computed from a sum that is not RN(a + b). guard(a) has the value of a: the statement
+# is two_sum's. Not claimed: the sign of a zero result, which the guard can change.
+kernel:        two_sum_entry
+input:         a
+input:         b
+output:        r = s e
+value:         a+b
+ensures:       leading_rounded r
+ensures:       error r R c=0 k=2 t=0
+min_precision: 2
+source:        two_sum on its guarded operands (Milestone 2 listing)
+license:       algorithm: published; proof: MIT
+status:        unverified
+entry:         yes
+
+ga     = guard(a)
+gb     = guard(b)
+(s, e) = two_sum(ga, gb)

@@ -81,12 +81,19 @@ ATOM = r'(?:[a-z][a-z0-9_]*|0x1(?:\.[0-9a-f]+)?p[-+][0-9]+f?|0\.0f?|' \
 # copy, which is none).
 ONE_OPERATION = re.compile(
     rf'(?:-{ATOM}|!{ATOM}|{ATOM} (?:[-+*<>&|]|<=|>=|==) {ATOM}|{ATOM} \? {ATOM} : {ATOM}|'
-    rf'fma_rn\(-?{ATOM}, {ATOM}, -?{ATOM}\)|(?:abs_bits|next_up|next_down)\({ATOM}\)|'
+    rf'fma_rn\(-?{ATOM}, {ATOM}, -?{ATOM}\)|(?:abs_bits|next_up_bits|next_down_bits)\({ATOM}\)|'
     rf'{ATOM} \* {ATOM} \+ {ATOM}|{ATOM}|'
     # guard in a constexpr kernel: its operand in constant evaluation, one addition at run time;
-    # times_inf: comparisons in constant evaluation (times_inf_ce), one multiplication at run time.
+    # times_inf: comparisons in constant evaluation (times_inf_ce), one multiplication at run time;
+    # prod in a kernel constexpr by the rule of the product: the plain product in constant
+    # evaluation, the opaque product at run time.
     rf'__builtin_is_constant_evaluated\(\) \? (?P<g>{ATOM}) : (?P=g) \+ 0\.0f?|'
-    rf'__builtin_is_constant_evaluated\(\) \? times_inf_ce\((?P<t>{ATOM})\) : (?P=t) \* {ATOM})')
+    rf'__builtin_is_constant_evaluated\(\) \? times_inf_ce\((?P<t>{ATOM})\) : (?P=t) \* {ATOM}|'
+    rf'__builtin_is_constant_evaluated\(\) \? (?P<pa>{ATOM}) \* (?P<pb>{ATOM}) : '
+    rf'fma_rn\((?P=pa), (?P=pb), 0\.0f?\))')
+# The constant-evaluation arm of a statement that dispatches on constant evaluation (guard,
+# times_inf, and prod by the rule of the product), which run time never takes.
+CONSTEVAL_ARM = re.compile(r'__builtin_is_constant_evaluated\(\) \? .*? : ')
 # The spelling of times_inf: a plain multiplication by +infinity.
 TIMES_INF = r' \* std::numeric_limits<(?:double|float)>::infinity\(\);$'
 
@@ -94,7 +101,7 @@ TIMES_INF = r' \* std::numeric_limits<(?:double|float)>::infinity\(\);$'
 # tests: the full kernels on f; the full Ball kernels and the constructors of balls on e & f.
 FULL = {f'{core}_full' for core in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
                                     'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
-FULL_BALL = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+FULL_BALL = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
 BRANCHED = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL | {'ball_make_1', 'ball_make_2'}})
 
 
@@ -141,7 +148,7 @@ class Cpp(unittest.TestCase):
         # is the IR's.
         for fns, ks in ((self.fns, self.ks), (self.tfns, self.tks)):
             for (name, t), f in fns.items():
-                body = self.run_time(f['lines'])
+                body = [CONSTEVAL_ARM.sub('', line) for line in self.run_time(f['lines'])]
                 prims = ir.prims(ks[name], ks)
                 stars = sum(line.count(' * ') for line in body if not line.strip().startswith('//'))
                 self.assertEqual(stars, sum(p.op in ('muladd', 'times_inf') for p in prims), name)
@@ -168,17 +175,21 @@ class Cpp(unittest.TestCase):
             self.assertIn(f'        const {t} ah_g = {splitter} * a;', ce)
             self.assertEqual(ce[-3:], ['        p_out = p;', '        e_out = e;', '        return;'])
 
-    # The kernels with a fused operation (an FMA or the opaque product) and no constant-evaluation
-    # variant: every one that computes a product, directly or through rmul.
-    NOT_CONSTEXPR = {'mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker', 'mul_1_1', 'rmul', 'mul_pow2_2',
-                     'ball_add_1', 'ball_add_2', 'ball_mul_1', 'ball_mul_2', 'ball_scale_1', 'ball_scale_2',
-                     'ball_sub_1', 'ball_sub_2'}
+    # The kernels with a fused operation other than prod (fma, fms) and no constant-evaluation
+    # variant: the products of two limbs (fma), the Ball cores of the second radius design (fma),
+    # and the directed products of one limb (two_prod's fms, which they must not evaluate through
+    # its variant: milestone2.md, "Building blocks on T").
+    NOT_CONSTEXPR = {'mul_2_2', 'mul_2_1', 'ball_add_1', 'ball_add_2', 'ball_mul_1', 'ball_mul_2', 'ball_scale_1',
+                     'ball_scale_2', 'ball_sub_1', 'ball_sub_2', 'mul_down_1', 'mul_up_1'}
     # The full kernels are constexpr where their cores are: their fix-up turns t into an infinity
-    # with times_inf, which is no fused operation. Those of the products are not (their cores, and
-    # t = prod(x0, y0), are fused operations), nor are the full Ball kernels (rmul). The
-    # constructors are.
-    NOT_CONSTEXPR |= {f'{core}_full' for core in ('mul_2_2', 'mul_2_1', 'mul_pow2_2')}
+    # with times_inf, which is no fused operation. Those of the products of two limbs are not, nor
+    # are the full Ball kernels but the scalings by a power of two. The constructors are.
+    NOT_CONSTEXPR |= {f'{core}_full' for core in ('mul_2_2', 'mul_2_1')}
     NOT_CONSTEXPR |= {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    # The kernels whose only fused operations are prod, constexpr by the rule of the product
+    # (milestone2.md, "The two executions of a product").
+    PRODUCT_RULE = {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1',
+                    'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
 
     def test_constexpr(self):
         plain = {name for (name, _), f in self.fns.items() if not f['constexpr']}
@@ -186,6 +197,31 @@ class Cpp(unittest.TestCase):
         line = [x for x in self.text.splitlines() if x.startswith('// Not constexpr: ')]
         self.assertEqual(set(line[0][len('// Not constexpr: '):-1].split(', ')), self.NOT_CONSTEXPR)
         self.assertTrue(all(f['head'].startswith('KAIRN_GEN_FORCEINLINE') for f in self.fns.values()))
+
+    def test_the_rule_of_the_product(self):
+        """A kernel whose only fused operations are prod is constexpr, and prints each prod as the
+        plain product under __builtin_is_constant_evaluated() and as the opaque product otherwise;
+        its fix-up function too. No other kernel has the dispatch on a product."""
+        self.assertEqual({n for n, k in self.ks.items() if cpp.product_rule(k, self.ks)}, self.PRODUCT_RULE)
+        dispatch = re.compile(rf'__builtin_is_constant_evaluated\(\) \? ({ATOM}) \* ({ATOM}) : fma_rn\(\1, \2, 0\.0f?\)')
+        for fns in (self.fns, functions(self.text, fixups=True)):
+            for (name, t), f in fns.items():
+                body = form(f['lines'], call=True) + form(f['lines'], call=False)
+                with self.subTest(kernel=name, type=t):
+                    if name in self.PRODUCT_RULE:
+                        self.assertTrue(f['constexpr'])
+                        self.assertFalse(any(re.search(r'fma_rn\(', CONSTEVAL_ARM.sub('', x)) and not dispatch.search(x)
+                                             for x in body), name)
+                    else:
+                        self.assertFalse(any(dispatch.search(x) for x in body), name)
+        k = self.ks['mul_pow2_2']
+        lines = self.fns[('mul_pow2_2', 'double')]['lines']
+        self.assertEqual(lines[:2], ['    const double h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);',
+                                     '    const double l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0);'])
+        self.assertEqual(sum(bool(dispatch.search(x)) for x in lines), sum(p.op == 'prod' for p in ir.prims(k, self.ks)))
+        self.assertIn('constexpr, each prod a plain product in constant evaluation.', self.text)
+        # two_prod keeps its variant: Dekker's product in constant evaluation, the FMA at run time.
+        self.assertFalse(any(dispatch.search(x) for x in self.fns[('two_prod', 'double')]['lines']))
 
     def test_masks_and_unused_inputs(self):
         self.assertTrue(self.fns[('lt_2_2', 'double')]['head'].endswith('double y1, bool& m_out) noexcept {'))
@@ -459,7 +495,7 @@ class Packed(unittest.TestCase):
     SPECIAL = r'std::numeric_limits<(?:double|float)>::(?:infinity|quiet_NaN)\(\)'
     CONSTANT = {'avx2.hpp': rf'_mm256_(?:set1_p[sd]\((?:[-+0-9a-fx.p]+f?|{SPECIAL})\)|setzero_p[sd]\(\))',
                 'neon.hpp': rf'vdupq_n_f(?:32|64)\((?:[-+0-9a-fx.p]+f?|{SPECIAL})\)'}
-    CALL = r'(?:_mm256_\w+|v\w+q_[fu](?:32|64)|not_mask|next_up|next_down)\('
+    CALL = r'(?:_mm256_\w+|v\w+q_[fu](?:32|64)|not_mask|next_up_bits|next_down_bits)\('
 
     @classmethod
     def setUpClass(cls):
@@ -626,16 +662,18 @@ class Rocq(unittest.TestCase):
                         want += said
                 self.assertEqual(conjuncts[:len(want)], want, name)
                 # represents is not printed next to other claims (neg_2, abs_2): in the real model
-                # it says what normalized with an exact error says.
+                # it says what normalized with an exact error says. An exact_when adds a conjunct
+                # after its claim's own (ball_mul_pow2_k).
                 printed = [e for e in k.ensures if e['kind'] != 'represents']
+                printed += [e for e in printed if 'exact_when' in e]
                 self.assertEqual(len(conjuncts), len(want) + len(printed), name)
                 uncovered[name] = len(want)
         # The loop has something to read: both ways of saying it occur, also in one statement,
         # and so does an output that says nothing (a mask).
         self.assertEqual([uncovered[n] for n in ('two_sum', 'ball_add_2', 'ops_wave2', 'add_2_2', 'lt_2_2')],
                          [2, 1, 3, 0, 0])
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 31)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 22)
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38)
         s = self.statements
         self.assertIn("  let '(cz0, cz1, rz) := ball_add_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in\n"
                       '  fmt emin prec rz /\\\n  normalized_2 emin prec cz0 cz1 /\\\n  (forall x y : R, ', s)
@@ -735,10 +773,13 @@ class Rocq(unittest.TestCase):
     # the non-finite layer (commit f39b066) and after it. Change them only together with a change
     # of the real model that is meant, and with the proofs that go with it. Model.v changed once
     # since: H of the six Ball cores gained the smallest normal number (five definitions
-    # up_ball_*_2); Statements.v and Audit.v did not.
-    DIGESTS = {'Model.v': '5d1877f80e6fdbe97881769674bf1bbe385d25a731f6817556f068faa0eb2d22',
-               'Statements.v': '1f65f1272b0c31eaf4d84ee809f3c06ab8c01ceae3360e3f3e248a5bdea3a68d',
-               'Audit.v': 'f70bb9882d50e61de707eb8e450b358375de8ececda800e88a2204aa13471a6f'}
+    # up_ball_*_2). Then the kernels of wave 1 of Milestone 2 were added (eighteen with a real-model
+    # statement, and the constants N, P and eta): every earlier definition and statement is the
+    # same, byte for byte, and fast_two_sum and two_prod are printed earlier, before the new kernels
+    # that call them; Audit.v lists the same theorems, those two earlier.
+    DIGESTS = {'Model.v': '7de4a50f5ea2be5d808f3ccda0021ba8f1646a7d593e8d34db4851d116342ea9',
+               'Statements.v': 'aa62c34c13cf335ef1751cb3897f095830c9d60de04a869c78968c1dc74a9463',
+               'Audit.v': '5a84d4a89dfd30d82fe18c89c6a11975c291c1b6226d70d23ff9bf9ed4c5e7a1'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in
@@ -747,7 +788,8 @@ class Rocq(unittest.TestCase):
         the format, for one limb) and a nonnegative radius for a ball, and without represents next
         to other claims. And the files are those of f39b066 but for the Ball cores of the second
         radius design and add_2_1 with its guard (and radd, rmul, which no kernel calls any more,
-        printed further down), and in Model.v for the constant H of those cores."""
+        printed further down), in Model.v for the constant H of those cores, and for the kernels
+        of wave 1 of Milestone 2 that were added (DIGESTS)."""
         printers = {'Model.v': rocq.model, 'Statements.v': rocq.statements, 'Audit.v': rocq.audit}
         finite = {}
         for name, k in copy.deepcopy(dict(self.all)).items():
@@ -768,7 +810,7 @@ class Rocq(unittest.TestCase):
             for e in k.ensures:
                 e.pop('finite_when', None)
             finite[name] = k
-        self.assertEqual(len(finite), 42)
+        self.assertEqual(len(finite), 60)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

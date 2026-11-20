@@ -1,0 +1,24 @@
+# RD(a + b), the largest number of the format not above the exact sum, for every pair of finite
+# numbers (milestone2.md, "Rounding a sum down and up"): the rounded sum, one step down when its
+# exact error is negative. two_sum_ord's error term is the exact error, so its sign decides. At an
+# overflow the error term is the infinity of the opposite sign, which chooses the right
+# neighbor: Omega for a sum that overflows upward, -inf for one that overflows downward (the
+# format with overflow). An infinite or NaN operand gives the sum of IEEE 754.
+kernel:        add_down_1
+input:         a
+input:         b
+output:        r
+value:         a+b
+ensures:       rounded r down
+min_precision: 2
+source:        the rounded sum and the sign of its exact error (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+cone_exempt:   r is s or pred(s), chosen by select, and pred(+inf) is finite; the rounded claim states the output for infinite and NaN operands
+
+(s, e) = two_sum_ord(a, b)
+n      = lt(e, 0)
+p      = pred(s)
+r      = select(n, p, s)

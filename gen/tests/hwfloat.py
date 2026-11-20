@@ -168,16 +168,18 @@ class Arith:
 
 
 def run(kernels, name, fmt, inputs, fused=True, consteval=False):
-    """A kernel as written, calls included; consteval runs its variant with plain products.
-    Masks are bools, and outputs that are masks come back as 1.0 or 0.0."""
+    """A kernel as written, calls included; consteval runs its variant if it has one, and every
+    prod as a plain product (in a kernel without a variant too: the rule of the product). Masks
+    are bools, and outputs that are masks come back as 1.0 or 0.0."""
     arith = Arith(fmt, kernels)
     arith.consteval = consteval
     k = kernels[name]
     plain = False
     if consteval:
         fused = False      # constant evaluation never contracts
+        plain = True
         if k.ce_variant:
-            k, plain = kernels[k.ce_variant], True
+            k = kernels[k.ce_variant]
 
     def ev(k, args):
         env = dict(zip(k.input_limbs, args))

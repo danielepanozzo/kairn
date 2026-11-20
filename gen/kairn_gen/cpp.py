@@ -13,10 +13,15 @@ library.md):
 - A rounded product is fma(a, b, +0.0): an FMA's result is not a multiplication, so no compiler
   can contract it into a later addition. The zero is +0.0 because fma(a, b, -0.0) equals a * b
   exactly and may be folded back into one.
-- A kernel is constexpr when it has no fused operation, or when it names a constant-evaluation
-  variant: it then dispatches on __builtin_is_constant_evaluated() (std::is_constant_evaluated is
-  host-only to nvcc), and the constant-evaluation branch is the variant's body with each prod a
-  plain product, since constant evaluation has neither FMA nor contraction.
+- A kernel is constexpr when its only fused operations are prod, or when it names a
+  constant-evaluation variant: it then dispatches on __builtin_is_constant_evaluated()
+  (std::is_constant_evaluated is host-only to nvcc). With a variant, the constant-evaluation branch
+  is the variant's body with each prod a plain product, since constant evaluation has neither FMA
+  nor contraction. Without one, each prod is the plain product in constant evaluation and the FMA
+  with a +0 addend otherwise (the rule of the product, docs/developer/design/milestone2.md, "The
+  two executions of a product"): as real numbers both are RN(a b), and as values of T they differ
+  only in the sign of an exactly zero product. A kernel with another fused operation (fma, fms,
+  fnma) and no variant is not constexpr.
 - Kernels of at most two limbs are force-inlined.
 - A mask is a bool, and select a conditional expression on values already computed, which
   compilers turn into a conditional move or a blend; succ and pred step the bit pattern
@@ -61,8 +66,8 @@ SPELL = {
     'or': '{0} | {1}',
     'not': '!{0}',
     'select': '{0} ? {1} : {2}',
-    'succ': 'next_up({0})',
-    'pred': 'next_down({0})',
+    'succ': 'next_up_bits({0})',
+    'pred': 'next_down_bits({0})',
     'copy': '{0}',
     # RN(a + 0). Never a - 0 or a + (-0), which are identities that compilers fold away; a + 0
     # turns -0 into +0, so a compiler that honors signed zeros keeps it.
@@ -79,9 +84,11 @@ SPELL = {
 # them, even where its result is not selected.
 SPELL_CONSTEVAL = dict(SPELL, prod='{0} * {1}', guard='{0}', times_inf='times_inf_ce({0})')
 # In a kernel that is constexpr without a variant, guard and times_inf dispatch on constant
-# evaluation, as the hand-written detail::guard of include/kairn/expansion.hpp does.
+# evaluation, as the hand-written detail::guard of include/kairn/expansion.hpp does, and so does
+# prod (the rule of the product): the plain product there, the opaque product at run time.
 SPELL_PLAIN = dict(SPELL, guard='__builtin_is_constant_evaluated() ? {0} : {0} + {zero}',
-                   times_inf='__builtin_is_constant_evaluated() ? times_inf_ce({0}) : {0} * {inf}')
+                   times_inf='__builtin_is_constant_evaluated() ? times_inf_ce({0}) : {0} * {inf}',
+                   prod='__builtin_is_constant_evaluated() ? {0} * {1} : fma_rn({0}, {1}, {zero})')
 
 # Names a value or a kernel must not take: keywords, alternative tokens, what the printed text
 # uses, and lowercase macros that common compilers and C libraries predefine.
@@ -94,7 +101,7 @@ RESERVED = frozenset('''
     return short signed sizeof static static_assert static_cast struct switch template this
     thread_local throw true try typedef typeid typename union unsigned using virtual void volatile
     wchar_t while xor xor_eq final override import module
-    kairn gen std fma_rn abs_bits next_up next_down times_inf_ce in out fixup result
+    kairn gen std fma_rn abs_bits next_up_bits next_down_bits times_inf_ce in out fixup result
     linux unix i386 major minor errno stdin stdout stderr assert
 '''.split())
 
@@ -134,12 +141,18 @@ class PrintError(Exception):
 
 
 def constexpr_kind(k, kernels):
-    """'variant', 'plain', or None when the kernel cannot be constexpr."""
+    """'variant', 'plain', or None when the kernel cannot be constexpr: it has a fused operation
+    other than prod and no variant. A 'plain' kernel may have prods (the rule of the product)."""
     if k.ce_variant:
         return 'variant'
-    if any(p.op in ir.FUSED for p in ir.prims(k, kernels)):
+    if any(p.op in ir.FUSED - {'prod'} for p in ir.prims(k, kernels)):
         return None
     return 'plain'
+
+
+def product_rule(k, kernels):
+    """Whether the kernel is constexpr by the rule of the product: plain, with at least one prod."""
+    return constexpr_kind(k, kernels) == 'plain' and any(p.op == 'prod' for p in ir.prims(k, kernels))
 
 
 def hex_literal(v, suffix):
@@ -334,7 +347,10 @@ def _description(k, kernels):
     sig = f'{k.name}({", ".join(map(_group, k.inputs))}) -> {", ".join(map(_group, k.outputs))}'
     kind = constexpr_kind(k, kernels)
     when = {'variant': f'constexpr through {k.ce_variant}', 'plain': 'constexpr',
-            None: 'not constexpr: it has fused operations and no constant-evaluation variant'}[kind]
+            None: 'not constexpr: it has fused operations other than prod and no constant-evaluation '
+                  'variant'}[kind]
+    if product_rule(k, kernels):
+        when = 'constexpr, each prod a plain product in constant evaluation'
     if not k.extended:
         status = f'Status: {k.status}'
     elif k.real_model:
@@ -435,8 +451,9 @@ def prelude(kernels):
                   f'    return {builtin}(a, b, c);',
                   '#endif',
                   '}']
-    for ctype, utype, sign, inf, bits in (('double', 'std::uint64_t', '0x7fffffffffffffffu', '0x7ff0000000000000u', 64),
-                                          ('float', 'std::uint32_t', '0x7fffffffu', '0x7f800000u', 32)):
+    for ctype, utype, sign, inf, bits, neg_eta in (
+            ('double', 'std::uint64_t', '0x7fffffffffffffffu', '0x7ff0000000000000u', 64, '0x8000000000000001u'),
+            ('float', 'std::uint32_t', '0x7fffffffu', '0x7f800000u', 32, '0x80000001u')):
         if 'abs' in helpers:
             lines += ['',
                       '// |a|, exactly, by clearing the sign bit (std::fabs is not constexpr in C++20).',
@@ -452,7 +469,7 @@ def prelude(kernels):
                       '// all ones or all zeros, each from one comparison: written with ?: or ||, GCC',
                       '// and Clang emit branches on the data. m + (s ^ 1) exceeds inf exactly for NaN',
                       '// and +inf (it is m + 1 for a positive pattern, m for a negative one).',
-                      f'KAIRN_GEN_FORCEINLINE constexpr {ctype} next_up({ctype} a) noexcept {{',
+                      f'KAIRN_GEN_FORCEINLINE constexpr {ctype} next_up_bits({ctype} a) noexcept {{',
                       f'    const {utype} b = std::bit_cast<{utype}>(a);',
                       f'    const {utype} m = b & {sign};',
                       f'    const {utype} s = b >> {bits - 1};',
@@ -462,7 +479,22 @@ def prelude(kernels):
                       f'    const {utype} r = (zero & 1) | (~zero & step);',
                       f'    return std::bit_cast<{ctype}>((keep & b) | (~keep & r));',
                       '}',
-                      f'KAIRN_GEN_FORCEINLINE constexpr {ctype} next_down({ctype} a) noexcept {{ return -next_up(-a); }}']
+                      '// nextDown mirrors it, with no negation of a value of the type: written as',
+                      '// -next_up_bits(-a), a compiler folds the negation of an FMA result into a negated',
+                      '// FMA (fnmadd), one fused operation more than the listing has (pred(p) in',
+                      '// mul_down_1). The pattern of a positive number moves towards zero, that of a',
+                      '// negative one down; either zero becomes -eta; NaN and -inf stay (m + s exceeds inf',
+                      '// exactly for them).',
+                      f'KAIRN_GEN_FORCEINLINE constexpr {ctype} next_down_bits({ctype} a) noexcept {{',
+                      f'    const {utype} b = std::bit_cast<{utype}>(a);',
+                      f'    const {utype} m = b & {sign};',
+                      f'    const {utype} s = b >> {bits - 1};',
+                      f'    const {utype} step = b - 1 + (s << 1);  // b - 1, or b + 1 for a negative pattern',
+                      f'    const {utype} zero = {utype}{{0}} - {utype}(m == 0);',
+                      f'    const {utype} keep = {utype}{{0}} - {utype}(m + s > {inf});',
+                      f'    const {utype} r = (zero & {neg_eta}) | (~zero & step);',
+                      f'    return std::bit_cast<{ctype}>((keep & b) | (~keep & r));',
+                      '}']
         if 'times_inf' in helpers:
             limits = f'std::numeric_limits<{ctype}>'
             lines += ['',

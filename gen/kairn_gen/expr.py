@@ -1,5 +1,5 @@
-"""Rational expressions: the `c` and `t` of an error claim, a kernel's `value`, and the EXPR of a
-constant `up(EXPR)`.
+"""Rational expressions: the `c` and `t` of an error claim, a kernel's `value`, the EXPR of a
+constant `up(EXPR)`, and the expressions of a condition `exact_when`.
 
 A small explicit parser, so that no claim text is ever evaluated as Python:
 
@@ -7,12 +7,14 @@ A small explicit parser, so that no claim text is ever evaluated as Python:
     term  := unary (('*' | '/') unary)*
     unary := '-' unary | power
     power := atom ('^' ['-'] INTEGER)?
-    atom  := INTEGER | 'abs' '(' expr ')' | ('unit' | 'tiny') '(' NAME ')' | NAME | '(' expr ')'
+    atom  := INTEGER | 'abs' '(' expr ')' | ('unit' | 'tiny') '(' NAME ')' | NAME '[' INTEGER ']'
+           | NAME | '(' expr ')'
 
-The result is a tree of tuples: ('int', n), ('name', s), ('neg', a), ('abs', a), ('pow', a, n)
-with an integer n, ('call', f, K) for unit(K) and tiny(K), and (op, a, b) for op in add, sub,
-mul, div. Where each kind of tree may appear is the rules' business: only constants up(EXPR) have
-powers and calls.
+The result is a tree of tuples: ('int', n), ('name', s), ('limb', s, i) for limb i of the input
+group s (0 the leading limb), ('neg', a), ('abs', a), ('pow', a, n) with an integer n, ('call', f,
+K) for unit(K) and tiny(K), and (op, a, b) for op in add, sub, mul, div. Where each kind of tree may
+appear is the rules' business: only constants up(EXPR) have powers and calls, and only the
+conditions of exact_when name a limb.
 """
 import re
 from fractions import Fraction
@@ -37,7 +39,7 @@ def parse(text):
         elif m.group(2):
             tokens.append(('name', m.group(2)))
         elif m.group(3):
-            if m.group(3) not in '+-*/()^':
+            if m.group(3) not in '+-*/()^[]':
                 raise ExprError(f'unexpected character {m.group(3)!r} in {text!r}')
             tokens.append(('op', m.group(3)))
     pos = 0
@@ -101,6 +103,11 @@ def parse(text):
             if not take(')'):
                 raise ExprError(f'missing ")" in {text!r}')
             return ('abs', a)
+        if kind == 'name' and pos + 1 < len(tokens) and tokens[pos + 1] == ('op', '['):
+            if pos + 3 >= len(tokens) or tokens[pos + 2][0] != 'int' or tokens[pos + 3] != ('op', ']'):
+                raise ExprError(f'{val}[ ] takes the index of a limb, in {text!r}')
+            pos += 4
+            return ('limb', val, tokens[pos - 2][1])
         if kind in ('int', 'name'):
             pos += 1
             return (kind, val)
@@ -118,11 +125,24 @@ def parse(text):
 
 
 def names(tree):
-    if tree[0] == 'name':
+    """The names a tree uses; a limb counts as the name of its group."""
+    if tree[0] in ('name', 'limb'):
         return {tree[1]}
     if tree[0] in ('int', 'call'):
         return set()
     return set().union(*(names(t) for t in tree[1:] if isinstance(t, tuple)))
+
+
+def limbs(tree):
+    """The (group, index) of every limb a tree names."""
+    if tree[0] == 'limb':
+        return {tree[1:]}
+    return set().union(*(limbs(t) for t in tree[1:] if isinstance(t, tuple)))
+
+
+def limb_key(name, i):
+    """The key of limb i of group `name` in the environment of `evaluate`."""
+    return f'{name}[{i}]'
 
 
 def calls(tree):
@@ -133,7 +153,8 @@ def calls(tree):
 
 
 def evaluate(tree, env):
-    """The exact value of a tree, with each name bound to a Fraction in env."""
+    """The exact value of a tree, with each name bound to a Fraction in env (limb i of group s
+    under limb_key(s, i))."""
     kind = tree[0]
     if kind == 'int':
         return Fraction(tree[1])
@@ -141,6 +162,11 @@ def evaluate(tree, env):
         if tree[1] not in env:
             raise ExprError(f'unknown name {tree[1]!r}')
         return env[tree[1]]
+    if kind == 'limb':
+        key = limb_key(tree[1], tree[2])
+        if key not in env:
+            raise ExprError(f'unknown limb {key!r}')
+        return env[key]
     if kind == 'neg':
         return -evaluate(tree[1], env)
     if kind == 'abs':
