@@ -158,9 +158,15 @@ foreach(_kernel IN LISTS _full_kernels)
       "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
   endif()
   set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "${_labels}")
-  if(_restrict AND NOT _error)
+  # The sampled run: of the whole toy format for a restricted enumeration, or of a format of its
+  # own where tests/CMakeLists.txt names one (_toy_sampled..., the interval kernels).
+  set(_sampled "${_full_${_kernel}_sampled}")
+  if(NOT _sampled AND _restrict)
+    set(_sampled "${_toy}")
+  endif()
+  if(_sampled AND NOT _error)
     set(_name full.crosscheck.interp-sampled.${_kernel})
-    add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy}"
+    add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_sampled}"
       -DRUNNER=interp ${_random} "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
     set_tests_properties(${_name} PROPERTIES TIMEOUT 300
       LABELS "full;python;crosscheck;interp;sampled")

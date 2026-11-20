@@ -147,6 +147,13 @@ SHAPES = {
     "1_1_1_product": ("fp:3:-6:-1", ["fp:4:-6:-1", "fp:3:-8:1"]),
     "2_2_2_product": ("fp:4:-3:-2", ["fp:4:-4:-2"]),
     "ext_a2": ("fp:5:-7:0", ["fp:6:-8:-1", "fp:7:-9:-2", "fp:6:-12:3"]),
+    # The interval kernels (Milestone 2): an interval of one limb (i1) or two (i2) is one operand,
+    # every canonical interval of its bounds. One interval of one limb: 0.2 to 0.9 million cases;
+    # two of one limb: 0.7 to 2.6 million; one of two limbs: 0.03 to 0.5 million.
+    "ext_i1": ("fp:5:-9:2", ["fp:6:-10:1", "fp:5:-13:6"]),
+    "ext_i1_i1_sum": ("fp:2:-3:2", ["fp:2:-5:4", "fp:3:-3:0"]),
+    "ext_i1_i1_product": ("fp:2:-3:2", ["fp:2:-5:4", "fp:3:-3:0"]),
+    "ext_i2": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-5:2", "fp:4:-4:-1"]),
 }
 
 # The folds (gen/claims.json, "folds"), by their arrays as tests/CMakeLists.txt names them (_1 a
@@ -233,6 +240,24 @@ EXPLICIT = {
         ("fp:4:-4:-1", []),
         ("fp:4:-5:0", ["cx.lead=0:0", "cy.lead=0:0"]),
         ("fp:5:-5:-2", ["rx.in=" + _R_EXT_MUL_P5, "ry.in=" + _R_EXT_MUL_P5, "cx.lead=0:0"]),
+    ]),
+    # Two intervals of two limbs (the interval kernels): every pair of intervals of a format of two
+    # exponents (the quick tier's sums, fp:3:-2:-1, 0.2 million) and of four with one bit more
+    # (fp:4:-3:-2, 3.8 million, complete for the product too); restricted ones of more exponents,
+    # the bounds of one operand with leading limbs in a few binades; for the hull and the
+    # intersection, whose claims hold from precision 1, precision 1 (fp:1:-1:2, 64 516) and 2
+    # (fp:2:-2:1, 2.6 million).
+    "ext_i2_i2_sum": ("fp:3:-2:-1", [
+        ("fp:1:-1:2", []),
+        ("fp:2:-2:1", []),
+        ("fp:3:-2:-1", []),
+        ("fp:4:-3:-2", []),
+        ("fp:3:-3:0", ["xl.lead=-1:0", "xu.lead=-1:0"]),
+    ]),
+    "ext_i2_i2_product": ("fp:4:-3:-2", [
+        ("fp:4:-3:-2", []),
+        ("fp:4:-4:-1", ["xl.lead=-1:-1", "xu.lead=-1:-1"]),
+        ("fp:5:-4:-3", ["xl.lead=-2:-2", "xu.lead=-2:-2"]),
     ]),
 }
 
@@ -367,14 +392,19 @@ def shape_of(k):
     requires = [r.replace(" ", "") for r in k.get("requires", [])]
     balls = dict(m.groups() for m in (re.match(r"^ball\(([^,]+),([^)]+)\)$", r) for r in requires)
                  if m)
+    # An interval (the interval kernels): its lower bound stands for it, its upper is left out.
+    intervals = dict(m.groups() for m in (re.match(r"^interval\(([^,]+),([^)]+)\)$", r)
+                                          for r in requires) if m)
     roles = []
     for i in k["inputs"]:
-        if i["name"] in balls.values():
+        if i["name"] in balls.values() or i["name"] in intervals.values():
             continue
         if i.get("type") == "mask":
             roles.append("m")
         elif i["name"] in balls:
             roles.append("b%d" % i.get("limbs", 1))
+        elif i["name"] in intervals:
+            roles.append("i%d" % i.get("limbs", 1))
         elif (i.get("limbs", 1) != 1 and k.get("domain") == "extended"
               and "canonical(%s)" % i["name"] not in requires):
             roles.append("a%d" % i["limbs"])       # several limbs of any values
@@ -390,7 +420,10 @@ def shape_of(k):
             roles.append("1")
     s = "_".join(roles)
     if len(roles) > 1:
-        s += "_product" if "*" in (k.get("value") or "") else "_sum"
+        # A kernel without a value (an interval kernel) is a product when the set of an entry is.
+        product = ("*" in k["value"] if k.get("value") is not None else
+                   any("*" in str(e.get("set") or "") for e in k.get("ensures", [])))
+        s += "_product" if product else "_sum"
     if k.get("domain") == "extended":
         s = "ext_" + s
     return s

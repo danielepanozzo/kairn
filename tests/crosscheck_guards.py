@@ -279,14 +279,243 @@ def m2_needs(kernel, e, extended):
             need.append("a non-finite operand")
             if two:
                 need += OVERFLOW_COUNTS + OPERAND_COUNTS
+    if two and not_nan_operands(kernel, two) and "a NaN operand" in need:
+        # Operands required not_nan() (the interval kernels' mul_dir_1) are never a NaN.
+        need.remove("a NaN operand")
     if kind in ("error", "encloses") and e.get("exact_when"):
         need.append(EXACT_HOLDS)
         need += [EXACT_FAILS + ew_text(c) for c in e["exact_when"] if isinstance(c, dict)]
     return need
 
 
+def not_nan_operands(kernel, two):
+    """Both operands of a value NAME op NAME are required not_nan()."""
+    req = [r.replace(" ", "") for r in kernel.get("requires", [])]
+    return all("not_nan(%s)" % n in req for n in (two[0], two[2]))
+
+
+# The interval kernels (architecture.md, "Claims of the interval kernels" and "... two limbs and
+# the enclosure interface"; oracle/README.md, "The kinds of the interval kernels";
+# oracle/kairn_oracle/intervals.py and gen6.py): the strata of their families beyond the common
+# ones, and the counts of the oracle's judge each entry must have seen.
+IV_STRATA = {
+    ("ivop", "+"): ("special", "point", "threshold", "cancel", "zerosum"),
+    ("ivop", "-"): ("special", "point", "threshold", "cancel", "zerosum"),
+    ("ivop", "*"): ("special", "point", "threshold", "zeroinf", "aroundp"),
+    ("ivop", "neg"): ("special", "point"),
+    ("ivset", None): ("special", "point", "disjoint", "touch", "nested"),
+    ("ivmake", "interval"): ("nanbound", "reversed", "infinities", "point"),
+    ("ivmake", "ball"): ("nanbound", "reversed", "infinities", "point", "oddeta", "top"),
+    ("ivmid", None): ("special", "point", "step", "oddeta", "top"),
+    ("ballbound", None): ("ballstates", "radii", "cross", "beyond", "exactend"),
+    ("outward", "+"): ("cancel", "zerosum", "close", "apart", "tiny"),
+    ("outward", "-"): ("cancel", "zerosum", "close", "apart", "tiny"),
+    ("outward", "*"): ("close", "tiny", "aroundp", "exactprod"),
+    ("dirmul", None): ("aroundp", "tiny", "exactprod", "beyond", "nonfinite", "zeroinf",
+                       "zerofactor"),
+}
+IV_OUTWARD_EXTENDED = ("nonfinite", "zeroinf", "edge")
+IV_OPS = ("operands: an empty operand", "operands: nonempty, an unbounded operand",
+          "operands: bounded", "result: empty", "result: bounded", "result: unbounded")
+IV_I5 = ("bounded operands, bounded_when holds", "bounded operands, bounded_when fails")
+IV_I5_NEAR = ("bounded_when holds: largest max|member| / limit",
+              "bounded_when fails: smallest max|member| / limit")
+IV_I6 = ("I6 applies: an operand is [0, 0]", "I6 applies: [0, 0] against an unbounded operand")
+IV_MAKE = ("given: an interval", "given: a point", "given: an unbounded interval",
+           "given: a NaN bound", "given: reversed bounds", "given: equal infinities")
+IV_BALLS = ("ball: empty", "ball: whole line", "ball: finite")
+IV_SET = ("an operand empty", "both operands empty", "nonempty operands, disjoint",
+          "nonempty operands, touching (one common point)", "nonempty operands, overlapping",
+          "result: empty", "result: bounded", "result: unbounded")
+IV_X = ("X: empty", "X: whole line", "X: half-line [l, +inf]", "X: half-line [-inf, h]",
+        "X: bounded", "X: a point")
+IV_ODD = "X: a bound an odd multiple of eta below 2N"
+IV_ZF = ("zero_factor: a zero operand", "zero_factor: a zero against an infinite operand")
+IV_OUT_EXT = ("a zero operand", "an infinite operand, none zero", "finite operands, finite output",
+              "finite operands, infinite output")
+# The fractions of the allowed slack a run must reach (oracle/README.md, "The kinds of the
+# interval kernels": what the interpreter and the compiled kernels reach): the bounds of two limbs
+# come to 0.43 to 0.70 of rel*|v| + abs (0.25 is the floor: a bound four times too loose fails),
+# and the midpoint of interval_mid_rad_1 to its bound u*|m| + eta itself (0.5 the floor).
+IV_OUTWARD_FLOOR = (1, 4)
+IV_MID_FLOOR = (1, 2)
+IV_RATIO = "|output - value| / (rel*|value| + abs)"
+IV_SIDE_RATIO = "%s: distance from the range bound / (rel*|bound| + abs)"
+IV_MID_RATIO = "|center - midpoint| / (rel*|midpoint| + abs)"
+
+
+def iv_family(kernel):
+    """(family, op) of an interval kernel (gen6.family_of), or None."""
+    ens = kernel.get("ensures", [])
+    kinds = {e.get("kind") for e in ens}
+
+    def op_of(t):
+        t = (t or "").replace(" ", "")
+        return "neg" if t.startswith("-") else "*" if "*" in t else "-" if "-" in t else "+"
+    if "encloses_interval" in kinds:
+        e = next(e for e in ens if e.get("kind") == "encloses_interval")
+        return "ivop", op_of(e.get("set"))
+    if "interval_set" in kinds:
+        return "ivset", None
+    if "makes_interval" in kinds:
+        return "ivmake", "interval"
+    if any(e.get("kind") == "makes_ball" and set(e.get("from") or {}) == {"lower", "upper"}
+           for e in ens):
+        return "ivmake", "ball"
+    if kinds & {"ball_of_interval", "splits"}:
+        return "ivmid", None
+    if kinds & {"set_bound", "interval_of_ball"}:
+        return "ballbound", None
+    if "outward" in kinds or any(e.get("kind") == "encloses" and e.get("balls") == {}
+                                 for e in ens):
+        return "outward", op_of(kernel.get("value"))
+    if any(e.get("zero_factor") for e in ens if e.get("kind") in ("bound", "rounded")):
+        return "dirmul", None
+    return None
+
+
+def iv_strata(kernel):
+    fam = iv_family(kernel)
+    if fam is None:
+        return ()
+    own = IV_STRATA[fam]
+    if fam[0] == "outward" and kernel.get("domain") == "extended":
+        own = own + IV_OUTWARD_EXTENDED
+    return own
+
+
+def _iv_ratio(keys, j, name, which="maxima"):
+    """The largest (or smallest) named fraction of entry j over the keys, as (num, den)."""
+    best = None
+    for k in keys:
+        ents = k["stats"]["entries"]
+        if j >= len(ents):
+            continue
+        v = ents[j].get(which, {}).get(name)
+        if v is None:
+            continue
+        r = (int(v[0][0]), int(v[0][1]))
+        if best is None or ((r[0] * best[1] > best[0] * r[1]) if which == "maxima"
+                            else (r[0] * best[1] < best[0] * r[1])):
+            best = r
+    return best
+
+
+def iv_needs(kernel, e, a):
+    """The counts an entry e of an interval kernel must have seen (none for the other kinds)."""
+    kind = e.get("kind")
+    need = []
+    if kind == "encloses_interval":
+        need += IV_OPS
+        names = e.get("intervals") or {}
+        if e.get("bounded_when"):
+            need.append(IV_I5[0])
+            if len(names) >= 2:
+                need.append(IV_I5[1])
+        t = e.get("tight") or {}
+        sides = ("lower", "upper")
+        if t.get("kind") == "rounded":
+            for s in sides:
+                need += ["%s: range bound a number of the format" % s,
+                         "%s: range bound not a number of the format" % s,
+                         "%s: range bound infinite" % s]
+                if t.get("steps"):
+                    need.append("%s: one step beyond the directed rounding" % s)
+                if t.get("when"):
+                    need += ["%s: product_large holds" % s,
+                             "%s: product_large does not hold (within the steps)" % s]
+        elif t.get("kind") == "outward":
+            for s in sides:
+                need.append("%s: range bound infinite" % s)
+                for c in (t.get("exact_when") or {}).get(s, []):
+                    need.append("%s: exact_when holds" % s)
+                    need.append("%s: exact_when fails: %s" % (s, iv_condition_text(c)))
+        if e.get("zero_factor"):
+            need += IV_I6
+    elif kind == "outward":
+        if kernel.get("domain") == "extended":
+            need += IV_OUT_EXT if e.get("zero_factor") else IV_OUT_EXT[1:]
+        for c in e.get("exact_when") or []:
+            need += ["exact_when holds", "exact_when fails: %s" % iv_condition_text(c)]
+    elif kind == "makes_interval":
+        need += IV_MAKE
+    elif kind == "makes_ball" and set(e.get("from") or {}) == {"lower", "upper"}:
+        need += IV_MAKE
+        if e.get("midpoint_when"):
+            need += ("midpoint_when holds", "midpoint_when fails")
+    elif kind in ("set_bound", "interval_of_ball"):
+        need += IV_BALLS
+        sides = ("lower", "upper") if kind == "interval_of_ball" else (
+            ("lower",) if e.get("side") == "below" else ("upper",))
+        for s in sides:
+            need += ["%s: range bound a number of the format" % s,
+                     "%s: range bound not a number of the format" % s]
+    elif kind == "interval_set":
+        need += IV_SET
+    elif kind in ("ball_of_interval", "splits"):
+        need += IV_X
+        if kind == "ball_of_interval":
+            need.append(IV_ODD)
+    elif kind in ("bound", "rounded") and e.get("zero_factor"):
+        need += IV_ZF
+    return need
+
+
+def iv_condition_text(c):
+    """The text the oracle counts a failing condition under (intervals.condition_text)."""
+    if isinstance(c, dict) and set(c) == {"zero"}:
+        return "%s = 0" % str(c["zero"]).strip()
+    return ew_text(c)
+
+
+def iv_problems(kernel, entries, merged, keys, a):
+    """The guards of the interval kernels on each entry of the kernel's own claims: the classes
+    of its statement (iv_needs), results near the limit of bounded_when on each side, and the
+    fractions of the allowed slack reached (IV_OUTWARD_FLOOR, IV_MID_FLOOR)."""
+    for j, e in enumerate(kernel.get("ensures", [])):
+        if j >= len(entries) or entries[j]["kind"] != e.get("kind"):
+            return
+        label, counts = entries[j]["label"], merged[j]
+        for name in iv_needs(kernel, e, a):
+            if not counts.get(name):
+                yield ('the claim "%s" saw no case of "%s", so its statement was not checked '
+                       'there' % (label, name))
+        kind = e.get("kind")
+        if kind == "encloses_interval" and e.get("bounded_when") and len(e.get("intervals") or
+                                                                         {}) >= 2:
+            # Results near the limit of bounded_when on each side: within a factor 2 of it.
+            hi = _iv_ratio(keys, j, IV_I5_NEAR[0], "maxima")
+            lo = _iv_ratio(keys, j, IV_I5_NEAR[1], "minima")
+            if hi is None or 2 * hi[0] < hi[1]:
+                yield ('the claim "%s" never came within a factor 2 below the limit of '
+                       'bounded_when (largest %s)' % (label, "none" if hi is None else
+                                                      "%.3g" % (hi[0] / hi[1])))
+            if lo is None or lo[0] > 2 * lo[1]:
+                yield ('the claim "%s" never came within a factor 2 above the limit of '
+                       'bounded_when (smallest %s)' % (label, "none" if lo is None else
+                                                       "%.3g" % (lo[0] / lo[1])))
+        ratios = []
+        if kind == "outward" or (kind == "encloses_interval"
+                                 and (e.get("tight") or {}).get("kind") == "outward"):
+            names = [IV_RATIO] if kind == "outward" else [IV_SIDE_RATIO % s
+                                                          for s in ("lower", "upper")]
+            ratios = [(n, IV_OUTWARD_FLOOR) for n in names]
+        elif kind == "ball_of_interval":
+            ratios = [(IV_MID_RATIO, IV_MID_FLOOR)]
+        for name, (num, den) in ratios:
+            r = _iv_ratio(keys, j, name)
+            if r is None or r[1] == 0 or r[0] * den < num * r[1]:
+                yield ('the claim "%s" came to at most %s of its bound (%s), below %d/%d: a bound '
+                       'far too loose would pass' % (label, "nothing" if r is None else
+                                                     "%.3g" % (r[0] / r[1]) if r[1] else "inf",
+                                                     name, num, den))
+
+
 def extended_strata(kernel):
     """The strata the oracle's generator adds for a kernel of the extended domain (gen3.py)."""
+    if iv_family(kernel):
+        # The interval kernels have families of their own (gen6.py, iv_strata).
+        return []
     ensures = kernel.get("ensures", [])
     kinds = {e.get("kind") for e in ensures}
     product = ("*" in (kernel.get("value") or "")
@@ -562,6 +791,12 @@ def problems(summary, a):
             if s not in strata:
                 yield ("the oracle's generator lists the strata %s, without %s, which its family "
                        "%s has (Milestone 2)" % (",".join(strata), s, family))
+        # The families of the interval kernels (gen6.py).
+        for s in iv_strata(kernel):
+            if s not in strata:
+                yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                       "%s has (the interval kernels)" % (",".join(strata), s,
+                                                          iv_family(kernel)[0]))
 
     keys = [k for k in summary.get("keys", [])
             if (k["kernel"], k["format"]) == (a.kernel, a.format)]
@@ -614,6 +849,7 @@ def problems(summary, a):
                 yield ('the claim "%s" never differed from the rounding to nearest, so the '
                        'direction was not checked' % label)
     yield from m2_problems(kernel, entries, merged, extended)
+    yield from iv_problems(kernel, entries, merged, keys, a)
     yield from count_problems(kernel, keys, a)
     if not extended:
         return
@@ -630,6 +866,8 @@ def problems(summary, a):
     for j, e in enumerate(own):
         label, counts = entries[j]["label"], merged[j]
         need = list(EXTENDED_COUNTS.get(e.get("kind"), ()))
+        if e.get("kind") == "makes_ball" and set(e.get("from") or {}) == {"lower", "upper"}:
+            need = []           # a ball from the bounds of an interval: iv_needs
         if e.get("kind") == "finite_or_nan":
             ins = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
             if ins.get((kernel.get("value") or "").strip(), 1) > 1:

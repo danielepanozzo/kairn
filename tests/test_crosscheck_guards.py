@@ -761,6 +761,153 @@ class FoldGuards(unittest.TestCase):
             self.assertIn("did not check what it set out to", bad.stdout)
 
 
+IV = "fp:4:-6:1"
+
+
+class IntervalGuards(unittest.TestCase):
+    """The interval kernels: the classes of each statement (I1 to I6 and the kinds of the
+    enclosure interface), results near the limit of bounded_when on each side, the fraction of
+    the bounds of two limbs and of the midpoint reached, and the strata of their families."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.args = ("--seed", "0", "--count", "500")
+        cls.add1 = pipeline("interval_add_1", IV, *cls.args)
+        cls.mul1 = pipeline("interval_mul_1", IV, *cls.args)
+        cls.add2 = pipeline("interval_add_2", IV, *cls.args)
+        cls.mul2 = pipeline("interval_mul_2", IV, *cls.args)
+        cls.mid = pipeline("interval_mid_rad_1", IV, *cls.args)
+        cls.down = pipeline("add_down_2_2", IV, *cls.args)
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        for name, s in (("interval_add_1", self.add1), ("interval_mul_1", self.mul1),
+                        ("interval_add_2", self.add2), ("interval_mul_2", self.mul2),
+                        ("interval_mid_rad_1", self.mid), ("add_down_2_2", self.down)):
+            self.passes(s, name, IV, *self.args)
+        for name in ("mul_dir_1", "interval_make_1", "ball_lower_as_2", "interval_hull_2",
+                     "interval_split_1", "mul_ext_2_2", "ball_from_interval_2", "ball_to_interval_1"):
+            s = pipeline(name, IV, *self.args)
+            self.passes(s, name, IV, *self.args)
+        s = pipeline("interval_neg_1", "fp:2:-2:1", "--exhaustive")
+        self.passes(s, "interval_neg_1", "fp:2:-2:1", "--exhaustive")
+
+    # encloses_interval: every class of operands and results, I5 both ways and near its limit.
+    def test_encloses_interval_without_an_empty_operand(self):
+        s = pipeline("interval_add_1", IV, *self.args, "--strata",
+                     M2_COMMON + ",point,threshold,cancel,zerosum")
+        self.fails(s, "interval_add_1", IV, *self.args,
+                   reason='saw no case of "operands: an empty operand"')
+        self.fails(s, "interval_add_1", IV, *self.args, reason="without special")
+
+    def test_bounded_when_that_never_fails(self):
+        # Bounds of magnitude at most 1: every sum stays below Omega = 6.
+        args = ("--exhaustive", "--restrict", "xl.lead=-2:-1,xu.lead=-2:-1,yl.lead=-2:-1,yu.lead=-2:-1")
+        s = pipeline("interval_add_1", "fp:2:-2:1", "--exhaustive", "--restrict", "xl.lead=-2:-1",
+                     "--restrict", "xu.lead=-2:-1", "--restrict", "yl.lead=-2:-1", "--restrict",
+                     "yu.lead=-2:-1")
+        self.fails(s, "interval_add_1", "fp:2:-2:1", *args,
+                   reason='saw no case of "bounded operands, bounded_when fails"')
+        self.fails(s, "interval_add_1", "fp:2:-2:1", *args,
+                   reason="within a factor 2 below the limit")
+
+    def test_never_near_the_limit(self):
+        s = edited(self.add1, 0, lambda e: e["minima"].update(
+            {"bounded_when fails: smallest max|member| / limit": [["3", "1"], ""]}))
+        self.fails(s, "interval_add_1", IV, *self.args, reason="within a factor 2 above the limit")
+
+    def test_rounded_without_a_step_or_a_condition(self):
+        for name in ("lower: one step beyond the directed rounding",
+                     "upper: product_large does not hold (within the steps)",
+                     "lower: range bound not a number of the format"):
+            s = edited(self.mul1, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "interval_mul_1", IV, *self.args, reason='saw no case of "%s"' % name)
+
+    def test_outward_far_from_its_bound(self):
+        name = "lower: distance from the range bound / (rel*|bound| + abs)"
+        s = edited(self.add2, 0, lambda e: e["maxima"].update(
+            {name: [[e["maxima"][name][0][0], str(1000 * int(e["maxima"][name][0][1]))], ""]}))
+        self.fails(s, "interval_add_2", IV, *self.args, reason="below 1/4")
+        name = "|output - value| / (rel*|value| + abs)"
+        s = edited(self.down, 1, lambda e: e["maxima"].update({name: [["1", "5"], ""]}))
+        self.fails(s, "add_down_2_2", IV, *self.args, reason="below 1/4")
+
+    def test_exact_when_that_never_holds_or_never_fails(self):
+        s = edited(self.add2, 0, lambda e: e["counts"].pop("lower: exact_when holds", None))
+        self.fails(s, "interval_add_2", IV, *self.args, reason='saw no case of "lower: exact_when '
+                   'holds"')
+        s = edited(self.add2, 0, lambda e: e["counts"].pop("upper: exact_when fails: xu+yu = 0",
+                                                           None))
+        self.fails(s, "interval_add_2", IV, *self.args, reason="exact_when fails: xu+yu = 0")
+        s = edited(self.down, 1, lambda e: e["counts"].pop("exact_when holds", None))
+        self.fails(s, "add_down_2_2", IV, *self.args, reason='saw no case of "exact_when holds"')
+
+    def test_zero_factor_never_applied(self):
+        s = edited(self.mul2, 0, lambda e: e["counts"].pop(
+            "I6 applies: [0, 0] against an unbounded operand", None))
+        self.fails(s, "interval_mul_2", IV, *self.args, reason="I6 applies")
+        args = ("--seed", "0", "--count", "400")
+        s = pipeline("mul_dir_1", IV, *args, "--strata", M2_COMMON + ",aroundp,tiny,exactprod,"
+                     "beyond")
+        self.fails(s, "mul_dir_1", IV, *args,
+                   reason='saw no case of "zero_factor: a zero against an infinite operand"')
+
+    def test_the_other_kinds_without_a_class(self):
+        args = ("--seed", "0", "--count", "400")
+        s = pipeline("interval_make_1", IV, *args, "--strata", M2_COMMON + ",reversed,infinities,"
+                     "point")
+        self.fails(s, "interval_make_1", IV, *args, reason='saw no case of "given: a NaN bound"')
+        s = pipeline("ball_lower_as_1", IV, *args, "--strata", M2_COMMON + ",radii,cross,beyond,"
+                     "exactend")
+        self.fails(s, "ball_lower_as_1", IV, *args, reason='saw no case of "ball: empty"')
+        s = pipeline("interval_intersection_1", IV, *args)
+        s = edited(s, 0, lambda e: e["counts"].pop("nonempty operands, disjoint", None))
+        self.fails(s, "interval_intersection_1", IV, *args, reason="disjoint")
+        s = edited(self.mid, 0, lambda e: e["counts"].pop(
+            "X: a bound an odd multiple of eta below 2N", None))
+        self.fails(s, "interval_mid_rad_1", IV, *self.args, reason="odd multiple of eta")
+        s = pipeline("interval_split_1", IV, *args)
+        s = edited(s, 0, lambda e: e["counts"].pop("X: half-line [-inf, h]", None))
+        self.fails(s, "interval_split_1", IV, *args, reason="half-line [-inf, h]")
+
+    def test_the_midpoint_far_from_its_bound(self):
+        name = "|center - midpoint| / (rel*|midpoint| + abs)"
+        s = edited(self.mid, 0, lambda e: e["maxima"].update({name: [["1", "3"], ""]}))
+        self.fails(s, "interval_mid_rad_1", IV, *self.args, reason="below 1/2")
+
+    def test_strata_of_the_families_not_promised(self):
+        s = pipeline("interval_add_2", IV, *self.args, "--strata",
+                     M2_COMMON + ",special,point,threshold,cancel")
+        self.fails(s, "interval_add_2", IV, *self.args, reason="without zerosum, which its family "
+                   "ivop has")
+        s = pipeline("add_down_2_2", IV, *self.args, "--strata", M2_COMMON + ",cancel,zerosum,"
+                     "close,apart")
+        self.fails(s, "add_down_2_2", IV, *self.args, reason="without tiny")
+
+    def test_the_one_process_driver(self):
+        with tempfile.TemporaryDirectory() as d:
+            def drive(kernel, *args):
+                return subprocess.run(
+                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", kernel,
+                     "--format", IV, "--summary", os.path.join(d, kernel + ".json"),
+                     "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
+                    capture_output=True, text=True)
+            good = drive("interval_sub_1", "--count", "500")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            bad = drive("interval_sub_1", "--count", "12")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("did not check what it set out to", bad.stdout)
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)

@@ -347,6 +347,18 @@ set(KAIRN_CROSSCHECK_CASES 20000 CACHE STRING
 set(KAIRN_CROSSCHECK_QUICK_CASES 6000 CACHE STRING
   "Random cases in each cross-check of the compiled runners of the quick tier")
 set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-checks")
+# The interval kernels of Milestone 2 (33, the kernels of KAIRN_NOT_PUBLIC_YET from mul_dir_1 on)
+# have fewer cases in the quick tier, to keep its time on the hosted runners: 2000, the first of
+# the full tier's 20 000, on which their guards still see every class (docs/developer/testing.md,
+# "Time").
+set(KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES 2000 CACHE STRING
+  "Random cases in each cross-check of the compiled runners of an interval kernel, quick tier")
+set(_interval_kernels
+  mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2 mul_ext_2_2
+  interval_make_1 interval_neg_1 interval_add_1 interval_sub_1 interval_mul_1 interval_add_2 ball_lower_as_1
+  ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
+  interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
+  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
 
 # The toy formats of the interpreter, by the kernel's inputs, each written as its role: 1 a limb,
 # 2 a normalized pair of limbs, r a radius (a limb with nonneg()), c a power of two (a limb with
@@ -478,6 +490,43 @@ set(_toy_1_1_1_product fp:3:-6:-1)
 set(_toy_2_2_2_product fp:4:-3:-2)
 set(_toy_ext_a2 fp:5:-7:0)
 
+# The interval kernels of Milestone 2, in the extended domain: i1 and i2 an interval of one limb
+# and of two, its two bounds together (interval()), which the oracle enumerates as one operand:
+# the empty set, and every pair l <= h of bounds with l a number or -inf and h a number or +inf.
+# The shapes of the other kernels of the interval work are those above: ext 1 1 (interval_make_1,
+# ball_from_interval_2, fp:5:-7:0, 84 100 pairs of any values; mul_dir_1, the same format, 83 521
+# without NaN), ext 2 2 (interval_make_2 fp:3:-4:1, 181 476; mul_ext_2_2 fp:4:-4:-1, 62 001
+# without NaN), ext b1 (ball_lower_as_1, ball_upper_as_1, ball_to_interval_1, fp:5:-9:2, 86 322),
+# ext b2 (ball_lower_as_2, ball_upper_as_2, ball_narrow_2_1, fp:4:-6:1, 198 074), and the finite
+# 2 2 (add_ball_2_2 and the bounds of two-limb sums at fp:3:-3:2, 178 929; mul_ball_2_2 and
+# mul_dir_2_2 at fp:4:-7:-3, 245 025). Where a sampled format is named (_toy_sampled...), the full
+# tier also runs the interpreter on KAIRN_CROSSCHECK_CASES random cases of it, from every stratum
+# (full.crosscheck.interp-sampled.K): the enumerations of two intervals are of tiny formats, of
+# two or three exponents for two limbs, where a sum of pairs is exact.
+#
+#   inputs       kernels                                      format        cases     sampled
+#   ext i1       interval_neg_1, interval_mid_rad_1,          fp:5:-9:2      86 737   -
+#                interval_to_ball_1, interval_split_1
+#   ext i1 i1    interval_add_1, interval_sub_1,              fp:2:-3:2     165 649   fp:5:-7:0
+#                interval_hull_1, interval_intersection_1
+#   ext i1 i1 *  interval_mul_1                               fp:2:-3:2     165 649   fp:5:-12:5
+#   ext i2       interval_neg_2                               fp:3:-4:1      90 101   -
+#   ext i2 i2    interval_add_2, interval_sub_2,              fp:3:-2:-1    217 156   fp:4:-10:5
+#                interval_hull_2, interval_intersection_2
+#   ext i2 i2 *  interval_mul_2: x's bounds with leading      fp:4:-3:-2    see the   fp:5:-12:5
+#                limbs in {0, 1/8, 1, 3/2, 3}, of either sign                 table
+set(_toy_ext_i1 fp:5:-9:2)
+set(_toy_ext_i1_i1_sum fp:2:-3:2)
+set(_toy_sampled_ext_i1_i1_sum fp:5:-7:0)
+set(_toy_ext_i1_i1_product fp:2:-3:2)
+set(_toy_sampled_ext_i1_i1_product fp:5:-12:5)
+set(_toy_ext_i2 fp:3:-4:1)
+set(_toy_ext_i2_i2_sum fp:3:-2:-1)
+set(_toy_sampled_ext_i2_i2_sum fp:4:-10:5)
+set(_bounds "0x0p+0/0x1p-3/-0x1p-3/0x1p+0/-0x1p+0/0x1.8p+0/-0x1.8p+0/0x1.8p+1/-0x1.8p+1")
+set(_toy_ext_i2_i2_product fp:4:-3:-2 "xl.in=${_bounds},xu.in=${_bounds}")
+set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
+
 # --- Not yet cross-checked by the oracle ------------------------------------------------------
 #
 # Kernels of gen/claims.json and folds of its list "folds" that the oracle does not judge yet: no
@@ -494,12 +543,12 @@ set(_toy_ext_a2 fp:5:-7:0)
 #   the oracle reads neither the claim maximum, nor finite_or_nan with if and steps, nor a fold's
 #   upper entry yet;
 # - the convolutions (architecture.md, "Convolutions"): the oracle reads neither requests of two
-#   lengths nor the claim coefficients yet (it refuses them as folds that write arrays);
-# - the interval kernels of Milestone 2 and the kernels of their bounds (architecture.md, "Claims of
-#   the interval kernels" and "... two limbs and the enclosure interface"): the oracle reads neither
-#   the requirements interval and not_nan, nor the claims outward, makes_interval,
-#   encloses_interval, set_bound, interval_set, ball_of_interval, interval_of_ball and splits, nor
-#   an encloses without a ball, nor a makes_ball from the bounds of an interval, yet.
+#   lengths nor the claim coefficients yet (it refuses them as folds that write arrays).
+#
+# Since the interval stage of Milestone 2 the oracle reads and judges every claim of the interval
+# kernels and of the kernels of their bounds (architecture.md, "Claims of the interval kernels" and
+# "... two limbs and the enclosure interface"; oracle/README.md, "The kinds of the interval
+# kernels").
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -507,12 +556,7 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
   mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
   axpy_entry_step_2_1
-  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
-  mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2 mul_ext_2_2
-  interval_make_1 interval_neg_1 interval_add_1 interval_sub_1 interval_mul_1 interval_add_2 ball_lower_as_1
-  ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
-  interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
-  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
+  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
   axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2
@@ -520,11 +564,18 @@ set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   conv_1 conv_2)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
-# whose public functions (sum, dot, the bounds as functions of n) come with BallVector. They are
-# cross-checked like every kernel; the public interface has no form of them.
+# whose public functions (sum, dot, the bounds as functions of n) come with BallVector, and the
+# interval kernels and the kernels of their bounds, whose public functions (Interval, the
+# conversions and the bounds of a Ball) come later. They are cross-checked like every kernel; the
+# public interface has no form of them.
 set(KAIRN_NOT_PUBLIC_YET
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
-  sum_fast_entry_step_2 fold_finish_1 fold_finish_2)
+  sum_fast_entry_step_2 fold_finish_1 fold_finish_2
+  mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2 mul_ext_2_2
+  interval_make_1 interval_neg_1 interval_add_1 interval_sub_1 interval_mul_1 interval_add_2 ball_lower_as_1
+  ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
+  interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
+  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than
@@ -605,6 +656,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     set(_requires "")
     set(_ball_centers "")
     set(_ball_radii "")
+    set(_iv_lowers "")
+    set(_iv_uppers "")
     string(JSON _n_requires LENGTH "${_claims}" kernels ${_i} requires)
     if(_n_requires GREATER 0)
       math(EXPR _req_last "${_n_requires} - 1")
@@ -615,6 +668,11 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
         if(_req MATCHES "^ball\\(([^,]+),([^)]+)\\)$")
           list(APPEND _ball_centers "${CMAKE_MATCH_1}")
           list(APPEND _ball_radii "${CMAKE_MATCH_2}")
+        endif()
+        # An interval (the interval kernels): its lower bound stands for it, its upper is left out.
+        if(_req MATCHES "^interval\\(([^,]+),([^)]+)\\)$")
+          list(APPEND _iv_lowers "${CMAKE_MATCH_1}")
+          list(APPEND _iv_uppers "${CMAKE_MATCH_2}")
         endif()
       endforeach()
     endif()
@@ -632,12 +690,14 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       string(JSON _input GET "${_claims}" kernels ${_i} inputs ${_j} name)
       string(JSON _type ERROR_VARIABLE _no_type GET "${_claims}" kernels ${_i} inputs ${_j} type)
       string(JSON _limbs ERROR_VARIABLE _no_limbs GET "${_claims}" kernels ${_i} inputs ${_j} limbs)
-      if(_input IN_LIST _ball_radii)
+      if(_input IN_LIST _ball_radii OR _input IN_LIST _iv_uppers)
         continue()
       elseif(_type STREQUAL "mask")
         set(_role m)
       elseif(_input IN_LIST _ball_centers)
         set(_role "b${_limbs}")
+      elseif(_input IN_LIST _iv_lowers)
+        set(_role "i${_limbs}")
       elseif(NOT _limbs STREQUAL "1" AND _domain STREQUAL "extended"
              AND NOT "canonical(${_input})" IN_LIST _requires)
         # Several limbs of any values (the state a fold's finish takes).
@@ -657,7 +717,21 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       math(EXPR _n_roles "${_n_roles} + 1")
     endforeach()
     if(_n_roles GREATER 1)
-      if(_value MATCHES "\\*")
+      # A kernel without a value (an interval kernel) is a product when the set of an entry is.
+      set(_product OFF)
+      if(_value MATCHES "\\*" AND NOT _no_value)
+        set(_product ON)
+      elseif(_no_value)
+        string(JSON _n_ensures LENGTH "${_claims}" kernels ${_i} ensures)
+        math(EXPR _ens_last "${_n_ensures} - 1")
+        foreach(_j RANGE ${_ens_last})
+          string(JSON _set ERROR_VARIABLE _no_set GET "${_claims}" kernels ${_i} ensures ${_j} set)
+          if(NOT _no_set AND _set MATCHES "\\*")
+            set(_product ON)
+          endif()
+        endforeach()
+      endif()
+      if(_product)
         string(APPEND _shape "_product")
       else()
         string(APPEND _shape "_sum")
@@ -707,13 +781,19 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     set(_full_${_kernel}_toy "${_toy}")
     set(_full_${_kernel}_restrict "${_restrict}")
     set(_full_${_kernel}_error "${_error}")
+    # A sampled format of its own (the interval kernels): random cases of it in the full tier.
+    set(_full_${_kernel}_sampled "${_toy_sampled${_shape}}")
 
     # The compiled runners, on random cases of every stratum.
     if(_compiled)
+      set(_quick_args ${_random_quick_args})
+      if(_kernel IN_LIST _interval_kernels)
+        set(_quick_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES}")
+      endif()
       foreach(_format binary64 binary32)
         set(_name crosscheck.compiled.${_kernel}.${_format})
         add_test(NAME ${_name} COMMAND ${_crosscheck} ${_this_compiled} --format ${_format}
-          ${_random_quick_args} --summary "${_summaries}/${_name}.json" ${_compiled})
+          ${_quick_args} --summary "${_summaries}/${_name}.json" ${_compiled})
         set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled")
       endforeach()
     endif()
