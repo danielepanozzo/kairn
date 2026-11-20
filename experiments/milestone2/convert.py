@@ -11,8 +11,11 @@ Statements judged (milestone2.md, "Limbs of another type"):
   N1  wide, one limb -> narrow, two limbs:   f0 = RN_N(x); r = x - f0 is exact in W; f1 = RN_N(r);
       z = Fast2Sum_N(f0, f1) is normalized and |x - z| <= u^2 |x| + eta / 2;
   N2  wide, two limbs -> narrow, two limbs:  f0 = RN_N(x0); r = RN_W((x0 - f0) + x1); f1 = RN_N(r);
-      z = Fast2Sum_N(f0, f1) is normalized and |x - z| <= (u + uw)^2 / (1 - uw) |x| + eta / 2;
-      a value beyond the range of N gives an infinite f0 (the full form returns (+-inf, 0));
+      z = Fast2Sum_N(f0, f1) is normalized and
+      |x - z| <= (u + uw)^2 / (1 - uw) |x| + (1 + uw) eta / 2;
+      a value beyond the range of N gives an infinite f0 (the full form returns (+-inf, 0)).
+      Counted: the cases beyond the same bound with eta / 2 alone, which holds only when
+      uw <= u^2 (as for double and float): the last two pairs of formats are not so;
   W1  narrow, two limbs -> wide, two limbs:  Fast2Sum_W(f0, f1) is normalized in W, and exact;
   B1  a ball: the center by N2, the radius rounded up to N and grown by the bound of N2 in its
       computed-value form, evaluated in N as a Ball radius of the second design:
@@ -56,7 +59,8 @@ def up_const(n, x):
 def main():
     rng = random.Random(20261119)
     for (pw, qw, tw), (pn, qn, tn) in (((7, -22, 2), (3, -8, 1)), ((9, -24, 0), (4, -10, 0)),
-                                       ((6, -18, 2), (3, -8, 2))):
+                                       ((6, -18, 2), (3, -8, 2)), ((5, -18, 2), (3, -8, 2)),
+                                       ((4, -18, 2), (3, -8, 2))):
         w, n = fmt(pw, qw, tw + 8), fmt(pn, qn, tn)
         src = fmt(pw, qw, tw)
         u, uw, e = u_of(n), u_of(w), eta(n)
@@ -64,10 +68,10 @@ def main():
         if len(pairs) > 60000:
             pairs = rng.sample(pairs, 60000)
         rel2 = (u + uw) ** 2 / (1 - uw)
-        st = dict(n=0, over=0, n1=Fraction(0), n2=Fraction(0), balls=0)
+        st = dict(n=0, over=0, n1=Fraction(0), n2=Fraction(0), balls=0, plain=0)
         # The constants of the radius, in N: E turns the relative part into a multiple of |z0|
         # (with 1 + u for the second limb), G and H are those of ball_scale_2's form.
-        V = e / 2 / (1 - rel2)
+        V = (1 + uw) * e / 2 / (1 - rel2)
         E = up_const(n, rel2 / (1 - rel2) * (1 + u))
         G = up_const(n, (1 + u) ** 3)
         H = up_const(n, (1 + u) * ((1 + u) ** 2 * e + V + e / 2) + e / (2 * u))
@@ -87,9 +91,10 @@ def main():
                 continue
             z = val(z0) + val(z1)
             assert normalized(n, val(z0), val(z1)), (w.name, n.name, x0, x1)
-            bound = rel2 * abs(x) + e / 2
+            bound = rel2 * abs(x) + (1 + uw) * e / 2
             assert abs(x - z) <= bound, (w.name, n.name, x0, x1, z)
             st['n2'] = max(st['n2'], abs(x - z) / bound)
+            st['plain'] += abs(x - z) > rel2 * abs(x) + e / 2
             if x1 == 0:
                 b1 = u * u * abs(x) + e / 2
                 assert abs(x - z) <= b1, (w.name, n.name, x0)
@@ -112,7 +117,8 @@ def main():
             st['n'] += 1
         print(f'W = {src.name}, N = {n.name}: {st["n"]} conversions of two limbs ({st["over"]} beyond the '
               f'range of N); largest error over the bound: one wide limb {float(st["n1"]):.3f}, two wide '
-              f'limbs {float(st["n2"]):.3f}; {st["balls"]} balls contained')
+              f'limbs {float(st["n2"]):.3f} ({st["plain"]} cases beyond the bound with eta/2 alone; '
+              f'uw <= u^2: {uw <= u * u}); {st["balls"]} balls contained')
     print('every statement held')
 
 

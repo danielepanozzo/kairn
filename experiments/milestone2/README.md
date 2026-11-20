@@ -51,7 +51,8 @@ sh experiments/milestone2/run_all.sh
 
 from the repository root, with Python 3 and nothing else. It takes about twenty minutes on one
 core and writes the output of each script to `results/`. The outputs recorded there are those
-of 2026-11-19. The samples are drawn with a fixed seed, so a rerun prints the same lines.
+of 2026-11-19 and 2026-11-20. The samples are drawn with a fixed seed, so a rerun prints the
+same lines.
 
 ## What the runs changed
 
@@ -68,3 +69,23 @@ Three statements were changed by a run before the page was written:
 
 And one consequence was found that the page records as an open question: the sum of two zero
 intervals of two limbs is not the zero interval (`interval_2.py`).
+
+## What the runs had missed
+
+A reading of the page's mathematics by a reviewer who was given the page, and not these scripts'
+conclusions, found two statements that were false as first written. No run had caught them,
+because the cases lay outside what the scripts ran; the scripts now run them.
+
+- The conversion of two wide limbs to two narrow ones was stated with an underflow term of
+  $\tfrac12\eta$. That holds only when $u_w \le u^2$, which the three pairs of formats of the
+  first runs all satisfied. `convert.py` now has two pairs that do not; the term is
+  $(1 + u_w)\tfrac12\eta$, and the script counts the cases beyond the first form (1 and 14).
+- The comparisons of balls of one limb that are not strict (the "no" of `X < Y`) were to be
+  `le_2_2` on two exact pairs. When both sums overflow, both pairs are $(+\infty, -\infty)$ and
+  the comparison is true whatever the truth is. `enclosure_1.py` only ran the strict one; it now
+  runs both, with the test of finiteness that the page adds, and counts the answers that would
+  be wrong without it (79 of 36 100 in the smallest format).
+
+The same reading corrected one remark, which `directed_1.py` now measures: the products whose
+computed error is zero although the exact one is not have a rounded product of at most
+$(1 - 2u)P$, not $(1 - u)P$.

@@ -14,7 +14,9 @@ Statements judged (milestone2.md, "One enclosure interface"):
                        smallest radius when both halvings are exact; states for lo > hi, NaN and
                        infinite bounds
   Ball<T, 1> predicates computed with exact pairs (two_sum_ord, abs_2, the comparisons of two
-  limbs): contains(point), contains(ball), and the three-valued X < Y.
+  limbs): contains(point), contains(ball), and the three-valued X < Y: its "yes" by a strict
+  comparison of pairs, its "no" by a comparison that is not strict and a test that both pairs
+  are finite. Counted: how often the "no" would be wrong without that test.
 """
 import sys
 from fractions import Fraction
@@ -126,7 +128,7 @@ def predicates(f):
     """contains(point), contains(ball) and X < Y for balls of one limb, by exact pairs."""
     bs = balls(f)
     nums = finite_numbers(f)
-    undecided = 0
+    undecided = unguarded = 0
     for c, r in bs:
         for t in nums:
             s, e = run('two_sum_ord', f, num(t), num(-c))
@@ -148,24 +150,39 @@ def predicates(f):
             e0, e1 = run('two_sum_ord', f, num(cy), num(-cx))
             yes = run('lt_2_2', f, s0, s1, e0, e1)
             truth = cx + rx < cy - ry
-            overflow = rx + ry > omega(f) or abs(cy - cx) > omega(f)
             assert (not yes) or truth, (f.name, cx, rx, cy, ry)        # yes is always right
-            if not overflow:
-                assert yes == truth, (f.name, cx, rx, cy, ry)          # and exact without overflow
+            if not (s0 == PINF and e0 == PINF):
+                # exact unless the sum of the radii and the difference of the centers both overflow
+                assert yes == truth, (f.name, cx, rx, cy, ry)
             undecided += truth and not yes
-    return undecided
+            # The "no" of X < Y, x >= y for all members: rx + ry <= cx - cy. This comparison is
+            # not strict, and two sums that overflow are both (+inf, -inf), which le_2_2 calls
+            # equal: the mask also asks for a finite sum of the radii.
+            g0, g1 = run('two_sum_ord', f, num(cx), num(-cy))
+            bare = run('le_2_2', f, s0, s1, g0, g1)
+            no = bare and s0[0] == 'num'
+            never = cx - rx >= cy + ry
+            assert (not no) or never, (f.name, cx, rx, cy, ry)
+            assert not (yes and no)
+            if not (s0 == PINF and g0 == PINF):
+                assert no == never, (f.name, cx, rx, cy, ry)
+            undecided += never and not no
+            unguarded += bare and not never
+    return undecided, unguarded
 
 
 def main():
     print('format        midpoint: largest |m - RN((l+u)/2)| in eta   split: largest half radius '
-          'over r/2   from_interval: inexact midpoints   X < Y true but not decided (overflow)')
+          'over r/2   from_interval: inexact midpoints   X < Y decidable but answered unknown '
+          '(both sides overflow)   "no" wrong without the test of finiteness')
     for f in (ieee_shape(2, 1), ieee_shape(2, 2), ieee_shape(3, 1), fmt(3, -6, 0), ieee_shape(4, 1)):
         worst_mid = mid_rad(f)
         to_interval(f)
         worst_split = split(f)
         inexact = from_interval(f)
-        undecided = predicates(f) if f.p <= 3 else '-'
-        print(f'{f.name:12} {float(worst_mid):30.2f} {float(worst_split):34.3f} {inexact:26} {undecided!s:>20}')
+        undecided, unguarded = predicates(f) if f.p <= 3 else ('-', '-')
+        print(f'{f.name:12} {float(worst_mid):30.2f} {float(worst_split):34.3f} {inexact:26} '
+              f'{undecided!s:>20} {unguarded!s:>30}')
     print('every statement held')
 
 

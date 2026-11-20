@@ -84,7 +84,8 @@ def products(f):
     nums = finite_numbers(f)
     vals = [(x, num(x)) for x in nums]
     band = Fraction(2) ** (2 * f.p - 1) * eta(f)
-    stats = dict(n=0, band=0, beyond_down=0, beyond_up=0, sign_lost=0, top=Fraction(0))
+    stats = dict(n=0, band=0, beyond_down=0, beyond_up=0, sign_lost=0, top=Fraction(0),
+                 lost_top=Fraction(0))
     for (a, va), (b, vb) in ((x, y) for x in vals for y in vals):
         t = a * b
         stats['n'] += 1
@@ -100,6 +101,7 @@ def products(f):
             if ce == 0 and err != 0:
                 assert abs(err) <= eta(f) / 2 and inband, (f.name, a, b)
                 stats['sign_lost'] += 1
+                stats['lost_top'] = max(stats['lost_top'], abs(ext(p)) / band)
             if not inband:
                 assert ce == err, (f.name, a, b)
         down, up = run('mul_down_1', f, va, vb), run('mul_up_1', f, va, vb)
@@ -144,7 +146,8 @@ def products_nonfinite(f):
 
 def main():
     print('format        sums   overflow | with two_sum: wrong side | products  below P  '
-          'one beyond (down, up)  sign lost  highest |ab|/P of a step beyond')
+          'one beyond (down, up)  sign lost  highest |ab|/P of a step beyond  '
+          'highest |RN(ab)|/P with the sign lost')
     for f in FORMATS:
         n, over = sums(f)
         sums_nonfinite(f)
@@ -153,7 +156,7 @@ def main():
         products_nonfinite(f)
         print(f'{f.name:12} {n:6} {over:8} | {wrong:24} | {st["n"]:8} {st["band"]:8}  '
               f'{st["beyond_down"]:9} {st["beyond_up"]:9} {st["sign_lost"]:10}  '
-              f'{float(st["top"]):.4f} = {st["top"]}')
+              f'{float(st["top"]):.4f} = {st["top"]}  {st["lost_top"]}')
     print('every statement held')
 
 

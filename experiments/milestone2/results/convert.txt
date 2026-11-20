@@ -1,4 +1,6 @@
-W = fp:7:-22:2, N = fp:3:-8:1: 30683 conversions of two limbs (28414 beyond the range of N); largest error over the bound: one wide limb 0.909, two wide limbs 0.990; 4384 balls contained
-W = fp:9:-24:0, N = fp:4:-10:0: 28160 conversions of two limbs (31154 beyond the range of N); largest error over the bound: one wide limb 0.703, two wide limbs 0.981; 4023 balls contained
-W = fp:6:-18:2, N = fp:3:-8:2: 37907 conversions of two limbs (21544 beyond the range of N); largest error over the bound: one wide limb 0.953, two wide limbs 0.995; 5416 balls contained
+W = fp:7:-22:2, N = fp:3:-8:1: 30683 conversions of two limbs (28414 beyond the range of N); largest error over the bound: one wide limb 0.909, two wide limbs 0.982 (0 cases beyond the bound with eta/2 alone; uw <= u^2: True); 4384 balls contained
+W = fp:9:-24:0, N = fp:4:-10:0: 28160 conversions of two limbs (31154 beyond the range of N); largest error over the bound: one wide limb 0.703, two wide limbs 0.979 (0 cases beyond the bound with eta/2 alone; uw <= u^2: True); 4023 balls contained
+W = fp:6:-18:2, N = fp:3:-8:2: 37907 conversions of two limbs (21544 beyond the range of N); largest error over the bound: one wide limb 0.953, two wide limbs 0.980 (0 cases beyond the bound with eta/2 alone; uw <= u^2: True); 5416 balls contained
+W = fp:5:-18:2, N = fp:3:-8:2: 45421 conversions of two limbs (14393 beyond the range of N); largest error over the bound: one wide limb 0.985, two wide limbs 0.972 (1 cases beyond the bound with eta/2 alone; uw <= u^2: False); 6489 balls contained
+W = fp:4:-18:2, N = fp:3:-8:2: 34305 conversions of two limbs (4846 beyond the range of N); largest error over the bound: one wide limb 0.985, two wide limbs 0.964 (14 cases beyond the bound with eta/2 alone; uw <= u^2: False); 4901 balls contained
 every statement held
