@@ -49,8 +49,9 @@ It calls [`ball_to_interval_2`](ball_to_interval_2.md), [`interval_intersection_
 
 ```
 # A ball with a 2-limb center that contains the intersection of two such balls (milestone2.md, "One
-# enclosure interface", "Hull, intersection and split of balls"): ball_intersection_1 on the
-# conversions of two limbs (ball_to_interval_2, interval_intersection_2, interval_to_ball_2). If an
+# enclosure interface", "Hull, intersection and split of balls"): the composition of ball_intersection_1
+# on the conversions of two limbs (ball_to_interval_2, interval_intersection_2, interval_to_ball_2), in
+# the order of the conversions (GCC does not duplicate the larger halving of two limbs). If an
 # operand is the whole line the other is returned as it is, by the tests of the radii; the selects
 # choose the composition when neither operand is the whole line (nx, ny). An empty operand gives the
 # empty set through the conversions, and so do two balls whose intervals do not meet. Not claimed:

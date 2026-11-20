@@ -208,18 +208,6 @@ Definition ball_equal_1_spec : Prop :=
     ~ ball_empty_1 cx rx /\ ~ ball_empty_1 cy ry /\
     (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> ~ (x = y)))).
 
-(* interval_make_1: constructor of an interval (Milestone 2 listing). IEEE-model status: proved. *)
-Definition interval_make_1_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus : nan2 prec emax) (nan_opp : nan1 prec emax),
-  forall lo hi : binary_float prec emax,
-  let '(zl, zu) := IeeeModel.interval_make_1 prec emax nan_plus nan_opp lo hi in
-  interval_1 zl zu /\
-  (xnonempty (xval lo) (xval hi) -> xval zl = xval lo /\ xval zu = xval hi) /\
-  (nan lo \/ nan hi -> zl = infinity prec emax true /\ zu = infinity prec emax false) /\
-  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> interval_empty_1 zl zu).
-
 (* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). IEEE-model status: proved. *)
 Definition sub_up_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -269,7 +257,7 @@ Definition interval_to_ball_1_spec : Prop :=
    (forall z : R, in_interval_1 xl xu z -> Rabs (z - val c) <= val r) /\
    val r = RU (ieee_emin prec emax) prec (Rmax (val c - val xl) (val xu - val c))).
 
-(* ball_from_interval_1: interval_make_1, then interval_to_ball_1 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). IEEE-model status: unverified. *)
 Definition ball_from_interval_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -370,25 +358,7 @@ Definition ball_hull_1_spec : Prop :=
   (ball_empty_1 cy ry -> cz = cx /\ rz = rx) /\
   (forall z : R, in_ball_1 cx rx z \/ in_ball_1 cy ry z -> in_ball_1 cz rz z).
 
-(* interval_intersection_1: the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). IEEE-model status: proved. *)
-Definition interval_intersection_1_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_opp : nan1 prec emax),
-  forall xl xu yl yu : binary_float prec emax,
-  interval_1 xl xu ->
-  interval_1 yl yu ->
-  let '(zl, zu) := IeeeModel.interval_intersection_1 prec emax nan_opp xl xu yl yu in
-  interval_1 zl zu /\
-  (interval_empty_1 zl zu <-> ~ (exists z : R, in_interval_1 xl xu z /\ in_interval_1 yl yu z)) /\
-  (forall z : R, in_interval_1 xl xu z /\ in_interval_1 yl yu z -> in_interval_1 zl zu z) /\
-  (~ interval_empty_1 zl zu ->
-   forall lo hi : xreal,
-   range_lower (fun z : R => in_interval_1 xl xu z /\ in_interval_1 yl yu z) lo ->
-   range_upper (fun z : R => in_interval_1 xl xu z /\ in_interval_1 yl yu z) hi ->
-   xval zl = lo /\ xval zu = hi).
-
-(* ball_intersection_1: both balls to intervals, their intersection, back to a ball (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). IEEE-model status: unverified. *)
 Definition ball_intersection_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -775,6 +745,24 @@ Definition interval_equal_1_spec : Prop :=
     (forall x y : R, in_interval_1 xl xu x -> in_interval_1 yl yu y -> ~ (x = y))) /\
   ~ (yes = true /\ no = true).
 
+(* interval_intersection_1: the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). IEEE-model status: proved. *)
+Definition interval_intersection_1_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp : nan1 prec emax),
+  forall xl xu yl yu : binary_float prec emax,
+  interval_1 xl xu ->
+  interval_1 yl yu ->
+  let '(zl, zu) := IeeeModel.interval_intersection_1 prec emax nan_opp xl xu yl yu in
+  interval_1 zl zu /\
+  (interval_empty_1 zl zu <-> ~ (exists z : R, in_interval_1 xl xu z /\ in_interval_1 yl yu z)) /\
+  (forall z : R, in_interval_1 xl xu z /\ in_interval_1 yl yu z -> in_interval_1 zl zu z) /\
+  (~ interval_empty_1 zl zu ->
+   forall lo hi : xreal,
+   range_lower (fun z : R => in_interval_1 xl xu z /\ in_interval_1 yl yu z) lo ->
+   range_upper (fun z : R => in_interval_1 xl xu z /\ in_interval_1 yl yu z) hi ->
+   xval zl = lo /\ xval zu = hi).
+
 (* interval_less_1: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
 Definition interval_less_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -806,6 +794,18 @@ Definition interval_less_equal_1_spec : Prop :=
     interval_nonempty_1 xl xu /\ interval_nonempty_1 yl yu /\
     (forall x y : R, in_interval_1 xl xu x -> in_interval_1 yl yu y -> ~ (x <= y))) /\
   ~ (yes = true /\ no = true).
+
+(* interval_make_1: constructor of an interval (Milestone 2 listing). IEEE-model status: proved. *)
+Definition interval_make_1_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_opp : nan1 prec emax),
+  forall lo hi : binary_float prec emax,
+  let '(zl, zu) := IeeeModel.interval_make_1 prec emax nan_plus nan_opp lo hi in
+  interval_1 zl zu /\
+  (xnonempty (xval lo) (xval hi) -> xval zl = xval lo /\ xval zu = xval hi) /\
+  (nan lo \/ nan hi -> zl = infinity prec emax true /\ zu = infinity prec emax false) /\
+  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> interval_empty_1 zl zu).
 
 (* two_prod: TwoProd with an FMA (folklore; see JMP17). IEEE-model status: unverified. *)
 Definition two_prod_ieee_spec : Prop :=

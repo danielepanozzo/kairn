@@ -38,36 +38,56 @@ Stated for every binary format with a precision of at least 2 bits, rounding to 
 
 ## Source
 
-**Algorithm:** both balls to intervals, their intersection, back to a ball (Milestone 2 listing). **License:** algorithm and proof: MIT.
+**Algorithm:** both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). **License:** algorithm and proof: MIT.
 
 ## Listing
 
 From [`gen/kernels/ball_intersection_1.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/ball_intersection_1.kernel), the description the C++ and the formal model (`proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
-It calls [`ball_to_interval_1`](ball_to_interval_1.md), [`interval_intersection_1`](interval_intersection_1.md), [`interval_to_ball_1`](interval_to_ball_1.md).
+It calls [`sub_down_1`](sub_down_1.md), [`add_up_1`](add_up_1.md), [`interval_to_ball_1`](interval_to_ball_1.md).
 
 ```
 # A ball with a one-limb center that contains the intersection of two such balls (milestone2.md,
-# "One enclosure interface", "Hull, intersection and split of balls"): both balls to intervals
-# (ball_to_interval_1), the intersection of the intervals (interval_intersection_1), back to a ball
-# (interval_to_ball_1). If an operand is the whole line the other is returned as it is, by the tests
-# of the radii; an empty operand gives the empty set through the conversions, and so do two balls
-# whose intervals do not meet. The selects choose the composition when neither operand is the whole
-# line (nx, ny), the case the scalar printer puts first. Not claimed: that the result is inside X or
-# Y (the two outward conversions can make it stick out by a rounding), nor that it is empty whenever
-# the balls are disjoint.
+# "One enclosure interface", "Hull, intersection and split of balls"): the values of the composition
+# of ball_to_interval_1 of each ball, interval_intersection_1 and interval_to_ball_1. If an operand is
+# the whole line the other is returned as it is, by the tests of the radii; an empty operand gives the
+# empty set, and so do two balls whose intervals do not meet. The listing computes those values in
+# another order: the directed bounds of both balls and their intersection [l, h] as they are, the
+# ball of interval_to_ball_1 of [l, h], and only then the empty set selected, when a radius is a NaN
+# (an empty ball, which ball_to_interval_1 makes the empty interval) or l > h (which
+# interval_intersection_1 makes the empty interval, and interval_to_ball_1 the empty ball, a NaN
+# center and radius). Where the conversions select the constants of the empty interval before the
+# halving of interval_mid_rad_1, GCC 13 on x86-64 duplicates the halving, its two products included,
+# on the path where the bounds are those constants (4 fused multiply-adds for 2, which the
+# object-code check refuses); selected after it, the products are computed once. The selects choose
+# the composition when neither operand is the whole line (nx, ny) and the intersection is not empty
+# (ob), the case the scalar printer puts first. Not claimed: that the result is inside X or Y (the
+# two outward conversions can make it stick out by a rounding), nor that it is empty whenever the
+# balls are disjoint.
 
-(xl, xu) = ball_to_interval_1(cx, rx)
-(yl, yu) = ball_to_interval_1(cy, ry)
-(zl, zu) = interval_intersection_1(xl, xu, yl, yu)
-(c, r)   = interval_to_ball_1(zl, zu)
-wx       = eq(rx, const inf)
-nx       = not(wx)
-wy       = eq(ry, const inf)
-ny       = not(wy)
-ca       = select(ny, c, cx)
-ra       = select(ny, r, rx)
-cz       = select(nx, ca, cy)
-rz       = select(nx, ra, ry)
+xl     = sub_down_1(cx, rx)
+xu     = add_up_1(cx, rx)
+yl     = sub_down_1(cy, ry)
+yu     = add_up_1(cy, ry)
+ml     = lt(xl, yl)
+l      = select(ml, yl, xl)
+mu     = lt(yu, xu)
+h      = select(mu, yu, xu)
+(c, r) = interval_to_ball_1(l, h)
+ok     = le(l, h)
+qx     = eq(rx, rx)
+qy     = eq(ry, ry)
+oa     = and(ok, qx)
+ob     = and(oa, qy)
+cb     = select(ob, c, const nan)
+rb     = select(ob, r, const nan)
+wx     = eq(rx, const inf)
+nx     = not(wx)
+wy     = eq(ry, const inf)
+ny     = not(wy)
+ca     = select(ny, cb, cx)
+ra     = select(ny, rb, rx)
+cz     = select(nx, ca, cy)
+rz     = select(nx, ra, ry)
 ```
 
 ## Measured

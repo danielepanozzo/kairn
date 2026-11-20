@@ -500,8 +500,11 @@ class CheckedFiles(unittest.TestCase):
     # Then the conversions of two limbs, the ball from an interval of one limb and the hull and the
     # intersection of balls of two limbs (seven, unverified): their definitions and statements
     # added, every earlier one the same, byte for byte; make -C proofs passed on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'ee63659056d82e2072fa7fbbc652f47c1a8ce144fbf8c8887cd74b428d74a042',
-               'proofs/gen/IeeeStatements.v': '1f12dc89f396b237906239d3e543041dd717e0c00b4d9eb89430e7b22318a041'}
+    # Then ball_intersection_1 and ball_from_interval_1 rewritten (the same values, the special
+    # results selected after the halving): their definitions and the source line of their
+    # statements' comments; make -C proofs passed on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'df13c0d5952de12186558d54ea83fa18307794c804c3fdd8cedcfeab42cad214',
+               'proofs/gen/IeeeStatements.v': '8a7fd38f072017b6ba2c35b4b82d2c2f489056539aedf196df13743d50feb268'}
 
 
     def test_the_checked_files(self):

@@ -319,25 +319,6 @@ Definition ball_equal_1 (cx rx cy ry : float) : bool * bool :=
   let no := lt_2_2 s0 s1 a0 a1 in
   (yes, no).
 
-(* interval_make_1: constructor of an interval (Milestone 2 listing). *)
-Definition interval_make_1 (lo hi : float) : float * float :=
-  let gl := guard lo in
-  let gu := guard hi in
-  let ok := le gl gu in
-  let nl := lt gl pinf in
-  let mi := neg pinf in
-  let nu := lt mi gu in
-  let va := andb ok nl in
-  let v := andb va nu in
-  let ql := eq gl gl in
-  let qu := eq gu gu in
-  let nn := andb ql qu in
-  let el := if nn then pinf else mi in
-  let eu := if nn then mi else pinf in
-  let zl := if v then gl else el in
-  let zu := if v then gu else eu in
-  (zl, zu).
-
 (* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
 Definition sub_up_1 (a b : float) : float :=
   let nb := neg b in
@@ -381,10 +362,26 @@ Definition interval_to_ball_1 (xl xu : float) : float * float :=
   let c := if un then pzero else m in
   (c, r).
 
-(* ball_from_interval_1: interval_make_1, then interval_to_ball_1 (Milestone 2 listing). *)
+(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). *)
 Definition ball_from_interval_1 (lo hi : float) : float * float :=
-  let '(zl, zu) := interval_make_1 lo hi in
-  let '(cw, rw) := interval_to_ball_1 zl zu in
+  let gl := guard lo in
+  let gu := guard hi in
+  let ok := le gl gu in
+  let nl := lt gl pinf in
+  let mi := neg pinf in
+  let nu := lt mi gu in
+  let va := andb ok nl in
+  let v := andb va nu in
+  let ql := eq gl gl in
+  let qu := eq gu gu in
+  let nn := andb ql qu in
+  let tl := if v then gl else pzero in
+  let tu := if v then gu else pzero in
+  let '(c, r) := interval_to_ball_1 tl tu in
+  let ec := if nn then cnan else pzero in
+  let er := if nn then cnan else pinf in
+  let cw := if v then c else ec in
+  let rw := if v then r else er in
   (cw, rw).
 
 (* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). *)
@@ -464,30 +461,30 @@ Definition ball_hull_1 (cx rx cy ry : float) : float * float :=
   let rz := if qx then ra else ry in
   (cz, rz).
 
-(* interval_intersection_1: the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). *)
-Definition interval_intersection_1 (xl xu yl yu : float) : float * float :=
+(* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). *)
+Definition ball_intersection_1 (cx rx cy ry : float) : float * float :=
+  let xl := sub_down_1 cx rx in
+  let xu := add_up_1 cx rx in
+  let yl := sub_down_1 cy ry in
+  let yu := add_up_1 cy ry in
   let ml := lt xl yl in
   let l := if ml then yl else xl in
   let mu := lt yu xu in
   let h := if mu then yu else xu in
+  let '(c, r) := interval_to_ball_1 l h in
   let ok := le l h in
-  let mi := neg pinf in
-  let zl := if ok then l else pinf in
-  let zu := if ok then h else mi in
-  (zl, zu).
-
-(* ball_intersection_1: both balls to intervals, their intersection, back to a ball (Milestone 2 listing). *)
-Definition ball_intersection_1 (cx rx cy ry : float) : float * float :=
-  let '(xl, xu) := ball_to_interval_1 cx rx in
-  let '(yl, yu) := ball_to_interval_1 cy ry in
-  let '(zl, zu) := interval_intersection_1 xl xu yl yu in
-  let '(c, r) := interval_to_ball_1 zl zu in
+  let qx := eq rx rx in
+  let qy := eq ry ry in
+  let oa := andb ok qx in
+  let ob := andb oa qy in
+  let cb := if ob then c else cnan in
+  let rb := if ob then r else cnan in
   let wx := eq rx pinf in
   let nx := negb wx in
   let wy := eq ry pinf in
   let ny := negb wy in
-  let ca := if ny then c else cx in
-  let ra := if ny then r else rx in
+  let ca := if ny then cb else cx in
+  let ra := if ny then rb else rx in
   let cz := if nx then ca else cy in
   let rz := if nx then ra else ry in
   (cz, rz).
@@ -820,6 +817,18 @@ Definition interval_equal_1 (xl xu yl yu : float) : bool * bool :=
   let no := andb dd ne in
   (yes, no).
 
+(* interval_intersection_1: the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). *)
+Definition interval_intersection_1 (xl xu yl yu : float) : float * float :=
+  let ml := lt xl yl in
+  let l := if ml then yl else xl in
+  let mu := lt yu xu in
+  let h := if mu then yu else xu in
+  let ok := le l h in
+  let mi := neg pinf in
+  let zl := if ok then l else pinf in
+  let zu := if ok then h else mi in
+  (zl, zu).
+
 (* interval_less_1: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
 Definition interval_less_1 (xl xu yl yu : float) : bool * bool :=
   let nx := lt xl pinf in
@@ -841,6 +850,25 @@ Definition interval_less_equal_1 (xl xu yl yu : float) : bool * bool :=
   let yes := andb a ne in
   let no := andb c ne in
   (yes, no).
+
+(* interval_make_1: constructor of an interval (Milestone 2 listing). *)
+Definition interval_make_1 (lo hi : float) : float * float :=
+  let gl := guard lo in
+  let gu := guard hi in
+  let ok := le gl gu in
+  let nl := lt gl pinf in
+  let mi := neg pinf in
+  let nu := lt mi gu in
+  let va := andb ok nl in
+  let v := andb va nu in
+  let ql := eq gl gl in
+  let qu := eq gu gu in
+  let nn := andb ql qu in
+  let el := if nn then pinf else mi in
+  let eu := if nn then mi else pinf in
+  let zl := if v then gl else el in
+  let zu := if v then gu else eu in
+  (zl, zu).
 
 (* two_prod: TwoProd with an FMA (folklore; see JMP17). *)
 Definition two_prod (a b : float) : float * float :=

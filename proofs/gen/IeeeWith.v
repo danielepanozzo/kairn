@@ -67,12 +67,11 @@ Local Notation up_bound_sum_2_1 := (IeeeModel.up_bound_sum_2_1 prec emax).
 Local Notation splitter := (IeeeModel.splitter prec emax).
 Local Notation add_1_1 := (IeeeModel.add_1_1 prec emax nan_plus).
 Local Notation sub_up_1 := (IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs).
-Local Notation interval_make_1 := (IeeeModel.interval_make_1 prec emax nan_plus nan_opp).
 Local Notation two_sum_ord := (IeeeModel.two_sum_ord prec emax nan_plus nan_minus nan_abs).
 Local Notation add_up_1 := (IeeeModel.add_up_1 prec emax nan_plus nan_minus nan_abs).
 Local Notation ball_to_interval_1 := (IeeeModel.ball_to_interval_1 prec emax nan_plus nan_minus nan_opp nan_abs).
 Local Notation interval_hull_1 := (IeeeModel.interval_hull_1 prec emax).
-Local Notation interval_intersection_1 := (IeeeModel.interval_intersection_1 prec emax nan_opp).
+Local Notation sub_down_1 := (IeeeModel.sub_down_1 prec emax nan_plus nan_minus nan_opp nan_abs).
 Local Notation fast_two_sum := (IeeeModel.fast_two_sum prec emax nan_plus nan_minus).
 Local Notation add_2_2 := (IeeeModel.add_2_2 prec emax nan_plus nan_minus).
 Local Notation lt_2_2 := (IeeeModel.lt_2_2 prec emax).
@@ -132,10 +131,26 @@ Definition interval_to_ball_1_with (p_ : float -> float -> float) (xl xu : float
   let c := if un then pzero else m in
   (c, r).
 
-(* ball_from_interval_1: interval_make_1, then interval_to_ball_1 (Milestone 2 listing). *)
+(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). *)
 Definition ball_from_interval_1_with (p_ : float -> float -> float) (lo hi : float) : float * float :=
-  let '(zl, zu) := interval_make_1 lo hi in
-  let '(cw, rw) := interval_to_ball_1_with p_ zl zu in
+  let gl := guard lo in
+  let gu := guard hi in
+  let ok := le gl gu in
+  let nl := lt gl pinf in
+  let mi := neg pinf in
+  let nu := lt mi gu in
+  let va := andb ok nl in
+  let v := andb va nu in
+  let ql := eq gl gl in
+  let qu := eq gu gu in
+  let nn := andb ql qu in
+  let tl := if v then gl else pzero in
+  let tu := if v then gu else pzero in
+  let '(c, r) := interval_to_ball_1_with p_ tl tu in
+  let ec := if nn then cnan else pzero in
+  let er := if nn then cnan else pinf in
+  let cw := if v then c else ec in
+  let rw := if v then r else er in
   (cw, rw).
 
 (* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). *)
@@ -191,18 +206,30 @@ Definition ball_hull_1_with (p_ : float -> float -> float) (cx rx cy ry : float)
   let rz := if qx then ra else ry in
   (cz, rz).
 
-(* ball_intersection_1: both balls to intervals, their intersection, back to a ball (Milestone 2 listing). *)
+(* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). *)
 Definition ball_intersection_1_with (p_ : float -> float -> float) (cx rx cy ry : float) : float * float :=
-  let '(xl, xu) := ball_to_interval_1 cx rx in
-  let '(yl, yu) := ball_to_interval_1 cy ry in
-  let '(zl, zu) := interval_intersection_1 xl xu yl yu in
-  let '(c, r) := interval_to_ball_1_with p_ zl zu in
+  let xl := sub_down_1 cx rx in
+  let xu := add_up_1 cx rx in
+  let yl := sub_down_1 cy ry in
+  let yu := add_up_1 cy ry in
+  let ml := lt xl yl in
+  let l := if ml then yl else xl in
+  let mu := lt yu xu in
+  let h := if mu then yu else xu in
+  let '(c, r) := interval_to_ball_1_with p_ l h in
+  let ok := le l h in
+  let qx := eq rx rx in
+  let qy := eq ry ry in
+  let oa := andb ok qx in
+  let ob := andb oa qy in
+  let cb := if ob then c else cnan in
+  let rb := if ob then r else cnan in
   let wx := eq rx pinf in
   let nx := negb wx in
   let wy := eq ry pinf in
   let ny := negb wy in
-  let ca := if ny then c else cx in
-  let ra := if ny then r else rx in
+  let ca := if ny then cb else cx in
+  let ra := if ny then rb else rx in
   let cz := if nx then ca else cy in
   let rz := if nx then ra else ry in
   (cz, rz).

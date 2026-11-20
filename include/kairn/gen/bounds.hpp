@@ -265,15 +265,6 @@ template <class T> struct ball_equal_1;
 template <> struct ball_equal_1<double> { static constexpr bool proved = false; };
 template <> struct ball_equal_1<float> { static constexpr bool proved = false; };
 
-// interval_make_1: proved. Claims: makes_interval.
-template <class T> struct interval_make_1;
-template <> struct interval_make_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct interval_make_1<float> {
-    static constexpr bool proved = true;
-};
-
 // sub_up_1: proved. Claims: rounded.
 template <class T> struct sub_up_1;
 template <> struct sub_up_1<double> {
@@ -346,15 +337,6 @@ template <> struct interval_hull_1<float> {
 template <class T> struct ball_hull_1;
 template <> struct ball_hull_1<double> { static constexpr bool proved = false; };
 template <> struct ball_hull_1<float> { static constexpr bool proved = false; };
-
-// interval_intersection_1: proved. Claims: interval_set.
-template <class T> struct interval_intersection_1;
-template <> struct interval_intersection_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct interval_intersection_1<float> {
-    static constexpr bool proved = true;
-};
 
 // ball_intersection_1: UNVERIFIED. Claims: ball_set.
 template <class T> struct ball_intersection_1;
@@ -601,6 +583,15 @@ template <class T> struct interval_equal_1;
 template <> struct interval_equal_1<double> { static constexpr bool proved = false; };
 template <> struct interval_equal_1<float> { static constexpr bool proved = false; };
 
+// interval_intersection_1: proved. Claims: interval_set.
+template <class T> struct interval_intersection_1;
+template <> struct interval_intersection_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_intersection_1<float> {
+    static constexpr bool proved = true;
+};
+
 // interval_less_1: UNVERIFIED. Claims: trit.
 template <class T> struct interval_less_1;
 template <> struct interval_less_1<double> { static constexpr bool proved = false; };
@@ -610,6 +601,15 @@ template <> struct interval_less_1<float> { static constexpr bool proved = false
 template <class T> struct interval_less_equal_1;
 template <> struct interval_less_equal_1<double> { static constexpr bool proved = false; };
 template <> struct interval_less_equal_1<float> { static constexpr bool proved = false; };
+
+// interval_make_1: proved. Claims: makes_interval.
+template <class T> struct interval_make_1;
+template <> struct interval_make_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_make_1<float> {
+    static constexpr bool proved = true;
+};
 
 // two_prod: proved. Claims: leading_rounded; error, form R, c = 0, k = 2, t = 1/2; error, form R, c = 0, k = 2, t = 0 when product_large.
 template <class T> struct two_prod;

@@ -12,7 +12,7 @@ $$Z = [l_o, h_i].$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`ball_from_interval_1`](ball_from_interval_1.md).
+**Not yet called by the public headers.** No public operation computes this kernel yet.
 
 ## Requires
 

@@ -513,42 +513,6 @@ inline const char* ball_equal_1_nonfinite_float() noexcept {
     return !same(o0, false) || !same(o1, false) ? "ball_equal_1 (float, a non-finite operand)" : nullptr;
 }
 
-// interval_make_1 (double)
-inline const char* interval_make_1_double() noexcept {
-    volatile double i0 = -0x1.9399c13a99bdep+3;
-    volatile double i1 = -0x1.2c08a1090ef11p-2;
-    double o0;
-    double o1;
-    interval_make_1(i0, i1, o0, o1);
-    return !same(o0, -0x1.9399c13a99bdep+3) || !same(o1, -0x1.2c08a1090ef11p-2) ? "interval_make_1 (double)" : nullptr;
-}
-inline const char* interval_make_1_nonfinite_double() noexcept {
-    volatile double i0 = std::numeric_limits<double>::infinity();
-    volatile double i1 = -0x1.2c08a1090ef11p-2;
-    double o0;
-    double o1;
-    interval_make_1(i0, i1, o0, o1);
-    return !same(o0, std::numeric_limits<double>::infinity()) || !same(o1, -std::numeric_limits<double>::infinity()) ? "interval_make_1 (double, a non-finite operand)" : nullptr;
-}
-
-// interval_make_1 (float)
-inline const char* interval_make_1_float() noexcept {
-    volatile float i0 = -0x1.5c0de2p-1f;
-    volatile float i1 = 0x1.3bc996p+3f;
-    float o0;
-    float o1;
-    interval_make_1(i0, i1, o0, o1);
-    return !same(o0, -0x1.5c0de2p-1f) || !same(o1, 0x1.3bc996p+3f) ? "interval_make_1 (float)" : nullptr;
-}
-inline const char* interval_make_1_nonfinite_float() noexcept {
-    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
-    volatile float i1 = 0x1.3bc996p+3f;
-    float o0;
-    float o1;
-    interval_make_1(i0, i1, o0, o1);
-    return !same(o0, -std::numeric_limits<float>::infinity()) || !same(o1, std::numeric_limits<float>::infinity()) ? "interval_make_1 (float, a non-finite operand)" : nullptr;
-}
-
 // sub_up_1 (double)
 inline const char* sub_up_1_double() noexcept {
     volatile double i0 = 0x1.9dedbb621ba9fp-2;
@@ -855,50 +819,6 @@ inline const char* ball_hull_1_nonfinite_float() noexcept {
     float o1;
     ball_hull_1(i0, i1, i2, i3, o0, o1);
     return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) ? "ball_hull_1 (float, a non-finite operand)" : nullptr;
-}
-
-// interval_intersection_1 (double)
-inline const char* interval_intersection_1_double() noexcept {
-    volatile double i0 = -0x1.5fbd8252477c9p+0;
-    volatile double i1 = 0x1.1c30c4f7ee05cp-1;
-    volatile double i2 = 0x1.3dad3bbcbf06p-3;
-    volatile double i3 = 0x1.d9890adc0abfap-1;
-    double o0;
-    double o1;
-    interval_intersection_1(i0, i1, i2, i3, o0, o1);
-    return !same(o0, 0x1.3dad3bbcbf06p-3) || !same(o1, 0x1.1c30c4f7ee05cp-1) ? "interval_intersection_1 (double)" : nullptr;
-}
-inline const char* interval_intersection_1_nonfinite_double() noexcept {
-    volatile double i0 = -std::numeric_limits<double>::infinity();
-    volatile double i1 = std::numeric_limits<double>::infinity();
-    volatile double i2 = -std::numeric_limits<double>::infinity();
-    volatile double i3 = std::numeric_limits<double>::infinity();
-    double o0;
-    double o1;
-    interval_intersection_1(i0, i1, i2, i3, o0, o1);
-    return !same(o0, -std::numeric_limits<double>::infinity()) || !same(o1, std::numeric_limits<double>::infinity()) ? "interval_intersection_1 (double, a non-finite operand)" : nullptr;
-}
-
-// interval_intersection_1 (float)
-inline const char* interval_intersection_1_float() noexcept {
-    volatile float i0 = -0x1.796272p+0f;
-    volatile float i1 = 0x1.bf1c52p+1f;
-    volatile float i2 = 0x1.697948p-2f;
-    volatile float i3 = 0x1.c29076p+1f;
-    float o0;
-    float o1;
-    interval_intersection_1(i0, i1, i2, i3, o0, o1);
-    return !same(o0, 0x1.697948p-2f) || !same(o1, 0x1.bf1c52p+1f) ? "interval_intersection_1 (float)" : nullptr;
-}
-inline const char* interval_intersection_1_nonfinite_float() noexcept {
-    volatile float i0 = std::numeric_limits<float>::infinity();
-    volatile float i1 = -std::numeric_limits<float>::infinity();
-    volatile float i2 = std::numeric_limits<float>::infinity();
-    volatile float i3 = -std::numeric_limits<float>::infinity();
-    float o0;
-    float o1;
-    interval_intersection_1(i0, i1, i2, i3, o0, o1);
-    return !same(o0, std::numeric_limits<float>::infinity()) || !same(o1, -std::numeric_limits<float>::infinity()) ? "interval_intersection_1 (float, a non-finite operand)" : nullptr;
 }
 
 // ball_intersection_1 (double)
@@ -1889,6 +1809,50 @@ inline const char* interval_equal_1_nonfinite_float() noexcept {
     return !same(o0, false) || !same(o1, false) ? "interval_equal_1 (float, a non-finite operand)" : nullptr;
 }
 
+// interval_intersection_1 (double)
+inline const char* interval_intersection_1_double() noexcept {
+    volatile double i0 = -0x1.5fbd8252477c9p+0;
+    volatile double i1 = 0x1.1c30c4f7ee05cp-1;
+    volatile double i2 = 0x1.3dad3bbcbf06p-3;
+    volatile double i3 = 0x1.d9890adc0abfap-1;
+    double o0;
+    double o1;
+    interval_intersection_1(i0, i1, i2, i3, o0, o1);
+    return !same(o0, 0x1.3dad3bbcbf06p-3) || !same(o1, 0x1.1c30c4f7ee05cp-1) ? "interval_intersection_1 (double)" : nullptr;
+}
+inline const char* interval_intersection_1_nonfinite_double() noexcept {
+    volatile double i0 = -std::numeric_limits<double>::infinity();
+    volatile double i1 = std::numeric_limits<double>::infinity();
+    volatile double i2 = -std::numeric_limits<double>::infinity();
+    volatile double i3 = std::numeric_limits<double>::infinity();
+    double o0;
+    double o1;
+    interval_intersection_1(i0, i1, i2, i3, o0, o1);
+    return !same(o0, -std::numeric_limits<double>::infinity()) || !same(o1, std::numeric_limits<double>::infinity()) ? "interval_intersection_1 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_intersection_1 (float)
+inline const char* interval_intersection_1_float() noexcept {
+    volatile float i0 = -0x1.796272p+0f;
+    volatile float i1 = 0x1.bf1c52p+1f;
+    volatile float i2 = 0x1.697948p-2f;
+    volatile float i3 = 0x1.c29076p+1f;
+    float o0;
+    float o1;
+    interval_intersection_1(i0, i1, i2, i3, o0, o1);
+    return !same(o0, 0x1.697948p-2f) || !same(o1, 0x1.bf1c52p+1f) ? "interval_intersection_1 (float)" : nullptr;
+}
+inline const char* interval_intersection_1_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::infinity();
+    volatile float i1 = -std::numeric_limits<float>::infinity();
+    volatile float i2 = std::numeric_limits<float>::infinity();
+    volatile float i3 = -std::numeric_limits<float>::infinity();
+    float o0;
+    float o1;
+    interval_intersection_1(i0, i1, i2, i3, o0, o1);
+    return !same(o0, std::numeric_limits<float>::infinity()) || !same(o1, -std::numeric_limits<float>::infinity()) ? "interval_intersection_1 (float, a non-finite operand)" : nullptr;
+}
+
 // interval_less_1 (double)
 inline const char* interval_less_1_double() noexcept {
     volatile double i0 = -0x1.277cfdf44a42ep+1;
@@ -1975,6 +1939,42 @@ inline const char* interval_less_equal_1_nonfinite_float() noexcept {
     bool o1;
     interval_less_equal_1(i0, i1, i2, i3, o0, o1);
     return !same(o0, false) || !same(o1, false) ? "interval_less_equal_1 (float, a non-finite operand)" : nullptr;
+}
+
+// interval_make_1 (double)
+inline const char* interval_make_1_double() noexcept {
+    volatile double i0 = -0x1.9399c13a99bdep+3;
+    volatile double i1 = -0x1.2c08a1090ef11p-2;
+    double o0;
+    double o1;
+    interval_make_1(i0, i1, o0, o1);
+    return !same(o0, -0x1.9399c13a99bdep+3) || !same(o1, -0x1.2c08a1090ef11p-2) ? "interval_make_1 (double)" : nullptr;
+}
+inline const char* interval_make_1_nonfinite_double() noexcept {
+    volatile double i0 = std::numeric_limits<double>::infinity();
+    volatile double i1 = -0x1.2c08a1090ef11p-2;
+    double o0;
+    double o1;
+    interval_make_1(i0, i1, o0, o1);
+    return !same(o0, std::numeric_limits<double>::infinity()) || !same(o1, -std::numeric_limits<double>::infinity()) ? "interval_make_1 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_make_1 (float)
+inline const char* interval_make_1_float() noexcept {
+    volatile float i0 = -0x1.5c0de2p-1f;
+    volatile float i1 = 0x1.3bc996p+3f;
+    float o0;
+    float o1;
+    interval_make_1(i0, i1, o0, o1);
+    return !same(o0, -0x1.5c0de2p-1f) || !same(o1, 0x1.3bc996p+3f) ? "interval_make_1 (float)" : nullptr;
+}
+inline const char* interval_make_1_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = 0x1.3bc996p+3f;
+    float o0;
+    float o1;
+    interval_make_1(i0, i1, o0, o1);
+    return !same(o0, -std::numeric_limits<float>::infinity()) || !same(o1, std::numeric_limits<float>::infinity()) ? "interval_make_1 (float, a non-finite operand)" : nullptr;
 }
 
 // two_prod (double)
@@ -6773,10 +6773,6 @@ inline const char* run() noexcept {
         ball_equal_1_nonfinite_double,
         ball_equal_1_float,
         ball_equal_1_nonfinite_float,
-        interval_make_1_double,
-        interval_make_1_nonfinite_double,
-        interval_make_1_float,
-        interval_make_1_nonfinite_float,
         sub_up_1_double,
         sub_up_1_float,
         interval_mid_rad_1_double,
@@ -6809,10 +6805,6 @@ inline const char* run() noexcept {
         ball_hull_1_nonfinite_double,
         ball_hull_1_float,
         ball_hull_1_nonfinite_float,
-        interval_intersection_1_double,
-        interval_intersection_1_nonfinite_double,
-        interval_intersection_1_float,
-        interval_intersection_1_nonfinite_float,
         ball_intersection_1_double,
         ball_intersection_1_nonfinite_double,
         ball_intersection_1_float,
@@ -6915,6 +6907,10 @@ inline const char* run() noexcept {
         interval_equal_1_nonfinite_double,
         interval_equal_1_float,
         interval_equal_1_nonfinite_float,
+        interval_intersection_1_double,
+        interval_intersection_1_nonfinite_double,
+        interval_intersection_1_float,
+        interval_intersection_1_nonfinite_float,
         interval_less_1_double,
         interval_less_1_nonfinite_double,
         interval_less_1_float,
@@ -6923,6 +6919,10 @@ inline const char* run() noexcept {
         interval_less_equal_1_nonfinite_double,
         interval_less_equal_1_float,
         interval_less_equal_1_nonfinite_float,
+        interval_make_1_double,
+        interval_make_1_nonfinite_double,
+        interval_make_1_float,
+        interval_make_1_nonfinite_float,
         two_prod_double,
         two_prod_float,
         mul_dir_1_double,

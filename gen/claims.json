@@ -1234,60 +1234,6 @@
       }
     },
     {
-      "name": "interval_make_1",
-      "domain": "extended",
-      "ieee_only": true,
-      "inputs": [
-        {
-          "name": "lo",
-          "limbs": 1
-        },
-        {
-          "name": "hi",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "zl",
-          "limbs": 1
-        },
-        {
-          "name": "zu",
-          "limbs": 1
-        }
-      ],
-      "requires": [],
-      "ensures": [
-        {
-          "kind": "makes_interval",
-          "lower": "zl",
-          "upper": "zu",
-          "from": {
-            "lower": "lo",
-            "upper": "hi"
-          }
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeInterval1.v",
-        "name": "interval_make_1_correct"
-      },
-      "source": {
-        "cite": "constructor of an interval (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 2,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
       "name": "sub_up_1",
       "domain": "extended",
       "inputs": [
@@ -1500,7 +1446,7 @@
       "ieee_status": "unverified",
       "theorem": null,
       "source": {
-        "cite": "interval_make_1, then interval_to_ball_1 (Milestone 2 listing)",
+        "cite": "interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 11,
@@ -1823,78 +1769,6 @@
       }
     },
     {
-      "name": "interval_intersection_1",
-      "domain": "extended",
-      "ieee_only": true,
-      "inputs": [
-        {
-          "name": "xl",
-          "limbs": 1
-        },
-        {
-          "name": "xu",
-          "limbs": 1
-        },
-        {
-          "name": "yl",
-          "limbs": 1
-        },
-        {
-          "name": "yu",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "zl",
-          "limbs": 1
-        },
-        {
-          "name": "zu",
-          "limbs": 1
-        }
-      ],
-      "requires": [
-        "interval(xl, xu)",
-        "interval(yl, yu)"
-      ],
-      "ensures": [
-        {
-          "kind": "interval_set",
-          "lower": "zl",
-          "upper": "zu",
-          "set": "intersection",
-          "intervals": {
-            "x": {
-              "lower": "xl",
-              "upper": "xu"
-            },
-            "y": {
-              "lower": "yl",
-              "upper": "yu"
-            }
-          }
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeIntervalExact.v",
-        "name": "interval_intersection_1_correct"
-      },
-      "source": {
-        "cite": "the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
       "name": "ball_intersection_1",
       "domain": "extended",
       "ieee_only": true,
@@ -1953,7 +1827,7 @@
       "ieee_status": "unverified",
       "theorem": null,
       "source": {
-        "cite": "both balls to intervals, their intersection, back to a ball (Milestone 2 listing)",
+        "cite": "both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 21,
@@ -3903,6 +3777,78 @@
       }
     },
     {
+      "name": "interval_intersection_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_set",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "intersection",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_intersection_1_correct"
+      },
+      "source": {
+        "cite": "the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "interval_less_1",
       "domain": "extended",
       "ieee_only": true,
@@ -4047,6 +3993,60 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_make_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "lo",
+          "limbs": 1
+        },
+        {
+          "name": "hi",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "makes_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "from": {
+            "lower": "lo",
+            "upper": "hi"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_make_1_correct"
+      },
+      "source": {
+        "cite": "constructor of an interval (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 2,
       "instances": {
         "binary64": [],
         "binary32": []

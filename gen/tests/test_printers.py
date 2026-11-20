@@ -129,16 +129,17 @@ BRANCHED.update({k: ('ne',) for k in ('interval_sub_2', 'interval_mul_2', 'inter
 BRANCHED.update(interval_make_2=('v',), interval_intersection_1=('ok',), interval_intersection_2=('ok',),
                 mul_ext_2_2=('nz', 'fo'))
 # Stage B2: the set operations of a ball, the composition when both operands are not empty (the
-# hull: qx, qy) or not the whole line (the intersection: nx, ny), and the ball sums of a finite ball
-# (the split: fr). The predicates and comparisons return masks, which are no selects.
-BRANCHED.update(ball_hull_1=('qx', 'qy'), ball_intersection_1=('nx', 'ny'), ball_split_1=('fr',),
+# hull: qx, qy) or not the whole line and the intersection not empty (the intersection: nx, ny, ob),
+# and the ball sums of a finite ball (the split: fr). The predicates and comparisons return masks, which are no selects.
+BRANCHED.update(ball_hull_1=('qx', 'qy'), ball_intersection_1=('nx', 'ny', 'ob'), ball_split_1=('fr',),
                 ball_split_2=('fr',))
 # And of two limbs: the midpoint and radius and the conversion of a ball to an interval on the test of
-# emptiness (ne), the hull and the intersection as for one limb. The conversion of an interval to a
-# ball, its split and the ball from an interval of one limb return values that are not selects of
-# their own listings on one mask.
+# emptiness (ne), the hull and the intersection of two limbs as the hull and the first listing of the
+# intersection of one limb (nx, ny); and the ball from an interval of one limb on the test of
+# interval_make_1 (v). The conversion of an interval to a ball and its split return values that are
+# not selects of their own listings on one mask.
 BRANCHED.update(interval_mid_rad_2=('ne',), ball_to_interval_2=('ne',), ball_hull_2=('qx', 'qy'),
-                ball_intersection_2=('nx', 'ny'))
+                ball_intersection_2=('nx', 'ny'), ball_from_interval_1=('v',))
 
 
 class Cpp(unittest.TestCase):
