@@ -274,6 +274,11 @@ def claims_reading_wave6(ctx):
         kern("mul_dir_1", lambda k: k.update(domain="finite", requires=[])),
         kern("add_ball_2_2", lambda k: k.update(domain="extended", requires=["canonical(x)",
                                                                               "canonical(y)"])),
+        # The same with the finite_when the extended domain asks of encloses: refused for the
+        # balls {} alone.
+        kern("add_ball_2_2", lambda k: (k.update(domain="extended",
+                                                 requires=["canonical(x)", "canonical(y)"]),
+                                        k["ensures"][2].update(finite_when=[]))),
     ]
     data = copy.deepcopy(raw)
     for i, k in enumerate(bad):
@@ -630,6 +635,11 @@ HAND = [
     ("interval_neg_1 binary64 0x1p+0 0x1p+1 -> -0x1p+1 -0x1p+0", ()),
     ("interval_neg_1 binary64 0x1p+0 0x1p+1 -> -0x1p+0 -0x1p+1", ("I1",)),
     ("interval_neg_1 binary64 -inf 0x1p+1 -> -0x1p+1 inf", ()),
+    # tight exact: an enclosure one step wider on either side is no longer exact (I4 alone).
+    ("interval_neg_1 binary64 0x1p+0 0x1p+1 -> -0x1.0000000000001p+1 -0x1p+0", ("I4",)),
+    ("interval_neg_1 binary64 0x1p+0 0x1p+1 -> -0x1p+1 -0x1.fffffffffffffp-1", ("I4",)),
+    ("interval_neg_2 binary64 0x1p+0 0x1p-60 0x1p+1 0x0p+0 -> -0x1p+1 -0x1p-104 -0x1p+0 -0x1p-60",
+     ("I4",)),
     # interval_mul_1: [0, 0] times the whole line is [0, 0]; [0, 1] [1, +inf] is [0, +inf].
     ("interval_mul_1 binary64 0x0p+0 0x0p+0 -inf inf -> 0x0p+0 0x0p+0", ()),
     ("interval_mul_1 binary64 0x0p+0 0x0p+0 -inf inf -> -inf inf", ("I4",)),
@@ -701,6 +711,13 @@ HAND = [
     ("ball_to_interval_1 binary64 nan nan -> -inf inf", ("empty",)),
     ("ball_to_interval_1 binary64 0x1p+0 0x1p-60 -> 0x1p+0 0x1.0000000000001p+0",
      ("containment",)),
+    # tight rounded: the roundings of 1 -+ 2^-60 down and up, and one step wider (contains, not
+    # tight).
+    ("ball_to_interval_1 binary64 0x1p+0 0x1p-60 -> 0x1.fffffffffffffp-1 0x1.0000000000001p+0", ()),
+    ("ball_to_interval_1 binary64 0x1p+0 0x1p-60 -> 0x1.ffffffffffffep-1 0x1.0000000000001p+0",
+     ("tight",)),
+    ("ball_to_interval_1 binary64 0x1p+0 0x1p-60 -> 0x1.fffffffffffffp-1 0x1.0000000000002p+0",
+     ("tight",)),
     # The constructors.
     ("interval_make_1 binary64 0x1p+0 0x1p+1 -> 0x1p+0 0x1p+1", ()),
     ("interval_make_1 binary64 nan 0x1p+1 -> -inf inf", ()),
@@ -714,6 +731,12 @@ HAND = [
     ("ball_from_interval_2 binary64 0x1p+0 0x1.8p+1 -> 0x1p+1 0x0p+0 0x1p+0", ()),
     ("ball_from_interval_2 binary64 0x1p+0 0x1.8p+1 -> 0x1p+1 0x0p+0 0x1p+1", ("makes_ball",)),
     ("ball_from_interval_2 binary64 0x1p+0 0x1.8p+1 -> 0x1p+1 0x1p-60 0x1.0000000000001p+0",
+     ("makes_ball",)),
+    # [-1, 2^53]: (hi - lo)/2 = 2^52 + 1/2 is not a number, its rounding up 2^52 + 1 leaves room,
+    # so a center off the midpoint 2^52 - 1/2 still contains the interval; midpoint_when holds.
+    ("ball_from_interval_2 binary64 -0x1p+0 0x1p+53 -> 0x1.fffffffffffffp+51 0x0p+0 "
+     "0x1.0000000000001p+52", ()),
+    ("ball_from_interval_2 binary64 -0x1p+0 0x1p+53 -> 0x1p+52 0x0p+0 0x1.0000000000001p+52",
      ("makes_ball",)),
     ("ball_from_interval_2 binary64 nan 0x1p+0 -> 0x0p+0 0x0p+0 inf", ()),
     ("ball_from_interval_2 binary64 0x1p+1 0x1p+0 -> nan nan nan", ()),
@@ -899,6 +922,19 @@ def iv_gen(ctx):
                 k, fname, sorted(tags), g.strata))
             if gen6.family_of(kern) is not None:
                 expect(set(gen6.COMMON) <= set(g.strata), "%s: a common stratum missing" % k)
+            if k in ("interval_mid_rad_1", "ball_from_interval_2"):
+                # oddeta aims at bounds that are odd multiples of eta below 2N, whose halves are
+                # not numbers: most of its cases have one (other strata, a subnormal by chance).
+                go = G.RandomGen(kern, fmt, "s", strata=["oddeta"])
+                odd = 0
+                cases = [ln for ln in go.lines(0, 200) if not ln.startswith("#")
+                         and "#oddeta" in ln]
+                expect(len(cases) >= 150, "%s %s: %d cases of oddeta" % (k, fname, len(cases)))
+                for ln in cases:
+                    vs = [F.parse_limb(fmt, t) for t in ln.split()[2:4]]
+                    odd += any(type(v) is int and v % 2 and abs(v) < 2 * fmt.lam for v in vs)
+                expect(odd * 4 >= 3 * len(cases), "%s %s: oddeta gave an odd bound below 2N in "
+                       "%d of %d cases" % (k, fname, odd, len(cases)))
     # The enumeration of intervals against the definition, in two tiny formats.
     for fname, k, limbs in (("fp:2:-1:0", "interval_neg_1", 1), ("fp:3:-2:-1", "interval_neg_2", 2),
                             ("fp:2:-1:0", "interval_hull_1", 1)):
