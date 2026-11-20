@@ -1,5 +1,5 @@
 refused: kernel ball_split_1, value nh: negated fused result: nh = neg(hs) negates a select one of whose arms, h, is the result of prod; compilers push a negation through a select into its arms. Negate an operand instead: -prod(a, b) is prod(neg(a), b), -fma(a, b, c) is fma(neg(a), b, neg(c)); and a rounding down of x - d is minus the rounding up of d - x, so sub_down_1(x, d) is neg(add_up_1(d, neg(x))) and sub_up_1(x, d) is neg(add_down_1(d, neg(x)))
-47 kernel descriptions (45 of them in gen/kernels, with their claims); 4 remarks that a description has no claim (expected); 1 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
+55 kernel descriptions (45 of them in gen/kernels, with their claims); 20 remarks that a description has no claim (expected); 1 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
 
 kernel                 operations after inlining
 acc_add_1                3 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
@@ -25,10 +25,18 @@ bound_dot_2              8 rounded operations, 0 steps to a neighbor,   3 compar
 bound_sum_2              5 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
 bv_add_radius_1          3 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations
 bv_add_radius_2          3 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations
+bv_axpy_radius_1         6 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
+bv_axpy_radius_2         6 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
+bv_axpy_step_1           2 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations
+bv_axpy_step_2          26 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations
 bv_center_2              0 rounded operations, 0 steps to a neighbor,   2 comparisons, selects, sign and mask operations
 bv_center_entry_1        1 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations
+bv_conv_finish           0 rounded operations, 0 steps to a neighbor,   5 comparisons, selects, sign and mask operations
 bv_make_finish           0 rounded operations, 0 steps to a neighbor,   6 comparisons, selects, sign and mask operations
 bv_make_radius           3 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations
+bv_mul_pow2_radius       3 rounded operations, 2 steps to a neighbor,   5 comparisons, selects, sign and mask operations
+bv_mul_pow2_step_1       1 rounded operations, 0 steps to a neighbor,   4 comparisons, selects, sign and mask operations
+bv_mul_pow2_step_2       5 rounded operations, 0 steps to a neighbor,   6 comparisons, selects, sign and mask operations
 bv_scale_radius_1        3 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
 bv_scale_radius_2        3 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
 conv_radius              8 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations

@@ -1132,7 +1132,29 @@ each is proposed in `experiments/milestone2/kernels/` and checked there:
   that are generated, which a header can call today with a temporary array (or in place, the second
   pass on the array written by the first: the centers written may be exactly the array read).
 - `bv_conv_k` with `conv_radius` (a convolution with the maxima of its two operands, the count
-  $\min(n_x, n_y)$ as a number of `T` and the bound of `dot` for it): [below](#the-product-of-polynomials-proposed).
+  $\min(n_x, n_y)$ as a number of `T` and the bound of `dot` for it): below.
+
+**The product of polynomials, proposed** (`experiments/milestone2/kernels/bv_conv_2.fold`,
+`conv_radius.kernel`, `bv_conv_finish.kernel`; checked by `bv_conv.py`). The centers are the
+coefficients of `conv_k` (the generated convolution, its mask included); besides, the state of two
+folds of maxima of the operands' centers ($M_a$, $M_b$: of what is read, not of what is written), the
+count $m = \min(n_x, n_y)$ as a number of `T` (exact below $2^p$, rounded up beyond), one call of
+`bound_dot_k(m)`, which covers every coefficient because coefficient $j$ has at most $m$ terms
+(`conv_terms_length`), the page's `conv_radius(ma, mb, rx, ry, m, g, t)`, and the finish
+`bv_conv_finish(rz, finite, okg)`, `norm_finish_1` under the `and` of the convolution's mask and the
+bound's. The claim would be a kind of its own, `encloses_coefficients`, with the two lengths of a
+convolution: V1 (canonical, $n_x + n_y - 1$ coefficients, none when a length is $0$), the flag, V2
+coefficient by coefficient for the set $\sum_i x_i y_{j-i}$ with every $x_i$ and $y_k$ ranging
+independently over its ball (each appears once in a coefficient, so the range of the sum is the sum of
+the ranges of the products), V3; no V4, whose fraction the page leaves to the proof (with an empty
+operand $m = 0$, and $M_b r_x$ alone can still overflow: a V4 over the coefficients would say nothing
+there, so it needs a condition on the radii and the maxima, as `radii_when`). Its line protocol would
+be a convolution's with the two radii between the lengths and the arrays:
+`bv_conv_K FORMAT seq N_X N_Y RX RY LIMB...`, completed with the $N_Z$ coefficients, the radius and
+the flag. `bv_conv.py` finds V1 to V3 and containment on every case it runs (1 500 products per toy
+format and 400 in `binary64` and `binary32`, lengths 0 to 4, the whole space among the operands).
+What the generator lacks: records on the arrays read, a count made from the lengths, a kernel run once
+between the loop and the radius (the bound), and a finish of two masks.
 
 ### The accumulator
 

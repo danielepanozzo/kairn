@@ -1,0 +1,20 @@
+fp:2:-3:2 bv_mul_pow2_1: 1500 cases, 479 the whole space, 467 exact as claimed, the radius the largest entrywise one in 819 of 819
+fp:2:-3:2 bv_axpy_1: 1500 cases, 1042 the whole space, the composition bit for bit in 1500 of 1500, the radius the largest entrywise one in 338 (and in 264 of 264 where one entry has both maxima)
+fp:2:-3:2 bv_mul_pow2_2: 1500 cases, 500 the whole space, 322 exact as claimed, the radius the largest entrywise one in 799 of 799
+fp:3:-5:2 bv_mul_pow2_1: 1500 cases, 454 the whole space, 482 exact as claimed, the radius the largest entrywise one in 836 of 836
+fp:3:-5:2 bv_axpy_1: 1500 cases, 763 the whole space, the composition bit for bit in 1500 of 1500, the radius the largest entrywise one in 562 (and in 399 of 399 where one entry has both maxima)
+fp:3:-5:2 bv_mul_pow2_2: 1500 cases, 472 the whole space, 297 exact as claimed, the radius the largest entrywise one in 833 of 833
+fp:3:-5:2 bv_axpy_2: 1500 cases, 774 the whole space, the composition bit for bit in 1500 of 1500, the radius the largest entrywise one in 552 (and in 401 of 401 where one entry has both maxima)
+fp:4:-7:2 bv_mul_pow2_1: 1500 cases, 420 the whole space, 466 exact as claimed, the radius the largest entrywise one in 877 of 877
+fp:4:-7:2 bv_axpy_1: 1500 cases, 694 the whole space, the composition bit for bit in 1500 of 1500, the radius the largest entrywise one in 595 (and in 438 of 438 where one entry has both maxima)
+fp:4:-7:2 bv_mul_pow2_2: 1500 cases, 396 the whole space, 266 exact as claimed, the radius the largest entrywise one in 903 of 903
+fp:4:-7:2 bv_axpy_2: 1500 cases, 659 the whole space, the composition bit for bit in 1500 of 1500, the radius the largest entrywise one in 643 (and in 451 of 451 where one entry has both maxima)
+binary64 bv_mul_pow2_1: 400 cases, 117 the whole space, 198 exact as claimed, the radius the largest entrywise one in 231 of 231
+binary64 bv_axpy_1: 400 cases, 176 the whole space, the composition bit for bit in 400 of 400, the radius the largest entrywise one in 174 (and in 121 of 121 where one entry has both maxima)
+binary64 bv_mul_pow2_2: 400 cases, 127 the whole space, 152 exact as claimed, the radius the largest entrywise one in 220 of 220
+binary64 bv_axpy_2: 400 cases, 185 the whole space, the composition bit for bit in 400 of 400, the radius the largest entrywise one in 170 (and in 122 of 122 where one entry has both maxima)
+binary32 bv_mul_pow2_1: 400 cases, 130 the whole space, 181 exact as claimed, the radius the largest entrywise one in 217 of 217
+binary32 bv_axpy_1: 400 cases, 174 the whole space, the composition bit for bit in 400 of 400, the radius the largest entrywise one in 174 (and in 124 of 124 where one entry has both maxima)
+binary32 bv_mul_pow2_2: 400 cases, 126 the whole space, 129 exact as claimed, the radius the largest entrywise one in 223 of 223
+binary32 bv_axpy_2: 400 cases, 190 the whole space, the composition bit for bit in 400 of 400, the radius the largest entrywise one in 154 (and in 103 of 103 where one entry has both maxima)
+every statement held

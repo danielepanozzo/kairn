@@ -1,0 +1,9 @@
+fp:4:-10:5 bv_conv_1: 1500 products, 704 finite ball vectors, 796 the whole space; the largest needed radius over the radius 0.666
+fp:4:-10:5 bv_conv_2: 1500 products, 678 finite ball vectors, 822 the whole space; the largest needed radius over the radius 0.670
+fp:5:-14:7 bv_conv_1: 1500 products, 741 finite ball vectors, 759 the whole space; the largest needed radius over the radius 0.831
+fp:5:-14:7 bv_conv_2: 1500 products, 716 finite ball vectors, 784 the whole space; the largest needed radius over the radius 0.835
+binary64 bv_conv_1: 400 products, 245 finite ball vectors, 155 the whole space; the largest needed radius over the radius 1.000
+binary64 bv_conv_2: 400 products, 233 finite ball vectors, 167 the whole space; the largest needed radius over the radius 1.000
+binary32 bv_conv_1: 400 products, 242 finite ball vectors, 158 the whole space; the largest needed radius over the radius 1.000
+binary32 bv_conv_2: 400 products, 232 finite ball vectors, 168 the whole space; the largest needed radius over the radius 1.000
+every statement held

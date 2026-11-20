@@ -1,0 +1,29 @@
+# Proposed (milestone2.md, "BallVector": bv_mul_pow2_k, "the same kernel along the entries, with ec true
+# only when it is for every entry"). Not readable by the generator as it is: a ball vector of
+# gen/kernels has a step that returns the center only and the state of one fold of maxima of the
+# centers written (architecture.md, "Ball vectors"). This one needs, besides, a mask of each entry (the
+# step's second output, that its scaling was exact) and-ed into a third group of the state, which the
+# radius takes; and its radius kernel's claim is not in the vocabulary (bv_mul_pow2_radius.kernel).
+# bv_proposals.py runs it by composing its kernels with the interpreter, as the generated code would.
+fold:          bv_mul_pow2_2
+arrays:        stored x = x0 x1
+scalars:       stored rx, supplied c
+state:         m, mask ok, mask ex
+step:          (z, e) = bv_mul_pow2_step_2(x, c)
+record:        (m, ok) = norm_step_2(m, ok, z)
+record:        ex = and(ex, e)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+combine:       ex = and(ex, ex)
+radius:        rz = bv_mul_pow2_radius(m, ex, rx, c)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x*c
+requires:      ball_vector x rx
+requires:      power_of_two c
+ensures:       encloses_entries z r x*c x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*c,-2) radii_when=abs_le(rx*c,-2) exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))
+min_precision: 2
+status:        unverified
+domain:        extended

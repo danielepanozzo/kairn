@@ -11,7 +11,13 @@ wrong on what was run.
 ## How it works
 
 - `kernels/` holds the proposed kernels as descriptions in the generator's own format
-  (`gen/README.md`): `ball_split_1` and `conv_radius`. They carry no claims: the claims of this
+  (`gen/README.md`): `ball_split_1` and `conv_radius`; and two kernels of BallVector that the ball
+  vectors of the generator cannot be yet, `bv_mul_pow2_2.fold` (with `bv_mul_pow2_step_1`,
+  `bv_mul_pow2_step_2`, `bv_mul_pow2_radius`) and `bv_axpy_2.fold` (with `bv_axpy_step_k`,
+  `bv_axpy_radius_k`), whose folds are written in the generator's syntax with what it does not have
+  (a step of two outputs, two records), and which `bv_proposals.py` runs by composing their kernels;
+  and the product of polynomials of BallVector, `bv_conv_2.fold` with `conv_radius` and
+  `bv_conv_finish`, which `bv_conv.py` runs on the generated `conv_k`. They carry no claims: the claims of this
   milestone need vocabulary that the generator does not have yet. The radii `bv_add_radius_2` and
   `bv_scale_radius_2` that were proposed here are in `gen/kernels` now, with their forms of one limb
   and their claims (`batch.py` reads them from there), and so is the constructor of a BallVector,
@@ -65,7 +71,9 @@ compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`)
 | `constants.py` | the constants $A$ and $B$ of the two-limb bounds in `binary64` and `binary32` | Bounds of two limbs |
 | `ballvector.py` | the constructor of a BallVector proposed in `kernels/` (`bv_make_1`, `bv_make_2`): its result is canonical; it is the whole space exactly when the radius given is negative, a NaN or $+\infty$, or a center is not finite; otherwise the centers and the radius given; the same in every order | BallVector |
 | `accumulator.py` | the kernels of the accumulator: the inequality the radius rests on, $\sum_i \lvert x_i y_i\rvert \le (1+u)^{n+2}(a + n\eta/2)$, after random sequences of `add`, `add_product` and `merge`; the proposed `acc_radius` above its claimed expression, and the chain error $\le$ radius with `bound_dot_k`; in the format itself, the sum of magnitudes $+\infty$ while the running sum is finite, and the radius's mask false for a sum of magnitudes that is not finite | The accumulator |
-| `rules_report.py` | what the generator's rules say of the 47 proposed kernels (2 in `kernels/`, 45 in `gen/kernels`), and the operations of each after inlining | Experiments |
+| `bv_proposals.py` | the proposed `bv_mul_pow2_k` and `bv_axpy_k`: V1 to V4 (every length) and the flag, every order the same; `bv_mul_pow2_k` exactly $cX$ when every entry and the radius satisfy the conditions of `exact_when`, its radius the largest of `ball_mul_pow2_k`'s; `bv_axpy_k` bit for bit `bv_add_k(bv_scale_k(X, a), Y)`, its radius at least the largest entrywise one and equal when one entry has both maxima | BallVector |
+| `bv_conv.py` | the proposed `bv_conv_k`: the generated `conv_k` on the centers, the maxima of the operands, one call of `bound_dot_k` with the smaller length, `conv_radius`: V1 to V3 and the flag, containment coefficient by coefficient for independent members, lengths 0 to 4, the whole space among the operands | The product of polynomials |
+| `rules_report.py` | what the generator's rules say of the 55 proposed kernels (10 in `kernels/`, 45 in `gen/kernels`), and the operations of each after inlining | Experiments |
 
 ## Rerun
 

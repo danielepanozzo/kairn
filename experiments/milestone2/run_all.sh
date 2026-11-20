@@ -6,7 +6,7 @@
 set -e
 here=$(dirname "$0")
 mkdir -p "$here/results"
-for s in constants rules_report rational batch accumulator ballvector scaling enclosure_1 enclosure_2 \
+for s in constants rules_report rational batch accumulator ballvector bv_proposals bv_conv scaling enclosure_1 enclosure_2 \
          interval_2 interval_1 directed_1 convert directed_2; do
     echo "$s"
     python3 "$here/$s.py" > "$here/results/$s.txt" 2>&1

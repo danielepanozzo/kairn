@@ -1,0 +1,25 @@
+# Proposed (milestone2.md, "BallVector": bv_mul_pow2_k, "with ec over all entries"): the step of
+# bv_mul_pow2_2, the center scaled as mul_pow2_2 does (the map mul_pow2_map_2) and, as a second output,
+# the mask that this entry's scaling was exact: ec of ball_mul_pow2_2 (the scaled last nonzero limb
+# above the smallest normal number N, or the center zero). The ball vector folds that mask with `and`
+# into a state of its own, besides the largest magnitude of a center written: a state that a ball
+# vector of gen/kernels cannot have (its state is that of one fold of maxima of the centers written,
+# and its step returns the center only). bv_proposals.py checks it.
+kernel:        bv_mul_pow2_step_2
+input:         x = x0 x1
+input:         c
+output:        z = z0 z1
+output:        mask e
+status:        unverified
+entry:         yes
+cone_exempt:   the mask e is a comparison; the center is mul_pow2_2's
+
+h        = prod(x0, c)
+l        = prod(x1, c)
+(z0, z1) = fast_two_sum(h, l)
+ze       = eq(x1, 0)
+mm       = select(ze, h, l)
+am       = abs(mm)
+bc       = lt(const up(eta/(2*u)), am)
+zc       = eq(x0, 0)
+e        = or(bc, zc)

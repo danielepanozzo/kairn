@@ -1,0 +1,20 @@
+# Proposed (milestone2.md, "The product of polynomials": bv_conv_k): the finish of the product of two
+# BallVectors whose coefficients are those of conv_k: the radius of conv_radius when every coefficient
+# written is finite (the mask of the convolution), the bound of dot for min(n_x, n_y) terms was
+# given (the mask of bound_dot_k) and the radius is finite, with the flag true; otherwise the
+# canonical NaN and the flag false, and the product is the whole space. norm_finish_1 under the and of
+# the two masks (bv_conv.py).
+kernel:        bv_conv_finish
+input:         rz
+input:         mask finite
+input:         mask okg
+output:        r
+output:        mask flag
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+ieee_only:     yes
+cone_exempt:   the outputs are those of norm_finish_1, after the and of two masks
+
+q         = and(finite, okg)
+(r, flag) = norm_finish_1(rz, q)
