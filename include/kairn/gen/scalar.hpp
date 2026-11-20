@@ -893,7 +893,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
 }
 
 // bound_dot_1(m) -> g, t, mask ok
-// the exported bound of a dot product as a function of n (milestone2.md). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+// the exported bound of a dot product as a function of n (milestone2.md). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void bound_dot_1(double m, double& g_out, double& t_out, bool& ok_out) noexcept {
     const double a = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
     const double aa = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
@@ -928,7 +928,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_dot_1(float m, float& g_out, float& t
 }
 
 // bound_dot_2(m) -> g, t, mask ok
-// the exported bound of a dot product as a function of n (milestone2.md). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+// the exported bound of a dot product as a function of n (milestone2.md). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void bound_dot_2(double m, double& g_out, double& t_out, bool& ok_out) noexcept {
     const double a = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-104 : fma_rn(m, 0x1.0000000000001p-104, 0.0);
     const double aa = __builtin_is_constant_evaluated() ? m * 0x1.0000000000002p-104 : fma_rn(m, 0x1.0000000000002p-104, 0.0);
@@ -963,7 +963,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_dot_2(float m, float& g_out, float& t
 }
 
 // bound_sum_1(m) -> g, mask ok
-// the exported bound of a sum as a function of n (milestone2.md). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+// the exported bound of a sum as a function of n (milestone2.md). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void bound_sum_1(double m, double& g_out, bool& ok_out) noexcept {
     const double a = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
     const double aa = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
@@ -986,7 +986,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_sum_1(float m, float& g_out, bool& ok
 }
 
 // bound_sum_2(m) -> g, mask ok
-// the exported bound of a sum as a function of n (milestone2.md). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+// the exported bound of a sum as a function of n (milestone2.md). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void bound_sum_2(double m, double& g_out, bool& ok_out) noexcept {
     const double a = __builtin_is_constant_evaluated() ? m * 0x1.8000000000004p-105 : fma_rn(m, 0x1.8000000000004p-105, 0.0);
     const double aa = __builtin_is_constant_evaluated() ? m * 0x1.8000000000005p-105 : fma_rn(m, 0x1.8000000000005p-105, 0.0);
@@ -1009,7 +1009,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_sum_2(float m, float& g_out, bool& ok
 }
 
 // dot_step_1(s, x, y) -> t
-// the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void dot_step_1(double s, double x, double y, double& t_out) noexcept {
     const double t = fma_rn(x, y, s);
     t_out = t;
@@ -1043,7 +1043,7 @@ KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(float a, float b, float&
 }
 
 // fold_finish_1(s) -> r, mask flag
-// the finish of a fold: the state or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+// the finish of a fold: the state or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void fold_finish_1(double s, double& r_out, bool& flag_out) noexcept {
     const double a = abs_bits(s);
     const bool flag = std::numeric_limits<double>::infinity() > a;
@@ -1485,7 +1485,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_up_entry(float a, float b, float& r_out
 }
 
 // sum_entry_step_1(s, x) -> t
-// add_1_1 on a guarded element (rule R3). Status: unverified; constexpr.
+// add_1_1 on a guarded element (rule R3). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sum_entry_step_1(double s, double x, double& t_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? x : x + 0.0;
     const double t = s + g;
@@ -3261,7 +3261,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
 }
 
 // dot_step_2(s = (s0, s1), x = (x0, x1), y = (y0, y1)) -> t = (t0, t1)
-// the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void dot_step_2(double s0, double s1, double x0, double x1, double y0, double y1, double& t0_out, double& t1_out) noexcept {
     // (p0, p1) = mul_2_2(x0, x1, y0, y1)
     // (p0_ch, p0_cl1) = two_prod(x0, y0)
@@ -3376,7 +3376,7 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(float x0, float x1, float y0, float 
 }
 
 // fold_finish_2(s = (s0, s1)) -> r = (r0, r1), mask flag
-// the finish of a fold: the state or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+// the finish of a fold: the state or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void fold_finish_2(double s0, double s1, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const double a = abs_bits(s0);
     const bool flag = std::numeric_limits<double>::infinity() > a;
@@ -4310,7 +4310,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, 
 }
 
 // sum_entry_step_2(s = (s0, s1), x = (x0, x1)) -> t = (t0, t1)
-// add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. Status: unverified; constexpr.
+// add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sum_entry_step_2(double s0, double s1, double x0, double x1, double& t0_out, double& t1_out) noexcept {
     const double g0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0;
     const double g1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0;
@@ -4375,7 +4375,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sum_entry_step_2(float s0, float s1, float 
 }
 
 // sum_fast_entry_step_2(s = (s0, s1), x = (x0, x1)) -> t = (t0, t1)
-// add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. Status: unverified; constexpr.
+// add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sum_fast_entry_step_2(double s0, double s1, double x0, double x1, double& t0_out, double& t1_out) noexcept {
     const double g0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0;
     const double g1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0;
@@ -4448,7 +4448,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(float x0, [[maybe_unused]] flo
 // the step inlined in the loop: a value of the step is named step_V, of the combination comb_V,
 // of the finish fin_V; the loop's own variables end with an underscore.
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void dot_1_seq(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double s = 0.0;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -4482,7 +4482,7 @@ inline void dot_1_seq(const float* x_in, const float* y_in, std::size_t n, float
     flag_out = fin_flag;
 }
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void dot_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s = 0.0;
@@ -4552,7 +4552,7 @@ inline void dot_1_lanes(const float* x_in, const float* y_in, std::size_t n, std
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void dot_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -4670,7 +4670,7 @@ inline void dot_2_seq(const float* x0_in, const float* x1_in, const float* y0_in
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void dot_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;
@@ -4954,7 +4954,7 @@ inline void dot_2_lanes(const float* x0_in, const float* x1_in, const float* y0_
     flag_out = fin_flag;
 }
 
-// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void sum_1_seq(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double s = 0.0;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -4986,7 +4986,7 @@ inline void sum_1_seq(const float* x_in, std::size_t n, float& r_out, bool& flag
     flag_out = fin_flag;
 }
 
-// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void sum_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s = 0.0;
@@ -5052,7 +5052,7 @@ inline void sum_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, flo
     flag_out = fin_flag;
 }
 
-// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void sum_1_entry_seq(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double s = 0.0;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -5086,7 +5086,7 @@ inline void sum_1_entry_seq(const float* x_in, std::size_t n, float& r_out, bool
     flag_out = fin_flag;
 }
 
-// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void sum_1_entry_lanes(const double* x_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s = 0.0;
@@ -5156,7 +5156,7 @@ inline void sum_1_entry_lanes(const float* x_in, std::size_t n, std::size_t lane
     flag_out = fin_flag;
 }
 
-// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void sum_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -5244,7 +5244,7 @@ inline void sum_2_seq(const float* x0_in, const float* x1_in, std::size_t n, flo
     flag_out = fin_flag;
 }
 
-// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void sum_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;
@@ -5468,7 +5468,7 @@ inline void sum_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, s
     flag_out = fin_flag;
 }
 
-// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void sum_2_entry_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -5562,7 +5562,7 @@ inline void sum_2_entry_seq(const float* x0_in, const float* x1_in, std::size_t 
     flag_out = fin_flag;
 }
 
-// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void sum_2_entry_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;
@@ -5798,7 +5798,7 @@ inline void sum_2_entry_lanes(const float* x0_in, const float* x1_in, std::size_
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void sum_fast_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -5864,7 +5864,7 @@ inline void sum_fast_2_seq(const float* x0_in, const float* x1_in, std::size_t n
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void sum_fast_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;
@@ -6022,7 +6022,7 @@ inline void sum_fast_2_lanes(const float* x0_in, const float* x1_in, std::size_t
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void sum_fast_2_entry_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -6094,7 +6094,7 @@ inline void sum_fast_2_entry_seq(const float* x0_in, const float* x1_in, std::si
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void sum_fast_2_entry_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;

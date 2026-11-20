@@ -255,7 +255,7 @@ Definition fast_two_sum_entry_ieee_spec : Prop :=
   (val s + val e) = (val a + val b) /\
   normalized_2 (ieee_emin prec emax) prec (val s) (val e).
 
-(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
 Definition fold_finish_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1062,7 +1062,7 @@ Definition eq_2_2_ieee_spec : Prop :=
   let m := IeeeModel.eq_2_2 prec emax x0 x1 y0 y1 in
   m = xeq (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* fold_finish_2: the finish of a fold: the state or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+(* fold_finish_2: the finish of a fold: the state or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
 Definition fold_finish_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

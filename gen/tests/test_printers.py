@@ -787,9 +787,11 @@ class Rocq(unittest.TestCase):
     # bounds, and their constants): every earlier definition and statement is the same, byte for
     # byte, mul_2_2 and add_2_2 printed earlier, before dot_step_2; Audit.v is the same. Then the
     # statements of bound_dot_1 and bound_dot_2 gained m unit <= 1/2 when ok, as those of bound_sum_k.
+    # Then those nine were proved, and the eight folds: in Statements.v only the comments above
+    # their statements changed, and Audit.v lists their theorems.
     DIGESTS = {'Model.v': '8b9cb1e627de7342805dc3f29feaf7e5d86f931e4593902343ae09b1c2dbfc20',
-               'Statements.v': '0b74f290fcaec0a072d5504e04833c81af083530cf9a1a6a0c44891a531a7d6a',
-               'Audit.v': '0c93acbf8651ff7bc342d1c9ab1f80d0f98718ddf3d0123dbff0d0547a871f15'}
+               'Statements.v': '51ef0dafb5efd9839866476b705b69c188c8d54cf717f41a3cf871a24876d253',
+               'Audit.v': '24ed7fe3187e0a1c3271a488e2674bd863b979d2b44ba220baec90bc49d0b7e6'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in
@@ -801,7 +803,7 @@ class Rocq(unittest.TestCase):
         printed further down), in Model.v for the constant H of those cores, and for the kernels
         of wave 1 of Milestone 2 that were added (DIGESTS)."""
         printers = {'Model.v': rocq.model, 'Statements.v': rocq.statements, 'Audit.v': rocq.audit}
-        finite = {}
+        finite = ir.KernelSet(folds=self.all.folds)     # the folds are proved: Audit.v lists them
         for name, k in copy.deepcopy(dict(self.all)).items():
             if not k.real_model:
                 continue

@@ -16,7 +16,8 @@ value:         x
 ensures:       fold_error r eps=u/(1+u) rel=n-1
 ensures:       finite_or_nan r flag=flag
 min_precision: 1
-status:        unverified
+theorem:       proofs/theories/FoldSums.v
+status:        proved
 domain:        extended
 source:        Higham's bound for summation over any tree, with the bound of one rounding
 license:       bound: published; proof: MIT

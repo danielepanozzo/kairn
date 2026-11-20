@@ -11,9 +11,10 @@ ensures:       finite_or_nan r flag=flag
 min_precision: 1
 source:        the finish of a fold: the state or the canonical NaN (milestone2.md)
 license:       proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeFoldFinish.v fold_finish_1_correct
 cone_exempt:   the output is a select after an explicit test that s is finite (flag), which is what the kernel claims
 
 a    = abs(s)

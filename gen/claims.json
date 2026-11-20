@@ -1285,8 +1285,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BoundKernels.v",
+        "name": "bound_dot_1_correct"
+      },
       "source": {
         "cite": "the exported bound of a dot product as a function of n (milestone2.md)",
         "license": "proof: MIT"
@@ -1348,8 +1351,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BoundKernels.v",
+        "name": "bound_dot_2_correct"
+      },
       "source": {
         "cite": "the exported bound of a dot product as a function of n (milestone2.md)",
         "license": "proof: MIT"
@@ -1401,8 +1407,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BoundKernels.v",
+        "name": "bound_sum_1_correct"
+      },
       "source": {
         "cite": "the exported bound of a sum as a function of n (milestone2.md)",
         "license": "proof: MIT"
@@ -1454,8 +1463,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BoundKernels.v",
+        "name": "bound_sum_2_correct"
+      },
       "source": {
         "cite": "the exported bound of a sum as a function of n (milestone2.md)",
         "license": "proof: MIT"
@@ -1498,8 +1510,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/StepKernels.v",
+        "name": "dot_step_1_correct"
+      },
       "source": {
         "cite": "the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md)",
         "license": "proof: MIT"
@@ -1608,9 +1623,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFoldFinish.v",
+        "name": "fold_finish_1_correct"
+      },
       "source": {
         "cite": "the finish of a fold: the state or the canonical NaN (milestone2.md)",
         "license": "proof: MIT"
@@ -2447,8 +2466,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/StepKernels.v",
+        "name": "sum_entry_step_1_correct"
+      },
       "source": {
         "cite": "add_1_1 on a guarded element (rule R3)",
         "license": "proof: MIT"
@@ -4330,8 +4352,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/StepKernels.v",
+        "name": "dot_step_2_correct"
+      },
       "source": {
         "cite": "the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -4496,9 +4521,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFoldFinish.v",
+        "name": "fold_finish_2_correct"
+      },
       "source": {
         "cite": "the finish of a fold: the state or the canonical NaN (milestone2.md)",
         "license": "proof: MIT"
@@ -5535,8 +5564,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/StepKernels.v",
+        "name": "sum_entry_step_2_correct"
+      },
       "source": {
         "cite": "add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -5596,8 +5628,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/StepKernels.v",
+        "name": "sum_fast_entry_step_2_correct"
+      },
       "source": {
         "cite": "add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5",
         "license": "algorithm: published; proof: MIT"
@@ -5784,10 +5819,16 @@
       "combine": "add_1_1",
       "finish": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "dot_1_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "dot_1_lanes_correct"
+        }
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, weighted: the fused dot product",
@@ -5887,10 +5928,16 @@
       "combine": "add_2_2",
       "finish": "fold_finish_2",
       "min_precision": 4,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "dot_2_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "dot_2_lanes_correct"
+        }
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22)",
@@ -5978,10 +6025,16 @@
       "combine": "add_1_1",
       "finish": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_1_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_1_lanes_correct"
+        }
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, with the bound of one rounding",
@@ -6069,10 +6122,16 @@
       "combine": "add_1_1",
       "finish": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_1_entry_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_1_entry_lanes_correct"
+        }
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, with the bound of one rounding",
@@ -6166,10 +6225,16 @@
       "combine": "add_2_2",
       "finish": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_2_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_2_lanes_correct"
+        }
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, with the bound of add_2_2 (MR22)",
@@ -6263,10 +6328,16 @@
       "combine": "add_2_2",
       "finish": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_2_entry_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_2_entry_lanes_correct"
+        }
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, with the bound of add_2_2 (MR22)",
@@ -6360,10 +6431,16 @@
       "combine": "add_fast_2_2",
       "finish": "fold_finish_2",
       "min_precision": 2,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_fast_2_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_fast_2_lanes_correct"
+        }
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, with the bound of add_fast_2_2",
@@ -6457,10 +6534,16 @@
       "combine": "add_fast_2_2",
       "finish": "fold_finish_2",
       "min_precision": 2,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_fast_2_entry_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "sum_fast_2_entry_lanes_correct"
+        }
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, with the bound of add_fast_2_2",

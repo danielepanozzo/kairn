@@ -8,7 +8,12 @@
      statements of the kernels of the finite domain, printed in
      proofs/gen/IeeeStatements.v (K_ieee_bridge_spec: the bridge to the real model;
      K_ieee_spec: correctness; K_ieee_finite_spec and K_ieee_finite_result_spec: no
-     overflow below a threshold);
+     overflow below a threshold), the steps of the folds among them; and the statements
+     of proofs/gen/IeeeFoldStatements.v, whose theorems no description of a kernel or of
+     a fold names either: the folds in the IEEE model (F_seq_ieee_spec and
+     F_lanes_ieee_spec, for the generated models of proofs/gen/IeeeFoldModel.v), and
+     the leading limb of the result of each step and combination of a fold
+     (K_ieee_lead_spec);
    - theorems whose statements are written by hand because the generator does not print
      them: two_sum in the IEEE model (the exact condition under which its error term is
      finite is not a claim), the guard (an operation, not a kernel), the threshold of
@@ -31,12 +36,22 @@
      bounds of one limb in the IEEE model, with the lemmas about the bounds of the exact
      range of an operation, the bounds of two limbs in the real model (a sum, a
      difference and a product moved outward by a bound of their own error), and the sum
-     of two intervals with bounds of two limbs in the IEEE model.
+     of two intervals with bounds of two limbs in the IEEE model;
+   - the theorems about the folds that have no generated statement: that a fold of the
+     model with overflow is the fold of the real model whenever its result is finite
+     (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
+     statements (theories/BoundKernels.v), that the exported bound covers the error
+     of each fold in each order (theories/FoldGuarantee.v), and what
+     theories/IeeeFolds.v proves of the generated models of the folds in the IEEE model
+     beyond their generated statements: the two facts about one application of each
+     step, a fold of such steps with its finish, and the state after every element in
+     the sequential order.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
    the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements IeeeStatements.
+From Kairn.Gen Require Import IeeeFoldStatements.
 From Kairn Require Import IeeeVocabulary IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore IeeeSub IeeeFinite.
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeOps.
@@ -44,6 +59,8 @@ From Kairn Require Import Folds Summation SummationKernels.
 From Kairn Require Import DirectedSum DirectedProd BallPow2 Rectangle IeeeProduct.
 From Kairn Require Import IeeeDirected IeeeDirectedProd IeeeEntry.
 From Kairn Require Import IeeeTwoExecutions.
+From Kairn Require Import StepKernels FoldTransfer BoundKernels FoldGuarantee.
+From Kairn Require Import IeeeSteps IeeeFolds.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -89,7 +106,8 @@ Print Assumptions mul_2_1_ieee_bridge.
 Definition mul_2_1_ieee_audit : mul_2_1_ieee_spec := mul_2_1_ieee_correct.
 Print Assumptions mul_2_1_ieee_correct.
 
-Definition add_fast_2_2_ieee_bridge_audit : add_fast_2_2_ieee_bridge_spec := add_fast_2_2_ieee_bridge.
+Definition add_fast_2_2_ieee_bridge_audit : add_fast_2_2_ieee_bridge_spec :=
+  add_fast_2_2_ieee_bridge.
 Print Assumptions add_fast_2_2_ieee_bridge.
 
 Definition add_fast_2_2_ieee_audit : add_fast_2_2_ieee_spec := add_fast_2_2_ieee_correct.
@@ -159,37 +177,44 @@ Print Assumptions mul_pow2_2_ieee_correct.
 (* The IEEE model: no overflow below a threshold, the other kernels
    (mul_pow2_2_ieee_finite_any_spec, for any finite scalar, is written by hand in
    theories/IeeeFinite.v). *)
-Definition add_2_2_ieee_finite_result_audit : add_2_2_ieee_finite_result_spec := add_2_2_ieee_finite_result.
+Definition add_2_2_ieee_finite_result_audit : add_2_2_ieee_finite_result_spec :=
+  add_2_2_ieee_finite_result.
 Print Assumptions add_2_2_ieee_finite_result.
 
-Definition add_fast_2_2_ieee_finite_audit : add_fast_2_2_ieee_finite_spec := add_fast_2_2_ieee_finite.
+Definition add_fast_2_2_ieee_finite_audit : add_fast_2_2_ieee_finite_spec :=
+  add_fast_2_2_ieee_finite.
 Print Assumptions add_fast_2_2_ieee_finite.
 
-Definition add_fast_2_2_ieee_finite_result_audit : add_fast_2_2_ieee_finite_result_spec := add_fast_2_2_ieee_finite_result.
+Definition add_fast_2_2_ieee_finite_result_audit : add_fast_2_2_ieee_finite_result_spec :=
+  add_fast_2_2_ieee_finite_result.
 Print Assumptions add_fast_2_2_ieee_finite_result.
 
 Definition sub_2_2_ieee_finite_audit : sub_2_2_ieee_finite_spec := sub_2_2_ieee_finite.
 Print Assumptions sub_2_2_ieee_finite.
 
-Definition sub_2_2_ieee_finite_result_audit : sub_2_2_ieee_finite_result_spec := sub_2_2_ieee_finite_result.
+Definition sub_2_2_ieee_finite_result_audit : sub_2_2_ieee_finite_result_spec :=
+  sub_2_2_ieee_finite_result.
 Print Assumptions sub_2_2_ieee_finite_result.
 
 Definition add_2_1_ieee_finite_audit : add_2_1_ieee_finite_spec := add_2_1_ieee_finite.
 Print Assumptions add_2_1_ieee_finite.
 
-Definition add_2_1_ieee_finite_result_audit : add_2_1_ieee_finite_result_spec := add_2_1_ieee_finite_result.
+Definition add_2_1_ieee_finite_result_audit : add_2_1_ieee_finite_result_spec :=
+  add_2_1_ieee_finite_result.
 Print Assumptions add_2_1_ieee_finite_result.
 
 Definition sub_2_1_ieee_finite_audit : sub_2_1_ieee_finite_spec := sub_2_1_ieee_finite.
 Print Assumptions sub_2_1_ieee_finite.
 
-Definition sub_2_1_ieee_finite_result_audit : sub_2_1_ieee_finite_result_spec := sub_2_1_ieee_finite_result.
+Definition sub_2_1_ieee_finite_result_audit : sub_2_1_ieee_finite_result_spec :=
+  sub_2_1_ieee_finite_result.
 Print Assumptions sub_2_1_ieee_finite_result.
 
 Definition sub_1_2_ieee_finite_audit : sub_1_2_ieee_finite_spec := sub_1_2_ieee_finite.
 Print Assumptions sub_1_2_ieee_finite.
 
-Definition sub_1_2_ieee_finite_result_audit : sub_1_2_ieee_finite_result_spec := sub_1_2_ieee_finite_result.
+Definition sub_1_2_ieee_finite_result_audit : sub_1_2_ieee_finite_result_spec :=
+  sub_1_2_ieee_finite_result.
 Print Assumptions sub_1_2_ieee_finite_result.
 
 Definition mul_2_1_ieee_finite_audit : mul_2_1_ieee_finite_spec := mul_2_1_ieee_finite.
@@ -510,3 +535,191 @@ Print Assumptions add_down_2_2_ieee_core.
 Print Assumptions add_up_2_2_ieee_core.
 Print Assumptions interval_tail_2.
 Print Assumptions interval_add_2_correct.
+
+(* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
+Print Assumptions fold_seq_transfer.
+Print Assumptions fold_seq_transfer_prefix.
+Print Assumptions fold_lanes_transfer.
+
+(* The bound kernels (theories/BoundKernels.v): everything that holds of each, 0 <= g
+   included, which the generated statements do not have. *)
+Print Assumptions bound_sum_1_facts.
+Print Assumptions bound_sum_2_facts.
+Print Assumptions bound_dot_1_facts.
+Print Assumptions bound_dot_2_facts.
+
+(* The exported bound covers the error of the fold (theories/FoldGuarantee.v), for each
+   fold of proofs/gen/FoldModel.v and each order. *)
+Print Assumptions gamma_le_real.
+Print Assumptions sum_1_seq_bound.
+Print Assumptions sum_1_lanes_bound.
+Print Assumptions sum_1_entry_seq_bound.
+Print Assumptions sum_1_entry_lanes_bound.
+Print Assumptions sum_2_seq_bound.
+Print Assumptions sum_2_lanes_bound.
+Print Assumptions sum_2_entry_seq_bound.
+Print Assumptions sum_2_entry_lanes_bound.
+Print Assumptions sum_fast_2_seq_bound.
+Print Assumptions sum_fast_2_lanes_bound.
+Print Assumptions sum_fast_2_entry_seq_bound.
+Print Assumptions sum_fast_2_entry_lanes_bound.
+Print Assumptions dot_1_seq_bound.
+Print Assumptions dot_1_lanes_bound.
+Print Assumptions dot_2_seq_bound.
+Print Assumptions dot_2_lanes_bound.
+
+(* The steps of the folds in the IEEE model (theories/IeeeSteps.v): the generated statements
+   of proofs/gen/IeeeStatements.v, the bridge to the real model and, for the steps of two
+   limbs, correctness. *)
+Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
+Print Assumptions dot_step_1_ieee_bridge.
+
+Definition sum_entry_step_1_ieee_bridge_audit : sum_entry_step_1_ieee_bridge_spec :=
+  sum_entry_step_1_ieee_bridge.
+Print Assumptions sum_entry_step_1_ieee_bridge.
+
+Definition dot_step_2_ieee_bridge_audit : dot_step_2_ieee_bridge_spec := dot_step_2_ieee_bridge.
+Print Assumptions dot_step_2_ieee_bridge.
+
+Definition dot_step_2_ieee_audit : dot_step_2_ieee_spec := dot_step_2_ieee_correct.
+Print Assumptions dot_step_2_ieee_correct.
+
+Definition sum_entry_step_2_ieee_bridge_audit : sum_entry_step_2_ieee_bridge_spec :=
+  sum_entry_step_2_ieee_bridge.
+Print Assumptions sum_entry_step_2_ieee_bridge.
+
+Definition sum_entry_step_2_ieee_audit : sum_entry_step_2_ieee_spec :=
+  sum_entry_step_2_ieee_correct.
+Print Assumptions sum_entry_step_2_ieee_correct.
+
+Definition sum_fast_entry_step_2_ieee_bridge_audit : sum_fast_entry_step_2_ieee_bridge_spec :=
+  sum_fast_entry_step_2_ieee_bridge.
+Print Assumptions sum_fast_entry_step_2_ieee_bridge.
+
+Definition sum_fast_entry_step_2_ieee_audit : sum_fast_entry_step_2_ieee_spec :=
+  sum_fast_entry_step_2_ieee_correct.
+Print Assumptions sum_fast_entry_step_2_ieee_correct.
+
+(* The leading limb of the result of each step and combination of a fold
+   (theories/IeeeFolds.v): the generated statements of proofs/gen/IeeeFoldStatements.v. If it
+   is finite, so is the leading limb of each operand. *)
+Definition add_1_1_ieee_lead_audit : add_1_1_ieee_lead_spec := add_1_1_ieee_lead.
+Print Assumptions add_1_1_ieee_lead.
+
+Definition dot_step_1_ieee_lead_audit : dot_step_1_ieee_lead_spec := dot_step_1_ieee_lead.
+Print Assumptions dot_step_1_ieee_lead.
+
+Definition sum_entry_step_1_ieee_lead_audit : sum_entry_step_1_ieee_lead_spec :=
+  sum_entry_step_1_ieee_lead.
+Print Assumptions sum_entry_step_1_ieee_lead.
+
+Definition add_2_2_ieee_lead_audit : add_2_2_ieee_lead_spec := add_2_2_ieee_lead.
+Print Assumptions add_2_2_ieee_lead.
+
+Definition add_fast_2_2_ieee_lead_audit : add_fast_2_2_ieee_lead_spec := add_fast_2_2_ieee_lead.
+Print Assumptions add_fast_2_2_ieee_lead.
+
+Definition dot_step_2_ieee_lead_audit : dot_step_2_ieee_lead_spec := dot_step_2_ieee_lead.
+Print Assumptions dot_step_2_ieee_lead.
+
+Definition sum_entry_step_2_ieee_lead_audit : sum_entry_step_2_ieee_lead_spec :=
+  sum_entry_step_2_ieee_lead.
+Print Assumptions sum_entry_step_2_ieee_lead.
+
+Definition sum_fast_entry_step_2_ieee_lead_audit : sum_fast_entry_step_2_ieee_lead_spec :=
+  sum_fast_entry_step_2_ieee_lead.
+Print Assumptions sum_fast_entry_step_2_ieee_lead.
+
+(* The folds in the IEEE model (theories/IeeeFolds.v): the generated statements of
+   proofs/gen/IeeeFoldStatements.v, about the generated models of
+   proofs/gen/IeeeFoldModel.v. If the flag is true, every element is finite and the result
+   is that of the real model, valid and within its bound; otherwise every limb is a NaN. *)
+Definition sum_1_seq_ieee_audit : sum_1_seq_ieee_spec := sum_1_seq_ieee_correct.
+Print Assumptions sum_1_seq_ieee_correct.
+
+Definition sum_1_lanes_ieee_audit : sum_1_lanes_ieee_spec := sum_1_lanes_ieee_correct.
+Print Assumptions sum_1_lanes_ieee_correct.
+
+Definition sum_1_entry_seq_ieee_audit : sum_1_entry_seq_ieee_spec := sum_1_entry_seq_ieee_correct.
+Print Assumptions sum_1_entry_seq_ieee_correct.
+
+Definition sum_1_entry_lanes_ieee_audit : sum_1_entry_lanes_ieee_spec :=
+  sum_1_entry_lanes_ieee_correct.
+Print Assumptions sum_1_entry_lanes_ieee_correct.
+
+Definition dot_1_seq_ieee_audit : dot_1_seq_ieee_spec := dot_1_seq_ieee_correct.
+Print Assumptions dot_1_seq_ieee_correct.
+
+Definition dot_1_lanes_ieee_audit : dot_1_lanes_ieee_spec := dot_1_lanes_ieee_correct.
+Print Assumptions dot_1_lanes_ieee_correct.
+
+Definition sum_2_seq_ieee_audit : sum_2_seq_ieee_spec := sum_2_seq_ieee_correct.
+Print Assumptions sum_2_seq_ieee_correct.
+
+Definition sum_2_lanes_ieee_audit : sum_2_lanes_ieee_spec := sum_2_lanes_ieee_correct.
+Print Assumptions sum_2_lanes_ieee_correct.
+
+Definition sum_2_entry_seq_ieee_audit : sum_2_entry_seq_ieee_spec := sum_2_entry_seq_ieee_correct.
+Print Assumptions sum_2_entry_seq_ieee_correct.
+
+Definition sum_2_entry_lanes_ieee_audit : sum_2_entry_lanes_ieee_spec :=
+  sum_2_entry_lanes_ieee_correct.
+Print Assumptions sum_2_entry_lanes_ieee_correct.
+
+Definition sum_fast_2_seq_ieee_audit : sum_fast_2_seq_ieee_spec := sum_fast_2_seq_ieee_correct.
+Print Assumptions sum_fast_2_seq_ieee_correct.
+
+Definition sum_fast_2_lanes_ieee_audit : sum_fast_2_lanes_ieee_spec :=
+  sum_fast_2_lanes_ieee_correct.
+Print Assumptions sum_fast_2_lanes_ieee_correct.
+
+Definition sum_fast_2_entry_seq_ieee_audit : sum_fast_2_entry_seq_ieee_spec :=
+  sum_fast_2_entry_seq_ieee_correct.
+Print Assumptions sum_fast_2_entry_seq_ieee_correct.
+
+Definition sum_fast_2_entry_lanes_ieee_audit : sum_fast_2_entry_lanes_ieee_spec :=
+  sum_fast_2_entry_lanes_ieee_correct.
+Print Assumptions sum_fast_2_entry_lanes_ieee_correct.
+
+Definition dot_2_seq_ieee_audit : dot_2_seq_ieee_spec := dot_2_seq_ieee_correct.
+Print Assumptions dot_2_seq_ieee_correct.
+
+Definition dot_2_lanes_ieee_audit : dot_2_lanes_ieee_spec := dot_2_lanes_ieee_correct.
+Print Assumptions dot_2_lanes_ieee_correct.
+
+(* What theories/IeeeFolds.v proves beyond those statements, written by hand about the same
+   generated models. The steps: a leading limb that is not finite stays not finite, and from
+   finite operands a finite leading limb gives the values of the real model. *)
+Print Assumptions add_1_1_dead.
+Print Assumptions add_1_1_live.
+Print Assumptions sum_entry_step_1_dead.
+Print Assumptions sum_entry_step_1_live.
+Print Assumptions dot_step_1_dead.
+Print Assumptions dot_step_1_live.
+Print Assumptions add22i_lead.
+Print Assumptions add22i_live.
+Print Assumptions addfast22i_lead.
+Print Assumptions addfast22i_live.
+Print Assumptions mul22i_lead.
+Print Assumptions mul22i_live.
+Print Assumptions sum_2_entry_step_ieee_live.
+Print Assumptions sum_fast_2_entry_step_ieee_live.
+Print Assumptions dot_2_step_ieee_dead.
+Print Assumptions dot_2_step_ieee_live.
+
+(* A fold of such steps with its finish, for one and two limbs and both orders. *)
+Print Assumptions seq_1.
+Print Assumptions lanes_1.
+Print Assumptions seq_2.
+Print Assumptions lanes_2.
+
+(* Each fold in the sequential order, with what its generated statement does not say: the
+   state after every element was finite (and a normalized pair, for two limbs). *)
+Print Assumptions sum_1_seq_ieee_facts.
+Print Assumptions sum_1_entry_seq_ieee_facts.
+Print Assumptions dot_1_seq_ieee_facts.
+Print Assumptions sum_2_seq_ieee_facts.
+Print Assumptions sum_2_entry_seq_ieee_facts.
+Print Assumptions sum_fast_2_seq_ieee_facts.
+Print Assumptions sum_fast_2_entry_seq_ieee_facts.
+Print Assumptions dot_2_seq_ieee_facts.
