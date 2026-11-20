@@ -268,6 +268,30 @@ def products(k, kernels):
                                   f'line {st.line}: {st.dsts[0]} is a plain multiplication, and {how}; '
                                   'a rounded product is written prod(a, b), which no compiler can '
                                   'contract'))
+    errs += doubling(k, kernels)
+    return errs
+
+
+def doubling(k, kernels):
+    """R1, for a product that the compiler writes itself: an addition of a value to itself. GCC 13
+    writes a + a as a * 2 and, under -ffp-contract=fast, contracts that product into the addition
+    that follows (measured by the object-code check on the first listings of bound_sum_2 and
+    bound_dot_2, at -O2 and -O3, scalar code). Checked on the listing with its calls inlined and
+    through copies, so that a callee given one value twice is seen. A doubling is written
+    prod(a, const up(2)): exact, and the opaque product."""
+    errs, alias = [], {}
+    for it in ir.flatten(k, kernels):
+        if not isinstance(it, ir.Prim):
+            continue
+        args = [('const', a.name) if a.const else alias.get(a.name, a.name) for a in it.args]
+        if it.op == 'copy':
+            alias[it.dst] = args[0]
+        elif it.op == 'add' and args[0] == args[1] and not isinstance(args[0], tuple):
+            errs.append(RuleError(k.name, it.dst, RULE_R1,
+                                  f'{it.dst} = add({args[0]}, {args[0]}) adds a value to itself, which a '
+                                  'compiler writes as a product by 2 and may contract into an addition that '
+                                  'follows (GCC 13 under -ffp-contract=fast); write prod(a, const up(2)), '
+                                  'exact and the opaque product'))
     return errs
 
 

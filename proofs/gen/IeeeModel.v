@@ -102,17 +102,20 @@ Definition up_bound_dot_1_0 : float := const_of (Model.up_bound_dot_1_0 (3 - ema
 (* up((1+u)^2*(unit(mul_1_1)+eta)), as a number of the format. *)
 Definition up_bound_dot_1_1 : float := const_of (Model.up_bound_dot_1_1 (3 - emax - prec) prec).
 
-(* up(1+2*u), as a number of the format. *)
+(* up(2), as a number of the format. *)
 Definition up_bound_dot_1_2 : float := const_of (Model.up_bound_dot_1_2 (3 - emax - prec) prec).
 
-(* up((1+u)^2*(tiny(mul_1_1)+eta)+eta/(2*u)), as a number of the format. *)
+(* up(1+2*u), as a number of the format. *)
 Definition up_bound_dot_1_3 : float := const_of (Model.up_bound_dot_1_3 (3 - emax - prec) prec).
 
-(* up(1/4), as a number of the format. *)
+(* up((1+u)^2*(tiny(mul_1_1)+eta)+eta/(2*u)), as a number of the format. *)
 Definition up_bound_dot_1_4 : float := const_of (Model.up_bound_dot_1_4 (3 - emax - prec) prec).
 
-(* up(1), as a number of the format. *)
+(* up(1/4), as a number of the format. *)
 Definition up_bound_dot_1_5 : float := const_of (Model.up_bound_dot_1_5 (3 - emax - prec) prec).
+
+(* up(1), as a number of the format. *)
+Definition up_bound_dot_1_6 : float := const_of (Model.up_bound_dot_1_6 (3 - emax - prec) prec).
 
 (* up((1+u)*(unit(mul_2_2)+eta/2)), as a number of the format. *)
 Definition up_bound_dot_2_0 : float := const_of (Model.up_bound_dot_2_0 (3 - emax - prec) prec).
@@ -121,7 +124,7 @@ Definition up_bound_dot_2_0 : float := const_of (Model.up_bound_dot_2_0 (3 - ema
 Definition up_bound_dot_2_1 : float := const_of (Model.up_bound_dot_2_1 (3 - emax - prec) prec).
 
 (* up((1+u)^2*(tiny(mul_2_2)+eta)+eta/(2*u)), as a number of the format. *)
-Definition up_bound_dot_2_3 : float := const_of (Model.up_bound_dot_2_3 (3 - emax - prec) prec).
+Definition up_bound_dot_2_4 : float := const_of (Model.up_bound_dot_2_4 (3 - emax - prec) prec).
 
 (* up((1+u)*(unit(add_1_1)+eta/2)), as a number of the format. *)
 Definition up_bound_sum_1_0 : float := const_of (Model.up_bound_sum_1_0 (3 - emax - prec) prec).
@@ -343,14 +346,14 @@ Definition ball_sub_1_full (cx rx cy ry : float) : float * float :=
 Definition bound_dot_1 (m : float) : float * float * bool :=
   let a := prod m up_bound_dot_1_0 in
   let aa := prod m up_bound_dot_1_1 in
-  let d := add a a in
-  let w := add d up_bound_dot_1_2 in
+  let d := prod a up_bound_dot_1_2 in
+  let w := add d up_bound_dot_1_3 in
   let g := prod aa w in
-  let tm := prod m up_bound_dot_1_3 in
-  let wg := add g up_bound_dot_1_2 in
+  let tm := prod m up_bound_dot_1_4 in
+  let wg := add g up_bound_dot_1_3 in
   let t := prod tm wg in
-  let oa := le a up_bound_dot_1_4 in
-  let ob := le g up_bound_dot_1_5 in
+  let oa := le a up_bound_dot_1_5 in
+  let ob := le g up_bound_dot_1_6 in
   let ok := andb oa ob in
   (g, t, ok).
 
@@ -358,14 +361,14 @@ Definition bound_dot_1 (m : float) : float * float * bool :=
 Definition bound_dot_2 (m : float) : float * float * bool :=
   let a := prod m up_bound_dot_2_0 in
   let aa := prod m up_bound_dot_2_1 in
-  let d := add a a in
-  let w := add d up_bound_dot_1_2 in
+  let d := prod a up_bound_dot_1_2 in
+  let w := add d up_bound_dot_1_3 in
   let g := prod aa w in
-  let tm := prod m up_bound_dot_2_3 in
-  let wg := add g up_bound_dot_1_2 in
+  let tm := prod m up_bound_dot_2_4 in
+  let wg := add g up_bound_dot_1_3 in
   let t := prod tm wg in
-  let oa := le a up_bound_dot_1_4 in
-  let ob := le g up_bound_dot_1_5 in
+  let oa := le a up_bound_dot_1_5 in
+  let ob := le g up_bound_dot_1_6 in
   let ok := andb oa ob in
   (g, t, ok).
 
@@ -373,20 +376,20 @@ Definition bound_dot_2 (m : float) : float * float * bool :=
 Definition bound_sum_1 (m : float) : float * bool :=
   let a := prod m up_bound_sum_1_0 in
   let aa := prod m up_bound_sum_1_1 in
-  let d := add a a in
-  let w := add d up_bound_dot_1_2 in
+  let d := prod a up_bound_dot_1_2 in
+  let w := add d up_bound_dot_1_3 in
   let g := prod aa w in
-  let ok := le a up_bound_dot_1_4 in
+  let ok := le a up_bound_dot_1_5 in
   (g, ok).
 
 (* bound_sum_2: the exported bound of a sum as a function of n (milestone2.md). *)
 Definition bound_sum_2 (m : float) : float * bool :=
   let a := prod m up_bound_sum_2_0 in
   let aa := prod m up_bound_sum_2_1 in
-  let d := add a a in
-  let w := add d up_bound_dot_1_2 in
+  let d := prod a up_bound_dot_1_2 in
+  let w := add d up_bound_dot_1_3 in
   let g := prod aa w in
-  let ok := le a up_bound_dot_1_4 in
+  let ok := le a up_bound_dot_1_5 in
   (g, ok).
 
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)

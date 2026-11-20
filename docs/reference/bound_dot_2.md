@@ -74,7 +74,9 @@ From [`gen/kernels/bound_dot_2.kernel`](https://github.com/danielepanozzo/kairn/
 
 a  = prod(m, const up((1+u)*(unit(mul_2_2)+eta/2)))
 aa = prod(m, const up((1+u)^2*(unit(mul_2_2)+eta)))
-d  = add(a, a)
+# d = 2a. milestone2.md writes add(a, a), which GCC turns into a * 2 and contracts into the
+# next addition (rule R1 refuses it); the opaque product has the same value.
+d  = prod(a, const up(2))
 w  = add(d, const up(1+2*u))
 g  = prod(aa, w)
 tm = prod(m, const up((1+u)^2*(tiny(mul_2_2)+eta)+eta/(2*u)))

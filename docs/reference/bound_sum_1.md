@@ -71,7 +71,9 @@ From [`gen/kernels/bound_sum_1.kernel`](https://github.com/danielepanozzo/kairn/
 
 a  = prod(m, const up((1+u)*(unit(add_1_1)+eta/2)))
 aa = prod(m, const up((1+u)^2*(unit(add_1_1)+eta)))
-d  = add(a, a)
+# d = 2a. milestone2.md writes add(a, a), which GCC turns into a * 2 and contracts into the
+# next addition (rule R1 refuses it); the opaque product has the same value.
+d  = prod(a, const up(2))
 w  = add(d, const up(1+2*u))
 g  = prod(aa, w)
 ok = le(a, const up(1/4))

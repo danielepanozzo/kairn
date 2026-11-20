@@ -699,7 +699,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(__m256 cx, __m256 rx, __m256 cy, __m2
 KAIRN_GEN_FORCEINLINE void bound_dot_1(__m256d m, __m256d& g_out, __m256d& t_out, __m256d& ok_out) noexcept {
     const __m256d a = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-53), _mm256_setzero_pd());
     const __m256d aa = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-53), _mm256_setzero_pd());
-    const __m256d d = _mm256_add_pd(a, a);
+    const __m256d d = _mm256_fmadd_pd(a, _mm256_set1_pd(0x1p+1), _mm256_setzero_pd());
     const __m256d w = _mm256_add_pd(d, _mm256_set1_pd(0x1.0000000000001p+0));
     const __m256d g = _mm256_fmadd_pd(aa, w, _mm256_setzero_pd());
     const __m256d tm = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000002p-1022), _mm256_setzero_pd());
@@ -715,7 +715,7 @@ KAIRN_GEN_FORCEINLINE void bound_dot_1(__m256d m, __m256d& g_out, __m256d& t_out
 KAIRN_GEN_FORCEINLINE void bound_dot_1(__m256 m, __m256& g_out, __m256& t_out, __m256& ok_out) noexcept {
     const __m256 a = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-24f), _mm256_setzero_ps());
     const __m256 aa = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-24f), _mm256_setzero_ps());
-    const __m256 d = _mm256_add_ps(a, a);
+    const __m256 d = _mm256_fmadd_ps(a, _mm256_set1_ps(0x1p+1f), _mm256_setzero_ps());
     const __m256 w = _mm256_add_ps(d, _mm256_set1_ps(0x1.000002p+0f));
     const __m256 g = _mm256_fmadd_ps(aa, w, _mm256_setzero_ps());
     const __m256 tm = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000004p-126f), _mm256_setzero_ps());
@@ -733,7 +733,7 @@ KAIRN_GEN_FORCEINLINE void bound_dot_1(__m256 m, __m256& g_out, __m256& t_out, _
 KAIRN_GEN_FORCEINLINE void bound_dot_2(__m256d m, __m256d& g_out, __m256d& t_out, __m256d& ok_out) noexcept {
     const __m256d a = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-104), _mm256_setzero_pd());
     const __m256d aa = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000002p-104), _mm256_setzero_pd());
-    const __m256d d = _mm256_add_pd(a, a);
+    const __m256d d = _mm256_fmadd_pd(a, _mm256_set1_pd(0x1p+1), _mm256_setzero_pd());
     const __m256d w = _mm256_add_pd(d, _mm256_set1_pd(0x1.0000000000001p+0));
     const __m256d g = _mm256_fmadd_pd(aa, w, _mm256_setzero_pd());
     const __m256d tm = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000003p-1022), _mm256_setzero_pd());
@@ -749,7 +749,7 @@ KAIRN_GEN_FORCEINLINE void bound_dot_2(__m256d m, __m256d& g_out, __m256d& t_out
 KAIRN_GEN_FORCEINLINE void bound_dot_2(__m256 m, __m256& g_out, __m256& t_out, __m256& ok_out) noexcept {
     const __m256 a = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-46f), _mm256_setzero_ps());
     const __m256 aa = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000004p-46f), _mm256_setzero_ps());
-    const __m256 d = _mm256_add_ps(a, a);
+    const __m256 d = _mm256_fmadd_ps(a, _mm256_set1_ps(0x1p+1f), _mm256_setzero_ps());
     const __m256 w = _mm256_add_ps(d, _mm256_set1_ps(0x1.000002p+0f));
     const __m256 g = _mm256_fmadd_ps(aa, w, _mm256_setzero_ps());
     const __m256 tm = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000006p-126f), _mm256_setzero_ps());
@@ -767,7 +767,7 @@ KAIRN_GEN_FORCEINLINE void bound_dot_2(__m256 m, __m256& g_out, __m256& t_out, _
 KAIRN_GEN_FORCEINLINE void bound_sum_1(__m256d m, __m256d& g_out, __m256d& ok_out) noexcept {
     const __m256d a = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-53), _mm256_setzero_pd());
     const __m256d aa = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-53), _mm256_setzero_pd());
-    const __m256d d = _mm256_add_pd(a, a);
+    const __m256d d = _mm256_fmadd_pd(a, _mm256_set1_pd(0x1p+1), _mm256_setzero_pd());
     const __m256d w = _mm256_add_pd(d, _mm256_set1_pd(0x1.0000000000001p+0));
     const __m256d g = _mm256_fmadd_pd(aa, w, _mm256_setzero_pd());
     const __m256d ok = _mm256_cmp_pd(a, _mm256_set1_pd(0x1p-2), _CMP_LE_OQ);
@@ -777,7 +777,7 @@ KAIRN_GEN_FORCEINLINE void bound_sum_1(__m256d m, __m256d& g_out, __m256d& ok_ou
 KAIRN_GEN_FORCEINLINE void bound_sum_1(__m256 m, __m256& g_out, __m256& ok_out) noexcept {
     const __m256 a = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-24f), _mm256_setzero_ps());
     const __m256 aa = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-24f), _mm256_setzero_ps());
-    const __m256 d = _mm256_add_ps(a, a);
+    const __m256 d = _mm256_fmadd_ps(a, _mm256_set1_ps(0x1p+1f), _mm256_setzero_ps());
     const __m256 w = _mm256_add_ps(d, _mm256_set1_ps(0x1.000002p+0f));
     const __m256 g = _mm256_fmadd_ps(aa, w, _mm256_setzero_ps());
     const __m256 ok = _mm256_cmp_ps(a, _mm256_set1_ps(0x1p-2f), _CMP_LE_OQ);
@@ -789,7 +789,7 @@ KAIRN_GEN_FORCEINLINE void bound_sum_1(__m256 m, __m256& g_out, __m256& ok_out) 
 KAIRN_GEN_FORCEINLINE void bound_sum_2(__m256d m, __m256d& g_out, __m256d& ok_out) noexcept {
     const __m256d a = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.8000000000004p-105), _mm256_setzero_pd());
     const __m256d aa = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.8000000000005p-105), _mm256_setzero_pd());
-    const __m256d d = _mm256_add_pd(a, a);
+    const __m256d d = _mm256_fmadd_pd(a, _mm256_set1_pd(0x1p+1), _mm256_setzero_pd());
     const __m256d w = _mm256_add_pd(d, _mm256_set1_pd(0x1.0000000000001p+0));
     const __m256d g = _mm256_fmadd_pd(aa, w, _mm256_setzero_pd());
     const __m256d ok = _mm256_cmp_pd(a, _mm256_set1_pd(0x1p-2), _CMP_LE_OQ);
@@ -799,7 +799,7 @@ KAIRN_GEN_FORCEINLINE void bound_sum_2(__m256d m, __m256d& g_out, __m256d& ok_ou
 KAIRN_GEN_FORCEINLINE void bound_sum_2(__m256 m, __m256& g_out, __m256& ok_out) noexcept {
     const __m256 a = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.800008p-47f), _mm256_setzero_ps());
     const __m256 aa = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.80000ap-47f), _mm256_setzero_ps());
-    const __m256 d = _mm256_add_ps(a, a);
+    const __m256 d = _mm256_fmadd_ps(a, _mm256_set1_ps(0x1p+1f), _mm256_setzero_ps());
     const __m256 w = _mm256_add_ps(d, _mm256_set1_ps(0x1.000002p+0f));
     const __m256 g = _mm256_fmadd_ps(aa, w, _mm256_setzero_ps());
     const __m256 ok = _mm256_cmp_ps(a, _mm256_set1_ps(0x1p-2f), _CMP_LE_OQ);
@@ -3446,7 +3446,7 @@ inline void dot_1_packed(const double* x_in, const double* y_in, std::size_t n, 
         const __m256d step_t = _mm256_fmadd_pd(x, y, s_lane_);
         s_lane_ = step_t;
     }
-    double s_lanes_[4] = {};
+    double s_lanes_[4];
     _mm256_storeu_pd(s_lanes_, s_lane_);
     double s = s_lanes_[0];
     for (std::size_t j_ = 1; j_ < 4; ++j_) {
@@ -3479,7 +3479,7 @@ inline void dot_1_packed(const float* x_in, const float* y_in, std::size_t n, fl
         const __m256 step_t = _mm256_fmadd_ps(x, y, s_lane_);
         s_lane_ = step_t;
     }
-    float s_lanes_[8] = {};
+    float s_lanes_[8];
     _mm256_storeu_ps(s_lanes_, s_lane_);
     float s = s_lanes_[0];
     for (std::size_t j_ = 1; j_ < 8; ++j_) {
@@ -3554,8 +3554,8 @@ inline void dot_2_packed(const double* x0_in, const double* x1_in, const double*
         s0_lane_ = step_t0;
         s1_lane_ = step_t1;
     }
-    double s0_lanes_[4] = {};
-    double s1_lanes_[4] = {};
+    double s0_lanes_[4];
+    double s1_lanes_[4];
     _mm256_storeu_pd(s0_lanes_, s0_lane_);
     _mm256_storeu_pd(s1_lanes_, s1_lane_);
     double s0 = s0_lanes_[0];
@@ -3696,8 +3696,8 @@ inline void dot_2_packed(const float* x0_in, const float* x1_in, const float* y0
         s0_lane_ = step_t0;
         s1_lane_ = step_t1;
     }
-    float s0_lanes_[8] = {};
-    float s1_lanes_[8] = {};
+    float s0_lanes_[8];
+    float s1_lanes_[8];
     _mm256_storeu_ps(s0_lanes_, s0_lane_);
     _mm256_storeu_ps(s1_lanes_, s1_lane_);
     float s0 = s0_lanes_[0];
@@ -3799,7 +3799,7 @@ inline void sum_1_packed(const double* x_in, std::size_t n, double& r_out, bool&
         const __m256d step_s = _mm256_add_pd(s_lane_, x);
         s_lane_ = step_s;
     }
-    double s_lanes_[4] = {};
+    double s_lanes_[4];
     _mm256_storeu_pd(s_lanes_, s_lane_);
     double s = s_lanes_[0];
     for (std::size_t j_ = 1; j_ < 4; ++j_) {
@@ -3830,7 +3830,7 @@ inline void sum_1_packed(const float* x_in, std::size_t n, float& r_out, bool& f
         const __m256 step_s = _mm256_add_ps(s_lane_, x);
         s_lane_ = step_s;
     }
-    float s_lanes_[8] = {};
+    float s_lanes_[8];
     _mm256_storeu_ps(s_lanes_, s_lane_);
     float s = s_lanes_[0];
     for (std::size_t j_ = 1; j_ < 8; ++j_) {
@@ -3864,7 +3864,7 @@ inline void sum_1_entry_packed(const double* x_in, std::size_t n, double& r_out,
         const __m256d step_t = _mm256_add_pd(s_lane_, step_g);
         s_lane_ = step_t;
     }
-    double s_lanes_[4] = {};
+    double s_lanes_[4];
     _mm256_storeu_pd(s_lanes_, s_lane_);
     double s = s_lanes_[0];
     for (std::size_t j_ = 1; j_ < 4; ++j_) {
@@ -3897,7 +3897,7 @@ inline void sum_1_entry_packed(const float* x_in, std::size_t n, float& r_out, b
         const __m256 step_t = _mm256_add_ps(s_lane_, step_g);
         s_lane_ = step_t;
     }
-    float s_lanes_[8] = {};
+    float s_lanes_[8];
     _mm256_storeu_ps(s_lanes_, s_lane_);
     float s = s_lanes_[0];
     for (std::size_t j_ = 1; j_ < 8; ++j_) {
@@ -3957,8 +3957,8 @@ inline void sum_2_packed(const double* x0_in, const double* x1_in, std::size_t n
         s0_lane_ = step_z0;
         s1_lane_ = step_z1;
     }
-    double s0_lanes_[4] = {};
-    double s1_lanes_[4] = {};
+    double s0_lanes_[4];
+    double s1_lanes_[4];
     _mm256_storeu_pd(s0_lanes_, s0_lane_);
     _mm256_storeu_pd(s1_lanes_, s1_lane_);
     double s0 = s0_lanes_[0];
@@ -4069,8 +4069,8 @@ inline void sum_2_packed(const float* x0_in, const float* x1_in, std::size_t n, 
         s0_lane_ = step_z0;
         s1_lane_ = step_z1;
     }
-    float s0_lanes_[8] = {};
-    float s1_lanes_[8] = {};
+    float s0_lanes_[8];
+    float s1_lanes_[8];
     _mm256_storeu_ps(s0_lanes_, s0_lane_);
     _mm256_storeu_ps(s1_lanes_, s1_lane_);
     float s0 = s0_lanes_[0];
@@ -4186,8 +4186,8 @@ inline void sum_2_entry_packed(const double* x0_in, const double* x1_in, std::si
         s0_lane_ = step_t0;
         s1_lane_ = step_t1;
     }
-    double s0_lanes_[4] = {};
-    double s1_lanes_[4] = {};
+    double s0_lanes_[4];
+    double s1_lanes_[4];
     _mm256_storeu_pd(s0_lanes_, s0_lane_);
     _mm256_storeu_pd(s1_lanes_, s1_lane_);
     double s0 = s0_lanes_[0];
@@ -4304,8 +4304,8 @@ inline void sum_2_entry_packed(const float* x0_in, const float* x1_in, std::size
         s0_lane_ = step_t0;
         s1_lane_ = step_t1;
     }
-    float s0_lanes_[8] = {};
-    float s1_lanes_[8] = {};
+    float s0_lanes_[8];
+    float s1_lanes_[8];
     _mm256_storeu_ps(s0_lanes_, s0_lane_);
     _mm256_storeu_ps(s1_lanes_, s1_lane_);
     float s0 = s0_lanes_[0];
@@ -4410,8 +4410,8 @@ inline void sum_fast_2_packed(const double* x0_in, const double* x1_in, std::siz
         s0_lane_ = step_z0;
         s1_lane_ = step_z1;
     }
-    double s0_lanes_[4] = {};
-    double s1_lanes_[4] = {};
+    double s0_lanes_[4];
+    double s1_lanes_[4];
     _mm256_storeu_pd(s0_lanes_, s0_lane_);
     _mm256_storeu_pd(s1_lanes_, s1_lane_);
     double s0 = s0_lanes_[0];
@@ -4489,8 +4489,8 @@ inline void sum_fast_2_packed(const float* x0_in, const float* x1_in, std::size_
         s0_lane_ = step_z0;
         s1_lane_ = step_z1;
     }
-    float s0_lanes_[8] = {};
-    float s1_lanes_[8] = {};
+    float s0_lanes_[8];
+    float s1_lanes_[8];
     _mm256_storeu_ps(s0_lanes_, s0_lane_);
     _mm256_storeu_ps(s1_lanes_, s1_lane_);
     float s0 = s0_lanes_[0];
@@ -4573,8 +4573,8 @@ inline void sum_fast_2_entry_packed(const double* x0_in, const double* x1_in, st
         s0_lane_ = step_t0;
         s1_lane_ = step_t1;
     }
-    double s0_lanes_[4] = {};
-    double s1_lanes_[4] = {};
+    double s0_lanes_[4];
+    double s1_lanes_[4];
     _mm256_storeu_pd(s0_lanes_, s0_lane_);
     _mm256_storeu_pd(s1_lanes_, s1_lane_);
     double s0 = s0_lanes_[0];
@@ -4658,8 +4658,8 @@ inline void sum_fast_2_entry_packed(const float* x0_in, const float* x1_in, std:
         s0_lane_ = step_t0;
         s1_lane_ = step_t1;
     }
-    float s0_lanes_[8] = {};
-    float s1_lanes_[8] = {};
+    float s0_lanes_[8];
+    float s1_lanes_[8];
     _mm256_storeu_ps(s0_lanes_, s0_lane_);
     _mm256_storeu_ps(s1_lanes_, s1_lane_);
     float s0 = s0_lanes_[0];

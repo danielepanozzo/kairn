@@ -319,7 +319,9 @@ rule:
 2. R1: there is no plain multiplication (`mul` is parsed only to be refused, with the route by
    which it reaches an addition). `times_inf`, a multiplication by infinity and exact, is one only
    in C++: its result may be an operand of a comparison or of `select` and nothing else, and an
-   output only through `select`.
+   output only through `select`. Nor is a value added to itself (`rules.doubling`, on the listing
+   with its calls inlined, through copies): GCC 13 writes `a + a` as `a * 2` and contracts it into
+   the addition that follows under `-ffp-contract=fast`; a doubling is `prod(a, const up(2))`.
 3. R2: no output is the result of a `muladd`, or an input (an input is returned through `copy`).
 4. The non-finite cone: every limb value reaches output limb 0 through operations that keep a
    non-finite operand non-finite (not `select`, `succ`, `pred` or comparisons), unless it is

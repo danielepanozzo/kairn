@@ -179,6 +179,27 @@ e = sub(s, b)
         errors = check(HEAD + 't = mul(a, b)\nc = copy(t)\ns = add(c, b)\nz = sub(s, a)\ne = sub(b, z)\n')
         self.refused(errors, 'bad', 't', rules.RULE_R1, 'copy at c then an operand of add at s')
 
+    def test_a_value_added_to_itself(self):
+        # GCC writes a + a as a * 2 and contracts it into the addition that follows.
+        errors = check(HEAD + 'd = add(a, a)\ns = add(d, b)\nz = sub(s, d)\ne = sub(b, z)\n')
+        self.refused(errors, 'bad', 'd', rules.RULE_R1, 'adds a value to itself')
+
+    def test_a_value_added_to_its_copy(self):
+        errors = check(HEAD + 'c = copy(a)\nd = add(a, c)\ns = add(d, b)\nz = sub(s, d)\ne = sub(b, z)\n')
+        self.refused(errors, 'bad', 'd', rules.RULE_R1, 'd = add(a, a) adds a value to itself')
+
+    def test_a_value_passed_twice_to_an_addition(self):
+        # Through a call: the callee adds its two inputs, the caller gives it one value twice.
+        callee = HEAD.replace('kernel:  bad', 'kernel:  callee') + GOOD
+        self.assertEqual(check(callee), [])
+        caller = HEAD.replace('kernel:  bad', 'kernel:  caller') + '(p, q) = callee(a, a)\ns = add(p, b)\ne = add(q, b)\n'
+        errors = check(callee, caller)
+        self.refused(errors, 'caller', 'p', rules.RULE_R1, 'p = add(a, a) adds a value to itself')
+        self.assertEqual([e for e in errors if e.kernel == 'callee'], [])
+
+    def test_a_doubling_as_an_opaque_product_is_accepted(self):
+        self.assertEqual(check(HEAD + 'd = prod(a, const up(2))\ns = add(d, b)\nz = sub(s, d)\ne = sub(b, z)\n'), [])
+
     def test_copy_as_an_output_is_accepted(self):
         self.assertEqual(check(HEAD + 's = add(a, b)\nz = sub(s, a)\nw = sub(b, z)\ne = copy(w)\n'), [])
 

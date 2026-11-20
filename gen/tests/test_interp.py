@@ -401,9 +401,9 @@ class Specials(unittest.TestCase):
                         seen += 1
         self.assertEqual(subnormal, [])
         # E, G, H of the six cores, and the splitter; P of the two directed products, and N of the
-        # two scalings of a ball by a power of two; the four constants of bound_sum_1 and of
-        # bound_sum_2 and the six of bound_dot_1 and of bound_dot_2.
-        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 4 + 4 + 6 + 6))
+        # two scalings of a ball by a power of two; the five constants of bound_sum_1 and of
+        # bound_sum_2 and the seven of bound_dot_1 and of bound_dot_2 (2, of the doubling, among them).
+        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7))
         # The constant of tm in bound_dot_k, (1 + u)^2 (tiny + eta) of milestone2.md, is subnormal: it
         # holds the smallest normal number besides, as H does (1 + 5/2 eta or 3/2 eta, rounded up).
         for name, more in (('bound_dot_1', 2), ('bound_dot_2', 3)):

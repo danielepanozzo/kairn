@@ -574,6 +574,16 @@ optimization every compiler called helpers (`std::bit_cast`, `std::numeric_limit
 `fma`: with `-mfma`, `/arch:AVX2` and on AArch64 the FMA is an instruction at every level, `-O0`
 and `/Od` included.
 
+On 2026-11-20 the check found two things in the code of the folds' stage, on x86-64. GCC 13 at
+`-O2` and `-O3` with `-ffp-contract=fast` compiled the first listings of `bound_sum_2` and
+`bound_dot_2` with one FMA more than they ask for: it wrote `d = a + a` as `a * 2` and contracted
+that product into `w = d + k`. The value was the same here (`2a` is exact), but not in general at
+an overflow, and rule R1 now refuses an addition of a value to itself
+([Architecture](architecture.md#the-kernel-ir)); the bound kernels double with the opaque
+product. And Clang 18 at `-O0` called `memset` to zero the 32-byte array into which `F_packed`
+stores the lane states, a call outside the object that the check cannot count; the array is now
+left uninitialized, since the store writes every lane before any is read.
+
 The check takes seconds, on the machines of [Time](#time), with `--parallel 4`:
 
 | Where | `objcode.check`, `objcode.controls` | The quick tier, in all | `full.objcode.check`, `full.objcode.controls` |

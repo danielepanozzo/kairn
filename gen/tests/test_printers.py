@@ -786,7 +786,7 @@ class Rocq(unittest.TestCase):
     # folds' stage (nine with a real-model statement: the steps of the folds and the four exported
     # bounds, and their constants): every earlier definition and statement is the same, byte for
     # byte, mul_2_2 and add_2_2 printed earlier, before dot_step_2; Audit.v is the same.
-    DIGESTS = {'Model.v': '2b797c6bad9c87ea80820323eed67101a66088bf700a6317e96702354016832e',
+    DIGESTS = {'Model.v': '8b9cb1e627de7342805dc3f29feaf7e5d86f931e4593902343ae09b1c2dbfc20',
                'Statements.v': '638028d5c502619d8bb7c0d001b2963f97a3b5512761096b985db12b81ec13e7',
                'Audit.v': '0c93acbf8651ff7bc342d1c9ab1f80d0f98718ddf3d0123dbff0d0547a871f15'}
 

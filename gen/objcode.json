@@ -100,24 +100,24 @@
    "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
   },
   "bound_dot_1": {
-   "scalar": {"double": [5, 4, 0, 0, 5, 0], "float": [5, 4, 0, 0, 5, 0]},
-   "scalar_call": {"double": [5, 4, 0, 0, 5, 0], "float": [5, 4, 0, 0, 5, 0]},
-   "packed": {"double": [5, 4, 0, 0, 0, 0], "float": [5, 4, 0, 0, 0, 0]}
+   "scalar": {"double": [6, 5, 0, 0, 6, 0], "float": [6, 5, 0, 0, 6, 0]},
+   "scalar_call": {"double": [6, 5, 0, 0, 6, 0], "float": [6, 5, 0, 0, 6, 0]},
+   "packed": {"double": [6, 5, 0, 0, 0, 0], "float": [6, 5, 0, 0, 0, 0]}
   },
   "bound_dot_2": {
-   "scalar": {"double": [5, 5, 0, 0, 5, 0], "float": [5, 5, 0, 0, 5, 0]},
-   "scalar_call": {"double": [5, 5, 0, 0, 5, 0], "float": [5, 5, 0, 0, 5, 0]},
-   "packed": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]}
+   "scalar": {"double": [6, 6, 0, 0, 6, 0], "float": [6, 6, 0, 0, 6, 0]},
+   "scalar_call": {"double": [6, 6, 0, 0, 6, 0], "float": [6, 6, 0, 0, 6, 0]},
+   "packed": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]}
   },
   "bound_sum_1": {
-   "scalar": {"double": [3, 2, 0, 0, 3, 0], "float": [3, 2, 0, 0, 3, 0]},
-   "scalar_call": {"double": [3, 2, 0, 0, 3, 0], "float": [3, 2, 0, 0, 3, 0]},
-   "packed": {"double": [3, 2, 0, 0, 0, 0], "float": [3, 2, 0, 0, 0, 0]}
+   "scalar": {"double": [4, 3, 0, 0, 4, 0], "float": [4, 3, 0, 0, 4, 0]},
+   "scalar_call": {"double": [4, 3, 0, 0, 4, 0], "float": [4, 3, 0, 0, 4, 0]},
+   "packed": {"double": [4, 3, 0, 0, 0, 0], "float": [4, 3, 0, 0, 0, 0]}
   },
   "bound_sum_2": {
-   "scalar": {"double": [3, 3, 0, 0, 3, 0], "float": [3, 3, 0, 0, 3, 0]},
-   "scalar_call": {"double": [3, 3, 0, 0, 3, 0], "float": [3, 3, 0, 0, 3, 0]},
-   "packed": {"double": [3, 3, 0, 0, 0, 0], "float": [3, 3, 0, 0, 0, 0]}
+   "scalar": {"double": [4, 4, 0, 0, 4, 0], "float": [4, 4, 0, 0, 4, 0]},
+   "scalar_call": {"double": [4, 4, 0, 0, 4, 0], "float": [4, 4, 0, 0, 4, 0]},
+   "packed": {"double": [4, 4, 0, 0, 0, 0], "float": [4, 4, 0, 0, 0, 0]}
   },
   "dot_step_1": {
    "scalar": {"double": [1, 1, 0, 0, 0, 0], "float": [1, 1, 0, 0, 0, 0]},

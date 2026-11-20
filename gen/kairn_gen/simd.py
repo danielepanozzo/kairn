@@ -278,7 +278,9 @@ def fold_packed(b, fd, kernels, ctype):
     items, outs = ir.inline_call(step, kernels, [ir.Operand(a) for a in cpp.step_arguments(
         fd, lane, {g.name: list(g.limbs) for g in fd.arrays})], cpp.STEP)
     lines += _statements(b, items, kernels, ctype, ' ' * 8) + cpp._assign(lane, outs, ' ' * 8) + ['    }']
-    lines += [f'    {ctype} {v}[{w}] = {{}};' for v in stored]
+    # Not initialized: the store writes every lane before any is read. (An initializer `= {}` is a
+    # call of memset at -O0 with Clang for 32 bytes, which the object-code check cannot count.)
+    lines += [f'    {ctype} {v}[{w}];' for v in stored]
     lines += [f'    {b["store"].format(v, r, **fmt)};' for v, r in zip(stored, lane)]
     lines += [f'    {ctype} {v} = {r}[0];' for v, r in zip(state, stored)]
     lines.append(f'    for (std::size_t j_ = 1; j_ < {w}; ++j_) {{')

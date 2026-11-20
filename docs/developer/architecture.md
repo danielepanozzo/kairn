@@ -115,7 +115,11 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    compiled code of every kernel, on the flag matrix of each compiler: one fused multiply-add per
    FMA node (identical nodes of one function may be merged into one), and no plain multiplication
    but one per `times_inf` and, where a compiler emits the branch that only constant evaluation
-   takes, the products of that branch.
+   takes, the products of that branch. An addition of a value to itself, `add(a, a)`, is refused
+   too, on the listing with its calls inlined and through copies: GCC 13 writes `a + a` as
+   `a * 2` and, under `-ffp-contract=fast`, contracts that product into the addition that follows
+   (the object-code check found it in the first listings of `bound_sum_2` and `bound_dot_2`, at
+   `-O2` and `-O3` on x86-64). A doubling is written `prod(a, const up(2))`, exact and opaque.
 3. **R2.** No kernel output is an expression the compiler could fuse into the caller: outputs are
    results of `add`, `sub`, `fma`-family, `prod`, `select`, `neg`, `abs`, `succ`, `pred`, never of
    `muladd`.

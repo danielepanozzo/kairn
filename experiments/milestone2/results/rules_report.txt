@@ -1,4 +1,6 @@
-33 kernel descriptions (12 of them in gen/kernels, with their claims); 35 remarks that a description has no claim (expected); 0 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
+refused: kernel ball_from_interval_2, value bl: rule 2 (R1: products): bl = add(hl, hl) adds a value to itself, which a compiler writes as a product by 2 and may contract into an addition that follows (GCC 13 under -ffp-contract=fast); write prod(a, const up(2)), exact and the opaque product
+refused: kernel ball_from_interval_2, value bu: rule 2 (R1: products): bu = add(hu, hu) adds a value to itself, which a compiler writes as a product by 2 and may contract into an addition that follows (GCC 13 under -ffp-contract=fast); write prod(a, const up(2)), exact and the opaque product
+33 kernel descriptions (12 of them in gen/kernels, with their claims); 35 remarks that a description has no claim (expected); 2 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
 
 kernel                 operations after inlining
 add_ball_2_2            22 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations

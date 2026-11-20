@@ -897,7 +897,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
 KAIRN_GEN_FORCEINLINE constexpr void bound_dot_1(double m, double& g_out, double& t_out, bool& ok_out) noexcept {
     const double a = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
     const double aa = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
-    const double d = a + a;
+    const double d = __builtin_is_constant_evaluated() ? a * 0x1p+1 : fma_rn(a, 0x1p+1, 0.0);
     const double w = d + 0x1.0000000000001p+0;
     const double g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0);
     const double tm = __builtin_is_constant_evaluated() ? m * 0x1.0000000000002p-1022 : fma_rn(m, 0x1.0000000000002p-1022, 0.0);
@@ -913,7 +913,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_dot_1(double m, double& g_out, double
 KAIRN_GEN_FORCEINLINE constexpr void bound_dot_1(float m, float& g_out, float& t_out, bool& ok_out) noexcept {
     const float a = __builtin_is_constant_evaluated() ? m * 0x1.000002p-24f : fma_rn(m, 0x1.000002p-24f, 0.0f);
     const float aa = __builtin_is_constant_evaluated() ? m * 0x1.000002p-24f : fma_rn(m, 0x1.000002p-24f, 0.0f);
-    const float d = a + a;
+    const float d = __builtin_is_constant_evaluated() ? a * 0x1p+1f : fma_rn(a, 0x1p+1f, 0.0f);
     const float w = d + 0x1.000002p+0f;
     const float g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0f);
     const float tm = __builtin_is_constant_evaluated() ? m * 0x1.000004p-126f : fma_rn(m, 0x1.000004p-126f, 0.0f);
@@ -932,7 +932,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_dot_1(float m, float& g_out, float& t
 KAIRN_GEN_FORCEINLINE constexpr void bound_dot_2(double m, double& g_out, double& t_out, bool& ok_out) noexcept {
     const double a = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-104 : fma_rn(m, 0x1.0000000000001p-104, 0.0);
     const double aa = __builtin_is_constant_evaluated() ? m * 0x1.0000000000002p-104 : fma_rn(m, 0x1.0000000000002p-104, 0.0);
-    const double d = a + a;
+    const double d = __builtin_is_constant_evaluated() ? a * 0x1p+1 : fma_rn(a, 0x1p+1, 0.0);
     const double w = d + 0x1.0000000000001p+0;
     const double g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0);
     const double tm = __builtin_is_constant_evaluated() ? m * 0x1.0000000000003p-1022 : fma_rn(m, 0x1.0000000000003p-1022, 0.0);
@@ -948,7 +948,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_dot_2(double m, double& g_out, double
 KAIRN_GEN_FORCEINLINE constexpr void bound_dot_2(float m, float& g_out, float& t_out, bool& ok_out) noexcept {
     const float a = __builtin_is_constant_evaluated() ? m * 0x1.000002p-46f : fma_rn(m, 0x1.000002p-46f, 0.0f);
     const float aa = __builtin_is_constant_evaluated() ? m * 0x1.000004p-46f : fma_rn(m, 0x1.000004p-46f, 0.0f);
-    const float d = a + a;
+    const float d = __builtin_is_constant_evaluated() ? a * 0x1p+1f : fma_rn(a, 0x1p+1f, 0.0f);
     const float w = d + 0x1.000002p+0f;
     const float g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0f);
     const float tm = __builtin_is_constant_evaluated() ? m * 0x1.000006p-126f : fma_rn(m, 0x1.000006p-126f, 0.0f);
@@ -967,7 +967,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_dot_2(float m, float& g_out, float& t
 KAIRN_GEN_FORCEINLINE constexpr void bound_sum_1(double m, double& g_out, bool& ok_out) noexcept {
     const double a = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
     const double aa = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
-    const double d = a + a;
+    const double d = __builtin_is_constant_evaluated() ? a * 0x1p+1 : fma_rn(a, 0x1p+1, 0.0);
     const double w = d + 0x1.0000000000001p+0;
     const double g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0);
     const bool ok = 0x1p-2 >= a;
@@ -977,7 +977,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_sum_1(double m, double& g_out, bool& 
 KAIRN_GEN_FORCEINLINE constexpr void bound_sum_1(float m, float& g_out, bool& ok_out) noexcept {
     const float a = __builtin_is_constant_evaluated() ? m * 0x1.000002p-24f : fma_rn(m, 0x1.000002p-24f, 0.0f);
     const float aa = __builtin_is_constant_evaluated() ? m * 0x1.000002p-24f : fma_rn(m, 0x1.000002p-24f, 0.0f);
-    const float d = a + a;
+    const float d = __builtin_is_constant_evaluated() ? a * 0x1p+1f : fma_rn(a, 0x1p+1f, 0.0f);
     const float w = d + 0x1.000002p+0f;
     const float g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0f);
     const bool ok = 0x1p-2f >= a;
@@ -990,7 +990,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_sum_1(float m, float& g_out, bool& ok
 KAIRN_GEN_FORCEINLINE constexpr void bound_sum_2(double m, double& g_out, bool& ok_out) noexcept {
     const double a = __builtin_is_constant_evaluated() ? m * 0x1.8000000000004p-105 : fma_rn(m, 0x1.8000000000004p-105, 0.0);
     const double aa = __builtin_is_constant_evaluated() ? m * 0x1.8000000000005p-105 : fma_rn(m, 0x1.8000000000005p-105, 0.0);
-    const double d = a + a;
+    const double d = __builtin_is_constant_evaluated() ? a * 0x1p+1 : fma_rn(a, 0x1p+1, 0.0);
     const double w = d + 0x1.0000000000001p+0;
     const double g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0);
     const bool ok = 0x1p-2 >= a;
@@ -1000,7 +1000,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_sum_2(double m, double& g_out, bool& 
 KAIRN_GEN_FORCEINLINE constexpr void bound_sum_2(float m, float& g_out, bool& ok_out) noexcept {
     const float a = __builtin_is_constant_evaluated() ? m * 0x1.800008p-47f : fma_rn(m, 0x1.800008p-47f, 0.0f);
     const float aa = __builtin_is_constant_evaluated() ? m * 0x1.80000ap-47f : fma_rn(m, 0x1.80000ap-47f, 0.0f);
-    const float d = a + a;
+    const float d = __builtin_is_constant_evaluated() ? a * 0x1p+1f : fma_rn(a, 0x1p+1f, 0.0f);
     const float w = d + 0x1.000002p+0f;
     const float g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0f);
     const bool ok = 0x1p-2f >= a;
