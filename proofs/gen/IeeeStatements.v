@@ -1702,7 +1702,7 @@ Definition ball_equal_2_spec : Prop :=
     ~ ball_empty_2 cx0 cx1 rx /\ ~ ball_empty_2 cy0 cy1 ry /\
     (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> ~ (x = y)))).
 
-(* ball_to_interval_2: the directed sums of two limbs of the center and the radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_to_interval_2: the directed sums of two limbs of the center and the radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_to_interval_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2073,7 +2073,7 @@ Definition lt_2_1_ieee_spec : Prop :=
   let m := IeeeModel.lt_2_1 prec emax x0 x1 a in
   m = xlt (xval_2 x0 x1) (xval a).
 
-(* ball_negative_2: the center compared with the negated radius by lt_2_1 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_negative_2: the center compared with the negated radius by lt_2_1 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_negative_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2095,7 +2095,7 @@ Definition lt_1_2_ieee_spec : Prop :=
   let m := IeeeModel.lt_1_2 prec emax a y0 y1 in
   m = xlt (xval a) (xval_2 y0 y1).
 
-(* ball_positive_2: the radius compared with the center by lt_1_2 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_positive_2: the radius compared with the center by lt_1_2 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_positive_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -2126,7 +2126,7 @@ Definition ball_scale_2_full_spec : Prop :=
    ball_finite_2 cw0 cw1 rw) /\
   (finite a -> forall x : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cw0 cw1 rw (x * val a)).
 
-(* ball_split_2: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_split_2: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_split_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2188,7 +2188,7 @@ Definition eq_2_1_ieee_spec : Prop :=
   let m := IeeeModel.eq_2_1 prec emax x0 x1 a in
   m = xeq (xval_2 x0 x1) (xval a).
 
-(* ball_zero_2: the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_zero_2: the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_zero_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),

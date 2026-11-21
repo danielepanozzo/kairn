@@ -10,9 +10,10 @@ ensures:       certain m eq x 0 x=c,r exact
 min_precision: 1
 source:        the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates2.v ball_zero_2_correct
 entry:         yes
 cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
 

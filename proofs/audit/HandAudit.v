@@ -60,7 +60,8 @@
      balls of one limb, a ball as an interval of extended real numbers, the exact pairs of
      two_sum_ord and their comparisons, and each kernel as a boolean of the bounds; for the
      ball of one limb from an interval and the split of a ball, the rest of a halving and a
-     point plus a ball;
+     point plus a ball; for the signs and the split of a ball of two limbs and its interval,
+     the ball as an interval of extended real numbers and the interval as a sum;
    - the theorems about the folds that have no generated statement: that a fold of the
      model with overflow is the fold of the real model whenever its result is finite
      (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
@@ -831,6 +832,26 @@ Print Assumptions half_rest_format.
 Print Assumptions point_plus.
 Print Assumptions ball_from_interval_1_all.
 Print Assumptions ball_split_1_all.
+
+(* The signs and the split of a ball of two limbs, and the interval of a ball of two limbs, in
+   the IEEE model (theories/IeeeBallPredicates2.v, theories/IeeeBallConvert2.v): the theorems of
+   their generated statements are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they rest
+   on: a canonical ball of two limbs as an interval of extended real numbers, each sign as a
+   boolean of its bounds, a point plus a ball of two limbs, the split in the names of the file,
+   and ball_to_interval_2 as interval_add_2 of [c, c] and [-r, r]. *)
+From Kairn Require Import IeeeBallPredicates2 IeeeBallConvert2.
+Print Assumptions ball_2_canonical.
+Print Assumptions ball_2_states.
+Print Assumptions xlohi_2_fin.
+Print Assumptions xlohi_2_whole.
+Print Assumptions xlohi_2_nan.
+Print Assumptions xball_2.
+Print Assumptions ball_positive_2_bool.
+Print Assumptions ball_negative_2_bool.
+Print Assumptions ball_zero_2_bool.
+Print Assumptions point_plus_2.
+Print Assumptions ball_split_2_all.
+Print Assumptions ball_to_interval_2_as_add.
 
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
 Print Assumptions fold_seq_transfer.

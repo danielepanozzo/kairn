@@ -6,10 +6,12 @@
 From Kairn.Gen Require Import IeeeStatements.
 From Kairn.Gen Require Import IeeeFoldStatements.
 From Kairn Require Import IeeeBallConvert.
+From Kairn Require Import IeeeBallConvert2.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeBallPow2.
 From Kairn Require Import IeeeBallPredicates.
+From Kairn Require Import IeeeBallPredicates2.
 From Kairn Require Import IeeeBallSets.
 From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
@@ -257,6 +259,9 @@ Print Assumptions to_down_2_ieee_correct.
 Definition eq_2_2_ieee_audit : eq_2_2_ieee_spec := eq_2_2_ieee_correct.
 Print Assumptions eq_2_2_ieee_correct.
 
+Definition ball_to_interval_2_audit : ball_to_interval_2_spec := ball_to_interval_2_correct.
+Print Assumptions ball_to_interval_2_correct.
+
 Definition interval_hull_2_audit : interval_hull_2_spec := interval_hull_2_correct.
 Print Assumptions interval_hull_2_correct.
 
@@ -287,11 +292,20 @@ Print Assumptions ball_neg_2_ieee_correct.
 Definition lt_2_1_ieee_audit : lt_2_1_ieee_spec := lt_2_1_ieee_correct.
 Print Assumptions lt_2_1_ieee_correct.
 
+Definition ball_negative_2_audit : ball_negative_2_spec := ball_negative_2_correct.
+Print Assumptions ball_negative_2_correct.
+
 Definition lt_1_2_ieee_audit : lt_1_2_ieee_spec := lt_1_2_ieee_correct.
 Print Assumptions lt_1_2_ieee_correct.
 
+Definition ball_positive_2_audit : ball_positive_2_spec := ball_positive_2_correct.
+Print Assumptions ball_positive_2_correct.
+
 Definition ball_scale_2_full_audit : ball_scale_2_full_spec := ball_scale_2_full_correct.
 Print Assumptions ball_scale_2_full_correct.
+
+Definition ball_split_2_audit : ball_split_2_spec := ball_split_2_correct.
+Print Assumptions ball_split_2_correct.
 
 Definition ball_sub_2_full_audit : ball_sub_2_full_spec := ball_sub_2_full_correct.
 Print Assumptions ball_sub_2_full_correct.
@@ -301,6 +315,9 @@ Print Assumptions ball_upper_as_2_correct.
 
 Definition eq_2_1_ieee_audit : eq_2_1_ieee_spec := eq_2_1_ieee_correct.
 Print Assumptions eq_2_1_ieee_correct.
+
+Definition ball_zero_2_audit : ball_zero_2_spec := ball_zero_2_correct.
+Print Assumptions ball_zero_2_correct.
 
 Definition fold_finish_2_audit : fold_finish_2_spec := fold_finish_2_correct.
 Print Assumptions fold_finish_2_correct.

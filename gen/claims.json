@@ -7991,9 +7991,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert2.v",
+        "name": "ball_to_interval_2_correct"
+      },
       "source": {
         "cite": "the directed sums of two limbs of the center and the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9377,9 +9381,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates2.v",
+        "name": "ball_negative_2_correct"
+      },
       "source": {
         "cite": "the center compared with the negated radius by lt_2_1 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9489,9 +9497,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates2.v",
+        "name": "ball_positive_2_correct"
+      },
       "source": {
         "cite": "the radius compared with the center by lt_1_2 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9692,9 +9704,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates2.v",
+        "name": "ball_split_2_correct"
+      },
       "source": {
         "cite": "the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -10033,9 +10049,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates2.v",
+        "name": "ball_zero_2_correct"
+      },
       "source": {
         "cite": "the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

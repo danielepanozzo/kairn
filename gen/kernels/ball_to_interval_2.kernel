@@ -19,9 +19,10 @@ ensures:       interval_of_ball zl zu x x=c,r tight=outward;rel=(2*(1+u)^3*up((1
 min_precision: 3
 source:        the directed sums of two limbs of the center and the radius (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallConvert2.v ball_to_interval_2_correct
 entry:         yes
 cone_exempt:   the bounds are directed sums made infinite on their side when not finite, and the empty set is selected after an explicit test; interval_of_ball states what comes out for every canonical ball
 

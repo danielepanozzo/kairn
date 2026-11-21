@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 200 kernels, 183 are proved and 17 are **UNVERIFIED**: [`ball_contains_ball_2`](ball_contains_ball_2.md), [`ball_contains_point_2`](ball_contains_point_2.md), [`ball_equal_2`](ball_equal_2.md), [`ball_hull_1`](ball_hull_1.md), [`ball_hull_2`](ball_hull_2.md), [`ball_intersection_1`](ball_intersection_1.md), [`ball_intersection_2`](ball_intersection_2.md), [`ball_less_2`](ball_less_2.md), [`ball_less_equal_2`](ball_less_equal_2.md), [`ball_negative_2`](ball_negative_2.md), [`ball_positive_2`](ball_positive_2.md), [`ball_split_2`](ball_split_2.md), [`ball_to_interval_2`](ball_to_interval_2.md), [`ball_zero_2`](ball_zero_2.md), [`interval_mid_rad_2`](interval_mid_rad_2.md), [`interval_split_2`](interval_split_2.md), [`interval_to_ball_2`](interval_to_ball_2.md).
+Of the 200 kernels, 188 are proved and 12 are **UNVERIFIED**: [`ball_contains_ball_2`](ball_contains_ball_2.md), [`ball_contains_point_2`](ball_contains_point_2.md), [`ball_equal_2`](ball_equal_2.md), [`ball_hull_1`](ball_hull_1.md), [`ball_hull_2`](ball_hull_2.md), [`ball_intersection_1`](ball_intersection_1.md), [`ball_intersection_2`](ball_intersection_2.md), [`ball_less_2`](ball_less_2.md), [`ball_less_equal_2`](ball_less_equal_2.md), [`interval_mid_rad_2`](interval_mid_rad_2.md), [`interval_split_2`](interval_split_2.md), [`interval_to_ball_2`](interval_to_ball_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -158,14 +158,14 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_2`](ball_from_interval_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) |
 | not yet called by the public headers | - | the smallest interval of `T` that contains the ball; empty for the empty ball | [`ball_to_interval_1`](ball_to_interval_1.md) |
-| not yet called by the public headers | - | an interval of two limbs that contains the ball, within $A\lvert v\rvert + B$ of its bounds; empty for the empty ball | [`ball_to_interval_2`](ball_to_interval_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | an interval of two limbs that contains the ball, within $A\lvert v\rvert + B$ of its bounds; empty for the empty ball | [`ball_to_interval_2`](ball_to_interval_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_1`](ball_from_interval_1.md) |
 | not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_2`](ball_hull_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_2`](ball_intersection_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_1`](ball_hull_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_1`](ball_intersection_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_1`](ball_split_1.md) |
-| not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_2`](ball_split_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_2`](ball_split_2.md) |
 | not yet called by the public headers | - | whether $t \in X$; exact | [`ball_contains_point_1`](ball_contains_point_1.md) |
 | not yet called by the public headers | - | whether $Y \subseteq X$; exact | [`ball_contains_ball_1`](ball_contains_ball_1.md) |
 | not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`ball_positive_1`](ball_positive_1.md) |
@@ -176,9 +176,9 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_equal_1`](ball_equal_1.md) |
 | not yet called by the public headers | - | yes, no or unknown: whether $t = t_0 + t_1 \in X$; never wrong | [`ball_contains_point_2`](ball_contains_point_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | whether $Y \subseteq X$; true only if it holds | [`ball_contains_ball_2`](ball_contains_ball_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`ball_positive_2`](ball_positive_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`ball_negative_2`](ball_negative_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`ball_zero_2`](ball_zero_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`ball_positive_2`](ball_positive_2.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`ball_negative_2`](ball_negative_2.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`ball_zero_2`](ball_zero_2.md) |
 | not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_2`](ball_less_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_equal_2`](ball_less_equal_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_equal_2`](ball_equal_2.md) **UNVERIFIED** |

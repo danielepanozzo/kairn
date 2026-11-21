@@ -7237,7 +7237,7 @@ KAIRN_GEN_FORCEINLINE void ball_equal_2(float cx0, float cx1, float rx, float cy
 }
 
 // ball_to_interval_2(c = (c0, c1), r) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the directed sums of two limbs of the center and the radius (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the directed sums of two limbs of the center and the radius (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> ball_to_interval_2(double mi, double a0, double a1, double b0, double b1, bool ne) noexcept {
@@ -11439,7 +11439,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(float x0, float x1, float a, bool& m
 }
 
 // ball_negative_2(c = (c0, c1), r) -> mask m
-// the center compared with the negated radius by lt_2_1 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center compared with the negated radius by lt_2_1 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_negative_2(double c0, double c1, double r, bool& m_out) noexcept {
     const double nr = -r;
     // (m) = lt_2_1(c0, c1, nr)
@@ -11481,7 +11481,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(float a, float y0, float y1, bool& m
 }
 
 // ball_positive_2(c = (c0, c1), r) -> mask m
-// the radius compared with the center by lt_1_2 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the radius compared with the center by lt_1_2 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_positive_2(double c0, double c1, double r, bool& m_out) noexcept {
     // (m) = lt_1_2(r, c0, c1)
     const bool m_h = c0 > r;
@@ -11656,7 +11656,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float cx0, float cx1, float rx, flo
 }
 
 // ball_split_2(c = (c0, c1), r) -> ca = (ca0, ca1), ra, cb = (cb0, cb1), rb
-// the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 6> ball_split_2(double c0, double c1, double r, bool fr, double a0, double a1, double ar, double b0, double b1, double br) noexcept {
@@ -12289,7 +12289,7 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(float x0, float x1, float a, bool& m
 }
 
 // ball_zero_2(c = (c0, c1), r) -> mask m
-// the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_zero_2(double c0, double c1, double r, bool& m_out) noexcept {
     // (a) = eq_2_1(c0, c1, 0)
     const bool a_h = c0 == 0.0;
