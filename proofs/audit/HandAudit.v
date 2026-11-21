@@ -33,10 +33,12 @@
      claims say, the error of a rounded product and the sign of the error term of
      two_prod, what mul_dir_1 returns beside its generated statements, the rectangle
      lemma of the product of intervals, the two executions of a product, and the lemmas
-     of the two executions of the thirty kernels whose only fused operations are products
-     (the operations of constant evaluation against those of run time, the listings of
-     proofs/gen/IeeeWith.v against the generated kernels, and in lockstep), whose theorems
-     proofs/gen/IeeeAudit.v checks against their generated statements;
+     of the two executions of the 63 kernels whose C++ computes an operation otherwise in
+     constant evaluation (the thirty whose only fused operations are products, and 33
+     without a product that compute a guard or times_inf: the operations of constant
+     evaluation against those of run time, the listings of proofs/gen/IeeeWith.v against the
+     generated kernels, and in lockstep), whose theorems proofs/gen/IeeeAudit.v checks
+     against their generated statements;
    - what is proved of the interval kernels of Milestone 2 and of the conversions of a
      ball beside their generated statements, which the generated audits list: for the
      conversions of a ball, the lemmas their theorems rest on; for the interval kernels
@@ -557,6 +559,39 @@ Print Assumptions bv_mul_pow2_step_2_with_prod.
 Print Assumptions interval_split_2_with_prod.
 Print Assumptions mul_pow2_2_full_with_prod.
 Print Assumptions mul_pow2_step_2_with_prod.
+Print Assumptions acc_add_1_with_prod.
+Print Assumptions add_down_entry_with_prod.
+Print Assumptions add_entry_step_1_with_prod.
+Print Assumptions add_up_entry_with_prod.
+Print Assumptions ball_contains_point_1_with_prod.
+Print Assumptions ball_make_1_with_prod.
+Print Assumptions bv_center_entry_1_with_prod.
+Print Assumptions bv_make_radius_with_prod.
+Print Assumptions fast_two_sum_entry_with_prod.
+Print Assumptions interval_make_1_with_prod.
+Print Assumptions make_2_with_prod.
+Print Assumptions radd_entry_with_prod.
+Print Assumptions sub_down_entry_with_prod.
+Print Assumptions sub_entry_step_1_with_prod.
+Print Assumptions sub_up_entry_with_prod.
+Print Assumptions sum_entry_step_1_with_prod.
+Print Assumptions two_sum_entry_with_prod.
+Print Assumptions acc_add_2_with_prod.
+Print Assumptions add_2_1_with_prod.
+Print Assumptions add_2_1_full_with_prod.
+Print Assumptions add_2_2_full_with_prod.
+Print Assumptions add_entry_step_2_with_prod.
+Print Assumptions add_fast_2_2_full_with_prod.
+Print Assumptions ball_make_2_with_prod.
+Print Assumptions make_2_limbs_with_prod.
+Print Assumptions sub_1_2_with_prod.
+Print Assumptions sub_1_2_full_with_prod.
+Print Assumptions sub_2_1_with_prod.
+Print Assumptions sub_2_1_full_with_prod.
+Print Assumptions sub_2_2_full_with_prod.
+Print Assumptions sub_entry_step_2_with_prod.
+Print Assumptions sum_entry_step_2_with_prod.
+Print Assumptions sum_fast_entry_step_2_with_prod.
 
 (* The kernels of IeeeModel.v without a product that the listings call: operands of the
    same value give outputs of the same value, and the same mask. *)
@@ -572,6 +607,12 @@ Print Assumptions ball_to_interval_1_same.
 Print Assumptions interval_hull_1_same.
 Print Assumptions add_2_2_same.
 Print Assumptions lt_2_2_same.
+Print Assumptions abs_2_same.
+Print Assumptions le_2_1_same.
+Print Assumptions radd_same.
+Print Assumptions sub_1_1_same.
+Print Assumptions sub_2_2_same.
+Print Assumptions add_fast_2_2_same.
 
 (* Two products of the same value (and two guards, or two forms of times_inf, of the same
    value), on operands of the same value, give outputs of the same value and the same
@@ -606,6 +647,39 @@ Print Assumptions scale_step_1_same.
 Print Assumptions bv_mul_pow2_step_2_same.
 Print Assumptions interval_split_2_same.
 Print Assumptions mul_pow2_step_2_same.
+Print Assumptions acc_add_1_same.
+Print Assumptions add_down_entry_same.
+Print Assumptions add_entry_step_1_same.
+Print Assumptions add_up_entry_same.
+Print Assumptions ball_contains_point_1_same.
+Print Assumptions ball_make_1_same.
+Print Assumptions bv_center_entry_1_same.
+Print Assumptions bv_make_radius_same.
+Print Assumptions fast_two_sum_entry_same.
+Print Assumptions interval_make_1_same.
+Print Assumptions make_2_same.
+Print Assumptions radd_entry_same.
+Print Assumptions sub_down_entry_same.
+Print Assumptions sub_entry_step_1_same.
+Print Assumptions sub_up_entry_same.
+Print Assumptions sum_entry_step_1_same.
+Print Assumptions two_sum_entry_same.
+Print Assumptions acc_add_2_same.
+Print Assumptions add_2_1_same.
+Print Assumptions add_2_1_full_same.
+Print Assumptions add_2_2_full_same.
+Print Assumptions add_entry_step_2_same.
+Print Assumptions add_fast_2_2_full_same.
+Print Assumptions ball_make_2_same.
+Print Assumptions make_2_limbs_same.
+Print Assumptions sub_1_2_same.
+Print Assumptions sub_1_2_full_same.
+Print Assumptions sub_2_1_same.
+Print Assumptions sub_2_1_full_same.
+Print Assumptions sub_2_2_full_same.
+Print Assumptions sub_entry_step_2_same.
+Print Assumptions sum_entry_step_2_same.
+Print Assumptions sum_fast_entry_step_2_same.
 
 (* Scaling a ball by a power of two (theories/BallPow2.v): the radius and the two claims
    for a center whose scaled value is exact when its test says so. *)

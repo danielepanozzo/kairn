@@ -449,26 +449,32 @@ returned is unspecified in both.
 - `next_up`, `next_down` and `radd` are `constexpr` today, with the same bits, which the
   generator's tests assert for every kernel without a fused operation.
 
-**State on 2026-11-21.** Proved now, in the IEEE model, for all thirty kernels that the rule makes
-`constexpr` (the ten named above, the bound kernels of the folds, the steps of `axpy` and of the
-scalings, and the conversions of intervals and balls that halve with `prod`; `build` lists them):
-on every operand, finite, infinite or NaN, and for every choice of NaN in each execution, the
-listing as constant evaluation runs it and the generated model of run time return outputs of the
-same value and the same masks, with no hypothesis (`IeeeTwoExecutions.v`, one theorem
-`K_two_executions` per kernel). The model of constant evaluation now covers the three operations
-whose C++ differs there, not the product alone: the plain product; the guard, which returns its
-operand where run time adds $+0$ (`axpy_entry_step_1`, `ball_from_interval_1`,
-`ball_from_interval_2`); and `times_inf`, which compares instead of multiplying (`times_inf_ce`,
-in `mul_pow2_2_full`). `IeeeWith.v` takes the three as arguments and defines their forms of
-constant evaluation from the C++, and each is proved to give the value of its form of run time
-on every operand. Each theorem has as its type a statement the generator prints,
-`K_two_executions_spec`, which the generated audit checks, so that a kernel that joins the rule
-without its theorem fails the proofs build. Still resting on the generator and its tests rather
-than on a proof: that the compiled C++ is the listing (one listing prints both), and that the
-compiler evaluates constant expressions as IEEE 754 does. The 33 kernels that are `constexpr`
-without any product, but whose guard or `times_inf` constant evaluation computes in the same
-other way (the entry kernels, the constructors, the full sums and differences), have no such
-theorem yet.
+**State on 2026-11-21.** Proved now, in the IEEE model, for every kernel whose C++ computes an
+operation otherwise in constant evaluation than at run time, 63 kernels: the thirty that the rule
+makes `constexpr` (the ten named above, the bound kernels of the folds, the steps of `axpy` and of
+the scalings, and the conversions of intervals and balls that halve with `prod`), and 33 that are
+`constexpr` without any product but guard an operand or fix up a non-finite result (the entry
+kernels and steps, the constructors of `Expansion`, `Ball` and `Interval`, the sums and
+differences of a pair and a `T`, and the full sums and differences): on every operand, finite,
+infinite or NaN, and for every choice of NaN in each execution, the listing as constant evaluation
+runs it and the generated model of run time return outputs of the same value and the same masks,
+with no hypothesis (`IeeeTwoExecutions.v`, one theorem `K_two_executions` per kernel). The model
+of constant evaluation covers the three operations whose C++ differs there, not the product
+alone: the plain product; the guard, which returns its operand where run time adds $+0$; and
+`times_inf`, which compares instead of multiplying (`times_inf_ce`). `IeeeWith.v` takes the three
+as arguments and defines their forms of constant evaluation from the C++, and each is proved to
+give the value of its form of run time on every operand. Each theorem has as its type a statement
+the generator prints, `K_two_executions_spec`, which the generated audit checks, so that a kernel
+whose C++ comes to dispatch without its theorem fails the proofs build: no kernel `constexpr`
+without a variant is left with a difference and without a theorem. Still resting on the generator
+and its tests rather than on a proof: that the compiled C++ is the listing (one listing prints
+both), and that the compiler evaluates constant expressions as IEEE 754 does. The exception is
+`two_prod`, `constexpr` through its variant: constant evaluation runs Dekker's product
+(`two_prod_dekker`), another algorithm, which gives the values of the run-time form only when no
+operation of it overflows and the product is not below $2^{2p-1}\eta$; below that threshold its
+error term is another, within $\tfrac{13}{8}\eta$ instead of $\eta/2$, and where a partial
+product overflows Clang computes an infinite error term at compile time (GCC refuses the
+program).
 
 *Risk: low.*
 

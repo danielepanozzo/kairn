@@ -494,8 +494,8 @@ class Statements(unittest.TestCase):
         # (2), and the two statements more of the two folds of maxima, F_orders_ieee_spec and
         # F_flag_ieee_spec (4): 302. Then the statements of the two executions of the thirty
         # kernels of IeeeWith.v, K_two_executions_spec, whose theorems no description names (30):
-        # 332.
-        self.assertEqual(text.count('Print Assumptions'), 332)
+        # 332. Then those of the 33 kernels without a product that IeeeWith.v has since (33): 365.
+        self.assertEqual(text.count('Print Assumptions'), 365)
         self.assertEqual(text.count('Print Assumptions IeeeTwoExecutions.'), len(ieee.with_kernels(self.ks)))
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
@@ -674,15 +674,38 @@ class WithProduct(unittest.TestCase):
         return m.group(0) if m else None
 
     def test_the_kernels(self):
+        """The kernels of IeeeWith.v are those whose C++ dispatches on constant evaluation without a
+        variant: every kernel constexpr without one that computes an operation whose spelling
+        dispatches (prod, guard, times_inf), the 30 of the rule of the product and 33 without a
+        product; every other generated function that dispatches is two_prod's, which has a variant.
+        So no kernel computes otherwise in constant evaluation without a listing here."""
         from kairn_gen import build, cpp
-        rule = [k.name for k in self.ks.values() if cpp.product_rule(k, self.ks)]
+        dispatched = {op for op, s in cpp.SPELL_PLAIN.items() if '__builtin_is_constant_evaluated()' in s}
+        rule = [k.name for k in self.ks.values() if cpp.constexpr_kind(k, self.ks) == 'plain'
+                and {p.op for p in ir.prims(k, self.ks)} & dispatched]
+        self.assertEqual([k.name for k in ieee.with_kernels(self.ks)], rule)
         section = self.text.split('\nEnd IeeeWith.\n', 1)[0]
         self.assertEqual(definitions(section), ['prod_ce', 'guard_ce', 'times_inf_ce'] + [f'{n}_with' for n in rule])
+        product = [k.name for k in self.ks.values() if cpp.product_rule(k, self.ks)]
         line = next(x for x in build.summary(self.ks) if x.startswith('constexpr by the rule of the product'))
-        self.assertEqual(sorted(line.split(': ', 1)[1].split(', ')), sorted(rule))
-        self.assertGreaterEqual(set(rule), {'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full',
-                                            'ball_mul_pow2_1', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2',
-                                            'ball_mul_pow2_2_full'})
+        self.assertEqual(sorted(line.split(': ', 1)[1].split(', ')), sorted(product))
+        self.assertEqual(len(product), 30)
+        self.assertEqual(len(rule), 63)
+        self.assertLessEqual(set(product), set(rule))
+        self.assertGreaterEqual(set(rule) - set(product), {
+            'add_2_1', 'add_2_1_full', 'add_2_2_full', 'add_fast_2_2_full', 'sub_1_2_full', 'sub_2_1_full',
+            'sub_2_2_full', 'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2', 'interval_make_1',
+            'two_sum_entry', 'fast_two_sum_entry', 'radd_entry'})
+        # In the C++: a function that dispatches on constant evaluation is a kernel of IeeeWith.v
+        # (its overloads for double and float) or two_prod (its variant).
+        scalar = read('include/kairn/gen/scalar.hpp')
+        functions = re.findall(r'^(?:KAIRN_GEN_FORCEINLINE|inline) constexpr void (\w+)\(.*?\n\}\n', scalar,
+                               flags=re.M | re.S)
+        bodies = re.findall(r'^(?:KAIRN_GEN_FORCEINLINE|inline) constexpr void \w+\((.*?)\n\}\n', scalar,
+                            flags=re.M | re.S)
+        dispatching = {f for f, b in zip(functions, bodies) if '__builtin_is_constant_evaluated()' in b}
+        self.assertEqual(dispatching, set(rule) | {'two_prod'})
+        self.assertEqual([k.name for k in self.ks.values() if k.ce_variant], ['two_prod'])
 
     def test_each_is_the_model_with_the_operations_as_arguments(self):
         rule = {k.name: k for k in ieee.with_kernels(self.ks)}
@@ -723,9 +746,15 @@ class WithProduct(unittest.TestCase):
             fn = scalar.split(f' void {k.name}(double ', 1)[1].split('\n}\n', 1)[0]
             if 'guard' in ops:
                 self.assertRegex(fn, r'const double \w+ = __builtin_is_constant_evaluated\(\) \? (\w+) : \1 \+ 0\.0;')
-        self.assertEqual(took['guard'], ['axpy_entry_step_1', 'ball_from_interval_1', 'ball_from_interval_2'])
-        self.assertEqual(took['times_inf'], ['mul_pow2_2_full'])
-        self.assertEqual(len(took['prod']), len(ieee.with_kernels(self.ks)))
+        product = [k.name for k in ieee.with_kernels(self.ks) if cpp.product_rule(k, self.ks)]
+        self.assertEqual([n for n in took['guard'] if n in product],
+                         ['axpy_entry_step_1', 'ball_from_interval_1', 'ball_from_interval_2'])
+        self.assertEqual([n for n in took['times_inf'] if n in product], ['mul_pow2_2_full'])
+        self.assertEqual(took['prod'], product)
+        self.assertEqual(len(took['guard']), 33)
+        self.assertEqual(sorted(took['times_inf']), ['add_2_1_full', 'add_2_2_full', 'add_fast_2_2_full',
+                                                     'mul_pow2_2_full', 'sub_1_2_full', 'sub_2_1_full',
+                                                     'sub_2_2_full'])
         section = self.text.split('Section IeeeWith.\n', 1)[1].split('\nEnd IeeeWith.\n', 1)[0]
         self.assertIsNone(re.search(r':= (guard|times_inf) ', section))
         self.assertNotIn('Local Notation guard ', section)
@@ -740,17 +769,15 @@ class WithProduct(unittest.TestCase):
                       read('include/kairn/gen/prelude.hpp'))
         self.assertIn('Definition prod_ce (a b : float) : float :=\n'
                       '  Bmult prec emax prec_gt_0_ prec_lt_emax_ nan_mult BinarySingleNaN.mode_NE a b.\n', section)
-        # A kernel of the rule that calls a kernel outside it which computes a guard is refused: its
-        # listing would keep the guard of run time where constant evaluation runs another.
-        ks = dict(self.ks)
-        k = ir.parse_kernel('kernel: rule_guarded\ninput: a\ninput: b\noutput: z\nvalue: a*b+b\n'
-                            'status: unverified\n\np = prod(a, b)\nz = add_entry_step_1(p, b)\n', 'k.kernel')
-        ks['rule_guarded'] = k
-        ks = ir.ordered(ks, self.ks.folds)
-        self.assertTrue(cpp.product_rule(ks['rule_guarded'], ks))
-        with self.assertRaisesRegex(ieee.PrintError, 'it calls add_entry_step_1, which is not a listing of '
+        # A listing that calls a kernel outside IeeeWith.v which computes a guard is refused: it would
+        # keep the guard of run time where constant evaluation runs another. Every such kernel is in
+        # the file now (test_the_kernels), so the refusal is shown on a set without add_2_1.
+        rule = {k.name for k in ieee.with_kernels(self.ks)}
+        cnames = ieee._const_names(ieee.in_model(self.ks), rocq.real(self.ks), self.ks)[0]
+        self.assertTrue(ieee._with_definition(self.ks['sub_1_2'], self.ks, cnames, rule))
+        with self.assertRaisesRegex(ieee.PrintError, 'it calls add_2_1, which is not a listing of '
                                     'IeeeWith.v and computes guard'):
-            ieee.with_model(ks)
+            ieee._with_definition(self.ks['sub_1_2'], self.ks, cnames, rule - {'add_2_1'})
 
     def test_the_statements_of_the_two_executions(self):
         """After the section, one statement K_two_executions_spec per kernel of the rule, in its order,

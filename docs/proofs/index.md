@@ -74,8 +74,10 @@ lists:
   ball by a power of two over the real numbers (`BallPow2.v`) and, with the special states of a
   ball, with overflow, infinities and NaN (`IeeeBallPow2.v`), the lemma that the product of two
   intervals rests on (`Rectangle.v`), the comparison of the two ways a product is executed
-  (`IeeeProduct.v`), with what follows for the thirty kernels whose only fused operations are
-  products, which are `constexpr`: on all operands each listing as constant evaluation runs it
+  (`IeeeProduct.v`), with what follows for the 63 kernels whose C++ computes an operation
+  otherwise in constant evaluation (the thirty whose only fused operations are products, and 33
+  without a product that guard an operand or fix up with `times_inf`), which are `constexpr`: on
+  all operands each listing as constant evaluation runs it
   (the plain product, the guard that returns its operand, `times_inf` from comparisons) returns
   outputs of the same values, and the same masks, as the kernel of run time (the fused product,
   the guard that adds $+0$, the multiplication by infinity) (`IeeeTwoExecutions.v`, one theorem
@@ -196,7 +198,7 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    the folds and of the steps of the maps (and of the two steps of the extended domain that
    have one, `neg_2` and `bv_center_2`), of the folds and the maps in their two orders, of the
    two statements more of the folds of maxima, of the convolutions and of the products of two
-   BallVectors; and last, for each kernel `constexpr` by the rule of the product, the theorem
+   BallVectors; and last, for each kernel whose C++ dispatches on constant evaluation (63), the theorem
    of its two executions (`IeeeTwoExecutions.v`) against the statement the generator prints
    for it in `proofs/gen/IeeeWith.v`, `K_two_executions_spec`, which no description names.
 

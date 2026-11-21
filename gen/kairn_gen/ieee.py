@@ -1655,19 +1655,31 @@ def _check_ce_operations():
     """The operations of CE_OPERATIONS are exactly those whose C++ dispatches on constant
     evaluation in a kernel constexpr without a variant: one more there, and the listings of
     IeeeWith.v would keep its run-time form where constant evaluation runs another."""
-    from . import cpp
-    dispatched = sorted(op for op, spelling in cpp.SPELL_PLAIN.items() if CE_DISPATCH in spelling)
+    dispatched = sorted(dispatched_operations())
     mine = sorted(op for op, _, _, _ in CE_OPERATIONS)
     if dispatched != mine:
         raise PrintError(f'the operations that dispatch on constant evaluation ({", ".join(dispatched)}) '
                          f'are not the arguments of the listings of IeeeWith.v ({", ".join(mine)})')
 
 
-def with_kernels(kernels):
-    """The kernels constexpr by the rule of the product (cpp.product_rule) that the IEEE model
-    defines, callees first."""
+def dispatched_operations():
+    """The operations whose C++, in a kernel constexpr without a variant, dispatches on
+    __builtin_is_constant_evaluated() (cpp.SPELL_PLAIN): prod, guard, times_inf."""
     from . import cpp
-    return [k for k in in_model(kernels).values() if cpp.product_rule(k, kernels)]
+    return {op for op, spelling in cpp.SPELL_PLAIN.items() if CE_DISPATCH in spelling}
+
+
+def with_kernels(kernels):
+    """The kernels whose C++ in constant evaluation differs from their C++ at run time, which the
+    IEEE model defines, callees first: those constexpr without a variant (cpp.constexpr_kind
+    'plain') that compute, in their listing or a callee's, an operation whose spelling dispatches
+    on constant evaluation (dispatched_operations): the kernels of the rule of the product
+    (cpp.product_rule) and those without a product that compute guard or times_inf. Every other
+    kernel constexpr without a variant has one C++ for both executions."""
+    from . import cpp
+    ops = dispatched_operations()
+    return [k for k in in_model(kernels).values()
+            if cpp.constexpr_kind(k, kernels) == 'plain' and {p.op for p in ir.prims(k, kernels)} & ops]
 
 
 def with_arguments(k, kernels):
@@ -1805,8 +1817,10 @@ def with_model(kernels):
     rule = with_kernels(kernels)
     names = {k.name for k in rule}
     lines = [HEADER, '',
-             '(* The kernels constexpr by the rule of the product (docs/developer/design/milestone2.md, "The',
-             '   two executions of a product"), in the IEEE model, with the operations that constant',
+             '(* The kernels whose C++ computes an operation otherwise in constant evaluation than at run',
+             '   time (docs/developer/design/milestone2.md, "The two executions of a product"): those',
+             '   constexpr without a variant that compute prod (the rule of the product), guard or',
+             '   times_inf, in their listing or a callee\'s. In the IEEE model, with the operations that constant',
              '   evaluation runs differently as arguments (cpp.py, SPELL_PLAIN): K_with is the definition of',
              '   IeeeModel.K with every `prod a b` written p_ a b, every `guard a` g_ a and every',
              '   `times_inf t` t_ t, for those of the three that the kernel computes, and every call of',
