@@ -667,7 +667,7 @@ MUTANTS = {
     "radius: -inf accepted": (
         "bvec.py", "        elif o == NAN or o == NINF:\n            why = \"upper: the output is",
         "        elif o == NAN:\n            why = \"upper: the output is"),
-    # The owner's ruling of 2026-11-21: conv_radius's claim is of finite results; one that is not
+    # The ruling of 2026-11-21: conv_radius's claim is of finite results; one that is not
     # finite is +inf or a NaN, never -inf or a negative number.
     "radius: -inf accepted where the claim is of finite results": (
         "bvec.py", '        if c["finite_results"] and o in (INF, NAN):',
@@ -821,7 +821,7 @@ MUTANTS = {
         "gen8.py", "            vals[n] = [1 if rng.chance(2, 3) else 0]", "            vals[n] = [1]"),
     # The folds of the ball vectors and the requests in place (bvfolds.py, genbv.py, maps.py,
     # genmap.py).
-    # The owner's ruling of 2026-11-21 on the formats of the statements: a failure of V4 in a
+    # The ruling of 2026-11-21 on the formats of the statements: a failure of V4 in a
     # format of a wider subnormal range than binary_float's is a finding, and says so.
     "bv: a failure of V4 in a wider subnormal range not said to be a finding": (
         "bvfolds.py", "    if fmt.qmax >= 1 and fmt.qmin < 3 - fmt.qmax - 2 * fmt.p:\n        return (",
@@ -1175,7 +1175,7 @@ MUTANTS.update({
         '        if False:\n            es.count("failed: center")'),
     "makes_ball with rel: rel without abs accepted": (
         "intervals.py", '        if "rel" not in raw or "abs" not in raw:', "        if False:"),
-    # The formats of the statements (the owner's ruling of 2026-11-21) for finite_when of
+    # The formats of the statements (the ruling of 2026-11-21) for finite_when of
     # ball_of_interval and bounded_when of interval_of_ball with bounds of two limbs.
     "finite_when: claimed in every format (the ruling of 2026-11-21 not applied)": (
         "intervals.py",

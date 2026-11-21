@@ -386,7 +386,7 @@ BV_STRATA = {"radius": ("huge", "zeros", "mixed", "atnormal"),
 BV_UP_FINITE = "output finite, at least the stated value"
 BV_UP_INF = "output +inf"
 BV_UP_UNLESS = "%s true: nothing claimed"
-# A radius kernel whose claim is of finite results (conv_radius, by the owner's ruling of
+# A radius kernel whose claim is of finite results (conv_radius, by the ruling of
 # 2026-11-21: architecture.md, "Claims of the non-finite layer"): a result that is not finite is
 # +inf or a NaN, counted so and judged no further. Such results must stay a small part of a run:
 # the finite ones, where the claim is checked, at least BV_FINITE_SHARE of those judged.
@@ -743,7 +743,7 @@ IV_I5_RANGE = ("bounded_when not claimed: a format of no statement (e_max <= p, 
 
 def outside_statements(a):
     """Whether the run's format is one of no statement: a toy format fp:p:qmin:qmax with
-    q_max < 1 or q_min > 3 - q_max - 2p (the owner's ruling of 2026-11-21, architecture.md, "The
+    q_max < 1 or q_min > 3 - q_max - 2p (the ruling of 2026-11-21, architecture.md, "The
     formats of the statements"), where a clause that promises a finite or bounded result is not
     claimed and the judge counts that (as for V4 of the ball vectors, bv_problems)."""
     m = re.fullmatch(r"fp:(\d+):(-?\d+):(-?\d+)", getattr(a, "format", None) or "")

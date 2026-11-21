@@ -170,8 +170,7 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   accumulator", "Their kernels", "Their folds"): they are cross-checked as the maps are, V4 in the
   formats its statements quantify over. `conv_radius`, the radius kernel of the
   products of two BallVectors, stayed on the list for the oracle's finding (a NaN where
-  `prod(ma, mb)` overflows and `g` or `m` is zero, $+\infty$ from a small stated value) until the
-  owner's ruling of 2026-11-21 made its claim one of finite results, a result that is not finite
+  `prod(ma, mb)` overflows and `g` or `m` is zero, $+\infty$ from a small stated value) until the ruling of 2026-11-21 made its claim one of finite results, a result that is not finite
   being $+\infty$ or a NaN ([`upper` of a kernel of the finite domain with several
   operations](architecture.md#claims-of-the-non-finite-layer)): it is cross-checked as the other
   radius kernels are, its results that are not finite counted. Every map and every ball vector is
@@ -203,7 +202,7 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `Interval` and the functions of a `Ball` of the enclosure interface, and lists the other nine
   (`mul_dir_1`, the bounds of two limbs `add_ball_2_2` to `mul_dir_2_2`, and `mul_ext_2_2`) as
   building blocks.
-- **The formats of the statements** (the owner's ruling of 2026-11-21; [Number
+- **The formats of the statements** (the ruling of 2026-11-21; [Number
   formats](architecture.md#number-formats)), in the same words in `oracle/README.md`: *the
   generated statements quantify over the formats of `binary_float` ($e_{\max} > p$, smallest
   exponent $3 - e_{\max} - p$; in the oracle's terms $q_{\max} \ge 1$ and
@@ -2380,7 +2379,7 @@ and every ball vector, with each array read that can be the array written, throu
 the runner and of the packed runner, completes exactly as the same request without the field.
 
 **The products of two BallVectors** `bv_conv_1` and `bv_conv_2` ([Architecture](architecture.md#ball-vectors)),
-which the oracle judges too (and `conv_radius` since the owner's ruling of 2026-11-21, [Cross-checks](#cross-checks)),
+which the oracle judges too (and `conv_radius` since the ruling of 2026-11-21, [Cross-checks](#cross-checks)),
 are tested by `gen/tests/test_bv_conv.py`: each check of
 `rules.bv_conv_rules` refuses what it is for, and the rules of the claims refuse `at_most` and `if_all`
 where they do not belong; the interpreter, on six formats of the IEEE shape of four to six bits

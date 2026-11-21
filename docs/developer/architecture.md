@@ -83,7 +83,7 @@ Toy formats exist so that statements can be tested on *all* operands before anyo
 them. Every number of a toy format with $p \le 53$ inside `binary64`'s range is a `double`, so the
 same tools and the same line protocol handle them.
 
-**The formats of the statements** (the owner's ruling of 2026-11-21). The generated statements of
+**The formats of the statements** (the ruling of 2026-11-21). The generated statements of
 the IEEE model quantify over the formats of Flocq's `binary_float prec emax`: $e_{\max} > p$, and
 the smallest exponent $3 - e_{\max} - p$; with $q_{\max} = e_{\max} - p$ that is $q_{\max} \ge 1$
 and $q_{\min} = 3 - q_{\max} - 2p$ (`binary64` and `binary32` are of that shape, and so is
@@ -1405,7 +1405,7 @@ domain:        extended
   M_b + t$, claimed as `upper rz value=...`, with the requirements that every input is nonnegative,
   `count m`, and the new requirement **`at_most(g, 1)`** (below), from precision 2 (below it the
   constant of `hm` is above the largest number of formats of few exponents). The claim is of finite
-  results (the owner's ruling of 2026-11-21, [Claims of the non-finite
+  results (the ruling of 2026-11-21, [Claims of the non-finite
   layer](#claims-of-the-non-finite-layer)): a radius that is not finite is $+\infty$ or a NaN, never
   a negative number or $-\infty$, and the finish below turns it into the whole space.
 - **The finish** `bv_conv_finish(rz, finite, okg)` is `norm_finish_1` under the `and` of the
@@ -2015,7 +2015,7 @@ statements](#number-formats)), not in every toy format.
 **`upper` of a kernel of the finite domain with several operations.** The row of `upper` above is
 about the building blocks of one operation of the extended domain. A kernel of the finite domain
 with several operations, such as `conv_radius`, the radius of a product of two BallVectors, claims
-`upper` as a statement of the real-number model: by the owner's ruling of 2026-11-21 its claim is
+`upper` as a statement of the real-number model: by the ruling of 2026-11-21 its claim is
 of finite results, and a result that is not finite claims only that it is $+\infty$ or a NaN,
 never a negative number, never $-\infty$. That is what is proved of `conv_radius` in the model with
 infinities and NaN, a hand lemma (`conv_radius_ieee`, `proofs/theories/IeeeBvConv.v`): on
@@ -2773,7 +2773,7 @@ Two things in those entries are new forms, which a reader of the claims must lea
 `value` and **no `if`**: no mask is named, and the claim holds unconditionally (under the
 requirements): the output is at least the exact value of `value`, whether it is finite or the
 rounding has overflowed to $+\infty$. Nothing is said of how far above. (Not of `conv_radius`,
-whose claim is of finite results, by the owner's ruling of 2026-11-21: a result of it that is not
+whose claim is of finite results, by the ruling of 2026-11-21: a result of it that is not
 finite is $+\infty$ or a NaN, [Claims of the non-finite layer](#claims-of-the-non-finite-layer).)
 And `value` may hold `abs(X)` of an input `X`, its exact magnitude.
 

@@ -575,7 +575,7 @@ set(_toy_ext_1_m_sum fp:11:-29:10)
 #   r r r r n    conv_radius (ma, mb, rx, ry, m, g, t):   fp:3:-4:4       23 040 of 3.9 10^10
 #     r r        a few values each, ma up to Omega
 #
-# conv_radius: by the owner's ruling of 2026-11-21 its claim is of finite results, and a result
+# conv_radius: by the ruling of 2026-11-21 its claim is of finite results, and a result
 # that is not finite is +inf or a NaN (architecture.md, "Claims of the non-finite layer"). In
 # fp:3:-4:4 its constants are 5/2 (up((1+u)^7)) and 15/16 (that of hm), and Omega is 112: ma = Omega
 # beside a nonzero mb overflows ma mb, which gives +inf, or a NaN where g or m is zero, and the
@@ -676,7 +676,7 @@ set(_toy_ext_b2_2_sum fp:3:-3:0)
 # smallest_radius of a makes_ball from an interval; architecture.md, "Claims of the enclosure
 # interface: predicates and comparisons", "... the set operations of a ball", "... the conversions
 # of two limbs"; oracle/README.md, "The kinds of the enclosure interface"): none of those is on the
-# lists. conv_radius left them with the owner's ruling of 2026-11-21 (architecture.md, "Claims of
+# lists. conv_radius left them with the ruling of 2026-11-21 (architecture.md, "Claims of
 # the non-finite layer"): its claim is of finite results, and a result that is not finite is +inf
 # or a NaN, as its listing's are (a NaN where ma*mb overflows and g or m is zero, 0 * inf; +inf
 # from small operands and a huge count).

@@ -1679,7 +1679,7 @@ class EnclosureGuards(unittest.TestCase):
 
     def test_the_formats_of_the_statements(self):
         # finite_when and bounded_when of two limbs in a format of no statement (q_max < 1): not
-        # claimed (the owner's ruling of 2026-11-21), and the guards ask for the judge's count of
+        # claimed (the ruling of 2026-11-21), and the guards ask for the judge's count of
         # that in place of the conditions'.
         sys.path.insert(0, TESTS)
         import crosscheck_guards as CG
