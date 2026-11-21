@@ -363,7 +363,21 @@ the comparisons and conversions, every operation of one limb, a ball's negation,
 predicates and constants, `kairn::finite::add`, `sub` and `add_fast`, `rational` and `integer`
 (below), and the building blocks on `T` but `mul_down` and `mul_up`: `next_up`, `next_down`,
 `radd` and `rmul` with the same bits as at run time, the others with the same values (`two_prod`
-through Dekker's product, the same values when its product is exact). Of intervals: the
+through Dekker's product: the same values when its product is exact, each its own error term
+below the threshold). `two_prod` is a constant expression only where Dekker's product computes
+the run-time result: on finite operands on which a split or one of its products overflows (the
+product of the leading halves can overflow where $ab$ does not) it is not one, a program that
+needs one does not compile, and the compiler's message names
+`two_prod_overflows_in_constant_evaluation`, or with GCC, which refuses an overflow itself, the
+operation. It is one when $\lvert a\rvert, \lvert b\rvert \le 2^{996}$ and
+$\lvert ab\rvert \le 2^{1023}$ ($2^{115}$ and $2^{127}$ for `float`), a sufficient condition, not
+an exact one (the square of `0x1.ffffffbffffffp+511`, above $2^{1023}$, is one);
+`two_prod(0x1.fffffffffffffp+511, 0x1.fffffffffffffp+511)`, whose run-time error term is
+$2^{918}$, is not. A variable of static storage duration that is not `constexpr`, initialized with
+such a call, which the compiler first tries as a constant expression, is then initialized at run
+time, with the run-time result. A product that overflows is not one either, nor, with GCC or
+Clang, an infinite operand; a NaN operand is not with Clang and gives two NaN with GCC, as at run
+time. Of intervals: the
 constructors and states, the bounds, the negation, the hull, the intersection, the midpoint, the
 radius, the split and the conversions, and of a ball the functions of the interface it shares with
 intervals (`lower_as`, `upper_as`, `lower`, `upper`, `midpoint`, `from_interval`, the narrowing).
