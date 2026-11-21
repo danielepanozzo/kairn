@@ -48,6 +48,9 @@ Print Assumptions acc_merge_1_correct.
 Definition acc_mul_1_audit : acc_mul_1_spec := acc_mul_1_correct.
 Print Assumptions acc_mul_1_correct.
 
+Definition acc_mul_entry_1_audit : acc_mul_entry_1_spec := acc_mul_entry_1_correct.
+Print Assumptions acc_mul_entry_1_correct.
+
 Definition acc_radius_1_audit : acc_radius_1_spec := acc_radius_1_correct.
 Print Assumptions acc_radius_1_correct.
 
@@ -164,6 +167,9 @@ Print Assumptions bv_scale_radius_2_correct.
 
 Definition conv_radius_audit : conv_radius_spec := conv_radius_correct.
 Print Assumptions conv_radius_correct.
+
+Definition dot_entry_step_1_audit : dot_entry_step_1_spec := dot_entry_step_1_correct.
+Print Assumptions dot_entry_step_1_correct.
 
 Definition dot_step_1_audit : dot_step_1_spec := dot_step_1_correct.
 Print Assumptions dot_step_1_correct.
@@ -470,6 +476,12 @@ Print Assumptions dot_1_seq_correct.
 
 Definition dot_1_lanes_audit : dot_1_lanes_spec := dot_1_lanes_correct.
 Print Assumptions dot_1_lanes_correct.
+
+Definition dot_1_entry_seq_audit : dot_1_entry_seq_spec := dot_1_entry_seq_correct.
+Print Assumptions dot_1_entry_seq_correct.
+
+Definition dot_1_entry_lanes_audit : dot_1_entry_lanes_spec := dot_1_entry_lanes_correct.
+Print Assumptions dot_1_entry_lanes_correct.
 
 Definition dot_2_seq_audit : dot_2_seq_spec := dot_2_seq_correct.
 Print Assumptions dot_2_seq_correct.

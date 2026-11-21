@@ -187,8 +187,8 @@ const ArrayForm array_forms[] = {
     AROW(sum_2_entry, sum_sequential, 'r', 2, 1, "", false, af_sum, 2, true)
     AROW(sum_fast_2_entry, sum_fast, 'r', 2, 1, "", true, af_sum_fast, 2, false)
     AROW(sum_fast_2_entry, sum_fast_sequential, 'r', 2, 1, "", false, af_sum_fast, 2, true)
-    AROW(dot_1, dot, 'r', 1, 2, "", true, af_dot, 1, false)
-    AROW(dot_1, dot_sequential, 'r', 1, 2, "", false, af_dot, 1, true)
+    AROW(dot_1_entry, dot, 'r', 1, 2, "", true, af_dot, 1, false)
+    AROW(dot_1_entry, dot_sequential, 'r', 1, 2, "", false, af_dot, 1, true)
     AROW(dot_2, dot, 'r', 2, 2, "", true, af_dot, 2, false)
     AROW(dot_2, dot_sequential, 'r', 2, 2, "", false, af_dot, 2, true)
     AROW(add_1_entry, add, 'm', 1, 2, "", true, af_add, 1)
@@ -217,10 +217,13 @@ struct FoldNotPublic {
 const char* const stored_fold = "the loop on stored arrays, written through Kairn only: no container of the library "
                                 "holds such arrays, and the functions of kairn/batch.hpp call the loop on supplied "
                                 "arrays (_entry)";
+const char* const factors_fold = "the dot product of one limb with its factors unguarded: kairn::dot of one limb "
+                                 "calls dot_1_entry, whose step guards both factors (rule R3, the factors of a fused "
+                                 "operation); conv_1 runs dot_1's step for each coefficient";
 const FoldNotPublic folds_not_public[] = {
     {"sum_1", stored_fold},  {"sum_2", stored_fold}, {"sum_fast_2", stored_fold}, {"add_1", stored_fold},
     {"add_2", stored_fold},  {"sub_1", stored_fold}, {"sub_2", stored_fold},      {"axpy_1", stored_fold},
-    {"axpy_2", stored_fold}, {"axpy_2_1", stored_fold},
+    {"axpy_2", stored_fold}, {"axpy_2_1", stored_fold}, {"dot_1", factors_fold},
 };
 
 // Whether a form of the array forms is listed by this runner: all of them, but in the runner of the

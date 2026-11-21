@@ -142,8 +142,8 @@ template <class T, int K>
 void dot_loop(const kairn::SoAView<const T, K>& x, const kairn::SoAView<const T, K>& y, std::size_t lanes, T* r,
               bool& f) {
     if constexpr (K == 1) {
-        if (lanes) kairn::gen::dot_1_lanes(x.limb(0), y.limb(0), x.size(), lanes, r[0], f);
-        else kairn::gen::dot_1_seq(x.limb(0), y.limb(0), x.size(), r[0], f);
+        if (lanes) kairn::gen::dot_1_entry_lanes(x.limb(0), y.limb(0), x.size(), lanes, r[0], f);
+        else kairn::gen::dot_1_entry_seq(x.limb(0), y.limb(0), x.size(), r[0], f);
     } else {
         if (lanes) kairn::gen::dot_2_lanes(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), lanes, r[0], r[1], f);
         else kairn::gen::dot_2_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r[0], r[1], f);

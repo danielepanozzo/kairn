@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: acc_mul_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_up_1, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_full, mul_2_2_full, scale_step_2.
+// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_up_1, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_full, mul_2_2_full, scale_step_2.
 #pragma once
 
 #include <cstddef>
@@ -67,6 +67,29 @@ KAIRN_GEN_FORCEINLINE void acc_mul_1(float s, float a, float x, float y, float& 
     const float t = fma_rn(x, y, s);
     const float ax = abs_bits(x);
     const float ay = abs_bits(y);
+    const float b = fma_rn(ax, ay, a);
+    t_out = t;
+    b_out = b;
+}
+
+// acc_mul_entry_1(s, a, x, y) -> t, b
+// acc_mul_1 on the guarded x and y (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void acc_mul_entry_1(double s, double a, double x, double y, double& t_out, double& b_out) noexcept {
+    const double gx = x + 0.0;
+    const double gy = y + 0.0;
+    const double t = fma_rn(gx, gy, s);
+    const double ax = abs_bits(gx);
+    const double ay = abs_bits(gy);
+    const double b = fma_rn(ax, ay, a);
+    t_out = t;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_mul_entry_1(float s, float a, float x, float y, float& t_out, float& b_out) noexcept {
+    const float gx = x + 0.0f;
+    const float gy = y + 0.0f;
+    const float t = fma_rn(gx, gy, s);
+    const float ax = abs_bits(gx);
+    const float ay = abs_bits(gy);
     const float b = fma_rn(ax, ay, a);
     t_out = t;
     b_out = b;
@@ -3880,6 +3903,21 @@ KAIRN_GEN_FORCEINLINE void conv_radius(float ma, float mb, float rx, float ry, f
     const float hm = fma_rn(m, 0x1.00000ap-126f, 0.0f);
     const float rz = fma_rn(s, 0x1.000008p+0f, hm);
     rz_out = rz;
+}
+
+// dot_entry_step_1(s, x, y) -> t
+// dot_step_1 on the guarded elements (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void dot_entry_step_1(double s, double x, double y, double& t_out) noexcept {
+    const double gx = x + 0.0;
+    const double gy = y + 0.0;
+    const double t = fma_rn(gx, gy, s);
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE void dot_entry_step_1(float s, float x, float y, float& t_out) noexcept {
+    const float gx = x + 0.0f;
+    const float gy = y + 0.0f;
+    const float t = fma_rn(gx, gy, s);
+    t_out = t;
 }
 
 // dot_step_1(s, x, y) -> t
@@ -24219,6 +24257,122 @@ inline void dot_1_lanes(const float* x_in, const float* y_in, std::size_t n, std
         const float y = y_in[i_];
         // (step_t) = dot_step_1(s, x, y)
         const float step_t = fma_rn(x, y, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold dot_1_entry(supplied x, supplied y), step dot_entry_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
+inline void dot_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
+    double s = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_t) = dot_entry_step_1(s, x, y)
+        const double step_gx = x + 0.0;
+        const double step_gy = y + 0.0;
+        const double step_t = fma_rn(step_gx, step_gy, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void dot_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float& r_out, bool& flag_out) noexcept {
+    float s = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_t) = dot_entry_step_1(s, x, y)
+        const float step_gx = x + 0.0f;
+        const float step_gy = y + 0.0f;
+        const float step_t = fma_rn(step_gx, step_gy, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold dot_1_entry(supplied x, supplied y), step dot_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
+inline void dot_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            const double y = y_in[i_];
+            // (step_t) = dot_entry_step_1(s_lane_, x, y)
+            const double step_gx = x + 0.0;
+            const double step_gy = y + 0.0;
+            const double step_t = fma_rn(step_gx, step_gy, s_lane_);
+            s_lane_ = step_t;
+        }
+        if (j_ == 0) {
+            s = s_lane_;
+        } else {
+            // (comb_s) = add_1_1(s, s_lane_)
+            const double comb_s = s + s_lane_;
+            s = comb_s;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_t) = dot_entry_step_1(s, x, y)
+        const double step_gx = x + 0.0;
+        const double step_gy = y + 0.0;
+        const double step_t = fma_rn(step_gx, step_gy, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void dot_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            const float y = y_in[i_];
+            // (step_t) = dot_entry_step_1(s_lane_, x, y)
+            const float step_gx = x + 0.0f;
+            const float step_gy = y + 0.0f;
+            const float step_t = fma_rn(step_gx, step_gy, s_lane_);
+            s_lane_ = step_t;
+        }
+        if (j_ == 0) {
+            s = s_lane_;
+        } else {
+            // (comb_s) = add_1_1(s, s_lane_)
+            const float comb_s = s + s_lane_;
+            s = comb_s;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_t) = dot_entry_step_1(s, x, y)
+        const float step_gx = x + 0.0f;
+        const float step_gy = y + 0.0f;
+        const float step_t = fma_rn(step_gx, step_gy, s);
         s = step_t;
     }
     // (fin_r, fin_flag) = fold_finish_1(s)

@@ -131,6 +131,28 @@ KAIRN_GEN_FORCEINLINE void acc_mul_1(__m256 s, __m256 a, __m256 x, __m256 y, __m
     b_out = b;
 }
 
+// acc_mul_entry_1(s, a, x, y) -> t, b
+KAIRN_GEN_FORCEINLINE void acc_mul_entry_1(__m256d s, __m256d a, __m256d x, __m256d y, __m256d& t_out, __m256d& b_out) noexcept {
+    const __m256d gx = _mm256_add_pd(x, _mm256_setzero_pd());
+    const __m256d gy = _mm256_add_pd(y, _mm256_setzero_pd());
+    const __m256d t = _mm256_fmadd_pd(gx, gy, s);
+    const __m256d ax = _mm256_andnot_pd(_mm256_set1_pd(-0.0), gx);
+    const __m256d ay = _mm256_andnot_pd(_mm256_set1_pd(-0.0), gy);
+    const __m256d b = _mm256_fmadd_pd(ax, ay, a);
+    t_out = t;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_mul_entry_1(__m256 s, __m256 a, __m256 x, __m256 y, __m256& t_out, __m256& b_out) noexcept {
+    const __m256 gx = _mm256_add_ps(x, _mm256_setzero_ps());
+    const __m256 gy = _mm256_add_ps(y, _mm256_setzero_ps());
+    const __m256 t = _mm256_fmadd_ps(gx, gy, s);
+    const __m256 ax = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), gx);
+    const __m256 ay = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), gy);
+    const __m256 b = _mm256_fmadd_ps(ax, ay, a);
+    t_out = t;
+    b_out = b;
+}
+
 // acc_radius_1(a, m, g, t) -> r, mask ok
 KAIRN_GEN_FORCEINLINE void acc_radius_1(__m256d a, __m256d m, __m256d g, __m256d t, __m256d& r_out, __m256d& ok_out) noexcept {
     const __m256d q = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-53), _mm256_setzero_pd());
@@ -3267,6 +3289,20 @@ KAIRN_GEN_FORCEINLINE void conv_radius(__m256 ma, __m256 mb, __m256 rx, __m256 r
     const __m256 hm = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.00000ap-126f), _mm256_setzero_ps());
     const __m256 rz = _mm256_fmadd_ps(s, _mm256_set1_ps(0x1.000008p+0f), hm);
     rz_out = rz;
+}
+
+// dot_entry_step_1(s, x, y) -> t
+KAIRN_GEN_FORCEINLINE void dot_entry_step_1(__m256d s, __m256d x, __m256d y, __m256d& t_out) noexcept {
+    const __m256d gx = _mm256_add_pd(x, _mm256_setzero_pd());
+    const __m256d gy = _mm256_add_pd(y, _mm256_setzero_pd());
+    const __m256d t = _mm256_fmadd_pd(gx, gy, s);
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE void dot_entry_step_1(__m256 s, __m256 x, __m256 y, __m256& t_out) noexcept {
+    const __m256 gx = _mm256_add_ps(x, _mm256_setzero_ps());
+    const __m256 gy = _mm256_add_ps(y, _mm256_setzero_ps());
+    const __m256 t = _mm256_fmadd_ps(gx, gy, s);
+    t_out = t;
 }
 
 // dot_step_1(s, x, y) -> t
@@ -19075,6 +19111,82 @@ inline void dot_1_packed(const float* x_in, const float* y_in, std::size_t n, fl
         const float y = y_in[i_];
         // (step_t) = dot_step_1(s, x, y)
         const float step_t = fma_rn(x, y, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold dot_1_entry(supplied x, supplied y), step dot_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), proved (IEEE model).
+inline void dot_1_entry_packed(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d s_lane_ = _mm256_setzero_pd();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x = _mm256_loadu_pd(x_in + i_);
+        const __m256d y = _mm256_loadu_pd(y_in + i_);
+        // (step_t) = dot_entry_step_1(s_lane_, x, y)
+        const __m256d step_gx = _mm256_add_pd(x, _mm256_setzero_pd());
+        const __m256d step_gy = _mm256_add_pd(y, _mm256_setzero_pd());
+        const __m256d step_t = _mm256_fmadd_pd(step_gx, step_gy, s_lane_);
+        s_lane_ = step_t;
+    }
+    double s_lanes_[4];
+    _mm256_storeu_pd(s_lanes_, s_lane_);
+    double s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const double comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_t) = dot_entry_step_1(s, x, y)
+        const double step_gx = x + 0.0;
+        const double step_gy = y + 0.0;
+        const double step_t = fma_rn(step_gx, step_gy, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void dot_1_entry_packed(const float* x_in, const float* y_in, std::size_t n, float& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 s_lane_ = _mm256_setzero_ps();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x = _mm256_loadu_ps(x_in + i_);
+        const __m256 y = _mm256_loadu_ps(y_in + i_);
+        // (step_t) = dot_entry_step_1(s_lane_, x, y)
+        const __m256 step_gx = _mm256_add_ps(x, _mm256_setzero_ps());
+        const __m256 step_gy = _mm256_add_ps(y, _mm256_setzero_ps());
+        const __m256 step_t = _mm256_fmadd_ps(step_gx, step_gy, s_lane_);
+        s_lane_ = step_t;
+    }
+    float s_lanes_[8];
+    _mm256_storeu_ps(s_lanes_, s_lane_);
+    float s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const float comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_t) = dot_entry_step_1(s, x, y)
+        const float step_gx = x + 0.0f;
+        const float step_gy = y + 0.0f;
+        const float step_t = fma_rn(step_gx, step_gy, s);
         s = step_t;
     }
     // (fin_r, fin_flag) = fold_finish_1(s)

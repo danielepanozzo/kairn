@@ -1,0 +1,33 @@
+# acc.add_product(x, y) of Accumulator<T, 1> (milestone2.md, "The accumulator"): acc_mul_1 on x and
+# y guarded (rule R3, the factors of a fused operation: architecture.md). acc_mul_1 only multiplies
+# x and y, which R3 alone does not guard; but a compiler that sees one of them to be 1 rewrites
+# fma(x, 1, s) as x + s and fuses a product x = a b of the program into that addition (Apple clang
+# 21 under -ffp-contract=fast, measured). After the guards each is a number of the format. Its
+# claims are those of acc_mul_1: the guard is the identity on numbers of the format.
+kernel:        acc_mul_entry_1
+input:         stored s
+input:         stored a
+input:         x
+input:         y
+output:        t
+output:        b
+value:         s+x*y
+requires:      nonneg a
+ensures:       rounded t nearest
+ensures:       rounded b nearest value=a+abs(x)*abs(y)
+theorem:       proofs/theories/AccKernels.v acc_mul_entry_1_correct
+ieee_spec_theorem: proofs/theories/IeeeAccKernels.v acc_mul_entry_1_ieee_correct
+min_precision: 1
+source:        acc_mul_1 on the guarded x and y (rule R3, the factors of a fused operation)
+license:       proof: MIT
+status:        proved
+ieee:          spec
+entry:         yes
+cone_exempt:   b, the sum of magnitudes, does not reach t: its claim is read where b is finite (an entry about an output group other than the first), and where b is +inf the mask ok of acc_radius_k is false
+
+gx = guard(x)
+gy = guard(y)
+t  = fma(gx, gy, s)
+ax = abs(gx)
+ay = abs(gy)
+b  = fma(ax, ay, a)

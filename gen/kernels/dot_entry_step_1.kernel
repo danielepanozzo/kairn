@@ -1,0 +1,28 @@
+# The step of dot_1_entry, the dot product of one limb of arrays the program supplies: dot_step_1,
+# s <- RN(x y + s), on the elements guarded (rule R3, the factors of a fused operation:
+# architecture.md). dot_step_1 only multiplies its elements, which R3 alone does not guard; but a
+# compiler that sees one factor to be 1 (an array of ones the program fills) rewrites fma(x, 1, s)
+# as x + s and fuses the program's product x = a b into that addition (Clang 18 on x86-64 and Apple
+# clang 21 under -ffp-contract=fast). After the guards each factor is a number of the format, the
+# rounded product a b at most. Its claims are those of dot_step_1: the guard is the identity on
+# numbers of the format.
+kernel:        dot_entry_step_1
+input:         stored s
+input:         x
+input:         y
+output:        t
+value:         s+x*y
+ensures:       rounded t nearest
+min_precision: 1
+theorem:       proofs/theories/StepKernels.v dot_entry_step_1_correct
+ieee_bridge_theorem: proofs/theories/IeeeSteps.v dot_entry_step_1_ieee_bridge
+ieee_lead_theorem: proofs/theories/IeeeFolds.v dot_entry_step_1_ieee_lead
+source:        dot_step_1 on the guarded elements (rule R3, the factors of a fused operation)
+license:       proof: MIT
+status:        proved
+entry:         yes
+ieee:          bridge
+
+gx = guard(x)
+gy = guard(y)
+t  = fma(gx, gy, s)

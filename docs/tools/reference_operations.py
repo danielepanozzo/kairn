@@ -822,10 +822,13 @@ KERNELS = {
     "sub_up_1": page("building-blocks", "A difference of two limbs rounded up"),
     # --- Milestone 2, the folds: the steps, the finishes, the exported bounds ---------------------
     "dot_step_1": page("arrays", "The step of a dot product of one limb: one fused multiply-add",
-                       form("dot(x, y)", V1, V1, result=R1, note=STEP_ORDER + " (loop `dot_1`)"),
-                       form("dot(x, y, sequential)", V1, V1, SEQ, result=R1),
                        form("conv(x, y, z)", V1, V1, W1, result="bool", note="each coefficient a sequential `dot_1` "
                             "(loop `conv_1`)")),
+    "dot_entry_step_1": page("arrays", "The step of a dot product of one limb, on arrays of the program: one fused "
+                             "multiply-add of the guarded elements",
+                             form("dot(x, y)", V1, V1, result=R1, note=STEP_ORDER + " (loop `dot_1_entry`; each "
+                                  "factor guarded, rule R3 on the factors of a fused operation)"),
+                             form("dot(x, y, sequential)", V1, V1, SEQ, result=R1)),
     "dot_step_2": page("arrays", "The step of a dot product of two limbs",
                        form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2`)"),
                        form("dot(x, y, sequential)", V2, V2, SEQ, result=R2),
@@ -906,9 +909,12 @@ KERNELS = {
     "acc_add_2": page("arrays", "An accumulator of two limbs: add a number of the program",
                       form("A.add(x)", A2, E2, result="void", note=ACC),
                       form("A.add(a)", A2, T, result="void", note=TO_TWO_LIMBS)),
-    "acc_mul_1": page("arrays", "An accumulator of one limb: add a product",
-                      form("A.add_product(x, y)", A1, E1, E1, result="void", note=ACC + "; not `constexpr`"),
-                      form("A.add_product(a, b)", A1, T, T, result="void")),
+    "acc_mul_1": page("arrays", "An accumulator of one limb: add a product (its factors unguarded; "
+                      "`add_product` calls `acc_mul_entry_1`)"),
+    "acc_mul_entry_1": page("arrays", "An accumulator of one limb: add a product of the guarded factors",
+                            form("A.add_product(x, y)", A1, E1, E1, result="void", note=ACC + "; not `constexpr`; "
+                                 "each factor guarded (rule R3 on the factors of a fused operation)"),
+                            form("A.add_product(a, b)", A1, T, T, result="void")),
     "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product",
                       form("A.add_product(x, y)", A2, E2, E2, result="void", note=ACC + "; not `constexpr`"),
                       form("A.add_product(a, b)", A2, T, T, result="void", note=TO_TWO_LIMBS)),

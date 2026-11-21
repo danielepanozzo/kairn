@@ -6,7 +6,8 @@
    what was added, and a count n. Its operations are kernels, proved in AccKernels.v:
 
        acc.add(x)              (s, a) <- acc_add_k (s, a, x)          n <- n + 1
-       acc.add_product(x, y)   (s, a) <- acc_mul_k (s, a, x, y)       n <- n + 1
+       acc.add_product(x, y)   (s, a) <- acc_mul_entry_1 (s, a, x, y) n <- n + 1   (one limb)
+                               (s, a) <- acc_mul_2 (s, a, x, y)       n <- n + 1   (two limbs)
        acc.merge(other)        (s, a) <- acc_merge_k (s, a, s', a')   n <- n + n'
        acc.error_bound()       (g, t, ok) = bound_dot_k (m),  (r, ok') = acc_radius_k (a, m, g, t)
 
@@ -197,7 +198,7 @@ Fixpoint run1 (h : hist R) : R * R :=
   match h with
   | Hnil => (0, 0)
   | Hadd h x => let '(s, a) := run1 h in acc_add_1 emin prec tie_even s a x
-  | Hmul h x y => let '(s, a) := run1 h in acc_mul_1 emin prec tie_even s a x y
+  | Hmul h x y => let '(s, a) := run1 h in acc_mul_entry_1 emin prec tie_even s a x y
   | Hmerge h1 h2 =>
       let '(s, a) := run1 h1 in let '(v, c) := run1 h2 in acc_merge_1 emin prec tie_even s a v c
   end.
@@ -249,8 +250,8 @@ induction h as [|h IH x|h IH x y|h1 IH1 h2 IH2]; cbn [elems run1 count leads].
   simpl pow. fold p. lra.
 - intros [Vh [Fx Fy]]. specialize (IH Vh). destruct (run1 h) as [s a].
   destruct IH as [Fs [Fa [Ha [_ IA]]]].
-  generalize (acc_mul_1_correct emin prec Hp1 s a x y Fs Fa Fx Fy Ha).
-  destruct (acc_mul_1 emin prec tie_even s a x y) as [t b].
+  generalize (acc_mul_entry_1_correct emin prec Hp1 s a x y Fs Fa Fx Fy Ha).
+  destruct (acc_mul_entry_1 emin prec tie_even s a x y) as [t b].
   intros [Ft [Fb [_ Eb]]].
   assert (Pxy : 0 <= Rabs x * Rabs y) by (apply Rmult_le_pos; apply Rabs_pos).
   assert (Lb : a + Rabs x * Rabs y <= (1 + uu) * (b + ee / 2)).
@@ -404,8 +405,8 @@ induction h as [|h IH x|h IH x y|h1 IH1 h2 IH2]; intros V.
   generalize (acc_1_mags h Vh). intros M.
   cbn [tree1 run1 terms count].
   destruct (run1 h) as [s a]. destruct M as [Fs [Fa [Ha _]]].
-  generalize (acc_mul_1_correct emin prec Hp1 s a x y Fs Fa Fx Fy Ha).
-  destruct (acc_mul_1 emin prec tie_even s a x y) as [t b]. intros [_ [_ [Et _]]].
+  generalize (acc_mul_entry_1_correct emin prec Hp1 s a x y Fs Fa Fx Fy Ha).
+  destruct (acc_mul_entry_1 emin prec tie_even s a x y) as [t b]. intros [_ [_ [Et _]]].
   cbn [fst] in IH |- *. rewrite S_INR.
   generalize (weight_1_bounds emin prec (x * y)). intros Wxy.
   destruct (tree1 h) as [T|].

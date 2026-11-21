@@ -33,6 +33,10 @@
    - dot_1: the generated step, RN (x y + s), is dot_step_1 of SummationKernels.v by
      definition; then dot_1_seq and dot_1_lanes of that file. The generated statement
      assumes that the elements are numbers of the format; the theorem does not use it.
+   - dot_1_entry: the step guards both numbers of the element first, so the fold is that
+     of dot_step_1 over the list of the guarded pairs, which is the list itself when they
+     are numbers of the format (guard2_map_fmt); then as dot_1. Here the hypothesis on
+     the elements is used.
 
    Names. SummationKernels.v was written before the generator had folds, and three of
    its names are now also names of generated definitions: dot_step_1 and dot_step_2
@@ -100,6 +104,18 @@ intros emin prec xs H. induction H as [|[x0 x1] r Nx _ IH]; cbn [map].
   now rewrite (guard_real_any emin prec tie_even x0 F0), (guard_real_any emin prec tie_even x1 F1).
 Qed.
 
+(* The same of the pairs of an element of a dot product, each number of the format. *)
+Lemma guard2_map_fmt :
+  forall (emin prec : Z) (xs : list (R * R)),
+  Forall (fun xy => fmt emin prec (fst xy) /\ fmt emin prec (snd xy)) xs ->
+  map (guard2 emin prec) xs = xs.
+Proof.
+intros emin prec xs H. induction H as [|[x y] r [Fx Fy] _ IH]; cbn [map].
+- reflexivity.
+- cbn [fst snd] in Fx, Fy. rewrite IH. unfold guard2, RN. cbn [fst snd].
+  now rewrite (guard_real_any emin prec tie_even x Fx), (guard_real_any emin prec tie_even y Fy).
+Qed.
+
 (** * The generated steps *)
 
 (* sum_1_entry: the addition of the guarded element. *)
@@ -130,6 +146,13 @@ unfold FoldModel.sum_fast_2_entry_step, Model.sum_fast_entry_step_2, addfast22, 
 cbv zeta. cbn [fst snd].
 destruct (add_fast_2_2 emin prec tie_even (fst s) (snd s) _ _) as [t0 t1]. reflexivity.
 Qed.
+
+(* dot_1_entry: the fused step of SummationKernels.v on the guarded pair. *)
+Lemma dot_1_entry_step_eq :
+  forall (emin prec : Z) (s : R) (xy : R * R),
+  FoldModel.dot_1_entry_step emin prec tie_even s xy =
+  SummationKernels.dot_step_1 emin prec s (guard2 emin prec xy).
+Proof. reflexivity. Qed.
 
 (* dot_2: the step of SummationKernels.v, add22 of mul22. *)
 Lemma dot_2_step_eq :
@@ -230,6 +253,31 @@ intros emin prec W xys. unfold FoldModel.dot_2_lanes.
 apply fold_lanes_ext.
 - exact (dot_2_step_eq emin prec).
 - reflexivity.
+Qed.
+
+Lemma dot_1_entry_seq_eq :
+  forall (emin prec : Z) (xys : list (R * R)),
+  Forall (fun xy => fmt emin prec (fst xy) /\ fmt emin prec (snd xy)) xys ->
+  FoldModel.dot_1_entry_seq emin prec tie_even xys =
+  fold_seq (SummationKernels.dot_step_1 emin prec) 0 xys.
+Proof.
+intros emin prec xys Hv. unfold FoldModel.dot_1_entry_seq.
+apply fold_seq_guarded with (g := guard2 emin prec).
+- exact (dot_1_entry_step_eq emin prec).
+- now apply guard2_map_fmt.
+Qed.
+
+Lemma dot_1_entry_lanes_eq :
+  forall (emin prec : Z) (W : nat) (xys : list (R * R)),
+  Forall (fun xy => fmt emin prec (fst xy) /\ fmt emin prec (snd xy)) xys ->
+  FoldModel.dot_1_entry_lanes emin prec tie_even W xys =
+  fold_lanes (SummationKernels.dot_step_1 emin prec) (add_1_1 emin prec tie_even) 0 W xys.
+Proof.
+intros emin prec W xys Hv. unfold FoldModel.dot_1_entry_lanes.
+apply fold_lanes_guarded with (g := guard2 emin prec).
+- exact (dot_1_entry_step_eq emin prec).
+- reflexivity.
+- now apply guard2_map_fmt.
 Qed.
 
 (** * One limb: the sums *)
@@ -393,5 +441,20 @@ Qed.
 Theorem dot_1_lanes_correct : dot_1_lanes_spec.
 Proof.
 intros emin prec Hp W xys _ s. unfold s. clear s.
+exact (SummationKernels.dot_1_lanes emin prec Hp W xys).
+Qed.
+
+(* dot_1_entry: the same fold, the guards changing no element of the format. *)
+Theorem dot_1_entry_seq_correct : dot_1_entry_seq_spec.
+Proof.
+intros emin prec Hp xys Hv s. unfold s. clear s.
+rewrite (dot_1_entry_seq_eq emin prec xys Hv).
+exact (SummationKernels.dot_1_seq emin prec Hp xys).
+Qed.
+
+Theorem dot_1_entry_lanes_correct : dot_1_entry_lanes_spec.
+Proof.
+intros emin prec Hp W xys Hv s. unfold s. clear s.
+rewrite (dot_1_entry_lanes_eq emin prec W xys Hv).
 exact (SummationKernels.dot_1_lanes emin prec Hp W xys).
 Qed.

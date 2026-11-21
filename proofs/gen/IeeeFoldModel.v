@@ -47,6 +47,21 @@ Definition dot_1_lanes (W : nat) (xys : list (float * float)) : float * bool :=
   let s := fold_lanes dot_1_step dot_1_combine pzero W xys in
   IeeeModel.fold_finish_1 prec emax nan_abs nan_const s.
 
+(* dot_1_entry: step dot_entry_step_1, combination add_1_1, finish fold_finish_1. *)
+Definition dot_1_entry_step (s : float) (xy : float * float) : float :=
+  IeeeModel.dot_entry_step_1 prec emax nan_plus nan_fma s (fst xy) (snd xy).
+
+Definition dot_1_entry_combine (a b : float) : float :=
+  IeeeModel.add_1_1 prec emax nan_plus a b.
+
+Definition dot_1_entry_seq (xys : list (float * float)) : float * bool :=
+  let s := fold_seq dot_1_entry_step pzero xys in
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const s.
+
+Definition dot_1_entry_lanes (W : nat) (xys : list (float * float)) : float * bool :=
+  let s := fold_lanes dot_1_entry_step dot_1_entry_combine pzero W xys in
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const s.
+
 (* dot_2: step dot_step_2, combination add_2_2, finish fold_finish_2. *)
 Definition dot_2_step (s : float * float) (xy : (float * float) * (float * float)) : float * float :=
   IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst s) (snd s) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).

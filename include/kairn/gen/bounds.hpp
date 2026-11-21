@@ -72,6 +72,15 @@ template <> struct acc_mul_1<float> {
     static constexpr bool proved = true;
 };
 
+// acc_mul_entry_1: proved. Claims: rounded; rounded.
+template <class T> struct acc_mul_entry_1;
+template <> struct acc_mul_entry_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct acc_mul_entry_1<float> {
+    static constexpr bool proved = true;
+};
+
 // acc_radius_1: proved. Claims: upper; holds.
 template <class T> struct acc_radius_1;
 template <> struct acc_radius_1<double> {
@@ -763,6 +772,15 @@ template <> struct conv_radius<double> {
     static constexpr bool proved = true;
 };
 template <> struct conv_radius<float> {
+    static constexpr bool proved = true;
+};
+
+// dot_entry_step_1: proved. Claims: rounded.
+template <class T> struct dot_entry_step_1;
+template <> struct dot_entry_step_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct dot_entry_step_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -2503,5 +2521,248 @@ template <> struct to_nearest_2<double> {
 template <> struct to_nearest_2<float> {
     static constexpr bool proved = true;
 };
+
+// The loops: the folds, maps, folds of maxima, convolutions and ball vectors of
+// gen/kernels/*.fold (docs/developer/architecture.md, "Folds"). Per loop F and limb type T,
+// kairn::gen::bounds::loops::F<T>::proved is true exactly when gen/claims.json gives F the
+// status proved ("folds": the theorems of its statements in both models), T has at least
+// F's minimum precision, and every kernel F runs (its step, combination, record, check,
+// radius, bound and finish) is proved for T, and so is the fold of its coefficients or of its
+// centers. The bound of a loop is in its statement (gen/claims.json); nothing else is here.
+namespace loops {
+
+// add_1: proved. Runs add_1_1, fold_finish_1.
+template <class T> struct add_1;
+template <> struct add_1<double> { static constexpr bool proved = true; };
+template <> struct add_1<float> { static constexpr bool proved = true; };
+
+// add_1_entry: proved. Runs add_entry_step_1, fold_finish_1.
+template <class T> struct add_1_entry;
+template <> struct add_1_entry<double> { static constexpr bool proved = true; };
+template <> struct add_1_entry<float> { static constexpr bool proved = true; };
+
+// add_2: proved. Runs add_2_2, fold_finish_2.
+template <class T> struct add_2;
+template <> struct add_2<double> { static constexpr bool proved = true; };
+template <> struct add_2<float> { static constexpr bool proved = true; };
+
+// add_2_entry: proved. Runs add_entry_step_2, fold_finish_2.
+template <class T> struct add_2_entry;
+template <> struct add_2_entry<double> { static constexpr bool proved = true; };
+template <> struct add_2_entry<float> { static constexpr bool proved = true; };
+
+// axpy_1: proved. Runs axpy_step_1, fold_finish_1.
+template <class T> struct axpy_1;
+template <> struct axpy_1<double> { static constexpr bool proved = true; };
+template <> struct axpy_1<float> { static constexpr bool proved = true; };
+
+// axpy_1_entry: proved. Runs axpy_entry_step_1, fold_finish_1.
+template <class T> struct axpy_1_entry;
+template <> struct axpy_1_entry<double> { static constexpr bool proved = true; };
+template <> struct axpy_1_entry<float> { static constexpr bool proved = true; };
+
+// axpy_2: proved. Runs axpy_step_2, fold_finish_2.
+template <class T> struct axpy_2;
+template <> struct axpy_2<double> { static constexpr bool proved = true; };
+template <> struct axpy_2<float> { static constexpr bool proved = true; };
+
+// axpy_2_1: proved. Runs axpy_step_2_1, fold_finish_2.
+template <class T> struct axpy_2_1;
+template <> struct axpy_2_1<double> { static constexpr bool proved = true; };
+template <> struct axpy_2_1<float> { static constexpr bool proved = true; };
+
+// axpy_2_1_entry: proved. Runs axpy_entry_step_2_1, fold_finish_2.
+template <class T> struct axpy_2_1_entry;
+template <> struct axpy_2_1_entry<double> { static constexpr bool proved = true; };
+template <> struct axpy_2_1_entry<float> { static constexpr bool proved = true; };
+
+// axpy_2_entry: proved. Runs axpy_entry_step_2, fold_finish_2.
+template <class T> struct axpy_2_entry;
+template <> struct axpy_2_entry<double> { static constexpr bool proved = true; };
+template <> struct axpy_2_entry<float> { static constexpr bool proved = true; };
+
+// bv_add_1: proved. Runs add_1_1, bv_add_radius_1, norm_combine, norm_finish_1, norm_step_1.
+template <class T> struct bv_add_1;
+template <> struct bv_add_1<double> { static constexpr bool proved = true; };
+template <> struct bv_add_1<float> { static constexpr bool proved = true; };
+
+// bv_add_2: proved. Runs add_2_2, bv_add_radius_2, norm_combine, norm_finish_1, norm_step_2.
+template <class T> struct bv_add_2;
+template <> struct bv_add_2<double> { static constexpr bool proved = true; };
+template <> struct bv_add_2<float> { static constexpr bool proved = true; };
+
+// bv_conv_1: proved. Runs add_1_1, bound_dot_1, bv_conv_finish, conv_radius, dot_step_1,
+// fold_finish_1, norm_step_1, the loop conv_1, the loop dot_1.
+template <class T> struct bv_conv_1;
+template <> struct bv_conv_1<double> { static constexpr bool proved = true; };
+template <> struct bv_conv_1<float> { static constexpr bool proved = true; };
+
+// bv_conv_2: proved. Runs add_2_2, bound_dot_2, bv_conv_finish, conv_radius, dot_step_2,
+// fold_finish_2, norm_step_2, the loop conv_2, the loop dot_2.
+template <class T> struct bv_conv_2;
+template <> struct bv_conv_2<double> { static constexpr bool proved = true; };
+template <> struct bv_conv_2<float> { static constexpr bool proved = true; };
+
+// bv_make_1: proved. Runs bv_center_entry_1, bv_make_finish, bv_make_radius, norm_combine,
+// norm_step_1.
+template <class T> struct bv_make_1;
+template <> struct bv_make_1<double> { static constexpr bool proved = true; };
+template <> struct bv_make_1<float> { static constexpr bool proved = true; };
+
+// bv_make_2: proved. Runs bv_center_2, bv_make_finish, bv_make_radius, norm_combine, norm_step_2.
+template <class T> struct bv_make_2;
+template <> struct bv_make_2<double> { static constexpr bool proved = true; };
+template <> struct bv_make_2<float> { static constexpr bool proved = true; };
+
+// bv_mul_pow2_1: proved. Runs bv_mul_pow2_radius, bv_mul_pow2_step_1, norm_combine, norm_finish_1,
+// norm_step_1.
+template <class T> struct bv_mul_pow2_1;
+template <> struct bv_mul_pow2_1<double> { static constexpr bool proved = true; };
+template <> struct bv_mul_pow2_1<float> { static constexpr bool proved = true; };
+
+// bv_mul_pow2_2: proved. Runs bv_mul_pow2_radius, bv_mul_pow2_step_2, norm_combine, norm_finish_1,
+// norm_step_2.
+template <class T> struct bv_mul_pow2_2;
+template <> struct bv_mul_pow2_2<double> { static constexpr bool proved = true; };
+template <> struct bv_mul_pow2_2<float> { static constexpr bool proved = true; };
+
+// bv_neg_1: proved. Runs bv_neg_radius, neg_1, norm_combine, norm_finish_1, norm_step_1.
+template <class T> struct bv_neg_1;
+template <> struct bv_neg_1<double> { static constexpr bool proved = true; };
+template <> struct bv_neg_1<float> { static constexpr bool proved = true; };
+
+// bv_neg_2: proved. Runs bv_neg_radius, neg_2, norm_combine, norm_finish_1, norm_step_2.
+template <class T> struct bv_neg_2;
+template <> struct bv_neg_2<double> { static constexpr bool proved = true; };
+template <> struct bv_neg_2<float> { static constexpr bool proved = true; };
+
+// bv_scale_1: proved. Runs bv_scale_radius_1, norm_combine, norm_finish_1, norm_step_1,
+// scale_step_1.
+template <class T> struct bv_scale_1;
+template <> struct bv_scale_1<double> { static constexpr bool proved = true; };
+template <> struct bv_scale_1<float> { static constexpr bool proved = true; };
+
+// bv_scale_2: proved. Runs bv_scale_radius_2, norm_combine, norm_finish_1, norm_step_2,
+// scale_step_2.
+template <class T> struct bv_scale_2;
+template <> struct bv_scale_2<double> { static constexpr bool proved = true; };
+template <> struct bv_scale_2<float> { static constexpr bool proved = true; };
+
+// bv_sub_1: proved. Runs bv_add_radius_1, norm_combine, norm_finish_1, norm_step_1, sub_1_1.
+template <class T> struct bv_sub_1;
+template <> struct bv_sub_1<double> { static constexpr bool proved = true; };
+template <> struct bv_sub_1<float> { static constexpr bool proved = true; };
+
+// bv_sub_2: proved. Runs bv_add_radius_2, norm_combine, norm_finish_1, norm_step_2, sub_2_2.
+template <class T> struct bv_sub_2;
+template <> struct bv_sub_2<double> { static constexpr bool proved = true; };
+template <> struct bv_sub_2<float> { static constexpr bool proved = true; };
+
+// conv_1: proved. Runs add_1_1, dot_step_1, fold_finish_1, the loop dot_1.
+template <class T> struct conv_1;
+template <> struct conv_1<double> { static constexpr bool proved = true; };
+template <> struct conv_1<float> { static constexpr bool proved = true; };
+
+// conv_2: proved. Runs add_2_2, dot_step_2, fold_finish_2, the loop dot_2.
+template <class T> struct conv_2;
+template <> struct conv_2<double> { static constexpr bool proved = true; };
+template <> struct conv_2<float> { static constexpr bool proved = true; };
+
+// dot_1: proved. Runs add_1_1, dot_step_1, fold_finish_1.
+template <class T> struct dot_1;
+template <> struct dot_1<double> { static constexpr bool proved = true; };
+template <> struct dot_1<float> { static constexpr bool proved = true; };
+
+// dot_1_entry: proved. Runs add_1_1, dot_entry_step_1, fold_finish_1.
+template <class T> struct dot_1_entry;
+template <> struct dot_1_entry<double> { static constexpr bool proved = true; };
+template <> struct dot_1_entry<float> { static constexpr bool proved = true; };
+
+// dot_2: proved. Runs add_2_2, dot_step_2, fold_finish_2.
+template <class T> struct dot_2;
+template <> struct dot_2<double> { static constexpr bool proved = true; };
+template <> struct dot_2<float> { static constexpr bool proved = true; };
+
+// mul_pow2_map_1: proved. Runs fold_finish_1, mul_pow2_step_1.
+template <class T> struct mul_pow2_map_1;
+template <> struct mul_pow2_map_1<double> { static constexpr bool proved = true; };
+template <> struct mul_pow2_map_1<float> { static constexpr bool proved = true; };
+
+// mul_pow2_map_2: proved. Runs fold_finish_2, mul_pow2_step_2.
+template <class T> struct mul_pow2_map_2;
+template <> struct mul_pow2_map_2<double> { static constexpr bool proved = true; };
+template <> struct mul_pow2_map_2<float> { static constexpr bool proved = true; };
+
+// norm_upper_1: proved. Runs norm_combine, norm_finish_1, norm_step_1.
+template <class T> struct norm_upper_1;
+template <> struct norm_upper_1<double> { static constexpr bool proved = true; };
+template <> struct norm_upper_1<float> { static constexpr bool proved = true; };
+
+// norm_upper_2: proved. Runs norm_combine, norm_finish_2, norm_step_2.
+template <class T> struct norm_upper_2;
+template <> struct norm_upper_2<double> { static constexpr bool proved = true; };
+template <> struct norm_upper_2<float> { static constexpr bool proved = true; };
+
+// scale_1: proved. Runs fold_finish_1, scale_step_1.
+template <class T> struct scale_1;
+template <> struct scale_1<double> { static constexpr bool proved = true; };
+template <> struct scale_1<float> { static constexpr bool proved = true; };
+
+// scale_2: proved. Runs fold_finish_2, scale_step_2.
+template <class T> struct scale_2;
+template <> struct scale_2<double> { static constexpr bool proved = true; };
+template <> struct scale_2<float> { static constexpr bool proved = true; };
+
+// sub_1: proved. Runs fold_finish_1, sub_1_1.
+template <class T> struct sub_1;
+template <> struct sub_1<double> { static constexpr bool proved = true; };
+template <> struct sub_1<float> { static constexpr bool proved = true; };
+
+// sub_1_entry: proved. Runs fold_finish_1, sub_entry_step_1.
+template <class T> struct sub_1_entry;
+template <> struct sub_1_entry<double> { static constexpr bool proved = true; };
+template <> struct sub_1_entry<float> { static constexpr bool proved = true; };
+
+// sub_2: proved. Runs fold_finish_2, sub_2_2.
+template <class T> struct sub_2;
+template <> struct sub_2<double> { static constexpr bool proved = true; };
+template <> struct sub_2<float> { static constexpr bool proved = true; };
+
+// sub_2_entry: proved. Runs fold_finish_2, sub_entry_step_2.
+template <class T> struct sub_2_entry;
+template <> struct sub_2_entry<double> { static constexpr bool proved = true; };
+template <> struct sub_2_entry<float> { static constexpr bool proved = true; };
+
+// sum_1: proved. Runs add_1_1, fold_finish_1.
+template <class T> struct sum_1;
+template <> struct sum_1<double> { static constexpr bool proved = true; };
+template <> struct sum_1<float> { static constexpr bool proved = true; };
+
+// sum_1_entry: proved. Runs add_1_1, fold_finish_1, sum_entry_step_1.
+template <class T> struct sum_1_entry;
+template <> struct sum_1_entry<double> { static constexpr bool proved = true; };
+template <> struct sum_1_entry<float> { static constexpr bool proved = true; };
+
+// sum_2: proved. Runs add_2_2, fold_finish_2.
+template <class T> struct sum_2;
+template <> struct sum_2<double> { static constexpr bool proved = true; };
+template <> struct sum_2<float> { static constexpr bool proved = true; };
+
+// sum_2_entry: proved. Runs add_2_2, fold_finish_2, sum_entry_step_2.
+template <class T> struct sum_2_entry;
+template <> struct sum_2_entry<double> { static constexpr bool proved = true; };
+template <> struct sum_2_entry<float> { static constexpr bool proved = true; };
+
+// sum_fast_2: proved. Runs add_fast_2_2, fold_finish_2.
+template <class T> struct sum_fast_2;
+template <> struct sum_fast_2<double> { static constexpr bool proved = true; };
+template <> struct sum_fast_2<float> { static constexpr bool proved = true; };
+
+// sum_fast_2_entry: proved. Runs add_fast_2_2, fold_finish_2, sum_fast_entry_step_2.
+template <class T> struct sum_fast_2_entry;
+template <> struct sum_fast_2_entry<double> { static constexpr bool proved = true; };
+template <> struct sum_fast_2_entry<float> { static constexpr bool proved = true; };
+
+}  // namespace loops
 
 }  // namespace kairn::gen::bounds

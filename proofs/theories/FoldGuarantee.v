@@ -17,7 +17,7 @@
        sum_1, sum_1_entry                 bound_sum_1    m >= n - 1   p >= 1
        sum_2, sum_2_entry                 bound_sum_2    m >= n - 1   p >= 3
        sum_fast_2, sum_fast_2_entry       bound_sum_2    m >= n - 1   p >= 3
-       dot_1                              bound_dot_1    m >= n       p >= 1
+       dot_1, dot_1_entry                 bound_dot_1    m >= n       p >= 1
        dot_2                              bound_dot_2    m >= n       p >= 4
 
    n - 1 is a natural number, 0 for the empty array. These are the counts of
@@ -495,6 +495,42 @@ Theorem dot_1_lanes_bound :
 Proof.
 intros emin prec Hp Hh W xys m g t Hv Fm Hm Hn Hb s. unfold s. clear s.
 pose proof (dot_1_lanes_correct emin prec Hp W xys Hv) as K. cbv zeta in K.
+destruct K as [Fs Es].
+split. exact Fs.
+exact (dot_1_use emin prec Hp Hh m g t _ _ _ Fm Hm Hn Hb (sumabs_ge_0 _) Es).
+Qed.
+
+Theorem dot_1_entry_seq_bound :
+  forall emin prec : Z, (1 <= prec)%Z -> eta emin <= / 2 ->
+  forall (xys : list (R * R)) (m g t : R),
+  Forall (fun xy => fmt emin prec (fst xy) /\ fmt emin prec (snd xy)) xys ->
+  fmt emin prec m -> (m = 0 \/ 1 <= m) -> INR (length xys) <= m ->
+  bound_dot_1 emin prec tie_even m = (g, t, true) ->
+  let s := FoldModel.dot_1_entry_seq emin prec tie_even xys in
+  fmt emin prec s /\
+  Rabs (s - sumR (map (fun xy => fst xy * snd xy) xys)) <=
+    g * sumabs (map (fun xy => fst xy * snd xy) xys) + t.
+Proof.
+intros emin prec Hp Hh xys m g t Hv Fm Hm Hn Hb s. unfold s. clear s.
+pose proof (dot_1_entry_seq_correct emin prec Hp xys Hv) as K. cbv zeta in K.
+destruct K as [Fs Es].
+split. exact Fs.
+exact (dot_1_use emin prec Hp Hh m g t _ _ _ Fm Hm Hn Hb (sumabs_ge_0 _) Es).
+Qed.
+
+Theorem dot_1_entry_lanes_bound :
+  forall emin prec : Z, (1 <= prec)%Z -> eta emin <= / 2 ->
+  forall (W : nat) (xys : list (R * R)) (m g t : R),
+  Forall (fun xy => fmt emin prec (fst xy) /\ fmt emin prec (snd xy)) xys ->
+  fmt emin prec m -> (m = 0 \/ 1 <= m) -> INR (length xys) <= m ->
+  bound_dot_1 emin prec tie_even m = (g, t, true) ->
+  let s := FoldModel.dot_1_entry_lanes emin prec tie_even W xys in
+  fmt emin prec s /\
+  Rabs (s - sumR (map (fun xy => fst xy * snd xy) xys)) <=
+    g * sumabs (map (fun xy => fst xy * snd xy) xys) + t.
+Proof.
+intros emin prec Hp Hh W xys m g t Hv Fm Hm Hn Hb s. unfold s. clear s.
+pose proof (dot_1_entry_lanes_correct emin prec Hp W xys Hv) as K. cbv zeta in K.
 destruct K as [Fs Es].
 split. exact Fs.
 exact (dot_1_use emin prec Hp Hh m g t _ _ _ Fm Hm Hn Hb (sumabs_ge_0 _) Es).

@@ -9,8 +9,9 @@
 /// magnitudes of the leading limbs of what was added; and the count n of terms. Each operation that
 /// changes s and a is one generated, proved kernel:
 /// - add(x): acc_add_1 or acc_add_2, s = s + x (add_1_1, add_2_2 on x guarded, rule R3), a = a + |x0|;
-/// - add_product(x, y): acc_mul_1 or acc_mul_2, s = s + x y (the step of the dot product: one fused
-///   operation for one limb, mul_2_2 then add_2_2 for two), a = a + |x0| |y0|;
+/// - add_product(x, y): acc_mul_entry_1 or acc_mul_2, s = s + x y (the step of the dot product: one
+///   fused operation of x and y guarded for one limb, mul_2_2 then add_2_2 for two),
+///   a = a + |x0| |y0|;
 /// - merge(other): acc_merge_1 or acc_merge_2, s = s + s' (a node of the summation tree), a = a + a';
 /// - error_bound(): bound_dot_1 or bound_dot_2 of the count m, then acc_radius_1 or acc_radius_2 of
 ///   (a, m, g, t).
@@ -52,8 +53,8 @@
 /// running_sum(), magnitudes() and count() do not round and check nothing.
 ///
 /// constexpr: the constructor, add, merge, sum, the accessors and from_state (their kernels have no
-/// fused operation). add_product, error_bound and ball are not: acc_mul_k and acc_radius_k have fused
-/// multiply-adds without a constant-evaluation variant.
+/// fused operation). add_product, error_bound and ball are not: acc_mul_entry_1, acc_mul_2 and
+/// acc_radius_k have fused multiply-adds without a constant-evaluation variant.
 #pragma once
 
 #include "ball.hpp"
@@ -74,7 +75,8 @@ namespace detail {
 template <class T, int K>
 concept acc_add_proved = (K == 1 && gen::bounds::acc_add_1<T>::proved) || (K == 2 && gen::bounds::acc_add_2<T>::proved);
 template <class T, int K>
-concept acc_mul_proved = (K == 1 && gen::bounds::acc_mul_1<T>::proved) || (K == 2 && gen::bounds::acc_mul_2<T>::proved);
+concept acc_mul_proved =
+    (K == 1 && gen::bounds::acc_mul_entry_1<T>::proved) || (K == 2 && gen::bounds::acc_mul_2<T>::proved);
 template <class T, int K>
 concept acc_merge_proved =
     (K == 1 && gen::bounds::acc_merge_1<T>::proved) || (K == 2 && gen::bounds::acc_merge_2<T>::proved);
@@ -144,18 +146,19 @@ public:
         add(Expansion<T, K>(x));
     }
 
-    /// Adds the product x y (kernel acc_mul_1 or acc_mul_2): for one limb s = fma(x, y, s), one
-    /// rounding of the exact product and the sum; for two the step of the dot product, mul_2_2 then
-    /// add_2_2; a = a + |x0| |y0| rounded once. x and y are only multiplied (rule R3 asks no guard of
-    /// them; but see docs/reference/accumulator.md for a factor 1 that the compiler sees). One more
-    /// term. Rounds; not constexpr (fused multiply-adds). Requires, with two limbs, x and y canonical
-    /// (checked with KAIRN_CHECKS).
+    /// Adds the product x y (kernel acc_mul_entry_1 or acc_mul_2): for one limb s = fma(x, y, s) on x
+    /// and y guarded, one rounding of the exact product and the sum (the guards keep a product of
+    /// the program out of the fused operation where the compiler sees the other factor to be 1, rule
+    /// R3: measured with Apple clang 21 under -ffp-contract=fast); for two the step of the dot
+    /// product, mul_2_2 then add_2_2, which only multiplies x and y; a = a + |x0| |y0| rounded once.
+    /// One more term. Rounds; not constexpr (fused multiply-adds). Requires, with two limbs, x and y
+    /// canonical (checked with KAIRN_CHECKS).
     void add_product(const Expansion<T, K>& x, const Expansion<T, K>& y) noexcept
         requires detail::acc_mul_proved<T, K>
     {
         detail::check(x, y);
         if constexpr (K == 1) {
-            gen::acc_mul_1(s_.limb[0], a_, x.limb[0], y.limb[0], s_.limb[0], a_);
+            gen::acc_mul_entry_1(s_.limb[0], a_, x.limb[0], y.limb[0], s_.limb[0], a_);
         } else {
             gen::acc_mul_2(s_.limb[0], s_.limb[1], a_, x.limb[0], x.limb[1], y.limb[0], y.limb[1], s_.limb[0],
                            s_.limb[1], a_);
@@ -163,7 +166,7 @@ public:
         n_ = detail::acc_count_add(n_, 1);
     }
     /// The product of two values of T: as add_product of Expansion<T, K>(x) and Expansion<T, K>(y)
-    /// (kernel acc_mul_1 or acc_mul_2).
+    /// (kernel acc_mul_entry_1 or acc_mul_2).
     void add_product(std::type_identity_t<T> x, std::type_identity_t<T> y) noexcept
         requires detail::acc_mul_proved<T, K>
     {

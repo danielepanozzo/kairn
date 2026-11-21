@@ -1,7 +1,7 @@
 (* The steps of the folds in the IEEE model (proofs/gen/IeeeModel.v), for finite operands
    that satisfy the requirements of the kernel: the generated statements
-   K_ieee_bridge_spec of dot_step_1, sum_entry_step_1, dot_step_2, sum_entry_step_2 and
-   sum_fast_entry_step_2, and K_ieee_spec of the last three
+   K_ieee_bridge_spec of dot_step_1, dot_entry_step_1, sum_entry_step_1, dot_step_2,
+   sum_entry_step_2 and sum_fast_entry_step_2, and K_ieee_spec of the last three
    (proofs/gen/IeeeStatements.v).
 
    1. Bridge (K_ieee_bridge). If the leading limb of the result is finite then every
@@ -276,6 +276,26 @@ split.
   rewrite (guard_real_any (ieee_emin prec emax) prec tie_even (val x) (b2r_format prec emax x)).
   generalize (proj2 (add_spec prec emax nan_plus s _ Fs Fg) Ft).
   rewrite (guard_val prec emax nan_plus). intros E. exact E.
+Qed.
+
+(* One limb: the guards of both factors, then one fused operation (rule R3, the factors of a
+   fused operation). As for sum_entry_step_1, the guard of a finite value is finite with the
+   same value, and in the real model it returns a number of the format unchanged. *)
+Theorem dot_entry_step_1_ieee_bridge : dot_entry_step_1_ieee_bridge_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp1 s x y Fs Fx Fy t Ft.
+assert (Gx : finite (IeeeOperations.guard prec emax nan_plus x)).
+{ unfold finite. rewrite (guard_finite prec emax nan_plus). exact Fx. }
+assert (Gy : finite (IeeeOperations.guard prec emax nan_plus y)).
+{ unfold finite. rewrite (guard_finite prec emax nan_plus). exact Fy. }
+split.
+- cbv [run stepB nth app IeeeModel.dot_entry_step_1_prog].
+  repeat constructor; first [assumption | exact Ft].
+- unfold dot_entry_step_1. cbv zeta.
+  rewrite (guard_real_any (ieee_emin prec emax) prec tie_even (val x) (b2r_format prec emax x)).
+  rewrite (guard_real_any (ieee_emin prec emax) prec tie_even (val y) (b2r_format prec emax y)).
+  generalize (proj2 (fma_spec prec emax nan_fma _ _ s Gx Gy Fs) Ft).
+  rewrite !(guard_val prec emax nan_plus). intros E. exact E.
 Qed.
 
 Theorem dot_step_2_ieee_bridge : dot_step_2_ieee_bridge_spec.

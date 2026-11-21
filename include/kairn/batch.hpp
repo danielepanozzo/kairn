@@ -24,9 +24,15 @@
 /// addition (rule R3 of docs/developer/architecture.md). So every function calls the loop on
 /// supplied arrays (milestone2.md, "Arrays that the program fills"): the sums and the maps that
 /// add an element are the loops named _entry, whose steps pass each limb that they add through the
-/// guard a + 0 first; dot, scale, mul_pow2, the x of axpy and conv only multiply their elements and
-/// need no guard. The loops on stored arrays (sum_1, sum_2, add_2, axpy_2, ...), for containers
-/// whose elements only Kairn writes, have no caller here: no container of this library is such.
+/// guard a + 0 first; the dot product of one limb is the loop dot_1_entry, whose step guards both
+/// factors of its fused operation, because a compiler that sees one of them to be 1 (an array of
+/// ones) rewrites fma(x, 1, s) as x + s and fuses the program's product x into it (rule R3, the
+/// factors of a fused operation: measured with Clang 18 on x86-64 and Apple clang 21 under
+/// -ffp-contract=fast); scale, mul_pow2, the x of axpy, the dot product of two limbs and conv
+/// only multiply their elements and are called without a guard (gen/kairn-gen build lists the
+/// factors that are not guarded, for the owner's decision). The loops on stored arrays (sum_1,
+/// sum_2, add_2, axpy_2, ...), for containers whose elements only Kairn writes, have no caller here:
+/// no container of this library is such.
 ///
 /// The order of summation. sum, sum_fast and dot are folds whose result depends on the order of its
 /// additions; one theorem bounds every order by the same expression of the length
@@ -104,53 +110,35 @@ inline constexpr Sequential sequential{};
 
 namespace detail {
 
-// The kernels each loop is made of are proved: its step (or its check, for a map), its
-// combination and its finish. gen/bounds.hpp has no entry for a loop itself, whose status is in
-// gen/claims.json ("folds") and in the comment of each generated loop function.
+// The loop each function calls is proved (gen/bounds.hpp, kairn::gen::bounds::loops: the loop's
+// own statements, its minimum precision, and every kernel it runs, its step, combination, check
+// and finish, and the loop of the coefficients of a convolution).
+namespace loops = gen::bounds::loops;
 template <class T, int K>
-concept sum_loop_proved = (K == 1 && gen::bounds::sum_entry_step_1<T>::proved && gen::bounds::add_1_1<T>::proved &&
-                           gen::bounds::fold_finish_1<T>::proved) ||
-                          (K == 2 && gen::bounds::sum_entry_step_2<T>::proved && gen::bounds::add_2_2<T>::proved &&
-                           gen::bounds::fold_finish_2<T>::proved);
+concept sum_loop_proved = (K == 1 && loops::sum_1_entry<T>::proved) || (K == 2 && loops::sum_2_entry<T>::proved);
 template <class T, int K>
-concept sum_fast_loop_proved =
-    (K == 1 && sum_loop_proved<T, 1>) ||
-    (K == 2 && gen::bounds::sum_fast_entry_step_2<T>::proved && gen::bounds::add_fast_2_2<T>::proved &&
-     gen::bounds::fold_finish_2<T>::proved);
+concept sum_fast_loop_proved = (K == 1 && sum_loop_proved<T, 1>) || (K == 2 && loops::sum_fast_2_entry<T>::proved);
 template <class T, int K>
-concept dot_loop_proved = (K == 1 && gen::bounds::dot_step_1<T>::proved && gen::bounds::add_1_1<T>::proved &&
-                           gen::bounds::fold_finish_1<T>::proved) ||
-                          (K == 2 && gen::bounds::dot_step_2<T>::proved && gen::bounds::add_2_2<T>::proved &&
-                           gen::bounds::fold_finish_2<T>::proved);
+concept dot_loop_proved = (K == 1 && loops::dot_1_entry<T>::proved) || (K == 2 && loops::dot_2<T>::proved);
 template <class T, int K>
-concept finish_proved = (K == 1 && gen::bounds::fold_finish_1<T>::proved) ||
-                        (K == 2 && gen::bounds::fold_finish_2<T>::proved);
+concept add_loop_proved = (K == 1 && loops::add_1_entry<T>::proved) || (K == 2 && loops::add_2_entry<T>::proved);
 template <class T, int K>
-concept add_loop_proved = finish_proved<T, K> && ((K == 1 && gen::bounds::add_entry_step_1<T>::proved) ||
-                                                  (K == 2 && gen::bounds::add_entry_step_2<T>::proved));
+concept sub_loop_proved = (K == 1 && loops::sub_1_entry<T>::proved) || (K == 2 && loops::sub_2_entry<T>::proved);
 template <class T, int K>
-concept sub_loop_proved = finish_proved<T, K> && ((K == 1 && gen::bounds::sub_entry_step_1<T>::proved) ||
-                                                  (K == 2 && gen::bounds::sub_entry_step_2<T>::proved));
+concept scale_loop_proved = (K == 1 && loops::scale_1<T>::proved) || (K == 2 && loops::scale_2<T>::proved);
 template <class T, int K>
-concept scale_loop_proved = finish_proved<T, K> && ((K == 1 && gen::bounds::scale_step_1<T>::proved) ||
-                                                    (K == 2 && gen::bounds::scale_step_2<T>::proved));
-template <class T, int K>
-concept mul_pow2_loop_proved = finish_proved<T, K> && ((K == 1 && gen::bounds::mul_pow2_step_1<T>::proved) ||
-                                                       (K == 2 && gen::bounds::mul_pow2_step_2<T>::proved));
+concept mul_pow2_loop_proved =
+    (K == 1 && loops::mul_pow2_map_1<T>::proved) || (K == 2 && loops::mul_pow2_map_2<T>::proved);
 // axpy with a scalar of T: axpy_1_entry for one limb, axpy_2_1_entry for two.
 template <class T, int K>
 concept axpy_limb_loop_proved =
-    finish_proved<T, K> && ((K == 1 && gen::bounds::axpy_entry_step_1<T>::proved) ||
-                            (K == 2 && gen::bounds::axpy_entry_step_2_1<T>::proved));
+    (K == 1 && loops::axpy_1_entry<T>::proved) || (K == 2 && loops::axpy_2_1_entry<T>::proved);
 template <class T>
-concept axpy_loop_proved = finish_proved<T, 2> && gen::bounds::axpy_entry_step_2<T>::proved;
+concept axpy_loop_proved = loops::axpy_2_entry<T>::proved;
 template <class T, int K>
-concept conv_loop_proved = finish_proved<T, K> && ((K == 1 && gen::bounds::dot_step_1<T>::proved) ||
-                                                   (K == 2 && gen::bounds::dot_step_2<T>::proved));
+concept conv_loop_proved = (K == 1 && loops::conv_1<T>::proved) || (K == 2 && loops::conv_2<T>::proved);
 template <class T, int K>
-concept norm_loop_proved = gen::bounds::norm_combine<T>::proved &&
-                           ((K == 1 && gen::bounds::norm_step_1<T>::proved && gen::bounds::norm_finish_1<T>::proved) ||
-                            (K == 2 && gen::bounds::norm_step_2<T>::proved && gen::bounds::norm_finish_2<T>::proved));
+concept norm_loop_proved = (K == 1 && loops::norm_upper_1<T>::proved) || (K == 2 && loops::norm_upper_2<T>::proved);
 
 // Views whose limbs are of the same type: T and U are the element types of two views (const or
 // not), the same limb type.
@@ -408,10 +396,11 @@ Reduction<Expansion<std::remove_const_t<T>, K>> sum_fast(SoAView<T, K> x, Sequen
 // --- Dot products --------------------------------------------------------------------------------
 
 /// The dot product sum_i x_i y_i of two arrays of the same length, in the lane order of this
-/// translation unit: loop dot_1 for one limb (the step dot_step_1, one fused operation
-/// s = fma(x, y, s), so that no product is rounded on its own), dot_2 for two (the step
-/// dot_step_2: mul_2_2, then add_2_2). The elements are only multiplied, and need no guard. Rounds;
-/// not constexpr. Returns Reduction<Expansion<T, K>>.
+/// translation unit: loop dot_1_entry for one limb (the step dot_entry_step_1, one fused operation
+/// s = fma(x, y, s) on the elements guarded, so that no product is rounded on its own and no
+/// product of the program is fused into it through a factor 1, rule R3), dot_2 for two (the step
+/// dot_step_2: mul_2_2, then add_2_2, which only multiplies the elements). Rounds; not constexpr.
+/// Returns Reduction<Expansion<T, K>>.
 ///
 /// Statement, proved for every length n, in both orders and for every number of lanes: when
 /// finite, value is finite (normalized, for two limbs) and
@@ -432,9 +421,9 @@ Reduction<Expansion<std::remove_const_t<T>, K>> dot(SoAView<T, K> x, SoAView<U, 
     Reduction<Expansion<std::remove_const_t<T>, K>> r;
     if constexpr (K == 1) {
 #if KAIRN_DETAIL_BATCH_PACKED
-        gen::dot_1_packed(x.limb(0), y.limb(0), x.size(), r.value.limb[0], r.finite);
+        gen::dot_1_entry_packed(x.limb(0), y.limb(0), x.size(), r.value.limb[0], r.finite);
 #else
-        gen::dot_1_seq(x.limb(0), y.limb(0), x.size(), r.value.limb[0], r.finite);
+        gen::dot_1_entry_seq(x.limb(0), y.limb(0), x.size(), r.value.limb[0], r.finite);
 #endif
     } else {
 #if KAIRN_DETAIL_BATCH_PACKED
@@ -447,15 +436,15 @@ Reduction<Expansion<std::remove_const_t<T>, K>> dot(SoAView<T, K> x, SoAView<U, 
     }
     return r;
 }
-/// The dot product in the sequential order: the same loops, dot_1 and dot_2, element after element;
-/// the same statement, and the same bits on every platform.
+/// The dot product in the sequential order: the same loops, dot_1_entry and dot_2, element after
+/// element; the same statement, and the same bits on every platform.
 template <class T, class U, int K>
     requires detail::same_limbs<T, U> && detail::dot_loop_proved<std::remove_const_t<T>, K>
 Reduction<Expansion<std::remove_const_t<T>, K>> dot(SoAView<T, K> x, SoAView<U, K> y, Sequential) noexcept {
     detail::check_dot("dot", x, y);
     Reduction<Expansion<std::remove_const_t<T>, K>> r;
     if constexpr (K == 1) {
-        gen::dot_1_seq(x.limb(0), y.limb(0), x.size(), r.value.limb[0], r.finite);
+        gen::dot_1_entry_seq(x.limb(0), y.limb(0), x.size(), r.value.limb[0], r.finite);
     } else {
         gen::dot_2_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0], r.value.limb[1],
                        r.finite);

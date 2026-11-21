@@ -143,6 +143,32 @@ split.
   unfold RN. f_equal. ring.
 Qed.
 
+(* acc_mul_1 on x and y guarded (rule R3, the factors of a fused operation): the guard of a
+   finite value is finite with the same value (guard_fin, guard_val). *)
+Theorem acc_mul_entry_1_ieee_correct : acc_mul_entry_1_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_abs nan_fma Hp1 s a x y Fs Fa Fx Fy Ha.
+unfold IeeeModel.acc_mul_entry_1. cbv beta iota zeta.
+set (gx := IeeeOperations.guard prec emax nan_plus x).
+set (gy := IeeeOperations.guard prec emax nan_plus y).
+assert (Fgx : finite gx) by exact (guard_fin prec emax nan_plus x Fx).
+assert (Fgy : finite gy) by exact (guard_fin prec emax nan_plus y Fy).
+assert (Vgx : val gx = val x) by exact (guard_val prec emax nan_plus x).
+assert (Vgy : val gy = val y) by exact (guard_val prec emax nan_plus y).
+unfold val in Vgx, Vgy.
+split.
+- intros Ft. unfold val. rewrite (proj2 (fma_spec prec emax nan_fma gx gy s Fgx Fgy Fs) Ft).
+  rewrite Vgx, Vgy. unfold RN. f_equal. ring.
+- intros Fb.
+  assert (Fax : finite (IeeeOperations.abs prec emax nan_abs gx))
+    by exact (abs_fin prec emax nan_abs gx Fgx).
+  assert (Fay : finite (IeeeOperations.abs prec emax nan_abs gy))
+    by exact (abs_fin prec emax nan_abs gy Fgy).
+  unfold val. rewrite (proj2 (fma_spec prec emax nan_fma _ _ a Fax Fay Fa) Fb).
+  rewrite (abs_val prec emax nan_abs gx), (abs_val prec emax nan_abs gy), Vgx, Vgy.
+  unfold RN. f_equal. ring.
+Qed.
+
 Theorem acc_add_2_ieee_correct : acc_add_2_ieee_spec.
 Proof.
 intros prec emax Hp He nan_plus nan_minus nan_abs Hp3 s0 s1 a x0 x1 Fs0 Fs1 Fa Fx0 Fx1 Ns Nx Ha.

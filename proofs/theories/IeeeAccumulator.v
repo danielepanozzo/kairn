@@ -109,7 +109,8 @@ Fixpoint run1i (h : hist float) : float * float :=
   match h with
   | Hnil => (pzero, pzero)
   | Hadd h x => let '(s, a) := run1i h in IeeeModel.acc_add_1 prec emax nan_plus nan_abs s a x
-  | Hmul h x y => let '(s, a) := run1i h in IeeeModel.acc_mul_1 prec emax nan_abs nan_fma s a x y
+  | Hmul h x y =>
+      let '(s, a) := run1i h in IeeeModel.acc_mul_entry_1 prec emax nan_plus nan_abs nan_fma s a x y
   | Hmerge h1 h2 =>
       let '(s, a) := run1i h1 in let '(v, c) := run1i h2 in
       IeeeModel.acc_merge_1 prec emax nan_plus s a v c
@@ -134,14 +135,17 @@ induction h as [|h IH x|h IH x y|h1 IH1 h2 IH2]; cbn [elems run1i hmap run1].
   rewrite (proj2 (add_spec prec emax nan_plus a _ Fa Fag) Fb).
   rewrite (abs_val prec emax nan_abs), (guard_val prec emax nan_plus). reflexivity.
 - intros [Vh [Fx Fy]]. destruct (run1i h) as [s a]. cbn [fst snd] in IH.
-  unfold IeeeModel.acc_mul_1. cbv beta iota zeta. cbn [fst snd]. intros Ft Fb.
+  unfold IeeeModel.acc_mul_entry_1. cbv beta iota zeta. cbn [fst snd]. intros Ft Fb.
   destruct (fma_finite_inv prec emax nan_fma _ _ _ Ft) as [_ [_ Fs]].
   destruct (fma_finite_inv prec emax nan_fma _ _ _ Fb) as [Fax [Fay Fa]].
   rewrite <- (IH Vh Fs Fa). cbv beta iota.
-  unfold acc_mul_1, ieee_emin. cbv zeta.
-  rewrite (proj2 (fma_spec prec emax nan_fma x y s Fx Fy Fs) Ft).
+  unfold acc_mul_entry_1, ieee_emin. cbv zeta.
+  rewrite (guard_real_any _ prec tie_even (b2r x) (b2r_format prec emax x)).
+  rewrite (guard_real_any _ prec tie_even (b2r y) (b2r_format prec emax y)).
+  rewrite (proj2 (fma_spec prec emax nan_fma (guard x) (guard y) s
+                    (guard_fin prec emax nan_plus x Fx) (guard_fin prec emax nan_plus y Fy) Fs) Ft).
   rewrite (proj2 (fma_spec prec emax nan_fma _ _ a Fax Fay Fa) Fb).
-  rewrite !(abs_val prec emax nan_abs). reflexivity.
+  rewrite !(abs_val prec emax nan_abs), !(guard_val prec emax nan_plus). reflexivity.
 - intros [V1 V2]. destruct (run1i h1) as [s a]. destruct (run1i h2) as [v c].
   cbn [fst snd] in IH1, IH2.
   unfold IeeeModel.acc_merge_1. cbv beta iota zeta. cbn [fst snd]. intros Ft Fb.

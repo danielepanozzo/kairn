@@ -226,6 +226,69 @@
       }
     },
     {
+      "name": "acc_mul_entry_1",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "value": "s+x*y",
+      "requires": [
+        "nonneg(a)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "nearest"
+        },
+        {
+          "kind": "rounded",
+          "of": "b",
+          "mode": "nearest",
+          "value": "a+abs(x)*abs(y)"
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_mul_entry_1_correct"
+      },
+      "source": {
+        "cite": "acc_mul_1 on the guarded x and y (rule R3, the factors of a fused operation)",
+        "license": "proof: MIT"
+      },
+      "flops": 4,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "acc_radius_1",
       "inputs": [
         {
@@ -4453,6 +4516,53 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 8,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "dot_entry_step_1",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "value": "s+x*y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "nearest"
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/StepKernels.v",
+        "name": "dot_entry_step_1_correct"
+      },
+      "source": {
+        "cite": "dot_step_1 on the guarded elements (rule R3, the factors of a fused operation)",
+        "license": "proof: MIT"
+      },
+      "flops": 3,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -17055,6 +17165,108 @@
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, weighted: the fused dot product",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "1/9007199254740993",
+            "term": "0",
+            "tau": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "1/16777217",
+            "term": "0",
+            "tau": "1/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "dot_1_entry",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "u/(1+u)",
+          "term": "0",
+          "tau": "eta/2",
+          "heights": {
+            "sequential": {
+              "rel": "n",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "dot_entry_step_1",
+      "combine": "add_1_1",
+      "finish": "fold_finish_1",
+      "min_precision": 1,
+      "status": "proved",
+      "theorems": {
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "dot_1_entry_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "dot_1_entry_lanes_correct"
+        }
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, weighted: the fused dot product, on the guarded elements",
         "license": "bound: published; proof: MIT"
       },
       "instances": {

@@ -101,6 +101,19 @@ split. limb_format.
 split; unfold RN; f_equal; ring.
 Qed.
 
+(* acc_mul_1 on x and y guarded (rule R3, the factors of a fused operation): numbers of the
+   format pass the guard unchanged (guard_real_any), so the statement is that of acc_mul_1. *)
+Theorem acc_mul_entry_1_correct : acc_mul_entry_1_spec.
+Proof.
+intros emin prec Hp s a x y Fs Fa Fx Fy Ha.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
+unfold acc_mul_entry_1. cbv beta iota zeta.
+rewrite (guard_real_any emin prec tie_even x Fx), (guard_real_any emin prec tie_even y Fy).
+split. limb_format.
+split. limb_format.
+split; unfold RN; f_equal; ring.
+Qed.
+
 Theorem acc_add_2_correct : acc_add_2_spec.
 Proof.
 intros emin prec Hp s0 s1 a x0 x1 Ns Fa Nx Ha.

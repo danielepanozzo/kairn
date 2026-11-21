@@ -69,6 +69,15 @@ Definition bv_mul_pow2_step_1_ieee_lead_spec : Prop :=
   let '(z, e) := IeeeModel.bv_mul_pow2_step_1 prec emax nan_abs nan_fma x c in
   finite z -> finite x /\ finite c.
 
+(* dot_entry_step_1, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
+Definition dot_entry_step_1_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_fma : nan3 prec emax),
+  forall s x y : binary_float prec emax,
+  let t := IeeeModel.dot_entry_step_1 prec emax nan_plus nan_fma s x y in
+  finite t -> finite s /\ finite x /\ finite y.
+
 (* dot_step_1, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition dot_step_1_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -317,6 +326,46 @@ Definition dot_1_lanes_ieee_spec : Prop :=
    finite r /\
    let vs := map (fun xy => (val (fst xy), val (snd xy))) xys in
    let s := FoldModel.dot_1_lanes (ieee_emin prec emax) prec tie_even W vs in
+   val r = s /\
+   fmt (ieee_emin prec emax) prec s /\
+   Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) vs)) <=
+      ((1 + (u prec / (1 + u prec))) ^ length vs - 1) * sumabs (map (fun xy => (fst xy * snd xy)) vs) +
+      (1 + (u prec / (1 + u prec))) ^ (length vs - 1) * (INR (length vs) * (eta (ieee_emin prec emax) / 2))) /\
+  (flag = false -> nan r).
+
+(* dot_1_entry, the sequential order, in the IEEE model. Status: proved. *)
+Definition dot_1_entry_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall xys : list (binary_float prec emax * binary_float prec emax),
+  let '(r, flag) := IeeeFoldModel.dot_1_entry_seq prec emax nan_plus nan_abs nan_fma nan_const xys in
+  (flag = true ->
+   Forall (fun xy => finite (fst xy) /\ finite (snd xy)) xys /\
+   finite r /\
+   let vs := map (fun xy => (val (fst xy), val (snd xy))) xys in
+   let s := FoldModel.dot_1_entry_seq (ieee_emin prec emax) prec tie_even vs in
+   val r = s /\
+   fmt (ieee_emin prec emax) prec s /\
+   Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) vs)) <=
+      ((1 + (u prec / (1 + u prec))) ^ length vs - 1) * sumabs (map (fun xy => (fst xy * snd xy)) vs) +
+      (1 + (u prec / (1 + u prec))) ^ (length vs - 1) * (INR (length vs) * (eta (ieee_emin prec emax) / 2))) /\
+  (flag = false -> nan r).
+
+(* dot_1_entry, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
+Definition dot_1_entry_lanes_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (W : nat) (xys : list (binary_float prec emax * binary_float prec emax)),
+  let '(r, flag) := IeeeFoldModel.dot_1_entry_lanes prec emax nan_plus nan_abs nan_fma nan_const W xys in
+  (flag = true ->
+   Forall (fun xy => finite (fst xy) /\ finite (snd xy)) xys /\
+   finite r /\
+   let vs := map (fun xy => (val (fst xy), val (snd xy))) xys in
+   let s := FoldModel.dot_1_entry_lanes (ieee_emin prec emax) prec tie_even W vs in
    val r = s /\
    fmt (ieee_emin prec emax) prec s /\
    Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) vs)) <=
