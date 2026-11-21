@@ -1,0 +1,23 @@
+# Whether an interval with one-limb bounds is the whole line (milestone2.md, "One enclosure
+# interface", the row of is_entire()): x_l = -inf and x_u = +inf. Exact; false for the empty set
+# (+inf, -inf). For every precision.
+kernel:        interval_entire_1
+input:         stored xl
+input:         stored xu
+output:        mask m
+requires:      interval xl xu
+ensures:       certain m entire x x=xl,xu exact
+min_precision: 1
+source:        the two bounds compared with the infinities (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalPredicates.v interval_entire_1_correct
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+mi = neg(const inf)
+a  = eq(xl, mi)
+b  = eq(xu, const inf)
+m  = and(a, b)

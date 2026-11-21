@@ -18,6 +18,18 @@ Notation rnd := (round radix2 (FLT_exp emin prec) (Znearest choice)).
 (* Veltkamp's multiplier 2^ceil(prec/2) + 1. *)
 Definition splitter : R := bpow radix2 (Z.div (prec + 1) 2) + 1.
 
+(* up((1+u)*u+eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_acc_radius_1_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * bpow radix2 (- prec)) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
+
+(* up((1+u)^8): the smallest number of the format not below it. *)
+Definition up_acc_radius_1_3 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 8).
+
+(* up((1+u)^7*eta/2+eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_acc_radius_1_4 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((((1 + bpow radix2 (- prec)) ^ 7) * bpow radix2 emin) / 2) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
+
 (* up(unit(add_1_1)/(1-unit(add_1_1))): the smallest number of the format not below it. *)
 Definition up_ball_add_1_0 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1))).
@@ -130,9 +142,60 @@ Definition up_bound_sum_2_0 : R :=
 Definition up_bound_sum_2_1 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) ^ 2) * (((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2) + bpow radix2 emin)).
 
+(* up(4*(1+u)^8*eta+eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_conv_radius_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((4 * ((1 + bpow radix2 (- prec)) ^ 8)) * bpow radix2 emin) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
+
+(* up((1+u)^7): the smallest number of the format not below it. *)
+Definition up_conv_radius_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 7).
+
 (* up(eta/(2*u^2)): the smallest number of the format not below it. *)
 Definition up_mul_down_1_0 : R :=
   round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin / (2 * (bpow radix2 (- prec) ^ 2))).
+
+(* acc_add_1: add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). *)
+Definition acc_add_1 (s a x : R) : R * R :=
+  let g := rnd (x + 0) in
+  let t := rnd (s + g) in
+  let ag := Rabs g in
+  let b := rnd (a + ag) in
+  (t, b).
+
+(* acc_merge_1: add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). *)
+Definition acc_merge_1 (s a v c : R) : R * R :=
+  let t := rnd (s + v) in
+  let b := rnd (a + c) in
+  (t, b).
+
+(* acc_mul_1: the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). *)
+Definition acc_mul_1 (s a x y : R) : R * R :=
+  let t := rnd (x * y + s) in
+  let ax := Rabs x in
+  let ay := Rabs y in
+  let b := rnd (ax * ay + a) in
+  (t, b).
+
+(* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. *)
+Definition acc_radius_1 (a m g t : R) : R * bool :=
+  let q := rnd (m * up_acc_radius_1_0 + 0) in
+  let d := rnd (q * up_bound_dot_1_2 + 0) in
+  let w := rnd (q * d + q) in
+  let c := rnd (m * up_ball_mul_pow2_1_0 + a) in
+  let e := rnd (c * w + c) in
+  let f := rnd (e * g + 0) in
+  let s := rnd (f + t) in
+  let r := rnd (s * up_acc_radius_1_3 + up_acc_radius_1_4) in
+  let oq := Rle_bool d up_bound_dot_1_6 in
+  let z := rnd (a - a) in
+  let fa := Req_bool z z in
+  let ok := andb oq fa in
+  (r, ok).
+
+(* acc_radius_2: acc_radius_1, for the bound of dot_2 (milestone2.md). *)
+Definition acc_radius_2 (a m g t : R) : R * bool :=
+  let '(r, ok) := acc_radius_1 a m g t in
+  (r, ok).
 
 (* add_1_1: one rounding to nearest. *)
 Definition add_1_1 (a b : R) : R :=
@@ -219,6 +282,48 @@ Definition ball_add_1 (cx rx cy ry : R) : R * R :=
   let t := rnd (az * up_ball_add_1_0 + s) in
   let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
   (cz, rz).
+
+(* abs_2: the sign of x0 (Milestone 1 listing). *)
+Definition abs_2 (x0 x1 : R) : R * R :=
+  let m := Rlt_bool x0 0 in
+  let n0 := - x0 in
+  let n1 := - x1 in
+  let z0 := if m then n0 else x0 in
+  let z1 := if m then n1 else x1 in
+  (z0, z1).
+
+(* le_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition le_2_2 (x0 x1 y0 y1 : R) : bool :=
+  let h := Rlt_bool x0 y0 in
+  let e := Req_bool x0 y0 in
+  let l := Rle_bool x1 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* le_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition le_2_1 (x0 x1 a : R) : bool :=
+  let h := Rlt_bool x0 a in
+  let e := Req_bool x0 a in
+  let l := Rle_bool x1 0 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* lt_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition lt_2_2 (x0 x1 y0 y1 : R) : bool :=
+  let h := Rlt_bool x0 y0 in
+  let e := Req_bool x0 y0 in
+  let l := Rlt_bool x1 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
+Definition sub_up_1 (a b : R) : R :=
+  let nb := - b in
+  let r := add_up_1 a nb in
+  r.
 
 (* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). *)
 Definition sub_down_1 (a b : R) : R :=
@@ -328,6 +433,88 @@ Definition bound_sum_2 (m : R) : R * bool :=
   let ok := Rle_bool a up_bound_dot_1_5 in
   (g, ok).
 
+(* bv_add_radius_1: the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_add_radius_1 (m rx ry : R) : R :=
+  let s := rnd (rx + ry) in
+  let t := rnd (m * up_ball_add_1_0 + s) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
+  rz.
+
+(* bv_add_radius_2: the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_add_radius_2 (m rx ry : R) : R :=
+  let s := rnd (rx + ry) in
+  let t := rnd (m * up_ball_add_2_0 + s) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
+  rz.
+
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). *)
+Definition bv_center_entry_1 (c : R) : R :=
+  let z := rnd (c + 0) in
+  z.
+
+(* bv_make_radius: the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). *)
+Definition bv_make_radius (m r : R) : R :=
+  let g := rnd (r + 0) in
+  let d := rnd (m - m) in
+  let rz := rnd (g + d) in
+  rz.
+
+(* bv_mul_pow2_radius: the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_radius (m : R) (ex : bool) (rx c : R) : R :=
+  let rr := rnd (rx * c + 0) in
+  let br := Rlt_bool up_ball_mul_pow2_1_0 rr in
+  let zr := Req_bool rx 0 in
+  let er := orb br zr in
+  let q := andb ex er in
+  let su := succ radix2 (FLT_exp emin prec) rr in
+  let rw := succ radix2 (FLT_exp emin prec) su in
+  let rs := if q then rr else rw in
+  let d := rnd (m - m) in
+  let rz := rnd (rs + d) in
+  rz.
+
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_1 (x c : R) : R * bool :=
+  let z := rnd (x * c + 0) in
+  let am := Rabs z in
+  let bc := Rlt_bool up_ball_mul_pow2_1_0 am in
+  let zc := Req_bool x 0 in
+  let e := orb bc zc in
+  (z, e).
+
+(* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). *)
+Definition bv_neg_radius (m rx : R) : R :=
+  let rz := rx in
+  rz.
+
+(* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_scale_radius_1 (m rx a : R) : R :=
+  let aa := Rabs a in
+  let p := rnd (aa * rx + 0) in
+  let t := rnd (m * up_ball_mul_1_0 + p) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_1_2) in
+  rz.
+
+(* bv_scale_radius_2: the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_scale_radius_2 (m rx a : R) : R :=
+  let aa := Rabs a in
+  let p := rnd (aa * rx + 0) in
+  let t := rnd (m * up_ball_scale_2_0 + p) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_2_2) in
+  rz.
+
+(* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). *)
+Definition conv_radius (ma mb rx ry m g t : R) : R :=
+  let p := rnd (rx * ry + 0) in
+  let q := rnd (mb * rx + p) in
+  let w := rnd (ma * ry + q) in
+  let ab := rnd (ma * mb + 0) in
+  let e := rnd (ab * g + w) in
+  let s := rnd (m * e + t) in
+  let hm := rnd (m * up_conv_radius_0 + 0) in
+  let rz := rnd (s * up_conv_radius_1 + hm) in
+  rz.
+
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)
 Definition dot_step_1 (s x y : R) : R :=
   let t := rnd (x * y + s) in
@@ -339,12 +526,6 @@ Definition fast_two_sum_entry (a b : R) : R * R :=
   let gb := rnd (b + 0) in
   let '(s, e) := fast_two_sum ga gb in
   (s, e).
-
-(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
-Definition sub_up_1 (a b : R) : R :=
-  let nb := - b in
-  let r := add_up_1 a nb in
-  r.
 
 (* two_prod: TwoProd with an FMA (folklore; see JMP17). *)
 Definition two_prod (a b : R) : R * R :=
@@ -412,6 +593,11 @@ Definition mul_up_1 (a b : R) : R :=
   let zz := orb za zb in
   let r := if zz then p else v in
   r.
+
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). *)
+Definition neg_1 (x : R) : R :=
+  let z := - x in
+  z.
 
 (* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). *)
 Definition next_down (a : R) : R :=
@@ -533,15 +719,6 @@ Definition two_sum_entry (a b : R) : R * R :=
   let '(s, e) := two_sum ga gb in
   (s, e).
 
-(* abs_2: the sign of x0 (Milestone 1 listing). *)
-Definition abs_2 (x0 x1 : R) : R * R :=
-  let m := Rlt_bool x0 0 in
-  let n0 := - x0 in
-  let n1 := - x1 in
-  let z0 := if m then n0 else x0 in
-  let z1 := if m then n1 else x1 in
-  (z0, z1).
-
 (* to_up_2: the sign of x1 (Milestone 1 listing). *)
 Definition to_up_2 (x0 x1 : R) : R :=
   let m := Rlt_bool 0 x1 in
@@ -555,14 +732,6 @@ Definition abs_upper_2 (x0 x1 : R) : R :=
   let t := to_up_2 a0 a1 in
   t.
 
-(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
-Definition add_2_1 (x0 x1 a : R) : R * R :=
-  let g := rnd (a + 0) in
-  let '(sh, sl) := two_sum x0 g in
-  let v := rnd (x1 + sl) in
-  let '(z0, z1) := fast_two_sum sh v in
-  (z0, z1).
-
 (* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. *)
 Definition add_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(sh, sl) := two_sum x0 y0 in
@@ -571,6 +740,53 @@ Definition add_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(vh, vl) := fast_two_sum sh c in
   let w := rnd (tl + vl) in
   let '(z0, z1) := fast_two_sum vh w in
+  (z0, z1).
+
+(* acc_add_2: add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. *)
+Definition acc_add_2 (s0 s1 a x0 x1 : R) : R * R * R :=
+  let g0 := rnd (x0 + 0) in
+  let g1 := rnd (x1 + 0) in
+  let '(t0, t1) := add_2_2 s0 s1 g0 g1 in
+  let ag := Rabs g0 in
+  let b := rnd (a + ag) in
+  (t0, t1, b).
+
+(* acc_merge_2: add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. *)
+Definition acc_merge_2 (s0 s1 a v0 v1 c : R) : R * R * R :=
+  let '(t0, t1) := add_2_2 s0 s1 v0 v1 in
+  let b := rnd (a + c) in
+  (t0, t1, b).
+
+(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. *)
+Definition mul_2_2 (x0 x1 y0 y1 : R) : R * R :=
+  let '(ch, cl1) := two_prod x0 y0 in
+  let tl0 := rnd (x1 * y1 + 0) in
+  let tl1 := rnd (x0 * y1 + tl0) in
+  let cl2 := rnd (x1 * y0 + tl1) in
+  let cl3 := rnd (cl1 + cl2) in
+  let '(z0, z1) := fast_two_sum ch cl3 in
+  (z0, z1).
+
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. *)
+Definition dot_step_2 (s0 s1 x0 x1 y0 y1 : R) : R * R :=
+  let '(p0, p1) := mul_2_2 x0 x1 y0 y1 in
+  let '(t0, t1) := add_2_2 s0 s1 p0 p1 in
+  (t0, t1).
+
+(* acc_mul_2: the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. *)
+Definition acc_mul_2 (s0 s1 a x0 x1 y0 y1 : R) : R * R * R :=
+  let '(t0, t1) := dot_step_2 s0 s1 x0 x1 y0 y1 in
+  let ax := Rabs x0 in
+  let ay := Rabs y0 in
+  let b := rnd (ax * ay + a) in
+  (t0, t1, b).
+
+(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
+Definition add_2_1 (x0 x1 a : R) : R * R :=
+  let g := rnd (a + 0) in
+  let '(sh, sl) := two_sum x0 g in
+  let v := rnd (x1 + sl) in
+  let '(z0, z1) := fast_two_sum sh v in
   (z0, z1).
 
 (* add_ball_2_2: add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). *)
@@ -617,16 +833,6 @@ Definition add_up_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let w := add_up_1 z1 dd in
   let '(h0, h1) := two_sum_ord z0 w in
   (h0, h1).
-
-(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. *)
-Definition mul_2_2 (x0 x1 y0 y1 : R) : R * R :=
-  let '(ch, cl1) := two_prod x0 y0 in
-  let tl0 := rnd (x1 * y1 + 0) in
-  let tl1 := rnd (x0 * y1 + tl0) in
-  let cl2 := rnd (x1 * y0 + tl1) in
-  let cl3 := rnd (cl1 + cl2) in
-  let '(z0, z1) := fast_two_sum ch cl3 in
-  (z0, z1).
 
 (* axpy_entry_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. *)
 Definition axpy_entry_step_2 (a0 a1 x0 x1 y0 y1 : R) : R * R :=
@@ -679,6 +885,20 @@ Definition to_down_2 (x0 x1 : R) : R :=
   let t := if m then p else x0 in
   t.
 
+(* eq_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition eq_2_2 (x0 x1 y0 y1 : R) : bool :=
+  let h := Req_bool x0 y0 in
+  let l := Req_bool x1 y1 in
+  let m := andb h l in
+  m.
+
+(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
+Definition mul_pow2_2 (x0 x1 c : R) : R * R :=
+  let h := rnd (x0 * c + 0) in
+  let l := rnd (x1 * c + 0) in
+  let '(z0, z1) := fast_two_sum h l in
+  (z0, z1).
+
 (* ball_mul_2: midpoint-radius product (Milestone 1 listing, second radius design). *)
 Definition ball_mul_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let '(cz0, cz1) := mul_2_2 cx0 cx1 cy0 cy1 in
@@ -725,6 +945,24 @@ Definition ball_neg_2 (cx0 cx1 rx : R) : R * R * R :=
   let rz := rx in
   (cz0, cz1, rz).
 
+(* lt_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition lt_2_1 (x0 x1 a : R) : bool :=
+  let h := Rlt_bool x0 a in
+  let e := Req_bool x0 a in
+  let l := Rlt_bool x1 0 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* lt_1_2: limbs compared in order (Milestone 1 listing). *)
+Definition lt_1_2 (a y0 y1 : R) : bool :=
+  let h := Rlt_bool a y0 in
+  let e := Req_bool a y0 in
+  let l := Rlt_bool 0 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
 (* ball_scale_2: midpoint-radius scaling (Milestone 1 listing, second radius design). *)
 Definition ball_scale_2 (cx0 cx1 rx a : R) : R * R * R :=
   let '(cz0, cz1) := mul_2_1 cx0 cx1 a in
@@ -741,12 +979,6 @@ Definition ball_sub_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in
   (cz0, cz1, rz).
 
-(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. *)
-Definition dot_step_2 (s0 s1 x0 x1 y0 y1 : R) : R * R :=
-  let '(p0, p1) := mul_2_2 x0 x1 y0 y1 in
-  let '(t0, t1) := add_2_2 s0 s1 p0 p1 in
-  (t0, t1).
-
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : R) : bool :=
   let h := Req_bool x0 a in
@@ -754,30 +986,24 @@ Definition eq_2_1 (x0 x1 a : R) : bool :=
   let m := andb h l in
   m.
 
-(* eq_2_2: limbs compared in order (Milestone 1 listing). *)
-Definition eq_2_2 (x0 x1 y0 y1 : R) : bool :=
-  let h := Req_bool x0 y0 in
-  let l := Req_bool x1 y1 in
-  let m := andb h l in
-  m.
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). *)
+Definition bv_center_2 (x0 x1 : R) : R * R :=
+  let z0 := x0 in
+  let z1 := x1 in
+  (z0, z1).
 
-(* lt_2_2: limbs compared in order (Milestone 1 listing). *)
-Definition lt_2_2 (x0 x1 y0 y1 : R) : bool :=
-  let h := Rlt_bool x0 y0 in
-  let e := Req_bool x0 y0 in
-  let l := Rlt_bool x1 y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* le_2_2: limbs compared in order (Milestone 1 listing). *)
-Definition le_2_2 (x0 x1 y0 y1 : R) : bool :=
-  let h := Rlt_bool x0 y0 in
-  let e := Req_bool x0 y0 in
-  let l := Rle_bool x1 y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_2 (x0 x1 c : R) : R * R * bool :=
+  let h := rnd (x0 * c + 0) in
+  let l := rnd (x1 * c + 0) in
+  let '(z0, z1) := fast_two_sum h l in
+  let ze := Req_bool x1 0 in
+  let mm := if ze then h else l in
+  let am := Rabs mm in
+  let bc := Rlt_bool up_ball_mul_pow2_1_0 am in
+  let zc := Req_bool x0 0 in
+  let e := orb bc zc in
+  (z0, z1, e).
 
 (* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). *)
 Definition mul_ball_2_2 (x0 x1 y0 y1 : R) : R * R * R :=
@@ -818,40 +1044,6 @@ Definition le_1_2 (a y0 y1 : R) : bool :=
   let t := andb e l in
   let m := orb h t in
   m.
-
-(* le_2_1: limbs compared in order (Milestone 1 listing). *)
-Definition le_2_1 (x0 x1 a : R) : bool :=
-  let h := Rlt_bool x0 a in
-  let e := Req_bool x0 a in
-  let l := Rle_bool x1 0 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* lt_1_2: limbs compared in order (Milestone 1 listing). *)
-Definition lt_1_2 (a y0 y1 : R) : bool :=
-  let h := Rlt_bool a y0 in
-  let e := Req_bool a y0 in
-  let l := Rlt_bool 0 y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* lt_2_1: limbs compared in order (Milestone 1 listing). *)
-Definition lt_2_1 (x0 x1 a : R) : bool :=
-  let h := Rlt_bool x0 a in
-  let e := Req_bool x0 a in
-  let l := Rlt_bool x1 0 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
-Definition mul_pow2_2 (x0 x1 c : R) : R * R :=
-  let h := rnd (x0 * c + 0) in
-  let l := rnd (x1 * c + 0) in
-  let '(z0, z1) := fast_two_sum h l in
-  (z0, z1).
 
 (* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. *)
 Definition mul_pow2_step_2 (x0 x1 c : R) : R * R :=

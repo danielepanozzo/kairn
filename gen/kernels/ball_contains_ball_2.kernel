@@ -1,0 +1,38 @@
+# Whether a ball with a 2-limb center contains another, Y inside X (milestone2.md, "One enclosure
+# interface", the row of contains(Y): certain): with (z, e) = add_ball_2_2(c_y, -c_x), hi =
+# radd(abs_upper_2(z), e) is at least |c_y - c_x|, and s = radd(hi, r_y) at least |c_y - c_x| + r_y;
+# the answer is s <= r_x, which implies the containment. The special states as for one limb: true
+# when X is the whole line or Y is empty; the comparison gives false for an empty X and a nonempty Y
+# and for a whole line Y in a finite X (s is then +inf). Certain, not exact: undecided within about
+# e and a step of T of the boundary.
+kernel:        ball_contains_ball_2
+input:         cx = cx0 cx1
+input:         stored rx
+input:         cy = cy0 cy1
+input:         stored ry
+output:        mask m
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       certain m subset y x x=cx,rx y=cy,ry
+min_precision: 3
+source:        an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallCompare2.v ball_contains_ball_2_correct
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
+
+ncx0        = neg(cx0)
+ncx1        = neg(cx1)
+(z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+au          = abs_upper_2(z0, z1)
+hi          = radd(au, e)
+s           = radd(hi, ry)
+f           = le(s, rx)
+wx          = eq(rx, const inf)
+qy          = eq(ry, ry)
+ey          = not(qy)
+sp          = or(wx, ey)
+m           = or(sp, f)

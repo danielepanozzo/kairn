@@ -1,0 +1,25 @@
+# The finish of the product of two BallVectors (milestone2.md, "The product of polynomials": bv_conv_k):
+# the radius of conv_radius, with the flag true, when every coefficient written is finite (okc, the
+# mask of the convolution conv_k of the centers), the bound of dot for min(n_x, n_y) terms was given
+# (okg, the mask of bound_dot_k) and the radius is finite; otherwise the canonical NaN and the flag
+# false, and the product is the whole space. norm_finish_1 under the and of the two masks. Proposed in
+# experiments/milestone2/kernels/ and checked there by bv_conv.py, with this listing.
+kernel:        bv_conv_finish
+input:         rz
+input:         mask okc
+input:         mask okg
+output:        r
+output:        mask flag
+value:         rz
+ensures:       finite_or_nan r flag=flag if_all=okc,okg
+min_precision: 1
+source:        the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md)
+license:       proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBvConv.v bv_conv_finish_correct
+cone_exempt:   the outputs are those of norm_finish_1, after the and of two masks, which is what the kernel claims
+
+q         = and(okc, okg)
+(r, flag) = norm_finish_1(rz, q)

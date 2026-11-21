@@ -51,6 +51,25 @@ else()
   set(_full_tier OFF)
 endif()
 
+# The claims the oracle judges against, gen/claims.json unless KAIRN_ORACLE_CLAIMS names another
+# file of the same form: the kernels and folds this file and api/ register tests for are read from
+# it, and every test that runs the oracle passes it on (--claims to crosscheck.py, run.py, the
+# oracle's check and search; -DCLAIMS= to crosscheck.cmake). For a branch of the oracle that reads
+# some of the claims only: its tests run against a copy of gen/claims.json without the objects it
+# does not read yet, and the objects removed are simply absent (docs/developer/testing.md, "Against
+# other claims").
+set(KAIRN_ORACLE_CLAIMS "" CACHE FILEPATH
+  "The claims file of the oracle's tests (empty: gen/claims.json)")
+if(KAIRN_ORACLE_CLAIMS)
+  get_filename_component(_oracle_claims "${KAIRN_ORACLE_CLAIMS}" ABSOLUTE)
+  set(_oracle_claims_arg --claims "${_oracle_claims}")
+  set(_oracle_claims_define "-DCLAIMS=${_oracle_claims}")
+else()
+  set(_oracle_claims "${PROJECT_SOURCE_DIR}/gen/claims.json")
+  set(_oracle_claims_arg "")
+  set(_oracle_claims_define "")
+endif()
+
 # --- The entry points ---------------------------------------------------------------------------
 #
 # Each is "SCRIPT COMMAND" from the repository root, run as python3 SCRIPT COMMAND ARGS:
@@ -97,7 +116,7 @@ foreach(_entry IN LISTS _entries)
   get_filename_component(_name "${_script}" NAME)
   set(_args "${_command}")
   if(_entry STREQUAL "oracle/kairn-oracle claims")
-    set(_args check --claims gen/claims.json --claims-only)
+    set(_args check --claims "${_oracle_claims}" --claims-only)
   endif()
   add_test(NAME "${_name}.${_command}"
     COMMAND "${Python3_EXECUTABLE}" "${_script}" ${_args}
@@ -362,6 +381,22 @@ set(_interval_kernels
   ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
   interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
   interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
+# The kernels of the enclosure interface of stage B2 (architecture.md, "Claims of the enclosure
+# interface: predicates and comparisons", "... the set operations of a ball", "... the conversions
+# of two limbs"): the same KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES in the quick tier, on which their
+# guards see every class.
+set(_enclosure_kernels
+  interval_empty_1 interval_entire_1 interval_contains_1 interval_subset_1 interval_positive_1 interval_negative_1
+  interval_zero_1 interval_less_1 interval_less_equal_1 interval_equal_1 interval_rel_equal_1 interval_rel_interior_1
+  interval_rel_disjoint_1 interval_empty_2 interval_entire_2 interval_contains_2 interval_subset_2 interval_positive_2
+  interval_negative_2 interval_zero_2 interval_less_2 interval_less_equal_2 interval_equal_2 interval_rel_equal_2
+  interval_rel_interior_2 interval_rel_disjoint_2
+  ball_contains_point_1 ball_contains_ball_1 ball_positive_1 ball_negative_1 ball_zero_1 ball_less_1
+  ball_less_equal_1 ball_equal_1 ball_contains_point_2 ball_contains_ball_2 ball_positive_2 ball_negative_2
+  ball_zero_2 ball_less_2 ball_less_equal_2 ball_equal_2
+  ball_hull_1 ball_intersection_1 ball_split_1 ball_split_2
+  interval_mid_rad_2 interval_to_ball_2 interval_split_2 ball_to_interval_2 ball_from_interval_1 ball_hull_2
+  ball_intersection_2)
 
 # The toy formats of the interpreter, by the kernel's inputs, each written as its role: 1 a limb,
 # 2 a normalized pair of limbs, r a radius (a limb with nonneg()), c a power of two (a limb with
@@ -515,6 +550,54 @@ set(_toy_1_m_1_sum fp:5:-7:0)
 set(_toy_1_m_2_sum fp:3:-6:2)
 set(_toy_ext_1_m_sum fp:11:-29:10)
 
+# The kernels of the ball vectors and of the accumulator (architecture.md, "Ball vectors", "The
+# accumulator"), with the steps of the scalings, the copies and bv_make_finish in the shapes above
+# (mul_pow2_step_k's, split's, the sums of one limb, neg_2's, norm_finish_1's); every constant of
+# their listings a finite number of these formats, and the radius of an accumulator at p >= 3 (at
+# p = 2 its factor (1+u)^8 rounded up is 6, and from a stated value of Omega/6 the radius
+# overflows inside, a non-finite result from small operands that the cross-checks fail):
+#
+#   inputs       kernels                                  format         cases
+#   r r r        bv_add_radius_k (m, rx, ry)              fp:3:-5:3       64 000
+#   r r 1        bv_scale_radius_k (m, rx, a)             fp:3:-5:3      126 400
+#   r m r c      bv_mul_pow2_radius (m, ex, rx, c)        fp:4:-4:2       81 920
+#   ext 1 m m    bv_conv_finish (rz, okc, okg)            fp:10:-27:9    155 656
+#   1 r 1        acc_add_1 (s, a, x)                      fp:3:-3:1       53 016
+#   2 r 2        acc_add_2                                fp:3:-2:0       55 696
+#   1 r 1 1 *    acc_mul_1                                fp:2:-2:1       68 590
+#   2 r 2 2 *    acc_mul_2: a in {0, 1/2, 3/2}, s and x   fp:4:-3:-2     105 408 of 5.4 million
+#                with leading limbs in [1/2, 2)
+#   1 r 1 r      acc_merge_1 (ball_add_1's shape)         fp:2:-3:1       76 176
+#   2 r 2 r      acc_merge_2 (of its own, against         fp:3:-2:0       55 696 of 891 136
+#                ball_add_2's): a in {0, 1/4, 5/4, 3/2},
+#                c in {0, 1/2, 5/4, 7/4}
+#   r n r r      acc_radius_k (a, m, g, t)                fp:3:-2:0       53 248
+#   r r r r n    conv_radius (ma, mb, rx, ry, m, g, t):   fp:3:-4:4       23 040 of 3.9 10^10
+#     r r        a few values each, ma up to Omega
+#
+# conv_radius: by the owner's ruling of 2026-11-21 its claim is of finite results, and a result
+# that is not finite is +inf or a NaN (architecture.md, "Claims of the non-finite layer"). In
+# fp:3:-4:4 its constants are 5/2 (up((1+u)^7)) and 15/16 (that of hm), and Omega is 112: ma = Omega
+# beside a nonzero mb overflows ma mb, which gives +inf, or a NaN where g or m is zero, and the
+# other values keep nine tenths of the results finite (the guards ask three quarters; at precision
+# 2, in fp:2:-2:2, where every constant is a number, hm = prod(m, 8) overflows from the count 2).
+# A kernel whose shape is another's, with another domain, has an entry _toy_kernel_KERNEL, read
+# first.
+set(_toy_r_r_r_sum fp:3:-5:3)
+set(_toy_r_r_1_sum fp:3:-5:3)
+set(_toy_r_m_r_c_sum fp:4:-4:2)
+set(_toy_ext_1_m_m_sum fp:10:-27:9)
+set(_toy_1_r_1_sum fp:3:-3:1)
+set(_toy_2_r_2_sum fp:3:-2:0)
+set(_toy_1_r_1_1_product fp:2:-2:1)
+set(_toy_2_r_2_2_product fp:4:-3:-2 "a.in=0x0p+0/0x1p-1/0x1.8p+0,s.lead=-1:0,x.lead=-1:0")
+# The sums of magnitudes of acc_merge_2 a few values each, among them 5 beside 1.25, whose sum
+# 6.25 rounds to 6 by more than a quarter of a gap: an inexact case that is not a tie (the guards
+# ask for one), beside the ties 2.75 and 3.25 (69 620 cases).
+set(_toy_kernel_acc_merge_2 fp:3:-2:0 "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0,c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2")
+set(_toy_r_n_r_r_sum fp:3:-2:0)
+set(_toy_kernel_conv_radius fp:3:-4:4 "ma.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1/0x1.cp+6,mb.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1,rx.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0,ry.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0,m.in=0x0p+0/0x1p+0/0x1p+1/0x1.8p+1,g.in=0x0p+0/0x1p-3/0x1p-1/0x1p+0,t.in=0x0p+0/0x1p-4/0x1p+0")
+
 # The interval kernels of Milestone 2, in the extended domain: i1 and i2 an interval of one limb
 # and of two, its two bounds together (interval()), which the oracle enumerates as one operand:
 # the empty set, and every pair l <= h of bounds with l a number or -inf and h a number or +inf.
@@ -551,6 +634,22 @@ set(_toy_sampled_ext_i2_i2_sum fp:4:-10:5)
 set(_bounds "0x0p+0/0x1p-3/-0x1p-3/0x1p+0/-0x1p+0/0x1.8p+0/-0x1.8p+0/0x1.8p+1/-0x1.8p+1")
 set(_toy_ext_i2_i2_product fp:4:-3:-2 "xl.in=${_bounds},xu.in=${_bounds}")
 set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
+# The enclosure interface of stage B2 has the shapes above (ext i1, i1 i1, i2, i2 i2, b1, b1 b1,
+# b2, b2 b2, 1 1: the predicates and comparisons of one set or two, the set operations of a ball,
+# the conversions of two limbs) and four of its own, a set and a point (member):
+#
+#   inputs       kernels                                      format        cases
+#   ext i1 1     interval_contains_1                          fp:3:-4:1      95 816
+#   ext i2 2     interval_contains_2                          fp:2:-2:1      95 816
+#   ext b1 1     ball_contains_point_1                        fp:3:-4:1      89 436
+#   ext b2 2     ball_contains_point_2                        fp:3:-3:0     290 604
+#
+# (two balls of two limbs, ball_less_2 ... ball_intersection_2: fp:3:-2:-1, 122 500; two intervals
+# of two limbs: fp:3:-2:-1, 245 025, and random cases of fp:4:-10:5).
+set(_toy_ext_i1_1_sum fp:3:-4:1)
+set(_toy_ext_i2_2_sum fp:2:-2:1)
+set(_toy_ext_b1_1_sum fp:3:-4:1)
+set(_toy_ext_b2_2_sum fp:3:-3:0)
 
 # --- Not yet cross-checked by the oracle ------------------------------------------------------
 #
@@ -566,7 +665,25 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # "... two limbs and the enclosure interface"; oracle/README.md, "The kinds of the interval
 # kernels"), and since stage B every claim of the maps and their steps, the folds of maxima and
 # their kernels, and the convolutions (oracle/README.md, "Maps", "Folds of maxima",
-# "Convolutions"): both lists are empty.
+# "Convolutions"), and since the ball vectors' stage the folds with "bv": true and "bv_conv": true
+# (their requests, the requirement ball_vector, the claims encloses_entries, makes_ball_vector and
+# encloses_coefficients with count_when), their kernels and those of the accumulator
+# (oracle/README.md, "Ball vectors and the accumulator"), and since stage B2 of the enclosure
+# interface the predicates and three-valued comparisons of an interval and of a ball (the claims
+# certain and trit, the condition abs_le of their exact_when), the set operations of a ball
+# (ball_set, ball_splits) and the conversions of two limbs with the hull and the intersection of
+# balls of two limbs (finite_when of ball_of_interval, interval_of_ball of two limbs, rel, abs and
+# smallest_radius of a makes_ball from an interval; architecture.md, "Claims of the enclosure
+# interface: predicates and comparisons", "... the set operations of a ball", "... the conversions
+# of two limbs"; oracle/README.md, "The kinds of the enclosure interface"): none of those is on the
+# lists. conv_radius left them with the owner's ruling of 2026-11-21 (architecture.md, "Claims of
+# the non-finite layer"): its claim is of finite results, and a result that is not finite is +inf
+# or a NaN, as its listing's are (a NaN where ma*mb overflows and g or m is zero, 0 * inf; +inf
+# from small operands and a huge count).
+#
+# Both lists are empty: the oracle reads every claim of gen/claims.json, and configuring says that
+# none is left out. They stay, for the objects of a later stage whose claims the oracle cannot read
+# yet.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -576,16 +693,27 @@ set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
 # whose public functions (sum, dot, the bounds as functions of n) come with BallVector, and the
 # steps of the maps and the kernels of the folds of maxima (architecture.md, "Maps", "Folds of
-# maxima"), whose public functions come with BallVector too. They are cross-checked like every
-# kernel; the public interface has no form of them. (The interval kernels left this list with
+# maxima"), whose public functions come with BallVector too; and the kernels of the ball vectors
+# (architecture.md, "Ball vectors"), which only the folds of BallVector call. They are
+# cross-checked like every kernel; the public interface has no form of them. (The interval kernels left this list with
 # include/kairn/interval.hpp: the public interface reaches each, or lists it as a building block.)
+# And the kernels of the enclosure interface of stage B2 (_enclosure_kernels above: predicates,
+# comparisons, set operations of a ball, conversions of two limbs), which the oracle judges since
+# stage B2 and which no public operation calls yet (include/kairn/interval.hpp holds the places of
+# three, interval_mid_rad_2, interval_split_2 and ball_to_interval_2, with kernel_not_generated_yet):
+# each leaves this list when runner.cpp maps a public form to it.
 set(KAIRN_NOT_PUBLIC_YET
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
   sum_fast_entry_step_2 fold_finish_1 fold_finish_2
   sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
   mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
   axpy_entry_step_2_1
-  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2)
+  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
+  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
+  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2 bv_center_entry_1 bv_center_2
+  bv_make_radius bv_make_finish neg_1 bv_neg_radius bv_mul_pow2_step_1 bv_mul_pow2_step_2
+  bv_mul_pow2_radius conv_radius bv_conv_finish
+  ${_enclosure_kernels})
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than
@@ -661,6 +789,46 @@ set(_fold_toy_max_1 fp:3:-3:0 3 fp:5:-7:4)
 set(_fold_toy_max_2 fp:3:-4:1 2 fp:4:-7:2)
 set(_fold_toy_conv_1_1 fp:2:-1:0 2 fp:5:-12:-1)
 set(_fold_toy_conv_2_2 fp:4:-4:-1 1 fp:4:-7:-3)
+
+# The ball vectors (architecture.md, "Ball vectors"), each its own toy formats (_fold_toy_kernel_F,
+# read first): every canonical BallVector (every nonnegative radius with every entry, and the
+# whole space) up to the length given, every value of the other scalars, every order that differs,
+# and random arrays of a format of more bits; their quick tier is the maps' (KAIRN_CROSSCHECK_MAP_*),
+# a product of BallVectors the convolutions' lengths. "-" for the enumeration: none, where every
+# format of the fold's minimum precision has more than a few million cases (a product of
+# BallVectors, at p = 4 10 million arrays of one entry each), and the random runs alone. The
+# oracle judges V4 in the formats of its statements, binary_float (q_max >= 1, q_min =
+# 3 - q_max - 2p) or of a wider subnormal range (architecture.md, "From which precision each clause
+# holds"; oracle/README.md, "Ball vectors and the accumulator"): every format below but
+# fp:3:-2:-1, where the smallest such format of precision 3, fp:3:-4:1, has some 10^8 requests of
+# one entry each (V4 of bv_add_2 and bv_sub_2 is judged in their random arrays).
+#
+#   folds                          every operand of                    random arrays of
+#   bv_add_1, bv_sub_1             fp:2:-2:1, one entry:        36 602 fp:5:-11:4
+#   bv_add_2, bv_sub_2             fp:3:-2:-1, one entry:      121 970 fp:4:-7:2
+#   bv_scale_1                     fp:2:-2:1 up to 2:          163 328 fp:5:-12:5
+#   bv_scale_2                     fp:2:-2:1, one entry:        12 364 fp:4:-8:2
+#   bv_neg_1                       fp:2:-2:1 up to 2:            7 424 fp:5:-11:4
+#   bv_neg_2                       fp:2:-2:1 up to 2:           61 064 fp:4:-7:2
+#   bv_mul_pow2_1                  fp:2:-2:1 up to 2:           37 120 fp:5:-9:2
+#   bv_mul_pow2_2                  fp:2:-2:1 up to 2:          305 320 fp:5:-9:2
+#   bv_make_1                      fp:2:-2:1 up to 2:           21 802 fp:5:-11:4
+#   bv_make_2                      fp:2:-2:1 up to 2:          149 314 fp:4:-7:2
+#   bv_conv_1, bv_conv_2           -                                   fp:5:-12:5
+set(_fold_toy_kernel_bv_add_1 fp:2:-2:1 1 fp:5:-11:4)
+set(_fold_toy_kernel_bv_sub_1 fp:2:-2:1 1 fp:5:-11:4)
+set(_fold_toy_kernel_bv_add_2 fp:3:-2:-1 1 fp:4:-7:2)
+set(_fold_toy_kernel_bv_sub_2 fp:3:-2:-1 1 fp:4:-7:2)
+set(_fold_toy_kernel_bv_scale_1 fp:2:-2:1 2 fp:5:-12:5)
+set(_fold_toy_kernel_bv_scale_2 fp:2:-2:1 1 fp:4:-8:2)
+set(_fold_toy_kernel_bv_neg_1 fp:2:-2:1 2 fp:5:-11:4)
+set(_fold_toy_kernel_bv_neg_2 fp:2:-2:1 2 fp:4:-7:2)
+set(_fold_toy_kernel_bv_mul_pow2_1 fp:2:-2:1 2 fp:5:-9:2)
+set(_fold_toy_kernel_bv_mul_pow2_2 fp:2:-2:1 2 fp:5:-9:2)
+set(_fold_toy_kernel_bv_make_1 fp:2:-2:1 2 fp:5:-11:4)
+set(_fold_toy_kernel_bv_make_2 fp:2:-2:1 2 fp:4:-7:2)
+set(_fold_toy_kernel_bv_conv_1 - 0 fp:5:-12:5)
+set(_fold_toy_kernel_bv_conv_2 - 0 fp:5:-12:5)
 set(KAIRN_CROSSCHECK_MAP_QUICK_CASES 100 CACHE STRING
   "Random arrays in each cross-check of a map, a convolution or a fold of maxima, quick tier")
 set(KAIRN_CROSSCHECK_MAP_QUICK_LENGTH 24 CACHE STRING
@@ -680,7 +848,7 @@ set(KAIRN_CROSSCHECK_CONV_LENGTH 64 CACHE STRING
 # fails its cross-check (--fail-on-suspicious).
 set(_intermediate_overflow split two_prod_dekker)
 
-set(_claims_file "${PROJECT_SOURCE_DIR}/gen/claims.json")
+set(_claims_file "${_oracle_claims}")
 if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_claims_file}")
   file(READ "${_claims_file}" _claims)
@@ -689,7 +857,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   set(_driver "${CMAKE_CURRENT_SOURCE_DIR}/crosscheck.cmake")
   set(_crosscheck "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/crosscheck.py")
   set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
-  set(_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}")
+  set(_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    ${_oracle_claims_define})
   set(_random "-DCOUNT=${KAIRN_CROSSCHECK_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}")
   set(_random_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_CASES}")
   set(_random_quick_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_QUICK_CASES}")
@@ -823,11 +992,14 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       set(_suspicious_arg "")
     endif()
     set(_this ${_common} "-DKERNEL=${_kernel}" "-DFAIL_ON_SUSPICIOUS=${_fail_on_suspicious}")
-    set(_this_compiled compiled --kernel "${_kernel}" ${_suspicious_arg})
+    set(_this_compiled compiled --kernel "${_kernel}" ${_suspicious_arg} ${_oracle_claims_arg})
 
     # The interpreter, on every operand of the toy format, or of a restricted domain of it and
     # on random cases of all of it.
     set(_toy "${_toy${_shape}}")
+    if(DEFINED _toy_kernel_${_kernel})
+      set(_toy "${_toy_kernel_${_kernel}}")
+    endif()
     list(LENGTH _toy _toy_length)
     set(_restrict "")
     if(_toy_length GREATER 1)
@@ -866,7 +1038,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     # The compiled runners, on random cases of every stratum.
     if(_compiled)
       set(_quick_args ${_random_quick_args})
-      if(_kernel IN_LIST _interval_kernels)
+      if(_kernel IN_LIST _interval_kernels OR _kernel IN_LIST _enclosure_kernels)
         set(_quick_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES}")
       endif()
       foreach(_format binary64 binary32)
@@ -917,6 +1089,14 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       string(JSON _is_map ERROR_VARIABLE _no_map GET "${_claims}" folds ${_i} map)
       string(JSON _is_conv ERROR_VARIABLE _no_conv GET "${_claims}" folds ${_i} conv)
       string(JSON _kind0 ERROR_VARIABLE _no_kind0 GET "${_claims}" folds ${_i} ensures 0 kind)
+      string(JSON _is_bv ERROR_VARIABLE _no_bv GET "${_claims}" folds ${_i} bv)
+      string(JSON _is_bvconv ERROR_VARIABLE _no_bvconv GET "${_claims}" folds ${_i} bv_conv)
+      if(_no_bv)
+        set(_is_bv OFF)
+      endif()
+      if(_no_bvconv)
+        set(_is_bvconv OFF)
+      endif()
       set(_shape "")
       set(_quick_count ${KAIRN_CROSSCHECK_FOLD_QUICK_CASES})
       set(_quick_packed ${KAIRN_CROSSCHECK_FOLD_PACKED_QUICK_CASES})
@@ -924,7 +1104,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       set(_full_fold_${_fold}_cases ${KAIRN_CROSSCHECK_FOLD_CASES})
       set(_full_fold_${_fold}_length ${KAIRN_CROSSCHECK_FOLD_LENGTH})
       set(_full_fold_${_fold}_sampled_length 1024)
-      if(_is_map OR _is_conv OR _kind0 STREQUAL "upper")
+      if(_is_map OR _is_conv OR _kind0 STREQUAL "upper" OR _is_bv OR _is_bvconv)
         set(_quick_count ${KAIRN_CROSSCHECK_MAP_QUICK_CASES})
         set(_quick_packed ${KAIRN_CROSSCHECK_MAP_QUICK_CASES})
         set(_quick_length ${KAIRN_CROSSCHECK_MAP_QUICK_LENGTH})
@@ -946,7 +1126,10 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
             endif()
           endforeach()
         endif()
-      elseif(_is_conv)
+      elseif(_is_bv)
+        set(_shape "_bv")
+        set(_full_fold_${_fold}_length ${KAIRN_CROSSCHECK_MAP_LENGTH})
+      elseif(_is_conv OR _is_bvconv)
         set(_shape "_conv")
         set(_quick_length ${KAIRN_CROSSCHECK_CONV_QUICK_LENGTH})
         set(_full_fold_${_fold}_cases ${KAIRN_CROSSCHECK_CONV_CASES})
@@ -962,6 +1145,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       endforeach()
       # The toy formats of the full tier: the enumeration's format and length, the sampled format.
       set(_toy "${_fold_toy${_shape}}")
+      if(DEFINED _fold_toy_kernel_${_fold})
+        set(_toy "${_fold_toy_kernel_${_fold}}")
+      endif()
       set(_error "")
       if(NOT _toy)
         string(REPLACE "_" " " _operands "${_shape}")
@@ -972,6 +1158,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
         list(GET _toy 1 _toy_length)
         list(GET _toy 2 _toy_sampled)
         foreach(_f IN ITEMS ${_toy_enum} ${_toy_sampled})
+          if(_f STREQUAL "-")
+            continue()
+          endif()
           string(REGEX REPLACE "^fp:([0-9]+):.*" "\\1" _p "${_f}")
           if(_min MATCHES "^[0-9]+$" AND _p LESS _min)
             set(_error "the toy format ${_f} of ${_fold} is below its min_precision ${_min}: "
@@ -983,7 +1172,12 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       list(APPEND _full_folds ${_fold})
       set(_full_fold_${_fold}_toy "${_toy}")
       set(_full_fold_${_fold}_error "${_error}")
-      set(_this_fold compiled --kernel "${_fold}" --fail-on-suspicious)
+      set(_this_fold compiled --kernel "${_fold}" --fail-on-suspicious ${_oracle_claims_arg})
+      # A map or a ball vector writes an array that may be one it reads: its requests in place
+      # too, a stream of their own through every runner (crosscheck.py --inplace).
+      if(_is_map OR _is_bv)
+        list(APPEND _this_fold --inplace)
+      endif()
       set(_full_fold_${_fold}_compiled ${_this_fold})
       foreach(_format binary64 binary32)
         set(_packed_args "")
@@ -1014,7 +1208,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   # cross-check of mul_2_2_full with it on the quick tier's cases: it must pass with the
   # consecutive assignment where no register mixes a non-finite operand with finite ones (W = 2
   # and 4 on the oracle's stream) and fail, by the oracle's verdict, with the permuted one; and
-  # the runner must refuse the consecutive assignment under the guard.
+  # the runner must refuse the consecutive assignment under the guard. The oracle reads the claims
+  # of KAIRN_ORACLE_CLAIMS, as every other cross-check.
   if(_packed_backend AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lanes/lane_fault.py")
     add_executable(kairn-gen-packed-runner-lane-fault "${PROJECT_SOURCE_DIR}/gen/tests/packed_runner.cpp")
     target_include_directories(kairn-gen-packed-runner-lane-fault PRIVATE
@@ -1029,7 +1224,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/lanes/lane_fault.py"
           --runner "$<TARGET_FILE:kairn-gen-packed-runner-lane-fault>" --format ${_format}
           --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_QUICK_CASES}"
-          --summary-dir "${_summaries}/lanes")
+          --summary-dir "${_summaries}/lanes" ${_oracle_claims_arg})
       set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled;lanes")
     endforeach()
   endif()
@@ -1048,6 +1243,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   if(_n_not_checked GREATER 0 OR _n_folds_not_checked GREATER 0)
     message(STATUS "Kairn tests: not yet cross-checked by the oracle (KAIRN_NOT_YET_CROSS_CHECKED): "
       "${_n_not_checked} kernels and ${_n_folds_not_checked} folds, tested by the generator's tier")
+  else()
+    message(STATUS "Kairn tests: the oracle judges every kernel and fold of the claims "
+      "(KAIRN_NOT_YET_CROSS_CHECKED and KAIRN_NOT_YET_CROSS_CHECKED_FOLDS name none of them)")
   endif()
   message(STATUS "Kairn tests: cross-checks of ${_count} kernels and ${_n_folds} folds: the compiled runners ${_labels} "
     "(${_packed}), on ${KAIRN_CROSSCHECK_QUICK_CASES} cases per kernel and format in the quick "
@@ -1133,6 +1331,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/regression/
   add_test(NAME regression.cases
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/regression/run.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/regression/cases.txt" ${_regression_args}
+      ${_oracle_claims_arg}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(regression.cases PROPERTIES TIMEOUT 300 LABELS regression)
 endif()

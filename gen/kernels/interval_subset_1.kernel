@@ -1,0 +1,27 @@
+# Whether an interval with one-limb bounds is a subset of another, X inside Y (milestone2.md, "One
+# enclosure interface": the row of contains(Y), with the operands exchanged, and the relation subset
+# of IEEE 1788): y_l <= x_l and x_u <= y_u. Exact, and no test of emptiness: with the empty set
+# stored as (+inf, -inf) the empty set is a subset of every interval and no nonempty interval is a
+# subset of it, the conventions of IEEE 1788 (Table 4.6). For every precision.
+kernel:        interval_subset_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        mask m
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       certain m subset x y x=xl,xu y=yl,yu exact
+min_precision: 1
+source:        the bounds compared (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalPredicates.v interval_subset_1_correct
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+a = le(yl, xl)
+b = le(xu, yu)
+m = and(a, b)

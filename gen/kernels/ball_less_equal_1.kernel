@@ -1,0 +1,36 @@
+# The three-valued X <= Y of balls with one-limb centers (milestone2.md, "One enclosure interface",
+# "Comparisons"): yes when every member of X is at most every member of Y, r_x + r_y <= c_y - c_x,
+# by le_2_2 on the exact pairs and a test that the sum of the radii is finite; no when every member
+# of X is above every member of Y, r_x + r_y < c_x - c_y, by lt_2_2. Both false for an empty operand
+# and for the whole line. Exact when r_x + r_y <= Omega (and also, not claimed, when the difference
+# of the centers does not overflow).
+kernel:        ball_less_equal_1
+input:         stored cx
+input:         stored rx
+input:         stored cy
+input:         stored ry
+output:        mask yes
+output:        mask no
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       trit yes no le x y x=cx,rx y=cy,ry exact_when=abs_le(rx+ry,omega)
+min_precision: 2
+source:        the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates.v ball_less_equal_1_correct
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical ball
+
+(s0, s1) = two_sum_ord(rx, ry)
+ncx      = neg(cx)
+(d0, d1) = two_sum_ord(cy, ncx)
+ncy      = neg(cy)
+(g0, g1) = two_sum_ord(cx, ncy)
+a        = le_2_2(s0, s1, d0, d1)
+sa       = abs(s0)
+fs       = lt(sa, const inf)
+yes      = and(a, fs)
+no       = lt_2_2(s0, s1, g0, g1)

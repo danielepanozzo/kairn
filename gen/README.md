@@ -24,8 +24,8 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/IeeeModel.v` | One Rocq `Definition` per kernel that has an IEEE-model statement, over Flocq's binary floating-point numbers (signed zeros, infinities, NaN), each operation the one of `proofs/theories/IeeeOperations.v` |
 | `proofs/gen/IeeeStatements.v` | `Definition K_ieee_spec : Prop` (and the finite-domain forms) per such kernel, from its claims, in the vocabulary of `proofs/theories/IeeeVocabulary.v` |
 | `proofs/gen/IeeeAudit.v` | For each kernel whose IEEE-model status is not unverified, checks that its theorem has the generated statement as its type and prints its assumptions |
-| `proofs/gen/IeeeFoldModel.v` | Per fold, its step and combination over tuples of floats (the IEEE models of IeeeModel.v) and its two orders with the finish, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v` |
-| `proofs/gen/IeeeFoldStatements.v` | `F_seq_ieee_spec` and `F_lanes_ieee_spec` per fold (the flag, and the real model's result when it is true), and `K_ieee_lead_spec` per step and combination of a fold |
+| `proofs/gen/IeeeFoldModel.v` | Per fold, its step and combination over tuples of floats (the IEEE models of IeeeModel.v) and its two orders with the finish, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v`; per map, its step, its check and its two orders (`map` of the step, the mask, the second pass); per convolution, its check and `F_conv` |
+| `proofs/gen/IeeeFoldStatements.v` | `F_seq_ieee_spec` and `F_lanes_ieee_spec` per fold (the flag, and the real model's result when it is true) and per map (element by element, and the mask), `F_ieee_spec` per convolution (coefficient by coefficient, and the mask), and `K_ieee_lead_spec` per step and combination of a fold and per step of a map |
 | `proofs/gen/IeeeWith.v` | Per kernel `constexpr` by the rule of the product, `K_with p_`: its IEEE-model definition with the product as an argument (`ieee.with_model`), for the theorems of its two executions |
 | `proofs/gen/FoldModel.v` | Per fold, its step and combination over tuples of reals and its two orders, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v` |
 | `proofs/gen/FoldStatements.v` | `Definition F_seq_spec : Prop` and `F_lanes_spec` per fold, from its claims; the proofs `F_seq_correct` and `F_lanes_correct` must have these types |
@@ -157,6 +157,27 @@ t        = add(x0, y0)
   `encloses_interval` entry whose set is a product;
   and `ordinary_inline: REASON`, for a kernel of at most two limbs whose C++ is an ordinary inline
   function rather than forced inline (`interval_mul_2`: milestone2.md, "Inlining and compile time").
+- The accumulator (architecture.md, "The accumulator"): `ensures: rounded b nearest
+  value=a+abs(x[0])`, the rounding of a value of its own over the inputs and their limbs, of the
+  finite domain; and `requires: count m` in the IEEE-model statements (`ieee: spec`) too. An
+  IEEE-model statement whose kernel has claims about an output group other than the first puts
+  each group's claims under the finiteness of that group's leading limb.
+- Stage B2 of the intervals (architecture.md, "Claims of the enclosure interface: predicates and
+  comparisons"): `ensures: certain m REL ARG... x=xl,xu [exact | exact_when=abs_le(EXPR,omega)]`, a
+  mask true only if the relation holds (`lt`, `le`, `eq` of every choice of members, an argument a
+  set or `0`; `member t x`, `subset`, `equal`, `interior`, `disjoint`, `empty`, `entire`), and
+  `ensures: trit yes no REL A B x=xl,xu y=yl,yu [exact | exact_when=...]`, the three-valued form of
+  `lt`, `le`, `eq` and `member`. A set `x=A,B` is an interval or a ball as the requirements say
+  (`requires: interval A B`, `requires: ball A B`), and parse_kernel writes it under `intervals` or
+  `balls` (`ir._set_kinds`). The C++ parameter of an input the computation does not need
+  (`unused:`) may be the first one (`interval_empty_1` reads only the lower bound). The set
+  operations of a ball: `ensures: ball_set cz rz union x=cx,rx y=cy,ry` (or `intersection`) and
+  `ensures: ball_splits ca ra cb rb from=c,r`. The conversions of two limbs: `finite_when=abs_le(xl,-2);
+  abs_le(xu,-2)` after a `ball_of_interval` entry (the radius finite under the conditions);
+  `interval_of_ball zl zu x x=c,r tight=outward;rel=EXPR;abs=EXPR [exact_lower=zero(c-r)]
+  [exact_upper=zero(c+r)] [bounded_when=abs_le(x,-2)]` with bounds of two limbs; and `rel=EXPR
+  abs=EXPR [smallest_radius]` after a `makes_ball ... from_interval=lo,hi` entry
+  (`ball_from_interval_1`).
 - `guard_pending: a REASON`: an input of an entry kernel whose guard is not written yet (only
   `add_2_1`, whose guard changes the formal model of a proved kernel and lands with its proof).
 - The folds' stage (architecture.md, "Claims of Milestone 2"): `requires: count m` ($m = 0$ or
@@ -170,6 +191,11 @@ t        = add(x0, y0)
   values of its own (`norm_combine`, `norm_step_k` have no `value:`); and
   `finite_or_nan r flag=f if=ok steps=1`, the finish of such a fold: the value stepped up that many
   times, a NaN when the mask input `ok` is false. A kernel may have mask inputs (`input: mask ok`).
+- The scaling of a BallVector by a power of two (architecture.md, "Ball vectors" and "Claims of
+  Milestone 2"): `exact_flag=e` after the `exact_when=` of an `error` entry, the mask output `e` true
+  exactly when those conditions hold; and of an `upper` entry with a value of its own, `unless=ex`, the
+  bound when the mask input `ex` is false, and `exact_when=mask(ex);zero_or_abs_gt(rx*c,eta/(2*u))`, the
+  output the value exactly when the conditions hold, `mask(NAME)` a condition that a mask input is true.
 
 ## A fold description
 
@@ -222,6 +248,9 @@ claims, element by element) and `finite_or_nan z flag=finite`. `rules.map_rules`
 `cpp.map_seq`, `cpp.map_lanes` and `simd.map_packed` print it, with the second pass that makes an
 element that is not finite the canonical NaN; `rocq.map_model` and `rocq.map_statement` give it a
 model, `map` of its step, and a statement, `Forall2` of the elements and the elements written;
+`ieee.map_model` and `ieee.map_statement` its IEEE model, the loops with the mask and the second pass,
+and its statements there, element by element and of the mask (architecture.md, "Maps and
+convolutions in the IEEE model");
 `claims.map_claims`, its entry of `"folds"`, with `"map": true`; the interpreter runs it with the
 scalars after the length (`Machine.run_fold`), and the runners complete its requests
 (`KAIRN_RUNNER_MAP` of `runner_kernels.inc`).
@@ -244,10 +273,64 @@ finish) and the second pass of a map, the order `sequential` only, and claims `c
 `finite_or_nan z flag=finite`. `rules.conv_rules` checks it; `cpp.conv_seq` prints it (no packed
 form); `rocq.conv_model` and `rocq.conv_statement` give it a model, a `map` over the indices of the
 coefficients of that fold's sequential order on `conv_terms xs ys j`, and a statement, `Forall2` of
-the indices and the coefficients; `claims.conv_claims`, its entry of `"folds"`, with `"conv": true`;
+the indices and the coefficients; `ieee.conv_model` and `ieee.conv_statement` their IEEE
+counterparts, with the mask and the second pass; `claims.conv_claims`, its entry of `"folds"`, with
+`"conv": true`;
 the interpreter runs it (`Machine.run_fold`) and completes its requests, which have two lengths
 (`interp.complete_conv`), and so does the compiled runner (`KAIRN_RUNNER_CONV` of
 `runner_kernels.inc`).
+
+A ball vector (architecture.md, "Ball vectors") is a map of the centers of BallVectors with the state
+of a fold of maxima: `record: (m, ok) = norm_step_k(m, ok, z)` updates the state from each center
+written, `combine:` is that fold's combination, `radius: rz = bv_add_radius_k(m, rx, ry)` gives the
+one radius from the largest magnitude and the scalars, and `finish: (r, finite) = norm_finish_1(rz,
+ok)` tests it; when the flag is false a second pass writes every center zero and the radius is
++infinity, the whole space. Each array is required `ball_vector ARRAY RADIUS`, and the fold claims
+`encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=... radii_when=... finite_from=P]`,
+`radii_when` the conditions of V4 on the scalars alone, so that V4 holds of every length, the empty vector
+included (it comes with `finite_when`), `finite_from` the precision from which V4 is claimed when it is
+above the fold's minimum precision (`rules._finite_from`: from that precision every constant of the
+fold must be finite in the smallest format, emax = prec + 1; `bv_add_1`, `bv_sub_1`, `bv_scale_1` say
+`finite_from=2`), and the word `exact` (`"exact_when": []`) for a ball vector that
+is exactly the set (`bv_neg_k`), or `exact_when=CONDITIONS` for one exact under conditions
+(`bv_mul_pow2_k`): its state has a third group, `mask ex`; its step returns the center and a mask, `(z, e)
+= STEP(...)`; a second `record:` line `ex = and(ex, e)` and a second `combine:` line `ex = and(ex, ex)`
+and the mask into the state; the radius takes `ex` after the state's limb; the conditions are those of
+the step's `exact_flag` and of the radius's exact `upper` entry (`rules._bv_exact`); a scalar may be
+required `power_of_two`. A constructor (`bv_make_k`) reads the centers and the radius
+given and claims `makes_ball_vector z rr from=c,r flag=F`; its finish claims
+`finite_or_nan r flag=flag if=ok nonneg`, the value also not negative (`rules._bv_make_claims`).
+`rules.bv_rules` checks
+it; `cpp.bv_seq`, `cpp.bv_lanes` and `simd.bv_packed` print it; `rocq.bv_model` and
+`rocq.bv_statement` give it a model (the centers and the radius) and a statement (containment entry
+by entry); `ieee.bv_model` and `ieee.bv_statement` its IEEE model and V1 to V4 of milestone2.md;
+`claims.bv_claims`, its entry of `"folds"`, with `"bv": true`; the interpreter runs it
+(`Machine.run_fold`), and the runners complete its requests (`KAIRN_RUNNER_BV` of
+`runner_kernels.inc`), the centers written, then the radius and the flag. The requests of a map and of a
+ball vector may say `inplace=I` after the length (architecture.md, "The line protocol"): the runners
+then pass array I as the array written, and the interpreter computes as without the field.
+
+The product of two BallVectors (architecture.md, "Ball vectors": `bv_conv_k`) names a convolution for
+its centers (`centers: conv_2`) and has no step: one `record:` line per array read, the step of a fold
+of maxima on that array's entries (`(ma, oka) = norm_step_2(ma, oka, x)`), a count made from the lengths
+(`count: m = min(n_x, n_y)`, a number of `T` rounded up), a kernel of that count run once (`bound: (g,
+t, okg) = bound_dot_2(m)`), the radius on the maxima, the radii, the count and the bound, and a finish
+on the radius, the convolution's mask and the bound's (`finish: (r, flag) = bv_conv_finish(rz, finite,
+okg)`, whose kernel claims `finite_or_nan r flag=flag if_all=okc,okg`). Its arrays are required
+`ball_vector`, and it claims `encloses_coefficients z r SET NAME=ARRAY,RADIUS... flag=F
+finite_when=... radii_when=... count_when=le(EXPR,K)...`, the conditions of `finite_when` on pairs of
+entries, on one array's entries or on the scalars, and `count_when` on the count `n` with `unit(K)` of a
+kernel, `u` and `eta` (`bv_conv_2` has the smallest normal number `eta/(2*u)` there, so that the count
+is a number of the format: architecture.md, "Ball vectors"). Its radius kernel may require `at_most
+NAME K`. `rules.bv_conv_rules` checks it (with
+`rules._bv_conv_bound`, that the bound is that of the products of the convolution's dot product);
+`cpp.bv_conv_seq` prints it (no packed form, with the end function `bv_conv_end_function`);
+`rocq.bv_conv_model` and `rocq.bv_conv_statement` give it a model and a statement (containment
+coefficient by coefficient for members chosen independently); `ieee.bv_conv_model` and
+`ieee.bv_conv_statement` its IEEE model and V1 to V4; `claims.bv_conv_claims`, its entry of `"folds"`,
+with `"bv_conv": true`; the interpreter runs it (`Machine.run_fold`) and completes its requests, which
+have two lengths and two radii (`interp.complete_conv`), and so does the compiled runner
+(`KAIRN_RUNNER_BV_CONV` of `runner_kernels.inc`).
 
 ## The operations
 
@@ -413,10 +496,21 @@ rule:
    kernel of the finite domain names the theorems of its IEEE-model statements once each is
    proved: `ieee_bridge_theorem: FILE K_ieee_bridge` (with `ieee: bridge`), `ieee_spec_theorem:
    FILE K_ieee_correct` (with `ieee: spec`), `ieee_lead_theorem: FILE K_ieee_lead` (the step or
-   the combination of a fold); a fold that is not a map, `ieee_theorem: FILE`, the file of
-   `F_seq_ieee_correct` and `F_lanes_ieee_correct`. Each names only a statement that is printed,
+   the combination of a fold, or the step of a map); `ieee_lead_theorem` is also that of a kernel
+   of the extended domain that has a leading-limb statement, the step of a fold (`neg_2`,
+   `bv_center_2`), whose other IEEE-model theorem is its `ieee_theorem`. A fold or a map names
+   `ieee_theorem: FILE`, the file of `F_seq_ieee_correct` and `F_lanes_ieee_correct` (and, for a
+   fold of maxima in both orders, of `F_orders_ieee_correct` and `F_flag_ieee_correct`, the
+   theorems of its two statements more), and a convolution or a product of two BallVectors, which
+   have one statement each (`F_ieee_spec`), the file of `F_ieee_correct`. A convolution also names
+   `terms_theorem: FILE`, the file of `conv_terms_eq_correct`, `conv_terms_count_correct` and
+   `conv_terms_length_correct`, the theorems of the three statements of `conv_terms` in
+   `proofs/gen/FoldStatements.v`, which every convolution shares: the convolutions that name one
+   name the same file, and `proofs/gen/Audit.v` checks the three once. Each names only a statement
+   that is printed,
    by its conventional name, in `proofs/theories/`; a statement whose theorem is not named is
-   printed as unverified, and only those that are named are in `proofs/gen/IeeeAudit.v`.
+   printed as unverified, and only those that are named are in `proofs/gen/IeeeAudit.v` (those of
+   `conv_terms`, of the real model, in `proofs/gen/Audit.v`).
 6. R3: in a kernel marked `entry`, an input that enters from the program (a one-limb input not
    declared `stored`, or the limbs of an input declared `supplied`), and whatever `neg`, `abs`,
    `select` or `copy` alone make of it, is never an operand of `add` or `sub` nor the addend of an
@@ -447,7 +541,8 @@ without one), of
 `normalized` for `canonical`), of constant-evaluation variants (same signature, no FMA), and of
 computed constants (above). A kernel has no real-model statement when it claims `extends`,
 `represents`, `makes_ball` or `finite_or_nan` (and the interval kinds `makes_interval`, `encloses_interval`,
-`set_bound`, `interval_set`, `ball_of_interval`, `interval_of_ball`, `splits`) and nothing else, or
+`set_bound`, `interval_set`, `ball_of_interval`, `interval_of_ball`, `splits`, `certain`, `trit`, `ball_set`,
+`ball_splits`) and nothing else, or
 says `ieee_only: yes`: the full kernels, the constructors, the interval kernels, the finishes of
 the folds. A constant `up(EXPR)` that only such kernels use (the halving of `ball_from_interval_2`
 and `interval_mid_rad_1`) has no definition in `Model.v`; `IeeeModel.v` defines it from its
@@ -530,6 +625,19 @@ statement uses too is `Model.v`'s, under one name: the doubling of `ball_from_in
   with them, and on their own the checks of `rules.max_rules`, the empty list and non-finite
   elements in every order, and their claim in exact arithmetic on random lists of toy formats of
   precision 1 to 6;
+- the maps and the convolutions in the IEEE model (`test_ieee_writers.py`): their statements of
+  `IeeeFoldStatements.v` read against the interpreter on formats of the IEEE shape of a few bits,
+  where overflows are frequent, and in `binary64` and `binary32`, with infinities, NaN and numbers
+  near the top among the scalars and elements, in every order; the lead statements of the steps of
+  the maps on operands of any value; and the same statements against every build of the runner;
+- the ball vectors (`test_bv.py`): the rules of a ball vector; V1 to V4 of milestone2.md and the
+  flag in exact arithmetic on the interpreter, on formats of the IEEE shape of a few bits and in
+  `binary64` and `binary32`, the whole space among the operands, in every order; the one radius
+  equal to the largest of the entrywise radii of the Ball kernel; the scalings by a power of two
+  exactly the set (and the radius $c\,r_x$) wherever their conditions hold, and sixty halvings in a row
+  exact; the compiled `F_seq`, `F_lanes`
+  and `F_packed` bit for bit against the interpreter; the line protocol; the printers and the claims,
+  and the entries that architecture.md writes out;
 - the convolutions (`test_conv.py`): the rules of a convolution; the interpreter, each coefficient
   the fold of its coefficients on its terms, their number, the canonical NaN of the coefficients a
   non-finite term reaches; the claims in exact arithmetic on toy formats, each coefficient within

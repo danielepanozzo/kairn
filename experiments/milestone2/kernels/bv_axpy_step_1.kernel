@@ -1,0 +1,14 @@
+# Proposed (milestone2.md, "BallVector": bv_axpy_k): the step of bv_axpy_1, the operations of
+# axpy_step_1 (mul_1_1, then add_1_1), with the scaled center p as a second output (bv_axpy_step_2,
+# bv_proposals.py).
+kernel:        bv_axpy_step_1
+input:         stored x
+input:         stored y
+input:         a
+output:        z
+output:        p
+status:        unverified
+entry:         yes
+
+p = mul_1_1(a, x)
+z = add_1_1(p, y)

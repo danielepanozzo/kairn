@@ -1,0 +1,21 @@
+# Whether every member of a ball with a 2-limb center is negative, and the ball is not empty
+# (milestone2.md, "One enclosure interface", the row of certainly_negative()): c < -r by lt_2_1. The
+# comparison of Ball<T, 2>::certainly_negative (include/kairn/ball.hpp). Exact.
+kernel:        ball_negative_2
+input:         c = c0 c1
+input:         stored r
+output:        mask m
+requires:      ball c r
+ensures:       certain m lt x 0 x=c,r exact
+min_precision: 1
+source:        the center compared with the negated radius by lt_2_1 (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates2.v ball_negative_2_correct
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
+
+nr = neg(r)
+m  = lt_2_1(c0, c1, nr)

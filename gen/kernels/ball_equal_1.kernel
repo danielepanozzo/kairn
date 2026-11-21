@@ -1,0 +1,35 @@
+# The three-valued X = Y of balls with one-limb centers (milestone2.md, "One enclosure interface",
+# "Comparisons"): yes when every member of X equals every member of Y, that is both balls the same
+# point, r_x = r_y = 0 and c_x = c_y; no when no member of X equals one of Y, the balls disjoint,
+# r_x + r_y < |c_y - c_x|, by lt_2_2 on the exact pairs. Both false for an empty operand and for the
+# whole line. Exact when r_x + r_y <= Omega.
+kernel:        ball_equal_1
+input:         stored cx
+input:         stored rx
+input:         stored cy
+input:         stored ry
+output:        mask yes
+output:        mask no
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       trit yes no eq x y x=cx,rx y=cy,ry exact_when=abs_le(rx+ry,omega)
+min_precision: 2
+source:        the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates.v ball_equal_1_correct
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical ball
+
+ea       = eq(rx, 0)
+eb       = eq(ry, 0)
+ec       = eq(cx, cy)
+eab      = and(ea, eb)
+yes      = and(eab, ec)
+(s0, s1) = two_sum_ord(rx, ry)
+ncx      = neg(cx)
+(d0, d1) = two_sum_ord(cy, ncx)
+(a0, a1) = abs_2(d0, d1)
+no       = lt_2_2(s0, s1, a0, a1)

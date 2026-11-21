@@ -10,6 +10,7 @@ ensures:       normalized z
 ensures:       error z R c=3/(1-4*u) k=2 t=0
 min_precision: 3
 theorem:       proofs/theories/Sign.v sub_2_2_correct
+ieee_lead_theorem: proofs/theories/IeeeMapSteps.v sub_2_2_ieee_lead
 source:        add_2_2 (JMP17 Alg. 6) on -y
 license:       algorithm: published; proof: MIT
 status:        proved

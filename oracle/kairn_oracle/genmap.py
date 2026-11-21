@@ -100,6 +100,10 @@ CONV_LENGTHS = ((0, 0), (0, "s"), ("s", 0), (1, 1), (1, "s"), ("s", 1), (2, 3), 
 
 def kind_of(obj):
     from . import maps as MP
+    from . import bvfolds as BF
+    if isinstance(obj, (BF.BallVector, BF.BvConv)):
+        # The ball vectors (genbv.py).
+        return "bv"
     if isinstance(obj, MP.Map):
         return "map"
     if isinstance(obj, MP.Conv):
@@ -433,7 +437,8 @@ def _elem_nonfinite(gen, rng, el):
 
 
 class RandomMapGen:
-    def __init__(self, m, fmt, seed, strata=None, orders=None, max_length=None, index_tags=True):
+    def __init__(self, m, fmt, seed, strata=None, orders=None, max_length=None, index_tags=True,
+                 inplace=False):
         self.fold = self.m = m
         self.fmt = fmt
         self.shape = MapShape(m)
@@ -441,6 +446,11 @@ class RandomMapGen:
         schedule = MAP_SCHEDULE if self.shape.two else tuple(s for s in MAP_SCHEDULE
                                                               if s != "tail")
         _setup(self, m, seed, strata, orders, max_length, index_tags, known, schedule, "map")
+        # In-place requests (gen --inplace): every request carries inplace=I, I in turn over the
+        # arrays read of the limbs of the array written (architecture.md, "The line protocol").
+        self.inplace = [i for i, (_n, l) in enumerate(m.arrays) if l == m.wlimbs] if inplace else []
+        if inplace:
+            self.key = hashlib.blake2b(self.key + b"|inplace", digest_size=32).digest()
 
     def make(self, rng, stratum, n):
         sh, fmt = self.shape, self.fmt
@@ -489,7 +499,8 @@ class RandomMapGen:
         else:
             raise G.GenError("could not generate a valid case %d (%s)" % (i, stratum))
         return map_text(self.m, self.fmt, o, scal, elems, rng,
-                        "#%s:%d" % (stratum, i) if self.index_tags else "#" + stratum)
+                        "#%s:%d" % (stratum, i) if self.index_tags else "#" + stratum,
+                        self.inplace[i % len(self.inplace)] if self.inplace else None)
 
 
 def _setup(g, obj, seed, strata, orders, max_length, index_tags, known, schedule, what):
@@ -526,7 +537,8 @@ def _header(g, start, count):
     return ("# kairn-oracle gen event=begin kernel=%s format=%s mode=random seed=%s strata=%s "
             "orders=%s maxlen=%d start=%d count=%d" % (
                 g.fold.name, g.fmt.name, g.seed, ",".join(g.strata), ",".join(g.orders),
-                g.max_length, start, count))
+                g.max_length, start, count)) + (" inplace=yes" if getattr(g, "inplace", None)
+                                                else "")
 
 
 def _lines(g, start, count):
@@ -548,8 +560,10 @@ def _tok(fmt, v, neg):
     return F.to_hex(v, fmt.qmin)
 
 
-def map_text(m, fmt, order, scal, elems, rng, tag):
+def map_text(m, fmt, order, scal, elems, rng, tag, inplace=None):
     toks = [m.name, fmt.name, order, str(len(elems))]
+    if inplace is not None:
+        toks.append("inplace=%d" % inplace)
     for n, _l in m.scalars:
         toks.extend(_tok(fmt, v, rng.chance(1, 4)) for v in scal[n])
     for n, l in m.arrays:
@@ -953,13 +967,26 @@ class ExhaustiveConvGen:
     lines = ExhaustiveMapGen.lines
 
 
-def random_gen(obj, fmt, seed, strata, orders, max_length, index_tags=True):
+def random_gen(obj, fmt, seed, strata, orders, max_length, index_tags=True, inplace=False):
     k = kind_of(obj)
+    if k == "bv":
+        from . import genbv as GB
+        return GB.RandomBVGen(obj, fmt, seed, strata, orders, max_length, index_tags, inplace)
+    if inplace:
+        return RandomMapGen(obj, fmt, seed, strata, orders, max_length, index_tags, inplace=True) \
+            if k == "map" else _no_inplace(obj)
     cls = {"map": RandomMapGen, "conv": RandomConvGen, "max": RandomMaxGen}[k]
     return cls(obj, fmt, seed, strata, orders, max_length, index_tags)
 
 
+def _no_inplace(obj):
+    raise G.GenError("%s has no in-place form (a map or a ball vector has one)" % obj.name)
+
+
 def exhaustive_gen(obj, fmt, max_length, index_tags=True):
+    if kind_of(obj) == "bv":
+        from . import genbv as GB
+        return GB.ExhaustiveBVGen(obj, fmt, max_length, index_tags)
     if kind_of(obj) == "conv":
         return ExhaustiveConvGen(obj, fmt, max_length, index_tags)
     return ExhaustiveMapGen(obj, fmt, max_length, index_tags)

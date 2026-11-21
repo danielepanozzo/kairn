@@ -68,6 +68,17 @@ extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_fixups_inline() noexcept {}
         [[maybe_unused]] const L* sc, [[maybe_unused]] L* const* w, [[maybe_unused]] bool* mo
 #define KAIRN_OBJCODE_MAP(PREFIX, NAME, L, CALL) \
     extern "C" KAIRN_OBJCODE_NOINLINE void PREFIX##NAME(KAIRN_OBJCODE_MAP_ARGS(L)) noexcept { CALL; }
+// The ball vectors have the functions of the maps, which also take the radius by reference.
+#define KAIRN_OBJCODE_BV_ARGS(L)                                                                     \
+    [[maybe_unused]] const L* const* in, [[maybe_unused]] std::size_t n, [[maybe_unused]] std::size_t lanes, \
+        [[maybe_unused]] const L* sc, [[maybe_unused]] L* const* w, [[maybe_unused]] L* out, [[maybe_unused]] bool* mo
+#define KAIRN_OBJCODE_BV(PREFIX, NAME, L, CALL) \
+    extern "C" KAIRN_OBJCODE_NOINLINE void PREFIX##NAME(KAIRN_OBJCODE_BV_ARGS(L)) noexcept { CALL; }
+#define KAIRN_RUNNER_BV(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED) \
+    KAIRN_OBJCODE_BV(kairn_objcode_fold_seq_double_, NAME, double, SEQ)       \
+    KAIRN_OBJCODE_BV(kairn_objcode_fold_seq_float_, NAME, float, SEQ)         \
+    KAIRN_OBJCODE_BV(kairn_objcode_fold_lanes_double_, NAME, double, LANES)   \
+    KAIRN_OBJCODE_BV(kairn_objcode_fold_lanes_float_, NAME, float, LANES)
 #define KAIRN_RUNNER_KERNEL(NAME, IN, OUT, CALL)
 #define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)        \
     KAIRN_OBJCODE_FOLD(kairn_objcode_fold_seq_double_, NAME, double, SEQ)     \
@@ -89,8 +100,20 @@ extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_fixups_inline() noexcept {}
 #define KAIRN_RUNNER_CONV(NAME, ARRAYS, WRITES, SEQ)                    \
     KAIRN_OBJCODE_CONV(kairn_objcode_fold_seq_double_, NAME, double, SEQ) \
     KAIRN_OBJCODE_CONV(kairn_objcode_fold_seq_float_, NAME, float, SEQ)
+// The products of ball vectors have the functions of the convolutions, which also take the scalars'
+// limbs and the radius by reference.
+#define KAIRN_OBJCODE_BV_CONV_ARGS(L)                                                                \
+    [[maybe_unused]] const L* const* in, [[maybe_unused]] std::size_t nx, [[maybe_unused]] std::size_t ny, \
+        [[maybe_unused]] const L* sc, [[maybe_unused]] L* const* w, [[maybe_unused]] L* out, [[maybe_unused]] bool* mo
+#define KAIRN_OBJCODE_BV_CONV(PREFIX, NAME, L, CALL) \
+    extern "C" KAIRN_OBJCODE_NOINLINE void PREFIX##NAME(KAIRN_OBJCODE_BV_CONV_ARGS(L)) noexcept { CALL; }
+#define KAIRN_RUNNER_BV_CONV(NAME, ARRAYS, SCALARS, WRITES, SEQ)            \
+    KAIRN_OBJCODE_BV_CONV(kairn_objcode_fold_seq_double_, NAME, double, SEQ) \
+    KAIRN_OBJCODE_BV_CONV(kairn_objcode_fold_seq_float_, NAME, float, SEQ)
 #include "runner_kernels.inc"
+#undef KAIRN_RUNNER_BV_CONV
 #undef KAIRN_RUNNER_CONV
+#undef KAIRN_RUNNER_BV
 #undef KAIRN_RUNNER_MAP
 #undef KAIRN_RUNNER_FOLD
 #undef KAIRN_RUNNER_KERNEL
@@ -119,7 +142,11 @@ using kairn_objcode_fm = uint32x4_t;
 #define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED)   \
     KAIRN_OBJCODE_MAP(kairn_objcode_fold_packed_double_, NAME, double, PACKED)  \
     KAIRN_OBJCODE_MAP(kairn_objcode_fold_packed_float_, NAME, float, PACKED)
+#define KAIRN_RUNNER_BV(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED)    \
+    KAIRN_OBJCODE_BV(kairn_objcode_fold_packed_double_, NAME, double, PACKED)   \
+    KAIRN_OBJCODE_BV(kairn_objcode_fold_packed_float_, NAME, float, PACKED)
 #include "runner_kernels.inc"
+#undef KAIRN_RUNNER_BV
 #undef KAIRN_RUNNER_MAP
 #undef KAIRN_RUNNER_FOLD
 #undef KAIRN_RUNNER_KERNEL

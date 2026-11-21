@@ -10,9 +10,12 @@ ensures:       rounded z nearest
 ensures:       error z R c=1/(1+u) k=1 t=1/2
 min_precision: 1
 theorem:       proofs/theories/MapSteps.v scale_step_1_correct
+ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v scale_step_1_ieee_bridge
+ieee_lead_theorem: proofs/theories/IeeeMapSteps.v scale_step_1_ieee_lead
 source:        mul_1_1, one rounding to nearest
 license:       bound: published; proof: MIT
 status:        proved
 entry:         yes
+ieee:          bridge
 
 z = mul_1_1(x, a)

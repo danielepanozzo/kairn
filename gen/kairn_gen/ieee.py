@@ -389,7 +389,7 @@ def _claim(e, k, t, outs):
     kind = e['kind']
     if kind == 'normalized':
         return _normalized_ieee(outs[e['of']], k)
-    value = t.value()
+    value = t.value() if k.value is not None else None     # the bound kernels have none
     if kind == 'leading_rounded':
         return f'val {outs[e["of"]][0]} = RN {EMIN} prec {value}'
     if kind == 'error':
@@ -419,8 +419,42 @@ def _claim(e, k, t, outs):
                      f' {bound})')
         if 'exact_when' in e:
             bound += f' /\\\n  ({t.exact_condition(e["exact_when"])} ->\n   {_val_sum(limbs)} = {value})'
+        if 'exact_flag' in e:
+            bound += f' /\\\n  ({e["exact_flag"]} = true <-> {t.exact_condition(e["exact_when"])})'
         return bound
+    if kind == 'rounded' and 'when' not in e:
+        # The rounding of the kernel's value, or of a value of its own over the inputs and their
+        # limbs (the accumulator's sum of magnitudes), as in the real model.
+        rounding = {'nearest': 'RN', 'down': 'RD', 'up': 'RU'}[e['mode']]
+        if 'value' in e:
+            value = _paren(rocq._term(expr.parse(e['value']), t.name,
+                                      limb=lambda g, i: f'val {t.ins[g].limbs[i]}'))
+        return f'val {outs[e["of"]][0]} = {rounding} {EMIN} prec {value}'
+    if kind == 'upper' and ('unless' in e or 'exact_when' in e):
+        raise PrintError(f'kernel {k.name}: no IEEE reading of an upper entry with unless= or exact_when= yet')
+    if kind == 'upper' and 'value' in e and 'gaps' not in e:
+        # The bound kernels' own value, under its mask when it has one, as in the real model.
+        claim = f'{_paren(_constant_term(e["value"], k, t))} <= val {outs[e["of"]][0]}'
+        return f'({e["if"]} = true -> {claim})' if 'if' in e else claim
+    if kind == 'holds':
+        a, b = (_constant_term(x, k, t) for x in e['args'])
+        return f'({e["if"]} = true -> {a} {({"lt": "<", "le": "<=", "eq": "="})[e["rel"]]} {b})'
     raise PrintError(f'kernel {k.name}: no IEEE reading of {kind}')
+
+
+def _constant_term(text, k, t):
+    """An expression of the claims of Milestone 2 over the IEEE model: the values of the inputs, u
+    and eta at the IEEE format's emin; no unit(K) or tiny(K) (none is needed yet)."""
+    def name(n):
+        if n == 'u':
+            return 'u prec'
+        if n == 'eta':
+            return f'eta {EMIN}'
+        return t.name(n)
+
+    def call(fn, kname):
+        raise PrintError(f'kernel {k.name}: {fn}({kname}) has no IEEE reading yet')
+    return rocq._term(expr.parse(text), name, call)
 
 
 def _head(k, nans, precision=True):
@@ -462,6 +496,8 @@ def _requires_finite(k, t):
             lines.append(f'  (exists n : Z, val {r[1]} = bpow radix2 n) ->')
         elif r[0] == 'nonneg':
             lines.append(f'  0 <= val {r[1]} ->')
+        elif r[0] == 'count':
+            lines.append(f'  (val {r[1]} = 0 \\/ 1 <= val {r[1]}) ->')
         else:
             raise PrintError(f'kernel {k.name}: no finite reading of {r[0]}')
     return lines
@@ -500,10 +536,29 @@ def _finite_ieee_spec(k, kernels):
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels)) + _requires_finite(k, t) + [_let(k, kernels)]
     out = k.outputs[0].limbs
-    lines.append(f'  finite {out[0]} ->')
     outs = {g.name: g.limbs for g in k.outputs}
-    claims = [f'finite {v}' for v in k.output_limbs[1:]] + [_claim(e, k, t, outs) for e in k.ensures]
-    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    first = k.outputs[0].name
+    # Entries about an output group other than the first hold where that group's leading limb is
+    # finite (architecture.md, "An output group other than the first"): the accumulator's sum of
+    # magnitudes. A kernel without them has the statement it had: every claim under output limb 0.
+    own = [g for g in k.outputs[1:] if g.kind == ir.LIMB and any(e.get('of') == g.name for e in k.ensures)]
+    if not own:
+        lines.append(f'  finite {out[0]} ->')
+        claims = [f'finite {v}' for v, kind in zip(k.output_limbs, k.output_kinds) if kind == ir.LIMB][1:]
+        claims += [_claim(e, k, t, outs) for e in k.ensures]
+        lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+        return _statement(f'{k.name}_ieee_spec', _comment(k, k.ieee_spec_theorem), lines)
+    mine = {g.name for g in own}
+    parts = []
+    for g in [k.outputs[0]] + own:
+        claims = [f'finite {v}' for v in g.limbs[1:]]
+        if g.name == first:
+            claims += [f'finite {v}' for h in k.outputs[1:] if h.kind == ir.LIMB and h.name not in mine
+                       for v in h.limbs]
+        claims += [_claim(e, k, t, outs) for e in k.ensures
+                   if (e.get('of') == g.name) or (g.name == first and e.get('of') not in mine)]
+        parts.append(f'  (finite {g.limbs[0]} ->\n   ' + ' /\\\n   '.join(claims) + ')')
+    lines.append(' /\\\n'.join(parts) + '.')
     return _statement(f'{k.name}_ieee_spec', _comment(k, k.ieee_spec_theorem), lines)
 
 
@@ -686,8 +741,9 @@ def _makes_ball_spec(k, kernels, e):
 
 def _finite_or_nan_spec(k, kernels, e):
     """The finish of a fold (milestone2.md, "When something is not finite"): the flag is true
-    exactly when limb 0 of the value is finite; the output is then the value, limb for limb, and
-    otherwise every limb of it is a NaN. For every input: the statement has no hypothesis."""
+    exactly when limb 0 of the value is finite (and the mask of `if`, or every mask of `if_all`,
+    is true); the output is then the value, limb for limb, and otherwise every limb of it is a
+    NaN. For every input: the statement has no hypothesis."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=False) + _hyps_extended(k, t) + [_let(k, kernels)]
     src, out, flag = list(t.ins[k.value].limbs), t.outs[e['of']].limbs, e['flag']
@@ -695,8 +751,15 @@ def _finite_or_nan_spec(k, kernels, e):
     for _ in range(e.get('steps', 0)):
         src = [f'({_ieee_op("succ", src)})']
     finite = f'finite {src[0]}'
+    if e.get('nonneg'):
+        # The finish of a constructor of a BallVector: the value is also not negative.
+        finite = f'{finite} /\\ 0 <= val {src[0]}'
     if 'if' in e:
         finite = f'{e["if"]} = true /\\ {finite}'
+    # The finish of the product of two BallVectors: under every mask of the list (if_all), as
+    # under the one mask of if.
+    for name in reversed(e.get('if_all', [])):
+        finite = f'{name} = true /\\ {finite}'
     lines += [f'  ({flag} = true <-> {finite}) /\\',
               f'  ({flag} = true -> ' + ' /\\ '.join(f'{o} = {i}' for o, i in zip(out, src)) + ') /\\',
               f'  ({flag} = false -> ' + ' /\\ '.join(f'nan {o}' for o in out) + ').']
@@ -902,6 +965,15 @@ def _makes_ball_interval_spec(k, kernels, e):
         claims.append(f'({nonempty} -> finite {lo} -> finite {hi} -> {halves} ->\n'
                       f'   {_val_sum(c_out)} = (val {lo} + val {hi}) / 2 /\\\n'
                       f'   val {r_out} = RU {EMIN} prec ((val {hi} - val {lo}) / 2))')
+    if 'rel' in e:
+        # Stage B2 (ball_from_interval_1): the center near the midpoint, and the smallest radius.
+        vc, mid = _val_sum(c_out), f'(val {lo} + val {hi}) / 2'
+        rel = rocq.claim_constant_term(e['rel'], kernels, EMIN)
+        absolute = rocq.claim_constant_term(e['abs'], kernels, EMIN)
+        near = [f'val {lo} <= {vc} <= val {hi}', f'Rabs ({vc} - {mid}) <= {rel} * Rabs ({mid}) + {absolute}']
+        if e.get('smallest_radius'):
+            near.append(f'val {r_out} = RU {EMIN} prec (Rmax ({vc} - val {lo}) (val {hi} - {vc}))')
+        claims.append(f'({nonempty} -> finite {lo} -> finite {hi} ->\n   ' + ' /\\\n   '.join(near) + ')')
     claims += [f'({nonempty} -> ~ (finite {lo} /\\ finite {hi}) -> ball_whole_{n} {out})',
                f'(nan {lo} \\/ nan {hi} \\/ {_same_infinity([lo], [hi])} ->\n   ball_whole_{n} {out})',
                f'(xlt (xval {hi}) (xval {lo}) = true -> ball_empty_{n} {out})']
@@ -940,7 +1012,8 @@ def _ball_of_interval_spec(k, kernels, e):
     bounded interval, a finite center between the bounds and within rel |mid| + abs of the midpoint
     mid, a finite radius with which it contains the interval, and with smallest_radius the smallest
     such radius of the format, RU of the larger distance to a bound; the special values of IEEE
-    1788's mid and rad (ieee1788) or of a canonical ball (ball) for the other intervals."""
+    1788's mid and rad (ieee1788) or of a canonical ball (ball) for the other intervals. With
+    ieee1788 a center of two limbs is canonical for every operand (_canonical_center)."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
         [_let(k, kernels)]
@@ -955,6 +1028,8 @@ def _ball_of_interval_spec(k, kernels, e):
     bounded = [f'{vl} <= {vc} <= {vh}',
                f'Rabs ({vc} - {mid}) <= {rel} * Rabs ({mid}) + {absolute}',
                f'(forall z : R, in_interval_{n} {x} z -> Rabs (z - {vc}) <= val {r})']
+    if 'finite_when' in e:
+        return _ball_of_interval_finite_when(k, e, lines, c, r, lo, hi, n, x, bounded, mid, rel, absolute)
     if e.get('smallest_radius'):
         bounded.append(f'val {r} = RU {EMIN} prec (Rmax ({vc} - {vl}) ({vh} - {vc}))')
     finite = ' /\\ '.join(f'finite {v}' for v in list(c) + [r])
@@ -969,11 +1044,56 @@ def _ball_of_interval_spec(k, kernels, e):
     else:
         zero = ' /\\ '.join(f'zero {v}' for v in c)
         inf = f'{r} = infinity prec emax false'
+        claims += _canonical_center(c)
         claims += [f'(interval_empty_{n} {x} -> ' + ' /\\ '.join(f'nan {v}' for v in list(c) + [r]) + ')',
                    f'({_xv(lo)} = XInf true -> {_xv(hi)} = XInf false -> {zero} /\\ {inf})',
                    f'(finite {lo[0]} -> {_xv(hi)} = XInf false -> {_xv(c)} = XFin (omega prec emax) /\\ {inf})',
                    f'({_xv(lo)} = XInf true -> finite {hi[0]} -> {_xv(c)} = XFin (- omega prec emax) /\\ {inf})',
                    f'(interval_bounded_{n} {x} ->\n   {finite} /\\\n   ' + ' /\\\n   '.join(bounded) + ')']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _canonical_center(c):
+    """With ieee1788 the center is a number given back as a number (the midpoint), not the center
+    of a ball: of two limbs, it is canonical for every canonical operand (two NaNs for the empty
+    set, which canonical_2 accepts). Of one limb every value is a number of the type, and nothing
+    is printed."""
+    return [f'canonical_2 {" ".join(c)}'] if len(c) == 2 else []
+
+
+def _ball_of_interval_finite_when(k, e, lines, c, r, lo, hi, n, x, bounded, mid, rel, absolute):
+    """ball_of_interval with finite_when (stage B2, interval_mid_rad_2 and interval_to_ball_2): for a
+    bounded interval the radius may be +infinity (a step past Omega near the top of the range), and
+    is finite under the conditions. ieee1788: the center as without the field (canonical, of two
+    limbs), and the radius +inf or a finite one with which the center contains the interval. ball:
+    a canonical ball that contains
+    the interval, and under the conditions a finite ball with the center and radius as without the
+    field."""
+    t = _Terms(k)
+    conds = ' -> '.join(_condition(cond, t) for cond in e['finite_when'])
+    vc = _val_sum(c)
+    contains = f'(forall z : R, in_interval_{n} {x} z -> Rabs (z - {vc}) <= val {r})'
+    claims = []
+    if e['special'] == 'ball':
+        b = _ball_args(c, r)
+        claims += [f'ball_{len(c)} {b}',
+                   f'(ball_empty_{len(c)} {b} <-> interval_empty_{n} {x})',
+                   f'(interval_nonempty_{n} {x} -> ~ interval_bounded_{n} {x} -> ball_whole_{len(c)} {b})',
+                   f'(interval_bounded_{n} {x} ->\n   forall z : R, in_interval_{n} {x} z -> in_ball_{len(c)} {b} z)',
+                   f'(interval_bounded_{n} {x} -> {conds} ->\n   ball_finite_{len(c)} {b} /\\\n   ' +
+                   ' /\\\n   '.join(bounded) + ')']
+    else:
+        zero = ' /\\ '.join(f'zero {v}' for v in c)
+        inf = f'{r} = infinity prec emax false'
+        finite = ' /\\ '.join(f'finite {v}' for v in c)
+        claims += _canonical_center(c)
+        claims += [f'(interval_empty_{n} {x} -> ' + ' /\\ '.join(f'nan {v}' for v in list(c) + [r]) + ')',
+                   f'({_xv(lo)} = XInf true -> {_xv(hi)} = XInf false -> {zero} /\\ {inf})',
+                   f'(finite {lo[0]} -> {_xv(hi)} = XInf false -> {_xv(c)} = XFin (omega prec emax) /\\ {inf})',
+                   f'({_xv(lo)} = XInf true -> finite {hi[0]} -> {_xv(c)} = XFin (- omega prec emax) /\\ {inf})',
+                   f'(interval_bounded_{n} {x} ->\n   {finite} /\\\n   ' + ' /\\\n   '.join(bounded[:2]) +
+                   f' /\\\n   ({inf} \\/ (finite {r} /\\ {contains})) /\\\n   ({conds} -> finite {r}))']
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
@@ -986,6 +1106,8 @@ def _interval_of_ball_spec(k, kernels, e):
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
         [_let(k, kernels)]
+    if e['tight']['kind'] == 'outward':
+        return _interval_of_ball_outward(k, kernels, e, t, lines)
     zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (1,)), _limbs(k, t.outs[e['upper']].limbs, e['upper'], (1,))
     z = ' '.join(zl + zu)
     groups = {b: t.ins[cr['center']].limbs + (cr['radius'],) for b, cr in e['balls'].items()}
@@ -1015,6 +1137,48 @@ def _interval_of_ball_spec(k, kernels, e):
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 
+def _interval_of_ball_outward(k, kernels, e, t, lines):
+    """An interval of two limbs that encloses a ball (stage B2, ball_to_interval_2): canonical; empty
+    exactly when the ball is; every value of the set a member; for a finite ball and a bounded result,
+    each bound within rel |v| + abs of the bound v of the set, outward; the exact bound when its
+    condition holds; an infinite bound of the set returned as that infinity; bounded under the
+    conditions of bounded_when."""
+    zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (2,)), _limbs(k, t.outs[e['upper']].limbs, e['upper'], (2,))
+    z = ' '.join(zl + zu)
+    groups = {b: t.ins[cr['center']].limbs + (cr['radius'],) for b, cr in e['balls'].items()}
+
+    def member(name):
+        return f'in_ball_{len(groups[name]) - 1} {" ".join(groups[name])}'
+    S = _set_of(k, e, groups, member)
+    names = list(groups)
+    empty = ' \\/ '.join(f'ball_empty_{len(g) - 1} {" ".join(g)}' for g in groups.values())
+    finite = ' -> '.join(f'ball_finite_{len(g) - 1} {" ".join(g)}' for g in groups.values())
+    target = rocq._term(expr.parse(e['set']), lambda x: x)
+    tight = e['tight']
+    rel = rocq.claim_constant_term(tight['rel'], kernels, EMIN)
+    absolute = rocq.claim_constant_term(tight['abs'], kernels, EMIN)
+    vl, vh = _val_sum(zl), _val_sum(zu)
+    inner = [f'(interval_bounded_2 {z} ->\n    lo - {vl} <= {rel} * Rabs lo + {absolute} /\\\n'
+             f'    {vh} - hi <= {rel} * Rabs hi + {absolute})']
+    for side, var, limbs in (('lower', 'lo', zl), ('upper', 'hi', zu)):
+        conds = tight.get('exact_when', {}).get(side)
+        if conds:
+            inner.append(f'({t.exact_condition(conds)} -> {_xv(limbs)} = XFin {var})')
+    claims = [f'interval_2 {z}', f'(interval_empty_2 {z} <-> {empty})',
+              f'(forall {" ".join(names)} : R, ' + ' '.join(f'{member(x)} {x} ->' for x in names) +
+              f'\n   in_interval_2 {z} {target})',
+              f'({finite} ->\n   forall lo hi : R,\n   range_lower {S} (XFin lo) ->\n'
+              f'   range_upper {S} (XFin hi) ->\n   ' + ' /\\\n   '.join(inner) + ')',
+              f'(~ ({empty}) ->\n   (range_lower {S} (XInf true) -> {_xv(zl)} = XInf true) /\\\n'
+              f'   (range_upper {S} (XInf false) -> {_xv(zu)} = XInf false))']
+    for c in e.get('bounded_when', []):
+        limit = 'bpow radix2 ' + ('emax' if c['exp'] == 0 else f'(emax {"-" if c["exp"] < 0 else "+"} {abs(c["exp"])})')
+        claims.append(f'({finite} ->\n   (forall z : R,\n    {_strip(S)} z ->\n    Rabs z <= {limit}) ->\n'
+                      f'   interval_bounded_2 {z})')
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
 def _splits_spec(k, kernels, e):
     """Two intervals that together are the operand (Milestone 2, the split of an interval): both
     canonical; both empty when the operand is; otherwise both nonempty, the first from the
@@ -1031,6 +1195,206 @@ def _splits_spec(k, kernels, e):
               f'(interval_empty_{n} {x} -> interval_empty_{n} {a} /\\ interval_empty_{n} {b})',
               f'(interval_nonempty_{n} {x} ->\n   interval_nonempty_{n} {a} /\\ interval_nonempty_{n} {b} /\\\n'
               f'   {_xv(al)} = {_xv(lo)} /\\ {_xv(bu)} = {_xv(hi)} /\\ {_xv(au)} = {_xv(bl)})']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+class _Sets:
+    """The sets of a certain or trit entry (Milestone 2, the enclosure interface) in the vocabulary
+    of IeeeIntervalVocabulary.v and IeeeVocabulary.v: membership, nonempty, empty, the special
+    states (the empty set and the whole line), a finite operand; and the relation as a proposition
+    of the reals, and its negation of every choice of members."""
+
+    REL = {'lt': '<', 'le': '<=', 'eq': '='}
+
+    def __init__(self, k, e, t):
+        self.k, self.e, self.t = k, e, t
+        self.balls = 'balls' in e
+        sets = e['balls'] if self.balls else e['intervals']
+        if self.balls:
+            self.groups = {x: t.ins[b['center']].limbs + (b['radius'],) for x, b in sets.items()}
+            self.n = {x: len(g) - 1 for x, g in self.groups.items()}
+        else:
+            self.groups = {x: t.ins[b['lower']].limbs + t.ins[b['upper']].limbs for x, b in sets.items()}
+            self.n = {x: len(g) // 2 for x, g in self.groups.items()}
+        for x, n in self.n.items():
+            _limbs(k, self.groups[x][:n], x, (1, 2))
+        # Bound names of the propositions: none may be a name of the kernel's inputs.
+        taken = set(k.input_limbs) | {g.name for g in k.inputs} | set(sets)
+        if taken & {'z', 'w', 'd'}:
+            raise PrintError(f'kernel {k.name}: z, w and d are bound in the statements of a predicate of sets')
+
+    def args(self, x):
+        return ' '.join(self.groups[x])
+
+    def member(self, x, z):
+        sort = 'ball' if self.balls else 'interval'
+        return f'in_{sort}_{self.n[x]} {self.args(x)} {z}'
+
+    def nonempty(self, x):
+        n = self.n[x]
+        return f'~ ball_empty_{n} {self.args(x)}' if self.balls else f'interval_nonempty_{n} {self.args(x)}'
+
+    def empty(self, x):
+        n = self.n[x]
+        return f'ball_empty_{n} {self.args(x)}' if self.balls else f'interval_empty_{n} {self.args(x)}'
+
+    def whole(self, x):
+        n, g = self.n[x], self.groups[x]
+        if self.balls:
+            return f'ball_whole_{n} {self.args(x)}'
+        return f'{_xv(g[:n])} = XInf true /\\ {_xv(g[n:])} = XInf false'
+
+    def finite(self, x):
+        n = self.n[x]
+        return f'ball_finite_{n} {self.args(x)}' if self.balls else f'interval_bounded_{n} {self.args(x)}'
+
+    def point(self):
+        """The point of a membership: its limbs, and its value as a real."""
+        p = self.t.ins[self.e['args'][0]].limbs
+        return p, _val_sum(p)
+
+    def special(self):
+        """An operand that is not finite: a set that is the empty set or the whole line, a point
+        that is not a finite number."""
+        parts = [f'{self.empty(x)} \\/ {self.whole(x)}' for x in self.groups]
+        if self.e['rel'] == 'member':
+            parts.append(f'~ finite {self.point()[0][0]}')
+        return ' \\/ '.join(parts)
+
+    def all_finite(self):
+        parts = [self.finite(x) for x in self.groups]
+        if self.e['rel'] == 'member':
+            parts.append(f'finite {self.point()[0][0]}')
+        return ' /\\ '.join(parts)
+
+    def holds(self, negated=False):
+        """The relation as a proposition; with `negated` (the `no` of a trit), its failure for every
+        choice of members: for lt, le, eq of nonempty sets, the negated relation of each pair; for
+        member, that the point is not a member."""
+        rel, args = self.e['rel'], self.e['args']
+        if rel in self.REL:
+            sets = [a for a in args if a != ir.ZERO]
+            body = f'{args[0]} {self.REL[rel]} {args[1]}'
+            if negated:
+                body = f'~ ({body})'
+            ne = ' /\\ '.join(self.nonempty(x) for x in sets)
+            return (f'{ne} /\\\n    (forall {" ".join(sets)} : R, ' + ' '.join(f'{self.member(x, x)} ->' for x in sets) +
+                    f' {body})')
+        if rel == 'member':
+            p, v = self.point()
+            inside = f'finite {p[0]} /\\ {self.member(args[1], _paren(v))}'
+            return f'~ ({inside})' if negated else inside
+        if negated:
+            raise PrintError(f'kernel {self.k.name}: {rel} has no three-valued reading')
+        x = args[0]
+        if rel == 'empty':
+            return self.empty(x)
+        if rel == 'entire':
+            return f'(forall z : R, {self.member(x, "z")})'
+        y = args[1]
+        if rel == 'subset':
+            return f'(forall z : R, {self.member(x, "z")} -> {self.member(y, "z")})'
+        if rel == 'equal':
+            return f'(forall z : R, {self.member(x, "z")} <-> {self.member(y, "z")})'
+        if rel == 'interior':
+            return (f'(forall z : R, {self.member(x, "z")} ->\n    exists d : R, 0 < d /\\ '
+                    f'(forall w : R, Rabs (w - z) < d -> {self.member(y, "w")}))')
+        if rel == 'disjoint':
+            return f'~ (exists z : R, {self.member(x, "z")} /\\ {self.member(y, "z")})'
+        raise PrintError(f'kernel {self.k.name}: no IEEE reading of the relation {rel}')
+
+
+def _ball_set_spec(k, kernels, e):
+    """A ball that contains the union or the intersection of two balls (Milestone 2, "Hull,
+    intersection and split of balls"): canonical; every member of the set a member; for the union,
+    empty exactly when both operands are, an empty X gives Y as it is, and an empty Y gives X as
+    it is when X is not empty; for the intersection, an empty operand gives the empty set, the
+    whole line X gives Y as it is, and the whole line Y gives X as it is when X is not the whole
+    line. "As it is" is equality of the limbs themselves (of the binary_float values: the sign of a
+    zero, and the sign and payload of a NaN, included). The second direction has the condition on
+    X because when both operands are special the result is one of them, Y, which need not equal X
+    (two NaNs that differ in sign, or a center +0 and a center -0)."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    c = _limbs(k, t.outs[e['center']].limbs, e['center'], (1, 2))
+    n = len(c)
+    z = _ball_args(c, e['radius'])
+    groups = {x: (t.ins[b['center']].limbs, b['radius']) for x, b in e['balls'].items()}
+    (x, (xc, xr)), (y, (yc, yr)) = groups.items()
+    bx, by = _ball_args(xc, xr), _ball_args(yc, yr)
+
+    def same(cc, r):
+        return ' /\\ '.join(f'{o} = {i}' for o, i in zip(list(c) + [e['radius']], list(cc) + [r]))
+    union = e['set'] == 'union'
+    ins = [f'in_ball_{n} {bx} z', f'in_ball_{n} {by} z']
+    claims = [f'ball_{n} {z}']
+    if union:
+        claims += [f'(ball_empty_{n} {z} <-> ball_empty_{n} {bx} /\\ ball_empty_{n} {by})',
+                   f'(ball_empty_{n} {bx} -> {same(yc, yr)})',
+                   f'(ball_empty_{n} {by} /\\ ~ ball_empty_{n} {bx} -> {same(xc, xr)})',
+                   f'(forall z : R, {ins[0]} \\/ {ins[1]} -> in_ball_{n} {z} z)']
+    else:
+        claims += [f'(ball_empty_{n} {bx} \\/ ball_empty_{n} {by} -> ball_empty_{n} {z})',
+                   f'(ball_whole_{n} {bx} -> {same(yc, yr)})',
+                   f'(ball_whole_{n} {by} /\\ ~ ball_whole_{n} {bx} -> {same(xc, xr)})',
+                   f'(forall z : R, {ins[0]} /\\ {ins[1]} -> in_ball_{n} {z} z)']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _ball_splits_spec(k, kernels, e):
+    """Two balls that cover the halves of a ball (Milestone 2, "Hull, intersection and split of
+    balls"): both canonical; the empty set gives the empty set twice and the whole line the whole
+    line twice; for a finite ball (c, r), the first contains [c - r, c] and the second [c, c + r]."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    xc, xr = t.ins[e['from']['center']].limbs, e['from']['radius']
+    n = len(_limbs(k, xc, e['from']['center'], (1, 2)))
+    x = _ball_args(xc, xr)
+    (a, b) = (_ball_args(t.outs[p['center']].limbs, p['radius']) for p in e['parts'])
+    vc = _val_sum(xc)
+    claims = [f'ball_{n} {a}', f'ball_{n} {b}',
+              f'(ball_empty_{n} {x} -> ball_empty_{n} {a} /\\ ball_empty_{n} {b})',
+              f'(ball_whole_{n} {x} -> ball_whole_{n} {a} /\\ ball_whole_{n} {b})',
+              f'(ball_finite_{n} {x} ->\n   (forall z : R, {vc} - val {xr} <= z <= {vc} -> in_ball_{n} {a} z) /\\\n'
+              f'   (forall z : R, {vc} <= z <= {vc} + val {xr} -> in_ball_{n} {b} z))']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _set_predicate_spec(k, kernels, e):
+    """A predicate of sets (Milestone 2, the enclosure interface), certain or trit, in the
+    vocabulary of IeeeIntervalVocabulary.v: a mask true only if the relation holds (certain; for
+    trit, yes only if it holds for every choice of members and no only if it fails for every one,
+    never both); exactly the relation when an operand is not finite (the empty set, the whole line,
+    a point that is not a finite number); and exactly it always (exact), or for finite operands
+    under the conditions of exact_when."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    s = _Sets(k, e, t)
+    held = s.holds()
+    if e['kind'] == 'certain':
+        m = e['of']
+        sound = [f'({m} = true ->\n    {held})']
+        exact = [f'({m} = true <->\n    {held})']
+    else:
+        yes, no = e['yes'], e['no']
+        failed = s.holds(negated=True)
+        sound = [f'({yes} = true ->\n    {held})', f'({no} = true ->\n    {failed})',
+                 f'~ ({yes} = true /\\ {no} = true)']
+        exact = [f'({yes} = true <->\n    {held})', f'({no} = true <->\n    {failed})']
+    if e.get('exact'):
+        claims = exact if e['kind'] == 'certain' else exact + [sound[-1]]
+    else:
+        both = ' /\\\n   '.join(exact)
+        claims = sound + [f'({s.special()} ->\n   {both})']
+        if 'exact_when' in e:
+            cond = t.exact_condition(e['exact_when'])
+            claims.append(f'({s.all_finite()} -> {cond} ->\n   {both})')
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
@@ -1219,7 +1583,9 @@ def kernel_statements(k, kernels):
         if enc:
             return [_ball_spec(k, kernels, enc[0])]
         for kind, printer in (('interval_set', _interval_set_spec), ('ball_of_interval', _ball_of_interval_spec),
-                              ('interval_of_ball', _interval_of_ball_spec), ('splits', _splits_spec)):
+                              ('interval_of_ball', _interval_of_ball_spec), ('splits', _splits_spec),
+                              ('certain', _set_predicate_spec), ('trit', _set_predicate_spec),
+                              ('ball_set', _ball_set_spec), ('ball_splits', _ball_splits_spec)):
             if kind in kinds:
                 if len(k.ensures) != 1:
                     raise PrintError(f'kernel {k.name}: {kind} goes with no other claim')
@@ -1375,8 +1741,9 @@ def proved_statements(kernels):
     """[(statement, theorem file, theorem name, generated file)] of the IEEE-model statements of the finite domain
     and of the folds whose theorems are named: K_ieee_bridge_spec and K_ieee_spec of
     IeeeStatements.v (ieee_bridge_theorem, ieee_spec_theorem), K_ieee_lead_spec (ieee_lead_theorem)
-    and F_O_ieee_spec (a fold's ieee_theorem) of IeeeFoldStatements.v; the first two, then the
-    others, each in the order of their file."""
+    and F_O_ieee_spec (a fold's or a map's ieee_theorem; F_ieee_spec, a convolution's or a product
+    of two BallVectors'; and F_orders_ieee_spec and F_flag_ieee_spec, a fold of maxima's) of
+    IeeeFoldStatements.v; the first two, then the others, each in the order of their file."""
     model = in_model(kernels)
     out = []
     for k in model.values():
@@ -1389,15 +1756,32 @@ def proved_statements(kernels):
     for k in lead_kernels(kernels):
         if k.ieee_lead_theorem:
             out.append((f'{k.name}_ieee_lead_spec', k.ieee_lead_theorem[0], k.ieee_lead_theorem[1], 'IeeeFoldStatements'))
-    for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False) or not fd.ieee_theorem:
+    for fd in _folds_in_order(kernels):
+        if not fd.ieee_theorem:
+            continue
+        if getattr(fd, 'is_conv', False) or getattr(fd, 'is_bv_conv', False):
+            # A convolution, and a product of two BallVectors, has one statement, of its one order
+            # (F_ieee_spec, bv_conv_statement), not one per order.
+            out.append((f'{fd.name}_ieee_spec', fd.ieee_theorem, fd.ieee_theorem_name('sequential'),
+                        'IeeeFoldStatements'))
             continue
         for order in ir.ORDERS:
             if order in fd.orders:
                 suffix = ir.ORDER_SUFFIX[order]
                 out.append((f'{fd.name}_{suffix}_ieee_spec', fd.ieee_theorem, fd.ieee_theorem_name(order),
                             'IeeeFoldStatements'))
+        # A fold of maxima in both orders has two statements more, printed after those of its orders
+        # (max_orders_statement, max_flag_statement), whose theorems are in the same file.
+        if max_statements(fd):
+            for what in ('orders', 'flag'):
+                out.append((f'{fd.name}_{what}_ieee_spec', fd.ieee_theorem, f'{fd.name}_{what}_ieee_correct',
+                            'IeeeFoldStatements'))
     return out
+
+
+def max_statements(fd):
+    """Whether fd has F_orders_ieee_spec and F_flag_ieee_spec: a fold of maxima in both orders."""
+    return getattr(fd, 'is_max', False) and set(ir.ORDERS) <= set(fd.orders)
 
 
 def audit(kernels):
@@ -1460,13 +1844,31 @@ def _fold_parts(fd, kernels):
     return step, combine, finish
 
 
+def _folds_in_order(kernels):
+    """The folds in the order of IeeeFoldModel.v and IeeeFoldStatements.v: those that are neither
+    maps nor convolutions, then the maps, then the convolutions (each after the fold of its
+    coefficients), each group in the order of the set."""
+    folds = list(getattr(kernels, 'folds', {}).values())
+    maps = [fd for fd in folds if getattr(fd, 'is_map', False)]
+    convs = [fd for fd in folds if getattr(fd, 'is_conv', False)]
+    bvs = [fd for fd in folds if getattr(fd, 'is_bv', False)]
+    # The products of two BallVectors name convolutions: last.
+    products = [fd for fd in folds if getattr(fd, 'is_bv_conv', False)]
+    return [fd for fd in folds if fd not in maps + convs + bvs + products] + maps + convs + bvs + products
+
+
 def fold_model(kernels):
     """proofs/gen/IeeeFoldModel.v: every fold of the extended domain in the IEEE model, in the shape
     of its real model (FoldModel.v): F_step and F_combine apply the IEEE models of the step and the
     combination (IeeeModel.v) to the limbs of tuples; F_seq is the finish on fold_seq of the step
-    from the zero state, every limb +0; F_lanes W the finish on fold_lanes W."""
-    folds = [fd for fd in getattr(kernels, 'folds', {}).values()
-             if not getattr(fd, 'is_map', False) and not getattr(fd, 'is_conv', False)]
+    from the zero state, every limb +0; F_lanes W the finish on fold_lanes W. Then the maps and the
+    convolutions (map_model, conv_model)."""
+    every = _folds_in_order(kernels)
+    products = [fd for fd in every if getattr(fd, 'is_bv_conv', False)]
+    folds = [fd for fd in every if not getattr(fd, 'is_map', False) and not getattr(fd, 'is_conv', False)
+             and not getattr(fd, 'is_bv', False) and fd not in products]
+    writers = [fd for fd in every if fd not in folds and not getattr(fd, 'is_bv', False) and fd not in products]
+    bvs = [fd for fd in every if getattr(fd, 'is_bv', False)]
     lines = [HEADER, '',
              '(* The folds in the IEEE model (docs/developer/architecture.md, "Folds"), in the shape of their',
              '   real model (FoldModel.v): the state is a tuple of limbs and an element one entry of every array,',
@@ -1478,7 +1880,8 @@ def fold_model(kernels):
              'From Flocq Require Import Core Binary.',
              f'From {THEORIES_PATH} Require Import Folds.',
              f'From {THEORIES_PATH} Require IeeeOperations.',
-             f'From {GEN_PATH} Require IeeeModel.',
+             f'From {GEN_PATH} Require IeeeModel.'] + \
+        ([f'From {GEN_PATH} Require FoldModel.'] if any(getattr(fd, 'is_conv', False) for fd in writers) else []) + [
              '',
              'Section IeeeFolds.',
              'Variable prec emax : Z.',
@@ -1494,6 +1897,8 @@ def fold_model(kernels):
         ('nan_fma', 'float -> float -> float -> nan_of'), ('nan_mult', 'float -> float -> nan_of'),
         ('nan_const', 'nan_of'))]
     lines += ['', 'Local Notation pzero := (IeeeOperations.pzero prec emax).']
+    if bvs:
+        lines.append('Local Notation pinf := (IeeeOperations.pinf prec emax).')
     for fd in folds:
         step, combine, finish = _fold_parts(fd, kernels)
         st, el, xs = rocq._fold_binders(fd)
@@ -1528,8 +1933,151 @@ def fold_model(kernels):
         if 'lanes' in fd.orders:
             lines += ['', f'Definition {fd.name}_lanes (W : nat) ({xs} : {lt}) : {rtype} :='] + \
                 result(f'fold_lanes {fd.name}_step {fd.name}_combine {zero} W {xs}')
+    if writers:
+        lines += ['', '(* The maps and the convolutions (architecture.md, "Maps", "Convolutions"): F_check is the check',
+                  '   of an element written (fold_finish_k), which returns it, or its canonical NaN, and the mask that',
+                  '   its leading limb is finite. A map writes ws_, its step on the scalars and each element (map); a',
+                  '   convolution writes the final state of the sequential order of the fold of its coefficients on',
+                  '   the terms of each coefficient. The mask m_ is the and of the check\'s mask on every element',
+                  '   written, by fold_seq (and, for a map, fold_lanes with andb, from true); when it is false, every',
+                  '   element written is what the check returns of it (the second pass). F_seq, F_lanes W and F_conv',
+                  '   return the list written and the mask. *)']
+    for fd in writers:
+        lines += map_model(fd, kernels) if getattr(fd, 'is_map', False) else conv_model(fd, kernels)
+    if bvs:
+        lines += ['', '(* The ball vectors (architecture.md, "Ball vectors"): F_step and F_map are a map\'s, the centers',
+                  '   written; F_record, the step of a fold of maxima, updates the state, the largest magnitude of a',
+                  '   leading limb written and the mask that none was a NaN, from each center written, and F_combine',
+                  '   combines two; F_seq and F_lanes W fold it over the centers written (fold_seq, fold_lanes), give',
+                  '   the radius by the radius kernel on the state\'s limb and the scalars, and test it with the',
+                  '   finish under the state\'s mask; when the finish\'s flag is false, every center written is zero',
+                  '   and the radius +infinity (the whole space). They return the centers, the radius and the flag. *)']
+    for fd in bvs:
+        lines += bv_model(fd, kernels)
+    if products:
+        lines += ['', '(* The products of two ball vectors (architecture.md, "Ball vectors"): the coefficients and the',
+                  '   mask of the convolution of the centers (F_conv of the convolution named); the maxima of the',
+                  '   operands\' centers, fold_seq of F_record over each list; the count min(n_x, n_y) rounded up',
+                  '   (F_count, binary_normalize upward); the bound of dot for it; the radius kernel on the maxima,',
+                  '   the radii, the count and the bound; the finish on the radius, the convolution\'s mask and the',
+                  '   bound\'s; when its flag is false, every coefficient is zero and the radius +infinity (the whole',
+                  '   space). F_conv returns the coefficients, the radius and the flag. *)']
+    for fd in products:
+        lines += bv_conv_model(fd, kernels)
     lines += ['', 'End IeeeFolds.']
     return '\n'.join(lines) + '\n'
+
+
+def bv_conv_model(fd, kernels):
+    """The product of two BallVectors in the IEEE model: F_record, F_count and F_conv (the code of
+    cpp.bv_conv_seq and cpp.bv_conv_end_function)."""
+    conv = kernels.folds[fd.centers]
+    record, bound, radius, finish = (kernels[c[0]] for c in (fd.records[0], fd.bound, fd.radius, fd.finish))
+    x, y = fd.arrays
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    tx = _ftype(len(x.limbs))
+    lx = f'list ({tx})' if ' ' in tx else f'list {tx}'
+    n = len(fd.writes[0].limbs)
+    wtype = _ftype(n)
+    lw = f'list ({wtype})' if ' ' in wtype else f'list {wtype}'
+    zeros = '(' + ', '.join(['pzero'] * n) + ')' if n > 1 else 'pzero'
+    names = fd.state_names()
+    env = {names[0]: 'fst sa_', names[2]: 'fst sb_', fd.count: 'm_', fd.bound[2][0]: 'fst (fst b_)',
+           fd.bound[2][1]: 'snd (fst b_)'}
+    env.update({g.name: g.name for g in fd.scalars})
+    rad = _kernel_call(radius, kernels, [env[a] for a in fd.radius[1]])
+    fin = _kernel_call(finish, kernels, ['rz_', 'snd c_', 'snd b_'])
+    params = ''.join(f' ({g.name} : float)' for g in fd.scalars)
+    return ['', f'(* {fd.name}: the product of two ball vectors; centers {conv.name}, records {record.name}, bound '
+                f'{bound.name}, radius {radius.name}, finish {finish.name}. *)',
+            f'Definition {fd.name}_record (mok : float * bool) (w_ : {tx}) : float * bool :=',
+            f'  {_kernel_call(record, kernels, rocq.tuple_parts("mok", 2) + rocq.tuple_parts("w_", len(x.limbs)))}.',
+            '',
+            f'Definition {fd.name}_count ({xs} {ys} : {lx}) : float :=',
+            f'  binary_normalize prec emax prec_gt_0_ prec_lt_emax_ BinarySingleNaN.mode_UP (Z.of_nat (Nat.min (length {xs}) '
+            f'(length {ys}))) 0 false.',
+            '',
+            f'Definition {fd.name}_conv{params} ({xs} {ys} : {lx}) : {lw} * float * bool :=',
+            f'  let c_ := {conv.name}_conv {xs} {ys} in',
+            f'  let sa_ := fold_seq {fd.name}_record (pzero, true) {xs} in',
+            f'  let sb_ := fold_seq {fd.name}_record (pzero, true) {ys} in',
+            f'  let m_ := {fd.name}_count {xs} {ys} in',
+            f'  let b_ := {_kernel_call(bound, kernels, ["m_"])} in',
+            f'  let rz_ := {rad} in',
+            f'  let f_ := {fin} in',
+            f'  (if snd f_ then (fst c_, fst f_) else (map (fun _ => {zeros}) (fst c_), pinf), snd f_).']
+
+
+def _check_model(fd, kernels):
+    """F_check: the IEEE model of the check of a map or a convolution, on one element written."""
+    check = kernels[fd.check]
+    n = len(fd.writes[0].limbs)
+    rtype = ' * '.join(_type(kind) for kind in check.output_kinds)
+    return [f'Definition {fd.name}_check (w_ : {_ftype(n)}) : {rtype} :=',
+            f'  {_kernel_call(check, kernels, rocq.tuple_parts("w_", n))}.']
+
+
+def _second_pass(fd, mask, written='ws_'):
+    """The last two lines of F_seq, F_lanes or F_conv: the mask, then the list written, each element
+    as the check returns it when the mask is false, and the mask."""
+    return [f'  let m_ := {mask} in',
+            f'  (if m_ then {written} else map (fun w_ => fst ({fd.name}_check w_)) {written}, m_).']
+
+
+def _mask_step(fd):
+    return f'(fun m_ w_ => andb m_ (snd ({fd.name}_check w_)))'
+
+
+def map_model(fd, kernels):
+    """A map in the IEEE model: F_step on the scalars and one element, from the IEEE model of the
+    step (the shape of FoldModel.F_step); F_check; F_seq and F_lanes W, which return the list written
+    and the mask (architecture.md, "Maps"; the code of cpp.map_seq, cpp.map_lanes)."""
+    step = kernels[fd.step[0]]
+    _, el, xs = rocq._fold_binders(fd)
+    etype = _fold_element_ftype(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    groups = rocq.fold_groups(fd, el)
+    sizes = {g.name: len(g.limbs) for g in fd.arrays + fd.scalars}
+    groups.update({g.name: g.name for g in fd.scalars})
+    args = [p for a in fd.step[1] for p in rocq.tuple_parts(groups[a], sizes[a])]
+    params = ''.join(f' ({g.name} : {_ftype(len(g.limbs))})' for g in fd.scalars)
+    wtype = _ftype(len(fd.writes[0].limbs))
+    lw = f'list ({wtype})' if ' ' in wtype else f'list {wtype}'
+    scalars = ''.join(' ' + g.name for g in fd.scalars)
+    stepped = f'({fd.name}_step{scalars})' if scalars else f'{fd.name}_step'
+    lines = ['', f'(* {fd.name}: a map; step {step.name}, check {fd.check}. *)',
+             f'Definition {fd.name}_step{params} ({el} : {etype}) : {wtype} :=',
+             f'  {_kernel_call(step, kernels, args)}.', ''] + _check_model(fd, kernels)
+    if 'sequential' in fd.orders:
+        lines += ['', f'Definition {fd.name}_seq{params} ({xs} : {lt}) : {lw} * bool :=',
+                  f'  let ws_ := map {stepped} {xs} in'] + _second_pass(fd, f'fold_seq {_mask_step(fd)} true ws_')
+    if 'lanes' in fd.orders:
+        lines += ['', f'Definition {fd.name}_lanes (W : nat){params} ({xs} : {lt}) : {lw} * bool :=',
+                  f'  let ws_ := map {stepped} {xs} in'] + \
+            _second_pass(fd, f'fold_lanes {_mask_step(fd)} andb true W ws_')
+    return lines
+
+
+def conv_model(fd, kernels):
+    """A convolution in the IEEE model: F_check, and F_conv xs ys, which returns the coefficients and
+    the mask: coefficient j is fold_seq of the IEEE step of the fold of its coefficients (F_step of
+    that fold, above) from its zero state on FoldModel.conv_terms xs ys j (architecture.md,
+    "Convolutions"; the code of cpp.conv_seq)."""
+    cf = kernels.folds[fd.coefficients]
+    x, y = fd.arrays
+    tx, ty = _ftype(len(x.limbs)), _ftype(len(y.limbs))
+    lx = f'list ({tx})' if ' ' in tx else f'list {tx}'
+    ly = f'list ({ty})' if ' ' in ty else f'list {ty}'
+    wtype = _ftype(len(fd.writes[0].limbs))
+    lw = f'list ({wtype})' if ' ' in wtype else f'list {wtype}'
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    zero = rocq.state_zero(cf, 'pzero', 'true')
+    return ['', f'(* {fd.name}: a convolution; coefficient j is {cf.name} in the sequential order on the terms '
+                f'FoldModel.conv_terms {xs} {ys} j, checked by {fd.check}. *)'] + _check_model(fd, kernels) + [
+            '', f'Definition {fd.name}_conv ({xs} : {lx}) ({ys} : {ly}) : {lw} * bool :=',
+            f'  let ws_ := map (fun j => fold_seq {cf.name}_step {zero} (FoldModel.conv_terms {xs} {ys} j))',
+            f'                 (seq 0 (FoldModel.conv_length (length {xs}) (length {ys}))) in'] + \
+        _second_pass(fd, f'fold_seq {_mask_step(fd)} true ws_')
 
 
 def _fold_nans(fd, kernels, order):
@@ -1609,6 +2157,627 @@ def fold_statement(fd, kernels, order):
     return lines
 
 
+# --- Folds of maxima: the two orders, and the flag ----------------------------------------------------
+#
+# Two statements more for a fold of maxima of both orders, of the IEEE model only (the real model's
+# maximum has no flag, and its lane order is its own definition): that the lane order computes the
+# state of the sequential order, for every number of lanes and every list, NaNs and infinities among
+# the elements; and when exactly the flag of the sequential order is true. With the first, the second
+# is the lane order's too. The hand-written theorems of these facts (IeeeFoldNorm.v of the proofs) have
+# exactly these types once the section's variables are bound.
+
+def _max_parts(fd, kernels):
+    """The step and the combination of a fold of maxima as terms of IeeeFoldModel.v, each with the NaN
+    choices it takes; the zero state; and the NaN choices of both, in section order."""
+    step, combine, _ = _fold_parts(fd, kernels)
+    snans = [n for n, _ in NANS if n in _used_nans(step, kernels)]
+    cnans = [n for n, _ in NANS if n in _used_nans(combine, kernels)]
+    stp = ' '.join([f'IeeeFoldModel.{fd.name}_step', 'prec', 'emax'] + snans)
+    cmb = ' '.join([f'IeeeFoldModel.{fd.name}_combine', 'prec', 'emax'] + cnans)
+    zero = rocq.state_zero(fd, 'IeeeOperations.pzero prec emax', 'true')
+    return stp, cmb, zero, [n for n, _ in NANS if n in set(snans) | set(cnans)]
+
+
+def _max_head(nans):
+    return ['  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+            '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+            (f'\n         {_binders(nans)},' if nans else ',')]
+
+
+def max_orders_statement(fd, kernels):
+    """F_orders_ieee_spec, of a fold of maxima in both orders: the lane order computes the state of the
+    sequential order, for every number of lanes W and every list, whatever its elements; its finish
+    then gives the same result and the same flag. For every precision: no minimum."""
+    _, el, xs = rocq._fold_binders(fd)
+    stp, cmb, zero, nans = _max_parts(fd, kernels)
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    return ([f'(* {fd.name}: the lane order computes the state of the sequential order, for every number of '
+             'lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_orders_ieee_spec : Prop :='] + _max_head(nans) +
+            [f'  forall (W : nat) ({xs} : list ({etype})),',
+             f'  fold_lanes ({stp}) ({cmb}) {zero} W {xs} =',
+             f'  fold_seq ({stp}) {zero} {xs}.'])
+
+
+def max_flag_statement(fd, kernels):
+    """F_flag_ieee_spec, of a fold of maxima: the flag of the sequential order is true exactly when the
+    leading limb of every element is finite and the limb of the final state, stepped up as the finish
+    does (the steps of its finite_or_nan), is finite; with no step, exactly when every leading limb
+    is finite (the largest of finite magnitudes is finite). No requirement on the elements: any
+    value, canonical or not. The lane order's flag is the same (F_orders_ieee_spec)."""
+    _, el, xs = rocq._fold_binders(fd)
+    stp, _, zero, _ = _max_parts(fd, kernels)
+    _, _, finish = _fold_parts(fd, kernels)
+    nans = _fold_nans(fd, kernels, 'sequential')
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    groups = rocq.fold_groups(fd, el)
+    g = fd.arrays[0]
+    lead = rocq.tuple_parts(groups[g.name], len(g.limbs))[0]
+    steps = next(e.get('steps', 0) for e in finish.ensures if e['kind'] == 'finite_or_nan')
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_seq', 'prec', 'emax'] + nans + [xs])
+    conds = [f'Forall (fun {el} => finite {rocq._paren(lead)}) {xs}']
+    what = 'every leading limb is finite'
+    if steps:
+        m = rocq.state_groups(fd, f'(fold_seq ({stp}) {zero} {xs})')[fd.states[0].name][0]
+        for _ in range(steps):
+            m = f'IeeeOperations.succ prec emax ({m})'
+        conds.append(f'finite ({m})')
+        what += (' and the largest magnitude, the limb of the final state, stepped up ' +
+                 ('once' if steps == 1 else f'{steps} times') + ' as the finish does, is finite')
+    return ([f'(* {fd.name}: the flag of the sequential order is true exactly when {what}, in the IEEE model. '
+             f'Status: {"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_flag_ieee_spec : Prop :='] + _max_head(nans) +
+            [f'  forall {xs} : list ({etype}),',
+             f'  snd ({call}) = true <->',
+             '  ' + ' /\\\n  '.join(conds) + '.'])
+
+
+def _writer_nans(fd, kernels, parts):
+    used = set()
+    for k in parts + [kernels[fd.check]]:
+        used.update(_used_nans(k, kernels))
+    return [n for n, _ in NANS if n in used]
+
+
+def _writer_head(fd, nans):
+    return ['  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+            '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+            (f'\n         {_binders(nans)},' if nans else ','),
+            f'  ({fd.min_precision} <= prec)%Z ->']
+
+
+def _written_limbs(fd, w='w_'):
+    return rocq.tuple_parts(w, len(fd.writes[0].limbs))
+
+
+def map_statement(fd, kernels, order):
+    """F_seq_ieee_spec or F_lanes_ieee_spec of a map (the second for every W): for canonical scalars
+    and elements (any value, for one limb; a finite power of two for a scalar power_of_two), with
+    (ws_, flag_) the list written and the mask, Forall2 of the elements and the elements written of:
+    if the leading limb of the element written is finite, every limb of the scalars, of the element
+    and of the element written is finite, the values written are those of the real model of the step
+    (Model.v, at ieee_emin prec emax) on the values given, and the claims of the step hold of them
+    (as in K_ieee_spec); otherwise every limb written is a NaN and the mask is false. And the mask is
+    true exactly when the leading limb of every element written is finite. The scalars are said to
+    be finite element by element: of an empty list nothing is said of them, and the mask is true."""
+    step = kernels[fd.step[0]]
+    _, el, xs = rocq._fold_binders(fd)
+    suffix = ir.ORDER_SUFFIX[order]
+    nans = _writer_nans(fd, kernels, [step])
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    lt = f'list ({etype})'
+    # The step's own names for what the map passes it, as in the real model (rocq.map_statement).
+    kgroup = dict(zip(fd.step[1], step.inputs))
+    canonical = {r[1] for r in fd.requires if r[0] == 'canonical'}
+    pow2 = {r[1] for r in fd.requires if r[0] == 'power_of_two'}
+    hyps = []
+    for g in fd.scalars:
+        limbs = list(kgroup[g.name].limbs)
+        if g.name in canonical:
+            hyps.append(f'canonical_2 {" ".join(_limbs(step, limbs, g.name))}')
+        if g.name in pow2:
+            hyps += [f'finite {limbs[0]}', f'(exists n : Z, val {limbs[0]} = bpow radix2 n)']
+    groups = rocq.fold_groups(fd, el)
+    element = [f'canonical_2 {" ".join(rocq._paren(x) for x in _limbs(step, rocq.tuple_parts(groups[g.name], len(g.limbs)), g.name))}'
+               for g in fd.arrays if g.name in canonical]
+    pattern = rocq._pattern([rocq._pattern(list(kgroup[g.name].limbs)) for g in fd.arrays])
+    outs = list(step.outputs[0].limbs)
+    t = _Terms(step)
+    claims = [_claim(e, step, t, {g.name: g.limbs for g in step.outputs}) for e in step.ensures]
+    section = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v] for v in rocq.section_args(step, kernels)]
+    real = ' '.join([step.name] + section + [f'(val {v})' for v in step.input_limbs])
+    vals = f'val {outs[0]}' if len(outs) == 1 else '(' + ', '.join(f'val {v}' for v in outs) + ')'
+    finite = [f'finite {v}' for v in step.input_limbs] + [f'finite {v}' for v in outs[1:]]
+    scalars = ' '.join('(' + ', '.join(kgroup[g.name].limbs) + ')' if len(g.limbs) > 1 else kgroup[g.name].limbs[0]
+                       for g in fd.scalars)
+    scalar_limbs = [v for g in fd.scalars for v in kgroup[g.name].limbs]
+    if order == 'lanes':
+        binders = f'forall (W : nat) ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),' \
+            if scalar_limbs else f'forall (W : nat) ({xs} : {lt}),'
+    else:
+        binders = f'forall ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),' \
+            if scalar_limbs else f'forall {xs} : {lt},'
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_{suffix}', 'prec', 'emax'] + nans + (['W'] if order == 'lanes' else []) +
+                    ([scalars] if scalars else []) + [xs])
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    lines = [f'(* {fd.name}, {what}, in the IEEE model: each element it writes, and its mask. Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_{suffix}_ieee_spec : Prop :='] + _writer_head(fd, nans) + [f'  {binders}']
+    lines += [f'  {h} ->' for h in hyps]
+    if element:
+        lines.append(f'  Forall (fun {el} => {" /\\ ".join(element)}) {xs} ->')
+    lines += [f"  let '(ws_, flag_) := {call} in",
+              f'  Forall2 (fun {el} w_ =>']
+    lines += [f'    {rocq._let(pattern, el)}'] if pattern != el else []
+    lines += [f'    {rocq._let(rocq._pattern(outs), "w_")}',
+              f'    (finite {outs[0]} ->',
+              '     ' + ' /\\ '.join(finite) + (' /\\' if finite else ''),
+              f'     {vals} = {real} /\\',
+              '     ' + ' /\\\n     '.join(claims) + ') /\\',
+              f'    (~ finite {outs[0]} -> ' + ' /\\ '.join(f'nan {v}' for v in outs) + ' /\\ flag_ = false))',
+              f'    {xs} ws_ /\\',
+              f'  (flag_ = true <-> Forall (fun w_ => finite {rocq._paren(_written_limbs(fd)[0])}) ws_).']
+    return lines
+
+
+def conv_statement(fd, kernels):
+    """F_ieee_spec of a convolution: for canonical entries of the two arrays (any value, for one
+    limb), with (ws_, flag_) the coefficients written and the mask, Forall2 of the indices of the
+    coefficients and the coefficients of: if the leading limb of coefficient j is finite, every limb
+    of every term of it (conv_terms xs ys j) and of the coefficient is finite, its values are the
+    real model of the sequential order of the fold of its coefficients (FoldModel.v, at ieee_emin
+    prec emax) on the values of the terms, and the claims of that fold's statement hold of them;
+    otherwise every limb of the coefficient is a NaN. And the mask is true exactly when the leading
+    limb of every coefficient is finite."""
+    cf = kernels.folds[fd.coefficients]
+    step = kernels[cf.step[0]]
+    nans = _writer_nans(fd, kernels, [step])
+    x, y = fd.arrays
+    _, el, txs = rocq._fold_binders(cf)
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    canonical = {r[1] for r in fd.requires if r[0] == 'canonical'}
+    hyps = []
+    for g, l in ((x, xs), (y, ys)):
+        if g.name in canonical:
+            limbs = _limbs(step, rocq.tuple_parts(g.name, len(g.limbs)), g.name)
+            hyps.append(f'Forall (fun {g.name} => canonical_2 {" ".join(rocq._paren(v) for v in limbs)}) {l}')
+    tx = _ftype(len(x.limbs)).replace('float', 'binary_float prec emax')
+    ty = _ftype(len(y.limbs)).replace('float', 'binary_float prec emax')
+    binders = f'forall ({xs} : list ({tx})) ({ys} : list ({ty})),' if tx != ty else f'forall {xs} {ys} : list ({tx}),'
+    groups = rocq.fold_groups(cf, el)
+    sizes = {g.name: len(g.limbs) for g in cf.arrays}
+    terms = [f'finite {rocq._paren(v)}' for g in cf.arrays for v in rocq.tuple_parts(groups[g.name], sizes[g.name])]
+    values = []
+    for g in cf.arrays:
+        parts = [f'val {rocq._paren(v)}' for v in rocq.tuple_parts(groups[g.name], sizes[g.name])]
+        values.append(parts[0] if len(parts) == 1 else '(' + ', '.join(parts) + ')')
+    value = values[0] if len(values) == 1 else '(' + ', '.join(values) + ')'
+    section = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v] for v in rocq.fold_section_args([step], kernels)]
+    real = ' '.join([f'FoldModel.{cf.name}_seq'] + section + ['vs'])
+    w = [rocq._paren(v) for v in _written_limbs(fd)]
+    vals = f'val {w[0]}' if len(w) == 1 else '(' + ', '.join(f'val {v}' for v in w) + ')'
+    claims = [re.sub(r'\bemin\b', EMIN, c) for c in rocq.fold_conclusion(cf, 's', el, 'vs', indent='         ')]
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_conv', 'prec', 'emax'] + nans + [xs, ys])
+    lines = [f'(* {fd.name}, each coefficient it writes, and its mask, in the IEEE model. Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_ieee_spec : Prop :='] + _writer_head(fd, nans) + [f'  {binders}']
+    lines += [f'  {h} ->' for h in hyps]
+    lines += [f"  let '(ws_, flag_) := {call} in",
+              '  Forall2 (fun j w_ =>',
+              f'    let {txs} := conv_terms {xs} {ys} j in',
+              f'    (finite {w[0]} ->',
+              f'     Forall (fun {el} => {" /\\ ".join(terms)}) {txs} /\\'] + \
+        ([f'     ' + ' /\\ '.join(f'finite {v}' for v in w[1:]) + ' /\\'] if len(w) > 1 else []) + [
+              f'     let vs := map (fun {el} => {value}) {txs} in',
+              f'     let s := {real} in',
+              f'     {vals} = s /\\',
+              '     ' + ' /\\\n     '.join(claims) + ') /\\',
+              # A coefficient that is not finite is a NaN in every limb, and the flag is false, as in a
+              # map's statement (map_statement).
+              f'    (~ finite {w[0]} -> ' + ' /\\ '.join(f'nan {v}' for v in w) + ' /\\ flag_ = false))',
+              f'    (seq 0 (conv_length (length {xs}) (length {ys}))) ws_ /\\',
+              f'  (flag_ = true <-> Forall (fun w_ => finite {w[0]}) ws_).']
+    return lines
+
+
+def bv_model(fd, kernels):
+    """A ball vector in the IEEE model: F_step, F_map, F_record, F_combine, and F_seq, F_lanes W,
+    which return the centers written, the radius and the flag (the code of cpp.bv_seq, cpp.bv_lanes)."""
+    step, record, combine, radius, finish = (kernels[c[0]] for c in (fd.step, fd.record, fd.combine, fd.radius,
+                                                                       fd.finish))
+    _, el, xs = rocq._fold_binders(fd)
+    etype = _fold_element_ftype(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    groups = rocq.fold_groups(fd, el)
+    sizes = {g.name: len(g.limbs) for g in fd.arrays + fd.scalars}
+    groups.update({g.name: g.name for g in fd.scalars})
+    args = [p for a in fd.step[1] for p in rocq.tuple_parts(groups[a], sizes[a])]
+    used = [g.name for g in fd.scalars if g.name in fd.step[1]]
+    params = rocq.bv_scalar_params(fd, set(used), 'float')
+    allp = rocq.bv_scalar_params(fd, {g.name for g in fd.scalars}, 'float')
+    n = len(fd.writes[0].limbs)
+    wtype = _ftype(n)
+    lw = f'list ({wtype})' if ' ' in wtype else f'list {wtype}'
+    exact = fd.exact_mask is not None
+    # The state of the fold of maxima, m and ok; a ball vector exact under conditions ands the step's
+    # masks apart, as a map its check's (ex_ below).
+    stype = 'float * bool'
+    mok = ''.join(fd.state_names()[:2])
+    zero = '(pzero, true)'
+    stepped = f'({fd.name}_step{"".join(" " + s for s in used)})' if used else f'{fd.name}_step'
+    zeros = '(' + ', '.join(['pzero'] * n) + ')' if n > 1 else 'pzero'
+    if exact:
+        mapped = [f'Definition {fd.name}_map{params} ({xs} : {lt}) : {lw} :=',
+                  f'  map (fun {el} => fst ({fd.name}_step{"".join(" " + s for s in used)} {el})) {xs}.']
+    else:
+        mapped = [f'Definition {fd.name}_map{params} ({xs} : {lt}) : {lw} :=',
+                  f'  map {stepped} {xs}.']
+    lines = ['', f'(* {fd.name}: a ball vector; step {step.name}, record {record.name}, combination {combine.name}, '
+                 f'radius {radius.name}, finish {finish.name}' +
+                 (', the and of the step\'s masks of exactness' if exact else '') + '. *)',
+             f'Definition {fd.name}_step{params} ({el} : {etype}) : {wtype}{" * bool" if exact else ""} :=',
+             f'  {_kernel_call(step, kernels, args)}.',
+             ''] + mapped + [
+             '',
+             f'Definition {fd.name}_record ({mok} : {stype}) (w_ : {wtype}) : {stype} :=',
+             f'  {_kernel_call(record, kernels, rocq.tuple_parts(mok, 2) + rocq.tuple_parts("w_", n))}.',
+             '',
+             f'Definition {fd.name}_combine (a b : {stype}) : {stype} :=',
+             f'  {_kernel_call(combine, kernels, rocq.tuple_parts("a", 2) + rocq.tuple_parts("b", 2))}.']
+    rad = _kernel_call(radius, kernels, ['fst s_'] + (['ex_'] if exact else []) + list(fd.radius[1][1 + exact:]))
+    fin = _kernel_call(finish, kernels, ['rz_', 'snd s_'])
+    for order in ('sequential', 'lanes'):
+        if order not in fd.orders:
+            continue
+        head = f'Definition {fd.name}_seq{allp} ({xs} : {lt})' if order == 'sequential' else \
+            f'Definition {fd.name}_lanes (W : nat){allp} ({xs} : {lt})'
+        state = (f'fold_seq {fd.name}_record {zero} ws_' if order == 'sequential' else
+                 f'fold_lanes {fd.name}_record {fd.name}_combine {zero} W ws_')
+        if exact:
+            # The centers and the masks of the step; the masks and-ed from true in the order's form, as
+            # a map's mask (fold_seq_and, fold_lanes_and of Folds.v).
+            mask = ('fold_seq (fun m_ e_ => andb m_ (snd e_)) true es_' if order == 'sequential' else
+                    'fold_lanes (fun m_ e_ => andb m_ (snd e_)) andb true W es_')
+            lines += ['', f'{head} : {lw} * float * bool :=',
+                      f'  let es_ := map {stepped} {xs} in',
+                      '  let ws_ := map fst es_ in',
+                      f'  let s_ := {state} in',
+                      f'  let ex_ := {mask} in',
+                      f'  let rz_ := {rad} in',
+                      f'  let f_ := {fin} in',
+                      f'  (if snd f_ then (ws_, fst f_) else (map (fun _ => {zeros}) ws_, pinf), snd f_).']
+            continue
+        lines += ['', f'{head} : {lw} * float * bool :=',
+                  f'  let ws_ := map {stepped} {xs} in',
+                  f'  let s_ := {state} in',
+                  f'  let rz_ := {rad} in',
+                  f'  let f_ := {fin} in',
+                  f'  (if snd f_ then (ws_, fst f_) else (map (fun _ => {zeros}) ws_, pinf), snd f_).']
+    return lines
+
+
+def _bv_vector(name, limbs, radius, xs, el, part):
+    """That the centers `part` of the elements and the radius are a canonical BallVector: every center
+    a finite ball with the radius, or every center zero with the radius +infinity."""
+    n = len(limbs)
+    cs = ' '.join(rocq._paren(x) for x in rocq.tuple_parts(part, n))
+    k = n
+    return (f'(finite {radius} /\\ 0 <= val {radius} /\\ Forall (fun {el} => ball_finite_{k} {cs} {radius}) {xs}) \\/\n'
+            f'  ({radius} = infinity prec emax false /\\ Forall (fun {el} => ball_whole_{k} {cs} {radius}) {xs})')
+
+
+def bv_statement(fd, kernels, order):
+    """F_seq_ieee_spec or F_lanes_ieee_spec of a ball vector (the second for every W): V1 to V4 of
+    milestone2.md, "BallVector", and the flag, for canonical BallVectors and any value of a scalar that
+    is not a radius."""
+    if fd.ensures[0]['kind'] == 'makes_ball_vector':
+        return bv_make_statement(fd, kernels, order)
+    step, radius = kernels[fd.step[0]], kernels[fd.radius[0]]
+    parts = [step, kernels[fd.record[0]], radius, kernels[fd.finish[0]]] + \
+        ([kernels[fd.combine[0]]] if order == 'lanes' else [])
+    used = set()
+    for k in parts:
+        used.update(_used_nans(k, kernels))
+    nans = [x for x, _ in NANS if x in used]
+    _, el, xs = rocq._fold_binders(fd)
+    suffix = ir.ORDER_SUFFIX[order]
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    lt = f'list ({etype})'
+    vectors = {r[1]: r[2] for r in fd.requires if r[0] == 'ball_vector'}
+    groups = rocq.fold_groups(fd, el)
+    scalar_limbs = [v for g in fd.scalars for v in g.limbs]
+    binders = (f'forall (W : nat) ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),'
+               if order == 'lanes' else f'forall ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),')
+    hyps = [_bv_vector(g.name, g.limbs, vectors[g.name], xs, el, groups[g.name]) for g in fd.arrays]
+    # A scalar that is a power of two (bv_mul_pow2_k): finite, as for a map.
+    pow2 = [r[1] for r in fd.requires if r[0] == 'power_of_two']
+    w = list(fd.writes[0].limbs)
+    pattern = rocq._pattern([rocq._pattern(list(g.limbs)) for g in fd.arrays])
+    wp = rocq._pattern(w)
+    entry = fd.ensures[0]
+    members = [rocq.bv_member(b) for b in entry['balls']]
+    arrays = {g.name: g for g in fd.arrays}
+    scalars = {g.name: g for g in fd.scalars}
+    k = len(w)
+    inb = [f'in_ball_{len(arrays[v["center"]].limbs)} {" ".join(arrays[v["center"]].limbs)} {v["radius"]} '
+           f'{rocq.bv_member(b)}' for b, v in entry['balls'].items()]
+
+    def name(nm):
+        if nm in entry['balls']:
+            return rocq.bv_member(nm)
+        return _val_sum(scalars[nm].limbs)
+    setv = rocq._term(expr.parse(entry['set']), name)
+
+    def vname(nm):
+        g = arrays.get(nm) or scalars[nm]
+        return _val_sum(g.limbs)
+    conds = []
+    for c in entry['finite_when']:
+        tree = expr.parse(c['abs_le'])
+        term = rocq._term(tree, vname)
+        e = c['exp']
+        bound = 'emax' if e == 0 else f'(emax {"-" if e < 0 else "+"} {abs(e)})'
+        conds.append(f'Rabs {_paren(term)} <= bpow radix2 {bound}')
+    # V4 is a statement of every length: the radii's own condition (radii_when, over the scalars) is
+    # a hypothesis, which the conditions of finite_when at any entry imply.
+    rconds = []
+    for c in entry.get('radii_when', []):
+        term = rocq._term(expr.parse(c['abs_le']), vname)
+        e = c['exp']
+        bound = 'emax' if e == 0 else f'(emax {"-" if e < 0 else "+"} {abs(e)})'
+        rconds.append(f'Rabs {_paren(term)} <= bpow radix2 {bound}')
+    section = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v] for v in rocq.section_args(step, kernels)]
+    real_step = ' '.join([step.name] + section +
+                         [f'(val {v})' for a in fd.step[1] for v in (arrays.get(a) or scalars[a]).limbs])
+    rsection = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v]
+                for v in rocq.fold_section_args([step, radius, kernels[fd.record[0]]], kernels)]
+    values = []
+    for g in fd.arrays:
+        ps = [f'val {rocq._paren(x)}' for x in rocq.tuple_parts(groups[g.name], len(g.limbs))]
+        values.append(ps[0] if len(ps) == 1 else '(' + ', '.join(ps) + ')')
+    value = values[0] if len(values) == 1 else '(' + ', '.join(values) + ')'
+    real_r = ' '.join([f'FoldModel.{fd.name}_radius'] + rsection + [f'(val {v})' for v in scalar_limbs] +
+                      [f'(map (fun {el} => {value}) {xs})'])
+    vals = f'val {w[0]}' if k == 1 else '(' + ', '.join(f'val {v}' for v in w) + ')'
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_{suffix}', 'prec', 'emax'] + nans + (['W'] if order == 'lanes' else []) +
+                    scalar_limbs + [xs])
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    wcs = ' '.join(rocq._paren(x) for x in rocq.tuple_parts('w_', k))
+    lines = [f'(* {fd.name}, {what}, in the IEEE model: V1 to V4 and the flag. Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_{suffix}_ieee_spec : Prop :=',
+             '  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+             '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+             (f'\n         {_binders(nans)},' if nans else ','),
+             f'  ({fd.min_precision} <= prec)%Z ->',
+             f'  {binders}']
+    lines += [f'  ({h}) ->' for h in hyps]
+    for s in pow2:
+        lines += [f'  finite {s} ->', f'  (exists n : Z, val {s} = bpow radix2 n) ->']
+    lines += [f"  let '(ws_, r_, flag_) := {call} in",
+              f'  ((finite r_ /\\ 0 <= val r_ /\\ Forall (fun w_ => ball_finite_{k} {wcs} r_) ws_) \\/',
+              f'   (r_ = infinity prec emax false /\\ Forall (fun w_ => ball_whole_{k} {wcs} r_) ws_)) /\\',
+              '  (flag_ = true <-> finite r_) /\\',
+              f'  Forall2 (fun {el} w_ =>']
+    lines += [f'    {rocq._let(pattern, el)}'] if pattern != el else []
+    lines += [f'    {rocq._let(wp, "w_")}',
+              f'    forall {" ".join(members)} : R, ' + ' -> '.join(inb) + f' -> in_ball_{k} {" ".join(w)} r_ {setv})',
+              f'    {xs} ws_ /\\']
+    if entry.get('exact_when'):
+        # Exact under conditions (bv_mul_pow2_k): a finite result whose scalars satisfy their
+        # conditions and every entry those of an entry is exactly the set, entry by entry.
+        econds = rocq.bv_exact_conditions(fd, entry, groups, pattern, el, xs, lambda nm: _val_sum(scalars[nm].limbs),
+                                          lambda v: f'val {v}', EMIN)
+        lines += ['  (finite r_ ->', '   ' + econds[0][3:]] + econds[1:] + [f'   Forall2 (fun {el} w_ =>']
+        lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
+        lines += [f'     {rocq._let(wp, "w_")}',
+                  f'     forall v_ : R, in_ball_{k} {" ".join(w)} r_ v_ -> exists {" ".join(members)} : R, ' +
+                  ' /\\ '.join(inb) + f' /\\ v_ = {setv}) {xs} ws_) /\\']
+    elif 'exact_when' in entry:
+        # Exact (bv_neg_k): a finite result is exactly the set, entry by entry.
+        lines += ['  (finite r_ ->', f'   Forall2 (fun {el} w_ =>']
+        lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
+        lines += [f'     {rocq._let(wp, "w_")}',
+                  f'     forall v_ : R, in_ball_{k} {" ".join(w)} r_ v_ -> exists {" ".join(members)} : R, ' +
+                  ' /\\ '.join(inb) + f' /\\ v_ = {setv}) {xs} ws_) /\\']
+    lines += ['  (finite r_ ->',
+              '   ' + ' /\\ '.join(f'finite {v}' for v in scalar_limbs) + ' /\\',
+              f'   Forall2 (fun {el} w_ =>']
+    lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
+    # The step of a ball vector exact under conditions returns the center and its mask: the center is
+    # the first component of the real model's.
+    centers = f'fst ({real_step})' if fd.exact_mask is not None else real_step
+    lines += [f'     {rocq._let(wp, "w_")}',
+              f'     {vals} = {centers}) {xs} ws_ /\\',
+              f'   val r_ = {real_r})' + (' /\\' if conds else '.')]
+    if conds:
+        # V4, for every length (the empty vector included); from the precision of finite_from when the
+        # claim has one (a constant of the radius overflows the smallest formats below it).
+        lines += ['  (' + _finite_from(entry) + ' -> '.join(f'finite {v}' for v in scalar_limbs) + ' ->',
+                  '   ' + ' /\\ '.join(rconds) + ' ->',
+                  f'   Forall (fun {el} =>']
+        lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
+        lines += ['     ' + ' /\\ '.join(conds) + f') {xs} ->',
+                  '   finite r_).']
+    return lines
+
+
+def _finite_from(entry):
+    """The premise of V4 on the precision, when the claim says from which precision V4 holds
+    (finite_from, above the fold's minimum precision): '(P <= prec)%Z -> '; otherwise nothing."""
+    return f'({entry["finite_from"]} <= prec)%Z -> ' if 'finite_from' in entry else ''
+
+
+def bv_conv_statement(fd, kernels):
+    """F_ieee_spec of the product of two BallVectors: V1 (canonical, of n_x + n_y - 1 coefficients, none
+    when a length is 0), the flag, V2 (containment coefficient by coefficient, for all members of the
+    operands' balls, each entry ranging independently over its ball), V3 (a finite result has finite
+    radii, the real model's coefficients and radius on the values), V4 (finite radii, the count
+    within count_when, the radii within radii_when, every entry of each array and every pair of
+    entries within finite_when: a finite result), for canonical BallVectors."""
+    conv = kernels.folds[fd.centers]
+    cf = kernels.folds[conv.coefficients]
+    parts = [kernels[cf.step[0]], kernels[conv.check]] + [kernels[c[0]] for c in (fd.records[0], fd.bound, fd.radius,
+                                                                                   fd.finish)]
+    used = set()
+    for k in parts:
+        used.update(_used_nans(k, kernels))
+    nans = [x for x, _ in NANS if x in used]
+    x, y = fd.arrays
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    vectors = {r[1]: r[2] for r in fd.requires if r[0] == 'ball_vector'}
+    k = len(fd.writes[0].limbs)
+    tx = _ftype(len(x.limbs)).replace('float', 'binary_float prec emax')
+    scalar_limbs = [v for g in fd.scalars for v in g.limbs]
+    hyps = [_bv_vector(g.name, g.limbs, vectors[g.name], l, g.name, g.name) for g, l in ((x, xs), (y, ys))]
+    entry = fd.ensures[0]
+    wcs = ' '.join(rocq._paren(v) for v in rocq.tuple_parts('w_', k))
+    inb = [f'Forall2 (fun {g.name} {rocq.bv_member(g.name)} => in_ball_{len(g.limbs)} '
+           f'{" ".join(rocq._paren(v) for v in rocq.tuple_parts(g.name, len(g.limbs)))} {vectors[g.name]} '
+           f'{rocq.bv_member(g.name)}) {l} {l}_' for g, l in ((x, xs), (y, ys))]
+    product = f'sumR (map (fun xy => fst xy * snd xy) (FoldModel.conv_terms {xs}_ {ys}_ j))'
+    count = f'INR (Nat.min (length {xs}) (length {ys}))'
+
+    def value(g):
+        ps = [f'val {rocq._paren(v)}' for v in rocq.tuple_parts(g.name, len(g.limbs))]
+        return ps[0] if len(ps) == 1 else '(' + ', '.join(ps) + ')'
+    vx, vy = (f'(map (fun {g.name} => {value(g)}) {l})' for g, l in ((x, xs), (y, ys)))
+    tie = {'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}
+    sec_c = [tie[v] for v in rocq.fold_section_args([kernels[cf.step[0]]], kernels)]
+    sec_r = [tie[v] for v in rocq.fold_section_args([kernels[fd.records[0][0]], kernels[fd.bound[0]],
+                                                      kernels[fd.radius[0]]], kernels)]
+    wv = f'val {rocq._paren("w_")}' if k == 1 else '(' + ', '.join(f'val {rocq._paren(v)}' for v in rocq.tuple_parts('w_', k)) + ')'
+
+    def term(text, names):
+        def name(nm):
+            if nm == rules_count():
+                return f'({count})'
+            if nm in names:
+                return names[nm]
+            g = next(h for h in fd.scalars if h.name == nm)
+            return _val_sum(g.limbs)
+        return rocq._term(expr.parse(text), name)
+
+    def bound(e):
+        b = 'emax' if e == 0 else f'(emax {"-" if e < 0 else "+"} {abs(e)})'
+        return f'bpow radix2 {b}'
+    conds = {'x': [], 'y': [], 'both': [], 'none': []}
+    for c in entry['finite_when'] + entry.get('radii_when', []):
+        names = expr.names(expr.parse(c['abs_le']))
+        where = 'both' if {x.name, y.name} <= names else 'x' if x.name in names else 'y' if y.name in names else 'none'
+        own = {x.name: _val_sum(x.limbs), y.name: _val_sum(y.limbs)}
+        conds[where].append(f'Rabs {_paren(term(c["abs_le"], own))} <= {bound(c["exp"])}')
+
+    def constant(text):
+        def name(nm):
+            return {'u': 'u prec', 'eta': f'eta {EMIN}', rules_count(): f'({count})'}[nm]
+        return rocq._term(expr.parse(text), name,
+                          lambda fn, kname: rocq.constant_call(fn, kname, kernels, 'u prec', f'eta {EMIN}'))
+    counts = [f'{constant(c["le"])} <= {constant(c["than"])}' for c in entry.get('count_when', [])]
+    lets = {g.name: rocq._let(rocq._pattern(list(g.limbs)), g.name) if rocq._pattern(list(g.limbs)) != g.name else ''
+            for g in (x, y)}
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_conv', 'prec', 'emax'] + nans + scalar_limbs + [xs, ys])
+    lines = [f'(* {fd.name}, in the IEEE model: V1 to V4 and the flag. Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_ieee_spec : Prop :=',
+             '  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+             '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+             (f'\n         {_binders(nans)},' if nans else ','),
+             f'  ({fd.min_precision} <= prec)%Z ->',
+             f'  forall ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} {ys} : list ({tx})),']
+    lines += [f'  ({h}) ->' for h in hyps]
+    lines += [f"  let '(ws_, r_, flag_) := {call} in",
+              f'  ((finite r_ /\\ 0 <= val r_ /\\ Forall (fun w_ => ball_finite_{k} {wcs} r_) ws_) \\/',
+              f'   (r_ = infinity prec emax false /\\ Forall (fun w_ => ball_whole_{k} {wcs} r_) ws_)) /\\',
+              f'  length ws_ = FoldModel.conv_length (length {xs}) (length {ys}) /\\',
+              '  (flag_ = true <-> finite r_) /\\',
+              f'  (forall {xs}_ {ys}_ : list R,',
+              f'   {inb[0]} ->',
+              f'   {inb[1]} ->',
+              f'   Forall2 (fun j w_ => in_ball_{k} {wcs} r_ ({product}))',
+              f'     (seq 0 (FoldModel.conv_length (length {xs}) (length {ys}))) ws_) /\\',
+              '  (finite r_ ->',
+              '   ' + ' /\\ '.join(f'finite {v}' for v in scalar_limbs) + ' /\\',
+              f'   Forall2 (fun w_ s_ => {wv} = s_) ws_ ({" ".join([f"FoldModel.{conv.name}_conv"] + sec_c + [vx, vy])}) /\\',
+              f'   val r_ = {" ".join([f"FoldModel.{fd.name}_radius"] + sec_r + [f"(val {v})" for v in scalar_limbs] + [vx, vy])})' +
+              (' /\\' if entry['finite_when'] else '.')]
+    if entry['finite_when']:
+        hyp = ['  (' + _finite_from(entry) + ' -> '.join(f'finite {v}' for v in scalar_limbs) + ' ->']
+        hyp += [f'   {c} ->' for c in counts + conds['none']]
+        for where, g, l in (('x', x, xs), ('y', y, ys)):
+            if conds[where]:
+                body = ' /\\ '.join(conds[where])
+                let = f'{lets[g.name]} ' if lets[g.name] else ''
+                hyp.append(f'   Forall (fun {g.name} => {let}{body}) {l} ->')
+        if conds['both']:
+            body = ' /\\ '.join(conds['both'])
+            lx, ly = (f'{lets[g.name]} ' if lets[g.name] else '' for g in (x, y))
+            hyp.append(f'   Forall (fun {x.name} => Forall (fun {y.name} => {lx}{ly}{body}) {ys}) {xs} ->')
+        lines += hyp + ['   finite r_).']
+    return lines
+
+
+def rules_count():
+    """The name of the count in the conditions of V4 of the product of two BallVectors."""
+    from . import rules
+    return rules.COUNT_NAME
+
+
+def bv_make_statement(fd, kernels, order):
+    """F_seq_ieee_spec or F_lanes_ieee_spec of a constructor of a BallVector (makes_ball_vector;
+    milestone2.md, "BallVector", "Values"), for any radius and any centers (canonical pairs for two
+    limbs): the result is canonical; the flag is true exactly when the radius is finite; it is true
+    exactly when the radius given is finite and not negative and every center given is finite (its
+    leading limb); and then the centers written are those given, limb for limb, and the radius the
+    radius given, as values."""
+    parts = [kernels[fd.step[0]], kernels[fd.record[0]], kernels[fd.radius[0]], kernels[fd.finish[0]]] + \
+        ([kernels[fd.combine[0]]] if order == 'lanes' else [])
+    used = set()
+    for k in parts:
+        used.update(_used_nans(k, kernels))
+    nans = [x for x, _ in NANS if x in used]
+    _, el, xs = rocq._fold_binders(fd)
+    suffix = ir.ORDER_SUFFIX[order]
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    c, r = fd.arrays[0], fd.scalars[0]
+    n = len(c.limbs)
+    w = list(fd.writes[0].limbs)
+    binders = (f'forall (W : nat) ({r.name} : binary_float prec emax) ({xs} : list ({etype})),' if order == 'lanes'
+               else f'forall ({r.name} : binary_float prec emax) ({xs} : list ({etype})),')
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_{suffix}', 'prec', 'emax'] + nans + (['W'] if order == 'lanes' else []) +
+                    [r.name, xs])
+    parts_c = rocq.tuple_parts(el, n)
+    wcs = ' '.join(rocq._paren(x) for x in rocq.tuple_parts('w_', n))
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    lines = [f'(* {fd.name}, {what}, in the IEEE model: the constructor of a BallVector (a canonical result; the '
+             'whole space exactly when the radius given is negative, a NaN or +infinity or a center given is not '
+             f'finite; otherwise the centers and the radius given). Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_{suffix}_ieee_spec : Prop :=',
+             '  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+             '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+             (f'\n         {_binders(nans)},' if nans else ','),
+             f'  ({fd.min_precision} <= prec)%Z ->',
+             f'  {binders}']
+    if n > 1:
+        lines.append(f'  Forall (fun {el} => canonical_{n} {" ".join(rocq._paren(x) for x in parts_c)}) {xs} ->')
+    lines += [f"  let '(ws_, r_, flag_) := {call} in",
+              f'  ((finite r_ /\\ 0 <= val r_ /\\ Forall (fun w_ => ball_finite_{n} {wcs} r_) ws_) \\/',
+              f'   (r_ = infinity prec emax false /\\ Forall (fun w_ => ball_whole_{n} {wcs} r_) ws_)) /\\',
+              '  (flag_ = true <-> finite r_) /\\',
+              f'  (flag_ = true <-> finite {r.name} /\\ 0 <= val {r.name} /\\ '
+              f'Forall (fun {el} => finite {rocq._paren(parts_c[0])}) {xs}) /\\',
+              f'  Forall2 (fun {el} w_ =>']
+    pattern = rocq._pattern(list(c.limbs))
+    if pattern != el:
+        lines.append(f'    {rocq._let(pattern, el)}')
+    lines += [f'    {rocq._let(rocq._pattern(w), "w_")}',
+              '    flag_ = true -> ' + ' /\\ '.join(f'val {a} = val {b}' for a, b in zip(w, c.limbs)) + f') {xs} ws_ /\\',
+              f'  (flag_ = true -> val r_ = val {r.name}).']
+    return lines
+
+
 # The kernels that are the steps or the combinations of the folds: each has a statement that its
 # result's leading limb is finite only if that of each of its operands is (lead_statement). Not
 # those of a fold of maxima, whose maximum keeps a finite state when the element is a NaN (the
@@ -1616,10 +2785,12 @@ def fold_statement(fd, kernels, order):
 def lead_kernels(kernels):
     names = set()
     for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False) or getattr(fd, 'is_max', False) or getattr(fd, 'is_conv', False):
+        if getattr(fd, 'is_max', False) or getattr(fd, 'is_conv', False) or getattr(fd, 'is_bv_conv', False):
             continue
         names.add(fd.step[0])
-        if fd.combine:
+        # A map's combination is the operation and, not a kernel; its step's operands are the
+        # scalars and the element, and the statement is about every one of them.
+        if fd.combine and not getattr(fd, 'is_map', False) and not getattr(fd, 'is_bv', False):
             names.add(fd.combine[0])
     return [k for k in in_model(kernels).values() if k.name in names]
 
@@ -1655,10 +2826,21 @@ def fold_statements(kernels):
              'Open Scope R_scope.']
     for k in lead_kernels(kernels):
         lines += [''] + lead_statement(k, kernels)
-    for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False) or getattr(fd, 'is_conv', False):
+    for fd in _folds_in_order(kernels):
+        if getattr(fd, 'is_conv', False):
+            lines += [''] + conv_statement(fd, kernels)
+            continue
+        if getattr(fd, 'is_bv_conv', False):
+            lines += [''] + bv_conv_statement(fd, kernels)
+            continue
+        if getattr(fd, 'is_bv', False):
+            for order in ir.ORDERS:
+                if order in fd.orders:
+                    lines += [''] + bv_statement(fd, kernels, order)
             continue
         for order in ir.ORDERS:
             if order in fd.orders:
-                lines += [''] + fold_statement(fd, kernels, order)
+                lines += [''] + (map_statement if getattr(fd, 'is_map', False) else fold_statement)(fd, kernels, order)
+        if max_statements(fd):
+            lines += [''] + max_orders_statement(fd, kernels) + [''] + max_flag_statement(fd, kernels)
     return '\n'.join(lines) + '\n'

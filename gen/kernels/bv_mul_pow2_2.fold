@@ -1,0 +1,35 @@
+# A BallVector with 2-limb centers times a positive power of two c (milestone2.md, "BallVector":
+# bv_mul_pow2_k; "Scaling a ball by a power of two"): exact when nothing underflows, so that halving a
+# polynomial again and again adds nothing to its radius. The centers by mul_pow2_2, entry by entry,
+# with the mask ec of ball_mul_pow2_2 that each was scaled exactly (bv_mul_pow2_step_2), and-ed into the
+# state's ex; the state's m and ok those of norm_upper_2 on the centers written; the one radius
+# bv_mul_pow2_radius, c rx when every entry and the radius were scaled exactly, otherwise the second
+# number after RN(c rx): the largest of the radii of ball_mul_pow2_2 entry by entry. norm_finish_1 tests
+# it: when it is not finite (the operand is the whole space, or a center or the radius overflowed),
+# every center written is zero and the radius +infinity, the whole space.
+fold:          bv_mul_pow2_2
+arrays:        stored x = x0 x1
+scalars:       stored rx, supplied c
+state:         m, mask ok, mask ex
+step:          (z, e) = bv_mul_pow2_step_2(x, c)
+record:        (m, ok) = norm_step_2(m, ok, z)
+record:        ex = and(ex, e)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+combine:       ex = and(ex, ex)
+radius:        rz = bv_mul_pow2_radius(m, ex, rx, c)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x*c
+requires:      ball_vector x rx
+requires:      power_of_two c
+ensures:       encloses_entries z r x*c x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*c,-2) radii_when=abs_le(rx*c,-2) exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))
+min_precision: 2
+theorem:       proofs/theories/BvPow2.v
+ieee_theorem:  proofs/theories/IeeeBvPow2.v
+status:        proved
+domain:        extended
+source:        mul_pow2_2 on the centers, the radius of ball_mul_pow2_2 with the exactness of every entry (milestone2.md, BallVector)
+license:       algorithm and proof: MIT

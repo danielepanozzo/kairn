@@ -106,6 +106,6 @@ The latest brute-force runs, from the stored summaries in [`results/milestone1/b
 
 ## Not claimed
 
-- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`add_2_2_full`](add_2_2_full.md) states that ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
+- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`add_2_2_full`](add_2_2_full.md) and [`interval_mid_rad_2`](interval_mid_rad_2.md) and [`interval_split_2`](interval_split_2.md) states that ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
 - Anything about an operand that is not normalized, which only limbs given by the program can make: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` written directly.
 

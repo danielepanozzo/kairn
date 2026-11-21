@@ -1052,6 +1052,18 @@ class R3OfTheKernels(unittest.TestCase):
     FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_1', 'dot_step_2'}
     # And the steps of the maps that read what the program supplies (sub_1_1 reads stored arrays).
     FOLD_STEPS |= MAP_STEPS - {'sub_1_1'}
+    # And the kernels of the accumulator that take what the program adds (acc_merge_k takes two
+    # accumulators, acc_radius_k a state).
+    FOLD_STEPS |= {'acc_add_1', 'acc_add_2', 'acc_mul_1', 'acc_mul_2'}
+    # And the radius kernels of BallVector that take the scalar the program gives (bv_scale_radius_k;
+    # bv_add_radius_k takes radii, limbs of objects, and the largest magnitude of a center).
+    FOLD_STEPS |= {'bv_scale_radius_1', 'bv_scale_radius_2'}
+    # And the step and the radius kernel of the constructor of a BallVector, which take the center and
+    # the radius the program gives (bv_center_2 copies the limbs of an Expansion<T, 2>, stored).
+    FOLD_STEPS |= {'bv_center_entry_1', 'bv_make_radius'}
+    # And the steps and the radius of the scaling of a BallVector by a power of two, which take the power
+    # of two the program gives (only multiplied).
+    FOLD_STEPS |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
 
     def test_entry_kernels(self):
         ks = common.kernels()
@@ -1062,6 +1074,9 @@ class R3OfTheKernels(unittest.TestCase):
         wave_2 = TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS | TheKernels.WAVE_2_B1
         self.assertEqual(wave_2, self.WAVE_2_CALLED)
         self.assertEqual(self.INTERVAL_PARTS, TheKernels.WAVE_2_CORES | {'mul_dir_1', 'mul_ext_2_2'})
+        # And those of stage B2 (the predicates, comparisons, set operations of a ball and conversions
+        # of two limbs), entry kernels too, which the public headers do not call yet.
+        wave_2 |= TheKernels.WAVE_2_B2
         self.assertEqual({n for n, k in ks.items() if k.entry},
                          self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1 | self.FOLD_STEPS | wave_2)
 
@@ -1129,7 +1144,10 @@ class R3OfTheKernels(unittest.TestCase):
         lines = build.summary(ks)
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
-                                         'conv_1', 'conv_2'} | MAPS)
+                                         'conv_1', 'conv_2'} | MAPS |
+                         {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
+                          'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'} |
+                         {'bv_conv_1', 'bv_conv_2'})
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
         self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)
@@ -1451,8 +1469,32 @@ class TheKernels(unittest.TestCase):
     # The folds of maxima, norm_upper_k (stage B, part 2): the combination and the steps, of the
     # finite domain, and the finishes, with the IEEE-model statement only.
     NORM_FINISH = {'norm_finish_1', 'norm_finish_2'}
+    # And the finish of the constructors of a BallVector, of the IEEE model only too.
+    NORM_FINISH |= {'bv_make_finish'}
+    # And the finish of the product of two BallVectors, of the IEEE model only too.
+    NORM_FINISH |= {'bv_conv_finish'}
     NORM = {'norm_combine', 'norm_step_1', 'norm_step_2'} | NORM_FINISH
-    FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM
+    # The kernels of the accumulator (milestone2.md, "The accumulator"), of the finite domain.
+    ACC = {f'acc_{op}_{k}' for op in ('add', 'mul', 'merge', 'radius') for k in (1, 2)}
+    # The radius kernels of BallVector (milestone2.md, "BallVector"), of the finite domain.
+    BV = {f'bv_{op}_radius_{k}' for op in ('add', 'scale') for k in (1, 2)}
+    # And the kernels of the constructor of a BallVector: its steps, its radius (finite domain; the copy
+    # bv_center_2 of the extended domain with a real-model statement, as neg_2) and its finish.
+    BV |= {'bv_center_entry_1', 'bv_center_2', 'bv_make_radius', 'bv_make_finish'}
+    # And the step of one limb and the radius of the negation of a BallVector (finite domain).
+    BV |= {'neg_1', 'bv_neg_radius'}
+    # And the steps and the radius of the scaling of a BallVector by a power of two (finite domain).
+    BV |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
+    # And the radius (finite domain) and the finish of the product of two BallVectors.
+    BV |= {'conv_radius', 'bv_conv_finish'}
+    # Of the kernels of the BallVectors, those that are still unverified, and of those of the extended
+    # domain, those whose IEEE-model statement is: none. (The kernels of the constructor and of the
+    # negation are proved, BvNegMake.v, IeeeBvNegMake.v, and those of the scaling by a power of two,
+    # BvPow2.v, IeeeBvPow2.v, and the radius of the product, BvConv.v, and the finish of the product,
+    # IeeeBvConv.v, once its statement printed the masks of if_all.)
+    BV_UNVERIFIED = set()
+    BV_IEEE_UNVERIFIED = set()
+    FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # which were unverified until their proofs were about the generated text: the interval kernels of one
     # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain
@@ -1473,6 +1515,24 @@ class TheKernels(unittest.TestCase):
                  'interval_intersection_1', 'interval_hull_2', 'interval_intersection_2', 'interval_mid_rad_1',
                  'interval_to_ball_1', 'ball_to_interval_1', 'interval_split_1'}
     WAVE_2 |= WAVE_2_B1 | {'mul_ext_2_2'}
+    # Stage B2 of wave 2, unverified, the IEEE-model statement only, entry kernels: the predicates,
+    # the three-valued comparisons and the relations of IEEE 1788 of an interval of one limb and of
+    # two (subset is the relation of IEEE 1788 and Kairn's contains(Y) with the operands exchanged).
+    WAVE_2_B2_INTERVALS = {f'interval_{name}_{k}' for k in (1, 2) for name in (
+        'empty', 'entire', 'contains', 'subset', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal',
+        'rel_equal', 'rel_interior', 'rel_disjoint')}
+    # And those of a ball, one limb and two.
+    WAVE_2_B2_BALLS = {f'ball_{name}_{k}' for k in (1, 2) for name in (
+        'contains_point', 'contains_ball', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal')}
+    # And the set operations of a ball: the hull and the intersection of one limb, the split of one
+    # and of two.
+    WAVE_2_B2_BALL_SETS = {'ball_hull_1', 'ball_intersection_1', 'ball_split_1', 'ball_split_2'}
+    # And the conversions of two limbs, the ball from an interval of one limb, and the hull and the
+    # intersection of balls of two limbs, which convert them.
+    WAVE_2_B2_CONVERSIONS = {'interval_mid_rad_2', 'interval_to_ball_2', 'ball_to_interval_2', 'interval_split_2',
+                             'ball_from_interval_1', 'ball_hull_2', 'ball_intersection_2'}
+    WAVE_2_B2 = WAVE_2_B2_INTERVALS | WAVE_2_B2_BALLS | WAVE_2_B2_BALL_SETS | WAVE_2_B2_CONVERSIONS
+    WAVE_2 |= WAVE_2_B2
     # Of these, the kernels whose theorems are about the generated text and pass the audit: all
     # of the first stage. The interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models
     # (DirectedProd.v, IeeeDirectedProd.v), the bounds of two limbs (Directed2.v), the sum of two
@@ -1485,7 +1545,24 @@ class TheKernels(unittest.TestCase):
     # of 2026-11-20, that the same infinity twice gives the whole line (IeeeInterval1.v,
     # IeeeIntervalExact.v, IeeeBallConvert.v).
     WAVE_2_B1_PROVED = WAVE_2_B1 | {'mul_ext_2_2'}
-    WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED
+    # And of stage B2, the kernels proved so far: the predicates, the three-valued comparisons and
+    # the relations of an interval of one limb and of two (IeeeIntervalPredicates.v); the
+    # predicates and comparisons of a ball of one limb (IeeeBallPredicates.v); the ball of one
+    # limb from an interval and the split of a ball of one limb (IeeeBallSets.v); the signs and
+    # the split of a ball of two limbs (IeeeBallPredicates2.v); ball_to_interval_2
+    # (IeeeBallConvert2.v); ball_less_2, ball_less_equal_2, ball_contains_ball_2 and ball_equal_2
+    # (IeeeBallCompare2.v); interval_mid_rad_2, interval_split_2 and interval_to_ball_2
+    # (IeeeIntervalConvert2.v); ball_contains_point_2 (IeeeBallContains2.v); the hull and the
+    # intersection of balls of one limb and of two (IeeeBallHull.v). That is all of them.
+    # ball_from_interval_1 is proved for the rule of 2026-11-20, that the same infinity twice gives
+    # the whole line, with its listing corrected for it (rv = lt(gu, gl), as interval_make_1).
+    WAVE_2_B2_PROVED = WAVE_2_B2_INTERVALS | {f'ball_{name}_1' for name in (
+        'contains_point', 'contains_ball', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal')} | {
+        'ball_from_interval_1', 'ball_split_1', 'ball_positive_2', 'ball_negative_2', 'ball_zero_2',
+        'ball_split_2', 'ball_to_interval_2', 'ball_less_2', 'ball_less_equal_2', 'ball_contains_ball_2',
+        'ball_equal_2', 'interval_mid_rad_2', 'interval_split_2', 'ball_contains_point_2',
+        'interval_to_ball_2', 'ball_hull_1', 'ball_intersection_1', 'ball_hull_2', 'ball_intersection_2'}
+    WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - WAVE_2_B2 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED | WAVE_2_B2_PROVED
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1510,36 +1587,45 @@ class TheKernels(unittest.TestCase):
         # constructors, which have no real-model statement, by their IEEE-model theorems.
         # Of wave 1 of Milestone 2, every kernel is proved too, the two full scalings of a ball by
         # their IEEE-model theorems (IeeeBallPow2.v), and so is every kernel of the folds' stage,
-        # those of the folds of maxima included (FoldNorm.v; the two finishes by their IEEE-model
-        # theorems, IeeeFoldNorm.v).
+        # every step of the maps (MapSteps.v), those of the folds of maxima (FoldNorm.v; the two
+        # finishes by their IEEE-model theorems, IeeeFoldNorm.v) and those of the accumulator, in
+        # both models (AccKernels.v, IeeeAccKernels.v), and the first radius kernels of BallVector
+        # (BvRadius.v).
         # The two constructors of a ball are proved for the rule of 2026-11-20, that a NaN radius
         # gives the whole line (IeeeMake.v).
+        # The kernels of the constructor, the negation, the scaling by a power of two and the product
+        # of BallVectors are proved (BV_UNVERIFIED is empty).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS | self.WAVE_2_PROVED)
-        # No kernel is unverified: the kernels of wave 2 were, in both models, until their proofs
-        # were about the generated text.
+                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.BV_UNVERIFIED) | self.WAVE_2_PROVED)
+        # No other kernel is unverified: the kernels of wave 2 were, in both models, until their proofs
+        # were about the generated text, and so were those of the accumulator and the radius
+        # kernels of BallVector (BvRadius.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
-                         self.WAVE_2 - self.WAVE_2_PROVED)
+                         (self.WAVE_2 - self.WAVE_2_PROVED) | self.BV_UNVERIFIED)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
-        wave_2_ieee_only = self.WAVE_2_INTERVALS | self.WAVE_2_BALLS | self.WAVE_2_B1 | {'mul_ext_2_2'}
+        wave_2_ieee_only = self.WAVE_2_INTERVALS | self.WAVE_2_BALLS | self.WAVE_2_B1 | {'mul_ext_2_2'} | self.WAVE_2_B2
         self.assertEqual({name for name, k in ks.items() if not k.real_model},
                          self.NON_FINITE | self.WAVE_1_FULL | self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only)
         self.assertEqual({name for name, k in ks.items() if k.extended},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL |
-                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'})
+                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'} | {'bv_center_2'})
+        # (bv_center_2, the copy of the constructor of a BallVector, has both statements, as neg_2.)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
                                             | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.FOLDS_FINISH
-                                            | self.NORM_FINISH | (self.WAVE_2_PROVED - self.WAVE_2_CORES), 'proved'),
-                              **dict.fromkeys((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED,
+                                            | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
+                                            | (self.WAVE_2_PROVED - self.WAVE_2_CORES), 'proved'),
+                              **dict.fromkeys(((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED)
+                                              | self.BV_IEEE_UNVERIFIED,
                                               'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
-                         | self.WAVE_1_FULL | self.FOLDS_FINISH | self.NORM_FINISH
+                         | self.WAVE_1_FULL | self.FOLDS_FINISH
+                         | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
                          | (self.WAVE_2_PROVED - self.WAVE_2_CORES))
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
@@ -1576,6 +1662,23 @@ class TheKernels(unittest.TestCase):
             'axpy_entry_step_2': 4, 'axpy_step_2_1': 3, 'axpy_entry_step_2_1': 3,
             # the folds of maxima: comparisons and selects, from one bit on
             'norm_combine': 1, 'norm_step_1': 1, 'norm_step_2': 1,
+            # the accumulator: that of add_1_1, add_2_2 and dot_step_2; the radius's constants are
+            # numbers of the toy formats from two bits on ((1+u)^8 above the top of fp:1:-3:3)
+            'acc_add_1': 1, 'acc_mul_1': 1, 'acc_merge_1': 1, 'acc_add_2': 3, 'acc_mul_2': 4, 'acc_merge_2': 3,
+            'acc_radius_1': 2, 'acc_radius_2': 2,
+            # The radius kernels of BallVector, from the precision of the Ball kernel whose radius
+            # lines they are.
+            'bv_add_radius_1': 1, 'bv_add_radius_2': 3, 'bv_scale_radius_1': 1, 'bv_scale_radius_2': 2,
+            # and the kernels of its constructor that have a real-model statement, from 1.
+            'bv_center_entry_1': 1, 'bv_center_2': 1, 'bv_make_radius': 1,
+            # and of the negation.
+            'neg_1': 1, 'bv_neg_radius': 1,
+            # and of the scaling by a power of two: the step of one limb from 1 (mul_pow2_step_1's), the
+            # others from the precision of ball_mul_pow2_k, 2.
+            'bv_mul_pow2_step_1': 1, 'bv_mul_pow2_step_2': 2, 'bv_mul_pow2_radius': 2,
+            # and the radius of the product of two BallVectors, from 2 (below, its constant hm is above
+            # the largest number of formats of few exponents).
+            'conv_radius': 2,
             # Wave 2 (as the proofs found them): mul_dir_1 from 2, the sums of two limbs from 3, the
             # products from 4.
             'mul_dir_1': 2, 'add_ball_2_2': 3, 'add_down_2_2': 3, 'add_up_2_2': 3, 'sub_down_2_2': 3,
@@ -1595,6 +1698,24 @@ class TheKernels(unittest.TestCase):
             'interval_neg_2': 1, 'interval_make_2': 1, 'interval_sub_2': 3, 'mul_ext_2_2': 4, 'interval_mul_2': 4,
             'interval_hull_1': 1, 'interval_intersection_1': 1, 'interval_hull_2': 1, 'interval_intersection_2': 1,
             'interval_mid_rad_1': 2, 'interval_to_ball_1': 2, 'ball_to_interval_1': 2, 'interval_split_1': 2})
+        # Stage B2: none for the predicates and comparisons of an interval (comparisons and selects).
+        self.assertEqual({ks[name].min_precision for name in self.WAVE_2_B2_INTERVALS}, {1})
+        # Of a ball: none for the signs; 2 for the exact pairs of one limb (two_sum_ord), 3 for the
+        # certain answers of two limbs (add_ball_2_2).
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_BALLS}, {
+            'ball_positive_1': 1, 'ball_negative_1': 1, 'ball_zero_1': 1, 'ball_positive_2': 1, 'ball_negative_2': 1,
+            'ball_zero_2': 1, 'ball_contains_point_1': 2, 'ball_contains_ball_1': 2, 'ball_less_1': 2,
+            'ball_less_equal_1': 2, 'ball_equal_1': 2, 'ball_contains_point_2': 3, 'ball_contains_ball_2': 3,
+            'ball_less_2': 3, 'ball_less_equal_2': 3, 'ball_equal_2': 3})
+        # Of the set operations: 2 for one limb (the conversions, the ball sum of one limb), 3 for the
+        # split of two limbs (the ball sum of two).
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_BALL_SETS}, {
+            'ball_hull_1': 2, 'ball_intersection_1': 2, 'ball_split_1': 2, 'ball_split_2': 3})
+        # Of the conversions: 3 for two limbs (add_2_2, add_ball_2_2, the directed sums), 2 for the
+        # ball from an interval of one limb (interval_to_ball_1).
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_CONVERSIONS}, {
+            'interval_mid_rad_2': 3, 'interval_to_ball_2': 3, 'ball_to_interval_2': 3, 'interval_split_2': 3,
+            'ball_from_interval_1': 2, 'ball_hull_2': 3, 'ball_intersection_2': 3})
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",

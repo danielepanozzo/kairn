@@ -1,0 +1,47 @@
+# Two balls that together cover a ball with a one-limb center (milestone2.md, "One enclosure
+# interface", "Hull, intersection and split of balls"): the first contains [c - r, c], the second
+# [c, c + r]. Each is the sum ball_add_1_full of the point c and a ball of center -h or +h, h =
+# RN(r/2), and of radius q = max(h, r - h) (r - h is exact): c + [-h - q, -h + q] contains [c - r, c]
+# since q >= h and h + q >= r. The whole line and the empty set are returned twice, as they are (a
+# ball cannot be a half-line, so splitting the whole line makes no progress). The page's listing
+# negates hs = select(fr, h, 0), whose first arm is the product h, which the generator refuses (no
+# fused result negated, directly or through a select); here -h is its own product, of the negated
+# radius, nh = select(fr, prod(-r, 1/2), 0): the same value, rounding to nearest being symmetric.
+# Not claimed: that the halves are inside X, nor that their radii are close to r/2 when r is near the
+# underflow range (each has the H of a ball sum).
+kernel:        ball_split_1
+input:         stored c
+input:         stored r
+output:        ca
+output:        ra
+output:        cb
+output:        rb
+requires:      ball c r
+ensures:       ball_splits ca ra cb rb from=c,r
+min_precision: 2
+source:        the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallSets.v ball_split_1_correct
+entry:         yes
+cone_exempt:   through ball_add_1_full, which states what comes out; the special states are selected after an explicit test of the radius
+
+h        = prod(r, const up(1/2))
+nr       = neg(r)
+hn       = prod(nr, const up(1/2))
+g        = sub(r, h)
+mg       = lt(h, g)
+q        = select(mg, g, h)
+fr       = lt(r, const inf)
+hs       = select(fr, h, 0)
+nh       = select(fr, hn, 0)
+ws       = select(fr, q, 0)
+cs       = select(fr, c, 0)
+(a0, a1) = ball_add_1_full(cs, 0, nh, ws)
+(b0, b1) = ball_add_1_full(cs, 0, hs, ws)
+ca       = select(fr, a0, c)
+ra       = select(fr, a1, r)
+cb       = select(fr, b0, c)
+rb       = select(fr, b1, r)

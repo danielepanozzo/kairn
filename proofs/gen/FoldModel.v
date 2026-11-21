@@ -102,6 +102,168 @@ Definition axpy_2_entry_step (a : R * R) (xy : (R * R) * (R * R)) : R * R :=
 Definition axpy_2_entry_map (a : R * R) (xys : list ((R * R) * (R * R))) : list (R * R) :=
   map (axpy_2_entry_step a) xys.
 
+(* bv_add_1: a ball vector; arrays stored x, stored y; scalars stored rx, stored ry; it writes z by the step add_1_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_add_radius_1. *)
+Definition bv_add_1_step (xy : R * R) : R :=
+  add_1_1 emin prec choice (fst xy) (snd xy).
+
+Definition bv_add_1_map (xys : list (R * R)) : list R :=
+  map bv_add_1_step xys.
+
+Definition bv_add_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_add_1_radius (rx : R) (ry : R) (xys : list (R * R)) : R :=
+  bv_add_radius_1 emin prec choice (fst (fold_seq bv_add_1_record (0, true) (bv_add_1_map xys))) rx ry.
+
+(* bv_add_2: a ball vector; arrays stored x, stored y; scalars stored rx, stored ry; it writes z by the step add_2_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_add_radius_2. *)
+Definition bv_add_2_step (xy : (R * R) * (R * R)) : R * R :=
+  add_2_2 emin prec choice (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition bv_add_2_map (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map bv_add_2_step xys.
+
+Definition bv_add_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_add_2_radius (rx : R) (ry : R) (xys : list ((R * R) * (R * R))) : R :=
+  bv_add_radius_2 emin prec choice (fst (fold_seq bv_add_2_record (0, true) (bv_add_2_map xys))) rx ry.
+
+(* bv_make_1: a ball vector; arrays supplied c; scalars supplied r; it writes z by the step bv_center_entry_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_make_radius. *)
+Definition bv_make_1_step (c : R) : R :=
+  bv_center_entry_1 emin prec choice c.
+
+Definition bv_make_1_map (cs : list R) : list R :=
+  map bv_make_1_step cs.
+
+Definition bv_make_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_make_1_radius (r : R) (cs : list R) : R :=
+  bv_make_radius emin prec choice (fst (fold_seq bv_make_1_record (0, true) (bv_make_1_map cs))) r.
+
+(* bv_make_2: a ball vector; arrays stored c; scalars supplied r; it writes z by the step bv_center_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_make_radius. *)
+Definition bv_make_2_step (c : R * R) : R * R :=
+  bv_center_2 (fst c) (snd c).
+
+Definition bv_make_2_map (cs : list (R * R)) : list (R * R) :=
+  map bv_make_2_step cs.
+
+Definition bv_make_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_make_2_radius (r : R) (cs : list (R * R)) : R :=
+  bv_make_radius emin prec choice (fst (fold_seq bv_make_2_record (0, true) (bv_make_2_map cs))) r.
+
+(* bv_mul_pow2_1: a ball vector; arrays stored x; scalars stored rx, supplied c; it writes z by the step bv_mul_pow2_step_1, records the largest magnitude of a center by norm_step_1 and the exactness of every entry by the step's mask, and gives the radius by bv_mul_pow2_radius. *)
+Definition bv_mul_pow2_1_step (c : R) (x : R) : R * bool :=
+  bv_mul_pow2_step_1 emin prec choice x c.
+
+Definition bv_mul_pow2_1_map (c : R) (xs : list R) : list R :=
+  map (fun x => fst (bv_mul_pow2_1_step c x)) xs.
+
+Definition bv_mul_pow2_1_exact (c : R) (xs : list R) : bool :=
+  forallb (fun x => snd (bv_mul_pow2_1_step c x)) xs.
+
+Definition bv_mul_pow2_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_mul_pow2_1_radius (rx : R) (c : R) (xs : list R) : R :=
+  bv_mul_pow2_radius emin prec choice (fst (fold_seq bv_mul_pow2_1_record (0, true) (bv_mul_pow2_1_map c xs))) (bv_mul_pow2_1_exact c xs) rx c.
+
+(* bv_mul_pow2_2: a ball vector; arrays stored x; scalars stored rx, supplied c; it writes z by the step bv_mul_pow2_step_2, records the largest magnitude of a center by norm_step_2 and the exactness of every entry by the step's mask, and gives the radius by bv_mul_pow2_radius. *)
+Definition bv_mul_pow2_2_step (c : R) (x : R * R) : R * R * bool :=
+  bv_mul_pow2_step_2 emin prec choice (fst x) (snd x) c.
+
+Definition bv_mul_pow2_2_map (c : R) (xs : list (R * R)) : list (R * R) :=
+  map (fun x => fst (bv_mul_pow2_2_step c x)) xs.
+
+Definition bv_mul_pow2_2_exact (c : R) (xs : list (R * R)) : bool :=
+  forallb (fun x => snd (bv_mul_pow2_2_step c x)) xs.
+
+Definition bv_mul_pow2_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_mul_pow2_2_radius (rx : R) (c : R) (xs : list (R * R)) : R :=
+  bv_mul_pow2_radius emin prec choice (fst (fold_seq bv_mul_pow2_2_record (0, true) (bv_mul_pow2_2_map c xs))) (bv_mul_pow2_2_exact c xs) rx c.
+
+(* bv_neg_1: a ball vector; arrays stored x; scalars stored rx; it writes z by the step neg_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_neg_radius. *)
+Definition bv_neg_1_step (x : R) : R :=
+  neg_1 x.
+
+Definition bv_neg_1_map (xs : list R) : list R :=
+  map bv_neg_1_step xs.
+
+Definition bv_neg_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_neg_1_radius (rx : R) (xs : list R) : R :=
+  bv_neg_radius (fst (fold_seq bv_neg_1_record (0, true) (bv_neg_1_map xs))) rx.
+
+(* bv_neg_2: a ball vector; arrays stored x; scalars stored rx; it writes z by the step neg_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_neg_radius. *)
+Definition bv_neg_2_step (x : R * R) : R * R :=
+  neg_2 (fst x) (snd x).
+
+Definition bv_neg_2_map (xs : list (R * R)) : list (R * R) :=
+  map bv_neg_2_step xs.
+
+Definition bv_neg_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_neg_2_radius (rx : R) (xs : list (R * R)) : R :=
+  bv_neg_radius (fst (fold_seq bv_neg_2_record (0, true) (bv_neg_2_map xs))) rx.
+
+(* bv_scale_1: a ball vector; arrays stored x; scalars stored rx, supplied a; it writes z by the step scale_step_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_scale_radius_1. *)
+Definition bv_scale_1_step (a : R) (x : R) : R :=
+  scale_step_1 emin prec choice x a.
+
+Definition bv_scale_1_map (a : R) (xs : list R) : list R :=
+  map (bv_scale_1_step a) xs.
+
+Definition bv_scale_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_scale_1_radius (rx : R) (a : R) (xs : list R) : R :=
+  bv_scale_radius_1 emin prec choice (fst (fold_seq bv_scale_1_record (0, true) (bv_scale_1_map a xs))) rx a.
+
+(* bv_scale_2: a ball vector; arrays stored x; scalars stored rx, supplied a; it writes z by the step scale_step_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_scale_radius_2. *)
+Definition bv_scale_2_step (a : R) (x : R * R) : R * R :=
+  scale_step_2 emin prec choice (fst x) (snd x) a.
+
+Definition bv_scale_2_map (a : R) (xs : list (R * R)) : list (R * R) :=
+  map (bv_scale_2_step a) xs.
+
+Definition bv_scale_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_scale_2_radius (rx : R) (a : R) (xs : list (R * R)) : R :=
+  bv_scale_radius_2 emin prec choice (fst (fold_seq bv_scale_2_record (0, true) (bv_scale_2_map a xs))) rx a.
+
+(* bv_sub_1: a ball vector; arrays stored x, stored y; scalars stored rx, stored ry; it writes z by the step sub_1_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_add_radius_1. *)
+Definition bv_sub_1_step (xy : R * R) : R :=
+  sub_1_1 emin prec choice (fst xy) (snd xy).
+
+Definition bv_sub_1_map (xys : list (R * R)) : list R :=
+  map bv_sub_1_step xys.
+
+Definition bv_sub_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_sub_1_radius (rx : R) (ry : R) (xys : list (R * R)) : R :=
+  bv_add_radius_1 emin prec choice (fst (fold_seq bv_sub_1_record (0, true) (bv_sub_1_map xys))) rx ry.
+
+(* bv_sub_2: a ball vector; arrays stored x, stored y; scalars stored rx, stored ry; it writes z by the step sub_2_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_add_radius_2. *)
+Definition bv_sub_2_step (xy : (R * R) * (R * R)) : R * R :=
+  sub_2_2 emin prec choice (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition bv_sub_2_map (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map bv_sub_2_step xys.
+
+Definition bv_sub_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_sub_2_radius (rx : R) (ry : R) (xys : list ((R * R) * (R * R))) : R :=
+  bv_add_radius_2 emin prec choice (fst (fold_seq bv_sub_2_record (0, true) (bv_sub_2_map xys))) rx ry.
+
 (* dot_1: arrays supplied x, supplied y; state s of 1 limb; step dot_step_1, combination add_1_1. *)
 Definition dot_1_step (s : R) (xy : R * R) : R :=
   dot_step_1 emin prec choice s (fst xy) (snd xy).
@@ -295,5 +457,37 @@ Definition conv_1_conv (xs : list R) (ys : list R) : list R :=
 (* conv_2: a convolution; arrays supplied x, supplied y; coefficient j is dot_2 in the sequential order on conv_terms xs ys j; it writes z. *)
 Definition conv_2_conv (xs : list (R * R)) (ys : list (R * R)) : list (R * R) :=
   map (fun j => dot_2_seq (conv_terms xs ys j)) (seq 0 (conv_length (length xs) (length ys))).
+
+(* bv_conv_1: the product of two ball vectors; arrays stored x, stored y; its coefficients are conv_1_conv; the maxima of the operands' centers by norm_step_1, the count min(length xs, length ys) rounded up, the bound of dot for it by bound_dot_1, the radius by conv_radius. *)
+Definition bv_conv_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_conv_1_count (xs ys : list R) : R :=
+  round radix2 (FLT_exp emin prec) Zceil (INR (Nat.min (length xs) (length ys))).
+
+Definition bv_conv_1_bound (xs ys : list R) : R * R * bool :=
+  bound_dot_1 emin prec choice (bv_conv_1_count xs ys).
+
+Definition bv_conv_1_ok (xs ys : list R) : bool :=
+  snd (bv_conv_1_bound xs ys).
+
+Definition bv_conv_1_radius (rx : R) (ry : R) (xs ys : list R) : R :=
+  conv_radius emin prec choice (fst (fold_seq bv_conv_1_record (0, true) xs)) (fst (fold_seq bv_conv_1_record (0, true) ys)) rx ry (bv_conv_1_count xs ys) (fst (fst (bv_conv_1_bound xs ys))) (snd (fst (bv_conv_1_bound xs ys))).
+
+(* bv_conv_2: the product of two ball vectors; arrays stored x, stored y; its coefficients are conv_2_conv; the maxima of the operands' centers by norm_step_2, the count min(length xs, length ys) rounded up, the bound of dot for it by bound_dot_2, the radius by conv_radius. *)
+Definition bv_conv_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_conv_2_count (xs ys : list (R * R)) : R :=
+  round radix2 (FLT_exp emin prec) Zceil (INR (Nat.min (length xs) (length ys))).
+
+Definition bv_conv_2_bound (xs ys : list (R * R)) : R * R * bool :=
+  bound_dot_2 emin prec choice (bv_conv_2_count xs ys).
+
+Definition bv_conv_2_ok (xs ys : list (R * R)) : bool :=
+  snd (bv_conv_2_bound xs ys).
+
+Definition bv_conv_2_radius (rx : R) (ry : R) (xs ys : list (R * R)) : R :=
+  conv_radius emin prec choice (fst (fold_seq bv_conv_2_record (0, true) xs)) (fst (fold_seq bv_conv_2_record (0, true) ys)) rx ry (bv_conv_2_count xs ys) (fst (fst (bv_conv_2_bound xs ys))) (snd (fst (bv_conv_2_bound xs ys))).
 
 End Folds.

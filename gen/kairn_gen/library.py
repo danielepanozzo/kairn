@@ -201,9 +201,15 @@ def selftest_case(k, kernels, f):
     pow2 = {r[0] for r in req.get('power_of_two', [])}
     counts = {r[0] for r in req.get('count', [])}
     smaller = {r[1] for r in req.get('abs_ge', [])}
+    # An input at most a positive integer (at_most): drawn at most 2^-16, below every such integer.
+    at_most = {r[0] for r in req.get('at_most', [])}
     # The mask that gates the result of the finish of a fold of maxima (finite_or_nan if=) is true:
     # otherwise the result is the canonical NaN, which is the non-finite case.
-    gates = {e['if'] for e in k.ensures if e['kind'] == 'finite_or_nan' and 'if' in e}
+    gates = {e['if'] for e in k.ensures if e['kind'] == 'finite_or_nan' and 'if' in e} | \
+        {n for e in k.ensures if e['kind'] == 'finite_or_nan' for n in e.get('if_all', [])}
+    # The value of the finish of a constructor (finite_or_nan nonneg) is not negative: otherwise the
+    # result is the canonical NaN.
+    nonneg = set(nonneg) | {k.value for e in k.ensures if e['kind'] == 'finite_or_nan' and e.get('nonneg')}
     inputs = []
     for g in k.inputs:
         if g.kind == ir.MASK:
@@ -212,6 +218,8 @@ def selftest_case(k, kernels, f):
             inputs.append(interp.canon(False, rng.pick(1, 1000), 0))
         elif g.name in pow2:
             inputs.append(interp.canon(False, 1, rng.pick(-6, 6)))
+        elif g.name in at_most:
+            inputs.append(_number(f, rng, -24, -16, positive=g.name in nonneg))
         elif g.name in nonneg:
             inputs.append(_number(f, rng, -24, -16, positive=True))
         elif len(g.limbs) == 1:
@@ -240,6 +248,12 @@ def selftest_case(k, kernels, f):
             values = sorted((inputs[at[n]] for n in names), key=_exact)
             for n, v in zip(names, values):
                 inputs[at[n]] = v
+    # The two balls of an intersection meet (otherwise the result would be the empty set): the second
+    # has the center of the first (stage B2).
+    for e in k.ensures:
+        if e['kind'] == 'ball_set' and e['set'] == 'intersection':
+            (x, bx), (y, by) = e['balls'].items()
+            inputs[at[by['center']]] = inputs[at[bx['center']]]
     machine = interp.Machine(kernels)
     out = machine.run(k.name, f, inputs)
     if interp.Machine(kernels, fused=False).run(k.name, f, inputs) != out:
@@ -274,9 +288,13 @@ def nonfinite_case(k, kernels, f):
     limbs = at[first.name]
     intervals = {r[1]: r[2] for r in k.requires if r[0] == 'interval'}
     if first.name in balls:                 # the whole line, or the empty set
-        for j in limbs:
-            inputs[j] = zero if inf else interp.NaN
-        inputs[at[balls[first.name]][0]] = special
+        # Of a set operation of balls (stage B2: the hull, the intersection), every operand: the hull
+        # with the empty set and the intersection with the whole line are the other operand.
+        sets = any(e['kind'] == 'ball_set' for e in k.ensures)
+        for center in (list(balls) if sets else [first.name]):
+            for j in at[center]:
+                inputs[j] = zero if inf else interp.NaN
+            inputs[at[balls[center]][0]] = special
     elif first.name in intervals:           # the whole line (-inf, +inf), or the empty set (+inf, -inf)
         # Of a set operation (the hull, the intersection), every operand: the hull with the empty set
         # and the intersection with the whole line are the other operand, which is finite.

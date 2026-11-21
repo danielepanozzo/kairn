@@ -599,7 +599,7 @@ MUTANTS = {
     "conv: the two lengths read swapped": (
         "maps.py", "    nx, ny = int(lt[3]), int(lt[4])", "    ny, nx = int(lt[3]), int(lt[4])"),
     "claims: a convolution read in the order of the list": (
-        "claims.py", "            for raw in [r for r in fl if not any(r is c for c in convs)] + convs:",
+        "claims.py", "            for raw in [r for r in fl if not any(r is c for c in later)] + later:",
         "            for raw in fl:"),
     "maxima: a result below V accepted": (
         "folds.py", "    if rc < Vc:\n        # (Beyond Omega too", "    if False:\n        # (Beyond Omega too"),
@@ -657,7 +657,570 @@ MUTANTS = {
     "gen2: the one-limb scale family's operand of two limbs": (
         "gen2.py", "    vals[xn] = [x]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals",
         "    vals[xn] = [x, 0]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals"),
+    # The kernels of the ball vectors and of the accumulator (bvec.py, gen8.py, cexpr.py).
+    "radius: an output below the stated value accepted": (
+        "bvec.py", "            if ov < v:\n                es.count(\"below the stated value\")",
+        "            if False:\n                es.count(\"below the stated value\")"),
+    "radius: a NaN output accepted": (
+        "bvec.py", "        elif o == NAN or o == NINF:\n            why = \"upper: the output is",
+        "        elif o == NINF:\n            why = \"upper: the output is"),
+    "radius: -inf accepted": (
+        "bvec.py", "        elif o == NAN or o == NINF:\n            why = \"upper: the output is",
+        "        elif o == NAN:\n            why = \"upper: the output is"),
+    # The owner's ruling of 2026-11-21: conv_radius's claim is of finite results; one that is not
+    # finite is +inf or a NaN, never -inf or a negative number.
+    "radius: -inf accepted where the claim is of finite results": (
+        "bvec.py", '        if c["finite_results"] and o in (INF, NAN):',
+        '        if c["finite_results"] and o in (INF, NAN, NINF):'),
+    "radius: a negative output accepted where the claim is of finite results": (
+        "bvec.py", '        if c["finite_results"] and o in (INF, NAN):',
+        '        if c["finite_results"] and (o in (INF, NAN) or (type(o) is int and o < 0)):'),
+    "radius: the claim of conv_radius read as of every result (a NaN fails)": (
+        "bvec.py", '        if c["finite_results"] and o in (INF, NAN):',
+        '        if False and o in (INF, NAN):'),
+    "radius: every radius kernel's claim read as of finite results": (
+        "bvec.py", "        e.finite_results = kernel.name in FINITE_RESULTS",
+        "        e.finite_results = True"),
+    "radius: a result that is not finite not counted": (
+        "bvec.py", "            es.count(UP_NONFINITE)\n", "            pass\n"),
+    "gen8: conv_radius's operands not scaled below the range": (
+        "gen8.py", "        _within(fmt, sh, vals, 2 if stratum == \"huge\" else 8)",
+        "        pass"),
+    "radius: unless ignored": (
+        "bvec.py", '        if c["unless"] is not None and x[c["unless"]] == 1:',
+        "        if False:"),
+    "radius: unless read the other way": (
+        "bvec.py", '        if c["unless"] is not None and x[c["unless"]] == 1:',
+        '        if c["unless"] is not None and x[c["unless"]] == 0:'),
+    "radius: the equality of exact_when not judged": (
+        "bvec.py", "                if conds_hold and d != 0:", "                if False:"),
+    "radius: +inf accepted where exact_when holds": (
+        "bvec.py", "            if conds_hold:\n                why = \"upper: exact_when holds but the output is +inf",
+        "            if False:\n                why = \"upper: exact_when holds but the output is +inf"),
+    "radius: a mask condition always true": (
+        "bvec.py", "conds.append((lambda x, slot=slot: x[slot] == 1,",
+        "conds.append((lambda x, slot=slot: x[slot] >= 0,"),
+    "radius: the equality judged beyond Omega": (
+        "bvec.py", "                if v > Fraction(fmt.omega) * eta:", "                if False:"),
+    "radius: +inf from small operands not suspicious": (
+        "bvec.py", "            elif _small(pl, x, v):", "            elif False:"),
+    "radius: abs( ) of a value ignored": (
+        "cexpr.py", "        return abs(evaluate(tree[1], env))", "        return evaluate(tree[1], env)"),
+    "exact_flag: not compared": (
+        "bvec.py", "    if f != (1 if holds else 0):", "    if False:"),
+    "exact_flag: read inverted": (
+        "bvec.py", '    holds = all(h(x) for h, _t in e["exact"])',
+        '    holds = not all(h(x) for h, _t in e["exact"])'),
+    "finish: nonneg ignored": (
+        "bvec.py", "    want = not off and type(v) is int and (not nonneg or v >= 0)",
+        "    want = not off and type(v) is int"),
+    "finish: a zero read as below zero": (
+        "bvec.py", "    want = not off and type(v) is int and (not nonneg or v >= 0)",
+        "    want = not off and type(v) is int and (not nonneg or v > 0)"),
+    "finish: if_all read as its first mask": (
+        "bvec.py", "    off = [n for n, i in zip(names, slots) if x[i] != 1]",
+        "    off = [n for n, i in zip(names[:1], slots[:1]) if x[i] != 1]"),
+    "finish: the output not compared": (
+        "bvec.py", "        if len(w) != 1 or w[0] != v:", "        if False:"),
+    "finish: the NaN of a false flag not required": (
+        "bvec.py", "    elif not all(t == NAN for t in w):\n        out.append(\"finite_or_nan: the flag is false, and the output is not a NaN\")",
+        "    elif False:\n        out.append(\"finite_or_nan: the flag is false, and the output is not a NaN\")"),
+    "acc: a value of its own read as the kernel's": (
+        "bvec.py", '        if c["kind"] == "rounded" and "own" in c:', "        if False:"),
+    "acc: a finite b beyond Omega accepted": (
+        "bvec.py", "        es.count(ACC_BEYOND)\n        return (\"rounded(%s): the output is finite, and its value",
+        "        es.count(ACC_BEYOND)\n        return None and (\"rounded(%s): the output is finite, and its value"),
+    "acc: its own rounding not compared": (
+        "bvec.py", "    if o != r:\n        return \"rounded(%s): the output is not its value",
+        "    if False:\n        return \"rounded(%s): the output is not its value"),
+    "acc: judged where its group is not finite": (
+        "bvec.py", "        if type(z[rg[0][0]]) is not int:\n            es.count(GROUP_NONFINITE)",
+        "        if False:\n            es.count(GROUP_NONFINITE)"),
+    "at_most not checked": (
+        "check.py", "                if BV.at_most_violated(r, x):", "                if False:"),
+    "at_most: the bound one more": (
+        "bvec.py", "    return (v << q) > k if q >= 0 else v > (k << -q)",
+        "    return (v << q) > k + 1 if q >= 0 else v > ((k + 1) << -q)"),
+    "at_most: the enumeration up to twice the bound": (
+        "gen.py", "                    d = [t for t in d if not ((sum(t) << q) > r[2] if q >= 0\n                                              else sum(t) > (r[2] << -q))]",
+        "                    d = [t for t in d if not ((sum(t) << q) > 2 * r[2] if q >= 0\n                                              else sum(t) > (2 * r[2] << -q))]"),
+    "conditional: an infinite output with ok true never suspicious": (
+        "check.py", "                if BV.small_inputs(pl, x) and BV.small_stated(pl, c, x, z):",
+        "                if False:"),
+    "claims: unless naming any input accepted": (
+        "bvec.py", "    if not isinstance(name, str) or name not in kernel.input_names or name not in kernel.masks:",
+        "    if not isinstance(name, str) or name not in kernel.input_names:"),
+    "claims: exact_flag naming any output accepted": (
+        "bvec.py", "    if not isinstance(m, str) or m not in dict(kernel.outputs) or m not in kernel.masks:",
+        "    if not isinstance(m, str) or m not in dict(kernel.outputs):"),
+    "claims: nonneg false accepted": (
+        "bvec.py", '        if raw["nonneg"] is not True:', "        if False:"),
+    "claims: if_all of one mask accepted": (
+        "bvec.py", "        if not isinstance(lst, list) or len(lst) < 2 or",
+        "        if not isinstance(lst, list) or len(lst) < 1 or"),
+    "claims: a limb of the value of rounded beyond the input's": (
+        "bvec.py", "            raise ClaimsError(\"%s: value: %s[%d] is not a limb of %s, which has %d\" % (",
+        "            pass\n        if False:\n            raise ClaimsError(\"%s: value: %s[%d] is not a limb of %s, which has %d\" % ("),
+    "claims: an upper entry with gaps and a value of its own accepted": (
+        "bvec.py", "    if \"gaps\" in raw:\n        raise ClaimsError(\"%s: an upper entry has gaps, or a value of its own",
+        "    if False:\n        raise ClaimsError(\"%s: an upper entry has gaps, or a value of its own"),
+    "claims: a radius kernel with entries of other kinds accepted": (
+        "bvec.py", "    if radius and len(radius) != len(kernel.ensures):", "    if False:"),
+    "claims: exact_when of masks alone accepted": (
+        "bvec.py", '    if masks and all(c[0] == "mask" for c in out):', "    if False:"),
+    "claims: at_most of 0 accepted": (
+        "bvec.py", "    if k < 1:\n        raise ClaimsError(\"%s: requirement %r: the bound of at_most()",
+        "    if k < 0:\n        raise ClaimsError(\"%s: requirement %r: the bound of at_most()"),
+    "gen8: huge without the top binades": (
+        "gen8.py", "        v = G2._top(fmt, rng) if rng.chance(2, 3) else _pos(fmt, rng, rng.between(\n            max(fmt.qmin, fmt.emax - fmt.p), fmt.emax))",
+        "        v = _pos(fmt, rng, G2._e_any(fmt, rng))"),
+    "gen8: zeros not zero": (
+        "gen8.py", '        v = 0 if rng.chance(3, 4) else _pos(fmt, rng, G2._e_any(fmt, rng))',
+        '        v = _pos(fmt, rng, G2._e_any(fmt, rng))'),
+    "gen8: atnormal off N": (
+        "gen8.py", "            N = fmt.lam\n", "            N = 3 * fmt.lam\n"),
+    "gen8: mixed of one magnitude": (
+        "gen8.py", "            d = 0 if n == big else rng.between(fmt.p, 3 * fmt.p + 4)",
+        "            d = 0"),
+    "gen8: atop not at the top": (
+        "gen8.py", "            vals[n] = [abs(G2._top(fmt, rng))]",
+        "            vals[n] = [abs(G2.limb(fmt, rng, \"uniform\")) >> 8]"),
+    "gen8: cancel not cancelling": (
+        "gen8.py", "            t = [-v for v in s]\n", "            t = [v for v in s]\n"),
+    "gen8: tie off the tie": (
+        "gen8.py", "                h = (u0 // 2) * (2 * rng.below(3) + 1)",
+        "                h = (u0 // 4) * (2 * rng.below(3) + 1)"),
+    "gen8: apart not apart": (
+        "gen8.py", "        d = rng.between(p + 2, 3 * p + 4) * (1 if rng.bits(1) else -1)",
+        "        d = 0"),
+    "gen8: exactprod of long significands": (
+        "gen8.py", '            vals[n] = [_pos(fmt, rng, e, "short" if stratum in ("exactprod", "tie") else "uniform")]',
+        '            vals[n] = [_pos(fmt, rng, e, "short" if stratum in ("tie",) else "uniform")]'),
+    "gen8: limit far from the limit": (
+        "gen8.py", "                x = Fraction(1, 2) * (1 + Fraction(rng.between(-64, 64), 256))",
+        "                x = Fraction(1, 8) * (1 + Fraction(rng.between(-64, 64), 256))"),
+    "gen8: beyond below the limit": (
+        "gen8.py", "                x = Fraction(1, 2) * (2 ** rng.between(1, max(1, fmt.p)))",
+        "                x = Fraction(1, 4)"),
+    "gen8: integer counts not integers": (
+        "gen8.py", '    if stratum == "integer" or rng.chance(1, 2):',
+        '    if rng.chance(1, 2):'),
+    "gen8: abig not big": (
+        "gen8.py", "            vals[a] = [_pos(fmt, rng, rng.between(max(fmt.qmin, fmt.emax - fmt.p), fmt.emax - 4))]",
+        "            vals[a] = [_pos(fmt, rng, G2._e_any(fmt, rng) // 2)]"),
+    "gen8: negative not negative": (
+        "gen8.py", "        x = -(1 if k == 0 else fmt.lam if k == 1 else fmt.omega if k == 2 else",
+        "        x = +(1 if k == 0 else fmt.lam if k == 1 else fmt.omega if k == 2 else"),
+    "gen8: nonfinite finite": (
+        "gen8.py", "        x = (INF, NINF, NAN)[rng.below(3)]", "        x = fmt.lam"),
+    "gen8: zeros of the finishes not zero": (
+        "gen8.py", '    elif stratum == "zeros":\n        x = 0\n', '    elif stratum == "zeros":\n        x = 1\n'),
+    "gen8: top not at the top": (
+        "gen8.py", "        x = fmt.omega if rng.bits(1) else F.pred(fmt, fmt.omega)", "        x = fmt.lam"),
+    "gen8: masks always true": (
+        "gen8.py", "            vals[n] = [1 if rng.chance(2, 3) else 0]", "            vals[n] = [1]"),
+    # The folds of the ball vectors and the requests in place (bvfolds.py, genbv.py, maps.py,
+    # genmap.py).
+    # The owner's ruling of 2026-11-21 on the formats of the statements: a failure of V4 in a
+    # format of a wider subnormal range than binary_float's is a finding, and says so.
+    "bv: a failure of V4 in a wider subnormal range not said to be a finding": (
+        "bvfolds.py", "    if fmt.qmax >= 1 and fmt.qmin < 3 - fmt.qmax - 2 * fmt.p:\n        return (",
+        "    if False:\n        return ("),
+    "bv: V1 not judged": (
+        "bvfolds.py", "    # V1: canonical; the flag.\n    res = _state(fmt, zs, r)\n    if res is None:",
+        "    # V1: canonical; the flag.\n    res = _state(fmt, zs, r)\n    if False:"),
+    "bv: the flag not judged": (
+        "bvfolds.py", "            flag, \"finite\" if type(r) is int else F.fixed_hex(fmt, r)))\n"
+        "    if f.kind == \"makes_ball_vector\":",
+        "            flag, \"finite\" if type(r) is int else F.fixed_hex(fmt, r))) if False else "
+        "None\n    if f.kind == \"makes_ball_vector\":"),
+    "bv: the flag read the other way": (
+        "bvfolds.py", "    if flag != (1 if type(r) is int else 0):\n        fail(\"flag\", \"the flag is %d "
+        "although the radius is %s\" % (\n            flag, \"finite\" if type(r) is int else "
+        "F.fixed_hex(fmt, r)))\n    if f.kind",
+        "    if flag != (0 if type(r) is int else 1):\n        fail(\"flag\", \"the flag is %d "
+        "although the radius is %s\" % (\n            flag, \"finite\" if type(r) is int else "
+        "F.fixed_hex(fmt, r)))\n    if f.kind"),
+    "bv: conv: the flag not judged": (
+        "bvfolds.py", "    if flag != (1 if type(r) is int else 0):\n        fail(\"flag\", \"the flag is %d "
+        "although the radius is %s\" % (\n            flag, \"finite\" if type(r) is int else "
+        "F.fixed_hex(fmt, r)))\n    whole = ",
+        "    if False:\n        fail(\"flag\", \"the flag is %d "
+        "although the radius is %s\" % (\n            flag, \"finite\" if type(r) is int else "
+        "F.fixed_hex(fmt, r)))\n    whole = "),
+    "bv: conv: V1 not judged": (
+        "bvfolds.py", "    res = _state(fmt, zs, r)\n    if res is None:\n        fail(\"V1\", \"the result is "
+        "neither a finite ball vector nor the whole space\")",
+        "    res = _state(fmt, zs, r)\n    if False:\n        fail(\"V1\", \"the result is "
+        "neither a finite ball vector nor the whole space\")"),
+    "bv: inplace= beyond the arrays accepted": (
+        "bvfolds.py", "        if m is None or int(m.group(1)) >= len(f.arrays) or",
+        "        if m is None or int(m.group(1)) > len(f.arrays) or"),
+    "bv: inplace= not a number accepted": (
+        "bvfolds.py", '_INPLACE = re.compile(r"inplace=(0|[1-9][0-9]*)\\Z")',
+        '_INPLACE = re.compile(r"inplace=([0-9]+)\\Z")'),
+    "bv: in place not counted": (
+        "bvfolds.py", "        es.count(INPLACE % inplace)", "        pass"),
+    "bv: a finite result beside a whole operand accepted": (
+        "bvfolds.py", "    if finite and (whole_op or not scal_fin):\n        fail(\"V3\"",
+        "    if False:\n        fail(\"V3\""),
+    "bv: V2 not judged": (
+        "bvfolds.py", "            if rmin > rr:\n                fail(\"V2\", \"entry %d: the set",
+        "            if False:\n                fail(\"V2\", \"entry %d: the set"),
+    "bv: V2 on one side of the center": (
+        "bvfolds.py", "            rmin = max(c - lo, hi - c)\n            if rmin > rr:",
+        "            rmin = hi - c\n            if rmin > rr:"),
+    "bv: V2 an unbounded set accepted": (
+        "bvfolds.py", "            if type(lo) is not int or type(hi) is not int:\n                "
+        "fail(\"V2\", \"entry %d: the set is unbounded",
+        "            if False:\n                fail(\"V2\", \"entry %d: the set is unbounded"),
+    "bv: V3 of the step not judged": (
+        "bvfolds.py", "        v = ck.verdict(sp, sub, xs, z, el)", "        v = (\"ok\", [])"),
+    "bv: V3 of the radius kernel not judged": (
+        "bvfolds.py", "    for w in BV.radius_reasons(rk, sub_r, xr, [r], line):\n        fail(\"V3\"",
+        "    for w in []:\n        fail(\"V3\""),
+    "bv: the radius kernel at m = +0": (
+        "bvfolds.py", "    m = max((abs(z[0]) for z in zs), default=0)\n    rk = pl.radius",
+        "    m = 0\n    rk = pl.radius"),
+    "bv: V4 not judged": (
+        "bvfolds.py", "            if not finite:\n                fail(\"V4\", \"every operand",
+        "            if False:\n                fail(\"V4\", \"every operand"),
+    "bv: V4 without radii_when": (
+        "bvfolds.py", "        elif all(h(tuple(sc) + (0,) * pl.L) for h in pl.rw) and all(",
+        "        elif all("),
+    "bv: V4 without finite_when": (
+        "bvfolds.py", "                h(x) for x in elems for h in pl.fw):",
+        "                True for x in elems):"),
+    "bv: V4 claimed below finite_from": (
+        "bvfolds.py", "        elif not pl.v4:\n            es.count(V4_BELOW)",
+        "        elif False:\n            es.count(V4_BELOW)"),
+    "bv: V4 judged in every format": (
+        "bvfolds.py", "    return fmt.qmax >= 1 and fmt.qmin <= 3 - fmt.qmax - 2 * fmt.p",
+        "    return True"),
+    "bv: V4 judged where eta is above binary_float's": (
+        "bvfolds.py", "    return fmt.qmax >= 1 and fmt.qmin <= 3 - fmt.qmax - 2 * fmt.p",
+        "    return fmt.qmax >= 1"),
+    "bv: exactness not judged": (
+        "bvfolds.py", "                if c - rr != lo or c + rr != hi:",
+        "                if False:"),
+    "bv: exactness judged where exact_when fails": (
+        "bvfolds.py", "        if not failing and elems:\n            es.count(EXACT_HOLDS)",
+        "        if elems:\n            es.count(EXACT_HOLDS)"),
+    "bv: makes: a center not finite ignored": (
+        "bvfolds.py", "    whole = rg == NAN or rg == INF or rg == NINF or (type(rg) is int and rg < 0) "
+        "or nonfin",
+        "    whole = rg == NAN or rg == INF or rg == NINF or (type(rg) is int and rg < 0)"),
+    "bv: makes: a negative radius kept": (
+        "bvfolds.py", "    whole = rg == NAN or rg == INF or rg == NINF or (type(rg) is int and rg < 0) "
+        "or nonfin",
+        "    whole = rg == NAN or rg == INF or rg == NINF or nonfin"),
+    "bv: makes: a NaN radius kept": (
+        "bvfolds.py", "    whole = rg == NAN or rg == INF or rg == NINF or (type(rg) is int and rg < 0) "
+        "or nonfin",
+        "    whole = rg == INF or rg == NINF or (type(rg) is int and rg < 0) or nonfin"),
+    "bv: makes: the radius not compared": (
+        "bvfolds.py", "    if r != rg:\n        fail(\"makes_ball_vector\"",
+        "    if False:\n        fail(\"makes_ball_vector\""),
+    "bv: makes: the centers not compared": (
+        "bvfolds.py", "        if list(z) != list(x[lo:hi]):", "        if False:"),
+    "bv: makes: the sign of a zero radius not read": (
+        "bvfolds.py", "        rcls = \"-0\" if tok[i].startswith(\"-\") else \"+0\"",
+        "        rcls = \"+0\""),
+    "bv: conv: V2 not judged": (
+        "bvfolds.py", "            if max(c - lo, hi - c) > rr:\n                fail(\"V2\", \"coefficient",
+        "            if False:\n                fail(\"V2\", \"coefficient"),
+    "bv: conv: count_when ignored": (
+        "bvfolds.py", "            if CX.evaluate(tree, env) > CX.evaluate(kt, env):\n                cw = False",
+        "            if False:\n                cw = False"),
+    "bv: conv: the count the larger length": (
+        "bvfolds.py", "        n = min(nx, ny)\n        cw = True",
+        "        n = max(nx, ny)\n        cw = True"),
+    "bv: conv: V3 the radius below the stated value accepted": (
+        "bvfolds.py", "    if r * eta < v:\n        fail(\"V3\", \"the radius is below",
+        "    if False:\n        fail(\"V3\", \"the radius is below"),
+    "bv: conv: the bound's stated values taken zero": (
+        "bvfolds.py", "                bnames[out] = CX.evaluate(pl.bound_values[out], pl.env(dict(bnames)))",
+        "                bnames[out] = Fraction(0)"),
+    "bv: conv: V4 not judged": (
+        "bvfolds.py", "            if not finite:\n                fail(\"V4\", \"both operands",
+        "            if False:\n                fail(\"V4\", \"both operands"),
+    "genbv: the count stratum away from the edge": (
+        "genbv.py", "        if g._edge < L and rng.chance(3, 4):", "        if False:"),
+    "genbv: in place, array 0 only": (
+        "genbv.py", "        self.inplace = [i for i, (_n, l) in enumerate(f.arrays) if l == f.wlimbs] "
+        "if inplace else []",
+        "        self.inplace = [0] if inplace else []"),
+    "genbv: the stratum whole without the whole space": (
+        "genbv.py", "            vals[a] = [[0] * k for _ in range(n)]\n            sc[radius_of[a]] = INF",
+        "            vals[a] = [[0] * k for _ in range(n)]\n            sc[radius_of[a]] = 0"),
+    "genbv: the enumeration without the whole space": (
+        "genbv.py", "        return len(self.radii) * len(self.entries) ** n + 1",
+        "        return len(self.radii) * len(self.entries) ** n"),
+    "genbv: the enumeration without the lane orders": (
+        "genbv.py", "            orders = [\"seq\"] + ([] if self.conv else [\"lanes:%d\" % W",
+        "            orders = [\"seq\"] + ([] if True else [\"lanes:%d\" % W"),
+    "maps: in place not counted": (
+        "maps.py", "        es_e.count(\"in place: array %d\" % inplace)", "        pass"),
+    "genmap: in place, array 0 only": (
+        "genmap.py", "        self.inplace = [i for i, (_n, l) in enumerate(m.arrays) if l == m.wlimbs] "
+        "if inplace else []",
+        "        self.inplace = [0] if inplace else []"),
+    "genmap: the header of a run in place": (
+        "genmap.py", "(\" inplace=yes\" if getattr(g, \"inplace\", None)",
+        "(\"\" if getattr(g, \"inplace\", None)"),
 }
+
+# The enclosure interface: the predicates, comparisons and set operations of a ball (enclosure.py,
+# genenc.py) and the conversions of two limbs (intervals.py, gen6.py); selftest_enc catches each.
+MUTANTS.update({
+    # Reading certain, trit, ball_set, ball_splits.
+    "enc claims: an unknown relation accepted": (
+        "enclosure.py", "    if e.rel not in allowed:", "    if False:"),
+    "enc claims: trit with a relation of certain accepted": (
+        "enclosure.py", 'allowed = TRIT_RELS if e.kind == "trit" else RELS', "allowed = RELS"),
+    "enc claims: the number of arguments not checked": (
+        "enclosure.py", "    if not isinstance(args, list) or len(args) != arity:",
+        "    if not isinstance(args, list):"),
+    "enc claims: an argument that is not a set accepted": (
+        "enclosure.py", "            elif isinstance(a, str) and a in e.sets:",
+        "            elif isinstance(a, str):"),
+    "enc claims: 0 as both arguments accepted": (
+        "enclosure.py", '        if e.args == ["0", "0"]:', "        if False:"),
+    "enc claims: intervals and balls together accepted": (
+        "enclosure.py", "    if has_iv == has_ball:", "    if not has_iv and not has_ball:"),
+    "enc claims: a set that is no argument accepted": (
+        "enclosure.py", "    if unused:", "    if False:"),
+    "enc claims: exact and exact_when together accepted": (
+        "enclosure.py", "        if e.exact:\n            raise _error(\"%s: exact and exact_when",
+        "        if False:\n            raise _error(\"%s: exact and exact_when"),
+    "enc claims: abs_le without omega true accepted": (
+        "enclosure.py", '                or cond["omega"] is not True or not isinstance(cond["abs_le"], str)):',
+        '                or not isinstance(cond["abs_le"], str)):'),
+    "enc claims: a name of exact_when not checked": (
+        "enclosure.py", "            if n not in dict(kernel.inputs) or n in kernel.masks:\n"
+        "                raise _error(\"%s: %r is not a limb input\" % (w, n))",
+        "            if False:\n                raise _error(\"%s: %r is not a limb input\" % (w, n))"),
+    "enc claims: of a limb output accepted": (
+        "enclosure.py", "    if not isinstance(n, str) or n not in dict(kernel.outputs) or n not in kernel.masks:",
+        "    if not isinstance(n, str) or n not in dict(kernel.outputs):"),
+    "enc claims: yes and no the same output accepted": (
+        "enclosure.py", "        if e.yes == e.no:", "        if False:"),
+    "enc claims: the point inside a set accepted": (
+        "enclosure.py", "                or t in inset:", "                or False:"),
+    "enc claims: a point of two limbs without canonical() accepted": (
+        "enclosure.py", '        if k not in (1, 2) or (k == 2 and ("canonical", t) not in kernel.requires):',
+        "        if k not in (1, 2):"),
+    "enc claims: the same set twice accepted": (
+        "enclosure.py", "        if len(set(args)) != len(args):", "        if False:"),
+    "enc claims: ball_set of one ball accepted": (
+        "enclosure.py", "    if len(e.balls) != 2:", "    if False:"),
+    "enc claims: ball_set centers of other limbs accepted": (
+        "enclosure.py", "        if kernel.limbs_of(c) != cl:", "        if False:"),
+    "enc claims: ball_splits of one part accepted": (
+        "enclosure.py", "    if not isinstance(parts, list) or len(parts) != 2:",
+        "    if not isinstance(parts, list):"),
+    "enc claims: an output of two parts accepted": (
+        "enclosure.py", "            if n in seen:", "            if False:"),
+    # (No mutant of the test that the kinds belong to the extended domain: in the finite domain no
+    # interval() or ball() requirement reads, so the sets of an entry never do either.)
+    # The judges of certain and trit.
+    "certain: a true mask where the relation fails accepted": (
+        "enclosure.py", '    if m and not R:\n        fail("sound"', '    if False:\n        fail("sound"'),
+    "certain: exactness not judged": (
+        "enclosure.py", "        if R and not m:\n            fail(how,", "        if False:\n            fail(how,"),
+    "trit: yes and no both true accepted": (
+        "enclosure.py", '    if yes and no:\n        fail("both"', '    if False:\n        fail("both"'),
+    "trit: a yes where the relation fails accepted": (
+        "enclosure.py", '    if yes and not R:\n        fail("yes"', '    if False:\n        fail("yes"'),
+    "trit: a no where the relation holds accepted": (
+        "enclosure.py", '    if no and not N:\n        fail("no"', '    if False:\n        fail("no"'),
+    "trit: the exactness of yes not judged": (
+        "enclosure.py", "        if R and not yes:\n            fail(how,",
+        "        if False:\n            fail(how,"),
+    "trit: the exactness of no not judged": (
+        "enclosure.py", "        if N and not no:\n            fail(how,",
+        "        if False:\n            fail(how,"),
+    "certain and trit: special operands not exact": (
+        "enclosure.py", '    if special:\n        return "special"', '    if False:\n        return "special"'),
+    "certain and trit: exact_when not judged": (
+        "enclosure.py", '            es.count(EW_HOLDS)\n            return "exact_when"',
+        "            es.count(EW_HOLDS)\n            return None"),
+    "certain and trit: abs_le read as half of Omega": (
+        "enclosure.py", "(abs(fn(x)) << d) <= fmt.omega)", "(abs(fn(x)) << d) <= fmt.omega // 2)"),
+    "certain and trit: a point not finite not special": (
+        "enclosure.py", "            if type(point) is not int:\n                special = True",
+        "            if False:\n                special = True"),
+    "certain and trit: the whole line of a ball not special": (
+        "enclosure.py", '        return ("nonempty", NINF, INF), "whole line", False, True, None',
+        '        return ("nonempty", NINF, INF), "whole line", False, False, None'),
+    "certain and trit: a ball without its radius": (
+        "enclosure.py", '    return ("nonempty", cv - r, cv + r), ("a point" if r == 0 else "finite"), True, False, (cv, r)',
+        '    return ("nonempty", cv, cv), ("a point" if r == 0 else "finite"), True, False, (cv, r)'),
+    "certain and trit: an argument 0 read as [0, 1]": (
+        "enclosure.py", '            vals.append(("nonempty", 0, 0))', '            vals.append(("nonempty", 0, 1))'),
+    "certain and trit: the band of the answers not given not measured": (
+        "enclosure.py", "        if 4 * d <= fmt.omega and 4 * rmax <= fmt.omega:", "        if False:"),
+    "certain and trit: the band without G": (
+        "enclosure.py", "6 * d + ((4 * fmt.lam + g) << sh)", "6 * d + ((4 * fmt.lam) << sh)"),
+    "certain and trit: the classes of a set not counted": (
+        "enclosure.py", "        es.count(CLASS % (n, cls))", "        pass"),
+    # The relations.
+    "relation: lt read as le": (
+        "enclosure.py", "            return _lt(Ua, Lb), _le(Ub, La)", "            return _le(Ua, Lb), _le(Ub, La)"),
+    "relation: the failure of le read with le": (
+        "enclosure.py", "            return _le(Ua, Lb), _lt(Ub, La)", "            return _le(Ua, Lb), _le(Ub, La)"),
+    "relation: eq read as equal lower bounds": (
+        "enclosure.py", "        same = La == Ua == Lb == Ub", "        same = La == Lb"),
+    "relation: touching sets fail eq for every choice": (
+        "enclosure.py", "        return same, _lt(Ua, Lb) or _lt(Ub, La)",
+        "        return same, _le(Ua, Lb) or _le(Ub, La)"),
+    "relation: lt holds of the empty set": (
+        "enclosure.py", "            return False, False", "            return True, False"),
+    "relation: an infinite point a member": (
+        "enclosure.py", '        r = type(t) is int and A[0] != "empty"', '        r = t != NAN and A[0] != "empty"'),
+    "relation: the empty set no subset": (
+        "enclosure.py", '            return True, None\n        return B[0] != "empty" and _le(B[1], A[1])',
+        '            return False, None\n        return B[0] != "empty" and _le(B[1], A[1])'),
+    "relation: the empty set equal to every set": (
+        "enclosure.py", "            return A[0] == B[0], None", "            return True, None"),
+    "relation: interior with closed bounds": (
+        "enclosure.py", "        lo = B[1] == NINF or _lt(B[1], A[1])", "        lo = B[1] == NINF or _le(B[1], A[1])"),
+    "relation: interior without the infinite bound": (
+        "enclosure.py", "        hi = B[2] == INF or _lt(A[2], B[2])", "        hi = _lt(A[2], B[2])"),
+    "relation: touching sets disjoint": (
+        "enclosure.py", "    return _lt(A[2], B[1]) or _lt(B[2], A[1]), None",
+        "    return _le(A[2], B[1]) or _le(B[2], A[1]), None"),
+    "relation: the empty set not disjoint": (
+        "enclosure.py", '    if A[0] == "empty" or B[0] == "empty":\n        return True, None',
+        '    if A[0] == "empty" or B[0] == "empty":\n        return False, None'),
+    "relation: entire read on the lower bound": (
+        "enclosure.py", '        return A[0] != "empty" and A[1] == NINF and A[2] == INF, None',
+        '        return A[0] != "empty" and A[1] == NINF, None'),
+    # ball_set and ball_splits.
+    "ball_set: Y as it is not judged": (
+        "enclosure.py", "        if not all(same_limb(fmt, a, b) for a, b in zip(zt, yt)):", "        if False:"),
+    "ball_set: X as it is not judged": (
+        "enclosure.py", "        if not all(same_limb(fmt, a, b) for a, b in zip(zt, xt)):", "        if False:"),
+    "ball_set: X as it is also when X is special (the reading before the correction)": (
+        "enclosure.py", "    elif sy == special:\n        es.count(SET_X_AS_IS)",
+        "    if sy == special:\n        es.count(SET_X_AS_IS)"),
+    "ball_set: the sign of a zero not compared": (
+        "enclosure.py", '    return va != 0 or a.startswith("-") == b.startswith("-")', "    return True"),
+    "ball_set: a NaN not matching a NaN": (
+        "enclosure.py", "    if va == NAN or vb == NAN:\n        return va == vb",
+        "    if va == NAN or vb == NAN:\n        return False"),
+    "ball_set: the empty union not judged": (
+        "enclosure.py", '        if (sz == "empty") != want_empty:', "        if False:"),
+    "ball_set: the empty intersection not judged": (
+        "enclosure.py", '    elif (sx == "empty" or sy == "empty") and sz != "empty":', "    elif False:"),
+    "ball_set: containment not judged": (
+        "enclosure.py", "            if not (_le(Z_[1], s[1]) and _le(s[2], Z_[2])):", "            if False:"),
+    "ball_set: the members due of the intersection read as the union's": (
+        "enclosure.py", "    if union:\n        due = [s for s in (X_, Y_) if s != EMPTY]",
+        "    if True:\n        due = [s for s in (X_, Y_) if s != EMPTY]"),
+    "ball_set: the zero signs of two whole lines not counted": (
+        "enclosure.py", "        es.count(SET_ZERO_SIGNS)", "        pass"),
+    "ball_splits: the first part not judged": (
+        "enclosure.py", '        if s == "empty" or not (P[1] <= lo and hi <= P[2]):', "        if False:"),
+    "ball_splits: the second part read as the first": (
+        "enclosure.py", "    for j, (lo, hi) in enumerate(((cv - r, cv), (cv, cv + r))):",
+        "    for j, (lo, hi) in enumerate(((cv - r, cv), (cv - r, cv))):"),
+    "ball_splits: the special states not judged": (
+        "enclosure.py", "            if s != sx:\n                fail(STATE_NAME[sx]",
+        "            if False:\n                fail(STATE_NAME[sx]"),
+    "ball_splits: a zero radius not counted": (
+        "enclosure.py", "        es.count(SPLIT_ZERO)", "        pass"),
+    # The conversions of two limbs (intervals.py).
+    "finite_when: not judged": (
+        "intervals.py", '        if holds:\n            fail("finite_when"', '        if False:\n            fail("finite_when"'),
+    "finite_when: the limit one binade higher": (
+        "intervals.py", "        k = fmt.qmax + fmt.p + ex - q", "        k = fmt.qmax + fmt.p + ex + 1 - q"),
+    "finite_when: the limit one binade lower": (
+        "intervals.py", "        k = fmt.qmax + fmt.p + ex - q", "        k = fmt.qmax + fmt.p + ex - 1 - q"),
+    "finite_when: containment not judged": (
+        "intervals.py", "    if type(r) is int and (cv - r > L or cv + r < U):", "    if False:"),
+    "finite_when: the center of 1788 judged only where the conditions hold": (
+        "intervals.py", "    if not finite_center or (not ieee and not holds):",
+        "    if not finite_center or not holds:"),
+    "finite_when: the conditions not counted": (
+        "intervals.py", "        es.count(FW_HOLDS)", "        pass"),
+    "finite_when: the midpoint not judged": (
+        "intervals.py", "    if not ok:   # (worded apart", "    if False:   # (worded apart"),
+    "finite_when: the center inside the interval not judged": (
+        "intervals.py", "        return out\n    if cv < L or cv > U:\n        fail(\"center\", \"the center is outside the interval\")\n    M2, C2 = L + U, 2 * cv",
+        "        return out\n    if False:\n        fail(\"center\", \"the center is outside the interval\")\n    M2, C2 = L + U, 2 * cv"),
+    "midpoint of two limbs: a center that is not canonical accepted": (
+        "intervals.py", "    if ieee and len(cw) == 2 and not XT.canonical(fmt, cw):", "    if False:"),
+    "interval_of_ball of two limbs: the tightness not judged": (
+        "intervals.py", '        if not ok:\n            fail("tight"', '        if False:\n            fail("tight"'),
+    "interval_of_ball of two limbs: exact_when not judged": (
+        "intervals.py", '            if _cmp(zv, q, v, s) != 0:\n                fail("exact_when"',
+        '            if False:\n                fail("exact_when"'),
+    "interval_of_ball of two limbs: bounded_when not judged": (
+        "intervals.py", '            if not bounded(zs):\n                fail("bounded_when"',
+        '            if False:\n                fail("bounded_when"'),
+    "interval_of_ball of two limbs: containment below not judged": (
+        "intervals.py", "    if _cmp(zl, q, lo, s) > 0:\n        fail(\"containment\", \"the lower bound %s is above the set's",
+        "    if False:\n        fail(\"containment\", \"the lower bound %s is above the set's"),
+    "interval_of_ball of two limbs: rounded tightness accepted": (
+        "intervals.py", '    if not isinstance(t, dict) or t.get("kind") != "outward":', "    if False:"),
+    "makes_ball with rel: the midpoint not judged": (
+        "intervals.py", '        if not ok:\n            es.count("failed: midpoint")',
+        '        if False:\n            es.count("failed: midpoint")'),
+    "makes_ball with rel: smallest_radius not judged": (
+        "intervals.py", '            if r != want:\n                es.count("failed: smallest_radius")',
+        '            if False:\n                es.count("failed: smallest_radius")'),
+    "makes_ball with rel: the center outside the bounds accepted": (
+        "intervals.py", '        if cv < lo or cv > hi:\n            es.count("failed: center")',
+        '        if False:\n            es.count("failed: center")'),
+    "makes_ball with rel: rel without abs accepted": (
+        "intervals.py", '        if "rel" not in raw or "abs" not in raw:', "        if False:"),
+    # The formats of the statements (the owner's ruling of 2026-11-21) for finite_when of
+    # ball_of_interval and bounded_when of interval_of_ball with bounds of two limbs.
+    "finite_when: claimed in every format (the ruling of 2026-11-21 not applied)": (
+        "intervals.py",
+        "    claimed, beyond = statement_format(fmt)\n    holds, ratio = _fw_conditions(",
+        "    claimed, beyond = True, statement_format(fmt)[1]\n    holds, ratio = _fw_conditions("),
+    "finite_when: a format of no statement not counted": (
+        "intervals.py", "        es.count(FW_RANGE)\n", ""),
+    "finite_when: the conditions counted in a format of no statement": (
+        "intervals.py", "_fw_conditions(fmt, c, x, es if claimed else None)",
+        "_fw_conditions(fmt, c, x, es)"),
+    "finite_when: a failure in a wider subnormal range not said to be a finding": (
+        "intervals.py", '"every condition of finite_when holds and the radius is +inf"\n                 + beyond)',
+        '"every condition of finite_when holds and the radius is +inf")'),
+    "bounded_when of two limbs: claimed in every format (the ruling of 2026-11-21 not applied)": (
+        "intervals.py", '    claimed, beyond = statement_format(fmt)\n    if c["bw"] and not claimed:',
+        '    claimed, beyond = True, statement_format(fmt)[1]\n    if c["bw"] and not claimed:'),
+    "bounded_when of two limbs: a format of no statement not counted": (
+        "intervals.py", "        es.count(I5_RANGE)\n", "        pass\n"),
+    "bounded_when of two limbs: a failure in a wider subnormal range not said to be a finding": (
+        "intervals.py", '"bounded_when gives an unbounded result" + beyond)',
+        '"bounded_when gives an unbounded result")'),
+    # The strata of the family (genenc.py) and of the conversions of two limbs (gen6.py).
+    "genenc: special without the empty set or the whole line": (
+        "genenc.py", '        ivs[j] = _special_iv(fmt, rng, k, ("empty", "whole")[rng.below(2)])', "        pass"),
+    "genenc: touching intervals apart": (
+        "genenc.py", "            ivs = [(a, b), (list(b), d)]", "            ivs = [(a, b), (c, d)]"),
+    "genenc: boundary balls moved off the boundary": (
+        "genenc.py", "    if near:\n        if rng.bits(1):\n            cy = _moved",
+        "    if True:\n        if rng.bits(1):\n            cy = _moved"),
+    "genenc: both special, one of them finite": (
+        "genenc.py", '            balls = [_ball_state(k, "empty"), _ball_state(k, "empty")]',
+        '            balls = [_ball_state(k, "empty"), _ball(fmt, rng, k)]'),
+    "genenc: no radius zero among the points": (
+        "genenc.py", "        balls = [(c, [0])] + [", "        balls = [(c, [1])] + ["),
+    "genenc: no huge radius": (
+        "genenc.py", "        balls[j] = (balls[j][0], [abs(G2._top(fmt, rng)) >> rng.below(3)])", "        pass"),
+    "gen6: no bound beyond Omega": (
+        "gen6.py", "    pair = [om, t]\n", "    pair = [om, 0]\n"),
+    "gen6: the threshold one binade lower": (
+        "gen6.py", "    T = 1 << (fmt.qmax + fmt.p - 2 - fmt.qmin)\n    j = rng.below(4)\n    if j == 0:\n        v = [T]",
+        "    T = 1 << (fmt.qmax + fmt.p - 4 - fmt.qmin)\n    j = rng.below(4)\n    if j == 0:\n        v = [T]"),
+    "gen6: an end of the ball not zero": (
+        "gen6.py", "    return {cn: c, rn: [a]}", "    return {cn: c, rn: [a >> 1]}"),
+})
+LONG_ENCLOSURE = ("enc_exhaustive", "enc_planted")
 
 
 # The selftest's longest tests (the exhaustive ones, the planted faults on every case), which
@@ -666,6 +1229,7 @@ MUTANTS = {
 LONG = ("correct_runner_toy_exhaustive", "exhaustive_wave2", "injected_wave2_exhaustive",
         "injected_wave3_exhaustive", "exhaustive_wave3", "iv_planted", "fold_planted",
         "injected_wave3", "injected_exhaustive", "fold_brackets", "fold_reference", "iv_exhaustive")
+LONG = LONG + LONG_ENCLOSURE
 FAIL_FAST = False
 
 

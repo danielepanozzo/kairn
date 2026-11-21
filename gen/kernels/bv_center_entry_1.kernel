@@ -1,0 +1,20 @@
+# The step of bv_make_1, the constructor of a BallVector with one-limb centers (milestone2.md,
+# "BallVector", "Values"): a center that the program gives, guarded (rule R3) as the constructors of a
+# Ball are. Its value is the center itself: guard(c) is RN(c + 0), which is c (a zero made +0), and an
+# infinity or a NaN stays what it is, which the finish of the constructor tests.
+kernel:        bv_center_entry_1
+input:         c
+output:        z
+value:         c
+ensures:       rounded z nearest
+min_precision: 1
+theorem:       proofs/theories/BvNegMake.v bv_center_entry_1_correct
+ieee_bridge_theorem: proofs/theories/IeeeBvNegMake.v bv_center_entry_1_ieee_bridge
+ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v bv_center_entry_1_ieee_lead
+source:        the guard of a constructor (milestone2.md, BallVector, Values)
+license:       algorithm and proof: MIT
+status:        proved
+entry:         yes
+ieee:          bridge
+
+z = guard(c)

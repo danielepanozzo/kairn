@@ -1,0 +1,31 @@
+# The three-valued X <= Y of intervals with one-limb bounds (milestone2.md, "One enclosure
+# interface", "Comparisons"): yes when every member of X is at most every member of Y, x_u <= y_l;
+# no when every member of X is above every member of Y, x_l > y_u; both false otherwise and when an
+# operand is empty. By the comparisons of T. Exact. For every precision.
+kernel:        interval_less_equal_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        mask yes
+output:        mask no
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       trit yes no le x y x=xl,xu y=yl,yu exact
+min_precision: 1
+source:        the bounds compared, and a test of emptiness (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalPredicates.v interval_less_equal_1_correct
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical operand
+
+nx  = lt(xl, const inf)
+ny  = lt(yl, const inf)
+ne  = and(nx, ny)
+a   = le(xu, yl)
+c   = lt(yu, xl)
+yes = and(a, ne)
+no  = and(c, ne)

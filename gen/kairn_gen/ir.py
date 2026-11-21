@@ -25,12 +25,23 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       the terms of value (s+x*y: |s| + |x*y|)
     ensures:       rounded t down [when=product_large]
                                       the mode: nearest, down or up
+    ensures:       rounded b nearest value=a+abs(x[0])
+                                      of a value of its own (as in value, and NAME[I] limb I of an
+                                      input) instead of the kernel's
     ensures:       upper r gaps=2
     ensures:       upper g value=m*unit(add_2_2)/(1-m*unit(add_2_2)) if=ok
                                       the value of the entry (an exact expression over the inputs,
                                       the one-limb outputs, u, eta, unit(K), tiny(K)) is at most the
                                       output whenever the mask output ok is true; no gaps: nothing
                                       is said of how far above
+    ensures:       upper rz value=rx*c+eta unless=ex
+                                      the same when the mask input ex is false
+    ensures:       upper rz value=rx*c exact_when=mask(ex);zero_or_abs_gt(rx*c,eta/(2*u))
+                                      and the output is the value exactly when the mask input ex
+                                      is true and the other conditions hold
+    ensures:       error z R c=0 k=1 t=1/2 exact_when=zero_or_abs_gt(x*c,eta/(2*u)) exact_flag=e
+                                      the mask output e is true exactly when the conditions of
+                                      exact_when hold
     ensures:       holds le m*unit(add_2_2) 1/2 if=ok
                                       the relation lt, le or eq between two such expressions, when
                                       the mask ok is true
@@ -85,6 +96,28 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       an interval that encloses a ball
     ensures:       splits al au bl bu from=xl,xu
                                       two intervals that together are the interval split
+    ensures:       certain m lt 0 x x=xl,xu [exact | exact_when=abs_le(EXPR,omega)]
+                                      a predicate of sets (intervals or balls, as the requirements
+                                      say): the mask is true only if the relation holds (lt, le,
+                                      eq of every choice of members, or member, subset, equal,
+                                      interior, disjoint, empty, entire); exact: and whenever it
+                                      holds
+    ensures:       trit yes no lt x y x=xl,xu y=yl,yu [exact | exact_when=...]
+                                      a three-valued comparison: yes only if the relation holds for
+                                      every choice of members, no only if it fails for every one
+    ensures:       ball_set cz rz union x=cx,rx y=cy,ry
+                                      a ball that contains the union (or intersection) of two balls
+    ensures:       ball_splits ca ra cb rb from=c,r
+                                      two balls, the first containing [c - r, c], the second
+                                      [c, c + r]
+    ensures:       ball_of_interval m r from=xl,xu ... finite_when=abs_le(xl,-2);abs_le(xu,-2)
+                                      the radius may be +inf for a bounded interval, and is finite
+                                      under the conditions (two limbs)
+    ensures:       interval_of_ball zl zu x x=c,r tight=outward;rel=EXPR;abs=EXPR
+                   [exact_lower=zero(c-r)] [exact_upper=zero(c+r)] [bounded_when=abs_le(x,-2)]
+                                      an interval of two limbs that encloses a ball
+    ensures:       makes_ball cw rw from_interval=lo,hi rel=u abs=eta [smallest_radius]
+                                      the center near the midpoint and the smallest radius
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
@@ -176,7 +209,15 @@ along arrays, described in gen/kernels/NAME.fold:
     status:        unverified         or proved, with theorem: FILE (F_seq_correct, F_lanes_correct)
     ieee_theorem:  FILE               optional, once the statements of proofs/gen/IeeeFoldStatements.v
                                       are proved: F_seq_ieee_correct and F_lanes_ieee_correct, of
-                                      the orders the fold has (not for a map, which has none)
+                                      the orders the fold (or the map) has, and of a fold of maxima
+                                      in both orders F_orders_ieee_correct and F_flag_ieee_correct
+                                      too; F_ieee_correct, of a convolution or a product of two
+                                      BallVectors
+    terms_theorem: FILE               a convolution's, optional: the file of conv_terms_eq_correct,
+                                      conv_terms_count_correct and conv_terms_length_correct, the
+                                      theorems of the three statements of conv_terms that every
+                                      convolution shares (proofs/gen/FoldStatements.v); the
+                                      convolutions that name one name the same file
     domain:        extended           elements may be infinite or NaN (the flag says what comes out)
 
 A map is a fold that writes an array (docs/developer/architecture.md, "Maps"):
@@ -227,6 +268,48 @@ It has no step of its own, and is otherwise described as a map:
     value:         x*y
     ensures:       coefficients z     each coefficient satisfies that fold's claims on its terms
     ensures:       finite_or_nan z flag=finite
+
+A ball vector (docs/developer/architecture.md, "Ball vectors"; milestone2.md, "BallVector") is a map
+of the centers of BallVectors whose state is that of a fold of maxima, the largest magnitude of a
+leading limb written and the mask that none was a NaN, and whose finish gives the one radius of the
+result; when the result is not a finite ball vector, every center written is zero and the radius
++infinity, the whole space:
+
+    fold:          bv_add_2
+    arrays:        stored x = x0 x1, stored y = y0 y1
+    scalars:       stored rx, stored ry
+    state:         m, mask ok
+    step:          z = add_2_2(x, y)
+    record:        (m, ok) = norm_step_2(m, ok, z)
+                                      the step of a fold of maxima, on each element written
+    combine:       (m, ok) = norm_combine(m, ok, m, ok)
+    radius:        rz = bv_add_radius_2(m, rx, ry)
+                                      the radius from the largest magnitude and scalars
+    finish:        (r, finite) = norm_finish_1(rz, ok)
+                                      the radius, or a NaN and the flag false
+    writes:        z = z0 z1
+    output:        r
+    output:        mask finite
+    requires:      ball_vector x rx   the centers x with the radius rx: canonical (finite, or the
+                                      whole space: every center zero and the radius +infinity)
+    ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2)
+                   radii_when=abs_le(rx+ry,-2)
+                                      V4 for every length: the radii's own condition (over the
+                                      scalars), which finite_when at any entry implies
+
+A ball vector exact under conditions (bv_mul_pow2_k: exact when nothing underflows) has a third group
+of the state, a mask from true; its step returns the center and a mask that its entry is exact, and a
+second record line and a second combine line and that mask into the state; its radius takes the
+state's mask after its limb; its claim has exact_when with conditions of an entry and of the scalars:
+
+    state:         m, mask ok, mask ex
+    step:          (z, e) = bv_mul_pow2_step_2(x, c)
+    record:        (m, ok) = norm_step_2(m, ok, z)
+    record:        ex = and(ex, e)
+    combine:       (m, ok) = norm_combine(m, ok, m, ok)
+    combine:       ex = and(ex, ex)
+    radius:        rz = bv_mul_pow2_radius(m, ex, rx, c)
+    ensures:       encloses_entries z r x*c x=x,rx flag=finite ... exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));...
 """
 import json
 import os
@@ -464,7 +547,8 @@ IEEE_THEOREM_NAMES = {'ieee_bridge_theorem': '{}_ieee_bridge', 'ieee_spec_theore
 # real-model statement (Kernel.real_model). The interval kinds of Milestone 2 are among them: an
 # interval has infinite bounds as ordinary values, so its kernels are stated in the IEEE model only.
 NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'finite_or_nan', 'makes_interval', 'encloses_interval',
-                   'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits')
+                   'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits', 'certain', 'trit',
+                   'ball_set', 'ball_splits')
 
 INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
 
@@ -485,6 +569,14 @@ def _group(text, where, classes=()):
     return Group(m.group(1), limbs), cls
 
 
+def _finite_from(text, where):
+    """finite_from=P of a ball vector's claim: the precision from which V4 is claimed, a positive
+    integer."""
+    if not re.fullmatch(r'[1-9][0-9]*', text):
+        raise DescriptionError(f'{where}: finite_from is a precision, a positive integer, got {text!r}')
+    return int(text)
+
+
 def _finite_when(text, where):
     """abs_le(EXPR,E);abs_le(EXPR,E) as [{'abs_le': EXPR, 'exp': E}, ...]."""
     out = []
@@ -497,14 +589,18 @@ def _finite_when(text, where):
 
 
 # The conditions of exact_when: EXPR = 0 or |EXPR| > K, and EXPR = 0 or |EXPR| >= K; and, on
-# outward and on the outward tightness of an interval (Milestone 2), EXPR = 0.
+# outward and on the outward tightness of an interval (Milestone 2), EXPR = 0; and, on an upper
+# entry of a radius kernel (the scaling of a BallVector by a power of two), that a mask input is
+# true.
 EXACT_CONDITIONS = ('zero_or_abs_gt', 'zero_or_abs_ge')
 ZERO_CONDITION = 'zero'
+MASK_CONDITION = 'mask'
 
 
 def _exact_when(text, where):
-    """zero_or_abs_gt(EXPR,K);zero_or_abs_ge(EXPR,K);zero(EXPR) as
-    [{'zero_or_abs_gt': EXPR, 'than': K}, ..., {'zero': EXPR}]."""
+    """zero_or_abs_gt(EXPR,K);zero_or_abs_ge(EXPR,K);zero(EXPR);mask(NAME) as
+    [{'zero_or_abs_gt': EXPR, 'than': K}, ..., {'zero': EXPR}, {'mask': NAME}]; and abs_le(EXPR,omega),
+    |EXPR| <= Omega, as {'abs_le': EXPR, 'omega': True} (a condition of certain and trit only: rules.py)."""
     out = []
     for part in text.split(';'):
         m = re.fullmatch(r'([a-z_]+)\((.+)\)', part)
@@ -512,9 +608,15 @@ def _exact_when(text, where):
         if m and m.group(1) == ZERO_CONDITION and len(args) == 1 and args[0]:
             out.append({ZERO_CONDITION: args[0]})
             continue
+        if m and m.group(1) == MASK_CONDITION and len(args) == 1 and VALUE_NAME.match(args[0]):
+            out.append({MASK_CONDITION: args[0]})
+            continue
+        if m and m.group(1) == 'abs_le' and len(args) == 2 and args[0] and args[1] == 'omega':
+            out.append({'abs_le': args[0], 'omega': True})
+            continue
         if not m or m.group(1) not in EXACT_CONDITIONS or len(args) != 2 or not all(args):
             raise DescriptionError(f'{where}: a condition of exact_when is zero_or_abs_gt(EXPR,K), '
-                                   f'zero_or_abs_ge(EXPR,K) or zero(EXPR), got {part!r}')
+                                   f'zero_or_abs_ge(EXPR,K), zero(EXPR) or mask(NAME), got {part!r}')
         out.append({m.group(1): args[0], 'than': args[1]})
     return out
 
@@ -565,6 +667,26 @@ def _tight(text, where):
     return out
 
 
+# The relations of the predicates of sets, certain and trit (Milestone 2, the enclosure interface),
+# and their number of arguments: empty and entire take one set, the others two arguments.
+SET_RELATION_ARITY = {'empty': 1, 'entire': 1, 'member': 2, 'subset': 2, 'equal': 2, 'interior': 2,
+                      'disjoint': 2, 'lt': 2, 'le': 2, 'eq': 2}
+
+
+def _set_kinds(e, k):
+    """A certain or trit entry with its sets named as what the requirements say they are: the
+    bounds of an interval ("intervals", NAME: {lower, upper}) or a ball ("balls", NAME: {center,
+    radius}). The sets of an entry are of one kind; a set that is neither is written as an interval,
+    which rules.py then refuses for want of its requirement."""
+    sets = e.pop('sets')
+    balls = bool(sets) and all(('ball', s['a'], s['b']) in k.requires for s in sets.values())
+    key, names = ('balls', ('center', 'radius')) if balls else ('intervals', ('lower', 'upper'))
+    out = {x: v for x, v in e.items() if x not in ('exact', 'exact_when')}
+    out[key] = {x: {names[0]: s['a'], names[1]: s['b']} for x, s in sets.items()}
+    out.update({x: v for x, v in e.items() if x in ('exact', 'exact_when')})
+    return out
+
+
 def _pairs(words, where, what, keys):
     """NAME=A,B words as {NAME: {keys[0]: A, keys[1]: B}}."""
     out = {}
@@ -599,24 +721,39 @@ def _ensures(words, where):
             raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from=CENTER,RADIUS"')
         return {'kind': kind, 'center': words[1], 'radius': words[2],
                 'from': {'center': m.group(1), 'radius': m.group(2)}}
-    if kind == 'makes_ball' and len(words) in (4, 5) and words[3].startswith('from_interval='):
+    if kind == 'makes_ball' and len(words) >= 4 and words[3].startswith('from_interval='):
         # A ball from the bounds of an interval (Milestone 2): `from` names a lower and an upper
-        # input, and midpoint_when the conditions under which the center is the exact midpoint.
+        # input, and midpoint_when the conditions under which the center is the exact midpoint; or
+        # (stage B2, ball_from_interval_1) rel and abs, the distance of the center to the midpoint,
+        # and smallest_radius, as ball_of_interval has them.
         m = re.fullmatch(r'from_interval=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
-        if not m or (len(words) == 5 and not words[4].startswith('midpoint_when=')):
+        opts = {}
+        for w in words[4:]:
+            key, eq, val = w.partition('=')
+            if key in ('midpoint_when', 'rel', 'abs') and eq and val and key not in opts:
+                opts[key] = val
+            elif w == 'smallest_radius' and w not in opts:
+                opts[w] = True
+            else:
+                m = None
+        if not m:
             raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from_interval=LOWER,UPPER '
-                                   '[midpoint_when=CONDITIONS]"')
+                                   '[midpoint_when=CONDITIONS] [rel=EXPR abs=EXPR] [smallest_radius]"')
         entry = {'kind': kind, 'center': words[1], 'radius': words[2],
                  'from': {'lower': m.group(1), 'upper': m.group(2)}}
-        if len(words) == 5:
+        for key in ('rel', 'abs', 'smallest_radius'):
+            if key in opts:
+                entry[key] = opts[key]
+        if 'midpoint_when' in opts:
             conds = []
-            for part in words[4][len('midpoint_when='):].split(';'):
+            for part in opts['midpoint_when'].split(';'):
                 c = re.fullmatch(r'half_in_format\(([a-z][a-z0-9]*)\)', part)
                 if not c:
                     raise DescriptionError(f'{where}: a condition of midpoint_when is half_in_format(INPUT), '
                                            f'got {part!r}')
                 conds.append({'half_in_format': c.group(1)})
-            entry['midpoint_when'] = conds
+            entry = {key: v for key, v in entry.items() if key not in ('rel', 'abs', 'smallest_radius')} | \
+                {'midpoint_when': conds} | {key: v for key, v in entry.items() if key in ('rel', 'abs', 'smallest_radius')}
         return entry
     if kind == 'makes_interval' and len(words) == 4:
         m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
@@ -637,6 +774,10 @@ def _ensures(words, where):
         # The condition is written only when there is one: a rounded entry without it has the
         # shape it always had.
         return {'kind': kind, 'of': words[1], 'mode': words[2], 'when': words[3][len('when='):]}
+    if kind == 'rounded' and len(words) == 4 and words[3].startswith('value='):
+        # A value of its own (the accumulator's sum of magnitudes, beside the kernel's value):
+        # written only when there is one.
+        return {'kind': kind, 'of': words[1], 'mode': words[2], 'value': words[3][len('value='):]}
     if kind == 'upper' and len(words) == 3 and words[2].startswith('gaps='):
         return {'kind': kind, 'of': words[1], 'gaps': words[2][len('gaps='):]}
     if kind == 'upper' and len(words) == 4 and words[2] == 'max' and words[3].startswith('steps='):
@@ -649,9 +790,12 @@ def _ensures(words, where):
         entry = {'kind': kind, 'of': words[1]}
         for w in words[2:]:
             key, eq, val = w.partition('=')
-            if not eq or key not in ('gaps', 'value', 'if') or key in entry or not val:
+            if not eq or key not in ('gaps', 'value', 'if', 'unless', 'exact_when') or key in entry or not val:
                 raise DescriptionError(f'{where}: bad or repeated field {w!r} in upper entry')
-            entry[key] = val
+            # unless: the bound holds when that mask input is false; exact_when: the output is the
+            # value exactly when the conditions hold (the radius of the scaling of a BallVector by a
+            # power of two). Written only in the entries that have them.
+            entry[key] = _exact_when(val, where) if key == 'exact_when' else val
         return entry
     if kind == 'holds' and len(words) == 5 and words[4].startswith('if='):
         return {'kind': kind, 'rel': words[1], 'args': words[2:4], 'if': words[4][len('if='):]}
@@ -662,8 +806,19 @@ def _ensures(words, where):
         # steps up from the value (steps=). The fields are written only when there are.
         entry = {'kind': kind, 'of': words[1], 'flag': words[2][len('flag='):]}
         for w in words[3:]:
+            if w == 'nonneg' and 'nonneg' not in entry:
+                # The finish of a constructor of a BallVector: the value is also not negative.
+                entry['nonneg'] = True
+                continue
+            if w.startswith('if_all=') and 'if_all' not in entry and 'if' not in entry:
+                # The finish of the product of two BallVectors: under several mask inputs, all true.
+                names = w[len('if_all='):].split(',')
+                if len(names) < 2 or not all(VALUE_NAME.match(n) for n in names):
+                    raise DescriptionError(f'{where}: if_all=MASK,MASK,...: the names of two mask inputs or more')
+                entry['if_all'] = names
+                continue
             key, eq, val = w.partition('=')
-            if not eq or key not in ('if', 'steps') or key in entry or not val:
+            if not eq or key not in ('if', 'steps') or key in entry or not val or 'nonneg' in entry:
                 raise DescriptionError(f'{where}: bad or repeated field {w!r} in finite_or_nan entry')
             entry[key] = _steps(val, where) if key == 'steps' else val
         return entry
@@ -761,18 +916,40 @@ def _ensures(words, where):
                 entry[key] = val
             elif w == 'smallest_radius' and w not in entry:
                 entry[w] = True
+            elif key == 'finite_when' and eq and val and key not in entry:
+                # Stage B2 (interval_mid_rad_2): the radius is finite when the conditions hold.
+                entry[key] = _finite_when(val, where)
             else:
                 raise DescriptionError(f'{where}: bad or repeated field {w!r} in ball_of_interval entry')
         if None in (entry['special'], entry['rel'], entry['abs']):
             raise DescriptionError(f'{where}: a ball_of_interval entry needs special=, rel= and abs=')
         if 'smallest_radius' in entry:
             entry['smallest_radius'] = entry.pop('smallest_radius')     # last, after the constants
+        if 'finite_when' in entry:
+            entry['finite_when'] = entry.pop('finite_when')
         return entry
-    if kind == 'interval_of_ball' and len(words) == 6 and words[5].startswith('tight='):
-        # interval_of_ball LOWER UPPER SET NAME=CENTER,RADIUS tight=...: an interval that encloses a ball.
-        return {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
-                'balls': _pairs(words[4:5], where, 'ball', ('center', 'radius')),
-                'tight': _tight(words[5][len('tight='):], where)}
+    if kind == 'interval_of_ball' and len(words) >= 6 and words[5].startswith('tight='):
+        # interval_of_ball LOWER UPPER SET NAME=CENTER,RADIUS tight=... [exact_lower=...]
+        #   [exact_upper=...] [bounded_when=...]: an interval that encloses a ball; the tightness
+        #   outward, with the exactness of each side and the condition of a bounded result, of two
+        #   limbs (stage B2).
+        entry = {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
+                 'balls': _pairs(words[4:5], where, 'ball', ('center', 'radius')),
+                 'tight': _tight(words[5][len('tight='):], where)}
+        opts = {}
+        for w in words[6:]:
+            key, eq, val = w.partition('=')
+            if key not in ('exact_lower', 'exact_upper', 'bounded_when') or not eq or key in opts:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in interval_of_ball entry')
+            opts[key] = val
+        sides = {s: _exact_when(opts[f'exact_{s}'], where) for s in ('lower', 'upper') if f'exact_{s}' in opts}
+        if sides:
+            if entry['tight']['kind'] != 'outward':
+                raise DescriptionError(f'{where}: exact_lower and exact_upper belong to tight=outward')
+            entry['tight']['exact_when'] = sides
+        if 'bounded_when' in opts:
+            entry['bounded_when'] = _bounded_when(opts['bounded_when'], where)
+        return entry
     if kind == 'splits' and len(words) == 6:
         # splits AL AU BL BU from=LOWER,UPPER: two intervals that together are the operand.
         m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[5])
@@ -780,6 +957,53 @@ def _ensures(words, where):
             raise DescriptionError(f'{where}: expected "splits AL AU BL BU from=LOWER,UPPER"')
         return {'kind': kind, 'parts': [{'lower': words[1], 'upper': words[2]}, {'lower': words[3], 'upper': words[4]}],
                 'from': {'lower': m.group(1), 'upper': m.group(2)}}
+    if kind == 'ball_set' and len(words) == 6:
+        # ball_set CENTER RADIUS union|intersection NAME=CENTER,RADIUS NAME=CENTER,RADIUS: a ball that
+        # contains the union or the intersection of two balls (Milestone 2, the enclosure interface).
+        return {'kind': kind, 'center': words[1], 'radius': words[2], 'set': words[3],
+                'balls': _pairs(words[4:], where, 'ball', ('center', 'radius'))}
+    if kind == 'ball_splits' and len(words) == 6:
+        # ball_splits CA RA CB RB from=CENTER,RADIUS: two balls that cover the two halves of a ball.
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[5])
+        if not m:
+            raise DescriptionError(f'{where}: expected "ball_splits CA RA CB RB from=CENTER,RADIUS"')
+        return {'kind': kind, 'parts': [{'center': words[1], 'radius': words[2]},
+                                        {'center': words[3], 'radius': words[4]}],
+                'from': {'center': m.group(1), 'radius': m.group(2)}}
+    if kind in ('certain', 'trit') and len(words) >= 4:
+        # certain MASK REL ARG... NAME=A,B ... [exact | exact_when=CONDITIONS]
+        # trit YES NO REL ARG ARG NAME=A,B ... [exact | exact_when=CONDITIONS]
+        # A predicate of sets of real numbers, intervals or balls (Milestone 2, the enclosure
+        # interface). The sets are written NAME=A,B as elsewhere; parse_kernel says, from the
+        # requirements, whether they are intervals or balls (_set_kinds).
+        masks = words[1:3] if kind == 'trit' else words[1:2]
+        rest = words[1 + len(masks):]
+        if not rest:
+            raise DescriptionError(f'{where}: a {kind} entry needs a relation')
+        rel = rest[0]
+        n = SET_RELATION_ARITY.get(rel, 2)
+        args, tail = rest[1:1 + n], rest[1 + n:]
+        if len(args) != n:
+            raise DescriptionError(f'{where}: {kind} {rel} has {n} argument{"s" if n > 1 else ""}')
+        pairs, exact = [], None
+        for w in tail:
+            if w == 'exact' and exact is None:
+                exact = True
+            elif w.startswith('exact_when=') and exact is None:
+                exact = _exact_when(w[len('exact_when='):], where)
+            else:
+                pairs.append(w)
+        entry = {'kind': kind}
+        if kind == 'trit':
+            entry.update(yes=masks[0], no=masks[1])
+        else:
+            entry['of'] = masks[0]
+        entry.update(rel=rel, args=args, sets=_pairs(pairs, where, 'set', ('a', 'b')))
+        if exact is True:
+            entry['exact'] = True
+        elif exact is not None:
+            entry['exact_when'] = exact
+        return entry
     if kind == 'predicate' and len(words) == 5:
         return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
     if kind == 'encloses' and len(words) >= 4:
@@ -802,6 +1026,98 @@ def _ensures(words, where):
         if exact_when is not None:
             entry['exact_when'] = exact_when
         return entry
+    if kind == 'makes_ball_vector' and len(words) == 5:
+        # The constructor of a BallVector (milestone2.md, "BallVector", "Values"): the centers written,
+        # the radius and the flag, from the centers and the radius given.
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m or not words[4].startswith('flag=') or not words[4][len('flag='):]:
+            raise DescriptionError(f'{where}: expected "makes_ball_vector CENTERS RADIUS from=CENTERS,RADIUS '
+                                   f'flag=MASK", got {" ".join(words)!r}')
+        return {'kind': kind, 'center': words[1], 'radius': words[2], 'flag': words[4][len('flag='):],
+                'from': {'center': m.group(1), 'radius': m.group(2)}}
+    if kind == 'encloses_entries' and len(words) >= 5:
+        # A ball vector (milestone2.md, "BallVector"): the centers written, the one radius and the
+        # mask that the result is a finite ball vector; each ball name an array of centers and a
+        # radius (a scalar). radii_when: the conditions of V4 on the scalars alone, which make it
+        # a statement of every length, the empty vector included (finite_when at any entry implies
+        # them).
+        balls, finite_when, radii_when, flag, exact, finite_from = {}, None, None, None, False, None
+        for w in words[4:]:
+            if w.startswith('finite_when=') and finite_when is None:
+                finite_when = _finite_when(w[len('finite_when='):], where)
+                continue
+            if w.startswith('radii_when=') and radii_when is None:
+                radii_when = _finite_when(w[len('radii_when='):], where)
+                continue
+            if w.startswith('finite_from=') and finite_from is None:
+                # The precision from which V4 is claimed, when above the fold's minimum precision
+                # (a constant of the radius kernel overflows the smallest formats below it).
+                finite_from = _finite_from(w[len('finite_from='):], where)
+                continue
+            if w == 'exact' and not exact:
+                # Exact (bv_neg_k): the result is exactly the set, entry by entry, always (the empty
+                # list of conditions of exact_when).
+                exact = True
+                continue
+            if w.startswith('exact_when=') and not exact:
+                # Exact under conditions (bv_mul_pow2_k): those of every entry and of the scalars.
+                exact = _exact_when(w[len('exact_when='):], where)
+                continue
+            if w.startswith('flag=') and flag is None:
+                flag = w[len('flag='):]
+                continue
+            m = re.fullmatch(r'([a-z][a-z0-9]*)=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', w)
+            if not m or m.group(1) in balls:
+                raise DescriptionError(f'{where}: bad or repeated ball vector {w!r}: NAME=CENTERS,RADIUS')
+            balls[m.group(1)] = {'center': m.group(2), 'radius': m.group(3)}
+        if not flag:
+            raise DescriptionError(f'{where}: an encloses_entries entry needs flag=MASK')
+        entry = {'kind': kind, 'center': words[1], 'radius': words[2], 'flag': flag, 'set': words[3],
+                 'balls': balls, 'finite_when': finite_when or []}
+        if radii_when is not None:
+            entry['radii_when'] = radii_when
+        if finite_from is not None:
+            entry['finite_from'] = finite_from
+        if exact:
+            entry['exact_when'] = [] if exact is True else exact
+        return entry
+    if kind == 'encloses_coefficients' and len(words) >= 5:
+        # The product of two BallVectors (milestone2.md, "The product of polynomials"): the coefficients
+        # written, the one radius and the flag; each ball name an array of centers and its radius.
+        # finite_when: conditions of V4 over a pair of entries, one of each array (EXPR names both),
+        # an entry of one array, or the count n = min(n_x, n_y); radii_when over the scalars alone;
+        # count_when, conditions on the count, n, under which the bound of dot for n terms is given.
+        balls, opts, flag = {}, {}, None
+        for w in words[4:]:
+            key, eq, val = w.partition('=')
+            if key in ('finite_when', 'radii_when', 'count_when', 'finite_from') and eq and key not in opts:
+                opts[key] = val
+                continue
+            if key == 'flag' and eq and val and flag is None:
+                flag = val
+                continue
+            m = re.fullmatch(r'([a-z][a-z0-9]*)=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', w)
+            if not m or m.group(1) in balls:
+                raise DescriptionError(f'{where}: bad or repeated ball vector {w!r}: NAME=CENTERS,RADIUS')
+            balls[m.group(1)] = {'center': m.group(2), 'radius': m.group(3)}
+        if not flag:
+            raise DescriptionError(f'{where}: an encloses_coefficients entry needs flag=MASK')
+        entry = {'kind': kind, 'center': words[1], 'radius': words[2], 'flag': flag, 'set': words[3], 'balls': balls,
+                 'finite_when': _finite_when(opts.get('finite_when', ''), where)}
+        if 'radii_when' in opts:
+            entry['radii_when'] = _finite_when(opts['radii_when'], where)
+        if 'count_when' in opts:
+            conds = []
+            for part in opts['count_when'].split(';'):
+                c = re.fullmatch(r'le\((.+)\)', part)
+                args = _arguments(c.group(1), where) if c else []
+                if len(args) != 2 or not all(args):
+                    raise DescriptionError(f'{where}: a condition of count_when is le(EXPR,K), got {part!r}')
+                conds.append({'le': args[0], 'than': args[1]})
+            entry['count_when'] = conds
+        if 'finite_from' in opts:
+            entry['finite_from'] = _finite_from(opts['finite_from'], where)
+        return entry
     if kind == 'error' and len(words) >= 3:
         entry = {'kind': 'error', 'of': words[1], 'form': words[2],
                  'c': None, 'k': None, 't': None, 'when': None}
@@ -810,6 +1126,11 @@ def _ensures(words, where):
             if key == 'exact_when' and eq and 'exact_when' not in entry:
                 # Only when there is one: an error entry without it has the shape it always had.
                 entry['exact_when'] = _exact_when(val, where)
+                continue
+            if key == 'exact_flag' and eq and val and 'exact_flag' not in entry:
+                # A mask output that is true exactly when the conditions of exact_when hold (the step
+                # of the scaling of a BallVector by a power of two): only where there is one.
+                entry['exact_flag'] = val
                 continue
             if not eq or key not in ('c', 'k', 't', 'when') or entry[key] is not None:
                 raise DescriptionError(f'{where}: bad or repeated field {w!r} in error entry')
@@ -949,6 +1270,9 @@ def parse_kernel(text, path):
         for e in k.ensures:
             if e['kind'] == 'encloses':
                 e.setdefault('finite_when', [])
+    for i, e in enumerate(k.ensures):
+        if e['kind'] in ('certain', 'trit'):
+            k.ensures[i] = _set_kinds(e, k)
     if not KERNEL_NAME.match(k.name):
         raise DescriptionError(f'{path}: bad kernel name {k.name!r}')
     if not k.inputs or not k.outputs:
@@ -982,6 +1306,19 @@ class Fold:
     states: list = field(default_factory=list)      # every group of the state, in order (a fold of maxima: two)
     step: tuple = None          # (kernel, argument group names, the line's destination)
     combine: tuple = None       # the same (for a map, the operation and), or None
+    record: tuple = None        # a ball vector: the state's update from the element written (a step of a fold of maxima)
+    # Every record line and every combine line, in order (record and combine are the first): a ball
+    # vector that is exact under conditions has a second of each, the and of the step's mask into a
+    # mask of the state (records[1]) and of two such masks (combines[1]).
+    records: list = field(default_factory=list)
+    combines: list = field(default_factory=list)
+    radius: tuple = None        # a ball vector: the kernel of its radius, on the state's limb and scalars
+    # The product of two BallVectors (bv_conv_k): the convolution of its centers (a fold with
+    # coefficients:), the count min(n_x, n_y) as a number of T (its name), and the kernel of the bound
+    # of a dot product of that many terms, run once (a call on the count).
+    centers: str = None
+    count: str = None
+    bound: tuple = None
     finish: tuple = None        # (kernel, argument group names, destination group names), or None
     orders: tuple = ()
     writes: list = field(default_factory=list)      # Groups: the arrays a map writes, one element per step
@@ -994,6 +1331,7 @@ class Fold:
     min_precision: int = None
     theorem: str = None         # the file of F_seq_correct and F_lanes_correct
     ieee_theorem: str = None    # the file of F_seq_ieee_correct and F_lanes_ieee_correct
+    terms_theorem: str = None   # a convolution's: the file of the theorems of the statements of conv_terms
     source: str = None
     license: str = None
     status: str = None
@@ -1007,7 +1345,29 @@ class Fold:
     @property
     def is_map(self):
         """A map: the step writes an element of each written array, from the elements read."""
-        return bool(self.writes) and not self.coefficients
+        return bool(self.writes) and not self.coefficients and not self.record
+
+    @property
+    def is_bv(self):
+        """A ball vector (milestone2.md, "BallVector"): a map whose state is that of a fold of maxima,
+        updated by `record` from each element written, and whose finish gives one radius."""
+        return bool(self.record) and not self.centers
+
+    @property
+    def is_bv_conv(self):
+        """The product of two BallVectors (milestone2.md, "The product of polynomials"): the
+        convolution `centers` of their centers, the maxima of the operands' centers by `record` lines
+        on the arrays read, the count, the bound, the radius and a finish of two masks."""
+        return bool(self.centers)
+
+    @property
+    def exact_mask(self):
+        """A ball vector exact under conditions (bv_mul_pow2_k): (the state's third group, a mask that
+        starts true, and the step's second output, the mask that its entry is exact), which the
+        second record line and-s together; None for every other fold."""
+        if self.is_bv and len(self.states) == 3 and self.step and len(self.step[2]) == 2:
+            return self.states[2].name, self.step[2][1]
+        return None
 
     @property
     def is_conv(self):
@@ -1047,6 +1407,10 @@ class Fold:
         return f'{self.name}_{ORDER_SUFFIX[order]}_correct'
 
     def ieee_theorem_name(self, order):
+        """The theorem of the IEEE-model statement of one order (of a convolution, of its one
+        statement: F_ieee_correct)."""
+        if self.is_conv or self.is_bv_conv:
+            return f'{self.name}_ieee_correct'
         return f'{self.name}_{ORDER_SUFFIX[order]}_ieee_correct'
 
 
@@ -1072,8 +1436,11 @@ def _fold_call(text, where, key):
 
 def parse_fold(text, path):
     fd = Fold(name=None, path=path)
-    single = {'fold', 'arrays', 'scalars', 'state', 'step', 'combine', 'orders', 'writes', 'check', 'finish',
-              'value', 'min_precision', 'theorem', 'source', 'license', 'status', 'domain', 'coefficients'}
+    # record and combine may be given more than once (a ball vector exact under conditions: the and of
+    # a mask of the step into the state); the rules say which folds may.
+    single = {'fold', 'arrays', 'scalars', 'state', 'step', 'orders', 'writes', 'check', 'finish',
+              'value', 'min_precision', 'theorem', 'source', 'license', 'status', 'domain', 'coefficients',
+              'radius', 'centers', 'count', 'bound'}
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
         where = f'{path}:{lineno}'
@@ -1104,8 +1471,25 @@ def parse_fold(text, path):
         elif key == 'state':
             fd.states = [_group(part, where)[0] for part in val.split(',')]
             fd.state = fd.states[0]
-        elif key in ('step', 'combine'):
+        elif key in ('combine', 'record'):
+            call = _fold_call(val, where, key)
+            (fd.combines if key == 'combine' else fd.records).append(call)
+            if key not in fd.declared:
+                fd.declared.add(key)
+                setattr(fd, key, call)
+        elif key in ('step', 'radius', 'bound'):
             setattr(fd, key, _fold_call(val, where, key))
+        elif key == 'centers':
+            if not KERNEL_NAME.match(val):
+                raise DescriptionError(f'{where}: expected "centers: CONVOLUTION", got {val!r}')
+            fd.centers = val
+        elif key == 'count':
+            # The one count a fold may make: the smaller of the lengths of its two arrays, as a number
+            # of T rounded up (exact below 2^p), the largest number of terms of a coefficient.
+            m = re.fullmatch(r'([a-z][a-z0-9]*)\s*=\s*min\(n_x,\s*n_y\)', val)
+            if not m:
+                raise DescriptionError(f'{where}: expected "count: NAME = min(n_x, n_y)", got {val!r}')
+            fd.count = m.group(1)
         elif key == 'finish':
             fd.finish = None if val == 'none' else _fold_call(val, where, key)
         elif key == 'orders':
@@ -1145,6 +1529,12 @@ def parse_fold(text, path):
                 raise DescriptionError(f'{where}: expected "ieee_theorem: FILE" (its theorems are '
                                        'F_seq_ieee_correct and F_lanes_ieee_correct)')
             fd.ieee_theorem = val
+        elif key == 'terms_theorem':
+            if len(val.split()) != 1:
+                raise DescriptionError(f'{where}: expected "terms_theorem: FILE" (its theorems are '
+                                       'conv_terms_eq_correct, conv_terms_count_correct and '
+                                       'conv_terms_length_correct)')
+            fd.terms_theorem = val
         elif key in ('source', 'license', 'status', 'domain'):
             setattr(fd, key, val)
         else:
@@ -1153,8 +1543,9 @@ def parse_fold(text, path):
         raise DescriptionError(f'{path}: no "fold:" line')
     if not KERNEL_NAME.match(fd.name):
         raise DescriptionError(f'{path}: bad fold name {fd.name!r}')
-    # A convolution has no step of its own: that of the fold of its coefficients.
-    for key in ('arrays', 'state', 'orders', 'writes', 'finish') + (() if fd.coefficients else ('step',)):
+    # A convolution has no step of its own: that of the fold of its coefficients; nor has the product
+    # of two BallVectors, whose centers are a convolution's.
+    for key in ('arrays', 'state', 'orders', 'writes', 'finish') + (() if fd.coefficients or fd.centers else ('step',)):
         if key not in fd.declared:
             raise DescriptionError(f'{path}: a fold needs "{key}:"' +
                                    (' (none, when there is none)' if key in ('writes', 'finish') else ''))

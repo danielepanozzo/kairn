@@ -902,7 +902,10 @@ def brute_driver(ctx):
 # non-finite layer after them, those of the search and the shrinker next, those of
 # rational_1 and rational_2 (kairn::rational) after them, those of the kinds of Milestone 2
 # next, then those of its interval kernels (selftest8), and those of its stage B (maps, folds of
-# maxima, convolutions; selftest9) last.
+# maxima, convolutions; selftest9), and those of the ball vectors and the accumulator
+# (selftest10), those of their folds (selftest11), and those of the enclosure interface's
+# predicates, comparisons, set operations of a ball and conversions of two limbs
+# (selftest_enc) last.
 from . import selftest2  # noqa: E402,F401
 from . import selftest3  # noqa: E402,F401
 from . import selftest4  # noqa: E402,F401
@@ -911,6 +914,9 @@ from . import selftest6  # noqa: E402,F401
 from . import selftest7  # noqa: E402,F401
 from . import selftest8  # noqa: E402,F401
 from . import selftest9  # noqa: E402,F401
+from . import selftest10  # noqa: E402,F401
+from . import selftest11  # noqa: E402,F401
+from . import selftest_enc  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------

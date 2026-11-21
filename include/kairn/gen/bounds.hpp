@@ -25,6 +25,71 @@ namespace kairn::gen::bounds {
 // What an error bound is relative to.
 enum class Form { result, operands, terms };
 
+// acc_add_1: proved. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0; rounded.
+template <class T> struct acc_add_1;
+template <> struct acc_add_1<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1p-53;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0x1p-53;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct acc_add_1<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1p-24f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0x1p-24f;
+    static constexpr float tiny_computed = 0.0f;
+};
+
+// acc_merge_1: proved. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0; rounded.
+template <class T> struct acc_merge_1;
+template <> struct acc_merge_1<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1p-53;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0x1p-53;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct acc_merge_1<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1p-24f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0x1p-24f;
+    static constexpr float tiny_computed = 0.0f;
+};
+
+// acc_mul_1: proved. Claims: rounded; rounded.
+template <class T> struct acc_mul_1;
+template <> struct acc_mul_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct acc_mul_1<float> {
+    static constexpr bool proved = true;
+};
+
+// acc_radius_1: proved. Claims: upper; holds.
+template <class T> struct acc_radius_1;
+template <> struct acc_radius_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct acc_radius_1<float> {
+    static constexpr bool proved = true;
+};
+
+// acc_radius_2: proved. Claims: upper; holds.
+template <class T> struct acc_radius_2;
+template <> struct acc_radius_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct acc_radius_2<float> {
+    static constexpr bool proved = true;
+};
+
 // add_1_1: proved. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0.
 template <class T> struct add_1_1;
 template <> struct add_1_1<double> {
@@ -204,6 +269,115 @@ template <> struct ball_add_1_full<float> {
     static constexpr bool proved = true;
 };
 
+// abs_2: proved. Claims: normalized; error, form R, c = 0, k = 2, t = 0; represents.
+template <class T> struct abs_2;
+template <> struct abs_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0.0;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0.0;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct abs_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0.0f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0.0f;
+    static constexpr float tiny_computed = 0.0f;
+};
+
+// le_2_2: proved. Claims: predicate.
+template <class T> struct le_2_2;
+template <> struct le_2_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct le_2_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_contains_ball_1: proved. Claims: certain.
+template <class T> struct ball_contains_ball_1;
+template <> struct ball_contains_ball_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_contains_ball_1<float> {
+    static constexpr bool proved = true;
+};
+
+// le_2_1: proved. Claims: predicate.
+template <class T> struct le_2_1;
+template <> struct le_2_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct le_2_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_contains_point_1: proved. Claims: certain.
+template <class T> struct ball_contains_point_1;
+template <> struct ball_contains_point_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_contains_point_1<float> {
+    static constexpr bool proved = true;
+};
+
+// lt_2_2: proved. Claims: predicate.
+template <class T> struct lt_2_2;
+template <> struct lt_2_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct lt_2_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_equal_1: proved. Claims: trit.
+template <class T> struct ball_equal_1;
+template <> struct ball_equal_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_equal_1<float> {
+    static constexpr bool proved = true;
+};
+
+// sub_up_1: proved. Claims: rounded.
+template <class T> struct sub_up_1;
+template <> struct sub_up_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct sub_up_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_mid_rad_1: proved. Claims: ball_of_interval.
+template <class T> struct interval_mid_rad_1;
+template <> struct interval_mid_rad_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_mid_rad_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_to_ball_1: proved. Claims: ball_of_interval.
+template <class T> struct interval_to_ball_1;
+template <> struct interval_to_ball_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_to_ball_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_from_interval_1: proved. Claims: makes_ball.
+template <class T> struct ball_from_interval_1;
+template <> struct ball_from_interval_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_from_interval_1<float> {
+    static constexpr bool proved = true;
+};
+
 // ball_from_interval_2: proved. Claims: makes_ball.
 template <class T> struct ball_from_interval_2;
 template <> struct ball_from_interval_2<double> {
@@ -219,6 +393,60 @@ template <> struct sub_down_1<double> {
     static constexpr bool proved = true;
 };
 template <> struct sub_down_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_to_interval_1: proved. Claims: interval_of_ball.
+template <class T> struct ball_to_interval_1;
+template <> struct ball_to_interval_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_to_interval_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_hull_1: proved. Claims: interval_set.
+template <class T> struct interval_hull_1;
+template <> struct interval_hull_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_hull_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_hull_1: proved. Claims: ball_set.
+template <class T> struct ball_hull_1;
+template <> struct ball_hull_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_hull_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_intersection_1: proved. Claims: ball_set.
+template <class T> struct ball_intersection_1;
+template <> struct ball_intersection_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_intersection_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_less_1: proved. Claims: trit.
+template <class T> struct ball_less_1;
+template <> struct ball_less_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_less_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_less_equal_1: proved. Claims: trit.
+template <class T> struct ball_less_equal_1;
+template <> struct ball_less_equal_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_less_equal_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -285,6 +513,24 @@ template <> struct ball_neg_1<float> {
     static constexpr bool proved = true;
 };
 
+// ball_negative_1: proved. Claims: certain.
+template <class T> struct ball_negative_1;
+template <> struct ball_negative_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_negative_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_positive_1: proved. Claims: certain.
+template <class T> struct ball_positive_1;
+template <> struct ball_positive_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_positive_1<float> {
+    static constexpr bool proved = true;
+};
+
 // ball_scale_1: proved. Claims: encloses.
 template <class T> struct ball_scale_1;
 template <> struct ball_scale_1<double> {
@@ -300,6 +546,15 @@ template <> struct ball_scale_1_full<double> {
     static constexpr bool proved = true;
 };
 template <> struct ball_scale_1_full<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_split_1: proved. Claims: ball_splits.
+template <class T> struct ball_split_1;
+template <> struct ball_split_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_split_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -321,21 +576,21 @@ template <> struct ball_sub_1_full<float> {
     static constexpr bool proved = true;
 };
 
-// ball_to_interval_1: proved. Claims: interval_of_ball.
-template <class T> struct ball_to_interval_1;
-template <> struct ball_to_interval_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct ball_to_interval_1<float> {
-    static constexpr bool proved = true;
-};
-
 // ball_upper_as_1: proved. Claims: set_bound.
 template <class T> struct ball_upper_as_1;
 template <> struct ball_upper_as_1<double> {
     static constexpr bool proved = true;
 };
 template <> struct ball_upper_as_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_zero_1: proved. Claims: certain.
+template <class T> struct ball_zero_1;
+template <> struct ball_zero_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_zero_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -375,6 +630,142 @@ template <> struct bound_sum_2<float> {
     static constexpr bool proved = true;
 };
 
+// bv_add_radius_1: proved. Claims: upper.
+template <class T> struct bv_add_radius_1;
+template <> struct bv_add_radius_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_add_radius_1<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_add_radius_2: proved. Claims: upper.
+template <class T> struct bv_add_radius_2;
+template <> struct bv_add_radius_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_add_radius_2<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_center_entry_1: proved. Claims: rounded.
+template <class T> struct bv_center_entry_1;
+template <> struct bv_center_entry_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_center_entry_1<float> {
+    static constexpr bool proved = true;
+};
+
+// fold_finish_1: proved. Claims: finite_or_nan.
+template <class T> struct fold_finish_1;
+template <> struct fold_finish_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct fold_finish_1<float> {
+    static constexpr bool proved = true;
+};
+
+// norm_finish_1: proved. Claims: finite_or_nan.
+template <class T> struct norm_finish_1;
+template <> struct norm_finish_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct norm_finish_1<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_conv_finish: proved. Claims: finite_or_nan.
+template <class T> struct bv_conv_finish;
+template <> struct bv_conv_finish<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_conv_finish<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_make_finish: proved. Claims: finite_or_nan.
+template <class T> struct bv_make_finish;
+template <> struct bv_make_finish<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_make_finish<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_make_radius: proved. Claims: rounded.
+template <class T> struct bv_make_radius;
+template <> struct bv_make_radius<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_make_radius<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_mul_pow2_radius: proved. Claims: upper; upper.
+template <class T> struct bv_mul_pow2_radius;
+template <> struct bv_mul_pow2_radius<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_mul_pow2_radius<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_mul_pow2_step_1: proved. Claims: rounded; error, form R, c = 0, k = 1, t = 1/2.
+template <class T> struct bv_mul_pow2_step_1;
+template <> struct bv_mul_pow2_step_1<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0.0;
+    static constexpr double tiny = 0x1p-1074;
+    static constexpr double unit_computed = 0.0;
+    static constexpr double tiny_computed = 0x1p-1074;
+};
+template <> struct bv_mul_pow2_step_1<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0.0f;
+    static constexpr float tiny = 0x1p-149f;
+    static constexpr float unit_computed = 0.0f;
+    static constexpr float tiny_computed = 0x1p-149f;
+};
+
+// bv_neg_radius: proved. Claims: rounded.
+template <class T> struct bv_neg_radius;
+template <> struct bv_neg_radius<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_neg_radius<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_scale_radius_1: proved. Claims: upper.
+template <class T> struct bv_scale_radius_1;
+template <> struct bv_scale_radius_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_scale_radius_1<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_scale_radius_2: proved. Claims: upper.
+template <class T> struct bv_scale_radius_2;
+template <> struct bv_scale_radius_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_scale_radius_2<float> {
+    static constexpr bool proved = true;
+};
+
+// conv_radius: proved. Claims: upper.
+template <class T> struct conv_radius;
+template <> struct conv_radius<double> {
+    static constexpr bool proved = true;
+};
+template <> struct conv_radius<float> {
+    static constexpr bool proved = true;
+};
+
 // dot_step_1: proved. Claims: rounded.
 template <class T> struct dot_step_1;
 template <> struct dot_step_1<double> {
@@ -403,15 +794,6 @@ template <> struct fast_two_sum_entry<float> {
     static constexpr float tiny_computed = 0.0f;
 };
 
-// fold_finish_1: proved. Claims: finite_or_nan.
-template <class T> struct fold_finish_1;
-template <> struct fold_finish_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct fold_finish_1<float> {
-    static constexpr bool proved = true;
-};
-
 // interval_add_1: proved. Claims: encloses_interval.
 template <class T> struct interval_add_1;
 template <> struct interval_add_1<double> {
@@ -421,12 +803,39 @@ template <> struct interval_add_1<float> {
     static constexpr bool proved = true;
 };
 
-// interval_hull_1: proved. Claims: interval_set.
-template <class T> struct interval_hull_1;
-template <> struct interval_hull_1<double> {
+// interval_contains_1: proved. Claims: certain.
+template <class T> struct interval_contains_1;
+template <> struct interval_contains_1<double> {
     static constexpr bool proved = true;
 };
-template <> struct interval_hull_1<float> {
+template <> struct interval_contains_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_empty_1: proved. Claims: certain.
+template <class T> struct interval_empty_1;
+template <> struct interval_empty_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_empty_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_entire_1: proved. Claims: certain.
+template <class T> struct interval_entire_1;
+template <> struct interval_entire_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_entire_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_equal_1: proved. Claims: trit.
+template <class T> struct interval_equal_1;
+template <> struct interval_equal_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_equal_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -439,30 +848,30 @@ template <> struct interval_intersection_1<float> {
     static constexpr bool proved = true;
 };
 
+// interval_less_1: proved. Claims: trit.
+template <class T> struct interval_less_1;
+template <> struct interval_less_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_less_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_less_equal_1: proved. Claims: trit.
+template <class T> struct interval_less_equal_1;
+template <> struct interval_less_equal_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_less_equal_1<float> {
+    static constexpr bool proved = true;
+};
+
 // interval_make_1: proved. Claims: makes_interval.
 template <class T> struct interval_make_1;
 template <> struct interval_make_1<double> {
     static constexpr bool proved = true;
 };
 template <> struct interval_make_1<float> {
-    static constexpr bool proved = true;
-};
-
-// sub_up_1: proved. Claims: rounded.
-template <class T> struct sub_up_1;
-template <> struct sub_up_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct sub_up_1<float> {
-    static constexpr bool proved = true;
-};
-
-// interval_mid_rad_1: proved. Claims: ball_of_interval.
-template <class T> struct interval_mid_rad_1;
-template <> struct interval_mid_rad_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct interval_mid_rad_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -512,6 +921,51 @@ template <> struct interval_neg_1<float> {
     static constexpr bool proved = true;
 };
 
+// interval_negative_1: proved. Claims: certain.
+template <class T> struct interval_negative_1;
+template <> struct interval_negative_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_negative_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_positive_1: proved. Claims: certain.
+template <class T> struct interval_positive_1;
+template <> struct interval_positive_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_positive_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_rel_disjoint_1: proved. Claims: certain.
+template <class T> struct interval_rel_disjoint_1;
+template <> struct interval_rel_disjoint_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_rel_disjoint_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_rel_equal_1: proved. Claims: certain.
+template <class T> struct interval_rel_equal_1;
+template <> struct interval_rel_equal_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_rel_equal_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_rel_interior_1: proved. Claims: certain.
+template <class T> struct interval_rel_interior_1;
+template <> struct interval_rel_interior_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_rel_interior_1<float> {
+    static constexpr bool proved = true;
+};
+
 // interval_split_1: proved. Claims: splits.
 template <class T> struct interval_split_1;
 template <> struct interval_split_1<double> {
@@ -530,12 +984,21 @@ template <> struct interval_sub_1<float> {
     static constexpr bool proved = true;
 };
 
-// interval_to_ball_1: proved. Claims: ball_of_interval.
-template <class T> struct interval_to_ball_1;
-template <> struct interval_to_ball_1<double> {
+// interval_subset_1: proved. Claims: certain.
+template <class T> struct interval_subset_1;
+template <> struct interval_subset_1<double> {
     static constexpr bool proved = true;
 };
-template <> struct interval_to_ball_1<float> {
+template <> struct interval_subset_1<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_zero_1: proved. Claims: certain.
+template <class T> struct interval_zero_1;
+template <> struct interval_zero_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_zero_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -585,6 +1048,15 @@ template <> struct mul_up_1<float> {
     static constexpr bool proved = true;
 };
 
+// neg_1: proved. Claims: rounded.
+template <class T> struct neg_1;
+template <> struct neg_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct neg_1<float> {
+    static constexpr bool proved = true;
+};
+
 // next_down: proved. Claims: neighbor.
 template <class T> struct next_down;
 template <> struct next_down<double> {
@@ -609,15 +1081,6 @@ template <> struct norm_combine<double> {
     static constexpr bool proved = true;
 };
 template <> struct norm_combine<float> {
-    static constexpr bool proved = true;
-};
-
-// norm_finish_1: proved. Claims: finite_or_nan.
-template <class T> struct norm_finish_1;
-template <> struct norm_finish_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct norm_finish_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -836,25 +1299,6 @@ template <> struct two_sum_entry<float> {
     static constexpr float tiny_computed = 0.0f;
 };
 
-// abs_2: proved. Claims: normalized; error, form R, c = 0, k = 2, t = 0; represents.
-template <class T> struct abs_2;
-template <> struct abs_2<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr double unit = 0.0;
-    static constexpr double tiny = 0.0;
-    static constexpr double unit_computed = 0.0;
-    static constexpr double tiny_computed = 0.0;
-};
-template <> struct abs_2<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr float unit = 0.0f;
-    static constexpr float tiny = 0.0f;
-    static constexpr float unit_computed = 0.0f;
-    static constexpr float tiny_computed = 0.0f;
-};
-
 // to_up_2: proved. Claims: rounded.
 template <class T> struct to_up_2;
 template <> struct to_up_2<double> {
@@ -871,6 +1315,112 @@ template <> struct abs_upper_2<double> {
 };
 template <> struct abs_upper_2<float> {
     static constexpr bool proved = true;
+};
+
+// add_2_2: proved. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0.
+template <class T> struct add_2_2;
+template <> struct add_2_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1.8000000000004p-105;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0x1.8000000000004p-105;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct add_2_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1.800008p-47f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0x1.800008p-47f;
+    static constexpr float tiny_computed = 0.0f;
+};
+
+// acc_add_2: proved. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0; rounded.
+template <class T> struct acc_add_2;
+template <> struct acc_add_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1.8000000000004p-105;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0x1.8000000000004p-105;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct acc_add_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1.800008p-47f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0x1.800008p-47f;
+    static constexpr float tiny_computed = 0.0f;
+};
+
+// acc_merge_2: proved. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0; rounded.
+template <class T> struct acc_merge_2;
+template <> struct acc_merge_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1.8000000000004p-105;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0x1.8000000000004p-105;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct acc_merge_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1.800008p-47f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0x1.800008p-47f;
+    static constexpr float tiny_computed = 0.0f;
+};
+
+// mul_2_2: proved. Claims: normalized; error, form R, c = 4, k = 2, t = 3/2.
+template <class T> struct mul_2_2;
+template <> struct mul_2_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1p-104;
+    static constexpr double tiny = 0x1p-1073;
+    static constexpr double unit_computed = 0x1.0000000000001p-104;
+    static constexpr double tiny_computed = 0x1p-1073;
+};
+template <> struct mul_2_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1p-46f;
+    static constexpr float tiny = 0x1p-148f;
+    static constexpr float unit_computed = 0x1.000002p-46f;
+    static constexpr float tiny_computed = 0x1p-148f;
+};
+
+// dot_step_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
+template <class T> struct dot_step_2;
+template <> struct dot_step_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr double unit = 0x1.c000000000002p-104;
+    static constexpr double tiny = 0x1p-1073;
+};
+template <> struct dot_step_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr float unit = 0x1.c00004p-46f;
+    static constexpr float tiny = 0x1p-148f;
+};
+
+// acc_mul_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2; rounded.
+template <class T> struct acc_mul_2;
+template <> struct acc_mul_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr double unit = 0x1.c000000000002p-104;
+    static constexpr double tiny = 0x1p-1073;
+};
+template <> struct acc_mul_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr float unit = 0x1.c00004p-46f;
+    static constexpr float tiny = 0x1p-148f;
 };
 
 // add_2_1: proved. Claims: normalized; error, form R, c = 2, k = 2, t = 0.
@@ -899,25 +1449,6 @@ template <> struct add_2_1_full<double> {
 };
 template <> struct add_2_1_full<float> {
     static constexpr bool proved = true;
-};
-
-// add_2_2: proved. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0.
-template <class T> struct add_2_2;
-template <> struct add_2_2<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr double unit = 0x1.8000000000004p-105;
-    static constexpr double tiny = 0.0;
-    static constexpr double unit_computed = 0x1.8000000000004p-105;
-    static constexpr double tiny_computed = 0.0;
-};
-template <> struct add_2_2<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr float unit = 0x1.800008p-47f;
-    static constexpr float tiny = 0.0f;
-    static constexpr float unit_computed = 0x1.800008p-47f;
-    static constexpr float tiny_computed = 0.0f;
 };
 
 // add_2_2_full: proved. Claims: extends.
@@ -1007,25 +1538,6 @@ template <> struct add_up_2_2<double> {
 };
 template <> struct add_up_2_2<float> {
     static constexpr bool proved = true;
-};
-
-// mul_2_2: proved. Claims: normalized; error, form R, c = 4, k = 2, t = 3/2.
-template <class T> struct mul_2_2;
-template <> struct mul_2_2<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr double unit = 0x1p-104;
-    static constexpr double tiny = 0x1p-1073;
-    static constexpr double unit_computed = 0x1.0000000000001p-104;
-    static constexpr double tiny_computed = 0x1p-1073;
-};
-template <> struct mul_2_2<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr float unit = 0x1p-46f;
-    static constexpr float tiny = 0x1p-148f;
-    static constexpr float unit_computed = 0x1.000002p-46f;
-    static constexpr float tiny_computed = 0x1p-148f;
 };
 
 // axpy_entry_step_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
@@ -1125,12 +1637,148 @@ template <> struct ball_add_2_full<float> {
     static constexpr bool proved = true;
 };
 
+// ball_contains_ball_2: proved. Claims: certain.
+template <class T> struct ball_contains_ball_2;
+template <> struct ball_contains_ball_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_contains_ball_2<float> {
+    static constexpr bool proved = true;
+};
+
 // to_down_2: proved. Claims: rounded.
 template <class T> struct to_down_2;
 template <> struct to_down_2<double> {
     static constexpr bool proved = true;
 };
 template <> struct to_down_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_contains_point_2: proved. Claims: trit.
+template <class T> struct ball_contains_point_2;
+template <> struct ball_contains_point_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_contains_point_2<float> {
+    static constexpr bool proved = true;
+};
+
+// eq_2_2: proved. Claims: predicate.
+template <class T> struct eq_2_2;
+template <> struct eq_2_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct eq_2_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_equal_2: proved. Claims: trit.
+template <class T> struct ball_equal_2;
+template <> struct ball_equal_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_equal_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_to_interval_2: proved. Claims: interval_of_ball.
+template <class T> struct ball_to_interval_2;
+template <> struct ball_to_interval_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_to_interval_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_hull_2: proved. Claims: interval_set.
+template <class T> struct interval_hull_2;
+template <> struct interval_hull_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_hull_2<float> {
+    static constexpr bool proved = true;
+};
+
+// mul_pow2_2: proved. Claims: normalized; error, form R, c = 0, k = 2, t = 1.
+template <class T> struct mul_pow2_2;
+template <> struct mul_pow2_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0.0;
+    static constexpr double tiny = 0x1p-1074;
+    static constexpr double unit_computed = 0.0;
+    static constexpr double tiny_computed = 0x1p-1074;
+};
+template <> struct mul_pow2_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0.0f;
+    static constexpr float tiny = 0x1p-149f;
+    static constexpr float unit_computed = 0.0f;
+    static constexpr float tiny_computed = 0x1p-149f;
+};
+
+// interval_mid_rad_2: proved. Claims: ball_of_interval.
+template <class T> struct interval_mid_rad_2;
+template <> struct interval_mid_rad_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_mid_rad_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_to_ball_2: proved. Claims: ball_of_interval.
+template <class T> struct interval_to_ball_2;
+template <> struct interval_to_ball_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_to_ball_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_hull_2: proved. Claims: ball_set.
+template <class T> struct ball_hull_2;
+template <> struct ball_hull_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_hull_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_intersection_2: proved. Claims: interval_set.
+template <class T> struct interval_intersection_2;
+template <> struct interval_intersection_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_intersection_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_intersection_2: proved. Claims: ball_set.
+template <class T> struct ball_intersection_2;
+template <> struct ball_intersection_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_intersection_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_less_2: proved. Claims: trit.
+template <class T> struct ball_less_2;
+template <> struct ball_less_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_less_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_less_equal_2: proved. Claims: trit.
+template <class T> struct ball_less_equal_2;
+template <> struct ball_less_equal_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_less_equal_2<float> {
     static constexpr bool proved = true;
 };
 
@@ -1231,6 +1879,42 @@ template <> struct ball_neg_2<float> {
     static constexpr bool proved = true;
 };
 
+// lt_2_1: proved. Claims: predicate.
+template <class T> struct lt_2_1;
+template <> struct lt_2_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct lt_2_1<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_negative_2: proved. Claims: certain.
+template <class T> struct ball_negative_2;
+template <> struct ball_negative_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_negative_2<float> {
+    static constexpr bool proved = true;
+};
+
+// lt_1_2: proved. Claims: predicate.
+template <class T> struct lt_1_2;
+template <> struct lt_1_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct lt_1_2<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_positive_2: proved. Claims: certain.
+template <class T> struct ball_positive_2;
+template <> struct ball_positive_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_positive_2<float> {
+    static constexpr bool proved = true;
+};
+
 // ball_scale_2: proved. Claims: normalized; encloses.
 template <class T> struct ball_scale_2;
 template <> struct ball_scale_2<double> {
@@ -1246,6 +1930,15 @@ template <> struct ball_scale_2_full<double> {
     static constexpr bool proved = true;
 };
 template <> struct ball_scale_2_full<float> {
+    static constexpr bool proved = true;
+};
+
+// ball_split_2: proved. Claims: ball_splits.
+template <class T> struct ball_split_2;
+template <> struct ball_split_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_split_2<float> {
     static constexpr bool proved = true;
 };
 
@@ -1282,21 +1975,6 @@ template <> struct ball_upper_as_2<float> {
     static constexpr float tiny = 0x1.8p-148f;
 };
 
-// dot_step_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
-template <class T> struct dot_step_2;
-template <> struct dot_step_2<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::terms;
-    static constexpr double unit = 0x1.c000000000002p-104;
-    static constexpr double tiny = 0x1p-1073;
-};
-template <> struct dot_step_2<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::terms;
-    static constexpr float unit = 0x1.c00004p-46f;
-    static constexpr float tiny = 0x1p-148f;
-};
-
 // eq_2_1: proved. Claims: predicate.
 template <class T> struct eq_2_1;
 template <> struct eq_2_1<double> {
@@ -1306,13 +1984,51 @@ template <> struct eq_2_1<float> {
     static constexpr bool proved = true;
 };
 
-// eq_2_2: proved. Claims: predicate.
-template <class T> struct eq_2_2;
-template <> struct eq_2_2<double> {
+// ball_zero_2: proved. Claims: certain.
+template <class T> struct ball_zero_2;
+template <> struct ball_zero_2<double> {
     static constexpr bool proved = true;
 };
-template <> struct eq_2_2<float> {
+template <> struct ball_zero_2<float> {
     static constexpr bool proved = true;
+};
+
+// bv_center_2: proved. Claims: normalized; error, form R, c = 0, k = 2, t = 0; represents.
+template <class T> struct bv_center_2;
+template <> struct bv_center_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0.0;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0.0;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct bv_center_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0.0f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0.0f;
+    static constexpr float tiny_computed = 0.0f;
+};
+
+// bv_mul_pow2_step_2: proved. Claims: normalized; error, form R, c = 0, k = 2, t = 1.
+template <class T> struct bv_mul_pow2_step_2;
+template <> struct bv_mul_pow2_step_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0.0;
+    static constexpr double tiny = 0x1p-1074;
+    static constexpr double unit_computed = 0.0;
+    static constexpr double tiny_computed = 0x1p-1074;
+};
+template <> struct bv_mul_pow2_step_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0.0f;
+    static constexpr float tiny = 0x1p-149f;
+    static constexpr float unit_computed = 0.0f;
+    static constexpr float tiny_computed = 0x1p-149f;
 };
 
 // fold_finish_2: proved. Claims: finite_or_nan.
@@ -1333,39 +2049,57 @@ template <> struct interval_add_2<float> {
     static constexpr bool proved = true;
 };
 
-// lt_2_2: proved. Claims: predicate.
-template <class T> struct lt_2_2;
-template <> struct lt_2_2<double> {
+// interval_contains_2: proved. Claims: certain.
+template <class T> struct interval_contains_2;
+template <> struct interval_contains_2<double> {
     static constexpr bool proved = true;
 };
-template <> struct lt_2_2<float> {
-    static constexpr bool proved = true;
-};
-
-// interval_hull_2: proved. Claims: interval_set.
-template <class T> struct interval_hull_2;
-template <> struct interval_hull_2<double> {
-    static constexpr bool proved = true;
-};
-template <> struct interval_hull_2<float> {
+template <> struct interval_contains_2<float> {
     static constexpr bool proved = true;
 };
 
-// le_2_2: proved. Claims: predicate.
-template <class T> struct le_2_2;
-template <> struct le_2_2<double> {
+// interval_empty_2: proved. Claims: certain.
+template <class T> struct interval_empty_2;
+template <> struct interval_empty_2<double> {
     static constexpr bool proved = true;
 };
-template <> struct le_2_2<float> {
+template <> struct interval_empty_2<float> {
     static constexpr bool proved = true;
 };
 
-// interval_intersection_2: proved. Claims: interval_set.
-template <class T> struct interval_intersection_2;
-template <> struct interval_intersection_2<double> {
+// interval_entire_2: proved. Claims: certain.
+template <class T> struct interval_entire_2;
+template <> struct interval_entire_2<double> {
     static constexpr bool proved = true;
 };
-template <> struct interval_intersection_2<float> {
+template <> struct interval_entire_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_equal_2: proved. Claims: trit.
+template <class T> struct interval_equal_2;
+template <> struct interval_equal_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_equal_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_less_2: proved. Claims: trit.
+template <class T> struct interval_less_2;
+template <> struct interval_less_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_less_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_less_equal_2: proved. Claims: trit.
+template <class T> struct interval_less_equal_2;
+template <> struct interval_less_equal_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_less_equal_2<float> {
     static constexpr bool proved = true;
 };
 
@@ -1433,6 +2167,60 @@ template <> struct interval_neg_2<float> {
     static constexpr bool proved = true;
 };
 
+// interval_negative_2: proved. Claims: certain.
+template <class T> struct interval_negative_2;
+template <> struct interval_negative_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_negative_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_positive_2: proved. Claims: certain.
+template <class T> struct interval_positive_2;
+template <> struct interval_positive_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_positive_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_rel_disjoint_2: proved. Claims: certain.
+template <class T> struct interval_rel_disjoint_2;
+template <> struct interval_rel_disjoint_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_rel_disjoint_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_rel_equal_2: proved. Claims: certain.
+template <class T> struct interval_rel_equal_2;
+template <> struct interval_rel_equal_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_rel_equal_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_rel_interior_2: proved. Claims: certain.
+template <class T> struct interval_rel_interior_2;
+template <> struct interval_rel_interior_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_rel_interior_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_split_2: proved. Claims: splits.
+template <class T> struct interval_split_2;
+template <> struct interval_split_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_split_2<float> {
+    static constexpr bool proved = true;
+};
+
 // sub_down_2_2: proved. Claims: normalized; outward.
 template <class T> struct sub_down_2_2;
 template <> struct sub_down_2_2<double> {
@@ -1460,39 +2248,30 @@ template <> struct interval_sub_2<float> {
     static constexpr bool proved = true;
 };
 
+// interval_subset_2: proved. Claims: certain.
+template <class T> struct interval_subset_2;
+template <> struct interval_subset_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_subset_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_zero_2: proved. Claims: certain.
+template <class T> struct interval_zero_2;
+template <> struct interval_zero_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_zero_2<float> {
+    static constexpr bool proved = true;
+};
+
 // le_1_2: proved. Claims: predicate.
 template <class T> struct le_1_2;
 template <> struct le_1_2<double> {
     static constexpr bool proved = true;
 };
 template <> struct le_1_2<float> {
-    static constexpr bool proved = true;
-};
-
-// le_2_1: proved. Claims: predicate.
-template <class T> struct le_2_1;
-template <> struct le_2_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct le_2_1<float> {
-    static constexpr bool proved = true;
-};
-
-// lt_1_2: proved. Claims: predicate.
-template <class T> struct lt_1_2;
-template <> struct lt_1_2<double> {
-    static constexpr bool proved = true;
-};
-template <> struct lt_1_2<float> {
-    static constexpr bool proved = true;
-};
-
-// lt_2_1: proved. Claims: predicate.
-template <class T> struct lt_2_1;
-template <> struct lt_2_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct lt_2_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -1521,25 +2300,6 @@ template <> struct mul_2_2_full<double> {
 };
 template <> struct mul_2_2_full<float> {
     static constexpr bool proved = true;
-};
-
-// mul_pow2_2: proved. Claims: normalized; error, form R, c = 0, k = 2, t = 1.
-template <class T> struct mul_pow2_2;
-template <> struct mul_pow2_2<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr double unit = 0.0;
-    static constexpr double tiny = 0x1p-1074;
-    static constexpr double unit_computed = 0.0;
-    static constexpr double tiny_computed = 0x1p-1074;
-};
-template <> struct mul_pow2_2<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::result;
-    static constexpr float unit = 0.0f;
-    static constexpr float tiny = 0x1p-149f;
-    static constexpr float unit_computed = 0.0f;
-    static constexpr float tiny_computed = 0x1p-149f;
 };
 
 // mul_pow2_2_full: proved. Claims: extends.

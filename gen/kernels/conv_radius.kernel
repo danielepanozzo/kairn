@@ -1,0 +1,45 @@
+# The radius of a product of polynomials whose coefficients are BallVectors (milestone2.md, "The
+# product of polynomials": conv_radius, the listing of the page). ma and mb are the largest |leading
+# limb| of the centers of the two operands, rx and ry their radii, m the largest number of terms of a
+# coefficient (the smaller of the two lengths, as a number of T rounded up), and g, t the exported
+# bound of a dot product of m terms (bound_dot_k), g at most 1. Then
+#   rz >= m ((1+u) ma ry + (1+u) mb rx + rx ry) + g m (1+u)^2 ma mb + t,
+# the first part being what the radii of the operands become and the second the rounding of the
+# centers, with the sum of |cx_i cy_j| of a coefficient bounded by m (1+u)^2 ma mb (a center is at most
+# (1+u) times its leading limb). Every operation is a rounding to nearest of a nonnegative value: the
+# product by (1+u)^7 covers the seven factors (1+u) that they lose, and hm the eta/2 that each of the
+# five roundings before s can lose, multiplied by m, and the smallest normal number N, which keeps the
+# radius normal (a chain of radius_4 of proofs/theories/Ball2.v, one link longer). Proposed in
+# experiments/milestone2/kernels/ and checked there by batch.py and bv_conv.py, with this listing.
+kernel:        conv_radius
+input:         ma
+input:         mb
+input:         rx
+input:         ry
+input:         m
+input:         g
+input:         t
+output:        rz
+requires:      nonneg ma
+requires:      nonneg mb
+requires:      nonneg rx
+requires:      nonneg ry
+requires:      count m
+requires:      nonneg g
+requires:      at_most g 1
+requires:      nonneg t
+ensures:       upper rz value=m*((1+u)*ma*ry+(1+u)*mb*rx+rx*ry)+g*m*(1+u)^2*ma*mb+t
+min_precision: 2
+theorem:       proofs/theories/BvConv.v conv_radius_correct
+source:        the radius of the product of polynomials of BallVector (milestone2.md, conv_radius)
+license:       algorithm and proof: MIT
+status:        proved
+
+p  = prod(rx, ry)
+q  = fma(mb, rx, p)
+w  = fma(ma, ry, q)
+ab = prod(ma, mb)
+e  = fma(ab, g, w)
+s  = fma(m, e, t)
+hm = prod(m, const up(4*(1+u)^8*eta+eta/(2*u)))
+rz = fma(s, const up((1+u)^7), hm)

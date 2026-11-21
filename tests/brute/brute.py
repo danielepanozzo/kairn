@@ -154,6 +154,13 @@ SHAPES = {
     "ext_i1_i1_sum": ("fp:2:-3:2", ["fp:2:-5:4", "fp:3:-3:0"]),
     "ext_i1_i1_product": ("fp:2:-3:2", ["fp:2:-5:4", "fp:3:-3:0"]),
     "ext_i2": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-5:2", "fp:4:-4:-1"]),
+    # The enclosure interface of stage B2: a set and a point (interval_contains_k,
+    # ball_contains_point_k); the other kernels of the stage have the shapes above. 0.1 to 2.5
+    # million cases each.
+    "ext_i1_1_sum": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-6:3"]),
+    "ext_i2_2_sum": ("fp:2:-2:1", ["fp:3:-3:0", "fp:2:-4:3"]),
+    "ext_b1_1_sum": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-6:3"]),
+    "ext_b2_2_sum": ("fp:3:-3:0", ["fp:4:-4:-1", "fp:3:-4:1"]),
     # The steps of the maps of stage B (the others have the shapes of the kernels they call): a
     # product by a power of two of one limb, the steps of axpy_2_1 (a of one limb).
     "1_c_product": ("fp:7:-14:6", ["fp:8:-14:6", "fp:7:-20:10"]),
@@ -164,6 +171,65 @@ SHAPES = {
     "1_m_1_sum": ("fp:5:-7:0", ["fp:6:-7:0", "fp:5:-10:3"]),
     "1_m_2_sum": ("fp:3:-6:2", ["fp:4:-6:2", "fp:3:-8:4"]),
     "ext_1_m_sum": ("fp:11:-29:10", ["fp:12:-30:9", "fp:13:-61:38"]),
+    # The kernels of the ball vectors (r a radius, m a mask, c a power of two, n a count): the
+    # quick tier's toy formats (tests/CMakeLists.txt), then a bit more and more exponents; the
+    # finishes of the extended domain as the finish of a fold of maxima, in the IEEE shape.
+    "r_r_r_sum": ("fp:3:-5:3", ["fp:4:-5:3", "fp:4:-8:4"]),
+    "r_r_1_sum": ("fp:3:-5:3", ["fp:4:-5:3", "fp:4:-8:4"]),
+    "r_m_r_c_sum": ("fp:4:-4:2", ["fp:5:-4:2", "fp:5:-8:4"]),
+    "ext_1_m_m_sum": ("fp:11:-29:10", ["fp:12:-30:9", "fp:13:-61:38"]),
+    # The accumulator's steps and its radius: 0.05 to 13 million cases each.
+    "1_r_1_sum": ("fp:3:-3:1", ["fp:4:-3:1", "fp:4:-6:3"]),
+    "2_r_2_sum": ("fp:3:-2:0", ["fp:4:-2:0", "fp:3:-3:1"]),
+    "1_r_1_1_product": ("fp:2:-2:1", ["fp:3:-2:1", "fp:3:-4:2"]),
+    "r_n_r_r_sum": ("fp:3:-2:0", ["fp:4:-2:0", "fp:4:-4:2"]),
+}
+
+# Kernels whose shape's formats do not fit them, each with its own (read before SHAPES and
+# EXPLICIT): the merge of two accumulators of two limbs has the shape of the sum of two balls of
+# two limbs, whose restrictions name their inputs; its own are those of the quick tier
+# (tests/CMakeLists.txt, _toy_kernel_acc_merge_2): the running sums every pair, the sums of
+# magnitudes a few values.
+_R_ACC_A = "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0"
+_R_ACC_C = "c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2"
+_R_ACC_MUL = "a.in=0x0p+0/0x1p-1/0x1.8p+0"
+# conv_radius (seven operands; by the owner's ruling of 2026-11-21 its claim is of finite results,
+# and a result that is not finite is +inf or a NaN, judged no further): a few values of each
+# operand, ma up to Omega so that ma mb overflows (+inf, and a NaN where g or m is zero), the
+# finite results nine tenths of each enumeration (the guards ask three quarters).
+_R_CONV = ["ma.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1/0x1.cp+6",
+           "mb.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1",
+           "rx.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0", "ry.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0",
+           "m.in=0x0p+0/0x1p+0/0x1p+1/0x1.8p+1", "g.in=0x0p+0/0x1p-3/0x1p-1/0x1p+0",
+           "t.in=0x0p+0/0x1p-4/0x1p+0"]
+_R_CONV_WIDE = ["ma.in=0x0p+0/0x1p-5/0x1p-2/0x1p-1/0x1p+0/0x1.8p+1/0x1.8p+2/0x1.cp+7",
+                "mb.in=0x0p+0/0x1p-5/0x1p-2/0x1p+0/0x1.8p+1/0x1.8p+2",
+                "rx.in=0x0p+0/0x1p-5/0x1p-3/0x1p-1/0x1p+0",
+                "ry.in=0x0p+0/0x1p-5/0x1p-3/0x1p-1/0x1p+0",
+                "m.in=0x0p+0/0x1p+0/0x1p+1/0x1.8p+1/0x1.4p+2",
+                "g.in=0x0p+0/0x1p-5/0x1p-3/0x1p-1/0x1p+0", "t.in=0x0p+0/0x1p-5/0x1p-1/0x1p+1"]
+KERNEL_FORMATS = {
+    # The quick tier's restricted domain (tests/CMakeLists.txt, _toy_kernel_conv_radius), the
+    # same one bit more precise, and more values of each operand with two exponents more: 23 040,
+    # 23 040 and 120 000 cases.
+    "conv_radius": ("fp:3:-4:4", [
+        ("fp:3:-4:4", _R_CONV),
+        ("fp:4:-4:4", _R_CONV),
+        ("fp:3:-5:5", _R_CONV_WIDE),
+    ]),
+    # The product step of an accumulator of two limbs: three operands of two limbs, the quick
+    # tier's restriction (tests/CMakeLists.txt, _toy_2_r_2_2_product), then the running sum's
+    # leading limb free, then a format of two exponents complete: 0.1 to 0.3 million cases.
+    "acc_mul_2": ("fp:4:-3:-2", [
+        ("fp:4:-3:-2", [_R_ACC_MUL, "s.lead=-1:0", "x.lead=-1:0"]),
+        ("fp:4:-3:-2", [_R_ACC_MUL, "s.lead=-1:0"]),
+        ("fp:3:-2:-1", []),
+    ]),
+    "acc_merge_2": ("fp:3:-2:0", [
+        ("fp:3:-2:0", [_R_ACC_A, _R_ACC_C]),
+        ("fp:3:-2:-1", []),
+        ("fp:4:-3:-1", [_R_ACC_A, _R_ACC_C]),
+    ]),
 }
 
 # The folds (gen/claims.json, "folds"), by their arrays as tests/CMakeLists.txt names them (_1 a
@@ -191,6 +257,24 @@ FOLD_SHAPES = {
     "max_2": [("fp:3:-4:1", 2), ("fp:3:-3:0", 2), ("fp:3:-5:2", 2)],
     "conv_1_1": [("fp:2:-1:0", 2), ("fp:2:-2:1", 2), ("fp:3:-3:0", 1)],
     "conv_2_2": [("fp:4:-4:-1", 1), ("fp:4:-5:0", 1)],
+    # The ball vectors, each by its name (kernel_NAME, tests/CMakeLists.txt's
+    # _fold_toy_kernel_NAME): the full tier's enumeration first ("-" for none: a product of
+    # BallVectors), then formats of binary_float's shape, where V4 is judged (oracle/README.md,
+    # "Their folds"): 7 thousand to 140 million requests each.
+    "kernel_bv_add_1": [("fp:2:-2:1", 1), ("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    "kernel_bv_sub_1": [("fp:2:-2:1", 1), ("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    "kernel_bv_add_2": [("fp:3:-2:-1", 1), ("fp:3:-4:1", 1)],
+    "kernel_bv_sub_2": [("fp:3:-2:-1", 1), ("fp:3:-4:1", 1)],
+    "kernel_bv_scale_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    "kernel_bv_scale_2": [("fp:2:-2:1", 1), ("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    "kernel_bv_neg_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 2), ("fp:2:-3:2", 3)],
+    "kernel_bv_neg_2": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    "kernel_bv_mul_pow2_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 2)],
+    "kernel_bv_mul_pow2_2": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    "kernel_bv_make_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 2), ("fp:2:-2:1", 3)],
+    "kernel_bv_make_2": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    "kernel_bv_conv_1": [("-", 0), ("fp:4:-3:-2", 1), ("fp:4:-4:-1", 1)],
+    "kernel_bv_conv_2": [("-", 0), ("fp:4:-3:-2", 1), ("fp:4:-4:-1", 1)],
 }
 FOLD_LENGTH = 4096
 FOLD_CHUNK_DIVISOR = 100
@@ -382,6 +466,8 @@ def fold_shape(f):
     arrays; for a map first its scalars (s1, s2, sc for a power of two), and map, conv or max for
     a map, a convolution and a fold of maxima."""
     shape = "_".join(str(a.get("limbs", 1)) for a in f.get("arrays", []))
+    if f.get("bv") or f.get("bv_conv"):
+        return "kernel_" + f["name"]
     if f.get("map"):
         req = [r.replace(" ", "") for r in f.get("requires", [])]
         sc = ["sc" if "power_of_two(%s)" % s.get("name") in req else "s%d" % s.get("limbs", 1)
@@ -408,6 +494,8 @@ def fold_plan(folds, only=None):
                           "FOLD_SHAPES in tests/brute/brute.py" % (name, shape.replace("_", " ")))
             continue
         for i, (fmt, L) in enumerate(FOLD_SHAPES[shape]):
+            if fmt == "-":
+                continue        # no enumeration in the full tier's format
             if parse_fmt(fmt)[0] < (f.get("min_precision") or 1):
                 continue
             plan.append({"kernel": name, "format": fmt, "restrict": [], "maxlen": L,
@@ -495,8 +583,8 @@ def interp_plan(kernels, only=None):
             errors.append("%s: min_precision is %r, so no format can be chosen" % (name, pmin))
             continue
         entries = []
-        if shape in EXPLICIT:
-            quick, listed = EXPLICIT[shape]
+        if name in KERNEL_FORMATS or shape in EXPLICIT:
+            quick, listed = KERNEL_FORMATS.get(name) or EXPLICIT[shape]
             for fmt, restrict in listed:
                 entries.append((fmt, restrict, None))
         elif shape in SHAPES:
@@ -891,6 +979,20 @@ def build_flags(command):
     return " ".join(keep)
 
 
+def runner_target(target):
+    """(packed, suffix) for the target name of a runner of the library, None for any other name.
+
+    The runners are kairn-gen-runner and kairn-gen-packed-runner, each with an optional suffix
+    naming its flags. A target whose suffix ends in "fault" is not one of them: it is a runner
+    built with a kernel that is wrong on purpose (tests/CMakeLists.txt:
+    kairn-gen-packed-runner-lane-fault, for crosscheck.lanes.fault.*), which an enumeration must
+    never take for the library."""
+    m = re.match(r"^kairn-gen-(packed-)?runner(?:-(.+))?$", target)
+    if not m or (m.group(2) and re.search(r"(^|-)fault$", m.group(2))):
+        return None
+    return bool(m.group(1)), m.group(2)
+
+
 def compiler_of(builddir):
     for f in glob.glob(os.path.join(builddir, "CMakeFiles", "*", "CMakeCXXCompiler.cmake")):
         with open(f, encoding="utf-8", errors="replace") as fh:
@@ -1003,14 +1105,14 @@ def discover(name, bdir):
     for path in sorted(glob.glob(os.path.join(bdir, "tests", "**", "kairn-gen-*runner*" + exe),
                                  recursive=True)):
         target = os.path.basename(path)[:len(os.path.basename(path)) - len(exe)]
-        m = re.match(r"^kairn-gen-(packed-)?runner(?:-(.+))?$", target)
-        if not m or not os.path.isfile(path) or (not WINDOWS and not os.access(path, os.X_OK)):
+        named = runner_target(target)
+        if not named or not os.path.isfile(path) or (not WINDOWS and not os.access(path, os.X_OK)):
             continue
-        kind = "packed" if m.group(1) else "scalar"
-        label = (backend if kind == "packed" else "cxx") + ("-" + m.group(2) if m.group(2) else "")
+        kind = "packed" if named[0] else "scalar"
+        label = (backend if kind == "packed" else "cxx") + ("-" + named[1] if named[1] else "")
         out.append({"id": "%s/%s" % (name, label), "build": name, "label": label, "kind": kind,
                     "backend": backend if kind == "packed" else "scalar", "target": target,
-                    "setting": m.group(2) or "the build's flags", "compiler": compiler,
+                    "setting": named[1] or "the build's flags", "compiler": compiler,
                     "flags": build_flags(commands.get(target, "")), "path": path})
     if not out:
         sys.exit("brute: no runner in %s" % bdir)

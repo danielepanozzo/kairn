@@ -1,0 +1,26 @@
+# Whether every member of an interval with 2-limb bounds is positive, and the interval is not empty
+# (milestone2.md, "One enclosure interface", the row of certainly_positive()): the same on the
+# leading limb of the lower bound, which has the sign of the bound (a normalized pair whose leading
+# limb is zero is zero). Exact. For every precision.
+kernel:        interval_positive_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+output:        mask m
+requires:      interval xl xu
+ensures:       certain m lt 0 x x=xl,xu exact
+min_precision: 1
+source:        the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalPredicates.v interval_positive_2_correct
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+unused:        xl1 the leading limb of a canonical bound has its sign, and is +inf exactly when the bound is
+unused:        xu0 the lower bound alone tells
+unused:        xu1 the lower bound alone tells
+
+a = lt(0, xl0)
+b = lt(xl0, const inf)
+m = and(a, b)

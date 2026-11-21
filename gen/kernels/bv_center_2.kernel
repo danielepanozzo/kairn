@@ -1,0 +1,27 @@
+# The step of bv_make_2, the constructor of a BallVector with 2-limb centers (milestone2.md,
+# "BallVector", "Values"): a center given as an Expansion<T, 2>, canonical already (finite and
+# normalized, (+-inf, +-0) or two NaN), copied limb for limb. Its limbs were written through Kairn
+# (stored), so rule R3 asks no guard. A center given as two arrays of limbs of the program's own,
+# which need not be normalized, is not covered: its step would be make_2_limbs, which has no
+# real-model statement, and the step of a ball vector needs one.
+kernel:        bv_center_2
+input:         x = x0 x1
+output:        z = z0 z1
+value:         x
+requires:      canonical x
+ensures:       normalized z
+ensures:       error z R c=0 k=2 t=0
+ensures:       represents z
+min_precision: 1
+theorem:       proofs/theories/BvNegMake.v bv_center_2_correct
+source:        a copy of a canonical pair (milestone2.md, BallVector, Values)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBvNegMake.v bv_center_2_ieee_correct
+ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v bv_center_2_ieee_lead
+cone_exempt:   z1 = x1 does not reach z0; a copy is exact, and a non-finite x1 beside a finite x0 is not a canonical operand, so the finish of the constructor, which reads z0, stands in for the check
+
+z0 = copy(x0)
+z1 = copy(x1)

@@ -33,6 +33,10 @@
 # oracle's and two enumerations of the interpreter, where it takes 149 seconds counted. The price
 # is on a machine with many processors and a low --parallel: with --parallel 4, each runs alone
 # (on 16 threads of the Linux machine the full tier took 452 seconds, against 260 uncounted).
+# The generator's test judges every kernel in the interpreter and its statements on thousands of
+# cases; with the 223 kernels and 44 folds of the joined tree of stage B2 it took 748 seconds alone
+# on the Linux machine (GCC 13, its four workers), past the 600 of the oracle's test below: its
+# limit is 1800.
 if(EXISTS "${PROJECT_SOURCE_DIR}/gen/kairn-gen")
   set(_args "")
   foreach(_pattern IN LISTS _gen_full)
@@ -41,7 +45,7 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/gen/kairn-gen")
   add_test(NAME full.kairn-gen.test
     COMMAND "${Python3_EXECUTABLE}" gen/kairn-gen test --no-cxx ${_args}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(full.kairn-gen.test PROPERTIES TIMEOUT 600 PROCESSORS 4
+  set_tests_properties(full.kairn-gen.test PROPERTIES TIMEOUT 1800 PROCESSORS 4
     ENVIRONMENT KAIRN_GEN_JOBS=4 LABELS "full;generator")
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
@@ -67,7 +71,10 @@ endif()
 #   code at -O0 and -O2, with and without -frounding-math, under every contraction setting, and
 #   compare it bit for bit with the interpreter: about two thirds of the suite's time, and what the
 #   cross-checks cover for this build's compiler and flags. Label generator: the CI runs the whole
-#   suite, C++ included, in generator.yml; by hand, python3 gen/kairn-gen test.
+#   suite, C++ included, in generator.yml; by hand, python3 gen/kairn-gen test. With the 223
+#   kernels and 44 folds of the joined tree of the ball vectors and stage B2 it took 571 seconds on
+#   the Linux machine (GCC 13, the full tier), near its limit of 600, as full.kairn-gen.test above
+#   had gone past it: its limit is 1800.
 # - full.tools.kairn-oracle.selftest: oracle/kairn-oracle selftest --quick without the six tests of
 #   full.kairn-oracle.selftest (--skip). It compiles its own C++ runner with this build's compiler,
 #   in the build tree, and skips the tests that need it, with a SKIP line, if the compiler does not
@@ -92,7 +99,7 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/gen/kairn-gen")
   add_test(NAME full.tools.kairn-gen.test
     COMMAND "${Python3_EXECUTABLE}" gen/kairn-gen test --no-cxx ${_args}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(full.tools.kairn-gen.test PROPERTIES TIMEOUT 600
+  set_tests_properties(full.tools.kairn-gen.test PROPERTIES TIMEOUT 1800
     LABELS "full;tools;generator")
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
@@ -123,6 +130,10 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py")
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
     set_tests_properties(full.tools.crosscheck.guards.${_class} PROPERTIES TIMEOUT 900
       LABELS "full;tools;crosscheck")
+    if(KAIRN_ORACLE_CLAIMS)
+      set_tests_properties(full.tools.crosscheck.guards.${_class} PROPERTIES
+        ENVIRONMENT "KAIRN_ORACLE_CLAIMS=${_oracle_claims}")
+    endif()
   endforeach()
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/docs/tools/test_reference.py")
@@ -177,7 +188,10 @@ foreach(_kernel IN LISTS _full_kernels)
       -DRUNNER=interp -DEXHAUSTIVE=ON "-DRESTRICT=${_restrict}"
       "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
   endif()
-  set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "${_labels}")
+  # 900 s: on a hosted runner the longest enumeration (interval_mul_2, restricted) took 159 s in
+  # a job of its own kind and more than 300 s beside three other long ones, where the limit of 300
+  # stopped it. The limit is a net for a run that hangs, not a budget.
+  set_tests_properties(${_name} PROPERTIES TIMEOUT 900 LABELS "${_labels}")
   # The sampled run: of the whole toy format for a restricted enumeration, or of a format of its
   # own where tests/CMakeLists.txt names one (_toy_sampled..., the interval kernels).
   set(_sampled "${_full_${_kernel}_sampled}")
@@ -188,7 +202,7 @@ foreach(_kernel IN LISTS _full_kernels)
     set(_name full.crosscheck.interp-sampled.${_kernel})
     add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_sampled}"
       -DRUNNER=interp ${_random} "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
-    set_tests_properties(${_name} PROPERTIES TIMEOUT 300
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 900
       LABELS "full;python;crosscheck;interp;sampled")
   endif()
 
@@ -230,17 +244,20 @@ foreach(_fold IN LISTS _full_folds)
     list(GET _toy 0 _toy_enum)
     list(GET _toy 1 _toy_length)
     list(GET _toy 2 _toy_sampled)
-    set(_name full.crosscheck.interp.${_fold})
-    add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_enum}"
-      -DRUNNER=interp -DEXHAUSTIVE=ON "-DMAX_LENGTH=${_toy_length}"
-      "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
-    set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "full;python;crosscheck;interp;fold")
+    # "-": no enumeration (tests/CMakeLists.txt, the products of BallVectors), the random runs only.
+    if(NOT _toy_enum STREQUAL "-")
+      set(_name full.crosscheck.interp.${_fold})
+      add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_enum}"
+        -DRUNNER=interp -DEXHAUSTIVE=ON "-DMAX_LENGTH=${_toy_length}"
+        "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 900 LABELS "full;python;crosscheck;interp;fold")
+    endif()
     set(_name full.crosscheck.interp-sampled.${_fold})
     add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_sampled}"
       -DRUNNER=interp "-DCOUNT=${_full_fold_${_fold}_cases}" "-DSEED=${KAIRN_CROSSCHECK_SEED}"
       "-DMAX_LENGTH=${_full_fold_${_fold}_sampled_length}" "-DSUMMARY=${_summaries}/${_name}.json"
       -P "${_driver}")
-    set_tests_properties(${_name} PROPERTIES TIMEOUT 300
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 900
       LABELS "full;python;crosscheck;interp;sampled;fold")
   endif()
   if(_compiled_full_scalar)
@@ -281,11 +298,15 @@ endif()
 # cases per kernel and format from its seeds (the attaining lines of results/*/brute/, the
 # regression cases, the literature, the strata), with --fail-on-suspicious as the cross-checks.
 # Four worker processes, counted (PROCESSORS). Fails on any violated claim.
+# The kernels the oracle's tests leave out (KAIRN_NOT_YET_CROSS_CHECKED) are left out of the search
+# too (--except): a kernel on the list is one whose cross-checks would fail or not run.
+list(JOIN KAIRN_NOT_YET_CROSS_CHECKED "," _search_except)
 if(TARGET kairn-gen-runner)
   add_test(NAME full.search.compiled
     COMMAND "${Python3_EXECUTABLE}" oracle/kairn-oracle search all binary64,binary32
       --runner "$<TARGET_FILE:kairn-gen-runner>" --evals 5000 --jobs 4 --quiet
-      --fail-on-suspicious --suspicious-ok split,two_prod_dekker
+      --fail-on-suspicious --suspicious-ok split,two_prod_dekker ${_oracle_claims_arg}
+      --except "${_search_except}"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(full.search.compiled PROPERTIES TIMEOUT 600 PROCESSORS 4
     LABELS "full;search")

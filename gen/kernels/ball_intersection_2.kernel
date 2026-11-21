@@ -1,0 +1,43 @@
+# A ball with a 2-limb center that contains the intersection of two such balls (milestone2.md, "One
+# enclosure interface", "Hull, intersection and split of balls"): the composition of ball_intersection_1
+# on the conversions of two limbs (ball_to_interval_2, interval_intersection_2, interval_to_ball_2), in
+# the order of the conversions (GCC does not duplicate the larger halving of two limbs). If X is the
+# whole line Y is returned as it is, and if Y is the whole line and X is not, X (the same limbs), by
+# the tests of the radii (two whole lines give Y); the selects choose the composition when neither
+# operand is the whole line (nx, ny). An empty operand gives the
+# empty set through the conversions, and so do two balls whose intervals do not meet. Not claimed:
+# that the result is inside X or Y, nor that it is empty whenever the balls are disjoint.
+kernel:        ball_intersection_2
+input:         cx = cx0 cx1
+input:         stored rx
+input:         cy = cy0 cy1
+input:         stored ry
+output:        cz = cz0 cz1
+output:        rz
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       ball_set cz rz intersection x=cx,rx y=cy,ry
+min_precision: 3
+source:        both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallHull.v ball_intersection_2_correct
+entry:         yes
+cone_exempt:   the ball is selected among the conversions and the operands after tests of the radii; ball_set states what comes out for every pair of canonical balls
+
+(xl0, xl1, xu0, xu1) = ball_to_interval_2(cx0, cx1, rx)
+(yl0, yl1, yu0, yu1) = ball_to_interval_2(cy0, cy1, ry)
+(zl0, zl1, zu0, zu1) = interval_intersection_2(xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1)
+(c0, c1, r)          = interval_to_ball_2(zl0, zl1, zu0, zu1)
+wx                   = eq(rx, const inf)
+nx                   = not(wx)
+wy                   = eq(ry, const inf)
+ny                   = not(wy)
+ca0                  = select(ny, c0, cx0)
+ca1                  = select(ny, c1, cx1)
+ra                   = select(ny, r, rx)
+cz0                  = select(nx, ca0, cy0)
+cz1                  = select(nx, ca1, cy1)
+rz                   = select(nx, ra, ry)

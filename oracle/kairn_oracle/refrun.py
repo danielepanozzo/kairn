@@ -204,6 +204,89 @@ VARIANTS = {
     "rat-tie-away": "rational: ties rounded away from zero instead of to even",
     "rat-truncate": "rational: every rounding to nearest truncates instead",
 }
+# The predicates, comparisons, set operations of a ball and conversions of two limbs of the
+# enclosure interface (the kernels of the block "the enclosure interface" of Kernels, below).
+VARIANTS.update({
+    "en-empty-whole": "interval_empty_k is true for the whole line too",
+    "en-entire-lower": "interval_entire_k tests the lower bound alone",
+    "en-contains-inf": "interval_contains_k does not test that the point is finite",
+    "en-subset-strict": "interval_subset_k compares the bounds with lt",
+    "en-positive-le": "interval_positive_k tests 0 <= xl",
+    "en-negative-empty": "interval_negative_k does not test xu > -inf: the empty set is negative",
+    "en-zero-lower": "interval_zero_k tests the lower bound alone",
+    "en-less-no-empty": "interval_less_k does not test that the operands are nonempty",
+    "en-less-touch": "interval_less_k answers yes for xu <= yl",
+    "en-le-no-strict": "interval_less_equal_k answers no for yu <= xl",
+    "en-equal-yes-ends": "interval_equal_k answers yes for xl = xu and yl = yu (two points)",
+    "en-equal-no-touch": "interval_equal_k answers no for xu <= yl or yu <= xl",
+    "en-trit-unknown-no": "interval_less_k answers no for nonempty operands where it does not "
+                          "answer yes",
+    "en-trit-both": "interval_equal_k answers no also where it answers yes",
+    "en-releq-lower": "interval_rel_equal_k compares the lower bounds alone",
+    "en-interior-closed": "interval_rel_interior_k compares the bounds with le",
+    "en-interior-no-inf": "interval_rel_interior_k without the infinite bounds of both operands",
+    "en-disjoint-no-empty": "interval_rel_disjoint_k does not test the empty set",
+    "en-disjoint-touch": "interval_rel_disjoint_k compares the bounds with le",
+    "en2-lead-only": "the interval predicates of two limbs compare bounds by their leading limbs",
+    "enb-point-lt": "ball_contains_point_1 compares the distance with lt",
+    "enb-point-inf-whole": "ball_contains_point_k: an infinite point is a member of the whole line",
+    "enb-ball-no-whole": "ball_contains_ball_k does not test X the whole line",
+    "enb-ball-no-empty": "ball_contains_ball_k does not test Y empty",
+    "enb-ball-strict": "ball_contains_ball_1 compares with lt_2_2",
+    "enb-positive-le": "ball_positive_k tests r <= c",
+    "enb-negative-sign": "ball_negative_1 tests c < r",
+    "enb-zero-radius": "ball_zero_k does not test the radius",
+    "enb-less-touch": "ball_less_1 answers yes for rx + ry <= cy - cx",
+    "enb-less-no-swap": "ball_less_1 answers no from cy - cx in place of cx - cy",
+    "enb-le-no-strict": "ball_less_equal_1 answers no for rx + ry <= cx - cy",
+    "enb-equal-yes-radius": "ball_equal_k answers yes for equal centers, whatever the radii",
+    "enb-equal-no-le": "ball_equal_1 answers no for rx + ry <= |cy - cx|",
+    "enb-less-unknown-large": "ball_less_1 answers unknown when rx + ry is above Omega/4",
+    "enb2-no-from-yes": "ball_less_2 and ball_less_equal_2 answer no from the side of yes, "
+                        "s <= dl",
+    "enb2-both": "ball_equal_2 answers no also where it answers yes",
+    "enb2-point-no-swap": "ball_contains_point_2 answers no for r < hi, the upper bound of the "
+                          "distance",
+    "enb2-point-no-special": "ball_contains_point_2 does not answer no for a point that is not "
+                             "finite or the empty set",
+    "enb2-less-whole-yes": "ball_less_2 answers yes when X is the whole line",
+    "ens-hull-no-y": "ball_hull_k leaves out the select of Y as it is when X is empty",
+    "ens-hull-no-x": "ball_hull_k leaves out the select of X as it is when Y is empty",
+    "ens-int-no-y": "ball_intersection_k leaves out the select of Y as it is when X is the whole "
+                    "line",
+    "ens-int-no-x": "ball_intersection_k leaves out the select of X as it is when Y is the whole "
+                    "line",
+    "ens-int-swapped": "ball_intersection_k tests Y first: two whole lines give X as it is",
+    "ens-hull-radius-small": "ball_hull_k returns its computed radius one number smaller",
+    "ens-int-empty-none": "ball_intersection_k without the empty set of an empty operand",
+    "ens-int-radius-small": "ball_intersection_k returns its computed radius one number smaller",
+    "ens-sign-lost": "ball_hull_k and ball_intersection_k write a zero of an operand as it is "
+                     "as +0",
+    "ens-split-first-short": "ball_split_k returns the first part's radius halved",
+    "ens-split-whole-empty": "ball_split_k gives the whole line two empty sets",
+    "ens-split-empty-whole": "ball_split_k gives the empty set the whole line twice",
+    "ens-split-second-shift": "ball_split_k centers the second part at c - h",
+    "enc-mid2-radius-small": "interval_mid_rad_2 returns a finite radius halved",
+    "enc-mid2-no-inf": "interval_mid_rad_2 returns Omega where radd steps past it",
+    "enc-mid2-no-move": "interval_mid_rad_2 without the moves of the midpoint into [l, h]",
+    "enc-mid2-whole-tail": "interval_mid_rad_2 gives the whole line the center (0, eta)",
+    "enc-tball2-halfline": "interval_to_ball_2 keeps the center +-Omega of a half-line",
+    "enc-mid2-finite-inf": "interval_mid_rad_2 and interval_to_ball_2 return the radius +inf for a "
+                           "bound beyond 2^(qmax+p-4)",
+    "enc-btoi2-nearest": "ball_to_interval_2 rounds c - r and c + r to nearest (add_2_2)",
+    "enc-btoi2-zero-eta": "ball_to_interval_2 gives -eta for an exact zero lower bound",
+    "enc-btoi2-inf-bounded": "ball_to_interval_2 gives infinite bounds for |c| + r above "
+                             "2^(qmax+p-4)",
+    "enc-fromint1-nan-empty": "ball_from_interval_1 gives the empty set for a NaN bound",
+    "enc-fromint1-inf-empty": "ball_from_interval_1 keeps the rule before 2026-11-20: the same "
+                              "infinity twice gives the empty set",
+    "enc-fromint1-reversed-whole": "ball_from_interval_1 gives reversed bounds the whole line",
+    "enc-fromint1-radius-large": "ball_from_interval_1 returns the radius one number larger",
+    "enc-fromint1-center-off": "ball_from_interval_1 moves the center one number up, with the "
+                               "smallest radius for it",
+    "enc-split2-no-move": "interval_split_2 without the move of the point of split into [xl, xu]",
+    "enc-split2-gap": "interval_split_2 starts the second part one number after the point",
+})
 
 ORACLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_CENTER_CLAIMS = os.path.join(ORACLE_DIR, "selftest", "claims-wave1.json")
@@ -1986,6 +2069,593 @@ class Kernels:
             bl = self.A.next_up(m)
         return xl, (m if ne else -INF), (bl if ne else INF), xu
 
+    # -- the enclosure interface (gen/kernels/*.kernel, whose listings are the specification): the
+    # predicates and three-valued comparisons of intervals and balls, the set operations of a ball,
+    # the conversions of two limbs. A mask is a bool. An operand returned as it is (a select of an
+    # input) is its token as the line wrote it (self.tokens, set by Runner.complete), so that the
+    # sign of a zero and of a NaN goes through as the kernel's select keeps them ----------------
+    def _c2(self, op, a, b, interval=True):
+        """lt_2_2, le_2_2 or eq_2_2 of two pairs (en2-lead-only: the leading limbs alone, in the
+        interval predicates)."""
+        if self.v == "en2-lead-only" and interval:
+            return {"lt": a[0] < b[0], "le": a[0] <= b[0], "eq": a[0] == b[0]}[op]
+        f = {"lt": self.lt_2_2, "le": self.le_2_2, "eq": self.eq_2_2}[op]
+        return f(a[0], a[1], b[0], b[1])[0]
+
+    def _iv_empty_p(self, l0):
+        return (l0 == INF,)
+
+    def interval_empty_1(self, xl, xu):
+        if self.v == "en-empty-whole":
+            return (xl == INF or (xl == -INF and xu == INF),)
+        return self._iv_empty_p(xl)
+
+    def interval_empty_2(self, xl0, xl1, xu0, xu1):
+        if self.v == "en-empty-whole":
+            return (xl0 == INF or (xl0 == -INF and xu0 == INF),)
+        return self._iv_empty_p(xl0)
+
+    def _entire(self, l0, u0):
+        if self.v == "en-entire-lower":
+            return (l0 == -INF,)
+        return (l0 == -INF and u0 == INF,)
+
+    def interval_entire_1(self, xl, xu):
+        return self._entire(xl, xu)
+
+    def interval_entire_2(self, xl0, xl1, xu0, xu1):
+        return self._entire(xl0, xu0)
+
+    def interval_contains_1(self, xl, xu, t):
+        ft = abs(t) < INF or self.v == "en-contains-inf"
+        return (xl <= t and t <= xu and ft,)
+
+    def interval_contains_2(self, xl0, xl1, xu0, xu1, t0, t1):
+        a = self._c2("le", (xl0, xl1), (t0, t1))
+        b = self._c2("le", (t0, t1), (xu0, xu1))
+        ft = abs(t0) < INF or self.v == "en-contains-inf"
+        return (a and b and ft,)
+
+    def _subset(self, le_yx_l, le_xu_yu, lt_yx_l, lt_xu_yu):
+        if self.v == "en-subset-strict":
+            return (lt_yx_l and lt_xu_yu,)
+        return (le_yx_l and le_xu_yu,)
+
+    def interval_subset_1(self, xl, xu, yl, yu):
+        return self._subset(yl <= xl, xu <= yu, yl < xl, xu < yu)
+
+    def interval_subset_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        xl, xu, yl, yu = (xl0, xl1), (xu0, xu1), (yl0, yl1), (yu0, yu1)
+        return self._subset(self._c2("le", yl, xl), self._c2("le", xu, yu),
+                            self._c2("lt", yl, xl), self._c2("lt", xu, yu))
+
+    def _positive(self, l0):
+        a = (0 <= l0) if self.v == "en-positive-le" else (0 < l0)
+        return (a and l0 < INF,)
+
+    def interval_positive_1(self, xl, xu):
+        return self._positive(xl)
+
+    def interval_positive_2(self, xl0, xl1, xu0, xu1):
+        return self._positive(xl0)
+
+    def _negative(self, u0):
+        b = True if self.v == "en-negative-empty" else -INF < u0
+        return (u0 < 0 and b,)
+
+    def interval_negative_1(self, xl, xu):
+        return self._negative(xu)
+
+    def interval_negative_2(self, xl0, xl1, xu0, xu1):
+        return self._negative(xu0)
+
+    def _zero(self, l0, u0):
+        if self.v == "en-zero-lower":
+            return (l0 == 0,)
+        return (l0 == 0 and u0 == 0,)
+
+    def interval_zero_1(self, xl, xu):
+        return self._zero(xl, xu)
+
+    def interval_zero_2(self, xl0, xl1, xu0, xu1):
+        return self._zero(xl0, xu0)
+
+    def _less(self, xl0, yl0, a, a_touch, c, strict):
+        """The three-valued X < Y (strict) or X <= Y: a = lt(xu, yl) (le), c = le(yu, xl) (lt);
+        a_touch the comparison of the other strictness, for en-less-touch and en-le-no-strict."""
+        ne = xl0 < INF and yl0 < INF
+        if self.v == "en-less-no-empty" and strict:
+            ne = True
+        if self.v == "en-less-touch" and strict:
+            a = a_touch
+        yes = a and ne
+        no = c and ne
+        if self.v == "en-trit-unknown-no" and strict:
+            no = ne and not yes
+        return yes, no
+
+    def interval_less_1(self, xl, xu, yl, yu):
+        return self._less(xl, yl, xu < yl, xu <= yl, yu <= xl, True)
+
+    def interval_less_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        xl, xu, yl, yu = (xl0, xl1), (xu0, xu1), (yl0, yl1), (yu0, yu1)
+        return self._less(xl0, yl0, self._c2("lt", xu, yl), self._c2("le", xu, yl),
+                          self._c2("le", yu, xl), True)
+
+    def interval_less_equal_1(self, xl, xu, yl, yu):
+        c = (yu <= xl) if self.v == "en-le-no-strict" else (yu < xl)
+        return self._less(xl, yl, xu <= yl, xu <= yl, c, False)
+
+    def interval_less_equal_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        xl, xu, yl, yu = (xl0, xl1), (xu0, xu1), (yl0, yl1), (yu0, yu1)
+        c = self._c2("le" if self.v == "en-le-no-strict" else "lt", yu, xl)
+        return self._less(xl0, yl0, self._c2("le", xu, yl), self._c2("le", xu, yl), c, False)
+
+    def _equal(self, ea, eb, ec, xl0, yl0, da, db, ta, tb):
+        """The three-valued X = Y: ea, eb, ec = eq(xl, xu), eq(xu, yl), eq(yl, yu); da, db =
+        lt(xu, yl), lt(yu, xl); ta, tb the same with le (en-equal-no-touch)."""
+        yes = ea and ec if self.v == "en-equal-yes-ends" else ea and eb and ec
+        ne = xl0 < INF and yl0 < INF
+        dd = (ta or tb) if self.v == "en-equal-no-touch" else (da or db)
+        if self.v == "en-trit-both":
+            dd = dd or yes
+        return yes, dd and ne
+
+    def interval_equal_1(self, xl, xu, yl, yu):
+        return self._equal(xl == xu, xu == yl, yl == yu, xl, yl, xu < yl, yu < xl,
+                           xu <= yl, yu <= xl)
+
+    def interval_equal_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        xl, xu, yl, yu = (xl0, xl1), (xu0, xu1), (yl0, yl1), (yu0, yu1)
+        c = self._c2
+        return self._equal(c("eq", xl, xu), c("eq", xu, yl), c("eq", yl, yu), xl0, yl0,
+                           c("lt", xu, yl), c("lt", yu, xl), c("le", xu, yl), c("le", yu, xl))
+
+    def _rel_equal(self, a, c):
+        return (a,) if self.v == "en-releq-lower" else (a and c,)
+
+    def interval_rel_equal_1(self, xl, xu, yl, yu):
+        return self._rel_equal(xl == yl, xu == yu)
+
+    def interval_rel_equal_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        return self._rel_equal(self._c2("eq", (xl0, xl1), (yl0, yl1)),
+                               self._c2("eq", (xu0, xu1), (yu0, yu1)))
+
+    def _interior(self, xl0, xu0, yl0, yu0, la, ua, la_le, ua_le):
+        ex = xl0 == INF
+        if self.v == "en-interior-closed":
+            la, ua = la_le, ua_le
+        ld = yl0 == -INF and xl0 == -INF
+        ud = xu0 == INF and yu0 == INF
+        if self.v == "en-interior-no-inf":
+            ld = ud = False
+        return (ex or ((la or ld) and (ua or ud)),)
+
+    def interval_rel_interior_1(self, xl, xu, yl, yu):
+        return self._interior(xl, xu, yl, yu, yl < xl, xu < yu, yl <= xl, xu <= yu)
+
+    def interval_rel_interior_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        xl, xu, yl, yu = (xl0, xl1), (xu0, xu1), (yl0, yl1), (yu0, yu1)
+        c = self._c2
+        return self._interior(xl0, xu0, yl0, yu0, c("lt", yl, xl), c("lt", xu, yu),
+                              c("le", yl, xl), c("le", xu, yu))
+
+    def _disjoint(self, xl0, yl0, da, db, ta, tb):
+        ee = xl0 == INF or yl0 == INF
+        if self.v == "en-disjoint-no-empty":
+            ee = False
+        if self.v == "en-disjoint-touch":
+            da, db = ta, tb
+        return (ee or da or db,)
+
+    def interval_rel_disjoint_1(self, xl, xu, yl, yu):
+        return self._disjoint(xl, yl, xu < yl, yu < xl, xu <= yl, yu <= xl)
+
+    def interval_rel_disjoint_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        xl, xu, yl, yu = (xl0, xl1), (xu0, xu1), (yl0, yl1), (yu0, yu1)
+        c = self._c2
+        return self._disjoint(xl0, yl0, c("lt", xu, yl), c("lt", yu, xl), c("le", xu, yl),
+                              c("le", yu, xl))
+
+    # The predicates and comparisons of a ball, one limb: exact pairs compared by the comparisons
+    # of two limbs.
+    def ball_contains_point_1(self, c, r, t):
+        g = self.guard(t)
+        d0, d1 = self.two_sum_ord(g, -c)
+        a0, a1 = self.abs_2(d0, d1)
+        (m,) = self.lt_2_1(a0, a1, r) if self.v == "enb-point-lt" else self.le_2_1(a0, a1, r)
+        if self.v == "enb-point-inf-whole" and r == INF and abs(t) == INF:
+            m = True
+        return (m,)
+
+    def _ball_special(self, rx, ry, f):
+        wx = rx == INF and self.v != "enb-ball-no-whole"
+        ey = not (ry == ry) and self.v != "enb-ball-no-empty"
+        return (wx or ey or f,)
+
+    def ball_contains_ball_1(self, cx, rx, cy, ry):
+        d0, d1 = self.two_sum_ord(cy, -cx)
+        a0, a1 = self.abs_2(d0, d1)
+        g0, g1 = self.two_sum_ord(rx, -ry)
+        (f,) = (self.lt_2_2 if self.v == "enb-ball-strict" else self.le_2_2)(a0, a1, g0, g1)
+        return self._ball_special(rx, ry, f)
+
+    def ball_positive_1(self, c, r):
+        return ((r <= c) if self.v == "enb-positive-le" else (r < c),)
+
+    def ball_negative_1(self, c, r):
+        return ((c < r) if self.v == "enb-negative-sign" else (c < -r),)
+
+    def ball_zero_1(self, c, r):
+        return (c == 0 and (r == 0 or self.v == "enb-zero-radius"),)
+
+    def _ball_pairs_1(self, cx, rx, cy, ry):
+        s = self.two_sum_ord(rx, ry)
+        d = self.two_sum_ord(cy, -cx)
+        g = self.two_sum_ord(cx, -cy)
+        return s, d, g
+
+    def ball_less_1(self, cx, rx, cy, ry):
+        s, d, g = self._ball_pairs_1(cx, rx, cy, ry)
+        yes = self._c2("le" if self.v == "enb-less-touch" else "lt", s, d, False)
+        b = self._c2("le", s, d if self.v == "enb-less-no-swap" else g, False)
+        no = b and abs(s[0]) < INF
+        if (self.v == "enb-less-unknown-large" and type(s[0]) is int
+                and 4 * abs(s[0]) > self.A.omega):
+            yes = no = False
+        return yes, no
+
+    def ball_less_equal_1(self, cx, rx, cy, ry):
+        s, d, g = self._ball_pairs_1(cx, rx, cy, ry)
+        yes = self._c2("le", s, d, False) and abs(s[0]) < INF
+        no = self._c2("le" if self.v == "enb-le-no-strict" else "lt", s, g, False)
+        return yes, no
+
+    def ball_equal_1(self, cx, rx, cy, ry):
+        yes = (self.v == "enb-equal-yes-radius" or (rx == 0 and ry == 0)) and cx == cy
+        s = self.two_sum_ord(rx, ry)
+        d = self.two_sum_ord(cy, -cx)
+        a = self.abs_2(*d)
+        no = self._c2("le" if self.v == "enb-equal-no-le" else "lt", s, a, False)
+        return yes, no
+
+    # Two limbs: a one-limb bound of a distance, from (z, e) = add_ball_2_2 of the difference of
+    # the centers, against the radius.
+    def _ball_diff(self, a0, a1, b0, b1):
+        """(z0, z1, e) = add_ball_2_2(a - b)."""
+        return self.add_ball_2_2(a0, a1, -b0, -b1)
+
+    def _dist_lower(self, z0, z1, e):
+        """-(add_up_1(e, -to_down_2(|z|))): the rounding down of |z| - e."""
+        w0, w1 = self.abs_2(z0, z1)
+        (wd,) = self.to_down_2(w0, w1)
+        (tl,) = self.add_up_1(e, -wd)
+        return -tl
+
+    def ball_contains_point_2(self, c0, c1, r, t0, t1):
+        z0, z1, e = self._ball_diff(t0, t1, c0, c1)
+        (au,) = self.abs_upper_2(z0, z1)
+        (hi,) = self.radd(au, e)
+        lo = self._dist_lower(z0, z1, e)
+        yes = hi <= r
+        na = (r < hi) if self.v == "enb2-point-no-swap" else (r < lo)
+        ok = abs(t0) < INF and r == r
+        if self.v == "enb2-point-no-special":
+            ok = True
+        if self.v == "enb-point-inf-whole" and r == INF and abs(t0) == INF:
+            yes = True
+        return yes, na or not ok
+
+    def ball_contains_ball_2(self, cx0, cx1, rx, cy0, cy1, ry):
+        z0, z1, e = self._ball_diff(cy0, cy1, cx0, cx1)
+        (au,) = self.abs_upper_2(z0, z1)
+        (hi,) = self.radd(au, e)
+        (s,) = self.radd(hi, ry)
+        return self._ball_special(rx, ry, s <= rx)
+
+    def ball_positive_2(self, c0, c1, r):
+        if self.v == "enb-positive-le":
+            return (self.le_1_2(r, c0, c1)[0],)
+        return self.lt_1_2(r, c0, c1)
+
+    def ball_negative_2(self, c0, c1, r):
+        return self.lt_2_1(c0, c1, -r)
+
+    def ball_zero_2(self, c0, c1, r):
+        return (self.eq_2_1(c0, c1, 0)[0] and (r == 0 or self.v == "enb-zero-radius"),)
+
+    def _ball_order_2(self, cx0, cx1, rx, cy0, cy1, ry, strict):
+        z0, z1, e = self._ball_diff(cy0, cy1, cx0, cx1)
+        (s,) = self.radd(rx, ry)
+        fs = abs(s) < INF
+        (zd,) = self.to_down_2(z0, z1)
+        (tl,) = self.add_up_1(e, -zd)
+        dl = -tl
+        fl = abs(dl) < INF
+        (zu,) = self.to_up_2(z0, z1)
+        (tm,) = self.add_up_1(zu, e)
+        ml = -tm
+        fm = abs(ml) < INF
+        if self.v == "enb2-no-from-yes":
+            ml, fm = dl, fl
+        if strict:
+            yes = s < dl and fl
+            no = s <= ml and fs and fm
+        else:
+            yes = s <= dl and fs and fl
+            no = s < ml and fm
+        if self.v == "enb2-less-whole-yes" and strict and rx == INF:
+            yes, no = True, False
+        return yes, no
+
+    def ball_less_2(self, cx0, cx1, rx, cy0, cy1, ry):
+        return self._ball_order_2(cx0, cx1, rx, cy0, cy1, ry, True)
+
+    def ball_less_equal_2(self, cx0, cx1, rx, cy0, cy1, ry):
+        return self._ball_order_2(cx0, cx1, rx, cy0, cy1, ry, False)
+
+    def ball_equal_2(self, cx0, cx1, rx, cy0, cy1, ry):
+        ec = self._c2("eq", (cx0, cx1), (cy0, cy1), False)
+        yes = (self.v == "enb-equal-yes-radius" or (rx == 0 and ry == 0)) and ec
+        z0, z1, e = self._ball_diff(cy0, cy1, cx0, cx1)
+        (s,) = self.radd(rx, ry)
+        al = self._dist_lower(z0, z1, e)
+        no = s < al and abs(al) < INF
+        if self.v == "enb2-both":
+            no = no or yes
+        return yes, no
+
+    # The set operations of a ball: the operands as they are by selects on their radii.
+    def _tok(self, i):
+        """The input limb i as the line wrote it (an operand returned as it is)."""
+        t = self.tokens[i]
+        if self.v == "ens-sign-lost":
+            v = self.A.read(t)
+            return v if v == v else NAN
+        return Token(t)
+
+    def ball_hull_1(self, cx, rx, cy, ry):
+        xl, xu = self.ball_to_interval_1(cx, rx)
+        yl, yu = self.ball_to_interval_1(cy, ry)
+        zl, zu = self.interval_hull_1(xl, xu, yl, yu)
+        c, r = self.interval_to_ball_1(zl, zu)
+        if self.v == "ens-hull-radius-small" and type(r) is int and r > 0:
+            r = self.A.next_down(r)
+        qx, qy = rx == rx, ry == ry
+        if self.v == "ens-hull-no-x":
+            qy = True
+        if self.v == "ens-hull-no-y":
+            qx = True
+        ca, ra = (c, r) if qy else (self._tok(0), self._tok(1))
+        return (ca, ra) if qx else (self._tok(2), self._tok(3))
+
+    def ball_intersection_1(self, cx, rx, cy, ry):
+        (xl,) = self.sub_down_1(cx, rx)
+        (xu,) = self.add_up_1(cx, rx)
+        (yl,) = self.sub_down_1(cy, ry)
+        (yu,) = self.add_up_1(cy, ry)
+        l = yl if xl < yl else xl
+        h = yu if yu < xu else xu
+        c, r = self.interval_to_ball_1(l, h)
+        if self.v == "ens-int-radius-small" and type(r) is int and r > 0:
+            r = self.A.next_down(r)
+        ob = l <= h and rx == rx and ry == ry
+        if self.v == "ens-int-empty-none":
+            ob = ob or not (rx == rx and ry == ry)
+            if not (rx == rx):
+                return self._tok(2), self._tok(3)
+            if not (ry == ry):
+                return self._tok(0), self._tok(1)
+        cb, rb = (c, r) if ob else (NAN, NAN)
+        return self._int_select(rx, ry, (cb, rb), 1)
+
+    def _int_select(self, rx, ry, z, k):
+        """The selects of the intersection on the whole line: Y as it is when X is the whole line,
+        X when Y is and X is not (ens-int-swapped: Y tested first)."""
+        X_ = tuple(self._tok(i) for i in range(k + 1))
+        Y_ = tuple(self._tok(i) for i in range(k + 1, 2 * k + 2))
+        wx, wy = rx == INF, ry == INF
+        if self.v == "ens-int-no-y":
+            wx = False
+        if self.v == "ens-int-no-x":
+            wy = False
+        if self.v == "ens-int-swapped":
+            return X_ if wy else Y_ if wx else tuple(z)
+        a = X_ if wy else tuple(z)
+        return Y_ if wx else a
+
+    def ball_hull_2(self, cx0, cx1, rx, cy0, cy1, ry):
+        x = self.ball_to_interval_2(cx0, cx1, rx)
+        y = self.ball_to_interval_2(cy0, cy1, ry)
+        zh = self.interval_hull_2(*(x + y))
+        c0, c1, r = self.interval_to_ball_2(*zh)
+        if self.v == "ens-hull-radius-small" and type(r) is int and r > 0:
+            r = self.A.next_down(r)
+        qx, qy = rx == rx, ry == ry
+        if self.v == "ens-hull-no-x":
+            qy = True
+        if self.v == "ens-hull-no-y":
+            qx = True
+        a = (c0, c1, r) if qy else tuple(self._tok(i) for i in range(3))
+        return a if qx else tuple(self._tok(i) for i in range(3, 6))
+
+    def ball_intersection_2(self, cx0, cx1, rx, cy0, cy1, ry):
+        x = self.ball_to_interval_2(cx0, cx1, rx)
+        y = self.ball_to_interval_2(cy0, cy1, ry)
+        zi = self.interval_intersection_2(*(x + y))
+        c0, c1, r = self.interval_to_ball_2(*zi)
+        if self.v == "ens-int-radius-small" and type(r) is int and r > 0:
+            r = self.A.next_down(r)
+        if self.v == "ens-int-empty-none":
+            if not (rx == rx):
+                return tuple(self._tok(i) for i in range(3, 6))
+            if not (ry == ry):
+                return tuple(self._tok(i) for i in range(3))
+        return self._int_select(rx, ry, (c0, c1, r), 2)
+
+    def _split_parts(self, r):
+        A = self.A
+        half = self._half()
+        h = A.prod(r, half)
+        hn = A.prod(-r, half)
+        g = A.sub(r, h)
+        q = g if h < g else h
+        fr = r < INF
+        return (h if fr else 0), (hn if fr else 0), (q if fr else 0), fr
+
+    def ball_split_1(self, c, r):
+        hs, nh, ws, fr = self._split_parts(r)
+        cs = c if fr else 0
+        a0, a1 = self.ball_add_1_full(cs, 0, nh, ws)
+        b0, b1 = self.ball_add_1_full(cs, 0, nh if self.v == "ens-split-second-shift" else hs, ws)
+        return self._split_out((a0,), a1, (b0,), b1, fr, r, 1)
+
+    def ball_split_2(self, c0, c1, r):
+        hs, nh, ws, fr = self._split_parts(r)
+        cs0, cs1 = (c0, c1) if fr else (0, 0)
+        n0, n1 = self.make_2(nh)
+        p0, p1 = self.make_2(nh if self.v == "ens-split-second-shift" else hs)
+        a0, a1, ar = self.ball_add_2_full(cs0, cs1, 0, n0, n1, ws)
+        b0, b1, br = self.ball_add_2_full(cs0, cs1, 0, p0, p1, ws)
+        return self._split_out((a0, a1), ar, (b0, b1), br, fr, r, 2)
+
+    def _split_out(self, ca, ra, cb, rb, fr, r, k):
+        if self.v == "ens-split-first-short" and type(ra) is int and ra > 0:
+            ra = self.A.prod(ra, self._half())
+        X_ = tuple(self._tok(i) for i in range(k + 1))
+        if not fr:
+            if self.v == "ens-split-whole-empty" and r == INF:
+                return (NAN,) * (2 * k + 2)
+            if self.v == "ens-split-empty-whole" and r != r:
+                return ((0,) * k + (INF,)) * 2
+            return X_ + X_
+        return tuple(ca) + (ra,) + tuple(cb) + (rb,)
+
+    # The conversions of two limbs.
+    def _mid_2(self, xl0, xl1, xu0, xu1, move=True):
+        """The listing of interval_mid_rad_2 up to the midpoint mc and the clamped bounds."""
+        A = self.A
+        om = A.next_down(INF)
+        mo = -om
+        ml = xl0 < mo
+        l0, l1 = (mo, 0) if ml else (xl0, xl1)
+        mu = om < xu0
+        h0, h1 = (om, 0) if mu else (xu0, xu1)
+        half = self._half()
+        hl0, hl1 = self.mul_pow2_2(l0, l1, half)
+        hu0, hu1 = self.mul_pow2_2(h0, h1, half)
+        ma = self.add_2_2(hl0, hl1, hu0, hu1)
+        mb = (l0, l1) if self._lt2(ma, (l0, l1)) else ma
+        mc = (h0, h1) if self._lt2((h0, h1), mb) else mb
+        if not move:
+            mc = ma
+        return (l0, l1), (h0, h1), mc, ml, mu
+
+    def _rad_side(self, a, b):
+        """radd(to_up_2(z), e) of (z, e) = add_ball_2_2(a - b), +inf where it is not finite."""
+        z0, z1, e = self.add_ball_2_2(a[0], a[1], -b[0], -b[1])
+        (t,) = self.to_up_2(z0, z1)
+        (rs,) = self.radd(t, e)
+        if self.v == "enc-mid2-no-inf":
+            return rs if rs < INF else self.A.omega
+        return rs if rs < INF else INF
+
+    def interval_mid_rad_2(self, xl0, xl1, xu0, xu1):
+        l, h, mc, ml, mu = self._mid_2(xl0, xl1, xu0, xu1, self.v != "enc-mid2-no-move")
+        ra = self._rad_side(mc, l)
+        rb = self._rad_side(h, mc)
+        rc = rb if ra < rb else ra
+        if self.v == "enc-mid2-radius-small" and type(rc) is int and rc > 0:
+            rc = self.A.prod(rc, self._half())
+        if self.v == "enc-mid2-finite-inf":
+            T = 1 << (self.A.qmax + self.A.p - 4 - self.A.qmin)
+            if any(type(v) is int and abs(v) > T for v in (xl0, xu0)):
+                rc = INF
+        om = self.A.next_down(INF)
+        md = (-om, 0) if ml else mc
+        me = (om, 0) if mu else md
+        mf = (0, 0) if ml and mu else me
+        if self.v == "enc-mid2-whole-tail" and ml and mu:
+            mf = (0, 1)
+        rd = INF if ml or mu else rc
+        ne = xl0 < INF
+        return (mf + (rd,)) if ne else (NAN, NAN, NAN)
+
+    def interval_to_ball_2(self, xl0, xl1, xu0, xu1):
+        m0, m1, r = self.interval_mid_rad_2(xl0, xl1, xu0, xu1)
+        if r == INF and self.v != "enc-tball2-halfline":
+            m0, m1 = 0, 0
+        return m0, m1, r
+
+    def interval_split_2(self, xl0, xl1, xu0, xu1):
+        l, h, mc, ml, mu = self._mid_2(xl0, xl1, xu0, xu1)
+        om = self.A.next_down(INF)
+        md = (-om, 0) if ml else mc
+        me = (om, 0) if mu else md
+        m = (0, 0) if ml and mu else me
+        n = (xl0, xl1) if self._lt2(m, (xl0, xl1)) else m
+        p = (xu0, xu1) if self._lt2((xu0, xu1), n) else n
+        if self.v == "enc-split2-no-move":
+            p = m
+        q = p
+        if self.v == "enc-split2-gap" and type(p[0]) is int:
+            q = (self.A.next_up(p[0]), 0)
+        ne = xl0 < INF
+        au = p if ne else (-INF, 0)
+        bl = q if ne else (INF, 0)
+        return (xl0, xl1) + au + bl + (xu0, xu1)
+
+    def ball_to_interval_2(self, c0, c1, r):
+        A = self.A
+        n0, n1 = self.make_2(-r)
+        p0, p1 = self.make_2(r)
+        l0, l1 = self.add_down_2_2(c0, c1, n0, n1)
+        h0, h1 = self.add_up_2_2(c0, c1, p0, p1)
+        if self.v == "enc-btoi2-nearest":
+            l0, l1 = self.add_2_2(c0, c1, n0, n1)
+            h0, h1 = self.add_2_2(c0, c1, p0, p1)
+        if (self.v == "enc-btoi2-zero-eta" and self._finite(c0, c1, r)
+                and c0 + c1 - r == 0):
+            l0, l1 = -1, 0
+        if self.v == "enc-btoi2-inf-bounded" and self._finite(c0, c1, r):
+            T = 1 << (A.qmax + A.p - 4 - A.qmin)
+            if abs(c0) + r > T:
+                l0, h0 = -INF, INF
+        fl, fh = abs(l0) < INF, abs(h0) < INF
+        a = (l0, l1) if fl else (-INF, 0)
+        b = (h0, h1) if fh else (INF, 0)
+        ne = r == r
+        return (a if ne else (INF, 0)) + (b if ne else (-INF, 0))
+
+    def ball_from_interval_1(self, lo, hi):
+        A = self.A
+        gl, gu = self.guard(lo), self.guard(hi)
+        v = gl <= gu and gl < INF and -INF < gu
+        rv = gu < gl
+        nn = gl == gl and gu == gu
+        if self.v == "enc-fromint1-nan-empty":
+            rv = rv or not nn
+        if self.v == "enc-fromint1-inf-empty":
+            rv = nn and not v
+        if self.v == "enc-fromint1-reversed-whole":
+            rv = False
+        tl, tu = (gl, gu) if v else (0, 0)
+        c, r = self.interval_to_ball_1(tl, tu)
+        if v and self.v == "enc-fromint1-radius-large" and type(r) is int:
+            r = A.next_up(r)
+        if (v and self.v == "enc-fromint1-center-off" and type(c) is int and type(r) is int
+                and type(tl) is int and type(tu) is int):
+            c = A.next_up(c)
+            if type(c) is int:
+                need = max(c - tl, tu - c)
+                r = A.round_up_fraction(Fraction(need)) if need > 0 else 0
+        ec, er = (NAN, NAN) if rv else (0, INF)
+        return (c, r) if v else (ec, er)
+
+
+class Token(str):
+    """An input limb returned as it is, written as the line wrote it."""
+
 
 # A negative zero as an output (next-down-zero): the fixed values have one zero.
 NEG_ZERO = "-0x0p+0"
@@ -2035,6 +2705,27 @@ ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "
          "axpy_entry_step_2": 6, "axpy_step_2_1": 5, "axpy_entry_step_2_1": 5, "scale_step_1": 2,
          "scale_step_2": 3, "mul_pow2_step_1": 2, "mul_pow2_step_2": 3, "norm_combine": 4,
          "norm_step_1": 3, "norm_step_2": 4, "norm_finish_1": 2, "norm_finish_2": 2}
+# The enclosure interface: predicates, comparisons, set operations of a ball, conversions of two
+# limbs.
+ARITY.update({
+    "interval_empty_1": 2, "interval_entire_1": 2, "interval_contains_1": 3,
+    "interval_subset_1": 4, "interval_positive_1": 2, "interval_negative_1": 2,
+    "interval_zero_1": 2, "interval_less_1": 4, "interval_less_equal_1": 4,
+    "interval_equal_1": 4, "interval_rel_equal_1": 4, "interval_rel_interior_1": 4,
+    "interval_rel_disjoint_1": 4, "interval_empty_2": 4, "interval_entire_2": 4,
+    "interval_contains_2": 6, "interval_subset_2": 8, "interval_positive_2": 4,
+    "interval_negative_2": 4, "interval_zero_2": 4, "interval_less_2": 8,
+    "interval_less_equal_2": 8, "interval_equal_2": 8, "interval_rel_equal_2": 8,
+    "interval_rel_interior_2": 8, "interval_rel_disjoint_2": 8,
+    "ball_contains_point_1": 3, "ball_contains_ball_1": 4, "ball_positive_1": 2,
+    "ball_negative_1": 2, "ball_zero_1": 2, "ball_less_1": 4, "ball_less_equal_1": 4,
+    "ball_equal_1": 4, "ball_contains_point_2": 5, "ball_contains_ball_2": 6,
+    "ball_positive_2": 3, "ball_negative_2": 3, "ball_zero_2": 3, "ball_less_2": 6,
+    "ball_less_equal_2": 6, "ball_equal_2": 6,
+    "ball_hull_1": 4, "ball_intersection_1": 4, "ball_split_1": 2, "ball_split_2": 3,
+    "ball_hull_2": 6, "ball_intersection_2": 6,
+    "interval_mid_rad_2": 4, "interval_to_ball_2": 4, "interval_split_2": 4,
+    "ball_to_interval_2": 3, "ball_from_interval_1": 2})
 FIRST_WAVE = frozenset(("two_sum", "fast_two_sum", "two_prod", "two_prod_dekker", "split",
                         "add_2_2", "add_2_1", "mul_2_2", "mul_2_1", "add_fast_2_2"))
 # kairn::rational<X>(num, den), with its number of limbs.
@@ -2045,7 +2736,8 @@ PAIRS = {"add_2_2": (0, 2), "add_2_1": (0,), "mul_2_2": (0, 2), "mul_2_1": (0,),
 
 
 class Runner:
-    def __init__(self, variant="correct", center_claims=None, radius="first", bound_claims=None):
+    def __init__(self, variant="correct", center_claims=None, radius="first", bound_claims=None,
+                 bv_claims=None):
         if variant not in VARIANTS:
             raise ValueError("unknown variant %r (known: %s)" % (variant, ", ".join(VARIANTS)))
         if radius not in RADIUS_DESIGNS:
@@ -2054,6 +2746,9 @@ class Runner:
         self.center_claims = center_claims or DEFAULT_CENTER_CLAIMS
         self.bound_claims = bound_claims or DEFAULT_BOUND_CLAIMS
         self.radius = radius
+        # The claims of the kernels whose unit( ) and tiny( ) the kernels of the ball vectors and of
+        # the accumulator name (refbv.py; the fixture claims-wave8.json by default).
+        self.bv_claims = bv_claims
         self.cache = {}
 
     def kernels(self, fmtname):
@@ -2061,15 +2756,19 @@ class Runner:
         if k is None:
             k = self.cache[fmtname] = Kernels(Arith(parse_format_triple(fmtname), self.variant),
                                               self.center_claims, self.radius, self.bound_claims)
+            k.bv_claims = self.bv_claims
         return k
 
     def map_line(self, line, toks, tag):
-        """MAP FORMAT ORDER N SCALAR... LIMB... [#TAG] -> Z... MASK."""
+        """MAP FORMAT ORDER N [inplace=I] SCALAR... LIMB... [#TAG] -> Z... MASK (in place, the same
+        values: architecture.md, "The line protocol")."""
         name, fname, order, n = toks[0], toks[1], toks[2], int(toks[3])
         K = self.kernels(fname)
         A = K.A
         _step, sl, al, k, _args = MAPS[name]
         limbs = toks[4:]
+        if limbs and limbs[0].startswith("inplace="):
+            limbs = limbs[1:]
         ns = sum(sl)
         if len(limbs) != ns + n * sum(al):
             raise ValueError("cannot run %r with %d limbs for %d elements" % (name, len(limbs), n))
@@ -2145,6 +2844,10 @@ class Runner:
             return self.map_line(line, toks, tag)
         if kname in CONVS:
             return self.conv_line(line, toks, tag)
+        if kname in _refbv.BVS:
+            return _refbv.bv_line(self, line, toks, tag)
+        if kname in _refbv.BVCONVS:
+            return _refbv.bvconv_line(self, line, toks, tag)
         K = self.kernels(fname)
         A = K.A
         if ARITY.get(kname) != len(args):
@@ -2158,6 +2861,8 @@ class Runner:
         vals = [(t == "1") if i in masks else A.read(t) for i, t in enumerate(args)]
         if K.trace is not None:
             del K.trace[:]
+        # The input limbs as written, for the kernels that return an operand as it is.
+        K.tokens = args
         out = list(getattr(K, kname)(*vals))
         if K.trace:
             pre += ["# refrun trace: " + t if isinstance(t, str) else
@@ -2177,7 +2882,7 @@ class Runner:
                 if type(n) is int and A.member(z1 - (n - z0)):
                     out = [n, z1 - (n - z0)]
         return pre + [line + " -> " + " ".join(
-            ("1" if v else "0") if type(v) is bool else v if v is NEG_ZERO else A.write(v)
+            ("1" if v else "0") if type(v) is bool else v if isinstance(v, str) else A.write(v)
             for v in out)]
 
     def corrupt(self, kname, A, args):
@@ -2305,6 +3010,11 @@ class Runner:
                 w("\n")
 
 
+# The kernels and folds of the ball vectors and of the accumulator (refbv.py).
+from . import refbv as _refbv  # noqa: E402
+_refbv.install(sys.modules[__name__])
+
+
 def main(argv):
     import argparse
     ap = argparse.ArgumentParser(prog="kairn-oracle refrun",
@@ -2315,6 +3025,10 @@ def main(argv):
                     help="claims file whose bounds of add_1_1, add_2_2, mul_1_1 and mul_2_2 give "
                          "the constants of the bound kernels of the folds (default: the oracle's "
                          "fixture of the folds' stage, claims-wave5.json)")
+    ap.add_argument("--bv-claims",
+                    help="claims file whose bounds of add_1_1, add_2_2, mul_1_1, mul_2_1 and mul_2_2 "
+                         "give the constants of the kernels of the ball vectors and of the "
+                         "accumulator (default: the oracle's fixture claims-wave8.json)")
     ap.add_argument("--center-claims",
                     help="claims file whose bounds of add_2_2, mul_2_2 and mul_2_1 give the Ball "
                          "constants U and V (default: the oracle's first-wave fixture)")
@@ -2349,6 +3063,7 @@ def main(argv):
             for which, v in zip("EGH", consts):
                 print("%s.%s.%s=%s" % (a.print_constants, kname, which, ar.write(v)))
         return 0
-    Runner(a.variant, a.center_claims, a.radius, a.bound_claims).run(sys.stdin, sys.stdout)
+    Runner(a.variant, a.center_claims, a.radius, a.bound_claims, a.bv_claims).run(sys.stdin,
+                                                                                   sys.stdout)
     sys.stdout.flush()
     return 0

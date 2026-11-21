@@ -1,0 +1,37 @@
+# The three-valued X = Y of intervals with one-limb bounds (milestone2.md, "One enclosure
+# interface", "Comparisons"): yes when every member of X equals every member of Y, that is X = Y =
+# [v, v], x_l = x_u = y_l = y_u; no when no member of X equals one of Y, the intervals disjoint, x_u
+# < y_l or y_u < x_l; both false otherwise and when an operand is empty (the yes of the empty set
+# fails by itself: its bounds differ). By the comparisons of T. Exact. For every precision.
+kernel:        interval_equal_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        mask yes
+output:        mask no
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       trit yes no eq x y x=xl,xu y=yl,yu exact
+min_precision: 1
+source:        the bounds compared, and a test of emptiness (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalPredicates.v interval_equal_1_correct
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical operand
+
+ea  = eq(xl, xu)
+eb  = eq(xu, yl)
+ec  = eq(yl, yu)
+eab = and(ea, eb)
+yes = and(eab, ec)
+nx  = lt(xl, const inf)
+ny  = lt(yl, const inf)
+ne  = and(nx, ny)
+da  = lt(xu, yl)
+db  = lt(yu, xl)
+dd  = or(da, db)
+no  = and(dd, ne)

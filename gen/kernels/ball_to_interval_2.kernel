@@ -1,0 +1,47 @@
+# An interval with 2-limb bounds that contains a ball with a 2-limb center (milestone2.md, "One
+# enclosure interface", "Midpoint, radius and the conversions", "Ball to interval"): the directed sums
+# of two limbs of the center and the radius, add_down_2_2(c, -r) and add_up_2_2(c, r), then the
+# selects of interval_add_2 (a bound that the finite core does not return finite is the infinity on
+# its side), and the empty set selected by the test of the radius. Each bound is within A |v| + B of
+# c -+ r, the constants of the sum, and a bound c -+ r that is exactly zero is returned as zero, by
+# the rule of the directed sums. The whole line gives [-inf, +inf], through the same selects. The
+# radius is made a 2-limb number by make_2 (the page writes (-r, 0) and (r, 0)), so that no limb is
+# added to a literal zero; its guard changes nothing of a radius, a limb of an object. These are the
+# values of lower() and upper() of a Ball<T, 2>. Bounded when every member of the ball is at most
+# 2^(emax-2) in magnitude, as the sum of two limbs.
+kernel:        ball_to_interval_2
+input:         c = c0 c1
+input:         stored r
+output:        zl = zl0 zl1
+output:        zu = zu0 zu1
+requires:      ball c r
+ensures:       interval_of_ball zl zu x x=c,r tight=outward;rel=(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u);abs=2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2) exact_lower=zero(c-r) exact_upper=zero(c+r) bounded_when=abs_le(x,-2)
+min_precision: 3
+source:        the directed sums of two limbs of the center and the radius (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallConvert2.v ball_to_interval_2_correct
+entry:         yes
+cone_exempt:   the bounds are directed sums made infinite on their side when not finite, and the empty set is selected after an explicit test; interval_of_ball states what comes out for every canonical ball
+
+nr       = neg(r)
+(n0, n1) = make_2(nr)
+(p0, p1) = make_2(r)
+(l0, l1) = add_down_2_2(c0, c1, n0, n1)
+(h0, h1) = add_up_2_2(c0, c1, p0, p1)
+al       = abs(l0)
+fl       = lt(al, const inf)
+ah       = abs(h0)
+fh       = lt(ah, const inf)
+mi       = neg(const inf)
+a0       = select(fl, l0, mi)
+a1       = select(fl, l1, 0)
+b0       = select(fh, h0, const inf)
+b1       = select(fh, h1, 0)
+ne       = eq(r, r)
+zl0      = select(ne, a0, const inf)
+zl1      = select(ne, a1, 0)
+zu0      = select(ne, b0, mi)
+zu1      = select(ne, b1, 0)

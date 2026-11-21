@@ -167,19 +167,23 @@ struct Map {
     const char* arrays;
     int scalars;
     int writes;
-    void (*binary64)(const double* const* in, std::size_t n, const double* sc, double* const* w, bool* mo);
-    void (*binary32)(const float* const* in, std::size_t n, const float* sc, float* const* w, bool* mo);
+    int radius;     // 1 for a ball vector, which returns its radius (out[0]) before the flag
+    void (*binary64)(const double* const* in, std::size_t n, const double* sc, double* const* w, double* out, bool* mo);
+    void (*binary32)(const float* const* in, std::size_t n, const float* sc, float* const* w, float* out, bool* mo);
 };
 #define KAIRN_RUNNER_MAP_ARGS(T)                                                                     \
     [[maybe_unused]] const T* const* in, [[maybe_unused]] std::size_t n, [[maybe_unused]] const T* sc, \
-        [[maybe_unused]] T* const* w, [[maybe_unused]] bool* mo
+        [[maybe_unused]] T* const* w, [[maybe_unused]] T* out, [[maybe_unused]] bool* mo
 #define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)
 #define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED) \
-    {#NAME, ARRAYS, SCALARS, WRITES, [](KAIRN_RUNNER_MAP_ARGS(double)) { PACKED; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { PACKED; }},
+    {#NAME, ARRAYS, SCALARS, WRITES, 0, [](KAIRN_RUNNER_MAP_ARGS(double)) { PACKED; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { PACKED; }},
+#define KAIRN_RUNNER_BV(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED) \
+    {#NAME, ARRAYS, SCALARS, WRITES, 1, [](KAIRN_RUNNER_MAP_ARGS(double)) { PACKED; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { PACKED; }},
 const Map maps[] = {
 #include KAIRN_RUNNER_TABLE
-    {nullptr, nullptr, 0, 0, nullptr, nullptr},
+    {nullptr, nullptr, 0, 0, 0, nullptr, nullptr},
 };
+#undef KAIRN_RUNNER_BV
 
 // The guard's thresholds (above).
 constexpr std::size_t guard_lines = 256;
@@ -569,9 +573,22 @@ T packed_limb(const std::string& text) {
     return x;
 }
 
-// A request of a map, MAP FORMAT lanes:W N SCALAR... LIMB..., computed at once.
+// In place: inplace=I after the length, I the index of an array read with as many limbs as the
+// array written, whose buffers the runner passes as the array written (runner.cpp, in_place).
+long in_place(const Map& m, const std::vector<std::string>& fields, std::size_t& at) {
+    const std::string head = "inplace=";
+    if (fields.size() <= at || fields[at].compare(0, head.size(), head) != 0) return -1;
+    const std::size_t i = decimal(fields[at].substr(head.size()), "an array");
+    if (i >= std::strlen(m.arrays) || m.arrays[i] - '0' != m.writes)
+        fail(fields[at] + ": not an array read with as many limbs as the array written");
+    ++at;
+    return long(i);
+}
+
+// A request of a map, MAP FORMAT lanes:W N [inplace=I] SCALAR... LIMB..., computed at once.
 template <class T>
-void complete_map(const Map& m, const Request& r, void (*fn)(const T* const*, std::size_t, const T*, T* const*, bool*)) {
+void complete_map(const Map& m, const Request& r,
+                  void (*fn)(const T* const*, std::size_t, const T*, T* const*, T*, bool*)) {
     const std::vector<std::string>& fields = r.fields;
     if (fields.size() < 4) fail(std::string("expected ") + m.name + " FORMAT ORDER N SCALAR ... LIMB ... [#TAG]");
     const std::string head = "lanes:";
@@ -583,22 +600,35 @@ void complete_map(const Map& m, const Request& r, void (*fn)(const T* const*, st
     std::size_t arrays = 0;
     for (const char* a = m.arrays; *a; ++a) arrays += std::size_t(*a - '0');
     const std::size_t scalars = std::size_t(m.scalars);
-    if (fields.size() - 4 != scalars + arrays * n)
+    std::size_t at = 4;
+    const long place = in_place(m, fields, at);
+    if (fields.size() - at != scalars + arrays * n)
         fail(std::string(m.name) + " of length " + fields[3] + " takes " + std::to_string(scalars + arrays * n) + " limbs");
     std::vector<T> sc(scalars + 1), data(arrays * n + 1);
-    for (std::size_t i = 0; i < scalars; ++i) sc[i] = packed_limb<T>(fields[4 + i]);
-    for (std::size_t i = 0; i < arrays * n; ++i) data[i] = packed_limb<T>(fields[4 + scalars + i]);
+    for (std::size_t i = 0; i < scalars; ++i) sc[i] = packed_limb<T>(fields[at + i]);
+    for (std::size_t i = 0; i < arrays * n; ++i) data[i] = packed_limb<T>(fields[at + scalars + i]);
     std::vector<const T*> in(arrays + 1);
     for (std::size_t l = 0; l < arrays; ++l) in[l] = data.data() + l * n;
     std::vector<T> written(std::size_t(m.writes) * n + 1);
     std::vector<T*> w(std::size_t(m.writes) + 1);
     for (int l = 0; l < m.writes; ++l) w[std::size_t(l)] = written.data() + std::size_t(l) * n;
+    if (place >= 0) {
+        std::size_t first = 0;
+        for (long a = 0; a < place; ++a) first += std::size_t(m.arrays[a] - '0');
+        for (int l = 0; l < m.writes; ++l) w[std::size_t(l)] = data.data() + (first + std::size_t(l)) * n;
+    }
     bool mo[1] = {};
-    fn(in.data(), n, sc.data(), w.data(), mo);
+    T res[1] = {};
+    fn(in.data(), n, sc.data(), w.data(), res, mo);
     std::string text = r.line + " ->";
-    for (std::size_t i = 0; i < std::size_t(m.writes) * n; ++i) {
+    for (int l = 0; l < m.writes; ++l)
+        for (std::size_t i = 0; i < n; ++i) {
+            text += ' ';
+            put(static_cast<double>(w[std::size_t(l)][i]), text);
+        }
+    if (m.radius) {
         text += ' ';
-        put(static_cast<double>(written[i]), text);
+        put(static_cast<double>(res[0]), text);
     }
     text += mo[0] ? " 1\n" : " 0\n";
     std::fwrite(text.data(), 1, text.size(), stdout);

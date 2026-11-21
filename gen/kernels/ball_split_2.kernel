@@ -1,0 +1,48 @@
+# Two balls that together cover a ball with a 2-limb center (milestone2.md, "One enclosure
+# interface", "Hull, intersection and split of balls"): ball_split_1 on the sum of two limbs, the
+# point c plus the balls of center -h and +h (the 2-limb numbers (-h, 0) and (h, 0), by make_2, so
+# that no limb is added to a literal zero) and radius q = max(h, r - h), h = RN(r/2), by
+# ball_add_2_full. The first contains [c - r, c], the second [c, c + r]; the whole line and the
+# empty set are returned twice, as they are. -h is its own product of the negated radius, as in
+# ball_split_1 (no fused result negated).
+kernel:        ball_split_2
+input:         c = c0 c1
+input:         stored r
+output:        ca = ca0 ca1
+output:        ra
+output:        cb = cb0 cb1
+output:        rb
+requires:      ball c r
+ensures:       ball_splits ca ra cb rb from=c,r
+min_precision: 3
+source:        the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates2.v ball_split_2_correct
+entry:         yes
+cone_exempt:   through ball_add_2_full, which states what comes out; the special states are selected after an explicit test of the radius
+
+h             = prod(r, const up(1/2))
+nr            = neg(r)
+hn            = prod(nr, const up(1/2))
+g             = sub(r, h)
+mg            = lt(h, g)
+q             = select(mg, g, h)
+fr            = lt(r, const inf)
+hs            = select(fr, h, 0)
+nh            = select(fr, hn, 0)
+ws            = select(fr, q, 0)
+cs0           = select(fr, c0, 0)
+cs1           = select(fr, c1, 0)
+(n0, n1)      = make_2(nh)
+(p0, p1)      = make_2(hs)
+(a0, a1, ar)  = ball_add_2_full(cs0, cs1, 0, n0, n1, ws)
+(b0, b1, br)  = ball_add_2_full(cs0, cs1, 0, p0, p1, ws)
+ca0           = select(fr, a0, c0)
+ca1           = select(fr, a1, c1)
+ra            = select(fr, ar, r)
+cb0           = select(fr, b0, c0)
+cb1           = select(fr, b1, c1)
+rb            = select(fr, br, r)

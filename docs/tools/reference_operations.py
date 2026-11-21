@@ -91,6 +91,10 @@ GROUPS = [
      "The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the "
      "operation of one entry, on an array the program supplies where it says so. The functions on arrays of "
      "the public headers come later."),
+    ("ball-vectors", "The radius of a BallVector",
+     "The one radius of the result of the BallVector kernels of Milestone 2 (the sum, the difference, the "
+     "scaling), from the largest magnitude of a center of the result: the radius lines of the entrywise Ball "
+     "operation. The public header of BallVector comes later."),
 ]
 
 
@@ -715,6 +719,65 @@ KERNELS = {
         "ball", "The smallest interval that contains a ball, one-limb center",
         form("Interval<T, 1>(X)", B1, result=I1, group="intervals", note="explicit; " + ROUNDS_CONSTEXPR),
     ),
+    # Stage B2: the predicates, the three-valued comparisons and the relations of IEEE 1788 of an
+    # interval (subset is interval_subset_k).
+    "interval_empty_1": page("intervals", "Whether an interval is empty, one-limb bounds"),
+    "interval_entire_1": page("intervals", "Whether an interval is the whole line, one-limb bounds"),
+    "interval_contains_1": page("intervals", "Whether a point is a member of an interval, one-limb bounds"),
+    "interval_subset_1": page("intervals", "Whether an interval is a subset of another, one-limb bounds"),
+    "interval_positive_1": page("intervals", "Whether every member of an interval is positive, one-limb bounds"),
+    "interval_negative_1": page("intervals", "Whether every member of an interval is negative, one-limb bounds"),
+    "interval_zero_1": page("intervals", "Whether an interval is [0, 0], one-limb bounds"),
+    "interval_less_1": page("intervals", "The three-valued X < Y of intervals, one-limb bounds"),
+    "interval_less_equal_1": page("intervals", "The three-valued X <= Y of intervals, one-limb bounds"),
+    "interval_equal_1": page("intervals", "The three-valued X = Y of intervals, one-limb bounds"),
+    "interval_rel_equal_1": page("intervals", "The relation equal of IEEE 1788, one-limb bounds"),
+    "interval_rel_interior_1": page("intervals", "The relation interior of IEEE 1788, one-limb bounds"),
+    "interval_rel_disjoint_1": page("intervals", "The relation disjoint of IEEE 1788, one-limb bounds"),
+    "interval_empty_2": page("intervals", "Whether an interval is empty, two-limb bounds"),
+    "interval_entire_2": page("intervals", "Whether an interval is the whole line, two-limb bounds"),
+    "interval_contains_2": page("intervals", "Whether a point is a member of an interval, two-limb bounds"),
+    "interval_subset_2": page("intervals", "Whether an interval is a subset of another, two-limb bounds"),
+    "interval_positive_2": page("intervals", "Whether every member of an interval is positive, two-limb bounds"),
+    "interval_negative_2": page("intervals", "Whether every member of an interval is negative, two-limb bounds"),
+    "interval_zero_2": page("intervals", "Whether an interval is [0, 0], two-limb bounds"),
+    "interval_less_2": page("intervals", "The three-valued X < Y of intervals, two-limb bounds"),
+    "interval_less_equal_2": page("intervals", "The three-valued X <= Y of intervals, two-limb bounds"),
+    "interval_equal_2": page("intervals", "The three-valued X = Y of intervals, two-limb bounds"),
+    "interval_rel_equal_2": page("intervals", "The relation equal of IEEE 1788, two-limb bounds"),
+    "interval_rel_interior_2": page("intervals", "The relation interior of IEEE 1788, two-limb bounds"),
+    "interval_rel_disjoint_2": page("intervals", "The relation disjoint of IEEE 1788, two-limb bounds"),
+    # The conversions of two limbs, the ball from an interval of one limb, and the hull and the
+    # intersection of balls of two limbs.
+    "interval_mid_rad_2": page("intervals", "The midpoint and radius of an interval, two-limb bounds"),
+    "interval_to_ball_2": page("intervals", "A ball that contains an interval, two-limb bounds"),
+    "interval_split_2": page("intervals", "An interval split at its midpoint, two-limb bounds"),
+    "ball_to_interval_2": page("ball", "An interval that contains a ball, two-limb center"),
+    "ball_from_interval_1": page("ball", "A ball with a one-limb center from an interval of two limbs"),
+    "ball_hull_2": page("ball", "A ball that contains two balls, two-limb center"),
+    "ball_intersection_2": page("ball", "A ball that contains the intersection of two balls, two-limb center"),
+    # The set operations of a ball.
+    "ball_hull_1": page("ball", "A ball that contains two balls, one-limb center"),
+    "ball_intersection_1": page("ball", "A ball that contains the intersection of two balls, one-limb center"),
+    "ball_split_1": page("ball", "Two balls that cover a ball, one-limb center"),
+    "ball_split_2": page("ball", "Two balls that cover a ball, two-limb center"),
+    # The predicates and the three-valued comparisons of a ball.
+    "ball_contains_point_1": page("ball", "Whether a point is a member of a ball, one-limb center"),
+    "ball_contains_ball_1": page("ball", "Whether a ball contains another, one-limb center"),
+    "ball_positive_1": page("ball", "Whether every member of a ball is positive, one-limb center"),
+    "ball_negative_1": page("ball", "Whether every member of a ball is negative, one-limb center"),
+    "ball_zero_1": page("ball", "Whether a ball is the point 0, one-limb center"),
+    "ball_less_1": page("ball", "The three-valued X < Y of balls, one-limb center"),
+    "ball_less_equal_1": page("ball", "The three-valued X <= Y of balls, one-limb center"),
+    "ball_equal_1": page("ball", "The three-valued X = Y of balls, one-limb center"),
+    "ball_contains_point_2": page("ball", "Whether a point is a member of a ball, two-limb center"),
+    "ball_contains_ball_2": page("ball", "Whether a ball contains another, two-limb center"),
+    "ball_positive_2": page("ball", "Whether every member of a ball is positive, two-limb center"),
+    "ball_negative_2": page("ball", "Whether every member of a ball is negative, two-limb center"),
+    "ball_zero_2": page("ball", "Whether a ball is the point 0, two-limb center"),
+    "ball_less_2": page("ball", "The three-valued X < Y of balls, two-limb center"),
+    "ball_less_equal_2": page("ball", "The three-valued X <= Y of balls, two-limb center"),
+    "ball_equal_2": page("ball", "The three-valued X = Y of balls, two-limb center"),
     # The building blocks of the intervals: parts of the interval kernels.
     "mul_dir_1": page("building-blocks", "Both directed products of two limbs, a zero factor giving zero"),
     "add_ball_2_2": page("building-blocks", "A sum of two-limb numbers with a bound of its error"),
@@ -770,6 +833,32 @@ KERNELS = {
     "norm_step_2": page("arrays", "The step of the largest magnitude of an array of two limbs: its leading limb"),
     "norm_finish_1": page("arrays", "The result of a fold of maxima of one limb: the maximum, or NaN"),
     "norm_finish_2": page("arrays", "The result of a fold of maxima of two limbs: one step above the maximum, or NaN"),
+    # --- Milestone 2, the accumulator ----------------------------------------------------------------
+    "acc_add_1": page("arrays", "An accumulator of one limb: add a number of the program"),
+    "acc_add_2": page("arrays", "An accumulator of two limbs: add a number of the program"),
+    "acc_mul_1": page("arrays", "An accumulator of one limb: add a product"),
+    "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product"),
+    "acc_merge_1": page("arrays", "Two accumulators of one limb into one"),
+    "acc_merge_2": page("arrays", "Two accumulators of two limbs into one"),
+    "acc_radius_1": page("arrays", "The radius of an accumulator of one limb"),
+    "acc_radius_2": page("arrays", "The radius of an accumulator of two limbs"),
+    # --- Milestone 2, BallVector ---------------------------------------------------------------------
+    "bv_add_radius_1": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of one limb"),
+    "bv_add_radius_2": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of two limbs"),
+    "bv_scale_radius_1": page("ball-vectors", "The radius of a BallVector of one limb times a number of T"),
+    "bv_scale_radius_2": page("ball-vectors", "The radius of a BallVector of two limbs times a number of T"),
+    "bv_center_entry_1": page("ball-vectors", "A center of one limb given to the constructor of a BallVector"),
+    "bv_center_2": page("ball-vectors", "A center of two limbs given to the constructor of a BallVector"),
+    "bv_make_radius": page("ball-vectors", "The radius given to the constructor of a BallVector"),
+    "bv_make_finish": page("ball-vectors", "The result of the constructor of a BallVector: the radius given, or NaN"),
+    "neg_1": page("ball-vectors", "The negation of a number of T, the step of the negation of a BallVector"),
+    "bv_neg_radius": page("ball-vectors", "The radius of the negation of a BallVector: the radius given"),
+    "bv_mul_pow2_step_1": page("ball-vectors", "A center of one limb times a power of two, and whether it is exact"),
+    "bv_mul_pow2_step_2": page("ball-vectors", "A center of two limbs times a power of two, and whether it is exact"),
+    "bv_mul_pow2_radius": page("ball-vectors", "The radius of a BallVector times a power of two: exact when nothing "
+                                               "underflows"),
+    "conv_radius": page("ball-vectors", "The radius of the product of two polynomials whose coefficients are BallVectors"),
+    "bv_conv_finish": page("ball-vectors", "The result of the product of two BallVectors: the radius, or NaN"),
 }
 
 

@@ -110,6 +110,21 @@ NONFINITE_CE_CASES = [
     ('norm_finish_2', 'double', [0.0, True]),
     ('norm_finish_2', 'float', [float.fromhex('0x1.fffffep+127'), True]),
     ('norm_finish_2', 'float', [3.0, False]),
+    # The finish of the constructors of a BallVector: the radius when the mask is true and it is
+    # finite and not negative (either zero), the canonical NaN otherwise.
+    ('bv_make_finish', 'double', [2.0, True]),
+    ('bv_make_finish', 'float', [0.0, True]),
+    ('bv_make_finish', 'double', [-0.0, True]),
+    ('bv_make_finish', 'float', [-1.0, True]),
+    ('bv_make_finish', 'double', [math.inf, True]),
+    ('bv_make_finish', 'double', [2.0, False]),
+    # The finish of the product of two BallVectors: the radius when both masks are true and it is
+    # finite, the canonical NaN otherwise.
+    ('bv_conv_finish', 'double', [2.0, True, True]),
+    ('bv_conv_finish', 'float', [0.0, True, True]),
+    ('bv_conv_finish', 'double', [2.0, False, True]),
+    ('bv_conv_finish', 'float', [2.0, True, False]),
+    ('bv_conv_finish', 'double', [math.inf, True, True]),
     # Milestone 2: the interval kernels and the functions of a Ball that are constexpr, on finite
     # operands where they compute (an infinite bound would make TwoSum compute inf - inf, and a NaN
     # bound of ball_from_interval_2 be halved, which constant evaluation refuses: a compile error,
@@ -155,6 +170,88 @@ NONFINITE_CE_CASES = [
     ('ball_to_interval_1', 'float', [-2.0, 2.0 ** -30]),
     ('interval_split_1', 'double', [1.0, 2.0]),
     ('interval_split_1', 'float', [-math.inf, math.inf]),
+    # Stage B2: the predicates and three-valued comparisons of an interval, which only compare, on
+    # every kind of interval and point; those of a ball of one limb and its signs, on finite balls,
+    # and on the whole line where no exact pair is made of an infinity (an empty ball, or the whole
+    # line in contains(Y), would make one, NaN or inf - inf, which constant evaluation refuses: a
+    # compile error, never a wrong constant); the hull and the intersection of balls of one limb on
+    # finite balls that meet (an empty intersection makes the sum of the halves +inf - inf).
+    ('interval_empty_1', 'double', [math.inf, -math.inf]),
+    ('interval_empty_1', 'float', [1.0, 2.0]),
+    ('interval_entire_1', 'double', [-math.inf, math.inf]),
+    ('interval_entire_1', 'float', [math.inf, -math.inf]),
+    ('interval_contains_1', 'double', [1.0, math.inf, math.inf]),
+    ('interval_contains_1', 'float', [1.0, 2.0, 1.5]),
+    ('interval_contains_1', 'double', [1.0, 2.0, math.nan]),
+    ('interval_subset_1', 'double', [math.inf, -math.inf, 1.0, 2.0]),
+    ('interval_subset_1', 'float', [1.0, 2.0, 0.5, 2.0]),
+    ('interval_positive_1', 'double', [0.0, 1.0]),
+    ('interval_positive_1', 'float', [2.0 ** -149, math.inf]),
+    ('interval_negative_1', 'double', [-math.inf, -1.0]),
+    ('interval_negative_1', 'float', [math.inf, -math.inf]),
+    ('interval_zero_1', 'double', [0.0, 0.0]),
+    ('interval_zero_1', 'float', [-0.0, 1.0]),
+    ('interval_less_1', 'double', [1.0, 2.0, 3.0, 4.0]),
+    ('interval_less_1', 'float', [math.inf, -math.inf, 3.0, 4.0]),
+    ('interval_less_equal_1', 'double', [3.0, 4.0, 1.0, 3.0]),
+    ('interval_less_equal_1', 'float', [1.0, 2.0, 2.0, math.inf]),
+    ('interval_equal_1', 'double', [2.0, 2.0, 2.0, 2.0]),
+    ('interval_equal_1', 'float', [1.0, 2.0, 3.0, 4.0]),
+    ('interval_rel_equal_1', 'double', [math.inf, -math.inf, math.inf, -math.inf]),
+    ('interval_rel_equal_1', 'float', [1.0, 2.0, 1.0, 3.0]),
+    ('interval_rel_interior_1', 'double', [-math.inf, 1.0, -math.inf, 2.0]),
+    ('interval_rel_interior_1', 'float', [1.0, 2.0, 1.0, 3.0]),
+    ('interval_rel_disjoint_1', 'double', [1.0, 2.0, 3.0, 4.0]),
+    ('interval_rel_disjoint_1', 'float', [math.inf, -math.inf, 3.0, 4.0]),
+    ('interval_empty_2', 'double', [math.inf, 0.0, -math.inf, 0.0]),
+    ('interval_entire_2', 'float', [-math.inf, 0.0, math.inf, 0.0]),
+    ('interval_contains_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0, 1.0, 2.0 ** -55]),
+    ('interval_contains_2', 'float', [1.0, 0.0, math.inf, 0.0, math.inf, 0.0]),
+    ('interval_subset_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0, 1.0, 0.0, 2.0, 2.0 ** -60]),
+    ('interval_positive_2', 'double', [1.0, -2.0 ** -60, 2.0, 0.0]),
+    ('interval_negative_2', 'float', [-2.0, 0.0, -1.0, 2.0 ** -30]),
+    ('interval_zero_2', 'double', [0.0, 0.0, 0.0, 0.0]),
+    ('interval_less_2', 'double', [1.0, 0.0, 2.0, 2.0 ** -60, 2.0, 2.0 ** -55, 3.0, 0.0]),
+    ('interval_less_equal_2', 'float', [1.0, 0.0, 2.0, 0.0, 2.0, 0.0, 3.0, 0.0]),
+    ('interval_equal_2', 'double', [2.0, 0.0, 2.0, 0.0, 2.0, 0.0, 2.0, 0.0]),
+    ('interval_rel_equal_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0, 1.0, 2.0 ** -60, 2.0, 0.0]),
+    ('interval_rel_interior_2', 'float', [-math.inf, 0.0, 1.0, 0.0, -math.inf, 0.0, 2.0, 0.0]),
+    ('interval_rel_disjoint_2', 'double', [1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]),
+    ('ball_contains_point_1', 'double', [1.0, 0.5, 1.5]),
+    ('ball_contains_point_1', 'float', [0.0, math.inf, 3.0]),
+    ('ball_contains_ball_1', 'double', [1.0, 2.0, 1.5, 0.5]),
+    ('ball_contains_ball_1', 'float', [0.0, 4.0, 1.0, 1.0]),
+    ('ball_positive_1', 'double', [1.0, 0.5]),
+    ('ball_positive_1', 'float', [0.0, math.inf]),
+    ('ball_negative_1', 'double', [-1.0, 0.5]),
+    ('ball_zero_1', 'float', [0.0, 0.0]),
+    ('ball_less_1', 'double', [1.0, 0.5, 3.0, 1.0]),
+    ('ball_less_1', 'float', [3.0, 1.0, 1.0, 0.5]),
+    ('ball_less_equal_1', 'double', [1.0, 1.0, 3.0, 1.0]),
+    ('ball_equal_1', 'double', [1.0, 0.0, 1.0, 0.0]),
+    ('ball_equal_1', 'float', [1.0, 0.25, 3.0, 0.5]),
+    ('ball_positive_2', 'double', [1.0, 2.0 ** -60, 0.5]),
+    ('ball_negative_2', 'float', [-1.0, 0.0, 0.5]),
+    ('ball_zero_2', 'double', [0.0, 0.0, 0.0]),
+    ('ball_hull_1', 'double', [1.0, 0.5, 3.0, 0.25]),
+    ('ball_hull_1', 'float', [1.0, 2.0 ** -30, -2.0, 1.0]),
+    ('ball_intersection_1', 'double', [1.0, 1.0, 1.5, 1.0]),
+    ('ball_intersection_1', 'float', [1.0, 0.5, 1.25, 2.0 ** -30]),
+    # The ball from an interval of one limb, on every kind of pair: its listing converts [0, 0] where
+    # interval_make_1 would give the empty set or the whole line, so that constant evaluation
+    # computes nothing of a NaN bound nor of the empty interval.
+    ('ball_from_interval_1', 'double', [1.0, 2.0]),
+    ('ball_from_interval_1', 'float', [math.nan, 1.0]),
+    ('ball_from_interval_1', 'double', [-math.inf, 1.0]),
+    ('ball_from_interval_1', 'double', [math.nan, math.nan]),
+    ('ball_from_interval_1', 'float', [2.0, 1.0]),
+    ('ball_from_interval_1', 'double', [math.inf, math.inf]),
+    # The split of an interval of two limbs, constexpr by the rule of the product: a bounded
+    # interval, the whole line and a half-line (the empty set would make the sum of the halves
+    # +inf - inf, as for interval_split_1).
+    ('interval_split_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0]),
+    ('interval_split_2', 'float', [-math.inf, 0.0, math.inf, 0.0]),
+    ('interval_split_2', 'double', [1.0, 0.0, math.inf, 0.0]),
 ]
 
 

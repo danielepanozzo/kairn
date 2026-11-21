@@ -22,7 +22,23 @@ IN_GEN = ('two_sum_ord', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mu
           'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'mul_dir_2_2', 'interval_add_2',
           'ball_from_interval_2',
           # and of its stage B1: the product of intervals of two limbs, and two of the enclosure interface.
-          'mul_ext_2_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1')
+          'mul_ext_2_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1',
+          # and the accumulator, acc_radius_k as proposed here (accumulator.py).
+          'acc_add_1', 'acc_add_2', 'acc_mul_1', 'acc_mul_2', 'acc_merge_1', 'acc_merge_2', 'acc_radius_1',
+          'acc_radius_2',
+          # and the radii of BallVector, bv_add_radius_2 and bv_scale_radius_2 as proposed here, with
+          # their forms of one limb.
+          'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2',
+          # and the kernels of the constructor of BallVector (ballvector.py), as proposed here.
+          'bv_center_2', 'bv_center_entry_1', 'bv_make_finish', 'bv_make_radius',
+          # and the kernels of the scaling of a BallVector by a power of two (bv_proposals.py), as proposed
+          # here, with their claims.
+          'bv_mul_pow2_radius', 'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2',
+          # and the radius and the finish of the product of polynomials of BallVector (batch.py, bv_conv.py),
+          # as proposed here, with their claims.
+          'conv_radius', 'bv_conv_finish',
+          # and of stage B2: the split of a ball, written again so that no fused result is negated.
+          'ball_split_1')
 
 
 def main():

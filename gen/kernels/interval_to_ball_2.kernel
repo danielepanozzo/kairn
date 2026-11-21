@@ -1,0 +1,28 @@
+# A ball with a 2-limb center that contains an interval with 2-limb bounds (milestone2.md, "One
+# enclosure interface", "Midpoint, radius and the conversions", "Interval to ball"):
+# interval_mid_rad_2, then the select of interval_to_ball_1: a radius +inf (an unbounded interval, or
+# a bounded one whose radius overflowed near the top of the range) gives the whole line, center 0;
+# the empty set gives three NaN already, the empty ball. So the ball is canonical, contains the
+# interval, is empty exactly when the interval is, and is a finite ball with the midpoint of
+# interval_mid_rad_2 for center when both bounds are at most 2^(emax-2) in magnitude.
+kernel:        interval_to_ball_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+output:        c = c0 c1
+output:        r
+requires:      interval xl xu
+ensures:       ball_of_interval c r from=xl,xu special=ball rel=3*u^2/(1-4*u) abs=2*eta finite_when=abs_le(xl,-2);abs_le(xu,-2)
+min_precision: 3
+source:        interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalConvert2.v interval_to_ball_2_correct
+entry:         yes
+cone_exempt:   the center is selected after the test of the radius that tells an unbounded interval; ball_of_interval states what comes out for every canonical interval
+
+(m0, m1, r) = interval_mid_rad_2(xl0, xl1, xu0, xu1)
+un          = eq(r, const inf)
+c0          = select(un, 0, m0)
+c1          = select(un, 0, m1)

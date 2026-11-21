@@ -18,6 +18,10 @@ invalid case must fail the run. With CMAKE, the path of cmake, it
 runs crosscheck.cmake, the driver of the interpreter's enumerations, likewise; with API_RUNNER,
 the public interface's runner (tests/api/runner.cpp), crosscheck.py api on a good run, on one
 whose cases miss a stratum, and on a kernel the runner maps no form to.
+
+The oracle reads gen/claims.json, or the claims file named by the environment variable
+KAIRN_ORACLE_CLAIMS (which the full tier sets from the CMake variable of that name), passed to
+every run of the oracle and of the drivers as --claims FILE (-DCLAIMS=FILE for crosscheck.cmake).
 """
 import copy
 import json
@@ -32,6 +36,10 @@ ROOT = os.path.dirname(TESTS)
 PY = sys.executable
 CMAKE = None
 API_RUNNER = None
+CLAIMS = os.environ.get("KAIRN_ORACLE_CLAIMS") or os.path.join(ROOT, "gen", "claims.json")
+CLAIMS_ARGS = ["--claims", CLAIMS] if os.environ.get("KAIRN_ORACLE_CLAIMS") else []
+# crosscheck.py MODE ...: its mode first, then --claims (both modes take it).
+CLAIMS_DRIVER = [PY, os.path.join(TESTS, "crosscheck.py")]
 
 
 def pipeline(kernel, fmt, *gen_args, fail_on_suspicious=True):
@@ -41,14 +49,16 @@ def pipeline(kernel, fmt, *gen_args, fail_on_suspicious=True):
     with tempfile.TemporaryDirectory() as d:
         js = os.path.join(d, "s.json")
         gen = subprocess.run([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "gen", kernel, fmt]
-                             + list(gen_args), capture_output=True, text=True, cwd=ROOT)
+                             + list(gen_args) + CLAIMS_ARGS, capture_output=True, text=True,
+                             cwd=ROOT)
         assert gen.returncode == 0, gen.stderr
         runner = ([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "refrun"]
                   if kernel.startswith("rational_") else
                   [PY, os.path.join(ROOT, "gen", "kairn-gen"), "interp"])
         run = subprocess.run(runner, input=gen.stdout, capture_output=True, text=True, cwd=ROOT)
         assert run.returncode == 0, run.stderr
-        check = [PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "check", "--json", js]
+        check = ([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "check", "--json", js]
+                 + CLAIMS_ARGS)
         if fail_on_suspicious:
             check.append("--fail-on-suspicious")
         ok = subprocess.run(check, input=run.stdout, capture_output=True, text=True, cwd=ROOT)
@@ -243,7 +253,7 @@ class RationalGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(*args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", "rational_2",
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", "rational_2",
                      "--format", "binary32", "--summary", os.path.join(d, "r.json"),
                      "--fail-on-suspicious", "--refrun"] + list(args),
                     capture_output=True, text=True)
@@ -392,7 +402,7 @@ class ExtendedGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, fmt, *args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", kernel,
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", kernel,
                      "--format", fmt, "--summary", os.path.join(d, kernel + ".json"),
                      "--fail-on-suspicious", "--interp"] + list(args),
                     capture_output=True, text=True)
@@ -453,7 +463,7 @@ sys.stdout.write("\\n".join(lines))
 
             def drive(name, change):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", "add_2_2",
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", "add_2_2",
                      "--format", "binary64", "--seed", "1", "--count", "1000",
                      "--summary", os.path.join(d, name + ".json"), "--fail-on-suspicious",
                      "--runner", name, runner(name, change)],
@@ -476,7 +486,7 @@ sys.stdout.write("\\n".join(lines))
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, count):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "api", "--kernel", kernel,
+                    CLAIMS_DRIVER + ["api"] + CLAIMS_ARGS + ["--kernel", kernel,
                      "--format", "binary64", "--seed", "1", "--count", str(count),
                      "--summary-dir", d, "--runner", "build", API_RUNNER],
                     capture_output=True, text=True)
@@ -501,8 +511,9 @@ sys.stdout.write("\\n".join(lines))
                     [CMAKE, "-DPYTHON=" + PY, "-DSOURCE_DIR=" + ROOT, "-DKERNEL=" + kernel,
                      "-DFORMAT=" + fmt, "-DRUNNER=interp", "-DEXHAUSTIVE=ON",
                      "-DRESTRICT=" + restrict,
-                     "-DSUMMARY=" + os.path.join(d, kernel + ".json"), "-DFAIL_ON_SUSPICIOUS=ON",
-                     "-P", os.path.join(TESTS, "crosscheck.cmake")],
+                     "-DSUMMARY=" + os.path.join(d, kernel + ".json"), "-DFAIL_ON_SUSPICIOUS=ON"]
+                    + ["-DCLAIMS=" + c for c in CLAIMS_ARGS[1:]]
+                    + ["-P", os.path.join(TESTS, "crosscheck.cmake")],
                     capture_output=True, text=True)
             bad = drive("mul_2_2", "fp:3:-3:2")
             self.assertNotEqual(bad.returncode, 0)
@@ -793,7 +804,7 @@ class FoldGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(fold, fmt, *args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", fold,
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", fold,
                      "--format", fmt, "--summary", os.path.join(d, fold + ".json"),
                      "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
                     capture_output=True, text=True)
@@ -857,7 +868,7 @@ class IntervalGuards(unittest.TestCase):
         self.assertEqual(len(CG.IV_MAKE_CELLS), 17)
         for kernel, tiny in (("interval_make_1", "fp:2:-2:1"), ("interval_make_2", "fp:2:-2:1"),
                              ("ball_from_interval_2", "fp:2:-2:1")):
-            with open(os.path.join(ROOT, "gen", "claims.json"), encoding="utf-8") as f:
+            with open(CLAIMS, encoding="utf-8") as f:
                 k = next(k for k in json.load(f)["kernels"] if k["name"] == kernel)
             two = kernel == "interval_make_2"
             good = pipeline(kernel, IV, *self.args)
@@ -999,7 +1010,7 @@ class IntervalGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, *args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", kernel,
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", kernel,
                      "--format", IV, "--summary", os.path.join(d, kernel + ".json"),
                      "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
                     capture_output=True, text=True)
@@ -1167,7 +1178,7 @@ class StageBGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(name, fmt, *args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", name,
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", name,
                      "--format", fmt, "--summary", os.path.join(d, name + ".json"),
                      "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
                     capture_output=True, text=True)
@@ -1177,6 +1188,262 @@ class StageBGuards(unittest.TestCase):
             bad = drive("scale_1", self.toy, "--count", "12", "--max-length", "24")
             self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
             self.assertIn("did not check what it set out to", bad.stdout)
+
+
+# The kernels of the ball vectors and of the accumulator (crosscheck_guards.py, bv_problems):
+# random runs of the interpreter on toy formats of tests/CMakeLists.txt.
+BV_ARGS = ("--seed", "0", "--count", "400")
+
+
+class BallVectorKernelGuards(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.runs = {}
+        for kernel, fmt in (("bv_mul_pow2_radius", "fp:4:-4:2"), ("bv_add_radius_2", "fp:3:-5:3"),
+                            ("bv_mul_pow2_step_1", "fp:7:-14:6"), ("bv_conv_finish", "fp:10:-27:9"),
+                            ("bv_make_finish", "fp:11:-29:10"), ("acc_add_2", "fp:3:-2:0"),
+                            ("acc_radius_1", "fp:3:-2:0"), ("neg_1", "fp:11:-30:10"),
+                            ("conv_radius", "fp:3:-4:4")):
+            cls.runs[kernel] = (pipeline(kernel, fmt, *BV_ARGS), fmt)
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def without(self, kernel, entry, name):
+        """The good run of KERNEL with the count NAME of entry ENTRY taken out."""
+        s, fmt = self.runs[kernel]
+        s = copy.deepcopy(s)
+        for k in s["keys"]:
+            k["stats"]["entries"][entry]["counts"].pop(name, None)
+        return s, fmt
+
+    def test_good_runs_pass(self):
+        for kernel, (s, fmt) in self.runs.items():
+            self.passes(s, kernel, fmt, *BV_ARGS)
+
+    # A copy or a negation is exact on every operand: no inexact case is asked of it.
+    def test_identity_rounded_exact_only(self):
+        s, fmt = self.runs["neg_1"]
+        counts = {}
+        for k in s["keys"]:
+            for name, n in k["stats"]["entries"][0]["counts"].items():
+                counts[name] = counts.get(name, 0) + n
+        self.assertEqual(set(counts), {"exact"})
+        self.passes(s, "neg_1", fmt, *BV_ARGS)
+
+    def test_radius_without_a_class(self):
+        for entry, name in ((0, "exact_when holds"), (0, "exact_when fails: ex true"),
+                            (0, "exact_when fails: rx*c = 0 or |rx*c| > eta/(2*u)"),
+                            (1, "ex true: nothing claimed"), (0, "output +inf"),
+                            (1, "output finite, at least the stated value")):
+            s, fmt = self.without("bv_mul_pow2_radius", entry, name)
+            self.fails(s, "bv_mul_pow2_radius", fmt, *BV_ARGS, reason='saw no case of "%s"' % name)
+
+    # conv_radius's claim is of finite results (the ruling of 2026-11-21): +inf and a NaN pass and
+    # are counted, and the finite results must be at least three quarters of those judged.
+    def test_conv_radius_finite_results_the_great_majority(self):
+        import crosscheck_guards as CG
+        s, fmt = self.runs["conv_radius"]
+        counts = {}
+        for k in s["keys"]:
+            for name, n in k["stats"]["entries"][0]["counts"].items():
+                counts[name] = counts.get(name, 0) + n
+        nonfinite = counts.get(CG.BV_UP_NONFINITE, 0)
+        finite = counts.get(CG.BV_UP_FINITE, 0)
+        self.assertGreater(nonfinite, 0, counts)
+        self.assertGreater(counts.get("output a NaN", 0), 0, counts)
+        self.assertGreaterEqual(4 * finite, 3 * (finite + nonfinite), counts)
+        self.passes(s, "conv_radius", fmt, *BV_ARGS)
+        # The same run with most of its finite results taken away, then with one too few.
+        for keep in (finite // 4, 3 * nonfinite - 1):
+            bad = copy.deepcopy(s)
+            left = keep
+            for k in bad["keys"]:
+                c = k["stats"]["entries"][0]["counts"]
+                if CG.BV_UP_FINITE in c:
+                    c[CG.BV_UP_FINITE] = min(c[CG.BV_UP_FINITE], left)
+                    left -= c[CG.BV_UP_FINITE]
+                    if not c[CG.BV_UP_FINITE]:
+                        del c[CG.BV_UP_FINITE]
+            self.fails(bad, "conv_radius", fmt, *BV_ARGS, reason="is of finite results")
+        # At exactly three quarters it passes.
+        ok = copy.deepcopy(s)
+        left = 3 * nonfinite
+        for k in ok["keys"]:
+            c = k["stats"]["entries"][0]["counts"]
+            if CG.BV_UP_FINITE in c:
+                c[CG.BV_UP_FINITE] = min(c[CG.BV_UP_FINITE], left)
+                left -= c[CG.BV_UP_FINITE]
+                if not c[CG.BV_UP_FINITE]:
+                    del c[CG.BV_UP_FINITE]
+        self.passes(ok, "conv_radius", fmt, *BV_ARGS)
+
+    def test_radius_without_a_stratum(self):
+        for stratum in ("atnormal", "huge", "zeros", "mixed"):
+            s, fmt = self.runs["bv_add_radius_2"]
+            s = copy.deepcopy(s)
+            d = s["coverage"][0]["desc"]
+            d["strata"] = ",".join(x for x in d["strata"].split(",") if x != stratum)
+            s["keys"] = [k for k in s["keys"] if k["tag"] != stratum]
+            self.fails(s, "bv_add_radius_2", fmt, *BV_ARGS, reason="without %s" % stratum)
+
+    def test_step_without_a_false_mask(self):
+        s, fmt = self.without("bv_mul_pow2_step_1", 1, "exact_flag false")
+        self.fails(s, "bv_mul_pow2_step_1", fmt, *BV_ARGS, reason='saw no case of "exact_flag false"')
+
+    def test_finish_without_a_cell(self):
+        for kernel, name in (("bv_conv_finish", "a mask false: okg"), ("bv_conv_finish", "value: NaN"),
+                             ("bv_conv_finish", "value: -inf"), ("bv_conv_finish", "value zero"),
+                             ("bv_make_finish", "value finite, below zero"),
+                             ("bv_make_finish", "a mask false: ok")):
+            s, fmt = self.without(kernel, 0, name)
+            self.fails(s, kernel, fmt, *BV_ARGS, reason='saw no case of "%s"' % name)
+
+    def test_accumulator_without_a_class(self):
+        for entry, name in ((2, "inexact"), (2, "exact"),
+                            (2, "the leading limb of its output is not finite: nothing claimed")):
+            s, fmt = self.without("acc_add_2", entry, name)
+            self.fails(s, "acc_add_2", fmt, *BV_ARGS, reason='saw no case of "%s"' % name)
+        s, fmt = self.without("acc_radius_1", 0, "ok false: nothing claimed")
+        self.fails(s, "acc_radius_1", fmt, *BV_ARGS, reason='saw no case of "ok false: nothing claimed"')
+        s, fmt = self.without("acc_radius_1", 1, "holds")
+        self.fails(s, "acc_radius_1", fmt, *BV_ARGS, reason='saw no case of "holds"')
+
+
+class BallVectorFoldGuards(unittest.TestCase):
+    """The folds of the ball vectors: both results, an operand that is the whole space, V4 applying
+    (with no entry too, and the format's scope and finite_from said where it does not), the
+    conditions of exactness each failing and all holding, every class of a radius given of a
+    constructor, the lengths 0 and 1 on each side of a product and count_when failing in a toy
+    format, the strata of the shape, a stream in place and its arrays."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.args = ("--seed", "0", "--count", "300", "--max-length", "24")
+        cls.cargs = ("--seed", "0", "--count", "200", "--max-length", "64")
+        cls.iargs = cls.args + ("--inplace",)
+        cls.add = pipeline("bv_add_2", "fp:4:-7:2", *cls.args)
+        cls.add_in = pipeline("bv_add_2", "fp:4:-7:2", *cls.iargs)
+        cls.pow2 = pipeline("bv_mul_pow2_1", "binary64", *cls.args)
+        cls.make = pipeline("bv_make_2", "binary64", *cls.args)
+        cls.conv = pipeline("bv_conv_2", "fp:5:-12:5", *cls.cargs)
+        cls.narrow = pipeline("bv_scale_1", "fp:4:-4:-1", *cls.args)
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        out = self.passes(self.add, "bv_add_2", "fp:4:-7:2", *self.args)
+        self.assertIn("ball vector: ", out)
+        self.passes(self.add_in, "bv_add_2", "fp:4:-7:2", *self.iargs)
+        self.passes(self.pow2, "bv_mul_pow2_1", "binary64", *self.args)
+        self.passes(self.make, "bv_make_2", "binary64", *self.args)
+        self.passes(self.conv, "bv_conv_2", "fp:5:-12:5", *self.cargs)
+        self.passes(self.narrow, "bv_scale_1", "fp:4:-4:-1", *self.args)
+        for name, fmt, L in (("bv_neg_1", "fp:2:-2:1", "2"), ("bv_make_1", "fp:2:-2:1", "1"),
+                             ("bv_add_1", "fp:2:-1:0", "1")):
+            e = pipeline(name, fmt, "--exhaustive", "--max-length", L)
+            self.passes(e, name, fmt, "--exhaustive", "--max-length", L)
+
+    def test_a_ball_vector_without_a_class(self):
+        for name in ("result: whole space", "result: finite ball vector",
+                     "operands: a whole-space operand", "V4 applies", "V4 applies, no entry",
+                     "length 0", "order: lanes, W = 3"):
+            s = edited(self.add, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "bv_add_2", "fp:4:-7:2", *self.args,
+                       reason=name.split(": ", 1)[1] if name.startswith("order") else
+                       "length 0" if name == "length 0" else 'saw no case "%s"' % name)
+
+    def test_exactness_without_a_condition(self):
+        for name in ("exact: every condition holds",
+                     "exact_when fails: rx*c = 0 or |rx*c| > eta/(2*u)",
+                     "exact_when fails: x*c = 0 or |x*c| > eta/(2*u)"):
+            s = edited(self.pow2, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "bv_mul_pow2_1", "binary64", *self.args, reason='saw no case "%s"' % name)
+
+    def test_a_constructor_without_a_radius(self):
+        for name in ("given radius negative, centers finite", "given radius NaN, centers finite",
+                     "given radius -0, centers finite", "given radius -inf, centers finite",
+                     "given radius positive, centers not all finite"):
+            s = edited(self.make, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "bv_make_2", "binary64", *self.args, reason='saw no case "%s"' % name)
+
+    def test_a_product_without_a_class(self):
+        # The condition on the count as the claims judged against write it (restated on
+        # 2026-11-21: n*(unit(mul_2_2)+eta/(2*u)) <= 1/16, which was n*(unit(mul_2_2)+eta)).
+        with open(CLAIMS, encoding="utf-8") as f:
+            fold = [x for x in json.load(f)["folds"] if x["name"] == "bv_conv_2"][0]
+        cw = fold["ensures"][0]["count_when"]
+        self.assertEqual(len(cw), 1, cw)
+        for name in ("n_x = 0", "n_y = 1", "n_x != n_y",
+                     "V3: the radius at least conv_radius's stated value",
+                     "count_when fails: %s <= %s" % (cw[0]["le"], cw[0]["than"]), "V4 applies"):
+            s = edited(self.conv, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "bv_conv_2", "fp:5:-12:5", *self.cargs, reason='saw no case "%s"' % name)
+
+    def test_v4_outside_its_formats_or_below_finite_from(self):
+        name = "V4 not claimed: a format of no statement (e_max <= p, or eta above binary_float's)"
+        s = edited(self.narrow, 0, lambda e: e["counts"].pop(name, None))
+        self.fails(s, "bv_scale_1", "fp:4:-4:-1", *self.args, reason='saw no case "%s"' % name)
+        # Below finite_from (precision 1, where the interpreter refuses bv_add_1's constants): the
+        # summary of a run at precision 2 read as one of precision 1 must show the count.
+        s = pipeline("bv_add_1", "fp:2:-2:1", *self.args)
+        self.passes(s, "bv_add_1", "fp:2:-2:1", *self.args)
+        for k in s["keys"]:
+            k["stats"]["p"] = 1
+        self.fails(s, "bv_add_1", "fp:2:-2:1", *self.args, reason="below finite_from")
+
+    def test_in_place(self):
+        s = edited(self.add_in, 0, lambda e: e["counts"].pop("in place: array 1", None))
+        self.fails(s, "bv_add_2", "fp:4:-7:2", *self.iargs, reason='saw no case "in place: array 1"')
+        self.fails(self.add, "bv_add_2", "fp:4:-7:2", *self.iargs,
+                   reason="the stream is not in place, though --inplace was asked")
+        self.fails(self.add_in, "bv_add_2", "fp:4:-7:2", *self.args,
+                   reason="the stream is in place, though --inplace was not asked")
+
+    def test_strata_of_the_shape_not_promised(self):
+        s = pipeline("bv_add_2", "fp:4:-7:2", *self.args, "--strata",
+                     "one,wide,zeroradius,whole,overflow,threshold,cancel,underflow,tail")
+        self.fails(s, "bv_add_2", "fp:4:-7:2", *self.args, reason="without zeros")
+        s = pipeline("bv_mul_pow2_1", "binary64", *self.args, "--strata",
+                     "one,wide,zeroradius,whole,overflow,threshold,cancel,underflow,zeros")
+        self.fails(s, "bv_mul_pow2_1", "binary64", *self.args, reason="without exact")
+
+
+class MapInPlaceGuards(unittest.TestCase):
+    """A map's stream in place: every array of the limbs of the array written seen in place, and
+    the stream in place exactly when --inplace was asked."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.args = ("--seed", "0", "--count", "120", "--max-length", "24")
+        cls.iargs = cls.args + ("--inplace",)
+        cls.map = pipeline("add_1", "fp:5:-12:6", *cls.iargs)
+
+    def test_in_place(self):
+        status, out = guards(self.map, "add_1", "fp:5:-12:6", *self.iargs)
+        self.assertEqual(status, 0, out)
+        s = edited(self.map, 0, lambda e: e["counts"].pop("in place: array 0", None))
+        status, out = guards(s, "add_1", "fp:5:-12:6", *self.iargs)
+        self.assertEqual(status, 1, out)
+        self.assertIn("saw no request in place of array 0", out)
+        status, out = guards(self.map, "add_1", "fp:5:-12:6", *self.args)
+        self.assertEqual(status, 1, out)
+        self.assertIn("the stream is in place, though --inplace was not asked", out)
 
 
 class LaneReports(unittest.TestCase):
@@ -1267,6 +1534,191 @@ class LaneReports(unittest.TestCase):
                                     "/p", assignments], capture_output=True, text=True)
                 self.assertEqual(r.returncode, 2, assignments)
                 self.assertIn("ASSIGNMENTS is permuted, consecutive or both", r.stderr)
+
+
+class LaneFaultVerdicts(unittest.TestCase):
+    """tests/lanes/lane_fault.py takes the oracle's verdict on an output from the summary of its
+    check, and tells it from a refusal of the claims: the check exits with 1 in both cases, and a
+    refusal is an error of the test, never the failure the planted fault must cause."""
+
+    def test_a_refusal_is_not_a_verdict(self):
+        sys.path.insert(0, os.path.join(TESTS, "lanes"))
+        import lane_fault as LF
+        oracle = [PY, os.path.join(ROOT, "oracle", "kairn-oracle")]
+        with tempfile.TemporaryDirectory() as d:
+            gen = subprocess.run(oracle + ["gen", "mul_2_2_full", "binary64", "--seed", "0",
+                                           "--count", "200"] + CLAIMS_ARGS,
+                                 capture_output=True, text=True, cwd=ROOT)
+            self.assertEqual(gen.returncode, 0, gen.stderr)
+            done = subprocess.run([PY, os.path.join(ROOT, "gen", "kairn-gen"), "interp"],
+                                  input=gen.stdout, capture_output=True, text=True, cwd=ROOT)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            good = done.stdout
+            # A wrong output: one result's first limb negated.
+            lines = good.splitlines(True)
+            j = next(i for i, ln in enumerate(lines) if " -> 0x1" in ln)
+            head, _, tail = lines[j].partition(" -> ")
+            lines[j] = head + " -> -" + tail
+            wrong = "".join(lines)
+            # Claims the oracle refuses: an entry of another kernel of an unknown kind.
+            with open(CLAIMS, encoding="utf-8") as f:
+                claims = json.load(f)
+            k = next(k for k in claims["kernels"] if k["name"] == "two_sum")
+            k["ensures"][0]["kind"] = "not_a_kind"
+            refused = os.path.join(d, "claims-refused.json")
+            with open(refused, "w", encoding="utf-8") as f:
+                json.dump(claims, f)
+
+            def check(name, claims_args, output):
+                js = os.path.join(d, name + ".json")
+                r = subprocess.run(oracle + ["check", "--quiet", "--json", js] + claims_args,
+                                   input=output, capture_output=True, text=True, cwd=ROOT)
+                return r.returncode, LF.oracle_outcome(js)
+
+            self.assertEqual(check("pass", CLAIMS_ARGS, good), (0, ("passed", 0)))
+            self.assertEqual(check("verdict", CLAIMS_ARGS, wrong), (1, ("failed", 1)))
+            for name, output in (("refused", good), ("refused-wrong", wrong)):
+                status, outcome = check(name, ["--claims", refused], output)
+                self.assertEqual(status, 1, name)
+                self.assertEqual(outcome[0], "refused", name)
+                self.assertIn("two_sum", outcome[1][0])
+                self.assertIn("the oracle refused the claims", LF.refusal(outcome))
+            self.assertIsNone(LF.refusal(("failed", 1)))
+            self.assertEqual(LF.oracle_outcome(os.path.join(d, "none.json"))[0], "unread")
+
+
+class EnclosureGuards(unittest.TestCase):
+    """The enclosure interface of stage B2: the predicates and comparisons of an interval and a ball
+    (the relation both ways, every answer, every class of each set and point, the special states,
+    exact_when both ways), the set operations of a ball (every pair of states, the operands as they
+    are, the finite operands placed every way, in a random run the zeros of different signs), the
+    split, the conversions of two limbs (finite_when both ways and an infinite radius, exact_when
+    of each side, bounded_when both ways, the center of the ball from an interval), the fractions of
+    their bounds, and the strata of their families."""
+
+    KERNELS = ("interval_less_2", "interval_contains_1", "interval_rel_interior_1",
+               "interval_empty_2", "ball_less_1", "ball_contains_point_2", "ball_contains_ball_2",
+               "ball_positive_1", "ball_hull_1", "ball_intersection_2", "ball_split_2",
+               "interval_mid_rad_2", "interval_to_ball_2", "interval_split_2",
+               "ball_to_interval_2", "ball_from_interval_1")
+
+    @classmethod
+    def setUpClass(cls):
+        # The quick tier's count of these kernels (KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES): with 600
+        # the table of the constructors of ball_from_interval_1 misses a cell in this format.
+        cls.args = ("--seed", "0", "--count", "2000")
+        cls.runs = {k: pipeline(k, IV, *cls.args) for k in cls.KERNELS}
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        for k, s in self.runs.items():
+            self.passes(s, k, IV, *self.args)
+        for k, fmt in (("interval_less_1", "fp:2:-2:1"), ("ball_hull_1", "fp:2:-2:1"),
+                       ("ball_from_interval_1", "fp:2:-2:1")):
+            s = pipeline(k, fmt, "--exhaustive")
+            self.passes(s, k, fmt, "--exhaustive")
+
+    def test_every_class_is_asked_for(self):
+        # Each class the guards ask of an entry, taken out of a good run's summary, fails the run,
+        # with that class as the reason.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        asked = 0
+        for name, good in self.runs.items():
+            with open(good["claims"], encoding="utf-8") as f:
+                kernel = next(k for k in json.load(f)["kernels"] if k["name"] == name)
+            for j, e in enumerate(kernel["ensures"]):
+                for need in CG.enc_needs(kernel, e, None) + CG.iv_needs(kernel, e, None):
+                    s = edited(good, j, lambda x: x["counts"].pop(need, None))
+                    self.fails(s, name, IV, *self.args, reason='saw no case of "%s"' % need)
+                    asked += 1
+        self.assertGreater(asked, 200)
+
+    def test_zero_signs_asked_of_a_random_run_only(self):
+        # An enumeration has one zero: no whole lines of zeros of different signs there.
+        s = pipeline("ball_hull_1", "fp:2:-2:1", "--exhaustive")
+        self.passes(s, "ball_hull_1", "fp:2:-2:1", "--exhaustive")
+        name = "both the whole line, centers zeros of different signs in the line"
+        s = edited(self.runs["ball_hull_1"], 0, lambda e: e["counts"].pop(name, None))
+        self.fails(s, "ball_hull_1", IV, *self.args, reason=name)
+
+    def test_strata_of_the_families_not_promised(self):
+        for k, strata, missing in (
+                ("ball_less_1", M2_COMMON + ",ballstates,boundary,near,huge,points", "wide"),
+                ("interval_less_2", M2_COMMON + ",special,nearzero,touch,equal,nested,disjoint",
+                 "tails"),
+                ("ball_hull_1", M2_COMMON + ",ballstates,disjoint,touch,nested,overlap,wide,point",
+                 "bothspecial"),
+                ("interval_mid_rad_2", M2_COMMON + ",special,point,step,oddeta,top,beyond",
+                 "threshold"),
+                ("ball_to_interval_2", M2_COMMON + ",ballstates,radii,cross,beyond,exactend,"
+                 "threshold", "zeroend")):
+            s = pipeline(k, IV, *self.args, "--strata", strata)
+            self.fails(s, k, IV, *self.args, reason="without %s, which its family" % missing)
+
+    def test_an_answer_not_given_far_from_the_boundary(self):
+        # The band of the answers not given held to architecture.md's 2e + 4G: an answer left five
+        # units of 2e + G from the boundary fails the run; one of three units passes.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        for k in ("ball_contains_ball_2", "ball_contains_point_2"):
+            good = self.runs[k]
+            s = edited(good, 0, lambda e: e["maxima"].update({CG.ENC_BAND_UNITS: [["5", "1"], ""]}))
+            self.fails(s, k, IV, *self.args, reason="beyond the 4 of architecture.md's band")
+            s = edited(good, 0, lambda e: e["maxima"].update({CG.ENC_BAND_UNITS: [["3", "1"], ""]}))
+            self.passes(s, k, IV, *self.args)
+
+    def test_the_formats_of_the_statements(self):
+        # finite_when and bounded_when of two limbs in a format of no statement (q_max < 1): not
+        # claimed (the owner's ruling of 2026-11-21), and the guards ask for the judge's count of
+        # that in place of the conditions'.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        for k, name in (("interval_mid_rad_2", CG.IV_FW_RANGE),
+                        ("interval_to_ball_2", CG.IV_FW_RANGE),
+                        ("ball_to_interval_2", CG.IV_I5_RANGE)):
+            s = pipeline(k, "fp:3:-2:-1", "--exhaustive")
+            self.passes(s, k, "fp:3:-2:-1", "--exhaustive")
+            bad = edited(s, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(bad, k, "fp:3:-2:-1", "--exhaustive", reason='saw no case of "%s"' % name)
+
+    def test_the_bounds_far_from_reached(self):
+        name = "lower: distance from the range bound / (rel*|bound| + abs)"
+        s = edited(self.runs["ball_to_interval_2"], 0, lambda e: e["maxima"].update(
+            {name: [["1", "5"], ""]}))
+        self.fails(s, "ball_to_interval_2", IV, *self.args, reason="below 1/4")
+        name = "|center - midpoint| / (rel*|midpoint| + abs)"
+        s = edited(self.runs["ball_from_interval_1"], 0, lambda e: e["maxima"].update(
+            {name: [["1", "5"], ""]}))
+        self.fails(s, "ball_from_interval_1", IV, *self.args, reason="below 1/4")
+        # The center of two limbs has no floor (its bound is not claimed tight).
+        s = edited(self.runs["interval_mid_rad_2"], 0, lambda e: e["maxima"].update(
+            {name: [["1", "100"], ""]}))
+        self.passes(s, "interval_mid_rad_2", IV, *self.args)
+
+    def test_the_one_process_driver(self):
+        with tempfile.TemporaryDirectory() as d:
+            def drive(kernel, *args):
+                return subprocess.run(
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS
+                    + ["--kernel", kernel, "--format", IV, "--summary",
+                       os.path.join(d, kernel + ".json"), "--fail-on-suspicious", "--interp",
+                       "--seed", "0"] + list(args),
+                    capture_output=True, text=True)
+            good = drive("ball_intersection_1", "--count", "600")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            bad = drive("ball_intersection_1", "--count", "12")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("did not check what it set out to", bad.stdout)
 
 
 if __name__ == "__main__":

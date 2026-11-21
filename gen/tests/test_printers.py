@@ -48,8 +48,11 @@ def functions(text, fixups=False):
             m = re.match(r'KAIRN_GEN_COLD (constexpr )?result<(double|float), [0-9]+> (\w+)\(', line)
             key = (m.group(3), m.group(2)) if m else None
         else:
-            m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((double|float) ', line) or \
-                re.match(r'inline (constexpr )?void (\w+)\((double|float) ', line)
+            # The first parameter may be an input the computation does not need, [[maybe_unused]]
+            # (bv_neg_radius; stage B2: the predicates of an interval that read one of its bounds).
+            m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ',
+                         line) or \
+                re.match(r'inline (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ', line)
             key = (m.group(2), m.group(3)) if m else None
         if m:
             current = out.setdefault(key, {'constexpr': bool(m.group(1)), 'lines': [], 'head': line})
@@ -125,6 +128,18 @@ BRANCHED.update(interval_make_1=('v',), ball_from_interval_2=('v', 'f'))
 BRANCHED.update({k: ('ne',) for k in ('interval_sub_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1')})
 BRANCHED.update(interval_make_2=('v',), interval_intersection_1=('ok',), interval_intersection_2=('ok',),
                 mul_ext_2_2=('nz', 'fo'))
+# Stage B2: the set operations of a ball, the composition when both operands are not empty (the
+# hull: qx, qy) or not the whole line and the intersection not empty (the intersection: nx, ny, ob),
+# and the ball sums of a finite ball (the split: fr). The predicates and comparisons return masks, which are no selects.
+BRANCHED.update(ball_hull_1=('qx', 'qy'), ball_intersection_1=('nx', 'ny', 'ob'), ball_split_1=('fr',),
+                ball_split_2=('fr',))
+# And of two limbs: the midpoint and radius and the conversion of a ball to an interval on the test of
+# emptiness (ne), the hull and the intersection of two limbs as the hull and the first listing of the
+# intersection of one limb (nx, ny); and the ball from an interval of one limb on the test of
+# interval_make_1 (v). The conversion of an interval to a ball and its split return values that are
+# not selects of their own listings on one mask.
+BRANCHED.update(interval_mid_rad_2=('ne',), ball_to_interval_2=('ne',), ball_hull_2=('qx', 'qy'),
+                ball_intersection_2=('nx', 'ny'), ball_from_interval_1=('v',))
 
 
 class Cpp(unittest.TestCase):
@@ -207,6 +222,13 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR |= {'dot_step_1', 'dot_step_2'}
     # The steps of the maps with the products of two limbs: mul_2_2 and mul_2_1.
     NOT_CONSTEXPR |= {'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1', 'scale_step_2'}
+    # The accumulator: the fma of the step of dot_1 and of the magnitudes (acc_mul_1), dot_step_2
+    # (acc_mul_2), and the fma of the radius (acc_radius_k).
+    NOT_CONSTEXPR |= {'acc_mul_1', 'acc_mul_2', 'acc_radius_1', 'acc_radius_2'}
+    # BallVector: the fmas of the radius kernels (bv_add_radius_k, bv_scale_radius_k).
+    NOT_CONSTEXPR |= {'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2'}
+    # The product of two BallVectors: the fmas of conv_radius.
+    NOT_CONSTEXPR |= {'conv_radius'}
     # The full kernels are constexpr where their cores are: their fix-up turns t into an infinity
     # with times_inf, which is no fused operation. Those of the products of two limbs are not, nor
     # are the full Ball kernels but the scalings by a power of two. The constructors are.
@@ -220,6 +242,13 @@ class Cpp(unittest.TestCase):
                       'sub_down_2_2', 'sub_up_2_2', 'mul_dir_2_2', 'interval_add_2'}
     # Stage B1: the difference of intervals of two limbs, and the product, through mul_dir_2_2.
     NOT_CONSTEXPR |= {'interval_sub_2', 'mul_ext_2_2', 'interval_mul_2'}
+    # Stage B2: the certain predicates and comparisons of a ball of two limbs (add_ball_2_2), and the
+    # split of a ball (ball_add_1_full, ball_add_2_full).
+    NOT_CONSTEXPR |= {'ball_contains_point_2', 'ball_contains_ball_2', 'ball_less_2', 'ball_less_equal_2',
+                      'ball_equal_2', 'ball_split_1', 'ball_split_2'}
+    # And the conversions of two limbs (add_ball_2_2, the directed sums of two limbs), with the hull and
+    # the intersection of balls of two limbs that call them.
+    NOT_CONSTEXPR |= {'ball_hull_2', 'ball_intersection_2', 'ball_to_interval_2', 'interval_mid_rad_2', 'interval_to_ball_2'}
     # The kernels whose only fused operations are prod, constexpr by the rule of the product
     # (milestone2.md, "The two executions of a product"); in Milestone 2 the ball made from an
     # interval, which halves its bounds and doubles the halves with prod.
@@ -232,6 +261,15 @@ class Cpp(unittest.TestCase):
     # Stage B1: the midpoint and radius of an interval, which halves its bounds with prod, and the
     # conversion to a ball and the split that call it.
     PRODUCT_RULE |= {'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'}
+    # The steps and the radius of the scaling of a BallVector by a power of two, whose products are
+    # those of mul_pow2_step_1, mul_pow2_2 and ball_mul_pow2_k.
+    PRODUCT_RULE |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
+    # Stage B2: the hull and the intersection of balls of one limb, through interval_to_ball_1.
+    PRODUCT_RULE |= {'ball_hull_1', 'ball_intersection_1'}
+    # And the ball from an interval of one limb, interval_make_1 then interval_to_ball_1; and the split
+    # of an interval of two limbs, whose midpoint halves the bounds by mul_pow2_2 (it does not compute
+    # the radius of interval_mid_rad_2, whose add_ball_2_2 has an FMA).
+    PRODUCT_RULE |= {'ball_from_interval_1', 'interval_split_2'}
     # The kernels that are ordinary inline functions, not forced inline (ordinary_inline:).
     ORDINARY_INLINE = {'interval_mul_2'}
 
@@ -728,7 +766,8 @@ class Rocq(unittest.TestCase):
                 # it says what normalized with an exact error says. An exact_when adds a conjunct
                 # after its claim's own (ball_mul_pow2_k).
                 printed = [e for e in k.ensures if e['kind'] != 'represents']
-                printed += [e for e in printed if 'exact_when' in e]
+                # exact_flag one more, the mask of those conditions (bv_mul_pow2_step_k).
+                printed += [e for e in printed if 'exact_when' in e] + [e for e in printed if 'exact_flag' in e]
                 # outward (Milestone 2) says its side and its distance: two conjuncts before the exact.
                 printed += [e for e in k.ensures if e['kind'] == 'outward']
                 self.assertEqual(len(conjuncts), len(want) + len(printed), name)
@@ -743,9 +782,16 @@ class Rocq(unittest.TestCase):
         # axpy_entry_step_1, 7 limbs in 7 kernels. With the folds of maxima: r of norm_combine,
         # norm_step_1 and norm_step_2, 3 limbs in 3 kernels. With Milestone 2's real-model kernels of
         # the intervals: d and v of mul_dir_1, d of add_ball_2_2 and of mul_ball_2_2 (the bounds of two
-        # limbs are normalized), 4 limbs in 3 kernels.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3)
+        # limbs are normalized), 4 limbs in 3 kernels. With the accumulator: t and b of acc_add_1,
+        # acc_mul_1 and acc_merge_1, b of acc_add_2, acc_mul_2 and acc_merge_2, and r of acc_radius_1
+        # and acc_radius_2 (claimed under the mask), 11 limbs in 8 kernels. With BallVector: rz of the
+        # four radius kernels, 4 limbs in 4 kernels; and z of bv_center_entry_1 and rz of
+        # bv_make_radius, the kernels of the constructor (bv_center_2 is normalized); and z of neg_1
+        # and rz of bv_neg_radius, of the negation; and z of bv_mul_pow2_step_1 and rz of
+        # bv_mul_pow2_radius, of the scaling by a power of two (bv_mul_pow2_step_2 is normalized); and rz
+        # of conv_radius, of the product of two BallVectors.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -891,9 +937,59 @@ class Rocq(unittest.TestCase):
     # proved: Statements.v prints that one word, and Audit.v lists its theorem; then the seven
     # bounds of two limbs: seven words more, and their theorems (Directed2.v). The files are
     # the regeneration of the merged descriptions.
-    DIGESTS = {'Model.v': '87fb181c8e6c93c1f4464b97b919af311fa8a00a9a9d941c3db262f8489375ee',
-               'Statements.v': '3e7e7c5148914c45a32bc5a285f4f552889434d0b714971783fe1f7521308fbc',
-               'Audit.v': '655b9f566eb3b51ca85aaffbe68da179ac2e76de08861bca21e0695ec5dcf129'}
+    # On another line, the eight kernels of the accumulator (unverified): every earlier definition
+    # and statement the same, byte for byte, add_2_2, mul_2_2 and dot_step_2, which they call,
+    # printed earlier, before them; their constants new (gen/constant_names.json); Audit.v lists
+    # the same theorems, add_2_2_correct and mul_2_2_correct earlier. Merged here: the
+    # regeneration of the merged descriptions.
+    # Then the six state kernels of the accumulator were proved (AccKernels.v): in Statements.v
+    # only the comments above their six statements changed, and Audit.v lists their six
+    # theorems, every earlier line kept, in its order; Model.v is the same. Then its two radii:
+    # two comments more, and two theorems.
+    # On another line, the four radius kernels of BallVector (unverified): their definitions and
+    # statements were added, every earlier line kept; their constants are those of ball_add_k and
+    # ball_scale_k, under the names they had; Audit.v is the same. Merged here: the regeneration of
+    # the merged descriptions.
+    # Then the four radius kernels were proved (BvRadius.v): in Statements.v only the comments above
+    # their four statements changed, and Audit.v lists their four theorems, every earlier line kept,
+    # in its order; Model.v is the same. Then the six ball vectors were proved (BvReal.v): Audit.v
+    # lists their six theorems among those of the folds, every earlier line kept, in its order;
+    # Model.v and Statements.v are the same.
+    # On the line of the ball vectors, after the four radius kernels: the three kernels of the
+    # constructor of BallVector with a real-model statement (bv_center_entry_1, bv_center_2,
+    # bv_make_radius; unverified): their definitions and statements were added, every earlier line
+    # kept; no constant; Audit.v is the same. Then neg_1 and bv_neg_radius, of the negation of a
+    # BallVector (unverified), in the same way. Then the two steps and the radius of the scaling of a
+    # BallVector by a power of two (unverified): their definitions and statements were added, every
+    # earlier line kept; their one constant is N of ball_mul_pow2_k, under the name it had; Audit.v is
+    # the same. Then conv_radius, the radius of the product of two BallVectors (unverified): its
+    # definition and statement were added, every earlier line kept; its two constants are new
+    # (gen/constant_names.json); Audit.v is the same. Merged here: the regeneration of the merged
+    # descriptions.
+    # Then the five kernels of the negation and of the constructor of BallVector with a real-model
+    # statement were proved, and the four folds (BvNegMake.v): in Statements.v only the comments above
+    # their five statements changed, and Audit.v lists their nine theorems, every earlier line kept, in
+    # its order; Model.v is the same. Then the three kernels of the scaling by a power of two and its
+    # two folds (BvPow2.v): three comments more, and five theorems. Then conv_radius and the two products
+    # of BallVectors (BvConv.v): one comment more, and three theorems.
+    # On another line, from the joined tree of stage B1 (a35501e): the predicates and comparisons of
+    # an interval of stage B2, which have no real-model
+    # statement, changed the order of the three files only: le_2_2, which interval_contains_2
+    # calls, is printed before lt_2_2 (callees before callers), every block the same, byte for byte.
+    # Then the predicates, comparisons and set operations of a ball of stage B2, which have no
+    # real-model statement either: the order of the three files only, every block the same. Then
+    # the conversions of two limbs of stage B2: the order again, every block the same. Merged here:
+    # the regeneration of the merged descriptions.
+    # Then the proofs of the ball vectors above met them in a merge: the regeneration of the merged
+    # descriptions (Model.v that of this line, Statements.v and Audit.v those of the ball vectors
+    # in the order of this line).
+    # On the line of the ball vectors, meanwhile: Then the convolutions named the
+    # file of the theorems of the three statements of conv_terms (terms_theorem): Audit.v checks them
+    # after those of the folds, every earlier line kept; Model.v and Statements.v are the same.
+    # Merged here: the regeneration of the merged descriptions.
+    DIGESTS = {'Model.v': '784bec01ec24ef2bdcd764c46228f787286560359461c5f976f90a80a6d2efc8',
+               'Statements.v': '953938a44e69028d7710b7f912245506fe398aac44e6f156cecf98a36d72e05a',
+               'Audit.v': '6f20785e7951c4c074f8e38bec683fded7ad979e875eb07c71005a3eaa604d58'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -927,8 +1023,10 @@ class Rocq(unittest.TestCase):
             finite[name] = k
         # 60; the nine of the folds' stage, the fifteen steps of the maps, the three of norm_upper_k;
         # and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and the
-        # seven bounds of two limbs.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8)
+        # seven bounds of two limbs; and the eight kernels of the accumulator; and the four radius
+        # kernels of BallVector; and the three of its constructor that have one; and the two of its
+        # negation; and the three of its scaling by a power of two; and conv_radius, of its product.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

@@ -58,13 +58,17 @@ KNOWN = {
                           "bounded_exactly", "zero_factor"},
     "set_bound": {"kind", "of", "side", "set", "balls", "tight"},
     "interval_set": {"kind", "lower", "upper", "set", "intervals"},
+    # The conversions of two limbs (architecture.md, "Claims of the enclosure interface: the
+    # conversions of two limbs"): finite_when of ball_of_interval, bounded_when (and the outward
+    # tight) of interval_of_ball with bounds of two limbs, rel, abs and smallest_radius of makes_ball
+    # from an interval.
     "ball_of_interval": {"kind", "center", "radius", "from", "special", "rel", "abs",
-                         "smallest_radius"},
-    "interval_of_ball": {"kind", "lower", "upper", "set", "balls", "tight"},
+                         "smallest_radius", "finite_when"},
+    "interval_of_ball": {"kind", "lower", "upper", "set", "balls", "tight", "bounded_when"},
     "splits": {"kind", "parts", "from"},
 }
 ADDED_FIELDS = {"bound": {"zero_factor"}, "rounded": {"zero_factor"},
-                "makes_ball": {"midpoint_when"}}
+                "makes_ball": {"midpoint_when", "rel", "abs", "smallest_radius"}}
 EXTENDED_ONLY = tuple(k for k in KNOWN if k != "outward")
 
 
@@ -559,7 +563,12 @@ def condition_text(text, op, k):
 
 
 def _const_field(entry, raw, field, where):
-    tree = parse_const(raw[field])
+    from .claims import ClaimsError
+    try:
+        tree = parse_const(raw[field])
+    except ClaimsError as ex:
+        # The reason names the kernel, the entry and the field.
+        raise _error("%s: %s: %s" % (where, field, ex))
     entry.consts[field] = (tree, str(raw[field]).strip())
 
 
@@ -772,21 +781,93 @@ def _read_ball_of_interval(e, kernel, raw, where):
     _const_field(e, raw, "abs", where)
     e.smallest_radius = _true_flag(raw, "smallest_radius", where)
     e.of = [e.center, e.radius]
+    # The conversions of two limbs: finite_when, [{"abs_le": BOUND, "exp": E}], BOUND an input of
+    # from, |BOUND| <= 2^(qmax + p + E); the radius (with ball, the ball) of a bounded interval is
+    # finite when every condition holds, and may be +inf (the whole line) otherwise.
+    # (Not e.finite_when, which extended.ExtPlan reads as the conditions of extends and encloses.)
+    e.radius_finite_when = None
+    if "finite_when" in raw:
+        e.radius_finite_when = _read_bound_conditions(raw["finite_when"], e.from_pair,
+                                                      where + ": finite_when")
+        if e.smallest_radius:
+            raise _error("%s: finite_when and smallest_radius together (the radius may be +inf, "
+                         "which is not the smallest)" % where)
+
+
+def _read_bound_conditions(lst, names, where):
+    """[(NAME, E)] of a list of conditions {"abs_le": NAME, "exp": E}, NAME one of names."""
+    if not isinstance(lst, list) or not lst:
+        raise _error("%s must be a nonempty list of conditions (absent when there is none)"
+                     % where)
+    out = []
+    for j, cond in enumerate(lst):
+        if (not isinstance(cond, dict) or set(cond) != {"abs_le", "exp"}
+                or cond["abs_le"] not in names or not isinstance(cond["exp"], int)
+                or isinstance(cond["exp"], bool)):
+            raise _error("%s[%d] must be {\"abs_le\": BOUND, \"exp\": E}, BOUND one of %s and E "
+                         "an integer, got %r" % (where, j, ", ".join(names), cond))
+        out.append((cond["abs_le"], cond["exp"]))
+    return out
 
 
 def _read_interval_of_ball(e, kernel, raw, where):
     _require(raw, ("lower", "upper", "set", "balls", "tight"), where)
     e.lower, e.upper = raw["lower"], raw["upper"]
-    if (_limb_output(kernel, e.lower, where, "lower") != 1
-            or _limb_output(kernel, e.upper, where, "upper") != 1 or e.lower == e.upper):
-        raise _error("%s: lower and upper must be two outputs of one limb" % where)
+    lo_l = _limb_output(kernel, e.lower, where, "lower")
+    if (lo_l not in (1, 2) or _limb_output(kernel, e.upper, where, "upper") != lo_l
+            or e.lower == e.upper):
+        raise _error("%s: lower and upper must be two outputs of one limb each or two each" % where)
     e.balls = _ball_names(kernel, raw, where)
     if len(e.balls) != 1:
         raise _error("%s: interval_of_ball takes one ball" % where)
     e.set_text = str(raw["set"]).strip()
     e.set_tree = _set_over(raw["set"], list(e.balls), where)
-    e.steps = _tight_rounded(raw["tight"], where)
     e.of = [e.lower, e.upper]
+    e.two = lo_l == 2
+    e.tight_exact, e.bounded_when = None, []
+    t = raw["tight"]
+    if not e.two:
+        # One limb: the rounded tightness, and nothing of the conversions of two limbs.
+        e.steps = _tight_rounded(t, where)
+        if "bounded_when" in raw:
+            raise _error("%s: bounded_when is for bounds of two limbs" % where)
+        return
+    # Two limbs (architecture.md, "... the conversions of two limbs"): the outward tightness of
+    # encloses_interval and an optional bounded_when of {"abs_le": SET, "exp": E}.
+    e.steps = 0
+    if not isinstance(t, dict) or t.get("kind") != "outward":
+        raise _error("%s: tight of bounds of two limbs must be {\"kind\": \"outward\", ...} (a "
+                     "two-limb bound has no rounding of its own)" % where)
+    bad = set(t) - {"kind", "rel", "abs", "exact_when"}
+    if bad:
+        raise _error("%s: tight: unknown fields %s" % (where, sorted(bad)))
+    _require(t, ("rel", "abs"), where + ": tight")
+    _const_field(e, t, "rel", where)
+    _const_field(e, t, "abs", where)
+    if "exact_when" in t:
+        ew = t["exact_when"]
+        if not isinstance(ew, dict) or not ew or set(ew) - {"lower", "upper"}:
+            raise _error("%s: tight: exact_when must be {\"lower\": [...], \"upper\": [...]}"
+                         % where)
+        e.tight_exact = {side: _conditions(kernel, ew[side], where + ": tight " + side)
+                         for side in ew}
+    if "bounded_when" in raw:
+        bw = raw["bounded_when"]
+        if not isinstance(bw, list) or not bw:
+            raise _error("%s: bounded_when must be a nonempty list (absent when there is none)"
+                         % where)
+        for j, cond in enumerate(bw):
+            w = "%s: bounded_when[%d]" % (where, j)
+            try:
+                ct = X.parse(cond["abs_le"]) if isinstance(cond, dict) and isinstance(
+                    cond.get("abs_le"), str) else None
+            except X.ExprError:
+                ct = None
+            if (ct != e.set_tree or set(cond) != {"abs_le", "exp"}
+                    or not isinstance(cond["exp"], int) or isinstance(cond["exp"], bool)):
+                raise _error("%s must be {\"abs_le\": SET, \"exp\": E}, SET the entry's set %r, "
+                             "got %r" % (w, e.set_text, cond))
+            e.bounded_when.append(("exp", cond["exp"]))
 
 
 def _read_splits(e, kernel, raw, where):
@@ -842,12 +923,27 @@ def read_makes_ball_interval(e, kernel, raw, where):
                 raise _error("%s: midpoint_when[%d] must be {\"half_in_format\": BOUND}, BOUND "
                              "one of the given bounds, got %r" % (where, j, cond))
             e.midpoint_when.append(cond["half_in_format"])
+    # rel, abs and smallest_radius (the conversions of two limbs, ball_from_interval_1): all three
+    # optional, rel and abs together, smallest_radius only with them.
+    e.mid_consts = "rel" in raw or "abs" in raw
+    if e.mid_consts:
+        if "rel" not in raw or "abs" not in raw:
+            raise _error("%s: rel and abs come together" % where)
+        _const_field(e, raw, "rel", where)
+        _const_field(e, raw, "abs", where)
+    e.smallest_radius = _true_flag(raw, "smallest_radius", where)
+    if e.smallest_radius and not e.mid_consts:
+        raise _error("%s: smallest_radius only with rel and abs" % where)
     e.of = [e.center, e.radius]
     e.label = "makes_ball(%s, %s) from the interval of lower %s, upper %s" % (
         e.center, e.radius, e.from_lower, e.from_upper)
     if e.midpoint_when:
         e.label += ", the midpoint when %s" % " and ".join("%s/2 is a number of the format" % n
                                                             for n in e.midpoint_when)
+    if e.mid_consts:
+        e.label += ", the center within rel %s, abs %s of the midpoint%s" % (
+            e.consts["rel"][1], e.consts["abs"][1],
+            ", the smallest radius" if e.smallest_radius else "")
 
 
 def read_zero_factor(e, kernel, raw, where):
@@ -923,10 +1019,27 @@ def label(e):
     if k == "interval_set":
         return "interval_set(%s, %s) %s of %s" % (e.lower, e.upper, e.op, _iv_text(e.intervals))
     if k == "ball_of_interval":
-        return "ball_of_interval(%s, %s) of [%s, %s], special %s, rel %s, abs %s%s" % (
+        s = "ball_of_interval(%s, %s) of [%s, %s], special %s, rel %s, abs %s%s" % (
             e.center, e.radius, e.from_pair[0], e.from_pair[1], e.special, e.consts["rel"][1],
             e.consts["abs"][1], ", the smallest radius" if e.smallest_radius else "")
+        if e.radius_finite_when:
+            s += ", finite when %s" % " and ".join("|%s| <= 2^(qmax+p%+d)" % (n, x) if x else
+                                                   "|%s| <= 2^(qmax+p)" % n
+                                                   for n, x in e.radius_finite_when)
+        return s
     if k == "interval_of_ball":
+        if e.two:
+            s = "interval_of_ball(%s, %s) %s over %s, tight outward" % (
+                e.lower, e.upper, e.set_text, _ball_text(e.balls))
+            if e.tight_exact:
+                s += ", exact when %s" % "; ".join(
+                    "%s: %s" % (side, " and ".join(condition_text(t, o, c) for _tr, t, o, c in cs))
+                    for side, cs in sorted(e.tight_exact.items()))
+            if e.bounded_when:
+                s += ", bounded when %s" % " and ".join(
+                    "|%s| <= %s" % (e.set_text, "2^(qmax+p%+d)" % x if x else "2^(qmax+p)")
+                    for _w, x in e.bounded_when)
+            return s
         return "interval_of_ball(%s, %s) %s over %s, tight rounded%s" % (
             e.lower, e.upper, e.set_text, _ball_text(e.balls),
             ", steps %d" % e.steps if e.steps else "")
@@ -1176,14 +1289,22 @@ def plan_entry(pl, e, claims):
                  tree=e.set_tree, steps=e.steps)
         if k == "set_bound":
             c.update(side=e.side, tight=e.tight, out=os_[e.of[0]][0])
-        else:
+        elif not e.two:
             c.update(lower=os_[e.lower][0], upper=os_[e.upper][0])
+        else:
+            # Bounds of two limbs, the outward tightness (the conversions of two limbs).
+            c.update(two=True, lower_sl=os_[e.lower], upper_sl=os_[e.upper], bw=e.bounded_when)
+            if e.tight_exact:
+                c["texact"] = {side: compile_conditions(pl, cs)
+                               for side, cs in e.tight_exact.items()}
     elif k == "interval_set":
         c.update(lower=os_[e.lower], upper=os_[e.upper], op=e.op,
                  ivs=[(sl[a], sl[b]) for a, b in e.intervals.values()])
     elif k == "ball_of_interval":
         c.update(center=os_[e.center], radius=os_[e.radius][0], special=e.special,
                  given=(sl[e.from_pair[0]], sl[e.from_pair[1]]), smallest=e.smallest_radius)
+        if e.radius_finite_when:
+            c["fw"] = [(sl[n], n, x) for n, x in e.radius_finite_when]
     elif k == "splits":
         c.update(given=(sl[e.from_pair[0]], sl[e.from_pair[1]]),
                  parts=[(os_[a], os_[b]) for a, b in e.parts])
@@ -1191,6 +1312,8 @@ def plan_entry(pl, e, claims):
         c.update(center=os_[e.center], radius=os_[e.radius][0],
                  given=(sl[e.from_lower][0], sl[e.from_upper][0]),
                  mid=[sl[n][0] for n in e.midpoint_when])
+        if e.mid_consts:
+            c.update(mid_consts=True, smallest=e.smallest_radius)
     elif k in ("bound", "rounded"):
         c["factors"] = [sl[n][0] for n in e.factors]
     return c
@@ -1716,6 +1839,8 @@ def k_interval_of_ball(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     es.applicable += 1
     out = []
     fail = XT._failer(es, out)
+    if c.get("two"):
+        return _interval_of_ball_two(pl, c, es, x, z, fail, out, line)
     zs = interval_state(fmt, [z[c["lower"]]], [z[c["upper"]]])
     if zs is None:
         fail("canonical", "the result is not a canonical interval")
@@ -1738,6 +1863,88 @@ def k_interval_of_ball(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
         why = _judge_rounded_side(fmt, es, name, zv, v, s, c["steps"], False, down)
         if why:
             fail("tight", why)
+    return out
+
+
+def _interval_of_ball_two(pl, c, es, x, z, fail, out, line):
+    """interval_of_ball with bounds of two limbs (architecture.md, "... the conversions of two
+    limbs"): Z canonical, empty exactly when the ball is, containing every value of the set; for a
+    finite ball and a bounded Z each bound within rel*|bound| + abs of the set's on its side; for a
+    finite ball, a side whose conditions of exact_when hold the set's bound exactly (whether or not
+    Z is bounded: the stricter reading, as for encloses_interval), and Z bounded when every member
+    is within the limit of each condition of bounded_when."""
+    fmt = pl.fmt
+    q = fmt.qmin
+    zs = interval_state(fmt, z[c["lower_sl"][0]:c["lower_sl"][1]],
+                        z[c["upper_sl"][0]:c["upper_sl"][1]])
+    if zs is None:
+        fail("canonical", "the result is not a canonical interval")
+        return out
+    states, env = _ball_env(fmt, x, c["balls"])
+    _ball_counts(es, states)
+    es.count(RES_EMPTY if zs[0] == "empty" else RES_BOUNDED if bounded(zs) else RES_UNBOUNDED)
+    if "empty" in states.values():
+        if zs[0] != "empty":
+            fail("empty", "an empty ball gives a result that is not empty")
+        return out
+    if zs[0] == "empty":
+        fail("empty", "the empty set from a ball that is not empty")
+        return out
+    lo, hi, s = range_eval(c["tree"], env)
+    zl, zu = zs[1], zs[2]
+    if _cmp(zl, q, lo, s) > 0:
+        fail("containment", "the lower bound %s is above the set's greatest lower bound %s"
+             % (F.fixed_hex(fmt, zl), _hexv(fmt, lo, s)))
+    if _cmp(zu, q, hi, s) < 0:
+        fail("containment", "the upper bound %s is below the set's least upper bound %s"
+             % (F.fixed_hex(fmt, zu), _hexv(fmt, hi, s)))
+    if any(st_ != "finite" for st_ in states.values()):
+        return out
+    rel, ab = c["consts"]["rel"], c["consts"]["abs"]
+    for name, zv, v, down in (("lower", zl, lo, True), ("upper", zu, hi, False)):
+        if v == 0:
+            es.count(SIDE_ZERO % name)
+        conds = (c.get("texact") or {}).get(name)
+        if conds and not failing(conds, x, es, SIDE_EW_FAILS % name, SIDE_EW_HOLDS % name):
+            if _cmp(zv, q, v, s) != 0:
+                fail("exact_when", "exact_when holds for the %s bound, and it is not the set's %s"
+                     % (name, _hexv(fmt, v, s)))
+        if type(zv) is not int:
+            continue
+        m = min(s, q)
+        Z, Vv = zv << (q - m), v << (s - m)
+        dist = (Vv - Z) if down else (Z - Vv)
+        ok, r = ratio_le(dist, abs(Vv), rel, ab, m)
+        if not bounded(zs):
+            es.track_max(SIDE_RATIO_UNCLAIMED % name, r, line)
+            continue
+        es.track_max(SIDE_RATIO % name, r, line)
+        a = ab * (Fraction(1 << -m) if m < 0 else Fraction(1, 1 << m))
+        if a <= rel * abs(Vv):
+            es.track_max(SIDE_RATIO_REL % name, r, line)
+        if not ok:
+            fail("tight", "the %s bound is farther from the set than rel*|bound| + abs" % name)
+    if not bounded(zs):
+        es.count(BOUNDED_TO_UNBOUNDED)
+    # bounded_when, in the formats of statement_format (counted as not claimed in any other).
+    claimed, beyond = statement_format(fmt)
+    if c["bw"] and not claimed:
+        es.count(I5_RANGE)
+    elif c["bw"]:
+        holds = True
+        for kind, e in c["bw"]:
+            a1, b1 = _limit_ratio(fmt, kind, e, lo, s)
+            a2, b2 = _limit_ratio(fmt, kind, e, hi, s)
+            r = (a1, b1) if a1 * b2 >= a2 * b1 else (a2, b2)
+            holds = holds and r[0] <= r[1]
+        es.count(I5_HOLDS if holds else I5_FAILS)
+        if holds:
+            es.track_max(I5_NEAR_HOLDS, r, line)
+            if not bounded(zs):
+                fail("bounded_when", "a finite ball whose members are within the limit of "
+                                     "bounded_when gives an unbounded result" + beyond)
+        else:
+            es.track_min(I5_NEAR_FAILS, r, line)
     return out
 
 
@@ -1801,6 +2008,14 @@ def k_ball_of_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     cw = z[c["center"][0]:c["center"][1]]
     r = z[c["radius"]]
     ieee = c["special"] == "ieee1788"
+    if ieee and len(cw) == 2 and not XT.canonical(fmt, cw):
+        # The midpoint of two limbs is a canonical number, for every X (architecture.md, "... the
+        # conversions of two limbs").
+        fail("canonical", "the center (%s) is not a canonical number of two limbs"
+             % " ".join(F.fixed_hex(fmt, v) for v in cw))
+        return out
+    if X_[0] != "empty" and bounded(X_) and c.get("fw"):
+        return _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line)
     if X_[0] == "empty" or not bounded(X_):
         if ieee:
             if X_[0] == "empty":
@@ -1849,6 +2064,115 @@ def k_ball_of_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
         if r != want:
             fail("smallest_radius", "the radius %s is not the smallest, %s" % (
                 F.fixed_hex(fmt, r), F.fixed_hex(fmt, want)))
+    return out
+
+
+FW_HOLDS = "finite_when holds"
+FW_FAILS = "finite_when fails: "
+FW_INFINITE = "bounded X, the radius +inf"
+FW_WHOLE = "bounded X, the whole line"
+FW_FINITE_FAILS = "finite_when fails and the ball is finite (its center not claimed)"
+FW_RATIO_FINITE = "a finite radius: largest max|bound| / 2^(qmax+p)"
+FW_RATIO_INFINITE = "the radius +inf: smallest max|bound| / 2^(qmax+p)"
+FW_RANGE = "finite_when not claimed: a format of no statement (e_max <= p, or eta above binary_float's)"
+I5_RANGE = "bounded_when not claimed: a format of no statement (e_max <= p, or eta above binary_float's)"
+
+
+def statement_format(fmt):
+    """(claimed, beyond) for a clause that promises a finite or bounded result, by the owner's
+    ruling of 2026-11-21 (architecture.md, "The formats of the statements"): claimed in the formats
+    of binary_float's shape, and judged in those of a wider subnormal range too, where a failure
+    is a finding to report, not a violated claim (beyond, the text its failure carries); not
+    claimed in any other toy format. The rule of V4 of the ball vectors, bvfolds.v4_range and
+    bvfolds.v4_beyond, for finite_when of ball_of_interval and bounded_when of interval_of_ball
+    with bounds of two limbs."""
+    from . import bvfolds as BF
+    return BF.v4_range(fmt), BF.v4_beyond(fmt)
+
+
+def _fw_conditions(fmt, c, x, es):
+    """Whether every condition of finite_when holds of the bounded interval x (counted, unless es
+    is None), and max|bound| / 2^(qmax+p) as a fraction."""
+    q = fmt.qmin
+    bad = []
+    big = 0
+    for (lo, hi), n, ex in c["fw"]:
+        v = abs(bound_value(fmt, x[lo:hi]))
+        big = max(big, v)
+        k = fmt.qmax + fmt.p + ex - q
+        ok = v <= (1 << k) if k >= 0 else (v << -k) <= 1
+        if not ok:
+            bad.append("|%s| <= 2^(qmax+p%+d)" % (n, ex) if ex else "|%s| <= 2^(qmax+p)" % n)
+    for t in (bad if es is not None else ()):
+        es.count(FW_FAILS + t)
+    if not bad and es is not None:
+        es.count(FW_HOLDS)
+    T = fmt.qmax + fmt.p - q
+    return not bad, (big, 1 << T) if T >= 0 else (big << -T, 1)
+
+
+def _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line):
+    """ball_of_interval with finite_when, for a bounded X = [l, h], m = (l + h)/2 (architecture.md,
+    "... the conversions of two limbs"): with ieee1788 the center finite, between the bounds and
+    within rel*|m| + abs of m, the radius +inf or a finite number with which the center contains X,
+    finite when every condition holds; with ball a canonical ball that contains X, and when every
+    condition holds a finite one whose center is as without the field. The clause of the
+    conditions is claimed in the formats of statement_format, and counted as not claimed in any
+    other (then the radius may be +inf, and with ball the center is not claimed)."""
+    fmt = pl.fmt
+    q = fmt.qmin
+    L, U = X_[1], X_[2]
+    if _odd_eta_low(fmt, L) or _odd_eta_low(fmt, U):
+        es.count(X_ODD)
+    claimed, beyond = statement_format(fmt)
+    holds, ratio = _fw_conditions(fmt, c, x, es if claimed else None)
+    if not claimed:
+        es.count(FW_RANGE)
+        holds = False
+    if ieee:
+        if (not all(type(v) is int for v in cw) or not F.normalized_limbs(fmt, cw)
+                or not (r == INF or (type(r) is int and r >= 0))):
+            fail("finite", "a bounded interval gives a center that is not a finite normalized "
+                           "number, or a radius that is neither finite and nonnegative nor +inf")
+            return out
+        finite_center = True
+    else:
+        stt = XT.ball_state(fmt, cw, r)
+        if stt is None:
+            fail("canonical", "a bounded interval gives a ball that is not canonical")
+            return out
+        if stt == "empty":
+            fail("containment", "a bounded interval gives the empty set")
+            return out
+        finite_center = stt == "finite"
+    if r == INF:
+        es.count(FW_INFINITE if ieee else FW_WHOLE)
+        if claimed:
+            es.track_min(FW_RATIO_INFINITE, ratio, line)
+        if holds:
+            fail("finite_when", "every condition of finite_when holds and the radius is +inf"
+                 + beyond)
+            return out
+        if not ieee:
+            return out
+    else:
+        if claimed:
+            es.track_max(FW_RATIO_FINITE, ratio, line)
+        if not holds and not ieee and claimed:
+            es.count(FW_FINITE_FAILS)
+    cv = sum(cw)
+    if type(r) is int and (cv - r > L or cv + r < U):
+        fail("containment", "[c - r, c + r] does not contain the interval")
+    if not finite_center or (not ieee and not holds):
+        return out
+    if cv < L or cv > U:
+        fail("center", "the center is outside the interval")
+    M2, C2 = L + U, 2 * cv
+    ok, rr = ratio_le(abs(C2 - M2), abs(M2), c["consts"]["rel"], c["consts"]["abs"], q - 1)
+    es.track_max(MID_RATIO, rr, line)
+    es.count(MID_EXACT if C2 == M2 else MID_INEXACT)
+    if not ok:   # (worded apart from k_ball_of_interval's, that a mutant finds each once)
+        fail("midpoint", "the center is farther from the midpoint than rel*|m| + abs (finite_when)")
     return out
 
 
@@ -1924,6 +2248,30 @@ def k_makes_ball_iv(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     if cv - r > lo or cv + r < hi:
         es.count("failed: does not contain the interval")
         return ["makes_ball: the ball does not contain [lo, hi]"]
+    if c.get("mid_consts"):
+        # rel, abs and smallest_radius (the conversions of two limbs): the center between the
+        # bounds and within rel*|m| + abs of m = (lo + hi)/2, the radius RU(max(c - lo, hi - c)).
+        why = []
+        if cv < lo or cv > hi:
+            es.count("failed: center")
+            why.append("makes_ball: the center is outside [lo, hi]")
+        M2, C2 = lo + hi, 2 * cv
+        ok, rr = ratio_le(abs(C2 - M2), abs(M2), c["consts"]["rel"], c["consts"]["abs"],
+                          fmt.qmin - 1)
+        es.track_max(MID_RATIO, rr, line)
+        es.count(MID_EXACT if C2 == M2 else MID_INEXACT)
+        if not ok:
+            es.count("failed: midpoint")
+            why.append("makes_ball: the center is farther from the midpoint than rel*|m| + abs")
+        if c["smallest"]:
+            rmin = F.rdir(fmt, max(cv - lo, hi - cv), fmt.qmin, True)
+            want = INF if rmin > fmt.omega else rmin
+            if r != want:
+                es.count("failed: smallest_radius")
+                why.append("makes_ball: the radius %s is not the smallest, %s" % (
+                    F.fixed_hex(fmt, r), F.fixed_hex(fmt, want)))
+        if why:
+            return why
     if c["mid"]:
         if all(x[j] % 2 == 0 for j in c["mid"]):
             es.count(MID_HOLDS)

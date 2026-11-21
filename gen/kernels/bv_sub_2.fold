@@ -1,0 +1,30 @@
+# The difference of two BallVectors with 2-limb centers (milestone2.md, "BallVector": bv_sub_k): the
+# centers by sub_2_2, entry by entry, as the map sub_2 (add_2_2 of the negated second operand); the
+# state that of norm_upper_2 on the centers written; the one radius bv_add_radius_2 at the largest
+# magnitude, the largest of the radii of ball_sub_2 (ball_add_2 of the negated operand) entry by
+# entry; norm_finish_1 tests that it is finite. When it is not, every center written is zero and the
+# radius +infinity: the whole space.
+fold:          bv_sub_2
+arrays:        stored x = x0 x1, stored y = y0 y1
+scalars:       stored rx, stored ry
+state:         m, mask ok
+step:          z = sub_2_2(x, y)
+record:        (m, ok) = norm_step_2(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_add_radius_2(m, rx, ry)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x-y
+requires:      ball_vector x rx
+requires:      ball_vector y ry
+ensures:       encloses_entries z r x-y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x-y)+rx+ry,-2) radii_when=abs_le(rx+ry,-2)
+min_precision: 3
+theorem:       proofs/theories/BvReal.v
+ieee_theorem:  proofs/theories/IeeeBv.v
+status:        proved
+domain:        extended
+source:        sub_2_2 on the centers, the radius of ball_sub_2 at the largest center (milestone2.md, BallVector)
+license:       algorithm and proof: MIT

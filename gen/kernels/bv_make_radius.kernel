@@ -1,0 +1,21 @@
+# The radius kernel of bv_make_k, the constructors of a BallVector (milestone2.md, "BallVector",
+# "Values"): the radius that the program gives, guarded (rule R3), carried to a NaN when the largest
+# magnitude m of a center is not finite: m - m is +0 for a finite m and a NaN for an infinite one,
+# and the sum keeps the guarded radius otherwise. In the real model, where nothing is infinite, the
+# value is the radius given, exactly (a -0 made +0).
+kernel:        bv_make_radius
+input:         stored m
+input:         r
+output:        rz
+value:         r
+ensures:       rounded rz nearest
+min_precision: 1
+theorem:       proofs/theories/BvNegMake.v bv_make_radius_correct
+source:        the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values)
+license:       algorithm and proof: MIT
+status:        proved
+entry:         yes
+
+g  = guard(r)
+d  = sub(m, m)
+rz = add(g, d)

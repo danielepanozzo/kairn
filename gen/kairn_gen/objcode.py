@@ -56,20 +56,40 @@ COMMUTATIVE = frozenset({'add', 'eq', 'and', 'or'})
 def _numbering(prims, kernels, ctype):
     """A value number for every value that prims define: equal for two values that compute the same
     thing from the same operands (the module's docstring). A value that prims do not define (an
-    input, or a parameter of a fix-up) is numbered by its name."""
+    input, or a parameter of a fix-up) is numbered by its name.
+
+    A number is an integer, given to each distinct key the first time it is seen, and a key holds
+    the numbers of its operands, not their keys: two values have the same number exactly when
+    their keys, written out in full, would be equal, and a key stays small. Written out in full, the
+    key of a value repeats the keys of its operands at every use, which for a listing whose values
+    are used many times over (a ball of two limbs through its interval and back, ball_hull_2) grows
+    exponentially with its depth, and so does the time to hash it where Python does not cache the
+    hash of a tuple (before 3.14)."""
     number = {}
-    zero = ('const', cpp.literal(ir.ZERO, kernels, ctype))
+    numbers = {}                         # key -> number
+    keys = []                            # number -> key
+
+    def intern(key):
+        n = numbers.get(key)
+        if n is None:
+            n = numbers[key] = len(keys)
+            keys.append(key)
+        return n
+
+    zero = intern(('const', cpp.literal(ir.ZERO, kernels, ctype)))
 
     def operand(a):
         if a.const:
-            return ('const', cpp.literal(a.name, kernels, ctype))
-        return number.get(a.name, ('value', a.name))
+            return intern(('const', cpp.literal(a.name, kernels, ctype)))
+        return number[a.name] if a.name in number else intern(('value', a.name))
 
-    def negate(key):
-        return key[1] if key[0] == 'neg' else ('neg', key)
+    def negate(n):
+        key = keys[n]
+        return key[1] if key[0] == 'neg' else intern(('neg', n))
 
-    def unsigned(key):
-        return (key[1], True) if key[0] == 'neg' else (key, False)
+    def unsigned(n):
+        key = keys[n]
+        return (key[1], True) if key[0] == 'neg' else (n, False)
 
     for p in prims:
         args = [operand(a) for a in p.args]
@@ -81,18 +101,18 @@ def _numbering(prims, kernels, ctype):
             if p.op == 'fnma':
                 a = negate(a)
             (a, na), (b, nb) = unsigned(a), unsigned(b)
-            key = ('fma', tuple(sorted((a, b))), na != nb, c)
+            n = intern(('fma', tuple(sorted((a, b))), na != nb, c))
         elif p.op == 'copy':
-            key = args[0]
+            n = args[0]
         elif p.op == 'neg':
-            key = negate(args[0])
+            n = negate(args[0])
         elif p.op == 'guard':
-            key = ('add', tuple(sorted((args[0], zero))))
+            n = intern(('add', tuple(sorted((args[0], zero)))))
         elif p.op in COMMUTATIVE:
-            key = (p.op, tuple(sorted(args)))
+            n = intern((p.op, tuple(sorted(args))))
         else:
-            key = (p.op, tuple(args))
-        number[p.dst] = key
+            n = intern((p.op, tuple(args)))
+        number[p.dst] = n
     return number
 
 
@@ -171,6 +191,33 @@ def fold_counts(fd, kernels):
         step, check = kernels[kernels.folds[fd.coefficients].step[0]], kernels[fd.check]
         return {'seq': {t: [_part('step', step, 1, kernels, t), _part('check', check, 2, kernels, t)]
                         for t in LIMB_TYPES}}
+    if fd.is_bv_conv:
+        # The product of two BallVectors: the records in the two loops of the maxima (one kernel, or two,
+        # each at least once per array), the step of the fold of the coefficients in the loop over the
+        # terms, the check of the convolution once (the first pass; the whole space computes nothing),
+        # and the bound, the radius and the finish once, in F_end.
+        conv = kernels.folds[fd.centers]
+        step, check = kernels[kernels.folds[conv.coefficients].step[0]], kernels[conv.check]
+        recs = {}
+        for r in fd.records:
+            recs[r[0]] = recs.get(r[0], 0) + 1
+        parts = [('record', kernels[name], n) for name, n in recs.items()] + \
+            [('step', step, 1), ('check', check, 1), ('bound', kernels[fd.bound[0]], 1),
+             ('radius', kernels[fd.radius[0]], 1), ('finish', kernels[fd.finish[0]], 1)]
+        return {'seq': {t: [_part(name, k, m, kernels, t) for name, k, m in parts] for t in LIMB_TYPES}}
+    if fd.is_bv:
+        # A ball vector: the step and the record per element (the scalar step and record twice in
+        # F_lanes, the lanes and the rest), the combination of the lanes, the radius and the finish
+        # once; the second pass computes nothing.
+        step, record, combine = (kernels[c[0]] for c in (fd.step, fd.record, fd.combine))
+        radius, finish = kernels[fd.radius[0]], kernels[fd.finish[0]]
+        end = [('radius', radius, 1), ('finish', finish, 1)]
+        forms = {'seq': [('step', step, 1), ('record', record, 1)] + end,
+                 'lanes': [('step', step, 2), ('record', record, 2), ('combine', combine, 1)] + end,
+                 'packed': [('packed step', step, 1), ('packed record', record, 1), ('combine', combine, 1),
+                            ('step', step, 1), ('record', record, 1)] + end}
+        return {form: {t: [_part(name, k, m, kernels, t) for name, k, m in parts] for t in LIMB_TYPES}
+                for form, parts in forms.items()}
     if fd.is_map:
         step, check = kernels[fd.step[0]], kernels[fd.check]
         forms = {'seq': [('step', step, 1), ('check', check, 2)],

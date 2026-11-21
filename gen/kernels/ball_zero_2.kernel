@@ -1,0 +1,22 @@
+# Whether a ball with a 2-limb center is the point 0 (milestone2.md, "One enclosure interface", the
+# row of certainly_zero()): the center equal to 0 by eq_2_1, and r = 0. The comparisons of Ball<T,
+# 2>::certainly_zero (include/kairn/ball.hpp). Exact.
+kernel:        ball_zero_2
+input:         c = c0 c1
+input:         stored r
+output:        mask m
+requires:      ball c r
+ensures:       certain m eq x 0 x=c,r exact
+min_precision: 1
+source:        the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates2.v ball_zero_2_correct
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
+
+a = eq_2_1(c0, c1, 0)
+b = eq(r, 0)
+m = and(a, b)

@@ -1,0 +1,22 @@
+# Whether every member of a ball with a one-limb center is positive, and the ball is not empty
+# (milestone2.md, "One enclosure interface", the row of certainly_positive()): c - r > 0, decided
+# exactly as r < c. False for the empty set (a NaN compares false) and for the whole line (+inf < 0
+# is false). The comparison of Ball<T, 1>::certainly_positive, written by hand in
+# include/kairn/ball.hpp. Exact.
+kernel:        ball_positive_1
+input:         stored c
+input:         stored r
+output:        mask m
+requires:      ball c r
+ensures:       certain m lt 0 x x=c,r exact
+min_precision: 1
+source:        the radius compared with the center (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates.v ball_positive_1_correct
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
+
+m = lt(r, c)

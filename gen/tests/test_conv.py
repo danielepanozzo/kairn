@@ -389,12 +389,61 @@ class Printers(unittest.TestCase):
         # its one statement.
         import copy
         ks = copy.deepcopy(self.ks)
-        for name in ('conv_1', 'conv_2'):
+        # (and the products of two BallVectors, proved too, BvConv.v, whose names contain conv_1)
+        for name in ('conv_1', 'conv_2', 'bv_conv_1', 'bv_conv_2'):
             ks.folds[name].status, ks.folds[name].theorem = 'unverified', None
         self.assertNotIn('conv_1', rocq.audit(ks))
         ks.folds['conv_1'].status, ks.folds['conv_1'].theorem = 'proved', 'proofs/theories/FoldConv.v'
         self.assertIn('\nDefinition conv_1_audit : conv_1_spec := conv_1_correct.\n'
                       'Print Assumptions conv_1_correct.\n', rocq.audit(ks))
+
+    def test_the_terms_theorem(self):
+        """terms_theorem: FILE, of the convolutions: the file of conv_terms_eq_correct,
+        conv_terms_count_correct and conv_terms_length_correct, the theorems of the three statements of
+        conv_terms that every convolution shares. Named by both convolutions, or by one, the comments of
+        the three statements say proved and the real-model audit checks the three theorems, once, after
+        those of the folds; named by none, they say unverified and the audit has none. Two different
+        files, another path, or a fold that is not a convolution: refused. Judged from the descriptions
+        with every terms_theorem removed, so that it means the same whatever they say."""
+        def kernels_with(files):
+            ks = common.kernels()
+
+            def text(fd):
+                with open(os.path.join(common.GEN, 'kernels', fd.path), encoding='utf-8') as f:
+                    lines = [x for x in f.read().rstrip('\n').split('\n') if not x.startswith('terms_theorem:')]
+                return '\n'.join(lines + ([f'terms_theorem: {files[fd.name]}'] if fd.name in files else [])) + '\n'
+
+            return ir.ordered(dict(ks), {name: ir.parse_fold(text(fd), fd.path) for name, fd in ks.folds.items()})
+
+        def comment(s, name):
+            return s.split(f'Definition {name}_spec : Prop :=', 1)[0].rsplit('(*', 1)[1].rstrip()
+
+        theory = 'proofs/theories/FoldConv.v'
+        self.assertEqual(rocq.CONV_TERMS, ('conv_terms_eq', 'conv_terms_count', 'conv_terms_length'))
+        for files in ({'conv_1': theory, 'conv_2': theory}, {'conv_2': theory}):
+            ks = kernels_with(files)
+            self.assertEqual(rules.check_all(ks), [])
+            s, audit = rocq.fold_statements(ks), rocq.audit(ks)
+            for name in rocq.CONV_TERMS:
+                self.assertTrue(comment(s, name).endswith('Status:\n   proved. *)') or
+                                comment(s, name).endswith('Status: proved. *)'), comment(s, name))
+                self.assertEqual(audit.count(f'\nDefinition {name}_audit : {name}_spec := {name}_correct.\n'
+                                             f'Print Assumptions {name}_correct.\n'), 1)
+                self.assertLess(audit.index('Definition bv_conv_2_audit'), audit.index(f'Definition {name}_audit'))
+            self.assertIn('From Kairn Require Import FoldConv.', audit)
+        ks = kernels_with({})
+        self.assertEqual(rules.check_all(ks), [])
+        s, audit = rocq.fold_statements(ks), rocq.audit(ks)
+        for name in rocq.CONV_TERMS:
+            self.assertTrue(comment(s, name).endswith('unverified. *)'), comment(s, name))
+        self.assertNotIn('conv_terms', audit)
+        for files, words in (({'conv_1': theory, 'conv_2': 'proofs/theories/Folds.v'},
+                              'the convolutions that name one name the same file'),
+                             ({'conv_1': 'theories/FoldConv.v', 'conv_2': 'theories/FoldConv.v'},
+                              'the terms_theorem file must be proofs/theories/*.v'),
+                             ({'conv_1': theory, 'conv_2': theory, 'dot_2': theory}, 'only a convolution names')):
+            errs = [str(e) for e in rules.check_all(kernels_with(files))]
+            self.assertTrue(any(words in e for e in errs), (files, errs))
 
     def test_the_claims(self):
         doc = json.loads(claims.claims(self.ks))

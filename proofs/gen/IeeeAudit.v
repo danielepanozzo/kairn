@@ -5,25 +5,44 @@
    for the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import IeeeStatements.
 From Kairn.Gen Require Import IeeeFoldStatements.
+From Kairn Require Import IeeeAccKernels.
+From Kairn Require Import IeeeBallCompare2.
+From Kairn Require Import IeeeBallContains2.
 From Kairn Require Import IeeeBallConvert.
+From Kairn Require Import IeeeBallConvert2.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
+From Kairn Require Import IeeeBallHull.
 From Kairn Require Import IeeeBallPow2.
+From Kairn Require Import IeeeBallPredicates.
+From Kairn Require Import IeeeBallPredicates2.
+From Kairn Require Import IeeeBallSets.
+From Kairn Require Import IeeeBv.
+From Kairn Require Import IeeeBvConv.
+From Kairn Require Import IeeeBvConvFinite.
+From Kairn Require Import IeeeBvConvFinite2.
+From Kairn Require Import IeeeBvNegMake.
+From Kairn Require Import IeeeBvPow2.
 From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
 From Kairn Require Import IeeeExt.
+From Kairn Require Import IeeeFoldConv.
 From Kairn Require Import IeeeFoldFinish.
+From Kairn Require Import IeeeFoldMaps.
 From Kairn Require Import IeeeFoldNorm.
 From Kairn Require Import IeeeFolds.
 From Kairn Require Import IeeeFull.
 From Kairn Require Import IeeeInterval1.
 From Kairn Require Import IeeeInterval2.
 From Kairn Require Import IeeeIntervalConvert.
+From Kairn Require Import IeeeIntervalConvert2.
 From Kairn Require Import IeeeIntervalExact.
 From Kairn Require Import IeeeIntervalMul2.
+From Kairn Require Import IeeeIntervalPredicates.
 From Kairn Require Import IeeeIntervalSub2.
 From Kairn Require Import IeeeMake.
+From Kairn Require Import IeeeMapSteps.
 From Kairn Require Import IeeeSteps.
 
 Definition add_down_1_ieee_audit : add_down_1_ieee_spec := add_down_1_ieee_correct.
@@ -41,11 +60,62 @@ Print Assumptions add_up_entry_ieee_correct.
 Definition ball_add_1_full_audit : ball_add_1_full_spec := ball_add_1_full_correct.
 Print Assumptions ball_add_1_full_correct.
 
+Definition abs_2_ieee_audit : abs_2_ieee_spec := abs_2_ieee_correct.
+Print Assumptions abs_2_ieee_correct.
+
+Definition le_2_2_ieee_audit : le_2_2_ieee_spec := le_2_2_ieee_correct.
+Print Assumptions le_2_2_ieee_correct.
+
+Definition ball_contains_ball_1_audit : ball_contains_ball_1_spec := ball_contains_ball_1_correct.
+Print Assumptions ball_contains_ball_1_correct.
+
+Definition le_2_1_ieee_audit : le_2_1_ieee_spec := le_2_1_ieee_correct.
+Print Assumptions le_2_1_ieee_correct.
+
+Definition ball_contains_point_1_audit : ball_contains_point_1_spec := ball_contains_point_1_correct.
+Print Assumptions ball_contains_point_1_correct.
+
+Definition lt_2_2_ieee_audit : lt_2_2_ieee_spec := lt_2_2_ieee_correct.
+Print Assumptions lt_2_2_ieee_correct.
+
+Definition ball_equal_1_audit : ball_equal_1_spec := ball_equal_1_correct.
+Print Assumptions ball_equal_1_correct.
+
+Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
+Print Assumptions sub_up_1_ieee_correct.
+
+Definition interval_mid_rad_1_audit : interval_mid_rad_1_spec := interval_mid_rad_1_correct.
+Print Assumptions interval_mid_rad_1_correct.
+
+Definition interval_to_ball_1_audit : interval_to_ball_1_spec := interval_to_ball_1_correct.
+Print Assumptions interval_to_ball_1_correct.
+
+Definition ball_from_interval_1_audit : ball_from_interval_1_spec := ball_from_interval_1_correct.
+Print Assumptions ball_from_interval_1_correct.
+
 Definition ball_from_interval_2_audit : ball_from_interval_2_spec := ball_from_interval_2_correct.
 Print Assumptions ball_from_interval_2_correct.
 
 Definition sub_down_1_ieee_audit : sub_down_1_ieee_spec := sub_down_1_ieee_correct.
 Print Assumptions sub_down_1_ieee_correct.
+
+Definition ball_to_interval_1_audit : ball_to_interval_1_spec := ball_to_interval_1_correct.
+Print Assumptions ball_to_interval_1_correct.
+
+Definition interval_hull_1_audit : interval_hull_1_spec := interval_hull_1_correct.
+Print Assumptions interval_hull_1_correct.
+
+Definition ball_hull_1_audit : ball_hull_1_spec := ball_hull_1_correct.
+Print Assumptions ball_hull_1_correct.
+
+Definition ball_intersection_1_audit : ball_intersection_1_spec := ball_intersection_1_correct.
+Print Assumptions ball_intersection_1_correct.
+
+Definition ball_less_1_audit : ball_less_1_spec := ball_less_1_correct.
+Print Assumptions ball_less_1_correct.
+
+Definition ball_less_equal_1_audit : ball_less_equal_1_spec := ball_less_equal_1_correct.
+Print Assumptions ball_less_equal_1_correct.
 
 Definition ball_lower_as_1_audit : ball_lower_as_1_spec := ball_lower_as_1_correct.
 Print Assumptions ball_lower_as_1_correct.
@@ -62,38 +132,65 @@ Print Assumptions ball_mul_pow2_1_full_correct.
 Definition ball_neg_1_ieee_audit : ball_neg_1_ieee_spec := ball_neg_1_ieee_correct.
 Print Assumptions ball_neg_1_ieee_correct.
 
+Definition ball_negative_1_audit : ball_negative_1_spec := ball_negative_1_correct.
+Print Assumptions ball_negative_1_correct.
+
+Definition ball_positive_1_audit : ball_positive_1_spec := ball_positive_1_correct.
+Print Assumptions ball_positive_1_correct.
+
 Definition ball_scale_1_full_audit : ball_scale_1_full_spec := ball_scale_1_full_correct.
 Print Assumptions ball_scale_1_full_correct.
+
+Definition ball_split_1_audit : ball_split_1_spec := ball_split_1_correct.
+Print Assumptions ball_split_1_correct.
 
 Definition ball_sub_1_full_audit : ball_sub_1_full_spec := ball_sub_1_full_correct.
 Print Assumptions ball_sub_1_full_correct.
 
-Definition ball_to_interval_1_audit : ball_to_interval_1_spec := ball_to_interval_1_correct.
-Print Assumptions ball_to_interval_1_correct.
-
 Definition ball_upper_as_1_audit : ball_upper_as_1_spec := ball_upper_as_1_correct.
 Print Assumptions ball_upper_as_1_correct.
+
+Definition ball_zero_1_audit : ball_zero_1_spec := ball_zero_1_correct.
+Print Assumptions ball_zero_1_correct.
 
 Definition fold_finish_1_audit : fold_finish_1_spec := fold_finish_1_correct.
 Print Assumptions fold_finish_1_correct.
 
+Definition norm_finish_1_audit : norm_finish_1_spec := norm_finish_1_correct.
+Print Assumptions norm_finish_1_correct.
+
+Definition bv_conv_finish_audit : bv_conv_finish_spec := bv_conv_finish_correct.
+Print Assumptions bv_conv_finish_correct.
+
+Definition bv_make_finish_audit : bv_make_finish_spec := bv_make_finish_correct.
+Print Assumptions bv_make_finish_correct.
+
 Definition interval_add_1_audit : interval_add_1_spec := interval_add_1_correct.
 Print Assumptions interval_add_1_correct.
 
-Definition interval_hull_1_audit : interval_hull_1_spec := interval_hull_1_correct.
-Print Assumptions interval_hull_1_correct.
+Definition interval_contains_1_audit : interval_contains_1_spec := interval_contains_1_correct.
+Print Assumptions interval_contains_1_correct.
+
+Definition interval_empty_1_audit : interval_empty_1_spec := interval_empty_1_correct.
+Print Assumptions interval_empty_1_correct.
+
+Definition interval_entire_1_audit : interval_entire_1_spec := interval_entire_1_correct.
+Print Assumptions interval_entire_1_correct.
+
+Definition interval_equal_1_audit : interval_equal_1_spec := interval_equal_1_correct.
+Print Assumptions interval_equal_1_correct.
 
 Definition interval_intersection_1_audit : interval_intersection_1_spec := interval_intersection_1_correct.
 Print Assumptions interval_intersection_1_correct.
 
+Definition interval_less_1_audit : interval_less_1_spec := interval_less_1_correct.
+Print Assumptions interval_less_1_correct.
+
+Definition interval_less_equal_1_audit : interval_less_equal_1_spec := interval_less_equal_1_correct.
+Print Assumptions interval_less_equal_1_correct.
+
 Definition interval_make_1_audit : interval_make_1_spec := interval_make_1_correct.
 Print Assumptions interval_make_1_correct.
-
-Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
-Print Assumptions sub_up_1_ieee_correct.
-
-Definition interval_mid_rad_1_audit : interval_mid_rad_1_spec := interval_mid_rad_1_correct.
-Print Assumptions interval_mid_rad_1_correct.
 
 Definition mul_dir_1_ieee_audit : mul_dir_1_ieee_spec := mul_dir_1_ieee_correct.
 Print Assumptions mul_dir_1_ieee_correct.
@@ -104,14 +201,32 @@ Print Assumptions interval_mul_1_correct.
 Definition interval_neg_1_audit : interval_neg_1_spec := interval_neg_1_correct.
 Print Assumptions interval_neg_1_correct.
 
+Definition interval_negative_1_audit : interval_negative_1_spec := interval_negative_1_correct.
+Print Assumptions interval_negative_1_correct.
+
+Definition interval_positive_1_audit : interval_positive_1_spec := interval_positive_1_correct.
+Print Assumptions interval_positive_1_correct.
+
+Definition interval_rel_disjoint_1_audit : interval_rel_disjoint_1_spec := interval_rel_disjoint_1_correct.
+Print Assumptions interval_rel_disjoint_1_correct.
+
+Definition interval_rel_equal_1_audit : interval_rel_equal_1_spec := interval_rel_equal_1_correct.
+Print Assumptions interval_rel_equal_1_correct.
+
+Definition interval_rel_interior_1_audit : interval_rel_interior_1_spec := interval_rel_interior_1_correct.
+Print Assumptions interval_rel_interior_1_correct.
+
 Definition interval_split_1_audit : interval_split_1_spec := interval_split_1_correct.
 Print Assumptions interval_split_1_correct.
 
 Definition interval_sub_1_audit : interval_sub_1_spec := interval_sub_1_correct.
 Print Assumptions interval_sub_1_correct.
 
-Definition interval_to_ball_1_audit : interval_to_ball_1_spec := interval_to_ball_1_correct.
-Print Assumptions interval_to_ball_1_correct.
+Definition interval_subset_1_audit : interval_subset_1_spec := interval_subset_1_correct.
+Print Assumptions interval_subset_1_correct.
+
+Definition interval_zero_1_audit : interval_zero_1_spec := interval_zero_1_correct.
+Print Assumptions interval_zero_1_correct.
 
 Definition make_2_audit : make_2_spec := make_2_correct.
 Print Assumptions make_2_correct.
@@ -127,9 +242,6 @@ Print Assumptions next_down_ieee_correct.
 
 Definition next_up_ieee_audit : next_up_ieee_spec := next_up_ieee_correct.
 Print Assumptions next_up_ieee_correct.
-
-Definition norm_finish_1_audit : norm_finish_1_spec := norm_finish_1_correct.
-Print Assumptions norm_finish_1_correct.
 
 Definition norm_finish_2_audit : norm_finish_2_spec := norm_finish_2_correct.
 Print Assumptions norm_finish_2_correct.
@@ -149,9 +261,6 @@ Print Assumptions sub_down_entry_ieee_correct.
 Definition sub_up_entry_ieee_audit : sub_up_entry_ieee_spec := sub_up_entry_ieee_correct.
 Print Assumptions sub_up_entry_ieee_correct.
 
-Definition abs_2_ieee_audit : abs_2_ieee_spec := abs_2_ieee_correct.
-Print Assumptions abs_2_ieee_correct.
-
 Definition to_up_2_ieee_audit : to_up_2_ieee_spec := to_up_2_ieee_correct.
 Print Assumptions to_up_2_ieee_correct.
 
@@ -170,8 +279,47 @@ Print Assumptions add_fast_2_2_full_correct.
 Definition ball_add_2_full_audit : ball_add_2_full_spec := ball_add_2_full_correct.
 Print Assumptions ball_add_2_full_correct.
 
+Definition ball_contains_ball_2_audit : ball_contains_ball_2_spec := ball_contains_ball_2_correct.
+Print Assumptions ball_contains_ball_2_correct.
+
 Definition to_down_2_ieee_audit : to_down_2_ieee_spec := to_down_2_ieee_correct.
 Print Assumptions to_down_2_ieee_correct.
+
+Definition ball_contains_point_2_audit : ball_contains_point_2_spec := ball_contains_point_2_correct.
+Print Assumptions ball_contains_point_2_correct.
+
+Definition eq_2_2_ieee_audit : eq_2_2_ieee_spec := eq_2_2_ieee_correct.
+Print Assumptions eq_2_2_ieee_correct.
+
+Definition ball_equal_2_audit : ball_equal_2_spec := ball_equal_2_correct.
+Print Assumptions ball_equal_2_correct.
+
+Definition ball_to_interval_2_audit : ball_to_interval_2_spec := ball_to_interval_2_correct.
+Print Assumptions ball_to_interval_2_correct.
+
+Definition interval_hull_2_audit : interval_hull_2_spec := interval_hull_2_correct.
+Print Assumptions interval_hull_2_correct.
+
+Definition interval_mid_rad_2_audit : interval_mid_rad_2_spec := interval_mid_rad_2_correct.
+Print Assumptions interval_mid_rad_2_correct.
+
+Definition interval_to_ball_2_audit : interval_to_ball_2_spec := interval_to_ball_2_correct.
+Print Assumptions interval_to_ball_2_correct.
+
+Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.
+Print Assumptions ball_hull_2_correct.
+
+Definition interval_intersection_2_audit : interval_intersection_2_spec := interval_intersection_2_correct.
+Print Assumptions interval_intersection_2_correct.
+
+Definition ball_intersection_2_audit : ball_intersection_2_spec := ball_intersection_2_correct.
+Print Assumptions ball_intersection_2_correct.
+
+Definition ball_less_2_audit : ball_less_2_spec := ball_less_2_correct.
+Print Assumptions ball_less_2_correct.
+
+Definition ball_less_equal_2_audit : ball_less_equal_2_spec := ball_less_equal_2_correct.
+Print Assumptions ball_less_equal_2_correct.
 
 Definition ball_lower_as_2_audit : ball_lower_as_2_spec := ball_lower_as_2_correct.
 Print Assumptions ball_lower_as_2_correct.
@@ -194,8 +342,23 @@ Print Assumptions neg_2_ieee_correct.
 Definition ball_neg_2_ieee_audit : ball_neg_2_ieee_spec := ball_neg_2_ieee_correct.
 Print Assumptions ball_neg_2_ieee_correct.
 
+Definition lt_2_1_ieee_audit : lt_2_1_ieee_spec := lt_2_1_ieee_correct.
+Print Assumptions lt_2_1_ieee_correct.
+
+Definition ball_negative_2_audit : ball_negative_2_spec := ball_negative_2_correct.
+Print Assumptions ball_negative_2_correct.
+
+Definition lt_1_2_ieee_audit : lt_1_2_ieee_spec := lt_1_2_ieee_correct.
+Print Assumptions lt_1_2_ieee_correct.
+
+Definition ball_positive_2_audit : ball_positive_2_spec := ball_positive_2_correct.
+Print Assumptions ball_positive_2_correct.
+
 Definition ball_scale_2_full_audit : ball_scale_2_full_spec := ball_scale_2_full_correct.
 Print Assumptions ball_scale_2_full_correct.
+
+Definition ball_split_2_audit : ball_split_2_spec := ball_split_2_correct.
+Print Assumptions ball_split_2_correct.
 
 Definition ball_sub_2_full_audit : ball_sub_2_full_spec := ball_sub_2_full_correct.
 Print Assumptions ball_sub_2_full_correct.
@@ -206,8 +369,11 @@ Print Assumptions ball_upper_as_2_correct.
 Definition eq_2_1_ieee_audit : eq_2_1_ieee_spec := eq_2_1_ieee_correct.
 Print Assumptions eq_2_1_ieee_correct.
 
-Definition eq_2_2_ieee_audit : eq_2_2_ieee_spec := eq_2_2_ieee_correct.
-Print Assumptions eq_2_2_ieee_correct.
+Definition ball_zero_2_audit : ball_zero_2_spec := ball_zero_2_correct.
+Print Assumptions ball_zero_2_correct.
+
+Definition bv_center_2_ieee_audit : bv_center_2_ieee_spec := bv_center_2_ieee_correct.
+Print Assumptions bv_center_2_ieee_correct.
 
 Definition fold_finish_2_audit : fold_finish_2_spec := fold_finish_2_correct.
 Print Assumptions fold_finish_2_correct.
@@ -215,17 +381,23 @@ Print Assumptions fold_finish_2_correct.
 Definition interval_add_2_audit : interval_add_2_spec := interval_add_2_correct.
 Print Assumptions interval_add_2_correct.
 
-Definition lt_2_2_ieee_audit : lt_2_2_ieee_spec := lt_2_2_ieee_correct.
-Print Assumptions lt_2_2_ieee_correct.
+Definition interval_contains_2_audit : interval_contains_2_spec := interval_contains_2_correct.
+Print Assumptions interval_contains_2_correct.
 
-Definition interval_hull_2_audit : interval_hull_2_spec := interval_hull_2_correct.
-Print Assumptions interval_hull_2_correct.
+Definition interval_empty_2_audit : interval_empty_2_spec := interval_empty_2_correct.
+Print Assumptions interval_empty_2_correct.
 
-Definition le_2_2_ieee_audit : le_2_2_ieee_spec := le_2_2_ieee_correct.
-Print Assumptions le_2_2_ieee_correct.
+Definition interval_entire_2_audit : interval_entire_2_spec := interval_entire_2_correct.
+Print Assumptions interval_entire_2_correct.
 
-Definition interval_intersection_2_audit : interval_intersection_2_spec := interval_intersection_2_correct.
-Print Assumptions interval_intersection_2_correct.
+Definition interval_equal_2_audit : interval_equal_2_spec := interval_equal_2_correct.
+Print Assumptions interval_equal_2_correct.
+
+Definition interval_less_2_audit : interval_less_2_spec := interval_less_2_correct.
+Print Assumptions interval_less_2_correct.
+
+Definition interval_less_equal_2_audit : interval_less_equal_2_spec := interval_less_equal_2_correct.
+Print Assumptions interval_less_equal_2_correct.
 
 Definition interval_make_2_audit : interval_make_2_spec := interval_make_2_correct.
 Print Assumptions interval_make_2_correct.
@@ -239,20 +411,35 @@ Print Assumptions interval_mul_2_correct.
 Definition interval_neg_2_audit : interval_neg_2_spec := interval_neg_2_correct.
 Print Assumptions interval_neg_2_correct.
 
+Definition interval_negative_2_audit : interval_negative_2_spec := interval_negative_2_correct.
+Print Assumptions interval_negative_2_correct.
+
+Definition interval_positive_2_audit : interval_positive_2_spec := interval_positive_2_correct.
+Print Assumptions interval_positive_2_correct.
+
+Definition interval_rel_disjoint_2_audit : interval_rel_disjoint_2_spec := interval_rel_disjoint_2_correct.
+Print Assumptions interval_rel_disjoint_2_correct.
+
+Definition interval_rel_equal_2_audit : interval_rel_equal_2_spec := interval_rel_equal_2_correct.
+Print Assumptions interval_rel_equal_2_correct.
+
+Definition interval_rel_interior_2_audit : interval_rel_interior_2_spec := interval_rel_interior_2_correct.
+Print Assumptions interval_rel_interior_2_correct.
+
+Definition interval_split_2_audit : interval_split_2_spec := interval_split_2_correct.
+Print Assumptions interval_split_2_correct.
+
 Definition interval_sub_2_audit : interval_sub_2_spec := interval_sub_2_correct.
 Print Assumptions interval_sub_2_correct.
 
+Definition interval_subset_2_audit : interval_subset_2_spec := interval_subset_2_correct.
+Print Assumptions interval_subset_2_correct.
+
+Definition interval_zero_2_audit : interval_zero_2_spec := interval_zero_2_correct.
+Print Assumptions interval_zero_2_correct.
+
 Definition le_1_2_ieee_audit : le_1_2_ieee_spec := le_1_2_ieee_correct.
 Print Assumptions le_1_2_ieee_correct.
-
-Definition le_2_1_ieee_audit : le_2_1_ieee_spec := le_2_1_ieee_correct.
-Print Assumptions le_2_1_ieee_correct.
-
-Definition lt_1_2_ieee_audit : lt_1_2_ieee_spec := lt_1_2_ieee_correct.
-Print Assumptions lt_1_2_ieee_correct.
-
-Definition lt_2_1_ieee_audit : lt_2_1_ieee_spec := lt_2_1_ieee_correct.
-Print Assumptions lt_2_1_ieee_correct.
 
 Definition make_2_limbs_audit : make_2_limbs_spec := make_2_limbs_correct.
 Print Assumptions make_2_limbs_correct.
@@ -283,17 +470,125 @@ Print Assumptions to_nearest_2_ieee_correct.
    theorems are named (ieee_bridge_theorem, ieee_spec_theorem, ieee_lead_theorem; the
    ieee_theorem of a fold). *)
 
+Definition acc_add_1_ieee_audit : acc_add_1_ieee_spec := acc_add_1_ieee_correct.
+Print Assumptions acc_add_1_ieee_correct.
+
+Definition acc_merge_1_ieee_audit : acc_merge_1_ieee_spec := acc_merge_1_ieee_correct.
+Print Assumptions acc_merge_1_ieee_correct.
+
+Definition acc_mul_1_ieee_audit : acc_mul_1_ieee_spec := acc_mul_1_ieee_correct.
+Print Assumptions acc_mul_1_ieee_correct.
+
+Definition acc_radius_1_ieee_audit : acc_radius_1_ieee_spec := acc_radius_1_ieee_correct.
+Print Assumptions acc_radius_1_ieee_correct.
+
+Definition acc_radius_2_ieee_audit : acc_radius_2_ieee_spec := acc_radius_2_ieee_correct.
+Print Assumptions acc_radius_2_ieee_correct.
+
+Definition add_1_1_ieee_bridge_audit : add_1_1_ieee_bridge_spec := add_1_1_ieee_bridge.
+Print Assumptions add_1_1_ieee_bridge.
+
+Definition add_entry_step_1_ieee_bridge_audit : add_entry_step_1_ieee_bridge_spec := add_entry_step_1_ieee_bridge.
+Print Assumptions add_entry_step_1_ieee_bridge.
+
+Definition axpy_entry_step_1_ieee_bridge_audit : axpy_entry_step_1_ieee_bridge_spec := axpy_entry_step_1_ieee_bridge.
+Print Assumptions axpy_entry_step_1_ieee_bridge.
+
+Definition axpy_step_1_ieee_bridge_audit : axpy_step_1_ieee_bridge_spec := axpy_step_1_ieee_bridge.
+Print Assumptions axpy_step_1_ieee_bridge.
+
+Definition bv_center_entry_1_ieee_bridge_audit : bv_center_entry_1_ieee_bridge_spec := bv_center_entry_1_ieee_bridge.
+Print Assumptions bv_center_entry_1_ieee_bridge.
+
+Definition bv_mul_pow2_step_1_ieee_audit : bv_mul_pow2_step_1_ieee_spec := bv_mul_pow2_step_1_ieee_correct.
+Print Assumptions bv_mul_pow2_step_1_ieee_correct.
+
 Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
 Print Assumptions dot_step_1_ieee_bridge.
 
+Definition mul_pow2_step_1_ieee_bridge_audit : mul_pow2_step_1_ieee_bridge_spec := mul_pow2_step_1_ieee_bridge.
+Print Assumptions mul_pow2_step_1_ieee_bridge.
+
+Definition neg_1_ieee_bridge_audit : neg_1_ieee_bridge_spec := neg_1_ieee_bridge.
+Print Assumptions neg_1_ieee_bridge.
+
+Definition scale_step_1_ieee_bridge_audit : scale_step_1_ieee_bridge_spec := scale_step_1_ieee_bridge.
+Print Assumptions scale_step_1_ieee_bridge.
+
+Definition sub_1_1_ieee_bridge_audit : sub_1_1_ieee_bridge_spec := sub_1_1_ieee_bridge.
+Print Assumptions sub_1_1_ieee_bridge.
+
+Definition sub_entry_step_1_ieee_bridge_audit : sub_entry_step_1_ieee_bridge_spec := sub_entry_step_1_ieee_bridge.
+Print Assumptions sub_entry_step_1_ieee_bridge.
+
 Definition sum_entry_step_1_ieee_bridge_audit : sum_entry_step_1_ieee_bridge_spec := sum_entry_step_1_ieee_bridge.
 Print Assumptions sum_entry_step_1_ieee_bridge.
+
+Definition acc_add_2_ieee_audit : acc_add_2_ieee_spec := acc_add_2_ieee_correct.
+Print Assumptions acc_add_2_ieee_correct.
+
+Definition acc_merge_2_ieee_audit : acc_merge_2_ieee_spec := acc_merge_2_ieee_correct.
+Print Assumptions acc_merge_2_ieee_correct.
 
 Definition dot_step_2_ieee_bridge_audit : dot_step_2_ieee_bridge_spec := dot_step_2_ieee_bridge.
 Print Assumptions dot_step_2_ieee_bridge.
 
 Definition dot_step_2_ieee_audit : dot_step_2_ieee_spec := dot_step_2_ieee_correct.
 Print Assumptions dot_step_2_ieee_correct.
+
+Definition acc_mul_2_ieee_audit : acc_mul_2_ieee_spec := acc_mul_2_ieee_correct.
+Print Assumptions acc_mul_2_ieee_correct.
+
+Definition add_entry_step_2_ieee_bridge_audit : add_entry_step_2_ieee_bridge_spec := add_entry_step_2_ieee_bridge.
+Print Assumptions add_entry_step_2_ieee_bridge.
+
+Definition add_entry_step_2_ieee_audit : add_entry_step_2_ieee_spec := add_entry_step_2_ieee_correct.
+Print Assumptions add_entry_step_2_ieee_correct.
+
+Definition axpy_entry_step_2_ieee_bridge_audit : axpy_entry_step_2_ieee_bridge_spec := axpy_entry_step_2_ieee_bridge.
+Print Assumptions axpy_entry_step_2_ieee_bridge.
+
+Definition axpy_entry_step_2_ieee_audit : axpy_entry_step_2_ieee_spec := axpy_entry_step_2_ieee_correct.
+Print Assumptions axpy_entry_step_2_ieee_correct.
+
+Definition axpy_entry_step_2_1_ieee_bridge_audit : axpy_entry_step_2_1_ieee_bridge_spec := axpy_entry_step_2_1_ieee_bridge.
+Print Assumptions axpy_entry_step_2_1_ieee_bridge.
+
+Definition axpy_entry_step_2_1_ieee_audit : axpy_entry_step_2_1_ieee_spec := axpy_entry_step_2_1_ieee_correct.
+Print Assumptions axpy_entry_step_2_1_ieee_correct.
+
+Definition axpy_step_2_ieee_bridge_audit : axpy_step_2_ieee_bridge_spec := axpy_step_2_ieee_bridge.
+Print Assumptions axpy_step_2_ieee_bridge.
+
+Definition axpy_step_2_ieee_audit : axpy_step_2_ieee_spec := axpy_step_2_ieee_correct.
+Print Assumptions axpy_step_2_ieee_correct.
+
+Definition axpy_step_2_1_ieee_bridge_audit : axpy_step_2_1_ieee_bridge_spec := axpy_step_2_1_ieee_bridge.
+Print Assumptions axpy_step_2_1_ieee_bridge.
+
+Definition axpy_step_2_1_ieee_audit : axpy_step_2_1_ieee_spec := axpy_step_2_1_ieee_correct.
+Print Assumptions axpy_step_2_1_ieee_correct.
+
+Definition bv_mul_pow2_step_2_ieee_audit : bv_mul_pow2_step_2_ieee_spec := bv_mul_pow2_step_2_ieee_correct.
+Print Assumptions bv_mul_pow2_step_2_ieee_correct.
+
+Definition mul_pow2_step_2_ieee_bridge_audit : mul_pow2_step_2_ieee_bridge_spec := mul_pow2_step_2_ieee_bridge.
+Print Assumptions mul_pow2_step_2_ieee_bridge.
+
+Definition mul_pow2_step_2_ieee_audit : mul_pow2_step_2_ieee_spec := mul_pow2_step_2_ieee_correct.
+Print Assumptions mul_pow2_step_2_ieee_correct.
+
+Definition scale_step_2_ieee_bridge_audit : scale_step_2_ieee_bridge_spec := scale_step_2_ieee_bridge.
+Print Assumptions scale_step_2_ieee_bridge.
+
+Definition scale_step_2_ieee_audit : scale_step_2_ieee_spec := scale_step_2_ieee_correct.
+Print Assumptions scale_step_2_ieee_correct.
+
+Definition sub_entry_step_2_ieee_bridge_audit : sub_entry_step_2_ieee_bridge_spec := sub_entry_step_2_ieee_bridge.
+Print Assumptions sub_entry_step_2_ieee_bridge.
+
+Definition sub_entry_step_2_ieee_audit : sub_entry_step_2_ieee_spec := sub_entry_step_2_ieee_correct.
+Print Assumptions sub_entry_step_2_ieee_correct.
 
 Definition sum_entry_step_2_ieee_bridge_audit : sum_entry_step_2_ieee_bridge_spec := sum_entry_step_2_ieee_bridge.
 Print Assumptions sum_entry_step_2_ieee_bridge.
@@ -310,8 +605,38 @@ Print Assumptions sum_fast_entry_step_2_ieee_correct.
 Definition add_1_1_ieee_lead_audit : add_1_1_ieee_lead_spec := add_1_1_ieee_lead.
 Print Assumptions add_1_1_ieee_lead.
 
+Definition add_entry_step_1_ieee_lead_audit : add_entry_step_1_ieee_lead_spec := add_entry_step_1_ieee_lead.
+Print Assumptions add_entry_step_1_ieee_lead.
+
+Definition axpy_entry_step_1_ieee_lead_audit : axpy_entry_step_1_ieee_lead_spec := axpy_entry_step_1_ieee_lead.
+Print Assumptions axpy_entry_step_1_ieee_lead.
+
+Definition axpy_step_1_ieee_lead_audit : axpy_step_1_ieee_lead_spec := axpy_step_1_ieee_lead.
+Print Assumptions axpy_step_1_ieee_lead.
+
+Definition bv_center_entry_1_ieee_lead_audit : bv_center_entry_1_ieee_lead_spec := bv_center_entry_1_ieee_lead.
+Print Assumptions bv_center_entry_1_ieee_lead.
+
+Definition bv_mul_pow2_step_1_ieee_lead_audit : bv_mul_pow2_step_1_ieee_lead_spec := bv_mul_pow2_step_1_ieee_lead.
+Print Assumptions bv_mul_pow2_step_1_ieee_lead.
+
 Definition dot_step_1_ieee_lead_audit : dot_step_1_ieee_lead_spec := dot_step_1_ieee_lead.
 Print Assumptions dot_step_1_ieee_lead.
+
+Definition mul_pow2_step_1_ieee_lead_audit : mul_pow2_step_1_ieee_lead_spec := mul_pow2_step_1_ieee_lead.
+Print Assumptions mul_pow2_step_1_ieee_lead.
+
+Definition neg_1_ieee_lead_audit : neg_1_ieee_lead_spec := neg_1_ieee_lead.
+Print Assumptions neg_1_ieee_lead.
+
+Definition scale_step_1_ieee_lead_audit : scale_step_1_ieee_lead_spec := scale_step_1_ieee_lead.
+Print Assumptions scale_step_1_ieee_lead.
+
+Definition sub_1_1_ieee_lead_audit : sub_1_1_ieee_lead_spec := sub_1_1_ieee_lead.
+Print Assumptions sub_1_1_ieee_lead.
+
+Definition sub_entry_step_1_ieee_lead_audit : sub_entry_step_1_ieee_lead_spec := sub_entry_step_1_ieee_lead.
+Print Assumptions sub_entry_step_1_ieee_lead.
 
 Definition sum_entry_step_1_ieee_lead_audit : sum_entry_step_1_ieee_lead_spec := sum_entry_step_1_ieee_lead.
 Print Assumptions sum_entry_step_1_ieee_lead.
@@ -319,11 +644,47 @@ Print Assumptions sum_entry_step_1_ieee_lead.
 Definition add_2_2_ieee_lead_audit : add_2_2_ieee_lead_spec := add_2_2_ieee_lead.
 Print Assumptions add_2_2_ieee_lead.
 
+Definition dot_step_2_ieee_lead_audit : dot_step_2_ieee_lead_spec := dot_step_2_ieee_lead.
+Print Assumptions dot_step_2_ieee_lead.
+
+Definition add_entry_step_2_ieee_lead_audit : add_entry_step_2_ieee_lead_spec := add_entry_step_2_ieee_lead.
+Print Assumptions add_entry_step_2_ieee_lead.
+
 Definition add_fast_2_2_ieee_lead_audit : add_fast_2_2_ieee_lead_spec := add_fast_2_2_ieee_lead.
 Print Assumptions add_fast_2_2_ieee_lead.
 
-Definition dot_step_2_ieee_lead_audit : dot_step_2_ieee_lead_spec := dot_step_2_ieee_lead.
-Print Assumptions dot_step_2_ieee_lead.
+Definition axpy_entry_step_2_ieee_lead_audit : axpy_entry_step_2_ieee_lead_spec := axpy_entry_step_2_ieee_lead.
+Print Assumptions axpy_entry_step_2_ieee_lead.
+
+Definition axpy_entry_step_2_1_ieee_lead_audit : axpy_entry_step_2_1_ieee_lead_spec := axpy_entry_step_2_1_ieee_lead.
+Print Assumptions axpy_entry_step_2_1_ieee_lead.
+
+Definition axpy_step_2_ieee_lead_audit : axpy_step_2_ieee_lead_spec := axpy_step_2_ieee_lead.
+Print Assumptions axpy_step_2_ieee_lead.
+
+Definition axpy_step_2_1_ieee_lead_audit : axpy_step_2_1_ieee_lead_spec := axpy_step_2_1_ieee_lead.
+Print Assumptions axpy_step_2_1_ieee_lead.
+
+Definition neg_2_ieee_lead_audit : neg_2_ieee_lead_spec := neg_2_ieee_lead.
+Print Assumptions neg_2_ieee_lead.
+
+Definition bv_center_2_ieee_lead_audit : bv_center_2_ieee_lead_spec := bv_center_2_ieee_lead.
+Print Assumptions bv_center_2_ieee_lead.
+
+Definition bv_mul_pow2_step_2_ieee_lead_audit : bv_mul_pow2_step_2_ieee_lead_spec := bv_mul_pow2_step_2_ieee_lead.
+Print Assumptions bv_mul_pow2_step_2_ieee_lead.
+
+Definition mul_pow2_step_2_ieee_lead_audit : mul_pow2_step_2_ieee_lead_spec := mul_pow2_step_2_ieee_lead.
+Print Assumptions mul_pow2_step_2_ieee_lead.
+
+Definition scale_step_2_ieee_lead_audit : scale_step_2_ieee_lead_spec := scale_step_2_ieee_lead.
+Print Assumptions scale_step_2_ieee_lead.
+
+Definition sub_2_2_ieee_lead_audit : sub_2_2_ieee_lead_spec := sub_2_2_ieee_lead.
+Print Assumptions sub_2_2_ieee_lead.
+
+Definition sub_entry_step_2_ieee_lead_audit : sub_entry_step_2_ieee_lead_spec := sub_entry_step_2_ieee_lead.
+Print Assumptions sub_entry_step_2_ieee_lead.
 
 Definition sum_entry_step_2_ieee_lead_audit : sum_entry_step_2_ieee_lead_spec := sum_entry_step_2_ieee_lead.
 Print Assumptions sum_entry_step_2_ieee_lead.
@@ -349,11 +710,23 @@ Print Assumptions norm_upper_1_seq_ieee_correct.
 Definition norm_upper_1_lanes_ieee_audit : norm_upper_1_lanes_ieee_spec := norm_upper_1_lanes_ieee_correct.
 Print Assumptions norm_upper_1_lanes_ieee_correct.
 
+Definition norm_upper_1_orders_ieee_audit : norm_upper_1_orders_ieee_spec := norm_upper_1_orders_ieee_correct.
+Print Assumptions norm_upper_1_orders_ieee_correct.
+
+Definition norm_upper_1_flag_ieee_audit : norm_upper_1_flag_ieee_spec := norm_upper_1_flag_ieee_correct.
+Print Assumptions norm_upper_1_flag_ieee_correct.
+
 Definition norm_upper_2_seq_ieee_audit : norm_upper_2_seq_ieee_spec := norm_upper_2_seq_ieee_correct.
 Print Assumptions norm_upper_2_seq_ieee_correct.
 
 Definition norm_upper_2_lanes_ieee_audit : norm_upper_2_lanes_ieee_spec := norm_upper_2_lanes_ieee_correct.
 Print Assumptions norm_upper_2_lanes_ieee_correct.
+
+Definition norm_upper_2_orders_ieee_audit : norm_upper_2_orders_ieee_spec := norm_upper_2_orders_ieee_correct.
+Print Assumptions norm_upper_2_orders_ieee_correct.
+
+Definition norm_upper_2_flag_ieee_audit : norm_upper_2_flag_ieee_spec := norm_upper_2_flag_ieee_correct.
+Print Assumptions norm_upper_2_flag_ieee_correct.
 
 Definition sum_1_seq_ieee_audit : sum_1_seq_ieee_spec := sum_1_seq_ieee_correct.
 Print Assumptions sum_1_seq_ieee_correct.
@@ -390,3 +763,195 @@ Print Assumptions sum_fast_2_entry_seq_ieee_correct.
 
 Definition sum_fast_2_entry_lanes_ieee_audit : sum_fast_2_entry_lanes_ieee_spec := sum_fast_2_entry_lanes_ieee_correct.
 Print Assumptions sum_fast_2_entry_lanes_ieee_correct.
+
+Definition add_1_seq_ieee_audit : add_1_seq_ieee_spec := add_1_seq_ieee_correct.
+Print Assumptions add_1_seq_ieee_correct.
+
+Definition add_1_lanes_ieee_audit : add_1_lanes_ieee_spec := add_1_lanes_ieee_correct.
+Print Assumptions add_1_lanes_ieee_correct.
+
+Definition add_1_entry_seq_ieee_audit : add_1_entry_seq_ieee_spec := add_1_entry_seq_ieee_correct.
+Print Assumptions add_1_entry_seq_ieee_correct.
+
+Definition add_1_entry_lanes_ieee_audit : add_1_entry_lanes_ieee_spec := add_1_entry_lanes_ieee_correct.
+Print Assumptions add_1_entry_lanes_ieee_correct.
+
+Definition add_2_seq_ieee_audit : add_2_seq_ieee_spec := add_2_seq_ieee_correct.
+Print Assumptions add_2_seq_ieee_correct.
+
+Definition add_2_lanes_ieee_audit : add_2_lanes_ieee_spec := add_2_lanes_ieee_correct.
+Print Assumptions add_2_lanes_ieee_correct.
+
+Definition add_2_entry_seq_ieee_audit : add_2_entry_seq_ieee_spec := add_2_entry_seq_ieee_correct.
+Print Assumptions add_2_entry_seq_ieee_correct.
+
+Definition add_2_entry_lanes_ieee_audit : add_2_entry_lanes_ieee_spec := add_2_entry_lanes_ieee_correct.
+Print Assumptions add_2_entry_lanes_ieee_correct.
+
+Definition axpy_1_seq_ieee_audit : axpy_1_seq_ieee_spec := axpy_1_seq_ieee_correct.
+Print Assumptions axpy_1_seq_ieee_correct.
+
+Definition axpy_1_lanes_ieee_audit : axpy_1_lanes_ieee_spec := axpy_1_lanes_ieee_correct.
+Print Assumptions axpy_1_lanes_ieee_correct.
+
+Definition axpy_1_entry_seq_ieee_audit : axpy_1_entry_seq_ieee_spec := axpy_1_entry_seq_ieee_correct.
+Print Assumptions axpy_1_entry_seq_ieee_correct.
+
+Definition axpy_1_entry_lanes_ieee_audit : axpy_1_entry_lanes_ieee_spec := axpy_1_entry_lanes_ieee_correct.
+Print Assumptions axpy_1_entry_lanes_ieee_correct.
+
+Definition axpy_2_seq_ieee_audit : axpy_2_seq_ieee_spec := axpy_2_seq_ieee_correct.
+Print Assumptions axpy_2_seq_ieee_correct.
+
+Definition axpy_2_lanes_ieee_audit : axpy_2_lanes_ieee_spec := axpy_2_lanes_ieee_correct.
+Print Assumptions axpy_2_lanes_ieee_correct.
+
+Definition axpy_2_1_seq_ieee_audit : axpy_2_1_seq_ieee_spec := axpy_2_1_seq_ieee_correct.
+Print Assumptions axpy_2_1_seq_ieee_correct.
+
+Definition axpy_2_1_lanes_ieee_audit : axpy_2_1_lanes_ieee_spec := axpy_2_1_lanes_ieee_correct.
+Print Assumptions axpy_2_1_lanes_ieee_correct.
+
+Definition axpy_2_1_entry_seq_ieee_audit : axpy_2_1_entry_seq_ieee_spec := axpy_2_1_entry_seq_ieee_correct.
+Print Assumptions axpy_2_1_entry_seq_ieee_correct.
+
+Definition axpy_2_1_entry_lanes_ieee_audit : axpy_2_1_entry_lanes_ieee_spec := axpy_2_1_entry_lanes_ieee_correct.
+Print Assumptions axpy_2_1_entry_lanes_ieee_correct.
+
+Definition axpy_2_entry_seq_ieee_audit : axpy_2_entry_seq_ieee_spec := axpy_2_entry_seq_ieee_correct.
+Print Assumptions axpy_2_entry_seq_ieee_correct.
+
+Definition axpy_2_entry_lanes_ieee_audit : axpy_2_entry_lanes_ieee_spec := axpy_2_entry_lanes_ieee_correct.
+Print Assumptions axpy_2_entry_lanes_ieee_correct.
+
+Definition mul_pow2_map_1_seq_ieee_audit : mul_pow2_map_1_seq_ieee_spec := mul_pow2_map_1_seq_ieee_correct.
+Print Assumptions mul_pow2_map_1_seq_ieee_correct.
+
+Definition mul_pow2_map_1_lanes_ieee_audit : mul_pow2_map_1_lanes_ieee_spec := mul_pow2_map_1_lanes_ieee_correct.
+Print Assumptions mul_pow2_map_1_lanes_ieee_correct.
+
+Definition mul_pow2_map_2_seq_ieee_audit : mul_pow2_map_2_seq_ieee_spec := mul_pow2_map_2_seq_ieee_correct.
+Print Assumptions mul_pow2_map_2_seq_ieee_correct.
+
+Definition mul_pow2_map_2_lanes_ieee_audit : mul_pow2_map_2_lanes_ieee_spec := mul_pow2_map_2_lanes_ieee_correct.
+Print Assumptions mul_pow2_map_2_lanes_ieee_correct.
+
+Definition scale_1_seq_ieee_audit : scale_1_seq_ieee_spec := scale_1_seq_ieee_correct.
+Print Assumptions scale_1_seq_ieee_correct.
+
+Definition scale_1_lanes_ieee_audit : scale_1_lanes_ieee_spec := scale_1_lanes_ieee_correct.
+Print Assumptions scale_1_lanes_ieee_correct.
+
+Definition scale_2_seq_ieee_audit : scale_2_seq_ieee_spec := scale_2_seq_ieee_correct.
+Print Assumptions scale_2_seq_ieee_correct.
+
+Definition scale_2_lanes_ieee_audit : scale_2_lanes_ieee_spec := scale_2_lanes_ieee_correct.
+Print Assumptions scale_2_lanes_ieee_correct.
+
+Definition sub_1_seq_ieee_audit : sub_1_seq_ieee_spec := sub_1_seq_ieee_correct.
+Print Assumptions sub_1_seq_ieee_correct.
+
+Definition sub_1_lanes_ieee_audit : sub_1_lanes_ieee_spec := sub_1_lanes_ieee_correct.
+Print Assumptions sub_1_lanes_ieee_correct.
+
+Definition sub_1_entry_seq_ieee_audit : sub_1_entry_seq_ieee_spec := sub_1_entry_seq_ieee_correct.
+Print Assumptions sub_1_entry_seq_ieee_correct.
+
+Definition sub_1_entry_lanes_ieee_audit : sub_1_entry_lanes_ieee_spec := sub_1_entry_lanes_ieee_correct.
+Print Assumptions sub_1_entry_lanes_ieee_correct.
+
+Definition sub_2_seq_ieee_audit : sub_2_seq_ieee_spec := sub_2_seq_ieee_correct.
+Print Assumptions sub_2_seq_ieee_correct.
+
+Definition sub_2_lanes_ieee_audit : sub_2_lanes_ieee_spec := sub_2_lanes_ieee_correct.
+Print Assumptions sub_2_lanes_ieee_correct.
+
+Definition sub_2_entry_seq_ieee_audit : sub_2_entry_seq_ieee_spec := sub_2_entry_seq_ieee_correct.
+Print Assumptions sub_2_entry_seq_ieee_correct.
+
+Definition sub_2_entry_lanes_ieee_audit : sub_2_entry_lanes_ieee_spec := sub_2_entry_lanes_ieee_correct.
+Print Assumptions sub_2_entry_lanes_ieee_correct.
+
+Definition conv_1_ieee_audit : conv_1_ieee_spec := conv_1_ieee_correct.
+Print Assumptions conv_1_ieee_correct.
+
+Definition conv_2_ieee_audit : conv_2_ieee_spec := conv_2_ieee_correct.
+Print Assumptions conv_2_ieee_correct.
+
+Definition bv_add_1_seq_ieee_audit : bv_add_1_seq_ieee_spec := bv_add_1_seq_ieee_correct.
+Print Assumptions bv_add_1_seq_ieee_correct.
+
+Definition bv_add_1_lanes_ieee_audit : bv_add_1_lanes_ieee_spec := bv_add_1_lanes_ieee_correct.
+Print Assumptions bv_add_1_lanes_ieee_correct.
+
+Definition bv_add_2_seq_ieee_audit : bv_add_2_seq_ieee_spec := bv_add_2_seq_ieee_correct.
+Print Assumptions bv_add_2_seq_ieee_correct.
+
+Definition bv_add_2_lanes_ieee_audit : bv_add_2_lanes_ieee_spec := bv_add_2_lanes_ieee_correct.
+Print Assumptions bv_add_2_lanes_ieee_correct.
+
+Definition bv_make_1_seq_ieee_audit : bv_make_1_seq_ieee_spec := bv_make_1_seq_ieee_correct.
+Print Assumptions bv_make_1_seq_ieee_correct.
+
+Definition bv_make_1_lanes_ieee_audit : bv_make_1_lanes_ieee_spec := bv_make_1_lanes_ieee_correct.
+Print Assumptions bv_make_1_lanes_ieee_correct.
+
+Definition bv_make_2_seq_ieee_audit : bv_make_2_seq_ieee_spec := bv_make_2_seq_ieee_correct.
+Print Assumptions bv_make_2_seq_ieee_correct.
+
+Definition bv_make_2_lanes_ieee_audit : bv_make_2_lanes_ieee_spec := bv_make_2_lanes_ieee_correct.
+Print Assumptions bv_make_2_lanes_ieee_correct.
+
+Definition bv_mul_pow2_1_seq_ieee_audit : bv_mul_pow2_1_seq_ieee_spec := bv_mul_pow2_1_seq_ieee_correct.
+Print Assumptions bv_mul_pow2_1_seq_ieee_correct.
+
+Definition bv_mul_pow2_1_lanes_ieee_audit : bv_mul_pow2_1_lanes_ieee_spec := bv_mul_pow2_1_lanes_ieee_correct.
+Print Assumptions bv_mul_pow2_1_lanes_ieee_correct.
+
+Definition bv_mul_pow2_2_seq_ieee_audit : bv_mul_pow2_2_seq_ieee_spec := bv_mul_pow2_2_seq_ieee_correct.
+Print Assumptions bv_mul_pow2_2_seq_ieee_correct.
+
+Definition bv_mul_pow2_2_lanes_ieee_audit : bv_mul_pow2_2_lanes_ieee_spec := bv_mul_pow2_2_lanes_ieee_correct.
+Print Assumptions bv_mul_pow2_2_lanes_ieee_correct.
+
+Definition bv_neg_1_seq_ieee_audit : bv_neg_1_seq_ieee_spec := bv_neg_1_seq_ieee_correct.
+Print Assumptions bv_neg_1_seq_ieee_correct.
+
+Definition bv_neg_1_lanes_ieee_audit : bv_neg_1_lanes_ieee_spec := bv_neg_1_lanes_ieee_correct.
+Print Assumptions bv_neg_1_lanes_ieee_correct.
+
+Definition bv_neg_2_seq_ieee_audit : bv_neg_2_seq_ieee_spec := bv_neg_2_seq_ieee_correct.
+Print Assumptions bv_neg_2_seq_ieee_correct.
+
+Definition bv_neg_2_lanes_ieee_audit : bv_neg_2_lanes_ieee_spec := bv_neg_2_lanes_ieee_correct.
+Print Assumptions bv_neg_2_lanes_ieee_correct.
+
+Definition bv_scale_1_seq_ieee_audit : bv_scale_1_seq_ieee_spec := bv_scale_1_seq_ieee_correct.
+Print Assumptions bv_scale_1_seq_ieee_correct.
+
+Definition bv_scale_1_lanes_ieee_audit : bv_scale_1_lanes_ieee_spec := bv_scale_1_lanes_ieee_correct.
+Print Assumptions bv_scale_1_lanes_ieee_correct.
+
+Definition bv_scale_2_seq_ieee_audit : bv_scale_2_seq_ieee_spec := bv_scale_2_seq_ieee_correct.
+Print Assumptions bv_scale_2_seq_ieee_correct.
+
+Definition bv_scale_2_lanes_ieee_audit : bv_scale_2_lanes_ieee_spec := bv_scale_2_lanes_ieee_correct.
+Print Assumptions bv_scale_2_lanes_ieee_correct.
+
+Definition bv_sub_1_seq_ieee_audit : bv_sub_1_seq_ieee_spec := bv_sub_1_seq_ieee_correct.
+Print Assumptions bv_sub_1_seq_ieee_correct.
+
+Definition bv_sub_1_lanes_ieee_audit : bv_sub_1_lanes_ieee_spec := bv_sub_1_lanes_ieee_correct.
+Print Assumptions bv_sub_1_lanes_ieee_correct.
+
+Definition bv_sub_2_seq_ieee_audit : bv_sub_2_seq_ieee_spec := bv_sub_2_seq_ieee_correct.
+Print Assumptions bv_sub_2_seq_ieee_correct.
+
+Definition bv_sub_2_lanes_ieee_audit : bv_sub_2_lanes_ieee_spec := bv_sub_2_lanes_ieee_correct.
+Print Assumptions bv_sub_2_lanes_ieee_correct.
+
+Definition bv_conv_1_ieee_audit : bv_conv_1_ieee_spec := bv_conv_1_ieee_correct.
+Print Assumptions bv_conv_1_ieee_correct.
+
+Definition bv_conv_2_ieee_audit : bv_conv_2_ieee_spec := bv_conv_2_ieee_correct.
+Print Assumptions bv_conv_2_ieee_correct.

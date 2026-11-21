@@ -30,6 +30,18 @@ PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_
             'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_pow2_2', 'fast_two_sum_entry']
 # And the steps of the folds, whose bridge statements the IEEE model of a fold uses.
 PROGRAMS += ['dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2']
+# And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
+# Program.v (acc_merge_k: additions; the others guard or take an absolute value).
+PROGRAMS += ['acc_merge_1', 'acc_merge_2']
+# And the steps of the maps, with their bridge statements (ieee: bridge), and mul_1_1, which
+# axpy_step_1 and its entry form call; the steps add_2_2 and sub_2_2 had theirs already.
+PROGRAMS += ['add_1_1', 'sub_1_1', 'add_entry_step_1', 'sub_entry_step_1', 'scale_step_1', 'mul_pow2_step_1',
+             'axpy_step_1', 'axpy_entry_step_1', 'mul_1_1', 'add_entry_step_2', 'sub_entry_step_2', 'scale_step_2',
+             'mul_pow2_step_2', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1']
+# And the step of the constructor of a BallVector of one limb (ieee: bridge).
+PROGRAMS += ['bv_center_entry_1']
+# And the step of the negation of a BallVector of one limb.
+PROGRAMS += ['neg_1']
 
 
 def read(rel):
@@ -100,8 +112,10 @@ class Model(unittest.TestCase):
         # The thirteen of the Ball cores, N and P of Milestone 2 (eta / (2u), eta / (2u^2): the
         # scalings of a ball and the directed products); the fourteen distinct ones of the four
         # bound kernels of the folds (bound_sum_k: 4 and 2; bound_dot_k: 4 and 3, 2, 1 + 2u, 1/4 and
-        # 1 shared); and the one above.
-        self.assertEqual(len(ups), 30)
+        # 1 shared); the one above; and the three of acc_radius_1 that no other kernel has
+        # ((1+u) u + N, (1+u)^8, (1+u)^7 eta/2 + N); and the two of conv_radius (4 (1+u)^8 eta + eta/(2u),
+        # (1+u)^7).
+        self.assertEqual(len(ups), 35)
         self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
@@ -267,6 +281,76 @@ class Statements(unittest.TestCase):
         # mul_dir_1, whose zero_factor is of one-limb operands, is printed as before.
         self.assertIn('  (zero a \\/ zero b -> zero d) /\\\n', spec('mul_dir_1_ieee'))
 
+    def test_the_kernels_of_stage_b2(self):
+        # The statements of certain and trit (architecture.md, "Claims of the enclosure interface:
+        # predicates and comparisons"), in their shapes: an exact predicate is one equivalence, a
+        # three-valued comparison two and the exclusion of both.
+        text = ieee.statements(self.ks)
+
+        def spec(name):
+            return re.search(rf'^Definition {name}_spec : Prop :=\n(.*?)\.\n', text, flags=re.M | re.S).group(1)
+        self.assertTrue(spec('interval_empty_1').endswith('  (m = true <->\n    interval_empty_1 xl xu)'))
+        self.assertIn('  (m = true <->\n    finite t0 /\\ in_interval_2 xl0 xl1 xu0 xu1 (val t0 + val t1))',
+                      spec('interval_contains_2'))
+        self.assertIn('  (m = true <->\n    interval_nonempty_1 xl xu /\\\n'
+                      '    (forall x : R, in_interval_1 xl xu x -> 0 < x))', spec('interval_positive_1'))
+        self.assertIn('  (m = true <->\n    (forall z : R, in_interval_1 xl xu z -> in_interval_1 yl yu z))',
+                      spec('interval_subset_1'))
+        self.assertIn('exists d : R, 0 < d /\\ (forall w : R, Rabs (w - z) < d -> in_interval_1 yl yu w)',
+                      spec('interval_rel_interior_1'))
+        s = spec('interval_less_2')
+        self.assertIn('  (yes = true <->\n    interval_nonempty_2 xl0 xl1 xu0 xu1 /\\ interval_nonempty_2 yl0 yl1 yu0 yu1 /\\\n'
+                      '    (forall x y : R, in_interval_2 xl0 xl1 xu0 xu1 x -> in_interval_2 yl0 yl1 yu0 yu1 y -> x < y)) /\\\n',
+                      s)
+        self.assertIn('-> ~ (x < y))) /\\\n  ~ (yes = true /\\ no = true)', s)
+        # No hypothesis on the precision: comparisons and selects, for every precision.
+        self.assertNotIn('<= prec)%Z', s)
+        # Of a ball: certain, exact on the special states and a point that is not finite, and for
+        # one limb exact for finite balls under the condition of exact_when.
+        s = spec('ball_contains_point_2')
+        self.assertIn('  (no = true ->\n    ~ (finite t0 /\\ in_ball_2 c0 c1 r (val t0 + val t1))) /\\\n', s)
+        self.assertIn('  (ball_empty_2 c0 c1 r \\/ ball_whole_2 c0 c1 r \\/ ~ finite t0 ->\n   (yes = true <->\n', s)
+        s = spec('ball_less_1')
+        self.assertIn('  (ball_finite_1 cx rx /\\ ball_finite_1 cy ry -> Rabs (val rx + val ry) <= omega prec emax ->\n',
+                      s)
+        self.assertIn('    ~ ball_empty_1 cx rx /\\ ~ ball_empty_1 cy ry /\\\n', s)
+        s = spec('ball_contains_ball_2')
+        self.assertIn('  (m = true ->\n    (forall z : R, in_ball_2 cy0 cy1 ry z -> in_ball_2 cx0 cx1 rx z)) /\\\n', s)
+        # The set operations of a ball.
+        # An operand returned as it is, the limbs themselves: Y when X is special, X when Y is
+        # and X is not (when both are, the result is Y, and need not be X: two NaNs of different
+        # signs, two whole lines of centers +0 and -0).
+        s = spec('ball_hull_1')
+        self.assertIn('  (ball_empty_1 cz rz <-> ball_empty_1 cx rx /\\ ball_empty_1 cy ry) /\\\n'
+                      '  (ball_empty_1 cx rx -> cz = cy /\\ rz = ry) /\\\n'
+                      '  (ball_empty_1 cy ry /\\ ~ ball_empty_1 cx rx -> cz = cx /\\ rz = rx) /\\\n', s)
+        self.assertIn('  (forall z : R, in_ball_1 cx rx z \\/ in_ball_1 cy ry z -> in_ball_1 cz rz z)', s)
+        s = spec('ball_intersection_1')
+        self.assertIn('  (ball_whole_1 cx rx -> cz = cy /\\ rz = ry) /\\\n'
+                      '  (ball_whole_1 cy ry /\\ ~ ball_whole_1 cx rx -> cz = cx /\\ rz = rx) /\\\n', s)
+        self.assertIn('  (ball_whole_2 cy0 cy1 ry /\\ ~ ball_whole_2 cx0 cx1 rx -> cz0 = cx0 /\\ cz1 = cx1 /\\ rz = rx)',
+                      spec('ball_intersection_2'))
+        self.assertIn('  (ball_empty_2 cy0 cy1 ry /\\ ~ ball_empty_2 cx0 cx1 rx -> cz0 = cx0 /\\ cz1 = cx1 /\\ rz = rx)',
+                      spec('ball_hull_2'))
+        # The conversions of two limbs. The midpoint of two limbs is a number, canonical for every
+        # canonical interval; a midpoint of one limb has no such clause, and the center of a ball
+        # (interval_to_ball_2) is canonical as part of ball_2.
+        self.assertIn(' xl0 xl1 xu0 xu1 in\n  canonical_2 m0 m1 /\\\n  (interval_empty_2 xl0 xl1 xu0 xu1 -> nan m0',
+                      spec('interval_mid_rad_2'))
+        self.assertNotIn('canonical_2', spec('interval_mid_rad_1'))
+        self.assertNotIn('canonical_2', spec('interval_to_ball_2'))
+        s = spec('interval_mid_rad_2')
+        self.assertIn('   (r = infinity prec emax false \\/ (finite r /\\ (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> '
+                      'Rabs (z - (val m0 + val m1)) <= val r))) /\\\n', s)
+        self.assertIn('-> finite r))', s)
+        s = spec('ball_to_interval_2')
+        self.assertIn('   (((val c0 + val c1) - val r) = 0 -> xval_2 zl0 zl1 = XFin lo) /\\\n', s)
+        self.assertIn('   interval_bounded_2 zl0 zl1 zu0 zu1)', s)
+        s = spec('ball_from_interval_1')
+        self.assertIn('   val rw = RU (ieee_emin prec emax) prec (Rmax (val cw - val lo) (val hi - val cw))) /\\\n', s)
+        s = spec('ball_split_2')
+        self.assertIn('   (forall z : R, (val c0 + val c1) - val r <= z <= (val c0 + val c1) -> in_ball_2 ca0 ca1 ra z)', s)
+
     def test_represents(self):
         # neg_2 and abs_2 say it next to normalized and an exact error, which it implies.
         self.assertTrue(self.statement('neg_2_ieee_spec').endswith(
@@ -389,8 +473,32 @@ class Statements(unittest.TestCase):
         # of the folds of maxima and the interval kernels of the extended domain among them
         # (84); then the theorems that the descriptions of the folds' first stage name: 5
         # bridges and 3 correctness statements of the steps, 8 leading limbs, and the 8 folds in
-        # their two orders (32); and the two folds of maxima in their two orders (4).
-        self.assertEqual(text.count('Print Assumptions'), 120)
+        # their two orders (32); and the two folds of maxima in their two orders (4); and the
+        # IEEE-model statements of the eight kernels of the accumulator (8); and those of the
+        # 16 steps of the maps, 16 bridges, 8 correctness statements and 16 leading limbs (40),
+        # of the 18 maps in their two orders (36) and of the two convolutions (2): 206. Then the 26
+        # predicates, comparisons and relations of an interval of stage B2 (232), and the eight
+        # predicates and comparisons of a ball of one limb (240), and ball_split_1 (241), and the
+        # signs and the split of a ball of two limbs and ball_to_interval_2 (246), and four
+        # comparisons of balls of two limbs (250), and interval_mid_rad_2 and interval_split_2
+        # (252), and ball_contains_point_2 (253), and interval_to_ball_2 (254), and the hull and
+        # the intersection of balls of one limb and of two (258); and ball_from_interval_1, proved
+        # again for the rule of 2026-11-20 with its listing corrected (259). And of the six ball
+        # vectors bv_add_k, bv_sub_k and bv_scale_k in their two orders (12); and of the negation and the
+        # constructor of a BallVector: bv_center_2 and bv_make_finish (2), the bridges and the leading
+        # limbs of neg_1 and bv_center_entry_1 (4), and bv_neg_k and bv_make_k in their two orders (8); and of
+        # the scaling by a power of two: the claims and the leading limbs of its two steps (4), and
+        # bv_mul_pow2_k in its two orders (4); and the finish of the product of two BallVectors,
+        # bv_conv_finish (1), and the products bv_conv_1 and bv_conv_2 (2: one statement each, as a
+        # convolution's); and the leading limbs of neg_2 and bv_center_2, steps of the extended domain
+        # (2), and the two statements more of the two folds of maxima, F_orders_ieee_spec and
+        # F_flag_ieee_spec (4): 302.
+        self.assertEqual(text.count('Print Assumptions'), 302)
+        self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
+                      'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
+        self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
+                      'Print Assumptions ball_hull_2_correct.', text)
+        self.assertIn('From Kairn Require Import IeeeBallHull.', text)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -445,14 +553,94 @@ class CheckedFiles(unittest.TestCase):
     # the new definitions for the new statements (theories/IeeeMake.v), the statements file prints
     # their status, proved, and make -C proofs passed on these files. Merged here: the
     # regeneration of the merged descriptions.
-    # Then the same infinity twice, given to the constructors of an interval or to the ball from an
+    # On another line, the kernels of the accumulator (unverified): their definitions, the programs
+    # of acc_merge_k and their statements (ieee: spec, each output group's claims under its own
+    # leading limb) were added, every earlier line kept; add_2_2, mul_2_2 and dot_step_2, which
+    # they call, are printed earlier, before them. Merged here: the regeneration of the merged
+    # descriptions, and make -C proofs passed on these files. Then the six state kernels were
+    # proved in the IEEE model (IeeeAccKernels.v): the comments above their six statements say
+    # proved, and nothing else changed. Then the two radii: two words more.
+    # On another line, the steps of the maps got their bridges (ieee: bridge, and spec for those of
+    # two limbs): the programs of sixteen steps and of mul_1_1, and their statements, were added,
+    # every earlier line kept. Then the radius kernels of BallVector (unverified): their definitions
+    # were added, every earlier line kept. Merged here: the regeneration of the merged descriptions,
+    # and make -C proofs passed on these files. Then the descriptions of the sixteen steps of the
+    # maps named the theorems of their bridges and, for those of two limbs, of their claims
+    # (IeeeMapSteps.v): the comments above those twenty-four statements say proved, and nothing
+    # else changed.
+    # On the same line, after the radius kernels: the four kernels of the constructor of BallVector
+    # (unverified): their definitions, the program of bv_center_entry_1 and their statements were
+    # added, every earlier line kept. Then neg_1 and bv_neg_radius, of the negation of a BallVector
+    # (unverified), in the same way. Then the two steps and the radius of the scaling of a BallVector
+    # by a power of two (unverified): their definitions and the statements of the steps (ieee: spec,
+    # with the mask of exact_flag) were added, every earlier line kept. Then conv_radius and
+    # bv_conv_finish, of the product of two BallVectors (unverified): their definitions, the two
+    # constants of conv_radius and the statement of bv_conv_finish (finite_or_nan with if_all) were
+    # added, every earlier line kept. Merged here: the regeneration of the merged descriptions.
+    # On that line, after that merge: the kernels of the negation and of the constructor
+    # were proved (IeeeBvNegMake.v): the comments above the statements of neg_1, bv_center_entry_1,
+    # bv_center_2 and bv_make_finish say proved, and nothing else changed. Then the two steps of the
+    # scaling by a power of two (IeeeBvPow2.v): two comments more.
+    # On another line, from the joined tree of stage B1 (a35501e): the 26 predicates and three-valued comparisons of an interval of stage B2, unverified,
+    # were added: their definitions and statements (certain and trit), every earlier definition
+    # and statement the same, byte for byte, some printed earlier (le_2_2 before lt_2_2, callees
+    # before callers); make -C proofs passed on these files.
+    # Then the 20 predicates, comparisons and set operations of a ball (unverified): their
+    # definitions and statements added, every earlier one the same, byte for byte, some printed
+    # earlier; make -C proofs passed on these files.
+    # Then the conversions of two limbs, the ball from an interval of one limb and the hull and the
+    # intersection of balls of two limbs (seven, unverified): their definitions and statements
+    # added, every earlier one the same, byte for byte; make -C proofs passed on these files.
+    # Then ball_intersection_1 and ball_from_interval_1 rewritten (the same values, the special
+    # results selected after the halving): their definitions and the source line of their
+    # statements' comments; make -C proofs passed on these files. Merged here: the regeneration of
+    # the merged descriptions.
+    # On the line of main, from the same base (f7c86be): the same infinity twice, given to the
+    # constructors of an interval or to the ball from an
     # interval of two T, became the whole line (decided on 2026-11-20): the definitions and
     # statements of interval_make_1, interval_make_2 and ball_from_interval_2 changed, and nothing
     # else; their theorems were proved again on the new definitions for the new statements
     # (theories/IeeeInterval1.v, IeeeIntervalExact.v, IeeeBallConvert.v), the statements file
     # prints their status, proved, and make -C proofs passed on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '0d22443834edb4ccda73e17e942a1814debbb1cb0fcfa4fcc44dcef202e0bebd',
-               'proofs/gen/IeeeStatements.v': 'f6d46b576c1f0c4553c90e35b4dd0acb60d5ea12388c249e8aba3537d1000b4d'}
+    # Merged here: the regeneration of the merged descriptions; the statement of
+    # ball_from_interval_1 (unverified) was printed under the same rule.
+    # On the line of stage B2, after ball_intersection_1 and ball_from_interval_1 were rewritten:
+    # the statements print "proved" for the 26 predicates, comparisons and relations of an
+    # interval (IeeeIntervalPredicates.v): 26 words, and nothing else, changed. Then for the eight
+    # predicates and comparisons of a ball of one limb (IeeeBallPredicates.v): eight words more.
+    # Then for ball_from_interval_1 and ball_split_1 (IeeeBallSets.v): two words more. Then for
+    # the signs and the split of a ball of two limbs (IeeeBallPredicates2.v) and
+    # ball_to_interval_2 (IeeeBallConvert2.v): five words more. Then for four comparisons of
+    # balls of two limbs (IeeeBallCompare2.v): four words more. Then for interval_mid_rad_2 and
+    # interval_split_2 (IeeeIntervalConvert2.v): two words more. Then for ball_contains_point_2
+    # (IeeeBallContains2.v): one word more. Then for interval_to_ball_2 (IeeeIntervalConvert2.v):
+    # one word more.
+    # Then the statements of ball_set were corrected (the proof of the other kernels of the stage
+    # refuted them): an empty X still gives Y as it is (the whole line X, for the intersection),
+    # and an empty Y gives X as it is only when X is not empty (the whole line Y when X is not the
+    # whole line); and ball_of_interval with ieee1788 and a center of two limbs says first that
+    # the center is canonical (interval_mid_rad_2, proved again). Five lines changed, the four
+    # kernels of ball_set still unverified; make -C proofs passed on these files. Then the
+    # statements print "proved" for those four (IeeeBallHull.v): four words more.
+    # Merged here: the regeneration of the merged descriptions. ball_from_interval_1 is printed
+    # unverified: the theorem of that line is of its statement before the rule of the same
+    # infinity twice, which its listing does not follow yet.
+    # Then the listing of ball_from_interval_1 was corrected for that rule (the owner's ruling of
+    # 2026-11-21: rv = lt(gu, gl) selects the empty ball where it tested for a NaN): its
+    # definition and the source line of its comments changed, and nothing else. Then its theorem
+    # was proved again for that listing and its statement (IeeeBallSets.v): the statements file
+    # prints its status, proved, one word more, and make -C proofs passed on these files.
+    # Then the proofs of the ball vectors met them in a merge: the regeneration of the merged
+    # descriptions.
+    # On the line of the ball vectors, meanwhile:
+    # Then the printer of finite_or_nan wrote the masks of if_all, which it had left out: the first
+    # clause of the statement of bv_conv_finish, the only kernel with if_all, says
+    # flag = true <-> okc = true /\ okg = true /\ finite rz (it said flag = true <-> finite rz, which
+    # was false), and nothing else changed; then that statement was proved (IeeeBvConv.v): one
+    # comment more. make -C proofs passed on these files.
+    # Merged here: the regeneration of the merged descriptions.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'c1dafcb503776af9a0ccc273cbb68029dad60d53ea214bf104cd6b2e826968aa',
+               'proofs/gen/IeeeStatements.v': '035b64a9e30a0b1f9cdb778af45831f4d8d74267d9298331ff8662a74b6d0208'}
 
 
     def test_the_checked_files(self):
@@ -605,12 +793,24 @@ class TheoremFields(unittest.TestCase):
         self.assertEqual(rules.check_all(ks), [])
         before, after = build.outputs(self.kernels_with()), build.outputs(ks)
         changed = sorted(rel for rel in after if after[rel] != before[rel])
-        self.assertEqual(changed, ['proofs/gen/IeeeAudit.v', 'proofs/gen/IeeeFoldStatements.v',
-                                   'proofs/gen/IeeeStatements.v'])
+        # The C++ headers too, since the comment of a fold's function gives the status of each model
+        # (cpp.fold_status): only the comments of dot_2's functions, from unverified to proved.
+        self.assertEqual(changed, ['include/kairn/gen/avx2.hpp', 'include/kairn/gen/neon.hpp',
+                                   'include/kairn/gen/scalar.hpp', 'proofs/gen/IeeeAudit.v',
+                                   'proofs/gen/IeeeFoldStatements.v', 'proofs/gen/IeeeStatements.v'])
 
         def diff(rel):
             old, new = before[rel].splitlines(), after[rel].splitlines()
             return [a for a in new if a not in old], [a for a in old if a not in new]
+
+        for rel in changed[:3]:
+            added, gone = diff(rel)
+            self.assertEqual(len(added), len(gone), rel)
+            self.assertTrue(added, rel)
+            self.assertEqual(sorted(a.replace('proved (IEEE model)', 'unverified (IEEE model)') for a in added),
+                             sorted(gone), rel)
+            self.assertTrue(all(a.startswith('// fold dot_2(') and a.endswith('(real model), proved (IEEE model).')
+                                for a in added), (rel, added))
 
         added, gone = diff('proofs/gen/IeeeStatements.v')
         self.assertEqual(len(added), 2)
@@ -642,9 +842,116 @@ class TheoremFields(unittest.TestCase):
                      'Definition dot_2_lanes_ieee_audit : dot_2_lanes_ieee_spec := dot_2_lanes_ieee_correct.',
                      'Print Assumptions dot_2_lanes_ieee_correct.'):
             self.assertIn(line + '\n', audit)
+        # A map names F_seq_ieee_correct and F_lanes_ieee_correct, a convolution F_ieee_correct; the
+        # comments of their statements say proved, and the audit checks each, after the folds'.
+        ks = self.kernels_with(folds={'axpy_2': self.FOLD, 'conv_1': self.FOLD})
+        self.assertEqual(rules.check_all(ks), [])
+        out = build.outputs(ks)
+        added, gone = [a for a in out['proofs/gen/IeeeFoldStatements.v'].splitlines()
+                       if a not in before['proofs/gen/IeeeFoldStatements.v'].splitlines()], None
+        self.assertEqual(sorted(added), sorted([
+            '(* axpy_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)',
+            '(* axpy_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and '
+            'its mask. Status: proved. *)',
+            '(* conv_1, each coefficient it writes, and its mask, in the IEEE model. Status: proved. *)']))
+        audit = out['proofs/gen/IeeeAudit.v']
+        for line in ('Definition axpy_2_seq_ieee_audit : axpy_2_seq_ieee_spec := axpy_2_seq_ieee_correct.',
+                     'Definition axpy_2_lanes_ieee_audit : axpy_2_lanes_ieee_spec := axpy_2_lanes_ieee_correct.',
+                     'Definition conv_1_ieee_audit : conv_1_ieee_spec := conv_1_ieee_correct.',
+                     'Print Assumptions conv_1_ieee_correct.'):
+            self.assertIn(line + '\n', audit)
+        self.assertLess(audit.index('axpy_2_lanes_ieee_audit'), audit.index('conv_1_ieee_audit'))
         # Only a bridge: IeeeFoldStatements.v is not imported.
         ks = self.kernels_with({'dot_step_2': self.STEP[:1]})
         self.assertFalse('Require Import IeeeFoldStatements.' in build.outputs(ks)['proofs/gen/IeeeAudit.v'])
+
+    @staticmethod
+    def comment(text, spec):
+        """The comment printed above the statement spec."""
+        return text.split(f'Definition {spec} : Prop :=', 1)[0].rsplit('(*', 1)[1].rstrip()
+
+    def test_the_two_statements_of_a_fold_of_maxima(self):
+        """A fold of maxima in both orders has F_orders_ieee_spec and F_flag_ieee_spec besides the
+        statements of its orders: its ieee_theorem names their theorems too, F_orders_ieee_correct and
+        F_flag_ieee_correct, in the same file. The comments of its four statements say proved, those of
+        the other fold of maxima unverified, and the audit checks the four, in the order of the file."""
+        from kairn_gen import build
+        ks = self.kernels_with(folds={'norm_upper_2': ['ieee_theorem: proofs/theories/IeeeFoldNorm.v']})
+        self.assertEqual(rules.check_all(ks), [])
+        out = build.outputs(ks)
+        audit, s = out['proofs/gen/IeeeAudit.v'], out['proofs/gen/IeeeFoldStatements.v']
+        self.assertEqual([n for n in re.findall(r'^Definition (\w+)_audit :', audit, flags=re.M)
+                          if n.startswith('norm_upper')],
+                         ['norm_upper_2_seq_ieee', 'norm_upper_2_lanes_ieee', 'norm_upper_2_orders_ieee',
+                          'norm_upper_2_flag_ieee'])
+        for what in ('orders', 'flag'):
+            self.assertIn(f'Definition norm_upper_2_{what}_ieee_audit : norm_upper_2_{what}_ieee_spec := '
+                          f'norm_upper_2_{what}_ieee_correct.\nPrint Assumptions norm_upper_2_{what}_ieee_correct.\n',
+                          audit)
+            self.assertTrue(self.comment(s, f'norm_upper_2_{what}_ieee_spec').endswith('Status: proved. *)'))
+            self.assertTrue(self.comment(s, f'norm_upper_1_{what}_ieee_spec').endswith('Status: unverified. *)'))
+        self.assertIn(('norm_upper_2_flag_ieee_spec', 'proofs/theories/IeeeFoldNorm.v', 'norm_upper_2_flag_ieee_correct',
+                       'IeeeFoldStatements'), ieee.proved_statements(ks))
+
+    def test_the_leading_limbs_of_the_extended_domain(self):
+        """neg_2 and bv_center_2, the steps of two limbs of folds of the extended domain, have leading-limb
+        statements: an ieee_lead_theorem names their theorems, the comments of the statements say proved
+        and the audit checks them. A kernel of the extended domain still names no bridge or spec theorem,
+        nor a lead theorem when it has no lead statement."""
+        from kairn_gen import build
+        lead = {'neg_2': ['ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v neg_2_ieee_lead'],
+                'bv_center_2': ['ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v bv_center_2_ieee_lead']}
+        ks = self.kernels_with(lead)
+        self.assertEqual(rules.check_all(ks), [])
+        out = build.outputs(ks)
+        audit, s = out['proofs/gen/IeeeAudit.v'], out['proofs/gen/IeeeFoldStatements.v']
+        for name in lead:
+            self.assertTrue(ks[name].extended, name)
+            self.assertIn(f'Definition {name}_ieee_lead_audit : {name}_ieee_lead_spec := {name}_ieee_lead.\n'
+                          f'Print Assumptions {name}_ieee_lead.\n', audit)
+            self.assertTrue(self.comment(s, f'{name}_ieee_lead_spec').endswith('IEEE-model status: proved. *)'))
+        self.assertIn('From Kairn Require Import IeeeBvNegMake.', audit)
+        self.assertTrue(any('belong to kernels of the finite domain' in e for e in self.errors(
+            'neg_2', {'neg_2': ['ieee_bridge_theorem: proofs/theories/IeeeBvNegMake.v neg_2_ieee_bridge']})))
+        self.assertTrue(any('belong to kernels of the finite domain' in e for e in self.errors(
+            'neg_2', {'neg_2': ['ieee_spec_theorem: proofs/theories/IeeeBvNegMake.v neg_2_ieee_correct']})))
+        self.assertTrue(ks['bv_make_finish'].extended)
+        self.assertTrue(any('only the step or the combination of a fold has' in e for e in self.errors(
+            'bv_make_finish',
+            {'bv_make_finish': ['ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v bv_make_finish_ieee_lead']})))
+
+    def test_a_product_of_ball_vectors(self):
+        """A product of two BallVectors has one IEEE-model statement, F_ieee_spec, as a convolution has, not
+        one per order: its ieee_theorem names F_ieee_correct, and the audit checks that theorem against
+        F_ieee_spec (it once printed F_seq_ieee_spec, a statement that does not exist). And with every fold
+        naming its file, every statement the audit names is one the statements file defines."""
+        from kairn_gen import build
+        before = build.outputs(self.kernels_with())
+        ks = self.kernels_with(folds={'bv_conv_1': ['ieee_theorem: proofs/theories/IeeeBvConvFinite.v']})
+        self.assertEqual(rules.check_all(ks), [])
+        self.assertIn(('bv_conv_1_ieee_spec', 'proofs/theories/IeeeBvConvFinite.v', 'bv_conv_1_ieee_correct',
+                       'IeeeFoldStatements'), ieee.proved_statements(ks))
+        out = build.outputs(ks)
+        audit = out['proofs/gen/IeeeAudit.v']
+        self.assertEqual([a for a in audit.splitlines() if ('BvConv' in a or 'bv_conv' in a) and 'finish' not in a
+                          and not a.endswith('Import IeeeBvConv.')],
+                         ['From Kairn Require Import IeeeBvConvFinite.',
+                          'Definition bv_conv_1_ieee_audit : bv_conv_1_ieee_spec := bv_conv_1_ieee_correct.',
+                          'Print Assumptions bv_conv_1_ieee_correct.'])
+        added = [a for a in out['proofs/gen/IeeeFoldStatements.v'].splitlines()
+                 if a not in before['proofs/gen/IeeeFoldStatements.v'].splitlines()]
+        self.assertEqual(added, ['(* bv_conv_1, in the IEEE model: V1 to V4 and the flag. Status: proved. *)'])
+        # Every fold naming a file: the audit names only statements that exist.
+        ks = self.kernels_with(folds={name: self.FOLD for name in common.kernels().folds})
+        out = build.outputs(ks)
+        defined = set(re.findall(r'^Definition (\w+) : Prop :=', out['proofs/gen/IeeeFoldStatements.v'], flags=re.M))
+        named = re.findall(r'^Definition \w+_audit : (\w+) := \w+\.$', out['proofs/gen/IeeeAudit.v'], flags=re.M)
+        folds = [spec for spec, _, _, gen in ieee.proved_statements(ks) if gen == 'IeeeFoldStatements']
+        self.assertTrue(set(folds) <= set(named), sorted(set(folds) - set(named)))
+        self.assertEqual(sorted(set(folds) - defined), [])
+        for name in ('bv_conv_1', 'bv_conv_2', 'conv_1', 'conv_2'):
+            self.assertIn(f'{name}_ieee_spec', folds)
+            self.assertNotIn(f'{name}_seq_ieee_spec', folds)
 
     def test_refused(self):
         self.assertTrue(any('must be named dot_step_2_ieee_correct, not dot_step_2_correct' in e for e in self.errors(
@@ -657,8 +964,9 @@ class TheoremFields(unittest.TestCase):
             'abs_2', {'abs_2': ['ieee_bridge_theorem: proofs/theories/IeeeExt.v abs_2_ieee_bridge']})))
         self.assertTrue(any('file must be proofs/theories/*.v' in e for e in self.errors(
             'dot_step_2', {'dot_step_2': ['ieee_lead_theorem: theories/IeeeSteps.v dot_step_2_ieee_lead']})))
-        self.assertTrue(any('a map has no statement in the IEEE model' in e for e in self.errors(
-            'axpy_2', folds={'axpy_2': self.FOLD})))
+        # A map and a convolution have statements in the IEEE model and name their file like a fold.
+        self.assertEqual(self.errors('axpy_2', folds={'axpy_2': self.FOLD}), [])
+        self.assertEqual(self.errors('conv_2', folds={'conv_2': self.FOLD}), [])
         self.assertTrue(any('the ieee_theorem file must be proofs/theories/*.v' in e for e in self.errors(
             'dot_2', folds={'dot_2': ['ieee_theorem: IeeeFolds.v']})))
 

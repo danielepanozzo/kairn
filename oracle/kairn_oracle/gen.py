@@ -410,6 +410,10 @@ def valid(fmt, kernel, vals):
             v = sum(vals[r[1]])
             if v != 0 and v < ((1 << -fmt.qmin) if fmt.qmin < 0 else 1):
                 return False
+        elif r[0] == "at_most":
+            v, q = sum(vals[r[1]]), fmt.qmin
+            if (v << q) > r[2] if q >= 0 else v > (r[2] << -q):
+                return False
         elif abs(sum(vals[r[1]])) < abs(sum(vals[r[2]])):
             return False
     return True
@@ -449,7 +453,22 @@ class RandomGen:
         from . import gen5
         from . import gen6
         from . import gen7
-        if gen6.family_of(kernel) is not None:
+        from . import genenc
+        from . import gen8
+        if gen8.family_of(kernel) is not None:
+            # The kernels of the ball vectors and of the accumulator (gen8.py).
+            self.shape = gen8.Shape8(kernel)
+            known, schedule = self.shape.strata, self.shape.schedule
+            self.make = gen8.make_case
+            self.valid = gen8.valid8
+        elif genenc.family_of(kernel) is not None:
+            # The predicates, comparisons and set operations of a ball of the enclosure
+            # interface (genenc.py).
+            self.shape = genenc.ShapeEnc(kernel)
+            known, schedule = self.shape.strata, self.shape.schedule
+            self.make = genenc.make_case
+            self.valid = gen6.valid6
+        elif gen6.family_of(kernel) is not None:
             # The interval kernels (gen6.py).
             self.shape = gen6.Shape6(kernel)
             known, schedule = self.shape.strata, self.shape.schedule
@@ -655,6 +674,12 @@ class ExhaustiveGen:
             mask = n in kernel.masks
             d = domain(fmt, l, [r for r in self.restrictions if r.name == n],
                        [r[0] for r in kernel.requires if len(r) == 2 and r[1] == n], mask)
+            for r in kernel.requires:
+                if r[0] == "at_most" and r[1] == n:
+                    # at_most(NAME, K): the numbers up to K (bvec.py).
+                    q = fmt.qmin
+                    d = [t for t in d if not ((sum(t) << q) > r[2] if q >= 0
+                                              else sum(t) > (r[2] << -q))]
             self.doms.append(d)
             self.texts.append([str(t[0]) if mask else " ".join(F.to_hex(v, fmt.qmin) for v in t)
                                for t in d])

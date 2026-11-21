@@ -1,0 +1,44 @@
+# The three-valued X = Y of balls with 2-limb centers (milestone2.md, "One enclosure interface",
+# "Comparisons": certain): yes when both balls are the same point, r_x = r_y = 0 and c_x = c_y by
+# eq_2_2, which is exact; no when the balls are disjoint, s < al, al = RD(to_down_2(abs_2(z)) - e),
+# written as minus the rounding up of the opposite, a finite lower bound of |c_y - c_x|, and s =
+# radd(r_x, r_y) an upper bound of r_x + r_y. Never both. Both false for an empty operand and for
+# the whole line. The yes is exact; the no is certain, not exact.
+kernel:        ball_equal_2
+input:         cx = cx0 cx1
+input:         stored rx
+input:         cy = cy0 cy1
+input:         stored ry
+output:        mask yes
+output:        mask no
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       trit yes no eq x y x=cx,rx y=cy,ry
+min_precision: 3
+source:        the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallCompare2.v ball_equal_2_correct
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical ball
+
+ea          = eq(rx, 0)
+eb          = eq(ry, 0)
+ec          = eq_2_2(cx0, cx1, cy0, cy1)
+eab         = and(ea, eb)
+yes         = and(eab, ec)
+ncx0        = neg(cx0)
+ncx1        = neg(cx1)
+(z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+s           = radd(rx, ry)
+(w0, w1)    = abs_2(z0, z1)
+wd          = to_down_2(w0, w1)
+nw          = neg(wd)
+tl          = add_up_1(e, nw)
+al          = neg(tl)
+aa          = abs(al)
+fa          = lt(aa, const inf)
+b           = lt(s, al)
+no          = and(b, fa)

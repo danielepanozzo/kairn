@@ -1,0 +1,41 @@
+# The product of two polynomials whose coefficients are BallVectors of 2-limb centers (milestone2.md,
+# "The product of polynomials": bv_conv_k with conv_radius). The centers are the convolution conv_2 of
+# the operands' centers, its mask included; besides, the largest magnitudes of the leading limbs of the
+# operands' centers, ma and mb (norm_step_2 on the arrays read, as norm_upper_2's state); the count
+# m = min(n_x, n_y), the largest number of terms of a coefficient (conv_terms_length), as a number of T
+# rounded up; one call of bound_dot_2(m), whose bound covers every coefficient; the radius
+# conv_radius; and the finish bv_conv_finish, norm_finish_1 under the and of the convolution's mask
+# and the bound's. When its flag is false (an operand is the whole space, the bound is not given, or
+# something overflowed) every coefficient written is zero and the radius +infinity, the whole space.
+# V4: finite operands give a finite product when every pair of entries, every entry of either array
+# with the other's radius, and the radii are within 2^(emax - 2) as finite_when and radii_when say, n
+# the count, and the count is small enough for the bound of dot to be given (count_when). The smallest
+# normal number eta/(2u) of count_when, not eta, makes the count a number of the format: n is then at
+# most 2^(emax - 6), where with eta a format of p >= 8 and emax <= 2p - 7 admitted counts above the
+# largest number, whose count rounded up is +infinity and whose product the whole space.
+fold:          bv_conv_2
+arrays:        stored x = x0 x1, stored y = y0 y1
+scalars:       stored rx, stored ry
+centers:       conv_2
+state:         ma, mask oka, mb, mask okb
+record:        (ma, oka) = norm_step_2(ma, oka, x)
+record:        (mb, okb) = norm_step_2(mb, okb, y)
+count:         m = min(n_x, n_y)
+bound:         (g, t, okg) = bound_dot_2(m)
+radius:        rz = conv_radius(ma, mb, rx, ry, m, g, t)
+finish:        (r, flag) = bv_conv_finish(rz, finite, okg)
+orders:        sequential
+writes:        z = z0 z1
+output:        r
+output:        mask flag
+value:         x*y
+requires:      ball_vector x rx
+requires:      ball_vector y ry
+ensures:       encloses_coefficients z r x*y x=x,rx y=y,ry flag=flag finite_when=abs_le(n*(abs(x)+rx)*(abs(y)+ry),-2);abs_le((abs(x)+rx)*ry,-2);abs_le((abs(y)+ry)*rx,-2) radii_when=abs_le(rx*ry,-2) count_when=le(n*(unit(mul_2_2)+eta/(2*u)),1/16)
+min_precision: 4
+theorem:       proofs/theories/BvConv.v
+ieee_theorem:  proofs/theories/IeeeBvConvFinite2.v
+status:        proved
+domain:        extended
+source:        conv_2 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)
+license:       algorithm and proof: MIT
