@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 653 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 669 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -1489,6 +1489,25 @@ the checks. The test time of the quick tier grew from 336 to 346 seconds with Ap
 615 seconds: 61 in `api.oracle.*`, where the packed forms run in three runners (the third built for
 AVX2), 26 for the new tests, 22 in `api.checks.*` and 9 in `api.reject.*`. The full tier has the same
 980 tests, the packed forms joining `full.api.oracle.*` and `full.api.flags.oracle.*`.
+
+**The test of a product passed into `Packed`** (`api.boundary.packed.*`) was measured the same day
+against the commit before it, on the Linux machine in the default build and with `-mavx2 -mfma`
+in the build's flags:
+
+| Where | Quick tier, before | Quick tier, after | Of which `api.boundary.packed.*` | Full tier, before | Full tier, after |
+|---|---|---|---|---|---|
+| Mac, Apple clang 21 | 653 tests, 89 s | 669 tests, 93 s | 11.0 s of test time | | |
+| Mac, GCC 16 | 654 tests, 89 s | 670 tests, 94 s | 10.9 s | | |
+| Linux, 16 threads, GCC 13 | 657 tests, 145 s | 673 tests, 174 s | 24.9 s | 980 tests, 1 939 s | 980 tests, 2 009 s |
+| Linux, 16 threads, Clang 18 | 654 tests, 150 s | 670 tests, 200 s | 21.0 s | | |
+| Linux, 16 threads, GCC 13, `-mavx2 -mfma` | 654 tests, 152 s | 670 tests, 178 s | 32.5 s | | |
+| Linux, 16 threads, Clang 18, `-mavx2 -mfma` | 651 tests, 151 s | 667 tests, 193 s | 22.1 s | | |
+
+It adds 16 tests to every quick tier (two forms, four contraction settings, the test and its
+control), each under two seconds, and none to the full tier. On the Linux machine the other tests
+took 60 to 160 seconds of test time more in the runs after than in the runs before, which ran
+later: the machine's load (a load average of 24 to 27 from other jobs), since none of those
+tests changed.
 
 The full tier's cross-checks of the maps and folds write a summary of each run of up to 1.7 GB
 (`full.crosscheck.compiled.add_2.binary64`, `axpy_2`), some 18 GB in all for one run on the Mac. In
