@@ -75,10 +75,12 @@ lists:
   ball, with overflow, infinities and NaN (`IeeeBallPow2.v`), the lemma that the product of two
   intervals rests on (`Rectangle.v`), the comparison of the two ways a product is executed
   (`IeeeProduct.v`), with what follows for the thirty kernels whose only fused operations are
-  products, which are `constexpr`: on all operands each listing with the plain product of
-  constant evaluation returns outputs of the same values, and the same masks, as the kernel with
-  the fused product of run time (`IeeeTwoExecutions.v`, one theorem `K_two_executions` per kernel
-  `K` of `IeeeWith.v`), the interval kernels with bounds of one limb, on all values:
+  products, which are `constexpr`: on all operands each listing as constant evaluation runs it
+  (the plain product, the guard that returns its operand, `times_inf` from comparisons) returns
+  outputs of the same values, and the same masks, as the kernel of run time (the fused product,
+  the guard that adds $+0$, the multiplication by infinity) (`IeeeTwoExecutions.v`, one theorem
+  `K_two_executions` per kernel `K` of `IeeeWith.v`), the interval kernels with bounds of one
+  limb, on all values:
   the constructor, the negation, the sum, the difference and the product (`IeeeInterval1.v`,
   with the definitions their statements use in `IeeeIntervalVocabulary.v`), and the bounds of
   two limbs over the real numbers: a sum, a difference and a product of two 2-limb numbers,

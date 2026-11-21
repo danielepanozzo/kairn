@@ -512,8 +512,18 @@ Print Assumptions same_select.
 Print Assumptions same_cnan.
 Print Assumptions mult_prod_products.
 
-(* Each listing of proofs/gen/IeeeWith.v is the generated definition when its product is
-   the fused one. *)
+(* The operations of constant evaluation (proofs/gen/IeeeWith.v: prod_ce, guard_ce,
+   times_inf_ce), each against its form of run time, on every operand. *)
+Print Assumptions xval_times_inf_ce.
+Print Assumptions same_times_inf_ce.
+Print Assumptions same_guard_ce.
+Print Assumptions same_prod_ce.
+Print Assumptions prod_ce_products.
+Print Assumptions guard_ce_unary.
+Print Assumptions times_inf_ce_unary.
+
+(* Each listing of proofs/gen/IeeeWith.v is the generated definition at the operations of
+   run time: the fused product, and the guard and times_inf of IeeeOperations.v. *)
 Print Assumptions mul_1_1_with_prod.
 Print Assumptions axpy_entry_step_1_with_prod.
 Print Assumptions axpy_step_1_with_prod.
@@ -560,8 +570,9 @@ Print Assumptions interval_hull_1_same.
 Print Assumptions add_2_2_same.
 Print Assumptions lt_2_2_same.
 
-(* Two products of the same value, on operands of the same value, give outputs of the
-   same value and the same masks. *)
+(* Two products of the same value (and two guards, or two forms of times_inf, of the same
+   value), on operands of the same value, give outputs of the same value and the same
+   masks. *)
 Print Assumptions split_same.
 Print Assumptions two_prod_dekker_same.
 Print Assumptions mul_pow2_2_same.
@@ -593,8 +604,9 @@ Print Assumptions bv_mul_pow2_step_2_same.
 Print Assumptions interval_split_2_same.
 Print Assumptions mul_pow2_step_2_same.
 
-(* The listing with the plain product and the generated kernel return outputs of the same
-   value and the same masks, on all operands: one theorem per kernel of IeeeWith.v. *)
+(* The listing at the operations of constant evaluation and the generated kernel return
+   outputs of the same value and the same masks, on all operands: one theorem per kernel of
+   IeeeWith.v. *)
 Print Assumptions split_two_executions.
 Print Assumptions two_prod_dekker_two_executions.
 Print Assumptions mul_pow2_2_two_executions.
