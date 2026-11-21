@@ -58,7 +58,7 @@ exact, of every type.
 | signs `certainly_*` | exact | exact | exact | exact |
 | `contains(t)`, `member(t, X)` | exact | exact; for `t` of `T` composed with `make_2` | exact, by exact pairs | certain: `contains` true only for a member; `member` yes, no or unknown, which it may be within about $2e + 3G$ of $\lvert t - c\rvert = r$ |
 | `contains(Y)` | exact | exact | exact, by exact pairs | certain: true only if $Y \subseteq X$; may be false within about $2e + 4G$ of the boundary |
-| `less`, `less_equal`, `equal` and mirrors | exact | exact | exact when $r_x + r_y \le \Omega$; beyond, unknown where the sum of the radii and the difference of the centers both overflow, never wrong | certain: unknown when the gap between the balls is within about $2e + 4G$ of zero |
+| `less`, `less_equal`, `equal` and mirrors | exact | exact | exact when $r_x + r_y \le \Omega$; beyond, unknown where the sum of the radii and the difference of the centers both overflow, never wrong | certain: may be unknown when the gap between the balls is within about $2e + 4G$ of zero |
 | relations of IEEE 1788 | exact | exact | not provided | not provided |
 | `hull`, `intersection` | exact: the smallest interval | exact | contains what it must; not claimed the smallest | the same |
 | `split` | two parts that are the interval and meet at a point of it, **not claimed the midpoint** | the same | two parts that cover $[c - r, c]$ and $[c, c + r]$; not claimed inside $X$, nor smaller | the same |
