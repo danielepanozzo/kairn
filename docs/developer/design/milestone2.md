@@ -2148,6 +2148,35 @@ milestone states about them is small: an element read from a container is the va
 constructor from limbs keeps its precondition, a canonical value, which a debug build checks.
 The folds above are the loops; the packed type is for the loops a program writes itself.
 
+**As built** (2026-11-21: `kairn/packed.hpp` and `kairn/soa.hpp`). What differs from the
+paragraph above, or adds to it:
+
+- **Three forms, chosen by the build:** AVX2 with FMA ($W$ = 4 for `double`, 8 for `float`),
+  NEON on AArch64 (2 and 4), and one lane over the scalar kernels everywhere else, so that one
+  loop compiles for every target. `KAIRN_PACKED_FORM` says which, and a program may set it; each
+  form is in an inline namespace of its own, so that translation units built for different
+  instruction sets link into one program.
+- **Neither header is included by `kairn/kairn.hpp`:** together they double or triple its cost
+  in compile time (0.1 s to 0.2 s with Apple clang, 0.3 s to 1.0 s with GCC 13 and AVX2).
+- **`Packed<T, 1>` has no arithmetic.** Rule R3 lets a public header call only entry kernels,
+  and the kernels of one limb, `add_1_1` and `mul_1_1`, are not entry kernels: the operators of
+  `Expansion<T, 1>` are those of `T`
+  ([D6](phase0/decisions.md#d6-one-limb-and-contraction-under-clang)). `Packed<T, 1>` is the
+  operand of the mixed operations of two limbs, the result of the conversions, and has the
+  exact operations (negation, absolute value, comparisons). Entry forms of the one-limb kernels
+  would give it arithmetic; they are not in this milestone.
+- **"Limbs are copied, never recomputed" holds of the value, not of the sign of a zero limb.**
+  A read of an element of two limbs goes through the guard of `from_limbs` (rule R3, one
+  addition of $+0$ per limb), so a limb $-0$ comes back $+0$. An element of one limb is read
+  bit for bit.
+- **Which reads are checked.** A read from a container or a view uses `from_limbs` in a build
+  with checks and the unchecked constructor otherwise. `Packed`'s own `from_limbs_unchecked`
+  and `load_unchecked` check nothing in any build, as `Expansion`'s.
+- **`SoA` is one allocation,** each limb's array starting at a multiple of 64 bytes; only its
+  constructors, its copy and `resize` allocate. Indices are not checked, as with `std::span`.
+- **Not provided:** a packed `Ball` or `Interval`, dispatch at run time, any operation across
+  lanes, a load that requires alignment.
+
 ## Inlining and compile time
 
 Kairn forces the inlining of every kernel of at most two limbs. That is a choice for speed. A
