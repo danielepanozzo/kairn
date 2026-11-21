@@ -760,9 +760,11 @@ compiler may call it rather than inline it: what it did is reported, not judged.
 on 2026-11-20 the 72 checks of the full tier (24 configurations, three forms) passed with Apple clang
 21 and GCC 16, and the control failed on 16 of 16 functions with each; with `half` of a ball of one
 and of two limbs in the unit, 20 functions, the same day, the same 72 passed and the control failed
-on 20 of 20, with each compiler. With the arithmetic of intervals, 32 functions, the quick tier's
-check passed with Apple clang 21, and the control failed on 26 of the 26 functions it judges; Apple
-clang 21 at `-O2` called `interval_mul_2` from the inline product, for `double` and `float`.
+on 20 of 20, with each compiler. With the arithmetic of intervals in the unit, 32 functions, the
+72 checks of the full tier passed with Apple clang 21 and GCC 16 on the Mac, and the control failed
+on 26 of the 26 functions it judges with each, as with GCC 13 and Clang 18 on x86-64; all four, at
+`-O2`, called `interval_mul_2` from the inline product, for `double` and `float`, rather than
+inline it.
 
 ### The flag matrix
 
@@ -1321,6 +1323,31 @@ each, back to back on the Mac under a load average of 18 to 42, took 80.4 and 75
 74.2 and 64.3 s after (314 and 295, 288 and 250 s of test time): at that load the difference is
 the load's, not the change's. The full tier after took 1 059 s with Apple clang and 752 s with
 GCC 16 (load 13 to 36).
+
+**`Interval` and the functions of a `Ball` of the enclosure interface** were measured on
+2026-11-20 against the commit before them, the quick tiers back to back on the Mac,
+`--parallel 4`, under a load average of 12 to 49 from other jobs:
+
+| Where | Quick tier, before | Quick tier, after | Full tier, after |
+|---|---|---|---|
+| Mac, Apple clang 21 | 571 tests, 84.2 s | 633 tests, 109.8 s (load 49 at its end) | 980 tests, 1 236 s |
+| Mac, GCC 16 | 572 tests, 87.2 s | 634 tests, 91.3 s | 980 tests, 1 276 s |
+| Linux, 16 threads, GCC 13 | | 634 tests, 179.8 s | 980 tests, 1 985 s |
+| Linux, 16 threads, Clang 18 | | 631 tests, 183.2 s | 980 tests, 1 980 s |
+
+The quick tier gains 62 tests: `api.oracle.K.F` for the 24 kernels that became public (48), ten
+of `api.reject.*` (five `interval.*`, `ball.implicit_narrowing`, `not_constexpr.interval_add` and
+three `unverified.*`), and `api.example.intervals` under each contraction setting (4); the checks
+of a debug build run 29 functions more. The full tier gains 96, the same 24 kernels in
+`full.api.oracle.K.F` and `full.api.flags.oracle.K.F`.
+
+The full tier's cross-checks of the maps and folds write a summary of each run of up to 1.7 GB
+(`full.crosscheck.compiled.add_2.binary64`, `axpy_2`), some 18 GB in all for one run on the Mac. In
+both runs above the Mac's disk was nearly full, from other jobs too, and some of these
+cross-checks failed for want of space: 79 of 980 with Apple clang (the disk had 105 MB free) and 7
+with GCC 16; each passed when rerun (`ctest --rerun-failed`) with the summaries of finished runs
+deleted as they came. None of them is about intervals; a run of the full tier needs that space
+free.
 
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:
