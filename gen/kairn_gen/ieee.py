@@ -90,10 +90,11 @@ def _used_nans(k, kernels):
 
 def _binders(names):
     """(nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax): consecutive variables of
-    one type share a binder."""
+    one type share a binder. A primed name (nan_plus', of the second execution in the statements
+    of IeeeWith.v) has the type of the unprimed one."""
     out = []
     for n in names:
-        t = dict(NANS)[n]
+        t = dict(NANS)[n.rstrip("'")]
         t = f'{t} prec emax' if t else CONST_NAN_TYPE
         if out and out[-1][1] == t:
             out[-1][0].append(n)
@@ -1631,31 +1632,112 @@ def statements(kernels):
 
 
 # ---------------------------------------------------------------------------------------------
-# IeeeWith.v: the kernels of the rule of the product, with the product as an argument
+# IeeeWith.v: the kernels of the rule of the product, with the operations that constant
+# evaluation runs differently as arguments, and the statements of their two executions
+
+# The operations whose C++, in a kernel constexpr without a variant, dispatches on
+# __builtin_is_constant_evaluated() (cpp.SPELL_PLAIN), in the order of the arguments of K_with:
+# the operation, the argument that stands for it, its type, and the definition of IeeeWith.v that
+# is its constant-evaluation form. The names of the arguments have an underscore, which no value
+# of a listing has (ir.py), so that no value hides them (mul_1_1, rmul and two_prod_dekker have a
+# value p, mul_pow2_2_full one t).
+CE_OPERATIONS = (('prod', 'p_', 'float -> float -> float', 'prod_ce'),
+                 ('guard', 'g_', 'float -> float', 'guard_ce'),
+                 ('times_inf', 't_', 'float -> float', 'times_inf_ce'))
+# The NaN-choice variables that each constant-evaluation form takes: the plain product returns a
+# NaN of nan_mult, as Flocq's Bmult; times_inf_ce returns the NaN that the C++ writes
+# quiet_NaN(), which is how it writes `const nan` too; the guard returns its operand.
+CE_NANS = {'prod': ('nan_mult',), 'guard': (), 'times_inf': ('nan_const',)}
+CE_DISPATCH = '__builtin_is_constant_evaluated()'
+
+
+def _check_ce_operations():
+    """The operations of CE_OPERATIONS are exactly those whose C++ dispatches on constant
+    evaluation in a kernel constexpr without a variant: one more there, and the listings of
+    IeeeWith.v would keep its run-time form where constant evaluation runs another."""
+    dispatched = sorted(dispatched_operations())
+    mine = sorted(op for op, _, _, _ in CE_OPERATIONS)
+    if dispatched != mine:
+        raise PrintError(f'the operations that dispatch on constant evaluation ({", ".join(dispatched)}) '
+                         f'are not the arguments of the listings of IeeeWith.v ({", ".join(mine)})')
+
+
+def dispatched_operations():
+    """The operations whose C++, in a kernel constexpr without a variant, dispatches on
+    __builtin_is_constant_evaluated() (cpp.SPELL_PLAIN): prod, guard, times_inf."""
+    from . import cpp
+    return {op for op, spelling in cpp.SPELL_PLAIN.items() if CE_DISPATCH in spelling}
+
 
 def with_kernels(kernels):
-    """The kernels constexpr by the rule of the product (cpp.product_rule) that the IEEE model
-    defines, callees first."""
+    """The kernels whose C++ in constant evaluation differs from their C++ at run time, which the
+    IEEE model defines, callees first: those constexpr without a variant (cpp.constexpr_kind
+    'plain') that compute, in their listing or a callee's, an operation whose spelling dispatches
+    on constant evaluation (dispatched_operations): the kernels of the rule of the product
+    (cpp.product_rule) and those without a product that compute guard or times_inf. Every other
+    kernel constexpr without a variant has one C++ for both executions."""
     from . import cpp
-    return [k for k in in_model(kernels).values() if cpp.product_rule(k, kernels)]
+    ops = dispatched_operations()
+    return [k for k in in_model(kernels).values()
+            if cpp.constexpr_kind(k, kernels) == 'plain' and {p.op for p in ir.prims(k, kernels)} & ops]
+
+
+def with_arguments(k, kernels):
+    """The entries of CE_OPERATIONS whose operation k computes, calls inlined: the arguments of
+    K_with, in order."""
+    ops = {p.op for p in ir.prims(k, kernels)}
+    return [entry for entry in CE_OPERATIONS if entry[0] in ops]
+
+
+def _with_nans(k, kernels):
+    """The NaN-choice variables the closed definition K_with takes, in section order: those of
+    its operations other than its arguments, and nan_const for a `const nan`."""
+    arguments = {op for op, _, _, _ in CE_OPERATIONS}
+    used = set()
+    for p in ir.prims(k, kernels):
+        if p.op not in SPELL:
+            raise PrintError(f'kernel {k.name}: the IEEE model has no {p.op}')
+        if p.op not in arguments:
+            used.update(OP_NANS.get(p.op, ()))
+        for a in p.args:
+            if a.const and a.name == 'nan':
+                used.add('nan_const')
+    return [n for n, _ in NANS if n in used]
+
+
+def _with_call(k, kernels, args):
+    """K_with applied to its arguments `args` (one term per entry of with_arguments) and inputs."""
+    return ' '.join([f'{k.name}_with prec emax'] + _with_nans(k, kernels) + list(args) + list(k.input_limbs))
 
 
 def _with_definition(k, kernels, cnames, rule):
-    """K_with: the definition of IeeeModel.K with every prod the argument p_, and every call of a
-    kernel of `rule` that kernel's K_with p_; any other call stays a call of IeeeModel. The
-    argument's name has an underscore, which no value of a listing has (ir.py), so that no value
-    hides it (mul_1_1, rmul and two_prod_dekker have a value p)."""
+    """K_with: the definition of IeeeModel.K with each operation of with_arguments(k) written as its
+    argument (`prod a b` as p_ a b, `guard a` as g_ a, `times_inf t` as t_ t), and every call of a
+    kernel of `rule` that kernel's K_with on the arguments it takes; any other call stays a call
+    of IeeeModel, and must compute none of these operations."""
+    arguments = with_arguments(k, kernels)
+    spelled = {op: arg for op, arg, _, _ in arguments}
+    every = {op for op, _, _, _ in CE_OPERATIONS}
+    binders = ''.join(f' ({arg} : {t})' for _, arg, t, _ in arguments)
     lines = [f'(* {k.name}: {k.source or "no source given"}. *)',
-             f'Definition {k.name}_with (p_ : float -> float -> float)'
+             f'Definition {k.name}_with{binders}'
              f'{_params(k.input_limbs, k.input_kinds)} : {" * ".join(map(_type, k.output_kinds))} :=']
     for st in k.body:
         args = [_operand(a, cnames) for a in st.args]
         if st.is_call:
-            callee = f'{st.op}_with p_' if st.op in rule else st.op
+            callee = kernels[st.op]
+            if st.op in rule:
+                head = ' '.join([f'{st.op}_with'] + [arg for _, arg, _, _ in with_arguments(callee, kernels)])
+            else:
+                kept = sorted({p.op for p in ir.prims(callee, kernels)} & every)
+                if kept:
+                    raise PrintError(f'kernel {k.name}: it calls {st.op}, which is not a listing of IeeeWith.v '
+                                     f'and computes {", ".join(kept)}, which constant evaluation runs differently')
+                head = st.op
             pattern = st.dsts[0] if len(st.dsts) == 1 else "'(" + ', '.join(st.dsts) + ')'
-            lines.append(f'  let {pattern} := {" ".join([callee] + args)} in')
-        elif st.op == 'prod':
-            lines.append(f'  let {st.dsts[0]} := p_ {args[0]} {args[1]} in')
+            lines.append(f'  let {pattern} := {" ".join([head] + args)} in')
+        elif st.op in spelled:
+            lines.append(f'  let {st.dsts[0]} := {" ".join([spelled[st.op]] + args)} in')
         else:
             if st.op not in SPELL:
                 raise PrintError(f'kernel {k.name}: the IEEE model has no {st.op}')
@@ -1665,23 +1747,94 @@ def _with_definition(k, kernels, cnames, rule):
     return lines
 
 
+def two_executions_nans(k, kernels):
+    """(ce, run): the NaN-choice variables of the two sides of K_two_executions_spec, in section
+    order. ce: those K_with takes, and those of the constant-evaluation forms of its arguments
+    (CE_NANS); run: those IeeeModel.K takes, which the statement primes."""
+    ce = set(_with_nans(k, kernels)) | {n for op, _, _, _ in with_arguments(k, kernels) for n in CE_NANS[op]}
+    run = set(_used_nans(k, kernels))
+    return [n for n, _ in NANS if n in ce], [n for n, _ in NANS if n in run]
+
+
+def _input_binders(k):
+    """forall a b : binary_float prec emax, -- or, with a mask among the inputs, one binder per run of
+    inputs of one kind, in the order of the kernel's arguments (bv_mul_pow2_radius: m, ex, rx, c)."""
+    if all(kind == ir.LIMB for kind in k.input_kinds):
+        return f'  forall {" ".join(k.input_limbs)} : binary_float prec emax,'
+    runs = []
+    for v, kind in zip(k.input_limbs, k.input_kinds):
+        if runs and runs[-1][1] == kind:
+            runs[-1][0].append(v)
+        else:
+            runs.append(([v], kind))
+    types = {ir.LIMB: 'binary_float prec emax', ir.MASK: 'bool'}
+    return '  forall ' + ' '.join(f'({" ".join(vs)} : {types[kind]})' for vs, kind in runs) + ','
+
+
+def two_executions_statement(k, kernels):
+    """K_two_executions_spec, in the shape of the theorems K_two_executions of
+    proofs/theories/IeeeTwoExecutions.v: for every format, its two instances, and two families of NaN
+    functions (each variable followed by its primed copy, those of each side only), on all operands
+    in the order of the kernel's arguments, K_with at the operations of constant evaluation and the
+    generated kernel IeeeModel.K, with the primed NaN functions, return limbs that stand for the same
+    extended real numbers (xval) and the same masks."""
+    ce, run = two_executions_nans(k, kernels)
+    names = [x for n, _ in NANS for x in ((n,) if n in ce else ()) + ((n + "'",) if n in run else ())]
+    outs = k.output_limbs
+    clash = set(outs) & (set(k.input_limbs) | {'prec', 'emax'})
+    if clash:
+        raise PrintError(f'kernel {k.name}: an output has the name of an input or of the format: '
+                         f'{", ".join(sorted(clash))}')
+    forms = [f'({ce_name}{"".join(" " + x for x in ("prec", "emax") + CE_NANS[op])})'
+             for op, _, _, ce_name in with_arguments(k, kernels)]
+    ce_call = _with_call(k, kernels, forms)
+    run_call = ' '.join([f'IeeeModel.{k.name} prec emax'] + [n + "'" for n in run] + list(k.input_limbs))
+    lines = [f'(* {k.name}: {k.source or "no source given"}. The two executions. *)',
+             f'Definition {k.name}_two_executions_spec : Prop :=',
+             '  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+             '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+             (f'\n         {_binders(names)},' if names else ','),
+             _input_binders(k)]
+
+    def same(v, w, kind):
+        return f'xval {v} = xval {w}' if kind == ir.LIMB else f'{v} = {w}'
+    if len(outs) == 1:
+        lines.append(f'  {same(f"({ce_call})", f"({run_call})", k.output_kinds[0])}.')
+    else:
+        primed = [v + "'" for v in outs]
+        lines += [f"  let '({', '.join(outs)}) := {ce_call} in",
+                  f"  let '({', '.join(primed)}) := {run_call} in",
+                  '  ' + ' /\\ '.join(same(v, w, kind) for v, w, kind in zip(outs, primed, k.output_kinds)) + '.']
+    return lines
+
+
 def with_model(kernels):
     """proofs/gen/IeeeWith.v (docs/developer/architecture.md, "The formal model")."""
+    _check_ce_operations()
     real = rocq.real(kernels)
     model_kernels = in_model(kernels)
     cnames, _ = _const_names(model_kernels, real, kernels)     # the names of IeeeModel.v (model)
     rule = with_kernels(kernels)
     names = {k.name for k in rule}
     lines = [HEADER, '',
-             '(* The kernels constexpr by the rule of the product (docs/developer/design/milestone2.md, "The',
-             '   two executions of a product"), in the IEEE model, with the product as an argument: K_with p_',
-             '   is the definition of IeeeModel.K with every `prod a b` written p_ a b, and every call of',
-             '   another such kernel written as its K_with p_. With p_ the fused product IeeeOperations.prod',
-             '   it is IeeeModel.K, by conversion; with the plain product of constant evaluation it is the',
-             '   listing that constant evaluation runs. The section has the variables of IeeeModel.v, in',
-             '   the same order, and the names of the values are those of the kernel descriptions. *)',
+             '(* The kernels whose C++ computes an operation otherwise in constant evaluation than at run',
+             '   time (docs/developer/design/milestone2.md, "The two executions of a product"): those',
+             '   constexpr without a variant that compute prod (the rule of the product), guard or',
+             '   times_inf, in their listing or a callee\'s. In the IEEE model, with the operations that constant',
+             '   evaluation runs differently as arguments (cpp.py, SPELL_PLAIN): K_with is the definition of',
+             '   IeeeModel.K with every `prod a b` written p_ a b, every `guard a` g_ a and every',
+             '   `times_inf t` t_ t, for those of the three that the kernel computes, and every call of',
+             '   another such kernel written as its K_with on the arguments it takes. With the operations',
+             '   of run time (IeeeOperations.prod, guard and times_inf) it is IeeeModel.K, by conversion;',
+             '   with those of constant evaluation defined below (prod_ce, guard_ce, times_inf_ce) it is',
+             '   the listing that constant evaluation runs. The section has the variables of IeeeModel.v,',
+             '   in the same order, and the names of the values are those of the kernel descriptions.',
+             '   After it, for each kernel, the statement of its two executions, K_two_executions_spec,',
+             '   whose theorem is K_two_executions of proofs/theories/IeeeTwoExecutions.v and which',
+             '   proofs/gen/IeeeAudit.v checks. *)',
              'From Stdlib Require Import Reals ZArith.',
              'From Flocq Require Import Core Binary.',
+             f'From {THEORIES_PATH} Require Import IeeeVocabulary.',
              f'From {THEORIES_PATH} Require IeeeOperations.',
              f'From {GEN_PATH} Require IeeeModel.',
              '',
@@ -1700,7 +1853,7 @@ def with_model(kernels):
         ('nan_const', 'nan_of'))]
     lines += ['',
               '(* The operations of IeeeOperations.v, applied to the variables of this section, as in',
-              '   IeeeModel.v. *)',
+              '   IeeeModel.v, but for prod, guard and times_inf, which the listings take as arguments. *)',
               'Local Notation pzero := (IeeeOperations.pzero prec emax).',
               'Local Notation pinf := (IeeeOperations.pinf prec emax).',
               'Local Notation cnan := (IeeeOperations.cnan prec emax nan_const).',
@@ -1710,13 +1863,28 @@ def with_model(kernels):
               'Local Notation abs := (IeeeOperations.abs prec emax nan_abs).',
               'Local Notation fma := (IeeeOperations.fma prec emax nan_fma).',
               'Local Notation fms := (IeeeOperations.fms prec emax nan_opp nan_fma).',
-              'Local Notation times_inf := (IeeeOperations.times_inf prec emax nan_mult).',
               'Local Notation lt := (IeeeOperations.lt prec emax).',
               'Local Notation le := (IeeeOperations.le prec emax).',
               'Local Notation eq := (IeeeOperations.eq prec emax).',
               'Local Notation succ := (IeeeOperations.succ prec emax).',
               'Local Notation pred := (IeeeOperations.pred prec emax).',
-              'Local Notation guard := (IeeeOperations.guard prec emax nan_plus).']
+              '',
+              '(* The three operations in constant evaluation, as the C++ of a kernel constexpr without',
+              '   a variant computes them under __builtin_is_constant_evaluated() (cpp.py, SPELL_PLAIN):',
+              '   - prod a b is the plain product a * b, rounded to nearest: Flocq\'s Bmult (at run time',
+              '     fma_rn(a, b, +0), IeeeOperations.prod);',
+              '   - guard a is a itself (at run time a + 0, IeeeOperations.guard);',
+              '   - times_inf t is times_inf_ce(t) of include/kairn/gen/prelude.hpp (at run time',
+              '     t * infinity, IeeeOperations.times_inf), comparison by comparison:',
+              '       t > 0 ? +infinity : 0 > t ? -infinity : quiet_NaN()',
+              '     where t > 0 is lt pzero t and 0 > t is lt t pzero (a < b is written b > a in the',
+              '     C++), -infinity is the negation of +infinity, and quiet_NaN() is the NaN of',
+              '     `const nan`, which the C++ writes the same way. *)',
+              'Definition prod_ce (a b : float) : float :=',
+              '  Bmult prec emax prec_gt_0_ prec_lt_emax_ nan_mult BinarySingleNaN.mode_NE a b.',
+              'Definition guard_ce (a : float) : float := a.',
+              'Definition times_inf_ce (t : float) : float :=',
+              '  if lt pzero t then pinf else if lt t pzero then B754_infinity prec emax true else cnan.']
     # The constants and the kernels of IeeeModel.v that these listings use, as there.
     consts, callees = [], []
     for k in rule:
@@ -1734,6 +1902,16 @@ def with_model(kernels):
     for k in rule:
         lines += [''] + _with_definition(k, kernels, cnames, names)
     lines += ['', 'End IeeeWith.']
+    if rule:
+        lines += ['', '(** * The two executions *)', '',
+                  '(* For each kernel above, K_two_executions_spec: for every format, every choice of the NaN',
+                  '   that each operation returns in each execution (the second\'s are the primed names), and',
+                  '   all operands, finite, infinite or NaN: the listing with the operations of constant',
+                  '   evaluation, K_with at prod_ce, guard_ce and times_inf_ce, and the generated kernel',
+                  '   IeeeModel.K, which is the execution of run time, return limbs that stand for the same',
+                  '   extended real numbers (xval: equal, or two zeros, or two NaN) and the same masks. *)']
+    for k in rule:
+        lines += [''] + two_executions_statement(k, kernels)
     return '\n'.join(lines) + '\n'
 
 
@@ -1784,13 +1962,29 @@ def max_statements(fd):
     return getattr(fd, 'is_max', False) and set(ir.ORDERS) <= set(fd.orders)
 
 
+TWO_EXECUTIONS_MODULE = 'IeeeTwoExecutions'
+
+
+def two_executions_theorems(kernels):
+    """[(statement, theorem)] for each kernel of IeeeWith.v, in its order: K_two_executions_spec of
+    IeeeWith.v and the theorem K_two_executions of proofs/theories/IeeeTwoExecutions.v, which no
+    description names: every kernel of the rule has one, so that a kernel that joins the rule
+    without its theorem, or with a theorem of another statement, fails the proofs build."""
+    return [(f'{k.name}_two_executions_spec', f'{TWO_EXECUTIONS_MODULE}.{k.name}_two_executions')
+            for k in with_kernels(kernels)]
+
+
 def audit(kernels):
     """For every IEEE-model statement with a theorem (ieee_theorem: of a kernel of the extended
     domain; then those of proved_statements), the check that the theorem has exactly that statement
-    as its type, and its assumptions; nothing else is printed. With no theorem of the second kind,
-    the file is what it was before they could be named."""
+    as its type, and its assumptions; then the same for the statement of the two executions of
+    every kernel of IeeeWith.v (two_executions_theorems), whose theorems are named by their
+    qualified names (IeeeProduct.v has an rmul_two_executions and a mul_1_1_two_executions too).
+    Nothing else is printed. With no theorem of the second kind, the file is what it was before
+    they could be named."""
     verified = [k for k in kernels.values() if k.ieee_theorem and k.ieee_status == 'proved']
     more = proved_statements(kernels)
+    executions = two_executions_theorems(kernels)
     folds = any(g == 'IeeeFoldStatements' for _, _, _, g in more)
     lines = [HEADER, '',
              '(* For every IEEE-model statement whose theorem is named (ieee_theorem): the theorem has',
@@ -1799,6 +1993,9 @@ def audit(kernels):
              f'From {GEN_PATH} Require Import IeeeStatements.']
     if folds:
         lines.append(f'From {GEN_PATH} Require Import IeeeFoldStatements.')
+    if executions:
+        lines += [f'From {GEN_PATH} Require Import IeeeWith.',
+                  f'From {THEORIES_PATH} Require {TWO_EXECUTIONS_MODULE}.']
     for m in sorted({rocq.theory_module(k.ieee_theorem[0]) for k in verified} | {rocq.theory_module(f) for _, f, _, _ in more}):
         lines.append(f'From {THEORIES_PATH} Require Import {m}.')
     if not verified and not more:
@@ -1813,6 +2010,13 @@ def audit(kernels):
                   '   theorems are named (ieee_bridge_theorem, ieee_spec_theorem, ieee_lead_theorem; the',
                   '   ieee_theorem of a fold). *)']
     for spec, _, name, _ in more:
+        lines += ['', f'Definition {spec[:-len("_spec")]}_audit : {spec} := {name}.',
+                  f'Print Assumptions {name}.']
+    if executions:
+        lines += ['', '(* The two executions of each kernel constexpr by the rule of the product (IeeeWith.v):',
+                  '   its theorem in proofs/theories/IeeeTwoExecutions.v has exactly the statement',
+                  '   K_two_executions_spec as its type. *)']
+    for spec, name in executions:
         lines += ['', f'Definition {spec[:-len("_spec")]}_audit : {spec} := {name}.',
                   f'Print Assumptions {name}.']
     return '\n'.join(lines) + '\n'

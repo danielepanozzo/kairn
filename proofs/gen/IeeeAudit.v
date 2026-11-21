@@ -5,6 +5,8 @@
    for the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import IeeeStatements.
 From Kairn.Gen Require Import IeeeFoldStatements.
+From Kairn.Gen Require Import IeeeWith.
+From Kairn Require IeeeTwoExecutions.
 From Kairn Require Import IeeeAccKernels.
 From Kairn Require Import IeeeBallCompare2.
 From Kairn Require Import IeeeBallContains2.
@@ -955,3 +957,196 @@ Print Assumptions bv_conv_1_ieee_correct.
 
 Definition bv_conv_2_ieee_audit : bv_conv_2_ieee_spec := bv_conv_2_ieee_correct.
 Print Assumptions bv_conv_2_ieee_correct.
+
+(* The two executions of each kernel constexpr by the rule of the product (IeeeWith.v):
+   its theorem in proofs/theories/IeeeTwoExecutions.v has exactly the statement
+   K_two_executions_spec as its type. *)
+
+Definition acc_add_1_two_executions_audit : acc_add_1_two_executions_spec := IeeeTwoExecutions.acc_add_1_two_executions.
+Print Assumptions IeeeTwoExecutions.acc_add_1_two_executions.
+
+Definition add_down_entry_two_executions_audit : add_down_entry_two_executions_spec := IeeeTwoExecutions.add_down_entry_two_executions.
+Print Assumptions IeeeTwoExecutions.add_down_entry_two_executions.
+
+Definition add_entry_step_1_two_executions_audit : add_entry_step_1_two_executions_spec := IeeeTwoExecutions.add_entry_step_1_two_executions.
+Print Assumptions IeeeTwoExecutions.add_entry_step_1_two_executions.
+
+Definition add_up_entry_two_executions_audit : add_up_entry_two_executions_spec := IeeeTwoExecutions.add_up_entry_two_executions.
+Print Assumptions IeeeTwoExecutions.add_up_entry_two_executions.
+
+Definition mul_1_1_two_executions_audit : mul_1_1_two_executions_spec := IeeeTwoExecutions.mul_1_1_two_executions.
+Print Assumptions IeeeTwoExecutions.mul_1_1_two_executions.
+
+Definition axpy_entry_step_1_two_executions_audit : axpy_entry_step_1_two_executions_spec := IeeeTwoExecutions.axpy_entry_step_1_two_executions.
+Print Assumptions IeeeTwoExecutions.axpy_entry_step_1_two_executions.
+
+Definition axpy_step_1_two_executions_audit : axpy_step_1_two_executions_spec := IeeeTwoExecutions.axpy_step_1_two_executions.
+Print Assumptions IeeeTwoExecutions.axpy_step_1_two_executions.
+
+Definition ball_contains_point_1_two_executions_audit : ball_contains_point_1_two_executions_spec := IeeeTwoExecutions.ball_contains_point_1_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_contains_point_1_two_executions.
+
+Definition interval_mid_rad_1_two_executions_audit : interval_mid_rad_1_two_executions_spec := IeeeTwoExecutions.interval_mid_rad_1_two_executions.
+Print Assumptions IeeeTwoExecutions.interval_mid_rad_1_two_executions.
+
+Definition interval_to_ball_1_two_executions_audit : interval_to_ball_1_two_executions_spec := IeeeTwoExecutions.interval_to_ball_1_two_executions.
+Print Assumptions IeeeTwoExecutions.interval_to_ball_1_two_executions.
+
+Definition ball_from_interval_1_two_executions_audit : ball_from_interval_1_two_executions_spec := IeeeTwoExecutions.ball_from_interval_1_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_from_interval_1_two_executions.
+
+Definition ball_from_interval_2_two_executions_audit : ball_from_interval_2_two_executions_spec := IeeeTwoExecutions.ball_from_interval_2_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_from_interval_2_two_executions.
+
+Definition ball_hull_1_two_executions_audit : ball_hull_1_two_executions_spec := IeeeTwoExecutions.ball_hull_1_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_hull_1_two_executions.
+
+Definition ball_intersection_1_two_executions_audit : ball_intersection_1_two_executions_spec := IeeeTwoExecutions.ball_intersection_1_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_intersection_1_two_executions.
+
+Definition ball_make_1_two_executions_audit : ball_make_1_two_executions_spec := IeeeTwoExecutions.ball_make_1_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_make_1_two_executions.
+
+Definition ball_mul_pow2_1_two_executions_audit : ball_mul_pow2_1_two_executions_spec := IeeeTwoExecutions.ball_mul_pow2_1_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_mul_pow2_1_two_executions.
+
+Definition ball_mul_pow2_1_full_two_executions_audit : ball_mul_pow2_1_full_two_executions_spec := IeeeTwoExecutions.ball_mul_pow2_1_full_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_mul_pow2_1_full_two_executions.
+
+Definition bound_dot_1_two_executions_audit : bound_dot_1_two_executions_spec := IeeeTwoExecutions.bound_dot_1_two_executions.
+Print Assumptions IeeeTwoExecutions.bound_dot_1_two_executions.
+
+Definition bound_dot_2_two_executions_audit : bound_dot_2_two_executions_spec := IeeeTwoExecutions.bound_dot_2_two_executions.
+Print Assumptions IeeeTwoExecutions.bound_dot_2_two_executions.
+
+Definition bound_sum_1_two_executions_audit : bound_sum_1_two_executions_spec := IeeeTwoExecutions.bound_sum_1_two_executions.
+Print Assumptions IeeeTwoExecutions.bound_sum_1_two_executions.
+
+Definition bound_sum_2_two_executions_audit : bound_sum_2_two_executions_spec := IeeeTwoExecutions.bound_sum_2_two_executions.
+Print Assumptions IeeeTwoExecutions.bound_sum_2_two_executions.
+
+Definition bv_center_entry_1_two_executions_audit : bv_center_entry_1_two_executions_spec := IeeeTwoExecutions.bv_center_entry_1_two_executions.
+Print Assumptions IeeeTwoExecutions.bv_center_entry_1_two_executions.
+
+Definition bv_make_radius_two_executions_audit : bv_make_radius_two_executions_spec := IeeeTwoExecutions.bv_make_radius_two_executions.
+Print Assumptions IeeeTwoExecutions.bv_make_radius_two_executions.
+
+Definition bv_mul_pow2_radius_two_executions_audit : bv_mul_pow2_radius_two_executions_spec := IeeeTwoExecutions.bv_mul_pow2_radius_two_executions.
+Print Assumptions IeeeTwoExecutions.bv_mul_pow2_radius_two_executions.
+
+Definition bv_mul_pow2_step_1_two_executions_audit : bv_mul_pow2_step_1_two_executions_spec := IeeeTwoExecutions.bv_mul_pow2_step_1_two_executions.
+Print Assumptions IeeeTwoExecutions.bv_mul_pow2_step_1_two_executions.
+
+Definition fast_two_sum_entry_two_executions_audit : fast_two_sum_entry_two_executions_spec := IeeeTwoExecutions.fast_two_sum_entry_two_executions.
+Print Assumptions IeeeTwoExecutions.fast_two_sum_entry_two_executions.
+
+Definition interval_make_1_two_executions_audit : interval_make_1_two_executions_spec := IeeeTwoExecutions.interval_make_1_two_executions.
+Print Assumptions IeeeTwoExecutions.interval_make_1_two_executions.
+
+Definition interval_split_1_two_executions_audit : interval_split_1_two_executions_spec := IeeeTwoExecutions.interval_split_1_two_executions.
+Print Assumptions IeeeTwoExecutions.interval_split_1_two_executions.
+
+Definition make_2_two_executions_audit : make_2_two_executions_spec := IeeeTwoExecutions.make_2_two_executions.
+Print Assumptions IeeeTwoExecutions.make_2_two_executions.
+
+Definition mul_pow2_step_1_two_executions_audit : mul_pow2_step_1_two_executions_spec := IeeeTwoExecutions.mul_pow2_step_1_two_executions.
+Print Assumptions IeeeTwoExecutions.mul_pow2_step_1_two_executions.
+
+Definition radd_entry_two_executions_audit : radd_entry_two_executions_spec := IeeeTwoExecutions.radd_entry_two_executions.
+Print Assumptions IeeeTwoExecutions.radd_entry_two_executions.
+
+Definition rmul_two_executions_audit : rmul_two_executions_spec := IeeeTwoExecutions.rmul_two_executions.
+Print Assumptions IeeeTwoExecutions.rmul_two_executions.
+
+Definition scale_step_1_two_executions_audit : scale_step_1_two_executions_spec := IeeeTwoExecutions.scale_step_1_two_executions.
+Print Assumptions IeeeTwoExecutions.scale_step_1_two_executions.
+
+Definition split_two_executions_audit : split_two_executions_spec := IeeeTwoExecutions.split_two_executions.
+Print Assumptions IeeeTwoExecutions.split_two_executions.
+
+Definition sub_down_entry_two_executions_audit : sub_down_entry_two_executions_spec := IeeeTwoExecutions.sub_down_entry_two_executions.
+Print Assumptions IeeeTwoExecutions.sub_down_entry_two_executions.
+
+Definition sub_entry_step_1_two_executions_audit : sub_entry_step_1_two_executions_spec := IeeeTwoExecutions.sub_entry_step_1_two_executions.
+Print Assumptions IeeeTwoExecutions.sub_entry_step_1_two_executions.
+
+Definition sub_up_entry_two_executions_audit : sub_up_entry_two_executions_spec := IeeeTwoExecutions.sub_up_entry_two_executions.
+Print Assumptions IeeeTwoExecutions.sub_up_entry_two_executions.
+
+Definition sum_entry_step_1_two_executions_audit : sum_entry_step_1_two_executions_spec := IeeeTwoExecutions.sum_entry_step_1_two_executions.
+Print Assumptions IeeeTwoExecutions.sum_entry_step_1_two_executions.
+
+Definition two_prod_dekker_two_executions_audit : two_prod_dekker_two_executions_spec := IeeeTwoExecutions.two_prod_dekker_two_executions.
+Print Assumptions IeeeTwoExecutions.two_prod_dekker_two_executions.
+
+Definition two_sum_entry_two_executions_audit : two_sum_entry_two_executions_spec := IeeeTwoExecutions.two_sum_entry_two_executions.
+Print Assumptions IeeeTwoExecutions.two_sum_entry_two_executions.
+
+Definition acc_add_2_two_executions_audit : acc_add_2_two_executions_spec := IeeeTwoExecutions.acc_add_2_two_executions.
+Print Assumptions IeeeTwoExecutions.acc_add_2_two_executions.
+
+Definition add_2_1_two_executions_audit : add_2_1_two_executions_spec := IeeeTwoExecutions.add_2_1_two_executions.
+Print Assumptions IeeeTwoExecutions.add_2_1_two_executions.
+
+Definition add_2_1_full_two_executions_audit : add_2_1_full_two_executions_spec := IeeeTwoExecutions.add_2_1_full_two_executions.
+Print Assumptions IeeeTwoExecutions.add_2_1_full_two_executions.
+
+Definition add_2_2_full_two_executions_audit : add_2_2_full_two_executions_spec := IeeeTwoExecutions.add_2_2_full_two_executions.
+Print Assumptions IeeeTwoExecutions.add_2_2_full_two_executions.
+
+Definition add_entry_step_2_two_executions_audit : add_entry_step_2_two_executions_spec := IeeeTwoExecutions.add_entry_step_2_two_executions.
+Print Assumptions IeeeTwoExecutions.add_entry_step_2_two_executions.
+
+Definition add_fast_2_2_full_two_executions_audit : add_fast_2_2_full_two_executions_spec := IeeeTwoExecutions.add_fast_2_2_full_two_executions.
+Print Assumptions IeeeTwoExecutions.add_fast_2_2_full_two_executions.
+
+Definition mul_pow2_2_two_executions_audit : mul_pow2_2_two_executions_spec := IeeeTwoExecutions.mul_pow2_2_two_executions.
+Print Assumptions IeeeTwoExecutions.mul_pow2_2_two_executions.
+
+Definition ball_make_2_two_executions_audit : ball_make_2_two_executions_spec := IeeeTwoExecutions.ball_make_2_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_make_2_two_executions.
+
+Definition ball_mul_pow2_2_two_executions_audit : ball_mul_pow2_2_two_executions_spec := IeeeTwoExecutions.ball_mul_pow2_2_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_mul_pow2_2_two_executions.
+
+Definition ball_mul_pow2_2_full_two_executions_audit : ball_mul_pow2_2_full_two_executions_spec := IeeeTwoExecutions.ball_mul_pow2_2_full_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_mul_pow2_2_full_two_executions.
+
+Definition bv_mul_pow2_step_2_two_executions_audit : bv_mul_pow2_step_2_two_executions_spec := IeeeTwoExecutions.bv_mul_pow2_step_2_two_executions.
+Print Assumptions IeeeTwoExecutions.bv_mul_pow2_step_2_two_executions.
+
+Definition interval_split_2_two_executions_audit : interval_split_2_two_executions_spec := IeeeTwoExecutions.interval_split_2_two_executions.
+Print Assumptions IeeeTwoExecutions.interval_split_2_two_executions.
+
+Definition make_2_limbs_two_executions_audit : make_2_limbs_two_executions_spec := IeeeTwoExecutions.make_2_limbs_two_executions.
+Print Assumptions IeeeTwoExecutions.make_2_limbs_two_executions.
+
+Definition mul_pow2_2_full_two_executions_audit : mul_pow2_2_full_two_executions_spec := IeeeTwoExecutions.mul_pow2_2_full_two_executions.
+Print Assumptions IeeeTwoExecutions.mul_pow2_2_full_two_executions.
+
+Definition mul_pow2_step_2_two_executions_audit : mul_pow2_step_2_two_executions_spec := IeeeTwoExecutions.mul_pow2_step_2_two_executions.
+Print Assumptions IeeeTwoExecutions.mul_pow2_step_2_two_executions.
+
+Definition sub_1_2_two_executions_audit : sub_1_2_two_executions_spec := IeeeTwoExecutions.sub_1_2_two_executions.
+Print Assumptions IeeeTwoExecutions.sub_1_2_two_executions.
+
+Definition sub_1_2_full_two_executions_audit : sub_1_2_full_two_executions_spec := IeeeTwoExecutions.sub_1_2_full_two_executions.
+Print Assumptions IeeeTwoExecutions.sub_1_2_full_two_executions.
+
+Definition sub_2_1_two_executions_audit : sub_2_1_two_executions_spec := IeeeTwoExecutions.sub_2_1_two_executions.
+Print Assumptions IeeeTwoExecutions.sub_2_1_two_executions.
+
+Definition sub_2_1_full_two_executions_audit : sub_2_1_full_two_executions_spec := IeeeTwoExecutions.sub_2_1_full_two_executions.
+Print Assumptions IeeeTwoExecutions.sub_2_1_full_two_executions.
+
+Definition sub_2_2_full_two_executions_audit : sub_2_2_full_two_executions_spec := IeeeTwoExecutions.sub_2_2_full_two_executions.
+Print Assumptions IeeeTwoExecutions.sub_2_2_full_two_executions.
+
+Definition sub_entry_step_2_two_executions_audit : sub_entry_step_2_two_executions_spec := IeeeTwoExecutions.sub_entry_step_2_two_executions.
+Print Assumptions IeeeTwoExecutions.sub_entry_step_2_two_executions.
+
+Definition sum_entry_step_2_two_executions_audit : sum_entry_step_2_two_executions_spec := IeeeTwoExecutions.sum_entry_step_2_two_executions.
+Print Assumptions IeeeTwoExecutions.sum_entry_step_2_two_executions.
+
+Definition sum_fast_entry_step_2_two_executions_audit : sum_fast_entry_step_2_two_executions_spec := IeeeTwoExecutions.sum_fast_entry_step_2_two_executions.
+Print Assumptions IeeeTwoExecutions.sum_fast_entry_step_2_two_executions.

@@ -3,8 +3,9 @@
    proofs/gen/Audit.v lists the theorem of every real-model statement, and
    proofs/gen/IeeeAudit.v the theorem of the IEEE-model statement of every kernel of the
    extended domain (the kernels with an ieee_theorem line), then the theorem of every
-   other generated IEEE-model statement that a description names. This file lists the
-   rest:
+   other generated IEEE-model statement that a description names, then the theorem of the
+   two executions of every kernel of proofs/gen/IeeeWith.v (K_two_executions_spec). This
+   file lists the rest:
 
    - theorems about generated statements that no kernel description names: the IEEE-model
      statements of the kernels of the finite domain of Milestone 1 and of the first
@@ -31,9 +32,16 @@
      statements: what the directed sums and products return in more detail than their
      claims say, the error of a rounded product and the sign of the error term of
      two_prod, what mul_dir_1 returns beside its generated statements, the rectangle
-     lemma of the product of intervals, the two executions of a product, and the two
-     executions of the thirty kernels whose only fused operations are products, on the
-     listings of proofs/gen/IeeeWith.v with the product as an argument;
+     lemma of the product of intervals, the two executions of a product, and the lemmas
+     of the two executions of the 63 kernels whose C++ computes an operation otherwise in
+     constant evaluation (the thirty whose only fused operations are products, and 33
+     without a product that compute a guard or times_inf: the operations of constant
+     evaluation against those of run time, the listings of proofs/gen/IeeeWith.v against the
+     generated kernels, and in lockstep), whose theorems proofs/gen/IeeeAudit.v checks
+     against their generated statements; and, for two_prod, which is constexpr through its
+     variant, that Dekker's product in constant evaluation and TwoProd at run time give the
+     same values when the error term of the first is finite and the product is exact, with
+     the statement written by hand (two_prod_two_executions_exact_spec);
    - what is proved of the interval kernels of Milestone 2 and of the conversions of a
      ball beside their generated statements, which the generated audits list: for the
      conversions of a ball, the lemmas their theorems rest on; for the interval kernels
@@ -512,8 +520,18 @@ Print Assumptions same_select.
 Print Assumptions same_cnan.
 Print Assumptions mult_prod_products.
 
-(* Each listing of proofs/gen/IeeeWith.v is the generated definition when its product is
-   the fused one. *)
+(* The operations of constant evaluation (proofs/gen/IeeeWith.v: prod_ce, guard_ce,
+   times_inf_ce), each against its form of run time, on every operand. *)
+Print Assumptions xval_times_inf_ce.
+Print Assumptions same_times_inf_ce.
+Print Assumptions same_guard_ce.
+Print Assumptions same_prod_ce.
+Print Assumptions prod_ce_products.
+Print Assumptions guard_ce_unary.
+Print Assumptions times_inf_ce_unary.
+
+(* Each listing of proofs/gen/IeeeWith.v is the generated definition at the operations of
+   run time: the fused product, and the guard and times_inf of IeeeOperations.v. *)
 Print Assumptions mul_1_1_with_prod.
 Print Assumptions axpy_entry_step_1_with_prod.
 Print Assumptions axpy_step_1_with_prod.
@@ -544,6 +562,39 @@ Print Assumptions bv_mul_pow2_step_2_with_prod.
 Print Assumptions interval_split_2_with_prod.
 Print Assumptions mul_pow2_2_full_with_prod.
 Print Assumptions mul_pow2_step_2_with_prod.
+Print Assumptions acc_add_1_with_prod.
+Print Assumptions add_down_entry_with_prod.
+Print Assumptions add_entry_step_1_with_prod.
+Print Assumptions add_up_entry_with_prod.
+Print Assumptions ball_contains_point_1_with_prod.
+Print Assumptions ball_make_1_with_prod.
+Print Assumptions bv_center_entry_1_with_prod.
+Print Assumptions bv_make_radius_with_prod.
+Print Assumptions fast_two_sum_entry_with_prod.
+Print Assumptions interval_make_1_with_prod.
+Print Assumptions make_2_with_prod.
+Print Assumptions radd_entry_with_prod.
+Print Assumptions sub_down_entry_with_prod.
+Print Assumptions sub_entry_step_1_with_prod.
+Print Assumptions sub_up_entry_with_prod.
+Print Assumptions sum_entry_step_1_with_prod.
+Print Assumptions two_sum_entry_with_prod.
+Print Assumptions acc_add_2_with_prod.
+Print Assumptions add_2_1_with_prod.
+Print Assumptions add_2_1_full_with_prod.
+Print Assumptions add_2_2_full_with_prod.
+Print Assumptions add_entry_step_2_with_prod.
+Print Assumptions add_fast_2_2_full_with_prod.
+Print Assumptions ball_make_2_with_prod.
+Print Assumptions make_2_limbs_with_prod.
+Print Assumptions sub_1_2_with_prod.
+Print Assumptions sub_1_2_full_with_prod.
+Print Assumptions sub_2_1_with_prod.
+Print Assumptions sub_2_1_full_with_prod.
+Print Assumptions sub_2_2_full_with_prod.
+Print Assumptions sub_entry_step_2_with_prod.
+Print Assumptions sum_entry_step_2_with_prod.
+Print Assumptions sum_fast_entry_step_2_with_prod.
 
 (* The kernels of IeeeModel.v without a product that the listings call: operands of the
    same value give outputs of the same value, and the same mask. *)
@@ -559,9 +610,16 @@ Print Assumptions ball_to_interval_1_same.
 Print Assumptions interval_hull_1_same.
 Print Assumptions add_2_2_same.
 Print Assumptions lt_2_2_same.
+Print Assumptions abs_2_same.
+Print Assumptions le_2_1_same.
+Print Assumptions radd_same.
+Print Assumptions sub_1_1_same.
+Print Assumptions sub_2_2_same.
+Print Assumptions add_fast_2_2_same.
 
-(* Two products of the same value, on operands of the same value, give outputs of the
-   same value and the same masks. *)
+(* Two products of the same value (and two guards, or two forms of times_inf, of the same
+   value), on operands of the same value, give outputs of the same value and the same
+   masks. *)
 Print Assumptions split_same.
 Print Assumptions two_prod_dekker_same.
 Print Assumptions mul_pow2_2_same.
@@ -592,39 +650,50 @@ Print Assumptions scale_step_1_same.
 Print Assumptions bv_mul_pow2_step_2_same.
 Print Assumptions interval_split_2_same.
 Print Assumptions mul_pow2_step_2_same.
+Print Assumptions acc_add_1_same.
+Print Assumptions add_down_entry_same.
+Print Assumptions add_entry_step_1_same.
+Print Assumptions add_up_entry_same.
+Print Assumptions ball_contains_point_1_same.
+Print Assumptions ball_make_1_same.
+Print Assumptions bv_center_entry_1_same.
+Print Assumptions bv_make_radius_same.
+Print Assumptions fast_two_sum_entry_same.
+Print Assumptions interval_make_1_same.
+Print Assumptions make_2_same.
+Print Assumptions radd_entry_same.
+Print Assumptions sub_down_entry_same.
+Print Assumptions sub_entry_step_1_same.
+Print Assumptions sub_up_entry_same.
+Print Assumptions sum_entry_step_1_same.
+Print Assumptions two_sum_entry_same.
+Print Assumptions acc_add_2_same.
+Print Assumptions add_2_1_same.
+Print Assumptions add_2_1_full_same.
+Print Assumptions add_2_2_full_same.
+Print Assumptions add_entry_step_2_same.
+Print Assumptions add_fast_2_2_full_same.
+Print Assumptions ball_make_2_same.
+Print Assumptions make_2_limbs_same.
+Print Assumptions sub_1_2_same.
+Print Assumptions sub_1_2_full_same.
+Print Assumptions sub_2_1_same.
+Print Assumptions sub_2_1_full_same.
+Print Assumptions sub_2_2_full_same.
+Print Assumptions sub_entry_step_2_same.
+Print Assumptions sum_entry_step_2_same.
+Print Assumptions sum_fast_entry_step_2_same.
 
-(* The listing with the plain product and the generated kernel return outputs of the same
-   value and the same masks, on all operands: one theorem per kernel of IeeeWith.v. *)
-Print Assumptions split_two_executions.
-Print Assumptions two_prod_dekker_two_executions.
-Print Assumptions mul_pow2_2_two_executions.
-Print Assumptions mul_pow2_2_full_two_executions.
-Print Assumptions ball_mul_pow2_1_two_executions.
-Print Assumptions ball_mul_pow2_1_full_two_executions.
-Print Assumptions ball_mul_pow2_2_two_executions.
-Print Assumptions ball_mul_pow2_2_full_two_executions.
-Print Assumptions IeeeTwoExecutions.mul_1_1_two_executions.
-Print Assumptions axpy_entry_step_1_two_executions.
-Print Assumptions axpy_step_1_two_executions.
-Print Assumptions interval_mid_rad_1_two_executions.
-Print Assumptions interval_to_ball_1_two_executions.
-Print Assumptions ball_from_interval_1_two_executions.
-Print Assumptions ball_from_interval_2_two_executions.
-Print Assumptions ball_hull_1_two_executions.
-Print Assumptions ball_intersection_1_two_executions.
-Print Assumptions bound_dot_1_two_executions.
-Print Assumptions bound_dot_2_two_executions.
-Print Assumptions bound_sum_1_two_executions.
-Print Assumptions bound_sum_2_two_executions.
-Print Assumptions bv_mul_pow2_radius_two_executions.
-Print Assumptions bv_mul_pow2_step_1_two_executions.
-Print Assumptions interval_split_1_two_executions.
-Print Assumptions mul_pow2_step_1_two_executions.
-Print Assumptions IeeeTwoExecutions.rmul_two_executions.
-Print Assumptions scale_step_1_two_executions.
-Print Assumptions bv_mul_pow2_step_2_two_executions.
-Print Assumptions interval_split_2_two_executions.
-Print Assumptions mul_pow2_step_2_two_executions.
+(* two_prod, constexpr through its variant: Dekker's product in constant evaluation against
+   TwoProd at run time (theories/IeeeTwoExecutions.v). The same values when the error term of
+   constant evaluation is finite and the product is exact; the statement is written by hand. *)
+Print Assumptions prod_ce_finite_inv.
+Print Assumptions prod_ce_val.
+Print Assumptions splitter_val.
+Print Assumptions dekker_ce_model.
+Definition two_prod_two_executions_exact_audit : two_prod_two_executions_exact_spec :=
+  two_prod_two_executions_exact.
+Print Assumptions two_prod_two_executions_exact.
 
 (* Scaling a ball by a power of two (theories/BallPow2.v): the radius and the two claims
    for a center whose scaled value is exact when its test says so. *)

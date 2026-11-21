@@ -46,6 +46,14 @@
 //          is not a form, or a form the target does not have (the generated header's #error)
 //   29-31  an UNVERIFIED building block (two_sum, next_up) and the scaling of a ball by a power of
 //          two (half), written without the marker, against headers in which every kernel is
+//          marked unverified (as 1-14)
+//   54-57  kairn::two_prod in a constant expression on finite operands where an operation of
+//          Dekker's product, which constant evaluation runs, overflows (blocks.hpp): the partial
+//          product ah bh while the product is finite (54 double, 55 float: 0x1.fffffffffffffp+511
+//          squared, whose run-time error term is 0x1p+918), and the product itself, with no NaN
+//          on the way (56, 57: the error term is the opposite infinity); each control is the
+//          neighboring operand where it compiles, the largest square or the next number below b,
+//          against the run-time result (api.constexpr checks the same bits at run time)
 #if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
 #if defined(KAIRN_TEST_CONTROL)
 #define KAIRN_CHECKS 0
@@ -311,6 +319,38 @@ int main() {
     sink = (px + pf).lane(0).limb[0];
 #endif
 #endif
+#elif KAIRN_TEST_CASE == 54
+#if defined(KAIRN_TEST_CONTROL)
+    constexpr kairn::ProductAndError<double> z = kairn::two_prod(0x1.ffffffbffffffp+511, 0x1.ffffffbffffffp+511);
+    static_assert(z.product == 0x1.ffffff7ffffffp+1023 && z.error == -0x1.fffffeffffffep+969);
+#else
+    constexpr kairn::ProductAndError<double> z = kairn::two_prod(0x1.fffffffffffffp+511, 0x1.fffffffffffffp+511);
+#endif
+    sink = z.error;
+#elif KAIRN_TEST_CASE == 55
+#if defined(KAIRN_TEST_CONTROL)
+    constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.ffeffep+63f, 0x1.ffeffep+63f);
+    static_assert(z.product == 0x1.ffdffcp+127f && z.error == 0x1.004004p+102f);
+#else
+    constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.fffffep+63f, 0x1.fffffep+63f);
+#endif
+    sink = z.error;
+#elif KAIRN_TEST_CASE == 56
+#if defined(KAIRN_TEST_CONTROL)
+    constexpr kairn::ProductAndError<double> z = kairn::two_prod(0x1.b07b6cd0ef55p+511, 0x1.2f11b5230d0c3p+512);
+    static_assert(z.product == 0x1.fffffffffffffp+1023 && z.error == 0x1.34eafe2d76fcp+969);
+#else
+    constexpr kairn::ProductAndError<double> z = kairn::two_prod(0x1.b07b6cd0ef55p+511, 0x1.2f11b5230d0c4p+512);
+#endif
+    sink = z.error;
+#elif KAIRN_TEST_CASE == 57
+#if defined(KAIRN_TEST_CONTROL)
+    constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.5b8dap+63f, 0x1.7920bap+64f);
+    static_assert(z.product == 0x1.fffffep+127f && z.error == 0x1.b1cc8p+102f);
+#else
+    constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.5b8dap+63f, 0x1.7920bcp+64f);
+#endif
+    sink = z.error;
 #endif
     return sink == 12345 ? 1 : 0;
 }

@@ -207,23 +207,41 @@ product of negative sign is $-0$ as `a * b` and $+0$ as `fma(a, b, +0)`. The IEE
 product too because they are about values, in which the two zeros are the same, except where a
 fix-up returns its own literal zero, which no product reaches: F4 and F5 of `mul_pow2_2_full`
 say that its second limb is the `+0` of the fix-up, a constant of the listing and the same in
-both executions. What is proved (`proofs/theories/IeeeTwoExecutions.v`) is that the eight kernels
-of the rule that are more than one product give outputs of the same value in both executions, on
-all operands (finite, infinite and NaN): each listing is written there once more with the
-product as a parameter, which with the FMA is the generated model by `reflexivity`, and with the
-plain product is the execution of constant evaluation (`IeeeProduct.v` compares the two products
-of `rmul` and `mul_1_1`); what is tested rather than proved is that the C++ compiled for
-constant evaluation is that listing: the generator's tests check that the two executions give
-the same bits, or for the kernels whose outputs can be an exact zero product the same values
-(`gen/tests/test_interp.py`, `TwoExecutionsOfAProduct`; `test_cxx.py` ties the C++ to them). The
-kernels `constexpr` by this rule are `rmul`, `mul_1_1`, `split`, `two_prod_dekker`, `mul_pow2_2`,
-`mul_pow2_2_full`, `ball_mul_pow2_k` with its full form, and the bound kernels of the folds,
-`bound_sum_k` and `bound_dot_k`; and, unverified, of Milestone 2, `ball_from_interval_2`,
-`interval_mid_rad_1` and the two kernels that call it, `interval_to_ball_1` and
-`interval_split_1`, which halve with `prod` (their two executions are compared by the tests only);
-and of stage B2, through `interval_to_ball_1`, `ball_hull_1`, `ball_intersection_1` and
-`ball_from_interval_1`, and `interval_split_2`, whose midpoint halves the bounds with `mul_pow2_2`;
-`build` lists them.
+both executions. What is proved (`proofs/theories/IeeeTwoExecutions.v`) is that every kernel of
+the rule, and every kernel listed further down, gives outputs of the same value, and the same masks, in both executions, on all operands
+(finite, infinite and NaN) and for every choice of NaN in each, with no hypothesis: each listing
+is written there once more with the operations that constant evaluation computes otherwise as
+parameters (`proofs/gen/IeeeWith.v`: the product, and the guard and `times_inf` where the kernel
+has them), which with the operations of run time is the generated model by `reflexivity`, and
+with those of constant evaluation (`prod_ce`, the plain product; `guard_ce`, the operand itself;
+`times_inf_ce`, the comparisons of `prelude.hpp`) is the execution of constant evaluation; each
+of the three gives the value of its form of run time on every operand. The theorem of each kernel
+has the generated statement `K_two_executions_spec` as its type, which `proofs/gen/IeeeAudit.v`
+checks, so that a kernel that comes to compute such an operation without its theorem fails the
+proofs build (`IeeeProduct.v` compares the two products of `rmul` and `mul_1_1` bit by bit). What is tested
+rather than proved is that the C++ compiled for constant evaluation is that listing: the generator
+prints the C++, `IeeeModel.v` and `IeeeWith.v` from one listing, and its tests check that the two
+executions give the same bits, or for the kernels whose outputs can be an exact zero product the
+same values (`gen/tests/test_interp.py`, `TwoExecutionsOfAProduct`; `test_cxx.py` ties the C++ to
+them). The kernels `constexpr` by this rule are thirty, which `build` lists: `rmul`, `mul_1_1`,
+`split`, `two_prod_dekker`, `mul_pow2_2`, `mul_pow2_2_full`, `ball_mul_pow2_k` with its full form,
+and the bound kernels of the folds, `bound_sum_k` and `bound_dot_k`; the steps of `axpy` and of
+the scalings, `axpy_step_1`, `axpy_entry_step_1`, `mul_pow2_step_k`, `scale_step_1` and the three
+of `bv_mul_pow2_k`; and of Milestone 2, `ball_from_interval_2`, `interval_mid_rad_1` and the two
+kernels that call it, `interval_to_ball_1` and `interval_split_1`, which halve with `prod`, and of
+stage B2, through `interval_to_ball_1`, `ball_hull_1`, `ball_intersection_1` and
+`ball_from_interval_1`, and `interval_split_2`, whose midpoint halves the bounds with `mul_pow2_2`.
+Thirty-three kernels that are `constexpr` without any product compute a `guard` or a `times_inf`,
+and so compute it otherwise in constant evaluation too: the entry kernels and constructors that
+guard their operands (among them the public constructors and the sums and differences of
+`Expansion` that take a `T`), and the full sums and differences, whose fix-ups use `times_inf`.
+They are in `IeeeWith.v` too, with the same theorem: 63 kernels in all, every kernel `constexpr`
+without a variant whose C++ dispatches on constant evaluation, so that none computes otherwise
+in constant evaluation without a proof that the values are the same. The one kernel that
+dispatches and is not among them is `two_prod`, `constexpr` through its variant: in constant
+evaluation it runs another algorithm, Dekker's product (`two_prod_dekker`), whose results are
+not always the values of its run-time form ([The two executions of a
+product](design/milestone2.md#the-two-executions-of-a-product)).
 
 C++ emission rules: non-template functions, one overload per limb type; one operation per
 statement; kernels of at most two limbs are force-inlined, but a kernel that says
@@ -1791,16 +1809,69 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   every named theorem against its statement (`Definition S_audit : S := theorem.` and `Print
   Assumptions`), after the theorems of the extended domain, importing `IeeeFoldStatements` only
   when one of them is about a fold. Without any of these fields every generated file is what it
-  was before they existed.
-- `IeeeWith.v`: the kernels that `build` lists as `constexpr` by the rule of the product, in the
-  IEEE model with the product as an argument. `K_with p_` is the definition of `IeeeModel.K` with
-  every `prod a b` written `p_ a b` and every call of another such kernel written as its
-  `K_with p_`; any other call stays a call of `IeeeModel`. With `p_` the fused product it is
-  `IeeeModel.K` by conversion; with the plain product of constant evaluation it is the listing
-  that constant evaluation runs, which the theorems `K_two_executions`
-  (`proofs/theories/IeeeTwoExecutions.v`) compare with the run-time one. The definitions of
-  `IeeeModel.v` are not changed by it, and the argument's name has an underscore, which no value
-  of a listing has.
+  was before they existed. Last, `IeeeAudit.v` checks the theorem of the two executions of every
+  kernel of `IeeeWith.v` against its statement `K_two_executions_spec` (below), which no field
+  names.
+- `IeeeWith.v`: the kernels whose C++ computes an operation otherwise in constant evaluation than
+  at run time (`ieee.with_kernels`): every kernel `constexpr` without a variant that computes, in
+  its listing or a callee's, an operation whose spelling dispatches on constant evaluation; the
+  thirty that `build` lists as `constexpr` by the rule of the product and 33 without a product,
+  63 in all. They are in the IEEE model with the operations that constant evaluation runs
+  differently as arguments. These
+  are the operations whose C++ in a kernel `constexpr` without a variant dispatches on
+  `__builtin_is_constant_evaluated()` (`cpp.SPELL_PLAIN`): `prod`, `guard` and `times_inf`
+  (`ieee.CE_OPERATIONS`; the printer refuses to print the file if the C++ printer dispatches on
+  any other). `K_with` is the definition of `IeeeModel.K` with every `prod a b` written `p_ a b`,
+  every `guard a` written `g_ a` and every `times_inf t` written `t_ t`, for those of the three
+  that the kernel computes, in its listing or a callee's (`K_with p_` for most of the rule of the
+  product, `K_with p_ g_` for `axpy_entry_step_1`, `ball_from_interval_1` and
+  `ball_from_interval_2`, `K_with p_ t_` for `mul_pow2_2_full`; `K_with g_`, `K_with t_` or
+  `K_with g_ t_` for the kernels without a product), and every call of another such kernel written as its `K_with` on the
+  arguments it takes; any other call stays a call of `IeeeModel`, and the printer refuses one
+  whose callee computes `guard` or `times_inf` (its listing would keep the form of run time
+  there). The section defines the three operations as constant evaluation computes them:
+  `prod_ce`, the plain product `a * b` (Flocq's `Bmult`, rounded to nearest); `guard_ce`, the
+  identity (the C++ is `h` where run time computes `h + 0.0`); and `times_inf_ce`, the function
+  of the same name of `prelude.hpp`, comparison by comparison:
+  `t > 0 ? +inf : 0 > t ? -inf : quiet_NaN()` is
+  `if lt pzero t then pinf else if lt t pzero then B754_infinity prec emax true else cnan`, the
+  NaN being that of `const nan`, which the C++ writes the same way. With the operations of run
+  time (`IeeeOperations.prod`, `guard`, `times_inf`) `K_with` is `IeeeModel.K` by conversion (the
+  lemmas `K_with_prod` of `proofs/theories/IeeeTwoExecutions.v`); with `prod_ce`, `guard_ce` and
+  `times_inf_ce` it is the listing that constant evaluation runs, which the theorems
+  `K_two_executions` compare with the run-time one. The definitions of `IeeeModel.v` are not
+  changed by it, and the arguments' names have an underscore, which no value of a listing has.
+  After the section, for each of these kernels, the statement of its two executions,
+  `K_two_executions_spec`, in the shape of its theorem `K_two_executions` (the lines of the file
+  are longer):
+
+  ```coq
+  Definition mul_pow2_2_full_two_executions_spec : Prop :=
+    forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+           (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+           (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_abs nan_abs' : nan1 prec emax)
+           (nan_fma' : nan3 prec emax) (nan_mult nan_mult' : nan2 prec emax)
+           (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+    forall x0 x1 c : binary_float prec emax,
+    let '(w0, w1) := mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs
+                       (prod_ce prec emax nan_mult) (times_inf_ce prec emax nan_const) x0 x1 c in
+    let '(w0', w1') := IeeeModel.mul_pow2_2_full prec emax nan_plus' nan_minus' nan_abs' nan_fma' nan_mult' x0 x1 c in
+    xval w0 = xval w0' /\ xval w1 = xval w1'.
+  ```
+
+  For every format and its two instances, and for two families of NaN functions, the first for
+  constant evaluation and the second (primed) for run time, each variable followed by its primed
+  copy and only those that a side uses (`two_executions_nans`: those of `K_with`, `nan_mult` for
+  `prod_ce` and `nan_const` for `times_inf_ce`; those of `IeeeModel.K`), on all operands in the
+  order of the kernel's arguments (a mask among them in its place, `bv_mul_pow2_radius`), the
+  listing at the operations of constant evaluation and the generated kernel return limbs that
+  stand for the same extended real numbers (`xval`: equal, two zeros or two NaN) and the same
+  masks; a kernel of one output has the two calls side by side, without a `let`. No description
+  names its theorem: `IeeeAudit.v` checks `K_two_executions_audit : K_two_executions_spec :=
+  IeeeTwoExecutions.K_two_executions` (the qualified name: `IeeeProduct.v` has an
+  `rmul_two_executions` and a `mul_1_1_two_executions` of its own) for every kernel of the file,
+  after the other checks, so that a kernel that joins the file without its theorem, or with a
+  theorem of another statement, fails the proofs build by itself.
 - `Audit.v`: for every kernel not marked `unverified`, a silent definition
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The
