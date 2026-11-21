@@ -1436,13 +1436,14 @@ struct Batches {
     // Completes every line and writes the stream, in its order.
     void finish() {
         if (!active) return;
-        std::vector<const PackedForm*> forms;
+        // Not named forms: MSVC's C4459 reports a local that hides the table of that name.
+        std::vector<const PackedForm*> used;
         for (const Pending& p : entries) {
             bool known = !p.form;
-            for (const PackedForm* f : forms) known = known || f == p.form;
-            if (!known) forms.push_back(p.form);
+            for (const PackedForm* f : used) known = known || f == p.form;
+            if (!known) used.push_back(p.form);
         }
-        for (const PackedForm* f : forms) {
+        for (const PackedForm* f : used) {
             stats.push_back(Stats{});
             Stats& st = stats.back();
             st.form = f;

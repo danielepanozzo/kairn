@@ -52,7 +52,7 @@
 /// KAIRN_PACKED_FORM_SCALAR. These are the conditions of the generated headers gen/avx2.hpp and
 /// gen/neon.hpp. A program may define it before including Kairn: to KAIRN_PACKED_FORM_SCALAR, to
 /// get one lane anywhere; to one of the other two only where the target has it, since otherwise
-/// the generated header does not compile (its #error says what is missing). Any other value does
+/// the generated header does not compile (its error directive says what is missing). Any other value does
 /// not compile.
 ///
 /// Each form is in an inline namespace of its own (kairn::packed_avx2, kairn::packed_neon,

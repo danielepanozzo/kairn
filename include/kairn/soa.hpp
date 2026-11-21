@@ -79,6 +79,8 @@ public:
     /// The number of one element.
     using value_type = Expansion<std::remove_const_t<T>, K>;
 
+    /// A copy refers to the same element. Assigning to a SoARef writes the element and never
+    /// rebinds the reference, so a copy is made by construction only.
     SoARef(const SoARef&) noexcept = default;
 
     /// The element, as get() reads it.
