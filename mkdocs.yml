@@ -100,6 +100,7 @@ nav:
   - Tutorials:
       - Accurate sums and dot products: tutorials/accurate-sums.md
       - The range of a polynomial: tutorials/intervals.md
+      - A vector loop: tutorials/vector-loop.md
   # BEGIN reference: written by docs/tools/reference.py; do not edit by hand
   - Reference:
       - reference/index.md
@@ -249,6 +250,9 @@ nav:
           - "The step of the largest magnitude of an array of two limbs: its leading limb": reference/norm_step_2.md
           - "The result of a fold of maxima of one limb: the maximum, or NaN": reference/norm_finish_1.md
           - "The result of a fold of maxima of two limbs: one step above the maximum, or NaN": reference/norm_finish_2.md
+      - "Vector loops: Packed and the containers":
+          - Packed numbers in registers: reference/packed.md
+          - "Arrays of numbers: SoA and its views": reference/soa.md
       - Operations on arrays, entry by entry:
           - The difference of two numbers of one limb, rounded to nearest: reference/sub_1_1.md
           - "x + y of one limb, on arrays of the program": reference/add_entry_step_1.md

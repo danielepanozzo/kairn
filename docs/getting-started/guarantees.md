@@ -400,6 +400,33 @@ default contraction a product followed by a sum is fused for `double` and not fo
 program defines `KAIRN_K1_CONTRACT`. MSVC does not vectorize a loop over the wrapper where it
 vectorizes the loop over `double`.
 
+## Packed numbers and arrays
+
+`Packed<T, k>` ([reference](../reference/packed.md)) holds $W$ numbers in registers ($W$ = 4 for
+`double` and 8 for `float` with AVX2, 2 and 4 on AArch64, 1 elsewhere). **Each of its operations
+has, in each lane, the statement of the operation of `Expansion` of the same name, which is
+proved**: it is the packed form of that operation's kernel, which the generator writes from the
+same description as the scalar kernel and tests lane by lane against it, bit for bit. The oracle
+also judges every packed operation through the public interface, one oracle case per lane, beside
+the other lanes, in the quick and the full tier, and a test compares every operation with the
+scalar one on every pair of a corpus of special values. Nothing is stated across lanes, and
+nothing about a loop as a whole: a program composes the bounds of its operations over the order it
+wrote, which depends on $W$, so that the same loop can give different bits on different targets,
+each within its own bound ([A vector loop](../tutorials/vector-loop.md)).
+
+Two compositions are written by hand, as for `Expansion`: `ldexp` and `half` beyond the powers of
+two of `T` (argued and tested, not machine-checked, [above](#overflow-and-non-finite-values)).
+One difference from `Expansion<T, 1>`: the products of one limb are the kernel `mul_1_1`, whose
+code is $\mathrm{fma}(a, b, +0)$, so a zero product is $+0$ where `T`'s product, which
+`Expansion<T, 1>` uses, gives $-0$. Kairn gives the sign of a zero no meaning.
+
+`SoA<T, k>` and its views ([reference](../reference/soa.md)) hold numbers as one array per limb and
+compute nothing: an element read is the value written (its limbs, but that a zero limb of two may
+come back with the other sign, through the guard of `from_limbs`); with `KAIRN_CHECKS` each read of
+two limbs is `from_limbs`, checked; a view never allocates, and an `SoA` allocates only in the
+functions that say so. Not provided: a packed `Ball` or `Interval`, dispatch at run time, and an
+alignment requirement (loads and stores are unaligned; an `SoA` aligns its arrays to 64 bytes).
+
 ## The environment
 
 Every guarantee assumes rounding to nearest, no flush to zero, and compiler flags that do not

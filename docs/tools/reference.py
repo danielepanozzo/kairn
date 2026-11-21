@@ -2871,7 +2871,8 @@ class Site:
                 if x["group"] != gid:
                     continue
                 for f in x["forms"]:
-                    rows.append("| `%s` | %s | %s | none |" % (f["code"], operand_types(f), x["does"]))
+                    rows.append("| `%s` | %s | %s | %s |" % (f["code"], operand_types(f), x["does"],
+                                                             x.get("kernel", "none")))
             if not rows:
                 continue
             w("## %s" % title)
