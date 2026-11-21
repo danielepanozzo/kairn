@@ -98,3 +98,4 @@ theories/IeeeBallSets.v
 theories/IeeeBallPredicates2.v
 theories/IeeeBallConvert2.v
 theories/IeeeBallCompare2.v
+theories/IeeeIntervalConvert2.v

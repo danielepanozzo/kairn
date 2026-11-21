@@ -25,6 +25,7 @@ From Kairn Require Import IeeeFull.
 From Kairn Require Import IeeeInterval1.
 From Kairn Require Import IeeeInterval2.
 From Kairn Require Import IeeeIntervalConvert.
+From Kairn Require Import IeeeIntervalConvert2.
 From Kairn Require Import IeeeIntervalExact.
 From Kairn Require Import IeeeIntervalMul2.
 From Kairn Require Import IeeeIntervalPredicates.
@@ -272,6 +273,9 @@ Print Assumptions ball_to_interval_2_correct.
 Definition interval_hull_2_audit : interval_hull_2_spec := interval_hull_2_correct.
 Print Assumptions interval_hull_2_correct.
 
+Definition interval_mid_rad_2_audit : interval_mid_rad_2_spec := interval_mid_rad_2_correct.
+Print Assumptions interval_mid_rad_2_correct.
+
 Definition interval_intersection_2_audit : interval_intersection_2_spec := interval_intersection_2_correct.
 Print Assumptions interval_intersection_2_correct.
 
@@ -382,6 +386,9 @@ Print Assumptions interval_rel_equal_2_correct.
 
 Definition interval_rel_interior_2_audit : interval_rel_interior_2_spec := interval_rel_interior_2_correct.
 Print Assumptions interval_rel_interior_2_correct.
+
+Definition interval_split_2_audit : interval_split_2_spec := interval_split_2_correct.
+Print Assumptions interval_split_2_correct.
 
 Definition interval_sub_2_audit : interval_sub_2_spec := interval_sub_2_correct.
 Print Assumptions interval_sub_2_correct.

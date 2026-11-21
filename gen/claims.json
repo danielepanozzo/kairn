@@ -8204,9 +8204,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert2.v",
+        "name": "interval_mid_rad_2_correct"
+      },
       "source": {
         "cite": "the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -11535,9 +11539,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert2.v",
+        "name": "interval_split_2_correct"
+      },
       "source": {
         "cite": "the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

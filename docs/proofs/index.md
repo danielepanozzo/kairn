@@ -94,7 +94,9 @@ lists:
   distance of the centers that add_ball_2_2 bounds (`IeeeBallCompare2.v`), and the sum of two
   2-limb numbers at the top of the range: it does not overflow when the leading limbs of both
   operands are at most half the largest finite number, a threshold that cannot be raised
-  (`IeeeAdd22Top.v`); and the theorems of
+  (`IeeeAdd22Top.v`), and the midpoint and a radius of an interval with bounds of two limbs,
+  with the ball made of them and the split of the interval at its midpoint
+  (`IeeeIntervalConvert2.v`); and the theorems of
   the
   folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
   finishes and bound kernels
@@ -140,7 +142,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    of two limbs, of the conversions of a ball, of the exact interval kernels (the hull and
    the intersection of intervals of extended real numbers), of the difference of two
    intervals of two limbs (the sum with the negated operand), of the conversions between an
-   interval and a ball (the midpoint of a bounded interval), of the product of two
+   interval and a ball (the midpoint of a bounded interval; for bounds of two limbs, the half
+   of a 2-limb number, the midpoint, each side of the radius and the point of the split), of
+   the product of two
    intervals of two limbs (the finite core of the directed product, and what each product of
    bounds gives) and of the predicates and comparisons of intervals and of balls of one limb
    (each relation on the bounds as extended real numbers, and the exact pairs of two_sum_ord)
@@ -159,7 +163,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  94 files: no Admitted, admit, Axiom or Parameter
+  95 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec

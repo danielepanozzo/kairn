@@ -1800,7 +1800,7 @@ Definition mul_pow2_2_ieee_finite_spec : Prop :=
   let '(z0, z1) := IeeeModel.mul_pow2_2 prec emax nan_plus nan_minus nan_fma x0 x1 c in
   finite z0 /\ finite z1.
 
-(* interval_mid_rad_2: the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_mid_rad_2: the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_mid_rad_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2523,7 +2523,7 @@ Definition interval_rel_interior_2_spec : Prop :=
     (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z ->
     exists d : R, 0 < d /\ (forall w : R, Rabs (w - z) < d -> in_interval_2 yl0 yl1 yu0 yu1 w))).
 
-(* interval_split_2: the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_split_2: the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_split_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

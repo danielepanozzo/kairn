@@ -1998,7 +1998,7 @@ Entries as the generator writes them (`source`, `flops` and the theorem fields l
  "outputs": [{"name": "m", "limbs": 2}, {"name": "r", "limbs": 1}],
  "requires": ["interval(xl, xu)"],
  "ensures": [{"kind": "ball_of_interval", "center": "m", "radius": "r", "from": {"lower": "xl", "upper": "xu"}, "special": "ieee1788", "rel": "3*u^2/(1-4*u)", "abs": "2*eta", "finite_when": [{"abs_le": "xl", "exp": -2}, {"abs_le": "xu", "exp": -2}]}],
- "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 3, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "ball_from_interval_1", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "lo", "limbs": 1}, {"name": "hi", "limbs": 1}],

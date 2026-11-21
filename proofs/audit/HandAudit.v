@@ -64,7 +64,9 @@
      point plus a ball; for the signs and the split of a ball of two limbs and its interval,
      the ball as an interval of extended real numbers and the interval as a sum; for the
      comparisons of balls of two limbs, the distance of the centers by add_ball_2_2 and the
-     directed bounds the kernels compute from it;
+     directed bounds the kernels compute from it; for the midpoint, the radius, the ball and
+     the split of an interval of two limbs, the half of a 2-limb number, the midpoint and
+     each side of the radius of a bounded interval, and the point of the split;
    - the theorems about the folds that have no generated statement: that a fold of the
      model with overflow is the fold of the real model whenever its result is finite
      (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
@@ -141,6 +143,29 @@ Print Assumptions add_2_2_ieee_finite_half.
 Definition add_2_2_ieee_finite_half_values_audit : add_2_2_ieee_finite_half_values_spec :=
   add_2_2_ieee_finite_half_values.
 Print Assumptions add_2_2_ieee_finite_half_values.
+
+(* The lemmas they rest on: a tie rounds to the even neighbor; a number within less than half
+   a gap of the largest number rounds to it; the numbers of the format below 2^(emax - 1), and
+   the tail of a pair whose leading limb is one of them; the tail of a pair whose leading limb
+   is the number just below a power of two, strictly below half the gap, with its two
+   instances; rounding below the midpoint above half the largest number; and that every value
+   of the real model is below 2^emax. Then add_2_2 with a second operand (0, 0), and with a
+   leading limb that is not finite. *)
+Print Assumptions rnd_tie.
+Print Assumptions rnd_near_Omega.
+Print Assumptions rnd_near_top.
+Print Assumptions lt_H_le_half_Omega.
+Print Assumptions below_half_Omega.
+Print Assumptions tail_below_H.
+Print Assumptions tail_pred_pow2_strict.
+Print Assumptions tail_half_Omega_strict.
+Print Assumptions tail_Omega_strict.
+Print Assumptions rnd_below_half_mid.
+Print Assumptions add_2_2_range_half.
+Print Assumptions add_2_2_values_finite_half.
+Print Assumptions add_2_2_zero_run.
+Print Assumptions add_2_2_zero_right.
+Print Assumptions add_2_2_lead_not_finite.
 
 (* The IEEE model: mul_2_2. *)
 Definition mul_2_2_ieee_bridge_audit : mul_2_2_ieee_bridge_spec := mul_2_2_ieee_bridge.
@@ -893,6 +918,40 @@ Print Assumptions abs_upper_2_any.
 Print Assumptions abs_upper_2_ge.
 Print Assumptions ball_contains_ball_2_facts.
 Print Assumptions ball_equal_2_facts.
+
+(* The midpoint and a radius of an interval of two limbs, its ball and its split, in the IEEE
+   model (theories/IeeeIntervalConvert2.v): the theorems of their generated statements are
+   listed by proofs/gen/IeeeAudit.v. Here, what they rest on and what says more: the constants;
+   the cases of a canonical interval of two limbs and the tests of the listings; the half of a
+   2-limb number, over the real numbers and on limbs; the two selects that move a value into
+   an interval, and the midpoint of a bounded interval; the distance by add_ball_2_2 with its
+   relative bound, a side of the radius, when it is finite, and the radius; each listing with
+   its cores named; the statement of the midpoint and the radius with the midpoint of a
+   bounded interval as a normalized pair, which the generated statement does not say; the
+   statement of the ball; and the point of the split, on extended real numbers and on limbs. *)
+From Kairn Require Import IeeeIntervalConvert2.
+Print Assumptions rel2_le.
+Print Assumptions two_eta_le.
+Print Assumptions interval_2_cases.
+Print Assumptions tests_2.
+Print Assumptions halve_real.
+Print Assumptions halve_facts.
+Print Assumptions clamp2_facts.
+Print Assumptions mid_core2_bounded.
+Print Assumptions dist_2_rel.
+Print Assumptions to_up_2_nonneg.
+Print Assumptions radd_not_lt_pinf.
+Print Assumptions side_facts.
+Print Assumptions side_small.
+Print Assumptions rad_core2_facts.
+Print Assumptions rad_core2_small.
+Print Assumptions interval_mid_rad_2_eq.
+Print Assumptions interval_mid_rad_2_all.
+Print Assumptions interval_to_ball_2_all.
+Print Assumptions xsplit_point.
+Print Assumptions split_point.
+Print Assumptions interval_split_2_eq.
+Print Assumptions interval_split_2_all.
 Print Assumptions trit_certain.
 
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)

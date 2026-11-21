@@ -7644,7 +7644,7 @@ KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_2(float x0, float x1, float c, flo
 }
 
 // interval_mid_rad_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> m = (m0, m1), r
-// the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> interval_mid_rad_2(double mf0, double mf1, double rd, bool ne) noexcept {
@@ -14658,7 +14658,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_interior_2(float xl0, float xl
 }
 
 // interval_split_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> al = (al0, al1), au = (au0, au1), bl = (bl0, bl1), bu = (bu0, bu1)
-// the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void interval_split_2(double xl0, double xl1, double xu0, double xu1, double& al0_out, double& al1_out, double& au0_out, double& au1_out, double& bl0_out, double& bl1_out, double& bu0_out, double& bu1_out) noexcept {
     const double om = next_down_bits(std::numeric_limits<double>::infinity());
     const double mo = -om;
