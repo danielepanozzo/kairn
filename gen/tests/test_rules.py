@@ -1075,7 +1075,8 @@ class R3OfTheKernels(unittest.TestCase):
         self.assertEqual(wave_2, self.WAVE_2_CALLED)
         self.assertEqual(self.INTERVAL_PARTS, TheKernels.WAVE_2_CORES | {'mul_dir_1', 'mul_ext_2_2'})
         # And those of stage B2 (the predicates, comparisons, set operations of a ball and conversions
-        # of two limbs), entry kernels too, which the public headers do not call yet.
+        # of two limbs), entry kernels too, which the public headers call since the enclosure
+        # interface was completed (test_every_kernel_the_public_headers_call_is_an_entry_kernel).
         wave_2 |= TheKernels.WAVE_2_B2
         self.assertEqual({n for n, k in ks.items() if k.entry},
                          self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1 | self.FOLD_STEPS | wave_2)
@@ -1093,13 +1094,15 @@ class R3OfTheKernels(unittest.TestCase):
                     called |= {n for n in ks if n.endswith(macro) and n[:-len(macro)] in ('lt', 'le', 'eq')}
         # Of wave 1, the headers call every kernel but the two cores of the scalings; of wave 2,
         # every entry kernel (the interval kernels and the functions of a Ball of the enclosure
-        # interface: WAVE_2_CALLED); of the folds' stage and the maps, nothing yet (FOLD_STEPS of
+        # interface: WAVE_2_CALLED, and those of stage B2: WAVE_2_B2); of the folds' stage and the
+        # maps, nothing yet (FOLD_STEPS of
         # test_entry_kernels are entry kernels that no header calls).
         self.assertEqual(self.WAVE_1, self.WAVE_1_CALLED | self.POW2_CORES)
         self.assertEqual(TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS | TheKernels.WAVE_2_B1,
                          self.WAVE_2_CALLED)
         self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED,
-                         self.CORES | TheKernels.NON_FINITE | self.WAVE_1_CALLED | self.WAVE_2_CALLED)
+                         self.CORES | TheKernels.NON_FINITE | self.WAVE_1_CALLED | self.WAVE_2_CALLED |
+                         TheKernels.WAVE_2_B2)
         self.assertTrue(all(ks[n].entry for n in called - self.NOT_ENTRY_BUT_CALLED))
         self.assertFalse(any(ks[n].entry for n in self.NOT_ENTRY_BUT_CALLED))
         # The cores of the Ball operations and of the scalings by a power of two are reached only
