@@ -123,9 +123,42 @@ the range a k-number overflows where `T` does: each operation's page in the
   error: the radius is that bound. In a chain of dependent operations the radius costs almost
   nothing; in loops of independent operations it costs more
   ([Benchmarks](../developer/results/bench-milestone1.md#3-the-cost-of-a-ball-operation)).
+- **An interval**, `Interval<T, k>`, when the program computes with sets that are wide or
+  unbounded, or needs bounds that are the tightest of `T` ([below](#intervals-and-balls)).
 
 Three and four limbs, and a $k$ chosen at run time, are planned for later milestones
 ([Plan](../developer/design/phase0/plan.md#milestones)).
+
+## Intervals and balls
+
+Both are sets of real numbers that contain every exact result of the computation that made them,
+and both answer for the empty set and the whole line; they differ in how they store the set, and
+so in what they are good at
+([One enclosure interface](../developer/design/milestone2.md#one-enclosure-interface)).
+
+- **`Interval<T, k>`** stores two bounds. It can be a half-line, $[0, +\infty]$, which a ball cannot
+  (a ball that is unbounded is the whole line). For one limb its bounds are the exact roundings
+  outward of the exact ones: a sum or a difference is the tightest interval of `T` that contains
+  the exact range, and a product too, but very close to zero. It is the type for a set that is wide
+  compared with its numbers, such as the domain of a search, and for one limb, where every
+  operation costs a few directed roundings.
+- **`Ball<T, k>`** stores a center of $k$ limbs and one radius of `T`. It is the type for a value
+  known to within a small error, such as the result of a long computation on data with rounding
+  errors: the center carries the value at the precision of $k$ limbs, and the radius, which needs
+  only a few bits, is computed in `T`. From two limbs on it is the cheap enclosure: a sum of balls
+  of two limbs is about 23 rounded operations, a sum of intervals of two limbs about 56, and the
+  bounds of an interval of two limbs are not the tightest numbers of two limbs but within about
+  $8u^2$ of them ([Bounds of two limbs](../developer/design/milestone2.md#bounds-of-two-limbs)).
+- **Neither** removes the *dependency problem*: an expression in which a variable appears twice,
+  such as $x^2 - 2x$, is evaluated as if each occurrence could take its own value, and the result
+  can be much wider than the exact range. Rewriting the expression and splitting the set are the
+  remedies; the [tutorial on intervals](../tutorials/intervals.md) shows both, and how a ball fares
+  on the same problem.
+
+`Ball<T, 1>(X)` and `Interval<T, 1>(B)` convert one into the other, each widening the set (so
+both are explicit), and `Ball<T, 2>::from_interval(lo, hi)` makes a ball of two limbs whose center
+is the exact midpoint of two numbers of `T`. What each function guarantees is in
+[What holds today](guarantees.md#intervals).
 
 ## Constants from fractions
 
@@ -382,9 +415,10 @@ example, then becomes one very large function, which the compiler takes long to 
 of memory to compile. `KAIRN_ENCLOSURE_CODE`, defined the same way before Kairn is included in
 every file of a program (or with `target_compile_definitions` on every target), says where the code
 of the operations of `Ball` that round (`+`, `-`, `*`, the scaling by a `T`, and `ldexp` and
-`half`, one and two limbs) is:
+`half`, one and two limbs) and of the arithmetic of `Interval` (`+`, `-`, `*`, one and two limbs)
+is:
 
-| Setting | The operations of `Ball` | When |
+| Setting | The operations of `Ball` and `Interval` | When |
 |---|---|---|
 | `KAIRN_ENCLOSURE_CODE_INLINE`, the default | forced inline into each call, as before | the operations are in loops and chains whose speed matters, and the functions are of ordinary size |
 | `KAIRN_ENCLOSURE_CODE_OUTLINED` | ordinary functions that the compiler is asked not to inline: each file compiles each operation once, whatever the number of its calls | a file with many ball operations in a few functions compiles too slowly or uses too much memory, and the build stays as simple as it is; with Clang it saves as much as external |
@@ -410,10 +444,16 @@ The three settings compute the same bits: each operation's code is the same, its
 inside it, and the tests check that every public form gives the same bytes in each
 ([Testing](../developer/testing.md#the-full-tier)). The negation of a ball and the constructors, a
 few instructions each, stay inline in every setting, and so does everything of `Expansion`; so do
-the steps of `ldexp`, each a call of the scaling by a power of two of `T`. An operation that is
+the steps of `ldexp`, each a call of the scaling by a power of two of `T`, and of an interval
+everything but its arithmetic (the constructors, the negation, the hull and the intersection, the
+midpoint, the radius, the split, the conversions, all `constexpr`). An operation that is
 outlined is still usable wherever it was (none of these is usable in constant expressions yet,
-`ldexp` and `half` of a ball included, although their kernel is); an external one cannot be
-evaluated at compile time. A call costs time at run
+`ldexp` and `half` of a ball and the sum and the difference of intervals of one limb included,
+although their kernels are); an external one cannot be evaluated at compile time. The kernel of the
+product of intervals of two limbs, some four hundred operations, is an ordinary inline function in
+every setting: the inline setting inlines the product's checks and the call, and the compiler
+decides whether to inline the kernel (Apple clang 21 at `-O2` calls it); the outlined and external
+settings make the product a function of its own, which calls or inlines the kernel. A call costs time at run
 time where the operations are short and many. Measured on an Apple M3 Max ([Compile times and other
 costs, Milestone 2](../developer/results/costs-milestone2.md)): a function of 10 000 operations of
 `Ball<double, 2>` compiled 6.8 to 7.1 times faster with Apple clang 21 outlined or external (5
@@ -578,15 +618,21 @@ canonical pair, $x_0 + x_1 = x_0$). They are:
 | `X.certainly_positive()`, `X.certainly_negative()`, `X.certainly_zero()` for a `Ball` | comparisons of the radius with the center |
 | `Ball<T, 1>(a)`, `Ball<T, 1>(c)`, `Ball<T, 1>(c, r)`, `Ball<T, 1>(q)`, `Ball<T, 2>(a)`: the constructors of a ball from a `T`, a number of one limb or a constant of one limb | their only rounded operations are the guards `a + 0`, whose value is `a` under every rounding mode; only the sign of a zero can differ, which Kairn leaves unspecified anyway |
 | `Expansion<T, 2>(r)` for the result `r` of `two_sum` or `fast_two_sum` | the guards, as above, and a test of the pair that compares and does not round |
+| `-X`, `X.hull(Y)`, `X.intersection(Y)` for an `Interval`, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of two limbs | sign bits, comparisons and selects of bounds; a bound rounded down or up to `T` as `to_down` and `to_up` round it |
+| the constructors of an `Interval`: from two bounds or a point of one limb, from a `T` of two limbs, from numbers of two limbs | the guards, as above; for numbers of two limbs comparisons and selects |
 | `kairn::next_up`, `kairn::next_down` | integer operations on the bit pattern, which no state of the environment changes: they check nothing at all |
-| `kairn::sign`, `kairn::isfinite`, `kairn::is_normalized` of one limb, `X.center()`, `X.radius()`, `X.is_finite()`, `X.is_whole()`, `X.is_empty()`, `Ball::empty()`, `Ball::whole()`, the constants of `kairn::traits`, `kairn::rational`; the constructors of two limbs from a `T` or a one-limb number and `from_limbs_unchecked` (their guard, as above) | tests of bit patterns, stored values and data, integer arithmetic; these check nothing at all, as before |
+| `kairn::sign`, `kairn::isfinite`, `kairn::is_normalized` of one limb, `X.center()`, `X.radius()`, `X.midpoint()`, `X.is_finite()`, `X.is_whole()`, `X.is_empty()`, `Ball::empty()`, `Ball::whole()`, `Interval()`, `Interval::empty()`, `Interval::whole()`, `X.lower()` and `X.upper()` of an interval, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of one limb, the constants of `kairn::traits`, `kairn::rational`; the constructors of two limbs from a `T` or a one-limb number and `from_limbs_unchecked` (their guard, as above) | tests of bit patterns, stored values and data, integer arithmetic; these check nothing at all, as before |
 
 Every other function rounds and checks the rounding mode: the arithmetic, `ldexp` and `half` (of
 numbers and of balls), the functions of `kairn::finite::`, the [building blocks](#building-blocks)
 but `next_up` and `next_down` (the directed bounds among them: they compute under rounding to
 nearest what rounding down or up gives), `from_limbs` and `kairn::is_normalized` of two limbs (both
-test $x_0 + x_1 = x_0$), and the constructors of `Ball<T, 2>` from a center of two limbs or a
-constant of two limbs (the test of a canonical center). The header `config.hpp` has the same list, and the reference comment of each of
+test $x_0 + x_1 = x_0$), the constructors of `Ball<T, 2>` from a center of two limbs or a
+constant of two limbs (the test of a canonical center), the arithmetic of intervals, and the
+functions of the interface of `Interval` and `Ball` that compute a bound or a center: the midpoint,
+the radius and the split of an interval, the conversions `Ball<T, 1>(X)` and `Interval<T, 1>(B)`,
+`Ball<T, 2>::from_interval`, the bounds of a ball as numbers of `T` and the narrowing of a ball to
+one limb (sums, halvings and directed sums computed under rounding to nearest). The header `config.hpp` has the same list, and the reference comment of each of
 these functions says "Does not round".
 
 - `kairn: the floating-point environment: ` followed by what is wrong:

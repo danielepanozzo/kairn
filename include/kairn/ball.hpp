@@ -586,10 +586,11 @@ public:
         return Expansion<T, 1>(detail::ball_upper_as(*this));
     }
 
-    /// The ball of one limb that contains the interval X (kernel interval_to_ball_1): the midpoint
-    /// and the radius of X.midpoint() and X.radius(), but for an unbounded interval, which becomes
-    /// the whole line, center 0 and radius +inf (a ball cannot be a half-line). Proved, in the IEEE
-    /// model, for a canonical interval: the ball is canonical, and empty exactly when X is; for a
+    /// The ball of one limb that contains the interval X (kernel interval_to_ball_1), its center a
+    /// midpoint of X and its radius the smallest for that center (the listing is that of
+    /// X.midpoint() and X.radius()), but for an unbounded interval, which becomes the whole line,
+    /// center 0 and radius +inf (a ball cannot be a half-line). Proved, in the IEEE model, for a
+    /// canonical interval: the ball is canonical, and empty exactly when X is; for a
     /// bounded X = [l, h] it is a finite ball whose center c has l <= c <= h and
     /// |c - (l + h)/2| <= u |(l + h)/2| + eta, and whose radius is the smallest number of T for which
     /// [c - r, c + r] contains X, RU(max(c - l, h - c)). Explicit: the conversion widens the set.
