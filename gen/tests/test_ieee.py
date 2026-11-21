@@ -271,6 +271,61 @@ class Statements(unittest.TestCase):
         # mul_dir_1, whose zero_factor is of one-limb operands, is printed as before.
         self.assertIn('  (zero a \\/ zero b -> zero d) /\\\n', spec('mul_dir_1_ieee'))
 
+    def test_the_kernels_of_stage_b2(self):
+        # The statements of certain and trit (architecture.md, "Claims of the enclosure interface:
+        # predicates and comparisons"), in their shapes: an exact predicate is one equivalence, a
+        # three-valued comparison two and the exclusion of both.
+        text = ieee.statements(self.ks)
+
+        def spec(name):
+            return re.search(rf'^Definition {name}_spec : Prop :=\n(.*?)\.\n', text, flags=re.M | re.S).group(1)
+        self.assertTrue(spec('interval_empty_1').endswith('  (m = true <->\n    interval_empty_1 xl xu)'))
+        self.assertIn('  (m = true <->\n    finite t0 /\\ in_interval_2 xl0 xl1 xu0 xu1 (val t0 + val t1))',
+                      spec('interval_contains_2'))
+        self.assertIn('  (m = true <->\n    interval_nonempty_1 xl xu /\\\n'
+                      '    (forall x : R, in_interval_1 xl xu x -> 0 < x))', spec('interval_positive_1'))
+        self.assertIn('  (m = true <->\n    (forall z : R, in_interval_1 xl xu z -> in_interval_1 yl yu z))',
+                      spec('interval_subset_1'))
+        self.assertIn('exists d : R, 0 < d /\\ (forall w : R, Rabs (w - z) < d -> in_interval_1 yl yu w)',
+                      spec('interval_rel_interior_1'))
+        s = spec('interval_less_2')
+        self.assertIn('  (yes = true <->\n    interval_nonempty_2 xl0 xl1 xu0 xu1 /\\ interval_nonempty_2 yl0 yl1 yu0 yu1 /\\\n'
+                      '    (forall x y : R, in_interval_2 xl0 xl1 xu0 xu1 x -> in_interval_2 yl0 yl1 yu0 yu1 y -> x < y)) /\\\n',
+                      s)
+        self.assertIn('-> ~ (x < y))) /\\\n  ~ (yes = true /\\ no = true)', s)
+        # No hypothesis on the precision: comparisons and selects, for every precision.
+        self.assertNotIn('<= prec)%Z', s)
+        # Of a ball: certain, exact on the special states and a point that is not finite, and for
+        # one limb exact for finite balls under the condition of exact_when.
+        s = spec('ball_contains_point_2')
+        self.assertIn('  (no = true ->\n    ~ (finite t0 /\\ in_ball_2 c0 c1 r (val t0 + val t1))) /\\\n', s)
+        self.assertIn('  (ball_empty_2 c0 c1 r \\/ ball_whole_2 c0 c1 r \\/ ~ finite t0 ->\n   (yes = true <->\n', s)
+        s = spec('ball_less_1')
+        self.assertIn('  (ball_finite_1 cx rx /\\ ball_finite_1 cy ry -> Rabs (val rx + val ry) <= omega prec emax ->\n',
+                      s)
+        self.assertIn('    ~ ball_empty_1 cx rx /\\ ~ ball_empty_1 cy ry /\\\n', s)
+        s = spec('ball_contains_ball_2')
+        self.assertIn('  (m = true ->\n    (forall z : R, in_ball_2 cy0 cy1 ry z -> in_ball_2 cx0 cx1 rx z)) /\\\n', s)
+        # The set operations of a ball.
+        s = spec('ball_hull_1')
+        self.assertIn('  (ball_empty_1 cz rz <-> ball_empty_1 cx rx /\\ ball_empty_1 cy ry) /\\\n'
+                      '  (ball_empty_1 cx rx -> cz = cy /\\ rz = ry) /\\\n', s)
+        self.assertIn('  (forall z : R, in_ball_1 cx rx z \\/ in_ball_1 cy ry z -> in_ball_1 cz rz z)', s)
+        s = spec('ball_intersection_1')
+        self.assertIn('  (ball_whole_1 cy ry -> cz = cx /\\ rz = rx) /\\\n', s)
+        # The conversions of two limbs.
+        s = spec('interval_mid_rad_2')
+        self.assertIn('   (r = infinity prec emax false \\/ (finite r /\\ (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> '
+                      'Rabs (z - (val m0 + val m1)) <= val r))) /\\\n', s)
+        self.assertIn('-> finite r))', s)
+        s = spec('ball_to_interval_2')
+        self.assertIn('   (((val c0 + val c1) - val r) = 0 -> xval_2 zl0 zl1 = XFin lo) /\\\n', s)
+        self.assertIn('   interval_bounded_2 zl0 zl1 zu0 zu1)', s)
+        s = spec('ball_from_interval_1')
+        self.assertIn('   val rw = RU (ieee_emin prec emax) prec (Rmax (val cw - val lo) (val hi - val cw))) /\\\n', s)
+        s = spec('ball_split_2')
+        self.assertIn('   (forall z : R, (val c0 + val c1) - val r <= z <= (val c0 + val c1) -> in_ball_2 ca0 ca1 ra z)', s)
+
     def test_represents(self):
         # neg_2 and abs_2 say it next to normalized and an exact error, which it implies.
         self.assertTrue(self.statement('neg_2_ieee_spec').endswith(
@@ -476,8 +531,22 @@ class CheckedFiles(unittest.TestCase):
     # bv_conv_finish, of the product of two BallVectors (unverified): their definitions, the two
     # constants of conv_radius and the statement of bv_conv_finish (finite_or_nan with if_all) were
     # added, every earlier line kept. Merged here: the regeneration of the merged descriptions.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '767697da2d8c9427dfc78858b27e17f481d44666aba4708bf7364652bdafd652',
-               'proofs/gen/IeeeStatements.v': 'd6b2acaacbfba69692fa56f2af743761d24b3a56da4814882068171c27402d0e'}
+    # On another line, from the joined tree of stage B1 (a35501e): the 26 predicates and three-valued comparisons of an interval of stage B2, unverified,
+    # were added: their definitions and statements (certain and trit), every earlier definition
+    # and statement the same, byte for byte, some printed earlier (le_2_2 before lt_2_2, callees
+    # before callers); make -C proofs passed on these files.
+    # Then the 20 predicates, comparisons and set operations of a ball (unverified): their
+    # definitions and statements added, every earlier one the same, byte for byte, some printed
+    # earlier; make -C proofs passed on these files.
+    # Then the conversions of two limbs, the ball from an interval of one limb and the hull and the
+    # intersection of balls of two limbs (seven, unverified): their definitions and statements
+    # added, every earlier one the same, byte for byte; make -C proofs passed on these files.
+    # Then ball_intersection_1 and ball_from_interval_1 rewritten (the same values, the special
+    # results selected after the halving): their definitions and the source line of their
+    # statements' comments; make -C proofs passed on these files. Merged here: the regeneration of
+    # the merged descriptions.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '5f88297c9fb33d8b2e5cdc3daa6599ffc539e5c4dbfb94215c72ebae71e632f9',
+               'proofs/gen/IeeeStatements.v': '88856cbaa93b93829e75b568c338d62defb8f3d220b7a2abc8aacef8e67a694f'}
 
 
     def test_the_checked_files(self):

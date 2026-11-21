@@ -1,0 +1,23 @@
+# Whether every member of an interval with one-limb bounds is negative, and the interval is not
+# empty (milestone2.md, "One enclosure interface", the row of certainly_negative()): -inf < x_u < 0.
+# Exact; false for the empty set. For every precision.
+kernel:        interval_negative_1
+input:         stored xl
+input:         stored xu
+output:        mask m
+requires:      interval xl xu
+ensures:       certain m lt x 0 x=xl,xu exact
+min_precision: 1
+source:        the upper bound compared with 0 and -inf (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+unused:        xl the upper bound alone tells: every member is at most it, and the interval is empty exactly when it is -inf
+
+mi = neg(const inf)
+a  = lt(xu, 0)
+b  = lt(mi, xu)
+m  = and(a, b)

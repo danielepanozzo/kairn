@@ -1074,6 +1074,9 @@ class R3OfTheKernels(unittest.TestCase):
         wave_2 = TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS | TheKernels.WAVE_2_B1
         self.assertEqual(wave_2, self.WAVE_2_CALLED)
         self.assertEqual(self.INTERVAL_PARTS, TheKernels.WAVE_2_CORES | {'mul_dir_1', 'mul_ext_2_2'})
+        # And those of stage B2 (the predicates, comparisons, set operations of a ball and conversions
+        # of two limbs), entry kernels too, which the public headers do not call yet.
+        wave_2 |= TheKernels.WAVE_2_B2
         self.assertEqual({n for n, k in ks.items() if k.entry},
                          self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1 | self.FOLD_STEPS | wave_2)
 
@@ -1508,6 +1511,24 @@ class TheKernels(unittest.TestCase):
                  'interval_intersection_1', 'interval_hull_2', 'interval_intersection_2', 'interval_mid_rad_1',
                  'interval_to_ball_1', 'ball_to_interval_1', 'interval_split_1'}
     WAVE_2 |= WAVE_2_B1 | {'mul_ext_2_2'}
+    # Stage B2 of wave 2, unverified, the IEEE-model statement only, entry kernels: the predicates,
+    # the three-valued comparisons and the relations of IEEE 1788 of an interval of one limb and of
+    # two (subset is the relation of IEEE 1788 and Kairn's contains(Y) with the operands exchanged).
+    WAVE_2_B2_INTERVALS = {f'interval_{name}_{k}' for k in (1, 2) for name in (
+        'empty', 'entire', 'contains', 'subset', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal',
+        'rel_equal', 'rel_interior', 'rel_disjoint')}
+    # And those of a ball, one limb and two.
+    WAVE_2_B2_BALLS = {f'ball_{name}_{k}' for k in (1, 2) for name in (
+        'contains_point', 'contains_ball', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal')}
+    # And the set operations of a ball: the hull and the intersection of one limb, the split of one
+    # and of two.
+    WAVE_2_B2_BALL_SETS = {'ball_hull_1', 'ball_intersection_1', 'ball_split_1', 'ball_split_2'}
+    # And the conversions of two limbs, the ball from an interval of one limb, and the hull and the
+    # intersection of balls of two limbs, which convert them.
+    WAVE_2_B2_CONVERSIONS = {'interval_mid_rad_2', 'interval_to_ball_2', 'ball_to_interval_2', 'interval_split_2',
+                             'ball_from_interval_1', 'ball_hull_2', 'ball_intersection_2'}
+    WAVE_2_B2 = WAVE_2_B2_INTERVALS | WAVE_2_B2_BALLS | WAVE_2_B2_BALL_SETS | WAVE_2_B2_CONVERSIONS
+    WAVE_2 |= WAVE_2_B2
     # Of these, the kernels whose theorems are about the generated text and pass the audit: all
     # of the first stage. The interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models
     # (DirectedProd.v, IeeeDirectedProd.v), the bounds of two limbs (Directed2.v), the sum of two
@@ -1517,7 +1538,7 @@ class TheKernels(unittest.TestCase):
     # the midpoint and the split (IeeeIntervalConvert.v), and mul_ext_2_2 with the product of two
     # limbs (IeeeIntervalMul2.v).
     WAVE_2_B1_PROVED = WAVE_2_B1 | {'mul_ext_2_2'}
-    WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED
+    WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - WAVE_2_B2 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1558,7 +1579,7 @@ class TheKernels(unittest.TestCase):
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
-        wave_2_ieee_only = self.WAVE_2_INTERVALS | self.WAVE_2_BALLS | self.WAVE_2_B1 | {'mul_ext_2_2'}
+        wave_2_ieee_only = self.WAVE_2_INTERVALS | self.WAVE_2_BALLS | self.WAVE_2_B1 | {'mul_ext_2_2'} | self.WAVE_2_B2
         self.assertEqual({name for name, k in ks.items() if not k.real_model},
                          self.NON_FINITE | self.WAVE_1_FULL | self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only)
         self.assertEqual({name for name, k in ks.items() if k.extended},
@@ -1650,6 +1671,24 @@ class TheKernels(unittest.TestCase):
             'interval_neg_2': 1, 'interval_make_2': 1, 'interval_sub_2': 3, 'mul_ext_2_2': 4, 'interval_mul_2': 4,
             'interval_hull_1': 1, 'interval_intersection_1': 1, 'interval_hull_2': 1, 'interval_intersection_2': 1,
             'interval_mid_rad_1': 2, 'interval_to_ball_1': 2, 'ball_to_interval_1': 2, 'interval_split_1': 2})
+        # Stage B2: none for the predicates and comparisons of an interval (comparisons and selects).
+        self.assertEqual({ks[name].min_precision for name in self.WAVE_2_B2_INTERVALS}, {1})
+        # Of a ball: none for the signs; 2 for the exact pairs of one limb (two_sum_ord), 3 for the
+        # certain answers of two limbs (add_ball_2_2).
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_BALLS}, {
+            'ball_positive_1': 1, 'ball_negative_1': 1, 'ball_zero_1': 1, 'ball_positive_2': 1, 'ball_negative_2': 1,
+            'ball_zero_2': 1, 'ball_contains_point_1': 2, 'ball_contains_ball_1': 2, 'ball_less_1': 2,
+            'ball_less_equal_1': 2, 'ball_equal_1': 2, 'ball_contains_point_2': 3, 'ball_contains_ball_2': 3,
+            'ball_less_2': 3, 'ball_less_equal_2': 3, 'ball_equal_2': 3})
+        # Of the set operations: 2 for one limb (the conversions, the ball sum of one limb), 3 for the
+        # split of two limbs (the ball sum of two).
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_BALL_SETS}, {
+            'ball_hull_1': 2, 'ball_intersection_1': 2, 'ball_split_1': 2, 'ball_split_2': 3})
+        # Of the conversions: 3 for two limbs (add_2_2, add_ball_2_2, the directed sums), 2 for the
+        # ball from an interval of one limb (interval_to_ball_1).
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_CONVERSIONS}, {
+            'interval_mid_rad_2': 3, 'interval_to_ball_2': 3, 'ball_to_interval_2': 3, 'interval_split_2': 3,
+            'ball_from_interval_1': 2, 'ball_hull_2': 3, 'ball_intersection_2': 3})
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",

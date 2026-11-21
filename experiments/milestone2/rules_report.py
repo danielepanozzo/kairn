@@ -36,7 +36,9 @@ IN_GEN = ('two_sum_ord', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mu
           'bv_mul_pow2_radius', 'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2',
           # and the radius and the finish of the product of polynomials of BallVector (batch.py, bv_conv.py),
           # as proposed here, with their claims.
-          'conv_radius', 'bv_conv_finish')
+          'conv_radius', 'bv_conv_finish',
+          # and of stage B2: the split of a ball, written again so that no fused result is negated.
+          'ball_split_1')
 
 
 def main():

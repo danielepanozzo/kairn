@@ -1,0 +1,68 @@
+# An interval with 2-limb bounds split at its midpoint (milestone2.md, "One enclosure interface", the
+# row of split() and "The empty set and the whole line"): [xl, m] and [m, xu], m the midpoint of
+# interval_mid_rad_2, which is in [xl, xu]; their union is the interval. The whole line gives [-inf,
+# 0] and [0, +inf], a half-line [l, +inf] gives [l, Omega] and [Omega, +inf], and the empty set the
+# empty set twice. One step more than for one limb: a bound of two limbs can be beyond Omega (Omega plus less than half a
+# gap), and the midpoint +-Omega of a half-line is then outside the interval; the point of the split
+# is the midpoint moved into [xl, xu] by lt_2_2, the bound itself in that case. The midpoint is
+# computed by the steps of interval_mid_rad_2 that make it, without its radius: interval_mid_rad_2 is
+# not called, since the radius would be unused (compilers remove its fused operations, which the
+# object-code check counts), and the empty set is told by the lower bound, +inf.
+kernel:        interval_split_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+output:        al = al0 al1
+output:        au = au0 au1
+output:        bl = bl0 bl1
+output:        bu = bu0 bu1
+requires:      interval xl xu
+ensures:       splits al au bl bu from=xl,xu
+min_precision: 3
+source:        the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the midpoint is selected after the test of the lower bound that tells the empty set; splits states what comes out for every canonical interval
+
+om         = pred(const inf)
+mo         = neg(om)
+ml         = lt(xl0, mo)
+l0         = select(ml, mo, xl0)
+l1         = select(ml, 0, xl1)
+mu         = lt(om, xu0)
+h0         = select(mu, om, xu0)
+h1         = select(mu, 0, xu1)
+(hl0, hl1) = mul_pow2_2(l0, l1, const up(1/2))
+(hu0, hu1) = mul_pow2_2(h0, h1, const up(1/2))
+(ma0, ma1) = add_2_2(hl0, hl1, hu0, hu1)
+ca         = lt_2_2(ma0, ma1, l0, l1)
+mb0        = select(ca, l0, ma0)
+mb1        = select(ca, l1, ma1)
+cb         = lt_2_2(h0, h1, mb0, mb1)
+mc0        = select(cb, h0, mb0)
+mc1        = select(cb, h1, mb1)
+md0        = select(ml, mo, mc0)
+md1        = select(ml, 0, mc1)
+me0        = select(mu, om, md0)
+me1        = select(mu, 0, md1)
+bo         = and(ml, mu)
+m0         = select(bo, 0, me0)
+m1         = select(bo, 0, me1)
+ka         = lt_2_2(m0, m1, xl0, xl1)
+n0         = select(ka, xl0, m0)
+n1         = select(ka, xl1, m1)
+kb         = lt_2_2(xu0, xu1, n0, n1)
+p0         = select(kb, xu0, n0)
+p1         = select(kb, xu1, n1)
+ne         = lt(xl0, const inf)
+mi         = neg(const inf)
+al0        = copy(xl0)
+al1        = copy(xl1)
+au0        = select(ne, p0, mi)
+au1        = select(ne, p1, 0)
+bl0        = select(ne, p0, const inf)
+bl1        = select(ne, p1, 0)
+bu0        = copy(xu0)
+bu1        = copy(xu1)

@@ -48,7 +48,8 @@ def functions(text, fixups=False):
             m = re.match(r'KAIRN_GEN_COLD (constexpr )?result<(double|float), [0-9]+> (\w+)\(', line)
             key = (m.group(3), m.group(2)) if m else None
         else:
-            # (A first input that the kernel ignores is [[maybe_unused]]: bv_neg_radius.)
+            # The first parameter may be an input the computation does not need, [[maybe_unused]]
+            # (bv_neg_radius; stage B2: the predicates of an interval that read one of its bounds).
             m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ',
                          line) or \
                 re.match(r'inline (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ', line)
@@ -127,6 +128,18 @@ BRANCHED.update(interval_make_1=('v',), ball_from_interval_2=('v', 'f'))
 BRANCHED.update({k: ('ne',) for k in ('interval_sub_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1')})
 BRANCHED.update(interval_make_2=('v',), interval_intersection_1=('ok',), interval_intersection_2=('ok',),
                 mul_ext_2_2=('nz', 'fo'))
+# Stage B2: the set operations of a ball, the composition when both operands are not empty (the
+# hull: qx, qy) or not the whole line and the intersection not empty (the intersection: nx, ny, ob),
+# and the ball sums of a finite ball (the split: fr). The predicates and comparisons return masks, which are no selects.
+BRANCHED.update(ball_hull_1=('qx', 'qy'), ball_intersection_1=('nx', 'ny', 'ob'), ball_split_1=('fr',),
+                ball_split_2=('fr',))
+# And of two limbs: the midpoint and radius and the conversion of a ball to an interval on the test of
+# emptiness (ne), the hull and the intersection of two limbs as the hull and the first listing of the
+# intersection of one limb (nx, ny); and the ball from an interval of one limb on the test of
+# interval_make_1 (v). The conversion of an interval to a ball and its split return values that are
+# not selects of their own listings on one mask.
+BRANCHED.update(interval_mid_rad_2=('ne',), ball_to_interval_2=('ne',), ball_hull_2=('qx', 'qy'),
+                ball_intersection_2=('nx', 'ny'), ball_from_interval_1=('v',))
 
 
 class Cpp(unittest.TestCase):
@@ -229,6 +242,13 @@ class Cpp(unittest.TestCase):
                       'sub_down_2_2', 'sub_up_2_2', 'mul_dir_2_2', 'interval_add_2'}
     # Stage B1: the difference of intervals of two limbs, and the product, through mul_dir_2_2.
     NOT_CONSTEXPR |= {'interval_sub_2', 'mul_ext_2_2', 'interval_mul_2'}
+    # Stage B2: the certain predicates and comparisons of a ball of two limbs (add_ball_2_2), and the
+    # split of a ball (ball_add_1_full, ball_add_2_full).
+    NOT_CONSTEXPR |= {'ball_contains_point_2', 'ball_contains_ball_2', 'ball_less_2', 'ball_less_equal_2',
+                      'ball_equal_2', 'ball_split_1', 'ball_split_2'}
+    # And the conversions of two limbs (add_ball_2_2, the directed sums of two limbs), with the hull and
+    # the intersection of balls of two limbs that call them.
+    NOT_CONSTEXPR |= {'ball_hull_2', 'ball_intersection_2', 'ball_to_interval_2', 'interval_mid_rad_2', 'interval_to_ball_2'}
     # The kernels whose only fused operations are prod, constexpr by the rule of the product
     # (milestone2.md, "The two executions of a product"); in Milestone 2 the ball made from an
     # interval, which halves its bounds and doubles the halves with prod.
@@ -244,6 +264,12 @@ class Cpp(unittest.TestCase):
     # The steps and the radius of the scaling of a BallVector by a power of two, whose products are
     # those of mul_pow2_step_1, mul_pow2_2 and ball_mul_pow2_k.
     PRODUCT_RULE |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
+    # Stage B2: the hull and the intersection of balls of one limb, through interval_to_ball_1.
+    PRODUCT_RULE |= {'ball_hull_1', 'ball_intersection_1'}
+    # And the ball from an interval of one limb, interval_make_1 then interval_to_ball_1; and the split
+    # of an interval of two limbs, whose midpoint halves the bounds by mul_pow2_2 (it does not compute
+    # the radius of interval_mid_rad_2, whose add_ball_2_2 has an FMA).
+    PRODUCT_RULE |= {'ball_from_interval_1', 'interval_split_2'}
     # The kernels that are ordinary inline functions, not forced inline (ordinary_inline:).
     ORDINARY_INLINE = {'interval_mul_2'}
 
@@ -940,9 +966,17 @@ class Rocq(unittest.TestCase):
     # definition and statement were added, every earlier line kept; its two constants are new
     # (gen/constant_names.json); Audit.v is the same. Merged here: the regeneration of the merged
     # descriptions.
-    DIGESTS = {'Model.v': '92ef82134249c903891247c27a7528c22b1055c1cf4a1b308ba445ed3fa949f3',
-               'Statements.v': '1726773db8522b0feba51c423deb13f8d14e9f165aef7d23c72b1b9bcea4359b',
-               'Audit.v': 'e76cdd765815b00e0722da5629e4fb754286787457f55d19fdad27615d94f40e'}
+    # On another line, from the joined tree of stage B1 (a35501e): the predicates and comparisons of
+    # an interval of stage B2, which have no real-model
+    # statement, changed the order of the three files only: le_2_2, which interval_contains_2
+    # calls, is printed before lt_2_2 (callees before callers), every block the same, byte for byte.
+    # Then the predicates, comparisons and set operations of a ball of stage B2, which have no
+    # real-model statement either: the order of the three files only, every block the same. Then
+    # the conversions of two limbs of stage B2: the order again, every block the same. Merged here:
+    # the regeneration of the merged descriptions.
+    DIGESTS = {'Model.v': '784bec01ec24ef2bdcd764c46228f787286560359461c5f976f90a80a6d2efc8',
+               'Statements.v': 'eb91699c8b7fa36e586e1580ca272a08d3ef32f39d5b31f07e8004320d4815cc',
+               'Audit.v': 'b7305fa936822f1a0d2d7407e59de085079fff67a3857241a4aba8852ecf98c9'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

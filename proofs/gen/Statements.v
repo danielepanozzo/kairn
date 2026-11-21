@@ -252,6 +252,52 @@ Definition ball_add_1_spec : Prop :=
   fmt emin prec rz /\
   (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x + y) - cz) <= rz).
 
+(* abs_2: the sign of x0 (Milestone 1 listing). Status: proved. *)
+Definition abs_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let '(z0, z1) := abs_2 x0 x1 in
+  normalized_2 emin prec z0 z1 /\
+  (z0 + z1) = (Rabs (x0 + x1)).
+
+(* le_2_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
+Definition le_2_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let m := le_2_2 x0 x1 y0 y1 in
+  m = Rle_bool (x0 + x1) (y0 + y1).
+
+(* le_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
+Definition le_2_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let m := le_2_1 x0 x1 a in
+  m = Rle_bool (x0 + x1) a.
+
+(* lt_2_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
+Definition lt_2_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let m := lt_2_2 x0 x1 y0 y1 in
+  m = Rlt_bool (x0 + x1) (y0 + y1).
+
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). Status: proved. *)
+Definition sub_up_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := sub_up_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RU emin prec (a - b).
+
 (* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). Status: proved. *)
 Definition sub_down_1_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -548,16 +594,6 @@ Definition fast_two_sum_entry_spec : Prop :=
   (s + e) = (a + b) /\
   normalized_2 emin prec s e.
 
-(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). Status: proved. *)
-Definition sub_up_1_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall a b : R,
-  fmt emin prec a ->
-  fmt emin prec b ->
-  let r := sub_up_1 emin prec tie_even a b in
-  fmt emin prec r /\
-  r = RU emin prec (a - b).
-
 (* two_prod: TwoProd with an FMA (folklore; see JMP17). Status: proved. *)
 Definition two_prod_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -815,15 +851,6 @@ Definition two_sum_entry_spec : Prop :=
   s = RN emin prec (a + b) /\
   (s + e) = (a + b).
 
-(* abs_2: the sign of x0 (Milestone 1 listing). Status: proved. *)
-Definition abs_2_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall x0 x1 : R,
-  normalized_2 emin prec x0 x1 ->
-  let '(z0, z1) := abs_2 x0 x1 in
-  normalized_2 emin prec z0 z1 /\
-  (z0 + z1) = (Rabs (x0 + x1)).
-
 (* to_up_2: the sign of x1 (Milestone 1 listing). Status: proved. *)
 Definition to_up_2_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -1062,6 +1089,26 @@ Definition to_down_2_spec : Prop :=
   fmt emin prec t /\
   t = RD emin prec (x0 + x1).
 
+(* eq_2_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
+Definition eq_2_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let m := eq_2_2 x0 x1 y0 y1 in
+  m = Req_bool (x0 + x1) (y0 + y1).
+
+(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved. *)
+Definition mul_pow2_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall x0 x1 c : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec c ->
+  (exists n : Z, c = bpow radix2 n) ->
+  let '(z0, z1) := mul_pow2_2 emin prec tie_even x0 x1 c in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin.
+
 (* ball_mul_2: midpoint-radius product (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_mul_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
@@ -1115,6 +1162,24 @@ Definition ball_neg_2_spec : Prop :=
   normalized_2 emin prec cz0 cz1 /\
   (forall x : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs ((- x) - (cz0 + cz1)) <= rz).
 
+(* lt_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
+Definition lt_2_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let m := lt_2_1 x0 x1 a in
+  m = Rlt_bool (x0 + x1) a.
+
+(* lt_1_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
+Definition lt_1_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall a y0 y1 : R,
+  fmt emin prec a ->
+  normalized_2 emin prec y0 y1 ->
+  let m := lt_1_2 a y0 y1 in
+  m = Rlt_bool a (y0 + y1).
+
 (* ball_scale_2: midpoint-radius scaling (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_scale_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -1143,6 +1208,15 @@ Definition ball_sub_2_spec : Prop :=
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x - y) - (cz0 + cz1)) <= rz).
 
+(* eq_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
+Definition eq_2_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let m := eq_2_1 x0 x1 a in
+  m = Req_bool (x0 + x1) a.
+
 (* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). Status: unverified. *)
 Definition bv_center_2_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -1165,42 +1239,6 @@ Definition bv_mul_pow2_step_2_spec : Prop :=
   (((x0 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x0 * c)) /\ ((x1 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x1 * c)) ->
    (z0 + z1) = ((x0 + x1) * c)) /\
   (e = true <-> ((x0 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x0 * c)) /\ ((x1 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x1 * c))).
-
-(* eq_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
-Definition eq_2_1_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall x0 x1 a : R,
-  normalized_2 emin prec x0 x1 ->
-  fmt emin prec a ->
-  let m := eq_2_1 x0 x1 a in
-  m = Req_bool (x0 + x1) a.
-
-(* eq_2_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
-Definition eq_2_2_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall x0 x1 y0 y1 : R,
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let m := eq_2_2 x0 x1 y0 y1 in
-  m = Req_bool (x0 + x1) (y0 + y1).
-
-(* lt_2_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
-Definition lt_2_2_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall x0 x1 y0 y1 : R,
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let m := lt_2_2 x0 x1 y0 y1 in
-  m = Rlt_bool (x0 + x1) (y0 + y1).
-
-(* le_2_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
-Definition le_2_2_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall x0 x1 y0 y1 : R,
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let m := le_2_2 x0 x1 y0 y1 in
-  m = Rle_bool (x0 + x1) (y0 + y1).
 
 (* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: proved. *)
 Definition mul_ball_2_2_spec : Prop :=
@@ -1260,44 +1298,6 @@ Definition le_1_2_spec : Prop :=
   normalized_2 emin prec y0 y1 ->
   let m := le_1_2 a y0 y1 in
   m = Rle_bool a (y0 + y1).
-
-(* le_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
-Definition le_2_1_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall x0 x1 a : R,
-  normalized_2 emin prec x0 x1 ->
-  fmt emin prec a ->
-  let m := le_2_1 x0 x1 a in
-  m = Rle_bool (x0 + x1) a.
-
-(* lt_1_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
-Definition lt_1_2_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall a y0 y1 : R,
-  fmt emin prec a ->
-  normalized_2 emin prec y0 y1 ->
-  let m := lt_1_2 a y0 y1 in
-  m = Rlt_bool a (y0 + y1).
-
-(* lt_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
-Definition lt_2_1_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall x0 x1 a : R,
-  normalized_2 emin prec x0 x1 ->
-  fmt emin prec a ->
-  let m := lt_2_1 x0 x1 a in
-  m = Rlt_bool (x0 + x1) a.
-
-(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved. *)
-Definition mul_pow2_2_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall x0 x1 c : R,
-  normalized_2 emin prec x0 x1 ->
-  fmt emin prec c ->
-  (exists n : Z, c = bpow radix2 n) ->
-  let '(z0, z1) := mul_pow2_2 emin prec tie_even x0 x1 c in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin.
 
 (* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. Status: proved. *)
 Definition mul_pow2_step_2_spec : Prop :=

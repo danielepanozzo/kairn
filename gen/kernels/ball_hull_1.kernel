@@ -1,0 +1,37 @@
+# A ball with a one-limb center that contains two such balls (milestone2.md, "One enclosure
+# interface", "Hull, intersection and split of balls"): both balls to intervals (ball_to_interval_1,
+# the smallest intervals of T that contain them), the hull of the intervals (interval_hull_1), back to
+# a ball (interval_to_ball_1). If an operand is empty the other is returned as it is, by the tests of
+# the radii (a NaN radius is the empty ball); the composition alone would return it converted twice.
+# The whole line gives the whole line through the conversions. The selects choose the composition
+# when both operands are not empty (qx, qy), the case the scalar printer puts first. Not claimed: the
+# smallest such ball.
+kernel:        ball_hull_1
+input:         stored cx
+input:         stored rx
+input:         stored cy
+input:         stored ry
+output:        cz
+output:        rz
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       ball_set cz rz union x=cx,rx y=cy,ry
+min_precision: 2
+source:        both balls to intervals, their hull, back to a ball (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the ball is selected among the conversions and the operands after tests of the radii; ball_set states what comes out for every pair of canonical balls
+
+(xl, xu) = ball_to_interval_1(cx, rx)
+(yl, yu) = ball_to_interval_1(cy, ry)
+(zl, zu) = interval_hull_1(xl, xu, yl, yu)
+(c, r)   = interval_to_ball_1(zl, zu)
+qx       = eq(rx, rx)
+qy       = eq(ry, ry)
+ca       = select(qy, c, cx)
+ra       = select(qy, r, rx)
+cz       = select(qx, ca, cy)
+rz       = select(qx, ra, ry)

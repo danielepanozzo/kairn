@@ -1,0 +1,38 @@
+# The relation interior of IEEE 1788 of two intervals with 2-limb bounds (milestone2.md,
+# "Comparisons", the relations of IEEE 1788, and "IEEE 1788"): every member of X is in the interior
+# of Y. The empty set is interior to every interval; otherwise y_l < x_l, or both are -inf, and x_u
+# < y_u, or both are +inf (an infinite bound is inside an equal infinite bound, the rule of Table
+# 4.5). With the empty set as Y, no nonempty X is interior: y_l = +inf is below no bound. Exact. For
+# every precision.
+kernel:        interval_rel_interior_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+input:         yl = yl0 yl1
+input:         yu = yu0 yu1
+output:        mask m
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       certain m interior x y x=xl,xu y=yl,yu exact
+min_precision: 1
+source:        the stored bounds compared, and a test of emptiness (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+ex = eq(xl0, const inf)
+mi = neg(const inf)
+la = lt_2_2(yl0, yl1, xl0, xl1)
+lb = eq(yl0, mi)
+lc = eq(xl0, mi)
+ld = and(lb, lc)
+lo = or(la, ld)
+ua = lt_2_2(xu0, xu1, yu0, yu1)
+ub = eq(xu0, const inf)
+uc = eq(yu0, const inf)
+ud = and(ub, uc)
+hi = or(ua, ud)
+lu = and(lo, hi)
+m  = or(ex, lu)

@@ -1,0 +1,25 @@
+# Whether an interval with 2-limb bounds is the whole line (milestone2.md, "One enclosure
+# interface", the row of is_entire()): the leading limbs of the bounds are -inf and +inf. A
+# canonical bound with an infinite leading limb is that infinity. Exact; false for the empty set.
+# For every precision.
+kernel:        interval_entire_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+output:        mask m
+requires:      interval xl xu
+ensures:       certain m entire x x=xl,xu exact
+min_precision: 1
+source:        the leading limbs of the bounds compared with the infinities (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+unused:        xl1 a canonical bound is infinite exactly when its leading limb is
+unused:        xu1 a canonical bound is infinite exactly when its leading limb is
+
+mi = neg(const inf)
+a  = eq(xl0, mi)
+b  = eq(xu0, const inf)
+m  = and(a, b)

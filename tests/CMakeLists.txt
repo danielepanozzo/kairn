@@ -567,18 +567,28 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # "Convolutions"): none of those is on the lists. On the lists:
 #
 # - the kernels of the accumulator (architecture.md, "The accumulator"): the oracle reads neither a
-#   rounded entry with a value of its own (value=) yet, and acc_radius_k is on the list with them.
+#   rounded entry with a value of its own (value=) yet, and acc_radius_k is on the list with them;
 # - the ball vectors (architecture.md, "Ball vectors") and their radius kernels: the oracle reads
 #   neither the folds with "bv": true (their requests, the requirement ball_vector, the claim
-#   encloses_entries) nor abs( ) in the value of an upper entry yet.
+#   encloses_entries) nor abs( ) in the value of an upper entry yet;
 # - the scalings of a BallVector by a power of two (architecture.md, "Ball vectors") and their
 #   kernels: besides what the other ball vectors need, the oracle reads neither exact_when with
 #   conditions in encloses_entries, nor exact_flag of an error entry, nor unless and exact_when of an
-#   upper entry, nor the condition mask(NAME) of exact_when, yet.
+#   upper entry, nor the condition mask(NAME) of exact_when, yet;
 # - the products of two BallVectors (architecture.md, "Ball vectors": the product of polynomials) and
 #   their kernels: the oracle reads neither the folds with "bv_conv": true (their requests of two
 #   lengths and two radii, the claim encloses_coefficients with count_when) nor the requirement
-#   at_most nor finite_or_nan with if_all, yet.
+#   at_most nor finite_or_nan with if_all, yet;
+# - the predicates and three-valued comparisons of the enclosure interface, of an interval and of a
+#   ball, of stage B2 (architecture.md, "Claims of the enclosure interface: predicates and
+#   comparisons"): the oracle reads neither the claims certain and trit nor the condition abs_le of
+#   their exact_when yet;
+# - the set operations of a ball, of stage B2 (architecture.md, "Claims of the enclosure interface:
+#   the set operations of a ball"): the oracle reads neither ball_set nor ball_splits yet;
+# - the conversions of two limbs of stage B2 (architecture.md, "Claims of the enclosure interface:
+#   the conversions of two limbs"), with the hull and the intersection of balls of two limbs: the
+#   oracle reads neither finite_when of ball_of_interval, nor interval_of_ball of two limbs, nor
+#   rel, abs and smallest_radius of a makes_ball from an interval, yet.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -588,7 +598,18 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   bv_center_entry_1 bv_center_2 bv_make_radius bv_make_finish
   neg_1 bv_neg_radius
   bv_mul_pow2_step_1 bv_mul_pow2_step_2 bv_mul_pow2_radius
-  conv_radius bv_conv_finish)
+  conv_radius bv_conv_finish
+  interval_empty_1 interval_entire_1 interval_contains_1 interval_subset_1 interval_positive_1 interval_negative_1
+  interval_zero_1 interval_less_1 interval_less_equal_1 interval_equal_1 interval_rel_equal_1 interval_rel_interior_1
+  interval_rel_disjoint_1 interval_empty_2 interval_entire_2 interval_contains_2 interval_subset_2 interval_positive_2
+  interval_negative_2 interval_zero_2 interval_less_2 interval_less_equal_2 interval_equal_2 interval_rel_equal_2
+  interval_rel_interior_2 interval_rel_disjoint_2
+  ball_contains_point_1 ball_contains_ball_1 ball_positive_1 ball_negative_1 ball_zero_1 ball_less_1
+  ball_less_equal_1 ball_equal_1 ball_contains_point_2 ball_contains_ball_2 ball_positive_2 ball_negative_2
+  ball_zero_2 ball_less_2 ball_less_equal_2 ball_equal_2
+  ball_hull_1 ball_intersection_1 ball_split_1 ball_split_2
+  interval_mid_rad_2 interval_to_ball_2 interval_split_2 ball_to_interval_2 ball_from_interval_1 ball_hull_2
+  ball_intersection_2)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2
   bv_make_1 bv_make_2

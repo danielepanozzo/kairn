@@ -41,7 +41,9 @@ def load():
                         continue           # gen/kernels/NAME.kernel is preferred
                     raise SystemExit(f'{fn}: kernel {k.name} is defined twice')
                 kernels[k.name] = k
-    return ir.ordered(kernels)
+    # The folds of gen/kernels, whose steps and combinations name the theorems of their leading limb
+    # (ieee_lead_theorem), which the rules accept only of a kernel that some fold uses.
+    return ir.ordered(kernels, ir.load_kernels(os.path.join(ROOT, 'gen', 'kernels')).folds)
 
 
 KERNELS = load()

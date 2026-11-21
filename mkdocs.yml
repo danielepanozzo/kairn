@@ -180,6 +180,30 @@ nav:
           - A ball with a two-limb center from an interval of two limbs: reference/ball_from_interval_2.md
           - A ball with a two-limb center as one with a one-limb center: reference/ball_narrow_2_1.md
           - The smallest interval that contains a ball, one-limb center: reference/ball_to_interval_1.md
+          - An interval that contains a ball, two-limb center: reference/ball_to_interval_2.md
+          - A ball with a one-limb center from an interval of two limbs: reference/ball_from_interval_1.md
+          - A ball that contains two balls, two-limb center: reference/ball_hull_2.md
+          - A ball that contains the intersection of two balls, two-limb center: reference/ball_intersection_2.md
+          - A ball that contains two balls, one-limb center: reference/ball_hull_1.md
+          - A ball that contains the intersection of two balls, one-limb center: reference/ball_intersection_1.md
+          - Two balls that cover a ball, one-limb center: reference/ball_split_1.md
+          - Two balls that cover a ball, two-limb center: reference/ball_split_2.md
+          - Whether a point is a member of a ball, one-limb center: reference/ball_contains_point_1.md
+          - Whether a ball contains another, one-limb center: reference/ball_contains_ball_1.md
+          - Whether every member of a ball is positive, one-limb center: reference/ball_positive_1.md
+          - Whether every member of a ball is negative, one-limb center: reference/ball_negative_1.md
+          - Whether a ball is the point 0, one-limb center: reference/ball_zero_1.md
+          - "The three-valued X < Y of balls, one-limb center": reference/ball_less_1.md
+          - "The three-valued X <= Y of balls, one-limb center": reference/ball_less_equal_1.md
+          - "The three-valued X = Y of balls, one-limb center": reference/ball_equal_1.md
+          - Whether a point is a member of a ball, two-limb center: reference/ball_contains_point_2.md
+          - Whether a ball contains another, two-limb center: reference/ball_contains_ball_2.md
+          - Whether every member of a ball is positive, two-limb center: reference/ball_positive_2.md
+          - Whether every member of a ball is negative, two-limb center: reference/ball_negative_2.md
+          - Whether a ball is the point 0, two-limb center: reference/ball_zero_2.md
+          - "The three-valued X < Y of balls, two-limb center": reference/ball_less_2.md
+          - "The three-valued X <= Y of balls, two-limb center": reference/ball_less_equal_2.md
+          - "The three-valued X = Y of balls, two-limb center": reference/ball_equal_2.md
       - Interval operations:
           - An interval from two limbs: reference/interval_make_1.md
           - The negation of an interval, one-limb bounds: reference/interval_neg_1.md
@@ -198,6 +222,35 @@ nav:
           - The midpoint and radius of an interval, one-limb bounds: reference/interval_mid_rad_1.md
           - A ball that contains an interval, one-limb bounds: reference/interval_to_ball_1.md
           - An interval split at its midpoint, one-limb bounds: reference/interval_split_1.md
+          - Whether an interval is empty, one-limb bounds: reference/interval_empty_1.md
+          - Whether an interval is the whole line, one-limb bounds: reference/interval_entire_1.md
+          - Whether a point is a member of an interval, one-limb bounds: reference/interval_contains_1.md
+          - Whether an interval is a subset of another, one-limb bounds: reference/interval_subset_1.md
+          - Whether every member of an interval is positive, one-limb bounds: reference/interval_positive_1.md
+          - Whether every member of an interval is negative, one-limb bounds: reference/interval_negative_1.md
+          - "Whether an interval is [0, 0], one-limb bounds": reference/interval_zero_1.md
+          - "The three-valued X < Y of intervals, one-limb bounds": reference/interval_less_1.md
+          - "The three-valued X <= Y of intervals, one-limb bounds": reference/interval_less_equal_1.md
+          - "The three-valued X = Y of intervals, one-limb bounds": reference/interval_equal_1.md
+          - The relation equal of IEEE 1788, one-limb bounds: reference/interval_rel_equal_1.md
+          - The relation interior of IEEE 1788, one-limb bounds: reference/interval_rel_interior_1.md
+          - The relation disjoint of IEEE 1788, one-limb bounds: reference/interval_rel_disjoint_1.md
+          - Whether an interval is empty, two-limb bounds: reference/interval_empty_2.md
+          - Whether an interval is the whole line, two-limb bounds: reference/interval_entire_2.md
+          - Whether a point is a member of an interval, two-limb bounds: reference/interval_contains_2.md
+          - Whether an interval is a subset of another, two-limb bounds: reference/interval_subset_2.md
+          - Whether every member of an interval is positive, two-limb bounds: reference/interval_positive_2.md
+          - Whether every member of an interval is negative, two-limb bounds: reference/interval_negative_2.md
+          - "Whether an interval is [0, 0], two-limb bounds": reference/interval_zero_2.md
+          - "The three-valued X < Y of intervals, two-limb bounds": reference/interval_less_2.md
+          - "The three-valued X <= Y of intervals, two-limb bounds": reference/interval_less_equal_2.md
+          - "The three-valued X = Y of intervals, two-limb bounds": reference/interval_equal_2.md
+          - The relation equal of IEEE 1788, two-limb bounds: reference/interval_rel_equal_2.md
+          - The relation interior of IEEE 1788, two-limb bounds: reference/interval_rel_interior_2.md
+          - The relation disjoint of IEEE 1788, two-limb bounds: reference/interval_rel_disjoint_2.md
+          - The midpoint and radius of an interval, two-limb bounds: reference/interval_mid_rad_2.md
+          - A ball that contains an interval, two-limb bounds: reference/interval_to_ball_2.md
+          - An interval split at its midpoint, two-limb bounds: reference/interval_split_2.md
       - Building blocks on T:
           - TwoSum on values of the program: reference/two_sum_entry.md
           - Fast2Sum on values of the program: reference/fast_two_sum_entry.md

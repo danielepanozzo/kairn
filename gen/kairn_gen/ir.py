@@ -96,6 +96,28 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       an interval that encloses a ball
     ensures:       splits al au bl bu from=xl,xu
                                       two intervals that together are the interval split
+    ensures:       certain m lt 0 x x=xl,xu [exact | exact_when=abs_le(EXPR,omega)]
+                                      a predicate of sets (intervals or balls, as the requirements
+                                      say): the mask is true only if the relation holds (lt, le,
+                                      eq of every choice of members, or member, subset, equal,
+                                      interior, disjoint, empty, entire); exact: and whenever it
+                                      holds
+    ensures:       trit yes no lt x y x=xl,xu y=yl,yu [exact | exact_when=...]
+                                      a three-valued comparison: yes only if the relation holds for
+                                      every choice of members, no only if it fails for every one
+    ensures:       ball_set cz rz union x=cx,rx y=cy,ry
+                                      a ball that contains the union (or intersection) of two balls
+    ensures:       ball_splits ca ra cb rb from=c,r
+                                      two balls, the first containing [c - r, c], the second
+                                      [c, c + r]
+    ensures:       ball_of_interval m r from=xl,xu ... finite_when=abs_le(xl,-2);abs_le(xu,-2)
+                                      the radius may be +inf for a bounded interval, and is finite
+                                      under the conditions (two limbs)
+    ensures:       interval_of_ball zl zu x x=c,r tight=outward;rel=EXPR;abs=EXPR
+                   [exact_lower=zero(c-r)] [exact_upper=zero(c+r)] [bounded_when=abs_le(x,-2)]
+                                      an interval of two limbs that encloses a ball
+    ensures:       makes_ball cw rw from_interval=lo,hi rel=u abs=eta [smallest_radius]
+                                      the center near the midpoint and the smallest radius
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
@@ -518,7 +540,8 @@ IEEE_THEOREM_NAMES = {'ieee_bridge_theorem': '{}_ieee_bridge', 'ieee_spec_theore
 # real-model statement (Kernel.real_model). The interval kinds of Milestone 2 are among them: an
 # interval has infinite bounds as ordinary values, so its kernels are stated in the IEEE model only.
 NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'finite_or_nan', 'makes_interval', 'encloses_interval',
-                   'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits')
+                   'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits', 'certain', 'trit',
+                   'ball_set', 'ball_splits')
 
 INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
 
@@ -569,7 +592,8 @@ MASK_CONDITION = 'mask'
 
 def _exact_when(text, where):
     """zero_or_abs_gt(EXPR,K);zero_or_abs_ge(EXPR,K);zero(EXPR);mask(NAME) as
-    [{'zero_or_abs_gt': EXPR, 'than': K}, ..., {'zero': EXPR}, {'mask': NAME}]."""
+    [{'zero_or_abs_gt': EXPR, 'than': K}, ..., {'zero': EXPR}, {'mask': NAME}]; and abs_le(EXPR,omega),
+    |EXPR| <= Omega, as {'abs_le': EXPR, 'omega': True} (a condition of certain and trit only: rules.py)."""
     out = []
     for part in text.split(';'):
         m = re.fullmatch(r'([a-z_]+)\((.+)\)', part)
@@ -579,6 +603,9 @@ def _exact_when(text, where):
             continue
         if m and m.group(1) == MASK_CONDITION and len(args) == 1 and VALUE_NAME.match(args[0]):
             out.append({MASK_CONDITION: args[0]})
+            continue
+        if m and m.group(1) == 'abs_le' and len(args) == 2 and args[0] and args[1] == 'omega':
+            out.append({'abs_le': args[0], 'omega': True})
             continue
         if not m or m.group(1) not in EXACT_CONDITIONS or len(args) != 2 or not all(args):
             raise DescriptionError(f'{where}: a condition of exact_when is zero_or_abs_gt(EXPR,K), '
@@ -633,6 +660,26 @@ def _tight(text, where):
     return out
 
 
+# The relations of the predicates of sets, certain and trit (Milestone 2, the enclosure interface),
+# and their number of arguments: empty and entire take one set, the others two arguments.
+SET_RELATION_ARITY = {'empty': 1, 'entire': 1, 'member': 2, 'subset': 2, 'equal': 2, 'interior': 2,
+                      'disjoint': 2, 'lt': 2, 'le': 2, 'eq': 2}
+
+
+def _set_kinds(e, k):
+    """A certain or trit entry with its sets named as what the requirements say they are: the
+    bounds of an interval ("intervals", NAME: {lower, upper}) or a ball ("balls", NAME: {center,
+    radius}). The sets of an entry are of one kind; a set that is neither is written as an interval,
+    which rules.py then refuses for want of its requirement."""
+    sets = e.pop('sets')
+    balls = bool(sets) and all(('ball', s['a'], s['b']) in k.requires for s in sets.values())
+    key, names = ('balls', ('center', 'radius')) if balls else ('intervals', ('lower', 'upper'))
+    out = {x: v for x, v in e.items() if x not in ('exact', 'exact_when')}
+    out[key] = {x: {names[0]: s['a'], names[1]: s['b']} for x, s in sets.items()}
+    out.update({x: v for x, v in e.items() if x in ('exact', 'exact_when')})
+    return out
+
+
 def _pairs(words, where, what, keys):
     """NAME=A,B words as {NAME: {keys[0]: A, keys[1]: B}}."""
     out = {}
@@ -667,24 +714,39 @@ def _ensures(words, where):
             raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from=CENTER,RADIUS"')
         return {'kind': kind, 'center': words[1], 'radius': words[2],
                 'from': {'center': m.group(1), 'radius': m.group(2)}}
-    if kind == 'makes_ball' and len(words) in (4, 5) and words[3].startswith('from_interval='):
+    if kind == 'makes_ball' and len(words) >= 4 and words[3].startswith('from_interval='):
         # A ball from the bounds of an interval (Milestone 2): `from` names a lower and an upper
-        # input, and midpoint_when the conditions under which the center is the exact midpoint.
+        # input, and midpoint_when the conditions under which the center is the exact midpoint; or
+        # (stage B2, ball_from_interval_1) rel and abs, the distance of the center to the midpoint,
+        # and smallest_radius, as ball_of_interval has them.
         m = re.fullmatch(r'from_interval=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
-        if not m or (len(words) == 5 and not words[4].startswith('midpoint_when=')):
+        opts = {}
+        for w in words[4:]:
+            key, eq, val = w.partition('=')
+            if key in ('midpoint_when', 'rel', 'abs') and eq and val and key not in opts:
+                opts[key] = val
+            elif w == 'smallest_radius' and w not in opts:
+                opts[w] = True
+            else:
+                m = None
+        if not m:
             raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from_interval=LOWER,UPPER '
-                                   '[midpoint_when=CONDITIONS]"')
+                                   '[midpoint_when=CONDITIONS] [rel=EXPR abs=EXPR] [smallest_radius]"')
         entry = {'kind': kind, 'center': words[1], 'radius': words[2],
                  'from': {'lower': m.group(1), 'upper': m.group(2)}}
-        if len(words) == 5:
+        for key in ('rel', 'abs', 'smallest_radius'):
+            if key in opts:
+                entry[key] = opts[key]
+        if 'midpoint_when' in opts:
             conds = []
-            for part in words[4][len('midpoint_when='):].split(';'):
+            for part in opts['midpoint_when'].split(';'):
                 c = re.fullmatch(r'half_in_format\(([a-z][a-z0-9]*)\)', part)
                 if not c:
                     raise DescriptionError(f'{where}: a condition of midpoint_when is half_in_format(INPUT), '
                                            f'got {part!r}')
                 conds.append({'half_in_format': c.group(1)})
-            entry['midpoint_when'] = conds
+            entry = {key: v for key, v in entry.items() if key not in ('rel', 'abs', 'smallest_radius')} | \
+                {'midpoint_when': conds} | {key: v for key, v in entry.items() if key in ('rel', 'abs', 'smallest_radius')}
         return entry
     if kind == 'makes_interval' and len(words) == 4:
         m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
@@ -847,18 +909,40 @@ def _ensures(words, where):
                 entry[key] = val
             elif w == 'smallest_radius' and w not in entry:
                 entry[w] = True
+            elif key == 'finite_when' and eq and val and key not in entry:
+                # Stage B2 (interval_mid_rad_2): the radius is finite when the conditions hold.
+                entry[key] = _finite_when(val, where)
             else:
                 raise DescriptionError(f'{where}: bad or repeated field {w!r} in ball_of_interval entry')
         if None in (entry['special'], entry['rel'], entry['abs']):
             raise DescriptionError(f'{where}: a ball_of_interval entry needs special=, rel= and abs=')
         if 'smallest_radius' in entry:
             entry['smallest_radius'] = entry.pop('smallest_radius')     # last, after the constants
+        if 'finite_when' in entry:
+            entry['finite_when'] = entry.pop('finite_when')
         return entry
-    if kind == 'interval_of_ball' and len(words) == 6 and words[5].startswith('tight='):
-        # interval_of_ball LOWER UPPER SET NAME=CENTER,RADIUS tight=...: an interval that encloses a ball.
-        return {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
-                'balls': _pairs(words[4:5], where, 'ball', ('center', 'radius')),
-                'tight': _tight(words[5][len('tight='):], where)}
+    if kind == 'interval_of_ball' and len(words) >= 6 and words[5].startswith('tight='):
+        # interval_of_ball LOWER UPPER SET NAME=CENTER,RADIUS tight=... [exact_lower=...]
+        #   [exact_upper=...] [bounded_when=...]: an interval that encloses a ball; the tightness
+        #   outward, with the exactness of each side and the condition of a bounded result, of two
+        #   limbs (stage B2).
+        entry = {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
+                 'balls': _pairs(words[4:5], where, 'ball', ('center', 'radius')),
+                 'tight': _tight(words[5][len('tight='):], where)}
+        opts = {}
+        for w in words[6:]:
+            key, eq, val = w.partition('=')
+            if key not in ('exact_lower', 'exact_upper', 'bounded_when') or not eq or key in opts:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in interval_of_ball entry')
+            opts[key] = val
+        sides = {s: _exact_when(opts[f'exact_{s}'], where) for s in ('lower', 'upper') if f'exact_{s}' in opts}
+        if sides:
+            if entry['tight']['kind'] != 'outward':
+                raise DescriptionError(f'{where}: exact_lower and exact_upper belong to tight=outward')
+            entry['tight']['exact_when'] = sides
+        if 'bounded_when' in opts:
+            entry['bounded_when'] = _bounded_when(opts['bounded_when'], where)
+        return entry
     if kind == 'splits' and len(words) == 6:
         # splits AL AU BL BU from=LOWER,UPPER: two intervals that together are the operand.
         m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[5])
@@ -866,6 +950,53 @@ def _ensures(words, where):
             raise DescriptionError(f'{where}: expected "splits AL AU BL BU from=LOWER,UPPER"')
         return {'kind': kind, 'parts': [{'lower': words[1], 'upper': words[2]}, {'lower': words[3], 'upper': words[4]}],
                 'from': {'lower': m.group(1), 'upper': m.group(2)}}
+    if kind == 'ball_set' and len(words) == 6:
+        # ball_set CENTER RADIUS union|intersection NAME=CENTER,RADIUS NAME=CENTER,RADIUS: a ball that
+        # contains the union or the intersection of two balls (Milestone 2, the enclosure interface).
+        return {'kind': kind, 'center': words[1], 'radius': words[2], 'set': words[3],
+                'balls': _pairs(words[4:], where, 'ball', ('center', 'radius'))}
+    if kind == 'ball_splits' and len(words) == 6:
+        # ball_splits CA RA CB RB from=CENTER,RADIUS: two balls that cover the two halves of a ball.
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[5])
+        if not m:
+            raise DescriptionError(f'{where}: expected "ball_splits CA RA CB RB from=CENTER,RADIUS"')
+        return {'kind': kind, 'parts': [{'center': words[1], 'radius': words[2]},
+                                        {'center': words[3], 'radius': words[4]}],
+                'from': {'center': m.group(1), 'radius': m.group(2)}}
+    if kind in ('certain', 'trit') and len(words) >= 4:
+        # certain MASK REL ARG... NAME=A,B ... [exact | exact_when=CONDITIONS]
+        # trit YES NO REL ARG ARG NAME=A,B ... [exact | exact_when=CONDITIONS]
+        # A predicate of sets of real numbers, intervals or balls (Milestone 2, the enclosure
+        # interface). The sets are written NAME=A,B as elsewhere; parse_kernel says, from the
+        # requirements, whether they are intervals or balls (_set_kinds).
+        masks = words[1:3] if kind == 'trit' else words[1:2]
+        rest = words[1 + len(masks):]
+        if not rest:
+            raise DescriptionError(f'{where}: a {kind} entry needs a relation')
+        rel = rest[0]
+        n = SET_RELATION_ARITY.get(rel, 2)
+        args, tail = rest[1:1 + n], rest[1 + n:]
+        if len(args) != n:
+            raise DescriptionError(f'{where}: {kind} {rel} has {n} argument{"s" if n > 1 else ""}')
+        pairs, exact = [], None
+        for w in tail:
+            if w == 'exact' and exact is None:
+                exact = True
+            elif w.startswith('exact_when=') and exact is None:
+                exact = _exact_when(w[len('exact_when='):], where)
+            else:
+                pairs.append(w)
+        entry = {'kind': kind}
+        if kind == 'trit':
+            entry.update(yes=masks[0], no=masks[1])
+        else:
+            entry['of'] = masks[0]
+        entry.update(rel=rel, args=args, sets=_pairs(pairs, where, 'set', ('a', 'b')))
+        if exact is True:
+            entry['exact'] = True
+        elif exact is not None:
+            entry['exact_when'] = exact
+        return entry
     if kind == 'predicate' and len(words) == 5:
         return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
     if kind == 'encloses' and len(words) >= 4:
@@ -1132,6 +1263,9 @@ def parse_kernel(text, path):
         for e in k.ensures:
             if e['kind'] == 'encloses':
                 e.setdefault('finite_when', [])
+    for i, e in enumerate(k.ensures):
+        if e['kind'] in ('certain', 'trit'):
+            k.ensures[i] = _set_kinds(e, k)
     if not KERNEL_NAME.match(k.name):
         raise DescriptionError(f'{path}: bad kernel name {k.name!r}')
     if not k.inputs or not k.outputs:

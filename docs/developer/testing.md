@@ -147,8 +147,14 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   and the ball vectors, the products of two of them and their kernels
   ([Ball vectors](architecture.md#ball-vectors); the folds with `"bv"` and `"bv_conv"`, the
   requirement `ball_vector`, the claims `encloses_entries`, `makes_ball_vector` and
-  `encloses_coefficients`, and what their kernels claim); what was on them before left them with
-  the interval stage and stage B of Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
+  `encloses_coefficients`, and what their kernels claim); and the kernels of stage B2 of the
+  intervals, the predicates and comparisons of an interval and of a ball, the set operations of a
+  ball and the conversions of two limbs ([Claims of the enclosure interface: predicates and
+  comparisons](architecture.md#claims-of-the-enclosure-interface-predicates-and-comparisons) and the
+  two sections after it: the kinds `certain`, `trit`, `ball_set` and `ball_splits`, the condition
+  `abs_le` of their `exact_when`, and the new fields of `ball_of_interval`, `interval_of_ball` and
+  `makes_ball`); what was on them before left them with the interval stage and stage B of
+  Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
   Milestone 2 the oracle reads and judges the maps, the folds of maxima and the convolutions, and
   their kernels (`oracle/README.md`, "Maps", "Folds of maxima", "Convolutions"): they are
   cross-checked as the folds are, and the steps of the maps and the kernels of the folds of maxima
@@ -850,11 +856,16 @@ the quick tier, *with* the compiler's own vectorization, and judges every functi
 same rule. It records what the check then finds, per compiler and version measured: with Clang 18
 on x86-64, the packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for
 `double`, and the scalar functions of `acc_mul_1`, `ball_from_interval_2`, `interval_add_2`,
-`interval_mul_1` and `interval_sub_2` for `double` and `float` (those the packing control finds;
-measured on 2026-11-20, `acc_mul_1` with the accumulator's kernels); with Apple clang 21 on AArch64,
-the scalar functions of `interval_add_2` and `interval_sub_2` for `double` and `float`, in the form
-of the fix-ups that is a call; with GCC 13 on x86-64 and GCC 16 on AArch64, nothing. Their
-vectorized loops hold whole copies of the step.
+`interval_mul_1` and `interval_sub_2` (those the packing control finds), and of the kernels of
+stage B2 of the intervals that make the bounds of a ball of two limbs by the directed sums
+(`ball_to_interval_2`, `ball_hull_2`, `ball_intersection_2`), the midpoint and radius of two limbs
+(`interval_mid_rad_2`, `interval_to_ball_2`) and the split of a ball (`ball_split_1`,
+`ball_split_2`), for `double` and `float`; with Apple clang 21 on AArch64, the scalar functions of
+`interval_add_2`, `interval_sub_2`, `ball_to_interval_2`, `ball_hull_2`, `ball_intersection_2`,
+`interval_mid_rad_2` and `interval_to_ball_2` for `double` and `float`, in the form of the fix-ups
+that is a call; with GCC 13 on x86-64 and GCC 16 on AArch64, nothing. Their vectorized loops hold
+whole copies of the step. Measured on 2026-11-20 with each line of work and again on the tree that
+joins them, where both Clangs pack exactly these and nothing else.
 With one of these versions, a compiler that stops packing, or one that starts, fails the control,
 so that we learn it. With any other version, and with a compiler never measured, the control
 reports what the check finds and does not judge it: what a vectorizer packs changes from one

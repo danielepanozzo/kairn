@@ -1,0 +1,21 @@
+# Whether an interval with one-limb bounds is [0, 0] (milestone2.md, "One enclosure interface", the
+# row of certainly_zero()): x_l = x_u = 0, every member zero and the interval not empty. Exact;
+# false for the empty set. For every precision.
+kernel:        interval_zero_1
+input:         stored xl
+input:         stored xu
+output:        mask m
+requires:      interval xl xu
+ensures:       certain m eq x 0 x=xl,xu exact
+min_precision: 1
+source:        the bounds compared with 0 (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+a = eq(xl, 0)
+b = eq(xu, 0)
+m = and(a, b)

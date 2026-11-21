@@ -1,0 +1,38 @@
+# A ball with a 2-limb center that contains two such balls (milestone2.md, "One enclosure interface",
+# "Hull, intersection and split of balls"): ball_hull_1 on the conversions of two limbs, both balls to
+# intervals (ball_to_interval_2), the hull of the intervals (interval_hull_2), back to a ball
+# (interval_to_ball_2). If an operand is empty the other is returned as it is, by the tests of the
+# radii; the selects choose the composition when both operands are not empty (qx, qy). The whole
+# line gives the whole line through the conversions, and so does a hull whose radius overflows near
+# the top of the range. Not claimed: the smallest such ball.
+kernel:        ball_hull_2
+input:         cx = cx0 cx1
+input:         stored rx
+input:         cy = cy0 cy1
+input:         stored ry
+output:        cz = cz0 cz1
+output:        rz
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       ball_set cz rz union x=cx,rx y=cy,ry
+min_precision: 3
+source:        both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the ball is selected among the conversions and the operands after tests of the radii; ball_set states what comes out for every pair of canonical balls
+
+(xl0, xl1, xu0, xu1) = ball_to_interval_2(cx0, cx1, rx)
+(yl0, yl1, yu0, yu1) = ball_to_interval_2(cy0, cy1, ry)
+(zl0, zl1, zu0, zu1) = interval_hull_2(xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1)
+(c0, c1, r)          = interval_to_ball_2(zl0, zl1, zu0, zu1)
+qx                   = eq(rx, rx)
+qy                   = eq(ry, ry)
+ca0                  = select(qy, c0, cx0)
+ca1                  = select(qy, c1, cx1)
+ra                   = select(qy, r, rx)
+cz0                  = select(qx, ca0, cy0)
+cz1                  = select(qx, ca1, cy1)
+rz                   = select(qx, ra, ry)

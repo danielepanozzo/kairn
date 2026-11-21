@@ -303,6 +303,145 @@ Definition ball_add_1_full (cx rx cy ry : float) : float * float :=
   let rw := if e then r else q in
   (cw, rw).
 
+(* abs_2: the sign of x0 (Milestone 1 listing). *)
+Definition abs_2 (x0 x1 : float) : float * float :=
+  let m := lt x0 pzero in
+  let n0 := neg x0 in
+  let n1 := neg x1 in
+  let z0 := if m then n0 else x0 in
+  let z1 := if m then n1 else x1 in
+  (z0, z1).
+
+(* le_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition le_2_2 (x0 x1 y0 y1 : float) : bool :=
+  let h := lt x0 y0 in
+  let e := eq x0 y0 in
+  let l := le x1 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* ball_contains_ball_1: the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing). *)
+Definition ball_contains_ball_1 (cx rx cy ry : float) : bool :=
+  let ncx := neg cx in
+  let '(d0, d1) := two_sum_ord cy ncx in
+  let '(a0, a1) := abs_2 d0 d1 in
+  let nry := neg ry in
+  let '(g0, g1) := two_sum_ord rx nry in
+  let f := le_2_2 a0 a1 g0 g1 in
+  let wx := eq rx pinf in
+  let qy := eq ry ry in
+  let ey := negb qy in
+  let sp := orb wx ey in
+  let m := orb sp f in
+  m.
+
+(* le_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition le_2_1 (x0 x1 a : float) : bool :=
+  let h := lt x0 a in
+  let e := eq x0 a in
+  let l := le x1 pzero in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* ball_contains_point_1: the distance as an exact pair compared with the radius (Milestone 2 listing). *)
+Definition ball_contains_point_1 (c r t : float) : bool :=
+  let g := guard t in
+  let nc := neg c in
+  let '(d0, d1) := two_sum_ord g nc in
+  let '(a0, a1) := abs_2 d0 d1 in
+  let m := le_2_1 a0 a1 r in
+  m.
+
+(* lt_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition lt_2_2 (x0 x1 y0 y1 : float) : bool :=
+  let h := lt x0 y0 in
+  let e := eq x0 y0 in
+  let l := lt x1 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* ball_equal_1: the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing). *)
+Definition ball_equal_1 (cx rx cy ry : float) : bool * bool :=
+  let ea := eq rx pzero in
+  let eb := eq ry pzero in
+  let ec := eq cx cy in
+  let eab := andb ea eb in
+  let yes := andb eab ec in
+  let '(s0, s1) := two_sum_ord rx ry in
+  let ncx := neg cx in
+  let '(d0, d1) := two_sum_ord cy ncx in
+  let '(a0, a1) := abs_2 d0 d1 in
+  let no := lt_2_2 s0 s1 a0 a1 in
+  (yes, no).
+
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
+Definition sub_up_1 (a b : float) : float :=
+  let nb := neg b in
+  let r := add_up_1 a nb in
+  r.
+
+(* interval_mid_rad_1: the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). *)
+Definition interval_mid_rad_1 (xl xu : float) : float * float :=
+  let om := pred pinf in
+  let mo := neg om in
+  let ml := lt xl mo in
+  let l := if ml then mo else xl in
+  let mu := lt om xu in
+  let h := if mu then om else xu in
+  let hl := prod l up_ball_from_interval_2_0 in
+  let hu := prod h up_ball_from_interval_2_0 in
+  let ma := add hl hu in
+  let ca := lt ma l in
+  let mb := if ca then l else ma in
+  let cb := lt h mb in
+  let mc := if cb then h else mb in
+  let ra := sub_up_1 mc l in
+  let rb := sub_up_1 h mc in
+  let rm := lt ra rb in
+  let rc := if rm then rb else ra in
+  let md := if ml then mo else mc in
+  let me := if mu then om else md in
+  let bo := andb ml mu in
+  let mf := if bo then pzero else me in
+  let un := orb ml mu in
+  let rd := if un then pinf else rc in
+  let ne := lt xl pinf in
+  let m := if ne then mf else cnan in
+  let r := if ne then rd else cnan in
+  (m, r).
+
+(* interval_to_ball_1: interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). *)
+Definition interval_to_ball_1 (xl xu : float) : float * float :=
+  let '(m, r) := interval_mid_rad_1 xl xu in
+  let un := eq r pinf in
+  let c := if un then pzero else m in
+  (c, r).
+
+(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). *)
+Definition ball_from_interval_1 (lo hi : float) : float * float :=
+  let gl := guard lo in
+  let gu := guard hi in
+  let ok := le gl gu in
+  let nl := lt gl pinf in
+  let mi := neg pinf in
+  let nu := lt mi gu in
+  let va := andb ok nl in
+  let v := andb va nu in
+  let ql := eq gl gl in
+  let qu := eq gu gu in
+  let nn := andb ql qu in
+  let tl := if v then gl else pzero in
+  let tu := if v then gu else pzero in
+  let '(c, r) := interval_to_ball_1 tl tu in
+  let ec := if nn then cnan else pzero in
+  let er := if nn then cnan else pinf in
+  let cw := if v then c else ec in
+  let rw := if v then r else er in
+  (cw, rw).
+
 (* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). *)
 Definition ball_from_interval_2 (lo hi : float) : float * float * float :=
   let gl := guard lo in
@@ -347,6 +486,94 @@ Definition sub_down_1 (a b : float) : float :=
   let nb := neg b in
   let r := add_down_1 a nb in
   r.
+
+(* ball_to_interval_1: the directed difference and sum of the center and the radius (Milestone 2 listing). *)
+Definition ball_to_interval_1 (c r : float) : float * float :=
+  let l := sub_down_1 c r in
+  let h := add_up_1 c r in
+  let ne := eq r r in
+  let mi := neg pinf in
+  let zl := if ne then l else pinf in
+  let zu := if ne then h else mi in
+  (zl, zu).
+
+(* interval_hull_1: the smaller lower bound and the larger upper bound (Milestone 2 listing). *)
+Definition interval_hull_1 (xl xu yl yu : float) : float * float :=
+  let ml := lt yl xl in
+  let zl := if ml then yl else xl in
+  let mu := lt xu yu in
+  let zu := if mu then yu else xu in
+  (zl, zu).
+
+(* ball_hull_1: both balls to intervals, their hull, back to a ball (Milestone 2 listing). *)
+Definition ball_hull_1 (cx rx cy ry : float) : float * float :=
+  let '(xl, xu) := ball_to_interval_1 cx rx in
+  let '(yl, yu) := ball_to_interval_1 cy ry in
+  let '(zl, zu) := interval_hull_1 xl xu yl yu in
+  let '(c, r) := interval_to_ball_1 zl zu in
+  let qx := eq rx rx in
+  let qy := eq ry ry in
+  let ca := if qy then c else cx in
+  let ra := if qy then r else rx in
+  let cz := if qx then ca else cy in
+  let rz := if qx then ra else ry in
+  (cz, rz).
+
+(* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). *)
+Definition ball_intersection_1 (cx rx cy ry : float) : float * float :=
+  let xl := sub_down_1 cx rx in
+  let xu := add_up_1 cx rx in
+  let yl := sub_down_1 cy ry in
+  let yu := add_up_1 cy ry in
+  let ml := lt xl yl in
+  let l := if ml then yl else xl in
+  let mu := lt yu xu in
+  let h := if mu then yu else xu in
+  let '(c, r) := interval_to_ball_1 l h in
+  let ok := le l h in
+  let qx := eq rx rx in
+  let qy := eq ry ry in
+  let oa := andb ok qx in
+  let ob := andb oa qy in
+  let cb := if ob then c else cnan in
+  let rb := if ob then r else cnan in
+  let wx := eq rx pinf in
+  let nx := negb wx in
+  let wy := eq ry pinf in
+  let ny := negb wy in
+  let ca := if ny then cb else cx in
+  let ra := if ny then rb else rx in
+  let cz := if nx then ca else cy in
+  let rz := if nx then ra else ry in
+  (cz, rz).
+
+(* ball_less_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). *)
+Definition ball_less_1 (cx rx cy ry : float) : bool * bool :=
+  let '(s0, s1) := two_sum_ord rx ry in
+  let ncx := neg cx in
+  let '(d0, d1) := two_sum_ord cy ncx in
+  let ncy := neg cy in
+  let '(g0, g1) := two_sum_ord cx ncy in
+  let yes := lt_2_2 s0 s1 d0 d1 in
+  let b := le_2_2 s0 s1 g0 g1 in
+  let sa := abs s0 in
+  let fs := lt sa pinf in
+  let no := andb b fs in
+  (yes, no).
+
+(* ball_less_equal_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). *)
+Definition ball_less_equal_1 (cx rx cy ry : float) : bool * bool :=
+  let '(s0, s1) := two_sum_ord rx ry in
+  let ncx := neg cx in
+  let '(d0, d1) := two_sum_ord cy ncx in
+  let ncy := neg cy in
+  let '(g0, g1) := two_sum_ord cx ncy in
+  let a := le_2_2 s0 s1 d0 d1 in
+  let sa := abs s0 in
+  let fs := lt sa pinf in
+  let yes := andb a fs in
+  let no := lt_2_2 s0 s1 g0 g1 in
+  (yes, no).
 
 (* ball_lower_as_1: the center minus the radius, rounded down (Milestone 2 listing). *)
 Definition ball_lower_as_1 (c r : float) : float :=
@@ -436,6 +663,17 @@ Definition ball_neg_1 (cx rx : float) : float * float :=
   let rz := rx in
   (cz, rz).
 
+(* ball_negative_1: the center compared with the negated radius (Milestone 2 listing). *)
+Definition ball_negative_1 (c r : float) : bool :=
+  let nr := neg r in
+  let m := lt c nr in
+  m.
+
+(* ball_positive_1: the radius compared with the center (Milestone 2 listing). *)
+Definition ball_positive_1 (c r : float) : bool :=
+  let m := lt r c in
+  m.
+
 (* ball_scale_1: midpoint-radius scaling (Milestone 1 listing, second radius design). *)
 Definition ball_scale_1 (cx rx a : float) : float * float :=
   let cz := prod cx a in
@@ -460,6 +698,27 @@ Definition ball_scale_1_full (cx rx a : float) : float * float :=
   let rw := if e then r else rx in
   (cw, rw).
 
+(* ball_split_1: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing). *)
+Definition ball_split_1 (c r : float) : float * float * float * float :=
+  let h := prod r up_ball_from_interval_2_0 in
+  let nr := neg r in
+  let hn := prod nr up_ball_from_interval_2_0 in
+  let g := sub r h in
+  let mg := lt h g in
+  let q := if mg then g else h in
+  let fr := lt r pinf in
+  let hs := if fr then h else pzero in
+  let nh := if fr then hn else pzero in
+  let ws := if fr then q else pzero in
+  let cs := if fr then c else pzero in
+  let '(a0, a1) := ball_add_1_full cs pzero nh ws in
+  let '(b0, b1) := ball_add_1_full cs pzero hs ws in
+  let ca := if fr then a0 else c in
+  let ra := if fr then a1 else r in
+  let cb := if fr then b0 else c in
+  let rb := if fr then b1 else r in
+  (ca, ra, cb, rb).
+
 (* ball_sub_1: midpoint-radius difference (Milestone 1 listing). *)
 Definition ball_sub_1 (cx rx cy ry : float) : float * float :=
   let n := neg cy in
@@ -481,16 +740,6 @@ Definition ball_sub_1_full (cx rx cy ry : float) : float * float :=
   let rw := if e then r else q in
   (cw, rw).
 
-(* ball_to_interval_1: the directed difference and sum of the center and the radius (Milestone 2 listing). *)
-Definition ball_to_interval_1 (c r : float) : float * float :=
-  let l := sub_down_1 c r in
-  let h := add_up_1 c r in
-  let ne := eq r r in
-  let mi := neg pinf in
-  let zl := if ne then l else pinf in
-  let zu := if ne then h else mi in
-  (zl, zu).
-
 (* ball_upper_as_1: the center plus the radius, rounded up (Milestone 2 listing). *)
 Definition ball_upper_as_1 (c r : float) : float :=
   let t := add_up_1 c r in
@@ -498,6 +747,13 @@ Definition ball_upper_as_1 (c r : float) : float :=
   let mi := neg pinf in
   let h := if ne then t else mi in
   h.
+
+(* ball_zero_1: the center and the radius compared with 0 (Milestone 2 listing). *)
+Definition ball_zero_1 (c r : float) : bool :=
+  let a := eq c pzero in
+  let b := eq r pzero in
+  let m := andb a b in
+  m.
 
 (* bound_dot_1: the exported bound of a dot product as a function of n (milestone2.md). *)
 Definition bound_dot_1 (m : float) : float * float * bool :=
@@ -681,13 +937,44 @@ Definition interval_add_1 (xl xu yl yu : float) : float * float :=
   let zu := if ne then h else mi in
   (zl, zu).
 
-(* interval_hull_1: the smaller lower bound and the larger upper bound (Milestone 2 listing). *)
-Definition interval_hull_1 (xl xu yl yu : float) : float * float :=
-  let ml := lt yl xl in
-  let zl := if ml then yl else xl in
-  let mu := lt xu yu in
-  let zu := if mu then yu else xu in
-  (zl, zu).
+(* interval_contains_1: the bounds compared with the point, and a test that the point is finite (Milestone 2 listing). *)
+Definition interval_contains_1 (xl xu t : float) : bool :=
+  let a := le xl t in
+  let b := le t xu in
+  let ta := abs t in
+  let ft := lt ta pinf in
+  let ab := andb a b in
+  let m := andb ab ft in
+  m.
+
+(* interval_empty_1: the lower bound compared with +inf (Milestone 2 listing). *)
+Definition interval_empty_1 (xl xu : float) : bool :=
+  let m := eq xl pinf in
+  m.
+
+(* interval_entire_1: the two bounds compared with the infinities (Milestone 2 listing). *)
+Definition interval_entire_1 (xl xu : float) : bool :=
+  let mi := neg pinf in
+  let a := eq xl mi in
+  let b := eq xu pinf in
+  let m := andb a b in
+  m.
+
+(* interval_equal_1: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_equal_1 (xl xu yl yu : float) : bool * bool :=
+  let ea := eq xl xu in
+  let eb := eq xu yl in
+  let ec := eq yl yu in
+  let eab := andb ea eb in
+  let yes := andb eab ec in
+  let nx := lt xl pinf in
+  let ny := lt yl pinf in
+  let ne := andb nx ny in
+  let da := lt xu yl in
+  let db := lt yu xl in
+  let dd := orb da db in
+  let no := andb dd ne in
+  (yes, no).
 
 (* interval_intersection_1: the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). *)
 Definition interval_intersection_1 (xl xu yl yu : float) : float * float :=
@@ -700,6 +987,28 @@ Definition interval_intersection_1 (xl xu yl yu : float) : float * float :=
   let zl := if ok then l else pinf in
   let zu := if ok then h else mi in
   (zl, zu).
+
+(* interval_less_1: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_less_1 (xl xu yl yu : float) : bool * bool :=
+  let nx := lt xl pinf in
+  let ny := lt yl pinf in
+  let ne := andb nx ny in
+  let a := lt xu yl in
+  let c := le yu xl in
+  let yes := andb a ne in
+  let no := andb c ne in
+  (yes, no).
+
+(* interval_less_equal_1: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_less_equal_1 (xl xu yl yu : float) : bool * bool :=
+  let nx := lt xl pinf in
+  let ny := lt yl pinf in
+  let ne := andb nx ny in
+  let a := le xu yl in
+  let c := lt yu xl in
+  let yes := andb a ne in
+  let no := andb c ne in
+  (yes, no).
 
 (* interval_make_1: constructor of an interval (Milestone 2 listing). *)
 Definition interval_make_1 (lo hi : float) : float * float :=
@@ -719,42 +1028,6 @@ Definition interval_make_1 (lo hi : float) : float * float :=
   let zl := if v then gl else el in
   let zu := if v then gu else eu in
   (zl, zu).
-
-(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
-Definition sub_up_1 (a b : float) : float :=
-  let nb := neg b in
-  let r := add_up_1 a nb in
-  r.
-
-(* interval_mid_rad_1: the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). *)
-Definition interval_mid_rad_1 (xl xu : float) : float * float :=
-  let om := pred pinf in
-  let mo := neg om in
-  let ml := lt xl mo in
-  let l := if ml then mo else xl in
-  let mu := lt om xu in
-  let h := if mu then om else xu in
-  let hl := prod l up_ball_from_interval_2_0 in
-  let hu := prod h up_ball_from_interval_2_0 in
-  let ma := add hl hu in
-  let ca := lt ma l in
-  let mb := if ca then l else ma in
-  let cb := lt h mb in
-  let mc := if cb then h else mb in
-  let ra := sub_up_1 mc l in
-  let rb := sub_up_1 h mc in
-  let rm := lt ra rb in
-  let rc := if rm then rb else ra in
-  let md := if ml then mo else mc in
-  let me := if mu then om else md in
-  let bo := andb ml mu in
-  let mf := if bo then pzero else me in
-  let un := orb ml mu in
-  let rd := if un then pinf else rc in
-  let ne := lt xl pinf in
-  let m := if ne then mf else cnan in
-  let r := if ne then rd else cnan in
-  (m, r).
 
 (* two_prod: TwoProd with an FMA (folklore; see JMP17). *)
 Definition two_prod (a b : float) : float * float :=
@@ -816,6 +1089,57 @@ Definition interval_neg_1 (xl xu : float) : float * float :=
   let zu := neg xl in
   (zl, zu).
 
+(* interval_negative_1: the upper bound compared with 0 and -inf (Milestone 2 listing). *)
+Definition interval_negative_1 (xl xu : float) : bool :=
+  let mi := neg pinf in
+  let a := lt xu pzero in
+  let b := lt mi xu in
+  let m := andb a b in
+  m.
+
+(* interval_positive_1: the lower bound compared with 0 and +inf (Milestone 2 listing). *)
+Definition interval_positive_1 (xl xu : float) : bool :=
+  let a := lt pzero xl in
+  let b := lt xl pinf in
+  let m := andb a b in
+  m.
+
+(* interval_rel_disjoint_1: the stored bounds compared, and tests of emptiness (Milestone 2 listing). *)
+Definition interval_rel_disjoint_1 (xl xu yl yu : float) : bool :=
+  let ex := eq xl pinf in
+  let ey := eq yl pinf in
+  let ee := orb ex ey in
+  let da := lt xu yl in
+  let db := lt yu xl in
+  let dd := orb da db in
+  let m := orb ee dd in
+  m.
+
+(* interval_rel_equal_1: the stored bounds compared (Milestone 2 listing). *)
+Definition interval_rel_equal_1 (xl xu yl yu : float) : bool :=
+  let a := eq xl yl in
+  let c := eq xu yu in
+  let m := andb a c in
+  m.
+
+(* interval_rel_interior_1: the stored bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_rel_interior_1 (xl xu yl yu : float) : bool :=
+  let ex := eq xl pinf in
+  let mi := neg pinf in
+  let la := lt yl xl in
+  let lb := eq yl mi in
+  let lc := eq xl mi in
+  let ld := andb lb lc in
+  let lo := orb la ld in
+  let ua := lt xu yu in
+  let ub := eq xu pinf in
+  let uc := eq yu pinf in
+  let ud := andb ub uc in
+  let hi := orb ua ud in
+  let lu := andb lo hi in
+  let m := orb ex lu in
+  m.
+
 (* interval_split_1: the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). *)
 Definition interval_split_1 (xl xu : float) : float * float * float * float :=
   let '(m, r) := interval_mid_rad_1 xl xu in
@@ -839,12 +1163,19 @@ Definition interval_sub_1 (xl xu yl yu : float) : float * float :=
   let zu := if ne then h else mi in
   (zl, zu).
 
-(* interval_to_ball_1: interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). *)
-Definition interval_to_ball_1 (xl xu : float) : float * float :=
-  let '(m, r) := interval_mid_rad_1 xl xu in
-  let un := eq r pinf in
-  let c := if un then pzero else m in
-  (c, r).
+(* interval_subset_1: the bounds compared (Milestone 2 listing). *)
+Definition interval_subset_1 (xl xu yl yu : float) : bool :=
+  let a := le yl xl in
+  let b := le xu yu in
+  let m := andb a b in
+  m.
+
+(* interval_zero_1: the bounds compared with 0 (Milestone 2 listing). *)
+Definition interval_zero_1 (xl xu : float) : bool :=
+  let a := eq xl pzero in
+  let b := eq xu pzero in
+  let m := andb a b in
+  m.
 
 (* make_2: constructors (Milestone 1 listing). *)
 Definition make_2 (a : float) : float * float :=
@@ -1023,15 +1354,6 @@ Definition two_sum_entry (a b : float) : float * float :=
   let gb := guard b in
   let '(s, e) := two_sum ga gb in
   (s, e).
-
-(* abs_2: the sign of x0 (Milestone 1 listing). *)
-Definition abs_2 (x0 x1 : float) : float * float :=
-  let m := lt x0 pzero in
-  let n0 := neg x0 in
-  let n1 := neg x1 in
-  let z0 := if m then n0 else x0 in
-  let z1 := if m then n1 else x1 in
-  (z0, z1).
 
 (* to_up_2: the sign of x1 (Milestone 1 listing). *)
 Definition to_up_2 (x0 x1 : float) : float :=
@@ -1249,12 +1571,279 @@ Definition ball_add_2_full (cx0 cx1 rx cy0 cy1 ry : float) : float * float * flo
   let rw := if e then r else q in
   (cw0, cw1, rw).
 
+(* ball_contains_ball_2: an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing). *)
+Definition ball_contains_ball_2 (cx0 cx1 rx cy0 cy1 ry : float) : bool :=
+  let ncx0 := neg cx0 in
+  let ncx1 := neg cx1 in
+  let '(z0, z1, e) := add_ball_2_2 cy0 cy1 ncx0 ncx1 in
+  let au := abs_upper_2 z0 z1 in
+  let hi := radd au e in
+  let s := radd hi ry in
+  let f := le s rx in
+  let wx := eq rx pinf in
+  let qy := eq ry ry in
+  let ey := negb qy in
+  let sp := orb wx ey in
+  let m := orb sp f in
+  m.
+
 (* to_down_2: the sign of x1 (Milestone 1 listing). *)
 Definition to_down_2 (x0 x1 : float) : float :=
   let m := lt x1 pzero in
   let p := pred x0 in
   let t := if m then p else x0 in
   t.
+
+(* ball_contains_point_2: the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing). *)
+Definition ball_contains_point_2 (c0 c1 r t0 t1 : float) : bool * bool :=
+  let nc0 := neg c0 in
+  let nc1 := neg c1 in
+  let '(z0, z1, e) := add_ball_2_2 t0 t1 nc0 nc1 in
+  let au := abs_upper_2 z0 z1 in
+  let hi := radd au e in
+  let '(w0, w1) := abs_2 z0 z1 in
+  let wd := to_down_2 w0 w1 in
+  let nw := neg wd in
+  let tl := add_up_1 e nw in
+  let lo := neg tl in
+  let yes := le hi r in
+  let na := lt r lo in
+  let ta := abs t0 in
+  let ft := lt ta pinf in
+  let ne := eq r r in
+  let ok := andb ft ne in
+  let nk := negb ok in
+  let no := orb na nk in
+  (yes, no).
+
+(* eq_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition eq_2_2 (x0 x1 y0 y1 : float) : bool :=
+  let h := eq x0 y0 in
+  let l := eq x1 y1 in
+  let m := andb h l in
+  m.
+
+(* ball_equal_2: the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing). *)
+Definition ball_equal_2 (cx0 cx1 rx cy0 cy1 ry : float) : bool * bool :=
+  let ea := eq rx pzero in
+  let eb := eq ry pzero in
+  let ec := eq_2_2 cx0 cx1 cy0 cy1 in
+  let eab := andb ea eb in
+  let yes := andb eab ec in
+  let ncx0 := neg cx0 in
+  let ncx1 := neg cx1 in
+  let '(z0, z1, e) := add_ball_2_2 cy0 cy1 ncx0 ncx1 in
+  let s := radd rx ry in
+  let '(w0, w1) := abs_2 z0 z1 in
+  let wd := to_down_2 w0 w1 in
+  let nw := neg wd in
+  let tl := add_up_1 e nw in
+  let al := neg tl in
+  let aa := abs al in
+  let fa := lt aa pinf in
+  let b := lt s al in
+  let no := andb b fa in
+  (yes, no).
+
+(* ball_to_interval_2: the directed sums of two limbs of the center and the radius (Milestone 2 listing). *)
+Definition ball_to_interval_2 (c0 c1 r : float) : float * float * float * float :=
+  let nr := neg r in
+  let '(n0, n1) := make_2 nr in
+  let '(p0, p1) := make_2 r in
+  let '(l0, l1) := add_down_2_2 c0 c1 n0 n1 in
+  let '(h0, h1) := add_up_2_2 c0 c1 p0 p1 in
+  let al := abs l0 in
+  let fl := lt al pinf in
+  let ah := abs h0 in
+  let fh := lt ah pinf in
+  let mi := neg pinf in
+  let a0 := if fl then l0 else mi in
+  let a1 := if fl then l1 else pzero in
+  let b0 := if fh then h0 else pinf in
+  let b1 := if fh then h1 else pzero in
+  let ne := eq r r in
+  let zl0 := if ne then a0 else pinf in
+  let zl1 := if ne then a1 else pzero in
+  let zu0 := if ne then b0 else mi in
+  let zu1 := if ne then b1 else pzero in
+  (zl0, zl1, zu0, zu1).
+
+(* interval_hull_2: the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing). *)
+Definition interval_hull_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * float * float * float :=
+  let ml := lt_2_2 yl0 yl1 xl0 xl1 in
+  let zl0 := if ml then yl0 else xl0 in
+  let zl1 := if ml then yl1 else xl1 in
+  let mu := lt_2_2 xu0 xu1 yu0 yu1 in
+  let zu0 := if mu then yu0 else xu0 in
+  let zu1 := if mu then yu1 else xu1 in
+  (zl0, zl1, zu0, zu1).
+
+(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
+Definition mul_pow2_2 (x0 x1 c : float) : float * float :=
+  let h := prod x0 c in
+  let l := prod x1 c in
+  let '(z0, z1) := fast_two_sum h l in
+  (z0, z1).
+
+(* interval_mid_rad_2: the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing). *)
+Definition interval_mid_rad_2 (xl0 xl1 xu0 xu1 : float) : float * float * float :=
+  let om := pred pinf in
+  let mo := neg om in
+  let ml := lt xl0 mo in
+  let l0 := if ml then mo else xl0 in
+  let l1 := if ml then pzero else xl1 in
+  let mu := lt om xu0 in
+  let h0 := if mu then om else xu0 in
+  let h1 := if mu then pzero else xu1 in
+  let '(hl0, hl1) := mul_pow2_2 l0 l1 up_ball_from_interval_2_0 in
+  let '(hu0, hu1) := mul_pow2_2 h0 h1 up_ball_from_interval_2_0 in
+  let '(ma0, ma1) := add_2_2 hl0 hl1 hu0 hu1 in
+  let ca := lt_2_2 ma0 ma1 l0 l1 in
+  let mb0 := if ca then l0 else ma0 in
+  let mb1 := if ca then l1 else ma1 in
+  let cb := lt_2_2 h0 h1 mb0 mb1 in
+  let mc0 := if cb then h0 else mb0 in
+  let mc1 := if cb then h1 else mb1 in
+  let nl0 := neg l0 in
+  let nl1 := neg l1 in
+  let '(za0, za1, ea) := add_ball_2_2 mc0 mc1 nl0 nl1 in
+  let ta := to_up_2 za0 za1 in
+  let rs := radd ta ea in
+  let fa := lt rs pinf in
+  let ra := if fa then rs else pinf in
+  let nm0 := neg mc0 in
+  let nm1 := neg mc1 in
+  let '(zb0, zb1, eb) := add_ball_2_2 h0 h1 nm0 nm1 in
+  let tb := to_up_2 zb0 zb1 in
+  let rt := radd tb eb in
+  let fb := lt rt pinf in
+  let rb := if fb then rt else pinf in
+  let rm := lt ra rb in
+  let rc := if rm then rb else ra in
+  let md0 := if ml then mo else mc0 in
+  let md1 := if ml then pzero else mc1 in
+  let me0 := if mu then om else md0 in
+  let me1 := if mu then pzero else md1 in
+  let bo := andb ml mu in
+  let mf0 := if bo then pzero else me0 in
+  let mf1 := if bo then pzero else me1 in
+  let un := orb ml mu in
+  let rd := if un then pinf else rc in
+  let ne := lt xl0 pinf in
+  let m0 := if ne then mf0 else cnan in
+  let m1 := if ne then mf1 else cnan in
+  let r := if ne then rd else cnan in
+  (m0, m1, r).
+
+(* interval_to_ball_2: interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing). *)
+Definition interval_to_ball_2 (xl0 xl1 xu0 xu1 : float) : float * float * float :=
+  let '(m0, m1, r) := interval_mid_rad_2 xl0 xl1 xu0 xu1 in
+  let un := eq r pinf in
+  let c0 := if un then pzero else m0 in
+  let c1 := if un then pzero else m1 in
+  (c0, c1, r).
+
+(* ball_hull_2: both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing). *)
+Definition ball_hull_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=
+  let '(xl0, xl1, xu0, xu1) := ball_to_interval_2 cx0 cx1 rx in
+  let '(yl0, yl1, yu0, yu1) := ball_to_interval_2 cy0 cy1 ry in
+  let '(zl0, zl1, zu0, zu1) := interval_hull_2 xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 in
+  let '(c0, c1, r) := interval_to_ball_2 zl0 zl1 zu0 zu1 in
+  let qx := eq rx rx in
+  let qy := eq ry ry in
+  let ca0 := if qy then c0 else cx0 in
+  let ca1 := if qy then c1 else cx1 in
+  let ra := if qy then r else rx in
+  let cz0 := if qx then ca0 else cy0 in
+  let cz1 := if qx then ca1 else cy1 in
+  let rz := if qx then ra else ry in
+  (cz0, cz1, rz).
+
+(* interval_intersection_2: the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). *)
+Definition interval_intersection_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * float * float * float :=
+  let ml := lt_2_2 xl0 xl1 yl0 yl1 in
+  let l0 := if ml then yl0 else xl0 in
+  let l1 := if ml then yl1 else xl1 in
+  let mu := lt_2_2 yu0 yu1 xu0 xu1 in
+  let h0 := if mu then yu0 else xu0 in
+  let h1 := if mu then yu1 else xu1 in
+  let ok := le_2_2 l0 l1 h0 h1 in
+  let mi := neg pinf in
+  let zl0 := if ok then l0 else pinf in
+  let zl1 := if ok then l1 else pzero in
+  let zu0 := if ok then h0 else mi in
+  let zu1 := if ok then h1 else pzero in
+  (zl0, zl1, zu0, zu1).
+
+(* ball_intersection_2: both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing). *)
+Definition ball_intersection_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=
+  let '(xl0, xl1, xu0, xu1) := ball_to_interval_2 cx0 cx1 rx in
+  let '(yl0, yl1, yu0, yu1) := ball_to_interval_2 cy0 cy1 ry in
+  let '(zl0, zl1, zu0, zu1) := interval_intersection_2 xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 in
+  let '(c0, c1, r) := interval_to_ball_2 zl0 zl1 zu0 zu1 in
+  let wx := eq rx pinf in
+  let nx := negb wx in
+  let wy := eq ry pinf in
+  let ny := negb wy in
+  let ca0 := if ny then c0 else cx0 in
+  let ca1 := if ny then c1 else cx1 in
+  let ra := if ny then r else rx in
+  let cz0 := if nx then ca0 else cy0 in
+  let cz1 := if nx then ca1 else cy1 in
+  let rz := if nx then ra else ry in
+  (cz0, cz1, rz).
+
+(* ball_less_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). *)
+Definition ball_less_2 (cx0 cx1 rx cy0 cy1 ry : float) : bool * bool :=
+  let ncx0 := neg cx0 in
+  let ncx1 := neg cx1 in
+  let '(z0, z1, e) := add_ball_2_2 cy0 cy1 ncx0 ncx1 in
+  let s := radd rx ry in
+  let sa := abs s in
+  let fs := lt sa pinf in
+  let zd := to_down_2 z0 z1 in
+  let nzd := neg zd in
+  let tl := add_up_1 e nzd in
+  let dl := neg tl in
+  let la := abs dl in
+  let fl := lt la pinf in
+  let zu := to_up_2 z0 z1 in
+  let tm := add_up_1 zu e in
+  let ml := neg tm in
+  let ma := abs ml in
+  let fm := lt ma pinf in
+  let a := lt s dl in
+  let yes := andb a fl in
+  let b := le s ml in
+  let bs := andb b fs in
+  let no := andb bs fm in
+  (yes, no).
+
+(* ball_less_equal_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). *)
+Definition ball_less_equal_2 (cx0 cx1 rx cy0 cy1 ry : float) : bool * bool :=
+  let ncx0 := neg cx0 in
+  let ncx1 := neg cx1 in
+  let '(z0, z1, e) := add_ball_2_2 cy0 cy1 ncx0 ncx1 in
+  let s := radd rx ry in
+  let sa := abs s in
+  let fs := lt sa pinf in
+  let zd := to_down_2 z0 z1 in
+  let nzd := neg zd in
+  let tl := add_up_1 e nzd in
+  let dl := neg tl in
+  let la := abs dl in
+  let fl := lt la pinf in
+  let zu := to_up_2 z0 z1 in
+  let tm := add_up_1 zu e in
+  let ml := neg tm in
+  let ma := abs ml in
+  let fm := lt ma pinf in
+  let a := le s dl in
+  let ys := andb a fs in
+  let yes := andb ys fl in
+  let b := lt s ml in
+  let no := andb b fm in
+  (yes, no).
 
 (* ball_lower_as_2: the center rounded down, minus the radius, rounded down (Milestone 2 listing). *)
 Definition ball_lower_as_2 (c0 c1 r : float) : float :=
@@ -1368,6 +1957,35 @@ Definition ball_neg_2 (cx0 cx1 rx : float) : float * float * float :=
   let rz := rx in
   (cz0, cz1, rz).
 
+(* lt_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition lt_2_1 (x0 x1 a : float) : bool :=
+  let h := lt x0 a in
+  let e := eq x0 a in
+  let l := lt x1 pzero in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* ball_negative_2: the center compared with the negated radius by lt_2_1 (Milestone 2 listing). *)
+Definition ball_negative_2 (c0 c1 r : float) : bool :=
+  let nr := neg r in
+  let m := lt_2_1 c0 c1 nr in
+  m.
+
+(* lt_1_2: limbs compared in order (Milestone 1 listing). *)
+Definition lt_1_2 (a y0 y1 : float) : bool :=
+  let h := lt a y0 in
+  let e := eq a y0 in
+  let l := lt pzero y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* ball_positive_2: the radius compared with the center by lt_1_2 (Milestone 2 listing). *)
+Definition ball_positive_2 (c0 c1 r : float) : bool :=
+  let m := lt_1_2 r c0 c1 in
+  m.
+
 (* ball_scale_2: midpoint-radius scaling (Milestone 1 listing, second radius design). *)
 Definition ball_scale_2 (cx0 cx1 rx a : float) : float * float * float :=
   let '(cz0, cz1) := mul_2_1 cx0 cx1 a in
@@ -1393,6 +2011,32 @@ Definition ball_scale_2_full (cx0 cx1 rx a : float) : float * float * float :=
   let cw1 := if e then c1 else rx in
   let rw := if e then r else rx in
   (cw0, cw1, rw).
+
+(* ball_split_2: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). *)
+Definition ball_split_2 (c0 c1 r : float) : float * float * float * float * float * float :=
+  let h := prod r up_ball_from_interval_2_0 in
+  let nr := neg r in
+  let hn := prod nr up_ball_from_interval_2_0 in
+  let g := sub r h in
+  let mg := lt h g in
+  let q := if mg then g else h in
+  let fr := lt r pinf in
+  let hs := if fr then h else pzero in
+  let nh := if fr then hn else pzero in
+  let ws := if fr then q else pzero in
+  let cs0 := if fr then c0 else pzero in
+  let cs1 := if fr then c1 else pzero in
+  let '(n0, n1) := make_2 nh in
+  let '(p0, p1) := make_2 hs in
+  let '(a0, a1, ar) := ball_add_2_full cs0 cs1 pzero n0 n1 ws in
+  let '(b0, b1, br) := ball_add_2_full cs0 cs1 pzero p0 p1 ws in
+  let ca0 := if fr then a0 else c0 in
+  let ca1 := if fr then a1 else c1 in
+  let ra := if fr then ar else r in
+  let cb0 := if fr then b0 else c0 in
+  let cb1 := if fr then b1 else c1 in
+  let rb := if fr then br else r in
+  (ca0, ca1, ra, cb0, cb1, rb).
 
 (* ball_sub_2: midpoint-radius difference (Milestone 1 listing). *)
 Definition ball_sub_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=
@@ -1426,6 +2070,20 @@ Definition ball_upper_as_2 (c0 c1 r : float) : float :=
   let h := if ne then t else mi in
   h.
 
+(* eq_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition eq_2_1 (x0 x1 a : float) : bool :=
+  let h := eq x0 a in
+  let l := eq x1 pzero in
+  let m := andb h l in
+  m.
+
+(* ball_zero_2: the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing). *)
+Definition ball_zero_2 (c0 c1 r : float) : bool :=
+  let a := eq_2_1 c0 c1 pzero in
+  let b := eq r pzero in
+  let m := andb a b in
+  m.
+
 (* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). *)
 Definition bv_center_2 (x0 x1 : float) : float * float :=
   let z0 := x0 in
@@ -1444,20 +2102,6 @@ Definition bv_mul_pow2_step_2 (x0 x1 c : float) : float * float * bool :=
   let zc := eq x0 pzero in
   let e := orb bc zc in
   (z0, z1, e).
-
-(* eq_2_1: limbs compared in order (Milestone 1 listing). *)
-Definition eq_2_1 (x0 x1 a : float) : bool :=
-  let h := eq x0 a in
-  let l := eq x1 pzero in
-  let m := andb h l in
-  m.
-
-(* eq_2_2: limbs compared in order (Milestone 1 listing). *)
-Definition eq_2_2 (x0 x1 y0 y1 : float) : bool :=
-  let h := eq x0 y0 in
-  let l := eq x1 y1 in
-  let m := andb h l in
-  m.
 
 (* fold_finish_2: the finish of a fold: the state or the canonical NaN (milestone2.md). *)
 Definition fold_finish_2 (s0 s1 : float) : float * float * bool :=
@@ -1489,49 +2133,66 @@ Definition interval_add_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * fl
   let zu1 := if ne then b1 else pzero in
   (zl0, zl1, zu0, zu1).
 
-(* lt_2_2: limbs compared in order (Milestone 1 listing). *)
-Definition lt_2_2 (x0 x1 y0 y1 : float) : bool :=
-  let h := lt x0 y0 in
-  let e := eq x0 y0 in
-  let l := lt x1 y1 in
-  let t := andb e l in
-  let m := orb h t in
+(* interval_contains_2: the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing). *)
+Definition interval_contains_2 (xl0 xl1 xu0 xu1 t0 t1 : float) : bool :=
+  let a := le_2_2 xl0 xl1 t0 t1 in
+  let b := le_2_2 t0 t1 xu0 xu1 in
+  let ta := abs t0 in
+  let ft := lt ta pinf in
+  let ab := andb a b in
+  let m := andb ab ft in
   m.
 
-(* interval_hull_2: the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing). *)
-Definition interval_hull_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * float * float * float :=
-  let ml := lt_2_2 yl0 yl1 xl0 xl1 in
-  let zl0 := if ml then yl0 else xl0 in
-  let zl1 := if ml then yl1 else xl1 in
-  let mu := lt_2_2 xu0 xu1 yu0 yu1 in
-  let zu0 := if mu then yu0 else xu0 in
-  let zu1 := if mu then yu1 else xu1 in
-  (zl0, zl1, zu0, zu1).
-
-(* le_2_2: limbs compared in order (Milestone 1 listing). *)
-Definition le_2_2 (x0 x1 y0 y1 : float) : bool :=
-  let h := lt x0 y0 in
-  let e := eq x0 y0 in
-  let l := le x1 y1 in
-  let t := andb e l in
-  let m := orb h t in
+(* interval_empty_2: the leading limb of the lower bound compared with +inf (Milestone 2 listing). *)
+Definition interval_empty_2 (xl0 xl1 xu0 xu1 : float) : bool :=
+  let m := eq xl0 pinf in
   m.
 
-(* interval_intersection_2: the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). *)
-Definition interval_intersection_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * float * float * float :=
-  let ml := lt_2_2 xl0 xl1 yl0 yl1 in
-  let l0 := if ml then yl0 else xl0 in
-  let l1 := if ml then yl1 else xl1 in
-  let mu := lt_2_2 yu0 yu1 xu0 xu1 in
-  let h0 := if mu then yu0 else xu0 in
-  let h1 := if mu then yu1 else xu1 in
-  let ok := le_2_2 l0 l1 h0 h1 in
+(* interval_entire_2: the leading limbs of the bounds compared with the infinities (Milestone 2 listing). *)
+Definition interval_entire_2 (xl0 xl1 xu0 xu1 : float) : bool :=
   let mi := neg pinf in
-  let zl0 := if ok then l0 else pinf in
-  let zl1 := if ok then l1 else pzero in
-  let zu0 := if ok then h0 else mi in
-  let zu1 := if ok then h1 else pzero in
-  (zl0, zl1, zu0, zu1).
+  let a := eq xl0 mi in
+  let b := eq xu0 pinf in
+  let m := andb a b in
+  m.
+
+(* interval_equal_2: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_equal_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool * bool :=
+  let ea := eq_2_2 xl0 xl1 xu0 xu1 in
+  let eb := eq_2_2 xu0 xu1 yl0 yl1 in
+  let ec := eq_2_2 yl0 yl1 yu0 yu1 in
+  let eab := andb ea eb in
+  let yes := andb eab ec in
+  let nx := lt xl0 pinf in
+  let ny := lt yl0 pinf in
+  let ne := andb nx ny in
+  let da := lt_2_2 xu0 xu1 yl0 yl1 in
+  let db := lt_2_2 yu0 yu1 xl0 xl1 in
+  let dd := orb da db in
+  let no := andb dd ne in
+  (yes, no).
+
+(* interval_less_2: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_less_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool * bool :=
+  let nx := lt xl0 pinf in
+  let ny := lt yl0 pinf in
+  let ne := andb nx ny in
+  let a := lt_2_2 xu0 xu1 yl0 yl1 in
+  let c := le_2_2 yu0 yu1 xl0 xl1 in
+  let yes := andb a ne in
+  let no := andb c ne in
+  (yes, no).
+
+(* interval_less_equal_2: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_less_equal_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool * bool :=
+  let nx := lt xl0 pinf in
+  let ny := lt yl0 pinf in
+  let ne := andb nx ny in
+  let a := le_2_2 xu0 xu1 yl0 yl1 in
+  let c := lt_2_2 yu0 yu1 xl0 xl1 in
+  let yes := andb a ne in
+  let no := andb c ne in
+  (yes, no).
 
 (* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing). *)
 Definition interval_make_2 (lo0 lo1 hi0 hi1 : float) : float * float * float * float :=
@@ -1643,6 +2304,101 @@ Definition interval_neg_2 (xl0 xl1 xu0 xu1 : float) : float * float * float * fl
   let '(zu0, zu1) := neg_2 xl0 xl1 in
   (zl0, zl1, zu0, zu1).
 
+(* interval_negative_2: the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing). *)
+Definition interval_negative_2 (xl0 xl1 xu0 xu1 : float) : bool :=
+  let mi := neg pinf in
+  let a := lt xu0 pzero in
+  let b := lt mi xu0 in
+  let m := andb a b in
+  m.
+
+(* interval_positive_2: the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing). *)
+Definition interval_positive_2 (xl0 xl1 xu0 xu1 : float) : bool :=
+  let a := lt pzero xl0 in
+  let b := lt xl0 pinf in
+  let m := andb a b in
+  m.
+
+(* interval_rel_disjoint_2: the stored bounds compared, and tests of emptiness (Milestone 2 listing). *)
+Definition interval_rel_disjoint_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool :=
+  let ex := eq xl0 pinf in
+  let ey := eq yl0 pinf in
+  let ee := orb ex ey in
+  let da := lt_2_2 xu0 xu1 yl0 yl1 in
+  let db := lt_2_2 yu0 yu1 xl0 xl1 in
+  let dd := orb da db in
+  let m := orb ee dd in
+  m.
+
+(* interval_rel_equal_2: the stored bounds compared (Milestone 2 listing). *)
+Definition interval_rel_equal_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool :=
+  let a := eq_2_2 xl0 xl1 yl0 yl1 in
+  let c := eq_2_2 xu0 xu1 yu0 yu1 in
+  let m := andb a c in
+  m.
+
+(* interval_rel_interior_2: the stored bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_rel_interior_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool :=
+  let ex := eq xl0 pinf in
+  let mi := neg pinf in
+  let la := lt_2_2 yl0 yl1 xl0 xl1 in
+  let lb := eq yl0 mi in
+  let lc := eq xl0 mi in
+  let ld := andb lb lc in
+  let lo := orb la ld in
+  let ua := lt_2_2 xu0 xu1 yu0 yu1 in
+  let ub := eq xu0 pinf in
+  let uc := eq yu0 pinf in
+  let ud := andb ub uc in
+  let hi := orb ua ud in
+  let lu := andb lo hi in
+  let m := orb ex lu in
+  m.
+
+(* interval_split_2: the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). *)
+Definition interval_split_2 (xl0 xl1 xu0 xu1 : float) : float * float * float * float * float * float * float * float :=
+  let om := pred pinf in
+  let mo := neg om in
+  let ml := lt xl0 mo in
+  let l0 := if ml then mo else xl0 in
+  let l1 := if ml then pzero else xl1 in
+  let mu := lt om xu0 in
+  let h0 := if mu then om else xu0 in
+  let h1 := if mu then pzero else xu1 in
+  let '(hl0, hl1) := mul_pow2_2 l0 l1 up_ball_from_interval_2_0 in
+  let '(hu0, hu1) := mul_pow2_2 h0 h1 up_ball_from_interval_2_0 in
+  let '(ma0, ma1) := add_2_2 hl0 hl1 hu0 hu1 in
+  let ca := lt_2_2 ma0 ma1 l0 l1 in
+  let mb0 := if ca then l0 else ma0 in
+  let mb1 := if ca then l1 else ma1 in
+  let cb := lt_2_2 h0 h1 mb0 mb1 in
+  let mc0 := if cb then h0 else mb0 in
+  let mc1 := if cb then h1 else mb1 in
+  let md0 := if ml then mo else mc0 in
+  let md1 := if ml then pzero else mc1 in
+  let me0 := if mu then om else md0 in
+  let me1 := if mu then pzero else md1 in
+  let bo := andb ml mu in
+  let m0 := if bo then pzero else me0 in
+  let m1 := if bo then pzero else me1 in
+  let ka := lt_2_2 m0 m1 xl0 xl1 in
+  let n0 := if ka then xl0 else m0 in
+  let n1 := if ka then xl1 else m1 in
+  let kb := lt_2_2 xu0 xu1 n0 n1 in
+  let p0 := if kb then xu0 else n0 in
+  let p1 := if kb then xu1 else n1 in
+  let ne := lt xl0 pinf in
+  let mi := neg pinf in
+  let al0 := xl0 in
+  let al1 := xl1 in
+  let au0 := if ne then p0 else mi in
+  let au1 := if ne then p1 else pzero in
+  let bl0 := if ne then p0 else pinf in
+  let bl1 := if ne then p1 else pzero in
+  let bu0 := xu0 in
+  let bu1 := xu1 in
+  (al0, al1, au0, au1, bl0, bl1, bu0, bu1).
+
 (* sub_down_2_2: add_down_2_2 on x and -y (Milestone 2 listing). *)
 Definition sub_down_2_2 (x0 x1 y0 y1 : float) : float * float :=
   let '(n0, n1) := neg_2 y0 y1 in
@@ -1677,38 +2433,25 @@ Definition interval_sub_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * fl
   let zu1 := if ne then b1 else pzero in
   (zl0, zl1, zu0, zu1).
 
+(* interval_subset_2: the bounds compared by le_2_2 (Milestone 2 listing). *)
+Definition interval_subset_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool :=
+  let a := le_2_2 yl0 yl1 xl0 xl1 in
+  let b := le_2_2 xu0 xu1 yu0 yu1 in
+  let m := andb a b in
+  m.
+
+(* interval_zero_2: the leading limbs of the bounds compared with 0 (Milestone 2 listing). *)
+Definition interval_zero_2 (xl0 xl1 xu0 xu1 : float) : bool :=
+  let a := eq xl0 pzero in
+  let b := eq xu0 pzero in
+  let m := andb a b in
+  m.
+
 (* le_1_2: limbs compared in order (Milestone 1 listing). *)
 Definition le_1_2 (a y0 y1 : float) : bool :=
   let h := lt a y0 in
   let e := eq a y0 in
   let l := le pzero y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* le_2_1: limbs compared in order (Milestone 1 listing). *)
-Definition le_2_1 (x0 x1 a : float) : bool :=
-  let h := lt x0 a in
-  let e := eq x0 a in
-  let l := le x1 pzero in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* lt_1_2: limbs compared in order (Milestone 1 listing). *)
-Definition lt_1_2 (a y0 y1 : float) : bool :=
-  let h := lt a y0 in
-  let e := eq a y0 in
-  let l := lt pzero y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* lt_2_1: limbs compared in order (Milestone 1 listing). *)
-Definition lt_2_1 (x0 x1 a : float) : bool :=
-  let h := lt x0 a in
-  let e := eq x0 a in
-  let l := lt x1 pzero in
   let t := andb e l in
   let m := orb h t in
   m.
@@ -1744,13 +2487,6 @@ Definition mul_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let w0 := if f then z0 else r0 in
   let w1 := if f then z1 else r1 in
   (w0, w1).
-
-(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
-Definition mul_pow2_2 (x0 x1 c : float) : float * float :=
-  let h := prod x0 c in
-  let l := prod x1 c in
-  let '(z0, z1) := fast_two_sum h l in
-  (z0, z1).
 
 (* mul_pow2_2_full: mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing). *)
 Definition mul_pow2_2_full (x0 x1 c : float) : float * float :=

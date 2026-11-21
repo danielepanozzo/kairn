@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $y = y_0 
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`interval_add_2`](interval_add_2.md), [`sub_up_2_2`](sub_up_2_2.md).
+No public operation computes this kernel on its own. It is part of [`ball_to_interval_2`](ball_to_interval_2.md), [`interval_add_2`](interval_add_2.md), [`sub_up_2_2`](sub_up_2_2.md).
 
 ## Requires
 
@@ -98,6 +98,6 @@ No stored brute-force run has judged this kernel yet.
 
 ## Not claimed
 
-- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`interval_add_2`](interval_add_2.md) states that ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
+- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`ball_to_interval_2`](ball_to_interval_2.md) and [`interval_add_2`](interval_add_2.md) states that ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
 - Anything about an operand that is not normalized, which only limbs given by the program can make: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` written directly.
 

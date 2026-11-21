@@ -408,7 +408,10 @@ class Specials(unittest.TestCase):
         # acc_radius_1, which acc_radius_2 calls. BallVector: E, G, H of the four radius kernels
         # (bv_add_radius_k, bv_scale_radius_k), those of ball_add_k and ball_scale_k; and N of the two
         # steps and of the radius of the scaling of a BallVector by a power of two; the two of conv_radius.
-        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7 + 3 * 2 + 1 + 2 + 1 + 6 + 3 * 4 + 3 + 2))
+        # Stage B2: 1/2 of ball_split_1, of ball_split_2, of interval_mid_rad_2 and of interval_split_2
+        # (which computes the midpoint itself).
+        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7 + 3 * 2 + 1 + 2 + 1 + 6 + 3 * 4 + 3 + 2
+                                    + 2 + 1 + 1))
         # The constant of tm in bound_dot_k, (1 + u)^2 (tiny + eta) of milestone2.md, is subnormal: it
         # holds the smallest normal number besides, as H does (1 + 5/2 eta or 3/2 eta, rounded up).
         for name, more in (('bound_dot_1', 2), ('bound_dot_2', 3)):
@@ -518,10 +521,17 @@ class TwoExecutionsOfAProduct(unittest.TestCase):
                  'ball_from_interval_2', 'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1',
                  # the steps of the scalings of a BallVector by a power of two, whose centers are those of
                  # mul_pow2_step_1 and mul_pow2_2
-                 'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2'}
+                 'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2',
+                 # stage B2: the ball from an interval of one limb, through interval_to_ball_1
+                 'ball_from_interval_1'}
     # Constexpr by the rule of the product, and the same bits in both executions: an exact zero product
-    # reaches no output as it is (bv_mul_pow2_radius adds +0, m - m, to its radius).
-    SAME_BITS = {'rmul', 'split', 'bv_mul_pow2_radius'}
+    # reaches no output as it is (bv_mul_pow2_radius adds +0, m - m, to its radius). The kernels of
+    # the rule whose two executions give the same bits on the corpus: rmul and split, and (stage B2)
+    # the hull and the intersection of balls of one limb, through interval_to_ball_1: no case of the
+    # corpus gives them a zero center of either sign from the two products; and the split of an
+    # interval of two limbs, whose point is the sum of two halves by mul_pow2_2 and add_2_2, which on
+    # the corpus gives no zero of the other sign.
+    SAME_BITS = {'rmul', 'split', 'bv_mul_pow2_radius', 'ball_hull_1', 'ball_intersection_1', 'interval_split_2'}
 
     def test_the_kernels(self):
         from kairn_gen import cpp

@@ -493,6 +493,43 @@ class Tool(unittest.TestCase):
         self.change("interval_hull_1", lambda k: k["ensures"][0].update(set="xor"))
         self.fails("interval_hull_1", "xor")
 
+    def test_unknown_set_relation(self):
+        # A relation of a predicate of sets that this script has no template for is an error (stage
+        # B2), and so is a trit of a relation without a three-valued reading.
+        self.change("interval_subset_1", lambda k: k["ensures"][0].update(rel="near"))
+        self.fails("interval_subset_1", "near")
+        self.change("interval_less_1", lambda k: k["ensures"][0].update(rel="subset"))
+        self.fails("interval_less_1", "subset")
+
+    def test_set_predicates(self):
+        # Stage B2: the predicates (certain) and the three-valued comparisons (trit) of an interval.
+        self.assertIn("$m$ is true exactly when the point $t$ is a finite number and a member of $X$: the answer "
+                      "is exact.", self.page("interval_contains_1"))
+        self.assertIn("$m$ is true exactly when $X \\subseteq Y$, every member of $X$ a member of $Y$",
+                      self.page("interval_subset_2"))
+        self.assertIn("$m$ is true exactly when $0 < x$ for every $x \\in X$, $X$ not being empty",
+                      self.page("interval_positive_1"))
+        self.assertIn("every member of $X$ is in the interior of $Y$", self.page("interval_rel_interior_1"))
+        page = self.page("interval_less_equal_2")
+        self.assertIn("never both. Both false is the answer *unknown*.", page)
+        self.assertIn("*unknown* is returned exactly when neither holds.", page)
+        self.assertIn("$\\mathit{no}$ only if", page)
+        # Of a ball: certain for two limbs, exact under a condition for one.
+        page = self.page("ball_contains_point_2")
+        self.assertIn("the point is not a finite number, the answer is exact", page)
+        self.assertIn("certain, not exact.", page)
+        self.assertIn("$\\lvert r_x + r_y\\rvert \\le \\Omega$, the answer is exact as well.", self.page("ball_less_1"))
+        self.assertIn("$m$ is true only if $Y \\subseteq X$", self.page("ball_contains_ball_2"))
+        # The set operations of a ball.
+        self.assertIn("when one is empty, $Z$ is the other, as it is", self.page("ball_hull_1"))
+        self.assertIn("when one is the whole line, $Z$ is the other", self.page("ball_intersection_1"))
+        self.assertIn("is a member of the first part", self.page("ball_split_2"))
+        # The conversions of two limbs.
+        self.assertIn("The radius $r$ may be $+\\infty$ for a bounded interval near the top of the range",
+                      self.page("interval_mid_rad_2"))
+        self.assertIn("When $c - r = 0$, $z_l = c - r$ exactly.", self.page("ball_to_interval_2"))
+        self.assertIn("the smallest radius of `T` for that center", self.page("ball_from_interval_1"))
+
     def test_interval_kernels(self):
         # The claims of the interval kernels (architecture.md, "Claims of the interval kernels").
         page = self.page("interval_mul_1")

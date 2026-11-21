@@ -950,6 +950,15 @@ def _makes_ball_interval_spec(k, kernels, e):
         claims.append(f'({nonempty} -> finite {lo} -> finite {hi} -> {halves} ->\n'
                       f'   {_val_sum(c_out)} = (val {lo} + val {hi}) / 2 /\\\n'
                       f'   val {r_out} = RU {EMIN} prec ((val {hi} - val {lo}) / 2))')
+    if 'rel' in e:
+        # Stage B2 (ball_from_interval_1): the center near the midpoint, and the smallest radius.
+        vc, mid = _val_sum(c_out), f'(val {lo} + val {hi}) / 2'
+        rel = rocq.claim_constant_term(e['rel'], kernels, EMIN)
+        absolute = rocq.claim_constant_term(e['abs'], kernels, EMIN)
+        near = [f'val {lo} <= {vc} <= val {hi}', f'Rabs ({vc} - {mid}) <= {rel} * Rabs ({mid}) + {absolute}']
+        if e.get('smallest_radius'):
+            near.append(f'val {r_out} = RU {EMIN} prec (Rmax ({vc} - val {lo}) (val {hi} - {vc}))')
+        claims.append(f'({nonempty} -> finite {lo} -> finite {hi} ->\n   ' + ' /\\\n   '.join(near) + ')')
     claims += [f'({nonempty} -> ~ (finite {lo} /\\ finite {hi}) -> ball_whole_{n} {out})',
                f'(nan {lo} \\/ nan {hi} -> ball_whole_{n} {out})',
                f'(~ nan {lo} -> ~ nan {hi} -> ~ {nonempty} -> ball_empty_{n} {out})']
@@ -1003,6 +1012,8 @@ def _ball_of_interval_spec(k, kernels, e):
     bounded = [f'{vl} <= {vc} <= {vh}',
                f'Rabs ({vc} - {mid}) <= {rel} * Rabs ({mid}) + {absolute}',
                f'(forall z : R, in_interval_{n} {x} z -> Rabs (z - {vc}) <= val {r})']
+    if 'finite_when' in e:
+        return _ball_of_interval_finite_when(k, e, lines, c, r, lo, hi, n, x, bounded, mid, rel, absolute)
     if e.get('smallest_radius'):
         bounded.append(f'val {r} = RU {EMIN} prec (Rmax ({vc} - {vl}) ({vh} - {vc}))')
     finite = ' /\\ '.join(f'finite {v}' for v in list(c) + [r])
@@ -1026,6 +1037,40 @@ def _ball_of_interval_spec(k, kernels, e):
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 
+def _ball_of_interval_finite_when(k, e, lines, c, r, lo, hi, n, x, bounded, mid, rel, absolute):
+    """ball_of_interval with finite_when (stage B2, interval_mid_rad_2 and interval_to_ball_2): for a
+    bounded interval the radius may be +infinity (a step past Omega near the top of the range), and
+    is finite under the conditions. ieee1788: the center as without the field, and the radius +inf
+    or a finite one with which the center contains the interval. ball: a canonical ball that contains
+    the interval, and under the conditions a finite ball with the center and radius as without the
+    field."""
+    t = _Terms(k)
+    conds = ' -> '.join(_condition(cond, t) for cond in e['finite_when'])
+    vc = _val_sum(c)
+    contains = f'(forall z : R, in_interval_{n} {x} z -> Rabs (z - {vc}) <= val {r})'
+    claims = []
+    if e['special'] == 'ball':
+        b = _ball_args(c, r)
+        claims += [f'ball_{len(c)} {b}',
+                   f'(ball_empty_{len(c)} {b} <-> interval_empty_{n} {x})',
+                   f'(interval_nonempty_{n} {x} -> ~ interval_bounded_{n} {x} -> ball_whole_{len(c)} {b})',
+                   f'(interval_bounded_{n} {x} ->\n   forall z : R, in_interval_{n} {x} z -> in_ball_{len(c)} {b} z)',
+                   f'(interval_bounded_{n} {x} -> {conds} ->\n   ball_finite_{len(c)} {b} /\\\n   ' +
+                   ' /\\\n   '.join(bounded) + ')']
+    else:
+        zero = ' /\\ '.join(f'zero {v}' for v in c)
+        inf = f'{r} = infinity prec emax false'
+        finite = ' /\\ '.join(f'finite {v}' for v in c)
+        claims += [f'(interval_empty_{n} {x} -> ' + ' /\\ '.join(f'nan {v}' for v in list(c) + [r]) + ')',
+                   f'({_xv(lo)} = XInf true -> {_xv(hi)} = XInf false -> {zero} /\\ {inf})',
+                   f'(finite {lo[0]} -> {_xv(hi)} = XInf false -> {_xv(c)} = XFin (omega prec emax) /\\ {inf})',
+                   f'({_xv(lo)} = XInf true -> finite {hi[0]} -> {_xv(c)} = XFin (- omega prec emax) /\\ {inf})',
+                   f'(interval_bounded_{n} {x} ->\n   {finite} /\\\n   ' + ' /\\\n   '.join(bounded[:2]) +
+                   f' /\\\n   ({inf} \\/ (finite {r} /\\ {contains})) /\\\n   ({conds} -> finite {r}))']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
 def _interval_of_ball_spec(k, kernels, e):
     """An interval that encloses a ball (Milestone 2, "Ball to interval"): canonical; empty
     exactly when the ball is; every value of the set, the ball name ranging over the members of its
@@ -1034,6 +1079,8 @@ def _interval_of_ball_spec(k, kernels, e):
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
         [_let(k, kernels)]
+    if e['tight']['kind'] == 'outward':
+        return _interval_of_ball_outward(k, kernels, e, t, lines)
     zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (1,)), _limbs(k, t.outs[e['upper']].limbs, e['upper'], (1,))
     z = ' '.join(zl + zu)
     groups = {b: t.ins[cr['center']].limbs + (cr['radius'],) for b, cr in e['balls'].items()}
@@ -1063,6 +1110,48 @@ def _interval_of_ball_spec(k, kernels, e):
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 
+def _interval_of_ball_outward(k, kernels, e, t, lines):
+    """An interval of two limbs that encloses a ball (stage B2, ball_to_interval_2): canonical; empty
+    exactly when the ball is; every value of the set a member; for a finite ball and a bounded result,
+    each bound within rel |v| + abs of the bound v of the set, outward; the exact bound when its
+    condition holds; an infinite bound of the set returned as that infinity; bounded under the
+    conditions of bounded_when."""
+    zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (2,)), _limbs(k, t.outs[e['upper']].limbs, e['upper'], (2,))
+    z = ' '.join(zl + zu)
+    groups = {b: t.ins[cr['center']].limbs + (cr['radius'],) for b, cr in e['balls'].items()}
+
+    def member(name):
+        return f'in_ball_{len(groups[name]) - 1} {" ".join(groups[name])}'
+    S = _set_of(k, e, groups, member)
+    names = list(groups)
+    empty = ' \\/ '.join(f'ball_empty_{len(g) - 1} {" ".join(g)}' for g in groups.values())
+    finite = ' -> '.join(f'ball_finite_{len(g) - 1} {" ".join(g)}' for g in groups.values())
+    target = rocq._term(expr.parse(e['set']), lambda x: x)
+    tight = e['tight']
+    rel = rocq.claim_constant_term(tight['rel'], kernels, EMIN)
+    absolute = rocq.claim_constant_term(tight['abs'], kernels, EMIN)
+    vl, vh = _val_sum(zl), _val_sum(zu)
+    inner = [f'(interval_bounded_2 {z} ->\n    lo - {vl} <= {rel} * Rabs lo + {absolute} /\\\n'
+             f'    {vh} - hi <= {rel} * Rabs hi + {absolute})']
+    for side, var, limbs in (('lower', 'lo', zl), ('upper', 'hi', zu)):
+        conds = tight.get('exact_when', {}).get(side)
+        if conds:
+            inner.append(f'({t.exact_condition(conds)} -> {_xv(limbs)} = XFin {var})')
+    claims = [f'interval_2 {z}', f'(interval_empty_2 {z} <-> {empty})',
+              f'(forall {" ".join(names)} : R, ' + ' '.join(f'{member(x)} {x} ->' for x in names) +
+              f'\n   in_interval_2 {z} {target})',
+              f'({finite} ->\n   forall lo hi : R,\n   range_lower {S} (XFin lo) ->\n'
+              f'   range_upper {S} (XFin hi) ->\n   ' + ' /\\\n   '.join(inner) + ')',
+              f'(~ ({empty}) ->\n   (range_lower {S} (XInf true) -> {_xv(zl)} = XInf true) /\\\n'
+              f'   (range_upper {S} (XInf false) -> {_xv(zu)} = XInf false))']
+    for c in e.get('bounded_when', []):
+        limit = 'bpow radix2 ' + ('emax' if c['exp'] == 0 else f'(emax {"-" if c["exp"] < 0 else "+"} {abs(c["exp"])})')
+        claims.append(f'({finite} ->\n   (forall z : R,\n    {_strip(S)} z ->\n    Rabs z <= {limit}) ->\n'
+                      f'   interval_bounded_2 {z})')
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
 def _splits_spec(k, kernels, e):
     """Two intervals that together are the operand (Milestone 2, the split of an interval): both
     canonical; both empty when the operand is; otherwise both nonempty, the first from the
@@ -1079,6 +1168,202 @@ def _splits_spec(k, kernels, e):
               f'(interval_empty_{n} {x} -> interval_empty_{n} {a} /\\ interval_empty_{n} {b})',
               f'(interval_nonempty_{n} {x} ->\n   interval_nonempty_{n} {a} /\\ interval_nonempty_{n} {b} /\\\n'
               f'   {_xv(al)} = {_xv(lo)} /\\ {_xv(bu)} = {_xv(hi)} /\\ {_xv(au)} = {_xv(bl)})']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+class _Sets:
+    """The sets of a certain or trit entry (Milestone 2, the enclosure interface) in the vocabulary
+    of IeeeIntervalVocabulary.v and IeeeVocabulary.v: membership, nonempty, empty, the special
+    states (the empty set and the whole line), a finite operand; and the relation as a proposition
+    of the reals, and its negation of every choice of members."""
+
+    REL = {'lt': '<', 'le': '<=', 'eq': '='}
+
+    def __init__(self, k, e, t):
+        self.k, self.e, self.t = k, e, t
+        self.balls = 'balls' in e
+        sets = e['balls'] if self.balls else e['intervals']
+        if self.balls:
+            self.groups = {x: t.ins[b['center']].limbs + (b['radius'],) for x, b in sets.items()}
+            self.n = {x: len(g) - 1 for x, g in self.groups.items()}
+        else:
+            self.groups = {x: t.ins[b['lower']].limbs + t.ins[b['upper']].limbs for x, b in sets.items()}
+            self.n = {x: len(g) // 2 for x, g in self.groups.items()}
+        for x, n in self.n.items():
+            _limbs(k, self.groups[x][:n], x, (1, 2))
+        # Bound names of the propositions: none may be a name of the kernel's inputs.
+        taken = set(k.input_limbs) | {g.name for g in k.inputs} | set(sets)
+        if taken & {'z', 'w', 'd'}:
+            raise PrintError(f'kernel {k.name}: z, w and d are bound in the statements of a predicate of sets')
+
+    def args(self, x):
+        return ' '.join(self.groups[x])
+
+    def member(self, x, z):
+        sort = 'ball' if self.balls else 'interval'
+        return f'in_{sort}_{self.n[x]} {self.args(x)} {z}'
+
+    def nonempty(self, x):
+        n = self.n[x]
+        return f'~ ball_empty_{n} {self.args(x)}' if self.balls else f'interval_nonempty_{n} {self.args(x)}'
+
+    def empty(self, x):
+        n = self.n[x]
+        return f'ball_empty_{n} {self.args(x)}' if self.balls else f'interval_empty_{n} {self.args(x)}'
+
+    def whole(self, x):
+        n, g = self.n[x], self.groups[x]
+        if self.balls:
+            return f'ball_whole_{n} {self.args(x)}'
+        return f'{_xv(g[:n])} = XInf true /\\ {_xv(g[n:])} = XInf false'
+
+    def finite(self, x):
+        n = self.n[x]
+        return f'ball_finite_{n} {self.args(x)}' if self.balls else f'interval_bounded_{n} {self.args(x)}'
+
+    def point(self):
+        """The point of a membership: its limbs, and its value as a real."""
+        p = self.t.ins[self.e['args'][0]].limbs
+        return p, _val_sum(p)
+
+    def special(self):
+        """An operand that is not finite: a set that is the empty set or the whole line, a point
+        that is not a finite number."""
+        parts = [f'{self.empty(x)} \\/ {self.whole(x)}' for x in self.groups]
+        if self.e['rel'] == 'member':
+            parts.append(f'~ finite {self.point()[0][0]}')
+        return ' \\/ '.join(parts)
+
+    def all_finite(self):
+        parts = [self.finite(x) for x in self.groups]
+        if self.e['rel'] == 'member':
+            parts.append(f'finite {self.point()[0][0]}')
+        return ' /\\ '.join(parts)
+
+    def holds(self, negated=False):
+        """The relation as a proposition; with `negated` (the `no` of a trit), its failure for every
+        choice of members: for lt, le, eq of nonempty sets, the negated relation of each pair; for
+        member, that the point is not a member."""
+        rel, args = self.e['rel'], self.e['args']
+        if rel in self.REL:
+            sets = [a for a in args if a != ir.ZERO]
+            body = f'{args[0]} {self.REL[rel]} {args[1]}'
+            if negated:
+                body = f'~ ({body})'
+            ne = ' /\\ '.join(self.nonempty(x) for x in sets)
+            return (f'{ne} /\\\n    (forall {" ".join(sets)} : R, ' + ' '.join(f'{self.member(x, x)} ->' for x in sets) +
+                    f' {body})')
+        if rel == 'member':
+            p, v = self.point()
+            inside = f'finite {p[0]} /\\ {self.member(args[1], _paren(v))}'
+            return f'~ ({inside})' if negated else inside
+        if negated:
+            raise PrintError(f'kernel {self.k.name}: {rel} has no three-valued reading')
+        x = args[0]
+        if rel == 'empty':
+            return self.empty(x)
+        if rel == 'entire':
+            return f'(forall z : R, {self.member(x, "z")})'
+        y = args[1]
+        if rel == 'subset':
+            return f'(forall z : R, {self.member(x, "z")} -> {self.member(y, "z")})'
+        if rel == 'equal':
+            return f'(forall z : R, {self.member(x, "z")} <-> {self.member(y, "z")})'
+        if rel == 'interior':
+            return (f'(forall z : R, {self.member(x, "z")} ->\n    exists d : R, 0 < d /\\ '
+                    f'(forall w : R, Rabs (w - z) < d -> {self.member(y, "w")}))')
+        if rel == 'disjoint':
+            return f'~ (exists z : R, {self.member(x, "z")} /\\ {self.member(y, "z")})'
+        raise PrintError(f'kernel {self.k.name}: no IEEE reading of the relation {rel}')
+
+
+def _ball_set_spec(k, kernels, e):
+    """A ball that contains the union or the intersection of two balls (Milestone 2, "Hull,
+    intersection and split of balls"): canonical; every member of the set a member; for the union,
+    empty exactly when both operands are, and an operand that is empty gives the other, limb for
+    limb; for the intersection, an empty operand gives the empty set, and an operand that is the
+    whole line gives the other, limb for limb."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    c = _limbs(k, t.outs[e['center']].limbs, e['center'], (1, 2))
+    n = len(c)
+    z = _ball_args(c, e['radius'])
+    groups = {x: (t.ins[b['center']].limbs, b['radius']) for x, b in e['balls'].items()}
+    (x, (xc, xr)), (y, (yc, yr)) = groups.items()
+    bx, by = _ball_args(xc, xr), _ball_args(yc, yr)
+
+    def same(cc, r):
+        return ' /\\ '.join(f'{o} = {i}' for o, i in zip(list(c) + [e['radius']], list(cc) + [r]))
+    union = e['set'] == 'union'
+    ins = [f'in_ball_{n} {bx} z', f'in_ball_{n} {by} z']
+    claims = [f'ball_{n} {z}']
+    if union:
+        claims += [f'(ball_empty_{n} {z} <-> ball_empty_{n} {bx} /\\ ball_empty_{n} {by})',
+                   f'(ball_empty_{n} {bx} -> {same(yc, yr)})',
+                   f'(ball_empty_{n} {by} -> {same(xc, xr)})',
+                   f'(forall z : R, {ins[0]} \\/ {ins[1]} -> in_ball_{n} {z} z)']
+    else:
+        claims += [f'(ball_empty_{n} {bx} \\/ ball_empty_{n} {by} -> ball_empty_{n} {z})',
+                   f'(ball_whole_{n} {bx} -> {same(yc, yr)})',
+                   f'(ball_whole_{n} {by} -> {same(xc, xr)})',
+                   f'(forall z : R, {ins[0]} /\\ {ins[1]} -> in_ball_{n} {z} z)']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _ball_splits_spec(k, kernels, e):
+    """Two balls that cover the halves of a ball (Milestone 2, "Hull, intersection and split of
+    balls"): both canonical; the empty set gives the empty set twice and the whole line the whole
+    line twice; for a finite ball (c, r), the first contains [c - r, c] and the second [c, c + r]."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    xc, xr = t.ins[e['from']['center']].limbs, e['from']['radius']
+    n = len(_limbs(k, xc, e['from']['center'], (1, 2)))
+    x = _ball_args(xc, xr)
+    (a, b) = (_ball_args(t.outs[p['center']].limbs, p['radius']) for p in e['parts'])
+    vc = _val_sum(xc)
+    claims = [f'ball_{n} {a}', f'ball_{n} {b}',
+              f'(ball_empty_{n} {x} -> ball_empty_{n} {a} /\\ ball_empty_{n} {b})',
+              f'(ball_whole_{n} {x} -> ball_whole_{n} {a} /\\ ball_whole_{n} {b})',
+              f'(ball_finite_{n} {x} ->\n   (forall z : R, {vc} - val {xr} <= z <= {vc} -> in_ball_{n} {a} z) /\\\n'
+              f'   (forall z : R, {vc} <= z <= {vc} + val {xr} -> in_ball_{n} {b} z))']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _set_predicate_spec(k, kernels, e):
+    """A predicate of sets (Milestone 2, the enclosure interface), certain or trit, in the
+    vocabulary of IeeeIntervalVocabulary.v: a mask true only if the relation holds (certain; for
+    trit, yes only if it holds for every choice of members and no only if it fails for every one,
+    never both); exactly the relation when an operand is not finite (the empty set, the whole line,
+    a point that is not a finite number); and exactly it always (exact), or for finite operands
+    under the conditions of exact_when."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    s = _Sets(k, e, t)
+    held = s.holds()
+    if e['kind'] == 'certain':
+        m = e['of']
+        sound = [f'({m} = true ->\n    {held})']
+        exact = [f'({m} = true <->\n    {held})']
+    else:
+        yes, no = e['yes'], e['no']
+        failed = s.holds(negated=True)
+        sound = [f'({yes} = true ->\n    {held})', f'({no} = true ->\n    {failed})',
+                 f'~ ({yes} = true /\\ {no} = true)']
+        exact = [f'({yes} = true <->\n    {held})', f'({no} = true <->\n    {failed})']
+    if e.get('exact'):
+        claims = exact if e['kind'] == 'certain' else exact + [sound[-1]]
+    else:
+        both = ' /\\\n   '.join(exact)
+        claims = sound + [f'({s.special()} ->\n   {both})']
+        if 'exact_when' in e:
+            cond = t.exact_condition(e['exact_when'])
+            claims.append(f'({s.all_finite()} -> {cond} ->\n   {both})')
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
@@ -1267,7 +1552,9 @@ def kernel_statements(k, kernels):
         if enc:
             return [_ball_spec(k, kernels, enc[0])]
         for kind, printer in (('interval_set', _interval_set_spec), ('ball_of_interval', _ball_of_interval_spec),
-                              ('interval_of_ball', _interval_of_ball_spec), ('splits', _splits_spec)):
+                              ('interval_of_ball', _interval_of_ball_spec), ('splits', _splits_spec),
+                              ('certain', _set_predicate_spec), ('trit', _set_predicate_spec),
+                              ('ball_set', _ball_set_spec), ('ball_splits', _ball_splits_spec)):
             if kind in kinds:
                 if len(k.ensures) != 1:
                     raise PrintError(f'kernel {k.name}: {kind} goes with no other claim')

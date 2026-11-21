@@ -1,0 +1,77 @@
+# The midpoint and a radius of an interval with 2-limb bounds (milestone2.md, "One enclosure
+# interface", "Midpoint, radius and the conversions"): the steps of interval_mid_rad_1 on kernels of
+# two limbs. The bounds brought into [-Omega, Omega] (the half-lines, by their leading limbs); the
+# halves by mul_pow2_2, exact but for a limb that is an odd multiple of eta, and one limb of a
+# normalized pair at most is, so that each half is within eta/2 of its value; their sum by add_2_2,
+# within 3u^2/(1-4u) of the sum of the halves; the move into [l, h] by lt_2_2 (it brings the midpoint
+# closer); each side of the radius by radd(to_up_2(z), e), (z, e) = add_ball_2_2 of the difference,
+# at least the difference, and the larger side. So for a bounded interval: l <= m <= h, m normalized,
+# |m - (l + h)/2| <= 3u^2/(1-4u) |(l + h)/2| + 2 eta, and [m - r, m + r] contains the interval; the
+# smallest radius is not claimed. Near the top of the range a side of the radius is not finite (radd
+# steps past Omega, or a TwoSum of add_2_2 overflows inside and gives a NaN): it is made +inf, a radius
+# with which every ball contains the interval; the radius is finite when both bounds are at most
+# 2^(emax-2) in magnitude, where add_2_2 stays finite. As for one limb: the whole
+# line has midpoint 0, a half-line the largest finite number of its sign, both with radius +inf (the
+# values of IEEE 1788); the empty set gives three NaN.
+kernel:        interval_mid_rad_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+output:        m = m0 m1
+output:        r
+requires:      interval xl xu
+ensures:       ball_of_interval m r from=xl,xu special=ieee1788 rel=3*u^2/(1-4*u) abs=2*eta finite_when=abs_le(xl,-2);abs_le(xu,-2)
+min_precision: 3
+source:        the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   every output is selected after explicit tests of the bounds; ball_of_interval states what comes out for every canonical interval
+
+om             = pred(const inf)
+mo             = neg(om)
+ml             = lt(xl0, mo)
+l0             = select(ml, mo, xl0)
+l1             = select(ml, 0, xl1)
+mu             = lt(om, xu0)
+h0             = select(mu, om, xu0)
+h1             = select(mu, 0, xu1)
+(hl0, hl1)     = mul_pow2_2(l0, l1, const up(1/2))
+(hu0, hu1)     = mul_pow2_2(h0, h1, const up(1/2))
+(ma0, ma1)     = add_2_2(hl0, hl1, hu0, hu1)
+ca             = lt_2_2(ma0, ma1, l0, l1)
+mb0            = select(ca, l0, ma0)
+mb1            = select(ca, l1, ma1)
+cb             = lt_2_2(h0, h1, mb0, mb1)
+mc0            = select(cb, h0, mb0)
+mc1            = select(cb, h1, mb1)
+nl0            = neg(l0)
+nl1            = neg(l1)
+(za0, za1, ea) = add_ball_2_2(mc0, mc1, nl0, nl1)
+ta             = to_up_2(za0, za1)
+rs             = radd(ta, ea)
+fa             = lt(rs, const inf)
+ra             = select(fa, rs, const inf)
+nm0            = neg(mc0)
+nm1            = neg(mc1)
+(zb0, zb1, eb) = add_ball_2_2(h0, h1, nm0, nm1)
+tb             = to_up_2(zb0, zb1)
+rt             = radd(tb, eb)
+fb             = lt(rt, const inf)
+rb             = select(fb, rt, const inf)
+rm             = lt(ra, rb)
+rc             = select(rm, rb, ra)
+md0            = select(ml, mo, mc0)
+md1            = select(ml, 0, mc1)
+me0            = select(mu, om, md0)
+me1            = select(mu, 0, md1)
+bo             = and(ml, mu)
+mf0            = select(bo, 0, me0)
+mf1            = select(bo, 0, me1)
+un             = or(ml, mu)
+rd             = select(un, const inf, rc)
+ne             = lt(xl0, const inf)
+m0             = select(ne, mf0, const nan)
+m1             = select(ne, mf1, const nan)
+r              = select(ne, rd, const nan)

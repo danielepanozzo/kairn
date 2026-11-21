@@ -430,6 +430,10 @@ def exact_condition(conditions, term, threshold):
             # mask(NAME) (the radius of the scaling of a BallVector): the mask input is true.
             parts.append(f'{c[ir.MASK_CONDITION]} = true')
             continue
+        if 'abs_le' in c:
+            # abs_le(EXPR,omega) (Milestone 2, certain and trit, of the IEEE model only): |EXPR| <= Omega.
+            parts.append(f'Rabs {_paren(term(c["abs_le"]))} <= omega prec emax')
+            continue
         kind = next(x for x in ir.EXACT_CONDITIONS if x in c)
         e = term(c[kind])
         rel = '<' if kind == 'zero_or_abs_gt' else '<='

@@ -1,0 +1,29 @@
+# The relation disjoint of IEEE 1788 of two intervals with 2-limb bounds (milestone2.md,
+# "Comparisons", the relations of IEEE 1788, and "IEEE 1788"): X and Y have no member in common. An
+# empty operand is disjoint from everything; otherwise x_u < y_l or y_u < x_l. Exact. For every
+# precision.
+kernel:        interval_rel_disjoint_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+input:         yl = yl0 yl1
+input:         yu = yu0 yu1
+output:        mask m
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       certain m disjoint x y x=xl,xu y=yl,yu exact
+min_precision: 1
+source:        the stored bounds compared, and tests of emptiness (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+ex = eq(xl0, const inf)
+ey = eq(yl0, const inf)
+ee = or(ex, ey)
+da = lt_2_2(xu0, xu1, yl0, yl1)
+db = lt_2_2(yu0, yu1, xl0, xl1)
+dd = or(da, db)
+m  = or(ee, dd)
