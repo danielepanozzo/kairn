@@ -43,7 +43,8 @@
 #   every form of Packed this compiler can build here: native (the build's flags), scalar (one
 #   lane, KAIRN_PACKED_FORM_SCALAR) and, on x86-64 where the build's flags do not give AVX2,
 #   avx2. The runner's packed forms (runner.cpp) join api.oracle.*; where the build's flags do not
-#   give AVX2 and the compiler can, a runner of the packed forms alone built for AVX2 joins them.
+#   give AVX2 and the compiler can, a runner of the packed forms alone built for AVX2 joins those of
+#   the kernels that packed.hpp calls.
 
 set(_api_include "${PROJECT_SOURCE_DIR}/include")
 if(_msvc_style)
@@ -164,9 +165,24 @@ add_subdirectory(flags)
 # The runners as --runner LABEL EXECUTABLE for ../crosscheck.py.
 set(_api_runners --runner build "$<TARGET_FILE:kairn-api-runner>"
   --runner contract-fast "$<TARGET_FILE:kairn-api-runner-contract-fast>")
+# The runner of the packed forms alone, for the kernels that packed.hpp calls (gen::NAME( in its
+# text; api.oracle.coverage checks that they are those of the packed forms), the only ones it has
+# forms for.
+set(_api_packed_runner "")
 if(_api_packed_avx2)
-  list(APPEND _api_runners --runner avx2 "$<TARGET_FILE:kairn-api-runner-avx2>")
+  set(_api_packed_runner --runner avx2 "$<TARGET_FILE:kairn-api-runner-avx2>")
 endif()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_api_include}/kairn/packed.hpp")
+file(READ "${_api_include}/kairn/packed.hpp" _api_packed_text)
+string(REGEX MATCHALL "gen::[a-z0-9_]+\\(" _api_packed_calls "${_api_packed_text}")
+set(_api_packed_kernels "")
+foreach(_call IN LISTS _api_packed_calls)
+  string(REGEX REPLACE "gen::([a-z0-9_]+)\\(" "\\1" _k "${_call}")
+  list(APPEND _api_packed_kernels ${_k})
+endforeach()
+list(REMOVE_DUPLICATES _api_packed_kernels)
+set(_api_packed_runner ${_api_packed_runner} PARENT_SCOPE)
+set(_api_packed_kernels ${_api_packed_kernels} PARENT_SCOPE)
 set(_api_debug_runner --runner debug "$<TARGET_FILE:kairn-api-runner-debug>" PARENT_SCOPE)
 set(_flags_runners "")
 foreach(_set IN LISTS _flags_names)
@@ -196,12 +212,16 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
       continue()
     endif()
     list(APPEND _api_mapped ${_kernel})
+    set(_extra "")
+    if(_kernel IN_LIST _api_packed_kernels)
+      set(_extra ${_api_packed_runner})
+    endif()
     foreach(_format binary64 binary32)
       set(_name api.oracle.${_kernel}.${_format})
       add_test(NAME ${_name}
         COMMAND ${_api_crosscheck} api --kernel ${_kernel} --format ${_format}
           --count ${KAIRN_API_QUICK_CASES} --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/oracle"
-          ${_api_common})
+          ${_api_common} ${_extra})
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle")
     endforeach()
   endforeach()
@@ -223,7 +243,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_packed_note "")
   if(_api_packed_avx2)
     set(_api_n_runners 3)
-    set(_api_packed_note " (the third: the packed forms alone, for AVX2)")
+    set(_api_packed_note " (the third, of the packed forms alone, for AVX2, on the kernels of packed.hpp)")
   endif()
   list(JOIN _api_packed_forms ", " _api_forms_text)
   message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with ${_api_n_runners} "
