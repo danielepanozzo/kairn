@@ -165,6 +165,106 @@ const OperandCase operand_cases[] = {
     {"enclosure.ball_hull", "a ball: is not canonical",
      [] { return o.bp.hull(B2(kairn::detail::kernel_result, raw(1.0, double(v_a)), v_r)).radius(); }},
     {"enclosure.ball_point", not_canonical, [] { return double(int(kairn::member(raw(1.0, double(v_a)), o.bp))); }},
+    // The functions on arrays (kairn/batch.hpp): an element that is not canonical, lengths that
+    // differ, arrays that overlap without being the same, a scalar that is not what the function
+    // requires.
+    {"batch.sum.unnormalized", "sum: an element of x is not canonical", [] {
+         Arrays a(o.y);
+         a.h[9] = 1.0;
+         a.l[9] = v_a;
+         return kairn::sum(kairn::SoAView<const double, 2>(a.h, a.l, 16)).value.limb[0];
+     }},
+    {"batch.dot.lengths", "dot: x and y have different lengths", [] {
+         const Arrays a(o.x), c(o.y);
+         return kairn::dot(kairn::SoAView<const double, 1>(a.h, 16), kairn::SoAView<const double, 1>(c.h, 15)).value.limb[0];
+     }},
+    {"batch.dot.unnormalized_y", "dot: an element of y is not canonical", [] {
+         Arrays a(o.x), c(o.y);
+         c.l[15] = v_a;
+         c.h[15] = 1.0;
+         return kairn::dot(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
+                           kairn::sequential).value.limb[0];
+     }},
+    {"batch.add.lengths", "add: x and z have different lengths", [] {
+         const Arrays a(o.x), c(o.y);
+         Arrays z(o.x);
+         return double(kairn::add(kairn::SoAView<const double, 1>(a.h, 16), kairn::SoAView<const double, 1>(c.h, 16),
+                                  kairn::SoAView<double, 1>(z.h, 12)));
+     }},
+    {"batch.add.y_lengths", "add: y and z have different lengths", [] {
+         const Arrays a(o.x), c(o.y);
+         Arrays z(o.x);
+         return double(kairn::add(kairn::SoAView<const double, 1>(a.h, 12), kairn::SoAView<const double, 1>(c.h, 16),
+                                  kairn::SoAView<double, 1>(z.h, 12)));
+     }},
+    {"batch.add.overlap", "add: z overlaps x without being x", [] {
+         Arrays a(o.x);
+         const Arrays c(o.y);
+         return double(kairn::add(kairn::SoAView<const double, 2>(a.h, a.l, 15), kairn::SoAView<const double, 2>(c.h, c.l, 15),
+                                  kairn::SoAView<double, 2>(a.h + 1, a.l + 1, 15)));
+     }},
+    {"batch.axpy.overlap_y", "axpy: z overlaps y without being y", [] {
+         const Arrays a(o.x);
+         Arrays c(o.y);
+         return double(kairn::axpy(2.0, kairn::SoAView<const double, 1>(a.h, 15), kairn::SoAView<const double, 1>(c.h + 1, 15),
+                                   kairn::SoAView<double, 1>(c.h, 15)));
+     }},
+    {"batch.add.limbs", "add: the limb arrays of z overlap each other", [] {
+         const Arrays a(o.x), c(o.y);
+         Arrays z(o.x);
+         return double(kairn::add(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
+                                  kairn::SoAView<double, 2>(z.h, z.h, 16)));
+     }},
+    {"batch.axpy.a", "axpy: a is not canonical", [] {
+         const Arrays a(o.x);
+         Arrays c(o.y);
+         const kairn::SoAView<double, 2> y(c.h, c.l, 16);
+         return double(kairn::axpy(raw(1.0, double(v_a)), kairn::SoAView<const double, 2>(a.h, a.l, 16), y, y));
+     }},
+    {"batch.mul_pow2.c", "mul_pow2: c is not a positive power of two of T", [] {
+         Arrays a(o.x);
+         const kairn::SoAView<double, 2> x(a.h, a.l, 16);
+         return double(kairn::mul_pow2(x, double(v_a), x));
+     }},
+    {"batch.mul_pow2.negative", "mul_pow2: c is not a positive power of two of T", [] {
+         Arrays a(o.x);
+         const kairn::SoAView<double, 1> x(a.h, 16);
+         return double(kairn::mul_pow2(x, -0.5 * double(opaque(1.0)), x));
+     }},
+    {"batch.conv.length", "conv: z does not have the length of the product", [] {
+         const Arrays a(o.x), c(o.y);
+         double h[31], l[31];
+         return double(kairn::conv(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
+                                   kairn::SoAView<double, 2>(h, l, 30)));
+     }},
+    {"batch.conv.overlap", "conv: z overlaps x or y", [] {
+         Arrays a(o.x);
+         const Arrays c(o.y);
+         return double(kairn::conv(kairn::SoAView<const double, 1>(a.h, 8), kairn::SoAView<const double, 1>(c.h, 8),
+                                   kairn::SoAView<double, 1>(a.h + 1, 15)));
+     }},
+    // The accumulator: an operand that is not canonical; a state given to from_state that is not
+    // one (a sum that is not canonical, negative magnitudes).
+    {"acc.add.unnormalized", not_canonical, [] {
+         kairn::Accumulator<double, 2> a;
+         a.add(raw(1.0, double(v_a)));
+         return a.running_sum().limb[0];
+     }},
+    {"acc.add_product.unnormalized", not_canonical, [] {
+         kairn::Accumulator<double, 2> a;
+         a.add_product(o.x, raw(1.0, double(v_a)));
+         return a.running_sum().limb[0];
+     }},
+    {"acc.from_state.unnormalized", "Accumulator::from_state: the running sum is not canonical",
+     [] { return kairn::Accumulator<double, 2>::from_state(raw(1.0, double(v_a)), 1.0, 2).magnitudes(); }},
+    {"acc.from_state.negative", "Accumulator::from_state: the sum of magnitudes is negative",
+     [] { return kairn::Accumulator<double, 2>::from_state(o.x, -double(v_a), 2).magnitudes(); }},
+    {"batch.norm_upper.unnormalized", "norm_upper: an element of x is not canonical", [] {
+         Arrays a(o.y);
+         a.h[4] = 1.0;
+         a.l[4] = v_a;
+         return kairn::norm_upper(kairn::SoAView<const double, 2>(a.h, a.l, 16)).value;
+     }},
 };
 
 // What the checks must let through: canonical values that are not finite, the special balls,
@@ -210,6 +310,25 @@ const Accepted accepted[] = {
          Arrays a(pair(-infinity, 0.0));
          a.l[1] = -0.0;
          return kairn::SoAView<const double, 2>(a.h, a.l, 16).get(1).limb[0];
+     }},
+    // The functions on arrays: canonical elements that are not finite, maps in place, empty arrays.
+    {"sum of (+inf, 0) and (NaN, NaN)", [] {
+         Arrays a(pair(infinity, 0.0));
+         a.h[3] = a.l[3] = not_a_number;
+         return kairn::sum(kairn::SoAView<const double, 2>(a.h, a.l, 16)).value.limb[0];
+     }},
+    {"axpy in place, z = x", [] {
+         Arrays a(o.x);
+         const Arrays c(o.y);
+         const kairn::SoAView<double, 2> x(a.h, a.l, 16);
+         return double(kairn::axpy(o.y, x, kairn::SoAView<const double, 2>(c.h, c.l, 16), x));
+     }},
+    {"an accumulator from the state (+inf, 0), +inf", [] {
+         return kairn::Accumulator<double, 2>::from_state(pair(infinity, 0.0), infinity, 3).error_bound();
+     }},
+    {"conv of empty polynomials", [] {
+         return double(kairn::conv(kairn::SoAView<const double, 2>(), kairn::SoAView<const double, 2>(),
+                                   kairn::SoAView<double, 2>()));
      }},
     {"kairn::finite::add on a lane (inf, NaN)", [] {
          P2 x = P2::broadcast(o.y);

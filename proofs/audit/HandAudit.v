@@ -1210,6 +1210,8 @@ Print Assumptions sum_fast_2_entry_seq_bound.
 Print Assumptions sum_fast_2_entry_lanes_bound.
 Print Assumptions dot_1_seq_bound.
 Print Assumptions dot_1_lanes_bound.
+Print Assumptions dot_1_entry_seq_bound.
+Print Assumptions dot_1_entry_lanes_bound.
 Print Assumptions dot_2_seq_bound.
 Print Assumptions dot_2_lanes_bound.
 
@@ -1226,6 +1228,8 @@ Print Assumptions sum_entry_step_1_dead.
 Print Assumptions sum_entry_step_1_live.
 Print Assumptions dot_step_1_dead.
 Print Assumptions dot_step_1_live.
+Print Assumptions dot_entry_step_1_dead.
+Print Assumptions dot_entry_step_1_live.
 Print Assumptions add22i_lead.
 Print Assumptions add22i_live.
 Print Assumptions addfast22i_lead.
@@ -1248,6 +1252,7 @@ Print Assumptions lanes_2.
 Print Assumptions sum_1_seq_ieee_facts.
 Print Assumptions sum_1_entry_seq_ieee_facts.
 Print Assumptions dot_1_seq_ieee_facts.
+Print Assumptions dot_1_entry_seq_ieee_facts.
 Print Assumptions sum_2_seq_ieee_facts.
 Print Assumptions sum_2_entry_seq_ieee_facts.
 Print Assumptions sum_fast_2_seq_ieee_facts.

@@ -85,6 +85,21 @@ Definition acc_mul_1_spec : Prop :=
   t = RN emin prec (s + (x * y)) /\
   b = RN emin prec (a + ((Rabs x) * (Rabs y))).
 
+(* acc_mul_entry_1: acc_mul_1 on the guarded x and y (rule R3, the factors of a fused operation). Status: proved. *)
+Definition acc_mul_entry_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall s a x y : R,
+  fmt emin prec s ->
+  fmt emin prec a ->
+  fmt emin prec x ->
+  fmt emin prec y ->
+  0 <= a ->
+  let '(t, b) := acc_mul_entry_1 emin prec tie_even s a x y in
+  fmt emin prec t /\
+  fmt emin prec b /\
+  t = RN emin prec (s + (x * y)) /\
+  b = RN emin prec (a + ((Rabs x) * (Rabs y))).
+
 (* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. Status: proved. *)
 Definition acc_radius_1_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -570,6 +585,17 @@ Definition conv_radius_spec : Prop :=
   let rz := conv_radius emin prec tie_even ma mb rx ry m g t in
   fmt emin prec rz /\
   (((m * (((((1 + u prec) * ma) * ry) + (((1 + u prec) * mb) * rx)) + (rx * ry))) + ((((g * m) * ((1 + u prec) ^ 2)) * ma) * mb)) + t) <= rz.
+
+(* dot_entry_step_1: dot_step_1 on the guarded elements (rule R3, the factors of a fused operation). Status: proved. *)
+Definition dot_entry_step_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall s x y : R,
+  fmt emin prec s ->
+  fmt emin prec x ->
+  fmt emin prec y ->
+  let t := dot_entry_step_1 emin prec tie_even s x y in
+  fmt emin prec t /\
+  t = RN emin prec (s + (x * y)).
 
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). Status: proved. *)
 Definition dot_step_1_spec : Prop :=

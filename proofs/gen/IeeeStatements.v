@@ -63,6 +63,21 @@ Definition acc_mul_1_ieee_spec : Prop :=
   (finite b ->
    val b = RN (ieee_emin prec emax) prec (val a + ((Rabs (val x)) * (Rabs (val y))))).
 
+(* acc_mul_entry_1: acc_mul_1 on the guarded x and y (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition acc_mul_entry_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (1 <= prec)%Z ->
+  forall s a x y : binary_float prec emax,
+  finite s -> finite a -> finite x -> finite y ->
+  0 <= val a ->
+  let '(t, b) := IeeeModel.acc_mul_entry_1 prec emax nan_plus nan_abs nan_fma s a x y in
+  (finite t ->
+   val t = RN (ieee_emin prec emax) prec (val s + (val x * val y))) /\
+  (finite b ->
+   val b = RN (ieee_emin prec emax) prec (val a + ((Rabs (val x)) * (Rabs (val y))))).
+
 (* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. IEEE-model status: proved. *)
 Definition acc_radius_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -852,6 +867,21 @@ Definition bv_mul_pow2_step_1_ieee_spec : Prop :=
   (((val x * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x * val c)) ->
    val z = (val x * val c)) /\
   (e = true <-> ((val x * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x * val c))).
+
+(* dot_entry_step_1: dot_step_1 on the guarded elements (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition dot_entry_step_1_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (1 <= prec)%Z ->
+  forall s x y : binary_float prec emax,
+  finite s -> finite x -> finite y ->
+  let t := IeeeModel.dot_entry_step_1 prec emax nan_plus nan_fma s x y in
+  finite t ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.dot_entry_step_1_prog [s; x; y]) /\
+  (val t)
+  = dot_entry_step_1 (ieee_emin prec emax) prec tie_even (val s) (val x) (val y).
 
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). IEEE-model status: proved. *)
 Definition dot_step_1_ieee_bridge_spec : Prop :=

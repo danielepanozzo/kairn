@@ -21,10 +21,23 @@ from kairn_gen import consts, expr, interp, ir, library
 TYPES = {'double': ('binary64', 53, -1074), 'float': ('binary32', 24, -149)}
 
 
+LOOPS = 'namespace loops {'
+
+
 def structs(text):
-    """{(kernel, type): body} of the specializations in bounds.hpp, the body as one string."""
+    """{(kernel, type): body} of the specializations of the kernels in bounds.hpp (before the
+    namespace of the loops), the body as one string."""
     out = {}
-    for m in re.finditer(r'^template <> struct (\w+)<(double|float)> \{(.*?)\};', text, re.M | re.S):
+    for m in re.finditer(r'^template <> struct (\w+)<(double|float)> \{(.*?)\};', text.split(LOOPS)[0], re.M | re.S):
+        out[(m.group(1), m.group(2))] = m.group(3)
+    return out
+
+
+def loop_structs(text):
+    """{(loop, type): body} of the specializations of kairn::gen::bounds::loops."""
+    out = {}
+    part = text.split(LOOPS)[1].split('}  // namespace loops')[0]
+    for m in re.finditer(r'^template <> struct (\w+)<(double|float)> \{(.*?)\};', part, re.M | re.S):
         out[(m.group(1), m.group(2))] = m.group(3)
     return out
 
@@ -155,6 +168,58 @@ class Bounds(unittest.TestCase):
         s = structs(library.bounds(ks))
         self.assertEqual(members(s[('mul_2_2', 'float')]), {'proved': 'false'})
         self.assertEqual(members(s[('mul_2_2', 'double')])['proved'], 'true')
+
+    # The loops (kairn::gen::bounds::loops): the status a public function on arrays gates on.
+
+    def test_every_loop_and_type(self):
+        loops = loop_structs(self.text)
+        self.assertEqual(set(loops), {(f, t) for f in self.ks.folds for t in TYPES})
+        for (name, t), body in loops.items():
+            self.assertEqual(set(members(body)), {'proved'}, (name, t))
+
+    def test_the_status_of_a_loop(self):
+        # Proved: the fold's own status, its minimum precision, every kernel it runs, and the loop
+        # of its coefficients or centers, as the claims say.
+        with open(os.path.join(common.GEN, 'claims.json'), encoding='utf-8') as f:
+            folds = {fd['name']: fd for fd in json.load(f)['folds']}
+        for (name, t), body in loop_structs(self.text).items():
+            fd = self.ks.folds[name]
+            names, inner = library.loop_parts(fd, self.ks)
+            want = folds[name]['status'] == 'proved' and (fd.min_precision or 1) <= TYPES[t][1] and \
+                all(self.claims[n]['status'] == 'proved' and (self.claims[n]['min_precision'] or 1) <= TYPES[t][1]
+                    for n in names) and all(folds[i]['status'] == 'proved' for i in inner)
+            self.assertEqual(members(body)['proved'], 'true' if want else 'false', (name, t))
+        # What each loop runs, for a few loops.
+        self.assertEqual(library.loop_parts(self.ks.folds['dot_1_entry'], self.ks),
+                         ({'dot_entry_step_1', 'add_1_1', 'fold_finish_1'}, []))
+        self.assertEqual(library.loop_parts(self.ks.folds['conv_1'], self.ks),
+                         ({'dot_step_1', 'add_1_1', 'fold_finish_1'}, ['dot_1']))
+        self.assertEqual(library.loop_parts(self.ks.folds['bv_conv_2'], self.ks)[1], ['conv_2', 'dot_2'])
+
+    def test_a_loop_is_proved_only_with_its_parts(self):
+        def status(ks, name, t='double'):
+            return members(loop_structs(library.bounds(ks))[(name, t)])['proved']
+        self.assertEqual(status(self.ks, 'dot_1_entry'), 'true')
+        for change in ('step', 'combination', 'finish', 'fold', 'precision', 'coefficients'):
+            ks = copy.deepcopy(self.ks)
+            if change == 'step':
+                ks['dot_entry_step_1'].status = 'unverified'
+            elif change == 'combination':
+                ks['add_1_1'].min_precision = 30
+            elif change == 'finish':
+                ks['fold_finish_1'].status = 'unverified'
+            elif change == 'fold':
+                ks.folds['dot_1_entry'].status = 'unverified'
+            elif change == 'precision':
+                ks.folds['dot_1_entry'].min_precision = 30
+            else:
+                ks.folds['dot_1'].status = 'unverified'
+                self.assertEqual(status(ks, 'conv_1'), 'false', change)
+                self.assertEqual(status(ks, 'dot_1_entry'), 'true', change)
+                continue
+            t = 'float' if change in ('combination', 'precision') else 'double'
+            self.assertEqual(status(ks, 'dot_1_entry', t), 'false', change)
+            self.assertEqual(status(ks, 'dot_1_entry', 'double'), 'true' if t == 'float' else 'false', change)
 
     def test_form_operands_has_no_computed_constants(self):
         ks = copy.deepcopy(dict(self.ks))
@@ -338,6 +403,10 @@ def status_asserts(ks):
             has = proved and library.error_entry(k) is not None
             lines.append(f'static_assert(b::{k.name}<{t}>::proved == {str(proved).lower()} && '
                          f'has_unit<b::{k.name}<{t}>> == {str(has).lower()});')
+    for fd in ks.folds.values():
+        for t in TYPES:
+            proved = library.loop_proved_for(fd, ks, t)
+            lines.append(f'static_assert(b::loops::{fd.name}<{t}>::proved == {str(proved).lower()});')
     return '\n'.join(lines)
 
 

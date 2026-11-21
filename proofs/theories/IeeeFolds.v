@@ -49,8 +49,9 @@
                add_fast_2_2_ieee_bridge, mul_2_2_ieee_bridge; add_spec and fma_spec for
                one limb), with the real-model theorem of the kernel for validity.
 
-   The steps: add_1_1, sum_entry_step_1, dot_step_1 (one limb); add_2_2, add_fast_2_2,
-   sum_entry_step_2, sum_fast_entry_step_2, dot_step_2 (two limbs). An entry step guards
+   The steps: add_1_1, sum_entry_step_1, dot_step_1, dot_entry_step_1 (one limb); add_2_2,
+   add_fast_2_2, sum_entry_step_2, sum_fast_entry_step_2, dot_step_2 (two limbs). An entry
+   step guards
    its element first: the guard keeps the finiteness and the value of a limb (guard_finite,
    guard_val of IeeeOps.v), and in the real model it returns a number of the format
    unchanged (guard_real_any). The bridges of the steps as kernels, with the finiteness
@@ -106,6 +107,14 @@ rewrite (guard_real_any emin prec tie_even x0 F0), (guard_real_any emin prec tie
 apply pair_eta.
 Qed.
 
+Lemma dot_entry_step_1_real :
+  forall (emin prec : Z) (s x y : R), fmt emin prec x -> fmt emin prec y ->
+  dot_entry_step_1 emin prec tie_even s x y = dot_step_1 emin prec tie_even s x y.
+Proof.
+intros emin prec s x y Fx Fy. unfold dot_entry_step_1, dot_step_1. cbv zeta.
+now rewrite (guard_real_any emin prec tie_even x Fx), (guard_real_any emin prec tie_even y Fy).
+Qed.
+
 Section IeeeFolds.
 Variable prec emax : Z.
 Context {prec_gt_0_ : Prec_gt_0 prec}.
@@ -142,6 +151,12 @@ Notation dot_1_combine_ieee := (IeeeFoldModel.dot_1_combine prec emax nan_plus).
 Notation dot_1_seq_ieee := (IeeeFoldModel.dot_1_seq prec emax nan_abs nan_fma nan_const).
 Notation dot_1_lanes_ieee :=
   (IeeeFoldModel.dot_1_lanes prec emax nan_plus nan_abs nan_fma nan_const).
+Notation dot_1_entry_step_ieee := (IeeeFoldModel.dot_1_entry_step prec emax nan_plus nan_fma).
+Notation dot_1_entry_combine_ieee := (IeeeFoldModel.dot_1_entry_combine prec emax nan_plus).
+Notation dot_1_entry_seq_ieee :=
+  (IeeeFoldModel.dot_1_entry_seq prec emax nan_plus nan_abs nan_fma nan_const).
+Notation dot_1_entry_lanes_ieee :=
+  (IeeeFoldModel.dot_1_entry_lanes prec emax nan_plus nan_abs nan_fma nan_const).
 Notation sum_2_step_ieee := (IeeeFoldModel.sum_2_step prec emax nan_plus nan_minus).
 Notation sum_2_combine_ieee := (IeeeFoldModel.sum_2_combine prec emax nan_plus nan_minus).
 Notation sum_2_seq_ieee := (IeeeFoldModel.sum_2_seq prec emax nan_plus nan_minus nan_abs nan_const).
@@ -229,6 +244,33 @@ Lemma dot_step_1_live :
   val (IeeeModel.dot_step_1 prec emax nan_fma s x y) =
   dot_step_1 emin prec tie_even (val s) (val x) (val y).
 Proof. intros s x y Fs Fx Fy F. exact (proj2 (fma_spec prec emax nan_fma x y s Fx Fy Fs) F). Qed.
+
+(* dot_entry_step_1: the fused operation of the guarded factors (rule R3, the factors of a
+   fused operation). The guard of a finite value is finite, with the same value. *)
+Lemma dot_entry_step_1_dead :
+  forall s x y : float, finite (IeeeModel.dot_entry_step_1 prec emax nan_plus nan_fma s x y) ->
+  finite s /\ finite x /\ finite y.
+Proof.
+intros s x y H. destruct (fma_finite_inv prec emax nan_fma (guard x) (guard y) s H) as [Fx [Fy Fs]].
+rewrite (guard_finite prec emax nan_plus) in Fx, Fy.
+split. exact Fs. split; assumption.
+Qed.
+
+Lemma dot_entry_step_1_live :
+  forall s x y : float, finite s -> finite x -> finite y ->
+  finite (IeeeModel.dot_entry_step_1 prec emax nan_plus nan_fma s x y) ->
+  val (IeeeModel.dot_entry_step_1 prec emax nan_plus nan_fma s x y) =
+  dot_entry_step_1 emin prec tie_even (val s) (val x) (val y).
+Proof.
+intros s x y Fs Fx Fy F.
+assert (Gx : finite (guard x)).
+{ unfold finite. rewrite (guard_finite prec emax nan_plus). exact Fx. }
+assert (Gy : finite (guard y)).
+{ unfold finite. rewrite (guard_finite prec emax nan_plus). exact Fy. }
+rewrite (dot_entry_step_1_real emin prec (val s) (val x) (val y) (val_fmt x) (val_fmt y)).
+pose proof (proj2 (fma_spec prec emax nan_fma (guard x) (guard y) s Gx Gy Fs) F) as E.
+unfold val in E |- *. rewrite !(guard_val prec emax nan_plus) in E. exact E.
+Qed.
 
 (** * Two limbs: the vocabulary *)
 
@@ -602,6 +644,22 @@ Lemma dot_step_1_step_live :
 Proof.
 intros s xy Fs F. destruct (dot_step_1_dead s (fst xy) (snd xy) F) as [_ [Fx Fy]].
 split. split; assumption. exact (dot_step_1_live s (fst xy) (snd xy) Fs Fx Fy F).
+Qed.
+
+Lemma dot_entry_step_1_step_dead :
+  forall (s : float) (xy : float * float),
+  finite (IeeeModel.dot_entry_step_1 prec emax nan_plus nan_fma s (fst xy) (snd xy)) -> finite s.
+Proof. intros s xy H. exact (proj1 (dot_entry_step_1_dead s (fst xy) (snd xy) H)). Qed.
+
+Lemma dot_entry_step_1_step_live :
+  forall (s : float) (xy : float * float), finite s ->
+  finite (IeeeModel.dot_entry_step_1 prec emax nan_plus nan_fma s (fst xy) (snd xy)) ->
+  fin11 xy /\
+  val (IeeeModel.dot_entry_step_1 prec emax nan_plus nan_fma s (fst xy) (snd xy)) =
+  FoldModel.dot_1_entry_step emin prec tie_even (val s) (vals11 xy).
+Proof.
+intros s xy Fs F. destruct (dot_entry_step_1_dead s (fst xy) (snd xy) F) as [_ [Fx Fy]].
+split. split; assumption. exact (dot_entry_step_1_live s (fst xy) (snd xy) Fs Fx Fy F).
 Qed.
 
 (* The values of any elements of one limb are numbers of the format: the requirement of
@@ -985,6 +1043,64 @@ cbv zeta. split. exact V.
 exact (dot_1_lanes_correct emin prec Hp W (map vals11 xs) (vals11_fmt xs)).
 Qed.
 
+(* dot_1_entry: the same, with the step dot_entry_step_1. *)
+Theorem dot_1_entry_seq_ieee_facts :
+  (1 <= prec)%Z ->
+  forall xs : list (float * float),
+  let '(r, flag) := dot_1_entry_seq_ieee xs in
+  (flag = true ->
+   Forall fin11 xs /\ finite r /\
+   let vs := map vals11 xs in
+   let s := FoldModel.dot_1_entry_seq emin prec tie_even vs in
+   val r = s /\
+   fmt emin prec s /\
+   Rabs (s - sumR (map (fun xy => fst xy * snd xy) vs)) <=
+     ((1 + u prec / (1 + u prec)) ^ length vs - 1) * sumabs (map (fun xy => fst xy * snd xy) vs) +
+     (1 + u prec / (1 + u prec)) ^ (length vs - 1) * (INR (length vs) * (eta emin / 2))) /\
+  (flag = false -> nan r).
+Proof.
+intros Hp xs.
+change (dot_1_entry_seq_ieee xs) with (finish1 (fold_seq dot_1_entry_step_ieee pzero xs)).
+generalize (seq_1 _ _ dot_1_entry_step_ieee (FoldModel.dot_1_entry_step emin prec tie_even)
+              vals11 fin11 dot_entry_step_1_step_dead dot_entry_step_1_step_live xs).
+destruct (finish1 (fold_seq dot_1_entry_step_ieee pzero xs)) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [Fx [Fr [V _]]].
+split. exact Fx. split. exact Fr.
+cbv zeta. split. exact V.
+exact (dot_1_entry_seq_correct emin prec Hp (map vals11 xs) (vals11_fmt xs)).
+Qed.
+
+Theorem dot_1_entry_lanes_ieee_facts :
+  (1 <= prec)%Z ->
+  forall (W : nat) (xs : list (float * float)),
+  let '(r, flag) := dot_1_entry_lanes_ieee W xs in
+  (flag = true ->
+   Forall fin11 xs /\ finite r /\
+   let vs := map vals11 xs in
+   let s := FoldModel.dot_1_entry_lanes emin prec tie_even W vs in
+   val r = s /\
+   fmt emin prec s /\
+   Rabs (s - sumR (map (fun xy => fst xy * snd xy) vs)) <=
+     ((1 + u prec / (1 + u prec)) ^ length vs - 1) * sumabs (map (fun xy => fst xy * snd xy) vs) +
+     (1 + u prec / (1 + u prec)) ^ (length vs - 1) * (INR (length vs) * (eta emin / 2))) /\
+  (flag = false -> nan r).
+Proof.
+intros Hp W xs.
+change (dot_1_entry_lanes_ieee W xs)
+  with (finish1 (fold_lanes dot_1_entry_step_ieee dot_1_entry_combine_ieee pzero W xs)).
+generalize (lanes_1 _ _ dot_1_entry_step_ieee (FoldModel.dot_1_entry_step emin prec tie_even)
+              dot_1_entry_combine_ieee (FoldModel.dot_1_entry_combine emin prec tie_even)
+              vals11 fin11 dot_entry_step_1_step_dead dot_entry_step_1_step_live
+              add_1_1_dead add_1_1_live W xs).
+destruct (finish1 (fold_lanes dot_1_entry_step_ieee dot_1_entry_combine_ieee pzero W xs)) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [Fx [Fr V]].
+split. exact Fx. split. exact Fr.
+cbv zeta. split. exact V.
+exact (dot_1_entry_lanes_correct emin prec Hp W (map vals11 xs) (vals11_fmt xs)).
+Qed.
+
 (** * The folds of two limbs, with their finish *)
 
 (* sum_2. *)
@@ -1339,6 +1455,12 @@ Proof.
 intros prec emax Hg Hl nan_fma s x y t H. exact (dot_step_1_dead prec emax nan_fma s x y H).
 Qed.
 
+Theorem dot_entry_step_1_ieee_lead : dot_entry_step_1_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_fma s x y t H.
+exact (dot_entry_step_1_dead prec emax nan_plus nan_fma s x y H).
+Qed.
+
 Theorem sum_entry_step_1_ieee_lead : sum_entry_step_1_ieee_lead_spec.
 Proof.
 intros prec emax Hg Hl nan_plus s x t H. exact (sum_entry_step_1_dead prec emax nan_plus s x H).
@@ -1451,6 +1573,27 @@ Proof.
 intros prec emax Hg Hl nan_plus nan_abs nan_fma nan_const Hp W xs.
 generalize (dot_1_lanes_ieee_facts prec emax nan_plus nan_abs nan_fma nan_const Hp W xs).
 destruct (IeeeFoldModel.dot_1_lanes prec emax nan_plus nan_abs nan_fma nan_const W xs) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [Fr H]].
+split. exact G. split. exact Fr. exact H.
+Qed.
+
+Theorem dot_1_entry_seq_ieee_correct : dot_1_entry_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_abs nan_fma nan_const Hp xs.
+generalize (dot_1_entry_seq_ieee_facts prec emax nan_plus nan_abs nan_fma nan_const Hp xs).
+destruct (IeeeFoldModel.dot_1_entry_seq prec emax nan_plus nan_abs nan_fma nan_const xs) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [Fr H]].
+split. exact G. split. exact Fr. exact H.
+Qed.
+
+Theorem dot_1_entry_lanes_ieee_correct : dot_1_entry_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_abs nan_fma nan_const Hp W xs.
+generalize (dot_1_entry_lanes_ieee_facts prec emax nan_plus nan_abs nan_fma nan_const Hp W xs).
+destruct (IeeeFoldModel.dot_1_entry_lanes prec emax nan_plus nan_abs nan_fma nan_const W xs)
+  as [r flag].
 intros [HT HF]. split; [|exact HF].
 intros E. destruct (HT E) as [G [Fr H]].
 split. exact G. split. exact Fr. exact H.

@@ -119,6 +119,28 @@ KAIRN_GEN_FORCEINLINE void acc_mul_1(float32x4_t s, float32x4_t a, float32x4_t x
     b_out = b;
 }
 
+// acc_mul_entry_1(s, a, x, y) -> t, b
+KAIRN_GEN_FORCEINLINE void acc_mul_entry_1(float64x2_t s, float64x2_t a, float64x2_t x, float64x2_t y, float64x2_t& t_out, float64x2_t& b_out) noexcept {
+    const float64x2_t gx = vaddq_f64(x, vdupq_n_f64(0.0));
+    const float64x2_t gy = vaddq_f64(y, vdupq_n_f64(0.0));
+    const float64x2_t t = vfmaq_f64(s, gx, gy);
+    const float64x2_t ax = vabsq_f64(gx);
+    const float64x2_t ay = vabsq_f64(gy);
+    const float64x2_t b = vfmaq_f64(a, ax, ay);
+    t_out = t;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_mul_entry_1(float32x4_t s, float32x4_t a, float32x4_t x, float32x4_t y, float32x4_t& t_out, float32x4_t& b_out) noexcept {
+    const float32x4_t gx = vaddq_f32(x, vdupq_n_f32(0.0f));
+    const float32x4_t gy = vaddq_f32(y, vdupq_n_f32(0.0f));
+    const float32x4_t t = vfmaq_f32(s, gx, gy);
+    const float32x4_t ax = vabsq_f32(gx);
+    const float32x4_t ay = vabsq_f32(gy);
+    const float32x4_t b = vfmaq_f32(a, ax, ay);
+    t_out = t;
+    b_out = b;
+}
+
 // acc_radius_1(a, m, g, t) -> r, mask ok
 KAIRN_GEN_FORCEINLINE void acc_radius_1(float64x2_t a, float64x2_t m, float64x2_t g, float64x2_t t, float64x2_t& r_out, uint64x2_t& ok_out) noexcept {
     const float64x2_t q = vfmaq_f64(vdupq_n_f64(0.0), m, vdupq_n_f64(0x1.0000000000001p-53));
@@ -3255,6 +3277,20 @@ KAIRN_GEN_FORCEINLINE void conv_radius(float32x4_t ma, float32x4_t mb, float32x4
     const float32x4_t hm = vfmaq_f32(vdupq_n_f32(0.0f), m, vdupq_n_f32(0x1.00000ap-126f));
     const float32x4_t rz = vfmaq_f32(hm, s, vdupq_n_f32(0x1.000008p+0f));
     rz_out = rz;
+}
+
+// dot_entry_step_1(s, x, y) -> t
+KAIRN_GEN_FORCEINLINE void dot_entry_step_1(float64x2_t s, float64x2_t x, float64x2_t y, float64x2_t& t_out) noexcept {
+    const float64x2_t gx = vaddq_f64(x, vdupq_n_f64(0.0));
+    const float64x2_t gy = vaddq_f64(y, vdupq_n_f64(0.0));
+    const float64x2_t t = vfmaq_f64(s, gx, gy);
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE void dot_entry_step_1(float32x4_t s, float32x4_t x, float32x4_t y, float32x4_t& t_out) noexcept {
+    const float32x4_t gx = vaddq_f32(x, vdupq_n_f32(0.0f));
+    const float32x4_t gy = vaddq_f32(y, vdupq_n_f32(0.0f));
+    const float32x4_t t = vfmaq_f32(s, gx, gy);
+    t_out = t;
 }
 
 // dot_step_1(s, x, y) -> t
@@ -19091,6 +19127,82 @@ inline void dot_1_packed(const float* x_in, const float* y_in, std::size_t n, fl
         const float y = y_in[i_];
         // (step_t) = dot_step_1(s, x, y)
         const float step_t = fma_rn(x, y, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold dot_1_entry(supplied x, supplied y), step dot_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), proved (IEEE model).
+inline void dot_1_entry_packed(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    float64x2_t s_lane_ = vdupq_n_f64(0.0);
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x = vld1q_f64(x_in + i_);
+        const float64x2_t y = vld1q_f64(y_in + i_);
+        // (step_t) = dot_entry_step_1(s_lane_, x, y)
+        const float64x2_t step_gx = vaddq_f64(x, vdupq_n_f64(0.0));
+        const float64x2_t step_gy = vaddq_f64(y, vdupq_n_f64(0.0));
+        const float64x2_t step_t = vfmaq_f64(s_lane_, step_gx, step_gy);
+        s_lane_ = step_t;
+    }
+    double s_lanes_[2];
+    vst1q_f64(s_lanes_, s_lane_);
+    double s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const double comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_t) = dot_entry_step_1(s, x, y)
+        const double step_gx = x + 0.0;
+        const double step_gy = y + 0.0;
+        const double step_t = fma_rn(step_gx, step_gy, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void dot_1_entry_packed(const float* x_in, const float* y_in, std::size_t n, float& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    float32x4_t s_lane_ = vdupq_n_f32(0.0f);
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x = vld1q_f32(x_in + i_);
+        const float32x4_t y = vld1q_f32(y_in + i_);
+        // (step_t) = dot_entry_step_1(s_lane_, x, y)
+        const float32x4_t step_gx = vaddq_f32(x, vdupq_n_f32(0.0f));
+        const float32x4_t step_gy = vaddq_f32(y, vdupq_n_f32(0.0f));
+        const float32x4_t step_t = vfmaq_f32(s_lane_, step_gx, step_gy);
+        s_lane_ = step_t;
+    }
+    float s_lanes_[4];
+    vst1q_f32(s_lanes_, s_lane_);
+    float s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const float comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_t) = dot_entry_step_1(s, x, y)
+        const float step_gx = x + 0.0f;
+        const float step_gy = y + 0.0f;
+        const float step_t = fma_rn(step_gx, step_gy, s);
         s = step_t;
     }
     // (fin_r, fin_flag) = fold_finish_1(s)

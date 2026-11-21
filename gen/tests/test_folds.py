@@ -33,6 +33,8 @@ import test_simd as simd_tests
 from kairn_gen import cpp, interp, ir, objcode, rocq, rules
 
 FOLDS = ('sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2', 'sum_fast_2_entry', 'dot_1', 'dot_2')
+# And dot_1 on arrays of the program, its factors guarded (rule R3, the factors of a fused operation).
+FOLDS += ('dot_1_entry',)
 # The folds of maxima (architecture.md, "Folds of maxima"): a state of a limb and a mask, and an upper
 # bound of the largest magnitude instead of fold_error. ALL: every fold that is not a map.
 MAX_FOLDS = ('norm_upper_1', 'norm_upper_2')

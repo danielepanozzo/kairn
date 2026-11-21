@@ -102,6 +102,7 @@ nav:
       - The range of a polynomial: tutorials/intervals.md
       - Zeros of a polynomial by bisection: tutorials/bisection.md
       - A vector loop: tutorials/vector-loop.md
+      - Sums and dot products of arrays: tutorials/arrays.md
   # BEGIN reference: written by docs/tools/reference.py; do not edit by hand
   - Reference:
       - reference/index.md
@@ -290,6 +291,7 @@ nav:
           - A difference of two limbs rounded up: reference/sub_up_1.md
       - Sums and dot products of arrays:
           - "The step of a dot product of one limb: one fused multiply-add": reference/dot_step_1.md
+          - "The step of a dot product of one limb, on arrays of the program: one fused multiply-add of the guarded elements": reference/dot_entry_step_1.md
           - The step of a dot product of two limbs: reference/dot_step_2.md
           - The step of a sum of one limb, on an array of the program: reference/sum_entry_step_1.md
           - The step of a sum of two limbs, on an array of the program: reference/sum_entry_step_2.md
@@ -307,12 +309,15 @@ nav:
           - "The result of a fold of maxima of two limbs: one step above the maximum, or NaN": reference/norm_finish_2.md
           - "An accumulator of one limb: add a number of the program": reference/acc_add_1.md
           - "An accumulator of two limbs: add a number of the program": reference/acc_add_2.md
-          - "An accumulator of one limb: add a product": reference/acc_mul_1.md
+          - "An accumulator of one limb: add a product (its factors unguarded; `add_product` calls `acc_mul_entry_1`)": reference/acc_mul_1.md
+          - "An accumulator of one limb: add a product of the guarded factors": reference/acc_mul_entry_1.md
           - "An accumulator of two limbs: add a product": reference/acc_mul_2.md
           - Two accumulators of one limb into one: reference/acc_merge_1.md
           - Two accumulators of two limbs into one: reference/acc_merge_2.md
           - The radius of an accumulator of one limb: reference/acc_radius_1.md
           - The radius of an accumulator of two limbs: reference/acc_radius_2.md
+          - Functions on arrays: reference/batch.md
+          - The accumulator: reference/accumulator.md
       - "Vector loops: Packed and the containers":
           - Packed numbers in registers: reference/packed.md
           - "Arrays of numbers: SoA and its views": reference/soa.md

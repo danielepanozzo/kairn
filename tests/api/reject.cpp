@@ -44,6 +44,15 @@
 //          kernels); the control negates, and adds a Packed<T, 1> to a Packed<T, 2>
 //   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
 //          is not a form, or a form the target does not have (the generated header's #error)
+//   59     a bound as a function of the length that is not given (traits<X>::sum(n) beyond the
+//          lengths its kernel bounds) in a constant expression; the control computes it at run time
+//   60-62  the accumulator (accumulator.hpp): a merge of accumulators of two limb types (the control
+//          merges two of one type), and add_product and error_bound in a constant expression,
+//          which they are not usable in (fused multiply-adds); the controls compute them at run time
+//   54-58  the functions on arrays (batch.hpp): a map and axpy writing through a view of const
+//          limbs, a dot product of views of two limb types, and of one and of two limbs, and a
+//          scaling by a two-limb number (no loop scales by one); each control writes what compiles
+//          instead (a view of mutable limbs written, views of one type, a scalar of T)
 //   70-81  the enclosure interface (headers-pred): a Trit as a bool, in a condition and in an
 //          initialization (a three-valued answer converts to no bool: the controls write
 //          kairn::certainly and kairn::possibly); a comparison operator of intervals and of balls
@@ -86,6 +95,12 @@
 #if KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 53
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
+#endif
+#if KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58
+#include <kairn/batch.hpp>
+#endif
+#if KAIRN_TEST_CASE >= 60 && KAIRN_TEST_CASE <= 62
+#include <kairn/accumulator.hpp>
 #endif
 
 #if defined(KAIRN_TEST_CONTROL)
@@ -333,6 +348,79 @@ int main() {
     sink = (px + px).lane(0).limb[0] + double((pf + pf).lane(0).limb[0]);
 #else
     sink = (px + pf).lane(0).limb[0];
+#endif
+#endif
+#elif KAIRN_TEST_CASE == 59
+#if defined(KAIRN_TEST_CONTROL)
+    const kairn::Bound<float> length_bound = kairn::traits<float>::sum(std::size_t{1} << 30);
+#else
+    constexpr kairn::Bound<float> length_bound = kairn::traits<float>::sum(std::size_t{1} << 30);
+#endif
+    sink = double(length_bound.unit);
+#elif KAIRN_TEST_CASE == 60
+    kairn::Accumulator<double, 2> acc_double;
+    const kairn::Accumulator<float, 2> acc_float;
+#if defined(KAIRN_TEST_CONTROL)
+    acc_double.merge(kairn::Accumulator<double, 2>());
+    sink = double(acc_float.count());
+#else
+    acc_double.merge(acc_float);
+#endif
+    sink += double(acc_double.count());
+#elif KAIRN_TEST_CASE == 61
+#if defined(KAIRN_TEST_CONTROL)
+    const kairn::Accumulator<double, 1> acc_product = [] {
+#else
+    constexpr kairn::Accumulator<double, 1> acc_product = [] {
+#endif
+        kairn::Accumulator<double, 1> a;
+        a.add_product(2.0, 3.0);
+        return a;
+    }();
+    sink = acc_product.sum().value.limb[0];
+#elif KAIRN_TEST_CASE == 62
+#if defined(KAIRN_TEST_CONTROL)
+    const double acc_radius = kairn::Accumulator<double, 2>().error_bound();
+#else
+    constexpr double acc_radius = kairn::Accumulator<double, 2>().error_bound();
+#endif
+    sink = acc_radius;
+#elif KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58
+    double h[4] = {1, 2, 3, 4}, l[4] = {0, 0, 0, 0};
+    float fh[4] = {1, 2, 3, 4}, fl[4] = {0, 0, 0, 0};
+    const kairn::SoAView<double, 2> mv(h, l, 4);
+    const kairn::SoAView<const double, 2> cv = mv;
+    [[maybe_unused]] const kairn::SoAView<const float, 2> fv(fh, fl, 4);
+    [[maybe_unused]] const kairn::SoAView<const double, 1> one(h, 4);
+#if KAIRN_TEST_CASE == 54
+#if defined(KAIRN_TEST_CONTROL)
+    sink = double(kairn::add(cv, cv, mv));
+#else
+    sink = double(kairn::add(cv, cv, cv));
+#endif
+#elif KAIRN_TEST_CASE == 55
+#if defined(KAIRN_TEST_CONTROL)
+    sink = double(kairn::axpy(2.0, cv, mv, mv));
+#else
+    sink = double(kairn::axpy(2.0, cv, mv, cv));
+#endif
+#elif KAIRN_TEST_CASE == 56
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::dot(cv, cv).value.limb[0] + double(kairn::dot(fv, fv).value.limb[0]);
+#else
+    sink = kairn::dot(cv, fv).value.limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 57
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::dot(one, one).value.limb[0] + kairn::dot(cv, cv).value.limb[0];
+#else
+    sink = kairn::dot(cv, one).value.limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 58
+#if defined(KAIRN_TEST_CONTROL)
+    sink = double(kairn::scale(cv, 2.0, mv));
+#else
+    sink = double(kairn::scale(cv, E2(2.0), mv));
 #endif
 #endif
 // The enclosure interface of stage B2 (headers-pred): cases 70 to 81 against the headers as they

@@ -12,7 +12,11 @@ $$r = s \ \text{when } s_0 \text{ is finite}, \qquad r = \mathrm{NaN} \text{ oth
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`norm_finish_1`](norm_finish_1.md), [`norm_finish_2`](norm_finish_2.md).
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `A.sum()` | `Accumulator<T, 1>` | `Reduction<Expansion<T, 1>>` | the running sum of an accumulator, canonical; the finish of the loops of `kairn/batch.hpp` too |
+
+`T` is `float` or `double`; `A` and `B` are accumulators, `kairn::Accumulator<T, k>`, header `kairn/accumulator.hpp`, which `kairn/kairn.hpp` includes. They take no marker: an operation of an accumulator compiles only while its kernels are proved ([The accumulator](accumulator.md)).
 
 ## Requires
 

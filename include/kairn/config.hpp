@@ -110,6 +110,7 @@
 ///   zero depends on the mode, and Kairn leaves it unspecified;
 /// - the conversion of a SumAndError (the result of two_sum or fast_two_sum) to Expansion<T, 2>:
 ///   the same guards, and a test of the pair that compares and does not round (blocks.hpp);
+/// - norm_upper of an array (batch.hpp: magnitudes, comparisons, a step of the bit pattern);
 /// - and, with no check at all: next_up and next_down (integer operations on the bit pattern,
 ///   which no state of the environment changes); as before, the constructors of two limbs from a
 ///   T or a number of one limb and from_limbs_unchecked (the same guards), sign, isfinite,
@@ -130,9 +131,11 @@
 /// share that compute bounds or centers (milestone2.md, "Functions that do not round", its second
 /// table): the midpoint, the radius, mid_rad and the split of an Interval, the conversions between
 /// Interval and Ball, the ball from an interval of two T, the bounds of a Ball (lower_as,
-/// upper_as, lower and upper), and the narrowing of a Ball to one limb; and of a Ball the member
-/// and subset tests, the three-valued comparisons, the hull, the intersection and the split, which
-/// compute a difference of centers or the conversions to intervals and back.
+/// upper_as, lower and upper), and the narrowing of a Ball to one limb; of a Ball the member and
+/// subset tests, the three-valued comparisons, the hull, the intersection and the split, which
+/// compute a difference of centers or the conversions to intervals and back; and the functions on
+/// arrays of batch.hpp but norm_upper (sum, sum_fast, dot, the maps, conv), which also check the
+/// lengths and the arrays that alias, and their elements as an operator does.
 #if !defined(KAIRN_CHECKS)
 #if defined(NDEBUG)
 #define KAIRN_CHECKS 0

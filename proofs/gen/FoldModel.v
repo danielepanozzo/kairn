@@ -277,6 +277,19 @@ Definition dot_1_seq (xs : list (R * R)) : R :=
 Definition dot_1_lanes (W : nat) (xs : list (R * R)) : R :=
   fold_lanes dot_1_step dot_1_combine 0 W xs.
 
+(* dot_1_entry: arrays supplied x, supplied y; state s of 1 limb; step dot_entry_step_1, combination add_1_1. *)
+Definition dot_1_entry_step (s : R) (xy : R * R) : R :=
+  dot_entry_step_1 emin prec choice s (fst xy) (snd xy).
+
+Definition dot_1_entry_combine (a b : R) : R :=
+  add_1_1 emin prec choice a b.
+
+Definition dot_1_entry_seq (xs : list (R * R)) : R :=
+  fold_seq dot_1_entry_step 0 xs.
+
+Definition dot_1_entry_lanes (W : nat) (xs : list (R * R)) : R :=
+  fold_lanes dot_1_entry_step dot_1_entry_combine 0 W xs.
+
 (* dot_2: arrays supplied x, supplied y; state s of 2 limbs; step dot_step_2, combination add_2_2. *)
 Definition dot_2_step (s : R * R) (xy : (R * R) * (R * R)) : R * R :=
   dot_step_2 emin prec choice (fst s) (snd s) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).

@@ -76,12 +76,22 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 # The building blocks, which no public operation computes on its own, and the entry kernels that no
 # public operation calls yet; runner.cpp lists the same, with why. The building blocks of the
 # interval kernels of Milestone 2 (mul_dir_1, the bounds of two limbs, mul_ext_2_2) are in the
-# first; every other interval kernel is reached by a public form.
+# first; every other interval kernel is reached by a public form. The functions on arrays
+# (kairn/batch.hpp) reach the kernels of their loops only inside the loops, which the oracle judges
+# (api.oracle.FOLD.FORMAT, below): the finishes and the kernels of the folds of maxima, which are
+# not entry kernels, are building blocks, and the steps, which are, are on the second list.
 set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
   sub_up_1 mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2
-  mul_ext_2_2)
+  mul_ext_2_2 fold_finish_1 fold_finish_2 norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
+  acc_radius_1 acc_radius_2)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2
-  ball_mul_pow2_1 ball_mul_pow2_2)
+  ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2 dot_step_1 dot_step_2
+  add_entry_step_1 add_entry_step_2 sub_entry_step_1 sub_entry_step_2 scale_step_1 scale_step_2 mul_pow2_step_1
+  mul_pow2_step_2 axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1 acc_mul_1)
+# The folds that no public function calls (runner_arrays.hpp lists the same, with why): the loops
+# on stored arrays, whose callers here call the loops on supplied arrays instead (kairn/batch.hpp),
+# and dot_1, whose caller calls dot_1_entry, the same loop with its factors guarded.
+set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 axpy_2 axpy_2_1 dot_1)
 set(KAIRN_API_CASES 10000 CACHE STRING
   "Random cases per kernel, format and form of the public interface judged by the oracle, in the full tier")
 set(KAIRN_API_QUICK_CASES 2000 CACHE STRING
@@ -227,6 +237,70 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle")
     endforeach()
   endforeach()
+  # The functions on arrays (kairn/batch.hpp): api.oracle.FOLD.FORMAT, every public form of each fold
+  # of gen/claims.json that a public function calls (runner_arrays.hpp), on random arrays of the
+  # oracle's generator in the sequential order (each form computes its own order: the claims of a
+  # fold are the same in both), as many and as long as the quick tier's cross-checks of that kind
+  # of fold (../CMakeLists.txt: KAIRN_CROSSCHECK_FOLD_QUICK_*, _MAP_QUICK_*, _CONV_QUICK_LENGTH);
+  # a map also on a second stream in place (crosscheck.py api --inplace). The runner of the packed
+  # forms alone, for AVX2, joins every fold but the convolutions, which have no packed loop. The
+  # folds on stored arrays have no public caller (_api_folds_not_public, with the runner's
+  # --folds-not-public), and neither have the folds of KAIRN_NOT_PUBLIC_YET_FOLDS (../CMakeLists.txt).
+  string(JSON _api_fold_count ERROR_VARIABLE _api_no_folds LENGTH "${_api_json}" folds)
+  if(_api_no_folds)
+    set(_api_fold_count 0)
+  endif()
+  set(_api_folds "")
+  if(_api_fold_count GREATER 0)
+    math(EXPR _api_fold_last "${_api_fold_count} - 1")
+    foreach(_i RANGE ${_api_fold_last})
+      string(JSON _fold GET "${_api_json}" folds ${_i} name)
+      if(_fold IN_LIST _api_folds_not_public OR _fold IN_LIST KAIRN_NOT_PUBLIC_YET_FOLDS
+         OR _fold IN_LIST KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
+        continue()
+      endif()
+      list(APPEND _api_folds ${_fold})
+      string(JSON _is_map ERROR_VARIABLE _no_map GET "${_api_json}" folds ${_i} map)
+      string(JSON _is_conv ERROR_VARIABLE _no_conv GET "${_api_json}" folds ${_i} conv)
+      string(JSON _kind0 ERROR_VARIABLE _no_kind0 GET "${_api_json}" folds ${_i} ensures 0 kind)
+      set(_count ${KAIRN_CROSSCHECK_FOLD_QUICK_CASES})
+      set(_length ${KAIRN_CROSSCHECK_FOLD_QUICK_LENGTH})
+      set(_full_count ${KAIRN_CROSSCHECK_FOLD_CASES})
+      set(_full_length ${KAIRN_CROSSCHECK_FOLD_LENGTH})
+      set(_inplace "")
+      set(_extra ${_api_packed_runner})
+      if(_is_map AND NOT _no_map)
+        set(_count ${KAIRN_CROSSCHECK_MAP_QUICK_CASES})
+        set(_length ${KAIRN_CROSSCHECK_MAP_QUICK_LENGTH})
+        set(_full_length ${KAIRN_CROSSCHECK_MAP_LENGTH})
+        set(_inplace --inplace)
+      elseif(_is_conv AND NOT _no_conv)
+        set(_count ${KAIRN_CROSSCHECK_MAP_QUICK_CASES})
+        set(_length ${KAIRN_CROSSCHECK_CONV_QUICK_LENGTH})
+        set(_full_count ${KAIRN_CROSSCHECK_CONV_CASES})
+        set(_full_length ${KAIRN_CROSSCHECK_CONV_LENGTH})
+        set(_extra "")
+      elseif(_kind0 STREQUAL "upper")
+        set(_count ${KAIRN_CROSSCHECK_MAP_QUICK_CASES})
+        set(_length ${KAIRN_CROSSCHECK_MAP_QUICK_LENGTH})
+        set(_full_length ${KAIRN_CROSSCHECK_MAP_LENGTH})
+      endif()
+      set(_api_fold_${_fold}_args --orders seq ${_inplace} PARENT_SCOPE)
+      set(_api_fold_${_fold}_quick --count ${_count} --max-length ${_length} PARENT_SCOPE)
+      set(_api_fold_${_fold}_extra ${_extra} PARENT_SCOPE)
+      set(_api_fold_${_fold}_full_count ${_full_count} PARENT_SCOPE)
+      set(_api_fold_${_fold}_full_length ${_full_length} PARENT_SCOPE)
+      foreach(_format binary64 binary32)
+        set(_name api.oracle.${_fold}.${_format})
+        add_test(NAME ${_name}
+          COMMAND ${_api_crosscheck} api --kernel ${_fold} --format ${_format} --count ${_count}
+            --orders seq --max-length ${_length} ${_inplace} --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/oracle"
+            ${_api_common} ${_extra})
+        set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle;arrays")
+      endforeach()
+    endforeach()
+  endif()
+  set(_api_oracle_folds ${_api_folds} PARENT_SCOPE)
   # For ../full/CMakeLists.txt, which registers the same on KAIRN_API_CASES cases, and every form of
   # the flag sets' runners on KAIRN_API_QUICK_CASES.
   set(_api_oracle_kernels ${_api_mapped} PARENT_SCOPE)
@@ -241,6 +315,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
       "-DCLAIMS=${PROJECT_SOURCE_DIR}/gen/claims.json"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
       "-DNOT_PUBLIC=${_api_not_public}" "-DNOT_CHECKED=${_api_unlisted}"
+      "-DFOLDS_NOT_PUBLIC=${_api_folds_not_public}"
+      "-DFOLDS_NOT_CHECKED=${KAIRN_NOT_YET_CROSS_CHECKED_FOLDS};${KAIRN_NOT_PUBLIC_YET_FOLDS}"
       "-DPACKED_HEADER=${_api_include}/kairn/packed.hpp" -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
   set_tests_properties(api.oracle.coverage PROPERTIES LABELS "api;oracle")
   list(LENGTH _api_mapped _n)
@@ -278,7 +354,35 @@ foreach(_form IN LISTS _api_packed_forms)
   _kairn_api_program(kairn-api-soa-${_form} soa.cpp ${_options})
   add_test(NAME api.soa.${_form} COMMAND kairn-api-soa-${_form})
   set_tests_properties(api.packed.${_form} api.soa.${_form} PROPERTIES TIMEOUT 120 LABELS "api;packed")
+  # The functions on arrays (batch.cpp): each calls its loop, in its order; the flags; the edges.
+  _kairn_api_program(kairn-api-batch-${_form} batch.cpp ${_options})
+  add_test(NAME api.batch.${_form} COMMAND kairn-api-batch-${_form})
+  set_tests_properties(api.batch.${_form} PROPERTIES TIMEOUT 120 LABELS "api;packed;arrays")
 endforeach()
+
+# --- The bounds as functions of the length, and the accumulator, in exact arithmetic -----------
+#
+# api.arrays.exact.KIND (arrays_exact.cpp computes through the public headers, arrays_exact.py
+# checks with Python's fractions): bounds, kairn::traits<X>::sum(n) and dot(n) at the lengths where
+# the count is converted to T exactly and where it is rounded up, against gamma_m(e) and the
+# underflow term of the proved statements, +infinity exactly where no bound is given; accumulator,
+# histories of kairn::Accumulator (random trees of add, add_product and merge, empty ones, counts
+# where their conversion to T rounds, a count that saturates, overflows, terms that are not finite)
+# against their exact sums, the radius never finite where the theorem gives none.
+_kairn_api_program(kairn-api-arrays-exact arrays_exact.cpp)
+# api.accumulator (accumulator.cpp): the accumulator in constant evaluation, its merges, from_state,
+# the count and what it returns when something is not finite.
+_kairn_api_program(kairn-api-accumulator accumulator.cpp)
+add_test(NAME api.accumulator COMMAND kairn-api-accumulator)
+set_tests_properties(api.accumulator PROPERTIES TIMEOUT 120 LABELS "api;arrays")
+if(Python3_Interpreter_FOUND)
+  foreach(_kind bounds accumulator)
+    add_test(NAME api.arrays.exact.${_kind}
+      COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/arrays_exact.py"
+        "$<TARGET_FILE:kairn-api-arrays-exact>" ${_kind})
+    set_tests_properties(api.arrays.exact.${_kind} PROPERTIES TIMEOUT 300 LABELS "api;arrays")
+  endforeach()
+endif()
 
 # --- kairn::rational -------------------------------------------------------------------------
 #
@@ -422,6 +526,18 @@ foreach(_i RANGE 0 ${_last} 2)
     set(_fuses ON)
   endif()
   string(REPLACE "." "-" _target_suffix "${_suffix}")
+  # The third kind of form, the other factor a constant the compiler sees (rule R3, the factors of a
+  # fused operation; boundary.cpp, --factor): with the guard every form must agree (--factor none);
+  # the copy without the guard requires a difference where a compiler was measured to fuse such a
+  # product. Measured (docs/developer/testing.md, "Products of the program passed into Kairn"): Apple
+  # clang 21 on AArch64 with =fast, at -O1 and -O2, in two_prod, mul_down, mul_up and
+  # finite::mul(E2, T), whose kernels have no guard on their factors, so that this build fails with
+  # the guard too, a finding kept failing until the owner decides; GCC 13 and 16 and Clang 18 on
+  # x86-64 fused none of these forms, at any setting. Elsewhere the copy only reports.
+  set(_factor report)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast")
+    set(_factor some)
+  endif()
   # At -O2, where Clang was measured to fuse every form without the guard (at -O3 fewer); MSVC's
   # Release is /O2 already.
   set(_level "")
@@ -429,7 +545,7 @@ foreach(_i RANGE 0 ${_last} 2)
     set(_level -O2)
   endif()
   _kairn_api_program(kairn-api-boundary${_target_suffix} boundary.cpp ${_level} ${_option})
-  add_test(NAME api.boundary${_suffix} COMMAND kairn-api-boundary${_target_suffix} --expect none)
+  add_test(NAME api.boundary${_suffix} COMMAND kairn-api-boundary${_target_suffix} --expect none --factor none)
   add_executable(kairn-api-boundary-unguarded${_target_suffix} boundary.cpp)
   target_include_directories(kairn-api-boundary-unguarded${_target_suffix} BEFORE PRIVATE "${_api_unguarded}")
   target_link_libraries(kairn-api-boundary-unguarded${_target_suffix} PRIVATE kairn::fma)
@@ -437,9 +553,11 @@ foreach(_i RANGE 0 ${_last} 2)
   target_compile_options(kairn-api-boundary-unguarded${_target_suffix} PRIVATE ${_api_warnings} ${_level} ${_option})
   target_compile_definitions(kairn-api-boundary-unguarded${_target_suffix} PRIVATE KAIRN_TEST_UNGUARDED_COPY)
   if(_fuses)
-    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect some)
+    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect some
+      --factor ${_factor})
   else()
-    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect report)
+    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect report
+      --factor ${_factor})
   endif()
   set_tests_properties(api.boundary${_suffix} api.boundary.unguarded${_suffix} PROPERTIES LABELS "api;boundary")
   # The same for Packed and the containers (boundary_packed.cpp), in each form above:
@@ -454,7 +572,7 @@ foreach(_i RANGE 0 ${_last} 2)
     endif()
     set(_target kairn-api-boundary-packed-${_form}${_target_suffix})
     _kairn_api_program(${_target} boundary_packed.cpp ${_level} ${_option} ${_form_options})
-    add_test(NAME api.boundary.packed.${_form}${_suffix} COMMAND ${_target} --expect none)
+    add_test(NAME api.boundary.packed.${_form}${_suffix} COMMAND ${_target} --expect none --factor none)
     add_executable(${_target}-unguarded boundary_packed.cpp)
     target_include_directories(${_target}-unguarded BEFORE PRIVATE "${_api_unguarded}")
     target_link_libraries(${_target}-unguarded PRIVATE kairn::fma)
@@ -481,9 +599,72 @@ foreach(_i RANGE 0 ${_last} 2)
     else()
       set(_expect report)
     endif()
-    add_test(NAME api.boundary.packed.unguarded.${_form}${_suffix} COMMAND ${_target}-unguarded --expect ${_expect})
+    # The products of Packed with a factor the compiler sees (--factor): measured to fuse with Apple
+    # clang 21 and =fast at -O2, in the NEON form (every product of Packed<T, 2> and Packed<T, 1>)
+    # and the scalar form (finite::mul); with the guard too, as in boundary.cpp. Nothing fused with
+    # GCC 13 and 16 and Clang 18 on x86-64, in any form.
+    set(_factor_packed report)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast"
+       AND (_form STREQUAL "native" OR _form STREQUAL "scalar"))
+      set(_factor_packed some)
+    endif()
+    add_test(NAME api.boundary.packed.unguarded.${_form}${_suffix} COMMAND ${_target}-unguarded --expect ${_expect}
+      --factor ${_factor_packed})
     set_tests_properties(api.boundary.packed.${_form}${_suffix} api.boundary.packed.unguarded.${_form}${_suffix}
       PROPERTIES LABELS "api;boundary;packed")
+    # The same for the functions on arrays (boundary_batch.cpp): arrays the program fills with
+    # products, passed into the sums, the maps and axpy; api.boundary.arrays.FORM.* and, against the
+    # copy without the guard, api.boundary.arrays.unguarded.FORM.*. At -O3, where the compilers
+    # inline the loops of one limb into the function that fills the arrays (at -O2 none did, and
+    # the copy without the guard then shows nothing). Measured to fuse without the guard (the sums
+    # of one limb in both forms, and the difference of one limb in the scalar form): GCC 16 on
+    # AArch64 by default and with =fast, and Apple clang 21 with =fast, in the NEON and the scalar
+    # forms; Clang 18 on x86-64 with =fast, in the scalar and the AVX2 forms. GCC 13 on x86-64 fused
+    # nothing without the guard, in either form, under any setting. Elsewhere it only reports.
+    set(_target kairn-api-boundary-arrays-${_form}${_target_suffix})
+    set(_o3 "")
+    if(NOT _msvc_style)
+      set(_o3 -O3)
+    endif()
+    _kairn_api_program(${_target} boundary_batch.cpp ${_o3} ${_option} ${_form_options})
+    add_test(NAME api.boundary.arrays.${_form}${_suffix} COMMAND ${_target} --expect none --factor none)
+    add_executable(${_target}-unguarded boundary_batch.cpp)
+    target_include_directories(${_target}-unguarded BEFORE PRIVATE "${_api_unguarded}")
+    target_link_libraries(${_target}-unguarded PRIVATE kairn::fma)
+    target_compile_features(${_target}-unguarded PRIVATE cxx_std_20)
+    target_compile_options(${_target}-unguarded PRIVATE ${_api_warnings} ${_o3} ${_option} ${_form_options})
+    target_compile_definitions(${_target}-unguarded PRIVATE KAIRN_TEST_UNGUARDED_COPY)
+    set(_fuses_arrays OFF)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND (_variant STREQUAL "" OR _variant STREQUAL "contract-fast")
+       AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
+      set(_fuses_arrays ON)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast")
+      set(_fuses_arrays ON)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT _msvc_style AND _variant STREQUAL "contract-fast"
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+      set(_fuses_arrays ON)
+    endif()
+    if(_fuses_arrays)
+      set(_expect some)
+    else()
+      set(_expect report)
+    endif()
+    # The arrays and values with a factor the compiler sees (--factor): measured to fuse without the
+    # guard, in the dot product of one limb (dot_1_entry's guards taken out), with Clang 18 on x86-64
+    # and =fast in the scalar form (not in the AVX2 form), and with Apple clang 21 and =fast in the
+    # NEON and the scalar forms. GCC 13 and 16 fused none. Elsewhere the copy only reports.
+    set(_factor_arrays report)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast"
+       AND (_form STREQUAL "native" OR _form STREQUAL "scalar"))
+      set(_factor_arrays some)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT _msvc_style AND _variant STREQUAL "contract-fast"
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$" AND _form STREQUAL "scalar")
+      set(_factor_arrays some)
+    endif()
+    add_test(NAME api.boundary.arrays.unguarded.${_form}${_suffix} COMMAND ${_target}-unguarded --expect ${_expect}
+      --factor ${_factor_arrays})
+    set_tests_properties(api.boundary.arrays.${_form}${_suffix} api.boundary.arrays.unguarded.${_form}${_suffix}
+      PROPERTIES LABELS "api;boundary;arrays")
   endforeach()
 endforeach()
 
@@ -755,6 +936,24 @@ _kairn_api_reject(packed.limb_operand 49 "${_api_no_operator}")
 _kairn_api_reject(packed.implicit_narrowing 50 "${_api_no_conversion}")
 _kairn_api_reject(packed.mixed_limb_types 51 "${_api_no_operator}")
 _kairn_api_reject(packed.one_limb_arithmetic 53 "${_api_no_operator}")
+# The functions on arrays (batch.hpp): nothing writes through a view of const limbs, every view of
+# one call has one limb type and one number of limbs, and nothing scales by a two-limb number (no
+# loop does). Each control writes what compiles instead.
+set(_api_no_function "no matching|no overloaded function|constraints|could not deduce|conflicting|cannot convert")
+_kairn_api_reject(batch.map_into_const 54 "${_api_no_function}")
+_kairn_api_reject(batch.axpy_into_const 55 "${_api_no_function}")
+_kairn_api_reject(batch.mixed_limb_types 56 "${_api_no_function}")
+_kairn_api_reject(batch.mixed_limbs 57 "${_api_no_function}")
+_kairn_api_reject(batch.scale_by_two_limbs 58 "${_api_no_function}")
+# A bound as a function of the length that the kernel does not give, in a constant expression: a
+# compile error (traits.hpp); the control computes it at run time, where it is +infinity.
+_kairn_api_reject(traits.length_beyond 59 "constant|constexpr")
+# The accumulator (accumulator.hpp): no merge of accumulators of two limb types; add_product and
+# error_bound are not constexpr (their kernels have fused multiply-adds); each control writes what
+# compiles instead.
+_kairn_api_reject(accumulator.mixed_limb_types 60 "${_api_no_conversion}|${_api_no_function}")
+_kairn_api_reject(not_constexpr.add_product 61 "constant|constexpr")
+_kairn_api_reject(not_constexpr.error_bound 62 "constant|constexpr")
 # KAIRN_PACKED_FORM (packed.hpp): a value that is not a form, a bare -D, and the form of another
 # target, which the generated header refuses.
 _kairn_api_reject(packed_form.unknown 52 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"
@@ -974,6 +1173,16 @@ foreach(_form IN LISTS _api_packed_forms)
       "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/packed_dot.txt"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
   set_tests_properties(api.example.packed_dot.${_form} PROPERTIES LABELS "api;example;packed")
+  # The tutorial on sums and dot products of arrays (docs/tutorials/arrays.md): the results of the
+  # sequential order, the same in every form, which the program checks against an exact reference
+  # and the bounds of kairn::traits, as the results of the lane order of the form, which it prints
+  # to the standard error only.
+  _kairn_api_program(kairn-example-arrays-${_form} "${PROJECT_SOURCE_DIR}/docs/examples/cpp/arrays.cpp" ${_options})
+  add_test(NAME api.example.arrays.${_form}
+    COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-arrays-${_form}>"
+      "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/arrays.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+  set_tests_properties(api.example.arrays.${_form} PROPERTIES LABELS "api;example;arrays")
 endforeach()
 set_tests_properties(api.constexpr api.environment PROPERTIES LABELS api)
 

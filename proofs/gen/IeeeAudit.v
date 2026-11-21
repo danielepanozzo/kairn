@@ -481,6 +481,9 @@ Print Assumptions acc_merge_1_ieee_correct.
 Definition acc_mul_1_ieee_audit : acc_mul_1_ieee_spec := acc_mul_1_ieee_correct.
 Print Assumptions acc_mul_1_ieee_correct.
 
+Definition acc_mul_entry_1_ieee_audit : acc_mul_entry_1_ieee_spec := acc_mul_entry_1_ieee_correct.
+Print Assumptions acc_mul_entry_1_ieee_correct.
+
 Definition acc_radius_1_ieee_audit : acc_radius_1_ieee_spec := acc_radius_1_ieee_correct.
 Print Assumptions acc_radius_1_ieee_correct.
 
@@ -504,6 +507,9 @@ Print Assumptions bv_center_entry_1_ieee_bridge.
 
 Definition bv_mul_pow2_step_1_ieee_audit : bv_mul_pow2_step_1_ieee_spec := bv_mul_pow2_step_1_ieee_correct.
 Print Assumptions bv_mul_pow2_step_1_ieee_correct.
+
+Definition dot_entry_step_1_ieee_bridge_audit : dot_entry_step_1_ieee_bridge_spec := dot_entry_step_1_ieee_bridge.
+Print Assumptions dot_entry_step_1_ieee_bridge.
 
 Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
 Print Assumptions dot_step_1_ieee_bridge.
@@ -622,6 +628,9 @@ Print Assumptions bv_center_entry_1_ieee_lead.
 Definition bv_mul_pow2_step_1_ieee_lead_audit : bv_mul_pow2_step_1_ieee_lead_spec := bv_mul_pow2_step_1_ieee_lead.
 Print Assumptions bv_mul_pow2_step_1_ieee_lead.
 
+Definition dot_entry_step_1_ieee_lead_audit : dot_entry_step_1_ieee_lead_spec := dot_entry_step_1_ieee_lead.
+Print Assumptions dot_entry_step_1_ieee_lead.
+
 Definition dot_step_1_ieee_lead_audit : dot_step_1_ieee_lead_spec := dot_step_1_ieee_lead.
 Print Assumptions dot_step_1_ieee_lead.
 
@@ -699,6 +708,12 @@ Print Assumptions dot_1_seq_ieee_correct.
 
 Definition dot_1_lanes_ieee_audit : dot_1_lanes_ieee_spec := dot_1_lanes_ieee_correct.
 Print Assumptions dot_1_lanes_ieee_correct.
+
+Definition dot_1_entry_seq_ieee_audit : dot_1_entry_seq_ieee_spec := dot_1_entry_seq_ieee_correct.
+Print Assumptions dot_1_entry_seq_ieee_correct.
+
+Definition dot_1_entry_lanes_ieee_audit : dot_1_entry_lanes_ieee_spec := dot_1_entry_lanes_ieee_correct.
+Print Assumptions dot_1_entry_lanes_ieee_correct.
 
 Definition dot_2_seq_ieee_audit : dot_2_seq_ieee_spec := dot_2_seq_ieee_correct.
 Print Assumptions dot_2_seq_ieee_correct.

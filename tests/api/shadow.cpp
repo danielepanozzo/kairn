@@ -10,6 +10,7 @@
 #include "shadow_globals.hpp"
 #endif
 #define KAIRN_CHECKS 1
+#include <kairn/batch.hpp>
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
@@ -354,6 +355,42 @@ double use_every_operation(UseT use_a, UseT use_b) {
         use_add(E2(use_read[1]).limb[0] + use_read.subview(1, 1).get(0).limb[0] + double(use_read.size()) +
                 use_plain.get(0).limb[0] + use_copy.get(0).limb[0] + use_soa.limb(0)[0] + use_soa.view().limb(1)[0] +
                 E2(use_copy[0]).limb[0] + use_copy.load(0).lane(0).limb[0] + double(use_soa.empty()));
+    }
+
+    // The functions on arrays (kairn/batch.hpp) and the bounds as functions of the length, every
+    // function once for one and two limbs; the accumulator (kairn/accumulator.hpp), every operation.
+    {
+        UseT use_arr_h1[4] = {use_a, use_b, use_a, use_b}, use_arr_h2[4] = {use_b, use_a, use_b, use_a};
+        UseT use_arr_l1z[4] = {}, use_arr_l2z[4] = {}, use_arr_zh[7] = {}, use_arr_zl[7] = {};
+        const kairn::SoAView<const UseT, 1> use_arr_v1(use_arr_h1, 4), use_arr_w1(use_arr_h2, 4);
+        const kairn::SoAView<const UseT, 2> use_arr_v2(use_arr_h1, use_arr_l1z, 4), use_arr_w2(use_arr_h2, use_arr_l2z, 4);
+        const kairn::SoAView<UseT, 1> use_arr_z1(use_arr_zh, 4);
+        const kairn::SoAView<UseT, 2> use_arr_z2(use_arr_zh, use_arr_zl, 4), use_arr_c2(use_arr_zh, use_arr_zl, 7);
+        use_add(kairn::sum(use_arr_v1).value.limb[0] + kairn::sum(use_arr_v2, kairn::sequential).value.limb[0] +
+                kairn::sum_fast(use_arr_v2).value.limb[1] + kairn::sum_fast(use_arr_v1, kairn::sequential).finite +
+                kairn::dot(use_arr_v1, use_arr_w1).value.limb[0] + kairn::dot(use_arr_v2, use_arr_w2, kairn::sequential).value.limb[0] +
+                kairn::norm_upper(use_arr_v2).value + kairn::norm_upper(use_arr_v1).finite);
+        use_add(kairn::add(use_arr_v2, use_arr_w2, use_arr_z2) + kairn::sub(use_arr_v1, use_arr_w1, use_arr_z1) +
+                kairn::scale(use_arr_v2, use_a, use_arr_z2) + kairn::mul_pow2(use_arr_v1, UseT(0.5), use_arr_z1) +
+                kairn::axpy(use_a, use_arr_v1, use_arr_w1, use_arr_z1) + kairn::axpy(use_a, use_arr_v2, use_arr_w2, use_arr_z2) +
+                kairn::axpy(E2(use_a), use_arr_v2, use_arr_w2, use_arr_z2) + kairn::conv(use_arr_v2, use_arr_w2, use_arr_c2));
+        using use_arr_traits2 = kairn::traits<E2>;
+        use_add(kairn::traits<UseT>::sum(4).unit + use_arr_traits2::dot(4).tiny + use_arr_traits2::sum_height(3).unit +
+                use_arr_traits2::axpy.unit + use_arr_traits2::axpy_limb.tiny + kairn::traits<UseT>::axpy.unit);
+        kairn::Accumulator<UseT, 2> use_arr_acc2, use_arr_other2;
+        kairn::Accumulator<UseT, 1> use_arr_acc1;
+        use_arr_acc2.add(use_x);
+        use_arr_acc2.add(use_a);
+        use_arr_acc2.add_product(use_x, use_y);
+        use_arr_acc2.add_product(use_a, use_b);
+        use_arr_other2.add(use_b);
+        use_arr_acc2.merge(use_arr_other2);
+        use_arr_acc1.add(use_a);
+        use_arr_acc1.add_product(use_a, use_b);
+        use_arr_acc1.merge(kairn::Accumulator<UseT, 1>::from_state(E1(use_a), use_a, 1));
+        use_add(use_arr_acc2.sum().value.limb[0] + use_arr_acc2.error_bound() + use_arr_acc2.ball().radius() +
+                double(use_arr_acc2.count()) + use_arr_acc2.magnitudes() + use_arr_acc2.running_sum().limb[1] +
+                use_arr_acc1.error_bound() + use_arr_acc1.ball().center().limb[0] + use_arr_acc1.sum().finite);
     }
 
     // Constants from fractions: rational and integer, in constant evaluation and at run time, and

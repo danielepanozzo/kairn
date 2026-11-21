@@ -15,10 +15,11 @@
      which is at most (e (1 + 4 u^2) + 4 u^2) (|s| + |x y|) + 2 eta because e <= 1/3
      (from precision 4, e <= 1/64). The generated statement prints the factor as
      (3 (1 + 4 u u) / (1 - 4 u) + 4) u^2.
-   - The three entry steps pass each limb of the element through the guard, RN (x + 0),
-     and then call add_1_1, add_2_2 or add_fast_2_2. A limb that is a number of the
-     format passes unchanged (guard_real_any), so each statement is that of the
-     addition. *)
+   - The three entry steps of the sums pass each limb of the element through the guard,
+     RN (x + 0), and then call add_1_1, add_2_2 or add_fast_2_2. A limb that is a number
+     of the format passes unchanged (guard_real_any), so each statement is that of the
+     addition. The entry step of the dot product of one limb, dot_entry_step_1, guards
+     both factors and is then dot_step_1, by the same argument. *)
 From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core.
 From Kairn.Gen Require Import Model Statements.
@@ -33,6 +34,18 @@ intros emin prec Hp s x y Fs Fx Fy t. unfold t, dot_step_1. clear t. cbv zeta.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
 split. limb_format.
 unfold RN. now rewrite (Rplus_comm s (x * y)).
+Qed.
+
+(** * dot_entry_step_1 *)
+
+(* dot_step_1 on the guarded elements (rule R3, the factors of a fused operation): an element
+   of the format passes the guard unchanged (guard_real_any), so the statement is that of
+   dot_step_1. *)
+Theorem dot_entry_step_1_correct : dot_entry_step_1_spec.
+Proof.
+intros emin prec Hp s x y Fs Fx Fy t. unfold t, dot_entry_step_1. clear t. cbv zeta.
+rewrite (guard_real_any emin prec tie_even x Fx), (guard_real_any emin prec tie_even y Fy).
+exact (dot_step_1_correct emin prec Hp s x y Fs Fx Fy).
 Qed.
 
 (** * dot_step_2 *)

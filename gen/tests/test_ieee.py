@@ -30,6 +30,8 @@ PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_
             'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_pow2_2', 'fast_two_sum_entry']
 # And the steps of the folds, whose bridge statements the IEEE model of a fold uses.
 PROGRAMS += ['dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2']
+# And the step of dot_1_entry, dot_step_1 on its factors guarded.
+PROGRAMS += ['dot_entry_step_1']
 # And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
 # Program.v (acc_merge_k: additions; the others guard or take an absolute value).
 PROGRAMS += ['acc_merge_1', 'acc_merge_2']
@@ -492,10 +494,12 @@ class Statements(unittest.TestCase):
         # bv_conv_finish (1), and the products bv_conv_1 and bv_conv_2 (2: one statement each, as a
         # convolution's); and the leading limbs of neg_2 and bv_center_2, steps of the extended domain
         # (2), and the two statements more of the two folds of maxima, F_orders_ieee_spec and
-        # F_flag_ieee_spec (4): 302. Then the statements of the two executions of the thirty
-        # kernels of IeeeWith.v, K_two_executions_spec, whose theorems no description names (30):
-        # 332. Then those of the 33 kernels without a product that IeeeWith.v has since (33): 365.
-        self.assertEqual(text.count('Print Assumptions'), 365)
+        # F_flag_ieee_spec (4): 302. And five with the guarded forms of rule R3 on the factors of a
+        # fused operation: acc_mul_entry_1, dot_entry_step_1 (bridge and lead) and dot_1_entry in
+        # both orders: 307. Then the statements of the two executions of the thirty kernels of
+        # IeeeWith.v, K_two_executions_spec, whose theorems no description names (30): 337. Then
+        # those of the 33 kernels without a product that IeeeWith.v has since (33): 370.
+        self.assertEqual(text.count('Print Assumptions'), 370)
         self.assertEqual(text.count('Print Assumptions IeeeTwoExecutions.'), len(ieee.with_kernels(self.ks)))
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
@@ -642,8 +646,11 @@ class CheckedFiles(unittest.TestCase):
     # was false), and nothing else changed; then that statement was proved (IeeeBvConv.v): one
     # comment more. make -C proofs passed on these files.
     # Merged here: the regeneration of the merged descriptions.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'c1dafcb503776af9a0ccc273cbb68029dad60d53ea214bf104cd6b2e826968aa',
-               'proofs/gen/IeeeStatements.v': '035b64a9e30a0b1f9cdb778af45831f4d8d74267d9298331ff8662a74b6d0208'}
+    # Then the guarded forms of rule R3 on the factors of a fused operation: the kernels
+    # dot_entry_step_1 and acc_mul_entry_1 (their models, the program of the first, and their
+    # statements), added and nothing else changed; make -C proofs passed on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'f00665b46037e1f91036eaf3bba3479b7f30bbca181ac71458465f62ad388bf1',
+               'proofs/gen/IeeeStatements.v': '32d46f34055618792cc8e3623891c4cccabe1fc58a68a4d039c090a3453fd27e'}
 
 
     def test_the_checked_files(self):

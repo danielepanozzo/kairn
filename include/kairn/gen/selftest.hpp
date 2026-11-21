@@ -105,6 +105,30 @@ inline const char* acc_mul_1_float() noexcept {
     return !same(o0, -0x1.6d0b1p+4f) || !same(o1, 0x1.7e5c38p+4f) ? "acc_mul_1 (float)" : nullptr;
 }
 
+// acc_mul_entry_1 (double)
+inline const char* acc_mul_entry_1_double() noexcept {
+    volatile double i0 = 0x1.f6354ed9aa942p+2;
+    volatile double i1 = 0x1.e303ec68947ap-23;
+    volatile double i2 = -0x1.46e5dec0f5686p+3;
+    volatile double i3 = 0x1.77abaf8d3bb16p+0;
+    double o0;
+    double o1;
+    acc_mul_entry_1(i0, i1, i2, i3, o0, o1);
+    return !same(o0, -0x1.c9369b2e3261ap+2) || !same(o1, 0x1.dfb5f57caf76p+3) ? "acc_mul_entry_1 (double)" : nullptr;
+}
+
+// acc_mul_entry_1 (float)
+inline const char* acc_mul_entry_1_float() noexcept {
+    volatile float i0 = -0x1.f29054p+1f;
+    volatile float i1 = 0x1.f6131ap-18f;
+    volatile float i2 = -0x1.ad9172p+2f;
+    volatile float i3 = -0x1.9053e2p-3f;
+    float o0;
+    float o1;
+    acc_mul_entry_1(i0, i1, i2, i3, o0, o1);
+    return !same(o0, -0x1.4aa054p+1f) || !same(o1, 0x1.4fe08p+0f) ? "acc_mul_entry_1 (float)" : nullptr;
+}
+
 // acc_radius_1 (double)
 inline const char* acc_radius_1_double() noexcept {
     volatile double i0 = 0x1.904da235c01f1p-17;
@@ -2011,6 +2035,26 @@ inline const char* conv_radius_float() noexcept {
     float o0;
     conv_radius(i0, i1, i2, i3, i4, i5, i6, o0);
     return !same(o0, 0x1.fdf3d6p-22f) ? "conv_radius (float)" : nullptr;
+}
+
+// dot_entry_step_1 (double)
+inline const char* dot_entry_step_1_double() noexcept {
+    volatile double i0 = -0x1.a5b86ccaf6124p+2;
+    volatile double i1 = -0x1.6be86976c2066p+2;
+    volatile double i2 = 0x1.2b22c6acc400dp+0;
+    double o0;
+    dot_entry_step_1(i0, i1, i2, o0);
+    return !same(o0, -0x1.a77927a10266ap+3) ? "dot_entry_step_1 (double)" : nullptr;
+}
+
+// dot_entry_step_1 (float)
+inline const char* dot_entry_step_1_float() noexcept {
+    volatile float i0 = 0x1.7378d4p-1f;
+    volatile float i1 = -0x1.c4195cp+1f;
+    volatile float i2 = 0x1.4927b6p+2f;
+    float o0;
+    dot_entry_step_1(i0, i1, i2, o0);
+    return !same(o0, -0x1.170996p+4f) ? "dot_entry_step_1 (float)" : nullptr;
 }
 
 // dot_step_1 (double)
@@ -7277,6 +7321,8 @@ inline const char* run() noexcept {
         acc_merge_1_float,
         acc_mul_1_double,
         acc_mul_1_float,
+        acc_mul_entry_1_double,
+        acc_mul_entry_1_float,
         acc_radius_1_double,
         acc_radius_1_float,
         acc_radius_2_double,
@@ -7471,6 +7517,8 @@ inline const char* run() noexcept {
         bv_scale_radius_2_float,
         conv_radius_double,
         conv_radius_float,
+        dot_entry_step_1_double,
+        dot_entry_step_1_float,
         dot_step_1_double,
         dot_step_1_float,
         fast_two_sum_entry_double,

@@ -439,6 +439,28 @@ Definition dot_1_lanes_spec : Prop :=
     ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs (map (fun xy => (fst xy * snd xy)) xys) +
     (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)).
 
+(* dot_1_entry, the sequential order: Higham's bound for summation over any tree, weighted: the fused dot product, on the guarded elements. Status: proved. *)
+Definition dot_1_entry_seq_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall xys : list (R * R),
+  Forall (fun xy => fmt emin prec (fst xy) /\ fmt emin prec (snd xy)) xys ->
+  let s := dot_1_entry_seq emin prec tie_even xys in
+  fmt emin prec s /\
+  Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) xys)) <=
+    ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs (map (fun xy => (fst xy * snd xy)) xys) +
+    (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)).
+
+(* dot_1_entry, the lane order, for every number of lanes W: Higham's bound for summation over any tree, weighted: the fused dot product, on the guarded elements. Status: proved. *)
+Definition dot_1_entry_lanes_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (W : nat) (xys : list (R * R)),
+  Forall (fun xy => fmt emin prec (fst xy) /\ fmt emin prec (snd xy)) xys ->
+  let s := dot_1_entry_lanes emin prec tie_even W xys in
+  fmt emin prec s /\
+  Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) xys)) <=
+    ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs (map (fun xy => (fst xy * snd xy)) xys) +
+    (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)).
+
 (* dot_2, the sequential order: Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22). Status: proved. *)
 Definition dot_2_seq_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->

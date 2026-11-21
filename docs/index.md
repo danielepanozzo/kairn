@@ -108,6 +108,9 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
   limbs, and why it tests its own progress.
 - [A vector loop](tutorials/vector-loop.md): a dot product of two-limb numbers written once for
   AVX2, AArch64 and targets with neither, with `Packed`, and what can be claimed about its result.
+- [Sums and dot products of arrays](tutorials/arrays.md): the functions on arrays of
+  `kairn/batch.hpp`, in both orders of summation, checked against the bound `kairn::traits` gives
+  for their length.
 - [Reference](reference/index.md): every operation, with its proved statement, its theorem, and
   what the brute-force runs measured.
 - [What holds today](getting-started/guarantees.md): which operations are proved, and what is not

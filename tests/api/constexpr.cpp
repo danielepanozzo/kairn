@@ -22,7 +22,12 @@
 // variant, or their code is where KAIRN_ENCLOSURE_CODE puts it (main() checks the arithmetic of
 // intervals at run time, against values computed by hand). mul_down and mul_up are not constexpr,
 // by design (api.reject.not_constexpr.*); main() checks them at run time.
-// Also: KAIRN_VERSION_AT_LEAST, in #if and in a constant expression.
+// Also: KAIRN_VERSION_AT_LEAST, in #if and in a constant expression; and the bounds as functions
+// of the length (traits<X>::sum(n), sum_height(h), dot(n), the kernels bound_sum_k and
+// bound_dot_k): their constants against what the kernels' statements give at the lengths where the
+// conversion of the count to T is exact and where it rounds up, +infinity beyond the lengths they
+// bound, and the same bits at run time (a bound not given in a constant expression is a compile
+// error: api.reject.traits.length_beyond).
 //
 // The comparisons are evaluated with NaN operands too: one compiler's constant evaluator takes
 // a < b for true when an operand is a NaN, so every comparison that can run in constant evaluation
@@ -240,10 +245,53 @@ struct Checks {
     static_assert(TR::mul_limb.unit_computed == bounds::mul_2_1<T>::unit_computed);
     static_assert(TR::add.reference == kairn::BoundForm::result);
     static_assert(kairn::traits<T>::limbs == 1 && kairn::traits<E1>::add.verified == bounds::add_1_1<T>::proved);
+    // axpy: the constants of its steps, relative to the two terms.
+    static_assert(TR::axpy.unit == bounds::axpy_entry_step_2<T>::unit && TR::axpy.reference == kairn::BoundForm::terms);
+    static_assert(TR::axpy_limb.tiny == bounds::axpy_entry_step_2_1<T>::tiny);
+    static_assert(kairn::traits<T>::axpy.unit == bounds::axpy_entry_step_1<T>::unit);
 };
 
 template struct Checks<double>;
 template struct Checks<float>;
+
+// The bounds as functions of the length. The count n of the program is given to the kernel as the
+// smallest number of T not below it (detail::count_up): exact up to 2^p, rounded up beyond.
+template <class T>
+struct Lengths {
+    static constexpr int p = std::numeric_limits<T>::digits;
+    static constexpr std::uint64_t two_p = std::uint64_t{1} << p;
+    using C1 = kairn::traits<T>;
+    using C2 = kairn::traits<kairn::Expansion<T, 2>>;
+    // count_up: exact below 2^p + 1, the next number of T above beyond, 2^64 for the largest counts.
+    static_assert(kairn::detail::count_up<T>(0) == T(0) && kairn::detail::count_up<T>(1) == T(1));
+    static_assert(kairn::detail::count_up<T>(two_p - 1) == T(two_p - 1) && kairn::detail::count_up<T>(two_p) == T(two_p));
+    static_assert(kairn::detail::count_up<T>(two_p + 1) == T(two_p + 2));
+    static_assert(kairn::detail::count_up<T>(two_p + 2) == T(two_p + 2) && kairn::detail::count_up<T>(two_p + 3) == T(two_p + 4));
+    static_assert(kairn::detail::count_up<T>(2 * two_p + 1) == T(2 * two_p + 4));
+    static_assert(kairn::detail::count_up<T>(~std::uint64_t{0}) == T(0x1p64));
+    static_assert(kairn::detail::count_up<T>((std::uint64_t{1} << 63) + 1) == T(0x1p63) + T(std::uint64_t{1} << (64 - p)));
+    // The sum: no addition, no error; then a unit at least (n - 1) e, of BoundForm::terms, no tiny.
+    static_assert(C1::sum(0).unit == T(0) && C1::sum(1).unit == T(0) && C2::sum(1).unit == T(0));
+    static_assert(C1::sum(2).unit >= kairn::traits<T>::add.unit && C1::sum(2).tiny == T(0));
+    static_assert(C2::sum(2).unit >= C2::add.unit && C2::sum(1000).reference == kairn::BoundForm::terms);
+    static_assert(C1::sum(1001).unit >= T(1000) * C1::add.unit);
+    static_assert(C2::sum_height(10).unit == C2::sum(11).unit && C1::sum_height(0).unit == T(0));
+    // The bound grows with the length, also where the count rounds: sum(2^p + 2) and sum(2^p + 3)
+    // give the kernel the same count, 2^p + 2.
+    static_assert(C2::sum(two_p + 2).unit == C2::sum(two_p + 3).unit && C2::sum(two_p + 3).unit <= C2::sum(two_p + 4).unit);
+    static_assert(C2::sum(two_p + 1).unit <= C2::sum(two_p + 2).unit);
+    // The dot product: a tiny at least n (eta/2) for one limb, n (3/2) eta for two.
+    static_assert(C1::dot(0).unit == T(0) && C1::dot(0).tiny == T(0));
+    static_assert(C1::dot(1).unit >= C1::mul.unit && C1::dot(1).tiny >= std::numeric_limits<T>::denorm_min());
+    static_assert(C2::dot(1).unit >= C2::mul.unit && C2::dot(1).tiny >= C2::mul.tiny);
+    static_assert(C2::dot(1000).tiny >= T(1000) * C2::mul.tiny);
+    // Beyond the lengths bounded: +infinity, which claims nothing (a constant expression of these
+    // fails to compile, so the run-time part below computes them). One limb: (n - 1) u about 1/4.
+    static constexpr std::size_t given1 = std::size_t{1} << (p - 3), beyond1 = std::size_t{1} << (p - 1);
+    static_assert(C1::sum(given1).unit < T(0.25) && C1::dot(given1).unit < T(0.25));
+};
+template struct Lengths<double>;
+template struct Lengths<float>;
 
 // The bit pattern of a value of T.
 template <class T>
@@ -1303,9 +1351,39 @@ void enclosure_run_time() {
 
 }  // namespace
 
+// The bounds as functions of the length at run time: the same bits as in constant evaluation, and
+// +infinity, for unit and tiny, beyond the lengths bounded.
+template <class T>
+void lengths_run_time() {
+    using L = Lengths<T>;
+    volatile std::size_t vn = 1001, vh = 10, vbig = L::beyond1;
+    same("traits::sum(n)", L::C1::sum(vn).unit, L::C1::sum(1001).unit);
+    same("traits::sum(n), two limbs", L::C2::sum(vn).unit, L::C2::sum(1001).unit);
+    same("traits::sum_height(h)", L::C2::sum_height(vh).unit, L::C2::sum_height(10).unit);
+    same("traits::dot(n)", L::C1::dot(vn).tiny, L::C1::dot(1001).tiny);
+    same("traits::dot(n), two limbs", L::C2::dot(vn).unit, L::C2::dot(1001).unit);
+    same("traits::dot(n), two limbs, tiny", L::C2::dot(vn).tiny, L::C2::dot(1001).tiny);
+    constexpr T inf = std::numeric_limits<T>::infinity();
+    same("traits::sum(n) beyond", L::C1::sum(vbig).unit, inf);
+    same("traits::sum(n) beyond, tiny", L::C1::sum(vbig).tiny, inf);
+    same("traits::dot(n) beyond", L::C1::dot(vbig).unit, inf);
+    same("traits::dot(n) beyond, tiny", L::C1::dot(vbig).tiny, inf);
+    if constexpr (sizeof(T) == 4) {
+        // float, two limbs: beyond about 2^44 terms; never for double, whose limit is 2^101.
+        volatile std::size_t vfar = std::size_t{1} << 46;
+        same("traits::sum(n) beyond, two limbs", L::C2::sum(vfar).unit, inf);
+        same("traits::dot(n) beyond, two limbs", L::C2::dot(vfar).tiny, inf);
+    } else {
+        volatile std::size_t vmax = ~std::size_t{0};
+        same("traits::sum(SIZE_MAX), two limbs, given", T(L::C2::sum(vmax).unit < T(1e-10)), T(1));
+    }
+}
+
 int main() {
     run_time<double>();
     run_time<float>();
+    lengths_run_time<double>();
+    lengths_run_time<float>();
     blocks_run_time<double>();
     blocks_run_time<float>();
     intervals_run_time<double>();

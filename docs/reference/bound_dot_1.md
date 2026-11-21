@@ -12,7 +12,11 @@ $$g \ge \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - m \mathrm{unit}(\mathtt{m
 
 ## C++
 
-No public operation computes this kernel on its own.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `traits<T>::dot(n)` | `std::size_t` | `Bound<T>` | $m = n$, a count of `T` rounded up; `unit` is $g$, `tiny` is $t$ |
+
+`T` is `float` or `double`; `kairn::traits<T>` is also `kairn::traits<float>`, `kairn::traits<double>` and `kairn::traits<Expansion<T, 1>>`; header `kairn/kairn.hpp` (`traits.hpp`). `constexpr`, with the same bits at compile time and at run time; where the mask is false the result's `unit` and `tiny` are $+\infty$, which claims nothing, and in a constant expression the call does not compile ([Functions on arrays](batch.md#the-bound-as-a-function-of-the-length)).
 
 ## Requires
 

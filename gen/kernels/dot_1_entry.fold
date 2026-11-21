@@ -1,0 +1,27 @@
+# The dot product of two arrays of numbers of one limb that the program supplies (rule R3, the
+# factors of a fused operation: architecture.md): the dot_1 fold with each element passed through
+# guard first (dot_entry_step_1). dot_1's step only multiplies its elements; but where the
+# compiler sees one array to hold ones, fma(x, 1, s) becomes x + s and a product the program stored
+# into the other is fused into it (Clang 18 on x86-64 and Apple clang 21 under -ffp-contract=fast,
+# measured). Two additions more per element, and the bound holds of the values in the arrays
+# whatever the compiler does. Its claims are those of dot_1.
+fold:          dot_1_entry
+arrays:        supplied x, supplied y
+state:         s
+step:          s = dot_entry_step_1(s, x, y)
+combine:       s = add_1_1(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r
+output:        mask flag
+finish:        (r, flag) = fold_finish_1(s)
+value:         x*y
+ensures:       fold_error r eps=u/(1+u) tau=eta/2 rel=n abs=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+theorem:       proofs/theories/FoldSums.v
+ieee_theorem:  proofs/theories/IeeeFolds.v
+status:        proved
+domain:        extended
+source:        Higham's bound for summation over any tree, weighted: the fused dot product, on the guarded elements
+license:       bound: published; proof: MIT

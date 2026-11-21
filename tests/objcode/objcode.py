@@ -761,7 +761,8 @@ def control_counts(tools, workdir, expected, limb_types, folds=None):
 # clang 21 and GCC 16 on the joined tree of the folds and the intervals; GCC packs none). Clang 18
 # on x86-64 also packs the two independent FMAs of acc_mul_1, the running sum and the sum of
 # magnitudes, into one vfmadd213pd (or ps), for double and float (Apple clang 21 and GCC do not:
-# measured with the accumulator's kernels). With the conversions of two limbs of stage B2, both
+# measured with the accumulator's kernels), and those of its guarded form acc_mul_entry_1 (measured
+# when it was added). With the conversions of two limbs of stage B2, both
 # Clangs pack the same pairs in the kernels that make the bounds of a ball of two limbs by the
 # directed sums (ball_to_interval_2, and the hull and the intersection of balls of two limbs, which
 # call it) and in the midpoint and radius of two limbs (two add_ball_2_2 of independent
@@ -775,9 +776,10 @@ def control_counts(tools, workdir, expected, limb_types, folds=None):
 # clang packs interval_mul_1 and not the two of the table, Clang on AArch64 packs three kernels,
 # and clang-cl, in its first optimized configuration, none.
 RECORDED_VERSIONS = {'clang x86-64': (18,), 'apple clang aarch64': (21,), 'gcc': (13, 16)}
-VECTORIZED_SCALAR = {'clang x86-64': ('acc_mul_1', 'ball_from_interval_2', 'interval_add_2', 'interval_mul_1',
-                                      'interval_sub_2', 'ball_to_interval_2', 'ball_hull_2', 'ball_intersection_2',
-                                      'interval_mid_rad_2', 'interval_to_ball_2', 'ball_split_1', 'ball_split_2'),
+VECTORIZED_SCALAR = {'clang x86-64': ('acc_mul_1', 'acc_mul_entry_1', 'ball_from_interval_2', 'interval_add_2',
+                                      'interval_mul_1', 'interval_sub_2', 'ball_to_interval_2', 'ball_hull_2',
+                                      'ball_intersection_2', 'interval_mid_rad_2', 'interval_to_ball_2', 'ball_split_1',
+                                      'ball_split_2'),
                      'apple clang aarch64': ('interval_add_2', 'interval_sub_2', 'ball_to_interval_2', 'ball_hull_2',
                                              'ball_intersection_2', 'interval_mid_rad_2', 'interval_to_ball_2')}
 

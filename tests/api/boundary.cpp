@@ -15,6 +15,17 @@
 //
 // The forms whose limb operand is only multiplied (x * (a * b), a ball scaled by a * b) or only
 // compared (the member test of an interval) need no guard and must agree in every build.
+//
+// A third kind (rule R3, the factors of a fused operation: docs/developer/architecture.md): every
+// public operation that takes a value of T from the program as a factor, with the other factor a
+// constant the compiler sees, F = 1, -1 or 2 (E2(F) * (a*b), two_prod(a*b, F), ...), in double and
+// float. A compiler that sees F = 1 rewrites fma(x, 1, s) as x + s and may fuse the program's
+// product into that addition. These operations are called with the headers as they are, and every
+// form must agree: --factor none in the build with the guard. The build without the guard reports
+// them (--factor report), or requires a difference (--factor some) where a compiler was measured to
+// fuse (tests/api/CMakeLists.txt; docs/developer/testing.md).
+//
+//   boundary --expect E --factor none|some|report
 #include <kairn/kairn.hpp>
 
 #include <cstdint>
@@ -94,6 +105,112 @@ bool same(const X& u, const X& v) {
     return std::memcmp(&u, &v, sizeof u) == 0;
 }
 
+// The third kind: the other factor F, a constant the compiler sees. Each form is computed with the
+// product a*b in the call (NAME_inline) and with the rounded product (NAME_ref, which gets it as a),
+// and every limb of the result is compared.
+template <int C, class T>
+constexpr T known() {
+    return C == 0 ? T(1) : C == 1 ? T(-1) : T(2);
+}
+template <class T>
+struct Limbs {
+    T v[3];
+};
+template <class T>
+Limbs<T> limbs(const kairn::Expansion<T, 2>& x) { return {{x.limb[0], x.limb[1], T(0)}}; }
+template <class T>
+Limbs<T> limbs(const kairn::Expansion<T, 1>& x) { return {{x.limb[0], T(0), T(0)}}; }
+template <class T>
+Limbs<T> limbs(const kairn::Ball<T, 2>& x) { return {{x.center().limb[0], x.center().limb[1], x.radius()}}; }
+template <class T>
+Limbs<T> limbs(const kairn::Ball<T, 1>& x) { return {{x.center().limb[0], x.radius(), T(0)}}; }
+template <class T>
+Limbs<T> limbs(const kairn::ProductAndError<T>& x) { return {{x.product, x.error, T(0)}}; }
+template <class T>
+Limbs<T> limbs(T x) { return {{x, T(0), T(0)}}; }
+
+#define KNOWN(NAME, ...)                                                                   \
+    template <class T, int C, class Q>                                                     \
+    inline Limbs<T> NAME##_body(Q q) {                                                     \
+        using X1 = kairn::Expansion<T, 1>;                                                 \
+        using X2 = kairn::Expansion<T, 2>;                                                 \
+        using Y1 = kairn::Ball<T, 1>;                                                      \
+        using Y2 = kairn::Ball<T, 2>;                                                      \
+        constexpr T F = known<C, T>();                                                     \
+        (void)sizeof(X1), (void)sizeof(X2), (void)sizeof(Y1), (void)sizeof(Y2), (void)F;   \
+        return limbs<T>(__VA_ARGS__);                                                      \
+    }                                                                                      \
+    template <class T, int C>                                                              \
+    NOINLINE Limbs<T> NAME##_inline(T a, T b) { return NAME##_body<T, C>(a * b); }         \
+    template <class T, int C>                                                              \
+    NOINLINE Limbs<T> NAME##_ref(T a, T) { return NAME##_body<T, C>(a); }
+
+// q is the product (a*b, or the rounded product); F the constant.
+KNOWN(k_times, X2(F) * q)
+KNOWN(k_times_rev, q * X2(F))
+KNOWN(k_times_assign, [&] { X2 x(F); x *= q; return x; }())
+KNOWN(k_finite_times, kairn::finite::mul(X2(F), q))
+KNOWN(k_finite_times_rev, kairn::finite::mul(q, X2(F)))
+KNOWN(k_times_one, X2(F) * X1(q))
+KNOWN(k_one_times, X1(q) * X2(F))
+KNOWN(k_finite_one, kairn::finite::mul(X2(F), X1(q)))
+KNOWN(k_one_one, X1(F) * X1(q))
+KNOWN(k_two_prod, kairn::two_prod(q, F))
+KNOWN(k_two_prod_rev, kairn::two_prod(F, q))
+KNOWN(k_two_prod_error, kairn::two_prod(q, F).error)
+KNOWN(k_rmul, kairn::rmul(q, F))
+KNOWN(k_mul_down, kairn::mul_down(q, F))
+KNOWN(k_mul_down_rev, kairn::mul_down(F, q))
+KNOWN(k_mul_up, kairn::mul_up(q, F))
+KNOWN(k_mul_up_rev, kairn::mul_up(F, q))
+KNOWN(k_ball2, Y2(X2(F), T(0x1p-20)) * q)
+KNOWN(k_ball2_rev, q * Y2(X2(F), T(0x1p-20)))
+KNOWN(k_ball2_assign, [&] { Y2 y(X2(F), T(0x1p-20)); y *= q; return y; }())
+KNOWN(k_ball1, Y1(X1(F), T(0x1p-20)) * q)
+KNOWN(k_ball1_rev, q * Y1(X1(F), T(0x1p-20)))
+KNOWN(k_ball1_one, Y1(X1(F), T(0x1p-20)) * X1(q))
+
+template <class T>
+using KnownFn = Limbs<T> (*)(T, T);
+struct KnownForm {
+    const char* name;
+    KnownFn<double> d[3];
+    KnownFn<double> dr[3];
+    KnownFn<float> f[3];
+    KnownFn<float> fr[3];
+};
+#define KROW(NAME, TEXT)                                                                                       \
+    {TEXT,                                                                                                     \
+     {&NAME##_inline<double, 0>, &NAME##_inline<double, 1>, &NAME##_inline<double, 2>},                        \
+     {&NAME##_ref<double, 0>, &NAME##_ref<double, 1>, &NAME##_ref<double, 2>},                                 \
+     {&NAME##_inline<float, 0>, &NAME##_inline<float, 1>, &NAME##_inline<float, 2>},                           \
+     {&NAME##_ref<float, 0>, &NAME##_ref<float, 1>, &NAME##_ref<float, 2>}}
+const KnownForm known_forms[] = {
+    KROW(k_times, "E2(F) * (a*b)"),
+    KROW(k_times_rev, "(a*b) * E2(F)"),
+    KROW(k_times_assign, "x = E2(F); x *= a*b"),
+    KROW(k_finite_times, "finite::mul(E2(F), a*b)"),
+    KROW(k_finite_times_rev, "finite::mul(a*b, E2(F))"),
+    KROW(k_times_one, "E2(F) * E1(a*b)"),
+    KROW(k_one_times, "E1(a*b) * E2(F)"),
+    KROW(k_finite_one, "finite::mul(E2(F), E1(a*b))"),
+    KROW(k_one_one, "E1(F) * E1(a*b)"),
+    KROW(k_two_prod, "two_prod(a*b, F)"),
+    KROW(k_two_prod_rev, "two_prod(F, a*b)"),
+    KROW(k_two_prod_error, "two_prod(a*b, F).error"),
+    KROW(k_rmul, "rmul(a*b, F)"),
+    KROW(k_mul_down, "mul_down(a*b, F)"),
+    KROW(k_mul_down_rev, "mul_down(F, a*b)"),
+    KROW(k_mul_up, "mul_up(a*b, F)"),
+    KROW(k_mul_up_rev, "mul_up(F, a*b)"),
+    KROW(k_ball2, "Ball2(E2(F), r) * (a*b)"),
+    KROW(k_ball2_rev, "(a*b) * Ball2(E2(F), r)"),
+    KROW(k_ball2_assign, "Y = Ball2(E2(F), r); Y *= a*b"),
+    KROW(k_ball1, "Ball1(E1(F), r) * (a*b)"),
+    KROW(k_ball1_rev, "(a*b) * Ball1(E1(F), r)"),
+    KROW(k_ball1_one, "Ball1(E1(F), r) * E1(a*b)"),
+};
+
 std::uint64_t state = 0x9E3779B97F4A7C15ull;
 double uniform() {  // in [0.5, 1)
     state ^= state << 13;
@@ -104,10 +221,49 @@ double uniform() {  // in [0.5, 1)
 
 }  // namespace
 
+// The known factors: every form, both types and the three constants, on `cases` pairs each.
+template <class T>
+T uniform_of() {
+    if constexpr (sizeof(T) == 8) {
+        return uniform();
+    } else {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        return 0.5f + float(state >> 40) * 0x1p-25f;
+    }
+}
+template <class T>
+NOINLINE T rounded_of(T a, T b) {
+    volatile T p = a * b;
+    return p;
+}
+template <class T>
+long known_run(const KnownFn<T>* in, const KnownFn<T>* ref, long cases, const char* name, const char* type) {
+    long total = 0;
+    for (int c = 0; c < 3; ++c) {
+        long differ = 0;
+        for (long i = 0; i < cases; ++i) {
+            const T a = uniform_of<T>(), b = uniform_of<T>();
+            const T p = rounded_of(a, b);
+            differ += !same(in[c](a, b), ref[c](p, T(1)));
+        }
+        if (differ)
+            std::printf("  %-30s %-6s F = %-2g differs in %6ld of %ld: a product of the program fused through "
+                        "the known factor\n", name, type, c == 0 ? 1.0 : c == 1 ? -1.0 : 2.0, differ, cases);
+        total += differ;
+    }
+    return total;
+}
+
 int main(int argc, char** argv) {
-    const char* expect = argc == 3 && std::strcmp(argv[1], "--expect") == 0 ? argv[2] : "";
-    if (std::strcmp(expect, "none") != 0 && std::strcmp(expect, "some") != 0 && std::strcmp(expect, "report") != 0) {
-        std::fprintf(stderr, "usage: boundary --expect none|some|report\n");
+    const char* expect = argc == 5 && std::strcmp(argv[1], "--expect") == 0 ? argv[2] : "";
+    const char* factor = argc == 5 && std::strcmp(argv[3], "--factor") == 0 ? argv[4] : "";
+    const auto valid = [](const char* e) {
+        return std::strcmp(e, "none") == 0 || std::strcmp(e, "some") == 0 || std::strcmp(e, "report") == 0;
+    };
+    if (!valid(expect) || !valid(factor)) {
+        std::fprintf(stderr, "usage: boundary --expect none|some|report --factor none|some|report\n");
         return 2;
     }
     enum { n_forms = 30 };
@@ -176,9 +332,23 @@ int main(int argc, char** argv) {
                     multiplicand[f] ? "   (multiplied or compared: no guard needed)" : "");
         (multiplicand[f] ? multiplied : guarded) += differ[f];
     }
+    // The known factors.
+    const long known_cases = 20000;
+    long known_total = 0;
+    std::printf("the other factor a constant F the compiler sees (1, -1, 2), %ld pairs per form, type and F:\n",
+                known_cases);
+    for (const KnownForm& k : known_forms) {
+        known_total += known_run<double>(k.d, k.dr, known_cases, k.name, "double");
+        known_total += known_run<float>(k.f, k.fr, known_cases, k.name, "float");
+    }
+    std::printf("  %d forms: %ld cases differ%s\n", int(sizeof known_forms / sizeof known_forms[0]), known_total,
+                known_total ? "" : " (no form differs)");
     bool ok = multiplied == 0;
     if (std::strcmp(expect, "none") == 0) ok = ok && guarded == 0;
     if (std::strcmp(expect, "some") == 0) ok = ok && guarded > 0;
-    std::printf("%s (expected: %s)\n", ok ? "ok" : "FAILED", expect);
-    return ok ? 0 : 1;
+    bool ok_known = true;
+    if (std::strcmp(factor, "none") == 0) ok_known = known_total == 0;
+    if (std::strcmp(factor, "some") == 0) ok_known = known_total > 0;
+    std::printf("%s (expected: %s; with a known factor: %s)\n", ok && ok_known ? "ok" : "FAILED", expect, factor);
+    return ok && ok_known ? 0 : 1;
 }

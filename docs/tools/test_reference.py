@@ -132,6 +132,12 @@ def header_operations(root, known):
             if t:
                 found.append((where, ("traits", "%s::%s" % (context, t.group(1))), names))
                 continue
+            # A function of traits (the bounds as functions of the length): traits<...>::name(n).
+            t = re.match(r"static constexpr auto (\w+)\(([^)]*)\)", s)
+            if t and (context or "").startswith("traits"):
+                operands = tuple(param_type(p, context) for p in split_params(t.group(2)))
+                found.append((where, ("op", "%s::%s" % (context, t.group(1)), operands), names))
+                continue
             f = re.search(r"(operator(?:\+=|-=|\*=|==|!=|<=|>=|[-+*<>])|\b[A-Za-z_]\w*)\(([^)]*)\)", s)
             if not f:
                 raise AssertionError("%s: cannot read the declaration %r" % (where, s))
@@ -152,12 +158,27 @@ def header_kernel_uses(root, known):
     for _, _, names in header_operations(root, known):
         named |= set(names)
     called = set()
+    # The kernels of the loops the headers call (gen::F_seq, F_lanes, F_packed) or gate on
+    # (gen::bounds::loops::F, through the alias loops::F): a step, a combination, a check or a
+    # finish is reached through its loop, and so are the kernels of a loop's coefficients.
+    with open(os.path.join(root, "gen", "claims.json"), encoding="utf-8") as f:
+        folds = {fd["name"]: fd for fd in json.load(f).get("folds", [])}
+
+    def loop_kernels(name):
+        fd = folds[name]
+        out = {fd[k] for k in ("step", "combine", "finish", "check") if isinstance(fd.get(k), str)} & known
+        return out | (loop_kernels(fd["coefficients"]) if fd.get("coefficients") in folds else set())
+
     d = os.path.join(root, "include", "kairn")
     for fname in os.listdir(d):
         if fname.endswith(".hpp"):
             text = reference.read(os.path.join(d, fname))
             called |= set(re.findall(r"\bgen::(\w+)\(", text)) & known
             called |= set(re.findall(r"\bgen::bounds::(\w+)<", text)) & known
+            loops = {m for m in re.findall(r"\bgen::(\w+)_(?:seq|lanes|packed)\(", text) if m in folds}
+            loops |= {m for m in re.findall(r"\bloops::(\w+)<", text) if m in folds}
+            for name in loops:
+                called |= loop_kernels(name)
     return named, called
 
 
@@ -169,7 +190,10 @@ def form_key(f):
     m = re.fullmatch(r"-(\w+)", code)
     if m:
         return ("op", "operator-", tuple(f["operands"]))
-    m = re.fullmatch(r"\w+\.(\w+)(?:<[^>]*>)?\((?:\w+)?\)", code)  # a member function, X.name(), X.name<T>(), X.name(Y)
+    m = re.fullmatch(r"(traits<.*>::\w+)\((.*)\)", code)  # a function of traits: traits<X>::sum(n)
+    if m:
+        return ("op", m.group(1), tuple(f["operands"]))
+    m = re.fullmatch(r"\w+\.(\w+)(?:<[^>]*>)?\((?:\w+(?:, \w+)*)?\)", code)  # a member function, X.name(), X.name<T>(), X.name(Y, Z)
     if m:
         return ("op", m.group(1), tuple(f["operands"][1:]))
     m = re.fullmatch(r"([\w:]+(?:<[^>]*>)?)\((.*)\)", code)

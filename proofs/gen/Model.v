@@ -176,6 +176,16 @@ Definition acc_mul_1 (s a x y : R) : R * R :=
   let b := rnd (ax * ay + a) in
   (t, b).
 
+(* acc_mul_entry_1: acc_mul_1 on the guarded x and y (rule R3, the factors of a fused operation). *)
+Definition acc_mul_entry_1 (s a x y : R) : R * R :=
+  let gx := rnd (x + 0) in
+  let gy := rnd (y + 0) in
+  let t := rnd (gx * gy + s) in
+  let ax := Rabs gx in
+  let ay := Rabs gy in
+  let b := rnd (ax * ay + a) in
+  (t, b).
+
 (* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. *)
 Definition acc_radius_1 (a m g t : R) : R * bool :=
   let q := rnd (m * up_acc_radius_1_0 + 0) in
@@ -514,6 +524,13 @@ Definition conv_radius (ma mb rx ry m g t : R) : R :=
   let hm := rnd (m * up_conv_radius_0 + 0) in
   let rz := rnd (s * up_conv_radius_1 + hm) in
   rz.
+
+(* dot_entry_step_1: dot_step_1 on the guarded elements (rule R3, the factors of a fused operation). *)
+Definition dot_entry_step_1 (s x y : R) : R :=
+  let gx := rnd (x + 0) in
+  let gy := rnd (y + 0) in
+  let t := rnd (gx * gy + s) in
+  t.
 
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)
 Definition dot_step_1 (s x y : R) : R :=

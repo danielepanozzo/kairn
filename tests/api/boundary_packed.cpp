@@ -19,7 +19,9 @@
 //   boundary_packed --expect report   prints the counts only, and says so if nothing differs
 //
 // The forms whose operand is only multiplied or compared need no guard and must agree in every
-// build: a product is fused only into an addition.
+// build: a product is fused only into an addition. A third kind (--factor none|some|report): the
+// products of Packed<T, 2> and Packed<T, 1> with the other factor a constant F (1, -1, 2) the
+// compiler sees (KNOWN below); --factor none in the build with the guard: every form agrees.
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
@@ -223,6 +225,43 @@ FORM(less_equal_rev, return as_number(PROD <= x);)
 FORM(equal, return as_number(x == PROD);)
 FORM(not_equal, return as_number(PROD != x);)
 
+// The other factor a constant the compiler sees (rule R3, the factors of a fused operation:
+// docs/developer/architecture.md): Packed<T, 2> of F in every lane, F = 1, -1 or 2, times the
+// program's register of products. A compiler that sees F = 1 rewrites fma(x, 1, s) as x + s and may
+// fuse the product into that addition. With the headers as they are every form must agree
+// (--factor none); the copy without the guard reports, or requires a difference where measured.
+template <int C, class T>
+constexpr T known() {
+    return C == 0 ? T(1) : C == 1 ? T(-1) : T(2);
+}
+#define KNOWN(NAME, ...)                                                                             \
+    template <class T, int C, class M>                                                               \
+    ALWAYS_INLINE P2<T> NAME##_body([[maybe_unused]] const T* a, [[maybe_unused]] const T* b) {      \
+        [[maybe_unused]] const P2<T> X = P2<T>::broadcast(E2<T>(known<C, T>()));                     \
+        __VA_ARGS__                                                                                  \
+    }                                                                                                \
+    template <class T, int C>                                                                        \
+    NOINLINE P2<T> NAME##_inline(const T* a, const T* b) { return NAME##_body<T, C, InPlace<T>>(a, b); } \
+    template <class T, int C>                                                                        \
+    NOINLINE P2<T> NAME##_rounded(const T* a, const T* b) { return NAME##_body<T, C, Rounded<T>>(a, b); }
+KNOWN(k_times, return X * PROD;)
+KNOWN(k_times_rev, return PROD * X;)
+KNOWN(k_times_assign, P2<T> y = X; y *= PROD; return y;)
+KNOWN(k_finite_times, return kairn::finite::mul(X, PROD);)
+KNOWN(k_finite_times_rev, return kairn::finite::mul(PROD, X);)
+
+template <class T>
+using KnownFn = P2<T> (*)(const T*, const T*);
+template <class T>
+struct KnownForm {
+    const char* name;
+    KnownFn<T> in_place[3], rounded[3];
+};
+#define KROW(NAME, TEXT)                                                                 \
+    {TEXT,                                                                               \
+     {&NAME##_inline<T, 0>, &NAME##_inline<T, 1>, &NAME##_inline<T, 2>},                 \
+     {&NAME##_rounded<T, 0>, &NAME##_rounded<T, 1>, &NAME##_rounded<T, 2>}}
+
 template <class T>
 using Fn = P2<T> (*)(const P2<T>&, const T*, const T*, int);
 
@@ -263,8 +302,45 @@ T uniform() {  // in [0.5, 1)
 }
 
 struct Totals {
-    long guarded = 0, unguarded = 0;
+    long guarded = 0, unguarded = 0, known = 0;
 };
+
+template <class T>
+void run_known(const char* type, long registers, Totals& totals) {
+    constexpr int W = P1<T>::lanes;
+    const KnownForm<T> forms[] = {
+        KROW(k_times, "P2(F) * P1(a*b)"),
+        KROW(k_times_rev, "P1(a*b) * P2(F)"),
+        KROW(k_times_assign, "y = P2(F); y *= P1(a*b)"),
+        KROW(k_finite_times, "finite::mul(P2(F), P1(a*b))"),
+        KROW(k_finite_times_rev, "finite::mul(P1(a*b), P2(F))"),
+    };
+    for (const KnownForm<T>& f : forms) {
+        for (int c = 0; c < 3; ++c) {
+            long differ = 0;
+            for (long i = 0; i < registers; ++i) {
+                T a[W], b[W], p[W];
+                for (int l = 0; l < W; ++l) {
+                    a[l] = uniform<T>();
+                    b[l] = uniform<T>();
+                    p[l] = rounded(a[l], b[l]);
+                }
+                const P2<T> u = f.in_place[c](a, b), v = f.rounded[c](p, b);
+                bool differs = false;
+                for (int l = 0; l < W; ++l) {
+                    const E2<T> ul = u.lane(l), vl = v.lane(l);
+                    differs = differs || !same_limb(ul.limb[0], vl.limb[0]) || !same_limb(ul.limb[1], vl.limb[1]);
+                }
+                differ += differs;
+            }
+            if (differ)
+                std::printf("  %-32s %-6s F = %-2g differs in %6ld of %ld registers: a product of the program fused "
+                            "through the known factor\n", f.name, type, c == 0 ? 1.0 : c == 1 ? -1.0 : 2.0, differ,
+                            registers);
+            totals.known += differ;
+        }
+    }
+}
 
 template <class T>
 void run(const char* type, long registers, Totals& totals) {
@@ -378,9 +454,13 @@ void run(const char* type, long registers, Totals& totals) {
 }  // namespace
 
 int main(int argc, char** argv) {
-    const char* expect = argc == 3 && std::strcmp(argv[1], "--expect") == 0 ? argv[2] : "";
-    if (std::strcmp(expect, "none") != 0 && std::strcmp(expect, "some") != 0 && std::strcmp(expect, "report") != 0) {
-        std::fprintf(stderr, "usage: boundary_packed --expect none|some|report\n");
+    const char* expect = argc == 5 && std::strcmp(argv[1], "--expect") == 0 ? argv[2] : "";
+    const char* factor = argc == 5 && std::strcmp(argv[3], "--factor") == 0 ? argv[4] : "";
+    const auto valid = [](const char* e) {
+        return std::strcmp(e, "none") == 0 || std::strcmp(e, "some") == 0 || std::strcmp(e, "report") == 0;
+    };
+    if (!valid(expect) || !valid(factor)) {
+        std::fprintf(stderr, "usage: boundary_packed --expect none|some|report --factor none|some|report\n");
         return 2;
     }
 #ifdef KAIRN_TEST_UNGUARDED_COPY
@@ -389,15 +469,20 @@ int main(int argc, char** argv) {
     Totals totals;
     run<double>("double", 40000, totals);
     run<float>("float", 40000, totals);
-    std::printf("forms that need the guard: %ld registers differ; forms that need none: %ld\n", totals.guarded,
-                totals.unguarded);
+    std::printf("the other factor a constant F the compiler sees (1, -1, 2), 20000 registers per form, type and F:\n");
+    run_known<double>("double", 20000, totals);
+    run_known<float>("float", 20000, totals);
+    std::printf("forms that need the guard: %ld registers differ; forms that need none: %ld; with a known factor: %ld\n",
+                totals.guarded, totals.unguarded, totals.known);
     if (std::strcmp(expect, "report") == 0 && totals.guarded == 0)
         std::printf("no form differs: this compiler and setting fused no product into Packed here, so this build "
                     "does not show that the guard is needed\n");
     bool ok = totals.unguarded == 0;
     if (std::strcmp(expect, "none") == 0) ok = ok && totals.guarded == 0;
     if (std::strcmp(expect, "some") == 0) ok = ok && totals.guarded > 0;
-    std::printf("%s (expected: %s)%s\n", ok ? "ok" : "FAILED", expect,
+    if (std::strcmp(factor, "none") == 0) ok = ok && totals.known == 0;
+    if (std::strcmp(factor, "some") == 0) ok = ok && totals.known > 0;
+    std::printf("%s (expected: %s; with a known factor: %s)%s\n", ok ? "ok" : "FAILED", expect, factor,
                 KAIRN_TEST_ZERO_SIGN_FREE ? " (a zero limb compared as a zero: MSVC)" : "");
     return ok ? 0 : 1;
 }

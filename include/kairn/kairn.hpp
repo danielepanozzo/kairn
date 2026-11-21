@@ -4,10 +4,13 @@
 /// Everything a program needs for Expansion<T, 1>, Expansion<T, 2>, Ball<T, k> and Interval<T, k>,
 /// with T float or double, their constants from fractions of integers (rational.hpp), and the
 /// building blocks on T (blocks.hpp: TwoSum, TwoProd, the neighbors of a number, the radius
-/// helpers, sums and products rounded down and up). Including it checks the compiler's flags
-/// (config.hpp); a program should call kairn::self_test() once at startup (environment.hpp).
-/// Larger k, vectors and I/O are not written yet, and will be separate headers so that this one
-/// stays cheap to include.
+/// helpers, sums and products rounded down and up), and the accumulator of a sum or a dot product
+/// with its error bound (accumulator.hpp), which costs nothing measurable to include beyond the
+/// rest. Including it checks the compiler's flags (config.hpp); a program should call
+/// kairn::self_test() once at startup (environment.hpp). Not included, so that this one stays cheap
+/// to include: Packed and the containers (packed.hpp, soa.hpp) and the functions on arrays
+/// (batch.hpp), which include the packed kernels of the target and double the time to compile an
+/// empty program. Larger k, vectors and I/O are not written yet, and will be separate headers.
 #pragma once
 
 #include "version.hpp"
@@ -20,3 +23,4 @@
 #include "interval.hpp"
 #include "rational.hpp"
 #include "blocks.hpp"
+#include "accumulator.hpp"

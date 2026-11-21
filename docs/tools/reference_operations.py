@@ -47,6 +47,18 @@ T = "T"
 P1 = "Packed<T, 1>"
 P2 = "Packed<T, 2>"
 PK = "Packed<T, K>"
+# The views of the functions on arrays (kairn/batch.hpp): read, and written; and their results.
+V1 = "SoAView<const T, 1>"
+V2 = "SoAView<const T, 2>"
+W1 = "SoAView<T, 1>"
+W2 = "SoAView<T, 2>"
+R1 = "Reduction<Expansion<T, 1>>"
+R2 = "Reduction<Expansion<T, 2>>"
+SEQ = "Sequential"
+A1 = "Accumulator<T, 1>"
+A2 = "Accumulator<T, 2>"
+# The accumulator (kairn/accumulator.hpp): what each operation does to its state.
+ACC = "one more term; the bound of the whole history is `A.error_bound()` ([Accumulator](accumulator.md))"
 
 # The groups of the index, in order: (id, title, what the group is).
 GROUPS = [
@@ -84,9 +96,12 @@ GROUPS = [
     ("building-blocks", "Parts of other kernels",
      "Kernels that other kernels call, and that no public operation computes on its own."),
     ("arrays", "Sums and dot products of arrays",
-     "The kernels of the loops over arrays (the folds of Milestone 2): their steps, the finish of their "
-     "result, and the bounds of a sum and of a dot product as a function of the number of terms. The "
-     "functions on arrays of the public headers come later."),
+     "The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batch.hpp` calls: the steps "
+     "of the sums and dot products, the finish of their result, the kernels of `norm_upper`, and the bounds of "
+     "a sum and of a dot product as a function of the number of terms, and the kernels of the accumulator "
+     "(`kairn/accumulator.hpp`). Each function on arrays calls a loop made of these, whose claims are those of "
+     "the whole array ([Functions on arrays](batch.md)); a step's page states what one step claims; what is "
+     "proved of an accumulator's history is on [The accumulator](accumulator.md)."),
     ("packed", "Vector loops: Packed and the containers",
      "`Packed<T, k>` (`kairn/packed.hpp`) holds W numbers in registers; its operations are those of `Expansion` "
      "that have a kernel, under the same names, each the packed form of that kernel, with its statement in every "
@@ -94,8 +109,9 @@ GROUPS = [
      "one array per limb and compute nothing ([Arrays of numbers](soa.md)). `kairn/kairn.hpp` includes neither."),
     ("maps", "Operations on arrays, entry by entry",
      "The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the "
-     "operation of one entry, on an array the program supplies where it says so. The functions on arrays of "
-     "the public headers come later."),
+     "operation of one entry, on an array the program supplies where it says so, and every element a map of "
+     "`kairn/batch.hpp` writes satisfies its claims ([Functions on arrays](batch.md)). The steps of the maps on "
+     "stored arrays have no caller there."),
     ("ball-vectors", "The radius of a BallVector",
      "The one radius of the result of the BallVector kernels of Milestone 2 (the sum, the difference, the "
      "scaling), from the largest magnitude of a center of the result: the radius lines of the entrywise Ball "
@@ -113,6 +129,11 @@ def page(group, title, *forms, traits=(), note=None):
 
 
 ONE = "the limb of the `Expansion<T, 1>` operand is the limb $a$"
+# The functions on arrays reach the step of their loop for every element: the page of the step says
+# what each step claims; the function's claims, those of its loop, are on [Functions on
+# arrays](batch.md).
+STEP = "the step of the loop the function calls, once per element; not `constexpr`; rounds"
+STEP_ORDER = STEP + "; in the lane order of the build, or, with `kairn::sequential`, in the sequential order"
 # The notes of the building blocks on T: whether constant evaluation has them, with what, and that
 # they round.
 SAME_BITS = "`constexpr`, with the same bits in constant evaluation; rounds"
@@ -925,33 +946,81 @@ KERNELS = {
     "sub_down_1": page("building-blocks", "A difference of two limbs rounded down"),
     "sub_up_1": page("building-blocks", "A difference of two limbs rounded up"),
     # --- Milestone 2, the folds: the steps, the finishes, the exported bounds ---------------------
-    "dot_step_1": page("arrays", "The step of a dot product of one limb: one fused multiply-add"),
-    "dot_step_2": page("arrays", "The step of a dot product of two limbs"),
-    "sum_entry_step_1": page("arrays", "The step of a sum of one limb, on an array of the program"),
-    "sum_entry_step_2": page("arrays", "The step of a sum of two limbs, on an array of the program"),
+    "dot_step_1": page("arrays", "The step of a dot product of one limb: one fused multiply-add",
+                       form("conv(x, y, z)", V1, V1, W1, result="bool", note="each coefficient a sequential `dot_1` "
+                            "(loop `conv_1`)")),
+    "dot_entry_step_1": page("arrays", "The step of a dot product of one limb, on arrays of the program: one fused "
+                             "multiply-add of the guarded elements",
+                             form("dot(x, y)", V1, V1, result=R1, note=STEP_ORDER + " (loop `dot_1_entry`; each "
+                                  "factor guarded, rule R3 on the factors of a fused operation)"),
+                             form("dot(x, y, sequential)", V1, V1, SEQ, result=R1)),
+    "dot_step_2": page("arrays", "The step of a dot product of two limbs",
+                       form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2`)"),
+                       form("dot(x, y, sequential)", V2, V2, SEQ, result=R2),
+                       form("conv(x, y, z)", V2, V2, W2, result="bool", note="each coefficient a sequential `dot_2` "
+                            "(loop `conv_2`)")),
+    "sum_entry_step_1": page("arrays", "The step of a sum of one limb, on an array of the program",
+                             form("sum(x)", V1, result=R1, note=STEP_ORDER + " (loop `sum_1_entry`)"),
+                             form("sum(x, sequential)", V1, SEQ, result=R1),
+                             form("sum_fast(x)", V1, result=R1, note="for one limb, `sum(x)`")),
+    "sum_entry_step_2": page("arrays", "The step of a sum of two limbs, on an array of the program",
+                             form("sum(x)", V2, result=R2, note=STEP_ORDER + " (loop `sum_2_entry`)"),
+                             form("sum(x, sequential)", V2, SEQ, result=R2)),
     "sum_fast_entry_step_2": page("arrays", "The step of a sum of two limbs with the fast addition, on an array of "
-                                            "the program"),
-    "fold_finish_1": page("arrays", "The result of a fold of one limb: the state, or NaN"),
-    "fold_finish_2": page("arrays", "The result of a fold of two limbs: the state, or NaN"),
-    "bound_sum_1": page("arrays", "The bound of a sum of one limb, as a function of the number of additions"),
-    "bound_sum_2": page("arrays", "The bound of a sum of two limbs, as a function of the number of additions"),
-    "bound_dot_1": page("arrays", "The bound of a dot product of one limb, as a function of the number of terms"),
-    "bound_dot_2": page("arrays", "The bound of a dot product of two limbs, as a function of the number of terms"),
+                                            "the program",
+                                  form("sum_fast(x)", V2, result=R2, note=STEP_ORDER + " (loop `sum_fast_2_entry`)"),
+                                  form("sum_fast(x, sequential)", V2, SEQ, result=R2)),
+    "fold_finish_1": page("arrays", "The result of a fold of one limb: the state, or NaN",
+                          form("A.sum()", A1, result=R1, note="the running sum of an accumulator, canonical; "
+                               "the finish of the loops of `kairn/batch.hpp` too")),
+    "fold_finish_2": page("arrays", "The result of a fold of two limbs: the state, or NaN",
+                          form("A.sum()", A2, result=R2, note="the running sum of an accumulator, canonical; "
+                               "the finish of the loops of `kairn/batch.hpp` too")),
+    "bound_sum_1": page("arrays", "The bound of a sum of one limb, as a function of the number of additions",
+                        form("traits<T>::sum(n)", "std::size_t", result="Bound<T>",
+                             note="$m = n - 1$ (0 for $n = 0$), a count of `T` rounded up; `unit` is $g$"),
+                        form("traits<T>::sum_height(h)", "std::size_t", result="Bound<T>", note="$m = h$")),
+    "bound_sum_2": page("arrays", "The bound of a sum of two limbs, as a function of the number of additions",
+                        form("traits<Expansion<T, 2>>::sum(n)", "std::size_t", result="Bound<T>",
+                             note="$m = n - 1$ (0 for $n = 0$), a count of `T` rounded up; `unit` is $g$"),
+                        form("traits<Expansion<T, 2>>::sum_height(h)", "std::size_t", result="Bound<T>",
+                             note="$m = h$")),
+    "bound_dot_1": page("arrays", "The bound of a dot product of one limb, as a function of the number of terms",
+                        form("traits<T>::dot(n)", "std::size_t", result="Bound<T>",
+                             note="$m = n$, a count of `T` rounded up; `unit` is $g$, `tiny` is $t$")),
+    "bound_dot_2": page("arrays", "The bound of a dot product of two limbs, as a function of the number of terms",
+                        form("traits<Expansion<T, 2>>::dot(n)", "std::size_t", result="Bound<T>",
+                             note="$m = n$, a count of `T` rounded up; `unit` is $g$, `tiny` is $t$")),
     "sub_1_1": page("maps", "The difference of two numbers of one limb, rounded to nearest"),
-    "add_entry_step_1": page("maps", "x + y of one limb, on arrays of the program"),
-    "sub_entry_step_1": page("maps", "x - y of one limb, on arrays of the program"),
-    "add_entry_step_2": page("maps", "x + y of two limbs, on arrays of the program"),
-    "sub_entry_step_2": page("maps", "x - y of two limbs, on arrays of the program"),
-    "scale_step_1": page("maps", "x a of one limb, a of T"),
-    "scale_step_2": page("maps", "x a of two limbs, a of T"),
-    "mul_pow2_step_1": page("maps", "x c of one limb, c a power of two"),
-    "mul_pow2_step_2": page("maps", "x c of two limbs, c a power of two"),
+    "add_entry_step_1": page("maps", "x + y of one limb, on arrays of the program",
+                             form("add(x, y, z)", V1, V1, W1, result="bool", note=STEP + " (loop `add_1_entry`)")),
+    "sub_entry_step_1": page("maps", "x - y of one limb, on arrays of the program",
+                             form("sub(x, y, z)", V1, V1, W1, result="bool", note=STEP + " (loop `sub_1_entry`)")),
+    "add_entry_step_2": page("maps", "x + y of two limbs, on arrays of the program",
+                             form("add(x, y, z)", V2, V2, W2, result="bool", note=STEP + " (loop `add_2_entry`)")),
+    "sub_entry_step_2": page("maps", "x - y of two limbs, on arrays of the program",
+                             form("sub(x, y, z)", V2, V2, W2, result="bool", note=STEP + " (loop `sub_2_entry`)")),
+    "scale_step_1": page("maps", "x a of one limb, a of T",
+                         form("scale(x, a, z)", V1, T, W1, result="bool", note=STEP + " (loop `scale_1`)")),
+    "scale_step_2": page("maps", "x a of two limbs, a of T",
+                         form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2`)")),
+    "mul_pow2_step_1": page("maps", "x c of one limb, c a power of two",
+                            form("mul_pow2(x, c, z)", V1, T, W1, result="bool", note=STEP + " (loop `mul_pow2_map_1`)")),
+    "mul_pow2_step_2": page("maps", "x c of two limbs, c a power of two",
+                            form("mul_pow2(x, c, z)", V2, T, W2, result="bool", note=STEP + " (loop `mul_pow2_map_2`)")),
     "axpy_step_1": page("maps", "a x + y of one limb, y stored"),
-    "axpy_entry_step_1": page("maps", "a x + y of one limb, y of the program"),
+    "axpy_entry_step_1": page("maps", "a x + y of one limb, y of the program",
+                              form("axpy(a, x, y, z)", T, V1, V1, W1, result="bool", note=STEP + " (loop `axpy_1_entry`)"),
+                              traits=["traits<T>::axpy"]),
     "axpy_step_2": page("maps", "a x + y of two limbs, y stored"),
-    "axpy_entry_step_2": page("maps", "a x + y of two limbs, y of the program"),
+    "axpy_entry_step_2": page("maps", "a x + y of two limbs, y of the program",
+                              form("axpy(a, x, y, z)", E2, V2, V2, W2, result="bool", note=STEP + " (loop `axpy_2_entry`)"),
+                              traits=["traits<Expansion<T, 2>>::axpy"]),
     "axpy_step_2_1": page("maps", "a x + y of two limbs, a of T, y stored"),
-    "axpy_entry_step_2_1": page("maps", "a x + y of two limbs, a of T, y of the program"),
+    "axpy_entry_step_2_1": page("maps", "a x + y of two limbs, a of T, y of the program",
+                                form("axpy(a, x, y, z)", T, V2, V2, W2, result="bool",
+                                     note=STEP + " (loop `axpy_2_1_entry`)"),
+                                traits=["traits<Expansion<T, 2>>::axpy_limb"]),
     # --- Milestone 2, the folds of maxima (norm_upper_k) ---------------------------------------------
     "norm_combine": page("arrays", "The larger of two magnitudes, and the and of two masks"),
     "norm_step_1": page("arrays", "The step of the largest magnitude of an array of one limb"),
@@ -959,14 +1028,37 @@ KERNELS = {
     "norm_finish_1": page("arrays", "The result of a fold of maxima of one limb: the maximum, or NaN"),
     "norm_finish_2": page("arrays", "The result of a fold of maxima of two limbs: one step above the maximum, or NaN"),
     # --- Milestone 2, the accumulator ----------------------------------------------------------------
-    "acc_add_1": page("arrays", "An accumulator of one limb: add a number of the program"),
-    "acc_add_2": page("arrays", "An accumulator of two limbs: add a number of the program"),
-    "acc_mul_1": page("arrays", "An accumulator of one limb: add a product"),
-    "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product"),
-    "acc_merge_1": page("arrays", "Two accumulators of one limb into one"),
-    "acc_merge_2": page("arrays", "Two accumulators of two limbs into one"),
-    "acc_radius_1": page("arrays", "The radius of an accumulator of one limb"),
-    "acc_radius_2": page("arrays", "The radius of an accumulator of two limbs"),
+    "acc_add_1": page("arrays", "An accumulator of one limb: add a number of the program",
+                      form("A.add(x)", A1, E1, result="void", note=ACC),
+                      form("A.add(a)", A1, T, result="void")),
+    "acc_add_2": page("arrays", "An accumulator of two limbs: add a number of the program",
+                      form("A.add(x)", A2, E2, result="void", note=ACC),
+                      form("A.add(a)", A2, T, result="void", note=TO_TWO_LIMBS)),
+    "acc_mul_1": page("arrays", "An accumulator of one limb: add a product (its factors unguarded; "
+                      "`add_product` calls `acc_mul_entry_1`)"),
+    "acc_mul_entry_1": page("arrays", "An accumulator of one limb: add a product of the guarded factors",
+                            form("A.add_product(x, y)", A1, E1, E1, result="void", note=ACC + "; not `constexpr`; "
+                                 "each factor guarded (rule R3 on the factors of a fused operation)"),
+                            form("A.add_product(a, b)", A1, T, T, result="void")),
+    "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product",
+                      form("A.add_product(x, y)", A2, E2, E2, result="void", note=ACC + "; not `constexpr`"),
+                      form("A.add_product(a, b)", A2, T, T, result="void", note=TO_TWO_LIMBS)),
+    "acc_merge_1": page("arrays", "Two accumulators of one limb into one",
+                        form("A.merge(B)", A1, A1, result="void", note="a node of the summation tree; the counts "
+                             "added")),
+    "acc_merge_2": page("arrays", "Two accumulators of two limbs into one",
+                        form("A.merge(B)", A2, A2, result="void", note="a node of the summation tree; the counts "
+                             "added")),
+    "acc_radius_1": page("arrays", "The radius of an accumulator of one limb",
+                         form("A.error_bound()", A1, result=T, note="with $(g, t)$ = `bound_dot_1` of the count "
+                              "as a number of `T` rounded up, $+\\infty$ where a mask is false or a value is not "
+                              "finite; not `constexpr`"),
+                         form("A.ball()", A1, result=B1, note="the whole line where `error_bound()` is $+\\infty$")),
+    "acc_radius_2": page("arrays", "The radius of an accumulator of two limbs",
+                         form("A.error_bound()", A2, result=T, note="with $(g, t)$ = `bound_dot_2` of the count "
+                              "as a number of `T` rounded up, $+\\infty$ where a mask is false or a value is not "
+                              "finite; not `constexpr`"),
+                         form("A.ball()", A2, result=B2, note="the whole line where `error_bound()` is $+\\infty$")),
     # --- Milestone 2, BallVector ---------------------------------------------------------------------
     "bv_add_radius_1": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of one limb"),
     "bv_add_radius_2": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of two limbs"),
@@ -1102,4 +1194,6 @@ PAGES = [
     ("intervals", "One enclosure interface: intervals and balls", "enclosure"),
     ("packed", "Packed numbers in registers", "packed"),
     ("packed", "Arrays of numbers: SoA and its views", "soa"),
+    ("arrays", "Functions on arrays", "batch"),
+    ("arrays", "The accumulator", "accumulator"),
 ]

@@ -8,8 +8,15 @@
 //   runner --internal         the building blocks: kernels that are parts of other kernels
 //   runner --not-public       entry kernels that no public operation calls yet, each with why
 //   runner --packed-list      every kernel that some packed form maps to
+//   runner --fold-list        every fold (gen/claims.json, "folds") that some form of the
+//                             functions on arrays maps to (runner_arrays.hpp)
+//   runner --folds-not-public the folds that no public function calls, each with why
 //   runner --self-test        kairn::self_test() and kairn::environment_ok() as built here: exit
 //                             0 if both pass (the tests of the flag sets, tests/api/flags/)
+//
+// The requests of the loops over arrays (folds, maps, convolutions, folds of maxima) are completed
+// at once through the functions of kairn/batch.hpp, on views of the line's arrays
+// (runner_arrays.hpp, which says how a form chooses its order and computes in place).
 //
 // The packed forms (named packed_NAME, listed after a kernel's scalar forms) compute through
 // Packed<T, k> (kairn/packed.hpp) and the views of kairn/soa.hpp, in whichever form this build
@@ -62,6 +69,7 @@
 #if !defined(KAIRN_TEST_CHECKS)
 #define KAIRN_CHECKS 0
 #endif
+#include <kairn/accumulator.hpp>
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
@@ -70,6 +78,9 @@
 #endif
 
 #include "no_crash_reports.hpp"
+// The functions on arrays (kairn/batch.hpp): the requests of the loops over arrays, completed
+// through them.
+#include "runner_arrays.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -302,6 +313,84 @@ FORM(next_up_next_up, out[0] = kairn::next_up(AS(next_up, in[0])))
 FORM(next_up_marked, out[0] = kairn::next_up(kairn::unverified(in[0])))
 FORM(next_down_next_down, out[0] = kairn::next_down(AS(next_down, in[0])))
 FORM(next_down_marked, out[0] = kairn::next_down(kairn::unverified(in[0])))
+// The bounds as functions of the length (traits.hpp): through kairn::traits<X>::sum_height(h),
+// sum(n) and dot(n), on the lines whose count m is an integer that a std::size_t holds (h = m,
+// n = m + 1 for sum, n = m for dot), the result's unit (and tiny) as g (and t), and the mask true
+// exactly when the unit is finite, as the function gives it (+inf where the kernel's mask is
+// false). A count that no program can give as a length (a fraction, or 2^64 and more, which the
+// oracle draws to reach the limit of the kernel) is completed by the kernel itself, so that the
+// stream is whole; each form computes its own operation on the integer lines, and fails if a stream
+// of 1000 lines reached none.
+template <class T>
+bool as_length(T m, std::size_t& n) {
+    if (!(m >= T(0)) || !(T(0x1p64) > m) || std::floor(m) != m) return false;
+    const std::uint64_t v = static_cast<std::uint64_t>(m);
+    if (v >= std::uint64_t(std::numeric_limits<std::size_t>::max())) return false;
+    n = static_cast<std::size_t>(v);
+    return true;
+}
+template <class T, int K>
+using traits_k = std::conditional_t<K == 1, kairn::traits<T>, kairn::traits<E2<T>>>;
+// Which: 0 sum_height(h), 1 sum(n), 2 dot(n).
+template <class T, int K, int Which>
+void length_bound(const T* in, T* out, bool* mo) {
+    std::size_t n = 0;
+    if (!as_length(in[0], n)) {
+        if constexpr (Which == 2) {
+            if constexpr (K == 1) kairn::gen::bound_dot_1(in[0], out[0], out[1], mo[2]);
+            else kairn::gen::bound_dot_2(in[0], out[0], out[1], mo[2]);
+        } else {
+            if constexpr (K == 1) kairn::gen::bound_sum_1(in[0], out[0], mo[1]);
+            else kairn::gen::bound_sum_2(in[0], out[0], mo[1]);
+        }
+        return;
+    }
+    ++reached;
+    if constexpr (Which == 2) {
+        const kairn::Bound<T> b = traits_k<T, K>::dot(n);
+        out[0] = b.unit;
+        out[1] = b.tiny;
+        mo[2] = std::isfinite(b.unit);
+    } else {
+        const kairn::Bound<T> b = Which == 0 ? traits_k<T, K>::sum_height(n) : traits_k<T, K>::sum(n + 1);
+        out[0] = b.unit;
+        mo[1] = std::isfinite(b.unit);
+    }
+}
+FORM(bound_sum_1_traits_sum_height, length_bound<T, 1, 0>(in, out, mo))
+FORM(bound_sum_1_traits_sum, length_bound<T, 1, 1>(in, out, mo))
+FORM(bound_sum_2_traits_sum_height, length_bound<T, 2, 0>(in, out, mo))
+FORM(bound_sum_2_traits_sum, length_bound<T, 2, 1>(in, out, mo))
+FORM(bound_dot_1_traits_dot, length_bound<T, 1, 2>(in, out, mo))
+FORM(bound_dot_2_traits_dot, length_bound<T, 2, 2>(in, out, mo))
+// The accumulator (accumulator.hpp): the state of the line made with Accumulator::from_state, then
+// add, add_product or merge, and the state read back (running_sum(), magnitudes()), the kernel's
+// outputs t and b. The other accumulator of a merge is made the same way.
+template <class T, int K>
+kairn::Accumulator<T, K> acc_of(const T* in) {
+    if constexpr (K == 1) return kairn::Accumulator<T, 1>::from_state(E1<T>(in[0]), in[1], 0);
+    else return kairn::Accumulator<T, 2>::from_state(two(in), in[2], 0);
+}
+template <class T, int K>
+void put_acc(T* out, const kairn::Accumulator<T, K>& acc) {
+    put(out, acc.running_sum());
+    out[K] = acc.magnitudes();
+}
+template <class T, int K>
+auto number_k(const T* in) {
+    if constexpr (K == 1) return one(in);
+    else return two(in);
+}
+FORM(acc_add_1_add, auto acc = acc_of<T, 1>(in); acc.add(number_k<T, 1>(in + 2)); put_acc(out, acc))
+FORM(acc_add_1_add_limb, auto acc = acc_of<T, 1>(in); acc.add(in[2]); put_acc(out, acc))
+FORM(acc_add_2_add, auto acc = acc_of<T, 2>(in); acc.add(number_k<T, 2>(in + 3)); put_acc(out, acc))
+FORM(acc_mul_entry_1_add_product, auto acc = acc_of<T, 1>(in); acc.add_product(number_k<T, 1>(in + 2), number_k<T, 1>(in + 3));
+     put_acc(out, acc))
+FORM(acc_mul_entry_1_add_product_limbs, auto acc = acc_of<T, 1>(in); acc.add_product(in[2], in[3]); put_acc(out, acc))
+FORM(acc_mul_2_add_product, auto acc = acc_of<T, 2>(in); acc.add_product(number_k<T, 2>(in + 3), number_k<T, 2>(in + 5));
+     put_acc(out, acc))
+FORM(acc_merge_1_merge, auto acc = acc_of<T, 1>(in); acc.merge(acc_of<T, 1>(in + 2)); put_acc(out, acc))
+FORM(acc_merge_2_merge, auto acc = acc_of<T, 2>(in); acc.merge(acc_of<T, 2>(in + 3)); put_acc(out, acc))
 FORM(radd_entry_radd, out[0] = kairn::radd(AS(radd_entry, in[0]), in[1]))
 FORM(radd_entry_marked, out[0] = kairn::radd(in[0], kairn::unverified(in[1])))
 FORM(rmul_rmul, out[0] = kairn::rmul(AS(rmul, in[0]), in[1]))
@@ -1167,6 +1256,20 @@ const Form forms[] = {
     ROW(radd_entry, marked, "ll", "l")
     ROW(rmul, rmul, "ll", "l")
     ROW(rmul, marked, "ll", "l")
+    SOME(bound_sum_1, traits_sum_height, "l", "lm")
+    SOME(bound_sum_1, traits_sum, "l", "lm")
+    SOME(bound_sum_2, traits_sum_height, "l", "lm")
+    SOME(bound_sum_2, traits_sum, "l", "lm")
+    SOME(bound_dot_1, traits_dot, "l", "llm")
+    SOME(bound_dot_2, traits_dot, "l", "llm")
+    ROW(acc_add_1, add, "lll", "ll")
+    ROW(acc_add_1, add_limb, "lll", "ll")
+    ROW(acc_add_2, add, "lllll", "lll")
+    ROW(acc_mul_entry_1, add_product, "llll", "ll")
+    ROW(acc_mul_entry_1, add_product_limbs, "llll", "ll")
+    ROW(acc_mul_2, add_product, "lllllll", "lll")
+    ROW(acc_merge_1, merge, "llll", "ll")
+    ROW(acc_merge_2, merge, "llllll", "lll")
     ROW(add_down_entry, add_down, "ll", "l")
     ROW(add_down_entry, marked, "ll", "l")
     ROW(add_up_entry, add_up, "ll", "l")
@@ -1489,6 +1592,16 @@ const char* const internal[] = {
     // bounds of two limbs of a sum and of a product, and the product of two bounds of two limbs.
     "mul_dir_1", "add_ball_2_2", "mul_ball_2_2", "add_down_2_2", "add_up_2_2", "sub_down_2_2", "sub_up_2_2",
     "mul_dir_2_2", "mul_ext_2_2",
+    // Milestone 2, the parts of the loops over arrays of kairn/batch.hpp that are not entry kernels:
+    // the finish of the folds and maps, and the kernels of the folds of maxima (norm_upper_k), which
+    // the public functions reach inside their loops, judged as api.oracle.FOLD.FORMAT.
+    "fold_finish_1", "fold_finish_2", "norm_combine", "norm_step_1", "norm_step_2", "norm_finish_1",
+    "norm_finish_2",
+    // The radius of an accumulator (accumulator.hpp): Accumulator::error_bound() calls it on the
+    // (g, t) that bound_dot_k gives for the count, never on given ones, so no form computes the
+    // kernel on a line's own (g, t); the composition is judged end to end in exact arithmetic
+    // (api.arrays.exact.accumulator).
+    "acc_radius_1", "acc_radius_2",
 };
 // Entry kernels (entry: yes in gen/kernels) that no public operation calls yet, and why.
 struct NotPublic {
@@ -1497,17 +1610,31 @@ struct NotPublic {
 };
 const char* const ball_core = "the finite core of a Ball operation: the operators call the full kernel, and "
                               "kairn::finite has no Ball forms (decision D5 names the Expansion arithmetic)";
+const char* const fold_step = "the step of a loop over arrays of the program (kairn/batch.hpp): the public "
+                              "function calls the loop, not the step on its own, and the oracle judges the "
+                              "loop's claims through it (api.oracle.FOLD.FORMAT)";
+const char* const factors_unguarded = "acc_mul_1 takes its factors unguarded: Accumulator::add_product of one limb "
+                                      "calls acc_mul_entry_1, acc_mul_1 on its factors guarded (rule R3, the factors "
+                                      "of a fused operation)";
 const NotPublic not_public[] = {
     {"ball_add_1", ball_core}, {"ball_sub_1", ball_core}, {"ball_mul_1", ball_core}, {"ball_scale_1", ball_core},
     {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core}, {"ball_scale_2", ball_core},
     {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
+    {"sum_entry_step_1", fold_step}, {"sum_entry_step_2", fold_step}, {"sum_fast_entry_step_2", fold_step},
+    {"dot_step_1", fold_step}, {"dot_entry_step_1", fold_step}, {"dot_step_2", fold_step}, {"add_entry_step_1", fold_step},
+    {"add_entry_step_2", fold_step}, {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step},
+    {"scale_step_1", fold_step}, {"scale_step_2", fold_step}, {"mul_pow2_step_1", fold_step},
+    {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},
+    {"axpy_entry_step_2", fold_step}, {"acc_mul_1", factors_unguarded},
 };
 // The interval kernels of Milestone 2 are reached by the forms of Interval (interval.hpp) and of
 // the functions of a Ball of the enclosure interface (ball.hpp), and so are the 53 kernels of the
 // enclosure interface of stage B2 (predicates, comparisons, relations of IEEE 1788, set operations
 // of a ball, conversions of two limbs); their building blocks are in `internal` above. The kernels
-// of the folds' stage and of the maps, which no public operation calls yet, are in none of these
-// lists (KAIRN_NOT_PUBLIC_YET of tests/CMakeLists.txt, coverage.cmake).
+// of the loops over arrays that kairn/batch.hpp calls are in the two lists above; those that no
+// public operation calls yet (the steps of the maps on stored arrays, the bounds as functions of
+// n, the accumulator, the ball vectors) are in none of these lists (KAIRN_NOT_PUBLIC_YET of
+// tests/CMakeLists.txt, coverage.cmake).
 
 constexpr int max_limbs = 16;
 long lineno = 0;
@@ -1549,7 +1676,7 @@ void put_limb(double v, std::string& out) {
 int usage() {
     std::fprintf(stderr,
                  "usage: runner [--form NAME] | --forms KERNEL | --list | --packed-list | --internal | --not-public | "
-                 "--self-test\n");
+                 "--fold-list | --folds-not-public | --self-test\n");
     return 2;
 }
 
@@ -1741,6 +1868,24 @@ int main(int argc, char** argv) {
 #endif
         for (const PackedForm& f : packed_forms)
             if (std::strcmp(f.kernel, argv[2]) == 0) std::printf("%s\n", f.name);
+        for (const ArrayForm& f : array_forms)
+            if (array_form_listed(f) && std::strcmp(f.fold, argv[2]) == 0) std::printf("%s\n", f.name);
+        return 0;
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--fold-list") == 0) {
+        std::vector<std::string> seen;
+        for (const ArrayForm& f : array_forms) {
+            bool known = !array_form_listed(f);
+            for (const std::string& s : seen) known = known || s == f.fold;
+            if (!known) {
+                seen.push_back(f.fold);
+                std::printf("%s\n", f.fold);
+            }
+        }
+        return 0;
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--folds-not-public") == 0) {
+        for (const FoldNotPublic& k : folds_not_public) std::printf("%s\t%s\n", k.fold, k.why);
         return 0;
     }
     if (argc == 2 && std::strcmp(argv[1], "--list") == 0) {
@@ -1813,6 +1958,26 @@ int main(int argc, char** argv) {
         }
         if (fields.back()[0] == '#') fields.pop_back();  // the tag
         if (fields.size() < 2) fail("expected KERNEL FORMAT LIMB ... [#TAG]");
+        // A loop over arrays: completed at once, through the function of kairn/batch.hpp.
+        const ArrayForm* af = nullptr;
+        for (const ArrayForm& f : array_forms) {
+            if (!array_form_listed(f) || fields[0] != f.fold) continue;
+            if (form_name ? std::strcmp(form_name, f.name) == 0 : af == nullptr) af = &f;
+        }
+        if (af) {
+            if (batch.active) fail("a packed form's stream has lines of packed forms only");
+            ++lines;
+            if (fields[1] != "binary64" && fields[1] != "binary32")
+                fail("this runner knows binary64 and binary32, not " + fields[1]);
+            out += " ->";
+            const std::string why = fields[1] == "binary64"
+                                        ? complete_array_line<double>(*af, fields, out, parse, put_limb)
+                                        : complete_array_line<float>(*af, fields, out, parse, put_limb);
+            if (!why.empty()) fail(why);
+            out += '\n';
+            std::fwrite(out.data(), 1, out.size(), stdout);
+            continue;
+        }
         const Form* k = nullptr;
         const PackedForm* pk = nullptr;
         for (const Form& f : forms) {

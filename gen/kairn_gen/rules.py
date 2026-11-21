@@ -4,6 +4,7 @@ Each rule is a short traversal of the kernel's dataflow graph and refuses with a
 names the kernel, the value and the rule. Nothing is printed for any kernel while one is refused.
 """
 import re
+from dataclasses import dataclass
 from fractions import Fraction
 
 from . import consts, cpp, expr, ieee, ir, rocq, simd
@@ -114,6 +115,8 @@ def check_all(kernels):
     if not errors:
         for fd in getattr(kernels, 'folds', {}).values():
             errors += fold_rules(fd, kernels)
+    if not errors:
+        errors += factor_rule(kernels)
     return errors
 
 
@@ -555,6 +558,216 @@ def r3_report(kernels):
             if others:
                 through[k.name] = others
     return pending, through
+
+
+# --- R3 and the factors of a fused operation (a report, not a refusal) ----------------------------
+#
+# R3 asks no guard of a value of the program that is only multiplied: nothing can be fused into a
+# product. That holds of the product alone, and not of a fused operation whose other factor the
+# compiler sees to be 1 or -1 after inlining: LLVM rewrites fma(x, 1, s) as x + s, and a product
+# x = a * b of the program is then fused into that addition (architecture.md, "R3", the factors).
+# The sound criterion: a value of the program is EXPOSED where it is a factor of a fused operation
+# (fma, fms, fnma, muladd) whose addend is not the literal zero of the listing, on a path that has
+# not passed through guard. A factor of prod, emitted fma(a, b, +0), is safe: whatever a compiler
+# does with the product a * b inside it, fma(a * b, 1, +0) fused is RN(a b + 0), the rounding of the
+# product itself, which is what the program's product is. These functions list the exposed
+# operands; they refuse nothing, and the decision to guard them is the owner's.
+FACTORS = {'fma': (0, 1), 'fms': (0, 1), 'fnma': (0, 1), 'muladd': (0, 1)}
+ADDEND = {'fma': 2, 'fms': 2, 'fnma': 2, 'muladd': 2}
+
+
+def exposed_analysis(k, kernels, tainted):
+    """The factors of fused operations that the values `tainted` of kernel k reach unguarded:
+    (hits, out), hits [(where, origins)], one per factor, with the route to it and the inputs of k
+    it comes from; out {output value of k: origins} for the outputs that are such a value (as in
+    r3_analysis: neg, abs, select and copy forward a value, guard ends it, a call is followed into
+    the callee)."""
+    origin = {v: frozenset([v]) for v in tainted}
+    hits = []
+    for st in k.body:
+        args = [None if a.const else origin.get(a.name) for a in st.args]
+        if st.is_call:
+            callee = kernels[st.op]
+            passed = {callee.input_limbs[i]: o for i, o in enumerate(args) if o}
+            if not passed:
+                continue
+            sub_hits, sub_out = exposed_analysis(callee, kernels, frozenset(passed))
+            for where, o in sub_hits:
+                hits.append((f'{where} in {st.op} (called for {st.dsts[0]})',
+                             frozenset().union(*(passed[x] for x in o))))
+            for d, v in zip(st.dsts, callee.output_limbs):
+                if v in sub_out:
+                    origin[d] = frozenset().union(*(passed[x] for x in sub_out[v]))
+            continue
+        if st.op in FACTORS:
+            addend = st.args[ADDEND[st.op]]
+            if not (addend.const and addend.name == ir.ZERO):
+                for i in FACTORS[st.op]:
+                    if args[i]:
+                        hits.append((f'a factor of {st.op} at {st.dsts[0]}', args[i]))
+        forwarded = [args[i] for i in FORWARDING.get(st.op, ()) if args[i]]
+        if forwarded:
+            origin[st.dsts[0]] = frozenset().union(*forwarded)
+    return hits, {v: origin[v] for v in k.output_limbs if v in origin}
+
+
+@dataclass
+class Exposed:
+    """One object with exposed operands: an entry kernel, or a loop (a fold, a map, a convolution, a
+    ball vector) through the kernel that takes what the program supplies. operands: {input limb of
+    that kernel: [where, ...]}; ops: the operations of that kernel today (ir.flops, an element of a
+    loop); guarded: with a guard on each exposed operand that is not guarded already."""
+    kind: str        # 'kernel' or 'loop'
+    name: str        # the kernel's or the loop's
+    kernel: str      # the kernel analyzed: the kernel itself, or the loop's step (radius, ...)
+    role: str        # '' for a kernel; 'step', 'radius', 'step of the coefficients (dot_1)', ...
+    operands: dict
+    ops: int
+    guarded: int
+
+
+def _exposed_of(kind, name, k, role, tainted, kernels):
+    hits, _ = exposed_analysis(k, kernels, frozenset(tainted))
+    if not hits:
+        return None
+    operands = {}
+    for where, origins in hits:
+        for v in sorted(origins):
+            operands.setdefault(v, [])
+            if where not in operands[v]:
+                operands[v].append(where)
+    already = {st.args[0].name for st in k.body if st.op == 'guard' and not st.args[0].const}
+    ops = ir.flops(k, kernels)
+    return Exposed(kind, name, k.name, role, dict(sorted(operands.items())), ops,
+                   ops + len(set(operands) - already))
+
+
+def _supplied_limbs(fd, call, kernel):
+    """The input limbs of `kernel`, called by the line `call` of fold fd, that receive a supplied
+    array or a supplied scalar."""
+    _, args, _ = call
+    by = dict(zip(args, kernel.inputs))
+    return [v for a in args if fd.roles.get(a) == 'supplied' and a in by for v in by[a].limbs]
+
+
+def exposed_operands(kernels):
+    """Every exposed operand (the criterion above) of every entry kernel, with what it takes from
+    the program (program_values), and of every loop, with what its supplied arrays and scalars give
+    its step, its radius (a ball vector) and the step of its coefficients (a convolution): a list
+    of Exposed, kernels first, in the order of the kernels and of the folds."""
+    out = []
+    for k in kernels.values():
+        if k.entry:
+            e = _exposed_of('kernel', k.name, k, '', k.program_values(), kernels)
+            if e:
+                out.append(e)
+    for fd in getattr(kernels, 'folds', {}).values():
+        parts = []
+        if fd.step and fd.step[0] in kernels:
+            parts.append(('step', kernels[fd.step[0]], _supplied_limbs(fd, fd.step, kernels[fd.step[0]])))
+        if fd.radius and fd.radius[0] in kernels:
+            parts.append(('radius', kernels[fd.radius[0]], _supplied_limbs(fd, fd.radius, kernels[fd.radius[0]])))
+        for key in ('coefficients', 'centers'):
+            inner = kernels.folds.get(getattr(fd, key)) if getattr(fd, key) else None
+            if inner is None:
+                continue
+            if inner.coefficients:      # the centers of a product of ball vectors: a convolution
+                inner = kernels.folds.get(inner.coefficients)
+            if inner is None or not inner.step:
+                continue
+            step = kernels[inner.step[0]]
+            # The arrays of fd are those of the inner fold, in order.
+            supplied = {ig.name for g, ig in zip(fd.arrays, inner.arrays) if fd.roles.get(g.name) == 'supplied'}
+            by = dict(zip(inner.step[1], step.inputs))
+            tainted = [v for a in inner.step[1] if a in supplied for v in by[a].limbs]
+            parts.append((f'step of {inner.name}', step, tainted))
+        for role, k, tainted in parts:
+            e = _exposed_of('loop', fd.name, k, role, tainted, kernels)
+            if e:
+                out.append(e)
+    return out
+
+
+def fold_kernels(fd, kernels):
+    """The kernels a loop runs: its step, combination, record, check, radius, bound and finish, and
+    those of the fold of its coefficients or centers."""
+    names = set()
+    for call in [fd.step, fd.combine, fd.finish, fd.radius, fd.bound] + list(fd.records):
+        if call and call[0] in kernels:
+            names.add(call[0])
+    if fd.check:
+        names.add(fd.check)
+    for key in ('coefficients', 'centers'):
+        inner = getattr(fd, key)
+        if inner and inner in kernels.folds:
+            names |= fold_kernels(kernels.folds[inner], kernels)
+    return names
+
+
+# The objects of gen/kernels whose exposed operands are not closed yet, each with its reason (the
+# owner's decision of 2026-11-21: the strict rule, every exposed operand guarded). R3 refuses an
+# exposed operand of any other object, and an entry here that has none; `build` prints the list.
+# The plan of each: a guarded entry twin where the kernel is also called inside kernels on limbs
+# that kernels wrote, a guard in the entry kernel itself where it has no internal caller.
+_TWIN = 'called inside other kernels on limbs that kernels wrote: a guarded entry twin is to come'
+_OWN = 'no internal caller on such limbs: its own guard on the supplied operand is to come'
+_LOOP = 'its step is to be the guarded form'
+FACTOR_PENDING = {
+    'acc_mul_1': 'replaced in the headers by acc_mul_entry_1; ' + _OWN,
+    'dot_step_1': "replaced in dot by dot_entry_step_1; conv_1's coefficients still run it: " + _TWIN,
+    'two_prod': _TWIN, 'mul_2_1': _TWIN, 'mul_2_1_full': _TWIN, 'ball_scale_2': _TWIN,
+    'mul_down_1': _OWN, 'mul_up_1': _OWN, 'ball_scale_2_full': _OWN, 'dot_step_2': _TWIN,
+    'acc_mul_2': _OWN, 'scale_step_2': _TWIN, 'axpy_entry_step_2': _OWN, 'axpy_entry_step_2_1': _OWN,
+    'axpy_step_2': _OWN, 'axpy_step_2_1': _OWN,
+    'loop axpy_2': _LOOP, 'loop axpy_2_1': _LOOP, 'loop axpy_2_1_entry': _LOOP, 'loop axpy_2_entry': _LOOP,
+    'loop bv_scale_2': _LOOP, 'loop conv_1': _LOOP, 'loop conv_2': _LOOP, 'loop dot_1': _LOOP,
+    'loop dot_2': _LOOP, 'loop scale_2': _LOOP,
+}
+
+
+def _pending_key(e):
+    return e.name if e.kind == 'kernel' else f'loop {e.name}'
+
+
+def factor_rule(kernels, pending=None):
+    """Rule R3 on the factors of a fused operation: an exposed operand (exposed_operands) of an
+    entry kernel or of a loop is refused, naming the operand, the operation and the route, unless
+    the object is in `pending` (FACTOR_PENDING by default); an entry of `pending` without an
+    exposed operand is refused too (remove it). Only the objects of `kernels` are judged."""
+    pending = FACTOR_PENDING if pending is None else pending
+    errs, found = [], set()
+    for e in exposed_operands(kernels):
+        key = _pending_key(e)
+        found.add(key)
+        if key in pending:
+            continue
+        where = f'the step {e.kernel}' if e.kind == 'loop' and e.role == 'step' else \
+            (f'the {e.role} {e.kernel}' if e.kind == 'loop' else '')
+        for v, ws in e.operands.items():
+            errs.append(RuleError(e.name, v, RULE_R3,
+                                  f'{v} enters from the program and is {ws[0]}{" in " + where if where else ""}'
+                                  f'{" (and " + str(len(ws) - 1) + " more)" if len(ws) > 1 else ""}: a factor of '
+                                  'a fused operation whose addend is not the literal zero, unguarded; a compiler '
+                                  'that sees the other factor to be 1 fuses a product of the program into it '
+                                  '(fma(x, 1, s) is x + s). Write g = guard(' + v + ') and use g there; a factor '
+                                  'of prod alone needs no guard'))
+    names = set(kernels) | {f'loop {f}' for f in getattr(kernels, 'folds', {})}
+    for key in sorted(set(pending) & names - found):
+        errs.append(RuleError(key, '-', RULE_R3, 'listed in FACTOR_PENDING, but nothing of it is exposed: '
+                                                 'remove the entry'))
+    return errs
+
+
+def callees(name, kernels):
+    """A kernel and every kernel it calls, directly or not."""
+    seen, todo = set(), [name]
+    while todo:
+        n = todo.pop()
+        if n in seen or n not in kernels:
+            continue
+        seen.add(n)
+        todo += [st.op for st in kernels[n].body if st.is_call]
+    return seen
 
 
 def claims(k, kernels):

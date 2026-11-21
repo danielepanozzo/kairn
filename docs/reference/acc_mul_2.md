@@ -14,7 +14,12 @@ A number of several limbs stands for their exact sum: $s = s_0 + s_1$, $x = x_0 
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `A.add_product(x, y)` | `Accumulator<T, 2>`, `Expansion<T, 2>`, `Expansion<T, 2>` | `void` | one more term; the bound of the whole history is `A.error_bound()` ([Accumulator](accumulator.md)); not `constexpr` |
+| `A.add_product(a, b)` | `Accumulator<T, 2>`, `T`, `T` | `void` | each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`) |
+
+`T` is `float` or `double`; `A` and `B` are accumulators, `kairn::Accumulator<T, k>`, header `kairn/accumulator.hpp`, which `kairn/kairn.hpp` includes. They take no marker: an operation of an accumulator compiles only while its kernels are proved ([The accumulator](accumulator.md)).
 
 ## Requires
 
