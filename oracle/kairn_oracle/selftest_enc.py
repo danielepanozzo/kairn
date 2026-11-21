@@ -702,6 +702,13 @@ PLANTED = {
     "enc-fromint1-center-off": ({"ball_from_interval_1": {"makes_ball"}}, ALL_FMT),
     "enc-split2-no-move": ({"interval_split_2": {"splits"}}, ALL_FMT),
     "enc-split2-gap": ({"interval_split_2": {"splits"}}, ALL_FMT),
+    # The midpoint a format of no statement may give (the second ruling of 2026-11-21),
+    # which the formats of the statements must still fail: interval_to_ball_2 meets it through the
+    # midpoint (the whole line where finite_when holds), and the hull and the intersection of two
+    # limbs through interval_to_ball_2.
+    "enc-mid2-nan": ({"interval_mid_rad_2": {"ball_of_interval"}, "interval_split_2": {"splits"},
+                      "interval_to_ball_2": {"ball_of_interval"}, "ball_hull_2": {"ball_set"},
+                      "ball_intersection_2": {"ball_set"}}, ALL_FMT),
 }
 # The kernels whose listing a fault reaches through a kernel it changes (interval_split_2 takes the
 # midpoint of interval_mid_rad_2's listing; the hull and intersection of two limbs the conversions).
@@ -726,6 +733,7 @@ MUST_CATCH = {v: {k for k in PLANTED[v][0] if k not in ("ball_hull_2", "ball_int
 MUST_CATCH.update({v: {"ball_hull_1", "ball_intersection_1"} & set(PLANTED[v][0])
                    for v in ("ens-hull-no-y", "ens-hull-no-x", "ens-hull-radius-small",
                              "ens-int-radius-small")})
+MUST_CATCH["enc-mid2-nan"] = {"interval_mid_rad_2", "interval_split_2"}
 # The strata that reach a fault that the default strata reach rarely.
 PLANTED_STRATA = {"enb-less-unknown-large": "huge", "enc-mid2-no-move": "point,step,oddeta",
                   "enc-btoi2-zero-eta": "zeroend,cross,exactend", "ens-int-swapped": "bothspecial",
@@ -801,6 +809,11 @@ def _reversed(fmt, line):
     return F.NAN not in (a, b) and not (a == b) and IV.make_given(a, b) == IV.MAKE_REVERSED
 
 
+def _x_bounded(fmt, line):
+    v = _vals(fmt, line)
+    return type(v[0]) is int and type(v[len(v) // 2]) is int
+
+
 # A fault and the lines of its kernel it is about: every one of them must fail.
 TARGETED = {
     "ens-int-swapped": [("ball_intersection_1", _both_whole_signs),
@@ -815,7 +828,13 @@ TARGETED = {
     "enc-fromint1-nan-empty": [("ball_from_interval_1", _a_nan)],
     "enc-fromint1-inf-empty": [("ball_from_interval_1", _same_inf)],
     "enc-fromint1-reversed-whole": [("ball_from_interval_1", _reversed)],
+    "enc-mid2-nan": [("interval_mid_rad_2", _x_bounded), ("interval_split_2", _x_bounded)],
 }
+# A fault the rule of the formats of the statements must not hide there, and must count as not
+# claimed in a format of no statement (fp:4:-4:-1, q_max < 1): its kernels pass there, each line
+# of a bounded X counted with a midpoint (a point of split) that is not finite.
+NO_STATEMENT = {"enc-mid2-nan": ("fp:4:-4:-1", {"interval_mid_rad_2": IV.CENTER_LOST,
+                                                "interval_split_2": IV.SPLIT_LOST})}
 
 
 def _planted_one(args):
@@ -892,9 +911,23 @@ def enc_planted(ctx):
             need = set(MUST_CATCH.get(variant, expected)) & {o[0] for o in out}
             expect(need <= caught, "%s %s: not caught in %s" % (variant, fname,
                                                                 sorted(need - caught)))
+    counted = 0
+    for variant, (fname, kernels) in sorted(NO_STATEMENT.items()):
+        claims, fmt = claims_enc(ctx), F.parse_format(fname)
+        for k, name in sorted(kernels.items()):
+            lines = list(G.RandomGen(claims.get(k), fmt, "selftest-enc").lines(0, n))
+            s = judge(run_enc(lines, variant), claims)
+            t = totals(s)
+            seen = sum(d[3].get(name, 0) for d in entry_stats(s, k).values())
+            aimed_k = sum(1 for ln in lines if not ln.startswith("#") and _x_bounded(fmt, ln))
+            expect(t["failed"] == 0 and t["invalid"] == 0 and seen == aimed_k > 0,
+                   "%s %s: %s, %d failed, %d of the %d lines of a bounded X counted %r"
+                   % (variant, fname, k, t["failed"], seen, aimed_k, name))
+            counted += seen
     return ("%d planted faults in %d formats; %d lines they change of kernels whose claim fixes the "
-            "output, %d lines of the classes they are about, each failed" % (
-                len(PLANTED), len(FORMATS), changed_n, aimed))
+            "output, %d lines of the classes they are about, each failed; %d lines of a fault "
+            "counted as not claimed in a format of no statement" % (
+                len(PLANTED), len(FORMATS), changed_n, aimed, counted))
 
 
 # ---------------------------------------------------------------------------
@@ -1244,6 +1277,123 @@ FORMAT_RULE = [
 ]
 
 
+# The midpoint of a bounded interval (ball_of_interval with ieee1788) and what a split claims of
+# the parts that rest on it (splits), by the second ruling of 2026-11-21: clauses that
+# promise a finite result, claimed in the formats of the statements (fp:3:-4:1, binary64), judged
+# in a wider subnormal range (fp:3:-5:1), where a failure says that it is a finding, and counted as
+# not claimed in any other (fp:4:-4:-1 and fp:4:-5:0, q_max < 1, where the brute-force plan's
+# enumerations found the midpoint a NaN; fp:3:-3:1, eta above binary_float's), where a center or a
+# point of split that is not finite is judged by what does not rest on it: containment (only a
+# radius +inf contains X about a center that is not finite), the outer bounds of the parts, the
+# same limbs at the point of split. One and two limbs; the special values of an unbounded X and a
+# finite center that is wrong still fail there. Each case: the line, the statements that fail, a
+# text of the reason, the counts of the entry that must be there and those that must not.
+QM, QM0, QE = "fp:4:-4:-1", "fp:4:-5:0", "fp:3:-3:1"          # formats of no statement
+QS, QW = "fp:3:-4:1", "fp:3:-5:1"                              # the shape; a wider subnormal range
+_X = "0x1p-1 0x0p+0 0x1p+0 0x0p+0"                             # [1/2, 1] of two limbs
+_BEYOND = "-0x1.ep+2 -0x1.8p-3 -0x1.ep+2 -0x1.8p-3"           # [-Omega - 3/16] twice, fp:4:-4:-1
+_BEYOND0 = "-0x1.ep+3 -0x1.ep-2 -0x1.ep+3 -0x1.6p-2"          # bounds beyond -Omega, fp:4:-5:0
+_LOST = (IV.CENTER_RANGE, IV.CENTER_LOST)
+_SLOST = (IV.SPLIT_RANGE, IV.SPLIT_LOST)
+_NONE = (IV.CENTER_RANGE, IV.CENTER_LOST, IV.SPLIT_RANGE, IV.SPLIT_LOST)
+FINITE_RULE = [
+    # interval_mid_rad_2: the two lines of the finding pass, counted.
+    ("interval_mid_rad_2 %s %s -> nan nan inf" % (QM, _BEYOND), (), None,
+     _LOST + (IV.FW_RANGE, IV.FW_INFINITE), ()),
+    ("interval_mid_rad_2 %s %s -> nan nan inf" % (QM0, _BEYOND0), (), None, _LOST, ()),
+    ("interval_mid_rad_2 %s %s -> inf nan inf" % (QM, _BEYOND), (), None, _LOST, ()),
+    ("interval_mid_rad_2 %s %s -> nan nan inf" % (QE, _X), (), None, _LOST, ()),
+    # Containment does not rest on the center: about a center that is not finite only +inf holds.
+    ("interval_mid_rad_2 %s %s -> nan nan 0x1p+0" % (QM, _BEYOND), ("containment",),
+     "the radius is not +inf", _LOST, ()),
+    ("interval_mid_rad_2 %s %s -> nan nan nan" % (QM, _BEYOND), ("containment",),
+     "the radius is not +inf", _LOST, ()),
+    # A finite center is judged as everywhere: right; outside X (within the bound of the midpoint);
+    # not normalized; and an unbounded X keeps its special values.
+    ("interval_mid_rad_2 %s %s -> 0x1.8p-1 0x0p+0 0x1p-2" % (QM, _X), (), None,
+     (IV.CENTER_RANGE,), (IV.CENTER_LOST,)),
+    ("interval_mid_rad_2 %s 0x1p-1 0x0p+0 0x1p-1 0x0p+0 -> 0x1.2p-1 0x0p+0 0x1p-4" % QM,
+     ("center",), None, (IV.CENTER_RANGE,), (IV.CENTER_LOST,)),
+    ("interval_mid_rad_2 %s %s -> 0x1p-1 0x1p-1 0x1p-2" % (QM, _X), ("canonical",), None,
+     (IV.CENTER_RANGE,), (IV.CENTER_LOST,)),
+    ("interval_mid_rad_2 %s 0x1p-1 0x0p+0 inf 0x0p+0 -> nan nan inf" % QM, ("special",), None,
+     (), _NONE),
+    # In the formats of the statements a NaN midpoint fails; in a wider subnormal range as a finding.
+    ("interval_mid_rad_2 %s %s -> nan nan inf" % (QS, _X), ("finite",), "a center that is not",
+     (), _NONE),
+    ("interval_mid_rad_2 binary64 0x1p+0 0x0p+0 0x1p+1 0x0p+0 -> nan nan inf", ("finite",),
+     "a center that is not", (), _NONE),
+    ("interval_mid_rad_2 %s %s -> inf nan inf" % (QS, _X), ("canonical",), None, (), _NONE),
+    ("interval_mid_rad_2 %s %s -> nan nan inf" % (QW, _X), ("finite",), "a finding to report",
+     (), _NONE),
+    # interval_split_2: the two lines of the finding pass, counted.
+    ("interval_split_2 %s %s -> -0x1.ep+2 -0x1.8p-3 nan nan nan nan -0x1.ep+2 -0x1.8p-3"
+     % (QM, _BEYOND), (), None, _SLOST, ()),
+    ("interval_split_2 %s %s -> -0x1.ep+3 -0x1.ep-2 nan nan nan nan -0x1.ep+3 -0x1.6p-2"
+     % (QM0, _BEYOND0), (), None, _SLOST, ()),
+    ("interval_split_2 %s %s -> 0x1p-1 0x0p+0 nan nan nan nan 0x1p+0 0x0p+0" % (QE, _X), (), None,
+     _SLOST, ()),
+    # What does not rest on the point: the outer bounds X's, the same limbs at the point.
+    ("interval_split_2 %s %s -> -0x1.ep+2 -0x1.8p-3 nan nan 0x0p+0 0x0p+0 -0x1.ep+2 -0x1.8p-3"
+     % (QM, _BEYOND), ("not a split",), "the first part's upper bound is not", _SLOST, ()),
+    ("interval_split_2 %s %s -> -0x1.ep+2 0x0p+0 nan nan nan nan -0x1.ep+2 -0x1.8p-3"
+     % (QM, _BEYOND), ("not a split",), "the first part's lower bound is not X's", _SLOST, ()),
+    # A finite point of split is judged as everywhere; an unbounded X as everywhere.
+    ("interval_split_2 %s %s -> 0x1p-1 0x0p+0 0x1.8p-1 0x0p+0 0x1.8p-1 0x0p+0 0x1p+0 0x0p+0"
+     % (QM, _X), (), None, (IV.SPLIT_RANGE,), (IV.SPLIT_LOST,)),
+    ("interval_split_2 %s %s -> 0x1p-1 0x0p+0 0x1p+1 0x0p+0 0x1p+1 0x0p+0 0x1p+0 0x0p+0"
+     % (QM, _X), ("a part not canonical",), None, (IV.SPLIT_RANGE,), (IV.SPLIT_LOST,)),
+    ("interval_split_2 %s 0x1p-1 0x0p+0 inf 0x0p+0 -> 0x1p-1 0x0p+0 nan nan nan nan inf 0x0p+0"
+     % QM, ("a part not canonical",), None, (), _NONE),
+    ("interval_split_2 %s %s -> 0x1p-1 0x0p+0 nan nan nan nan 0x1p+0 0x0p+0" % (QS, _X),
+     ("a part not canonical",), None, (), _NONE),
+    ("interval_split_2 %s %s -> 0x1p-1 0x0p+0 nan nan nan nan 0x1p+0 0x0p+0" % (QW, _X),
+     ("a part not canonical",), "a finding to report", (), _NONE),
+    # One limb (the fixture of the interval kernels): the same rule.
+    ("interval_mid_rad_1 %s 0x1p-1 0x1p+0 -> nan inf" % QM, (), None, _LOST, ()),
+    ("interval_mid_rad_1 %s 0x1p-1 0x1p+0 -> nan 0x1p-2" % QM, ("containment",),
+     "the radius is not +inf", _LOST, ()),
+    ("interval_mid_rad_1 %s 0x1p-1 0x1p+0 -> 0x1.8p-1 0x1p-2" % QM, (), None, (IV.CENTER_RANGE,),
+     (IV.CENTER_LOST,)),
+    ("interval_mid_rad_1 %s 0x1p-1 0x1p+0 -> 0x1.8p-1 inf" % QM, ("finite",), None,
+     (IV.CENTER_RANGE,), (IV.CENTER_LOST,)),
+    ("interval_mid_rad_1 %s 0x1p-1 0x1p+0 -> nan inf" % QS, ("finite",), None, (), _NONE),
+    ("interval_mid_rad_1 %s 0x1p-1 0x1p+0 -> nan inf" % QW, ("finite",), "a finding to report",
+     (), _NONE),
+    ("interval_split_1 %s 0x1p-1 0x1p+0 -> 0x1p-1 nan nan 0x1p+0" % QM, (), None, _SLOST, ()),
+    ("interval_split_1 %s 0x1p-1 0x1p+0 -> 0x1p-1 nan 0x1.8p-1 0x1p+0" % QM, ("not a split",),
+     None, _SLOST, ()),
+    ("interval_split_1 %s 0x1p-1 0x1p+0 -> 0x1p-1 nan nan 0x1p+0" % QS, ("a part not canonical",),
+     None, (), _NONE),
+    ("interval_split_1 %s 0x1p-1 0x1p+0 -> 0x1p-1 nan nan 0x1p+0" % QW, ("a part not canonical",),
+     "a finding to report", (), _NONE),
+]
+
+
+def _finite_rule(ctx):
+    """The cases of FINITE_RULE, judged by hand (enc_judge); the kernels of one limb with the
+    fixture of the interval kernels."""
+    from .selftest8 import claims6
+    cl, cl6 = claims_enc(ctx), claims6(ctx)
+    for line, want, why, present, absent in FINITE_RULE:
+        kernel = line.split()[0]
+        s = judge([line], cl if kernel in KERNELS else cl6)
+        t = totals(s)
+        expect(t["invalid"] == 0 and t["judged"] == 1, "%s: not judged (%s)" % (line, t))
+        got = failed_statements(s, kernel)
+        expect(t["failed"] == (1 if want else 0) and got == set(want),
+               "%s: failed %s, not %s" % (line, sorted(got), list(want)))
+        reasons = " ".join(r for st in s.keys.values() for r in st.reasons)
+        expect(why is None or why in reasons, "%s: failed for %r, not %r" % (line, reasons, why))
+        expect(("a finding to report" in reasons) == (why == "a finding to report"),
+               "%s: a finding said, or not said, otherwise (%r)" % (line, reasons))
+        counts = {c for d in entry_stats(s, kernel).values() for c in d[3]}
+        expect(set(present) <= counts and not counts & set(absent),
+               "%s: counted %s, not %s and none of %s" % (line, sorted(counts), list(present),
+                                                          list(absent)))
+    return len(FINITE_RULE)
+
+
 @test
 def enc_judge(ctx):
     """Hand-written lines judged as worked out by hand, each failure in its statement: one or more
@@ -1288,8 +1438,10 @@ def enc_judge(ctx):
                 c.startswith(IV.FW_FAILS) for c in counts),
                 "%s: the conditions counted where nothing is claimed (%s)" % (line, sorted(counts)))
     cells = _cells(cl)
+    rule = _finite_rule(ctx)
     return ("%d hand-written lines, %d invalid ones, %d lines of the formats of the statements, "
-            "%d lines of the cells of the constructors" % (n, len(INVALID), len(FORMAT_RULE), cells))
+            "%d of the midpoint and the split there, %d lines of the cells of the constructors"
+            % (n, len(INVALID), len(FORMAT_RULE), rule, cells))
 
 
 INVALID = [

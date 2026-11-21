@@ -1150,7 +1150,8 @@ MUTANTS.update({
         "intervals.py", "        return out\n    if cv < L or cv > U:\n        fail(\"center\", \"the center is outside the interval\")\n    M2, C2 = L + U, 2 * cv",
         "        return out\n    if False:\n        fail(\"center\", \"the center is outside the interval\")\n    M2, C2 = L + U, 2 * cv"),
     "midpoint of two limbs: a center that is not canonical accepted": (
-        "intervals.py", "    if ieee and len(cw) == 2 and not XT.canonical(fmt, cw):", "    if False:"),
+        "intervals.py", "    if ieee and len(cw) == 2 and not lost and not XT.canonical(fmt, cw):",
+        "    if False:"),
     "interval_of_ball of two limbs: the tightness not judged": (
         "intervals.py", '        if not ok:\n            fail("tight"', '        if False:\n            fail("tight"'),
     "interval_of_ball of two limbs: exact_when not judged": (
@@ -1197,6 +1198,46 @@ MUTANTS.update({
     "bounded_when of two limbs: a failure in a wider subnormal range not said to be a finding": (
         "intervals.py", '"bounded_when gives an unbounded result" + beyond)',
         '"bounded_when gives an unbounded result")'),
+    # The midpoint of a bounded interval (ball_of_interval with ieee1788) and the parts of a split
+    # that rest on it, under the same rule (the second ruling of 2026-11-21).
+    "the center of 1788: claimed in every format (the ruling of 2026-11-21 not applied)": (
+        "intervals.py",
+        "        claimed, beyond = statement_format(fmt)\n        if not claimed:\n            es.count(CENTER_RANGE)",
+        "        claimed, beyond = True, statement_format(fmt)[1]\n        if not claimed:\n            es.count(CENTER_RANGE)"),
+    "the center of 1788: not claimed in a format of the statements either": (
+        "intervals.py",
+        "            es.count(CENTER_RANGE)\n            lost = not all(type(v) is int for v in cw)",
+        "            es.count(CENTER_RANGE)\n        lost = not all(type(v) is int for v in cw)"),
+    "the center of 1788: a format of no statement not counted": (
+        "intervals.py", "            es.count(CENTER_RANGE)\n", "            pass\n"),
+    "the center of 1788: a center not finite not counted": (
+        "intervals.py", "    es.count(CENTER_LOST)\n", "    pass\n"),
+    "the center of 1788: a center not finite with a finite radius accepted": (
+        "intervals.py", "    if r != INF:\n        fail(\"containment\", \"the center is not finite",
+        "    if False:\n        fail(\"containment\", \"the center is not finite"),
+    "the center of 1788: a failure in a wider subnormal range not said to be a finding": (
+        "intervals.py", '"number, or a radius that is neither finite and nonnegative nor +inf"\n                 + (beyond if bad_c else ""))',
+        '"number, or a radius that is neither finite and nonnegative nor +inf")'),
+    "the center of 1788 of one limb: a failure in a wider subnormal range not said to be a finding": (
+        "intervals.py", '"center that is not normalized)" + beyond)', '"center that is not normalized)")'),
+    "splits: claimed in every format (the ruling of 2026-11-21 not applied)": (
+        "intervals.py",
+        "        claimed, beyond = statement_format(fmt)\n        if not claimed:\n            es.count(SPLIT_RANGE)",
+        "        claimed, beyond = True, statement_format(fmt)[1]\n        if not claimed:\n            es.count(SPLIT_RANGE)"),
+    "splits: not claimed in a format of the statements either": (
+        "intervals.py", "        if not claimed:\n            es.count(SPLIT_RANGE)\n",
+        "        if True:\n            es.count(SPLIT_RANGE) if not claimed else None\n"),
+    "splits: a format of no statement not counted": (
+        "intervals.py", "            es.count(SPLIT_RANGE)\n", "            pass\n"),
+    "splits: a point of split not finite not counted": (
+        "intervals.py", "    es.count(SPLIT_LOST)\n", "    pass\n"),
+    "splits: the outer bounds not judged about a point of split not finite": (
+        "intervals.py", "    if bound_value(fmt, z[a0:a1]) != X_[1]:", "    if False:"),
+    "splits: parts that do not meet accepted about a point of split not finite": (
+        "intervals.py", "    if inner[0] != inner[1]:", "    if False:"),
+    "splits: a failure in a wider subnormal range not said to be a finding": (
+        "intervals.py", '"splits: a part is not a canonical interval" + beyond]',
+        '"splits: a part is not a canonical interval"]'),
     # The strata of the family (genenc.py) and of the conversions of two limbs (gen6.py).
     "genenc: special without the empty set or the whole line": (
         "genenc.py", '        ivs[j] = _special_iv(fmt, rng, k, ("empty", "whole")[rng.below(2)])', "        pass"),
