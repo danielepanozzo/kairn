@@ -7,8 +7,9 @@ could be tested, it was tested, and the result is under
 [`experiments/phase0/`](https://github.com/danielepanozzo/kairn/tree/main/experiments/phase0).
 Items the agents could not confirm from a primary source are listed at the end. The entries of
 [Classical algorithms and results](#classical-algorithms-and-results) were added on 2026-11-21:
-works that the source fields of the kernels and the pages cite and that this page lacked; their
-bibliographic data were not re-read from the works that day.
+works that the source fields of the kernels and the pages cite and that this page lacked. Their
+bibliographic data were checked against the Crossref records of their DOIs where they have one
+(Dekker, Møller, IEEE 754); the works themselves were not re-read that day.
 
 **License rule.** Algorithms are taken from papers and cited. Code is reused only from MIT-,
 BSD- or Apache-licensed sources and only with attribution; nothing is taken from GPL code.
@@ -18,7 +19,7 @@ dependencies of the proofs, not of the library.
 ## Classical algorithms and results
 
 <a id="dekker71"></a>**Dekker 1971.** T. J. Dekker. *A floating-point technique for extending
-the available precision.* Numerische Mathematik 18, 1971, pp. 224–242.
+the available precision.* Numerische Mathematik 18(3), 1971, pp. 224–242.
 [doi:10.1007/BF01397083](https://doi.org/10.1007/BF01397083). Fast2Sum (`fast_two_sum`, and
 `two_sum_ord` with its comparison of the operands), the split of a number into two halves, which
 the paper credits to G. W. Veltkamp (`split`, "Veltkamp's split"), and the exact product without
@@ -30,8 +31,9 @@ accuracy of floating-point arithmetic: the exact error of a rounded sum in six o
 operands in any order (`two_sum`).
 
 <a id="moller65"></a>**Møller 1965.** O. Møller. *Quasi double-precision in floating point
-addition.* BIT 5, 1965, pp. 37–50. The same exact error of a rounded sum (`two_sum`, cited with
-Knuth).
+addition.* BIT 5(1), 1965, pp. 37–50.
+[doi:10.1007/BF01975722](https://doi.org/10.1007/BF01975722). The same exact error of a rounded
+sum (`two_sum`, cited with Knuth).
 
 <a id="sterbenz74"></a>**Sterbenz 1974.** P. H. Sterbenz. *Floating-Point Computation.*
 Prentice-Hall, 1974. Sterbenz's lemma: for numbers $a$ and $b$ of a format with
@@ -39,7 +41,8 @@ $b/2 \le a \le 2b$, $a - b$ is a number of the format. Flocq proves it (`Sterben
 proofs and the [Milestone 2 statements](../milestone2.md#limbs-of-another-type) use it.
 
 <a id="ieee-754"></a>**IEEE 754.** IEEE Std 754-2019, *IEEE Standard for Floating-Point
-Arithmetic*. The binary formats, rounding to nearest with ties to even, and the operations
+Arithmetic*. IEEE, 2019. [doi:10.1109/IEEESTD.2019.8766229](https://doi.org/10.1109/IEEESTD.2019.8766229).
+The binary formats, rounding to nearest with ties to even, and the operations
 `nextUp` and `nextDown`, which `next_up` and `next_down` compute on the bit pattern.
 
 ## Double-word arithmetic
