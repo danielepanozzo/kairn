@@ -97,7 +97,8 @@ lists:
   `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); of the product of two
   polynomials, over the real numbers and with overflow, infinities and NaN (`FoldConv.v`,
   `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); of the radius kernels of the
-  ball vectors (`BvRadius.v`; [below](#ball-vectors)); and of the kernels of
+  ball vectors and of the ball vectors themselves, over the real numbers (`BvRadius.v`,
+  `BvReal.v`; [below](#ball-vectors)); and of the kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
   `IeeeAccumulator.v`; [below](#the-accumulator));
@@ -153,7 +154,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  95 files: no Admitted, admit, Axiom or Parameter
+  96 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -481,6 +482,20 @@ $\lvert a\rvert r_x + U\kappa\,m + V$ (scaling), with $U$ and $V$ from the bound
 relative to its result and $\kappa = (1+u)^{k-1}$: the bound of the radius of the Ball
 kernels (`Ball2.v`, `radius_2`) at $m$, for every $m \ge 0$ and radii $\ge 0$. These are
 statements of the real model.
+
+**The ball vectors in the real model** (`BvReal.v`): `F_correct` has the generated statement
+of each of the six as its type. For nonnegative radii and valid centers (numbers of the
+format, normalized pairs for two limbs), the radius is a number of the format and, entry by
+entry, the center written is valid and the value of the operation on any members of the balls
+of the operands' entries is within the radius of it. Entry by entry: the members' result is
+within $r_x + r_y$ (or $\lvert a\rvert r_x$) of the exact result on the centers, which is
+within $U\lvert z\rvert + V$ of the center written $z$ (the bound of the step, made relative
+to its result); $\lvert z\rvert \le \kappa m$, because the record is the maximum of the
+magnitudes (`maxc_seq_value` of `FoldNorm.v`) and a normalized pair is at most $(1+u)$ times
+its leading limb; and the claim of the radius kernel at $m$ covers the sum. So no property of
+the rounded radius lines as functions of $m$ is needed: that they are nondecreasing, which
+makes the one radius the largest of the radii the Ball kernel would compute entry by entry, is
+true but not proved.
 
 ## The accumulator
 

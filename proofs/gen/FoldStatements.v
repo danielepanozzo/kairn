@@ -140,7 +140,7 @@ Definition axpy_2_entry_spec : Prop :=
     Rabs ((z0 + z1) - (((a0 + a1) * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((a0 + a1) * (x0 + x1)) + Rabs (y0 + y1)) + 2 * eta emin)
     xys (axpy_2_entry_map emin prec tie_even (a0, a1) xys).
 
-(* bv_add_1, each center it writes and its one radius: add_1_1 on the centers, the radius of ball_add_1 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+(* bv_add_1, each center it writes and its one radius: add_1_1 on the centers, the radius of ball_add_1 at the largest center (milestone2.md, BallVector). Status: proved. *)
 Definition bv_add_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (rx ry : R) (xys : list (R * R)),
@@ -158,7 +158,7 @@ Definition bv_add_1_spec : Prop :=
     forall x_ y_ : R, Rabs (x_ - x) <= rx -> Rabs (y_ - y) <= ry -> Rabs ((x_ + y_) - z) <= r_)
     xys (bv_add_1_map emin prec tie_even xys).
 
-(* bv_add_2, each center it writes and its one radius: add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+(* bv_add_2, each center it writes and its one radius: add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector). Status: proved. *)
 Definition bv_add_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall (rx ry : R) (xys : list ((R * R) * (R * R))),
@@ -176,7 +176,7 @@ Definition bv_add_2_spec : Prop :=
     forall x_ y_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs (y_ - (y0 + y1)) <= ry -> Rabs ((x_ + y_) - (z0 + z1)) <= r_)
     xys (bv_add_2_map emin prec tie_even xys).
 
-(* bv_scale_1, each center it writes and its one radius: mul_1_1 on the centers, the radius of ball_scale_1 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+(* bv_scale_1, each center it writes and its one radius: mul_1_1 on the centers, the radius of ball_scale_1 at the largest center (milestone2.md, BallVector). Status: proved. *)
 Definition bv_scale_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (rx a : R) (xs : list R),
@@ -192,7 +192,7 @@ Definition bv_scale_1_spec : Prop :=
     forall x_ : R, Rabs (x_ - x) <= rx -> Rabs ((x_ * a) - z) <= r_)
     xs (bv_scale_1_map emin prec tie_even a xs).
 
-(* bv_scale_2, each center it writes and its one radius: mul_2_1 on the centers, the radius of ball_scale_2 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+(* bv_scale_2, each center it writes and its one radius: mul_2_1 on the centers, the radius of ball_scale_2 at the largest center (milestone2.md, BallVector). Status: proved. *)
 Definition bv_scale_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall (rx a : R) (xs : list (R * R)),
@@ -209,7 +209,7 @@ Definition bv_scale_2_spec : Prop :=
     forall x_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs ((x_ * a) - (z0 + z1)) <= r_)
     xs (bv_scale_2_map emin prec tie_even a xs).
 
-(* bv_sub_1, each center it writes and its one radius: sub_1_1 on the centers, the radius of ball_sub_1 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+(* bv_sub_1, each center it writes and its one radius: sub_1_1 on the centers, the radius of ball_sub_1 at the largest center (milestone2.md, BallVector). Status: proved. *)
 Definition bv_sub_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (rx ry : R) (xys : list (R * R)),
@@ -227,7 +227,7 @@ Definition bv_sub_1_spec : Prop :=
     forall x_ y_ : R, Rabs (x_ - x) <= rx -> Rabs (y_ - y) <= ry -> Rabs ((x_ - y_) - z) <= r_)
     xys (bv_sub_1_map emin prec tie_even xys).
 
-(* bv_sub_2, each center it writes and its one radius: sub_2_2 on the centers, the radius of ball_sub_2 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+(* bv_sub_2, each center it writes and its one radius: sub_2_2 on the centers, the radius of ball_sub_2 at the largest center (milestone2.md, BallVector). Status: proved. *)
 Definition bv_sub_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall (rx ry : R) (xys : list ((R * R) * (R * R))),

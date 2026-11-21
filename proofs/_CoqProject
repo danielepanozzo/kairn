@@ -51,6 +51,7 @@ theories/BoundKernels.v
 theories/FoldGuarantee.v
 theories/FoldConv.v
 theories/BvRadius.v
+theories/BvReal.v
 theories/AccKernels.v
 theories/Accumulator.v
 theories/IeeeOperations.v

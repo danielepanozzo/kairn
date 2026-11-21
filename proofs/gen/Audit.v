@@ -13,6 +13,7 @@ From Kairn Require Import Ball2.
 From Kairn Require Import BallPow2.
 From Kairn Require Import BoundKernels.
 From Kairn Require Import BvRadius.
+From Kairn Require Import BvReal.
 From Kairn Require Import Compare.
 From Kairn Require Import Convert.
 From Kairn Require Import Directed.
@@ -385,6 +386,24 @@ Print Assumptions axpy_2_1_entry_correct.
 
 Definition axpy_2_entry_audit : axpy_2_entry_spec := axpy_2_entry_correct.
 Print Assumptions axpy_2_entry_correct.
+
+Definition bv_add_1_audit : bv_add_1_spec := bv_add_1_correct.
+Print Assumptions bv_add_1_correct.
+
+Definition bv_add_2_audit : bv_add_2_spec := bv_add_2_correct.
+Print Assumptions bv_add_2_correct.
+
+Definition bv_scale_1_audit : bv_scale_1_spec := bv_scale_1_correct.
+Print Assumptions bv_scale_1_correct.
+
+Definition bv_scale_2_audit : bv_scale_2_spec := bv_scale_2_correct.
+Print Assumptions bv_scale_2_correct.
+
+Definition bv_sub_1_audit : bv_sub_1_spec := bv_sub_1_correct.
+Print Assumptions bv_sub_1_correct.
+
+Definition bv_sub_2_audit : bv_sub_2_spec := bv_sub_2_correct.
+Print Assumptions bv_sub_2_correct.
 
 Definition conv_1_audit : conv_1_spec := conv_1_correct.
 Print Assumptions conv_1_correct.

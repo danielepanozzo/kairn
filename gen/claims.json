@@ -11024,8 +11024,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvReal.v",
+        "name": "bv_add_1_correct"
+      },
       "source": {
         "cite": "add_1_1 on the centers, the radius of ball_add_1 at the largest center (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -11135,8 +11138,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvReal.v",
+        "name": "bv_add_2_correct"
+      },
       "source": {
         "cite": "add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -11236,8 +11242,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvReal.v",
+        "name": "bv_scale_1_correct"
+      },
       "source": {
         "cite": "mul_1_1 on the centers, the radius of ball_scale_1 at the largest center (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -11337,8 +11346,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvReal.v",
+        "name": "bv_scale_2_correct"
+      },
       "source": {
         "cite": "mul_2_1 on the centers, the radius of ball_scale_2 at the largest center (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -11448,8 +11460,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvReal.v",
+        "name": "bv_sub_1_correct"
+      },
       "source": {
         "cite": "sub_1_1 on the centers, the radius of ball_sub_1 at the largest center (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -11559,8 +11574,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvReal.v",
+        "name": "bv_sub_2_correct"
+      },
       "source": {
         "cite": "sub_2_2 on the centers, the radius of ball_sub_2 at the largest center (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"

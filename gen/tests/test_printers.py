@@ -914,10 +914,12 @@ class Rocq(unittest.TestCase):
     # the merged descriptions.
     # Then the four radius kernels were proved (BvRadius.v): in Statements.v only the comments above
     # their four statements changed, and Audit.v lists their four theorems, every earlier line kept,
-    # in its order; Model.v is the same.
+    # in its order; Model.v is the same. Then the six ball vectors were proved (BvReal.v): Audit.v
+    # lists their six theorems among those of the folds, every earlier line kept, in its order;
+    # Model.v and Statements.v are the same.
     DIGESTS = {'Model.v': '852cded22919dbde42ddc40eec7f67444a76a7e6bb03018ec69df53022dd5c6e',
                'Statements.v': '21cc4fd9de3c7b7729aa4ac7a4213374a9df630833f9f49ed4e5f541a39db804',
-               'Audit.v': '8d9bed8f614561a0d9e830437d68483d73fc656ce8157e6063100052e9ea26a8'}
+               'Audit.v': 'e76cdd765815b00e0722da5629e4fb754286787457f55d19fdad27615d94f40e'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
