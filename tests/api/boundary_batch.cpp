@@ -20,14 +20,18 @@
 // norm_upper) need no guard by the generator's rule R3, and must agree in every build: on the other
 // factor of a product read at run time (from a volatile), which the compiler cannot know.
 //
-// A third kind: the same forms with the other factor a 1 the compiler sees (an array of ones the
-// function fills, a = 1). A compiler may then remove the multiplication, fma(x, 1, s) becoming
-// x + s, and fuse the program's product into that addition. Clang 18 on x86-64 at -O3 with
-// -ffp-contract=fast does so in the dot product of one limb, in both orders (about a quarter of the
-// rounds differ); no other compiler or setting measured does, and no other form. This is a finding
-// on the headers as they are (the step of dot_1 does not guard its operands, which it only
-// multiplies): the test prints it, with the count, and does not fail on it, so that the other forms
-// keep being judged; docs/developer/testing.md records it.
+// A third kind, --factor none|some|report (rule R3, the factors of a fused operation:
+// docs/developer/architecture.md): every function that takes an array or a value of T from the
+// program as a factor, with the other factor a constant F (1, -1, 2) the compiler sees (an array of
+// F the function fills, a scalar F). A compiler that sees F = 1 rewrites fma(x, 1, s) as x + s and
+// may fuse the program's product into that addition: Clang 18 on x86-64 and Apple clang 21 under
+// -ffp-contract=fast did so in the dot product of one limb and Apple clang 21 in the accumulator's
+// add_product of one limb, whose loops and kernel now guard both factors (dot_1_entry,
+// acc_mul_entry_1). With the headers as they are every form must agree (--factor none); the copy
+// without the guard requires a difference where a compiler was measured to fuse (--factor some,
+// tests/api/CMakeLists.txt) and reports elsewhere.
+//
+//   boundary_batch --expect E --factor none|some|report
 #include <kairn/accumulator.hpp>
 #include <kairn/batch.hpp>
 
@@ -177,22 +181,88 @@ FORM(dot1_seq, MIXED(s, t) const T zero[N] = {}; T ones[N];
 FORM(dot2, MIXED(s, t) const T zero[N] = {}; T ones[N];
      for (int i = 0; i < N; ++i) ones[i] = run_time_one<T>();
      put<T, 2>(out, kairn::dot(view<2>(s, t, N), view<2>(ones, zero, N)));)
-// The other factor a 1 the compiler sees: a finding where a form differs (above).
-FORM(dot1_one, MIXED(s, t) const T zero[N] = {}; T ones[N];
-     for (int i = 0; i < N; ++i) ones[i] = T(1);
-     put<T, 1>(out, kairn::dot(view<1>(s, t, N), view<1>(ones, zero, N)));)
-FORM(dot1_seq_one, MIXED(s, t) const T zero[N] = {}; T ones[N];
-     for (int i = 0; i < N; ++i) ones[i] = T(1);
-     put<T, 1>(out, kairn::dot(view<1>(s, t, N), view<1>(ones, zero, N), kairn::sequential));)
-FORM(dot2_one, MIXED(s, t) const T zero[N] = {}; T ones[N];
-     for (int i = 0; i < N; ++i) ones[i] = T(1);
-     put<T, 2>(out, kairn::dot(view<2>(s, t, N), view<2>(ones, zero, N)));)
-FORM(axpy1_one, MAP(1, kairn::axpy(T(1), view<1>(s, t, N), CANCEL(1), z)))
-FORM(axpy2_one, MAP(2, kairn::axpy(T(1), view<2>(s, t, N), CANCEL(2), z)))
-FORM(scale2_one, MAP(2, kairn::scale(view<2>(s, t, N), T(1), z)))
+// The other factor a constant F the compiler sees (1, -1 or 2: an array of F the function fills,
+// a scalar F): the third kind, KNOWN (rule R3, the factors of a fused operation). FORMK is FORM
+// with F as a template parameter; ARRAYSK makes s (the products and the cancelling elements in
+// turn, as MIXED), r (the cancelling element first, then the product), t a zero tail, fs every
+// element F, and cf the cancelling elements times F, so that F p + c F cancels too.
+#define FORMK(NAME, ...)                                                                                  \
+    template <class T, int C, class M>                                                                    \
+    ALWAYS_INLINE void NAME##_body([[maybe_unused]] const T* c, [[maybe_unused]] const T* a,              \
+                                   [[maybe_unused]] const T* b, [[maybe_unused]] T* out) {                \
+        constexpr T F = C == 0 ? T(1) : C == 1 ? T(-1) : T(2);                                            \
+        __VA_ARGS__                                                                                       \
+    }                                                                                                     \
+    template <class T, int C>                                                                             \
+    NOINLINE void NAME##_inline(const T* c, const T* a, const T* b, T* out) {                             \
+        NAME##_body<T, C, InPlace<T>>(c, a, b, out);                                                      \
+    }                                                                                                     \
+    template <class T, int C>                                                                             \
+    NOINLINE void NAME##_rounded(const T* c, const T* a, const T* b, T* out) {                            \
+        NAME##_body<T, C, Rounded<T>>(c, a, b, out);                                                      \
+    }
+#define ARRAYSK                                                                   \
+    T s[N], r[N], t[N], fs[N], cf[N];                                            \
+    [[maybe_unused]] const T zero[N] = {};                                       \
+    for (int i = 0; i < N; ++i) {                                                \
+        s[i] = i % 2 ? c[i / 2] : M::one(a, b, i / 2);                           \
+        r[i] = i % 2 ? M::one(a, b, i / 2) : c[i / 2];                           \
+        t[i] = T(0);                                                             \
+        fs[i] = F;                                                               \
+        cf[i] = c[i] * F;                                                        \
+    }
+// A map of the products px with the cancelling elements cf, into z.
+#define MAPK(K, CALL)                                                             \
+    ARRAYSK T px[N];                                                              \
+    for (int i = 0; i < N; ++i) px[i] = M::one(a, b, i);                          \
+    T zh[N], zl[N];                                                               \
+    const auto z = out_view<K>(zh, zl, N);                                        \
+    const bool f = CALL;                                                          \
+    for (int i = 0; i < N; ++i) {                                                 \
+        out[i] = zh[i];                                                           \
+        out[N + i] = K == 2 ? zl[i] : T(0);                                       \
+    }                                                                             \
+    out[2 * N] = f ? T(1) : T(0);
+#define CONVK(K, X, Y)                                                            \
+    ARRAYSK T fl[2] = {F, F}, f0[2] = {T(0), T(0)}, zh[N + 1], zl[N + 1];         \
+    (void)fl, (void)f0;                                                           \
+    const bool f = kairn::conv(X, Y, out_view<K>(zh, zl, N + 1));                 \
+    for (int i = 0; i <= N; ++i) {                                                \
+        out[i] = zh[i];                                                           \
+        out[N + 1 + i] = K == 2 ? zl[i] : T(0);                                   \
+    }                                                                             \
+    out[2 * N + 2] = f ? T(1) : T(0);
+FORMK(dot1_k, ARRAYSK put<T, 1>(out, kairn::dot(view<1>(s, t, N), view<1>(fs, zero, N)));)
+FORMK(dot1_seq_k, ARRAYSK put<T, 1>(out, kairn::dot(view<1>(s, t, N), view<1>(fs, zero, N), kairn::sequential));)
+FORMK(dot1_rev_k, ARRAYSK put<T, 1>(out, kairn::dot(view<1>(fs, zero, N), view<1>(s, t, N)));)
+FORMK(dot1_rev_seq_k, ARRAYSK put<T, 1>(out, kairn::dot(view<1>(fs, zero, N), view<1>(s, t, N), kairn::sequential));)
+FORMK(dot2_k, ARRAYSK put<T, 2>(out, kairn::dot(view<2>(s, t, N), view<2>(fs, zero, N)));)
+FORMK(dot2_seq_k, ARRAYSK put<T, 2>(out, kairn::dot(view<2>(s, t, N), view<2>(fs, zero, N), kairn::sequential));)
+FORMK(dot2_rev_k, ARRAYSK put<T, 2>(out, kairn::dot(view<2>(fs, zero, N), view<2>(s, t, N)));)
+FORMK(conv1_k, CONVK(1, view<1>(r, t, N), view<1>(fl, f0, 2)))
+FORMK(conv1_rev_k, CONVK(1, view<1>(fl, f0, 2), view<1>(r, t, N)))
+FORMK(conv2_k, CONVK(2, view<2>(r, t, N), view<2>(fl, f0, 2)))
+FORMK(axpy1_k, MAPK(1, kairn::axpy(F, view<1>(px, t, N), view<1>(cf, zero, N), z)))
+FORMK(axpy21_k, MAPK(2, kairn::axpy(F, view<2>(px, t, N), view<2>(cf, zero, N), z)))
+FORMK(axpy2_k, MAPK(2, kairn::axpy(kairn::Expansion<T, 2>(F), view<2>(px, t, N), view<2>(cf, zero, N), z)))
+FORMK(axpy1_a_k, MAPK(1, kairn::axpy(M::one(a, b, 0), view<1>(fs, zero, N), view<1>(cf, zero, N), z)))
+FORMK(scale1_k, MAPK(1, kairn::scale(view<1>(px, t, N), F, z)))
+FORMK(scale2_k, MAPK(2, kairn::scale(view<2>(px, t, N), F, z)))
+FORMK(scale1_a_k, MAPK(1, kairn::scale(view<1>(fs, zero, N), M::one(a, b, 0), z)))
+FORMK(mul_pow2_1_k, MAPK(1, kairn::mul_pow2(view<1>(px, t, N), C == 1 ? T(0.5) : F, z)))
+FORMK(mul_pow2_2_k, MAPK(2, kairn::mul_pow2(view<2>(px, t, N), C == 1 ? T(0.5) : F, z)))
+FORMK(acc_product1_k, kairn::Accumulator<T, 1> acc;
+      for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), F); acc.add(c[i] * F); } put_acc(out, acc);)
+FORMK(acc_product1_rev_k, kairn::Accumulator<T, 1> acc;
+      for (int i = 0; i < N / 2; ++i) { acc.add_product(F, M::one(a, b, i)); acc.add(c[i] * F); } put_acc(out, acc);)
+FORMK(acc_product1_once_k, kairn::Accumulator<T, 1> acc; acc.add(c[0] * F); acc.add_product(M::one(a, b, 0), F);
+      put_acc(out, acc);)
+FORMK(acc_product2_k, kairn::Accumulator<T, 2> acc;
+      for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), F); acc.add(c[i] * F); } put_acc(out, acc);)
+FORMK(acc_product2_rev_k, kairn::Accumulator<T, 2> acc;
+      for (int i = 0; i < N / 2; ++i) { acc.add_product(F, M::one(a, b, i)); acc.add(c[i] * F); } put_acc(out, acc);)
 // The accumulator: products added (guarded by acc_add_k), and products times a factor read at run
-// time, or a 1 the compiler sees, added with add_product (only multiplied), with the cancelling
-// elements between them.
+// time added with add_product (only multiplied), with the cancelling elements between them.
 FORM(acc_add1, kairn::Accumulator<T, 1> acc; for (int i = 0; i < N / 2; ++i) { acc.add(M::one(a, b, i)); acc.add(c[i]); }
      put_acc(out, acc);)
 FORM(acc_add2, kairn::Accumulator<T, 2> acc; for (int i = 0; i < N / 2; ++i) { acc.add(M::one(a, b, i)); acc.add(c[i]); }
@@ -201,10 +271,6 @@ FORM(acc_product1, kairn::Accumulator<T, 1> acc; const T one = run_time_one<T>()
      for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), one); acc.add(c[i]); } put_acc(out, acc);)
 FORM(acc_product2, kairn::Accumulator<T, 2> acc; const T one = run_time_one<T>();
      for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), one); acc.add(c[i]); } put_acc(out, acc);)
-FORM(acc_product1_one, kairn::Accumulator<T, 1> acc;
-     for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), T(1)); acc.add(c[i]); } put_acc(out, acc);)
-FORM(acc_product2_one, kairn::Accumulator<T, 2> acc;
-     for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), T(1)); acc.add(c[i]); } put_acc(out, acc);)
 FORM(scale1, MAP(1, kairn::scale(view<1>(s, t, N), T(3), z)))
 FORM(scale2, MAP(2, kairn::scale(view<2>(s, t, N), T(3), z)))
 FORM(mul_pow2_2, MAP(2, kairn::mul_pow2(view<2>(s, t, N), T(0.5), z)))
@@ -223,10 +289,13 @@ template <class T>
 struct Form {
     const char* name;
     Fn<T> in_place, rounded;
-    int kind;  // 0: needs the guard; 1: multiplied or compared; 2: multiplied by a 1 the compiler sees
+    int kind;  // 0: needs the guard; 1: multiplied or compared; 2: multiplied by a constant the compiler sees
 };
 #define ROW(NAME, TEXT, GUARD) {TEXT, &NAME##_inline<T>, &NAME##_rounded<T>, (GUARD) ? 0 : 1}
-#define ONE(NAME, TEXT) {TEXT, &NAME##_inline<T>, &NAME##_rounded<T>, 2}
+#define KNOWN(NAME, TEXT)                                              \
+    {TEXT ", F = 1", &NAME##_inline<T, 0>, &NAME##_rounded<T, 0>, 2},  \
+    {TEXT ", F = -1", &NAME##_inline<T, 1>, &NAME##_rounded<T, 1>, 2}, \
+    {TEXT ", F = 2", &NAME##_inline<T, 2>, &NAME##_rounded<T, 2>, 2}
 
 template <class T>
 using Bits = std::conditional_t<sizeof(T) == 8, std::uint64_t, std::uint32_t>;
@@ -256,7 +325,7 @@ T uniform() {  // in [0.5, 1)
 }
 
 struct Totals {
-    long guarded = 0, unguarded = 0, known_one = 0;
+    long guarded = 0, unguarded = 0, known = 0;
 };
 
 template <class T>
@@ -290,14 +359,30 @@ void run(const char* type, long rounds, Totals& totals) {
         ROW(conv2, "conv({a*b}, {1, 1}, z)", false),
         ROW(acc_product1, "acc.add_product(a*b, 1), 1 limb", false),
         ROW(acc_product2, "acc.add_product(a*b, 1), 2 limbs", false),
-        ONE(dot1_one, "dot(.., {1} seen), 1 limb"),
-        ONE(dot1_seq_one, "dot(.., {1} seen, sequential), 1 limb"),
-        ONE(dot2_one, "dot(.., {1} seen), 2 limbs"),
-        ONE(axpy1_one, "axpy(1, {a*b}, c, z)"),
-        ONE(axpy2_one, "axpy(1, {a*b}, c, z), 2 limbs"),
-        ONE(scale2_one, "scale({a*b}, 1, z), 2 limbs"),
-        ONE(acc_product1_one, "acc.add_product(a*b, 1 seen), 1 limb"),
-        ONE(acc_product2_one, "acc.add_product(a*b, 1 seen), 2 limbs"),
+        KNOWN(dot1_k, "dot({a*b, c, ...}, {F})"),
+        KNOWN(dot1_seq_k, "dot({a*b, c, ...}, {F}, sequential)"),
+        KNOWN(dot1_rev_k, "dot({F}, {a*b, c, ...})"),
+        KNOWN(dot1_rev_seq_k, "dot({F}, {a*b, c, ...}, sequential)"),
+        KNOWN(dot2_k, "dot({a*b, c, ...}, {F}), 2 limbs"),
+        KNOWN(dot2_seq_k, "dot(.., {F}, sequential), 2 limbs"),
+        KNOWN(dot2_rev_k, "dot({F}, {a*b, c, ...}), 2 limbs"),
+        KNOWN(conv1_k, "conv({c, a*b, ...}, {F, F}, z)"),
+        KNOWN(conv1_rev_k, "conv({F, F}, {c, a*b, ...}, z)"),
+        KNOWN(conv2_k, "conv({c, a*b, ...}, {F, F}, z), 2 limbs"),
+        KNOWN(axpy1_k, "axpy(F, {a*b}, c F, z)"),
+        KNOWN(axpy21_k, "axpy(F, {a*b}, c F, z), 2 limbs"),
+        KNOWN(axpy2_k, "axpy(E2(F), {a*b}, c F, z)"),
+        KNOWN(axpy1_a_k, "axpy(a*b, {F}, c F, z)"),
+        KNOWN(scale1_k, "scale({a*b}, F, z)"),
+        KNOWN(scale2_k, "scale({a*b}, F, z), 2 limbs"),
+        KNOWN(scale1_a_k, "scale({F}, a*b, z)"),
+        KNOWN(mul_pow2_1_k, "mul_pow2({a*b}, F or 1/2, z)"),
+        KNOWN(mul_pow2_2_k, "mul_pow2({a*b}, F or 1/2, z), 2 limbs"),
+        KNOWN(acc_product1_k, "acc.add_product(a*b, F), 1 limb"),
+        KNOWN(acc_product1_rev_k, "acc.add_product(F, a*b), 1 limb"),
+        KNOWN(acc_product1_once_k, "acc.add(c F); acc.add_product(a*b, F)"),
+        KNOWN(acc_product2_k, "acc.add_product(a*b, F), 2 limbs"),
+        KNOWN(acc_product2_rev_k, "acc.add_product(F, a*b), 2 limbs"),
     };
     constexpr int n_forms = int(sizeof forms / sizeof forms[0]);
     long differ[n_forms] = {};
@@ -336,19 +421,22 @@ void run(const char* type, long rounds, Totals& totals) {
                 kairn::Packed<T, 1>::lanes, rounds);
     for (int f = 0; f < n_forms; ++f) {
         static const char* const notes[] = {"", "   (multiplied or compared: no guard needed)",
-                                            "   (multiplied by a 1 the compiler sees)"};
-        std::printf("  %-40s differs in %6ld of %ld%s%s\n", forms[f].name, differ[f], rounds, notes[forms[f].kind],
-                    forms[f].kind == 2 && differ[f] ? ": FINDING" : "");
-        (forms[f].kind == 0 ? totals.guarded : forms[f].kind == 1 ? totals.unguarded : totals.known_one) += differ[f];
+                                            "   (multiplied by a constant the compiler sees)"};
+        std::printf("  %-48s differs in %6ld of %ld%s\n", forms[f].name, differ[f], rounds, notes[forms[f].kind]);
+        (forms[f].kind == 0 ? totals.guarded : forms[f].kind == 1 ? totals.unguarded : totals.known) += differ[f];
     }
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-    const char* expect = argc == 3 && std::strcmp(argv[1], "--expect") == 0 ? argv[2] : "";
-    if (std::strcmp(expect, "none") != 0 && std::strcmp(expect, "some") != 0 && std::strcmp(expect, "report") != 0) {
-        std::fprintf(stderr, "usage: boundary_batch --expect none|some|report\n");
+    const char* expect = argc == 5 && std::strcmp(argv[1], "--expect") == 0 ? argv[2] : "";
+    const char* factor = argc == 5 && std::strcmp(argv[3], "--factor") == 0 ? argv[4] : "";
+    const auto valid = [](const char* e) {
+        return std::strcmp(e, "none") == 0 || std::strcmp(e, "some") == 0 || std::strcmp(e, "report") == 0;
+    };
+    if (!valid(expect) || !valid(factor)) {
+        std::fprintf(stderr, "usage: boundary_batch --expect none|some|report --factor none|some|report\n");
         return 2;
     }
 #ifdef KAIRN_TEST_UNGUARDED_COPY
@@ -357,20 +445,17 @@ int main(int argc, char** argv) {
     Totals totals;
     run<double>("double", 20000, totals);
     run<float>("float", 20000, totals);
-    std::printf("forms that need the guard: %ld rounds differ; forms that need none: %ld\n", totals.guarded,
-                totals.unguarded);
-    if (totals.known_one)
-        std::printf("FINDING: with a factor 1 the compiler sees, %ld rounds differ: a product of the program was "
-                    "fused through the multiplication by 1 (docs/developer/testing.md, \"The functions on "
-                    "arrays\"); not counted against the expectation\n",
-                    totals.known_one);
+    std::printf("forms that need the guard: %ld rounds differ; forms that need none: %ld; with a known factor: %ld\n",
+                totals.guarded, totals.unguarded, totals.known);
     if (std::strcmp(expect, "report") == 0 && totals.guarded == 0)
         std::printf("no form differs: this compiler and setting fused no product into the loops here, so this build "
                     "does not show that the guard is needed\n");
     bool ok = totals.unguarded == 0;
     if (std::strcmp(expect, "none") == 0) ok = ok && totals.guarded == 0;
     if (std::strcmp(expect, "some") == 0) ok = ok && totals.guarded > 0;
-    std::printf("%s (expected: %s)%s\n", ok ? "ok" : "FAILED", expect,
+    if (std::strcmp(factor, "none") == 0) ok = ok && totals.known == 0;
+    if (std::strcmp(factor, "some") == 0) ok = ok && totals.known > 0;
+    std::printf("%s (expected: %s; with a known factor: %s)%s\n", ok ? "ok" : "FAILED", expect, factor,
                 KAIRN_TEST_ZERO_SIGN_FREE ? " (a zero limb compared as a zero: MSVC)" : "");
     return ok ? 0 : 1;
 }

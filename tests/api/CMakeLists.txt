@@ -87,10 +87,11 @@ set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord ad
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2
   ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2 dot_step_1 dot_step_2
   add_entry_step_1 add_entry_step_2 sub_entry_step_1 sub_entry_step_2 scale_step_1 scale_step_2 mul_pow2_step_1
-  mul_pow2_step_2 axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2)
+  mul_pow2_step_2 axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1 acc_mul_1)
 # The folds that no public function calls (runner_arrays.hpp lists the same, with why): the loops
-# on stored arrays, whose callers here call the loops on supplied arrays instead (kairn/batch.hpp).
-set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 axpy_2 axpy_2_1)
+# on stored arrays, whose callers here call the loops on supplied arrays instead (kairn/batch.hpp),
+# and dot_1, whose caller calls dot_1_entry, the same loop with its factors guarded.
+set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 axpy_2 axpy_2_1 dot_1)
 set(KAIRN_API_CASES 10000 CACHE STRING
   "Random cases per kernel, format and form of the public interface judged by the oracle, in the full tier")
 set(KAIRN_API_QUICK_CASES 2000 CACHE STRING
@@ -525,6 +526,18 @@ foreach(_i RANGE 0 ${_last} 2)
     set(_fuses ON)
   endif()
   string(REPLACE "." "-" _target_suffix "${_suffix}")
+  # The third kind of form, the other factor a constant the compiler sees (rule R3, the factors of a
+  # fused operation; boundary.cpp, --factor): with the guard every form must agree (--factor none);
+  # the copy without the guard requires a difference where a compiler was measured to fuse such a
+  # product. Measured (docs/developer/testing.md, "Products of the program passed into Kairn"): Apple
+  # clang 21 on AArch64 with =fast, at -O1 and -O2, in two_prod, mul_down, mul_up and
+  # finite::mul(E2, T), whose kernels have no guard on their factors, so that this build fails with
+  # the guard too, a finding kept failing until the owner decides; GCC 13 and 16 and Clang 18 on
+  # x86-64 fused none of these forms, at any setting. Elsewhere the copy only reports.
+  set(_factor report)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast")
+    set(_factor some)
+  endif()
   # At -O2, where Clang was measured to fuse every form without the guard (at -O3 fewer); MSVC's
   # Release is /O2 already.
   set(_level "")
@@ -532,7 +545,7 @@ foreach(_i RANGE 0 ${_last} 2)
     set(_level -O2)
   endif()
   _kairn_api_program(kairn-api-boundary${_target_suffix} boundary.cpp ${_level} ${_option})
-  add_test(NAME api.boundary${_suffix} COMMAND kairn-api-boundary${_target_suffix} --expect none)
+  add_test(NAME api.boundary${_suffix} COMMAND kairn-api-boundary${_target_suffix} --expect none --factor none)
   add_executable(kairn-api-boundary-unguarded${_target_suffix} boundary.cpp)
   target_include_directories(kairn-api-boundary-unguarded${_target_suffix} BEFORE PRIVATE "${_api_unguarded}")
   target_link_libraries(kairn-api-boundary-unguarded${_target_suffix} PRIVATE kairn::fma)
@@ -540,9 +553,11 @@ foreach(_i RANGE 0 ${_last} 2)
   target_compile_options(kairn-api-boundary-unguarded${_target_suffix} PRIVATE ${_api_warnings} ${_level} ${_option})
   target_compile_definitions(kairn-api-boundary-unguarded${_target_suffix} PRIVATE KAIRN_TEST_UNGUARDED_COPY)
   if(_fuses)
-    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect some)
+    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect some
+      --factor ${_factor})
   else()
-    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect report)
+    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect report
+      --factor ${_factor})
   endif()
   set_tests_properties(api.boundary${_suffix} api.boundary.unguarded${_suffix} PROPERTIES LABELS "api;boundary")
   # The same for Packed and the containers (boundary_packed.cpp), in each form above:
@@ -557,7 +572,7 @@ foreach(_i RANGE 0 ${_last} 2)
     endif()
     set(_target kairn-api-boundary-packed-${_form}${_target_suffix})
     _kairn_api_program(${_target} boundary_packed.cpp ${_level} ${_option} ${_form_options})
-    add_test(NAME api.boundary.packed.${_form}${_suffix} COMMAND ${_target} --expect none)
+    add_test(NAME api.boundary.packed.${_form}${_suffix} COMMAND ${_target} --expect none --factor none)
     add_executable(${_target}-unguarded boundary_packed.cpp)
     target_include_directories(${_target}-unguarded BEFORE PRIVATE "${_api_unguarded}")
     target_link_libraries(${_target}-unguarded PRIVATE kairn::fma)
@@ -584,7 +599,17 @@ foreach(_i RANGE 0 ${_last} 2)
     else()
       set(_expect report)
     endif()
-    add_test(NAME api.boundary.packed.unguarded.${_form}${_suffix} COMMAND ${_target}-unguarded --expect ${_expect})
+    # The products of Packed with a factor the compiler sees (--factor): measured to fuse with Apple
+    # clang 21 and =fast at -O2, in the NEON form (every product of Packed<T, 2> and Packed<T, 1>)
+    # and the scalar form (finite::mul); with the guard too, as in boundary.cpp. Nothing fused with
+    # GCC 13 and 16 and Clang 18 on x86-64, in any form.
+    set(_factor_packed report)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast"
+       AND (_form STREQUAL "native" OR _form STREQUAL "scalar"))
+      set(_factor_packed some)
+    endif()
+    add_test(NAME api.boundary.packed.unguarded.${_form}${_suffix} COMMAND ${_target}-unguarded --expect ${_expect}
+      --factor ${_factor_packed})
     set_tests_properties(api.boundary.packed.${_form}${_suffix} api.boundary.packed.unguarded.${_form}${_suffix}
       PROPERTIES LABELS "api;boundary;packed")
     # The same for the functions on arrays (boundary_batch.cpp): arrays the program fills with
@@ -602,7 +627,7 @@ foreach(_i RANGE 0 ${_last} 2)
       set(_o3 -O3)
     endif()
     _kairn_api_program(${_target} boundary_batch.cpp ${_o3} ${_option} ${_form_options})
-    add_test(NAME api.boundary.arrays.${_form}${_suffix} COMMAND ${_target} --expect none)
+    add_test(NAME api.boundary.arrays.${_form}${_suffix} COMMAND ${_target} --expect none --factor none)
     add_executable(${_target}-unguarded boundary_batch.cpp)
     target_include_directories(${_target}-unguarded BEFORE PRIVATE "${_api_unguarded}")
     target_link_libraries(${_target}-unguarded PRIVATE kairn::fma)
@@ -624,7 +649,20 @@ foreach(_i RANGE 0 ${_last} 2)
     else()
       set(_expect report)
     endif()
-    add_test(NAME api.boundary.arrays.unguarded.${_form}${_suffix} COMMAND ${_target}-unguarded --expect ${_expect})
+    # The arrays and values with a factor the compiler sees (--factor): measured to fuse without the
+    # guard, in the dot product of one limb (dot_1_entry's guards taken out), with Clang 18 on x86-64
+    # and =fast in the scalar form (not in the AVX2 form), and with Apple clang 21 and =fast in the
+    # NEON and the scalar forms. GCC 13 and 16 fused none. Elsewhere the copy only reports.
+    set(_factor_arrays report)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast"
+       AND (_form STREQUAL "native" OR _form STREQUAL "scalar"))
+      set(_factor_arrays some)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT _msvc_style AND _variant STREQUAL "contract-fast"
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$" AND _form STREQUAL "scalar")
+      set(_factor_arrays some)
+    endif()
+    add_test(NAME api.boundary.arrays.unguarded.${_form}${_suffix} COMMAND ${_target}-unguarded --expect ${_expect}
+      --factor ${_factor_arrays})
     set_tests_properties(api.boundary.arrays.${_form}${_suffix} api.boundary.arrays.unguarded.${_form}${_suffix}
       PROPERTIES LABELS "api;boundary;arrays")
   endforeach()
