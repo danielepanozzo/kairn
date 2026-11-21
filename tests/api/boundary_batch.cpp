@@ -202,7 +202,7 @@ FORM(dot2, MIXED(s, t) const T zero[N] = {}; T ones[N];
         NAME##_body<T, C, Rounded<T>>(c, a, b, out);                                                      \
     }
 #define ARRAYSK                                                                   \
-    T s[N], r[N], t[N], fs[N], cf[N];                                            \
+    [[maybe_unused]] T s[N], r[N], t[N], fs[N], cf[N];                           \
     [[maybe_unused]] const T zero[N] = {};                                       \
     for (int i = 0; i < N; ++i) {                                                \
         s[i] = i % 2 ? c[i / 2] : M::one(a, b, i / 2);                           \
@@ -213,7 +213,7 @@ FORM(dot2, MIXED(s, t) const T zero[N] = {}; T ones[N];
     }
 // A map of the products px with the cancelling elements cf, into z.
 #define MAPK(K, CALL)                                                             \
-    ARRAYSK T px[N];                                                              \
+    ARRAYSK [[maybe_unused]] T px[N];                                             \
     for (int i = 0; i < N; ++i) px[i] = M::one(a, b, i);                          \
     T zh[N], zl[N];                                                               \
     const auto z = out_view<K>(zh, zl, N);                                        \
