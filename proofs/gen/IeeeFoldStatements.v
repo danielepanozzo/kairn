@@ -60,7 +60,7 @@ Definition bv_center_entry_1_ieee_lead_spec : Prop :=
   let z := IeeeModel.bv_center_entry_1 prec emax nan_plus c in
   finite z -> finite c.
 
-(* bv_mul_pow2_step_1, the leading limb of its result: finite only if those of its operands are. *)
+(* bv_mul_pow2_step_1, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition bv_mul_pow2_step_1_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -221,7 +221,7 @@ Definition bv_center_2_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.bv_center_2 prec emax x0 x1 in
   finite z0 -> finite x0.
 
-(* bv_mul_pow2_step_2, the leading limb of its result: finite only if those of its operands are. *)
+(* bv_mul_pow2_step_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition bv_mul_pow2_step_2_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1726,7 +1726,7 @@ Definition bv_make_2_lanes_ieee_spec : Prop :=
     flag_ = true -> val z0 = val c0 /\ val z1 = val c1) cs ws_ /\
   (flag_ = true -> val r_ = val r).
 
-(* bv_mul_pow2_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_mul_pow2_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_mul_pow2_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1764,7 +1764,7 @@ Definition bv_mul_pow2_1_seq_ieee_spec : Prop :=
      Rabs (((Rabs (val x)) + val rx) * val c) <= bpow radix2 (emax - 2)) xs ->
    finite r_).
 
-(* bv_mul_pow2_1, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_mul_pow2_1, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_mul_pow2_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1802,7 +1802,7 @@ Definition bv_mul_pow2_1_lanes_ieee_spec : Prop :=
      Rabs (((Rabs (val x)) + val rx) * val c) <= bpow radix2 (emax - 2)) xs ->
    finite r_).
 
-(* bv_mul_pow2_2, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_mul_pow2_2, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_mul_pow2_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1845,7 +1845,7 @@ Definition bv_mul_pow2_2_seq_ieee_spec : Prop :=
      Rabs (((Rabs (val x0 + val x1)) + val rx) * val c) <= bpow radix2 (emax - 2)) xs ->
    finite r_).
 
-(* bv_mul_pow2_2, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_mul_pow2_2, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_mul_pow2_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

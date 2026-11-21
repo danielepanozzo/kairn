@@ -433,7 +433,7 @@ Definition bv_make_radius_spec : Prop :=
   fmt emin prec rz /\
   rz = RN emin prec r.
 
-(* bv_mul_pow2_radius: the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). Status: unverified. *)
+(* bv_mul_pow2_radius: the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). Status: proved. *)
 Definition bv_mul_pow2_radius_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall m rx c : R,
@@ -451,7 +451,7 @@ Definition bv_mul_pow2_radius_spec : Prop :=
    rz = (rx * c)) /\
   (ex = false -> ((rx * c) + eta emin) <= rz).
 
-(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). Status: unverified. *)
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). Status: proved. *)
 Definition bv_mul_pow2_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall x c : R,
@@ -1152,7 +1152,7 @@ Definition bv_center_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   (z0 + z1) = (x0 + x1).
 
-(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: unverified. *)
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: proved. *)
 Definition bv_mul_pow2_step_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall x0 x1 c : R,

@@ -1457,9 +1457,9 @@ class TheKernels(unittest.TestCase):
     BV |= {'conv_radius', 'bv_conv_finish'}
     # Of the kernels of the BallVectors, those that are still unverified, and of those of the extended
     # domain, those whose IEEE-model statement is. (The kernels of the constructor and of the negation
-    # are proved: BvNegMake.v, IeeeBvNegMake.v.)
-    BV_UNVERIFIED = {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius', 'conv_radius',
-                     'bv_conv_finish'}
+    # are proved, BvNegMake.v, IeeeBvNegMake.v, and those of the scaling by a power of two, BvPow2.v,
+    # IeeeBvPow2.v.)
+    BV_UNVERIFIED = {'conv_radius', 'bv_conv_finish'}
     BV_IEEE_UNVERIFIED = {'bv_conv_finish'}
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),

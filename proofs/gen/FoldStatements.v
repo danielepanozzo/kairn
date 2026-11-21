@@ -236,7 +236,7 @@ Definition bv_make_2_spec : Prop :=
   bv_make_2_radius emin prec tie_even r cs = r /\
   Forall2 (fun c w_ => w_ = c) cs (bv_make_2_map cs).
 
-(* bv_mul_pow2_1, each center it writes and its one radius: mul_pow2_step_1 on the centers, the radius of ball_mul_pow2_1 with the exactness of every entry (milestone2.md, BallVector). Status: unverified. *)
+(* bv_mul_pow2_1, each center it writes and its one radius: mul_pow2_step_1 on the centers, the radius of ball_mul_pow2_1 with the exactness of every entry (milestone2.md, BallVector). Status: proved. *)
 Definition bv_mul_pow2_1_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall (rx c : R) (xs : list R),
@@ -260,7 +260,7 @@ Definition bv_mul_pow2_1_spec : Prop :=
      forall v_ : R, Rabs (v_ - z) <= r_ -> exists x_ : R, Rabs (x_ - x) <= rx /\ v_ = (x_ * c))
      xs (bv_mul_pow2_1_map emin prec tie_even c xs)).
 
-(* bv_mul_pow2_2, each center it writes and its one radius: mul_pow2_2 on the centers, the radius of ball_mul_pow2_2 with the exactness of every entry (milestone2.md, BallVector). Status: unverified. *)
+(* bv_mul_pow2_2, each center it writes and its one radius: mul_pow2_2 on the centers, the radius of ball_mul_pow2_2 with the exactness of every entry (milestone2.md, BallVector). Status: proved. *)
 Definition bv_mul_pow2_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall (rx c : R) (xs : list (R * R)),

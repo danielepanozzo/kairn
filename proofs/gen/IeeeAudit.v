@@ -12,6 +12,7 @@ From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeBallPow2.
 From Kairn Require Import IeeeBv.
 From Kairn Require Import IeeeBvNegMake.
+From Kairn Require Import IeeeBvPow2.
 From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
@@ -325,6 +326,9 @@ Print Assumptions axpy_step_1_ieee_bridge.
 Definition bv_center_entry_1_ieee_bridge_audit : bv_center_entry_1_ieee_bridge_spec := bv_center_entry_1_ieee_bridge.
 Print Assumptions bv_center_entry_1_ieee_bridge.
 
+Definition bv_mul_pow2_step_1_ieee_audit : bv_mul_pow2_step_1_ieee_spec := bv_mul_pow2_step_1_ieee_correct.
+Print Assumptions bv_mul_pow2_step_1_ieee_correct.
+
 Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
 Print Assumptions dot_step_1_ieee_bridge.
 
@@ -391,6 +395,9 @@ Print Assumptions axpy_step_2_1_ieee_bridge.
 Definition axpy_step_2_1_ieee_audit : axpy_step_2_1_ieee_spec := axpy_step_2_1_ieee_correct.
 Print Assumptions axpy_step_2_1_ieee_correct.
 
+Definition bv_mul_pow2_step_2_ieee_audit : bv_mul_pow2_step_2_ieee_spec := bv_mul_pow2_step_2_ieee_correct.
+Print Assumptions bv_mul_pow2_step_2_ieee_correct.
+
 Definition mul_pow2_step_2_ieee_bridge_audit : mul_pow2_step_2_ieee_bridge_spec := mul_pow2_step_2_ieee_bridge.
 Print Assumptions mul_pow2_step_2_ieee_bridge.
 
@@ -436,6 +443,9 @@ Print Assumptions axpy_step_1_ieee_lead.
 Definition bv_center_entry_1_ieee_lead_audit : bv_center_entry_1_ieee_lead_spec := bv_center_entry_1_ieee_lead.
 Print Assumptions bv_center_entry_1_ieee_lead.
 
+Definition bv_mul_pow2_step_1_ieee_lead_audit : bv_mul_pow2_step_1_ieee_lead_spec := bv_mul_pow2_step_1_ieee_lead.
+Print Assumptions bv_mul_pow2_step_1_ieee_lead.
+
 Definition dot_step_1_ieee_lead_audit : dot_step_1_ieee_lead_spec := dot_step_1_ieee_lead.
 Print Assumptions dot_step_1_ieee_lead.
 
@@ -480,6 +490,9 @@ Print Assumptions axpy_step_2_ieee_lead.
 
 Definition axpy_step_2_1_ieee_lead_audit : axpy_step_2_1_ieee_lead_spec := axpy_step_2_1_ieee_lead.
 Print Assumptions axpy_step_2_1_ieee_lead.
+
+Definition bv_mul_pow2_step_2_ieee_lead_audit : bv_mul_pow2_step_2_ieee_lead_spec := bv_mul_pow2_step_2_ieee_lead.
+Print Assumptions bv_mul_pow2_step_2_ieee_lead.
 
 Definition mul_pow2_step_2_ieee_lead_audit : mul_pow2_step_2_ieee_lead_spec := mul_pow2_step_2_ieee_lead.
 Print Assumptions mul_pow2_step_2_ieee_lead.
@@ -696,6 +709,18 @@ Print Assumptions bv_make_2_seq_ieee_correct.
 
 Definition bv_make_2_lanes_ieee_audit : bv_make_2_lanes_ieee_spec := bv_make_2_lanes_ieee_correct.
 Print Assumptions bv_make_2_lanes_ieee_correct.
+
+Definition bv_mul_pow2_1_seq_ieee_audit : bv_mul_pow2_1_seq_ieee_spec := bv_mul_pow2_1_seq_ieee_correct.
+Print Assumptions bv_mul_pow2_1_seq_ieee_correct.
+
+Definition bv_mul_pow2_1_lanes_ieee_audit : bv_mul_pow2_1_lanes_ieee_spec := bv_mul_pow2_1_lanes_ieee_correct.
+Print Assumptions bv_mul_pow2_1_lanes_ieee_correct.
+
+Definition bv_mul_pow2_2_seq_ieee_audit : bv_mul_pow2_2_seq_ieee_spec := bv_mul_pow2_2_seq_ieee_correct.
+Print Assumptions bv_mul_pow2_2_seq_ieee_correct.
+
+Definition bv_mul_pow2_2_lanes_ieee_audit : bv_mul_pow2_2_lanes_ieee_spec := bv_mul_pow2_2_lanes_ieee_correct.
+Print Assumptions bv_mul_pow2_2_lanes_ieee_correct.
 
 Definition bv_neg_1_seq_ieee_audit : bv_neg_1_seq_ieee_spec := bv_neg_1_seq_ieee_correct.
 Print Assumptions bv_neg_1_seq_ieee_correct.

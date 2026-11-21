@@ -102,7 +102,10 @@
      generated statements, which the generated audits list: the leading limbs of the two
      steps of the extended domain (neg_2, bv_center_2) as their generated statements, which
      no field can name, and the lemmas of theories/BvNegMake.v and IeeeBvNegMake.v the
-     theorems rest on.
+     theorems rest on;
+   - the scaling of a ball vector by a power of two, beside the theorems of its generated
+     statements, which the generated audits list: the lemmas of theories/BvPow2.v and
+     IeeeBvPow2.v the theorems rest on.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -1052,3 +1055,38 @@ Print Assumptions bv_neg_1_lanes_seq_ieee.
 Print Assumptions bv_neg_2_lanes_seq_ieee.
 Print Assumptions bv_make_1_lanes_seq_ieee.
 Print Assumptions bv_make_2_lanes_seq_ieee.
+
+(* The scaling of a ball vector by a power of two (theories/BvPow2.v, IeeeBvPow2.v): the
+   theorems of the generated statements are listed by the generated audits; these are
+   beside them. In the real model, the condition of exactness on a product, that the mask
+   of a step is true exactly when its products are zero or above the smallest normal number
+   (and that the rounding is then exact), that the radius kernel does not depend on m and
+   what it gives at c = 2^n, that c times a ball is the ball of c times its center, and the
+   containment of a scaled member; in the IEEE model, a list lemma on forallb, that a step
+   on finite operands with a finite center is the real model's (masks included) and its
+   leading limb, the radius kernel, the result of each fold in closed form and its flag
+   under the conditions of V4, and that the lane order returns what the sequential order
+   returns. *)
+From Kairn Require Import BvPow2 IeeeBvPow2.
+Print Assumptions BvPow2.cond_mul.
+Print Assumptions BvPow2.step_mask_1.
+Print Assumptions BvPow2.step_mask_2.
+Print Assumptions BvPow2.radius_any_m.
+Print Assumptions BvPow2.radius_facts.
+Print Assumptions BvPow2.pow2_ball_image.
+Print Assumptions BvPow2.pow2_member.
+Print Assumptions IeeeBvPow2.forallb_map_ext.
+Print Assumptions IeeeBvPow2.step_1_values.
+Print Assumptions IeeeBvPow2.step_2_values.
+Print Assumptions IeeeBvPow2.step_1_lead.
+Print Assumptions IeeeBvPow2.step_2_lead.
+Print Assumptions IeeeBvPow2.real_radius_eq.
+Print Assumptions IeeeBvPow2.radius_ieee.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_1_result.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_1_finite.
+Print Assumptions IeeeBvPow2.record_2_seq.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_2_result.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_2_finite.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_1_lanes_seq_ieee.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_2_lanes_seq_ieee.
+

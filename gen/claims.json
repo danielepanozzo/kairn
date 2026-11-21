@@ -2829,8 +2829,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_radius_correct"
+      },
       "source": {
         "cite": "the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -2892,8 +2895,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_step_1_correct"
+      },
       "source": {
         "cite": "mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -8269,8 +8275,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_step_2_correct"
+      },
       "source": {
         "cite": "mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -12330,8 +12339,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_1_correct"
+      },
       "source": {
         "cite": "mul_pow2_step_1 on the centers, the radius of ball_mul_pow2_1 with the exactness of every entry (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -12457,8 +12469,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_2_correct"
+      },
       "source": {
         "cite": "mul_pow2_2 on the centers, the radius of ball_mul_pow2_2 with the exactness of every entry (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"

@@ -99,8 +99,9 @@ lists:
   `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); of the radius kernels of the
   ball vectors and of the ball vectors themselves, over the real numbers (`BvRadius.v`,
   `BvReal.v`), and with overflow, infinities and NaN (`IeeeBv.v`), and of the negation and
-  the constructor of a ball vector, in both models (`BvNegMake.v`, `IeeeBvNegMake.v`;
-  [below](#ball-vectors)); and of the
+  the constructor of a ball vector and its scaling by a power of two, in both models
+  (`BvNegMake.v`, `IeeeBvNegMake.v`, `BvPow2.v`, `IeeeBvPow2.v`; [below](#ball-vectors)); and of
+  the
   kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
@@ -544,6 +545,22 @@ the record's mask true exactly when every center is, and the finish tests the si
 radius (`bv_make_finish`). The leading limbs of `neg_2` and `bv_center_2`, the steps of
 two limbs, are generated statements that no field of a description can name (they are kernels
 of the extended domain): their theorems are audited in step 3.
+
+**The scaling by a power of two** (`BvPow2.v`, `IeeeBvPow2.v`): the two steps, the radius kernel
+and `bv_mul_pow2_k` have their generated statements, in both models and both orders, as types.
+With $c = 2^n$ and $N = \eta / (2u)$ the smallest normal number: each step scales the center as
+`mul_pow2_step_1` or `mul_pow2_2` does, within $\eta/2$ (one limb) or $\eta$ (two limbs) of
+$c\,x$, and its mask is true exactly when every scaled limb is zero or above $N$ in magnitude, in
+which case the center is $c\,x$ exactly (`step_mask_k`: a rounded product above $N$ comes from a
+product above $N$, which is a number of the format). The radius is $c\,r_x$ when the mask of every
+entry is true and $c\,r_x$ is zero or above $N$, at least $c\,r_x$ always, and at least
+$c\,r_x + \eta$ when some mask is false (two steps above the rounded $c\,r_x$); the largest
+magnitude enters only as $m - m$, which is $0$ in the real model and a NaN for an infinite $m$ in
+the IEEE model. So the one radius covers every entry, and under the conditions of `exact_when`
+(every scaled limb and $c\,r_x$ zero or above $N$) the result is exactly $c$ times the operand: a
+polynomial halved again and again keeps the radius $r/2^i$ exactly, until something underflows.
+In the IEEE model a finite result is the real model's on the values, masks included; V4 holds
+because under its conditions every scaled center and the radius lines stay below $2^{e_{\max}}$.
 
 ## The accumulator
 

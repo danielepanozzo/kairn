@@ -13,6 +13,7 @@ From Kairn Require Import Ball2.
 From Kairn Require Import BallPow2.
 From Kairn Require Import BoundKernels.
 From Kairn Require Import BvNegMake.
+From Kairn Require Import BvPow2.
 From Kairn Require Import BvRadius.
 From Kairn Require Import BvReal.
 From Kairn Require Import Compare.
@@ -129,6 +130,12 @@ Print Assumptions bv_center_entry_1_correct.
 
 Definition bv_make_radius_audit : bv_make_radius_spec := bv_make_radius_correct.
 Print Assumptions bv_make_radius_correct.
+
+Definition bv_mul_pow2_radius_audit : bv_mul_pow2_radius_spec := bv_mul_pow2_radius_correct.
+Print Assumptions bv_mul_pow2_radius_correct.
+
+Definition bv_mul_pow2_step_1_audit : bv_mul_pow2_step_1_spec := bv_mul_pow2_step_1_correct.
+Print Assumptions bv_mul_pow2_step_1_correct.
 
 Definition bv_neg_radius_audit : bv_neg_radius_spec := bv_neg_radius_correct.
 Print Assumptions bv_neg_radius_correct.
@@ -304,6 +311,9 @@ Print Assumptions ball_sub_2_correct.
 Definition bv_center_2_audit : bv_center_2_spec := bv_center_2_correct.
 Print Assumptions bv_center_2_correct.
 
+Definition bv_mul_pow2_step_2_audit : bv_mul_pow2_step_2_spec := bv_mul_pow2_step_2_correct.
+Print Assumptions bv_mul_pow2_step_2_correct.
+
 Definition eq_2_1_audit : eq_2_1_spec := eq_2_1_correct.
 Print Assumptions eq_2_1_correct.
 
@@ -414,6 +424,12 @@ Print Assumptions bv_make_1_correct.
 
 Definition bv_make_2_audit : bv_make_2_spec := bv_make_2_correct.
 Print Assumptions bv_make_2_correct.
+
+Definition bv_mul_pow2_1_audit : bv_mul_pow2_1_spec := bv_mul_pow2_1_correct.
+Print Assumptions bv_mul_pow2_1_correct.
+
+Definition bv_mul_pow2_2_audit : bv_mul_pow2_2_spec := bv_mul_pow2_2_correct.
+Print Assumptions bv_mul_pow2_2_correct.
 
 Definition bv_neg_1_audit : bv_neg_1_spec := bv_neg_1_correct.
 Print Assumptions bv_neg_1_correct.

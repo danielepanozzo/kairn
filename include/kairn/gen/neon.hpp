@@ -11264,7 +11264,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_1_packed_end(double m, bool ok, bool ex, dou
 }
 // ball vector bv_mul_pow2_1(stored x, stored rx, supplied c) -> z, r, finite: step bv_mul_pow2_step_1, record norm_step_1, radius bv_mul_pow2_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_mul_pow2_1_packed(const double* x_in, std::size_t n, double rx, double c, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t c_v_ = vdupq_n_f64(c);
@@ -11367,7 +11367,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_1_packed_end(float m, bool ok, bool ex, floa
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_mul_pow2_1_packed(const float* x_in, std::size_t n, float rx, float c, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t c_v_ = vdupq_n_f32(c);
@@ -11472,7 +11472,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_2_packed_end(double m, bool ok, bool ex, dou
 }
 // ball vector bv_mul_pow2_2(stored x = (x0, x1), stored rx, supplied c) -> z = (z0, z1), r, finite: step bv_mul_pow2_step_2, record norm_step_2, radius bv_mul_pow2_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_mul_pow2_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double c, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t c_v_ = vdupq_n_f64(c);
@@ -11596,7 +11596,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_2_packed_end(float m, bool ok, bool ex, floa
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_mul_pow2_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float c, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t c_v_ = vdupq_n_f32(c);
