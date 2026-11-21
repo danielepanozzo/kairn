@@ -1112,7 +1112,7 @@ def discover(name, bdir):
         label = (backend if kind == "packed" else "cxx") + ("-" + named[1] if named[1] else "")
         out.append({"id": "%s/%s" % (name, label), "build": name, "label": label, "kind": kind,
                     "backend": backend if kind == "packed" else "scalar", "target": target,
-                    "setting": m.group(2) or "the build's flags", "compiler": compiler,
+                    "setting": named[1] or "the build's flags", "compiler": compiler,
                     "flags": build_flags(commands.get(target, "")), "path": path})
     if not out:
         sys.exit("brute: no runner in %s" % bdir)

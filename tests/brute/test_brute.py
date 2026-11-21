@@ -133,6 +133,35 @@ class Runners(unittest.TestCase):
         self.assertIsNone(brute.runner_target("kairn-gen-packed-runner-o1-fault"))
         self.assertIsNotNone(brute.runner_target("kairn-gen-packed-runner-default"))
 
+    def test_the_runners_found_in_a_build(self):
+        # discover() on a build directory with the files a build leaves: the runners of the
+        # library with their labels and settings, and not the planted fault's.
+        import stat
+        import tempfile
+        exe = ".exe" if brute.WINDOWS else ""
+        with tempfile.TemporaryDirectory() as bdir:
+            tests = os.path.join(bdir, "tests")
+            os.makedirs(tests)
+            for target in ("kairn-gen-runner", "kairn-gen-runner-contract-off", "kairn-gen-packed-runner",
+                           "kairn-gen-packed-runner-contract-on", "kairn-gen-packed-runner-lane-fault"):
+                path = os.path.join(tests, target + exe)
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write("")
+                os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
+            with open(os.path.join(bdir, "CMakeCache.txt"), "w", encoding="utf-8") as fh:
+                fh.write("KAIRN_TESTS_NEON:BOOL=ON\n")
+            found = brute.discover("clang", bdir)
+        self.assertEqual(sorted(r["target"] for r in found),
+                         ["kairn-gen-packed-runner", "kairn-gen-packed-runner-contract-on",
+                          "kairn-gen-runner", "kairn-gen-runner-contract-off"])
+        by = {r["target"]: r for r in found}
+        self.assertEqual(by["kairn-gen-runner"]["setting"], "the build's flags")
+        self.assertEqual(by["kairn-gen-runner"]["kind"], "scalar")
+        self.assertEqual(by["kairn-gen-runner-contract-off"]["setting"], "contract-off")
+        self.assertEqual(by["kairn-gen-packed-runner-contract-on"]["kind"], "packed")
+        self.assertEqual(by["kairn-gen-packed-runner-contract-on"]["setting"], "contract-on")
+        self.assertEqual(len({r["id"] for r in found}), 4)
+
     def test_every_runner_target_of_the_build_is_classified(self):
         # Every target tests/CMakeLists.txt names kairn-gen-...runner...: a runner of the library,
         # or a planted fault, whose name must then end in "fault" so that it is never run as one.
