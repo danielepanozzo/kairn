@@ -397,7 +397,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float cx, float rx, float cy, float r
 }
 
 // ball_from_interval_2(lo, hi) -> cw = (cw0, cw1), rw
-// the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 3> ball_from_interval_2(double gl, double gu, double c0, double c1, double r, bool v, bool f) noexcept {
@@ -1810,7 +1810,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_intersection_1(float xl, float xu,
 }
 
 // interval_make_1(lo, hi) -> zl, zu
-// constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: unverified (IEEE model only); constexpr.
+// constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> interval_make_1(double gl, double gu, double mi, bool v) noexcept {
@@ -6638,7 +6638,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_intersection_2(float xl0, float xl
 }
 
 // interval_make_2(lo = (lo0, lo1), hi = (hi0, hi1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: unverified (IEEE model only); constexpr.
+// constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 4> interval_make_2(double lo0, double lo1, double hi0, double hi1, double mi, bool v) noexcept {

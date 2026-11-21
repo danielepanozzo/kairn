@@ -24,9 +24,11 @@
      exactly when the operand is, and its members are the opposites of the operand's.
 
    - interval_make_2, for two canonical 2-limb values lo and hi (interval_make_2_correct):
-     the result is a canonical interval; it is [lo, hi] when lo <= hi, lo < +infinity and
-     hi > -infinity; the whole line ((-inf, +0), (+inf, +0)) when a leading limb is a NaN;
-     and the empty set otherwise.
+     the result is a canonical interval; it is the whole line ((-inf, +0), (+inf, +0)) when
+     a leading limb is a NaN, and when both bounds stand for the same infinity (the owner's
+     decision of 2026-11-20; they gave the empty set before, as in IEEE 1788); the empty set
+     when the bounds are reversed, hi < lo; and [lo, hi] otherwise, that is when lo <= hi,
+     lo < +infinity and hi > -infinity.
 
    - The hulls and the intersections, for canonical operands. The hull is [min, max] of the
      bounds: Z is canonical, empty exactly when both operands are, contains every member of
@@ -601,8 +603,12 @@ Qed.
 (** * interval_make_2 *)
 
 (* interval_make_2, for two canonical 2-limb values lo and hi, for every precision: the
-   result is a canonical interval; [lo, hi] when lo <= hi, lo < +infinity and
-   hi > -infinity; the whole line when a leading limb is a NaN; the empty set otherwise. *)
+   result is a canonical interval; the whole line when a leading limb is a NaN, and when
+   both bounds stand for the same infinity (the owner's decision of 2026-11-20); the empty
+   set when the bounds are reversed, hi < lo; [lo, hi] when lo <= hi, lo < +infinity and
+   hi > -infinity. The listing of interval_make_1 on the comparisons of two limbs: le_2_2
+   and lt_2_2 are the order of what canonical values stand for (le_2_2_ext, lt_2_2_ext),
+   and a comparison with a NaN is false. *)
 Theorem interval_make_2_all :
   forall lo0 lo1 hi0 hi1 : float,
   canonical_2 lo0 lo1 -> canonical_2 hi0 hi1 ->
@@ -610,16 +616,16 @@ Theorem interval_make_2_all :
   interval_2 zl0 zl1 zu0 zu1 /\
   (xnonempty (xval_2 lo0 lo1) (xval_2 hi0 hi1) ->
    xval_2 zl0 zl1 = xval_2 lo0 lo1 /\ xval_2 zu0 zu1 = xval_2 hi0 hi1) /\
-  (nan lo0 \/ nan hi0 ->
+  (nan lo0 \/ nan hi0 \/ (exists s : bool, xval_2 lo0 lo1 = XInf s /\ xval_2 hi0 hi1 = XInf s) ->
    zl0 = infinity prec emax true /\ zu0 = infinity prec emax false /\ zero zl1 /\ zero zu1) /\
-  (~ nan lo0 -> ~ nan hi0 -> ~ xnonempty (xval_2 lo0 lo1) (xval_2 hi0 hi1) ->
-   interval_empty_2 zl0 zl1 zu0 zu1).
+  (xlt (xval_2 hi0 hi1) (xval_2 lo0 lo1) = true -> interval_empty_2 zl0 zl1 zu0 zu1).
 Proof.
 intros lo0 lo1 hi0 hi1 Cl Ch.
 unfold IeeeModel.interval_make_2. cbv beta iota zeta.
 rewrite (le_2_2_ext prec emax Hp1 lo0 lo1 hi0 hi1 Cl Ch).
+rewrite (lt_2_2_ext prec emax Hp1 hi0 hi1 lo0 lo1 Ch Cl).
 rewrite (neg_pinf prec emax nan_opp).
-rewrite (lt_xval prec emax lo0 pinf), (lt_xval prec emax ninf hi0), 2!(eq_self prec emax).
+rewrite (lt_xval prec emax lo0 pinf), (lt_xval prec emax ninf hi0).
 change (xv pinf) with (XInf false). change (xv ninf) with (XInf true).
 rewrite <- (xlt_xval_2_pinf prec emax lo0 lo1), <- (xlt_ninf_xval_2 hi0 hi1).
 assert (WholeZ : interval_2 ninf pzero pinf pzero).
@@ -639,27 +645,28 @@ destruct (andb (andb (xle (xv2 lo0 lo1) (xv2 hi0 hi1)) (xlt (xv2 lo0 lo1) (XInf 
   split; [right; exact (conj Cl (conj Ch N))|].
   split; [intros _; split; reflexivity|].
   split.
-  + unfold nan. intros [K|K]; exfalso.
+  + unfold nan. intros [K|[K|[s [K1 K2]]]]; exfalso.
     * rewrite (xval_2_nan lo0 lo1 K) in V1. discriminate V1.
     * rewrite (xval_2_nan hi0 hi1 K) in V1. destruct (xv2 lo0 lo1) as [|[|]|r]; discriminate V1.
-  + intros _ _ K. elim (K N).
+    * rewrite K1, K2 in N. destruct N as [_ [W1 W2]]. destruct s; cbn in W1, W2; discriminate.
+  + intros K. elim (xle_not_xlt _ _ V1 K).
 - (* it describes none *)
   assert (NN : ~ xnonempty (xv2 lo0 lo1) (xv2 hi0 hi1)).
   { intros [N1 [N2 N3]]. rewrite N1, N2, N3 in V. discriminate V. }
-  destruct (is_nan prec emax lo0) eqn:N1; [|destruct (is_nan prec emax hi0) eqn:N2];
-    cbn [andb negb].
-  + split; [exact WholeZ|].
+  destruct (xlt (xv2 hi0 hi1) (xv2 lo0 lo1)) eqn:R; cbv beta iota.
+  + (* reversed bounds: the empty set *)
+    split; [left; exact EmptyZ|].
+    split; [intros K; elim (NN K)|].
+    split; [|intros _; exact EmptyZ].
+    unfold nan. intros [K|[K|[s [K1 K2]]]].
+    * rewrite (xval_2_nan lo0 lo1 K) in R. destruct (xv2 hi0 hi1) as [|[|]|r]; discriminate R.
+    * rewrite (xval_2_nan hi0 hi1 K) in R. discriminate R.
+    * rewrite K1, K2 in R. destruct s; discriminate R.
+  + (* a NaN bound, or the same infinity twice: the whole line *)
+    split; [exact WholeZ|].
     split; [intros K; elim (NN K)|].
     split; [intros _; split; [reflexivity|split; [reflexivity|split; exists false; reflexivity]]|].
-    intros K. elim K. exact N1.
-  + split; [exact WholeZ|].
-    split; [intros K; elim (NN K)|].
-    split; [intros _; split; [reflexivity|split; [reflexivity|split; exists false; reflexivity]]|].
-    intros _ K. elim K. exact N2.
-  + split; [left; exact EmptyZ|].
-    split; [intros K; elim (NN K)|].
-    split; [unfold nan; intros [K|K]; congruence|].
-    intros _ _ _. exact EmptyZ.
+    intros K. discriminate K.
 Qed.
 
 End IeeeIntervalExact.

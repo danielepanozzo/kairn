@@ -15,9 +15,6 @@
 # above when both are finite. The difference of the halves adds minus the lower half, computed as
 # its own exact product of the negated guarded bound, so that no fused result is negated (a rule of
 # the generator); it is -hl, rounding to nearest being symmetric.
-# The IEEE-model proof (proofs/theories/IeeeBallConvert.v) is of the rule before, that the two
-# pairs of the same infinity give the empty set, and is being redone for this one: unverified until
-# then.
 kernel:        ball_from_interval_2
 input:         lo
 input:         hi
@@ -27,9 +24,10 @@ ensures:       makes_ball cw rw from_interval=lo,hi midpoint_when=half_in_format
 min_precision: 2
 source:        the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallConvert.v ball_from_interval_2_correct
 entry:         yes
 cone_exempt:   every output is selected after explicit tests of the bounds; makes_ball states what comes out
 

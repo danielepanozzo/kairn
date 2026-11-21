@@ -6,8 +6,6 @@
 # 1788 makes the empty set). Otherwise the empty set when lo > hi (rv, false with a NaN), [+inf, -inf]
 # and lo = +inf with a finite hi among them; otherwise [lo, hi], [-inf, +inf], [lo, +inf] and
 # [-inf, hi] included. For every precision.
-# The IEEE-model proof (proofs/theories/IeeeInterval1.v) is of the rule before, that the two pairs
-# of the same infinity give the empty set, and is being redone for this one: unverified until then.
 kernel:        interval_make_1
 input:         lo
 input:         hi
@@ -17,9 +15,10 @@ ensures:       makes_interval zl zu from=lo,hi
 min_precision: 1
 source:        constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeInterval1.v interval_make_1_correct
 entry:         yes
 cone_exempt:   both outputs are selected after explicit tests of the bounds; makes_interval states what comes out
 

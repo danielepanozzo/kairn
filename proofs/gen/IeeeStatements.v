@@ -107,7 +107,7 @@ Definition ball_add_1_full_spec : Prop :=
    ball_finite_1 cw rw) /\
   (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x + y)).
 
-(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: unverified. *)
+(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition ball_from_interval_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -399,7 +399,7 @@ Definition interval_intersection_1_spec : Prop :=
    range_upper (fun z : R => in_interval_1 xl xu z /\ in_interval_1 yl yu z) hi ->
    xval zl = lo /\ xval zu = hi).
 
-(* interval_make_1: constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: unverified. *)
+(* interval_make_1: constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition interval_make_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1550,7 +1550,7 @@ Definition interval_intersection_2_spec : Prop :=
    range_upper (fun z : R => in_interval_2 xl0 xl1 xu0 xu1 z /\ in_interval_2 yl0 yl1 yu0 yu1 z) hi ->
    xval_2 zl0 zl1 = lo /\ xval_2 zu0 zu1 = hi).
 
-(* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: unverified. *)
+(* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition interval_make_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

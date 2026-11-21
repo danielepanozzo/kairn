@@ -389,11 +389,8 @@ class Statements(unittest.TestCase):
         # of the folds of maxima and the interval kernels of the extended domain among them
         # (84); then the theorems that the descriptions of the folds' first stage name: 5
         # bridges and 3 correctness statements of the steps, 8 leading limbs, and the 8 folds in
-        # their two orders (32); and the two folds of maxima in their two orders (4). But the
-        # constructors of an interval and the ball from an interval of two T (3), unverified while
-        # their proofs are redone for the same infinity twice, which gives the whole line (decided
-        # on 2026-11-20).
-        self.assertEqual(text.count('Print Assumptions'), 117)
+        # their two orders (32); and the two folds of maxima in their two orders (4).
+        self.assertEqual(text.count('Print Assumptions'), 120)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -451,11 +448,11 @@ class CheckedFiles(unittest.TestCase):
     # Then the same infinity twice, given to the constructors of an interval or to the ball from an
     # interval of two T, became the whole line (decided on 2026-11-20): the definitions and
     # statements of interval_make_1, interval_make_2 and ball_from_interval_2 changed, and nothing
-    # else; their status is unverified, and make -k -C proofs builds every file but
-    # theories/IeeeInterval1.v, IeeeIntervalExact.v and IeeeBallConvert.v, whose proofs of the rule
-    # before fail, the files that import them, and the audits; the three are being redone.
+    # else; their theorems were proved again on the new definitions for the new statements
+    # (theories/IeeeInterval1.v, IeeeIntervalExact.v, IeeeBallConvert.v), the statements file
+    # prints their status, proved, and make -C proofs passed on these files.
     DIGESTS = {'proofs/gen/IeeeModel.v': '0d22443834edb4ccda73e17e942a1814debbb1cb0fcfa4fcc44dcef202e0bebd',
-               'proofs/gen/IeeeStatements.v': 'f99ca68f9af84529c6579dd89b03814c8e6844616ebee4ff81840f2b198e21b6'}
+               'proofs/gen/IeeeStatements.v': 'f6d46b576c1f0c4553c90e35b4dd0acb60d5ea12388c249e8aba3537d1000b4d'}
 
 
     def test_the_checked_files(self):
