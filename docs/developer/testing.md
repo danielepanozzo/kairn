@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 633 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 653 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -1425,6 +1425,29 @@ of `api.reject.*` (five `interval.*`, `ball.implicit_narrowing`, `not_constexpr.
 three `unverified.*`), and `api.example.intervals` under each contraction setting (4); the checks
 of a debug build run 29 functions more. The full tier gains 96, the same 24 kernels in
 `full.api.oracle.K.F` and `full.api.flags.oracle.K.F`.
+
+**`Packed` and the containers** were measured on 2026-11-21 against the commit before them, the
+quick tiers on the Mac under a load average of 8 to 13 from other jobs, and those of the Linux
+machine on 16 of its threads:
+
+| Where | Quick tier, before | Quick tier, after | Full tier, before | Full tier, after |
+|---|---|---|---|---|
+| Mac, Apple clang 21 | 633 tests, 88 s | 653 tests, 89 s | | |
+| Mac, GCC 16 | 634 tests, 82 s | 654 tests, 95 s | | |
+| Linux, 16 threads, GCC 13 | 634 tests, 137 s | 657 tests, 169 s | 980 tests, 1 894 s | 980 tests, 1 924 s |
+| Linux, 16 threads, Clang 18 | | 654 tests, 196 s | | |
+
+The quick tier gains 20 tests on the Mac (`api.packed.FORM`, `api.soa.FORM` and
+`api.example.packed_dot.FORM` in two forms, and 14 of `api.reject.*`) and 23 on x86-64 with GCC 13,
+whose default build makes the AVX2 form as well. The packed forms of the kernels add no test of their
+own but longer runs of the runner in `api.oracle.*` (4 to 7 seconds of test time on the Mac) and of
+the checks. The test time of the quick tier grew from 336 to 346 seconds with Apple clang and from
+305 to 353 with GCC 16, 20 of those 48 seconds in `api.reject.*`, whose new cases compile
+`kairn/packed.hpp` twice each (GCC parses `arm_neon.h` and the generated header slowly:
+[Packed](../reference/packed.md#compile-time)). On the Linux machine with GCC 13 it grew from 504 to
+615 seconds: 61 in `api.oracle.*`, where the packed forms run in three runners (the third built for
+AVX2), 26 for the new tests, 22 in `api.checks.*` and 9 in `api.reject.*`. The full tier has the same
+980 tests, the packed forms joining `full.api.oracle.*` and `full.api.flags.oracle.*`.
 
 The full tier's cross-checks of the maps and folds write a summary of each run of up to 1.7 GB
 (`full.crosscheck.compiled.add_2.binary64`, `axpy_2`), some 18 GB in all for one run on the Mac. In
