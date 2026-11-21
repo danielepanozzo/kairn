@@ -812,7 +812,9 @@ form natively, and on AArch64 NEON.
   of `gen/neon.hpp` (and their `float` forms), and requires that some form differ where the
   compiler was measured to fuse: GCC by default and under `-ffp-contract=fast` (GCC 16 on
   AArch64 in the forms NEON and scalar, GCC 13 on x86-64 in AVX2 and scalar), and Clang under
-  `-ffp-contract=fast` on AArch64 (Apple clang 21, NEON and scalar). A form that differs there
+  `-ffp-contract=fast` on AArch64 (Apple clang 21, NEON and scalar; Clang 18 on Linux in the
+  scalar form only: it fused no product written with the NEON intrinsics, in any of 40 000
+  registers of any form, so its NEON build only reports). A form that differs there
   differs in every register, in every lane position. Which forms differ depends on the compiler
   and the form (with GCC 13 and AVX2, 18 of the 42 that need the guard; with Apple clang and NEON,
   35), and each of the 42 differs on one of them at least, but `abs` and the four forms of

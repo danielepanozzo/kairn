@@ -459,15 +459,17 @@ foreach(_i RANGE 0 ${_last} 2)
     target_compile_definitions(${_target}-unguarded PRIVATE KAIRN_TEST_UNGUARDED_COPY)
     # Where the unguarded build was measured to fuse a product into Packed: GCC by default and with
     # =fast, in every form (GCC 16 on AArch64, NEON and scalar; GCC 13 on x86-64, AVX2 and scalar,
-    # with and without -mavx2 -mfma in the build's flags); Clang with =fast on AArch64, NEON and
-    # scalar (Apple clang 21). Clang 18 on x86-64 fused nothing without the guard, in either form
-    # and at any setting, and MSVC and clang-cl were not measured with Packed: their builds only
-    # report.
+    # with and without -mavx2 -mfma in the build's flags); Apple clang 21 with =fast, NEON and
+    # scalar; Clang 18 on Linux AArch64 with =fast in the scalar form only (it fused no product
+    # written with the NEON intrinsics: 0 of 40 000 registers in every form). Clang 18 on x86-64
+    # fused nothing without the guard, in either form and at any setting, and MSVC and clang-cl
+    # were not measured with Packed: their builds only report.
     set(_fuses_packed OFF)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND (_variant STREQUAL "" OR _variant STREQUAL "contract-fast"))
       set(_fuses_packed ON)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT _msvc_style AND _variant STREQUAL "contract-fast"
-           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$"
+           AND (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR _form STREQUAL "scalar"))
       set(_fuses_packed ON)
     endif()
     if(_fuses_packed)
