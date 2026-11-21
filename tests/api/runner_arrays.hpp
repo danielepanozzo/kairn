@@ -219,7 +219,7 @@ const char* const stored_fold = "the loop on stored arrays, written through Kair
                                 "arrays (_entry)";
 const char* const factors_fold = "the dot product of one limb with its factors unguarded: kairn::dot of one limb "
                                  "calls dot_1_entry, whose step guards both factors (rule R3, the factors of a fused "
-                                 "operation); conv_1 runs dot_1's step for each coefficient";
+                                 "operation), and conv_1 runs dot_1's step for each coefficient";
 const FoldNotPublic folds_not_public[] = {
     {"sum_1", stored_fold},  {"sum_2", stored_fold}, {"sum_fast_2", stored_fold}, {"add_1", stored_fold},
     {"add_2", stored_fold},  {"sub_1", stored_fold}, {"sub_2", stored_fold},      {"axpy_1", stored_fold},
