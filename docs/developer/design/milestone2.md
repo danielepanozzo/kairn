@@ -463,6 +463,14 @@ $(1 - u)^2 P$, which rounds to at most $(1 - 2u)P$), so $ab$ is a multiple of $\
 precision:* 2. *Risk: medium*, for the new lemma. Should it resist, the test `lt(ap, P)` becomes
 `le(ap, P)`: the statement then says "$\lvert ab\rvert > P$" and needs Flocq's lemma only.
 
+*As built (2026-11-21):* the listings are those above, proved in both models (`DirectedProd.v`,
+`IeeeDirectedProd.v`). The new lemma holds for every rounding of a product that reaches $P$
+(`mult_error_format_ge`), and for the rounding to nearest from $(1 - u)P$ on
+(`mult_error_format_pred`), so the fallback was not needed. The proof gives more than the claim:
+the two results are the exact roundings also when $\lvert\mathrm{RN}(ab)\rvert \ge P$, a product
+just below $P$ that rounds to $P$ included (`mul_down_1_facts`, `mul_up_1_facts`); the claim,
+`rounded` with `when=product_large`, keeps the condition on the exact product, as stated above.
+
 *Not claimed:* the exact rounding below $P$. It can be had by rescaling, as the `kv` library
 does ([kv](phase0/references.md#kv)); see [question 6](#open-questions).
 
@@ -493,7 +501,13 @@ returned is unspecified in both.
   is zero can differ in sign.
 - **The kernels that the rule makes `constexpr`**, now that the generator has it: `rmul`,
   `mul_1_1`, `split`, `two_prod_dekker`, `mul_pow2_2`, `mul_pow2_2_full`, and the four scalings
-  of a ball, `ball_mul_pow2_k` and their full forms. All give the same values in both
+  of a ball, `ball_mul_pow2_k` and their full forms. *As built (2026-11-21), also:* the bounds
+  as functions of $n$, `bound_sum_k` and `bound_dot_k`; the steps of maps whose only products
+  are `prod` (`scale_step_1`, `axpy_step_1`, `axpy_entry_step_1`, `mul_pow2_step_k`); the
+  kernels that halve with `prod` or `mul_pow2_2`, `interval_mid_rad_1`, `interval_to_ball_1`,
+  `interval_split_1`, `interval_split_2`, `ball_from_interval_1`, `ball_from_interval_2`,
+  `ball_hull_1`, `ball_intersection_1`; and the step and the radius of the scaling of a ball
+  vector, `bv_mul_pow2_step_k` and `bv_mul_pow2_radius`. All give the same values in both
   executions, and `rmul` the same bits. `mul_1_1`, whose result *is* the product, and
   `two_prod_dekker`, whose leading limb is, can differ in the sign of a zero, as the scalings
   named above can. The generator's tests check the same bits, or the same values for the
@@ -510,7 +524,12 @@ returned is unspecified in both.
   (`IeeeTwoExecutions.v`, `IeeeProduct.v`): for each kernel that the rule makes `constexpr`, the
   listing with plain products returns outputs of the same value as the generated model on all
   operands, for every choice of NaN; that the compiled constant evaluation is that listing is
-  what the generator's tests compare. This is a lemma and a printer rule, not the "variant kernels with proofs of their
+  what the generator's tests compare. **Claimed less than this page asks** (2026-11-21): the
+  proof covers the eight kernels of the rule that are more than one product and existed when it
+  was written (`split`, `two_prod_dekker`, `mul_pow2_2`, `mul_pow2_2_full`, `ball_mul_pow2_k`
+  and their full forms); for the kernels the rule made `constexpr` since, named above, the two
+  executions are compared by the generator's tests only (`test_interp.py`,
+  `TwoExecutionsOfAProduct`). This is a lemma and a printer rule, not the "variant kernels with proofs of their
   own" of [deviation 14](phase0/decisions.md#deviations-from-the-brief-flagged); those remain
   necessary for every kernel with an FMA whose addend is not zero: `two_prod` has one, and the
   two-limb products and the radius of a `Ball` operation need theirs.
@@ -533,7 +552,7 @@ result cannot depend on the mode needs neither. These are the ones:
 | `to_nearest`, `to_down`, `to_up`, `abs_upper` of a 2-limb number | a limb, or a comparison, a step and a select |
 | `lower`, `upper`, `lower_as`, `upper_as` of an `Interval` | stored bounds, or the row above |
 | `center`, `radius` of a `Ball`; `midpoint` of a `Ball` | stored values |
-| `is_empty`, `is_entire`, `is_finite`, `is_whole` | comparisons |
+| `is_empty`, `is_whole`, `is_finite` (`is_entire` in the first version: below) | comparisons |
 | `hull`, `intersection`, `contains`, the comparisons and the relations of 1788, on `Interval` | comparisons of bounds and selects |
 | `certainly_positive`, `certainly_negative`, `certainly_zero` on `Interval` and on `Ball` | comparisons (for a ball, of the radius with the center) |
 | `traits<X>::add` and the other constants | data |
@@ -553,6 +572,16 @@ And these *look* as if they did not round, and do:
 constructors and `rational`, and is removed from the functions of the first. No statement
 depends on this; it is a property of the headers, tested by running each exempt function under
 the four rounding modes and comparing bits.
+
+*Decided on 2026-11-20, with three differences*
+([decisions log](phase0/decisions.md#decisions-log)): the exempt functions keep the check of
+flush to zero, which changes a comparison of a subnormal number, and check their operands only
+under rounding to nearest where that check itself rounds; `is_normalized` of two limbs, which
+rounds, gains a check; and the constructors of `Ball<T, 2>` from a two-limb center keep theirs.
+The tests hold a table of 80 public functions, each marked as rounding or not. *The name of the
+predicate of the whole line* is `is_whole` on both types, the name `Ball` has had since
+Milestone 1 (the owner's ruling of 2026-11-21); the first version of this page wrote `is_entire`
+for both, and the kernels of `Interval` keep the name `interval_entire_k`.
 
 ## Interval kernels
 
@@ -648,6 +677,11 @@ For canonical operands $X$ and $Y$ and the result $Z$ of an operation $\circ$:
 I1 to I3 are what a program relies on. I4 and I5 say that the kernel does not satisfy them by
 returning the whole line.
 
+*As built (2026-11-21):* these are the claim `encloses_interval`. The product of two limbs has one
+clause more, **I6**: for nonempty operands, when one is $[0, 0]$ the result is $[0, 0]$, the
+other unbounded included (the field `zero_factor`). The negation, the hull and the intersection
+are exact: their bounds are those of the exact range.
+
 ### One limb
 
 For one limb the bounds are computed by the directed primitives, so a sum or a difference is the
@@ -727,7 +761,9 @@ and comparisons.
 
 *Smallest precision:* 2. *Risk:* low for the sum, the difference and the negation; **medium**
 for the product, for the number of cases of its IEEE-model proof (four candidates, each finite,
-zero, or infinite).
+zero, or infinite). *As built (2026-11-21):* the four are proved in the IEEE model
+(`IeeeInterval1.v`), the sum and the difference from precision 2, the negation and the product
+from precision 1 (the descriptions' `min_precision`).
 
 *Cost.* After inlining (`rules_report.py`): a sum is 6 rounded operations, 2 steps and 20
 comparisons, selects and sign operations; a product is 8 rounded operations, 8 steps and 78 of
@@ -775,16 +811,27 @@ add_down_2_2(x, y) -> l                        add_up_2_2(x, y) -> h
   (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)     (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
   zd          = eq(z0, 0)                        zd          = eq(z0, 0)
   dd          = select(zd, 0, d)                 dd          = select(zd, 0, d)
-  w           = sub_down_1(z1, dd)               w           = add_up_1(z1, dd)
-  (l0, l1)    = two_sum_ord(z0, w)               (h0, h1)    = two_sum_ord(z0, w)
+  nz          = neg(z1)                          w           = add_up_1(z1, dd)
+  t           = add_up_1(dd, nz)                 (h0, h1)    = two_sum_ord(z0, w)
+  w           = neg(t)          -RU(dd - z1) = RD(z1 - dd)
+  (l0, l1)    = two_sum_ord(z0, w)
 
 mul_dir_2_2(x, y) -> (l, h)                    sub_down_2_2(x, y), sub_up_2_2(x, y):
   (z0, z1, d) = mul_ball_2_2(x0, x1, y0, y1)     neg_2(y), then the sum
-  wl          = sub_down_1(z1, d)
+  nz          = neg(z1)
+  t           = add_up_1(d, nz)
+  wl          = neg(t)          -RU(d - z1) = RD(z1 - d)
   wu          = add_up_1(z1, d)
   (l0, l1)    = two_sum_ord(z0, wl)
   (h0, h1)    = two_sum_ord(z0, wu)
 ```
+
+*As built (2026-11-20).* The first version of these listings computed the lower bound's second
+limb as `w = sub_down_1(z1, dd)` and `wl = sub_down_1(z1, d)`. The bound $d$ is a fused result,
+and the difference negates it inside `sub_down_1`, which the generator refuses
+([Notation](#notation-and-vocabulary)); the listings compute minus the rounding up of $d - z_1$,
+which is the same value, rounding being symmetric. Everything below speaks of
+$w = \mathrm{RD}(z_1 - b)$, which is what they compute.
 
 **A sum that is zero.** The two lines `zd` and `dd` of the sums replace the bound by zero when
 the computed sum is zero. Without them a sum that is exactly zero would get the bounds $-H$ and
@@ -963,7 +1010,9 @@ interval_mul_2: four calls of mul_ext_2_2 on the pairs of bounds, as interval_mu
 are canonical and not NaN, and $l \le x \cdot y \le h$ as extended real numbers with
 $0 \cdot \infty = 0$. A zero operand gives $l = h = 0$; otherwise an infinite operand gives
 $l = h$, the infinity of the product's sign; otherwise the statement of `mul_dir_2_2` when its
-results are finite.
+results are finite. *As built (2026-11-20):* this is claimed as `normalized` and `outward` of each
+output read in extended real numbers, with `zero_factor`, rather than as a `bound`
+([decisions log](phase0/decisions.md#decisions-log)); the content is the one above.
 
 **Statement of the interval kernels of two limbs, IEEE model, canonical operands.**
 
@@ -1004,8 +1053,11 @@ one limb.
 
 *Smallest precision:* 3 for the sum and the difference, 4 for the product. *Risk:* medium for
 the sum, **high** for the product: it is the largest listing of the milestone (96 rounded
-operations, 8 steps and 258 comparisons, selects and sign operations after inlining), and its
-IEEE-model proof multiplies the cases of `mul_ext_2_2` by four.
+operations, 8 steps and 262 comparisons, selects and sign operations after inlining, by
+`rules_report.py` on the listing as built; the first version of this page counted 258), and its
+IEEE-model proof multiplies the cases of `mul_ext_2_2` by four. *As built (2026-11-21):* both are
+proved, in the IEEE model (`IeeeIntervalMul2.v`); `interval_mul_2` is an ordinary inline function and
+not forced inline ([Inlining and compile time](#inlining-and-compile-time)).
 
 *Not claimed.*
 
