@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 571 tests. The full tier, 884 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 633 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -1358,8 +1358,9 @@ The full tier's cross-checks of the maps and folds write a summary of each run o
 both runs above the Mac's disk was nearly full, from other jobs too, and some of these
 cross-checks failed for want of space: 79 of 980 with Apple clang (the disk had 105 MB free) and 7
 with GCC 16; each passed when rerun (`ctest --rerun-failed`) with the summaries of finished runs
-deleted as they came. None of them is about intervals; a run of the full tier needs that space
-free.
+deleted as they came. None of them is about intervals. Summaries of that size were a defect,
+fixed since ([The size of the summaries](#the-size-of-the-summaries)): a full-tier build tree is
+now about half a GB.
 
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:
