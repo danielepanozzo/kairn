@@ -1094,7 +1094,7 @@ names are `interval_NAME_k` and `ball_NAME_k`; the listings of the short ones ar
 | Function | `Interval<T, 1>` | `Interval<T, 2>` | `Ball<T, 1>` | `Ball<T, 2>` |
 |---|---|---|---|---|
 | `lower()`, `upper()`, k-numbers | the stored bounds | the stored bounds | the bounds of `ball_to_interval_1`: $\mathrm{RD}(c - r)$, $\mathrm{RU}(c + r)$ | the bounds of `ball_to_interval_2`: within $A\lvert v\rvert + B$ of $c \mp r$, and zero when $c \mp r$ is zero |
-| `lower_as<T>()`, `upper_as<T>()` | the stored bounds | `to_down_2`, `to_up_2`: the exact roundings | as `lower`, `upper` | `sub_down_1(to_down_2(c), r)`, `add_up_1(to_up_2(c), r)`: a bound, less than one gap of `T` at $c$ plus one at the result from $c \mp r$ |
+| `lower_as<T>()`, `upper_as<T>()` | the stored bounds | `to_down_2`, `to_up_2`: the exact roundings | as `lower`, `upper` | `sub_down_1(to_down_2(c), r)`, `add_up_1(to_up_2(c), r)`: a bound, less than one gap of `T` at $c$ plus one at the result from $c \mp r$. **Claimed less** (2026-11-21): a bound on its side within $5u(\lvert c\rvert + r) + 3\eta$ of $c \mp r$ (`ball_lower_as_2`, `ball_upper_as_2`) |
 | `midpoint()` | `interval_mid_rad_1` | `interval_mid_rad_2` | the center | the center |
 | `radius()`, a `T` | `interval_mid_rad_1`: the smallest radius of `T` for that midpoint | `interval_mid_rad_2`: a radius for that midpoint | the radius | the radius |
 | `contains(t)`, $t$ a `T` or a k-number | `le(xl, t)`, `le(t, xu)`, $t$ finite: exact | the same with `le_2_1`, `le_1_2`, `le_2_2`: exact | $\lvert t - c\rvert \le r$ by exact pairs: exact | certain |
@@ -1104,7 +1104,7 @@ names are `interval_NAME_k` and `ball_NAME_k`; the listings of the short ones ar
 | `hull(Y)` | the smaller lower bound, the larger upper bound: exact | the same with `lt_2_2`: exact | `ball_hull_1`: contains both | `ball_hull_2` |
 | `intersection(Y)` | the larger lower bound, the smaller upper bound, empty if they cross: exact | the same: exact | `ball_intersection_1`: contains $X \cap Y$ | `ball_intersection_2` |
 | `split()` | $[x_\ell, m]$, $[m, x_u]$, $m$ the midpoint: their union is $X$ | the same | `ball_split_1`: two balls that cover $X$ | `ball_split_2` |
-| `is_empty()`, `is_entire()` | $x_\ell = +\infty$; $x_\ell = -\infty$ and $x_u = +\infty$ | the same on the leading limbs | $r$ is a NaN; $r = +\infty$ | the same |
+| `is_empty()`, `is_whole()` (first written `is_entire()`) | $x_\ell = +\infty$; $x_\ell = -\infty$ and $x_u = +\infty$ | the same on the leading limbs | $r$ is a NaN; $r = +\infty$ | the same |
 | to the other type | `interval_to_ball_1` | `interval_to_ball_2` | `ball_to_interval_1` | `ball_to_interval_2` |
 
 The expressions in the two `Ball` columns are for finite balls. A kernel of a `Ball` first
@@ -1116,10 +1116,42 @@ intersection, the empty set included; the signs and the three-valued comparisons
 of emptiness that their conditions show; `midpoint`, `radius` and `split` select the special
 values, as the listing of `interval_mid_rad_1` does.
 
+**As built (2026-11-21).** Every cell of the table has its kernel, generated and proved in the
+IEEE model, of one limb and of two: `interval_NAME_k` for the predicates (`interval_empty_k`,
+`interval_entire_k`, `interval_contains_k`, `interval_subset_k`, `interval_positive_k`,
+`interval_negative_k`, `interval_zero_k`), the comparisons and the relations of IEEE 1788;
+`ball_NAME_k` for those of a ball; and the bounds of a ball as numbers of `T` are
+`ball_lower_as_k` and `ball_upper_as_k`. Three cells claim less than the table says, each marked
+below: the split of an interval, the hull and the intersection of balls, which return an operand
+as it is in a conditional form, and `lower_as` of a `Ball<T, 2>`. The predicate of the whole
+line is `is_whole()` on both types (the owner's ruling of 2026-11-21); its kernels keep the name
+`interval_entire_k`. On this tree the public headers have the part of the interface that
+`Interval` and `Ball` had headers for when they were written: for `Interval`, the bounds,
+`lower_as` and `upper_as`, the hull and the intersection, and for one limb the midpoint, the
+radius, the split and the conversions; for `Ball`, `lower_as`, `upper_as`, the midpoint, the
+signs, the state tests, the conversions of one limb, the ball of two limbs from two `T`
+(`ball_from_interval_2`) and the narrowing of a ball of two limbs (`ball_narrow_2_1`). The
+signs of a `Ball` are written in the header with the comparisons that `ball_positive_k`,
+`ball_negative_k` and `ball_zero_k` make. The predicates, the comparisons, the
+relations, `contains`, and for two limbs the midpoint, the radius, the split and the conversions
+have their proved kernels and no public function yet.
+
+**Claimed less than this page asks** (2026-11-21), *the split of an interval.* The table asks
+the two halves at the midpoint. The claim (`splits`) is that both parts are canonical, empty
+together exactly when $X$ is, and otherwise nonempty intervals $[x_\ell, p]$ and $[p, x_u]$ that
+meet at a point $p$ of $X$; it does not say which point. The kernels split at the midpoint of
+`interval_mid_rad_k`, which for two limbs is moved into $[x_\ell, x_u]$ first (a finite bound of
+two limbs can lie beyond $\Omega$, and then the midpoint $\pm\Omega$ of the half-line is outside
+it, and the point is the bound). The hand theorem `interval_split_1_correct`
+(`IeeeIntervalConvert.v`) proves that the point is the midpoint for one limb, and
+`interval_split_2_correct` (`IeeeIntervalConvert2.v`) that it is the midpoint moved into $X$ for
+two.
+
 **Exact pairs.** For a ball of one limb the bounds $c \pm r$ are not numbers of `T`, but the
 difference of two numbers of `T` is an exact normalized pair, by `two_sum_ord`, and pairs are
 compared exactly by the kernels of Milestone 1. So $\lvert t - c\rvert \le r$ is
-`le_2_1(abs_2(two_sum_ord(t, neg(c))), r)`, and $Y \subseteq X$ is
+`le_2_1(abs_2(two_sum_ord(t, neg(c))), r)` (with $t$ guarded first, as a value from the
+program: rule R3), and $Y \subseteq X$ is
 `le_2_2(abs_2(two_sum_ord(cy, neg(cx))), two_sum_ord(rx, neg(ry)))`. A difference that
 overflows gives a false answer, which is then the right one: a distance beyond $\Omega$ exceeds
 every radius. *Checked:* `enclosure_1.py`, every ball and every point of four formats, and
@@ -1132,10 +1164,21 @@ $\lvert (t - c) - z\rvert \le e$:
 ball_contains_point_2(c, r, t) -> (yes, no)
   (z0, z1, e) = add_ball_2_2(t0, t1, neg(c0), neg(c1))
   hi  = radd(abs_upper_2(z0, z1), e)                 >= |t - c|
-  lo  = sub_down_1(to_down_2(abs_2(z0, z1)), e)      <= |t - c|
+  wd  = to_down_2(abs_2(z0, z1))
+  lo  = neg(add_up_1(e, neg(wd)))                    -RU(e - wd) = RD(wd - e) <= |t - c|
   yes = le(hi, r)
-  no  = lt(r, lo)
+  na  = lt(r, lo)
+  ta  = abs(t0);  ft = lt(ta, const inf)             t is finite
+  ne  = eq(r, r)                                     the ball is not empty
+  ok  = and(ft, ne)
+  no  = or(na, not(ok))
 ```
+
+*As built (2026-11-20).* The first version wrote `lo = sub_down_1(to_down_2(abs_2(z0, z1)), e)`,
+which negates $e$, a fused result: the listing computes the same value as minus the rounding up
+of the opposite ([Notation](#notation-and-vocabulary)). And `no` is also true for the empty set
+and for a $t$ that is not a finite number, of which no ball has a member; the first version
+answered *unknown* there.
 
 *Statement (`trit`):* `yes` implies $\lvert t - c\rvert \le r$, `no` implies
 $\lvert t - c\rvert > r$, and they are never both true. `contains` returns `yes`. *Checked:*
@@ -1143,6 +1186,15 @@ $\lvert t - c\rvert > r$, and they are never both true. `contains` returns `yes`
 five bits where $e$ is large; with $e \approx 3u^2\lvert t - c\rvert + 2^{-1022}$ in `double`
 the undecided band is that thin. *Not claimed:* an exact answer. It needs the sign of a sum of
 five limbs, which is arithmetic of more than two limbs ([question 8](#open-questions)).
+
+*As built (2026-11-21): the band is wider than this paragraph says.* `hi` and `lo` are numbers of
+`T`, so besides $e$ each loses up to a gap of `T` at the radius or the distance, $G$, which is
+about $2u$ times them. The answer is given unless
+$\bigl\lvert\lvert t - c\rvert - r\bigr\rvert < 2e + 3G$, and for the comparisons of balls and
+`contains(Y)` unless the margin is below $2e + 4G$: it is $G$, not $e$, that dominates unless the
+radius is small against the distance. The band is not claimed; `predicates_2.py` asserts it on
+20 000 cases at three, four and five bits, and the largest margin of an answer not given was
+2.3 units of $2e + G$ ([Claims of the enclosure interface](../architecture.md#claims-of-the-enclosure-interface-predicates-and-comparisons)).
 
 ### Midpoint, radius and the conversions
 
@@ -1182,22 +1234,44 @@ $\lvert m - \tfrac{\ell+h}{2}\rvert \le \tfrac{3u^2}{1-4u}\lvert\tfrac{\ell+h}{2
 and $[m - r, m + r] \supseteq X$; the smallest radius is not claimed. *Checked:*
 `enclosure_2.py`. *Risk: medium* (a long listing; every step has its lemma).
 
+*As built (2026-11-21).* `interval_mid_rad_2` is this listing, proved in the IEEE model
+(`IeeeIntervalConvert2.v`), with the constants above. Two things are more precise than this
+paragraph. The midpoint is a canonical number of two limbs for every canonical $X$ (two NaN for
+the empty set, two zeros for the whole line, $(\pm\Omega, +0)$ for a half-line), and finite for
+every bounded $X$: the sum of the two halves cannot overflow, because `add_2_2` is proved not to
+overflow when both leading limbs are at most $\Omega/2$, half the range (`IeeeAdd22Top.v`; the
+bound proved in Milestone 1, and the one the interval sums claim, is a quarter). The radius can
+be $+\infty$ for a bounded interval near the top of the range: a side of it, `radd` of a rounding
+up, can step past $\Omega$, and the listing makes such a side $+\infty$; it is finite when both
+bounds are at most $2^{e_{\max}-2}$ in magnitude (the claim's `finite_when`). An infinite radius
+still covers $X$, so the statement above holds as written.
+
 **Interval to ball.** `interval_to_ball_k` is `interval_mid_rad_k` followed by two selects: an
 unbounded interval becomes the whole line, whose center is 0 and not the $\pm\Omega$ of a
 half-line; the empty set becomes the empty ball. *Statement:* the ball is canonical and contains
-the interval; it is empty exactly when the interval is.
+the interval; it is empty exactly when the interval is. *As built (2026-11-20):* one select, of
+the center, where the radius is $+\infty$ (a select per limb of the center for two limbs): the
+radius of an unbounded interval is already $+\infty$, and that of the empty set a NaN, with a NaN
+midpoint, which is the empty ball. For two limbs the ball is finite when both bounds are at most
+$2^{e_{\max}-2}$ in magnitude, and otherwise may be the whole line, as the radius above.
 
 **Ball to interval.**
 
 ```
 ball_to_interval_1(c, r) -> (zl, zu)             ball_to_interval_2(c, r) -> (zl, zu)
   l  = sub_down_1(c, r)                            nr       = neg(r)
-  h  = add_up_1(c, r)                              (l0, l1) = add_down_2_2(c0, c1, nr, 0)
-  ne = eq(r, r)            not the empty ball      (h0, h1) = add_up_2_2(c0, c1, r, 0)
-  mi = neg(const inf)                              then the selects of interval_add_2, with
-  zl = select(ne, l, const inf)                    ne = eq(r, r)
-  zu = select(ne, h, mi)
+  h  = add_up_1(c, r)                              (n0, n1) = make_2(nr)
+  ne = eq(r, r)            not the empty ball      (p0, p1) = make_2(r)
+  mi = neg(const inf)                              (l0, l1) = add_down_2_2(c0, c1, n0, n1)
+  zl = select(ne, l, const inf)                    (h0, h1) = add_up_2_2(c0, c1, p0, p1)
+  zu = select(ne, h, mi)                           then the selects of interval_add_2, with
+                                                   ne = eq(r, r)
 ```
+
+*As built (2026-11-20):* the first version passed $(-r, 0)$ and $(r, 0)$ to the directed sums;
+the listing makes those pairs by `make_2`, whose guard leaves a radius as it is, so that no limb
+is added to a literal zero, which the C++ printer would write as an addition of $+0$, the form of
+a guard. The values are the same.
 
 *Statement:* the interval is canonical and contains the ball; it is empty exactly when the ball
 is; the whole line gives $[-\infty, +\infty]$ (by the same operations: $0 - \infty$ rounded down
@@ -1205,7 +1279,10 @@ is $-\infty$). For one limb it is the *smallest* interval of `T` that contains t
 limbs each bound is within $A\lvert v\rvert + B$ of $c \mp r$, the constants of the sum, and a
 bound $c \mp r$ that is exactly zero is returned as zero, by the rule of the directed sums: the
 ball of center $r$ and radius $r$ gives an interval whose lower bound is $0$, not $-H$. These
-are the values of `lower()` and `upper()` of a `Ball<T, 2>`.
+are the values of `lower()` and `upper()` of a `Ball<T, 2>`. *As built:* the claim
+(`interval_of_ball`) adds that for a finite ball the interval is bounded when no member exceeds
+$2^{e_{\max}-2}$ in magnitude; both kernels are proved in the IEEE model (`IeeeIntervalConvert.v`,
+`IeeeBallConvert2.v`).
 *Checked:* `enclosure_1.py`; `enclosure_2.py`, where 2 to 128 of the 80 000 bounds of each
 format were exactly zero. *Risk: low.*
 
@@ -1275,31 +1352,98 @@ is `interval_make_1` followed by `interval_to_ball_1`, so it has the same cases:
 the same infinity twice, gives the whole line through the whole-line interval, and $lo > hi$
 the empty ball through the empty interval.
 
+*As built (2026-11-21).* `ball_from_interval_2` is the listing above, proved in the IEEE model
+(`IeeeBallConvert.v`); its claim, `makes_ball` with `midpoint_when`, is the statement above, the
+center the exact midpoint and the radius the smallest when $lo/2$ and $hi/2$ are numbers of the
+format. **Claimed less than this page asks:** when a halving is not exact the claim says only
+that the finite ball contains $[lo, hi]$; that the center is then within $\eta$ of the midpoint,
+and the radius the number after $d$, is what the listing computes and `enclosure_1.py` checks,
+not a claim. `Ball<T, 1>` from two `T` became a kernel of its own, `ball_from_interval_1`, which
+computes the values of `interval_make_1` followed by `interval_to_ball_1` in another order:
+
+```
+ball_from_interval_1(lo, hi) -> (cw, rw)
+  gl = guard(lo);  gu = guard(hi)
+  ok = le(gl, gu);  nl = lt(gl, const inf);  mi = neg(const inf);  nu = lt(mi, gu)
+  va = and(ok, nl);  v = and(va, nu)                 the pair describes an interval
+  rv = lt(gu, gl)                                    reversed bounds
+  tl = select(v, gl, 0);  tu = select(v, gu, 0)      [0, 0] where it describes none
+  (c, r) = interval_to_ball_1(tl, tu)
+  ec = select(rv, const nan, 0);  er = select(rv, const nan, const inf)
+  cw = select(v, c, ec);  rw = select(v, r, er)
+```
+
+Selecting the whole line or the empty interval first, as `interval_make_1` does, made GCC 13 on
+x86-64 duplicate the halving on the path of a constant bound, which the object-code check
+refuses; and $[0, 0]$ in place of a pair that describes no interval keeps constant evaluation
+away from a NaN and from $+\infty - \infty$, so that the ball of every pair is a constant
+expression. Its claim is `makes_ball` with `rel` $u$, `abs` $\eta$ and `smallest_radius`: the
+cases above, and for finite $lo \le hi$ a center within $u\lvert m\rvert + \eta$ of the midpoint
+$m$, between the bounds, with the smallest radius for it. Proved (`IeeeBallSets.v`); from
+precision 2. No public function calls it yet.
+
+**A ball of one limb from a ball of two.** `ball_narrow_2_1`, which the first version of this page
+did not list, is the narrowing that `Ball<T, 1>(Ball<T, 2>)` makes:
+
+```
+ball_narrow_2_1(c, r) -> (cz, rz)
+  a  = abs(c1)
+  rz = radd(r, a)                    the radius widened by the second limb, rounded up
+  wh = eq(rz, const inf)
+  cz = select(wh, 0, c0)             the whole line when the radius overflows
+```
+
+*Statement* (`encloses`, B1 to B4 of [Milestone 1](milestone1.md#ball-kernels)): the result is
+canonical, empty exactly when the operand is, contains it, and is a finite ball when
+$\lvert c\rvert + r \le 2^{e_{\max}-2}$. Proved in the IEEE model (`IeeeBallConvert.v`); from
+precision 2.
+
 ### Hull, intersection and split of balls
 
-- `ball_hull_k(X, Y)`: both balls to intervals, the hull of the intervals, back to a ball. If an
-  operand is empty the other is returned as it is. *Statement:* the result is canonical and
-  contains $X \cup Y$. Not claimed: the smallest such ball.
-- `ball_intersection_k(X, Y)`: both to intervals, the intersection, back to a ball. If an operand
-  is the whole line the other is returned as it is; if one is empty, the empty set.
+- `ball_hull_k(X, Y)`: both balls to intervals, the hull of the intervals, back to a ball. If $X$
+  is empty, $Y$ is returned as it is; if $Y$ is empty and $X$ is not, $X$ (the first version:
+  "if an operand is empty the other is returned as it is", below). *Statement:* the result is
+  canonical and contains $X \cup Y$. Not claimed: the smallest such ball.
+- `ball_intersection_k(X, Y)`: both to intervals, the intersection, back to a ball. If $X$ is the
+  whole line, $Y$ is returned as it is; if $Y$ is and $X$ is not, $X$; if one is empty, the empty
+  set.
   *Statement:* the result is canonical and contains $X \cap Y$; it is empty only if
   $X \cap Y$ is. Not claimed: that it is inside $X$ or $Y$ (the two outward conversions can
   make it stick out by a rounding), nor that it is empty whenever the balls are disjoint.
 - `ball_split_k(X)`: two balls, the first containing $[c - r, c]$ and the second $[c, c + r]$.
 
+*As built (2026-11-21).* The hull and the intersection are proved in the IEEE model
+(`IeeeBallHull.v`), for one limb and for two, and claim (`ball_set`) containment and an operand
+returned as it is, the limbs themselves, in a conditional form: for the hull, the result is empty
+exactly when both operands are, it is $Y$ when $X$ is empty, and $X$ when $Y$ is empty and $X$ is
+not; for the intersection, it is empty when an operand is, $Y$ when $X$ is the whole line, and
+$X$ when $Y$ is the whole line and $X$ is not. The first form, "the other is returned as it is"
+for either operand, was refuted: when both are special the result is one of them, and two empty
+balls can differ in their NaNs and two whole lines in the sign of the zero of their centers, so
+no result is both. `ball_hull_1` is the composition the first item says, with selects on the
+radii for the operands returned as they are; `ball_intersection_1` computes the values of its
+composition in another order (the halving of `interval_to_ball_1` before the selects of the
+special states), because GCC 13 duplicated the halving on the path of a constant. The two-limb
+forms convert by `ball_to_interval_2` and `interval_to_ball_2`.
+
 ```
 ball_split_1(c, r) -> (ca, ra, cb, rb)
   h  = prod(r, const 1/2)
+  hn = prod(neg(r), const 1/2)                     -h, a product of its own
   g  = sub(r, h)                                   exact
   mg = lt(h, g);  q = select(mg, g, h)             max(h, r - h)
   fr = lt(r, const inf)                            a finite ball
-  hs = select(fr, h, 0);  ws = select(fr, q, 0);  cs = select(fr, c, 0)
-  nh = neg(hs)
+  hs = select(fr, h, 0);  nh = select(fr, hn, 0);  ws = select(fr, q, 0);  cs = select(fr, c, 0)
   (a0, a1) = ball_add_1_full(cs, 0, nh, ws)        the point c plus the ball (-h, q)
   (b0, b1) = ball_add_1_full(cs, 0, hs, ws)
   ca = select(fr, a0, c);  ra = select(fr, a1, r)  the whole line and the empty set: twice, as they are
   cb = select(fr, b0, c);  rb = select(fr, b1, r)
 ```
+
+*As built (2026-11-20):* the first version wrote `nh = neg(hs)`, the negation of a select whose
+first arm is the product `h`, which the generator refuses ([Notation](#notation-and-vocabulary));
+$-h$ is its own product, the same value. `ball_split_2` is the same listing with a center of two
+limbs and `ball_add_2_full`, the balls of center $\mp h$ made by `make_2`.
 
 *Statement:* four canonical values; for a finite ball, $[c - r, c] \subseteq (c_a, r_a)$ and
 $[c, c + r] \subseteq (c_b, r_b)$; the whole line gives the whole line twice (a ball cannot be a
@@ -1307,7 +1451,9 @@ half-line, so splitting it makes no progress), the empty set the empty set twice
 containment of `ball_add_k_full`, which is proved: the point $c$ plus the ball of center $-h$
 and radius $q \ge \max(h, r - h)$ contains $[c - r, c]$. *Not claimed:* that the halves are
 inside $X$, nor that their radii are close to $r/2$ when $r$ is near the underflow range: each
-has the $H \approx N$ of a ball sum. *Checked:* `enclosure_1.py`.
+has the $H \approx N$ of a ball sum. *Checked:* `enclosure_1.py`. *Proved* (`ball_splits`) in
+the IEEE model, `IeeeBallSets.v` and `IeeeBallPredicates2.v`, from precision 2 for one limb and 3
+for two.
 
 ### The empty set and the whole line
 
@@ -1327,7 +1473,7 @@ returns on the two special values, for `Interval` and for `Ball` alike unless sa
 | `hull(Y)` | $Y$ | the whole line |
 | `intersection(Y)` | the empty set | $Y$ |
 | `split()` | the empty set, twice | `Interval`: $[-\infty, 0]$ and $[0, +\infty]$. `Ball`: the whole line, twice |
-| `is_empty()`, `is_entire()` | true, false | false, true |
+| `is_empty()`, `is_whole()` (first written `is_entire()`) | true, false | false, true |
 | the conversion to the other type | the empty set | the whole line |
 | the three-valued comparisons | unknown | unknown |
 
@@ -1356,6 +1502,10 @@ answers no, and `is_empty` is the query to make first. The three-valued comparis
 standard's conventions, which are the vacuous ones. For a half-line $[\ell, +\infty]$, which
 only an `Interval` can be: `midpoint` is $\Omega$, `radius` is $+\infty$, `split` gives
 $[\ell, \Omega]$ and $[\Omega, +\infty]$, and the conversion to a ball gives the whole line.
+*As built (2026-11-21):* every row of these tables is what the kernels claim; one case was found
+that the split row does not cover: a lower bound of two limbs can lie beyond $\Omega$ (by less
+than half a gap of `T`), and then `interval_split_2` splits $[\ell, +\infty]$ at $\ell$ itself,
+the midpoint $\Omega$ being outside it.
 
 ### Comparisons
 
@@ -1421,6 +1571,23 @@ which has `contains`, the three-valued comparisons, and the conversion to an int
 *Smallest precision of this section:* that of the kernels composed, at most 4. *IEEE model:*
 every kernel of the interface is of the extended domain. *Risk:* low for `Interval` (comparisons
 and selects), medium for `Ball<T, 2>` (many compositions, each to be stated).
+
+*As built (2026-11-21).* The three-valued comparisons of intervals and of balls, and the four
+relations of IEEE Std 1788.1-2017, are kernels, proved in the IEEE model: `interval_less_k`,
+`interval_less_equal_k`, `interval_equal_k` (`trit`, exact); `interval_subset_k`,
+`interval_rel_equal_k`, `interval_rel_interior_k`, `interval_rel_disjoint_k` (`certain`, exact,
+with the standard's readings of the empty set; `subset` is also `Y.contains(X)`);
+`ball_less_k`, `ball_less_equal_k`, `ball_equal_k` (`trit`: for one limb exact when
+$r_x + r_y \le \Omega$, which is the half of "exact unless both overflow" that a condition can
+state; for two limbs certain, the *yes* of `equal`, both balls the same point, being exact in
+fact and not by a claim). `greater`,
+`greater_equal` and `not_equal` are the same kernels with the operands or the masks exchanged.
+The four relations that only the full standard has, `less`, `precedes`, `strict_less` and
+`strict_precedes`, are not kernels of this milestone: their rows above were to be checked against
+the cases of ITF1788 first, and those are not in the repository ([question 18](#open-questions)).
+No public function and no namespace `kairn::rel` exist yet. The smallest precisions are 1 for
+every kernel of an interval, 2 for the balls of one limb and 3 for those of two, and 1 for the
+signs of a ball.
 
 ## Scaling a ball by a power of two
 
