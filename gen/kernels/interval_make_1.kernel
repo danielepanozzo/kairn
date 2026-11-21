@@ -1,8 +1,11 @@
 # An interval from two values of T supplied by the program, guarded (rule R3); milestone2.md,
-# "Interval kernels", "Values of an interval": [lo, hi] when lo <= hi, lo < +inf and hi > -inf;
-# the whole line when a bound is a NaN, whatever the other bound is (decided on 2026-11-20: a NaN
-# says that something failed upstream, and the empty set must not come out of that); the empty set
-# otherwise, that is for lo > hi, [+inf, +inf] and [-inf, -inf]. For every precision.
+# "Interval kernels", "Values of an interval". The whole line when a bound is a NaN, whatever the
+# other bound is, and when both bounds are the same infinity, [+inf, +inf] or [-inf, -inf]: a value
+# from the program that is not finite never makes the empty set (decided on 2026-11-20 for a NaN, a
+# NaN saying that something failed upstream, and on the same day for an infinite point, which IEEE
+# 1788 makes the empty set). Otherwise the empty set when lo > hi (rv, false with a NaN), [+inf, -inf]
+# and lo = +inf with a finite hi among them; otherwise [lo, hi], [-inf, +inf], [lo, +inf] and
+# [-inf, hi] included. For every precision.
 kernel:        interval_make_1
 input:         lo
 input:         hi
@@ -10,7 +13,7 @@ output:        zl
 output:        zu
 ensures:       makes_interval zl zu from=lo,hi
 min_precision: 1
-source:        constructor of an interval (Milestone 2 listing)
+source:        constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20)
 license:       algorithm and proof: MIT
 status:        proved
 domain:        extended
@@ -27,10 +30,8 @@ mi = neg(const inf)
 nu = lt(mi, gu)
 va = and(ok, nl)
 v  = and(va, nu)
-ql = eq(gl, gl)
-qu = eq(gu, gu)
-nn = and(ql, qu)
-el = select(nn, const inf, mi)
-eu = select(nn, mi, const inf)
+rv = lt(gu, gl)
+el = select(rv, const inf, mi)
+eu = select(rv, mi, const inf)
 zl = select(v, gl, el)
 zu = select(v, gu, eu)

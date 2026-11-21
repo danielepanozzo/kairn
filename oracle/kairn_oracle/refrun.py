@@ -144,7 +144,14 @@ VARIANTS = {
     "iv-neg-not-swapped": "the negations of intervals negate each bound without exchanging them",
     "iv-make-nan-empty": "the constructors of intervals give the empty set for a NaN bound (the "
                          "rule of IEEE 1788, not Kairn's)",
+    "iv-make-inf-empty": "the constructors of intervals keep the rule before 2026-11-20 (and of "
+                         "IEEE 1788): the same infinity twice gives the empty set, (+inf, 0) with "
+                         "(+inf, -0) too",
     "iv-make-reversed": "the constructors of intervals keep reversed bounds",
+    "iv-make-reversed-whole": "the constructors of intervals do not test reversed bounds: every "
+                              "pair that describes no interval gives the whole line",
+    "iv2-make-reversed-lead": "interval_make_2 tests reversed bounds on the leading limbs alone, "
+                              "so (1, 2^-4) with (1, 0) gives the whole line",
     "iv2-no-zero-rule": "the bounds of two-limb sums move a sum that is zero by d (no select)",
     "iv2-wrong-side": "the bounds of two limbs move the second limb to the wrong side",
     "iv2-wide": "the bounds of two limbs move by 4 d instead of d (valid, not tight)",
@@ -162,6 +169,10 @@ VARIANTS = {
     "iv-ballbound-empty-nan": "the bounds of a ball give a NaN for the empty ball",
     "iv-fromint-no-step": "ball_from_interval_2 does not step the radius when a halving is inexact",
     "iv-fromint-nan-empty": "ball_from_interval_2 gives the empty set for a NaN bound",
+    "iv-fromint-inf-empty": "ball_from_interval_2 keeps the rule before 2026-11-20: the same "
+                            "infinity twice gives the empty set",
+    "iv-fromint-reversed-whole": "ball_from_interval_2 does not test reversed bounds: every pair "
+                                 "that describes no interval gives the whole line",
     "iv-narrow-no-tail": "ball_narrow_2_1 keeps the radius without the second limb of the center",
     "iv-ball-no-term": "add_ball_2_2 and mul_ball_2_2 return d = H, without the center's error",
     "iv-to-interval-nearest": "ball_to_interval_1 rounds c - r and c + r to nearest",
@@ -1695,17 +1706,30 @@ class Kernels:
         h = vb if va < vb else va
         return self._iv_empty(xl < INF and yl < INF, l, h)
 
+    def _make_rv(self, rv, nn, make):
+        """The test of reversed bounds of a constructor (rv, false with a NaN), with its planted
+        faults; nn: no bound is a NaN; make: interval_make_k (True) or ball_from_interval_2."""
+        v = self.v
+        if v == ("iv-make-nan-empty" if make else "iv-fromint-nan-empty"):
+            return rv or not nn                 # a NaN bound gives the empty set
+        if v == ("iv-make-inf-empty" if make else "iv-fromint-inf-empty"):
+            return nn                           # the listing before 2026-11-20
+        if v == ("iv-make-reversed-whole" if make else "iv-fromint-reversed-whole"):
+            return False                        # reversed bounds give the whole line
+        return rv
+
     def interval_make_1(self, lo, hi):
+        """milestone2.md, "Values of an interval": a pair that describes no interval is the empty
+        set when it is reversed (rv = lt(gu, gl), false with a NaN), and the whole line otherwise
+        (a NaN bound, or the same infinity twice)."""
         gl, gu = self.guard(lo), self.guard(hi)
         ok = gl <= gu
         v = ok and gl < INF and -INF < gu
-        nn = gl == gl and gu == gu
-        if self.v == "iv-make-nan-empty":
-            nn = True
-        if self.v == "iv-make-reversed" and nn and not ok:
+        rv = self._make_rv(gu < gl, gl == gl and gu == gu, True)
+        if self.v == "iv-make-reversed" and rv:
             v = True
-        el = INF if nn else -INF
-        eu = -INF if nn else INF
+        el = INF if rv else -INF
+        eu = -INF if rv else INF
         return (gl if v else el), (gu if v else eu)
 
     def add_ball_2_2(self, x0, x1, y0, y1):
@@ -1806,10 +1830,10 @@ class Kernels:
         v = gl <= gu and gl < INF and -INF < gu
         f = -INF < gl and gu < INF
         k0, k1, s = (c0, c1, r) if f else (0, 0, INF)
-        nn = gl == gl and gu == gu
-        if self.v == "iv-fromint-nan-empty":
-            nn = True
-        wc, wr = (NAN, NAN) if nn else (0, INF)
+        # For a pair that describes no interval: the empty set for reversed bounds, the whole
+        # line otherwise (a NaN bound, or the same infinity twice).
+        rv = self._make_rv(gu < gl, gl == gl and gu == gu, False)
+        wc, wr = (NAN, NAN) if rv else (0, INF)
         return (k0, k1, s) if v else (wc, wc, wr)
 
     def _iv2_finish(self, l, h, ne):
@@ -1838,15 +1862,19 @@ class Kernels:
         return -xu0, -xu1, -xl0, -xl1
 
     def interval_make_2(self, lo0, lo1, hi0, hi1):
-        ok = lo0 < hi0 or (lo0 == hi0 and lo1 <= hi1)
+        """The listing of one limb on the comparisons of two limbs, le_2_2 and lt_2_2 (written
+        out, so that the faults of the comparison kernels do not reach it), and the leading limbs
+        for the tests against infinity; objects, so no guard."""
+        ok = lo0 < hi0 or (lo0 == hi0 and lo1 <= hi1)          # le_2_2(lo, hi)
         v = ok and lo0 < INF and -INF < hi0
-        nn = lo0 == lo0 and hi0 == hi0
-        if self.v == "iv-make-nan-empty":
-            nn = True
-        if self.v == "iv-make-reversed" and nn and not ok:
+        rv = hi0 < lo0 or (hi0 == lo0 and hi1 < lo1)           # lt_2_2(hi, lo)
+        if self.v == "iv2-make-reversed-lead":
+            rv = hi0 < lo0                                     # the leading limbs alone
+        rv = self._make_rv(rv, lo0 == lo0 and hi0 == hi0, True)
+        if self.v == "iv-make-reversed" and rv:
             v = True
-        el = (INF, 0) if nn else (-INF, 0)
-        eu = (-INF, 0) if nn else (INF, 0)
+        el = (INF, 0) if rv else (-INF, 0)
+        eu = (-INF, 0) if rv else (INF, 0)
         return ((lo0, lo1) if v else el) + ((hi0, hi1) if v else eu)
 
     def mul_ext_2_2(self, x0, x1, y0, y1):

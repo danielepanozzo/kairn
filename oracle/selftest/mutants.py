@@ -466,9 +466,52 @@ MUTANTS = {
     "outward: an infinity on the wrong side accepted": (
         "intervals.py", "        if w0 != (NINF if below else INF) or any(t != 0 for t in w[1:]):",
         "        if any(t != 0 for t in w[1:]):"),
+    # The constructors under the rule of 2026-11-20: a NaN bound or the same infinity twice gives
+    # the whole line, reversed bounds the empty set.
     "makes_interval: a NaN bound gives the empty set": (
-        "intervals.py", "        want = (\"nonempty\", NINF, INF)\n    elif L != INF",
-        "        want = (\"empty\", INF, NINF)\n    elif L != INF"),
+        "intervals.py", "    if given in (MAKE_NAN, MAKE_EQUAL_INF):\n        want = (\"nonempty\", NINF, INF)\n    elif given == MAKE_REVERSED:",
+        "    if given == MAKE_EQUAL_INF:\n        want = (\"nonempty\", NINF, INF)\n    elif given in (MAKE_REVERSED, MAKE_NAN):"),
+    "makes_interval: the same infinity twice gives the empty set (the old rule)": (
+        "intervals.py", "    if given in (MAKE_NAN, MAKE_EQUAL_INF):\n        want = (\"nonempty\", NINF, INF)\n    elif given == MAKE_REVERSED:",
+        "    if given == MAKE_NAN:\n        want = (\"nonempty\", NINF, INF)\n    elif given in (MAKE_REVERSED, MAKE_EQUAL_INF):"),
+    "makes_interval: reversed bounds give the whole line": (
+        "intervals.py", "    if given in (MAKE_NAN, MAKE_EQUAL_INF):\n        want = (\"nonempty\", NINF, INF)\n    elif given == MAKE_REVERSED:",
+        "    if given in (MAKE_NAN, MAKE_EQUAL_INF, MAKE_REVERSED):\n        want = (\"nonempty\", NINF, INF)\n    elif False:"),
+    "makes_interval: bounds of two limbs compared by their leading limbs": (
+        "intervals.py", "    L, U = bound_value(fmt, x[a0:a1]), bound_value(fmt, x[b0:b1])\n    es.applicable += 1\n    given",
+        "    L, U = x[a0], x[b0]\n    es.applicable += 1\n    given"),
+    "makes_ball from an interval: the same infinity twice gives the empty set (the old rule)": (
+        "intervals.py", "    if given == MAKE_REVERSED:\n        want = \"empty\"",
+        "    if given in (MAKE_REVERSED, MAKE_EQUAL_INF):\n        want = \"empty\""),
+    "makes_ball from an interval: a NaN bound gives the empty set": (
+        "intervals.py", "    if given == MAKE_REVERSED:\n        want = \"empty\"",
+        "    if given in (MAKE_REVERSED, MAKE_NAN):\n        want = \"empty\""),
+    "constructors: the same infinity twice classed as reversed bounds": (
+        "intervals.py", "    if L == U and type(L) is not int:\n        return MAKE_EQUAL_INF",
+        "    if L == U and type(L) is not int:\n        return MAKE_REVERSED"),
+    "constructors: a NaN bound tested after the same infinity": (
+        "intervals.py", "    if L == NAN or U == NAN:\n        return MAKE_NAN\n    if L == U and type(L) is not int:\n        return MAKE_EQUAL_INF",
+        "    if L == U and type(L) is not int:\n        return MAKE_EQUAL_INF\n    if L == NAN or U == NAN:\n        return MAKE_NAN"),
+    # The cells of the table of the constructors, and the classes of two limbs, that the guards
+    # ask for.
+    "constructors: a <= b and a > b swapped in the cells": (
+        "intervals.py", "        s += \", a <= b\" if L <= U else \", a > b\"",
+        "        s += \", a <= b\" if L >= U else \", a > b\""),
+    "constructors: lo and hi of a cell exchanged": (
+        "intervals.py", "    s = MAKE_CELL % (name(L, \"a\"), name(U, \"b\"))",
+        "    s = MAKE_CELL % (name(U, \"a\"), name(L, \"b\"))"),
+    "makes_interval: the cell not counted": (
+        "intervals.py", "    es.count(make_cell(L, U))\n", "\n"),
+    "makes_ball from an interval: the cell not counted": (
+        "intervals.py", "    es.count(make_cell(lo, hi))\n", "\n"),
+    "makes_interval: zeros of opposite signs not read": (
+        "intervals.py", "            if toks[a0 + 1].startswith(\"-\") != toks[b0 + 1].startswith(\"-\"):",
+        "            if False:"),
+    "makes_interval: reversed bounds of equal leading limbs not counted": (
+        "intervals.py", "        elif given == MAKE_REVERSED and x[a0] == x[b0]:", "        elif False:"),
+    "gen6: the infinities stratum never gives the same infinity twice": (
+        "gen6.py", "        a = _inf(k, rng.sign()) if rng.chance(2, 3) else _number(fmt, rng, k, \"uniform\")\n        b = _inf(k, rng.sign())",
+        "        a = _inf(k, -1) if rng.chance(2, 3) else _number(fmt, rng, k, \"uniform\")\n        b = _inf(k, 1)"),
     "set_bound: an empty ball not judged": (
         "intervals.py", "        if o != want:\n            es.count(\"failed: empty ball\")",
         "        if False:\n            es.count(\"failed: empty ball\")"),
@@ -594,6 +637,23 @@ MUTANTS = {
         "genmap.py", 'CONV_LENGTHS = ((0, 0), (0, "s"), ("s", 0),', 'CONV_LENGTHS = ((1, 1), (1, "s"), ("s", 1),'),
     "gen7: the tight case of axpy off the tie": (
         "gen7.py", "        y = _scaled_exact(fmt, (4 * j + 1) * u, E)", "        y = _scaled_exact(fmt, (4 * j + 3) * u, E)"),
+    # What a summary keeps (oracle/README.md, "The size of a summary").
+    "summary: the step's statistics keep the map's line": (
+        "maps.py", "            v = ck.verdict(pl.step, sub, x, z, ElementLine(m.step, fname, pl, ins, outs, n, i,\n"
+        "                                                           etag))",
+        "            v = ck.verdict(pl.step, sub, x, z, line)"),
+    "summary: an element line with the outputs of the next element": (
+        "maps.py", "        z = self.z or [self.outs[j * n + i] for j in range(pl.W)]",
+        "        z = self.z or [self.outs[j * n + i + 1] for j in range(pl.W)]"),
+    "summary: the profile keeps every distance": (
+        "check.py", "            if best is None or not _gt(best, v[0]):", "            if True:"),
+    "summary: a record only when strictly larger": (
+        "check.py", "            if best is None or not _gt(best, v[0]):",
+        "            if best is None or _gt(v[0], best):"),
+    "summary: a distance without its ratio loses its place in a merge": (
+        "check.py", "                self.profile.setdefault(d, None)", "                pass"),
+    "summary: the distances not read back": (
+        "check.py", "            present.update(range(lo, hi + 1))", "            pass"),
     "gen2: the one-limb scale family's operand of two limbs": (
         "gen2.py", "    vals[xn] = [x]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals",
         "    vals[xn] = [x, 0]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals"),

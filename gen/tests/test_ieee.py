@@ -220,8 +220,11 @@ class Statements(unittest.TestCase):
                       '   (val cw0 + val cw1) = (val lo + val hi) / 2 /\\\n'
                       '   val rw = RU (ieee_emin prec emax) prec ((val hi - val lo) / 2)) /\\\n'
                       '  (xnonempty (xval lo) (xval hi) -> ~ (finite lo /\\ finite hi) -> ball_whole_2 cw0 cw1 rw) /\\\n'
-                      '  (nan lo \\/ nan hi -> ball_whole_2 cw0 cw1 rw) /\\\n'
-                      '  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> ball_empty_2 cw0 cw1 rw)', s)
+                      # The same infinity twice is the whole line, as a NaN bound is (decided on
+                      # 2026-11-20); reversed bounds are the empty set.
+                      '  (nan lo \\/ nan hi \\/ (exists s : bool, xval lo = XInf s /\\ xval hi = XInf s) ->\n'
+                      '   ball_whole_2 cw0 cw1 rw) /\\\n'
+                      '  (xlt (xval hi) (xval lo) = true -> ball_empty_2 cw0 cw1 rw)', s)
         m = ieee.model(ks)
         self.assertNotIn('up_ball_from_interval_2', rocq.model(ks))
         self.assertIn('Definition up_ball_from_interval_2_0 : float := const_of (round radix2 '
@@ -259,8 +262,15 @@ class Statements(unittest.TestCase):
         s = spec('interval_split_1')
         self.assertIn('   xval al = xval xl /\\ xval bu = xval xu /\\ xval au = xval bl', s)
         s = spec('interval_make_2')
-        self.assertIn('  (nan lo0 \\/ nan hi0 -> zl0 = infinity prec emax true /\\ zu0 = infinity prec emax false '
-                      '/\\ zero zl1 /\\ zero zu1) /\\\n', s)
+        self.assertIn('  (nan lo0 \\/ nan hi0 \\/ (exists s : bool, xval_2 lo0 lo1 = XInf s /\\ xval_2 hi0 hi1 = XInf s) ->\n'
+                      '   zl0 = infinity prec emax true /\\ zu0 = infinity prec emax false '
+                      '/\\ zero zl1 /\\ zero zu1) /\\\n'
+                      '  (xlt (xval_2 hi0 hi1) (xval_2 lo0 lo1) = true -> interval_empty_2 zl0 zl1 zu0 zu1)', s)
+        # One limb: the same, the whole line for the same infinity twice (decided on 2026-11-20).
+        s = spec('interval_make_1')
+        self.assertIn('  (nan lo \\/ nan hi \\/ (exists s : bool, xval lo = XInf s /\\ xval hi = XInf s) ->\n'
+                      '   zl = infinity prec emax true /\\ zu = infinity prec emax false) /\\\n'
+                      '  (xlt (xval hi) (xval lo) = true -> interval_empty_1 zl zu)', s)
         s = spec('mul_ext_2_2')
         self.assertIn('  ~ nan x0 ->\n  ~ nan y0 ->\n', s)
         self.assertIn('  (zero x0 \\/ zero y0 -> zero l0 /\\ zero l1) /\\\n', s)
@@ -545,8 +555,17 @@ class CheckedFiles(unittest.TestCase):
     # results selected after the halving): their definitions and the source line of their
     # statements' comments; make -C proofs passed on these files. Merged here: the regeneration of
     # the merged descriptions.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '5f88297c9fb33d8b2e5cdc3daa6599ffc539e5c4dbfb94215c72ebae71e632f9',
-               'proofs/gen/IeeeStatements.v': '88856cbaa93b93829e75b568c338d62defb8f3d220b7a2abc8aacef8e67a694f'}
+    # On the line of main, from the same base (f7c86be): the same infinity twice, given to the
+    # constructors of an interval or to the ball from an
+    # interval of two T, became the whole line (decided on 2026-11-20): the definitions and
+    # statements of interval_make_1, interval_make_2 and ball_from_interval_2 changed, and nothing
+    # else; their theorems were proved again on the new definitions for the new statements
+    # (theories/IeeeInterval1.v, IeeeIntervalExact.v, IeeeBallConvert.v), the statements file
+    # prints their status, proved, and make -C proofs passed on these files.
+    # Merged here: the regeneration of the merged descriptions; the statement of
+    # ball_from_interval_1 (unverified) was printed under the same rule.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '4314901cbfe423a65e1ed75713ce60d0be72c7f7d5b6e683fc405d3837882658',
+               'proofs/gen/IeeeStatements.v': '44ac305946c29f57aa262768903052b57ef94aee339600c54144747e3877063f'}
 
 
     def test_the_checked_files(self):

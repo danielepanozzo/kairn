@@ -28,11 +28,11 @@ $$Z \supseteq [l_o, h_i].$$
 For operands that satisfy the requirements, finite, infinite or NaN:
 
 - The result $Z$, of center $c_w$ and radius $r_w$, is a canonical ball.
-- If a bound is a NaN, whatever the other: $Z$ is the whole line (center 0, radius $+\infty$).
-- If $l_o \le h_i$, both finite: $Z$ is a finite ball that contains $[l_o, h_i]$.
+- If a bound is a NaN, whatever the other, or both are the same infinity ($[+\infty, +\infty]$, $[-\infty, -\infty]$): $Z$ is the whole line (center 0, radius $+\infty$).
+- Otherwise, if the bounds are reversed, $l_o > h_i$: $Z$ is the empty set (every limb a NaN).
+- Otherwise, if both are finite ($l_o \le h_i$): $Z$ is a finite ball that contains $[l_o, h_i]$.
 - When moreover $l_o/2$ and $h_i/2$ are numbers of `T`: $c_w = (l_o + h_i)/2$ exactly and $r_w = \mathrm{RU}((h_i - l_o)/2)$, the smallest radius of `T` for that center.
-- If $l_o \le h_i$, $l_o < +\infty$, $h_i > -\infty$ and a bound is infinite: $Z$ is the whole line.
-- Otherwise ($l_o > h_i$, $[+\infty, +\infty]$, $[-\infty, -\infty]$): $Z$ is the empty set.
+- Otherwise ($l_o \le h_i$, $l_o < +\infty$, $h_i > -\infty$, and a bound is infinite): $Z$ is the whole line; a ball cannot be a half-line.
 
 Proved for every binary format with a precision of at least 2 bits, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 
@@ -53,7 +53,7 @@ Which of them the proof of `ball_from_interval_2_correct` depends on is not copi
 
 ## Source
 
-**Algorithm:** the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). **License:** algorithm and proof: MIT.
+**Algorithm:** the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). **License:** algorithm and proof: MIT.
 
 ## Listing
 
@@ -71,11 +71,13 @@ It calls [`two_sum_ord`](two_sum_ord.md), [`add_up_1`](add_up_1.md).
 # (hi - lo)/2 + |a + b| <= d - a + b + |a + b| <= d + eta). No constant of the listing is subnormal.
 # The test of an exact halving doubles each half back by an exact product with 2, not by adding the
 # half to itself, which GCC rewrites as a product it may fuse into the next addition. States: the
-# whole line when a bound is a NaN, whatever the other bound (decided on 2026-11-20, as for
-# interval_make_1), and when a bound of an interval that is not empty is infinite; the empty set
-# for lo > hi, [+inf, +inf] and [-inf, -inf]. The difference of the halves adds minus the lower
-# half, computed as its own exact product of the negated guarded bound, so that no fused result is
-# negated (a rule of the generator); it is -hl, rounding to nearest being symmetric.
+# whole line when a bound is a NaN, whatever the other bound, and when both bounds are the same
+# infinity (decided on 2026-11-20, as for interval_make_1: a value from the program that is not
+# finite never makes the empty set); otherwise the empty set for lo > hi (rv, false with a NaN);
+# otherwise the whole line when a bound is infinite (a ball cannot be a half-line), and the ball
+# above when both are finite. The difference of the halves adds minus the lower half, computed as
+# its own exact product of the negated guarded bound, so that no fused result is negated (a rule of
+# the generator); it is -hl, rounding to nearest being symmetric.
 
 gl       = guard(lo)
 gu       = guard(hi)
@@ -104,11 +106,9 @@ f        = and(fl, fu)
 k0       = select(f, c0, 0)
 k1       = select(f, c1, 0)
 s        = select(f, r, const inf)
-ql       = eq(gl, gl)
-qu       = eq(gu, gu)
-nn       = and(ql, qu)
-wc       = select(nn, const nan, 0)
-wr       = select(nn, const nan, const inf)
+rv       = lt(gu, gl)
+wc       = select(rv, const nan, 0)
+wr       = select(rv, const nan, const inf)
 cw0      = select(v, k0, wc)
 cw1      = select(v, k1, wc)
 rw       = select(v, s, wr)

@@ -122,6 +122,18 @@ MAKE_UNBOUNDED = "given: an unbounded interval"
 MAKE_NAN = "given: a NaN bound"
 MAKE_REVERSED = "given: reversed bounds"
 MAKE_EQUAL_INF = "given: equal infinities"
+# The cells of the table of the constructors (architecture.md, "The constructors on every pair of
+# values"), lo the row and hi the column, a and b finite; the guards ask for each (MAKE_CELLS).
+MAKE_CELL = "given lo %s, hi %s"
+MAKE_CELLS = tuple(MAKE_CELL % (r, c) + t for r in ("NaN", "-inf", "a", "+inf")
+                   for c in ("NaN", "-inf", "b", "+inf")
+                   for t in ((", a <= b", ", a > b") if (r, c) == ("a", "b") else ("",)))
+# Two limbs: the same infinity with second limbs that are zeros of opposite signs ((+inf, 0) and
+# (+inf, -0): the same infinity twice, the whole line), read from the line's text; and reversed
+# bounds whose leading limbs are equal ((1, 2^-4) and (1, 0): the comparison of two limbs tells
+# them, the leading limbs alone do not).
+MAKE_INF_TAILS = "given the same infinity, second limbs zeros of opposite signs"
+MAKE_REVERSED_LEAD = "given reversed bounds, equal leading limbs"
 MID_HOLDS = "midpoint_when holds"
 MID_FAILS = "midpoint_when fails"
 X_EMPTY = "X: empty"
@@ -1558,24 +1570,68 @@ def k_encloses_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     return out
 
 
+def make_given(L, U):
+    """The given state of a constructor's bounds L and U (values in the extended reals), by the
+    first case that applies (architecture.md, "The constructors on every pair of values"):
+    MAKE_NAN for a NaN bound, whatever the other; MAKE_EQUAL_INF for the same infinity twice;
+    MAKE_REVERSED for L > U; otherwise the state of a nonempty interval (MAKE_POINT,
+    MAKE_INTERVAL, MAKE_UNBOUNDED)."""
+    if L == NAN or U == NAN:
+        return MAKE_NAN
+    if L == U and type(L) is not int:
+        return MAKE_EQUAL_INF
+    if XT.x_cmp(L, 0, U, 0) > 0:
+        return MAKE_REVERSED
+    if L == U:
+        return MAKE_POINT
+    return MAKE_INTERVAL if type(L) is int and type(U) is int else MAKE_UNBOUNDED
+
+
+def make_cell(L, U):
+    """The cell of the given bounds in the table of architecture.md, "The constructors on every
+    pair of values": lo (row) and hi (column) each a NaN, -inf, a finite number (a, b) or +inf,
+    and for two finite bounds whether a <= b."""
+    def name(v, finite):
+        return "NaN" if v == NAN else "-inf" if v == NINF else "+inf" if v == INF else finite
+    s = MAKE_CELL % (name(L, "a"), name(U, "b"))
+    if type(L) is int and type(U) is int:
+        s += ", a <= b" if L <= U else ", a > b"
+    return s
+
+
+def _input_tokens(line):
+    """The texts of the input limbs of a line, in the order of x (they keep the signs of zeros)."""
+    return [t for t in line.partition(" -> ")[0].split()[2:] if not t.startswith("#")]
+
+
 def k_makes_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
-    """The output is canonical: the interval of the given bounds when lo <= hi, lo < +inf and
-    hi > -inf; the whole line when a given bound is a NaN, whatever the other; the empty set
-    otherwise."""
+    """The output is canonical, and by the first case that applies: the whole line when a given
+    bound is a NaN, whatever the other, or when both are the same infinity; the empty set when
+    the bounds are reversed, lo > hi; otherwise the interval of the given bounds (architecture.md,
+    "The constructors on every pair of values"). Two limbs: a bound is a NaN or an infinity when
+    its leading limb is (canonical inputs: the infinity followed by a zero of either sign), and
+    the values are compared. The same infinity twice gave the empty set, as in IEEE 1788, until
+    the owner's decision of 2026-11-20."""
     fmt = pl.fmt
     (a0, a1), (b0, b1) = c["given"]
     L, U = bound_value(fmt, x[a0:a1]), bound_value(fmt, x[b0:b1])
     es.applicable += 1
-    if L == NAN or U == NAN:
-        es.count(MAKE_NAN)
+    given = make_given(L, U)
+    es.count(given)
+    es.count(make_cell(L, U))
+    if a1 - a0 == 2:
+        if given == MAKE_EQUAL_INF:
+            toks = _input_tokens(line)
+            if toks[a0 + 1].startswith("-") != toks[b0 + 1].startswith("-"):
+                es.count(MAKE_INF_TAILS)
+        elif given == MAKE_REVERSED and x[a0] == x[b0]:
+            es.count(MAKE_REVERSED_LEAD)
+    if given in (MAKE_NAN, MAKE_EQUAL_INF):
         want = ("nonempty", NINF, INF)
-    elif L != INF and U != NINF and XT.x_cmp(L, 0, U, 0) <= 0:
-        es.count(MAKE_POINT if L == U else MAKE_INTERVAL if type(L) is int and type(U) is int
-                 else MAKE_UNBOUNDED)
-        want = ("nonempty", L, U)
-    else:
-        es.count(MAKE_EQUAL_INF if L == U else MAKE_REVERSED)
+    elif given == MAKE_REVERSED:
         want = ("empty", INF, NINF)
+    else:
+        want = ("nonempty", L, U)
     zs = interval_state(fmt, z[c["lower"][0]:c["lower"][1]], z[c["upper"][0]:c["upper"][1]])
     if zs is None:
         es.count("failed: not canonical")
@@ -1834,25 +1890,27 @@ def k_splits(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
 
 
 def k_makes_ball_iv(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
-    """makes_ball from the bounds of an interval: the whole line for a NaN bound, whatever the
-    other; for lo <= hi, lo < +inf, hi > -inf: a finite ball that contains [lo, hi] when both are
-    finite (with midpoint_when holding: the center (lo + hi)/2 exactly and the radius (hi - lo)/2
-    rounded up), the whole line when a bound is infinite; the empty set otherwise."""
+    """makes_ball from the bounds of an interval, by the first case that applies: the whole line
+    for a NaN bound, whatever the other, or for the same infinity twice; the empty set for
+    reversed bounds, lo > hi; otherwise (lo <= hi) a finite ball that contains [lo, hi] when both
+    are finite (with midpoint_when holding: the center (lo + hi)/2 exactly and the radius
+    (hi - lo)/2 rounded up), and the whole line when a bound is infinite (architecture.md, "The
+    constructors on every pair of values"). The same infinity twice gave the empty set until the
+    owner's decision of 2026-11-20."""
     fmt = pl.fmt
     lo, hi = x[c["given"][0]], x[c["given"][1]]
     cw = z[c["center"][0]:c["center"][1]]
     r = z[c["radius"]]
     es.applicable += 1
-    if lo == NAN or hi == NAN:
-        es.count(MAKE_NAN)
-        want = "whole"
-    elif lo != INF and hi != NINF and XT.x_cmp(lo, 0, hi, 0) <= 0:
-        fin2 = type(lo) is int and type(hi) is int
-        es.count((MAKE_POINT if lo == hi else MAKE_INTERVAL) if fin2 else MAKE_UNBOUNDED)
-        want = "finite" if fin2 else "whole"
-    else:
-        es.count(MAKE_EQUAL_INF if lo == hi else MAKE_REVERSED)
+    given = make_given(lo, hi)
+    es.count(given)
+    es.count(make_cell(lo, hi))
+    if given == MAKE_REVERSED:
         want = "empty"
+    elif given in (MAKE_INTERVAL, MAKE_POINT):
+        want = "finite"
+    else:
+        want = "whole"
     stt = XT.ball_state(fmt, cw, r)
     if stt is None:
         es.count("failed: not canonical")

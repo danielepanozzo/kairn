@@ -14,6 +14,8 @@ their kernels and the kernels and folds they name, frozen from the claims of 202
 import copy
 import json
 import os
+import random
+from fractions import Fraction as Q
 
 from . import check as C
 from . import fmt as F
@@ -685,3 +687,78 @@ def merging_wave7(ctx):
     expect(ja == jb, "the merged summary differs from the whole")
     return "%d lines" % len(lines)
 
+
+
+def _old_json(es):
+    """An entry's summary as it was before the profile kept only its records: every distance."""
+    j = es.to_json()
+    j["profile"] = {str(d): [[str(r[0]), str(r[1])], c] for d, (r, c) in sorted(es.profile.items())}
+    del j["profile_distances"]
+    return j
+
+
+@test
+def summary_bounds(ctx):
+    """What a summary keeps does not grow with the lines judged.  The step's entries of a map keep
+    the line of the element that attains a statistic (maps.ElementLine), a line of the step that
+    runs again with the same verdict, never the map's line; the profile keeps its records
+    (check.EntryStats.profile_records), from which (a) at every distance, with its case, is what
+    the whole profile gave, also after merges, as the brute-force driver and check --merge do
+    them."""
+    cl = claims7(ctx)
+    kept = []
+    for name in ("axpy_2_1", "sub_2_entry", "scale_1"):
+        s = judge(run6(stream6(ctx, name, "binary64", ctx.n(60, 25), max_length=1024)), cl)
+        j = s.to_json()
+        step = cl.get_fold(name).step
+        size = len(json.dumps(j))
+        expect(size < 1 << 20, "%s: a summary of %d bytes" % (name, size))
+        for key in j["keys"]:
+            for e in key["stats"]["entries"][2:]:
+                cases = [e["max_ratio_case"], e["b_case"]]
+                cases += [c for _r, c in e["profile"].values()]
+                cases += [c for _r, c in list(e["maxima"].values()) + list(e["minima"].values())]
+                for c in cases:
+                    if c is None:
+                        continue
+                    t = c.split(" ")
+                    expect(t[0] == step and ":element:" in c and len(t) < 16,
+                           "%s: the step's entries keep %r" % (name, c[:200]))
+                    kept.append(c)
+                recs = sorted((int(d), v[0]) for d, v in e["profile"].items())
+                for i, (d, r) in enumerate(recs):
+                    expect(all(Q(int(r[0]), int(r[1])) >= Q(int(x[0]), int(x[1]))
+                               for _d, x in recs[i + 1:]),
+                           "%s: distance %d of the profile is not a record" % (name, d))
+    expect(kept, "no case kept")
+    # The element lines are lines of the steps: judged again, they pass, each judged once.
+    t = totals(judge(sorted(set(kept)), cl))
+    expect(t["judged"] == len(set(kept)) and t["failed"] == t["invalid"] == 0,
+           "the kept element lines judged again: %s" % t)
+    # The records against the whole profile, on random profiles with many equal ratios: (a) for
+    # every F, value and case, merged in order from summaries read back, is the same with the
+    # records as with every distance, and so is the merged summary.
+    rng = random.Random("summary_bounds")
+    trials = ctx.n(3000, 800)
+    for trial in range(trials):
+        parts = []
+        for i in range(rng.randrange(1, 5)):
+            e = C.EntryStats("e", "error")
+            for _ in range(rng.randrange(0, 10)):
+                d, r = rng.randrange(-4, 5), C._reduce(rng.randrange(0, 4), rng.choice((1, 2)))
+                if d not in e.profile or C._gt(r, e.profile[d][0]):
+                    e.profile[d] = (r, "part %d: %d at %d" % (i, trial, d))
+            parts.append(e)
+        old, new, live = (C.EntryStats("e", "error") for _ in range(3))
+        for e in parts:
+            old.merge(C.EntryStats.from_json(json.loads(json.dumps(_old_json(e)))))
+            new.merge(C.EntryStats.from_json(json.loads(json.dumps(e.to_json()))))
+            live.merge(e)
+        for far in range(-6, 7):
+            expect(old.observed_a(far) == new.observed_a(far),
+                   "(a) beyond %d: %s with every distance, %s with the records (%s)"
+                   % (far, old.observed_a(far), new.observed_a(far),
+                      [_old_json(e)["profile"] for e in parts]))
+        expect(old.to_json() == new.to_json() == live.to_json(),
+               "the merged records differ: %s" % [_old_json(e)["profile"] for e in parts])
+    return "%d element lines kept, judged again; %d random profiles" % (len(set(kept)), trials)

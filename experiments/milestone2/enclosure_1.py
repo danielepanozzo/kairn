@@ -14,8 +14,8 @@ Statements judged (milestone2.md, "One enclosure interface"):
                        smallest radius when both halvings are exact; otherwise a center within
                        eta of the midpoint and the number after RU(hu - hl) as the radius, hl
                        and hu the rounded halves; containment always; the whole line for an
-                       infinite bound and for a NaN bound (decided on 2026-11-20); the empty set
-                       for lo > hi, [+inf, +inf] and [-inf, -inf]
+                       infinite bound, for a NaN bound and for the same infinity twice (both
+                       decided on 2026-11-20); the empty set for lo > hi
   Ball<T, 1> predicates computed with exact pairs (two_sum_ord, abs_2, the comparisons of two
   limbs): contains(point), contains(ball), and the three-valued X < Y: its "yes" by a strict
   comparison of pairs, its "no" by a comparison that is not strict and a test that both pairs
@@ -106,11 +106,12 @@ def from_interval(f):
     for lo in vals:
         for hi in vals:
             c0, c1, r = run('ball_from_interval_2', f, value(lo), value(hi))
-            if lo is None or hi is None:
-                # a NaN bound: the whole line, whatever the other bound (decided on 2026-11-20)
+            if lo is None or hi is None or (lo == hi and abs(lo) == INF):
+                # a NaN bound, whatever the other bound, or the same infinity twice: the whole line
+                # (both decided on 2026-11-20)
                 assert ext(c0) == 0 and ext(c1) == 0 and ext(r) == INF, (f.name, lo, hi)
-            elif not (lo <= hi and lo < INF and hi > -INF):
-                # lo > hi, [+inf, +inf], [-inf, -inf]: the empty set
+            elif lo > hi:
+                # reversed bounds, [+inf, -inf] among them: the empty set
                 assert is_nan(c0) and is_nan(c1) and is_nan(r), (f.name, lo, hi)
             elif abs(lo) == INF or abs(hi) == INF:
                 assert ext(c0) == 0 and ext(c1) == 0 and ext(r) == INF, (f.name, lo, hi)

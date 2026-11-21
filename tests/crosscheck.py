@@ -58,7 +58,8 @@ run of RUNNER --form FORM named LABEL.FORM; check always with --expect-valid and
 DIR/K.F.work, and the summary of each output judged DIR/K.F.LABEL.FORM.json. The test fails if a
 runner maps no form to the kernel, if a run fails (a form that computes only some lines of its
 kernel fails when it computed none), if the oracle fails an output, if it judged no case of an
-output, or if an output has no case of a stratum the generator's header announced; and, for each
+output, if an output has no case of a stratum the generator's header announced, or if a summary
+exceeds the guards' bound (crosscheck_guards.SUMMARY_BYTES); and, for each
 --same-as LABEL OTHER, if a form of runner LABEL wrote other bytes than the same form of runner
 OTHER (the settings of KAIRN_ENCLOSURE_CODE, which must compute the same bits).
 
@@ -386,6 +387,10 @@ def judge_api(output, summary, count):
     if status != 0:
         return "oracle check %s; 0 is success" % status
     try:
+        size = os.path.getsize(summary)
+        if size > crosscheck_guards.SUMMARY_BYTES:
+            return ("the oracle's summary %s is %d bytes, above the %d a summary may take"
+                    % (summary, size, crosscheck_guards.SUMMARY_BYTES))
         with open(summary, encoding="utf-8") as f:
             s = json.load(f)
         strata = s["coverage"][0]["desc"]["strata"]

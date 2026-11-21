@@ -487,6 +487,41 @@ def _flag(es, flag, leads, kinds, nonfinite_ops):
     return None
 
 
+class ElementLine:
+    """Element I of a map's line as a completed line of the map's step, its tokens as the map's
+    line spells them (the step's operands from the scalars and the arrays, its outputs those
+    written, or Z):
+
+        STEP FORMAT OPERAND... #MAP:STRATUM:INDEX:element:I -> OUTPUT...
+
+    It is the case that the statistics of the step's entries keep where the element attains an
+    extreme (check.EntryStats): a few limbs, which run again as a line of the step, where the
+    map's line holds thousands and would be kept once per distance of the profile.  Its text is
+    made only when it is kept (str())."""
+
+    __slots__ = ("step", "fname", "pl", "ins", "outs", "n", "i", "tag", "z")
+
+    def __init__(self, step, fname, pl, ins, outs, n, i, tag, z=None):
+        self.step, self.fname, self.pl, self.ins, self.outs = step, fname, pl, ins, outs
+        self.n, self.i, self.tag, self.z = n, i, tag, z
+
+    def __str__(self):
+        pl, ins, n, i = self.pl, self.ins, self.n, self.i
+        x = []
+        for where, lo, l in pl.args:
+            x.extend(ins[lo:lo + l] if where == "s" else
+                     [ins[pl.n_scalar + k * n + i] for k in range(lo, lo + l)])
+        z = self.z or [self.outs[j * n + i] for j in range(pl.W)]
+        return "%s %s %s #%s:element:%d -> %s" % (self.step, self.fname, " ".join(x), self.tag,
+                                                   i, " ".join(z))
+
+
+def _map_tag(m, line):
+    """The tag of a map's line, MAP:STRATUM:INDEX (the map's name and its own tag)."""
+    last = line.partition(" -> ")[0].rsplit(" ", 1)[-1]
+    return m.name + (":" + last[1:] if last.startswith("#") else "")
+
+
 def judge_map_line(ck, line, lt, sep, right, tag):
     m = ck.claims.get_fold(lt[0])
     fname = lt[1] if len(lt) > 1 else "?"
@@ -573,6 +608,7 @@ def judge_map_line(ck, line, lt, sep, right, tag):
     leads, kinds = [], []
     nonfinite_ops = False
     es_e.applicable += 1
+    etag = _map_tag(m, line)
     for k in [FO.length_class(n)] + FO.order_classes(order, n):
         es_e.count(k)
     bad_e = []
@@ -597,7 +633,8 @@ def judge_map_line(ck, line, lt, sep, right, tag):
                 # The map's requirements give the step's on finite operands: a claims error.
                 bad_e.append("element %d: its operands violate the step's %s" % (i, why))
                 continue
-            v = ck.verdict(pl.step, sub, x, z, line)
+            v = ck.verdict(pl.step, sub, x, z, ElementLine(m.step, fname, pl, ins, outs, n, i,
+                                                           etag))
             if v[0] == "fail":
                 bad_e.append("element %d: %s" % (i, v[1]))
             elif v[0] == "nonfinite":
@@ -618,7 +655,9 @@ def judge_map_line(ck, line, lt, sep, right, tag):
         if fin:
             kinds.append("overflow")
             es_e.count("element: finite operands, not finite (an overflow)")
-            v = ck.verdict(pl.step, sub, x, [NAN] * W, line)
+            nan = [NAN] * W
+            v = ck.verdict(pl.step, sub, x, nan, ElementLine(m.step, fname, pl, ins, outs, n, i,
+                                                             etag, nan))
             if v[0] == "nonfinite" and v[3]:
                 sus.append("element %d is not finite although its operands and its exact value "
                            "are below Omega/4" % i)

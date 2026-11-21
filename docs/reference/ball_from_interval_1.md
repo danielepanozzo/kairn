@@ -26,11 +26,11 @@ $$Z \supseteq [l_o, h_i].$$
 For operands that satisfy the requirements, finite, infinite or NaN:
 
 - The result $Z$, of center $c_w$ and radius $r_w$, is a canonical ball.
-- If a bound is a NaN, whatever the other: $Z$ is the whole line (center 0, radius $+\infty$).
-- If $l_o \le h_i$, both finite: $Z$ is a finite ball that contains $[l_o, h_i]$.
+- If a bound is a NaN, whatever the other, or both are the same infinity ($[+\infty, +\infty]$, $[-\infty, -\infty]$): $Z$ is the whole line (center 0, radius $+\infty$).
+- Otherwise, if the bounds are reversed, $l_o > h_i$: $Z$ is the empty set (every limb a NaN).
+- Otherwise, if both are finite ($l_o \le h_i$): $Z$ is a finite ball that contains $[l_o, h_i]$.
 - Then $l_o \le c_w \le h_i$ and $\lvert c_w - \tfrac{l_o + h_i}{2}\rvert \le u\,\lvert \tfrac{l_o + h_i}{2}\rvert + \eta$, and $r_w = \mathrm{RU}(\max(c_w - l_o, h_i - c_w))$, the smallest radius of `T` for that center.
-- If $l_o \le h_i$, $l_o < +\infty$, $h_i > -\infty$ and a bound is infinite: $Z$ is the whole line.
-- Otherwise ($l_o > h_i$, $[+\infty, +\infty]$, $[-\infty, -\infty]$): $Z$ is the empty set.
+- Otherwise ($l_o \le h_i$, $l_o < +\infty$, $h_i > -\infty$, and a bound is infinite): $Z$ is the whole line; a ball cannot be a half-line.
 
 Stated for every binary format with a precision of at least 2 bits, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 

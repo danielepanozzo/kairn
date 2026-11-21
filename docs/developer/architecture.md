@@ -2763,12 +2763,12 @@ statements are those of the page.
 
 | Kind | Fields | Meaning |
 |---|---|---|
-| `makes_interval` | `lower`, `upper`: the outputs; `from`: the inputs given as `lower` and `upper` | the output is a canonical interval: the interval of the given bounds (the same extended real numbers) when lo $\le$ hi, lo $< +\infty$ and hi $> -\infty$; the whole line $(-\infty, +\infty)$ when a given bound is a NaN, whatever the other; the empty set otherwise |
+| `makes_interval` | `lower`, `upper`: the outputs; `from`: the inputs given as `lower` and `upper` | the output is a canonical interval, and with lo and hi the given bounds it is, by the first case that applies: the whole line $(-\infty, +\infty)$ when lo or hi is a NaN, whatever the other, or when lo and hi are the same infinity, both $+\infty$ or both $-\infty$; otherwise the empty set when the bounds are reversed, lo $>$ hi; otherwise the interval of the given bounds, the same extended real numbers. [The case analysis](#the-constructors-on-every-pair-of-values) below gives every pair. (The same infinity twice gave the empty set, as in IEEE 1788, until the owner's decision of 2026-11-20, which made it the whole line, as a NaN bound is.) |
 | `encloses_interval` | `lower`, `upper`: the outputs; `set`: an expression over interval names; `intervals`: for each name its `lower` and `upper` inputs; `tight`; `bounded_when`: a list of conditions; `bounded_exactly`: `true`, only when it is so | I1 to I5 below |
 | `set_bound` | `of` (a one-limb output), `side`: `below` or `above`, `set` and `balls` as in `encloses`, `tight` (optional): `{"kind": "rounded"}`, with an optional `steps` | if a ball operand is empty the output is $+\infty$ (`below`) or $-\infty$ (`above`); otherwise it is at most (at least) every value of `set`, each ball name ranging over the members of its ball: below or at the set's greatest lower bound $t$, an extended real number, $-\infty$ for a set that is unbounded below. With `tight`, the output is $t$ rounded down (up) in the format with overflow, or, with `steps` $s$, between that rounding stepped $s$ times outward and the rounding |
 | `outward` | `of` (a 2-limb output), `side`: `below` or `above`, `rel`, `abs`: constants (below); `exact_when` (optional) | the output is on that side of `value`, and $\lvert\text{output} - \text{value}\rvert \le \mathrm{rel}\cdot\lvert\text{value}\rvert + \mathrm{abs}$; when every condition of `exact_when` holds, the output equals `value`. Of the finite domain: it holds whenever the requirements hold and the output's leading limb is finite |
 | `encloses`, with `"balls": {}` | as before | the operands are points: $\lvert \text{set} - \text{center}\rvert \le$ radius, `set` an expression over the inputs. Of the finite domain only |
-| `makes_ball`, from an interval | `center`, `radius`; `from`: the inputs given as `lower` and `upper` (one limb each); `midpoint_when` (optional): a list of conditions `{"half_in_format": NAME}`, NAME/2 is a number of the format | the output ball is canonical: the whole line when a given bound is a NaN, whatever the other; when lo $\le$ hi, lo $< +\infty$ and hi $> -\infty$: a finite ball that contains $[lo, hi]$ when both are finite, and when every condition of `midpoint_when` holds its center is $(lo + hi)/2$ exactly and its radius $(hi - lo)/2$ rounded up; the whole line when a bound is infinite; the empty set otherwise |
+| `makes_ball`, from an interval | `center`, `radius`; `from`: the inputs given as `lower` and `upper` (one limb each); `midpoint_when` (optional): a list of conditions `{"half_in_format": NAME}`, NAME/2 is a number of the format | the output ball is canonical, and with lo and hi the given bounds it is, by the first case that applies: the whole line when lo or hi is a NaN, whatever the other, or when lo and hi are the same infinity; otherwise the empty set when the bounds are reversed, lo $>$ hi; otherwise (lo $\le$ hi) the whole line when a bound is infinite (a ball cannot be a half-line), and when both are finite a finite ball that contains $[lo, hi]$, whose center is $(lo + hi)/2$ exactly and radius $(hi - lo)/2$ rounded up when every condition of `midpoint_when` holds. [The case analysis](#the-constructors-on-every-pair-of-values) below gives every pair. (The same infinity twice gave the empty set until the owner's decision of 2026-11-20.) |
 | `bound`, `rounded`, with `"zero_factor": true` | as before, `value` the product of two one-limb inputs, the extended domain | when an operand is a zero, the output is a zero (0 · ∞ = 0: the product of two bounds in interval arithmetic); otherwise as without the field |
 
 The **I1 to I5** of `encloses_interval`, for canonical operands; $Z$ is the output interval. The
@@ -2929,6 +2929,38 @@ product, which `rounded` with `product_large` already says). In the IEEE model t
 `interval_mul_1_tight_range`, with the condition `product_large` of that file unfolded. A
 statement about intervals has a hypothesis on the precision only when its minimum is above 1.
 
+#### The constructors on every pair of values
+
+`makes_interval` and `makes_ball` from an interval, for every pair (lo, hi) of values of the
+format. Each given bound is a NaN, $-\infty$, a finite number ($-0$ and $+0$ are both the number
+0, so $[+0, -0]$ is $[0, 0]$), or $+\infty$; for two limbs (`interval_make_2`) each is a canonical
+2-limb value: a NaN when its leading limb is a NaN (a canonical NaN is all NaN), an infinity when
+its leading limb is one (followed by a zero of either sign), and otherwise the finite number
+$\ell_0 + \ell_1$. Comparisons are of these extended real numbers, and a comparison with a NaN is
+false. *The same infinity*: both $+\infty$ or both $-\infty$. *Reversed*: lo $>$ hi, neither a
+NaN. With $a$ and $b$ finite:
+
+| lo (row), hi (column) | NaN | $-\infty$ | $b$ | $+\infty$ |
+|---|---|---|---|---|
+| NaN | whole line | whole line | whole line | whole line |
+| $-\infty$ | whole line | whole line (the same infinity) | $[-\infty, b]$ | $[-\infty, +\infty]$, the whole line |
+| $a$ | whole line | empty set (reversed) | $[a, b]$ for $a \le b$; the empty set (reversed) for $a > b$ | $[a, +\infty]$ |
+| $+\infty$ | whole line | empty set (reversed) | empty set (reversed) | whole line (the same infinity) |
+
+That is the table of `makes_interval`. For `makes_ball` from an interval it is the same table with
+every interval that is not empty and not bounded, $[-\infty, b]$, $[a, +\infty]$ and
+$[-\infty, +\infty]$, made the whole line, and $[a, b]$ a finite ball that contains it: a ball
+from an interval is the empty set exactly for reversed bounds, a finite ball exactly for finite
+$a \le b$, and the whole line in every other case. The three conditions of the statements, *a
+NaN or the same infinity*, *reversed*, and *neither* (lo $\le$ hi, lo $< +\infty$ and
+hi $> -\infty$: a nonempty interval), are disjoint, and together they cover every pair. The
+outputs: the whole line is $(-\infty, +\infty)$ for an interval of one limb,
+$((-\infty, 0), (+\infty, 0))$ for one of two, and center $(0, 0)$ with radius $+\infty$ for a
+ball of two limbs; the empty set is $(+\infty, -\infty)$, $((+\infty, 0), (-\infty, 0))$, and
+every limb a NaN for a ball; each of these zeros may be of either sign. A finite bound of an
+interval is returned as the same number, the sign of a zero not claimed; an infinite bound as that
+infinity, for two limbs followed by a zero.
+
 ### Claims of the interval kernels: two limbs and the enclosure interface
 
 The second stage of the interval work needs the additions below:
@@ -2941,7 +2973,7 @@ Everything above keeps its meaning and its JSON shape: a field that is new to a 
 
 **Kinds that exist, read on two limbs or with a new field.**
 
-- `makes_interval` whose `from` names inputs of two limbs, each required `canonical` (`interval_make_2`). The meaning is that of one limb, over the values of the 2-limb numbers. The whole line is $((-\infty, 0), (+\infty, 0))$ and the empty set $((+\infty, 0), (-\infty, 0))$, the zeros of either sign. A finite bound is returned as given. An infinite bound is returned as $(\pm\infty, \pm 0)$.
+- `makes_interval` whose `from` names inputs of two limbs, each required `canonical` (`interval_make_2`). The meaning is that of one limb, over the values of the 2-limb numbers ([the case analysis](#the-constructors-on-every-pair-of-values)): a bound is a NaN when its leading limb is one and an infinity when its leading limb is one, so that $(+\infty, 0)$ and $(+\infty, -0)$ are the same infinity twice, the whole line. The whole line is $((-\infty, 0), (+\infty, 0))$ and the empty set $((+\infty, 0), (-\infty, 0))$, the zeros of either sign. A finite bound is returned as given. An infinite bound is returned as $(\pm\infty, \pm 0)$.
 - `encloses_interval` with bounds of two limbs and `"tight": {"kind": "exact"}` (`interval_neg_2`): I1 to I5 as above. Its I5 condition is `{"abs_le": "-x", "exp": 0}` with `bounded_exactly`, that is $\lvert z\rvert \le 2^{q_{\max}+p}$, the overflow threshold. Every finite canonical pair is below that threshold, so the condition says that a bounded operand gives a bounded result.
 - `encloses_interval` with `"zero_factor": true` (`interval_mul_2`, whose `set` is a product of two interval names). It adds **I6**: for nonempty operands, when one operand is $[0, 0]$ (both bounds zero), $Z$ is $[0, 0]$, even when the other operand is unbounded ($0 \cdot \infty = 0$). The field comes after `bounded_when` and `bounded_exactly`. The tightness of the product is `outward`, with the constants of `mul_dir_2_2` and no `exact_when`; its I5 is `{"abs_le": "x*y", "exp": -2}`, not exactly.
 - `outward` in the extended domain (`mul_ext_2_2`). The operands of several limbs are required `canonical` and `not_nan`, and the entry may carry `zero_factor` (the value is then the product of two inputs).

@@ -2069,11 +2069,13 @@ class Site:
         lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
         zl, zu = name_tex(x["lower"]), name_tex(x["upper"])
         return ["The result $Z = [%s, %s]$ is a canonical interval." % (zl, zu),
-                "If $%s \\le %s$, $%s < +\\infty$ and $%s > -\\infty$: $Z$ is $[%s, %s]$, the same extended real "
-                "numbers (a zero may change its sign)." % (lo, hi, lo, hi, lo, hi),
-                "If a bound is a NaN, whatever the other: $Z$ is the whole line, $[-\\infty, +\\infty]$.",
-                "Otherwise ($%s > %s$, $[+\\infty, +\\infty]$, $[-\\infty, -\\infty]$): $Z$ is the empty set, "
-                "$(+\\infty, -\\infty)$." % (lo, hi)]
+                "If a bound is a NaN, whatever the other, or both are the same infinity ($[+\\infty, +\\infty]$, "
+                "$[-\\infty, -\\infty]$): $Z$ is the whole line, $[-\\infty, +\\infty]$.",
+                "Otherwise, if the bounds are reversed, $%s > %s$ ($[+\\infty, -\\infty]$, and $%s = +\\infty$ or "
+                "$%s = -\\infty$ with the other finite, among them): $Z$ is the empty set, $(+\\infty, -\\infty)$." % (
+                    lo, hi, lo, hi),
+                "Otherwise ($%s \\le %s$, $%s < +\\infty$ and $%s > -\\infty$): $Z$ is $[%s, %s]$, the same extended "
+                "real numbers (a zero may change its sign)." % (lo, hi, lo, hi, lo, hi)]
 
     def interval_set(self, k, x):
         names = list(x["intervals"])
@@ -2423,8 +2425,11 @@ class Site:
         lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
         c, r = name_tex(x["center"]), name_tex(x["radius"])
         lines = ["The result $Z$, of center $%s$ and radius $%s$, is a canonical ball." % (c, r),
-                 "If a bound is a NaN, whatever the other: $Z$ is the whole line (center 0, radius $+\\infty$).",
-                 "If $%s \\le %s$, both finite: $Z$ is a finite ball that contains $[%s, %s]$." % (lo, hi, lo, hi)]
+                 "If a bound is a NaN, whatever the other, or both are the same infinity ($[+\\infty, +\\infty]$, "
+                 "$[-\\infty, -\\infty]$): $Z$ is the whole line (center 0, radius $+\\infty$).",
+                 "Otherwise, if the bounds are reversed, $%s > %s$: $Z$ is the empty set (every limb a NaN)." % (lo, hi),
+                 "Otherwise, if both are finite ($%s \\le %s$): $Z$ is a finite ball that contains $[%s, %s]$." % (
+                     lo, hi, lo, hi)]
         if x.get("midpoint_when"):
             halves = " and ".join("$%s/2$" % name_tex(cnd["half_in_format"]) for cnd in x["midpoint_when"])
             lines.append("When moreover %s are numbers of `T`: $%s = (%s + %s)/2$ exactly and $%s = "
@@ -2438,9 +2443,8 @@ class Site:
                 lo, c, hi, c, mid, rel, mid, absolute,
                 (", and $%s = \\mathrm{RU}(\\max(%s - %s, %s - %s))$, the smallest radius of `T` for that center" % (
                     r, c, lo, hi, c)) if x.get("smallest_radius") else ""))
-        lines += ["If $%s \\le %s$, $%s < +\\infty$, $%s > -\\infty$ and a bound is infinite: $Z$ is the whole line." % (
-                      lo, hi, lo, hi),
-                  "Otherwise ($%s > %s$, $[+\\infty, +\\infty]$, $[-\\infty, -\\infty]$): $Z$ is the empty set." % (lo, hi)]
+        lines.append("Otherwise ($%s \\le %s$, $%s < +\\infty$, $%s > -\\infty$, and a bound is infinite): $Z$ is the "
+                     "whole line; a ball cannot be a half-line." % (lo, hi, lo, hi))
         return lines
 
     def outward_constants(self, k, x):
@@ -2570,8 +2574,8 @@ class Site:
         if "makes_interval" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "makes_interval")
             lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
-            return ("The interval of two values of `T`, or the whole line when a bound is a NaN, or the empty set "
-                    "when they describe none:\n\n$$Z = [%s, %s].$$" % (lo, hi))
+            return ("The interval of two values of `T`; the whole line when a bound is a NaN or both are the same "
+                    "infinity, and the empty set when they are reversed:\n\n$$Z = [%s, %s].$$" % (lo, hi))
         if "interval_set" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "interval_set")
             (a, _), (b, _) = x["intervals"].items()
@@ -2752,7 +2756,8 @@ class Site:
             elif x["kind"] == "represents":
                 parts.append("$%s = %s$ exactly, canonical" % (name_tex(x["of"]), tex(k.value)))
             elif x["kind"] == "makes_ball" and "lower" in x["from"]:
-                parts.append("a canonical ball that contains $[%s, %s]$; the whole line for a NaN bound" % (
+                parts.append("a canonical ball that contains $[%s, %s]$; the whole line for a NaN bound and for "
+                             "the same infinity twice" % (
                     name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])))
             elif x["kind"] == "makes_ball":
                 parts.append("the ball of center $%s$ and radius $%s$, canonical" % (
@@ -2761,7 +2766,8 @@ class Site:
                 parts.append("$%s$ when its leading limb is finite, flag true; otherwise NaN, flag false" % (
                     tex(k.value)))
             elif x["kind"] == "makes_interval":
-                parts.append("the interval $[%s, %s]$, canonical; the whole line for a NaN bound" % (
+                parts.append("the interval $[%s, %s]$, canonical; the whole line for a NaN bound and for the "
+                             "same infinity twice" % (
                     name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])))
             elif x["kind"] == "encloses_interval":
                 s, _, _ = self.interval_set(k, x)

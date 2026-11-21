@@ -416,10 +416,11 @@ Definition ball_from_interval_1_spec : Prop :=
    Rabs (val cw - (val lo + val hi) / 2) <= u prec * Rabs ((val lo + val hi) / 2) + eta (ieee_emin prec emax) /\
    val rw = RU (ieee_emin prec emax) prec (Rmax (val cw - val lo) (val hi - val cw))) /\
   (xnonempty (xval lo) (xval hi) -> ~ (finite lo /\ finite hi) -> ball_whole_1 cw rw) /\
-  (nan lo \/ nan hi -> ball_whole_1 cw rw) /\
-  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> ball_empty_1 cw rw).
+  (nan lo \/ nan hi \/ (exists s : bool, xval lo = XInf s /\ xval hi = XInf s) ->
+   ball_whole_1 cw rw) /\
+  (xlt (xval hi) (xval lo) = true -> ball_empty_1 cw rw).
 
-(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). IEEE-model status: proved. *)
+(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition ball_from_interval_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -435,8 +436,9 @@ Definition ball_from_interval_2_spec : Prop :=
    (val cw0 + val cw1) = (val lo + val hi) / 2 /\
    val rw = RU (ieee_emin prec emax) prec ((val hi - val lo) / 2)) /\
   (xnonempty (xval lo) (xval hi) -> ~ (finite lo /\ finite hi) -> ball_whole_2 cw0 cw1 rw) /\
-  (nan lo \/ nan hi -> ball_whole_2 cw0 cw1 rw) /\
-  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> ball_empty_2 cw0 cw1 rw).
+  (nan lo \/ nan hi \/ (exists s : bool, xval lo = XInf s /\ xval hi = XInf s) ->
+   ball_whole_2 cw0 cw1 rw) /\
+  (xlt (xval hi) (xval lo) = true -> ball_empty_2 cw0 cw1 rw).
 
 (* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). IEEE-model status: proved. *)
 Definition sub_down_1_ieee_spec : Prop :=
@@ -1005,7 +1007,7 @@ Definition interval_less_equal_1_spec : Prop :=
     (forall x y : R, in_interval_1 xl xu x -> in_interval_1 yl yu y -> ~ (x <= y))) /\
   ~ (yes = true /\ no = true).
 
-(* interval_make_1: constructor of an interval (Milestone 2 listing). IEEE-model status: proved. *)
+(* interval_make_1: constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition interval_make_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1014,8 +1016,9 @@ Definition interval_make_1_spec : Prop :=
   let '(zl, zu) := IeeeModel.interval_make_1 prec emax nan_plus nan_opp lo hi in
   interval_1 zl zu /\
   (xnonempty (xval lo) (xval hi) -> xval zl = xval lo /\ xval zu = xval hi) /\
-  (nan lo \/ nan hi -> zl = infinity prec emax true /\ zu = infinity prec emax false) /\
-  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> interval_empty_1 zl zu).
+  (nan lo \/ nan hi \/ (exists s : bool, xval lo = XInf s /\ xval hi = XInf s) ->
+   zl = infinity prec emax true /\ zu = infinity prec emax false) /\
+  (xlt (xval hi) (xval lo) = true -> interval_empty_1 zl zu).
 
 (* two_prod: TwoProd with an FMA (folklore; see JMP17). IEEE-model status: unverified. *)
 Definition two_prod_ieee_spec : Prop :=
@@ -2897,7 +2900,7 @@ Definition interval_less_equal_2_spec : Prop :=
     (forall x y : R, in_interval_2 xl0 xl1 xu0 xu1 x -> in_interval_2 yl0 yl1 yu0 yu1 y -> ~ (x <= y))) /\
   ~ (yes = true /\ no = true).
 
-(* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing). IEEE-model status: proved. *)
+(* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition interval_make_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2908,8 +2911,9 @@ Definition interval_make_2_spec : Prop :=
   let '(zl0, zl1, zu0, zu1) := IeeeModel.interval_make_2 prec emax nan_opp lo0 lo1 hi0 hi1 in
   interval_2 zl0 zl1 zu0 zu1 /\
   (xnonempty (xval_2 lo0 lo1) (xval_2 hi0 hi1) -> xval_2 zl0 zl1 = xval_2 lo0 lo1 /\ xval_2 zu0 zu1 = xval_2 hi0 hi1) /\
-  (nan lo0 \/ nan hi0 -> zl0 = infinity prec emax true /\ zu0 = infinity prec emax false /\ zero zl1 /\ zero zu1) /\
-  (~ nan lo0 -> ~ nan hi0 -> ~ xnonempty (xval_2 lo0 lo1) (xval_2 hi0 hi1) -> interval_empty_2 zl0 zl1 zu0 zu1).
+  (nan lo0 \/ nan hi0 \/ (exists s : bool, xval_2 lo0 lo1 = XInf s /\ xval_2 hi0 hi1 = XInf s) ->
+   zl0 = infinity prec emax true /\ zu0 = infinity prec emax false /\ zero zl1 /\ zero zu1) /\
+  (xlt (xval_2 hi0 hi1) (xval_2 lo0 lo1) = true -> interval_empty_2 zl0 zl1 zu0 zu1).
 
 (* mul_ext_2_2: mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing). IEEE-model status: proved. *)
 Definition mul_ext_2_2_spec : Prop :=

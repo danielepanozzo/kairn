@@ -1369,18 +1369,16 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_from_interval_1(float lo, float hi, fl
 }
 
 // ball_from_interval_2(lo, hi) -> cw = (cw0, cw1), rw
-// the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 3> ball_from_interval_2(double gl, double gu, double c0, double c1, double r, bool v, bool f) noexcept {
     const double k0 = f ? c0 : 0.0;
     const double k1 = f ? c1 : 0.0;
     const double s = f ? r : std::numeric_limits<double>::infinity();
-    const bool ql = gl == gl;
-    const bool qu = gu == gu;
-    const bool nn = ql & qu;
-    const double wc = nn ? std::numeric_limits<double>::quiet_NaN() : 0.0;
-    const double wr = nn ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
+    const bool rv = gl > gu;
+    const double wc = rv ? std::numeric_limits<double>::quiet_NaN() : 0.0;
+    const double wr = rv ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
     const double cw0 = v ? k0 : wc;
     const double cw1 = v ? k1 : wc;
     const double rw = v ? s : wr;
@@ -1390,11 +1388,9 @@ KAIRN_GEN_COLD constexpr result<float, 3> ball_from_interval_2(float gl, float g
     const float k0 = f ? c0 : 0.0f;
     const float k1 = f ? c1 : 0.0f;
     const float s = f ? r : std::numeric_limits<float>::infinity();
-    const bool ql = gl == gl;
-    const bool qu = gu == gu;
-    const bool nn = ql & qu;
-    const float wc = nn ? std::numeric_limits<float>::quiet_NaN() : 0.0f;
-    const float wr = nn ? std::numeric_limits<float>::quiet_NaN() : std::numeric_limits<float>::infinity();
+    const bool rv = gl > gu;
+    const float wc = rv ? std::numeric_limits<float>::quiet_NaN() : 0.0f;
+    const float wr = rv ? std::numeric_limits<float>::quiet_NaN() : std::numeric_limits<float>::infinity();
     const float cw0 = v ? k0 : wc;
     const float cw1 = v ? k1 : wc;
     const float rw = v ? s : wr;
@@ -1463,11 +1459,9 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_from_interval_2(double lo, double hi, 
         const double k0 = f ? c0 : 0.0;
         const double k1 = f ? c1 : 0.0;
         const double s = f ? r : std::numeric_limits<double>::infinity();
-        const bool ql = gl == gl;
-        const bool qu = gu == gu;
-        const bool nn = ql & qu;
-        const double wc = nn ? std::numeric_limits<double>::quiet_NaN() : 0.0;
-        const double wr = nn ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
+        const bool rv = gl > gu;
+        const double wc = rv ? std::numeric_limits<double>::quiet_NaN() : 0.0;
+        const double wr = rv ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
         const double cw0 = v ? k0 : wc;
         const double cw1 = v ? k1 : wc;
         const double rw = v ? s : wr;
@@ -1538,11 +1532,9 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_from_interval_2(float lo, float hi, fl
         const float k0 = f ? c0 : 0.0f;
         const float k1 = f ? c1 : 0.0f;
         const float s = f ? r : std::numeric_limits<float>::infinity();
-        const bool ql = gl == gl;
-        const bool qu = gu == gu;
-        const bool nn = ql & qu;
-        const float wc = nn ? std::numeric_limits<float>::quiet_NaN() : 0.0f;
-        const float wr = nn ? std::numeric_limits<float>::quiet_NaN() : std::numeric_limits<float>::infinity();
+        const bool rv = gl > gu;
+        const float wc = rv ? std::numeric_limits<float>::quiet_NaN() : 0.0f;
+        const float wr = rv ? std::numeric_limits<float>::quiet_NaN() : std::numeric_limits<float>::infinity();
         const float cw0 = v ? k0 : wc;
         const float cw1 = v ? k1 : wc;
         const float rw = v ? s : wr;
@@ -4249,25 +4241,21 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_less_equal_1(float xl, float xu, f
 }
 
 // interval_make_1(lo, hi) -> zl, zu
-// constructor of an interval (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
+// constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> interval_make_1(double gl, double gu, double mi, bool v) noexcept {
-    const bool ql = gl == gl;
-    const bool qu = gu == gu;
-    const bool nn = ql & qu;
-    const double el = nn ? std::numeric_limits<double>::infinity() : mi;
-    const double eu = nn ? mi : std::numeric_limits<double>::infinity();
+    const bool rv = gl > gu;
+    const double el = rv ? std::numeric_limits<double>::infinity() : mi;
+    const double eu = rv ? mi : std::numeric_limits<double>::infinity();
     const double zl = v ? gl : el;
     const double zu = v ? gu : eu;
     return {{zl, zu}};
 }
 KAIRN_GEN_COLD constexpr result<float, 2> interval_make_1(float gl, float gu, float mi, bool v) noexcept {
-    const bool ql = gl == gl;
-    const bool qu = gu == gu;
-    const bool nn = ql & qu;
-    const float el = nn ? std::numeric_limits<float>::infinity() : mi;
-    const float eu = nn ? mi : std::numeric_limits<float>::infinity();
+    const bool rv = gl > gu;
+    const float el = rv ? std::numeric_limits<float>::infinity() : mi;
+    const float eu = rv ? mi : std::numeric_limits<float>::infinity();
     const float zl = v ? gl : el;
     const float zu = v ? gu : eu;
     return {{zl, zu}};
@@ -4292,11 +4280,9 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_make_1(double lo, double hi, doubl
         zl_out = fixed_.limb[0];
         zu_out = fixed_.limb[1];
 #else
-        const bool ql = gl == gl;
-        const bool qu = gu == gu;
-        const bool nn = ql & qu;
-        const double el = nn ? std::numeric_limits<double>::infinity() : mi;
-        const double eu = nn ? mi : std::numeric_limits<double>::infinity();
+        const bool rv = gl > gu;
+        const double el = rv ? std::numeric_limits<double>::infinity() : mi;
+        const double eu = rv ? mi : std::numeric_limits<double>::infinity();
         const double zl = v ? gl : el;
         const double zu = v ? gu : eu;
         zl_out = zl;
@@ -4322,11 +4308,9 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_make_1(float lo, float hi, float& 
         zl_out = fixed_.limb[0];
         zu_out = fixed_.limb[1];
 #else
-        const bool ql = gl == gl;
-        const bool qu = gu == gu;
-        const bool nn = ql & qu;
-        const float el = nn ? std::numeric_limits<float>::infinity() : mi;
-        const float eu = nn ? mi : std::numeric_limits<float>::infinity();
+        const bool rv = gl > gu;
+        const float el = rv ? std::numeric_limits<float>::infinity() : mi;
+        const float eu = rv ? mi : std::numeric_limits<float>::infinity();
         const float zl = v ? gl : el;
         const float zu = v ? gu : eu;
         zl_out = zl;
@@ -13618,15 +13602,18 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_less_equal_2(float xl0, float xl1,
 }
 
 // interval_make_2(lo = (lo0, lo1), hi = (hi0, hi1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// constructor of an interval of two limbs (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
+// constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 4> interval_make_2(double lo0, double lo1, double hi0, double hi1, double mi, bool v) noexcept {
-    const bool ql = lo0 == lo0;
-    const bool qu = hi0 == hi0;
-    const bool nn = ql & qu;
-    const double el = nn ? std::numeric_limits<double>::infinity() : mi;
-    const double eu = nn ? mi : std::numeric_limits<double>::infinity();
+    // (rv) = lt_2_2(hi0, hi1, lo0, lo1)
+    const bool rv_h = lo0 > hi0;
+    const bool rv_e = hi0 == lo0;
+    const bool rv_l = lo1 > hi1;
+    const bool rv_t = rv_e & rv_l;
+    const bool rv = rv_h | rv_t;
+    const double el = rv ? std::numeric_limits<double>::infinity() : mi;
+    const double eu = rv ? mi : std::numeric_limits<double>::infinity();
     const double zl0 = v ? lo0 : el;
     const double zl1 = v ? lo1 : 0.0;
     const double zu0 = v ? hi0 : eu;
@@ -13634,11 +13621,14 @@ KAIRN_GEN_COLD constexpr result<double, 4> interval_make_2(double lo0, double lo
     return {{zl0, zl1, zu0, zu1}};
 }
 KAIRN_GEN_COLD constexpr result<float, 4> interval_make_2(float lo0, float lo1, float hi0, float hi1, float mi, bool v) noexcept {
-    const bool ql = lo0 == lo0;
-    const bool qu = hi0 == hi0;
-    const bool nn = ql & qu;
-    const float el = nn ? std::numeric_limits<float>::infinity() : mi;
-    const float eu = nn ? mi : std::numeric_limits<float>::infinity();
+    // (rv) = lt_2_2(hi0, hi1, lo0, lo1)
+    const bool rv_h = lo0 > hi0;
+    const bool rv_e = hi0 == lo0;
+    const bool rv_l = lo1 > hi1;
+    const bool rv_t = rv_e & rv_l;
+    const bool rv = rv_h | rv_t;
+    const float el = rv ? std::numeric_limits<float>::infinity() : mi;
+    const float eu = rv ? mi : std::numeric_limits<float>::infinity();
     const float zl0 = v ? lo0 : el;
     const float zl1 = v ? lo1 : 0.0f;
     const float zu0 = v ? hi0 : eu;
@@ -13672,11 +13662,14 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_make_2(double lo0, double lo1, dou
         zu0_out = fixed_.limb[2];
         zu1_out = fixed_.limb[3];
 #else
-        const bool ql = lo0 == lo0;
-        const bool qu = hi0 == hi0;
-        const bool nn = ql & qu;
-        const double el = nn ? std::numeric_limits<double>::infinity() : mi;
-        const double eu = nn ? mi : std::numeric_limits<double>::infinity();
+        // (rv) = lt_2_2(hi0, hi1, lo0, lo1)
+        const bool rv_h = lo0 > hi0;
+        const bool rv_e = hi0 == lo0;
+        const bool rv_l = lo1 > hi1;
+        const bool rv_t = rv_e & rv_l;
+        const bool rv = rv_h | rv_t;
+        const double el = rv ? std::numeric_limits<double>::infinity() : mi;
+        const double eu = rv ? mi : std::numeric_limits<double>::infinity();
         const double zl0 = v ? lo0 : el;
         const double zl1 = v ? lo1 : 0.0;
         const double zu0 = v ? hi0 : eu;
@@ -13713,11 +13706,14 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_make_2(float lo0, float lo1, float
         zu0_out = fixed_.limb[2];
         zu1_out = fixed_.limb[3];
 #else
-        const bool ql = lo0 == lo0;
-        const bool qu = hi0 == hi0;
-        const bool nn = ql & qu;
-        const float el = nn ? std::numeric_limits<float>::infinity() : mi;
-        const float eu = nn ? mi : std::numeric_limits<float>::infinity();
+        // (rv) = lt_2_2(hi0, hi1, lo0, lo1)
+        const bool rv_h = lo0 > hi0;
+        const bool rv_e = hi0 == lo0;
+        const bool rv_l = lo1 > hi1;
+        const bool rv_t = rv_e & rv_l;
+        const bool rv = rv_h | rv_t;
+        const float el = rv ? std::numeric_limits<float>::infinity() : mi;
+        const float eu = rv ? mi : std::numeric_limits<float>::infinity();
         const float zl0 = v ? lo0 : el;
         const float zl1 = v ? lo1 : 0.0f;
         const float zu0 = v ? hi0 : eu;

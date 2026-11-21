@@ -72,7 +72,7 @@ work changed one, or found a consequence that the decision did not state.
 | Decision | State | What changed, or what follows from it |
 |---|---|---|
 | 1. Directed rounding on one limb | adopted | The operands of a sum are ordered by a kernel of its own, `two_sum_ord`. The underflow range of a product is recognized on the rounded product, and a zero factor on the operands. One lemma is needed beyond Flocq's: the error of a product whose rounding is at least $2^{2p-1}\eta$ is a number of the format |
-| 2. `Interval<T, 1>` | adopted, with one departure decided since | A product costs eight steps to a neighbor; in packed code each is about ten integer operations. The semantics differ from IEEE 1788 in the three points that [its section](#ieee-1788) marks. One was decided by the owner on 2026-11-20 ([question 1](#open-questions)): a NaN bound given to the constructor gives the whole line, where the standard gives the empty set |
+| 2. `Interval<T, 1>` | adopted, with one departure decided since | A product costs eight steps to a neighbor; in packed code each is about ten integer operations. The semantics differ from IEEE 1788 in the four points that [its section](#ieee-1788) marks. Two were decided by the owner on 2026-11-20: a NaN bound given to the constructor ([question 1](#open-questions)), and the same infinity given as both bounds, give the whole line, where the standard gives the empty set |
 | 3. `Interval<T, 2>` | **changed** | `Fast2Sum(z0, RD(z1 - d))` is replaced by `two_sum_ord`: the requirement of `Fast2Sum` does not hold when $\lvert z_0\rvert$ is below about the smallest normal number (and the bound subtracted is not zero). The bound $d$ is the radius of the Milestone 1 ball with radii zero, bit for bit, with one exception settled on 2026-11-20 ([question 2](#open-questions)): in the directed sums it is replaced by zero when the computed sum is zero. As first decided, the sum of two zero intervals was $[-H, H]$; it is now $[0, 0]$ |
 | 4. Statements in the IEEE model | adopted | For one limb, "bounded" has an exact condition, not only a sufficient one |
 | 5. One enclosure interface | adopted | For `Ball<T, 2>` the tests of membership and the comparisons are *certain*, not exact: they never answer wrongly, and may decline to answer within a few $u^2$ of the boundary. `lower_as` of a `Ball<T, 2>` is a valid bound within two steps of `T`, not the exact rounding |
@@ -128,7 +128,7 @@ that exists keeps its meaning.
 | `outward` | `of` (a 2-limb output), `side`, `rel`, `abs` | the output is on that side of `value`, and $\lvert\text{output} - \text{value}\rvert \le \mathrm{rel}\cdot\lvert\text{value}\rvert + \mathrm{abs}$ |
 | `interval` (a requirement) | `interval(L, U)` | the two groups are the bounds of a canonical interval ([below](#values-of-an-interval)) |
 | `encloses_interval` | `lower`, `upper`, `set`, `intervals`, `tight`, `bounded_when` | statements I1 to I5 of [Interval kernels](#interval-kernels): `set` is an expression over interval names, `intervals` gives each name its bounds, `tight` is `rounded` (with optional `steps` and `when`) or a pair `rel`, `abs`, and `bounded_when` is a list of conditions |
-| `makes_interval` | `lower`, `upper`, `from` | the output is canonical: the interval of the given bounds when they describe one; the whole line when a given bound is a NaN; the empty set otherwise |
+| `makes_interval` | `lower`, `upper`, `from` | the output is canonical: the whole line when a given bound is a NaN or when both given bounds are the same infinity; otherwise the empty set when the bounds are reversed; otherwise the interval of the given bounds |
 | `certain` | `of` (a mask), `rel`, `args`, `exact_when` | when the mask is true the relation holds between the exact values; it is true whenever the relation holds and the condition `exact_when` does (always, when the condition is absent) |
 | `trit` | `yes`, `no` (masks), `rel`, `sets` | `yes` implies that the relation holds for every member of the sets, `no` that it fails for every member; never both |
 | `exact_when` on `encloses` | a list of conditions, each `zero_or_abs_gt(EXPR, K)` or `zero_or_abs_ge(EXPR, K)`: EXPR is zero, or exceeds $K$ (or is at least $K$) in magnitude. In EXPR, `NAME[I]` is limb I of an input | when every condition holds, the output ball is exactly the set: besides containing it, every number within the radius of the center is a value of the set. This reverse inclusion is how the generator states the exactness of the [scalings of a ball](#scaling-a-ball-by-a-power-of-two). For `ball_mul_pow2_2` the conditions are written limb by limb, each limb times $c$ zero or above $N$; for a normalized center that is "the center is zero or its last nonzero limb times $c$ is above $N$" |
@@ -522,11 +522,9 @@ interval_make_1(lo, hi) -> (zl, zu)
   nu = lt(mi, gu)
   va = and(ok, nl)
   v  = and(va, nu)               the pair describes an interval
-  ql = eq(gl, gl)
-  qu = eq(gu, gu)
-  nn = and(ql, qu)               neither bound is a NaN
-  el = select(nn, const inf, mi)     what is returned for a pair that describes none:
-  eu = select(nn, mi, const inf)     the empty set, or the whole line when a bound is a NaN
+  rv = lt(gu, gl)                reversed bounds; false with a NaN
+  el = select(rv, const inf, mi)     what is returned for a pair that describes none:
+  eu = select(rv, mi, const inf)     the empty set for reversed bounds, the whole line otherwise
   zl = select(v, gl, el)
   zu = select(v, gu, eu)
 ```
@@ -535,29 +533,36 @@ interval_make_1(lo, hi) -> (zl, zu)
 canonical, and it is
 
 - $[lo, hi]$ when $lo \le hi$, $lo < +\infty$ and $hi > -\infty$;
-- **the whole line when a bound is a NaN**, whatever the other bound is;
-- the empty set otherwise: when $lo > hi$, and for $[+\infty, +\infty]$ and
-  $[-\infty, -\infty]$.
+- **the whole line when a bound is a NaN**, whatever the other bound is, **and when both
+  bounds are the same infinity**, $[+\infty, +\infty]$ or $[-\infty, -\infty]$;
+- the empty set otherwise, that is when the bounds are reversed, $lo > hi$ (which includes
+  $[+\infty, -\infty]$, and $lo = +\infty$ with a finite $hi$).
 
 The first and the third are `numsToInterval` of IEEE 1788. The second is not: for a NaN the
-standard's call fails and returns the empty set ([IEEE 1788](#ieee-1788)), and Kairn has no
-exception by which to say that it failed. The
-owner decided it on 2026-11-20 ([question 1](#open-questions),
-[deviation 23](phase0/decisions.md#deviations-from-the-brief-flagged)). A NaN among the bounds
-means that a computation upstream failed, and says nothing about where the values are; the
-empty set says that there are none, and a search that discards empty boxes would discard a
+standard's call fails and returns the empty set, and for the same infinity twice it returns
+the empty set as well ([IEEE 1788](#ieee-1788)); Kairn has no exception by which to say that a
+call failed. The owner decided both on 2026-11-20: the NaN first
+([question 1](#open-questions)), the infinities when the public constructor showed what they
+did ([deviation 23](phase0/decisions.md#deviations-from-the-brief-flagged)). A NaN among the
+bounds means that a computation upstream failed, and says nothing about where the values are;
+the empty set says that there are none, and a search that discards empty boxes would discard a
 solution with it. The whole line is the answer that is always true. Milestone 1 made the same
-choice for a `Ball` whose center is a NaN. Reversed bounds are different: $lo > hi$ with two
-numbers describes no value at all, and stays the empty set.
+choice for a `Ball` whose center is a NaN or infinite. An infinity given as a point, which is
+what `Interval(a)` does with its one argument, is the same case: it is what an overflow
+upstream leaves, and as the empty set it would be discarded. Reversed bounds are different:
+$lo > hi$ describes no value at all, and stays the empty set. The second decision made the
+listing shorter: a pair that describes no interval is the empty set exactly when it is
+reversed, which one comparison tells, and that comparison is false with a NaN.
 
 `interval_make_2` takes two canonical 2-limb values (objects, so no guard) and is the same
-listing on the comparisons of two limbs: `le_2_2`, and the leading limbs for the tests against
-infinity and for the two tests of a NaN, a canonical NaN being $(\mathrm{NaN}, \mathrm{NaN})$.
-An infinite bound is returned as $(\pm\infty, 0)$.
+listing on the comparisons of two limbs: `le_2_2` and `lt_2_2` (the leading limbs alone would
+not tell reversed bounds: $(1, 2^{-4})$ and $(1, 0)$ are reversed and have equal leading
+limbs), and the leading limbs for the tests against infinity.
+An infinite bound is returned as it is given, $(\pm\infty, \pm 0)$: the second limb is a zero of either sign.
 
 *Checked:* `interval_1.py`, every pair of values of five formats, NaN and infinities included:
-in the smallest, of 484 pairs, 229 give their interval, the 43 with a NaN the whole line, and
-212 the empty set. *Risk: low.*
+in the smallest, of 484 pairs, 229 give their interval, the 43 with a NaN and the 2 of the same
+infinity twice the whole line, and 210 the empty set. *Risk: low.*
 
 ### What is stated of an interval kernel
 
@@ -1093,8 +1098,9 @@ ball_from_interval_2(lo, hi) -> (cw, rw)
   gl = guard(lo);  gu = guard(hi)                    values from the program (rule R3)
   hl = prod(gl, const 1/2);  hu = prod(gu, const 1/2)
   (c0, c1) = two_sum_ord(hl, hu)                     the exact sum of the halves
-  d  = sub_up_1(hu, hl)                              RU(hi/2 - lo/2)
-  bl = add(hl, hl);  bu = add(hu, hu)
+  gn = neg(gl);  hn = prod(gn, const 1/2)            minus the lower half, a product of its own
+  d  = add_up_1(hu, hn)                              RU(hi/2 - lo/2)
+  bl = prod(hl, const 2);  bu = prod(hu, const 2)    the halves doubled back, exactly
   xl = eq(bl, gl);   xu = eq(bu, gu);  xx = and(xl, xu)     both halvings were exact
   dn = succ(d)                                       the number after d: at least d + eta
   r  = select(xx, d, dn)
@@ -1102,9 +1108,9 @@ ball_from_interval_2(lo, hi) -> (cw, rw)
   va = and(ok, nl);  v = and(va, nu)                 the pair describes an interval
   fl = lt(mi, gl);  fu = lt(gu, const inf);  f = and(fl, fu)     and a bounded one
   k0 = select(f, c0, 0);  k1 = select(f, c1, 0);  s = select(f, r, const inf)
-  ql = eq(gl, gl);  qu = eq(gu, gu);  nn = and(ql, qu)           neither bound is a NaN
-  wc = select(nn, const nan, 0)                      for a pair that describes no interval: the
-  wr = select(nn, const nan, const inf)              empty set, or the whole line when a bound is a NaN
+  rv = lt(gu, gl)                                    reversed bounds; false with a NaN
+  wc = select(rv, const nan, 0)                      for a pair that describes no interval: the
+  wr = select(rv, const nan, const inf)              empty set for reversed bounds, the whole line otherwise
   cw0 = select(v, k0, wc);  cw1 = select(v, k1, wc);  rw = select(v, s, wr)
 ```
 
@@ -1124,11 +1130,11 @@ ball_from_interval_2(lo, hi) -> (cw, rw)
   is what keeps $[\Omega, \Omega]$ from overflowing; the price is at the other end of the range.
 - If $lo \le hi$ and a bound is infinite ($[-\infty, hi]$, $[lo, +\infty]$, $[-\infty, +\infty]$):
   the whole line. A ball cannot be a half-line.
-- **If a bound is a NaN, whatever the other bound: the whole line**, center $0$ and radius
-  $+\infty$. This is the decision of 2026-11-20 for `Interval(lo, hi)`
-  ([question 1](#open-questions)), for the same reason, and it is also what a `Ball` already
-  does with a center that is a NaN.
-- Otherwise, that is $lo > hi$, $[+\infty, +\infty]$ or $[-\infty, -\infty]$: the empty set.
+- **If a bound is a NaN, whatever the other bound, or both bounds are the same infinity: the
+  whole line**, center $0$ and radius $+\infty$. These are the decisions of 2026-11-20 for
+  `Interval(lo, hi)` ([values of an interval](#values-of-an-interval)), for the same reason,
+  and it is also what a `Ball` already does with a center that is a NaN or infinite.
+- Otherwise, that is $lo > hi$: the empty set.
 
 In each case the ball is the one that `Interval(lo, hi)` followed by the conversion to a ball
 has for its special states: the two routes agree on which pairs give the empty set and which
@@ -1137,14 +1143,17 @@ the whole line.
 *Checked:* `enclosure_1.py`, every pair of values of five formats, NaN and infinities included:
 containment in every case, the smallest radius when both halvings are exact, and the number
 after $d$ otherwise.
-*Proof:* `two_sum_ord`; `sub_up_1`; a halving is exact exactly when doubling it back gives the
+*Proof:* `two_sum_ord`; `add_up_1` (the difference of the halves is computed as the sum of the
+upper half and of the half of the negated lower bound, and the doubling as a product by 2: the
+generator refuses the negation of a fused result and a value added to itself, because some
+compilers fuse them); a halving is exact exactly when doubling it back gives the
 operand, and is off by at most $\tfrac12\eta$ otherwise; the step, by the inequality above. The
 first version of this listing computed $\mathrm{RN}(d + \eta)$ and then stepped; one step from
 $d$ is never larger, and needs no subnormal constant
 ([Notation](#notation-and-vocabulary)). *Risk: low.* `Ball<T, 1>` from two `T`
-is `interval_make_1` followed by `interval_to_ball_1`, so it has the same three cases: a NaN
-bound gives the whole line through the whole-line interval, and $lo > hi$ the empty ball
-through the empty interval.
+is `interval_make_1` followed by `interval_to_ball_1`, so it has the same cases: a NaN bound, or
+the same infinity twice, gives the whole line through the whole-line interval, and $lo > hi$
+the empty ball through the empty interval.
 
 ### Hull, intersection and split of balls
 
@@ -1206,12 +1215,14 @@ And this is which values of `T`, given to a constructor, produce the two states:
 
 | Built from | The empty set | The whole line |
 |---|---|---|
-| `Interval(lo, hi)`, two values of `T` | $lo > hi$; $[+\infty, +\infty]$; $[-\infty, -\infty]$ | a NaN bound, whatever the other; $[-\infty, +\infty]$ |
-| a `Ball` from an interval of two `T`, of one limb or two | the same three | a NaN bound, whatever the other; an infinite bound of an interval that is not empty |
+| `Interval(lo, hi)`, two values of `T`; `Interval(a)` is `Interval(a, a)` | $lo > hi$ | a NaN bound, whatever the other; the same infinity twice, so `Interval(a)` of an infinite `a`; $[-\infty, +\infty]$ |
+| a `Ball` from an interval of two `T`, of one limb or two | $lo > hi$ | a NaN bound, whatever the other; an infinite bound of a pair that is not reversed |
 | `Ball(c, r)` ([Milestone 1](milestone1.md#values-that-enter-from-the-program), changed on 2026-11-20) | a negative radius, $-\infty$ included | otherwise: a center that is a NaN or infinite; a radius that is $+\infty$ or a NaN |
 
-A NaN from the program never produces the empty set, be it a bound, a center or a radius: a NaN
-says that something failed, and the answer that is always true is the whole line. The radius of
+A NaN from the program never produces the empty set, be it a bound, a center or a radius, and
+neither does an infinity given as a point or as both bounds: each says that something failed
+upstream, and the answer that is always true is the whole line. What still makes the empty set
+is what describes no value: reversed bounds, and a negative radius. The radius of
 `Ball(c, r)` was the one exception, from Milestone 1, where a NaN radius is the stored form of
 the empty ball; the owner extended the decision about bounds to it on the same day, and
 `ball_make_1` and `ball_make_2` were changed and proved again. One consequence: `Ball(X.center(),
@@ -2170,7 +2181,8 @@ Kairn does not have, and its one interval type has bounds of type `binary64`.
 | Members | real numbers; $\pm\infty$ can be bounds and are never members | the same (4.2) |
 | An operation on an empty operand | empty | the same: the range over an empty box is empty (4.4.4) |
 | $[0, 0] \cdot X$ for nonempty $X$, unbounded included | $[0, 0]$ | the same (the example of 4.4.4) |
-| The constructor from two numbers, $lo > hi$, $[+\infty, +\infty]$ or $[-\infty, -\infty]$ | the empty set, silently | the same value (6.7.5); the standard also signals an exception (6.1.4), and its decorated form returns "not an interval" |
+| The constructor from two numbers, $lo > hi$ | the empty set, silently | the same value (6.7.5); the standard also signals an exception (6.1.4), and its decorated form returns "not an interval" |
+| The constructor from two numbers, $[+\infty, +\infty]$ or $[-\infty, -\infty]$, and so from one infinite point | the whole line (decided by the owner on 2026-11-20: an infinity given as a point is what an overflow upstream leaves, and the empty set would discard it) | **differs**: the empty set, as for reversed bounds (6.7.5) |
 | The constructor from two numbers, a NaN bound | the whole line, whatever the other bound ([question 1](#open-questions), decided by the owner on 2026-11-20; the [listing](#values-of-an-interval) is `interval_make_1`) | **differs**: the call fails and returns the empty set (6.7.5) |
 | The sign of a zero bound | unspecified | **differs**: a zero lower bound is returned as $-0$, every other zero as $+0$ (6.7.6, 7.3) |
 | Tightness of $+$, $-$, $\times$ on one limb | tightest for sums and differences; for products tightest outside the range below $2^{2p-1}\eta$, and at most one number wider inside it | **differs** inside that range: the basic operations shall be *tightest* (6.5.2). Kairn's product there is within the standard's second mode, *accurate* (6.5.1): it is inside the tightest result widened by one number on each side |
@@ -2240,7 +2252,7 @@ from. `k` stands for 1 and 2.
 | `mul_down_1`, `mul_up_1` | $(a, b) \to r$ | — | `bound` with `steps` 1; `rounded` when `product_large` | `two_prod_exact`; one new lemma | 2 | both | medium: the lemma at the edge of the range |
 | `mul_dir_1` | $(a, b) \to (d, v)$ | neither a NaN | the same two, and zero for a zero factor | as above | 2 | both | medium |
 | `two_sum_entry`, `fast_two_sum_entry`, `radd_entry`, `add_down_entry`, `add_up_entry`, `sub_down_entry`, `sub_up_entry` | as the kernel called | as the kernel called | as the kernel called | `guard_ieee`, `Guard.v` | 2 | as called | low: two guards |
-| `interval_make_k` | $(lo, hi) \to (z_\ell, z_u)$ | canonical bounds, for two limbs | `makes_interval`: the interval, the whole line for a NaN bound, the empty set otherwise | the way of `IeeeMake.v` | 1 | only | low |
+| `interval_make_k` | $(lo, hi) \to (z_\ell, z_u)$ | canonical bounds, for two limbs | `makes_interval`: the whole line for a NaN bound or the same infinity twice, the empty set for reversed bounds, the interval otherwise | the way of `IeeeMake.v` | 1 | only | low |
 | `interval_neg_k` | $X \to Z$ | `interval` | `encloses_interval`, exact | — | 1 | only | low |
 | `interval_add_1`, `interval_sub_1` | $(X, Y) \to Z$ | `interval` | `encloses_interval`, `tight` rounded, bounded exactly within $\Omega$ | `add_down_1`, `add_up_1` | 2 | only | low |
 | `interval_mul_1` | $(X, Y) \to Z$ | `interval` | the same, with `steps` 1 unless `product_large` | `mul_dir_1`; the lemma of the rectangle | 2 | only | medium: many cases |
@@ -2256,7 +2268,7 @@ from. `k` stands for 1 and 2.
 | `interval_less_k`, `interval_less_equal_k`, `interval_equal_k` | $(X, Y) \to$ (yes, no) | `interval` | `trit`, exact | `Compare.v` | 1 | only | low |
 | the eight relations of IEEE 1788, `interval_rel_NAME_k` | $(X, Y) \to$ a mask | `interval` | `predicate` on the sets | `Compare.v` | 1 | only | low; the definitions are the risk, not the proofs |
 | `ball_to_interval_k`, `ball_lower_k`, `ball_upper_k` | a ball $\to$ bounds | `ball` | `encloses_interval`; `rounded` for one limb | the directed sums | 2, 3 | only | low |
-| `ball_from_interval_k` | $(lo, hi) \to$ a ball | — | [stated above](#midpoint-radius-and-the-conversions): the whole line for a NaN bound and for an unbounded interval; the empty set for $lo > hi$, $[+\infty, +\infty]$ and $[-\infty, -\infty]$ | `two_sum_ord`, `sub_up_1` | 2 | only | low |
+| `ball_from_interval_k` | $(lo, hi) \to$ a ball | — | [stated above](#midpoint-radius-and-the-conversions): the whole line for a NaN bound, for the same infinity twice and for an unbounded interval; the empty set for $lo > hi$ | `two_sum_ord`, `add_up_1` | 2 | only | low |
 | `ball_contains_point_k`, `ball_contains_ball_k`, `ball_less_k`, `ball_less_equal_k`, `ball_equal_k`, `ball_positive_k`, `ball_negative_k`, `ball_zero_k` | $\to$ masks | `ball` | `predicate` for the signs; `certain` and `trit`, exact for one limb without overflow | `two_sum_ord`, `abs_2`, the comparisons; `add_ball_2_2` | 2, 3 | only | medium for two limbs |
 | `ball_hull_k`, `ball_intersection_k`, `ball_split_k` | balls $\to$ balls | `ball` | `encloses`, of a union, an intersection, two halves | the conversions; `ball_add_k_full` | 2, 3 | only | medium: compositions |
 | `ball_mul_pow2_k`, `ball_mul_pow2_k_full` | $(c_x, r_x, c) \to (c_z, r_z)$ | normalized, $r_x \ge 0$, $c$ a positive power of two | `normalized`; `encloses`, with `exact_when` on it: the conditions per limb | `mul_pow2_2_exact`; `up_above` and the smallest gap of the format, for the two steps | 2 | core, only | low |
@@ -2379,14 +2391,16 @@ Each with the options and what I recommend.
 
 1. **A NaN bound given to the constructor of an interval.** *Decided by the owner on
    2026-11-20: the whole line*, for `Interval(lo, hi)` and for the ball from an interval alike,
-   whatever the other bound is; $lo > hi$, $[+\infty, +\infty]$ and $[-\infty, -\infty]$ stay
-   the empty set. A NaN usually means that something upstream failed, and the empty set is the
+   whatever the other bound is; $lo > hi$ stays the empty set, and so did $[+\infty, +\infty]$
+   and $[-\infty, -\infty]$ until the owner, later the same day, made them the whole line too
+   ([values of an interval](#values-of-an-interval)). A NaN usually means that something upstream failed, and the empty set is the
    one value that a verified computation must never produce by accident: an empty box is
    discarded, and a root with it. The standard signals an exception there, which Kairn cannot.
    Milestone 1 already made a `Ball` with a NaN *center* the whole line. The option not taken
-   was the empty set, as IEEE 1788 returns and as this page was first written. The cost is five
-   operations in each of the two listings (two tests of a NaN, a mask, two selects), and a
-   deviation from the standard, which is recorded.
+   was the empty set, as IEEE 1788 returns and as this page was first written. The cost was five
+   operations in each of the two listings (two tests of a NaN, a mask, two selects); with the
+   second decision it is one comparison and two selects. Both are deviations from the standard,
+   which are recorded.
 2. **The sum of exact zeros in two limbs.** *Settled on 2026-11-20: exact.* The directed sums
    have two more lines after `add_ball_2_2`, `zd = eq(z0, 0); dd = select(zd, 0, d)`, and `dd`
    in place of `d`. It is sound because the bound of `add_2_2` is relative: a computed sum of
