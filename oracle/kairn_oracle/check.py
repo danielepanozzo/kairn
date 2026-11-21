@@ -19,6 +19,7 @@ from . import extended as XT
 from . import fmt as F
 from . import folds as FO
 from . import intervals as IV
+from . import enclosure as EN
 from . import rational as RAT
 from .claims import ClaimsError, ew_condition_text, format_u_eta
 
@@ -613,6 +614,9 @@ class Plan:
             if getattr(e, "iv", False):
                 # The kinds of the interval kernels and the fields they add (intervals.py).
                 c.update(IV.plan_entry(self, e, claims))
+            if getattr(e, "encl", False):
+                # The predicates, comparisons and set operations of a ball (enclosure.py).
+                c.update(EN.plan_entry(self, e, claims))
             self.entries.append(c)
         # In the finite domain, a kernel with an entry about an output group other than the first
         # is judged entry by entry, each where its own group's leading limb is finite.

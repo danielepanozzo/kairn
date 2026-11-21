@@ -86,6 +86,15 @@ STRATA_OWN = {
     ("outward", "*"): ("close", "tiny", "aroundp", "exactprod"),
     ("dirmul", None): ("aroundp", "tiny", "exactprod", "beyond", "nonfinite", "zeroinf",
                        "zerofactor"),
+    # The conversions of two limbs (architecture.md, "Claims of the enclosure interface: the
+    # conversions of two limbs"): interval_mid_rad_2, interval_to_ball_2, interval_split_2 and
+    # ball_to_interval_2 have the strata of their families and two more each: bounds of two limbs
+    # beyond Omega (a half-line or a bounded interval whose bound is (+-Omega, +-t), or a ball
+    # whose ends are) and bounds at the limit of finite_when or bounded_when, 2^(qmax+p-2), just
+    # inside or outside; and for ball_to_interval_2 an end exactly zero (exact_when).
+    ("ivmid", "two"): ("special", "point", "step", "oddeta", "top", "beyond", "threshold"),
+    ("ballbound", "two"): ("ballstates", "radii", "cross", "beyond", "exactend", "threshold",
+                           "zeroend"),
 }
 # The strata of the extended domain added to the outward family's for mul_ext_2_2.
 OUTWARD_EXTENDED = ("nonfinite", "zeroinf", "edge")
@@ -164,9 +173,16 @@ class Shape6:
             e = next(e for e in kernel.ensures if e.kind in ("ball_of_interval", "splits"))
             self.pairs = [e.from_pair]
             self.k = self.limbs[e.from_pair[0]]
+            # Bounds of two limbs: the conversions of two limbs.
+            op = "two" if self.k == 2 else None
         elif fam == "ballbound":
             (self.center, self.radius), = self.balls
             self.k = self.limbs[self.center]
+            # interval_of_ball with bounds of two limbs (ball_to_interval_2); set_bound of a ball
+            # of two limbs (ball_lower_as_2, ball_upper_as_2) keeps the strata of the family.
+            if any(e.kind == "interval_of_ball" and getattr(e, "two", False)
+                   for e in kernel.ensures):
+                op = "two"
         elif fam == "outward":
             t = kernel.value_tree
             op = t[0]
@@ -570,7 +586,105 @@ def _ivmid(fmt, sh, rng, stratum):
              (abs(G2._top(fmt, rng)), om), (-om, G2.limb(fmt, rng, "uniform"))]
         lo, hi = c[rng.below(len(c))]
         return [_sorted2([lo] + [0] * (k - 1), [hi] + [0] * (k - 1))]
+    if stratum == "beyond":
+        return [_beyond_interval(fmt, rng, k)]
+    if stratum == "threshold":
+        return [_threshold_interval(fmt, rng, k)]
     raise G.GenError("unknown stratum %r" % stratum)
+
+
+# The conversions of two limbs: bounds beyond Omega, and at the limit 2^(qmax+p-2) of finite_when
+# and bounded_when.
+
+def _omega_tail(fmt, rng, sign):
+    """(+-Omega, +-t): a pair beyond Omega (t of the sign of Omega), or (+-Omega, -+t) below it."""
+    om = fmt.omega
+    t = abs(G.tail_for(fmt, rng, om, ("near", "any", "max", "eta")[rng.below(4)])) or 1
+    while t > 1 and not F.normalized_limbs(fmt, [om, t]):
+        t >>= 1
+    if rng.chance(1, 4):
+        t = -t
+    pair = [om, t]
+    if not F.normalized_limbs(fmt, pair):
+        pair = [om, 0]
+    return [sign * v for v in pair]
+
+
+def _beyond_interval(fmt, rng, k):
+    """An interval of two limbs with a bound (+-Omega, +-t): a half-line, a point, or bounded."""
+    if k == 1:
+        return _special(fmt, rng, k, ("above", "below")[rng.below(2)])
+    up, dn = _omega_tail(fmt, rng, 1), _omega_tail(fmt, rng, -1)
+    j = rng.below(6)
+    if j == 0:
+        return up, _inf(k, 1)
+    if j == 1:
+        return _inf(k, -1), dn
+    if j == 2:
+        return dn, up
+    if j == 3:
+        return _sorted2(_number(fmt, rng, k, "uniform"), up)
+    if j == 4:
+        return _sorted2(dn, _number(fmt, rng, k, "uniform"))
+    return up, list(up)
+
+
+def _at_threshold(fmt, rng, k, sign):
+    """A bound of magnitude about 2^(qmax+p-2): the power of two itself, a neighbour, or (for two
+    limbs) the power of two with a small tail of either sign."""
+    T = 1 << (fmt.qmax + fmt.p - 2 - fmt.qmin)
+    j = rng.below(4)
+    if j == 0:
+        v = [T] + [0] * (k - 1)
+    elif j == 1:
+        v = [F.pred(fmt, T)] + [0] * (k - 1)
+    elif j == 2:
+        n = F.succ(fmt, T)
+        v = [n if type(n) is int else T] + [0] * (k - 1)
+    else:
+        v = [T] + [0] * (k - 1)
+        if k == 2:
+            t = G.tail_for(fmt, rng, T, ("near", "eta", "max")[rng.below(3)]) or 1
+            t = t if rng.bits(1) else -t
+            if F.normalized_limbs(fmt, [T, t]):
+                v = [T, t]
+    return [sign * x for x in v]
+
+
+def _threshold_interval(fmt, rng, k):
+    """A bounded interval with a bound at the limit of finite_when, inside or just outside."""
+    a = _at_threshold(fmt, rng, k, 1 if rng.bits(1) else -1)
+    j = rng.below(3)
+    b = _number(fmt, rng, k, "uniform") if j == 0 else \
+        _at_threshold(fmt, rng, k, -1 if a[0] > 0 else 1) if j == 1 else list(a)
+    return _sorted2(a, b)
+
+
+def _ballbound_two(fmt, rng, sh, stratum):
+    """ball_to_interval_2: a ball at the limit of bounded_when (|c| + r about 2^(qmax+p-2)), or
+    with an end exactly zero (c = +-r)."""
+    k = sh.k
+    cn, rn = sh.center, sh.radius
+    if stratum == "threshold":
+        T = 1 << (fmt.qmax + fmt.p - 2 - fmt.qmin)
+        h = T >> 1
+        j = rng.below(4)
+        s = 1 if rng.bits(1) else -1
+        if j == 0:
+            c, r = [s * h], h
+        elif j == 1:
+            c, r = [s * h], _near(fmt, rng, h)
+        elif j == 2:
+            c, r = _at_threshold(fmt, rng, k, s), rng.below(3)
+        else:
+            c, r = [0], _near(fmt, rng, T)
+        c = (c + [0] * k)[:k]
+        return {cn: c, rn: [min(r, fmt.omega)]}
+    # zeroend: c - r = 0 or c + r = 0 exactly.
+    a = abs(_number(fmt, rng, 1, ("uniform", "underflow", "extreme")[rng.below(3)])[0]) or 1
+    s = 1 if rng.bits(1) else -1
+    c = [s * a] + [0] * (k - 1)
+    return {cn: c, rn: [a]}
 
 
 # ---------------------------------------------------------------------------
@@ -583,6 +697,8 @@ def _ball_center(fmt, rng, k, stratum):
 def _ballbound(fmt, sh, rng, stratum):
     k = sh.k
     cn, rn = sh.center, sh.radius
+    if stratum in ("threshold", "zeroend"):
+        return _ballbound_two(fmt, rng, sh, stratum)
     if stratum in COMMON:
         c = _ball_center(fmt, rng, k, stratum)
         mode = {"underflow": ("zero", "eta", "subnormal", "tiny", "ulp"),

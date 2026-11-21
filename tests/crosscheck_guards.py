@@ -510,6 +510,11 @@ IV_STRATA = {
     ("outward", "*"): ("close", "tiny", "aroundp", "exactprod"),
     ("dirmul", None): ("aroundp", "tiny", "exactprod", "beyond", "nonfinite", "zeroinf",
                        "zerofactor"),
+    # The conversions of two limbs (gen6.py): bounds beyond Omega, at the limit of finite_when and
+    # bounded_when, and an end of a ball exactly zero.
+    ("ivmid", "two"): ("special", "point", "step", "oddeta", "top", "beyond", "threshold"),
+    ("ballbound", "two"): ("ballstates", "radii", "cross", "beyond", "exactend", "threshold",
+                           "zeroend"),
 }
 IV_OUTWARD_EXTENDED = ("nonfinite", "zeroinf", "edge")
 IV_OPS = ("operands: an empty operand", "operands: nonempty, an unbounded operand",
@@ -581,10 +586,16 @@ def iv_family(kernel):
     if any(e.get("kind") == "makes_ball" and set(e.get("from") or {}) == {"lower", "upper"}
            for e in ens):
         return "ivmake", "ball"
+    limbs = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
     if kinds & {"ball_of_interval", "splits"}:
-        return "ivmid", None
+        e = next(e for e in ens if e.get("kind") in ("ball_of_interval", "splits"))
+        two = limbs.get((e.get("from") or {}).get("lower")) == 2
+        return "ivmid", "two" if two else None
     if kinds & {"set_bound", "interval_of_ball"}:
-        return "ballbound", None
+        outs = {o.get("name"): o.get("limbs", 1) for o in kernel.get("outputs", [])}
+        two = any(e.get("kind") == "interval_of_ball" and outs.get(e.get("lower")) == 2
+                  for e in ens)
+        return "ballbound", "two" if two else None
     if "outward" in kinds or any(e.get("kind") == "encloses" and e.get("balls") == {}
                                  for e in ens):
         return "outward", op_of(kernel.get("value"))
@@ -675,6 +686,19 @@ def iv_needs(kernel, e, a):
         need += iv_make_needs(kernel, e, getattr(a, "exhaustive", False))
         if e.get("midpoint_when"):
             need += ("midpoint_when holds", "midpoint_when fails")
+        if "rel" in e:
+            # rel and abs (ball_from_interval_1): a center that is the midpoint and one that is not.
+            need += IV_MID_CLASSES
+    elif kind == "interval_of_ball" and (e.get("tight") or {}).get("kind") == "outward":
+        # Bounds of two limbs (ball_to_interval_2): every state of the ball, each side's exact_when
+        # both ways, bounded_when both ways.
+        need += IV_BALLS
+        for s in ("lower", "upper"):
+            for c in ((e.get("tight") or {}).get("exact_when") or {}).get(s, []):
+                need.append("%s: exact_when holds" % s)
+                need.append("%s: exact_when fails: %s" % (s, iv_condition_text(c)))
+        if e.get("bounded_when"):
+            need += IV_I5
     elif kind in ("set_bound", "interval_of_ball"):
         need += IV_BALLS
         sides = ("lower", "upper") if kind == "interval_of_ball" else (
@@ -688,9 +712,30 @@ def iv_needs(kernel, e, a):
         need += IV_X
         if kind == "ball_of_interval":
             need.append(IV_ODD)
+        if e.get("finite_when"):
+            # finite_when (the conversions of two limbs): each condition holding and failing, and
+            # the radius +inf (the whole line, for a ball) of a bounded interval.
+            need.append(IV_FW_HOLDS)
+            for c in e["finite_when"]:
+                need.append(IV_FW_FAILS + iv_bound_condition_text(c))
+            need.append(IV_FW_INFINITE if e.get("special") == "ieee1788" else IV_FW_WHOLE)
     elif kind in ("bound", "rounded") and e.get("zero_factor"):
         need += IV_ZF
     return need
+
+
+IV_MID_CLASSES = ("center the midpoint exactly", "center not the midpoint")
+IV_FW_HOLDS = "finite_when holds"
+IV_FW_FAILS = "finite_when fails: "
+IV_FW_INFINITE = "bounded X, the radius +inf"
+IV_FW_WHOLE = "bounded X, the whole line"
+
+
+def iv_bound_condition_text(c):
+    """The text the oracle counts a failing finite_when condition of ball_of_interval under."""
+    x = c.get("exp", 0)
+    return "|%s| <= 2^(qmax+p%+d)" % (c.get("abs_le"), x) if x else "|%s| <= 2^(qmax+p)" % (
+        c.get("abs_le"),)
 
 
 def iv_condition_text(c):
@@ -727,13 +772,20 @@ def iv_problems(kernel, entries, merged, keys, a):
                        'bounded_when (smallest %s)' % (label, "none" if lo is None else
                                                        _ratio(lo[0], lo[1], 3)))
         ratios = []
-        if kind == "outward" or (kind == "encloses_interval"
+        outs = {o.get("name"): o.get("limbs", 1) for o in kernel.get("outputs", [])}
+        if kind == "outward" or (kind in ("encloses_interval", "interval_of_ball")
                                  and (e.get("tight") or {}).get("kind") == "outward"):
             names = [IV_RATIO] if kind == "outward" else [IV_SIDE_RATIO % s
                                                           for s in ("lower", "upper")]
             ratios = [(n, IV_OUTWARD_FLOOR) for n in names]
-        elif kind == "ball_of_interval":
+        elif kind == "ball_of_interval" and outs.get(e.get("center")) == 1:
+            # (A center of two limbs, interval_mid_rad_2 and interval_to_ball_2: its bound
+            # 3u^2/(1-4u)|m| + 2 eta is not claimed tight, and the runs come to 0.08 to 0.5 of it:
+            # no floor.)
             ratios = [(IV_MID_RATIO, IV_MID_FLOOR)]
+        elif kind == "makes_ball" and "rel" in e:
+            # The center of ball_from_interval_1 within u|m| + eta: 0.4 to 0.85 in 2 000 cases.
+            ratios = [(IV_MID_RATIO, IV_OUTWARD_FLOOR)]
         for name, (num, den) in ratios:
             r = _iv_ratio(keys, j, name)
             if r is None or r[1] == 0 or r[0] * den < num * r[1]:
@@ -743,9 +795,135 @@ def iv_problems(kernel, entries, merged, keys, a):
                                                      name, num, den))
 
 
+# The predicates, comparisons and set operations of a ball of the enclosure interface
+# (architecture.md, "Claims of the enclosure interface: predicates and comparisons" and "... the set
+# operations of a ball"; oracle/README.md, "The kinds of the enclosure interface";
+# oracle/kairn_oracle/enclosure.py and genenc.py): the strata of their families and the classes
+# each entry must have seen. An answer not given (certain and trit without exact, exact_when
+# failing) is not claimed (architecture.md: "The band is not claimed"); its distance from the
+# boundary is held to the band the documentation gives (ENC_BAND_LIMIT), which is not a claim of
+# the kernel but what a pass of its run must look like.
+ENC_KINDS = ("certain", "trit", "ball_set", "ball_splits")
+ENC_ORDER_RELS = ("lt", "le", "eq")
+ENC_CLASSES = {"intervals": ("empty", "whole line", "half-line", "bounded", "a point"),
+               "balls": ("empty", "whole line", "finite", "a point")}
+ENC_POINT_CLASSES = ("finite", "infinite", "NaN")
+ENC_SPECIAL = "an operand not finite: exact (claimed)"
+ENC_ALL_FINITE = "every operand finite"
+ENC_SET_STATES = ("empty", "whole line", "finite")
+ENC_SET_PAIRS = tuple("X %s, Y %s" % (x, y) for x in ENC_SET_STATES for y in ENC_SET_STATES)
+ENC_SET_COUNTS = ("Y as it is (claimed)", "X as it is (claimed)", "finite operands, disjoint",
+                  "finite operands, overlapping", "finite operands, one inside the other",
+                  "finite operands, touching (one common point)")
+ENC_SET_ZERO_SIGNS = "both the whole line, centers zeros of different signs in the line"
+ENC_SPLIT_COUNTS = ("X: empty", "X: whole line", "X: finite", "X: a point (radius 0)")
+# The band of the answers not given (architecture.md: an answer is given unless the margin is
+# below 2e + 3G for contains(t), 2e + 4G for the others, e about 3 u^2 times the distance plus twice
+# the smallest normal number, G the gap of T at the larger of the radius and the distance): the
+# oracle measures the largest margin of an answer not given in units of 2e + G with that estimate
+# of e, away from overflow (distance and radius below Omega/4), and the guards hold it to 4, the
+# documentation's largest, 2e + 4G <= 4 (2e + G). Measured: 0.67 to 2.5 on 20 000 random cases of
+# binary64, binary32 and fp:4:-6:1, 0.17 to 0.42 on the enumerations of the toy formats.
+ENC_BAND_UNITS = ("an answer not given: largest margin / (2e + G), e = 3 u^2 distance + 2 lambda, "
+                  "G the gap at max(radius, distance), both below Omega/4")
+ENC_BAND_LIMIT = 4
+
+
+def enc_entry(kernel):
+    return next((e for e in kernel.get("ensures", []) if e.get("kind") in ENC_KINDS), None)
+
+
+def enc_family(kernel):
+    """The family of a kernel of the enclosure interface (genenc.family_of), or None."""
+    e = enc_entry(kernel)
+    if e is None:
+        return None
+    if e.get("kind") in ("certain", "trit"):
+        return "ivpred" if "intervals" in e else "ballpred"
+    return "ballset" if e.get("kind") == "ball_set" else "ballsplit"
+
+
+def enc_strata(kernel):
+    """The strata of the family beyond the common ones (genenc.own_strata)."""
+    fam = enc_family(kernel)
+    if fam is None:
+        return ()
+    e = enc_entry(kernel)
+    limbs = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
+    if fam in ("ivpred", "ballpred"):
+        sets = e.get("intervals") or e.get("balls") or {}
+        point = e.get("rel") == "member"
+        first = next(iter(sets.values()), {})
+        k = limbs.get(first.get("lower") or first.get("center"), 1)
+        if fam == "ivpred":
+            s = ["special", "nearzero"]
+            s += ["member"] if point else ["point"] if len(sets) == 1 else [
+                "touch", "equal", "nested", "disjoint"]
+            return tuple(s + (["tails"] if k == 2 else []))
+        s = ["ballstates"] + (["nearzero"] if len(sets) == 1 and not point else
+                              ["boundary", "near"])
+        return tuple(s + ["huge", "points"] + (["wide"] if len(sets) == 2 else []))
+    if fam == "ballset":
+        return ("ballstates", "bothspecial", "disjoint", "touch", "nested", "overlap", "wide",
+                "point")
+    return ("ballstates", "radii", "top")
+
+
+def enc_needs(kernel, e, a):
+    """The counts an entry e of the family must have seen (none for the other kinds)."""
+    kind = e.get("kind")
+    exhaustive = getattr(a, "exhaustive", False)
+    need = []
+    if kind in ("certain", "trit"):
+        rel = e.get("rel")
+        need.append("the relation holds")
+        if kind == "trit":
+            need += ["the relation fails for every choice", "answer yes", "answer no"]
+            if rel in ENC_ORDER_RELS:
+                need += ["the relation neither holds nor fails for every choice",
+                         "answer unknown"]
+        else:
+            need += ["the relation does not hold", "mask true", "mask false"]
+        over = "intervals" if "intervals" in e else "balls"
+        for n in e.get(over) or {}:
+            need += ["%s: %s" % (n, c) for c in ENC_CLASSES[over]]
+        if rel == "member":
+            need += ["%s: %s" % (e["args"][0], c) for c in ENC_POINT_CLASSES]
+        need += [ENC_SPECIAL, ENC_ALL_FINITE]
+        for c in e.get("exact_when") or []:
+            need += ["exact_when holds", "exact_when fails: |%s| <= Omega" % c.get("abs_le")]
+    elif kind == "ball_set":
+        need += list(ENC_SET_PAIRS) + list(ENC_SET_COUNTS)
+        if not exhaustive:
+            # (An enumeration has one zero.)
+            need.append(ENC_SET_ZERO_SIGNS)
+    elif kind == "ball_splits":
+        need += list(ENC_SPLIT_COUNTS)
+    return need
+
+
+def enc_problems(kernel, entries, merged, keys, a):
+    """The guards of the family on each entry of the kernel's own claims (enc_needs), and the band
+    of the answers not given held to architecture.md's (ENC_BAND_LIMIT)."""
+    for j, e in enumerate(kernel.get("ensures", [])):
+        if j >= len(entries) or entries[j]["kind"] != e.get("kind"):
+            return
+        label, counts = entries[j]["label"], merged[j]
+        for name in enc_needs(kernel, e, a):
+            if not counts.get(name):
+                yield ('the claim "%s" saw no case of "%s", so its statement was not checked '
+                       'there' % (label, name))
+        if e.get("kind") in ("certain", "trit"):
+            r = _iv_ratio(keys, j, ENC_BAND_UNITS)
+            if r is not None and r[1] and r[0] > ENC_BAND_LIMIT * r[1]:
+                yield ('the claim "%s" left an answer %s units of 2e + G from the boundary of its '
+                       'relation, beyond the %d of architecture.md\'s band (2e + 4G)'
+                       % (label, _ratio(r[0], r[1], 3), ENC_BAND_LIMIT))
+
+
 def extended_strata(kernel):
     """The strata the oracle's generator adds for a kernel of the extended domain (gen3.py)."""
-    if iv_family(kernel):
+    if iv_family(kernel) or enc_family(kernel):
         # The interval kernels have families of their own (gen6.py, iv_strata).
         return []
     ensures = kernel.get("ensures", [])
@@ -1431,6 +1609,12 @@ def problems(summary, a):
                 yield ("the oracle's generator lists the strata %s, without %s, which its family "
                        "%s has (the interval kernels)" % (",".join(strata), s,
                                                           iv_family(kernel)[0]))
+        # The families of the enclosure interface (genenc.py).
+        for s in enc_strata(kernel):
+            if s not in strata:
+                yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                       "%s has (the enclosure interface)" % (",".join(strata), s,
+                                                             enc_family(kernel)))
 
     keys = [k for k in summary.get("keys", [])
             if (k["kernel"], k["format"]) == (a.kernel, a.format)]
@@ -1487,6 +1671,7 @@ def problems(summary, a):
     yield from m2_problems(kernel, entries, merged, extended)
     yield from bv_problems(kernel, entries, merged, a)
     yield from iv_problems(kernel, entries, merged, keys, a)
+    yield from enc_problems(kernel, entries, merged, keys, a)
     yield from count_problems(kernel, keys, a)
     yield from axpy_problems(kernel, keys, a)
     if not extended:

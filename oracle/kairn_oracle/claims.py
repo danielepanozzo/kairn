@@ -341,6 +341,10 @@ class Entry:
         if self.kind in EXTENDED_KINDS and not kernel.extended:
             raise ClaimsError("%s: this kind belongs to the extended domain, and the kernel has "
                               "no \"domain\": \"extended\"" % where)
+        # The predicates, comparisons and set operations of a ball (enclosure.py).
+        if self.kind in EN.KNOWN:
+            EN.read_entry(self, kernel, raw, where)
+            return
         # The kinds of the interval kernels, and makes_ball from the bounds of an interval
         # (intervals.py).
         if self.kind in IV.KNOWN:
@@ -353,6 +357,9 @@ class Entry:
         if self.kind == "makes_ball" and "midpoint_when" in raw:
             raise ClaimsError("%s: midpoint_when is for a ball made from the bounds of an "
                               "interval" % where)
+        if self.kind == "makes_ball" and {"rel", "abs", "smallest_radius"} & set(raw):
+            raise ClaimsError("%s: rel, abs and smallest_radius are for a ball made from the "
+                              "bounds of an interval" % where)
         if self.kind == "holds":
             self._read_holds(kernel, raw, where)
             self.of = []
@@ -1444,3 +1451,8 @@ for _kind, _fields in IV.ADDED_FIELDS.items():
 from . import bvec as BV  # noqa: E402
 for _kind, _fields in BV.ADDED_FIELDS.items():
     Entry.KNOWN[_kind] = Entry.KNOWN[_kind] | _fields
+
+# The predicates, comparisons and set operations of a ball of the enclosure interface
+# (enclosure.py): the kinds certain, trit, ball_set and ball_splits.
+from . import enclosure as EN  # noqa: E402
+Entry.KNOWN.update(EN.KNOWN)

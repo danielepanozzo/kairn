@@ -38,7 +38,7 @@ The tests that `ctest` runs in the build directory, by name:
 | Test | Checks |
 |---|---|
 | `kairn-gen.check` | Every committed generated file is what `python3 gen/kairn-gen build` writes. |
-| `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
+| `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json` (the claims file `KAIRN_ORACLE_CLAIMS`, [below](#against-other-claims)). |
 | `docs.reference.check` | The reference pages of the site are what `docs/tools/reference.py` writes ([Documentation](documentation.md#reference-pages)). |
 | `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum; the packed runners with the requests assigned to the lanes by a seeded permutation, under the guard that the registers mixed kinds, and the one with the build's flags also consecutively ([below](#packed-kernels)). |
 | `crosscheck.lanes.fault.F` | A packed runner with a fault planted in a copy of `mul_2_2_full` (its special-value select reads the mask of the neighboring lane, `tests/lanes/`) passes the cross-check of format F with the consecutive assignment where no register mixes a non-finite operand with finite ones, and fails it, by the oracle's verdict, with the permuted one; the guard refuses the consecutive assignment of the same stream ([below](#packed-kernels)). |
@@ -147,18 +147,28 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `tests/CMakeLists.txt`, kernels whose claims the oracle cannot read yet; with them
   `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS` for folds. No cross-check, no enumeration of a toy format,
   no brute-force run and no test of the public interface is registered for a name of these lists,
-  and configuring says how many are left out. **On them today**: the kernels of stage B2 of the
-  intervals, the predicates and comparisons of an interval and of a ball, the set operations of a
-  ball and the conversions of two limbs ([Claims of the enclosure interface: predicates and
+  and configuring says how many are left out, or, when none is, that the oracle judges every kernel
+  and fold of the claims. **On them today**: nothing. Both lists are empty, and stay for the objects
+  of a later stage whose claims the oracle cannot read yet; what was on them left them with the
+  interval stage, stage B, the ball vectors' stage and stage B2 of Milestone 2. Since stage B2 the
+  oracle reads and judges the 53 kernels of the predicates and comparisons of an interval and of a
+  ball, the set operations of a ball and the conversions of two limbs ([Claims of the enclosure
+  interface: predicates and
   comparisons](architecture.md#claims-of-the-enclosure-interface-predicates-and-comparisons) and the
   two sections after it: the kinds `certain`, `trit`, `ball_set` and `ball_splits`, the condition
   `abs_le` of their `exact_when`, and the new fields of `ball_of_interval`, `interval_of_ball` and
-  `makes_ball`); what was on them before left them with the interval stage and stage B of
-  Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since the ball
-  vectors' stage the oracle reads and judges the ball vectors, their constructors, the products of
-  two BallVectors and their kernels, and the accumulator's kernels (`oracle/README.md`, "Ball
-  vectors and the accumulator", "Their kernels", "Their folds"): they are cross-checked as the maps
-  are, V4 in the formats its statements quantify over. `conv_radius`, the radius kernel of the
+  `makes_ball`; `oracle/README.md`, "The kinds of the enclosure interface"): they are
+  cross-checked by every compiled runner, scalar and packed, on 2 000 cases per format in the quick
+  tier (`KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES`) and 20 000 in the full tier, and the interpreter
+  enumerates their toy formats; no public operation calls them yet, so they are on
+  `KAIRN_NOT_PUBLIC_YET` (below) and have no `api.oracle` test. Their guards ask for every class of
+  each claim, and hold the answers that the comparisons of balls of two limbs leave unknown to the
+  band architecture.md gives, $2e + 4G$ (`ENC_BAND_LIMIT`: an answer is not claimed there, but a
+  run that leaves one far from the boundary does not pass). Since the ball vectors' stage the
+  oracle reads and judges the ball vectors, their constructors, the products of two BallVectors and
+  their kernels, and the accumulator's kernels (`oracle/README.md`, "Ball vectors and the
+  accumulator", "Their kernels", "Their folds"): they are cross-checked as the maps are, V4 in the
+  formats its statements quantify over. `conv_radius`, the radius kernel of the
   products of two BallVectors, stayed on the list for the oracle's finding (a NaN where
   `prod(ma, mb)` overflows and `g` or `m` is zero, $+\infty$ from a small stated value) until the
   owner's ruling of 2026-11-21 made its claim one of finite results, a result that is not finite
@@ -1740,6 +1750,34 @@ with GCC 16; each passed when rerun (`ctest --rerun-failed`) with the summaries 
 deleted as they came. None of them is about intervals. Summaries of that size were a defect,
 fixed since ([The size of the summaries](#the-size-of-the-summaries)): a full-tier build tree is
 now about half a GB.
+
+**The oracle of stage B2 of the enclosure interface** (the predicates and comparisons of an
+interval and of a ball, the set operations of a ball, the conversions of two limbs: 53 kernels)
+was measured on 2026-11-21 against the commit before it, `--parallel 4`, the Linux machine on 16
+threads. Before it, the claims of two families were unreadable and every test that runs the
+oracle failed for that alone; after it, the tiers ran against `gen/claims.json` without the other
+family, the accumulator and the ball vectors (`-DKAIRN_ORACLE_CLAIMS=FILE`, [Against other
+claims](#against-other-claims)),
+so that the counts below lack that family's tests. A test that fails on the claims fails at once,
+so the times before are short of what those tests take; and the Linux machine was shared with
+other jobs, so its times vary from run to run (its quick tier with GCC took 178 s and 165 s on two
+runs of the stage, a commit apart that adds only a guard):
+
+| Where | Quick tier, before | Quick tier, after | Full tier, before | Full tier, after |
+|---|---|---|---|---|
+| Mac, Apple clang 21 | 633 tests, 534 failing, 90.9 s | 739 tests, 105.1 s | | |
+| Linux, GCC 13 | 634 tests, 534 failing, 161.1 s | 740 tests, 164.6 s | 980 tests, 934 failing, 2 482 s | 1 154 tests, 2 874 s |
+| Linux, Clang 18 | 631 tests, 534 failing, 159.6 s | 737 tests, 182.2 s | | |
+
+The quick tier gains 106 tests, `crosscheck.compiled.K.F` of the 53 kernels in two formats, on
+2 000 cases each (`KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES`); the full tier 174: the same on 20 000
+cases (106), the interpreter's enumerations of their toy formats (53) and the sampled runs of
+the kernels of two intervals (14), and `full.tools.crosscheck.guards.EnclosureGuards`. The largest
+summary of a kernel of the stage in the quick tier is 36 KB (`interval_mid_rad_2`), and in the full
+tier none is among the ten largest (the tenth is 0.96 MB); the largest of the quick tier is still
+`two_prod_dekker`'s, 0.98 MB, and of the full tier `mul_pow2_map_1`'s, 2.7 MB (`binary64`, `cxx`). The oracle's whole selftest
+takes 529 s on the Mac with 8 workers (103 tests, nine of them the stage's), and of its 338
+mutants (`oracle/selftest/mutants.py`) 90 are the stage's.
 
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:

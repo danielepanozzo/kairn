@@ -1536,6 +1536,126 @@ class LaneReports(unittest.TestCase):
                 self.assertIn("ASSIGNMENTS is permuted, consecutive or both", r.stderr)
 
 
+class EnclosureGuards(unittest.TestCase):
+    """The enclosure interface of stage B2: the predicates and comparisons of an interval and a ball
+    (the relation both ways, every answer, every class of each set and point, the special states,
+    exact_when both ways), the set operations of a ball (every pair of states, the operands as they
+    are, the finite operands placed every way, in a random run the zeros of different signs), the
+    split, the conversions of two limbs (finite_when both ways and an infinite radius, exact_when
+    of each side, bounded_when both ways, the center of the ball from an interval), the fractions of
+    their bounds, and the strata of their families."""
+
+    KERNELS = ("interval_less_2", "interval_contains_1", "interval_rel_interior_1",
+               "interval_empty_2", "ball_less_1", "ball_contains_point_2", "ball_contains_ball_2",
+               "ball_positive_1", "ball_hull_1", "ball_intersection_2", "ball_split_2",
+               "interval_mid_rad_2", "interval_to_ball_2", "interval_split_2",
+               "ball_to_interval_2", "ball_from_interval_1")
+
+    @classmethod
+    def setUpClass(cls):
+        # The quick tier's count of these kernels (KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES): with 600
+        # the table of the constructors of ball_from_interval_1 misses a cell in this format.
+        cls.args = ("--seed", "0", "--count", "2000")
+        cls.runs = {k: pipeline(k, IV, *cls.args) for k in cls.KERNELS}
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        for k, s in self.runs.items():
+            self.passes(s, k, IV, *self.args)
+        for k, fmt in (("interval_less_1", "fp:2:-2:1"), ("ball_hull_1", "fp:2:-2:1"),
+                       ("ball_from_interval_1", "fp:2:-2:1")):
+            s = pipeline(k, fmt, "--exhaustive")
+            self.passes(s, k, fmt, "--exhaustive")
+
+    def test_every_class_is_asked_for(self):
+        # Each class the guards ask of an entry, taken out of a good run's summary, fails the run,
+        # with that class as the reason.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        asked = 0
+        for name, good in self.runs.items():
+            with open(good["claims"], encoding="utf-8") as f:
+                kernel = next(k for k in json.load(f)["kernels"] if k["name"] == name)
+            for j, e in enumerate(kernel["ensures"]):
+                for need in CG.enc_needs(kernel, e, None) + CG.iv_needs(kernel, e, None):
+                    s = edited(good, j, lambda x: x["counts"].pop(need, None))
+                    self.fails(s, name, IV, *self.args, reason='saw no case of "%s"' % need)
+                    asked += 1
+        self.assertGreater(asked, 200)
+
+    def test_zero_signs_asked_of_a_random_run_only(self):
+        # An enumeration has one zero: no whole lines of zeros of different signs there.
+        s = pipeline("ball_hull_1", "fp:2:-2:1", "--exhaustive")
+        self.passes(s, "ball_hull_1", "fp:2:-2:1", "--exhaustive")
+        name = "both the whole line, centers zeros of different signs in the line"
+        s = edited(self.runs["ball_hull_1"], 0, lambda e: e["counts"].pop(name, None))
+        self.fails(s, "ball_hull_1", IV, *self.args, reason=name)
+
+    def test_strata_of_the_families_not_promised(self):
+        for k, strata, missing in (
+                ("ball_less_1", M2_COMMON + ",ballstates,boundary,near,huge,points", "wide"),
+                ("interval_less_2", M2_COMMON + ",special,nearzero,touch,equal,nested,disjoint",
+                 "tails"),
+                ("ball_hull_1", M2_COMMON + ",ballstates,disjoint,touch,nested,overlap,wide,point",
+                 "bothspecial"),
+                ("interval_mid_rad_2", M2_COMMON + ",special,point,step,oddeta,top,beyond",
+                 "threshold"),
+                ("ball_to_interval_2", M2_COMMON + ",ballstates,radii,cross,beyond,exactend,"
+                 "threshold", "zeroend")):
+            s = pipeline(k, IV, *self.args, "--strata", strata)
+            self.fails(s, k, IV, *self.args, reason="without %s, which its family" % missing)
+
+    def test_an_answer_not_given_far_from_the_boundary(self):
+        # The band of the answers not given held to architecture.md's 2e + 4G: an answer left five
+        # units of 2e + G from the boundary fails the run; one of three units passes.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        for k in ("ball_contains_ball_2", "ball_contains_point_2"):
+            good = self.runs[k]
+            s = edited(good, 0, lambda e: e["maxima"].update({CG.ENC_BAND_UNITS: [["5", "1"], ""]}))
+            self.fails(s, k, IV, *self.args, reason="beyond the 4 of architecture.md's band")
+            s = edited(good, 0, lambda e: e["maxima"].update({CG.ENC_BAND_UNITS: [["3", "1"], ""]}))
+            self.passes(s, k, IV, *self.args)
+
+    def test_the_bounds_far_from_reached(self):
+        name = "lower: distance from the range bound / (rel*|bound| + abs)"
+        s = edited(self.runs["ball_to_interval_2"], 0, lambda e: e["maxima"].update(
+            {name: [["1", "5"], ""]}))
+        self.fails(s, "ball_to_interval_2", IV, *self.args, reason="below 1/4")
+        name = "|center - midpoint| / (rel*|midpoint| + abs)"
+        s = edited(self.runs["ball_from_interval_1"], 0, lambda e: e["maxima"].update(
+            {name: [["1", "5"], ""]}))
+        self.fails(s, "ball_from_interval_1", IV, *self.args, reason="below 1/4")
+        # The center of two limbs has no floor (its bound is not claimed tight).
+        s = edited(self.runs["interval_mid_rad_2"], 0, lambda e: e["maxima"].update(
+            {name: [["1", "100"], ""]}))
+        self.passes(s, "interval_mid_rad_2", IV, *self.args)
+
+    def test_the_one_process_driver(self):
+        with tempfile.TemporaryDirectory() as d:
+            def drive(kernel, *args):
+                return subprocess.run(
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS
+                    + ["--kernel", kernel, "--format", IV, "--summary",
+                       os.path.join(d, kernel + ".json"), "--fail-on-suspicious", "--interp",
+                       "--seed", "0"] + list(args),
+                    capture_output=True, text=True)
+            good = drive("ball_intersection_1", "--count", "600")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            bad = drive("ball_intersection_1", "--count", "12")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("did not check what it set out to", bad.stdout)
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)
