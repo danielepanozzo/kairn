@@ -301,10 +301,14 @@ def compile_tables(directory):
             if r['kind'] != 'unit':
                 continue
             cell = data.setdefault(key, {}).setdefault((r['operations'], r['setting'], r['config']),
-                                                       {'cpu': [], 'peak': [], 'obj': None, 'run': [], 'run_first': []})
+                                                       {'cpu': [], 'peak': [], 'obj': None, 'run': [], 'run_first': [],
+                                                        'timeout': None})
             if first:
                 cell['cpu'] += [c for c, s in zip(r['cpu'], r['status']) if s == 0]
-                cell['peak'] += r['peak_mb']
+                # The peak of a compilation stopped at its timeout is that of the driver alone.
+                cell['peak'] += [m for m, s in zip(r['peak_mb'], r['status']) if s == 0]
+                if not cell['cpu'] and -1 in r['status']:
+                    cell['timeout'] = d.get('timeout')
                 cell['obj'] = r.get('object_bytes')
                 if 'run' in r:
                     cell['run_first'].append(r['run']['ns_per_op_min'])
@@ -334,6 +338,8 @@ def compile_tables(directory):
 
         def seconds(c, machine=None):
             w = med(c['cpu'])
+            if w is None and c['timeout']:
+                return 'stopped at %d' % c['timeout']
             return '' if w is None else ('%.2f' % w if w < 10 else '%.1f' % w if w < 100 else '%.0f' % w)
 
         def runs(c, machine):

@@ -254,7 +254,9 @@ with an empty table and once per kernel with that kernel alone: the difference i
 costs. `phases` asks the compiler where the time goes (GCC `-ftime-report`, Clang `-ftime-trace`,
 MSVC `/Bt+`). `kernels` counts the lines and operations of every generated kernel. `--cpu` pins
 the script, and every compiler it starts, to one logical processor (Linux, Windows). Every
-compilation has a timeout, and on a timeout only the process the script started is terminated.
+compilation has a timeout, and on a timeout only the process the script started is terminated,
+after (on Linux and macOS) the processes it started itself: the compiler proper, which a driver
+runs as its child and which would otherwise keep running on the same core.
 
 ### Constants from fractions
 
