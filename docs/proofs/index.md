@@ -81,7 +81,9 @@ lists:
   (the plain product, the guard that returns its operand, `times_inf` from comparisons) returns
   outputs of the same values, and the same masks, as the kernel of run time (the fused product,
   the guard that adds $+0$, the multiplication by infinity) (`IeeeTwoExecutions.v`, one theorem
-  `K_two_executions` per kernel `K` of `IeeeWith.v`), the interval kernels with bounds of one
+  `K_two_executions` per kernel `K` of `IeeeWith.v`; and for `two_prod`, `constexpr` through
+  Dekker's product, the same values only when the error term of constant evaluation is finite and
+  the product is exact, `two_prod_two_executions_exact`), the interval kernels with bounds of one
   limb, on all values:
   the constructor, the negation, the sum, the difference and the product (`IeeeInterval1.v`,
   with the definitions their statements use in `IeeeIntervalVocabulary.v`), and the bounds of

@@ -137,7 +137,7 @@ From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements.
 From Kairn Require Import Format IeeeBridge IeeeVocabulary IeeeOps IeeeExt IeeeDirected
   IeeeDirectedProd IeeeEntry IeeeProduct.
-From Kairn Require IeeeOperations.
+From Kairn Require IeeeOperations Split TwoProdDekker IeeeEFT.
 From Kairn.Gen Require IeeeModel IeeeWith.
 Open Scope R_scope.
 
@@ -3029,3 +3029,226 @@ exact (sum_fast_entry_step_2_same guard_ce guard' Hgc s0 s0 s1 s1 x0 x0 x1 x1 (s
 Qed.
 
 End TwoExecutions.
+
+(** * two_prod: Dekker's product in constant evaluation against TwoProd at run time *)
+
+(* two_prod is constexpr through a constant-evaluation variant, not by the rule of the
+   product: in constant evaluation the C++ runs the listing of two_prod_dekker (Veltkamp's
+   split and Dekker's product) with plain products, at run time TwoProd with an FMA. These
+   are two algorithms, and their error terms are not always the same number: below
+   2^(2p-1) eta neither is exact and each is its own rounding of the exact error, within
+   eta/2 at run time and 13/8 eta in constant evaluation; and an operation of Dekker's
+   product (a split, a partial product) can overflow where TwoProd overflows nowhere, which
+   makes its error term infinite or a NaN. What is proved here: when the error term of
+   Dekker's product is finite (then so is every value it computes: non-finite in, non-finite
+   out), and the product is exact (a b = 0 or |a b| >= 2^(2p-1) eta), the two executions of
+   two_prod return the same values. Without the second condition this is false: in binary64,
+   a = -0x1.204f8c386bbc4p-102 and b = -0x1.3c5fd414c343cp-911 give the error term
+   -0x1.d4p-1068 at run time and -0x1.d8p-1068 in constant evaluation. Without the first, too:
+   a = b = 0x1.fffffffffffffp+511 give 0x1p+918 at run time, and +infinity in constant
+   evaluation, where Dekker's partial product ah bh overflows (Clang computes it; GCC refuses
+   the program, which is no wrong constant). No kernel
+   reaches two_prod in constant evaluation: every kernel that calls it has an fms, and no
+   variant, so it is not constexpr. *)
+Section TwoProdVariant.
+Variable prec emax : Z.
+Context {prec_gt_0_ : Prec_gt_0 prec}.
+Context {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}.
+
+Notation float := (binary_float prec emax).
+Notation nan_of := {x : float | is_nan prec emax x = true}.
+(* The NaN functions of constant evaluation, and those of run time (primed). *)
+Variable nan_plus : float -> float -> nan_of.
+Variable nan_minus : float -> float -> nan_of.
+Variable nan_opp' : float -> nan_of.
+Variable nan_fma' : float -> float -> float -> nan_of.
+Variable nan_mult : float -> float -> nan_of.
+
+Notation emin := (3 - emax - prec)%Z.
+Notation fexp := (FLT_exp emin prec).
+Notation rnd := (round radix2 fexp (Znearest tie_even)).
+Notation fin x := (is_finite prec emax x = true).
+Notation b2r := (B2R prec emax).
+Notation sv := (@same_value prec emax).
+Notation add := (IeeeOperations.add prec emax nan_plus).
+Notation sub := (IeeeOperations.sub prec emax nan_minus).
+Notation prod_ce := (IeeeWith.prod_ce prec emax nan_mult).
+Notation prod' := (IeeeOperations.prod prec emax nan_fma').
+Notation splitter := (IeeeModel.splitter prec emax).
+Notation dekker_ce := (IeeeWith.two_prod_dekker_with prec emax nan_plus nan_minus prod_ce).
+
+Let Hprec : (0 < prec)%Z.
+Proof. exact prec_gt_0_. Qed.
+Let Hemax : (prec < emax)%Z.
+Proof. exact prec_lt_emax_. Qed.
+
+(* The plain product: non-finite in, non-finite out; finite, the rounded product. *)
+Lemma prod_ce_finite_inv : forall x y : float, fin (prod_ce x y) -> fin x /\ fin y.
+Proof.
+intros x y. unfold IeeeWith.prod_ce, Bmult. rewrite is_finite_BSN2B.
+destruct x as [sx|sx|sx px Hx|sx mx ex Hx]; destruct y as [sy|sy|sy py Hy|sy my ey Hy];
+  try (intros _; split; reflexivity); simpl; try discriminate.
+Qed.
+
+Lemma prod_ce_val :
+  forall x y : float, fin x -> fin y -> fin (prod_ce x y) ->
+  b2r (prod_ce x y) = rnd (b2r x * b2r y + 0).
+Proof.
+intros x y Fx Fy F.
+assert (S : sv (prod_ce x y) (prod' x y)).
+{ apply (same_prod_ce prec emax nan_fma' nan_mult); apply same_refl. }
+assert (F' : fin (prod' x y)) by (rewrite <- (same_finite prec emax _ _ S); exact F).
+rewrite (same_val prec emax _ _ S). unfold IeeeOperations.prod.
+destruct (fma_spec prec emax nan_fma' x y (IeeeOperations.pzero prec emax) Fx Fy eq_refl)
+  as [_ E].
+rewrite (E F'). reflexivity.
+Qed.
+
+(* The splitter of the format, 2^s + 1 with s = ceil(prec / 2), is the number of the
+   real model. *)
+Lemma splitter_val : (4 <= prec)%Z -> fin splitter /\ b2r splitter = Model.splitter prec.
+Proof.
+intros Hp. unfold IeeeModel.splitter.
+assert (Hs : (2 <= Split.split_s prec <= prec - 2)%Z) by (apply Split.split_s_bounds; exact Hp).
+assert (P : (2 ^ Split.split_s prec + 1 < 2 ^ prec)%Z).
+{ assert (A : (2 ^ Split.split_s prec <= 2 ^ (prec - 2))%Z) by (apply Z.pow_le_mono_r; lia).
+  assert (B : (2 ^ prec = 2 ^ (prec - 2) * 2 ^ 2)%Z).
+  { rewrite <- Z.pow_add_r by lia. f_equal. lia. }
+  assert (C : (0 < 2 ^ (prec - 2))%Z) by (apply Z.pow_pos_nonneg; lia).
+  rewrite B. simpl (2 ^ 2)%Z. lia. }
+rewrite (Split.splitter_IZR prec) by lia.
+apply (const_of_spec prec emax).
+- apply generic_format_FLT.
+  apply (FLT_spec _ _ _ _ (Float radix2 (2 ^ Split.split_s prec + 1) 0)).
+  + unfold F2R. simpl. ring.
+  + simpl. rewrite Z.abs_eq by lia. change (Zpower radix2 prec) with (2 ^ prec)%Z. exact P.
+  + cbn [Fexp]. lia.
+- rewrite Rabs_pos_eq by (apply IZR_le; lia).
+  apply Rlt_le_trans with (IZR (2 ^ prec)); [apply IZR_lt; exact P|].
+  change (2 ^ prec)%Z with (Zpower radix2 prec).
+  rewrite (IZR_Zpower radix2) by lia. apply bpow_le. lia.
+Qed.
+
+(* Dekker's product in constant evaluation with a finite error term: every value finite, and
+   the values of the real model. *)
+Lemma dekker_ce_model :
+  (4 <= prec)%Z ->
+  forall a b : float, fin a -> fin b ->
+  fin (snd (dekker_ce a b)) ->
+  fin (fst (dekker_ce a b)) /\
+  (b2r (fst (dekker_ce a b)), b2r (snd (dekker_ce a b)))
+  = Model.two_prod_dekker emin prec tie_even (b2r a) (b2r b).
+Proof.
+intros Hp a b Fa Fb.
+destruct (splitter_val Hp) as [FS VS].
+cbv beta iota zeta delta [IeeeWith.two_prod_dekker_with IeeeWith.split_with Model.two_prod_dekker
+  Model.split fst snd].
+set (ga := prod_ce splitter a). set (da := sub a ga). set (ah := add ga da).
+set (al := sub a ah).
+set (gb := prod_ce splitter b). set (db := sub b gb). set (bh := add gb db).
+set (bl := sub b bh).
+set (p := prod_ce a b). set (q0 := prod_ce ah bh). set (t1 := sub q0 p).
+set (q1 := prod_ce ah bl). set (t2 := add t1 q1). set (q2 := prod_ce al bh).
+set (t3 := add t2 q2). set (q3 := prod_ce al bl). set (e := add t3 q3).
+intros Fe.
+destruct (add_finite_inv prec emax nan_plus t3 q3 Fe) as [Ft3 Fq3].
+destruct (add_finite_inv prec emax nan_plus t2 q2 Ft3) as [Ft2 Fq2].
+destruct (add_finite_inv prec emax nan_plus t1 q1 Ft2) as [Ft1 Fq1].
+destruct (sub_finite_inv prec emax nan_minus q0 p Ft1) as [Fq0 Fp].
+destruct (prod_ce_finite_inv ah bh Fq0) as [Fah Fbh].
+destruct (prod_ce_finite_inv al bl Fq3) as [Fal Fbl].
+destruct (add_finite_inv prec emax nan_plus ga da Fah) as [Fga Fda].
+destruct (add_finite_inv prec emax nan_plus gb db Fbh) as [Fgb Fdb].
+split; [exact Fp|].
+assert (Vga : b2r ga = rnd (Model.splitter prec * b2r a + 0)).
+{ rewrite <- VS. apply prod_ce_val; assumption. }
+assert (Vgb : b2r gb = rnd (Model.splitter prec * b2r b + 0)).
+{ rewrite <- VS. apply prod_ce_val; assumption. }
+assert (Vda : b2r da = rnd (b2r a - b2r ga)).
+{ apply (proj2 (sub_spec prec emax nan_minus a ga Fa Fga)). exact Fda. }
+assert (Vdb : b2r db = rnd (b2r b - b2r gb)).
+{ apply (proj2 (sub_spec prec emax nan_minus b gb Fb Fgb)). exact Fdb. }
+assert (Vah : b2r ah = rnd (b2r ga + b2r da)).
+{ apply (proj2 (add_spec prec emax nan_plus ga da Fga Fda)). exact Fah. }
+assert (Vbh : b2r bh = rnd (b2r gb + b2r db)).
+{ apply (proj2 (add_spec prec emax nan_plus gb db Fgb Fdb)). exact Fbh. }
+assert (Val : b2r al = rnd (b2r a - b2r ah)).
+{ apply (proj2 (sub_spec prec emax nan_minus a ah Fa Fah)). exact Fal. }
+assert (Vbl : b2r bl = rnd (b2r b - b2r bh)).
+{ apply (proj2 (sub_spec prec emax nan_minus b bh Fb Fbh)). exact Fbl. }
+assert (Vp : b2r p = rnd (b2r a * b2r b + 0)) by (apply prod_ce_val; assumption).
+assert (Vq0 : b2r q0 = rnd (b2r ah * b2r bh + 0)) by (apply prod_ce_val; assumption).
+assert (Vq1 : b2r q1 = rnd (b2r ah * b2r bl + 0)) by (apply prod_ce_val; assumption).
+assert (Vq2 : b2r q2 = rnd (b2r al * b2r bh + 0)) by (apply prod_ce_val; assumption).
+assert (Vq3 : b2r q3 = rnd (b2r al * b2r bl + 0)) by (apply prod_ce_val; assumption).
+assert (Vt1 : b2r t1 = rnd (b2r q0 - b2r p)).
+{ apply (proj2 (sub_spec prec emax nan_minus q0 p Fq0 Fp)). exact Ft1. }
+assert (Vt2 : b2r t2 = rnd (b2r t1 + b2r q1)).
+{ apply (proj2 (add_spec prec emax nan_plus t1 q1 Ft1 Fq1)). exact Ft2. }
+assert (Vt3 : b2r t3 = rnd (b2r t2 + b2r q2)).
+{ apply (proj2 (add_spec prec emax nan_plus t2 q2 Ft2 Fq2)). exact Ft3. }
+assert (Ve : b2r e = rnd (b2r t3 + b2r q3)).
+{ apply (proj2 (add_spec prec emax nan_plus t3 q3 Ft3 Fq3)). exact Fe. }
+rewrite Ve, Vt3, Vq3, Vt2, Vq2, Vt1, Vq1, Vq0, Vp, Val, Vbl, Vah, Vbh, Vda, Vdb, Vga, Vgb.
+reflexivity.
+Qed.
+
+(* The two executions of two_prod: Dekker's product with plain products (constant evaluation)
+   and TwoProd with an FMA (run time), on the same finite operands, with any NaN functions on
+   either side. When the error term of constant evaluation is finite and the product is
+   exact, both pairs have the same values. *)
+Theorem two_prod_two_executions_exact :
+  (4 <= prec)%Z ->
+  forall a b : float, fin a -> fin b ->
+  let '(p, e) := dekker_ce a b in
+  let '(p', e') := IeeeModel.two_prod prec emax nan_opp' nan_fma' a b in
+  fin e ->
+  (b2r a * b2r b = 0 \/ bpow radix2 (2 * prec - 1) * bpow radix2 emin <= Rabs (b2r a * b2r b)) ->
+  sv p p' /\ sv e e'.
+Proof.
+intros Hp a b Fa Fb.
+assert (Sp : sv (fst (dekker_ce a b)) (fst (IeeeModel.two_prod prec emax nan_opp' nan_fma' a b))).
+{ cbv beta iota zeta delta [IeeeWith.two_prod_dekker_with IeeeWith.split_with IeeeModel.two_prod
+    fst].
+  apply (same_prod_ce prec emax nan_fma' nan_mult); apply same_refl. }
+generalize (dekker_ce_model Hp a b Fa Fb).
+generalize (IeeeEFT.two_prod_ieee_correct prec emax prec_gt_0_ prec_lt_emax_ nan_opp' nan_fma'
+              ltac:(lia) a b Fa Fb).
+generalize (TwoProdDekker.two_prod_dekker_correct emin prec Hp (b2r a) (b2r b)
+              (b2r_format prec emax a) (b2r_format prec emax b)).
+revert Sp.
+destruct (Model.two_prod_dekker emin prec tie_even (b2r a) (b2r b)) as [rp re].
+destruct (dekker_ce a b) as [p e].
+destruct (IeeeModel.two_prod prec emax nan_opp' nan_fma' a b) as [p' e'].
+cbn [fst snd]. intros Sp [_ [_ [Erp [_ Xr]]]] Hrun Hce Fe Big.
+destruct (Hce Fe) as [Fp E]. injection E as Ep Ee.
+assert (Fp' : fin p') by (rewrite <- (same_finite prec emax _ _ Sp); exact Fp).
+destruct (Hrun Fp') as [Fe' [Ep' [_ Xrun]]].
+split; [exact Sp|].
+unfold same_value. rewrite (xval_fin prec emax e Fe), (xval_fin prec emax e' Fe').
+f_equal.
+assert (Hrp : rp + re = b2r a * b2r b) by (apply Xr; exact Big).
+assert (Hrun' : b2r p' + b2r e' = b2r a * b2r b) by (apply Xrun; exact Big).
+assert (Epp : b2r p' = rp) by (change (b2r p') with (val p'); rewrite Ep', Erp; reflexivity).
+lra.
+Qed.
+
+End TwoProdVariant.
+
+(* The statement of two_prod_two_executions_exact, written by hand (two_prod is constexpr
+   through a variant, which IeeeWith.v does not list, and the statement has two hypotheses):
+   proofs/audit/HandAudit.v checks the theorem against it. *)
+Definition two_prod_two_executions_exact_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp' : nan1 prec emax)
+         (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  (4 <= prec)%Z ->
+  forall a b : binary_float prec emax, finite a -> finite b ->
+  let '(p, e) := IeeeWith.two_prod_dekker_with prec emax nan_plus nan_minus
+                   (IeeeWith.prod_ce prec emax nan_mult) a b in
+  let '(p', e') := IeeeModel.two_prod prec emax nan_opp' nan_fma' a b in
+  finite e ->
+  (val a * val b = 0 \/
+   bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
+  xval p = xval p' /\ xval e = xval e'.

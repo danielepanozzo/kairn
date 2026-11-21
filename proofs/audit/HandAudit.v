@@ -38,7 +38,10 @@
      without a product that compute a guard or times_inf: the operations of constant
      evaluation against those of run time, the listings of proofs/gen/IeeeWith.v against the
      generated kernels, and in lockstep), whose theorems proofs/gen/IeeeAudit.v checks
-     against their generated statements;
+     against their generated statements; and, for two_prod, which is constexpr through its
+     variant, that Dekker's product in constant evaluation and TwoProd at run time give the
+     same values when the error term of the first is finite and the product is exact, with
+     the statement written by hand (two_prod_two_executions_exact_spec);
    - what is proved of the interval kernels of Milestone 2 and of the conversions of a
      ball beside their generated statements, which the generated audits list: for the
      conversions of a ball, the lemmas their theorems rest on; for the interval kernels
@@ -680,6 +683,17 @@ Print Assumptions sub_2_2_full_same.
 Print Assumptions sub_entry_step_2_same.
 Print Assumptions sum_entry_step_2_same.
 Print Assumptions sum_fast_entry_step_2_same.
+
+(* two_prod, constexpr through its variant: Dekker's product in constant evaluation against
+   TwoProd at run time (theories/IeeeTwoExecutions.v). The same values when the error term of
+   constant evaluation is finite and the product is exact; the statement is written by hand. *)
+Print Assumptions prod_ce_finite_inv.
+Print Assumptions prod_ce_val.
+Print Assumptions splitter_val.
+Print Assumptions dekker_ce_model.
+Definition two_prod_two_executions_exact_audit : two_prod_two_executions_exact_spec :=
+  two_prod_two_executions_exact.
+Print Assumptions two_prod_two_executions_exact.
 
 (* Scaling a ball by a power of two (theories/BallPow2.v): the radius and the two claims
    for a center whose scaled value is exact when its test says so. *)
