@@ -224,7 +224,7 @@ and functions Kairn does not have, and its one interval type has bounds of `bina
   $\pm\Omega$ and $+\infty$ for a half-line, NaN for the empty set); the radius of one limb the
   smallest for Kairn's midpoint;
 - the predicates `isEmpty` and `isEntire`, which are `is_empty()` and `is_whole()` here (the name
-  of `Ball::is_whole()`, public since 0.2.0, for both types);
+  of `Ball::is_whole()`, public since Milestone 1, in version 0.0.0, for both types);
 - the four relations of IEEE Std 1788.1-2017, under the standard's names in the namespace
   `kairn::ieee1788`, each returning a `bool` with the standard's readings of the empty set (it is a
   subset of every interval, interior to every interval, disjoint from every interval, and equal to
@@ -280,13 +280,14 @@ read stored values, check nothing.
 
 `constexpr`: every function of this page on intervals of one and two limbs but the midpoint, the
 radius, `mid_rad()` and the conversions of two limbs (the split of two limbs is `constexpr`); on
-balls of one limb every function but the split; on balls of two limbs the signs, the states,
-`mid_rad()` and `from_interval`. The others compute with fused operations that have no variant for
-constant evaluation (`add_ball_2_2`, the sums of balls). On the empty set and the whole line the
-listings of balls compute a NaN or $\infty - \infty$ before the selects that return their result,
-and so do the midpoint, the radius and the split of the empty interval, which GCC and Clang refuse
-in constant evaluation: those calls are not constant expressions, though they are evaluated as
-stated at run time (`api.constexpr` checks them at run time).
+balls of one limb every function but the split; on balls of two limbs `lower_as`, `upper_as`,
+`midpoint()`, `mid_rad()`, the signs, the states and `from_interval`, and the narrowing
+`Ball<T, 1>(X)` of a ball of two limbs. The others compute with fused operations that have no
+variant for constant evaluation (`add_ball_2_2`, the sums of balls). On the empty set and the
+whole line the listings of balls compute a NaN or $\infty - \infty$ before the selects that
+return their result, and so do the midpoint, the radius and the split of the empty interval,
+which GCC and Clang refuse in constant evaluation: those calls are not constant expressions,
+though they are evaluated as stated at run time (`api.constexpr` checks them at run time).
 
 ## What is tested
 

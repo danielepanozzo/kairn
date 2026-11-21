@@ -425,19 +425,21 @@ C++20, and there is nothing to compile. Its headers today:
 
 | Header | Content |
 |---|---|
-| `kairn/kairn.hpp` | All of the following. |
+| `kairn/kairn.hpp` | All of the following but `kairn/packed.hpp` and `kairn/soa.hpp`. |
 | `kairn/expansion.hpp` | `kairn::Expansion<T, 1>` and `kairn::Expansion<T, 2>`, `T` = `float` or `double`, and their operations. |
 | `kairn/ball.hpp` | `kairn::Ball<T, 1>` and `kairn::Ball<T, 2>`; it includes `interval.hpp`. |
 | `kairn/interval.hpp` | `kairn::Interval<T, 1>` and `kairn::Interval<T, 2>`, the conversions between intervals and balls, and the relations of IEEE 1788 (`kairn::ieee1788`). |
 | `kairn/enclosure.hpp` | The types the two share: `kairn::Trit` with `kairn::certainly` and `kairn::possibly`, `kairn::Split` and `kairn::MidRad` ([One enclosure interface](../reference/enclosure.md)). |
 | `kairn/blocks.hpp` | The [building blocks](#building-blocks) on `T`: `two_sum`, `fast_two_sum`, `two_prod`, `next_up`, `next_down`, `radd`, `rmul`, the sums and products rounded down and up. |
 | `kairn/rational.hpp` | `kairn::rational`, `kairn::integer` and `kairn::Constant` ([above](#constants-from-fractions)). |
+| `kairn/packed.hpp` | `kairn::Packed<T, k>` and `kairn::PackedMask<T>`, numbers in SIMD registers ([Vector loops](#vector-loops)); not included by `kairn/kairn.hpp`. |
+| `kairn/soa.hpp` | `kairn::SoA<T, k>` and its views, numbers stored as one array per limb ([Vector loops](#vector-loops)); not included by `kairn/kairn.hpp`. |
 | `kairn/traits.hpp` | `kairn::traits<X>`: limb type, number of limbs, precision, and the error constants of the proved operations. |
 | `kairn/environment.hpp` | `kairn::self_test()` and `kairn::environment_ok()`. |
 | `kairn/config.hpp` | The checks of the compiler's flags, the marker `kairn::unverified`, and the macros `KAIRN_CHECKS`, `KAIRN_ENVIRONMENT_FAILURE`, `KAIRN_K1_CONTRACT`, `KAIRN_ENCLOSURE_CODE`. |
 | `kairn/version.hpp` | `KAIRN_VERSION_MAJOR`, `KAIRN_VERSION_MINOR`, `KAIRN_VERSION_PATCH`, `KAIRN_VERSION_STRING` and `KAIRN_VERSION` (configuring fails if they disagree with the version in `CMakeLists.txt`), and `KAIRN_VERSION_AT_LEAST(major, minor, patch)` ([above](#building-blocks)). |
 | `kairn/definitions.hpp` | The definitions of the operations of `Ball`, for one file of a program built with `KAIRN_ENCLOSURE_CODE_EXTERNAL` ([below](#compile-time-and-the-operations-of-ball)); nothing in the other settings. |
-| `kairn/ball_operations.hpp`, `kairn/gen/` | The operations of `Ball` that `ball.hpp` and `definitions.hpp` include, and the generated kernels and data the headers above use; not an interface to call directly. |
+| `kairn/ball_operations.hpp`, `kairn/interval_operations.hpp`, `kairn/gen/` | The operations of `Ball` and of `Interval` that round, which `ball.hpp`, `interval.hpp` and `definitions.hpp` include, and the generated kernels and data the headers above use; not an interface to call directly. |
 
 A project can add the source tree (directly, or through `FetchContent`), as the
 `consume.add_subdirectory` test does, with `KAIRN_SOURCE_DIR` the path of the checkout:
@@ -483,16 +485,11 @@ is:
 | `KAIRN_ENCLOSURE_CODE_OUTLINED` | ordinary functions that the compiler is asked not to inline: each file compiles each operation once, whatever the number of its calls | a file with many ball operations in a few functions compiles too slowly or uses too much memory, and the build stays as simple as it is; with Clang it saves as much as external |
 | `KAIRN_ENCLOSURE_CODE_EXTERNAL` | declared only; one file of the program defines them | the same, when many files use balls and the program would rather compile the operations once in all; with GCC, which compiled an external unit 1.1 to 2.4 times as fast as an outlined one |
 
-```cpp
-// In every file of the program, or with -DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL:
-#define KAIRN_ENCLOSURE_CODE KAIRN_ENCLOSURE_CODE_EXTERNAL
-#include <kairn/kairn.hpp>
-
-// And in exactly one file, compiled with the same settings as the others:
-#include <kairn/definitions.hpp>
-```
-
-With CMake, the definition can go on the targets
+For the external setting, every file of the program defines `KAIRN_ENCLOSURE_CODE` as
+`KAIRN_ENCLOSURE_CODE_EXTERNAL` before it includes `kairn/kairn.hpp` (or is compiled with
+`-DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL`), and exactly one file, compiled with the
+same settings as the others, includes `kairn/definitions.hpp`, as Kairn's own tests do
+(`tests/api/definitions.cpp`). With CMake, the definition can go on the targets
 (`target_compile_definitions(app PRIVATE KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL)`), and the
 one file into one of them. `kairn::kairn` builds nothing: the file is the program's own, so that it
 is compiled with the program's compiler and flags, `KAIRN_CHECKS` and `KAIRN_ENVIRONMENT_FAILURE`

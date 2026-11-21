@@ -2738,8 +2738,10 @@ name of a form).
 
 ## Continuous integration
 
-Five workflows under `.github/workflows/`, each on pushes to `main` and on pull requests, one run
-per branch at a time (a new push cancels the run in progress); their jobs all start at once:
+Six workflows under `.github/workflows/`, one run per branch at a time (a new push cancels the run
+in progress). Five run on pushes to `main` and on pull requests, and their jobs all start at once;
+the sixth, `nightly.yml`, runs every night, by hand, and on a pull request that changes it or its
+driver:
 
 | Workflow | Jobs |
 |---|---|
