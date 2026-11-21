@@ -294,7 +294,7 @@ def compile_tables(directory):
             continue
         d = json.load(open(path))
         key = (m.group('machine'), m.group('compiler'), m.group('kind'))
-        first = m.group('run') is None and m.group('size') is None
+        first = m.group('run') is None
         for r in d['results']:
             if r['kind'] != 'unit':
                 continue
@@ -322,29 +322,56 @@ def compile_tables(directory):
                 cells = []
                 for col in present:
                     t = data[(col[0], col[1], kind)]
-                    parts = [f(t[(n, s, lvl)]) for lvl in ('O2', 'O3') if (n, s, lvl) in t]
-                    cells.append('; '.join(p for p in parts if p))
-                print('| %d, %s | %s |' % (n, s, ' | '.join(cells)))
+                    parts = [f(t[(n, s, lvl)], col[0]) if (n, s, lvl) in t else '' for lvl in ('O2', 'O3')]
+                    cells.append('' if not any(parts) else '; '.join(p or '–' for p in parts))
+                if any(cells):
+                    print('| %d, %s | %s |' % (n, s, ' | '.join(cells)))
 
         def med(v):
             return sorted(v)[len(v) // 2] if v else None
 
-        def seconds(c):
+        def seconds(c, machine=None):
             w = med(c['wall'])
             return '' if w is None else ('%.2f' % w if w < 10 else '%.1f' % w if w < 100 else '%.0f' % w)
 
-        def runs(c):
-            v = c['run'] or c['run_first']
+        def runs(c, machine):
+            # On Linux the first runs were made on the cores of the timed compilations, on the
+            # busier socket, and are left out (the table after shows them); on the Mac, which has
+            # no affinity, every run counts.
+            v = c['run'] + (c['run_first'] if machine == 'mac' else [])
             if not v:
                 return ''
-            return fmt_ns_range(min(v), max(v)) + ('' if c['run'] else ' (one run)')
+            return fmt_ns_range(min(v), max(v)) + (' (one run)' if len(v) == 1 else '')
 
         emit('%s: compile time, s (-O2; -O3)' % kind, seconds)
-        emit('%s: peak memory, MB (-O2; -O3)' % kind, lambda c: '%d' % round(med(c['peak'])) if c['peak'] else '')
-        emit('%s: object, KB (-O2; -O3)' % kind, lambda c: '%d' % round(c['obj'] / 1024) if c['obj'] else '')
+        emit('%s: peak memory, MB (-O2; -O3)' % kind, lambda c, m: '%d' % round(med(c['peak'])) if c['peak'] else '')
+        emit('%s: object, KB (-O2; -O3)' % kind, lambda c, m: '%d' % round(c['obj'] / 1024) if c['obj'] else '')
         emit('%s: run time of the unit, ns per operation (-O2; -O3)' % kind, runs)
         emit('%s: run time of the unit, first runs, ns per operation (-O2; -O3)' % kind,
-             lambda c: fmt_ns_range(min(c['run_first']), max(c['run_first'])) if c['run_first'] else '')
+             lambda c, m: fmt_ns_range(min(c['run_first']), max(c['run_first'])) if c['run_first'] else '')
+
+
+def modes(directory):
+    """modes-MACHINE-COMPILER-LEVEL.json, written by kairn-bench-m2-modes: ns per element of a loop of
+    additions and of products under each rounding mode."""
+    runs = {}
+    for path in sorted(glob.glob(os.path.join(directory, 'modes-*.json'))):
+        m = re.match(r'^modes-(mac|linux)-([a-z0-9]+)-(O[23])\.json$', os.path.basename(path))
+        if m:
+            runs[(m.group(1), m.group(2), m.group(3))] = json.load(open(path))
+    if not runs:
+        return
+    keys = sorted(runs)
+    print('\n| Loop under the mode, ns per element | %s |' % ' | '.join(
+        '%s -%s' % (next(c[2] for c in COLUMNS if c[0] == k[0] and c[1] == k[1]), k[2]) for k in keys))
+    print('|---' * (len(keys) + 1) + '|')
+    for op in ('add', 'mul'):
+        for mode in ('nearest', 'downward', 'upward', 'towardzero'):
+            cells = []
+            for k in keys:
+                r = next((x for x in runs[k]['results'] if x['op'] == op and x['mode'] == mode), None)
+                cells.append(fmt_ns(r['ns_min']) if r else '')
+            print('| `%s`, %s | %s |' % (op, mode, ' | '.join(cells)))
 
 
 def rational_compile(directory):
@@ -571,6 +598,8 @@ def report(directory, sections):
             rational_compile(directory)
         elif name == 'compile_tables':
             compile_tables(directory)
+        elif name == 'modes':
+            modes(directory)
         else:
             SECTIONS[name](c if name == 'settings' else inline)
 
@@ -587,7 +616,7 @@ def fill(directory, template, out):
     import io
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables'])
+        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes'])
     tables, current = {}, None
     for line in buf.getvalue().splitlines():
         if line.startswith('| ') and current is None:
@@ -635,13 +664,13 @@ def fill(directory, template, out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('dir')
-    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables'], action='append')
+    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables', 'modes'], action='append')
     ap.add_argument('--fill', nargs=2, metavar=('TEMPLATE', 'OUT'))
     a = ap.parse_args()
     if a.fill:
         fill(a.dir, a.fill[0], a.fill[1])
         return 0
-    report(a.dir, a.section or list(SECTIONS) + ['rational_compile', 'compile_tables'])
+    report(a.dir, a.section or list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes'])
     return 0
 
 

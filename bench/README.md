@@ -186,6 +186,11 @@ taskset -c 50 build-bench/bench/kairn-bench-m2-O2 --cpu 50 --reps 31 \
 python3 bench/m2_report.py results/milestone2/bench   # the tables of the results page
 ```
 
+`kairn-bench-m2-modes-LEVEL` (`m2_modes.cpp`, no Kairn header) times a loop of additions and one
+of products under each of the four rounding modes, compiled as plain code, and checks that they
+computed under the mode set: whether a directed mode, once set, costs anything
+(`--json results/milestone2/bench/modes-MACHINE-COMPILER-LEVEL.json`).
+
 The options are those of `kairn-bench` (`--filter` takes several texts, separated by commas), and
 `--wide N`. The JSON has, besides the times, the load average at the start and the end of the
 timing, the checks (with the counts against rounding to nearest and the wide sample) and the

@@ -167,3 +167,14 @@ foreach(_code INLINE OUTLINED EXTERNAL)
       KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_${_code})
   endforeach()
 endforeach()
+
+# kairn-bench-m2-modes-LEVEL (bench/m2_modes.cpp): a loop of additions and one of products timed under
+# each rounding mode, compiled as plain code; no Kairn header.
+foreach(_level IN LISTS _levels)
+  add_executable(kairn-bench-m2-modes-${_level} m2_modes.cpp)
+  target_compile_options(kairn-bench-m2-modes-${_level} PRIVATE ${_opt_${_level}} ${_no_contract})
+  target_compile_features(kairn-bench-m2-modes-${_level} PRIVATE cxx_std_20)
+  string(STRIP "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_config}} ${_opt_${_level}} ${_no_contract}" _flags)
+  string(REGEX REPLACE " +" " " _flags "${_flags}")
+  target_compile_definitions(kairn-bench-m2-modes-${_level} PRIVATE "KAIRN_BENCH_FLAGS=\"${_flags}\"")
+endforeach()
