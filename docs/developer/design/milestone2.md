@@ -564,7 +564,9 @@ returned is unspecified in both.
   was written (`split`, `two_prod_dekker`, `mul_pow2_2`, `mul_pow2_2_full`, `ball_mul_pow2_k`
   and their full forms); for the kernels the rule made `constexpr` since, named above, the two
   executions are compared by the generator's tests only (`test_interp.py`,
-  `TwoExecutionsOfAProduct`). This is a lemma and a printer rule, not the "variant kernels with proofs of their
+  `TwoExecutionsOfAProduct`). (That was the state when this note was written; the two executions
+  are proved since for every such kernel, thirty of this rule among 63: see the state below.)
+  This is a lemma and a printer rule, not the "variant kernels with proofs of their
   own" of [deviation 14](phase0/decisions.md#deviations-from-the-brief-flagged); those remain
   necessary for every kernel with an FMA whose addend is not zero: `two_prod` has one, and the
   two-limb products and the radius of a `Ball` operation need theirs.
@@ -595,8 +597,22 @@ both), and that the compiler evaluates constant expressions as IEEE 754 does. Th
 (`two_prod_dekker`), another algorithm, which gives the values of the run-time form only when no
 operation of it overflows and the product is not below $2^{2p-1}\eta$; below that threshold its
 error term is another, within $\tfrac{13}{8}\eta$ instead of $\eta/2$, and where a partial
-product overflows Clang computes an infinite error term at compile time (GCC refuses the
+product overflows Clang computed an infinite error term at compile time (GCC refused the
 program).
+
+*As built (2026-11-21), the overflow.* `kairn::two_prod` is not a constant expression on finite
+operands where an operation of Dekker's product overflows: after the kernel, in constant
+evaluation only, finite operands with an error term that is not finite reach a function that is
+not `constexpr`, so the program does not compile with any compiler, instead of getting at compile
+time an infinite error term where run time gives a finite one. A variable of static storage
+duration that is not `constexpr` is then initialized at run time, with the run-time value. It is
+a test of bits after the kernel; no arithmetic is added and the run-time code is unchanged. A
+sufficient condition for a constant expression: $\lvert a\rvert, \lvert b\rvert \le 2^{996}$
+and $\lvert ab\rvert \le 2^{1023}$ ($2^{115}$ and $2^{127}$ for `float`). Where it is one and
+the product is zero or at least $2^{2p-1}\eta$ in magnitude, the values are those of run time
+(`two_prod_two_executions_exact`). The documentation had said that the two executions give the
+same values; it now says this
+([the decisions log](phase0/decisions.md#decisions-log), 2026-11-21).
 
 *Risk: low.*
 
