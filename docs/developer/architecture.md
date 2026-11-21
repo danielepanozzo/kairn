@@ -90,7 +90,12 @@ and $q_{\min} = 3 - q_{\max} - 2p$ (`binary64` and `binary32` are of that shape,
 `fp:8:-14:1`, precision 8 with $e_{\max} = 9$). A clause that promises a finite result (V4 of a
 ball vector or of a product of two BallVectors with its `finite_when`, `radii_when` and
 `count_when`; the `finite_when` of `extends`, `encloses` and `ball_of_interval`; the
-`bounded_when` of the interval kernels) is claimed in those formats. A reader may also judge it in
+`bounded_when` of the interval kernels) is claimed in those formats. So are the midpoint of a
+bounded interval of `ball_of_interval` with `ieee1788`, a finite canonical number, and what
+`splits` claims of the parts that rest on it (each a canonical interval, the two meeting at a point
+of the interval), by a second ruling of the same day: what is proved is that the sum of the two
+halves of two limbs cannot overflow where $e_{\max} > p \ge 3$, and below that it can, and the
+midpoint is a NaN. A reader may also judge it in
 a format of a wider subnormal range ($q_{\max} \ge 1$ and $q_{\min} < 3 - q_{\max} - 2p$), where
 nothing is proved and a failure is a finding to report, not a violated claim; in any other toy
 format it is not claimed, and a reader counts that it was not judged. In `fp:2:-1:0`

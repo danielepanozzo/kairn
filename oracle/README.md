@@ -592,10 +592,14 @@ never judged.
   Otherwise `ieee1788`: $(0, +\infty)$ for the whole line, $(\Omega, +\infty)$ and
   $(-\Omega, +\infty)$ for the half-lines, two NaN for the empty set; `ball`: the whole line for an
   unbounded $X$ and the empty ball for the empty set. Each part counted under its name when it
-  fails (`special`, `finite`, `center`, `midpoint`, `containment`, `smallest_radius`).
+  fails (`special`, `finite`, `center`, `midpoint`, `containment`, `smallest_radius`). With
+  `ieee1788` the center of a bounded $X$ finite (and canonical) is claimed in the formats of the
+  statements only, the ruling of 2026-11-21 ("The formats of V4", below).
 - **`splits`**: both parts canonical; the empty set gives the empty set twice; otherwise the first
   part's lower bound is $X$'s, the second's upper bound $X$'s, and the first part's upper bound the
-  second's lower bound, a member of $X$ (implied by the rest: both parts canonical).
+  second's lower bound, a member of $X$ (implied by the rest: both parts canonical). For a bounded
+  $X$ the parts canonical and meeting at a point of $X$ are claimed in the formats of the
+  statements only (the same ruling).
 - **`zero_factor` on `bound` and `rounded`** (the extended domain, the value a product of two
   one-limb inputs): a zero operand gives a zero output, $0 \cdot \infty = 0$; otherwise as without
   the field.
@@ -659,7 +663,10 @@ line`, `finite` with the sides' classes; for `interval_set` `an operand empty`, 
 empty`, `nonempty operands, disjoint`, `touching (one common point)`, `overlapping`; for
 `ball_of_interval` and `splits` the class of $X$ (`X: empty`, `whole line`, `half-line [l, +inf]`,
 `half-line [-inf, h]`, `bounded`, `a point`, `a bound an odd multiple of eta below 2N`) and the
-largest $\lvert c - m\rvert / (\mathrm{rel}\lvert m\rvert + \mathrm{abs})$; for `zero_factor`
+largest $\lvert c - m\rvert / (\mathrm{rel}\lvert m\rvert + \mathrm{abs})$, and in a format of no
+statement `a finite center not claimed: a format of no statement (...)` (`a split at a point of X
+not claimed: ...`) on every bounded $X$ and `bounded X, the center not finite (not claimed)`
+(`bounded X, the point of split not finite (not claimed)`); for `zero_factor`
 `zero_factor: a zero operand` and `a zero against an infinite operand`.
 
 **What the reference implementation, the interpreter and the compiled kernels reach** (the
@@ -745,7 +752,8 @@ checks this reading against the definitions quantified over the members of sets 
   values of 1788 as before. `finite_when` and `smallest_radius` together are refused (the radius
   may be $+\infty$, which is not the smallest). The clause of the conditions (with `ball`, the
   finite ball and its center) is claimed in the formats of the statements only ("The formats of
-  V4", below, the ruling of 2026-11-21).
+  V4", below, the ruling of 2026-11-21), and so is, with `ieee1788`, the center finite and
+  canonical (the second ruling of that day).
 - **`interval_of_ball` with bounds of two limbs** (`ball_to_interval_2`): `tight` must be the
   outward tightness (a rounded one is refused for two limbs), with `rel`, `abs` and `exact_when`
   by side; the result canonical, empty exactly when the ball is, containing the set
@@ -1658,7 +1666,8 @@ that.*
   format of no statement (e_max <= p, or eta above binary_float's)` (`bounded_when not claimed:
   ...`) elsewhere, the conditions then not counted, which the guards ask a run in such a format to
   say; with `ball` the center, which is claimed with the clause, is not judged there either, and
-  with `ieee1788` the center of 1788 is judged in every format. The formats of their cross-checks
+  with `ieee1788` the center of 1788 is judged in every format (but its being finite, below). The
+  formats of their cross-checks
   (`binary64`, `binary32`, `fp:3:-4:1`, `fp:4:-6:1`) are all of `binary_float`'s shape, so the
   rule changes no verdict there; the selftest's enumerations in `fp:3:-2:-1` ($q_{\max} < 1$)
   count the clause as not claimed, where it was judged (and passed) before, and so do six of the
@@ -1666,6 +1675,30 @@ that.*
   `fp:6:-8:-1`): on five of them, judged through the interpreter by the oracle before the rule and
   after it, every line has the same verdict. 13 hand-judged lines (`enc_judge`) and seven mutants
   hold it.
+- The midpoint of a bounded interval of `ball_of_interval` with `ieee1788` (`interval_mid_rad_1`,
+  `interval_mid_rad_2`), a finite canonical number, and what `splits` claims of the parts that rest
+  on it (`interval_split_1`, `interval_split_2`: each a canonical interval, the two meeting at a
+  point of $X$), follow it too, by a second ruling of 2026-11-21: the sum of the two
+  halves of two limbs is proved finite where $e_{\max} > p \ge 3$, and below that it can overflow
+  and the midpoint is a NaN. Through `intervals.statement_format`, they are judged in the formats
+  of the statements as before, a failure in a format of a wider subnormal range saying that it is
+  a finding, and in any other format counted on every bounded $X$, `a finite center not claimed: a
+  format of no statement (e_max <= p, or eta above binary_float's)` (`a split at a point of X not
+  claimed: ...`), which the guards ask a run in such a format to say. There a center that is not
+  finite (a limb a NaN or an infinity) is counted (`bounded X, the center not finite (not
+  claimed)`) and judged by what does not rest on it, containment: no real number is within a
+  finite radius of a center that is not finite, so the radius must be $+\infty$; and a point of
+  split that is not finite is counted (`bounded X, the point of split not finite (not claimed)`)
+  and judged by the rest of the clause: the first part's lower bound is $X$'s, the second's upper
+  bound $X$'s, and the first part ends with the limbs the second begins with (a NaN matching a
+  NaN). A finite center or point of split is judged as everywhere, and so is an unbounded or empty
+  $X$. The brute-force plan's enumerations found the case: in `fp:4:-4:-1` and `fp:4:-5:0`
+  ($q_{\max} < 1$) `interval_mid_rad_2` gives `nan nan inf` and `interval_split_2` the point of
+  split `nan nan` on 12 of 31 124 and 60 of 493 520 lines, every one a bounded interval whose two
+  leading limbs are both $-\Omega$ or both $\Omega$, a bound beyond it
+  (`interval_mid_rad_2 fp:4:-4:-1 -0x1.ep+2 -0x1.8p-3 -0x1.ep+2 -0x1.8p-3 -> nan nan inf`): they
+  failed before the ruling and pass, counted, after it. 34 hand-judged lines (`enc_judge`), a
+  planted fault (`enc-mid2-nan`, below) and 14 mutants hold it.
 - The `finite_when` of the Milestone 1 kernels (F3 of `extends`, B4 of `encloses`: the full
   kernels, the full Ball kernels, `ball_narrow_2_1`) and the `bounded_when` of the interval
   kernels (I5), clauses of the same sort, are judged in **every** format, those outside
@@ -2071,7 +2104,7 @@ call (`two_sum_ord`, `abs_2`, the comparisons of two limbs, `add_ball_2_2`, `rad
 `to_up_2`, `mul_pow2_2`, `add_2_2`, `make_2`, `ball_add_k_full`, the directed sums of two limbs,
 `ball_to_interval_1`, the hulls and intersections, `interval_to_ball_1`): an operand returned as
 it is by a select is its token as the line wrote it, the sign of a zero kept. Its variants plant one
-fault each (`refrun --list-variants`, 68 of them, `en-` for the predicates of an interval, `enb-`
+fault each (`refrun --list-variants`, 69 of them, `en-` for the predicates of an interval, `enb-`
 and `enb2-` for those of a ball, `ens-` for the set operations of a ball, `enc-` for the
 conversions): a relation read on the wrong side or strictness, an emptiness or infinity test left
 out, the comparisons of two limbs on the leading limbs alone, a yes or a no where the relation
@@ -2081,7 +2114,11 @@ or writing a zero as $+0$, a radius halved or one number smaller, the empty set 
 of the parts of a split exchanged, the midpoint of two limbs not moved into $[l, h]$, a center of
 the whole line that is not canonical, $\Omega$ where $+\infty$ is due, an infinite radius below the
 limit of `finite_when`, an exact zero end off by $\eta$, infinite bounds below the limit of
-`bounded_when`, the rules of the constructors before 2026-11-20, a center one number off.
+`bounded_when`, the rules of the constructors before 2026-11-20, a center one number off, and
+(`enc-mid2-nan`) the midpoint $(\mathrm{NaN}, \mathrm{NaN})$ of every bounded interval, with the
+radius $+\infty$, and the point of split $(\mathrm{NaN}, \mathrm{NaN})$: what a format of no
+statement may give, which `enc_planted` fails in every format of the statements, on every line of
+a bounded interval, and counts as not claimed in `fp:4:-4:-1`.
 
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
@@ -2170,7 +2207,12 @@ special, the sign of a zero, a NaN against a NaN, emptiness, containment, the pa
 canonical center, the tightness, `exact_when` and `bounded_when` of two limbs, the center, midpoint
 and smallest radius of a ball from an interval; the formats of the statements not applied to
 `finite_when` and `bounded_when` of two limbs, not counted, the conditions counted outside them, a
-failure in a wider subnormal range not said to be a finding), a relation read on the wrong side,
+failure in a wider subnormal range not said to be a finding; the same rule for the midpoint of a
+bounded interval of 1788 and the parts of a split not applied, applied in a format of the
+statements too, not counted, a center or a point of split that is not finite not counted, a finite
+radius about such a center accepted, the outer bounds of the parts or their common point about
+such a point not judged, a failure in a wider subnormal range not said to be a finding), a
+relation read on the wrong side,
 with the wrong strictness or without its empty set or infinite bound, a set without its radius, a
 count the guards read not counted, a stratum that does not reach what it is for) and requires
 `selftest --quick` to fail on the copy. With
@@ -2291,8 +2333,8 @@ follows from both parts being canonical.
 | `enc_relations` | `enclosure.relation` other than the definitions of architecture.md's table, quantified over the members, on every pair of 27 sets (the empty set, half-lines, the whole line, bounds in -2..2), every relation, and `member` of every point of -3..3, the infinities and NaN (5 508 relations) |
 | `enc_reference` | the reference runner (the listings of gen/kernels/) failing a kernel of the family, or an invalid or suspicious case, on random streams of 1 500 cases (500 with `--quick`) of every kernel in `binary64`, `binary32` and `fp:4:-6:1`; a stratum of the header without a case; an entry never applied; a class the guards ask for never reached in `binary64` or `binary32` |
 | `enc_exhaustive` | the reference runner failing any case of the enumerations of tiny formats of every kernel (two intervals or two balls of two limbs on a restricted domain: 70 enumerations, 1.5 million cases with `--quick`), a line not judged, a cell of the table of the constructors never met by `ball_from_interval_k`; 16 planted faults not caught there, caught in another entry, or, for a kernel whose claim fixes the output, not failing every line they change |
-| `enc_planted` | a planted fault of the family (68: `refrun` variants `en-`, `enb-`, `ens-`, `enc-`) not caught in the kernels and entries where it belongs, in `binary64`, `binary32` and `fp:4:-6:1`, caught in a kernel that does not use it, seen as invalid or suspicious; a line it changes of a kernel whose claim fixes the output not failing; a line of the class it is about not failing (two whole lines of zeros of different signs, a zero passed through as it is, the whole line, a half-line, the empty set, an exact zero end, a NaN bound, the same infinity twice, reversed bounds) |
-| `enc_judge` | one of 228 hand-written lines judged otherwise than worked out by hand, each failure in its statement (every cell of the table of `rel` and of the special states of the predicates of an interval and a ball, of the clauses of `ball_set` with the signs of zeros, of `ball_splits`, of the conversions of two limbs: the special values of 1788, a canonical center, `finite_when` at and beyond its limit, the center claimed beyond it, `exact_when`, the tightness, containment and `bounded_when` of two limbs, the center, midpoint and smallest radius of `ball_from_interval_1`); one of 10 lines outside the requirements not invalid; one of 13 lines of the formats of the statements judged otherwise (`finite_when` and `bounded_when` of two limbs failing in `fp:3:-4:1`, failing as a finding in `fp:3:-5:1`, counted as not claimed in `fp:3:-2:-1` with the conditions not counted and the center of 1788 still judged); a cell of the table of the constructors for `ball_from_interval_1` (17) passing its wrong result, failing its right one or counting another cell |
+| `enc_planted` | a planted fault of the family (69: `refrun` variants `en-`, `enb-`, `ens-`, `enc-`) not caught in the kernels and entries where it belongs, in `binary64`, `binary32` and `fp:4:-6:1`, caught in a kernel that does not use it, seen as invalid or suspicious; a line it changes of a kernel whose claim fixes the output not failing; a line of the class it is about not failing (two whole lines of zeros of different signs, a zero passed through as it is, the whole line, a half-line, the empty set, an exact zero end, a NaN bound, the same infinity twice, reversed bounds, a bounded interval); the midpoint $(\mathrm{NaN}, \mathrm{NaN})$ of `enc-mid2-nan` failing, or not counted as not claimed on every line of a bounded interval, in `fp:4:-4:-1`, a format of no statement |
+| `enc_judge` | one of 228 hand-written lines judged otherwise than worked out by hand, each failure in its statement (every cell of the table of `rel` and of the special states of the predicates of an interval and a ball, of the clauses of `ball_set` with the signs of zeros, of `ball_splits`, of the conversions of two limbs: the special values of 1788, a canonical center, `finite_when` at and beyond its limit, the center claimed beyond it, `exact_when`, the tightness, containment and `bounded_when` of two limbs, the center, midpoint and smallest radius of `ball_from_interval_1`); one of 10 lines outside the requirements not invalid; one of 13 lines of the formats of the statements judged otherwise (`finite_when` and `bounded_when` of two limbs failing in `fp:3:-4:1`, failing as a finding in `fp:3:-5:1`, counted as not claimed in `fp:3:-2:-1` with the conditions not counted and the center of 1788 still judged); one of 34 lines of the midpoint of a bounded interval with `ieee1788` and of `splits`, of one limb and of two, judged otherwise (a NaN midpoint or point of split failing in `fp:3:-4:1` and `binary64`, failing as a finding in `fp:3:-5:1`, passing, counted, in `fp:4:-4:-1`, `fp:4:-5:0` and `fp:3:-3:1`, the two lines of the brute-force plan's finding among them; there containment about a center that is not finite, the outer bounds of the parts and their common point still judged, and a finite center or point of split, a center not normalized and the special values of an unbounded interval as everywhere); a cell of the table of the constructors for `ball_from_interval_1` (17) passing its wrong result, failing its right one or counting another cell |
 | `enc_gen` | case $i$ alone not case $i$ of its run, a seed not mattering, a stratum of the header without a case or a case of none, an invalid case, in every kernel of the family in two formats; no center $-0$ of the whole line in the streams of the set operations |
 | `enc_strata` | a stratum of the family (or of the conversions of two limbs in `gen6.py`) whose cases do not have what it is for, in `binary64` and `fp:4:-6:1` (every case, or the fraction given: an operand special, intervals touching, nested, disjoint or with an equal bound, balls on the boundary of the relation, huge, of radius zero, both special, a center near $\Omega$, a bound beyond $\Omega$, at the limit of `finite_when` or `bounded_when`, an end exactly zero) |
 | `enc_merging` | the merge of the summaries of two halves of streams of seven kernels of the family differs from the whole |
