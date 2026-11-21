@@ -921,6 +921,129 @@ inline const Operation operations[] = {
              put(out, kairn::Interval<T, 1>::empty());
          });
      }},
+    // --- The enclosure interface of stage B2 (headers-pred) -----------------------------------
+    // Intervals: the predicates, the member and subset tests, the three-valued comparisons and the
+    // relations of IEEE 1788, comparisons and selects that do not round, on the whole corpus.
+    {"interval1.predicates", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (const auto& x : c.intervals1) {
+                 put(out, x.is_empty());
+                 put(out, x.is_whole());
+                 put(out, x.certainly_positive());
+                 put(out, x.certainly_negative());
+                 put(out, x.certainly_zero());
+                 for (T t : c.one) {
+                     put(out, x.contains(t));
+                     put(out, x.contains(kairn::Expansion<T, 1>(t)));
+                     put(out, int(kairn::member(t, x)));
+                 }
+             }
+         });
+     }},
+    {"interval2.predicates", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (const auto& x : c.intervals2) {
+                 put(out, x.is_empty());
+                 put(out, x.is_whole());
+                 put(out, x.certainly_positive());
+                 put(out, x.certainly_negative());
+                 put(out, x.certainly_zero());
+                 for (T t : c.one) put(out, x.contains(t));  // through make_2, whose guard keeps the value
+                 for (const auto& t : c.two) {
+                     put(out, x.contains(t));
+                     put(out, int(kairn::member(t, x)));
+                 }
+             }
+         });
+     }},
+    {"interval1.compare", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.intervals1)
+                 for (const auto& y : c.intervals1) {
+                     put(out, x.contains(unverified(y)));
+                     put(out, int(kairn::less(unverified(x), y)));
+                     put(out, int(kairn::less_equal(x, y)));
+                     put(out, int(kairn::equal(x, y)));
+                     put(out, int(kairn::greater(x, y)));
+                     put(out, int(kairn::not_equal(x, y)));
+                     put(out, kairn::ieee1788::equal(x, y));
+                     put(out, kairn::ieee1788::subset(x, y));
+                     put(out, kairn::ieee1788::interior(x, y));
+                     put(out, kairn::ieee1788::disjoint(x, y));
+                 }
+         });
+     }},
+    {"interval2.compare", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.intervals2)
+                 for (const auto& y : c.intervals2) {
+                     put(out, x.contains(y));
+                     put(out, int(kairn::less(x, unverified(y))));
+                     put(out, int(kairn::less_equal(x, y)));
+                     put(out, int(kairn::equal(x, y)));
+                     put(out, int(kairn::greater_equal(x, y)));
+                     put(out, kairn::ieee1788::equal(x, y));
+                     put(out, kairn::ieee1788::subset(x, y));
+                     put(out, kairn::ieee1788::interior(x, y));
+                     put(out, kairn::ieee1788::disjoint(x, y));
+                 }
+         });
+     }},
+    // What rounds: the midpoint and radius together of one limb; for two limbs the midpoint, the
+    // radius, the split and the conversions; of a ball the member and subset tests, the
+    // comparisons, the hull, the intersection, the split, the bounds of two limbs and the ball from
+    // an interval of two T. Each checks the environment, the rounding mode included.
+    {"interval1.mid_rad", Kind::rounds, [](Bits& b) {
+         const kairn::MidRad<double, 1> m = o.ix.mid_rad();
+         put(b, m.midpoint);
+         put(b, m.radius);
+     }},
+    {"interval2.midpoint", Kind::rounds, [](Bits& b) { put(b, o.jy.midpoint()); }},
+    {"interval2.radius", Kind::rounds, [](Bits& b) { put(b, o.jy.radius()); }},
+    {"interval2.mid_rad", Kind::rounds, [](Bits& b) { put(b, o.jy.mid_rad().radius); }},
+    {"interval2.split", Kind::rounds, [](Bits& b) { put(b, o.jy.split()); }},
+    {"interval2.to_ball", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.jy))); }},
+    {"ball2.to_interval", Kind::rounds, [](Bits& b) { put(b, I2(unverified(o.bp))); }},
+    {"ball2.lower", Kind::rounds, [](Bits& b) { put(b, o.bp.lower()); }},
+    {"ball2.upper", Kind::rounds, [](Bits& b) { put(b, o.bp.upper()); }},
+    {"ball1.from_interval", Kind::rounds, [](Bits& b) { put(b, B1::from_interval(unverified(double(v_b)), v_a)); }},
+    {"ball1.contains", Kind::rounds, [](Bits& b) { put(b, o.p.contains(double(v_c))); }},
+    {"ball1.contains_one", Kind::rounds, [](Bits& b) { put(b, o.p.contains(E1(v_c))); }},
+    {"ball1.member", Kind::rounds, [](Bits& b) { put(b, int(kairn::member(double(v_c), o.p))); }},
+    {"ball1.contains_ball", Kind::rounds, [](Bits& b) { put(b, o.p.contains(unverified(o.q))); }},
+    {"ball2.contains", Kind::rounds, [](Bits& b) { put(b, o.bp.contains(double(v_c))); }},
+    {"ball2.contains_two", Kind::rounds, [](Bits& b) { put(b, o.bp.contains(o.y)); }},
+    {"ball2.member", Kind::rounds, [](Bits& b) { put(b, int(kairn::member(o.y, o.bp))); }},
+    {"ball2.contains_ball", Kind::rounds, [](Bits& b) { put(b, o.bp.contains(o.bq)); }},
+    {"ball1.less", Kind::rounds, [](Bits& b) { put(b, int(kairn::less(unverified(o.p), o.q))); }},
+    {"ball1.less_equal", Kind::rounds, [](Bits& b) { put(b, int(kairn::less_equal(o.p, o.q))); }},
+    {"ball1.equal", Kind::rounds, [](Bits& b) { put(b, int(kairn::equal(o.p, o.q))); }},
+    {"ball2.less", Kind::rounds, [](Bits& b) { put(b, int(kairn::less(o.bp, unverified(o.bq)))); }},
+    {"ball2.less_equal", Kind::rounds, [](Bits& b) { put(b, int(kairn::greater_equal(o.bp, o.bq))); }},
+    {"ball2.equal", Kind::rounds, [](Bits& b) { put(b, int(kairn::not_equal(o.bp, o.bq))); }},
+    {"ball1.hull", Kind::rounds, [](Bits& b) { put(b, o.p.hull(unverified(o.q))); }},
+    {"ball1.intersection", Kind::rounds, [](Bits& b) { put(b, o.p.intersection(o.q)); }},
+    {"ball1.split", Kind::rounds, [](Bits& b) { put(b, o.p.split()); }},
+    {"ball2.hull", Kind::rounds, [](Bits& b) { put(b, o.bp.hull(o.bq)); }},
+    {"ball2.intersection", Kind::rounds, [](Bits& b) { put(b, o.bp.intersection(unverified(o.bq))); }},
+    {"ball2.split", Kind::rounds, [](Bits& b) { put(b, o.bp.split()); }},
+    // What reads stored values or a Trit, and checks nothing.
+    {"enclosure.unchecked", Kind::unchecked, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.balls1) {
+                 put(out, x.mid_rad().midpoint);
+                 put(out, x.mid_rad().radius);
+             }
+             for (const auto& x : c.balls2) put(out, x.mid_rad().midpoint);
+         });
+         for (kairn::Trit t : {kairn::Trit::no, kairn::Trit::unknown, kairn::Trit::yes}) {
+             put(b, kairn::certainly(t));
+             put(b, kairn::possibly(t));
+         }
+     }},
+    // --- The end of the enclosure interface of stage B2 -------------------------------------
     {"traits", Kind::unchecked, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = std::decay_t<decltype(c.one[0])>;

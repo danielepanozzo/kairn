@@ -14,7 +14,11 @@ A number of several limbs stands for their exact sum: $x_l = x_{l0} + x_{l1}$, $
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`ball_hull_2`](ball_hull_2.md), [`ball_intersection_2`](ball_intersection_2.md).
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `Ball<T, 2>(X)` | `Interval<T, 2>` | `Ball<T, 2>` | explicit; rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr` |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED (a constructor does not take it).
 
 ## Requires
 

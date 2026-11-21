@@ -14,8 +14,9 @@ $$[m - r, m + r] \supseteq [x_l, x_u].$$
 
 | Form | Operands | Result | Note |
 |---|---|---|---|
-| `X.midpoint()` | `Interval<T, 1>` | `Expansion<T, 1>` | $m$; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
-| `X.radius()` | `Interval<T, 1>` | `T` | $r$; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+| `X.midpoint()` | `Interval<T, 1>` | `Expansion<T, 1>` | $m$; computes the whole kernel, as the other does: `X.mid_rad()` gives both from one call; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+| `X.radius()` | `Interval<T, 1>` | `T` | $r$; computes the whole kernel, as the other does: `X.mid_rad()` gives both from one call; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+| `X.mid_rad()` | `Interval<T, 1>` | `MidRad<T, 1>` | $m$ and $r$ from one call; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 

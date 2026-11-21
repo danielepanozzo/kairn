@@ -1,0 +1,30 @@
+Interval<double, 1>, width 1e-06: 167 evaluations, 4 parts kept (0 not narrowed by split), 4 zeros
+  radius 9.54e-07  midpoint -3.1462640762329102
+  radius 9.54e-07  midpoint -0.31783771514892578
+  radius 9.54e-07  midpoint 0.31783771514892578
+  radius 9.54e-07  midpoint 3.1462640762329102
+Ball<double, 1>, width 1e-06: 179 evaluations, 4 parts kept (0 not narrowed by split), 4 zeros
+  radius 9.54e-07  midpoint -3.1462640762329093
+  radius 9.54e-07  midpoint -0.31783771514892478
+  radius 9.54e-07  midpoint 0.31783771514892478
+  radius 9.54e-07  midpoint 3.1462640762329093
+Ball<double, 2>, width 1e-06: 179 evaluations, 4 parts kept (0 not narrowed by split), 4 zeros
+  radius 9.54e-07  midpoint -3.1462640762329106 +8.39e-17
+  radius 9.54e-07  midpoint -0.31783771514892462 -2.55e-17
+  radius 9.54e-07  midpoint 0.31783771514892462 +2.55e-17
+  radius 9.54e-07  midpoint 3.1462640762329106 -8.39e-17
+Interval<double, 1>, width 0: 435 evaluations, 6 parts kept (6 not narrowed by split), 4 zeros
+  radius 4.44e-16  midpoint -3.1462643699419721
+  radius 1.11e-16  midpoint -0.31783724519578227
+  radius 1.11e-16  midpoint 0.31783724519578227
+  radius 4.44e-16  midpoint 3.1462643699419721
+Ball<double, 1>, width 0: 443 evaluations, 10 parts kept (10 not narrowed by split), 4 zeros
+  radius 2.66e-15  midpoint -3.1462643699419721
+  radius 2.78e-16  midpoint -0.31783724519578221
+  radius 2.78e-16  midpoint 0.31783724519578221
+  radius 2.66e-15  midpoint 3.1462643699419721
+Ball<double, 2>, width 0: 875 evaluations, 16 parts kept (16 not narrowed by split), 4 zeros
+  radius 1.01e-30  midpoint -3.1462643699419726 +2.18e-16
+  radius 1.17e-31  midpoint -0.31783724519578227 +2.50e-17
+  radius 1.17e-31  midpoint 0.31783724519578227 -2.50e-17
+  radius 1.01e-30  midpoint 3.1462643699419726 -2.18e-16

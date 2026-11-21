@@ -7,18 +7,25 @@
 /// Each operation forwards to one generated kernel: the constructor kernels interval_make_1 and
 /// interval_make_2, the negations, sums, differences and products interval_neg_k, interval_add_k,
 /// interval_sub_k and interval_mul_k, the hull and the intersection interval_hull_k and
-/// interval_intersection_k, for one limb the midpoint and radius interval_mid_rad_1 and the split
-/// interval_split_1, the conversions interval_to_ball_1 (in ball.hpp) and ball_to_interval_1, and
-/// for the bounds of two limbs as numbers of T the roundings to_down_2 and to_up_2. Like every
-/// operation, each needs the kairn::unverified marker while gen/claims.json does not mark its kernel
-/// proved. A constructor of two limbs from a T builds the two-limb number first (make_2), as
-/// Ball<T, 2>(a) does; no other function composes kernels.
+/// interval_intersection_k, the midpoint and radius interval_mid_rad_k, the split interval_split_k,
+/// the conversions interval_to_ball_k (in ball.hpp) and ball_to_interval_k, for the bounds of two
+/// limbs as numbers of T the roundings to_down_2 and to_up_2, and the predicates, the three-valued
+/// comparisons and the relations of IEEE 1788 of the enclosure interface: interval_empty_k,
+/// interval_entire_k, interval_contains_k, interval_subset_k, interval_positive_k,
+/// interval_negative_k, interval_zero_k, interval_less_k, interval_less_equal_k, interval_equal_k,
+/// interval_rel_equal_k, interval_rel_interior_k and interval_rel_disjoint_k. Like every
+/// operation, each needs the kairn::unverified marker while gen/claims.json does not mark its
+/// kernel proved. Two kinds of function compose kernels, each documented as such: a constructor of
+/// two limbs from a T builds the two-limb number first (make_2), as Ball<T, 2>(a) does, and so do
+/// contains(t) and kairn::member of two limbs with a point t of T. make_2 gives t exactly, which
+/// is the argument for both; it is not machine-checked as one statement.
 ///
-/// Not here yet, their kernels being still to come: every predicate and comparison (is_empty,
-/// is_entire, contains, the signs, the three-valued comparisons, the relations of IEEE 1788), and
-/// for two limbs the midpoint, the radius, the split and the conversions between Interval and Ball.
-/// No operation mixes an interval with a number (X + a): no kernel takes one, and an interval of a
-/// point is written Interval(a).
+/// The three-valued comparisons kairn::less, kairn::less_equal, kairn::equal and their mirrors
+/// return a kairn::Trit (enclosure.hpp); intervals have no comparison operators, so that no answer
+/// about sets becomes a bool unseen. The relations of IEEE 1788, which return a bool with the
+/// standard's conventions for the empty set, are in the namespace kairn::ieee1788. No operation
+/// mixes an interval with a number (X + a): no kernel takes one, and an interval of a point is
+/// written Interval(a); a point given to contains(t) is a member test, never made an interval.
 #pragma once
 
 #include "ball.hpp"
@@ -27,11 +34,6 @@ KAIRN_GEN_PUSH_WARNINGS
 namespace kairn {
 
 namespace detail {
-
-// The kernel that stands for a function of an interval of two limbs whose kernel is still to come.
-struct kernel_not_generated_yet {
-    static constexpr bool proved = false;
-};
 
 // The kernels of the Interval operations, by number of limbs of the bounds.
 template <class T, int K>
@@ -48,6 +50,19 @@ struct interval_kernels<T, 1> {
     using mid_rad = gen::bounds::interval_mid_rad_1<T>;
     using split = gen::bounds::interval_split_1<T>;
     using from_ball = gen::bounds::ball_to_interval_1<T>;
+    using empty = gen::bounds::interval_empty_1<T>;
+    using entire = gen::bounds::interval_entire_1<T>;
+    using contains = gen::bounds::interval_contains_1<T>;
+    using subset = gen::bounds::interval_subset_1<T>;
+    using positive = gen::bounds::interval_positive_1<T>;
+    using negative = gen::bounds::interval_negative_1<T>;
+    using zero = gen::bounds::interval_zero_1<T>;
+    using less = gen::bounds::interval_less_1<T>;
+    using less_equal = gen::bounds::interval_less_equal_1<T>;
+    using equal = gen::bounds::interval_equal_1<T>;
+    using rel_equal = gen::bounds::interval_rel_equal_1<T>;
+    using rel_interior = gen::bounds::interval_rel_interior_1<T>;
+    using rel_disjoint = gen::bounds::interval_rel_disjoint_1<T>;
 };
 template <class T>
 struct interval_kernels<T, 2> {
@@ -58,9 +73,22 @@ struct interval_kernels<T, 2> {
     using mul = gen::bounds::interval_mul_2<T>;
     using hull = gen::bounds::interval_hull_2<T>;
     using intersection = gen::bounds::interval_intersection_2<T>;
-    using mid_rad = kernel_not_generated_yet;       // interval_mid_rad_2
-    using split = kernel_not_generated_yet;         // interval_split_2
-    using from_ball = kernel_not_generated_yet;     // ball_to_interval_2
+    using mid_rad = gen::bounds::interval_mid_rad_2<T>;
+    using split = gen::bounds::interval_split_2<T>;
+    using from_ball = gen::bounds::ball_to_interval_2<T>;
+    using empty = gen::bounds::interval_empty_2<T>;
+    using entire = gen::bounds::interval_entire_2<T>;
+    using contains = gen::bounds::interval_contains_2<T>;
+    using subset = gen::bounds::interval_subset_2<T>;
+    using positive = gen::bounds::interval_positive_2<T>;
+    using negative = gen::bounds::interval_negative_2<T>;
+    using zero = gen::bounds::interval_zero_2<T>;
+    using less = gen::bounds::interval_less_2<T>;
+    using less_equal = gen::bounds::interval_less_equal_2<T>;
+    using equal = gen::bounds::interval_equal_2<T>;
+    using rel_equal = gen::bounds::interval_rel_equal_2<T>;
+    using rel_interior = gen::bounds::interval_rel_interior_2<T>;
+    using rel_disjoint = gen::bounds::interval_rel_disjoint_2<T>;
 };
 
 /// Whether the kernels that build the interval of a point of T are proved: interval_make_1, or
@@ -68,6 +96,11 @@ struct interval_kernels<T, 2> {
 template <class T, int K>
 concept interval_point_proved =
     proof_checked<typename interval_kernels<T, K>::make> && (K == 1 || proof_checked<gen::bounds::make_2<T>>);
+/// Whether the kernels of the member test of a point of T are proved: interval_contains_1, or
+/// make_2 and interval_contains_2.
+template <class T, int K>
+concept interval_member_proved =
+    proof_checked<typename interval_kernels<T, K>::contains> && (K == 1 || proof_checked<gen::bounds::make_2<T>>);
 
 // Whether an interval is canonical (milestone2.md, "Values of an interval"): the empty set,
 // (+inf, -inf), the bounds of two limbs (+inf, +-0) and (-inf, +-0); or bounds lo <= hi, neither a
@@ -157,19 +190,22 @@ KAIRN_FORCEINLINE constexpr Interval<T, K> make_interval_pair(std::type_identity
         return make_interval_kernel(make<T>(lo), make<T>(hi));
     }
 }
-// The interval of one limb of a ball of one limb (kernel ball_to_interval_1).
+// The interval of a ball (kernel ball_to_interval_1 or ball_to_interval_2), after the check of a
+// canonical ball. Not constexpr for two limbs: the directed sums of two limbs have fused
+// operations without a variant for constant evaluation.
 template <class T>
 KAIRN_FORCEINLINE constexpr Interval<T, 1> to_interval(const Ball<T, 1>& x) noexcept;
+template <class T>
+KAIRN_FORCEINLINE Interval<T, 2> to_interval(const Ball<T, 2>& x) noexcept;
+// The midpoint and the radius (kernel interval_mid_rad_1 or interval_mid_rad_2), after the check of
+// a canonical interval. Not constexpr for two limbs: each side of the radius is an upper bound from
+// add_ball_2_2, which has fused operations without a variant for constant evaluation.
+template <class T>
+KAIRN_FORCEINLINE constexpr MidRad<T, 1> mid_rad(const Interval<T, 1>& x) noexcept;
+template <class T>
+KAIRN_FORCEINLINE MidRad<T, 2> mid_rad(const Interval<T, 2>& x) noexcept;
 
 }  // namespace detail
-
-/// What split() returns: two intervals whose union is the one split, the left one below the right
-/// one, sharing the point at which it was split.
-template <class X>
-struct Split {
-    X left;   ///< The part that holds the lower bound.
-    X right;  ///< The part that holds the upper bound.
-};
 
 /// An interval with bounds of K limbs of type T; defined for K = 1 and K = 2. A value is one of
 /// (milestone2.md, "Values of an interval"):
@@ -262,21 +298,27 @@ public:
         : Interval(detail::make_interval(lo.value, hi)) {}
     /// The same with a marked lower bound of T.
     constexpr Interval(Unverified<T> lo, T hi) noexcept : Interval(detail::make_interval_pair<T, K>(lo.value, hi)) {}
-    /// The smallest interval of one limb that contains the ball X of one limb (kernel
-    /// ball_to_interval_1): [RD(c - r), RU(c + r)], the roundings down and up in the format with
-    /// overflow. Proved, in the IEEE model, for a canonical ball: the interval is canonical, empty
-    /// exactly when X is, and contains every member of X; the whole line gives [-inf, +inf].
+    /// An interval that contains the ball X (kernel ball_to_interval_1 or ball_to_interval_2).
+    /// Proved, in the IEEE model, for a canonical ball: the interval is canonical, empty exactly
+    /// when X is, and contains every member of X; the whole line gives [-inf, +inf]. For one limb it
+    /// is the smallest interval of T that contains X, [RD(c - r), RU(c + r)], the roundings down and
+    /// up in the format with overflow. For two limbs, for a finite ball and a bounded result, each
+    /// bound is on its side of c - r or c + r and within A |v| + B of it, v being that bound, with
+    /// the constants of the sum of two limbs, A about 8 u^2 and B about twice the smallest normal
+    /// number of T (docs/reference/ball_to_interval_2.md gives them); a bound c - r or c + r that is
+    /// exactly zero is returned as zero; the result is bounded when every member of X is at most
+    /// 2^(e_max - 2) in magnitude, a quarter of the overflow threshold; it is not the smallest
+    /// interval of two limbs. These are the values of X.lower() and X.upper().
     /// Explicit: the conversion widens the set. Rounds (it computes under rounding to nearest what
     /// rounding down and up give): preceded, when KAIRN_CHECKS is 1, by the check of the
-    /// environment, the rounding mode included, and of a canonical ball (config.hpp). constexpr. For
-    /// two limbs not yet: its kernel, ball_to_interval_2, is still to come.
+    /// environment, the rounding mode included, and of a canonical ball (config.hpp). constexpr for
+    /// one limb; for two not, its kernel having fused operations without a variant for constant
+    /// evaluation.
     explicit constexpr Interval(const Ball<T, K>& x) noexcept
-        requires(K == 1 && detail::proof_checked<typename detail::interval_kernels<T, K>::from_ball>)
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::from_ball>
         : Interval(detail::to_interval(x)) {}
     /// The same with a marked operand.
-    explicit constexpr Interval(const Unverified<Ball<T, K>>& x) noexcept
-        requires(K == 1)
-        : Interval(detail::to_interval(x.value)) {}
+    explicit constexpr Interval(const Unverified<Ball<T, K>>& x) noexcept : Interval(detail::to_interval(x.value)) {}
     /// Internal: a kernel's bounds, as they are.
     constexpr Interval(detail::kernel_result_t, const Expansion<T, K>& lo, const Expansion<T, K>& hi) noexcept
         : lo_(lo), hi_(hi) {}
@@ -340,52 +382,207 @@ public:
         }
     }
 
-    /// The midpoint of an interval of one limb (kernel interval_mid_rad_1): the sum of the halves of
-    /// the bounds, moved into the interval if a halving underflowed. Proved, in the IEEE model, for
-    /// a canonical interval: for a bounded [l, h], a finite m with l <= m <= h and
-    /// |m - (l + h)/2| <= u |(l + h)/2| + eta; 0 for the whole line; Omega, the largest finite number
-    /// of T, for [l, +inf] with l finite, and -Omega for [-inf, h]; a NaN for the empty set. These
-    /// are the values of mid in IEEE 1788, but for a bounded interval with a bound that is an odd
-    /// multiple of eta, where the result is within eta and one rounding of the midpoint and need not
-    /// be the midpoint rounded to nearest. Rounds (halvings and a sum): preceded, when KAIRN_CHECKS
-    /// is 1, by the check of the environment, the rounding mode included, and of a canonical
-    /// interval (config.hpp). constexpr. For two limbs not yet: its kernel, interval_mid_rad_2, is
-    /// still to come.
-    constexpr Expansion<T, 1> midpoint() const noexcept
-        requires(K == 1 && detail::proof_checked<typename detail::interval_kernels<T, K>::mid_rad>)
+    /// Whether this is the empty set (kernel interval_empty_1 or interval_empty_2): its lower bound
+    /// is +inf, which no nonempty canonical interval has. Proved, in the IEEE model, for a canonical
+    /// interval: exact. IEEE 1788 calls it isEmpty.
+    /// Does not round (a comparison): not preceded by the debug build's check of the rounding mode
+    /// (config.hpp); for two limbs the interval must be canonical, which is checked when the
+    /// rounding mode is to nearest. constexpr.
+    constexpr bool is_empty() const noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::empty>
     {
-        T m = T(0), r = T(0);
-        mid_rad(m, r);
-        return Expansion<T, 1>(m);
+        detail::check_interval_exact(*this);
+        bool m = false;
+        if constexpr (K == 1) {
+            gen::interval_empty_1(lo_.limb[0], hi_.limb[0], m);
+        } else {
+            gen::interval_empty_2(lo_.limb[0], lo_.limb[1], hi_.limb[0], hi_.limb[1], m);
+        }
+        return m;
     }
-    /// The radius of an interval of one limb, for the midpoint that midpoint() returns (kernel
-    /// interval_mid_rad_1). Proved, in the IEEE model, for a canonical interval: for a bounded
-    /// [l, h], the smallest number r of T with [m - r, m + r] containing [l, h], RU(max(m - l, h - m));
+    /// Whether this is the whole line, [-inf, +inf] (kernel interval_entire_1 or
+    /// interval_entire_2): both bounds infinite. Proved, in the IEEE model, for a canonical
+    /// interval: exact; false for the empty set and for a half-line. IEEE 1788 calls it isEntire;
+    /// the name is that of Ball::is_whole(), so that code written for both reads the same, and the
+    /// kernels keep the standard's. Does not round, and is checked, as is_empty(); constexpr.
+    constexpr bool is_whole() const noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::entire>
+    {
+        detail::check_interval_exact(*this);
+        bool m = false;
+        if constexpr (K == 1) {
+            gen::interval_entire_1(lo_.limb[0], hi_.limb[0], m);
+        } else {
+            gen::interval_entire_2(lo_.limb[0], lo_.limb[1], hi_.limb[0], hi_.limb[1], m);
+        }
+        return m;
+    }
+
+    /// Whether t, a value of T, is a member (kernel interval_contains_1 or interval_contains_2, for two
+    /// limbs with t made a number of two limbs by make_2 first): lo <= t <= hi and t finite. Proved, in the IEEE model, for a canonical
+    /// interval and every value of T: exact. The members of an interval are real numbers, so an
+    /// infinite t or a NaN is a member of none, the whole line included ([1, +inf] does not contain
+    /// +inf), and the empty set has no member. For two limbs this composes two proved kernels:
+    /// make_2 gives t exactly as a number of two limbs ((t, 0), (+-inf, 0) or (NaN, NaN)), and
+    /// interval_contains_2 answers exactly for that number; the composition is argued so, not
+    /// machine-checked as one statement. kairn::member(t, X) is the same test, as a Trit.
+    /// Does not round (comparisons; for two limbs the guard of make_2, t + 0, whose value is t under
+    /// every rounding mode): not preceded by the debug build's check of the rounding mode
+    /// (config.hpp); for two limbs the interval must be canonical, which is checked when the
+    /// rounding mode is to nearest. constexpr.
+    constexpr bool contains(T t) const noexcept
+        requires detail::interval_member_proved<T, K>
+    {
+        return contains_point(t);
+    }
+    /// The same with a marked point: see kairn::Unverified.
+    constexpr bool contains(Unverified<T> t) const noexcept { return contains_point(t.value); }
+    /// Whether t, a number of K limbs, is a member (kernel interval_contains_1 or
+    /// interval_contains_2): lo <= t <= hi and t finite, as contains(T). Proved, in the IEEE model,
+    /// for a canonical interval and a canonical t: exact. Does not round, and is checked, as
+    /// is_empty(); a t of two limbs must be canonical, which is checked when the rounding mode is to
+    /// nearest. constexpr.
+    constexpr bool contains(const Expansion<T, K>& t) const noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::contains>
+    {
+        return contains_number(t);
+    }
+    /// The same with a marked point.
+    constexpr bool contains(const Unverified<Expansion<T, K>>& t) const noexcept { return contains_number(t.value); }
+    /// Whether Y is a subset of this interval: every member of Y is a member of this one (kernel
+    /// interval_subset_1 or interval_subset_2, with Y as its first operand: y_l >= lo and
+    /// y_u <= hi on the stored bounds). Proved, in the IEEE model, for canonical intervals: exact,
+    /// with the readings of IEEE 1788 for the empty set: it is a subset of every interval, so
+    /// X.contains(Interval::empty()) is true for every X, and the empty set contains no nonempty
+    /// interval. kairn::ieee1788::subset(Y, X) is the same answer. Only an Interval of the same T
+    /// and K is accepted: a point is not made an interval here (contains(t) is the member test,
+    /// which differs on an infinite point).
+    /// Does not round (comparisons): not preceded by the debug build's check of the rounding mode
+    /// (config.hpp). constexpr.
+    template <int J>
+        requires(J == K && detail::proof_checked<typename detail::interval_kernels<T, K>::subset>)
+    constexpr bool contains(const Interval<T, J>& y) const noexcept {
+        return contains_set(y);
+    }
+    /// The same with a marked operand.
+    constexpr bool contains(const Unverified<Interval>& y) const noexcept { return contains_set(y.value); }
+
+    /// Whether every member is positive and the interval is not empty (kernel interval_positive_1
+    /// or interval_positive_2): 0 < lo < +inf, on the leading limb of the lower bound. Proved, in
+    /// the IEEE model, for a canonical interval: exact. False for the empty set, although "every
+    /// member is positive" is vacuously true of it: a query about nothing answers no, and is_empty()
+    /// is the query to make first (milestone2.md, "The empty set and the whole line").
+    /// Does not round (comparisons): not preceded by the debug build's check of the rounding mode
+    /// (config.hpp). constexpr.
+    constexpr bool certainly_positive() const noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::positive>
+    {
+        detail::check_interval_exact(*this);
+        bool m = false;
+        if constexpr (K == 1) {
+            gen::interval_positive_1(lo_.limb[0], hi_.limb[0], m);
+        } else {
+            gen::interval_positive_2(lo_.limb[0], lo_.limb[1], hi_.limb[0], hi_.limb[1], m);
+        }
+        return m;
+    }
+    /// Whether every member is negative and the interval is not empty (kernel interval_negative_1
+    /// or interval_negative_2): -inf < hi < 0, on the leading limb of the upper bound. Exact; false
+    /// for the empty set. Does not round, and is checked, as certainly_positive(); constexpr.
+    constexpr bool certainly_negative() const noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::negative>
+    {
+        detail::check_interval_exact(*this);
+        bool m = false;
+        if constexpr (K == 1) {
+            gen::interval_negative_1(lo_.limb[0], hi_.limb[0], m);
+        } else {
+            gen::interval_negative_2(lo_.limb[0], lo_.limb[1], hi_.limb[0], hi_.limb[1], m);
+        }
+        return m;
+    }
+    /// Whether the interval is [0, 0], its only member 0 (kernel interval_zero_1 or
+    /// interval_zero_2): both bounds zero. Exact; false for the empty set. Does not round, and is
+    /// checked, as certainly_positive(); constexpr.
+    constexpr bool certainly_zero() const noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::zero>
+    {
+        detail::check_interval_exact(*this);
+        bool m = false;
+        if constexpr (K == 1) {
+            gen::interval_zero_1(lo_.limb[0], hi_.limb[0], m);
+        } else {
+            gen::interval_zero_2(lo_.limb[0], lo_.limb[1], hi_.limb[0], hi_.limb[1], m);
+        }
+        return m;
+    }
+
+    /// The midpoint (kernel interval_mid_rad_1 or interval_mid_rad_2): the sum of the halves of the
+    /// bounds, moved into the interval if a halving underflowed. It runs the kernel of the midpoint
+    /// and the radius, and so does radius(): a program that needs both calls mid_rad(), which runs
+    /// it once (twice the cost was measured for the two calls, docs/developer/results/
+    /// bench-milestone2.md). Proved, in the IEEE model, for a canonical interval: for a bounded
+    /// [l, h], a finite m with l <= m <= h and, for one limb, |m - (l + h)/2| <= u |(l + h)/2| + eta,
+    /// for two limbs a normalized pair with |m - (l + h)/2| <= 3u^2/(1 - 4u) |(l + h)/2| + 2 eta;
+    /// 0 for the whole line; Omega, the largest finite number of T, for [l, +inf] with l finite, and
+    /// -Omega for [-inf, h]; a NaN (every limb) for the empty set. These are the values of mid in
+    /// IEEE 1788, but for a bounded interval of one limb with a bound that is an odd multiple of
+    /// eta, where the result is within eta and one rounding of the midpoint and need not be the
+    /// midpoint rounded to nearest; for two limbs the midpoint is a canonical number in every case.
+    /// Rounds (halvings and a sum): preceded, when KAIRN_CHECKS is 1, by the check of the
+    /// environment, the rounding mode included, and of a canonical interval (config.hpp). constexpr
+    /// for one limb; for two not, its kernel having fused operations without a variant for constant
+    /// evaluation.
+    constexpr Expansion<T, K> midpoint() const noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::mid_rad>
+    {
+        return detail::mid_rad(*this).midpoint;
+    }
+    /// The radius, for the midpoint that midpoint() returns (kernel interval_mid_rad_1 or
+    /// interval_mid_rad_2), a number of T; it runs the whole kernel, as midpoint() does (mid_rad()
+    /// gives both from one call). Proved, in the IEEE model, for a canonical interval: for a bounded
+    /// [l, h] and one limb, the smallest number r of T with [m - r, m + r] containing [l, h],
+    /// RU(max(m - l, h - m)); for two limbs a number r of T with [m - r, m + r] containing [l, h],
+    /// not claimed the smallest, which is +inf for a bounded interval near the top of the range and
+    /// finite when |l| and |h| are at most 2^(e_max - 2), a quarter of the overflow threshold;
     /// +inf for an unbounded interval; a NaN for the empty set, as rad in IEEE 1788. Rounds, and is
-    /// checked, as midpoint(); constexpr. For two limbs not yet.
+    /// checked, as midpoint(); constexpr for one limb.
     constexpr T radius() const noexcept
-        requires(K == 1 && detail::proof_checked<typename detail::interval_kernels<T, K>::mid_rad>)
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::mid_rad>
     {
-        T m = T(0), r = T(0);
-        mid_rad(m, r);
-        return r;
+        return detail::mid_rad(*this).radius;
     }
-    /// Two intervals of one limb whose union is this one, split at a point of it (kernel
-    /// interval_split_1): left = [l, m] and right = [m, h]. Proved, in the IEEE model, for a
+    /// The midpoint and the radius together, from one call of their kernel (interval_mid_rad_1 or
+    /// interval_mid_rad_2): the values of midpoint() and radius(), with their statements. Rounds,
+    /// and is checked, as midpoint(); constexpr for one limb.
+    constexpr MidRad<T, K> mid_rad() const noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::mid_rad>
+    {
+        return detail::mid_rad(*this);
+    }
+    /// Two intervals that together are this one and meet at a point of it (kernel interval_split_1
+    /// or interval_split_2): left = [l, p] and right = [p, h]. Proved, in the IEEE model, for a
     /// canonical interval: both are canonical; both are empty for the empty set; otherwise neither
-    /// is, left.lower() is l, right.upper() is h, and left.upper() equals right.lower(), a point of
-    /// the interval. The point is the midpoint of the listing (interval_mid_rad_1), 0 for the whole
-    /// line and Omega for [l, +inf]; that it is the midpoint is the listing's, not claimed. Rounds,
-    /// and is checked, as midpoint(); constexpr. For two limbs not yet: its kernel, interval_split_2,
-    /// is still to come.
+    /// is, left.lower() is l, right.upper() is h, and left.upper() equals right.lower(), a point p
+    /// of the interval. **Which point p is, is not claimed.** The listing splits at the midpoint of
+    /// mid_rad(), moved into the interval for two limbs (a bound of two limbs can lie beyond Omega,
+    /// and then the midpoint Omega of a half-line is outside it), but no claim says so, and p can be
+    /// a bound: [l, h] with h the number after l is split into itself and a point. A bisection
+    /// therefore needs its own test of progress, such as a radius of each part at most three
+    /// quarters of that of the interval (docs/tutorials/bisection.md). Rounds (halvings and a sum),
+    /// and is checked, as midpoint(); constexpr.
     constexpr Split<Interval> split() const noexcept
-        requires(K == 1 && detail::proof_checked<typename detail::interval_kernels<T, K>::split>)
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::split>
     {
         detail::check_interval(*this);
-        T al = T(0), au = T(0), bl = T(0), bu = T(0);
-        gen::interval_split_1(lo_.limb[0], hi_.limb[0], al, au, bl, bu);
-        return {Interval(detail::kernel_result, Expansion<T, 1>(al), Expansion<T, 1>(au)),
-                Interval(detail::kernel_result, Expansion<T, 1>(bl), Expansion<T, 1>(bu))};
+        Expansion<T, K> al, au, bl, bu;
+        if constexpr (K == 1) {
+            gen::interval_split_1(lo_.limb[0], hi_.limb[0], al.limb[0], au.limb[0], bl.limb[0], bu.limb[0]);
+        } else {
+            gen::interval_split_2(lo_.limb[0], lo_.limb[1], hi_.limb[0], hi_.limb[1], al.limb[0], al.limb[1],
+                                  au.limb[0], au.limb[1], bl.limb[0], bl.limb[1], bu.limb[0], bu.limb[1]);
+        }
+        return {Interval(detail::kernel_result, al, au), Interval(detail::kernel_result, bl, bu)};
     }
 
     /// The hull of this interval and Y, the smallest interval that contains both (kernel
@@ -425,10 +622,41 @@ private:
         x.limb[0] = a;
         return x;
     }
-    // The midpoint and the radius (kernel interval_mid_rad_1).
-    constexpr void mid_rad(T& m, T& r) const noexcept {
-        detail::check_interval(*this);
-        gen::interval_mid_rad_1(lo_.limb[0], hi_.limb[0], m, r);
+    // The member tests and the subset test, without their markers and constraints.
+    constexpr bool contains_point(T t) const noexcept {
+        if constexpr (K == 1) {
+            return contains_number(Expansion<T, 1>(t));
+        } else {
+            detail::check_interval_exact(*this);
+            const Expansion<T, 2> p = detail::make<T>(t);
+            bool m = false;
+            gen::interval_contains_2(lo_.limb[0], lo_.limb[1], hi_.limb[0], hi_.limb[1], p.limb[0], p.limb[1], m);
+            return m;
+        }
+    }
+    constexpr bool contains_number(const Expansion<T, K>& t) const noexcept {
+        detail::check_interval_exact(*this);
+        bool m = false;
+        if constexpr (K == 1) {
+            gen::interval_contains_1(lo_.limb[0], hi_.limb[0], t.limb[0], m);
+        } else {
+            detail::check_exact(t);
+            gen::interval_contains_2(lo_.limb[0], lo_.limb[1], hi_.limb[0], hi_.limb[1], t.limb[0], t.limb[1], m);
+        }
+        return m;
+    }
+    // Y inside this interval: the kernel's first operand is Y.
+    constexpr bool contains_set(const Interval& y) const noexcept {
+        detail::check_interval_exact(*this);
+        detail::check_interval_exact(y);
+        bool m = false;
+        if constexpr (K == 1) {
+            gen::interval_subset_1(y.lo_.limb[0], y.hi_.limb[0], lo_.limb[0], hi_.limb[0], m);
+        } else {
+            gen::interval_subset_2(y.lo_.limb[0], y.lo_.limb[1], y.hi_.limb[0], y.hi_.limb[1], lo_.limb[0], lo_.limb[1],
+                                   hi_.limb[0], hi_.limb[1], m);
+        }
+        return m;
     }
     constexpr Interval hull_of(const Interval& y) const noexcept {
         detail::check_interval_exact(*this);
@@ -492,11 +720,153 @@ KAIRN_FORCEINLINE constexpr Interval<T, 1> to_interval(const Ball<T, 1>& x) noex
     return Interval<T, 1>(kernel_result, Expansion<T, 1>(l), Expansion<T, 1>(h));
 }
 template <class T>
+KAIRN_FORCEINLINE Interval<T, 2> to_interval(const Ball<T, 2>& x) noexcept {
+    Expansion<T, 2> l, h;
+    ball_bounds(x, l, h);
+    return Interval<T, 2>(kernel_result, l, h);
+}
+template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> to_ball(const Interval<T, 1>& x) noexcept {
     check_interval(x);
     T c = T(0), r = T(0);
     gen::interval_to_ball_1(x.lower().limb[0], x.upper().limb[0], c, r);
     return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
+}
+template <class T>
+KAIRN_FORCEINLINE Ball<T, 2> to_ball(const Interval<T, 2>& x) noexcept {
+    check_interval(x);
+    Expansion<T, 2> c;
+    T r = T(0);
+    gen::interval_to_ball_2(x.lower().limb[0], x.lower().limb[1], x.upper().limb[0], x.upper().limb[1], c.limb[0],
+                            c.limb[1], r);
+    return Ball<T, 2>(kernel_result, c, r);
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr MidRad<T, 1> mid_rad(const Interval<T, 1>& x) noexcept {
+    check_interval(x);
+    T m = T(0), r = T(0);
+    gen::interval_mid_rad_1(x.lower().limb[0], x.upper().limb[0], m, r);
+    return {Expansion<T, 1>(m), r};
+}
+template <class T>
+KAIRN_FORCEINLINE MidRad<T, 2> mid_rad(const Interval<T, 2>& x) noexcept {
+    check_interval(x);
+    Expansion<T, 2> m;
+    T r = T(0);
+    gen::interval_mid_rad_2(x.lower().limb[0], x.lower().limb[1], x.upper().limb[0], x.upper().limb[1], m.limb[0],
+                            m.limb[1], r);
+    return {m, r};
+}
+
+// The three-valued comparisons and the relations of IEEE 1788 of two intervals, and the member
+// test of kairn::member, without their markers and constraints: one kernel each, comparisons and
+// selects that do not round, so the rounding mode is not checked (check_interval_exact). The
+// kernels of the comparisons return the two masks of a Trit; trit() makes it, and opposite()
+// exchanges yes and no for not_equal; greater and greater_equal are less and less_equal of the
+// operands exchanged; member is the member test, whose claim is exact, as a Trit that is never
+// unknown.
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit less(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    check_interval_exact(x);
+    check_interval_exact(y);
+    bool yes = false, no = false;
+    if constexpr (K == 1) {
+        gen::interval_less_1(x.lower().limb[0], x.upper().limb[0], y.lower().limb[0], y.upper().limb[0], yes, no);
+    } else {
+        gen::interval_less_2(x.lower().limb[0], x.lower().limb[1], x.upper().limb[0], x.upper().limb[1],
+                             y.lower().limb[0], y.lower().limb[1], y.upper().limb[0], y.upper().limb[1], yes, no);
+    }
+    return trit(yes, no);
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit less_equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    check_interval_exact(x);
+    check_interval_exact(y);
+    bool yes = false, no = false;
+    if constexpr (K == 1) {
+        gen::interval_less_equal_1(x.lower().limb[0], x.upper().limb[0], y.lower().limb[0], y.upper().limb[0], yes,
+                                   no);
+    } else {
+        gen::interval_less_equal_2(x.lower().limb[0], x.lower().limb[1], x.upper().limb[0], x.upper().limb[1],
+                                   y.lower().limb[0], y.lower().limb[1], y.upper().limb[0], y.upper().limb[1], yes, no);
+    }
+    return trit(yes, no);
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    check_interval_exact(x);
+    check_interval_exact(y);
+    bool yes = false, no = false;
+    if constexpr (K == 1) {
+        gen::interval_equal_1(x.lower().limb[0], x.upper().limb[0], y.lower().limb[0], y.upper().limb[0], yes, no);
+    } else {
+        gen::interval_equal_2(x.lower().limb[0], x.lower().limb[1], x.upper().limb[0], x.upper().limb[1],
+                              y.lower().limb[0], y.lower().limb[1], y.upper().limb[0], y.upper().limb[1], yes, no);
+    }
+    return trit(yes, no);
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit greater(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::less(y, x);
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit greater_equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::less_equal(y, x);
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit not_equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::opposite(detail::equal(x, y));
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit member(std::type_identity_t<T> t, const Interval<T, K>& x) noexcept {
+    return x.contains(unverified(t)) ? Trit::yes : Trit::no;
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit member(const Expansion<T, K>& t, const Interval<T, K>& x) noexcept {
+    return x.contains(unverified(t)) ? Trit::yes : Trit::no;
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr bool rel_subset(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return y.contains(unverified(x));
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr bool rel_equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    check_interval_exact(x);
+    check_interval_exact(y);
+    bool m = false;
+    if constexpr (K == 1) {
+        gen::interval_rel_equal_1(x.lower().limb[0], x.upper().limb[0], y.lower().limb[0], y.upper().limb[0], m);
+    } else {
+        gen::interval_rel_equal_2(x.lower().limb[0], x.lower().limb[1], x.upper().limb[0], x.upper().limb[1],
+                                  y.lower().limb[0], y.lower().limb[1], y.upper().limb[0], y.upper().limb[1], m);
+    }
+    return m;
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr bool rel_interior(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    check_interval_exact(x);
+    check_interval_exact(y);
+    bool m = false;
+    if constexpr (K == 1) {
+        gen::interval_rel_interior_1(x.lower().limb[0], x.upper().limb[0], y.lower().limb[0], y.upper().limb[0], m);
+    } else {
+        gen::interval_rel_interior_2(x.lower().limb[0], x.lower().limb[1], x.upper().limb[0], x.upper().limb[1],
+                                     y.lower().limb[0], y.lower().limb[1], y.upper().limb[0], y.upper().limb[1], m);
+    }
+    return m;
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr bool rel_disjoint(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    check_interval_exact(x);
+    check_interval_exact(y);
+    bool m = false;
+    if constexpr (K == 1) {
+        gen::interval_rel_disjoint_1(x.lower().limb[0], x.upper().limb[0], y.lower().limb[0], y.upper().limb[0], m);
+    } else {
+        gen::interval_rel_disjoint_2(x.lower().limb[0], x.lower().limb[1], x.upper().limb[0], x.upper().limb[1],
+                                     y.lower().limb[0], y.lower().limb[1], y.upper().limb[0], y.upper().limb[1], m);
+    }
+    return m;
 }
 
 // The negation: two changes of sign and an exchange, inline in every setting, and constexpr. It
@@ -682,6 +1052,216 @@ KAIRN_FORCEINLINE auto operator*=(X& x, const Y& y) noexcept -> decltype(x = det
     return x = detail::mul(x, detail::unmark(y));
 }
 
+// The three-valued comparisons (milestone2.md, "Comparisons"), as functions and not operators:
+// each answer is a kairn::Trit, which does not convert to bool, so that a program says which answer
+// it acts on (kairn::certainly, kairn::possibly). Function templates, so that no operand converts:
+// two intervals of the same T and K. The same names compare balls (ball.hpp). Each is exact for
+// intervals of one and of two limbs: the comparisons of bounds of two limbs are exact.
+
+/// The three-valued X < Y of intervals (kernel interval_less_1 or interval_less_2): yes when every
+/// member of X is below every member of Y, x_u < y_l; no when no member of X is below a member of
+/// Y, x_l >= y_u; unknown otherwise, and when an operand is empty (a query about nothing answers
+/// neither). Proved, in the IEEE model, for canonical intervals: exact, so unknown exactly when
+/// neither holds; with the whole line, never yes or no. Does not round (comparisons): not preceded
+/// by the debug build's check of the rounding mode (config.hpp). constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::less>
+KAIRN_FORCEINLINE constexpr Trit less(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::less(x, y);
+}
+/// The three-valued X <= Y (kernel interval_less_equal_1 or interval_less_equal_2): yes when
+/// x_u <= y_l, no when x_l > y_u, unknown otherwise and for an empty operand; exact, as less().
+/// Does not round. constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::less_equal>
+KAIRN_FORCEINLINE constexpr Trit less_equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::less_equal(x, y);
+}
+/// The three-valued X > Y: less(Y, X), the same kernel (interval_less_1 or interval_less_2) with
+/// the operands exchanged, and its statement. Does not round. constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::less>
+KAIRN_FORCEINLINE constexpr Trit greater(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::greater(x, y);
+}
+/// The three-valued X >= Y: less_equal(Y, X) (kernel interval_less_equal_1 or
+/// interval_less_equal_2). Does not round. constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::less_equal>
+KAIRN_FORCEINLINE constexpr Trit greater_equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::greater_equal(x, y);
+}
+/// The three-valued X = Y (kernel interval_equal_1 or interval_equal_2): yes when every member of
+/// X equals every member of Y, that is when both are the same point, x_l = x_u = y_l = y_u; no
+/// when no member of X equals a member of Y, the intervals being disjoint; unknown otherwise and
+/// for an empty operand. Exact. Not the relation equal of IEEE 1788, whose answer is whether the
+/// two sets have the same members: that is kairn::ieee1788::equal. Does not round. constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::equal>
+KAIRN_FORCEINLINE constexpr Trit equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::equal(x, y);
+}
+/// The three-valued X != Y: equal(X, Y) with yes and no exchanged (kernel interval_equal_1 or
+/// interval_equal_2): yes when the intervals are disjoint, no when both are the same point. Does
+/// not round. constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::equal>
+KAIRN_FORCEINLINE constexpr Trit not_equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::not_equal(x, y);
+}
+/// Whether t, a value of T, is a member of X, as a Trit (kernel interval_contains_1 or
+/// interval_contains_2, with make_2 first for two limbs, as X.contains(t)): yes when it is, no when it
+/// is not; the answer is exact, so never unknown. For code written for intervals and balls alike,
+/// where the answer about a ball of two limbs is only certain. Does not round. constexpr.
+template <class T, int K>
+    requires detail::interval_member_proved<T, K>
+KAIRN_FORCEINLINE constexpr Trit member(std::type_identity_t<T> t, const Interval<T, K>& x) noexcept {
+    return detail::member(t, x);
+}
+/// Whether t, a number of K limbs, is a member of X, as a Trit (kernel interval_contains_1 or
+/// interval_contains_2): exact, never unknown, as X.contains(t). Does not round. constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::contains>
+KAIRN_FORCEINLINE constexpr Trit member(const Expansion<T, K>& t, const Interval<T, K>& x) noexcept {
+    return detail::member(t, x);
+}
+
+namespace detail {
+template <class X, class Y>
+concept marked_enclosure_pair = (marked<X> || marked<Y>) && enclosure<X> && enclosure<Y>;
+template <class P, class X>
+concept marked_member = (marked<P> || marked<X>) && !enclosure<P> && enclosure<X>;
+}  // namespace detail
+
+/// less(X, Y) with a marked operand, of intervals or of balls.
+template <class X, class Y>
+    requires detail::marked_enclosure_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto less(const X& x, const Y& y) noexcept
+    -> decltype(detail::less(detail::unmark(x), detail::unmark(y))) {
+    return detail::less(detail::unmark(x), detail::unmark(y));
+}
+/// less_equal(X, Y) with a marked operand.
+template <class X, class Y>
+    requires detail::marked_enclosure_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto less_equal(const X& x, const Y& y) noexcept
+    -> decltype(detail::less_equal(detail::unmark(x), detail::unmark(y))) {
+    return detail::less_equal(detail::unmark(x), detail::unmark(y));
+}
+/// greater(X, Y) with a marked operand.
+template <class X, class Y>
+    requires detail::marked_enclosure_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto greater(const X& x, const Y& y) noexcept
+    -> decltype(detail::greater(detail::unmark(x), detail::unmark(y))) {
+    return detail::greater(detail::unmark(x), detail::unmark(y));
+}
+/// greater_equal(X, Y) with a marked operand.
+template <class X, class Y>
+    requires detail::marked_enclosure_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto greater_equal(const X& x, const Y& y) noexcept
+    -> decltype(detail::greater_equal(detail::unmark(x), detail::unmark(y))) {
+    return detail::greater_equal(detail::unmark(x), detail::unmark(y));
+}
+/// equal(X, Y) with a marked operand.
+template <class X, class Y>
+    requires detail::marked_enclosure_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto equal(const X& x, const Y& y) noexcept
+    -> decltype(detail::equal(detail::unmark(x), detail::unmark(y))) {
+    return detail::equal(detail::unmark(x), detail::unmark(y));
+}
+/// not_equal(X, Y) with a marked operand.
+template <class X, class Y>
+    requires detail::marked_enclosure_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto not_equal(const X& x, const Y& y) noexcept
+    -> decltype(detail::not_equal(detail::unmark(x), detail::unmark(y))) {
+    return detail::not_equal(detail::unmark(x), detail::unmark(y));
+}
+/// member(t, X) with a marked operand, of an interval or a ball.
+template <class P, class X>
+    requires detail::marked_member<P, X>
+KAIRN_FORCEINLINE constexpr auto member(const P& t, const X& x) noexcept
+    -> decltype(detail::member(detail::unmark(t), detail::unmark(x))) {
+    return detail::member(detail::unmark(t), detail::unmark(x));
+}
+
+/// The relations of IEEE Std 1788.1-2017 of two intervals, under the standard's names, each
+/// returning a bool with the standard's readings of the empty set: the empty set is a subset of
+/// every interval, interior to every interval, disjoint from every interval, and equal to the empty
+/// set only (milestone2.md, "Comparisons" and "IEEE 1788"; Tables 4.5 and 4.6 of the standard). In
+/// a namespace of their own because two of the names are also those of Kairn's three-valued
+/// comparisons, which answer another question: kairn::equal(X, Y) is yes when X and Y are the same
+/// point, kairn::ieee1788::equal(X, Y) true when they have the same members. Each is one kernel,
+/// exact, on intervals of one and of two limbs; none rounds. Balls have none of these:
+/// Ball::contains, the three-valued comparisons and the conversion to an interval answer for them.
+/// The relations of the full standard IEEE Std 1788-2015 that the simplified one does not require
+/// (less, precedes, strict_less, strict_precedes) are not provided.
+namespace ieee1788 {
+
+/// The relation equal: X and Y have the same members, x_l = y_l and x_u = y_u on the stored bounds
+/// (kernel interval_rel_equal_1 or interval_rel_equal_2). Proved, in the IEEE model, for canonical
+/// intervals: exact; two empty sets are equal, and the empty set is equal to nothing else. Does not
+/// round (comparisons): not preceded by the debug build's check of the rounding mode (config.hpp).
+/// constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::rel_equal>
+KAIRN_FORCEINLINE constexpr bool equal(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::rel_equal(x, y);
+}
+/// The relation subset: every member of X is a member of Y, y_l <= x_l and x_u <= y_u on the
+/// stored bounds (kernel interval_subset_1 or interval_subset_2), the answer of Y.contains(X).
+/// Exact; the empty set is a subset of every interval. Does not round. constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::subset>
+KAIRN_FORCEINLINE constexpr bool subset(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::rel_subset(x, y);
+}
+/// The relation interior: every member of X has a neighbourhood, an open interval around it, made
+/// of members of Y (kernel interval_rel_interior_1 or interval_rel_interior_2): y_l < x_l, or both
+/// are -inf, and x_u < y_u, or both are +inf, an infinite bound being inside an equal infinite
+/// bound (the rule of the standard's Table 4.5). Exact; the empty set is interior to every
+/// interval, and no nonempty interval to the empty set. Does not round. constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::rel_interior>
+KAIRN_FORCEINLINE constexpr bool interior(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::rel_interior(x, y);
+}
+/// The relation disjoint: no real number is a member of both (kernel interval_rel_disjoint_1 or
+/// interval_rel_disjoint_2): an operand is empty, or x_u < y_l, or y_u < x_l. Exact; for nonempty
+/// operands, the no of the three-valued kairn::equal. Does not round. constexpr.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::interval_kernels<T, K>::rel_disjoint>
+KAIRN_FORCEINLINE constexpr bool disjoint(const Interval<T, K>& x, const Interval<T, K>& y) noexcept {
+    return detail::rel_disjoint(x, y);
+}
+/// equal(X, Y) with a marked operand.
+template <class X, class Y>
+    requires detail::marked_interval_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto equal(const X& x, const Y& y) noexcept
+    -> decltype(detail::rel_equal(detail::unmark(x), detail::unmark(y))) {
+    return detail::rel_equal(detail::unmark(x), detail::unmark(y));
+}
+/// subset(X, Y) with a marked operand.
+template <class X, class Y>
+    requires detail::marked_interval_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto subset(const X& x, const Y& y) noexcept
+    -> decltype(detail::rel_subset(detail::unmark(x), detail::unmark(y))) {
+    return detail::rel_subset(detail::unmark(x), detail::unmark(y));
+}
+/// interior(X, Y) with a marked operand.
+template <class X, class Y>
+    requires detail::marked_interval_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto interior(const X& x, const Y& y) noexcept
+    -> decltype(detail::rel_interior(detail::unmark(x), detail::unmark(y))) {
+    return detail::rel_interior(detail::unmark(x), detail::unmark(y));
+}
+/// disjoint(X, Y) with a marked operand.
+template <class X, class Y>
+    requires detail::marked_interval_pair<X, Y>
+KAIRN_FORCEINLINE constexpr auto disjoint(const X& x, const Y& y) noexcept
+    -> decltype(detail::rel_disjoint(detail::unmark(x), detail::unmark(y))) {
+    return detail::rel_disjoint(detail::unmark(x), detail::unmark(y));
+}
+
+}  // namespace ieee1788
 }  // namespace kairn
 KAIRN_GEN_POP_WARNINGS
 

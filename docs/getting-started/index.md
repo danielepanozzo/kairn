@@ -155,10 +155,19 @@ so in what they are good at
   remedies; the [tutorial on intervals](../tutorials/intervals.md) shows both, and how a ball fares
   on the same problem.
 
-`Ball<T, 1>(X)` and `Interval<T, 1>(B)` convert one into the other, each widening the set (so
-both are explicit), and `Ball<T, 2>::from_interval(lo, hi)` makes a ball of two limbs whose center
-is the exact midpoint of two numbers of `T`. What each function guarantees is in
-[What holds today](guarantees.md#intervals).
+`Ball<T, k>(X)` and `Interval<T, k>(B)` convert one into the other, each widening the set (so
+both are explicit), and `Ball<T, k>::from_interval(lo, hi)` makes a ball from two numbers of `T`
+(for two limbs with the exact midpoint for its center). Both types answer the same questions under
+the same names, so that an algorithm can be written once for either
+([One enclosure interface](../reference/enclosure.md); the
+[tutorial on bisection](../tutorials/bisection.md) is such an algorithm): `lower()`, `upper()`,
+`midpoint()`, `radius()`, `mid_rad()`, `is_empty()`, `is_whole()`, `contains(t)` and `contains(Y)`,
+the signs `certainly_positive()`, `certainly_negative()`, `certainly_zero()`, `hull`,
+`intersection`, `split`, and the three-valued comparisons `kairn::less`, `less_equal`, `equal`
+and their mirrors, whose answer, a `kairn::Trit`, is *yes*, *no* or *unknown* and converts to no
+`bool`. For an interval and a ball of one limb the answers are exact; for a ball of two limbs the
+comparisons and the member tests are only *certain*, right when given and possibly not given near
+the boundary. What each function guarantees is in [What holds today](guarantees.md#intervals).
 
 ## Vector loops
 
@@ -402,7 +411,9 @@ C++20, and there is nothing to compile. Its headers today:
 |---|---|
 | `kairn/kairn.hpp` | All of the following. |
 | `kairn/expansion.hpp` | `kairn::Expansion<T, 1>` and `kairn::Expansion<T, 2>`, `T` = `float` or `double`, and their operations. |
-| `kairn/ball.hpp` | `kairn::Ball<T, 1>` and `kairn::Ball<T, 2>`. |
+| `kairn/ball.hpp` | `kairn::Ball<T, 1>` and `kairn::Ball<T, 2>`; it includes `interval.hpp`. |
+| `kairn/interval.hpp` | `kairn::Interval<T, 1>` and `kairn::Interval<T, 2>`, the conversions between intervals and balls, and the relations of IEEE 1788 (`kairn::ieee1788`). |
+| `kairn/enclosure.hpp` | The types the two share: `kairn::Trit` with `kairn::certainly` and `kairn::possibly`, `kairn::Split` and `kairn::MidRad` ([One enclosure interface](../reference/enclosure.md)). |
 | `kairn/blocks.hpp` | The [building blocks](#building-blocks) on `T`: `two_sum`, `fast_two_sum`, `two_prod`, `next_up`, `next_down`, `radd`, `rmul`, the sums and products rounded down and up. |
 | `kairn/rational.hpp` | `kairn::rational`, `kairn::integer` and `kairn::Constant` ([above](#constants-from-fractions)). |
 | `kairn/traits.hpp` | `kairn::traits<X>`: limb type, number of limbs, precision, and the error constants of the proved operations. |
@@ -652,8 +663,9 @@ canonical pair, $x_0 + x_1 = x_0$). They are:
 | `Expansion<T, 2>(r)` for the result `r` of `two_sum` or `fast_two_sum` | the guards, as above, and a test of the pair that compares and does not round |
 | `-X`, `X.hull(Y)`, `X.intersection(Y)` for an `Interval`, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of two limbs | sign bits, comparisons and selects of bounds; a bound rounded down or up to `T` as `to_down` and `to_up` round it |
 | the constructors of an `Interval`: from two bounds or a point of one limb, from a `T` of two limbs, from numbers of two limbs | the guards, as above; for numbers of two limbs comparisons and selects |
+| of an `Interval`: `X.is_empty()`, `X.is_whole()`, the signs, `X.contains(t)`, `X.contains(Y)`, `kairn::member`, the three-valued comparisons (`kairn::less` and the others) and the relations `kairn::ieee1788::equal`, `subset`, `interior`, `disjoint` | comparisons and selects of bounds; for a point of `T` of two limbs the guard of `make_2`, as above |
 | `kairn::next_up`, `kairn::next_down` | integer operations on the bit pattern, which no state of the environment changes: they check nothing at all |
-| `kairn::sign`, `kairn::isfinite`, `kairn::is_normalized` of one limb, `X.center()`, `X.radius()`, `X.midpoint()`, `X.is_finite()`, `X.is_whole()`, `X.is_empty()`, `Ball::empty()`, `Ball::whole()`, `Interval()`, `Interval::empty()`, `Interval::whole()`, `X.lower()` and `X.upper()` of an interval, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of one limb, the constants of `kairn::traits`, `kairn::rational`; the constructors of two limbs from a `T` or a one-limb number and `from_limbs_unchecked` (their guard, as above) | tests of bit patterns, stored values and data, integer arithmetic; these check nothing at all, as before |
+| `kairn::sign`, `kairn::isfinite`, `kairn::is_normalized` of one limb, `X.center()`, `X.radius()`, `X.midpoint()`, `X.mid_rad()`, `X.is_finite()`, `X.is_whole()`, `X.is_empty()` of a `Ball`, `kairn::certainly` and `kairn::possibly` of a `Trit`, `Ball::empty()`, `Ball::whole()`, `Interval()`, `Interval::empty()`, `Interval::whole()`, `X.lower()` and `X.upper()` of an interval, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of one limb, the constants of `kairn::traits`, `kairn::rational`; the constructors of two limbs from a `T` or a one-limb number and `from_limbs_unchecked` (their guard, as above) | tests of bit patterns, stored values and data, integer arithmetic; these check nothing at all, as before |
 
 Every other function rounds and checks the rounding mode: the arithmetic, `ldexp` and `half` (of
 numbers and of balls), the functions of `kairn::finite::`, the [building blocks](#building-blocks)
@@ -662,9 +674,12 @@ nearest what rounding down or up gives), `from_limbs` and `kairn::is_normalized`
 test $x_0 + x_1 = x_0$), the constructors of `Ball<T, 2>` from a center of two limbs or a
 constant of two limbs (the test of a canonical center), the arithmetic of intervals, and the
 functions of the interface of `Interval` and `Ball` that compute a bound or a center: the midpoint,
-the radius and the split of an interval, the conversions `Ball<T, 1>(X)` and `Interval<T, 1>(B)`,
-`Ball<T, 2>::from_interval`, the bounds of a ball as numbers of `T` and the narrowing of a ball to
-one limb (sums, halvings and directed sums computed under rounding to nearest). The header `config.hpp` has the same list, and the reference comment of each of
+the radius, `mid_rad()` and the split of an interval, the conversions `Ball<T, k>(X)` and
+`Interval<T, k>(B)`, `Ball<T, k>::from_interval`, the bounds of a ball and the narrowing of a ball
+to one limb (sums, halvings and directed sums computed under rounding to nearest); and of a ball
+the member and subset tests, the three-valued comparisons, the hull, the intersection and the
+split (differences of centers by exact pairs or with a bound of their error, and the conversions
+to intervals and back). The header `config.hpp` has the same list, and the reference comment of each of
 these functions says "Does not round".
 
 - `kairn: the floating-point environment: ` followed by what is wrong:

@@ -40,7 +40,8 @@ jobs:
     # done). So each Windows compiler runs the tier in three shards, each its own job with its own
     # build: ctest runs the tests that pass the label filter AND whose number is in the stride
     # (-I start,,3), so the three shards are the job's tests, each once. The other platforms take
-    # 22 to 38 minutes in one job.
+    # 22 to 38 minutes in one job. The stride is quoted: the step runs in PowerShell on Windows,
+    # where a bare 1,,3 is a syntax error.
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -64,27 +65,27 @@ jobs:
           - name: Windows x64, MSVC, 1 of 3
             os: windows-2025
             cxx: cl
-            shard: -I 1,,3
+            shard: '-I "1,,3"'
           - name: Windows x64, MSVC, 2 of 3
             os: windows-2025
             cxx: cl
-            shard: -I 2,,3
+            shard: '-I "2,,3"'
           - name: Windows x64, MSVC, 3 of 3
             os: windows-2025
             cxx: cl
-            shard: -I 3,,3
+            shard: '-I "3,,3"'
           - name: Windows x64, clang-cl, 1 of 3
             os: windows-2025
             cxx: clang-cl
-            shard: -I 1,,3
+            shard: '-I "1,,3"'
           - name: Windows x64, clang-cl, 2 of 3
             os: windows-2025
             cxx: clang-cl
-            shard: -I 2,,3
+            shard: '-I "2,,3"'
           - name: Windows x64, clang-cl, 3 of 3
             os: windows-2025
             cxx: clang-cl
-            shard: -I 3,,3
+            shard: '-I "3,,3"'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -1493,7 +1493,7 @@ refused otherwise (a CLAIMS ERROR naming the kernel, the entry and the field):
   of `error`, which an `exact_when` of masks alone may not do without) the output is the value
   exactly where every condition holds, and $+\infty$ there fails. `unless` and `exact_when` are
   refused beside `if` or `gaps`, and together.
-- **`conv_radius`**, whose claim is of finite results by the owner's ruling of 2026-11-21
+- **`conv_radius`**, whose claim is of finite results by the ruling of 2026-11-21
   (architecture.md, "Claims of the non-finite layer", "`upper` of a kernel of the finite domain
   with several operations"; `bvec.FINITE_RESULTS`: the claims file writes its entry as the other
   radius kernels', so the name comes from the ruling): a finite output is judged as above (at
@@ -1578,7 +1578,7 @@ overflows and `g` (or `m`) is zero, an FMA of $0 \cdot \infty$ (`conv_radius bin
 small (`conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x1p+0 0x0.0000000000001p-1022
 0x0p+0 -> inf`, a stated value of about $2^{926}$); in 400 random cases of each of three formats,
 72 such lines, which failed or were suspicious, and the kernel stayed on the list of
-tests/CMakeLists.txt. The owner's ruling of 2026-11-21 made its claim one of finite results (the
+tests/CMakeLists.txt. The ruling of 2026-11-21 made its claim one of finite results (the
 product of BallVectors turns a radius that is not finite into the whole space): both lines pass
 now, counted, and `conv_radius` is cross-checked as the other radius kernels are.
 
@@ -1636,8 +1636,7 @@ R FLAG`, $n_x + n_y - 1$ coefficients (none when a length is 0).
   `radii_when` and `finite_when` (per pair, per entry of either array with the other's radius,
   or once) hold.
 
-**The formats of V4**, and of every clause that promises a finite result. The rule, by the
-owner's ruling of 2026-11-21 (architecture.md, "Number formats", "The formats of the statements"),
+**The formats of V4**, and of every clause that promises a finite result. The rule, by the ruling of 2026-11-21 (architecture.md, "Number formats", "The formats of the statements"),
 in the same words in docs/developer/testing.md: *the generated statements quantify over the
 formats of `binary_float` ($e_{\max} > p$, smallest exponent $3 - e_{\max} - p$; in this oracle's
 terms $q_{\max} \ge 1$ and $q_{\min} = 3 - q_{\max} - 2p$); a clause that promises a finite result

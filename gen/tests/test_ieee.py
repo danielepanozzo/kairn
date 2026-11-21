@@ -628,7 +628,7 @@ class CheckedFiles(unittest.TestCase):
     # Merged here: the regeneration of the merged descriptions. ball_from_interval_1 is printed
     # unverified: the theorem of that line is of its statement before the rule of the same
     # infinity twice, which its listing does not follow yet.
-    # Then the listing of ball_from_interval_1 was corrected for that rule (the owner's ruling of
+    # Then the listing of ball_from_interval_1 was corrected for that rule (the ruling of
     # 2026-11-21: rv = lt(gu, gl) selects the empty ball where it tested for a NaN): its
     # definition and the source line of its comments changed, and nothing else. Then its theorem
     # was proved again for that listing and its statement (IeeeBallSets.v): the statements file

@@ -31,10 +31,11 @@
 //
 // Some forms can compute only some lines of their kernel: ldexp needs a power of two among the
 // operands of mul_1_1, half needs an operand it can halve back exactly, a point form needs a ball
-// of radius zero, a sign predicate of a ball a line whose two operands are a ball's center and
-// radius, the conversion of a SumAndError to a two-limb number a finite error term, the interval of
-// a point a line whose two bounds are one value, and the bounds of an interval of two limbs as
-// numbers of T a line of to_down_2 or to_up_2 whose operand is not a NaN. On the other
+// of radius zero, the conversion of a SumAndError to a two-limb number a finite error term, the
+// interval of a point a line whose two bounds are one value, the bounds of an interval of two limbs
+// as numbers of T a line of to_down_2 or to_up_2 whose operand is not a NaN, and the member test
+// of a point of T in an interval or a ball of two limbs a line whose point is a value of T (its
+// second limb zero, or the NaN pair). On the other
 // lines such a form computes the plain operation (written beside it), and it fails at the end of a
 // stream of at least 1000 lines in which it computed none: a pass must mean that the form itself
 // was judged.
@@ -135,6 +136,24 @@ template <class T>
 B2<T> ball2(const T* in) {
     if (in[2] != in[2]) return B2<T>::empty();
     return B2<T>(AS(ball_make_2, two(in)), in[2]);
+}
+// A ball operand with the line's limbs as they are, for the forms whose claim compares limbs, the
+// sign of a zero included: the hull and the intersection of balls return an operand as it is
+// (ball_set, architecture.md). The constructor's guard makes a zero center or radius +0, so these
+// forms take the canonical ball the line gives through the constructor that keeps a kernel's
+// result: a program has such balls from the operations (the negation of the whole line has the
+// center -0), and the kernel is judged on every canonical ball the claim covers, a radius -0
+// included, which no public operation returns.
+template <class T>
+B1<T> ball1_as_is(const T* in) {
+    return B1<T>(kairn::detail::kernel_result, E1<T>(in[0]), in[1]);
+}
+template <class T>
+B2<T> ball2_as_is(const T* in) {
+    E2<T> c;
+    c.limb[0] = in[0];
+    c.limb[1] = in[1];
+    return B2<T>(kairn::detail::kernel_result, c, in[2]);
 }
 // Results, into the limbs of the completed line.
 template <class T>
@@ -506,18 +525,6 @@ bool far_ball_split(const T* x, int m, T* y, int& n) {
 POW2_FORMS(1, ball1)
 POW2_FORMS(2, ball2)
 
-// The sign predicates of a ball of two limbs, whose kernels are comparisons of the radius with the
-// center: on a line of lt_1_2 (a, y), the ball of center y and radius a, when a is not negative
-// and y is finite (a +inf or a NaN radius makes the whole line, and the comparison is then false
-// too); on a line of lt_2_1 (x, a), the ball of center x and radius -a; on a line of
-// eq_2_1 (x, a) whose a is zero, the ball of center x and radius 0. The comparison otherwise.
-FORM(lt_1_2_certainly_positive, if (0 > in[0] || !std::isfinite(in[1])) { mo[0] = in[0] < two(in + 1); return; }
-     ++reached; mo[0] = B2<T>(two(in + 1), in[0]).certainly_positive())
-FORM(lt_2_1_certainly_negative, if (in[2] > 0 || !std::isfinite(in[0])) { mo[0] = two(in) < in[2]; return; }
-     ++reached; mo[0] = B2<T>(two(in), -in[2]).certainly_negative())
-FORM(eq_2_1_certainly_zero, if (in[2] != 0) { mo[0] = two(in) == in[2]; return; }
-     ++reached; mo[0] = B2<T>(two(in), T(0)).certainly_zero())
-
 // Points: the radius of the point's ball is zero, and for a point of type T with two limbs so is
 // its second limb.
 template <class T, int K>
@@ -657,6 +664,139 @@ FORM(ball_lower_as_2_lower_as, out[0] = ball2(in).template lower_as<T>())
 FORM(ball_upper_as_2_upper_as, out[0] = ball2(in).template upper_as<T>())
 FORM(ball_narrow_2_1_narrow, put(out, B1<T>(AS(ball_narrow_2_1, ball2(in)))))
 FORM(ball_narrow_2_1_marked, put(out, B1<T>(kairn::unverified(ball2(in)))))
+
+// --- The enclosure interface of stage B2 (headers-pred) -------------------------------------------
+//
+// The predicates, the member and subset tests, the three-valued comparisons and the relations of
+// IEEE 1788 of intervals and of balls, the set operations of a ball, and the midpoint, radius,
+// split and conversions of two limbs (milestone2.md, "One enclosure interface"). A Trit is printed
+// as the two masks of its kernel, yes then no; not_equal, whose answer is that of the kernel's
+// equal with yes and no exchanged, is printed exchanged back. kairn::member on a kernel of one exact
+// mask (an interval, a ball of one limb) prints the mask's yes, and stops the runner if it ever
+// answers unknown, which its claim excludes. contains(t) of a ball of two limbs is the yes of its
+// kernel, printed with the no of kairn::member, the other public answer of the same kernel. The
+// forms whose point is a value of T of two limbs compute their own operation on the lines whose
+// point is one (a_limb), and the form with a point of two limbs otherwise.
+void put_trit(bool* mo, kairn::Trit t) {
+    mo[0] = t == kairn::Trit::yes;
+    mo[1] = t == kairn::Trit::no;
+}
+void put_opposite(bool* mo, kairn::Trit t) {
+    mo[0] = t == kairn::Trit::no;
+    mo[1] = t == kairn::Trit::yes;
+}
+bool known_yes(kairn::Trit t) {
+    if (t == kairn::Trit::unknown) {
+        std::fflush(stdout);
+        std::fprintf(stderr, "runner: kairn::member answered unknown, which an exact claim excludes\n");
+        std::exit(2);
+    }
+    return t == kairn::Trit::yes;
+}
+#define ENCLOSURE_INTERVAL_FORMS(K, IV)                                                                              \
+    FORM(interval_empty_##K##_is_empty, mo[0] = IV(in).is_empty())                                                   \
+    FORM(interval_entire_##K##_is_whole, mo[0] = IV(in).is_whole())                                                  \
+    FORM(interval_subset_##K##_contains, mo[0] = IV(in + 2 * K).contains(AS(interval_subset_##K, IV(in))))           \
+    FORM(interval_subset_##K##_contains_marked, mo[0] = IV(in + 2 * K).contains(kairn::unverified(IV(in))))          \
+    FORM(interval_subset_##K##_ieee1788_subset,                                                                      \
+         mo[0] = kairn::ieee1788::subset(AS(interval_subset_##K, IV(in)), IV(in + 2 * K)))                           \
+    FORM(interval_subset_##K##_ieee1788_marked, mo[0] = kairn::ieee1788::subset(IV(in), kairn::unverified(IV(in + 2 * K)))) \
+    FORM(interval_positive_##K##_certainly_positive, mo[0] = IV(in).certainly_positive())                            \
+    FORM(interval_negative_##K##_certainly_negative, mo[0] = IV(in).certainly_negative())                            \
+    FORM(interval_zero_##K##_certainly_zero, mo[0] = IV(in).certainly_zero())                                        \
+    FORM(interval_less_##K##_less, put_trit(mo, kairn::less(AS(interval_less_##K, IV(in)), IV(in + 2 * K))))       \
+    FORM(interval_less_##K##_greater, put_trit(mo, kairn::greater(IV(in + 2 * K), AS(interval_less_##K, IV(in))))) \
+    FORM(interval_less_##K##_marked, put_trit(mo, kairn::less(IV(in), kairn::unverified(IV(in + 2 * K)))))         \
+    FORM(interval_less_equal_##K##_less_equal,                                                                       \
+         put_trit(mo, kairn::less_equal(AS(interval_less_equal_##K, IV(in)), IV(in + 2 * K))))                     \
+    FORM(interval_less_equal_##K##_greater_equal,                                                                    \
+         put_trit(mo, kairn::greater_equal(IV(in + 2 * K), AS(interval_less_equal_##K, IV(in)))))                  \
+    FORM(interval_less_equal_##K##_marked, put_trit(mo, kairn::less_equal(kairn::unverified(IV(in)), IV(in + 2 * K)))) \
+    FORM(interval_equal_##K##_equal, put_trit(mo, kairn::equal(AS(interval_equal_##K, IV(in)), IV(in + 2 * K))))  \
+    FORM(interval_equal_##K##_not_equal,                                                                             \
+         put_opposite(mo, kairn::not_equal(AS(interval_equal_##K, IV(in)), IV(in + 2 * K))))                       \
+    FORM(interval_equal_##K##_marked, put_trit(mo, kairn::equal(IV(in), kairn::unverified(IV(in + 2 * K)))))       \
+    FORM(interval_rel_equal_##K##_ieee1788_equal,                                                                    \
+         mo[0] = kairn::ieee1788::equal(AS(interval_rel_equal_##K, IV(in)), IV(in + 2 * K)))                         \
+    FORM(interval_rel_equal_##K##_marked, mo[0] = kairn::ieee1788::equal(kairn::unverified(IV(in)), IV(in + 2 * K)))  \
+    FORM(interval_rel_interior_##K##_ieee1788_interior,                                                              \
+         mo[0] = kairn::ieee1788::interior(AS(interval_rel_interior_##K, IV(in)), IV(in + 2 * K)))                   \
+    FORM(interval_rel_interior_##K##_marked,                                                                         \
+         mo[0] = kairn::ieee1788::interior(IV(in), kairn::unverified(IV(in + 2 * K))))                               \
+    FORM(interval_rel_disjoint_##K##_ieee1788_disjoint,                                                              \
+         mo[0] = kairn::ieee1788::disjoint(AS(interval_rel_disjoint_##K, IV(in)), IV(in + 2 * K)))                   \
+    FORM(interval_rel_disjoint_##K##_marked,                                                                         \
+         mo[0] = kairn::ieee1788::disjoint(kairn::unverified(IV(in)), IV(in + 2 * K)))
+ENCLOSURE_INTERVAL_FORMS(1, iv1)
+ENCLOSURE_INTERVAL_FORMS(2, iv2)
+// The member test: a point of one limb, (xl, xu, t); of two, (xl0, xl1, xu0, xu1, t0, t1).
+FORM(interval_contains_1_contains, mo[0] = iv1(in).contains(in[2]))
+FORM(interval_contains_1_contains_one, mo[0] = iv1(in).contains(one(in + 2)))
+FORM(interval_contains_1_contains_marked, mo[0] = iv1(in).contains(kairn::unverified(in[2])))
+FORM(interval_contains_1_member, mo[0] = known_yes(kairn::member(in[2], iv1(in))))
+FORM(interval_contains_1_member_marked, mo[0] = known_yes(kairn::member(kairn::unverified(one(in + 2)), iv1(in))))
+FORM(interval_contains_2_contains, mo[0] = iv2(in).contains(two(in + 4)))
+FORM(interval_contains_2_contains_marked, mo[0] = iv2(in).contains(kairn::unverified(two(in + 4))))
+FORM(interval_contains_2_member, mo[0] = known_yes(kairn::member(two(in + 4), iv2(in))))
+FORM(interval_contains_2_contains_limb, if (!a_limb(in + 4)) { mo[0] = iv2(in).contains(two(in + 4)); return; } ++reached;
+     mo[0] = iv2(in).contains(in[4]))
+FORM(interval_contains_2_member_limb, if (!a_limb(in + 4)) { mo[0] = iv2(in).contains(two(in + 4)); return; } ++reached;
+     mo[0] = known_yes(kairn::member(in[4], iv2(in))))
+// The midpoint and the radius together, and the split and the conversions of two limbs.
+FORM(interval_mid_rad_1_mid_rad, const kairn::MidRad<T, 1> m = iv1(in).mid_rad(); put(out, m.midpoint); out[1] = m.radius)
+FORM(interval_mid_rad_2_midpoint_radius, const I2<T> x = iv2(in); put(out, x.midpoint()); out[2] = x.radius())
+FORM(interval_mid_rad_2_mid_rad, const kairn::MidRad<T, 2> m = iv2(in).mid_rad(); put(out, m.midpoint); out[2] = m.radius)
+FORM(interval_split_2_split, const kairn::Split<I2<T>> s = iv2(in).split(); put(out, s.left); put(out + 4, s.right))
+FORM(interval_to_ball_2_to_ball, put(out, B2<T>(AS(interval_to_ball_2, iv2(in)))))
+FORM(interval_to_ball_2_marked, put(out, B2<T>(kairn::unverified(iv2(in)))))
+FORM(ball_to_interval_2_to_interval, put(out, I2<T>(AS(ball_to_interval_2, ball2(in)))))
+FORM(ball_to_interval_2_marked, put(out, I2<T>(kairn::unverified(ball2(in)))))
+FORM(ball_to_interval_2_lower_upper, const B2<T> x = ball2(in); put(out, x.lower()); put(out + 2, x.upper()))
+FORM(ball_from_interval_1_from_interval, put(out, B1<T>::from_interval(AS(ball_from_interval_1, in[0]), in[1])))
+FORM(ball_from_interval_1_marked, put(out, B1<T>::from_interval(kairn::unverified(in[0]), in[1])))
+// Balls: the subset test, the signs, the comparisons and the set operations. Two balls are
+// (center limbs, radius) twice.
+#define ENCLOSURE_BALL_FORMS(K, BALL, AS_IS)                                                                                \
+    FORM(ball_contains_ball_##K##_contains, mo[0] = BALL(in).contains(AS(ball_contains_ball_##K, BALL(in + K + 1)))) \
+    FORM(ball_contains_ball_##K##_marked, mo[0] = BALL(in).contains(kairn::unverified(BALL(in + K + 1))))            \
+    FORM(ball_positive_##K##_certainly_positive, mo[0] = BALL(in).certainly_positive())                              \
+    FORM(ball_negative_##K##_certainly_negative, mo[0] = BALL(in).certainly_negative())                              \
+    FORM(ball_zero_##K##_certainly_zero, mo[0] = BALL(in).certainly_zero())                                          \
+    FORM(ball_less_##K##_less, put_trit(mo, kairn::less(AS(ball_less_##K, BALL(in)), BALL(in + K + 1))))           \
+    FORM(ball_less_##K##_greater, put_trit(mo, kairn::greater(BALL(in + K + 1), AS(ball_less_##K, BALL(in)))))     \
+    FORM(ball_less_##K##_marked, put_trit(mo, kairn::less(BALL(in), kairn::unverified(BALL(in + K + 1)))))         \
+    FORM(ball_less_equal_##K##_less_equal,                                                                           \
+         put_trit(mo, kairn::less_equal(AS(ball_less_equal_##K, BALL(in)), BALL(in + K + 1))))                     \
+    FORM(ball_less_equal_##K##_greater_equal,                                                                        \
+         put_trit(mo, kairn::greater_equal(BALL(in + K + 1), AS(ball_less_equal_##K, BALL(in)))))                  \
+    FORM(ball_less_equal_##K##_marked, put_trit(mo, kairn::less_equal(kairn::unverified(BALL(in)), BALL(in + K + 1)))) \
+    FORM(ball_equal_##K##_equal, put_trit(mo, kairn::equal(AS(ball_equal_##K, BALL(in)), BALL(in + K + 1))))       \
+    FORM(ball_equal_##K##_not_equal, put_opposite(mo, kairn::not_equal(AS(ball_equal_##K, BALL(in)), BALL(in + K + 1)))) \
+    FORM(ball_equal_##K##_marked, put_trit(mo, kairn::equal(BALL(in), kairn::unverified(BALL(in + K + 1)))))       \
+    FORM(ball_hull_##K##_hull, put(out, AS_IS(in).hull(AS(ball_hull_##K, AS_IS(in + K + 1)))))                      \
+    FORM(ball_hull_##K##_marked, put(out, AS_IS(in).hull(kairn::unverified(AS_IS(in + K + 1)))))                    \
+    FORM(ball_intersection_##K##_intersection, put(out, AS_IS(in).intersection(AS(ball_intersection_##K, AS_IS(in + K + 1))))) \
+    FORM(ball_intersection_##K##_marked, put(out, AS_IS(in).intersection(kairn::unverified(AS_IS(in + K + 1)))))       \
+    FORM(ball_split_##K##_split, const auto s = BALL(in).split(); put(out, s.left); put(out + K + 1, s.right))
+ENCLOSURE_BALL_FORMS(1, ball1, ball1_as_is)
+ENCLOSURE_BALL_FORMS(2, ball2, ball2_as_is)
+// The member test of a ball: (c, r, t) for one limb, (c0, c1, r, t0, t1) for two.
+FORM(ball_contains_point_1_contains, mo[0] = ball1(in).contains(in[2]))
+FORM(ball_contains_point_1_contains_one, mo[0] = ball1(in).contains(one(in + 2)))
+FORM(ball_contains_point_1_contains_marked, mo[0] = ball1(in).contains(kairn::unverified(in[2])))
+FORM(ball_contains_point_1_member, mo[0] = known_yes(kairn::member(in[2], ball1(in))))
+FORM(ball_contains_point_1_member_marked, mo[0] = known_yes(kairn::member(one(in + 2), kairn::unverified(ball1(in)))))
+FORM(ball_contains_point_2_member, put_trit(mo, kairn::member(two(in + 3), ball2(in))))
+FORM(ball_contains_point_2_contains, const B2<T> x = ball2(in); mo[0] = x.contains(two(in + 3));
+     mo[1] = kairn::member(two(in + 3), x) == kairn::Trit::no)
+FORM(ball_contains_point_2_contains_marked, const B2<T> x = ball2(in); mo[0] = x.contains(kairn::unverified(two(in + 3)));
+     mo[1] = kairn::member(kairn::unverified(two(in + 3)), x) == kairn::Trit::no)
+FORM(ball_contains_point_2_member_limb, if (!a_limb(in + 3)) { put_trit(mo, kairn::member(two(in + 3), ball2(in))); return; }
+     ++reached; put_trit(mo, kairn::member(in[3], ball2(in))))
+FORM(ball_contains_point_2_contains_limb, const B2<T> x = ball2(in);
+     if (!a_limb(in + 3)) { put_trit(mo, kairn::member(two(in + 3), x)); return; } ++reached;
+     mo[0] = x.contains(in[3]); mo[1] = kairn::member(in[3], x) == kairn::Trit::no)
+// --- The end of the enclosure interface of stage B2 ------------------------------------------------
 
 // --- The packed forms ---------------------------------------------------------------------------
 //
@@ -961,6 +1101,53 @@ struct Form {
     ROW(interval_hull_##K, marked, TWO, ONE)                       \
     ROW(interval_intersection_##K, intersection, TWO, ONE)         \
     ROW(interval_intersection_##K, marked, TWO, ONE)
+// The enclosure interface of stage B2: one interval is ONE limbs, two are TWO; one ball is ONE limbs,
+// two are TWO (and the two parts of a split).
+#define ENCLOSURE_INTERVAL_ROWS(K, ONE, TWO)                   \
+    ROW(interval_empty_##K, is_empty, ONE, "m")                \
+    ROW(interval_entire_##K, is_whole, ONE, "m")               \
+    ROW(interval_subset_##K, contains, TWO, "m")               \
+    ROW(interval_subset_##K, contains_marked, TWO, "m")        \
+    ROW(interval_subset_##K, ieee1788_subset, TWO, "m")        \
+    ROW(interval_subset_##K, ieee1788_marked, TWO, "m")        \
+    ROW(interval_positive_##K, certainly_positive, ONE, "m")   \
+    ROW(interval_negative_##K, certainly_negative, ONE, "m")   \
+    ROW(interval_zero_##K, certainly_zero, ONE, "m")           \
+    ROW(interval_less_##K, less, TWO, "mm")                    \
+    ROW(interval_less_##K, greater, TWO, "mm")                 \
+    ROW(interval_less_##K, marked, TWO, "mm")                  \
+    ROW(interval_less_equal_##K, less_equal, TWO, "mm")        \
+    ROW(interval_less_equal_##K, greater_equal, TWO, "mm")     \
+    ROW(interval_less_equal_##K, marked, TWO, "mm")            \
+    ROW(interval_equal_##K, equal, TWO, "mm")                  \
+    ROW(interval_equal_##K, not_equal, TWO, "mm")              \
+    ROW(interval_equal_##K, marked, TWO, "mm")                 \
+    ROW(interval_rel_equal_##K, ieee1788_equal, TWO, "m")      \
+    ROW(interval_rel_equal_##K, marked, TWO, "m")              \
+    ROW(interval_rel_interior_##K, ieee1788_interior, TWO, "m") \
+    ROW(interval_rel_interior_##K, marked, TWO, "m")           \
+    ROW(interval_rel_disjoint_##K, ieee1788_disjoint, TWO, "m") \
+    ROW(interval_rel_disjoint_##K, marked, TWO, "m")
+#define ENCLOSURE_BALL_ROWS(K, ONE, TWO, PARTS)                \
+    ROW(ball_contains_ball_##K, contains, TWO, "m")            \
+    ROW(ball_contains_ball_##K, marked, TWO, "m")              \
+    ROW(ball_positive_##K, certainly_positive, ONE, "m")       \
+    ROW(ball_negative_##K, certainly_negative, ONE, "m")       \
+    ROW(ball_zero_##K, certainly_zero, ONE, "m")               \
+    ROW(ball_less_##K, less, TWO, "mm")                        \
+    ROW(ball_less_##K, greater, TWO, "mm")                     \
+    ROW(ball_less_##K, marked, TWO, "mm")                      \
+    ROW(ball_less_equal_##K, less_equal, TWO, "mm")            \
+    ROW(ball_less_equal_##K, greater_equal, TWO, "mm")         \
+    ROW(ball_less_equal_##K, marked, TWO, "mm")                \
+    ROW(ball_equal_##K, equal, TWO, "mm")                      \
+    ROW(ball_equal_##K, not_equal, TWO, "mm")                  \
+    ROW(ball_equal_##K, marked, TWO, "mm")                     \
+    ROW(ball_hull_##K, hull, TWO, ONE)                         \
+    ROW(ball_hull_##K, marked, TWO, ONE)                       \
+    ROW(ball_intersection_##K, intersection, TWO, ONE)         \
+    ROW(ball_intersection_##K, marked, TWO, ONE)               \
+    ROW(ball_split_##K, split, ONE, PARTS)
 
 // The first form of each kernel is its canonical one.
 const Form forms[] = {
@@ -1091,7 +1278,6 @@ const Form forms[] = {
     ROW(lt_2_1, greater, "lll", "m")
     ROW(lt_2_1, less_one, "lll", "m")
     ROW(lt_2_1, greater_one, "lll", "m")
-    SOME(lt_2_1, certainly_negative, "lll", "m")
     ROW(le_2_1, less_equal, "lll", "m")
     ROW(le_2_1, greater_equal, "lll", "m")
     ROW(le_2_1, less_equal_one, "lll", "m")
@@ -1104,12 +1290,10 @@ const Form forms[] = {
     ROW(eq_2_1, equal_one_rev, "lll", "m")
     ROW(eq_2_1, not_unequal_one, "lll", "m")
     ROW(eq_2_1, not_unequal_one_rev, "lll", "m")
-    SOME(eq_2_1, certainly_zero, "lll", "m")
     ROW(lt_1_2, less, "lll", "m")
     ROW(lt_1_2, greater, "lll", "m")
     ROW(lt_1_2, less_one, "lll", "m")
     ROW(lt_1_2, greater_one, "lll", "m")
-    SOME(lt_1_2, certainly_positive, "lll", "m")
     ROW(le_1_2, less_equal, "lll", "m")
     ROW(le_1_2, greater_equal, "lll", "m")
     ROW(le_1_2, less_equal_one, "lll", "m")
@@ -1169,6 +1353,42 @@ const Form forms[] = {
     ROW(ball_upper_as_2, upper_as, "lll", "l")
     ROW(ball_narrow_2_1, narrow, "lll", "ll")
     ROW(ball_narrow_2_1, marked, "lll", "ll")
+    // The enclosure interface of stage B2 (headers-pred).
+    ENCLOSURE_INTERVAL_ROWS(1, "ll", "llll")
+    ENCLOSURE_INTERVAL_ROWS(2, "llll", "llllllll")
+    ROW(interval_contains_1, contains, "lll", "m")
+    ROW(interval_contains_1, contains_one, "lll", "m")
+    ROW(interval_contains_1, contains_marked, "lll", "m")
+    ROW(interval_contains_1, member, "lll", "m")
+    ROW(interval_contains_1, member_marked, "lll", "m")
+    ROW(interval_contains_2, contains, "llllll", "m")
+    ROW(interval_contains_2, contains_marked, "llllll", "m")
+    ROW(interval_contains_2, member, "llllll", "m")
+    SOME(interval_contains_2, contains_limb, "llllll", "m")
+    SOME(interval_contains_2, member_limb, "llllll", "m")
+    ROW(interval_mid_rad_1, mid_rad, "ll", "ll")
+    ROW(interval_mid_rad_2, midpoint_radius, "llll", "lll")
+    ROW(interval_mid_rad_2, mid_rad, "llll", "lll")
+    ROW(interval_split_2, split, "llll", "llllllll")
+    ROW(interval_to_ball_2, to_ball, "llll", "lll")
+    ROW(interval_to_ball_2, marked, "llll", "lll")
+    ROW(ball_to_interval_2, to_interval, "lll", "llll")
+    ROW(ball_to_interval_2, marked, "lll", "llll")
+    ROW(ball_to_interval_2, lower_upper, "lll", "llll")
+    ROW(ball_from_interval_1, from_interval, "ll", "ll")
+    ROW(ball_from_interval_1, marked, "ll", "ll")
+    ENCLOSURE_BALL_ROWS(1, "ll", "llll", "llll")
+    ENCLOSURE_BALL_ROWS(2, "lll", "llllll", "llllll")
+    ROW(ball_contains_point_1, contains, "lll", "m")
+    ROW(ball_contains_point_1, contains_one, "lll", "m")
+    ROW(ball_contains_point_1, contains_marked, "lll", "m")
+    ROW(ball_contains_point_1, member, "lll", "m")
+    ROW(ball_contains_point_1, member_marked, "lll", "m")
+    ROW(ball_contains_point_2, member, "lllll", "mm")
+    ROW(ball_contains_point_2, contains, "lllll", "mm")
+    ROW(ball_contains_point_2, contains_marked, "lllll", "mm")
+    SOME(ball_contains_point_2, member_limb, "lllll", "mm")
+    SOME(ball_contains_point_2, contains_limb, "lllll", "mm")
 };
 
 // The packed forms: each kernel's after its scalar ones, so that a kernel's first form stays the
@@ -1283,10 +1503,11 @@ const NotPublic not_public[] = {
     {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
 };
 // The interval kernels of Milestone 2 are reached by the forms of Interval (interval.hpp) and of
-// the functions of a Ball of the enclosure interface (ball.hpp); their building blocks are in
-// `internal` above. The kernels of the folds' stage and of the maps, which no public operation
-// calls yet, are in none of these lists (KAIRN_NOT_PUBLIC_YET of tests/CMakeLists.txt,
-// coverage.cmake).
+// the functions of a Ball of the enclosure interface (ball.hpp), and so are the 53 kernels of the
+// enclosure interface of stage B2 (predicates, comparisons, relations of IEEE 1788, set operations
+// of a ball, conversions of two limbs); their building blocks are in `internal` above. The kernels
+// of the folds' stage and of the maps, which no public operation calls yet, are in none of these
+// lists (KAIRN_NOT_PUBLIC_YET of tests/CMakeLists.txt, coverage.cmake).
 
 constexpr int max_limbs = 16;
 long lineno = 0;

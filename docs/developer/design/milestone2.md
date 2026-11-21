@@ -155,7 +155,7 @@ the values are those of the first listings. And no value is added to itself: GCC
 $a + a$ as $a \cdot 2$ and fuses that product into the addition that follows, so a doubling is
 `prod(a, const up(2))`. Each listing below that one of the rules changed says so.
 
-*The formats of the statements* (the owner's ruling of 2026-11-21,
+*The formats of the statements* (the ruling of 2026-11-21,
 [Number formats](../architecture.md#number-formats)). The generated statements of the IEEE model
 quantify over the formats of Flocq's `binary_float`: $e_{\max} > p$ and the smallest exponent
 $3 - e_{\max} - p$, which `binary64` and `binary32` are. A clause that promises a finite or bounded
@@ -608,7 +608,7 @@ under rounding to nearest where that check itself rounds; `is_normalized` of two
 rounds, gains a check; and the constructors of `Ball<T, 2>` from a two-limb center keep theirs.
 The tests hold a table of 80 public functions, each marked as rounding or not. *The name of the
 predicate of the whole line* is `is_whole` on both types, the name `Ball` has had since
-Milestone 1 (the owner's ruling of 2026-11-21); the first version of this page wrote `is_entire`
+Milestone 1 (the ruling of 2026-11-21); the first version of this page wrote `is_entire`
 for both, and the kernels of `Interval` keep the name `interval_entire_k`.
 
 ## Interval kernels
@@ -1156,7 +1156,7 @@ IEEE model, of one limb and of two: `interval_NAME_k` for the predicates (`inter
 the split of an interval (below) and `lower_as` of a `Ball<T, 2>` (in the table). The hull and
 the intersection of balls return an operand as it is in a conditional form, the first form being
 false ([Hull, intersection and split of balls](#hull-intersection-and-split-of-balls)). The predicate of the whole
-line is `is_whole()` on both types (the owner's ruling of 2026-11-21); its kernels keep the name
+line is `is_whole()` on both types (the ruling of 2026-11-21); its kernels keep the name
 `interval_entire_k`. On this tree the public headers have the part of the interface that
 `Interval` and `Ball` had headers for when they were written: for `Interval`, the bounds,
 `lower_as` and `upper_as`, the hull and the intersection, and for one limb the midpoint, the
@@ -1167,6 +1167,31 @@ signs of a `Ball` are written in the header with the comparisons that `ball_posi
 `ball_negative_k` and `ball_zero_k` make. The predicates, the comparisons, the
 relations, `contains`, and for two limbs the midpoint, the radius, the split and the conversions
 have their proved kernels and no public function yet.
+
+*As built (2026-11-21, the public interface).* Every cell of the table is a public function now,
+and none of the 53 kernels of this section is without one. The types the two classes share are
+in `kairn/enclosure.hpp` (`Trit`, `certainly`, `possibly`, `Split`, `MidRad`), which
+`interval.hpp` and `ball.hpp` include. Beyond the table:
+
+- `mid_rad()` returns the midpoint and the radius from one call of the kernel; `midpoint()` and
+  `radius()` each run it whole.
+- `member(t, X)` is the three-valued form of `contains(t)`: for a `Ball<T, 2>` it is the only
+  way to ask whether a point is certainly not a member.
+- `contains(Y)` is a template on the number of limbs of `Y`, so that a point never converts to
+  a set: `contains(+inf)` would otherwise have become the question about the interval of an
+  infinite point, another kernel with another answer.
+- `lower()` and `upper()` of a `Ball<T, 2>` each compute both bounds (`ball_to_interval_2`), and
+  `Ball<T, 1>::from_interval` is `ball_from_interval_1`.
+- The signs of a `Ball` call `ball_positive_k`, `ball_negative_k` and `ball_zero_k`, which make
+  the comparisons the header made by hand: no result changed.
+- The hull and the intersection of balls return an operand "as it is", the sign of a zero
+  included, which no ball built by a public constructor can show (the guard of the constructor
+  turns $-0$ into $+0$): the test of the public functions builds its operands from the results
+  of kernels.
+- A bisection needs its own test of progress, since a split is not claimed at the midpoint. For
+  intervals "a part smaller than its parent" serves. For balls it does not: near the limit of
+  the precision the parts of a split are barely smaller, both are kept, and the work doubles at
+  each step. The documentation gives "the radius of each part at most 3/4 of the parent's".
 
 **Claimed less than this page asks** (2026-11-21), *the split of an interval.* The table asks
 the two halves at the midpoint. The claim (`splits`) is that both parts are canonical, empty
@@ -1620,6 +1645,16 @@ the cases of ITF1788 first, and those are not in the repository ([question 18](#
 No public function and no namespace `kairn::rel` exist yet. The smallest precisions are 1 for
 every kernel of an interval, 2 for the balls of one limb and 3 for those of two, and 1 for the
 signs of a ball.
+
+*As built (2026-11-21, the public interface).* The comparisons are the free functions `less`,
+`less_equal`, `equal`, `greater`, `greater_equal` and `not_equal`, which return `kairn::Trit`, a
+scoped enumeration (`no`, `unknown`, `yes`) that does not convert to `bool`: a program writes
+`certainly(less(x, y))` or `possibly(less(x, y))`, compares with an enumerator, or switches on
+the answer. Intervals and balls have no comparison operators: `x < y` would be read as a `bool`,
+and `==` has two meanings here, the same point and the same set. The relations of IEEE 1788 are
+`kairn::ieee1788::equal`, `subset`, `interior` and `disjoint`, which return `bool`; the
+namespace is named for the standard, and not `kairn::rel` as written above, so that the name
+says whose conventions on the empty set they follow.
 
 ## Scaling a ball by a power of two
 
@@ -2437,7 +2472,7 @@ this sentence said 0.45). *Smallest precision:* 4 for two limbs.
 
 *As built (2026-11-21).* `conv_radius` is this listing, proved (`BvConv.v`) from precision 2,
 with the requirements that every input is nonnegative, $m$ a count and $g \le 1$ (`at_most`),
-which `bound_dot_k` gives when its mask is true. Its claim is of finite results, by the owner's
+which `bound_dot_k` gives when its mask is true. Its claim is of finite results, by the
 ruling of 2026-11-21: a result that is not finite is $+\infty$ or a NaN (an FMA of $0$ and
 $+\infty$), and the finish turns it into the whole space; the statement above, read for every
 result, would be false for the NaN. `bv_conv_1` and `bv_conv_2` are products of two BallVectors,

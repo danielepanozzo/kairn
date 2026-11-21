@@ -37,8 +37,8 @@
 #   rational_runner.cpp (../crosscheck.py compiled). The full tier has more cases, through the runner of every
 #   flag set too, and rational.cpp built with every flag set.
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
-#   api.example.accurate_sums.*, api.example.intervals.* and api.example.packed_dot.* also compare
-#   it with the text their tutorials show.
+#   api.example.accurate_sums.*, api.example.intervals.*, api.example.bisection.* and
+#   api.example.packed_dot.* also compare it with the text their tutorials show.
 # - api.packed.FORM, api.soa.FORM, api.example.packed_dot.FORM: Packed (packed.hpp) against the
 #   scalar operations, bit for bit, lane by lane (packed.cpp); the containers of soa.hpp (soa.cpp);
 #   and the tutorial's vector loop, whose results are checked against the bound it states; each in
@@ -768,6 +768,46 @@ else()
   _kairn_api_reject(packed_form.other_target 52 "needs AArch64"
     "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM=KAIRN_PACKED_FORM_NEON")
 endif()
+# The enclosure interface of stage B2 (headers-pred; reject.cpp, cases 70 to 92): a three-valued
+# answer converts to no bool, intervals and balls have no comparison operators, no function takes
+# two kinds of set or two numbers of limbs, the conversions between the two types of two limbs are
+# explicit, and a point is never made a set to reach another kernel. A Trit in a condition: Clang
+# says it is not contextually convertible, GCC that it could not convert, MSVC that the conditional
+# expression is not valid (C2451); a call that matches no function: "no matching", or MSVC's C2672,
+# C2664 ("cannot convert argument") or C2665 ("none of the overloads could convert").
+set(_api_no_bool "contextually convertible|could not convert|cannot convert|not valid|cannot initialize")
+set(_api_no_call "no matching|no overloaded function|cannot convert|could convert|satisfied its constraints")
+_kairn_api_reject(enclosure.trit_condition 70 "${_api_no_bool}")
+_kairn_api_reject(enclosure.trit_bool 71 "${_api_no_bool}")
+_kairn_api_reject(enclosure.interval_operator 72 "${_api_no_operator}")
+_kairn_api_reject(enclosure.ball_operator 73 "${_api_no_operator}")
+_kairn_api_reject(enclosure.mixed_limbs 74 "${_api_no_call}")
+_kairn_api_reject(enclosure.mixed_types 75 "${_api_no_call}")
+_kairn_api_reject(enclosure.interval_contains_ball 76 "${_api_no_call}")
+_kairn_api_reject(enclosure.ball_relation 77 "${_api_no_call}")
+_kairn_api_reject(enclosure.implicit_to_ball 78 "${_api_no_conversion}")
+_kairn_api_reject(enclosure.implicit_to_interval 79 "${_api_no_conversion}")
+_kairn_api_reject(enclosure.hull_mixed_limbs 80 "${_api_no_call}")
+_kairn_api_reject(enclosure.contains_mixed_limbs 81 "${_api_no_call}")
+foreach(_case_name IN ITEMS 82:interval_less_1 83:interval_subset_1 84:ball_hull_2 85:interval_rel_disjoint_1
+                            86:ball_from_interval_1 87:ball_contains_point_1 88:interval_to_ball_2)
+  string(REPLACE ":" ";" _pair "${_case_name}")
+  list(GET _pair 0 _case)
+  list(GET _pair 1 _name)
+  _kairn_api_reject(unverified.${_name} ${_case} "${_api_unmarked}"
+    "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/${_name}")
+endforeach()
+foreach(_case_name IN ITEMS 89:interval_contains_1:point 90:interval_contains_2:limb 91:ball_contains_point_1:point
+                            92:ball_contains_point_2:limb)
+  string(REPLACE ":" ";" _triple "${_case_name}")
+  list(GET _triple 0 _case)
+  list(GET _triple 1 _kernel)
+  list(GET _triple 2 _what)
+  _kairn_api_reject(unverified_only.${_kernel}.${_what} ${_case} "${_api_unmarked}"
+    "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/only-${_kernel}-${_what}"
+    "-DUNVERIFIED_ONLY=${_kernel}")
+endforeach()
+# --- The end of the enclosure interface's cases ----------------------------------------------------
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
 _kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")
@@ -800,8 +840,8 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 else()
   set(_api_overflow "two_prod_overflows_in_constant_evaluation")
 endif()
-foreach(_case_name IN ITEMS 54:partial_product.double 55:partial_product.float 56:product.double
-                            57:product.float)
+foreach(_case_name IN ITEMS 93:partial_product.double 94:partial_product.float 95:product.double
+                            96:product.float)
   string(REPLACE ":" ";" _pair "${_case_name}")
   list(GET _pair 0 _case)
   list(GET _pair 1 _name)
@@ -907,6 +947,15 @@ foreach(_i RANGE 0 ${_last} 2)
       "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/intervals.txt"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
   set_tests_properties(api.example.intervals${_suffix} PROPERTIES LABELS "api;example")
+  # The tutorial on bisection (docs/tutorials/bisection.md), the same way: one algorithm for an
+  # interval and two balls, whose output is the same text everywhere (headers-pred).
+  _kairn_api_program(kairn-example-bisection${_target_suffix} "${PROJECT_SOURCE_DIR}/docs/examples/cpp/bisection.cpp"
+    ${_option})
+  add_test(NAME api.example.bisection${_suffix}
+    COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-bisection${_target_suffix}>"
+      "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/bisection.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+  set_tests_properties(api.example.bisection${_suffix} PROPERTIES LABELS "api;example")
 endforeach()
 # The tutorial on a vector loop (docs/tutorials/vector-loop.md), in every form of Packed (above):
 # the same text in each, which the program checks against an exact reference and the bound it

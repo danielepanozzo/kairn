@@ -149,6 +149,22 @@ const OperandCase operand_cases[] = {
          const double omega = opaque(std::numeric_limits<double>::max());
          return E2(kairn::two_sum(-1.5 * 0x1p971 * opaque(1.0), omega)).limb[1];
      }},
+    // The enclosure interface of stage B2 (headers-pred): an interval that is not canonical (made
+    // by the internal constructor: reversed bounds, a NaN bound) given to a member test, a
+    // comparison and a relation of IEEE 1788; a ball that is not canonical given to a member test
+    // and to the hull; a point of two limbs that is not canonical given to the member tests.
+    {"enclosure.interval_contains", "an interval: is not canonical",
+     [] { return double(I1(kairn::detail::kernel_result, E1(v_c), E1(v_a)).contains(double(v_b))); }},
+    {"enclosure.interval_less", "an interval: is not canonical",
+     [] { return double(int(kairn::less(I1(kairn::detail::kernel_result, E1(not_a_number), E1(v_a)), o.iy))); }},
+    {"enclosure.interval_subset", "an interval: is not canonical",
+     [] { return double(kairn::ieee1788::subset(o.jx, I2(kairn::detail::kernel_result, o.y, o.x))); }},
+    {"enclosure.interval_point", not_canonical, [] { return double(o.jy.contains(raw(1.0, double(v_a)))); }},
+    {"enclosure.ball_contains", "a ball: is not canonical",
+     [] { return double(B1(kairn::detail::kernel_result, E1(v_a), -v_r).contains(double(v_c))); }},
+    {"enclosure.ball_hull", "a ball: is not canonical",
+     [] { return o.bp.hull(B2(kairn::detail::kernel_result, raw(1.0, double(v_a)), v_r)).radius(); }},
+    {"enclosure.ball_point", not_canonical, [] { return double(int(kairn::member(raw(1.0, double(v_a)), o.bp))); }},
 };
 
 // What the checks must let through: canonical values that are not finite, the special balls,
@@ -200,6 +216,15 @@ const Accepted accepted[] = {
          x.set_lane(0, raw(infinity, not_a_number));
          return kairn::finite::add(x, P2::broadcast(o.y)).lane(1).limb[0];
      }},
+    // The enclosure interface of stage B2 (headers-pred): the special states and points that are
+    // not finite, which the member tests, the comparisons and the set operations take.
+    {"the whole line contains a NaN", [] { return double(I2::whole().contains(not_a_number)); }},
+    {"the empty ball contains (NaN, NaN)", [] { return double(B2::empty().contains(pair(not_a_number, not_a_number))); }},
+    {"less of the empty set and the whole line", [] { return double(int(kairn::less(I1::empty(), I1::whole()))); }},
+    {"the hull of the empty ball and the whole line", [] { return B2::empty().hull(B2::whole()).radius(); }},
+    {"the split of the whole line", [] { return B1::whole().split().left.radius(); }},
+    {"the ball of [NaN, 1]", [] { return B1::from_interval(not_a_number, double(v_a)).radius(); }},
+    {"the midpoint of the empty interval of two limbs", [] { return I2::empty().midpoint().limb[0]; }},
 };
 
 void say(const char* format, const char* a = "", const char* b = "") {

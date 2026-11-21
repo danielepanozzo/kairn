@@ -44,14 +44,30 @@
 //          kernels); the control negates, and adds a Packed<T, 1> to a Packed<T, 2>
 //   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
 //          is not a form, or a form the target does not have (the generated header's #error)
+//   70-81  the enclosure interface (headers-pred): a Trit as a bool, in a condition and in an
+//          initialization (a three-valued answer converts to no bool: the controls write
+//          kairn::certainly and kairn::possibly); a comparison operator of intervals and of balls
+//          (there is none: the controls call the three-valued functions); a comparison of intervals
+//          of one and of two limbs, and of an interval and a ball; an interval's contains of a
+//          ball, and of an interval of the other number of limbs; a relation of IEEE 1788 of balls
+//          (there is none: the control is contains); the implicit conversions between Interval<T,
+//          2> and Ball<T, 2> (each widens the set); the hull of balls of one and of two limbs; each
+//          control writes what compiles instead
+//   82-88  an UNVERIFIED comparison, subset test, hull of balls, relation of IEEE 1788, ball from
+//          an interval of two T, member test and conversion of two limbs, written without the
+//          marker, against headers in which every kernel is unverified (as 1-14)
+//   89-92  one kernel of a member test UNVERIFIED and every other proved (interval_contains_1,
+//          interval_contains_2, ball_contains_point_1, ball_contains_point_2): contains(t) of a
+//          point of T must not compile through the set of the point, contains(Interval(t)), whose
+//          kernel is another and whose answer differs on an infinite point; the control marks t
 //   29-31  an UNVERIFIED building block (two_sum, next_up) and the scaling of a ball by a power of
 //          two (half), written without the marker, against headers in which every kernel is
 //          marked unverified (as 1-14)
-//   54-57  kairn::two_prod in a constant expression on finite operands where an operation of
+//   93-96  kairn::two_prod in a constant expression on finite operands where an operation of
 //          Dekker's product, which constant evaluation runs, overflows (blocks.hpp): the partial
-//          product ah bh while the product is finite (54 double, 55 float: 0x1.fffffffffffffp+511
+//          product ah bh while the product is finite (93 double, 94 float: 0x1.fffffffffffffp+511
 //          squared, whose run-time error term is 0x1p+918), and the product itself, with no NaN
-//          on the way (56, 57: the error term is the opposite infinity); each control is the
+//          on the way (95, 96: the error term is the opposite infinity); each control is the
 //          neighboring operand where it compiles, the largest square or the next number below b,
 //          against the run-time result (api.constexpr checks the same bits at run time)
 #if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
@@ -319,7 +335,103 @@ int main() {
     sink = (px + pf).lane(0).limb[0];
 #endif
 #endif
-#elif KAIRN_TEST_CASE == 54
+// The enclosure interface of stage B2 (headers-pred): cases 70 to 81 against the headers as they
+// are, 82 to 88 against the copy in which every kernel is unverified, 89 to 92 against a copy in
+// which one kernel is.
+#elif KAIRN_TEST_CASE == 70
+#if defined(KAIRN_TEST_CONTROL)
+    if (kairn::certainly(kairn::less(i, i))) sink = 1;
+#else
+    if (kairn::less(i, i)) sink = 1;
+#endif
+#elif KAIRN_TEST_CASE == 71
+#if defined(KAIRN_TEST_CONTROL)
+    const bool c = kairn::possibly(kairn::less(o, o));
+#else
+    const bool c = kairn::less(o, o);
+#endif
+    sink = c;
+#elif KAIRN_TEST_CASE == 72
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::certainly(kairn::less(i, i));
+#else
+    sink = i < i;
+#endif
+#elif KAIRN_TEST_CASE == 73
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::certainly(kairn::equal(p, q));
+#else
+    sink = p == q;
+#endif
+#elif KAIRN_TEST_CASE == 74
+#if defined(KAIRN_TEST_CONTROL)
+    sink = int(kairn::less(j, j));
+#else
+    sink = int(kairn::less(i, j));
+#endif
+#elif KAIRN_TEST_CASE == 75
+#if defined(KAIRN_TEST_CONTROL)
+    sink = int(kairn::less(i, I1(o)));
+#else
+    sink = int(kairn::less(i, o));
+#endif
+#elif KAIRN_TEST_CASE == 76
+#if defined(KAIRN_TEST_CONTROL)
+    sink = i.contains(I1(o));
+#else
+    sink = i.contains(o);
+#endif
+#elif KAIRN_TEST_CASE == 77
+#if defined(KAIRN_TEST_CONTROL)
+    sink = o.contains(o);
+#else
+    sink = kairn::ieee1788::subset(o, o);
+#endif
+#elif KAIRN_TEST_CASE == 78
+#if defined(KAIRN_TEST_CONTROL)
+    const B2 z(j);
+#else
+    const B2 z = j;
+#endif
+    sink = z.radius();
+#elif KAIRN_TEST_CASE == 79
+#if defined(KAIRN_TEST_CONTROL)
+    const I2 z(p);
+#else
+    const I2 z = p;
+#endif
+    sink = z.lower().limb[0];
+#elif KAIRN_TEST_CASE == 80
+#if defined(KAIRN_TEST_CONTROL)
+    sink = o.hull(B1(p)).radius();
+#else
+    sink = o.hull(p).radius();
+#endif
+#elif KAIRN_TEST_CASE == 81
+#if defined(KAIRN_TEST_CONTROL)
+    sink = j.contains(j);
+#else
+    sink = i.contains(j);
+#endif
+#elif KAIRN_TEST_CASE == 82
+    sink = int(kairn::less(MARK(i), i));
+#elif KAIRN_TEST_CASE == 83
+    sink = i.contains(MARK(i));
+#elif KAIRN_TEST_CASE == 84
+    sink = p.hull(MARK(q)).radius();
+#elif KAIRN_TEST_CASE == 85
+    sink = kairn::ieee1788::disjoint(MARK(i), i);
+#elif KAIRN_TEST_CASE == 86
+    sink = B1::from_interval(MARK(s), s).radius();
+#elif KAIRN_TEST_CASE == 87
+    sink = int(kairn::member(MARK(s), o));
+#elif KAIRN_TEST_CASE == 88
+    sink = B2(MARK(j)).radius();
+#elif KAIRN_TEST_CASE == 89 || KAIRN_TEST_CASE == 90
+    sink = i.contains(MARK(s)) + j.contains(MARK(s));
+#elif KAIRN_TEST_CASE == 91 || KAIRN_TEST_CASE == 92
+    sink = o.contains(MARK(s)) + p.contains(MARK(s));
+#elif KAIRN_TEST_CASE == 93
 #if defined(KAIRN_TEST_CONTROL)
     constexpr kairn::ProductAndError<double> z = kairn::two_prod(0x1.ffffffbffffffp+511, 0x1.ffffffbffffffp+511);
     static_assert(z.product == 0x1.ffffff7ffffffp+1023 && z.error == -0x1.fffffeffffffep+969);
@@ -327,7 +439,7 @@ int main() {
     constexpr kairn::ProductAndError<double> z = kairn::two_prod(0x1.fffffffffffffp+511, 0x1.fffffffffffffp+511);
 #endif
     sink = z.error;
-#elif KAIRN_TEST_CASE == 55
+#elif KAIRN_TEST_CASE == 94
 #if defined(KAIRN_TEST_CONTROL)
     constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.ffeffep+63f, 0x1.ffeffep+63f);
     static_assert(z.product == 0x1.ffdffcp+127f && z.error == 0x1.004004p+102f);
@@ -335,7 +447,7 @@ int main() {
     constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.fffffep+63f, 0x1.fffffep+63f);
 #endif
     sink = z.error;
-#elif KAIRN_TEST_CASE == 56
+#elif KAIRN_TEST_CASE == 95
 #if defined(KAIRN_TEST_CONTROL)
     constexpr kairn::ProductAndError<double> z = kairn::two_prod(0x1.b07b6cd0ef55p+511, 0x1.2f11b5230d0c3p+512);
     static_assert(z.product == 0x1.fffffffffffffp+1023 && z.error == 0x1.34eafe2d76fcp+969);
@@ -343,7 +455,7 @@ int main() {
     constexpr kairn::ProductAndError<double> z = kairn::two_prod(0x1.b07b6cd0ef55p+511, 0x1.2f11b5230d0c4p+512);
 #endif
     sink = z.error;
-#elif KAIRN_TEST_CASE == 57
+#elif KAIRN_TEST_CASE == 96
 #if defined(KAIRN_TEST_CONTROL)
     constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.5b8dap+63f, 0x1.7920bap+64f);
     static_assert(z.product == 0x1.fffffep+127f && z.error == 0x1.b1cc8p+102f);

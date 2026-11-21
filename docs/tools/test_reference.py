@@ -60,6 +60,9 @@ def param_type(param, context):
     t = re.sub(r"\s+[A-Za-z_]\w*\s*$", "", t.strip())     # the parameter's name
     t = re.sub(r"\s+", " ", t).strip()
     t = t.replace("std::type_identity_t<T>", "T")
+    # The set operand of contains(Y), a template on its number of limbs J so that no point converts
+    # to a set, which the constraint J == K makes the class's own K.
+    t = t.replace("<T, J>", "<T, K>")
     if t == "Expansion" and context and context.startswith("Expansion<"):
         return context
     if t == "Ball":
@@ -97,7 +100,9 @@ def header_operations(root, known):
                 detail = False
             elif s.startswith("namespace finite {"):
                 prefix = "finite::"                              # kairn::finite::add(x, y)
-            elif s.startswith("}  // namespace finite"):
+            elif s.startswith("namespace ieee1788 {"):
+                prefix = "ieee1788::"                            # kairn::ieee1788::subset(X, Y)
+            elif s.startswith("}  // namespace finite") or s.startswith("}  // namespace ieee1788"):
                 prefix = ""
             m = re.match(r"(?:struct|class) (Expansion<T, [12]>|Ball|Interval|traits_one_limb|traits<Expansion<T, 2>>) \{",
                          s)
@@ -274,7 +279,8 @@ class Table(unittest.TestCase):
         self.assertIn((("op", "operator+", ("Ball<T, K>", "Ball<T, K>")), ("ball_add_1_full", "ball_add_2_full")), keys)
         self.assertIn((("op", "Ball<T, K>", ("Expansion<T, K>", "T")), ("ball_make_1", "ball_make_2")), keys)
         self.assertIn((("op", "two_sum", ("T", "T")), ("two_sum_entry",)), keys)
-        self.assertIn((("op", "certainly_positive", ()), ("lt_1_2",)), keys)
+        self.assertIn((("op", "certainly_positive", ()), ("ball_positive_1", "ball_positive_2")), keys)
+        self.assertIn((("op", "certainly_positive", ()), ("interval_positive_1", "interval_positive_2")), keys)
         self.assertIn((("op", "Ball<T, K>", ("Constant<Expansion<T, K>>",)), ("ball_make_1", "ball_make_2")), keys)
         self.assertIn((("traits", "traits<Expansion<T, 2>>::sub_limb"), ("sub_2_1", "sub_1_2")), keys)
         # Intervals, and the functions of a Ball of the interface the two share.
@@ -283,12 +289,21 @@ class Table(unittest.TestCase):
         self.assertIn((("op", "Interval<T, K>", ("Expansion<T, K>", "Expansion<T, K>")),
                        ("interval_make_1", "interval_make_2")), keys)
         self.assertIn((("op", "hull", ("Interval<T, K>",)), ("interval_hull_1", "interval_hull_2")), keys)
-        self.assertIn((("op", "split", ()), ("interval_split_1",)), keys)
+        self.assertIn((("op", "split", ()), ("interval_split_1", "interval_split_2")), keys)
         self.assertIn((("op", "lower_as", ()), ("to_down_2",)), keys)
         self.assertIn((("op", "lower_as", ()), ("ball_lower_as_1", "ball_lower_as_2")), keys)
-        self.assertIn((("op", "Ball<T, K>", ("Interval<T, K>",)), ("interval_to_ball_1",)), keys)
+        self.assertIn((("op", "Ball<T, K>", ("Interval<T, K>",)), ("interval_to_ball_1", "interval_to_ball_2")), keys)
         self.assertIn((("op", "Ball<T, K>", ("Ball<T, 2>",)), ("ball_narrow_2_1",)), keys)
-        self.assertIn((("op", "from_interval", ("T", "T")), ("ball_from_interval_2",)), keys)
+        self.assertIn((("op", "from_interval", ("T", "T")), ("ball_from_interval_1", "ball_from_interval_2")), keys)
+        # The enclosure interface of stage B2: a set operand of contains, a template on its limbs; the
+        # free functions of three-valued answers; the relations of IEEE 1788 under their namespace.
+        self.assertIn((("op", "contains", ("Interval<T, K>",)), ("interval_subset_1", "interval_subset_2")), keys)
+        self.assertIn((("op", "contains", ("Ball<T, K>",)), ("ball_contains_ball_1", "ball_contains_ball_2")), keys)
+        self.assertIn((("op", "less", ("Ball<T, K>", "Ball<T, K>")), ("ball_less_1", "ball_less_2")), keys)
+        self.assertIn((("op", "member", ("T", "Interval<T, K>")), ("interval_contains_1", "interval_contains_2")), keys)
+        self.assertIn((("op", "ieee1788::subset", ("Interval<T, K>", "Interval<T, K>")),
+                       ("interval_subset_1", "interval_subset_2")), keys)
+        self.assertIn((("op", "lower", ()), ("ball_lower_as_1", "ball_to_interval_2")), keys)
 
 
 # --- The tool on modified copies ---------------------------------------------------------------

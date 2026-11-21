@@ -193,7 +193,7 @@ SHAPES = {
 _R_ACC_A = "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0"
 _R_ACC_C = "c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2"
 _R_ACC_MUL = "a.in=0x0p+0/0x1p-1/0x1.8p+0"
-# conv_radius (seven operands; by the owner's ruling of 2026-11-21 its claim is of finite results,
+# conv_radius (seven operands; by the ruling of 2026-11-21 its claim is of finite results,
 # and a result that is not finite is +inf or a NaN, judged no further): a few values of each
 # operand, ma up to Omega so that ma mb overflows (+inf, and a NaN where g or m is zero), the
 # finite results nine tenths of each enumeration (the guards ask three quarters).
