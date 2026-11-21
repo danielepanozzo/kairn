@@ -479,8 +479,9 @@ rule:
    proved: `ieee_bridge_theorem: FILE K_ieee_bridge` (with `ieee: bridge`), `ieee_spec_theorem:
    FILE K_ieee_correct` (with `ieee: spec`), `ieee_lead_theorem: FILE K_ieee_lead` (the step or
    the combination of a fold, or the step of a map); a fold or a map, `ieee_theorem: FILE`, the
-   file of `F_seq_ieee_correct` and `F_lanes_ieee_correct`, and a convolution, the file of
-   `F_ieee_correct`. Each names only a statement that is printed,
+   file of `F_seq_ieee_correct` and `F_lanes_ieee_correct`, and a convolution or a product of two
+   BallVectors, which have one statement each (`F_ieee_spec`), the file of `F_ieee_correct`. Each
+   names only a statement that is printed,
    by its conventional name, in `proofs/theories/`; a statement whose theorem is not named is
    printed as unverified, and only those that are named are in `proofs/gen/IeeeAudit.v`.
 6. R3: in a kernel marked `entry`, an input that enters from the program (a one-limb input not

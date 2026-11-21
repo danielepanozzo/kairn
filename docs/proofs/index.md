@@ -591,12 +591,12 @@ finite radius. The generator now prints the masks of `if_all`, as it prints the 
 `if`.)
 
 **The product in the model with overflow.** Its generated statement is one conjunction, V1 to
-V4. For `bv_conv_1` it is proved (`bv_conv_1_ieee_correct` of `IeeeBvConvFinite.v`) and checked
-against the generated statement in step 3, not step 5: the generator's audit would name the
-statement `bv_conv_1_seq_ieee_spec`, which does not exist (a product of two BallVectors has one
-statement, `bv_conv_1_ieee_spec`, as a convolution has), so the description does not name the
-theorem and the generated comment still says unverified. For `bv_conv_2` the statement is not
-proved: its V4 is false (below). V1 to V3 are proved for both, as lemmas of their own in the
+V4. For `bv_conv_1` it is proved (`bv_conv_1_ieee_correct` of `IeeeBvConvFinite.v`): the
+description names the file and the generated audit checks it against the generated statement in
+step 5. (A product of two BallVectors has one statement, `bv_conv_1_ieee_spec`, as a convolution
+has; the generator's audit first named it `bv_conv_1_seq_ieee_spec`, a statement that does not
+exist, and the theorem was checked in step 3 until the printer was mended.) For `bv_conv_2` the
+statement is not proved: its V4 is false (below). V1 to V3 are proved for both, as lemmas of their own in the
 vocabulary of the statement (`bv_conv_k_ieee_v1`, `_v2`, `_v3` of `IeeeBvConv.v`, audited in step
 3), for canonical operands,
 infinite radii (the whole space) included: the result is a finite ball vector or the whole space,

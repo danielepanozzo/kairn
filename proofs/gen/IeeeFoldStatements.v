@@ -2286,7 +2286,7 @@ Definition bv_sub_2_lanes_ieee_spec : Prop :=
      Rabs (((Rabs ((val x0 + val x1) - (val y0 + val y1))) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
 
-(* bv_conv_1, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_conv_1, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_conv_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

@@ -27,6 +27,7 @@ requires:      ball_vector y ry
 ensures:       encloses_coefficients z r x*y x=x,rx y=y,ry flag=flag finite_when=abs_le(n*(abs(x)+rx)*(abs(y)+ry),-2);abs_le((abs(x)+rx)*ry,-2);abs_le((abs(y)+ry)*rx,-2) radii_when=abs_le(rx*ry,-2) count_when=le(n*(unit(mul_1_1)+eta),1/16)
 min_precision: 4
 theorem:       proofs/theories/BvConv.v
+ieee_theorem:  proofs/theories/IeeeBvConvFinite.v
 status:        proved
 domain:        extended
 source:        conv_1 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)

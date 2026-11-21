@@ -111,8 +111,9 @@
      lemmas of theories/BvConv.v they rest on, and in the IEEE model the lemmas of
      theories/IeeeBvConv.v beside the theorem of the finish bv_conv_finish, which
      proofs/gen/IeeeAudit.v lists: V1 to V3 of both products, and, from
-     theories/IeeeBvConvFinite.v, V4 of bv_conv_1 and its generated statement
-     bv_conv_1_ieee_spec, which its description cannot name yet (see there).
+     theories/IeeeBvConvFinite.v, V4 of bv_conv_1 and the lemmas it rests on, beside the
+     theorem of its generated statement bv_conv_1_ieee_spec, which proofs/gen/IeeeAudit.v
+     lists.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -1157,15 +1158,10 @@ Print Assumptions IeeeBvConv.bv_conv_2_ieee_v1.
 Print Assumptions IeeeBvConv.bv_conv_2_ieee_v2.
 Print Assumptions IeeeBvConv.bv_conv_2_ieee_v3.
 
-(* V4 of bv_conv_1 and its generated statement in the IEEE model (theories/IeeeBvConvFinite.v).
-   The statement has its theorem, but the description cannot name it yet: the printer of
-   proofs/gen/IeeeAudit.v would check it against bv_conv_1_seq_ieee_spec, a name the products of
-   two BallVectors do not have (their statement is F_ieee_spec, as a convolution's). So it is
-   checked here, against the generated statement, and its comment still says unverified. *)
+(* V4 of bv_conv_1 in the IEEE model, and the lemmas it rests on (theories/IeeeBvConvFinite.v),
+   beside the theorem of its generated statement, bv_conv_1_ieee_correct, which the description
+   names and proofs/gen/IeeeAudit.v lists. *)
 From Kairn Require Import IeeeBvConvFinite.
-Definition bv_conv_1_ieee_audit : IeeeFoldStatements.bv_conv_1_ieee_spec :=
-  IeeeBvConvFinite.bv_conv_1_ieee_correct.
-Print Assumptions IeeeBvConvFinite.bv_conv_1_ieee_correct.
 Print Assumptions IeeeBvConvFinite.bv_conv_1_ieee_v4.
 Print Assumptions IeeeBvConvFinite.maxl_attained.
 Print Assumptions IeeeBvConvFinite.emax_gt.

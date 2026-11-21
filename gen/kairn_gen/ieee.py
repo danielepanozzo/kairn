@@ -1428,8 +1428,9 @@ def proved_statements(kernels):
     """[(statement, theorem file, theorem name, generated file)] of the IEEE-model statements of the finite domain
     and of the folds whose theorems are named: K_ieee_bridge_spec and K_ieee_spec of
     IeeeStatements.v (ieee_bridge_theorem, ieee_spec_theorem), K_ieee_lead_spec (ieee_lead_theorem)
-    and F_O_ieee_spec (a fold's or a map's ieee_theorem; F_ieee_spec, a convolution's) of
-    IeeeFoldStatements.v; the first two, then the others, each in the order of their file."""
+    and F_O_ieee_spec (a fold's or a map's ieee_theorem; F_ieee_spec, a convolution's or a product
+    of two BallVectors') of IeeeFoldStatements.v; the first two, then the others, each in the order
+    of their file."""
     model = in_model(kernels)
     out = []
     for k in model.values():
@@ -1445,9 +1446,11 @@ def proved_statements(kernels):
     for fd in _folds_in_order(kernels):
         if not fd.ieee_theorem:
             continue
-        if getattr(fd, 'is_conv', False):
-            # A convolution has one statement, of its one order (F_ieee_spec).
-            out.append((f'{fd.name}_ieee_spec', fd.ieee_theorem, f'{fd.name}_ieee_correct', 'IeeeFoldStatements'))
+        if getattr(fd, 'is_conv', False) or getattr(fd, 'is_bv_conv', False):
+            # A convolution, and a product of two BallVectors, has one statement, of its one order
+            # (F_ieee_spec, bv_conv_statement), not one per order.
+            out.append((f'{fd.name}_ieee_spec', fd.ieee_theorem, fd.ieee_theorem_name('sequential'),
+                        'IeeeFoldStatements'))
             continue
         for order in ir.ORDERS:
             if order in fd.orders:
