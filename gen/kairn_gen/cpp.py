@@ -46,6 +46,36 @@ from . import consts, ir
 TYPES = {'double': (53, ''), 'float': (24, 'f')}
 FORMATS = {'double': (53, -1074, 971), 'float': (24, -149, 104)}
 
+
+class Limb:
+    """A limb type of a format chosen at run time, for which the printer writes the same kernels:
+    the emulated type of the exhaustive tier (emulated.py, tests/emulated/number.hpp). A function
+    of this printer takes as `ctype` the name of double or float, or a Limb, which changes the
+    spellings that depend on the type and nothing else: its name, its literals (a constant of the
+    run-time format, `constant` with the constant's index; +inf and NaN still from
+    std::numeric_limits), the test of constant evaluation (`consteval`, a run-time mode of the type
+    where double has __builtin_is_constant_evaluated()), 2^64 (`pow2_64`), and no `constexpr`, since
+    nothing of such a type is evaluated at compile time."""
+
+    def __init__(self, name, constant, indices, consteval, pow2_64):
+        self.name, self.constant, self.indices = name, constant, indices
+        self.consteval, self.pow2_64 = consteval, pow2_64
+
+    def __str__(self):
+        return self.name
+
+    def __format__(self, spec):
+        return format(self.name, spec)
+
+
+def _consteval(ctype):
+    """The test of constant evaluation in the code of a limb type."""
+    return ctype.consteval if isinstance(ctype, Limb) else '__builtin_is_constant_evaluated()'
+
+
+def _constexpr(ctype):
+    return '' if isinstance(ctype, Limb) else 'constexpr '
+
 # Each operation as a C++ expression of exactly one operation. {0} {1} {2} are operands (names or
 # literals, never expressions) and {zero} is +0 of the limb type.
 SPELL = {
@@ -86,10 +116,11 @@ SPELL = {
 SPELL_CONSTEVAL = dict(SPELL, prod='{0} * {1}', guard='{0}', times_inf='times_inf_ce({0})')
 # In a kernel that is constexpr without a variant, guard and times_inf dispatch on constant
 # evaluation, as the hand-written detail::guard of include/kairn/expansion.hpp does, and so does
-# prod (the rule of the product): the plain product there, the opaque product at run time.
-SPELL_PLAIN = dict(SPELL, guard='__builtin_is_constant_evaluated() ? {0} : {0} + {zero}',
-                   times_inf='__builtin_is_constant_evaluated() ? times_inf_ce({0}) : {0} * {inf}',
-                   prod='__builtin_is_constant_evaluated() ? {0} * {1} : fma_rn({0}, {1}, {zero})')
+# prod (the rule of the product): the plain product there, the opaque product at run time. {ce} is
+# the test, __builtin_is_constant_evaluated() (_consteval).
+SPELL_PLAIN = dict(SPELL, guard='{ce} ? {0} : {0} + {zero}',
+                   times_inf='{ce} ? times_inf_ce({0}) : {0} * {inf}',
+                   prod='{ce} ? {0} * {1} : fma_rn({0}, {1}, {zero})')
 
 # Names a value or a kernel must not take: keywords, alternative tokens, what the printed text
 # uses, and lowercase macros that common compilers and C libraries predefine.
@@ -178,6 +209,10 @@ def literal(name, kernels, ctype):
         return f'std::numeric_limits<{ctype}>::infinity()'
     if name == 'nan':
         return f'std::numeric_limits<{ctype}>::quiet_NaN()'
+    if isinstance(ctype, Limb):
+        if name not in ctype.indices:
+            raise PrintError(f'constant {name}: not among the constants of {ctype}')
+        return ctype.constant.format(ctype.indices[name])
     suffix = TYPES[ctype][1]
     try:
         v = consts.value(name, kernels, *FORMATS[ctype])
@@ -243,8 +278,9 @@ def branch(k, kernels):
 
 
 def _statements(items, kernels, ctype, spell, pad):
-    zero = '0.0' + TYPES[ctype][1]
+    zero = _zero(ctype)
     inf = literal('inf', kernels, ctype)
+    ce = _consteval(ctype)
     lines = []
     for it in items:
         if isinstance(it, ir.CallMark):
@@ -252,7 +288,7 @@ def _statements(items, kernels, ctype, spell, pad):
             continue
         args = [literal(a.name, kernels, ctype) if a.const else a.name for a in it.args]
         vtype = ctype if ir.OPS[it.op][1] == ir.LIMB else 'bool'
-        lines.append(f'{pad}const {vtype} {it.dst} = {spell[it.op].format(*args, zero=zero, inf=inf)};')
+        lines.append(f'{pad}const {vtype} {it.dst} = {spell[it.op].format(*args, zero=zero, inf=inf, ce=ce)};')
     return lines
 
 
@@ -299,7 +335,7 @@ def fixup_function(k, kernels, ctype):
     kinds = ir.kinds(k, kernels)
     kind = constexpr_kind(k, kernels)
     params = [f'{ctype if kinds[v] == ir.LIMB else "bool"} {v}' for v in fixup_inputs(k, b)]
-    lines = [f'KAIRN_GEN_COLD {"constexpr " if kind == "plain" else ""}result<{ctype}, {len(k.output_limbs)}> '
+    lines = [f'KAIRN_GEN_COLD {_constexpr(ctype) if kind == "plain" else ""}result<{ctype}, {len(k.output_limbs)}> '
              f'{k.name}({", ".join(params)}) noexcept {{']
     lines += _statements(b.after, kernels, ctype, SPELL_PLAIN if kind == 'plain' else SPELL, '    ')
     lines += [f'    return {{{{{", ".join(k.output_limbs)}}}}};', '}']
@@ -329,10 +365,10 @@ def function(k, kernels, ctype):
     kind = constexpr_kind(k, kernels)
     params = parameters(k, ctype, 'bool')
     inline = 'KAIRN_GEN_FORCEINLINE' if k.forced_inline else 'inline'
-    lines = [f'{inline} {"constexpr " if kind else ""}void {k.name}({", ".join(params)}) noexcept {{']
+    lines = [f'{inline} {_constexpr(ctype) if kind else ""}void {k.name}({", ".join(params)}) noexcept {{']
     if kind == 'variant':
         v = kernels[k.ce_variant]
-        lines += ['    if (__builtin_is_constant_evaluated()) {',
+        lines += [f'    if ({_consteval(ctype)}) {{',
                   f'        // {v.name}, with each prod a plain product.']
         lines += _body(v, kernels, ctype, SPELL_CONSTEVAL, 8)
         lines += ['        return;', '    }']
@@ -619,7 +655,7 @@ def fold_step_loop(fd, kernels, ctype, state, start, pad='    '):
 
 
 def _zero(ctype):
-    return '0.0' + TYPES[ctype][1]
+    return literal(ir.ZERO, None, ctype) if isinstance(ctype, Limb) else '0.0' + TYPES[ctype][1]
 
 
 def fold_description(fd, kernels, order):
@@ -1035,14 +1071,14 @@ def bv_conv_end_function(fd, kernels, ctype):
     bound, radius, finish = kernels[fd.bound[0]], kernels[fd.radius[0]], kernels[fd.finish[0]]
     names = fd.state_names()
     ma, mb, m = names[0], names[2], fd.count
-    suffix = TYPES[ctype][1]
+    two64 = ctype.pow2_64 if isinstance(ctype, Limb) else f'0x1p64{TYPES[ctype][1]}'
     params = [f'{ctype} {ma}', f'{ctype} {mb}', 'std::size_t nm_', f'bool {conv.state.name}'] + \
         [f'{ctype} {v}' for v in fd.scalar_limbs()] + [f'{ctype}& {RAD}_out_', 'bool& fin_out_']
     lines = [f'KAIRN_GEN_NOINLINE void {fd.name}_end({", ".join(params)}) noexcept {{',
              f'    volatile {ctype} {ma}_v_ = {ma};', f'    const {ctype} {ma}_e_ = {ma}_v_;',
              f'    volatile {ctype} {mb}_v_ = {mb};', f'    const {ctype} {mb}_e_ = {mb}_v_;',
              f'    const {ctype} {m}_r_ = static_cast<{ctype}>(nm_);',
-             f'    const {ctype} {m} = {m}_r_ < 0x1p64{suffix} && static_cast<std::size_t>({m}_r_) < nm_ ? '
+             f'    const {ctype} {m} = {m}_r_ < {two64} && static_cast<std::size_t>({m}_r_) < nm_ ? '
              f'next_up_bits({m}_r_) : {m}_r_;']
     body, bouts = _call(bound, kernels, ctype, [m], BND, '    ')
     lines += body
@@ -1091,17 +1127,17 @@ def bv_conv_seq(fd, kernels, ctype):
     return lines + ['        }', '    }', f'    {r}_out = {RAD}_f_ ? {RAD}_r_ : {inf};', f'    {flag}_out = {RAD}_f_;', '}']
 
 
-def folds(kernels):
-    """The scalar functions of every fold, for both limb types."""
+def folds(kernels, types=tuple(TYPES)):
+    """The scalar functions of every fold, for each limb type (double and float)."""
     lines = []
     for fd in getattr(kernels, 'folds', {}).values():
         if fd.is_bv_conv:
             lines += ['', f'// The end of the product of ball vectors {fd.name}: its count, its bound {fd.bound[0]}, its radius '
                           f'{fd.radius[0]} and its finish {fd.finish[0]}.']
-            for ctype in TYPES:
+            for ctype in types:
                 lines += bv_conv_end_function(fd, kernels, ctype)
             lines.append('')
-            for i, ctype in enumerate(TYPES):
+            for i, ctype in enumerate(types):
                 lines += bv_conv_seq(fd, kernels, ctype)[(4 if i else 0):]   # the description once
             continue
         printers = ((('sequential', map_seq), ('lanes', map_lanes)) if fd.is_map else
@@ -1110,21 +1146,23 @@ def folds(kernels):
                     (('sequential', fold_seq), ('lanes', fold_lanes)))
         if fd.is_bv:
             lines += ['', f'// The end of ball vector {fd.name}: its radius {fd.radius[0]} and its finish {fd.finish[0]}.']
-            for ctype in TYPES:
+            for ctype in types:
                 lines += bv_end_function(fd, kernels, ctype)
         for order, printer in printers:
             if order in fd.orders:
                 lines.append('')
-                for i, ctype in enumerate(TYPES):
+                for i, ctype in enumerate(types):
                     lines += printer(fd, kernels, ctype)[(1 if i else 0):]   # the description once
     return lines
 
 
-def scalar(kernels, prelude_name='prelude.hpp'):
+def scalar(kernels, prelude_name='prelude.hpp', types=tuple(TYPES), intro=None):
+    """scalar.hpp: every kernel and fold for each limb type of `types` (double and float; the
+    emulated type, with `intro` the first lines of its comment, in emulated.py)."""
     plain = [k.name for k in kernels.values() if constexpr_kind(k, kernels) is None]
-    lines = [HEADER, '//',
+    lines = [HEADER, '//'] + (intro or [
              '// Scalar kernels for double and float limbs (docs/developer/architecture.md, "The kernel',
-             '// IR"). Inputs are passed by value; outputs by reference, each written once on the path',
+             '// IR"). Inputs are passed by value; outputs by reference, each written once on the path']) + [
              '// taken. Values keep the names of the kernel descriptions; a value inlined from a call is',
              '// named SITE_VALUE, where SITE is the first value the call defines. The fix-up of a full',
              '// kernel or a constructor is behind a branch: the listing\'s operations that its masks and',
@@ -1142,17 +1180,17 @@ def scalar(kernels, prelude_name='prelude.hpp'):
         lines += [''] + _description(k, kernels)
         if branch(k, kernels):
             lines += ['#if KAIRN_GEN_FIXUP_CALL', 'namespace fixup {']
-            for ctype in TYPES:
+            for ctype in types:
                 lines += fixup_function(k, kernels, ctype)
             lines += ['}  // namespace fixup', '#endif']
-        for ctype in TYPES:
+        for ctype in types:
             lines += function(k, kernels, ctype)
     if getattr(kernels, 'folds', {}):
         lines += ['', '// --- Folds: loops of the kernels above along arrays (docs/developer/architecture.md, "Folds").',
                   '// One pointer per limb array and a length; nothing is allocated. Ordinary inline functions,',
                   '// the step inlined in the loop: a value of the step is named step_V, of the combination comb_V,',
                   '// of the finish fin_V; the loop\'s own variables end with an underscore.']
-        lines += folds(kernels)
+        lines += folds(kernels, types)
     lines += ['', '}  // namespace kairn::gen', 'KAIRN_GEN_POP_WARNINGS']
     return '\n'.join(lines) + '\n'
 

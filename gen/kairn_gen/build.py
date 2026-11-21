@@ -2,9 +2,12 @@
 import os
 
 from . import claims, cpp, ieee, ir, library, objcode, rocq, rules, simd
+from . import emulated
 
 # Every file in these directories must be one that build writes.
 GENERATED_DIRS = ('proofs/gen', 'include/kairn/gen')
+# The kernels for the emulated limb type of the tests (emulated.py), in a directory of their own.
+GENERATED_DIRS += ('tests/emulated/gen',)
 
 
 def load(root, kernel_dir=None):
@@ -36,6 +39,8 @@ def outputs(kernels):
         'gen/constant_names.json': rocq.constant_names_file(kernels),
         'gen/objcode.json': objcode.objcode(kernels),
         'gen/tests/runner_kernels.inc': cpp.runner_table(kernels),
+        # The emulated limb type's kernels, for the exhaustive tier (tests/emulated).
+        emulated.PATH: emulated.header(kernels),
     }
 
 
