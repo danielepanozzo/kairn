@@ -497,6 +497,12 @@ Print Assumptions axpy_step_2_ieee_lead.
 Definition axpy_step_2_1_ieee_lead_audit : axpy_step_2_1_ieee_lead_spec := axpy_step_2_1_ieee_lead.
 Print Assumptions axpy_step_2_1_ieee_lead.
 
+Definition neg_2_ieee_lead_audit : neg_2_ieee_lead_spec := neg_2_ieee_lead.
+Print Assumptions neg_2_ieee_lead.
+
+Definition bv_center_2_ieee_lead_audit : bv_center_2_ieee_lead_spec := bv_center_2_ieee_lead.
+Print Assumptions bv_center_2_ieee_lead.
+
 Definition bv_mul_pow2_step_2_ieee_lead_audit : bv_mul_pow2_step_2_ieee_lead_spec := bv_mul_pow2_step_2_ieee_lead.
 Print Assumptions bv_mul_pow2_step_2_ieee_lead.
 
@@ -536,11 +542,23 @@ Print Assumptions norm_upper_1_seq_ieee_correct.
 Definition norm_upper_1_lanes_ieee_audit : norm_upper_1_lanes_ieee_spec := norm_upper_1_lanes_ieee_correct.
 Print Assumptions norm_upper_1_lanes_ieee_correct.
 
+Definition norm_upper_1_orders_ieee_audit : norm_upper_1_orders_ieee_spec := norm_upper_1_orders_ieee_correct.
+Print Assumptions norm_upper_1_orders_ieee_correct.
+
+Definition norm_upper_1_flag_ieee_audit : norm_upper_1_flag_ieee_spec := norm_upper_1_flag_ieee_correct.
+Print Assumptions norm_upper_1_flag_ieee_correct.
+
 Definition norm_upper_2_seq_ieee_audit : norm_upper_2_seq_ieee_spec := norm_upper_2_seq_ieee_correct.
 Print Assumptions norm_upper_2_seq_ieee_correct.
 
 Definition norm_upper_2_lanes_ieee_audit : norm_upper_2_lanes_ieee_spec := norm_upper_2_lanes_ieee_correct.
 Print Assumptions norm_upper_2_lanes_ieee_correct.
+
+Definition norm_upper_2_orders_ieee_audit : norm_upper_2_orders_ieee_spec := norm_upper_2_orders_ieee_correct.
+Print Assumptions norm_upper_2_orders_ieee_correct.
+
+Definition norm_upper_2_flag_ieee_audit : norm_upper_2_flag_ieee_spec := norm_upper_2_flag_ieee_correct.
+Print Assumptions norm_upper_2_flag_ieee_correct.
 
 Definition sum_1_seq_ieee_audit : sum_1_seq_ieee_spec := sum_1_seq_ieee_correct.
 Print Assumptions sum_1_seq_ieee_correct.

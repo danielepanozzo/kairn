@@ -124,7 +124,8 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    theorem has exactly the generated statement as its type, followed by
    `Print Assumptions K_correct`; the same two lines for each order of every fold that is
    proved (`F_seq_audit : F_seq_spec := F_seq_correct`, and `F_lanes`), and once for every map
-   and convolution, which have one statement (`F_audit : F_spec := F_correct`). A script,
+   and convolution, which have one statement (`F_audit : F_spec := F_correct`); then the three
+   statements of `conv_terms`, which the convolutions share, whose file they name. A script,
    `proofs/audit/audit.py`, reads what Rocq printed and fails on any axiom outside the allowed
    list, on a missing report, or on any output it does not understand.
 3. **The theorems that the generated audits do not list**, the same way, from
@@ -154,8 +155,10 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
    generated `proofs/gen/IeeeAudit.v`, like step 2; then, in the same file, every other
    IEEE-model theorem that a description names: those of the steps and the combinations of
-   the folds and of the steps of the maps, of the folds and the maps in their two orders, and
-   of the convolutions.
+   the folds and of the steps of the maps (and of the two steps of the extended domain that
+   have one, `neg_2` and `bv_center_2`), of the folds and the maps in their two orders, of the
+   two statements more of the folds of maxima, of the convolutions and of the products of two
+   BallVectors.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 
@@ -440,7 +443,7 @@ step above the largest leading limb would not be a number of the format. That th
 computes the state of the sequential order, and when exactly the flag is true, are also
 generated statements, `F_orders_ieee_spec` and `F_flag_ieee_spec`, whose theorems
 `F_orders_ieee_correct` and `F_flag_ieee_correct` are the lemmas above with their variables
-bound; no field of a description names them, so step 3 audits them.
+bound; the fold's `ieee_theorem` names them with those of its orders, so step 5 audits them.
 
 ## The product of two polynomials
 
@@ -464,8 +467,8 @@ least $\min(n_x, n_y)$, its two numbers bound the error of every coefficient (`c
 `conv_2_bound`, from the theorems of [the two together](#sums-and-dot-products-of-arrays)).
 Three of these facts are also generated statements, `conv_terms_eq_spec`,
 `conv_terms_count_spec` and `conv_terms_length_spec`, whose theorems `conv_terms_eq_correct`,
-`conv_terms_count_correct` and `conv_terms_length_correct` are those lemmas; no field of a
-description names them, so step 3 audits them.
+`conv_terms_count_correct` and `conv_terms_length_correct` are those lemmas; the convolutions
+name their file (`terms_theorem`), so step 2 audits them.
 
 These are statements of the real model, as for a map. No theorem is about the product as a
 polynomial (its value at a point).
@@ -545,8 +548,9 @@ exactly when the radius is negative, a NaN or $+\infty$ or a center (its leading
 finite: the radius kernel is finite only from a finite $m$ and a finite $r$, $m$ is finite with
 the record's mask true exactly when every center is, and the finish tests the sign of the
 radius (`bv_make_finish`). The leading limbs of `neg_2` and `bv_center_2`, the steps of
-two limbs, are generated statements that no field of a description can name (they are kernels
-of the extended domain): their theorems are audited in step 3.
+two limbs, are generated statements too, whose theorems their descriptions name
+(`ieee_lead_theorem`, which a kernel of the extended domain may name when it has a leading-limb
+statement): they are audited in step 5.
 
 **The scaling by a power of two** (`BvPow2.v`, `IeeeBvPow2.v`): the two steps, the radius kernel
 and `bv_mul_pow2_k` have their generated statements, in both models and both orders, as types.

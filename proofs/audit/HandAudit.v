@@ -79,14 +79,15 @@
      IEEE model (theories/IeeeFoldNorm.v), that the two orders return the same result
      and the same flag on every input, the statements of the sequential order with the
      elements as finite normalized pairs, and when the flag is true, the first and the
-     last also as the generated statements F_orders_ieee_spec and F_flag_ieee_spec, which
-     no field of a description names;
+     last also as the generated statements F_orders_ieee_spec and F_flag_ieee_spec, whose
+     theorems the description of the fold names and proofs/gen/IeeeAudit.v lists;
    - the convolutions (theories/FoldConv.v), beside their theorems, which
      proofs/gen/Audit.v lists: what the terms of a coefficient are, which the generated
      statements name and do not describe, how many there are, and that one answer of
      the bound kernel of the dot product covers every coefficient; three of these also as
      the generated statements conv_terms_eq_spec, conv_terms_count_spec and
-     conv_terms_length_spec, which no field of a description names;
+     conv_terms_length_spec, whose theorems the descriptions of the convolutions name
+     (terms_theorem) and proofs/gen/Audit.v lists;
    - the accumulator, beside the theorems of the generated statements of its eight
      kernels, which the generated audits list: the lemmas of its radius
      (theories/AccKernels.v, IeeeAccKernels.v), and what a user of the accumulator relies
@@ -99,9 +100,9 @@
      of theories/IeeeBv.v those theorems put together, V1 to V4 of each ball vector in both
      orders, and that the lane order returns what the sequential order returns;
    - the negation and the constructor of a ball vector, beside the theorems of their
-     generated statements, which the generated audits list: the leading limbs of the two
-     steps of the extended domain (neg_2, bv_center_2) as their generated statements, which
-     no field can name, and the lemmas of theories/BvNegMake.v and IeeeBvNegMake.v the
+     generated statements, which the generated audits list (the leading limbs of the two
+     steps of the extended domain, neg_2 and bv_center_2, among them: their descriptions name
+     them with ieee_lead_theorem): the lemmas of theories/BvNegMake.v and IeeeBvNegMake.v the
      theorems rest on;
    - the scaling of a ball vector by a power of two, beside the theorems of its generated
      statements, which the generated audits list: the lemmas of theories/BvPow2.v and
@@ -875,26 +876,10 @@ Print Assumptions norm_upper_2_seq_ieee_facts.
 Print Assumptions norm_upper_1_seq_ieee_flag.
 Print Assumptions norm_upper_2_seq_ieee_flag.
 
-(* The last two of these facts as the generated statements F_orders_ieee_spec and
-   F_flag_ieee_spec of proofs/gen/IeeeFoldStatements.v, which no field of a description names
-   yet (so the generated audit does not list them): the theorems of IeeeFoldNorm.v with the
-   variables of its section bound. *)
-From Kairn.Gen Require IeeeFoldStatements.
-Definition norm_upper_1_orders_ieee_audit : IeeeFoldStatements.norm_upper_1_orders_ieee_spec :=
-  norm_upper_1_orders_ieee_correct.
-Print Assumptions norm_upper_1_orders_ieee_correct.
-
-Definition norm_upper_1_flag_ieee_audit : IeeeFoldStatements.norm_upper_1_flag_ieee_spec :=
-  norm_upper_1_flag_ieee_correct.
-Print Assumptions norm_upper_1_flag_ieee_correct.
-
-Definition norm_upper_2_orders_ieee_audit : IeeeFoldStatements.norm_upper_2_orders_ieee_spec :=
-  norm_upper_2_orders_ieee_correct.
-Print Assumptions norm_upper_2_orders_ieee_correct.
-
-Definition norm_upper_2_flag_ieee_audit : IeeeFoldStatements.norm_upper_2_flag_ieee_spec :=
-  norm_upper_2_flag_ieee_correct.
-Print Assumptions norm_upper_2_flag_ieee_correct.
+(* The last two of these facts are also the generated statements F_orders_ieee_spec and
+   F_flag_ieee_spec of proofs/gen/IeeeFoldStatements.v, whose theorems (those of
+   IeeeFoldNorm.v with the variables of its section bound) the descriptions name with the
+   ieee_theorem of the fold: proofs/gen/IeeeAudit.v lists them. *)
 
 (* The convolutions (theories/FoldConv.v): the theorems of their generated statements are
    listed by proofs/gen/Audit.v; these are beside them. The terms of coefficient j, the
@@ -913,19 +898,9 @@ Print Assumptions conv_terms_nonempty.
 Print Assumptions conv_terms_nth.
 Print Assumptions conv_terms_eq.
 
-(* Three of them as the generated statements of proofs/gen/FoldStatements.v,
-   conv_terms_eq_spec, conv_terms_count_spec and conv_terms_length_spec, which no field of a
-   description names yet (so the generated audit does not list them). *)
-From Kairn.Gen Require FoldStatements.
-Definition conv_terms_eq_audit : FoldStatements.conv_terms_eq_spec := conv_terms_eq_correct.
-Print Assumptions conv_terms_eq_correct.
-
-Definition conv_terms_count_audit : FoldStatements.conv_terms_count_spec := conv_terms_count_correct.
-Print Assumptions conv_terms_count_correct.
-
-Definition conv_terms_length_audit : FoldStatements.conv_terms_length_spec :=
-  conv_terms_length_correct.
-Print Assumptions conv_terms_length_correct.
+(* Three of them are also the generated statements of proofs/gen/FoldStatements.v,
+   conv_terms_eq_spec, conv_terms_count_spec and conv_terms_length_spec, whose theorems the
+   convolutions name (terms_theorem): proofs/gen/Audit.v lists them. *)
 Print Assumptions Forall2_seq_nth.
 Print Assumptions conv_1_bound.
 Print Assumptions conv_2_bound.
@@ -1036,22 +1011,14 @@ Print Assumptions bv_scale_2_lanes_ieee_v4.
 
 (* The negation and the constructor of a ball vector (theories/BvNegMake.v,
    IeeeBvNegMake.v): the theorems of their generated statements are listed by the generated
-   audits; these are beside them. The leading limbs of neg_2 and bv_center_2, the steps of
-   bv_neg_2 and bv_make_2, as their generated statements K_ieee_lead_spec, which a kernel of
-   the extended domain cannot name (ieee_lead_theorem belongs to the finite domain); in the
-   real model, that the radius kernel of the constructor returns the radius given and that
+   audits (the leading limbs of neg_2 and bv_center_2, the steps of bv_neg_2 and bv_make_2,
+   among them: their descriptions name them with ieee_lead_theorem); these are beside them. In
+   the real model, that the radius kernel of the constructor returns the radius given and that
    the ball of a negated center is exactly the image of the operand's ball; in the IEEE
    model, the radius kernel of the constructor, the result of each fold in closed form (a
    finite ball vector, or the whole space), and that the lane order returns what the
    sequential order returns. *)
 From Kairn Require Import BvNegMake IeeeBvNegMake.
-Definition neg_2_ieee_lead_audit : IeeeFoldStatements.neg_2_ieee_lead_spec := neg_2_ieee_lead.
-Print Assumptions neg_2_ieee_lead.
-
-Definition bv_center_2_ieee_lead_audit : IeeeFoldStatements.bv_center_2_ieee_lead_spec :=
-  bv_center_2_ieee_lead.
-Print Assumptions bv_center_2_ieee_lead.
-
 Print Assumptions bv_make_radius_value.
 Print Assumptions neg_ball_image.
 Print Assumptions make_radius_ieee.

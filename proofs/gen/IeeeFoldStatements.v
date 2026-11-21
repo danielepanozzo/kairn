@@ -204,7 +204,7 @@ Definition axpy_step_2_1_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.axpy_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
   finite z0 -> finite a /\ finite x0 /\ finite y0.
 
-(* neg_2, the leading limb of its result: finite only if those of its operands are. *)
+(* neg_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition neg_2_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -213,7 +213,7 @@ Definition neg_2_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.neg_2 prec emax nan_opp x0 x1 in
   finite z0 -> finite x0.
 
-(* bv_center_2, the leading limb of its result: finite only if those of its operands are. *)
+(* bv_center_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition bv_center_2_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -408,7 +408,7 @@ Definition norm_upper_1_lanes_ieee_spec : Prop :=
    r_ <= RU (ieee_emin prec emax) prec v_) /\
   (flag = false -> nan r).
 
-(* norm_upper_1: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: unverified. *)
+(* norm_upper_1: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: proved. *)
 Definition norm_upper_1_orders_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -417,7 +417,7 @@ Definition norm_upper_1_orders_ieee_spec : Prop :=
   fold_lanes (IeeeFoldModel.norm_upper_1_step prec emax nan_abs) (IeeeFoldModel.norm_upper_1_combine prec emax) (IeeeOperations.pzero prec emax, true) W xs =
   fold_seq (IeeeFoldModel.norm_upper_1_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs.
 
-(* norm_upper_1: the flag of the sequential order is true exactly when every leading limb is finite, in the IEEE model. Status: unverified. *)
+(* norm_upper_1: the flag of the sequential order is true exactly when every leading limb is finite, in the IEEE model. Status: proved. *)
 Definition norm_upper_1_flag_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -470,7 +470,7 @@ Definition norm_upper_2_lanes_ieee_spec : Prop :=
    r_ <= succ radix2 (FLT_exp (ieee_emin prec emax) prec) (RU (ieee_emin prec emax) prec v_)) /\
   (flag = false -> nan r).
 
-(* norm_upper_2: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: unverified. *)
+(* norm_upper_2: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: proved. *)
 Definition norm_upper_2_orders_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -479,7 +479,7 @@ Definition norm_upper_2_orders_ieee_spec : Prop :=
   fold_lanes (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeFoldModel.norm_upper_2_combine prec emax) (IeeeOperations.pzero prec emax, true) W xs =
   fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs.
 
-(* norm_upper_2: the flag of the sequential order is true exactly when every leading limb is finite and the largest magnitude, the limb of the final state, stepped up once as the finish does, is finite, in the IEEE model. Status: unverified. *)
+(* norm_upper_2: the flag of the sequential order is true exactly when every leading limb is finite and the largest magnitude, the limb of the final state, stepped up once as the finish does, is finite, in the IEEE model. Status: proved. *)
 Definition norm_upper_2_flag_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

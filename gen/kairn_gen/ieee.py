@@ -1429,8 +1429,8 @@ def proved_statements(kernels):
     and of the folds whose theorems are named: K_ieee_bridge_spec and K_ieee_spec of
     IeeeStatements.v (ieee_bridge_theorem, ieee_spec_theorem), K_ieee_lead_spec (ieee_lead_theorem)
     and F_O_ieee_spec (a fold's or a map's ieee_theorem; F_ieee_spec, a convolution's or a product
-    of two BallVectors') of IeeeFoldStatements.v; the first two, then the others, each in the order
-    of their file."""
+    of two BallVectors'; and F_orders_ieee_spec and F_flag_ieee_spec, a fold of maxima's) of
+    IeeeFoldStatements.v; the first two, then the others, each in the order of their file."""
     model = in_model(kernels)
     out = []
     for k in model.values():
@@ -1457,7 +1457,18 @@ def proved_statements(kernels):
                 suffix = ir.ORDER_SUFFIX[order]
                 out.append((f'{fd.name}_{suffix}_ieee_spec', fd.ieee_theorem, fd.ieee_theorem_name(order),
                             'IeeeFoldStatements'))
+        # A fold of maxima in both orders has two statements more, printed after those of its orders
+        # (max_orders_statement, max_flag_statement), whose theorems are in the same file.
+        if max_statements(fd):
+            for what in ('orders', 'flag'):
+                out.append((f'{fd.name}_{what}_ieee_spec', fd.ieee_theorem, f'{fd.name}_{what}_ieee_correct',
+                            'IeeeFoldStatements'))
     return out
+
+
+def max_statements(fd):
+    """Whether fd has F_orders_ieee_spec and F_flag_ieee_spec: a fold of maxima in both orders."""
+    return getattr(fd, 'is_max', False) and set(ir.ORDERS) <= set(fd.orders)
 
 
 def audit(kernels):
@@ -1869,7 +1880,7 @@ def max_orders_statement(fd, kernels):
     etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
     return ([f'(* {fd.name}: the lane order computes the state of the sequential order, for every number of '
              'lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: '
-             'unverified. *)',
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
              f'Definition {fd.name}_orders_ieee_spec : Prop :='] + _max_head(nans) +
             [f'  forall (W : nat) ({xs} : list ({etype})),',
              f'  fold_lanes ({stp}) ({cmb}) {zero} W {xs} =',
@@ -1902,7 +1913,7 @@ def max_flag_statement(fd, kernels):
         what += (' and the largest magnitude, the limb of the final state, stepped up ' +
                  ('once' if steps == 1 else f'{steps} times') + ' as the finish does, is finite')
     return ([f'(* {fd.name}: the flag of the sequential order is true exactly when {what}, in the IEEE model. '
-             'Status: unverified. *)',
+             f'Status: {"proved" if fd.ieee_theorem else "unverified"}. *)',
              f'Definition {fd.name}_flag_ieee_spec : Prop :='] + _max_head(nans) +
             [f'  forall {xs} : list ({etype}),',
              f'  snd ({call}) = true <->',
@@ -2517,6 +2528,6 @@ def fold_statements(kernels):
         for order in ir.ORDERS:
             if order in fd.orders:
                 lines += [''] + (map_statement if getattr(fd, 'is_map', False) else fold_statement)(fd, kernels, order)
-        if getattr(fd, 'is_max', False) and set(ir.ORDERS) <= set(fd.orders):
+        if max_statements(fd):
             lines += [''] + max_orders_statement(fd, kernels) + [''] + max_flag_statement(fd, kernels)
     return '\n'.join(lines) + '\n'

@@ -480,12 +480,21 @@ rule:
    kernel of the finite domain names the theorems of its IEEE-model statements once each is
    proved: `ieee_bridge_theorem: FILE K_ieee_bridge` (with `ieee: bridge`), `ieee_spec_theorem:
    FILE K_ieee_correct` (with `ieee: spec`), `ieee_lead_theorem: FILE K_ieee_lead` (the step or
-   the combination of a fold, or the step of a map); a fold or a map, `ieee_theorem: FILE`, the
-   file of `F_seq_ieee_correct` and `F_lanes_ieee_correct`, and a convolution or a product of two
-   BallVectors, which have one statement each (`F_ieee_spec`), the file of `F_ieee_correct`. Each
-   names only a statement that is printed,
+   the combination of a fold, or the step of a map); `ieee_lead_theorem` is also that of a kernel
+   of the extended domain that has a leading-limb statement, the step of a fold (`neg_2`,
+   `bv_center_2`), whose other IEEE-model theorem is its `ieee_theorem`. A fold or a map names
+   `ieee_theorem: FILE`, the file of `F_seq_ieee_correct` and `F_lanes_ieee_correct` (and, for a
+   fold of maxima in both orders, of `F_orders_ieee_correct` and `F_flag_ieee_correct`, the
+   theorems of its two statements more), and a convolution or a product of two BallVectors, which
+   have one statement each (`F_ieee_spec`), the file of `F_ieee_correct`. A convolution also names
+   `terms_theorem: FILE`, the file of `conv_terms_eq_correct`, `conv_terms_count_correct` and
+   `conv_terms_length_correct`, the theorems of the three statements of `conv_terms` in
+   `proofs/gen/FoldStatements.v`, which every convolution shares: the convolutions that name one
+   name the same file, and `proofs/gen/Audit.v` checks the three once. Each names only a statement
+   that is printed,
    by its conventional name, in `proofs/theories/`; a statement whose theorem is not named is
-   printed as unverified, and only those that are named are in `proofs/gen/IeeeAudit.v`.
+   printed as unverified, and only those that are named are in `proofs/gen/IeeeAudit.v` (those of
+   `conv_terms`, of the real model, in `proofs/gen/Audit.v`).
 6. R3: in a kernel marked `entry`, an input that enters from the program (a one-limb input not
    declared `stored`, or the limbs of an input declared `supplied`), and whatever `neg`, `abs`,
    `select` or `copy` alone make of it, is never an operand of `add` or `sub` nor the addend of an

@@ -20,6 +20,7 @@ ensures:       finite_or_nan z flag=finite
 min_precision: 1
 theorem:       proofs/theories/FoldConv.v
 ieee_theorem:  proofs/theories/IeeeFoldConv.v
+terms_theorem: proofs/theories/FoldConv.v
 status:        proved
 domain:        extended
 source:        dot_1 on the terms of each coefficient

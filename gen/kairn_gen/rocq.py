@@ -1069,22 +1069,35 @@ def fold_statements(kernels):
             if order in fd.orders:
                 lines += [''] + (max_statement if fd.is_max else fold_statement)(fd, kernels, order)
     if any(fd.is_conv or fd.is_bv_conv for fd in getattr(kernels, 'folds', {}).values()):
-        lines += [''] + conv_terms_statements()
+        lines += [''] + conv_terms_statements(terms_theorem(kernels))
     return '\n'.join(lines) + '\n'
 
 
-def conv_terms_statements():
+# The theorems of the three statements of conv_terms (conv_terms_statements), in their order.
+CONV_TERMS = ('conv_terms_eq', 'conv_terms_count', 'conv_terms_length')
+
+
+def terms_theorem(kernels):
+    """The file of the theorems of the statements of conv_terms: the terms_theorem that the
+    convolutions name (rules.conv_rules: those that name one name the same), or None."""
+    files = {fd.terms_theorem for fd in getattr(kernels, 'folds', {}).values() if fd.is_conv and fd.terms_theorem}
+    return min(files) if files else None
+
+
+def conv_terms_statements(proved=None):
     """Three statements of conv_terms (FoldModel.v), the definition every convolution shares, which the
     statements of the convolutions and of the products of two BallVectors read: the terms of
     coefficient j are the pairs (x_i, y_(j-i)) for consecutive i in increasing order (conv_terms_eq_spec);
     how many, with at least one y (conv_terms_count_spec); and at most min(n_x, n_y)
     (conv_terms_length_spec, which lets one bound of dot cover every coefficient). The subtractions
-    are of natural numbers, 0 where they would be negative: %nat, the file's scope being R."""
+    are of natural numbers, 0 where they would be negative: %nat, the file's scope being R. Their
+    status is proved when the convolutions name the file of their theorems (`proved`, terms_theorem)."""
+    status = 'proved' if proved else 'unverified'
     return [
         '(* The terms of coefficient j of a convolution (conv_terms of FoldModel.v): the pairs (x_i, y_(j-i))',
         '   for the consecutive i from j - (n_y - 1) on, a subtraction of natural numbers (0 when it would be',
         '   negative), in increasing order, as many as conv_terms has; a and b are any elements. Status:',
-        '   unverified. *)',
+        f'   {status}. *)',
         'Definition conv_terms_eq_spec : Prop :=',
         '  forall (A B : Type) (xs : list A) (ys : list B) (j : nat) (a : A) (b : B),',
         '  conv_terms xs ys j =',
@@ -1092,14 +1105,14 @@ def conv_terms_statements():
         '      (seq (j - (length ys - 1))%nat (length (conv_terms xs ys j))).',
         '',
         '(* How many terms coefficient j has, with at least one y: min(j + 1, n_x) - (j - (n_y - 1)), so that',
-        '   i goes from max(0, j - n_y + 1) to min(j, n_x - 1). Status: unverified. *)',
+        f'   i goes from max(0, j - n_y + 1) to min(j, n_x - 1). Status: {status}. *)',
         'Definition conv_terms_count_spec : Prop :=',
         '  forall (A B : Type) (xs : list A) (ys : list B) (j : nat),',
         '  (0 < length ys)%nat ->',
         '  length (conv_terms xs ys j) = (Nat.min (S j) (length xs) - (j - (length ys - 1)))%nat.',
         '',
         '(* Every coefficient has at most min(n_x, n_y) terms: one bound of dot for that count covers them',
-        '   all (the products of two BallVectors). Status: unverified. *)',
+        f'   all (the products of two BallVectors). Status: {status}. *)',
         'Definition conv_terms_length_spec : Prop :=',
         '  forall (A B : Type) (xs : list A) (ys : list B) (j : nat),',
         '  (length (conv_terms xs ys j) <= Nat.min (length xs) (length ys))%nat.']
@@ -1617,14 +1630,16 @@ def audit(kernels):
     # The folds that are proved: each order's theorem, as for a kernel (FoldStatements.v is
     # imported only when there is one, so that the file is what it was before folds existed).
     folds = [fd for fd in getattr(kernels, 'folds', {}).values() if fd.status != 'unverified']
+    terms = terms_theorem(kernels)
     lines = [HEADER, '',
              '(* For every kernel not marked unverified: its theorem has exactly the generated',
              '   statement as its type, and the axioms it depends on are printed, for the audit',
              '   script to compare with the allow-list. Nothing else is printed. *)',
              f'From {GEN_PATH} Require Import Statements.']
-    if folds:
+    if folds or terms:
         lines.append(f'From {GEN_PATH} Require Import FoldStatements.')
-    for m in sorted({theory_module(k.theorem[0]) for k in verified} | {theory_module(fd.theorem) for fd in folds}):
+    for m in sorted({theory_module(k.theorem[0]) for k in verified} | {theory_module(fd.theorem) for fd in folds} |
+                    ({theory_module(terms)} if terms else set())):
         lines.append(f'From {THEORIES_PATH} Require Import {m}.')
     if not verified and not folds:
         lines += ['', '(* No kernel is verified yet. *)']
@@ -1636,6 +1651,11 @@ def audit(kernels):
         names = [fd.name] if fd.is_map or fd.is_conv or fd.is_bv or fd.is_bv_conv else \
             [f'{fd.name}_{ir.ORDER_SUFFIX[order]}' for order in ir.ORDERS if order in fd.orders]
         for name in names:
+            lines += ['', f'Definition {name}_audit : {name}_spec := {name}_correct.',
+                      f'Print Assumptions {name}_correct.']
+    # The statements of conv_terms, which every convolution shares, after the folds (terms_theorem).
+    if terms:
+        for name in CONV_TERMS:
             lines += ['', f'Definition {name}_audit : {name}_spec := {name}_correct.',
                       f'Print Assumptions {name}_correct.']
     return '\n'.join(lines) + '\n'

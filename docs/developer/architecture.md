@@ -630,6 +630,10 @@ Definition norm_upper_2_flag_ieee_spec : Prop :=
   finite (IeeeOperations.succ prec emax (fst (fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs))).
 ```
 
+Their theorems, `F_orders_ieee_correct` and `F_flag_ieee_correct`, are in the file the fold's
+`ieee_theorem` names, with those of its orders (`ieee.proved_statements`): the comments above the
+two statements say proved when it does, and `IeeeAudit.v` checks them after those of the orders.
+
 Both are unverified until a proof is pointed at them: they are the types of the hand-written
 theorems of these facts (`norm_upper_k_lanes_seq_state`, `norm_upper_k_seq_ieee_flag`) once their
 section's variables are bound, so that those theorems can prove generated statements rather than
@@ -778,7 +782,11 @@ lemmas of `FoldConv.v` so that they can prove them: `conv_terms_eq_spec` (the li
 (nth i xs a, nth (j - i)%nat ys b)) (seq (j - (length ys - 1))%nat (length (conv_terms xs ys j)))`),
 `conv_terms_count_spec` (with at least one $y$, coefficient $j$ has $\min(j + 1, n_x) - (j - (n_y -
 1))$ terms, a subtraction of natural numbers) and `conv_terms_length_spec` (at most $\min(n_x, n_y)$,
-which the products of two BallVectors need). Unverified, as statements of no kernel or fold.
+which the products of two BallVectors need). They are statements of no kernel or fold: their
+theorems (`conv_terms_eq_correct`, `conv_terms_count_correct`, `conv_terms_length_correct`, in
+`FoldConv.v`) are named by the convolutions, `terms_theorem: FILE`, the same file by every
+convolution that names one (`rules.conv_rules`); then the three comments say proved and `Audit.v`
+checks the three theorems once, after the folds (`rocq.CONV_TERMS`); otherwise they say unverified.
 
 ### Maps and convolutions in the IEEE model
 
@@ -1734,9 +1742,15 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
 - **Their theorems.** A kernel of the finite domain names the theorem of each IEEE-model
   statement once it is proved: `ieee_bridge_theorem` (`K_ieee_bridge`, of `K_ieee_bridge_spec`),
   `ieee_spec_theorem` (`K_ieee_correct`, of `K_ieee_spec`) and `ieee_lead_theorem`
-  (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`; a fold or a map, `ieee_theorem: FILE`,
-  whose theorems are `F_seq_ieee_correct` and `F_lanes_ieee_correct`, and a convolution the same
-  field, whose theorem is `F_ieee_correct`. The comment above a statement
+  (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`. A kernel of the extended domain names
+  no bridge or spec theorem (its IEEE-model statement is its `ieee_theorem`'s), but one with a lead
+  statement, the step of a fold (`neg_2`, `bv_center_2`), names its `ieee_lead_theorem`. A fold or a
+  map names `ieee_theorem: FILE`, whose theorems are `F_seq_ieee_correct` and
+  `F_lanes_ieee_correct` (and `F_orders_ieee_correct` and `F_flag_ieee_correct` for a fold of
+  maxima in both orders), and a convolution or a product of two BallVectors the same field, whose
+  theorem is `F_ieee_correct` (each has one statement, `F_ieee_spec`; until 2026-11-21 the audit
+  printed a product's check against `F_seq_ieee_spec`, which does not exist). The comment above a
+  statement
   says `proved` when its theorem is named and `unverified` otherwise. The comment above a fold's C++
   function gives both, as a kernel's does: `Status: proved (real model), unverified (IEEE model)` for
   `sum_2` (`cpp.fold_status`; until 2026-11-20 it gave the real model's alone). `IeeeAudit.v` checks
