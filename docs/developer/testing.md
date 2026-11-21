@@ -142,9 +142,7 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `tests/CMakeLists.txt`, kernels whose claims the oracle cannot read yet; with them
   `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS` for folds. No cross-check, no enumeration of a toy format,
   no brute-force run and no test of the public interface is registered for a name of these lists,
-  and configuring says how many are left out. **On them today**: `conv_radius`, the radius kernel
-  of the products of two BallVectors, for the oracle's finding (a NaN where `prod(ma, mb)`
-  overflows and `g` or `m` is zero; `oracle/README.md`, "Ball vectors and the accumulator"); and the kernels of stage B2 of the
+  and configuring says how many are left out. **On them today**: the kernels of stage B2 of the
   intervals, the predicates and comparisons of an interval and of a ball, the set operations of a
   ball and the conversions of two limbs ([Claims of the enclosure interface: predicates and
   comparisons](architecture.md#claims-of-the-enclosure-interface-predicates-and-comparisons) and the
@@ -155,7 +153,13 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   vectors' stage the oracle reads and judges the ball vectors, their constructors, the products of
   two BallVectors and their kernels, and the accumulator's kernels (`oracle/README.md`, "Ball
   vectors and the accumulator", "Their kernels", "Their folds"): they are cross-checked as the maps
-  are, V4 in the formats its statements quantify over. Every map and every ball vector is
+  are, V4 in the formats its statements quantify over. `conv_radius`, the radius kernel of the
+  products of two BallVectors, stayed on the list for the oracle's finding (a NaN where
+  `prod(ma, mb)` overflows and `g` or `m` is zero, $+\infty$ from a small stated value) until the
+  owner's ruling of 2026-11-21 made its claim one of finite results, a result that is not finite
+  being $+\infty$ or a NaN ([`upper` of a kernel of the finite domain with several
+  operations](architecture.md#claims-of-the-non-finite-layer)): it is cross-checked as the other
+  radius kernels are, its results that are not finite counted. Every map and every ball vector is
   cross-checked in place too (`tests/crosscheck.py --inplace`, a stream of requests `inplace=I`
   through every runner, the packed ones included, with its guards). Since stage B of
   Milestone 2 the oracle reads and judges the maps, the folds of maxima and the convolutions, and
@@ -532,7 +536,7 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
 
     | Objects | Cases the run must have seen |
     |---|---|
-    | a radius kernel | an output $+\infty$ and a finite one at least the stated value; with `exact_when`, the conditions holding and each failing, the output exactly the stated value, the mask true where nothing is claimed |
+    | a radius kernel | an output $+\infty$ and a finite one at least the stated value; with `exact_when`, the conditions holding and each failing, the output exactly the stated value, the mask true where nothing is claimed; whose claim is of finite results (`conv_radius`, whose results that are not finite are counted and judged no further), finite results at least three quarters of those judged |
     | a step of a scaling | `exact_flag` true and false, `exact_when` holding |
     | a finish | every mask true and each false, a value zero, below zero, above zero, a NaN, $\pm\infty$ |
     | a step of the accumulator | a rounding inexact, an output group not finite (nothing claimed) |
@@ -541,7 +545,8 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     | a product of BallVectors | lengths 0 and 1 of each array, unequal lengths; both results, a whole-space operand, V4 applying; the radius at least `conv_radius`'s stated value; in a toy format `count_when` failing |
 
     `full.tools.crosscheck.guards` has runs and altered summaries that miss each of these (a
-    class of a radius, a stratum, a mask of a step, a cell of a finish or of an accumulator; a
+    class of a radius, `conv_radius` with too few finite results, a stratum, a mask of a step, a
+    cell of a finish or of an accumulator; a
     class of results, of operands, of V4 or of exactness of a ball vector, a class of radius of a
     constructor, a length, the count or the radius of a product, `count_when` never failing, V4
     outside its formats or below `finite_from` not said; a stream in place without its arrays, or
@@ -1941,8 +1946,8 @@ and every ball vector, with each array read that can be the array written, throu
 the runner and of the packed runner, completes exactly as the same request without the field.
 
 **The products of two BallVectors** `bv_conv_1` and `bv_conv_2` ([Architecture](architecture.md#ball-vectors)),
-which the oracle judges too (`conv_radius` stays on the list of [Cross-checks](#cross-checks) for the
-oracle's finding), are tested by `gen/tests/test_bv_conv.py`: each check of
+which the oracle judges too (and `conv_radius` since the owner's ruling of 2026-11-21, [Cross-checks](#cross-checks)),
+are tested by `gen/tests/test_bv_conv.py`: each check of
 `rules.bv_conv_rules` refuses what it is for, and the rules of the claims refuse `at_most` and `if_all`
 where they do not belong; the interpreter, on six formats of the IEEE shape of four to six bits
 (precision 4 to 6, $e_{\max}$ 7 to 14) and in `binary64` and `binary32`, on canonical BallVectors of

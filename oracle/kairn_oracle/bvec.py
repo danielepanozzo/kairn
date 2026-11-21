@@ -18,7 +18,11 @@ The kernels of the radii (bv_add_radius_k, bv_scale_radius_k, conv_radius, bv_mu
     at_most(NAME, K)                          a requirement: NAME <= K, K a positive integer.
 
 Such a kernel has only such entries and is judged on every line (judge_radius): a NaN or -inf
-output fails, +inf passes (and is suspicious where the stated value is below Omega/4).
+output fails, +inf passes (and is suspicious where the stated value is below Omega/4).  But
+conv_radius (FINITE_RESULTS): by the owner's ruling of 2026-11-21 (architecture.md, "Claims of the
+non-finite layer" and "Claims of Milestone 2") its claim is of finite results, and a result that is
+not finite claims only that it is +inf or a NaN: either passes and is counted (never suspicious),
+-inf fails, a finite result is judged as for every radius kernel.
 
 The steps of the scalings by a power of two (bv_mul_pow2_step_k): `error` with `exact_flag`, the
 mask output that is true exactly when every condition of the entry's exact_when holds (where
@@ -55,6 +59,8 @@ UP_UNLESS = "%s true: nothing claimed"
 UP_EW_HOLDS = "exact_when holds"
 UP_EW_FAILS = "exact_when fails: "
 UP_EW_BEYOND = "exact_when holds, the stated value beyond Omega: the equality not judged"
+UP_NONFINITE = "output not finite (+inf or a NaN): nothing more claimed"
+UP_NAN = "output a NaN"
 UP_EXCESS = "(output - value) / value"
 UP_GAPS = "excess over a positive stated value, in gaps of the output"
 FLAG_TRUE = "exact_flag true"
@@ -73,6 +79,16 @@ ACC_INEXACT = "inexact"
 ACC_BEYOND = "the exact value rounds beyond Omega"
 GROUP_NONFINITE = "the leading limb of its output is not finite: nothing claimed"
 GROUP_TAIL = "a lower limb of its output is not finite: nothing claimed"
+
+# The radius kernels whose upper entries are claimed of finite results only: the owner's ruling
+# of 2026-11-21 on conv_radius (architecture.md, "Claims of the non-finite layer", "Claims of
+# Milestone 2").  A result that is not finite claims only that it is +inf or a NaN, never a
+# negative number or -inf; the product of BallVectors that calls it turns such a radius into the
+# whole space, and its own claim covers that.  The claims file writes the entry as it writes the
+# other radius kernels' (upper with a value and no if), so the name comes from the ruling; the
+# other radius kernels keep the reading of architecture.md's sentence on them (at least the value,
+# finite or +inf).
+FINITE_RESULTS = ("conv_radius",)
 
 
 # ---------------------------------------------------------------------------
@@ -291,6 +307,8 @@ def finish_kernel(kernel):
         raise ClaimsError("%s: upper entries with a value of their own and no if are read in a "
                           "kernel whose every entry is one" % kernel.name)
     kernel.bv_radius = bool(radius)
+    for e in radius:
+        e.finite_results = kernel.name in FINITE_RESULTS
     kernel.acc = any(getattr(e, "own_tree", None) is not None for e in kernel.ensures)
 
 
@@ -326,7 +344,8 @@ def label_suffix(e):
 def plan_upper(pl, e, claims):
     """The plan of an upper entry with a value of its own and no if."""
     fmt = pl.fmt
-    c = {"bv": True, "tree": e.cvalue, "unless": None, "conds": None}
+    c = {"bv": True, "tree": e.cvalue, "unless": None, "conds": None,
+         "finite_results": getattr(e, "finite_results", False)}
     if e.unless is not None:
         c["unless"] = pl.in_slices[e.unless][0]
     if e.uexact is not None and pl.in_scope:
@@ -538,9 +557,17 @@ def radius_entries(pl, ents, x, z, line):
                     # "Ball vectors and the accumulator").
                     es.count(UP_EW_BEYOND)
                     conds_hold = False
-        if o == NAN or o == NINF:
+        if c["finite_results"] and o in (INF, NAN):
+            # The ruling of 2026-11-21 (FINITE_RESULTS): the claim is of finite results, and one
+            # that is not finite claims only that it is +inf or a NaN, which it is.  Counted;
+            # never suspicious, whatever the operands.
+            es.count(UP_NONFINITE)
+            es.count(UP_INF if o == INF else UP_NAN)
+        elif o == NAN or o == NINF:
             why = "upper: the output is %s, not at least the stated value %s" % (
                 "a NaN" if o == NAN else "-inf", es.label.split(" >= ", 1)[-1].split(",")[0])
+            if c["finite_results"]:
+                why += " (a result that is not finite is +inf or a NaN)"
         elif o == INF:
             es.count(UP_INF)
             if conds_hold:

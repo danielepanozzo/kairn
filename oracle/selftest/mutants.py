@@ -662,11 +662,30 @@ MUTANTS = {
         "bvec.py", "            if ov < v:\n                es.count(\"below the stated value\")",
         "            if False:\n                es.count(\"below the stated value\")"),
     "radius: a NaN output accepted": (
-        "bvec.py", "        if o == NAN or o == NINF:\n            why = \"upper: the output is",
-        "        if o == NINF:\n            why = \"upper: the output is"),
+        "bvec.py", "        elif o == NAN or o == NINF:\n            why = \"upper: the output is",
+        "        elif o == NINF:\n            why = \"upper: the output is"),
     "radius: -inf accepted": (
-        "bvec.py", "        if o == NAN or o == NINF:\n            why = \"upper: the output is",
-        "        if o == NAN:\n            why = \"upper: the output is"),
+        "bvec.py", "        elif o == NAN or o == NINF:\n            why = \"upper: the output is",
+        "        elif o == NAN:\n            why = \"upper: the output is"),
+    # The owner's ruling of 2026-11-21: conv_radius's claim is of finite results; one that is not
+    # finite is +inf or a NaN, never -inf or a negative number.
+    "radius: -inf accepted where the claim is of finite results": (
+        "bvec.py", '        if c["finite_results"] and o in (INF, NAN):',
+        '        if c["finite_results"] and o in (INF, NAN, NINF):'),
+    "radius: a negative output accepted where the claim is of finite results": (
+        "bvec.py", '        if c["finite_results"] and o in (INF, NAN):',
+        '        if c["finite_results"] and (o in (INF, NAN) or (type(o) is int and o < 0)):'),
+    "radius: the claim of conv_radius read as of every result (a NaN fails)": (
+        "bvec.py", '        if c["finite_results"] and o in (INF, NAN):',
+        '        if False and o in (INF, NAN):'),
+    "radius: every radius kernel's claim read as of finite results": (
+        "bvec.py", "        e.finite_results = kernel.name in FINITE_RESULTS",
+        "        e.finite_results = True"),
+    "radius: a result that is not finite not counted": (
+        "bvec.py", "            es.count(UP_NONFINITE)\n", "            pass\n"),
+    "gen8: conv_radius's operands not scaled below the range": (
+        "gen8.py", "        _within(fmt, sh, vals, 2 if stratum == \"huge\" else 8)",
+        "        pass"),
     "radius: unless ignored": (
         "bvec.py", '        if c["unless"] is not None and x[c["unless"]] == 1:',
         "        if False:"),

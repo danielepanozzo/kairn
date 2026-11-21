@@ -554,7 +554,15 @@ set(_toy_ext_1_m_sum fp:11:-29:10)
 #                ball_add_2's): a in {0, 1/4, 5/4, 3/2},
 #                c in {0, 1/2, 5/4, 7/4}
 #   r n r r      acc_radius_k (a, m, g, t)                fp:3:-2:0       53 248
+#   r r r r n    conv_radius (ma, mb, rx, ry, m, g, t):   fp:3:-4:4       23 040 of 3.9 10^10
+#     r r        a few values each, ma up to Omega
 #
+# conv_radius: by the owner's ruling of 2026-11-21 its claim is of finite results, and a result
+# that is not finite is +inf or a NaN (architecture.md, "Claims of the non-finite layer"). In
+# fp:3:-4:4 its constants are 5/2 (up((1+u)^7)) and 15/16 (that of hm), and Omega is 112: ma = Omega
+# beside a nonzero mb overflows ma mb, which gives +inf, or a NaN where g or m is zero, and the
+# other values keep nine tenths of the results finite (the guards ask three quarters; at precision
+# 2, in fp:2:-2:2, where every constant is a number, hm = prod(m, 8) overflows from the count 2).
 # A kernel whose shape is another's, with another domain, has an entry _toy_kernel_KERNEL, read
 # first.
 set(_toy_r_r_r_sum fp:3:-5:3)
@@ -570,6 +578,7 @@ set(_toy_2_r_2_2_product fp:4:-3:-2 "a.in=0x0p+0/0x1p-1/0x1.8p+0,s.lead=-1:0,x.l
 # ask for one), beside the ties 2.75 and 3.25 (69 620 cases).
 set(_toy_kernel_acc_merge_2 fp:3:-2:0 "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0,c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2")
 set(_toy_r_n_r_r_sum fp:3:-2:0)
+set(_toy_kernel_conv_radius fp:3:-4:4 "ma.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1/0x1.cp+6,mb.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1,rx.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0,ry.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0,m.in=0x0p+0/0x1p+0/0x1p+1/0x1.8p+1,g.in=0x0p+0/0x1p-3/0x1p-1/0x1p+0,t.in=0x0p+0/0x1p-4/0x1p+0")
 
 # The interval kernels of Milestone 2, in the extended domain: i1 and i2 an interval of one limb
 # and of two, its two bounds together (interval()), which the oracle enumerates as one operand:
@@ -622,19 +631,15 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # "... two limbs and the enclosure interface"; oracle/README.md, "The kinds of the interval
 # kernels"), and since stage B every claim of the maps and their steps, the folds of maxima and
 # their kernels, and the convolutions (oracle/README.md, "Maps", "Folds of maxima",
-# "Convolutions"): none of those is on the lists. On the lists:
+# "Convolutions"), and since the ball vectors' stage the folds with "bv": true and "bv_conv": true
+# (their requests, the requirement ball_vector, the claims encloses_entries, makes_ball_vector and
+# encloses_coefficients with count_when), their kernels and those of the accumulator
+# (oracle/README.md, "Ball vectors and the accumulator"): none of those is on the lists. conv_radius
+# left them with the owner's ruling of 2026-11-21 (architecture.md, "Claims of the non-finite
+# layer"): its claim is of finite results, and a result that is not finite is +inf or a NaN, as its
+# listing's are (a NaN where ma*mb overflows and g or m is zero, 0 * inf; +inf from small operands
+# and a huge count). On the lists:
 #
-# - conv_radius, the radius kernel of the products of two BallVectors (architecture.md, "Ball
-#   vectors"). Since the ball vectors' stage the oracle reads and judges the folds with "bv": true
-#   and "bv_conv": true (their requests, the requirement ball_vector, the claims encloses_entries,
-#   makes_ball_vector and encloses_coefficients with count_when), their kernels and those of the
-#   accumulator (oracle/README.md, "Ball vectors and the accumulator"), and none of them is on the
-#   lists but conv_radius: its claim upper with a value of its own says that its output is at least that
-#   value or +inf, and the listing returns a NaN where the product ma*mb overflows and g or m is
-#   zero (0 * inf; conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x0p+0 0x0p+0 0x0p+0 ->
-#   nan, a stated value of 0), and +inf from operands and a stated value far below Omega: a
-#   finding, which its cross-checks fail; it stays here until the listing or the claim changes
-#   (the product of BallVectors never passes it such operands: m is 0 only where ma or mb is);
 # - the predicates and three-valued comparisons of the enclosure interface, of an interval and of a
 #   ball, of stage B2 (architecture.md, "Claims of the enclosure interface: predicates and
 #   comparisons"): the oracle reads neither the claims certain and trit nor the condition abs_le of
@@ -649,7 +654,6 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
 set(KAIRN_NOT_YET_CROSS_CHECKED
-  conv_radius
   interval_empty_1 interval_entire_1 interval_contains_1 interval_subset_1 interval_positive_1 interval_negative_1
   interval_zero_1 interval_less_1 interval_less_equal_1 interval_equal_1 interval_rel_equal_1 interval_rel_interior_1
   interval_rel_disjoint_1 interval_empty_2 interval_entire_2 interval_contains_2 interval_subset_2 interval_positive_2
@@ -680,7 +684,7 @@ set(KAIRN_NOT_PUBLIC_YET
   acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
   bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2 bv_center_entry_1 bv_center_2
   bv_make_radius bv_make_finish neg_1 bv_neg_radius bv_mul_pow2_step_1 bv_mul_pow2_step_2
-  bv_mul_pow2_radius bv_conv_finish)
+  bv_mul_pow2_radius conv_radius bv_conv_finish)
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than

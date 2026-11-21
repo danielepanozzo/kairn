@@ -1310,6 +1310,14 @@ refused otherwise (a CLAIMS ERROR naming the kernel, the entry and the field):
   of `error`, which an `exact_when` of masks alone may not do without) the output is the value
   exactly where every condition holds, and $+\infty$ there fails. `unless` and `exact_when` are
   refused beside `if` or `gaps`, and together.
+- **`conv_radius`**, whose claim is of finite results by the owner's ruling of 2026-11-21
+  (architecture.md, "Claims of the non-finite layer", "`upper` of a kernel of the finite domain
+  with several operations"; `bvec.FINITE_RESULTS`: the claims file writes its entry as the other
+  radius kernels', so the name comes from the ruling): a finite output is judged as above (at
+  least the stated value), and one that is not finite claims only that it is $+\infty$ or a NaN.
+  Either passes and is **counted** (`output not finite (+inf or a NaN): nothing more claimed`,
+  with `output +inf` or `output a NaN`), from any operands, never suspicious; $-\infty$ fails, and
+  so does a negative number (below the stated value, which is not negative).
 - **`at_most(NAME, K)`**, a requirement of the finite domain: the one-limb input is at most the
   positive integer K; a line beyond is **invalid**, `gen` draws no operand beyond (`gen.valid`,
   `gen8.valid8`) and the enumeration's domain stops at K.
@@ -1345,13 +1353,15 @@ and returns $+\infty$ with `ok` true from a small stated value.
 
 | Family | Kernels | Strata of its own |
 |---|---|---|
-| `radius` | every entry an `upper` with a value and no `if` | `huge` (the top binades: the radius overflows), `zeros` (most operands zero, the count zero), `mixed` (one operand $2^p$ to $2^{3p+4}$ above the others), `atnormal` ($r_x c$ exactly $N$, just below, just above, or zero; the mask both ways) |
+| `radius` | every entry an `upper` with a value and no `if` | `huge` (the top binades: the radius overflows), `zeros` (most operands zero, the count zero), `mixed` (one operand $2^p$ to $2^{3p+4}$ above the others), `atnormal` ($r_x c$ exactly $N$, just below, just above, or zero; the mask both ways); for `conv_radius`, whose results that are not finite are judged no further, every stratum but `overflow` and half of `huge` scales the operands down together until the stated value, with `g` at its bound 1 and the count at least 1, is at most $\Omega/8$ ($\Omega/2$ in `huge`): no product of the listing overflows there, and the finite results are some 80 to 85 % of a run (`gen8._within`) |
 | `acc` | a `rounded` entry with a value | `cancel` (the element within a few units of minus the running sum), `tie` and `exactprod` (short significands within two binades: ties and exact sums of magnitudes), `apart` ($a$ far above or below what is added), `atop` ($a$ in the top binades: the sum of magnitudes $+\infty$ beside a finite running sum, A4 of `accumulator.py`) |
 | `accradius` | a `count()` under masks, no `unit( )` | `integer` (integers from 1 to $2^p$, $g$ and $t$ of the size of the bound of $m$ terms), `limit` ($m u$ within a quarter of $\tfrac12$), `beyond` ($m u$ above $\tfrac12$), `abig` ($a$ in the top binades); every stratum keeps the stated value below $\Omega/8$ |
 | `bvfinish` | `finite_or_nan` with `nonneg` or `if_all` | `nonfinite`, `negative` ($-\eta$, $-\lambda$, $-\Omega$, random), `zeros` (either sign), `top` ($\Omega$, its predecessor), `masks` (a positive value, each mask both ways) |
 
 **Statistics** (the guards read them): for `upper` with a value `output finite, at least the stated
-value`, `output +inf`, `output the stated value exactly`, `M true: nothing claimed`, `exact_when
+value`, `output +inf`, `output the stated value exactly`, for `conv_radius` `output a NaN` and
+`output not finite (+inf or a NaN): nothing more claimed` (the guards ask that finite results be
+at least three quarters of those judged), `M true: nothing claimed`, `exact_when
 holds`, `exact_when fails: COND` (`M true` for a mask), `exact_when holds, the stated value beyond
 Omega: the equality not judged`, and the extremes of (output $-$ value)/value and of the excess
 in gaps; for `exact_flag` `exact_flag true` and `false`; for the finishes `every mask true`, `a
@@ -1363,7 +1373,8 @@ nothing claimed`.
 Readings chosen where the documents leave a choice, the stricter where they differ:
 
 - A NaN output of a radius kernel fails: "the output is at least the exact value of value,
-  whether it is finite or the rounding has overflowed to $+\infty$" names those two outputs.
+  whether it is finite or the rounding has overflowed to $+\infty$" names those two outputs. Not
+  of `conv_radius`, whose claim the ruling of 2026-11-21 makes one of finite results (above).
 - The equality of `exact_when` on an `upper` entry where the stated value is beyond $\Omega$: no
   number of the format is that value, and in the finite domain an exact result beyond $\Omega$ is
   outside the statement, as everywhere: counted, not judged ($+\infty$ passes the bound).
@@ -1377,18 +1388,23 @@ or a NaN, which the claims of `acc_radius_k`, of the finite domain, do not state
 operand is $+\infty$). The masks the steps of a scaling and-ed into the fold's `ex` are judged by
 `exact_flag`; how the fold uses them, by the fold's claims.
 
-**Findings** (lines the oracle fails, the claim kept as written): `conv_radius` returns a NaN
-where the product `prod(ma, mb)` overflows and `g` (or `m`) is zero, an FMA of $0 \cdot \infty$
-(`conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x0p+0 0x0p+0 0x0p+0 -> nan`, a
-stated value of 0, the interpreter and `refrun` alike), and $+\infty$ from operands and a stated
-value far below $\Omega$ when $g$ is small (suspicious); in 400 random cases of each of three
-formats, 72 such lines. The product of BallVectors never passes it such operands ($m = 0$ only
-where $M_a$ or $M_b$ is 0). It stays on the list of tests/CMakeLists.txt.
+**Findings, and the ruling on them**: `conv_radius` returns a NaN where the product `prod(ma, mb)`
+overflows and `g` (or `m`) is zero, an FMA of $0 \cdot \infty$ (`conv_radius binary64 0x1p+1000
+0x1p+1000 0x0p+0 0x0p+0 0x0p+0 0x0p+0 0x0p+0 -> nan`, a stated value of 0, the interpreter and
+`refrun` alike), and $+\infty$ from operands and a stated value far below $\Omega$ when $g$ is
+small (`conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x1p+0 0x0.0000000000001p-1022
+0x0p+0 -> inf`, a stated value of about $2^{926}$); in 400 random cases of each of three formats,
+72 such lines, which failed or were suspicious, and the kernel stayed on the list of
+tests/CMakeLists.txt. The owner's ruling of 2026-11-21 made its claim one of finite results (the
+product of BallVectors turns a radius that is not finite into the whole space): both lines pass
+now, counted, and `conv_radius` is cross-checked as the other radius kernels are.
 
 The reference runner's variants of these kernels (`refrun --list-variants`, `bvr-*`, `bvs-*`,
 `bvc-*`, `bvf-*`, `acc-*`) plant one fault each: the term of the largest magnitude left out, a
-NaN for an overflow, the radius of a scaling grown where exact or not grown where `ex` is false,
-`conv_radius` without its term in $g$, the mask of a step inverted or always true, a negation that
+NaN for an overflow (a fault of every radius kernel but `conv_radius`, whose NaN the ruling
+allows), the radius of a scaling grown where exact or not grown where `ex` is false,
+`conv_radius` without its term in $g$, `conv_radius` with $-\infty$ where its result is a NaN and
+$-\Omega$ where it is $+\infty$, the mask of a step inverted or always true, a negation that
 does not negate, a constructor's radius zero, `bv_center_2` without its second limb, a finish that
 ignores the sign or a mask, a sum of magnitudes signed or $\Omega$ at an overflow, the radius of an
 accumulator with `ok` always true or without $t$.
@@ -1988,10 +2004,10 @@ follows from both parts being canonical.
 | `merging_wave7` | the merge of summaries of stage B differs from the whole |
 | `summary_bounds` | a statistic of a map's step keeping anything but the line of its element of the step (or one that does not pass when judged again), a summary of a map above 1 MB, a distance of the profile kept that is not a record; on 3 000 random profiles with many equal ratios, merged in order from summaries read back, (a) for some $F$ (value or case) or the merged summary differing between the records and every distance |
 | `claims_reading_wave8` | the kernels of the fixture of the ball vectors and the accumulator (`claims-wave8.json`) unreadable or read otherwise (`unless`, `exact_when` with `mask`, `exact_flag`, `nonneg`, `if_all`, `at_most`, `rounded` with a value); 36 malformed kernels not set aside (gaps beside a value, an unknown name, `abs` of a sum, `unit( )` of a missing kernel, `unless` of a limb or an output, a radius kernel with an entry of another kind, the extended domain, `unless` beside `exact_when`, `exact_when` of masks alone, empty, over a limb, of a mask with another field, with a threshold 0, `unless` beside `if`; `at_most` of 0, of a name, twice, of no input; `exact_flag` of a limb or an input, without `exact_when`, on `rounded`; `nonneg` false, without `if`, with `steps`; `if_all` of one mask, twice the same, of a limb, beside `if` or `nonneg`; a value of `rounded` over a limb an input does not have, over an unknown name, malformed, beside `when`, not a string) |
-| `bv_kernels_reference` | the reference runner failing a kernel of the family, or an invalid or suspicious case, on random cases of `binary64`, `binary32` and `fp:5:-12:6`, but `conv_radius`'s finding (every failure a NaN); a class the guards ask for never met |
-| `bv_kernels_planted` | a planted fault of these kernels (`bvr-*`, `bvs-*`, `bvc-*`, `bvf-*`, `acc-*`) not caught in its entry, caught in another, or in a kernel it does not touch |
-| `bv_kernels_exhaustive` | the reference runner failing any operand of tiny formats (13 kernels; 20 without `--quick`), the coverage not complete; the domain of `at_most(g, 1)` other than every number from 0 to 1; three planted faults not caught there |
-| `bv_kernels_judge` | one of 78 hand-written lines judged otherwise than worked out by hand (a stated value met and missed by one unit, $+\infty$ passing and suspicious, a NaN, $-\infty$, `at_most` both ways, the exactness of the radius of a scaling and its `unless`, beyond $\Omega$, the mask of a step both ways, each cell of the finishes, the copies, a sum of magnitudes at a tie and at an overflow beside a finite running sum and the reverse, the radius of an accumulator under its mask, `conv_radius`'s finding) |
+| `bv_kernels_reference` | the reference runner failing a kernel of the family, or an invalid or suspicious case, on random cases of `binary64`, `binary32` and `fp:5:-12:6`, `conv_radius` included (its results that are not finite counted, by the ruling of 2026-11-21); a class the guards ask for never met; `conv_radius`'s finite results less than three quarters of a run |
+| `bv_kernels_planted` | a planted fault of these kernels (`bvr-*`, `bvs-*`, `bvc-*`, `bvf-*`, `acc-*`) not caught in its entry, caught in another, or in a kernel it does not touch; a variant of `refbv.VARIANTS` without a test |
+| `bv_kernels_exhaustive` | the reference runner failing any operand of tiny formats (13 kernels; 21 enumerations without `--quick`, `conv_radius` in `fp:2:-1:0`, where every result is $+\infty$ or a NaN, and in the full tier's restricted domain of `fp:3:-4:4`), the coverage not complete; the domain of `at_most(g, 1)` other than every number from 0 to 1; three planted faults not caught there |
+| `bv_kernels_judge` | one of 88 hand-written lines judged otherwise than worked out by hand (a stated value met and missed by one unit, $+\infty$ passing and suspicious, a NaN, $-\infty$, `at_most` both ways, the exactness of the radius of a scaling and its `unless`, beyond $\Omega$, the mask of a step both ways, each cell of the finishes, the copies, a sum of magnitudes at a tie and at an overflow beside a finite running sum and the reverse, the radius of an accumulator under its mask, `conv_radius`'s results that are not finite: $+\infty$ and a NaN passing from any operands, $-\infty$ and a negative number failing) |
 | `gen_wave8` | a kernel of the family given another family, case $i$ alone not case $i$ of its run, a seed that does not matter, an invalid case, a stratum of the header without a case |
 | `gen_wave8_strata` | a stratum of `gen8.py` off its corner (an output $+\infty$ from `huge`, every operand zero from `zeros`, $r_x c = N$ from `atnormal`, operands $2^p$ apart from `mixed`; a sum of magnitudes $+\infty$ beside a finite running sum from `atop`, a cancellation, three quarters ties and exact sums from `tie` and `exactprod`, $a$ apart; the mask both ways at `limit`, false `beyond`, nine tenths integers up to $2^p$ from `integer`, $a$ in the top binades; each class of value of the finishes) |
 | `merging_wave8` | the merge of the summaries of two halves of streams of the family's kernels differs from the whole |

@@ -17,6 +17,7 @@ import os
 from fractions import Fraction
 
 INF = math.inf
+NINF = -math.inf
 NAN = math.nan
 
 VARIANTS = {
@@ -28,6 +29,8 @@ VARIANTS = {
     "bvr-pow2-unless": "bv_mul_pow2_radius keeps the product rx c without its two steps when ex "
                        "is false",
     "bvr-conv-no-g": "conv_radius leaves out the term g m (1+u)^2 ma mb",
+    "bvr-conv-nonfinite-negative": "conv_radius returns -inf where its result is a NaN and the "
+                                   "negative -Omega where it is +inf",
     "bvs-flag-inverted": "the steps of the scalings return the mask e inverted",
     "bvs-flag-true": "the steps of the scalings return the mask e true whatever the operands",
     "bvc-negate-not": "neg_1 returns its operand unchanged",
@@ -186,6 +189,9 @@ class BvKernels:
         s = A.fma(m, e, t)
         hm = A.prod(m, self._up(4 * (1 + u) ** 8 * eta + eta / (2 * u)))
         rz = A.fma(s, self._up((1 + u) ** 7), hm)
+        if self.v == "bvr-conv-nonfinite-negative" and type(rz) is float:
+            # A result that is not finite may be +inf or a NaN only (the ruling of 2026-11-21).
+            rz = NINF if rz != rz else -A.omega
         return (self._bvr_out(rz),)
 
     # -- the steps of the scalings by a power of two ----------------------------------------------

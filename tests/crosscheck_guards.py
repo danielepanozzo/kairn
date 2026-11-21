@@ -386,6 +386,12 @@ BV_STRATA = {"radius": ("huge", "zeros", "mixed", "atnormal"),
 BV_UP_FINITE = "output finite, at least the stated value"
 BV_UP_INF = "output +inf"
 BV_UP_UNLESS = "%s true: nothing claimed"
+# A radius kernel whose claim is of finite results (conv_radius, by the owner's ruling of
+# 2026-11-21: architecture.md, "Claims of the non-finite layer"): a result that is not finite is
+# +inf or a NaN, counted so and judged no further. Such results must stay a small part of a run:
+# the finite ones, where the claim is checked, at least BV_FINITE_SHARE of those judged.
+BV_UP_NONFINITE = "output not finite (+inf or a NaN): nothing more claimed"
+BV_FINITE_SHARE = (3, 4)
 BV_FLAG = ("exact_flag true", "exact_flag false")
 BV_FIN_VALUES = ("value finite, above zero", "value zero", "value: NaN", "value: +inf",
                  "value: -inf")
@@ -469,6 +475,14 @@ def bv_problems(kernel, entries, merged, a):
             if not counts.get(name):
                 yield ('the claim "%s" saw no case of "%s", so its statement was not checked '
                        'there' % (label, name))
+        nonfinite = counts.get(BV_UP_NONFINITE, 0)
+        if nonfinite:
+            finite = counts.get(BV_UP_FINITE, 0)
+            num, den = BV_FINITE_SHARE
+            if den * finite < num * (finite + nonfinite):
+                yield ('the claim "%s" is of finite results, and only %d of the %d results judged '
+                       'were finite (at least %d/%d must be): the run checked its statement on '
+                       'too few' % (label, finite, finite + nonfinite, num, den))
 
 
 def not_nan_operands(kernel, two):

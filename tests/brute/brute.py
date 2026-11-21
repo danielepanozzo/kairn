@@ -186,7 +186,30 @@ SHAPES = {
 _R_ACC_A = "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0"
 _R_ACC_C = "c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2"
 _R_ACC_MUL = "a.in=0x0p+0/0x1p-1/0x1.8p+0"
+# conv_radius (seven operands; by the owner's ruling of 2026-11-21 its claim is of finite results,
+# and a result that is not finite is +inf or a NaN, judged no further): a few values of each
+# operand, ma up to Omega so that ma mb overflows (+inf, and a NaN where g or m is zero), the
+# finite results nine tenths of each enumeration (the guards ask three quarters).
+_R_CONV = ["ma.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1/0x1.cp+6",
+           "mb.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1",
+           "rx.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0", "ry.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0",
+           "m.in=0x0p+0/0x1p+0/0x1p+1/0x1.8p+1", "g.in=0x0p+0/0x1p-3/0x1p-1/0x1p+0",
+           "t.in=0x0p+0/0x1p-4/0x1p+0"]
+_R_CONV_WIDE = ["ma.in=0x0p+0/0x1p-5/0x1p-2/0x1p-1/0x1p+0/0x1.8p+1/0x1.8p+2/0x1.cp+7",
+                "mb.in=0x0p+0/0x1p-5/0x1p-2/0x1p+0/0x1.8p+1/0x1.8p+2",
+                "rx.in=0x0p+0/0x1p-5/0x1p-3/0x1p-1/0x1p+0",
+                "ry.in=0x0p+0/0x1p-5/0x1p-3/0x1p-1/0x1p+0",
+                "m.in=0x0p+0/0x1p+0/0x1p+1/0x1.8p+1/0x1.4p+2",
+                "g.in=0x0p+0/0x1p-5/0x1p-3/0x1p-1/0x1p+0", "t.in=0x0p+0/0x1p-5/0x1p-1/0x1p+1"]
 KERNEL_FORMATS = {
+    # The quick tier's restricted domain (tests/CMakeLists.txt, _toy_kernel_conv_radius), the
+    # same one bit more precise, and more values of each operand with two exponents more: 23 040,
+    # 23 040 and 120 000 cases.
+    "conv_radius": ("fp:3:-4:4", [
+        ("fp:3:-4:4", _R_CONV),
+        ("fp:4:-4:4", _R_CONV),
+        ("fp:3:-5:5", _R_CONV_WIDE),
+    ]),
     # The product step of an accumulator of two limbs: three operands of two limbs, the quick
     # tier's restriction (tests/CMakeLists.txt, _toy_2_r_2_2_product), then the running sum's
     # leading limb free, then a format of two exponents complete: 0.1 to 0.3 million cases.

@@ -126,6 +126,10 @@ class Shape8:
             self.roles[n] = role
         self.strata = FAMILY_STRATA[self.family]
         self.schedule = FAMILY_SCHEDULE[self.family]
+        # A radius kernel whose claim is of finite results (bvec.FINITE_RESULTS, conv_radius):
+        # its entry's value, the stated value, scaled below Omega/8 (see _within).
+        self.finite_results = self.family == "radius" and any(
+            getattr(e, "finite_results", False) for e in kernel.ensures)
         if self.family == "acc":
             # s, a, then what is added: x (and y), or v and c (a merge).
             self.s = self.names[0]
@@ -257,7 +261,49 @@ def _radius(fmt, sh, rng, stratum):
                 r = base
             vals[c] = [cv]
             vals[rx] = [max(0, r)]
+    if sh.finite_results and stratum != "overflow" and (stratum != "huge" or rng.bits(1)):
+        _within(fmt, sh, vals, 2 if stratum == "huge" else 8)
     return vals
+
+
+def _within(fmt, sh, vals, k):
+    """A radius kernel whose claim is of finite results (conv_radius, bvec.FINITE_RESULTS) claims
+    nothing of a result that is not finite but that it is +inf or a NaN: a run of such results
+    judges little, and the cross-checks' guards ask that finite results be the great majority.
+    In every stratum but overflow (and half of huge, which keeps its overflows) the operands of
+    the roles radius and limb are scaled down together until the stated value, with each input
+    under at_most( ) at its bound and a count at least 1, is at most Omega/k: every product the
+    value names is then below the range (Omega/8; Omega/2 in huge, near the top)."""
+    tree = sh.kernel.ensures[0].cvalue
+    if CX.calls(tree):
+        return
+    one = _one(fmt)
+    eta = format_eta(fmt)
+    lim = Fraction(fmt.omega) * eta / k
+    ops = [n for n in sh.names if sh.roles[n] in ("radius", "limb")]
+
+    def stated():
+        names = {}
+        for n in sh.names:
+            v = vals[n][0]
+            if sh.roles[n] == "atmost":
+                v = sh.at_most[n] * one
+            elif sh.roles[n] == "count":
+                v = max(v, one)
+            names[n] = abs(v) * eta
+        env = {"u": Fraction(1, 1 << fmt.p), "eta": eta, "names": names}
+        return CX.evaluate(tree, env)
+
+    for _ in range(4 * (fmt.emax - fmt.qmin + 2)):
+        v = stated()
+        if v <= lim:
+            break
+        d = max(1, (int(v / lim)).bit_length() // 2)
+        for n in ops:
+            vals[n] = [vals[n][0] >> d if vals[n][0] >= 0 else -((-vals[n][0]) >> d)]
+    for n in ops:
+        while vals[n][0] and not F.is_member(fmt, vals[n][0]):
+            vals[n] = [F.rdir(fmt, vals[n][0], fmt.qmin, vals[n][0] < 0)]
 
 
 def format_eta(fmt):

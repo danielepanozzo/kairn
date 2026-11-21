@@ -20,6 +20,7 @@ from . import check as C
 from . import fmt as F
 from . import gen as G
 from . import gen8 as G8
+from . import refbv
 from . import refrun
 from .claims import Claims
 from .selftest import test, expect, judge, totals, ORACLE_DIR
@@ -195,6 +196,10 @@ NEEDS8 = {
     "bv_conv_finish": [("finite_or_nan", ("every mask true", "a mask false: okc",
                                           "a mask false: okg", "value: NaN", "value: +inf",
                                           "value finite, above zero"))],
+    # The ruling of 2026-11-21: a result that is not finite, +inf or a NaN, is counted.
+    "conv_radius": [("upper", ("output +inf", "output finite, at least the stated value",
+                               "output a NaN",
+                               "output not finite (+inf or a NaN): nothing more claimed"))],
 }
 for _k in ACC:
     NEEDS8[_k] = [("rounded", ("inexact", "the leading limb of its output is not finite: nothing "
@@ -218,32 +223,31 @@ def _kernel_runs(ctx, names, variant="correct", formats=("binary64", "binary32",
 @test
 def bv_kernels_reference(ctx):
     """The kernels of the ball vectors and of the accumulator through the reference runner on
-    random cases of three formats: nothing fails, nothing is invalid or suspicious, but the
-    finding of conv_radius (a NaN where ma mb overflows and g or m is zero: 0 times infinity,
-    against its claim); every class the guards ask for is met."""
+    random cases of three formats: nothing fails, nothing is invalid or suspicious (conv_radius
+    included: by the owner's ruling of 2026-11-21 its claim is of finite results, and its NaN
+    where ma mb overflows and g or m is zero, 0 times infinity, and its +inf from small operands
+    are counted, not failed); every class the guards ask for is met, and conv_radius's finite
+    results are the great majority (at least three quarters, as the guards ask)."""
     found = 0
     for name, fmtname, s in _kernel_runs(ctx, KERNELS8):
         t = totals(s)
         bad = failed8(s, name)
-        if name == "conv_radius":
-            # The finding: every failure a NaN output (oracle/README.md, "Ball vectors and the
-            # accumulator", findings).
-            # Every failure a NaN output, every suspicious line +inf from operands and a stated
-            # value below Omega/4: the product ma mb overflows inside.
-            reasons = [r for st in s.keys.values() for r in st.reasons]
-            expect(all("is a NaN" in r for r in reasons), "conv_radius %s: %s" % (fmtname,
-                                                                                   reasons[:3]))
-            found += t["failed"] + t["suspicious"]
-        else:
-            expect(t["failed"] == 0 and t["suspicious"] == 0, "%s %s: %s %s" % (name, fmtname, t,
-                                                                                bad))
+        expect(t["failed"] == 0 and t["suspicious"] == 0, "%s %s: %s %s" % (name, fmtname, t,
+                                                                            bad))
         expect(t["invalid"] == 0, "%s %s: %s" % (name, fmtname, t))
         for kind, names in NEEDS8.get(name, ()):
             c = counts8(s, name, kind)
             for x in names:
                 expect(c.get(x), "%s %s: no case %r of %s (%s)" % (name, fmtname, x, kind,
                                                                     sorted(c)))
-    return "%d kernels in 3 formats; conv_radius's finding on %d lines" % (len(KERNELS8), found)
+        if name == "conv_radius":
+            c = counts8(s, name, "upper")
+            nf = c.get("output not finite (+inf or a NaN): nothing more claimed", 0)
+            fin = c.get("output finite, at least the stated value", 0)
+            expect(4 * fin >= 3 * (fin + nf), "conv_radius %s: %d finite results of %d" % (
+                fmtname, fin, fin + nf))
+            found += nf
+    return "%d kernels in 3 formats; conv_radius not finite on %d lines" % (len(KERNELS8), found)
 
 
 # The planted faults of the kernels (refbv.VARIANTS): the kernels they touch and the kinds of the
@@ -251,10 +255,13 @@ def bv_kernels_reference(ctx):
 PLANTED8 = {
     "bvr-drop-m": (("bv_add_radius_1", "bv_add_radius_2", "bv_scale_radius_1", "bv_scale_radius_2",
                     "conv_radius"), {"upper"}),
-    "bvr-nan-overflow": (RADII, {"upper"}),
+    # A NaN for +inf is no fault of conv_radius, whose claim is of finite results (the ruling of
+    # 2026-11-21): it touches the other radius kernels only.
+    "bvr-nan-overflow": (tuple(k for k in RADII if k != "conv_radius"), {"upper"}),
     "bvr-pow2-grow-exact": (("bv_mul_pow2_radius",), {"upper"}),
     "bvr-pow2-unless": (("bv_mul_pow2_radius",), {"upper"}),
     "bvr-conv-no-g": (("conv_radius",), {"upper"}),
+    "bvr-conv-nonfinite-negative": (("conv_radius",), {"upper"}),
     "bvs-flag-inverted": (STEPS8, {"error"}),
     "bvs-flag-true": (STEPS8, {"error"}),
     "bvc-negate-not": (("neg_1",), {"rounded"}),
@@ -275,13 +282,16 @@ ALSO8 = {"bvc-center2-tail": {"normalized"}, "acc-radius-ok-true": {"upper"}}
 @test
 def bv_kernels_planted(ctx):
     """Each planted fault of the kernels fails, in binary64, in the entries where it belongs (a
-    radius without its largest term or a NaN for an overflow: upper; the exactness of the radius
+    radius without its largest term or a NaN for an overflow, conv_radius's -inf or negative
+    result where it is not finite: upper; the exactness of the radius
     of a scaling grown or its two steps dropped: upper; the mask e of a step inverted or always
     true: error, its exact_flag; a copy, a negation or a constructor wrong: rounded, error and
     represents; the sign or a mask of a finish ignored: finite_or_nan; the sum of magnitudes
     signed or finite at an overflow: rounded; the radius of an accumulator with ok always true or
     without t: holds, upper) and in no kernel it does not touch."""
     notes = []
+    expect(set(PLANTED8) == set(refbv.VARIANTS), "planted faults without a test: %s"
+           % sorted(set(refbv.VARIANTS) ^ set(PLANTED8)))
     names = KERNELS8 if not ctx.quick else (
         "bv_add_radius_2", "bv_scale_radius_1", "bv_mul_pow2_radius", "conv_radius",
         "bv_mul_pow2_step_2", "neg_1", "bv_make_radius", "bv_center_2", "bv_make_finish",
@@ -289,9 +299,6 @@ def bv_kernels_planted(ctx):
     for variant, (objs, kinds) in PLANTED8.items():
         for name, _f, s in _kernel_runs(ctx, names, variant, ("binary64",), ctx.n(600, 300)):
             fk = {d[0] for d in entry_stats(s, name).values() if d[2]}
-            if name == "conv_radius" and variant not in ("bvr-drop-m", "bvr-conv-no-g",
-                                                         "bvr-nan-overflow"):
-                fk.discard("upper")         # the finding, on the correct listing too
             if name in objs:
                 expect(kinds <= fk <= kinds | ALSO8.get(variant, set()),
                        "%s on %s fails %s, not %s" % (variant, name, sorted(fk) or "nothing",
@@ -302,7 +309,16 @@ def bv_kernels_planted(ctx):
     return ", ".join(notes)
 
 
-# Every operand of tiny formats (a restriction where the domain is large).
+# Every operand of tiny formats (a restriction where the domain is large).  conv_radius's restricted
+# domain is that of the full tier (tests/CMakeLists.txt, _toy_kernel_conv_radius): a few values of
+# each operand, ma up to Omega (ma mb overflows: +inf, and a NaN where g or m is zero), the others
+# small; 23 040 cases, nine tenths of them finite.
+CONV_RADIUS_RESTRICT = (
+    "ma.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1/0x1.cp+6",
+    "mb.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+1",
+    "rx.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0", "ry.in=0x0p+0/0x1p-4/0x1p-2/0x1p+0",
+    "m.in=0x0p+0/0x1p+0/0x1p+1/0x1.8p+1", "g.in=0x0p+0/0x1p-3/0x1p-1/0x1p+0",
+    "t.in=0x0p+0/0x1p-4/0x1p+0")
 ENUM8 = [("bv_add_radius_1", "fp:2:-2:1", ()), ("bv_scale_radius_1", "fp:2:-2:1", ()),
          ("bv_mul_pow2_radius", "fp:3:-3:1", ()), ("bv_mul_pow2_step_1", "fp:3:-4:2", ()),
          ("bv_mul_pow2_step_2", "fp:3:-4:2", ()), ("bv_make_finish", "fp:3:-4:2", ()),
@@ -313,13 +329,15 @@ ENUM8 = [("bv_add_radius_1", "fp:2:-2:1", ()), ("bv_scale_radius_1", "fp:2:-2:1"
 ENUM8_FULL = [("bv_add_radius_1", "fp:3:-3:1", ()), ("bv_add_radius_2", "fp:3:-3:1", ()),
               ("bv_scale_radius_2", "fp:2:-2:1", ()), ("acc_add_2", "fp:2:-2:1", ()),
               ("acc_mul_1", "fp:2:-2:1", ()), ("acc_mul_2", "fp:2:-1:0", ()),
-              ("conv_radius", "fp:2:-1:0", ()), ("acc_radius_1", "fp:3:-2:0", ())]
+              ("conv_radius", "fp:2:-1:0", ()), ("acc_radius_1", "fp:3:-2:0", ()),
+              ("conv_radius", "fp:3:-4:4", CONV_RADIUS_RESTRICT)]
 
 
 @test
 def bv_kernels_exhaustive(ctx):
-    """Every operand of tiny formats through the reference runner: nothing fails (but the finding
-    of conv_radius) and the coverage is complete; the at_most() domain is the numbers up to its
+    """Every operand of tiny formats through the reference runner: nothing fails (conv_radius
+    included, whose results in fp:2:-1:0 are all +inf or a NaN: its constant up((1+u)^7) is above
+    Omega there) and the coverage is complete; the at_most() domain is the numbers up to its
     bound; a planted fault is caught there too."""
     cl = claims8(ctx)
     cases = ENUM8 + (ENUM8_FULL if not ctx.quick else [])
@@ -329,9 +347,8 @@ def bv_kernels_exhaustive(ctx):
         s = judge(run8(list(g.lines(0, g.total))), cl)
         t = totals(s)
         n += g.total
-        if name != "conv_radius":
-            expect(t["failed"] == 0 and t["suspicious"] == 0, "%s %s: %s %s" % (
-                name, fmtname, t, failed8(s, name)))
+        expect(t["failed"] == 0 and t["suspicious"] == 0, "%s %s: %s %s" % (
+            name, fmtname, t, failed8(s, name)))
         expect(t["invalid"] == 0, "%s %s: %s" % (name, fmtname, t))
         cov = s.coverage.describe()
         expect(cov and ("COMPLETE" in cov[0] or restrict), "coverage: %s" % cov)
@@ -369,15 +386,38 @@ JUDGE8 = [
     # bv_scale_radius_1: abs(a) rx + m u + tiny(mul_1_1)/(1-u/(1+u)); a negative.
     ("bv_scale_radius_1 binary64 0x0p+0 0x1p+0 -0x1p+1 -> 0x1p+1", "fail", "upper", "below"),
     ("bv_scale_radius_1 binary64 0x0p+0 0x1p+0 -0x1p+1 -> 0x1.0000000000001p+1", "pass", None),
-    # conv_radius: at_most(g, 1); its finding, a NaN from 0 times infinity (the value is 0).
+    # conv_radius: at_most(g, 1).  Its claim is of finite results (the owner's ruling of
+    # 2026-11-21): a result that is not finite passes when it is +inf or a NaN, from any operands
+    # (never suspicious), and fails when it is -inf or negative.  The interpreter's lines: a NaN
+    # from 0 times infinity (ma mb overflows, g or m zero; the value is 0), +inf where ma mb
+    # overflows and g is the smallest number (the value about 2^926), and the value 4 + 4u of
+    # operands 1 (0x1.0000000000004p+2).
     ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+1 0x0p+0 -> 0x1p+4", "invalid",
      None),
     ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x0p+0 -> 0x1.8p+2", "pass",
      None),
     ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x0p+0 -> 0x1p+2", "fail",
      "upper", "below"),
-    ("conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x0p+0 0x0p+0 0x0p+0 -> nan", "fail",
-     "upper", "is a NaN"),
+    ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x0p+0 -> "
+     "0x1.0000000000004p+2", "pass", None),
+    ("conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x0p+0 0x0p+0 0x0p+0 -> nan", "pass",
+     None),
+    ("conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x1p+0 0x0p+0 0x0p+0 -> nan", "pass",
+     None),
+    ("conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x1p+0 0x0.0000000000001p-1022 "
+     "0x0p+0 -> inf", "pass", None),
+    ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x0p+0 -> inf", "pass", None),
+    ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x0p+0 -> nan", "pass", None),
+    ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 %s 0x1p+0 0x0p+0 -> inf" % OM8, "pass",
+     None),
+    ("conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x0p+0 0x0p+0 0x0p+0 -> -inf",
+     "fail", "upper", "+inf or a NaN"),
+    ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x0p+0 -> -inf", "fail",
+     "upper", "+inf or a NaN"),
+    ("conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x0p+0 0x0p+0 0x0p+0 -> -0x1p+0",
+     "fail", "upper", "below"),
+    ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x0p+0 -> -%s" % OM8, "fail",
+     "upper", "below"),
     ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 -0x0p+0 0x1p+0 0x0p+0 -> 0x0p+0", "pass",
      None),
     ("conv_radius binary64 0x1p+0 0x1p+0 0x1p+0 0x1p+0 0x1p-1 0x1p+0 0x0p+0 -> 0x1p+0", "invalid",
@@ -472,7 +512,8 @@ def bv_kernels_judge(ctx):
     unless, beyond Omega; the mask of a step both ways; each cell of the finishes (the masks, a
     negative value, either zero, the infinities, a NaN); the copies; the sum of magnitudes at a tie
     and at an overflow beside a finite running sum, and the reverse; the radius of an accumulator
-    under its mask."""
+    under its mask; conv_radius's results that are not finite (+inf and a NaN passing from any
+    operands, -inf and a negative number failing: the ruling of 2026-11-21)."""
     cl = claims8(ctx)
     n = 0
     for case in JUDGE8:

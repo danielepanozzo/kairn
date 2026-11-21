@@ -1375,7 +1375,10 @@ domain:        extended
   the listing of the page): $r_z \ge m\bigl((1+u)M_a r_y + (1+u)M_b r_x + r_x r_y\bigr) + g\,m\,(1+u)^2 M_a
   M_b + t$, claimed as `upper rz value=...`, with the requirements that every input is nonnegative,
   `count m`, and the new requirement **`at_most(g, 1)`** (below), from precision 2 (below it the
-  constant of `hm` is above the largest number of formats of few exponents).
+  constant of `hm` is above the largest number of formats of few exponents). The claim is of finite
+  results (the owner's ruling of 2026-11-21, [Claims of the non-finite
+  layer](#claims-of-the-non-finite-layer)): a radius that is not finite is $+\infty$ or a NaN, never
+  a negative number or $-\infty$, and the finish below turns it into the whole space.
 - **The finish** `bv_conv_finish(rz, finite, okg)` is `norm_finish_1` under the `and` of the
   convolution's mask and the bound's: the radius, with the flag true, when every coefficient is finite,
   the bound is given and the radius is finite; it claims `finite_or_nan r flag=flag if_all=finite,okg`
@@ -1964,7 +1967,7 @@ field has the domain `finite`, as before.
 | `normalized`, `error` | as before | apply when every operand and the output are finite; the output is canonical in every case |
 | `predicate` | as before | the relation between the two values as extended real numbers; false when an operand is a NaN |
 | `rounded` | as before | for a finite operand, the rounding of `value` in the sense of the format with overflow: a result beyond $\Omega$ in the direction of rounding is the infinity; for an infinite or NaN operand, `value` of it (the operand itself, or its absolute value for `abs_upper_2`) |
-| `upper` | as before | the output is a NaN exactly when an operand is a NaN or the operation is $0 \cdot \infty$; otherwise it is not below `value`, and `gaps` applies when it is finite |
+| `upper` | as before | (the building blocks of one operation of this domain, `radd`, `rmul` and `radd_entry`) the output is a NaN exactly when an operand is a NaN or the operation is $0 \cdot \infty$; otherwise it is not below `value`, and `gaps` applies when it is finite |
 
 A condition of `finite_when` is `{"abs_le": EXPR, "exp": E}`: $\lvert \mathrm{EXPR}\rvert \le
 2^{q_{\max} + p + E}$, with `EXPR` an expression over the input names as in `value` and $E$ an
@@ -1977,6 +1980,20 @@ the radii, and the expression is the largest magnitude of a member of the exact 
 list is empty when no condition is claimed, and an empty list claims nothing about when the
 result is finite: it does not say that it always is. Every full kernel and every full Ball
 kernel has a condition; `ball_neg_k` has none.
+
+**`upper` of a kernel of the finite domain with several operations.** The row of `upper` above is
+about the building blocks of one operation of the extended domain. A kernel of the finite domain
+with several operations, such as `conv_radius`, the radius of a product of two BallVectors, claims
+`upper` as a statement of the real-number model: by the owner's ruling of 2026-11-21 its claim is
+of finite results, and a result that is not finite claims only that it is $+\infty$ or a NaN,
+never a negative number, never $-\infty$. That is what is proved of `conv_radius` in the model with
+infinities and NaN, a hand lemma (`conv_radius_ieee`, `proofs/theories/IeeeBvConv.v`): on
+nonnegative operands the result is nonnegative, $+\infty$ or a NaN, and when it is finite the
+operands are finite and it is the real model's value. Its listing returns a NaN where `prod(ma, mb)`
+overflows and `g` or `m` is zero (an infinity times zero inside), and $+\infty$ where it overflows
+and `g` is small, from a stated value far below the largest number. The loop that calls it, `bv_conv_k`, turns any radius that is not finite into the
+whole space, and its own statement covers those cases. The radius kernels of the other ball vectors
+are read as [their entries are](#claims-of-milestone-2): at least `value`, finite or $+\infty$.
 
 The `core` of `extends` has the inputs of the full kernel, by name, and outputs of the same shape
 under other names; they correspond by position. Its requirements are the full kernel's with
@@ -2722,7 +2739,10 @@ with `mul_2_1` and the factor $(1+u)$ on `m`), with the requirements `nonneg(m)`
 Two things in those entries are new forms, which a reader of the claims must learn. The entry has a
 `value` and **no `if`**: no mask is named, and the claim holds unconditionally (under the
 requirements): the output is at least the exact value of `value`, whether it is finite or the
-rounding has overflowed to $+\infty$. Nothing is said of how far above. And `value` may hold
+rounding has overflowed to $+\infty$. Nothing is said of how far above. (Not of `conv_radius`,
+whose claim is of finite results, by the owner's ruling of 2026-11-21: a result of it that is not
+finite is $+\infty$ or a NaN, [Claims of the non-finite layer](#claims-of-the-non-finite-layer).)
+And `value` may hold
 `abs(X)` of an input `X`, its exact magnitude.
 
 **The kernels of the scaling of a BallVector by a power of two** (`bv_mul_pow2_k`) add three fields, each

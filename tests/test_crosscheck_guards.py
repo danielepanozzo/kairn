@@ -1202,7 +1202,8 @@ class BallVectorKernelGuards(unittest.TestCase):
         for kernel, fmt in (("bv_mul_pow2_radius", "fp:4:-4:2"), ("bv_add_radius_2", "fp:3:-5:3"),
                             ("bv_mul_pow2_step_1", "fp:7:-14:6"), ("bv_conv_finish", "fp:10:-27:9"),
                             ("bv_make_finish", "fp:11:-29:10"), ("acc_add_2", "fp:3:-2:0"),
-                            ("acc_radius_1", "fp:3:-2:0"), ("neg_1", "fp:11:-30:10")):
+                            ("acc_radius_1", "fp:3:-2:0"), ("neg_1", "fp:11:-30:10"),
+                            ("conv_radius", "fp:3:-4:4")):
             cls.runs[kernel] = (pipeline(kernel, fmt, *BV_ARGS), fmt)
 
     def passes(self, summary, kernel, fmt, *args):
@@ -1244,6 +1245,45 @@ class BallVectorKernelGuards(unittest.TestCase):
                             (1, "output finite, at least the stated value")):
             s, fmt = self.without("bv_mul_pow2_radius", entry, name)
             self.fails(s, "bv_mul_pow2_radius", fmt, *BV_ARGS, reason='saw no case of "%s"' % name)
+
+    # conv_radius's claim is of finite results (the ruling of 2026-11-21): +inf and a NaN pass and
+    # are counted, and the finite results must be at least three quarters of those judged.
+    def test_conv_radius_finite_results_the_great_majority(self):
+        import crosscheck_guards as CG
+        s, fmt = self.runs["conv_radius"]
+        counts = {}
+        for k in s["keys"]:
+            for name, n in k["stats"]["entries"][0]["counts"].items():
+                counts[name] = counts.get(name, 0) + n
+        nonfinite = counts.get(CG.BV_UP_NONFINITE, 0)
+        finite = counts.get(CG.BV_UP_FINITE, 0)
+        self.assertGreater(nonfinite, 0, counts)
+        self.assertGreater(counts.get("output a NaN", 0), 0, counts)
+        self.assertGreaterEqual(4 * finite, 3 * (finite + nonfinite), counts)
+        self.passes(s, "conv_radius", fmt, *BV_ARGS)
+        # The same run with most of its finite results taken away, then with one too few.
+        for keep in (finite // 4, 3 * nonfinite - 1):
+            bad = copy.deepcopy(s)
+            left = keep
+            for k in bad["keys"]:
+                c = k["stats"]["entries"][0]["counts"]
+                if CG.BV_UP_FINITE in c:
+                    c[CG.BV_UP_FINITE] = min(c[CG.BV_UP_FINITE], left)
+                    left -= c[CG.BV_UP_FINITE]
+                    if not c[CG.BV_UP_FINITE]:
+                        del c[CG.BV_UP_FINITE]
+            self.fails(bad, "conv_radius", fmt, *BV_ARGS, reason="is of finite results")
+        # At exactly three quarters it passes.
+        ok = copy.deepcopy(s)
+        left = 3 * nonfinite
+        for k in ok["keys"]:
+            c = k["stats"]["entries"][0]["counts"]
+            if CG.BV_UP_FINITE in c:
+                c[CG.BV_UP_FINITE] = min(c[CG.BV_UP_FINITE], left)
+                left -= c[CG.BV_UP_FINITE]
+                if not c[CG.BV_UP_FINITE]:
+                    del c[CG.BV_UP_FINITE]
+        self.passes(ok, "conv_radius", fmt, *BV_ARGS)
 
     def test_radius_without_a_stratum(self):
         for stratum in ("atnormal", "huge", "zeros", "mixed"):
