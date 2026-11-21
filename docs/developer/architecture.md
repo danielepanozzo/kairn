@@ -1415,14 +1415,47 @@ The line protocol is a convolution's with the two radii between the lengths and 
 `bv_conv_K FORMAT seq N_X N_Y RX RY LIMB...`, completed with the $N_Z$ coefficients (limb array after
 limb array), the radius and the flag ([The line protocol](#the-line-protocol)).
 
-**Not yet generated: a proposal.** One kernel of the page does not fit the ball vectors of the
-generator; it is proposed in `experiments/milestone2/kernels/` and checked there: `bv_axpy_k`
-(`bv_axpy_2.fold`, `bv_axpy_step_k`, `bv_axpy_radius_k`; `bv_proposals.py`): the page's radius
-$\mathrm{bv\_add\_radius}_k(M, \mathrm{bv\_scale\_radius}_k(M', r_x, a), r_y)$ needs a second maximum, of
-the scaled centers, a second output of the step and a second fold of maxima in the state. The check
-finds it bit for bit the composition `bv_add_k(bv_scale_k(X, a), Y)` of two ball vectors that are
-generated, which a header can call today with a temporary array (or in place, the second pass on the
-array written by the first: the centers written may be exactly the array read).
+**Not yet generated: a proposal.** One kernel of the page is not generated (`experiments/milestone2/
+kernels/`, checked there): `bv_axpy_k` (`bv_axpy_2.fold`, `bv_axpy_step_k`, `bv_axpy_radius_k`;
+`bv_proposals.py`), whose radius $\mathrm{bv\_add\_radius}_k(M, \mathrm{bv\_scale\_radius}_k(M', r_x, a),
+r_y)$ needs a second maximum, of the scaled centers. See [`axpy` of ball vectors](#axpy-of-ball-vectors),
+below.
+
+#### axpy of ball vectors
+
+**`bv_axpy_k(a, X, Y)` $= aX + Y$ is the composition** of two ball vectors that are generated: the
+public header of `BallVector` calls `bv_scale_k(X, a)`, then `bv_add_k` of what it
+wrote and $Y$, in place (the centers written may be exactly one of the arrays read, [Maps](#maps)): the
+scaled centers into the array of the result, then their sum with $Y$ into that same array, or into the
+array of $Y$ when $Y$ is the one to overwrite. No kernel of the generator is `axpy` of ball vectors.
+
+**What is claimed of it** is the two kernels' claims, composed, and nothing of its own: $S$ =
+`bv_scale_k(X, a)` (`encloses_entries` of `x*a`: V1 to V4 with `finite_when=abs_le((abs(x)+rx)*a,-2)`
+and `radii_when=abs_le(rx*a,-2)`), then $Z$ = `bv_add_k(S, Y)` (`encloses_entries` of `x+y`, its V4 with
+`abs(x+y)+rx+ry` and `rx+ry` within $2^{e_{\max}-2}$, read on the values of $S$ and its radius). V2
+composes: for $x$ in the ball of entry $i$ of $X$ and $y$ in that of $Y$, $a x$ is in the ball of entry
+$i$ of $S$, so $a x + y$ is in the ball of entry $i$ of $Z$. V1 and the flag are $Z$'s; the whole space
+propagates (an operand of `bv_add_k` that is the whole space gives the whole space). V3: a finite $Z$
+has a finite $S$, so finite $X$, $Y$ and $a$. V4 is that of each call in turn, the second on the
+computed $S$: it is not stated once of $X$, $Y$ and $a$; `bv_proposals.py` finds that
+$(\lvert x\rvert + r_x)\lvert a\rvert \le 2^{e_{\max}-2}$ and $\lvert a x + y\rvert + \lvert a\rvert r_x +
+r_y \le 2^{e_{\max}-3}$ at every entry, with the radii's conditions, give a finite result, on every case it
+runs. The radius is at least the largest of the entrywise radii of `ball_add_k(ball_scale_k(x_i, r_x, a),
+y_i, r_y)`, and equal to it when one entry has both maxima, of the scaled centers and of the results
+(the page's "at least the largest; equal when one entry has both maxima"), tested by `bv_proposals.py`,
+not claimed.
+
+**What the one-pass kernel would add**: one pass over memory in place of two (it reads $X$ and $Y$
+once and writes $Z$ once; the composition reads $X$, writes $S$, reads $S$ and $Y$ and writes $Z$), and
+no temporary array when neither $X$ nor $Y$ may be overwritten. Its results are those of the
+composition, bit for bit: the centers, the radius and the flag, in every case `bv_proposals.py` runs (1 500
+per toy format, 400 in `binary64` and `binary32`, lengths 0 to 5, the whole space and non-finite `a`
+among them), because its radius is `bv_add_radius_k` of the largest result and of `bv_scale_radius_k` of
+the largest scaled center, which is what the second call computes from the first's radius. What it needs
+of the generator, and what the extension of `bv_mul_pow2_k` (a mask and-ed into the state) does not give:
+a second fold of maxima in the state, of a second *limb* output of the step (the scaled center), its
+record and its combination (`norm_step_k`, `norm_combine` again), and a radius kernel on two maxima. That
+is not done: the composition computes the same.
 
 ### The accumulator
 
