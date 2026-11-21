@@ -46,6 +46,10 @@ lists:
 - `proofs/gen/IeeeModel.v` and `proofs/gen/IeeeStatements.v`, generated too: each kernel as a
   function of Flocq's binary floating-point numbers, where operations overflow and operands may
   be infinite or NaN, and its statements there;
+- `proofs/gen/IeeeWith.v`, generated too: each kernel that is `constexpr` by the rule of the
+  product, in the same model with the product as an argument, so that the same listing stands
+  for its execution at run time (the fused product) and in constant evaluation (the plain
+  product);
 - `proofs/gen/FoldModel.v` and `proofs/gen/FoldStatements.v`, generated too: each fold (a loop
   of kernels along arrays: the sums, the dot products and the largest magnitude) as a function
   on lists, in the two orders in which the library runs it, and its statement in each order;
@@ -67,8 +71,11 @@ lists:
   ball by a power of two over the real numbers (`BallPow2.v`) and, with the special states of a
   ball, with overflow, infinities and NaN (`IeeeBallPow2.v`), the lemma that the product of two
   intervals rests on (`Rectangle.v`), the comparison of the two ways a product is executed
-  (`IeeeProduct.v`), with what follows for the kernels whose only fused operations are products
-  (`IeeeTwoExecutions.v`), the interval kernels with bounds of one limb, on all values:
+  (`IeeeProduct.v`), with what follows for the thirty kernels whose only fused operations are
+  products, which are `constexpr`: on all operands each listing with the plain product of
+  constant evaluation returns outputs of the same values, and the same masks, as the kernel with
+  the fused product of run time (`IeeeTwoExecutions.v`, one theorem `K_two_executions` per kernel
+  `K` of `IeeeWith.v`), the interval kernels with bounds of one limb, on all values:
   the constructor, the negation, the sum, the difference and the product (`IeeeInterval1.v`,
   with the definitions their statements use in `IeeeIntervalVocabulary.v`), and the bounds of
   two limbs over the real numbers: a sum, a difference and a product of two 2-limb numbers,
@@ -168,9 +175,10 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    and of the hull and the intersection of balls (the tests of the radii, and that the ball of
    a canonical interval contains its members)
    beside their generated
-   statements, those about the two executions of a product, whose plain-product listings are
-   written by hand, the theorems about the folds, the largest magnitude and the product of
-   polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)),
+   statements, those about the two executions of a product and of the kernels `constexpr` by
+   its rule, on the listings of `proofs/gen/IeeeWith.v`, the theorems about the folds, the
+   largest magnitude and the product of polynomials whose statements are written by hand
+   ([below](#sums-and-dot-products-of-arrays)),
    the lemmas of the radius of the accumulator and what a user of it relies on
    ([below](#the-accumulator)), and the lemmas of the ball vectors in the model with overflow
    ([below](#ball-vectors)).
