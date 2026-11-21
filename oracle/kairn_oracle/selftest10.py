@@ -226,7 +226,7 @@ def _kernel_runs(ctx, names, variant="correct", formats=("binary64", "binary32",
 def bv_kernels_reference(ctx):
     """The kernels of the ball vectors and of the accumulator through the reference runner on
     random cases of three formats: nothing fails, nothing is invalid or suspicious (conv_radius
-    included: by the owner's ruling of 2026-11-21 its claim is of finite results, and its NaN
+    included: by the ruling of 2026-11-21 its claim is of finite results, and its NaN
     where ma mb overflows and g or m is zero, 0 times infinity, and its +inf from small operands
     are counted, not failed); every class the guards ask for is met, and conv_radius's finite
     results are the great majority (at least three quarters, as the guards ask)."""
@@ -388,7 +388,7 @@ JUDGE8 = [
     # bv_scale_radius_1: abs(a) rx + m u + tiny(mul_1_1)/(1-u/(1+u)); a negative.
     ("bv_scale_radius_1 binary64 0x0p+0 0x1p+0 -0x1p+1 -> 0x1p+1", "fail", "upper", "below"),
     ("bv_scale_radius_1 binary64 0x0p+0 0x1p+0 -0x1p+1 -> 0x1.0000000000001p+1", "pass", None),
-    # conv_radius: at_most(g, 1).  Its claim is of finite results (the owner's ruling of
+    # conv_radius: at_most(g, 1).  Its claim is of finite results (the ruling of
     # 2026-11-21): a result that is not finite passes when it is +inf or a NaN, from any operands
     # (never suspicious), and fails when it is -inf or negative.  The interpreter's lines: a NaN
     # from 0 times infinity (ma mb overflows, g or m zero; the value is 0), +inf where ma mb

@@ -1235,7 +1235,7 @@ HAND = [
 ]
 
 
-# The formats of the statements (the owner's ruling of 2026-11-21; architecture.md, "The formats of
+# The formats of the statements (the ruling of 2026-11-21; architecture.md, "The formats of
 # the statements"): finite_when of ball_of_interval and bounded_when of interval_of_ball with
 # bounds of two limbs are claimed in the formats of binary_float's shape (q_max >= 1, q_min = 3 -
 # q_max - 2p), judged in a format of a wider subnormal range, where a failure says that it is a

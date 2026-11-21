@@ -12,7 +12,11 @@ $$Z \supseteq X \cap Y.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.intersection(Y)` | `Ball<T, 1>`, `Ball<T, 1>` | `Ball<T, 1>` | contains the common members, not claimed the smallest nor inside either; with the whole line as an operand, the other as it is; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

@@ -193,7 +193,7 @@ SHAPES = {
 _R_ACC_A = "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0"
 _R_ACC_C = "c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2"
 _R_ACC_MUL = "a.in=0x0p+0/0x1p-1/0x1.8p+0"
-# conv_radius (seven operands; by the owner's ruling of 2026-11-21 its claim is of finite results,
+# conv_radius (seven operands; by the ruling of 2026-11-21 its claim is of finite results,
 # and a result that is not finite is +inf or a NaN, judged no further): a few values of each
 # operand, ma up to Omega so that ma mb overflows (+inf, and a NaN where g or m is zero), the
 # finite results nine tenths of each enumeration (the guards ask three quarters).
@@ -979,6 +979,20 @@ def build_flags(command):
     return " ".join(keep)
 
 
+def runner_target(target):
+    """(packed, suffix) for the target name of a runner of the library, None for any other name.
+
+    The runners are kairn-gen-runner and kairn-gen-packed-runner, each with an optional suffix
+    naming its flags. A target whose suffix ends in "fault" is not one of them: it is a runner
+    built with a kernel that is wrong on purpose (tests/CMakeLists.txt:
+    kairn-gen-packed-runner-lane-fault, for crosscheck.lanes.fault.*), which an enumeration must
+    never take for the library."""
+    m = re.match(r"^kairn-gen-(packed-)?runner(?:-(.+))?$", target)
+    if not m or (m.group(2) and re.search(r"(^|-)fault$", m.group(2))):
+        return None
+    return bool(m.group(1)), m.group(2)
+
+
 def compiler_of(builddir):
     for f in glob.glob(os.path.join(builddir, "CMakeFiles", "*", "CMakeCXXCompiler.cmake")):
         with open(f, encoding="utf-8", errors="replace") as fh:
@@ -1091,14 +1105,14 @@ def discover(name, bdir):
     for path in sorted(glob.glob(os.path.join(bdir, "tests", "**", "kairn-gen-*runner*" + exe),
                                  recursive=True)):
         target = os.path.basename(path)[:len(os.path.basename(path)) - len(exe)]
-        m = re.match(r"^kairn-gen-(packed-)?runner(?:-(.+))?$", target)
-        if not m or not os.path.isfile(path) or (not WINDOWS and not os.access(path, os.X_OK)):
+        named = runner_target(target)
+        if not named or not os.path.isfile(path) or (not WINDOWS and not os.access(path, os.X_OK)):
             continue
-        kind = "packed" if m.group(1) else "scalar"
-        label = (backend if kind == "packed" else "cxx") + ("-" + m.group(2) if m.group(2) else "")
+        kind = "packed" if named[0] else "scalar"
+        label = (backend if kind == "packed" else "cxx") + ("-" + named[1] if named[1] else "")
         out.append({"id": "%s/%s" % (name, label), "build": name, "label": label, "kind": kind,
                     "backend": backend if kind == "packed" else "scalar", "target": target,
-                    "setting": m.group(2) or "the build's flags", "compiler": compiler,
+                    "setting": named[1] or "the build's flags", "compiler": compiler,
                     "flags": build_flags(commands.get(target, "")), "path": path})
     if not out:
         sys.exit("brute: no runner in %s" % bdir)

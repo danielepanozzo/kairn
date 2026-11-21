@@ -62,13 +62,18 @@ GROUPS = [
     ("scaling", "Scaling by a power of two", "`ldexp` and `half`, of numbers and of balls; for a ball exact when "
      "nothing underflows, unlike the scaling `X * a` by a `T`, whose radius grows even when `a` is a power of two."),
     ("ball", "Ball operations", "Arithmetic on balls: the result contains every result on points of the operands; "
-     "and the sign predicates of a ball, comparisons of its radius with its center."),
+     "and the interface a ball shares with an interval ([One enclosure interface](enclosure.md)): its bounds, the "
+     "member and subset tests, the signs, the three-valued comparisons, the hull, the intersection, the split and "
+     "the conversions. Of one limb the predicates and the comparisons are exact; of two they are certain but the "
+     "signs, which are exact."),
     ("intervals", "Interval operations",
      "`Interval<T, k>` (`kairn/interval.hpp`): its constructors, the arithmetic of intervals of numbers of `T` and "
      "of two limbs, whose result contains every result on members of the operands, unbounded and empty intervals "
-     "included, the hull, the intersection, the midpoint, the radius and the split, and the conversions between an "
-     "interval and a ball. The arithmetic is not `constexpr` (its code is where `KAIRN_ENCLOSURE_CODE` puts it); "
-     "the rest is, and of it only the midpoint, the radius, the split and the conversions round."),
+     "included, the hull, the intersection, the midpoint, the radius and the split, the conversions between an "
+     "interval and a ball, and the predicates, the three-valued comparisons and the relations of IEEE 1788 "
+     "([One enclosure interface](enclosure.md)), each exact. The arithmetic is not `constexpr` (its code is where "
+     "`KAIRN_ENCLOSURE_CODE` puts it), nor the midpoint, the radius and the conversions of two limbs; the rest is, "
+     "and of it only the midpoint, the radius, the split and the conversions round."),
     ("blocks", "Building blocks on T",
      "Functions of `float` and `double` (`kairn/blocks.hpp`) for a program's own tests of exactness, its own "
      "radius arithmetic, and bounds rounded down or up without changing the rounding mode. Each is one call of "
@@ -122,6 +127,19 @@ EXACT_INTERVAL = "`constexpr`; does not round"
 ROUNDS_CONSTEXPR = "`constexpr`; rounds, and is preceded by the debug build's check of the rounding mode"
 TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`)"
 CORE = "the finite core: no fix-up of infinities and NaN"
+# The notes of the enclosure interface of stage B2 ([One enclosure interface](enclosure.md)).
+ROUNDS = "rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr`"
+WHOLE = "IEEE 1788 calls it `isEntire`; the name is `Ball`'s"
+MEMBER_EXACT = "as a `Trit`: yes or no, never unknown"
+OPPOSITE = "the answer of `equal(X, Y)` with yes and no exchanged"
+POINT_TWO = ("the point made a number of two limbs by `make_2` first, exactly: a composition of two proved "
+             "kernels, not machine-checked as one statement")
+MIDRAD_TWICE = "computes the whole kernel, as the other does: `X.mid_rad()` gives both from one call"
+SPLIT_POINT = "they meet at a point of $X$, which is not claimed to be the midpoint"
+HULL_NOTE = "contains both, not claimed the smallest; with an empty operand, the other as it is"
+INTERSECTION_NOTE = ("contains the common members, not claimed the smallest nor inside either; with the whole line "
+                     "as an operand, the other as it is")
+BALL_SPLIT = "covers $[c - r, c]$ and $[c, c + r]$; the parts are not claimed inside $X$, nor smaller than $X$"
 # The steps of ldexp beyond the powers of two of T are written in the header, not generated
 # (deviation 17 of docs/developer/design/phase0/decisions.md): every page that shows such a form
 # says so in these words.
@@ -345,9 +363,6 @@ KERNELS = {
         form("a > x", T, E2, result="bool"),
         form("x < y", E2, E1, result="bool", note=ONE),
         form("y > x", E1, E2, result="bool", note=ONE),
-        form("X.certainly_negative()", B2, result="bool", group="ball",
-             note="whether every member of the ball is negative: $c < -r$, exactly; false for the empty set and "
-                  "the whole line; `constexpr`; does not round"),
     ),
     "le_2_1": page(
         "comparisons", "A two-limb number at most a limb",
@@ -366,9 +381,6 @@ KERNELS = {
         form("y == x", E1, E2, result="bool", note=ONE),
         form("x != y", E2, E1, result="bool", note="the negation of `x == y`; " + ONE),
         form("y != x", E1, E2, result="bool", note="the negation of `y == x`; " + ONE),
-        form("X.certainly_zero()", B2, result="bool", group="ball",
-             note="whether the ball is the point 0: $c = 0$, and $r = 0$ by a comparison of `T`; false for the "
-                  "empty set and the whole line; `constexpr`; does not round"),
     ),
     "lt_1_2": page(
         "comparisons", "A limb less than a two-limb number",
@@ -376,9 +388,6 @@ KERNELS = {
         form("y > a", E2, T, result="bool"),
         form("x < y", E1, E2, result="bool", note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
         form("y > x", E2, E1, result="bool", note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
-        form("X.certainly_positive()", B2, result="bool", group="ball",
-             note="whether every member of the ball is positive: $r < c$, exactly; false for the empty set and "
-                  "the whole line; `constexpr`; does not round"),
     ),
     "le_1_2": page(
         "comparisons", "A limb at most a two-limb number",
@@ -703,8 +712,9 @@ KERNELS = {
     ),
     "interval_mid_rad_1": page(
         "intervals", "The midpoint and radius of an interval, one-limb bounds",
-        form("X.midpoint()", I1, result=E1, note="$m$; " + ROUNDS_CONSTEXPR),
-        form("X.radius()", I1, result=T, note="$r$; " + ROUNDS_CONSTEXPR),
+        form("X.midpoint()", I1, result=E1, note="$m$; " + MIDRAD_TWICE + "; " + ROUNDS_CONSTEXPR),
+        form("X.radius()", I1, result=T, note="$r$; " + MIDRAD_TWICE + "; " + ROUNDS_CONSTEXPR),
+        form("X.mid_rad()", I1, result="MidRad<T, 1>", note="$m$ and $r$ from one call; " + ROUNDS_CONSTEXPR),
     ),
     "interval_to_ball_1": page(
         "intervals", "A ball that contains an interval, one-limb bounds",
@@ -713,71 +723,181 @@ KERNELS = {
     "interval_split_1": page(
         "intervals", "An interval split at its midpoint, one-limb bounds",
         form("X.split()", I1, result="Split<Interval<T, 1>>",
-             note="`left` is $[a_l, a_u]$ and `right` is $[b_l, b_u]$; " + ROUNDS_CONSTEXPR),
+             note="`left` is $[a_l, a_u]$ and `right` is $[b_l, b_u]$; " + SPLIT_POINT + "; " + ROUNDS_CONSTEXPR),
     ),
     "ball_to_interval_1": page(
         "ball", "The smallest interval that contains a ball, one-limb center",
         form("Interval<T, 1>(X)", B1, result=I1, group="intervals", note="explicit; " + ROUNDS_CONSTEXPR),
     ),
     # Stage B2: the predicates, the three-valued comparisons and the relations of IEEE 1788 of an
-    # interval (subset is interval_subset_k).
-    "interval_empty_1": page("intervals", "Whether an interval is empty, one-limb bounds"),
-    "interval_entire_1": page("intervals", "Whether an interval is the whole line, one-limb bounds"),
-    "interval_contains_1": page("intervals", "Whether a point is a member of an interval, one-limb bounds"),
-    "interval_subset_1": page("intervals", "Whether an interval is a subset of another, one-limb bounds"),
-    "interval_positive_1": page("intervals", "Whether every member of an interval is positive, one-limb bounds"),
-    "interval_negative_1": page("intervals", "Whether every member of an interval is negative, one-limb bounds"),
-    "interval_zero_1": page("intervals", "Whether an interval is [0, 0], one-limb bounds"),
-    "interval_less_1": page("intervals", "The three-valued X < Y of intervals, one-limb bounds"),
-    "interval_less_equal_1": page("intervals", "The three-valued X <= Y of intervals, one-limb bounds"),
-    "interval_equal_1": page("intervals", "The three-valued X = Y of intervals, one-limb bounds"),
-    "interval_rel_equal_1": page("intervals", "The relation equal of IEEE 1788, one-limb bounds"),
-    "interval_rel_interior_1": page("intervals", "The relation interior of IEEE 1788, one-limb bounds"),
-    "interval_rel_disjoint_1": page("intervals", "The relation disjoint of IEEE 1788, one-limb bounds"),
-    "interval_empty_2": page("intervals", "Whether an interval is empty, two-limb bounds"),
-    "interval_entire_2": page("intervals", "Whether an interval is the whole line, two-limb bounds"),
-    "interval_contains_2": page("intervals", "Whether a point is a member of an interval, two-limb bounds"),
-    "interval_subset_2": page("intervals", "Whether an interval is a subset of another, two-limb bounds"),
-    "interval_positive_2": page("intervals", "Whether every member of an interval is positive, two-limb bounds"),
-    "interval_negative_2": page("intervals", "Whether every member of an interval is negative, two-limb bounds"),
-    "interval_zero_2": page("intervals", "Whether an interval is [0, 0], two-limb bounds"),
-    "interval_less_2": page("intervals", "The three-valued X < Y of intervals, two-limb bounds"),
-    "interval_less_equal_2": page("intervals", "The three-valued X <= Y of intervals, two-limb bounds"),
-    "interval_equal_2": page("intervals", "The three-valued X = Y of intervals, two-limb bounds"),
-    "interval_rel_equal_2": page("intervals", "The relation equal of IEEE 1788, two-limb bounds"),
-    "interval_rel_interior_2": page("intervals", "The relation interior of IEEE 1788, two-limb bounds"),
-    "interval_rel_disjoint_2": page("intervals", "The relation disjoint of IEEE 1788, two-limb bounds"),
+    # interval (subset is interval_subset_k), public since the enclosure interface was completed in
+    # kairn/interval.hpp and kairn/ball.hpp ([One enclosure interface](enclosure.md)).
+    "interval_empty_1": page("intervals", "Whether an interval is empty, one-limb bounds",
+                             form("X.is_empty()", I1, result="bool", note=EXACT_INTERVAL)),
+    "interval_entire_1": page("intervals", "Whether an interval is the whole line, one-limb bounds",
+                              form("X.is_whole()", I1, result="bool", note=WHOLE + "; " + EXACT_INTERVAL)),
+    "interval_contains_1": page(
+        "intervals", "Whether a point is a member of an interval, one-limb bounds",
+        form("X.contains(t)", I1, T, result="bool", note=EXACT_INTERVAL),
+        form("X.contains(t)", I1, E1, result="bool", note=EXACT_INTERVAL),
+        form("member(t, X)", T, I1, result="Trit", note=MEMBER_EXACT + "; " + EXACT_INTERVAL),
+        form("member(t, X)", E1, I1, result="Trit", note=MEMBER_EXACT + "; " + EXACT_INTERVAL)),
+    "interval_subset_1": page(
+        "intervals", "Whether an interval is a subset of another, one-limb bounds",
+        form("Y.contains(X)", I1, I1, result="bool", note="whether $Y \\supseteq X$; " + EXACT_INTERVAL),
+        form("ieee1788::subset(X, Y)", I1, I1, result="bool", note="the relation subset of IEEE 1788; " + EXACT_INTERVAL)),
+    "interval_positive_1": page("intervals", "Whether every member of an interval is positive, one-limb bounds",
+                                form("X.certainly_positive()", I1, result="bool", note=EXACT_INTERVAL)),
+    "interval_negative_1": page("intervals", "Whether every member of an interval is negative, one-limb bounds",
+                                form("X.certainly_negative()", I1, result="bool", note=EXACT_INTERVAL)),
+    "interval_zero_1": page("intervals", "Whether an interval is [0, 0], one-limb bounds",
+                            form("X.certainly_zero()", I1, result="bool", note=EXACT_INTERVAL)),
+    "interval_less_1": page(
+        "intervals", "The three-valued X < Y of intervals, one-limb bounds",
+        form("less(X, Y)", I1, I1, result="Trit", note=EXACT_INTERVAL),
+        form("greater(Y, X)", I1, I1, result="Trit", note="the operands exchanged; " + EXACT_INTERVAL)),
+    "interval_less_equal_1": page(
+        "intervals", "The three-valued X <= Y of intervals, one-limb bounds",
+        form("less_equal(X, Y)", I1, I1, result="Trit", note=EXACT_INTERVAL),
+        form("greater_equal(Y, X)", I1, I1, result="Trit", note="the operands exchanged; " + EXACT_INTERVAL)),
+    "interval_equal_1": page(
+        "intervals", "The three-valued X = Y of intervals, one-limb bounds",
+        form("equal(X, Y)", I1, I1, result="Trit", note=EXACT_INTERVAL),
+        form("not_equal(X, Y)", I1, I1, result="Trit", note=OPPOSITE + "; " + EXACT_INTERVAL)),
+    "interval_rel_equal_1": page("intervals", "The relation equal of IEEE 1788, one-limb bounds",
+                                 form("ieee1788::equal(X, Y)", I1, I1, result="bool", note=EXACT_INTERVAL)),
+    "interval_rel_interior_1": page("intervals", "The relation interior of IEEE 1788, one-limb bounds",
+                                    form("ieee1788::interior(X, Y)", I1, I1, result="bool", note=EXACT_INTERVAL)),
+    "interval_rel_disjoint_1": page("intervals", "The relation disjoint of IEEE 1788, one-limb bounds",
+                                    form("ieee1788::disjoint(X, Y)", I1, I1, result="bool", note=EXACT_INTERVAL)),
+    "interval_empty_2": page("intervals", "Whether an interval is empty, two-limb bounds",
+                             form("X.is_empty()", I2, result="bool", note=EXACT_INTERVAL)),
+    "interval_entire_2": page("intervals", "Whether an interval is the whole line, two-limb bounds",
+                              form("X.is_whole()", I2, result="bool", note=WHOLE + "; " + EXACT_INTERVAL)),
+    "interval_contains_2": page(
+        "intervals", "Whether a point is a member of an interval, two-limb bounds",
+        form("X.contains(t)", I2, E2, result="bool", note=EXACT_INTERVAL),
+        form("X.contains(t)", I2, T, result="bool", note=POINT_TWO + "; " + EXACT_INTERVAL),
+        form("member(t, X)", E2, I2, result="Trit", note=MEMBER_EXACT + "; " + EXACT_INTERVAL),
+        form("member(t, X)", T, I2, result="Trit", note=MEMBER_EXACT + "; " + POINT_TWO + "; " + EXACT_INTERVAL)),
+    "interval_subset_2": page(
+        "intervals", "Whether an interval is a subset of another, two-limb bounds",
+        form("Y.contains(X)", I2, I2, result="bool", note="whether $Y \\supseteq X$; " + EXACT_INTERVAL),
+        form("ieee1788::subset(X, Y)", I2, I2, result="bool", note="the relation subset of IEEE 1788; " + EXACT_INTERVAL)),
+    "interval_positive_2": page("intervals", "Whether every member of an interval is positive, two-limb bounds",
+                                form("X.certainly_positive()", I2, result="bool", note=EXACT_INTERVAL)),
+    "interval_negative_2": page("intervals", "Whether every member of an interval is negative, two-limb bounds",
+                                form("X.certainly_negative()", I2, result="bool", note=EXACT_INTERVAL)),
+    "interval_zero_2": page("intervals", "Whether an interval is [0, 0], two-limb bounds",
+                            form("X.certainly_zero()", I2, result="bool", note=EXACT_INTERVAL)),
+    "interval_less_2": page(
+        "intervals", "The three-valued X < Y of intervals, two-limb bounds",
+        form("less(X, Y)", I2, I2, result="Trit", note=EXACT_INTERVAL),
+        form("greater(Y, X)", I2, I2, result="Trit", note="the operands exchanged; " + EXACT_INTERVAL)),
+    "interval_less_equal_2": page(
+        "intervals", "The three-valued X <= Y of intervals, two-limb bounds",
+        form("less_equal(X, Y)", I2, I2, result="Trit", note=EXACT_INTERVAL),
+        form("greater_equal(Y, X)", I2, I2, result="Trit", note="the operands exchanged; " + EXACT_INTERVAL)),
+    "interval_equal_2": page(
+        "intervals", "The three-valued X = Y of intervals, two-limb bounds",
+        form("equal(X, Y)", I2, I2, result="Trit", note=EXACT_INTERVAL),
+        form("not_equal(X, Y)", I2, I2, result="Trit", note=OPPOSITE + "; " + EXACT_INTERVAL)),
+    "interval_rel_equal_2": page("intervals", "The relation equal of IEEE 1788, two-limb bounds",
+                                 form("ieee1788::equal(X, Y)", I2, I2, result="bool", note=EXACT_INTERVAL)),
+    "interval_rel_interior_2": page("intervals", "The relation interior of IEEE 1788, two-limb bounds",
+                                    form("ieee1788::interior(X, Y)", I2, I2, result="bool", note=EXACT_INTERVAL)),
+    "interval_rel_disjoint_2": page("intervals", "The relation disjoint of IEEE 1788, two-limb bounds",
+                                    form("ieee1788::disjoint(X, Y)", I2, I2, result="bool", note=EXACT_INTERVAL)),
     # The conversions of two limbs, the ball from an interval of one limb, and the hull and the
     # intersection of balls of two limbs.
-    "interval_mid_rad_2": page("intervals", "The midpoint and radius of an interval, two-limb bounds"),
-    "interval_to_ball_2": page("intervals", "A ball that contains an interval, two-limb bounds"),
-    "interval_split_2": page("intervals", "An interval split at its midpoint, two-limb bounds"),
-    "ball_to_interval_2": page("ball", "An interval that contains a ball, two-limb center"),
-    "ball_from_interval_1": page("ball", "A ball with a one-limb center from an interval of two limbs"),
-    "ball_hull_2": page("ball", "A ball that contains two balls, two-limb center"),
-    "ball_intersection_2": page("ball", "A ball that contains the intersection of two balls, two-limb center"),
+    "interval_mid_rad_2": page(
+        "intervals", "The midpoint and radius of an interval, two-limb bounds",
+        form("X.midpoint()", I2, result=E2, note="$m$; " + MIDRAD_TWICE + "; " + ROUNDS),
+        form("X.radius()", I2, result=T, note="$r$; " + MIDRAD_TWICE + "; " + ROUNDS),
+        form("X.mid_rad()", I2, result="MidRad<T, 2>", note="$m$ and $r$ from one call; " + ROUNDS)),
+    "interval_to_ball_2": page("intervals", "A ball that contains an interval, two-limb bounds",
+                               form("Ball<T, 2>(X)", I2, result=B2, note="explicit; " + ROUNDS)),
+    "interval_split_2": page(
+        "intervals", "An interval split at its midpoint, two-limb bounds",
+        form("X.split()", I2, result="Split<Interval<T, 2>>",
+             note="`left` is $[a_l, a_u]$ and `right` is $[b_l, b_u]$; " + SPLIT_POINT + "; " + ROUNDS_CONSTEXPR)),
+    "ball_to_interval_2": page(
+        "ball", "An interval that contains a ball, two-limb center",
+        form("Interval<T, 2>(X)", B2, result=I2, group="intervals", note="explicit; " + ROUNDS),
+        form("X.lower()", B2, result=E2, note="$z_l$; the kernel computes both bounds; " + ROUNDS),
+        form("X.upper()", B2, result=E2, note="$z_u$; the kernel computes both bounds; " + ROUNDS)),
+    "ball_from_interval_1": page(
+        "ball", "A ball with a one-limb center from an interval of two limbs",
+        form("from_interval(lo, hi)", T, T, result=B1,
+             note="`Ball<T, 1>::from_interval(lo, hi)`, the ball of `Interval<T, 1>(lo, hi)` in one kernel; the "
+                  "bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR)),
+    "ball_hull_2": page("ball", "A ball that contains two balls, two-limb center",
+                        form("X.hull(Y)", B2, B2, result=B2, note=HULL_NOTE + "; " + ROUNDS)),
+    "ball_intersection_2": page("ball", "A ball that contains the intersection of two balls, two-limb center",
+                                form("X.intersection(Y)", B2, B2, result=B2, note=INTERSECTION_NOTE + "; " + ROUNDS)),
     # The set operations of a ball.
-    "ball_hull_1": page("ball", "A ball that contains two balls, one-limb center"),
-    "ball_intersection_1": page("ball", "A ball that contains the intersection of two balls, one-limb center"),
-    "ball_split_1": page("ball", "Two balls that cover a ball, one-limb center"),
-    "ball_split_2": page("ball", "Two balls that cover a ball, two-limb center"),
+    "ball_hull_1": page("ball", "A ball that contains two balls, one-limb center",
+                        form("X.hull(Y)", B1, B1, result=B1, note=HULL_NOTE + "; " + ROUNDS_CONSTEXPR)),
+    "ball_intersection_1": page("ball", "A ball that contains the intersection of two balls, one-limb center",
+                                form("X.intersection(Y)", B1, B1, result=B1, note=INTERSECTION_NOTE + "; " + ROUNDS_CONSTEXPR)),
+    "ball_split_1": page("ball", "Two balls that cover a ball, one-limb center",
+                         form("X.split()", B1, result="Split<Ball<T, 1>>", note=BALL_SPLIT + "; " + ROUNDS)),
+    "ball_split_2": page("ball", "Two balls that cover a ball, two-limb center",
+                         form("X.split()", B2, result="Split<Ball<T, 2>>", note=BALL_SPLIT + "; " + ROUNDS)),
     # The predicates and the three-valued comparisons of a ball.
-    "ball_contains_point_1": page("ball", "Whether a point is a member of a ball, one-limb center"),
-    "ball_contains_ball_1": page("ball", "Whether a ball contains another, one-limb center"),
-    "ball_positive_1": page("ball", "Whether every member of a ball is positive, one-limb center"),
-    "ball_negative_1": page("ball", "Whether every member of a ball is negative, one-limb center"),
-    "ball_zero_1": page("ball", "Whether a ball is the point 0, one-limb center"),
-    "ball_less_1": page("ball", "The three-valued X < Y of balls, one-limb center"),
-    "ball_less_equal_1": page("ball", "The three-valued X <= Y of balls, one-limb center"),
-    "ball_equal_1": page("ball", "The three-valued X = Y of balls, one-limb center"),
-    "ball_contains_point_2": page("ball", "Whether a point is a member of a ball, two-limb center"),
-    "ball_contains_ball_2": page("ball", "Whether a ball contains another, two-limb center"),
-    "ball_positive_2": page("ball", "Whether every member of a ball is positive, two-limb center"),
-    "ball_negative_2": page("ball", "Whether every member of a ball is negative, two-limb center"),
-    "ball_zero_2": page("ball", "Whether a ball is the point 0, two-limb center"),
-    "ball_less_2": page("ball", "The three-valued X < Y of balls, two-limb center"),
-    "ball_less_equal_2": page("ball", "The three-valued X <= Y of balls, two-limb center"),
-    "ball_equal_2": page("ball", "The three-valued X = Y of balls, two-limb center"),
+    "ball_contains_point_1": page(
+        "ball", "Whether a point is a member of a ball, one-limb center",
+        form("X.contains(t)", B1, T, result="bool", note=ROUNDS_CONSTEXPR),
+        form("X.contains(t)", B1, E1, result="bool", note=ROUNDS_CONSTEXPR),
+        form("member(t, X)", T, B1, result="Trit", note=MEMBER_EXACT + "; " + ROUNDS_CONSTEXPR),
+        form("member(t, X)", E1, B1, result="Trit", note=MEMBER_EXACT + "; " + ROUNDS_CONSTEXPR)),
+    "ball_contains_ball_1": page("ball", "Whether a ball contains another, one-limb center",
+                                 form("X.contains(Y)", B1, B1, result="bool",
+                                      note="whether $X \\supseteq Y$; " + ROUNDS_CONSTEXPR)),
+    "ball_positive_1": page("ball", "Whether every member of a ball is positive, one-limb center",
+                            form("X.certainly_positive()", B1, result="bool", note=EXACT_INTERVAL)),
+    "ball_negative_1": page("ball", "Whether every member of a ball is negative, one-limb center",
+                            form("X.certainly_negative()", B1, result="bool", note=EXACT_INTERVAL)),
+    "ball_zero_1": page("ball", "Whether a ball is the point 0, one-limb center",
+                        form("X.certainly_zero()", B1, result="bool", note=EXACT_INTERVAL)),
+    "ball_less_1": page(
+        "ball", "The three-valued X < Y of balls, one-limb center",
+        form("less(X, Y)", B1, B1, result="Trit", note=ROUNDS_CONSTEXPR),
+        form("greater(Y, X)", B1, B1, result="Trit", note="the operands exchanged; " + ROUNDS_CONSTEXPR)),
+    "ball_less_equal_1": page(
+        "ball", "The three-valued X <= Y of balls, one-limb center",
+        form("less_equal(X, Y)", B1, B1, result="Trit", note=ROUNDS_CONSTEXPR),
+        form("greater_equal(Y, X)", B1, B1, result="Trit", note="the operands exchanged; " + ROUNDS_CONSTEXPR)),
+    "ball_equal_1": page(
+        "ball", "The three-valued X = Y of balls, one-limb center",
+        form("equal(X, Y)", B1, B1, result="Trit", note=ROUNDS_CONSTEXPR),
+        form("not_equal(X, Y)", B1, B1, result="Trit", note=OPPOSITE + "; " + ROUNDS_CONSTEXPR)),
+    "ball_contains_point_2": page(
+        "ball", "Whether a point is a member of a ball, two-limb center",
+        form("member(t, X)", E2, B2, result="Trit", note="yes, no or unknown; " + ROUNDS),
+        form("member(t, X)", T, B2, result="Trit", note="yes, no or unknown; " + POINT_TWO + "; " + ROUNDS),
+        form("X.contains(t)", B2, E2, result="bool", note="$\\mathit{yes}$; " + ROUNDS),
+        form("X.contains(t)", B2, T, result="bool", note="$\\mathit{yes}$; " + POINT_TWO + "; " + ROUNDS)),
+    "ball_contains_ball_2": page("ball", "Whether a ball contains another, two-limb center",
+                                 form("X.contains(Y)", B2, B2, result="bool", note="whether $X \\supseteq Y$; " + ROUNDS)),
+    "ball_positive_2": page("ball", "Whether every member of a ball is positive, two-limb center",
+                            form("X.certainly_positive()", B2, result="bool", note=EXACT_INTERVAL)),
+    "ball_negative_2": page("ball", "Whether every member of a ball is negative, two-limb center",
+                            form("X.certainly_negative()", B2, result="bool", note=EXACT_INTERVAL)),
+    "ball_zero_2": page("ball", "Whether a ball is the point 0, two-limb center",
+                        form("X.certainly_zero()", B2, result="bool", note=EXACT_INTERVAL)),
+    "ball_less_2": page(
+        "ball", "The three-valued X < Y of balls, two-limb center",
+        form("less(X, Y)", B2, B2, result="Trit", note=ROUNDS),
+        form("greater(Y, X)", B2, B2, result="Trit", note="the operands exchanged; " + ROUNDS)),
+    "ball_less_equal_2": page(
+        "ball", "The three-valued X <= Y of balls, two-limb center",
+        form("less_equal(X, Y)", B2, B2, result="Trit", note=ROUNDS),
+        form("greater_equal(Y, X)", B2, B2, result="Trit", note="the operands exchanged; " + ROUNDS)),
+    "ball_equal_2": page(
+        "ball", "The three-valued X = Y of balls, two-limb center",
+        form("equal(X, Y)", B2, B2, result="Trit", note=ROUNDS),
+        form("not_equal(X, Y)", B2, B2, result="Trit", note=OPPOSITE + "; " + ROUNDS)),
     # The building blocks of the intervals: parts of the interval kernels.
     "mul_dir_1": page("building-blocks", "Both directed products of two limbs, a zero factor giving zero"),
     "add_ball_2_2": page("building-blocks", "A sum of two-limb numbers with a bound of its error"),
@@ -911,14 +1031,11 @@ EXACT = [
           form("isfinite(x)", "Expansion<T, K>", result="bool")),
     exact("construction", "whether every limb is finite and, for two limbs, $x_0 + x_1$ rounds to $x_0$",
           form("is_normalized(x)", "Expansion<T, K>", result="bool")),
-    exact("ball", "whether every member is positive: $r < c$, the comparison of `T`; false for the empty set and "
-          "the whole line",
-          form("X.certainly_positive()", B1, result="bool")),
-    exact("ball", "whether every member is negative: $c < -r$, the comparison of `T`; false for the empty set and "
-          "the whole line",
-          form("X.certainly_negative()", B1, result="bool")),
-    exact("ball", "whether the ball is the point 0: $c = 0$ and $r = 0$; false for the empty set and the whole line",
-          form("X.certainly_zero()", B1, result="bool")),
+    exact("ball", "the center and the radius together, for code written for intervals and balls alike",
+          form("X.mid_rad()", "Ball<T, K>", result="MidRad<T, K>")),
+    exact("ball", "whether a three-valued answer is yes, and whether it is not no ([One enclosure "
+          "interface](enclosure.md#three-valued-answers))",
+          form("certainly(t), possibly(t)", "Trit", result="bool")),
     exact("arithmetic", "the IEEE 754 operation of `T`: exact",
           form("-x", E1, result=E1),
           form("abs(x)", E1, result=E1)),
@@ -977,6 +1094,7 @@ EXACT = [
 
 PAGES = [
     ("construction", "Constants from fractions", "rational"),
+    ("intervals", "One enclosure interface: intervals and balls", "enclosure"),
     ("packed", "Packed numbers in registers", "packed"),
     ("packed", "Arrays of numbers: SoA and its views", "soa"),
 ]

@@ -100,6 +100,7 @@ nav:
   - Tutorials:
       - Accurate sums and dot products: tutorials/accurate-sums.md
       - The range of a polynomial: tutorials/intervals.md
+      - Zeros of a polynomial by bisection: tutorials/bisection.md
       - A vector loop: tutorials/vector-loop.md
   # BEGIN reference: written by docs/tools/reference.py; do not edit by hand
   - Reference:
@@ -252,6 +253,7 @@ nav:
           - The midpoint and radius of an interval, two-limb bounds: reference/interval_mid_rad_2.md
           - A ball that contains an interval, two-limb bounds: reference/interval_to_ball_2.md
           - An interval split at its midpoint, two-limb bounds: reference/interval_split_2.md
+          - "One enclosure interface: intervals and balls": reference/enclosure.md
       - Building blocks on T:
           - TwoSum on values of the program: reference/two_sum_entry.md
           - Fast2Sum on values of the program: reference/fast_two_sum_entry.md

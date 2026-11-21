@@ -89,6 +89,9 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
   and balls, on a sum that `double` gets entirely wrong.
 - [The range of a polynomial](tutorials/intervals.md): a tutorial with intervals and balls, on the
   dependency problem and how splitting the interval narrows the result.
+- [Zeros of a polynomial by bisection](tutorials/bisection.md): one algorithm, written once with the
+  interface intervals and balls share, run on an interval of one limb and balls of one and two
+  limbs, and why it tests its own progress.
 - [A vector loop](tutorials/vector-loop.md): a dot product of two-limb numbers written once for
   AVX2, AArch64 and targets with neither, with `Packed`, and what can be claimed about its result.
 - [Reference](reference/index.md): every operation, with its proved statement, its theorem, and

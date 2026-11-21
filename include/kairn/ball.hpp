@@ -7,19 +7,30 @@
 /// followed by the fix-up of the special states (the empty set, the whole line), the scaling by a
 /// power of two of ldexp and half (two or three calls of it when 2^n is not a number of T), the
 /// constructor kernels ball_make_1 and ball_make_2 (from a center and a radius, or from a constant
-/// of kairn::rational), and for the sign predicates of two limbs the comparisons lt_1_2, lt_2_1
-/// and eq_2_1. The functions of the interface that Ball shares with Interval
+/// of kairn::rational). The functions of the interface that Ball shares with Interval
 /// (docs/developer/design/milestone2.md, "One enclosure interface") call the kernels of that
-/// section: the bounds of a ball as numbers of T (ball_lower_as_k, ball_upper_as_k), the ball of
-/// one limb of an interval (interval_to_ball_1), the ball of two limbs from an interval of two T
-/// (ball_from_interval_2), and the narrowing of a ball of two limbs to one (ball_narrow_2_1).
-/// Like every operation, each needs the kairn::unverified marker while gen/claims.json does not
-/// mark its kernel proved.
+/// section: the signs (ball_positive_k, ball_negative_k, ball_zero_k), the member and subset tests
+/// (ball_contains_point_k, ball_contains_ball_k), the three-valued comparisons (ball_less_k,
+/// ball_less_equal_k, ball_equal_k), the hull, the intersection and the split (ball_hull_k,
+/// ball_intersection_k, ball_split_k), the bounds of a ball as numbers of T (ball_lower_as_k,
+/// ball_upper_as_k) and, for two limbs, as numbers of two limbs (ball_to_interval_2), the ball of
+/// an interval (interval_to_ball_k), the ball from an interval of two T (ball_from_interval_k),
+/// and the narrowing of a ball of two limbs to one (ball_narrow_2_1). Like every operation, each
+/// needs the kairn::unverified marker while gen/claims.json does not mark its kernel proved. The
+/// member test of a point of T in a ball of two limbs makes the two-limb number first (make_2),
+/// as the constructor of a point does: a composition of two proved kernels, argued (make_2 gives
+/// the point exactly) and not machine-checked as one statement.
+///
+/// The states (is_finite, is_whole, is_empty) are tests of the radius, written here: the states of
+/// a ball have no kernel of their own. The three-valued comparisons kairn::less, kairn::less_equal,
+/// kairn::equal and their mirrors return a kairn::Trit (enclosure.hpp); balls have no comparison
+/// operators.
 ///
 /// This header includes kairn/interval.hpp at its end, so that Interval and the conversions
 /// between the two types are there whichever of the two headers a program includes.
 #pragma once
 
+#include "enclosure.hpp"  // kairn::Trit, kairn::Split, kairn::MidRad
 #include "expansion.hpp"
 #include "rational.hpp"  // kairn::Constant, from which a Ball can be made
 
@@ -42,6 +53,21 @@ struct ball_kernels<T, 1> {
     using make = gen::bounds::ball_make_1<T>;
     using lower_as = gen::bounds::ball_lower_as_1<T>;
     using upper_as = gen::bounds::ball_upper_as_1<T>;
+    using lower = gen::bounds::ball_lower_as_1<T>;
+    using upper = gen::bounds::ball_upper_as_1<T>;
+    using positive = gen::bounds::ball_positive_1<T>;
+    using negative = gen::bounds::ball_negative_1<T>;
+    using zero = gen::bounds::ball_zero_1<T>;
+    using contains_point = gen::bounds::ball_contains_point_1<T>;
+    using contains_ball = gen::bounds::ball_contains_ball_1<T>;
+    using less = gen::bounds::ball_less_1<T>;
+    using less_equal = gen::bounds::ball_less_equal_1<T>;
+    using equal = gen::bounds::ball_equal_1<T>;
+    using hull = gen::bounds::ball_hull_1<T>;
+    using intersection = gen::bounds::ball_intersection_1<T>;
+    using split = gen::bounds::ball_split_1<T>;
+    using from_interval = gen::bounds::ball_from_interval_1<T>;
+    using to_ball = gen::bounds::interval_to_ball_1<T>;
 };
 template <class T>
 struct ball_kernels<T, 2> {
@@ -54,6 +80,21 @@ struct ball_kernels<T, 2> {
     using make = gen::bounds::ball_make_2<T>;
     using lower_as = gen::bounds::ball_lower_as_2<T>;
     using upper_as = gen::bounds::ball_upper_as_2<T>;
+    using lower = gen::bounds::ball_to_interval_2<T>;
+    using upper = gen::bounds::ball_to_interval_2<T>;
+    using positive = gen::bounds::ball_positive_2<T>;
+    using negative = gen::bounds::ball_negative_2<T>;
+    using zero = gen::bounds::ball_zero_2<T>;
+    using contains_point = gen::bounds::ball_contains_point_2<T>;
+    using contains_ball = gen::bounds::ball_contains_ball_2<T>;
+    using less = gen::bounds::ball_less_2<T>;
+    using less_equal = gen::bounds::ball_less_equal_2<T>;
+    using equal = gen::bounds::ball_equal_2<T>;
+    using hull = gen::bounds::ball_hull_2<T>;
+    using intersection = gen::bounds::ball_intersection_2<T>;
+    using split = gen::bounds::ball_split_2<T>;
+    using from_interval = gen::bounds::ball_from_interval_2<T>;
+    using to_ball = gen::bounds::interval_to_ball_2<T>;
 };
 
 /// Whether the kernel that makes a ball from a center is proved: ball_make_1 or ball_make_2.
@@ -63,6 +104,11 @@ concept make_proved = proof_checked<typename ball_kernels<T, K>::make>;
 /// ball_make_2.
 template <class T, int K>
 concept point_proved = make_proved<T, K> && (K == 1 || proof_checked<gen::bounds::make_2<T>>);
+/// Whether the kernels of the member test of a point of T are proved: ball_contains_point_1, or
+/// make_2 and ball_contains_point_2.
+template <class T, int K>
+concept ball_member_proved =
+    proof_checked<typename ball_kernels<T, K>::contains_point> && (K == 1 || proof_checked<gen::bounds::make_2<T>>);
 
 /// The tag of the constructor of Ball that takes a kernel's result as it is.
 struct kernel_result_t {
@@ -177,18 +223,127 @@ KAIRN_FORCEINLINE constexpr Ball<T, 1> narrow(const Ball<T, 2>& x) noexcept {
     gen::ball_narrow_2_1(x.center().limb[0], x.center().limb[1], x.radius(), c, r);
     return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
 }
-template <class T>
-KAIRN_FORCEINLINE constexpr Ball<T, 2> ball_from_interval(std::type_identity_t<T> lo, std::type_identity_t<T> hi) noexcept {
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Ball<T, K> ball_from_interval(std::type_identity_t<T> lo, std::type_identity_t<T> hi) noexcept {
     check_environment();
-    Expansion<T, 2> c;
+    Expansion<T, K> c;
     T r = T(0);
-    gen::ball_from_interval_2(lo, hi, c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(kernel_result, c, r);
+    if constexpr (K == 1) {
+        gen::ball_from_interval_1(lo, hi, c.limb[0], r);
+    } else {
+        gen::ball_from_interval_2(lo, hi, c.limb[0], c.limb[1], r);
+    }
+    return Ball<T, K>(kernel_result, c, r);
 }
-// The ball of one limb of an interval of one limb (kernel interval_to_ball_1), after the check of a
-// canonical interval: defined in interval.hpp, with the other conversions.
+// The bounds of a ball of two limbs as numbers of two limbs (kernel ball_to_interval_2), after the
+// check of a canonical ball: the lower() and upper() of Ball<T, 2> and the conversion to
+// Interval<T, 2>. Not constexpr: the directed sums of two limbs have fused operations without a
+// variant for constant evaluation.
+template <class T>
+KAIRN_FORCEINLINE void ball_bounds(const Ball<T, 2>& x, Expansion<T, 2>& l, Expansion<T, 2>& h) noexcept {
+    check_ball(x);
+    gen::ball_to_interval_2(x.center().limb[0], x.center().limb[1], x.radius(), l.limb[0], l.limb[1], h.limb[0],
+                            h.limb[1]);
+}
+// The ball of an interval (kernel interval_to_ball_1 or interval_to_ball_2), after the check of a
+// canonical interval: defined in interval.hpp, with the other conversions. Not constexpr for two
+// limbs (interval_mid_rad_2 says why).
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> to_ball(const Interval<T, 1>& x) noexcept;
+template <class T>
+KAIRN_FORCEINLINE Ball<T, 2> to_ball(const Interval<T, 2>& x) noexcept;
+
+// The member test, the subset test, the signs, the hull, the intersection and the split of a ball,
+// without their markers and constraints: one kernel each. Those of one limb are constexpr but the
+// split (its sums are ball_add_1_full, whose radius is computed with fused operations); of two
+// limbs only the signs are, the others computing with add_ball_2_2 or ball_add_2_full. The member
+// tests and the subset tests round (exact pairs by two_sum_ord; bounds by add_ball_2_2 and radd),
+// and so do the hull, the intersection and the split (the conversions between a ball and an
+// interval; ball_add_k_full): each checks the environment, the rounding mode included, then
+// canonical balls (check_ball). The signs are comparisons (check_ball_exact). A member test of two
+// limbs returns the two masks of its kernel, yes and no; contains(t) is the yes.
+template <class T>
+KAIRN_FORCEINLINE constexpr bool contains_point(const Ball<T, 1>& x, std::type_identity_t<T> t) noexcept {
+    check_ball(x);
+    bool m = false;
+    gen::ball_contains_point_1(x.center().limb[0], x.radius(), t, m);
+    return m;
+}
+template <class T>
+KAIRN_FORCEINLINE void contains_point(const Ball<T, 2>& x, const Expansion<T, 2>& t, bool& yes, bool& no) noexcept {
+    check_ball(x);
+    gen::ball_contains_point_2(x.center().limb[0], x.center().limb[1], x.radius(), t.limb[0], t.limb[1], yes, no);
+}
+// Y inside X: the kernel's first operand is X.
+template <class T>
+KAIRN_FORCEINLINE constexpr bool contains_ball(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    bool m = false;
+    gen::ball_contains_ball_1(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), m);
+    return m;
+}
+template <class T>
+KAIRN_FORCEINLINE bool contains_ball(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    bool m = false;
+    gen::ball_contains_ball_2(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0],
+                              y.center().limb[1], y.radius(), m);
+    return m;
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Ball<T, 1> hull(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    T c = T(0), r = T(0);
+    gen::ball_hull_1(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), c, r);
+    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
+}
+template <class T>
+KAIRN_FORCEINLINE Ball<T, 2> hull(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    Expansion<T, 2> c;
+    T r = T(0);
+    gen::ball_hull_2(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0], y.center().limb[1],
+                     y.radius(), c.limb[0], c.limb[1], r);
+    return Ball<T, 2>(kernel_result, c, r);
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Ball<T, 1> intersection(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    T c = T(0), r = T(0);
+    gen::ball_intersection_1(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), c, r);
+    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
+}
+template <class T>
+KAIRN_FORCEINLINE Ball<T, 2> intersection(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    Expansion<T, 2> c;
+    T r = T(0);
+    gen::ball_intersection_2(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0],
+                             y.center().limb[1], y.radius(), c.limb[0], c.limb[1], r);
+    return Ball<T, 2>(kernel_result, c, r);
+}
+template <class T>
+KAIRN_FORCEINLINE Split<Ball<T, 1>> split(const Ball<T, 1>& x) noexcept {
+    check_ball(x);
+    T ca = T(0), ra = T(0), cb = T(0), rb = T(0);
+    gen::ball_split_1(x.center().limb[0], x.radius(), ca, ra, cb, rb);
+    return {Ball<T, 1>(kernel_result, Expansion<T, 1>(ca), ra), Ball<T, 1>(kernel_result, Expansion<T, 1>(cb), rb)};
+}
+template <class T>
+KAIRN_FORCEINLINE Split<Ball<T, 2>> split(const Ball<T, 2>& x) noexcept {
+    check_ball(x);
+    Expansion<T, 2> ca, cb;
+    T ra = T(0), rb = T(0);
+    gen::ball_split_2(x.center().limb[0], x.center().limb[1], x.radius(), ca.limb[0], ca.limb[1], ra, cb.limb[0],
+                      cb.limb[1], rb);
+    return {Ball<T, 2>(kernel_result, ca, ra), Ball<T, 2>(kernel_result, cb, rb)};
+}
 
 // The operations that round, without their markers and constraints: one kernel each. Where their
 // code is depends on KAIRN_ENCLOSURE_CODE (config.hpp): declared here, defined in
@@ -469,74 +624,185 @@ public:
     /// Whether this is a finite ball (for a canonical ball: its radius is finite).
     /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr bool is_finite() const noexcept { return std::numeric_limits<T>::infinity() > r_; }
-    /// Whether this is the whole line (radius +inf).
+    /// Whether this is the whole line (radius +inf): a test of the radius, which has no kernel. IEEE
+    /// 1788 calls the predicate of the whole line isEntire; Interval::is_whole() is the same name.
     /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr bool is_whole() const noexcept { return r_ == std::numeric_limits<T>::infinity(); }
-    /// Whether this is the empty set (radius NaN).
+    /// Whether this is the empty set (radius NaN): a test of the radius, which has no kernel.
     /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr bool is_empty() const noexcept { return r_ != r_; }
 
-    /// Whether every member is positive: for a finite ball, c - r > 0, decided exactly as r < c, a
-    /// comparison of the radius with the center (for two limbs, kernel lt_1_2; for one, the
-    /// comparison of T). False for the empty set (a query about nothing answers no: test
-    /// is_empty() first) and for the whole line (docs/developer/design/milestone2.md, "One
-    /// enclosure interface").
+    /// Whether every member is positive and the ball is not empty (kernel ball_positive_1 or
+    /// ball_positive_2): for a finite ball c - r > 0, decided as r < c, a comparison of the radius
+    /// with the center (for two limbs by lt_1_2). Proved, in the IEEE model, for a canonical ball:
+    /// exact. False for the empty set (a query about nothing answers no: test is_empty() first) and
+    /// for the whole line (docs/developer/design/milestone2.md, "The empty set and the whole line").
     /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
+    /// constexpr.
     constexpr bool certainly_positive() const noexcept
-        requires(K == 1 || detail::proof_checked<gen::bounds::lt_1_2<T>>)
-    {
-        detail::check_ball_exact(*this);
-        if constexpr (K == 1) {
-            return c_.limb[0] > r_;
-        } else {
-            bool m = false;
-            gen::lt_1_2(r_, c_.limb[0], c_.limb[1], m);
-            return m;
-        }
-    }
-    /// Whether every member is negative: for a finite ball, c + r < 0, decided exactly as c < -r, a
-    /// comparison of the center with the radius (for two limbs, kernel lt_2_1; for one, the
-    /// comparison of T). False for the empty set and for the whole line.
-    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
-    constexpr bool certainly_negative() const noexcept
-        requires(K == 1 || detail::proof_checked<gen::bounds::lt_2_1<T>>)
-    {
-        detail::check_ball_exact(*this);
-        if constexpr (K == 1) {
-            return -r_ > c_.limb[0];
-        } else {
-            bool m = false;
-            gen::lt_2_1(c_.limb[0], c_.limb[1], -r_, m);
-            return m;
-        }
-    }
-    /// Whether the ball is the point 0: center 0 and radius 0, exactly (for two limbs, kernel
-    /// eq_2_1 on the center and 0; for one, the comparison of T). False for the empty set and for
-    /// the whole line.
-    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
-    constexpr bool certainly_zero() const noexcept
-        requires(K == 1 || detail::proof_checked<gen::bounds::eq_2_1<T>>)
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::positive>
     {
         detail::check_ball_exact(*this);
         bool m = false;
         if constexpr (K == 1) {
-            m = c_.limb[0] == 0;
+            gen::ball_positive_1(c_.limb[0], r_, m);
         } else {
-            gen::eq_2_1(c_.limb[0], c_.limb[1], T(0), m);
+            gen::ball_positive_2(c_.limb[0], c_.limb[1], r_, m);
         }
-        return m && r_ == 0;
+        return m;
+    }
+    /// Whether every member is negative and the ball is not empty (kernel ball_negative_1 or
+    /// ball_negative_2): for a finite ball c + r < 0, decided as c < -r (for two limbs by lt_2_1).
+    /// Exact; false for the empty set and for the whole line. Does not round, and is checked, as
+    /// certainly_positive(); constexpr.
+    constexpr bool certainly_negative() const noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::negative>
+    {
+        detail::check_ball_exact(*this);
+        bool m = false;
+        if constexpr (K == 1) {
+            gen::ball_negative_1(c_.limb[0], r_, m);
+        } else {
+            gen::ball_negative_2(c_.limb[0], c_.limb[1], r_, m);
+        }
+        return m;
+    }
+    /// Whether the ball is the point 0 (kernel ball_zero_1 or ball_zero_2): center 0 (for two
+    /// limbs by eq_2_1) and radius 0. Exact; false for the empty set and for the whole line. Does
+    /// not round, and is checked, as certainly_positive(); constexpr.
+    constexpr bool certainly_zero() const noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::zero>
+    {
+        detail::check_ball_exact(*this);
+        bool m = false;
+        if constexpr (K == 1) {
+            gen::ball_zero_1(c_.limb[0], r_, m);
+        } else {
+            gen::ball_zero_2(c_.limb[0], c_.limb[1], r_, m);
+        }
+        return m;
     }
 
-    // The interface that Ball shares with Interval (docs/developer/design/milestone2.md, "One
-    // enclosure interface"). Not here yet, their kernels being still to come: lower() and upper()
-    // of a ball of two limbs (ball_to_interval_2), the conversion of an Interval<T, 2>
-    // (interval_to_ball_2), contains, hull, intersection, split, is_entire and the three-valued
-    // comparisons.
+    /// Whether t, a value of T, is a member (kernel ball_contains_point_1 or ball_contains_point_2,
+    /// for two limbs with t made a number of two limbs by make_2 first): |t - c| <= r. The members of a ball are real numbers, so an
+    /// infinite t or a NaN is a member of none, the whole line included, and the empty set has no
+    /// member. Proved, in the IEEE model, for a canonical ball and every value of T:
+    /// - one limb: exact; t - c is computed as an exact pair (two_sum_ord), compared with r;
+    /// - two limbs: certain. True only if t is a member; false when it is not, and also when the
+    ///   kernel does not decide, which it may within a band around the boundary |t - c| = r of
+    ///   about 2e + 3G, e being a few u^2 |t - c| plus twice the smallest normal number and G a gap
+    ///   of T at the larger of r and |t - c|; the band is measured, not claimed (architecture.md,
+    ///   "Claims of the enclosure interface: predicates and comparisons"). On the empty set, the
+    ///   whole line and a t that is not finite the answer is exact. kairn::member(t, X) gives the
+    ///   three answers.
+    /// For two limbs this composes two proved kernels: make_2 gives t exactly as a number of two
+    /// limbs, and ball_contains_point_2 answers for that number; argued so, not machine-checked as
+    /// one statement. t is guarded (rule R3) before it is added, by the kernel or by make_2.
+    /// Rounds (the difference of t and the center): preceded, when KAIRN_CHECKS is 1, by the check
+    /// of the environment, the rounding mode included, and of a canonical ball (config.hpp).
+    /// constexpr for one limb; for two not, add_ball_2_2 having fused operations without a variant
+    /// for constant evaluation.
+    constexpr bool contains(T t) const noexcept
+        requires detail::ball_member_proved<T, K>
+    {
+        return contains_point(t);
+    }
+    /// The same with a marked point: see kairn::Unverified.
+    constexpr bool contains(Unverified<T> t) const noexcept { return contains_point(t.value); }
+    /// Whether t, a number of K limbs, is a member (kernel ball_contains_point_1 or
+    /// ball_contains_point_2): as contains(T), exact for one limb and certain for two; a t of two
+    /// limbs must be canonical, which is checked with the ball. Rounds, and is checked, as
+    /// contains(T); constexpr for one limb.
+    constexpr bool contains(const Expansion<T, K>& t) const noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::contains_point>
+    {
+        return contains_number(t);
+    }
+    /// The same with a marked point.
+    constexpr bool contains(const Unverified<Expansion<T, K>>& t) const noexcept { return contains_number(t.value); }
+    /// Whether Y is inside this ball: every member of Y is a member of this one (kernel
+    /// ball_contains_ball_1 or ball_contains_ball_2), |c_y - c| <= r - r_y. Proved, in the IEEE
+    /// model, for canonical balls: the whole line contains every ball and is contained only in
+    /// itself, the empty set is inside every ball and contains no other, and then:
+    /// - one limb: exact; the distance of the centers and the difference of the radii are compared
+    ///   as exact pairs;
+    /// - two limbs: certain. True only if Y is inside; false when it is not, and also when the
+    ///   kernel does not decide, which it may when r - (|c_y - c| + r_y) is below about 2e + 4G (e
+    ///   and G as for contains(t)); measured, not claimed. On the empty set and the whole line the
+    ///   answer is exact.
+    /// Only a Ball of the same T and K is accepted: a point is not made a ball here (contains(t) is
+    /// the member test, which differs on an infinite point).
+    /// Rounds (differences of centers and of radii): preceded, when KAIRN_CHECKS is 1, by the check
+    /// of the environment, the rounding mode included, and of canonical balls (config.hpp).
+    /// constexpr for one limb.
+    template <int J>
+        requires(J == K && detail::proof_checked<typename detail::ball_kernels<T, K>::contains_ball>)
+    constexpr bool contains(const Ball<T, J>& y) const noexcept {
+        return detail::contains_ball(*this, y);
+    }
+    /// The same with a marked operand.
+    constexpr bool contains(const Unverified<Ball>& y) const noexcept { return detail::contains_ball(*this, y.value); }
+
+    /// A ball that contains this ball and Y (kernel ball_hull_1 or ball_hull_2): both converted to
+    /// intervals, the hull of the intervals, and that converted back to a ball. Proved, in the IEEE
+    /// model, for canonical balls: the result is canonical and contains every member of either; it
+    /// is empty exactly when both are; when this ball is empty the result is Y as it is, the same
+    /// limbs, and when Y is empty and this ball is not, this ball as it is. Not claimed: that it is
+    /// the smallest such ball (two outward conversions can widen it by a rounding each).
+    /// Rounds (the conversions): preceded, when KAIRN_CHECKS is 1, by the check of the environment,
+    /// the rounding mode included, and of canonical balls (config.hpp). constexpr for one limb; for
+    /// two not, the conversions of two limbs having fused operations without a variant for
+    /// constant evaluation.
+    constexpr Ball hull(const Ball& y) const noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::hull>
+    {
+        return detail::hull(*this, y);
+    }
+    /// The same with a marked operand.
+    constexpr Ball hull(const Unverified<Ball>& y) const noexcept { return detail::hull(*this, y.value); }
+    /// A ball that contains every common member of this ball and Y (kernel ball_intersection_1 or
+    /// ball_intersection_2): both converted to intervals, their intersection, converted back.
+    /// Proved, in the IEEE model, for canonical balls: the result is canonical and contains every
+    /// real number that is a member of both; it is empty when an operand is; when this ball is the
+    /// whole line the result is Y as it is, and when Y is the whole line and this ball is not, this
+    /// ball as it is. Not claimed: that it is inside either operand (the outward conversions can
+    /// make it stick out by a rounding), the smallest such ball, or empty whenever the balls are
+    /// disjoint. Rounds, and is checked, as hull(); constexpr for one limb.
+    constexpr Ball intersection(const Ball& y) const noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::intersection>
+    {
+        return detail::intersection(*this, y);
+    }
+    /// The same with a marked operand.
+    constexpr Ball intersection(const Unverified<Ball>& y) const noexcept { return detail::intersection(*this, y.value); }
+    /// Two balls that cover this one (kernel ball_split_1 or ball_split_2): the center plus the
+    /// balls of center -h and +h, h = r/2 rounded to nearest, and radius max(h, r - h), each sum a
+    /// sum of balls. Proved, in the IEEE model, for a canonical ball of center c and radius r: both
+    /// parts are canonical; for a finite ball every real number of [c - r, c] is a member of left
+    /// and every one of [c, c + r] of right, so together they cover the ball; the empty set gives
+    /// the empty set twice, the whole line the whole line twice (a ball cannot be a half-line, so
+    /// splitting it makes no progress). **Not claimed:** that the parts are inside the ball, nor
+    /// that their radii are smaller than r or near r/2: each has the error bound of a sum of balls,
+    /// and once r is near u |c| (for two limbs, u^2 |c|) or the smallest normal number, the parts
+    /// can be as wide as the ball. A bisection therefore needs its own test of progress
+    /// (docs/tutorials/bisection.md). Rounds (sums of balls): preceded, when KAIRN_CHECKS is 1, by
+    /// the check of the environment, the rounding mode included, and of a canonical ball
+    /// (config.hpp). Not usable in constant evaluation: the sums of balls compute their radius with
+    /// fused operations without a variant for it.
+    Split<Ball> split() const noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::split>
+    {
+        return detail::split(*this);
+    }
 
     /// The midpoint: the center, for code written once for a Ball and an Interval; 0 for the whole
     /// line, NaN limbs for the empty set.
     /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr const Expansion<T, K>& midpoint() const noexcept { return c_; }
+    /// The center and the radius together, for code written once for a Ball and an Interval (whose
+    /// mid_rad() computes both): {center(), radius()}, copied.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
+    constexpr MidRad<T, K> mid_rad() const noexcept { return {c_, r_}; }
     /// A lower bound of the ball as a number of T, for U = T (kernel ball_lower_as_1 or
     /// ball_lower_as_2). Proved, in the IEEE model, for a canonical ball: +inf for the empty set;
     /// otherwise at most every member, so -inf for the whole line. For one limb and a finite ball,
@@ -567,68 +833,94 @@ public:
     constexpr U upper_as() const noexcept {
         return detail::ball_upper_as(*this);
     }
-    /// The lower bound of a ball of one limb as a number of one limb (kernel ball_lower_as_1): the
-    /// value of lower_as<T>(), RD(c - r) for a finite ball, +inf for the empty set, -inf for the
-    /// whole line; that is also the lower bound of Interval<T, 1>(X), the smallest interval of T that
-    /// contains the ball. Rounds, and is checked, as lower_as; constexpr.
-    constexpr Expansion<T, 1> lower() const noexcept
-        requires(K == 1 && detail::proof_checked<gen::bounds::ball_lower_as_1<T>>)
+    /// The lower bound of the ball as a number of K limbs (kernel ball_lower_as_1 or
+    /// ball_to_interval_2): +inf for the empty set, -inf for the whole line, and for a finite ball
+    /// - one limb: the value of lower_as<T>(), RD(c - r), also the lower bound of Interval<T, 1>(X),
+    ///   the smallest interval of T that contains the ball;
+    /// - two limbs: the lower bound of Interval<T, 2>(X), at most c - r and within A |c - r| + B of
+    ///   it, A about 8 u^2 and B about twice the smallest normal number (the constants of the sum
+    ///   of two limbs; docs/reference/ball_to_interval_2.md gives them), and c - r itself when it is
+    ///   zero; finite when no member is above 2^(e_max - 2) in magnitude. The kernel computes both
+    ///   bounds, and so does upper(): a program that needs both converts once, Interval<T, 2>(X).
+    /// Rounds, and is checked, as lower_as; constexpr for one limb; for two not, the directed sums
+    /// of two limbs having fused operations without a variant for constant evaluation.
+    constexpr Expansion<T, K> lower() const noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::lower>
     {
-        return Expansion<T, 1>(detail::ball_lower_as(*this));
+        if constexpr (K == 1) {
+            return Expansion<T, 1>(detail::ball_lower_as(*this));
+        } else {
+            Expansion<T, 2> l, h;
+            detail::ball_bounds(*this, l, h);
+            return l;
+        }
     }
-    /// The upper bound of a ball of one limb as a number of one limb (kernel ball_upper_as_1): the
-    /// value of upper_as<T>(), RU(c + r) for a finite ball, -inf for the empty set, +inf for the
-    /// whole line; that is also the upper bound of Interval<T, 1>(X). Rounds, and is checked, as
-    /// lower_as; constexpr.
-    constexpr Expansion<T, 1> upper() const noexcept
-        requires(K == 1 && detail::proof_checked<gen::bounds::ball_upper_as_1<T>>)
+    /// The upper bound of the ball as a number of K limbs (kernel ball_upper_as_1 or
+    /// ball_to_interval_2): -inf for the empty set, +inf for the whole line, and for a finite ball,
+    /// for one limb the value of upper_as<T>(), RU(c + r), the upper bound of Interval<T, 1>(X); for
+    /// two the upper bound of Interval<T, 2>(X), at least c + r and within A |c + r| + B of it, c + r
+    /// itself when it is zero (the kernel computes both bounds, as for lower()). Rounds, and is
+    /// checked, as lower_as; constexpr for one limb.
+    constexpr Expansion<T, K> upper() const noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::upper>
     {
-        return Expansion<T, 1>(detail::ball_upper_as(*this));
+        if constexpr (K == 1) {
+            return Expansion<T, 1>(detail::ball_upper_as(*this));
+        } else {
+            Expansion<T, 2> l, h;
+            detail::ball_bounds(*this, l, h);
+            return h;
+        }
     }
 
-    /// The ball of one limb that contains the interval X (kernel interval_to_ball_1), its center a
-    /// midpoint of X and its radius the smallest for that center (the listing is that of
-    /// X.midpoint() and X.radius()), but for an unbounded interval, which becomes the whole line,
-    /// center 0 and radius +inf (a ball cannot be a half-line). Proved, in the IEEE model, for a
-    /// canonical interval: the ball is canonical, and empty exactly when X is; for a
-    /// bounded X = [l, h] it is a finite ball whose center c has l <= c <= h and
-    /// |c - (l + h)/2| <= u |(l + h)/2| + eta, and whose radius is the smallest number of T for which
-    /// [c - r, c + r] contains X, RU(max(c - l, h - c)). Explicit: the conversion widens the set.
-    /// Rounds (sums and halvings): preceded, when KAIRN_CHECKS is 1, by the check of the environment,
-    /// the rounding mode included, and of a canonical interval (config.hpp). constexpr. For two
-    /// limbs not yet: its kernel, interval_to_ball_2, is still to come.
+    /// A ball that contains the interval X (kernel interval_to_ball_1 or interval_to_ball_2), its
+    /// center a midpoint of X (the listing is that of X.midpoint() and X.radius()), but for an
+    /// unbounded interval, which becomes the whole line, center 0 and radius +inf (a ball cannot be
+    /// a half-line). Proved, in the IEEE model, for a canonical interval: the ball is canonical, and
+    /// empty exactly when X is; for a bounded X = [l, h]:
+    /// - one limb: a finite ball whose center c has l <= c <= h and
+    ///   |c - (l + h)/2| <= u |(l + h)/2| + eta, and whose radius is the smallest number of T for
+    ///   which [c - r, c + r] contains X, RU(max(c - l, h - c));
+    /// - two limbs: a ball that contains X, which is a finite ball, with a normalized center c,
+    ///   l <= c <= h and |c - (l + h)/2| <= 3u^2/(1 - 4u) |(l + h)/2| + 2 eta, when |l| and |h| are
+    ///   at most 2^(e_max - 2), and may be the whole line otherwise; the smallest radius is not
+    ///   claimed.
+    /// Explicit: the conversion widens the set. Rounds (sums and halvings): preceded, when
+    /// KAIRN_CHECKS is 1, by the check of the environment, the rounding mode included, and of a
+    /// canonical interval (config.hpp). constexpr for one limb; for two not, its kernel having fused
+    /// operations without a variant for constant evaluation.
     explicit constexpr Ball(const Interval<T, K>& x) noexcept
-        requires(K == 1 && detail::proof_checked<gen::bounds::interval_to_ball_1<T>>)
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::to_ball>
         : Ball(detail::to_ball(x)) {}
     /// The same with a marked operand: see kairn::Unverified.
-    explicit constexpr Ball(const Unverified<Interval<T, K>>& x) noexcept
-        requires(K == 1)
-        : Ball(detail::to_ball(x.value)) {}
-    /// The ball of two limbs whose center is the midpoint of [lo, hi], two values of T (kernel
-    /// ball_from_interval_2), each guarded (rule R3): Ball<T, 2>::from_interval(lo, hi). Proved, in
+    explicit constexpr Ball(const Unverified<Interval<T, K>>& x) noexcept : Ball(detail::to_ball(x.value)) {}
+    /// The ball of the interval [lo, hi] of two values of T (kernel ball_from_interval_1 or
+    /// ball_from_interval_2), each guarded (rule R3): Ball<T, K>::from_interval(lo, hi). Proved, in
     /// the IEEE model, for any two values of T: the ball is canonical, and it is, by the first case
     /// that applies, the whole line, center 0 and radius +inf, when a bound is a NaN, whatever the
     /// other, and when both bounds are the same infinity, [+inf, +inf] or [-inf, -inf] (a value from
     /// the program that is not finite says that something failed or overflowed upstream, and the
     /// empty set would say that there is no value); the empty set when the bounds are reversed,
-    /// lo > hi, as Interval(lo, hi); when both are finite (lo <= hi), a finite ball that contains
-    /// [lo, hi], and when moreover lo/2 and hi/2 are numbers of T (neither bound an odd multiple of
-    /// eta below twice the smallest normal number) its center is (lo + hi)/2 exactly, the sum of the
-    /// halves as two limbs, and its radius RU((hi - lo)/2), the smallest of T for that center; and
-    /// the whole line when a bound is infinite (lo <= hi, [lo, +inf], [-inf, hi], [-inf, +inf]): a
-    /// ball cannot be a half-line.
-    /// Rounds (halvings and a difference rounded up): preceded, when KAIRN_CHECKS is 1, by the check
+    /// lo > hi, as Interval(lo, hi); the whole line when a bound is infinite (lo <= hi, [lo, +inf],
+    /// [-inf, hi], [-inf, +inf]): a ball cannot be a half-line; and when both are finite (lo <= hi),
+    /// a finite ball that contains [lo, hi], and
+    /// - one limb: its center c is between the bounds and within u |m| + eta of the midpoint
+    ///   m = (lo + hi)/2, and its radius is the smallest number of T for that center,
+    ///   RU(max(c - lo, hi - c)): the ball of Interval<T, 1>(lo, hi), in one kernel;
+    /// - two limbs: when moreover lo/2 and hi/2 are numbers of T (neither bound an odd multiple of
+    ///   eta below twice the smallest normal number), its center is (lo + hi)/2 exactly, the sum of
+    ///   the halves as two limbs, and its radius RU((hi - lo)/2), the smallest of T for that center;
+    ///   otherwise only the containment is claimed.
+    /// Rounds (halvings and differences rounded up): preceded, when KAIRN_CHECKS is 1, by the check
     /// of the environment, the rounding mode included; every value of T is accepted. constexpr.
     static constexpr Ball from_interval(T lo, T hi) noexcept
-        requires(K == 2 && detail::proof_checked<gen::bounds::ball_from_interval_2<T>>)
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::from_interval>
     {
-        return detail::ball_from_interval<T>(lo, hi);
+        return detail::ball_from_interval<T, K>(lo, hi);
     }
     /// The same with a marked operand.
-    static constexpr Ball from_interval(Unverified<T> lo, T hi) noexcept
-        requires(K == 2)
-    {
-        return detail::ball_from_interval<T>(lo.value, hi);
+    static constexpr Ball from_interval(Unverified<T> lo, T hi) noexcept {
+        return detail::ball_from_interval<T, K>(lo.value, hi);
     }
     /// A ball of one limb that contains the ball X of two limbs (kernel ball_narrow_2_1): the leading
     /// limb of the center, and the radius widened by the second limb, rounded up. Proved, in the
@@ -647,6 +939,28 @@ public:
     explicit constexpr Ball(const Unverified<Ball<T, 2>>& x) noexcept
         requires(K == 1)
         : Ball(detail::narrow(x.value)) {}
+
+private:
+    // The member tests, without their markers and constraints; for two limbs the yes of the kernel.
+    constexpr bool contains_point(T t) const noexcept {
+        if constexpr (K == 1) {
+            return detail::contains_point(*this, t);
+        } else {
+            bool yes = false, no = false;
+            detail::contains_point(*this, detail::make<T>(t), yes, no);
+            return yes;
+        }
+    }
+    constexpr bool contains_number(const Expansion<T, K>& t) const noexcept {
+        if constexpr (K == 1) {
+            return detail::contains_point(*this, t.limb[0]);
+        } else {
+            detail::check(t);
+            bool yes = false, no = false;
+            detail::contains_point(*this, t, yes, no);
+            return yes;
+        }
+    }
 };
 
 namespace detail {
@@ -959,6 +1273,189 @@ template <class X>
     requires detail::marked<X> && detail::ball<X>
 KAIRN_FORCEINLINE auto half(const X& x) noexcept -> decltype(detail::half(detail::unmark(x))) {
     return detail::half(detail::unmark(x));
+}
+
+namespace detail {
+// The three-valued comparisons of two balls and the member test as a Trit, without their markers
+// and constraints: one kernel each, which rounds (exact pairs by two_sum_ord for one limb; bounds
+// by add_ball_2_2 and radd for two), so each checks the environment, the rounding mode included,
+// then canonical balls. greater and greater_equal are less and less_equal of the operands
+// exchanged, not_equal is equal with yes and no exchanged.
+template <class T>
+KAIRN_FORCEINLINE constexpr Trit less(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    bool yes = false, no = false;
+    gen::ball_less_1(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), yes, no);
+    return trit(yes, no);
+}
+template <class T>
+KAIRN_FORCEINLINE Trit less(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    bool yes = false, no = false;
+    gen::ball_less_2(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0], y.center().limb[1],
+                     y.radius(), yes, no);
+    return trit(yes, no);
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Trit less_equal(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    bool yes = false, no = false;
+    gen::ball_less_equal_1(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), yes, no);
+    return trit(yes, no);
+}
+template <class T>
+KAIRN_FORCEINLINE Trit less_equal(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    bool yes = false, no = false;
+    gen::ball_less_equal_2(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0],
+                           y.center().limb[1], y.radius(), yes, no);
+    return trit(yes, no);
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Trit equal(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    bool yes = false, no = false;
+    gen::ball_equal_1(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), yes, no);
+    return trit(yes, no);
+}
+template <class T>
+KAIRN_FORCEINLINE Trit equal(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
+    check_ball(x);
+    check_ball(y);
+    bool yes = false, no = false;
+    gen::ball_equal_2(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0], y.center().limb[1],
+                      y.radius(), yes, no);
+    return trit(yes, no);
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit greater(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
+    return detail::less(y, x);
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit greater_equal(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
+    return detail::less_equal(y, x);
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr Trit not_equal(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
+    return detail::opposite(detail::equal(x, y));
+}
+// One limb: the kernel's one mask, exact, as yes or no. Two limbs: the kernel's yes and no.
+template <class T>
+KAIRN_FORCEINLINE constexpr Trit member(std::type_identity_t<T> t, const Ball<T, 1>& x) noexcept {
+    return detail::contains_point(x, t) ? Trit::yes : Trit::no;
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Trit member(const Expansion<T, 1>& t, const Ball<T, 1>& x) noexcept {
+    return detail::contains_point(x, t.limb[0]) ? Trit::yes : Trit::no;
+}
+template <class T>
+KAIRN_FORCEINLINE Trit member(const Expansion<T, 2>& t, const Ball<T, 2>& x) noexcept {
+    check(t);
+    bool yes = false, no = false;
+    detail::contains_point(x, t, yes, no);
+    return trit(yes, no);
+}
+template <class T>
+KAIRN_FORCEINLINE Trit member(std::type_identity_t<T> t, const Ball<T, 2>& x) noexcept {
+    bool yes = false, no = false;
+    detail::contains_point(x, make<T>(t), yes, no);
+    return trit(yes, no);
+}
+}  // namespace detail
+
+// The three-valued comparisons of balls (milestone2.md, "Comparisons"), under the names of those of
+// intervals (interval.hpp), as functions and not operators: each answer is a kairn::Trit, which does
+// not convert to bool. Function templates, so that no operand converts: two balls of the same T and
+// K. The bounds c - r and c + r of a ball are not numbers of T, and what is claimed depends on the
+// number of limbs: for one limb the comparisons are of exact pairs (two_sum_ord of the radii and of
+// the centers) and exact when the sum of the radii is at most Omega; for two limbs they are
+// certain: yes and no are right when given, and the answer may be unknown near the boundary.
+
+/// The three-valued X < Y of balls (kernel ball_less_1 or ball_less_2): yes only when every member
+/// of X is below every member of Y, c_x + r_x < c_y - r_y; no only when no member of X is below a
+/// member of Y; never both. Unknown when an operand is empty or the whole line (exactly). Proved,
+/// in the IEEE model, for canonical balls:
+/// - one limb: exact when r_x + r_y <= Omega (the claim's exact_when): unknown exactly when neither
+///   holds. Beyond, when the sum of the radii and the difference of the centers both overflow, the
+///   answer is unknown, still never wrong;
+/// - two limbs: certain. yes and no are right when given; unknown also near the boundary, when the
+///   gap between the balls, (c_y - c_x) - (r_x + r_y) or its opposite, is below about 2e + 4G, e a
+///   few u^2 |c_y - c_x| plus twice the smallest normal number and G a gap of T at the larger of
+///   the radii and the distance: measured, not claimed (architecture.md, "Claims of the enclosure
+///   interface: predicates and comparisons").
+/// Rounds (the difference of the centers, the sum of the radii): preceded, when KAIRN_CHECKS is 1,
+/// by the check of the environment, the rounding mode included, and of canonical balls
+/// (config.hpp). constexpr for one limb; for two not, add_ball_2_2 having fused operations without
+/// a variant for constant evaluation.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::less>
+KAIRN_FORCEINLINE constexpr Trit less(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
+    return detail::less(x, y);
+}
+/// The three-valued X <= Y of balls (kernel ball_less_equal_1 or ball_less_equal_2): yes only when
+/// c_x + r_x <= c_y - r_y, no only when c_x - r_x > c_y + r_y; exact for one limb when
+/// r_x + r_y <= Omega, certain for two, as less(). Rounds, and is checked, as less(); constexpr for
+/// one limb.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::less_equal>
+KAIRN_FORCEINLINE constexpr Trit less_equal(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
+    return detail::less_equal(x, y);
+}
+/// The three-valued X > Y of balls: less(Y, X), the same kernel (ball_less_1 or ball_less_2) with
+/// the operands exchanged, and its statement. Rounds, and is checked, as less().
+template <class T, int K>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::less>
+KAIRN_FORCEINLINE constexpr Trit greater(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
+    return detail::greater(x, y);
+}
+/// The three-valued X >= Y of balls: less_equal(Y, X) (kernel ball_less_equal_1 or
+/// ball_less_equal_2). Rounds, and is checked, as less().
+template <class T, int K>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::less_equal>
+KAIRN_FORCEINLINE constexpr Trit greater_equal(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
+    return detail::greater_equal(x, y);
+}
+/// The three-valued X = Y of balls (kernel ball_equal_1 or ball_equal_2): yes only when every
+/// member of X equals every member of Y, both balls being the same point (radii 0, centers equal);
+/// no only when no member of X equals a member of Y, the balls being disjoint; never both. Exact
+/// for one limb when r_x + r_y <= Omega; for two limbs certain, the no near the boundary as for
+/// less() and the yes too: the kernel compares the centers exactly, but no claim says so. Rounds,
+/// and is checked, as less(); constexpr for one limb.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::equal>
+KAIRN_FORCEINLINE constexpr Trit equal(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
+    return detail::equal(x, y);
+}
+/// The three-valued X != Y of balls: equal(X, Y) with yes and no exchanged (kernel ball_equal_1 or
+/// ball_equal_2). Rounds, and is checked, as less().
+template <class T, int K>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::equal>
+KAIRN_FORCEINLINE constexpr Trit not_equal(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
+    return detail::not_equal(x, y);
+}
+/// Whether t, a value of T, is a member of X, as a Trit (kernel ball_contains_point_1 or
+/// ball_contains_point_2, with make_2 first for two limbs, as X.contains(t)): for one limb exact,
+/// yes or no, never unknown; for two limbs yes only when t is a member, no only when it is not,
+/// and unknown when the kernel does not decide (the band of X.contains(t), measured, not
+/// claimed); exact on the empty set (no), the whole line (yes for a finite t) and a t that is not
+/// finite (no). Rounds, and is checked, as X.contains(t); constexpr for one limb.
+template <class T, int K>
+    requires detail::ball_member_proved<T, K>
+KAIRN_FORCEINLINE constexpr Trit member(std::type_identity_t<T> t, const Ball<T, K>& x) noexcept {
+    return detail::member(t, x);
+}
+/// Whether t, a number of K limbs, is a member of X, as a Trit (kernel ball_contains_point_1 or
+/// ball_contains_point_2): as member(T, X); a t of two limbs must be canonical. Rounds, and is
+/// checked, as X.contains(t); constexpr for one limb.
+template <class T, int K>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::contains_point>
+KAIRN_FORCEINLINE constexpr Trit member(const Expansion<T, K>& t, const Ball<T, K>& x) noexcept {
+    return detail::member(t, x);
 }
 
 }  // namespace kairn

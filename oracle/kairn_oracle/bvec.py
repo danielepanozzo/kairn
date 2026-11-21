@@ -19,7 +19,7 @@ The kernels of the radii (bv_add_radius_k, bv_scale_radius_k, conv_radius, bv_mu
 
 Such a kernel has only such entries and is judged on every line (judge_radius): a NaN or -inf
 output fails, +inf passes (and is suspicious where the stated value is below Omega/4).  But
-conv_radius (FINITE_RESULTS): by the owner's ruling of 2026-11-21 (architecture.md, "Claims of the
+conv_radius (FINITE_RESULTS): by the ruling of 2026-11-21 (architecture.md, "Claims of the
 non-finite layer" and "Claims of Milestone 2") its claim is of finite results, and a result that is
 not finite claims only that it is +inf or a NaN: either passes and is counted (never suspicious),
 -inf fails, a finite result is judged as for every radius kernel.
@@ -80,7 +80,7 @@ ACC_BEYOND = "the exact value rounds beyond Omega"
 GROUP_NONFINITE = "the leading limb of its output is not finite: nothing claimed"
 GROUP_TAIL = "a lower limb of its output is not finite: nothing claimed"
 
-# The radius kernels whose upper entries are claimed of finite results only: the owner's ruling
+# The radius kernels whose upper entries are claimed of finite results only: the ruling
 # of 2026-11-21 on conv_radius (architecture.md, "Claims of the non-finite layer", "Claims of
 # Milestone 2").  A result that is not finite claims only that it is +inf or a NaN, never a
 # negative number or -inf; the product of BallVectors that calls it turns such a radius into the

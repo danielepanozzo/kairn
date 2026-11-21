@@ -13,8 +13,8 @@
 //                              of a compiler that fuses
 //   boundary --expect report   prints the counts only
 //
-// The forms whose limb operand is only multiplied (x * (a * b), a ball scaled by a * b) need no
-// guard and must agree in every build.
+// The forms whose limb operand is only multiplied (x * (a * b), a ball scaled by a * b) or only
+// compared (the member test of an interval) need no guard and must agree in every build.
 #include <kairn/kairn.hpp>
 
 #include <cstdint>
@@ -33,6 +33,8 @@ using E1 = kairn::Expansion<double, 1>;
 using E2 = kairn::Expansion<double, 2>;
 using B1 = kairn::Ball<double, 1>;
 using B2 = kairn::Ball<double, 2>;
+using I1 = kairn::Interval<double, 1>;
+using I2 = kairn::Interval<double, 2>;
 
 NOINLINE double rounded(double a, double b) {
     volatile double p = a * b;
@@ -68,10 +70,24 @@ PAIR(finite_plus, E2, (E2 x, double a, double b), return kairn::finite::add(x, a
 PAIR(finite_rminus, E2, (E2 x, double a, double b), return kairn::finite::sub(a * b, x), return kairn::finite::sub(a, x))
 PAIR(ball2_plus_point, B2, (B2 y, double a, double b), return y + a * b, return y + a)
 PAIR(ball1_point_minus, B1, (B1 y, double a, double b), return a * b - y, return a - y)
+// The enclosure interface (headers-pred): a point of the program in a ball, whose member test adds
+// it (ball_contains_point_1 guards it; for two limbs make_2 does), against a ball centered at the
+// rounded product with a radius that the guarded point is within and a fused one is not; and the
+// ball from an interval of two T, whose bounds are guarded and added to the midpoint.
+PAIR(ball1_contains, bool, (B1 y, double a, double b), return y.contains(a * b), return y.contains(a))
+PAIR(ball2_contains, bool, (B2 y, double a, double b), return y.contains(a * b), return y.contains(a))
+PAIR(ball1_from_interval, B1, (B1 y, double a, double b), return B1::from_interval(a * b, a * b) + y,
+     return B1::from_interval(a, a) + y)
+PAIR(ball2_from_interval, B2, (B2 y, double a, double b), return B2::from_interval(a * b, a * b) + y,
+     return B2::from_interval(a, a) + y)
 // Multiplicands: no guard, and none needed.
 PAIR(times, E2, (E2 x, double a, double b), return x * (a * b), return x * a)
 PAIR(ball2_scale, B2, (B2 y, double a, double b), return y * (a * b), return y * a)
 PAIR(ball1_scale, B1, (B1 y, double a, double b), return y * (a * b), return y * a)
+// A point of the program only compared, in the member test of an interval: no guard needed (for two
+// limbs make_2 guards it, and nothing adds it).
+PAIR(interval1_contains, bool, (I1 x, double a, double b), return x.contains(a * b), return x.contains(a))
+PAIR(interval2_contains, bool, (I2 x, double a, double b), return x.contains(a * b), return x.contains(a))
 
 template <class X>
 bool same(const X& u, const X& v) {
@@ -94,15 +110,17 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "usage: boundary --expect none|some|report\n");
         return 2;
     }
-    enum { n_forms = 24 };
+    enum { n_forms = 30 };
     const char* names[n_forms] = {"x + a*b", "a*b + x", "x - a*b", "a*b - x", "x += a*b", "x -= a*b", "E2(a*b) + x",
                                   "from_limbs({a*b, 0}) + x", "E2(E1(a) * E1(b)) + x", "Ball2(a*b) + Y",
                                   "Ball2(E2(a*b), r) + Y", "Ball2(c, a*b) + Y", "Ball1(a*b) + Y",
                                   "Ball1(E1(a) * E1(b), r) + Y", "Ball1(c, a*b) + Y", "x + E1(a*b)", "x - E1(a*b)",
                                   "finite::add(x, a*b)", "finite::sub(a*b, x)", "Y + a*b (Ball2)", "a*b - Y (Ball1)",
-                                  "x * (a*b)", "Ball2 * (a*b)", "Ball1 * (a*b)"};
+                                  "Ball1.contains(a*b)", "Ball2.contains(a*b)", "Ball1::from_interval(a*b, a*b)",
+                                  "Ball2::from_interval(a*b, a*b)", "x * (a*b)", "Ball2 * (a*b)", "Ball1 * (a*b)",
+                                  "Interval1.contains(a*b)", "Interval2.contains(a*b)"};
     bool multiplicand[n_forms] = {};
-    multiplicand[n_forms - 3] = multiplicand[n_forms - 2] = multiplicand[n_forms - 1] = true;
+    for (int f = n_forms - 5; f < n_forms; ++f) multiplicand[f] = true;
     long differ[n_forms] = {};
     const long cases = 200000;
     for (long i = 0; i < cases; ++i) {
@@ -135,14 +153,27 @@ int main(int argc, char** argv) {
         differ[f++] += !same(finite_rminus_inline(xp, a, b), finite_rminus_ref(xp, p, 1.0));
         differ[f++] += !same(ball2_plus_point_inline(y2, a, b), ball2_plus_point_ref(y2, p, 1.0));
         differ[f++] += !same(ball1_point_minus_inline(m1, a, b), ball1_point_minus_ref(m1, p, 1.0));
+        // A ball centered at the rounded product: radius 0 for one limb, which the guarded point
+        // meets exactly; for two limbs 2^-990, above the bound of the error of an exact difference
+        // and far below the error of a product fused into it.
+        const B1 at1(E1(p), 0.0);
+        const B2 at2(E2(p), 0x1p-990);
+        differ[f++] += !same(ball1_contains_inline(at1, a, b), ball1_contains_ref(at1, p, 1.0));
+        differ[f++] += !same(ball2_contains_inline(at2, a, b), ball2_contains_ref(at2, p, 1.0));
+        differ[f++] += !same(ball1_from_interval_inline(y1, a, b), ball1_from_interval_ref(y1, p, 1.0));
+        differ[f++] += !same(ball2_from_interval_inline(y2, a, b), ball2_from_interval_ref(y2, p, 1.0));
         differ[f++] += !same(times_inline(xm, a, b), times_ref(xm, p, 1.0));
         differ[f++] += !same(ball2_scale_inline(y2, a, b), ball2_scale_ref(y2, p, 1.0));
         differ[f++] += !same(ball1_scale_inline(y1, a, b), ball1_scale_ref(y1, p, 1.0));
+        const I1 pt1(p);
+        const I2 pt2(p);
+        differ[f++] += !same(interval1_contains_inline(pt1, a, b), interval1_contains_ref(pt1, p, 1.0));
+        differ[f++] += !same(interval2_contains_inline(pt2, a, b), interval2_contains_ref(pt2, p, 1.0));
     }
     long guarded = 0, multiplied = 0;
     for (int f = 0; f < n_forms; ++f) {
         std::printf("  %-28s differs in %6ld of %ld%s\n", names[f], differ[f], cases,
-                    multiplicand[f] ? "   (multiplicand: no guard needed)" : "");
+                    multiplicand[f] ? "   (multiplied or compared: no guard needed)" : "");
         (multiplicand[f] ? multiplied : guarded) += differ[f];
     }
     bool ok = multiplied == 0;

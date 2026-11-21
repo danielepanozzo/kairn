@@ -81,11 +81,13 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 | one limb: `-x`, `abs`, comparisons, conversions | exact (no kernel) | the IEEE 754 operation |
 | `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (the kernels of [Ball operations](../reference/index.md#ball-operations)) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B4 (B1 to B3 for `-X`): containment in every case, the empty set and the whole line included; a finite ball when no $x \circ y$ exceeds $2^{e_{\max}-2}$ in magnitude ($2^{e_{\max}-4}$ for the product of one-limb balls) |
 | `Ball`: `ldexp(X, n)`, `half(X)` ([`ball_mul_pow2_1_full`](../reference/ball_mul_pow2_1_full.md), [`ball_mul_pow2_2_full`](../reference/ball_mul_pow2_2_full.md)) | containment of $2^n x$ for all $x \in X$, and the result is $2^n X$ exactly when each limb of its center and its radius is zero or above the smallest normal number of `T`; when $2^n$ is a number of `T` ([below](#overflow-and-non-finite-values) for the other $n$) | B1 to B4; a finite ball when $(\lvert c\rvert + r)\,2^n \le 2^{e_{\max}-2}$ |
-| `Ball`: `X.certainly_positive()`, `X.certainly_negative()`, `X.certainly_zero()` (for two limbs [`lt_1_2`](../reference/lt_1_2.md), [`lt_2_1`](../reference/lt_2_1.md), [`eq_2_1`](../reference/eq_2_1.md); for one, comparisons of `T`) | exactly whether every member is positive, negative, or zero | false for the empty set and for the whole line |
+| `Ball`: `X.certainly_positive()`, `X.certainly_negative()`, `X.certainly_zero()` ([`ball_positive_k`](../reference/ball_positive_1.md), [`ball_negative_k`](../reference/ball_negative_1.md), [`ball_zero_k`](../reference/ball_zero_1.md)) | exactly whether every member is positive, negative, or zero | false for the empty set and for the whole line |
 | the building blocks on `T`: `two_sum`, `fast_two_sum`, `two_prod`, `next_up`, `next_down`, `radd`, `rmul`, `add_down`, `add_up`, `sub_down`, `sub_up`, `mul_down`, `mul_up` ([Building blocks on T](../reference/index.md#building-blocks-on-t)) | each its kernel's statement: an exact sum, an exact product above $2^{2p-1}\eta$, an upper bound for radii, the exact rounding down or up of a sum, a bound of a product on the side asked for | the neighbors, the directed sums and the directed products on every value of `T`; `radd`, `rmul` a NaN for a NaN or $0 \cdot \infty$; `two_sum`, `fast_two_sum`, `two_prod` stated for finite operands, which their pages say more of |
 | `Interval`: constructors, `-X`, `X.hull(Y)`, `X.intersection(Y)` (the `interval_make`, `interval_neg`, `interval_hull` and `interval_intersection` kernels of [Interval operations](../reference/index.md#interval-operations)) | | the interval given, or the whole line for a NaN bound and the empty set for reversed bounds ([below](#intervals)); the negation, the hull and the intersection exactly |
 | `Interval`: `X + Y`, `X - Y`, `X * Y` (`interval_add_k`, `interval_sub_k`, `interval_mul_k`) | | I1 to I5 ([below](#intervals)): containment in every case, unbounded and empty operands included; one limb: the tightest interval of `T` for sums and differences, for products the tightest or one number of `T` wider on each side; two limbs: each bound within about $8u^2$ (sums) or $10u^2$ (products) of the exact one, relative to it, plus about twice the smallest normal number |
-| `Interval<T, 1>`: `X.midpoint()`, `X.radius()`, `X.split()`, `Ball<T, 1>(X)`, `Interval<T, 1>(B)` ([`interval_mid_rad_1`](../reference/interval_mid_rad_1.md), [`interval_split_1`](../reference/interval_split_1.md), [`interval_to_ball_1`](../reference/interval_to_ball_1.md), [`ball_to_interval_1`](../reference/ball_to_interval_1.md)) | | the midpoint within one rounding and $\eta$ of the exact one, inside the interval, with the smallest radius of `T` for it; the values of `mid` and `rad` of IEEE 1788 on the special intervals; two parts whose union is the interval; the conversions contain what they convert, the interval of a ball being the smallest of `T` |
+| `Interval`: `X.midpoint()`, `X.radius()`, `X.mid_rad()`, `X.split()`, `Ball<T, k>(X)`, `Interval<T, k>(B)` ([`interval_mid_rad_k`](../reference/interval_mid_rad_1.md), [`interval_split_k`](../reference/interval_split_1.md), [`interval_to_ball_k`](../reference/interval_to_ball_1.md), [`ball_to_interval_k`](../reference/ball_to_interval_1.md)) | | one limb: the midpoint within one rounding and $\eta$ of the exact one, inside the interval, with the smallest radius of `T` for it; two limbs: within $\frac{3u^2}{1-4u}$ relative and $2\eta$, inside, with a radius that covers the interval; the values of `mid` and `rad` of IEEE 1788 on the special intervals; two nonempty parts that are the interval and meet at a point of it, **not claimed the midpoint**; the conversions contain what they convert, the interval of a ball of one limb being the smallest of `T` |
+| `Interval`: `is_empty()`, `is_whole()`, `contains(t)`, `contains(Y)`, the signs, `less`, `less_equal`, `equal` and mirrors, `member`, `ieee1788::equal`, `subset`, `interior`, `disjoint` (the `interval_` kernels of [One enclosure interface](../reference/enclosure.md)) | | exact, one limb and two; the three-valued comparisons return a `Trit`, unknown with an empty operand; the relations of IEEE 1788 with the standard's readings of the empty set |
+| `Ball`: `contains(t)`, `contains(Y)`, `less`, `less_equal`, `equal` and mirrors, `member`, `hull`, `intersection`, `split`, `from_interval` of one limb, `lower()` and `upper()` of two (the `ball_` kernels of [One enclosure interface](../reference/enclosure.md)) | | one limb: the tests exact, the comparisons exact when $r_x + r_y \le \Omega$; two limbs: certain, an answer given is right, none is claimed near the boundary; the hull and the intersection contain what they must, an operand returned as it is when the other is special; the split covers $[c - r, c]$ and $[c, c + r]$, not claimed inside or smaller |
 | `Ball`: `X.lower_as<T>()`, `X.upper_as<T>()`, `lower()`, `upper()` of one limb, `Ball<T, 2>::from_interval(lo, hi)`, `Ball<T, 1>(X)` of a ball of two limbs ([`ball_lower_as_1`](../reference/ball_lower_as_1.md), [`ball_lower_as_2`](../reference/ball_lower_as_2.md), [`ball_from_interval_2`](../reference/ball_from_interval_2.md), [`ball_narrow_2_1`](../reference/ball_narrow_2_1.md)) | | a bound of every member, $+\infty$ and $-\infty$ for the empty set: for one limb exactly $\mathrm{RD}(c - r)$ and $\mathrm{RU}(c + r)$, for two within $5u(\lvert c\rvert + r) + 3\eta$ of $c \mp r$; a ball of two limbs that contains $[lo, hi]$, with the exact midpoint for its center when the halves are; a ball of one limb that contains the ball of two |
 | `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states, an interval's bounds | exact (no kernel) | |
 | `rational<X>(num, den)`, `integer<X>(n)` (no kernel: [Constants from fractions](../reference/rational.md)) | specified exactly, bit for bit; tested for equality with the oracle; **not machine-checked** ([below](#constants-from-fractions)) | integer arithmetic only: the same result in every environment; for `den` = 0, the canonical NaN at run time |
@@ -262,8 +264,12 @@ being that bound for the sum of two-limb numbers (about $3u^2$ relative to the s
 zero is kept exact. Bounded operands whose sum or product overflows give the
 infinite bound on that side, or the whole line, where one limb gives $[\Omega, +\infty]$.
 
-**Midpoint, radius, split and conversions, for one limb**
-([Midpoint, radius and the conversions](../developer/design/milestone2.md#midpoint-radius-and-the-conversions)).
+**Midpoint, radius, split and conversions**
+([Midpoint, radius and the conversions](../developer/design/milestone2.md#midpoint-radius-and-the-conversions);
+for two limbs, [`interval_mid_rad_2`](../reference/interval_mid_rad_2.md) and the pages after it:
+the same special values, a midpoint within $\frac{3u^2}{1-4u}$ relative and $2\eta$, a radius that
+covers the interval and is not claimed the smallest; `midpoint()` and `radius()` each run the
+whole kernel, and `mid_rad()` gives both from one call). For one limb:
 For a bounded $[\ell, h]$, `X.midpoint()` is a number of `T` in $[\ell, h]$ within
 $u\,\lvert\tfrac{\ell+h}{2}\rvert + \eta$ of the midpoint, and `X.radius()` the smallest number of
 `T` for which the midpoint plus or minus it covers $X$; the whole line gives $0$ and $+\infty$,
@@ -282,16 +288,35 @@ the bound by up to a gap of `T` at $c$); `Ball<T, 2>::from_interval(lo, hi)` con
 with the exact midpoint for its center when $lo/2$ and $hi/2$ are numbers of `T`, and has the
 special states of `Interval(lo, hi)`; `Ball<T, 1>(X)` of a ball of two limbs contains it.
 
-**Not claimed, and not here yet.** The sign of a zero bound. The tightest interval of a product of
-one limb in the underflow range above, or of any operation of two limbs. That a product of two
-limbs whose exact range has a bound at zero keeps it: $[0, a] \cdot [b, c]$ gets the lower bound
-of $ab$ moved outward. The constructor of two limbs from a `T` is `make_2`, which gives the number
-exactly, followed by the constructor of an interval of two limbs: a composition of two proved
-kernels, argued and not machine-checked as one statement. Not in the headers yet, their kernels
-being still to come: the predicates and comparisons (`is_empty`, `is_entire`, `contains`, the signs,
-the three-valued comparisons, the relations of IEEE 1788), and for two limbs the midpoint, the
-radius, the split and the conversions between an interval and a ball; no operation takes a number
-as an operand (`X + a`), since no kernel does: `X + Interval(a)` is what a program writes.
+**The interface intervals and balls share**: the predicates, the member and subset tests, the
+three-valued comparisons, the relations of IEEE 1788, and the hull, the intersection and the split
+of balls, each one kernel ([One enclosure interface](../reference/enclosure.md), which has the
+table of what is exact, what is certain and what is not claimed). For an interval every answer is
+exact. For a ball of one limb the member and subset tests are exact (the distances are compared as
+exact pairs) and the comparisons are exact when the sum of the radii is at most $\Omega$. For a
+ball of two limbs only the signs are exact; the member and subset tests and the comparisons are
+*certain*: an answer given is right, and near the boundary an answer may not be given (a `bool`
+false, a `Trit` unknown), within a band that is measured, not claimed. The comparisons return a
+`kairn::Trit`, *yes*, *no* or *unknown*, which converts to no `bool`: a program writes
+`kairn::certainly(less(x, y))` or `kairn::possibly(...)`, and intervals and balls have no
+comparison operators. On the empty set and the whole line every answer is exact: the comparisons
+are *unknown*, the signs false, a member test false, the set operations the values of
+[The empty set and the whole line](../developer/design/milestone2.md#the-empty-set-and-the-whole-line).
+
+**Not claimed.** The sign of a zero bound. The tightest interval of a product of one limb in the
+underflow range above, or of any operation of two limbs. That a product of two limbs whose exact
+range has a bound at zero keeps it: $[0, a] \cdot [b, c]$ gets the lower bound of $ab$ moved
+outward. That `split()` splits at the midpoint: only that the two parts meet at a point of the
+interval, which can be a bound, so a bisection tests its progress itself
+([Zeros of a polynomial by bisection](../tutorials/bisection.md)); for a ball, that its parts are
+inside it or smaller than it. That the hull and the intersection of balls are the smallest balls
+that contain what they must. An answer of a comparison of balls of two limbs near the boundary.
+The constructor of two limbs from a `T` is `make_2`, which gives the number exactly, followed by
+the constructor of an interval of two limbs, and the member test of a point of `T` in an interval
+or a ball of two limbs is `make_2` followed by the member test of two limbs: compositions of two
+proved kernels, argued and not machine-checked as one statement. No operation takes a number as an
+operand of an arithmetic operation (`X + a`), since no kernel does: `X + Interval(a)` is what a
+program writes.
 
 **Where Kairn departs from IEEE 1788** ([IEEE 1788](../developer/design/milestone2.md#ieee-1788)).
 Kairn is modeled on the set-based intervals of IEEE Std 1788.1-2017 and is not a conforming
@@ -308,7 +333,10 @@ the sign of a zero bound is not specified, where the standard returns
 $-0$ for a zero lower bound and $+0$ otherwise; and a product of one limb in the underflow range is
 *accurate* in the standard's sense, the tightest result widened by at most one number on each side,
 where the standard asks for the tightest. Intervals of two limbs and of `float` are not types of the
-standard, whose one interval type has bounds of `binary64`.
+standard, whose one interval type has bounds of `binary64`. The four relations of IEEE Std
+1788.1-2017 are `kairn::ieee1788::equal`, `subset`, `interior` and `disjoint`, exact, with the
+standard's readings of the empty set; its predicates `isEmpty` and `isEntire` are `is_empty()` and
+`is_whole()` ([One enclosure interface](../reference/enclosure.md#ieee-1788)).
 
 ## Products the program passes in
 
@@ -368,9 +396,12 @@ predicates and constants, `kairn::finite::add`, `sub` and `add_fast`, `rational`
 (below), and the building blocks on `T` but `mul_down` and `mul_up`: `next_up`, `next_down`,
 `radd` and `rmul` with the same bits as at run time, the others with the same values (`two_prod`
 through Dekker's product, the same values when its product is exact). Of intervals: the
-constructors and states, the bounds, the negation, the hull, the intersection, the midpoint, the
-radius, the split and the conversions, and of a ball the functions of the interface it shares with
-intervals (`lower_as`, `upper_as`, `lower`, `upper`, `midpoint`, `from_interval`, the narrowing).
+constructors and states, the bounds, the negation, the hull, the intersection, the predicates, the
+member and subset tests, the three-valued comparisons and the relations of IEEE 1788, the split,
+and of one limb the midpoint, the radius and the conversions; and of a ball the functions of the
+interface it shares with intervals, of one limb all but the split, of two limbs `lower_as`,
+`upper_as`, `midpoint`, `mid_rad`, the signs, `from_interval` and the narrowing
+([One enclosure interface](../reference/enclosure.md#constant-evaluation)).
 Not yet: the products of two limbs, `ldexp` and `half` on two limbs and on balls, and the Ball and
 Interval arithmetic, whose kernels contain fused operations without a constant-evaluation variant,
 or whose code is where `KAIRN_ENCLOSURE_CODE` puts it (the sum and the difference of intervals of
@@ -475,4 +506,7 @@ of an `Interval`) does not check the rounding mode, so that a program may call i
 directed one; [Getting started](index.md#when-a-check-of-a-build-without-ndebug-fails) lists them.
 The midpoint, the radius and the split of an interval, the conversions between an interval and a
 ball, and the bounds of a ball as numbers of `T` compute sums and halvings under rounding to
-nearest, and are checked as every operation that rounds.
+nearest, and are checked as every operation that rounds; so are the member and subset tests, the
+comparisons, the hull, the intersection and the split of a ball. The predicates, the member and
+subset tests, the comparisons and the relations of an interval compare and select, and do not
+check the rounding mode.

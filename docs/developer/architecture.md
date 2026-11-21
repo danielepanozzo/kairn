@@ -83,7 +83,7 @@ Toy formats exist so that statements can be tested on *all* operands before anyo
 them. Every number of a toy format with $p \le 53$ inside `binary64`'s range is a `double`, so the
 same tools and the same line protocol handle them.
 
-**The formats of the statements** (the owner's ruling of 2026-11-21). The generated statements of
+**The formats of the statements** (the ruling of 2026-11-21). The generated statements of
 the IEEE model quantify over the formats of Flocq's `binary_float prec emax`: $e_{\max} > p$, and
 the smallest exponent $3 - e_{\max} - p$; with $q_{\max} = e_{\max} - p$ that is $q_{\max} \ge 1$
 and $q_{\min} = 3 - q_{\max} - 2p$ (`binary64` and `binary32` are of that shape, and so is
@@ -1410,7 +1410,7 @@ domain:        extended
   M_b + t$, claimed as `upper rz value=...`, with the requirements that every input is nonnegative,
   `count m`, and the new requirement **`at_most(g, 1)`** (below), from precision 2 (below it the
   constant of `hm` is above the largest number of formats of few exponents). The claim is of finite
-  results (the owner's ruling of 2026-11-21, [Claims of the non-finite
+  results (the ruling of 2026-11-21, [Claims of the non-finite
   layer](#claims-of-the-non-finite-layer)): a radius that is not finite is $+\infty$ or a NaN, never
   a negative number or $-\infty$, and the finish below turns it into the whole space.
 - **The finish** `bv_conv_finish(rz, finite, okg)` is `norm_finish_1` under the `and` of the
@@ -2020,7 +2020,7 @@ statements](#number-formats)), not in every toy format.
 **`upper` of a kernel of the finite domain with several operations.** The row of `upper` above is
 about the building blocks of one operation of the extended domain. A kernel of the finite domain
 with several operations, such as `conv_radius`, the radius of a product of two BallVectors, claims
-`upper` as a statement of the real-number model: by the owner's ruling of 2026-11-21 its claim is
+`upper` as a statement of the real-number model: by the ruling of 2026-11-21 its claim is
 of finite results, and a result that is not finite claims only that it is $+\infty$ or a NaN,
 never a negative number, never $-\infty$. That is what is proved of `conv_radius` in the model with
 infinities and NaN, a hand lemma (`conv_radius_ieee`, `proofs/theories/IeeeBvConv.v`): on
@@ -2778,7 +2778,7 @@ Two things in those entries are new forms, which a reader of the claims must lea
 `value` and **no `if`**: no mask is named, and the claim holds unconditionally (under the
 requirements): the output is at least the exact value of `value`, whether it is finite or the
 rounding has overflowed to $+\infty$. Nothing is said of how far above. (Not of `conv_radius`,
-whose claim is of finite results, by the owner's ruling of 2026-11-21: a result of it that is not
+whose claim is of finite results, by the ruling of 2026-11-21: a result of it that is not
 finite is $+\infty$ or a NaN, [Claims of the non-finite layer](#claims-of-the-non-finite-layer).)
 And `value` may hold `abs(X)` of an input `X`, its exact magnitude.
 
@@ -3229,7 +3229,7 @@ those of `interval_positive_1`, `interval_zero_1`, `interval_empty_2`, `interval
 - Two limbs: certain, not exact, but `ball_positive_2`, `ball_negative_2` and `ball_zero_2` (the comparisons `lt_1_2`, `lt_2_1`, `eq_2_1` with the radius), which are `exact`. The others compare a one-limb bound of a distance with the radius: with $(z, e)$ = `add_ball_2_2` of the difference of the centers (or of the point and the center), $\lvert d - z\rvert \le e$, and an upper bound by `abs_upper_2` and `radd`, or a lower bound by `to_down_2` and a directed difference with $e$. Every answer given is right; an answer not given is near the boundary. With $G$ the gap of `T` at the largest of the radii and the distance: `contains(t)` answers unless $\bigl\lvert\lvert t - c\rvert - r\bigr\rvert < 2e + 3G$; `contains(Y)` gives true unless $r_x - (\lvert c_y - c_x\rvert + r_y) < 2e + 4G$; `less` and `less_equal` give *yes* (*no*) unless the gap between the balls, $(c_y - c_x) - (r_x + r_y)$ (or $(c_x - c_y) - (r_x + r_y)$), is below $2e + 4G$; `equal` gives *no* unless $\lvert c_y - c_x\rvert - (r_x + r_y) < 2e + 4G$. Of its *yes* (both balls the same point) the claim says what it says of every answer and no more: the generated statement (`ball_equal_2_spec` in `proofs/gen/IeeeStatements.v`) has a *yes* only where every member of X equals every member of Y, a *no* only where none does, never both, and both exact when an operand is empty or the whole line; on two finite balls that are the same point it claims no answer, and *unknown* there violates nothing. The band is not claimed: the reasoning is in `experiments/milestone2/predicates_2.py`, which asserts it on 20 000 cases at three, four and five bits and measures the largest margin of an answer not given (2.3 units of $2e + G$). It is $G$, a gap of `T` at the radius, about $2u\,r$, that dominates unless the radius is small compared with the distance: $e$ is about $3u^2$ times the distance plus twice the smallest normal number. $e$ is inside the kernel and no output shows it, so the oracle measures the band in what a line does show (`oracle/README.md`, "The kinds of the enclosure interface"): the margin of an answer not given, its distance from the boundary of the relation ($\bigl\lvert\lvert t - c\rvert - r\bigr\rvert$ for `contains(t)`, $r_x - (\lvert c_y - c_x\rvert + r_y)$ for `contains(Y)`, the gap between the balls for the comparisons), in units of $2e + G$, with $e$ estimated from the operands as $3u^2$ times the distance of the centers (or of the point and the center) plus twice the smallest normal number, and $G$ the gap of `T` at the larger of the largest radius and the distance, where both are below $\Omega/4$ (above, $e$ or the difference itself may overflow and the band is the whole line). Nothing is claimed of the band: an answer not given passes the oracle wherever it is, and is counted. The cross-checks' guards hold the largest margin of a run to 4 such units, $2e + 4G \le 4(2e + G)$, the widest band above (`tests/crosscheck_guards.py`, `ENC_BAND_LIMIT`): a test that the kernels keep to the band described here, not a claim.
 - Special states: on the empty set and the whole line every kernel gives the exact answers, those of [The empty set and the whole line](design/milestone2.md#the-empty-set-and-the-whole-line): `contains(t)` is false on the empty set and true on the whole line for a finite $t$, `contains(Y)` true when X is the whole line or Y empty, the signs false, the comparisons *unknown*. A point that is not a finite number is a member of nothing: the *no* of `ball_contains_point_2` is then true.
 
-`ball_contains_point_2` returns *yes* and *no*, as the page's listing does (`contains` returns *yes*), and `ball_contains_point_1` one mask, exact. The signs are the comparisons that the hand-written `Ball::certainly_positive`, `certainly_negative` and `certainly_zero` of `include/kairn/ball.hpp` make: for two limbs the same calls of `lt_1_2`, `lt_2_1` and `eq_2_1`, for one limb the same comparisons of `T`, now with statements of their own about the members of the ball.
+`ball_contains_point_2` returns *yes* and *no*, as the page's listing does (`contains` returns *yes*), and `ball_contains_point_1` one mask, exact. The signs are the comparisons that `Ball::certainly_positive`, `certainly_negative` and `certainly_zero` of `include/kairn/ball.hpp` made by hand before (for two limbs the same calls of `lt_1_2`, `lt_2_1` and `eq_2_1`, for one limb the same comparisons of `T`), now with statements of their own about the members of the ball; those functions call these kernels since the enclosure interface was completed, with the same results. The public forms of every kernel of this section are in [One enclosure interface](../reference/enclosure.md).
 
 Two entries in full, and the `ensures` of four more (`ball_contains_point_1`, `ball_contains_ball_2`, `ball_positive_2`, `ball_equal_2`):
 

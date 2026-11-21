@@ -98,6 +98,10 @@
 /// - the negation of an Interval, its hull and its intersection (comparisons and selects), and
 ///   the bounds of an interval of two limbs as numbers of T, lower_as and upper_as (to_down and
 ///   to_up of a bound);
+/// - the predicates of an Interval (is_empty, is_whole, the signs), its member and subset tests
+///   (contains, kairn::member; for a point of T of two limbs the guard of make_2, whose value is
+///   the point), its three-valued comparisons (kairn::less, less_equal, equal and their mirrors)
+///   and the relations of IEEE 1788 (kairn::ieee1788): comparisons and selects;
 /// - the constructors of a Ball from a T or from a number or a constant of one limb: Ball<T, 1>(a),
 ///   Ball<T, 1>(c), Ball<T, 1>(c, r), Ball<T, 1>(q) and Ball<T, 2>(a); and the constructors of an
 ///   Interval: of one limb, and of two from a T, whose only rounded operations are the guards; of
@@ -110,8 +114,9 @@
 ///   which no state of the environment changes); as before, the constructors of two limbs from a
 ///   T or a number of one limb and from_limbs_unchecked (the same guards), sign, isfinite,
 ///   is_normalized of one limb, the constructors that copy a value (Expansion<T, 1>(a),
-///   Expansion<T, 1>::from_limbs), Ball::empty(), Ball::whole(), the accessors center(), radius()
-///   and midpoint() and the tests is_finite(), is_whole(), is_empty() of a Ball, Interval(),
+///   Expansion<T, 1>::from_limbs), Ball::empty(), Ball::whole(), the accessors center(), radius(),
+///   midpoint() and mid_rad() and the tests is_finite(), is_whole(), is_empty() of a Ball,
+///   kairn::certainly and kairn::possibly of a Trit, Interval(),
 ///   Interval::empty(), Interval::whole(), the accessors lower() and upper() of an Interval and,
 ///   for one limb, lower_as and upper_as, the constants of kairn::traits, and kairn::rational
 ///   (rational.hpp).
@@ -123,9 +128,11 @@
 /// limbs (each tests x0 + x1 == x0), the constructors of Ball<T, 2> from a center or a constant
 /// (the test of a canonical center), and the functions of the interface that Ball and Interval
 /// share that compute bounds or centers (milestone2.md, "Functions that do not round", its second
-/// table): the midpoint, the radius and the split of an Interval, the conversions between Interval
-/// and Ball, the ball from an interval of two T, the bounds of a Ball as numbers of T (lower_as,
-/// upper_as, and lower and upper of one limb), and the narrowing of a Ball to one limb.
+/// table): the midpoint, the radius, mid_rad and the split of an Interval, the conversions between
+/// Interval and Ball, the ball from an interval of two T, the bounds of a Ball (lower_as,
+/// upper_as, lower and upper), and the narrowing of a Ball to one limb; and of a Ball the member
+/// and subset tests, the three-valued comparisons, the hull, the intersection and the split, which
+/// compute a difference of centers or the conversions to intervals and back.
 #if !defined(KAIRN_CHECKS)
 #if defined(NDEBUG)
 #define KAIRN_CHECKS 0
@@ -187,8 +194,11 @@
 /// inline in every setting, and so do the steps of ldexp (two or three calls of the scaling by a
 /// power of two of T, when 2^n is not one) and everything of Expansion and of blocks.hpp; so do the
 /// negation, the constructors, the hull, the intersection, the midpoint, the radius and the split
-/// of an Interval, the conversions between Interval and Ball, and the bounds and the narrowing of
-/// a Ball, which are constexpr. None of the operations it places is usable in constant
+/// of an Interval, the conversions between Interval and Ball, the bounds and the narrowing of a
+/// Ball, and the rest of the interface Ball and Interval share (the predicates, the member and
+/// subset tests, the three-valued comparisons, the relations of IEEE 1788, and the hull, the
+/// intersection and the split of a Ball), which are constexpr where their kernels are
+/// (docs/reference/enclosure.md says which). None of the operations it places is usable in constant
 /// evaluation, ldexp and half of a ball and the sum and the difference of intervals of one limb
 /// included, whose kernels are constexpr: in the external setting their code is in another
 /// translation unit. The three settings compute the same bits: the body of each operation is the

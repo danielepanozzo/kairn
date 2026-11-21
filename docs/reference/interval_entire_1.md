@@ -12,7 +12,11 @@ $$m \implies X = \mathbb{R}.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.is_whole()` | `Interval<T, 1>` | `bool` | IEEE 1788 calls it `isEntire`; the name is `Ball`'s; `constexpr`; does not round |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

@@ -1679,7 +1679,7 @@ class EnclosureGuards(unittest.TestCase):
 
     def test_the_formats_of_the_statements(self):
         # finite_when and bounded_when of two limbs in a format of no statement (q_max < 1): not
-        # claimed (the owner's ruling of 2026-11-21), and the guards ask for the judge's count of
+        # claimed (the ruling of 2026-11-21), and the guards ask for the judge's count of
         # that in place of the conditions'; so is the midpoint of a bounded interval of 1788 a
         # finite number, and what a split claims of the parts that rest on it (the second ruling
         # of 2026-11-21), of one limb and of two. In a format of the statements no such count is

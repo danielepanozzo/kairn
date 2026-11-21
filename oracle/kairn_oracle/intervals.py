@@ -2116,7 +2116,7 @@ def _center_lost(es, r, fail, out):
 
 
 def statement_format(fmt):
-    """(claimed, beyond) for a clause that promises a finite or bounded result, by the owner's
+    """(claimed, beyond) for a clause that promises a finite or bounded result, by the
     ruling of 2026-11-21 (architecture.md, "The formats of the statements"): claimed in the formats
     of binary_float's shape, and judged in those of a wider subnormal range too, where a failure
     is a finding to report, not a violated claim (beyond, the text its failure carries); not

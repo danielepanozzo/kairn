@@ -810,7 +810,7 @@ def v4_range(fmt):
 
 def v4_beyond(fmt):
     """The text a failure of V4 carries in a format of a wider subnormal range than binary_float's
-    (q_min below 3 - q_max - 2p), where V4 is judged and nothing is proved: by the owner's ruling
+    (q_min below 3 - q_max - 2p), where V4 is judged and nothing is proved: by the ruling
     of 2026-11-21 (architecture.md, "The formats of the statements") a failure there is a finding
     to report, not a violated claim."""
     if fmt.qmax >= 1 and fmt.qmin < 3 - fmt.qmax - 2 * fmt.p:

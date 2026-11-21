@@ -14,7 +14,14 @@ A number of several limbs stands for their exact sum: $c = c_0 + c_1$, $t = t_0 
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `member(t, X)` | `Expansion<T, 2>`, `Ball<T, 2>` | `Trit` | yes, no or unknown; rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr` |
+| `member(t, X)` | `T`, `Ball<T, 2>` | `Trit` | yes, no or unknown; the point made a number of two limbs by `make_2` first, exactly: a composition of two proved kernels, not machine-checked as one statement; rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr` |
+| `X.contains(t)` | `Ball<T, 2>`, `Expansion<T, 2>` | `bool` | $\mathit{yes}$; rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr` |
+| `X.contains(t)` | `Ball<T, 2>`, `T` | `bool` | $\mathit{yes}$; the point made a number of two limbs by `make_2` first, exactly: a composition of two proved kernels, not machine-checked as one statement; rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr` |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 
