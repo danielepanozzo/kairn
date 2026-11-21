@@ -103,10 +103,15 @@ set(KAIRN_API_LOOP_CASES 4000 CACHE STRING
   "Random requests per loop, format and form of the public interface judged by the oracle, in the full tier")
 set(KAIRN_API_LOOP_QUICK_CASES 1000 CACHE STRING
   "Random requests per loop, format and form of the public interface judged by the oracle, in the quick tier")
-# The products of polynomials, whose judgment costs the product of the two lengths per request: their
-# random arrays are of at most KAIRN_API_LOOP_PRODUCT_LENGTH entries (the oracle's 256 by default made
-# each test of 1 000 requests take 40 to 50 seconds; with 64, 3 to 4), in both tiers.
+# The random arrays are of at most KAIRN_API_LOOP_QUICK_LENGTH entries in the quick tier and of the
+# oracle's 256 in the full tier, every length class below them included: on the Mac a test of 1 000
+# requests of bv_add_2 took 7.8 seconds with 256 and 2.8 with 64, and the 32 tests of the loops 160
+# seconds of test time with 256. The products of polynomials, whose judgment costs the product of the
+# two lengths per request, have at most KAIRN_API_LOOP_PRODUCT_LENGTH in both tiers (with 256 a test
+# of 1 000 requests took 40 to 50 seconds, with 64 three to four).
 set(_api_loops_product bv_conv_1 bv_conv_2)
+set(KAIRN_API_LOOP_QUICK_LENGTH 64 CACHE STRING
+  "The longest random array of the loops of BallVector judged through the public interface, quick tier")
 set(KAIRN_API_LOOP_PRODUCT_LENGTH 64 CACHE STRING
   "The longest random array of the products of polynomials of BallVector judged through the public interface")
 set(KAIRN_API_CASES 10000 CACHE STRING
@@ -273,9 +278,11 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
     if(_loop IN_LIST _api_loops_fast)
       set(_extra ${_api_packed_runner})
     endif()
-    if(_loop IN_LIST _api_loops_product)
-      list(APPEND _extra --max-length ${KAIRN_API_LOOP_PRODUCT_LENGTH})
+    set(_length ${KAIRN_API_LOOP_QUICK_LENGTH})
+    if(_loop IN_LIST _api_loops_product AND KAIRN_API_LOOP_PRODUCT_LENGTH LESS _length)
+      set(_length ${KAIRN_API_LOOP_PRODUCT_LENGTH})
     endif()
+    list(APPEND _extra --max-length ${_length})
     foreach(_format binary64 binary32)
       set(_name api.oracle.${_loop}.${_format})
       add_test(NAME ${_name}
