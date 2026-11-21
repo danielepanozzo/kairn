@@ -10,7 +10,7 @@ on each distinct output and, for the kernels' runners, the guards (docs/develope
         [(--packed-runner LABEL EXECUTABLE)... --packed-lanes W [--packed-count N]]
     python3 tests/crosscheck.py api --kernel K --format F --seed S --count N --summary-dir DIR
         (--runner LABEL EXECUTABLE)... [--first-form LABEL]... [--same-as LABEL OTHER]...
-        [--claims FILE]
+        [--claims FILE] [--max-length L]
 
 Each output is that of the pipeline
 
@@ -71,7 +71,9 @@ kernel fails when it computed none), if the oracle fails an output, if it judged
 output, if an output has no case of a stratum the generator's header announced, or if a summary
 exceeds the guards' bound (crosscheck_guards.SUMMARY_BYTES); and, for each
 --same-as LABEL OTHER, if a form of runner LABEL wrote other bytes than the same form of runner
-OTHER (the settings of KAIRN_ENCLOSURE_CODE, which must compute the same bits).
+OTHER (the settings of KAIRN_ENCLOSURE_CODE, which must compute the same bits). K may be a loop
+(the forms of kairn/ball_vector.hpp), whose requests carry arrays; --max-length goes to the oracle's
+gen.
 
 --claims FILE, in both modes: the claims the oracle's gen and check read (and the guards, through
 the summary), gen/claims.json by default (tests/CMakeLists.txt, KAIRN_ORACLE_CLAIMS).
@@ -541,6 +543,8 @@ def api(a):
     fresh(work)
     claims = ["--claims", a.claims] if a.claims else []
     gen = ["gen", kernel, fmt, "--seed", a.seed, "--count", a.count] + claims
+    if a.max_length:
+        gen += ["--max-length", a.max_length]
     status, requests = generate(gen, work)
     if status != 0:
         print("the request generator failed (%s) for %s %s" % (status, kernel, fmt))
@@ -682,6 +686,7 @@ def main(argv=None):
                    help="every form of runner LABEL must write the same bytes as the same form of "
                         "runner OTHER")
     p.add_argument("--claims", help="the claims file of the oracle (default gen/claims.json)")
+    p.add_argument("--max-length", help="a loop: the largest random length of its arrays (gen --max-length)")
     a = ap.parse_args(argv)
     if a.mode == "compiled":
         if not a.exhaustive and (a.seed is None or a.count is None):

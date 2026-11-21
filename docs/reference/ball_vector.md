@@ -275,7 +275,7 @@ So `kairn/kairn.hpp`, which stays cheap to include, does not include it: a progr
   (`bv_make_k`, `bv_neg_k`, `bv_add_k`, `bv_sub_k`, `bv_scale_k`, `bv_mul_pow2_k`, `bv_conv_k`,
   `norm_upper_k`) has forms in the runner of the public interface
   (`tests/api/runner_ball_vector.hpp`): its request lines, with arrays of every length class (0, 1,
-  below, at and above the lanes, up to 256) and every stratum of the oracle (the whole space,
+  below, at and above the lanes, up to 256, and 64 for the product) and every stratum of the oracle (the whole space,
   overflow, the thresholds of V4, cancellation, subnormal numbers, zeros, exactness), are completed
   through the constructors, the functions on views, the operators of `BallVector` (on the lengths
   of the oracle's schedule up to 17), in place, and in both orders, and judged against the loop's

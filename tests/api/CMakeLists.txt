@@ -103,6 +103,12 @@ set(KAIRN_API_LOOP_CASES 4000 CACHE STRING
   "Random requests per loop, format and form of the public interface judged by the oracle, in the full tier")
 set(KAIRN_API_LOOP_QUICK_CASES 1000 CACHE STRING
   "Random requests per loop, format and form of the public interface judged by the oracle, in the quick tier")
+# The products of polynomials, whose judgment costs the product of the two lengths per request: their
+# random arrays are of at most KAIRN_API_LOOP_PRODUCT_LENGTH entries (the oracle's 256 by default made
+# each test of 1 000 requests take 40 to 50 seconds; with 64, 3 to 4), in both tiers.
+set(_api_loops_product bv_conv_1 bv_conv_2)
+set(KAIRN_API_LOOP_PRODUCT_LENGTH 64 CACHE STRING
+  "The longest random array of the products of polynomials of BallVector judged through the public interface")
 set(KAIRN_API_CASES 10000 CACHE STRING
   "Random cases per kernel, format and form of the public interface judged by the oracle, in the full tier")
 set(KAIRN_API_QUICK_CASES 2000 CACHE STRING
@@ -267,6 +273,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
     if(_loop IN_LIST _api_loops_fast)
       set(_extra ${_api_packed_runner})
     endif()
+    if(_loop IN_LIST _api_loops_product)
+      list(APPEND _extra --max-length ${KAIRN_API_LOOP_PRODUCT_LENGTH})
+    endif()
     foreach(_format binary64 binary32)
       set(_name api.oracle.${_loop}.${_format})
       add_test(NAME ${_name}
@@ -278,6 +287,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   endforeach()
   set(_api_oracle_loops ${_api_mapped_loops} PARENT_SCOPE)
   set(_api_loops_fast ${_api_loops_fast} PARENT_SCOPE)
+  set(_api_loops_product ${_api_loops_product} PARENT_SCOPE)
   # For ../full/CMakeLists.txt, which registers the same on KAIRN_API_CASES cases, and every form of
   # the flag sets' runners on KAIRN_API_QUICK_CASES.
   set(_api_oracle_kernels ${_api_mapped} PARENT_SCOPE)
