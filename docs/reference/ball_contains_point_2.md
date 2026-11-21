@@ -64,9 +64,11 @@ It calls [`add_ball_2_2`](add_ball_2_2.md), [`abs_upper_2`](abs_upper_2.md), [`r
 # value, so that the radius e, a fused result, is not negated (a rule of the generator); and two
 # masks more for the operands that are not finite: no is true for the empty set and for a point that
 # is not a finite number, of which no ball has a member (the whole line contains every finite point,
-# which yes says). Certain, not exact: undecided within about e, a few u^2 |t - c| and twice the
-# smallest normal number, of the boundary, and within a step of T at r (the bounds hi and lo are
-# numbers of T).
+# which yes says). Certain, not exact: undecided within about 2e of the boundary (e: a few
+# u^2 |t - c| and twice the smallest normal number) plus three gaps of T at the radius or at the
+# distance, whichever is larger (the bounds hi and lo are numbers of T; architecture.md, "Claims of
+# the enclosure interface: predicates and comparisons", gives the band as measured). The band is not
+# claimed.
 
 nc0         = neg(c0)
 nc1         = neg(c1)

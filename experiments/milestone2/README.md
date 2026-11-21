@@ -1,8 +1,9 @@
 # Milestone 2 experiments
 
 The numerical checks behind the
-[Milestone 2 statements](../../docs/developer/design/milestone2.md). That page proposes kernels
-and what each will guarantee; nothing of it is implemented or proved yet. Before a statement was
+[Milestone 2 statements](../../docs/developer/design/milestone2.md). That page proposed kernels
+and what each would guarantee, before any was implemented; they are generated and proved since, and
+the page says what changed on the way. Before a statement was
 written there, its kernel was run on every operand of small number formats, or on samples where
 there are too many, and the statement was judged in exact arithmetic. Nothing here is library
 code, and nothing here is a proof: a run that finds no failure says that a statement is not
@@ -21,8 +22,8 @@ wrong on what was run.
   `bv_conv_2.fold` with `conv_radius` and `bv_conv_finish`, was proposed here too; it is in
   `gen/kernels` now (`bv_conv_1.fold`, `bv_conv_2.fold`), with the same listings and its claims, and
   `bv_conv.py` runs the generated descriptions, with the same output (`batch.py` reads `conv_radius`
-  from there). They carry no claims: the claims of this
-  milestone need vocabulary that the generator does not have yet. The radii `bv_add_radius_2` and
+  from there). The descriptions that are still only here carry no claims; those that moved to
+  `gen/kernels` have theirs. The radii `bv_add_radius_2` and
   `bv_scale_radius_2` that were proposed here are in `gen/kernels` now, with their forms of one limb
   and their claims (`batch.py` reads them from there), and so is the constructor of a BallVector,
   `bv_make_1.fold` and `bv_make_2.fold` with their kernels `bv_center_entry_1`, `bv_center_2`,
@@ -59,8 +60,9 @@ wrong on what was run.
 
 The formats are toy formats, as in the generator's and the oracle's tests: precisions of 2 to 6
 bits and a few exponents, most of them with the shape of `binary64`
-($q_{\min} + q_{\max} = 3 - 2p$), which the theorems about overflow are for. Three scripts also
-compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`).
+($q_{\min} + q_{\max} = 3 - 2p$), which the theorems about overflow are for. Seven scripts also
+compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`,
+`accumulator.py`, `ballvector.py`, `bv_proposals.py`, `bv_conv.py`).
 
 ## The scripts
 
