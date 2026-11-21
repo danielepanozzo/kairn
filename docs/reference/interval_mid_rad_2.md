@@ -26,6 +26,7 @@ For operands that satisfy the requirements, finite, infinite or NaN:
 
 - If $[x_l, x_u]$ is bounded: $m$ is finite, $x_l \le m \le x_u$, $\lvert m - \tfrac{x_l + x_u}{2}\rvert \le \frac{3u^{2}}{1 - 4u}\,\lvert \tfrac{x_l + x_u}{2}\rvert + 2\eta$, and $[m - r, m + r] \supseteq [x_l, x_u]$. The radius $r$ may be $+\infty$ for a bounded interval near the top of the range (an infinite radius contains everything); it is finite when $\lvert x_l\rvert \le 2^{e_{\max}-2}$ and $\lvert x_u\rvert \le 2^{e_{\max}-2}$.
 - The whole line gives $m = 0$, $r = +\infty$; $[x_l, +\infty]$ with $x_l$ finite gives $m = \Omega$, the largest finite number of `T`, and $[-\infty, x_u]$ gives $m = -\Omega$, both with $r = +\infty$; the empty set gives a NaN in every limb. These are the values of `mid` and `rad` of IEEE 1788.
+- In every case the midpoint $m$ is a canonical number of two limbs: two NaN for the empty set, two zeros for the whole line, $(\pm\Omega, +0)$ for a half-line, and a normalized pair for a bounded interval.
 
 Proved for every binary format with a precision of at least 3 bits, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 

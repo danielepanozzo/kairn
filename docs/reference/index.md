@@ -160,10 +160,10 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `Ball<T, 1>(X)` | `Ball<T, 2>` | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) |
 | not yet called by the public headers | - | an interval of two limbs that contains the ball, within $A\lvert v\rvert + B$ of its bounds; empty for the empty ball | [`ball_to_interval_2`](ball_to_interval_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_1`](ball_from_interval_1.md) |
-| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_2`](ball_hull_2.md) |
-| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_2`](ball_intersection_2.md) |
-| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_1`](ball_hull_1.md) |
-| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_1`](ball_intersection_1.md) |
+| not yet called by the public headers | - | a canonical ball Z that contains the union of the balls; when X is empty, Z is Y as it is (the same limbs); when Y is empty and X is not, Z is X as it is | [`ball_hull_2`](ball_hull_2.md) |
+| not yet called by the public headers | - | a canonical ball Z that contains the intersection of the balls; when X is the whole line, Z is Y as it is (the same limbs); when Y is the whole line and X is not, Z is X as it is | [`ball_intersection_2`](ball_intersection_2.md) |
+| not yet called by the public headers | - | a canonical ball Z that contains the union of the balls; when X is empty, Z is Y as it is (the same limbs); when Y is empty and X is not, Z is X as it is | [`ball_hull_1`](ball_hull_1.md) |
+| not yet called by the public headers | - | a canonical ball Z that contains the intersection of the balls; when X is the whole line, Z is Y as it is (the same limbs); when Y is the whole line and X is not, Z is X as it is | [`ball_intersection_1`](ball_intersection_1.md) |
 | not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_1`](ball_split_1.md) |
 | not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_2`](ball_split_2.md) |
 | not yet called by the public headers | - | whether $t \in X$; exact | [`ball_contains_point_1`](ball_contains_point_1.md) |

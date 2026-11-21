@@ -521,12 +521,24 @@ class Tool(unittest.TestCase):
         self.assertIn("$\\lvert r_x + r_y\\rvert \\le \\Omega$, the answer is exact as well.", self.page("ball_less_1"))
         self.assertIn("$m$ is true only if $Y \\subseteq X$", self.page("ball_contains_ball_2"))
         # The set operations of a ball.
-        self.assertIn("when one is empty, $Z$ is the other, as it is", self.page("ball_hull_1"))
-        self.assertIn("when one is the whole line, $Z$ is the other", self.page("ball_intersection_1"))
+        self.assertIn("when $X$ is empty, $Z$ is $Y$ as it is (the same limbs); when $Y$ is empty and $X$ is not, "
+                      "$Z$ is $X$ as it is", self.page("ball_hull_1"))
+        self.assertIn("when $X$ is the whole line, $Z$ is $Y$ as it is (the same limbs); when $Y$ is the whole line "
+                      "and $X$ is not, $Z$ is $X$ as it is", self.page("ball_intersection_1"))
+        self.assertIn("when $X$ is empty, $Z$ is $Y$ as it is", self.page("ball_hull_2"))
+        self.assertIn("when $Y$ is the whole line and $X$ is not", self.page("ball_intersection_2"))
+        index = self.page("index")
+        self.assertIn("when X is empty, Z is Y as it is (the same limbs); when Y is empty and X is not, Z is X as it "
+                      "is", index)
+        self.assertIn("when X is the whole line, Z is Y as it is (the same limbs); when Y is the whole line and X is "
+                      "not, Z is X as it is", index)
+        self.assertNotIn("gives the other", index)
         self.assertIn("is a member of the first part", self.page("ball_split_2"))
         # The conversions of two limbs.
         self.assertIn("The radius $r$ may be $+\\infty$ for a bounded interval near the top of the range",
                       self.page("interval_mid_rad_2"))
+        self.assertIn("In every case the midpoint $m$ is a canonical number of two limbs", self.page("interval_mid_rad_2"))
+        self.assertNotIn("canonical number of two limbs", self.page("interval_mid_rad_1"))
         self.assertIn("When $c - r = 0$, $z_l = c - r$ exactly.", self.page("ball_to_interval_2"))
         self.assertIn("the smallest radius of `T` for that center", self.page("ball_from_interval_1"))
 

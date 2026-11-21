@@ -2185,12 +2185,17 @@ class Site:
             bounded += (" The radius $%s$ may be $+\\infty$ for a bounded interval near the top of the range (an "
                         "infinite radius contains everything); it is finite when %s." % (r, conds))
         if x["special"] == "ieee1788":
-            return [bounded,
-                    "The whole line gives $%s = 0$, $%s = +\\infty$; $[%s, +\\infty]$ with $%s$ finite gives "
-                    "$%s = \\Omega$, the largest finite number of `T`, and $[-\\infty, %s]$ gives $%s = -\\Omega$, both "
-                    "with $%s = +\\infty$; the empty set gives %s. These are the values of `mid` and `rad` of "
-                    "IEEE 1788." % (c, r, lo, lo, c, hi, c, r,
-                                    "two NaN" if len(k.limbs(x["center"])) == 1 else "a NaN in every limb")]
+            lines = [bounded,
+                     "The whole line gives $%s = 0$, $%s = +\\infty$; $[%s, +\\infty]$ with $%s$ finite gives "
+                     "$%s = \\Omega$, the largest finite number of `T`, and $[-\\infty, %s]$ gives $%s = -\\Omega$, both "
+                     "with $%s = +\\infty$; the empty set gives %s. These are the values of `mid` and `rad` of "
+                     "IEEE 1788." % (c, r, lo, lo, c, hi, c, r,
+                                     "two NaN" if len(k.limbs(x["center"])) == 1 else "a NaN in every limb")]
+            if len(k.limbs(x["center"])) == 2:
+                lines.append("In every case the midpoint $%s$ is a canonical number of two limbs: two NaN for the "
+                             "empty set, two zeros for the whole line, $(\\pm\\Omega, +0)$ for a half-line, and a "
+                             "normalized pair for a bounded interval." % c)
+            return lines
         return ["The ball of center $%s$ and radius $%s$ is canonical, and empty exactly when the interval is." % (c, r),
                 bounded + " It is then a finite ball.",
                 "An unbounded interval gives the whole line, center 0 and radius $+\\infty$ (a ball cannot be a "
@@ -2259,13 +2264,13 @@ class Site:
         lines = ["The result, %s, is a canonical ball." % Z]
         if x["set"] == "union":
             lines += ["$Z$ contains every member of $%s$ and every member of $%s$." % (A, B),
-                      "$Z$ is empty exactly when $%s$ and $%s$ both are; when one is empty, $Z$ is the other, as it is "
-                      "(the same limbs)." % (A, B),
+                      "$Z$ is empty exactly when $%s$ and $%s$ both are; when $%s$ is empty, $Z$ is $%s$ as it is (the "
+                      "same limbs); when $%s$ is empty and $%s$ is not, $Z$ is $%s$ as it is." % (A, B, A, B, B, A, A),
                       "Not claimed: that $Z$ is the smallest such ball."]
         else:
             lines += ["$Z$ contains every real number that is a member of both $%s$ and $%s$." % (A, B),
-                      "$Z$ is empty when an operand is; when one is the whole line, $Z$ is the other, as it is (the same "
-                      "limbs).",
+                      "$Z$ is empty when an operand is; when $%s$ is the whole line, $Z$ is $%s$ as it is (the same "
+                      "limbs); when $%s$ is the whole line and $%s$ is not, $Z$ is $%s$ as it is." % (A, B, B, A, A),
                       "Not claimed: that $Z$ is inside $%s$ or $%s$, nor that it is empty whenever they are disjoint."
                       % (A, B)]
         return lines
@@ -2804,9 +2809,11 @@ class Site:
                 parts.append("whether $%s$; %s" % (self.set_relation(k, x, formula=True),
                                                    "exact" if x.get("exact") else "true only if it holds"))
             elif x["kind"] == "ball_set":
-                parts.append("a canonical ball that contains the %s of the balls; an empty operand gives the other"
-                             % x["set"] if x["set"] == "union" else
-                             "a canonical ball that contains the intersection of the balls; the whole line gives the other")
+                parts.append("a canonical ball Z that contains the %s of the balls; when X is empty, Z is Y as it is "
+                             "(the same limbs); when Y is empty and X is not, Z is X as it is" % x["set"]
+                             if x["set"] == "union" else
+                             "a canonical ball Z that contains the intersection of the balls; when X is the whole line, "
+                             "Z is Y as it is (the same limbs); when Y is the whole line and X is not, Z is X as it is")
             elif x["kind"] == "ball_splits":
                 parts.append("two canonical balls that cover the two halves of the ball")
             elif x["kind"] == "trit":

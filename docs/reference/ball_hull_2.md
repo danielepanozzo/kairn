@@ -27,7 +27,7 @@ For operands that satisfy the requirements, finite, infinite or NaN:
 
 - The result, the ball $Z$ of center $c_z$ and radius $r_z$, is a canonical ball.
 - $Z$ contains every member of $X$ and every member of $Y$.
-- $Z$ is empty exactly when $X$ and $Y$ both are; when one is empty, $Z$ is the other, as it is (the same limbs).
+- $Z$ is empty exactly when $X$ and $Y$ both are; when $X$ is empty, $Z$ is $Y$ as it is (the same limbs); when $Y$ is empty and $X$ is not, $Z$ is $X$ as it is.
 - Not claimed: that $Z$ is the smallest such ball.
 
 Proved for every binary format with a precision of at least 3 bits, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
