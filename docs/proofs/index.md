@@ -90,10 +90,20 @@ lists:
   (`FoldGuarantee.v`), and of the folds and their steps in the model with overflow
   (`FoldTransfer.v`, `IeeeSteps.v`, `IeeeFolds.v`; [below](#sums-and-dot-products-of-arrays));
   the theorems of the maps, `F_correct` per map `F`, and of their steps (`FoldMaps.v`,
-  `MapSteps.v`; [below](#loops-that-write-an-array)); of the largest magnitude of an array and
+  `MapSteps.v`), and of the maps and their steps in the model with overflow
+  (`IeeeFoldMaps.v`, `IeeeMapSteps.v`; [below](#loops-that-write-an-array)); of the largest
+  magnitude of an array and
   its kernels, over the real numbers and with overflow, infinities and NaN (`FoldNorm.v`,
-  `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); and of the product of two
-  polynomials (`FoldConv.v`; [below](#the-product-of-two-polynomials));
+  `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); of the product of two
+  polynomials, over the real numbers and with overflow, infinities and NaN (`FoldConv.v`,
+  `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); of the radius kernels of the
+  ball vectors and of the ball vectors themselves, over the real numbers (`BvRadius.v`,
+  `BvReal.v`), and the lemmas of the ball vectors in the model with overflow that their
+  statements, to be restated, will rest on (`IeeeBv.v`; [below](#ball-vectors)); and of the
+  kernels of
+  the accumulator and what a user of it relies on, over the real numbers and with overflow,
+  infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
+  `IeeeAccumulator.v`; [below](#the-accumulator));
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -130,20 +140,24 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    intervals of two limbs (the finite core of the directed product, and what each product of
    bounds gives) beside their generated
    statements, those about the two executions of a product, whose plain-product listings are
-   written by hand, and the theorems about the folds, the largest magnitude and the product of
-   polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)).
+   written by hand, the theorems about the folds, the largest magnitude and the product of
+   polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)),
+   the lemmas of the radius of the accumulator and what a user of it relies on
+   ([below](#the-accumulator)), and the lemmas of the ball vectors in the model with overflow
+   ([below](#ball-vectors)).
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
    generated `proofs/gen/IeeeAudit.v`, like step 2; then, in the same file, every other
    IEEE-model theorem that a description names: those of the steps and the combinations of
-   the folds, and of the folds in their two orders.
+   the folds and of the steps of the maps, of the folds and the maps in their two orders, and
+   of the convolutions.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 
 ```text
 == text scan of the proof files
-  87 files: no Admitted, admit, Axiom or Parameter
+  97 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -351,8 +365,37 @@ that are kernels of their own are proved in `MapSteps.v`.
 
 These are statements of the real model. They say nothing of the order in which the loop runs
 (the model has none: an element written depends on its own element only), of the mask the loop
-returns, or of an array written over one it reads; the statement of a map in the model with
-overflow is not generated yet, so nothing is proved of the mask.
+returns, or of an array written over one it reads.
+
+**The steps in the model with overflow** (`IeeeMapSteps.v`). Each of the sixteen steps that is
+not a kernel of Milestone 1 (`add_2_2` and `sub_2_2`, the steps of `add_2` and `sub_2`, have
+theirs already) has its generated bridge: from finite operands that satisfy its requirements, a
+finite leading limb of its result means that every value it computes is finite and that the
+result is that of the real model (`K_ieee_bridge`); for the eight of two limbs, its claims under
+the same hypotheses (`K_ieee_correct`); and, for any operands, that a finite leading limb of its
+result means a finite leading limb of every operand, the scalars included (`K_ieee_lead`, also
+for `sub_2_2`). Each value of a program at an input position or before its leading limb is in
+the cone of that limb, which is computed: the same theorems of `IeeeBridge.v` as for the steps
+of the folds.
+
+**The maps in the model with overflow** (`IeeeFoldMaps.v`). The generated model of a map in
+this model (`proofs/gen/IeeeFoldModel.v`) is that of the scalar loop: the step on every
+element, the mask, the and of the check of every element written (its leading limb is finite),
+in the sequential order and in the lane order for every `W`, and, when the mask is false, a
+second pass in which every element is replaced by what the check returns of it: itself when
+its leading limb is finite, NaN in every limb otherwise. `F_seq_ieee_correct` and
+`F_lanes_ieee_correct` have the generated statements as their types. For canonical elements
+and scalars (of two limbs: finite and normalized, or an infinity and a zero, or two NaN; of
+one limb, any value; a power of two, finite), entry by entry: if the leading limb returned is
+finite, every limb of the scalars, of the element and of the element returned is finite, the
+values are those of the real-model step on the values of the operands, and the claims of the
+step hold of them; otherwise every limb returned is a NaN and the mask is false; and the mask
+is true exactly when every leading limb returned is finite. So an infinity or a NaN among the
+operands, or an overflow in a step, gives a NaN in that entry and a false mask, never a finite
+wrong element, and the other entries keep their correct values. The proof writes the mask as
+`forallb` of the check, in both orders (`fold_seq_and`, `fold_lanes_and`), and follows its two
+values (`map_entries_mask_true`, `map_entries_mask_false` of `Folds.v`), entry by entry with
+the theorems of the step: its leading limb, its bridge, and its claims (`K_entry`).
 
 ## The largest magnitude of an array
 
@@ -412,9 +455,120 @@ has at least one term and at most $\min(n_x, n_y)$ (`conv_terms_nonempty`,
 least $\min(n_x, n_y)$, its two numbers bound the error of every coefficient (`conv_1_bound`,
 `conv_2_bound`, from the theorems of [the two together](#sums-and-dot-products-of-arrays)).
 
-These are statements of the real model, as for a map: the statement of a convolution in the
-model with overflow is not generated yet, so nothing is proved of its mask or of a coefficient
-that overflows. No theorem is about the product as a polynomial (its value at a point).
+These are statements of the real model, as for a map. No theorem is about the product as a
+polynomial (its value at a point).
+
+**In the model with overflow** (`IeeeFoldConv.v`): `conv_k_ieee_correct` has the generated
+statement as its type. Coefficient $j$ is the final state of the dot product, in its
+sequential order, on the terms of $j$; the convolution keeps the and of the check of every
+coefficient, and when it is false every coefficient is replaced by what the check returns of
+it, as a map does. For canonical entries of the two polynomials, coefficient by coefficient:
+if its leading limb is finite, every limb of every term is finite, the values are those of
+the dot product of the real model on the values of the terms, and the conclusions of its
+statement hold; otherwise every limb of the coefficient is a NaN; and the mask is true exactly
+when every leading limb is finite. The proof reads the IEEE-model theorem of the dot product
+(`dot_k_seq_ieee_correct`, about the finish of that state) on the state: the finish of a state
+whose leading limb is finite returns it, with the flag true.
+
+## Ball vectors
+
+A ball vector is $N$ centers with one radius ([the design](../developer/design/milestone2.md#ballvector)):
+`bv_add_k`, `bv_sub_k` and `bv_scale_k` write the centers of the result by the map of their
+operation, record the largest magnitude $m$ of a center written (of its leading limb, for two
+limbs), and compute the one radius by a radius kernel on $m$ and the scalars.
+
+**The radius kernels** (`BvRadius.v`): `bv_add_radius_k` and `bv_scale_radius_k` have their
+generated statements as types. They are the radius lines of `ball_add_k` and `ball_scale_k`
+with $m$ in place of the magnitude of one entry's center, and their claim is that the radius
+is a number of the format and at least $r_x + r_y + U\kappa\,m$ (sum and difference) or
+$\lvert a\rvert r_x + U\kappa\,m + V$ (scaling), with $U$ and $V$ from the bound of the step
+relative to its result and $\kappa = (1+u)^{k-1}$: the bound of the radius of the Ball
+kernels (`Ball2.v`, `radius_2`) at $m$, for every $m \ge 0$ and radii $\ge 0$. These are
+statements of the real model.
+
+**The ball vectors in the real model** (`BvReal.v`): `F_correct` has the generated statement
+of each of the six as its type. For nonnegative radii and valid centers (numbers of the
+format, normalized pairs for two limbs), the radius is a number of the format and, entry by
+entry, the center written is valid and the value of the operation on any members of the balls
+of the operands' entries is within the radius of it. Entry by entry: the members' result is
+within $r_x + r_y$ (or $\lvert a\rvert r_x$) of the exact result on the centers, which is
+within $U\lvert z\rvert + V$ of the center written $z$ (the bound of the step, made relative
+to its result); $\lvert z\rvert \le \kappa m$, because the record is the maximum of the
+magnitudes (`maxc_seq_value` of `FoldNorm.v`) and a normalized pair is at most $(1+u)$ times
+its leading limb; and the claim of the radius kernel at $m$ covers the sum. So no property of
+the rounded radius lines as functions of $m$ is needed: that they are nondecreasing, which
+makes the one radius the largest of the radii the Ball kernel would compute entry by entry, is
+true but not proved.
+
+**The ball vectors in the model with overflow** (`IeeeBv.v`): not proved against their
+generated statements, which are to be restated (their fourth clause), and so still
+unverified. What is proved, for both orders, as lemmas the restated statements will rest
+on, for canonical operands (a finite nonnegative radius with finite centers, or the radius
+$+\infty$ with zero centers): the result is a finite ball vector or the whole space (zero
+centers, radius $+\infty$), and the flag is true exactly when the radius is finite (V1);
+entry by entry, the value of the operation on members of the operands' balls is in the ball
+of the center written (V2); a finite radius means finite radii and scalar, the centers of
+the real model and its radius (V3); and finite radii (and scalar) whose own sum, or
+$\lvert a\rvert r_x$, is at most $2^{e_{\max}-2}$, with every entry within the same limit,
+give a finite radius, for every length including zero (V4), from precision 2 (3 for the sums
+of two limbs, the precision of their statements). The lane
+order returns what the sequential order returns. The proof: when the flag is true, the
+radius kernel's result is finite, so the record and every center written are, and the
+lemmas of the maps and of the folds of maxima in this model give the values of the real
+model, where `BvReal.v` applies; when it is false the result is the whole space. V4 is the
+finiteness of the Ball kernels' radius (`IeeeBallFinite.v`) at the largest magnitude. At
+precision 1, where the statements of one limb start, the clause is false: with
+$e_{\max} = 2$ a constant of the radius lines rounds up to $2^{e_{\max}}$, so every radius is
+$+\infty$ or a NaN.
+
+## The accumulator
+
+`Accumulator<T, k>` keeps a running sum $s$ of $k$ limbs, a running sum $a$ in `T` of the
+magnitudes of the leading limbs of what was added, and a count
+([the design](../developer/design/milestone2.md#the-accumulator)). Its state kernels are
+proved against their generated statements in both models: `acc_add_k` (one term),
+`acc_mul_k` (one product) and `acc_merge_k` (another accumulator's state) return the next
+$s$ with the claims of `add_1_1`, `add_2_2` or the step of the dot product, and the next $a$
+as the rounding to nearest of its value (`AccKernels.v`); in the IEEE model each output
+group's claims hold where its own leading limb is finite (`IeeeAccKernels.v`).
+
+The radius `acc_radius_k`, from $a$, a count $m$ (0 or at least 1) and the two numbers of
+`bound_dot_k(m)`, is proved in both models too: its result $r$ is at least
+$g\,(1+u)^2(1 + m u + 2m^2u^2)(a + m\eta/2) + t$ for every $m$, and when its mask is true,
+$m u \le \tfrac12$. The proof needs nothing of the format beyond $p \ge 2$: each of its
+roundings is in the normal range, or is covered by the constant added in the last line. In
+the IEEE model a finite $r$ is the real model's $r$, and the mask the real model's
+(`acc_radius_1_real`).
+
+**What a user of the accumulator relies on** (`Accumulator.v` in the real model,
+`IeeeAccumulator.v` in the IEEE model; written by hand and audited in step 3). A history of
+an accumulator is a tree: `add` and `add_product` add a term to a history, and `merge` joins
+two histories, each of which may contain merges. For every such history whose elements are
+numbers of the format (normalized pairs for two limbs), with $n$ the number of terms, $s$
+the running sum, $a$ the sum of magnitudes and $\Sigma$ the exact sum of the terms ($x$ for
+an `add`, $x y$ for an `add_product`):
+
+- $\sum_i \lvert x_i y_i\rvert \le (1+u)^{n+2}\,(a + n\eta/2)$ (`acc_2_terms_mags`; for one
+  limb with $(1+u)^n$, `acc_1_mags`): the magnitudes the kernels add are those of the leading
+  limbs, each rounding of a nonnegative sum loses at most a factor $1+u$, and $\eta/2$ only in
+  a fused multiply-add, and a merge of two histories of $n_1, n_2 \ge 1$ terms costs one
+  factor for $n_1 + n_2$ terms;
+- $\lvert s - \Sigma\rvert$ is within the statement of `dot_k` for $n$ terms, whatever the
+  shape of the tree (`acc_1_error`, `acc_2_error`): the history is mapped to a tree of the
+  summation theorem, of height at most $n - 1$ for two limbs and $n$ for one;
+- with $(g, t)$ from `bound_dot_k(m)` and $r$ from `acc_radius_k(a, m, g, t)`, for $m$ a
+  number of `T` that is 0 or at least 1 and at least $n$, in a format that contains
+  $\tfrac12$, when both masks are true:
+  $\lvert s - \Sigma\rvert \le g\sum_i\lvert x_i y_i\rvert + t \le r$
+  (`acc_1_chain`, `acc_2_chain`; the final statements `acc_1_bound`, `acc_2_bound`).
+
+In the IEEE model, for elements whose limbs are finite: if the running sum and $r$ are
+finite and both masks are true, then every state on the way was finite and had the values
+of the real model, and the same bound holds (`acc_1_ieee_bound`, `acc_2_ieee_bound`). A true
+mask of `acc_radius_k` means a finite $a$ (`acc_radius_1_ok_finite`). Not proved: what the
+header does when a value is not finite or a mask is false (it returns the whole line), the
+count as a machine integer and its conversion to `T`, and that the header calls the kernels
+in this way.
 
 ## What a proof does not cover
 

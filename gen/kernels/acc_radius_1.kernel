@@ -1,0 +1,62 @@
+# The radius of an accumulator of one limb (milestone2.md, "The accumulator": acc.error_bound()),
+# in the form of conv_radius ("The product of polynomials"): roundings to nearest of nonnegative
+# values, then one product by (1+u)^8 that covers the seven before it, and a constant that covers
+# what the one product that may underflow loses and keeps the radius normal. The page gives it no
+# listing: this one was proposed and checked in exact arithmetic by
+# experiments/milestone2/accumulator.py. acc_radius_2 is the same listing: the magnitudes are summed
+# in T for both numbers of limbs, and only (g, t) = bound_dot_k(m) differ.
+#
+# a is the running sum of the magnitudes of the leading limbs of what was added, m the count of terms
+# (0 or at least 1), and (g, t) = bound_dot_k(m). The radius rests on the inequality of the page,
+#   sum_i |x_i y_i| <= (1+u)^(m+2) (a + m eta/2),
+# with (1+u)^m <= 1 + m u (1 + 2 m u) when m u <= 1/2 (pow_minus_1_le_gamma and gamma_le_poly of
+# proofs/theories/Summation.v with eps = u): then g sum_i |x_i y_i| + t, the bound of dot for m terms
+# in any tree, is at most the value of the claim upper below, which r is at least when ok.
+#   q >= m u: q = RN(m ((1+u) u + N)), and q >= N for m >= 1   d = 2 q, exactly
+#   w = RN(q + 2 q^2) >= (q + 2 q^2) / (1+u)                     c = RN(m N + a) >= (a + m eta/2) / (1+u)
+#   e = RN(c (1 + w)) >= c (1 + w) / (1+u)                       f = RN(e g) >= e g / (1+u) - eta/2
+#   s = RN(f + t) >= (f + t) / (1+u)                             r = RN(s K + C) >= (s K + C) / (1+u)
+# with K >= (1+u)^8 and C >= (1+u)^7 eta/2 + N: r >= (1+u)^2 g (1 + m u + 2 m^2 u^2)(a + m eta/2) + t.
+#
+# The mask ok is false when m u may exceed 1/2 (d = 2 q exactly, so d <= 1 is q <= 1/2, written with
+# the constant 1 of bound_dot_1 rather than a constant 1/2 that only a kernel without a real-model
+# statement has, whose definition in IeeeModel.v would then change), and when a is not finite: a
+# sum of magnitudes that
+# overflowed (acc_add_k, acc_mul_k, acc_merge_k claim nothing of b where it is +inf), from which no
+# radius may be believed. z = a - a is +0 for every finite a and a NaN for +inf and for a NaN, so
+# eq(z, z) is the test that a is finite, written without the constant inf, which the real model
+# does not have; in the real model it is always true.
+kernel:        acc_radius_1
+input:         a
+input:         m
+input:         g
+input:         t
+output:        r
+output:        mask ok
+requires:      nonneg a
+requires:      count m
+requires:      nonneg g
+requires:      nonneg t
+ensures:       upper r value=g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if=ok
+ensures:       holds le m*u 1/2 if=ok
+theorem:       proofs/theories/AccKernels.v acc_radius_1_correct
+ieee_spec_theorem: proofs/theories/IeeeAccKernels.v acc_radius_1_ieee_correct
+min_precision: 2
+source:        the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here
+license:       proof: MIT
+status:        proved
+ieee:          spec
+cone_exempt:   z = a - a is only compared with itself, for the mask ok: false when a is not finite, which is what it is for
+
+q  = prod(m, const up((1+u)*u+eta/(2*u)))
+d  = prod(q, const up(2))
+w  = fma(q, d, q)
+c  = fma(m, const up(eta/(2*u)), a)
+e  = fma(c, w, c)
+f  = prod(e, g)
+s  = add(f, t)
+r  = fma(s, const up((1+u)^8), const up((1+u)^7*eta/2+eta/(2*u)))
+oq = le(d, const up(1))
+z  = sub(a, a)
+fa = eq(z, z)
+ok = and(oq, fa)

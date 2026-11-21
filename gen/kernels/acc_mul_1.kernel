@@ -2,13 +2,6 @@
 # plus the exact product x y, rounded once (the step of dot_1, s <- RN(x y + s)), and the running sum
 # a of the magnitudes plus |x| |y|, rounded once (a <- RN(|x| |y| + a)). x and y are values of the
 # program that are only multiplied: rule R3 asks no guard of them.
-#
-# The claims proposed for it in gen/kernels, which accumulator.py checks:
-#   value:         s+x*y
-#   requires:      nonneg a
-#   ensures:       rounded t nearest
-#   ensures:       rounded b nearest value=a+abs(x)*abs(y)
-#   (needs rounded ... value=, which the generator does not have: see accumulator.py)
 kernel:        acc_mul_1
 input:         stored s
 input:         stored a
@@ -16,12 +9,19 @@ input:         x
 input:         y
 output:        t
 output:        b
+value:         s+x*y
+requires:      nonneg a
+ensures:       rounded t nearest
+ensures:       rounded b nearest value=a+abs(x)*abs(y)
+theorem:       proofs/theories/AccKernels.v acc_mul_1_correct
+ieee_spec_theorem: proofs/theories/IeeeAccKernels.v acc_mul_1_ieee_correct
 min_precision: 1
 source:        the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md)
 license:       proof: MIT
-status:        unverified
+status:        proved
+ieee:          spec
 entry:         yes
-cone_exempt:   b, the sum of magnitudes, does not reach t; it overflows (to +inf, its operands being nonnegative) only when a + |x| |y| rounds above the largest number of T, and a radius computed from it is then +inf, the whole line
+cone_exempt:   b, the sum of magnitudes, does not reach t: its claim is read where b is finite (an entry about an output group other than the first), and where b is +inf the mask ok of acc_radius_k is false
 
 t  = fma(x, y, s)
 ax = abs(x)

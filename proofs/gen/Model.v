@@ -18,6 +18,18 @@ Notation rnd := (round radix2 (FLT_exp emin prec) (Znearest choice)).
 (* Veltkamp's multiplier 2^ceil(prec/2) + 1. *)
 Definition splitter : R := bpow radix2 (Z.div (prec + 1) 2) + 1.
 
+(* up((1+u)*u+eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_acc_radius_1_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * bpow radix2 (- prec)) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
+
+(* up((1+u)^8): the smallest number of the format not below it. *)
+Definition up_acc_radius_1_3 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 8).
+
+(* up((1+u)^7*eta/2+eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_acc_radius_1_4 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((((1 + bpow radix2 (- prec)) ^ 7) * bpow radix2 emin) / 2) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
+
 (* up(unit(add_1_1)/(1-unit(add_1_1))): the smallest number of the format not below it. *)
 Definition up_ball_add_1_0 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1))).
@@ -133,6 +145,49 @@ Definition up_bound_sum_2_1 : R :=
 (* up(eta/(2*u^2)): the smallest number of the format not below it. *)
 Definition up_mul_down_1_0 : R :=
   round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin / (2 * (bpow radix2 (- prec) ^ 2))).
+
+(* acc_add_1: add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). *)
+Definition acc_add_1 (s a x : R) : R * R :=
+  let g := rnd (x + 0) in
+  let t := rnd (s + g) in
+  let ag := Rabs g in
+  let b := rnd (a + ag) in
+  (t, b).
+
+(* acc_merge_1: add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). *)
+Definition acc_merge_1 (s a v c : R) : R * R :=
+  let t := rnd (s + v) in
+  let b := rnd (a + c) in
+  (t, b).
+
+(* acc_mul_1: the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). *)
+Definition acc_mul_1 (s a x y : R) : R * R :=
+  let t := rnd (x * y + s) in
+  let ax := Rabs x in
+  let ay := Rabs y in
+  let b := rnd (ax * ay + a) in
+  (t, b).
+
+(* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. *)
+Definition acc_radius_1 (a m g t : R) : R * bool :=
+  let q := rnd (m * up_acc_radius_1_0 + 0) in
+  let d := rnd (q * up_bound_dot_1_2 + 0) in
+  let w := rnd (q * d + q) in
+  let c := rnd (m * up_ball_mul_pow2_1_0 + a) in
+  let e := rnd (c * w + c) in
+  let f := rnd (e * g + 0) in
+  let s := rnd (f + t) in
+  let r := rnd (s * up_acc_radius_1_3 + up_acc_radius_1_4) in
+  let oq := Rle_bool d up_bound_dot_1_6 in
+  let z := rnd (a - a) in
+  let fa := Req_bool z z in
+  let ok := andb oq fa in
+  (r, ok).
+
+(* acc_radius_2: acc_radius_1, for the bound of dot_2 (milestone2.md). *)
+Definition acc_radius_2 (a m g t : R) : R * bool :=
+  let '(r, ok) := acc_radius_1 a m g t in
+  (r, ok).
 
 (* add_1_1: one rounding to nearest. *)
 Definition add_1_1 (a b : R) : R :=
@@ -327,6 +382,36 @@ Definition bound_sum_2 (m : R) : R * bool :=
   let g := rnd (aa * w + 0) in
   let ok := Rle_bool a up_bound_dot_1_5 in
   (g, ok).
+
+(* bv_add_radius_1: the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_add_radius_1 (m rx ry : R) : R :=
+  let s := rnd (rx + ry) in
+  let t := rnd (m * up_ball_add_1_0 + s) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
+  rz.
+
+(* bv_add_radius_2: the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_add_radius_2 (m rx ry : R) : R :=
+  let s := rnd (rx + ry) in
+  let t := rnd (m * up_ball_add_2_0 + s) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
+  rz.
+
+(* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_scale_radius_1 (m rx a : R) : R :=
+  let aa := Rabs a in
+  let p := rnd (aa * rx + 0) in
+  let t := rnd (m * up_ball_mul_1_0 + p) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_1_2) in
+  rz.
+
+(* bv_scale_radius_2: the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_scale_radius_2 (m rx a : R) : R :=
+  let aa := Rabs a in
+  let p := rnd (aa * rx + 0) in
+  let t := rnd (m * up_ball_scale_2_0 + p) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_2_2) in
+  rz.
 
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)
 Definition dot_step_1 (s x y : R) : R :=
@@ -555,14 +640,6 @@ Definition abs_upper_2 (x0 x1 : R) : R :=
   let t := to_up_2 a0 a1 in
   t.
 
-(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
-Definition add_2_1 (x0 x1 a : R) : R * R :=
-  let g := rnd (a + 0) in
-  let '(sh, sl) := two_sum x0 g in
-  let v := rnd (x1 + sl) in
-  let '(z0, z1) := fast_two_sum sh v in
-  (z0, z1).
-
 (* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. *)
 Definition add_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(sh, sl) := two_sum x0 y0 in
@@ -571,6 +648,53 @@ Definition add_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(vh, vl) := fast_two_sum sh c in
   let w := rnd (tl + vl) in
   let '(z0, z1) := fast_two_sum vh w in
+  (z0, z1).
+
+(* acc_add_2: add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. *)
+Definition acc_add_2 (s0 s1 a x0 x1 : R) : R * R * R :=
+  let g0 := rnd (x0 + 0) in
+  let g1 := rnd (x1 + 0) in
+  let '(t0, t1) := add_2_2 s0 s1 g0 g1 in
+  let ag := Rabs g0 in
+  let b := rnd (a + ag) in
+  (t0, t1, b).
+
+(* acc_merge_2: add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. *)
+Definition acc_merge_2 (s0 s1 a v0 v1 c : R) : R * R * R :=
+  let '(t0, t1) := add_2_2 s0 s1 v0 v1 in
+  let b := rnd (a + c) in
+  (t0, t1, b).
+
+(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. *)
+Definition mul_2_2 (x0 x1 y0 y1 : R) : R * R :=
+  let '(ch, cl1) := two_prod x0 y0 in
+  let tl0 := rnd (x1 * y1 + 0) in
+  let tl1 := rnd (x0 * y1 + tl0) in
+  let cl2 := rnd (x1 * y0 + tl1) in
+  let cl3 := rnd (cl1 + cl2) in
+  let '(z0, z1) := fast_two_sum ch cl3 in
+  (z0, z1).
+
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. *)
+Definition dot_step_2 (s0 s1 x0 x1 y0 y1 : R) : R * R :=
+  let '(p0, p1) := mul_2_2 x0 x1 y0 y1 in
+  let '(t0, t1) := add_2_2 s0 s1 p0 p1 in
+  (t0, t1).
+
+(* acc_mul_2: the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. *)
+Definition acc_mul_2 (s0 s1 a x0 x1 y0 y1 : R) : R * R * R :=
+  let '(t0, t1) := dot_step_2 s0 s1 x0 x1 y0 y1 in
+  let ax := Rabs x0 in
+  let ay := Rabs y0 in
+  let b := rnd (ax * ay + a) in
+  (t0, t1, b).
+
+(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
+Definition add_2_1 (x0 x1 a : R) : R * R :=
+  let g := rnd (a + 0) in
+  let '(sh, sl) := two_sum x0 g in
+  let v := rnd (x1 + sl) in
+  let '(z0, z1) := fast_two_sum sh v in
   (z0, z1).
 
 (* add_ball_2_2: add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). *)
@@ -617,16 +741,6 @@ Definition add_up_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let w := add_up_1 z1 dd in
   let '(h0, h1) := two_sum_ord z0 w in
   (h0, h1).
-
-(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. *)
-Definition mul_2_2 (x0 x1 y0 y1 : R) : R * R :=
-  let '(ch, cl1) := two_prod x0 y0 in
-  let tl0 := rnd (x1 * y1 + 0) in
-  let tl1 := rnd (x0 * y1 + tl0) in
-  let cl2 := rnd (x1 * y0 + tl1) in
-  let cl3 := rnd (cl1 + cl2) in
-  let '(z0, z1) := fast_two_sum ch cl3 in
-  (z0, z1).
 
 (* axpy_entry_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. *)
 Definition axpy_entry_step_2 (a0 a1 x0 x1 y0 y1 : R) : R * R :=
@@ -740,12 +854,6 @@ Definition ball_sub_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let '(n0, n1) := neg_2 cy0 cy1 in
   let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in
   (cz0, cz1, rz).
-
-(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. *)
-Definition dot_step_2 (s0 s1 x0 x1 y0 y1 : R) : R * R :=
-  let '(p0, p1) := mul_2_2 x0 x1 y0 y1 in
-  let '(t0, t1) := add_2_2 s0 s1 p0 p1 in
-  (t0, t1).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : R) : bool :=

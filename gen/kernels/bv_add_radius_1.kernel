@@ -1,0 +1,26 @@
+# The one radius of the sum (and of the difference) of two BallVectors with one-limb centers
+# (milestone2.md, "BallVector": bv_add_radius_k): the radius lines of ball_add_1, with m, the
+# largest magnitude of a center of the result, in place of one entry's |cz|. Every operation is a
+# rounding of a nondecreasing function of m on nonnegative values, so with m the largest |cz| the
+# result is the largest of the radii that ball_add_1 returns entry by entry. Its claim is what makes
+# it a radius of every entry: by the bound of add_1_1 relative to the result, an entry whose exact
+# center is s and computed center cz has |cz - s| <= U |cz| <= U m, with U = unit/(1 - unit), and a
+# member of the exact sum is within rx + ry of s.
+kernel:        bv_add_radius_1
+input:         m
+input:         rx
+input:         ry
+output:        rz
+requires:      nonneg m
+requires:      nonneg rx
+requires:      nonneg ry
+ensures:       upper rz value=rx+ry+m*unit(add_1_1)/(1-unit(add_1_1))
+min_precision: 1
+theorem:       proofs/theories/BvRadius.v bv_add_radius_1_correct
+source:        the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)
+license:       algorithm and proof: MIT
+status:        proved
+
+s  = add(rx, ry)
+t  = fma(m, const up(unit(add_1_1)/(1-unit(add_1_1))), s)
+rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))

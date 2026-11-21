@@ -343,6 +343,8 @@ def holds(e, k, fmt, ins, outs, limbs=None, kernels=None):
     if kind == 'leading_rounded':
         return out[0] == fmt.round(value, 'nearest')
     if kind == 'rounded':
+        if 'value' in e:              # a value of its own, over the inputs and their limbs
+            value = expr.evaluate(expr.parse(e['value']), dict(ins, **(limbs or {})))
         if e.get('when') == 'product_large' and not product_large(fmt, value):
             return True
         return out[0] == fmt.directed(value, e['mode'])

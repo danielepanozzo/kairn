@@ -11,10 +11,13 @@ wrong on what was run.
 ## How it works
 
 - `kernels/` holds the proposed kernels as descriptions in the generator's own format
-  (`gen/README.md`), 11 of them. They carry no claims: the claims of this milestone need
-  vocabulary that the generator does not have yet. The seven of the accumulator (`acc_add_k`,
-  `acc_mul_k`, `acc_merge_k` and `acc_radius`) carry the claims proposed for them as comments,
-  and `accumulator.py` says why they are not in `gen/kernels`. The 29 that the generator has now
+  (`gen/README.md`), 6 of them, and two proposed folds: `ball_split_1`, `conv_radius`, and the
+  constructor of a BallVector, `bv_make_1.fold` and `bv_make_2.fold` with their kernels
+  `bv_center_entry_1`, `bv_center_2`, `bv_make_radius` and `bv_make_finish`, whose listing the page
+  does not give (`ballvector.py`). They carry no claims: the claims of this milestone need
+  vocabulary that the generator does not have yet. The radii `bv_add_radius_2` and
+  `bv_scale_radius_2` that were proposed here are in `gen/kernels` now, with their forms of one limb
+  and their claims (`batch.py` reads them from there). The 41 that the generator has now
   are in `gen/kernels`, with their claims, and only there: the nine of the first wave
   (`two_sum_ord`, the four directed sums, the two directed products and the two scalings of a ball
   by a power of two); three bound kernels of the folds' stage (`bound_sum_2`, `bound_dot_2`,
@@ -23,7 +26,10 @@ wrong on what was run.
   `interval_neg_1`, `interval_add_1`, `interval_sub_1`, `interval_mul_1`, `add_ball_2_2`,
   `mul_ball_2_2`, `add_down_2_2`, `add_up_2_2`, `mul_dir_2_2`, `interval_add_2` and
   `ball_from_interval_2`); and four of the next stage (`mul_ext_2_2`, `interval_mul_2`,
-  `interval_mid_rad_1` and `ball_to_interval_1`, as they were written here). Three of those were written again there, with the same values, so that
+  `interval_mid_rad_1` and `ball_to_interval_1`, as they were written here); and the eight of the
+  accumulator (`acc_add_k`, `acc_mul_k`, `acc_merge_k`, and `acc_radius_k`, whose listing the page
+  does not give and which was proposed here: `accumulator.py`); and the four radii of BallVector
+  (`bv_add_radius_k`, `bv_scale_radius_k`). Three of those were written again there, with the same values, so that
   no fused result is negated, directly or through a select (a rule of the generator): the lower
   bounds of `mul_dir_2_2` and `add_down_2_2` are minus the rounding up of $d - z_1$ (for the sum,
   $dd - z_1$, with $dd$ the radius or zero), and the radius of `ball_from_interval_2` adds minus
@@ -57,8 +63,9 @@ compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`)
 | `rational.py` | a model in integer arithmetic of `rational(num, den)`, the three-word method of the page's first version, equals the specification, limb for limb. It is not a test of the header, whose computation is another and which the oracle tests | Constants at compile time |
 | `convert.py` | conversions between a wide and a narrow format, of numbers and of balls | Limbs of another type |
 | `constants.py` | the constants $A$ and $B$ of the two-limb bounds in `binary64` and `binary32` | Bounds of two limbs |
-| `accumulator.py` | the kernels of the accumulator: the inequality the radius rests on, $\sum_i \lvert x_i y_i\rvert \le (1+u)^{n+2}(a + n\eta/2)$, after random sequences of `add`, `add_product` and `merge`; the proposed `acc_radius` above its claimed expression, and the chain error $\le$ radius with `bound_dot_k`; in the format itself, the sum of magnitudes $+\infty$ while the running sum is finite | The accumulator |
-| `rules_report.py` | what the generator's rules say of the 40 proposed kernels (11 in `kernels/`, 29 in `gen/kernels`), and the operations of each after inlining | Experiments |
+| `ballvector.py` | the constructor of a BallVector proposed in `kernels/` (`bv_make_1`, `bv_make_2`): its result is canonical; it is the whole space exactly when the radius given is negative, a NaN or $+\infty$, or a center is not finite; otherwise the centers and the radius given; the same in every order | BallVector |
+| `accumulator.py` | the kernels of the accumulator: the inequality the radius rests on, $\sum_i \lvert x_i y_i\rvert \le (1+u)^{n+2}(a + n\eta/2)$, after random sequences of `add`, `add_product` and `merge`; the proposed `acc_radius` above its claimed expression, and the chain error $\le$ radius with `bound_dot_k`; in the format itself, the sum of magnitudes $+\infty$ while the running sum is finite, and the radius's mask false for a sum of magnitudes that is not finite | The accumulator |
+| `rules_report.py` | what the generator's rules say of the 47 proposed kernels (6 in `kernels/`, 41 in `gen/kernels`), and the operations of each after inlining | Experiments |
 
 ## Rerun
 

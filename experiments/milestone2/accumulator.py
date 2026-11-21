@@ -1,31 +1,24 @@
 #!/usr/bin/env python3
-"""The accumulator (milestone2.md, "The accumulator"): the kernels acc_add_k, acc_mul_k and
-acc_merge_k and the radius acc_radius proposed in kernels/, judged in exact arithmetic.
+"""The accumulator (milestone2.md, "The accumulator"): the kernels acc_add_k, acc_mul_k,
+acc_merge_k and acc_radius_k of gen/kernels, judged in exact arithmetic.
 
 The page gives acc_radius_k no listing: it says only that it "has the form of conv_radius" and that
-the radius rests on the inequality below. The listing of kernels/acc_radius.kernel is the one
-proposed for it, one kernel for both numbers of limbs (the magnitudes are summed in T in both), and
-this script is its check. It is not in gen/kernels: there its constants, shared with those of
-ball_mul_pow2_1 and bound_dot_1 and named after the first kernel in the order of the names, would
-rename up_ball_mul_pow2_1_0 and up_bound_dot_1_2, which proofs/theories names.
-
-The six others are proposals too, not in gen/kernels, because of A4: each claims of its second
-output b (the sum of magnitudes) that it is the rounding to nearest of a value of its own (a claim
-rounded b nearest value=..., which the generator does not have either), and in the format itself b
-is +inf in some cases where the running sum, output limb 0, is finite. The claims file is read
-whenever output limb 0 is finite, so there that claim is false; in the real model, where nothing
-overflows, it holds. Each description carries the claims proposed for it as comments. Statements
-judged:
+the radius rests on the inequality below. The listing of gen/kernels/acc_radius_1.kernel is the one
+proposed for it (acc_radius_2 calls it: the magnitudes are summed in T for both numbers of limbs),
+and this script is its check. Of the sum of magnitudes b, the second output of acc_add_k, acc_mul_k
+and acc_merge_k, the claims say something only where b is finite (an entry about an output group
+other than the first); where b is +inf, which happens while the running sum is finite (A4), the
+mask ok of acc_radius_k is false (A5), and the header returns the whole line. Statements judged:
 
   A1  the inequality the radius rests on: after any sequence of add(x), add_product(x, y) and
       merge(other) with valid operands, with n the number of terms (a merge adds the counts, a sum
       x is the product x * 1) and a the running sum of the magnitudes of the leading limbs that the
       kernels compute (a = RN(a + |x0|), RN(|x0| |y0| + a), RN(a + a')),
           sum_i |x_i y_i| <= (1 + u)^(n+2) (a + n eta / 2);
-  A2  acc_radius(a, m, g, t) = (r, ok), for every a, g, t >= 0 and m = 0 or m >= 1 of the format:
-          r >= g (1 + u)^2 (1 + m u + 2 m^2 u^2) (a + m eta / 2) + t,
-      and ok implies m u <= 1/2 (the claims upper and holds proposed for it);
-  A3  the chain of the page: with (g, t, ok) = bound_dot_k(n) and (r, ok') = acc_radius(a, n, g, t),
+  A2  acc_radius_k(a, m, g, t) = (r, ok), for every a, g, t >= 0 and m = 0 or m >= 1 of the format:
+      r >= g (1 + u)^2 (1 + m u + 2 m^2 u^2) (a + m eta / 2) + t (asserted in every case here,
+      claimed when ok) and, when ok, m u <= 1/2 (its claims upper and holds); and acc_radius_2 returns what acc_radius_1 does;
+  A3  the chain of the page: with (g, t, ok) = bound_dot_k(n) and (r, ok') = acc_radius_k(a, n, g, t),
       when ok and ok' are true,
           |s - Sigma| <= g sum_i |x_i y_i| + t <= r,
       s the running k-number and Sigma the exact sum of what was added: the first inequality is the
@@ -36,7 +29,8 @@ judged:
       a + |x0| |y0|, a + c) with the overflow rule, +inf when it rounds to 2^(qmax+p) or above
       (common.rn, which shares nothing with the interpreter), for nonnegative a and c; and the
       cases where b is +inf while output limb 0 is finite, counted for each kernel: there are some
-      for each of the six.
+      for each of the six;
+  A5  ok is false when a is +inf or a NaN, whatever m, g, t (on the toy formats, binary32, binary64).
 
 Run on toy formats with room above (nothing overflows: the real model), in binary64 and binary32
 for A2, and on formats of 1 to 3 bits for A2; A4 on the toy formats without the room.
@@ -45,7 +39,7 @@ import random
 import sys
 from fractions import Fraction
 
-from common import ZERO, ext, finite_numbers, fmt, interp, is_fin, normalized_pairs, num, rn, run, u_of, eta, val
+from common import NaN, PINF, ZERO, ext, finite_numbers, fmt, interp, is_fin, normalized_pairs, num, rn, run, u_of, eta, val
 
 
 def v2(x):
@@ -124,7 +118,7 @@ def accumulators(f, k, pool, rng, rounds):
         if not interp.member(f, mv):
             continue
         g, t, ok = run(f'bound_dot_{k}', f, mv)
-        r, ok2 = run('acc_radius', f, acc.a, mv, g, t)
+        r, ok2 = run(f'acc_radius_{k}', f, acc.a, mv, g, t)
         if not (ok and ok2):
             continue
         judged += 1
@@ -150,7 +144,8 @@ def radii(f, rng, rounds, counts):
         mv = num(m)
         if not interp.member(f, mv):
             continue
-        r, ok = run('acc_radius', f, num(a), mv, num(g), num(t))
+        r, ok = run('acc_radius_1', f, num(a), mv, num(g), num(t))
+        assert (r, ok) == run('acc_radius_2', f, num(a), mv, num(g), num(t))
         if r[0] != interp.NUM:
             continue                    # an overflow: the real model has none
         need = radius_claim(f, a, m, g, t)
@@ -191,6 +186,21 @@ def overflow_corner(f, k, pool, rng, rounds):
     return out
 
 
+def not_finite(f, rng, rounds):
+    """A5: acc_radius_k's mask is false when a is +inf or a NaN; returns the cases run. g and t are
+    drawn from a few binades of each end of the format (every number of binary64 is too many)."""
+    qs = list(range(f.qmin, f.qmin + 2 * f.p)) + list(range(max(f.qmin, f.qmax - 2 * f.p), f.qmax + 1))
+    mags = [ZERO] + [interp.canon(False, m, q) for q in qs for m in (1, 3, 2 ** f.p - 1) if m < 2 ** f.p]
+    counts = [num(c) for c in (0, 1, 2, 3, 5) if interp.member(f, num(c))]
+    for _ in range(rounds):
+        a = rng.choice((PINF, NaN))
+        m, g, t = rng.choice(counts), rng.choice(mags), rng.choice(mags)
+        for k in (1, 2):
+            r, ok = run(f'acc_radius_{k}', f, a, m, g, t)
+            assert ok is False, (f.name, k, a, m, g, t, r)                                    # A5
+    return rounds
+
+
 def main():
     rng = random.Random(20261121)
     for p, qmin, qtop in ((4, -10, -4), (5, -14, -6), (6, -18, -8)):
@@ -212,6 +222,8 @@ def main():
             found = overflow_corner(g, k, pool, rng, 3000)
             print(f'     in the format itself, k={k}: b the rounding with overflow in every case; b = +inf with '
                   'output limb 0 finite in ' + ', '.join(f'{c} of {n} ({name})' for name, (n, c) in found.items()))
+        print(f'     ok of acc_radius_1 and acc_radius_2 false for a = +inf or NaN in {not_finite(f, rng, 500)} '
+              'cases each')
     for p, qmin, qmax in ((1, -6, 8), (2, -6, 8), (3, -8, 8)):
         f = fmt(p, qmin, qmax)
         worst, accepted = radii(f, rng, 3000, [0, 1, 2, 3, 4, 6, 8])
@@ -223,6 +235,8 @@ def main():
         worst, accepted = radii(f, rng, 10000, counts)
         print(f'{name}: acc_radius: its claimed expression over r at most {float(worst):.6f}; ok true in '
               f'{accepted} cases')
+        print(f'{name}: ok of acc_radius_1 and acc_radius_2 false for a = +inf or NaN in {not_finite(f, rng, 500)} '
+              'cases each')
     print('every statement held')
 
 

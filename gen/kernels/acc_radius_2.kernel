@@ -1,0 +1,27 @@
+# The radius of an accumulator of two limbs (milestone2.md, "The accumulator": acc.error_bound()):
+# acc_radius_1, whose comment gives the listing's argument. The magnitudes are summed in T for both
+# numbers of limbs (a is the sum of the magnitudes of the leading limbs); only the (g, t) passed in
+# differ: those of bound_dot_2(m).
+kernel:        acc_radius_2
+input:         a
+input:         m
+input:         g
+input:         t
+output:        r
+output:        mask ok
+requires:      nonneg a
+requires:      count m
+requires:      nonneg g
+requires:      nonneg t
+ensures:       upper r value=g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if=ok
+ensures:       holds le m*u 1/2 if=ok
+theorem:       proofs/theories/AccKernels.v acc_radius_2_correct
+ieee_spec_theorem: proofs/theories/IeeeAccKernels.v acc_radius_2_ieee_correct
+min_precision: 2
+source:        acc_radius_1, for the bound of dot_2 (milestone2.md)
+license:       proof: MIT
+status:        proved
+ieee:          spec
+cone_exempt:   as in acc_radius_1: a - a is only compared with itself, for the mask ok
+
+(r, ok) = acc_radius_1(a, m, g, t)

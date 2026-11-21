@@ -171,6 +171,19 @@ def fold_counts(fd, kernels):
         step, check = kernels[kernels.folds[fd.coefficients].step[0]], kernels[fd.check]
         return {'seq': {t: [_part('step', step, 1, kernels, t), _part('check', check, 2, kernels, t)]
                         for t in LIMB_TYPES}}
+    if fd.is_bv:
+        # A ball vector: the step and the record per element (the scalar step and record twice in
+        # F_lanes, the lanes and the rest), the combination of the lanes, the radius and the finish
+        # once; the second pass computes nothing.
+        step, record, combine = (kernels[c[0]] for c in (fd.step, fd.record, fd.combine))
+        radius, finish = kernels[fd.radius[0]], kernels[fd.finish[0]]
+        end = [('radius', radius, 1), ('finish', finish, 1)]
+        forms = {'seq': [('step', step, 1), ('record', record, 1)] + end,
+                 'lanes': [('step', step, 2), ('record', record, 2), ('combine', combine, 1)] + end,
+                 'packed': [('packed step', step, 1), ('packed record', record, 1), ('combine', combine, 1),
+                            ('step', step, 1), ('record', record, 1)] + end}
+        return {form: {t: [_part(name, k, m, kernels, t) for name, k, m in parts] for t in LIMB_TYPES}
+                for form, parts in forms.items()}
     if fd.is_map:
         step, check = kernels[fd.step[0]], kernels[fd.check]
         forms = {'seq': [('step', step, 1), ('check', check, 2)],

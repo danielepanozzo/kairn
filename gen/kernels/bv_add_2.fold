@@ -1,0 +1,29 @@
+# The sum of two BallVectors with 2-limb centers (milestone2.md, "BallVector": bv_add_k): the
+# centers by add_2_2, entry by entry, as the map add_2; the state that of norm_upper_2 on the
+# centers written, the largest magnitude of a leading limb and the mask that none was a NaN; the one
+# radius bv_add_radius_2 at that magnitude, the largest of the radii of ball_add_2 entry by entry;
+# norm_finish_1 tests that it is finite. When it is not (an operand is the whole space, or something
+# overflowed), every center written is zero and the radius +infinity: the whole space.
+fold:          bv_add_2
+arrays:        stored x = x0 x1, stored y = y0 y1
+scalars:       stored rx, stored ry
+state:         m, mask ok
+step:          z = add_2_2(x, y)
+record:        (m, ok) = norm_step_2(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_add_radius_2(m, rx, ry)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x+y
+requires:      ball_vector x rx
+requires:      ball_vector y ry
+ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2)
+min_precision: 3
+theorem:       proofs/theories/BvReal.v
+status:        proved
+domain:        extended
+source:        add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector)
+license:       algorithm and proof: MIT

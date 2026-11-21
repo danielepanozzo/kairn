@@ -25,6 +25,9 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       the terms of value (s+x*y: |s| + |x*y|)
     ensures:       rounded t down [when=product_large]
                                       the mode: nearest, down or up
+    ensures:       rounded b nearest value=a+abs(x[0])
+                                      of a value of its own (as in value, and NAME[I] limb I of an
+                                      input) instead of the kernel's
     ensures:       upper r gaps=2
     ensures:       upper g value=m*unit(add_2_2)/(1-m*unit(add_2_2)) if=ok
                                       the value of the entry (an exact expression over the inputs,
@@ -176,7 +179,8 @@ along arrays, described in gen/kernels/NAME.fold:
     status:        unverified         or proved, with theorem: FILE (F_seq_correct, F_lanes_correct)
     ieee_theorem:  FILE               optional, once the statements of proofs/gen/IeeeFoldStatements.v
                                       are proved: F_seq_ieee_correct and F_lanes_ieee_correct, of
-                                      the orders the fold has (not for a map, which has none)
+                                      the orders the fold (or the map) has; F_ieee_correct, of a
+                                      convolution
     domain:        extended           elements may be infinite or NaN (the flag says what comes out)
 
 A map is a fold that writes an array (docs/developer/architecture.md, "Maps"):
@@ -227,6 +231,31 @@ It has no step of its own, and is otherwise described as a map:
     value:         x*y
     ensures:       coefficients z     each coefficient satisfies that fold's claims on its terms
     ensures:       finite_or_nan z flag=finite
+
+A ball vector (docs/developer/architecture.md, "Ball vectors"; milestone2.md, "BallVector") is a map
+of the centers of BallVectors whose state is that of a fold of maxima, the largest magnitude of a
+leading limb written and the mask that none was a NaN, and whose finish gives the one radius of the
+result; when the result is not a finite ball vector, every center written is zero and the radius
++infinity, the whole space:
+
+    fold:          bv_add_2
+    arrays:        stored x = x0 x1, stored y = y0 y1
+    scalars:       stored rx, stored ry
+    state:         m, mask ok
+    step:          z = add_2_2(x, y)
+    record:        (m, ok) = norm_step_2(m, ok, z)
+                                      the step of a fold of maxima, on each element written
+    combine:       (m, ok) = norm_combine(m, ok, m, ok)
+    radius:        rz = bv_add_radius_2(m, rx, ry)
+                                      the radius from the largest magnitude and scalars
+    finish:        (r, finite) = norm_finish_1(rz, ok)
+                                      the radius, or a NaN and the flag false
+    writes:        z = z0 z1
+    output:        r
+    output:        mask finite
+    requires:      ball_vector x rx   the centers x with the radius rx: canonical (finite, or the
+                                      whole space: every center zero and the radius +infinity)
+    ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2)
 """
 import json
 import os
@@ -637,6 +666,10 @@ def _ensures(words, where):
         # The condition is written only when there is one: a rounded entry without it has the
         # shape it always had.
         return {'kind': kind, 'of': words[1], 'mode': words[2], 'when': words[3][len('when='):]}
+    if kind == 'rounded' and len(words) == 4 and words[3].startswith('value='):
+        # A value of its own (the accumulator's sum of magnitudes, beside the kernel's value):
+        # written only when there is one.
+        return {'kind': kind, 'of': words[1], 'mode': words[2], 'value': words[3][len('value='):]}
     if kind == 'upper' and len(words) == 3 and words[2].startswith('gaps='):
         return {'kind': kind, 'of': words[1], 'gaps': words[2][len('gaps='):]}
     if kind == 'upper' and len(words) == 4 and words[2] == 'max' and words[3].startswith('steps='):
@@ -802,6 +835,26 @@ def _ensures(words, where):
         if exact_when is not None:
             entry['exact_when'] = exact_when
         return entry
+    if kind == 'encloses_entries' and len(words) >= 5:
+        # A ball vector (milestone2.md, "BallVector"): the centers written, the one radius and the
+        # mask that the result is a finite ball vector; each ball name an array of centers and a
+        # radius (a scalar).
+        balls, finite_when, flag = {}, None, None
+        for w in words[4:]:
+            if w.startswith('finite_when=') and finite_when is None:
+                finite_when = _finite_when(w[len('finite_when='):], where)
+                continue
+            if w.startswith('flag=') and flag is None:
+                flag = w[len('flag='):]
+                continue
+            m = re.fullmatch(r'([a-z][a-z0-9]*)=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', w)
+            if not m or m.group(1) in balls:
+                raise DescriptionError(f'{where}: bad or repeated ball vector {w!r}: NAME=CENTERS,RADIUS')
+            balls[m.group(1)] = {'center': m.group(2), 'radius': m.group(3)}
+        if not flag:
+            raise DescriptionError(f'{where}: an encloses_entries entry needs flag=MASK')
+        return {'kind': kind, 'center': words[1], 'radius': words[2], 'flag': flag, 'set': words[3],
+                'balls': balls, 'finite_when': finite_when or []}
     if kind == 'error' and len(words) >= 3:
         entry = {'kind': 'error', 'of': words[1], 'form': words[2],
                  'c': None, 'k': None, 't': None, 'when': None}
@@ -982,6 +1035,8 @@ class Fold:
     states: list = field(default_factory=list)      # every group of the state, in order (a fold of maxima: two)
     step: tuple = None          # (kernel, argument group names, the line's destination)
     combine: tuple = None       # the same (for a map, the operation and), or None
+    record: tuple = None        # a ball vector: the state's update from the element written (a step of a fold of maxima)
+    radius: tuple = None        # a ball vector: the kernel of its radius, on the state's limb and scalars
     finish: tuple = None        # (kernel, argument group names, destination group names), or None
     orders: tuple = ()
     writes: list = field(default_factory=list)      # Groups: the arrays a map writes, one element per step
@@ -1007,7 +1062,13 @@ class Fold:
     @property
     def is_map(self):
         """A map: the step writes an element of each written array, from the elements read."""
-        return bool(self.writes) and not self.coefficients
+        return bool(self.writes) and not self.coefficients and not self.record
+
+    @property
+    def is_bv(self):
+        """A ball vector (milestone2.md, "BallVector"): a map whose state is that of a fold of maxima,
+        updated by `record` from each element written, and whose finish gives one radius."""
+        return bool(self.record)
 
     @property
     def is_conv(self):
@@ -1047,6 +1108,10 @@ class Fold:
         return f'{self.name}_{ORDER_SUFFIX[order]}_correct'
 
     def ieee_theorem_name(self, order):
+        """The theorem of the IEEE-model statement of one order (of a convolution, of its one
+        statement: F_ieee_correct)."""
+        if self.is_conv:
+            return f'{self.name}_ieee_correct'
         return f'{self.name}_{ORDER_SUFFIX[order]}_ieee_correct'
 
 
@@ -1073,7 +1138,8 @@ def _fold_call(text, where, key):
 def parse_fold(text, path):
     fd = Fold(name=None, path=path)
     single = {'fold', 'arrays', 'scalars', 'state', 'step', 'combine', 'orders', 'writes', 'check', 'finish',
-              'value', 'min_precision', 'theorem', 'source', 'license', 'status', 'domain', 'coefficients'}
+              'value', 'min_precision', 'theorem', 'source', 'license', 'status', 'domain', 'coefficients',
+              'record', 'radius'}
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
         where = f'{path}:{lineno}'
@@ -1104,7 +1170,7 @@ def parse_fold(text, path):
         elif key == 'state':
             fd.states = [_group(part, where)[0] for part in val.split(',')]
             fd.state = fd.states[0]
-        elif key in ('step', 'combine'):
+        elif key in ('step', 'combine', 'record', 'radius'):
             setattr(fd, key, _fold_call(val, where, key))
         elif key == 'finish':
             fd.finish = None if val == 'none' else _fold_call(val, where, key)

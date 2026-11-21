@@ -16,10 +16,14 @@ ensures:       normalized z
 ensures:       error z T c=3*(1+2*u*u)/(1-4*u)+2 k=2 t=5/4
 min_precision: 3
 theorem:       proofs/theories/MapSteps.v axpy_step_2_1_correct
+ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v axpy_step_2_1_ieee_bridge
+ieee_spec_theorem: proofs/theories/IeeeMapSteps.v axpy_step_2_1_ieee_correct
+ieee_lead_theorem: proofs/theories/IeeeMapSteps.v axpy_step_2_1_ieee_lead
 source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
 entry:         yes
+ieee:          bridge spec
 
 (p0, p1) = mul_2_1(x0, x1, a)
 (z0, z1) = add_2_2(p0, p1, y0, y1)

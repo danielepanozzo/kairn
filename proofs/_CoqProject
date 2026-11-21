@@ -50,6 +50,10 @@ theories/FoldNorm.v
 theories/BoundKernels.v
 theories/FoldGuarantee.v
 theories/FoldConv.v
+theories/BvRadius.v
+theories/BvReal.v
+theories/AccKernels.v
+theories/Accumulator.v
 theories/IeeeOperations.v
 gen/IeeeModel.v
 gen/IeeeWith.v
@@ -85,9 +89,15 @@ theories/IeeeInterval2.v
 theories/IeeeFoldFinish.v
 theories/IeeeSteps.v
 theories/IeeeFolds.v
+theories/IeeeMapSteps.v
+theories/IeeeFoldMaps.v
+theories/IeeeFoldConv.v
+theories/IeeeBv.v
 theories/IeeeFoldNorm.v
 theories/IeeeBallConvert.v
 theories/IeeeIntervalExact.v
 theories/IeeeIntervalSub2.v
 theories/IeeeIntervalConvert.v
 theories/IeeeIntervalMul2.v
+theories/IeeeAccKernels.v
+theories/IeeeAccumulator.v

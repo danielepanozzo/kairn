@@ -60,6 +60,13 @@
 #endif
 #endif
 
+// The end of a ball vector (its radius and its finish), a function of its own, never inlined.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define KAIRN_GEN_NOINLINE inline __declspec(noinline)
+#else
+#define KAIRN_GEN_NOINLINE inline __attribute__((noinline))
+#endif
+
 // Every theorem assumes that fma_rn is one rounding, done by the hardware. Without the
 // instruction the builtin becomes a library call, and the intrinsic an illegal instruction.
 #if (defined(__x86_64__) || defined(__i386__)) && !defined(__FMA__)

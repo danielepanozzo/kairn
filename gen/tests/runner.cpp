@@ -71,28 +71,38 @@ const Fold folds[] = {
 #undef KAIRN_RUNNER_FOLD
 
 // The maps: MAP FORMAT ORDER N SCALAR... LIMB..., the scalars' limbs after the length; the result
-// is each limb array written, N entries each, then the mask.
+// is each limb array written, N entries each, then the mask. The ball vectors have the requests of
+// maps and return, after the centers written, their radius (out[0]), then the flag.
 struct Map {
     const char* name;
     const char* arrays;
     int scalars;
     int writes;
-    void (*seq64)(const double* const* in, std::size_t n, std::size_t lanes, const double* sc, double* const* w, bool* mo);
-    void (*lanes64)(const double* const* in, std::size_t n, std::size_t lanes, const double* sc, double* const* w, bool* mo);
-    void (*seq32)(const float* const* in, std::size_t n, std::size_t lanes, const float* sc, float* const* w, bool* mo);
-    void (*lanes32)(const float* const* in, std::size_t n, std::size_t lanes, const float* sc, float* const* w, bool* mo);
+    int radius;     // 1 for a ball vector
+    void (*seq64)(const double* const* in, std::size_t n, std::size_t lanes, const double* sc, double* const* w,
+                  double* out, bool* mo);
+    void (*lanes64)(const double* const* in, std::size_t n, std::size_t lanes, const double* sc, double* const* w,
+                    double* out, bool* mo);
+    void (*seq32)(const float* const* in, std::size_t n, std::size_t lanes, const float* sc, float* const* w,
+                  float* out, bool* mo);
+    void (*lanes32)(const float* const* in, std::size_t n, std::size_t lanes, const float* sc, float* const* w,
+                    float* out, bool* mo);
 };
 #define KAIRN_RUNNER_MAP_ARGS(T)                                                                    \
     [[maybe_unused]] const T* const* in, [[maybe_unused]] std::size_t n, [[maybe_unused]] std::size_t lanes, \
-        [[maybe_unused]] const T* sc, [[maybe_unused]] T* const* w, [[maybe_unused]] bool* mo
+        [[maybe_unused]] const T* sc, [[maybe_unused]] T* const* w, [[maybe_unused]] T* out, [[maybe_unused]] bool* mo
 #define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)
 #define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED)                        \
-    {#NAME, ARRAYS, SCALARS, WRITES, [](KAIRN_RUNNER_MAP_ARGS(double)) { SEQ; }, [](KAIRN_RUNNER_MAP_ARGS(double)) { LANES; }, \
+    {#NAME, ARRAYS, SCALARS, WRITES, 0, [](KAIRN_RUNNER_MAP_ARGS(double)) { SEQ; }, [](KAIRN_RUNNER_MAP_ARGS(double)) { LANES; }, \
+     [](KAIRN_RUNNER_MAP_ARGS(float)) { SEQ; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { LANES; }},
+#define KAIRN_RUNNER_BV(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED)                         \
+    {#NAME, ARRAYS, SCALARS, WRITES, 1, [](KAIRN_RUNNER_MAP_ARGS(double)) { SEQ; }, [](KAIRN_RUNNER_MAP_ARGS(double)) { LANES; }, \
      [](KAIRN_RUNNER_MAP_ARGS(float)) { SEQ; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { LANES; }},
 const Map maps[] = {
 #include "runner_kernels.inc"
-    {nullptr, nullptr, 0, 0, nullptr, nullptr, nullptr, nullptr},
+    {nullptr, nullptr, 0, 0, 0, nullptr, nullptr, nullptr, nullptr},
 };
+#undef KAIRN_RUNNER_BV
 #undef KAIRN_RUNNER_MAP
 
 // The convolutions: CONV FORMAT seq N_X N_Y LIMB..., the N_X entries of each limb array of the first
@@ -214,8 +224,8 @@ void complete_fold(const Fold& f, const std::vector<std::string>& fields, std::s
 
 template <class T>
 void complete_map(const Map& m, const std::vector<std::string>& fields, std::string& out,
-                  void (*seq)(const T* const*, std::size_t, std::size_t, const T*, T* const*, bool*),
-                  void (*lanes_fn)(const T* const*, std::size_t, std::size_t, const T*, T* const*, bool*)) {
+                  void (*seq)(const T* const*, std::size_t, std::size_t, const T*, T* const*, T*, bool*),
+                  void (*lanes_fn)(const T* const*, std::size_t, std::size_t, const T*, T* const*, T*, bool*)) {
     if (fields.size() < 4) fail(std::string("expected ") + m.name + " FORMAT ORDER N SCALAR ... LIMB ... [#TAG]");
     std::size_t lanes = 0;
     const bool by_lanes = lane_order(fields[2], lanes);
@@ -234,10 +244,15 @@ void complete_map(const Map& m, const std::vector<std::string>& fields, std::str
     std::vector<T*> w(std::size_t(m.writes) + 1);
     for (int l = 0; l < m.writes; ++l) w[std::size_t(l)] = written.data() + std::size_t(l) * n;
     bool mo[1] = {};
-    (by_lanes ? lanes_fn : seq)(in.data(), n, lanes, sc.data(), w.data(), mo);
+    T res[1] = {};
+    (by_lanes ? lanes_fn : seq)(in.data(), n, lanes, sc.data(), w.data(), res, mo);
     for (std::size_t i = 0; i < std::size_t(m.writes) * n; ++i) {
         out += ' ';
         put(static_cast<double>(written[i]), out);
+    }
+    if (m.radius) {
+        out += ' ';
+        put(static_cast<double>(res[0]), out);
     }
     out += mo[0] ? " 1" : " 0";
 }

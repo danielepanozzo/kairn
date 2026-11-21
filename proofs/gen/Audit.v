@@ -5,12 +5,15 @@
    script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements.
 From Kairn.Gen Require Import FoldStatements.
+From Kairn Require Import AccKernels.
 From Kairn Require Import Add21.
 From Kairn Require Import Add22.
 From Kairn Require Import AddFast22.
 From Kairn Require Import Ball2.
 From Kairn Require Import BallPow2.
 From Kairn Require Import BoundKernels.
+From Kairn Require Import BvRadius.
+From Kairn Require Import BvReal.
 From Kairn Require Import Compare.
 From Kairn Require Import Convert.
 From Kairn Require Import Directed.
@@ -32,6 +35,21 @@ From Kairn Require Import Sign.
 From Kairn Require Import Split.
 From Kairn Require Import StepKernels.
 From Kairn Require Import TwoProdDekker.
+
+Definition acc_add_1_audit : acc_add_1_spec := acc_add_1_correct.
+Print Assumptions acc_add_1_correct.
+
+Definition acc_merge_1_audit : acc_merge_1_spec := acc_merge_1_correct.
+Print Assumptions acc_merge_1_correct.
+
+Definition acc_mul_1_audit : acc_mul_1_spec := acc_mul_1_correct.
+Print Assumptions acc_mul_1_correct.
+
+Definition acc_radius_1_audit : acc_radius_1_spec := acc_radius_1_correct.
+Print Assumptions acc_radius_1_correct.
+
+Definition acc_radius_2_audit : acc_radius_2_spec := acc_radius_2_correct.
+Print Assumptions acc_radius_2_correct.
 
 Definition add_1_1_audit : add_1_1_spec := add_1_1_correct.
 Print Assumptions add_1_1_correct.
@@ -98,6 +116,18 @@ Print Assumptions bound_sum_1_correct.
 
 Definition bound_sum_2_audit : bound_sum_2_spec := bound_sum_2_correct.
 Print Assumptions bound_sum_2_correct.
+
+Definition bv_add_radius_1_audit : bv_add_radius_1_spec := bv_add_radius_1_correct.
+Print Assumptions bv_add_radius_1_correct.
+
+Definition bv_add_radius_2_audit : bv_add_radius_2_spec := bv_add_radius_2_correct.
+Print Assumptions bv_add_radius_2_correct.
+
+Definition bv_scale_radius_1_audit : bv_scale_radius_1_spec := bv_scale_radius_1_correct.
+Print Assumptions bv_scale_radius_1_correct.
+
+Definition bv_scale_radius_2_audit : bv_scale_radius_2_spec := bv_scale_radius_2_correct.
+Print Assumptions bv_scale_radius_2_correct.
 
 Definition dot_step_1_audit : dot_step_1_spec := dot_step_1_correct.
 Print Assumptions dot_step_1_correct.
@@ -183,11 +213,26 @@ Print Assumptions to_up_2_correct.
 Definition abs_upper_2_audit : abs_upper_2_spec := abs_upper_2_correct.
 Print Assumptions abs_upper_2_correct.
 
-Definition add_2_1_audit : add_2_1_spec := add_2_1_correct.
-Print Assumptions add_2_1_correct.
-
 Definition add_2_2_audit : add_2_2_spec := add_2_2_correct.
 Print Assumptions add_2_2_correct.
+
+Definition acc_add_2_audit : acc_add_2_spec := acc_add_2_correct.
+Print Assumptions acc_add_2_correct.
+
+Definition acc_merge_2_audit : acc_merge_2_spec := acc_merge_2_correct.
+Print Assumptions acc_merge_2_correct.
+
+Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
+Print Assumptions mul_2_2_correct.
+
+Definition dot_step_2_audit : dot_step_2_spec := dot_step_2_correct.
+Print Assumptions dot_step_2_correct.
+
+Definition acc_mul_2_audit : acc_mul_2_spec := acc_mul_2_correct.
+Print Assumptions acc_mul_2_correct.
+
+Definition add_2_1_audit : add_2_1_spec := add_2_1_correct.
+Print Assumptions add_2_1_correct.
 
 Definition add_ball_2_2_audit : add_ball_2_2_spec := add_ball_2_2_correct.
 Print Assumptions add_ball_2_2_correct.
@@ -203,9 +248,6 @@ Print Assumptions add_fast_2_2_correct.
 
 Definition add_up_2_2_audit : add_up_2_2_spec := add_up_2_2_correct.
 Print Assumptions add_up_2_2_correct.
-
-Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
-Print Assumptions mul_2_2_correct.
 
 Definition axpy_entry_step_2_audit : axpy_entry_step_2_spec := axpy_entry_step_2_correct.
 Print Assumptions axpy_entry_step_2_correct.
@@ -245,9 +287,6 @@ Print Assumptions ball_scale_2_correct.
 
 Definition ball_sub_2_audit : ball_sub_2_spec := ball_sub_2_correct.
 Print Assumptions ball_sub_2_correct.
-
-Definition dot_step_2_audit : dot_step_2_spec := dot_step_2_correct.
-Print Assumptions dot_step_2_correct.
 
 Definition eq_2_1_audit : eq_2_1_spec := eq_2_1_correct.
 Print Assumptions eq_2_1_correct.
@@ -347,6 +386,24 @@ Print Assumptions axpy_2_1_entry_correct.
 
 Definition axpy_2_entry_audit : axpy_2_entry_spec := axpy_2_entry_correct.
 Print Assumptions axpy_2_entry_correct.
+
+Definition bv_add_1_audit : bv_add_1_spec := bv_add_1_correct.
+Print Assumptions bv_add_1_correct.
+
+Definition bv_add_2_audit : bv_add_2_spec := bv_add_2_correct.
+Print Assumptions bv_add_2_correct.
+
+Definition bv_scale_1_audit : bv_scale_1_spec := bv_scale_1_correct.
+Print Assumptions bv_scale_1_correct.
+
+Definition bv_scale_2_audit : bv_scale_2_spec := bv_scale_2_correct.
+Print Assumptions bv_scale_2_correct.
+
+Definition bv_sub_1_audit : bv_sub_1_spec := bv_sub_1_correct.
+Print Assumptions bv_sub_1_correct.
+
+Definition bv_sub_2_audit : bv_sub_2_spec := bv_sub_2_correct.
+Print Assumptions bv_sub_2_correct.
 
 Definition conv_1_audit : conv_1_spec := conv_1_correct.
 Print Assumptions conv_1_correct.

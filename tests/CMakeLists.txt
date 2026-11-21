@@ -564,12 +564,21 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # "... two limbs and the enclosure interface"; oracle/README.md, "The kinds of the interval
 # kernels"), and since stage B every claim of the maps and their steps, the folds of maxima and
 # their kernels, and the convolutions (oracle/README.md, "Maps", "Folds of maxima",
-# "Convolutions"): both lists are empty.
+# "Convolutions"): none of those is on the lists. On the lists:
+#
+# - the kernels of the accumulator (architecture.md, "The accumulator"): the oracle reads neither a
+#   rounded entry with a value of its own (value=) yet, and acc_radius_k is on the list with them.
+# - the ball vectors (architecture.md, "Ball vectors") and their radius kernels: the oracle reads
+#   neither the folds with "bv": true (their requests, the requirement ball_vector, the claim
+#   encloses_entries) nor abs( ) in the value of an upper entry yet.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
-set(KAIRN_NOT_YET_CROSS_CHECKED)
-set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
+set(KAIRN_NOT_YET_CROSS_CHECKED
+  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
+  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2)
+set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
+  bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
 # whose public functions (sum, dot, the bounds as functions of n) come with BallVector, and the
@@ -583,7 +592,8 @@ set(KAIRN_NOT_PUBLIC_YET
   sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
   mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
   axpy_entry_step_2_1
-  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2)
+  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
+  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2)
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than

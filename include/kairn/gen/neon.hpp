@@ -69,6 +69,126 @@ KAIRN_GEN_FORCEINLINE float32x4_t next_down_bits(float32x4_t a) noexcept {
     return vreinterpretq_f32_u32(vbslq_u32(keep, b, r));
 }
 
+// acc_add_1(s, a, x) -> t, b
+KAIRN_GEN_FORCEINLINE void acc_add_1(float64x2_t s, float64x2_t a, float64x2_t x, float64x2_t& t_out, float64x2_t& b_out) noexcept {
+    const float64x2_t g = vaddq_f64(x, vdupq_n_f64(0.0));
+    const float64x2_t t = vaddq_f64(s, g);
+    const float64x2_t ag = vabsq_f64(g);
+    const float64x2_t b = vaddq_f64(a, ag);
+    t_out = t;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_add_1(float32x4_t s, float32x4_t a, float32x4_t x, float32x4_t& t_out, float32x4_t& b_out) noexcept {
+    const float32x4_t g = vaddq_f32(x, vdupq_n_f32(0.0f));
+    const float32x4_t t = vaddq_f32(s, g);
+    const float32x4_t ag = vabsq_f32(g);
+    const float32x4_t b = vaddq_f32(a, ag);
+    t_out = t;
+    b_out = b;
+}
+
+// acc_merge_1(s, a, v, c) -> t, b
+KAIRN_GEN_FORCEINLINE void acc_merge_1(float64x2_t s, float64x2_t a, float64x2_t v, float64x2_t c, float64x2_t& t_out, float64x2_t& b_out) noexcept {
+    const float64x2_t t = vaddq_f64(s, v);
+    const float64x2_t b = vaddq_f64(a, c);
+    t_out = t;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_merge_1(float32x4_t s, float32x4_t a, float32x4_t v, float32x4_t c, float32x4_t& t_out, float32x4_t& b_out) noexcept {
+    const float32x4_t t = vaddq_f32(s, v);
+    const float32x4_t b = vaddq_f32(a, c);
+    t_out = t;
+    b_out = b;
+}
+
+// acc_mul_1(s, a, x, y) -> t, b
+KAIRN_GEN_FORCEINLINE void acc_mul_1(float64x2_t s, float64x2_t a, float64x2_t x, float64x2_t y, float64x2_t& t_out, float64x2_t& b_out) noexcept {
+    const float64x2_t t = vfmaq_f64(s, x, y);
+    const float64x2_t ax = vabsq_f64(x);
+    const float64x2_t ay = vabsq_f64(y);
+    const float64x2_t b = vfmaq_f64(a, ax, ay);
+    t_out = t;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_mul_1(float32x4_t s, float32x4_t a, float32x4_t x, float32x4_t y, float32x4_t& t_out, float32x4_t& b_out) noexcept {
+    const float32x4_t t = vfmaq_f32(s, x, y);
+    const float32x4_t ax = vabsq_f32(x);
+    const float32x4_t ay = vabsq_f32(y);
+    const float32x4_t b = vfmaq_f32(a, ax, ay);
+    t_out = t;
+    b_out = b;
+}
+
+// acc_radius_1(a, m, g, t) -> r, mask ok
+KAIRN_GEN_FORCEINLINE void acc_radius_1(float64x2_t a, float64x2_t m, float64x2_t g, float64x2_t t, float64x2_t& r_out, uint64x2_t& ok_out) noexcept {
+    const float64x2_t q = vfmaq_f64(vdupq_n_f64(0.0), m, vdupq_n_f64(0x1.0000000000001p-53));
+    const float64x2_t d = vfmaq_f64(vdupq_n_f64(0.0), q, vdupq_n_f64(0x1p+1));
+    const float64x2_t w = vfmaq_f64(q, q, d);
+    const float64x2_t c = vfmaq_f64(a, m, vdupq_n_f64(0x1p-1022));
+    const float64x2_t e = vfmaq_f64(c, c, w);
+    const float64x2_t f = vfmaq_f64(vdupq_n_f64(0.0), e, g);
+    const float64x2_t s = vaddq_f64(f, t);
+    const float64x2_t r = vfmaq_f64(vdupq_n_f64(0x1.0000000000001p-1022), s, vdupq_n_f64(0x1.0000000000005p+0));
+    const uint64x2_t oq = vcleq_f64(d, vdupq_n_f64(0x1p+0));
+    const float64x2_t z = vsubq_f64(a, a);
+    const uint64x2_t fa = vceqq_f64(z, z);
+    const uint64x2_t ok = vandq_u64(oq, fa);
+    r_out = r;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE void acc_radius_1(float32x4_t a, float32x4_t m, float32x4_t g, float32x4_t t, float32x4_t& r_out, uint32x4_t& ok_out) noexcept {
+    const float32x4_t q = vfmaq_f32(vdupq_n_f32(0.0f), m, vdupq_n_f32(0x1.000002p-24f));
+    const float32x4_t d = vfmaq_f32(vdupq_n_f32(0.0f), q, vdupq_n_f32(0x1p+1f));
+    const float32x4_t w = vfmaq_f32(q, q, d);
+    const float32x4_t c = vfmaq_f32(a, m, vdupq_n_f32(0x1p-126f));
+    const float32x4_t e = vfmaq_f32(c, c, w);
+    const float32x4_t f = vfmaq_f32(vdupq_n_f32(0.0f), e, g);
+    const float32x4_t s = vaddq_f32(f, t);
+    const float32x4_t r = vfmaq_f32(vdupq_n_f32(0x1.000002p-126f), s, vdupq_n_f32(0x1.00000ap+0f));
+    const uint32x4_t oq = vcleq_f32(d, vdupq_n_f32(0x1p+0f));
+    const float32x4_t z = vsubq_f32(a, a);
+    const uint32x4_t fa = vceqq_f32(z, z);
+    const uint32x4_t ok = vandq_u32(oq, fa);
+    r_out = r;
+    ok_out = ok;
+}
+
+// acc_radius_2(a, m, g, t) -> r, mask ok
+KAIRN_GEN_FORCEINLINE void acc_radius_2(float64x2_t a, float64x2_t m, float64x2_t g, float64x2_t t, float64x2_t& r_out, uint64x2_t& ok_out) noexcept {
+    // (r, ok) = acc_radius_1(a, m, g, t)
+    const float64x2_t r_q = vfmaq_f64(vdupq_n_f64(0.0), m, vdupq_n_f64(0x1.0000000000001p-53));
+    const float64x2_t r_d = vfmaq_f64(vdupq_n_f64(0.0), r_q, vdupq_n_f64(0x1p+1));
+    const float64x2_t r_w = vfmaq_f64(r_q, r_q, r_d);
+    const float64x2_t r_c = vfmaq_f64(a, m, vdupq_n_f64(0x1p-1022));
+    const float64x2_t r_e = vfmaq_f64(r_c, r_c, r_w);
+    const float64x2_t r_f = vfmaq_f64(vdupq_n_f64(0.0), r_e, g);
+    const float64x2_t r_s = vaddq_f64(r_f, t);
+    const float64x2_t r = vfmaq_f64(vdupq_n_f64(0x1.0000000000001p-1022), r_s, vdupq_n_f64(0x1.0000000000005p+0));
+    const uint64x2_t r_oq = vcleq_f64(r_d, vdupq_n_f64(0x1p+0));
+    const float64x2_t r_z = vsubq_f64(a, a);
+    const uint64x2_t r_fa = vceqq_f64(r_z, r_z);
+    const uint64x2_t ok = vandq_u64(r_oq, r_fa);
+    r_out = r;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE void acc_radius_2(float32x4_t a, float32x4_t m, float32x4_t g, float32x4_t t, float32x4_t& r_out, uint32x4_t& ok_out) noexcept {
+    // (r, ok) = acc_radius_1(a, m, g, t)
+    const float32x4_t r_q = vfmaq_f32(vdupq_n_f32(0.0f), m, vdupq_n_f32(0x1.000002p-24f));
+    const float32x4_t r_d = vfmaq_f32(vdupq_n_f32(0.0f), r_q, vdupq_n_f32(0x1p+1f));
+    const float32x4_t r_w = vfmaq_f32(r_q, r_q, r_d);
+    const float32x4_t r_c = vfmaq_f32(a, m, vdupq_n_f32(0x1p-126f));
+    const float32x4_t r_e = vfmaq_f32(r_c, r_c, r_w);
+    const float32x4_t r_f = vfmaq_f32(vdupq_n_f32(0.0f), r_e, g);
+    const float32x4_t r_s = vaddq_f32(r_f, t);
+    const float32x4_t r = vfmaq_f32(vdupq_n_f32(0x1.000002p-126f), r_s, vdupq_n_f32(0x1.00000ap+0f));
+    const uint32x4_t r_oq = vcleq_f32(r_d, vdupq_n_f32(0x1p+0f));
+    const float32x4_t r_z = vsubq_f32(a, a);
+    const uint32x4_t r_fa = vceqq_f32(r_z, r_z);
+    const uint32x4_t ok = vandq_u32(r_oq, r_fa);
+    r_out = r;
+    ok_out = ok;
+}
+
 // add_1_1(a, b) -> s
 KAIRN_GEN_FORCEINLINE void add_1_1(float64x2_t a, float64x2_t b, float64x2_t& s_out) noexcept {
     const float64x2_t s = vaddq_f64(a, b);
@@ -1183,6 +1303,66 @@ KAIRN_GEN_FORCEINLINE void bound_sum_2(float32x4_t m, float32x4_t& g_out, uint32
     const uint32x4_t ok = vcleq_f32(a, vdupq_n_f32(0x1p-2f));
     g_out = g;
     ok_out = ok;
+}
+
+// bv_add_radius_1(m, rx, ry) -> rz
+KAIRN_GEN_FORCEINLINE void bv_add_radius_1(float64x2_t m, float64x2_t rx, float64x2_t ry, float64x2_t& rz_out) noexcept {
+    const float64x2_t s = vaddq_f64(rx, ry);
+    const float64x2_t t = vfmaq_f64(s, m, vdupq_n_f64(0x1p-53));
+    const float64x2_t rz = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), t, vdupq_n_f64(0x1.0000000000002p+0));
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void bv_add_radius_1(float32x4_t m, float32x4_t rx, float32x4_t ry, float32x4_t& rz_out) noexcept {
+    const float32x4_t s = vaddq_f32(rx, ry);
+    const float32x4_t t = vfmaq_f32(s, m, vdupq_n_f32(0x1p-24f));
+    const float32x4_t rz = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), t, vdupq_n_f32(0x1.000004p+0f));
+    rz_out = rz;
+}
+
+// bv_add_radius_2(m, rx, ry) -> rz
+KAIRN_GEN_FORCEINLINE void bv_add_radius_2(float64x2_t m, float64x2_t rx, float64x2_t ry, float64x2_t& rz_out) noexcept {
+    const float64x2_t s = vaddq_f64(rx, ry);
+    const float64x2_t t = vfmaq_f64(s, m, vdupq_n_f64(0x1.8000000000004p-105));
+    const float64x2_t rz = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), t, vdupq_n_f64(0x1.0000000000002p+0));
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void bv_add_radius_2(float32x4_t m, float32x4_t rx, float32x4_t ry, float32x4_t& rz_out) noexcept {
+    const float32x4_t s = vaddq_f32(rx, ry);
+    const float32x4_t t = vfmaq_f32(s, m, vdupq_n_f32(0x1.800008p-47f));
+    const float32x4_t rz = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), t, vdupq_n_f32(0x1.000004p+0f));
+    rz_out = rz;
+}
+
+// bv_scale_radius_1(m, rx, a) -> rz
+KAIRN_GEN_FORCEINLINE void bv_scale_radius_1(float64x2_t m, float64x2_t rx, float64x2_t a, float64x2_t& rz_out) noexcept {
+    const float64x2_t aa = vabsq_f64(a);
+    const float64x2_t p = vfmaq_f64(vdupq_n_f64(0.0), aa, rx);
+    const float64x2_t t = vfmaq_f64(p, m, vdupq_n_f64(0x1p-53));
+    const float64x2_t rz = vfmaq_f64(vdupq_n_f64(0x1.0000000000003p-1022), t, vdupq_n_f64(0x1.0000000000002p+0));
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void bv_scale_radius_1(float32x4_t m, float32x4_t rx, float32x4_t a, float32x4_t& rz_out) noexcept {
+    const float32x4_t aa = vabsq_f32(a);
+    const float32x4_t p = vfmaq_f32(vdupq_n_f32(0.0f), aa, rx);
+    const float32x4_t t = vfmaq_f32(p, m, vdupq_n_f32(0x1p-24f));
+    const float32x4_t rz = vfmaq_f32(vdupq_n_f32(0x1.000006p-126f), t, vdupq_n_f32(0x1.000004p+0f));
+    rz_out = rz;
+}
+
+// bv_scale_radius_2(m, rx, a) -> rz
+KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(float64x2_t m, float64x2_t rx, float64x2_t a, float64x2_t& rz_out) noexcept {
+    const float64x2_t aa = vabsq_f64(a);
+    const float64x2_t p = vfmaq_f64(vdupq_n_f64(0.0), aa, rx);
+    const float64x2_t t = vfmaq_f64(p, m, vdupq_n_f64(0x1.0000000000001p-105));
+    const float64x2_t rz = vfmaq_f64(vdupq_n_f64(0x1.0000000000003p-1022), t, vdupq_n_f64(0x1.0000000000002p+0));
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(float32x4_t m, float32x4_t rx, float32x4_t a, float32x4_t& rz_out) noexcept {
+    const float32x4_t aa = vabsq_f32(a);
+    const float32x4_t p = vfmaq_f32(vdupq_n_f32(0.0f), aa, rx);
+    const float32x4_t t = vfmaq_f32(p, m, vdupq_n_f32(0x1.000002p-47f));
+    const float32x4_t rz = vfmaq_f32(vdupq_n_f32(0x1.000006p-126f), t, vdupq_n_f32(0x1.000004p+0f));
+    rz_out = rz;
 }
 
 // dot_step_1(s, x, y) -> t
@@ -2761,6 +2941,408 @@ KAIRN_GEN_FORCEINLINE void abs_upper_2(float32x4_t x0, float32x4_t x1, float32x4
     t_out = t;
 }
 
+// add_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+KAIRN_GEN_FORCEINLINE void add_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
+    // (sh, sl) = two_sum(x0, y0)
+    const float64x2_t sh = vaddq_f64(x0, y0);
+    const float64x2_t sh_bb = vsubq_f64(sh, x0);
+    const float64x2_t sh_t0 = vsubq_f64(sh, sh_bb);
+    const float64x2_t sh_t1 = vsubq_f64(x0, sh_t0);
+    const float64x2_t sh_t2 = vsubq_f64(y0, sh_bb);
+    const float64x2_t sl = vaddq_f64(sh_t1, sh_t2);
+    // (th, tl) = two_sum(x1, y1)
+    const float64x2_t th = vaddq_f64(x1, y1);
+    const float64x2_t th_bb = vsubq_f64(th, x1);
+    const float64x2_t th_t0 = vsubq_f64(th, th_bb);
+    const float64x2_t th_t1 = vsubq_f64(x1, th_t0);
+    const float64x2_t th_t2 = vsubq_f64(y1, th_bb);
+    const float64x2_t tl = vaddq_f64(th_t1, th_t2);
+    const float64x2_t c = vaddq_f64(sl, th);
+    // (vh, vl) = fast_two_sum(sh, c)
+    const float64x2_t vh = vaddq_f64(sh, c);
+    const float64x2_t vh_z = vsubq_f64(vh, sh);
+    const float64x2_t vl = vsubq_f64(c, vh_z);
+    const float64x2_t w = vaddq_f64(tl, vl);
+    // (z0, z1) = fast_two_sum(vh, w)
+    const float64x2_t z0 = vaddq_f64(vh, w);
+    const float64x2_t z0_z = vsubq_f64(z0, vh);
+    const float64x2_t z1 = vsubq_f64(w, z0_z);
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void add_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, float32x4_t& z0_out, float32x4_t& z1_out) noexcept {
+    // (sh, sl) = two_sum(x0, y0)
+    const float32x4_t sh = vaddq_f32(x0, y0);
+    const float32x4_t sh_bb = vsubq_f32(sh, x0);
+    const float32x4_t sh_t0 = vsubq_f32(sh, sh_bb);
+    const float32x4_t sh_t1 = vsubq_f32(x0, sh_t0);
+    const float32x4_t sh_t2 = vsubq_f32(y0, sh_bb);
+    const float32x4_t sl = vaddq_f32(sh_t1, sh_t2);
+    // (th, tl) = two_sum(x1, y1)
+    const float32x4_t th = vaddq_f32(x1, y1);
+    const float32x4_t th_bb = vsubq_f32(th, x1);
+    const float32x4_t th_t0 = vsubq_f32(th, th_bb);
+    const float32x4_t th_t1 = vsubq_f32(x1, th_t0);
+    const float32x4_t th_t2 = vsubq_f32(y1, th_bb);
+    const float32x4_t tl = vaddq_f32(th_t1, th_t2);
+    const float32x4_t c = vaddq_f32(sl, th);
+    // (vh, vl) = fast_two_sum(sh, c)
+    const float32x4_t vh = vaddq_f32(sh, c);
+    const float32x4_t vh_z = vsubq_f32(vh, sh);
+    const float32x4_t vl = vsubq_f32(c, vh_z);
+    const float32x4_t w = vaddq_f32(tl, vl);
+    // (z0, z1) = fast_two_sum(vh, w)
+    const float32x4_t z0 = vaddq_f32(vh, w);
+    const float32x4_t z0_z = vsubq_f32(z0, vh);
+    const float32x4_t z1 = vsubq_f32(w, z0_z);
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// acc_add_2(s = (s0, s1), a, x = (x0, x1)) -> t = (t0, t1), b
+KAIRN_GEN_FORCEINLINE void acc_add_2(float64x2_t s0, float64x2_t s1, float64x2_t a, float64x2_t x0, float64x2_t x1, float64x2_t& t0_out, float64x2_t& t1_out, float64x2_t& b_out) noexcept {
+    const float64x2_t g0 = vaddq_f64(x0, vdupq_n_f64(0.0));
+    const float64x2_t g1 = vaddq_f64(x1, vdupq_n_f64(0.0));
+    // (t0, t1) = add_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const float64x2_t t0_sh = vaddq_f64(s0, g0);
+    const float64x2_t t0_sh_bb = vsubq_f64(t0_sh, s0);
+    const float64x2_t t0_sh_t0 = vsubq_f64(t0_sh, t0_sh_bb);
+    const float64x2_t t0_sh_t1 = vsubq_f64(s0, t0_sh_t0);
+    const float64x2_t t0_sh_t2 = vsubq_f64(g0, t0_sh_bb);
+    const float64x2_t t0_sl = vaddq_f64(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, g1)
+    const float64x2_t t0_th = vaddq_f64(s1, g1);
+    const float64x2_t t0_th_bb = vsubq_f64(t0_th, s1);
+    const float64x2_t t0_th_t0 = vsubq_f64(t0_th, t0_th_bb);
+    const float64x2_t t0_th_t1 = vsubq_f64(s1, t0_th_t0);
+    const float64x2_t t0_th_t2 = vsubq_f64(g1, t0_th_bb);
+    const float64x2_t t0_tl = vaddq_f64(t0_th_t1, t0_th_t2);
+    const float64x2_t t0_c = vaddq_f64(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float64x2_t t0_vh = vaddq_f64(t0_sh, t0_c);
+    const float64x2_t t0_vh_z = vsubq_f64(t0_vh, t0_sh);
+    const float64x2_t t0_vl = vsubq_f64(t0_c, t0_vh_z);
+    const float64x2_t t0_w = vaddq_f64(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float64x2_t t0 = vaddq_f64(t0_vh, t0_w);
+    const float64x2_t t0_z = vsubq_f64(t0, t0_vh);
+    const float64x2_t t1 = vsubq_f64(t0_w, t0_z);
+    const float64x2_t ag = vabsq_f64(g0);
+    const float64x2_t b = vaddq_f64(a, ag);
+    t0_out = t0;
+    t1_out = t1;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_add_2(float32x4_t s0, float32x4_t s1, float32x4_t a, float32x4_t x0, float32x4_t x1, float32x4_t& t0_out, float32x4_t& t1_out, float32x4_t& b_out) noexcept {
+    const float32x4_t g0 = vaddq_f32(x0, vdupq_n_f32(0.0f));
+    const float32x4_t g1 = vaddq_f32(x1, vdupq_n_f32(0.0f));
+    // (t0, t1) = add_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const float32x4_t t0_sh = vaddq_f32(s0, g0);
+    const float32x4_t t0_sh_bb = vsubq_f32(t0_sh, s0);
+    const float32x4_t t0_sh_t0 = vsubq_f32(t0_sh, t0_sh_bb);
+    const float32x4_t t0_sh_t1 = vsubq_f32(s0, t0_sh_t0);
+    const float32x4_t t0_sh_t2 = vsubq_f32(g0, t0_sh_bb);
+    const float32x4_t t0_sl = vaddq_f32(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, g1)
+    const float32x4_t t0_th = vaddq_f32(s1, g1);
+    const float32x4_t t0_th_bb = vsubq_f32(t0_th, s1);
+    const float32x4_t t0_th_t0 = vsubq_f32(t0_th, t0_th_bb);
+    const float32x4_t t0_th_t1 = vsubq_f32(s1, t0_th_t0);
+    const float32x4_t t0_th_t2 = vsubq_f32(g1, t0_th_bb);
+    const float32x4_t t0_tl = vaddq_f32(t0_th_t1, t0_th_t2);
+    const float32x4_t t0_c = vaddq_f32(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float32x4_t t0_vh = vaddq_f32(t0_sh, t0_c);
+    const float32x4_t t0_vh_z = vsubq_f32(t0_vh, t0_sh);
+    const float32x4_t t0_vl = vsubq_f32(t0_c, t0_vh_z);
+    const float32x4_t t0_w = vaddq_f32(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float32x4_t t0 = vaddq_f32(t0_vh, t0_w);
+    const float32x4_t t0_z = vsubq_f32(t0, t0_vh);
+    const float32x4_t t1 = vsubq_f32(t0_w, t0_z);
+    const float32x4_t ag = vabsq_f32(g0);
+    const float32x4_t b = vaddq_f32(a, ag);
+    t0_out = t0;
+    t1_out = t1;
+    b_out = b;
+}
+
+// acc_merge_2(s = (s0, s1), a, v = (v0, v1), c) -> t = (t0, t1), b
+KAIRN_GEN_FORCEINLINE void acc_merge_2(float64x2_t s0, float64x2_t s1, float64x2_t a, float64x2_t v0, float64x2_t v1, float64x2_t c, float64x2_t& t0_out, float64x2_t& t1_out, float64x2_t& b_out) noexcept {
+    // (t0, t1) = add_2_2(s0, s1, v0, v1)
+    // (t0_sh, t0_sl) = two_sum(s0, v0)
+    const float64x2_t t0_sh = vaddq_f64(s0, v0);
+    const float64x2_t t0_sh_bb = vsubq_f64(t0_sh, s0);
+    const float64x2_t t0_sh_t0 = vsubq_f64(t0_sh, t0_sh_bb);
+    const float64x2_t t0_sh_t1 = vsubq_f64(s0, t0_sh_t0);
+    const float64x2_t t0_sh_t2 = vsubq_f64(v0, t0_sh_bb);
+    const float64x2_t t0_sl = vaddq_f64(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, v1)
+    const float64x2_t t0_th = vaddq_f64(s1, v1);
+    const float64x2_t t0_th_bb = vsubq_f64(t0_th, s1);
+    const float64x2_t t0_th_t0 = vsubq_f64(t0_th, t0_th_bb);
+    const float64x2_t t0_th_t1 = vsubq_f64(s1, t0_th_t0);
+    const float64x2_t t0_th_t2 = vsubq_f64(v1, t0_th_bb);
+    const float64x2_t t0_tl = vaddq_f64(t0_th_t1, t0_th_t2);
+    const float64x2_t t0_c = vaddq_f64(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float64x2_t t0_vh = vaddq_f64(t0_sh, t0_c);
+    const float64x2_t t0_vh_z = vsubq_f64(t0_vh, t0_sh);
+    const float64x2_t t0_vl = vsubq_f64(t0_c, t0_vh_z);
+    const float64x2_t t0_w = vaddq_f64(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float64x2_t t0 = vaddq_f64(t0_vh, t0_w);
+    const float64x2_t t0_z = vsubq_f64(t0, t0_vh);
+    const float64x2_t t1 = vsubq_f64(t0_w, t0_z);
+    const float64x2_t b = vaddq_f64(a, c);
+    t0_out = t0;
+    t1_out = t1;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_merge_2(float32x4_t s0, float32x4_t s1, float32x4_t a, float32x4_t v0, float32x4_t v1, float32x4_t c, float32x4_t& t0_out, float32x4_t& t1_out, float32x4_t& b_out) noexcept {
+    // (t0, t1) = add_2_2(s0, s1, v0, v1)
+    // (t0_sh, t0_sl) = two_sum(s0, v0)
+    const float32x4_t t0_sh = vaddq_f32(s0, v0);
+    const float32x4_t t0_sh_bb = vsubq_f32(t0_sh, s0);
+    const float32x4_t t0_sh_t0 = vsubq_f32(t0_sh, t0_sh_bb);
+    const float32x4_t t0_sh_t1 = vsubq_f32(s0, t0_sh_t0);
+    const float32x4_t t0_sh_t2 = vsubq_f32(v0, t0_sh_bb);
+    const float32x4_t t0_sl = vaddq_f32(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, v1)
+    const float32x4_t t0_th = vaddq_f32(s1, v1);
+    const float32x4_t t0_th_bb = vsubq_f32(t0_th, s1);
+    const float32x4_t t0_th_t0 = vsubq_f32(t0_th, t0_th_bb);
+    const float32x4_t t0_th_t1 = vsubq_f32(s1, t0_th_t0);
+    const float32x4_t t0_th_t2 = vsubq_f32(v1, t0_th_bb);
+    const float32x4_t t0_tl = vaddq_f32(t0_th_t1, t0_th_t2);
+    const float32x4_t t0_c = vaddq_f32(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float32x4_t t0_vh = vaddq_f32(t0_sh, t0_c);
+    const float32x4_t t0_vh_z = vsubq_f32(t0_vh, t0_sh);
+    const float32x4_t t0_vl = vsubq_f32(t0_c, t0_vh_z);
+    const float32x4_t t0_w = vaddq_f32(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float32x4_t t0 = vaddq_f32(t0_vh, t0_w);
+    const float32x4_t t0_z = vsubq_f32(t0, t0_vh);
+    const float32x4_t t1 = vsubq_f32(t0_w, t0_z);
+    const float32x4_t b = vaddq_f32(a, c);
+    t0_out = t0;
+    t1_out = t1;
+    b_out = b;
+}
+
+// mul_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+KAIRN_GEN_FORCEINLINE void mul_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, y0)
+    const float64x2_t ch = vfmaq_f64(vdupq_n_f64(0.0), x0, y0);
+    const float64x2_t cl1 = vfmaq_f64(vnegq_f64(ch), x0, y0);
+    const float64x2_t tl0 = vfmaq_f64(vdupq_n_f64(0.0), x1, y1);
+    const float64x2_t tl1 = vfmaq_f64(tl0, x0, y1);
+    const float64x2_t cl2 = vfmaq_f64(tl1, x1, y0);
+    const float64x2_t cl3 = vaddq_f64(cl1, cl2);
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const float64x2_t z0 = vaddq_f64(ch, cl3);
+    const float64x2_t z0_z = vsubq_f64(z0, ch);
+    const float64x2_t z1 = vsubq_f64(cl3, z0_z);
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void mul_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, float32x4_t& z0_out, float32x4_t& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, y0)
+    const float32x4_t ch = vfmaq_f32(vdupq_n_f32(0.0f), x0, y0);
+    const float32x4_t cl1 = vfmaq_f32(vnegq_f32(ch), x0, y0);
+    const float32x4_t tl0 = vfmaq_f32(vdupq_n_f32(0.0f), x1, y1);
+    const float32x4_t tl1 = vfmaq_f32(tl0, x0, y1);
+    const float32x4_t cl2 = vfmaq_f32(tl1, x1, y0);
+    const float32x4_t cl3 = vaddq_f32(cl1, cl2);
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const float32x4_t z0 = vaddq_f32(ch, cl3);
+    const float32x4_t z0_z = vsubq_f32(z0, ch);
+    const float32x4_t z1 = vsubq_f32(cl3, z0_z);
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// dot_step_2(s = (s0, s1), x = (x0, x1), y = (y0, y1)) -> t = (t0, t1)
+KAIRN_GEN_FORCEINLINE void dot_step_2(float64x2_t s0, float64x2_t s1, float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, float64x2_t& t0_out, float64x2_t& t1_out) noexcept {
+    // (p0, p1) = mul_2_2(x0, x1, y0, y1)
+    // (p0_ch, p0_cl1) = two_prod(x0, y0)
+    const float64x2_t p0_ch = vfmaq_f64(vdupq_n_f64(0.0), x0, y0);
+    const float64x2_t p0_cl1 = vfmaq_f64(vnegq_f64(p0_ch), x0, y0);
+    const float64x2_t p0_tl0 = vfmaq_f64(vdupq_n_f64(0.0), x1, y1);
+    const float64x2_t p0_tl1 = vfmaq_f64(p0_tl0, x0, y1);
+    const float64x2_t p0_cl2 = vfmaq_f64(p0_tl1, x1, y0);
+    const float64x2_t p0_cl3 = vaddq_f64(p0_cl1, p0_cl2);
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const float64x2_t p0 = vaddq_f64(p0_ch, p0_cl3);
+    const float64x2_t p0_z = vsubq_f64(p0, p0_ch);
+    const float64x2_t p1 = vsubq_f64(p0_cl3, p0_z);
+    // (t0, t1) = add_2_2(s0, s1, p0, p1)
+    // (t0_sh, t0_sl) = two_sum(s0, p0)
+    const float64x2_t t0_sh = vaddq_f64(s0, p0);
+    const float64x2_t t0_sh_bb = vsubq_f64(t0_sh, s0);
+    const float64x2_t t0_sh_t0 = vsubq_f64(t0_sh, t0_sh_bb);
+    const float64x2_t t0_sh_t1 = vsubq_f64(s0, t0_sh_t0);
+    const float64x2_t t0_sh_t2 = vsubq_f64(p0, t0_sh_bb);
+    const float64x2_t t0_sl = vaddq_f64(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, p1)
+    const float64x2_t t0_th = vaddq_f64(s1, p1);
+    const float64x2_t t0_th_bb = vsubq_f64(t0_th, s1);
+    const float64x2_t t0_th_t0 = vsubq_f64(t0_th, t0_th_bb);
+    const float64x2_t t0_th_t1 = vsubq_f64(s1, t0_th_t0);
+    const float64x2_t t0_th_t2 = vsubq_f64(p1, t0_th_bb);
+    const float64x2_t t0_tl = vaddq_f64(t0_th_t1, t0_th_t2);
+    const float64x2_t t0_c = vaddq_f64(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float64x2_t t0_vh = vaddq_f64(t0_sh, t0_c);
+    const float64x2_t t0_vh_z = vsubq_f64(t0_vh, t0_sh);
+    const float64x2_t t0_vl = vsubq_f64(t0_c, t0_vh_z);
+    const float64x2_t t0_w = vaddq_f64(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float64x2_t t0 = vaddq_f64(t0_vh, t0_w);
+    const float64x2_t t0_z = vsubq_f64(t0, t0_vh);
+    const float64x2_t t1 = vsubq_f64(t0_w, t0_z);
+    t0_out = t0;
+    t1_out = t1;
+}
+KAIRN_GEN_FORCEINLINE void dot_step_2(float32x4_t s0, float32x4_t s1, float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, float32x4_t& t0_out, float32x4_t& t1_out) noexcept {
+    // (p0, p1) = mul_2_2(x0, x1, y0, y1)
+    // (p0_ch, p0_cl1) = two_prod(x0, y0)
+    const float32x4_t p0_ch = vfmaq_f32(vdupq_n_f32(0.0f), x0, y0);
+    const float32x4_t p0_cl1 = vfmaq_f32(vnegq_f32(p0_ch), x0, y0);
+    const float32x4_t p0_tl0 = vfmaq_f32(vdupq_n_f32(0.0f), x1, y1);
+    const float32x4_t p0_tl1 = vfmaq_f32(p0_tl0, x0, y1);
+    const float32x4_t p0_cl2 = vfmaq_f32(p0_tl1, x1, y0);
+    const float32x4_t p0_cl3 = vaddq_f32(p0_cl1, p0_cl2);
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const float32x4_t p0 = vaddq_f32(p0_ch, p0_cl3);
+    const float32x4_t p0_z = vsubq_f32(p0, p0_ch);
+    const float32x4_t p1 = vsubq_f32(p0_cl3, p0_z);
+    // (t0, t1) = add_2_2(s0, s1, p0, p1)
+    // (t0_sh, t0_sl) = two_sum(s0, p0)
+    const float32x4_t t0_sh = vaddq_f32(s0, p0);
+    const float32x4_t t0_sh_bb = vsubq_f32(t0_sh, s0);
+    const float32x4_t t0_sh_t0 = vsubq_f32(t0_sh, t0_sh_bb);
+    const float32x4_t t0_sh_t1 = vsubq_f32(s0, t0_sh_t0);
+    const float32x4_t t0_sh_t2 = vsubq_f32(p0, t0_sh_bb);
+    const float32x4_t t0_sl = vaddq_f32(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, p1)
+    const float32x4_t t0_th = vaddq_f32(s1, p1);
+    const float32x4_t t0_th_bb = vsubq_f32(t0_th, s1);
+    const float32x4_t t0_th_t0 = vsubq_f32(t0_th, t0_th_bb);
+    const float32x4_t t0_th_t1 = vsubq_f32(s1, t0_th_t0);
+    const float32x4_t t0_th_t2 = vsubq_f32(p1, t0_th_bb);
+    const float32x4_t t0_tl = vaddq_f32(t0_th_t1, t0_th_t2);
+    const float32x4_t t0_c = vaddq_f32(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float32x4_t t0_vh = vaddq_f32(t0_sh, t0_c);
+    const float32x4_t t0_vh_z = vsubq_f32(t0_vh, t0_sh);
+    const float32x4_t t0_vl = vsubq_f32(t0_c, t0_vh_z);
+    const float32x4_t t0_w = vaddq_f32(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float32x4_t t0 = vaddq_f32(t0_vh, t0_w);
+    const float32x4_t t0_z = vsubq_f32(t0, t0_vh);
+    const float32x4_t t1 = vsubq_f32(t0_w, t0_z);
+    t0_out = t0;
+    t1_out = t1;
+}
+
+// acc_mul_2(s = (s0, s1), a, x = (x0, x1), y = (y0, y1)) -> t = (t0, t1), b
+KAIRN_GEN_FORCEINLINE void acc_mul_2(float64x2_t s0, float64x2_t s1, float64x2_t a, float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, float64x2_t& t0_out, float64x2_t& t1_out, float64x2_t& b_out) noexcept {
+    // (t0, t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+    // (t0_p0, t0_p1) = mul_2_2(x0, x1, y0, y1)
+    // (t0_p0_ch, t0_p0_cl1) = two_prod(x0, y0)
+    const float64x2_t t0_p0_ch = vfmaq_f64(vdupq_n_f64(0.0), x0, y0);
+    const float64x2_t t0_p0_cl1 = vfmaq_f64(vnegq_f64(t0_p0_ch), x0, y0);
+    const float64x2_t t0_p0_tl0 = vfmaq_f64(vdupq_n_f64(0.0), x1, y1);
+    const float64x2_t t0_p0_tl1 = vfmaq_f64(t0_p0_tl0, x0, y1);
+    const float64x2_t t0_p0_cl2 = vfmaq_f64(t0_p0_tl1, x1, y0);
+    const float64x2_t t0_p0_cl3 = vaddq_f64(t0_p0_cl1, t0_p0_cl2);
+    // (t0_p0, t0_p1) = fast_two_sum(t0_p0_ch, t0_p0_cl3)
+    const float64x2_t t0_p0 = vaddq_f64(t0_p0_ch, t0_p0_cl3);
+    const float64x2_t t0_p0_z = vsubq_f64(t0_p0, t0_p0_ch);
+    const float64x2_t t0_p1 = vsubq_f64(t0_p0_cl3, t0_p0_z);
+    // (t0, t1) = add_2_2(s0, s1, t0_p0, t0_p1)
+    // (t0_sh, t0_sl) = two_sum(s0, t0_p0)
+    const float64x2_t t0_sh = vaddq_f64(s0, t0_p0);
+    const float64x2_t t0_sh_bb = vsubq_f64(t0_sh, s0);
+    const float64x2_t t0_sh_t0 = vsubq_f64(t0_sh, t0_sh_bb);
+    const float64x2_t t0_sh_t1 = vsubq_f64(s0, t0_sh_t0);
+    const float64x2_t t0_sh_t2 = vsubq_f64(t0_p0, t0_sh_bb);
+    const float64x2_t t0_sl = vaddq_f64(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, t0_p1)
+    const float64x2_t t0_th = vaddq_f64(s1, t0_p1);
+    const float64x2_t t0_th_bb = vsubq_f64(t0_th, s1);
+    const float64x2_t t0_th_t0 = vsubq_f64(t0_th, t0_th_bb);
+    const float64x2_t t0_th_t1 = vsubq_f64(s1, t0_th_t0);
+    const float64x2_t t0_th_t2 = vsubq_f64(t0_p1, t0_th_bb);
+    const float64x2_t t0_tl = vaddq_f64(t0_th_t1, t0_th_t2);
+    const float64x2_t t0_c = vaddq_f64(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float64x2_t t0_vh = vaddq_f64(t0_sh, t0_c);
+    const float64x2_t t0_vh_z = vsubq_f64(t0_vh, t0_sh);
+    const float64x2_t t0_vl = vsubq_f64(t0_c, t0_vh_z);
+    const float64x2_t t0_w = vaddq_f64(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float64x2_t t0 = vaddq_f64(t0_vh, t0_w);
+    const float64x2_t t0_z = vsubq_f64(t0, t0_vh);
+    const float64x2_t t1 = vsubq_f64(t0_w, t0_z);
+    const float64x2_t ax = vabsq_f64(x0);
+    const float64x2_t ay = vabsq_f64(y0);
+    const float64x2_t b = vfmaq_f64(a, ax, ay);
+    t0_out = t0;
+    t1_out = t1;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_mul_2(float32x4_t s0, float32x4_t s1, float32x4_t a, float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, float32x4_t& t0_out, float32x4_t& t1_out, float32x4_t& b_out) noexcept {
+    // (t0, t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+    // (t0_p0, t0_p1) = mul_2_2(x0, x1, y0, y1)
+    // (t0_p0_ch, t0_p0_cl1) = two_prod(x0, y0)
+    const float32x4_t t0_p0_ch = vfmaq_f32(vdupq_n_f32(0.0f), x0, y0);
+    const float32x4_t t0_p0_cl1 = vfmaq_f32(vnegq_f32(t0_p0_ch), x0, y0);
+    const float32x4_t t0_p0_tl0 = vfmaq_f32(vdupq_n_f32(0.0f), x1, y1);
+    const float32x4_t t0_p0_tl1 = vfmaq_f32(t0_p0_tl0, x0, y1);
+    const float32x4_t t0_p0_cl2 = vfmaq_f32(t0_p0_tl1, x1, y0);
+    const float32x4_t t0_p0_cl3 = vaddq_f32(t0_p0_cl1, t0_p0_cl2);
+    // (t0_p0, t0_p1) = fast_two_sum(t0_p0_ch, t0_p0_cl3)
+    const float32x4_t t0_p0 = vaddq_f32(t0_p0_ch, t0_p0_cl3);
+    const float32x4_t t0_p0_z = vsubq_f32(t0_p0, t0_p0_ch);
+    const float32x4_t t0_p1 = vsubq_f32(t0_p0_cl3, t0_p0_z);
+    // (t0, t1) = add_2_2(s0, s1, t0_p0, t0_p1)
+    // (t0_sh, t0_sl) = two_sum(s0, t0_p0)
+    const float32x4_t t0_sh = vaddq_f32(s0, t0_p0);
+    const float32x4_t t0_sh_bb = vsubq_f32(t0_sh, s0);
+    const float32x4_t t0_sh_t0 = vsubq_f32(t0_sh, t0_sh_bb);
+    const float32x4_t t0_sh_t1 = vsubq_f32(s0, t0_sh_t0);
+    const float32x4_t t0_sh_t2 = vsubq_f32(t0_p0, t0_sh_bb);
+    const float32x4_t t0_sl = vaddq_f32(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, t0_p1)
+    const float32x4_t t0_th = vaddq_f32(s1, t0_p1);
+    const float32x4_t t0_th_bb = vsubq_f32(t0_th, s1);
+    const float32x4_t t0_th_t0 = vsubq_f32(t0_th, t0_th_bb);
+    const float32x4_t t0_th_t1 = vsubq_f32(s1, t0_th_t0);
+    const float32x4_t t0_th_t2 = vsubq_f32(t0_p1, t0_th_bb);
+    const float32x4_t t0_tl = vaddq_f32(t0_th_t1, t0_th_t2);
+    const float32x4_t t0_c = vaddq_f32(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float32x4_t t0_vh = vaddq_f32(t0_sh, t0_c);
+    const float32x4_t t0_vh_z = vsubq_f32(t0_vh, t0_sh);
+    const float32x4_t t0_vl = vsubq_f32(t0_c, t0_vh_z);
+    const float32x4_t t0_w = vaddq_f32(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float32x4_t t0 = vaddq_f32(t0_vh, t0_w);
+    const float32x4_t t0_z = vsubq_f32(t0, t0_vh);
+    const float32x4_t t1 = vsubq_f32(t0_w, t0_z);
+    const float32x4_t ax = vabsq_f32(x0);
+    const float32x4_t ay = vabsq_f32(y0);
+    const float32x4_t b = vfmaq_f32(a, ax, ay);
+    t0_out = t0;
+    t1_out = t1;
+    b_out = b;
+}
+
 // add_2_1(x = (x0, x1), a) -> z = (z0, z1)
 KAIRN_GEN_FORCEINLINE void add_2_1(float64x2_t x0, float64x2_t x1, float64x2_t a, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
     const float64x2_t g = vaddq_f64(a, vdupq_n_f64(0.0));
@@ -2851,64 +3433,6 @@ KAIRN_GEN_FORCEINLINE void add_2_1_full(float32x4_t x0, float32x4_t x1, float32x
     const float32x4_t w1 = vbslq_f32(f, z1, r1);
     w0_out = w0;
     w1_out = w1;
-}
-
-// add_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-KAIRN_GEN_FORCEINLINE void add_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
-    // (sh, sl) = two_sum(x0, y0)
-    const float64x2_t sh = vaddq_f64(x0, y0);
-    const float64x2_t sh_bb = vsubq_f64(sh, x0);
-    const float64x2_t sh_t0 = vsubq_f64(sh, sh_bb);
-    const float64x2_t sh_t1 = vsubq_f64(x0, sh_t0);
-    const float64x2_t sh_t2 = vsubq_f64(y0, sh_bb);
-    const float64x2_t sl = vaddq_f64(sh_t1, sh_t2);
-    // (th, tl) = two_sum(x1, y1)
-    const float64x2_t th = vaddq_f64(x1, y1);
-    const float64x2_t th_bb = vsubq_f64(th, x1);
-    const float64x2_t th_t0 = vsubq_f64(th, th_bb);
-    const float64x2_t th_t1 = vsubq_f64(x1, th_t0);
-    const float64x2_t th_t2 = vsubq_f64(y1, th_bb);
-    const float64x2_t tl = vaddq_f64(th_t1, th_t2);
-    const float64x2_t c = vaddq_f64(sl, th);
-    // (vh, vl) = fast_two_sum(sh, c)
-    const float64x2_t vh = vaddq_f64(sh, c);
-    const float64x2_t vh_z = vsubq_f64(vh, sh);
-    const float64x2_t vl = vsubq_f64(c, vh_z);
-    const float64x2_t w = vaddq_f64(tl, vl);
-    // (z0, z1) = fast_two_sum(vh, w)
-    const float64x2_t z0 = vaddq_f64(vh, w);
-    const float64x2_t z0_z = vsubq_f64(z0, vh);
-    const float64x2_t z1 = vsubq_f64(w, z0_z);
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void add_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, float32x4_t& z0_out, float32x4_t& z1_out) noexcept {
-    // (sh, sl) = two_sum(x0, y0)
-    const float32x4_t sh = vaddq_f32(x0, y0);
-    const float32x4_t sh_bb = vsubq_f32(sh, x0);
-    const float32x4_t sh_t0 = vsubq_f32(sh, sh_bb);
-    const float32x4_t sh_t1 = vsubq_f32(x0, sh_t0);
-    const float32x4_t sh_t2 = vsubq_f32(y0, sh_bb);
-    const float32x4_t sl = vaddq_f32(sh_t1, sh_t2);
-    // (th, tl) = two_sum(x1, y1)
-    const float32x4_t th = vaddq_f32(x1, y1);
-    const float32x4_t th_bb = vsubq_f32(th, x1);
-    const float32x4_t th_t0 = vsubq_f32(th, th_bb);
-    const float32x4_t th_t1 = vsubq_f32(x1, th_t0);
-    const float32x4_t th_t2 = vsubq_f32(y1, th_bb);
-    const float32x4_t tl = vaddq_f32(th_t1, th_t2);
-    const float32x4_t c = vaddq_f32(sl, th);
-    // (vh, vl) = fast_two_sum(sh, c)
-    const float32x4_t vh = vaddq_f32(sh, c);
-    const float32x4_t vh_z = vsubq_f32(vh, sh);
-    const float32x4_t vl = vsubq_f32(c, vh_z);
-    const float32x4_t w = vaddq_f32(tl, vl);
-    // (z0, z1) = fast_two_sum(vh, w)
-    const float32x4_t z0 = vaddq_f32(vh, w);
-    const float32x4_t z0_z = vsubq_f32(z0, vh);
-    const float32x4_t z1 = vsubq_f32(w, z0_z);
-    z0_out = z0;
-    z1_out = z1;
 }
 
 // add_2_2_full(x = (x0, x1), y = (y0, y1)) -> w = (w0, w1)
@@ -3455,38 +3979,6 @@ KAIRN_GEN_FORCEINLINE void add_up_2_2(float32x4_t x0, float32x4_t x1, float32x4_
     const float32x4_t h1 = vsubq_f32(h0_l, h0_z);
     h0_out = h0;
     h1_out = h1;
-}
-
-// mul_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-KAIRN_GEN_FORCEINLINE void mul_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, y0)
-    const float64x2_t ch = vfmaq_f64(vdupq_n_f64(0.0), x0, y0);
-    const float64x2_t cl1 = vfmaq_f64(vnegq_f64(ch), x0, y0);
-    const float64x2_t tl0 = vfmaq_f64(vdupq_n_f64(0.0), x1, y1);
-    const float64x2_t tl1 = vfmaq_f64(tl0, x0, y1);
-    const float64x2_t cl2 = vfmaq_f64(tl1, x1, y0);
-    const float64x2_t cl3 = vaddq_f64(cl1, cl2);
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const float64x2_t z0 = vaddq_f64(ch, cl3);
-    const float64x2_t z0_z = vsubq_f64(z0, ch);
-    const float64x2_t z1 = vsubq_f64(cl3, z0_z);
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void mul_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, float32x4_t& z0_out, float32x4_t& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, y0)
-    const float32x4_t ch = vfmaq_f32(vdupq_n_f32(0.0f), x0, y0);
-    const float32x4_t cl1 = vfmaq_f32(vnegq_f32(ch), x0, y0);
-    const float32x4_t tl0 = vfmaq_f32(vdupq_n_f32(0.0f), x1, y1);
-    const float32x4_t tl1 = vfmaq_f32(tl0, x0, y1);
-    const float32x4_t cl2 = vfmaq_f32(tl1, x1, y0);
-    const float32x4_t cl3 = vaddq_f32(cl1, cl2);
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const float32x4_t z0 = vaddq_f32(ch, cl3);
-    const float32x4_t z0_z = vsubq_f32(z0, ch);
-    const float32x4_t z1 = vsubq_f32(cl3, z0_z);
-    z0_out = z0;
-    z1_out = z1;
 }
 
 // axpy_entry_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
@@ -4765,90 +5257,6 @@ KAIRN_GEN_FORCEINLINE void ball_upper_as_2(float32x4_t c0, float32x4_t c1, float
     const float32x4_t mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
     const float32x4_t h = vbslq_f32(ne, t, mi);
     h_out = h;
-}
-
-// dot_step_2(s = (s0, s1), x = (x0, x1), y = (y0, y1)) -> t = (t0, t1)
-KAIRN_GEN_FORCEINLINE void dot_step_2(float64x2_t s0, float64x2_t s1, float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, float64x2_t& t0_out, float64x2_t& t1_out) noexcept {
-    // (p0, p1) = mul_2_2(x0, x1, y0, y1)
-    // (p0_ch, p0_cl1) = two_prod(x0, y0)
-    const float64x2_t p0_ch = vfmaq_f64(vdupq_n_f64(0.0), x0, y0);
-    const float64x2_t p0_cl1 = vfmaq_f64(vnegq_f64(p0_ch), x0, y0);
-    const float64x2_t p0_tl0 = vfmaq_f64(vdupq_n_f64(0.0), x1, y1);
-    const float64x2_t p0_tl1 = vfmaq_f64(p0_tl0, x0, y1);
-    const float64x2_t p0_cl2 = vfmaq_f64(p0_tl1, x1, y0);
-    const float64x2_t p0_cl3 = vaddq_f64(p0_cl1, p0_cl2);
-    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
-    const float64x2_t p0 = vaddq_f64(p0_ch, p0_cl3);
-    const float64x2_t p0_z = vsubq_f64(p0, p0_ch);
-    const float64x2_t p1 = vsubq_f64(p0_cl3, p0_z);
-    // (t0, t1) = add_2_2(s0, s1, p0, p1)
-    // (t0_sh, t0_sl) = two_sum(s0, p0)
-    const float64x2_t t0_sh = vaddq_f64(s0, p0);
-    const float64x2_t t0_sh_bb = vsubq_f64(t0_sh, s0);
-    const float64x2_t t0_sh_t0 = vsubq_f64(t0_sh, t0_sh_bb);
-    const float64x2_t t0_sh_t1 = vsubq_f64(s0, t0_sh_t0);
-    const float64x2_t t0_sh_t2 = vsubq_f64(p0, t0_sh_bb);
-    const float64x2_t t0_sl = vaddq_f64(t0_sh_t1, t0_sh_t2);
-    // (t0_th, t0_tl) = two_sum(s1, p1)
-    const float64x2_t t0_th = vaddq_f64(s1, p1);
-    const float64x2_t t0_th_bb = vsubq_f64(t0_th, s1);
-    const float64x2_t t0_th_t0 = vsubq_f64(t0_th, t0_th_bb);
-    const float64x2_t t0_th_t1 = vsubq_f64(s1, t0_th_t0);
-    const float64x2_t t0_th_t2 = vsubq_f64(p1, t0_th_bb);
-    const float64x2_t t0_tl = vaddq_f64(t0_th_t1, t0_th_t2);
-    const float64x2_t t0_c = vaddq_f64(t0_sl, t0_th);
-    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
-    const float64x2_t t0_vh = vaddq_f64(t0_sh, t0_c);
-    const float64x2_t t0_vh_z = vsubq_f64(t0_vh, t0_sh);
-    const float64x2_t t0_vl = vsubq_f64(t0_c, t0_vh_z);
-    const float64x2_t t0_w = vaddq_f64(t0_tl, t0_vl);
-    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
-    const float64x2_t t0 = vaddq_f64(t0_vh, t0_w);
-    const float64x2_t t0_z = vsubq_f64(t0, t0_vh);
-    const float64x2_t t1 = vsubq_f64(t0_w, t0_z);
-    t0_out = t0;
-    t1_out = t1;
-}
-KAIRN_GEN_FORCEINLINE void dot_step_2(float32x4_t s0, float32x4_t s1, float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, float32x4_t& t0_out, float32x4_t& t1_out) noexcept {
-    // (p0, p1) = mul_2_2(x0, x1, y0, y1)
-    // (p0_ch, p0_cl1) = two_prod(x0, y0)
-    const float32x4_t p0_ch = vfmaq_f32(vdupq_n_f32(0.0f), x0, y0);
-    const float32x4_t p0_cl1 = vfmaq_f32(vnegq_f32(p0_ch), x0, y0);
-    const float32x4_t p0_tl0 = vfmaq_f32(vdupq_n_f32(0.0f), x1, y1);
-    const float32x4_t p0_tl1 = vfmaq_f32(p0_tl0, x0, y1);
-    const float32x4_t p0_cl2 = vfmaq_f32(p0_tl1, x1, y0);
-    const float32x4_t p0_cl3 = vaddq_f32(p0_cl1, p0_cl2);
-    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
-    const float32x4_t p0 = vaddq_f32(p0_ch, p0_cl3);
-    const float32x4_t p0_z = vsubq_f32(p0, p0_ch);
-    const float32x4_t p1 = vsubq_f32(p0_cl3, p0_z);
-    // (t0, t1) = add_2_2(s0, s1, p0, p1)
-    // (t0_sh, t0_sl) = two_sum(s0, p0)
-    const float32x4_t t0_sh = vaddq_f32(s0, p0);
-    const float32x4_t t0_sh_bb = vsubq_f32(t0_sh, s0);
-    const float32x4_t t0_sh_t0 = vsubq_f32(t0_sh, t0_sh_bb);
-    const float32x4_t t0_sh_t1 = vsubq_f32(s0, t0_sh_t0);
-    const float32x4_t t0_sh_t2 = vsubq_f32(p0, t0_sh_bb);
-    const float32x4_t t0_sl = vaddq_f32(t0_sh_t1, t0_sh_t2);
-    // (t0_th, t0_tl) = two_sum(s1, p1)
-    const float32x4_t t0_th = vaddq_f32(s1, p1);
-    const float32x4_t t0_th_bb = vsubq_f32(t0_th, s1);
-    const float32x4_t t0_th_t0 = vsubq_f32(t0_th, t0_th_bb);
-    const float32x4_t t0_th_t1 = vsubq_f32(s1, t0_th_t0);
-    const float32x4_t t0_th_t2 = vsubq_f32(p1, t0_th_bb);
-    const float32x4_t t0_tl = vaddq_f32(t0_th_t1, t0_th_t2);
-    const float32x4_t t0_c = vaddq_f32(t0_sl, t0_th);
-    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
-    const float32x4_t t0_vh = vaddq_f32(t0_sh, t0_c);
-    const float32x4_t t0_vh_z = vsubq_f32(t0_vh, t0_sh);
-    const float32x4_t t0_vl = vsubq_f32(t0_c, t0_vh_z);
-    const float32x4_t t0_w = vaddq_f32(t0_tl, t0_vl);
-    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
-    const float32x4_t t0 = vaddq_f32(t0_vh, t0_w);
-    const float32x4_t t0_z = vsubq_f32(t0, t0_vh);
-    const float32x4_t t1 = vsubq_f32(t0_w, t0_z);
-    t0_out = t0;
-    t1_out = t1;
 }
 
 // eq_2_1(x = (x0, x1), a) -> mask m
@@ -9825,6 +10233,1272 @@ inline void axpy_2_entry_packed(const float* x0_in, const float* x1_in, const fl
         }
     }
     finite_out = finite;
+}
+
+KAIRN_GEN_NOINLINE void bv_add_1_packed_end(double m, bool ok, double rx, double ry, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_add_radius_1(m_e_, rx, ry)
+    const double rad_s = rx + ry;
+    const double rad_t = fma_rn(m_e_, 0x1p-53, rad_s);
+    const double rad_rz = fma_rn(rad_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_add_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step add_1_1, record norm_step_1, radius bv_add_radius_1: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_add_1_packed(const double* x_in, const double* y_in, std::size_t n, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x = vld1q_f64(x_in + i_);
+        const float64x2_t y = vld1q_f64(y_in + i_);
+        // (step_s) = add_1_1(x, y)
+        const float64x2_t step_s = vaddq_f64(x, y);
+        vst1q_f64(z_out + i_, step_s);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_s)
+        const float64x2_t rec_a = vabsq_f64(step_s);
+        const uint64x2_t rec_e = vceqq_f64(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_s) = add_1_1(x, y)
+        const double step_s = x + y;
+        z_out[i_] = step_s;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_s)
+        const double rec_a = abs_bits(step_s);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_add_1_packed_end(m, ok, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_add_1_packed_end(float m, bool ok, float rx, float ry, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_add_radius_1(m_e_, rx, ry)
+    const float rad_s = rx + ry;
+    const float rad_t = fma_rn(m_e_, 0x1p-24f, rad_s);
+    const float rad_rz = fma_rn(rad_t, 0x1.000004p+0f, 0x1.000004p-126f);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_add_1_packed(const float* x_in, const float* y_in, std::size_t n, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x = vld1q_f32(x_in + i_);
+        const float32x4_t y = vld1q_f32(y_in + i_);
+        // (step_s) = add_1_1(x, y)
+        const float32x4_t step_s = vaddq_f32(x, y);
+        vst1q_f32(z_out + i_, step_s);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_s)
+        const float32x4_t rec_a = vabsq_f32(step_s);
+        const uint32x4_t rec_e = vceqq_f32(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_s) = add_1_1(x, y)
+        const float step_s = x + y;
+        z_out[i_] = step_s;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_s)
+        const float rec_a = abs_bits(step_s);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_add_1_packed_end(m, ok, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_add_2_packed_end(double m, bool ok, double rx, double ry, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_add_radius_2(m_e_, rx, ry)
+    const double rad_s = rx + ry;
+    const double rad_t = fma_rn(m_e_, 0x1.8000000000004p-105, rad_s);
+    const double rad_rz = fma_rn(rad_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_add_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step add_2_2, record norm_step_2, radius bv_add_radius_2: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_add_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x0 = vld1q_f64(x0_in + i_);
+        const float64x2_t x1 = vld1q_f64(x1_in + i_);
+        const float64x2_t y0 = vld1q_f64(y0_in + i_);
+        const float64x2_t y1 = vld1q_f64(y1_in + i_);
+        // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+        // (step_sh, step_sl) = two_sum(x0, y0)
+        const float64x2_t step_sh = vaddq_f64(x0, y0);
+        const float64x2_t step_sh_bb = vsubq_f64(step_sh, x0);
+        const float64x2_t step_sh_t0 = vsubq_f64(step_sh, step_sh_bb);
+        const float64x2_t step_sh_t1 = vsubq_f64(x0, step_sh_t0);
+        const float64x2_t step_sh_t2 = vsubq_f64(y0, step_sh_bb);
+        const float64x2_t step_sl = vaddq_f64(step_sh_t1, step_sh_t2);
+        // (step_th, step_tl) = two_sum(x1, y1)
+        const float64x2_t step_th = vaddq_f64(x1, y1);
+        const float64x2_t step_th_bb = vsubq_f64(step_th, x1);
+        const float64x2_t step_th_t0 = vsubq_f64(step_th, step_th_bb);
+        const float64x2_t step_th_t1 = vsubq_f64(x1, step_th_t0);
+        const float64x2_t step_th_t2 = vsubq_f64(y1, step_th_bb);
+        const float64x2_t step_tl = vaddq_f64(step_th_t1, step_th_t2);
+        const float64x2_t step_c = vaddq_f64(step_sl, step_th);
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const float64x2_t step_vh = vaddq_f64(step_sh, step_c);
+        const float64x2_t step_vh_z = vsubq_f64(step_vh, step_sh);
+        const float64x2_t step_vl = vsubq_f64(step_c, step_vh_z);
+        const float64x2_t step_w = vaddq_f64(step_tl, step_vl);
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const float64x2_t step_z0 = vaddq_f64(step_vh, step_w);
+        const float64x2_t step_z0_z = vsubq_f64(step_z0, step_vh);
+        const float64x2_t step_z1 = vsubq_f64(step_w, step_z0_z);
+        vst1q_f64(z0_out + i_, step_z0);
+        vst1q_f64(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float64x2_t rec_r_a = vabsq_f64(step_z0);
+        const uint64x2_t rec_r_e = vceqq_f64(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_r_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_r_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+        // (step_sh, step_sl) = two_sum(x0, y0)
+        const double step_sh = x0 + y0;
+        const double step_sh_bb = step_sh - x0;
+        const double step_sh_t0 = step_sh - step_sh_bb;
+        const double step_sh_t1 = x0 - step_sh_t0;
+        const double step_sh_t2 = y0 - step_sh_bb;
+        const double step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(x1, y1)
+        const double step_th = x1 + y1;
+        const double step_th_bb = step_th - x1;
+        const double step_th_t0 = step_th - step_th_bb;
+        const double step_th_t1 = x1 - step_th_t0;
+        const double step_th_t2 = y1 - step_th_bb;
+        const double step_tl = step_th_t1 + step_th_t2;
+        const double step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const double step_vh = step_sh + step_c;
+        const double step_vh_z = step_vh - step_sh;
+        const double step_vl = step_c - step_vh_z;
+        const double step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const double step_z0 = step_vh + step_w;
+        const double step_z0_z = step_z0 - step_vh;
+        const double step_z1 = step_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_add_2_packed_end(m, ok, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_add_2_packed_end(float m, bool ok, float rx, float ry, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_add_radius_2(m_e_, rx, ry)
+    const float rad_s = rx + ry;
+    const float rad_t = fma_rn(m_e_, 0x1.800008p-47f, rad_s);
+    const float rad_rz = fma_rn(rad_t, 0x1.000004p+0f, 0x1.000004p-126f);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_add_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x0 = vld1q_f32(x0_in + i_);
+        const float32x4_t x1 = vld1q_f32(x1_in + i_);
+        const float32x4_t y0 = vld1q_f32(y0_in + i_);
+        const float32x4_t y1 = vld1q_f32(y1_in + i_);
+        // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+        // (step_sh, step_sl) = two_sum(x0, y0)
+        const float32x4_t step_sh = vaddq_f32(x0, y0);
+        const float32x4_t step_sh_bb = vsubq_f32(step_sh, x0);
+        const float32x4_t step_sh_t0 = vsubq_f32(step_sh, step_sh_bb);
+        const float32x4_t step_sh_t1 = vsubq_f32(x0, step_sh_t0);
+        const float32x4_t step_sh_t2 = vsubq_f32(y0, step_sh_bb);
+        const float32x4_t step_sl = vaddq_f32(step_sh_t1, step_sh_t2);
+        // (step_th, step_tl) = two_sum(x1, y1)
+        const float32x4_t step_th = vaddq_f32(x1, y1);
+        const float32x4_t step_th_bb = vsubq_f32(step_th, x1);
+        const float32x4_t step_th_t0 = vsubq_f32(step_th, step_th_bb);
+        const float32x4_t step_th_t1 = vsubq_f32(x1, step_th_t0);
+        const float32x4_t step_th_t2 = vsubq_f32(y1, step_th_bb);
+        const float32x4_t step_tl = vaddq_f32(step_th_t1, step_th_t2);
+        const float32x4_t step_c = vaddq_f32(step_sl, step_th);
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const float32x4_t step_vh = vaddq_f32(step_sh, step_c);
+        const float32x4_t step_vh_z = vsubq_f32(step_vh, step_sh);
+        const float32x4_t step_vl = vsubq_f32(step_c, step_vh_z);
+        const float32x4_t step_w = vaddq_f32(step_tl, step_vl);
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const float32x4_t step_z0 = vaddq_f32(step_vh, step_w);
+        const float32x4_t step_z0_z = vsubq_f32(step_z0, step_vh);
+        const float32x4_t step_z1 = vsubq_f32(step_w, step_z0_z);
+        vst1q_f32(z0_out + i_, step_z0);
+        vst1q_f32(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float32x4_t rec_r_a = vabsq_f32(step_z0);
+        const uint32x4_t rec_r_e = vceqq_f32(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_r_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_r_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+        // (step_sh, step_sl) = two_sum(x0, y0)
+        const float step_sh = x0 + y0;
+        const float step_sh_bb = step_sh - x0;
+        const float step_sh_t0 = step_sh - step_sh_bb;
+        const float step_sh_t1 = x0 - step_sh_t0;
+        const float step_sh_t2 = y0 - step_sh_bb;
+        const float step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(x1, y1)
+        const float step_th = x1 + y1;
+        const float step_th_bb = step_th - x1;
+        const float step_th_t0 = step_th - step_th_bb;
+        const float step_th_t1 = x1 - step_th_t0;
+        const float step_th_t2 = y1 - step_th_bb;
+        const float step_tl = step_th_t1 + step_th_t2;
+        const float step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const float step_vh = step_sh + step_c;
+        const float step_vh_z = step_vh - step_sh;
+        const float step_vl = step_c - step_vh_z;
+        const float step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const float step_z0 = step_vh + step_w;
+        const float step_z0_z = step_z0 - step_vh;
+        const float step_z1 = step_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_add_2_packed_end(m, ok, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_scale_1_packed_end(double m, bool ok, double rx, double a, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_scale_radius_1(m_e_, rx, a)
+    const double rad_aa = abs_bits(a);
+    const double rad_p = fma_rn(rad_aa, rx, 0.0);
+    const double rad_t = fma_rn(m_e_, 0x1p-53, rad_p);
+    const double rad_rz = fma_rn(rad_t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_scale_1(stored x, stored rx, supplied a) -> z, r, finite: step scale_step_1, record norm_step_1, radius bv_scale_radius_1: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_scale_1_packed(const double* x_in, std::size_t n, double rx, double a, double* z_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    const float64x2_t a_v_ = vdupq_n_f64(a);
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x = vld1q_f64(x_in + i_);
+        // (step_z) = scale_step_1(x, a_v_)
+        // (step_z) = mul_1_1(x, a_v_)
+        const float64x2_t step_z = vfmaq_f64(vdupq_n_f64(0.0), x, a_v_);
+        vst1q_f64(z_out + i_, step_z);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+        const float64x2_t rec_a = vabsq_f64(step_z);
+        const uint64x2_t rec_e = vceqq_f64(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z) = scale_step_1(x, a)
+        // (step_z) = mul_1_1(x, a)
+        const double step_z = fma_rn(x, a, 0.0);
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_scale_1_packed_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_scale_1_packed_end(float m, bool ok, float rx, float a, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_scale_radius_1(m_e_, rx, a)
+    const float rad_aa = abs_bits(a);
+    const float rad_p = fma_rn(rad_aa, rx, 0.0f);
+    const float rad_t = fma_rn(m_e_, 0x1p-24f, rad_p);
+    const float rad_rz = fma_rn(rad_t, 0x1.000004p+0f, 0x1.000006p-126f);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_scale_1_packed(const float* x_in, std::size_t n, float rx, float a, float* z_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    const float32x4_t a_v_ = vdupq_n_f32(a);
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x = vld1q_f32(x_in + i_);
+        // (step_z) = scale_step_1(x, a_v_)
+        // (step_z) = mul_1_1(x, a_v_)
+        const float32x4_t step_z = vfmaq_f32(vdupq_n_f32(0.0f), x, a_v_);
+        vst1q_f32(z_out + i_, step_z);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+        const float32x4_t rec_a = vabsq_f32(step_z);
+        const uint32x4_t rec_e = vceqq_f32(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z) = scale_step_1(x, a)
+        // (step_z) = mul_1_1(x, a)
+        const float step_z = fma_rn(x, a, 0.0f);
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_scale_1_packed_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_scale_2_packed_end(double m, bool ok, double rx, double a, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_scale_radius_2(m_e_, rx, a)
+    const double rad_aa = abs_bits(a);
+    const double rad_p = fma_rn(rad_aa, rx, 0.0);
+    const double rad_t = fma_rn(m_e_, 0x1.0000000000001p-105, rad_p);
+    const double rad_rz = fma_rn(rad_t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_scale_2(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_scale_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double a, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    const float64x2_t a_v_ = vdupq_n_f64(a);
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x0 = vld1q_f64(x0_in + i_);
+        const float64x2_t x1 = vld1q_f64(x1_in + i_);
+        // (step_z0, step_z1) = scale_step_2(x0, x1, a_v_)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, a_v_)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, a_v_)
+        const float64x2_t step_z0_ch = vfmaq_f64(vdupq_n_f64(0.0), x0, a_v_);
+        const float64x2_t step_z0_cl1 = vfmaq_f64(vnegq_f64(step_z0_ch), x0, a_v_);
+        const float64x2_t step_z0_cl3 = vfmaq_f64(step_z0_cl1, x1, a_v_);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float64x2_t step_z0 = vaddq_f64(step_z0_ch, step_z0_cl3);
+        const float64x2_t step_z0_z = vsubq_f64(step_z0, step_z0_ch);
+        const float64x2_t step_z1 = vsubq_f64(step_z0_cl3, step_z0_z);
+        vst1q_f64(z0_out + i_, step_z0);
+        vst1q_f64(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float64x2_t rec_r_a = vabsq_f64(step_z0);
+        const uint64x2_t rec_r_e = vceqq_f64(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_r_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_r_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_step_2(x0, x1, a)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, a)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, a)
+        const double step_z0_ch = fma_rn(x0, a, 0.0);
+        const double step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
+        const double step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const double step_z0 = step_z0_ch + step_z0_cl3;
+        const double step_z0_z = step_z0 - step_z0_ch;
+        const double step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_scale_2_packed_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_scale_2_packed_end(float m, bool ok, float rx, float a, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_scale_radius_2(m_e_, rx, a)
+    const float rad_aa = abs_bits(a);
+    const float rad_p = fma_rn(rad_aa, rx, 0.0f);
+    const float rad_t = fma_rn(m_e_, 0x1.000002p-47f, rad_p);
+    const float rad_rz = fma_rn(rad_t, 0x1.000004p+0f, 0x1.000006p-126f);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_scale_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float a, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    const float32x4_t a_v_ = vdupq_n_f32(a);
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x0 = vld1q_f32(x0_in + i_);
+        const float32x4_t x1 = vld1q_f32(x1_in + i_);
+        // (step_z0, step_z1) = scale_step_2(x0, x1, a_v_)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, a_v_)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, a_v_)
+        const float32x4_t step_z0_ch = vfmaq_f32(vdupq_n_f32(0.0f), x0, a_v_);
+        const float32x4_t step_z0_cl1 = vfmaq_f32(vnegq_f32(step_z0_ch), x0, a_v_);
+        const float32x4_t step_z0_cl3 = vfmaq_f32(step_z0_cl1, x1, a_v_);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float32x4_t step_z0 = vaddq_f32(step_z0_ch, step_z0_cl3);
+        const float32x4_t step_z0_z = vsubq_f32(step_z0, step_z0_ch);
+        const float32x4_t step_z1 = vsubq_f32(step_z0_cl3, step_z0_z);
+        vst1q_f32(z0_out + i_, step_z0);
+        vst1q_f32(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float32x4_t rec_r_a = vabsq_f32(step_z0);
+        const uint32x4_t rec_r_e = vceqq_f32(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_r_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_r_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_step_2(x0, x1, a)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, a)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, a)
+        const float step_z0_ch = fma_rn(x0, a, 0.0f);
+        const float step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
+        const float step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float step_z0 = step_z0_ch + step_z0_cl3;
+        const float step_z0_z = step_z0 - step_z0_ch;
+        const float step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_scale_2_packed_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_sub_1_packed_end(double m, bool ok, double rx, double ry, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_add_radius_1(m_e_, rx, ry)
+    const double rad_s = rx + ry;
+    const double rad_t = fma_rn(m_e_, 0x1p-53, rad_s);
+    const double rad_rz = fma_rn(rad_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_sub_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step sub_1_1, record norm_step_1, radius bv_add_radius_1: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_sub_1_packed(const double* x_in, const double* y_in, std::size_t n, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x = vld1q_f64(x_in + i_);
+        const float64x2_t y = vld1q_f64(y_in + i_);
+        // (step_s) = sub_1_1(x, y)
+        const float64x2_t step_s = vsubq_f64(x, y);
+        vst1q_f64(z_out + i_, step_s);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_s)
+        const float64x2_t rec_a = vabsq_f64(step_s);
+        const uint64x2_t rec_e = vceqq_f64(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_s) = sub_1_1(x, y)
+        const double step_s = x - y;
+        z_out[i_] = step_s;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_s)
+        const double rec_a = abs_bits(step_s);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_sub_1_packed_end(m, ok, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_sub_1_packed_end(float m, bool ok, float rx, float ry, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_add_radius_1(m_e_, rx, ry)
+    const float rad_s = rx + ry;
+    const float rad_t = fma_rn(m_e_, 0x1p-24f, rad_s);
+    const float rad_rz = fma_rn(rad_t, 0x1.000004p+0f, 0x1.000004p-126f);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_sub_1_packed(const float* x_in, const float* y_in, std::size_t n, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x = vld1q_f32(x_in + i_);
+        const float32x4_t y = vld1q_f32(y_in + i_);
+        // (step_s) = sub_1_1(x, y)
+        const float32x4_t step_s = vsubq_f32(x, y);
+        vst1q_f32(z_out + i_, step_s);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_s)
+        const float32x4_t rec_a = vabsq_f32(step_s);
+        const uint32x4_t rec_e = vceqq_f32(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_s) = sub_1_1(x, y)
+        const float step_s = x - y;
+        z_out[i_] = step_s;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_s)
+        const float rec_a = abs_bits(step_s);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_sub_1_packed_end(m, ok, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_sub_2_packed_end(double m, bool ok, double rx, double ry, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_add_radius_2(m_e_, rx, ry)
+    const double rad_s = rx + ry;
+    const double rad_t = fma_rn(m_e_, 0x1.8000000000004p-105, rad_s);
+    const double rad_rz = fma_rn(rad_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_sub_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step sub_2_2, record norm_step_2, radius bv_add_radius_2: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_sub_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x0 = vld1q_f64(x0_in + i_);
+        const float64x2_t x1 = vld1q_f64(x1_in + i_);
+        const float64x2_t y0 = vld1q_f64(y0_in + i_);
+        const float64x2_t y1 = vld1q_f64(y1_in + i_);
+        // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+        const float64x2_t step_n0 = vnegq_f64(y0);
+        const float64x2_t step_n1 = vnegq_f64(y1);
+        // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+        const float64x2_t step_z0_sh = vaddq_f64(x0, step_n0);
+        const float64x2_t step_z0_sh_bb = vsubq_f64(step_z0_sh, x0);
+        const float64x2_t step_z0_sh_t0 = vsubq_f64(step_z0_sh, step_z0_sh_bb);
+        const float64x2_t step_z0_sh_t1 = vsubq_f64(x0, step_z0_sh_t0);
+        const float64x2_t step_z0_sh_t2 = vsubq_f64(step_n0, step_z0_sh_bb);
+        const float64x2_t step_z0_sl = vaddq_f64(step_z0_sh_t1, step_z0_sh_t2);
+        // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+        const float64x2_t step_z0_th = vaddq_f64(x1, step_n1);
+        const float64x2_t step_z0_th_bb = vsubq_f64(step_z0_th, x1);
+        const float64x2_t step_z0_th_t0 = vsubq_f64(step_z0_th, step_z0_th_bb);
+        const float64x2_t step_z0_th_t1 = vsubq_f64(x1, step_z0_th_t0);
+        const float64x2_t step_z0_th_t2 = vsubq_f64(step_n1, step_z0_th_bb);
+        const float64x2_t step_z0_tl = vaddq_f64(step_z0_th_t1, step_z0_th_t2);
+        const float64x2_t step_z0_c = vaddq_f64(step_z0_sl, step_z0_th);
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float64x2_t step_z0_vh = vaddq_f64(step_z0_sh, step_z0_c);
+        const float64x2_t step_z0_vh_z = vsubq_f64(step_z0_vh, step_z0_sh);
+        const float64x2_t step_z0_vl = vsubq_f64(step_z0_c, step_z0_vh_z);
+        const float64x2_t step_z0_w = vaddq_f64(step_z0_tl, step_z0_vl);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float64x2_t step_z0 = vaddq_f64(step_z0_vh, step_z0_w);
+        const float64x2_t step_z0_z = vsubq_f64(step_z0, step_z0_vh);
+        const float64x2_t step_z1 = vsubq_f64(step_z0_w, step_z0_z);
+        vst1q_f64(z0_out + i_, step_z0);
+        vst1q_f64(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float64x2_t rec_r_a = vabsq_f64(step_z0);
+        const uint64x2_t rec_r_e = vceqq_f64(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_r_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_r_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+        const double step_n0 = -y0;
+        const double step_n1 = -y1;
+        // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+        const double step_z0_sh = x0 + step_n0;
+        const double step_z0_sh_bb = step_z0_sh - x0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = x0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_n0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+        const double step_z0_th = x1 + step_n1;
+        const double step_z0_th_bb = step_z0_th - x1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = x1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_n1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_sub_2_packed_end(m, ok, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_sub_2_packed_end(float m, bool ok, float rx, float ry, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_add_radius_2(m_e_, rx, ry)
+    const float rad_s = rx + ry;
+    const float rad_t = fma_rn(m_e_, 0x1.800008p-47f, rad_s);
+    const float rad_rz = fma_rn(rad_t, 0x1.000004p+0f, 0x1.000004p-126f);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved.
+inline void bv_sub_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x0 = vld1q_f32(x0_in + i_);
+        const float32x4_t x1 = vld1q_f32(x1_in + i_);
+        const float32x4_t y0 = vld1q_f32(y0_in + i_);
+        const float32x4_t y1 = vld1q_f32(y1_in + i_);
+        // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+        const float32x4_t step_n0 = vnegq_f32(y0);
+        const float32x4_t step_n1 = vnegq_f32(y1);
+        // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+        const float32x4_t step_z0_sh = vaddq_f32(x0, step_n0);
+        const float32x4_t step_z0_sh_bb = vsubq_f32(step_z0_sh, x0);
+        const float32x4_t step_z0_sh_t0 = vsubq_f32(step_z0_sh, step_z0_sh_bb);
+        const float32x4_t step_z0_sh_t1 = vsubq_f32(x0, step_z0_sh_t0);
+        const float32x4_t step_z0_sh_t2 = vsubq_f32(step_n0, step_z0_sh_bb);
+        const float32x4_t step_z0_sl = vaddq_f32(step_z0_sh_t1, step_z0_sh_t2);
+        // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+        const float32x4_t step_z0_th = vaddq_f32(x1, step_n1);
+        const float32x4_t step_z0_th_bb = vsubq_f32(step_z0_th, x1);
+        const float32x4_t step_z0_th_t0 = vsubq_f32(step_z0_th, step_z0_th_bb);
+        const float32x4_t step_z0_th_t1 = vsubq_f32(x1, step_z0_th_t0);
+        const float32x4_t step_z0_th_t2 = vsubq_f32(step_n1, step_z0_th_bb);
+        const float32x4_t step_z0_tl = vaddq_f32(step_z0_th_t1, step_z0_th_t2);
+        const float32x4_t step_z0_c = vaddq_f32(step_z0_sl, step_z0_th);
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float32x4_t step_z0_vh = vaddq_f32(step_z0_sh, step_z0_c);
+        const float32x4_t step_z0_vh_z = vsubq_f32(step_z0_vh, step_z0_sh);
+        const float32x4_t step_z0_vl = vsubq_f32(step_z0_c, step_z0_vh_z);
+        const float32x4_t step_z0_w = vaddq_f32(step_z0_tl, step_z0_vl);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float32x4_t step_z0 = vaddq_f32(step_z0_vh, step_z0_w);
+        const float32x4_t step_z0_z = vsubq_f32(step_z0, step_z0_vh);
+        const float32x4_t step_z1 = vsubq_f32(step_z0_w, step_z0_z);
+        vst1q_f32(z0_out + i_, step_z0);
+        vst1q_f32(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float32x4_t rec_r_a = vabsq_f32(step_z0);
+        const uint32x4_t rec_r_e = vceqq_f32(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_r_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_r_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+        const float step_n0 = -y0;
+        const float step_n1 = -y1;
+        // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+        const float step_z0_sh = x0 + step_n0;
+        const float step_z0_sh_bb = step_z0_sh - x0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = x0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_n0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+        const float step_z0_th = x1 + step_n1;
+        const float step_z0_th_bb = step_z0_th - x1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = x1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_n1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_sub_2_packed_end(m, ok, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
 }
 
 // fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved.

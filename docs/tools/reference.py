@@ -122,8 +122,9 @@ KIND_FIELDS = {
 }
 # The fields an entry of these kinds has in either domain when it uses them (Milestone 2): a
 # rounding under a condition, a condition of exactness, a zero factor, the midpoint of a ball made
-# from an interval, an equivalence for a bounded result, a tightness.
-KIND_OPTIONAL = {"rounded": {"when", "zero_factor"}, "error": {"exact_when"}, "encloses": {"exact_when"},
+# from an interval, an equivalence for a bounded result, a tightness, a value of its own (the
+# accumulator's sum of magnitudes).
+KIND_OPTIONAL = {"rounded": {"when", "zero_factor", "value"}, "error": {"exact_when"}, "encloses": {"exact_when"},
                  "bound": {"zero_factor"}, "outward": {"exact_when", "zero_factor"}, "makes_ball": {"midpoint_when"},
                  "encloses_interval": {"bounded_exactly", "zero_factor"}, "set_bound": {"tight"},
                  "ball_of_interval": {"smallest_radius"},
@@ -555,6 +556,18 @@ def strip_rocq_comments(text):
                 out.append(text[i])
             i += 1
     return "".join(out)
+
+
+def load_not_judged(root):
+    """The kernels the oracle does not judge yet: the list KAIRN_NOT_YET_CROSS_CHECKED of
+    tests/CMakeLists.txt, read as tests/brute/brute.py reads it (the words between
+    `set(KAIRN_NOT_YET_CROSS_CHECKED` at the start of a line and the next `)`), empty when the file has
+    none."""
+    path = os.path.join(root, "tests", "CMakeLists.txt")
+    if not os.path.exists(path):
+        return set()
+    m = re.search(r"^set\(KAIRN_NOT_YET_CROSS_CHECKED\s([^)]*)\)", read(path), re.M)
+    return set(m.group(1).split()) if m else set()
 
 
 def load_audit(root):
@@ -1046,7 +1059,9 @@ class Kernel:
         if kind == "rounded":
             if e["mode"] not in KNOWN_MODES:
                 fail("kernel %s: the rounding mode %r has no template" % (self.name, e["mode"]))
-            text = "$%s = \\mathrm{%s}(%s)$" % (name_tex(e["of"]), KNOWN_MODES[e["mode"]], tex(self.value))
+            # A value of its own (the accumulator's sum of magnitudes), or the kernel's.
+            v = self.limb_expr(e["value"], "rounded") if "value" in e else self.value
+            text = "$%s = \\mathrm{%s}(%s)$" % (name_tex(e["of"]), KNOWN_MODES[e["mode"]], tex(v))
             when = self.when_tex(e)
             if short:
                 return text + (" " + when if when else "")
@@ -1054,7 +1069,7 @@ class Kernel:
                 "nearest": ": the number of the format nearest to $%s$, ties to even",
                 "down": ": the largest number of the format not above $%s$",
                 "up": ": the smallest number of the format not below $%s$",
-            }[e["mode"]] % tex(self.value) + (", " + when if when else "")
+            }[e["mode"]] % tex(v) + (", " + when if when else "")
         if kind == "neighbor":
             r, v = name_tex(e["of"]), tex(self.value)
             step, where = KNOWN_SIDES[kind][e["side"]]
@@ -1427,6 +1442,7 @@ class Site:
         self.bounds = load_bounds(root)
         self.statements = load_statements(root)
         self.allowed_axioms, self.audited = load_audit(root)
+        self.not_judged = load_not_judged(root)
         # The generated formal models (the real one, and the IEEE one where it exists) and the
         # kernels each defines.
         self.models = []
@@ -1513,10 +1529,18 @@ class Site:
             calls = ("An operation that calls this kernel compiles only with the marker `kairn::unverified` on "
                      "an operand, and `kairn::traits` exports no constants for it"
                      if p["forms"] else "No public operation calls it yet")
+            if k.extended:
+                tested = "Rocq has not checked a proof of it"
+            elif name in self.not_judged:
+                # On the list of what the oracle does not judge yet (tests/CMakeLists.txt): the
+                # generator's tests test it, and no cross-check against the oracle is registered.
+                tested = ("the generator's tests test it, but the oracle does not judge it yet (it is on the list "
+                          "`KAIRN_NOT_YET_CROSS_CHECKED` of `tests/CMakeLists.txt`) and Rocq has not checked a "
+                          "proof of it")
+            else:
+                tested = "the oracle tests it, but Rocq has not checked a proof of it"
             w("**UNVERIFIED: no proof is checked.** The statement below is a target: %s. %s "
-              "([What holds today](../getting-started/guarantees.md#proved-and-unverified))." % (
-                  "Rocq has not checked a proof of it" if k.extended else
-                  "the oracle tests it, but Rocq has not checked a proof of it", calls))
+              "([What holds today](../getting-started/guarantees.md#proved-and-unverified))." % (tested, calls))
             w("")
 
         # What it computes.
@@ -2225,9 +2249,10 @@ class Site:
             masks = sorted({x["if"] for x in e["ensures"] if "if" in x})
             bounds = [k.finite_bullet(x)[len("when $%s$ is true, " % name_tex(x["if"])):] if "if" in x
                       else k.finite_bullet(x) for x in e["ensures"] if x["kind"] == "upper"]
-            return ("Numbers of `T` that bound expressions of $%s$ from above, valid when the mask %s is true:"
+            return ("Numbers of `T` that bound expressions of $%s$ from above%s:"
                     "\n\n$$%s.$$" % (", ".join(name_tex(i) for i in k.inputs),
-                                       " and ".join("$%s$" % name_tex(m) for m in masks),
+                                       (", valid when the mask %s is true" %
+                                        " and ".join("$%s$" % name_tex(m) for m in masks)) if masks else "",
                                        ", \\qquad ".join(b.strip("$") for b in bounds)))
         if "makes_interval" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "makes_interval")
@@ -2360,6 +2385,20 @@ class Site:
             return ("The larger of $%s$ and $%s$, exactly, by a comparison%s:\n\n$$%s = \\max(%s, %s).$$" % (
                 a, b, ("; and the mask $%s$ of a fold of maxima, true while no element was a NaN, which the claims "
                        "do not describe" % masks[0]) if masks else "", name_tex(x["of"]), a, b))
+        own = [x for x in e["ensures"] if x["kind"] == "rounded" and "value" in x]
+        if own and len(k.outputs) == 2 and len(own) == 1:
+            # The kernels of the accumulator: the running sum, an approximation of the kernel's value
+            # (rounded to nearest with one limb), and the sum of the magnitudes, a rounding of a
+            # value of its own.
+            x = own[0]
+            main = next(o for o in k.outputs if o != x["of"])
+            w = tex(k.limb_expr(x["value"], "rounded"))
+            mine = [y for y in e["ensures"] if y["kind"] == "rounded" and y["of"] == main and "value" not in y]
+            first = ("$%s = \\mathrm{%s}(%s)$" % (k.out_tex(main), KNOWN_MODES[mine[0]["mode"]], v) if mine
+                     else "$%s \\approx %s$" % (k.out_tex(main), v))
+            return ("A step of an accumulator: the running sum %s, and the sum of the magnitudes $%s$ rounded "
+                    "to a number of `T`:\n\n$$%s, \\qquad %s = \\mathrm{%s}(%s).$$" % (
+                        first, name_tex(x["of"]), first.strip("$"), name_tex(x["of"]), KNOWN_MODES[x["mode"]], w))
         if len(k.outputs) != 1:
             fail("kernel %s: %d outputs, and no ball or predicate claim: no template" % (k.name, len(k.outputs)))
         out = k.out_tex(k.outputs[0])

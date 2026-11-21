@@ -472,6 +472,10 @@ def _claim_error(e, s):
 
 def _claim_rounded(e, s):
     rounding = {'nearest': 'RN', 'down': 'RD', 'up': 'RU'}[e['mode']]
+    if 'value' in e:
+        # A value of its own, over the inputs and their limbs.
+        v = _term(expr.parse(e['value']), lambda n: _sum(s.ins[n].limbs), limb=lambda g, i: s.ins[g].limbs[i])
+        return f'{s.outs[e["of"]].limbs[0]} = {rounding} emin prec {_paren(v)}'
     claim = f'{s.outs[e["of"]].limbs[0]} = {rounding} emin prec {s.value}'
     if e.get('when') == 'product_large':
         claim = (f'(({s.value} = 0 \\/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs {s.value}) ->'
@@ -832,6 +836,9 @@ def fold_model(kernels):
         if fd.is_conv:
             lines += conv_model(fd, kernels)
             continue
+        if fd.is_bv:
+            lines += bv_model(fd, kernels)
+            continue
         step, combine = kernels[fd.step[0]], kernels[fd.combine[0]] if fd.combine else None
         st, el, _ = _fold_binders(fd)
         stype = state_type(fd)
@@ -1029,6 +1036,9 @@ def fold_statements(kernels):
         if fd.is_map:
             lines += [''] + map_statement(fd, kernels)
             continue
+        if fd.is_bv:
+            lines += [''] + bv_statement(fd, kernels)
+            continue
         if fd.is_conv:
             lines += [''] + conv_statement(fd, kernels)
             continue
@@ -1124,6 +1134,125 @@ def map_statement(fd, kernels):
     lines += [f'    {_let(_pattern(list(outs)), "w_")}',
               '    ' + ' /\\\n    '.join(claims) + ')',
               f'    {xs} ({call}).']
+    return lines
+
+
+# --- Ball vectors ------------------------------------------------------------------------------------
+#
+# A ball vector (rules.py, "Ball vectors") is in the real model the map of its step on the elements,
+# the centers written, and its radius: the radius kernel on the limb of the sequential fold of the
+# record (the step of a fold of maxima) over the centers written, from (0, true), and on the scalars.
+# Its statement says that every center written is valid and that the ball of each center with the
+# one radius contains the value of every choice of members of the operands' balls, entry by entry.
+
+def bv_scalar_params(fd, names, item='R'):
+    return ''.join(f' ({g.name} : {tuple_type(len(g.limbs), item)})' for g in fd.scalars if g.name in names)
+
+
+def bv_model(fd, kernels):
+    """F_step and F_map (the centers), F_record (the state's update from a center written) and
+    F_radius (the one radius) of a ball vector."""
+    step, record, radius = (kernels[c[0]] for c in (fd.step, fd.record, fd.radius))
+    _, el, xs = _fold_binders(fd)
+    etype = fold_element_type(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    groups = fold_groups(fd, el)
+    sizes = {g.name: len(g.limbs) for g in fd.arrays + fd.scalars}
+    groups.update({g.name: g.name for g in fd.scalars})
+    args = [p for a in fd.step[1] for p in tuple_parts(groups[a], sizes[a])]
+    used = set(fd.step[1])
+    params = bv_scalar_params(fd, used)
+    written = fd.writes[0]
+    wtype = tuple_type(len(written.limbs))
+    stype = state_type(fd)
+    zero = state_zero(fd, '0', 'true')
+    mok = ''.join(fd.state_names())
+    rec_args = tuple_parts(mok, 2) + tuple_parts('w_', len(written.limbs))
+    stepped = f'({fd.name}_step{"".join(" " + g.name for g in fd.scalars if g.name in used)})' \
+        if used & {g.name for g in fd.scalars} else f'{fd.name}_step'
+    rad_args = [f'(fst (fold_seq {fd.name}_record {zero} ({fd.name}_map'
+                f'{"".join(" " + g.name for g in fd.scalars if g.name in used)} {xs})))'] + list(fd.radius[1][1:])
+    arrays = ', '.join(f'{fd.roles[g.name]} {g.name}' for g in fd.arrays)
+    scalars = ', '.join(f'{fd.roles[g.name]} {g.name}' for g in fd.scalars)
+    return ['', f'(* {fd.name}: a ball vector; arrays {arrays}; scalars {scalars}; it writes {written.name} by the '
+                f'step {step.name}, records the largest magnitude of a center by {record.name}, and gives the radius '
+                f'by {radius.name}. *)',
+            f'Definition {fd.name}_step{params} ({el} : {etype}) : {wtype} :=',
+            f'  {_apply(step, kernels, args)}.',
+            '',
+            f'Definition {fd.name}_map{params} ({xs} : {lt}) : list {_paren(wtype)} :=',
+            f'  map {stepped} {xs}.',
+            '',
+            f'Definition {fd.name}_record ({mok} : {stype}) (w_ : {wtype}) : {stype} :=',
+            f'  {_apply(record, kernels, rec_args)}.',
+            '',
+            f'Definition {fd.name}_radius{bv_scalar_params(fd, {g.name for g in fd.scalars})} ({xs} : {lt}) : R :=',
+            f'  {_apply(radius, kernels, rad_args)}.']
+
+
+def bv_member(name):
+    """The binder of a member of the ball of an operand, named after its array: x_ for x."""
+    return f'{name}_'
+
+
+def bv_statement(fd, kernels):
+    """The Definition F_spec : Prop of a ball vector: for nonnegative radii and valid centers (every
+    limb a number of the format), the radius is a number of the format and, entry by entry (Forall2 of
+    the elements and the centers written), the center written is valid and, for every choice of
+    members of the balls of the operands' entries, the value of the fold on them is within the radius
+    of the center."""
+    step, radius = kernels[fd.step[0]], kernels[fd.radius[0]]
+    _, el, xs = _fold_binders(fd)
+    section = [{'choice': 'tie_even'}.get(v, v) for v in fold_section_args([step, radius, kernels[fd.record[0]]],
+                                                                             kernels)]
+    etype = fold_element_type(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    vectors = {r[1]: r[2] for r in fd.requires if r[0] == 'ball_vector'}
+    radii = set(vectors.values())
+    scalar_limbs = [v for g in fd.scalars for v in g.limbs]
+    hyps = []
+    for g in fd.scalars:
+        hyps += [f'fmt emin prec {v}' for v in g.limbs]
+        if g.name in radii:
+            hyps.append(f'0 <= {g.name}')
+    groups = fold_groups(fd, el)
+    valid = []
+    for g in fd.arrays:
+        limbs = tuple_parts(groups[g.name], len(g.limbs))
+        valid += ([f'normalized_{len(limbs)} emin prec {" ".join(_paren(x) for x in limbs)}'] if len(limbs) > 1
+                  else [f'fmt emin prec {_paren(limbs[0])}'])
+    pattern = _pattern([_pattern(list(g.limbs)) for g in fd.arrays])
+    w = list(fd.writes[0].limbs)
+    entry = fd.ensures[0]
+    members = [bv_member(b) for b in entry['balls']]
+    near = [f'Rabs ({bv_member(b)} - {_sum(next(g for g in fd.arrays if g.name == v["center"]).limbs)}) <= {v["radius"]}'
+            for b, v in entry['balls'].items()]
+
+    def name(n):
+        if n in entry['balls']:
+            return bv_member(n)
+        return _sum(next(g for g in fd.scalars if g.name == n).limbs)
+    setv = _term(expr.parse(entry['set']), name)
+    center = (f'normalized_{len(w)} emin prec {" ".join(w)}' if len(w) > 1 else f'fmt emin prec {w[0]}')
+    used = [g.name for g in fd.scalars if g.name in fd.step[1]]
+    call_map = ' '.join([f'{fd.name}_map'] + [{'choice': 'tie_even'}.get(v, v) for v in fold_section_args([step], kernels)]
+                        + used + [xs])
+    call_r = ' '.join([f'{fd.name}_radius'] + section + [g.name for g in fd.scalars] + [xs])
+    lines = [f'(* {fd.name}, each center it writes and its one radius: {fd.source or "no source given"}. '
+             f'Status: {fd.status}. *)',
+             f'Definition {fd.name}_spec : Prop :=',
+             f'  forall emin prec : Z, ({fd.min_precision} <= prec)%Z ->',
+             f'  forall ({" ".join(scalar_limbs)} : R) ({xs} : {lt}),']
+    lines += [f'  {h} ->' for h in hyps]
+    lines += [f'  Forall (fun {el} => {" /\\ ".join(valid)}) {xs} ->',
+              f'  let r_ := {call_r} in',
+              '  fmt emin prec r_ /\\',
+              f'  Forall2 (fun {el} w_ =>']
+    lines += [f'    {_let(pattern, el)}'] if pattern != el else []
+    lines += [f'    {_let(_pattern(w), "w_")}',
+              f'    {center} /\\',
+              f'    forall {" ".join(members)} : R, ' + ' -> '.join(near) + f' -> Rabs ({setv} - {_sum(w)}) <= r_)',
+              f'    {xs} ({call_map}).']
     return lines
 
 
@@ -1231,7 +1360,7 @@ def audit(kernels):
                   f'Print Assumptions {k.name}_correct.']
     for fd in folds:
         # A map and a convolution have one statement each, F_spec, not one per order.
-        names = [fd.name] if fd.is_map or fd.is_conv else \
+        names = [fd.name] if fd.is_map or fd.is_conv or fd.is_bv else \
             [f'{fd.name}_{ir.ORDER_SUFFIX[order]}' for order in ir.ORDERS if order in fd.orders]
         for name in names:
             lines += ['', f'Definition {name}_audit : {name}_spec := {name}_correct.',
