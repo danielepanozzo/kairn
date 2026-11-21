@@ -1016,18 +1016,20 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   same kind is in `api.boundary.S` and `api.boundary.packed.FORM.S`: the products of `Expansion<T,
   2>` and of a ball by a `T` (`x * a`, `a * x`, `*=`, `finite::mul`, with a one-limb `a` too), of
   one limb, `two_prod`, `rmul`, `mul_down` and `mul_up`, and the products of `Packed<T, 2>` and
-  `Packed<T, 1>`, with the other factor $F$. **A finding of the first importance, kept failing:**
-  Apple clang 21 under `-ffp-contract=fast`, at `-O1` and `-O2`, fuses the program's product through
-  $F = \pm 1$ into `two_prod` (both outputs, and the error alone; every round), `mul_down` and
-  `mul_up` (half the rounds), `finite::mul(E2, T)` (every round) and, in the NEON form, the product
-  `Packed<T, 2> * Packed<T, 1>` and its `finite::mul` (every register; the scalar form's
-  `finite::mul` too): their kernels, `two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1` and
-  `mul_2_1_full`, take their factors unguarded and are kernels of Milestone 1 and of the blocks of
-  Milestone 2 whose headers that stage did not change. `api.boundary.contract-fast` and
-  `api.boundary.packed.native.contract-fast` (and `.scalar.`) fail with Apple clang until the owner
-  decides; their controls require the difference there, and report elsewhere. GCC 13 and 16 and
-  Clang 18 on x86-64 fused none of these forms at any setting, and the scalar `operator*` of
-  `Expansion` and the products of a ball by a `T` fused with no compiler.
+  `Packed<T, 1>`, with the other factor $F$. **A finding of the first importance:** with their
+  first kernels, Apple clang 21 under `-ffp-contract=fast`, at `-O1` and `-O2`, fused the program's
+  product through $F = \pm 1$ into `two_prod` (both outputs, and the error alone; every round),
+  `mul_down` and `mul_up` (half the rounds), `finite::mul(E2, T)` (every round) and, in the NEON
+  form, the product `Packed<T, 2> * Packed<T, 1>` and its `finite::mul` (every register; the scalar
+  form's `finite::mul` too): those kernels, `two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1` and
+  `mul_2_1_full`, took their factors unguarded. The public products now call their entry forms,
+  which guard the factors first (`two_prod_entry`, `mul_down_entry`, `mul_up_entry`,
+  `mul_2_1_entry`, `mul_2_1_full_entry`; rule R3, the factors of a fused operation), and with them
+  `api.boundary.contract-fast` and `api.boundary.packed.native.contract-fast` (and `.scalar.`)
+  pass with Apple clang; their controls, with those guards taken out, require the difference
+  there, and report elsewhere. GCC 13 and 16 and Clang 18 on x86-64 fused none of these forms at
+  any setting, and the scalar `operator*` of `Expansion` and the products of a ball by a `T` fused
+  with no compiler.
 - **The bounds as functions of the length** (`traits<X>::sum(n)`, `sum_height(h)`, `dot(n)`, the
   kernels `bound_sum_k` and `bound_dot_k`). The oracle judges the kernels through them
   (`api.oracle.bound_sum_k.F`, `api.oracle.bound_dot_k.F`, the forms `traits_sum_height`,

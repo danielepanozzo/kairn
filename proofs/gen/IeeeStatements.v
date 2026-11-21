@@ -1301,6 +1301,21 @@ Definition mul_down_1_ieee_spec : Prop :=
     (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
    xval r = xrd prec emax (xmul (xval a) (xval b))).
 
+(* mul_down_entry: mul_down_1 on its guarded operands (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition mul_down_entry_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall a b : binary_float prec emax,
+  let r := IeeeModel.mul_down_entry prec emax nan_plus nan_opp nan_abs nan_fma a b in
+  (finite a /\ finite b ->
+   xle (xval r) (xmul (xval a) (xval b)) = true /\ xle (xpred prec emax (xrd prec emax (xmul (xval a) (xval b)))) (xval r) = true) /\
+  (~ (finite a /\ finite b) -> xval r = (xmul (xval a) (xval b))) /\
+  ((finite a /\ finite b ->
+    (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
+   xval r = xrd prec emax (xmul (xval a) (xval b))).
+
 (* mul_pow2_step_1: one rounding to nearest of a product by a power of two. IEEE-model status: proved. *)
 Definition mul_pow2_step_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -1325,6 +1340,21 @@ Definition mul_up_1_ieee_spec : Prop :=
   (2 <= prec)%Z ->
   forall a b : binary_float prec emax,
   let r := IeeeModel.mul_up_1 prec emax nan_opp nan_abs nan_fma a b in
+  (finite a /\ finite b ->
+   xle (xmul (xval a) (xval b)) (xval r) = true /\ xle (xval r) (xsucc prec emax (xru prec emax (xmul (xval a) (xval b)))) = true) /\
+  (~ (finite a /\ finite b) -> xval r = (xmul (xval a) (xval b))) /\
+  ((finite a /\ finite b ->
+    (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
+   xval r = xru prec emax (xmul (xval a) (xval b))).
+
+(* mul_up_entry: mul_up_1 on its guarded operands (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition mul_up_entry_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall a b : binary_float prec emax,
+  let r := IeeeModel.mul_up_entry prec emax nan_plus nan_opp nan_abs nan_fma a b in
   (finite a /\ finite b ->
    xle (xmul (xval a) (xval b)) (xval r) = true /\ xle (xval r) (xsucc prec emax (xru prec emax (xmul (xval a) (xval b)))) = true) /\
   (~ (finite a /\ finite b) -> xval r = (xmul (xval a) (xval b))) /\
@@ -1507,6 +1537,21 @@ Definition sum_entry_step_1_ieee_bridge_spec : Prop :=
                      IeeeModel.sum_entry_step_1_prog [s; x]) /\
   (val t)
   = sum_entry_step_1 (ieee_emin prec emax) prec tie_even (val s) (val x).
+
+(* two_prod_entry: two_prod on its guarded operands (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition two_prod_entry_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall a b : binary_float prec emax,
+  finite a -> finite b ->
+  let '(p, e) := IeeeModel.two_prod_entry prec emax nan_plus nan_opp nan_fma a b in
+  finite p ->
+  finite e /\
+  val p = RN (ieee_emin prec emax) prec (val a * val b) /\
+  Rabs ((val p + val e) - (val a * val b)) <= (1 / 2) * eta (ieee_emin prec emax) /\
+  (((val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) -> (val p + val e) = (val a * val b)).
 
 (* to_up_2: the sign of x1 (Milestone 1 listing). IEEE-model status: proved. *)
 Definition to_up_2_ieee_spec : Prop :=
@@ -3188,6 +3233,53 @@ Definition make_2_limbs_spec : Prop :=
   xval_2 x0 x1 = xval_2 h l /\
   (finite h -> val x0 = val h /\ val x1 = val l).
 
+(* mul_2_1_entry: mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition mul_2_1_entry_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  finite x0 -> finite x1 -> finite a ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  let '(z0, z1) := IeeeModel.mul_2_1_entry prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.mul_2_1_entry_prog [x0; x1; a]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = mul_2_1_entry (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val a).
+
+(* mul_2_1_entry: mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition mul_2_1_entry_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  finite x0 -> finite x1 -> finite a ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  let '(z0, z1) := IeeeModel.mul_2_1_entry prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) * val a)) <= 2 * u prec ^ 2 * Rabs ((val x0 + val x1) * val a) + 1 * eta (ieee_emin prec emax).
+
+(* mul_2_1_entry: mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). IEEE-model status: unverified. *)
+Definition mul_2_1_entry_ieee_finite_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  finite x0 -> finite x1 -> finite a ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  Rabs ((val x0 + val x1) * val a) <= bpow radix2 (emax - 1) ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.mul_2_1_entry_prog [x0; x1; a]) /\
+  let '(z0, z1) := IeeeModel.mul_2_1_entry prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
+  finite z0 /\ finite z1.
+
 (* mul_2_1_full: mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). IEEE-model status: proved. *)
 Definition mul_2_1_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -3198,6 +3290,31 @@ Definition mul_2_1_full_spec : Prop :=
   canonical_2 x0 x1 ->
   let t := IeeeOperations.prod prec emax nan_fma x0 a in
   let '(w0, w1) := IeeeModel.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult x0 x1 a in
+  canonical_2 w0 w1 /\
+  (finite w0 ->
+   finite x0 /\
+   finite x1 /\
+   finite a /\
+   finite w1 /\
+   normalized_2 (ieee_emin prec emax) prec (val w0) (val w1) /\
+   Rabs ((val w0 + val w1) - ((val x0 + val x1) * val a)) <= 2 * u prec ^ 2 * Rabs ((val x0 + val x1) * val a) + 1 * eta (ieee_emin prec emax)) /\
+  (finite x0 -> finite a ->
+   Rabs ((val x0 + val x1) * val a) <= bpow radix2 (emax - 1) ->
+   finite w0) /\
+  (finite x0 -> finite a -> ~ finite w0 ->
+   w0 = infinity prec emax (Rlt_bool ((val x0 + val x1) * val a) 0) /\ w1 = pos_zero prec emax) /\
+  (~ (finite x0 /\ finite a) -> canonical_of t w0 w1).
+
+(* mul_2_1_full_entry: mul_2_1_entry, then the fix-up of IEEE-like results (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition mul_2_1_full_entry_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_mult : nan2 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let t := IeeeOperations.prod prec emax nan_fma x0 a in
+  let '(w0, w1) := IeeeModel.mul_2_1_full_entry prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult x0 x1 a in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite x0 /\

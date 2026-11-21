@@ -32,6 +32,9 @@ PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_
 PROGRAMS += ['dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2']
 # And the step of dot_1_entry, dot_step_1 on its factors guarded.
 PROGRAMS += ['dot_entry_step_1']
+# And the entry forms of two_prod and mul_2_1, which guard the factors first (rule R3, the factors of
+# a fused operation).
+PROGRAMS += ['two_prod_entry', 'mul_2_1_entry']
 # And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
 # Program.v (acc_merge_k: additions; the others guard or take an absolute value).
 PROGRAMS += ['acc_merge_1', 'acc_merge_2']
@@ -496,8 +499,10 @@ class Statements(unittest.TestCase):
         # (2), and the two statements more of the two folds of maxima, F_orders_ieee_spec and
         # F_flag_ieee_spec (4): 302.
         # And five with the guarded forms of rule R3 on the factors of a fused operation:
-        # acc_mul_entry_1, dot_entry_step_1 (bridge and lead) and dot_1_entry in both orders.
-        self.assertEqual(text.count('Print Assumptions'), 307)
+        # acc_mul_entry_1, dot_entry_step_1 (bridge and lead) and dot_1_entry in both orders. And six
+        # with the entry forms of the products: two_prod_entry, mul_down_entry, mul_up_entry,
+        # mul_2_1_entry (bridge and statement) and mul_2_1_full_entry.
+        self.assertEqual(text.count('Print Assumptions'), 313)
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
         self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
@@ -646,8 +651,12 @@ class CheckedFiles(unittest.TestCase):
     # Then the guarded forms of rule R3 on the factors of a fused operation: the kernels
     # dot_entry_step_1 and acc_mul_entry_1 (their models, the program of the first, and their
     # statements), added and nothing else changed; make -C proofs passed on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'f00665b46037e1f91036eaf3bba3479b7f30bbca181ac71458465f62ad388bf1',
-               'proofs/gen/IeeeStatements.v': '32d46f34055618792cc8e3623891c4cccabe1fc58a68a4d039c090a3453fd27e'}
+    # Then the entry forms of the products (rule R3, the factors of a fused operation): the kernels
+    # two_prod_entry, mul_down_entry, mul_up_entry, mul_2_1_entry and mul_2_1_full_entry (their
+    # models, the programs of the first and the fourth, and their statements), added and nothing
+    # else changed; make -C proofs passed on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '8c8aadb99d4c986af21d2cd0690524b6c0c84739c7e8ce70975bbb4839afb7b2',
+               'proofs/gen/IeeeStatements.v': 'b6f1f636cef6d5c86c7f9d7d03a69f58d38da2126d668ae2a515a8d678ae33d1'}
 
 
     def test_the_checked_files(self):

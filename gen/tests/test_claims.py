@@ -369,6 +369,8 @@ class Claims(unittest.TestCase):
                 'sub_1_2_full': [bound('a', -2), bound('y', -2)],
                 'mul_2_2_full': [bound('x*y', -1)],
                 'mul_2_1_full': [bound('x*a', -1)],
+                # its entry form, which guards a first (rule R3, the factors of a fused operation)
+                'mul_2_1_full_entry': [bound('x*a', -1)],
                 'mul_pow2_2_full': [bound('x*c', -1)],
                 # Milestone 2: a ball of two limbs narrowed to one, finite while no member exceeds a
                 # quarter of the threshold (its radius plus the second limb then stays below it).
@@ -642,6 +644,9 @@ class Claims(unittest.TestCase):
                                         'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
         full_ball = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
         constructors = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
+        # and the entry form of mul_2_1_full, which guards a first (rule R3, the factors of a fused
+        # operation)
+        full |= {'mul_2_1_full_entry'}
         # and the finishes of the folds, which say what comes out when the state is not finite
         finishes = {'fold_finish_1', 'fold_finish_2', 'norm_finish_1', 'norm_finish_2'}
         # and the finish of the constructors of a BallVector (finite_or_nan with nonneg)

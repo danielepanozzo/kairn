@@ -271,7 +271,8 @@ fused operations are `prod` or it names a constant-evaluation variant; a kernel 
 `__builtin_is_constant_evaluated()` too, so the full kernels of the additions and the constructors
 are `constexpr`; the products of two limbs, the Ball cores and their full kernels are not, because
 they contain FMAs with an addend that is not zero, and so are not the directed products of one
-limb, `mul_down_1` and `mul_up_1`, which must not be evaluated through `two_prod`'s variant
+limb, `mul_down_1` and `mul_up_1` (and their entry forms), which must not be evaluated through
+`two_prod`'s variant
 ([Building blocks on T](design/milestone2.md#building-blocks-on-t)), nor the steps of the dot
 products, `dot_step_1` (an FMA with the state as addend) and `dot_step_2` (`mul_2_2`).
 

@@ -2967,6 +2967,24 @@ inline const char* mul_down_1_float() noexcept {
     return !same(o0, 0x1.9e38bp-3f) ? "mul_down_1 (float)" : nullptr;
 }
 
+// mul_down_entry (double)
+inline const char* mul_down_entry_double() noexcept {
+    volatile double i0 = 0x1.8fdeade9d0d96p-3;
+    volatile double i1 = -0x1.beec9399117fp-2;
+    double o0;
+    mul_down_entry(i0, i1, o0);
+    return !same(o0, -0x1.5d0bbd68d1575p-4) ? "mul_down_entry (double)" : nullptr;
+}
+
+// mul_down_entry (float)
+inline const char* mul_down_entry_float() noexcept {
+    volatile float i0 = -0x1.684506p+1f;
+    volatile float i1 = -0x1.889ec6p+1f;
+    float o0;
+    mul_down_entry(i0, i1, o0);
+    return !same(o0, 0x1.14449p+3f) ? "mul_down_entry (float)" : nullptr;
+}
+
 // mul_pow2_step_1 (double)
 inline const char* mul_pow2_step_1_double() noexcept {
     volatile double i0 = 0x1.e2c00a038116bp+2;
@@ -3001,6 +3019,24 @@ inline const char* mul_up_1_float() noexcept {
     float o0;
     mul_up_1(i0, i1, o0);
     return !same(o0, 0x1.4d47ep+2f) ? "mul_up_1 (float)" : nullptr;
+}
+
+// mul_up_entry (double)
+inline const char* mul_up_entry_double() noexcept {
+    volatile double i0 = -0x1.8f5d52417bb8fp-2;
+    volatile double i1 = 0x1.162fcb9e96a7ep+0;
+    double o0;
+    mul_up_entry(i0, i1, o0);
+    return !same(o0, -0x1.b1f9e71b9d39cp-2) ? "mul_up_entry (double)" : nullptr;
+}
+
+// mul_up_entry (float)
+inline const char* mul_up_entry_float() noexcept {
+    volatile float i0 = 0x1.5dcbcp+3f;
+    volatile float i1 = 0x1.c37b2cp-1f;
+    float o0;
+    mul_up_entry(i0, i1, o0);
+    return !same(o0, 0x1.347322p+3f) ? "mul_up_entry (float)" : nullptr;
 }
 
 // neg_1 (double)
@@ -3331,6 +3367,26 @@ inline const char* two_prod_dekker_float() noexcept {
     float o1;
     two_prod_dekker(i0, i1, o0, o1);
     return !same(o0, 0x1.7c0fbep+1f) || !same(o1, 0x1.f5a63p-24f) ? "two_prod_dekker (float)" : nullptr;
+}
+
+// two_prod_entry (double)
+inline const char* two_prod_entry_double() noexcept {
+    volatile double i0 = 0x1.974e14ce7e612p+1;
+    volatile double i1 = 0x1.3d502d3f62e25p+2;
+    double o0;
+    double o1;
+    two_prod_entry(i0, i1, o0, o1);
+    return !same(o0, 0x1.f8db4027c6392p+3) || !same(o1, 0x1.0bff6d09df268p-51) ? "two_prod_entry (double)" : nullptr;
+}
+
+// two_prod_entry (float)
+inline const char* two_prod_entry_float() noexcept {
+    volatile float i0 = -0x1.73678ep+0f;
+    volatile float i1 = 0x1.b3f872p+2f;
+    float o0;
+    float o1;
+    two_prod_entry(i0, i1, o0, o1);
+    return !same(o0, -0x1.3c40b4p+3f) || !same(o1, 0x1.4b1p-32f) ? "two_prod_entry (float)" : nullptr;
 }
 
 // two_sum (double)
@@ -6835,6 +6891,28 @@ inline const char* make_2_limbs_nonfinite_float() noexcept {
     return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) ? "make_2_limbs (float, a non-finite operand)" : nullptr;
 }
 
+// mul_2_1_entry (double)
+inline const char* mul_2_1_entry_double() noexcept {
+    volatile double i0 = -0x1.a5e4965039539p+0;
+    volatile double i1 = -0x1.259ba2ec13d11p-56;
+    volatile double i2 = -0x1.ced4380056753p+3;
+    double o0;
+    double o1;
+    mul_2_1_entry(i0, i1, i2, o0, o1);
+    return !same(o0, 0x1.7d60226de8a0ep+4) || !same(o1, 0x1.85b7c0e76d161p-54) ? "mul_2_1_entry (double)" : nullptr;
+}
+
+// mul_2_1_entry (float)
+inline const char* mul_2_1_entry_float() noexcept {
+    volatile float i0 = -0x1.44e908p-3f;
+    volatile float i1 = 0x1.17373ap-28f;
+    volatile float i2 = 0x1.7656c2p+2f;
+    float o0;
+    float o1;
+    mul_2_1_entry(i0, i1, i2, o0, o1);
+    return !same(o0, -0x1.db1a8ep-1f) || !same(o1, 0x1.35b92ep-26f) ? "mul_2_1_entry (float)" : nullptr;
+}
+
 // mul_2_1_full (double)
 inline const char* mul_2_1_full_double() noexcept {
     volatile double i0 = -0x1.04f66b960d8a6p+0;
@@ -6873,6 +6951,46 @@ inline const char* mul_2_1_full_nonfinite_float() noexcept {
     float o1;
     mul_2_1_full(i0, i1, i2, o0, o1);
     return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) ? "mul_2_1_full (float, a non-finite operand)" : nullptr;
+}
+
+// mul_2_1_full_entry (double)
+inline const char* mul_2_1_full_entry_double() noexcept {
+    volatile double i0 = -0x1.36b3c268564e6p-2;
+    volatile double i1 = 0x1.ddcc8d744c643p-59;
+    volatile double i2 = -0x1.a227392db2621p+0;
+    double o0;
+    double o1;
+    mul_2_1_full_entry(i0, i1, i2, o0, o1);
+    return !same(o0, 0x1.fb811e3677338p-2) || !same(o1, 0x1.884ea9c0608ecp-56) ? "mul_2_1_full_entry (double)" : nullptr;
+}
+inline const char* mul_2_1_full_entry_nonfinite_double() noexcept {
+    volatile double i0 = std::numeric_limits<double>::infinity();
+    volatile double i1 = 0.0;
+    volatile double i2 = -0x1.a227392db2621p+0;
+    double o0;
+    double o1;
+    mul_2_1_full_entry(i0, i1, i2, o0, o1);
+    return !same(o0, -std::numeric_limits<double>::infinity()) || !same(o1, 0.0) ? "mul_2_1_full_entry (double, a non-finite operand)" : nullptr;
+}
+
+// mul_2_1_full_entry (float)
+inline const char* mul_2_1_full_entry_float() noexcept {
+    volatile float i0 = -0x1.9cf4fp+3f;
+    volatile float i1 = 0x1.4f5e7cp-25f;
+    volatile float i2 = -0x1.f9476p+1f;
+    float o0;
+    float o1;
+    mul_2_1_full_entry(i0, i1, i2, o0, o1);
+    return !same(o0, 0x1.978928p+5f) || !same(o1, 0x1.10b11cp-24f) ? "mul_2_1_full_entry (float)" : nullptr;
+}
+inline const char* mul_2_1_full_entry_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i2 = -0x1.f9476p+1f;
+    float o0;
+    float o1;
+    mul_2_1_full_entry(i0, i1, i2, o0, o1);
+    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) ? "mul_2_1_full_entry (float, a non-finite operand)" : nullptr;
 }
 
 // mul_2_2_full (double)
@@ -7613,10 +7731,14 @@ inline const char* run() noexcept {
         make_2_nonfinite_float,
         mul_down_1_double,
         mul_down_1_float,
+        mul_down_entry_double,
+        mul_down_entry_float,
         mul_pow2_step_1_double,
         mul_pow2_step_1_float,
         mul_up_1_double,
         mul_up_1_float,
+        mul_up_entry_double,
+        mul_up_entry_float,
         neg_1_double,
         neg_1_float,
         next_down_double,
@@ -7653,6 +7775,8 @@ inline const char* run() noexcept {
         sum_entry_step_1_float,
         two_prod_dekker_double,
         two_prod_dekker_float,
+        two_prod_entry_double,
+        two_prod_entry_float,
         two_sum_double,
         two_sum_float,
         two_sum_entry_double,
@@ -7935,10 +8059,16 @@ inline const char* run() noexcept {
         make_2_limbs_nonfinite_double,
         make_2_limbs_float,
         make_2_limbs_nonfinite_float,
+        mul_2_1_entry_double,
+        mul_2_1_entry_float,
         mul_2_1_full_double,
         mul_2_1_full_nonfinite_double,
         mul_2_1_full_float,
         mul_2_1_full_nonfinite_float,
+        mul_2_1_full_entry_double,
+        mul_2_1_full_entry_nonfinite_double,
+        mul_2_1_full_entry_float,
+        mul_2_1_full_entry_nonfinite_float,
         mul_2_2_full_double,
         mul_2_2_full_nonfinite_double,
         mul_2_2_full_float,

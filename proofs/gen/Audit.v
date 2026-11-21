@@ -186,11 +186,17 @@ Print Assumptions mul_dir_1_correct.
 Definition mul_down_1_audit : mul_down_1_spec := mul_down_1_correct.
 Print Assumptions mul_down_1_correct.
 
+Definition mul_down_entry_audit : mul_down_entry_spec := mul_down_entry_correct.
+Print Assumptions mul_down_entry_correct.
+
 Definition mul_pow2_step_1_audit : mul_pow2_step_1_spec := mul_pow2_step_1_correct.
 Print Assumptions mul_pow2_step_1_correct.
 
 Definition mul_up_1_audit : mul_up_1_spec := mul_up_1_correct.
 Print Assumptions mul_up_1_correct.
+
+Definition mul_up_entry_audit : mul_up_entry_spec := mul_up_entry_correct.
+Print Assumptions mul_up_entry_correct.
 
 Definition neg_1_audit : neg_1_spec := neg_1_correct.
 Print Assumptions neg_1_correct.
@@ -239,6 +245,9 @@ Print Assumptions sum_entry_step_1_correct.
 
 Definition two_prod_dekker_audit : two_prod_dekker_spec := two_prod_dekker_correct.
 Print Assumptions two_prod_dekker_correct.
+
+Definition two_prod_entry_audit : two_prod_entry_spec := two_prod_entry_correct.
+Print Assumptions two_prod_entry_correct.
 
 Definition two_sum_audit : two_sum_spec := two_sum_correct.
 Print Assumptions two_sum_correct.
@@ -362,6 +371,9 @@ Print Assumptions sub_up_2_2_correct.
 
 Definition le_1_2_audit : le_1_2_spec := le_1_2_correct.
 Print Assumptions le_1_2_correct.
+
+Definition mul_2_1_entry_audit : mul_2_1_entry_spec := mul_2_1_entry_correct.
+Print Assumptions mul_2_1_entry_correct.
 
 Definition mul_pow2_step_2_audit : mul_pow2_step_2_spec := mul_pow2_step_2_correct.
 Print Assumptions mul_pow2_step_2_correct.

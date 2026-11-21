@@ -11,11 +11,16 @@
      of a number of the format is that number (Guard.v), so the entry form has the
      statement of the kernel it calls: two_sum_entry that of two_sum, fast_two_sum_entry
      that of fast_two_sum, radd_entry that of radd.
-   The entry forms of the directed sums are in DirectedSum.v. *)
+   The entry forms of the directed sums are in DirectedSum.v.
+   - The entry forms of the products (rule R3, the factors of a fused operation): a compiler
+     that sees a factor of a fused operation to be 1 fuses a product of the program into it,
+     so the public products guard their operands too. two_prod_entry has the statement of
+     two_prod, mul_down_entry and mul_up_entry those of mul_down_1 and mul_up_1, and
+     mul_2_1_entry, which guards its scalar, that of mul_2_1, by the same argument. *)
 From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core.
 From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Guard EFT Directed.
+From Kairn Require Import Format Guard EFT Directed DirectedProd Mul21.
 Open Scope R_scope.
 
 (* next_up: the next number of the format above a. *)
@@ -59,4 +64,38 @@ Proof.
 intros emin prec Hp a b Fa Fb Pa Pb. unfold radd_entry. cbv zeta.
 rewrite 2!guard_real_any by assumption.
 exact (radd_correct emin prec Hp a b Fa Fb Pa Pb).
+Qed.
+
+(* two_prod_entry: two_prod on its guarded operands (rule R3, the factors of a fused
+   operation). *)
+Theorem two_prod_entry_correct : two_prod_entry_spec.
+Proof.
+intros emin prec Hp a b Fa Fb. unfold two_prod_entry. cbv zeta.
+rewrite 2!guard_real_any by assumption.
+generalize (two_prod_correct emin prec Hp a b Fa Fb).
+destruct (two_prod emin prec tie_even a b) as [p e]. trivial.
+Qed.
+
+(* mul_down_entry and mul_up_entry: mul_down_1 and mul_up_1 on their guarded operands. *)
+Theorem mul_down_entry_correct : mul_down_entry_spec.
+Proof.
+intros emin prec Hp a b Fa Fb. unfold mul_down_entry. cbv zeta.
+rewrite 2!guard_real_any by assumption.
+exact (mul_down_1_correct emin prec Hp a b Fa Fb).
+Qed.
+
+Theorem mul_up_entry_correct : mul_up_entry_spec.
+Proof.
+intros emin prec Hp a b Fa Fb. unfold mul_up_entry. cbv zeta.
+rewrite 2!guard_real_any by assumption.
+exact (mul_up_1_correct emin prec Hp a b Fa Fb).
+Qed.
+
+(* mul_2_1_entry: mul_2_1 on its guarded scalar; x is a number of the library. *)
+Theorem mul_2_1_entry_correct : mul_2_1_entry_spec.
+Proof.
+intros emin prec Hp x0 x1 a Nx Fa. unfold mul_2_1_entry. cbv zeta.
+rewrite guard_real_any by assumption.
+generalize (mul_2_1_correct emin prec Hp x0 x1 a Nx Fa).
+destruct (mul_2_1 emin prec tie_even x0 x1 a) as [z0 z1]. trivial.
 Qed.

@@ -1,0 +1,29 @@
+# mul_2_1 for the products of the program by a number of the format, finite::mul(x, a) and the
+# finite products of Packed (rule R3, the factors of a fused operation: architecture.md): a passes
+# through guard, then mul_2_1. mul_2_1 only multiplies a, in the fms of its two_prod and in its
+# fma, which R3 alone does not guard; but a compiler that sees x0 to be 1 rewrites fms(1, a, ch) as
+# a - ch and fuses a product a = y z of the program into it (Apple clang 21 under
+# -ffp-contract=fast, measured). x is a number of the library, its limbs written by kernels. After
+# the guard a is a number of the format. Its claims are those of mul_2_1: the guard is the
+# identity on numbers of the format.
+kernel:        mul_2_1_entry
+input:         x = x0 x1
+input:         a
+output:        z = z0 z1
+value:         x*a
+requires:      normalized x
+ensures:       normalized z
+ensures:       error z R c=2 k=2 t=1
+min_precision: 2
+theorem:       proofs/theories/EntryKernels.v mul_2_1_entry_correct
+ieee_bridge_theorem: proofs/theories/IeeeEntry.v mul_2_1_entry_ieee_bridge
+ieee_spec_theorem: proofs/theories/IeeeEntry.v mul_2_1_entry_ieee_correct
+source:        mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation)
+license:       algorithm: published; proof: MIT
+status:        proved
+ieee:          bridge spec
+ieee_finite:   abs_le(x*a,-1)
+entry:         yes
+
+ga       = guard(a)
+(z0, z1) = mul_2_1(x0, x1, ga)

@@ -122,7 +122,7 @@ nav:
           - A two-limb number minus a limb: reference/sub_2_1_full.md
           - A limb minus a two-limb number: reference/sub_1_2_full.md
           - Product of two two-limb numbers: reference/mul_2_2_full.md
-          - Product of a two-limb number and a limb: reference/mul_2_1_full.md
+          - Product of a two-limb number and a limb: reference/mul_2_1_full_entry.md
           - Fast sum of two two-limb numbers: reference/add_fast_2_2_full.md
           - Negation, two limbs: reference/neg_2.md
           - Absolute value, two limbs: reference/abs_2.md
@@ -133,7 +133,7 @@ nav:
           - A two-limb number minus a limb, finite core: reference/sub_2_1.md
           - A limb minus a two-limb number, finite core: reference/sub_1_2.md
           - Product of two two-limb numbers, finite core: reference/mul_2_2.md
-          - Product of a two-limb number and a limb, finite core: reference/mul_2_1.md
+          - Product of a two-limb number and a limb, finite core: reference/mul_2_1_entry.md
           - Fast sum of two two-limb numbers, finite core: reference/add_fast_2_2.md
           - Scaling a two-limb number by a power of two, finite core: reference/mul_pow2_2.md
       - Comparisons:
@@ -256,7 +256,7 @@ nav:
       - Building blocks on T:
           - TwoSum on values of the program: reference/two_sum_entry.md
           - Fast2Sum on values of the program: reference/fast_two_sum_entry.md
-          - "TwoProd: an exact product as two limbs": reference/two_prod.md
+          - TwoProd on values of the program: reference/two_prod_entry.md
           - The next number of T above a value: reference/next_up.md
           - The next number of T below a value: reference/next_down.md
           - An upper bound of a sum, for radii, on values of the program: reference/radd_entry.md
@@ -265,8 +265,8 @@ nav:
           - A sum of two limbs rounded up, on values of the program: reference/add_up_entry.md
           - A difference of two limbs rounded down, on values of the program: reference/sub_down_entry.md
           - A difference of two limbs rounded up, on values of the program: reference/sub_up_entry.md
-          - A lower bound of a product of two limbs: reference/mul_down_1.md
-          - An upper bound of a product of two limbs: reference/mul_up_1.md
+          - A lower bound of a product of two limbs, on values of the program: reference/mul_down_entry.md
+          - An upper bound of a product of two limbs, on values of the program: reference/mul_up_entry.md
       - Parts of other kernels:
           - Both directed products of two limbs, a zero factor giving zero: reference/mul_dir_1.md
           - A sum of two-limb numbers with a bound of its error: reference/add_ball_2_2.md
@@ -278,6 +278,11 @@ nav:
           - Two bounds of a product of two-limb numbers: reference/mul_dir_2_2.md
           - Two bounds of a product of two bounds of intervals, two limbs: reference/mul_ext_2_2.md
           - "TwoSum: an exact sum as two limbs": reference/two_sum.md
+          - "TwoProd: an exact product as two limbs": reference/two_prod.md
+          - A lower bound of a product of two limbs: reference/mul_down_1.md
+          - An upper bound of a product of two limbs: reference/mul_up_1.md
+          - Product of a two-limb number and a limb: reference/mul_2_1.md
+          - Product of a two-limb number and a limb, with IEEE-like results: reference/mul_2_1_full.md
           - "Fast2Sum: an exact sum of ordered operands": reference/fast_two_sum.md
           - "Dekker's product: TwoProd without an FMA": reference/two_prod_dekker.md
           - Veltkamp's split: reference/split.md

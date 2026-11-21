@@ -315,7 +315,8 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> make_limbs(std::type_identity_t<T> h
 
 // k = 2, arithmetic: the full kernels. The one-limb operand of a sum or a difference is guarded
 // by the kernel (add_2_1 guards it in its first line; sub_2_1 and sub_1_2 pass it to add_2_1);
-// that of a product is only multiplied, which nothing can fuse.
+// that of a product too (mul_2_1_full_entry guards it in mul_2_1_entry): it is a factor of fused
+// operations, and a compiler that sees x0 to be 1 would fuse a product of the program into one.
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> add(Expansion<T, 2> x, Expansion<T, 2> y) noexcept {
     check(x, y);
@@ -383,7 +384,7 @@ template <class T>
 KAIRN_FORCEINLINE Expansion<T, 2> mul(Expansion<T, 2> x, std::type_identity_t<T> a) noexcept {
     check(x);
     Expansion<T, 2> w;
-    gen::mul_2_1_full(x.limb[0], x.limb[1], a, w.limb[0], w.limb[1]);
+    gen::mul_2_1_full_entry(x.limb[0], x.limb[1], a, w.limb[0], w.limb[1]);
     return w;
 }
 template <class T>
@@ -601,7 +602,7 @@ template <class T>
 KAIRN_FORCEINLINE Expansion<T, 2> core_mul(Expansion<T, 2> x, std::type_identity_t<T> a) noexcept {
     check_core(x);
     Expansion<T, 2> z;
-    gen::mul_2_1(x.limb[0], x.limb[1], a, z.limb[0], z.limb[1]);
+    gen::mul_2_1_entry(x.limb[0], x.limb[1], a, z.limb[0], z.limb[1]);
     return z;
 }
 template <class T>
@@ -1019,30 +1020,30 @@ template <class T>
 KAIRN_FORCEINLINE Expansion<T, 2> operator*(const Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
     return detail::mul(x, y);
 }
-/// x * a (kernel mul_2_1_full: the core mul_2_1, JMP17 Algorithm 9, and the fix-up). Not usable in
-/// constant evaluation yet.
+/// x * a (kernel mul_2_1_full_entry: the core mul_2_1_entry, which is JMP17 Algorithm 9 on the
+/// guarded a, and the fix-up). Not usable in constant evaluation yet.
 ///
 /// Core: z normalized, |z - xa| <= 2u^2 |xa| + eta. Finite when |xa| is at most 2^(e_max - 1).
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1_full<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_full_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> operator*(const Expansion<T, 2>& x, std::type_identity_t<T> a) noexcept {
     return detail::mul(x, a);
 }
-/// a * x: the same operation and claim as x * a (kernel mul_2_1_full).
+/// a * x: the same operation and claim as x * a (kernel mul_2_1_full_entry).
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1_full<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_full_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> operator*(std::type_identity_t<T> a, const Expansion<T, 2>& x) noexcept {
     return detail::mul(a, x);
 }
-/// x * y for a one-limb y: x * a with a its limb (kernel mul_2_1_full).
+/// x * y for a one-limb y: x * a with a its limb (kernel mul_2_1_full_entry).
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1_full<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_full_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> operator*(const Expansion<T, 2>& x, const Expansion<T, 1>& y) noexcept {
     return detail::mul(x, y);
 }
-/// x * y for a one-limb x: a * y with a its limb (kernel mul_2_1_full).
+/// x * y for a one-limb x: a * y with a its limb (kernel mul_2_1_full_entry).
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1_full<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_full_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> operator*(const Expansion<T, 1>& x, const Expansion<T, 2>& y) noexcept {
     return detail::mul(x, y);
 }
@@ -1088,15 +1089,15 @@ template <class T>
 KAIRN_FORCEINLINE Expansion<T, 2>& operator*=(Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
     return x = detail::mul(x, y);
 }
-/// x = x * a (kernel mul_2_1_full).
+/// x = x * a (kernel mul_2_1_full_entry).
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1_full<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_full_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2>& operator*=(Expansion<T, 2>& x, std::type_identity_t<T> a) noexcept {
     return x = detail::mul(x, a);
 }
-/// x = x * y for a one-limb y (kernel mul_2_1_full).
+/// x = x * y for a one-limb y (kernel mul_2_1_full_entry).
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1_full<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_full_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2>& operator*=(Expansion<T, 2>& x, const Expansion<T, 1>& y) noexcept {
     return x = detail::mul(x, y);
 }
@@ -1736,27 +1737,27 @@ template <class T>
 KAIRN_FORCEINLINE Expansion<T, 2> mul(const Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
     return detail::core_mul(x, y);
 }
-/// x * a, the core alone (kernel mul_2_1). Not usable in constant evaluation yet.
+/// x * a, the core alone (kernel mul_2_1_entry). Not usable in constant evaluation yet.
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> mul(const Expansion<T, 2>& x, std::type_identity_t<T> a) noexcept {
     return detail::core_mul(x, a);
 }
-/// a * x, the core alone (kernel mul_2_1).
+/// a * x, the core alone (kernel mul_2_1_entry).
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> mul(std::type_identity_t<T> a, const Expansion<T, 2>& x) noexcept {
     return detail::core_mul(x, a);
 }
-/// x * y for a one-limb y, the core alone (kernel mul_2_1).
+/// x * y for a one-limb y, the core alone (kernel mul_2_1_entry).
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> mul(const Expansion<T, 2>& x, const Expansion<T, 1>& y) noexcept {
     return detail::core_mul(x, y.limb[0]);
 }
-/// x * y for a one-limb x, the core alone (kernel mul_2_1).
+/// x * y for a one-limb x, the core alone (kernel mul_2_1_entry).
 template <class T>
-    requires detail::proof_checked<gen::bounds::mul_2_1<T>>
+    requires detail::proof_checked<gen::bounds::mul_2_1_entry<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> mul(const Expansion<T, 1>& x, const Expansion<T, 2>& y) noexcept {
     return detail::core_mul(y, x.limb[0]);
 }

@@ -589,6 +589,13 @@ Definition mul_down_1 (a b : R) : R :=
   let r := if zz then p else d in
   r.
 
+(* mul_down_entry: mul_down_1 on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition mul_down_entry (a b : R) : R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let r := mul_down_1 ga gb in
+  r.
+
 (* mul_pow2_step_1: one rounding to nearest of a product by a power of two. *)
 Definition mul_pow2_step_1 (x c : R) : R :=
   let z := rnd (x * c + 0) in
@@ -609,6 +616,13 @@ Definition mul_up_1 (a b : R) : R :=
   let zb := Req_bool b 0 in
   let zz := orb za zb in
   let r := if zz then p else v in
+  r.
+
+(* mul_up_entry: mul_up_1 on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition mul_up_entry (a b : R) : R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let r := mul_up_1 ga gb in
   r.
 
 (* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). *)
@@ -717,6 +731,13 @@ Definition two_prod_dekker (a b : R) : R * R :=
   let t3 := rnd (t2 + q2) in
   let q3 := rnd (al * bl + 0) in
   let e := rnd (t3 + q3) in
+  (p, e).
+
+(* two_prod_entry: two_prod on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition two_prod_entry (a b : R) : R * R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let '(p, e) := two_prod ga gb in
   (p, e).
 
 (* two_sum: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965). *)
@@ -1061,6 +1082,12 @@ Definition le_1_2 (a y0 y1 : R) : bool :=
   let t := andb e l in
   let m := orb h t in
   m.
+
+(* mul_2_1_entry: mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). *)
+Definition mul_2_1_entry (x0 x1 a : R) : R * R :=
+  let ga := rnd (a + 0) in
+  let '(z0, z1) := mul_2_1 x0 x1 ga in
+  (z0, z1).
 
 (* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. *)
 Definition mul_pow2_step_2 (x0 x1 c : R) : R * R :=

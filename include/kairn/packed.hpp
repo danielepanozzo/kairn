@@ -791,18 +791,18 @@ KAIRN_FORCEINLINE Packed<T, 2> operator*(const Packed<T, 2>& x, const Packed<T, 
     gen::mul_2_2_full(x.limb[0], x.limb[1], y.limb[0], y.limb[1], w.limb[0], w.limb[1]);
     return w;
 }
-/// In each lane, x * a (kernel mul_2_1_full).
+/// In each lane, x * a (kernel mul_2_1_full_entry).
 template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_2_1_full<T>>
+    requires kairn::detail::proof_checked<gen::bounds::mul_2_1_full_entry<T>>
 KAIRN_FORCEINLINE Packed<T, 2> operator*(const Packed<T, 2>& x, const Packed<T, 1>& a) noexcept {
     packed_detail::check(x, a);
     Packed<T, 2> w;
-    gen::mul_2_1_full(x.limb[0], x.limb[1], a.limb[0], w.limb[0], w.limb[1]);
+    gen::mul_2_1_full_entry(x.limb[0], x.limb[1], a.limb[0], w.limb[0], w.limb[1]);
     return w;
 }
-/// a * x: the same operation as x * a (kernel mul_2_1_full).
+/// a * x: the same operation as x * a (kernel mul_2_1_full_entry).
 template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_2_1_full<T>>
+    requires kairn::detail::proof_checked<gen::bounds::mul_2_1_full_entry<T>>
 KAIRN_FORCEINLINE Packed<T, 2> operator*(const Packed<T, 1>& a, const Packed<T, 2>& x) noexcept {
     return x * a;
 }
@@ -836,9 +836,9 @@ template <class T>
 KAIRN_FORCEINLINE Packed<T, 2>& operator*=(Packed<T, 2>& x, const Packed<T, 2>& y) noexcept {
     return x = x * y;
 }
-/// x = x * a (kernel mul_2_1_full).
+/// x = x * a (kernel mul_2_1_full_entry).
 template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_2_1_full<T>>
+    requires kairn::detail::proof_checked<gen::bounds::mul_2_1_full_entry<T>>
 KAIRN_FORCEINLINE Packed<T, 2>& operator*=(Packed<T, 2>& x, const Packed<T, 1>& a) noexcept {
     return x = x * a;
 }
@@ -1146,18 +1146,18 @@ KAIRN_FORCEINLINE Packed<T, 2> mul(const Packed<T, 2>& x, const Packed<T, 2>& y)
     gen::mul_2_2(x.limb[0], x.limb[1], y.limb[0], y.limb[1], z.limb[0], z.limb[1]);
     return z;
 }
-/// In each lane, x * a, the core alone (kernel mul_2_1).
+/// In each lane, x * a, the core alone (kernel mul_2_1_entry).
 template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_2_1<T>>
+    requires kairn::detail::proof_checked<gen::bounds::mul_2_1_entry<T>>
 KAIRN_FORCEINLINE Packed<T, 2> mul(const Packed<T, 2>& x, const Packed<T, 1>& a) noexcept {
     packed_detail::check_core(x);
     Packed<T, 2> z;
-    gen::mul_2_1(x.limb[0], x.limb[1], a.limb[0], z.limb[0], z.limb[1]);
+    gen::mul_2_1_entry(x.limb[0], x.limb[1], a.limb[0], z.limb[0], z.limb[1]);
     return z;
 }
-/// In each lane, a * x, the core alone (kernel mul_2_1).
+/// In each lane, a * x, the core alone (kernel mul_2_1_entry).
 template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_2_1<T>>
+    requires kairn::detail::proof_checked<gen::bounds::mul_2_1_entry<T>>
 KAIRN_FORCEINLINE Packed<T, 2> mul(const Packed<T, 1>& a, const Packed<T, 2>& x) noexcept {
     return finite::mul(x, a);
 }

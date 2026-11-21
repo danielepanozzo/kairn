@@ -143,6 +143,8 @@ EXACT_INTERVAL = "`constexpr`; does not round"
 ROUNDS_CONSTEXPR = "`constexpr`; rounds, and is preceded by the debug build's check of the rounding mode"
 TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`)"
 CORE = "the finite core: no fix-up of infinities and NaN"
+# The products that guard their operands, which are factors of a fused operation (rule R3).
+FACTORS = "; the operands are guarded, as factors of a fused operation ([rule R3](../developer/architecture.md#the-kernel-ir))"
 # The steps of ldexp beyond the powers of two of T are written in the header, not generated
 # (deviation 17 of docs/developer/design/phase0/decisions.md): every page that shows such a form
 # says so in these words.
@@ -267,7 +269,7 @@ KERNELS = {
         form("x * y", E2, E2, result=E2),
         form("x *= y", E2, E2, result=E2),
     ),
-    "mul_2_1_full": page(
+    "mul_2_1_full_entry": page(
         "arithmetic", "Product of a two-limb number and a limb",
         form("x * a", E2, T, result=E2),
         form("a * x", T, E2, result=E2),
@@ -324,13 +326,12 @@ KERNELS = {
         form("finite::mul(x, y)", E2, E2, result=E2, note=CORE),
         traits=["traits<Expansion<T, 2>>::mul"],
     ),
-    "mul_2_1": page(
+    "mul_2_1_entry": page(
         "finite", "Product of a two-limb number and a limb, finite core",
-        form("finite::mul(x, a)", E2, T, result=E2, note=CORE),
+        form("finite::mul(x, a)", E2, T, result=E2, note=CORE + FACTORS),
         form("finite::mul(a, x)", T, E2, result=E2),
         form("finite::mul(x, y)", E2, E1, result=E2, note=ONE),
         form("finite::mul(y, x)", E1, E2, result=E2, note=ONE),
-        traits=["traits<Expansion<T, 2>>::mul_limb"],
     ),
     "add_fast_2_2": page(
         "finite", "Fast sum of two two-limb numbers, finite core",
@@ -559,12 +560,12 @@ KERNELS = {
                   "checks; without it the sum is still $\\mathrm{RN}(a + b)$ and the error term a number of `T`, "
                   "but their sum need not be $a + b$"),
     ),
-    "two_prod": page(
-        "blocks", "TwoProd: an exact product as two limbs",
+    "two_prod_entry": page(
+        "blocks", "TwoProd on values of the program",
         form("two_prod(a, b)", T, T, result="ProductAndError<T>",
              note="`constexpr`, through Dekker's product ([`two_prod_dekker`](two_prod_dekker.md)) in constant "
                   "evaluation: the same values when the product is exact, each its own error term below the "
-                  "threshold; rounds; `r.product` is $p$ and `r.error` is $e$"),
+                  "threshold; rounds; `r.product` is $p$ and `r.error` is $e$" + FACTORS),
     ),
     "next_up": page(
         "blocks", "The next number of T above a value",
@@ -608,17 +609,19 @@ KERNELS = {
         form("sub_up(a, b)", T, T, result=T,
              note=SAME_VALUES + ": computes under rounding to nearest what rounding up gives" + GUARDED),
     ),
-    "mul_down_1": page(
-        "blocks", "A lower bound of a product of two limbs",
+    "mul_down_entry": page(
+        "blocks", "A lower bound of a product of two limbs, on values of the program",
         form("mul_down(a, b)", T, T, result=T,
              note="not `constexpr`: its statement is about the fused product, which constant evaluation does not "
-                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"),
+                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"
+                  + FACTORS),
     ),
-    "mul_up_1": page(
-        "blocks", "An upper bound of a product of two limbs",
+    "mul_up_entry": page(
+        "blocks", "An upper bound of a product of two limbs, on values of the program",
         form("mul_up(a, b)", T, T, result=T,
              note="not `constexpr`: its statement is about the fused product, which constant evaluation does not "
-                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"),
+                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"
+                  + FACTORS),
     ),
     # --- Milestone 2, wave 2: the interval kernels (kairn/interval.hpp) --------------------------
     "interval_make_1": page(
@@ -811,6 +814,13 @@ KERNELS = {
     "mul_ext_2_2": page("building-blocks", "Two bounds of a product of two bounds of intervals, two limbs"),
     # --- Building blocks: no public form -------------------------------------------------------
     "two_sum": page("building-blocks", "TwoSum: an exact sum as two limbs"),
+    "two_prod": page("building-blocks", "TwoProd: an exact product as two limbs"),
+    "mul_down_1": page("building-blocks", "A lower bound of a product of two limbs"),
+    "mul_up_1": page("building-blocks", "An upper bound of a product of two limbs"),
+    # traits<Expansion<T, 2>>::mul_limb is the bound of mul_2_1 (traits.hpp), which mul_2_1_entry claims too.
+    "mul_2_1": page("building-blocks", "Product of a two-limb number and a limb",
+                    traits=["traits<Expansion<T, 2>>::mul_limb"]),
+    "mul_2_1_full": page("building-blocks", "Product of a two-limb number and a limb, with IEEE-like results"),
     "fast_two_sum": page("building-blocks", "Fast2Sum: an exact sum of ordered operands"),
     "two_prod_dekker": page("building-blocks", "Dekker's product: TwoProd without an FMA"),
     "split": page("building-blocks", "Veltkamp's split"),

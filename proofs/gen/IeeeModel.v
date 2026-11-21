@@ -1212,6 +1212,13 @@ Definition mul_down_1 (a b : float) : float :=
   let r := if zz then p else d in
   r.
 
+(* mul_down_entry: mul_down_1 on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition mul_down_entry (a b : float) : float :=
+  let ga := guard a in
+  let gb := guard b in
+  let r := mul_down_1 ga gb in
+  r.
+
 (* mul_pow2_step_1: one rounding to nearest of a product by a power of two. *)
 Definition mul_pow2_step_1 (x c : float) : float :=
   let z := prod x c in
@@ -1232,6 +1239,13 @@ Definition mul_up_1 (a b : float) : float :=
   let zb := eq b pzero in
   let zz := orb za zb in
   let r := if zz then p else v in
+  r.
+
+(* mul_up_entry: mul_up_1 on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition mul_up_entry (a b : float) : float :=
+  let ga := guard a in
+  let gb := guard b in
+  let r := mul_up_1 ga gb in
   r.
 
 (* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). *)
@@ -1347,6 +1361,13 @@ Definition two_prod_dekker (a b : float) : float * float :=
   let t3 := add t2 q2 in
   let q3 := prod al bl in
   let e := add t3 q3 in
+  (p, e).
+
+(* two_prod_entry: two_prod on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition two_prod_entry (a b : float) : float * float :=
+  let ga := guard a in
+  let gb := guard b in
+  let '(p, e) := two_prod ga gb in
   (p, e).
 
 (* two_sum: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965). *)
@@ -2471,9 +2492,28 @@ Definition make_2_limbs (h l : float) : float * float :=
   let x1 := guard l in
   (x0, x1).
 
+(* mul_2_1_entry: mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). *)
+Definition mul_2_1_entry (x0 x1 a : float) : float * float :=
+  let ga := guard a in
+  let '(z0, z1) := mul_2_1 x0 x1 ga in
+  (z0, z1).
+
 (* mul_2_1_full: mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). *)
 Definition mul_2_1_full (x0 x1 a : float) : float * float :=
   let '(z0, z1) := mul_2_1 x0 x1 a in
+  let t := prod x0 a in
+  let az := abs z0 in
+  let f := lt az pinf in
+  let r0 := times_inf t in
+  let n := eq r0 r0 in
+  let r1 := if n then pzero else r0 in
+  let w0 := if f then z0 else r0 in
+  let w1 := if f then z1 else r1 in
+  (w0, w1).
+
+(* mul_2_1_full_entry: mul_2_1_entry, then the fix-up of IEEE-like results (rule R3, the factors of a fused operation). *)
+Definition mul_2_1_full_entry (x0 x1 a : float) : float * float :=
+  let '(z0, z1) := mul_2_1_entry x0 x1 a in
   let t := prod x0 a in
   let az := abs z0 in
   let f := lt az pinf in
@@ -2727,6 +2767,14 @@ Definition sub_entry_step_1_prog : list instr :=
 Definition sum_entry_step_1_prog : list instr :=
   [ Iguard 1  (*  2 g *)
   ; Iadd 0 2  (*  3 t *)
+  ].
+
+(* inputs: 0 a, 1 b *)
+Definition two_prod_entry_prog : list instr :=
+  [ Iguard 0    (*  2 ga *)
+  ; Iguard 1    (*  3 gb *)
+  ; Iprod 2 3   (*  4 p *)
+  ; Ifms 2 3 4  (*  5 e *)
   ].
 
 (* inputs: 0 a, 1 b *)
@@ -3039,6 +3087,17 @@ Definition mul_pow2_2_prog : list instr :=
   ; Iadd 3 4   (*  5 z0 *)
   ; Isub 5 3   (*  6 z0_z *)
   ; Isub 4 6   (*  7 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition mul_2_1_entry_prog : list instr :=
+  [ Iguard 2    (*  3 ga *)
+  ; Iprod 0 3   (*  4 z0_ch *)
+  ; Ifms 0 3 4  (*  5 z0_cl1 *)
+  ; Ifma 1 3 5  (*  6 z0_cl3 *)
+  ; Iadd 4 6    (*  7 z0 *)
+  ; Isub 7 4    (*  8 z0_z *)
+  ; Isub 6 8    (*  9 z1 *)
   ].
 
 (* inputs: 0 x0, 1 x1, 2 c *)

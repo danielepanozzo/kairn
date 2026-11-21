@@ -1,0 +1,30 @@
+# two_prod for the public building block kairn::two_prod (milestone2.md, "Building blocks on T"):
+# both operands pass through guard, then two_prod (rule R3, the factors of a fused operation:
+# architecture.md). two_prod only multiplies a and b, which R3 alone does not guard; but a compiler
+# that sees one of them to be 1 rewrites fms(a, 1, p) as a - p and fuses a product a = x y of the
+# program into it, so that the error term is that of the exact product (Apple clang 21 under
+# -ffp-contract=fast, measured). After the guards each is a number of the format. Its claims are
+# those of two_prod: the guard is the identity on numbers of the format. Not claimed: the sign of a
+# zero error term, which the guard of a negative zero can change. In constant evaluation the variant
+# of two_prod, Dekker's product, on the operands as they are: constant evaluation fuses nothing.
+kernel:        two_prod_entry
+input:         a
+input:         b
+output:        r = p e
+value:         a*b
+ensures:       leading_rounded r
+ensures:       error r R c=0 k=2 t=1/2
+ensures:       error r R c=0 k=2 t=0 when=product_large
+min_precision: 2
+theorem:       proofs/theories/EntryKernels.v two_prod_entry_correct
+ieee_spec_theorem: proofs/theories/IeeeEntry.v two_prod_entry_ieee_correct
+source:        two_prod on its guarded operands (rule R3, the factors of a fused operation)
+license:       algorithm: published; proof: MIT
+status:        proved
+ieee:          spec
+ce_variant:    two_prod_dekker
+entry:         yes
+
+ga     = guard(a)
+gb     = guard(b)
+(p, e) = two_prod(ga, gb)

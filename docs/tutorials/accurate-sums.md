@@ -93,7 +93,7 @@ uses `float` data: its output is the same on every compiler. With two limbs:
 ```
 
 The error is $5.1 \times 10^{-14}$. `Number(a[i]) * double(b[i])` multiplies a two-limb number by a
-`double` ([`mul_2_1_full`](../reference/mul_2_1_full.md)), which keeps the rounding error of the product as
+`double` ([`mul_2_1_full_entry`](../reference/mul_2_1_full_entry.md)), which keeps the rounding error of the product as
 well; with `double` data, whose products are not exact, that is what makes the dot product
 accurate. Writing `e += x * y` with two `double` factors instead would round each product to one
 `double` before the two-limb addition sees it (and here `a[i] * b[i]`, a product of two `float`s,

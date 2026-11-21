@@ -234,8 +234,14 @@ Print Assumptions make_2_correct.
 Definition mul_down_1_ieee_audit : mul_down_1_ieee_spec := mul_down_1_ieee_correct.
 Print Assumptions mul_down_1_ieee_correct.
 
+Definition mul_down_entry_ieee_audit : mul_down_entry_ieee_spec := mul_down_entry_ieee_correct.
+Print Assumptions mul_down_entry_ieee_correct.
+
 Definition mul_up_1_ieee_audit : mul_up_1_ieee_spec := mul_up_1_ieee_correct.
 Print Assumptions mul_up_1_ieee_correct.
+
+Definition mul_up_entry_ieee_audit : mul_up_entry_ieee_spec := mul_up_entry_ieee_correct.
+Print Assumptions mul_up_entry_ieee_correct.
 
 Definition next_down_ieee_audit : next_down_ieee_spec := next_down_ieee_correct.
 Print Assumptions next_down_ieee_correct.
@@ -447,6 +453,9 @@ Print Assumptions make_2_limbs_correct.
 Definition mul_2_1_full_audit : mul_2_1_full_spec := mul_2_1_full_correct.
 Print Assumptions mul_2_1_full_correct.
 
+Definition mul_2_1_full_entry_audit : mul_2_1_full_entry_spec := mul_2_1_full_entry_correct.
+Print Assumptions mul_2_1_full_entry_correct.
+
 Definition mul_2_2_full_audit : mul_2_2_full_spec := mul_2_2_full_correct.
 Print Assumptions mul_2_2_full_correct.
 
@@ -530,6 +539,9 @@ Print Assumptions sub_entry_step_1_ieee_bridge.
 Definition sum_entry_step_1_ieee_bridge_audit : sum_entry_step_1_ieee_bridge_spec := sum_entry_step_1_ieee_bridge.
 Print Assumptions sum_entry_step_1_ieee_bridge.
 
+Definition two_prod_entry_ieee_audit : two_prod_entry_ieee_spec := two_prod_entry_ieee_correct.
+Print Assumptions two_prod_entry_ieee_correct.
+
 Definition acc_add_2_ieee_audit : acc_add_2_ieee_spec := acc_add_2_ieee_correct.
 Print Assumptions acc_add_2_ieee_correct.
 
@@ -577,6 +589,12 @@ Print Assumptions axpy_step_2_1_ieee_correct.
 
 Definition bv_mul_pow2_step_2_ieee_audit : bv_mul_pow2_step_2_ieee_spec := bv_mul_pow2_step_2_ieee_correct.
 Print Assumptions bv_mul_pow2_step_2_ieee_correct.
+
+Definition mul_2_1_entry_ieee_bridge_audit : mul_2_1_entry_ieee_bridge_spec := mul_2_1_entry_ieee_bridge.
+Print Assumptions mul_2_1_entry_ieee_bridge.
+
+Definition mul_2_1_entry_ieee_audit : mul_2_1_entry_ieee_spec := mul_2_1_entry_ieee_correct.
+Print Assumptions mul_2_1_entry_ieee_correct.
 
 Definition mul_pow2_step_2_ieee_bridge_audit : mul_pow2_step_2_ieee_bridge_spec := mul_pow2_step_2_ieee_bridge.
 Print Assumptions mul_pow2_step_2_ieee_bridge.

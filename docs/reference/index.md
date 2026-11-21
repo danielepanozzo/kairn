@@ -6,9 +6,9 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 225 kernels are proved.
+All 230 kernels are proved.
 
-33 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
+35 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
 No public operation calls an UNVERIFIED kernel, so none needs the marker `kairn::unverified`.
 
@@ -59,7 +59,7 @@ Sums, differences, products, negation and absolute value. The operators of two l
 | `x - a`, `x -= a`, `x - y`, `x -= y` | `Expansion<T, 2>`, `T` | canonical; the result of [`sub_2_1`](sub_2_1.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`sub_2_1_full`](sub_2_1_full.md) |
 | `a - y`, `x - y` | `T`, `Expansion<T, 2>` | canonical; the result of [`sub_1_2`](sub_1_2.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`sub_1_2_full`](sub_1_2_full.md) |
 | `x * y`, `x *= y` | `Expansion<T, 2>`, `Expansion<T, 2>` | canonical; the result of [`mul_2_2`](mul_2_2.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`mul_2_2_full`](mul_2_2_full.md) |
-| `x * a`, `a * x`, `x *= a`, `x * y`, `y * x`, `x *= y` | `Expansion<T, 2>`, `T` | canonical; the result of [`mul_2_1`](mul_2_1.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`mul_2_1_full`](mul_2_1_full.md) |
+| `x * a`, `a * x`, `x *= a`, `x * y`, `y * x`, `x *= y` | `Expansion<T, 2>`, `T` | canonical; the result of [`mul_2_1_entry`](mul_2_1_entry.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`mul_2_1_full_entry`](mul_2_1_full_entry.md) |
 | `add_fast(x, y)` | `Expansion<T, 2>`, `Expansion<T, 2>` | canonical; the result of [`add_fast_2_2`](add_fast_2_2.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`add_fast_2_2_full`](add_fast_2_2_full.md) |
 | `-x` | `Expansion<T, 2>` | $z = -x$ exactly, normalized | [`neg_2`](neg_2.md) |
 | `abs(x)` | `Expansion<T, 2>` | $z = \lvert x\rvert$ exactly, normalized | [`abs_2`](abs_2.md) |
@@ -80,7 +80,7 @@ Sums, differences, products, negation and absolute value. The operators of two l
 | `finite::sub(x, a)`, `finite::sub(x, y)` | `Expansion<T, 2>`, `T` | $\lvert z - (x - a)\rvert \le 2\,u^2\,\lvert x - a\rvert$, normalized | [`sub_2_1`](sub_2_1.md) |
 | `finite::sub(a, y)`, `finite::sub(x, y)` | `T`, `Expansion<T, 2>` | $\lvert z - (a - y)\rvert \le 2\,u^2\,\lvert a - y\rvert$, normalized | [`sub_1_2`](sub_1_2.md) |
 | `finite::mul(x, y)` | `Expansion<T, 2>`, `Expansion<T, 2>` | $\lvert z - x y\rvert \le 4\,u^2\,\lvert x y\rvert + \tfrac{3}{2}\,\eta$, normalized | [`mul_2_2`](mul_2_2.md) |
-| `finite::mul(x, a)`, `finite::mul(a, x)`, `finite::mul(x, y)`, `finite::mul(y, x)` | `Expansion<T, 2>`, `T` | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`mul_2_1`](mul_2_1.md) |
+| `finite::mul(x, a)`, `finite::mul(a, x)`, `finite::mul(x, y)`, `finite::mul(y, x)` | `Expansion<T, 2>`, `T` | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`mul_2_1_entry`](mul_2_1_entry.md) |
 | `finite::add_fast(x, y)` | `Expansion<T, 2>`, `Expansion<T, 2>` | $\lvert z - (x + y)\rvert \le 3\,u^2\,(\lvert x\rvert + \lvert y\rvert)$, normalized | [`add_fast_2_2`](add_fast_2_2.md) |
 | `finite::ldexp(x, n)` | `Expansion<T, 2>`, `int` | $\lvert z - x c\rvert \le \eta$, normalized | [`mul_pow2_2`](mul_pow2_2.md) |
 
@@ -255,7 +255,7 @@ Functions of `float` and `double` (`kairn/blocks.hpp`) for a program's own tests
 |---|---|---|---|
 | `two_sum(a, b)` | `T`, `T` | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum_entry`](two_sum_entry.md) |
 | `fast_two_sum(a, b)` | `T`, `T` | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum_entry`](fast_two_sum_entry.md) |
-| `two_prod(a, b)` | `T`, `T` | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |
+| `two_prod(a, b)` | `T`, `T` | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod_entry`](two_prod_entry.md) |
 | `next_up(a)` | `T` | $r = \mathrm{succ}(a)$ | [`next_up`](next_up.md) |
 | `next_down(a)` | `T` | $r = \mathrm{pred}(a)$ | [`next_down`](next_down.md) |
 | `radd(a, b)` | `T`, `T` | $r \ge a + b$, at most $\tfrac{3}{2}$ gaps above | [`radd_entry`](radd_entry.md) |
@@ -264,8 +264,8 @@ Functions of `float` and `double` (`kairn/blocks.hpp`) for a program's own tests
 | `add_up(a, b)` | `T`, `T` | $r = \mathrm{RU}(a + b)$ | [`add_up_entry`](add_up_entry.md) |
 | `sub_down(a, b)` | `T`, `T` | $r = \mathrm{RD}(a - b)$ | [`sub_down_entry`](sub_down_entry.md) |
 | `sub_up(a, b)` | `T`, `T` | $r = \mathrm{RU}(a - b)$ | [`sub_up_entry`](sub_up_entry.md) |
-| `mul_down(a, b)` | `T`, `T` | $r \le a b$, at most 1 step below $\mathrm{RD}(a b)$ | [`mul_down_1`](mul_down_1.md) |
-| `mul_up(a, b)` | `T`, `T` | $r \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_up_1`](mul_up_1.md) |
+| `mul_down(a, b)` | `T`, `T` | $r \le a b$, at most 1 step below $\mathrm{RD}(a b)$ | [`mul_down_entry`](mul_down_entry.md) |
+| `mul_up(a, b)` | `T`, `T` | $r \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_up_entry`](mul_up_entry.md) |
 
 ## Parts of other kernels
 
@@ -283,6 +283,11 @@ Kernels that other kernels call, and that no public operation computes on its ow
 | none (internal) | - | $l \le x y$, within $A\lvert x y\rvert + B$; $h \ge x y$, within $A\lvert x y\rvert + B$, normalized | [`mul_dir_2_2`](mul_dir_2_2.md) |
 | none (internal) | - | $l$ canonical, normalized when finite; $h$ canonical, normalized when finite; a lower bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand; a upper bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand | [`mul_ext_2_2`](mul_ext_2_2.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum`](two_sum.md) |
+| none (internal) | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |
+| none (internal) | - | $r \le a b$, at most 1 step below $\mathrm{RD}(a b)$ | [`mul_down_1`](mul_down_1.md) |
+| none (internal) | - | $r \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_up_1`](mul_up_1.md) |
+| none (internal) | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`mul_2_1`](mul_2_1.md) |
+| none (internal) | - | canonical; the result of [`mul_2_1`](mul_2_1.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`mul_2_1_full`](mul_2_1_full.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum`](fast_two_sum.md) |
 | none (internal) | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{13}{8}\,\eta$ | [`two_prod_dekker`](two_prod_dekker.md) |
 | none (internal) | - | $a_h + a_l = a$ exactly | [`split`](split.md) |

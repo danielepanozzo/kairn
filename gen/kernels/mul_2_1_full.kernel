@@ -1,5 +1,7 @@
-# x * a with IEEE-like results: mul_2_1, then the fix-up. a is only multiplied, so it
-# needs no guard.
+# x * a with IEEE-like results: mul_2_1, then the fix-up. The public products call
+# mul_2_1_full_entry, the same with the core mul_2_1_entry, which guards a first (rule R3, the
+# factors of a fused operation: a compiler that sees x0 to be 1 fuses a product of the program
+# into the core's fms).
 # The fix-up is that of milestone1.md, "IEEE-like results", with r0 = times_inf(t) (exact, so not
 # a fused operation) for prod(t, const inf): |z0| is named az here, since a is the operand.
 kernel:        mul_2_1_full
@@ -16,7 +18,6 @@ status:        proved
 domain:        extended
 ieee_status:   proved
 ieee_theorem:  proofs/theories/IeeeFull.v mul_2_1_full_correct
-entry:         yes
 cone_exempt:   the fix-up selects, after an explicit test that z0 is finite (f), between the core's result and the canonical form of t; F1 to F5 of milestone1.md, "IEEE-like results", state what comes out
 
 (z0, z1) = mul_2_1(x0, x1, a)

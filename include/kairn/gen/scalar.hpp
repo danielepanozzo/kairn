@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_up_1, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_full, mul_2_2_full, scale_step_2.
+// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_down_entry, mul_up_1, mul_up_entry, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_entry, mul_2_1_full, mul_2_1_full_entry, mul_2_2_full, scale_step_2.
 #pragma once
 
 #include <cstddef>
@@ -5192,6 +5192,51 @@ KAIRN_GEN_FORCEINLINE void mul_down_1(float a, float b, float& r_out) noexcept {
     r_out = r;
 }
 
+// mul_down_entry(a, b) -> r
+// mul_down_1 on its guarded operands (rule R3, the factors of a fused operation). Status: proved (real model), proved (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_down_entry(double a, double b, double& r_out) noexcept {
+    const double ga = a + 0.0;
+    const double gb = b + 0.0;
+    // (r) = mul_down_1(ga, gb)
+    // (r_p, r_e) = two_prod(ga, gb)
+    const double r_p = fma_rn(ga, gb, 0.0);
+    const double r_e = fma_rn(ga, gb, -r_p);
+    const double r_ap = abs_bits(r_p);
+    const bool r_bd = 0x1p-969 > r_ap;
+    const bool r_ez = r_e == 0.0;
+    const bool r_un = r_bd & r_ez;
+    const bool r_n = 0.0 > r_e;
+    const bool r_sd = r_n | r_un;
+    const double r_pp = next_down_bits(r_p);
+    const double r_d = r_sd ? r_pp : r_p;
+    const bool r_za = ga == 0.0;
+    const bool r_zb = gb == 0.0;
+    const bool r_zz = r_za | r_zb;
+    const double r = r_zz ? r_p : r_d;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void mul_down_entry(float a, float b, float& r_out) noexcept {
+    const float ga = a + 0.0f;
+    const float gb = b + 0.0f;
+    // (r) = mul_down_1(ga, gb)
+    // (r_p, r_e) = two_prod(ga, gb)
+    const float r_p = fma_rn(ga, gb, 0.0f);
+    const float r_e = fma_rn(ga, gb, -r_p);
+    const float r_ap = abs_bits(r_p);
+    const bool r_bd = 0x1p-102f > r_ap;
+    const bool r_ez = r_e == 0.0f;
+    const bool r_un = r_bd & r_ez;
+    const bool r_n = 0.0f > r_e;
+    const bool r_sd = r_n | r_un;
+    const float r_pp = next_down_bits(r_p);
+    const float r_d = r_sd ? r_pp : r_p;
+    const bool r_za = ga == 0.0f;
+    const bool r_zb = gb == 0.0f;
+    const bool r_zz = r_za | r_zb;
+    const float r = r_zz ? r_p : r_d;
+    r_out = r;
+}
+
 // mul_pow2_step_1(x, c) -> z
 // one rounding to nearest of a product by a power of two. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_step_1(double x, double c, double& z_out) noexcept {
@@ -5239,6 +5284,51 @@ KAIRN_GEN_FORCEINLINE void mul_up_1(float a, float b, float& r_out) noexcept {
     const bool zb = b == 0.0f;
     const bool zz = za | zb;
     const float r = zz ? p : v;
+    r_out = r;
+}
+
+// mul_up_entry(a, b) -> r
+// mul_up_1 on its guarded operands (rule R3, the factors of a fused operation). Status: proved (real model), proved (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_up_entry(double a, double b, double& r_out) noexcept {
+    const double ga = a + 0.0;
+    const double gb = b + 0.0;
+    // (r) = mul_up_1(ga, gb)
+    // (r_p, r_e) = two_prod(ga, gb)
+    const double r_p = fma_rn(ga, gb, 0.0);
+    const double r_e = fma_rn(ga, gb, -r_p);
+    const double r_ap = abs_bits(r_p);
+    const bool r_bd = 0x1p-969 > r_ap;
+    const bool r_ez = r_e == 0.0;
+    const bool r_un = r_bd & r_ez;
+    const bool r_n = r_e > 0.0;
+    const bool r_su = r_n | r_un;
+    const double r_sp = next_up_bits(r_p);
+    const double r_v = r_su ? r_sp : r_p;
+    const bool r_za = ga == 0.0;
+    const bool r_zb = gb == 0.0;
+    const bool r_zz = r_za | r_zb;
+    const double r = r_zz ? r_p : r_v;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void mul_up_entry(float a, float b, float& r_out) noexcept {
+    const float ga = a + 0.0f;
+    const float gb = b + 0.0f;
+    // (r) = mul_up_1(ga, gb)
+    // (r_p, r_e) = two_prod(ga, gb)
+    const float r_p = fma_rn(ga, gb, 0.0f);
+    const float r_e = fma_rn(ga, gb, -r_p);
+    const float r_ap = abs_bits(r_p);
+    const bool r_bd = 0x1p-102f > r_ap;
+    const bool r_ez = r_e == 0.0f;
+    const bool r_un = r_bd & r_ez;
+    const bool r_n = r_e > 0.0f;
+    const bool r_su = r_n | r_un;
+    const float r_sp = next_up_bits(r_p);
+    const float r_v = r_su ? r_sp : r_p;
+    const bool r_za = ga == 0.0f;
+    const bool r_zb = gb == 0.0f;
+    const bool r_zz = r_za | r_zb;
+    const float r = r_zz ? r_p : r_v;
     r_out = r;
 }
 
@@ -5591,6 +5681,77 @@ KAIRN_GEN_FORCEINLINE constexpr void two_prod_dekker(float a, float b, float& p_
     const float t3 = t2 + q2;
     const float q3 = __builtin_is_constant_evaluated() ? al * bl : fma_rn(al, bl, 0.0f);
     const float e = t3 + q3;
+    p_out = p;
+    e_out = e;
+}
+
+// two_prod_entry(a, b) -> r = (p, e)
+// two_prod on its guarded operands (rule R3, the factors of a fused operation). Status: proved; constexpr through two_prod_dekker.
+KAIRN_GEN_FORCEINLINE constexpr void two_prod_entry(double a, double b, double& p_out, double& e_out) noexcept {
+    if (__builtin_is_constant_evaluated()) {
+        // two_prod_dekker, with each prod a plain product.
+        // (ah, al) = split(a)
+        const double ah_g = 0x1.0000002p+27 * a;
+        const double ah_d = a - ah_g;
+        const double ah = ah_g + ah_d;
+        const double al = a - ah;
+        // (bh, bl) = split(b)
+        const double bh_g = 0x1.0000002p+27 * b;
+        const double bh_d = b - bh_g;
+        const double bh = bh_g + bh_d;
+        const double bl = b - bh;
+        const double p = a * b;
+        const double q0 = ah * bh;
+        const double t1 = q0 - p;
+        const double q1 = ah * bl;
+        const double t2 = t1 + q1;
+        const double q2 = al * bh;
+        const double t3 = t2 + q2;
+        const double q3 = al * bl;
+        const double e = t3 + q3;
+        p_out = p;
+        e_out = e;
+        return;
+    }
+    const double ga = a + 0.0;
+    const double gb = b + 0.0;
+    // (p, e) = two_prod(ga, gb)
+    const double p = fma_rn(ga, gb, 0.0);
+    const double e = fma_rn(ga, gb, -p);
+    p_out = p;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE constexpr void two_prod_entry(float a, float b, float& p_out, float& e_out) noexcept {
+    if (__builtin_is_constant_evaluated()) {
+        // two_prod_dekker, with each prod a plain product.
+        // (ah, al) = split(a)
+        const float ah_g = 0x1.001p+12f * a;
+        const float ah_d = a - ah_g;
+        const float ah = ah_g + ah_d;
+        const float al = a - ah;
+        // (bh, bl) = split(b)
+        const float bh_g = 0x1.001p+12f * b;
+        const float bh_d = b - bh_g;
+        const float bh = bh_g + bh_d;
+        const float bl = b - bh;
+        const float p = a * b;
+        const float q0 = ah * bh;
+        const float t1 = q0 - p;
+        const float q1 = ah * bl;
+        const float t2 = t1 + q1;
+        const float q2 = al * bh;
+        const float t3 = t2 + q2;
+        const float q3 = al * bl;
+        const float e = t3 + q3;
+        p_out = p;
+        e_out = e;
+        return;
+    }
+    const float ga = a + 0.0f;
+    const float gb = b + 0.0f;
+    // (p, e) = two_prod(ga, gb)
+    const float p = fma_rn(ga, gb, 0.0f);
+    const float e = fma_rn(ga, gb, -p);
     p_out = p;
     e_out = e;
 }
@@ -16230,6 +16391,37 @@ KAIRN_GEN_FORCEINLINE constexpr void make_2_limbs(float h, float l, float& x0_ou
     x1_out = x1;
 }
 
+// mul_2_1_entry(x = (x0, x1), a) -> z = (z0, z1)
+// mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_2_1_entry(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    const double ga = a + 0.0;
+    // (z0, z1) = mul_2_1(x0, x1, ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, ga)
+    const double z0_ch = fma_rn(x0, ga, 0.0);
+    const double z0_cl1 = fma_rn(x0, ga, -z0_ch);
+    const double z0_cl3 = fma_rn(x1, ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const double z0 = z0_ch + z0_cl3;
+    const double z0_z = z0 - z0_ch;
+    const double z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void mul_2_1_entry(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    const float ga = a + 0.0f;
+    // (z0, z1) = mul_2_1(x0, x1, ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, ga)
+    const float z0_ch = fma_rn(x0, ga, 0.0f);
+    const float z0_cl1 = fma_rn(x0, ga, -z0_ch);
+    const float z0_cl3 = fma_rn(x1, ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float z0 = z0_ch + z0_cl3;
+    const float z0_z = z0 - z0_ch;
+    const float z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // mul_2_1_full(x = (x0, x1), a) -> w = (w0, w1)
 // mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
@@ -16304,6 +16496,99 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(float x0, float x1, float a, float& w0_o
     } else {
 #if KAIRN_GEN_FIXUP_CALL
         const fixup::result<float, 2> fixed_ = fixup::mul_2_1_full(x0, a, z0, z1, f);
+        w0_out = fixed_.limb[0];
+        w1_out = fixed_.limb[1];
+#else
+        const float t = fma_rn(x0, a, 0.0f);
+        const float r0 = t * std::numeric_limits<float>::infinity();
+        const bool n = r0 == r0;
+        const float r1 = n ? 0.0f : r0;
+        const float w0 = f ? z0 : r0;
+        const float w1 = f ? z1 : r1;
+        w0_out = w0;
+        w1_out = w1;
+#endif
+    }
+}
+
+// mul_2_1_full_entry(x = (x0, x1), a) -> w = (w0, w1)
+// mul_2_1_entry, then the fix-up of IEEE-like results (rule R3, the factors of a fused operation). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD result<double, 2> mul_2_1_full_entry(double x0, double a, double z0, double z1, bool f) noexcept {
+    const double t = fma_rn(x0, a, 0.0);
+    const double r0 = t * std::numeric_limits<double>::infinity();
+    const bool n = r0 == r0;
+    const double r1 = n ? 0.0 : r0;
+    const double w0 = f ? z0 : r0;
+    const double w1 = f ? z1 : r1;
+    return {{w0, w1}};
+}
+KAIRN_GEN_COLD result<float, 2> mul_2_1_full_entry(float x0, float a, float z0, float z1, bool f) noexcept {
+    const float t = fma_rn(x0, a, 0.0f);
+    const float r0 = t * std::numeric_limits<float>::infinity();
+    const bool n = r0 == r0;
+    const float r1 = n ? 0.0f : r0;
+    const float w0 = f ? z0 : r0;
+    const float w1 = f ? z1 : r1;
+    return {{w0, w1}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE void mul_2_1_full_entry(double x0, double x1, double a, double& w0_out, double& w1_out) noexcept {
+    // (z0, z1) = mul_2_1_entry(x0, x1, a)
+    const double z0_ga = a + 0.0;
+    // (z0, z1) = mul_2_1(x0, x1, z0_ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, z0_ga)
+    const double z0_ch = fma_rn(x0, z0_ga, 0.0);
+    const double z0_cl1 = fma_rn(x0, z0_ga, -z0_ch);
+    const double z0_cl3 = fma_rn(x1, z0_ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const double z0 = z0_ch + z0_cl3;
+    const double z0_z = z0 - z0_ch;
+    const double z1 = z0_cl3 - z0_z;
+    const double az = abs_bits(z0);
+    const bool f = std::numeric_limits<double>::infinity() > az;
+    if (f) [[likely]] {
+        w0_out = z0;
+        w1_out = z1;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 2> fixed_ = fixup::mul_2_1_full_entry(x0, a, z0, z1, f);
+        w0_out = fixed_.limb[0];
+        w1_out = fixed_.limb[1];
+#else
+        const double t = fma_rn(x0, a, 0.0);
+        const double r0 = t * std::numeric_limits<double>::infinity();
+        const bool n = r0 == r0;
+        const double r1 = n ? 0.0 : r0;
+        const double w0 = f ? z0 : r0;
+        const double w1 = f ? z1 : r1;
+        w0_out = w0;
+        w1_out = w1;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE void mul_2_1_full_entry(float x0, float x1, float a, float& w0_out, float& w1_out) noexcept {
+    // (z0, z1) = mul_2_1_entry(x0, x1, a)
+    const float z0_ga = a + 0.0f;
+    // (z0, z1) = mul_2_1(x0, x1, z0_ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, z0_ga)
+    const float z0_ch = fma_rn(x0, z0_ga, 0.0f);
+    const float z0_cl1 = fma_rn(x0, z0_ga, -z0_ch);
+    const float z0_cl3 = fma_rn(x1, z0_ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float z0 = z0_ch + z0_cl3;
+    const float z0_z = z0 - z0_ch;
+    const float z1 = z0_cl3 - z0_z;
+    const float az = abs_bits(z0);
+    const bool f = std::numeric_limits<float>::infinity() > az;
+    if (f) [[likely]] {
+        w0_out = z0;
+        w1_out = z1;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 2> fixed_ = fixup::mul_2_1_full_entry(x0, a, z0, z1, f);
         w0_out = fixed_.limb[0];
         w1_out = fixed_.limb[1];
 #else

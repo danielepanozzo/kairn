@@ -715,8 +715,7 @@ _LOOP = 'its step is to be the guarded form'
 FACTOR_PENDING = {
     'acc_mul_1': 'replaced in the headers by acc_mul_entry_1; ' + _OWN,
     'dot_step_1': "replaced in dot by dot_entry_step_1; conv_1's coefficients still run it: " + _TWIN,
-    'two_prod': _TWIN, 'mul_2_1': _TWIN, 'mul_2_1_full': _TWIN, 'ball_scale_2': _TWIN,
-    'mul_down_1': _OWN, 'mul_up_1': _OWN, 'ball_scale_2_full': _OWN, 'dot_step_2': _TWIN,
+    'ball_scale_2': _TWIN, 'ball_scale_2_full': _OWN, 'dot_step_2': _TWIN,
     'acc_mul_2': _OWN, 'scale_step_2': _TWIN, 'axpy_entry_step_2': _OWN, 'axpy_entry_step_2_1': _OWN,
     'axpy_step_2': _OWN, 'axpy_step_2_1': _OWN,
     'loop axpy_2': _LOOP, 'loop axpy_2_1': _LOOP, 'loop axpy_2_1_entry': _LOOP, 'loop axpy_2_entry': _LOOP,

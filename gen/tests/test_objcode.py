@@ -139,7 +139,10 @@ class Counts(unittest.TestCase):
                                         # interval of two limbs
                                         'ball_hull_1', 'ball_intersection_1', 'ball_from_interval_1',
                                         'interval_split_2'})
-        self.assertEqual(differ, {'mul_2_1_full', 'mul_2_2_full', 'mul_pow2_2_full', 'mul_ext_2_2', 'two_prod'} |
+        # two_prod_entry has two_prod's branch of constant evaluation (rule R3, the factors of a fused
+        # operation).
+        self.assertEqual(differ, {'mul_2_1_full', 'mul_2_2_full', 'mul_pow2_2_full', 'mul_ext_2_2', 'two_prod',
+                                  'two_prod_entry'} |
                          product_rule)
         for name in product_rule:
             prods = sum(1 for p in ir.prims(self.ks[name], self.ks) if p.op == 'prod')

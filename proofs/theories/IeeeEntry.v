@@ -16,11 +16,19 @@
      which guards its operands and calls the kernel of the same name, has that kernel's
      statement: add_down_entry, add_up_entry, sub_down_entry, sub_up_entry (the directed
      rounding of the sum or difference of IEEE 754), radd_entry (as radd), and
-     fast_two_sum_entry (as fast_two_sum, on finite operands). *)
-From Stdlib Require Import Reals ZArith Bool Lia Lra.
+     fast_two_sum_entry (as fast_two_sum, on finite operands).
+   - The entry forms of the products (rule R3, the factors of a fused operation: a compiler
+     that sees a factor of a fused operation to be 1 fuses a product of the program into
+     it): two_prod_entry has the statement of two_prod on finite operands,
+     mul_down_entry and mul_up_entry those of mul_down_1 and mul_up_1 on every operand,
+     and mul_2_1_entry, which guards its scalar, the bridge and the statement of mul_2_1:
+     the run of its program is the guard, then the run of mul_2_1's program on the
+     guarded scalar. *)
+From Stdlib Require Import Reals ZArith List Bool Lia Lra.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements.
 From Kairn Require Import Format IeeeBridge IeeeVocabulary IeeeEFT IeeeOps IeeeExt IeeeDirected.
+From Kairn Require Import Guard Program IeeeDirectedProd IeeeMore.
 From Kairn Require IeeeOperations.
 From Kairn.Gen Require IeeeModel.
 Open Scope R_scope.
@@ -250,4 +258,89 @@ Theorem fast_two_sum_entry_ieee_correct : fast_two_sum_entry_ieee_spec.
 Proof.
 intros prec emax Hp0 He nan_plus nan_minus Hp a b Fa Fb Hab.
 exact (fast_two_sum_entry_ieee prec emax nan_plus nan_minus Hp a b Fa Fb Hab).
+Qed.
+
+(** * The entry forms of the products (rule R3, the factors of a fused operation) *)
+
+(* two_prod_entry: two_prod on its guarded operands, finite with the same values. *)
+Theorem two_prod_entry_ieee_correct : two_prod_entry_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_opp nan_fma Hp2 a b Fa Fb.
+assert (Ga : finite (IeeeOperations.guard prec emax nan_plus a)).
+{ unfold finite. rewrite (guard_finite prec emax nan_plus). exact Fa. }
+assert (Gb : finite (IeeeOperations.guard prec emax nan_plus b)).
+{ unfold finite. rewrite (guard_finite prec emax nan_plus). exact Fb. }
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a)
+  by exact (guard_val prec emax nan_plus a).
+assert (Vb : val (IeeeOperations.guard prec emax nan_plus b) = val b)
+  by exact (guard_val prec emax nan_plus b).
+generalize (two_prod_ieee_correct prec emax Hp He nan_opp nan_fma Hp2 _ _ Ga Gb).
+unfold IeeeModel.two_prod_entry. cbv zeta.
+destruct (IeeeModel.two_prod prec emax nan_opp nan_fma (IeeeOperations.guard prec emax nan_plus a)
+            (IeeeOperations.guard prec emax nan_plus b)) as [p e].
+rewrite Va, Vb. intros H. exact H.
+Qed.
+
+(* mul_down_entry and mul_up_entry: mul_down_1 and mul_up_1 on their guarded operands. The
+   statements say of the operands only whether they are finite, their values and their
+   extended values, which the guard keeps (guard_finite, guard_val, xval_guard). *)
+Theorem mul_down_entry_ieee_correct : mul_down_entry_ieee_spec.
+Proof.
+intros prec emax Hp0 He nan_plus nan_opp nan_abs nan_fma Hp a b. cbv zeta.
+generalize (mul_down_1_ieee_correct prec emax Hp0 He nan_opp nan_abs nan_fma Hp
+              (IeeeOperations.guard prec emax nan_plus a) (IeeeOperations.guard prec emax nan_plus b)).
+unfold IeeeModel.mul_down_entry. cbv zeta.
+rewrite !(xval_guard prec emax nan_plus). unfold finite, val.
+rewrite !(guard_finite prec emax nan_plus), !(guard_val prec emax nan_plus).
+intros H. exact H.
+Qed.
+
+Theorem mul_up_entry_ieee_correct : mul_up_entry_ieee_spec.
+Proof.
+intros prec emax Hp0 He nan_plus nan_opp nan_abs nan_fma Hp a b. cbv zeta.
+generalize (mul_up_1_ieee_correct prec emax Hp0 He nan_opp nan_abs nan_fma Hp
+              (IeeeOperations.guard prec emax nan_plus a) (IeeeOperations.guard prec emax nan_plus b)).
+unfold IeeeModel.mul_up_entry. cbv zeta.
+rewrite !(xval_guard prec emax nan_plus). unfold finite, val.
+rewrite !(guard_finite prec emax nan_plus), !(guard_val prec emax nan_plus).
+intros H. exact H.
+Qed.
+
+(* mul_2_1_entry: mul_2_1 on its guarded scalar. The bridge: the values its program computes
+   are a, x0, x1, the guard of a and then those that mul_2_1's program computes from the
+   guarded a, so they are finite when those are. *)
+Theorem mul_2_1_entry_ieee_bridge : mul_2_1_entry_ieee_bridge_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp2 x0 x1 a F0 F1 Fa Nx.
+assert (Ga : finite (IeeeOperations.guard prec emax nan_plus a)).
+{ unfold finite. rewrite (guard_finite prec emax nan_plus). exact Fa. }
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a)
+  by exact (guard_val prec emax nan_plus a).
+generalize (mul_2_1_ieee_bridge prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp2 x0 x1 _ F0 F1 Ga Nx).
+unfold IeeeModel.mul_2_1_entry. cbv zeta.
+destruct (IeeeModel.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1
+            (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
+intros B Fz. destruct (B Fz) as [R [Fz1 E]].
+split; [|split; [exact Fz1|]].
+- cbv [run stepB nth app IeeeModel.mul_2_1_prog] in R.
+  cbv [run stepB nth app IeeeModel.mul_2_1_entry_prog].
+  repeat match goal with H : Forall _ (_ :: _) |- _ => apply Forall_cons_iff in H; destruct H end.
+  repeat constructor; assumption.
+- rewrite Va in E. rewrite E. unfold mul_2_1_entry. cbv zeta.
+  rewrite (guard_real_any (ieee_emin prec emax) prec tie_even (val a) (b2r_format prec emax a)).
+  destruct (mul_2_1 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val a)). reflexivity.
+Qed.
+
+Theorem mul_2_1_entry_ieee_correct : mul_2_1_entry_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp2 x0 x1 a F0 F1 Fa Nx.
+assert (Ga : finite (IeeeOperations.guard prec emax nan_plus a)).
+{ unfold finite. rewrite (guard_finite prec emax nan_plus). exact Fa. }
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a)
+  by exact (guard_val prec emax nan_plus a).
+generalize (mul_2_1_ieee_correct prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp2 x0 x1 _ F0 F1 Ga Nx).
+unfold IeeeModel.mul_2_1_entry. cbv zeta.
+destruct (IeeeModel.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1
+            (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
+rewrite Va. intros H. exact H.
 Qed.
