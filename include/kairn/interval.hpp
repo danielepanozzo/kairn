@@ -192,11 +192,13 @@ struct Split {
 /// the tightest interval of T; for two limbs they are within a bound proportional to u^2 of them,
 /// and not the tightest interval of two limbs. The sign of a zero bound is not specified.
 ///
-/// Kairn's intervals are modeled on IEEE Std 1788.1-2017 and differ from it on purpose in three
+/// Kairn's intervals are modeled on IEEE Std 1788.1-2017 and differ from it on purpose in four
 /// points (milestone2.md, "IEEE 1788"): a NaN given as a bound gives the whole line, not the empty
-/// set; the sign of a zero bound is not specified; and a product of one limb whose products of
-/// bounds are below 2^(2p-1) eta in magnitude (2^-969 for double) may be one number of T wider
-/// than the tightest on each side. Kairn has no decorations and no exceptions.
+/// set; so does the same infinity given as both bounds, [+inf, +inf] or [-inf, -inf] (the interval
+/// of an infinite point), which the standard makes the empty set, no real number being infinite;
+/// the sign of a zero bound is not specified; and a product of one limb whose products of bounds
+/// are below 2^(2p-1) eta in magnitude (2^-969 for double) may be one number of T wider than the
+/// tightest on each side. Kairn has no decorations and no exceptions.
 template <class T, int K>
 class Interval {
     static_assert(detail::limb<T>, "Interval<T, k>: the limb type T is float or double");
@@ -209,9 +211,12 @@ public:
     /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr Interval() noexcept = default;
     /// The interval [a, a] of a point (kernel interval_make_1 or interval_make_2, with two limbs
-    /// made by make_2 first): [a, a] for a finite a, the whole line for a NaN (a NaN says that
-    /// something failed upstream, and the whole line is the answer that is always true), and the
-    /// empty set for an infinite a, which is no real number: [+inf, +inf] is empty, as in IEEE 1788.
+    /// made by make_2 first): [a, a] for a finite a, and the whole line for a NaN or an infinite a.
+    /// A value from the program that is not finite says that something failed or overflowed
+    /// upstream, and says nothing about where the true value is: the whole line is the answer that
+    /// is always true, and the empty set would say that there is no value. (IEEE 1788 makes
+    /// [+inf, +inf] the empty set, an infinity being no real number; Kairn never makes the empty set
+    /// of a value that is not finite.) So Interval(+inf).lower() is -inf and .upper() is +inf.
     /// Its only rounded operations are the guards, a + 0, whose values are a under every rounding
     /// mode (only the sign of a zero depends on the mode): not preceded by the debug build's check of
     /// the rounding mode (config.hpp).
@@ -221,7 +226,7 @@ public:
     /// The same with a marked operand: see kairn::Unverified.
     explicit constexpr Interval(Unverified<T> a) noexcept : Interval(detail::make_interval_point<T, K>(a.value)) {}
     /// The interval [a, a] of a number of K limbs (kernel interval_make_1 or interval_make_2), with
-    /// the same three cases as the constructor from a T.
+    /// the same cases as the constructor from a T: [a, a] for a finite a, the whole line otherwise.
     /// Does not round (comparisons and selects, and for one limb the guards): not preceded by the
     /// debug build's check of the rounding mode (config.hpp); a two-limb a must be canonical, which
     /// is checked when the rounding mode is to nearest.
@@ -233,14 +238,18 @@ public:
         : Interval(detail::make_interval(a.value, a.value)) {}
     /// The interval of two bounds (kernel interval_make_1 or interval_make_2); two values of T are
     /// first converted to K limbs, exactly. Proved, in the IEEE model, for any two values of T, or
-    /// any two canonical numbers of two limbs: the result is canonical, and it is
-    /// - [lo, hi], the same extended real numbers, when lo <= hi, lo < +inf and hi > -inf;
-    /// - the whole line when a bound is a NaN, whatever the other bound is: a NaN says that something
-    ///   failed upstream, and the empty set would say that there are no values (IEEE 1788 returns
-    ///   the empty set there, and signals; Kairn has no exception by which to signal);
-    /// - the empty set otherwise: when lo > hi, and for [+inf, +inf] and [-inf, -inf]. Reversed
-    ///   bounds are not reported by a debug build: they describe no value, and the empty set is what
-    ///   they mean. Interval::empty() is the empty set.
+    /// any two canonical numbers of two limbs: the result is canonical, and it is, by the first case
+    /// that applies,
+    /// - the whole line when a bound is a NaN, whatever the other bound is, and when both bounds are
+    ///   the same infinity, [+inf, +inf] or [-inf, -inf]: a value from the program that is not finite
+    ///   says that something failed or overflowed upstream, and the empty set would say that there
+    ///   are no values (IEEE 1788 returns the empty set for both, and signals for a NaN; Kairn has no
+    ///   exception by which to signal);
+    /// - the empty set when the bounds are reversed, lo > hi, [+inf, -inf] and lo = +inf with a
+    ///   finite hi among them. Reversed bounds are not reported by a debug build: they describe no
+    ///   value, and the empty set is what they mean. Interval::empty() is the empty set;
+    /// - otherwise [lo, hi], the same extended real numbers: lo <= hi, lo < +inf and hi > -inf,
+    ///   [-inf, +inf], [lo, +inf] and [-inf, hi] included.
     /// Does not round (comparisons and selects; for one limb the guards of the bounds, whose values
     /// are the bounds under every rounding mode): not preceded by the debug build's check of the
     /// rounding mode (config.hpp); two-limb bounds must be canonical, which is checked when the
