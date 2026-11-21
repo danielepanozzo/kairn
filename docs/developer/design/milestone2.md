@@ -3107,10 +3107,24 @@ exact rationals. The recorded output of each script is in `results/`.
 | `convert.py` | the conversions between a wide and a narrow format | five pairs of toy formats |
 | `constants.py` | $A$ and $B$ in `binary64` and `binary32` | exact |
 | `rules_report.py` | the generator's own rules on the 33 descriptions | no refusal but the absence of claims |
+| `predicates_2.py` (*added*) | the predicates and comparisons of a ball of `gen/kernels`: for two limbs every answer given is right, and the band of the answers not given; for one limb, exact unless both sums overflow | 20 000 cases at three to five bits; every pair of balls of three formats |
+| `ballvector.py` (*added*) | the constructor of a `BallVector`, `bv_make_k` | every list of up to three centers of a toy format and every radius, infinities and NaN included; random lists in `binary64` and `binary32` |
+| `accumulator.py` (*added*) | the kernels of the accumulator: the inequality on the magnitudes, the claim of the radius, the chain with `bound_dot_k`, the mask | random histories at 4 to 6 bits; `binary64`, `binary32` |
+| `bv_proposals.py` (*added*) | `bv_mul_pow2_k`, generated, and the proposed `bv_axpy_k` against the composition `bv_add_k(bv_scale_k(X, a), Y)` | 1 500 cases per toy format, 400 in `binary64` and `binary32` |
+| `bv_conv.py` (*added*) | `bv_conv_k`: V1 to V3, the flag, containment coefficient by coefficient | 1 500 products per toy format, 400 in `binary64` and `binary32` |
 
 The 33 descriptions pass single assignment, R1, R2, R3, the non-finite cone and the checks of
 kinds and constants as the generator has them today; they carry no claims, since the claims
 need the vocabulary this page adds. No statement of this page, as it stands, fails in any run.
+
+*State on 2026-11-21.* The descriptions proposed in `kernels/` moved to `gen/kernels/`, with their
+claims, as each was generated, and the scripts run them from there (`common.py` takes a kernel
+from `gen/kernels/` when it has one); `kernels/` keeps the one proposal that is not generated,
+`bv_axpy_2.fold` with its kernels. `rules_report.py` now reports 55 descriptions, 4 in `kernels/`
+and 51 in `gen/kernels/`: no refusal, and 8 remarks that a description of `kernels/` has no claim.
+The recorded outputs are of the descriptions as generated; `scaling.py` is among them, and runs
+the two generated scalings of a ball (the paragraph below first said it had moved to the
+generator). Every statement held in every run.
 Three were *changed* by a run before they were written here: the renormalization of the
 two-limb bounds, the second limb of `rational`, and the conversion to a narrow format at the
 top of its range.
@@ -3130,5 +3144,6 @@ listings: `interval_make_1` and `ball_from_interval_2` (a NaN bound), `add_down_
 `ball_from_interval_2` again, and the scaling of a ball. The scripts that judge them were
 rerun, and the recorded outputs are those of the listings as they stand, with one exception:
 `scaling.py` and the two descriptions of the scaling are with the generator, where they are
-rerun. The proof of the summation theorems added one case to `batch.py`, which no run had
+rerun. (*2026-11-21:* the two descriptions are in `gen/kernels/`; `scaling.py` stayed here, runs
+them, and its output is recorded in `results/scaling.txt`.) The proof of the summation theorems added one case to `batch.py`, which no run had
 covered: the fused dot product of one limb, in the two orders.

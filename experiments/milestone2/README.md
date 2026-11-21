@@ -59,8 +59,9 @@ wrong on what was run.
 
 The formats are toy formats, as in the generator's and the oracle's tests: precisions of 2 to 6
 bits and a few exponents, most of them with the shape of `binary64`
-($q_{\min} + q_{\max} = 3 - 2p$), which the theorems about overflow are for. Three scripts also
-compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`).
+($q_{\min} + q_{\max} = 3 - 2p$), which the theorems about overflow are for. Seven scripts also
+compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`,
+`accumulator.py`, `ballvector.py`, `bv_proposals.py`, `bv_conv.py`).
 
 ## The scripts
 
