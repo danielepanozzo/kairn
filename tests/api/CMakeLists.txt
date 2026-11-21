@@ -130,10 +130,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   string(JSON _api_count LENGTH "${_api_json}" kernels)
   math(EXPR _api_last "${_api_count} - 1")
   set(_api_mapped "")
-  set(_api_names "")
   foreach(_i RANGE ${_api_last})
     string(JSON _kernel GET "${_api_json}" kernels ${_i} name)
-    list(APPEND _api_names ${_kernel})
     if(_kernel IN_LIST _api_internal OR _kernel IN_LIST _api_not_public)
       continue()
     endif()
@@ -157,21 +155,14 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   # the flag sets' runners on KAIRN_API_QUICK_CASES.
   set(_api_oracle_kernels ${_api_mapped} PARENT_SCOPE)
   set(_api_oracle_common ${_api_common} PARENT_SCOPE)
-  set(_api_flags_common --seed "${KAIRN_API_SEED}" ${_flags_runners} PARENT_SCOPE)
+  set(_api_flags_common --seed "${KAIRN_API_SEED}" ${_flags_runners} ${_oracle_claims_arg}
+    PARENT_SCOPE)
   set(_api_unlisted ${KAIRN_NOT_YET_CROSS_CHECKED} ${KAIRN_NOT_PUBLIC_YET})
-  if(KAIRN_ORACLE_CLAIMS)
-    # Against other claims (../CMakeLists.txt, KAIRN_ORACLE_CLAIMS): a name of the lists that is
-    # no kernel of that file is one of the objects left out of it, absent rather than unknown.
-    set(_api_present "")
-    foreach(_k IN LISTS _api_unlisted)
-      if(_k IN_LIST _api_names)
-        list(APPEND _api_present ${_k})
-      endif()
-    endforeach()
-    set(_api_unlisted ${_api_present})
-  endif()
+  # The runner's lists against the listings of gen/kernels and every kernel of gen/claims.json,
+  # whatever claims the oracle reads (KAIRN_ORACLE_CLAIMS): the runner is built from them all.
   add_test(NAME api.oracle.coverage
-    COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
+    COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>"
+      "-DCLAIMS=${PROJECT_SOURCE_DIR}/gen/claims.json"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
       "-DNOT_PUBLIC=${_api_not_public}" "-DNOT_CHECKED=${_api_unlisted}"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
@@ -203,7 +194,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-orac
   # claims; ../crosscheck_guards.py: every stratum, exact and inexact cases, den = 0 and, for two
   # limbs, a pair that the two roundings alone do not normalize).
   set(_api_rational_common "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/crosscheck.py" compiled
-    --seed "${KAIRN_API_SEED}" --fail-on-suspicious)
+    --seed "${KAIRN_API_SEED}" --fail-on-suspicious ${_oracle_claims_arg})
   foreach(_kind 1 2)
     foreach(_format binary64 binary32)
       set(_name api.rational.${_kind}.${_format})
