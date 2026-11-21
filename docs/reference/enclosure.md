@@ -7,10 +7,11 @@ an algorithm can be written once and run on either, with one limb or two
 [tutorial on bisection](../tutorials/bisection.md) is such an algorithm). Every function is one
 generated kernel, proved in Rocq and judged by the oracle through the public interface, or one of
 the two compositions said below. What each answer means differs by the type and the number of
-limbs: for an interval and a ball of one limb the predicates and comparisons are **exact**; for a
-ball of two limbs most are only **certain**, an answer that is right when it is given and that may
-not be given near the boundary. This page says which, function by function, and what is not
-claimed. Each kernel's own page has its statement in full.
+limbs: for an interval the predicates and comparisons are **exact**; for a ball of one limb the
+predicates are exact, and the comparisons exact when the sum of the radii is at most $\Omega$,
+the largest finite number of `T`; for a ball of two limbs most are only **certain**, an answer
+that is right when it is given and that may not be given near the boundary. This page says which,
+function by function, and what is not claimed. Each kernel's own page has its statement in full.
 
 The functions are in `kairn/interval.hpp` and `kairn/ball.hpp`, and the three types they share
 (`kairn::Trit`, `kairn::Split`, `kairn::MidRad`) in `kairn/enclosure.hpp`; `kairn/kairn.hpp`
@@ -142,8 +143,12 @@ Members are real numbers: $\pm\infty$ is a bound, never a member.
 | `split()` | the empty set, twice | `Interval`: $[-\infty, p]$ and $[p, +\infty]$; `Ball`: the whole line, twice |
 | the conversion to the other type | the empty set | the whole line |
 
-For a half-line $[\ell, +\infty]$, which only an interval can be, `midpoint()` is $\Omega$ (for
-$\ell \le \Omega$), `radius()` is $+\infty$, and the conversion to a ball is the whole line.
+For a half-line $[\ell, +\infty]$, which only an interval can be, `midpoint()` is $\Omega$ for
+every finite $\ell$, `radius()` is $+\infty$, and the conversion to a ball is the whole line. A
+finite bound of two limbs can exceed $\Omega$, by less than half a gap of `T` (the pair
+$(\Omega, \mathrm{ulp}(\Omega)/4)$, for example): then the midpoint $\Omega$ is not a member of the
+half-line, which is what [`interval_mid_rad_2`](interval_mid_rad_2.md) claims, and `split()` splits
+it at $\ell$ itself.
 `certainly_positive()` is false on the empty set although "every member is positive" is vacuously
 true of it: a query about nothing answers no, and `is_empty()` is the query to make first. The
 relations of IEEE 1788 keep the standard's vacuous readings instead ([below](#ieee-1788)).

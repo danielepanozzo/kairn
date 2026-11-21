@@ -583,17 +583,21 @@ public:
     /// The same with a marked center.
     constexpr Ball(const Unverified<Expansion<T, K>>& c, T r) noexcept : Ball(detail::make_ball(c.value, r)) {}
     /// The ball of a constant from a fraction, q = kairn::rational<Expansion<T, K>>(num, den) or
-    /// kairn::integer: center q.value and radius q.error, which contains num/den (kernel ball_make_1
-    /// or ball_make_2, as Ball(q.value, q.error), with the same checks). Explicit: the error becomes
-    /// a radius. Until Kairn has a division, X * Ball(kairn::rational<Expansion<T, K>>(1, s)) is how
-    /// to multiply a ball by 1/s for an integer s and keep an enclosure.
+    /// kairn::integer: center q.value and radius q.error (kernel ball_make_1 or ball_make_2, as
+    /// Ball(q.value, q.error), with the same checks), which contains num/den when q is what the
+    /// specification of kairn::rational says. That rests on rational, integer code that is tested
+    /// for equality and, by default, checked against its specification for every constant computed
+    /// at compile time, but not machine-checked (rational.hpp); the constructor kernel is proved.
+    /// Explicit: the error becomes a radius. Until Kairn has a division,
+    /// X * Ball(kairn::rational<Expansion<T, K>>(1, s)) is how to multiply a ball by 1/s for an
+    /// integer s and keep an enclosure.
     ///
-    /// q.error is the smallest number of T at least |q.value - num/den|, so for den != 0 the ball
-    /// is finite, of radius zero exactly when q.exact. A q whose value is not finite gives what the
-    /// constructor kernel gives such a center: for den = 0 at run time (value NaN, error +inf) the
-    /// whole line. Usable in constant evaluation (kairn::rational is, for den != 0). For one limb it
-    /// does not round, as Ball(c, r); for two the test of a canonical center does, when
-    /// KAIRN_CHECKS is 1, and the rounding mode is checked (config.hpp).
+    /// By the specification, q.error is the smallest number of T at least |q.value - num/den|, so
+    /// for den != 0 the ball is finite, of radius zero exactly when q.exact. A q whose value is not
+    /// finite gives what the constructor kernel gives such a center: for den = 0 at run time (value
+    /// NaN, error +inf) the whole line. Usable in constant evaluation (kairn::rational is, for
+    /// den != 0). For one limb it does not round, as Ball(c, r); for two the test of a canonical
+    /// center does, when KAIRN_CHECKS is 1, and the rounding mode is checked (config.hpp).
     explicit constexpr Ball(const Constant<Expansion<T, K>>& q) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::make>
         : Ball(detail::make_ball(q.value, q.error)) {}

@@ -157,7 +157,10 @@ so in what they are good at
 
 `Ball<T, k>(X)` and `Interval<T, k>(B)` convert one into the other, each widening the set (so
 both are explicit), and `Ball<T, k>::from_interval(lo, hi)` makes a ball from two numbers of `T`
-(for two limbs with the exact midpoint for its center). Both types answer the same questions under
+(for two limbs with the exact midpoint for its center when $lo/2$ and $hi/2$ are numbers of `T`;
+when a halving is not exact, a ball that contains $[lo, hi]$ and no more is claimed: with
+$lo = hi = \eta$, the smallest subnormal number, the center is 0). Both types answer the same
+questions under
 the same names, so that an algorithm can be written once for either
 ([One enclosure interface](../reference/enclosure.md); the
 [tutorial on bisection](../tutorials/bisection.md) is such an algorithm): `lower()`, `upper()`,
@@ -165,9 +168,12 @@ the same names, so that an algorithm can be written once for either
 the signs `certainly_positive()`, `certainly_negative()`, `certainly_zero()`, `hull`,
 `intersection`, `split`, and the three-valued comparisons `kairn::less`, `less_equal`, `equal`
 and their mirrors, whose answer, a `kairn::Trit`, is *yes*, *no* or *unknown* and converts to no
-`bool`. For an interval and a ball of one limb the answers are exact; for a ball of two limbs the
-comparisons and the member tests are only *certain*, right when given and possibly not given near
-the boundary. What each function guarantees is in [What holds today](guarantees.md#intervals).
+`bool`. For an interval the answers are exact. For a ball of one limb the member and subset tests
+are exact, and the comparisons are exact when the sum of the two radii is at most the largest
+finite number of `T`; beyond, they can answer *unknown* where the answer is known, never a wrong
+one. For a ball of two limbs the signs are exact, and the comparisons and the member and subset
+tests are only *certain*, right when given and possibly not given near the boundary. What each
+function guarantees is in [What holds today](guarantees.md#intervals).
 
 ## Vector loops
 
@@ -287,9 +293,13 @@ of two:
 ```
 
 **A ball from a constant.** `Ball<T, k>(q)`, for `q` a result of `kairn::rational` or
-`kairn::integer` of $k$ limbs, is the ball of center `q.value` and radius `q.error`, which
-contains the fraction. It is how a program multiplies a ball by $1/s$, for an integer $s$, and
-keeps an enclosure, until Kairn has a division:
+`kairn::integer` of $k$ limbs, is the ball of center `q.value` and radius `q.error`, made by the
+proved constructor of a ball. It contains the fraction when `q` is what `rational` specifies,
+which rests on `rational` itself: tested for equality and, by default, checked for every constant
+computed at compile time, but not machine-checked ([above](#constants-from-fractions)). It is how
+a program
+multiplies a ball by $1/s$, for an integer $s$, and keeps an enclosure, until Kairn has a
+division:
 
 ```cpp
 --8<-- "docs/examples/cpp/building_blocks.cpp:rational"
