@@ -167,7 +167,7 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    [D6](design/phase0/decisions.md#d6-one-limb-and-contraction-under-clang): it behaves like `T`,
    contraction included.
 
-   **The factors of a fused operation (a report, not a refusal).** "Nothing can be fused into a
+   **The factors of a fused operation.** "Nothing can be fused into a
    product" holds of the product alone. It does not hold of a fused operation whose *other* factor
    the compiler sees to be 1 or -1 after inlining: LLVM rewrites `fma(x, 1, s)` as `x + s` (and
    `fma(x, -1, s)` as `s - x`), and a product `x = a * b` that the program computed is then fused
@@ -186,15 +186,16 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    `python3 gen/kairn-gen build` prints the list after its summary, with the operations of each
    object today and with a guard on each exposed operand, and the header functions that reach it
    (`build.header_calls`: the function of the public headers whose body calls the kernel or the
-   loop). The generator refuses nothing for it: whether to guard every exposed operand (which
-   changes proved kernels of Milestone 1, and costs an addition per operand) is the owner's
-   decision, and the list is its evidence. Where a compiler was measured to fuse such a product,
-   the public function calls a guarded form instead, an entry kernel of its own whose listing is
-   the unguarded one after a guard of each factor and whose proofs reduce to it (the guard is the
-   identity on numbers of the format): `dot` of one limb calls the loop `dot_1_entry` (step
-   `dot_entry_step_1`) and `Accumulator::add_product` of one limb `acc_mul_entry_1`. The
-   measurements, and the operations measured to fuse whose header this stage did not change, are
-   in [Testing](testing.md#the-functions-on-arrays), "A factor the compiler sees".
+   loop). By the owner's decision of 2026-11-21 (the strict rule) an exposed operand is refused,
+   with its operation and route (`rules.factor_rule`): an entry kernel guards each factor it takes
+   from the program, and a kernel that other kernels also call on limbs that kernels wrote gets a
+   guarded entry twin instead, whose listing is the unguarded one after a guard of each factor and
+   whose proofs reduce to it (the guard is the identity on numbers of the format), as
+   `dot_entry_step_1` (the step of `dot_1_entry`, which `dot` of one limb calls) and
+   `acc_mul_entry_1` (`Accumulator::add_product` of one limb). The objects not closed yet are listed
+   in `rules.FACTOR_PENDING`, each with its reason: R3 accepts their exposed operands, and refuses an
+   entry there that has none; `build` prints them as PENDING. The measurements are in
+   [Testing](testing.md#the-functions-on-arrays), "A factor the compiler sees".
 
 R3 was added in Milestone 1, after a test of the public headers found the failure it prevents:
 with GCC 13 and 16 at their default setting, with Apple clang on AArch64 under

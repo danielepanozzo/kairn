@@ -115,6 +115,8 @@ def check_all(kernels):
     if not errors:
         for fd in getattr(kernels, 'folds', {}).values():
             errors += fold_rules(fd, kernels)
+    if not errors:
+        errors += factor_rule(kernels)
     return errors
 
 
@@ -700,6 +702,60 @@ def fold_kernels(fd, kernels):
         if inner and inner in kernels.folds:
             names |= fold_kernels(kernels.folds[inner], kernels)
     return names
+
+
+# The objects of gen/kernels whose exposed operands are not closed yet, each with its reason (the
+# owner's decision of 2026-11-21: the strict rule, every exposed operand guarded). R3 refuses an
+# exposed operand of any other object, and an entry here that has none; `build` prints the list.
+# The plan of each: a guarded entry twin where the kernel is also called inside kernels on limbs
+# that kernels wrote, a guard in the entry kernel itself where it has no internal caller.
+_TWIN = 'called inside other kernels on limbs that kernels wrote: a guarded entry twin is to come'
+_OWN = 'no internal caller on such limbs: its own guard on the supplied operand is to come'
+_LOOP = 'its step is to be the guarded form'
+FACTOR_PENDING = {
+    'acc_mul_1': 'replaced in the headers by acc_mul_entry_1; ' + _OWN,
+    'dot_step_1': "replaced in dot by dot_entry_step_1; conv_1's coefficients still run it: " + _TWIN,
+    'two_prod': _TWIN, 'mul_2_1': _TWIN, 'mul_2_1_full': _TWIN, 'ball_scale_2': _TWIN,
+    'mul_down_1': _OWN, 'mul_up_1': _OWN, 'ball_scale_2_full': _OWN, 'dot_step_2': _TWIN,
+    'acc_mul_2': _OWN, 'scale_step_2': _TWIN, 'axpy_entry_step_2': _OWN, 'axpy_entry_step_2_1': _OWN,
+    'axpy_step_2': _OWN, 'axpy_step_2_1': _OWN,
+    'loop axpy_2': _LOOP, 'loop axpy_2_1': _LOOP, 'loop axpy_2_1_entry': _LOOP, 'loop axpy_2_entry': _LOOP,
+    'loop bv_scale_2': _LOOP, 'loop conv_1': _LOOP, 'loop conv_2': _LOOP, 'loop dot_1': _LOOP,
+    'loop dot_2': _LOOP, 'loop scale_2': _LOOP,
+}
+
+
+def _pending_key(e):
+    return e.name if e.kind == 'kernel' else f'loop {e.name}'
+
+
+def factor_rule(kernels, pending=None):
+    """Rule R3 on the factors of a fused operation: an exposed operand (exposed_operands) of an
+    entry kernel or of a loop is refused, naming the operand, the operation and the route, unless
+    the object is in `pending` (FACTOR_PENDING by default); an entry of `pending` without an
+    exposed operand is refused too (remove it). Only the objects of `kernels` are judged."""
+    pending = FACTOR_PENDING if pending is None else pending
+    errs, found = [], set()
+    for e in exposed_operands(kernels):
+        key = _pending_key(e)
+        found.add(key)
+        if key in pending:
+            continue
+        where = f'the step {e.kernel}' if e.kind == 'loop' and e.role == 'step' else \
+            (f'the {e.role} {e.kernel}' if e.kind == 'loop' else '')
+        for v, ws in e.operands.items():
+            errs.append(RuleError(e.name, v, RULE_R3,
+                                  f'{v} enters from the program and is {ws[0]}{" in " + where if where else ""}'
+                                  f'{" (and " + str(len(ws) - 1) + " more)" if len(ws) > 1 else ""}: a factor of '
+                                  'a fused operation whose addend is not the literal zero, unguarded; a compiler '
+                                  'that sees the other factor to be 1 fuses a product of the program into it '
+                                  '(fma(x, 1, s) is x + s). Write g = guard(' + v + ') and use g there; a factor '
+                                  'of prod alone needs no guard'))
+    names = set(kernels) | {f'loop {f}' for f in getattr(kernels, 'folds', {})}
+    for key in sorted(set(pending) & names - found):
+        errs.append(RuleError(key, '-', RULE_R3, 'listed in FACTOR_PENDING, but nothing of it is exposed: '
+                                                 'remove the entry'))
+    return errs
 
 
 def callees(name, kernels):

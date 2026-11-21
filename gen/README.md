@@ -51,8 +51,9 @@ cone, the entry kernels, the guards of rule R3 that are pending, the kernels acc
 through a pending guard, the folds and those of them that are unverified; and then the report of
 rule R3 on the factors of fused operations (`rules.exposed_operands`, below): every entry kernel
 and every loop with an exposed operand, the route to each, its operations today and with a guard
-on each, and the functions of the public headers that reach it (`build.header_calls`). That report
-refuses nothing. `proofs/gen` is mapped to the logical path `Kairn.Gen`, and `proofs/theories` to
+on each, and the functions of the public headers that reach it (`build.header_calls`), each marked
+PENDING while it is in `rules.FACTOR_PENDING` (R3 refuses every other exposed operand). `proofs/gen`
+is mapped to the logical path `Kairn.Gen`, and `proofs/theories` to
 `Kairn`.
 
 ## The code
@@ -523,15 +524,16 @@ rule:
    what that kernel returns of it. Nor is such a value an output of the entry kernel as it is (it
    would be stored in an object, unguarded). `guard_pending: INPUT REASON` excuses one input of one
    kernel, and every kernel that passes a value into it, of the first part; `build` prints both
-   lists, and the declaration is refused once the input is guarded. Not a refusal but a report,
-   beside the rule: such a value is *exposed* where it is a factor of `fma`, `fms`, `fnma` or
-   `muladd` whose addend is not the literal zero, before `guard` (a compiler that sees the other
-   factor to be 1 rewrites `fma(x, 1, s)` as `x + s` and fuses the program's product into it; a
-   factor of `prod`, `fma(a, b, +0)`, is safe, its fusion being the product's own rounding).
-   `rules.exposed_operands` lists them for every entry kernel and every loop (its supplied arrays
-   and scalars, through its step, its radius and the step of the fold of its coefficients), and
-   `build` prints the list (docs/developer/architecture.md, "R3", the factors of a fused
-   operation).
+   lists, and the declaration is refused once the input is guarded. Nor is such a value (for a
+   loop: an element of a supplied array or a supplied scalar, through its step, its radius and the
+   step of the fold of its coefficients) a factor of `fma`, `fms`, `fnma` or `muladd` whose addend
+   is not the literal zero before `guard`: it is *exposed* there, and refused with the operand,
+   the operation and the route (`rules.factor_rule` on `rules.exposed_operands`), because a
+   compiler that sees the other factor to be 1 rewrites `fma(x, 1, s)` as `x + s` and fuses the
+   program's product into it. A factor of `prod`, `fma(a, b, +0)`, is accepted: its fusion is the
+   product's own rounding. `rules.FACTOR_PENDING` names the objects not closed yet, each with its
+   reason; an entry there with nothing exposed is refused (docs/developer/architecture.md, "R3",
+   the factors of a fused operation).
 7. No value is the negation of the result of a fused operation (`fma`, `fms`, `fnma`, `prod`),
    callees inlined: `sub_down_1(x, d)` and `sub_up_1(x, d)` negate `d`. Nor is it the negation of a
    `select` one of whose arms is such a result (or a `select` or `copy` of one, through any number

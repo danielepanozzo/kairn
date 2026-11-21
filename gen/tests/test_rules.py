@@ -376,8 +376,12 @@ r = neg(p)
     # Each allowed use passes.
 
     def test_factor_and_comparison(self):
-        self.assertEqual(self.r3('p = prod(x0, a)\nq = fma(a, x1, x0)\nm = lt(a, x0)\nw = select(m, p, q)\n'
-                                 's = add(w, p)\n' + self.END), [])
+        # A factor of prod and an operand of a comparison as it is; a factor of an fma with a
+        # nonzero addend only after guard (the factors of a fused operation, R3Factors).
+        self.assertEqual(self.r3('p = prod(x0, a)\ng = guard(a)\nq = fma(g, x1, x0)\nm = lt(a, x0)\n'
+                                 'w = select(m, p, q)\ns = add(w, p)\n' + self.END), [])
+        self.refused('p = prod(x0, a)\nq = fma(a, x1, x0)\nm = lt(a, x0)\nw = select(m, p, q)\n'
+                     's = add(w, p)\n' + self.END, 'a', 'is a factor of fma at q')
 
     def test_through_a_call_into_an_input_the_callee_multiplies(self):
         self.assertEqual(self.r3('n = abs(a)\np = multiplies(x0, n)\ns = add(p, x0)\n' + self.END), [])
@@ -459,9 +463,53 @@ class R3Factors(unittest.TestCase):
             k = ir.parse_kernel(text, 'test')
             kernels[k.name] = k
         kernels = ir.ordered(kernels)
-        others = [e for e in rules.check_all(kernels) if e.rule != rules.RULE_CONE]
+        others = [e for e in rules.check_all(kernels) if e.rule != rules.RULE_CONE and
+                  'a factor of a fused operation' not in str(e)]
         self.assertEqual(others, [], body)
         return {(e.name, v): ws for e in rules.exposed_operands(kernels) for v, ws in e.operands.items()}
+
+    def refusals(self, body, *more, pending=None):
+        kernels = {}
+        for text in (R3.ENTRY + body, R3.ADDS, R3.MULTIPLIES, R3.RETURNS) + more:
+            k = ir.parse_kernel(text, 'test')
+            kernels[k.name] = k
+        return [(e.kernel, e.value, str(e)) for e in rules.factor_rule(ir.ordered(kernels), pending)]
+
+    def test_the_rule_refuses_an_exposed_operand(self):
+        # Directly, through neg, abs, select and copy, and through a callee: each named with the
+        # operation and the route.
+        for body, words in (('p = fma(a, x1, x0)\n', 'a factor of fma at p'),
+                            ('n = neg(a)\nm = abs(n)\np = fms(m, x1, x0)\n', 'a factor of fms at p'),
+                            ('c = copy(a)\nm = lt(x0, x1)\nq = select(m, x1, c)\np = fnma(x1, q, x0)\n',
+                             'a factor of fnma at p')):
+            found = self.refusals(body + 's = add(p, x0)\n' + self.END)
+            self.assertEqual([(k, v) for k, v, _ in found], [('k', 'a')], body)
+            self.assertIn(words, found[0][2])
+            self.assertIn(rules.RULE_R3, found[0][2])
+        fused = R3.ADDS.replace('kernel:  adds', 'kernel:  fuses').replace('p+q', 'p*q+p') \
+            .replace('s = add(p, q)', 's = fma(q, p, p)')
+        found = self.refusals('s = fuses(x0, a)\n' + self.END, fused)
+        self.assertEqual([(k, v) for k, v, _ in found], [('k', 'a')])
+        self.assertIn('a factor of fma at s in fuses (called for s)', found[0][2])
+
+    def test_the_rule_accepts_prod_a_guard_and_a_pending_object(self):
+        self.assertEqual(self.refusals('p = prod(a, x1)\ns = add(p, x0)\n' + self.END), [])
+        self.assertEqual(self.refusals('g = guard(a)\np = fma(g, x1, x0)\ns = add(p, x0)\n' + self.END), [])
+        self.assertEqual(self.refusals('p = fma(a, x1, x0)\ns = add(p, x0)\n' + self.END,
+                                       pending={'k': 'the reason'}), [])
+        # A pending entry with nothing exposed is refused.
+        found = self.refusals('p = prod(a, x1)\ns = add(p, x0)\n' + self.END, pending={'k': 'the reason'})
+        self.assertEqual([(k, v) for k, v, _ in found], [('k', '-')])
+        self.assertIn('remove the entry', found[0][2])
+
+    def test_what_is_pending(self):
+        # Every exposed object of gen/kernels is pending, and nothing else: the list to close
+        # (EXPOSED), each with its reason.
+        ks = common.kernels()
+        self.assertEqual(set(rules.FACTOR_PENDING),
+                         {(n if kind == 'kernel' else f'loop {n}') for kind, n, _ in EXPOSED})
+        self.assertEqual(rules.factor_rule(ks), [])
+        self.assertTrue(all(len(r) > 20 for r in rules.FACTOR_PENDING.values()))
 
     END = R3.END
 
