@@ -33,6 +33,10 @@
 # oracle's and two enumerations of the interpreter, where it takes 149 seconds counted. The price
 # is on a machine with many processors and a low --parallel: with --parallel 4, each runs alone
 # (on 16 threads of the Linux machine the full tier took 452 seconds, against 260 uncounted).
+# The generator's test judges every kernel in the interpreter and its statements on thousands of
+# cases; with the 223 kernels and 44 folds of the joined tree of stage B2 it took 748 seconds alone
+# on the Linux machine (GCC 13, its four workers), past the 600 of the oracle's test below: its
+# limit is 1800.
 if(EXISTS "${PROJECT_SOURCE_DIR}/gen/kairn-gen")
   set(_args "")
   foreach(_pattern IN LISTS _gen_full)
@@ -41,7 +45,7 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/gen/kairn-gen")
   add_test(NAME full.kairn-gen.test
     COMMAND "${Python3_EXECUTABLE}" gen/kairn-gen test --no-cxx ${_args}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(full.kairn-gen.test PROPERTIES TIMEOUT 600 PROCESSORS 4
+  set_tests_properties(full.kairn-gen.test PROPERTIES TIMEOUT 1800 PROCESSORS 4
     ENVIRONMENT KAIRN_GEN_JOBS=4 LABELS "full;generator")
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
