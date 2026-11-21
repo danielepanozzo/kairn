@@ -8712,7 +8712,7 @@ KAIRN_GEN_FORCEINLINE void to_nearest_2(float32x4_t x0, [[maybe_unused]] float32
 // finish of scalar.hpp after it, inlined in the same way: values step_V, comb_V, fin_V.
 
 // map add_1(stored x, stored y) -> z, step add_1_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void add_1_packed(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     uint64x2_t finite_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
@@ -8751,7 +8751,7 @@ inline void add_1_packed(const double* x_in, const double* y_in, std::size_t n, 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void add_1_packed(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     uint32x4_t finite_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
@@ -8792,7 +8792,7 @@ inline void add_1_packed(const float* x_in, const float* y_in, std::size_t n, fl
 }
 
 // map add_1_entry(supplied x, supplied y) -> z, step add_entry_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void add_1_entry_packed(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     uint64x2_t finite_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
@@ -8837,7 +8837,7 @@ inline void add_1_entry_packed(const double* x_in, const double* y_in, std::size
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void add_1_entry_packed(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     uint32x4_t finite_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
@@ -8884,7 +8884,7 @@ inline void add_1_entry_packed(const float* x_in, const float* y_in, std::size_t
 }
 
 // map add_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step add_2_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void add_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     uint64x2_t finite_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
@@ -8978,7 +8978,7 @@ inline void add_2_packed(const double* x0_in, const double* x1_in, const double*
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void add_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     uint32x4_t finite_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
@@ -9074,7 +9074,7 @@ inline void add_2_packed(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map add_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step add_entry_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void add_2_entry_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     uint64x2_t finite_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
@@ -9178,7 +9178,7 @@ inline void add_2_entry_packed(const double* x0_in, const double* x1_in, const d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void add_2_entry_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     uint32x4_t finite_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
@@ -9284,7 +9284,7 @@ inline void add_2_entry_packed(const float* x0_in, const float* x1_in, const flo
 }
 
 // map axpy_1(supplied x, stored y, supplied a) -> z, step axpy_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_1_packed(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a_v_ = vdupq_n_f64(a);
@@ -9330,7 +9330,7 @@ inline void axpy_1_packed(const double* x_in, const double* y_in, std::size_t n,
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_1_packed(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a_v_ = vdupq_n_f32(a);
@@ -9378,7 +9378,7 @@ inline void axpy_1_packed(const float* x_in, const float* y_in, std::size_t n, f
 }
 
 // map axpy_1_entry(supplied x, supplied y, supplied a) -> z, step axpy_entry_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_1_entry_packed(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a_v_ = vdupq_n_f64(a);
@@ -9426,7 +9426,7 @@ inline void axpy_1_entry_packed(const double* x_in, const double* y_in, std::siz
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_1_entry_packed(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a_v_ = vdupq_n_f32(a);
@@ -9476,7 +9476,7 @@ inline void axpy_1_entry_packed(const float* x_in, const float* y_in, std::size_
 }
 
 // map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a0_v_ = vdupq_n_f64(a0);
@@ -9598,7 +9598,7 @@ inline void axpy_2_packed(const double* x0_in, const double* x1_in, const double
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a0_v_ = vdupq_n_f32(a0);
@@ -9722,7 +9722,7 @@ inline void axpy_2_packed(const float* x0_in, const float* x1_in, const float* y
 }
 
 // map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_2_1_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a_v_ = vdupq_n_f64(a);
@@ -9837,7 +9837,7 @@ inline void axpy_2_1_packed(const double* x0_in, const double* x1_in, const doub
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_2_1_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a_v_ = vdupq_n_f32(a);
@@ -9954,7 +9954,7 @@ inline void axpy_2_1_packed(const float* x0_in, const float* x1_in, const float*
 }
 
 // map axpy_2_1_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_entry_step_2_1, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_2_1_entry_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a_v_ = vdupq_n_f64(a);
@@ -10073,7 +10073,7 @@ inline void axpy_2_1_entry_packed(const double* x0_in, const double* x1_in, cons
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_2_1_entry_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a_v_ = vdupq_n_f32(a);
@@ -10194,7 +10194,7 @@ inline void axpy_2_1_entry_packed(const float* x0_in, const float* x1_in, const 
 }
 
 // map axpy_2_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_entry_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_2_entry_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a0_v_ = vdupq_n_f64(a0);
@@ -10320,7 +10320,7 @@ inline void axpy_2_entry_packed(const double* x0_in, const double* x1_in, const 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void axpy_2_entry_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a0_v_ = vdupq_n_f32(a0);
@@ -10465,7 +10465,7 @@ KAIRN_GEN_NOINLINE void bv_add_1_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_add_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step add_1_1, record norm_step_1, radius bv_add_radius_1: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_add_1_packed(const double* x_in, const double* y_in, std::size_t n, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -10546,7 +10546,7 @@ KAIRN_GEN_NOINLINE void bv_add_1_packed_end(float m, bool ok, float rx, float ry
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_add_1_packed(const float* x_in, const float* y_in, std::size_t n, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     float32x4_t m_lane_ = vdupq_n_f32(0.0f);
@@ -10629,7 +10629,7 @@ KAIRN_GEN_NOINLINE void bv_add_2_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_add_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step add_2_2, record norm_step_2, radius bv_add_radius_2: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_add_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -10765,7 +10765,7 @@ KAIRN_GEN_NOINLINE void bv_add_2_packed_end(float m, bool ok, float rx, float ry
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_add_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     float32x4_t m_lane_ = vdupq_n_f32(0.0f);
@@ -10906,7 +10906,7 @@ KAIRN_GEN_NOINLINE void bv_make_1_packed_end(double m, bool ok, double r, double
 }
 // ball vector bv_make_1(supplied c, supplied r) -> z, rr, finite: step bv_center_entry_1, record norm_step_1, radius bv_make_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_make_1_packed(const double* c_in, std::size_t n, double r, double* z_out, double& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -10988,7 +10988,7 @@ KAIRN_GEN_NOINLINE void bv_make_1_packed_end(float m, bool ok, float r, float& r
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_make_1_packed(const float* c_in, std::size_t n, float r, float* z_out, float& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     float32x4_t m_lane_ = vdupq_n_f32(0.0f);
@@ -11072,7 +11072,7 @@ KAIRN_GEN_NOINLINE void bv_make_2_packed_end(double m, bool ok, double r, double
 }
 // ball vector bv_make_2(stored c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_2, record norm_step_2, radius bv_make_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_make_2_packed(const double* c0_in, const double* c1_in, std::size_t n, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -11163,7 +11163,7 @@ KAIRN_GEN_NOINLINE void bv_make_2_packed_end(float m, bool ok, float r, float& r
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_make_2_packed(const float* c0_in, const float* c1_in, std::size_t n, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     float32x4_t m_lane_ = vdupq_n_f32(0.0f);
@@ -11260,7 +11260,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_1_packed_end(double m, bool ok, bool ex, dou
 }
 // ball vector bv_mul_pow2_1(stored x, stored rx, supplied c) -> z, r, finite: step bv_mul_pow2_step_1, record norm_step_1, radius bv_mul_pow2_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_mul_pow2_1_packed(const double* x_in, std::size_t n, double rx, double c, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t c_v_ = vdupq_n_f64(c);
@@ -11363,7 +11363,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_1_packed_end(float m, bool ok, bool ex, floa
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_mul_pow2_1_packed(const float* x_in, std::size_t n, float rx, float c, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t c_v_ = vdupq_n_f32(c);
@@ -11468,7 +11468,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_2_packed_end(double m, bool ok, bool ex, dou
 }
 // ball vector bv_mul_pow2_2(stored x = (x0, x1), stored rx, supplied c) -> z = (z0, z1), r, finite: step bv_mul_pow2_step_2, record norm_step_2, radius bv_mul_pow2_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_mul_pow2_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double c, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t c_v_ = vdupq_n_f64(c);
@@ -11592,7 +11592,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_2_packed_end(float m, bool ok, bool ex, floa
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_mul_pow2_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float c, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t c_v_ = vdupq_n_f32(c);
@@ -11709,7 +11709,7 @@ KAIRN_GEN_NOINLINE void bv_neg_1_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_neg_1(stored x, stored rx) -> z, r, finite: step neg_1, record norm_step_1, radius bv_neg_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_neg_1_packed(const double* x_in, std::size_t n, double rx, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -11786,7 +11786,7 @@ KAIRN_GEN_NOINLINE void bv_neg_1_packed_end(float m, bool ok, float rx, float& r
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_neg_1_packed(const float* x_in, std::size_t n, float rx, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     float32x4_t m_lane_ = vdupq_n_f32(0.0f);
@@ -11865,7 +11865,7 @@ KAIRN_GEN_NOINLINE void bv_neg_2_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_neg_2(stored x = (x0, x1), stored rx) -> z = (z0, z1), r, finite: step neg_2, record norm_step_2, radius bv_neg_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_neg_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -11951,7 +11951,7 @@ KAIRN_GEN_NOINLINE void bv_neg_2_packed_end(float m, bool ok, float rx, float& r
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_neg_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     float32x4_t m_lane_ = vdupq_n_f32(0.0f);
@@ -12042,7 +12042,7 @@ KAIRN_GEN_NOINLINE void bv_scale_1_packed_end(double m, bool ok, double rx, doub
 }
 // ball vector bv_scale_1(stored x, stored rx, supplied a) -> z, r, finite: step scale_step_1, record norm_step_1, radius bv_scale_radius_1: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_scale_1_packed(const double* x_in, std::size_t n, double rx, double a, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a_v_ = vdupq_n_f64(a);
@@ -12125,7 +12125,7 @@ KAIRN_GEN_NOINLINE void bv_scale_1_packed_end(float m, bool ok, float rx, float 
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_scale_1_packed(const float* x_in, std::size_t n, float rx, float a, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a_v_ = vdupq_n_f32(a);
@@ -12210,7 +12210,7 @@ KAIRN_GEN_NOINLINE void bv_scale_2_packed_end(double m, bool ok, double rx, doub
 }
 // ball vector bv_scale_2(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_scale_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double a, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a_v_ = vdupq_n_f64(a);
@@ -12314,7 +12314,7 @@ KAIRN_GEN_NOINLINE void bv_scale_2_packed_end(float m, bool ok, float rx, float 
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_scale_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float a, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a_v_ = vdupq_n_f32(a);
@@ -12419,7 +12419,7 @@ KAIRN_GEN_NOINLINE void bv_sub_1_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_sub_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step sub_1_1, record norm_step_1, radius bv_add_radius_1: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_sub_1_packed(const double* x_in, const double* y_in, std::size_t n, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -12500,7 +12500,7 @@ KAIRN_GEN_NOINLINE void bv_sub_1_packed_end(float m, bool ok, float rx, float ry
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_sub_1_packed(const float* x_in, const float* y_in, std::size_t n, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     float32x4_t m_lane_ = vdupq_n_f32(0.0f);
@@ -12583,7 +12583,7 @@ KAIRN_GEN_NOINLINE void bv_sub_2_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_sub_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step sub_2_2, record norm_step_2, radius bv_add_radius_2: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_sub_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -12725,7 +12725,7 @@ KAIRN_GEN_NOINLINE void bv_sub_2_packed_end(float m, bool ok, float rx, float ry
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified.
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
 inline void bv_sub_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     float32x4_t m_lane_ = vdupq_n_f32(0.0f);
@@ -12851,7 +12851,7 @@ inline void bv_sub_2_packed(const float* x0_in, const float* x1_in, const float*
     finite_out = rad_f_;
 }
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved.
+// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), unverified (IEEE model).
 inline void dot_1_packed(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t s_lane_ = vdupq_n_f64(0.0);
@@ -12919,7 +12919,7 @@ inline void dot_1_packed(const float* x_in, const float* y_in, std::size_t n, fl
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
+// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), unverified (IEEE model).
 inline void dot_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t s0_lane_ = vdupq_n_f64(0.0);
@@ -13206,7 +13206,7 @@ inline void dot_2_packed(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map mul_pow2_map_1(supplied x, supplied c) -> z, step mul_pow2_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void mul_pow2_map_1_packed(const double* x_in, std::size_t n, double c, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t c_v_ = vdupq_n_f64(c);
@@ -13244,7 +13244,7 @@ inline void mul_pow2_map_1_packed(const double* x_in, std::size_t n, double c, d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void mul_pow2_map_1_packed(const float* x_in, std::size_t n, float c, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t c_v_ = vdupq_n_f32(c);
@@ -13284,7 +13284,7 @@ inline void mul_pow2_map_1_packed(const float* x_in, std::size_t n, float c, flo
 }
 
 // map mul_pow2_map_2(supplied x = (x0, x1), supplied c) -> z = (z0, z1), step mul_pow2_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void mul_pow2_map_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double c, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t c_v_ = vdupq_n_f64(c);
@@ -13341,7 +13341,7 @@ inline void mul_pow2_map_2_packed(const double* x0_in, const double* x1_in, std:
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void mul_pow2_map_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float c, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t c_v_ = vdupq_n_f32(c);
@@ -13399,7 +13399,7 @@ inline void mul_pow2_map_2_packed(const float* x0_in, const float* x1_in, std::s
     finite_out = finite;
 }
 
-// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified (real model), unverified (IEEE model).
 inline void norm_upper_1_packed(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -13507,7 +13507,7 @@ inline void norm_upper_1_packed(const float* x_in, std::size_t n, float& r_out, 
     flag_out = fin_flag;
 }
 
-// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified (real model), unverified (IEEE model).
 inline void norm_upper_2_packed(const double* x0_in, [[maybe_unused]] const double* x1_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -13622,7 +13622,7 @@ inline void norm_upper_2_packed(const float* x0_in, [[maybe_unused]] const float
 }
 
 // map scale_1(supplied x, supplied a) -> z, step scale_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void scale_1_packed(const double* x_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a_v_ = vdupq_n_f64(a);
@@ -13662,7 +13662,7 @@ inline void scale_1_packed(const double* x_in, std::size_t n, double a, double* 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void scale_1_packed(const float* x_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a_v_ = vdupq_n_f32(a);
@@ -13704,7 +13704,7 @@ inline void scale_1_packed(const float* x_in, std::size_t n, float a, float* z_o
 }
 
 // map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void scale_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     const float64x2_t a_v_ = vdupq_n_f64(a);
@@ -13765,7 +13765,7 @@ inline void scale_2_packed(const double* x0_in, const double* x1_in, std::size_t
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void scale_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const float32x4_t a_v_ = vdupq_n_f32(a);
@@ -13828,7 +13828,7 @@ inline void scale_2_packed(const float* x0_in, const float* x1_in, std::size_t n
 }
 
 // map sub_1(stored x, stored y) -> z, step sub_1_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void sub_1_packed(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     uint64x2_t finite_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
@@ -13867,7 +13867,7 @@ inline void sub_1_packed(const double* x_in, const double* y_in, std::size_t n, 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void sub_1_packed(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     uint32x4_t finite_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
@@ -13908,7 +13908,7 @@ inline void sub_1_packed(const float* x_in, const float* y_in, std::size_t n, fl
 }
 
 // map sub_1_entry(supplied x, supplied y) -> z, step sub_entry_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void sub_1_entry_packed(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     uint64x2_t finite_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
@@ -13953,7 +13953,7 @@ inline void sub_1_entry_packed(const double* x_in, const double* y_in, std::size
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void sub_1_entry_packed(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     uint32x4_t finite_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
@@ -14000,7 +14000,7 @@ inline void sub_1_entry_packed(const float* x_in, const float* y_in, std::size_t
 }
 
 // map sub_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step sub_2_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void sub_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     uint64x2_t finite_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
@@ -14100,7 +14100,7 @@ inline void sub_2_packed(const double* x0_in, const double* x1_in, const double*
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void sub_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     uint32x4_t finite_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
@@ -14202,7 +14202,7 @@ inline void sub_2_packed(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map sub_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step sub_entry_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void sub_2_entry_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
     uint64x2_t finite_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
@@ -14312,7 +14312,7 @@ inline void sub_2_entry_packed(const double* x0_in, const double* x1_in, const d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified (real model), unverified (IEEE model).
 inline void sub_2_entry_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     uint32x4_t finite_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
@@ -14423,7 +14423,7 @@ inline void sub_2_entry_packed(const float* x0_in, const float* x1_in, const flo
     finite_out = finite;
 }
 
-// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved.
+// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), unverified (IEEE model).
 inline void sum_1_packed(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t s_lane_ = vdupq_n_f64(0.0);
@@ -14487,7 +14487,7 @@ inline void sum_1_packed(const float* x_in, std::size_t n, float& r_out, bool& f
     flag_out = fin_flag;
 }
 
-// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved.
+// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), unverified (IEEE model).
 inline void sum_1_entry_packed(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t s_lane_ = vdupq_n_f64(0.0);
@@ -14555,7 +14555,7 @@ inline void sum_1_entry_packed(const float* x_in, std::size_t n, float& r_out, b
     flag_out = fin_flag;
 }
 
-// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
+// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), unverified (IEEE model).
 inline void sum_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t s0_lane_ = vdupq_n_f64(0.0);
@@ -14781,7 +14781,7 @@ inline void sum_2_packed(const float* x0_in, const float* x1_in, std::size_t n, 
     flag_out = fin_flag;
 }
 
-// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
+// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), unverified (IEEE model).
 inline void sum_2_entry_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t s0_lane_ = vdupq_n_f64(0.0);
@@ -15019,7 +15019,7 @@ inline void sum_2_entry_packed(const float* x0_in, const float* x1_in, std::size
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
+// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), unverified (IEEE model).
 inline void sum_fast_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t s0_lane_ = vdupq_n_f64(0.0);
@@ -15179,7 +15179,7 @@ inline void sum_fast_2_packed(const float* x0_in, const float* x1_in, std::size_
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
+// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), unverified (IEEE model).
 inline void sum_fast_2_entry_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t s0_lane_ = vdupq_n_f64(0.0);

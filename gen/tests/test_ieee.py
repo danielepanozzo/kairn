@@ -588,12 +588,24 @@ class TheoremFields(unittest.TestCase):
         self.assertEqual(rules.check_all(ks), [])
         before, after = build.outputs(self.kernels_with()), build.outputs(ks)
         changed = sorted(rel for rel in after if after[rel] != before[rel])
-        self.assertEqual(changed, ['proofs/gen/IeeeAudit.v', 'proofs/gen/IeeeFoldStatements.v',
-                                   'proofs/gen/IeeeStatements.v'])
+        # The C++ headers too, since the comment of a fold's function gives the status of each model
+        # (cpp.fold_status): only the comments of dot_2's functions, from unverified to proved.
+        self.assertEqual(changed, ['include/kairn/gen/avx2.hpp', 'include/kairn/gen/neon.hpp',
+                                   'include/kairn/gen/scalar.hpp', 'proofs/gen/IeeeAudit.v',
+                                   'proofs/gen/IeeeFoldStatements.v', 'proofs/gen/IeeeStatements.v'])
 
         def diff(rel):
             old, new = before[rel].splitlines(), after[rel].splitlines()
             return [a for a in new if a not in old], [a for a in old if a not in new]
+
+        for rel in changed[:3]:
+            added, gone = diff(rel)
+            self.assertEqual(len(added), len(gone), rel)
+            self.assertTrue(added, rel)
+            self.assertEqual(sorted(a.replace('proved (IEEE model)', 'unverified (IEEE model)') for a in added),
+                             sorted(gone), rel)
+            self.assertTrue(all(a.startswith('// fold dot_2(') and a.endswith('(real model), proved (IEEE model).')
+                                for a in added), (rel, added))
 
         added, gone = diff('proofs/gen/IeeeStatements.v')
         self.assertEqual(len(added), 2)

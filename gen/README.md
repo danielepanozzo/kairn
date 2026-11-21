@@ -270,9 +270,12 @@ written, `combine:` is that fold's combination, `radius: rz = bv_add_radius_k(m,
 one radius from the largest magnitude and the scalars, and `finish: (r, finite) = norm_finish_1(rz,
 ok)` tests it; when the flag is false a second pass writes every center zero and the radius is
 +infinity, the whole space. Each array is required `ball_vector ARRAY RADIUS`, and the fold claims
-`encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=... radii_when=...]`, `radii_when`
-the conditions of V4 on the scalars alone, so that V4 holds of every length, the empty vector
-included (it comes with `finite_when`), and the word `exact` (`"exact_when": []`) for a ball vector that
+`encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=... radii_when=... finite_from=P]`,
+`radii_when` the conditions of V4 on the scalars alone, so that V4 holds of every length, the empty vector
+included (it comes with `finite_when`), `finite_from` the precision from which V4 is claimed when it is
+above the fold's minimum precision (`rules._finite_from`: from that precision every constant of the
+fold must be finite in the smallest format, emax = prec + 1; `bv_add_1`, `bv_sub_1`, `bv_scale_1` say
+`finite_from=2`), and the word `exact` (`"exact_when": []`) for a ball vector that
 is exactly the set (`bv_neg_k`), or `exact_when=CONDITIONS` for one exact under conditions
 (`bv_mul_pow2_k`): its state has a third group, `mask ex`; its step returns the center and a mask, `(z, e)
 = STEP(...)`; a second `record:` line `ex = and(ex, e)` and a second `combine:` line `ex = and(ex, ex)`

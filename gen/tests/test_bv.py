@@ -27,7 +27,7 @@ import test_folds as folds_tests
 import test_ieee_writers as writers
 import test_simd as simd_tests
 import test_statements as st
-from kairn_gen import claims, cpp, expr, interp, ir, objcode, rocq, rules
+from kairn_gen import claims, consts, cpp, expr, interp, ir, objcode, rocq, rules
 
 BVS = ('bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_neg_1', 'bv_neg_2',
        'bv_mul_pow2_1', 'bv_mul_pow2_2')
@@ -119,6 +119,18 @@ def exact_conditions_hold(fd, f, given, groups):
     return True
 
 
+def smallest_formats(fd):
+    """The smallest formats each clause of the IEEE statement is printed for: the fold's minimum
+    precision, and the precision of V4 (finite_from) when it is above it, each with the smallest emax the
+    model admits (binary_float asks prec < emax: emax = prec + 1). toy_formats starts at precision 2 with
+    emax = prec + 3, and missed that bv_add_1's radius overflows at precision 1, emax 2. Below
+    finite_from a constant of the fold overflows that format, where the IEEE model makes it +infinity
+    and the interpreter refuses to run (InterpError): V1 to V3 there are the proofs' only, and
+    test_v4_is_false_at_precision_1 checks the overflow itself."""
+    p = fd.ensures[0].get('finite_from', fd.min_precision)
+    return [(p, p + 1)]
+
+
 def radii_within(fd, f, given):
     """Whether the scalars satisfy radii_when, the radii's own condition of V4."""
     top = F(2) ** (f.qmax + f.p)
@@ -207,9 +219,10 @@ def judge_bv(m, ks, fd, f, scalars, elements, out):
             want = m.run(fd.radius[0], wide, lead + [given[a] for a in fd.radius[1][len(lead):]])
             if exact(want[0]) != exact(r):
                 bad.append('V3: the radius is not the radius kernel\'s on the largest center')
-    elif operands_finite:
+    elif operands_finite and f.p >= entry.get('finite_from', 0):
         # V4, of every length: finite operands, the radii within their condition (radii_when), and
-        # every entry within the stated fraction of the overflow threshold give a finite result.
+        # every entry within the stated fraction of the overflow threshold give a finite result; from
+        # the precision of finite_from when the claim has one (bv_add_1, bv_sub_1, bv_scale_1: from 2).
         top = F(2) ** (f.qmax + f.p)
         ok = radii_within(fd, f, given)
         for gs in groups:
@@ -538,6 +551,26 @@ domain:        extended
             errs = [str(e) for e in rules.claims(k, ks)]
             self.assertTrue(any(words in e for e in errs), (name, old, words, errs))
 
+    def test_finite_from(self):
+        """V4 is claimed from a precision where every constant of the fold is finite in the smallest format
+        (emax = prec + 1): bv_add_1 without finite_from=2 is refused (its radius's constants overflow at
+        precision 1, emax 2), and so are finite_from at the minimum precision and without finite_when."""
+        ks = common.kernels()
+        with open(f'{common.GEN}/kernels/bv_add_1.fold', encoding='utf-8') as fh:
+            base = fh.read().replace('fold:          bv_add_1', 'fold:          tb')
+        for old, new, words in ((' finite_from=2', '', 'V4 is claimed from precision 1'),
+                                (' finite_from=2', ' finite_from=1', 'above the minimum precision 1'),
+                                (' finite_when=abs_le(abs(x+y)+rx+ry,-2) radii_when=abs_le(rx+ry,-2)', '',
+                                 'which needs finite_when')):
+            text = base.replace(old, new)
+            self.assertNotEqual(text, base, old)
+            fd = ir.parse_fold(text, 'tb.fold')
+            errs = [str(e) for e in rules.fold_rules(fd, ir.ordered(dict(ks), dict(ks.folds, tb=fd)))]
+            self.assertTrue(any(words in e for e in errs), (old, words, errs))
+        for name in BVS:
+            e = ks.folds[name].ensures[0]
+            self.assertEqual(e.get('finite_from'), 2 if name in ('bv_add_1', 'bv_sub_1', 'bv_scale_1') else None, name)
+
     def test_the_ball_vectors_are_accepted(self):
         ks = common.kernels()
         for name in BVS + MAKES:
@@ -577,6 +610,7 @@ class Interp(unittest.TestCase):
         for name in BVS:
             fd = ks.folds[name]
             jobs += [(name, p, emax, common.size(150, 1500)) for p, emax in writers.toy_formats(fd.min_precision)]
+            jobs += [(name, p, emax, common.size(150, 1500)) for p, emax in smallest_formats(fd)]
             jobs += [(name, None, fmt, common.size(80, 600)) for fmt in ('binary64', 'binary32')]
         with ProcessPoolExecutor(max_workers=common.JOBS) as ex:
             results = list(ex.map(_judge, jobs))
@@ -591,6 +625,30 @@ class Interp(unittest.TestCase):
             if name in EXACTS:
                 # Exact under its conditions, in many cases: the scalings that do not underflow.
                 self.assertGreater(sum(r[7] for r in mine), 30, name)
+
+    def test_v4_is_false_at_precision_1(self):
+        """Why V4 of the one-limb sums and scaling is claimed from precision 2 (finite_from=2): at precision
+        1, emax 2 (the finite numbers 0, 1 and 2), the constant up((1+u)^3) of bv_add_radius_1 and
+        bv_scale_radius_1 is 27/8 rounded up, 4 = 2^emax, beyond the largest finite number: the IEEE model
+        makes it +infinity, and bv_add_1 of one entry (+0, +0) and the radii +0, every premise of V4 met,
+        is the whole space (rz = fma(+0, +inf, H) is a NaN); the interpreter refuses the format. In the
+        smallest format of precision 2 the same case is a finite ball vector."""
+        ks = common.kernels()
+        m = interp.Machine(ks)
+        f1 = writers.ieee_format(1, 2)
+        for radius in ('bv_add_radius_1', 'bv_scale_radius_1'):
+            self.assertIn('up((1+u)^3)', ir.constants(ks[radius]))
+        with self.assertRaisesRegex(consts.ConstError, 'overflows'):
+            consts.value('up((1+u)^3)', ks, f1.p, f1.qmin, f1.qmax)
+        with self.assertRaises(interp.InterpError):
+            m.run_fold('bv_add_1', f1, 'sequential', 0, [[ZERO], [ZERO]], [ZERO, ZERO])
+        f2 = writers.ieee_format(2, 3)
+        self.assertEqual(consts.value('up((1+u)^3)', ks, f2.p, f2.qmin, f2.qmax), 2)
+        for name in ('bv_add_1', 'bv_sub_1'):
+            out = m.run_fold(name, f2, 'sequential', 0, [[ZERO], [ZERO]], [ZERO, ZERO])
+            self.assertEqual(out[-1], True, name)
+        out = m.run_fold('bv_scale_1', f2, 'sequential', 0, [[ZERO]], [ZERO, interp.canon(False, 1, 0)])
+        self.assertEqual(out[-1], True)
 
     def test_the_norm_of_a_ball_vector(self):
         """bv_norm_upper_k is two calls (architecture.md, "Ball vectors"): (n, ok) = norm_upper_k(c) and
@@ -646,6 +704,7 @@ class Interp(unittest.TestCase):
         for name in MAKES:
             fd = ks.folds[name]
             jobs += [(name, p, emax, common.size(300, 3000)) for p, emax in writers.toy_formats(fd.min_precision)]
+            jobs += [(name, p, p + 1, common.size(300, 3000)) for p in (fd.min_precision,)]   # the smallest format
             jobs += [(name, None, fmt, common.size(200, 1500)) for fmt in ('binary64', 'binary32')]
         with ProcessPoolExecutor(max_workers=common.JOBS) as ex:
             results = list(ex.map(_judge_make, jobs))
@@ -692,6 +751,7 @@ class Interp(unittest.TestCase):
         for name in BVS:
             fd = ks.folds[name]
             formats = [writers.ieee_format(p, emax) for p, emax in writers.toy_formats(fd.min_precision)] + \
+                [writers.ieee_format(p, emax) for p, emax in smallest_formats(fd)] + \
                 [interp.parse_format('binary64'), interp.parse_format('binary32')]
             at_limit, beyond, whole = 0, 0, 0
             for f in formats:
@@ -1062,6 +1122,30 @@ class Printers(unittest.TestCase):
         self.assertIn('inline void bv_sub_2_packed(const double* x0_in', simd.header(simd.AVX2, self.ks))
         self.assertIn('KAIRN_GEN_NOINLINE void bv_sub_2_packed_end(double m', simd.header(simd.AVX2, self.ks))
         self.assertIn('inline void bv_sub_2_packed(const double* x0_in', simd.header(simd.NEON, self.ks))
+
+    def test_the_precisions_and_the_statuses(self):
+        """V4 of bv_add_1, bv_sub_1 and bv_scale_1 is printed under (2 <= prec)%Z, their finite_from, and that
+        of the others under nothing more than the fold's minimum precision; a convolution's NaN branch says
+        the flag is false; the C++ comment of a fold gives the status of each model."""
+        from kairn_gen import ieee
+        s = ieee.fold_statements(self.ks)
+        for name in BVS:
+            fd = self.ks.folds[name]
+            for order in fd.orders:
+                text = s.split(f'Definition {name}_{ir.ORDER_SUFFIX[order]}_ieee_spec : Prop :=', 1)[1].split('\n\n', 1)[0]
+                self.assertEqual('  ((2 <= prec)%Z -> finite ' in text, name in ('bv_add_1', 'bv_sub_1', 'bv_scale_1'),
+                                 (name, order))
+                self.assertEqual(text.count('<= prec)%Z ->'), 1 + (name in ('bv_add_1', 'bv_sub_1', 'bv_scale_1')),
+                                 (name, order))
+        self.assertIn('  ((2 <= prec)%Z -> finite rx -> finite ry ->\n', s)
+        self.assertIn('    (~ finite (fst w_) -> nan (fst w_) /\\ nan (snd w_) /\\ flag_ = false))', s)
+        self.assertNotIn('nan (snd w_)))', s)
+        text = cpp.scalar(self.ks)
+        self.assertIn('// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), '
+                      'unverified (IEEE model).', text)
+        self.assertIn('the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved '
+                      '(real model), unverified (IEEE model).', text)
+        self.assertNotRegex(text, r'Status: (proved|unverified)\.\n(inline|KAIRN_GEN_NOINLINE) [^\n]*_(seq|lanes)\(')
 
     def test_the_models_and_statements(self):
         from kairn_gen import ieee

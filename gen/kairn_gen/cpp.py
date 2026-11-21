@@ -600,6 +600,13 @@ def fold_finish_lines(fd, kernels, ctype, state, pad='    '):
     return lines + _assign(outs, vals, pad)
 
 
+def fold_status(fd):
+    """The status of a fold in each of its two models, as a kernel's comment gives it: the real-model
+    statement (FoldStatements.v; fd.status) and the IEEE-model one (IeeeFoldStatements.v, proved once
+    the fold names its ieee_theorem). Every fold has both statements."""
+    return f'{fd.status} (real model), {"proved" if fd.ieee_theorem else "unverified"} (IEEE model)'
+
+
 def fold_step_loop(fd, kernels, ctype, state, start, pad='    '):
     """`for (i_ = START; i_ < n; ++i_)` the scalar step on the state variables `state`."""
     step, _, _ = fold_kernels(fd, kernels)
@@ -624,7 +631,7 @@ def fold_description(fd, kernels, order):
     what = {'seq': 'the sequential order (fold_seq of proofs/theories/Folds.v)',
             'lanes': 'the lane order (fold_lanes) with `lanes` lanes, computed one lane after another',
             'packed': 'the lane order (fold_lanes) with the lanes of a register'}[order]
-    return [f'// fold {fd.name}({arrays}), {parts}: {what}. Status: {fd.status}.']
+    return [f'// fold {fd.name}({arrays}), {parts}: {what}. Status: {fold_status(fd)}.']
 
 
 def fold_seq(fd, kernels, ctype):
@@ -751,7 +758,7 @@ def map_description(fd, kernels, order):
     return [f'// map {fd.name}({reads}) -> {w.name}' + (f' = ({", ".join(w.limbs)})' if len(w.limbs) > 1 else '')
             + f', step {step.name}, check {check.name}: {what}. A written array is exactly one of the',
             '// arrays read (in place) or overlaps none of them, nor another written one. Status: '
-            f'{fd.status}.']
+            f'{fold_status(fd)}.']
 
 
 def map_seq(fd, kernels, ctype):
@@ -814,7 +821,7 @@ def conv_description(fd, kernels):
             f': coefficient j, of n_{x.name} + n_{y.name} - 1 (none when a length is 0), is the fold {cf.name} in its',
             f'// sequential order on the terms ({x.name}_i, {y.name}_(j-i)), i increasing, checked by {fd.check}. '
             f'The array written',
-            f'// overlaps neither {x.name} nor {y.name}. Status: {fd.status}.']
+            f'// overlaps neither {x.name} nor {y.name}. Status: {fold_status(fd)}.']
 
 
 def conv_seq(fd, kernels, ctype):
@@ -955,7 +962,7 @@ def bv_description(fd, kernels, order):
             f'{what}.',
             '// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is '
             'exactly one',
-            f'// of the arrays read (in place) or overlaps none of them. Status: {fd.status}.']
+            f'// of the arrays read (in place) or overlaps none of them. Status: {fold_status(fd)}.']
 
 
 def bv_seq(fd, kernels, ctype):
@@ -1063,7 +1070,7 @@ def bv_conv_seq(fd, kernels, ctype):
              'space',
              '// (every coefficient zero, the radius +infinity) when the flag is false. The array written overlaps '
              f'neither {x.name} nor {y.name}.',
-             f'// Status: {fd.status}.',
+             f'// Status: {fold_status(fd)}.',
              f'inline void {fd.name}_seq({", ".join(bv_conv_parameters(fd, ctype))}) noexcept {{']
     for i, (g, rec) in enumerate(zip(fd.arrays, fd.records)):
         k = kernels[rec[0]]

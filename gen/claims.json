@@ -11395,7 +11395,8 @@
               "abs_le": "rx+ry",
               "exp": -2
             }
-          ]
+          ],
+          "finite_from": 2
         }
       ],
       "orders": [
@@ -12487,7 +12488,8 @@
               "abs_le": "rx*a",
               "exp": -2
             }
-          ]
+          ],
+          "finite_from": 2
         }
       ],
       "orders": [
@@ -12711,7 +12713,8 @@
               "abs_le": "rx+ry",
               "exp": -2
             }
-          ]
+          ],
+          "finite_from": 2
         }
       ],
       "orders": [

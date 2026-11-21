@@ -2157,6 +2157,46 @@ def _bv_claims(fd, kernels, step, radius, host):
         for k in (step, radius, kernels[host.step[0]]):
             if (k.min_precision or 1) > fd.min_precision:
                 err(f'min_precision {fd.min_precision}: the claims of {k.name} hold from precision {k.min_precision} on')
+        parts = [step, kernels[host.step[0]], radius] + ([kernels[fd.finish[0]]] if fd.finish else [])
+        errs += _finite_from(fd, e, kernels, parts)
+    return errs
+
+
+def _finite_from(fd, e, kernels, parts):
+    """The precision from which V4 is claimed: finite_from when the claim says it, which is then above the
+    fold's minimum precision and comes with finite_when; otherwise the minimum precision. V4 promises a
+    finite result, so from that precision on every constant of the fold's kernels (PARTS, their callees
+    included) must be a finite number of the smallest format the statement admits: that precision, with
+    emax = prec + 1 (binary_float asks prec < emax), qmin = 2 - 2 prec, qmax = 1. A constant that
+    overflows there (bv_add_radius_1's up((1+u)^3) at precision 1: 27/8 rounded up is 4 = 2^emax) makes
+    the radius +infinity or a NaN whatever the operands: V1 to V3 still hold (the whole space), V4 not."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', CLAIMS, msg))
+
+    if 'finite_from' in e:
+        if not e['finite_when']:
+            err('finite_from: the precision from which V4 is claimed, which needs finite_when')
+            return errs
+        if fd.min_precision is not None and e['finite_from'] <= fd.min_precision:
+            err(f'finite_from={e["finite_from"]}: above the minimum precision {fd.min_precision} (at or below it, '
+                'leave it out)')
+            return errs
+    if not e['finite_when'] or fd.min_precision is None:
+        return errs
+    p = e.get('finite_from', fd.min_precision)
+    names = set()
+    for k in parts:
+        for prim in ir.prims(k, kernels):
+            names |= {a.name for a in prim.args if a.const}
+    for c in sorted(names - {ir.ZERO, 'inf', 'nan'}):
+        try:
+            consts.value(c, kernels, p, 2 - 2 * p, 1)
+        except consts.ConstError as x:
+            err(f'V4 is claimed from precision {p}, but in the smallest format of that precision (emax {p + 1}) {x}: '
+                'claim it from a precision where every constant of the fold is finite (finite_from=P)')
+            break
     return errs
 
 
@@ -2339,6 +2379,11 @@ def bv_conv_rules(fd, kernels, reserved):
         return errs
     errs += _bv_radius_r3(fd, radius, kernels)
     errs += _bv_conv_claims(fd, kernels, conv, [radius, finish, bound] + [kernels[h.step[0]] for h in host])
+    if not errs and fd.ensures and fd.ensures[0].get('kind') == 'encloses_coefficients':
+        # V4 from its precision: the constants of every part, the coefficients' step and check included.
+        parts = [radius, finish, bound, kernels[cf.step[0]]] + [kernels[h.step[0]] for h in host] + \
+            ([kernels[conv.check]] if conv.check in kernels else [])
+        errs += _finite_from(fd, fd.ensures[0], kernels, parts)
     errs += _fold_theorem(fd)
     return errs
 

@@ -881,7 +881,8 @@ Definition axpy_2_seq_ieee_spec : Prop :=
 - if the leading limb of coefficient $j$ is finite: every limb of every term of `conv_terms xs ys j`
   and of the coefficient is finite, its values are those of the real model `D_seq` (`FoldModel.v`)
   on the values of those terms, and the conclusions of `D_seq_spec` hold of them;
-- otherwise: every limb of the coefficient is a NaN;
+- otherwise: every limb of the coefficient is a NaN, and `flag_ = false` (as in a map's statement;
+  until 2026-11-20 the convolution's left the flag out of this branch, which the last line implies);
 
 and `flag_ = true` exactly when the leading limb of every coefficient is finite.
 
@@ -1722,7 +1723,9 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`; a fold or a map, `ieee_theorem: FILE`,
   whose theorems are `F_seq_ieee_correct` and `F_lanes_ieee_correct`, and a convolution the same
   field, whose theorem is `F_ieee_correct`. The comment above a statement
-  says `proved` when its theorem is named and `unverified` otherwise, and `IeeeAudit.v` checks
+  says `proved` when its theorem is named and `unverified` otherwise. The comment above a fold's C++
+  function gives both, as a kernel's does: `Status: proved (real model), unverified (IEEE model)` for
+  `sum_2` (`cpp.fold_status`; until 2026-11-20 it gave the real model's alone). `IeeeAudit.v` checks
   every named theorem against its statement (`Definition S_audit : S := theorem.` and `Print
   Assumptions`), after the theorems of the extended domain, importing `IeeeFoldStatements` only
   when one of them is about a fold. Without any of these fields every generated file is what it
@@ -2445,7 +2448,7 @@ true` (and no `"map"`):
   "ensures": [{"kind": "encloses_entries", "center": "z", "radius": "r", "flag": "finite", "set": "x*a",
                "balls": {"x": {"center": "x", "radius": "rx"}},
                "finite_when": [{"abs_le": "(abs(x)+rx)*a", "exp": -2}],
-               "radii_when": [{"abs_le": "rx*a", "exp": -2}]}],
+               "radii_when": [{"abs_le": "rx*a", "exp": -2}], "finite_from": 2}],
   "orders": ["sequential", "lanes"],
   "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
   "step": "scale_step_1", "step_args": ["x", "a"], "record": "norm_step_1", "combine": "norm_combine",
@@ -2491,6 +2494,42 @@ true` (and no `"map"`):
       $\lvert x + y\rvert + r_x + r_y \ge r_x + r_y$, and for `bv_scale_1`,
       $(\lvert x\rvert + r_x)\lvert a\rvert \ge r_x\lvert a\rvert$. (Until 2026-11-20 V4 was stated
       for $n \ge 1$ only and `radii_when` did not exist.)
+    - **`finite_from`**, an integer, written after `radii_when` and only in an entry that has it
+      (`bv_add_1`, `bv_sub_1`, `bv_scale_1`: `"finite_from": 2`): the precision from which V4 is
+      claimed, above the fold's `min_precision`. V1 to V3 and the flag are claimed from `min_precision`,
+      V4 from `finite_from` (from `min_precision` when there is none). A reader judges V4 only in
+      formats of at least that precision.
+
+**From which precision each clause holds.** The statements quantify over every `emax` above the
+precision (`binary_float` asks $p < e_{\max}$), so the smallest format of precision $p$ has
+$e_{\max} = p + 1$: the finite numbers below $2^{p+1}$. V1 to V3 and the flag hold from the fold's
+minimum precision, whatever the constants: a constant of the radius kernel that overflows is
+$+\infty$ in the IEEE model, so the radius it enters is $+\infty$ or a NaN (an FMA of $+0$ and
+$+\infty$), the finish returns the whole space with the flag false, and V1 (the whole space is
+canonical), the flag, V2 (the whole space contains every set) and V3 (its premise is a finite result)
+hold of it. V4 alone promises a finite result, so it needs every constant of the fold's kernels to be
+finite in the smallest format: at precision 1, $e_{\max} = 2$ (the finite numbers $0$, $1$, $2$),
+`up((1+u)^3)` of `bv_add_radius_1` and `bv_scale_radius_1` is $27/8$ rounded up, $4 = 2^{e_{\max}}$,
+and so is `up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u))`: `bv_add_1` of one entry $(+0, +0)$ with the radii
+$+0$ meets every premise of V4 and returns the whole space. The rules check it
+(`rules._finite_from`): from the precision V4 is claimed from, every constant of the fold's step,
+records, radius and finish (and of the bound, the coefficients' step and check of a product of
+BallVectors), their callees included, must be a finite number of the smallest format of that
+precision; otherwise the description must say `finite_from=P`. The precisions:
+
+| Ball vectors | V1 to V3, the flag | V4 |
+|---|---|---|
+| `bv_add_1`, `bv_sub_1`, `bv_scale_1` | 1 | 2 (`finite_from=2`) |
+| `bv_neg_1`, `bv_neg_2` (no constant) | 1 | 1 |
+| `bv_make_1`, `bv_make_2` (`makes_ball_vector`: the whole space exactly when, no constant) | 1 | 1 |
+| `bv_scale_2`, `bv_mul_pow2_1`, `bv_mul_pow2_2` | 2 | 2 |
+| `bv_add_2`, `bv_sub_2` | 3 | 3 |
+| `bv_conv_1`, `bv_conv_2` | 4 | 4 |
+
+The tests of V4 (`test_bv.py`, `test_bv_conv.py`) run, besides their toy formats, the smallest format
+of the precision V4 is claimed from ($e_{\max} = p + 1$); below `finite_from` the interpreter refuses
+the format, whose constant overflows (an `InterpError`), and `test_bv.Interp.test_v4_is_false_at_precision_1`
+checks that overflow. (Until 2026-11-20 V4 of the three was claimed from precision 1, which is false.)
 
     - **Exact**, with `"exact_when": []` (written last, only in an entry that has it: `bv_neg_k`, the
       word `exact` of the description): if the result is a finite ball vector, it is exactly the set,

@@ -539,6 +539,14 @@ def _group(text, where, classes=()):
     return Group(m.group(1), limbs), cls
 
 
+def _finite_from(text, where):
+    """finite_from=P of a ball vector's claim: the precision from which V4 is claimed, a positive
+    integer."""
+    if not re.fullmatch(r'[1-9][0-9]*', text):
+        raise DescriptionError(f'{where}: finite_from is a precision, a positive integer, got {text!r}')
+    return int(text)
+
+
 def _finite_when(text, where):
     """abs_le(EXPR,E);abs_le(EXPR,E) as [{'abs_le': EXPR, 'exp': E}, ...]."""
     out = []
@@ -895,13 +903,18 @@ def _ensures(words, where):
         # radius (a scalar). radii_when: the conditions of V4 on the scalars alone, which make it
         # a statement of every length, the empty vector included (finite_when at any entry implies
         # them).
-        balls, finite_when, radii_when, flag, exact = {}, None, None, None, False
+        balls, finite_when, radii_when, flag, exact, finite_from = {}, None, None, None, False, None
         for w in words[4:]:
             if w.startswith('finite_when=') and finite_when is None:
                 finite_when = _finite_when(w[len('finite_when='):], where)
                 continue
             if w.startswith('radii_when=') and radii_when is None:
                 radii_when = _finite_when(w[len('radii_when='):], where)
+                continue
+            if w.startswith('finite_from=') and finite_from is None:
+                # The precision from which V4 is claimed, when above the fold's minimum precision
+                # (a constant of the radius kernel overflows the smallest formats below it).
+                finite_from = _finite_from(w[len('finite_from='):], where)
                 continue
             if w == 'exact' and not exact:
                 # Exact (bv_neg_k): the result is exactly the set, entry by entry, always (the empty
@@ -925,6 +938,8 @@ def _ensures(words, where):
                  'balls': balls, 'finite_when': finite_when or []}
         if radii_when is not None:
             entry['radii_when'] = radii_when
+        if finite_from is not None:
+            entry['finite_from'] = finite_from
         if exact:
             entry['exact_when'] = [] if exact is True else exact
         return entry
@@ -937,7 +952,7 @@ def _ensures(words, where):
         balls, opts, flag = {}, {}, None
         for w in words[4:]:
             key, eq, val = w.partition('=')
-            if key in ('finite_when', 'radii_when', 'count_when') and eq and key not in opts:
+            if key in ('finite_when', 'radii_when', 'count_when', 'finite_from') and eq and key not in opts:
                 opts[key] = val
                 continue
             if key == 'flag' and eq and val and flag is None:
@@ -962,6 +977,8 @@ def _ensures(words, where):
                     raise DescriptionError(f'{where}: a condition of count_when is le(EXPR,K), got {part!r}')
                 conds.append({'le': args[0], 'than': args[1]})
             entry['count_when'] = conds
+        if 'finite_from' in opts:
+            entry['finite_from'] = _finite_from(opts['finite_from'], where)
         return entry
     if kind == 'error' and len(words) >= 3:
         entry = {'kind': 'error', 'of': words[1], 'form': words[2],

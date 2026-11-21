@@ -1488,7 +1488,7 @@ Definition conv_1_ieee_spec : Prop :=
      Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) vs)) <=
          ((1 + (u prec / (1 + u prec))) ^ length vs - 1) * sumabs (map (fun xy => (fst xy * snd xy)) vs) +
          (1 + (u prec / (1 + u prec))) ^ (length vs - 1) * (INR (length vs) * (eta (ieee_emin prec emax) / 2))) /\
-    (~ finite w_ -> nan w_))
+    (~ finite w_ -> nan w_ /\ flag_ = false))
     (seq 0 (conv_length (length xs) (length ys))) ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
@@ -1514,7 +1514,7 @@ Definition conv_2_ieee_spec : Prop :=
      Rabs ((fst s + snd s) - sumR (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) vs)) <=
          ((1 + (4 * (u prec ^ 2))) * (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) - 1) * sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) vs) +
          (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) * (INR (length vs) * ((3 / 2) * eta (ieee_emin prec emax)))) /\
-    (~ finite (fst w_) -> nan (fst w_) /\ nan (snd w_)))
+    (~ finite (fst w_) -> nan (fst w_) /\ nan (snd w_) /\ flag_ = false))
     (seq 0 (conv_length (length xs) (length ys))) ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
@@ -1545,7 +1545,7 @@ Definition bv_add_1_seq_ieee_spec : Prop :=
      let z := w_ in
      val z = add_1_1 (ieee_emin prec emax) prec tie_even (val x) (val y)) xys ws_ /\
    val r_ = FoldModel.bv_add_1_radius (ieee_emin prec emax) prec tie_even (val rx) (val ry) (map (fun xy => (val (fst xy), val (snd xy))) xys)) /\
-  (finite rx -> finite ry ->
+  ((2 <= prec)%Z -> finite rx -> finite ry ->
    Rabs (val rx + val ry) <= bpow radix2 (emax - 2) ->
    Forall (fun xy =>
      let '(x, y) := xy in
@@ -1579,7 +1579,7 @@ Definition bv_add_1_lanes_ieee_spec : Prop :=
      let z := w_ in
      val z = add_1_1 (ieee_emin prec emax) prec tie_even (val x) (val y)) xys ws_ /\
    val r_ = FoldModel.bv_add_1_radius (ieee_emin prec emax) prec tie_even (val rx) (val ry) (map (fun xy => (val (fst xy), val (snd xy))) xys)) /\
-  (finite rx -> finite ry ->
+  ((2 <= prec)%Z -> finite rx -> finite ry ->
    Rabs (val rx + val ry) <= bpow radix2 (emax - 2) ->
    Forall (fun xy =>
      let '(x, y) := xy in
@@ -2051,7 +2051,7 @@ Definition bv_scale_1_seq_ieee_spec : Prop :=
      let z := w_ in
      val z = scale_step_1 (ieee_emin prec emax) prec tie_even (val x) (val a)) xs ws_ /\
    val r_ = FoldModel.bv_scale_1_radius (ieee_emin prec emax) prec tie_even (val rx) (val a) (map (fun x => val x) xs)) /\
-  (finite rx -> finite a ->
+  ((2 <= prec)%Z -> finite rx -> finite a ->
    Rabs (val rx * val a) <= bpow radix2 (emax - 2) ->
    Forall (fun x =>
      Rabs (((Rabs (val x)) + val rx) * val a) <= bpow radix2 (emax - 2)) xs ->
@@ -2080,7 +2080,7 @@ Definition bv_scale_1_lanes_ieee_spec : Prop :=
      let z := w_ in
      val z = scale_step_1 (ieee_emin prec emax) prec tie_even (val x) (val a)) xs ws_ /\
    val r_ = FoldModel.bv_scale_1_radius (ieee_emin prec emax) prec tie_even (val rx) (val a) (map (fun x => val x) xs)) /\
-  (finite rx -> finite a ->
+  ((2 <= prec)%Z -> finite rx -> finite a ->
    Rabs (val rx * val a) <= bpow radix2 (emax - 2) ->
    Forall (fun x =>
      Rabs (((Rabs (val x)) + val rx) * val a) <= bpow radix2 (emax - 2)) xs ->
@@ -2177,7 +2177,7 @@ Definition bv_sub_1_seq_ieee_spec : Prop :=
      let z := w_ in
      val z = sub_1_1 (ieee_emin prec emax) prec tie_even (val x) (val y)) xys ws_ /\
    val r_ = FoldModel.bv_sub_1_radius (ieee_emin prec emax) prec tie_even (val rx) (val ry) (map (fun xy => (val (fst xy), val (snd xy))) xys)) /\
-  (finite rx -> finite ry ->
+  ((2 <= prec)%Z -> finite rx -> finite ry ->
    Rabs (val rx + val ry) <= bpow radix2 (emax - 2) ->
    Forall (fun xy =>
      let '(x, y) := xy in
@@ -2211,7 +2211,7 @@ Definition bv_sub_1_lanes_ieee_spec : Prop :=
      let z := w_ in
      val z = sub_1_1 (ieee_emin prec emax) prec tie_even (val x) (val y)) xys ws_ /\
    val r_ = FoldModel.bv_sub_1_radius (ieee_emin prec emax) prec tie_even (val rx) (val ry) (map (fun xy => (val (fst xy), val (snd xy))) xys)) /\
-  (finite rx -> finite ry ->
+  ((2 <= prec)%Z -> finite rx -> finite ry ->
    Rabs (val rx + val ry) <= bpow radix2 (emax - 2) ->
    Forall (fun xy =>
      let '(x, y) := xy in

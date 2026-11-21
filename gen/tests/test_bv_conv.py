@@ -225,7 +225,9 @@ def _limits(job):
 
 
 def formats():
-    return [(p, emax) for p, emax in ((4, 7), (4, 9), (5, 8), (5, 12), (6, 10), (6, 14))]
+    # The smallest format of the precision the statement is printed from (emax = prec + 1: binary_float
+    # asks prec < emax), and wider ones.
+    return [(p, emax) for p, emax in ((4, 5), (4, 7), (4, 9), (5, 8), (5, 12), (6, 10), (6, 14))]
 
 
 class Rules(unittest.TestCase):

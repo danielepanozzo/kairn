@@ -2038,7 +2038,9 @@ def conv_statement(fd, kernels):
               f'     let s := {real} in',
               f'     {vals} = s /\\',
               '     ' + ' /\\\n     '.join(claims) + ') /\\',
-              f'    (~ finite {w[0]} -> ' + ' /\\ '.join(f'nan {v}' for v in w) + '))',
+              # A coefficient that is not finite is a NaN in every limb, and the flag is false, as in a
+              # map's statement (map_statement).
+              f'    (~ finite {w[0]} -> ' + ' /\\ '.join(f'nan {v}' for v in w) + ' /\\ flag_ = false))',
               f'    (seq 0 (conv_length (length {xs}) (length {ys}))) ws_ /\\',
               f'  (flag_ = true <-> Forall (fun w_ => finite {w[0]}) ws_).']
     return lines
@@ -2255,14 +2257,21 @@ def bv_statement(fd, kernels, order):
               f'     {vals} = {centers}) {xs} ws_ /\\',
               f'   val r_ = {real_r})' + (' /\\' if conds else '.')]
     if conds:
-        # V4, for every length (the empty vector included).
-        lines += ['  (' + ' -> '.join(f'finite {v}' for v in scalar_limbs) + ' ->',
+        # V4, for every length (the empty vector included); from the precision of finite_from when the
+        # claim has one (a constant of the radius overflows the smallest formats below it).
+        lines += ['  (' + _finite_from(entry) + ' -> '.join(f'finite {v}' for v in scalar_limbs) + ' ->',
                   '   ' + ' /\\ '.join(rconds) + ' ->',
                   f'   Forall (fun {el} =>']
         lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
         lines += ['     ' + ' /\\ '.join(conds) + f') {xs} ->',
                   '   finite r_).']
     return lines
+
+
+def _finite_from(entry):
+    """The premise of V4 on the precision, when the claim says from which precision V4 holds
+    (finite_from, above the fold's minimum precision): '(P <= prec)%Z -> '; otherwise nothing."""
+    return f'({entry["finite_from"]} <= prec)%Z -> ' if 'finite_from' in entry else ''
 
 
 def bv_conv_statement(fd, kernels):
@@ -2359,7 +2368,7 @@ def bv_conv_statement(fd, kernels):
               f'   val r_ = {" ".join([f"FoldModel.{fd.name}_radius"] + sec_r + [f"(val {v})" for v in scalar_limbs] + [vx, vy])})' +
               (' /\\' if entry['finite_when'] else '.')]
     if entry['finite_when']:
-        hyp = ['  (' + ' -> '.join(f'finite {v}' for v in scalar_limbs) + ' ->']
+        hyp = ['  (' + _finite_from(entry) + ' -> '.join(f'finite {v}' for v in scalar_limbs) + ' ->']
         hyp += [f'   {c} ->' for c in counts + conds['none']]
         for where, g, l in (('x', x, xs), ('y', y, ys)):
             if conds[where]:
