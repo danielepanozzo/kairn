@@ -90,6 +90,10 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
   for infinities and NaN the operations return IEEE-like results and the special states of a
   ball, which is proved in a model of IEEE 754, with a condition under which a `Ball` operation
   stays finite. The report lists what is open.
+- **Milestone 2**, in progress ([design](developer/design/milestone2.md)): on `main`, `Interval`,
+  the interface intervals and balls share, the building blocks, constants at compile time,
+  `Packed` and the containers; in review, the functions on arrays, the accumulator and
+  `BallVector`.
 - The later milestones are in the [Plan](developer/design/phase0/plan.md#milestones).
 
 ## Where to go next
