@@ -12,6 +12,7 @@ From Kairn Require Import AddFast22.
 From Kairn Require Import Ball2.
 From Kairn Require Import BallPow2.
 From Kairn Require Import BoundKernels.
+From Kairn Require Import BvConv.
 From Kairn Require Import BvNegMake.
 From Kairn Require Import BvPow2.
 From Kairn Require Import BvRadius.
@@ -145,6 +146,9 @@ Print Assumptions bv_scale_radius_1_correct.
 
 Definition bv_scale_radius_2_audit : bv_scale_radius_2_spec := bv_scale_radius_2_correct.
 Print Assumptions bv_scale_radius_2_correct.
+
+Definition conv_radius_audit : conv_radius_spec := conv_radius_correct.
+Print Assumptions conv_radius_correct.
 
 Definition dot_step_1_audit : dot_step_1_spec := dot_step_1_correct.
 Print Assumptions dot_step_1_correct.
@@ -418,6 +422,12 @@ Print Assumptions bv_add_1_correct.
 
 Definition bv_add_2_audit : bv_add_2_spec := bv_add_2_correct.
 Print Assumptions bv_add_2_correct.
+
+Definition bv_conv_1_audit : bv_conv_1_spec := bv_conv_1_correct.
+Print Assumptions bv_conv_1_correct.
+
+Definition bv_conv_2_audit : bv_conv_2_spec := bv_conv_2_correct.
+Print Assumptions bv_conv_2_correct.
 
 Definition bv_make_1_audit : bv_make_1_spec := bv_make_1_correct.
 Print Assumptions bv_make_1_correct.

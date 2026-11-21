@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 170 kernels, 168 are proved and 2 are **UNVERIFIED**: [`bv_conv_finish`](bv_conv_finish.md), [`conv_radius`](conv_radius.md).
+Of the 170 kernels, 169 are proved and 1 are **UNVERIFIED**: [`bv_conv_finish`](bv_conv_finish.md).
 
 33 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -304,6 +304,6 @@ The one radius of the result of the BallVector kernels of Milestone 2 (the sum, 
 | not yet called by the public headers | - | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md) |
 | not yet called by the public headers | - | $\lvert z - x c\rvert \le \eta$, normalized | [`bv_mul_pow2_step_2`](bv_mul_pow2_step_2.md) |
 | not yet called by the public headers | - | $r_z \ge r_x c$; when $e_x$ is false, $r_z \ge r_x c + \eta$ | [`bv_mul_pow2_radius`](bv_mul_pow2_radius.md) |
-| none (internal) | - | $r_z \ge m ((1 + u) m_a r_y + (1 + u) m_b r_x + r_x r_y) + g m (1 + u)^{2} m_a m_b + t$ | [`conv_radius`](conv_radius.md) **UNVERIFIED** |
+| none (internal) | - | $r_z \ge m ((1 + u) m_a r_y + (1 + u) m_b r_x + r_x r_y) + g m (1 + u)^{2} m_a m_b + t$ | [`conv_radius`](conv_radius.md) |
 | none (internal) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_conv_finish`](bv_conv_finish.md) **UNVERIFIED** |
 

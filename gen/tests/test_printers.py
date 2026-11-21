@@ -944,10 +944,11 @@ class Rocq(unittest.TestCase):
     # statement were proved, and the four folds (BvNegMake.v): in Statements.v only the comments above
     # their five statements changed, and Audit.v lists their nine theorems, every earlier line kept, in
     # its order; Model.v is the same. Then the three kernels of the scaling by a power of two and its
-    # two folds (BvPow2.v): three comments more, and five theorems.
+    # two folds (BvPow2.v): three comments more, and five theorems. Then conv_radius and the two products
+    # of BallVectors (BvConv.v): one comment more, and three theorems.
     DIGESTS = {'Model.v': '92ef82134249c903891247c27a7528c22b1055c1cf4a1b308ba445ed3fa949f3',
-               'Statements.v': '0cb60bb76232993750ec965d630342f83073db7911365b4da2d2eec7f50eb253',
-               'Audit.v': '7d4dce14f36e2ec979869bc2da9f3873c2998be2637931caef86c612e7f8cf45'}
+               'Statements.v': '81c63b87aaa4ef0549b5a9dea6b1c72d85b7b015ff63c54cb7f696599975ba07',
+               'Audit.v': 'ce66489fd072eb2379bea3bf8a720b1a04c9036434ab723fd011c1ea601b7305'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

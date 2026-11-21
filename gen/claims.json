@@ -3117,8 +3117,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvConv.v",
+        "name": "conv_radius_correct"
+      },
       "source": {
         "cite": "the radius of the product of polynomials of BallVector (milestone2.md, conv_radius)",
         "license": "algorithm and proof: MIT"
@@ -11918,8 +11921,11 @@
       ],
       "finish": "bv_conv_finish",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvConv.v",
+        "name": "bv_conv_1_correct"
+      },
       "source": {
         "cite": "conv_1 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)",
         "license": "algorithm and proof: MIT"
@@ -12042,8 +12048,11 @@
       ],
       "finish": "bv_conv_finish",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvConv.v",
+        "name": "bv_conv_2_correct"
+      },
       "source": {
         "cite": "conv_2 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)",
         "license": "algorithm and proof: MIT"

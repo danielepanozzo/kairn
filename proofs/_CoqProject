@@ -54,6 +54,7 @@ theories/BvRadius.v
 theories/BvReal.v
 theories/BvNegMake.v
 theories/BvPow2.v
+theories/BvConv.v
 theories/AccKernels.v
 theories/Accumulator.v
 theories/IeeeOperations.v
@@ -97,6 +98,7 @@ theories/IeeeFoldConv.v
 theories/IeeeBv.v
 theories/IeeeBvNegMake.v
 theories/IeeeBvPow2.v
+theories/IeeeBvConv.v
 theories/IeeeFoldNorm.v
 theories/IeeeBallConvert.v
 theories/IeeeIntervalExact.v

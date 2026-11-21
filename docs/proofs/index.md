@@ -100,8 +100,9 @@ lists:
   ball vectors and of the ball vectors themselves, over the real numbers (`BvRadius.v`,
   `BvReal.v`), and with overflow, infinities and NaN (`IeeeBv.v`), and of the negation and
   the constructor of a ball vector and its scaling by a power of two, in both models
-  (`BvNegMake.v`, `IeeeBvNegMake.v`, `BvPow2.v`, `IeeeBvPow2.v`; [below](#ball-vectors)); and of
-  the
+  (`BvNegMake.v`, `IeeeBvNegMake.v`, `BvPow2.v`, `IeeeBvPow2.v`), and of the product of two ball
+  vectors over the real numbers, with what holds of its finish with overflow (`BvConv.v`,
+  `IeeeBvConv.v`; [below](#ball-vectors)); and of the
   kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
@@ -159,7 +160,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  97 files: no Admitted, admit, Axiom or Parameter
+  103 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -561,6 +562,31 @@ the IEEE model. So the one radius covers every entry, and under the conditions o
 polynomial halved again and again keeps the radius $r/2^i$ exactly, until something underflows.
 In the IEEE model a finite result is the real model's on the values, masks included; V4 holds
 because under its conditions every scaled center and the radius lines stay below $2^{e_{\max}}$.
+
+**The product of two ball vectors** (`BvConv.v`): the radius kernel `conv_radius` and
+`bv_conv_k` have their generated statements of the real model as types. The radius: each of the
+six first lines is one rounding of a nonnegative value, which loses at most a factor $1+u$ and
+$\eta/2$; chained, with $g \le 1$, they leave the bound of the claim times $(1+u)^5$ plus at most
+$(1+u)^5\eta/2 + 5(1+u)^4 m\,\eta/2$, which the last line covers: its factor
+$\mathrm{RU}((1+u)^7)$, and its term $m\,\mathrm{RU}(4(1+u)^8\eta + \eta/(2u))$, in the normal
+range for $m \ge 1$ (with no term, $m = 0$, the claim is $t \le r_z$). The requirement $g \le 1$ is
+what a true mask of `bound_dot_k` gives (`bound_dot_k_at_most`: its listing tests $g$ against
+$\mathrm{up}(1) = 1$). The fold: coefficient $j$ is within $g\sum\lvert c_x c_y\rvert + t$ of the
+exact sum of the products of the centers of its terms (`conv_k_bound` of `FoldConv.v`, for the
+count $m \ge \min(n_x, n_y)$ rounded up), and for members $x_i$, $y_k$ chosen independently in
+their balls, the terms of the coefficient of the members are those of the centers term by term
+(`conv_terms_Forall2`), each product within $\lvert c_x\rvert r_y + \lvert c_y\rvert r_x + r_x
+r_y$ of the product of the centers (`member_product`), every center at most $(1+u)M$ (one limb:
+$M$) with $M$ the largest magnitude of a leading limb, and at most $m$ terms: so the exact
+coefficient of the members is within the radius's claim of the coefficient written
+(`coef_bound`).
+
+**Not proved: the product in the model with overflow.** `bv_conv_k` in the IEEE model (V1 to V4)
+is unverified, and so is the finish `bv_conv_finish`, whose generated statement is false
+(`not_bv_conv_finish_spec` of `IeeeBvConv.v`, audited in step 3): it says that the flag is true
+exactly when the radius is finite, for any masks, while a false mask of the convolution gives a
+false flag with a finite radius; what holds is the same with both masks true
+(`bv_conv_finish_facts`).
 
 ## The accumulator
 

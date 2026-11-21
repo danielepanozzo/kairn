@@ -563,10 +563,14 @@ template <> struct bv_scale_radius_2<float> {
     static constexpr bool proved = true;
 };
 
-// conv_radius: UNVERIFIED. Claims: upper.
+// conv_radius: proved. Claims: upper.
 template <class T> struct conv_radius;
-template <> struct conv_radius<double> { static constexpr bool proved = false; };
-template <> struct conv_radius<float> { static constexpr bool proved = false; };
+template <> struct conv_radius<double> {
+    static constexpr bool proved = true;
+};
+template <> struct conv_radius<float> {
+    static constexpr bool proved = true;
+};
 
 // dot_step_1: proved. Claims: rounded.
 template <class T> struct dot_step_1;

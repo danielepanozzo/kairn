@@ -502,7 +502,7 @@ Definition bv_scale_radius_2_spec : Prop :=
   fmt emin prec rz /\
   ((((Rabs a) * rx) + (((m * (2 * u prec ^ 2)) / (1 - (2 * u prec ^ 2))) * (1 + u prec))) + ((1 * eta emin) / (1 - (2 * u prec ^ 2)))) <= rz.
 
-(* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: unverified. *)
+(* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: proved. *)
 Definition conv_radius_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall ma mb rx ry m g t : R,

@@ -105,7 +105,12 @@
      theorems rest on;
    - the scaling of a ball vector by a power of two, beside the theorems of its generated
      statements, which the generated audits list: the lemmas of theories/BvPow2.v and
-     IeeeBvPow2.v the theorems rest on.
+     IeeeBvPow2.v the theorems rest on;
+   - the product of two ball vectors, beside the theorems of the generated statements of its
+     radius kernel and of the folds in the real model, which proofs/gen/Audit.v lists: the
+     lemmas of theories/BvConv.v they rest on, and in the IEEE model what the finish
+     bv_conv_finish returns, with the proof that its generated statement is false
+     (theories/IeeeBvConv.v).
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -1089,4 +1094,38 @@ Print Assumptions IeeeBvPow2.bv_mul_pow2_2_result.
 Print Assumptions IeeeBvPow2.bv_mul_pow2_2_finite.
 Print Assumptions IeeeBvPow2.bv_mul_pow2_1_lanes_seq_ieee.
 Print Assumptions IeeeBvPow2.bv_mul_pow2_2_lanes_seq_ieee.
+
+(* The product of two ball vectors (theories/BvConv.v, IeeeBvConv.v): the theorems of the
+   generated statements of conv_radius and of bv_conv_k in the real model are listed by
+   proofs/gen/Audit.v; these are beside them. In the real model, the claim of conv_radius
+   with its hypotheses written out, one rounding in the normal range, the requirement
+   at_most(g, 1) that a true mask of bound_dot_k gives, the facts of the count rounded up,
+   lists related entry by entry, the terms of a coefficient of members, the product and the
+   sum of products of members against those of the centers, and the bound of a coefficient
+   of members. In the IEEE model, what bv_conv_finish returns, and that its generated
+   statement is false: a finite radius with a false mask of the convolution gives a false
+   flag (the statement leaves out the masks of if_all); and, for the IEEE-model statements of
+   the folds, not proved yet, that the radius kernel on nonnegative operands is nonnegative,
+   +infinity or a NaN, and when finite the real model's. *)
+From Kairn Require Import BvConv IeeeBvConv.
+Print Assumptions BvConv.rnd_lower_normal_conv.
+Print Assumptions BvConv.conv_radius_facts.
+Print Assumptions BvConv.bound_dot_1_at_most.
+Print Assumptions BvConv.bound_dot_2_at_most.
+Print Assumptions BvConv.count_facts.
+Print Assumptions BvConv.Forall2_firstn_l.
+Print Assumptions BvConv.Forall2_skipn_l.
+Print Assumptions BvConv.Forall2_rev_l.
+Print Assumptions BvConv.Forall2_combine_l.
+Print Assumptions BvConv.conv_terms_Forall2.
+Print Assumptions BvConv.Forall2_Forall_r.
+Print Assumptions BvConv.member_product.
+Print Assumptions BvConv.sum_members.
+Print Assumptions BvConv.sumR_le_count.
+Print Assumptions BvConv.coef_bound.
+Print Assumptions IeeeBvConv.bv_conv_finish_facts.
+Print Assumptions IeeeBvConv.bv_conv_finish_spec_counterexample.
+Print Assumptions IeeeBvConv.not_bv_conv_finish_spec.
+Print Assumptions IeeeBvConv.up_const_cases.
+Print Assumptions IeeeBvConv.conv_radius_ieee.
 

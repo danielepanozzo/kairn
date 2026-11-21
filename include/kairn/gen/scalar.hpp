@@ -1932,7 +1932,7 @@ KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(float m, float rx, float a, float& 
 }
 
 // conv_radius(ma, mb, rx, ry, m, g, t) -> rz
-// the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void conv_radius(double ma, double mb, double rx, double ry, double m, double g, double t, double& rz_out) noexcept {
     const double p = fma_rn(rx, ry, 0.0);
     const double q = fma_rn(mb, rx, p);
@@ -14089,7 +14089,7 @@ KAIRN_GEN_NOINLINE void bv_conv_1_end(float ma, float mb, std::size_t nm_, bool 
 // product of ball vectors bv_conv_1(stored x, stored y, stored rx, stored ry) -> z, r, flag: the convolution conv_1 of the centers,
 // the maxima by norm_step_1, the bound bound_dot_1 of min(n_x, n_y) terms, the radius conv_radius, the finish bv_conv_finish. The whole space
 // (every coefficient zero, the radius +infinity) when the flag is false. The array written overlaps neither x nor y.
-// Status: unverified (real model), unverified (IEEE model).
+// Status: proved (real model), unverified (IEEE model).
 inline void bv_conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double rx, double ry, double* z_out, double& r_out, bool& flag_out) noexcept {
     double ma = 0.0;
     bool oka = true;
@@ -14292,7 +14292,7 @@ KAIRN_GEN_NOINLINE void bv_conv_2_end(float ma, float mb, std::size_t nm_, bool 
 // product of ball vectors bv_conv_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, flag: the convolution conv_2 of the centers,
 // the maxima by norm_step_2, the bound bound_dot_2 of min(n_x, n_y) terms, the radius conv_radius, the finish bv_conv_finish. The whole space
 // (every coefficient zero, the radius +infinity) when the flag is false. The array written overlaps neither x nor y.
-// Status: unverified (real model), unverified (IEEE model).
+// Status: proved (real model), unverified (IEEE model).
 inline void bv_conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x, const double* y0_in, const double* y1_in, std::size_t n_y, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& flag_out) noexcept {
     double ma = 0.0;
     bool oka = true;
