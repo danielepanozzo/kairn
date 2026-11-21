@@ -125,8 +125,8 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py")
   foreach(_line IN LISTS _guard_classes)
     string(REGEX REPLACE "^class ([A-Za-z0-9_]+).*" "\\1" _class "${_line}")
     add_test(NAME full.tools.crosscheck.guards.${_class}
-      COMMAND "${Python3_EXECUTABLE}" tests/test_crosscheck_guards.py "${CMAKE_COMMAND}"
-        "$<TARGET_FILE:kairn-api-runner>" ${_class}
+      COMMAND "${Python3_EXECUTABLE}" tests/test_crosscheck_guards.py --claims "${KAIRN_ORACLE_CLAIMS}"
+        "${CMAKE_COMMAND}" "$<TARGET_FILE:kairn-api-runner>" ${_class}
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
     set_tests_properties(full.tools.crosscheck.guards.${_class} PROPERTIES TIMEOUT 900
       LABELS "full;tools;crosscheck")

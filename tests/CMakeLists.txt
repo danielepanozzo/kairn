@@ -367,6 +367,22 @@ set(_interval_kernels
   ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
   interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
   interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
+# The kernels of the enclosure interface of stage B2 (architecture.md, "Claims of the enclosure
+# interface: predicates and comparisons", "... the set operations of a ball", "... the conversions
+# of two limbs"): the same KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES in the quick tier, on which their
+# guards see every class.
+set(_enclosure_kernels
+  interval_empty_1 interval_entire_1 interval_contains_1 interval_subset_1 interval_positive_1 interval_negative_1
+  interval_zero_1 interval_less_1 interval_less_equal_1 interval_equal_1 interval_rel_equal_1 interval_rel_interior_1
+  interval_rel_disjoint_1 interval_empty_2 interval_entire_2 interval_contains_2 interval_subset_2 interval_positive_2
+  interval_negative_2 interval_zero_2 interval_less_2 interval_less_equal_2 interval_equal_2 interval_rel_equal_2
+  interval_rel_interior_2 interval_rel_disjoint_2
+  ball_contains_point_1 ball_contains_ball_1 ball_positive_1 ball_negative_1 ball_zero_1 ball_less_1
+  ball_less_equal_1 ball_equal_1 ball_contains_point_2 ball_contains_ball_2 ball_positive_2 ball_negative_2
+  ball_zero_2 ball_less_2 ball_less_equal_2 ball_equal_2
+  ball_hull_1 ball_intersection_1 ball_split_1 ball_split_2
+  interval_mid_rad_2 interval_to_ball_2 interval_split_2 ball_to_interval_2 ball_from_interval_1 ball_hull_2
+  ball_intersection_2)
 
 # The toy formats of the interpreter, by the kernel's inputs, each written as its role: 1 a limb,
 # 2 a normalized pair of limbs, r a radius (a limb with nonneg()), c a power of two (a limb with
@@ -556,6 +572,22 @@ set(_toy_sampled_ext_i2_i2_sum fp:4:-10:5)
 set(_bounds "0x0p+0/0x1p-3/-0x1p-3/0x1p+0/-0x1p+0/0x1.8p+0/-0x1.8p+0/0x1.8p+1/-0x1.8p+1")
 set(_toy_ext_i2_i2_product fp:4:-3:-2 "xl.in=${_bounds},xu.in=${_bounds}")
 set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
+# The enclosure interface of stage B2 has the shapes above (ext i1, i1 i1, i2, i2 i2, b1, b1 b1,
+# b2, b2 b2, 1 1: the predicates and comparisons of one set or two, the set operations of a ball,
+# the conversions of two limbs) and four of its own, a set and a point (member):
+#
+#   inputs       kernels                                      format        cases
+#   ext i1 1     interval_contains_1                          fp:3:-4:1      95 816
+#   ext i2 2     interval_contains_2                          fp:2:-2:1      95 816
+#   ext b1 1     ball_contains_point_1                        fp:3:-4:1      89 436
+#   ext b2 2     ball_contains_point_2                        fp:3:-3:0     290 604
+#
+# (two balls of two limbs, ball_less_2 ... ball_intersection_2: fp:3:-2:-1, 122 500; two intervals
+# of two limbs: fp:3:-2:-1, 245 025, and random cases of fp:4:-10:5).
+set(_toy_ext_i1_1_sum fp:3:-4:1)
+set(_toy_ext_i2_2_sum fp:2:-2:1)
+set(_toy_ext_b1_1_sum fp:3:-4:1)
+set(_toy_ext_b2_2_sum fp:3:-3:0)
 
 # --- Not yet cross-checked by the oracle ------------------------------------------------------
 #
@@ -585,17 +617,13 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # - the products of two BallVectors (architecture.md, "Ball vectors": the product of polynomials) and
 #   their kernels: the oracle reads neither the folds with "bv_conv": true (their requests of two
 #   lengths and two radii, the claim encloses_coefficients with count_when) nor the requirement
-#   at_most nor finite_or_nan with if_all, yet;
-# - the predicates and three-valued comparisons of the enclosure interface, of an interval and of a
-#   ball, of stage B2 (architecture.md, "Claims of the enclosure interface: predicates and
-#   comparisons"): the oracle reads neither the claims certain and trit nor the condition abs_le of
-#   their exact_when yet;
-# - the set operations of a ball, of stage B2 (architecture.md, "Claims of the enclosure interface:
-#   the set operations of a ball"): the oracle reads neither ball_set nor ball_splits yet;
-# - the conversions of two limbs of stage B2 (architecture.md, "Claims of the enclosure interface:
-#   the conversions of two limbs"), with the hull and the intersection of balls of two limbs: the
-#   oracle reads neither finite_when of ball_of_interval, nor interval_of_ball of two limbs, nor
-#   rel, abs and smallest_radius of a makes_ball from an interval, yet.
+#   at_most nor finite_or_nan with if_all, yet.
+#
+# Since stage B2 the oracle reads and judges the predicates and three-valued comparisons of an
+# interval and of a ball, the set operations of a ball and the conversions of two limbs
+# (architecture.md, "Claims of the enclosure interface: predicates and comparisons", "... the set
+# operations of a ball", "... the conversions of two limbs"; oracle/README.md, "The kinds of the
+# enclosure interface"): none of those is on the lists.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -605,18 +633,7 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   bv_center_entry_1 bv_center_2 bv_make_radius bv_make_finish
   neg_1 bv_neg_radius
   bv_mul_pow2_step_1 bv_mul_pow2_step_2 bv_mul_pow2_radius
-  conv_radius bv_conv_finish
-  interval_empty_1 interval_entire_1 interval_contains_1 interval_subset_1 interval_positive_1 interval_negative_1
-  interval_zero_1 interval_less_1 interval_less_equal_1 interval_equal_1 interval_rel_equal_1 interval_rel_interior_1
-  interval_rel_disjoint_1 interval_empty_2 interval_entire_2 interval_contains_2 interval_subset_2 interval_positive_2
-  interval_negative_2 interval_zero_2 interval_less_2 interval_less_equal_2 interval_equal_2 interval_rel_equal_2
-  interval_rel_interior_2 interval_rel_disjoint_2
-  ball_contains_point_1 ball_contains_ball_1 ball_positive_1 ball_negative_1 ball_zero_1 ball_less_1
-  ball_less_equal_1 ball_equal_1 ball_contains_point_2 ball_contains_ball_2 ball_positive_2 ball_negative_2
-  ball_zero_2 ball_less_2 ball_less_equal_2 ball_equal_2
-  ball_hull_1 ball_intersection_1 ball_split_1 ball_split_2
-  interval_mid_rad_2 interval_to_ball_2 interval_split_2 ball_to_interval_2 ball_from_interval_1 ball_hull_2
-  ball_intersection_2)
+  conv_radius bv_conv_finish)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2
   bv_make_1 bv_make_2
@@ -630,6 +647,10 @@ set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
 # maxima"), whose public functions come with BallVector too. They are cross-checked like every
 # kernel; the public interface has no form of them. (The interval kernels left this list with
 # include/kairn/interval.hpp: the public interface reaches each, or lists it as a building block.)
+# And the kernels of the enclosure interface of stage B2 (_enclosure_kernels above: predicates,
+# comparisons, set operations of a ball, conversions of two limbs), which the oracle judges since
+# stage B2 and which no public operation calls yet (include/kairn/interval.hpp has their places,
+# kernel_not_generated_yet): each leaves this list when runner.cpp maps a public form to it.
 set(KAIRN_NOT_PUBLIC_YET
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
   sum_fast_entry_step_2 fold_finish_1 fold_finish_2
@@ -637,7 +658,8 @@ set(KAIRN_NOT_PUBLIC_YET
   mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
   axpy_entry_step_2_1
   norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
-  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2)
+  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
+  ${_enclosure_kernels})
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than
@@ -903,7 +925,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     # The compiled runners, on random cases of every stratum.
     if(_compiled)
       set(_quick_args ${_random_quick_args})
-      if(_kernel IN_LIST _interval_kernels)
+      if(_kernel IN_LIST _interval_kernels OR _kernel IN_LIST _enclosure_kernels)
         set(_quick_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES}")
       endif()
       foreach(_format binary64 binary32)

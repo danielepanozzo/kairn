@@ -38,7 +38,7 @@ The tests that `ctest` runs in the build directory, by name:
 | Test | Checks |
 |---|---|
 | `kairn-gen.check` | Every committed generated file is what `python3 gen/kairn-gen build` writes. |
-| `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
+| `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json` (the claims file `KAIRN_ORACLE_CLAIMS`, [below](#cross-checks)). |
 | `docs.reference.check` | The reference pages of the site are what `docs/tools/reference.py` writes ([Documentation](documentation.md#reference-pages)). |
 | `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum. |
 | `crosscheck.compiled.FOLD.F` | A fold (a sum or a dot product over arrays) compiled likewise: the scalar runners on 300 random arrays of format F, of every length class and in every order, and the packed runners on 200 arrays in the lane order of their register ([below](#cross-checks)). A map, a fold of maxima and a convolution likewise, on 100 arrays of up to 24 elements (pairs of polynomials of up to 20 coefficients for a convolution, which has no packed form). |
@@ -147,14 +147,17 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   and the ball vectors, the products of two of them and their kernels
   ([Ball vectors](architecture.md#ball-vectors); the folds with `"bv"` and `"bv_conv"`, the
   requirement `ball_vector`, the claims `encloses_entries`, `makes_ball_vector` and
-  `encloses_coefficients`, and what their kernels claim); and the kernels of stage B2 of the
-  intervals, the predicates and comparisons of an interval and of a ball, the set operations of a
-  ball and the conversions of two limbs ([Claims of the enclosure interface: predicates and
+  `encloses_coefficients`, and what their kernels claim); what was on them before left them with
+  the interval stage, stage B and stage B2 of Milestone 2. The generator's tier tests them
+  ([below](#the-generators-tier)). Since stage B2 the oracle reads and judges the 53 kernels of the
+  predicates and comparisons of an interval and of a ball, the set operations of a ball and the
+  conversions of two limbs ([Claims of the enclosure interface: predicates and
   comparisons](architecture.md#claims-of-the-enclosure-interface-predicates-and-comparisons) and the
-  two sections after it: the kinds `certain`, `trit`, `ball_set` and `ball_splits`, the condition
-  `abs_le` of their `exact_when`, and the new fields of `ball_of_interval`, `interval_of_ball` and
-  `makes_ball`); what was on them before left them with the interval stage and stage B of
-  Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
+  two sections after it; `oracle/README.md`, "The kinds of the enclosure interface"): they are
+  cross-checked by every compiled runner, scalar and packed, on 2 000 cases per format in the quick
+  tier (`KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES`) and 20 000 in the full tier, and the interpreter
+  enumerates their toy formats; no public operation calls them yet, so they are on
+  `KAIRN_NOT_PUBLIC_YET` (below) and have no `api.oracle` test. Since stage B of
   Milestone 2 the oracle reads and judges the maps, the folds of maxima and the convolutions, and
   their kernels (`oracle/README.md`, "Maps", "Folds of maxima", "Convolutions"): they are
   cross-checked as the folds are, and the steps of the maps and the kernels of the folds of maxima
@@ -240,6 +243,17 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
     fold of maxima as a fold, and 300 pairs of up to 64 coefficients for a convolution
     (`KAIRN_CROSSCHECK_CONV_CASES`, `KAIRN_CROSSCHECK_CONV_LENGTH`), whose lines hold $n_x n_y$
     terms.
+- **The claims file**: every test that runs the oracle reads the claims of the CMake cache variable
+  `KAIRN_ORACLE_CLAIMS` (`gen/claims.json` by default), and the cross-checks are registered from
+  it: `tests/crosscheck.py` takes `--claims FILE` in both modes and passes it to the oracle's `gen`
+  and `check` (the guards read the file the summary names), `tests/crosscheck.cmake` takes
+  `-DCLAIMS`, and the claims test, the regression cases, the public interface's oracle tests,
+  `kairn::rational`'s, the adversarial search and `tests/test_crosscheck_guards.py --claims FILE`
+  pass it on; `api.oracle.coverage` keeps `gen/claims.json`. The oracle fails every run while the
+  claims it reads hold anything it cannot read; a branch whose generator is ahead of its oracle
+  (two families of claims written at once) runs its tiers against a copy of `gen/claims.json`
+  without the family the oracle does not read yet,
+  `cmake -DKAIRN_ORACLE_CLAIMS=FILE ...`.
 - **Random cases**: 6 000 per kernel and format in the quick tier (`KAIRN_CROSSCHECK_QUICK_CASES`)
   and 20 000 in the full tier (`KAIRN_CROSSCHECK_CASES`), seed 0 (`KAIRN_CROSSCHECK_SEED`), so
   that a run is the same everywhere and can be repeated. The oracle's generator chooses the strata

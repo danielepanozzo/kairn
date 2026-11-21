@@ -1,6 +1,6 @@
 """The cross-checks' guards must fail the runs they are there to fail (tests/crosscheck_guards.py).
 
-    python3 tests/test_crosscheck_guards.py [CMAKE [API_RUNNER]]
+    python3 tests/test_crosscheck_guards.py [--claims FILE] [CMAKE [API_RUNNER]]
 
 Each test runs a real pipeline, gen | kairn-gen interp | check --json, on a tiny toy format, whose
 stream the oracle passes but which did not check what a cross-check sets out to check (a
@@ -32,6 +32,28 @@ ROOT = os.path.dirname(TESTS)
 PY = sys.executable
 CMAKE = None
 API_RUNNER = None
+# --claims FILE: the claims the oracle reads (KAIRN_ORACLE_CLAIMS of tests/CMakeLists.txt), passed
+# to every oracle, crosscheck.py and crosscheck.cmake run; gen/claims.json by default.
+CLAIMS = None
+
+
+def run(cmd, **kw):
+    """subprocess.run of a command, with --claims CLAIMS for the oracle's gen and check and for
+    tests/crosscheck.py, and -DCLAIMS=CLAIMS for crosscheck.cmake, when CLAIMS is given."""
+    if CLAIMS:
+        cmd = list(cmd)
+        words = [os.path.basename(str(c)) for c in cmd]
+        if len(cmd) > 2 and words[1] == "kairn-oracle" and cmd[2] in ("gen", "check"):
+            cmd[3:3] = ["--claims", CLAIMS]
+        elif len(cmd) > 2 and words[1] == "crosscheck.py":
+            cmd[3:3] = ["--claims", CLAIMS]
+        elif "-P" in cmd and words[cmd.index("-P") + 1] == "crosscheck.cmake":
+            cmd.insert(cmd.index("-P"), "-DCLAIMS=" + CLAIMS)
+    return subprocess.run(cmd, **kw)
+
+
+def claims_path():
+    return CLAIMS or os.path.join(ROOT, "gen", "claims.json")
 
 
 def pipeline(kernel, fmt, *gen_args, fail_on_suspicious=True):
@@ -40,18 +62,18 @@ def pipeline(kernel, fmt, *gen_args, fail_on_suspicious=True):
     (refrun) in its place."""
     with tempfile.TemporaryDirectory() as d:
         js = os.path.join(d, "s.json")
-        gen = subprocess.run([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "gen", kernel, fmt]
-                             + list(gen_args), capture_output=True, text=True, cwd=ROOT)
+        gen = run([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "gen", kernel, fmt]
+                  + list(gen_args), capture_output=True, text=True, cwd=ROOT)
         assert gen.returncode == 0, gen.stderr
         runner = ([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "refrun"]
                   if kernel.startswith("rational_") else
                   [PY, os.path.join(ROOT, "gen", "kairn-gen"), "interp"])
-        run = subprocess.run(runner, input=gen.stdout, capture_output=True, text=True, cwd=ROOT)
-        assert run.returncode == 0, run.stderr
+        done = run(runner, input=gen.stdout, capture_output=True, text=True, cwd=ROOT)
+        assert done.returncode == 0, done.stderr
         check = [PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "check", "--json", js]
         if fail_on_suspicious:
             check.append("--fail-on-suspicious")
-        ok = subprocess.run(check, input=run.stdout, capture_output=True, text=True, cwd=ROOT)
+        ok = run(check, input=done.stdout, capture_output=True, text=True, cwd=ROOT)
         assert ok.returncode == 0, ok.stdout + ok.stderr
         with open(js, encoding="utf-8") as f:
             return json.load(f)
@@ -63,7 +85,7 @@ def guards(summary, kernel, fmt, *args):
         js = os.path.join(d, "s.json")
         with open(js, "w", encoding="utf-8") as f:
             json.dump(summary, f)
-        r = subprocess.run([PY, os.path.join(TESTS, "crosscheck_guards.py"), js, "--kernel", kernel,
+        r = run([PY, os.path.join(TESTS, "crosscheck_guards.py"), js, "--kernel", kernel,
                             "--format", fmt] + list(args), capture_output=True, text=True)
         return r.returncode, r.stdout + r.stderr
 
@@ -242,7 +264,7 @@ class RationalGuards(unittest.TestCase):
     def test_the_one_process_driver(self):
         with tempfile.TemporaryDirectory() as d:
             def drive(*args):
-                return subprocess.run(
+                return run(
                     [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", "rational_2",
                      "--format", "binary32", "--summary", os.path.join(d, "r.json"),
                      "--fail-on-suspicious", "--refrun"] + list(args),
@@ -391,7 +413,7 @@ class ExtendedGuards(unittest.TestCase):
     def test_the_one_process_driver(self):
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, fmt, *args):
-                return subprocess.run(
+                return run(
                     [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", kernel,
                      "--format", fmt, "--summary", os.path.join(d, kernel + ".json"),
                      "--fail-on-suspicious", "--interp"] + list(args),
@@ -452,7 +474,7 @@ sys.stdout.write("\\n".join(lines))
                 return exe
 
             def drive(name, change):
-                return subprocess.run(
+                return run(
                     [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", "add_2_2",
                      "--format", "binary64", "--seed", "1", "--count", "1000",
                      "--summary", os.path.join(d, name + ".json"), "--fail-on-suspicious",
@@ -475,7 +497,7 @@ sys.stdout.write("\\n".join(lines))
             self.skipTest("needs the path of the API runner (tests/api/runner.cpp)")
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, count):
-                return subprocess.run(
+                return run(
                     [PY, os.path.join(TESTS, "crosscheck.py"), "api", "--kernel", kernel,
                      "--format", "binary64", "--seed", "1", "--count", str(count),
                      "--summary-dir", d, "--runner", "build", API_RUNNER],
@@ -497,7 +519,7 @@ sys.stdout.write("\\n".join(lines))
             self.skipTest("needs the path of cmake")
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, fmt, restrict=""):
-                return subprocess.run(
+                return run(
                     [CMAKE, "-DPYTHON=" + PY, "-DSOURCE_DIR=" + ROOT, "-DKERNEL=" + kernel,
                      "-DFORMAT=" + fmt, "-DRUNNER=interp", "-DEXHAUSTIVE=ON",
                      "-DRESTRICT=" + restrict,
@@ -792,7 +814,7 @@ class FoldGuards(unittest.TestCase):
     def test_the_one_process_driver(self):
         with tempfile.TemporaryDirectory() as d:
             def drive(fold, fmt, *args):
-                return subprocess.run(
+                return run(
                     [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", fold,
                      "--format", fmt, "--summary", os.path.join(d, fold + ".json"),
                      "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
@@ -857,7 +879,7 @@ class IntervalGuards(unittest.TestCase):
         self.assertEqual(len(CG.IV_MAKE_CELLS), 17)
         for kernel, tiny in (("interval_make_1", "fp:2:-2:1"), ("interval_make_2", "fp:2:-2:1"),
                              ("ball_from_interval_2", "fp:2:-2:1")):
-            with open(os.path.join(ROOT, "gen", "claims.json"), encoding="utf-8") as f:
+            with open(claims_path(), encoding="utf-8") as f:
                 k = next(k for k in json.load(f)["kernels"] if k["name"] == kernel)
             two = kernel == "interval_make_2"
             good = pipeline(kernel, IV, *self.args)
@@ -998,7 +1020,7 @@ class IntervalGuards(unittest.TestCase):
     def test_the_one_process_driver(self):
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, *args):
-                return subprocess.run(
+                return run(
                     [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", kernel,
                      "--format", IV, "--summary", os.path.join(d, kernel + ".json"),
                      "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
@@ -1166,7 +1188,7 @@ class StageBGuards(unittest.TestCase):
     def test_the_one_process_driver(self):
         with tempfile.TemporaryDirectory() as d:
             def drive(name, fmt, *args):
-                return subprocess.run(
+                return run(
                     [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", name,
                      "--format", fmt, "--summary", os.path.join(d, name + ".json"),
                      "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
@@ -1179,7 +1201,118 @@ class StageBGuards(unittest.TestCase):
             self.assertIn("did not check what it set out to", bad.stdout)
 
 
+class EnclosureGuards(unittest.TestCase):
+    """The enclosure interface of stage B2: the predicates and comparisons of an interval and a ball
+    (the relation both ways, every answer, every class of each set and point, the special states,
+    exact_when both ways), the set operations of a ball (every pair of states, the operands as they
+    are, the finite operands placed every way, in a random run the zeros of different signs), the
+    split, the conversions of two limbs (finite_when both ways and an infinite radius, exact_when
+    of each side, bounded_when both ways, the center of the ball from an interval), the fractions of
+    their bounds, and the strata of their families."""
+
+    KERNELS = ("interval_less_2", "interval_contains_1", "interval_rel_interior_1",
+               "interval_empty_2", "ball_less_1", "ball_contains_point_2", "ball_contains_ball_2",
+               "ball_positive_1", "ball_hull_1", "ball_intersection_2", "ball_split_2",
+               "interval_mid_rad_2", "interval_to_ball_2", "interval_split_2",
+               "ball_to_interval_2", "ball_from_interval_1")
+
+    @classmethod
+    def setUpClass(cls):
+        # The quick tier's count of these kernels (KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES): with 600
+        # the table of the constructors of ball_from_interval_1 misses a cell in this format.
+        cls.args = ("--seed", "0", "--count", "2000")
+        cls.runs = {k: pipeline(k, IV, *cls.args) for k in cls.KERNELS}
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        for k, s in self.runs.items():
+            self.passes(s, k, IV, *self.args)
+        for k, fmt in (("interval_less_1", "fp:2:-2:1"), ("ball_hull_1", "fp:2:-2:1"),
+                       ("ball_from_interval_1", "fp:2:-2:1")):
+            s = pipeline(k, fmt, "--exhaustive")
+            self.passes(s, k, fmt, "--exhaustive")
+
+    def test_every_class_is_asked_for(self):
+        # Each class the guards ask of an entry, taken out of a good run's summary, fails the run,
+        # with that class as the reason.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        asked = 0
+        for name, good in self.runs.items():
+            with open(good["claims"], encoding="utf-8") as f:
+                kernel = next(k for k in json.load(f)["kernels"] if k["name"] == name)
+            for j, e in enumerate(kernel["ensures"]):
+                for need in CG.enc_needs(kernel, e, None) + CG.iv_needs(kernel, e, None):
+                    s = edited(good, j, lambda x: x["counts"].pop(need, None))
+                    self.fails(s, name, IV, *self.args, reason='saw no case of "%s"' % need)
+                    asked += 1
+        self.assertGreater(asked, 200)
+
+    def test_zero_signs_asked_of_a_random_run_only(self):
+        # An enumeration has one zero: no whole lines of zeros of different signs there.
+        s = pipeline("ball_hull_1", "fp:2:-2:1", "--exhaustive")
+        self.passes(s, "ball_hull_1", "fp:2:-2:1", "--exhaustive")
+        name = "both the whole line, centers zeros of different signs in the line"
+        s = edited(self.runs["ball_hull_1"], 0, lambda e: e["counts"].pop(name, None))
+        self.fails(s, "ball_hull_1", IV, *self.args, reason=name)
+
+    def test_strata_of_the_families_not_promised(self):
+        for k, strata, missing in (
+                ("ball_less_1", M2_COMMON + ",ballstates,boundary,near,huge,points", "wide"),
+                ("interval_less_2", M2_COMMON + ",special,nearzero,touch,equal,nested,disjoint",
+                 "tails"),
+                ("ball_hull_1", M2_COMMON + ",ballstates,disjoint,touch,nested,overlap,wide,point",
+                 "bothspecial"),
+                ("interval_mid_rad_2", M2_COMMON + ",special,point,step,oddeta,top,beyond",
+                 "threshold"),
+                ("ball_to_interval_2", M2_COMMON + ",ballstates,radii,cross,beyond,exactend,"
+                 "threshold", "zeroend")):
+            s = pipeline(k, IV, *self.args, "--strata", strata)
+            self.fails(s, k, IV, *self.args, reason="without %s, which its family" % missing)
+
+    def test_the_bounds_far_from_reached(self):
+        name = "lower: distance from the range bound / (rel*|bound| + abs)"
+        s = edited(self.runs["ball_to_interval_2"], 0, lambda e: e["maxima"].update(
+            {name: [["1", "5"], ""]}))
+        self.fails(s, "ball_to_interval_2", IV, *self.args, reason="below 1/4")
+        name = "|center - midpoint| / (rel*|midpoint| + abs)"
+        s = edited(self.runs["ball_from_interval_1"], 0, lambda e: e["maxima"].update(
+            {name: [["1", "5"], ""]}))
+        self.fails(s, "ball_from_interval_1", IV, *self.args, reason="below 1/4")
+        # The center of two limbs has no floor (its bound is not claimed tight).
+        s = edited(self.runs["interval_mid_rad_2"], 0, lambda e: e["maxima"].update(
+            {name: [["1", "100"], ""]}))
+        self.passes(s, "interval_mid_rad_2", IV, *self.args)
+
+    def test_the_one_process_driver(self):
+        with tempfile.TemporaryDirectory() as d:
+            def drive(kernel, *args):
+                return run(
+                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", kernel,
+                     "--format", IV, "--summary", os.path.join(d, kernel + ".json"),
+                     "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
+                    capture_output=True, text=True)
+            good = drive("ball_intersection_1", "--count", "600")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            bad = drive("ball_intersection_1", "--count", "12")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("did not check what it set out to", bad.stdout)
+
+
 if __name__ == "__main__":
+    if "--claims" in sys.argv:
+        i = sys.argv.index("--claims")
+        CLAIMS = os.path.abspath(sys.argv[i + 1])
+        del sys.argv[i:i + 2]
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):

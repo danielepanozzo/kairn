@@ -154,6 +154,13 @@ SHAPES = {
     "ext_i1_i1_sum": ("fp:2:-3:2", ["fp:2:-5:4", "fp:3:-3:0"]),
     "ext_i1_i1_product": ("fp:2:-3:2", ["fp:2:-5:4", "fp:3:-3:0"]),
     "ext_i2": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-5:2", "fp:4:-4:-1"]),
+    # The enclosure interface of stage B2: a set and a point (interval_contains_k,
+    # ball_contains_point_k); the other kernels of the stage have the shapes above. 0.1 to 2.5
+    # million cases each.
+    "ext_i1_1_sum": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-6:3"]),
+    "ext_i2_2_sum": ("fp:2:-2:1", ["fp:3:-3:0", "fp:2:-4:3"]),
+    "ext_b1_1_sum": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-6:3"]),
+    "ext_b2_2_sum": ("fp:3:-3:0", ["fp:4:-4:-1", "fp:3:-4:1"]),
     # The steps of the maps of stage B (the others have the shapes of the kernels they call): a
     # product by a power of two of one limb, the steps of axpy_2_1 (a of one limb).
     "1_c_product": ("fp:7:-14:6", ["fp:8:-14:6", "fp:7:-20:10"]),
