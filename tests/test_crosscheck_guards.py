@@ -1343,9 +1343,15 @@ class BallVectorFoldGuards(unittest.TestCase):
             self.fails(s, "bv_make_2", "binary64", *self.args, reason='saw no case "%s"' % name)
 
     def test_a_product_without_a_class(self):
+        # The condition on the count as the claims judged against write it (restated on
+        # 2026-11-21: n*(unit(mul_2_2)+eta/(2*u)) <= 1/16, which was n*(unit(mul_2_2)+eta)).
+        with open(CLAIMS, encoding="utf-8") as f:
+            fold = [x for x in json.load(f)["folds"] if x["name"] == "bv_conv_2"][0]
+        cw = fold["ensures"][0]["count_when"]
+        self.assertEqual(len(cw), 1, cw)
         for name in ("n_x = 0", "n_y = 1", "n_x != n_y",
                      "V3: the radius at least conv_radius's stated value",
-                     "count_when fails: n*(unit(mul_2_2)+eta) <= 1/16", "V4 applies"):
+                     "count_when fails: %s <= %s" % (cw[0]["le"], cw[0]["than"]), "V4 applies"):
             s = edited(self.conv, 0, lambda e: e["counts"].pop(name, None))
             self.fails(s, "bv_conv_2", "fp:5:-12:5", *self.cargs, reason='saw no case "%s"' % name)
 
