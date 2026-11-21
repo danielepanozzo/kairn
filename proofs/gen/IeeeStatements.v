@@ -399,7 +399,7 @@ Definition interval_to_ball_1_spec : Prop :=
    (forall z : R, in_interval_1 xl xu z -> Rabs (z - val c) <= val r) /\
    val r = RU (ieee_emin prec emax) prec (Rmax (val c - val xl) (val xu - val c))).
 
-(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: unverified. *)
+(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition ball_from_interval_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

@@ -13,10 +13,13 @@
      result is a canonical ball; for lo <= hi finite, a finite ball that contains [lo, hi],
      whose center is in [lo, hi] within u |m| + eta of the midpoint m, and whose radius is the
      smallest number of T with which it contains [lo, hi]; the whole line when lo and hi are
-     the bounds of a nonempty interval that is not bounded, or when one of them is a NaN; and
-     the empty set otherwise. It is interval_to_ball_1 of the interval of interval_make_1, with
-     the special balls selected last, and the proof is that of interval_to_ball_1
-     (interval_to_ball_1_all of IeeeIntervalConvert.v) on the guarded bounds.
+     the bounds of a nonempty interval that is not bounded, when one of them is a NaN, whatever
+     the other is, and when both are the same infinity (the owner's decision of 2026-11-20, as
+     for interval_make_1 and ball_from_interval_2); and the empty set when the bounds are
+     reversed, hi < lo. It is interval_to_ball_1 of the interval of interval_make_1, with the
+     special balls selected last (the empty ball where rv = lt(hi, lo), the whole line
+     otherwise), and the proof is that of interval_to_ball_1 (interval_to_ball_1_all of
+     IeeeIntervalConvert.v) on the guarded bounds.
 
    - ball_split_1, for a canonical ball (ball_split_1_correct): two canonical balls; the empty
      set twice for the empty set and the whole line twice for the whole line; and for a finite
@@ -91,8 +94,9 @@ Theorem ball_from_interval_1_all :
    Rabs (val cw - (val lo + val hi) / 2) <= u prec * Rabs ((val lo + val hi) / 2) + eta (ieee_emin prec emax) /\
    val rw = RU (ieee_emin prec emax) prec (Rmax (val cw - val lo) (val hi - val cw))) /\
   (xnonempty (xval lo) (xval hi) -> ~ (finite lo /\ finite hi) -> ball_whole_1 cw rw) /\
-  (nan lo \/ nan hi -> ball_whole_1 cw rw) /\
-  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> ball_empty_1 cw rw).
+  (nan lo \/ nan hi \/ (exists s : bool, xval lo = XInf s /\ xval hi = XInf s) ->
+   ball_whole_1 cw rw) /\
+  (xlt (xval hi) (xval lo) = true -> ball_empty_1 cw rw).
 Proof.
 intros Hp lo hi. unfold IeeeModel.ball_from_interval_1. cbv zeta.
 assert (Xl : xv (guard lo) = xv lo) by apply (xval_guard prec emax nan_plus).
@@ -103,8 +107,7 @@ assert (Fu : is_finite prec emax (guard hi) = is_finite prec emax hi)
   by apply (guard_finite prec emax nan_plus).
 assert (Vl : b2r (guard lo) = b2r lo) by apply (guard_val prec emax nan_plus).
 assert (Vu : b2r (guard hi) = b2r hi) by apply (guard_val prec emax nan_plus).
-rewrite (neg_pinf prec emax nan_opp), (le_xval prec emax), 2!(lt_xval prec emax),
-  2!(eq_self prec emax), 2!(guard_nan prec emax nan_plus), Xl, Xu.
+rewrite (neg_pinf prec emax nan_opp), (le_xval prec emax), !(lt_xval prec emax), Xl, Xu.
 change (xv pinf) with (XInf false). change (xv ninf) with (XInf true).
 assert (Wh : ball_whole_1 pzero pinf) by (split; [exists false; reflexivity|reflexivity]).
 destruct (andb (andb (xle (xv lo) (xv hi)) (xlt (xv lo) (XInf false))) (xlt (XInf true) (xv hi)))
@@ -115,6 +118,11 @@ destruct (andb (andb (xle (xv lo) (xv hi)) (xlt (xv lo) (XInf false))) (xlt (XIn
   assert (I : interval_1 (guard lo) (guard hi)).
   { right. unfold interval_nonempty_1. rewrite Xl, Xu. exact N. }
   destruct (xnonempty_not_nan prec emax lo hi N) as [Nl Nh].
+  (* neither a NaN nor the same infinity twice, nor reversed *)
+  assert (NW : ~ (nan lo \/ nan hi \/ (exists s : bool, xval lo = XInf s /\ xval hi = XInf s))).
+  { unfold nan. intros [K|[K|[s [K1 K2]]]]; [congruence|congruence|].
+    rewrite K1, K2 in N. destruct N as [_ [W1 W2]]. destruct s; cbn in W1, W2; discriminate. }
+  assert (NR : xlt (xval hi) (xval lo) <> true) by exact (xle_not_xlt _ _ V1).
   generalize (interval_to_ball_1_all prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
                 Hp (guard lo) (guard hi) I).
   destruct (interval_to_ball_1 (guard lo) (guard hi)) as [c r].
@@ -140,34 +148,31 @@ destruct (andb (andb (xle (xv lo) (xv hi)) (xlt (xv lo) (XInf false))) (xlt (XIn
   split.
   { intros _ NB. apply (B3 NI). intros [K1 K2]. apply NB. unfold finite.
     rewrite <- Fl, <- Fu. split; assumption. }
-  split.
-  { intros [K|K]; exfalso; unfold nan in K; congruence. }
-  intros _ _ K. elim (K N).
+  split; [intros K; elim (NW K)|].
+  intros K. elim (NR K).
 - (* it describes none *)
   assert (NN : ~ xnonempty (xv lo) (xv hi)).
   { intros [N1 [N2 N3]]. rewrite N1, N2, N3 in V. discriminate V. }
   destruct (interval_to_ball_1 pzero pzero) as [c r].
-  destruct (is_nan prec emax lo) eqn:N1; [|destruct (is_nan prec emax hi) eqn:N2];
-    cbn [andb negb]; cbv beta iota.
-  + split; [right; left; exact Wh|].
-    split; [intros K; elim (NN K)|].
-    split; [intros K; elim (NN K)|].
-    split; [intros K; elim (NN K)|].
-    split; [intros _; exact Wh|].
-    intros K. elim K. exact N1.
-  + split; [right; left; exact Wh|].
-    split; [intros K; elim (NN K)|].
-    split; [intros K; elim (NN K)|].
-    split; [intros K; elim (NN K)|].
-    split; [intros _; exact Wh|].
-    intros _ K. elim K. exact N2.
-  + assert (Em : ball_empty_1 cnan cnan) by (split; exact (proj2_sig nan_const)).
+  destruct (xlt (xv hi) (xv lo)) eqn:R; cbv beta iota.
+  + (* reversed bounds: the empty ball *)
+    assert (Em : ball_empty_1 cnan cnan) by (split; exact (proj2_sig nan_const)).
     split; [right; right; exact Em|].
     split; [intros K; elim (NN K)|].
     split; [intros K; elim (NN K)|].
     split; [intros K; elim (NN K)|].
-    split; [intros [K|K]; unfold nan in K; congruence|].
-    intros _ _ _. exact Em.
+    split; [|intros _; exact Em].
+    unfold nan. intros [K|[K|[s [K1 K2]]]].
+    * rewrite (xval_nan prec emax lo K) in R. destruct (xv hi) as [|[|]|z]; discriminate R.
+    * rewrite (xval_nan prec emax hi K) in R. discriminate R.
+    * rewrite K1, K2 in R. destruct s; discriminate R.
+  + (* a NaN bound, or the same infinity twice: the whole line *)
+    split; [right; left; exact Wh|].
+    split; [intros K; elim (NN K)|].
+    split; [intros K; elim (NN K)|].
+    split; [intros K; elim (NN K)|].
+    split; [intros _; exact Wh|].
+    intros K. discriminate K.
 Qed.
 
 (** * ball_split_1 *)

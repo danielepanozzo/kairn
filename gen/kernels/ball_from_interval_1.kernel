@@ -27,9 +27,10 @@ ensures:       makes_ball cw rw from_interval=lo,hi rel=u abs=eta smallest_radiu
 min_precision: 2
 source:        interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallSets.v ball_from_interval_1_correct
 entry:         yes
 cone_exempt:   every output is selected after explicit tests of the bounds, those of interval_make_1 and of interval_to_ball_1; makes_ball states what comes out
 

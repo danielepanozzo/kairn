@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 223 kernels, 211 are proved and 12 are **UNVERIFIED**: [`ball_from_interval_1`](ball_from_interval_1.md), [`bv_center_2`](bv_center_2.md), [`bv_center_entry_1`](bv_center_entry_1.md), [`bv_conv_finish`](bv_conv_finish.md), [`bv_make_finish`](bv_make_finish.md), [`bv_make_radius`](bv_make_radius.md), [`bv_mul_pow2_radius`](bv_mul_pow2_radius.md), [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md), [`bv_mul_pow2_step_2`](bv_mul_pow2_step_2.md), [`bv_neg_radius`](bv_neg_radius.md), [`conv_radius`](conv_radius.md), [`neg_1`](neg_1.md).
+Of the 223 kernels, 212 are proved and 11 are **UNVERIFIED**: [`bv_center_2`](bv_center_2.md), [`bv_center_entry_1`](bv_center_entry_1.md), [`bv_conv_finish`](bv_conv_finish.md), [`bv_make_finish`](bv_make_finish.md), [`bv_make_radius`](bv_make_radius.md), [`bv_mul_pow2_radius`](bv_mul_pow2_radius.md), [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md), [`bv_mul_pow2_step_2`](bv_mul_pow2_step_2.md), [`bv_neg_radius`](bv_neg_radius.md), [`conv_radius`](conv_radius.md), [`neg_1`](neg_1.md).
 
 33 kernels have a statement on finite operands and one on infinite and NaN operands; the second is **UNVERIFIED** for [`bv_center_2`](bv_center_2.md).
 
@@ -159,7 +159,7 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `from_interval(lo, hi)` | `T`, `T` | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_2`](ball_from_interval_2.md) |
 | `Ball<T, 1>(X)` | `Ball<T, 2>` | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) |
 | not yet called by the public headers | - | an interval of two limbs that contains the ball, within $A\lvert v\rvert + B$ of its bounds; empty for the empty ball | [`ball_to_interval_2`](ball_to_interval_2.md) |
-| not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_1`](ball_from_interval_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_1`](ball_from_interval_1.md) |
 | not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_2`](ball_hull_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_2`](ball_intersection_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_1`](ball_hull_1.md) |

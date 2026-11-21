@@ -369,10 +369,14 @@ template <> struct interval_to_ball_1<float> {
     static constexpr bool proved = true;
 };
 
-// ball_from_interval_1: UNVERIFIED. Claims: makes_ball.
+// ball_from_interval_1: proved. Claims: makes_ball.
 template <class T> struct ball_from_interval_1;
-template <> struct ball_from_interval_1<double> { static constexpr bool proved = false; };
-template <> struct ball_from_interval_1<float> { static constexpr bool proved = false; };
+template <> struct ball_from_interval_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_from_interval_1<float> {
+    static constexpr bool proved = true;
+};
 
 // ball_from_interval_2: proved. Claims: makes_ball.
 template <class T> struct ball_from_interval_2;

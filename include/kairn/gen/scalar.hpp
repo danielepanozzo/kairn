@@ -1158,7 +1158,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_to_ball_1(float xl, float xu, floa
 }
 
 // ball_from_interval_1(lo, hi) -> cw, rw
-// interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_from_interval_1(double gl, double gu, bool v, double r, double c) noexcept {

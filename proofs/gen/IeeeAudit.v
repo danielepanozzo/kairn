@@ -84,6 +84,9 @@ Print Assumptions interval_mid_rad_1_correct.
 Definition interval_to_ball_1_audit : interval_to_ball_1_spec := interval_to_ball_1_correct.
 Print Assumptions interval_to_ball_1_correct.
 
+Definition ball_from_interval_1_audit : ball_from_interval_1_spec := ball_from_interval_1_correct.
+Print Assumptions ball_from_interval_1_correct.
+
 Definition ball_from_interval_2_audit : ball_from_interval_2_spec := ball_from_interval_2_correct.
 Print Assumptions ball_from_interval_2_correct.
 

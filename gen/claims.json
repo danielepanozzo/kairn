@@ -1818,9 +1818,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallSets.v",
+        "name": "ball_from_interval_1_correct"
+      },
       "source": {
         "cite": "interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20)",
         "license": "algorithm and proof: MIT"

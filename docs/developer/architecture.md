@@ -3243,7 +3243,7 @@ Entries as the generator writes them (`source`, `flops` and the theorem fields l
  "outputs": [{"name": "cw", "limbs": 1}, {"name": "rw", "limbs": 1}],
  "requires": [],
  "ensures": [{"kind": "makes_ball", "center": "cw", "radius": "rw", "from": {"lower": "lo", "upper": "hi"}, "rel": "u", "abs": "eta", "smallest_radius": true}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}}
 ```
 

@@ -482,8 +482,11 @@ class Statements(unittest.TestCase):
         # signs and the split of a ball of two limbs and ball_to_interval_2 (246), and four
         # comparisons of balls of two limbs (250), and interval_mid_rad_2 and interval_split_2
         # (252), and ball_contains_point_2 (253), and interval_to_ball_2 (254), and the hull and
-        # the intersection of balls of one limb and of two (258).
-        self.assertEqual(text.count('Print Assumptions'), 258)
+        # the intersection of balls of one limb and of two (258); and ball_from_interval_1, proved
+        # again for the rule of 2026-11-20 with its listing corrected (259).
+        self.assertEqual(text.count('Print Assumptions'), 259)
+        self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
+                      'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
         self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
                       'Print Assumptions ball_hull_2_correct.', text)
         self.assertIn('From Kairn Require Import IeeeBallHull.', text)
@@ -611,9 +614,11 @@ class CheckedFiles(unittest.TestCase):
     # infinity twice, which its listing does not follow yet.
     # Then the listing of ball_from_interval_1 was corrected for that rule (the owner's ruling of
     # 2026-11-21: rv = lt(gu, gl) selects the empty ball where it tested for a NaN): its
-    # definition and the source line of its comments changed, and nothing else.
+    # definition and the source line of its comments changed, and nothing else. Then its theorem
+    # was proved again for that listing and its statement (IeeeBallSets.v): the statements file
+    # prints its status, proved, one word more, and make -C proofs passed on these files.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'c1dafcb503776af9a0ccc273cbb68029dad60d53ea214bf104cd6b2e826968aa',
-               'proofs/gen/IeeeStatements.v': '528f8f96edd7b687680321259ff372072983b7c9a8a2a216320987baa695f80a'}
+               'proofs/gen/IeeeStatements.v': 'f532230e1425d76fb4559d6239dd0abf19f1162a94523d76ade42caab30b31fb'}
 
 
     def test_the_checked_files(self):
