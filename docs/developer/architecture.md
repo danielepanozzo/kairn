@@ -1916,7 +1916,7 @@ Two entries in full, and the `ensures` of four more (`ball_contains_point_1`, `b
  "outputs": [{"name": "yes", "limbs": 1, "type": "mask"}, {"name": "no", "limbs": 1, "type": "mask"}],
  "requires": ["ball(cx, rx)", "ball(cy, ry)"],
  "ensures": [{"kind": "trit", "yes": "yes", "no": "no", "rel": "lt", "args": ["x", "y"], "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}}, "exact_when": [{"abs_le": "rx+ry", "omega": true}]}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "ball_contains_point_2", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "c", "limbs": 2}, {"name": "r", "limbs": 1}, {"name": "t", "limbs": 2}],

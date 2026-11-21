@@ -9,6 +9,7 @@ From Kairn Require Import IeeeBallConvert.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeBallPow2.
+From Kairn Require Import IeeeBallPredicates.
 From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
@@ -48,11 +49,20 @@ Print Assumptions abs_2_ieee_correct.
 Definition le_2_2_ieee_audit : le_2_2_ieee_spec := le_2_2_ieee_correct.
 Print Assumptions le_2_2_ieee_correct.
 
+Definition ball_contains_ball_1_audit : ball_contains_ball_1_spec := ball_contains_ball_1_correct.
+Print Assumptions ball_contains_ball_1_correct.
+
 Definition le_2_1_ieee_audit : le_2_1_ieee_spec := le_2_1_ieee_correct.
 Print Assumptions le_2_1_ieee_correct.
 
+Definition ball_contains_point_1_audit : ball_contains_point_1_spec := ball_contains_point_1_correct.
+Print Assumptions ball_contains_point_1_correct.
+
 Definition lt_2_2_ieee_audit : lt_2_2_ieee_spec := lt_2_2_ieee_correct.
 Print Assumptions lt_2_2_ieee_correct.
+
+Definition ball_equal_1_audit : ball_equal_1_spec := ball_equal_1_correct.
+Print Assumptions ball_equal_1_correct.
 
 Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
 Print Assumptions sub_up_1_ieee_correct.
@@ -75,6 +85,12 @@ Print Assumptions ball_to_interval_1_correct.
 Definition interval_hull_1_audit : interval_hull_1_spec := interval_hull_1_correct.
 Print Assumptions interval_hull_1_correct.
 
+Definition ball_less_1_audit : ball_less_1_spec := ball_less_1_correct.
+Print Assumptions ball_less_1_correct.
+
+Definition ball_less_equal_1_audit : ball_less_equal_1_spec := ball_less_equal_1_correct.
+Print Assumptions ball_less_equal_1_correct.
+
 Definition ball_lower_as_1_audit : ball_lower_as_1_spec := ball_lower_as_1_correct.
 Print Assumptions ball_lower_as_1_correct.
 
@@ -90,6 +106,12 @@ Print Assumptions ball_mul_pow2_1_full_correct.
 Definition ball_neg_1_ieee_audit : ball_neg_1_ieee_spec := ball_neg_1_ieee_correct.
 Print Assumptions ball_neg_1_ieee_correct.
 
+Definition ball_negative_1_audit : ball_negative_1_spec := ball_negative_1_correct.
+Print Assumptions ball_negative_1_correct.
+
+Definition ball_positive_1_audit : ball_positive_1_spec := ball_positive_1_correct.
+Print Assumptions ball_positive_1_correct.
+
 Definition ball_scale_1_full_audit : ball_scale_1_full_spec := ball_scale_1_full_correct.
 Print Assumptions ball_scale_1_full_correct.
 
@@ -98,6 +120,9 @@ Print Assumptions ball_sub_1_full_correct.
 
 Definition ball_upper_as_1_audit : ball_upper_as_1_spec := ball_upper_as_1_correct.
 Print Assumptions ball_upper_as_1_correct.
+
+Definition ball_zero_1_audit : ball_zero_1_spec := ball_zero_1_correct.
+Print Assumptions ball_zero_1_correct.
 
 Definition fold_finish_1_audit : fold_finish_1_spec := fold_finish_1_correct.
 Print Assumptions fold_finish_1_correct.

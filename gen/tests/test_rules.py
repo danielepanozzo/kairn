@@ -1472,8 +1472,10 @@ class TheKernels(unittest.TestCase):
     # limbs (IeeeIntervalMul2.v).
     WAVE_2_B1_PROVED = WAVE_2_B1 | {'mul_ext_2_2'}
     # And of stage B2, the kernels proved so far: the predicates, the three-valued comparisons and
-    # the relations of an interval of one limb and of two (IeeeIntervalPredicates.v).
-    WAVE_2_B2_PROVED = WAVE_2_B2_INTERVALS
+    # the relations of an interval of one limb and of two (IeeeIntervalPredicates.v); the
+    # predicates and comparisons of a ball of one limb (IeeeBallPredicates.v).
+    WAVE_2_B2_PROVED = WAVE_2_B2_INTERVALS | {f'ball_{name}_1' for name in (
+        'contains_point', 'contains_ball', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal')}
     WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - WAVE_2_B2 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED | WAVE_2_B2_PROVED
 
     def test_kernel_names_are_those_of_the_listings(self):

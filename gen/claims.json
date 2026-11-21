@@ -967,9 +967,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_contains_ball_1_correct"
+      },
       "source": {
         "cite": "the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1083,9 +1087,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_contains_point_1_correct"
+      },
       "source": {
         "cite": "the distance as an exact pair compared with the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1220,9 +1228,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_equal_1_correct"
+      },
       "source": {
         "cite": "the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1903,9 +1915,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_less_1_correct"
+      },
       "source": {
         "cite": "the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1983,9 +1999,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_less_equal_1_correct"
+      },
       "source": {
         "cite": "the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2514,9 +2534,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_negative_1_correct"
+      },
       "source": {
         "cite": "the center compared with the negated radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2570,9 +2594,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_positive_1_correct"
+      },
       "source": {
         "cite": "the radius compared with the center (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -3030,9 +3058,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_zero_1_correct"
+      },
       "source": {
         "cite": "the center and the radius compared with 0 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

@@ -56,7 +56,9 @@
      for the product of two intervals of two limbs, the finite core of the directed product,
      the facts of each product of bounds, and the statements with the constants by name; for
      the predicates, comparisons and relations of intervals of stage B2, each relation on the
-     bounds as extended real numbers and the facts about members it rests on;
+     bounds as extended real numbers and the facts about members it rests on; for those of
+     balls of one limb, a ball as an interval of extended real numbers, the exact pairs of
+     two_sum_ord and their comparisons, and each kernel as a boolean of the bounds;
    - the theorems about the folds that have no generated statement: that a fold of the
      model with overflow is the fold of the real model whenever its result is finite
      (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
@@ -762,6 +764,60 @@ Print Assumptions xcontains.
 Print Assumptions lead_tests.
 Print Assumptions interval_1_parts.
 Print Assumptions interval_2_parts.
+
+(* The predicates and the three-valued comparisons of balls of one limb, in the IEEE model
+   (theories/IeeeBallPredicates.v): the theorems of their generated statements are listed by
+   proofs/gen/IeeeAudit.v. Here, the lemmas they rest on: the statement of a three-valued
+   comparison from its cases; a canonical ball as an interval of extended real numbers; the
+   sum of two numbers by two_sum_ord as an exact pair or its overflow, and the comparisons of
+   such pairs; the pairs led by a NaN or +infinity; the relations on the bounds of a ball that
+   is not finite; and each kernel as a boolean of the bounds of the balls. *)
+From Kairn Require Import IeeeBallPredicates.
+Print Assumptions trit_from.
+Print Assumptions xlohi_fin.
+Print Assumptions xlohi_whole.
+Print Assumptions xlohi_nan.
+Print Assumptions ball_1_states.
+Print Assumptions xball_1.
+Print Assumptions ball_pair_1.
+Print Assumptions two_sum_ord_fst.
+Print Assumptions tso_pair_of.
+Print Assumptions overflow_order.
+Print Assumptions overflow_big.
+Print Assumptions tso_pair_small.
+Print Assumptions xval_2_lead_fin.
+Print Assumptions lt_2_2_xval.
+Print Assumptions le_2_2_xval.
+Print Assumptions le_2_1_xval.
+Print Assumptions pair_cmp.
+Print Assumptions pair_cmp_r.
+Print Assumptions pair_top.
+Print Assumptions rnd_abs.
+Print Assumptions abs_pair.
+Print Assumptions pair_le_2_1.
+Print Assumptions xadd_nan_r.
+Print Assumptions xadd_inf_l.
+Print Assumptions xval_nonfin.
+Print Assumptions abs_nonfin.
+Print Assumptions nonfin_lt_2_2.
+Print Assumptions nonfin_le_2_2.
+Print Assumptions nonfin_le_2_1.
+Print Assumptions tso_zero.
+Print Assumptions ball_1_fin_r.
+Print Assumptions xlohi_cases.
+Print Assumptions radius_cases.
+Print Assumptions radii_special.
+Print Assumptions special_rels.
+Print Assumptions ball_positive_1_bool.
+Print Assumptions ball_negative_1_bool.
+Print Assumptions ball_zero_1_bool.
+Print Assumptions ball_contains_point_1_bool.
+Print Assumptions ball_contains_ball_1_bool.
+Print Assumptions special_nonfin.
+Print Assumptions radii_cases.
+Print Assumptions ball_less_1_bools.
+Print Assumptions ball_less_equal_1_bools.
+Print Assumptions ball_equal_1_bools.
 
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
 Print Assumptions fold_seq_transfer.

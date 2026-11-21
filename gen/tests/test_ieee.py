@@ -435,8 +435,9 @@ class Statements(unittest.TestCase):
         # (84); then the theorems that the descriptions of the folds' first stage name: 5
         # bridges and 3 correctness statements of the steps, 8 leading limbs, and the 8 folds in
         # their two orders (32); and the two folds of maxima in their two orders (4). Then the 26
-        # predicates, comparisons and relations of an interval of stage B2 (146).
-        self.assertEqual(text.count('Print Assumptions'), 146)
+        # predicates, comparisons and relations of an interval of stage B2 (146), and the eight
+        # predicates and comparisons of a ball of one limb (154).
+        self.assertEqual(text.count('Print Assumptions'), 154)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -505,9 +506,10 @@ class CheckedFiles(unittest.TestCase):
     # results selected after the halving): their definitions and the source line of their
     # statements' comments; make -C proofs passed on these files.
     # Then the statements print "proved" for the 26 predicates, comparisons and relations of an
-    # interval (IeeeIntervalPredicates.v): 26 words, and nothing else, changed.
+    # interval (IeeeIntervalPredicates.v): 26 words, and nothing else, changed. Then for the eight
+    # predicates and comparisons of a ball of one limb (IeeeBallPredicates.v): eight words more.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'df13c0d5952de12186558d54ea83fa18307794c804c3fdd8cedcfeab42cad214',
-               'proofs/gen/IeeeStatements.v': '88ccbafbc1620832f658f69122b235dac0603e64ffbf3ce7e0c8dca7f875c889'}
+               'proofs/gen/IeeeStatements.v': 'f87a57109aedc39cb73b8b0bd83abb0d91d35bd151bf802f9014c942d281d7ac'}
 
 
     def test_the_checked_files(self):

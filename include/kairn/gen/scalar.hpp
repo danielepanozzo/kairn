@@ -437,7 +437,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_2(float x0, float x1, float y0, float 
 }
 
 // ball_contains_ball_1(cx, rx, cy, ry) -> mask m
-// the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_contains_ball_1(double cx, double rx, double cy, double ry, bool& m_out) noexcept {
     const double ncx = -cx;
     // (d0, d1) = two_sum_ord(cy, ncx)
@@ -543,7 +543,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_1(float x0, float x1, float a, bool& m
 }
 
 // ball_contains_point_1(c, r, t) -> mask m
-// the distance as an exact pair compared with the radius (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the distance as an exact pair compared with the radius (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_contains_point_1(double c, double r, double t, bool& m_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? t : t + 0.0;
     const double nc = -c;
@@ -619,7 +619,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(float x0, float x1, float y0, float 
 }
 
 // ball_equal_1(cx, rx, cy, ry) -> mask yes, mask no
-// the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_equal_1(double cx, double rx, double cy, double ry, bool& yes_out, bool& no_out) noexcept {
     const bool ea = rx == 0.0;
     const bool eb = ry == 0.0;
@@ -2270,7 +2270,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_intersection_1(float cx, float rx, flo
 }
 
 // ball_less_1(cx, rx, cy, ry) -> mask yes, mask no
-// the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_less_1(double cx, double rx, double cy, double ry, bool& yes_out, bool& no_out) noexcept {
     // (s0, s1) = two_sum_ord(rx, ry)
     const double s0_aa = abs_bits(rx);
@@ -2375,7 +2375,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_less_1(float cx, float rx, float cy, f
 }
 
 // ball_less_equal_1(cx, rx, cy, ry) -> mask yes, mask no
-// the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_less_equal_1(double cx, double rx, double cy, double ry, bool& yes_out, bool& no_out) noexcept {
     // (s0, s1) = two_sum_ord(rx, ry)
     const double s0_aa = abs_bits(rx);
@@ -2899,7 +2899,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_neg_1(float cx, float rx, float& cz_ou
 }
 
 // ball_negative_1(c, r) -> mask m
-// the center compared with the negated radius (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center compared with the negated radius (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_negative_1(double c, double r, bool& m_out) noexcept {
     const double nr = -r;
     const bool m = nr > c;
@@ -2912,7 +2912,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_negative_1(float c, float r, bool& m_o
 }
 
 // ball_positive_1(c, r) -> mask m
-// the radius compared with the center (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the radius compared with the center (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_positive_1(double c, double r, bool& m_out) noexcept {
     const bool m = c > r;
     m_out = m;
@@ -3377,7 +3377,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_upper_as_1(float c, float r, float& h_
 }
 
 // ball_zero_1(c, r) -> mask m
-// the center and the radius compared with 0 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center and the radius compared with 0 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_zero_1(double c, double r, bool& m_out) noexcept {
     const bool a = c == 0.0;
     const bool b = r == 0.0;

@@ -130,7 +130,7 @@ Definition le_2_2_ieee_spec : Prop :=
   let m := IeeeModel.le_2_2 prec emax x0 x1 y0 y1 in
   m = xle (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* ball_contains_ball_1: the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_contains_ball_1: the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_contains_ball_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -153,7 +153,7 @@ Definition le_2_1_ieee_spec : Prop :=
   let m := IeeeModel.le_2_1 prec emax x0 x1 a in
   m = xle (xval_2 x0 x1) (xval a).
 
-(* ball_contains_point_1: the distance as an exact pair compared with the radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_contains_point_1: the distance as an exact pair compared with the radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_contains_point_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -176,7 +176,7 @@ Definition lt_2_2_ieee_spec : Prop :=
   let m := IeeeModel.lt_2_2 prec emax x0 x1 y0 y1 in
   m = xlt (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* ball_equal_1: the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_equal_1: the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -374,7 +374,7 @@ Definition ball_intersection_1_spec : Prop :=
   (ball_whole_1 cy ry -> cz = cx /\ rz = rx) /\
   (forall z : R, in_ball_1 cx rx z /\ in_ball_1 cy ry z -> in_ball_1 cz rz z).
 
-(* ball_less_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_less_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_less_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -406,7 +406,7 @@ Definition ball_less_1_spec : Prop :=
     ~ ball_empty_1 cx rx /\ ~ ball_empty_1 cy ry /\
     (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> ~ (x < y)))).
 
-(* ball_less_equal_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_less_equal_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_less_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -526,7 +526,7 @@ Definition ball_neg_1_ieee_spec : Prop :=
     Rabs ((- x) - val cz) <= val rz)) /\
   (forall x : R, in_ball_1 cx rx x -> in_ball_1 cz rz (- x)).
 
-(* ball_negative_1: the center compared with the negated radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_negative_1: the center compared with the negated radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_negative_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -538,7 +538,7 @@ Definition ball_negative_1_spec : Prop :=
     ~ ball_empty_1 c r /\
     (forall x : R, in_ball_1 c r x -> x < 0)).
 
-(* ball_positive_1: the radius compared with the center (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_positive_1: the radius compared with the center (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_positive_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -619,7 +619,7 @@ Definition ball_upper_as_1_spec : Prop :=
   (ball_empty_1 c r -> h = infinity prec emax true) /\
   (~ ball_empty_1 c r -> forall hi : xreal, range_upper (in_ball_1 c r) hi -> xval h = xru prec emax hi).
 
-(* ball_zero_1: the center and the radius compared with 0 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_zero_1: the center and the radius compared with 0 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_zero_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
