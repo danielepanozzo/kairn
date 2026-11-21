@@ -146,12 +146,24 @@ KAIRN_FORCEINLINE constexpr SumAndError<T> fast_two_sum(T a, T b) noexcept {
     gen::fast_two_sum_entry(a, b, r.sum, r.error);
     return r;
 }
-// a and b are only multiplied: two_prod needs no guard.
+/// Called by kairn::two_prod in constant evaluation when its operands are finite and its error
+/// term is not, which makes the expression invalid: the compiler's message names this function.
+/// There the kernel runs Dekker's product, one of whose operations overflowed, and the run-time
+/// result is another (kairn::two_prod says when).
+inline void two_prod_overflows_in_constant_evaluation() noexcept {
+    fail("two_prod", "an operation of Dekker's product overflows in constant evaluation");
+}
+
+// a and b are only multiplied: two_prod needs no guard. In constant evaluation, where the kernel
+// runs Dekker's product, finite operands with an error term that is not finite are refused (bit
+// tests after the kernel, no arithmetic); at run time the test is not compiled.
 template <limb T>
 KAIRN_FORCEINLINE constexpr ProductAndError<T> two_prod(T a, T b) noexcept {
     check_environment();
     ProductAndError<T> r;
     gen::two_prod(a, b, r.product, r.error);
+    if (__builtin_is_constant_evaluated() && finite(a) && finite(b) && !finite(r.error))
+        two_prod_overflows_in_constant_evaluation();
     return r;
 }
 // Integer operations on the bit pattern: nothing to check.
@@ -283,14 +295,29 @@ KAIRN_FORCEINLINE constexpr auto fast_two_sum(const X& a, const Y& b) noexcept
 
 /// a b as its rounded product and the error of that rounding (kernel two_prod: TwoProd with a
 /// fused multiply-add; in constant evaluation its variant two_prod_dekker, Dekker's product).
-/// Rounds; constexpr.
+/// Rounds; constexpr, on the operands given below.
 ///
 /// Statement, proved: product = RN(a b), |product + error - a b| <= eta/2, and product + error =
 /// a b exactly when a b = 0 or |a b| >= 2^(2p-1) eta (2^-969 for double, 2^-102 for float), for
-/// finite a and b when the product does not overflow. In constant evaluation the same with 13/8 eta
-/// for eta/2: the two executions give the same values when the product is exact (a zero product
-/// can differ in sign), and below the threshold each its own error term, within its own bound. A
-/// product that overflows gives an infinite product and the opposite infinity as the error term.
+/// finite a and b when the product does not overflow. A product that overflows gives an infinite
+/// product and the opposite infinity as the error term.
+///
+/// Constant evaluation runs Dekker's product, which splits a and b into halves and adds four
+/// partial products: a split, or the product of the leading halves, can overflow where a b does
+/// not. With finite operands the call is a constant expression only when its error term is
+/// finite, which is when none of those operations overflows. Otherwise it is not one: a program
+/// that needs one (a constexpr variable, a static_assert) does not compile, and the compiler's
+/// message names detail::two_prod_overflows_in_constant_evaluation (GCC, which refuses an
+/// overflow itself, names the operation that overflowed); a variable of static storage duration
+/// that is not constexpr is initialized at run time, with the run-time result. It is one when
+/// |a| <= 2^996, |b| <= 2^996 and |a b| <= 2^1023 (2^115, 2^115 and 2^127 for float): a sufficient
+/// condition, not an exact one (the square of 0x1.ffffffbffffffp+511 is one, that of
+/// 0x1.fffffffffffffp+511 is not). Where it is one the statement holds with 13/8 eta for eta/2,
+/// and the values are those of run time when the product is exact (proved; a zero product can
+/// differ in sign); below the threshold each execution has its own error term, within its own
+/// bound. A product that overflows is not one either, nor, with GCC or Clang, an infinite operand
+/// (the split computes inf - inf); a NaN operand is not with Clang, and gives two NaN with GCC,
+/// as at run time.
 template <class T>
     requires detail::limb<T> && detail::proof_checked<gen::bounds::two_prod<T>>
 KAIRN_FORCEINLINE constexpr ProductAndError<T> two_prod(T a, T b) noexcept {
