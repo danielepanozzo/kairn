@@ -565,7 +565,10 @@ set(_toy_1_r_1_sum fp:3:-3:1)
 set(_toy_2_r_2_sum fp:3:-2:0)
 set(_toy_1_r_1_1_product fp:2:-2:1)
 set(_toy_2_r_2_2_product fp:4:-3:-2 "a.in=0x0p+0/0x1p-1/0x1.8p+0,s.lead=-1:0,x.lead=-1:0")
-set(_toy_kernel_acc_merge_2 fp:3:-2:0 "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0,c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0")
+# The sums of magnitudes of acc_merge_2 a few values each, among them 5 beside 1.25, whose sum
+# 6.25 rounds to 6 by more than a quarter of a gap: an inexact case that is not a tie (the guards
+# ask for one), beside the ties 2.75 and 3.25 (69 620 cases).
+set(_toy_kernel_acc_merge_2 fp:3:-2:0 "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0,c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2")
 set(_toy_r_n_r_r_sum fp:3:-2:0)
 
 # The interval kernels of Milestone 2, in the extended domain: i1 and i2 an interval of one limb

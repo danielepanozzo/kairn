@@ -184,7 +184,7 @@ SHAPES = {
 # (tests/CMakeLists.txt, _toy_kernel_acc_merge_2): the running sums every pair, the sums of
 # magnitudes a few values.
 _R_ACC_A = "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0"
-_R_ACC_C = "c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0"
+_R_ACC_C = "c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2"
 _R_ACC_MUL = "a.in=0x0p+0/0x1p-1/0x1.8p+0"
 KERNEL_FORMATS = {
     # The product step of an accumulator of two limbs: three operands of two limbs, the quick

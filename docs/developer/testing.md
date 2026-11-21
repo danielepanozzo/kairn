@@ -8,7 +8,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | with `--parallel 4`, on 2026-11-20 with 571 and 572 tests, 79 seconds on the Mac with Apple clang, 97 with GCC 16 and 125 to 127 on 16 threads of the Linux machine with GCC 13 ([The size of the summaries](#the-size-of-the-summaries)); with 421 to 452 tests, 25 to 34 seconds on the Mac, 37 to 47 on the Linux machine and 52 to 58 on the Windows machine (73 on 4 logical processors); on the hosted runners, measured before each cross-check ran in one process, 31 to 45 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest runner seen ([Time](#each-cross-check-in-one-process)) |
+| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | on 2026-11-21, with the ball vectors and the accumulator judged (against claims without the 53 objects of stage B2 of the intervals, `KAIRN_ORACLE_CLAIMS`), 705 tests and 127 seconds on the Mac with Apple clang (`--parallel 4`; 633 tests and 92 seconds before them), 706 tests and 49 seconds with GCC 13 on the Linux machine (`--parallel 16`); with `--parallel 4`, on 2026-11-20 with 571 and 572 tests, 79 seconds on the Mac with Apple clang, 97 with GCC 16 and 125 to 127 on 16 threads of the Linux machine with GCC 13 ([The size of the summaries](#the-size-of-the-summaries)); with 421 to 452 tests, 25 to 34 seconds on the Mac, 37 to 47 on the Linux machine and 52 to 58 on the Windows machine (73 on 4 logical processors); on the hosted runners, measured before each cross-check ran in one process, 31 to 45 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest runner seen ([Time](#each-cross-check-in-one-process)) |
 | Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | with `--parallel 4`, on 2026-11-20 with 884 tests, 20 minutes on the Mac with Apple clang and 32 on 16 threads of the Linux machine with GCC 13; it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 633 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 705 tests. The full tier, 1105 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -519,6 +519,33 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     length of a convolution, a coefficient's class, cancellation, its error far from the bound, an
     order other than `seq`; the strata of the families of the kernels, axpy far from its bound, a
     class of a finish or of a maximum) and must fail them.
+
+- **The ball vectors and the accumulator** (`oracle/README.md`, "Ball vectors and the
+  accumulator", "Their kernels", "Their folds"). A random run's header lists the strata of the
+  generator: for the kernels the families of `gen8.py` (`radius`: `huge`, `zeros`, `mixed`,
+  `atnormal`; `acc`: `cancel`, `tie`, `exactprod`, `apart`, `atop`; `accradius`: `integer`, `limit`,
+  `beyond`, `abig`; `bvfinish`: `nonfinite`, `negative`, `zeros`, `top`, `masks`); for the folds
+  those of `genbv.py` by shape (a ball vector `one`, `wide`, `zeroradius`, `whole`, `overflow`,
+  `threshold`, `cancel`, `underflow`, `zeros`, and `nonfinite`, `exact` and `tail` where they apply;
+  a constructor `one`, `badradius`, `badcenter`, `zeros`, `overflow`, `underflow`; a product those
+  of a ball vector, `count` among them). Then:
+
+    | Objects | Cases the run must have seen |
+    |---|---|
+    | a radius kernel | an output $+\infty$ and a finite one at least the stated value; with `exact_when`, the conditions holding and each failing, the output exactly the stated value, the mask true where nothing is claimed |
+    | a step of a scaling | `exact_flag` true and false, `exact_when` holding |
+    | a finish | every mask true and each false, a value zero, below zero, above zero, a NaN, $\pm\infty$ |
+    | a step of the accumulator | a rounding inexact, an output group not finite (nothing claimed) |
+    | a ball vector | every length class and order asked for (as a fold); a finite result and the whole space; an operand that is the whole space and finite operands; V4 applying, of no entry too, or the count `V4 not claimed` below `finite_from` or in a format of no statement of V4; with `exact_when`, every condition holding and each failing; in place (`--inplace`), every array of the limbs of the array written |
+    | a constructor | each class of the radius given (negative, $-\infty$, NaN, $+\infty$, $\pm 0$, positive) with finite centers, and a positive radius with centers not all finite |
+    | a product of BallVectors | lengths 0 and 1 of each array, unequal lengths; both results, a whole-space operand, V4 applying; the radius at least `conv_radius`'s stated value; in a toy format `count_when` failing |
+
+    `full.tools.crosscheck.guards` has runs and altered summaries that miss each of these (a
+    class of a radius, a stratum, a mask of a step, a cell of a finish or of an accumulator; a
+    class of results, of operands, of V4 or of exactness of a ball vector, a class of radius of a
+    constructor, a length, the count or the radius of a product, `count_when` never failing, V4
+    outside its formats or below `finite_from` not said; a stream in place without its arrays, or
+    in place when it was not asked, and the reverse) and must fail them.
 
 - **The interval kernels of Milestone 2** (`oracle/README.md`, "The kinds of the interval
   kernels"). A random run's header lists the strata of the family (`gen6.py`: `special`, `point`,
