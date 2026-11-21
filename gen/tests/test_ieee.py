@@ -434,8 +434,9 @@ class Statements(unittest.TestCase):
         # of the folds of maxima and the interval kernels of the extended domain among them
         # (84); then the theorems that the descriptions of the folds' first stage name: 5
         # bridges and 3 correctness statements of the steps, 8 leading limbs, and the 8 folds in
-        # their two orders (32); and the two folds of maxima in their two orders (4).
-        self.assertEqual(text.count('Print Assumptions'), 120)
+        # their two orders (32); and the two folds of maxima in their two orders (4). Then the 26
+        # predicates, comparisons and relations of an interval of stage B2 (146).
+        self.assertEqual(text.count('Print Assumptions'), 146)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -503,8 +504,10 @@ class CheckedFiles(unittest.TestCase):
     # Then ball_intersection_1 and ball_from_interval_1 rewritten (the same values, the special
     # results selected after the halving): their definitions and the source line of their
     # statements' comments; make -C proofs passed on these files.
+    # Then the statements print "proved" for the 26 predicates, comparisons and relations of an
+    # interval (IeeeIntervalPredicates.v): 26 words, and nothing else, changed.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'df13c0d5952de12186558d54ea83fa18307794c804c3fdd8cedcfeab42cad214',
-               'proofs/gen/IeeeStatements.v': '8a7fd38f072017b6ba2c35b4b82d2c2f489056539aedf196df13743d50feb268'}
+               'proofs/gen/IeeeStatements.v': '88ccbafbc1620832f658f69122b235dac0603e64ffbf3ce7e0c8dca7f875c889'}
 
 
     def test_the_checked_files(self):

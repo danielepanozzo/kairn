@@ -54,7 +54,9 @@
      conversions between an interval and a ball of one limb, the midpoint of a bounded
      interval over the real numbers and on limbs, and the cases of a canonical interval; and
      for the product of two intervals of two limbs, the finite core of the directed product,
-     the facts of each product of bounds, and the statements with the constants by name;
+     the facts of each product of bounds, and the statements with the constants by name; for
+     the predicates, comparisons and relations of intervals of stage B2, each relation on the
+     bounds as extended real numbers and the facts about members it rests on;
    - the theorems about the folds that have no generated statement: that a fold of the
      model with overflow is the fold of the real model whenever its result is finite
      (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
@@ -716,6 +718,50 @@ Print Assumptions mul_ext_2_2_small.
 Print Assumptions mul_ext_corner.
 Print Assumptions interval_mul_2_of.
 Print Assumptions interval_mul_2_all.
+
+(* The predicates, the three-valued comparisons and the relations of IEEE 1788 of intervals of
+   one and of two limbs, in the IEEE model (theories/IeeeIntervalPredicates.v): the theorems of
+   their generated statements are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they rest
+   on: the order of the extended real numbers; the members of a nonempty interval below or
+   above a number, and of two nonempty intervals in every choice; each relation on the bounds
+   as extended real numbers; and the tests of the leading limb of a canonical 2-limb value. *)
+From Kairn Require Import IeeeIntervalPredicates.
+Print Assumptions xeq_eq.
+Print Assumptions xeq_refl.
+Print Assumptions xlt_le.
+Print Assumptions xlt_le_trans.
+Print Assumptions xle_lt_trans.
+Print Assumptions xlt_false_le.
+Print Assumptions xle_false_lt.
+Print Assumptions xupper_lt.
+Print Assumptions xupper_le.
+Print Assumptions xlower_gt.
+Print Assumptions xlower_ge.
+Print Assumptions xlower_ge_x.
+Print Assumptions xupper_le_x.
+Print Assumptions xinterval_ne_l.
+Print Assumptions xinterval_ne_r.
+Print Assumptions xall_lt.
+Print Assumptions xall_le.
+Print Assumptions xall_ne_common.
+Print Assumptions xall_ne.
+Print Assumptions xempty.
+Print Assumptions xentire.
+Print Assumptions xsubset.
+Print Assumptions xpositive.
+Print Assumptions xnegative.
+Print Assumptions xzero.
+Print Assumptions xless.
+Print Assumptions xless_equal.
+Print Assumptions xequal.
+Print Assumptions xrel_equal.
+Print Assumptions xopen.
+Print Assumptions xinterior.
+Print Assumptions xdisjoint.
+Print Assumptions xcontains.
+Print Assumptions lead_tests.
+Print Assumptions interval_1_parts.
+Print Assumptions interval_2_parts.
 
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
 Print Assumptions fold_seq_transfer.

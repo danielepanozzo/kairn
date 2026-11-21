@@ -1471,7 +1471,10 @@ class TheKernels(unittest.TestCase):
     # the midpoint and the split (IeeeIntervalConvert.v), and mul_ext_2_2 with the product of two
     # limbs (IeeeIntervalMul2.v).
     WAVE_2_B1_PROVED = WAVE_2_B1 | {'mul_ext_2_2'}
-    WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - WAVE_2_B2 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED
+    # And of stage B2, the kernels proved so far: the predicates, the three-valued comparisons and
+    # the relations of an interval of one limb and of two (IeeeIntervalPredicates.v).
+    WAVE_2_B2_PROVED = WAVE_2_B2_INTERVALS
+    WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - WAVE_2_B2 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED | WAVE_2_B2_PROVED
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()

@@ -10,9 +10,10 @@ ensures:       certain m lt x 0 x=xl,xu exact
 min_precision: 1
 source:        the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalPredicates.v interval_negative_2_correct
 entry:         yes
 cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
 unused:        xl0 the upper bound alone tells

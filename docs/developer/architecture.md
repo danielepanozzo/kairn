@@ -1875,14 +1875,14 @@ Entries as the generator writes them (`source`, `flops` and the theorem fields l
  "outputs": [{"name": "m", "limbs": 1, "type": "mask"}],
  "requires": ["interval(xl, xu)"],
  "ensures": [{"kind": "certain", "of": "m", "rel": "member", "args": ["t", "x"], "intervals": {"x": {"lower": "xl", "upper": "xu"}}, "exact": true}],
- "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 1, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "interval_less_2", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "xl", "limbs": 2}, {"name": "xu", "limbs": 2}, {"name": "yl", "limbs": 2}, {"name": "yu", "limbs": 2}],
  "outputs": [{"name": "yes", "limbs": 1, "type": "mask"}, {"name": "no", "limbs": 1, "type": "mask"}],
  "requires": ["interval(xl, xu)", "interval(yl, yu)"],
  "ensures": [{"kind": "trit", "yes": "yes", "no": "no", "rel": "lt", "args": ["x", "y"], "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}}, "exact": true}],
- "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 1, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}}
 ```
 

@@ -3676,7 +3676,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_add_1(float xl, float xu, float yl
 }
 
 // interval_contains_1(xl, xu, t) -> mask m
-// the bounds compared with the point, and a test that the point is finite (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared with the point, and a test that the point is finite (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_contains_1(double xl, double xu, double t, bool& m_out) noexcept {
     const bool a = t >= xl;
     const bool b = xu >= t;
@@ -3697,7 +3697,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_contains_1(float xl, float xu, flo
 }
 
 // interval_empty_1(xl, xu) -> mask m
-// the lower bound compared with +inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the lower bound compared with +inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_empty_1(double xl, [[maybe_unused]] double xu, bool& m_out) noexcept {
     const bool m = xl == std::numeric_limits<double>::infinity();
     m_out = m;
@@ -3708,7 +3708,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_empty_1(float xl, [[maybe_unused]]
 }
 
 // interval_entire_1(xl, xu) -> mask m
-// the two bounds compared with the infinities (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the two bounds compared with the infinities (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_entire_1(double xl, double xu, bool& m_out) noexcept {
     const double mi = -std::numeric_limits<double>::infinity();
     const bool a = xl == mi;
@@ -3725,7 +3725,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_entire_1(float xl, float xu, bool&
 }
 
 // interval_equal_1(xl, xu, yl, yu) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_equal_1(double xl, double xu, double yl, double yu, bool& yes_out, bool& no_out) noexcept {
     const bool ea = xl == xu;
     const bool eb = xu == yl;
@@ -3825,7 +3825,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_intersection_1(float xl, float xu,
 }
 
 // interval_less_1(xl, xu, yl, yu) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_less_1(double xl, double xu, double yl, double yu, bool& yes_out, bool& no_out) noexcept {
     const bool nx = std::numeric_limits<double>::infinity() > xl;
     const bool ny = std::numeric_limits<double>::infinity() > yl;
@@ -3850,7 +3850,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_less_1(float xl, float xu, float y
 }
 
 // interval_less_equal_1(xl, xu, yl, yu) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_less_equal_1(double xl, double xu, double yl, double yu, bool& yes_out, bool& no_out) noexcept {
     const bool nx = std::numeric_limits<double>::infinity() > xl;
     const bool ny = std::numeric_limits<double>::infinity() > yl;
@@ -4346,7 +4346,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_neg_1(float xl, float xu, float& z
 }
 
 // interval_negative_1(xl, xu) -> mask m
-// the upper bound compared with 0 and -inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the upper bound compared with 0 and -inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_negative_1([[maybe_unused]] double xl, double xu, bool& m_out) noexcept {
     const double mi = -std::numeric_limits<double>::infinity();
     const bool a = 0.0 > xu;
@@ -4363,7 +4363,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_negative_1([[maybe_unused]] float 
 }
 
 // interval_positive_1(xl, xu) -> mask m
-// the lower bound compared with 0 and +inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the lower bound compared with 0 and +inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_positive_1(double xl, [[maybe_unused]] double xu, bool& m_out) noexcept {
     const bool a = xl > 0.0;
     const bool b = std::numeric_limits<double>::infinity() > xl;
@@ -4378,7 +4378,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_positive_1(float xl, [[maybe_unuse
 }
 
 // interval_rel_disjoint_1(xl, xu, yl, yu) -> mask m
-// the stored bounds compared, and tests of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared, and tests of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_disjoint_1(double xl, double xu, double yl, double yu, bool& m_out) noexcept {
     const bool ex = xl == std::numeric_limits<double>::infinity();
     const bool ey = yl == std::numeric_limits<double>::infinity();
@@ -4401,7 +4401,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_disjoint_1(float xl, float xu,
 }
 
 // interval_rel_equal_1(xl, xu, yl, yu) -> mask m
-// the stored bounds compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_equal_1(double xl, double xu, double yl, double yu, bool& m_out) noexcept {
     const bool a = xl == yl;
     const bool c = xu == yu;
@@ -4416,7 +4416,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_equal_1(float xl, float xu, fl
 }
 
 // interval_rel_interior_1(xl, xu, yl, yu) -> mask m
-// the stored bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_interior_1(double xl, double xu, double yl, double yu, bool& m_out) noexcept {
     const bool ex = xl == std::numeric_limits<double>::infinity();
     const double mi = -std::numeric_limits<double>::infinity();
@@ -4719,7 +4719,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_sub_1(float xl, float xu, float yl
 }
 
 // interval_subset_1(xl, xu, yl, yu) -> mask m
-// the bounds compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_subset_1(double xl, double xu, double yl, double yu, bool& m_out) noexcept {
     const bool a = xl >= yl;
     const bool b = yu >= xu;
@@ -4734,7 +4734,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_subset_1(float xl, float xu, float
 }
 
 // interval_zero_1(xl, xu) -> mask m
-// the bounds compared with 0 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared with 0 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_zero_1(double xl, double xu, bool& m_out) noexcept {
     const bool a = xl == 0.0;
     const bool b = xu == 0.0;
@@ -12739,7 +12739,7 @@ KAIRN_GEN_FORCEINLINE void interval_add_2(float xl0, float xl1, float xu0, float
 }
 
 // interval_contains_2(xl = (xl0, xl1), xu = (xu0, xu1), t = (t0, t1)) -> mask m
-// the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_contains_2(double xl0, double xl1, double xu0, double xu1, double t0, double t1, bool& m_out) noexcept {
     // (a) = le_2_2(xl0, xl1, t0, t1)
     const bool a_h = t0 > xl0;
@@ -12780,7 +12780,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_contains_2(float xl0, float xl1, f
 }
 
 // interval_empty_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limb of the lower bound compared with +inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limb of the lower bound compared with +inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_empty_2(double xl0, [[maybe_unused]] double xl1, [[maybe_unused]] double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const bool m = xl0 == std::numeric_limits<double>::infinity();
     m_out = m;
@@ -12791,7 +12791,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_empty_2(float xl0, [[maybe_unused]
 }
 
 // interval_entire_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limbs of the bounds compared with the infinities (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limbs of the bounds compared with the infinities (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_entire_2(double xl0, [[maybe_unused]] double xl1, double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const double mi = -std::numeric_limits<double>::infinity();
     const bool a = xl0 == mi;
@@ -12808,7 +12808,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_entire_2(float xl0, [[maybe_unused
 }
 
 // interval_equal_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_equal_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& yes_out, bool& no_out) noexcept {
     // (ea) = eq_2_2(xl0, xl1, xu0, xu1)
     const bool ea_h = xl0 == xu0;
@@ -12881,7 +12881,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_equal_2(float xl0, float xl1, floa
 }
 
 // interval_less_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_less_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& yes_out, bool& no_out) noexcept {
     const bool nx = std::numeric_limits<double>::infinity() > xl0;
     const bool ny = std::numeric_limits<double>::infinity() > yl0;
@@ -12926,7 +12926,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_less_2(float xl0, float xl1, float
 }
 
 // interval_less_equal_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_less_equal_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& yes_out, bool& no_out) noexcept {
     const bool nx = std::numeric_limits<double>::infinity() > xl0;
     const bool ny = std::numeric_limits<double>::infinity() > yl0;
@@ -14499,7 +14499,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_neg_2(float xl0, float xl1, float 
 }
 
 // interval_negative_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_negative_2([[maybe_unused]] double xl0, [[maybe_unused]] double xl1, double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const double mi = -std::numeric_limits<double>::infinity();
     const bool a = 0.0 > xu0;
@@ -14516,7 +14516,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_negative_2([[maybe_unused]] float 
 }
 
 // interval_positive_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_positive_2(double xl0, [[maybe_unused]] double xl1, [[maybe_unused]] double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const bool a = xl0 > 0.0;
     const bool b = std::numeric_limits<double>::infinity() > xl0;
@@ -14531,7 +14531,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_positive_2(float xl0, [[maybe_unus
 }
 
 // interval_rel_disjoint_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
-// the stored bounds compared, and tests of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared, and tests of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_disjoint_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& m_out) noexcept {
     const bool ex = xl0 == std::numeric_limits<double>::infinity();
     const bool ey = yl0 == std::numeric_limits<double>::infinity();
@@ -14574,7 +14574,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_disjoint_2(float xl0, float xl
 }
 
 // interval_rel_equal_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
-// the stored bounds compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_equal_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& m_out) noexcept {
     // (a) = eq_2_2(xl0, xl1, yl0, yl1)
     const bool a_h = xl0 == yl0;
@@ -14601,7 +14601,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_equal_2(float xl0, float xl1, 
 }
 
 // interval_rel_interior_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
-// the stored bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_interior_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& m_out) noexcept {
     const bool ex = xl0 == std::numeric_limits<double>::infinity();
     const double mi = -std::numeric_limits<double>::infinity();
@@ -15474,7 +15474,7 @@ KAIRN_GEN_FORCEINLINE void interval_sub_2(float xl0, float xl1, float xu0, float
 }
 
 // interval_subset_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
-// the bounds compared by le_2_2 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared by le_2_2 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_subset_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& m_out) noexcept {
     // (a) = le_2_2(yl0, yl1, xl0, xl1)
     const bool a_h = xl0 > yl0;
@@ -15509,7 +15509,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_subset_2(float xl0, float xl1, flo
 }
 
 // interval_zero_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limbs of the bounds compared with 0 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limbs of the bounds compared with 0 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_zero_2(double xl0, [[maybe_unused]] double xl1, double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const bool a = xl0 == 0.0;
     const bool b = xu0 == 0.0;

@@ -22,6 +22,7 @@ From Kairn Require Import IeeeInterval2.
 From Kairn Require Import IeeeIntervalConvert.
 From Kairn Require Import IeeeIntervalExact.
 From Kairn Require Import IeeeIntervalMul2.
+From Kairn Require Import IeeeIntervalPredicates.
 From Kairn Require Import IeeeIntervalSub2.
 From Kairn Require Import IeeeMake.
 From Kairn Require Import IeeeSteps.
@@ -104,8 +105,26 @@ Print Assumptions fold_finish_1_correct.
 Definition interval_add_1_audit : interval_add_1_spec := interval_add_1_correct.
 Print Assumptions interval_add_1_correct.
 
+Definition interval_contains_1_audit : interval_contains_1_spec := interval_contains_1_correct.
+Print Assumptions interval_contains_1_correct.
+
+Definition interval_empty_1_audit : interval_empty_1_spec := interval_empty_1_correct.
+Print Assumptions interval_empty_1_correct.
+
+Definition interval_entire_1_audit : interval_entire_1_spec := interval_entire_1_correct.
+Print Assumptions interval_entire_1_correct.
+
+Definition interval_equal_1_audit : interval_equal_1_spec := interval_equal_1_correct.
+Print Assumptions interval_equal_1_correct.
+
 Definition interval_intersection_1_audit : interval_intersection_1_spec := interval_intersection_1_correct.
 Print Assumptions interval_intersection_1_correct.
+
+Definition interval_less_1_audit : interval_less_1_spec := interval_less_1_correct.
+Print Assumptions interval_less_1_correct.
+
+Definition interval_less_equal_1_audit : interval_less_equal_1_spec := interval_less_equal_1_correct.
+Print Assumptions interval_less_equal_1_correct.
 
 Definition interval_make_1_audit : interval_make_1_spec := interval_make_1_correct.
 Print Assumptions interval_make_1_correct.
@@ -119,11 +138,32 @@ Print Assumptions interval_mul_1_correct.
 Definition interval_neg_1_audit : interval_neg_1_spec := interval_neg_1_correct.
 Print Assumptions interval_neg_1_correct.
 
+Definition interval_negative_1_audit : interval_negative_1_spec := interval_negative_1_correct.
+Print Assumptions interval_negative_1_correct.
+
+Definition interval_positive_1_audit : interval_positive_1_spec := interval_positive_1_correct.
+Print Assumptions interval_positive_1_correct.
+
+Definition interval_rel_disjoint_1_audit : interval_rel_disjoint_1_spec := interval_rel_disjoint_1_correct.
+Print Assumptions interval_rel_disjoint_1_correct.
+
+Definition interval_rel_equal_1_audit : interval_rel_equal_1_spec := interval_rel_equal_1_correct.
+Print Assumptions interval_rel_equal_1_correct.
+
+Definition interval_rel_interior_1_audit : interval_rel_interior_1_spec := interval_rel_interior_1_correct.
+Print Assumptions interval_rel_interior_1_correct.
+
 Definition interval_split_1_audit : interval_split_1_spec := interval_split_1_correct.
 Print Assumptions interval_split_1_correct.
 
 Definition interval_sub_1_audit : interval_sub_1_spec := interval_sub_1_correct.
 Print Assumptions interval_sub_1_correct.
+
+Definition interval_subset_1_audit : interval_subset_1_spec := interval_subset_1_correct.
+Print Assumptions interval_subset_1_correct.
+
+Definition interval_zero_1_audit : interval_zero_1_spec := interval_zero_1_correct.
+Print Assumptions interval_zero_1_correct.
 
 Definition make_2_audit : make_2_spec := make_2_correct.
 Print Assumptions make_2_correct.
@@ -236,6 +276,24 @@ Print Assumptions fold_finish_2_correct.
 Definition interval_add_2_audit : interval_add_2_spec := interval_add_2_correct.
 Print Assumptions interval_add_2_correct.
 
+Definition interval_contains_2_audit : interval_contains_2_spec := interval_contains_2_correct.
+Print Assumptions interval_contains_2_correct.
+
+Definition interval_empty_2_audit : interval_empty_2_spec := interval_empty_2_correct.
+Print Assumptions interval_empty_2_correct.
+
+Definition interval_entire_2_audit : interval_entire_2_spec := interval_entire_2_correct.
+Print Assumptions interval_entire_2_correct.
+
+Definition interval_equal_2_audit : interval_equal_2_spec := interval_equal_2_correct.
+Print Assumptions interval_equal_2_correct.
+
+Definition interval_less_2_audit : interval_less_2_spec := interval_less_2_correct.
+Print Assumptions interval_less_2_correct.
+
+Definition interval_less_equal_2_audit : interval_less_equal_2_spec := interval_less_equal_2_correct.
+Print Assumptions interval_less_equal_2_correct.
+
 Definition interval_make_2_audit : interval_make_2_spec := interval_make_2_correct.
 Print Assumptions interval_make_2_correct.
 
@@ -248,8 +306,29 @@ Print Assumptions interval_mul_2_correct.
 Definition interval_neg_2_audit : interval_neg_2_spec := interval_neg_2_correct.
 Print Assumptions interval_neg_2_correct.
 
+Definition interval_negative_2_audit : interval_negative_2_spec := interval_negative_2_correct.
+Print Assumptions interval_negative_2_correct.
+
+Definition interval_positive_2_audit : interval_positive_2_spec := interval_positive_2_correct.
+Print Assumptions interval_positive_2_correct.
+
+Definition interval_rel_disjoint_2_audit : interval_rel_disjoint_2_spec := interval_rel_disjoint_2_correct.
+Print Assumptions interval_rel_disjoint_2_correct.
+
+Definition interval_rel_equal_2_audit : interval_rel_equal_2_spec := interval_rel_equal_2_correct.
+Print Assumptions interval_rel_equal_2_correct.
+
+Definition interval_rel_interior_2_audit : interval_rel_interior_2_spec := interval_rel_interior_2_correct.
+Print Assumptions interval_rel_interior_2_correct.
+
 Definition interval_sub_2_audit : interval_sub_2_spec := interval_sub_2_correct.
 Print Assumptions interval_sub_2_correct.
+
+Definition interval_subset_2_audit : interval_subset_2_spec := interval_subset_2_correct.
+Print Assumptions interval_subset_2_correct.
+
+Definition interval_zero_2_audit : interval_zero_2_spec := interval_zero_2_correct.
+Print Assumptions interval_zero_2_correct.
 
 Definition le_1_2_ieee_audit : le_1_2_ieee_spec := le_1_2_ieee_correct.
 Print Assumptions le_1_2_ieee_correct.

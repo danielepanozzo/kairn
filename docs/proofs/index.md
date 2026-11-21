@@ -83,7 +83,9 @@ lists:
   (`IeeeIntervalSub2.v`), the conversions between an interval and a ball of one limb, with
   the midpoint and the radius of an interval and its split at the midpoint
   (`IeeeIntervalConvert.v`), and the product of two intervals whose bounds have two limbs,
-  with the product of two bounds on all values (`IeeeIntervalMul2.v`); and the theorems of the
+  with the product of two bounds on all values (`IeeeIntervalMul2.v`), and the predicates, the
+  three-valued comparisons and the relations of IEEE 1788 of intervals with bounds of one and
+  of two limbs, all exact (`IeeeIntervalPredicates.v`); and the theorems of the
   folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
   finishes and bound kernels
   (`StepKernels.v`, `IeeeFoldFinish.v`, `BoundKernels.v`), of the two together
@@ -126,9 +128,10 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    of two limbs, of the conversions of a ball, of the exact interval kernels (the hull and
    the intersection of intervals of extended real numbers), of the difference of two
    intervals of two limbs (the sum with the negated operand), of the conversions between an
-   interval and a ball (the midpoint of a bounded interval) and of the product of two
+   interval and a ball (the midpoint of a bounded interval), of the product of two
    intervals of two limbs (the finite core of the directed product, and what each product of
-   bounds gives) beside their generated
+   bounds gives) and of the predicates and comparisons of intervals (each relation on the
+   bounds as extended real numbers) beside their generated
    statements, those about the two executions of a product, whose plain-product listings are
    written by hand, and the theorems about the folds, the largest magnitude and the product of
    polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)).
@@ -143,7 +146,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  87 files: no Admitted, admit, Axiom or Parameter
+  88 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
