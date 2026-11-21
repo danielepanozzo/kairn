@@ -15,7 +15,7 @@ against `Ball`. Two machines, four compilers, `-O2` and `-O3`, three runs of eac
 measurements, one JSON file per run, in
 [`results/milestone2/bench/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/bench).
 It is the first part of the milestone's benchmarks: [what is still to come](#still-to-come) is
-measured on the branch that has it.
+measured later.
 
 "M3" and "Zen 2" are the two machines ([How it was measured](#how-it-was-measured)). A **loop** is a
 loop of independent operations over arrays in L1, timed per operation; a **chain** is a dependent
@@ -865,13 +865,18 @@ the same operands under two modes into one. Three things prevent that, and one c
 
 ## Still to come
 
-This page measures what `main` holds today. The functions of Milestone 2 that are not on `main`
-yet are measured later, on the branch that has them, with the same harness: the functions on
-arrays (sum, dot product, `axpy`, convolution, norm), `BallVector`, the accumulator, the predicates
-and comparisons of `Interval` and `Ball` (`is_empty`, `contains`, the signs, the three-valued
-comparisons, the relations of IEEE 1788), the midpoint, radius, split and conversions of intervals
-of two limbs, the hull, intersection and split of balls, and `Packed` and the containers. The
-harness takes them as new rows of its tables (`bench/README.md`, "Milestone 2").
+This page measures what `main` held at commit `dee8ecd`. Measured later, with the same harness,
+which takes them as new rows of its tables (`bench/README.md`, "Milestone 2"):
+
+- what reached `main` after that commit and is not measured here: the predicates and comparisons
+  of `Interval` and `Ball` (`is_empty`, `contains`, the signs, the three-valued comparisons, the
+  relations of IEEE 1788), the midpoint, radius, split and conversions of intervals of two limbs,
+  the hull, intersection and split of balls, and `Packed` and the containers;
+- what is not on `main` yet, in review: the functions on arrays (sum, dot product, `axpy`,
+  convolution, norm), `BallVector` and the accumulator.
+
+(State on 2026-11-21. The paragraph first written here, at `dee8ecd`, listed all of these as not
+on `main` yet.)
 
 ## How it was measured
 

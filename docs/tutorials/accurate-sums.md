@@ -246,7 +246,10 @@ one-limb balls), the condition B4 on the page of each Ball kernel, such as
 
 ## What the headers do not provide yet
 
-This tutorial uses all there is for an accurate sum: numbers of one and two limbs, balls around
-them, addition, subtraction and multiplication. Not yet: division and square root, three or more
-limbs, decimal input and output (print the limbs, as here), an interval type, and vectors of
-balls. The [Plan](../developer/design/phase0/plan.md#milestones) says when each is to come.
+This tutorial uses numbers of one and two limbs, balls around them, addition, subtraction and
+multiplication. The headers also have intervals ([The range of a polynomial](intervals.md)) and
+the packed type for a loop of one's own ([A vector loop](vector-loop.md)). Not yet: the sum and
+the dot product of arrays as functions with a bound for the whole loop, vectors of balls
+(`BallVector`), which are in review, division and square root, three or more limbs, and decimal
+input and output (print the limbs, as here). The [Plan](../developer/design/phase0/plan.md#milestones)
+says when each is to come.
