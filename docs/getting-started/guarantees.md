@@ -342,7 +342,11 @@ So the program may pass its own products to Kairn under every contraction settin
 `api.boundary.*` checks each guarded form with the product written in the call against the same
 operation on the rounded product, bit for bit, under each contraction setting of the compiler, and
 `api.boundary.unguarded.*` builds the same test against a copy of the headers with the guard taken
-out of the generated kernels, and checks that the compilers above do fuse then. A guarded $-0$
+out of the generated kernels, and checks that the compilers above do fuse then. `api.boundary.packed.*`
+does the same for the products a program passes into `Packed` and the containers, computed in
+registers with the intrinsics of the form or in `T` into arrays, in each form of `Packed`, the
+guard of the packed kernels taken out of the copy as well
+([Testing](../developer/testing.md#packed-and-the-containers)). A guarded $-0$
 enters as $+0$; Kairn leaves the sign of a zero unspecified anyway.
 
 One-limb values themselves are not guarded: they behave like `T`, contraction included, so an

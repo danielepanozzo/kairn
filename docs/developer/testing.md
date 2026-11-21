@@ -71,6 +71,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three (`enclosure_code.*`: an unknown name, nothing, a bare `-D`); each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`); `mul_down` and `mul_up` in a constant expression, whose control computes the same at run time (`not_constexpr.*`), so that a change cannot make them `constexpr` by accident, and the sum of intervals likewise (`not_constexpr.interval_add`); of intervals (`interval.*`, `ball.implicit_narrowing`), an operation of intervals of one and of two limbs, an interval and a number (no kernel takes one), the implicit conversions of a ball to an interval, of an interval to a ball and of a ball of two limbs to one (each widens the set, so each is explicit), and an interval of two limbs from one of one limb, each control writing what compiles instead; an interval operation, constructor and conversion written without the marker against the copy of the headers in which every kernel is unverified (`unverified.interval_add_1`, `.interval_make_1`, `.interval_to_ball_1`); `kairn::rational` in a constant expression with a zero denominator, and with a result that fails its check, against a copy of the headers with a wrong flag planted in it, whose control turns `KAIRN_RATIONAL_CHECK` off (`rational.*`).; of the containers (`soa.*`), a write through a view of `const T` (an element, `set`, `store`, an element assigned from another) and a view of mutable limbs made of a view of `const T` or of a const `SoA`; of `Packed` (`packed.*`), an operation with an `Expansion` or a `T` operand (no packed kernel takes one), the narrowing to one limb written as an implicit conversion, and an operation of two limb types; the arithmetic of `Packed<T, 1>`, which has none (`packed.one_limb_arithmetic`); and a
 `KAIRN_PACKED_FORM` that is not a form (`packed_form.unknown`, `.bare`) or the form of another target (`packed_form.other_target`, which the generated header's `#error` refuses). |
 | `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
+| `api.boundary.packed.FORM.S`, `api.boundary.packed.unguarded.FORM.S` | The same for `Packed` and the containers, in each form FORM of `Packed` ([below](#packed-and-the-containers)): a product the program computes in the registers of the form, or in `T` into an array, passed into `Packed<T, 1>::from_limbs` and then the mixed forms, into `Packed<T, 2>::from_limbs`, a load, a view or an `SoA` (`tests/api/boundary_packed.cpp`); the copy without the guard also takes it out of `gen/avx2.hpp` and `gen/neon.hpp`. |
 | `api.k1.zero_cost` | The instructions emitted for one operation and for loops over `Expansion<double, 1>` against the same code over `double` (`tests/api/k1/zero_cost.py`); with MSVC it also fails when one of these functions has a `/GS` stack cookie ([costs](results/costs-milestone1.md#3-msvc-and-the-gs-stack-cookie)). |
 | `api.rational.K.F` | `kairn::rational` with K limbs of format F ([Constants from fractions](../reference/rational.md)) on 2 000 cases of the oracle's generator of `rational_K` (`KAIRN_RATIONAL_QUICK_CASES`, seed `KAIRN_API_SEED`), computed at run time by `tests/api/rational_runner.cpp`, which also requires `kairn::is_rational_result` to accept each result; the oracle compares every limb, the error and the flag with its own, for equality, and the guards require what the cross-checks of `rational_K` must have seen ([Cross-checks](#cross-checks); `tests/crosscheck.py compiled --kernel rational_K`, one process, as for a kernel). |
 | `api.rational.constexpr` | `tests/api/rational.cpp`: `static_assert`s of the results of two dozen fractions and six integers, for `float` and `double`, one and two limbs, against values computed from the specification with exact rationals; `kairn::is_rational_result` refusing each result changed by one unit; and a corpus of 104 fractions, each computed in a constant expression and at run time under each of the four rounding modes, with the same bits. |
@@ -647,6 +648,40 @@ form natively, and on AArch64 NEON.
   (`broadcast`, `lane`, `set_lane`, `load` and `store` from arrays one element off any register
   alignment, `load_partial` and `store_partial` for every count, `from_limbs`), and the type's
   properties.
+- **A product of the program** (`api.boundary.packed.FORM.S`, `tests/api/boundary_packed.cpp`),
+  what `api.boundary.S` checks for `Expansion` and `Ball`
+  ([above](#the-quick-tier)), for each way a register or a value enters
+  `Packed`: `Packed<T, 1>::from_limbs` of a register followed by `x + a`, `a + x`, `x - a`, `a - x`,
+  `+=`, `-=`, `Packed<T, 2>(a)`, `add_fast`, the functions of `kairn::finite`, after a negation, an
+  `abs` or a `select`; `Packed<T, 2>::from_limbs` and `from_limbs_unchecked` with the product as the
+  leading limb; `broadcast` and `set_lane` of a number made from a product in `T`; `load`,
+  `load_unchecked` and `load_partial` (the product as `fill` too) of arrays the program fills with
+  products, or stores a register of products into; views of those arrays (`load`, `load_partial`,
+  the proxy, `get`, `set`, an assignment through the proxy, `store`); and an `SoA` whose limbs or
+  elements the program writes. Each form is computed with the product written in place (`a * b`
+  in `T`, or the form's own intrinsic, `_mm256_mul_pd`, `vmulq_f64` and their `float` forms) and
+  with the rounded product (through a `volatile`, in a function that is not inlined), on factors
+  in $[1/2, 1)$ and a leading limb within a few units of $\mp$ their product, so that the sums
+  cancel, a different pair in each lane; every limb of every lane is compared bit for bit, a zero
+  as a zero with MSVC. `double` and `float`, 40 000 registers of each per form, in the forms
+  `native` (where it has more than one lane), `scalar` and `avx2` (where it applies), at `-O2`
+  under each contraction setting of `api.boundary.S`. Products that are only multiplied or
+  compared (`x * a`, `a * x`, `*=`, `kairn::finite::mul`, the comparisons) need no guard and must
+  agree in every build. The control, `api.boundary.packed.unguarded.FORM.S`, builds the test
+  against the copy of the headers without the guard, which also keeps only `a` of every
+  `_mm256_add_pd(a, _mm256_setzero_pd())` of `gen/avx2.hpp` and `vaddq_f64(a, vdupq_n_f64(0.0))`
+  of `gen/neon.hpp` (and their `float` forms), and requires that some form differ where the
+  compiler was measured to fuse: GCC by default and under `-ffp-contract=fast` (GCC 16 on
+  AArch64 in the forms NEON and scalar, GCC 13 on x86-64 in AVX2 and scalar), and Clang under
+  `-ffp-contract=fast` on AArch64 (Apple clang 21, NEON and scalar). A form that differs there
+  differs in every register, in every lane position. Which forms differ depends on the compiler
+  and the form (with GCC 13 and AVX2, 18 of the 42 that need the guard; with Apple clang and NEON,
+  35), and each of the 42 differs on one of them at least, but `abs` and the four forms of
+  `load_partial`, which none of them fused even without the guard: for those, the test shows only
+  that nothing fused them. Clang 18 on x86-64 fused nothing without the guard, in either form and under every
+  setting, and MSVC and clang-cl were not measured with `Packed`: their controls only report,
+  and say that nothing differed when nothing did. With the guard no form differs, on any of these
+  compilers, in any form or setting.
 - **The containers** (`api.soa.FORM`, `tests/api/soa.cpp`): an element read is the value written,
   for every index of arrays of 0, 1, $W - 1$, $W$, $W + 1$, $2W - 1$, $2W + 1$ and 37 elements,
   through the proxy, `get`, a const view, a const `SoA` and `load` (the limbs of `from_limbs` of the
