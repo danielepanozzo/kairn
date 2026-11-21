@@ -5,9 +5,10 @@
 # headers may call with values from the program) can never be a building block: it is reached
 # by a public form or it is on the short list. A kernel added to the generator fails here until
 # someone decides which it is. The kernels of NOT_CHECKED, the lists KAIRN_NOT_YET_CROSS_CHECKED
-# (the kernels the oracle does not judge yet) and KAIRN_NOT_PUBLIC_YET (the folds' stage of
-# Milestone 2, judged by the oracle, whose public functions come later) of tests/CMakeLists.txt,
-# are in none of the runner's lists, and no public operation calls them yet.
+# (the kernels the oracle does not judge yet) and KAIRN_NOT_PUBLIC_YET (kernels judged by the
+# oracle whose public functions come later: those of the ball vectors, and the steps of the maps on
+# stored arrays) of tests/CMakeLists.txt, are in none of the runner's lists, and no public
+# operation calls them yet.
 #
 # With -DPACKED_HEADER=include/kairn/packed.hpp, also: the kernels that header calls (gen::NAME(
 # with NAME a kernel of the claims) are exactly those that the runner's packed forms map to

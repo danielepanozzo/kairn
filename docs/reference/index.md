@@ -295,7 +295,7 @@ Kernels that other kernels call, and that no public operation computes on its ow
 
 ## Sums and dot products of arrays
 
-The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batch.hpp` calls: the steps of the sums and dot products, the finish of their result, the kernels of `norm_upper`, and the bounds of a sum and of a dot product as a function of the number of terms. Each function on arrays calls a loop made of these, whose claims are those of the whole array ([Functions on arrays](batch.md)); a step's page states what one step claims.
+The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batch.hpp` calls: the steps of the sums and dot products, the finish of their result, the kernels of `norm_upper`, and the bounds of a sum and of a dot product as a function of the number of terms, and the kernels of the accumulator (`kairn/accumulator.hpp`). Each function on arrays calls a loop made of these, whose claims are those of the whole array ([Functions on arrays](batch.md)); a step's page states what one step claims; what is proved of an accumulator's history is on [The accumulator](accumulator.md).
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
