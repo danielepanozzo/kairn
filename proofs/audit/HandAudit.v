@@ -89,7 +89,12 @@
      on, whose statements are written by hand (theories/Accumulator.v in the real model,
      theories/IeeeAccumulator.v in the IEEE model): for any history of add, add_product
      and merge, the bound of the sum of magnitudes, the error of the running sum in the
-     form of the statement of dot_k, and the error within the radius of error_bound().
+     form of the statement of dot_k, and the error within the radius of error_bound();
+   - the ball vectors in the IEEE model, whose generated statements are to be restated and
+     whose descriptions name no IEEE-model theorem yet: the lemmas of theories/IeeeBv.v
+     the restated statements will rest on, V1 to V4 of each ball vector in both orders (V4
+     in the form ruled for the restatement), and that the lane order returns what the
+     sequential order returns.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -914,3 +919,62 @@ Print Assumptions acc_1_ieee_bound.
 Print Assumptions run2i_real.
 Print Assumptions bound_dot_2_real.
 Print Assumptions acc_2_ieee_bound.
+
+(* The ball vectors in the IEEE model, prepared for the restatement of their generated
+   statements (theories/IeeeBv.v): for each, the lane order returns what the sequential
+   order returns, and V1 to V4 in both orders. *)
+From Kairn Require Import IeeeBv.
+Print Assumptions bv_add_1_lanes_seq_ieee.
+Print Assumptions bv_add_1_seq_ieee_v1.
+Print Assumptions bv_add_1_seq_ieee_v2.
+Print Assumptions bv_add_1_seq_ieee_v3.
+Print Assumptions bv_add_1_seq_ieee_v4.
+Print Assumptions bv_add_1_lanes_ieee_v1.
+Print Assumptions bv_add_1_lanes_ieee_v2.
+Print Assumptions bv_add_1_lanes_ieee_v3.
+Print Assumptions bv_add_1_lanes_ieee_v4.
+Print Assumptions bv_sub_1_lanes_seq_ieee.
+Print Assumptions bv_sub_1_seq_ieee_v1.
+Print Assumptions bv_sub_1_seq_ieee_v2.
+Print Assumptions bv_sub_1_seq_ieee_v3.
+Print Assumptions bv_sub_1_seq_ieee_v4.
+Print Assumptions bv_sub_1_lanes_ieee_v1.
+Print Assumptions bv_sub_1_lanes_ieee_v2.
+Print Assumptions bv_sub_1_lanes_ieee_v3.
+Print Assumptions bv_sub_1_lanes_ieee_v4.
+Print Assumptions bv_scale_1_lanes_seq_ieee.
+Print Assumptions bv_scale_1_seq_ieee_v1.
+Print Assumptions bv_scale_1_seq_ieee_v2.
+Print Assumptions bv_scale_1_seq_ieee_v3.
+Print Assumptions bv_scale_1_seq_ieee_v4.
+Print Assumptions bv_scale_1_lanes_ieee_v1.
+Print Assumptions bv_scale_1_lanes_ieee_v2.
+Print Assumptions bv_scale_1_lanes_ieee_v3.
+Print Assumptions bv_scale_1_lanes_ieee_v4.
+Print Assumptions bv_add_2_lanes_seq_ieee.
+Print Assumptions bv_add_2_seq_ieee_v1.
+Print Assumptions bv_add_2_seq_ieee_v2.
+Print Assumptions bv_add_2_seq_ieee_v3.
+Print Assumptions bv_add_2_seq_ieee_v4.
+Print Assumptions bv_add_2_lanes_ieee_v1.
+Print Assumptions bv_add_2_lanes_ieee_v2.
+Print Assumptions bv_add_2_lanes_ieee_v3.
+Print Assumptions bv_add_2_lanes_ieee_v4.
+Print Assumptions bv_sub_2_lanes_seq_ieee.
+Print Assumptions bv_sub_2_seq_ieee_v1.
+Print Assumptions bv_sub_2_seq_ieee_v2.
+Print Assumptions bv_sub_2_seq_ieee_v3.
+Print Assumptions bv_sub_2_seq_ieee_v4.
+Print Assumptions bv_sub_2_lanes_ieee_v1.
+Print Assumptions bv_sub_2_lanes_ieee_v2.
+Print Assumptions bv_sub_2_lanes_ieee_v3.
+Print Assumptions bv_sub_2_lanes_ieee_v4.
+Print Assumptions bv_scale_2_lanes_seq_ieee.
+Print Assumptions bv_scale_2_seq_ieee_v1.
+Print Assumptions bv_scale_2_seq_ieee_v2.
+Print Assumptions bv_scale_2_seq_ieee_v3.
+Print Assumptions bv_scale_2_seq_ieee_v4.
+Print Assumptions bv_scale_2_lanes_ieee_v1.
+Print Assumptions bv_scale_2_lanes_ieee_v2.
+Print Assumptions bv_scale_2_lanes_ieee_v3.
+Print Assumptions bv_scale_2_lanes_ieee_v4.

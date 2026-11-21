@@ -98,7 +98,9 @@ lists:
   polynomials, over the real numbers and with overflow, infinities and NaN (`FoldConv.v`,
   `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); of the radius kernels of the
   ball vectors and of the ball vectors themselves, over the real numbers (`BvRadius.v`,
-  `BvReal.v`; [below](#ball-vectors)); and of the kernels of
+  `BvReal.v`), and the lemmas of the ball vectors in the model with overflow that their
+  statements, to be restated, will rest on (`IeeeBv.v`; [below](#ball-vectors)); and of the
+  kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
   `IeeeAccumulator.v`; [below](#the-accumulator));
@@ -140,8 +142,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    statements, those about the two executions of a product, whose plain-product listings are
    written by hand, the theorems about the folds, the largest magnitude and the product of
    polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)),
-   and the lemmas of the radius of the accumulator and what a user of it relies on
-   ([below](#the-accumulator)).
+   the lemmas of the radius of the accumulator and what a user of it relies on
+   ([below](#the-accumulator)), and the lemmas of the ball vectors in the model with overflow
+   ([below](#ball-vectors)).
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -154,7 +157,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  96 files: no Admitted, admit, Axiom or Parameter
+  97 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -496,6 +499,27 @@ its leading limb; and the claim of the radius kernel at $m$ covers the sum. So n
 the rounded radius lines as functions of $m$ is needed: that they are nondecreasing, which
 makes the one radius the largest of the radii the Ball kernel would compute entry by entry, is
 true but not proved.
+
+**The ball vectors in the model with overflow** (`IeeeBv.v`): not proved against their
+generated statements, which are to be restated (their fourth clause), and so still
+unverified. What is proved, for both orders, as lemmas the restated statements will rest
+on, for canonical operands (a finite nonnegative radius with finite centers, or the radius
+$+\infty$ with zero centers): the result is a finite ball vector or the whole space (zero
+centers, radius $+\infty$), and the flag is true exactly when the radius is finite (V1);
+entry by entry, the value of the operation on members of the operands' balls is in the ball
+of the center written (V2); a finite radius means finite radii and scalar, the centers of
+the real model and its radius (V3); and finite radii (and scalar) whose own sum, or
+$\lvert a\rvert r_x$, is at most $2^{e_{\max}-2}$, with every entry within the same limit,
+give a finite radius, for every length including zero (V4), from precision 2 (3 for the sums
+of two limbs, the precision of their statements). The lane
+order returns what the sequential order returns. The proof: when the flag is true, the
+radius kernel's result is finite, so the record and every center written are, and the
+lemmas of the maps and of the folds of maxima in this model give the values of the real
+model, where `BvReal.v` applies; when it is false the result is the whole space. V4 is the
+finiteness of the Ball kernels' radius (`IeeeBallFinite.v`) at the largest magnitude. At
+precision 1, where the statements of one limb start, the clause is false: with
+$e_{\max} = 2$ a constant of the radius lines rounds up to $2^{e_{\max}}$, so every radius is
+$+\infty$ or a NaN.
 
 ## The accumulator
 
