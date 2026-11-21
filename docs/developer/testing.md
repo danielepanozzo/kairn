@@ -780,13 +780,6 @@ product of finite operands beside a non-finite one. `crosscheck.lanes.fault.F` b
 runner with it (`KAIRN_RUNNER_HEADER`, and `KAIRN_RUNNER_TABLE` for a table of this kernel alone)
 and runs the cross-check of the quick tier's 6 000 cases (`tests/lanes/lane_fault.py`):
 
-The runner built with that kernel, `kairn-gen-packed-runner-lane-fault`, is not a runner of the
-library, and the brute-force tier does not run it: `brute.py` takes as runners the targets
-`kairn-gen-runner` and `kairn-gen-packed-runner` with their suffixes, except those whose suffix
-ends in `fault` (`runner_target`, with tests in `tests/brute/test_brute.py`). For one night it did:
-the scheduled run of 2026-11-21 took the planted fault for the library and failed on every
-platform.
-
 | Form | W | Consecutive | Permuted |
 |---|---|---|---|
 | NEON, `binary64` | 2 | 0 of 3 000 registers mix: passes | 942 mix: the oracle fails 768 lines |
@@ -807,6 +800,13 @@ because that one also fails for finite operands whose product overflows, which t
 `edge`, `threshold` and `overflow` put next to products that do not in consecutive lines: the
 same neighbor's mask planted there is caught by both assignments (598 lines with the consecutive
 one at W = 2).
+
+The runner built with that kernel, `kairn-gen-packed-runner-lane-fault`, is not a runner of the
+library, and the brute-force tier does not run it: `brute.py` takes as runners the targets
+`kairn-gen-runner` and `kairn-gen-packed-runner` with their suffixes, except those whose suffix
+ends in `fault` (`runner_target`, with tests in `tests/brute/test_brute.py`). For one night it did:
+the scheduled run of 2026-11-21 took the planted fault for the library and failed on every
+platform.
 
 **The folds and the maps** have no such assignment: `F_packed` deals the elements of one array
 to the lanes, $W$ consecutive elements per register, and runs the last $n \bmod W$ in a scalar
