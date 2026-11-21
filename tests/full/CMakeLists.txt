@@ -188,7 +188,10 @@ foreach(_kernel IN LISTS _full_kernels)
       -DRUNNER=interp -DEXHAUSTIVE=ON "-DRESTRICT=${_restrict}"
       "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
   endif()
-  set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "${_labels}")
+  # 900 s: on a hosted runner the longest enumeration (interval_mul_2, restricted) took 159 s in
+  # a job of its own kind and more than 300 s beside three other long ones, where the limit of 300
+  # stopped it. The limit is a net for a run that hangs, not a budget.
+  set_tests_properties(${_name} PROPERTIES TIMEOUT 900 LABELS "${_labels}")
   # The sampled run: of the whole toy format for a restricted enumeration, or of a format of its
   # own where tests/CMakeLists.txt names one (_toy_sampled..., the interval kernels).
   set(_sampled "${_full_${_kernel}_sampled}")
@@ -199,7 +202,7 @@ foreach(_kernel IN LISTS _full_kernels)
     set(_name full.crosscheck.interp-sampled.${_kernel})
     add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_sampled}"
       -DRUNNER=interp ${_random} "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
-    set_tests_properties(${_name} PROPERTIES TIMEOUT 300
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 900
       LABELS "full;python;crosscheck;interp;sampled")
   endif()
 
@@ -247,14 +250,14 @@ foreach(_fold IN LISTS _full_folds)
       add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_enum}"
         -DRUNNER=interp -DEXHAUSTIVE=ON "-DMAX_LENGTH=${_toy_length}"
         "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
-      set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "full;python;crosscheck;interp;fold")
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 900 LABELS "full;python;crosscheck;interp;fold")
     endif()
     set(_name full.crosscheck.interp-sampled.${_fold})
     add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_sampled}"
       -DRUNNER=interp "-DCOUNT=${_full_fold_${_fold}_cases}" "-DSEED=${KAIRN_CROSSCHECK_SEED}"
       "-DMAX_LENGTH=${_full_fold_${_fold}_sampled_length}" "-DSUMMARY=${_summaries}/${_name}.json"
       -P "${_driver}")
-    set_tests_properties(${_name} PROPERTIES TIMEOUT 300
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 900
       LABELS "full;python;crosscheck;interp;sampled;fold")
   endif()
   if(_compiled_full_scalar)
