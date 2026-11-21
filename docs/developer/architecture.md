@@ -1931,7 +1931,7 @@ true` (and no `"map"`):
   "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
   "step": "add_2_2", "step_args": ["x", "y"], "record": "norm_step_2", "combine": "norm_combine",
   "radius": "bv_add_radius_2", "radius_args": ["m", "rx", "ry"], "finish": "norm_finish_1",
-  "min_precision": 3, "status": "unverified", "theorem": null,
+  "min_precision": 3, "status": "proved", "theorem": {"file": "proofs/theories/BvReal.v", "name": "bv_add_2_correct"},
   "source": {"cite": "add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector)",
              "license": "algorithm and proof: MIT"}
 },
@@ -1950,7 +1950,7 @@ true` (and no `"map"`):
   "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
   "step": "scale_step_1", "step_args": ["x", "a"], "record": "norm_step_1", "combine": "norm_combine",
   "radius": "bv_scale_radius_1", "radius_args": ["m", "rx", "a"], "finish": "norm_finish_1",
-  "min_precision": 1, "status": "unverified", "theorem": null,
+  "min_precision": 1, "status": "proved", "theorem": {"file": "proofs/theories/BvReal.v", "name": "bv_scale_1_correct"},
   "source": {"cite": "mul_1_1 on the centers, the radius of ball_scale_1 at the largest center (milestone2.md, BallVector)",
              "license": "algorithm and proof: MIT"}
 }
