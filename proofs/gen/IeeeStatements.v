@@ -342,7 +342,7 @@ Definition interval_hull_1_spec : Prop :=
    range_upper (fun z : R => in_interval_1 xl xu z \/ in_interval_1 yl yu z) hi ->
    xval zl = lo /\ xval zu = hi).
 
-(* ball_hull_1: both balls to intervals, their hull, back to a ball (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_hull_1: both balls to intervals, their hull, back to a ball (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_hull_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -358,7 +358,7 @@ Definition ball_hull_1_spec : Prop :=
   (ball_empty_1 cy ry /\ ~ ball_empty_1 cx rx -> cz = cx /\ rz = rx) /\
   (forall z : R, in_ball_1 cx rx z \/ in_ball_1 cy ry z -> in_ball_1 cz rz z).
 
-(* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_intersection_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1841,7 +1841,7 @@ Definition interval_to_ball_2_spec : Prop :=
    Rabs ((val c0 + val c1) - ((val xl0 + val xl1) + (val xu0 + val xu1)) / 2) <= ((3 * (u prec ^ 2)) / (1 - (4 * u prec))) * Rabs (((val xl0 + val xl1) + (val xu0 + val xu1)) / 2) + (2 * eta (ieee_emin prec emax)) /\
    (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> Rabs (z - (val c0 + val c1)) <= val r)).
 
-(* ball_hull_2: both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_hull_2: both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_hull_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1875,7 +1875,7 @@ Definition interval_intersection_2_spec : Prop :=
    range_upper (fun z : R => in_interval_2 xl0 xl1 xu0 xu1 z /\ in_interval_2 yl0 yl1 yu0 yu1 z) hi ->
    xval_2 zl0 zl1 = lo /\ xval_2 zu0 zu1 = hi).
 
-(* ball_intersection_2: both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_intersection_2: both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_intersection_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

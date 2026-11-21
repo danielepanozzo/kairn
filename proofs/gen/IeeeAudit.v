@@ -11,6 +11,7 @@ From Kairn Require Import IeeeBallConvert.
 From Kairn Require Import IeeeBallConvert2.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
+From Kairn Require Import IeeeBallHull.
 From Kairn Require Import IeeeBallPow2.
 From Kairn Require Import IeeeBallPredicates.
 From Kairn Require Import IeeeBallPredicates2.
@@ -93,6 +94,12 @@ Print Assumptions ball_to_interval_1_correct.
 
 Definition interval_hull_1_audit : interval_hull_1_spec := interval_hull_1_correct.
 Print Assumptions interval_hull_1_correct.
+
+Definition ball_hull_1_audit : ball_hull_1_spec := ball_hull_1_correct.
+Print Assumptions ball_hull_1_correct.
+
+Definition ball_intersection_1_audit : ball_intersection_1_spec := ball_intersection_1_correct.
+Print Assumptions ball_intersection_1_correct.
 
 Definition ball_less_1_audit : ball_less_1_spec := ball_less_1_correct.
 Print Assumptions ball_less_1_correct.
@@ -283,8 +290,14 @@ Print Assumptions interval_mid_rad_2_correct.
 Definition interval_to_ball_2_audit : interval_to_ball_2_spec := interval_to_ball_2_correct.
 Print Assumptions interval_to_ball_2_correct.
 
+Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.
+Print Assumptions ball_hull_2_correct.
+
 Definition interval_intersection_2_audit : interval_intersection_2_spec := interval_intersection_2_correct.
 Print Assumptions interval_intersection_2_correct.
+
+Definition ball_intersection_2_audit : ball_intersection_2_spec := ball_intersection_2_correct.
+Print Assumptions ball_intersection_2_correct.
 
 Definition ball_less_2_audit : ball_less_2_spec := ball_less_2_correct.
 Print Assumptions ball_less_2_correct.

@@ -349,15 +349,23 @@ template <> struct interval_hull_1<float> {
     static constexpr bool proved = true;
 };
 
-// ball_hull_1: UNVERIFIED. Claims: ball_set.
+// ball_hull_1: proved. Claims: ball_set.
 template <class T> struct ball_hull_1;
-template <> struct ball_hull_1<double> { static constexpr bool proved = false; };
-template <> struct ball_hull_1<float> { static constexpr bool proved = false; };
+template <> struct ball_hull_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_hull_1<float> {
+    static constexpr bool proved = true;
+};
 
-// ball_intersection_1: UNVERIFIED. Claims: ball_set.
+// ball_intersection_1: proved. Claims: ball_set.
 template <class T> struct ball_intersection_1;
-template <> struct ball_intersection_1<double> { static constexpr bool proved = false; };
-template <> struct ball_intersection_1<float> { static constexpr bool proved = false; };
+template <> struct ball_intersection_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_intersection_1<float> {
+    static constexpr bool proved = true;
+};
 
 // ball_less_1: proved. Claims: trit.
 template <class T> struct ball_less_1;
@@ -1469,10 +1477,14 @@ template <> struct interval_to_ball_2<float> {
     static constexpr bool proved = true;
 };
 
-// ball_hull_2: UNVERIFIED. Claims: ball_set.
+// ball_hull_2: proved. Claims: ball_set.
 template <class T> struct ball_hull_2;
-template <> struct ball_hull_2<double> { static constexpr bool proved = false; };
-template <> struct ball_hull_2<float> { static constexpr bool proved = false; };
+template <> struct ball_hull_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_hull_2<float> {
+    static constexpr bool proved = true;
+};
 
 // interval_intersection_2: proved. Claims: interval_set.
 template <class T> struct interval_intersection_2;
@@ -1483,10 +1495,14 @@ template <> struct interval_intersection_2<float> {
     static constexpr bool proved = true;
 };
 
-// ball_intersection_2: UNVERIFIED. Claims: ball_set.
+// ball_intersection_2: proved. Claims: ball_set.
 template <class T> struct ball_intersection_2;
-template <> struct ball_intersection_2<double> { static constexpr bool proved = false; };
-template <> struct ball_intersection_2<float> { static constexpr bool proved = false; };
+template <> struct ball_intersection_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_intersection_2<float> {
+    static constexpr bool proved = true;
+};
 
 // ball_less_2: proved. Claims: trit.
 template <class T> struct ball_less_2;

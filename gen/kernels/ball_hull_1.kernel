@@ -20,9 +20,10 @@ ensures:       ball_set cz rz union x=cx,rx y=cy,ry
 min_precision: 2
 source:        both balls to intervals, their hull, back to a ball (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallHull.v ball_hull_1_correct
 entry:         yes
 cone_exempt:   the ball is selected among the conversions and the operands after tests of the radii; ball_set states what comes out for every pair of canonical balls
 

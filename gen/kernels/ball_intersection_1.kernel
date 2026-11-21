@@ -30,9 +30,10 @@ ensures:       ball_set cz rz intersection x=cx,rx y=cy,ry
 min_precision: 2
 source:        both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallHull.v ball_intersection_1_correct
 entry:         yes
 cone_exempt:   the ball is selected among the conversions and the operands after tests of the radii; ball_set states what comes out for every pair of canonical balls
 

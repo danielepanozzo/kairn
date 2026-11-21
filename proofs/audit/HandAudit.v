@@ -978,6 +978,26 @@ Print Assumptions lower_bound_2.
 Print Assumptions ball_contains_point_2_facts.
 Print Assumptions trit_certain.
 
+(* The hull and the intersection of two balls, with a center of one limb and of two, in the
+   IEEE model (theories/IeeeBallHull.v): the theorems of their generated statements are listed
+   by proofs/gen/IeeeAudit.v. Here, the lemmas they rest on: the tests of the radii of a
+   canonical ball, the whole line is not empty, the empty ball of two NaN constants, the ball
+   of a canonical interval contains its members, an empty interval of two limbs has none; and
+   the four statements in the names of this file. *)
+From Kairn Require Import IeeeBallHull.
+Print Assumptions radius_tests_1.
+Print Assumptions radius_tests_2.
+Print Assumptions whole_not_empty_1.
+Print Assumptions whole_not_empty_2.
+Print Assumptions empty_ball_cnan_1.
+Print Assumptions to_ball_1_members.
+Print Assumptions empty_2_no_member.
+Print Assumptions to_ball_2_members.
+Print Assumptions ball_hull_1_all.
+Print Assumptions ball_intersection_1_all.
+Print Assumptions ball_hull_2_all.
+Print Assumptions ball_intersection_2_all.
+
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
 Print Assumptions fold_seq_transfer.
 Print Assumptions fold_seq_transfer_prefix.

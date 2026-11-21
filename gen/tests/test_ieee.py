@@ -455,8 +455,12 @@ class Statements(unittest.TestCase):
         # ball_split_1 (156), and the signs and the split of a ball of two limbs and
         # ball_to_interval_2 (161), and four comparisons of balls of two limbs (165), and
         # interval_mid_rad_2 and interval_split_2 (167), and ball_contains_point_2 (168), and
-        # interval_to_ball_2 (169).
-        self.assertEqual(text.count('Print Assumptions'), 169)
+        # interval_to_ball_2 (169), and the hull and the intersection of balls of one limb and of
+        # two (173).
+        self.assertEqual(text.count('Print Assumptions'), 173)
+        self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
+                      'Print Assumptions ball_hull_2_correct.', text)
+        self.assertIn('From Kairn Require Import IeeeBallHull.', text)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -539,9 +543,10 @@ class CheckedFiles(unittest.TestCase):
     # and an empty Y gives X as it is only when X is not empty (the whole line Y when X is not the
     # whole line); and ball_of_interval with ieee1788 and a center of two limbs says first that
     # the center is canonical (interval_mid_rad_2, proved again). Five lines changed, the four
-    # kernels of ball_set still unverified; make -C proofs passed on these files.
+    # kernels of ball_set still unverified; make -C proofs passed on these files. Then the
+    # statements print "proved" for those four (IeeeBallHull.v): four words more.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'df13c0d5952de12186558d54ea83fa18307794c804c3fdd8cedcfeab42cad214',
-               'proofs/gen/IeeeStatements.v': 'e6005bafa9b42df9004a7fd3bdd7f797442129c57fc929dd4e785749b43ccc25'}
+               'proofs/gen/IeeeStatements.v': '4302461bd7933854e4b2eff1b40a20f552b4476474de1cd31c913072cc9f7638'}
 
 
     def test_the_checked_files(self):

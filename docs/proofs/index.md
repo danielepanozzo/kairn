@@ -97,7 +97,8 @@ lists:
   (`IeeeAdd22Top.v`), and the midpoint and a radius of an interval with bounds of two limbs,
   with the ball made of them and the split of the interval at its midpoint
   (`IeeeIntervalConvert2.v`), and whether a ball of two limbs contains a point of two limbs
-  (`IeeeBallContains2.v`); and the theorems of
+  (`IeeeBallContains2.v`), and the hull and the intersection of two balls with a center of one
+  limb and of two (`IeeeBallHull.v`); and the theorems of
   the
   folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
   finishes and bound kernels
@@ -148,7 +149,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    the product of two
    intervals of two limbs (the finite core of the directed product, and what each product of
    bounds gives) and of the predicates and comparisons of intervals and of balls of one limb
-   (each relation on the bounds as extended real numbers, and the exact pairs of two_sum_ord)
+   (each relation on the bounds as extended real numbers, and the exact pairs of two_sum_ord),
+   and of the hull and the intersection of balls (the tests of the radii, and that the ball of
+   a canonical interval contains its members)
    beside their generated
    statements, those about the two executions of a product, whose plain-product listings are
    written by hand, and the theorems about the folds, the largest magnitude and the product of
@@ -164,7 +167,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  96 files: no Admitted, admit, Axiom or Parameter
+  97 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -280,7 +283,13 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   the leading limbs of both operands are at most half the largest finite number. And whether
   a ball of two limbs contains a point of two limbs: a yes or a no is given only when it is
   right, never both, and exactly when it is right if the ball is the empty set or the whole
-  line or the point is not a finite number.
+  line or the point is not a finite number. And the hull and the intersection of two balls,
+  with a center of one limb and of two: the result is a canonical ball that contains every
+  member of either ball (of both, for the intersection); the hull is empty exactly when both
+  balls are, and the intersection is empty when one of them is; when the first ball is empty
+  (for the intersection, the whole line) the result is the second as it is, its very limbs, and
+  when the second is and the first is not, the first as it is. Not that the hull is the smallest
+  such ball, nor that the intersection is inside either ball or empty for disjoint balls.
 
 These statements and the models of the kernels they are about are generated from the kernel
 descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Three files are

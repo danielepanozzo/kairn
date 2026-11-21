@@ -1478,13 +1478,14 @@ class TheKernels(unittest.TestCase):
     # the split of a ball of two limbs (IeeeBallPredicates2.v); ball_to_interval_2
     # (IeeeBallConvert2.v); ball_less_2, ball_less_equal_2, ball_contains_ball_2 and ball_equal_2
     # (IeeeBallCompare2.v); interval_mid_rad_2, interval_split_2 and interval_to_ball_2
-    # (IeeeIntervalConvert2.v); ball_contains_point_2 (IeeeBallContains2.v).
+    # (IeeeIntervalConvert2.v); ball_contains_point_2 (IeeeBallContains2.v); the hull and the
+    # intersection of balls of one limb and of two (IeeeBallHull.v). That is all of them.
     WAVE_2_B2_PROVED = WAVE_2_B2_INTERVALS | {f'ball_{name}_1' for name in (
         'contains_point', 'contains_ball', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal')} | {
         'ball_from_interval_1', 'ball_split_1', 'ball_positive_2', 'ball_negative_2', 'ball_zero_2',
         'ball_split_2', 'ball_to_interval_2', 'ball_less_2', 'ball_less_equal_2', 'ball_contains_ball_2',
         'ball_equal_2', 'interval_mid_rad_2', 'interval_split_2', 'ball_contains_point_2',
-        'interval_to_ball_2'}
+        'interval_to_ball_2', 'ball_hull_1', 'ball_intersection_1', 'ball_hull_2', 'ball_intersection_2'}
     WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - WAVE_2_B2 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED | WAVE_2_B2_PROVED
 
     def test_kernel_names_are_those_of_the_listings(self):

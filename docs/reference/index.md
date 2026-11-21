@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 200 kernels, 196 are proved and 4 are **UNVERIFIED**: [`ball_hull_1`](ball_hull_1.md), [`ball_hull_2`](ball_hull_2.md), [`ball_intersection_1`](ball_intersection_1.md), [`ball_intersection_2`](ball_intersection_2.md).
+All 200 kernels are proved.
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -160,10 +160,10 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | not yet called by the public headers | - | the smallest interval of `T` that contains the ball; empty for the empty ball | [`ball_to_interval_1`](ball_to_interval_1.md) |
 | not yet called by the public headers | - | an interval of two limbs that contains the ball, within $A\lvert v\rvert + B$ of its bounds; empty for the empty ball | [`ball_to_interval_2`](ball_to_interval_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_1`](ball_from_interval_1.md) |
-| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_2`](ball_hull_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_2`](ball_intersection_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_1`](ball_hull_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_1`](ball_intersection_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_2`](ball_hull_2.md) |
+| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_2`](ball_intersection_2.md) |
+| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_1`](ball_hull_1.md) |
+| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_1`](ball_intersection_1.md) |
 | not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_1`](ball_split_1.md) |
 | not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_2`](ball_split_2.md) |
 | not yet called by the public headers | - | whether $t \in X$; exact | [`ball_contains_point_1`](ball_contains_point_1.md) |

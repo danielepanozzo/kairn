@@ -1771,9 +1771,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallHull.v",
+        "name": "ball_hull_1_correct"
+      },
       "source": {
         "cite": "both balls to intervals, their hull, back to a ball (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1839,9 +1843,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallHull.v",
+        "name": "ball_intersection_1_correct"
+      },
       "source": {
         "cite": "both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -8349,9 +8357,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallHull.v",
+        "name": "ball_hull_2_correct"
+      },
       "source": {
         "cite": "both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -8489,9 +8501,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallHull.v",
+        "name": "ball_intersection_2_correct"
+      },
       "source": {
         "cite": "both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

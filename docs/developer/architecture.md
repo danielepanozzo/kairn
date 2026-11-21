@@ -1962,7 +1962,7 @@ Entries as the generator writes them (`source`, `flops` and the theorem fields l
  "outputs": [{"name": "cz", "limbs": 1}, {"name": "rz", "limbs": 1}],
  "requires": ["ball(cx, rx)", "ball(cy, ry)"],
  "ensures": [{"kind": "ball_set", "center": "cz", "radius": "rz", "set": "union", "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}}}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "ball_split_2", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "c", "limbs": 2}, {"name": "r", "limbs": 1}],

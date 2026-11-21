@@ -1604,7 +1604,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_hull_1(float xl, float xu, float y
 }
 
 // ball_hull_1(cx, rx, cy, ry) -> cz, rz
-// both balls to intervals, their hull, back to a ball (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// both balls to intervals, their hull, back to a ball (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_hull_1(double cx, double rx, double cy, double ry, double r, double c, bool qx, bool qy) noexcept {
@@ -1937,7 +1937,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_hull_1(float cx, float rx, float cy, f
 }
 
 // ball_intersection_1(cx, rx, cy, ry) -> cz, rz
-// both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_intersection_1(double cx, double rx, double cy, double ry, double r, double c, bool ob, bool nx, bool ny) noexcept {
@@ -8352,7 +8352,7 @@ KAIRN_GEN_FORCEINLINE void interval_to_ball_2(float xl0, float xl1, float xu0, f
 }
 
 // ball_hull_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> ball_hull_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double r, double c0, double c1, bool qx, bool qy) noexcept {
@@ -9460,7 +9460,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_intersection_2(float xl0, float xl
 }
 
 // ball_intersection_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> ball_intersection_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double r, double c0, double c1, bool nx, bool ny) noexcept {

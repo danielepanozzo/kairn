@@ -100,3 +100,4 @@ theories/IeeeBallConvert2.v
 theories/IeeeBallCompare2.v
 theories/IeeeIntervalConvert2.v
 theories/IeeeBallContains2.v
+theories/IeeeBallHull.v
