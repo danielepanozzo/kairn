@@ -71,7 +71,10 @@ endif()
 #   code at -O0 and -O2, with and without -frounding-math, under every contraction setting, and
 #   compare it bit for bit with the interpreter: about two thirds of the suite's time, and what the
 #   cross-checks cover for this build's compiler and flags. Label generator: the CI runs the whole
-#   suite, C++ included, in generator.yml; by hand, python3 gen/kairn-gen test.
+#   suite, C++ included, in generator.yml; by hand, python3 gen/kairn-gen test. With the 223
+#   kernels and 44 folds of the joined tree of the ball vectors and stage B2 it took 571 seconds on
+#   the Linux machine (GCC 13, the full tier), near its limit of 600, as full.kairn-gen.test above
+#   had gone past it: its limit is 1800.
 # - full.tools.kairn-oracle.selftest: oracle/kairn-oracle selftest --quick without the six tests of
 #   full.kairn-oracle.selftest (--skip). It compiles its own C++ runner with this build's compiler,
 #   in the build tree, and skips the tests that need it, with a SKIP line, if the compiler does not
@@ -96,7 +99,7 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/gen/kairn-gen")
   add_test(NAME full.tools.kairn-gen.test
     COMMAND "${Python3_EXECUTABLE}" gen/kairn-gen test --no-cxx ${_args}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(full.tools.kairn-gen.test PROPERTIES TIMEOUT 600
+  set_tests_properties(full.tools.kairn-gen.test PROPERTIES TIMEOUT 1800
     LABELS "full;tools;generator")
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
