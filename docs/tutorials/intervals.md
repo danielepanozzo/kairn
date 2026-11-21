@@ -71,8 +71,9 @@ The other remedy is to split $X$ into pieces, evaluate on each, and take the hul
 --8<-- "docs/examples/cpp/intervals.cpp:pieces"
 ```
 
-`X.split()` returns two intervals whose union is $X$, split at a point of it (the midpoint, here,
-which is exact for these bounds), and `X.hull(Y)` is the smallest interval that contains both;
+`X.split()` returns two intervals whose union is $X$, split at a point of it (only that is claimed;
+here the point is the midpoint, which is exact for these bounds), and `X.hull(Y)` is the smallest
+interval that contains both;
 `Interval::empty()`, the empty set, is the start of the hull. Both are exact.
 
 ```cpp
@@ -182,8 +183,10 @@ a sum of intervals of two limbs about 56
 
 ## What the headers do not provide yet
 
-The predicates and comparisons of intervals (`is_empty`, `contains`, the signs, the three-valued
-comparisons, the relations of IEEE 1788), the midpoint, radius, split and conversions of intervals
-of two limbs, and the hull, intersection and split of balls are in Milestone 2 and come next; so
-does a square of an interval. Division, square roots and the elementary functions are for later
-milestones ([Plan](../developer/design/phase0/plan.md#milestones)).
+A square of an interval, which would make the centered form exact on one piece. Division, square
+roots and the elementary functions are for later milestones
+([Plan](../developer/design/phase0/plan.md#milestones)). The predicates and the comparisons of
+intervals and balls, the midpoint, radius, split and conversions of two limbs, and the hull,
+intersection and split of balls are there ([One enclosure interface](../reference/enclosure.md)):
+the [tutorial on bisection](bisection.md) uses them to find the zeros of a polynomial with one
+algorithm for intervals and balls.
