@@ -12,12 +12,13 @@
 /// bounds every entry, and entry(i) is the ball of center i and that radius, a copy.
 ///
 /// The header adds no arithmetic. Each operation is one generated loop over the arrays of the
-/// centers, proved in Rocq for both of its orders (the files named by gen/kernels/bv_*.fold): the
+/// centers, proved in Rocq for each of its orders (the files named by gen/kernels/bv_*.fold): the
 /// constructor bv_make_k, the negation bv_neg_k, the sum bv_add_k, the difference bv_sub_k, the
 /// scaling by a T bv_scale_k, the scaling by a power of two bv_mul_pow2_k (two or three calls of it
-/// in ldexp when 2^n is not a number of T), the product of polynomials bv_conv_k. Two operations are
-/// compositions made here, and say so: axpy (bv_scale_k, then bv_add_k in place) and norm_upper
-/// (the fold of maxima norm_upper_k on the centers, then add_up of blocks.hpp with the radius). What
+/// in ldexp when 2^n is not a number of T, a composition argued as for a Ball), the product of
+/// polynomials bv_conv_k. Two operations are compositions made here, and say so: axpy (bv_scale_k,
+/// then bv_add_k in place) and norm_upper (the fold of maxima norm_upper_k on the centers, then
+/// add_up of blocks.hpp with the radius). None of the compositions is machine-checked as one. What
 /// each loop claims, for canonical operands, in the IEEE model with overflow:
 /// - V1: the result is canonical (a finite ball vector or the whole space);
 /// - V2: containment, in every case: for every member x of X (and y of Y), f(x, y) is a member of
@@ -43,11 +44,11 @@
 ///
 /// Not here: an empty state; a radius per entry or weights (a program writes those on the functions
 /// on arrays); a packed or lane-parallel form of the product; operations of a BallVector with a Ball
-/// or a number; dispatch at run time; constant evaluation of any operation (the generated loops are
-/// not constexpr; the accessors are). Every loop called here is proved (gen/claims.json): no
-/// operation needs the kairn::unverified marker. The operations are ordinary inline functions in
-/// every setting of KAIRN_ENCLOSURE_CODE: each calls one loop, itself an ordinary inline function
-/// whose end (the radius and the finish) is never inlined.
+/// or a number, but the scaling by a T; dispatch at run time; constant evaluation of any operation
+/// (the generated loops are not constexpr; the accessors are). Every loop called here is proved
+/// (gen/claims.json): no operation needs the kairn::unverified marker. The operations are ordinary
+/// inline functions in every setting of KAIRN_ENCLOSURE_CODE: each calls one loop, itself an
+/// ordinary inline function whose end (the radius and the finish) is never inlined.
 ///
 /// Including this header includes soa.hpp, packed.hpp, ball.hpp and blocks.hpp; kairn/kairn.hpp
 /// does not include it (docs/reference/ball_vector.md, "Compile time").
