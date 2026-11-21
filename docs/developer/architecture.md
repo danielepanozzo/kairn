@@ -167,6 +167,35 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    [D6](design/phase0/decisions.md#d6-one-limb-and-contraction-under-clang): it behaves like `T`,
    contraction included.
 
+   **The factors of a fused operation (a report, not a refusal).** "Nothing can be fused into a
+   product" holds of the product alone. It does not hold of a fused operation whose *other* factor
+   the compiler sees to be 1 or -1 after inlining: LLVM rewrites `fma(x, 1, s)` as `x + s` (and
+   `fma(x, -1, s)` as `s - x`), and a product `x = a * b` that the program computed is then fused
+   into that addition, so that the kernel computes with the exact product. The sound criterion: a
+   value supplied by the program (an input of an entry kernel that is not `stored`, the limbs of a
+   `supplied` input, the elements of a supplied array and a supplied scalar of a loop), reached
+   directly or through a callee and through `neg`, `abs`, `select` and `copy` as for the rule
+   above, is **exposed** where it is a factor of `fma`, `fms`, `fnma` or `muladd` whose addend is
+   not the literal zero of the listing, on a path on which it has not passed through `guard`. A
+   factor of `prod`, emitted `fma(a, b, +0.0)`, is not exposed: whatever a compiler does with the
+   product `a * b` of the program inside it, fused it is $\mathrm{RN}(ab + 0)$, the rounding of the
+   product itself, which is what the program's product is (and the same holds of a fused
+   operation whose addend is the literal zero). A guarded value is a number of the format, the
+   rounded product at most, and nothing is left to fuse. `rules.exposed_operands` lists, for every
+   entry kernel and every loop, its exposed operands with the route to each, and
+   `python3 gen/kairn-gen build` prints the list after its summary, with the operations of each
+   object today and with a guard on each exposed operand, and the header functions that reach it
+   (`build.header_calls`: the function of the public headers whose body calls the kernel or the
+   loop). The generator refuses nothing for it: whether to guard every exposed operand (which
+   changes proved kernels of Milestone 1, and costs an addition per operand) is the owner's
+   decision, and the list is its evidence. Where a compiler was measured to fuse such a product,
+   the public function calls a guarded form instead, an entry kernel of its own whose listing is
+   the unguarded one after a guard of each factor and whose proofs reduce to it (the guard is the
+   identity on numbers of the format): `dot` of one limb calls the loop `dot_1_entry` (step
+   `dot_entry_step_1`) and `Accumulator::add_product` of one limb `acc_mul_entry_1`. The
+   measurements, and the operations measured to fuse whose header this stage did not change, are
+   in [Testing](testing.md#the-functions-on-arrays), "A factor the compiler sees".
+
 R3 was added in Milestone 1, after a test of the public headers found the failure it prevents:
 with GCC 13 and 16 at their default setting, with Apple clang on AArch64 under
 `-ffp-contract=fast` and with MSVC under `/fp:contract`, `x + a * b`, `x - a * b` and `a * b - x` for a 2-limb `x` differed from the same
@@ -316,7 +345,10 @@ The folds of this stage are the sums and dot products of the page: `sum_1`, `sum
 steps (`sum_entry_step_1`, `sum_entry_step_2`, `sum_fast_entry_step_2`) pass each limb of the
 element through `guard`, and `dot_1` (the fused step `dot_step_1`, `t = fma(x, y, s)`) and `dot_2`
 (`dot_step_2`: `p = mul_2_2(x, y); t = add_2_2(s, p)`), whose arrays are supplied and need no
-guard: their steps only multiply their elements. The finishes `fold_finish_1` and
+guard by rule R3: their steps only multiply their elements. `dot_1_entry` is `dot_1` with the
+step `dot_entry_step_1`, which guards both factors before the fused operation (R3, the factors of
+a fused operation, above): the dot product of one limb of `kairn/batch.hpp` calls it. The
+finishes `fold_finish_1` and
 `fold_finish_2` return the state with the flag true when its leading limb is finite, and
 otherwise the canonical NaN, every limb a NaN, with the flag false
 ([When something is not finite](design/milestone2.md#sum-dot-axpy-convolution)).
@@ -373,6 +405,13 @@ void F_seq(const T* x0_in, const T* x1_in, ..., std::size_t n, T& r0_out, ..., b
 void F_lanes(const T* x0_in, ..., std::size_t n, std::size_t lanes, T& r0_out, ..., bool& flag_out) scalar.hpp
 void F_packed(const T* x0_in, ..., std::size_t n, T& r0_out, ..., bool& flag_out)      avx2.hpp, neon.hpp
 ```
+
+Whether a loop is proved is in `include/kairn/gen/bounds.hpp`, beside the kernels':
+`kairn::gen::bounds::loops::F<T>::proved` is true exactly when the claims give the fold the status
+proved (the theorems of its statements in both models), `T` has at least its minimum precision,
+and every kernel it runs (step, combination, record, check, radius, bound, finish, and those of
+the fold of its coefficients or centers, itself proved) is proved for `T` (`library.loop_lines`).
+A public function on arrays gates on the status of its loop, not on those of its parts.
 
 One pointer per limb array and a length; nothing is allocated; `n = 0` gives the finish of the
 zero state, every limb $+0$ and the flag true. `F_seq` is a loop over the scalar step. `F_lanes`
@@ -1572,6 +1611,7 @@ a count in `T` would round past $2^p$, added on a merge, and converted to `T` on
 |---|---|---|---|
 | `acc_add_k` | `s`, `a`, `x` (supplied) | `t`, `b` | `add_1_1` (`add_2_2`) on the guarded `x`; `b = add(a, abs(x0))` |
 | `acc_mul_k` | `s`, `a`, `x`, `y` (supplied) | `t`, `b` | the step of `dot_k`; `b = fma(abs(x0), abs(y0), a)` |
+| `acc_mul_entry_1` | `s`, `a`, `x`, `y` (supplied) | `t`, `b` | `acc_mul_1` on `x` and `y` guarded (R3, the factors of a fused operation): what `add_product` of one limb calls |
 | `acc_merge_k` | `s`, `a`, `v`, `c` (another accumulator) | `t`, `b` | `add_1_1` (`add_2_2`) of the sums; `b = add(a, c)` |
 | `acc_radius_k` | `a`, `m`, `g`, `t` | `r`, mask `ok` | in the form of `conv_radius`; `(g, t) = bound_dot_k(m)` |
 

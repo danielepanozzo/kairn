@@ -33,7 +33,7 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen`; where the fix-up is a function of its own, that function, in `kairn::gen::fixup`; then every fold, `F_seq` and `F_lanes` |
 | `include/kairn/gen/avx2.hpp` | Every kernel for `__m256d` and `__m256` (4 doubles, 8 floats), then every fold's `F_packed`; refuses a target without AVX2 and FMA |
 | `include/kairn/gen/neon.hpp` | Every kernel for `float64x2_t` and `float32x4_t` (2 doubles, 4 floats), then every fold's `F_packed`; AArch64 only |
-| `include/kairn/gen/bounds.hpp` | Per kernel and limb type, whether it is proved and, only then, the constants of its error claim rounded up (`unit`, `tiny`, and for the form relative to the result `unit_computed`, `tiny_computed`) and its form: `result` (R), `operands` (A) or `terms` (T, the terms of the value: `dot_step_2`); what the public headers gate on and export through `kairn::traits` |
+| `include/kairn/gen/bounds.hpp` | Per kernel and limb type, whether it is proved and, only then, the constants of its error claim rounded up (`unit`, `tiny`, and for the form relative to the result `unit_computed`, `tiny_computed`) and its form: `result` (R), `operands` (A) or `terms` (T, the terms of the value: `dot_step_2`); what the public headers gate on and export through `kairn::traits`; then, in `kairn::gen::bounds::loops`, per loop and limb type whether it is proved (its own status and minimum precision, and every kernel it runs), what the functions on arrays gate on |
 | `include/kairn/gen/selftest.hpp` | Every kernel on fixed operands, with the results the interpreter computes: the stored bit patterns of `kairn::self_test()` |
 | `gen/claims.json` | What every kernel and every fold claims, with the constants per format as exact fractions |
 | `gen/constant_names.json` | The names of the constants `up(EXPR)` in the Rocq models, read first and only added to (below, "The operations") |
@@ -48,8 +48,12 @@ the extended domain that has one (the comparisons, the conversions, `neg_2`, `ab
 `build` also lists the kernels that are unverified (in the real model, and in the IEEE model), those
 without a real-model statement, those that are not `constexpr`, those exempt from the non-finite
 cone, the entry kernels, the guards of rule R3 that are pending, the kernels accepted only
-through a pending guard, the folds and those of them that are unverified. `proofs/gen` is mapped
-to the logical path `Kairn.Gen`, and `proofs/theories` to `Kairn`.
+through a pending guard, the folds and those of them that are unverified; and then the report of
+rule R3 on the factors of fused operations (`rules.exposed_operands`, below): every entry kernel
+and every loop with an exposed operand, the route to each, its operations today and with a guard
+on each, and the functions of the public headers that reach it (`build.header_calls`). That report
+refuses nothing. `proofs/gen` is mapped to the logical path `Kairn.Gen`, and `proofs/theories` to
+`Kairn`.
 
 ## The code
 
@@ -519,7 +523,15 @@ rule:
    what that kernel returns of it. Nor is such a value an output of the entry kernel as it is (it
    would be stored in an object, unguarded). `guard_pending: INPUT REASON` excuses one input of one
    kernel, and every kernel that passes a value into it, of the first part; `build` prints both
-   lists, and the declaration is refused once the input is guarded.
+   lists, and the declaration is refused once the input is guarded. Not a refusal but a report,
+   beside the rule: such a value is *exposed* where it is a factor of `fma`, `fms`, `fnma` or
+   `muladd` whose addend is not the literal zero, before `guard` (a compiler that sees the other
+   factor to be 1 rewrites `fma(x, 1, s)` as `x + s` and fuses the program's product into it; a
+   factor of `prod`, `fma(a, b, +0)`, is safe, its fusion being the product's own rounding).
+   `rules.exposed_operands` lists them for every entry kernel and every loop (its supplied arrays
+   and scalars, through its step, its radius and the step of the fold of its coefficients), and
+   `build` prints the list (docs/developer/architecture.md, "R3", the factors of a fused
+   operation).
 7. No value is the negation of the result of a fused operation (`fma`, `fms`, `fnma`, `prod`),
    callees inlined: `sub_down_1(x, d)` and `sub_up_1(x, d)` negate `d`. Nor is it the negation of a
    `select` one of whose arms is such a result (or a `select` or `copy` of one, through any number
@@ -602,8 +614,13 @@ statement uses too is `Model.v`'s, under one name: the doubling of `ball_from_in
   what fails is printed and pinned in `KNOWN`;
 - rule R3 (`test_rules.py`): each way of breaking it is refused, each allowed use accepted; the
   entry kernels are those the public headers call (read from `include/kairn/*.hpp`) and the full
-  kernels and constructors; the pending guards are exactly `add_2_1`'s, and without it exactly
-  the kernels that pass it their scalar are refused;
+  kernels and constructors, and a kernel a header calls that is not an entry kernel is on an
+  argued list (`R3OfTheKernels.NOT_ENTRY_BUT_CALLED`: the header function that calls it, and for
+  every input group why no value of the program reaches it: a count the header converts, the
+  state of an object, the output of a kernel called just before, a constant of the self-test); the
+  pending guards are exactly `add_2_1`'s, and without it exactly the kernels that pass it their
+  scalar are refused; the report on the factors of fused operations (`R3Factors`): the criterion
+  on small kernels, the list of `gen/kernels` pinned (`EXPOSED`), the calls of the headers;
 - the real model: `Model.v`, `Statements.v` and `Audit.v` are what they were before the non-finite
   layer, byte for byte (pinned digests), and the same as with the layer stripped;
 - the runners read `inf`, `-inf` and `nan` and print non-finite outputs as exactly those words,

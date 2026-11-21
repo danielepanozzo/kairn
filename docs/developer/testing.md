@@ -72,7 +72,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.link.external.S` | With `KAIRN_ENCLOSURE_CODE_EXTERNAL`, `tests/api/link_main.cpp` linked with the definitions (`tests/api/definitions.cpp`) compiled with another `KAIRN_CHECKS` (S = `checks`), with the outlined setting (`setting`), or without them (`missing`) must not link, with the undefined operation in the message (`kairn::detail::external_checked::` or `external::`, or MSVC's LNK2038); its control, both files with the same options, links and runs (`tests/api/link_fail.cmake`). |
 | `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three (`enclosure_code.*`: an unknown name, nothing, a bare `-D`); each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`); `mul_down` and `mul_up` in a constant expression, whose control computes the same at run time (`not_constexpr.*`), so that a change cannot make them `constexpr` by accident, and the sum of intervals likewise (`not_constexpr.interval_add`); of intervals (`interval.*`, `ball.implicit_narrowing`), an operation of intervals of one and of two limbs, an interval and a number (no kernel takes one), the implicit conversions of a ball to an interval, of an interval to a ball and of a ball of two limbs to one (each widens the set, so each is explicit), and an interval of two limbs from one of one limb, each control writing what compiles instead; an interval operation, constructor and conversion written without the marker against the copy of the headers in which every kernel is unverified (`unverified.interval_add_1`, `.interval_make_1`, `.interval_to_ball_1`); `kairn::rational` in a constant expression with a zero denominator, and with a result that fails its check, against a copy of the headers with a wrong flag planted in it, whose control turns `KAIRN_RATIONAL_CHECK` off (`rational.*`).; of the containers (`soa.*`), a write through a view of `const T` (an element, `set`, `store`, an element assigned from another) and a view of mutable limbs made of a view of `const T` or of a const `SoA`; of `Packed` (`packed.*`), an operation with an `Expansion` or a `T` operand (no packed kernel takes one), the narrowing to one limb written as an implicit conversion, and an operation of two limb types; the arithmetic of `Packed<T, 1>`, which has none (`packed.one_limb_arithmetic`); a
 `KAIRN_PACKED_FORM` that is not a form (`packed_form.unknown`, `.bare`) or the form of another target (`packed_form.other_target`, which the generated header's `#error` refuses); and of the functions on arrays (`batch.*`), a map and `axpy` writing through a view of `const T`, a dot product of views of two limb types and of one and two limbs, and a scaling by a two-limb number, which no loop computes. |
-| `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
+| `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). A third kind, `--factor`: each product of a `T` of the program, with the other factor a constant the compiler sees, must agree too ([below](#the-functions-on-arrays), "A factor the compiler sees"). |
 | `api.boundary.packed.FORM.S`, `api.boundary.packed.unguarded.FORM.S` | The same for `Packed` and the containers, in each form FORM of `Packed` ([below](#packed-and-the-containers)): a product the program computes in the registers of the form, or in `T` into an array, passed into `Packed<T, 1>::from_limbs` and then the mixed forms, into `Packed<T, 2>::from_limbs`, a load, a view or an `SoA` (`tests/api/boundary_packed.cpp`); the copy without the guard also takes it out of `gen/avx2.hpp` and `gen/neon.hpp`. |
 | `api.k1.zero_cost` | The instructions emitted for one operation and for loops over `Expansion<double, 1>` against the same code over `double` (`tests/api/k1/zero_cost.py`); with MSVC it also fails when one of these functions has a `/GS` stack cookie ([costs](results/costs-milestone1.md#3-msvc-and-the-gs-stack-cookie)). |
 | `api.rational.K.F` | `kairn::rational` with K limbs of format F ([Constants from fractions](../reference/rational.md)) on 2 000 cases of the oracle's generator of `rational_K` (`KAIRN_RATIONAL_QUICK_CASES`, seed `KAIRN_API_SEED`), computed at run time by `tests/api/rational_runner.cpp`, which also requires `kairn::is_rational_result` to accept each result; the oracle compares every limb, the error and the flag with its own, for equality, and the guards require what the cross-checks of `rational_K` must have seen ([Cross-checks](#cross-checks); `tests/crosscheck.py compiled --kernel rational_K`, one process, as for a kernel). |
@@ -82,7 +82,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.batch.FORM` | The functions on arrays, in each form of `Packed`: each calls its loop in the order it says, bit for bit, the flags and the canonical NaN, the edges ([below](#the-functions-on-arrays)). |
 | `api.accumulator`, `api.arrays.exact.accumulator` | `kairn::Accumulator`: in constant evaluation (the same bits at run time), its merges (with itself, with an empty one, of empty ones), `from_state` of the state read back, the count and where a radius is given, and what it returns when something is not finite (`tests/api/accumulator.cpp`); and histories in exact rational arithmetic (`tests/api/arrays_exact.py`): random trees of `add`, `add_product` and `merge`, counts around and beyond $2^p$, a saturated count, overflows, terms that are not finite, $\lvert s - \Sigma\rvert \le r$ wherever $r$ is finite and $+\infty$ wherever the theorem gives nothing ([below](#the-functions-on-arrays)). |
 | `api.arrays.exact.bounds` | `kairn::traits<X>::sum(n)` and `dot(n)` for `float` and `double`, one and two limbs, at the lengths where the count is converted to `T` exactly and where it is rounded up (around $2^{24}$ and $2^{53}$ and a few multiples), at every power of two and its neighbors, near the largest `std::size_t` and at 400 random lengths, checked in exact rational arithmetic (`tests/api/arrays_exact.py`, Python's `fractions`) against $\gamma$ of the proved statements and their underflow terms, and $+\infty$ for `unit` and `tiny` exactly where no bound is given ([below](#the-functions-on-arrays)). |
-| `api.boundary.arrays.FORM.S`, `api.boundary.arrays.unguarded.FORM.S` | An array the program fills with products in the same function, passed into a sum, a map or `axpy`, gives the result of the same function on the rounded products, at `-O3` under each contraction setting, in each form; the control, against the copy of the headers without the guard, must differ where the compiler was measured to fuse ([below](#the-functions-on-arrays), `tests/api/boundary_batch.cpp`). |
+| `api.boundary.arrays.FORM.S`, `api.boundary.arrays.unguarded.FORM.S` | An array the program fills with products in the same function, passed into a sum, a map or `axpy`, gives the result of the same function on the rounded products, at `-O3` under each contraction setting, in each form; the control, against the copy of the headers without the guard, must differ where the compiler was measured to fuse ([below](#the-functions-on-arrays), `tests/api/boundary_batch.cpp`); and every function that takes an array or a value as a factor, with the other factor a constant the compiler sees (`--factor`). |
 
 ## The full tier
 
@@ -991,20 +991,43 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   ten to seven in ten); GCC 13 on x86-64 fused nothing without the guard, in either form, under any
   setting, and its controls only report, as do MSVC's and clang-cl's, not measured. With the guard
   no form of these differs, on any of the four compilers, in any form or setting.
-  **A finding: a factor the compiler knows to be 1.** The test has a third kind of form, the
-  multiplied ones with the other factor a 1 that the compiler sees (an array of ones the function
-  fills, `axpy` and `scale` with `a = 1`). Clang 18 on x86-64 at `-O3` under `-ffp-contract=fast`
-  removes the multiplication of the step of the dot product of one limb, `fma(x, 1, s)` becoming
-  `x + s`, and fuses the program's product into that addition: `kairn::dot` of one limb, in both
-  orders and in the scalar and the AVX2 forms, then gives the result of the exact products and not
-  of the products the array holds, in 5 to 38 per cent of the rounds; no other form, compiler or
-  setting measured does (GCC 13 and 16, Apple clang 21, two limbs, `axpy` and `scale` by 1). The
-  step `dot_step_1` takes its operands unguarded because it only multiplies them (rule R3); the
-  test prints these forms with the word FINDING and their count, and does not fail on them, so that
-  the other forms keep being judged. Whether the claim of `dot_1` still holds of the values in the
-  array is argued (each fused step is the step of an exact product, which adds at most one
-  rounding to a term, and the claim's height $n$ for the relative term leaves room for it, the first
-  step from zero being exact) and not tested.
+  **A factor the compiler sees** (the third kind, `--factor`; rule R3, the factors of a fused
+  operation, [Architecture](architecture.md#the-kernel-ir)). Every function that takes an array or
+  a value of `T` from the program as a factor, with the other factor a constant $F$ the compiler
+  sees ($F = 1$, $-1$ or $2$: an array of $F$ the function fills, a scalar $F$): `dot` (one and two
+  limbs, both orders, $F$ as either array), `conv` ($F$ as either operand), `axpy` ($a = F$, and $a$
+  a product with $x$ the array of $F$), `scale` (likewise), `mul_pow2` ($c = 1$, $2$ or $1/2$),
+  `acc.add_product` (one and two limbs, $F$ as either factor, and one call alone). A compiler that
+  sees $F = \pm 1$ rewrites `fma(x, 1, s)` as `x + s` and may fuse the program's product into
+  that addition; none rewrote $F = 2$. Measured on the headers before the guards of the factors
+  (2026-11-21, every contraction setting at `-O1`, `-O2` and `-O3`, `double` and `float`, 20 000
+  rounds each): Clang 18 on x86-64 under `-ffp-contract=fast` at `-O2` and `-O3` fused into the dot
+  product of one limb, in both orders, with $F$ as either array, in the scalar form (with and
+  without `-mavx2 -mfma`; not in the AVX2 form), in about one round in ten; Apple clang 21 under
+  `-ffp-contract=fast` the same, at `-O2` in the scalar form and at `-O3` in the NEON and the scalar
+  forms, and `add_product` of one limb at `-O1` and `-O2` (every round of a single call); GCC 13 and
+  16 fused none, and no compiler fused into `dot` or `add_product` of two limbs, `conv`, `axpy`,
+  `scale` or `mul_pow2`. So `dot` of one limb calls `dot_1_entry` and `add_product` of one limb
+  `acc_mul_entry_1`, which guard both factors, and with them every form agrees with every compiler
+  measured: `--factor none` in `api.boundary.arrays.FORM.S`, a hard failure otherwise. The control
+  (`api.boundary.arrays.unguarded.FORM.S`, those guards taken out with the others) requires a
+  difference (`--factor some`) where it was measured: Clang 18 on x86-64 under `=fast` in the scalar
+  form, Apple clang 21 under `=fast` in the NEON and the scalar forms; it reports elsewhere. The
+  same kind is in `api.boundary.S` and `api.boundary.packed.FORM.S`: the products of `Expansion<T,
+  2>` and of a ball by a `T` (`x * a`, `a * x`, `*=`, `finite::mul`, with a one-limb `a` too), of
+  one limb, `two_prod`, `rmul`, `mul_down` and `mul_up`, and the products of `Packed<T, 2>` and
+  `Packed<T, 1>`, with the other factor $F$. **A finding of the first importance, kept failing:**
+  Apple clang 21 under `-ffp-contract=fast`, at `-O1` and `-O2`, fuses the program's product through
+  $F = \pm 1$ into `two_prod` (both outputs, and the error alone; every round), `mul_down` and
+  `mul_up` (half the rounds), `finite::mul(E2, T)` (every round) and, in the NEON form, the product
+  `Packed<T, 2> * Packed<T, 1>` and its `finite::mul` (every register; the scalar form's
+  `finite::mul` too): their kernels, `two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1` and
+  `mul_2_1_full`, take their factors unguarded and are kernels of Milestone 1 and of the blocks of
+  Milestone 2 whose headers that stage did not change. `api.boundary.contract-fast` and
+  `api.boundary.packed.native.contract-fast` (and `.scalar.`) fail with Apple clang until the owner
+  decides; their controls require the difference there, and report elsewhere. GCC 13 and 16 and
+  Clang 18 on x86-64 fused none of these forms at any setting, and the scalar `operator*` of
+  `Expansion` and the products of a ball by a `T` fused with no compiler.
 - **The bounds as functions of the length** (`traits<X>::sum(n)`, `sum_height(h)`, `dot(n)`, the
   kernels `bound_sum_k` and `bound_dot_k`). The oracle judges the kernels through them
   (`api.oracle.bound_sum_k.F`, `api.oracle.bound_dot_k.F`, the forms `traits_sum_height`,

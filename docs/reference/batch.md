@@ -48,17 +48,19 @@ function and pass it straight in; a compiler that inlines the loop could then fu
 into the loop's first addition, and the sum would not be that of the numbers in the array
 ([rule R3](../developer/architecture.md#the-kernel-ir)). So every function calls the loop on
 *supplied* arrays: the sums and the maps that add an element are the loops named `_entry`, whose
-steps pass each limb they add through the guard $a + 0$ first; `dot`, `scale`, `mul_pow2`, the `x`
-of `axpy` and `conv` only multiply their elements and need none. With the guard taken out, GCC 16
-at `-O3`, Apple clang 21 and Clang 18 with `-ffp-contract=fast` do fuse such products into the sum
-of one limb and its difference; with it, no form differs (`api.boundary.arrays.*`,
-[Testing](../developer/testing.md#the-functions-on-arrays)). **One exception was found**: when the
-other factor of a dot product of one limb is a 1 that the compiler sees (an array of ones filled in
-the same function), Clang 18 on x86-64 at `-O3` with `-ffp-contract=fast` removes the
-multiplication, `fma(x, 1, s)` becoming `x + s`, and fuses the program's product into that
-addition, so that `dot` gives the dot product of the exact products rather than of the numbers in
-the array. A program that sums an array of products should call `sum`, which guards; the step of
-`dot_1` does not guard what it only multiplies.
+steps pass each limb they add through the guard $a + 0$ first. A product is fused only into an
+addition, so a factor needs no guard, except where the compiler sees the *other* factor to be 1:
+when one array of a dot product of one limb holds ones filled in the same function, Clang 18 on
+x86-64 and Apple clang 21 with `-ffp-contract=fast` remove the multiplication, `fma(x, 1, s)`
+becoming `x + s`, and fuse the program's product into that addition. So `dot` of one limb calls
+the loop `dot_1_entry`, whose step guards both factors of its fused operation; `scale`,
+`mul_pow2`, the `x` of `axpy`, `dot` of two limbs and `conv` only multiply their elements and are
+called without a guard, and no compiler measured fuses into them with a factor it sees
+([rule R3](../developer/architecture.md#the-kernel-ir), the factors of a fused operation). With the
+guard taken out, GCC 16 at `-O3`, Apple clang 21 and Clang 18 with `-ffp-contract=fast` do fuse
+such products into the sum of one limb and its difference, and Clang 18 and Apple clang 21 into the
+dot product of one limb with a factor 1; with it, no form differs (`api.boundary.arrays.*`,
+[Testing](../developer/testing.md#the-functions-on-arrays)).
 
 ## The order of a sum
 
@@ -100,8 +102,9 @@ $(n-1)e < 1$. No underflow term. **`sum_fast(x)`**: the same with the fast addit
 (loop `sum_fast_2_entry`, step [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md)), $e = 3u^2$,
 which is below the $e$ of `sum`; for one limb it is `sum`.
 
-**`dot(x, y)`** (loops `dot_1`, `dot_2`; step [`dot_step_1`](dot_step_1.md), one fused
-multiply-add $s \leftarrow \mathrm{RN}(x_i y_i + s)$, and [`dot_step_2`](dot_step_2.md)). When
+**`dot(x, y)`** (loops `dot_1_entry`, `dot_2`; step [`dot_entry_step_1`](dot_entry_step_1.md),
+one fused multiply-add $s \leftarrow \mathrm{RN}(x_i y_i + s)$ of the guarded elements, and
+[`dot_step_2`](dot_step_2.md)). When
 `finite`, `value` is finite, normalized for two limbs, and
 
 - one limb: $\lvert\mathit{value} - \sum x_i y_i\rvert \le ((1+e)^n - 1)\sum\lvert x_i y_i\rvert
