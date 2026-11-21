@@ -6,7 +6,8 @@ times what a client gets, the generated kernels of `include/kairn/gen/` and the 
 answers five questions: what the opaque product costs, what the fix-up for non-finite results
 costs, what a `Ball` operation costs, how Kairn compares with textbook double-word arithmetic, and
 how `float` limbs compare with `double` limbs. No external benchmark library; MPFR is timed for
-scale when it is already installed.
+scale when it is already installed. The harness of Milestone 2, a program of its own, is described
+[below](#milestone-2).
 
 Nothing here is part of the library. The props (`props.hpp`, `props_packed.hpp`) are not
 verified and must not be used elsewhere. Each is the baseline of one comparison: a core with the
@@ -264,6 +265,11 @@ python3 bench/rational_cost.py compile --cxx cl --msvc --flags=/arch:AVX2 --json
 python3 bench/rational_cost.py run --cxx clang++ --flags=-mfma
 ```
 
+`--types e1,e2` makes the units for `Expansion<double, 1>` as well, `--counts 10,100,1000` the
+counts of Milestone 2's page (`results/milestone2/bench/rational-compile-*.json`, printed by
+`m2_report.py`), `--cpu N` pins (Linux). The time of one call at run time is also timed by
+`kairn-bench-m2` (`m2/tp/rational_*`), for small and 64-bit terms.
+
 ### The settings of `KAIRN_ENCLOSURE_CODE`
 
 The tools behind [Compile times and other costs, Milestone
@@ -286,6 +292,23 @@ cost the compiler.
 python3 bench/enclosure_costs.py compile --cxx g++-16 --reps 3 --workdir /tmp/enclosure \
     --machine "..." --commit "$(git rev-parse --short HEAD)" --json results/milestone2/costs/compile-gcc16.json
 python3 bench/enclosure_costs.py report results/milestone2/costs
+```
+
+`--kind interval1`, `interval2` or `mixed` writes units of intervals, or of `Ball<double, 2>`,
+`Interval<double, 1>` and `Interval<double, 2>` in turn, in which each operation takes one of the
+eight values of its type computed last and one of eight inputs near 1, so that every value stays a
+finite enclosure; with `--run` the object of the first compilation of each unit is linked with a
+driver that `enclosure_costs.py` writes (and, external, with `definitions.cpp`) and run: the time
+per operation of the unit itself, in each setting. `--flags` adds options to every compilation
+(Clang 18 on Linux needs `--flags=--gcc-install-dir=...`), `--cpu N` pins the script and what it
+starts (Linux). [Benchmarks, Milestone 2](../docs/developer/results/bench-milestone2.md) reports
+these units, with the measurements in `results/milestone2/bench/compile-*.json`:
+
+```sh
+python3 bench/enclosure_costs.py compile --cxx g++ --kind mixed --cpu 26 --sizes 100,1000,10000 \
+    --settings inline,outlined,external,calls --reps 3 --run --run-reps 21 --workdir ... \
+    --machine "..." --commit "..." --json results/milestone2/bench/compile-linux-gcc-mixed.json
+python3 bench/enclosure_costs.py report results/milestone2/bench
 ```
 
 At run time, the harness above is built once more per setting, `kairn-bench-outlined-LEVEL` and

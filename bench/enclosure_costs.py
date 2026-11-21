@@ -380,6 +380,23 @@ def cmd_report(args):
                          r.get('object_bytes', 0)))
         print('\nObject sizes in bytes: ' + '; '.join(
             '%d %s %s: %d' % (r['operations'], r['config'], r['setting'], r.get('object_bytes', 0)) for r in rows))
+        if any('run' in r for r in rows):
+            print('\nKind %s, run: ns per operation (the minimum over %d samples), and the object in KB\n'
+                  % (d.get('kind', 'ball2'), d.get('run_reps', 0)))
+            run_settings = [s for s in SETTINGS if s in present]
+            print('| Operations | ' + ' | '.join('%s %s' % (c, s) for c in configs for s in run_settings) + ' |')
+            print('|---' * (1 + len(configs) * len(run_settings)) + '|')
+            for n in sizes:
+                cells = []
+                for c in configs:
+                    for s in run_settings:
+                        r = next((x for x in rows if x['operations'] == n and x['config'] == c and x['setting'] == s), None)
+                        if r is None or 'run' not in r:
+                            cells.append('')
+                        else:
+                            cells.append('%.3g ns, %d KB%s' % (r['run']['ns_per_op_min'], round(r['object_bytes'] / 1024),
+                                                             '' if r['run']['finite'] == n else ' (not finite)'))
+                print('| %d | ' % n + ' | '.join(cells) + ' |')
     # run-COMPILER-SETTING-LEVEL[-rN].json: the minimum over the runs of each function's minimum,
     # and the largest ratio of one run's minimum to that, the spread.
     runs, spread = {}, {}

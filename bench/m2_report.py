@@ -41,7 +41,9 @@ def load(directory):
     return configs
 
 
-def fmt_range(lo, hi, digits=2):
+def fmt_range(lo, hi, digits=None):
+    if digits is None:   # two decimals below 10, one below 100, none above
+        digits = 2 if hi < 10 else 1 if hi < 100 else 0
     a, b = '%.*f' % (digits, lo), '%.*f' % (digits, hi)
     return a if a == b else '%s to %s' % (a, b)
 
@@ -69,7 +71,7 @@ def values(runs, f):
 
 def cell(configs, machine, compiler, f, setting='inline', kind='ratio'):
     """One cell: the range of f over the runs of each level; the levels merged when they agree
-    within 0.05 (ratios) or 5% (times)."""
+    within 0.05 or 3%, whichever is larger (ratios), or within 5% (times)."""
     per = {}
     for level in ('O2', 'O3'):
         v = values(configs.get((machine, compiler, setting, level), []), f)
@@ -81,7 +83,7 @@ def cell(configs, machine, compiler, f, setting='inline', kind='ratio'):
     if len(per) == 2:
         lo = min(per['O2'][0], per['O3'][0])
         hi = max(per['O2'][1], per['O3'][1])
-        close = (hi - lo) <= 0.05 if kind == 'ratio' else hi <= 1.05 * lo
+        close = (hi - lo) <= max(0.05, 0.03 * lo) if kind == 'ratio' else hi <= 1.05 * lo
         if close:
             return fmt(lo, hi)
         return '%s (-O2), %s (-O3)' % (fmt(*per['O2']), fmt(*per['O3']))
@@ -145,7 +147,7 @@ def blocks(c, b='m2'):
                                    '%s/tp/mul_down/fenv' % b, '%s/sum/add/plain' % b, '%s/sum/add_down/op' % b,
                                    '%s/sum/add_down/fenv' % b, '%s/sum/add_down/csr' % b, '%s/sum/add_down/fenv_loop' % b,
                                    '%s/prod/mul_down/op' % b, '%s/prod/mul_down/fenv' % b)]
-    table(c, 'Times (ns)', [('`%s`' % n, f) for n, f in rows], kind='time')
+    table(c, 'Times of the blocks (ns)', [('`%s`' % n, f) for n, f in rows], kind='time')
 
 
 def interval1(c, b='m2'):
@@ -192,7 +194,7 @@ def interval1(c, b='m2'):
               '%s/tp/plain4_mul_1/plain' % b, '%s/sum/interval_add_1/op' % b, '%s/prod/interval_mul_1/op' % b,
               '%s/prod/interval_mul_1/fenv' % b, '%s/prod/interval_mul_1/fenv_loop' % b, '%s/sum/ball_add_1/op' % b,
               '%s/prod/ball_mul_1/op' % b]
-    table(c, 'Times (ns)', [('`%s`' % n, time(n)) for n in names], kind='time')
+    table(c, 'Times of Interval<T, 1> (ns)', [('`%s`' % n, time(n)) for n in names], kind='time')
 
 
 def interval2(c, b='m2'):
@@ -223,7 +225,7 @@ def interval2(c, b='m2'):
               '%s/prod/interval_mul_2/flat' % b, '%s/sum/ball_add_2/op' % b, '%s/prod/ball_mul_2/op' % b,
               '%s/sum/pair_add_2/op' % b, '%s/prod/pair_mul_2/op' % b, '%s/tp/call_8_4/plain' % b,
               '%s/tp/call_8_4/kairn' % b, '%s/prod/call_8_4/plain' % b, '%s/prod/call_8_4/kairn' % b]
-    table(c, 'Times (ns)', [('`%s`' % n, time(n)) for n in names], kind='time')
+    table(c, 'Times of Interval<T, 2> (ns)', [('`%s`' % n, time(n)) for n in names], kind='time')
 
 
 def horner(c, b='m2'):
@@ -262,7 +264,7 @@ def ball_additions(c, b='m2'):
                                                'ball_half_1', 'ball_half_2', 'ball_scale_half_1', 'ball_scale_half_2',
                                                'ball_ldexp_1', 'ball_ldexp_2')]
     names += ['%s/prod/ball_ldexp_2/op' % b, '%s/prod/ball_scale_pow2_2/op' % b]
-    table(c, 'Times (ns)', [('`%s`' % n, time(n)) for n in names], kind='time')
+    table(c, 'Times of the additions to Ball (ns)', [('`%s`' % n, time(n)) for n in names], kind='time')
 
 
 def rational(c, b='m2'):
@@ -273,6 +275,99 @@ def rational(c, b='m2'):
              ('`is_rational_result`, two limbs, 64-bit terms', 'rational_check_2_large/op'),
              ('`T(num) / T(den)`, for scale', 'divide_large/plain')]
     table(c, 'kairn::rational, ns per call', [(label, time('%s/tp/%s' % (b, n))) for label, n in names], kind='time')
+
+
+COMPILE = re.compile(r'^compile-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<kind>mixed|interval2|interval1)'
+                     r'(?:-(?P<size>\d+))?(?:-r(?P<run>\d+))?$')
+
+
+def compile_tables(directory):
+    """compile-MACHINE-COMPILER-KIND[-SIZE][-rN].json, written by enclosure_costs.py compile: the
+    compile time, peak memory, object size and run time of the units in each setting. The first
+    file of a configuration (no -rN) is the one of the timed compilations (three of each unit, one of
+    the largest); the -rN files are later compilations and runs of the same units, for the spread of
+    the run times."""
+    data = {}
+    for path in sorted(glob.glob(os.path.join(directory, 'compile-*.json'))):
+        m = COMPILE.match(os.path.basename(path)[:-len('.json')])
+        if not m:
+            continue
+        d = json.load(open(path))
+        key = (m.group('machine'), m.group('compiler'), m.group('kind'))
+        first = m.group('run') is None and m.group('size') is None
+        for r in d['results']:
+            if r['kind'] != 'unit':
+                continue
+            cell = data.setdefault(key, {}).setdefault((r['operations'], r['setting'], r['config']),
+                                                       {'wall': [], 'peak': [], 'obj': None, 'run': [], 'run_first': []})
+            if first:
+                cell['wall'] += [w for w, s in zip(r['wall'], r['status']) if s == 0]
+                cell['peak'] += r['peak_mb']
+                cell['obj'] = r.get('object_bytes')
+                if 'run' in r:
+                    cell['run_first'].append(r['run']['ns_per_op_min'])
+            elif 'run' in r:
+                cell['run'].append(r['run']['ns_per_op_min'])
+    for kind in ('mixed', 'interval2', 'interval1'):
+        present = [col for col in COLUMNS if (col[0], col[1], kind) in data]
+        if not present:
+            continue
+        rows = sorted({(n, s) for col in present for (n, s, _) in data[(col[0], col[1], kind)]},
+                      key=lambda x: (x[0], ['inline', 'outlined', 'external', 'calls'].index(x[1])))
+
+        def emit(title, f):
+            print('\n| %s | %s |' % (title, ' | '.join(col[2] for col in present)))
+            print('|---' * (len(present) + 1) + '|')
+            for n, s in rows:
+                cells = []
+                for col in present:
+                    t = data[(col[0], col[1], kind)]
+                    parts = [f(t[(n, s, lvl)]) for lvl in ('O2', 'O3') if (n, s, lvl) in t]
+                    cells.append('; '.join(p for p in parts if p))
+                print('| %d, %s | %s |' % (n, s, ' | '.join(cells)))
+
+        def med(v):
+            return sorted(v)[len(v) // 2] if v else None
+
+        def seconds(c):
+            w = med(c['wall'])
+            return '' if w is None else ('%.2f' % w if w < 10 else '%.1f' % w if w < 100 else '%.0f' % w)
+
+        def runs(c):
+            v = c['run'] or c['run_first']
+            if not v:
+                return ''
+            return fmt_ns_range(min(v), max(v)) + ('' if c['run'] else ' (one run)')
+
+        emit('%s: compile time, s (-O2; -O3)' % kind, seconds)
+        emit('%s: peak memory, MB (-O2; -O3)' % kind, lambda c: '%d' % round(med(c['peak'])) if c['peak'] else '')
+        emit('%s: object, KB (-O2; -O3)' % kind, lambda c: '%d' % round(c['obj'] / 1024) if c['obj'] else '')
+        emit('%s: run time of the unit, ns per operation (-O2; -O3)' % kind, runs)
+        emit('%s: run time of the unit, first runs, ns per operation (-O2; -O3)' % kind,
+             lambda c: fmt_ns_range(min(c['run_first']), max(c['run_first'])) if c['run_first'] else '')
+
+
+def rational_compile(directory):
+    """rational-compile-MACHINE-COMPILER.json, written by rational_cost.py compile."""
+    files = sorted(glob.glob(os.path.join(directory, 'rational-compile-*.json')))
+    if not files:
+        return
+    print('\n| Compiler | Include only, s | Constants | `Expansion<double, 1>`: s, ms per constant (check 0; check 1) | `Expansion<double, 2>`: s, ms per constant (check 0; check 1) |')
+    print('|---|---:|---:|---|---|')
+    for path in files:
+        d = json.load(open(path))
+        name = os.path.basename(path)[len('rational-compile-'):-len('.json')]
+        counts = sorted({r['constants'] for r in d['rows']})
+        for n in counts:
+            cells = []
+            for typ in ('e1', 'e2'):
+                parts = []
+                for check in (0, 1):
+                    r = next((x for x in d['rows'] if x['type'] == typ and x['constants'] == n and x['check'] == check), None)
+                    parts.append('%.2f, %.2f' % (r['median_s'], r['per_constant_ms']) if r else '')
+                cells.append('; '.join(parts))
+            print('| %s (%s) | %.2f | %d | %s | %s |' % (name, d.get('version', d['compiler']), d['include_only_s'], n,
+                                                    cells[0], cells[1]))
 
 
 def packed(c):
@@ -327,9 +422,8 @@ def settings(c):
         present = [k for k in c if k[2] == setting]
         if not present:
             continue
-        print('\n%s over inline (each a ratio of the minima over the runs of each program)' % setting)
         cols = [col for col in COLUMNS if any(k[0] == col[0] and k[1] == col[1] for k in present)]
-        print('| Function | %s |' % ' | '.join(col[2] for col in cols))
+        print('\n| %s over inline | %s |' % (setting.capitalize(), ' | '.join(col[2] for col in cols)))
         print('|---' * (len(cols) + 1) + '|')
         for label, _, name in rows:
             cells = []
@@ -345,7 +439,7 @@ def settings(c):
 
 
 def checks(c):
-    print('\n| Configuration | Runs | Functions checked, failed | Wide sample: compared, equal, zero sign, below P one wider, failed | Load average (1 min) at start, end |')
+    print('\n| Checks of | Runs | Functions checked, failed | Wide sample: compared, equal, zero of the other sign, below P one number wider, failed; not the result rounded to nearest | Load average (1 min) at start, end of each run |')
     print('|---|---:|---|---|---|')
     for key in sorted(c):
         runs = c[key]
@@ -356,9 +450,10 @@ def checks(c):
         zs = sum(w['zero_sign'] for w in wide)
         bp = sum(w['below_p_wider'] for w in wide)
         fl = sum(w['failed'] for w in wide)
-        loads = ', '.join('%.1f, %.1f' % (x['load_average']['start'][0], x['load_average']['end'][0]) for x in runs)
-        print('| %s | %d | %d, %d | %d, %d, %d, %d, %d | %s |' % ('-'.join(key), len(runs), r['checks']['compared'],
-                                                                r['checks']['failed'], comp, eq, zs, bp, fl, loads))
+        rn = sum(w['differ_from_nearest'] for w in wide)
+        loads = '; '.join('%.1f, %.1f' % (x['load_average']['start'][0], x['load_average']['end'][0]) for x in runs)
+        print('| %s | %d | %d, %d | %d, %d, %d, %d, %d; %d | %s |' % ('-'.join(key), len(runs), r['checks']['compared'],
+                                                                    r['checks']['failed'], comp, eq, zs, bp, fl, rn, loads))
 
 
 def discrimination(c):
@@ -370,15 +465,24 @@ def discrimination(c):
             t[0] = d['values']
             t[1] = d['differ_from_nearest']
             t[2].add('-'.join(key))
-    print('\n| Prop | Values compared with Kairn | Of them not the result rounded to nearest | Configurations |')
-    print('|---|---:|---:|---:|')
-    for name in sorted(totals):
-        v, dif, cfgs = totals[name]
-        print('| `%s` | %d | %d | %d |' % (name, v, dif, len(cfgs)))
+    # Summed by limb type and variant: the props are deterministic, so one configuration's counts
+    # are every configuration's (each configuration checked them all before timing).
+    groups = {}
+    for name, (v, dif, cfgs) in totals.items():
+        backend, _, _, variant = name.split('/')
+        g = groups.setdefault((backend, variant), [0, 0, 0, len(cfgs)])
+        g[0] += 1
+        g[1] += v
+        g[2] += dif
+    print('\n| Props of | Variant | Props | Values compared with Kairn, bit for bit | Of them not the result rounded to nearest | Configurations |')
+    print('|---|---|---:|---:|---:|---:|')
+    for (backend, variant), (n, v, dif, cfgs) in sorted(groups.items()):
+        print('| %s | `%s` | %d | %d | %d | %d |' % ({'m2': 'double', 'm2f': 'float'}.get(backend, backend), variant, n, v,
+                                                  dif, cfgs))
 
 
 def spread(c):
-    print('\n| Configuration | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |')
+    print('\n| Spread of | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |')
     print('|---|---:|---|---|')
     for key in sorted(c):
         runs = c[key]
@@ -395,6 +499,27 @@ def spread(c):
         med = sp[len(sp) // 2][0]
         p90 = sp[int(0.9 * (len(sp) - 1))][0]
         print('| %s | %d | %.1f%%, %.1f%%, %.1f%% | `%s` |' % ('-'.join(key), len(runs), 100 * med, 100 * p90, 100 * sp[-1][0], sp[-1][1]))
+
+
+def runs(c):
+    """Each run against the fastest of its configuration: the median and 90th percentile over the
+    functions of its minimum over the configuration's least minimum, the median over the functions
+    of its own median over minimum (the spread within the run), and the load average."""
+    print('\n| Run | Over the fastest run: median, 90th percentile | Median over minimum within the run (median function) | Load average (1, 5 min) at start, end |')
+    print('|---|---|---|---|')
+    for key in sorted(c):
+        rs = c[key]
+        names = set(rs[0]['ns'])
+        for r in rs[1:]:
+            names &= set(r['ns'])
+        best = {n: min(r['ns'][n] for r in rs) for n in names}
+        for r in rs:
+            rel = sorted(r['ns'][n] / best[n] for n in names)
+            within = sorted(x['ns_median'] / x['ns_min'] for x in r['results'])
+            la = r['load_average']
+            print('| `%s` | %.3f, %.3f | %.3f | %.1f %.1f, %.1f %.1f |' % (
+                r['path'], rel[len(rel) // 2], rel[int(0.9 * (len(rel) - 1))], within[len(within) // 2],
+                la['start'][0], la['start'][1], la['end'][0], la['end'][1]))
 
 
 def tightness(c):
@@ -418,7 +543,7 @@ def tightness(c):
     for e in first[1]:
         print('| %s | %s | `%s` | %.3g, %.3g, %.3g (of %s) | %.3g | %d |' % (
             'double' if e['bits'] == 64 else 'float', e['regime'], e['type'], e['ratio_median'], e['ratio_p90'],
-            e['ratio_max'], e['ratio_of'], e['width_median'], e['not_contained']))
+            e['ratio_max'], e['ratio_of'].replace('|', '\\|'), e['width_median'], e['not_contained']))
 
 
 def configurations(c):
@@ -432,21 +557,91 @@ def configurations(c):
 
 
 SECTIONS = {'configurations': configurations, 'checks': checks, 'discrimination': discrimination,
-            'spread': spread, 'blocks': blocks, 'interval1': interval1, 'interval2': interval2,
+            'spread': spread, 'runs': runs, 'blocks': blocks, 'interval1': interval1, 'interval2': interval2,
             'horner': horner, 'tightness': tightness, 'ball': ball_additions, 'rational': rational,
             'packed': packed, 'float': floats, 'settings': settings}
+
+
+def report(directory, sections):
+    c = load(directory)
+    inline = {k: v for k, v in c.items() if k[2] == 'inline'}
+    for name in sections:
+        print('\n## %s' % name)
+        if name == 'rational_compile':
+            rational_compile(directory)
+        elif name == 'compile_tables':
+            compile_tables(directory)
+        else:
+            SECTIONS[name](c if name == 'settings' else inline)
+
+
+def fill(directory, template, out):
+    """Writes TEMPLATE to OUT with its table directives replaced by tables of the report, so that no
+    number of the page is typed by hand:
+        @@table TITLE           the table whose first heading is TITLE
+        @@rows TITLE [=> NEW]   the rows of that table whose labels follow, one per line as
+        @@ LABEL                '@@ LABEL', until '@@end'; the heading NEW in place of TITLE
+        @@end
+    """
+    import contextlib
+    import io
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables'])
+    tables, current = {}, None
+    for line in buf.getvalue().splitlines():
+        if line.startswith('| ') and current is None:
+            title = line[2:].split(' | ')[0]
+            current = tables.setdefault(title, [])
+            if current:   # a second table of the same title (Times (ns)): keep the first
+                current = []
+        if line.startswith('|') and current is not None:
+            current.append(line)
+        elif not line.startswith('|'):
+            current = None
+    lines = open(template).read().splitlines()
+    result, i = [], 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith('@@table '):
+            title = line[len('@@table '):]
+            if title not in tables:
+                sys.stderr.write('no table %r\n' % title)
+                result.append('MISSING TABLE: %s' % title)
+            else:
+                result += tables[title]
+        elif line.startswith('@@rows '):
+            spec = line[len('@@rows '):]
+            title, _, new = spec.partition(' => ')
+            t = tables[title.strip()]
+            head = t[0] if not new else '| ' + new.strip() + ' |' + t[0].split(' |', 1)[1]
+            rows = [head, t[1]]
+            i += 1
+            while lines[i] != '@@end':
+                label = lines[i][3:]
+                match = [r for r in t[2:] if r.startswith('| %s |' % label)]
+                if not match:
+                    raise SystemExit('no row %r in table %r' % (label, title))
+                rows.append(match[0])
+                i += 1
+            result += rows
+        else:
+            result.append(line)
+        i += 1
+    with open(out, 'w') as f:
+        f.write('\n'.join(result) + '\n')
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('dir')
-    ap.add_argument('--section', choices=sorted(SECTIONS), action='append')
+    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables'], action='append')
+    ap.add_argument('--fill', nargs=2, metavar=('TEMPLATE', 'OUT'))
     a = ap.parse_args()
-    c = load(a.dir)
-    inline = {k: v for k, v in c.items() if k[2] == 'inline'}
-    for name in a.section or list(SECTIONS):
-        print('\n## %s' % name)
-        SECTIONS[name](c if name == 'settings' else inline)
+    if a.fill:
+        fill(a.dir, a.fill[0], a.fill[1])
+        return 0
+    report(a.dir, a.section or list(SECTIONS) + ['rational_compile', 'compile_tables'])
     return 0
 
 
