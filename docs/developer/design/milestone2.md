@@ -27,6 +27,27 @@ and a number that comes from one of them names it. Such a run is evidence that a
 wrong, never a proof of it. Where a point is not settled it is in the
 [open questions](#open-questions).
 
+**State at the end of the milestone, 2026-11-21.** The paragraph above is the state in which the
+page was reviewed. Since, every kernel and every loop over arrays of this page has been generated
+and proved, in the real model and in the IEEE model, with three exceptions that are not generated
+and say so where they are: `bv_axpy_k` and `bv_norm_upper_k`, which are compositions of generated
+kernels ([BallVector](#ballvector)), and the conversions between limb types, which moved to
+Milestone 3 ([Limbs of another type](#limbs-of-another-type)). `gen/kernels/` holds 223 kernels
+and 44 loops over arrays, of which 160 kernels and the 44 loops are of this milestone, all with
+the status `proved`, and the audits print the assumptions of 1 299 theorems. The truth of what
+each kernel computes and claims is its description in `gen/kernels/`, `gen/claims.json` and the
+generated statements of `proofs/gen/`, read as
+[the architecture page](../architecture.md#claims-of-milestone-2) says. Many listings and
+statements changed on the way, because a proof found a statement false, a compiler fused or
+duplicated an operation, or a rule of the generator refused a form; each change is marked where
+it is, with its date, and the first text is kept where it is part of the record. Where this page
+asks more than is claimed, a note headed **Claimed less than this page asks** says what is
+claimed and proved, and the owner rules on each. The public headers of this tree are those of
+`Interval`, `Ball`, the building blocks and `rational`: no public function calls the folds, the
+bounds as functions of $n$, the accumulator or the ball vectors yet (the list
+`KAIRN_NOT_PUBLIC_YET` of `tests/CMakeLists.txt`), so what this page says of those headers is
+still a design.
+
 How each section reads: two or three plain sentences on what is guaranteed and why it matters;
 the exact statement; the kernel, in the operations of the
 [IR](../architecture.md#the-kernel-ir); how it is to be proved and from which lemmas; what is
@@ -57,12 +78,21 @@ not claimed.
 - **Batch kernels** are folds of the proved kernels of Milestone 1 over arrays. One theorem
   covers every order of summation, and it is proved, with the bounds of the sums and dot
   products that follow from it; the bound is exported as a function of $n$ that is itself to
-  be a generated, proved kernel. `BallVector` is built on top of them.
+  be a generated, proved kernel. `BallVector` is built on top of them. *As built (2026-11-21):*
+  the folds, the maps, the convolutions, the bounds `bound_sum_k` and `bound_dot_k`, the
+  kernels of the accumulator and the ball vectors are generated and proved in both models.
 - **Three things are not machine-checked by design** and are recorded as such: the integer code
   of `rational`, the compositions the headers make of proved kernels where this page says so,
   and the semantics of IEEE 1788, which are a reading: of the text of IEEE Std 1788.1-2017 for
   what that standard defines, and of drafts and public test cases for the four relations that
-  only the full standard has ([IEEE 1788](#ieee-1788)).
+  only the full standard has ([IEEE 1788](#ieee-1788)). *As built (2026-11-21):* the
+  compositions are `ldexp` beyond the powers of two of `T` (from Milestone 1), `axpy` and the
+  norm of a `BallVector` ([BallVector](#ballvector)), and what the accumulator's header adds to
+  its kernels: the count, its conversion to `T`, and the whole line returned when a mask is false
+  ([The accumulator](#the-accumulator)).
+- **At the end of the milestone** (2026-11-21) every kernel and loop of this page is generated
+  and proved but the three named at the top of this page; the statements that the proofs
+  changed are marked where they are.
 
 ## Decisions adopted and changed
 
@@ -71,14 +101,14 @@ work changed one, or found a consequence that the decision did not state.
 
 | Decision | State | What changed, or what follows from it |
 |---|---|---|
-| 1. Directed rounding on one limb | adopted | The operands of a sum are ordered by a kernel of its own, `two_sum_ord`. The underflow range of a product is recognized on the rounded product, and a zero factor on the operands. One lemma is needed beyond Flocq's: the error of a product whose rounding is at least $2^{2p-1}\eta$ is a number of the format |
+| 1. Directed rounding on one limb | adopted | The operands of a sum are ordered by a kernel of its own, `two_sum_ord`. The underflow range of a product is recognized on the rounded product, and a zero factor on the operands. One lemma is needed beyond Flocq's: the error of a product whose rounding is at least $2^{2p-1}\eta$ is a number of the format. *As built (2026-11-21):* the lemma is proved (`mult_error_format_ge`, `DirectedProd.v`), and holds from a rounded product of $(1 - u)P$ on, so the fallback of [question 17](#open-questions) was not needed |
 | 2. `Interval<T, 1>` | adopted, with one departure decided since | A product costs eight steps to a neighbor; in packed code each is about ten integer operations. The semantics differ from IEEE 1788 in the four points that [its section](#ieee-1788) marks. Two were decided by the owner on 2026-11-20: a NaN bound given to the constructor ([question 1](#open-questions)), and the same infinity given as both bounds, give the whole line, where the standard gives the empty set |
-| 3. `Interval<T, 2>` | **changed** | `Fast2Sum(z0, RD(z1 - d))` is replaced by `two_sum_ord`: the requirement of `Fast2Sum` does not hold when $\lvert z_0\rvert$ is below about the smallest normal number (and the bound subtracted is not zero). The bound $d$ is the radius of the Milestone 1 ball with radii zero, bit for bit, with one exception settled on 2026-11-20 ([question 2](#open-questions)): in the directed sums it is replaced by zero when the computed sum is zero. As first decided, the sum of two zero intervals was $[-H, H]$; it is now $[0, 0]$ |
+| 3. `Interval<T, 2>` | **changed** | `Fast2Sum(z0, RD(z1 - d))` is replaced by `two_sum_ord`: the requirement of `Fast2Sum` does not hold when $\lvert z_0\rvert$ is below about the smallest normal number (and the bound subtracted is not zero). The bound $d$ is the radius of the Milestone 1 ball with radii zero, bit for bit, with one exception settled on 2026-11-20 ([question 2](#open-questions)): in the directed sums it is replaced by zero when the computed sum is zero. As first decided, the sum of two zero intervals was $[-H, H]$; it is now $[0, 0]$. *As built (2026-11-21):* $\mathrm{RD}(z_1 - d)$ is computed as $-\mathrm{RU}(d - z_1)$, the same value, because the generator refuses the negation of a fused result ([below](#bounds-of-two-limbs)) |
 | 4. Statements in the IEEE model | adopted | For one limb, "bounded" has an exact condition, not only a sufficient one |
-| 5. One enclosure interface | adopted | For `Ball<T, 2>` the tests of membership and the comparisons are *certain*, not exact: they never answer wrongly, and may decline to answer within a few $u^2$ of the boundary. `lower_as` of a `Ball<T, 2>` is a valid bound within two steps of `T`, not the exact rounding |
+| 5. One enclosure interface | adopted | For `Ball<T, 2>` the tests of membership and the comparisons are *certain*, not exact: they never answer wrongly, and may decline to answer within a few $u^2$ of the boundary. `lower_as` of a `Ball<T, 2>` is a valid bound within two steps of `T`, not the exact rounding. *As built (2026-11-21):* the band where they decline is not claimed, and is wider than a few $u^2$: about two gaps of `T` at the radius ([Certain](#one-enclosure-interface)). **Claimed less than this page asks:** `lower_as` of a `Ball<T, 2>` is a bound on its side within $5u(\lvert c\rvert + r) + 3\eta$ of $c - r$, not within two steps ([Midpoint, radius and the conversions](#midpoint-radius-and-the-conversions)) |
 | 6. Three-valued comparisons | adopted | With an empty operand the answer is *unknown*; the relations of IEEE 1788 keep the standard's conventions |
 | 7. Batch kernels | adopted; the theorem is proved | The theorem needs less than asked: an error relative to the operands of each addition suffices, so it also covers the fast addition. The exported bound is finite for $n\varepsilon \le \tfrac14$ and not for all $n\varepsilon < 1$, and avoids a division. The proof asked more of the zero state of a fold than this page first did, and gave the dot product of one limb its own statement ([below](#sum-dot-axpy-convolution)) |
-| 8. `BallVector` | adopted | The radius of a sum, a difference and a scaling *equals* the largest entrywise `Ball` radius. That of a convolution comes from the theorem of the dot product and is not compared with a ball-by-ball evaluation. A kernel whose operations are exact adds nothing to the radius. There is no empty state |
+| 8. `BallVector` | adopted | The radius of a sum, a difference and a scaling *equals* the largest entrywise `Ball` radius. That of a convolution comes from the theorem of the dot product and is not compared with a ball-by-ball evaluation. A kernel whose operations are exact adds nothing to the radius. There is no empty state. **Claimed less than this page asks** (2026-11-21): the equality is what the listings compute and what the tests find, not a claim ([BallVector](#ballvector)) |
 | 9. Public building blocks | adopted | A building block that adds its operands needs the guard of rule R3 once it is public, hence *entry* forms of seven of them. `rmul` and the scalings by a power of two become `constexpr` by a rule of the printer and one lemma, without variant kernels |
 | 10. Constants at compile time | adopted | The second limb cannot be "the rounding of what the first left": that pair is not always normalized. The value is fixed uniquely all the same |
 | 11. Limbs of another type | adopted; **moved to Milestone 3** on 2026-11-20 | Needs kernels with two formats, which the IR does not have. The decision allowed the move if the work did not fit, and it does not: [its section](#limbs-of-another-type) says why |
@@ -114,6 +144,25 @@ page added $\eta$ to a radius; they now take a step to the next number instead, 
 least $\eta$ away ([the ball from an interval](#midpoint-radius-and-the-conversions),
 [the scaling of a ball](#scaling-a-ball-by-a-power-of-two)).
 
+*Two more rules of the generator, found with the compilers during the work (2026-11-20,
+[decisions log](phase0/decisions.md#decisions-log)), changed listings of this page without
+changing a value.* No kernel negates the result of a fused operation, directly or through a
+select: Apple clang and GCC 13 fold such a negation into a second fused instruction. So
+$\mathrm{RD}(x - e)$, where $e$ is a fused result, is written $-\mathrm{RU}(e - x)$, and a negated
+half is its own product, $\mathrm{RN}(-a \cdot \tfrac12)$; rounding to nearest is symmetric, and
+the values are those of the first listings. And no value is added to itself: GCC 13 writes
+$a + a$ as $a \cdot 2$ and fuses that product into the addition that follows, so a doubling is
+`prod(a, const up(2))`. Each listing below that one of the rules changed says so.
+
+*The formats of the statements* (the owner's ruling of 2026-11-21,
+[Number formats](../architecture.md#number-formats)). The generated statements of the IEEE model
+quantify over the formats of Flocq's `binary_float`: $e_{\max} > p$ and the smallest exponent
+$3 - e_{\max} - p$, which `binary64` and `binary32` are. A clause that promises a finite or bounded
+result (I5 of an interval kernel, V4 of a ball vector, the `finite_when` of a ball) is claimed in
+those formats. The smallest precision named in each section is the `min_precision` of the
+description, from which every clause holds, with one exception: V4 of three ball vectors of one
+limb holds from precision 2 only ([BallVector](#ballvector)).
+
 ### Additions to the claims
 
 The vocabulary of [`gen/claims.json`](../architecture.md#claims) grows as follows. Everything
@@ -127,12 +176,12 @@ that exists keeps its meaning.
 | `bound` | `of`, `side`: `below` or `above`, `steps` | the output is on that side of `value`, and at most `steps` steps of the format beyond its directed rounding; in the extended domain, with an infinite or NaN operand, the output is `value` as IEEE 754 defines it |
 | `outward` | `of` (a 2-limb output), `side`, `rel`, `abs` | the output is on that side of `value`, and $\lvert\text{output} - \text{value}\rvert \le \mathrm{rel}\cdot\lvert\text{value}\rvert + \mathrm{abs}$ |
 | `interval` (a requirement) | `interval(L, U)` | the two groups are the bounds of a canonical interval ([below](#values-of-an-interval)) |
-| `encloses_interval` | `lower`, `upper`, `set`, `intervals`, `tight`, `bounded_when` | statements I1 to I5 of [Interval kernels](#interval-kernels): `set` is an expression over interval names, `intervals` gives each name its bounds, `tight` is `rounded` (with optional `steps` and `when`) or a pair `rel`, `abs`, and `bounded_when` is a list of conditions |
+| `encloses_interval` | `lower`, `upper`, `set`, `intervals`, `tight`, `bounded_when` | statements I1 to I5 of [Interval kernels](#interval-kernels): `set` is an expression over interval names, `intervals` gives each name its bounds, `tight` is `rounded` (with optional `steps` and `when`) or a pair `rel`, `abs`, and `bounded_when` is a list of conditions. *As built:* `tight` is `exact`, `rounded`, or `outward` with `rel`, `abs` and an `exact_when` per side; `bounded_exactly` makes I5 an equivalence; `zero_factor` adds I6, $[0, 0]$ times a nonempty interval is $[0, 0]$ |
 | `makes_interval` | `lower`, `upper`, `from` | the output is canonical: the whole line when a given bound is a NaN or when both given bounds are the same infinity; otherwise the empty set when the bounds are reversed; otherwise the interval of the given bounds |
-| `certain` | `of` (a mask), `rel`, `args`, `exact_when` | when the mask is true the relation holds between the exact values; it is true whenever the relation holds and the condition `exact_when` does (always, when the condition is absent) |
-| `trit` | `yes`, `no` (masks), `rel`, `sets` | `yes` implies that the relation holds for every member of the sets, `no` that it fails for every member; never both |
+| `certain` | `of` (a mask), `rel`, `args`, `exact_when` | when the mask is true the relation holds between the exact values; it is true whenever the relation holds and the condition `exact_when` does (always, when the condition is absent). *As built:* the sets are named by `intervals` or `balls`; `exact` (always exact) and `exact_when` (exact for finite operands under the conditions) are optional, and without either the mask may be false although the relation holds; on the empty set and the whole line the mask is always exact |
+| `trit` | `yes`, `no` (masks), `rel`, `sets` | `yes` implies that the relation holds for every member of the sets, `no` that it fails for every member; never both. *As built:* `rel`, `args`, `intervals` or `balls`, and `exact` or `exact_when` as for `certain` |
 | `exact_when` on `encloses` | a list of conditions, each `zero_or_abs_gt(EXPR, K)` or `zero_or_abs_ge(EXPR, K)`: EXPR is zero, or exceeds $K$ (or is at least $K$) in magnitude. In EXPR, `NAME[I]` is limb I of an input | when every condition holds, the output ball is exactly the set: besides containing it, every number within the radius of the center is a value of the set. This reverse inclusion is how the generator states the exactness of the [scalings of a ball](#scaling-a-ball-by-a-power-of-two). For `ball_mul_pow2_2` the conditions are written limb by limb, each limb times $c$ zero or above $N$; for a normalized center that is "the center is zero or its last nonzero limb times $c$ is above $N$" |
-| `exact_when` on `error` | the same conditions | the output equals `value` when every condition holds. The vocabulary has it and no kernel uses it yet: `mul_pow2_2` keeps the hand-written `mul_pow2_2_exact`, since the field would change the generated statement that its theorem proves |
+| `exact_when` on `error` | the same conditions | the output equals `value` when every condition holds. The vocabulary has it and no kernel uses it yet: `mul_pow2_2` keeps the hand-written `mul_pow2_2_exact`, since the field would change the generated statement that its theorem proves. *As built:* the steps of the scaling of a ball vector, `bv_mul_pow2_step_k`, use it, with `exact_flag`, a mask output true exactly when the conditions hold; `mul_pow2_2` keeps its statement |
 | `exact_when` on `outward`, and on the pair `rel`, `abs` of `tight` | a condition of one more kind, `zero(EXPR)`: $\mathrm{EXPR} = 0$ | the output is `value` itself when the condition holds. Its one use: a directed sum of two limbs whose exact value is zero is zero, and so is a bound of an interval sum |
 | a condition `{"abs_le": EXPR, "omega": true}` | | $\lvert\mathrm{EXPR}\rvert \le \Omega$ |
 | expressions of constants | `rel`, `abs` | the language of `const up(EXPR)`: `u`, `eta`, integers, `unit(K)`, `tiny(K)`, the four operations and integer powers, and now `up( )` inside an expression, so that a bound can name a constant as the format rounds it |
@@ -143,6 +192,25 @@ that exists keeps its meaning.
 $2(1+u)^3\,G\,E$ uses the constants $E$ and $G$ of a ball kernel, which are expressions rounded
 up; in a format of three or four bits they are far from their expressions, and a claim written
 with the expressions alone would be false there.
+
+**Added during the work** (to 2026-11-21). The kernels as they were written needed more than the
+table above; each is defined in [Claims of Milestone 2](../architecture.md#claims-of-milestone-2)
+and the sections after it, which are the meaning a reader relies on.
+
+| Addition | For | Meaning, in short |
+|---|---|---|
+| `not_nan`, `count`, `at_most`, `power_of_two` of a scalar (requirements) | the operands of `mul_dir_1` and `mul_ext_2_2`; a number of terms; `conv_radius`; the scaling of a ball vector | not a NaN; $0$ or at least $1$; at most an integer; a positive power of two of the format |
+| `ball_vector` (a requirement) | the ball vectors | an array and a radius that are a canonical `BallVector` |
+| `zero_factor`, a field of `bound`, `rounded`, `outward` | `mul_dir_1`, `mul_ext_2_2` | a zero operand gives a zero, an infinite other operand included |
+| `set_bound` | `ball_lower_as_k`, `ball_upper_as_k` | a bound of a set on its side, optionally its rounding |
+| `makes_ball` from an interval, with `midpoint_when`, `rel`, `abs`, `smallest_radius` | `ball_from_interval_k` | the cases of the constructor of an interval, then a ball that contains the interval |
+| `interval_set`, `ball_set` | the hull and the intersection | exact for intervals; for balls, containment and the operands returned as they are |
+| `ball_of_interval`, `interval_of_ball` | the midpoint and radius, the conversions | [Midpoint, radius and the conversions](#midpoint-radius-and-the-conversions) |
+| `splits`, `ball_splits` | `split` | two parts that cover the operand |
+| `error` of form `T`, `rounded` with `value`, `holds`, `upper` with `value`, `if`, `unless`, `exact_when` | the steps of the dot products, the accumulator, the bounds as functions of $n$, the radius kernels | an error relative to the terms; a rounding of a value of its own; a relation under a mask; an upper bound of an expression |
+| `maximum`, `finite_or_nan` (with `if`, `steps`, `if_all`, `nonneg`) | the folds of maxima and the finishes | the larger of two values; the flag and the canonical NaN |
+| `fold_error`, `entries`, `coefficients`, `upper` over `max` | the folds, the maps, the convolutions, `norm_upper_k` | the bound of a fold by its height; each element written within its step's claims |
+| `encloses_entries` (`finite_when`, `radii_when`, `finite_from`, `exact_when`), `encloses_coefficients` (`count_when`), `makes_ball_vector` | the ball vectors | V1 to V4 of [BallVector](#ballvector) |
 
 ## Building blocks on T
 
