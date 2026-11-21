@@ -145,11 +145,17 @@ endif()
 # (crosscheck.cmake, the three stages of the pipeline at once); and every compiled runner on
 # KAIRN_CROSSCHECK_CASES cases of each format, with the kernels' runners of the flag sets
 # (api/flags/: the debug build, and one set at -O1 or /O1), in one Python process
-# (tests/crosscheck.py).
+# (tests/crosscheck.py); every packed runner with both assignments of its lanes, the permuted
+# and the consecutive one (_compiled_both of tests/CMakeLists.txt).
 set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
-set(_compiled_full ${_compiled})
+set(_compiled_full ${_compiled_both})
 foreach(_runner _label IN ZIP_LISTS _flags_gen_runners _flags_gen_labels)
-  list(APPEND _compiled_full --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+  if(_label MATCHES "^cxx")
+    list(APPEND _compiled_full --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+  else()
+    list(APPEND _compiled_full --packed-kernels "${_label}" "$<TARGET_FILE:${_runner}>"
+      "permuted,consecutive")
+  endif()
 endforeach()
 foreach(_kernel IN LISTS _full_kernels)
   set(_this ${_full_${_kernel}_this})

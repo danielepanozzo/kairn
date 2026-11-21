@@ -21,7 +21,8 @@
 #   build's compiler and flags, on random binary64 and binary32 cases, once as the flags stand and
 #   once per contraction setting that matters to this compiler: the scalar kernels
 #   (gen/tests/runner.cpp), and the packed kernels of the target's backend, NEON or AVX2
-#   (gen/tests/packed_runner.cpp); in the full tier on more cases, and also as run by the
+#   (gen/tests/packed_runner.cpp), with the lanes of each register assigned by a seeded
+#   permutation and consecutively; in the full tier on more cases, and also as run by the
 #   generator's interpreter on every operand of a toy format (or, where that is too many, on every
 #   operand of a restricted domain and on random cases of the whole format).
 # - The consumer checks (consume/): a project that uses kairn::kairn and kairn::fma through
@@ -142,7 +143,8 @@ endif()
 # --- The compiled runners -----------------------------------------------------------------------
 #
 # gen/tests/runner.cpp runs the generated scalar kernels on the line protocol, and
-# gen/tests/packed_runner.cpp the packed ones, consecutive requests one per lane. Each is built
+# gen/tests/packed_runner.cpp the packed ones, one request per lane, the requests assigned to the
+# lanes by a seeded permutation (or consecutively, --lanes consecutive). Each is built
 # with this build's compiler and flags (kairn-gen-runner, kairn-gen-packed-runner), and once more
 # for each contraction setting that matters to the compiler, appended to those flags: the
 # regression test of the contraction experiment of docs/developer/design/phase0/environment.md.
@@ -691,10 +693,27 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   set(_random "-DCOUNT=${KAIRN_CROSSCHECK_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}")
   set(_random_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_CASES}")
   set(_random_quick_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_QUICK_CASES}")
-  # Every compiled runner, as --runner LABEL EXECUTABLE for crosscheck.py.
+  # Every compiled runner for crosscheck.py: the scalar ones as --runner LABEL EXECUTABLE, the
+  # packed ones as --packed-kernels LABEL EXECUTABLE ASSIGNMENTS, with the lanes of their
+  # registers assigned by the seeded permutation (each under the guard that the lanes mixed), and
+  # also consecutively (LABEL.consecutive, registers of one kind): in the quick tier the second
+  # for the runner with the build's flags only, in the full tier (_compiled_both) for every one
+  # (docs/developer/testing.md, "Packed kernels").
   set(_compiled "")
+  set(_compiled_both "")
   foreach(_runner _label IN ZIP_LISTS _runners _runner_labels)
-    list(APPEND _compiled --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+    if(_label MATCHES "^cxx")
+      list(APPEND _compiled --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+      list(APPEND _compiled_both --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+    else()
+      set(_assignments permuted)
+      if(_label STREQUAL "${_packed_backend}")
+        set(_assignments "permuted,consecutive")
+      endif()
+      list(APPEND _compiled --packed-kernels "${_label}" "$<TARGET_FILE:${_runner}>" "${_assignments}")
+      list(APPEND _compiled_both --packed-kernels "${_label}" "$<TARGET_FILE:${_runner}>"
+        "permuted,consecutive")
+    endif()
   endforeach()
   # What full/CMakeLists.txt registers, kernel by kernel, for the full tier.
   set(_full_kernels "")
@@ -986,6 +1005,32 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
           set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled;fold")
         endif()
       endforeach()
+    endforeach()
+  endif()
+
+  # The planted fault of the packed lanes (lanes/lane_fault.py): the packed runner built with
+  # lanes/lane_fault.hpp, a copy of mul_2_2_full whose special-value select reads the mask of the
+  # neighboring lane, in place of the backend's kernels. crosscheck.lanes.fault.FORMAT runs the
+  # cross-check of mul_2_2_full with it on the quick tier's cases: it must pass with the
+  # consecutive assignment where no register mixes a non-finite operand with finite ones (W = 2
+  # and 4 on the oracle's stream) and fail, by the oracle's verdict, with the permuted one; and
+  # the runner must refuse the consecutive assignment under the guard.
+  if(_packed_backend AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lanes/lane_fault.py")
+    add_executable(kairn-gen-packed-runner-lane-fault "${PROJECT_SOURCE_DIR}/gen/tests/packed_runner.cpp")
+    target_include_directories(kairn-gen-packed-runner-lane-fault PRIVATE
+      "${PROJECT_SOURCE_DIR}/gen/tests" "${CMAKE_CURRENT_SOURCE_DIR}/lanes")
+    target_compile_definitions(kairn-gen-packed-runner-lane-fault PRIVATE
+      KAIRN_RUNNER_HEADER="lane_fault.hpp" KAIRN_RUNNER_TABLE="lane_fault.inc")
+    target_link_libraries(kairn-gen-packed-runner-lane-fault PRIVATE kairn::kairn kairn::fma)
+    target_compile_options(kairn-gen-packed-runner-lane-fault PRIVATE ${_warnings} ${_isa_option})
+    foreach(_format binary64 binary32)
+      set(_name crosscheck.lanes.fault.${_format})
+      add_test(NAME ${_name}
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/lanes/lane_fault.py"
+          --runner "$<TARGET_FILE:kairn-gen-packed-runner-lane-fault>" --format ${_format}
+          --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_QUICK_CASES}"
+          --summary-dir "${_summaries}/lanes")
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled;lanes")
     endforeach()
   endif()
 

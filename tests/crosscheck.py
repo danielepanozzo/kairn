@@ -5,6 +5,7 @@ on each distinct output and, for the kernels' runners, the guards (docs/develope
     python3 tests/crosscheck.py compiled --kernel K --format F --summary FILE
         (--seed S --count N | --exhaustive [--restrict R1,R2,...]) [--fail-on-suspicious]
         (--runner LABEL EXECUTABLE)... [--interp] [--refrun]
+        (--packed-kernels LABEL EXECUTABLE ASSIGNMENTS)...
         [--orders O1,O2,...] [--max-length L]
         [(--packed-runner LABEL EXECUTABLE)... --packed-lanes W [--packed-count N]]
     python3 tests/crosscheck.py api --kernel K --format F --seed S --count N --summary-dir DIR
@@ -33,7 +34,15 @@ the full tier: the runners of the generated kernels (gen/tests/runner.cpp, packe
 each named by its LABEL; --interp adds the generator's interpreter (python3 gen/kairn-gen interp)
 as one more, labelled interp, and --refrun the oracle's reference runner (python3
 oracle/kairn-oracle refrun), labelled refrun, which tests/test_crosscheck_guards.py runs for
-rational_1 and rational_2. K is a kernel of gen/claims.json or one of these two,
+rational_1 and rational_2. --packed-kernels adds a runner of the packed kernels
+(gen/tests/packed_runner.cpp) on the same requests, once per assignment of ASSIGNMENTS (permuted,
+consecutive, or both, comma-separated), labelled LABEL for the permuted one and LABEL.consecutive
+for the consecutive one, each run as EXECUTABLE --lanes A --lane-seed S (S of --seed, 0 for an
+enumeration) --lane-report REPORT: the runner fails, with 3, when the permuted assignment did not
+mix the lanes (docs/developer/testing.md, "Packed kernels"), and this test fails when a report
+does not say that the run had one segment of every request with the assignment asked for. Each
+report is kept next to SUMMARY, as SUMMARY's name with the run's label and .lanes.json, and a pass
+prints its counts. K is a kernel of gen/claims.json or one of these two,
 kairn::rational<X>(num, den), which the oracle knows without claims (oracle/README.md,
 "rational"): the same pipeline and guards, with no enumeration. K may also be a fold of the list
 "folds" (architecture.md, "Folds"), whose requests carry arrays: --orders and --max-length go to
@@ -260,6 +269,8 @@ def compiled(a):
         runs.append(("interp", INTERP))
     if a.refrun:
         runs.append(("refrun", REFRUN))
+    lanes = packed_kernel_runs(a, work)
+    runs += [(label, command) for label, command, _, _ in lanes]
     if runs:
         streams.append(("requests", a.orders, a.count, runs))
     if a.packed_runner:
@@ -271,12 +282,14 @@ def compiled(a):
                         [(label, [exe]) for label, exe in a.packed_runner]))
     if not streams:
         print("crosscheck.py: no runner (--runner LABEL EXECUTABLE, --interp, --refrun, "
-              "--packed-runner LABEL EXECUTABLE)", file=sys.stderr)
+              "--packed-kernels LABEL EXECUTABLE ASSIGNMENTS, --packed-runner LABEL EXECUTABLE)",
+              file=sys.stderr)
         return 2
     failed = []
     reports = []
     for name, orders, count, runs in streams:
-        failed += compiled_stream(a, name, orders, count, runs, summary_dir, base, work, reports)
+        failed += compiled_stream(a, name, orders, count, runs, summary_dir, base, work, reports,
+                                  lanes if name == "requests" else [])
     if failed:
         print("cross-check of %s %s failed for:\n%s\nThe requests and the outputs that failed are "
               "in %s" % (kernel, fmt, "\n".join(failed), work), flush=True)
@@ -287,9 +300,81 @@ def compiled(a):
     return 0
 
 
-def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, reports):
+ASSIGNMENTS = ("permuted", "consecutive")
+
+
+def lane_seed(seed):
+    """The packed runners' --lane-seed for the cross-check's --seed: the seed itself if it is a
+    decimal integer of at most 18 digits, otherwise a number made of its hash; 0 for none."""
+    if seed is None:
+        return "0"
+    if seed.isdigit() and len(seed) <= 18:
+        return str(int(seed))
+    return str(int(hashlib.sha256(seed.encode()).hexdigest()[:15], 16))
+
+
+def packed_kernel_runs(a, work):
+    """The runs of --packed-kernels: [(label, command, assignment, report)], one per assignment of
+    each runner, the report of its lanes in WORK."""
+    out = []
+    for label, exe, assignments in a.packed_kernels or []:
+        for assignment in assignments.split(","):
+            name = label if assignment == "permuted" else label + ".consecutive"
+            report = os.path.join(work, name + ".lanes.json")
+            out.append((name, [exe, "--lanes", assignment, "--lane-seed", lane_seed(a.seed),
+                               "--lane-report", report], assignment, report))
+    return out
+
+
+def check_lanes(report, assignment, kernel, fmt, requests):
+    """The report of a packed runner's lanes: (the reason it fails, or "", its counts in a line).
+    It fails unless the run had one segment, of the kernel and format, holding the REQUESTS
+    request lines, with the assignment asked for and, for the permuted one, the guard passed or
+    not applied to a stream too short for it."""
+    try:
+        with open(report, encoding="utf-8") as f:
+            r = json.load(f)
+        segments = r["segments"]
+        guard = r["guard"]
+        if r["assignment"] != assignment:
+            return "the runner's report of its lanes says the %s assignment, not %s" % (
+                r["assignment"], assignment), ""
+        if len(segments) != 1:
+            return "the runner's report of its lanes has %d segments, not one" % len(segments), ""
+        s = segments[0]
+        if (s["kernel"], s["format"], s["requests"]) != (kernel, fmt, requests):
+            return "the runner's report of its lanes is of %d requests of %s %s, not %d of %s %s" % (
+                s["requests"], s["kernel"], s["format"], requests, kernel, fmt), ""
+        w = s["lanes"]
+        short = sum(1 for k in s["kinds"] if k["requests"] >= w and min(k["lanes"]) == 0)
+        line = ("%d lanes, the %s assignment%s: %d registers, %d of them mixing a non-finite limb "
+                "with finite ones (%d and %d requests), %d mixing strata, %d padding slots; %d "
+                "kinds, %s; the guard (%d requests, %d of each class) %s" % (
+                    w, assignment, " (seed %s)" % r["seed"] if assignment == "permuted" else "",
+                    s["registers"], s["mixed"], s["with_nonfinite"], s["with_finite"],
+                    s["mixed_strata"], s["padding"], len(s["kinds"]),
+                    "each of at least %d requests in every lane" % w if not short else
+                    "%d of at least %d requests missing from a lane" % (short, w),
+                    guard["lines"], guard["cases"], s["guard"]))
+    except (OSError, ValueError, KeyError, TypeError, IndexError) as ex:
+        return "the runner wrote no report of its lanes that can be read (%s: %s)" % (
+            type(ex).__name__, ex), ""
+    if assignment == "permuted" and s["guard"] != "passed" and \
+            not s["guard"].startswith("not applied: fewer than"):
+        return "the permuted assignment's guard: %s" % s["guard"], line
+    return "", line
+
+
+def request_lines(path):
+    """The number of request lines of the file (neither empty nor comments)."""
+    with open(path, "rb") as f:
+        return sum(1 for line in f if line.strip() and not line.startswith(b"#"))
+
+
+def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, reports, lanes=()):
     """One stream of requests through its runners: the texts of the failures (and, on a pass, what
-    was checked, appended to reports)."""
+    was checked, appended to reports). LANES: the runs of packed_kernel_runs among RUNS, whose
+    reports are checked, kept next to the summary and printed."""
     kernel, fmt = a.kernel, a.format
     gen = ["gen", kernel, fmt]
     guard_args = ["--kernel", kernel, "--format", fmt]
@@ -323,21 +408,42 @@ def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, repor
         return ["%s: the request generator failed" % name]
 
     command_of = dict(runs)
+    lanes_of = {label: (assignment, report) for label, _, assignment, report in lanes}
+    n_requests = request_lines(requests) if lanes else 0
     failed = []             # one text per runner that failed
     failed_first = set()    # the runners whose output the oracle or the guards failed
     passed = []             # the runners whose output passed, each the first that wrote it
     sharing = {}            # such a runner -> the runners that wrote the same output
     report_of = {}
+    lanes_line = {}         # a packed kernels' run -> the counts of its lanes
+    for label in lanes_of:
+        remove(os.path.join(summary_dir, "%s.%s.lanes.json" % (base, label)))
     for label, status, output, first in run_all(runs, requests):
         what = "cross-check of %s %s with %s" % (kernel, fmt, label)
         again = "  %s | %s | %s" % (shell(python_oracle + one), shell(command_of[label]),
                                     shell(python_oracle + check))
+        if label in lanes_of:
+            # A case that fails only beside the other lanes of its register fails only in the
+            # whole stream: --lane-plan gives each request's register and lane.
+            again += ("\n  or, for a case that fails only beside the others of its register, the "
+                      "whole stream:\n  %s --lane-plan PLAN < %s | %s" % (
+                          shell(command_of[label]), shell([requests]), shell(python_oracle + check)))
         if status != 0:
             say("%s: the runner failed (%s)" % (what, status))
             keep(work, label, output)
             failed.append("%s: the runner failed (%s); to run one case again:\n%s"
                           % (label, status, again))
             continue
+        if label in lanes_of:
+            assignment, report = lanes_of[label]
+            why, lanes_line[label] = check_lanes(report, assignment, kernel, fmt, n_requests)
+            if os.path.exists(report):
+                shutil.copyfile(report, os.path.join(summary_dir, "%s.%s.lanes.json" % (base, label)))
+            if why:
+                say("%s: %s" % (what, why))
+                keep(work, label, output)
+                failed.append("%s: %s" % (label, why))
+                continue
         if first != label:
             # The same bytes as an output judged above: the same verdict.
             say("%s: the same output, byte for byte, as %s's, judged above" % (what, first))
@@ -370,6 +476,9 @@ def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, repor
     for label in passed:
         reports.append("cross-check of %s %s with %s: passed, %s"
                        % (kernel, fmt, ", ".join(sharing[label]), report_of[label]))
+        for other in sharing[label]:
+            if other in lanes_line:
+                reports.append("lanes of %s: %s" % (other, lanes_line[other]))
     return failed
 
 
@@ -525,6 +634,11 @@ def main(argv=None):
     c.add_argument("--refrun", action="store_true",
                    help="the oracle's reference runner as a runner too (for rational_K: a test of "
                         "the driver and the guards)")
+    c.add_argument("--packed-kernels", nargs=3, action="append",
+                   metavar=("LABEL", "EXECUTABLE", "ASSIGNMENTS"),
+                   help="a runner of the packed kernels, on the same requests, with each "
+                        "assignment of lanes of ASSIGNMENTS (permuted, consecutive, or both, "
+                        "comma-separated)")
     c.add_argument("--orders", help="a fold: the orders of the requests (gen --orders)")
     c.add_argument("--max-length", help="a fold: the largest length (gen --max-length)")
     c.add_argument("--packed-runner", nargs=2, action="append", metavar=("LABEL", "EXECUTABLE"),
@@ -549,6 +663,11 @@ def main(argv=None):
     if a.mode == "compiled":
         if not a.exhaustive and (a.seed is None or a.count is None):
             ap.error("a random run needs --seed and --count")
+        for _, _, assignments in a.packed_kernels or []:
+            names = assignments.split(",")
+            if not names or any(n not in ASSIGNMENTS for n in names) or len(set(names)) != len(names):
+                ap.error("--packed-kernels: ASSIGNMENTS is permuted, consecutive or both, not %s"
+                         % assignments)
         return compiled(a)
     return api(a)
 
