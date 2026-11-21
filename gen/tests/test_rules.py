@@ -1481,6 +1481,9 @@ class TheKernels(unittest.TestCase):
     # limbs (IeeeIntervalSub2.v), the conversions between an interval and a ball of one limb, with
     # the midpoint and the split (IeeeIntervalConvert.v), and mul_ext_2_2 with the product of two
     # limbs (IeeeIntervalMul2.v).
+    # The constructors of an interval and the ball from an interval of two T are proved for the rule
+    # of 2026-11-20, that the same infinity twice gives the whole line (IeeeInterval1.v,
+    # IeeeIntervalExact.v, IeeeBallConvert.v).
     WAVE_2_B1_PROVED = WAVE_2_B1 | {'mul_ext_2_2'}
     WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED
 

@@ -460,20 +460,29 @@ struct Intervals {
     static_assert(can_add<kairn::Unverified<I1>, I1> && can_negate<kairn::Unverified<I2>> && !can_add<kairn::Unverified<I1>, I2>);
     static_assert(can_midpoint<B1> && can_midpoint<B2>);
 
-    // Construction: the point 0 by default; two bounds; a NaN bound the whole line; reversed
-    // bounds and equal infinities the empty set; a point; the named states.
+    // Construction: the point 0 by default; two bounds; a NaN bound and the same infinity twice
+    // the whole line (an infinite point too: the owner's decision of 2026-11-20); reversed bounds
+    // the empty set; a point; the named states.
     static_assert(is(I1(), 0, 0) && is(I2(), 0, 0, 0, 0));
     static_assert(is(I1(T(1), T(2)), 1, 2) && is(I1(E1(T(-3)), E1(T(5))), -3, 5) && is(I1(unverified(T(1)), T(2)), 1, 2));
     static_assert(whole(I1(nan, T(1))) && whole(I1(T(1), nan)) && whole(I1(nan, nan)) && whole(I1(nan, -inf)));
     static_assert(whole(I1(inf, nan)) && whole(I1(-inf, inf)) && is(I1(-inf, T(1)), -inf, 1) && is(I1(T(1), inf), 1, inf));
-    static_assert(empty(I1(T(2), T(1))) && empty(I1(inf, inf)) && empty(I1(-inf, -inf)) && empty(I1(inf, -inf)));
-    static_assert(is(I1(T(3)), 3, 3) && whole(I1(nan)) && empty(I1(inf)) && empty(I1(-inf)) && is(I1(E1(T(3))), 3, 3));
+    static_assert(whole(I1(inf, inf)) && whole(I1(-inf, -inf)) && whole(I1(E1(inf), E1(inf))));
+    static_assert(empty(I1(T(2), T(1))) && empty(I1(inf, -inf)) && empty(I1(inf, T(1))) && empty(I1(T(1), -inf)));
+    static_assert(is(I1(T(3)), 3, 3) && whole(I1(nan)) && whole(I1(inf)) && whole(I1(-inf)) && is(I1(E1(T(3))), 3, 3));
+    // The interval of an infinite point is the whole line, in every function that reads it.
+    static_assert(I1(inf).lower().limb[0] == -inf && I1(inf).upper().limb[0] == inf && whole(I1(E1(-inf))));
+    static_assert(I1(inf).template lower_as<T>() == -inf && I1(-inf).template upper_as<T>() == inf);
+    static_assert(I1(inf).midpoint().limb[0] == 0 && I1(-inf).radius() == inf && B1(I1(inf)).is_whole());
     static_assert(empty(I1::empty()) && whole(I1::whole()) && empty(I2::empty()) && whole(I2::whole()));
     static constexpr T above[2] = {1, u / 2};
     static constexpr E2 x2 = E2::from_limbs(above);  // 1 + u/2
     static_assert(is(I2(x2, E2(T(2))), 1, u / 2, 2, 0) && is(I2(T(1), T(2)), 1, 0, 2, 0) && is(I2(x2), 1, u / 2, 1, u / 2));
     static_assert(whole(I2(E2(nan), x2)) && whole(I2(x2, E2(nan))) && whole(I2(nan)) && empty(I2(E2(T(2)), x2)));
-    static_assert(empty(I2(inf)) && empty(I2(E2(-inf), E2(-inf))) && whole(I2(E2(-inf), E2(inf))) && is(I2(T(3)), 3, 0, 3, 0));
+    static_assert(whole(I2(inf)) && whole(I2(-inf)) && whole(I2(E2(-inf), E2(-inf))) && whole(I2(E2(inf), E2(inf))));
+    static_assert(whole(I2(inf, inf)) && empty(I2(E2(inf), E2(-inf))) && empty(I2(E2(inf), x2)) && empty(I2(x2, E2(-inf))));
+    static_assert(whole(I2(E2(-inf), E2(inf))) && is(I2(T(3)), 3, 0, 3, 0));
+    static_assert(I2(inf).template lower_as<T>() == -inf && I2(-inf).template upper_as<T>() == inf);
     static_assert(is(I2(unverified(x2), E2(T(2))), 1, u / 2, 2, 0) && is(I2(unverified(T(1)), T(2)), 1, 0, 2, 0));
     // The bounds as numbers of T: for two limbs rounded outward.
     static_assert(I1(T(1), T(2)).template lower_as<T>() == 1 && I1::empty().template upper_as<T>() == -inf);
@@ -769,7 +778,17 @@ void intervals_run_time() {
     expect("split", C::is(x.split().left, 1, 2) && C::is(x.split().right, 2, 3));
     expect("split of the whole line", C::is(I1(-T(v_inf), T(v_inf)).split().left, -inf, 0));
     expect("the constructor with a NaN bound", C::whole(I1(nan, one)) && C::whole(I2(E2(one), E2(nan))));
-    expect("reversed bounds", C::empty(I1(two, one)) && C::empty(I2(two, one)) && C::empty(I1(T(v_inf))));
+    expect("reversed bounds", C::empty(I1(two, one)) && C::empty(I2(two, one)) && C::empty(I1(T(v_inf), one)) &&
+                                  C::empty(I1(T(v_inf), -T(v_inf))) && C::empty(I2(E2(T(v_inf)), E2(one))));
+    // An infinite point, and the same infinity twice: the whole line (decided on 2026-11-20).
+    expect("an infinite point", C::whole(I1(T(v_inf))) && C::whole(I1(-T(v_inf))) && C::whole(I2(T(v_inf))) &&
+                                    C::whole(I2(-T(v_inf))) && C::whole(I1(T(v_inf), T(v_inf))) &&
+                                    C::whole(I2(E2(-T(v_inf)), E2(-T(v_inf)))));
+    expect("the bounds of an infinite point", I1(T(v_inf)).lower().limb[0] == -inf && I1(T(v_inf)).upper().limb[0] == inf &&
+                                                  I2(-T(v_inf)).template lower_as<T>() == -inf &&
+                                                  I2(-T(v_inf)).template upper_as<T>() == inf);
+    expect("the midpoint and the radius of an infinite point",
+           I1(T(v_inf)).midpoint().limb[0] == 0 && I1(-T(v_inf)).radius() == inf && B1(I1(T(v_inf))).is_whole());
     expect("the hull", C::is(x.hull(I1(four, four)), 1, 4) && C::is(I1::empty().hull(x), 1, 3));
     expect("the intersection", C::is(x.intersection(I1(two, four)), 2, 3) && C::empty(x.intersection(I1(four, four))));
     expect("the negation", C::is(-x, -3, -1) && C::empty(-I1(two, one)));
@@ -793,9 +812,13 @@ void intervals_run_time() {
     expect("from_interval with a NaN", B2::from_interval(nan, one).is_whole() && B2::from_interval(one, nan).is_whole());
     expect("from_interval of a half-line, of the whole line",
            B2::from_interval(one, T(v_inf)).is_whole() && B2::from_interval(-T(v_inf), T(v_inf)).is_whole());
-    expect("from_interval of reversed bounds, of equal infinities", B2::from_interval(two, one).is_empty() &&
-                                                                     B2::from_interval(T(v_inf), T(v_inf)).is_empty() &&
-                                                                     B2::from_interval(-T(v_inf), -T(v_inf)).is_empty());
+    expect("from_interval of reversed bounds", B2::from_interval(two, one).is_empty() &&
+                                                   B2::from_interval(T(v_inf), -T(v_inf)).is_empty() &&
+                                                   B2::from_interval(T(v_inf), one).is_empty() &&
+                                                   B2::from_interval(one, -T(v_inf)).is_empty());
+    // The same infinity twice: the whole line (decided on 2026-11-20).
+    expect("from_interval of equal infinities", B2::from_interval(T(v_inf), T(v_inf)).is_whole() &&
+                                                    B2::from_interval(-T(v_inf), -T(v_inf)).is_whole());
     expect("the bounds of the empty ball", B1::empty().template lower_as<T>() == inf && B1::empty().template upper_as<T>() == -inf &&
                                                B2::empty().template lower_as<T>() == inf &&
                                                B2::empty().template upper_as<T>() == -inf);

@@ -839,11 +839,46 @@ class IntervalGuards(unittest.TestCase):
                         ("interval_mid_rad_1", self.mid), ("add_down_2_2", self.down)):
             self.passes(s, name, IV, *self.args)
         for name in ("mul_dir_1", "interval_make_1", "ball_lower_as_2", "interval_hull_2",
-                     "interval_split_1", "mul_ext_2_2", "ball_from_interval_2", "ball_to_interval_1"):
+                     "interval_split_1", "mul_ext_2_2", "ball_from_interval_2", "ball_to_interval_1",
+                     "interval_make_2"):
             s = pipeline(name, IV, *self.args)
             self.passes(s, name, IV, *self.args)
         s = pipeline("interval_neg_1", "fp:2:-2:1", "--exhaustive")
         self.passes(s, "interval_neg_1", "fp:2:-2:1", "--exhaustive")
+
+    # The constructors under the rule of 2026-11-20 (a NaN bound or the same infinity twice gives
+    # the whole line, reversed bounds the empty set): every cell of the table of architecture.md,
+    # "The constructors on every pair of values", in a random run and in an enumeration; for two
+    # limbs reversed bounds of equal leading limbs, and in a random run the same infinity with zeros
+    # of opposite signs as second limbs. A run without the same infinity twice fails.
+    def test_constructors_without_a_cell(self):
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        self.assertEqual(len(CG.IV_MAKE_CELLS), 17)
+        for kernel, tiny in (("interval_make_1", "fp:2:-2:1"), ("interval_make_2", "fp:2:-2:1"),
+                             ("ball_from_interval_2", "fp:2:-2:1")):
+            with open(os.path.join(ROOT, "gen", "claims.json"), encoding="utf-8") as f:
+                k = next(k for k in json.load(f)["kernels"] if k["name"] == kernel)
+            two = kernel == "interval_make_2"
+            good = pipeline(kernel, IV, *self.args)
+            names = CG.iv_make_needs(k, k["ensures"][0], False)
+            self.assertEqual(len(names), 6 + 17 + (2 if two else 0))
+            for name in names:
+                s = edited(good, 0, lambda e: e["counts"].pop(name, None))
+                self.fails(s, kernel, IV, *self.args, reason='saw no case of "%s"' % name)
+            ex = pipeline(kernel, tiny, "--exhaustive")
+            self.passes(ex, kernel, tiny, "--exhaustive")
+            names = CG.iv_make_needs(k, k["ensures"][0], True)
+            self.assertEqual(len(names), 6 + 17 + (1 if two else 0))
+            for name in names:
+                s = edited(ex, 0, lambda e: e["counts"].pop(name, None))
+                self.fails(s, kernel, tiny, "--exhaustive", reason='saw no case of "%s"' % name)
+            strata = M2_COMMON + ",nanbound,reversed,point" + (",oddeta,top" if "ball" in kernel
+                                                                 else "")
+            s = pipeline(kernel, IV, *self.args, "--strata", strata)
+            for name in ("given: equal infinities", "given lo +inf, hi +inf",
+                         "given lo -inf, hi -inf"):
+                self.fails(s, kernel, IV, *self.args, reason='saw no case of "%s"' % name)
 
     # encloses_interval: every class of operands and results, I5 both ways and near its limit.
     def test_encloses_interval_without_an_empty_operand(self):
@@ -933,7 +968,7 @@ class IntervalGuards(unittest.TestCase):
                 "interval_mid_rad_1": self.mid, "add_down_2_2": self.down}
         for name in ("mul_ext_2_2", "interval_make_1", "ball_from_interval_2", "ball_lower_as_2",
                      "ball_to_interval_1", "interval_hull_1", "interval_split_1", "mul_dir_1",
-                     "interval_neg_2"):
+                     "interval_neg_2", "interval_make_2"):
             runs[name] = pipeline(name, IV, *self.args)
         asked = 0
         for name, good in runs.items():

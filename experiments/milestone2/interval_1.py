@@ -14,9 +14,9 @@ Statements judged (milestone2.md, "Interval kernels"), for canonical operands X 
   I5  for bounded operands the result is bounded exactly when the exact range lies in
       [-Omega, Omega].
 
-And the constructor interval_make_1 on every pair of values of T: [lo, hi] when lo <= hi,
-lo < +inf and hi > -inf; the whole line when a bound is a NaN (decided on 2026-11-20); the empty
-set otherwise.
+And the constructor interval_make_1 on every pair of values of T: the whole line when a bound is a
+NaN and when both are the same infinity (both decided on 2026-11-20); otherwise the empty set when
+lo > hi; otherwise [lo, hi].
 
 The exact range of a product is computed here without the rule "0 times infinity is 0": an
 infinite bound is replaced by a number K so large that any product with it leaves every range
@@ -112,21 +112,24 @@ def check(f, name, X, Y, stats):
 
 
 def constructor(f):
-    """interval_make_1 on every pair of values, NaN and the infinities included: the interval
-    when the pair describes one; the whole line when a bound is a NaN, whatever the other bound;
-    the empty set otherwise (lo > hi, [+inf, +inf], [-inf, -inf])."""
+    """interval_make_1 on every pair of values, NaN and the infinities included: the whole line
+    when a bound is a NaN, whatever the other bound, and when both are the same infinity
+    ([+inf, +inf], [-inf, -inf]: decided on 2026-11-20); otherwise the empty set when lo > hi;
+    otherwise the interval [lo, hi]."""
     vals = [(x, num(x)) for x in finite_numbers(f)] + [(INF, PINF), (-INF, NINF), (None, NaN)]
-    counts = dict(interval=0, whole=0, empty=0)
+    counts = dict(interval=0, whole=0, same_infinity=0, empty=0)
     for l, vl in vals:
         for u, vu in vals:
             zl, zu = run('interval_make_1', f, vl, vu)
             assert canonical(zl, zu), (f.name, l, u, zl, zu)
             if l is None or u is None:
                 want, kind = (-INF, INF), 'whole'
-            elif l <= u and l < INF and u > -INF:
-                want, kind = (l, u), 'interval'
-            else:
+            elif l == u and abs(l) == INF:
+                want, kind = (-INF, INF), 'same_infinity'
+            elif l > u:
                 want, kind = EMPTY, 'empty'
+            else:
+                want, kind = (l, u), 'interval'
             assert (ext(zl), ext(zu)) == want, (f.name, l, u, zl, zu)
             counts[kind] += 1
     return counts
@@ -165,7 +168,8 @@ def main():
               f'{out["interval_mul_1"]["unbounded_from_bounded"]:6}'
               f'                       {out["interval_mul_1"]["beyond"]:8}')
         print(f'{"":12} constructor, every pair of values: {made["interval"]} give their interval, '
-              f'{made["whole"]} with a NaN bound the whole line, {made["empty"]} the empty set')
+              f'{made["whole"]} with a NaN bound and {made["same_infinity"]} of the same infinity the whole line, '
+              f'{made["empty"]} the empty set')
     print('every statement held')
 
 

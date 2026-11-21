@@ -130,8 +130,8 @@ inline Corpus<T> make_corpus() {
         }
     c.sums.push_back(kairn::two_sum(nan, nan));
     // The intervals: every pair of bounds of the corpus that is not a NaN and that the constructor
-    // does not make the empty set (it keeps their bounds as they are), then the empty set and the
-    // whole line once each.
+    // does not make the empty set (it keeps their bounds as they are, but the same infinity twice,
+    // which it makes the whole line), then the empty set and the whole line once each.
     for (T lo : c.one)
         for (T hi : c.one) {
             if (lo != lo || hi != hi) continue;

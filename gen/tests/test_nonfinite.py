@@ -681,20 +681,27 @@ def judge_splits(k, ks, fmt, e, ins, outs, values):
     return [] if ok else ['splits (cover)']
 
 
+def same_infinity(lo, hi):
+    """Both given bounds are the same infinity, [+inf, +inf] or [-inf, -inf] (of one limb, or the
+    leading limbs of two)."""
+    return lo[0] == hi[0] and lo[0] in (PINF, NINF)
+
+
 def judge_makes_interval(k, ks, fmt, e, ins, outs, values):
-    """The constructor of an interval: canonical; the interval of the bounds given when they
-    describe a nonempty one; the whole line when a bound is a NaN; the empty set otherwise."""
+    """The constructor of an interval: canonical; the whole line when a bound is a NaN or both are
+    the same infinity (decided on 2026-11-20); otherwise the empty set when the bounds are reversed;
+    otherwise the interval of the bounds given."""
     lo, hi = ins[e['from']['lower']], ins[e['from']['upper']]      # of one limb, or two (stage B1)
     zl, zu = outs[e['lower']], outs[e['upper']]
     state = interval_state(fmt, zl, zu)
     if state is None:
         return ['makes_interval (canonical)']
-    if NAN in (lo[0][0], hi[0][0]):
+    if NAN in (lo[0][0], hi[0][0]) or same_infinity(lo, hi):
         ok = zl[0] == NINF and zu[0] == PINF and all(finite(v) and v[2] == 0 for v in zl[1:] + zu[1:])
-    elif xle(bound_value(lo), bound_value(hi)) and lo[0] != PINF and hi[0] != NINF:
-        ok = state != 'empty' and bound_value(zl) == bound_value(lo) and bound_value(zu) == bound_value(hi)
+    elif not xle(bound_value(lo), bound_value(hi)):
+        ok = state == 'empty'                # reversed bounds: lo > hi
     else:
-        ok = state == 'empty'
+        ok = state != 'empty' and bound_value(zl) == bound_value(lo) and bound_value(zu) == bound_value(hi)
     return [] if ok else ['makes_interval']
 
 
@@ -706,12 +713,12 @@ def judge_ball_from_interval(k, ks, fmt, e, ins, outs):
     state = ball_state(fmt, oc, orad)
     if state is None:
         return ['makes_ball (canonical)']
-    if NAN in (lo[0], hi[0]):
-        want = 'line'
-    elif xle(bound_value([lo]), bound_value([hi])) and lo != PINF and hi != NINF:
-        want = 'finite' if finite(lo) and finite(hi) else 'line'
+    if NAN in (lo[0], hi[0]) or same_infinity([lo], [hi]):
+        want = 'line'                   # the same infinity twice too (decided on 2026-11-20)
+    elif not xle(bound_value([lo]), bound_value([hi])):
+        want = 'empty'                  # reversed bounds: lo > hi
     else:
-        want = 'empty'
+        want = 'finite' if finite(lo) and finite(hi) else 'line'
     if state != want:
         return [f'makes_ball ({want} expected)']
     if want != 'finite':
@@ -1168,7 +1175,14 @@ class NonFinite(unittest.TestCase):
         self.assertEqual(judge_makes_interval(mk, ks, fmt, mk.ensures[0], {'lo': [NaN], 'hi': [one]}, whole, None), [])
         self.assertEqual(judge_makes_interval(mk, ks, fmt, mk.ensures[0], {'lo': [two], 'hi': [one]}, whole, None),
                          ['makes_interval'])
-        self.assertEqual(judge_makes_interval(mk, ks, fmt, mk.ensures[0], {'lo': [PINF], 'hi': [PINF]}, empty, None), [])
+        # The same infinity twice is the whole line (decided on 2026-11-20); +inf above a finite bound
+        # and [+inf, -inf] are reversed bounds, the empty set.
+        self.assertEqual(judge_makes_interval(mk, ks, fmt, mk.ensures[0], {'lo': [PINF], 'hi': [PINF]}, whole, None), [])
+        self.assertEqual(judge_makes_interval(mk, ks, fmt, mk.ensures[0], {'lo': [NINF], 'hi': [NINF]}, empty, None),
+                         ['makes_interval'])
+        self.assertEqual(judge_makes_interval(mk, ks, fmt, mk.ensures[0], {'lo': [PINF], 'hi': [one]}, empty, None), [])
+        self.assertEqual(judge_makes_interval(mk, ks, fmt, mk.ensures[0], {'lo': [PINF], 'hi': [NINF]}, whole, None),
+                         ['makes_interval'])
         # A ball made from an interval (makes_ball with a lower and an upper bound: the claim of
         # ball_from_interval_2).
         fb = ks['ball_from_interval_2'].ensures[0]
@@ -1187,6 +1201,10 @@ class NonFinite(unittest.TestCase):
                                           None), [])
         self.assertEqual(judge_makes_ball(None, ks, fmt, fb, {'lo': [two], 'hi': [one]}, {'cw': [NaN, NaN], 'rw': [NaN]},
                                           None), [])
+        self.assertEqual(judge_makes_ball(None, ks, fmt, fb, {'lo': [NINF], 'hi': [NINF]}, {'cw': [ZERO, ZERO], 'rw': [PINF]},
+                                          None), [])
+        self.assertEqual(judge_makes_ball(None, ks, fmt, fb, {'lo': [PINF], 'hi': [PINF]}, {'cw': [NaN, NaN], 'rw': [NaN]},
+                                          None), ['makes_ball (line expected)'])
         lb = ks['ball_lower_as_1']
         self.assertEqual(judge_set_bound(lb, ks, fmt, lb.ensures[0], {'c': [two], 'r': [one]}, {'l': [one]}, None), [])
         self.assertEqual(judge_set_bound(lb, ks, fmt, lb.ensures[0], {'c': [NaN], 'r': [NaN]}, {'l': [PINF]}, None), [])
@@ -1254,6 +1272,10 @@ class NonFinite(unittest.TestCase):
                                               {'zl': [NINF, ZERO], 'zu': [PINF, ZERO]}, None), [])
         self.assertEqual(judge_makes_interval(mk2, ks, fmt, mk2.ensures[0], {'lo': [two, ZERO], 'hi': [one, ZERO]},
                                               {'zl': [NINF, ZERO], 'zu': [PINF, ZERO]}, None), ['makes_interval'])
+        self.assertEqual(judge_makes_interval(mk2, ks, fmt, mk2.ensures[0], {'lo': [PINF, ZERO], 'hi': [PINF, NZERO]},
+                                              {'zl': [NINF, ZERO], 'zu': [PINF, ZERO]}, None), [])
+        self.assertEqual(judge_makes_interval(mk2, ks, fmt, mk2.ensures[0], {'lo': [NINF, ZERO], 'hi': [NINF, ZERO]},
+                                              {'zl': [PINF, ZERO], 'zu': [NINF, ZERO]}, None), ['makes_interval'])
         rep = ks['make_2'].ensures[0]
         self.assertEqual(judge_represents(ks['make_2'], ks, fmt, rep, {'a': [NINF]}, {'x': [NINF, ZERO]}, None), [])
         self.assertEqual(judge_represents(ks['make_2'], ks, fmt, rep, {'a': [NINF]}, {'x': [NINF, NaN]}, None),

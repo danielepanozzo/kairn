@@ -15,11 +15,14 @@
    interval_add_1_correct, interval_sub_1_correct and interval_mul_1_correct.
 
    - interval_make_1, for any two values of T (interval_make_1_correct): the result is a
-     canonical interval; it is the interval [lo, hi] when lo <= hi, lo < +infinity and
-     hi > -infinity; the whole line when a bound is a NaN, whatever the other bound is;
-     and the empty set otherwise, in particular for reversed bounds and for the two pairs
-     of equal infinities (interval_make_1_reversed, interval_make_1_equal_infinities).
-     For every precision.
+     canonical interval; it is the whole line when a bound is a NaN, whatever the other
+     bound is, and when both bounds are the same infinity, [+infinity, +infinity] or
+     [-infinity, -infinity] (interval_make_1_equal_infinities: the owner's decision of
+     2026-11-20, a value from the program that is not finite never makes the empty set;
+     these two pairs gave the empty set before, as in IEEE 1788); the empty set when the
+     bounds are reversed, hi < lo (interval_make_1_reversed); and the interval [lo, hi]
+     otherwise, that is when lo <= hi, lo < +infinity and hi > -infinity. The three cases
+     are disjoint and cover every pair of values. For every precision.
 
    - interval_neg_1, for a canonical operand: I1 the result is canonical; I2 it is empty
      exactly when the operand is; I3 it contains -x for every member x; I4 it is exact;
@@ -128,6 +131,13 @@ Lemma xle_antisym : forall a b : xreal, xle a b = true -> xle b a = true -> a = 
 Proof.
 intros [|[|]|x] [|[|]|y]; cbn; intros H K; try discriminate H; try discriminate K; trivial.
 f_equal. apply Rle_antisym; now apply Rle_bool_inv.
+Qed.
+
+(* Two extended real numbers in order are not in the reverse order. *)
+Lemma xle_not_xlt : forall a b : xreal, xle a b = true -> xlt b a = true -> False.
+Proof.
+intros [|[|]|x] [|[|]|y] H K; cbn in H, K; try discriminate H; try discriminate K.
+apply Rle_bool_inv in H. apply Rlt_bool_inv in K. lra.
 Qed.
 
 (** * Members *)
@@ -933,21 +943,27 @@ Qed.
 (** * interval_make_1 *)
 
 (* interval_make_1, for any two values lo and hi of T: the result is a canonical
-   interval; it is [lo, hi] when lo <= hi, lo < +infinity and hi > -infinity (the bounds
-   returned stand for the same extended real numbers as lo and hi; a zero may change its
-   sign); it is the whole line when a bound is a NaN, whatever the other bound is; and
-   it is the empty set otherwise. For every precision. *)
+   interval; it is the whole line when a bound is a NaN, whatever the other bound is, and
+   when both bounds are the same infinity (the owner's decision of 2026-11-20); the empty
+   set when the bounds are reversed, hi < lo; and [lo, hi] when lo <= hi, lo < +infinity
+   and hi > -infinity (the bounds returned stand for the same extended real numbers as lo
+   and hi; a zero may change its sign). For every precision.
+   In the listing, v says that the pair describes a nonempty interval, which is then
+   returned, guarded; otherwise rv = lt(hi, lo), false with a NaN, chooses between the
+   empty set (reversed bounds) and the whole line (a NaN bound, or the same infinity
+   twice: the pairs that are neither nonempty nor reversed). *)
 Theorem interval_make_1_correct :
   forall lo hi : float,
   let '(zl, zu) := interval_make_1 lo hi in
   interval_1 zl zu /\
   (xnonempty (xval lo) (xval hi) -> xval zl = xval lo /\ xval zu = xval hi) /\
-  (nan lo \/ nan hi -> zl = infinity prec emax true /\ zu = infinity prec emax false) /\
-  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> interval_empty_1 zl zu).
+  (nan lo \/ nan hi \/ (exists s : bool, xval lo = XInf s /\ xval hi = XInf s) ->
+   zl = infinity prec emax true /\ zu = infinity prec emax false) /\
+  (xlt (xval hi) (xval lo) = true -> interval_empty_1 zl zu).
 Proof.
 intros lo hi. unfold IeeeModel.interval_make_1. cbv zeta.
-rewrite le_xval, 2!lt_xval, 2!eq_self, 2!(guard_nan prec emax nan_plus).
-rewrite neg_pinf. rewrite 2!(xval_guard prec emax nan_plus).
+rewrite le_xval, !lt_xval.
+rewrite neg_pinf. rewrite !(xval_guard prec emax nan_plus).
 change (xv pinf) with (XInf false). change (xv ninf) with (XInf true).
 destruct (andb (andb (xle (xv lo) (xv hi)) (xlt (xv lo) (XInf false)))
                (xlt (XInf true) (xv hi))) eqn:V; cbv beta iota.
@@ -959,22 +975,26 @@ destruct (andb (andb (xle (xv lo) (xv hi)) (xlt (xv lo) (XInf false)))
   split; [right; unfold interval_nonempty_1; now rewrite 2!(xval_guard prec emax nan_plus)|].
   split; [intros _; split; apply (xval_guard prec emax nan_plus)|].
   split.
-  + unfold nan. intros [K|K]; congruence.
-  + intros _ _ K. elim (K N).
+  + unfold nan. intros [K|[K|[s [K1 K2]]]]; [congruence|congruence|].
+    rewrite K1, K2 in N. destruct N as [_ [W1 W2]]. destruct s; cbn in W1, W2; discriminate.
+  + intros K. elim (xle_not_xlt _ _ V1 K).
 - (* it describes none *)
   assert (NN : ~ xnonempty (xv lo) (xv hi)).
   { intros [N1 [N2 N3]]. rewrite N1, N2, N3 in V. discriminate V. }
-  destruct (is_nan prec emax lo) eqn:N1; [|destruct (is_nan prec emax hi) eqn:N2];
-    cbn [andb negb].
-  + split; [right; split; [reflexivity|split; reflexivity]|].
-    split; [intros K; elim (NN K)|split; [intros _; split; reflexivity|]].
-    intros K. elim K. exact N1.
-  + split; [right; split; [reflexivity|split; reflexivity]|].
-    split; [intros K; elim (NN K)|split; [intros _; split; reflexivity|]].
-    intros _ K. elim K. exact N2.
-  + split; [left; split; reflexivity|].
-    split; [intros K; elim (NN K)|split; [|intros _ _ _; split; reflexivity]].
-    unfold nan. intros [K|K]; congruence.
+  destruct (xlt (xv hi) (xv lo)) eqn:R; cbv beta iota.
+  + (* reversed bounds: the empty set *)
+    split; [left; split; reflexivity|].
+    split; [intros K; elim (NN K)|].
+    split; [|intros _; split; reflexivity].
+    unfold nan. intros [K|[K|[s [K1 K2]]]].
+    * rewrite (xval_nan prec emax lo K) in R. destruct (xv hi) as [|[|]|r]; discriminate R.
+    * rewrite (xval_nan prec emax hi K) in R. discriminate R.
+    * rewrite K1, K2 in R. destruct s; discriminate R.
+  + (* a NaN bound, or the same infinity twice: the whole line *)
+    split; [right; split; [reflexivity|split; reflexivity]|].
+    split; [intros K; elim (NN K)|].
+    split; [intros _; split; reflexivity|].
+    intros K. discriminate K.
 Qed.
 
 (* Reversed bounds, hi < lo, give the empty set. *)
@@ -983,26 +1003,21 @@ Corollary interval_make_1_reversed :
   let '(zl, zu) := interval_make_1 lo hi in interval_empty_1 zl zu.
 Proof.
 intros lo hi H. generalize (interval_make_1_correct lo hi).
-destruct (interval_make_1 lo hi) as [zl zu]. intros [_ [_ [_ K]]]. apply K.
-- unfold nan. intros N. rewrite (xval_nan prec emax lo N) in H.
-  destruct (xv hi) as [|[|]|r]; discriminate H.
-- unfold nan. intros N. rewrite (xval_nan prec emax hi N) in H. discriminate H.
-- intros [N _]. revert H N. destruct (xv lo) as [|[|]|a]; destruct (xv hi) as [|[|]|b]; xcase.
+destruct (interval_make_1 lo hi) as [zl zu]. intros [_ [_ [_ K]]]. exact (K H).
 Qed.
 
-(* The two pairs of equal infinities, [+infinity, +infinity] and [-infinity, -infinity],
-   give the empty set. *)
+(* The two pairs of the same infinity, [+infinity, +infinity] and [-infinity, -infinity],
+   give the whole line: the owner's decision of 2026-11-20, a value from the program that
+   is not finite never makes the empty set. (They gave the empty set before, as in
+   IEEE 1788, where an infinity is no real number and so no point.) *)
 Corollary interval_make_1_equal_infinities :
   forall s : bool,
   let '(zl, zu) := interval_make_1 (B754_infinity prec emax s) (B754_infinity prec emax s) in
-  interval_empty_1 zl zu.
+  zl = infinity prec emax true /\ zu = infinity prec emax false.
 Proof.
 intros s. generalize (interval_make_1_correct (B754_infinity prec emax s) (B754_infinity prec emax s)).
 destruct (interval_make_1 (B754_infinity prec emax s) (B754_infinity prec emax s)) as [zl zu].
-intros [_ [_ [_ K]]]. apply K.
-- unfold nan. intros N. discriminate N.
-- unfold nan. intros N. discriminate N.
-- intros [_ [N1 N2]]. destruct s; [discriminate N2|discriminate N1].
+intros [_ [_ [K _]]]. apply K. right. right. exists s. split; reflexivity.
 Qed.
 
 (** * interval_neg_1 *)

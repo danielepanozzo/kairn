@@ -530,6 +530,13 @@ class Tool(unittest.TestCase):
         self.assertIn("$x$ is not a NaN: a finite normalized pair or $(\\pm\\infty, \\pm 0)$", page)
         self.assertIn("| $A / u^2$ |", page)
         self.assertIn("$Z$ is the whole line, $[-\\infty, +\\infty]$", self.page("interval_make_1"))
+        # The same infinity twice is the whole line, for an interval and for a ball from an interval
+        # (the owner's decision of 2026-11-20); reversed bounds the empty set.
+        for name in ("interval_make_1", "interval_make_2", "ball_from_interval_2"):
+            page = self.page(name)
+            self.assertIn("or both are the same infinity ($[+\\infty, +\\infty]$, $[-\\infty, -\\infty]$): $Z$ is "
+                          "the whole line", page)
+            self.assertIn("Otherwise, if the bounds are reversed, $l_o > h_i$", page)
         self.assertIn("If an operand is a zero: $d$ is a zero", self.page("mul_dir_1"))
         # A constant of a claim this script cannot read is an error, never a guess.
         self.change("add_down_2_2", lambda k: k["ensures"][1].update(rel="up(v)"))

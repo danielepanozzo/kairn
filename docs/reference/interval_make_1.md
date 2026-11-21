@@ -6,7 +6,7 @@ Kernel `interval_make_1` · proved · [all operations](index.md) · [how to read
 
 ## What it computes
 
-The interval of two values of `T`, or the whole line when a bound is a NaN, or the empty set when they describe none:
+The interval of two values of `T`; the whole line when a bound is a NaN or both are the same infinity, and the empty set when they are reversed:
 
 $$Z = [l_o, h_i].$$
 
@@ -31,9 +31,9 @@ $$Z = [l_o, h_i].$$
 For operands that satisfy the requirements, finite, infinite or NaN:
 
 - The result $Z = [z_l, z_u]$ is a canonical interval.
-- If $l_o \le h_i$, $l_o < +\infty$ and $h_i > -\infty$: $Z$ is $[l_o, h_i]$, the same extended real numbers (a zero may change its sign).
-- If a bound is a NaN, whatever the other: $Z$ is the whole line, $[-\infty, +\infty]$.
-- Otherwise ($l_o > h_i$, $[+\infty, +\infty]$, $[-\infty, -\infty]$): $Z$ is the empty set, $(+\infty, -\infty)$.
+- If a bound is a NaN, whatever the other, or both are the same infinity ($[+\infty, +\infty]$, $[-\infty, -\infty]$): $Z$ is the whole line, $[-\infty, +\infty]$.
+- Otherwise, if the bounds are reversed, $l_o > h_i$ ($[+\infty, -\infty]$, and $l_o = +\infty$ or $h_i = -\infty$ with the other finite, among them): $Z$ is the empty set, $(+\infty, -\infty)$.
+- Otherwise ($l_o \le h_i$, $l_o < +\infty$ and $h_i > -\infty$): $Z$ is $[l_o, h_i]$, the same extended real numbers (a zero may change its sign).
 
 Proved for every binary format with a precision of at least 1 bit, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 
@@ -54,7 +54,7 @@ Which of them the proof of `interval_make_1_correct` depends on is not copied he
 
 ## Source
 
-**Algorithm:** constructor of an interval (Milestone 2 listing). **License:** algorithm and proof: MIT.
+**Algorithm:** constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20). **License:** algorithm and proof: MIT.
 
 ## Listing
 
@@ -62,10 +62,13 @@ From [`gen/kernels/interval_make_1.kernel`](https://github.com/danielepanozzo/ka
 
 ```
 # An interval from two values of T supplied by the program, guarded (rule R3); milestone2.md,
-# "Interval kernels", "Values of an interval": [lo, hi] when lo <= hi, lo < +inf and hi > -inf;
-# the whole line when a bound is a NaN, whatever the other bound is (decided on 2026-11-20: a NaN
-# says that something failed upstream, and the empty set must not come out of that); the empty set
-# otherwise, that is for lo > hi, [+inf, +inf] and [-inf, -inf]. For every precision.
+# "Interval kernels", "Values of an interval". The whole line when a bound is a NaN, whatever the
+# other bound is, and when both bounds are the same infinity, [+inf, +inf] or [-inf, -inf]: a value
+# from the program that is not finite never makes the empty set (decided on 2026-11-20 for a NaN, a
+# NaN saying that something failed upstream, and on the same day for an infinite point, which IEEE
+# 1788 makes the empty set). Otherwise the empty set when lo > hi (rv, false with a NaN), [+inf, -inf]
+# and lo = +inf with a finite hi among them; otherwise [lo, hi], [-inf, +inf], [lo, +inf] and
+# [-inf, hi] included. For every precision.
 
 gl = guard(lo)
 gu = guard(hi)
@@ -75,11 +78,9 @@ mi = neg(const inf)
 nu = lt(mi, gu)
 va = and(ok, nl)
 v  = and(va, nu)
-ql = eq(gl, gl)
-qu = eq(gu, gu)
-nn = and(ql, qu)
-el = select(nn, const inf, mi)
-eu = select(nn, mi, const inf)
+rv = lt(gu, gl)
+el = select(rv, const inf, mi)
+eu = select(rv, mi, const inf)
 zl = select(v, gl, el)
 zu = select(v, gu, eu)
 ```

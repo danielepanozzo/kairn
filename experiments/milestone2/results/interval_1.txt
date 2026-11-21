@@ -1,12 +1,12 @@
 format        intervals  pairs judged per operation   unbounded results of bounded operands (add, sub, mul)   products one step beyond
 fp:2:-2:1           230      52900                     11010  11010  14855                          19476
-             constructor, every pair of values: 229 give their interval, 43 with a NaN bound the whole line, 212 the empty set
+             constructor, every pair of values: 229 give their interval, 43 with a NaN bound and 2 of the same infinity the whole line, 210 the empty set
 fp:2:-3:1           324     104976                     19398  19398  23415                          38943
-             constructor, every pair of values: 323 give their interval, 51 with a NaN bound the whole line, 302 the empty set
+             constructor, every pair of values: 323 give their interval, 51 with a NaN bound and 2 of the same infinity the whole line, 300 the empty set
 fp:3:-4:1          1652      76520 (sample)             8932   9001  22285                          19820
-             constructor, every pair of values: 1651 give their interval, 115 with a NaN bound the whole line, 1598 the empty set
+             constructor, every pair of values: 1651 give their interval, 115 with a NaN bound and 2 of the same infinity the whole line, 1596 the empty set
 fp:4:-6:1         10584     145840 (sample)             3896   3865  15492                          11634
-             constructor, every pair of values: 10583 give their interval, 291 with a NaN bound the whole line, 10442 the empty set
+             constructor, every pair of values: 10583 give their interval, 291 with a NaN bound and 2 of the same infinity the whole line, 10440 the empty set
 fp:3:-6:0          2144      61440 (sample)             4996   5014   7666                          16404
-             constructor, every pair of values: 2143 give their interval, 131 with a NaN bound the whole line, 2082 the empty set
+             constructor, every pair of values: 2143 give their interval, 131 with a NaN bound and 2 of the same infinity the whole line, 2080 the empty set
 every statement held

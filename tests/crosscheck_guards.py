@@ -406,6 +406,28 @@ IV_I5_NEAR = ("bounded_when holds: largest max|member| / limit",
 IV_I6 = ("I6 applies: an operand is [0, 0]", "I6 applies: [0, 0] against an unbounded operand")
 IV_MAKE = ("given: an interval", "given: a point", "given: an unbounded interval",
            "given: a NaN bound", "given: reversed bounds", "given: equal infinities")
+# The constructors of intervals and the ball from an interval (the rule of 2026-11-20: a NaN bound
+# or the same infinity twice gives the whole line, reversed bounds the empty set): every cell of
+# the table of architecture.md, "The constructors on every pair of values", lo the row and hi the
+# column, a and b finite (oracle/kairn_oracle/intervals.py, MAKE_CELLS); for bounds of two limbs
+# also reversed bounds with equal leading limbs, and, in a random run (an enumeration has one
+# zero), the same infinity with second limbs that are zeros of opposite signs.
+IV_MAKE_CELLS = tuple("given lo %s, hi %s%s" % (r, c, t) for r in ("NaN", "-inf", "a", "+inf")
+                      for c in ("NaN", "-inf", "b", "+inf")
+                      for t in ((", a <= b", ", a > b") if (r, c) == ("a", "b") else ("",)))
+IV_MAKE_REVERSED_LEAD = "given reversed bounds, equal leading limbs"
+IV_MAKE_INF_TAILS = "given the same infinity, second limbs zeros of opposite signs"
+
+
+def iv_make_needs(kernel, e, exhaustive):
+    """The classes a constructor's entry e must have seen (iv_needs)."""
+    need = list(IV_MAKE) + list(IV_MAKE_CELLS)
+    limbs = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
+    if e.get("kind") == "makes_interval" and limbs.get((e.get("from") or {}).get("lower")) == 2:
+        need.append(IV_MAKE_REVERSED_LEAD)
+        if not exhaustive:
+            need.append(IV_MAKE_INF_TAILS)
+    return need
 IV_BALLS = ("ball: empty", "ball: whole line", "ball: finite")
 IV_SET = ("an operand empty", "both operands empty", "nonempty operands, disjoint",
           "nonempty operands, touching (one common point)", "nonempty operands, overlapping",
@@ -534,9 +556,9 @@ def iv_needs(kernel, e, a):
         for c in e.get("exact_when") or []:
             need += ["exact_when holds", "exact_when fails: %s" % iv_condition_text(c)]
     elif kind == "makes_interval":
-        need += IV_MAKE
+        need += iv_make_needs(kernel, e, getattr(a, "exhaustive", False))
     elif kind == "makes_ball" and set(e.get("from") or {}) == {"lower", "upper"}:
-        need += IV_MAKE
+        need += iv_make_needs(kernel, e, getattr(a, "exhaustive", False))
         if e.get("midpoint_when"):
             need += ("midpoint_when holds", "midpoint_when fails")
     elif kind in ("set_bound", "interval_of_ball"):

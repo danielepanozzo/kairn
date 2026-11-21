@@ -635,13 +635,16 @@ FORM(interval_to_ball_1_marked, put(out, B1<T>(kairn::unverified(iv1(in)))))
 FORM(ball_to_interval_1_to_interval, put(out, I1<T>(AS(ball_to_interval_1, ball1(in)))))
 FORM(ball_to_interval_1_marked, put(out, I1<T>(kairn::unverified(ball1(in)))))
 // The bounds of an interval of two limbs as numbers of T, which are to_down_2 and to_up_2 of the
-// bound: on a line of to_down_2 whose x is not a NaN, the interval [x, +inf] (empty for x = +inf,
-// whose lower bound is then +inf, which is to_down(+inf)); [-inf, x] for to_up_2. The rounding
-// otherwise.
+// bound: on a line of to_down_2 whose x is not a NaN, the interval [x, +inf]; for x = +inf, which
+// [+inf, +inf] would make the whole line (decided on 2026-11-20), the empty set made from the
+// reversed bounds [+inf, -inf], whose lower bound is +inf. [-inf, x] for to_up_2, and for
+// x = -inf the same empty set, whose upper bound is -inf. The rounding otherwise.
 FORM(to_down_2_interval_lower_as, if (in[0] != in[0]) { out[0] = kairn::to_down(two(in)); return; } ++reached;
-     out[0] = I2<T>(two(in), E2<T>(std::numeric_limits<T>::infinity())).template lower_as<T>())
+     const T inf = std::numeric_limits<T>::infinity();
+     out[0] = (in[0] == inf ? I2<T>(two(in), E2<T>(-inf)) : I2<T>(two(in), E2<T>(inf))).template lower_as<T>())
 FORM(to_up_2_interval_upper_as, if (in[0] != in[0]) { out[0] = kairn::to_up(two(in)); return; } ++reached;
-     out[0] = I2<T>(E2<T>(-std::numeric_limits<T>::infinity()), two(in)).template upper_as<T>())
+     const T inf = std::numeric_limits<T>::infinity();
+     out[0] = (in[0] == -inf ? I2<T>(E2<T>(inf), two(in)) : I2<T>(E2<T>(-inf), two(in))).template upper_as<T>())
 
 // Balls: the functions of the interface they share with intervals.
 FORM(ball_from_interval_2_from_interval, put(out, B2<T>::from_interval(AS(ball_from_interval_2, in[0]), in[1])))

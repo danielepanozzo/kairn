@@ -46,7 +46,9 @@
      ball that contains [lo, hi], and when lo / 2 and hi / 2 are numbers of T its center is
      (lo + hi) / 2 exactly and its radius RU((hi - lo) / 2); for lo <= hi with an infinite
      bound it is the whole line; when a bound is a NaN it is the whole line, whatever the
-     other bound is; otherwise it is the empty ball.
+     other bound is, and so it is when both bounds are the same infinity (the owner's
+     decision of 2026-11-20; they gave the empty ball before); when the bounds are reversed,
+     hi < lo, it is the empty ball.
      The finite case (ball_from_interval_2_finite). The halves hl = RN(lo / 2) and
      hu = RN(hi / 2) are within eta / 2 of lo / 2 and hi / 2 (scale_error of MulPow2.v), and
      at most Omega / 2 in magnitude, so their exact sum by two_sum_ord does not overflow.
@@ -764,17 +766,18 @@ Definition bfi_radius (lo hi : float) : float :=
 
 (* What the listing returns: for a pair that describes an interval, the center and the
    radius above when both bounds are finite and the whole line otherwise; for a pair that
-   describes none, the empty ball, or the whole line when a bound is a NaN. *)
+   describes none, the empty ball when the bounds are reversed (rv = lt(hi, lo)), and the
+   whole line otherwise, that is when a bound is a NaN or both are the same infinity. *)
 Lemma ball_from_interval_2_eq :
   forall lo hi : float,
   ball_from_interval_2 lo hi
   = (let v := andb (andb (fle (guard lo) (guard hi)) (flt (guard lo) pinf))
                    (flt (neg pinf) (guard hi)) in
      let f := andb (flt (neg pinf) (guard lo)) (flt (guard hi) pinf) in
-     let nn := andb (feq (guard lo) (guard lo)) (feq (guard hi) (guard hi)) in
-     (if v then (if f then fst (bfi_center lo hi) else pzero) else (if nn then cnan else pzero),
-      if v then (if f then snd (bfi_center lo hi) else pzero) else (if nn then cnan else pzero),
-      if v then (if f then bfi_radius lo hi else pinf) else (if nn then cnan else pinf))).
+     let rv := flt (guard hi) (guard lo) in
+     (if v then (if f then fst (bfi_center lo hi) else pzero) else (if rv then cnan else pzero),
+      if v then (if f then snd (bfi_center lo hi) else pzero) else (if rv then cnan else pzero),
+      if v then (if f then bfi_radius lo hi else pinf) else (if rv then cnan else pinf))).
 Proof.
 intros lo hi. unfold IeeeModel.ball_from_interval_2, bfi_center, bfi_radius.
 destruct (two_sum_ord (prod (guard lo) half) (prod (guard hi) half)) as [c0 c1].
@@ -922,8 +925,9 @@ Qed.
 (* ball_from_interval_2, for any two values lo and hi of T, from precision 2: the result
    is a canonical ball; a finite ball that contains [lo, hi] when lo <= hi are finite, with
    the midpoint for its center and the half-width rounded up for its radius when both
-   halvings are exact; the whole line when lo <= hi and a bound is infinite, and when a
-   bound is a NaN; the empty ball otherwise. *)
+   halvings are exact; the whole line when lo <= hi and a bound is infinite, when a bound
+   is a NaN, and when both bounds are the same infinity (the owner's decision of
+   2026-11-20); the empty ball when the bounds are reversed, hi < lo. *)
 Theorem ball_from_interval_2_ieee :
   (2 <= prec)%Z -> forall lo hi : float,
   let '(cw0, cw1, rw) := ball_from_interval_2 lo hi in
@@ -936,12 +940,12 @@ Theorem ball_from_interval_2_ieee :
    (val cw0 + val cw1) = (val lo + val hi) / 2 /\
    val rw = RU emin prec ((val hi - val lo) / 2)) /\
   (xnonempty (xval lo) (xval hi) -> ~ (finite lo /\ finite hi) -> ball_whole_2 cw0 cw1 rw) /\
-  (nan lo \/ nan hi -> ball_whole_2 cw0 cw1 rw) /\
-  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> ball_empty_2 cw0 cw1 rw).
+  (nan lo \/ nan hi \/ (exists s : bool, xval lo = XInf s /\ xval hi = XInf s) ->
+   ball_whole_2 cw0 cw1 rw) /\
+  (xlt (xval hi) (xval lo) = true -> ball_empty_2 cw0 cw1 rw).
 Proof.
 intros Hp lo hi. rewrite ball_from_interval_2_eq. cbv zeta.
-rewrite (le_xval prec emax), !(lt_xval prec emax), !(eq_self prec emax).
-rewrite !(guard_nan prec emax nan_plus), !(xval_guard prec emax nan_plus).
+rewrite (le_xval prec emax), !(lt_xval prec emax), !(xval_guard prec emax nan_plus).
 rewrite (neg_pinf prec emax nan_opp).
 change (xv pinf) with (XInf false). change (xv ninf) with (XInf true).
 assert (Wh : ball_whole_2 pzero pzero pinf).
@@ -953,6 +957,11 @@ destruct (andb (andb (xle (xv lo) (xv hi)) (xlt (xv lo) (XInf false)))
   destruct V as [V1 V2].
   assert (N : xnonempty (xv lo) (xv hi)) by (split; [exact V1|split; [exact V2|exact V3]]).
   destruct (xnonempty_not_nan prec emax lo hi N) as [N1 N2].
+  (* neither a NaN nor the same infinity twice, nor reversed *)
+  assert (NW : ~ (nan lo \/ nan hi \/ (exists s : bool, xval lo = XInf s /\ xval hi = XInf s))).
+  { unfold nan. intros [K|[K|[s [K1 K2]]]]; [congruence|congruence|].
+    rewrite K1, K2 in N. destruct N as [_ [W1 W2]]. destruct s; cbn in W1, W2; discriminate. }
+  assert (NR : xlt (xval hi) (xval lo) <> true) by exact (xle_not_xlt _ _ V1).
   destruct (andb (xlt (XInf true) (xv lo)) (xlt (xv hi) (XInf false))) eqn:Ff; cbv beta iota.
   + (* a bounded one *)
     apply andb_true_iff in Ff. destruct Ff as [W1 W2].
@@ -973,8 +982,8 @@ destruct (andb (andb (xle (xv lo) (xv hi)) (xlt (xv lo) (XInf false)))
     { intros _ _ _. split; [exact BF|]. intros x Hx. right. split; [exact BF|exact (Cont x Hx)]. }
     split; [intros _ _ _ FL FH; exact (Mid FL FH)|].
     split; [intros _ K; elim K; split; assumption|].
-    split; [intros [K|K]; unfold nan in K; congruence|].
-    intros _ _ K. elim (K N).
+    split; [intros K; elim (NW K)|].
+    intros K. elim (NR K).
   + (* a bound is infinite: the whole line *)
     assert (NotBoth : ~ (fin lo /\ fin hi)).
     { intros [Flo Fhi].
@@ -984,32 +993,30 @@ destruct (andb (andb (xle (xv lo) (xv hi)) (xlt (xv lo) (XInf false)))
     split; [intros _ Flo Fhi; elim NotBoth; split; assumption|].
     split; [intros _ _; exact Wh|].
     split; [intros _; exact Wh|].
-    intros _ _ K. elim (K N).
+    intros K. elim (NR K).
 - (* it describes none *)
   assert (NN : ~ xnonempty (xv lo) (xv hi)).
   { intros [N1 [N2 N3]]. rewrite N1, N2, N3 in V. discriminate V. }
-  destruct (is_nan prec emax lo) eqn:N1; [|destruct (is_nan prec emax hi) eqn:N2];
-    cbn [andb negb]; cbv beta iota.
-  + split; [right; left; exact Wh|].
-    split; [intros K; elim (NN K)|].
-    split; [intros K; elim (NN K)|].
-    split; [intros K; elim (NN K)|].
-    split; [intros _; exact Wh|].
-    intros K. elim K. exact N1.
-  + split; [right; left; exact Wh|].
-    split; [intros K; elim (NN K)|].
-    split; [intros K; elim (NN K)|].
-    split; [intros K; elim (NN K)|].
-    split; [intros _; exact Wh|].
-    intros _ K. elim K. exact N2.
-  + assert (Em : ball_empty_2 cnan cnan cnan).
+  destruct (xlt (xv hi) (xv lo)) eqn:R; cbv beta iota.
+  + (* reversed bounds: the empty ball *)
+    assert (Em : ball_empty_2 cnan cnan cnan).
     { split; [|split]; exact (proj2_sig nan_const). }
     split; [right; right; exact Em|].
     split; [intros K; elim (NN K)|].
     split; [intros K; elim (NN K)|].
     split; [intros K; elim (NN K)|].
-    split; [intros [K|K]; unfold nan in K; congruence|].
-    intros _ _ _. exact Em.
+    split; [|intros _; exact Em].
+    unfold nan. intros [K|[K|[s [K1 K2]]]].
+    * rewrite (xval_nan prec emax lo K) in R. destruct (xv hi) as [|[|]|r]; discriminate R.
+    * rewrite (xval_nan prec emax hi K) in R. discriminate R.
+    * rewrite K1, K2 in R. destruct s; discriminate R.
+  + (* a NaN bound, or the same infinity twice: the whole line *)
+    split; [right; left; exact Wh|].
+    split; [intros K; elim (NN K)|].
+    split; [intros K; elim (NN K)|].
+    split; [intros K; elim (NN K)|].
+    split; [intros _; exact Wh|].
+    intros K. discriminate K.
 Qed.
 
 End IeeeBallConvert.

@@ -555,15 +555,23 @@ never judged.
 - **`encloses` with `"balls": {}`** (the finite domain only): the operands are points,
   $\lvert\text{set} - \text{center}\rvert \le$ radius: the judge of `encloses`, whose range is then
   the one value.
-- **`makes_interval`**: the output canonical; the interval of the given bounds when $lo \le hi$,
-  $lo < +\infty$, $hi > -\infty$; the whole line when a given bound is a NaN, whatever the other;
-  the empty set otherwise. Two limbs: canonical inputs, a NaN bound is $(\mathrm{NaN},
-  \mathrm{NaN})$, and the values are compared (a normalized pair is unique for its value).
-- **`makes_ball` from an interval** (`from` with `lower` and `upper`, one limb each): the whole line
-  for a NaN bound; for $lo \le hi$, $lo < +\infty$, $hi > -\infty$ a finite ball containing
-  $[lo, hi]$ when both are finite (with every `midpoint_when` condition, `half_in_format`: the bound
-  is even as a multiple of $\eta$, its center $(lo + hi)/2$ exactly and its radius
-  $\mathrm{RU}((hi - lo)/2)$), the whole line when a bound is infinite; the empty set otherwise.
+- **`makes_interval`**: the output canonical, and by the first case that applies (architecture.md,
+  "The constructors on every pair of values"): the whole line when a given bound is a NaN,
+  whatever the other, or when both are the same infinity, $[+\infty, +\infty]$ or
+  $[-\infty, -\infty]$; the empty set when the bounds are reversed, $lo > hi$ (which includes
+  $[+\infty, -\infty]$, $[+\infty, h]$ and $[l, -\infty]$); otherwise the interval of the given
+  bounds. Two limbs: canonical inputs, a bound is a NaN or an infinity when its leading limb is one
+  (a NaN bound is $(\mathrm{NaN}, \mathrm{NaN})$, an infinite one $(\pm\infty, \pm 0)$, so that
+  $(+\infty, 0)$ and $(+\infty, -0)$ are the same infinity twice), and the values are compared (a
+  normalized pair is unique for its value: $(1, 2^{-4})$ and $(1, 0)$ are reversed). The same
+  infinity twice gave the empty set, as in IEEE 1788, until the owner's decision of 2026-11-20.
+- **`makes_ball` from an interval** (`from` with `lower` and `upper`, one limb each), by the first
+  case that applies: the whole line for a NaN bound, whatever the other, or for the same infinity
+  twice (center zero, of either sign, radius $+\infty$); the empty set for reversed bounds; and
+  for the other pairs, $lo \le hi$, a finite ball containing $[lo, hi]$ when both are finite (with
+  every `midpoint_when` condition, `half_in_format`: the bound is even as a multiple of $\eta$, its
+  center $(lo + hi)/2$ exactly and its radius $\mathrm{RU}((hi - lo)/2)$), the whole line when a
+  bound is infinite. The same infinity twice gave the empty set until 2026-11-20.
 - **`set_bound`**: $+\infty$ (`below`) or $-\infty$ (`above`) for an empty ball; otherwise at most
   (at least) the set's greatest lower (least upper) bound $t$, and with `tight` the rounding of $t$
   down (up) in the format with overflow, within `steps`. **`interval_of_ball`**: the output
@@ -635,7 +643,12 @@ same fraction of $\lvert\text{output} - \text{value}\rvert$, `value zero`, `outp
 exactly` or not, `absolute term larger than the relative term`, `exact_when holds` and fails, and
 in the extended domain `a zero operand`, `an infinite operand, none zero`, `finite operands,
 finite output` and `infinite output`; for the constructors the given states (`given: an interval`,
-`a point`, `an unbounded interval`, `a NaN bound`, `reversed bounds`, `equal infinities`,
+`a point`, `an unbounded interval`, `a NaN bound`, `reversed bounds`, `equal infinities`, by the
+first case that applies, so that $[\mathrm{NaN}, +\infty]$ is a NaN bound), the cell of the table
+of architecture.md's case analysis (`given lo R, hi C`, R one of `NaN`, `-inf`, `a`, `+inf` and C
+one of `NaN`, `-inf`, `b`, `+inf`, `given lo a, hi b, a <= b` and `a > b` for two finite bounds:
+17 cells), for two limbs `given reversed bounds, equal leading limbs` and `given the same
+infinity, second limbs zeros of opposite signs` (the signs read from the line's text),
 `midpoint_when holds` and `fails`); for `set_bound` and `interval_of_ball` `ball: empty`, `whole
 line`, `finite` with the sides' classes; for `interval_set` `an operand empty`, `both operands
 empty`, `nonempty operands, disjoint`, `touching (one common point)`, `overlapping`; for
@@ -1537,15 +1550,25 @@ of the sums, `sub_down_1` and `add_up_1` of the second limb, `two_sum_ord`), `mu
 intervals of two limbs, the hulls and intersections, `interval_mid_rad_1`, `interval_to_ball_1`,
 `ball_to_interval_1`, `interval_split_1`, `ball_from_interval_2`, the bounds of a ball, and
 `ball_narrow_2_1`, which the page does not list: its leading limb as the center and the radius
-`next_up(r + |c1|)` (the whole line when that is not finite). Its variants plant one fault each
-(`refrun --list-variants`, `iv-...`): `iv-sum-nearest`, `iv-empty-whole`, `iv-mul-zero-nan`,
-`iv-mul-step-large`, `iv-neg-not-swapped`, `iv-make-nan-empty` (the rule of IEEE 1788),
-`iv-make-reversed`, `iv2-no-zero-rule`, `iv2-wrong-side`, `iv2-wide` ($4d$: valid, not tight),
-`iv2-keep-nonfinite`, `iv-mulext-inf-sign`, `iv-hull-as-intersection`, `iv-intersection-no-empty`,
-`iv-mid-no-move`, `iv-mid-radius-small`, `iv-mid-radius-large`, `iv-tball-halfline`,
-`iv-split-gap`, `iv-ballbound-nearest`, `iv-ballbound-empty-nan`, `iv-fromint-no-step`,
-`iv-fromint-nan-empty`, `iv-narrow-no-tail`, `iv-ball-no-term` ($d = H$: caught in `binary64` and
-`binary32`; in a format of few exponents every error of a sum is below $H$) and
+`next_up(r + |c1|)` (the whole line when that is not finite). The constructors
+(`interval_make_1`, `interval_make_2`, `ball_from_interval_2`) are the page's listings of the rule
+of 2026-11-20: a pair that describes no interval is the empty set when it is reversed,
+`rv = lt(gu, gl)` (for two limbs the comparison of two limbs, `lt_2_2`, written out), and the whole
+line otherwise. Its variants plant one fault each (`refrun --list-variants`, `iv-...`):
+`iv-sum-nearest`, `iv-empty-whole`, `iv-mul-zero-nan`, `iv-mul-step-large`, `iv-neg-not-swapped`,
+`iv-make-nan-empty` (a NaN bound gives the empty set: the rule of IEEE 1788), `iv-make-inf-empty`
+(the same infinity twice gives the empty set, $(+\infty, 0)$ with $(+\infty, -0)$ too: the rule
+before 2026-11-20, and IEEE 1788's), `iv-make-reversed` (reversed bounds kept),
+`iv-make-reversed-whole` (no test of reversed bounds: they give the whole line, $[+\infty, -\infty]$
+and $[+\infty, 1]$ too), `iv2-make-reversed-lead` (`interval_make_2` tells reversed bounds by their
+leading limbs, so $(1, 2^{-4})$ with $(1, 0)$ gives the whole line), `iv2-no-zero-rule`,
+`iv2-wrong-side`, `iv2-wide` ($4d$: valid, not tight), `iv2-keep-nonfinite`,
+`iv-mulext-inf-sign`, `iv-hull-as-intersection`, `iv-intersection-no-empty`, `iv-mid-no-move`,
+`iv-mid-radius-small`, `iv-mid-radius-large`, `iv-tball-halfline`, `iv-split-gap`,
+`iv-ballbound-nearest`, `iv-ballbound-empty-nan`, `iv-fromint-no-step`, `iv-fromint-nan-empty`,
+`iv-fromint-inf-empty`, `iv-fromint-reversed-whole` (the three faults of the constructors of an
+interval, in the ball from an interval), `iv-narrow-no-tail`, `iv-ball-no-term` ($d = H$: caught
+in `binary64` and `binary32`; in a format of few exponents every error of a sum is below $H$) and
 `iv-to-interval-nearest`. The C++ runner has no kernel of Milestone 2.
 **Stage B.** `refrun` runs the steps of the maps as the claims' sources list them (`sub_1_1`, the
 entry forms of the sums with both operands through `guard`, `axpy_step_1` as `mul_1_1` then
@@ -1630,7 +1653,13 @@ the special values of 1788 exchanged, an output group judged only where the firs
 `up( )` read as its argument, a malformed claim accepted, a stratum aimed elsewhere; for the
 constructors under the rule of 2026-11-20, a NaN radius read as the empty set, the center tested
 before the radius, the class of the radius or the sign of a zero radius not counted, a center
-never left finite by `badradius`; for stage B, a finite element from an operand that is not finite or beyond $\Omega$
+never left finite by `badradius`; for the constructors of intervals and the ball from an interval
+under the rule of 2026-11-20, a NaN bound or the same infinity twice read as the empty set (the
+old rule), reversed bounds read as the whole line, bounds of two limbs compared by their leading
+limbs, the same infinity classed as reversed bounds, a NaN bound tested after the same infinity,
+an `infinities` stratum that never gives the same infinity twice, a cell of their table not
+counted, counted with its bounds exchanged or with $a \le b$ and $a > b$ swapped, the zeros of
+opposite signs or reversed bounds of equal leading limbs of two limbs not counted; for stage B, a finite element from an operand that is not finite or beyond $\Omega$
 accepted, the second pass or the flag not checked, the step's verdict ignored or its arguments
 reversed, a requirement of a map or a convolution not checked, a step's requirement or value not
 compared, a coefficient without its last term or not judged, the lengths swapped, a convolution
@@ -1720,9 +1749,9 @@ follows from both parts being canonical.
 | `claims_reading_wave6` | the fixture of the interval kernels unreadable, or its requirements, kinds and fields read otherwise (`interval()`, `not_nan()`, `tight`, `bounded_when`, `zero_factor`, `midpoint_when`, an `encloses` with no ball); 60 malformed kernels not set aside (requirements on one input, of bounds of other limbs, in the finite domain, missing, listed twice, a two-limb `not_nan()` without `canonical()`, an interval sharing a ball's input; `outward` with another side, of a one-limb output, a malformed `up( )`, a name in a constant, a missing kernel in `unit( )`, a fractional power, a negative constant, an empty or malformed `exact_when`, `zero_factor` in the finite domain or false, `abs` missing; `encloses_interval` with a name twice, `abs`, an input in the set, bounds that are not an `interval()`, an interval named like an input, an unknown `tight`, negative steps, `when` on a sum, `rounded` on two limbs, `bounded_when` over another set or malformed, `bounded_exactly` false, `zero_factor` on a sum, an output twice, a field missing, `exact_when` of an unknown side or as a list; the other kinds with a bound that is not a requirement, another side, a ball without `ball()`, an unknown `tight`, `set` or `special`, a name in a constant, `smallest_radius` not true, an output twice, `tight` missing, one part, `midpoint_when` on another input or empty; `zero_factor` not true or in the finite domain; balls `{}` in the extended domain, with and without the `finite_when` that domain asks of `encloses`); a constant's `unit( )` of an unreadable kernel not setting its kernels aside; `midpoint_when` on a ball from a center |
 | `iv_constants` | the constants of a claim with `up( )` other than Python's Fractions with an `up( )` of their own (the smallest number of the format not below, by a walk over its numbers) on 1 500 random ones (300 with `--quick`), the precedence of `-` and `^`; a malformed constant read, an `up( )` beyond $\Omega$ evaluated; the `rel` and `abs` of the bounds of two limbs other than the closed forms $A$ and $B$ of milestone2.md built from the reference runner's own $E$, $G$, $H$ in five formats, and other than the page's table ($8.000000000000009u^2$, $2.000000000000002N$; $10.000000000000012u^2$, $2.000000000000003N$; $8.0000049u^2$, $10.0000068u^2$) |
 | `iv_reference` | the reference runner failing an interval kernel, or an invalid or suspicious case, on 1 200 random cases (300) of each in `binary64`, `binary32` and `fp:4:-6:1`; an entry never applied; a class the guards ask for never reached in `binary64` or `binary32` (empty, unbounded and bounded operands and results, `bounded_when` both ways and within a factor 2 below its limit, a rounded bound inexact or exact or a step beyond, `product_large` both ways, `exact_when` holding, I6, a NaN bound, reversed bounds, equal infinities, the states of a ball, disjoint and touching intervals, both empty, every class of $X$, an odd bound, a zero against an infinity); a fraction of the bounds of two limbs or of the midpoint below 1/4 |
-| `iv_exhaustive` | the reference runner failing any case of tiny formats (`fp:2:-2:1`, `fp:3:-2:-1`, `fp:4:-3:-2`; the product of two-limb intervals on a restricted domain), every line of the extended domain judged; eight planted faults not caught there, or caught in another entry |
-| `iv_planted` | a planted fault of the interval kernels not caught in the kernels and entries where it belongs (in `binary64`, `binary32` and `fp:4:-6:1`, `iv-ball-no-term` in the first two), caught in a kernel that does not use it, or seen as an invalid or suspicious case |
-| `iv_judge` | one of 131 hand-written lines judged otherwise than worked out by hand (each failure in its statement: I1 to I6 (a negation one step wider than exact failing I4 alone), the parts of `ball_of_interval` and `interval_of_ball`, the kind otherwise; results at and one unit past the bounds of two limbs; the zero rule; $0 \cdot \infty$; the special values of 1788; the constructors on every kind of given bounds), one of 8 lines outside the requirements not invalid; an infinite lower bound of `mul_dir_2_2` beside a finite upper one not judging the upper, or not suspicious; both infinite not non-finite |
+| `iv_exhaustive` | the reference runner failing any case of tiny formats (`fp:2:-2:1`, `fp:3:-2:-1`, `fp:4:-3:-2`; the product of two-limb intervals on a restricted domain), every line of the extended domain judged; a cell of the table of the constructors never met in the enumerations of the three (or, for `interval_make_2`, reversed bounds of equal leading limbs; zeros of opposite signs met in an enumeration, which has one zero); twelve planted faults not caught there, or caught in another entry (of the constructors: a NaN bound or the same infinity twice giving the empty set, reversed bounds the whole line, reversed bounds of two limbs told by their leading limbs) |
+| `iv_planted` | a planted fault of the interval kernels not caught in the kernels and entries where it belongs (in `binary64`, `binary32` and `fp:4:-6:1`, `iv-ball-no-term` in the first two), caught in a kernel that does not use it, or seen as an invalid or suspicious case; a fault of the constructors not failing every line of its streams that it is about (`iv-make-inf-empty` and `iv-fromint-inf-empty` the same infinity twice, for `interval_make_2` also with second limbs that are zeros of opposite signs; `iv-make-nan-empty` and `iv-fromint-nan-empty` a NaN bound; `iv-make-reversed-whole` and `iv-fromint-reversed-whole` reversed bounds with an infinity, $[+\infty, -\infty]$, $[+\infty, h]$, $[l, -\infty]$; `iv2-make-reversed-lead` reversed bounds of equal leading limbs), or the streams without such lines in a format |
+| `iv_judge` | one of 169 hand-written lines judged otherwise than worked out by hand (each failure in its statement: I1 to I6 (a negation one step wider than exact failing I4 alone), the parts of `ball_of_interval` and `interval_of_ball`, the kind otherwise; results at and one unit past the bounds of two limbs; the zero rule; $0 \cdot \infty$; the special values of 1788; the constructors on every kind of given bounds: a NaN, the same infinity twice, $(+\infty, 0)$ with $(+\infty, -0)$, reversed bounds infinite or of equal leading limbs, $[+0, -0]$), one of 8 lines outside the requirements not invalid; one of 24 lines of the constructors counted under another given state than worked out by hand; a line of each cell of the table of the constructors (architecture.md, "The constructors on every pair of values", written out in the test) for each of the three, 51 lines, judged otherwise than the table says or counting another cell, its wrong result passing; the classes of two limbs counted otherwise on 9 lines; an infinite lower bound of `mul_dir_2_2` beside a finite upper one not judging the upper, or not suspicious; both infinite not non-finite |
 | `iv_gen` | case $i$ alone not case $i$ of its run, a seed not mattering, an invalid case, a stratum of the header without a case or a case of none, a common stratum missing, `oddeta` giving an odd multiple of $\eta$ below $2N$ in fewer than three quarters of its cases (`interval_mid_rad_1`, `ball_from_interval_2`), in every interval kernel in two formats; the enumeration of intervals other than every canonical interval of the definition, counted in three tiny formats; a restriction dropping the infinite bounds or the empty set |
 | `iv_merging` | the merge of the summaries of two halves of streams of four interval kernels differs from the whole |
 | `iv_scaled` | with `rel` and `abs` of the outward bounds times 1 024 a failure, or a largest fraction of the bound not exactly 1 024 times smaller; divided by 8 no failure |

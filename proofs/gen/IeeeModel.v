@@ -245,7 +245,7 @@ Definition ball_add_1_full (cx rx cy ry : float) : float * float :=
   let rw := if e then r else q in
   (cw, rw).
 
-(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). *)
+(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). *)
 Definition ball_from_interval_2 (lo hi : float) : float * float * float :=
   let gl := guard lo in
   let gu := guard hi in
@@ -274,11 +274,9 @@ Definition ball_from_interval_2 (lo hi : float) : float * float * float :=
   let k0 := if f then c0 else pzero in
   let k1 := if f then c1 else pzero in
   let s := if f then r else pinf in
-  let ql := eq gl gl in
-  let qu := eq gu gu in
-  let nn := andb ql qu in
-  let wc := if nn then cnan else pzero in
-  let wr := if nn then cnan else pinf in
+  let rv := lt gu gl in
+  let wc := if rv then cnan else pzero in
+  let wr := if rv then cnan else pinf in
   let cw0 := if v then k0 else wc in
   let cw1 := if v then k1 else wc in
   let rw := if v then s else wr in
@@ -542,7 +540,7 @@ Definition interval_intersection_1 (xl xu yl yu : float) : float * float :=
   let zu := if ok then h else mi in
   (zl, zu).
 
-(* interval_make_1: constructor of an interval (Milestone 2 listing). *)
+(* interval_make_1: constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20). *)
 Definition interval_make_1 (lo hi : float) : float * float :=
   let gl := guard lo in
   let gu := guard hi in
@@ -552,11 +550,9 @@ Definition interval_make_1 (lo hi : float) : float * float :=
   let nu := lt mi gu in
   let va := andb ok nl in
   let v := andb va nu in
-  let ql := eq gl gl in
-  let qu := eq gu gu in
-  let nn := andb ql qu in
-  let el := if nn then pinf else mi in
-  let eu := if nn then mi else pinf in
+  let rv := lt gu gl in
+  let el := if rv then pinf else mi in
+  let eu := if rv then mi else pinf in
   let zl := if v then gl else el in
   let zu := if v then gu else eu in
   (zl, zu).
@@ -1333,7 +1329,7 @@ Definition interval_intersection_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : f
   let zu1 := if ok then h1 else pzero in
   (zl0, zl1, zu0, zu1).
 
-(* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing). *)
+(* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20). *)
 Definition interval_make_2 (lo0 lo1 hi0 hi1 : float) : float * float * float * float :=
   let ok := le_2_2 lo0 lo1 hi0 hi1 in
   let nl := lt lo0 pinf in
@@ -1341,11 +1337,9 @@ Definition interval_make_2 (lo0 lo1 hi0 hi1 : float) : float * float * float * f
   let nu := lt mi hi0 in
   let va := andb ok nl in
   let v := andb va nu in
-  let ql := eq lo0 lo0 in
-  let qu := eq hi0 hi0 in
-  let nn := andb ql qu in
-  let el := if nn then pinf else mi in
-  let eu := if nn then mi else pinf in
+  let rv := lt_2_2 hi0 hi1 lo0 lo1 in
+  let el := if rv then pinf else mi in
+  let eu := if rv then mi else pinf in
   let zl0 := if v then lo0 else el in
   let zl1 := if v then lo1 else pzero in
   let zu0 := if v then hi0 else eu in

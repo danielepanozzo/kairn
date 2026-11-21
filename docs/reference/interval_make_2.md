@@ -6,7 +6,7 @@ Kernel `interval_make_2` · proved · [all operations](index.md) · [how to read
 
 ## What it computes
 
-The interval of two values of `T`, or the whole line when a bound is a NaN, or the empty set when they describe none:
+The interval of two values of `T`; the whole line when a bound is a NaN or both are the same infinity, and the empty set when they are reversed:
 
 $$Z = [l_o, h_i].$$
 
@@ -33,9 +33,9 @@ A number of several limbs stands for their exact sum: $l_o = l_{o0} + l_{o1}$, $
 For operands that satisfy the requirements, finite, infinite or NaN:
 
 - The result $Z = [z_l, z_u]$ is a canonical interval.
-- If $l_o \le h_i$, $l_o < +\infty$ and $h_i > -\infty$: $Z$ is $[l_o, h_i]$, the same extended real numbers (a zero may change its sign).
-- If a bound is a NaN, whatever the other: $Z$ is the whole line, $[-\infty, +\infty]$.
-- Otherwise ($l_o > h_i$, $[+\infty, +\infty]$, $[-\infty, -\infty]$): $Z$ is the empty set, $(+\infty, -\infty)$.
+- If a bound is a NaN, whatever the other, or both are the same infinity ($[+\infty, +\infty]$, $[-\infty, -\infty]$): $Z$ is the whole line, $[-\infty, +\infty]$.
+- Otherwise, if the bounds are reversed, $l_o > h_i$ ($[+\infty, -\infty]$, and $l_o = +\infty$ or $h_i = -\infty$ with the other finite, among them): $Z$ is the empty set, $(+\infty, -\infty)$.
+- Otherwise ($l_o \le h_i$, $l_o < +\infty$ and $h_i > -\infty$): $Z$ is $[l_o, h_i]$, the same extended real numbers (a zero may change its sign).
 
 Proved for every binary format with a precision of at least 1 bit, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 
@@ -56,21 +56,22 @@ Which of them the proof of `interval_make_2_correct` depends on is not copied he
 
 ## Source
 
-**Algorithm:** constructor of an interval of two limbs (Milestone 2 listing). **License:** algorithm and proof: MIT.
+**Algorithm:** constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20). **License:** algorithm and proof: MIT.
 
 ## Listing
 
 From [`gen/kernels/interval_make_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/interval_make_2.kernel), the description the C++ and the formal model (`proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
-It calls [`le_2_2`](le_2_2.md).
+It calls [`le_2_2`](le_2_2.md), [`lt_2_2`](lt_2_2.md).
 
 ```
 # An interval from two canonical 2-limb values (milestone2.md, "Interval kernels", "Values of an
-# interval"): the listing of interval_make_1 on the comparisons of two limbs, le_2_2 for the order
-# of the bounds and the leading limbs for the tests against infinity and of a NaN (a canonical NaN
-# is all NaN). The values are limbs of objects, already canonical, so nothing is guarded. [lo, hi]
-# when lo <= hi, lo < +inf and hi > -inf, an infinite bound returned as (+-inf, 0); the whole line
-# when a bound is a NaN, whatever the other bound is (decided on 2026-11-20); the empty set
-# otherwise, that is for lo > hi, [+inf, +inf] and [-inf, -inf]. For every precision.
+# interval"): the listing of interval_make_1 on the comparisons of two limbs, le_2_2 and lt_2_2 for
+# the order of the bounds and the leading limbs for the tests against infinity (a canonical NaN is
+# all NaN, and a comparison with it is false). The values are limbs of objects, already canonical,
+# so nothing is guarded. The whole line when a bound is a NaN, whatever the other bound is, and when
+# both bounds are the same infinity (decided on 2026-11-20, as for interval_make_1); otherwise the
+# empty set when lo > hi (rv); otherwise [lo, hi], an infinite bound returned as (+-inf, 0). For
+# every precision.
 
 ok  = le_2_2(lo0, lo1, hi0, hi1)
 nl  = lt(lo0, const inf)
@@ -78,11 +79,9 @@ mi  = neg(const inf)
 nu  = lt(mi, hi0)
 va  = and(ok, nl)
 v   = and(va, nu)
-ql  = eq(lo0, lo0)
-qu  = eq(hi0, hi0)
-nn  = and(ql, qu)
-el  = select(nn, const inf, mi)
-eu  = select(nn, mi, const inf)
+rv  = lt_2_2(hi0, hi1, lo0, lo1)
+el  = select(rv, const inf, mi)
+eu  = select(rv, mi, const inf)
 zl0 = select(v, lo0, el)
 zl1 = select(v, lo1, 0)
 zu0 = select(v, hi0, eu)
