@@ -12,7 +12,12 @@ $$m \implies X \subseteq Y.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `Y.contains(X)` | `Interval<T, 1>`, `Interval<T, 1>` | `bool` | whether $Y \supseteq X$; `constexpr`; does not round |
+| `ieee1788::subset(X, Y)` | `Interval<T, 1>`, `Interval<T, 1>` | `bool` | the relation subset of IEEE 1788; `constexpr`; does not round |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

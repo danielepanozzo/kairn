@@ -37,8 +37,8 @@
 #   rational_runner.cpp (../crosscheck.py compiled). The full tier has more cases, through the runner of every
 #   flag set too, and rational.cpp built with every flag set.
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
-#   api.example.accurate_sums.*, api.example.intervals.* and api.example.packed_dot.* also compare
-#   it with the text their tutorials show.
+#   api.example.accurate_sums.*, api.example.intervals.*, api.example.bisection.* and
+#   api.example.packed_dot.* also compare it with the text their tutorials show.
 # - api.packed.FORM, api.soa.FORM, api.example.packed_dot.FORM: Packed (packed.hpp) against the
 #   scalar operations, bit for bit, lane by lane (packed.cpp); the containers of soa.hpp (soa.cpp);
 #   and the tutorial's vector loop, whose results are checked against the bound it states; each in
@@ -887,6 +887,15 @@ foreach(_i RANGE 0 ${_last} 2)
       "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/intervals.txt"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
   set_tests_properties(api.example.intervals${_suffix} PROPERTIES LABELS "api;example")
+  # The tutorial on bisection (docs/tutorials/bisection.md), the same way: one algorithm for an
+  # interval and two balls, whose output is the same text everywhere (headers-pred).
+  _kairn_api_program(kairn-example-bisection${_target_suffix} "${PROJECT_SOURCE_DIR}/docs/examples/cpp/bisection.cpp"
+    ${_option})
+  add_test(NAME api.example.bisection${_suffix}
+    COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-bisection${_target_suffix}>"
+      "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/bisection.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+  set_tests_properties(api.example.bisection${_suffix} PROPERTIES LABELS "api;example")
 endforeach()
 # The tutorial on a vector loop (docs/tutorials/vector-loop.md), in every form of Packed (above):
 # the same text in each, which the program checks against an exact reference and the bound it

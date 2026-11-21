@@ -696,12 +696,10 @@ set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
 # maxima"), whose public functions come with BallVector too; and the kernels of the ball vectors
 # (architecture.md, "Ball vectors"), which only the folds of BallVector call. They are
 # cross-checked like every kernel; the public interface has no form of them. (The interval kernels left this list with
-# include/kairn/interval.hpp: the public interface reaches each, or lists it as a building block.)
-# And the kernels of the enclosure interface of stage B2 (_enclosure_kernels above: predicates,
-# comparisons, set operations of a ball, conversions of two limbs), which the oracle judges since
-# stage B2 and which no public operation calls yet (include/kairn/interval.hpp holds the places of
-# three, interval_mid_rad_2, interval_split_2 and ball_to_interval_2, with kernel_not_generated_yet):
-# each leaves this list when runner.cpp maps a public form to it.
+# include/kairn/interval.hpp: the public interface reaches each, or lists it as a building block.
+# The 53 kernels of the enclosure interface of stage B2, _enclosure_kernels above, left it with the
+# functions of interval.hpp and ball.hpp that call them: predicates, comparisons, relations of IEEE
+# 1788, set operations of a ball, conversions of two limbs; runner.cpp maps a public form to each.)
 set(KAIRN_NOT_PUBLIC_YET
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
   sum_fast_entry_step_2 fold_finish_1 fold_finish_2
@@ -712,8 +710,7 @@ set(KAIRN_NOT_PUBLIC_YET
   acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
   bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2 bv_center_entry_1 bv_center_2
   bv_make_radius bv_make_finish neg_1 bv_neg_radius bv_mul_pow2_step_1 bv_mul_pow2_step_2
-  bv_mul_pow2_radius conv_radius bv_conv_finish
-  ${_enclosure_kernels})
+  bv_mul_pow2_radius conv_radius bv_conv_finish)
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than

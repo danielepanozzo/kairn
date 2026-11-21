@@ -14,7 +14,11 @@ A number of several limbs stands for their exact sum: $c_x = c_{x0} + c_{x1}$, $
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.hull(Y)` | `Ball<T, 2>`, `Ball<T, 2>` | `Ball<T, 2>` | contains both, not claimed the smallest; with an empty operand, the other as it is; rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr` |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

@@ -12,7 +12,14 @@ $$m \implies t \in X.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.contains(t)` | `Interval<T, 1>`, `T` | `bool` | `constexpr`; does not round |
+| `X.contains(t)` | `Interval<T, 1>`, `Expansion<T, 1>` | `bool` | `constexpr`; does not round |
+| `member(t, X)` | `T`, `Interval<T, 1>` | `Trit` | as a `Trit`: yes or no, never unknown; `constexpr`; does not round |
+| `member(t, X)` | `Expansion<T, 1>`, `Interval<T, 1>` | `Trit` | as a `Trit`: yes or no, never unknown; `constexpr`; does not round |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

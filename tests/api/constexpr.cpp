@@ -443,8 +443,10 @@ struct Intervals {
     static_assert(sizeof(I1) == 2 * sizeof(T) && sizeof(I2) == 4 * sizeof(T));
     static_assert(std::is_convertible_v<T, I1> && std::is_convertible_v<E1, I1> && std::is_convertible_v<T, I2>);
     static_assert(std::is_convertible_v<E2, I2> && !std::is_constructible_v<I2, I1> && !std::is_constructible_v<I1, I2>);
-    static_assert(std::is_constructible_v<I1, B1> && !std::is_convertible_v<B1, I1> && !std::is_constructible_v<I2, B2>);
-    static_assert(std::is_constructible_v<B1, I1> && !std::is_convertible_v<I1, B1> && !std::is_constructible_v<B2, I2>);
+    static_assert(std::is_constructible_v<I1, B1> && !std::is_convertible_v<B1, I1> &&
+                  std::is_constructible_v<I2, B2> == bounds::ball_to_interval_2<T>::proved && !std::is_convertible_v<B2, I2>);
+    static_assert(std::is_constructible_v<B1, I1> && !std::is_convertible_v<I1, B1> &&
+                  std::is_constructible_v<B2, I2> == bounds::interval_to_ball_2<T>::proved && !std::is_convertible_v<I2, B2>);
     static_assert(std::is_constructible_v<B1, B2> && !std::is_convertible_v<B2, B1> && !std::is_constructible_v<B2, B1>);
     static_assert(!std::is_constructible_v<B1, I2> && !std::is_constructible_v<I1, B2>);
     // The operations exist exactly when the kernel they call is proved, between intervals of one
@@ -453,7 +455,8 @@ struct Intervals {
     static_assert(can_sub<I1, I1> == bounds::interval_sub_1<T>::proved && can_mul<I2, I2> == bounds::interval_mul_2<T>::proved);
     static_assert(can_mul<I1, I1> == bounds::interval_mul_1<T>::proved && can_negate<I2> == bounds::interval_neg_2<T>::proved);
     static_assert(can_hull<I1, I1> == bounds::interval_hull_1<T>::proved && can_midpoint<I1> == bounds::interval_mid_rad_1<T>::proved);
-    static_assert(can_split<I1> == bounds::interval_split_1<T>::proved && !can_midpoint<I2> && !can_split<I2>);
+    static_assert(can_split<I1> == bounds::interval_split_1<T>::proved && can_midpoint<I2> == bounds::interval_mid_rad_2<T>::proved);
+    static_assert(can_split<I2> == bounds::interval_split_2<T>::proved);
     static_assert(std::is_constructible_v<I1, T, T> == bounds::interval_make_1<T>::proved);
     static_assert(!can_add<I1, I2> && !can_add<I1, T> && !can_add<T, I1> && !can_mul<I2, E2> && !can_sub<I1, B1>);
     static_assert(!can_add<I1, kairn::Interval<float, 1>> || std::is_same_v<T, float>);
@@ -559,6 +562,161 @@ struct Intervals {
 
 template struct Intervals<double>;
 template struct Intervals<float>;
+
+// The enclosure interface of stage B2 (headers-pred): the predicates, the member and subset tests,
+// the three-valued comparisons, the relations of IEEE 1788 and the set operations of a ball, where
+// they are constexpr (every one of an interval; of a ball of one limb all but the split; of a ball
+// of two limbs the signs), against values computed by hand, the empty set, the whole line and
+// half-lines among them; the types, which exist exactly when the kernel they call is proved, take
+// operands of one T and K only, and have no comparison operators. enclosure_run_time checks the
+// others, and these on operands read through volatile objects.
+template <class X, class Y>
+concept can_three_way = requires(X x, Y y) { kairn::less(x, y); };
+template <class X, class Y>
+concept can_contain = requires(X x, Y y) { x.contains(y); };
+template <class X, class Y>
+concept can_equal = requires(X x, Y y) { x == y; };
+template <class X, class Y>
+concept can_subset = requires(X x, Y y) { kairn::ieee1788::subset(x, y); };
+template <class X>
+concept can_split_ball = requires(X x) { x.split(); };
+template <class T>
+struct Enclosure {
+    using E1 = kairn::Expansion<T, 1>;
+    using E2 = kairn::Expansion<T, 2>;
+    using B1 = kairn::Ball<T, 1>;
+    using B2 = kairn::Ball<T, 2>;
+    using I1 = kairn::Interval<T, 1>;
+    using I2 = kairn::Interval<T, 2>;
+    using Trit = kairn::Trit;
+    using L = std::numeric_limits<T>;
+    static constexpr T u = L::epsilon() / 2;
+    static constexpr T eta = L::denorm_min();
+    static constexpr T omega = (L::max)();
+    static constexpr T inf = L::infinity();
+    static constexpr T nan = L::quiet_NaN();
+    static constexpr Trit yes = Trit::yes, no = Trit::no, unknown = Trit::unknown;
+    static constexpr bool is(const I2& x, T l0, T l1, T h0, T h1) {
+        return x.lower().limb[0] == l0 && x.lower().limb[1] == l1 && x.upper().limb[0] == h0 && x.upper().limb[1] == h1;
+    }
+
+    // The types: a Trit of one byte, which converts to no bool; the parts of a split and a midpoint
+    // with its radius, aggregates of their members.
+    static_assert(sizeof(Trit) == 1 && std::is_same_v<std::underlying_type_t<Trit>, signed char>);
+    static_assert(!std::is_convertible_v<Trit, bool> && !std::is_constructible_v<bool, Trit>);
+    static_assert(int(Trit::no) == -1 && int(Trit::unknown) == 0 && int(Trit::yes) == 1);
+    static_assert(kairn::certainly(yes) && !kairn::certainly(unknown) && !kairn::certainly(no));
+    static_assert(kairn::possibly(yes) && kairn::possibly(unknown) && !kairn::possibly(no));
+    static_assert(std::is_trivially_copyable_v<kairn::Split<I1>> && std::is_trivially_copyable_v<kairn::Split<B2>>);
+    static_assert(std::is_trivially_copyable_v<kairn::MidRad<T, 2>> && std::is_aggregate_v<kairn::MidRad<T, 1>>);
+    // The operations exist exactly when their kernel is proved, between sets of one type, T and K;
+    // a point is a member, never converted to a set; no comparison operator of sets.
+    static_assert(can_three_way<I1, I1> == bounds::interval_less_1<T>::proved && can_three_way<B2, B2> == bounds::ball_less_2<T>::proved);
+    static_assert(!can_three_way<I1, I2> && !can_three_way<I1, B1> && !can_three_way<B1, B2> && !can_three_way<I1, T> && !can_three_way<B1, E1>);
+    static_assert(can_three_way<kairn::Unverified<I1>, I1> && can_three_way<B1, kairn::Unverified<B1>> && !can_three_way<kairn::Unverified<I1>, B1>);
+    static_assert(can_contain<I1, I1> && can_contain<I1, T> && can_contain<I1, E1> && can_contain<I2, T> && can_contain<I2, E2>);
+    static_assert(can_contain<B1, B1> && can_contain<B2, T> && can_contain<B2, E2> && !can_contain<I1, B1> && !can_contain<B1, I1>);
+    static_assert(!can_contain<I1, I2> && !can_contain<B2, B1> && !can_contain<I1, E2> && !can_contain<B1, E2>);
+    static_assert(!can_contain<I1, kairn::Interval<float, 1>> || std::is_same_v<T, float>);
+    static_assert(!can_less<I1, I1> && !can_less<B2, B2> && !can_equal<I1, I1> && !can_equal<B1, B1>);
+    static_assert(can_subset<I2, I2> && !can_subset<B1, B1> && !can_subset<I1, I2>);
+    static_assert(can_split_ball<B1> == bounds::ball_split_1<T>::proved && can_split_ball<B2> == bounds::ball_split_2<T>::proved);
+
+    // Intervals of one limb. The predicates: exact, false for the empty set but is_empty.
+    static_assert(I1::empty().is_empty() && !I1(T(1), T(2)).is_empty() && !I1::whole().is_empty());
+    static_assert(I1::whole().is_whole() && !I1(T(1), inf).is_whole() && !I1::empty().is_whole() && I1(nan).is_whole());
+    static_assert(I1(T(1), T(2)).certainly_positive() && I1(T(1), inf).certainly_positive() && !I1(T(0), T(2)).certainly_positive());
+    static_assert(I1(T(-2), T(-1)).certainly_negative() && !I1(T(-2), T(0)).certainly_negative() && !I1::whole().certainly_negative());
+    static_assert(I1(T(0), T(0)).certainly_zero() && !I1(T(0), eta).certainly_zero() && !I1::empty().certainly_zero());
+    static_assert(!I1::empty().certainly_positive() && !I1::empty().certainly_negative());
+    // The member test: members are real numbers, so an infinity is a member of none, and a NaN.
+    static_assert(I1(T(1), T(2)).contains(T(1)) && I1(T(1), T(2)).contains(T(2)) && !I1(T(1), T(2)).contains(T(3)));
+    static_assert(I1::whole().contains(T(0)) && !I1::whole().contains(inf) && !I1(T(1), inf).contains(inf));
+    static_assert(!I1::empty().contains(T(0)) && !I1(T(1), T(2)).contains(nan) && !I1::whole().contains(-inf));
+    static_assert(I1(T(1), T(2)).contains(E1(T(1.5))) && I1(T(1), T(2)).contains(unverified(T(2))));
+    static_assert(kairn::member(T(1.5), I1(T(1), T(2))) == yes && kairn::member(T(3), I1(T(1), T(2))) == no);
+    static_assert(kairn::member(inf, I1::whole()) == no && kairn::member(E1(T(1)), I1::empty()) == no);
+    // The subset test, with the readings of IEEE 1788 for the empty set.
+    static_assert(I1(T(0), T(3)).contains(I1(T(1), T(2))) && !I1(T(1), T(2)).contains(I1(T(0), T(3))));
+    static_assert(I1(T(1), T(2)).contains(I1::empty()) && I1::empty().contains(I1::empty()) && !I1::empty().contains(I1(T(1))));
+    static_assert(I1::whole().contains(I1(T(1), inf)) && !I1(T(1), inf).contains(I1::whole()) && I1::whole().contains(I1::whole()));
+    static_assert(I1(T(1), T(2)).contains(unverified(I1(T(1), T(2)))));
+    // The three-valued comparisons: exact; unknown with the empty set and the whole line.
+    static_assert(kairn::less(I1(T(1), T(2)), I1(T(3), T(4))) == yes && kairn::less(I1(T(3), T(4)), I1(T(1), T(2))) == no);
+    static_assert(kairn::less(I1(T(1), T(3)), I1(T(2), T(4))) == unknown && kairn::less(I1(T(1), T(2)), I1(T(2), T(3))) == unknown);
+    static_assert(kairn::less_equal(I1(T(1), T(2)), I1(T(2), T(3))) == yes && kairn::less_equal(I1(T(3)), I1(T(2))) == no);
+    static_assert(kairn::greater(I1(T(3), T(4)), I1(T(1), T(2))) == yes && kairn::greater_equal(I1(T(2)), I1(T(2))) == yes);
+    static_assert(kairn::less(I1::empty(), I1(T(1))) == unknown && kairn::less(I1(T(1)), I1::empty()) == unknown);
+    static_assert(kairn::less(I1::whole(), I1(T(1))) == unknown && kairn::less_equal(I1(-inf, T(0)), I1(T(0), inf)) == yes);
+    static_assert(kairn::equal(I1(T(2)), I1(T(2))) == yes && kairn::equal(I1(T(1), T(2)), I1(T(3), T(4))) == no);
+    static_assert(kairn::equal(I1(T(1), T(2)), I1(T(1), T(2))) == unknown && kairn::equal(I1::empty(), I1::empty()) == unknown);
+    static_assert(kairn::not_equal(I1(T(1), T(2)), I1(T(3), T(4))) == yes && kairn::not_equal(I1(T(2)), I1(T(2))) == no);
+    static_assert(kairn::less(unverified(I1(T(1))), I1(T(2))) == yes && kairn::not_equal(I1(T(1)), unverified(I1(T(1)))) == no);
+    // The relations of IEEE 1788, with its readings of the empty set.
+    static_assert(kairn::ieee1788::equal(I1(T(1), T(2)), I1(T(1), T(2))) && kairn::ieee1788::equal(I1::empty(), I1::empty()));
+    static_assert(!kairn::ieee1788::equal(I1::empty(), I1(T(1))) && !kairn::ieee1788::equal(I1(T(1), T(2)), I1(T(1), T(3))));
+    static_assert(kairn::ieee1788::subset(I1::empty(), I1(T(1))) && kairn::ieee1788::subset(I1(T(1), T(2)), I1(T(0), T(3))));
+    static_assert(!kairn::ieee1788::subset(I1(T(1)), I1::empty()) && kairn::ieee1788::subset(I1::whole(), I1::whole()));
+    static_assert(kairn::ieee1788::interior(I1(T(1), T(2)), I1(T(0), T(3))) && !kairn::ieee1788::interior(I1(T(0), T(2)), I1(T(0), T(3))));
+    static_assert(kairn::ieee1788::interior(I1(T(1), inf), I1(T(0), inf)) && kairn::ieee1788::interior(I1::whole(), I1::whole()));
+    static_assert(kairn::ieee1788::interior(I1::empty(), I1::empty()) && !kairn::ieee1788::interior(I1(T(1)), I1::empty()));
+    static_assert(kairn::ieee1788::disjoint(I1(T(1), T(2)), I1(T(3), T(4))) && !kairn::ieee1788::disjoint(I1(T(1), T(2)), I1(T(2), T(3))));
+    static_assert(kairn::ieee1788::disjoint(I1::empty(), I1::empty()) && kairn::ieee1788::disjoint(I1::whole(), I1::empty()));
+    static_assert(kairn::ieee1788::disjoint(unverified(I1(T(1))), I1(T(2))) && kairn::ieee1788::subset(I1(T(1)), unverified(I1(T(1)))));
+    // The midpoint and the radius together.
+    static_assert(I1(T(1), T(3)).mid_rad().midpoint.limb[0] == 2 && I1(T(1), T(3)).mid_rad().radius == 1);
+    static_assert(I1::whole().mid_rad().midpoint.limb[0] == 0 && I1(T(1), inf).mid_rad().radius == inf);
+
+    // Intervals of two limbs: the predicates, comparisons and relations decided on the second limb
+    // where it decides; the split, constexpr too.
+    static constexpr T above[2] = {1, u / 2};
+    static constexpr E2 x2 = E2::from_limbs(above);  // 1 + u/2
+    static_assert(I2::empty().is_empty() && !I2(x2).is_empty() && I2::whole().is_whole() && !I2(x2, E2(inf)).is_whole());
+    static_assert(I2(x2).certainly_positive() && I2(-x2).certainly_negative() && I2(T(0)).certainly_zero() && !I2(x2).certainly_zero());
+    static_assert(I2(T(1), T(2)).contains(x2) && !I2(x2, E2(T(2))).contains(T(1)) && I2(x2, E2(T(2))).contains(x2));
+    static_assert(!I2::whole().contains(inf) && !I2::empty().contains(T(0)) && I2(T(1), T(2)).contains(unverified(T(2))));
+    static_assert(I2(T(1), T(2)).contains(I2(x2)) && !I2(x2, E2(T(2))).contains(I2(T(1))) && I2(x2).contains(I2::empty()));
+    static_assert(kairn::member(T(1), I2(x2, E2(T(2)))) == no && kairn::member(x2, I2(T(1), T(2))) == yes);
+    static_assert(kairn::less(I2(T(1)), I2(x2)) == yes && kairn::less(I2(x2), I2(T(1))) == no && kairn::equal(I2(x2), I2(x2)) == yes);
+    static_assert(kairn::equal(I2(T(1)), I2(x2)) == no && kairn::less_equal(I2(T(1), x2), I2(x2, E2(T(2)))) == yes);
+    static_assert(kairn::ieee1788::interior(I2(x2), I2(T(1), T(2))) && !kairn::ieee1788::interior(I2(T(1), x2), I2(T(1), T(2))));
+    static_assert(kairn::ieee1788::disjoint(I2(T(1)), I2(x2)) && kairn::ieee1788::equal(I2(x2), I2(x2)));
+    static_assert(is(I2(T(1), T(3)).split().left, 1, 0, 2, 0) && is(I2(T(1), T(3)).split().right, 2, 0, 3, 0));
+    static_assert(is(I2::whole().split().left, -inf, 0, 0, 0) && is(I2::whole().split().right, 0, 0, inf, 0));
+    static_assert(is(I2(x2).split().left, 1, u / 2, 1, u / 2) && is(I2(x2).split().right, 1, u / 2, 1, u / 2));
+
+    // Balls of one limb: the member and subset tests and the comparisons, exact by exact pairs. On
+    // the empty set and the whole line their listings compute with a NaN or inf - inf before the
+    // selects that return their results, which GCC and Clang refuse in constant evaluation:
+    // enclosure_run_time checks those.
+    static_assert(B1(T(2), T(1)).contains(T(3)) && B1(T(2), T(1)).contains(T(1)) && !B1(T(2), T(1)).contains(T(3.5)));
+    static_assert(B1(T(1), 2 * u).contains(T(1) + 2 * u) && !B1(T(1), u).contains(T(1) + 2 * u) && B1(T(2), T(1)).contains(E1(T(2))));
+    static_assert(kairn::member(T(3), B1(T(2), T(1))) == yes && kairn::member(T(4), B1(T(2), T(1))) == no);
+    static_assert(B1(T(2), T(1)).contains(B1(T(2.5), T(0.5))) && !B1(T(2), T(1)).contains(B1(T(2.5), T(0.75))));
+    static_assert(B1(T(1)).contains(unverified(B1(T(1)))) && !B1(T(1)).contains(B1(T(1) + 2 * u)));
+    static_assert(kairn::less(B1(T(1), T(0.5)), B1(T(3), T(0.5))) == yes && kairn::less(B1(T(3), T(0.5)), B1(T(1), T(0.5))) == no);
+    static_assert(kairn::less(B1(T(1), T(1)), B1(T(2), T(1))) == unknown && kairn::less(B1(T(1)), B1(T(1) + 2 * u)) == yes);
+    static_assert(kairn::less_equal(B1(T(1), T(0.5)), B1(T(2), T(0.5))) == yes && kairn::greater(B1(T(3)), B1(T(1))) == yes);
+    static_assert(kairn::equal(B1(T(2)), B1(T(2))) == yes && kairn::equal(B1(T(1), T(0.25)), B1(T(2), T(0.25))) == no);
+    static_assert(kairn::not_equal(B1(T(2)), B1(T(2))) == no && kairn::greater_equal(B1(T(2)), unverified(B1(T(2)))) == yes);
+    // The hull and the intersection: they contain what they must.
+    static_assert(B1(T(1), T(0.5)).hull(B1(T(3), T(0.5))).center().limb[0] == 2 && B1(T(1), T(0.5)).hull(B1(T(3), T(0.5))).radius() == T(1.5));
+    static_assert(B1(T(1), T(1)).intersection(B1(T(2), T(1))).center().limb[0] == T(1.5) &&
+                  B1(T(1), T(1)).intersection(B1(T(2), T(1))).radius() == T(0.5));
+    static_assert(B1(T(1)).intersection(unverified(B1(T(1)))).center().limb[0] == 1 && B1(T(1)).hull(unverified(B1(T(2)))).radius() == T(0.5));
+    // A ball of one limb from two values of T: the ball of Interval<T, 1>(lo, hi), in one kernel.
+    static_assert(B1::from_interval(T(1), T(3)).center().limb[0] == 2 && B1::from_interval(T(1), T(3)).radius() == 1);
+    static_assert(B1::from_interval(T(2), T(1)).is_empty() && B1::from_interval(nan, T(1)).is_whole() && B1::from_interval(inf, inf).is_whole());
+    static_assert(B1::from_interval(T(1), inf).is_whole() && B1::from_interval(unverified(T(1)), T(3)).radius() == 1);
+    static_assert(B1::from_interval(eta, eta).center().limb[0] == eta && B1::from_interval(eta, eta).radius() == 0);
+    // Balls of two limbs: the signs, which are constexpr; the bounds are not (enclosure_run_time).
+    static_assert(B2(x2, T(1)).certainly_positive() && !B2(E2(T(1)), T(1)).certainly_positive() && B2(-x2, T(1)).certainly_negative());
+    static_assert(B2().certainly_zero() && !B2::whole().certainly_zero() && !B2::empty().certainly_positive());
+    static_assert(B1(T(2), T(1)).mid_rad().midpoint.limb[0] == 2 && B2(x2, u).mid_rad().radius == u && B2(x2, u).mid_rad().midpoint.limb[1] == u / 2);
+};
+
+template struct Enclosure<double>;
+template struct Enclosure<float>;
 
 int failures = 0;
 
@@ -920,6 +1078,118 @@ void run_time() {
     same("ldexp k = 2, NaN", kairn::ldexp(E2(T(vnan)), big).limb[1], C::nan);
 }
 
+// The enclosure interface at run time: what is not constexpr (the balls of two limbs, the split of a
+// ball, the midpoint, radius and conversions of two limbs) and what is not a constant expression on
+// the special states (the balls of one limb), against values computed by hand; the constexpr
+// functions on operands the compiler cannot see, which must give the values of Enclosure. Where
+// the claim of a ball of two limbs is only certain, the cases are far from the boundary, where the
+// kernels decide (the band is measured, not claimed: architecture.md).
+template <class T>
+void enclosure_run_time() {
+    using C = Enclosure<T>;
+    using E2 = kairn::Expansion<T, 2>;
+    using B1 = kairn::Ball<T, 1>;
+    using B2 = kairn::Ball<T, 2>;
+    using I1 = kairn::Interval<T, 1>;
+    using I2 = kairn::Interval<T, 2>;
+    using kairn::Trit;
+    constexpr T u = C::u, inf = C::inf, omega = C::omega;
+    volatile T v_one = 1, v_two = 2, v_three = 3, v_half = 0.5, v_quarter = 0.25, v_inf = inf, v_nan = C::nan,
+               v_omega = omega;
+    const T one = v_one, two = v_two, three = v_three, half = v_half, quarter = v_quarter, nan = v_nan;
+    const T infinity = v_inf;
+    // The constexpr functions, on operands read at run time.
+    const I1 x(one, two), y(three, three);
+    expect("predicates of an interval", !x.is_empty() && I1(infinity, -infinity).is_empty() && I1(nan, one).is_whole() &&
+                                            x.certainly_positive() && !(-x).certainly_positive() && (-x).certainly_negative());
+    expect("member test of an interval", x.contains(one) && !x.contains(three) && !I1(-infinity, infinity).contains(infinity) &&
+                                             !x.contains(nan) && kairn::member(two, x) == Trit::yes);
+    expect("comparisons of intervals", kairn::less(x, y) == Trit::yes && kairn::greater(x, y) == Trit::no &&
+                                           kairn::equal(y, I1(three)) == Trit::yes && kairn::equal(x, x) == Trit::unknown);
+    expect("relations of intervals", kairn::ieee1788::subset(x, I1(one, three)) && kairn::ieee1788::disjoint(x, y) &&
+                                         !kairn::ieee1788::interior(x, I1(one, three)) && kairn::ieee1788::equal(x, I1(one, two)));
+    expect("balls of one limb", B1(two, one).contains(three) && kairn::less(B1(one, half), B1(three, half)) == Trit::yes &&
+                                    B1(one, half).hull(B1(three, half)).radius() == T(1.5) &&
+                                    B1::from_interval(one, three).radius() == 1);
+    // The special states of the balls of one limb.
+    const B1 e1 = B1::empty(), w1 = B1::whole(), p1(two, one);
+    expect("member of the empty ball and of the whole line", !e1.contains(T(0)) && w1.contains(one) && !w1.contains(infinity) &&
+                                                               kairn::member(one, e1) == Trit::no);
+    expect("subset of the special balls", w1.contains(p1) && p1.contains(e1) && !p1.contains(w1) && !e1.contains(p1) &&
+                                              w1.contains(w1) && e1.contains(e1));
+    expect("comparisons of the special balls", kairn::less(e1, p1) == Trit::unknown && kairn::less(w1, p1) == Trit::unknown &&
+                                                   kairn::equal(e1, e1) == Trit::unknown && kairn::greater(p1, w1) == Trit::unknown);
+    expect("the radii sum beyond Omega", kairn::less(B1(T(0), T(v_omega)), B1(T(0), T(v_omega))) == Trit::unknown);
+    expect("the hull of the special balls", e1.hull(p1).radius() == 1 && p1.hull(e1).center().limb[0] == 2 &&
+                                                e1.hull(e1).is_empty() && w1.hull(p1).is_whole() && p1.hull(w1).is_whole());
+    expect("the intersection of the special balls", w1.intersection(p1).radius() == 1 && p1.intersection(w1).radius() == 1 &&
+                                                        e1.intersection(w1).is_empty() && p1.intersection(e1).is_empty());
+    // The operand returned as it is, the sign of its zero included: the negation of the whole line
+    // has the center -0.
+    const B1 w1m = -w1;
+    expect("the whole line with the center -0", std::signbit(w1m.center().limb[0]) &&
+                                                    std::signbit(e1.hull(w1m).center().limb[0]) &&
+                                                    !std::signbit(w1m.intersection(w1).center().limb[0]) &&
+                                                    std::signbit(w1.intersection(w1m).center().limb[0]));
+    expect("the ball from an interval of special bounds", B1::from_interval(two, one).is_empty() &&
+                                                            B1::from_interval(nan, one).is_whole() &&
+                                                            B1::from_interval(infinity, infinity).is_whole() &&
+                                                            B1::from_interval(one, infinity).is_whole());
+    // The split of a ball: the parts cover [c - r, c] and [c, c + r]; the special states twice.
+    const kairn::Split<B1> s1 = p1.split();
+    expect("the split of a ball of one limb", s1.left.contains(one) && s1.left.contains(two) && s1.right.contains(two) &&
+                                                  s1.right.contains(three) && s1.left.radius() >= half &&
+                                                  s1.left.radius() <= half + 4 * u);
+    expect("the split of the special balls", e1.split().left.is_empty() && e1.split().right.is_empty() &&
+                                                 w1.split().left.is_whole() && w1.split().right.is_whole());
+    // Two limbs: the midpoint, the radius, the split and the conversions of an interval.
+    const I2 x2(one, three);
+    const kairn::MidRad<T, 2> m2 = x2.mid_rad();
+    expect("the midpoint of two limbs", m2.midpoint.limb[0] == 2 && m2.midpoint.limb[1] == 0 && x2.midpoint().limb[0] == 2);
+    expect("the radius of two limbs", m2.radius >= 1 && m2.radius <= 1 + 4 * u && x2.radius() == m2.radius);
+    const kairn::MidRad<T, 2> mw = I2(-infinity, infinity).mid_rad(), mh = I2(one, infinity).mid_rad();
+    const kairn::MidRad<T, 2> me = I2(infinity, -infinity).mid_rad();
+    expect("the midpoint and the radius of the special intervals", mw.midpoint.limb[0] == 0 && mw.radius == inf &&
+                                                                       mh.midpoint.limb[0] == omega && mh.midpoint.limb[1] == 0 &&
+                                                                       mh.radius == inf && me.midpoint.limb[0] != me.midpoint.limb[0] &&
+                                                                       me.midpoint.limb[1] != me.midpoint.limb[1] && me.radius != me.radius);
+    const kairn::Split<I2> s2 = x2.split();
+    expect("the split of two limbs", C::is(s2.left, 1, 0, 2, 0) && C::is(s2.right, 2, 0, 3, 0));
+    const B2 b2(x2);
+    expect("the ball of an interval of two limbs", b2.center().limb[0] == 2 && b2.radius() >= 1 && b2.radius() <= 1 + 4 * u &&
+                                                       B2(I2(one, infinity)).is_whole() && B2(I2(infinity, -infinity)).is_empty());
+    const I2 i2(B2(E2(two), one));
+    const T below = (E2(one) - i2.lower()).limb[0], above = (i2.upper() - E2(three)).limb[0];
+    expect("the interval of a ball of two limbs", below >= 0 && below <= 16 * u * u && above >= 0 && above <= 16 * u * u);
+    expect("the bounds of a ball of two limbs", B2(E2(two), one).lower() == i2.lower() && B2(E2(two), one).upper() == i2.upper());
+    expect("a bound that is zero stays zero", I2(B2(E2(one), one)).lower().limb[0] == 0 && B2(E2(-one), one).upper().limb[0] == 0);
+    expect("the interval of the special balls of two limbs", I2(B2::whole()).is_whole() && I2(B2::empty()).is_empty() &&
+                                                                  B2::whole().lower().limb[0] == -inf && B2::empty().upper().limb[0] == -inf);
+    // Balls of two limbs: certain answers, far from the boundary.
+    const B2 p2(E2(two), one), q2(E2(two), quarter), w2 = B2::whole(), e2 = B2::empty();
+    expect("member test of a ball of two limbs", p2.contains(T(2.5)) && !p2.contains(T(3.5)) && p2.contains(E2(two)) &&
+                                                     kairn::member(T(3.5), p2) == Trit::no && kairn::member(T(2.5), p2) == Trit::yes &&
+                                                     !w2.contains(infinity) && w2.contains(one) && kairn::member(one, e2) == Trit::no);
+    expect("subset test of balls of two limbs", p2.contains(q2) && !q2.contains(p2) && w2.contains(p2) && p2.contains(e2) &&
+                                                    !p2.contains(w2));
+    expect("comparisons of balls of two limbs", kairn::less(B2(E2(one), quarter), B2(E2(three), quarter)) == Trit::yes &&
+                                                    kairn::less(B2(E2(three), quarter), B2(E2(one), quarter)) == Trit::no &&
+                                                    kairn::less(p2, q2) == Trit::unknown && kairn::less(e2, p2) == Trit::unknown &&
+                                                    kairn::equal(B2(E2(one), quarter), B2(E2(three), quarter)) == Trit::no &&
+                                                    kairn::not_equal(B2(E2(one), quarter), B2(E2(three), quarter)) == Trit::yes &&
+                                                    kairn::less_equal(w2, p2) == Trit::unknown);
+    const B2 h2 = B2(E2(one), half).hull(B2(E2(three), half));
+    expect("the hull of balls of two limbs", h2.contains(T(0.5)) && h2.contains(T(3.5)) && h2.center().limb[0] == 2 &&
+                                                 e2.hull(p2).radius() == 1 && w2.hull(p2).is_whole());
+    const B2 n2 = B2(E2(one), one).intersection(B2(E2(two), one));
+    expect("the intersection of balls of two limbs", n2.contains(one) && n2.contains(two) && n2.radius() <= half + 4 * u &&
+                                                         w2.intersection(p2).radius() == 1 && p2.intersection(e2).is_empty());
+    const kairn::Split<B2> sp = p2.split();
+    expect("the split of a ball of two limbs", sp.left.contains(one) && sp.left.contains(two) && sp.right.contains(two) &&
+                                                   sp.right.contains(three) && sp.left.radius() <= half + 4 * u &&
+                                                   w2.split().left.is_whole() && e2.split().right.is_empty());
+}
+
 }  // namespace
 
 int main() {
@@ -929,6 +1199,8 @@ int main() {
     blocks_run_time<float>();
     intervals_run_time<double>();
     intervals_run_time<float>();
+    enclosure_run_time<double>();
+    enclosure_run_time<float>();
     std::printf("%s\n", failures ? "FAILED" : "ok");
     return failures ? 1 : 0;
 }

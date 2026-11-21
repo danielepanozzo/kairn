@@ -14,7 +14,13 @@ A number of several limbs stands for their exact sum: $x_l = x_{l0} + x_{l1}$, $
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call its core, [`mul_pow2_2`](mul_pow2_2.md) and [`add_2_2`](add_2_2.md), instead.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.midpoint()` | `Interval<T, 2>` | `Expansion<T, 2>` | $m$; computes the whole kernel, as the other does: `X.mid_rad()` gives both from one call; rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr` |
+| `X.radius()` | `Interval<T, 2>` | `T` | $r$; computes the whole kernel, as the other does: `X.mid_rad()` gives both from one call; rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr` |
+| `X.mid_rad()` | `Interval<T, 2>` | `MidRad<T, 2>` | $m$ and $r$ from one call; rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr` |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 
