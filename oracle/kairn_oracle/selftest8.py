@@ -528,7 +528,11 @@ def _enum_one(args):
     claims = load_claims(FIXTURE6)
     g = G.ExhaustiveGen(claims.get(kernel), F.parse_format(fmtname), restrict)
     s = judge(run6(g.lines(0, g.total), variant), claims)
-    return kernel, variant, g.total, totals(s), failing_kinds(s, kernel)
+    counts = {}
+    for d in entry_stats(s, kernel).values():
+        for c, m in d[3].items():
+            counts[c] = counts.get(c, 0) + m
+    return kernel, variant, g.total, totals(s), failing_kinds(s, kernel), counts
 
 
 @test
@@ -562,11 +566,21 @@ def iv_exhaustive(ctx):
     with cf.ProcessPoolExecutor(ctx.jobs) as ex:
         results = list(ex.map(_enum_one, tasks))
     cases = 0
-    for kernel, variant, total, t, kinds in results:
+    for kernel, variant, total, t, kinds, counts in results:
         cases += total
         if variant == "correct":
             expect(t["failed"] == 0 and t["invalid"] == 0 and t["suspicious"] == 0,
                    "%s: %s" % (kernel, t))
+            # The constructors: every cell of the table of architecture.md, and for two limbs
+            # reversed bounds of equal leading limbs (an enumeration has one zero: no zeros of
+            # opposite signs).
+            if kernel in ("interval_make_1", "interval_make_2", "ball_from_interval_2"):
+                need = IV.MAKE_CELLS + ((IV.MAKE_REVERSED_LEAD,) if kernel == "interval_make_2"
+                                        else ())
+                missing = [c for c in need if not counts.get(c)]
+                expect(not missing, "%s: never %s" % (kernel, missing))
+                expect(not counts.get(IV.MAKE_INF_TAILS), "%s: zeros of opposite signs in an "
+                       "enumeration" % kernel)
             # Every line of the extended domain is judged; in the finite domain the lines whose
             # result is not finite are not.
             ext = cl.get(kernel).extended
@@ -968,6 +982,98 @@ def _given_states(ctx):
     return len(GIVEN)
 
 
+# The table of architecture.md, "The constructors on every pair of values", as written there: for
+# each cell (lo the row, hi the column, a and b finite), the result of makes_interval; that of
+# makes_ball from an interval is the same with every unbounded interval the whole line and [a, b] a
+# finite ball. The finite bounds are 1 and 2: a <= b is [1, 2], a > b is [2, 1]; a or b beside a
+# NaN or an infinity is 1.
+WHOLE, EMPTY = "whole", "empty"
+GRID = {
+    "given lo NaN, hi NaN": WHOLE, "given lo NaN, hi -inf": WHOLE, "given lo NaN, hi b": WHOLE,
+    "given lo NaN, hi +inf": WHOLE,
+    "given lo -inf, hi NaN": WHOLE, "given lo -inf, hi -inf": WHOLE, "given lo -inf, hi b": "[-inf, b]",
+    "given lo -inf, hi +inf": WHOLE,
+    "given lo a, hi NaN": WHOLE, "given lo a, hi -inf": EMPTY, "given lo a, hi b, a <= b": "[a, b]",
+    "given lo a, hi b, a > b": EMPTY, "given lo a, hi +inf": "[a, +inf]",
+    "given lo +inf, hi NaN": WHOLE, "given lo +inf, hi -inf": EMPTY, "given lo +inf, hi b": EMPTY,
+    "given lo +inf, hi +inf": WHOLE,
+}
+
+
+def _grid_lines():
+    """(line, cell, passes) for each kernel and cell of GRID: the result of the table, which must
+    pass and count that cell alone, and a wrong one (the empty set for the whole line or a
+    bounded result, the whole line otherwise), which must fail."""
+    one = {"NaN": "nan", "-inf": "-inf", "+inf": "inf", "a": "0x1p+0", "b": "0x1p+0"}
+    two = {k: v + (" nan" if v == "nan" else " 0x0p+0") for k, v in one.items()}
+    out = []
+    for cell, want in GRID.items():
+        r, c = cell[len("given lo "):].split(", hi ")
+        c = c.split(",")[0]
+        if cell.endswith("a <= b"):
+            lo, hi = "0x1p+0", "0x1p+1"
+        elif cell.endswith("a > b"):
+            lo, hi = "0x1p+1", "0x1p+0"
+        else:
+            lo, hi = one[r], one[c]
+        res1 = {WHOLE: "-inf inf", EMPTY: "inf -inf", "[-inf, b]": "-inf " + hi,
+                "[a, +inf]": lo + " inf", "[a, b]": lo + " " + hi}[want]
+        bad1 = "inf -inf" if want in (WHOLE, "[a, b]") else "-inf inf"
+        L2 = two[r] if r != "a" else lo + " 0x0p+0"
+        H2 = two[c] if c != "b" else hi + " 0x0p+0"
+        res2 = " ".join(t + " 0x0p+0" for t in res1.split())
+        bad2 = " ".join(t + " 0x0p+0" for t in bad1.split())
+        ball = {WHOLE: "0x0p+0 0x0p+0 inf", EMPTY: "nan nan nan", "[a, b]": "0x1.8p+0 0x0p+0 0x1p-1"}
+        resb = ball.get(want, ball[WHOLE])
+        badb = ball[EMPTY] if want != EMPTY else ball[WHOLE]
+        for kernel, given, res, bad in (("interval_make_1", lo + " " + hi, res1, bad1),
+                                        ("interval_make_2", L2 + " " + H2, res2, bad2),
+                                        ("ball_from_interval_2", lo + " " + hi, resb, badb)):
+            out.append(("%s binary64 %s -> %s" % (kernel, given, res), cell, True))
+            out.append(("%s binary64 %s -> %s" % (kernel, given, bad), cell, False))
+    return out
+
+
+# Two limbs, the classes of their own: the same infinity with zeros of opposite signs as second
+# limbs, and reversed bounds with equal leading limbs (each line passes; the count of each class).
+TWO_LIMB_CLASSES = [
+    ("interval_make_2 binary64 inf 0x0p+0 inf -0x0p+0 -> -inf 0x0p+0 inf 0x0p+0", 1, 0),
+    ("interval_make_2 binary64 -inf -0x0p+0 -inf 0x0p+0 -> -inf 0x0p+0 inf 0x0p+0", 1, 0),
+    ("interval_make_2 binary64 inf 0x0p+0 inf 0x0p+0 -> -inf 0x0p+0 inf 0x0p+0", 0, 0),
+    ("interval_make_2 binary64 -inf -0x0p+0 -inf -0x0p+0 -> -inf 0x0p+0 inf 0x0p+0", 0, 0),
+    ("interval_make_2 binary64 inf -0x0p+0 -inf 0x0p+0 -> inf 0x0p+0 -inf 0x0p+0", 0, 0),
+    ("interval_make_2 binary64 0x1p+0 0x1p-60 0x1p+0 0x0p+0 -> inf 0x0p+0 -inf 0x0p+0", 0, 1),
+    ("interval_make_2 binary64 0x1p+0 0x0p+0 0x1p+0 -0x1p-60 -> inf 0x0p+0 -inf 0x0p+0", 0, 1),
+    ("interval_make_2 binary64 0x1p+1 0x0p+0 0x1p+0 0x1p-60 -> inf 0x0p+0 -inf 0x0p+0", 0, 0),
+    ("interval_make_2 binary64 0x1p+0 0x0p+0 0x1p+0 0x1p-60 -> 0x1p+0 0x0p+0 0x1p+0 0x1p-60", 0, 0),
+]
+
+
+def _grid(ctx):
+    """Every cell of the table of the constructors judged as the table says, counting that cell
+    and no other, its wrong result failing; the classes of two limbs counted as worked out."""
+    cl = claims6(ctx)
+    lines = _grid_lines()
+    for line, cell, ok in lines:
+        kernel = line.split()[0]
+        s = judge([line], cl)
+        t = totals(s)
+        expect(t["judged"] == 1 and t["failed"] == (0 if ok else 1),
+               "%s: %s, it should %s" % (line, t, "pass" if ok else "fail"))
+        (counts,) = [d[3] for d in entry_stats(s, kernel).values()]
+        got = [c for c in IV.MAKE_CELLS if counts.get(c)]
+        expect(got == [cell] and counts[cell] == 1, "%s: cells %s, not %s" % (line, got, cell))
+    for line, tails, lead in TWO_LIMB_CLASSES:
+        s = judge([line], cl)
+        expect(totals(s)["failed"] == 0, "%s failed" % line)
+        (counts,) = [d[3] for d in entry_stats(s, "interval_make_2").values()]
+        expect((counts.get(IV.MAKE_INF_TAILS, 0), counts.get(IV.MAKE_REVERSED_LEAD, 0))
+               == (tails, lead), "%s: counted %s" % (line, counts))
+    expect(len(IV.MAKE_CELLS) == 17 and set(IV.MAKE_CELLS) == set(GRID), "the cells: %s"
+           % (IV.MAKE_CELLS,))
+    return len(lines) + len(TWO_LIMB_CLASSES)
+
+
 def _failed_statements(summary, kernel):
     """What failed: the statements (I1 to I6, the parts of ball_of_interval and interval_of_ball)
     for the kinds that count them, the kind of the entry otherwise."""
@@ -1023,8 +1129,9 @@ def iv_judge(ctx):
     expect(t["judged"] == 0 and t["nonfinite"] == 1 and t["suspicious"] == 1,
            "both bounds infinite on small operands: %s" % t)
     g = _given_states(ctx)
-    return "%d hand-written lines, %d invalid ones, three of the groups, %d given states" % (
-        n, len(INVALID), g)
+    c = _grid(ctx)
+    return ("%d hand-written lines, %d invalid ones, three of the groups, %d given states, %d lines "
+            "of the cells of the constructors" % (n, len(INVALID), g, c))
 
 
 def _brute_intervals(fmt, limbs):

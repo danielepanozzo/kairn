@@ -492,6 +492,23 @@ MUTANTS = {
     "constructors: a NaN bound tested after the same infinity": (
         "intervals.py", "    if L == NAN or U == NAN:\n        return MAKE_NAN\n    if L == U and type(L) is not int:\n        return MAKE_EQUAL_INF",
         "    if L == U and type(L) is not int:\n        return MAKE_EQUAL_INF\n    if L == NAN or U == NAN:\n        return MAKE_NAN"),
+    # The cells of the table of the constructors, and the classes of two limbs, that the guards
+    # ask for.
+    "constructors: a <= b and a > b swapped in the cells": (
+        "intervals.py", "        s += \", a <= b\" if L <= U else \", a > b\"",
+        "        s += \", a <= b\" if L >= U else \", a > b\""),
+    "constructors: lo and hi of a cell exchanged": (
+        "intervals.py", "    s = MAKE_CELL % (name(L, \"a\"), name(U, \"b\"))",
+        "    s = MAKE_CELL % (name(U, \"a\"), name(L, \"b\"))"),
+    "makes_interval: the cell not counted": (
+        "intervals.py", "    es.count(make_cell(L, U))\n", "\n"),
+    "makes_ball from an interval: the cell not counted": (
+        "intervals.py", "    es.count(make_cell(lo, hi))\n", "\n"),
+    "makes_interval: zeros of opposite signs not read": (
+        "intervals.py", "            if toks[a0 + 1].startswith(\"-\") != toks[b0 + 1].startswith(\"-\"):",
+        "            if False:"),
+    "makes_interval: reversed bounds of equal leading limbs not counted": (
+        "intervals.py", "        elif given == MAKE_REVERSED and x[a0] == x[b0]:", "        elif False:"),
     "gen6: the infinities stratum never gives the same infinity twice": (
         "gen6.py", "        a = _inf(k, rng.sign()) if rng.chance(2, 3) else _number(fmt, rng, k, \"uniform\")\n        b = _inf(k, rng.sign())",
         "        a = _inf(k, -1) if rng.chance(2, 3) else _number(fmt, rng, k, \"uniform\")\n        b = _inf(k, 1)"),

@@ -122,6 +122,18 @@ MAKE_UNBOUNDED = "given: an unbounded interval"
 MAKE_NAN = "given: a NaN bound"
 MAKE_REVERSED = "given: reversed bounds"
 MAKE_EQUAL_INF = "given: equal infinities"
+# The cells of the table of the constructors (architecture.md, "The constructors on every pair of
+# values"), lo the row and hi the column, a and b finite; the guards ask for each (MAKE_CELLS).
+MAKE_CELL = "given lo %s, hi %s"
+MAKE_CELLS = tuple(MAKE_CELL % (r, c) + t for r in ("NaN", "-inf", "a", "+inf")
+                   for c in ("NaN", "-inf", "b", "+inf")
+                   for t in ((", a <= b", ", a > b") if (r, c) == ("a", "b") else ("",)))
+# Two limbs: the same infinity with second limbs that are zeros of opposite signs ((+inf, 0) and
+# (+inf, -0): the same infinity twice, the whole line), read from the line's text; and reversed
+# bounds whose leading limbs are equal ((1, 2^-4) and (1, 0): the comparison of two limbs tells
+# them, the leading limbs alone do not).
+MAKE_INF_TAILS = "given the same infinity, second limbs zeros of opposite signs"
+MAKE_REVERSED_LEAD = "given reversed bounds, equal leading limbs"
 MID_HOLDS = "midpoint_when holds"
 MID_FAILS = "midpoint_when fails"
 X_EMPTY = "X: empty"
@@ -1575,6 +1587,23 @@ def make_given(L, U):
     return MAKE_INTERVAL if type(L) is int and type(U) is int else MAKE_UNBOUNDED
 
 
+def make_cell(L, U):
+    """The cell of the given bounds in the table of architecture.md, "The constructors on every
+    pair of values": lo (row) and hi (column) each a NaN, -inf, a finite number (a, b) or +inf,
+    and for two finite bounds whether a <= b."""
+    def name(v, finite):
+        return "NaN" if v == NAN else "-inf" if v == NINF else "+inf" if v == INF else finite
+    s = MAKE_CELL % (name(L, "a"), name(U, "b"))
+    if type(L) is int and type(U) is int:
+        s += ", a <= b" if L <= U else ", a > b"
+    return s
+
+
+def _input_tokens(line):
+    """The texts of the input limbs of a line, in the order of x (they keep the signs of zeros)."""
+    return [t for t in line.partition(" -> ")[0].split()[2:] if not t.startswith("#")]
+
+
 def k_makes_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     """The output is canonical, and by the first case that applies: the whole line when a given
     bound is a NaN, whatever the other, or when both are the same infinity; the empty set when
@@ -1589,6 +1618,14 @@ def k_makes_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     es.applicable += 1
     given = make_given(L, U)
     es.count(given)
+    es.count(make_cell(L, U))
+    if a1 - a0 == 2:
+        if given == MAKE_EQUAL_INF:
+            toks = _input_tokens(line)
+            if toks[a0 + 1].startswith("-") != toks[b0 + 1].startswith("-"):
+                es.count(MAKE_INF_TAILS)
+        elif given == MAKE_REVERSED and x[a0] == x[b0]:
+            es.count(MAKE_REVERSED_LEAD)
     if given in (MAKE_NAN, MAKE_EQUAL_INF):
         want = ("nonempty", NINF, INF)
     elif given == MAKE_REVERSED:
@@ -1867,6 +1904,7 @@ def k_makes_ball_iv(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     es.applicable += 1
     given = make_given(lo, hi)
     es.count(given)
+    es.count(make_cell(lo, hi))
     if given == MAKE_REVERSED:
         want = "empty"
     elif given in (MAKE_INTERVAL, MAKE_POINT):

@@ -516,7 +516,7 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     |---|---|---|
     | `encloses_interval` | `interval_neg_k`, `interval_add_k`, `interval_sub_k`, `interval_mul_k` | an empty operand, an unbounded one, bounded operands; an empty, a bounded and an unbounded result; `bounded_when` holding and, for two operands, failing, with a range within a factor 2 below its limit and one within a factor 2 above it (the results near the overflow threshold on each side); with `tight` rounded, each bound of the range a number of the format, not one, and infinite, one step beyond the rounding where `steps` is 1 and `product_large` both ways; with `tight` outward, an infinite bound of the range, each side's `exact_when` holding and each of its conditions failing, and a distance of at least 1/4 of $\mathrm{rel}\lvert v\rvert + \mathrm{abs}$ on each side; with `zero_factor`, an operand $[0, 0]$, against an unbounded one too |
     | `outward` | the bounds of two limbs, `mul_ext_2_2` | `exact_when` holding and each condition failing; a distance of at least 1/4 of $\mathrm{rel}\lvert v\rvert + \mathrm{abs}$; in the extended domain a zero operand, an infinite one, a finite and an infinite output from finite operands |
-    | `makes_interval`, `makes_ball` from an interval | `interval_make_k`, `ball_from_interval_2` | each given class of the [case analysis](architecture.md#the-constructors-on-every-pair-of-values): an interval, a point, an unbounded interval; a NaN bound and equal infinities, $[+\infty, +\infty]$ or $[-\infty, -\infty]$ (both the whole line, the second since the owner's decision of 2026-11-20); reversed bounds (the empty set); `midpoint_when` holding and failing |
+    | `makes_interval`, `makes_ball` from an interval | `interval_make_k`, `ball_from_interval_2` | each given class of the [case analysis](architecture.md#the-constructors-on-every-pair-of-values): an interval, a point, an unbounded interval; a NaN bound and equal infinities, $[+\infty, +\infty]$ or $[-\infty, -\infty]$ (both the whole line, the second since the owner's decision of 2026-11-20); reversed bounds (the empty set); and every cell of its table, each of the four kinds of lower bound (a NaN, $-\infty$, a finite number, $+\infty$) with each of the four kinds of upper bound, two finite bounds both ways ($a \le b$ and $a > b$): 17 cells, each seen by the quick tier's runs and by every enumeration; for bounds of two limbs (`interval_make_2`) also reversed bounds with equal leading limbs, such as $(1, 2^{-4})$ and $(1, 0)$, and, but in an enumeration, which has one zero, the same infinity with second limbs that are zeros of opposite signs, $(+\infty, 0)$ and $(+\infty, -0)$; `midpoint_when` holding and failing |
     | `set_bound`, `interval_of_ball` | the bounds of a ball, `ball_to_interval_1` | the empty ball, the whole line, a finite ball; each bound of the set a number of the format and not one |
     | `interval_set` | the hulls and intersections | an empty operand, both empty, disjoint, touching and overlapping operands; an empty, a bounded and an unbounded result |
     | `ball_of_interval`, `splits` | `interval_mid_rad_1`, `interval_to_ball_1`, `interval_split_1` | $X$ empty, the whole line, a half-line on each side, bounded, a point; for the midpoint a bound an odd multiple of $\eta$ below $2N$ and a distance of at least 1/2 of $u\lvert m\rvert + \eta$ |
@@ -530,9 +530,10 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     that miss each (no empty operand, `bounded_when` that never fails or a range never near its
     limit, a rounding never a step beyond or never inexact, `product_large` one way, a bound or a
     midpoint far from its bound, `exact_when` that never holds or never fails, I6 never applied,
-    no zero against an infinity, a constructor never given a NaN bound, no empty ball, no disjoint
-    intervals, no odd bound, no half-line, a header without a stratum of the family) and must fail
-    them.
+    no zero against an infinity, a constructor never given a NaN bound, never the same infinity
+    twice (a run without the stratum `infinities`) or without a cell of the table, no empty ball,
+    no disjoint intervals, no odd bound, no half-line, a header without a stratum of the family)
+    and must fail them.
 
 For a kernel of the extended domain the run must also have seen what that layer is about. The
 guards read the kernel's claims (the file the oracle's summary names) and the oracle's counts of
