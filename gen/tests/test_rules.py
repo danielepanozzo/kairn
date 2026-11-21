@@ -1488,12 +1488,12 @@ class TheKernels(unittest.TestCase):
     # And the radius (finite domain) and the finish of the product of two BallVectors.
     BV |= {'conv_radius', 'bv_conv_finish'}
     # Of the kernels of the BallVectors, those that are still unverified, and of those of the extended
-    # domain, those whose IEEE-model statement is. (The kernels of the constructor and of the negation
-    # are proved, BvNegMake.v, IeeeBvNegMake.v, and those of the scaling by a power of two, BvPow2.v,
-    # IeeeBvPow2.v, and the radius of the product, BvConv.v; the IEEE-model statement of the finish of
-    # the product is false, IeeeBvConv.v.)
-    BV_UNVERIFIED = {'bv_conv_finish'}
-    BV_IEEE_UNVERIFIED = {'bv_conv_finish'}
+    # domain, those whose IEEE-model statement is: none. (The kernels of the constructor and of the
+    # negation are proved, BvNegMake.v, IeeeBvNegMake.v, and those of the scaling by a power of two,
+    # BvPow2.v, IeeeBvPow2.v, and the radius of the product, BvConv.v, and the finish of the product,
+    # IeeeBvConv.v, once its statement printed the masks of if_all.)
+    BV_UNVERIFIED = set()
+    BV_IEEE_UNVERIFIED = set()
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # which were unverified until their proofs were about the generated text: the interval kernels of one
@@ -1594,7 +1594,7 @@ class TheKernels(unittest.TestCase):
         # The two constructors of a ball are proved for the rule of 2026-11-20, that a NaN radius
         # gives the whole line (IeeeMake.v).
         # The kernels of the constructor, the negation, the scaling by a power of two and the product
-        # of BallVectors are proved but the finish of the product (BV_UNVERIFIED).
+        # of BallVectors are proved (BV_UNVERIFIED is empty).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
                          self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.BV_UNVERIFIED) | self.WAVE_2_PROVED)
         # No other kernel is unverified: the kernels of wave 2 were, in both models, until their proofs

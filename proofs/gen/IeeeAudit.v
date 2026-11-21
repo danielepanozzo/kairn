@@ -18,6 +18,9 @@ From Kairn Require Import IeeeBallPredicates.
 From Kairn Require Import IeeeBallPredicates2.
 From Kairn Require Import IeeeBallSets.
 From Kairn Require Import IeeeBv.
+From Kairn Require Import IeeeBvConv.
+From Kairn Require Import IeeeBvConvFinite.
+From Kairn Require Import IeeeBvConvFinite2.
 From Kairn Require Import IeeeBvNegMake.
 From Kairn Require Import IeeeBvPow2.
 From Kairn Require Import IeeeDirected.
@@ -155,6 +158,9 @@ Print Assumptions fold_finish_1_correct.
 
 Definition norm_finish_1_audit : norm_finish_1_spec := norm_finish_1_correct.
 Print Assumptions norm_finish_1_correct.
+
+Definition bv_conv_finish_audit : bv_conv_finish_spec := bv_conv_finish_correct.
+Print Assumptions bv_conv_finish_correct.
 
 Definition bv_make_finish_audit : bv_make_finish_spec := bv_make_finish_correct.
 Print Assumptions bv_make_finish_correct.
@@ -659,6 +665,12 @@ Print Assumptions axpy_step_2_ieee_lead.
 Definition axpy_step_2_1_ieee_lead_audit : axpy_step_2_1_ieee_lead_spec := axpy_step_2_1_ieee_lead.
 Print Assumptions axpy_step_2_1_ieee_lead.
 
+Definition neg_2_ieee_lead_audit : neg_2_ieee_lead_spec := neg_2_ieee_lead.
+Print Assumptions neg_2_ieee_lead.
+
+Definition bv_center_2_ieee_lead_audit : bv_center_2_ieee_lead_spec := bv_center_2_ieee_lead.
+Print Assumptions bv_center_2_ieee_lead.
+
 Definition bv_mul_pow2_step_2_ieee_lead_audit : bv_mul_pow2_step_2_ieee_lead_spec := bv_mul_pow2_step_2_ieee_lead.
 Print Assumptions bv_mul_pow2_step_2_ieee_lead.
 
@@ -698,11 +710,23 @@ Print Assumptions norm_upper_1_seq_ieee_correct.
 Definition norm_upper_1_lanes_ieee_audit : norm_upper_1_lanes_ieee_spec := norm_upper_1_lanes_ieee_correct.
 Print Assumptions norm_upper_1_lanes_ieee_correct.
 
+Definition norm_upper_1_orders_ieee_audit : norm_upper_1_orders_ieee_spec := norm_upper_1_orders_ieee_correct.
+Print Assumptions norm_upper_1_orders_ieee_correct.
+
+Definition norm_upper_1_flag_ieee_audit : norm_upper_1_flag_ieee_spec := norm_upper_1_flag_ieee_correct.
+Print Assumptions norm_upper_1_flag_ieee_correct.
+
 Definition norm_upper_2_seq_ieee_audit : norm_upper_2_seq_ieee_spec := norm_upper_2_seq_ieee_correct.
 Print Assumptions norm_upper_2_seq_ieee_correct.
 
 Definition norm_upper_2_lanes_ieee_audit : norm_upper_2_lanes_ieee_spec := norm_upper_2_lanes_ieee_correct.
 Print Assumptions norm_upper_2_lanes_ieee_correct.
+
+Definition norm_upper_2_orders_ieee_audit : norm_upper_2_orders_ieee_spec := norm_upper_2_orders_ieee_correct.
+Print Assumptions norm_upper_2_orders_ieee_correct.
+
+Definition norm_upper_2_flag_ieee_audit : norm_upper_2_flag_ieee_spec := norm_upper_2_flag_ieee_correct.
+Print Assumptions norm_upper_2_flag_ieee_correct.
 
 Definition sum_1_seq_ieee_audit : sum_1_seq_ieee_spec := sum_1_seq_ieee_correct.
 Print Assumptions sum_1_seq_ieee_correct.
@@ -925,3 +949,9 @@ Print Assumptions bv_sub_2_seq_ieee_correct.
 
 Definition bv_sub_2_lanes_ieee_audit : bv_sub_2_lanes_ieee_spec := bv_sub_2_lanes_ieee_correct.
 Print Assumptions bv_sub_2_lanes_ieee_correct.
+
+Definition bv_conv_1_ieee_audit : bv_conv_1_ieee_spec := bv_conv_1_ieee_correct.
+Print Assumptions bv_conv_1_ieee_correct.
+
+Definition bv_conv_2_ieee_audit : bv_conv_2_ieee_spec := bv_conv_2_ieee_correct.
+Print Assumptions bv_conv_2_ieee_correct.

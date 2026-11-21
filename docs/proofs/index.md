@@ -117,8 +117,9 @@ lists:
   `BvReal.v`), and with overflow, infinities and NaN (`IeeeBv.v`), and of the negation and
   the constructor of a ball vector and its scaling by a power of two, in both models
   (`BvNegMake.v`, `IeeeBvNegMake.v`, `BvPow2.v`, `IeeeBvPow2.v`), and of the product of two ball
-  vectors over the real numbers, with what holds of its finish with overflow (`BvConv.v`,
-  `IeeeBvConv.v`; [below](#ball-vectors)); and of the
+  vectors over the real numbers, and with overflow its finish, V1 to V3 of both products and V4
+  of the product of one limb (`BvConv.v`, `IeeeBvConv.v`, `IeeeBvConvFinite.v`;
+  [below](#ball-vectors)); and of the
   kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
@@ -139,7 +140,8 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    theorem has exactly the generated statement as its type, followed by
    `Print Assumptions K_correct`; the same two lines for each order of every fold that is
    proved (`F_seq_audit : F_seq_spec := F_seq_correct`, and `F_lanes`), and once for every map
-   and convolution, which have one statement (`F_audit : F_spec := F_correct`). A script,
+   and convolution, which have one statement (`F_audit : F_spec := F_correct`); then the three
+   statements of `conv_terms`, which the convolutions share, whose file they name. A script,
    `proofs/audit/audit.py`, reads what Rocq printed and fails on any axiom outside the allowed
    list, on a missing report, or on any output it does not understand.
 3. **The theorems that the generated audits do not list**, the same way, from
@@ -177,14 +179,16 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
    generated `proofs/gen/IeeeAudit.v`, like step 2; then, in the same file, every other
    IEEE-model theorem that a description names: those of the steps and the combinations of
-   the folds and of the steps of the maps, of the folds and the maps in their two orders, and
-   of the convolutions.
+   the folds and of the steps of the maps (and of the two steps of the extended domain that
+   have one, `neg_2` and `bv_center_2`), of the folds and the maps in their two orders, of the
+   two statements more of the folds of maxima, of the convolutions and of the products of two
+   BallVectors.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 
 ```text
 == text scan of the proof files
-  113 files: no Admitted, admit, Axiom or Parameter
+  115 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -481,7 +485,7 @@ step above the largest leading limb would not be a number of the format. That th
 computes the state of the sequential order, and when exactly the flag is true, are also
 generated statements, `F_orders_ieee_spec` and `F_flag_ieee_spec`, whose theorems
 `F_orders_ieee_correct` and `F_flag_ieee_correct` are the lemmas above with their variables
-bound; no field of a description names them, so step 3 audits them.
+bound; the fold's `ieee_theorem` names them with those of its orders, so step 5 audits them.
 
 ## The product of two polynomials
 
@@ -505,8 +509,8 @@ least $\min(n_x, n_y)$, its two numbers bound the error of every coefficient (`c
 `conv_2_bound`, from the theorems of [the two together](#sums-and-dot-products-of-arrays)).
 Three of these facts are also generated statements, `conv_terms_eq_spec`,
 `conv_terms_count_spec` and `conv_terms_length_spec`, whose theorems `conv_terms_eq_correct`,
-`conv_terms_count_correct` and `conv_terms_length_correct` are those lemmas; no field of a
-description names them, so step 3 audits them.
+`conv_terms_count_correct` and `conv_terms_length_correct` are those lemmas; the convolutions
+name their file (`terms_theorem`), so step 2 audits them.
 
 These are statements of the real model, as for a map. No theorem is about the product as a
 polynomial (its value at a point).
@@ -586,8 +590,9 @@ exactly when the radius is negative, a NaN or $+\infty$ or a center (its leading
 finite: the radius kernel is finite only from a finite $m$ and a finite $r$, $m$ is finite with
 the record's mask true exactly when every center is, and the finish tests the sign of the
 radius (`bv_make_finish`). The leading limbs of `neg_2` and `bv_center_2`, the steps of
-two limbs, are generated statements that no field of a description can name (they are kernels
-of the extended domain): their theorems are audited in step 3.
+two limbs, are generated statements too, whose theorems their descriptions name
+(`ieee_lead_theorem`, which a kernel of the extended domain may name when it has a leading-limb
+statement): they are audited in step 5.
 
 **The scaling by a power of two** (`BvPow2.v`, `IeeeBvPow2.v`): the two steps, the radius kernel
 and `bv_mul_pow2_k` have their generated statements, in both models and both orders, as types.
@@ -623,12 +628,78 @@ $M$) with $M$ the largest magnitude of a leading limb, and at most $m$ terms: so
 coefficient of the members is within the radius's claim of the coefficient written
 (`coef_bound`).
 
-**Not proved: the product in the model with overflow.** `bv_conv_k` in the IEEE model (V1 to V4)
-is unverified, and so is the finish `bv_conv_finish`, whose generated statement is false
-(`not_bv_conv_finish_spec` of `IeeeBvConv.v`, audited in step 3): it says that the flag is true
-exactly when the radius is finite, for any masks, while a false mask of the convolution gives a
-false flag with a finite radius; what holds is the same with both masks true
-(`bv_conv_finish_facts`).
+**The finish of the product in the model with overflow** (`IeeeBvConv.v`): `bv_conv_finish` has
+its generated statement as type: the flag is true exactly when both masks (the convolution's and
+the bound's) are true and the radius is finite, the result is then the radius, and otherwise a
+NaN. (The statement was first printed without the two masks, "the flag is true exactly when the
+radius is finite", which was false: a false mask of the convolution gives a false flag with a
+finite radius. The generator now prints the masks of `if_all`, as it prints the one mask of
+`if`.)
+
+**The product in the model with overflow.** Its generated statement is one conjunction, V1 to
+V4. For `bv_conv_1` it is proved (`bv_conv_1_ieee_correct` of `IeeeBvConvFinite.v`): the
+description names the file and the generated audit checks it against the generated statement in
+step 5. (A product of two BallVectors has one statement, `bv_conv_1_ieee_spec`, as a convolution
+has; the generator's audit first named it `bv_conv_1_seq_ieee_spec`, a statement that does not
+exist, and the theorem was checked in step 3 until the printer was mended.) For `bv_conv_2` it is
+proved too (`bv_conv_2_ieee_correct` of `IeeeBvConvFinite2.v`, audited in step 5), under the
+condition on the count as restated: as first printed its V4 was false (below). V1 to V3 are proved for both, as lemmas of their own in the
+vocabulary of the statement (`bv_conv_k_ieee_v1`, `_v2`, `_v3` of `IeeeBvConv.v`, audited in step
+3), for canonical operands,
+infinite radii (the whole space) included: the result is a finite ball vector or the whole space,
+with $n_x + n_y - 1$ coefficients (none when an operand is empty), and the flag is true exactly when
+the radius is finite; for all members of the operands' balls, each entry chosen independently,
+coefficient $j$ of their exact product is in the ball of coefficient $j$ written (the whole space
+contains everything); and a finite radius comes from finite radii, with the coefficients and the
+radius of the real model on the values, so that V2 is the real-model theorem read on the values.
+
+**V4 of `bv_conv_1`** (`bv_conv_1_ieee_v4`): finite radii, $n\,(u/(1+u) + \eta) \le \tfrac1{16}$ with
+$n = \min(n_x, n_y)$, $r_x r_y \le Q$, $(\lvert x\rvert + r_x)\,r_y \le Q$ for every entry $x$,
+$(\lvert y\rvert + r_y)\,r_x \le Q$ for every entry $y$ and $n\,(\lvert x\rvert + r_x)(\lvert y\rvert
++ r_y) \le Q$ for every pair, $Q = 2^{e_{\max}-2}$, give a finite product, in every format of the
+statement (precision at least 4, $e_{\max} > p$). Every value the IEEE model computes is shown at
+most $\tfrac72 Q$, below the largest number $4Q(1-u)$, so that every operation returns its rounded
+real result: the count $n \le 2^p$ is a number of the format; the bound's mask is true ($a \le
+0.16 \le \mathrm{up}(\tfrac14)$, $g \le 0.3$), its $t$ at most $Q/4$ (the smallest normal number of
+the constant of $tm$, times $n$, is at most $1/(32u) \le Q/16$); every state of the fused dot
+product of a coefficient is within $(1+\varepsilon)^k \le \tfrac{16}{15}$ of a sum of at most $n$
+products each at most $Q/n$; and with $P = (M_a + r_x)(M_b + r_y)$, the largest magnitudes being
+attained, $P \le Q$ and $n P \le Q$ (the pairs' condition with both operands nonempty, an array's
+own condition or the radii's otherwise), and the radius kernel stays at most $3.2\,Q$.
+
+**V4 of `bv_conv_2` was false as first printed, and its claim is restated.** In a format of
+precision $p \ge 8$ with $p < e_{\max} \le 2p - 7$, the condition on the count as first printed,
+$n\,(4u^2 + \eta) \le \tfrac1{16}$, admits $n = 2^{e_{\max}}$, and every $n$ above the largest number
+$\Omega = (1 - 2^{-p})\,2^{e_{\max}}$ makes the count rounded up overflow to $+\infty$;
+`bound_dot_2(+\infty)` then has its mask false and the product is the whole space, although the
+operands are finite and meet every condition. For instance $p = 8$, $e_{\max} = 9$ ($\eta =
+2^{-14}$, $\Omega = 510$), both operands 511 entries $(+0, +0)$ with radii $+0$: $511\,(2^{-14} +
+2^{-14}) = 511/8192 \le 1/16$, every other condition is $0 \le 2^{7}$, and the interpreter returns
+1021 zero coefficients, the radius $+\infty$ and the flag false (with 510 entries the count is 510
+and the product is finite). The condition now has the smallest normal number $\eta/(2u) =
+2^{2 - e_{\max}}$ in place of $\eta$, $n\,(4u^2 + \eta/(2u)) \le \tfrac1{16}$, which bounds $n$ by
+$2^{e_{\max} - 6}$ whatever the precision, so that the count is a number of the format; in that
+format it admits $n \le 7$. `binary32` and `binary64` admit exactly the same counts under both forms
+(up to $2^{42} - 1$ and $2^{100} - 1$: the $4u^2$ is what bounds them).
+`test_bv_conv.Interp.test_the_count_overflowed` keeps the counterexample.
+
+**V4 of `bv_conv_2`** (`bv_conv_2_ieee_v4`), in the manner of one limb: finite radii, $n\,(4u^2 +
+\eta/(2u)) \le \tfrac1{16}$, and the conditions on the radii, the entries and the pairs as for
+`bv_conv_1` with each entry's value $x_0 + x_1$, give a finite product in every format of the
+statement (precision at least 4, $e_{\max} > p$). The count: $n \le 2^{e_{\max}-6}$, so $m$, $n$
+rounded up, is finite and at most $(1+2u)\,n \le \tfrac98 n$ (`count_bounded`), and $m\,4u^2$ and
+$m\,\eta/(2u)$ are at most $\tfrac9{128}$. The bound's mask is true ($a \le 0.115$, $g \le 0.23$) and
+its $t$ at most $\tfrac14$. The coefficients: each step of the dot product of two limbs is `mul_2_2`,
+finite when the exact product is at most $2^{e_{\max}-1}$ (`IeeeMul22.v`), then `add_2_2`, finite
+when both leading limbs are at most $\tfrac54 Q$ (`add_2_2_values_finite_wide`: the bounds of
+`IeeeAdd22.v` with $\tfrac54 Q$ for $Q$, which precision 4 still allows); every state of the real
+model is within $(1 + 4u^2)(1 + 3u^2/(1-4u))^{k-1} \le \tfrac{65}{64}\cdot\tfrac{16}{15}$ of a sum of
+at most $n$ products each at most $Q/n$, so its leading limb is at most $1.16\,Q$, and the leading limb
+of each product at most $1.09\,Q$; so every IEEE state is finite and the real model's
+(`dot_2_forward`). The radius: the largest leading limbs are at most $(1+u)$ times their entries'
+magnitudes, so $P \le (1+u)^2 Q$ and $m P \le \tfrac98 (1+u)^2 Q$, and the radius kernel stays at most
+$3.35\,Q$. The theorem of the generated statement, `bv_conv_2_ieee_correct`, is V1 to V3 of
+`IeeeBvConv.v` with V4.
 
 ## The accumulator
 

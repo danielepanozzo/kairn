@@ -1112,11 +1112,13 @@ class Printers(unittest.TestCase):
         import copy
         ks = copy.deepcopy(self.ks)
         for fd in ks.folds.values():        # the folds of the library are proved (FoldSums.v)
-            fd.status, fd.theorem = 'unverified', None
+            # (and the convolutions name the theorems of the statements of conv_terms, FoldConv.v)
+            fd.status, fd.theorem, fd.terms_theorem = 'unverified', None, None
         # Without a proved fold the audit neither imports the folds' statements nor checks a fold's
         # theorem (a kernel's theorem may be in a file of any name).
         audit = rocq.audit(ks)
         self.assertNotIn('Require Import FoldStatements.', audit)
+        self.assertNotIn('conv_terms', audit)
         for name in ks.folds:
             self.assertNotIn(f'{name}_seq_correct', audit)
             self.assertNotIn(f'{name}_lanes_correct', audit)

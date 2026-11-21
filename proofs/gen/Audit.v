@@ -548,3 +548,12 @@ Print Assumptions sum_fast_2_entry_seq_correct.
 
 Definition sum_fast_2_entry_lanes_audit : sum_fast_2_entry_lanes_spec := sum_fast_2_entry_lanes_correct.
 Print Assumptions sum_fast_2_entry_lanes_correct.
+
+Definition conv_terms_eq_audit : conv_terms_eq_spec := conv_terms_eq_correct.
+Print Assumptions conv_terms_eq_correct.
+
+Definition conv_terms_count_audit : conv_terms_count_spec := conv_terms_count_correct.
+Print Assumptions conv_terms_count_correct.
+
+Definition conv_terms_length_audit : conv_terms_length_spec := conv_terms_length_correct.
+Print Assumptions conv_terms_length_correct.

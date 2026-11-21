@@ -209,8 +209,15 @@ along arrays, described in gen/kernels/NAME.fold:
     status:        unverified         or proved, with theorem: FILE (F_seq_correct, F_lanes_correct)
     ieee_theorem:  FILE               optional, once the statements of proofs/gen/IeeeFoldStatements.v
                                       are proved: F_seq_ieee_correct and F_lanes_ieee_correct, of
-                                      the orders the fold (or the map) has; F_ieee_correct, of a
-                                      convolution
+                                      the orders the fold (or the map) has, and of a fold of maxima
+                                      in both orders F_orders_ieee_correct and F_flag_ieee_correct
+                                      too; F_ieee_correct, of a convolution or a product of two
+                                      BallVectors
+    terms_theorem: FILE               a convolution's, optional: the file of conv_terms_eq_correct,
+                                      conv_terms_count_correct and conv_terms_length_correct, the
+                                      theorems of the three statements of conv_terms that every
+                                      convolution shares (proofs/gen/FoldStatements.v); the
+                                      convolutions that name one name the same file
     domain:        extended           elements may be infinite or NaN (the flag says what comes out)
 
 A map is a fold that writes an array (docs/developer/architecture.md, "Maps"):
@@ -1324,6 +1331,7 @@ class Fold:
     min_precision: int = None
     theorem: str = None         # the file of F_seq_correct and F_lanes_correct
     ieee_theorem: str = None    # the file of F_seq_ieee_correct and F_lanes_ieee_correct
+    terms_theorem: str = None   # a convolution's: the file of the theorems of the statements of conv_terms
     source: str = None
     license: str = None
     status: str = None
@@ -1521,6 +1529,12 @@ def parse_fold(text, path):
                 raise DescriptionError(f'{where}: expected "ieee_theorem: FILE" (its theorems are '
                                        'F_seq_ieee_correct and F_lanes_ieee_correct)')
             fd.ieee_theorem = val
+        elif key == 'terms_theorem':
+            if len(val.split()) != 1:
+                raise DescriptionError(f'{where}: expected "terms_theorem: FILE" (its theorems are '
+                                       'conv_terms_eq_correct, conv_terms_count_correct and '
+                                       'conv_terms_length_correct)')
+            fd.terms_theorem = val
         elif key in ('source', 'license', 'status', 'domain'):
             setattr(fd, key, val)
         else:

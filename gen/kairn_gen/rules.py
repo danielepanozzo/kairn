@@ -416,9 +416,12 @@ def theorem(k, kernels):
     # The theorems of the IEEE-model statements of a kernel of the finite domain: each names the
     # statement it proves by its name, and only a statement the kernel has.
     named = [(key, getattr(k, key), ir.IEEE_THEOREM_NAMES[key].format(k.name)) for key in ir.IEEE_THEOREM_KEYS]
-    if k.extended and any(have for _, have, _ in named):
-        err('ieee_bridge_theorem, ieee_spec_theorem and ieee_lead_theorem belong to kernels of the '
-            'finite domain (one of the extended domain names its ieee_theorem)')
+    # A kernel of the extended domain names the theorem of its IEEE-model statement as its
+    # ieee_theorem; it has no bridge or spec statement, but a step of a fold of the extended domain
+    # has a leading-limb statement, whose theorem is its ieee_lead_theorem.
+    if k.extended and (k.ieee_bridge_theorem or k.ieee_spec_theorem):
+        err('ieee_bridge_theorem and ieee_spec_theorem belong to kernels of the finite domain (one of the '
+            'extended domain names its ieee_theorem)')
     if k.ieee_bridge_theorem and 'bridge' not in k.ieee:
         err('an ieee_bridge_theorem proves K_ieee_bridge_spec, which the kernel has only with "ieee: bridge"')
     if k.ieee_spec_theorem and 'spec' not in k.ieee:
@@ -2437,6 +2440,12 @@ def conv_rules(fd, kernels, reserved):
             'false flag', CLAIMS)
     if fd.min_precision is None or fd.min_precision < (cf.min_precision or 1):
         err(f'min_precision: at least that of {cf.name}, {cf.min_precision}', CLAIMS)
+    # The statements of conv_terms are printed once, for every convolution: so is the file of their
+    # theorems, which the convolutions that name one name alike.
+    files = {g.name: g.terms_theorem for g in getattr(kernels, 'folds', {}).values() if g.is_conv and g.terms_theorem}
+    if len(set(files.values())) > 1:
+        err('terms_theorem: the convolutions that name one name the same file (the statements of conv_terms are '
+            'shared): ' + ', '.join(f'{n} {f}' for n, f in sorted(files.items())), RULE_THEOREM)
     errs += _fold_theorem(fd)
     return errs
 
@@ -3155,4 +3164,8 @@ def _fold_theorem(fd):
         err('a theorem file is named only once the fold is proved (status: proved)')
     if fd.ieee_theorem and not (fd.ieee_theorem.startswith('proofs/theories/') and fd.ieee_theorem.endswith('.v')):
         err(f'the ieee_theorem file must be proofs/theories/*.v, not {fd.ieee_theorem}')
+    if fd.terms_theorem and not fd.is_conv:
+        err('a terms_theorem names the theorems of the statements of conv_terms, which only a convolution names')
+    if fd.terms_theorem and not (fd.terms_theorem.startswith('proofs/theories/') and fd.terms_theorem.endswith('.v')):
+        err(f'the terms_theorem file must be proofs/theories/*.v, not {fd.terms_theorem}')
     return errs

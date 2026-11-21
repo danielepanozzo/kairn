@@ -15,9 +15,10 @@ ensures:       finite_or_nan r flag=flag if_all=okc,okg
 min_precision: 1
 source:        the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md)
 license:       proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBvConv.v bv_conv_finish_correct
 cone_exempt:   the outputs are those of norm_finish_1, after the and of two masks, which is what the kernel claims
 
 q         = and(okc, okg)

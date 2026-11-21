@@ -204,7 +204,7 @@ Definition axpy_step_2_1_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.axpy_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
   finite z0 -> finite a /\ finite x0 /\ finite y0.
 
-(* neg_2, the leading limb of its result: finite only if those of its operands are. *)
+(* neg_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition neg_2_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -213,7 +213,7 @@ Definition neg_2_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.neg_2 prec emax nan_opp x0 x1 in
   finite z0 -> finite x0.
 
-(* bv_center_2, the leading limb of its result: finite only if those of its operands are. *)
+(* bv_center_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition bv_center_2_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -408,7 +408,7 @@ Definition norm_upper_1_lanes_ieee_spec : Prop :=
    r_ <= RU (ieee_emin prec emax) prec v_) /\
   (flag = false -> nan r).
 
-(* norm_upper_1: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: unverified. *)
+(* norm_upper_1: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: proved. *)
 Definition norm_upper_1_orders_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -417,7 +417,7 @@ Definition norm_upper_1_orders_ieee_spec : Prop :=
   fold_lanes (IeeeFoldModel.norm_upper_1_step prec emax nan_abs) (IeeeFoldModel.norm_upper_1_combine prec emax) (IeeeOperations.pzero prec emax, true) W xs =
   fold_seq (IeeeFoldModel.norm_upper_1_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs.
 
-(* norm_upper_1: the flag of the sequential order is true exactly when every leading limb is finite, in the IEEE model. Status: unverified. *)
+(* norm_upper_1: the flag of the sequential order is true exactly when every leading limb is finite, in the IEEE model. Status: proved. *)
 Definition norm_upper_1_flag_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -470,7 +470,7 @@ Definition norm_upper_2_lanes_ieee_spec : Prop :=
    r_ <= succ radix2 (FLT_exp (ieee_emin prec emax) prec) (RU (ieee_emin prec emax) prec v_)) /\
   (flag = false -> nan r).
 
-(* norm_upper_2: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: unverified. *)
+(* norm_upper_2: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: proved. *)
 Definition norm_upper_2_orders_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -479,7 +479,7 @@ Definition norm_upper_2_orders_ieee_spec : Prop :=
   fold_lanes (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeFoldModel.norm_upper_2_combine prec emax) (IeeeOperations.pzero prec emax, true) W xs =
   fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs.
 
-(* norm_upper_2: the flag of the sequential order is true exactly when every leading limb is finite and the largest magnitude, the limb of the final state, stepped up once as the finish does, is finite, in the IEEE model. Status: unverified. *)
+(* norm_upper_2: the flag of the sequential order is true exactly when every leading limb is finite and the largest magnitude, the limb of the final state, stepped up once as the finish does, is finite, in the IEEE model. Status: proved. *)
 Definition norm_upper_2_flag_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2286,7 +2286,7 @@ Definition bv_sub_2_lanes_ieee_spec : Prop :=
      Rabs (((Rabs ((val x0 + val x1) - (val y0 + val y1))) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
 
-(* bv_conv_1, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_conv_1, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_conv_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2319,7 +2319,7 @@ Definition bv_conv_1_ieee_spec : Prop :=
    Forall (fun x => Forall (fun y => Rabs (((INR (Nat.min (length xs) (length ys))) * ((Rabs (val x)) + val rx)) * ((Rabs (val y)) + val ry)) <= bpow radix2 (emax - 2)) ys) xs ->
    finite r_).
 
-(* bv_conv_2, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_conv_2, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_conv_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2345,7 +2345,7 @@ Definition bv_conv_2_ieee_spec : Prop :=
    Forall2 (fun w_ s_ => (val (fst w_), val (snd w_)) = s_) ws_ (FoldModel.conv_2_conv (ieee_emin prec emax) prec tie_even (map (fun x => (val (fst x), val (snd x))) xs) (map (fun y => (val (fst y), val (snd y))) ys)) /\
    val r_ = FoldModel.bv_conv_2_radius (ieee_emin prec emax) prec tie_even (val rx) (val ry) (map (fun x => (val (fst x), val (snd x))) xs) (map (fun y => (val (fst y), val (snd y))) ys)) /\
   (finite rx -> finite ry ->
-   ((INR (Nat.min (length xs) (length ys))) * ((4 * u prec ^ 2) + eta (ieee_emin prec emax))) <= (1 / 16) ->
+   ((INR (Nat.min (length xs) (length ys))) * ((4 * u prec ^ 2) + (eta (ieee_emin prec emax) / (2 * u prec)))) <= (1 / 16) ->
    Rabs (val rx * val ry) <= bpow radix2 (emax - 2) ->
    Forall (fun x => let '(x0, x1) := x in Rabs (((Rabs (val x0 + val x1)) + val rx) * val ry) <= bpow radix2 (emax - 2)) xs ->
    Forall (fun y => let '(y0, y1) := y in Rabs (((Rabs (val y0 + val y1)) + val ry) * val rx) <= bpow radix2 (emax - 2)) ys ->

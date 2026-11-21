@@ -632,6 +632,10 @@ Definition norm_upper_2_flag_ieee_spec : Prop :=
   finite (IeeeOperations.succ prec emax (fst (fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs))).
 ```
 
+Their theorems, `F_orders_ieee_correct` and `F_flag_ieee_correct`, are in the file the fold's
+`ieee_theorem` names, with those of its orders (`ieee.proved_statements`): the comments above the
+two statements say proved when it does, and `IeeeAudit.v` checks them after those of the orders.
+
 Both are unverified until a proof is pointed at them: they are the types of the hand-written
 theorems of these facts (`norm_upper_k_lanes_seq_state`, `norm_upper_k_seq_ieee_flag`) once their
 section's variables are bound, so that those theorems can prove generated statements rather than
@@ -780,7 +784,11 @@ lemmas of `FoldConv.v` so that they can prove them: `conv_terms_eq_spec` (the li
 (nth i xs a, nth (j - i)%nat ys b)) (seq (j - (length ys - 1))%nat (length (conv_terms xs ys j)))`),
 `conv_terms_count_spec` (with at least one $y$, coefficient $j$ has $\min(j + 1, n_x) - (j - (n_y -
 1))$ terms, a subtraction of natural numbers) and `conv_terms_length_spec` (at most $\min(n_x, n_y)$,
-which the products of two BallVectors need). Unverified, as statements of no kernel or fold.
+which the products of two BallVectors need). They are statements of no kernel or fold: their
+theorems (`conv_terms_eq_correct`, `conv_terms_count_correct`, `conv_terms_length_correct`, in
+`FoldConv.v`) are named by the convolutions, `terms_theorem: FILE`, the same file by every
+convolution that names one (`rules.conv_rules`); then the three comments say proved and `Audit.v`
+checks the three theorems once, after the folds (`rocq.CONV_TERMS`); otherwise they say unverified.
 
 ### Maps and convolutions in the IEEE model
 
@@ -1338,7 +1346,7 @@ output:        mask flag
 value:         x*y
 requires:      ball_vector x rx
 requires:      ball_vector y ry
-ensures:       encloses_coefficients z r x*y x=x,rx y=y,ry flag=flag finite_when=abs_le(n*(abs(x)+rx)*(abs(y)+ry),-2);abs_le((abs(x)+rx)*ry,-2);abs_le((abs(y)+ry)*rx,-2) radii_when=abs_le(rx*ry,-2) count_when=le(n*(unit(mul_2_2)+eta),1/16)
+ensures:       encloses_coefficients z r x*y x=x,rx y=y,ry flag=flag finite_when=abs_le(n*(abs(x)+rx)*(abs(y)+ry),-2);abs_le((abs(x)+rx)*ry,-2);abs_le((abs(y)+ry)*rx,-2) radii_when=abs_le(rx*ry,-2) count_when=le(n*(unit(mul_2_2)+eta/(2*u)),1/16)
 min_precision: 4
 status:        unverified
 domain:        extended
@@ -1394,8 +1402,9 @@ x_i y_{j-i}$ with every $x_i$ and $y_k$ ranging independently over its ball (eac
 a coefficient, so the exact range of the sum is the sum of the ranges of the products), V3 (a finite
 result has finite radii, the convolution's coefficients and the radius kernel's radius on the values),
 and **V4**, which the page left to the proof and which is now, exactly: *if both operands are finite
-ball vectors, $n\,(\mathrm{unit}(K) + \eta) \le \tfrac1{16}$ with $n = \min(n_x, n_y)$ and $K$ the
-products' kernel (`mul_2_2`, `mul_1_1`), $r_x r_y \le 2^{e_{\max}-2}$, every entry $x_i$ has $(\lvert
+ball vectors, $n\,(\mathrm{unit}(K) + \eta/(2u)) \le \tfrac1{16}$ for `bv_conv_2` and $n\,(\mathrm{unit}(K)
++ \eta) \le \tfrac1{16}$ for `bv_conv_1`, with $n = \min(n_x, n_y)$ and $K$ the products' kernel (`mul_2_2`,
+`mul_1_1`), $r_x r_y \le 2^{e_{\max}-2}$, every entry $x_i$ has $(\lvert
 x_i\rvert + r_x)\,r_y \le 2^{e_{\max}-2}$, every entry $y_k$ has $(\lvert y_k\rvert + r_y)\,r_x \le
 2^{e_{\max}-2}$, and every pair has $n\,(\lvert x_i\rvert + r_x)(\lvert y_k\rvert + r_y) \le
 2^{e_{\max}-2}$, then the result is a finite ball vector.* The condition of the pairs is the bound of the
@@ -1411,10 +1420,23 @@ r_y)\,r_x$ not met). The radii's own condition is the case of two empty operands
 empty the condition of the pairs implies the others, as `finite_when` implies `radii_when` for every
 ball vector. The condition on the count is the bound's: `bound_dot_k(m)` refuses a count beyond about
 $\tfrac14 / \mathrm{unit}(K)$ (in formats of few bits, a few terms), and then the result is the whole
-space whatever the values; $n\,(\mathrm{unit}(K) + \eta) \le \tfrac1{16}$ makes it given in every format
-from $p = 4$ (`test_bv_conv.Interp.test_the_count_gives_the_bound`: every such $n$, up to 3 000 of them,
-in 36 formats of precisions 4 to 9, `ok` true; the $\eta$ covers formats whose $\eta$ is not small
-against $\mathrm{unit}(K)$). How it was checked: in exact arithmetic on the interpreter, at random
+space whatever the values; the condition makes it given in every format from $p = 4$, and it makes the
+count a number of the format. That second part is why `bv_conv_2` has the smallest normal number
+$\eta/(2u) = 2^{2 - e_{\max}}$ where `bv_conv_1` has $\eta$: the count is $m$, $n$ rounded up, and when $n$
+is above the largest number $m$ is $+\infty$, `bound_dot_k(+\infty)` is not given, and the product is the
+whole space. $n\,\eta/(2u) \le \tfrac1{16}$ bounds $n$ by $2^{e_{\max} - 6}$ whatever the precision. With
+$\eta$ in its place, as first stated, $n\,(4u^2 + \eta) \le \tfrac1{16}$ bounds $n$ by about $\min(2^{2p-6},
+2^{e_{\max}+p-7})$, which is above the largest number in every format with $p \ge 8$ and $p < e_{\max} \le
+2p - 7$: there finite operands meeting every condition gave the whole space ($p = 8$, $e_{\max} = 9$, both
+operands 511 entries $(+0, +0)$ with radii $+0$; `test_bv_conv.Interp.test_the_count_overflowed`), and V4
+was false. In `binary32` and `binary64` the two forms admit the same counts, up to $2^{42} - 1$ and $2^{100}
+- 1$ (the $4u^2$ is what bounds them). For `bv_conv_1` the term $u/(1+u)$ already bounds $n$ by about
+$2^{p-4}$, a number of the format, and $\eta$ is kept. `test_bv_conv.Interp.test_the_count_gives_the_bound`
+checks, for every $n$ the condition admits (up to 3 000 of them and the largest), that the count rounded up
+is finite and `ok` true, in 36 formats of precisions 4 to 9 with room above (the $\eta$ covers formats whose
+$\eta$ is not small against $\mathrm{unit}(K)$) and in formats of the IEEE shape of precisions 4 to 12, each
+with its smallest exponent range and, from $p = 8$ on, those with $e_{\max} \le 2p - 7$, where it checks
+too that the first form admitted a count whose rounding up overflows. How it was checked: in exact arithmetic on the interpreter, at random
 (`test_v1_to_v4`) and on cases aimed at the limits of the conditions, a quarter with $n_x = 0$ and a
 quarter with $n_y = 0$ (`test_v4_at_its_limits`), in six formats of the IEEE shape of four to six bits
 and in `binary64` and `binary32`, with no failure; and the compiled code computes what the interpreter
@@ -1722,9 +1744,15 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
 - **Their theorems.** A kernel of the finite domain names the theorem of each IEEE-model
   statement once it is proved: `ieee_bridge_theorem` (`K_ieee_bridge`, of `K_ieee_bridge_spec`),
   `ieee_spec_theorem` (`K_ieee_correct`, of `K_ieee_spec`) and `ieee_lead_theorem`
-  (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`; a fold or a map, `ieee_theorem: FILE`,
-  whose theorems are `F_seq_ieee_correct` and `F_lanes_ieee_correct`, and a convolution the same
-  field, whose theorem is `F_ieee_correct`. The comment above a statement
+  (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`. A kernel of the extended domain names
+  no bridge or spec theorem (its IEEE-model statement is its `ieee_theorem`'s), but one with a lead
+  statement, the step of a fold (`neg_2`, `bv_center_2`), names its `ieee_lead_theorem`. A fold or a
+  map names `ieee_theorem: FILE`, whose theorems are `F_seq_ieee_correct` and
+  `F_lanes_ieee_correct` (and `F_orders_ieee_correct` and `F_flag_ieee_correct` for a fold of
+  maxima in both orders), and a convolution or a product of two BallVectors the same field, whose
+  theorem is `F_ieee_correct` (each has one statement, `F_ieee_spec`; until 2026-11-21 the audit
+  printed a product's check against `F_seq_ieee_spec`, which does not exist). The comment above a
+  statement
   says `proved` when its theorem is named and `unverified` otherwise. The comment above a fold's C++
   function gives both, as a kernel's does: `Status: proved (real model), unverified (IEEE model)` for
   `sum_2` (`cpp.fold_status`; until 2026-11-20 it gave the real model's alone). `IeeeAudit.v` checks
@@ -2232,7 +2260,7 @@ finishes `fold_finish_1` and `fold_finish_2` (`finite_or_nan`, `ieee_only`), and
   "ensures": [{"kind": "holds", "rel": "le", "args": ["m*unit(mul_2_2)", "1/2"], "if": "ok"},
               {"kind": "upper", "of": "g", "value": "m*unit(mul_2_2)/(1-m*unit(mul_2_2))", "if": "ok"},
               {"kind": "upper", "of": "t", "value": "m*tiny(mul_2_2)*(1+g)", "if": "ok"}],
-  "min_precision": 4, "status": "unverified",
+  "min_precision": 4, "status": "proved",
   "instances": {"binary64": [], "binary32": []}
 },
 {
@@ -2242,7 +2270,7 @@ finishes `fold_finish_1` and `fold_finish_2` (`finite_or_nan`, `ieee_only`), and
   "requires": ["count(m)", "format(half)"],
   "ensures": [{"kind": "holds", "rel": "le", "args": ["m*unit(add_1_1)", "1/2"], "if": "ok"},
               {"kind": "upper", "of": "g", "value": "m*unit(add_1_1)/(1-m*unit(add_1_1))", "if": "ok"}],
-  "min_precision": 1, "status": "unverified",
+  "min_precision": 1, "status": "proved",
   "instances": {"binary64": [], "binary32": []}
 }
 ```
@@ -2273,7 +2301,7 @@ short here):
   "orders": ["sequential", "lanes"],
   "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
   "step": "dot_step_2", "combine": "add_2_2", "finish": "fold_finish_2",
-  "min_precision": 4, "status": "unverified", "theorems": {"sequential": null, "lanes": null},
+  "min_precision": 4, "status": "proved", "theorems": {"sequential": {"file": "proofs/theories/FoldSums.v", "name": "dot_2_seq_correct"}, "lanes": {"file": "proofs/theories/FoldSums.v", "name": "dot_2_lanes_correct"}},
   "source": {"cite": "Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22)",
              "license": "bound: published; proof: MIT"},
   "instances": {"binary64": [{"eps": "3/81129638414606645666991986180096",
@@ -2323,7 +2351,7 @@ short here):
   "orders": ["sequential", "lanes"],
   "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
   "step": "axpy_step_2", "step_args": ["a", "x", "y"], "check": "fold_finish_2",
-  "min_precision": 4, "status": "unverified", "theorem": null,
+  "min_precision": 4, "status": "proved", "theorem": {"file": "proofs/theories/FoldMaps.v", "name": "axpy_2_correct"},
   "source": {"cite": "axpy_step_2 on each element", "license": "algorithm: published; proof: MIT"}
 }
 ```
@@ -2398,7 +2426,7 @@ true` (and no `"map"`):
               {"kind": "finite_or_nan", "of": "z", "flag": "finite"}],
   "orders": ["sequential"],
   "coefficients": "dot_2", "check": "fold_finish_2",
-  "min_precision": 4, "status": "unverified", "theorem": null,
+  "min_precision": 4, "status": "proved", "theorem": {"file": "proofs/theories/FoldConv.v", "name": "conv_2_correct"},
   "source": {"cite": "dot_2 on the terms of each coefficient", "license": "bound: published; proof: MIT"}
 }
 ```
@@ -2596,7 +2624,7 @@ writes it (`source` left out):
                "finite_when": [{"abs_le": "n*(abs(x)+rx)*(abs(y)+ry)", "exp": -2}, {"abs_le": "(abs(x)+rx)*ry", "exp": -2},
                                {"abs_le": "(abs(y)+ry)*rx", "exp": -2}],
                "radii_when": [{"abs_le": "rx*ry", "exp": -2}],
-               "count_when": [{"le": "n*(unit(mul_2_2)+eta)", "than": "1/16"}]}],
+               "count_when": [{"le": "n*(unit(mul_2_2)+eta/(2*u))", "than": "1/16"}]}],
   "orders": ["sequential"],
   "centers": "conv_2", "records": ["norm_step_2", "norm_step_2"], "count": "min(n_x,n_y)", "bound": "bound_dot_2",
   "radius": "conv_radius", "radius_args": ["ma", "mb", "rx", "ry", "m", "g", "t"], "finish": "bv_conv_finish",
@@ -2632,8 +2660,10 @@ writes it (`source` left out):
       one array when it names that array only; once when it names neither (`radii_when` names scalars
       only). A condition of **`count_when`**, `{"le": EXPR, "than": K}`, is EXPR $\le$ K, EXPR an exact
       expression over `n`, `u`, `eta`, integers and `unit(K)`, `tiny(K)` of a kernel's bound, K a positive
-      rational: here $n\,(4u^2 + \eta) \le \tfrac1{16}$ (`unit(mul_1_1)` $= u/(1+u)$ for `bv_conv_1`), which
-      makes the bound of `dot` for $n$ terms given (`bound_dot_k`'s mask true). For $n_x = 0$ or $n_y = 0$
+      rational: here $n\,(4u^2 + \eta/(2u)) \le \tfrac1{16}$, $\eta/(2u)$ the smallest normal number
+      (for `bv_conv_1`, $n\,(u/(1+u) + \eta) \le \tfrac1{16}$, `unit(mul_1_1)` $= u/(1+u)$), which makes the
+      count $n$ rounded up a number of the format and the bound of `dot` for that many terms given
+      (`bound_dot_k`'s mask true). For $n_x = 0$ or $n_y = 0$
       there is no pair, and the conditions of the other array and of the radii are the whole of V4.
   `finite_when`, `radii_when` and `count_when` are present together or not at all.
 - `centers` (the convolution of the centers, an entry of the list with `"conv": true`), `records`,

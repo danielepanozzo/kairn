@@ -1143,13 +1143,10 @@ class Printers(unittest.TestCase):
         text = cpp.scalar(self.ks)
         self.assertIn('// of the arrays read (in place) or overlaps none of them. Status: proved (real model), '
                       'proved (IEEE model).', text)
+        # (the products of two BallVectors, bv_conv_k, proved in both models since IeeeBvConvFinite.v and
+        # IeeeBvConvFinite2.v)
         self.assertIn('The array written overlaps neither x nor y.\n// Status: proved (real model), '
-                      'unverified (IEEE model).', text)
-        # The ball vectors with a lane order are proved in both models (BvReal.v, IeeeBv.v, and the
-        # later ones), the products of two BallVectors in the real model only (BvConv.v), and the
-        # folds with a lane order in both models (IeeeFolds.v, IeeeFoldNorm.v): each comment says so.
-        self.assertNotIn('// of the arrays read (in place) or overlaps none of them. Status: proved (real model), '
-                         'unverified (IEEE model).', text)
+                      'proved (IEEE model).', text)
         self.assertIn('the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved '
                       '(real model), proved (IEEE model).', text)
         self.assertNotRegex(text, r'Status: (proved|unverified)\.\n(inline|KAIRN_GEN_NOINLINE) [^\n]*_(seq|lanes)\(')

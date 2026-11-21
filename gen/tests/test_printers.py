@@ -983,9 +983,13 @@ class Rocq(unittest.TestCase):
     # Then the proofs of the ball vectors above met them in a merge: the regeneration of the merged
     # descriptions (Model.v that of this line, Statements.v and Audit.v those of the ball vectors
     # in the order of this line).
+    # On the line of the ball vectors, meanwhile: Then the convolutions named the
+    # file of the theorems of the three statements of conv_terms (terms_theorem): Audit.v checks them
+    # after those of the folds, every earlier line kept; Model.v and Statements.v are the same.
+    # Merged here: the regeneration of the merged descriptions.
     DIGESTS = {'Model.v': '784bec01ec24ef2bdcd764c46228f787286560359461c5f976f90a80a6d2efc8',
                'Statements.v': '953938a44e69028d7710b7f912245506fe398aac44e6f156cecf98a36d72e05a',
-               'Audit.v': 'd66239165eb54b7cf9aceade205c0fd9576f0192f49874bf1270f592e59d2836'}
+               'Audit.v': '6f20785e7951c4c074f8e38bec683fded7ad979e875eb07c71005a3eaa604d58'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

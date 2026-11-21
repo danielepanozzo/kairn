@@ -3696,7 +3696,7 @@ KAIRN_GEN_FORCEINLINE constexpr void norm_finish_1(float m, bool ok, float& r_ou
 }
 
 // bv_conv_finish(rz, mask okc, mask okg) -> r, mask flag
-// the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+// the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void bv_conv_finish(double rz, bool okc, bool okg, double& r_out, bool& flag_out) noexcept {
     const bool q = okc & okg;
     // (r, flag) = norm_finish_1(rz, q)
@@ -20738,7 +20738,7 @@ KAIRN_GEN_NOINLINE void bv_conv_1_end(float ma, float mb, std::size_t nm_, bool 
 // product of ball vectors bv_conv_1(stored x, stored y, stored rx, stored ry) -> z, r, flag: the convolution conv_1 of the centers,
 // the maxima by norm_step_1, the bound bound_dot_1 of min(n_x, n_y) terms, the radius conv_radius, the finish bv_conv_finish. The whole space
 // (every coefficient zero, the radius +infinity) when the flag is false. The array written overlaps neither x nor y.
-// Status: proved (real model), unverified (IEEE model).
+// Status: proved (real model), proved (IEEE model).
 inline void bv_conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double rx, double ry, double* z_out, double& r_out, bool& flag_out) noexcept {
     double ma = 0.0;
     bool oka = true;
@@ -20941,7 +20941,7 @@ KAIRN_GEN_NOINLINE void bv_conv_2_end(float ma, float mb, std::size_t nm_, bool 
 // product of ball vectors bv_conv_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, flag: the convolution conv_2 of the centers,
 // the maxima by norm_step_2, the bound bound_dot_2 of min(n_x, n_y) terms, the radius conv_radius, the finish bv_conv_finish. The whole space
 // (every coefficient zero, the radius +infinity) when the flag is false. The array written overlaps neither x nor y.
-// Status: proved (real model), unverified (IEEE model).
+// Status: proved (real model), proved (IEEE model).
 inline void bv_conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x, const double* y0_in, const double* y1_in, std::size_t n_y, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& flag_out) noexcept {
     double ma = 0.0;
     bool oka = true;

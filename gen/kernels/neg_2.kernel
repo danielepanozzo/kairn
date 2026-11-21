@@ -15,6 +15,7 @@ status:        proved
 domain:        extended
 ieee_status:   proved
 ieee_theorem:  proofs/theories/IeeeExt.v neg_2_ieee_correct
+ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v neg_2_ieee_lead
 entry:         yes
 cone_exempt:   z1 = -x1 does not reach z0; a negation is exact and cannot overflow, and a non-finite x1 beside a finite x0 is not a normalized operand, so the non-finite layer, which reads x0, stands in for the check
 

@@ -812,7 +812,7 @@ Definition norm_finish_1_spec : Prop :=
   (flag = true -> r = m) /\
   (flag = false -> nan r).
 
-(* bv_conv_finish: the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+(* bv_conv_finish: the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
 Definition bv_conv_finish_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -820,7 +820,7 @@ Definition bv_conv_finish_spec : Prop :=
   forall rz : binary_float prec emax,
   forall okc okg : bool,
   let '(r, flag) := IeeeModel.bv_conv_finish prec emax nan_abs nan_const rz okc okg in
-  (flag = true <-> finite rz) /\
+  (flag = true <-> okc = true /\ okg = true /\ finite rz) /\
   (flag = true -> r = rz) /\
   (flag = false -> nan r).
 

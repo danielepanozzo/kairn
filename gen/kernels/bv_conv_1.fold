@@ -4,7 +4,10 @@
 # largest magnitudes of the operands' centers, ma and mb (norm_step_1 on the arrays read); the count
 # m = min(n_x, n_y) as a number of T rounded up; one call of bound_dot_1(m); the radius conv_radius;
 # and the finish bv_conv_finish. When its flag is false every coefficient written is zero and the
-# radius +infinity, the whole space. V4 as for bv_conv_2, with the bound of mul_1_1. From precision 4:
+# radius +infinity, the whole space. V4 with the bound of mul_1_1 and its own condition on the count
+# (count_when: n is then at most about 2^(p - 4), a number of the format; bv_conv_2's condition has
+# the smallest normal number where this one has eta, because its count could otherwise exceed the
+# largest number in formats of a small exponent range). From precision 4:
 # below it the factors (1+u) of conv_radius are too large for the fraction 2^(emax - 2) of V4.
 fold:          bv_conv_1
 arrays:        stored x, stored y
@@ -27,6 +30,7 @@ requires:      ball_vector y ry
 ensures:       encloses_coefficients z r x*y x=x,rx y=y,ry flag=flag finite_when=abs_le(n*(abs(x)+rx)*(abs(y)+ry),-2);abs_le((abs(x)+rx)*ry,-2);abs_le((abs(y)+ry)*rx,-2) radii_when=abs_le(rx*ry,-2) count_when=le(n*(unit(mul_1_1)+eta),1/16)
 min_precision: 4
 theorem:       proofs/theories/BvConv.v
+ieee_theorem:  proofs/theories/IeeeBvConvFinite.v
 status:        proved
 domain:        extended
 source:        conv_1 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)

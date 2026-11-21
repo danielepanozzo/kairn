@@ -488,8 +488,12 @@ class Statements(unittest.TestCase):
         # constructor of a BallVector: bv_center_2 and bv_make_finish (2), the bridges and the leading
         # limbs of neg_1 and bv_center_entry_1 (4), and bv_neg_k and bv_make_k in their two orders (8); and of
         # the scaling by a power of two: the claims and the leading limbs of its two steps (4), and
-        # bv_mul_pow2_k in its two orders (4): 293.
-        self.assertEqual(text.count('Print Assumptions'), 293)
+        # bv_mul_pow2_k in its two orders (4); and the finish of the product of two BallVectors,
+        # bv_conv_finish (1), and the products bv_conv_1 and bv_conv_2 (2: one statement each, as a
+        # convolution's); and the leading limbs of neg_2 and bv_center_2, steps of the extended domain
+        # (2), and the two statements more of the two folds of maxima, F_orders_ieee_spec and
+        # F_flag_ieee_spec (4): 302.
+        self.assertEqual(text.count('Print Assumptions'), 302)
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
         self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
@@ -628,8 +632,15 @@ class CheckedFiles(unittest.TestCase):
     # prints its status, proved, one word more, and make -C proofs passed on these files.
     # Then the proofs of the ball vectors met them in a merge: the regeneration of the merged
     # descriptions.
+    # On the line of the ball vectors, meanwhile:
+    # Then the printer of finite_or_nan wrote the masks of if_all, which it had left out: the first
+    # clause of the statement of bv_conv_finish, the only kernel with if_all, says
+    # flag = true <-> okc = true /\ okg = true /\ finite rz (it said flag = true <-> finite rz, which
+    # was false), and nothing else changed; then that statement was proved (IeeeBvConv.v): one
+    # comment more. make -C proofs passed on these files.
+    # Merged here: the regeneration of the merged descriptions.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'c1dafcb503776af9a0ccc273cbb68029dad60d53ea214bf104cd6b2e826968aa',
-               'proofs/gen/IeeeStatements.v': '11c994939978813a575fe16b2344778f9b8c63495d17f51931b9e9c19878b32e'}
+               'proofs/gen/IeeeStatements.v': '035b64a9e30a0b1f9cdb778af45831f4d8d74267d9298331ff8662a74b6d0208'}
 
 
     def test_the_checked_files(self):
@@ -853,6 +864,94 @@ class TheoremFields(unittest.TestCase):
         # Only a bridge: IeeeFoldStatements.v is not imported.
         ks = self.kernels_with({'dot_step_2': self.STEP[:1]})
         self.assertFalse('Require Import IeeeFoldStatements.' in build.outputs(ks)['proofs/gen/IeeeAudit.v'])
+
+    @staticmethod
+    def comment(text, spec):
+        """The comment printed above the statement spec."""
+        return text.split(f'Definition {spec} : Prop :=', 1)[0].rsplit('(*', 1)[1].rstrip()
+
+    def test_the_two_statements_of_a_fold_of_maxima(self):
+        """A fold of maxima in both orders has F_orders_ieee_spec and F_flag_ieee_spec besides the
+        statements of its orders: its ieee_theorem names their theorems too, F_orders_ieee_correct and
+        F_flag_ieee_correct, in the same file. The comments of its four statements say proved, those of
+        the other fold of maxima unverified, and the audit checks the four, in the order of the file."""
+        from kairn_gen import build
+        ks = self.kernels_with(folds={'norm_upper_2': ['ieee_theorem: proofs/theories/IeeeFoldNorm.v']})
+        self.assertEqual(rules.check_all(ks), [])
+        out = build.outputs(ks)
+        audit, s = out['proofs/gen/IeeeAudit.v'], out['proofs/gen/IeeeFoldStatements.v']
+        self.assertEqual([n for n in re.findall(r'^Definition (\w+)_audit :', audit, flags=re.M)
+                          if n.startswith('norm_upper')],
+                         ['norm_upper_2_seq_ieee', 'norm_upper_2_lanes_ieee', 'norm_upper_2_orders_ieee',
+                          'norm_upper_2_flag_ieee'])
+        for what in ('orders', 'flag'):
+            self.assertIn(f'Definition norm_upper_2_{what}_ieee_audit : norm_upper_2_{what}_ieee_spec := '
+                          f'norm_upper_2_{what}_ieee_correct.\nPrint Assumptions norm_upper_2_{what}_ieee_correct.\n',
+                          audit)
+            self.assertTrue(self.comment(s, f'norm_upper_2_{what}_ieee_spec').endswith('Status: proved. *)'))
+            self.assertTrue(self.comment(s, f'norm_upper_1_{what}_ieee_spec').endswith('Status: unverified. *)'))
+        self.assertIn(('norm_upper_2_flag_ieee_spec', 'proofs/theories/IeeeFoldNorm.v', 'norm_upper_2_flag_ieee_correct',
+                       'IeeeFoldStatements'), ieee.proved_statements(ks))
+
+    def test_the_leading_limbs_of_the_extended_domain(self):
+        """neg_2 and bv_center_2, the steps of two limbs of folds of the extended domain, have leading-limb
+        statements: an ieee_lead_theorem names their theorems, the comments of the statements say proved
+        and the audit checks them. A kernel of the extended domain still names no bridge or spec theorem,
+        nor a lead theorem when it has no lead statement."""
+        from kairn_gen import build
+        lead = {'neg_2': ['ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v neg_2_ieee_lead'],
+                'bv_center_2': ['ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v bv_center_2_ieee_lead']}
+        ks = self.kernels_with(lead)
+        self.assertEqual(rules.check_all(ks), [])
+        out = build.outputs(ks)
+        audit, s = out['proofs/gen/IeeeAudit.v'], out['proofs/gen/IeeeFoldStatements.v']
+        for name in lead:
+            self.assertTrue(ks[name].extended, name)
+            self.assertIn(f'Definition {name}_ieee_lead_audit : {name}_ieee_lead_spec := {name}_ieee_lead.\n'
+                          f'Print Assumptions {name}_ieee_lead.\n', audit)
+            self.assertTrue(self.comment(s, f'{name}_ieee_lead_spec').endswith('IEEE-model status: proved. *)'))
+        self.assertIn('From Kairn Require Import IeeeBvNegMake.', audit)
+        self.assertTrue(any('belong to kernels of the finite domain' in e for e in self.errors(
+            'neg_2', {'neg_2': ['ieee_bridge_theorem: proofs/theories/IeeeBvNegMake.v neg_2_ieee_bridge']})))
+        self.assertTrue(any('belong to kernels of the finite domain' in e for e in self.errors(
+            'neg_2', {'neg_2': ['ieee_spec_theorem: proofs/theories/IeeeBvNegMake.v neg_2_ieee_correct']})))
+        self.assertTrue(ks['bv_make_finish'].extended)
+        self.assertTrue(any('only the step or the combination of a fold has' in e for e in self.errors(
+            'bv_make_finish',
+            {'bv_make_finish': ['ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v bv_make_finish_ieee_lead']})))
+
+    def test_a_product_of_ball_vectors(self):
+        """A product of two BallVectors has one IEEE-model statement, F_ieee_spec, as a convolution has, not
+        one per order: its ieee_theorem names F_ieee_correct, and the audit checks that theorem against
+        F_ieee_spec (it once printed F_seq_ieee_spec, a statement that does not exist). And with every fold
+        naming its file, every statement the audit names is one the statements file defines."""
+        from kairn_gen import build
+        before = build.outputs(self.kernels_with())
+        ks = self.kernels_with(folds={'bv_conv_1': ['ieee_theorem: proofs/theories/IeeeBvConvFinite.v']})
+        self.assertEqual(rules.check_all(ks), [])
+        self.assertIn(('bv_conv_1_ieee_spec', 'proofs/theories/IeeeBvConvFinite.v', 'bv_conv_1_ieee_correct',
+                       'IeeeFoldStatements'), ieee.proved_statements(ks))
+        out = build.outputs(ks)
+        audit = out['proofs/gen/IeeeAudit.v']
+        self.assertEqual([a for a in audit.splitlines() if ('BvConv' in a or 'bv_conv' in a) and 'finish' not in a
+                          and not a.endswith('Import IeeeBvConv.')],
+                         ['From Kairn Require Import IeeeBvConvFinite.',
+                          'Definition bv_conv_1_ieee_audit : bv_conv_1_ieee_spec := bv_conv_1_ieee_correct.',
+                          'Print Assumptions bv_conv_1_ieee_correct.'])
+        added = [a for a in out['proofs/gen/IeeeFoldStatements.v'].splitlines()
+                 if a not in before['proofs/gen/IeeeFoldStatements.v'].splitlines()]
+        self.assertEqual(added, ['(* bv_conv_1, in the IEEE model: V1 to V4 and the flag. Status: proved. *)'])
+        # Every fold naming a file: the audit names only statements that exist.
+        ks = self.kernels_with(folds={name: self.FOLD for name in common.kernels().folds})
+        out = build.outputs(ks)
+        defined = set(re.findall(r'^Definition (\w+) : Prop :=', out['proofs/gen/IeeeFoldStatements.v'], flags=re.M))
+        named = re.findall(r'^Definition \w+_audit : (\w+) := \w+\.$', out['proofs/gen/IeeeAudit.v'], flags=re.M)
+        folds = [spec for spec, _, _, gen in ieee.proved_statements(ks) if gen == 'IeeeFoldStatements']
+        self.assertTrue(set(folds) <= set(named), sorted(set(folds) - set(named)))
+        self.assertEqual(sorted(set(folds) - defined), [])
+        for name in ('bv_conv_1', 'bv_conv_2', 'conv_1', 'conv_2'):
+            self.assertIn(f'{name}_ieee_spec', folds)
+            self.assertNotIn(f'{name}_seq_ieee_spec', folds)
 
     def test_refused(self):
         self.assertTrue(any('must be named dot_step_2_ieee_correct, not dot_step_2_correct' in e for e in self.errors(
