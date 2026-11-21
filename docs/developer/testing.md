@@ -636,7 +636,12 @@ form natively, and on AArch64 NEON.
   both signs, subnormal numbers, the smallest normal number, ordinary and random numbers across the
   range, the largest finite number and pairs near it whose results overflow, the infinities and
   NaN, the pair in lane $k mod W$ for the $k$-th pair and the other lanes filled from the corpus
-  by a fixed sequence; every limb of every lane compared, a NaN as a NaN. It fails if an operation of the extended domain met no register mixing finite and non-finite
+  by a fixed sequence; every limb of every lane compared, a NaN as a NaN, and with MSVC a zero as
+  a zero of either sign: MSVC removes the addition of $+0$ that guards an operand of a packed
+  kernel, so a limb $-0$ keeps its sign there
+  ([Packed](../reference/packed.md#packed-numbers-in-registers); the reads of `api.soa.FORM`
+  through `Packed` are compared the same way, and what a store writes to an array bit for bit
+  with every compiler). It fails if an operation of the extended domain met no register mixing finite and non-finite
   operands (or results, an overflow in one lane only). Also the masks (`any`, `all`, `lane`, `&`,
   `|`, `!`, `select`, a mask with each lane alone set), the moves against the scalar constructors
   (`broadcast`, `lane`, `set_lane`, `load` and `store` from arrays one element off any register

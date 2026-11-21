@@ -115,6 +115,14 @@ struct ops<double> {
     static KAIRN_FORCEINLINE reg broadcast(double a) noexcept { return _mm256_set1_pd(a); }
     static KAIRN_FORCEINLINE reg load(const double* p) noexcept { return _mm256_loadu_pd(p); }
     static KAIRN_FORCEINLINE void store(double* p, reg a) noexcept { _mm256_storeu_pd(p, a); }
+    // a with lane i replaced by v, by a blend and not through memory: MSVC 19.52 at /O2 with
+    // /arch:AVX2 loses the write when a register is stored to a local array, one element of it is
+    // assigned and the array is loaded back, all inlined in a loop over the lanes (reproduced
+    // without any Kairn code; /O1 and /Od are right, and so is this form at every level).
+    static KAIRN_FORCEINLINE reg insert(reg a, int i, double v) noexcept {
+        const __m256i lane = _mm256_cmpeq_epi64(_mm256_set_epi64x(3, 2, 1, 0), _mm256_set1_epi64x(i));
+        return _mm256_blendv_pd(a, _mm256_set1_pd(v), _mm256_castsi256_pd(lane));
+    }
     // Lane m set: a's lane, otherwise b's.
     static KAIRN_FORCEINLINE reg select(mask m, reg a, reg b) noexcept { return _mm256_blendv_pd(b, a, m); }
     static KAIRN_FORCEINLINE reg neg(reg a) noexcept { return _mm256_xor_pd(a, _mm256_set1_pd(-0.0)); }
@@ -139,6 +147,11 @@ struct ops<float> {
     static KAIRN_FORCEINLINE reg broadcast(float a) noexcept { return _mm256_set1_ps(a); }
     static KAIRN_FORCEINLINE reg load(const float* p) noexcept { return _mm256_loadu_ps(p); }
     static KAIRN_FORCEINLINE void store(float* p, reg a) noexcept { _mm256_storeu_ps(p, a); }
+    // As for double, and for the same reason.
+    static KAIRN_FORCEINLINE reg insert(reg a, int i, float v) noexcept {
+        const __m256i lane = _mm256_cmpeq_epi32(_mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0), _mm256_set1_epi32(i));
+        return _mm256_blendv_ps(a, _mm256_set1_ps(v), _mm256_castsi256_ps(lane));
+    }
     static KAIRN_FORCEINLINE reg select(mask m, reg a, reg b) noexcept { return _mm256_blendv_ps(b, a, m); }
     static KAIRN_FORCEINLINE reg neg(reg a) noexcept { return _mm256_xor_ps(a, _mm256_set1_ps(-0.0f)); }
     static KAIRN_FORCEINLINE reg abs(reg a) noexcept { return _mm256_andnot_ps(_mm256_set1_ps(-0.0f), a); }
@@ -163,6 +176,13 @@ struct ops<double> {
     static KAIRN_FORCEINLINE reg broadcast(double a) noexcept { return vdupq_n_f64(a); }
     static KAIRN_FORCEINLINE reg load(const double* p) noexcept { return vld1q_f64(p); }
     static KAIRN_FORCEINLINE void store(double* p, reg a) noexcept { vst1q_f64(p, a); }
+    // a with lane i replaced by v, through memory (the index is not a constant).
+    static KAIRN_FORCEINLINE reg insert(reg a, int i, double v) noexcept {
+        double t[lanes];
+        vst1q_f64(t, a);
+        t[i] = v;
+        return vld1q_f64(t);
+    }
     static KAIRN_FORCEINLINE reg select(mask m, reg a, reg b) noexcept { return vbslq_f64(m, a, b); }
     static KAIRN_FORCEINLINE reg neg(reg a) noexcept { return vnegq_f64(a); }
     static KAIRN_FORCEINLINE reg abs(reg a) noexcept { return vabsq_f64(a); }
@@ -194,6 +214,12 @@ struct ops<float> {
     static KAIRN_FORCEINLINE reg broadcast(float a) noexcept { return vdupq_n_f32(a); }
     static KAIRN_FORCEINLINE reg load(const float* p) noexcept { return vld1q_f32(p); }
     static KAIRN_FORCEINLINE void store(float* p, reg a) noexcept { vst1q_f32(p, a); }
+    static KAIRN_FORCEINLINE reg insert(reg a, int i, float v) noexcept {
+        float t[lanes];
+        vst1q_f32(t, a);
+        t[i] = v;
+        return vld1q_f32(t);
+    }
     static KAIRN_FORCEINLINE reg select(mask m, reg a, reg b) noexcept { return vbslq_f32(m, a, b); }
     static KAIRN_FORCEINLINE reg neg(reg a) noexcept { return vnegq_f32(a); }
     static KAIRN_FORCEINLINE reg abs(reg a) noexcept { return vabsq_f32(a); }
@@ -224,6 +250,7 @@ struct ops {
     static KAIRN_FORCEINLINE reg broadcast(T a) noexcept { return a; }
     static KAIRN_FORCEINLINE reg load(const T* p) noexcept { return *p; }
     static KAIRN_FORCEINLINE void store(T* p, reg a) noexcept { *p = a; }
+    static KAIRN_FORCEINLINE reg insert(reg, int, T v) noexcept { return v; }
     static KAIRN_FORCEINLINE reg select(mask m, reg a, reg b) noexcept { return m ? a : b; }
     static KAIRN_FORCEINLINE reg neg(reg a) noexcept { return -a; }
     static KAIRN_FORCEINLINE reg abs(reg a) noexcept { return gen::abs_bits(a); }
@@ -241,7 +268,7 @@ struct ops {
 };
 #endif
 
-// Lane i of a register, read and written through memory.
+// Lane i of a register: read through memory, written by the form's insert.
 template <class T>
 KAIRN_FORCEINLINE T get(const typename ops<T>::reg& a, int i) noexcept {
     T t[ops<T>::lanes];
@@ -250,10 +277,7 @@ KAIRN_FORCEINLINE T get(const typename ops<T>::reg& a, int i) noexcept {
 }
 template <class T>
 KAIRN_FORCEINLINE void set(typename ops<T>::reg& a, int i, T v) noexcept {
-    T t[ops<T>::lanes];
-    ops<T>::store(t, a);
-    t[i] = v;
-    a = ops<T>::load(t);
+    a = ops<T>::insert(a, i, v);
 }
 
 // The checks of KAIRN_CHECKS (config.hpp) for packed operands: those of expansion.hpp, detail::check,

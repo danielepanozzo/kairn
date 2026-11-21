@@ -17,6 +17,14 @@ of `y`, with that operation's proved bound, its results for infinities and NaN, 
 requirement of canonical operands: the page of each kernel applies to each lane. Nothing is stated
 across lanes: the $W$ operations are side by side, never combined.
 
+The number is the same with every compiler; its bits are too, **except the sign of a zero limb
+with MSVC**. A kernel guards each operand that comes from the program by adding $+0$ to it, which
+turns a limb $-0$ into $+0$. In packed code MSVC removes that addition (measured with MSVC 19.52,
+at every `/fp:` setting), so a limb $-0$ stays $-0$ and a zero computed from it has its sign. No
+statement of Kairn is about the sign of a zero that an operation computes, and the guard still does
+what it is for: under `/fp:contract` a product of the program is not fused into a kernel's first
+addition. clang-cl, Clang, GCC and Apple clang keep the addition.
+
 ```cpp
 template <class T, int K> struct Packed {
     using limb_type = T;  using value_type = Expansion<T, K>;
@@ -192,6 +200,7 @@ therefore does not include them: a program includes `kairn/packed.hpp` or `kairn
 - **Bit for bit against the scalar operations** (`tests/api/packed.cpp`): every operation above,
   `float` and `double`, one and two limbs, on every pair of a corpus of every kind of value, one
   pair per lane position in turn, in the form of the build, the scalar form and, where it applies,
-  AVX2. Every limb of every lane equals the scalar result, a NaN compared as a NaN.
+  AVX2. Every limb of every lane equals the scalar result, a NaN compared as a NaN, and with MSVC
+  a zero as a zero ([above](#packed-numbers-in-registers)).
 - **The checks**, the compile-fail cases and the tutorial's loop in the three forms:
   [Testing](../developer/testing.md#packed-and-the-containers).

@@ -106,6 +106,22 @@ bool same(const kairn::Expansion<T, K>& a, const kairn::Expansion<T, K>& b) {
         if (!same_limb(a.limb[j], b.limb[j])) return false;
     return true;
 }
+// What a read through Packed must give: the limbs of the expected read, except that under MSVC a
+// zero limb is compared as a zero of either sign (MSVC folds the +0 guard of a packed kernel:
+// packed.cpp says what was measured). The arrays themselves are compared with same_limb: a store
+// writes the limbs bit for bit with every compiler.
+template <class T, int K>
+bool same_read(const kairn::Expansion<T, K>& a, const kairn::Expansion<T, K>& b) {
+#if defined(_MSC_VER) && !defined(__clang__)
+    for (int j = 0; j < K; ++j) {
+        if (a.limb[j] == T(0) && b.limb[j] == T(0)) continue;
+        if (!same_limb(a.limb[j], b.limb[j])) return false;
+    }
+    return true;
+#else
+    return same(a, b);
+#endif
+}
 // The same value: every limb equal, or both NaN.
 template <class T, int K>
 bool same_value(const kairn::Expansion<T, K>& a, const kairn::Expansion<T, K>& b) {
@@ -176,13 +192,13 @@ void elements(std::size_t n) {
     for (; i + W <= n; i += W) {
         const P p = cv.load(i);
         for (int l = 0; l < W; ++l)
-            expect(same(p.lane(l), expected_read(c[(i + std::size_t(l)) % c.size()])), "load", type_name<T>(), long(i) + l);
+            expect(same_read(p.lane(l), expected_read(c[(i + std::size_t(l)) % c.size()])), "load", type_name<T>(), long(i) + l);
     }
     if (i < n) {
         const int rest = int(n - i);
         const P p = cv.load_partial(i, rest, fill);
         for (int l = 0; l < W; ++l)
-            expect(same(p.lane(l), l < rest ? expected_read(c[(i + std::size_t(l)) % c.size()]) : expected_read(fill)),
+            expect(same_read(p.lane(l), l < rest ? expected_read(c[(i + std::size_t(l)) % c.size()]) : expected_read(fill)),
                    "load_partial", type_name<T>(), long(i) + l);
     }
     // store into a second SoA, with the tail rule, then every element read back; nothing beyond n.

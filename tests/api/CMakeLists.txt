@@ -658,7 +658,7 @@ _kairn_api_reject(not_constexpr.interval_add 38 "constant|constexpr")
 # a T (no packed kernel does: a program broadcasts it), the narrowing to one limb is explicit, no
 # operation mixes limb types, and Packed<T, 1> has no arithmetic. Each control writes what compiles instead.
 set(_api_no_assignment "no viable overloaded|no match for|binary '='|no operator found|constraints")
-set(_api_no_member "constraints not satisfied|no matching|no overloaded function|associated constraints")
+set(_api_no_member "constraints not satisfied|no matching|no overloaded function|associated constraints|satisfied its constraints")
 _kairn_api_reject(soa.assign_const_element 42 "${_api_no_assignment}")
 _kairn_api_reject(soa.set_const 43 "${_api_no_member}")
 _kairn_api_reject(soa.store_const 44 "${_api_no_member}")

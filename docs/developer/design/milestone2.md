@@ -2176,6 +2176,15 @@ paragraph above, or adds to it:
   constructors, its copy and `resize` allocate. Indices are not checked, as with `std::span`.
 - **Not provided:** a packed `Ball` or `Interval`, dispatch at run time, any operation across
   lanes, a load that requires alignment.
+- **With MSVC the sign of a zero limb is not that of the scalar operation.** MSVC removes, in
+  packed code, the addition of $+0$ that guards an operand, so a limb $-0$ stays $-0$; every
+  other compiler tested keeps the addition. The values are the same, and the guard still stops
+  the contraction it is for (measured under `/fp:contract`). The comparison of `Packed` with the
+  scalar operations is bit for bit elsewhere and up to the sign of a zero with MSVC.
+- **One lane is written by a blend, not through memory**, in the AVX2 form: MSVC 19.52 at `/O2`
+  with `/arch:AVX2` compiles "store the register to an array, assign one element, load the
+  array", inlined in a loop over the lanes, to code that loses the assignment (reproduced
+  without any Kairn code; `/O1` and `/Od` are right).
 
 ## Inlining and compile time
 
