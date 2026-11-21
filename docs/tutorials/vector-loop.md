@@ -85,8 +85,10 @@ The `double` loop, `plain += a[i] * b[i]`, loses 43 in a result of 33 566 778: i
 come near $2^{59}$, where the spacing of `double` is 64. The packed two-limb loop returns the exact
 value in every form, since every partial sum of these integers fits in two limbs. The random sets
 have sums that need far more than two limbs; their results differ between AVX2, NEON and the
-scalar form, each within its bound (the error was at most $1.4 \cdot 10^{-3}$ of the bound in the
-runs of the CI).
+scalar form, each within its bound: the largest error of the three sets was $1.4 \cdot 10^{-3}$ of
+its bound with AVX2, $5.2 \cdot 10^{-4}$ with NEON and $5.0 \cdot 10^{-4}$ in the scalar form (the
+program prints these on its standard error). The bound is a worst case over every possible
+rounding, which these sums do not come near.
 
 ## When to use it
 
