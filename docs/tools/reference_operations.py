@@ -926,9 +926,13 @@ KERNELS = {
                             form("A.add_product(x, y)", A1, E1, E1, result="void", note=ACC + "; not `constexpr`; "
                                  "each factor guarded (rule R3 on the factors of a fused operation)"),
                             form("A.add_product(a, b)", A1, T, T, result="void")),
-    "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product",
-                      form("A.add_product(x, y)", A2, E2, E2, result="void", note=ACC + "; not `constexpr`"),
-                      form("A.add_product(a, b)", A2, T, T, result="void", note=TO_TWO_LIMBS)),
+    "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product (its factors unguarded; "
+                      "`add_product` calls `acc_mul_entry_2`)"),
+    "acc_mul_entry_2": page("arrays", "An accumulator of two limbs: add a product of the guarded factors",
+                            form("A.add_product(x, y)", A2, E2, E2, result="void", note=ACC + "; not `constexpr`; "
+                                 "each limb of each factor guarded (rule R3 on the factors of a fused "
+                                 "operation)"),
+                            form("A.add_product(a, b)", A2, T, T, result="void", note=TO_TWO_LIMBS)),
     "acc_merge_1": page("arrays", "Two accumulators of one limb into one",
                         form("A.merge(B)", A1, A1, result="void", note="a node of the summation tree; the counts "
                              "added")),

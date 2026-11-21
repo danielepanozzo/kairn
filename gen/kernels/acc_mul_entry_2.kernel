@@ -1,0 +1,37 @@
+# acc.add_product(x, y) of Accumulator<T, 2> (milestone2.md, "The accumulator"): acc_mul_2 on the
+# limbs of x and y guarded (rule R3, the factors of a fused operation: architecture.md). acc_mul_2
+# only multiplies them, in mul_2_2 and in the sum of the magnitudes, which R3 alone does not guard;
+# but a compiler that sees one of them to be 1 rewrites fma(x, 1, s) as x + s and fuses a product of
+# the program into it (measured in acc_mul_1, the product of one limb, with Apple clang 21 under
+# -ffp-contract=fast). After the guards each limb is a number of the format. Its claims are those
+# of acc_mul_2: the guard is the identity on numbers of the format.
+kernel:        acc_mul_entry_2
+input:         s = s0 s1
+input:         stored a
+input:         supplied x = x0 x1
+input:         supplied y = y0 y1
+output:        t = t0 t1
+output:        b
+value:         s+x*y
+requires:      normalized s
+requires:      normalized x
+requires:      normalized y
+requires:      nonneg a
+ensures:       normalized t
+ensures:       error t T c=3*(1+4*u*u)/(1-4*u)+4 k=2 t=2
+ensures:       rounded b nearest value=a+abs(x[0])*abs(y[0])
+theorem:       proofs/theories/AccKernels.v acc_mul_entry_2_correct
+ieee_spec_theorem: proofs/theories/IeeeAccKernels.v acc_mul_entry_2_ieee_correct
+min_precision: 4
+source:        acc_mul_2 on the guarded limbs of x and y (rule R3, the factors of a fused operation)
+license:       algorithm: published; proof: MIT
+status:        proved
+ieee:          spec
+entry:         yes
+cone_exempt:   b, the sum of magnitudes, does not reach t0: its claim is read where b is finite (an entry about an output group other than the first), and where b is +inf the mask ok of acc_radius_k is false
+
+gx0          = guard(x0)
+gx1          = guard(x1)
+gy0          = guard(y0)
+gy1          = guard(y1)
+(t0, t1, b)  = acc_mul_2(s0, s1, a, gx0, gx1, gy0, gy1)

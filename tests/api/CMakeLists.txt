@@ -83,15 +83,18 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 # products that the public operations reach through their entry forms, which guard the factors first
 # (rule R3, the factors of a fused operation), are building blocks too: two_prod, mul_down_1,
 # mul_up_1, mul_2_1 and mul_2_1_full, and the scaling of a ball of two limbs, ball_scale_2 and
-# ball_scale_2_full, which the operators reach through ball_scale_2_full_entry.
+# ball_scale_2_full, which the operators reach through ball_scale_2_full_entry; and the products of
+# the accumulator, acc_mul_1 and acc_mul_2, which add_product reaches through acc_mul_entry_1 and
+# acc_mul_entry_2.
 set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
   sub_up_1 mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2
   mul_ext_2_2 fold_finish_1 fold_finish_2 norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
-  acc_radius_1 acc_radius_2 two_prod mul_down_1 mul_up_1 mul_2_1 mul_2_1_full ball_scale_2 ball_scale_2_full)
+  acc_radius_1 acc_radius_2 two_prod mul_down_1 mul_up_1 mul_2_1 mul_2_1_full ball_scale_2 ball_scale_2_full
+  acc_mul_1 acc_mul_2)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2
   ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2 dot_step_1 dot_step_2
   add_entry_step_1 add_entry_step_2 sub_entry_step_1 sub_entry_step_2 scale_step_1 scale_step_2 mul_pow2_step_1
-  mul_pow2_step_2 axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1 acc_mul_1)
+  mul_pow2_step_2 axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1)
 # The folds that no public function calls (runner_arrays.hpp lists the same, with why): the loops
 # on stored arrays, whose callers here call the loops on supplied arrays instead (kairn/batch.hpp),
 # and dot_1, whose caller calls dot_1_entry, the same loop with its factors guarded.

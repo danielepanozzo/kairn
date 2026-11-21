@@ -819,6 +819,15 @@ Definition acc_mul_2 (s0 s1 a x0 x1 y0 y1 : R) : R * R * R :=
   let b := rnd (ax * ay + a) in
   (t0, t1, b).
 
+(* acc_mul_entry_2: acc_mul_2 on the guarded limbs of x and y (rule R3, the factors of a fused operation). *)
+Definition acc_mul_entry_2 (s0 s1 a x0 x1 y0 y1 : R) : R * R * R :=
+  let gx0 := rnd (x0 + 0) in
+  let gx1 := rnd (x1 + 0) in
+  let gy0 := rnd (y0 + 0) in
+  let gy1 := rnd (y1 + 0) in
+  let '(t0, t1, b) := acc_mul_2 s0 s1 a gx0 gx1 gy0 gy1 in
+  (t0, t1, b).
+
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
 Definition add_2_1 (x0 x1 a : R) : R * R :=
   let g := rnd (a + 0) in

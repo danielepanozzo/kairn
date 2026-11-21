@@ -659,6 +659,11 @@
    "scalar_call": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
    "packed": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]}
   },
+  "acc_mul_entry_2": {
+   "scalar": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
+   "scalar_call": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
+   "packed": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]}
+  },
   "add_2_1": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},

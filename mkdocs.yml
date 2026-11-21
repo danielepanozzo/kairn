@@ -315,7 +315,8 @@ nav:
           - "An accumulator of two limbs: add a number of the program": reference/acc_add_2.md
           - "An accumulator of one limb: add a product (its factors unguarded; `add_product` calls `acc_mul_entry_1`)": reference/acc_mul_1.md
           - "An accumulator of one limb: add a product of the guarded factors": reference/acc_mul_entry_1.md
-          - "An accumulator of two limbs: add a product": reference/acc_mul_2.md
+          - "An accumulator of two limbs: add a product (its factors unguarded; `add_product` calls `acc_mul_entry_2`)": reference/acc_mul_2.md
+          - "An accumulator of two limbs: add a product of the guarded factors": reference/acc_mul_entry_2.md
           - Two accumulators of one limb into one: reference/acc_merge_1.md
           - Two accumulators of two limbs into one: reference/acc_merge_2.md
           - The radius of an accumulator of one limb: reference/acc_radius_1.md

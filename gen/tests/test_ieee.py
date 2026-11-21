@@ -504,8 +504,8 @@ class Statements(unittest.TestCase):
         # acc_mul_entry_1, dot_entry_step_1 (bridge and lead) and dot_1_entry in both orders. And six
         # with the entry forms of the products: two_prod_entry, mul_down_entry, mul_up_entry,
         # mul_2_1_entry (bridge and statement) and mul_2_1_full_entry; and one with that of the scaling
-        # of a ball of two limbs, ball_scale_2_full_entry.
-        self.assertEqual(text.count('Print Assumptions'), 314)
+        # of a ball of two limbs, ball_scale_2_full_entry; and one with acc_mul_entry_2.
+        self.assertEqual(text.count('Print Assumptions'), 315)
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
         self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
@@ -659,8 +659,9 @@ class CheckedFiles(unittest.TestCase):
     # models, the programs of the first and the fourth, and their statements), added and nothing
     # else changed; make -C proofs passed on these files.
     # Then ball_scale_2_full_entry (the same rule): its model and statement added, nothing else changed.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '30b659b5096f21119030530f79a6bf2641edeae4549afc6ddf690b9e3041fd24',
-               'proofs/gen/IeeeStatements.v': 'ccac59319d657e722c159de84d770b7c25b575858c13c8a98af69e44486d7b8b'}
+    # Then acc_mul_entry_2 (the same rule): its model and statement added, nothing else changed.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '31d0ea5ce6f572929a1faffeecd0f949eb3b54d3ecf0941b9362b0103c8c8eca',
+               'proofs/gen/IeeeStatements.v': '6c1966fc4bc9f150922f4270ca79e821dcd7c30bd8e4236e80c9724cf7166b19'}
 
 
     def test_the_checked_files(self):

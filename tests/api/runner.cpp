@@ -368,7 +368,7 @@ FORM(acc_add_2_add, auto acc = acc_of<T, 2>(in); acc.add(number_k<T, 2>(in + 3))
 FORM(acc_mul_entry_1_add_product, auto acc = acc_of<T, 1>(in); acc.add_product(number_k<T, 1>(in + 2), number_k<T, 1>(in + 3));
      put_acc(out, acc))
 FORM(acc_mul_entry_1_add_product_limbs, auto acc = acc_of<T, 1>(in); acc.add_product(in[2], in[3]); put_acc(out, acc))
-FORM(acc_mul_2_add_product, auto acc = acc_of<T, 2>(in); acc.add_product(number_k<T, 2>(in + 3), number_k<T, 2>(in + 5));
+FORM(acc_mul_entry_2_add_product, auto acc = acc_of<T, 2>(in); acc.add_product(number_k<T, 2>(in + 3), number_k<T, 2>(in + 5));
      put_acc(out, acc))
 FORM(acc_merge_1_merge, auto acc = acc_of<T, 1>(in); acc.merge(acc_of<T, 1>(in + 2)); put_acc(out, acc))
 FORM(acc_merge_2_merge, auto acc = acc_of<T, 2>(in); acc.merge(acc_of<T, 2>(in + 3)); put_acc(out, acc))
@@ -1082,7 +1082,7 @@ const Form forms[] = {
     ROW(acc_add_2, add, "lllll", "lll")
     ROW(acc_mul_entry_1, add_product, "llll", "ll")
     ROW(acc_mul_entry_1, add_product_limbs, "llll", "ll")
-    ROW(acc_mul_2, add_product, "lllllll", "lll")
+    ROW(acc_mul_entry_2, add_product, "lllllll", "lll")
     ROW(acc_merge_1, merge, "llll", "ll")
     ROW(acc_merge_2, merge, "llllll", "lll")
     ROW(add_down_entry, add_down, "ll", "l")
@@ -1372,6 +1372,9 @@ const char* const internal[] = {
     // the products of two limbs), mul_down_1 and mul_up_1 (mul_down_entry, mul_up_entry), mul_2_1
     // (mul_2_1_entry, and inside the scalings) and mul_2_1_full (mul_2_1_full_entry).
     "two_prod", "mul_down_1", "mul_up_1", "mul_2_1", "mul_2_1_full",
+    // And the products of the accumulator, which add_product reaches through acc_mul_entry_1 and
+    // acc_mul_entry_2, which guard the factors first.
+    "acc_mul_1", "acc_mul_2",
     // And the scaling of a ball of two limbs, core and full form, which the operators reach through
     // ball_scale_2_full_entry, which guards the scalar first.
     "ball_scale_2", "ball_scale_2_full",
@@ -1403,9 +1406,6 @@ const char* const ball_core = "the finite core of a Ball operation: the operator
 const char* const fold_step = "the step of a loop over arrays of the program (kairn/batch.hpp): the public "
                               "function calls the loop, not the step on its own, and the oracle judges the "
                               "loop's claims through it (api.oracle.FOLD.FORMAT)";
-const char* const factors_unguarded = "acc_mul_1 takes its factors unguarded: Accumulator::add_product of one limb "
-                                      "calls acc_mul_entry_1, acc_mul_1 on its factors guarded (rule R3, the factors "
-                                      "of a fused operation)";
 const NotPublic not_public[] = {
     {"ball_add_1", ball_core}, {"ball_sub_1", ball_core}, {"ball_mul_1", ball_core}, {"ball_scale_1", ball_core},
     {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core},
@@ -1415,7 +1415,7 @@ const NotPublic not_public[] = {
     {"add_entry_step_2", fold_step}, {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step},
     {"scale_step_1", fold_step}, {"scale_step_2", fold_step}, {"mul_pow2_step_1", fold_step},
     {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},
-    {"axpy_entry_step_2", fold_step}, {"acc_mul_1", factors_unguarded},
+    {"axpy_entry_step_2", fold_step},
 };
 // The interval kernels of Milestone 2 are reached by the forms of Interval (interval.hpp) and of
 // the functions of a Ball of the enclosure interface (ball.hpp); their building blocks are in

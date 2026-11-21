@@ -12,7 +12,7 @@ $$t = \mathrm{RN}(s + x y), \qquad b = \mathrm{RN}(a + \lvert x\rvert \lvert y\r
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+No public operation computes this kernel on its own.
 
 ## Requires
 
@@ -72,8 +72,9 @@ From [`gen/kernels/acc_mul_1.kernel`](https://github.com/danielepanozzo/kairn/bl
 ```
 # acc.add_product(x, y) of Accumulator<T, 1> (milestone2.md, "The accumulator"): the running sum s
 # plus the exact product x y, rounded once (the step of dot_1, s <- RN(x y + s)), and the running sum
-# a of the magnitudes plus |x| |y|, rounded once (a <- RN(|x| |y| + a)). x and y are values of the
-# program that are only multiplied: rule R3 asks no guard of them.
+# a of the magnitudes plus |x| |y|, rounded once (a <- RN(|x| |y| + a)). add_product of one limb
+# calls acc_mul_entry_1, which guards x and y first (rule R3, the factors of a fused operation);
+# this listing is its core.
 
 t  = fma(x, y, s)
 ax = abs(x)

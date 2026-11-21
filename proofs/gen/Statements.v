@@ -1006,6 +1006,21 @@ Definition acc_mul_2_spec : Prop :=
   Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin /\
   b = RN emin prec (a + ((Rabs x0) * (Rabs y0))).
 
+(* acc_mul_entry_2: acc_mul_2 on the guarded limbs of x and y (rule R3, the factors of a fused operation). Status: proved. *)
+Definition acc_mul_entry_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall s0 s1 a x0 x1 y0 y1 : R,
+  normalized_2 emin prec s0 s1 ->
+  fmt emin prec a ->
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  0 <= a ->
+  let '(t0, t1, b) := acc_mul_entry_2 emin prec tie_even s0 s1 a x0 x1 y0 y1 in
+  fmt emin prec b /\
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin /\
+  b = RN emin prec (a + ((Rabs x0) * (Rabs y0))).
+
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: proved. *)
 Definition add_2_1_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->

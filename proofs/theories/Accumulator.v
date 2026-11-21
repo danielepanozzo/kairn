@@ -7,7 +7,7 @@
 
        acc.add(x)              (s, a) <- acc_add_k (s, a, x)          n <- n + 1
        acc.add_product(x, y)   (s, a) <- acc_mul_entry_1 (s, a, x, y) n <- n + 1   (one limb)
-                               (s, a) <- acc_mul_2 (s, a, x, y)       n <- n + 1   (two limbs)
+                               (s, a) <- acc_mul_entry_2 (s, a, x, y) n <- n + 1   (two limbs)
        acc.merge(other)        (s, a) <- acc_merge_k (s, a, s', a')   n <- n + n'
        acc.error_bound()       (g, t, ok) = bound_dot_k (m),  (r, ok') = acc_radius_k (a, m, g, t)
 
@@ -592,7 +592,7 @@ Fixpoint run2 (h : hist (R * R)) : R * R * R :=
       let '(s0, s1, a) := run2 h in acc_add_2 emin prec tie_even s0 s1 a (fst x) (snd x)
   | Hmul h x y =>
       let '(s0, s1, a) := run2 h in
-      acc_mul_2 emin prec tie_even s0 s1 a (fst x) (snd x) (fst y) (snd y)
+      acc_mul_entry_2 emin prec tie_even s0 s1 a (fst x) (snd x) (fst y) (snd y)
   | Hmerge h1 h2 =>
       let '(s0, s1, a) := run2 h1 in let '(v0, v1, c) := run2 h2 in
       acc_merge_2 emin prec tie_even s0 s1 a v0 v1 c
@@ -629,6 +629,17 @@ intros. unfold acc_mul_2, Model.dot_step_2, add22, mul22. cbv zeta. cbn [fst snd
 destruct (mul_2_2 emin prec tie_even x0 x1 y0 y1) as [p0 p1]. cbn [fst snd].
 destruct (add_2_2 emin prec tie_even s0 s1 p0 p1) as [t0 t1]. unfold RN. cbn [fst snd].
 rewrite (Rplus_comm a (Rabs x0 * Rabs y0)). reflexivity.
+Qed.
+
+(* acc_mul_entry_2 guards the limbs of the factors, numbers of the format: it is acc_mul_2. *)
+Lemma acc_mul_entry_2_real :
+  forall s0 s1 a x0 x1 y0 y1 : R, F x0 -> F x1 -> F y0 -> F y1 ->
+  acc_mul_entry_2 emin prec tie_even s0 s1 a x0 x1 y0 y1 = acc_mul_2 emin prec tie_even s0 s1 a x0 x1 y0 y1.
+Proof.
+intros s0 s1 a x0 x1 y0 y1 F0 F1 G0 G1. unfold acc_mul_entry_2. cbv zeta.
+rewrite (guard_real_any emin prec tie_even x0 F0), (guard_real_any emin prec tie_even x1 F1),
+        (guard_real_any emin prec tie_even y0 G0), (guard_real_any emin prec tie_even y1 G1).
+destruct (acc_mul_2 emin prec tie_even s0 s1 a x0 x1 y0 y1) as [[t0 t1] b]. reflexivity.
 Qed.
 
 Lemma acc_merge_2_eq :
@@ -689,8 +700,8 @@ induction h as [|h IH x|h IH x y|h1 IH1 h2 IH2]; cbn [elems run2 count leads].
 - intros [Vh [Nx Ny]]. specialize (IH Vh). destruct (run2 h) as [[s0 s1] a].
   destruct IH as [Ns [Fa [Ha [_ IA]]]].
   destruct x as [x0 x1]. destruct y as [y0 y1]. cbn [fst snd] in *.
-  generalize (acc_mul_2_correct emin prec Hp4 s0 s1 a x0 x1 y0 y1 Ns Fa Nx Ny Ha).
-  destruct (acc_mul_2 emin prec tie_even s0 s1 a x0 x1 y0 y1) as [[t0 t1] b].
+  generalize (acc_mul_entry_2_correct emin prec Hp4 s0 s1 a x0 x1 y0 y1 Ns Fa Nx Ny Ha).
+  destruct (acc_mul_entry_2 emin prec tie_even s0 s1 a x0 x1 y0 y1) as [[t0 t1] b].
   intros [Fb [Nt [_ Eb]]].
   assert (Pxy : 0 <= Rabs x0 * Rabs y0) by (apply Rmult_le_pos; apply Rabs_pos).
   assert (Lb : a + Rabs x0 * Rabs y0 <= (1 + uu) * (b + ee / 2)).
@@ -881,6 +892,8 @@ induction h as [|h IH x|h IH x y|h1 IH1 h2 IH2]; intros V.
   generalize (acc_2_mags h Vh). intros M.
   cbn [tree2 run2 terms count].
   destruct (run2 h) as [[s0 s1] a]. destruct M as [Ns _].
+  destruct (acc_norm2_fmt x Nx) as [Gx0 Gx1]. destruct (acc_norm2_fmt y Ny) as [Gy0 Gy1].
+  rewrite (acc_mul_entry_2_real s0 s1 a (fst x) (snd x) (fst y) (snd y) Gx0 Gx1 Gy0 Gy1).
   rewrite (acc_mul_2_eq s0 s1 a (fst x) (snd x) (fst y) (snd y)). cbn [fst] in IH |- *.
   rewrite acc_pair_eta, (acc_pair_eta x), (acc_pair_eta y).
   destruct (mul_2_2_leaf emin prec Hp4 x y Nx Ny) as [Np Ap].

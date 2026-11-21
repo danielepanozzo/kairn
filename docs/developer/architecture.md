@@ -190,12 +190,22 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    with its operation and route (`rules.factor_rule`): an entry kernel guards each factor it takes
    from the program, and a kernel that other kernels also call on limbs that kernels wrote gets a
    guarded entry twin instead, whose listing is the unguarded one after a guard of each factor and
-   whose proofs reduce to it (the guard is the identity on numbers of the format), as
-   `dot_entry_step_1` (the step of `dot_1_entry`, which `dot` of one limb calls) and
-   `acc_mul_entry_1` (`Accumulator::add_product` of one limb). The objects not closed yet are listed
-   in `rules.FACTOR_PENDING`, each with its reason: R3 accepts their exposed operands, and refuses an
-   entry there that has none; `build` prints them as PENDING. The measurements are in
-   [Testing](testing.md#the-functions-on-arrays), "A factor the compiler sees".
+   whose proofs reduce to it (the guard is the identity on numbers of the format). The public
+   operations call these entry forms: `two_prod_entry` (`kairn::two_prod`; in constant evaluation
+   the variant `two_prod_dekker` on the operands themselves, as constant evaluation never guards),
+   `mul_down_entry` and `mul_up_entry` (`mul_down`, `mul_up`), `mul_2_1_entry` (`finite::mul(x, a)` of
+   `Expansion<T, 2>` and of `Packed`), `mul_2_1_full_entry` (`x * a`, `a * x`, `x *= a` of both),
+   `ball_scale_2_full_entry` (the scaling of a `Ball<T, 2>` by a `T`), `acc_mul_entry_1` and
+   `acc_mul_entry_2` (`Accumulator::add_product`), and `dot_entry_step_1`, the step of `dot_1_entry`
+   (`dot` of one limb). The kernels they guard for (`two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1`,
+   `mul_2_1_full`, `ball_scale_2`, `ball_scale_2_full`, `acc_mul_1`, `acc_mul_2`) are no longer entry
+   kernels. The objects not closed yet are listed in `rules.FACTOR_PENDING`, each with its reason:
+   the loops over arrays of two limbs (`dot`, `axpy`, `scale`), the convolutions and the scaling of a
+   ball vector, with their steps. Of these, Apple clang 21 under `-ffp-contract=fast` at `-O2` with
+   `NDEBUG` was measured to fuse a product of the program through a visible 1 into `conv` of one limb
+   and `scale` of two limbs (every round); no compiler into the others. R3 accepts their exposed
+   operands, and refuses an entry there that has none; `build` prints them as PENDING. The measurements are in [Testing](testing.md#the-functions-on-arrays), "A factor the
+   compiler sees".
 
 R3 was added in Milestone 1, after a test of the public headers found the failure it prevents:
 with GCC 13 and 16 at their default setting, with Apple clang on AArch64 under
@@ -1614,6 +1624,7 @@ a count in `T` would round past $2^p$, added on a merge, and converted to `T` on
 | `acc_add_k` | `s`, `a`, `x` (supplied) | `t`, `b` | `add_1_1` (`add_2_2`) on the guarded `x`; `b = add(a, abs(x0))` |
 | `acc_mul_k` | `s`, `a`, `x`, `y` (supplied) | `t`, `b` | the step of `dot_k`; `b = fma(abs(x0), abs(y0), a)` |
 | `acc_mul_entry_1` | `s`, `a`, `x`, `y` (supplied) | `t`, `b` | `acc_mul_1` on `x` and `y` guarded (R3, the factors of a fused operation): what `add_product` of one limb calls |
+| `acc_mul_entry_2` | `s`, `a`, `x`, `y` (supplied) | `t`, `b` | `acc_mul_2` on the limbs of `x` and `y` guarded (the same rule): what `add_product` of two limbs calls |
 | `acc_merge_k` | `s`, `a`, `v`, `c` (another accumulator) | `t`, `b` | `add_1_1` (`add_2_2`) of the sums; `b = add(a, c)` |
 | `acc_radius_k` | `a`, `m`, `g`, `t` | `r`, mask `ok` | in the form of `conv_radius`; `(g, t) = bound_dot_k(m)` |
 

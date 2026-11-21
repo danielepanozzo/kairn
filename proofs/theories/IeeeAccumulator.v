@@ -333,7 +333,7 @@ Fixpoint run2i (h : hist (float * float)) : float * float * float :=
       IeeeModel.acc_add_2 prec emax nan_plus nan_minus nan_abs s0 s1 a (fst x) (snd x)
   | Hmul h x y =>
       let '(s0, s1, a) := run2i h in
-      IeeeModel.acc_mul_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma s0 s1 a
+      IeeeModel.acc_mul_entry_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma s0 s1 a
         (fst x) (snd x) (fst y) (snd y)
   | Hmerge h1 h2 =>
       let '(s0, s1, a) := run2i h1 in let '(v0, v1, c) := run2i h2 in
@@ -414,24 +414,46 @@ induction h as [|h IH x|h IH x y|h1 IH1 h2 IH2]; intros V; cbn [run2i hmap run2]
 - destruct V as [Vh [[Fx0 [Fx1 Nx]] [Fy0 [Fy1 Ny]]]].
   generalize (acc_2_mags (ieee_emin prec emax) prec Hp4 (hmap vals2i h) (Hv h Vh)).
   destruct (run2i h) as [[s0 s1] a]. cbn [fst snd] in IH.
-  unfold IeeeModel.acc_mul_2. cbv zeta.
+  unfold IeeeModel.acc_mul_entry_2, IeeeModel.acc_mul_2. cbv zeta.
+  (* the limbs of the factors guarded (rule R3, the factors of a fused operation): finite, with
+     the same values *)
+  set (gx0 := IeeeOperations.guard prec emax nan_plus (fst x)).
+  set (gx1 := IeeeOperations.guard prec emax nan_plus (snd x)).
+  set (gy0 := IeeeOperations.guard prec emax nan_plus (fst y)).
+  set (gy1 := IeeeOperations.guard prec emax nan_plus (snd y)).
+  assert (Gx0 : fin gx0) by (unfold gx0; rewrite (guard_finite prec emax nan_plus); exact Fx0).
+  assert (Gx1 : fin gx1) by (unfold gx1; rewrite (guard_finite prec emax nan_plus); exact Fx1).
+  assert (Gy0 : fin gy0) by (unfold gy0; rewrite (guard_finite prec emax nan_plus); exact Fy0).
+  assert (Gy1 : fin gy1) by (unfold gy1; rewrite (guard_finite prec emax nan_plus); exact Fy1).
+  assert (Vx0 : b2r gx0 = b2r (fst x)) by exact (guard_val prec emax nan_plus (fst x)).
+  assert (Vx1 : b2r gx1 = b2r (snd x)) by exact (guard_val prec emax nan_plus (snd x)).
+  assert (Vy0 : b2r gy0 = b2r (fst y)) by exact (guard_val prec emax nan_plus (fst y)).
+  assert (Vy1 : b2r gy1 = b2r (snd y)) by exact (guard_val prec emax nan_plus (snd y)).
+  assert (Nxg := Nx). rewrite <- Vx0, <- Vx1 in Nxg.
+  assert (Nyg := Ny). rewrite <- Vy0, <- Vy1 in Nyg.
   generalize (dot_step_2_values prec emax nan_plus nan_minus nan_opp nan_fma Hp4
-                s0 s1 (fst x) (snd x) (fst y) (snd y)).
-  generalize (dot_step_2_lead s0 s1 (fst x) (snd x) (fst y) (snd y)).
+                s0 s1 gx0 gx1 gy0 gy1).
+  generalize (dot_step_2_lead s0 s1 gx0 gx1 gy0 gy1).
   destruct (IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1
-              (fst x) (snd x) (fst y) (snd y)) as [t0 t1].
+              gx0 gx1 gy0 gy1) as [t0 t1].
   cbn [fst snd]. intros L S M Ft0 Fb.
   specialize (L Ft0) as Fs0.
   destruct (fma_finite_inv prec emax nan_fma _ _ _ Fb) as [Fax [Fay Fa]].
   destruct (IH Vh Fs0 Fa) as [Fs1 E].
   rewrite <- E in M |- *. cbv beta iota in M |- *. destruct M as [Ns _].
-  destruct (S Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx Ny Ft0) as [Ft1 ES].
+  destruct (S Fs0 Fs1 Gx0 Gx1 Gy0 Gy1 Ns Nxg Nyg Ft0) as [Ft1 ES].
+  rewrite Vx0, Vx1, Vy0, Vy1 in ES.
   split. exact Ft1.
   unfold vals2i. cbn [fst snd].
-  unfold acc_mul_2. cbv zeta.
-  unfold ieee_emin in ES |- *. rewrite <- ES. cbv beta iota.
+  unfold acc_mul_entry_2, acc_mul_2. cbv zeta.
+  unfold ieee_emin in ES |- *.
+  rewrite (guard_real_any _ prec tie_even _ (b2r_format prec emax (fst x))),
+          (guard_real_any _ prec tie_even _ (b2r_format prec emax (snd x))),
+          (guard_real_any _ prec tie_even _ (b2r_format prec emax (fst y))),
+          (guard_real_any _ prec tie_even _ (b2r_format prec emax (snd y))).
+  rewrite <- ES. cbv beta iota.
   rewrite (proj2 (fma_spec prec emax nan_fma _ _ a Fax Fay Fa) Fb).
-  rewrite !(abs_val prec emax nan_abs). reflexivity.
+  rewrite !(abs_val prec emax nan_abs), Vx0, Vy0. reflexivity.
 - destruct V as [V1 V2].
   generalize (acc_2_mags (ieee_emin prec emax) prec Hp4 (hmap vals2i h1) (Hv h1 V1))
              (acc_2_mags (ieee_emin prec emax) prec Hp4 (hmap vals2i h2) (Hv h2 V2)).

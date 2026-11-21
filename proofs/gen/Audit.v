@@ -279,6 +279,9 @@ Print Assumptions dot_step_2_correct.
 Definition acc_mul_2_audit : acc_mul_2_spec := acc_mul_2_correct.
 Print Assumptions acc_mul_2_correct.
 
+Definition acc_mul_entry_2_audit : acc_mul_entry_2_spec := acc_mul_entry_2_correct.
+Print Assumptions acc_mul_entry_2_correct.
+
 Definition add_2_1_audit : add_2_1_spec := add_2_1_correct.
 Print Assumptions add_2_1_correct.
 

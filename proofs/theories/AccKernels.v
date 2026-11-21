@@ -155,6 +155,22 @@ split. exact Et.
 unfold RN. f_equal. ring.
 Qed.
 
+(* acc_mul_2 on the limbs of x and y guarded (rule R3, the factors of a fused operation): the limbs
+   of a normalized pair are numbers of the format, which pass the guard unchanged (guard_real_any),
+   so the statement is that of acc_mul_2. *)
+Theorem acc_mul_entry_2_correct : acc_mul_entry_2_spec.
+Proof.
+intros emin prec Hp s0 s1 a x0 x1 y0 y1 Ns Fa Nx Ny Ha.
+unfold acc_mul_entry_2. cbv zeta.
+destruct Nx as [F0 [F1 Hx]]. destruct Ny as [G0 [G1 Hy]].
+rewrite (guard_real_any emin prec tie_even x0 F0), (guard_real_any emin prec tie_even x1 F1),
+        (guard_real_any emin prec tie_even y0 G0), (guard_real_any emin prec tie_even y1 G1).
+assert (Nx : normalized_2 emin prec x0 x1) by (split; [exact F0 | split; [exact F1 | exact Hx]]).
+assert (Ny : normalized_2 emin prec y0 y1) by (split; [exact G0 | split; [exact G1 | exact Hy]]).
+generalize (acc_mul_2_correct emin prec Hp s0 s1 a x0 x1 y0 y1 Ns Fa Nx Ny Ha).
+destruct (acc_mul_2 emin prec tie_even s0 s1 a x0 x1 y0 y1) as [[t0 t1] b]. intros H. exact H.
+Qed.
+
 (** * The radius *)
 
 Section Radius.

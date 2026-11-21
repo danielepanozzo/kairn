@@ -132,6 +132,7 @@ KAIRN_RUNNER_KERNEL(acc_merge_2, "llllll", "lll", kairn::gen::acc_merge_2(in[0],
 KAIRN_RUNNER_KERNEL(mul_2_2, "llll", "ll", kairn::gen::mul_2_2(in[0], in[1], in[2], in[3], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(dot_step_2, "llllll", "ll", kairn::gen::dot_step_2(in[0], in[1], in[2], in[3], in[4], in[5], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(acc_mul_2, "lllllll", "lll", kairn::gen::acc_mul_2(in[0], in[1], in[2], in[3], in[4], in[5], in[6], out[0], out[1], out[2]))
+KAIRN_RUNNER_KERNEL(acc_mul_entry_2, "lllllll", "lll", kairn::gen::acc_mul_entry_2(in[0], in[1], in[2], in[3], in[4], in[5], in[6], out[0], out[1], out[2]))
 KAIRN_RUNNER_KERNEL(add_2_1, "lll", "ll", kairn::gen::add_2_1(in[0], in[1], in[2], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(add_2_1_full, "lll", "ll", kairn::gen::add_2_1_full(in[0], in[1], in[2], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(add_2_2_full, "llll", "ll", kairn::gen::add_2_2_full(in[0], in[1], in[2], in[3], out[0], out[1]))

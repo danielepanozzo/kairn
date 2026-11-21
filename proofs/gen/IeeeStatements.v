@@ -1786,6 +1786,26 @@ Definition acc_mul_2_ieee_spec : Prop :=
   (finite b ->
    val b = RN (ieee_emin prec emax) prec (val a + ((Rabs (val x0)) * (Rabs (val y0))))).
 
+(* acc_mul_entry_2: acc_mul_2 on the guarded limbs of x and y (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition acc_mul_entry_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall s0 s1 a x0 x1 y0 y1 : binary_float prec emax,
+  finite s0 -> finite s1 -> finite a -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  0 <= val a ->
+  let '(t0, t1, b) := IeeeModel.acc_mul_entry_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma s0 s1 a x0 x1 y0 y1 in
+  (finite t0 ->
+   finite t1 /\
+   normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
+   Rabs ((val t0 + val t1) - ((val s0 + val s1) + ((val x0 + val x1) * (val y0 + val y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (val s0 + val s1) + Rabs ((val x0 + val x1) * (val y0 + val y1))) + 2 * eta (ieee_emin prec emax)) /\
+  (finite b ->
+   val b = RN (ieee_emin prec emax) prec (val a + ((Rabs (val x0)) * (Rabs (val y0))))).
+
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. IEEE-model status: unverified. *)
 Definition add_2_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)

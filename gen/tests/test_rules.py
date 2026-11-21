@@ -598,10 +598,8 @@ class R3Factors(unittest.TestCase):
 # The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the
 # kernel analyzed) -> the exposed limbs of that kernel.
 EXPOSED = {
-    ('kernel', 'acc_mul_1', 'acc_mul_1'): ['x', 'y'],
     ('kernel', 'dot_step_1', 'dot_step_1'): ['x', 'y'],
     ('kernel', 'dot_step_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-    ('kernel', 'acc_mul_2', 'acc_mul_2'): ['x0', 'x1', 'y0', 'y1'],
     ('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('kernel', 'axpy_entry_step_2_1', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
     ('kernel', 'axpy_step_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
@@ -1242,7 +1240,7 @@ class R3OfTheKernels(unittest.TestCase):
     # and products of the accumulator, which take what the program adds (acc_add_k guards it;
     # acc_mul_entry_1 guards both factors, rule R3 on the factors of a fused operation; acc_mul_2
     # only multiplies them, one of the exposed operands that build lists).
-    ARRAYS_CALLED = {'acc_add_1', 'acc_add_2', 'acc_mul_entry_1', 'acc_mul_2'}
+    ARRAYS_CALLED = {'acc_add_1', 'acc_add_2', 'acc_mul_entry_1', 'acc_mul_entry_2'}
     # The building blocks that milestone2.md makes public ("Building blocks on T"): the entry forms
     # of the blocks that add their operands, and of two_prod and the directed products, whose
     # operands are factors of a fused operation (rule R3, the factors of a fused operation); the
@@ -1295,7 +1293,9 @@ class R3OfTheKernels(unittest.TestCase):
     FOLD_STEPS |= MAP_STEPS - {'sub_1_1'}
     # And the kernels of the accumulator that take what the program adds (acc_merge_k takes two
     # accumulators, acc_radius_k a state); acc_mul_entry_1 is acc_mul_1 on its factors guarded.
-    FOLD_STEPS |= {'acc_add_1', 'acc_add_2', 'acc_mul_1', 'acc_mul_2', 'acc_mul_entry_1'}
+    # acc_mul_1 and acc_mul_2 are their cores, no longer entry kernels (rule R3, the factors of a fused
+    # operation): add_product calls acc_mul_entry_1 and acc_mul_entry_2.
+    FOLD_STEPS |= {'acc_add_1', 'acc_add_2', 'acc_mul_entry_1', 'acc_mul_entry_2'}
     # And the radius kernels of BallVector that take the scalar the program gives (bv_scale_radius_k;
     # bv_add_radius_k takes radii, limbs of objects, and the largest magnitude of a center).
     FOLD_STEPS |= {'bv_scale_radius_1', 'bv_scale_radius_2'}
@@ -1733,6 +1733,8 @@ class TheKernels(unittest.TestCase):
     # And acc_mul_1 on its factors guarded, which add_product of one limb calls (rule R3, the factors
     # of a fused operation), proved in AccKernels.v.
     ACC |= {'acc_mul_entry_1'}
+    # And acc_mul_2 on its factors guarded, which add_product of two limbs calls.
+    ACC |= {'acc_mul_entry_2'}
     # The radius kernels of BallVector (milestone2.md, "BallVector"), of the finite domain.
     BV = {f'bv_{op}_radius_{k}' for op in ('add', 'scale') for k in (1, 2)}
     # And the kernels of the constructor of a BallVector: its steps, its radius (finite domain; the copy
@@ -1939,7 +1941,7 @@ class TheKernels(unittest.TestCase):
             # the accumulator: that of add_1_1, add_2_2 and dot_step_2; the radius's constants are
             # numbers of the toy formats from two bits on ((1+u)^8 above the top of fp:1:-3:3)
             'acc_add_1': 1, 'acc_mul_1': 1, 'acc_mul_entry_1': 1, 'acc_merge_1': 1, 'acc_add_2': 3, 'acc_mul_2': 4,
-            'acc_merge_2': 3,
+            'acc_merge_2': 3, 'acc_mul_entry_2': 4,
             'acc_radius_1': 2, 'acc_radius_2': 2,
             # The radius kernels of BallVector, from the precision of the Ball kernel whose radius
             # lines they are.

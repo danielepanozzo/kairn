@@ -560,6 +560,9 @@ Print Assumptions dot_step_2_ieee_correct.
 Definition acc_mul_2_ieee_audit : acc_mul_2_ieee_spec := acc_mul_2_ieee_correct.
 Print Assumptions acc_mul_2_ieee_correct.
 
+Definition acc_mul_entry_2_ieee_audit : acc_mul_entry_2_ieee_spec := acc_mul_entry_2_ieee_correct.
+Print Assumptions acc_mul_entry_2_ieee_correct.
+
 Definition add_entry_step_2_ieee_bridge_audit : add_entry_step_2_ieee_bridge_spec := add_entry_step_2_ieee_bridge.
 Print Assumptions add_entry_step_2_ieee_bridge.
 

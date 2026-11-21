@@ -3631,6 +3631,38 @@ inline const char* acc_mul_2_float() noexcept {
     return !same(o0, 0x1.597ae6p+1f) || !same(o1, -0x1.ed817cp-27f) || !same(o2, 0x1.3f57ep+1f) ? "acc_mul_2 (float)" : nullptr;
 }
 
+// acc_mul_entry_2 (double)
+inline const char* acc_mul_entry_2_double() noexcept {
+    volatile double i0 = -0x1.82a8820c03db7p-1;
+    volatile double i1 = -0x1.cd731a126addfp-56;
+    volatile double i2 = 0x1.4d6e5ca6f4c55p-19;
+    volatile double i3 = -0x1.f3ad09d3a666p+2;
+    volatile double i4 = -0x1.36b17e2d21273p-55;
+    volatile double i5 = -0x1.95e4e557626eap-1;
+    volatile double i6 = 0x1.79bea9a2860f1p-58;
+    double o0;
+    double o1;
+    double o2;
+    acc_mul_entry_2(i0, i1, i2, i3, i4, i5, i6, o0, o1, o2);
+    return !same(o0, 0x1.5bcab2e4f7c0cp+2) || !same(o1, 0x1.14e3a6b9d6624p-52) || !same(o2, 0x1.8c1fcd91eb217p+2) ? "acc_mul_entry_2 (double)" : nullptr;
+}
+
+// acc_mul_entry_2 (float)
+inline const char* acc_mul_entry_2_float() noexcept {
+    volatile float i0 = -0x1.f1bdbep+2f;
+    volatile float i1 = -0x1.617af8p-23f;
+    volatile float i2 = 0x1.64f8a6p-19f;
+    volatile float i3 = 0x1.27b6fap+1f;
+    volatile float i4 = -0x1.5ca64ap-26f;
+    volatile float i5 = 0x1.ae4638p+3f;
+    volatile float i6 = 0x1.9e62cep-26f;
+    float o0;
+    float o1;
+    float o2;
+    acc_mul_entry_2(i0, i1, i2, i3, i4, i5, i6, o0, o1, o2);
+    return !same(o0, 0x1.749704p+4f) || !same(o1, 0x1.7bd1a6p-21f) || !same(o2, 0x1.f10678p+4f) ? "acc_mul_entry_2 (float)" : nullptr;
+}
+
 // add_2_1 (double)
 inline const char* add_2_1_double() noexcept {
     volatile double i0 = 0x1.e12af1c7bb967p+1;
@@ -7845,6 +7877,8 @@ inline const char* run() noexcept {
         dot_step_2_float,
         acc_mul_2_double,
         acc_mul_2_float,
+        acc_mul_entry_2_double,
+        acc_mul_entry_2_float,
         add_2_1_double,
         add_2_1_float,
         add_2_1_full_double,

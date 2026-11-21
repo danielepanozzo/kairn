@@ -236,6 +236,8 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR |= {'mul_down_entry', 'mul_up_entry', 'mul_2_1_entry', 'mul_2_1_full_entry'}
     # And that of the scaling of a ball of two limbs.
     NOT_CONSTEXPR |= {'ball_scale_2_full_entry'}
+    # And the guarded form of acc_mul_2 (the same rule).
+    NOT_CONSTEXPR |= {'acc_mul_entry_2'}
     # BallVector: the fmas of the radius kernels (bv_add_radius_k, bv_scale_radius_k).
     NOT_CONSTEXPR |= {'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2'}
     # The product of two BallVectors: the fmas of conv_radius.
@@ -806,10 +808,11 @@ class Rocq(unittest.TestCase):
         # of conv_radius, of the product of two BallVectors. And the guarded forms of rule R3 on the
         # factors of a fused operation: t of dot_entry_step_1, t and b of acc_mul_entry_1, 3 limbs in
         # 2 kernels; and p and e of two_prod_entry and r of mul_down_entry and mul_up_entry, 4 limbs in
-        # 3 kernels (mul_2_1_entry is normalized).
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1 + 3 + 4)
+        # 3 kernels (mul_2_1_entry is normalized); and b of acc_mul_entry_2, 1 limb in 1 kernel.
+        self.assertEqual(sum(uncovered[n] for n in self.ks),
+                         49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1 + 3 + 4 + 1)
         self.assertEqual(sum(1 for n in self.ks if uncovered[n]),
-                         38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1 + 2 + 3)
+                         38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1 + 2 + 3 + 1)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -1010,10 +1013,10 @@ class Rocq(unittest.TestCase):
     # audit lines added, every earlier line kept.
     # Then the entry forms of the products (the same rule): two_prod_entry, mul_down_entry,
     # mul_up_entry and mul_2_1_entry, their models, statements and audit lines added, every earlier
-    # line kept.
-    DIGESTS = {'Model.v': 'b3d0c30b703549928135604814d1acdb6965a7f13e6f6f6dc50b4d04a8e45a61',
-               'Statements.v': 'd14b89c7ca529c6f1a677e7dbdd77df93435cdba6975e49ae9619a00e8a6a500',
-               'Audit.v': '714e2e56d8f79fb9b058c78dea9948abb63cfdee3cbbcaf51c8c24b0476e427a'}
+    # line kept. Then acc_mul_entry_2 (the same rule), its model, statement and audit line added.
+    DIGESTS = {'Model.v': '4638afc7a907a7dc198ea2fb82cb44368818135d24b75db5b2825ef3294b175e',
+               'Statements.v': 'f714e41646935a828d991adac9a6643738fedebb6b898d8396036f20d4be064f',
+               'Audit.v': 'b15e6daa08c537682f266c32b70c4997418bd18edd6123d8f8c3a922d1baf6e0'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -1052,8 +1055,8 @@ class Rocq(unittest.TestCase):
         # negation; and the three of its scaling by a power of two; and conv_radius, of its product;
         # and the two guarded forms of rule R3 on the factors, dot_entry_step_1 and acc_mul_entry_1; and
         # the four entry forms of the products with a real-model statement, two_prod_entry,
-        # mul_down_entry, mul_up_entry and mul_2_1_entry.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2 + 4)
+        # mul_down_entry, mul_up_entry and mul_2_1_entry; and acc_mul_entry_2.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2 + 4 + 1)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)
