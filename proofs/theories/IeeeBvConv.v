@@ -41,7 +41,8 @@
    the values; when the flag is false, the result is the whole space, which contains
    everything.
 
-   V4 is not proved here. As printed for bv_conv_2 it is false in formats of precision 8 and more
+   V4 is not proved here: for bv_conv_1 it is, with the generated statement, in
+   IeeeBvConvFinite.v. As printed for bv_conv_2 it is false in formats of precision 8 and more
    whose emax is at most 2 prec - 7: its condition on the count admits counts above the largest
    number, which round up to +infinity, and then the bound is not given and the product is the
    whole space (docs/proofs/index.md). *)

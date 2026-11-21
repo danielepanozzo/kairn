@@ -110,7 +110,9 @@
      radius kernel and of the folds in the real model, which proofs/gen/Audit.v lists: the
      lemmas of theories/BvConv.v they rest on, and in the IEEE model the lemmas of
      theories/IeeeBvConv.v beside the theorem of the finish bv_conv_finish, which
-     proofs/gen/IeeeAudit.v lists.
+     proofs/gen/IeeeAudit.v lists: V1 to V3 of both products, and, from
+     theories/IeeeBvConvFinite.v, V4 of bv_conv_1 and its generated statement
+     bv_conv_1_ieee_spec, which its description cannot name yet (see there).
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -1154,4 +1156,48 @@ Print Assumptions IeeeBvConv.bv_conv_2_parts.
 Print Assumptions IeeeBvConv.bv_conv_2_ieee_v1.
 Print Assumptions IeeeBvConv.bv_conv_2_ieee_v2.
 Print Assumptions IeeeBvConv.bv_conv_2_ieee_v3.
+
+(* V4 of bv_conv_1 and its generated statement in the IEEE model (theories/IeeeBvConvFinite.v).
+   The statement has its theorem, but the description cannot name it yet: the printer of
+   proofs/gen/IeeeAudit.v would check it against bv_conv_1_seq_ieee_spec, a name the products of
+   two BallVectors do not have (their statement is F_ieee_spec, as a convolution's). So it is
+   checked here, against the generated statement, and its comment still says unverified. *)
+From Kairn Require Import IeeeBvConvFinite.
+Definition bv_conv_1_ieee_audit : IeeeFoldStatements.bv_conv_1_ieee_spec :=
+  IeeeBvConvFinite.bv_conv_1_ieee_correct.
+Print Assumptions IeeeBvConvFinite.bv_conv_1_ieee_correct.
+Print Assumptions IeeeBvConvFinite.bv_conv_1_ieee_v4.
+Print Assumptions IeeeBvConvFinite.maxl_attained.
+Print Assumptions IeeeBvConvFinite.emax_gt.
+Print Assumptions IeeeBvConvFinite.uu_bounds.
+Print Assumptions IeeeBvConvFinite.ee_bounds.
+Print Assumptions IeeeBvConvFinite.Q_ge_8.
+Print Assumptions IeeeBvConvFinite.top_Q.
+Print Assumptions IeeeBvConvFinite.inv_2u_le.
+Print Assumptions IeeeBvConvFinite.ee_2u.
+Print Assumptions IeeeBvConvFinite.inrange_of.
+Print Assumptions IeeeBvConvFinite.rnd_up.
+Print Assumptions IeeeBvConvFinite.rnd_nonneg.
+Print Assumptions IeeeBvConvFinite.RU_up.
+Print Assumptions IeeeBvConvFinite.RU_nonneg.
+Print Assumptions IeeeBvConvFinite.rnd_bound.
+Print Assumptions IeeeBvConvFinite.pow_1u.
+Print Assumptions IeeeBvConvFinite.RU_bound.
+Print Assumptions IeeeBvConvFinite.mul_le.
+Print Assumptions IeeeBvConvFinite.range_le.
+Print Assumptions IeeeBvConvFinite.fma_ok.
+Print Assumptions IeeeBvConvFinite.prod_ok.
+Print Assumptions IeeeBvConvFinite.add_ok.
+Print Assumptions IeeeBvConvFinite.const_ok.
+Print Assumptions IeeeBvConvFinite.count_exact.
+Print Assumptions IeeeBvConvFinite.E1_bounds.
+Print Assumptions IeeeBvConvFinite.bound_dot_1_given.
+Print Assumptions IeeeBvConvFinite.dot_1_forward.
+Print Assumptions IeeeBvConvFinite.sumabs_scaled.
+Print Assumptions IeeeBvConvFinite.coef_prefix.
+Print Assumptions IeeeBvConvFinite.conv_1_mask_true.
+Print Assumptions IeeeBvConvFinite.conv_radius_given.
+Print Assumptions IeeeBvConvFinite.maxl_values.
+Print Assumptions IeeeBvConvFinite.P_bound.
+Print Assumptions IeeeBvConvFinite.bv_conv_1_finite_parts.
 

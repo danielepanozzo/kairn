@@ -101,8 +101,9 @@ lists:
   `BvReal.v`), and with overflow, infinities and NaN (`IeeeBv.v`), and of the negation and
   the constructor of a ball vector and its scaling by a power of two, in both models
   (`BvNegMake.v`, `IeeeBvNegMake.v`, `BvPow2.v`, `IeeeBvPow2.v`), and of the product of two ball
-  vectors over the real numbers, and of its finish with overflow (`BvConv.v`,
-  `IeeeBvConv.v`; [below](#ball-vectors)); and of the
+  vectors over the real numbers, and with overflow its finish, V1 to V3 of both products and V4
+  of the product of one limb (`BvConv.v`, `IeeeBvConv.v`, `IeeeBvConvFinite.v`;
+  [below](#ball-vectors)); and of the
   kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
@@ -160,7 +161,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  103 files: no Admitted, admit, Axiom or Parameter
+  104 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -589,16 +590,35 @@ radius is finite", which was false: a false mask of the convolution gives a fals
 finite radius. The generator now prints the masks of `if_all`, as it prints the one mask of
 `if`.)
 
-**The product in the model with overflow: V1 to V3 proved, the statement not.** `bv_conv_k` in the
-IEEE model is unverified: its generated statement is one conjunction, V1 to V4, and V4 is not
-proved. V1 to V3 are, as lemmas of their own in the vocabulary of the statement
-(`bv_conv_k_ieee_v1`, `_v2`, `_v3` of `IeeeBvConv.v`, audited in step 3), for canonical operands,
+**The product in the model with overflow.** Its generated statement is one conjunction, V1 to
+V4. For `bv_conv_1` it is proved (`bv_conv_1_ieee_correct` of `IeeeBvConvFinite.v`) and checked
+against the generated statement in step 3, not step 5: the generator's audit would name the
+statement `bv_conv_1_seq_ieee_spec`, which does not exist (a product of two BallVectors has one
+statement, `bv_conv_1_ieee_spec`, as a convolution has), so the description does not name the
+theorem and the generated comment still says unverified. For `bv_conv_2` the statement is not
+proved: its V4 is false (below). V1 to V3 are proved for both, as lemmas of their own in the
+vocabulary of the statement (`bv_conv_k_ieee_v1`, `_v2`, `_v3` of `IeeeBvConv.v`, audited in step
+3), for canonical operands,
 infinite radii (the whole space) included: the result is a finite ball vector or the whole space,
 with $n_x + n_y - 1$ coefficients (none when an operand is empty), and the flag is true exactly when
 the radius is finite; for all members of the operands' balls, each entry chosen independently,
 coefficient $j$ of their exact product is in the ball of coefficient $j$ written (the whole space
 contains everything); and a finite radius comes from finite radii, with the coefficients and the
 radius of the real model on the values, so that V2 is the real-model theorem read on the values.
+
+**V4 of `bv_conv_1`** (`bv_conv_1_ieee_v4`): finite radii, $n\,(u/(1+u) + \eta) \le \tfrac1{16}$ with
+$n = \min(n_x, n_y)$, $r_x r_y \le Q$, $(\lvert x\rvert + r_x)\,r_y \le Q$ for every entry $x$,
+$(\lvert y\rvert + r_y)\,r_x \le Q$ for every entry $y$ and $n\,(\lvert x\rvert + r_x)(\lvert y\rvert
++ r_y) \le Q$ for every pair, $Q = 2^{e_{\max}-2}$, give a finite product, in every format of the
+statement (precision at least 4, $e_{\max} > p$). Every value the IEEE model computes is shown at
+most $\tfrac72 Q$, below the largest number $4Q(1-u)$, so that every operation returns its rounded
+real result: the count $n \le 2^p$ is a number of the format; the bound's mask is true ($a \le
+0.16 \le \mathrm{up}(\tfrac14)$, $g \le 0.3$), its $t$ at most $Q/4$ (the smallest normal number of
+the constant of $tm$, times $n$, is at most $1/(32u) \le Q/16$); every state of the fused dot
+product of a coefficient is within $(1+\varepsilon)^k \le \tfrac{16}{15}$ of a sum of at most $n$
+products each at most $Q/n$; and with $P = (M_a + r_x)(M_b + r_y)$, the largest magnitudes being
+attained, $P \le Q$ and $n P \le Q$ (the pairs' condition with both operands nonempty, an array's
+own condition or the radii's otherwise), and the radius kernel stays at most $3.2\,Q$.
 
 **V4 of `bv_conv_2` is false as printed.** In a format of precision $p \ge 8$ with
 $p < e_{\max} \le 2p - 7$, the condition on the count, $n\,(4u^2 + \eta) \le \tfrac1{16}$, admits
