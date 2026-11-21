@@ -6898,7 +6898,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out)
 }
 
 // ball_contains_point_2(c = (c0, c1), r, t = (t0, t1)) -> mask yes, mask no
-// the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_contains_point_2(double c0, double c1, double r, double t0, double t1, bool& yes_out, bool& no_out) noexcept {
     const double nc0 = -c0;
     const double nc1 = -c1;

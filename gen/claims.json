@@ -7786,9 +7786,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallContains2.v",
+        "name": "ball_contains_point_2_correct"
+      },
       "source": {
         "cite": "the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

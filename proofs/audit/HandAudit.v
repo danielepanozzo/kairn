@@ -66,7 +66,9 @@
      comparisons of balls of two limbs, the distance of the centers by add_ball_2_2 and the
      directed bounds the kernels compute from it; for the midpoint, the radius, the ball and
      the split of an interval of two limbs, the half of a 2-limb number, the midpoint and
-     each side of the radius of a bounded interval, and the point of the split;
+     each side of the radius of a bounded interval, and the point of the split; for the
+     point that a ball of two limbs contains, the radius of add_ball_2_2, a point against the
+     whole line, and the lower bound of the distance;
    - the theorems about the folds that have no generated statement: that a fold of the
      model with overflow is the fold of the real model whenever its result is finite
      (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
@@ -952,6 +954,27 @@ Print Assumptions xsplit_point.
 Print Assumptions split_point.
 Print Assumptions interval_split_2_eq.
 Print Assumptions interval_split_2_all.
+
+(* Whether a ball of two limbs contains a point, in the IEEE model
+   (theories/IeeeBallContains2.v): the theorem of its generated statement is listed by
+   proofs/gen/IeeeAudit.v. Here, the lemmas it rests on: the error bound of add_ball_2_2 is
+   finite when the sum is; a finite point against a center (+-0, +-0), and a point that is not
+   finite; a NaN through abs_upper_2 and radd, and their results when no operand is a NaN; the
+   rounding down of the magnitude of a finite pair; the lower bound of the distance that the
+   listing computes; and the answers of the kernel as facts about the real values, by the
+   state of the ball. *)
+From Kairn Require Import IeeeBallContains2.
+Print Assumptions add_ball_radius_fin.
+Print Assumptions point_zero_center.
+Print Assumptions point_not_finite.
+Print Assumptions abs_upper_2_nan.
+Print Assumptions abs_upper_2_not_nan.
+Print Assumptions radd_nan_l.
+Print Assumptions radd_not_nan.
+Print Assumptions xru_fin_not_ninf.
+Print Assumptions to_down_2_abs_fin.
+Print Assumptions lower_bound_2.
+Print Assumptions ball_contains_point_2_facts.
 Print Assumptions trit_certain.
 
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)

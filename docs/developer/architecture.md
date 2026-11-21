@@ -1923,7 +1923,7 @@ Two entries in full, and the `ensures` of four more (`ball_contains_point_1`, `b
  "outputs": [{"name": "yes", "limbs": 1, "type": "mask"}, {"name": "no", "limbs": 1, "type": "mask"}],
  "requires": ["ball(c, r)", "canonical(t)"],
  "ensures": [{"kind": "trit", "yes": "yes", "no": "no", "rel": "member", "args": ["t", "x"], "balls": {"x": {"center": "c", "radius": "r"}}}],
- "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 3, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}}
 ```
 

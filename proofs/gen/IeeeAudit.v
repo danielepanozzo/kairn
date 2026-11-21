@@ -6,6 +6,7 @@
 From Kairn.Gen Require Import IeeeStatements.
 From Kairn.Gen Require Import IeeeFoldStatements.
 From Kairn Require Import IeeeBallCompare2.
+From Kairn Require Import IeeeBallContains2.
 From Kairn Require Import IeeeBallConvert.
 From Kairn Require Import IeeeBallConvert2.
 From Kairn Require Import IeeeBallCores.
@@ -260,6 +261,9 @@ Print Assumptions ball_contains_ball_2_correct.
 
 Definition to_down_2_ieee_audit : to_down_2_ieee_spec := to_down_2_ieee_correct.
 Print Assumptions to_down_2_ieee_correct.
+
+Definition ball_contains_point_2_audit : ball_contains_point_2_spec := ball_contains_point_2_correct.
+Print Assumptions ball_contains_point_2_correct.
 
 Definition eq_2_2_ieee_audit : eq_2_2_ieee_spec := eq_2_2_ieee_correct.
 Print Assumptions eq_2_2_ieee_correct.

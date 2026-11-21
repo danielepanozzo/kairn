@@ -96,7 +96,8 @@ lists:
   operands are at most half the largest finite number, a threshold that cannot be raised
   (`IeeeAdd22Top.v`), and the midpoint and a radius of an interval with bounds of two limbs,
   with the ball made of them and the split of the interval at its midpoint
-  (`IeeeIntervalConvert2.v`); and the theorems of
+  (`IeeeIntervalConvert2.v`), and whether a ball of two limbs contains a point of two limbs
+  (`IeeeBallContains2.v`); and the theorems of
   the
   folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
   finishes and bound kernels
@@ -163,7 +164,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  95 files: no Admitted, admit, Axiom or Parameter
+  96 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec

@@ -1387,10 +1387,14 @@ template <> struct to_down_2<float> {
     static constexpr bool proved = true;
 };
 
-// ball_contains_point_2: UNVERIFIED. Claims: trit.
+// ball_contains_point_2: proved. Claims: trit.
 template <class T> struct ball_contains_point_2;
-template <> struct ball_contains_point_2<double> { static constexpr bool proved = false; };
-template <> struct ball_contains_point_2<float> { static constexpr bool proved = false; };
+template <> struct ball_contains_point_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_contains_point_2<float> {
+    static constexpr bool proved = true;
+};
 
 // eq_2_2: proved. Claims: predicate.
 template <class T> struct eq_2_2;

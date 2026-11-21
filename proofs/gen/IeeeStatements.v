@@ -1645,7 +1645,7 @@ Definition to_down_2_ieee_spec : Prop :=
   let t := IeeeModel.to_down_2 prec emax x0 x1 in
   xval t = xround emax (RD (ieee_emin prec emax) prec) (xval_2 x0 x1).
 
-(* ball_contains_point_2: the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_contains_point_2: the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_contains_point_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
