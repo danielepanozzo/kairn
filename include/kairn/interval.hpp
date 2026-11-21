@@ -568,9 +568,9 @@ public:
     /// mid_rad(), moved into the interval for two limbs (a bound of two limbs can lie beyond Omega,
     /// and then the midpoint Omega of a half-line is outside it), but no claim says so, and p can be
     /// a bound: [l, h] with h the number after l is split into itself and a point. A bisection
-    /// therefore needs its own test of progress, such as a radius of the parts below that of the
-    /// interval (docs/tutorials/bisection.md). Rounds (halvings and a sum), and is checked, as
-    /// midpoint(); constexpr.
+    /// therefore needs its own test of progress, such as a radius of each part at most three
+    /// quarters of that of the interval (docs/tutorials/bisection.md). Rounds (halvings and a sum),
+    /// and is checked, as midpoint(); constexpr.
     constexpr Split<Interval> split() const noexcept
         requires detail::proof_checked<typename detail::interval_kernels<T, K>::split>
     {

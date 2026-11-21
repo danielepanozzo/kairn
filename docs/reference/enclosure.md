@@ -165,9 +165,12 @@ relations of IEEE 1788 keep the standard's vacuous readings instead ([below](#ie
   $u\lvert c\rvert$ (for two limbs $u^2\lvert c\rvert$) or the smallest normal number, the parts
   can be as wide as $X$. The whole line splits into the whole line twice.
 
-A bisection therefore needs a test of progress of its own: stop refining a part that is not
-smaller than its parent, for example when `part.radius() < parent.radius()` does not hold. The
-[tutorial](../tutorials/bisection.md) shows one, and where each type reaches it.
+A bisection therefore needs a test of progress of its own: stop refining a set whose parts are
+not clearly smaller, for example when a part has more than three quarters of its radius. "Smaller"
+alone is not enough for balls: near the limit the parts of a split are smaller than the ball by a
+little only, both are kept, and the work doubles at each step for nothing (the first version of
+the tutorial's program, with `part.radius() < x.radius()`, did not end). The
+[tutorial](../tutorials/bisection.md) shows the test, and where each type reaches it.
 
 ## The hull and the intersection of balls
 
