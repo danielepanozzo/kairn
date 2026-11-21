@@ -1008,6 +1008,32 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     endforeach()
   endif()
 
+  # The planted fault of the packed lanes (lanes/lane_fault.py): the packed runner built with
+  # lanes/lane_fault.hpp, a copy of mul_2_2_full whose special-value select reads the mask of the
+  # neighboring lane, in place of the backend's kernels. crosscheck.lanes.fault.FORMAT runs the
+  # cross-check of mul_2_2_full with it on the quick tier's cases: it must pass with the
+  # consecutive assignment where no register mixes a non-finite operand with finite ones (W = 2
+  # and 4 on the oracle's stream) and fail, by the oracle's verdict, with the permuted one; and
+  # the runner must refuse the consecutive assignment under the guard.
+  if(_packed_backend AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lanes/lane_fault.py")
+    add_executable(kairn-gen-packed-runner-lane-fault "${PROJECT_SOURCE_DIR}/gen/tests/packed_runner.cpp")
+    target_include_directories(kairn-gen-packed-runner-lane-fault PRIVATE
+      "${PROJECT_SOURCE_DIR}/gen/tests" "${CMAKE_CURRENT_SOURCE_DIR}/lanes")
+    target_compile_definitions(kairn-gen-packed-runner-lane-fault PRIVATE
+      KAIRN_RUNNER_HEADER="lane_fault.hpp" KAIRN_RUNNER_TABLE="lane_fault.inc")
+    target_link_libraries(kairn-gen-packed-runner-lane-fault PRIVATE kairn::kairn kairn::fma)
+    target_compile_options(kairn-gen-packed-runner-lane-fault PRIVATE ${_warnings} ${_isa_option})
+    foreach(_format binary64 binary32)
+      set(_name crosscheck.lanes.fault.${_format})
+      add_test(NAME ${_name}
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/lanes/lane_fault.py"
+          --runner "$<TARGET_FILE:kairn-gen-packed-runner-lane-fault>" --format ${_format}
+          --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_QUICK_CASES}"
+          --summary-dir "${_summaries}/lanes")
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled;lanes")
+    endforeach()
+  endif()
+
   set(_packed "no packed runners (no packed backend for this target)")
   if(_packed_backend)
     if(_isa_option)
