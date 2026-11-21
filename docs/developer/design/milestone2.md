@@ -1121,9 +1121,10 @@ IEEE model, of one limb and of two: `interval_NAME_k` for the predicates (`inter
 `interval_entire_k`, `interval_contains_k`, `interval_subset_k`, `interval_positive_k`,
 `interval_negative_k`, `interval_zero_k`), the comparisons and the relations of IEEE 1788;
 `ball_NAME_k` for those of a ball; and the bounds of a ball as numbers of `T` are
-`ball_lower_as_k` and `ball_upper_as_k`. Three cells claim less than the table says, each marked
-below: the split of an interval, the hull and the intersection of balls, which return an operand
-as it is in a conditional form, and `lower_as` of a `Ball<T, 2>`. The predicate of the whole
+`ball_lower_as_k` and `ball_upper_as_k`. Two cells claim less than the table says, each marked:
+the split of an interval (below) and `lower_as` of a `Ball<T, 2>` (in the table). The hull and
+the intersection of balls return an operand as it is in a conditional form, the first form being
+false ([Hull, intersection and split of balls](#hull-intersection-and-split-of-balls)). The predicate of the whole
 line is `is_whole()` on both types (the owner's ruling of 2026-11-21); its kernels keep the name
 `interval_entire_k`. On this tree the public headers have the part of the interface that
 `Interval` and `Ball` had headers for when they were written: for `Interval`, the bounds,
@@ -2243,6 +2244,15 @@ pointers to the limb arrays of a run-time length and a reference to the radius. 
 radius finite and nonnegative) or the **whole space**: every center zero and the radius
 $+\infty$. There is no empty state ([question 7](#open-questions)); a constructor given a
 radius that is negative or a NaN, or a center that is not finite, returns the whole space.
+*As built (2026-11-21):* also a radius of $+\infty$, which is not finite. The constructors are ball
+vectors of their own, `bv_make_1` and `bv_make_2` (the page gave no listing; they were proposed
+in `experiments/milestone2/kernels/` and checked by `ballvector.py`), with the claim
+`makes_ball_vector`: the result is canonical, and it is the whole space exactly when the radius
+given is negative, a NaN or $+\infty$, or the leading limb of a center is not finite; otherwise the
+centers and the radius given, as values. `bv_make_1` guards the centers and the radius, values of
+the program; `bv_make_2` takes its centers as `Expansion<T, 2>`, canonical. No public
+`BallVector` exists on this tree yet: the kernels are generated and proved, and their header is
+to come.
 
 **What is stated of a kernel**, in the IEEE model, for canonical operands:
 
@@ -2256,21 +2266,67 @@ radius that is negative or a NaN, or a center that is not finite, returns the wh
   sums, the differences, the scalings and `axpy` it is the fraction of the entrywise `Ball`
   operation ([B4](milestone1.md#when-the-result-is-a-finite-ball)). For the product of
   polynomials it is to be fixed by the proof: `conv_radius` has larger constants in formats of
-  few bits, as `ball_mul_1` had.
+  few bits, as `ball_mul_1` had. *Fixed by the proof, 2026-11-21:*
+  [below](#the-product-of-polynomials). V4 as written here was false in two cases: see the note
+  after the next paragraph.
 
 Every kernel also returns the flag `finite`, true exactly when the result is a finite ball. When
 it is false the centers are set to zero in a second pass.
+
+*As built (2026-11-21): V4 as first written is false in two cases, and is claimed with two
+changes* (the claim `encloses_entries`, [Ball vectors](../architecture.md#ball-vectors)). For a
+vector of length zero the conditions on the entries say nothing, and a radius computed from radii
+near the overflow threshold alone can overflow (`bv_add_radius_k` of two radii of about
+$\Omega/2$): V4 is claimed for every length, $0$ included, with a condition on the radii of its
+own, `radii_when` ($r_x + r_y$ for the sums and the differences, $\lvert a\rvert r_x$ for the
+scaling, $c\,r_x$ for the scaling by a power of two, each within $2^{e_{\max}-2}$), which the
+condition of any entry implies. And at precision 1 a constant of `bv_add_radius_1` and
+`bv_scale_radius_1`, $\mathrm{up}((1+u)^3)$, is $2^{e_{\max}}$ in the smallest format, so that
+one entry $(+0, +0)$ with radii $+0$ gives the whole space: V4 of `bv_add_1`, `bv_sub_1` and
+`bv_scale_1` is claimed from precision 2 (`finite_from=2`), their other clauses from 1. V4 is
+claimed in the formats of the statements ([Notation](#notation-and-vocabulary)). The
+fractions are those of the entrywise `Ball` operations, as first written: a quarter of the
+overflow threshold for each, the negation's condition being met by every finite operand. The
+smallest precisions: `bv_neg_k`, `bv_make_k`, `bv_add_1`, `bv_sub_1`, `bv_scale_1` 1;
+`bv_scale_2`, `bv_mul_pow2_k` 2; `bv_add_2`, `bv_sub_2` 3; `bv_conv_k` 4. Every kernel is proved
+in both models, in both orders (`BvReal.v`, `BvNegMake.v`, `BvPow2.v`, `BvConv.v`, and
+`IeeeBv.v`, `IeeeBvNegMake.v`, `IeeeBvPow2.v`, `IeeeBvConvFinite.v`, `IeeeBvConvFinite2.v`).
 
 | Kernel | Centers | Radius | Against the entrywise `Ball` operation |
 |---|---|---|---|
 | `bv_neg_k` | `neg` | $r_x$ | equal: exact |
 | `bv_add_k`, `bv_sub_k` | `add_k`, `sub_k` | `bv_add_radius_k(M, rx, ry)`: the radius lines of `ball_add_k` with $M = \max_i\lvert c_{z,i,0}\rvert$ | **equal** to the largest of the $N$ radii of `ball_add_k` |
 | `bv_scale_k`, by a `T` | `scale_k` | `bv_scale_radius_k(M, rx, a)`: the radius lines of `ball_scale_k` | **equal** to the largest of the $N$ radii |
-| `bv_mul_pow2_k` | `mul_pow2_k` | [exact scaling](#scaling-a-ball-by-a-power-of-two), with `ec` over all entries | equal: $c\,r_x$ when every entry is exact |
-| `bv_axpy_k` | `axpy_k` | `bv_add_radius_k(M, bv_scale_radius_k(M', rx, a), ry)` | at least the largest; equal when one entry has both maxima |
+| `bv_mul_pow2_k` | `mul_pow2_k` (as built, `bv_mul_pow2_step_k`: the step of `mul_pow2_map_k` and the mask `ec`) | [exact scaling](#scaling-a-ball-by-a-power-of-two), with `ec` over all entries | equal: $c\,r_x$ when every entry is exact |
+| `bv_axpy_k` (**not generated**: below) | `axpy_k` | `bv_add_radius_k(M, bv_scale_radius_k(M', rx, a), ry)` | at least the largest; equal when one entry has both maxima |
 | `bv_conv_k`, the product of polynomials | `conv_k` | `conv_radius`, [below](#the-product-of-polynomials) | not compared |
+| `bv_make_k`, the constructor (added) | the centers given, guarded for one limb (`bv_center_entry_1`, `bv_center_2`) | the radius given (`bv_make_radius`), tested by `bv_make_finish` | not compared |
 
 `bv_norm_upper_k` returns a number and not a `BallVector`; it is after the table.
+
+*As built (2026-11-21).* Each row but `bv_axpy_k` is a loop of `gen/kernels`, `bv_NAME_1` and
+`bv_NAME_2`, whose state is that of the fold of maxima of the centers written (`norm_step_k`,
+`norm_combine`) and whose finish is `norm_finish_1` on the radius; the radius kernels are
+`bv_add_radius_k`, `bv_scale_radius_k`, `bv_neg_radius` (a copy of $r_x$), `bv_mul_pow2_radius`
+and `conv_radius`. The scaling by a power of two carries, besides, a mask of exactness and-ed over
+the entries (its step `bv_mul_pow2_step_k` returns the center and the mask `ec`), and its radius is
+$c\,r_x$ when the mask is true and $c\,r_x$ is zero or above $N$, otherwise the second number after
+$\mathrm{RN}(c\,r_x)$; the claim is exactness when every entry and the radius meet the conditions
+of `ball_mul_pow2_k`. **`bv_axpy_k` is not a kernel**: the header of `BallVector` is to compose
+`bv_scale_k(X, a)` and `bv_add_k` of what it wrote and $Y$, in place, and what is claimed is the
+two kernels' claims, composed ([axpy of ball vectors](../architecture.md#axpy-of-ball-vectors)).
+The one-pass kernel would need a second fold of maxima in the state, of the scaled centers, which
+the generator does not have; `bv_proposals.py` runs it from `experiments/milestone2/kernels/` and
+finds its results bit for bit those of the composition. The end of every ball-vector loop, the
+radius and the finish, is a function of its own that is never inlined
+([Inlining and compile time](#inlining-and-compile-time)).
+
+**Claimed less than this page asks** (2026-11-21), *the last column.* The equalities of the column
+(the one radius is the largest of the $N$ entrywise radii, for the sums, the differences, the
+scalings, and for the scaling by a power of two when not every entry is exact) are what the
+listings compute and what the tests find, not claims: what is claimed of the one radius is
+containment (V2), when it is finite (V4), and for `bv_mul_pow2_k` its exactness. No claim of
+the vocabulary names another kernel's computation.
 
 **Why the first rows are equalities.** The radius of `ball_add_k` is
 $\mathrm{RN}(\mathrm{RN}(a_z E + \mathrm{RN}(r_x + r_y))\,G + H)$ with $a_z$ the magnitude of the
@@ -2290,6 +2346,16 @@ leading limb: a normalized pair is strictly between the neighbors of its leading
 smallest such number of `T`. One step for the whole vector replaces one `abs_upper` per entry.
 A norm with weights is the program's own loop, on `abs_upper` and `rmul`
 ([Building blocks](#building-blocks-on-t)).
+
+*As built (2026-11-21): `bv_norm_upper_k` is not a kernel.* The bound of the centers described
+here is `norm_upper_k`, a fold of maxima with the flag, generated and proved (`upper` over `max`,
+steps 0 and 1; `FoldNorm.v`, `IeeeFoldNorm.v`); its flag is false for finite centers only when a
+leading limb of two limbs is $\pm\Omega$, whose step up is $+\infty$. What a `BallVector` needs is
+a bound of every *member*, and the header is to write it as two calls,
+$b = $ `add_up_1(norm_upper_k(c), r)`, or $+\infty$ when the flag is false: every member $x$ of
+entry $i$ has $\lvert x\rvert \le \lvert c_i\rvert + r \le b$. That inequality is the header's
+argument from the two claims, tested in exact arithmetic
+(`test_bv.Interp.test_the_norm_of_a_ball_vector`), not the claim of one kernel.
 
 ### The product of polynomials
 
@@ -2334,8 +2400,47 @@ this one once.
 that each of five roundings can lose, multiplied by $m$, and holds the $N$ that keeps a radius
 normal. *Checked:* `batch.py`: `conv_radius` is at least its right side on every case, and
 4 500 products of polynomials of up to four coefficients, at four to six bits, are contained,
-the needed radius reaching 0.45 of the computed one. *Smallest precision:* 4 for two limbs.
+the needed radius reaching 0.39 of the computed one (`results/batch.txt`; the first version of
+this sentence said 0.45). *Smallest precision:* 4 for two limbs.
 *Risk: medium.*
+
+*As built (2026-11-21).* `conv_radius` is this listing, proved (`BvConv.v`) from precision 2,
+with the requirements that every input is nonnegative, $m$ a count and $g \le 1$ (`at_most`),
+which `bound_dot_k` gives when its mask is true. Its claim is of finite results, by the owner's
+ruling of 2026-11-21: a result that is not finite is $+\infty$ or a NaN (an FMA of $0$ and
+$+\infty$), and the finish turns it into the whole space; the statement above, read for every
+result, would be false for the NaN. `bv_conv_1` and `bv_conv_2` are products of two BallVectors,
+a loop of a kind of its own: the convolution `conv_k` of the centers, its mask included, the
+largest magnitudes $M_a$, $M_b$ of the leading limbs of the operands' centers (one fold of maxima
+per operand), the count $m = \min(n_a, n_b)$ as a number of `T` rounded up, one call of
+`bound_dot_k(m)`, `conv_radius`, and the finish `bv_conv_finish`, `norm_finish_1` under the `and`
+of the convolution's mask and the bound's. The sequential order only; from precision 4 for both.
+
+*V4, fixed by the proof* (the claim `encloses_coefficients`): if both operands are finite ball
+vectors and, with $n = \min(n_a, n_b)$,
+
+- $n\,(\mathrm{unit}(K) + \tfrac{\eta}{2u}) \le \tfrac1{16}$ for `bv_conv_2`, and
+  $n\,(\mathrm{unit}(K) + \eta) \le \tfrac1{16}$ for `bv_conv_1`, $K$ the kernel of the products
+  (`count_when`);
+- $r_x r_y \le 2^{e_{\max}-2}$ (`radii_when`);
+- every entry $a_i$ has $(\lvert a_i\rvert + r_x)\,r_y \le 2^{e_{\max}-2}$, every entry $b_k$ has
+  $(\lvert b_k\rvert + r_y)\,r_x \le 2^{e_{\max}-2}$, and every pair has
+  $n\,(\lvert a_i\rvert + r_x)(\lvert b_k\rvert + r_y) \le 2^{e_{\max}-2}$ (`finite_when`),
+
+then the product is a finite ball vector. The condition of the pairs bounds every value that
+`conv_radius` and the dot products compute, at most $(1+u)^{14}(1+2u)(1-u)^{-2}\,n\,A\,B$ with $A$
+and $B$ the largest $\lvert a_i\rvert + r_x$ and $\lvert b_k\rvert + r_y$, which is below
+$0.75 \cdot 2^{e_{\max}}$ from $p = 4$: hence the smallest precision 4. The conditions of each array
+alone are what an empty operand needs ($n = 0$, and `conv_radius` computes $M_b r_a + r_x r_y$
+before multiplying by $m$), and that of the radii the case of two empty operands. The condition
+on the count makes the bound of `dot` given in every format from $p = 4$, and makes the count a
+number of the format. It has two forms because the first, with $\eta$ for both, was proved false
+for two limbs: $n\,(4u^2 + \eta) \le \tfrac1{16}$ admits counts above the largest number in formats
+of a small exponent range ($p \ge 8$ and $e_{\max} \le 2p - 7$), whose count rounded up is
+$+\infty$ and whose product is then the whole space; with the smallest normal number,
+$n\,\tfrac{\eta}{2u} \le \tfrac1{16}$ bounds $n$ by $2^{e_{\max}-6}$. In `binary64` and
+`binary32` the two forms admit the same counts. For one limb the term $\tfrac{u}{1+u}$ already
+bounds $n$ by about $2^{p-4}$, and $\eta$ is kept ([Ball vectors](../architecture.md#ball-vectors)).
 
 *Not claimed:* a tight radius for polynomials whose coefficients differ much in size; a
 `BallVector` with one radius per entry or with weights, which is not this type.
@@ -2571,6 +2676,14 @@ it at compile time, and may prefer the kernels as ordinary functions. The rules 
   a batch kernel, which is a loop with the step inlined in it and is itself an ordinary inline
   function, emitted once per translation unit; and any `Ball` or `Interval` operation in code
   that is not on a critical path.
+- *As built (2026-11-21), two exceptions to forced inlining that the compilers asked for.*
+  `interval_mul_2`, the largest kernel (366 operations after inlining), is an ordinary inline
+  function (`ordinary_inline:` in its description): a function that calls it 1 000 times
+  compiled in 1.8 s with GCC 16 against 212 s forced. And the end of every ball-vector loop, its
+  radius and its finish, is a function of its own that is never inlined (`KAIRN_GEN_NOINLINE`):
+  inline, compilers duplicated it into the paths that leave the loop and folded or hoisted part of
+  a copy, so that the fused instructions of the loop were no number of whole copies of its parts,
+  which the object-code check refuses ([Ball vectors](../architecture.md#ball-vectors)).
 
 *Proposed:* one macro, set by the program before including Kairn, with three values.
 *Inline* (the default): as today. *Outlined:* the kernels of the `Ball`, `Interval` and
