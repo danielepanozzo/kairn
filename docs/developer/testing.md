@@ -1608,7 +1608,11 @@ above, after the oracle's 120) and 8 for the oracle's; on Windows, four times th
 logical processors, 9 minutes for the quick tier and 12 for the compiled runners. (Those were the
 times with the kernels of Milestone 1. With those of Milestone 2 the interpreter's enumerations
 are 340 tests and no longer fit one job: on a hosted runner they were cancelled at 30 minutes
-with 258 done, and are three jobs of a third each since.) The one tier
+with 258 done, and are three jobs of a third each since. The compiled runners' job, 939 tests,
+takes 22 to 38 minutes on the hosted Linux and macOS runners and did not finish in 60 on the
+Windows ones, where a cross-check takes 18 seconds against 7 on Linux and the oracle's self-test
+17 minutes against 9: each Windows compiler runs it as three jobs of a third each, every one
+with its own build.) The one tier
 suggests the rule is cautious indeed: it took 1 040 seconds with GCC on a hosted Linux runner
 against 948 on 4 threads of the Linux machine, a ratio of 1.1, which would make the quick tier
 about 75 seconds there and the compiled runners' job about 100; and 1 011 seconds on a hosted
