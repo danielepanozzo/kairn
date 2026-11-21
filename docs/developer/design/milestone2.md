@@ -2911,6 +2911,42 @@ times, benchmarks; the report.
    costs more than expected: containment and I5 do not depend on it.
 5. `bv_conv_k`'s V4 and the accumulator's radius, which are the least reused.
 
+**State at the end of the milestone (2026-11-21).** Of the list above only the first was given
+up; the other four were done: the lane order in packed code, the proof of `interval_mul_2`, the
+closed form of the tightness of two limbs (the claim `outward`), V4 of the product of polynomials
+and the accumulator's radius are all proved. Wave by wave, on this tree:
+
+- **Wave 1.** Done: 1.1 and 1.2 (the claims, the rule of the product, the entry forms, the
+  directed sums and products and the neighbors, public in `blocks.hpp`); 1.3 (`ball_mul_pow2_k`
+  and its full form, `ldexp` and `half` of a `Ball`); 1.4 (`rational`); 1.6 (the tree theorem).
+  Of 1.5, the kernels of the interface of `Ball` are generated and proved, and the public
+  functions are `lower_as`, `upper_as`, the midpoint and the signs; `contains`, the comparisons
+  and `split` of a `Ball` have no public function yet. The functions that do not round lost the
+  check of the rounding mode, as decided on 2026-11-20.
+- **Wave 2.** Done: 2.1 (`Interval<T, 1>`, public; the cases of ITF1788 are not converted,
+  [question 18](#open-questions)), 2.2 and 2.3 (the cores of two limbs, the sums, differences and
+  products of intervals of two limbs, public). Of 2.4, every kernel is generated and proved
+  (the conversions, the hull, the intersection, the midpoint and the radius, the predicates, the
+  comparisons, three relations of IEEE 1788 and the subset, `ball_from_interval_k`); public are
+  the hull and the intersection, and for one limb the midpoint, the radius, the split and the
+  conversions. The four relations of the full standard were not made
+  ([Comparisons](#comparisons)).
+- **Wave 3.** Done: 3.1, the folds in the generator, both orders in scalar code and the lane order
+  in packed code, and four more kinds of loop (maps, folds of maxima, convolutions, ball vectors);
+  3.2 for the proofs: every statement of the folds, the maps and the convolutions in both models,
+  and the bound kernels; the kernels and the theorem of the accumulator (3.3). Not done: the
+  public functions on arrays, `traits<X>::sum(n)` and `dot(n)`, the accumulator's class and the
+  public `Packed`, `SoA` and views ([Packed type and containers](#packed-type-and-containers)).
+- **Wave 4.** The kernels of `BallVector` are generated and proved, V1 to V4 with the conditions
+  of [BallVector](#ballvector); `bv_axpy_k` and `bv_norm_upper_k` are compositions, not kernels.
+  The public `BallVector` is not on this tree.
+- **Wave 5.** The conversions between limb types moved to Milestone 3. The inlining modes are
+  built (`KAIRN_ENCLOSURE_CODE`, [question 13](#open-questions)), with their compile times in
+  [Costs, Milestone 2](../results/costs-milestone2.md); a tutorial on intervals is written
+  (`docs/tutorials/intervals.md`), and the reference pages are generated for every kernel. No
+  record of a run of the brute-force tier on the kernels of this milestone, no benchmarks and no
+  report of the milestone are on this tree.
+
 ## Open questions
 
 Each with the options and what I recommend.
@@ -2941,6 +2977,13 @@ Each with the options and what I recommend.
 - The summation theorems are proved since ([Summation over any tree](#summation-over-any-tree)).
   The proof changed two statements of this page, which are revised above: what is required of
   the zero state of a fold, and the bound of the dot product of one limb.
+
+**State at the end of the milestone, 2026-11-21.** Every question is answered as recommended or
+decided, and what was decided is built, with these remarks: 3 is (a), the infinite bound on the
+side of an overflow; 4 is (a), `bound_sum_k` and `bound_dot_k`, proved; 6, 7, 8, 9, 10, 14 and 15
+are (a), as the kernels show; 11 and 16 moved to Milestone 3; 12 is left for later; 13 was decided
+on 2026-11-20, below; 17 is the first form, the lemma being proved at the boundary; 18 and 19 are
+(a) and not carried out yet, below.
 
 1. **A NaN bound given to the constructor of an interval.** *Decided by the owner on
    2026-11-20: the whole line*, for `Interval(lo, hi)` and for the ball from an interval alike,
@@ -3007,7 +3050,12 @@ Each with the options and what I recommend.
 13. **The inlining macro**: its name and its three values, and whether "outlined" should be
     the default for `Interval<T, 2>`, whose product is several hundred operations.
     *Recommended:* the default stays "inline" for everything of at most two limbs but
-    `interval_mul_2` and the folds, which are plain inline functions from the start.
+    `interval_mul_2` and the folds, which are plain inline functions from the start. *Decided on
+    2026-11-20* ([decisions log](phase0/decisions.md#decisions-log)): `KAIRN_ENCLOSURE_CODE`,
+    with the values `KAIRN_ENCLOSURE_CODE_INLINE` (the default), `_OUTLINED` and `_EXTERNAL`, for
+    the operations of `Ball` that round; negation and the constructors stay inline.
+    `interval_mul_2` is an ordinary inline function, as recommended, and the end of a ball-vector
+    loop is never inlined ([Inlining and compile time](#inlining-and-compile-time)).
 14. **The entry forms.** (a) Seven guarded kernels, as above. (b) Document a precondition
     ("do not pass a product"). *Recommended: (a)*: rule R3 exists because (b) fails silently.
 15. **The steps of `interval_mul_1`.** (a) Eight, as decided. (b) Choose the least and the
@@ -3018,10 +3066,14 @@ Each with the options and what I recommend.
     of question 11; until then only `U = T`. With them it is Milestone 3's.
 17. **The band test of the directed product**: `lt(ap, P)` with the new lemma, or `le(ap, P)`
     with Flocq's lemma only and a statement that excludes $\lvert ab\rvert = P$.
-    *Recommended:* the first; the second is the fallback.
+    *Recommended:* the first; the second is the fallback. *Built as the first* (2026-11-20): the
+    lemma holds from a rounded product of $(1 - u)P$ on ([Rounding a product down and
+    up](#rounding-a-product-down-and-up)).
 18. **The cases of ITF1788.** (a) Convert the Apache-licensed files and keep them in
     `tests/`, with their notices. (b) Do not store them; run them from a checkout.
-    *Recommended: (a)*, for those files only.
+    *Recommended: (a)*, for those files only. *State on 2026-11-21:* adopted and not carried out;
+    no case of ITF1788 is in the repository, and the four relations that only the full standard
+    has wait for them ([Comparisons](#comparisons)).
 19. **The guard on arrays of `T`.** A sum of one-limb numbers over an array the program filled
     is one addition per element, and the guard of rule R3 doubles it. (a) Guard, as for two
     limbs: the exported bound then holds of the values in the array whatever the compiler
@@ -3029,6 +3081,10 @@ Each with the options and what I recommend.
     does, like `T`: no guard, and a statement that allows a product of the program to be fused
     into the sum. *Recommended: (a)*, measured before it is final: in packed code the guard is
     one more addition per register, and a bound that a compiler setting can falsify is not one.
+    *State on 2026-11-21:* (a) is built: the loops over supplied arrays that add their elements
+    are folds of their own, `sum_1_entry` and the others named `_entry`, whose steps guard
+    ([Folds](#folds-the-extension-of-the-ir)). No public function calls them yet, and no
+    measurement of the guard's cost is recorded on this tree.
 
 ## Experiments
 
