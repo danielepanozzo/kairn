@@ -21,9 +21,10 @@ ensures:       ball_splits ca ra cb rb from=c,r
 min_precision: 2
 source:        the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallSets.v ball_split_1_correct
 entry:         yes
 cone_exempt:   through ball_add_1_full, which states what comes out; the special states are selected after an explicit test of the radius
 

@@ -1007,7 +1007,8 @@ def _ball_of_interval_spec(k, kernels, e):
     bounded interval, a finite center between the bounds and within rel |mid| + abs of the midpoint
     mid, a finite radius with which it contains the interval, and with smallest_radius the smallest
     such radius of the format, RU of the larger distance to a bound; the special values of IEEE
-    1788's mid and rad (ieee1788) or of a canonical ball (ball) for the other intervals."""
+    1788's mid and rad (ieee1788) or of a canonical ball (ball) for the other intervals. With
+    ieee1788 a center of two limbs is canonical for every operand (_canonical_center)."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
         [_let(k, kernels)]
@@ -1038,6 +1039,7 @@ def _ball_of_interval_spec(k, kernels, e):
     else:
         zero = ' /\\ '.join(f'zero {v}' for v in c)
         inf = f'{r} = infinity prec emax false'
+        claims += _canonical_center(c)
         claims += [f'(interval_empty_{n} {x} -> ' + ' /\\ '.join(f'nan {v}' for v in list(c) + [r]) + ')',
                    f'({_xv(lo)} = XInf true -> {_xv(hi)} = XInf false -> {zero} /\\ {inf})',
                    f'(finite {lo[0]} -> {_xv(hi)} = XInf false -> {_xv(c)} = XFin (omega prec emax) /\\ {inf})',
@@ -1047,11 +1049,20 @@ def _ball_of_interval_spec(k, kernels, e):
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 
+def _canonical_center(c):
+    """With ieee1788 the center is a number given back as a number (the midpoint), not the center
+    of a ball: of two limbs, it is canonical for every canonical operand (two NaNs for the empty
+    set, which canonical_2 accepts). Of one limb every value is a number of the type, and nothing
+    is printed."""
+    return [f'canonical_2 {" ".join(c)}'] if len(c) == 2 else []
+
+
 def _ball_of_interval_finite_when(k, e, lines, c, r, lo, hi, n, x, bounded, mid, rel, absolute):
     """ball_of_interval with finite_when (stage B2, interval_mid_rad_2 and interval_to_ball_2): for a
     bounded interval the radius may be +infinity (a step past Omega near the top of the range), and
-    is finite under the conditions. ieee1788: the center as without the field, and the radius +inf
-    or a finite one with which the center contains the interval. ball: a canonical ball that contains
+    is finite under the conditions. ieee1788: the center as without the field (canonical, of two
+    limbs), and the radius +inf or a finite one with which the center contains the interval. ball:
+    a canonical ball that contains
     the interval, and under the conditions a finite ball with the center and radius as without the
     field."""
     t = _Terms(k)
@@ -1071,6 +1082,7 @@ def _ball_of_interval_finite_when(k, e, lines, c, r, lo, hi, n, x, bounded, mid,
         zero = ' /\\ '.join(f'zero {v}' for v in c)
         inf = f'{r} = infinity prec emax false'
         finite = ' /\\ '.join(f'finite {v}' for v in c)
+        claims += _canonical_center(c)
         claims += [f'(interval_empty_{n} {x} -> ' + ' /\\ '.join(f'nan {v}' for v in list(c) + [r]) + ')',
                    f'({_xv(lo)} = XInf true -> {_xv(hi)} = XInf false -> {zero} /\\ {inf})',
                    f'(finite {lo[0]} -> {_xv(hi)} = XInf false -> {_xv(c)} = XFin (omega prec emax) /\\ {inf})',
@@ -1291,9 +1303,13 @@ class _Sets:
 def _ball_set_spec(k, kernels, e):
     """A ball that contains the union or the intersection of two balls (Milestone 2, "Hull,
     intersection and split of balls"): canonical; every member of the set a member; for the union,
-    empty exactly when both operands are, and an operand that is empty gives the other, limb for
-    limb; for the intersection, an empty operand gives the empty set, and an operand that is the
-    whole line gives the other, limb for limb."""
+    empty exactly when both operands are, an empty X gives Y as it is, and an empty Y gives X as
+    it is when X is not empty; for the intersection, an empty operand gives the empty set, the
+    whole line X gives Y as it is, and the whole line Y gives X as it is when X is not the whole
+    line. "As it is" is equality of the limbs themselves (of the binary_float values: the sign of a
+    zero, and the sign and payload of a NaN, included). The second direction has the condition on
+    X because when both operands are special the result is one of them, Y, which need not equal X
+    (two NaNs that differ in sign, or a center +0 and a center -0)."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
         [_let(k, kernels)]
@@ -1312,12 +1328,12 @@ def _ball_set_spec(k, kernels, e):
     if union:
         claims += [f'(ball_empty_{n} {z} <-> ball_empty_{n} {bx} /\\ ball_empty_{n} {by})',
                    f'(ball_empty_{n} {bx} -> {same(yc, yr)})',
-                   f'(ball_empty_{n} {by} -> {same(xc, xr)})',
+                   f'(ball_empty_{n} {by} /\\ ~ ball_empty_{n} {bx} -> {same(xc, xr)})',
                    f'(forall z : R, {ins[0]} \\/ {ins[1]} -> in_ball_{n} {z} z)']
     else:
         claims += [f'(ball_empty_{n} {bx} \\/ ball_empty_{n} {by} -> ball_empty_{n} {z})',
                    f'(ball_whole_{n} {bx} -> {same(yc, yr)})',
-                   f'(ball_whole_{n} {by} -> {same(xc, xr)})',
+                   f'(ball_whole_{n} {by} /\\ ~ ball_whole_{n} {bx} -> {same(xc, xr)})',
                    f'(forall z : R, {ins[0]} /\\ {ins[1]} -> in_ball_{n} {z} z)']
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return _statement(f'{k.name}_spec', _comment(k), lines)

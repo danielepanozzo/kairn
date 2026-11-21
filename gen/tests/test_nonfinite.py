@@ -600,10 +600,14 @@ def judge_ball_of_interval(k, ks, fmt, e, ins, outs, values):
     """A ball made from an interval (stage B1): the special values of IEEE 1788's mid and rad, or of
     a canonical ball, for an interval that is not bounded; for a bounded one a finite center within
     the bounds and within rel |mid| + abs of the midpoint, a finite radius with which it contains
-    the interval, and with smallest_radius RU of the larger distance to a bound."""
+    the interval, and with smallest_radius RU of the larger distance to a bound. With ieee1788 a
+    center of two limbs, a number given back as a number, is canonical for every canonical operand
+    (stage B2: two NaNs for the empty set)."""
     lo, hi = ins[e['from']['lower']], ins[e['from']['upper']]
     c, r = outs[e['center']], outs[e['radius']][0]
     state = interval_state(fmt, lo, hi)
+    if e['special'] == 'ieee1788' and len(c) == 2 and not fmt.canonical(c):
+        return ['ball_of_interval (canonical center)']
     a, z = bound_value(lo), bound_value(hi)
     within = all(abs(bound_value(ins[cond['abs_le']])) <= fmt.threshold * F(2) ** cond['exp']
                  for cond in e.get('finite_when', [])) if state == 'bounded' else True
@@ -852,9 +856,11 @@ def _ball_bounds(fmt, center, radius):
 
 def judge_ball_set(k, ks, fmt, e, ins, outs, values):
     """A ball that contains the union or the intersection of two balls (stage B2): canonical; every
-    member of the set a member; for the union empty exactly when both operands are, and an empty
-    operand gives the other as it is; for the intersection an empty operand gives the empty set and
-    the whole line gives the other as it is."""
+    member of the set a member; for the union empty exactly when both operands are, an empty X gives
+    Y as it is, and an empty Y gives X as it is when X is not empty; for the intersection an empty
+    operand gives the empty set, the whole line X gives Y as it is, and the whole line Y gives X as
+    it is when X is not the whole line. "As it is": the same limbs, the sign of a zero included;
+    the interpreter has one NaN, as the line protocol prints one, so a NaN matches a NaN."""
     c, r = outs[e['center']], outs[e['radius']]
     z = _ball_bounds(fmt, c, r) if ball_state(fmt, c, r[0]) is not None else None
     if z is None:
@@ -864,8 +870,7 @@ def judge_ball_set(k, ks, fmt, e, ins, outs, values):
     Y = _ball_bounds(fmt, ins[by['center']], ins[by['radius']])
 
     def same(b):
-        return [fr(v) if finite(v) else v[0] for v in c + r] == [fr(v) if finite(v) else v[0]
-                                                                for v in ins[b['center']] + ins[b['radius']]]
+        return list(c) + list(r) == list(ins[b['center']]) + list(ins[b['radius']])
     bad = []
     union = e['set'] == 'union'
     if union:
@@ -873,7 +878,7 @@ def judge_ball_set(k, ks, fmt, e, ins, outs, values):
             bad.append('ball_set (empty)')
         if X[0] == 'empty' and not same(by):
             bad.append('ball_set (the other operand)')
-        if Y[0] == 'empty' and not same(bx):
+        if Y[0] == 'empty' and X[0] != 'empty' and not same(bx):
             bad.append('ball_set (the other operand)')
         for s in (X, Y):
             if s[0] != 'empty' and (z[0] == 'empty' or not (xle(z[1], s[1]) and xle(s[2], z[2]))):
@@ -883,7 +888,7 @@ def judge_ball_set(k, ks, fmt, e, ins, outs, values):
             bad.append('ball_set (empty)')
         if X[0] == 'line' and not same(by):
             bad.append('ball_set (the other operand)')
-        if Y[0] == 'line' and not same(bx):
+        if Y[0] == 'line' and X[0] != 'line' and not same(bx):
             bad.append('ball_set (the other operand)')
         if 'empty' not in (X[0], Y[0]):
             lo, hi = max((X[1], Y[1]), key=_rank), min((X[2], Y[2]), key=_rank)
@@ -1598,6 +1603,38 @@ class NonFinite(unittest.TestCase):
                                         None), ['ball_set (containment)'])
         self.assertEqual(judge_ball_set(bi, ks, fmt, bi.ensures[0], dict(xy, cx=[ZERO], rx=[PINF]),
                                         {'cz': [make(F(3))], 'rz': [one]}, None), [])
+        # "As it is" is the limbs themselves: the sign of a zero counts (a NaN matches a NaN, the
+        # interpreter and the line protocol having one). When both operands are special the
+        # result is Y, and the clause that gives X holds only when X is not special: the hull of
+        # two empty balls (the NaNs of the listing may differ in sign, which only the formal model
+        # sees), the intersection of the whole lines of centers +0 and -0. Each with one limb and
+        # with two; the result that returns X instead is refused.
+        bh2, bi2 = ks['ball_hull_2'], ks['ball_intersection_2']
+        for h, i, n in ((bh, bi, 1), (bh2, bi2, 2)):
+            def ball(cx, rx, cy, ry):
+                return {'cx': [cx] * n, 'rx': [rx], 'cy': [cy] * n, 'ry': [ry]}
+
+            def out(c, r):
+                return {'cz': [c] * n, 'rz': [r]}
+            self.assertEqual(judge_ball_set(h, ks, fmt, h.ensures[0], ball(NaN, NaN, NaN, NaN), out(NaN, NaN), None), [])
+            line_line = ball(ZERO, PINF, NZERO, PINF)
+            self.assertEqual(judge_ball_set(i, ks, fmt, i.ensures[0], line_line, out(NZERO, PINF), None), [])
+            self.assertEqual(judge_ball_set(i, ks, fmt, i.ensures[0], line_line, out(ZERO, PINF), None),
+                             ['ball_set (the other operand)'])
+            # One operand empty and the other the whole line: the hull is the whole line as it is,
+            # the intersection the empty set as it is, whichever comes first.
+            for args, want in (((NaN, NaN, NZERO, PINF), (NZERO, PINF)), ((NZERO, PINF, NaN, NaN), (NZERO, PINF))):
+                self.assertEqual(judge_ball_set(h, ks, fmt, h.ensures[0], ball(*args), out(*want), None), [])
+                self.assertEqual(judge_ball_set(h, ks, fmt, h.ensures[0], ball(*args), out(ZERO, PINF), None),
+                                 ['ball_set (the other operand)'])
+                self.assertEqual(judge_ball_set(i, ks, fmt, i.ensures[0], ball(*args), out(NaN, NaN), None), [])
+            self.assertEqual(judge_ball_set(i, ks, fmt, i.ensures[0], ball(ZERO, PINF, NaN, NaN), out(ZERO, PINF),
+                                            None), ['ball_set (empty)', 'ball_set (the other operand)'])
+            # The whole line and a finite ball of center -0: that ball, its zero as it is.
+            self.assertEqual(judge_ball_set(i, ks, fmt, i.ensures[0], ball(ZERO, PINF, NZERO, one), out(NZERO, one),
+                                            None), [])
+            self.assertEqual(judge_ball_set(i, ks, fmt, i.ensures[0], ball(ZERO, PINF, NZERO, one), out(ZERO, one),
+                                            None), ['ball_set (the other operand)'])
         x = {'c': [two], 'r': [one]}
         self.assertEqual(judge_ball_splits(bs, ks, fmt, bs.ensures[0], x, {'ca': [make(F(3, 2))], 'ra': [make(F(1, 2))],
                                                                         'cb': [make(F(5, 2))], 'rb': [make(F(1, 2))]},
@@ -1629,6 +1666,20 @@ class NonFinite(unittest.TestCase):
         self.assertEqual(judge_ball_of_interval(mr2, ks, fmt, mr2.ensures[0], {'xl': [one, ZERO], 'xu': [two, ZERO]},
                                                 {'m': [make(F(3, 2)), ZERO], 'r': [PINF]}, None),
                          ['ball_of_interval (finite)'])
+        # The midpoint of two limbs is canonical: (1, 1/2) has the value 3/2 but is not normalized;
+        # the empty set gives two NaNs, which are canonical, and a half-line (Omega, 0).
+        self.assertEqual(judge_ball_of_interval(mr2, ks, fmt, mr2.ensures[0], {'xl': [one, ZERO], 'xu': [two, ZERO]},
+                                                {'m': [one, make(F(1, 2))], 'r': [make(F(1, 2))]}, None),
+                         ['ball_of_interval (canonical center)'])
+        self.assertEqual(judge_ball_of_interval(mr2, ks, fmt, mr2.ensures[0], {'xl': [one, ZERO], 'xu': [two, ZERO]},
+                                                {'m': [make(F(3, 2)), ZERO], 'r': [make(F(1, 2))]}, None), [])
+        self.assertEqual(judge_ball_of_interval(mr2, ks, fmt, mr2.ensures[0], {'xl': [PINF, ZERO], 'xu': [NINF, ZERO]},
+                                                {'m': [NaN, NaN], 'r': [NaN]}, None), [])
+        self.assertEqual(judge_ball_of_interval(mr2, ks, fmt, mr2.ensures[0], {'xl': [one, ZERO], 'xu': [PINF, ZERO]},
+                                                {'m': [make(fmt.top), ZERO], 'r': [PINF]}, None), [])
+        self.assertEqual(judge_ball_of_interval(mr2, ks, fmt, mr2.ensures[0], {'xl': [one, ZERO], 'xu': [PINF, ZERO]},
+                                                {'m': [make(fmt.top), NaN], 'r': [PINF]}, None),
+                         ['ball_of_interval (canonical center)'])
         self.assertEqual(fmt.ieee_round(F(15), 'nearest'), PINF)           # 15 is a tie between 14 and 16
         self.assertEqual(fmt.ieee_round(F(29, 2), 'down'), make(F(14)))
         self.assertEqual(fmt.ieee_round(F(-29, 2), 'down'), NINF)

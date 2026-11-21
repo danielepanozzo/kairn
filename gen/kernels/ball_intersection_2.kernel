@@ -1,9 +1,10 @@
 # A ball with a 2-limb center that contains the intersection of two such balls (milestone2.md, "One
 # enclosure interface", "Hull, intersection and split of balls"): the composition of ball_intersection_1
 # on the conversions of two limbs (ball_to_interval_2, interval_intersection_2, interval_to_ball_2), in
-# the order of the conversions (GCC does not duplicate the larger halving of two limbs). If an
-# operand is the whole line the other is returned as it is, by the tests of the radii; the selects
-# choose the composition when neither operand is the whole line (nx, ny). An empty operand gives the
+# the order of the conversions (GCC does not duplicate the larger halving of two limbs). If X is the
+# whole line Y is returned as it is, and if Y is the whole line and X is not, X (the same limbs), by
+# the tests of the radii (two whole lines give Y); the selects choose the composition when neither
+# operand is the whole line (nx, ny). An empty operand gives the
 # empty set through the conversions, and so do two balls whose intervals do not meet. Not claimed:
 # that the result is inside X or Y, nor that it is empty whenever the balls are disjoint.
 kernel:        ball_intersection_2
@@ -19,9 +20,10 @@ ensures:       ball_set cz rz intersection x=cx,rx y=cy,ry
 min_precision: 3
 source:        both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallHull.v ball_intersection_2_correct
 entry:         yes
 cone_exempt:   the ball is selected among the conversions and the operands after tests of the radii; ball_set states what comes out for every pair of canonical balls
 

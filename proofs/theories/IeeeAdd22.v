@@ -18,12 +18,13 @@
       |sh| <= H, |sl|, |th|, |tl| <= U/2, |c| <= U, |vh| <= H + U, |vl| <= U,
       |w| <= 2U, |vh + w| <= H + 3U <= Omega, and the tail is at most U.
 
-   What exhaustive enumeration of toy formats says beyond this (not proved here): the
-   statement holds up to |x0|, |y0| <= Omega/2, and not beyond (at |x0| = |y0| =
-   2^(emax - 1) the leading sum overflows); and it also holds, with no condition on the
-   operands, when |x + y| <= 2^(emax - 1). At the threshold Omega/2 the proof needs a
-   special case, x0 = y0 = Omega/2, where the general bounds above leave no margin
-   (the two sharper statements are written down, unproved, in wip/IeeeSharper.v).
+   Beyond this: the statement holds up to |x0|, |y0| <= Omega/2, and not beyond (at
+   |x0| = |y0| = 2^(emax - 1) the leading sum overflows). That is proved in
+   IeeeAdd22Top.v (add_2_2_values_finite_half), with the special case x0 = y0 = Omega/2,
+   where the general bounds above leave no margin. Exhaustive enumeration of toy formats
+   says that it also holds, with no condition on the operands, when
+   |x + y| <= 2^(emax - 1): that statement is written down, unproved, in
+   wip/IeeeSharper.v (IeeeRange.v proves it for |x + y| <= 2^(emax - 2)).
 
    The statements, in the form of proofs/gen/IeeeStatements.v, are at the end of the file:
    add_2_2_ieee_bridge, add_2_2_ieee_correct, add_2_2_ieee_finite. *)

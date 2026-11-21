@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 223 kernels, 159 are proved and 64 are **UNVERIFIED**: [`ball_contains_ball_1`](ball_contains_ball_1.md), [`ball_contains_ball_2`](ball_contains_ball_2.md), [`ball_contains_point_1`](ball_contains_point_1.md), [`ball_contains_point_2`](ball_contains_point_2.md), [`ball_equal_1`](ball_equal_1.md), [`ball_equal_2`](ball_equal_2.md), [`ball_from_interval_1`](ball_from_interval_1.md), [`ball_hull_1`](ball_hull_1.md), [`ball_hull_2`](ball_hull_2.md), [`ball_intersection_1`](ball_intersection_1.md), [`ball_intersection_2`](ball_intersection_2.md), [`ball_less_1`](ball_less_1.md), [`ball_less_2`](ball_less_2.md), [`ball_less_equal_1`](ball_less_equal_1.md), [`ball_less_equal_2`](ball_less_equal_2.md), [`ball_negative_1`](ball_negative_1.md), [`ball_negative_2`](ball_negative_2.md), [`ball_positive_1`](ball_positive_1.md), [`ball_positive_2`](ball_positive_2.md), [`ball_split_1`](ball_split_1.md), [`ball_split_2`](ball_split_2.md), [`ball_to_interval_2`](ball_to_interval_2.md), [`ball_zero_1`](ball_zero_1.md), [`ball_zero_2`](ball_zero_2.md), [`bv_center_2`](bv_center_2.md), [`bv_center_entry_1`](bv_center_entry_1.md), [`bv_conv_finish`](bv_conv_finish.md), [`bv_make_finish`](bv_make_finish.md), [`bv_make_radius`](bv_make_radius.md), [`bv_mul_pow2_radius`](bv_mul_pow2_radius.md), [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md), [`bv_mul_pow2_step_2`](bv_mul_pow2_step_2.md), [`bv_neg_radius`](bv_neg_radius.md), [`conv_radius`](conv_radius.md), [`interval_contains_1`](interval_contains_1.md), [`interval_contains_2`](interval_contains_2.md), [`interval_empty_1`](interval_empty_1.md), [`interval_empty_2`](interval_empty_2.md), [`interval_entire_1`](interval_entire_1.md), [`interval_entire_2`](interval_entire_2.md), [`interval_equal_1`](interval_equal_1.md), [`interval_equal_2`](interval_equal_2.md), [`interval_less_1`](interval_less_1.md), [`interval_less_2`](interval_less_2.md), [`interval_less_equal_1`](interval_less_equal_1.md), [`interval_less_equal_2`](interval_less_equal_2.md), [`interval_mid_rad_2`](interval_mid_rad_2.md), [`interval_negative_1`](interval_negative_1.md), [`interval_negative_2`](interval_negative_2.md), [`interval_positive_1`](interval_positive_1.md), [`interval_positive_2`](interval_positive_2.md), [`interval_rel_disjoint_1`](interval_rel_disjoint_1.md), [`interval_rel_disjoint_2`](interval_rel_disjoint_2.md), [`interval_rel_equal_1`](interval_rel_equal_1.md), [`interval_rel_equal_2`](interval_rel_equal_2.md), [`interval_rel_interior_1`](interval_rel_interior_1.md), [`interval_rel_interior_2`](interval_rel_interior_2.md), [`interval_split_2`](interval_split_2.md), [`interval_subset_1`](interval_subset_1.md), [`interval_subset_2`](interval_subset_2.md), [`interval_to_ball_2`](interval_to_ball_2.md), [`interval_zero_1`](interval_zero_1.md), [`interval_zero_2`](interval_zero_2.md), [`neg_1`](neg_1.md).
+Of the 223 kernels, 211 are proved and 12 are **UNVERIFIED**: [`ball_from_interval_1`](ball_from_interval_1.md), [`bv_center_2`](bv_center_2.md), [`bv_center_entry_1`](bv_center_entry_1.md), [`bv_conv_finish`](bv_conv_finish.md), [`bv_make_finish`](bv_make_finish.md), [`bv_make_radius`](bv_make_radius.md), [`bv_mul_pow2_radius`](bv_mul_pow2_radius.md), [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md), [`bv_mul_pow2_step_2`](bv_mul_pow2_step_2.md), [`bv_neg_radius`](bv_neg_radius.md), [`conv_radius`](conv_radius.md), [`neg_1`](neg_1.md).
 
 33 kernels have a statement on finite operands and one on infinite and NaN operands; the second is **UNVERIFIED** for [`bv_center_2`](bv_center_2.md).
 
@@ -158,30 +158,30 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `X.upper_as<T>()` | `Ball<T, 2>` | a upper bound of the ball; $-\infty$ for the empty ball; $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_upper_as_2`](ball_upper_as_2.md) |
 | `from_interval(lo, hi)` | `T`, `T` | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_2`](ball_from_interval_2.md) |
 | `Ball<T, 1>(X)` | `Ball<T, 2>` | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) |
-| not yet called by the public headers | - | an interval of two limbs that contains the ball, within $A\lvert v\rvert + B$ of its bounds; empty for the empty ball | [`ball_to_interval_2`](ball_to_interval_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | an interval of two limbs that contains the ball, within $A\lvert v\rvert + B$ of its bounds; empty for the empty ball | [`ball_to_interval_2`](ball_to_interval_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_1`](ball_from_interval_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_2`](ball_hull_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_2`](ball_intersection_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_1`](ball_hull_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_1`](ball_intersection_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_1`](ball_split_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_2`](ball_split_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $t \in X$; exact | [`ball_contains_point_1`](ball_contains_point_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $Y \subseteq X$; exact | [`ball_contains_ball_1`](ball_contains_ball_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`ball_positive_1`](ball_positive_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`ball_negative_1`](ball_negative_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`ball_zero_1`](ball_zero_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_1`](ball_less_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_equal_1`](ball_less_equal_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_equal_1`](ball_equal_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $t = t_0 + t_1 \in X$; never wrong | [`ball_contains_point_2`](ball_contains_point_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $Y \subseteq X$; true only if it holds | [`ball_contains_ball_2`](ball_contains_ball_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`ball_positive_2`](ball_positive_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`ball_negative_2`](ball_negative_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`ball_zero_2`](ball_zero_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_2`](ball_less_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_equal_2`](ball_less_equal_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_equal_2`](ball_equal_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_2`](ball_hull_2.md) |
+| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_2`](ball_intersection_2.md) |
+| not yet called by the public headers | - | a canonical ball that contains the union of the balls; an empty operand gives the other | [`ball_hull_1`](ball_hull_1.md) |
+| not yet called by the public headers | - | a canonical ball that contains the intersection of the balls; the whole line gives the other | [`ball_intersection_1`](ball_intersection_1.md) |
+| not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_1`](ball_split_1.md) |
+| not yet called by the public headers | - | two canonical balls that cover the two halves of the ball | [`ball_split_2`](ball_split_2.md) |
+| not yet called by the public headers | - | whether $t \in X$; exact | [`ball_contains_point_1`](ball_contains_point_1.md) |
+| not yet called by the public headers | - | whether $Y \subseteq X$; exact | [`ball_contains_ball_1`](ball_contains_ball_1.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`ball_positive_1`](ball_positive_1.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`ball_negative_1`](ball_negative_1.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`ball_zero_1`](ball_zero_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_1`](ball_less_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_equal_1`](ball_less_equal_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_equal_1`](ball_equal_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $t = t_0 + t_1 \in X$; never wrong | [`ball_contains_point_2`](ball_contains_point_2.md) |
+| not yet called by the public headers | - | whether $Y \subseteq X$; true only if it holds | [`ball_contains_ball_2`](ball_contains_ball_2.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`ball_positive_2`](ball_positive_2.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`ball_negative_2`](ball_negative_2.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`ball_zero_2`](ball_zero_2.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_2`](ball_less_2.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_equal_2`](ball_less_equal_2.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_equal_2`](ball_equal_2.md) |
 | `X.certainly_positive()` | `Ball<T, 1>` | whether every member is positive: $r < c$, the comparison of `T`; false for the empty set and the whole line | none |
 | `X.certainly_negative()` | `Ball<T, 1>` | whether every member is negative: $c < -r$, the comparison of `T`; false for the empty set and the whole line | none |
 | `X.certainly_zero()` | `Ball<T, 1>` | whether the ball is the point 0: $c = 0$ and $r = 0$; false for the empty set and the whole line | none |
@@ -212,35 +212,35 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `Ball<T, 1>(X)` | `Interval<T, 1>` | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_1`](interval_to_ball_1.md) |
 | `X.split()` | `Interval<T, 1>` | two intervals that together are the operand, split at a point of it | [`interval_split_1`](interval_split_1.md) |
 | `Interval<T, 1>(X)` | `Ball<T, 1>` | the smallest interval of `T` that contains the ball; empty for the empty ball | [`ball_to_interval_1`](ball_to_interval_1.md) |
-| not yet called by the public headers | - | whether $X = \emptyset$; exact | [`interval_empty_1`](interval_empty_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X = \mathbb{R}$; exact | [`interval_entire_1`](interval_entire_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $t \in X$; exact | [`interval_contains_1`](interval_contains_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \subseteq Y$; exact | [`interval_subset_1`](interval_subset_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`interval_positive_1`](interval_positive_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`interval_negative_1`](interval_negative_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`interval_zero_1`](interval_zero_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_1`](interval_less_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_equal_1`](interval_less_equal_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`interval_equal_1`](interval_equal_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X = Y$; exact | [`interval_rel_equal_1`](interval_rel_equal_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`interval_rel_interior_1`](interval_rel_interior_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`interval_rel_disjoint_1`](interval_rel_disjoint_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X = \emptyset$; exact | [`interval_empty_2`](interval_empty_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X = \mathbb{R}$; exact | [`interval_entire_2`](interval_entire_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $t = t_0 + t_1 \in X$; exact | [`interval_contains_2`](interval_contains_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \subseteq Y$; exact | [`interval_subset_2`](interval_subset_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`interval_positive_2`](interval_positive_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`interval_negative_2`](interval_negative_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`interval_zero_2`](interval_zero_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_2`](interval_less_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_equal_2`](interval_less_equal_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`interval_equal_2`](interval_equal_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X = Y$; exact | [`interval_rel_equal_2`](interval_rel_equal_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`interval_rel_interior_2`](interval_rel_interior_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`interval_rel_disjoint_2`](interval_rel_disjoint_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | the midpoint and radius, the values of IEEE 1788 when unbounded or empty | [`interval_mid_rad_2`](interval_mid_rad_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_2`](interval_to_ball_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | two intervals that together are the operand, split at a point of it | [`interval_split_2`](interval_split_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X = \emptyset$; exact | [`interval_empty_1`](interval_empty_1.md) |
+| not yet called by the public headers | - | whether $X = \mathbb{R}$; exact | [`interval_entire_1`](interval_entire_1.md) |
+| not yet called by the public headers | - | whether $t \in X$; exact | [`interval_contains_1`](interval_contains_1.md) |
+| not yet called by the public headers | - | whether $X \subseteq Y$; exact | [`interval_subset_1`](interval_subset_1.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`interval_positive_1`](interval_positive_1.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`interval_negative_1`](interval_negative_1.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`interval_zero_1`](interval_zero_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_1`](interval_less_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_equal_1`](interval_less_equal_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`interval_equal_1`](interval_equal_1.md) |
+| not yet called by the public headers | - | whether $X = Y$; exact | [`interval_rel_equal_1`](interval_rel_equal_1.md) |
+| not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`interval_rel_interior_1`](interval_rel_interior_1.md) |
+| not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`interval_rel_disjoint_1`](interval_rel_disjoint_1.md) |
+| not yet called by the public headers | - | whether $X = \emptyset$; exact | [`interval_empty_2`](interval_empty_2.md) |
+| not yet called by the public headers | - | whether $X = \mathbb{R}$; exact | [`interval_entire_2`](interval_entire_2.md) |
+| not yet called by the public headers | - | whether $t = t_0 + t_1 \in X$; exact | [`interval_contains_2`](interval_contains_2.md) |
+| not yet called by the public headers | - | whether $X \subseteq Y$; exact | [`interval_subset_2`](interval_subset_2.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`interval_positive_2`](interval_positive_2.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`interval_negative_2`](interval_negative_2.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`interval_zero_2`](interval_zero_2.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_2`](interval_less_2.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_equal_2`](interval_less_equal_2.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`interval_equal_2`](interval_equal_2.md) |
+| not yet called by the public headers | - | whether $X = Y$; exact | [`interval_rel_equal_2`](interval_rel_equal_2.md) |
+| not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`interval_rel_interior_2`](interval_rel_interior_2.md) |
+| not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`interval_rel_disjoint_2`](interval_rel_disjoint_2.md) |
+| not yet called by the public headers | - | the midpoint and radius, the values of IEEE 1788 when unbounded or empty | [`interval_mid_rad_2`](interval_mid_rad_2.md) |
+| not yet called by the public headers | - | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_2`](interval_to_ball_2.md) |
+| not yet called by the public headers | - | two intervals that together are the operand, split at a point of it | [`interval_split_2`](interval_split_2.md) |
 | `Interval<T, K>()` | none | the point 0: $[0, 0]$ | none |
 | `Interval<T, K>::empty()` | none | the empty set: $(+\infty, -\infty)$ | none |
 | `Interval<T, K>::whole()` | none | the whole line: $[-\infty, +\infty]$ | none |

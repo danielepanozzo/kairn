@@ -272,7 +272,7 @@ Definition le_2_2_ieee_spec : Prop :=
   let m := IeeeModel.le_2_2 prec emax x0 x1 y0 y1 in
   m = xle (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* ball_contains_ball_1: the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_contains_ball_1: the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_contains_ball_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -295,7 +295,7 @@ Definition le_2_1_ieee_spec : Prop :=
   let m := IeeeModel.le_2_1 prec emax x0 x1 a in
   m = xle (xval_2 x0 x1) (xval a).
 
-(* ball_contains_point_1: the distance as an exact pair compared with the radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_contains_point_1: the distance as an exact pair compared with the radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_contains_point_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -318,7 +318,7 @@ Definition lt_2_2_ieee_spec : Prop :=
   let m := IeeeModel.lt_2_2 prec emax x0 x1 y0 y1 in
   m = xlt (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* ball_equal_1: the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_equal_1: the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -486,7 +486,7 @@ Definition interval_hull_1_spec : Prop :=
    range_upper (fun z : R => in_interval_1 xl xu z \/ in_interval_1 yl yu z) hi ->
    xval zl = lo /\ xval zu = hi).
 
-(* ball_hull_1: both balls to intervals, their hull, back to a ball (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_hull_1: both balls to intervals, their hull, back to a ball (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_hull_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -499,10 +499,10 @@ Definition ball_hull_1_spec : Prop :=
   ball_1 cz rz /\
   (ball_empty_1 cz rz <-> ball_empty_1 cx rx /\ ball_empty_1 cy ry) /\
   (ball_empty_1 cx rx -> cz = cy /\ rz = ry) /\
-  (ball_empty_1 cy ry -> cz = cx /\ rz = rx) /\
+  (ball_empty_1 cy ry /\ ~ ball_empty_1 cx rx -> cz = cx /\ rz = rx) /\
   (forall z : R, in_ball_1 cx rx z \/ in_ball_1 cy ry z -> in_ball_1 cz rz z).
 
-(* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_intersection_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -515,10 +515,10 @@ Definition ball_intersection_1_spec : Prop :=
   ball_1 cz rz /\
   (ball_empty_1 cx rx \/ ball_empty_1 cy ry -> ball_empty_1 cz rz) /\
   (ball_whole_1 cx rx -> cz = cy /\ rz = ry) /\
-  (ball_whole_1 cy ry -> cz = cx /\ rz = rx) /\
+  (ball_whole_1 cy ry /\ ~ ball_whole_1 cx rx -> cz = cx /\ rz = rx) /\
   (forall z : R, in_ball_1 cx rx z /\ in_ball_1 cy ry z -> in_ball_1 cz rz z).
 
-(* ball_less_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_less_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_less_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -550,7 +550,7 @@ Definition ball_less_1_spec : Prop :=
     ~ ball_empty_1 cx rx /\ ~ ball_empty_1 cy ry /\
     (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> ~ (x < y)))).
 
-(* ball_less_equal_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_less_equal_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_less_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -670,7 +670,7 @@ Definition ball_neg_1_ieee_spec : Prop :=
     Rabs ((- x) - val cz) <= val rz)) /\
   (forall x : R, in_ball_1 cx rx x -> in_ball_1 cz rz (- x)).
 
-(* ball_negative_1: the center compared with the negated radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_negative_1: the center compared with the negated radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_negative_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -682,7 +682,7 @@ Definition ball_negative_1_spec : Prop :=
     ~ ball_empty_1 c r /\
     (forall x : R, in_ball_1 c r x -> x < 0)).
 
-(* ball_positive_1: the radius compared with the center (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_positive_1: the radius compared with the center (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_positive_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -713,7 +713,7 @@ Definition ball_scale_1_full_spec : Prop :=
    ball_finite_1 cw rw) /\
   (finite a -> forall x : R, in_ball_1 cx rx x -> in_ball_1 cw rw (x * val a)).
 
-(* ball_split_1: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_split_1: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_split_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -763,7 +763,7 @@ Definition ball_upper_as_1_spec : Prop :=
   (ball_empty_1 c r -> h = infinity prec emax true) /\
   (~ ball_empty_1 c r -> forall hi : xreal, range_upper (in_ball_1 c r) hi -> xval h = xru prec emax hi).
 
-(* ball_zero_1: the center and the radius compared with 0 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_zero_1: the center and the radius compared with 0 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_zero_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -909,7 +909,7 @@ Definition interval_add_1_spec : Prop :=
     range_2 (fun x y : R => x + y) (in_interval_1 xl xu) (in_interval_1 yl yu) z ->
     Rabs z <= omega prec emax)).
 
-(* interval_contains_1: the bounds compared with the point, and a test that the point is finite (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_contains_1: the bounds compared with the point, and a test that the point is finite (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_contains_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -920,7 +920,7 @@ Definition interval_contains_1_spec : Prop :=
   (m = true <->
     finite t /\ in_interval_1 xl xu (val t)).
 
-(* interval_empty_1: the lower bound compared with +inf (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_empty_1: the lower bound compared with +inf (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_empty_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -930,7 +930,7 @@ Definition interval_empty_1_spec : Prop :=
   (m = true <->
     interval_empty_1 xl xu).
 
-(* interval_entire_1: the two bounds compared with the infinities (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_entire_1: the two bounds compared with the infinities (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_entire_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -941,7 +941,7 @@ Definition interval_entire_1_spec : Prop :=
   (m = true <->
     (forall z : R, in_interval_1 xl xu z)).
 
-(* interval_equal_1: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_equal_1: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -975,7 +975,7 @@ Definition interval_intersection_1_spec : Prop :=
    range_upper (fun z : R => in_interval_1 xl xu z /\ in_interval_1 yl yu z) hi ->
    xval zl = lo /\ xval zu = hi).
 
-(* interval_less_1: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_less_1: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_less_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -991,7 +991,7 @@ Definition interval_less_1_spec : Prop :=
     (forall x y : R, in_interval_1 xl xu x -> in_interval_1 yl yu y -> ~ (x < y))) /\
   ~ (yes = true /\ no = true).
 
-(* interval_less_equal_1: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_less_equal_1: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_less_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -1125,7 +1125,7 @@ Definition interval_neg_1_spec : Prop :=
     range_1 (fun x : R => - x) (in_interval_1 xl xu) z ->
     Rabs z <= omega prec emax)).
 
-(* interval_negative_1: the upper bound compared with 0 and -inf (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_negative_1: the upper bound compared with 0 and -inf (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_negative_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1137,7 +1137,7 @@ Definition interval_negative_1_spec : Prop :=
     interval_nonempty_1 xl xu /\
     (forall x : R, in_interval_1 xl xu x -> x < 0)).
 
-(* interval_positive_1: the lower bound compared with 0 and +inf (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_positive_1: the lower bound compared with 0 and +inf (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_positive_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -1148,7 +1148,7 @@ Definition interval_positive_1_spec : Prop :=
     interval_nonempty_1 xl xu /\
     (forall x : R, in_interval_1 xl xu x -> 0 < x)).
 
-(* interval_rel_disjoint_1: the stored bounds compared, and tests of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_rel_disjoint_1: the stored bounds compared, and tests of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_rel_disjoint_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -1159,7 +1159,7 @@ Definition interval_rel_disjoint_1_spec : Prop :=
   (m = true <->
     ~ (exists z : R, in_interval_1 xl xu z /\ in_interval_1 yl yu z)).
 
-(* interval_rel_equal_1: the stored bounds compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_rel_equal_1: the stored bounds compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_rel_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -1170,7 +1170,7 @@ Definition interval_rel_equal_1_spec : Prop :=
   (m = true <->
     (forall z : R, in_interval_1 xl xu z <-> in_interval_1 yl yu z)).
 
-(* interval_rel_interior_1: the stored bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_rel_interior_1: the stored bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_rel_interior_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1224,7 +1224,7 @@ Definition interval_sub_1_spec : Prop :=
     range_2 (fun x y : R => x - y) (in_interval_1 xl xu) (in_interval_1 yl yu) z ->
     Rabs z <= omega prec emax)).
 
-(* interval_subset_1: the bounds compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_subset_1: the bounds compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_subset_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -1235,7 +1235,7 @@ Definition interval_subset_1_spec : Prop :=
   (m = true <->
     (forall z : R, in_interval_1 xl xu z -> in_interval_1 yl yu z)).
 
-(* interval_zero_1: the bounds compared with 0 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_zero_1: the bounds compared with 0 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_zero_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -2165,7 +2165,7 @@ Definition ball_add_2_full_spec : Prop :=
    ball_finite_2 cw0 cw1 rw) /\
   (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x + y)).
 
-(* ball_contains_ball_2: an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_contains_ball_2: an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_contains_ball_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2191,7 +2191,7 @@ Definition to_down_2_ieee_spec : Prop :=
   let t := IeeeModel.to_down_2 prec emax x0 x1 in
   xval t = xround emax (RD (ieee_emin prec emax) prec) (xval_2 x0 x1).
 
-(* ball_contains_point_2: the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_contains_point_2: the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_contains_point_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2223,7 +2223,7 @@ Definition eq_2_2_ieee_spec : Prop :=
   let m := IeeeModel.eq_2_2 prec emax x0 x1 y0 y1 in
   m = xeq (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* ball_equal_2: the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_equal_2: the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_equal_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2248,7 +2248,7 @@ Definition ball_equal_2_spec : Prop :=
     ~ ball_empty_2 cx0 cx1 rx /\ ~ ball_empty_2 cy0 cy1 ry /\
     (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> ~ (x = y)))).
 
-(* ball_to_interval_2: the directed sums of two limbs of the center and the radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_to_interval_2: the directed sums of two limbs of the center and the radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_to_interval_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2346,7 +2346,7 @@ Definition mul_pow2_2_ieee_finite_spec : Prop :=
   let '(z0, z1) := IeeeModel.mul_pow2_2 prec emax nan_plus nan_minus nan_fma x0 x1 c in
   finite z0 /\ finite z1.
 
-(* interval_mid_rad_2: the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_mid_rad_2: the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_mid_rad_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2355,6 +2355,7 @@ Definition interval_mid_rad_2_spec : Prop :=
   forall xl0 xl1 xu0 xu1 : binary_float prec emax,
   interval_2 xl0 xl1 xu0 xu1 ->
   let '(m0, m1, r) := IeeeModel.interval_mid_rad_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const xl0 xl1 xu0 xu1 in
+  canonical_2 m0 m1 /\
   (interval_empty_2 xl0 xl1 xu0 xu1 -> nan m0 /\ nan m1 /\ nan r) /\
   (xval_2 xl0 xl1 = XInf true -> xval_2 xu0 xu1 = XInf false -> zero m0 /\ zero m1 /\ r = infinity prec emax false) /\
   (finite xl0 -> xval_2 xu0 xu1 = XInf false -> xval_2 m0 m1 = XFin (omega prec emax) /\ r = infinity prec emax false) /\
@@ -2366,7 +2367,7 @@ Definition interval_mid_rad_2_spec : Prop :=
    (r = infinity prec emax false \/ (finite r /\ (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> Rabs (z - (val m0 + val m1)) <= val r))) /\
    (Rabs (val xl0 + val xl1) <= bpow radix2 (emax - 2) -> Rabs (val xu0 + val xu1) <= bpow radix2 (emax - 2) -> finite r)).
 
-(* interval_to_ball_2: interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_to_ball_2: interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_to_ball_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2386,7 +2387,7 @@ Definition interval_to_ball_2_spec : Prop :=
    Rabs ((val c0 + val c1) - ((val xl0 + val xl1) + (val xu0 + val xu1)) / 2) <= ((3 * (u prec ^ 2)) / (1 - (4 * u prec))) * Rabs (((val xl0 + val xl1) + (val xu0 + val xu1)) / 2) + (2 * eta (ieee_emin prec emax)) /\
    (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> Rabs (z - (val c0 + val c1)) <= val r)).
 
-(* ball_hull_2: both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_hull_2: both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_hull_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2399,7 +2400,7 @@ Definition ball_hull_2_spec : Prop :=
   ball_2 cz0 cz1 rz /\
   (ball_empty_2 cz0 cz1 rz <-> ball_empty_2 cx0 cx1 rx /\ ball_empty_2 cy0 cy1 ry) /\
   (ball_empty_2 cx0 cx1 rx -> cz0 = cy0 /\ cz1 = cy1 /\ rz = ry) /\
-  (ball_empty_2 cy0 cy1 ry -> cz0 = cx0 /\ cz1 = cx1 /\ rz = rx) /\
+  (ball_empty_2 cy0 cy1 ry /\ ~ ball_empty_2 cx0 cx1 rx -> cz0 = cx0 /\ cz1 = cx1 /\ rz = rx) /\
   (forall z : R, in_ball_2 cx0 cx1 rx z \/ in_ball_2 cy0 cy1 ry z -> in_ball_2 cz0 cz1 rz z).
 
 (* interval_intersection_2: the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). IEEE-model status: proved. *)
@@ -2420,7 +2421,7 @@ Definition interval_intersection_2_spec : Prop :=
    range_upper (fun z : R => in_interval_2 xl0 xl1 xu0 xu1 z /\ in_interval_2 yl0 yl1 yu0 yu1 z) hi ->
    xval_2 zl0 zl1 = lo /\ xval_2 zu0 zu1 = hi).
 
-(* ball_intersection_2: both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_intersection_2: both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_intersection_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2433,10 +2434,10 @@ Definition ball_intersection_2_spec : Prop :=
   ball_2 cz0 cz1 rz /\
   (ball_empty_2 cx0 cx1 rx \/ ball_empty_2 cy0 cy1 ry -> ball_empty_2 cz0 cz1 rz) /\
   (ball_whole_2 cx0 cx1 rx -> cz0 = cy0 /\ cz1 = cy1 /\ rz = ry) /\
-  (ball_whole_2 cy0 cy1 ry -> cz0 = cx0 /\ cz1 = cx1 /\ rz = rx) /\
+  (ball_whole_2 cy0 cy1 ry /\ ~ ball_whole_2 cx0 cx1 rx -> cz0 = cx0 /\ cz1 = cx1 /\ rz = rx) /\
   (forall z : R, in_ball_2 cx0 cx1 rx z /\ in_ball_2 cy0 cy1 ry z -> in_ball_2 cz0 cz1 rz z).
 
-(* ball_less_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_less_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_less_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2461,7 +2462,7 @@ Definition ball_less_2_spec : Prop :=
     ~ ball_empty_2 cx0 cx1 rx /\ ~ ball_empty_2 cy0 cy1 ry /\
     (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> ~ (x < y)))).
 
-(* ball_less_equal_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_less_equal_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_less_equal_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2619,7 +2620,7 @@ Definition lt_2_1_ieee_spec : Prop :=
   let m := IeeeModel.lt_2_1 prec emax x0 x1 a in
   m = xlt (xval_2 x0 x1) (xval a).
 
-(* ball_negative_2: the center compared with the negated radius by lt_2_1 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_negative_2: the center compared with the negated radius by lt_2_1 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_negative_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2641,7 +2642,7 @@ Definition lt_1_2_ieee_spec : Prop :=
   let m := IeeeModel.lt_1_2 prec emax a y0 y1 in
   m = xlt (xval a) (xval_2 y0 y1).
 
-(* ball_positive_2: the radius compared with the center by lt_1_2 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_positive_2: the radius compared with the center by lt_1_2 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_positive_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -2672,7 +2673,7 @@ Definition ball_scale_2_full_spec : Prop :=
    ball_finite_2 cw0 cw1 rw) /\
   (finite a -> forall x : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cw0 cw1 rw (x * val a)).
 
-(* ball_split_2: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_split_2: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_split_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2734,7 +2735,7 @@ Definition eq_2_1_ieee_spec : Prop :=
   let m := IeeeModel.eq_2_1 prec emax x0 x1 a in
   m = xeq (xval_2 x0 x1) (xval a).
 
-(* ball_zero_2: the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_zero_2: the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_zero_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -2819,7 +2820,7 @@ Definition interval_add_2_spec : Prop :=
     Rabs z <= bpow radix2 (emax - 2)) ->
    interval_bounded_2 zl0 zl1 zu0 zu1).
 
-(* interval_contains_2: the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_contains_2: the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_contains_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2831,7 +2832,7 @@ Definition interval_contains_2_spec : Prop :=
   (m = true <->
     finite t0 /\ in_interval_2 xl0 xl1 xu0 xu1 (val t0 + val t1)).
 
-(* interval_empty_2: the leading limb of the lower bound compared with +inf (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_empty_2: the leading limb of the lower bound compared with +inf (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_empty_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -2841,7 +2842,7 @@ Definition interval_empty_2_spec : Prop :=
   (m = true <->
     interval_empty_2 xl0 xl1 xu0 xu1).
 
-(* interval_entire_2: the leading limbs of the bounds compared with the infinities (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_entire_2: the leading limbs of the bounds compared with the infinities (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_entire_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2852,7 +2853,7 @@ Definition interval_entire_2_spec : Prop :=
   (m = true <->
     (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z)).
 
-(* interval_equal_2: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_equal_2: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_equal_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -2868,7 +2869,7 @@ Definition interval_equal_2_spec : Prop :=
     (forall x y : R, in_interval_2 xl0 xl1 xu0 xu1 x -> in_interval_2 yl0 yl1 yu0 yu1 y -> ~ (x = y))) /\
   ~ (yes = true /\ no = true).
 
-(* interval_less_2: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_less_2: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_less_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -2884,7 +2885,7 @@ Definition interval_less_2_spec : Prop :=
     (forall x y : R, in_interval_2 xl0 xl1 xu0 xu1 x -> in_interval_2 yl0 yl1 yu0 yu1 y -> ~ (x < y))) /\
   ~ (yes = true /\ no = true).
 
-(* interval_less_equal_2: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_less_equal_2: the bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_less_equal_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -3007,7 +3008,7 @@ Definition interval_neg_2_spec : Prop :=
     range_1 (fun x : R => - x) (in_interval_2 xl0 xl1 xu0 xu1) z ->
     Rabs z <= bpow radix2 emax)).
 
-(* interval_negative_2: the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_negative_2: the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_negative_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -3019,7 +3020,7 @@ Definition interval_negative_2_spec : Prop :=
     interval_nonempty_2 xl0 xl1 xu0 xu1 /\
     (forall x : R, in_interval_2 xl0 xl1 xu0 xu1 x -> x < 0)).
 
-(* interval_positive_2: the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_positive_2: the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_positive_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -3030,7 +3031,7 @@ Definition interval_positive_2_spec : Prop :=
     interval_nonempty_2 xl0 xl1 xu0 xu1 /\
     (forall x : R, in_interval_2 xl0 xl1 xu0 xu1 x -> 0 < x)).
 
-(* interval_rel_disjoint_2: the stored bounds compared, and tests of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_rel_disjoint_2: the stored bounds compared, and tests of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_rel_disjoint_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -3041,7 +3042,7 @@ Definition interval_rel_disjoint_2_spec : Prop :=
   (m = true <->
     ~ (exists z : R, in_interval_2 xl0 xl1 xu0 xu1 z /\ in_interval_2 yl0 yl1 yu0 yu1 z)).
 
-(* interval_rel_equal_2: the stored bounds compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_rel_equal_2: the stored bounds compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_rel_equal_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -3052,7 +3053,7 @@ Definition interval_rel_equal_2_spec : Prop :=
   (m = true <->
     (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z <-> in_interval_2 yl0 yl1 yu0 yu1 z)).
 
-(* interval_rel_interior_2: the stored bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_rel_interior_2: the stored bounds compared, and a test of emptiness (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_rel_interior_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -3065,7 +3066,7 @@ Definition interval_rel_interior_2_spec : Prop :=
     (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z ->
     exists d : R, 0 < d /\ (forall w : R, Rabs (w - z) < d -> in_interval_2 yl0 yl1 yu0 yu1 w))).
 
-(* interval_split_2: the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_split_2: the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_split_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -3113,7 +3114,7 @@ Definition interval_sub_2_spec : Prop :=
     Rabs z <= bpow radix2 (emax - 2)) ->
    interval_bounded_2 zl0 zl1 zu0 zu1).
 
-(* interval_subset_2: the bounds compared by le_2_2 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_subset_2: the bounds compared by le_2_2 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_subset_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -3124,7 +3125,7 @@ Definition interval_subset_2_spec : Prop :=
   (m = true <->
     (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> in_interval_2 yl0 yl1 yu0 yu1 z)).
 
-(* interval_zero_2: the leading limbs of the bounds compared with 0 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_zero_2: the leading limbs of the bounds compared with 0 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_zero_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),

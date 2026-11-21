@@ -15,9 +15,10 @@ ensures:       trit yes no lt x y x=xl,xu y=yl,yu exact
 min_precision: 1
 source:        the bounds compared, and a test of emptiness (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalPredicates.v interval_less_1_correct
 entry:         yes
 cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical operand
 

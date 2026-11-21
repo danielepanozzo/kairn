@@ -1331,9 +1331,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_contains_ball_1_correct"
+      },
       "source": {
         "cite": "the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1447,9 +1451,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_contains_point_1_correct"
+      },
       "source": {
         "cite": "the distance as an exact pair compared with the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1584,9 +1592,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_equal_1_correct"
+      },
       "source": {
         "cite": "the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2119,9 +2131,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallHull.v",
+        "name": "ball_hull_1_correct"
+      },
       "source": {
         "cite": "both balls to intervals, their hull, back to a ball (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2187,9 +2203,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallHull.v",
+        "name": "ball_intersection_1_correct"
+      },
       "source": {
         "cite": "both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2267,9 +2287,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_less_1_correct"
+      },
       "source": {
         "cite": "the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2347,9 +2371,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_less_equal_1_correct"
+      },
       "source": {
         "cite": "the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2878,9 +2906,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_negative_1_correct"
+      },
       "source": {
         "cite": "the center compared with the negated radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2934,9 +2966,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_positive_1_correct"
+      },
       "source": {
         "cite": "the radius compared with the center (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -3132,9 +3168,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallSets.v",
+        "name": "ball_split_1_correct"
+      },
       "source": {
         "cite": "the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -3394,9 +3434,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates.v",
+        "name": "ball_zero_1_correct"
+      },
       "source": {
         "cite": "the center and the radius compared with 0 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -4627,9 +4671,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_contains_1_correct"
+      },
       "source": {
         "cite": "the bounds compared with the point, and a test that the point is finite (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -4682,9 +4730,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_empty_1_correct"
+      },
       "source": {
         "cite": "the lower bound compared with +inf (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -4737,9 +4789,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_entire_1_correct"
+      },
       "source": {
         "cite": "the two bounds compared with the infinities (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -4812,9 +4868,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_equal_1_correct"
+      },
       "source": {
         "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -4959,9 +5019,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_less_1_correct"
+      },
       "source": {
         "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5034,9 +5098,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_less_equal_1_correct"
+      },
       "source": {
         "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5454,9 +5522,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_negative_1_correct"
+      },
       "source": {
         "cite": "the upper bound compared with 0 and -inf (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5510,9 +5582,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_positive_1_correct"
+      },
       "source": {
         "cite": "the lower bound compared with 0 and +inf (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5579,9 +5655,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_rel_disjoint_1_correct"
+      },
       "source": {
         "cite": "the stored bounds compared, and tests of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5648,9 +5728,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_rel_equal_1_correct"
+      },
       "source": {
         "cite": "the stored bounds compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5717,9 +5801,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_rel_interior_1_correct"
+      },
       "source": {
         "cite": "the stored bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5940,9 +6028,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_subset_1_correct"
+      },
       "source": {
         "cite": "the bounds compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5996,9 +6088,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_zero_1_correct"
+      },
       "source": {
         "cite": "the bounds compared with 0 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -8924,9 +9020,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCompare2.v",
+        "name": "ball_contains_ball_2_correct"
+      },
       "source": {
         "cite": "an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9037,9 +9137,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallContains2.v",
+        "name": "ball_contains_point_2_correct"
+      },
       "source": {
         "cite": "the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9168,9 +9272,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCompare2.v",
+        "name": "ball_equal_2_correct"
+      },
       "source": {
         "cite": "the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9246,9 +9354,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert2.v",
+        "name": "ball_to_interval_2_correct"
+      },
       "source": {
         "cite": "the directed sums of two limbs of the center and the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9447,9 +9559,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert2.v",
+        "name": "interval_mid_rad_2_correct"
+      },
       "source": {
         "cite": "the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9512,9 +9628,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert2.v",
+        "name": "interval_to_ball_2_correct"
+      },
       "source": {
         "cite": "interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9580,9 +9700,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallHull.v",
+        "name": "ball_hull_2_correct"
+      },
       "source": {
         "cite": "both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9720,9 +9844,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallHull.v",
+        "name": "ball_intersection_2_correct"
+      },
       "source": {
         "cite": "both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9794,9 +9922,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCompare2.v",
+        "name": "ball_less_2_correct"
+      },
       "source": {
         "cite": "a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -9868,9 +10000,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCompare2.v",
+        "name": "ball_less_equal_2_correct"
+      },
       "source": {
         "cite": "a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -10632,9 +10768,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates2.v",
+        "name": "ball_negative_2_correct"
+      },
       "source": {
         "cite": "the center compared with the negated radius by lt_2_1 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -10744,9 +10884,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates2.v",
+        "name": "ball_positive_2_correct"
+      },
       "source": {
         "cite": "the radius compared with the center by lt_1_2 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -10947,9 +11091,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates2.v",
+        "name": "ball_split_2_correct"
+      },
       "source": {
         "cite": "the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -11288,9 +11436,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallPredicates2.v",
+        "name": "ball_zero_2_correct"
+      },
       "source": {
         "cite": "the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -11631,9 +11783,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_contains_2_correct"
+      },
       "source": {
         "cite": "the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -11686,9 +11842,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_empty_2_correct"
+      },
       "source": {
         "cite": "the leading limb of the lower bound compared with +inf (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -11741,9 +11901,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_entire_2_correct"
+      },
       "source": {
         "cite": "the leading limbs of the bounds compared with the infinities (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -11816,9 +11980,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_equal_2_correct"
+      },
       "source": {
         "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -11891,9 +12059,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_less_2_correct"
+      },
       "source": {
         "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -11966,9 +12138,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_less_equal_2_correct"
+      },
       "source": {
         "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -12449,9 +12625,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_negative_2_correct"
+      },
       "source": {
         "cite": "the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -12505,9 +12685,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_positive_2_correct"
+      },
       "source": {
         "cite": "the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -12574,9 +12758,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_rel_disjoint_2_correct"
+      },
       "source": {
         "cite": "the stored bounds compared, and tests of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -12643,9 +12831,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_rel_equal_2_correct"
+      },
       "source": {
         "cite": "the stored bounds compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -12712,9 +12904,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_rel_interior_2_correct"
+      },
       "source": {
         "cite": "the stored bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -12780,9 +12976,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert2.v",
+        "name": "interval_split_2_correct"
+      },
       "source": {
         "cite": "the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -13058,9 +13258,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_subset_2_correct"
+      },
       "source": {
         "cite": "the bounds compared by le_2_2 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -13114,9 +13318,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalPredicates.v",
+        "name": "interval_zero_2_correct"
+      },
       "source": {
         "cite": "the leading limbs of the bounds compared with 0 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

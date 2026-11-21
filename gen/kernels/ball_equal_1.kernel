@@ -16,9 +16,10 @@ ensures:       trit yes no eq x y x=cx,rx y=cy,ry exact_when=abs_le(rx+ry,omega)
 min_precision: 2
 source:        the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates.v ball_equal_1_correct
 entry:         yes
 cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical ball
 

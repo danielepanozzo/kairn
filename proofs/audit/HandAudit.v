@@ -20,7 +20,8 @@
    - theorems whose statements are written by hand because the generator does not print
      them: two_sum in the IEEE model (the exact condition under which its error term is
      finite is not a claim), the guard (an operation, not a kernel), the threshold of
-     mul_pow2_2 for a scalar that is not a power of two, and statements that say more
+     mul_pow2_2 for a scalar that is not a power of two, the threshold of add_2_2 at half
+     the range (its claim has a quarter), and statements that say more
      about a kernel than its generated statement does (the parts of a split, the
      exactness of mul_pow2_2, further bounds on radd and rmul);
    - the theorems of summation, which are about no single kernel and have no generated
@@ -54,7 +55,20 @@
      conversions between an interval and a ball of one limb, the midpoint of a bounded
      interval over the real numbers and on limbs, and the cases of a canonical interval; and
      for the product of two intervals of two limbs, the finite core of the directed product,
-     the facts of each product of bounds, and the statements with the constants by name;
+     the facts of each product of bounds, and the statements with the constants by name; for
+     the predicates, comparisons and relations of intervals of stage B2, each relation on the
+     bounds as extended real numbers and the facts about members it rests on; for those of
+     balls of one limb, a ball as an interval of extended real numbers, the exact pairs of
+     two_sum_ord and their comparisons, and each kernel as a boolean of the bounds; for the
+     ball of one limb from an interval and the split of a ball, the rest of a halving and a
+     point plus a ball; for the signs and the split of a ball of two limbs and its interval,
+     the ball as an interval of extended real numbers and the interval as a sum; for the
+     comparisons of balls of two limbs, the distance of the centers by add_ball_2_2 and the
+     directed bounds the kernels compute from it; for the midpoint, the radius, the ball and
+     the split of an interval of two limbs, the half of a 2-limb number, the midpoint and
+     each side of the radius of a bounded interval, and the point of the split; for the
+     point that a ball of two limbs contains, the radius of add_ball_2_2, a point against the
+     whole line, and the lower bound of the distance;
    - the theorems about the folds that have no generated statement: that a fold of the
      model with overflow is the fold of the real model whenever its result is finite
      (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
@@ -101,6 +115,7 @@
    the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements IeeeStatements.
 From Kairn Require Import IeeeVocabulary IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore IeeeSub IeeeFinite.
+From Kairn Require Import IeeeAdd22Top.
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeOps.
 From Kairn Require Import Folds Summation SummationKernels.
@@ -132,6 +147,39 @@ Print Assumptions add_2_2_ieee_correct.
 
 Definition add_2_2_ieee_finite_audit : add_2_2_ieee_finite_spec := add_2_2_ieee_finite.
 Print Assumptions add_2_2_ieee_finite.
+
+(* The IEEE model: add_2_2 with leading limbs below half the range, 2^(emax - 1) (statements
+   written by hand, in theories/IeeeAdd22Top.v: the claim of the kernel has a quarter). *)
+Definition add_2_2_ieee_finite_half_audit : add_2_2_ieee_finite_half_spec :=
+  add_2_2_ieee_finite_half.
+Print Assumptions add_2_2_ieee_finite_half.
+
+Definition add_2_2_ieee_finite_half_values_audit : add_2_2_ieee_finite_half_values_spec :=
+  add_2_2_ieee_finite_half_values.
+Print Assumptions add_2_2_ieee_finite_half_values.
+
+(* The lemmas they rest on: a tie rounds to the even neighbor; a number within less than half
+   a gap of the largest number rounds to it; the numbers of the format below 2^(emax - 1), and
+   the tail of a pair whose leading limb is one of them; the tail of a pair whose leading limb
+   is the number just below a power of two, strictly below half the gap, with its two
+   instances; rounding below the midpoint above half the largest number; and that every value
+   of the real model is below 2^emax. Then add_2_2 with a second operand (0, 0), and with a
+   leading limb that is not finite. *)
+Print Assumptions rnd_tie.
+Print Assumptions rnd_near_Omega.
+Print Assumptions rnd_near_top.
+Print Assumptions lt_H_le_half_Omega.
+Print Assumptions below_half_Omega.
+Print Assumptions tail_below_H.
+Print Assumptions tail_pred_pow2_strict.
+Print Assumptions tail_half_Omega_strict.
+Print Assumptions tail_Omega_strict.
+Print Assumptions rnd_below_half_mid.
+Print Assumptions add_2_2_range_half.
+Print Assumptions add_2_2_values_finite_half.
+Print Assumptions add_2_2_zero_run.
+Print Assumptions add_2_2_zero_right.
+Print Assumptions add_2_2_lead_not_finite.
 
 (* The IEEE model: mul_2_2. *)
 Definition mul_2_2_ieee_bridge_audit : mul_2_2_ieee_bridge_spec := mul_2_2_ieee_bridge.
@@ -728,6 +776,239 @@ Print Assumptions mul_ext_2_2_small.
 Print Assumptions mul_ext_corner.
 Print Assumptions interval_mul_2_of.
 Print Assumptions interval_mul_2_all.
+
+(* The predicates, the three-valued comparisons and the relations of IEEE 1788 of intervals of
+   one and of two limbs, in the IEEE model (theories/IeeeIntervalPredicates.v): the theorems of
+   their generated statements are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they rest
+   on: the order of the extended real numbers; the members of a nonempty interval below or
+   above a number, and of two nonempty intervals in every choice; each relation on the bounds
+   as extended real numbers; and the tests of the leading limb of a canonical 2-limb value. *)
+From Kairn Require Import IeeeIntervalPredicates.
+Print Assumptions xeq_eq.
+Print Assumptions xeq_refl.
+Print Assumptions xlt_le.
+Print Assumptions xlt_le_trans.
+Print Assumptions xle_lt_trans.
+Print Assumptions xlt_false_le.
+Print Assumptions xle_false_lt.
+Print Assumptions xupper_lt.
+Print Assumptions xupper_le.
+Print Assumptions xlower_gt.
+Print Assumptions xlower_ge.
+Print Assumptions xlower_ge_x.
+Print Assumptions xupper_le_x.
+Print Assumptions xinterval_ne_l.
+Print Assumptions xinterval_ne_r.
+Print Assumptions xall_lt.
+Print Assumptions xall_le.
+Print Assumptions xall_ne_common.
+Print Assumptions xall_ne.
+Print Assumptions xempty.
+Print Assumptions xentire.
+Print Assumptions xsubset.
+Print Assumptions xpositive.
+Print Assumptions xnegative.
+Print Assumptions xzero.
+Print Assumptions xless.
+Print Assumptions xless_equal.
+Print Assumptions xequal.
+Print Assumptions xrel_equal.
+Print Assumptions xopen.
+Print Assumptions xinterior.
+Print Assumptions xdisjoint.
+Print Assumptions xcontains.
+Print Assumptions lead_tests.
+Print Assumptions interval_1_parts.
+Print Assumptions interval_2_parts.
+
+(* The predicates and the three-valued comparisons of balls of one limb, in the IEEE model
+   (theories/IeeeBallPredicates.v): the theorems of their generated statements are listed by
+   proofs/gen/IeeeAudit.v. Here, the lemmas they rest on: the statement of a three-valued
+   comparison from its cases; a canonical ball as an interval of extended real numbers; the
+   sum of two numbers by two_sum_ord as an exact pair or its overflow, and the comparisons of
+   such pairs; the pairs led by a NaN or +infinity; the relations on the bounds of a ball that
+   is not finite; and each kernel as a boolean of the bounds of the balls. *)
+From Kairn Require Import IeeeBallPredicates.
+Print Assumptions trit_from.
+Print Assumptions xlohi_fin.
+Print Assumptions xlohi_whole.
+Print Assumptions xlohi_nan.
+Print Assumptions ball_1_states.
+Print Assumptions xball_1.
+Print Assumptions ball_pair_1.
+Print Assumptions two_sum_ord_fst.
+Print Assumptions tso_pair_of.
+Print Assumptions overflow_order.
+Print Assumptions overflow_big.
+Print Assumptions tso_pair_small.
+Print Assumptions xval_2_lead_fin.
+Print Assumptions lt_2_2_xval.
+Print Assumptions le_2_2_xval.
+Print Assumptions le_2_1_xval.
+Print Assumptions pair_cmp.
+Print Assumptions pair_cmp_r.
+Print Assumptions pair_top.
+Print Assumptions rnd_abs.
+Print Assumptions abs_pair.
+Print Assumptions pair_le_2_1.
+Print Assumptions xadd_nan_r.
+Print Assumptions xadd_inf_l.
+Print Assumptions xval_nonfin.
+Print Assumptions abs_nonfin.
+Print Assumptions nonfin_lt_2_2.
+Print Assumptions nonfin_le_2_2.
+Print Assumptions nonfin_le_2_1.
+Print Assumptions tso_zero.
+Print Assumptions ball_1_fin_r.
+Print Assumptions xlohi_cases.
+Print Assumptions radius_cases.
+Print Assumptions radii_special.
+Print Assumptions special_rels.
+Print Assumptions ball_positive_1_bool.
+Print Assumptions ball_negative_1_bool.
+Print Assumptions ball_zero_1_bool.
+Print Assumptions ball_contains_point_1_bool.
+Print Assumptions ball_contains_ball_1_bool.
+Print Assumptions special_nonfin.
+Print Assumptions radii_cases.
+Print Assumptions ball_less_1_bools.
+Print Assumptions ball_less_equal_1_bools.
+Print Assumptions ball_equal_1_bools.
+
+(* The ball of one limb made from an interval of two numbers and the split of a ball of one
+   limb, in the IEEE model (theories/IeeeBallSets.v): the theorems of their generated
+   statements are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they rest on: the rest of
+   a halving is a number of the format, a point plus a ball contains the shifted ball, and the
+   two statements in the names of this file. *)
+From Kairn Require Import IeeeBallSets.
+Print Assumptions half_rest_format.
+Print Assumptions point_plus.
+Print Assumptions ball_from_interval_1_all.
+Print Assumptions ball_split_1_all.
+
+(* The signs and the split of a ball of two limbs, and the interval of a ball of two limbs, in
+   the IEEE model (theories/IeeeBallPredicates2.v, theories/IeeeBallConvert2.v): the theorems of
+   their generated statements are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they rest
+   on: a canonical ball of two limbs as an interval of extended real numbers, each sign as a
+   boolean of its bounds, a point plus a ball of two limbs, the split in the names of the file,
+   and ball_to_interval_2 as interval_add_2 of [c, c] and [-r, r]. *)
+From Kairn Require Import IeeeBallPredicates2 IeeeBallConvert2.
+Print Assumptions ball_2_canonical.
+Print Assumptions ball_2_states.
+Print Assumptions xlohi_2_fin.
+Print Assumptions xlohi_2_whole.
+Print Assumptions xlohi_2_nan.
+Print Assumptions xball_2.
+Print Assumptions ball_positive_2_bool.
+Print Assumptions ball_negative_2_bool.
+Print Assumptions ball_zero_2_bool.
+Print Assumptions point_plus_2.
+Print Assumptions ball_split_2_all.
+Print Assumptions ball_to_interval_2_as_add.
+
+(* The comparisons of balls of two limbs, in the IEEE model (theories/IeeeBallCompare2.v): the
+   theorems of their generated statements are listed by proofs/gen/IeeeAudit.v. Here, the
+   lemmas they rest on: the distance of two centers by add_ball_2_2 and its bound; the directed
+   operations on finite values; the bounds of the distance that the comparisons compute; the
+   sum of the radii; each kernel's answers as facts about the real values; and the relations on
+   the bounds of balls that are not finite. *)
+From Kairn Require Import IeeeBallCompare2.
+Print Assumptions dist_2.
+Print Assumptions add_up_1_ge.
+Print Assumptions to_down_2_below.
+Print Assumptions to_up_2_above.
+Print Assumptions nonneg_lt_fin.
+Print Assumptions nonneg_le_fin.
+Print Assumptions radius_2_nonneg.
+Print Assumptions ball_2_fin_r.
+Print Assumptions bounds_dl_ml.
+Print Assumptions radii_sum_2.
+Print Assumptions ball_less_2_facts.
+Print Assumptions ball_less_equal_2_facts.
+Print Assumptions xlohi_2_cases.
+Print Assumptions special_rels_2.
+Print Assumptions special_nonfin_2.
+Print Assumptions abs_upper_2_any.
+Print Assumptions abs_upper_2_ge.
+Print Assumptions ball_contains_ball_2_facts.
+Print Assumptions ball_equal_2_facts.
+
+(* The midpoint and a radius of an interval of two limbs, its ball and its split, in the IEEE
+   model (theories/IeeeIntervalConvert2.v): the theorems of their generated statements are
+   listed by proofs/gen/IeeeAudit.v. Here, what they rest on and what says more: the constants;
+   the cases of a canonical interval of two limbs and the tests of the listings; the half of a
+   2-limb number, over the real numbers and on limbs; the two selects that move a value into
+   an interval, and the midpoint of a bounded interval; the distance by add_ball_2_2 with its
+   relative bound, a side of the radius, when it is finite, and the radius; each listing with
+   its cores named; the statement of the midpoint and the radius with the midpoint of a
+   bounded interval as a normalized pair, in the form the proof of the ball uses (the generated
+   statement says that the midpoint is canonical); the statement of the ball; and the point of
+   the split, on extended real numbers and on limbs. *)
+From Kairn Require Import IeeeIntervalConvert2.
+Print Assumptions rel2_le.
+Print Assumptions two_eta_le.
+Print Assumptions interval_2_cases.
+Print Assumptions tests_2.
+Print Assumptions halve_real.
+Print Assumptions halve_facts.
+Print Assumptions clamp2_facts.
+Print Assumptions mid_core2_bounded.
+Print Assumptions dist_2_rel.
+Print Assumptions to_up_2_nonneg.
+Print Assumptions radd_not_lt_pinf.
+Print Assumptions side_facts.
+Print Assumptions side_small.
+Print Assumptions rad_core2_facts.
+Print Assumptions rad_core2_small.
+Print Assumptions interval_mid_rad_2_eq.
+Print Assumptions interval_mid_rad_2_all.
+Print Assumptions interval_to_ball_2_all.
+Print Assumptions xsplit_point.
+Print Assumptions split_point.
+Print Assumptions interval_split_2_eq.
+Print Assumptions interval_split_2_all.
+
+(* Whether a ball of two limbs contains a point, in the IEEE model
+   (theories/IeeeBallContains2.v): the theorem of its generated statement is listed by
+   proofs/gen/IeeeAudit.v. Here, the lemmas it rests on: the error bound of add_ball_2_2 is
+   finite when the sum is; a finite point against a center (+-0, +-0), and a point that is not
+   finite; a NaN through abs_upper_2 and radd, and their results when no operand is a NaN; the
+   rounding down of the magnitude of a finite pair; the lower bound of the distance that the
+   listing computes; and the answers of the kernel as facts about the real values, by the
+   state of the ball. *)
+From Kairn Require Import IeeeBallContains2.
+Print Assumptions add_ball_radius_fin.
+Print Assumptions point_zero_center.
+Print Assumptions point_not_finite.
+Print Assumptions abs_upper_2_nan.
+Print Assumptions abs_upper_2_not_nan.
+Print Assumptions radd_nan_l.
+Print Assumptions radd_not_nan.
+Print Assumptions xru_fin_not_ninf.
+Print Assumptions to_down_2_abs_fin.
+Print Assumptions lower_bound_2.
+Print Assumptions ball_contains_point_2_facts.
+Print Assumptions trit_certain.
+
+(* The hull and the intersection of two balls, with a center of one limb and of two, in the
+   IEEE model (theories/IeeeBallHull.v): the theorems of their generated statements are listed
+   by proofs/gen/IeeeAudit.v. Here, the lemmas they rest on: the tests of the radii of a
+   canonical ball, the whole line is not empty, the empty ball of two NaN constants, the ball
+   of a canonical interval contains its members, an empty interval of two limbs has none; and
+   the four statements in the names of this file. *)
+From Kairn Require Import IeeeBallHull.
+Print Assumptions radius_tests_1.
+Print Assumptions radius_tests_2.
+Print Assumptions whole_not_empty_1.
+Print Assumptions whole_not_empty_2.
+Print Assumptions empty_ball_cnan_1.
+Print Assumptions to_ball_1_members.
+Print Assumptions empty_2_no_member.
+Print Assumptions to_ball_2_members.
+Print Assumptions ball_hull_1_all.
+Print Assumptions ball_intersection_1_all.
+Print Assumptions ball_hull_2_all.
+Print Assumptions ball_intersection_2_all.
 
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
 Print Assumptions fold_seq_transfer.

@@ -562,7 +562,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_2(float x0, float x1, float y0, float 
 }
 
 // ball_contains_ball_1(cx, rx, cy, ry) -> mask m
-// the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_contains_ball_1(double cx, double rx, double cy, double ry, bool& m_out) noexcept {
     const double ncx = -cx;
     // (d0, d1) = two_sum_ord(cy, ncx)
@@ -668,7 +668,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_1(float x0, float x1, float a, bool& m
 }
 
 // ball_contains_point_1(c, r, t) -> mask m
-// the distance as an exact pair compared with the radius (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the distance as an exact pair compared with the radius (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_contains_point_1(double c, double r, double t, bool& m_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? t : t + 0.0;
     const double nc = -c;
@@ -744,7 +744,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(float x0, float x1, float y0, float 
 }
 
 // ball_equal_1(cx, rx, cy, ry) -> mask yes, mask no
-// the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_equal_1(double cx, double rx, double cy, double ry, bool& yes_out, bool& no_out) noexcept {
     const bool ea = rx == 0.0;
     const bool eb = ry == 0.0;
@@ -1721,7 +1721,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_hull_1(float xl, float xu, float y
 }
 
 // ball_hull_1(cx, rx, cy, ry) -> cz, rz
-// both balls to intervals, their hull, back to a ball (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// both balls to intervals, their hull, back to a ball (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_hull_1(double cx, double rx, double cy, double ry, double r, double c, bool qx, bool qy) noexcept {
@@ -2054,7 +2054,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_hull_1(float cx, float rx, float cy, f
 }
 
 // ball_intersection_1(cx, rx, cy, ry) -> cz, rz
-// both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_intersection_1(double cx, double rx, double cy, double ry, double r, double c, bool ob, bool nx, bool ny) noexcept {
@@ -2387,7 +2387,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_intersection_1(float cx, float rx, flo
 }
 
 // ball_less_1(cx, rx, cy, ry) -> mask yes, mask no
-// the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_less_1(double cx, double rx, double cy, double ry, bool& yes_out, bool& no_out) noexcept {
     // (s0, s1) = two_sum_ord(rx, ry)
     const double s0_aa = abs_bits(rx);
@@ -2492,7 +2492,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_less_1(float cx, float rx, float cy, f
 }
 
 // ball_less_equal_1(cx, rx, cy, ry) -> mask yes, mask no
-// the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_less_equal_1(double cx, double rx, double cy, double ry, bool& yes_out, bool& no_out) noexcept {
     // (s0, s1) = two_sum_ord(rx, ry)
     const double s0_aa = abs_bits(rx);
@@ -3016,7 +3016,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_neg_1(float cx, float rx, float& cz_ou
 }
 
 // ball_negative_1(c, r) -> mask m
-// the center compared with the negated radius (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center compared with the negated radius (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_negative_1(double c, double r, bool& m_out) noexcept {
     const double nr = -r;
     const bool m = nr > c;
@@ -3029,7 +3029,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_negative_1(float c, float r, bool& m_o
 }
 
 // ball_positive_1(c, r) -> mask m
-// the radius compared with the center (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the radius compared with the center (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_positive_1(double c, double r, bool& m_out) noexcept {
     const bool m = c > r;
     m_out = m;
@@ -3146,7 +3146,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(float cx, float rx, float a, float&
 }
 
 // ball_split_1(c, r) -> ca, ra, cb, rb
-// the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> ball_split_1(double c, double r, bool fr, double a0, double a1, double b0, double b1) noexcept {
@@ -3494,7 +3494,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_upper_as_1(float c, float r, float& h_
 }
 
 // ball_zero_1(c, r) -> mask m
-// the center and the radius compared with 0 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center and the radius compared with 0 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_zero_1(double c, double r, bool& m_out) noexcept {
     const bool a = c == 0.0;
     const bool b = r == 0.0;
@@ -4042,7 +4042,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_add_1(float xl, float xu, float yl
 }
 
 // interval_contains_1(xl, xu, t) -> mask m
-// the bounds compared with the point, and a test that the point is finite (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared with the point, and a test that the point is finite (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_contains_1(double xl, double xu, double t, bool& m_out) noexcept {
     const bool a = t >= xl;
     const bool b = xu >= t;
@@ -4063,7 +4063,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_contains_1(float xl, float xu, flo
 }
 
 // interval_empty_1(xl, xu) -> mask m
-// the lower bound compared with +inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the lower bound compared with +inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_empty_1(double xl, [[maybe_unused]] double xu, bool& m_out) noexcept {
     const bool m = xl == std::numeric_limits<double>::infinity();
     m_out = m;
@@ -4074,7 +4074,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_empty_1(float xl, [[maybe_unused]]
 }
 
 // interval_entire_1(xl, xu) -> mask m
-// the two bounds compared with the infinities (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the two bounds compared with the infinities (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_entire_1(double xl, double xu, bool& m_out) noexcept {
     const double mi = -std::numeric_limits<double>::infinity();
     const bool a = xl == mi;
@@ -4091,7 +4091,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_entire_1(float xl, float xu, bool&
 }
 
 // interval_equal_1(xl, xu, yl, yu) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_equal_1(double xl, double xu, double yl, double yu, bool& yes_out, bool& no_out) noexcept {
     const bool ea = xl == xu;
     const bool eb = xu == yl;
@@ -4191,7 +4191,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_intersection_1(float xl, float xu,
 }
 
 // interval_less_1(xl, xu, yl, yu) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_less_1(double xl, double xu, double yl, double yu, bool& yes_out, bool& no_out) noexcept {
     const bool nx = std::numeric_limits<double>::infinity() > xl;
     const bool ny = std::numeric_limits<double>::infinity() > yl;
@@ -4216,7 +4216,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_less_1(float xl, float xu, float y
 }
 
 // interval_less_equal_1(xl, xu, yl, yu) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_less_equal_1(double xl, double xu, double yl, double yu, bool& yes_out, bool& no_out) noexcept {
     const bool nx = std::numeric_limits<double>::infinity() > xl;
     const bool ny = std::numeric_limits<double>::infinity() > yl;
@@ -4704,7 +4704,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_neg_1(float xl, float xu, float& z
 }
 
 // interval_negative_1(xl, xu) -> mask m
-// the upper bound compared with 0 and -inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the upper bound compared with 0 and -inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_negative_1([[maybe_unused]] double xl, double xu, bool& m_out) noexcept {
     const double mi = -std::numeric_limits<double>::infinity();
     const bool a = 0.0 > xu;
@@ -4721,7 +4721,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_negative_1([[maybe_unused]] float 
 }
 
 // interval_positive_1(xl, xu) -> mask m
-// the lower bound compared with 0 and +inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the lower bound compared with 0 and +inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_positive_1(double xl, [[maybe_unused]] double xu, bool& m_out) noexcept {
     const bool a = xl > 0.0;
     const bool b = std::numeric_limits<double>::infinity() > xl;
@@ -4736,7 +4736,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_positive_1(float xl, [[maybe_unuse
 }
 
 // interval_rel_disjoint_1(xl, xu, yl, yu) -> mask m
-// the stored bounds compared, and tests of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared, and tests of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_disjoint_1(double xl, double xu, double yl, double yu, bool& m_out) noexcept {
     const bool ex = xl == std::numeric_limits<double>::infinity();
     const bool ey = yl == std::numeric_limits<double>::infinity();
@@ -4759,7 +4759,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_disjoint_1(float xl, float xu,
 }
 
 // interval_rel_equal_1(xl, xu, yl, yu) -> mask m
-// the stored bounds compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_equal_1(double xl, double xu, double yl, double yu, bool& m_out) noexcept {
     const bool a = xl == yl;
     const bool c = xu == yu;
@@ -4774,7 +4774,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_equal_1(float xl, float xu, fl
 }
 
 // interval_rel_interior_1(xl, xu, yl, yu) -> mask m
-// the stored bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_interior_1(double xl, double xu, double yl, double yu, bool& m_out) noexcept {
     const bool ex = xl == std::numeric_limits<double>::infinity();
     const double mi = -std::numeric_limits<double>::infinity();
@@ -5077,7 +5077,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_sub_1(float xl, float xu, float yl
 }
 
 // interval_subset_1(xl, xu, yl, yu) -> mask m
-// the bounds compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_subset_1(double xl, double xu, double yl, double yu, bool& m_out) noexcept {
     const bool a = xl >= yl;
     const bool b = yu >= xu;
@@ -5092,7 +5092,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_subset_1(float xl, float xu, float
 }
 
 // interval_zero_1(xl, xu) -> mask m
-// the bounds compared with 0 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared with 0 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_zero_1(double xl, double xu, bool& m_out) noexcept {
     const bool a = xl == 0.0;
     const bool b = xu == 0.0;
@@ -7430,7 +7430,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float cx0, float cx1, float rx, float
 }
 
 // ball_contains_ball_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask m
-// an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_contains_ball_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, bool& m_out) noexcept {
     const double ncx0 = -cx0;
     const double ncx1 = -cx1;
@@ -7562,7 +7562,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out)
 }
 
 // ball_contains_point_2(c = (c0, c1), r, t = (t0, t1)) -> mask yes, mask no
-// the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_contains_point_2(double c0, double c1, double r, double t0, double t1, bool& yes_out, bool& no_out) noexcept {
     const double nc0 = -c0;
     const double nc1 = -c1;
@@ -7746,7 +7746,7 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(float x0, float x1, float y0, float 
 }
 
 // ball_equal_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask yes, mask no
-// the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_equal_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, bool& yes_out, bool& no_out) noexcept {
     const bool ea = rx == 0.0;
     const bool eb = ry == 0.0;
@@ -7901,7 +7901,7 @@ KAIRN_GEN_FORCEINLINE void ball_equal_2(float cx0, float cx1, float rx, float cy
 }
 
 // ball_to_interval_2(c = (c0, c1), r) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the directed sums of two limbs of the center and the radius (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the directed sums of two limbs of the center and the radius (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> ball_to_interval_2(double mi, double a0, double a1, double b0, double b1, bool ne) noexcept {
@@ -8308,7 +8308,7 @@ KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_2(float x0, float x1, float c, flo
 }
 
 // interval_mid_rad_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> m = (m0, m1), r
-// the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the sum of the halves of two limbs, moved into the interval, and the larger bound of the distance to a bound (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> interval_mid_rad_2(double mf0, double mf1, double rd, bool ne) noexcept {
@@ -8679,7 +8679,7 @@ KAIRN_GEN_FORCEINLINE void interval_mid_rad_2(float xl0, float xl1, float xu0, f
 }
 
 // interval_to_ball_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> c = (c0, c1), r
-// interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void interval_to_ball_2(double xl0, double xl1, double xu0, double xu1, double& c0_out, double& c1_out, double& r_out) noexcept {
     // (m0, m1, r) = interval_mid_rad_2(xl0, xl1, xu0, xu1)
     const double m0_om = next_down_bits(std::numeric_limits<double>::infinity());
@@ -9016,7 +9016,7 @@ KAIRN_GEN_FORCEINLINE void interval_to_ball_2(float xl0, float xl1, float xu0, f
 }
 
 // ball_hull_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// both balls to intervals, their hull, back to a ball, on two limbs (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> ball_hull_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double r, double c0, double c1, bool qx, bool qy) noexcept {
@@ -10124,7 +10124,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_intersection_2(float xl0, float xl
 }
 
 // ball_intersection_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// both balls to intervals, their intersection, back to a ball, on two limbs (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 3> ball_intersection_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double r, double c0, double c1, bool nx, bool ny) noexcept {
@@ -11139,7 +11139,7 @@ KAIRN_GEN_FORCEINLINE void ball_intersection_2(float cx0, float cx1, float rx, f
 }
 
 // ball_less_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask yes, mask no
-// a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_less_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, bool& yes_out, bool& no_out) noexcept {
     const double ncx0 = -cx0;
     const double ncx1 = -cx1;
@@ -11318,7 +11318,7 @@ KAIRN_GEN_FORCEINLINE void ball_less_2(float cx0, float cx1, float rx, float cy0
 }
 
 // ball_less_equal_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask yes, mask no
-// a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_less_equal_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, bool& yes_out, bool& no_out) noexcept {
     const double ncx0 = -cx0;
     const double ncx1 = -cx1;
@@ -12103,7 +12103,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(float x0, float x1, float a, bool& m
 }
 
 // ball_negative_2(c = (c0, c1), r) -> mask m
-// the center compared with the negated radius by lt_2_1 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center compared with the negated radius by lt_2_1 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_negative_2(double c0, double c1, double r, bool& m_out) noexcept {
     const double nr = -r;
     // (m) = lt_2_1(c0, c1, nr)
@@ -12145,7 +12145,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(float a, float y0, float y1, bool& m
 }
 
 // ball_positive_2(c = (c0, c1), r) -> mask m
-// the radius compared with the center by lt_1_2 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the radius compared with the center by lt_1_2 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_positive_2(double c0, double c1, double r, bool& m_out) noexcept {
     // (m) = lt_1_2(r, c0, c1)
     const bool m_h = c0 > r;
@@ -12320,7 +12320,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float cx0, float cx1, float rx, flo
 }
 
 // ball_split_2(c = (c0, c1), r) -> ca = (ca0, ca1), ra, cb = (cb0, cb1), rb
-// the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 6> ball_split_2(double c0, double c1, double r, bool fr, double a0, double a1, double ar, double b0, double b1, double br) noexcept {
@@ -12953,7 +12953,7 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(float x0, float x1, float a, bool& m
 }
 
 // ball_zero_2(c = (c0, c1), r) -> mask m
-// the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_zero_2(double c0, double c1, double r, bool& m_out) noexcept {
     // (a) = eq_2_1(c0, c1, 0)
     const bool a_h = c0 == 0.0;
@@ -13370,7 +13370,7 @@ KAIRN_GEN_FORCEINLINE void interval_add_2(float xl0, float xl1, float xu0, float
 }
 
 // interval_contains_2(xl = (xl0, xl1), xu = (xu0, xu1), t = (t0, t1)) -> mask m
-// the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_contains_2(double xl0, double xl1, double xu0, double xu1, double t0, double t1, bool& m_out) noexcept {
     // (a) = le_2_2(xl0, xl1, t0, t1)
     const bool a_h = t0 > xl0;
@@ -13411,7 +13411,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_contains_2(float xl0, float xl1, f
 }
 
 // interval_empty_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limb of the lower bound compared with +inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limb of the lower bound compared with +inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_empty_2(double xl0, [[maybe_unused]] double xl1, [[maybe_unused]] double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const bool m = xl0 == std::numeric_limits<double>::infinity();
     m_out = m;
@@ -13422,7 +13422,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_empty_2(float xl0, [[maybe_unused]
 }
 
 // interval_entire_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limbs of the bounds compared with the infinities (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limbs of the bounds compared with the infinities (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_entire_2(double xl0, [[maybe_unused]] double xl1, double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const double mi = -std::numeric_limits<double>::infinity();
     const bool a = xl0 == mi;
@@ -13439,7 +13439,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_entire_2(float xl0, [[maybe_unused
 }
 
 // interval_equal_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_equal_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& yes_out, bool& no_out) noexcept {
     // (ea) = eq_2_2(xl0, xl1, xu0, xu1)
     const bool ea_h = xl0 == xu0;
@@ -13512,7 +13512,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_equal_2(float xl0, float xl1, floa
 }
 
 // interval_less_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_less_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& yes_out, bool& no_out) noexcept {
     const bool nx = std::numeric_limits<double>::infinity() > xl0;
     const bool ny = std::numeric_limits<double>::infinity() > yl0;
@@ -13557,7 +13557,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_less_2(float xl0, float xl1, float
 }
 
 // interval_less_equal_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask yes, mask no
-// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_less_equal_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& yes_out, bool& no_out) noexcept {
     const bool nx = std::numeric_limits<double>::infinity() > xl0;
     const bool ny = std::numeric_limits<double>::infinity() > yl0;
@@ -15142,7 +15142,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_neg_2(float xl0, float xl1, float 
 }
 
 // interval_negative_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_negative_2([[maybe_unused]] double xl0, [[maybe_unused]] double xl1, double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const double mi = -std::numeric_limits<double>::infinity();
     const bool a = 0.0 > xu0;
@@ -15159,7 +15159,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_negative_2([[maybe_unused]] float 
 }
 
 // interval_positive_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_positive_2(double xl0, [[maybe_unused]] double xl1, [[maybe_unused]] double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const bool a = xl0 > 0.0;
     const bool b = std::numeric_limits<double>::infinity() > xl0;
@@ -15174,7 +15174,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_positive_2(float xl0, [[maybe_unus
 }
 
 // interval_rel_disjoint_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
-// the stored bounds compared, and tests of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared, and tests of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_disjoint_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& m_out) noexcept {
     const bool ex = xl0 == std::numeric_limits<double>::infinity();
     const bool ey = yl0 == std::numeric_limits<double>::infinity();
@@ -15217,7 +15217,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_disjoint_2(float xl0, float xl
 }
 
 // interval_rel_equal_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
-// the stored bounds compared (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_equal_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& m_out) noexcept {
     // (a) = eq_2_2(xl0, xl1, yl0, yl1)
     const bool a_h = xl0 == yl0;
@@ -15244,7 +15244,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_equal_2(float xl0, float xl1, 
 }
 
 // interval_rel_interior_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
-// the stored bounds compared, and a test of emptiness (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the stored bounds compared, and a test of emptiness (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_rel_interior_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& m_out) noexcept {
     const bool ex = xl0 == std::numeric_limits<double>::infinity();
     const double mi = -std::numeric_limits<double>::infinity();
@@ -15301,7 +15301,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_rel_interior_2(float xl0, float xl
 }
 
 // interval_split_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> al = (al0, al1), au = (au0, au1), bl = (bl0, bl1), bu = (bu0, bu1)
-// the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void interval_split_2(double xl0, double xl1, double xu0, double xu1, double& al0_out, double& al1_out, double& au0_out, double& au1_out, double& bl0_out, double& bl1_out, double& bu0_out, double& bu1_out) noexcept {
     const double om = next_down_bits(std::numeric_limits<double>::infinity());
     const double mo = -om;
@@ -16117,7 +16117,7 @@ KAIRN_GEN_FORCEINLINE void interval_sub_2(float xl0, float xl1, float xu0, float
 }
 
 // interval_subset_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
-// the bounds compared by le_2_2 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds compared by le_2_2 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_subset_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, bool& m_out) noexcept {
     // (a) = le_2_2(yl0, yl1, xl0, xl1)
     const bool a_h = xl0 > yl0;
@@ -16152,7 +16152,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_subset_2(float xl0, float xl1, flo
 }
 
 // interval_zero_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
-// the leading limbs of the bounds compared with 0 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limbs of the bounds compared with 0 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_zero_2(double xl0, [[maybe_unused]] double xl1, double xu0, [[maybe_unused]] double xu1, bool& m_out) noexcept {
     const bool a = xl0 == 0.0;
     const bool b = xu0 == 0.0;

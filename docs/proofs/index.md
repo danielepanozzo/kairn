@@ -83,7 +83,23 @@ lists:
   (`IeeeIntervalSub2.v`), the conversions between an interval and a ball of one limb, with
   the midpoint and the radius of an interval and its split at the midpoint
   (`IeeeIntervalConvert.v`), and the product of two intervals whose bounds have two limbs,
-  with the product of two bounds on all values (`IeeeIntervalMul2.v`); and the theorems of the
+  with the product of two bounds on all values (`IeeeIntervalMul2.v`), and the predicates, the
+  three-valued comparisons and the relations of IEEE 1788 of intervals with bounds of one and
+  of two limbs, all exact (`IeeeIntervalPredicates.v`), and the predicates and the three-valued
+  comparisons of balls with a center of one limb, on exact pairs (`IeeeBallPredicates.v`), and
+  the ball of one limb made from an interval of two numbers and the split of a ball of one
+  limb (`IeeeBallSets.v`), the signs and the split of a ball with a center of two limbs
+  (`IeeeBallPredicates2.v`), and the interval of a ball of two limbs, the sum of [c, c] and
+  [-r, r] (`IeeeBallConvert2.v`), and the comparisons of balls of two limbs, certain, by the
+  distance of the centers that add_ball_2_2 bounds (`IeeeBallCompare2.v`), and the sum of two
+  2-limb numbers at the top of the range: it does not overflow when the leading limbs of both
+  operands are at most half the largest finite number, a threshold that cannot be raised
+  (`IeeeAdd22Top.v`), and the midpoint and a radius of an interval with bounds of two limbs,
+  with the ball made of them and the split of the interval at its midpoint
+  (`IeeeIntervalConvert2.v`), and whether a ball of two limbs contains a point of two limbs
+  (`IeeeBallContains2.v`), and the hull and the intersection of two balls with a center of one
+  limb and of two (`IeeeBallHull.v`); and the theorems of
+  the
   folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
   finishes and bound kernels
   (`StepKernels.v`, `IeeeFoldFinish.v`, `BoundKernels.v`), of the two together
@@ -129,16 +145,24 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    domain (these have generated statements as their types, checked by a definition of the same
    form; their descriptions do not name them yet),
    a few facts whose statements are written by hand because they say more about a kernel than
-   its claims can express, the theorems about sums and dot products of arrays, which are
+   its claims can express (among them that the sum of two 2-limb numbers does not overflow up
+   to half the range, where its claim says a quarter), the theorems about sums and dot
+   products of arrays, which are
    about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
    not generated statements, among them what is proved of `mul_dir_1`, of the interval
    kernels with bounds of one limb, of the bounds of two limbs, of the sum of two intervals
    of two limbs, of the conversions of a ball, of the exact interval kernels (the hull and
    the intersection of intervals of extended real numbers), of the difference of two
    intervals of two limbs (the sum with the negated operand), of the conversions between an
-   interval and a ball (the midpoint of a bounded interval) and of the product of two
+   interval and a ball (the midpoint of a bounded interval; for bounds of two limbs, the half
+   of a 2-limb number, the midpoint, each side of the radius and the point of the split), of
+   the product of two
    intervals of two limbs (the finite core of the directed product, and what each product of
-   bounds gives) beside their generated
+   bounds gives) and of the predicates and comparisons of intervals and of balls of one limb
+   (each relation on the bounds as extended real numbers, and the exact pairs of two_sum_ord),
+   and of the hull and the intersection of balls (the tests of the radii, and that the ball of
+   a canonical interval contains its members)
+   beside their generated
    statements, those about the two executions of a product, whose plain-product listings are
    written by hand, the theorems about the folds, the largest magnitude and the product of
    polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)),
@@ -261,7 +285,25 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   $-\infty$ for the empty ball, and they are the bounds rounded outward for a center of one
   limb; a ball of two limbs narrowed to one limb, and a ball of two limbs made from an interval
   of two numbers of `T`, are canonical and contain what they are made from, whatever the
-  operands are.
+  operands are. For an interval whose bounds have two limbs: the midpoint is a canonical
+  number of two limbs for every interval (two NaN for the empty set), and that of a bounded
+  interval is finite, in the interval and within $3u^2/(1-4u)\,\lvert m\rvert + 2\eta$ of the
+  exact midpoint $m$; its radius is $+\infty$ or a finite number with which the midpoint
+  contains the interval, and it is finite when both bounds are within a quarter of the
+  overflow threshold; the ball made of the two contains the interval; the split at the
+  midpoint gives two canonical intervals with a common finite bound; and the empty set, the
+  whole line and the half-lines give the values of IEEE 1788. That the midpoint is finite
+  rests on a fact about the sum of two 2-limb numbers, proved here: it does not overflow when
+  the leading limbs of both operands are at most half the largest finite number. And whether
+  a ball of two limbs contains a point of two limbs: a yes or a no is given only when it is
+  right, never both, and exactly when it is right if the ball is the empty set or the whole
+  line or the point is not a finite number. And the hull and the intersection of two balls,
+  with a center of one limb and of two: the result is a canonical ball that contains every
+  member of either ball (of both, for the intersection); the hull is empty exactly when both
+  balls are, and the intersection is empty when one of them is; when the first ball is empty
+  (for the intersection, the whole line) the result is the second as it is, its very limbs, and
+  when the second is and the first is not, the first as it is. Not that the hull is the smallest
+  such ball, nor that the intersection is inside either ball or empty for disjoint balls.
 
 These statements and the models of the kernels they are about are generated from the kernel
 descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Three files are

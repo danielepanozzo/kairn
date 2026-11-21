@@ -70,6 +70,7 @@ gen/IeeeFoldModel.v
 gen/IeeeFoldStatements.v
 theories/IeeeOps.v
 theories/IeeeRange.v
+theories/IeeeAdd22Top.v
 theories/IeeeFull.v
 theories/IeeeMake.v
 theories/IeeeFinite.v
@@ -101,3 +102,12 @@ theories/IeeeIntervalConvert.v
 theories/IeeeIntervalMul2.v
 theories/IeeeAccKernels.v
 theories/IeeeAccumulator.v
+theories/IeeeIntervalPredicates.v
+theories/IeeeBallPredicates.v
+theories/IeeeBallSets.v
+theories/IeeeBallPredicates2.v
+theories/IeeeBallConvert2.v
+theories/IeeeBallCompare2.v
+theories/IeeeIntervalConvert2.v
+theories/IeeeBallContains2.v
+theories/IeeeBallHull.v

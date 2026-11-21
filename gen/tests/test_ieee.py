@@ -317,13 +317,28 @@ class Statements(unittest.TestCase):
         s = spec('ball_contains_ball_2')
         self.assertIn('  (m = true ->\n    (forall z : R, in_ball_2 cy0 cy1 ry z -> in_ball_2 cx0 cx1 rx z)) /\\\n', s)
         # The set operations of a ball.
+        # An operand returned as it is, the limbs themselves: Y when X is special, X when Y is
+        # and X is not (when both are, the result is Y, and need not be X: two NaNs of different
+        # signs, two whole lines of centers +0 and -0).
         s = spec('ball_hull_1')
         self.assertIn('  (ball_empty_1 cz rz <-> ball_empty_1 cx rx /\\ ball_empty_1 cy ry) /\\\n'
-                      '  (ball_empty_1 cx rx -> cz = cy /\\ rz = ry) /\\\n', s)
+                      '  (ball_empty_1 cx rx -> cz = cy /\\ rz = ry) /\\\n'
+                      '  (ball_empty_1 cy ry /\\ ~ ball_empty_1 cx rx -> cz = cx /\\ rz = rx) /\\\n', s)
         self.assertIn('  (forall z : R, in_ball_1 cx rx z \\/ in_ball_1 cy ry z -> in_ball_1 cz rz z)', s)
         s = spec('ball_intersection_1')
-        self.assertIn('  (ball_whole_1 cy ry -> cz = cx /\\ rz = rx) /\\\n', s)
-        # The conversions of two limbs.
+        self.assertIn('  (ball_whole_1 cx rx -> cz = cy /\\ rz = ry) /\\\n'
+                      '  (ball_whole_1 cy ry /\\ ~ ball_whole_1 cx rx -> cz = cx /\\ rz = rx) /\\\n', s)
+        self.assertIn('  (ball_whole_2 cy0 cy1 ry /\\ ~ ball_whole_2 cx0 cx1 rx -> cz0 = cx0 /\\ cz1 = cx1 /\\ rz = rx)',
+                      spec('ball_intersection_2'))
+        self.assertIn('  (ball_empty_2 cy0 cy1 ry /\\ ~ ball_empty_2 cx0 cx1 rx -> cz0 = cx0 /\\ cz1 = cx1 /\\ rz = rx)',
+                      spec('ball_hull_2'))
+        # The conversions of two limbs. The midpoint of two limbs is a number, canonical for every
+        # canonical interval; a midpoint of one limb has no such clause, and the center of a ball
+        # (interval_to_ball_2) is canonical as part of ball_2.
+        self.assertIn(' xl0 xl1 xu0 xu1 in\n  canonical_2 m0 m1 /\\\n  (interval_empty_2 xl0 xl1 xu0 xu1 -> nan m0',
+                      spec('interval_mid_rad_2'))
+        self.assertNotIn('canonical_2', spec('interval_mid_rad_1'))
+        self.assertNotIn('canonical_2', spec('interval_to_ball_2'))
         s = spec('interval_mid_rad_2')
         self.assertIn('   (r = infinity prec emax false \\/ (finite r /\\ (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> '
                       'Rabs (z - (val m0 + val m1)) <= val r))) /\\\n', s)
@@ -461,8 +476,17 @@ class Statements(unittest.TestCase):
         # their two orders (32); and the two folds of maxima in their two orders (4); and the
         # IEEE-model statements of the eight kernels of the accumulator (8); and those of the
         # 16 steps of the maps, 16 bridges, 8 correctness statements and 16 leading limbs (40),
-        # of the 18 maps in their two orders (36) and of the two convolutions (2).
-        self.assertEqual(text.count('Print Assumptions'), 206)
+        # of the 18 maps in their two orders (36) and of the two convolutions (2): 206. Then the 26
+        # predicates, comparisons and relations of an interval of stage B2 (232), and the eight
+        # predicates and comparisons of a ball of one limb (240), and ball_split_1 (241), and the
+        # signs and the split of a ball of two limbs and ball_to_interval_2 (246), and four
+        # comparisons of balls of two limbs (250), and interval_mid_rad_2 and interval_split_2
+        # (252), and ball_contains_point_2 (253), and interval_to_ball_2 (254), and the hull and
+        # the intersection of balls of one limb and of two (258).
+        self.assertEqual(text.count('Print Assumptions'), 258)
+        self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
+                      'Print Assumptions ball_hull_2_correct.', text)
+        self.assertIn('From Kairn Require Import IeeeBallHull.', text)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -564,8 +588,29 @@ class CheckedFiles(unittest.TestCase):
     # prints their status, proved, and make -C proofs passed on these files.
     # Merged here: the regeneration of the merged descriptions; the statement of
     # ball_from_interval_1 (unverified) was printed under the same rule.
+    # On the line of stage B2, after ball_intersection_1 and ball_from_interval_1 were rewritten:
+    # the statements print "proved" for the 26 predicates, comparisons and relations of an
+    # interval (IeeeIntervalPredicates.v): 26 words, and nothing else, changed. Then for the eight
+    # predicates and comparisons of a ball of one limb (IeeeBallPredicates.v): eight words more.
+    # Then for ball_from_interval_1 and ball_split_1 (IeeeBallSets.v): two words more. Then for
+    # the signs and the split of a ball of two limbs (IeeeBallPredicates2.v) and
+    # ball_to_interval_2 (IeeeBallConvert2.v): five words more. Then for four comparisons of
+    # balls of two limbs (IeeeBallCompare2.v): four words more. Then for interval_mid_rad_2 and
+    # interval_split_2 (IeeeIntervalConvert2.v): two words more. Then for ball_contains_point_2
+    # (IeeeBallContains2.v): one word more. Then for interval_to_ball_2 (IeeeIntervalConvert2.v):
+    # one word more.
+    # Then the statements of ball_set were corrected (the proof of the other kernels of the stage
+    # refuted them): an empty X still gives Y as it is (the whole line X, for the intersection),
+    # and an empty Y gives X as it is only when X is not empty (the whole line Y when X is not the
+    # whole line); and ball_of_interval with ieee1788 and a center of two limbs says first that
+    # the center is canonical (interval_mid_rad_2, proved again). Five lines changed, the four
+    # kernels of ball_set still unverified; make -C proofs passed on these files. Then the
+    # statements print "proved" for those four (IeeeBallHull.v): four words more.
+    # Merged here: the regeneration of the merged descriptions. ball_from_interval_1 is printed
+    # unverified: the theorem of that line is of its statement before the rule of the same
+    # infinity twice, which its listing does not follow yet.
     DIGESTS = {'proofs/gen/IeeeModel.v': '4314901cbfe423a65e1ed75713ce60d0be72c7f7d5b6e683fc405d3837882658',
-               'proofs/gen/IeeeStatements.v': '44ac305946c29f57aa262768903052b57ef94aee339600c54144747e3877063f'}
+               'proofs/gen/IeeeStatements.v': 'f674ad8d548a59c2423db6cb02a699c520f7d12735f3e6a6d28b050d0596c74f'}
 
 
     def test_the_checked_files(self):

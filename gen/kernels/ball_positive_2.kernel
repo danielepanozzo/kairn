@@ -11,9 +11,10 @@ ensures:       certain m lt 0 x x=c,r exact
 min_precision: 1
 source:        the radius compared with the center by lt_1_2 (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates2.v ball_positive_2_correct
 entry:         yes
 cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
 

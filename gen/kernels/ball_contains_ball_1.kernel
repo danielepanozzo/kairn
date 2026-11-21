@@ -17,9 +17,10 @@ ensures:       certain m subset y x x=cx,rx y=cy,ry exact
 min_precision: 2
 source:        the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPredicates.v ball_contains_ball_1_correct
 entry:         yes
 cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
 
