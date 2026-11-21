@@ -1662,8 +1662,11 @@ that.*
   with `ieee1788` the center of 1788 is judged in every format. The formats of their cross-checks
   (`binary64`, `binary32`, `fp:3:-4:1`, `fp:4:-6:1`) are all of `binary_float`'s shape, so the
   rule changes no verdict there; the selftest's enumerations in `fp:3:-2:-1` ($q_{\max} < 1$)
-  count the clause as not claimed, where it was judged (and passed) before. 13 hand-judged lines
-  (`enc_judge`) and seven mutants hold it.
+  count the clause as not claimed, where it was judged (and passed) before, and so do six of the
+  brute-force plan's enumerations of the three kernels (`fp:4:-4:-1`, `fp:4:-5:0`, `fp:5:-7:0`,
+  `fp:6:-8:-1`): on five of them, judged through the interpreter by the oracle before the rule and
+  after it, every line has the same verdict. 13 hand-judged lines (`enc_judge`) and seven mutants
+  hold it.
 - The `finite_when` of the Milestone 1 kernels (F3 of `extends`, B4 of `encloses`: the full
   kernels, the full Ball kernels, `ball_narrow_2_1`) and the `bounded_when` of the interval
   kernels (I5), clauses of the same sort, are judged in **every** format, those outside
@@ -2104,7 +2107,10 @@ The exhaustive tests run one worker process per CPU; `--jobs N` (or `KAIRN_ORACL
 caps them. The times: the whole selftest, 474 seconds on an Apple M3 Max with 8 workers
 (`KAIRN_ORACLE_JOBS=8`) beside a build of the library, and the 234 mutants, 2 703 seconds on 14
 hardware threads of the Linux machine with two workers each (`KAIRN_ORACLE_JOBS=2`), both on
-2026-11-20; `--quick` earlier, on the M3 Max with `--jobs 6`. `--only NAMES` runs only the tests
+2026-11-20; on the joined tree of 2026-11-21, which judges every claim of `gen/claims.json`, the
+whole selftest (119 tests) 566 seconds on the M3 Max beside other jobs, and the 448 mutants,
+3 580 seconds with `--jobs 16 --fail-fast` on the Linux machine with one worker each
+(`KAIRN_ORACLE_JOBS=1`), every one caught; `--quick` earlier, on the M3 Max with `--jobs 6`. `--only NAMES` runs only the tests
 named (comma-separated), `--skip NAMES` all but those, `--last NAMES` runs those after the others
 and `--fail-fast` stops at the first failing test; a name that is not a test's is an error.
 ctest's full tier runs it in two parts: `--quick` with `--skip` for the six enumerations of toy
