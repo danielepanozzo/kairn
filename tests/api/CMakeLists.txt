@@ -768,6 +768,46 @@ else()
   _kairn_api_reject(packed_form.other_target 52 "needs AArch64"
     "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM=KAIRN_PACKED_FORM_NEON")
 endif()
+# The enclosure interface of stage B2 (headers-pred; reject.cpp, cases 70 to 92): a three-valued
+# answer converts to no bool, intervals and balls have no comparison operators, no function takes
+# two kinds of set or two numbers of limbs, the conversions between the two types of two limbs are
+# explicit, and a point is never made a set to reach another kernel. A Trit in a condition: Clang
+# says it is not contextually convertible, GCC that it could not convert, MSVC that the conditional
+# expression is not valid (C2451); a call that matches no function: "no matching", or MSVC's C2672,
+# C2664 ("cannot convert argument") or C2665 ("none of the overloads could convert").
+set(_api_no_bool "contextually convertible|could not convert|cannot convert|not valid|cannot initialize")
+set(_api_no_call "no matching|no overloaded function|cannot convert|could convert|satisfied its constraints")
+_kairn_api_reject(enclosure.trit_condition 70 "${_api_no_bool}")
+_kairn_api_reject(enclosure.trit_bool 71 "${_api_no_bool}")
+_kairn_api_reject(enclosure.interval_operator 72 "${_api_no_operator}")
+_kairn_api_reject(enclosure.ball_operator 73 "${_api_no_operator}")
+_kairn_api_reject(enclosure.mixed_limbs 74 "${_api_no_call}")
+_kairn_api_reject(enclosure.mixed_types 75 "${_api_no_call}")
+_kairn_api_reject(enclosure.interval_contains_ball 76 "${_api_no_call}")
+_kairn_api_reject(enclosure.ball_relation 77 "${_api_no_call}")
+_kairn_api_reject(enclosure.implicit_to_ball 78 "${_api_no_conversion}")
+_kairn_api_reject(enclosure.implicit_to_interval 79 "${_api_no_conversion}")
+_kairn_api_reject(enclosure.hull_mixed_limbs 80 "${_api_no_call}")
+_kairn_api_reject(enclosure.contains_mixed_limbs 81 "${_api_no_call}")
+foreach(_case_name IN ITEMS 82:interval_less_1 83:interval_subset_1 84:ball_hull_2 85:interval_rel_disjoint_1
+                            86:ball_from_interval_1 87:ball_contains_point_1 88:interval_to_ball_2)
+  string(REPLACE ":" ";" _pair "${_case_name}")
+  list(GET _pair 0 _case)
+  list(GET _pair 1 _name)
+  _kairn_api_reject(unverified.${_name} ${_case} "${_api_unmarked}"
+    "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/${_name}")
+endforeach()
+foreach(_case_name IN ITEMS 89:interval_contains_1:point 90:interval_contains_2:limb 91:ball_contains_point_1:point
+                            92:ball_contains_point_2:limb)
+  string(REPLACE ":" ";" _triple "${_case_name}")
+  list(GET _triple 0 _case)
+  list(GET _triple 1 _kernel)
+  list(GET _triple 2 _what)
+  _kairn_api_reject(unverified_only.${_kernel}.${_what} ${_case} "${_api_unmarked}"
+    "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/only-${_kernel}-${_what}"
+    "-DUNVERIFIED_ONLY=${_kernel}")
+endforeach()
+# --- The end of the enclosure interface's cases ----------------------------------------------------
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
 _kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")

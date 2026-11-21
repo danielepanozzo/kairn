@@ -221,6 +221,46 @@ double use_every_operation(UseT use_a, UseT use_b) {
             use_b1.upper().limb[0] + use_b2.template lower_as<UseT>() + use_b2.template upper_as<UseT>() +
             use_b2.midpoint().limb[0] + use_b1.midpoint().limb[0]);
 
+    // The enclosure interface of stage B2 (headers-pred): the predicates, the member and subset
+    // tests, the three-valued comparisons and the relations of IEEE 1788, of both types and both
+    // numbers of limbs, with and without the marker; the set operations of a ball; the midpoint,
+    // radius, split and conversions of two limbs.
+    use_add(use_v1.is_empty() + use_v1.is_whole() + use_v2.is_empty() + use_v2.is_whole() + use_v1.certainly_positive() +
+            use_v1.certainly_negative() + use_v1.certainly_zero() + use_v2.certainly_positive() +
+            use_v2.certainly_negative() + use_v2.certainly_zero());
+    use_add(use_v1.contains(use_a) + use_v1.contains(E1(use_a)) + use_v1.contains(unverified(use_a)) +
+            use_v1.contains(unverified(E1(use_a))) + use_v1.contains(use_v1e) + use_v1.contains(unverified(use_v1e)) +
+            use_v2.contains(use_a) + use_v2.contains(use_x) + use_v2.contains(use_v2t) + use_v2.contains(unverified(use_x)));
+    use_add(use_b1.contains(use_a) + use_b1.contains(E1(use_a)) + use_b1.contains(use_b1) +
+            use_b1.contains(unverified(use_b1)) + use_b2.contains(use_a) + use_b2.contains(use_x) +
+            use_b2.contains(use_b2) + use_b2.contains(unverified(use_a)));
+    use_add(int(kairn::member(use_a, use_v1)) + int(kairn::member(use_x, use_v2)) + int(kairn::member(use_a, use_b1)) +
+            int(kairn::member(use_x, use_b2)) + int(kairn::member(unverified(use_a), use_b2)) +
+            int(kairn::member(E1(use_a), unverified(use_v1))));
+    use_add(int(kairn::less(use_v1, use_v1e)) + int(kairn::less_equal(use_v2, use_v2t)) +
+            int(kairn::equal(use_v1, unverified(use_v1e))) + int(kairn::greater(use_v2, use_v2t)) +
+            int(kairn::greater_equal(unverified(use_v1), use_v1e)) + int(kairn::not_equal(use_v2, use_v2t)));
+    use_add(int(kairn::less(use_b1, use_k1)) + int(kairn::less_equal(use_b2, use_k2)) +
+            int(kairn::equal(use_b1, unverified(use_k1))) + int(kairn::greater(use_b2, use_k2)) +
+            int(kairn::greater_equal(use_b1, use_k1)) + int(kairn::not_equal(unverified(use_b2), use_k2)));
+    use_add(kairn::certainly(kairn::less(use_v1, use_v1)) + kairn::possibly(kairn::equal(use_b2, use_b2)));
+    use_add(kairn::ieee1788::equal(use_v1, use_v1e) + kairn::ieee1788::subset(use_v2, use_v2t) +
+            kairn::ieee1788::interior(use_v1, unverified(use_v1e)) + kairn::ieee1788::disjoint(unverified(use_v2), use_v2t));
+    const kairn::Split<B1> use_bs1 = use_b1.split();
+    const kairn::Split<B2> use_bs2 = use_b2.split();
+    use_add(use_b1.hull(use_k1).radius() + use_b1.intersection(unverified(use_k1)).radius() +
+            use_b2.hull(unverified(use_k2)).radius() + use_b2.intersection(use_k2).radius() + use_bs1.left.radius() +
+            use_bs2.right.radius() + use_b1.mid_rad().radius + use_b2.mid_rad().midpoint.limb[1]);
+    const kairn::MidRad<UseT, 2> use_mr2 = use_v2.mid_rad();
+    const kairn::Split<I2> use_halves2 = use_v2.split();
+    use_add(use_v2.midpoint().limb[1] + use_v2.radius() + use_mr2.radius + use_v1.mid_rad().radius +
+            use_halves2.left.upper().limb[0]);
+    const B2 use_ib2(use_v2), use_ib2m(unverified(use_v2));
+    const I2 use_bi2(use_b2), use_bi2m(unverified(use_b2));
+    const B1 use_fi1 = B1::from_interval(use_a, use_a + 1), use_fi1m = B1::from_interval(unverified(use_b), use_a);
+    use_add(use_ib2.radius() + use_ib2m.radius() + use_bi2.lower().limb[1] + use_bi2m.upper().limb[0] +
+            use_b2.lower().limb[0] + use_b2.upper().limb[1] + use_fi1.radius() + use_fi1m.center().limb[0]);
+
     // The building blocks on T, each with and without the marker, and the conversion of a sum.
     const kairn::SumAndError<UseT> use_sum2 = kairn::two_sum(use_a, use_b);
     const auto [use_fs, use_fe] = kairn::fast_two_sum(use_a, use_b);
