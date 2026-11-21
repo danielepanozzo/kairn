@@ -447,6 +447,134 @@ r = neg(p)
                       str([e for e in errors if e.kernel == 'outer'][0]))
 
 
+class R3Factors(unittest.TestCase):
+    """The report of rule R3 on the factors of fused operations (rules.exposed_operands,
+    architecture.md, "R3"): a value of the program is exposed where it is a factor of fma, fms, fnma
+    or muladd whose addend is not the literal zero, unguarded on that path. A report: nothing is
+    refused for it."""
+
+    def exposed(self, body, *more, head=None):
+        kernels = {}
+        for text in ((head or R3.ENTRY) + body, R3.ADDS, R3.MULTIPLIES, R3.RETURNS) + more:
+            k = ir.parse_kernel(text, 'test')
+            kernels[k.name] = k
+        kernels = ir.ordered(kernels)
+        others = [e for e in rules.check_all(kernels) if e.rule != rules.RULE_CONE]
+        self.assertEqual(others, [], body)
+        return {(e.name, v): ws for e in rules.exposed_operands(kernels) for v, ws in e.operands.items()}
+
+    END = R3.END
+
+    def test_a_factor_of_each_fused_operation(self):
+        for op in ('fma', 'fms', 'fnma', 'muladd'):
+            self.assertEqual(self.exposed(f'p = {op}(a, x1, x0)\ns = add(p, x0)\n' + self.END),
+                             {('k', 'a'): [f'a factor of {op} at p']})
+            self.assertEqual(self.exposed(f'p = {op}(x1, a, x0)\ns = add(p, x0)\n' + self.END),
+                             {('k', 'a'): [f'a factor of {op} at p']})
+
+    def test_through_neg_abs_select_copy_and_a_callee(self):
+        self.assertEqual(self.exposed('n = neg(a)\nm = abs(n)\np = fma(m, x1, x0)\ns = add(p, x0)\n' + self.END),
+                         {('k', 'a'): ['a factor of fma at p']})
+        self.assertEqual(self.exposed('c = copy(a)\nm = lt(x0, x1)\nq = select(m, x1, c)\np = fms(q, x1, x0)\n'
+                                      's = add(p, x0)\n' + self.END), {('k', 'a'): ['a factor of fms at p']})
+        fused = R3.ADDS.replace('kernel:  adds', 'kernel:  fuses').replace('p+q', 'p*q+p') \
+            .replace('s = add(p, q)', 's = fma(q, p, p)')
+        self.assertEqual(self.exposed('s = fuses(x0, a)\n' + self.END, fused),
+                         {('k', 'a'): ['a factor of fma at s in fuses (called for s)']})
+
+    def test_safe_uses(self):
+        # The opaque product (addend +0), a fused operation whose addend is the literal zero, a
+        # guarded value, a comparison, a stored input, the limbs of a multi-limb input, a kernel that
+        # is not an entry kernel.
+        self.assertEqual(self.exposed('p = prod(a, x1)\ns = add(p, x0)\n' + self.END), {})
+        self.assertEqual(self.exposed('p = fma(a, x1, 0)\ns = add(p, x0)\n' + self.END), {})
+        self.assertEqual(self.exposed('g = guard(a)\np = fma(g, x1, x0)\ns = add(p, x0)\n' + self.END), {})
+        self.assertEqual(self.exposed('p = multiplies(x0, a)\nm = lt(a, x0)\nq = select(m, p, x0)\n'
+                                      's = add(q, x0)\n' + self.END), {})
+        self.assertEqual(self.exposed('p = fma(a, x1, x0)\ns = add(p, x0)\n' + self.END,
+                                      head=R3.ENTRY.replace('input:    a', 'input:    stored a')), {})
+        self.assertEqual(self.exposed('g = guard(a)\np = fma(x0, x1, g)\ns = add(p, x0)\n' + self.END), {})
+        self.assertEqual(self.exposed('p = fma(a, x1, x0)\ns = add(p, x0)\n' + self.END,
+                                      head=R3.ENTRY.replace('entry:    yes\n', '')), {})
+
+    def test_supplied_limbs_and_the_cost(self):
+        head = R3.ENTRY.replace('input:    x = x0 x1', 'input:    supplied x = x0 x1')
+        kernels = {}
+        k = ir.parse_kernel(head + 'g = guard(a)\np = fma(x0, x1, g)\ns = add(p, g)\n' + self.END, 'test')
+        kernels[k.name] = k
+        found = rules.exposed_operands(ir.ordered(kernels))
+        self.assertEqual([(e.name, sorted(e.operands)) for e in found], [('k', ['x0', 'x1'])])
+        # Four operations; a guard more for each of x0 and x1 (a is guarded already, and its
+        # addition into the kernel's sums is rule R3's, which refuses x0 too: the analysis only lists).
+        self.assertEqual((found[0].ops, found[0].guarded), (5, 7))
+
+    def test_the_kernels(self):
+        # Every object of gen/kernels with exposed operands, as the report lists them today: the list
+        # is the evidence for the owner's decision (architecture.md, "R3"), and a kernel or a loop
+        # that joins or leaves it is a change to look at.
+        ks = common.kernels()
+        found = {(e.kind, e.name, e.kernel): sorted(e.operands) for e in rules.exposed_operands(ks)}
+        xy2 = ['x0', 'x1', 'y0', 'y1']
+        ax2 = ['a0', 'a1', 'x0', 'x1']
+        self.assertEqual(found, EXPOSED)
+        self.assertEqual(EXPOSED[('kernel', 'dot_step_1', 'dot_step_1')], ['x', 'y'])
+        self.assertEqual(EXPOSED[('kernel', 'dot_step_2', 'dot_step_2')], xy2)
+        self.assertEqual(EXPOSED[('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2')], ax2)
+
+    def test_build_prints_the_report(self):
+        ks = common.kernels()
+        lines = build.summary(ks)
+        found = rules.exposed_operands(ks)
+        head = [ln for ln in lines if ln.startswith('R3, factors of a fused operation')]
+        self.assertEqual(len(head), 1)
+        self.assertIn(f'{len(found)} objects with exposed operands', head[0])
+        self.assertIn('  kernel two_prod: a: a factor of fms at e; b: a factor of fms at e; 2 operations, 4 with '
+                      'the guards; reached by blocks.hpp detail::two_prod(T a, T b)', '\n'.join(lines))
+        for e in found:
+            self.assertTrue(any(ln.startswith(f'  {e.kind} {e.name}') for ln in lines), e.name)
+
+    def test_the_calls_of_the_headers(self):
+        calls = build.header_calls(common.ROOT, common.kernels())
+        self.assertEqual(calls['two_prod'], ['blocks.hpp detail::two_prod(T a, T b)'])
+        self.assertEqual(calls['mul_2_1_full'], ['expansion.hpp detail::mul(Expansion<T, 2> x, std::type_identity_t<T> a)',
+                                                 'packed.hpp operator*(const Packed<T, 2>& x, const Packed<T, 1>& a)'])
+        self.assertIn('accumulator.hpp Accumulator::add_product(const Expansion<T, K>& x, const Expansion<T, K>& y)',
+                      calls['acc_mul_1'])
+        self.assertEqual(calls['sum_1_entry'], ['batch.hpp sum(SoAView<T, K> x)', 'batch.hpp sum(SoAView<T, K> x, Sequential)'])
+
+
+# The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the
+# kernel analyzed) -> the exposed limbs of that kernel.
+EXPOSED = {
+    ('kernel', 'acc_mul_1', 'acc_mul_1'): ['x', 'y'],
+    ('kernel', 'dot_step_1', 'dot_step_1'): ['x', 'y'],
+    ('kernel', 'two_prod', 'two_prod'): ['a', 'b'],
+    ('kernel', 'mul_down_1', 'mul_down_1'): ['a', 'b'],
+    ('kernel', 'mul_up_1', 'mul_up_1'): ['a', 'b'],
+    ('kernel', 'dot_step_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
+    ('kernel', 'acc_mul_2', 'acc_mul_2'): ['x0', 'x1', 'y0', 'y1'],
+    ('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
+    ('kernel', 'mul_2_1', 'mul_2_1'): ['a'],
+    ('kernel', 'axpy_entry_step_2_1', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
+    ('kernel', 'axpy_step_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
+    ('kernel', 'axpy_step_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
+    ('kernel', 'ball_scale_2', 'ball_scale_2'): ['a'],
+    ('kernel', 'ball_scale_2_full', 'ball_scale_2_full'): ['a'],
+    ('kernel', 'mul_2_1_full', 'mul_2_1_full'): ['a'],
+    ('kernel', 'scale_step_2', 'scale_step_2'): ['a', 'x0', 'x1'],
+    ('loop', 'axpy_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
+    ('loop', 'axpy_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
+    ('loop', 'axpy_2_1_entry', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
+    ('loop', 'axpy_2_entry', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
+    ('loop', 'bv_scale_2', 'scale_step_2'): ['a'],
+    ('loop', 'conv_1', 'dot_step_1'): ['x', 'y'],
+    ('loop', 'conv_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
+    ('loop', 'dot_1', 'dot_step_1'): ['x', 'y'],
+    ('loop', 'dot_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
+    ('loop', 'scale_2', 'scale_step_2'): ['a', 'x0', 'x1'],
+}
+
+
 class NonFiniteLayer(unittest.TestCase):
     """The description format and the rules of the non-finite layer (architecture.md, "Claims of
     the non-finite layer"): a full kernel, a full ball kernel and a constructor, and each misuse."""
