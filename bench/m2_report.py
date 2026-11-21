@@ -286,7 +286,9 @@ def compile_tables(directory):
     compile time, peak memory, object size and run time of the units in each setting. The first
     file of a configuration (no -rN) is the one of the timed compilations (three of each unit, one of
     the largest); the -rN files are later compilations and runs of the same units, for the spread of
-    the run times."""
+    the run times. The compile time is the compiler's processor time (user and system), which on
+    an idle core is its wall time within 1%, and which a process left on the same core by a stopped
+    compilation does not lengthen; the wall times stay in the files."""
     data = {}
     for path in sorted(glob.glob(os.path.join(directory, 'compile-*.json'))):
         m = COMPILE.match(os.path.basename(path)[:-len('.json')])
@@ -299,9 +301,9 @@ def compile_tables(directory):
             if r['kind'] != 'unit':
                 continue
             cell = data.setdefault(key, {}).setdefault((r['operations'], r['setting'], r['config']),
-                                                       {'wall': [], 'peak': [], 'obj': None, 'run': [], 'run_first': []})
+                                                       {'cpu': [], 'peak': [], 'obj': None, 'run': [], 'run_first': []})
             if first:
-                cell['wall'] += [w for w, s in zip(r['wall'], r['status']) if s == 0]
+                cell['cpu'] += [c for c, s in zip(r['cpu'], r['status']) if s == 0]
                 cell['peak'] += r['peak_mb']
                 cell['obj'] = r.get('object_bytes')
                 if 'run' in r:
@@ -331,7 +333,7 @@ def compile_tables(directory):
             return sorted(v)[len(v) // 2] if v else None
 
         def seconds(c, machine=None):
-            w = med(c['wall'])
+            w = med(c['cpu'])
             return '' if w is None else ('%.2f' % w if w < 10 else '%.1f' % w if w < 100 else '%.0f' % w)
 
         def runs(c, machine):
@@ -343,7 +345,7 @@ def compile_tables(directory):
                 return ''
             return fmt_ns_range(min(v), max(v)) + (' (one run)' if len(v) == 1 else '')
 
-        emit('%s: compile time, s (-O2; -O3)' % kind, seconds)
+        emit('%s: compile time, s of processor time (-O2; -O3)' % kind, seconds)
         emit('%s: peak memory, MB (-O2; -O3)' % kind, lambda c, m: '%d' % round(med(c['peak'])) if c['peak'] else '')
         emit('%s: object, KB (-O2; -O3)' % kind, lambda c, m: '%d' % round(c['obj'] / 1024) if c['obj'] else '')
         emit('%s: run time of the unit, ns per operation (-O2; -O3)' % kind, runs)

@@ -120,6 +120,15 @@ if WINDOWS:
         return ((f.dwHighDateTime << 32) | f.dwLowDateTime) * 1e-7
 
 
+def _kill(p):
+    """Kills p at a timeout; on POSIX first its children (pkill -P: the direct children of p only,
+    which this script started through it)."""
+    if not WINDOWS:
+        subprocess.run(['pkill', '-KILL', '-P', str(p.pid)], stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, check=False)
+    p.kill()
+
+
 def measure(cmd, timeout, cwd=ROOT):
     """Runs cmd; returns (status, wall seconds, processor seconds, peak memory in MB, output).
     The peak is the largest resident set of the process and of the processes it waited for
@@ -128,8 +137,10 @@ def measure(cmd, timeout, cwd=ROOT):
     with tempfile.TemporaryFile() as out:
         t0 = time.perf_counter()
         p = subprocess.Popen(cmd, cwd=cwd, stdout=out, stderr=subprocess.STDOUT)
-        # On a timeout, only the process this script started is terminated, by its handle.
-        timer = threading.Timer(timeout, p.kill)
+        # On a timeout, only the process this script started is terminated, by its handle, and on
+        # POSIX first the processes it started (GCC's and Clang's drivers run the compiler proper
+        # as a child, which killing the driver alone leaves running).
+        timer = threading.Timer(timeout, _kill, (p,))
         timer.start()
         if WINDOWS:
             p.wait()
