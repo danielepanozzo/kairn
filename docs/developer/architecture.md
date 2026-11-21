@@ -1994,8 +1994,8 @@ the radii, and the expression is the largest magnitude of a member of the exact 
 list is empty when no condition is claimed, and an empty list claims nothing about when the
 result is finite: it does not say that it always is. Every full kernel and every full Ball
 kernel has a condition; `ball_neg_k` has none. The promise of a finite result (F3, B4) is claimed
-in the formats of the statements, `binary_float`'s ([The formats of the statements](#number-formats)),
-not in every toy format.
+in the formats of the statements, `binary_float`'s ([The formats of the
+statements](#number-formats)), not in every toy format.
 
 **`upper` of a kernel of the finite domain with several operations.** The row of `upper` above is
 about the building blocks of one operation of the extended domain. A kernel of the finite domain
@@ -2007,9 +2007,10 @@ infinities and NaN, a hand lemma (`conv_radius_ieee`, `proofs/theories/IeeeBvCon
 nonnegative operands the result is nonnegative, $+\infty$ or a NaN, and when it is finite the
 operands are finite and it is the real model's value. Its listing returns a NaN where `prod(ma, mb)`
 overflows and `g` or `m` is zero (an infinity times zero inside), and $+\infty$ where it overflows
-and `g` is small, from a stated value far below the largest number. The loop that calls it, `bv_conv_k`, turns any radius that is not finite into the
-whole space, and its own statement covers those cases. The radius kernels of the other ball vectors
-are read as [their entries are](#claims-of-milestone-2): at least `value`, finite or $+\infty$.
+and `g` is small, from a stated value far below the largest number. The loop that calls it,
+`bv_conv_k`, turns any radius that is not finite into the whole space, and its own statement covers
+those cases. The radius kernels of the other ball vectors are read as [their entries
+are](#claims-of-milestone-2): at least `value`, finite or $+\infty$.
 
 The `core` of `extends` has the inputs of the full kernel, by name, and outputs of the same shape
 under other names; they correspond by position. Its requirements are the full kernel's with
@@ -2759,8 +2760,7 @@ requirements): the output is at least the exact value of `value`, whether it is 
 rounding has overflowed to $+\infty$. Nothing is said of how far above. (Not of `conv_radius`,
 whose claim is of finite results, by the owner's ruling of 2026-11-21: a result of it that is not
 finite is $+\infty$ or a NaN, [Claims of the non-finite layer](#claims-of-the-non-finite-layer).)
-And `value` may hold
-`abs(X)` of an input `X`, its exact magnitude.
+And `value` may hold `abs(X)` of an input `X`, its exact magnitude.
 
 **The kernels of the scaling of a BallVector by a power of two** (`bv_mul_pow2_k`) add three fields, each
 written only in an entry that has it, in the finite domain:
