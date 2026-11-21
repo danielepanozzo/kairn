@@ -180,8 +180,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    and of the hull and the intersection of balls (the tests of the radii, and that the ball of
    a canonical interval contains its members)
    beside their generated
-   statements, those about the two executions of a product and of the kernels `constexpr` by
-   its rule, on the listings of `proofs/gen/IeeeWith.v`, the theorems about the folds, the
+   statements, those about the two executions of a product and the lemmas of the two
+   executions of the kernels `constexpr` by its rule, on the listings of
+   `proofs/gen/IeeeWith.v`, the theorems about the folds, the
    largest magnitude and the product of polynomials whose statements are written by hand
    ([below](#sums-and-dot-products-of-arrays)),
    the lemmas of the radius of the accumulator and what a user of it relies on
@@ -195,7 +196,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    the folds and of the steps of the maps (and of the two steps of the extended domain that
    have one, `neg_2` and `bv_center_2`), of the folds and the maps in their two orders, of the
    two statements more of the folds of maxima, of the convolutions and of the products of two
-   BallVectors.
+   BallVectors; and last, for each kernel `constexpr` by the rule of the product, the theorem
+   of its two executions (`IeeeTwoExecutions.v`) against the statement the generator prints
+   for it in `proofs/gen/IeeeWith.v`, `K_two_executions_spec`, which no description names.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 

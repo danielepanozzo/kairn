@@ -492,8 +492,11 @@ class Statements(unittest.TestCase):
         # bv_conv_finish (1), and the products bv_conv_1 and bv_conv_2 (2: one statement each, as a
         # convolution's); and the leading limbs of neg_2 and bv_center_2, steps of the extended domain
         # (2), and the two statements more of the two folds of maxima, F_orders_ieee_spec and
-        # F_flag_ieee_spec (4): 302.
-        self.assertEqual(text.count('Print Assumptions'), 302)
+        # F_flag_ieee_spec (4): 302. Then the statements of the two executions of the thirty
+        # kernels of IeeeWith.v, K_two_executions_spec, whose theorems no description names (30):
+        # 332.
+        self.assertEqual(text.count('Print Assumptions'), 332)
+        self.assertEqual(text.count('Print Assumptions IeeeTwoExecutions.'), len(ieee.with_kernels(self.ks)))
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
         self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
@@ -748,6 +751,58 @@ class WithProduct(unittest.TestCase):
         with self.assertRaisesRegex(ieee.PrintError, 'it calls add_entry_step_1, which is not a listing of '
                                     'IeeeWith.v and computes guard'):
             ieee.with_model(ks)
+
+    def test_the_statements_of_the_two_executions(self):
+        """After the section, one statement K_two_executions_spec per kernel of the rule, in its order,
+        and the IEEE audit checks each theorem K_two_executions of IeeeTwoExecutions.v against it: a
+        kernel that joins the rule without its theorem, or with a theorem of another statement, fails
+        the proofs build."""
+        rule = [k.name for k in ieee.with_kernels(self.ks)]
+        after = self.text.split('\nEnd IeeeWith.\n', 1)[1]
+        self.assertEqual(re.findall(r'^Definition (\w+)_two_executions_spec : Prop :=$', after, flags=re.M), rule)
+        self.assertEqual(definitions(after), [f'{n}_two_executions_spec' for n in rule])
+        audit = read('proofs/gen/IeeeAudit.v')
+        self.assertEqual(audit, ieee.audit(self.ks))
+        checked = re.findall(r'^Definition (\w+)_two_executions_audit : (\w+)_two_executions_spec := '
+                             r'IeeeTwoExecutions\.(\w+)_two_executions\.\nPrint Assumptions '
+                             r'IeeeTwoExecutions\.(\w+)_two_executions\.$', audit, flags=re.M)
+        self.assertEqual(checked, [(n, n, n, n) for n in rule])
+        self.assertIn('From Kairn.Gen Require Import IeeeWith.\nFrom Kairn Require IeeeTwoExecutions.\n', audit)
+        # The checks come last, after those of the statements the descriptions name.
+        self.assertTrue(audit.endswith(f'Print Assumptions IeeeTwoExecutions.{rule[-1]}_two_executions.\n'))
+        self.assertGreater(audit.index('_two_executions_audit'), audit.index('ball_hull_2_correct'))
+        # A kernel that joins the rule gets its statement and its check, with no field to write.
+        ks = dict(self.ks)
+        ks['rule_toy'] = ir.parse_kernel('kernel: rule_toy\ninput: a\ninput: b\noutput: z\nvalue: a*b\n'
+                                         'status: unverified\n\nz = prod(a, b)\n', 'k.kernel')
+        ks = ir.ordered(ks, self.ks.folds)
+        self.assertIn('Definition rule_toy_two_executions_spec : Prop :=', ieee.with_model(ks))
+        self.assertIn('Definition rule_toy_two_executions_audit : rule_toy_two_executions_spec := '
+                      'IeeeTwoExecutions.rule_toy_two_executions.\n'
+                      'Print Assumptions IeeeTwoExecutions.rule_toy_two_executions.\n', ieee.audit(ks))
+
+    def test_the_shape_of_a_statement(self):
+        """The binders in the order of the theorems: the format, its two instances, the NaN functions,
+        each followed by its primed copy, of each side only (here nan_mult for the plain product,
+        nan_const for times_inf_ce, nan_mult' for the run-time times_inf), then the operands; the
+        listing at prod_ce and times_inf_ce, the generated kernel with the primed functions."""
+        self.assertIn("""(* mul_pow2_2_full: mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing). The two executions. *)
+Definition mul_pow2_2_full_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult nan_mult' : nan2 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall x0 x1 c : binary_float prec emax,
+  let '(w0, w1) := mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs (prod_ce prec emax nan_mult) (times_inf_ce prec emax nan_const) x0 x1 c in
+  let '(w0', w1') := IeeeModel.mul_pow2_2_full prec emax nan_plus' nan_minus' nan_abs' nan_fma' nan_mult' x0 x1 c in
+  xval w0 = xval w0' /\\ xval w1 = xval w1'.
+""", self.text)
+        # The guard of constant evaluation, one output: the outputs' values without a let.
+        self.assertIn("""  forall a x y : binary_float prec emax,
+  xval (axpy_entry_step_1_with prec emax nan_plus (prod_ce prec emax nan_mult) (guard_ce prec emax) a x y) = xval (IeeeModel.axpy_entry_step_1 prec emax nan_plus' nan_fma' a x y).
+""", self.text)
+        # A mask among the operands, in its place; a mask among the outputs, compared by equality.
+        self.assertIn('  forall (m : binary_float prec emax) (ex : bool) (rx c : binary_float prec emax),\n', self.text)
+        self.assertIn("  xval g = xval g' /\\ xval t = xval t' /\\ ok = ok'.\n", self.text)
 
     def test_the_section(self):
         section = self.text.split('Section IeeeWith.\n', 1)[1].split('\n\n(*', 1)[0]

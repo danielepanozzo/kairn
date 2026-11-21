@@ -3,8 +3,9 @@
    proofs/gen/Audit.v lists the theorem of every real-model statement, and
    proofs/gen/IeeeAudit.v the theorem of the IEEE-model statement of every kernel of the
    extended domain (the kernels with an ieee_theorem line), then the theorem of every
-   other generated IEEE-model statement that a description names. This file lists the
-   rest:
+   other generated IEEE-model statement that a description names, then the theorem of the
+   two executions of every kernel of proofs/gen/IeeeWith.v (K_two_executions_spec). This
+   file lists the rest:
 
    - theorems about generated statements that no kernel description names: the IEEE-model
      statements of the kernels of the finite domain of Milestone 1 and of the first
@@ -31,9 +32,11 @@
      statements: what the directed sums and products return in more detail than their
      claims say, the error of a rounded product and the sign of the error term of
      two_prod, what mul_dir_1 returns beside its generated statements, the rectangle
-     lemma of the product of intervals, the two executions of a product, and the two
-     executions of the thirty kernels whose only fused operations are products, on the
-     listings of proofs/gen/IeeeWith.v with the product as an argument;
+     lemma of the product of intervals, the two executions of a product, and the lemmas
+     of the two executions of the thirty kernels whose only fused operations are products
+     (the operations of constant evaluation against those of run time, the listings of
+     proofs/gen/IeeeWith.v against the generated kernels, and in lockstep), whose theorems
+     proofs/gen/IeeeAudit.v checks against their generated statements;
    - what is proved of the interval kernels of Milestone 2 and of the conversions of a
      ball beside their generated statements, which the generated audits list: for the
      conversions of a ball, the lemmas their theorems rest on; for the interval kernels
@@ -603,40 +606,6 @@ Print Assumptions scale_step_1_same.
 Print Assumptions bv_mul_pow2_step_2_same.
 Print Assumptions interval_split_2_same.
 Print Assumptions mul_pow2_step_2_same.
-
-(* The listing at the operations of constant evaluation and the generated kernel return
-   outputs of the same value and the same masks, on all operands: one theorem per kernel of
-   IeeeWith.v. *)
-Print Assumptions split_two_executions.
-Print Assumptions two_prod_dekker_two_executions.
-Print Assumptions mul_pow2_2_two_executions.
-Print Assumptions mul_pow2_2_full_two_executions.
-Print Assumptions ball_mul_pow2_1_two_executions.
-Print Assumptions ball_mul_pow2_1_full_two_executions.
-Print Assumptions ball_mul_pow2_2_two_executions.
-Print Assumptions ball_mul_pow2_2_full_two_executions.
-Print Assumptions IeeeTwoExecutions.mul_1_1_two_executions.
-Print Assumptions axpy_entry_step_1_two_executions.
-Print Assumptions axpy_step_1_two_executions.
-Print Assumptions interval_mid_rad_1_two_executions.
-Print Assumptions interval_to_ball_1_two_executions.
-Print Assumptions ball_from_interval_1_two_executions.
-Print Assumptions ball_from_interval_2_two_executions.
-Print Assumptions ball_hull_1_two_executions.
-Print Assumptions ball_intersection_1_two_executions.
-Print Assumptions bound_dot_1_two_executions.
-Print Assumptions bound_dot_2_two_executions.
-Print Assumptions bound_sum_1_two_executions.
-Print Assumptions bound_sum_2_two_executions.
-Print Assumptions bv_mul_pow2_radius_two_executions.
-Print Assumptions bv_mul_pow2_step_1_two_executions.
-Print Assumptions interval_split_1_two_executions.
-Print Assumptions mul_pow2_step_1_two_executions.
-Print Assumptions IeeeTwoExecutions.rmul_two_executions.
-Print Assumptions scale_step_1_two_executions.
-Print Assumptions bv_mul_pow2_step_2_two_executions.
-Print Assumptions interval_split_2_two_executions.
-Print Assumptions mul_pow2_step_2_two_executions.
 
 (* Scaling a ball by a power of two (theories/BallPow2.v): the radius and the two claims
    for a center whose scaled value is exact when its test says so. *)

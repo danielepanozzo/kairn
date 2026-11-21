@@ -1776,7 +1776,9 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   every named theorem against its statement (`Definition S_audit : S := theorem.` and `Print
   Assumptions`), after the theorems of the extended domain, importing `IeeeFoldStatements` only
   when one of them is about a fold. Without any of these fields every generated file is what it
-  was before they existed.
+  was before they existed. Last, `IeeeAudit.v` checks the theorem of the two executions of every
+  kernel of `IeeeWith.v` against its statement `K_two_executions_spec` (below), which no field
+  names.
 - `IeeeWith.v`: the kernels that `build` lists as `constexpr` by the rule of the product, in the
   IEEE model with the operations that constant evaluation runs differently as arguments. These
   are the operations whose C++ in a kernel `constexpr` without a variant dispatches on
@@ -1801,6 +1803,37 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   `times_inf_ce` it is the listing that constant evaluation runs, which the theorems
   `K_two_executions` compare with the run-time one. The definitions of `IeeeModel.v` are not
   changed by it, and the arguments' names have an underscore, which no value of a listing has.
+  After the section, for each of these kernels, the statement of its two executions,
+  `K_two_executions_spec`, in the shape of its theorem `K_two_executions` (the lines of the file
+  are longer):
+
+  ```coq
+  Definition mul_pow2_2_full_two_executions_spec : Prop :=
+    forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+           (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+           (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_abs nan_abs' : nan1 prec emax)
+           (nan_fma' : nan3 prec emax) (nan_mult nan_mult' : nan2 prec emax)
+           (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+    forall x0 x1 c : binary_float prec emax,
+    let '(w0, w1) := mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs
+                       (prod_ce prec emax nan_mult) (times_inf_ce prec emax nan_const) x0 x1 c in
+    let '(w0', w1') := IeeeModel.mul_pow2_2_full prec emax nan_plus' nan_minus' nan_abs' nan_fma' nan_mult' x0 x1 c in
+    xval w0 = xval w0' /\ xval w1 = xval w1'.
+  ```
+
+  For every format and its two instances, and for two families of NaN functions, the first for
+  constant evaluation and the second (primed) for run time, each variable followed by its primed
+  copy and only those that a side uses (`two_executions_nans`: those of `K_with`, `nan_mult` for
+  `prod_ce` and `nan_const` for `times_inf_ce`; those of `IeeeModel.K`), on all operands in the
+  order of the kernel's arguments (a mask among them in its place, `bv_mul_pow2_radius`), the
+  listing at the operations of constant evaluation and the generated kernel return limbs that
+  stand for the same extended real numbers (`xval`: equal, two zeros or two NaN) and the same
+  masks; a kernel of one output has the two calls side by side, without a `let`. No description
+  names its theorem: `IeeeAudit.v` checks `K_two_executions_audit : K_two_executions_spec :=
+  IeeeTwoExecutions.K_two_executions` (the qualified name: `IeeeProduct.v` has an
+  `rmul_two_executions` and a `mul_1_1_two_executions` of its own) for every kernel of the file,
+  after the other checks, so that a kernel that joins the rule without its theorem, or with a
+  theorem of another statement, fails the proofs build by itself.
 - `Audit.v`: for every kernel not marked `unverified`, a silent definition
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The

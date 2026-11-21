@@ -9,9 +9,13 @@
    of run time (IeeeOperations.prod, guard and times_inf) it is IeeeModel.K, by conversion;
    with those of constant evaluation defined below (prod_ce, guard_ce, times_inf_ce) it is
    the listing that constant evaluation runs. The section has the variables of IeeeModel.v,
-   in the same order, and the names of the values are those of the kernel descriptions. *)
+   in the same order, and the names of the values are those of the kernel descriptions.
+   After it, for each kernel, the statement of its two executions, K_two_executions_spec,
+   whose theorem is K_two_executions of proofs/theories/IeeeTwoExecutions.v and which
+   proofs/gen/IeeeAudit.v checks. *)
 From Stdlib Require Import Reals ZArith.
 From Flocq Require Import Core Binary.
+From Kairn Require Import IeeeVocabulary.
 From Kairn Require IeeeOperations.
 From Kairn.Gen Require IeeeModel.
 
@@ -522,3 +526,298 @@ Definition mul_pow2_step_2_with (p_ : float -> float -> float) (x0 x1 c : float)
   (z0, z1).
 
 End IeeeWith.
+
+(** * The two executions *)
+
+(* For each kernel above, K_two_executions_spec: for every format, every choice of the NaN
+   that each operation returns in each execution (the second's are the primed names), and
+   all operands, finite, infinite or NaN: the listing with the operations of constant
+   evaluation, K_with at prod_ce, guard_ce and times_inf_ce, and the generated kernel
+   IeeeModel.K, which is the execution of run time, return limbs that stand for the same
+   extended real numbers (xval: equal, or two zeros, or two NaN) and the same masks. *)
+
+(* mul_1_1: one rounding to nearest. The two executions. *)
+Definition mul_1_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall a b : binary_float prec emax,
+  xval (mul_1_1_with prec emax (prod_ce prec emax nan_mult) a b) = xval (IeeeModel.mul_1_1 prec emax nan_fma' a b).
+
+(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. The two executions. *)
+Definition axpy_entry_step_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall a x y : binary_float prec emax,
+  xval (axpy_entry_step_1_with prec emax nan_plus (prod_ce prec emax nan_mult) (guard_ce prec emax) a x y) = xval (IeeeModel.axpy_entry_step_1 prec emax nan_plus' nan_fma' a x y).
+
+(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. The two executions. *)
+Definition axpy_step_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall a x y : binary_float prec emax,
+  xval (axpy_step_1_with prec emax nan_plus (prod_ce prec emax nan_mult) a x y) = xval (IeeeModel.axpy_step_1 prec emax nan_plus' nan_fma' a x y).
+
+(* interval_mid_rad_1: the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). The two executions. *)
+Definition interval_mid_rad_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_opp nan_opp' nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax) (nan_const nan_const' : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall xl xu : binary_float prec emax,
+  let '(m, r) := interval_mid_rad_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const (prod_ce prec emax nan_mult) xl xu in
+  let '(m', r') := IeeeModel.interval_mid_rad_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_fma' nan_const' xl xu in
+  xval m = xval m' /\ xval r = xval r'.
+
+(* interval_to_ball_1: interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). The two executions. *)
+Definition interval_to_ball_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_opp nan_opp' nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax) (nan_const nan_const' : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall xl xu : binary_float prec emax,
+  let '(c, r) := interval_to_ball_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const (prod_ce prec emax nan_mult) xl xu in
+  let '(c', r') := IeeeModel.interval_to_ball_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_fma' nan_const' xl xu in
+  xval c = xval c' /\ xval r = xval r'.
+
+(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20). The two executions. *)
+Definition ball_from_interval_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_opp nan_opp' nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax) (nan_const nan_const' : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall lo hi : binary_float prec emax,
+  let '(cw, rw) := ball_from_interval_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const (prod_ce prec emax nan_mult) (guard_ce prec emax) lo hi in
+  let '(cw', rw') := IeeeModel.ball_from_interval_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_fma' nan_const' lo hi in
+  xval cw = xval cw' /\ xval rw = xval rw'.
+
+(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). The two executions. *)
+Definition ball_from_interval_2_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_opp nan_opp' nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax) (nan_const nan_const' : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall lo hi : binary_float prec emax,
+  let '(cw0, cw1, rw) := ball_from_interval_2_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const (prod_ce prec emax nan_mult) (guard_ce prec emax) lo hi in
+  let '(cw0', cw1', rw') := IeeeModel.ball_from_interval_2 prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_fma' nan_const' lo hi in
+  xval cw0 = xval cw0' /\ xval cw1 = xval cw1' /\ xval rw = xval rw'.
+
+(* ball_hull_1: both balls to intervals, their hull, back to a ball (Milestone 2 listing). The two executions. *)
+Definition ball_hull_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_opp nan_opp' nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax) (nan_const nan_const' : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall cx rx cy ry : binary_float prec emax,
+  let '(cz, rz) := ball_hull_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const (prod_ce prec emax nan_mult) cx rx cy ry in
+  let '(cz', rz') := IeeeModel.ball_hull_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_fma' nan_const' cx rx cy ry in
+  xval cz = xval cz' /\ xval rz = xval rz'.
+
+(* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). The two executions. *)
+Definition ball_intersection_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_opp nan_opp' nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax) (nan_const nan_const' : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall cx rx cy ry : binary_float prec emax,
+  let '(cz, rz) := ball_intersection_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const (prod_ce prec emax nan_mult) cx rx cy ry in
+  let '(cz', rz') := IeeeModel.ball_intersection_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_fma' nan_const' cx rx cy ry in
+  xval cz = xval cz' /\ xval rz = xval rz'.
+
+(* ball_mul_pow2_1: midpoint-radius scaling by a power of two (Milestone 2 listing). The two executions. *)
+Definition ball_mul_pow2_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall cx rx c : binary_float prec emax,
+  let '(cz, rz) := ball_mul_pow2_1_with prec emax nan_abs (prod_ce prec emax nan_mult) cx rx c in
+  let '(cz', rz') := IeeeModel.ball_mul_pow2_1 prec emax nan_abs' nan_fma' cx rx c in
+  xval cz = xval cz' /\ xval rz = xval rz'.
+
+(* ball_mul_pow2_1_full: ball_mul_pow2_1, then the fix-up of the special states of a ball (Milestone 2 listing). The two executions. *)
+Definition ball_mul_pow2_1_full_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall cx rx c : binary_float prec emax,
+  let '(cw, rw) := ball_mul_pow2_1_full_with prec emax nan_abs (prod_ce prec emax nan_mult) cx rx c in
+  let '(cw', rw') := IeeeModel.ball_mul_pow2_1_full prec emax nan_abs' nan_fma' cx rx c in
+  xval cw = xval cw' /\ xval rw = xval rw'.
+
+(* bound_dot_1: the exported bound of a dot product as a function of n (milestone2.md). The two executions. *)
+Definition bound_dot_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall m : binary_float prec emax,
+  let '(g, t, ok) := bound_dot_1_with prec emax nan_plus (prod_ce prec emax nan_mult) m in
+  let '(g', t', ok') := IeeeModel.bound_dot_1 prec emax nan_plus' nan_fma' m in
+  xval g = xval g' /\ xval t = xval t' /\ ok = ok'.
+
+(* bound_dot_2: the exported bound of a dot product as a function of n (milestone2.md). The two executions. *)
+Definition bound_dot_2_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall m : binary_float prec emax,
+  let '(g, t, ok) := bound_dot_2_with prec emax nan_plus (prod_ce prec emax nan_mult) m in
+  let '(g', t', ok') := IeeeModel.bound_dot_2 prec emax nan_plus' nan_fma' m in
+  xval g = xval g' /\ xval t = xval t' /\ ok = ok'.
+
+(* bound_sum_1: the exported bound of a sum as a function of n (milestone2.md). The two executions. *)
+Definition bound_sum_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall m : binary_float prec emax,
+  let '(g, ok) := bound_sum_1_with prec emax nan_plus (prod_ce prec emax nan_mult) m in
+  let '(g', ok') := IeeeModel.bound_sum_1 prec emax nan_plus' nan_fma' m in
+  xval g = xval g' /\ ok = ok'.
+
+(* bound_sum_2: the exported bound of a sum as a function of n (milestone2.md). The two executions. *)
+Definition bound_sum_2_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall m : binary_float prec emax,
+  let '(g, ok) := bound_sum_2_with prec emax nan_plus (prod_ce prec emax nan_mult) m in
+  let '(g', ok') := IeeeModel.bound_sum_2 prec emax nan_plus' nan_fma' m in
+  xval g = xval g' /\ ok = ok'.
+
+(* bv_mul_pow2_radius: the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). The two executions. *)
+Definition bv_mul_pow2_radius_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall (m : binary_float prec emax) (ex : bool) (rx c : binary_float prec emax),
+  xval (bv_mul_pow2_radius_with prec emax nan_plus nan_minus (prod_ce prec emax nan_mult) m ex rx c) = xval (IeeeModel.bv_mul_pow2_radius prec emax nan_plus' nan_minus' nan_fma' m ex rx c).
+
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). The two executions. *)
+Definition bv_mul_pow2_step_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall x c : binary_float prec emax,
+  let '(z, e) := bv_mul_pow2_step_1_with prec emax nan_abs (prod_ce prec emax nan_mult) x c in
+  let '(z', e') := IeeeModel.bv_mul_pow2_step_1 prec emax nan_abs' nan_fma' x c in
+  xval z = xval z' /\ e = e'.
+
+(* interval_split_1: the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). The two executions. *)
+Definition interval_split_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_opp nan_opp' nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax) (nan_const nan_const' : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall xl xu : binary_float prec emax,
+  let '(al, au, bl, bu) := interval_split_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const (prod_ce prec emax nan_mult) xl xu in
+  let '(al', au', bl', bu') := IeeeModel.interval_split_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_fma' nan_const' xl xu in
+  xval al = xval al' /\ xval au = xval au' /\ xval bl = xval bl' /\ xval bu = xval bu'.
+
+(* mul_pow2_step_1: one rounding to nearest of a product by a power of two. The two executions. *)
+Definition mul_pow2_step_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall x c : binary_float prec emax,
+  xval (mul_pow2_step_1_with prec emax (prod_ce prec emax nan_mult) x c) = xval (IeeeModel.mul_pow2_step_1 prec emax nan_fma' x c).
+
+(* rmul: one step up from the rounded product (Milestone 1 listing). The two executions. *)
+Definition rmul_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall a b : binary_float prec emax,
+  xval (rmul_with prec emax (prod_ce prec emax nan_mult) a b) = xval (IeeeModel.rmul prec emax nan_fma' a b).
+
+(* scale_step_1: mul_1_1, one rounding to nearest. The two executions. *)
+Definition scale_step_1_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall x a : binary_float prec emax,
+  xval (scale_step_1_with prec emax (prod_ce prec emax nan_mult) x a) = xval (IeeeModel.scale_step_1 prec emax nan_fma' x a).
+
+(* split: Veltkamp's split (Dekker 1971). The two executions. *)
+Definition split_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall a : binary_float prec emax,
+  let '(ah, al) := split_with prec emax nan_plus nan_minus (prod_ce prec emax nan_mult) a in
+  let '(ah', al') := IeeeModel.split prec emax nan_plus' nan_minus' nan_fma' a in
+  xval ah = xval ah' /\ xval al = xval al'.
+
+(* two_prod_dekker: Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. The two executions. *)
+Definition two_prod_dekker_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall a b : binary_float prec emax,
+  let '(p, e) := two_prod_dekker_with prec emax nan_plus nan_minus (prod_ce prec emax nan_mult) a b in
+  let '(p', e') := IeeeModel.two_prod_dekker prec emax nan_plus' nan_minus' nan_fma' a b in
+  xval p = xval p' /\ xval e = xval e'.
+
+(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). The two executions. *)
+Definition mul_pow2_2_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall x0 x1 c : binary_float prec emax,
+  let '(z0, z1) := mul_pow2_2_with prec emax nan_plus nan_minus (prod_ce prec emax nan_mult) x0 x1 c in
+  let '(z0', z1') := IeeeModel.mul_pow2_2 prec emax nan_plus' nan_minus' nan_fma' x0 x1 c in
+  xval z0 = xval z0' /\ xval z1 = xval z1'.
+
+(* ball_mul_pow2_2: midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing). The two executions. *)
+Definition ball_mul_pow2_2_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall cx0 cx1 rx c : binary_float prec emax,
+  let '(cz0, cz1, rz) := ball_mul_pow2_2_with prec emax nan_plus nan_minus nan_abs (prod_ce prec emax nan_mult) cx0 cx1 rx c in
+  let '(cz0', cz1', rz') := IeeeModel.ball_mul_pow2_2 prec emax nan_plus' nan_minus' nan_abs' nan_fma' cx0 cx1 rx c in
+  xval cz0 = xval cz0' /\ xval cz1 = xval cz1' /\ xval rz = xval rz'.
+
+(* ball_mul_pow2_2_full: ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing). The two executions. *)
+Definition ball_mul_pow2_2_full_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall cx0 cx1 rx c : binary_float prec emax,
+  let '(cw0, cw1, rw) := ball_mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs (prod_ce prec emax nan_mult) cx0 cx1 rx c in
+  let '(cw0', cw1', rw') := IeeeModel.ball_mul_pow2_2_full prec emax nan_plus' nan_minus' nan_abs' nan_fma' cx0 cx1 rx c in
+  xval cw0 = xval cw0' /\ xval cw1 = xval cw1' /\ xval rw = xval rw'.
+
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). The two executions. *)
+Definition bv_mul_pow2_step_2_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall x0 x1 c : binary_float prec emax,
+  let '(z0, z1, e) := bv_mul_pow2_step_2_with prec emax nan_plus nan_minus nan_abs (prod_ce prec emax nan_mult) x0 x1 c in
+  let '(z0', z1', e') := IeeeModel.bv_mul_pow2_step_2 prec emax nan_plus' nan_minus' nan_abs' nan_fma' x0 x1 c in
+  xval z0 = xval z0' /\ xval z1 = xval z1' /\ e = e'.
+
+(* interval_split_2: the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). The two executions. *)
+Definition interval_split_2_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_opp nan_opp' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall xl0 xl1 xu0 xu1 : binary_float prec emax,
+  let '(al0, al1, au0, au1, bl0, bl1, bu0, bu1) := interval_split_2_with prec emax nan_plus nan_minus nan_opp (prod_ce prec emax nan_mult) xl0 xl1 xu0 xu1 in
+  let '(al0', al1', au0', au1', bl0', bl1', bu0', bu1') := IeeeModel.interval_split_2 prec emax nan_plus' nan_minus' nan_opp' nan_fma' xl0 xl1 xu0 xu1 in
+  xval al0 = xval al0' /\ xval al1 = xval al1' /\ xval au0 = xval au0' /\ xval au1 = xval au1' /\ xval bl0 = xval bl0' /\ xval bl1 = xval bl1' /\ xval bu0 = xval bu0' /\ xval bu1 = xval bu1'.
+
+(* mul_pow2_2_full: mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing). The two executions. *)
+Definition mul_pow2_2_full_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_abs nan_abs' : nan1 prec emax) (nan_fma' : nan3 prec emax) (nan_mult nan_mult' : nan2 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall x0 x1 c : binary_float prec emax,
+  let '(w0, w1) := mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs (prod_ce prec emax nan_mult) (times_inf_ce prec emax nan_const) x0 x1 c in
+  let '(w0', w1') := IeeeModel.mul_pow2_2_full prec emax nan_plus' nan_minus' nan_abs' nan_fma' nan_mult' x0 x1 c in
+  xval w0 = xval w0' /\ xval w1 = xval w1'.
+
+(* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. The two executions. *)
+Definition mul_pow2_step_2_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_plus' nan_minus nan_minus' : nan2 prec emax) (nan_fma' : nan3 prec emax) (nan_mult : nan2 prec emax),
+  forall x0 x1 c : binary_float prec emax,
+  let '(z0, z1) := mul_pow2_step_2_with prec emax nan_plus nan_minus (prod_ce prec emax nan_mult) x0 x1 c in
+  let '(z0', z1') := IeeeModel.mul_pow2_step_2 prec emax nan_plus' nan_minus' nan_fma' x0 x1 c in
+  xval z0 = xval z0' /\ xval z1 = xval z1'.

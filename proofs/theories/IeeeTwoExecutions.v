@@ -97,7 +97,8 @@
      K_with at the operations of constant evaluation (prod_ce, guard_ce, times_inf_ce of
      IeeeWith.v) with the NaN functions of one execution, and the generated kernel
      IeeeModel.K with those of the other, return outputs of the same value and the same
-     masks. No hypothesis on the operands.
+     masks. No hypothesis on the operands. Each is the statement K_two_executions_spec that
+     the generator prints in IeeeWith.v, and proofs/gen/IeeeAudit.v checks it.
 
    The names. rmul_two_executions and mul_1_1_two_executions of this file are not the
    corollaries of the same names of IeeeProduct.v, which say more of fewer operands (the
@@ -1634,7 +1635,8 @@ Qed.
 (* On the left the listing at the operations of constant evaluation, prod_ce, guard_ce and
    times_inf_ce (the execution of constant evaluation), on the right the generated IEEE model
    of the kernel (the execution of run time), on the same operands, with any NaN functions on
-   either side. *)
+   either side. Each theorem is the statement K_two_executions_spec of proofs/gen/IeeeWith.v,
+   which proofs/gen/IeeeAudit.v checks. *)
 Let Hmp : same_ps prod_ce prod'.
 Proof. exact (prod_ce_products prec emax nan_fma' nan_mult). Qed.
 
