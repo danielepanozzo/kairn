@@ -41,6 +41,8 @@ E1 = "Expansion<T, 1>"
 E2 = "Expansion<T, 2>"
 B1 = "Ball<T, 1>"
 B2 = "Ball<T, 2>"
+I1 = "Interval<T, 1>"
+I2 = "Interval<T, 2>"
 T = "T"
 
 # The groups of the index, in order: (id, title, what the group is).
@@ -59,8 +61,11 @@ GROUPS = [
     ("ball", "Ball operations", "Arithmetic on balls: the result contains every result on points of the operands; "
      "and the sign predicates of a ball, comparisons of its radius with its center."),
     ("intervals", "Interval operations",
-     "Arithmetic on intervals of numbers of `T` and of two limbs: the result contains every result on members of "
-     "the operands, unbounded and empty intervals included. No public operation computes them yet."),
+     "`Interval<T, k>` (`kairn/interval.hpp`): its constructors, the arithmetic of intervals of numbers of `T` and "
+     "of two limbs, whose result contains every result on members of the operands, unbounded and empty intervals "
+     "included, the hull, the intersection, the midpoint, the radius and the split, and the conversions between an "
+     "interval and a ball. The arithmetic is not `constexpr` (its code is where `KAIRN_ENCLOSURE_CODE` puts it); "
+     "the rest is, and of it only the midpoint, the radius, the split and the conversions round."),
     ("blocks", "Building blocks on T",
      "Functions of `float` and `double` (`kairn/blocks.hpp`) for a program's own tests of exactness, its own "
      "radius arithmetic, and bounds rounded down or up without changing the rounding mode. Each is one call of "
@@ -99,6 +104,11 @@ SAME_VALUES = ("`constexpr`, with the same values in constant evaluation (a zero
 GUARDED = "; the operands are guarded ([rule R3](../developer/architecture.md#the-kernel-ir))"
 CONVERTED = "the limb is converted to `Expansion<T, 1>` first, exactly"
 POINT = "the point is the ball of radius 0 its constructor makes"
+# The notes of the interval operations: whether constant evaluation has them, and whether they round.
+NOT_CONSTEXPR_INTERVAL = "rounds; not `constexpr`: its code is where `KAIRN_ENCLOSURE_CODE` puts it"
+EXACT_INTERVAL = "`constexpr`; does not round"
+ROUNDS_CONSTEXPR = "`constexpr`; rounds, and is preceded by the debug build's check of the rounding mode"
+TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`)"
 CORE = "the finite core: no fix-up of infinities and NaN"
 # The steps of ldexp beyond the powers of two of T are written in the header, not generated
 # (deviation 17 of docs/developer/design/phase0/decisions.md): every page that shows such a form
@@ -374,10 +384,14 @@ KERNELS = {
     "to_down_2": page(
         "conversions", "Rounding down",
         form("to_down(x)", E2, result=T),
+        form("X.lower_as<T>()", I2, result=T, group="intervals",
+             note="the lower bound of an interval of two limbs, rounded down: $x$ is the bound; " + EXACT_INTERVAL),
     ),
     "to_up_2": page(
         "conversions", "Rounding up",
         form("to_up(x)", E2, result=T),
+        form("X.upper_as<T>()", I2, result=T, group="intervals",
+             note="the upper bound of an interval of two limbs, rounded up: $x$ is the bound; " + EXACT_INTERVAL),
     ),
     "abs_upper_2": page(
         "conversions", "Upper bound of the magnitude",
@@ -573,33 +587,126 @@ KERNELS = {
              note="not `constexpr`: its statement is about the fused product, which constant evaluation does not "
                   "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"),
     ),
-    # --- Milestone 2, wave 2: the interval kernels, entry kernels no public operation calls yet --
-    "interval_make_1": page("intervals", "An interval from two limbs"),
-    "interval_neg_1": page("intervals", "The negation of an interval, one-limb bounds"),
-    "interval_add_1": page("intervals", "Sum of intervals, one-limb bounds"),
-    "interval_sub_1": page("intervals", "Difference of intervals, one-limb bounds"),
-    "interval_mul_1": page("intervals", "Product of intervals, one-limb bounds"),
-    "interval_add_2": page("intervals", "Sum of intervals, two-limb bounds"),
-    "ball_lower_as_1": page("ball", "The lower bound of a ball as a limb, one-limb center"),
-    "ball_upper_as_1": page("ball", "The upper bound of a ball as a limb, one-limb center"),
-    "ball_lower_as_2": page("ball", "A lower bound of a ball as a limb, two-limb center"),
-    "ball_upper_as_2": page("ball", "An upper bound of a ball as a limb, two-limb center"),
-    "ball_from_interval_2": page("ball", "A ball with a two-limb center from an interval of two limbs"),
-    "ball_narrow_2_1": page("ball", "A ball with a two-limb center as one with a one-limb center"),
+    # --- Milestone 2, wave 2: the interval kernels (kairn/interval.hpp) --------------------------
+    "interval_make_1": page(
+        "intervals", "An interval from two limbs",
+        form("Interval<T, 1>(lo, hi)", E1, E1, result=I1, note="implicit for one operand; " + EXACT_INTERVAL),
+        form("Interval<T, 1>(lo, hi)", T, T, result=I1,
+             note="each limb converted to `Expansion<T, 1>` first, exactly; " + EXACT_INTERVAL),
+        form("Interval<T, 1>(a)", T, result=I1, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
+        form("Interval<T, 1>(a)", E1, result=I1, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
+    ),
+    "interval_neg_1": page(
+        "intervals", "The negation of an interval, one-limb bounds",
+        form("-X", I1, result=I1, note=EXACT_INTERVAL),
+    ),
+    "interval_add_1": page(
+        "intervals", "Sum of intervals, one-limb bounds",
+        form("X + Y", I1, I1, result=I1, note=NOT_CONSTEXPR_INTERVAL),
+        form("X += Y", I1, I1, result=I1, note=NOT_CONSTEXPR_INTERVAL),
+    ),
+    "interval_sub_1": page(
+        "intervals", "Difference of intervals, one-limb bounds",
+        form("X - Y", I1, I1, result=I1, note=NOT_CONSTEXPR_INTERVAL),
+        form("X -= Y", I1, I1, result=I1, note=NOT_CONSTEXPR_INTERVAL),
+    ),
+    "interval_mul_1": page(
+        "intervals", "Product of intervals, one-limb bounds",
+        form("X * Y", I1, I1, result=I1, note=NOT_CONSTEXPR_INTERVAL),
+        form("X *= Y", I1, I1, result=I1, note=NOT_CONSTEXPR_INTERVAL),
+    ),
+    "interval_add_2": page(
+        "intervals", "Sum of intervals, two-limb bounds",
+        form("X + Y", I2, I2, result=I2, note=NOT_CONSTEXPR_INTERVAL),
+        form("X += Y", I2, I2, result=I2, note=NOT_CONSTEXPR_INTERVAL),
+    ),
+    "ball_lower_as_1": page(
+        "ball", "The lower bound of a ball as a limb, one-limb center",
+        form("X.lower_as<T>()", B1, result=T, note=ROUNDS_CONSTEXPR),
+        form("X.lower()", B1, result=E1, note="the same value as a one-limb number; " + ROUNDS_CONSTEXPR),
+    ),
+    "ball_upper_as_1": page(
+        "ball", "The upper bound of a ball as a limb, one-limb center",
+        form("X.upper_as<T>()", B1, result=T, note=ROUNDS_CONSTEXPR),
+        form("X.upper()", B1, result=E1, note="the same value as a one-limb number; " + ROUNDS_CONSTEXPR),
+    ),
+    "ball_lower_as_2": page(
+        "ball", "A lower bound of a ball as a limb, two-limb center",
+        form("X.lower_as<T>()", B2, result=T, note=ROUNDS_CONSTEXPR),
+    ),
+    "ball_upper_as_2": page(
+        "ball", "An upper bound of a ball as a limb, two-limb center",
+        form("X.upper_as<T>()", B2, result=T, note=ROUNDS_CONSTEXPR),
+    ),
+    "ball_from_interval_2": page(
+        "ball", "A ball with a two-limb center from an interval of two limbs",
+        form("from_interval(lo, hi)", T, T, result=B2,
+             note="`Ball<T, 2>::from_interval(lo, hi)`; the bounds are guarded "
+                  "([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR),
+    ),
+    "ball_narrow_2_1": page(
+        "ball", "A ball with a two-limb center as one with a one-limb center",
+        form("Ball<T, 1>(X)", B2, result=B1, note="explicit; " + ROUNDS_CONSTEXPR),
+    ),
     # Stage B1: the interval kernels of two limbs, and the set operations, conversions and split of
     # the enclosure interface.
-    "interval_neg_2": page("intervals", "The negation of an interval, two-limb bounds"),
-    "interval_sub_2": page("intervals", "Difference of intervals, two-limb bounds"),
-    "interval_make_2": page("intervals", "An interval from two two-limb numbers"),
-    "interval_mul_2": page("intervals", "Product of intervals, two-limb bounds"),
-    "interval_hull_1": page("intervals", "The hull of two intervals, one-limb bounds"),
-    "interval_intersection_1": page("intervals", "The intersection of two intervals, one-limb bounds"),
-    "interval_hull_2": page("intervals", "The hull of two intervals, two-limb bounds"),
-    "interval_intersection_2": page("intervals", "The intersection of two intervals, two-limb bounds"),
-    "interval_mid_rad_1": page("intervals", "The midpoint and radius of an interval, one-limb bounds"),
-    "interval_to_ball_1": page("intervals", "A ball that contains an interval, one-limb bounds"),
-    "interval_split_1": page("intervals", "An interval split at its midpoint, one-limb bounds"),
-    "ball_to_interval_1": page("ball", "The smallest interval that contains a ball, one-limb center"),
+    "interval_neg_2": page(
+        "intervals", "The negation of an interval, two-limb bounds",
+        form("-X", I2, result=I2, note=EXACT_INTERVAL),
+    ),
+    "interval_sub_2": page(
+        "intervals", "Difference of intervals, two-limb bounds",
+        form("X - Y", I2, I2, result=I2, note=NOT_CONSTEXPR_INTERVAL),
+        form("X -= Y", I2, I2, result=I2, note=NOT_CONSTEXPR_INTERVAL),
+    ),
+    "interval_make_2": page(
+        "intervals", "An interval from two two-limb numbers",
+        form("Interval<T, 2>(lo, hi)", E2, E2, result=I2, note="implicit for one operand; " + EXACT_INTERVAL),
+        form("Interval<T, 2>(lo, hi)", T, T, result=I2, note=TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
+        form("Interval<T, 2>(a)", T, result=I2, note="implicit; $l_o = h_i = a$, " + TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
+        form("Interval<T, 2>(a)", E2, result=I2, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
+    ),
+    "interval_mul_2": page(
+        "intervals", "Product of intervals, two-limb bounds",
+        form("X * Y", I2, I2, result=I2,
+             note=NOT_CONSTEXPR_INTERVAL + "; the kernel is an ordinary inline function in every setting, which the "
+                  "compiler may call rather than inline"),
+        form("X *= Y", I2, I2, result=I2, note=NOT_CONSTEXPR_INTERVAL),
+    ),
+    "interval_hull_1": page(
+        "intervals", "The hull of two intervals, one-limb bounds",
+        form("X.hull(Y)", I1, I1, result=I1, note=EXACT_INTERVAL),
+    ),
+    "interval_intersection_1": page(
+        "intervals", "The intersection of two intervals, one-limb bounds",
+        form("X.intersection(Y)", I1, I1, result=I1, note=EXACT_INTERVAL),
+    ),
+    "interval_hull_2": page(
+        "intervals", "The hull of two intervals, two-limb bounds",
+        form("X.hull(Y)", I2, I2, result=I2, note=EXACT_INTERVAL),
+    ),
+    "interval_intersection_2": page(
+        "intervals", "The intersection of two intervals, two-limb bounds",
+        form("X.intersection(Y)", I2, I2, result=I2, note=EXACT_INTERVAL),
+    ),
+    "interval_mid_rad_1": page(
+        "intervals", "The midpoint and radius of an interval, one-limb bounds",
+        form("X.midpoint()", I1, result=E1, note="$m$; " + ROUNDS_CONSTEXPR),
+        form("X.radius()", I1, result=T, note="$r$; " + ROUNDS_CONSTEXPR),
+    ),
+    "interval_to_ball_1": page(
+        "intervals", "A ball that contains an interval, one-limb bounds",
+        form("Ball<T, 1>(X)", I1, result=B1, note="explicit; " + ROUNDS_CONSTEXPR),
+    ),
+    "interval_split_1": page(
+        "intervals", "An interval split at its midpoint, one-limb bounds",
+        form("X.split()", I1, result="Split<Interval<T, 1>>",
+             note="`left` is $[a_l, a_u]$ and `right` is $[b_l, b_u]$; " + ROUNDS_CONSTEXPR),
+    ),
+    "ball_to_interval_1": page(
+        "ball", "The smallest interval that contains a ball, one-limb center",
+        form("Interval<T, 1>(X)", B1, result=I1, group="intervals", note="explicit; " + ROUNDS_CONSTEXPR),
+    ),
     # The building blocks of the intervals: parts of the interval kernels.
     "mul_dir_1": page("building-blocks", "Both directed products of two limbs, a zero factor giving zero"),
     "add_ball_2_2": page("building-blocks", "A sum of two-limb numbers with a bound of its error"),
@@ -690,6 +797,17 @@ EXACT = [
           form("X.is_whole()", "Ball<T, K>", result="bool")),
     exact("construction", "whether it is the empty set (its radius is a NaN)",
           form("X.is_empty()", "Ball<T, K>", result="bool")),
+    exact("construction", "the midpoint of the interface Ball shares with Interval: the center",
+          form("X.midpoint()", "Ball<T, K>", result="Expansion<T, K>")),
+    exact("intervals", "the point 0: $[0, 0]$",
+          form("Interval<T, K>()", result="Interval<T, K>")),
+    exact("intervals", "the empty set: $(+\\infty, -\\infty)$",
+          form("Interval<T, K>::empty()", result="Interval<T, K>")),
+    exact("intervals", "the whole line: $[-\\infty, +\\infty]$",
+          form("Interval<T, K>::whole()", result="Interval<T, K>")),
+    exact("intervals", "the stored bounds; $+\\infty$ and $-\\infty$ for the empty set",
+          form("X.lower(), X.upper()", "Interval<T, K>", result="Expansion<T, K>"),
+          form("X.lower_as<T>(), X.upper_as<T>()", I1, result=T)),
     exact("construction", "$-1$, $0$ or $+1$, from the leading limb; $0$ for NaN",
           form("sign(x)", "Expansion<T, K>", result="int")),
     exact("construction", "whether the leading limb is finite",

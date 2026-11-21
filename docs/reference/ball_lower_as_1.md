@@ -12,7 +12,12 @@ $$l \le x \text{ for every } x \in X.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.lower_as<T>()` | `Ball<T, 1>` | `T` | `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+| `X.lower()` | `Ball<T, 1>` | `Expansion<T, 1>` | the same value as a one-limb number; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

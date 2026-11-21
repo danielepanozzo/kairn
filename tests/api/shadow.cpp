@@ -185,6 +185,40 @@ double use_every_operation(UseT use_a, UseT use_b) {
     const B2 use_k2(kairn::integer<E2>(7));
     use_add(use_k1.radius() + use_k2.center().limb[0]);
 
+    // Intervals of one and two limbs: the constructors, the states, every operator and function,
+    // with and without the marker; and the functions of a Ball of the interface the two share.
+    using I1 = kairn::Interval<UseT, 1>;
+    using I2 = kairn::Interval<UseT, 2>;
+    const I1 use_v1(use_a, use_a + 1), use_v1p(use_a), use_v1e{E1(use_b), E1(use_a)}, use_v1m(unverified(use_b), use_a);
+    const I2 use_v2(use_x, use_x + UseT(1)), use_v2p(use_a), use_v2t(use_b, use_a), use_v2m(unverified(use_x), use_x);
+    use_add((use_v1 + use_v1p).lower().limb[0] + (use_v1 - use_v1e).upper().limb[0] + (use_v1 * use_v1m).lower().limb[0] +
+            (-use_v1).upper().limb[0] + (unverified(use_v1) + use_v1).lower().limb[0] + (-unverified(use_v1)).lower().limb[0]);
+    use_add((use_v2 + use_v2p).lower().limb[1] + (use_v2 - use_v2t).upper().limb[1] + (use_v2 * use_v2m).lower().limb[1] +
+            (-use_v2).upper().limb[1] + (use_v2 * unverified(use_v2)).lower().limb[1]);
+    I1 use_v1a = use_v1;
+    use_v1a += use_v1p;
+    use_v1a -= unverified(use_v1p);
+    use_v1a *= use_v1e;
+    I2 use_v2a = use_v2;
+    use_v2a += unverified(use_v2p);
+    use_v2a -= use_v2p;
+    use_v2a *= use_v2t;
+    use_add(use_v1a.lower().limb[0] + use_v2a.upper().limb[1] + I1::empty().lower().limb[0] + I2::whole().upper().limb[1] +
+            I1().lower().limb[0]);
+    use_add(use_v1.hull(use_v1e).lower().limb[0] + use_v1.intersection(unverified(use_v1e)).upper().limb[0] +
+            use_v2.hull(unverified(use_v2t)).lower().limb[1] + use_v2.intersection(use_v2t).upper().limb[1]);
+    const kairn::Split<I1> use_halves = use_v1.split();
+    use_add(use_v1.midpoint().limb[0] + use_v1.radius() + use_halves.left.upper().limb[0] + use_halves.right.lower().limb[0] +
+            use_v1.template lower_as<UseT>() + use_v2.template upper_as<UseT>() + use_v2.template lower_as<UseT>());
+    const B1 use_ib(use_v1), use_ibm(unverified(use_v1)), use_nb(use_b2), use_nbm(unverified(use_b2));
+    const I1 use_bi(use_b1), use_bim(unverified(use_b1));
+    const B2 use_fi = B2::from_interval(use_a, use_a + 1), use_fim = B2::from_interval(unverified(use_b), use_a);
+    use_add(use_ib.radius() + use_ibm.radius() + use_nb.radius() + use_nbm.radius() + use_bi.lower().limb[0] +
+            use_bim.upper().limb[0] + use_fi.radius() + use_fim.center().limb[1]);
+    use_add(use_b1.template lower_as<UseT>() + use_b1.template upper_as<UseT>() + use_b1.lower().limb[0] +
+            use_b1.upper().limb[0] + use_b2.template lower_as<UseT>() + use_b2.template upper_as<UseT>() +
+            use_b2.midpoint().limb[0] + use_b1.midpoint().limb[0]);
+
     // The building blocks on T, each with and without the marker, and the conversion of a sum.
     const kairn::SumAndError<UseT> use_sum2 = kairn::two_sum(use_a, use_b);
     const auto [use_fs, use_fe] = kairn::fast_two_sum(use_a, use_b);

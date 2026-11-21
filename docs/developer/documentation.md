@@ -76,8 +76,9 @@ and runs it (`api.example.*`, registered in `tests/api/CMakeLists.txt`), and the
 its own results and exits with a status other than 0 when one is wrong. When a page shows what a
 program prints, the output is a file next to it, `PROGRAM.txt`, included the same way, and the test
 compares the program's output with it (`tests/api/example_output.cmake`), so the output must be
-the same on every platform. [Accurate sums](../tutorials/accurate-sums.md) is built this way, once
-with the build's flags and once per contraction setting of the compiler. After changing such a
+the same on every platform. [Accurate sums](../tutorials/accurate-sums.md) and
+[The range of a polynomial](../tutorials/intervals.md) are built this way, once with the build's
+flags and once per contraction setting of the compiler. After changing such a
 program, write its new output into the `.txt` file and check the page that includes it.
 
 ## Reference pages

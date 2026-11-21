@@ -348,8 +348,8 @@ set(KAIRN_CROSSCHECK_CASES 20000 CACHE STRING
 set(KAIRN_CROSSCHECK_QUICK_CASES 6000 CACHE STRING
   "Random cases in each cross-check of the compiled runners of the quick tier")
 set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-checks")
-# The interval kernels of Milestone 2 (33, the kernels of KAIRN_NOT_PUBLIC_YET from mul_dir_1 to
-# ball_to_interval_1) have fewer cases in the quick tier, to keep its time on the hosted runners:
+# The interval kernels of Milestone 2 (the 33 below, their building blocks among them) have fewer
+# cases in the quick tier, to keep its time on the hosted runners:
 # 2000, the first of the full tier's 20 000, on which their guards still see every class
 # (docs/developer/testing.md, "Time").
 set(KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES 2000 CACHE STRING
@@ -572,20 +572,14 @@ set(KAIRN_NOT_YET_CROSS_CHECKED)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
-# whose public functions (sum, dot, the bounds as functions of n) come with BallVector, the
-# interval kernels and the kernels of their bounds, whose public functions (Interval, the
-# conversions and the bounds of a Ball) come later, and the steps of the maps and the kernels of
-# the folds of maxima (architecture.md, "Maps", "Folds of maxima"), whose public functions come
-# with BallVector too. They are cross-checked like every kernel; the
-# public interface has no form of them.
+# whose public functions (sum, dot, the bounds as functions of n) come with BallVector, and the
+# steps of the maps and the kernels of the folds of maxima (architecture.md, "Maps", "Folds of
+# maxima"), whose public functions come with BallVector too. They are cross-checked like every
+# kernel; the public interface has no form of them. (The interval kernels left this list with
+# include/kairn/interval.hpp: the public interface reaches each, or lists it as a building block.)
 set(KAIRN_NOT_PUBLIC_YET
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
   sum_fast_entry_step_2 fold_finish_1 fold_finish_2
-  mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2 mul_ext_2_2
-  interval_make_1 interval_neg_1 interval_add_1 interval_sub_1 interval_mul_1 interval_add_2 ball_lower_as_1
-  ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
-  interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
-  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1
   sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
   mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
   axpy_entry_step_2_1

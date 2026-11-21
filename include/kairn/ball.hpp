@@ -8,8 +8,16 @@
 /// power of two of ldexp and half (two or three calls of it when 2^n is not a number of T), the
 /// constructor kernels ball_make_1 and ball_make_2 (from a center and a radius, or from a constant
 /// of kairn::rational), and for the sign predicates of two limbs the comparisons lt_1_2, lt_2_1
-/// and eq_2_1. Like every operation, each needs the kairn::unverified marker while gen/claims.json
-/// does not mark its kernel proved.
+/// and eq_2_1. The functions of the interface that Ball shares with Interval
+/// (docs/developer/design/milestone2.md, "One enclosure interface") call the kernels of that
+/// section: the bounds of a ball as numbers of T (ball_lower_as_k, ball_upper_as_k), the ball of
+/// one limb of an interval (interval_to_ball_1), the ball of two limbs from an interval of two T
+/// (ball_from_interval_2), and the narrowing of a ball of two limbs to one (ball_narrow_2_1).
+/// Like every operation, each needs the kairn::unverified marker while gen/claims.json does not
+/// mark its kernel proved.
+///
+/// This header includes kairn/interval.hpp at its end, so that Interval and the conversions
+/// between the two types are there whichever of the two headers a program includes.
 #pragma once
 
 #include "expansion.hpp"
@@ -32,6 +40,8 @@ struct ball_kernels<T, 1> {
     using scale_pow2 = gen::bounds::ball_mul_pow2_1_full<T>;
     using neg = gen::bounds::ball_neg_1<T>;
     using make = gen::bounds::ball_make_1<T>;
+    using lower_as = gen::bounds::ball_lower_as_1<T>;
+    using upper_as = gen::bounds::ball_upper_as_1<T>;
 };
 template <class T>
 struct ball_kernels<T, 2> {
@@ -42,6 +52,8 @@ struct ball_kernels<T, 2> {
     using scale_pow2 = gen::bounds::ball_mul_pow2_2_full<T>;
     using neg = gen::bounds::ball_neg_2<T>;
     using make = gen::bounds::ball_make_2<T>;
+    using lower_as = gen::bounds::ball_lower_as_2<T>;
+    using upper_as = gen::bounds::ball_upper_as_2<T>;
 };
 
 /// Whether the kernel that makes a ball from a center is proved: ball_make_1 or ball_make_2.
@@ -128,6 +140,55 @@ KAIRN_FORCEINLINE constexpr void check_ball_exact([[maybe_unused]] const Ball<T,
                        "empty set), so no guarantee applies to the result");
 #endif
 }
+
+// The functions of the interface that Ball shares with Interval (milestone2.md, "One enclosure
+// interface"), without their markers and constraints: one kernel each, inline and constexpr in
+// every setting of KAIRN_ENCLOSURE_CODE, as the constructors are. Each rounds, so each checks the
+// environment, the rounding mode included, then a canonical ball: the bounds of a ball as numbers
+// of T compute under rounding to nearest what rounding down or up gives, and the narrowing of two
+// limbs to one widens the radius by radd. The ball from an interval of two T guards the bounds
+// (rule R3) and halves them; it accepts any two values of T.
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr T ball_lower_as(const Ball<T, K>& x) noexcept {
+    check_ball(x);
+    T l = T(0);
+    if constexpr (K == 1) {
+        gen::ball_lower_as_1(x.center().limb[0], x.radius(), l);
+    } else {
+        gen::ball_lower_as_2(x.center().limb[0], x.center().limb[1], x.radius(), l);
+    }
+    return l;
+}
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr T ball_upper_as(const Ball<T, K>& x) noexcept {
+    check_ball(x);
+    T h = T(0);
+    if constexpr (K == 1) {
+        gen::ball_upper_as_1(x.center().limb[0], x.radius(), h);
+    } else {
+        gen::ball_upper_as_2(x.center().limb[0], x.center().limb[1], x.radius(), h);
+    }
+    return h;
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Ball<T, 1> narrow(const Ball<T, 2>& x) noexcept {
+    check_ball(x);
+    T c = T(0), r = T(0);
+    gen::ball_narrow_2_1(x.center().limb[0], x.center().limb[1], x.radius(), c, r);
+    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Ball<T, 2> ball_from_interval(std::type_identity_t<T> lo, std::type_identity_t<T> hi) noexcept {
+    check_environment();
+    Expansion<T, 2> c;
+    T r = T(0);
+    gen::ball_from_interval_2(lo, hi, c.limb[0], c.limb[1], r);
+    return Ball<T, 2>(kernel_result, c, r);
+}
+// The ball of one limb of an interval of one limb (kernel interval_to_ball_1), after the check of a
+// canonical interval: defined in interval.hpp, with the other conversions.
+template <class T>
+KAIRN_FORCEINLINE constexpr Ball<T, 1> to_ball(const Interval<T, 1>& x) noexcept;
 
 // The operations that round, without their markers and constraints: one kernel each. Where their
 // code is depends on KAIRN_ENCLOSURE_CODE (config.hpp): declared here, defined in
@@ -465,6 +526,124 @@ public:
         }
         return m && r_ == 0;
     }
+
+    // The interface that Ball shares with Interval (docs/developer/design/milestone2.md, "One
+    // enclosure interface"). Not here yet, their kernels being still to come: lower() and upper()
+    // of a ball of two limbs (ball_to_interval_2), the conversion of an Interval<T, 2>
+    // (interval_to_ball_2), contains, hull, intersection, split, is_entire and the three-valued
+    // comparisons.
+
+    /// The midpoint: the center, for code written once for a Ball and an Interval; 0 for the whole
+    /// line, NaN limbs for the empty set.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
+    constexpr const Expansion<T, K>& midpoint() const noexcept { return c_; }
+    /// A lower bound of the ball as a number of T, for U = T (kernel ball_lower_as_1 or
+    /// ball_lower_as_2). Proved, in the IEEE model, for a canonical ball: +inf for the empty set;
+    /// otherwise at most every member, so -inf for the whole line. For one limb and a finite ball,
+    /// exactly RD(c - r), the largest number of T not above c - r, in the format with overflow (-inf
+    /// below -Omega). For two limbs, the center rounded down to T, minus the radius, rounded down:
+    /// when the center, the radius and the result are finite, |l - (c - r)| <= 5 u (|c| + r) + 3 eta;
+    /// no number of steps of T from RD(c - r) is claimed, since the rounding of the center moves the
+    /// bound by up to a gap of T at c, which is many gaps at c - r when r is close to |c|.
+    /// Rounds (it computes under rounding to nearest what rounding down would give): preceded, when
+    /// KAIRN_CHECKS is 1, by the check of the environment, the rounding mode included, and of a
+    /// canonical ball (config.hpp). constexpr. A U other than T needs conversions between limb types,
+    /// which Kairn does not have yet (milestone2.md, question 16).
+    template <class U>
+        requires(std::is_same_v<U, T> && detail::proof_checked<typename detail::ball_kernels<T, K>::lower_as>)
+    constexpr U lower_as() const noexcept {
+        return detail::ball_lower_as(*this);
+    }
+    /// An upper bound of the ball as a number of T, for U = T (kernel ball_upper_as_1 or
+    /// ball_upper_as_2). Proved, in the IEEE model, for a canonical ball: -inf for the empty set;
+    /// otherwise at least every member, so +inf for the whole line. For one limb and a finite ball,
+    /// exactly RU(c + r), the smallest number of T not below c + r, in the format with overflow (+inf
+    /// above Omega). For two limbs, the center rounded up to T, plus the radius, rounded up: when the
+    /// center, the radius and the result are finite, |h - (c + r)| <= 5 u (|c| + r) + 3 eta; no
+    /// number of steps of T from RU(c + r) is claimed. Rounds, and is checked, as lower_as;
+    /// constexpr.
+    template <class U>
+        requires(std::is_same_v<U, T> && detail::proof_checked<typename detail::ball_kernels<T, K>::upper_as>)
+    constexpr U upper_as() const noexcept {
+        return detail::ball_upper_as(*this);
+    }
+    /// The lower bound of a ball of one limb as a number of one limb (kernel ball_lower_as_1): the
+    /// value of lower_as<T>(), RD(c - r) for a finite ball, +inf for the empty set, -inf for the
+    /// whole line; that is also the lower bound of Interval<T, 1>(X), the smallest interval of T that
+    /// contains the ball. Rounds, and is checked, as lower_as; constexpr.
+    constexpr Expansion<T, 1> lower() const noexcept
+        requires(K == 1 && detail::proof_checked<gen::bounds::ball_lower_as_1<T>>)
+    {
+        return Expansion<T, 1>(detail::ball_lower_as(*this));
+    }
+    /// The upper bound of a ball of one limb as a number of one limb (kernel ball_upper_as_1): the
+    /// value of upper_as<T>(), RU(c + r) for a finite ball, -inf for the empty set, +inf for the
+    /// whole line; that is also the upper bound of Interval<T, 1>(X). Rounds, and is checked, as
+    /// lower_as; constexpr.
+    constexpr Expansion<T, 1> upper() const noexcept
+        requires(K == 1 && detail::proof_checked<gen::bounds::ball_upper_as_1<T>>)
+    {
+        return Expansion<T, 1>(detail::ball_upper_as(*this));
+    }
+
+    /// The ball of one limb that contains the interval X (kernel interval_to_ball_1), its center a
+    /// midpoint of X and its radius the smallest for that center (the listing is that of
+    /// X.midpoint() and X.radius()), but for an unbounded interval, which becomes the whole line,
+    /// center 0 and radius +inf (a ball cannot be a half-line). Proved, in the IEEE model, for a
+    /// canonical interval: the ball is canonical, and empty exactly when X is; for a
+    /// bounded X = [l, h] it is a finite ball whose center c has l <= c <= h and
+    /// |c - (l + h)/2| <= u |(l + h)/2| + eta, and whose radius is the smallest number of T for which
+    /// [c - r, c + r] contains X, RU(max(c - l, h - c)). Explicit: the conversion widens the set.
+    /// Rounds (sums and halvings): preceded, when KAIRN_CHECKS is 1, by the check of the environment,
+    /// the rounding mode included, and of a canonical interval (config.hpp). constexpr. For two
+    /// limbs not yet: its kernel, interval_to_ball_2, is still to come.
+    explicit constexpr Ball(const Interval<T, K>& x) noexcept
+        requires(K == 1 && detail::proof_checked<gen::bounds::interval_to_ball_1<T>>)
+        : Ball(detail::to_ball(x)) {}
+    /// The same with a marked operand: see kairn::Unverified.
+    explicit constexpr Ball(const Unverified<Interval<T, K>>& x) noexcept
+        requires(K == 1)
+        : Ball(detail::to_ball(x.value)) {}
+    /// The ball of two limbs whose center is the midpoint of [lo, hi], two values of T (kernel
+    /// ball_from_interval_2), each guarded (rule R3): Ball<T, 2>::from_interval(lo, hi). Proved, in
+    /// the IEEE model, for any two values of T: the ball is canonical; the whole line, center 0 and
+    /// radius +inf, when a bound is a NaN, whatever the other (a NaN says that something failed
+    /// upstream); when lo <= hi and both are finite, a finite ball that contains [lo, hi], and when
+    /// moreover lo/2 and hi/2 are numbers of T (neither bound an odd multiple of eta below twice the
+    /// smallest normal number) its center is (lo + hi)/2 exactly, the sum of the halves as two
+    /// limbs, and its radius RU((hi - lo)/2), the smallest of T for that center; the whole line when
+    /// lo <= hi, lo < +inf, hi > -inf and a bound is infinite (a ball cannot be a half-line); the
+    /// empty set otherwise, that is for lo > hi, [+inf, +inf] and [-inf, -inf], as Interval(lo, hi).
+    /// Rounds (halvings and a difference rounded up): preceded, when KAIRN_CHECKS is 1, by the check
+    /// of the environment, the rounding mode included; every value of T is accepted. constexpr.
+    static constexpr Ball from_interval(T lo, T hi) noexcept
+        requires(K == 2 && detail::proof_checked<gen::bounds::ball_from_interval_2<T>>)
+    {
+        return detail::ball_from_interval<T>(lo, hi);
+    }
+    /// The same with a marked operand.
+    static constexpr Ball from_interval(Unverified<T> lo, T hi) noexcept
+        requires(K == 2)
+    {
+        return detail::ball_from_interval<T>(lo.value, hi);
+    }
+    /// A ball of one limb that contains the ball X of two limbs (kernel ball_narrow_2_1): the leading
+    /// limb of the center, and the radius widened by the second limb, rounded up. Proved, in the
+    /// IEEE model, for a canonical X (statements B1 to B4 of milestone1.md, "Ball kernels"): the
+    /// result is canonical, empty exactly when X is, and if it is a finite ball then X is one and the
+    /// result contains every member of X; so it contains X in every case, the whole line counting as
+    /// containing everything. It is a finite ball when X is one and |c| + r is at most
+    /// 2^(e_max - 2), a quarter of the overflow threshold (2^1022 for double, 2^126 for float).
+    /// Explicit, as the narrowing of a number: the set grows. Rounds (radd): preceded, when
+    /// KAIRN_CHECKS is 1, by the check of the environment, the rounding mode included, and of a
+    /// canonical ball (config.hpp). constexpr.
+    template <int J = 2>
+        requires(K == 1 && J == 2 && detail::proof_checked<gen::bounds::ball_narrow_2_1<T>>)
+    explicit constexpr Ball(const Ball<T, 2>& x) noexcept : Ball(detail::narrow(x)) {}
+    /// The same with a marked operand.
+    explicit constexpr Ball(const Unverified<Ball<T, 2>>& x) noexcept
+        requires(K == 1)
+        : Ball(detail::narrow(x.value)) {}
 };
 
 namespace detail {
@@ -797,3 +976,7 @@ KAIRN_GEN_POP_WARNINGS
 #else
 #include "ball_operations.hpp"
 #endif
+
+// Interval<T, k> and the conversions between the two types (interval.hpp includes this header
+// first, so the two are defined in this order whichever a program includes).
+#include "interval.hpp"

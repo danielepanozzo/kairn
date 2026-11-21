@@ -1,7 +1,8 @@
 # What holds today
 
-Kairn's public headers cover `Expansion<T, 1>`, `Expansion<T, 2>` and `Ball<T, 1>`, `Ball<T, 2>`
-for `T` = `float` and `double`. This page says, for each operation, what is proved, what the
+Kairn's public headers cover `Expansion<T, 1>`, `Expansion<T, 2>`, `Ball<T, 1>`, `Ball<T, 2>` and
+`Interval<T, 1>`, `Interval<T, 2>` for `T` = `float` and `double`. This page says, for each
+operation, what is proved, what the
 library returns at overflow and for infinite and NaN values, and what is not proved yet. It
 describes the repository as `gen/claims.json` stands in this version; the compiler enforces the
 current status on its own (below), so the code cannot fall behind it. The design is in the
@@ -48,9 +49,10 @@ of an UNVERIFIED one has `verified == false` and no constants to read, so that n
 be built on a number that is only a target.
 
 In this version every kernel that an operation of these headers calls is proved, so no operation
-needs the marker; the kernels of Milestone 2 written so far are proved too, and no operation calls
-them yet ([reference](../reference/index.md)). It is how the operations still to come (three and four limbs, division, square
-root) will ship before their proofs.
+needs the marker; the kernels of Milestone 2 written so far are proved too, and those of the loops
+over arrays are not called by any operation yet ([reference](../reference/index.md)). It is how the
+operations still to come (three and four limbs, division, square root) will ship before their
+proofs.
 
 ## The operations
 
@@ -81,7 +83,11 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 | `Ball`: `ldexp(X, n)`, `half(X)` ([`ball_mul_pow2_1_full`](../reference/ball_mul_pow2_1_full.md), [`ball_mul_pow2_2_full`](../reference/ball_mul_pow2_2_full.md)) | containment of $2^n x$ for all $x \in X$, and the result is $2^n X$ exactly when each limb of its center and its radius is zero or above the smallest normal number of `T`; when $2^n$ is a number of `T` ([below](#overflow-and-non-finite-values) for the other $n$) | B1 to B4; a finite ball when $(\lvert c\rvert + r)\,2^n \le 2^{e_{\max}-2}$ |
 | `Ball`: `X.certainly_positive()`, `X.certainly_negative()`, `X.certainly_zero()` (for two limbs [`lt_1_2`](../reference/lt_1_2.md), [`lt_2_1`](../reference/lt_2_1.md), [`eq_2_1`](../reference/eq_2_1.md); for one, comparisons of `T`) | exactly whether every member is positive, negative, or zero | false for the empty set and for the whole line |
 | the building blocks on `T`: `two_sum`, `fast_two_sum`, `two_prod`, `next_up`, `next_down`, `radd`, `rmul`, `add_down`, `add_up`, `sub_down`, `sub_up`, `mul_down`, `mul_up` ([Building blocks on T](../reference/index.md#building-blocks-on-t)) | each its kernel's statement: an exact sum, an exact product above $2^{2p-1}\eta$, an upper bound for radii, the exact rounding down or up of a sum, a bound of a product on the side asked for | the neighbors, the directed sums and the directed products on every value of `T`; `radd`, `rmul` a NaN for a NaN or $0 \cdot \infty$; `two_sum`, `fast_two_sum`, `two_prod` stated for finite operands, which their pages say more of |
-| `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states | exact (no kernel) | |
+| `Interval`: constructors, `-X`, `X.hull(Y)`, `X.intersection(Y)` (the `interval_make`, `interval_neg`, `interval_hull` and `interval_intersection` kernels of [Interval operations](../reference/index.md#interval-operations)) | | the interval given, or the whole line for a NaN bound and the empty set for reversed bounds ([below](#intervals)); the negation, the hull and the intersection exactly |
+| `Interval`: `X + Y`, `X - Y`, `X * Y` (`interval_add_k`, `interval_sub_k`, `interval_mul_k`) | | I1 to I5 ([below](#intervals)): containment in every case, unbounded and empty operands included; one limb: the tightest interval of `T` for sums and differences, for products the tightest or one number of `T` wider on each side; two limbs: each bound within about $8u^2$ (sums) or $10u^2$ (products) of the exact one, relative to it, plus about twice the smallest normal number |
+| `Interval<T, 1>`: `X.midpoint()`, `X.radius()`, `X.split()`, `Ball<T, 1>(X)`, `Interval<T, 1>(B)` ([`interval_mid_rad_1`](../reference/interval_mid_rad_1.md), [`interval_split_1`](../reference/interval_split_1.md), [`interval_to_ball_1`](../reference/interval_to_ball_1.md), [`ball_to_interval_1`](../reference/ball_to_interval_1.md)) | | the midpoint within one rounding and $\eta$ of the exact one, inside the interval, with the smallest radius of `T` for it; the values of `mid` and `rad` of IEEE 1788 on the special intervals; two parts whose union is the interval; the conversions contain what they convert, the interval of a ball being the smallest of `T` |
+| `Ball`: `X.lower_as<T>()`, `X.upper_as<T>()`, `lower()`, `upper()` of one limb, `Ball<T, 2>::from_interval(lo, hi)`, `Ball<T, 1>(X)` of a ball of two limbs ([`ball_lower_as_1`](../reference/ball_lower_as_1.md), [`ball_lower_as_2`](../reference/ball_lower_as_2.md), [`ball_from_interval_2`](../reference/ball_from_interval_2.md), [`ball_narrow_2_1`](../reference/ball_narrow_2_1.md)) | | a bound of every member, $+\infty$ and $-\infty$ for the empty set: for one limb exactly $\mathrm{RD}(c - r)$ and $\mathrm{RU}(c + r)$, for two within $5u(\lvert c\rvert + r) + 3\eta$ of $c \mp r$; a ball of two limbs that contains $[lo, hi]$, with the exact midpoint for its center when the halves are; a ball of one limb that contains the ball of two |
+| `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states, an interval's bounds | exact (no kernel) | |
 | `rational<X>(num, den)`, `integer<X>(n)` (no kernel: [Constants from fractions](../reference/rational.md)) | specified exactly, bit for bit; tested for equality with the oracle; **not machine-checked** ([below](#constants-from-fractions)) | integer arithmetic only: the same result in every environment; for `den` = 0, the canonical NaN at run time |
 
 A one-limb operand next to a two-limb one is its limb: `x + y` with `y` an `Expansion<T, 1>` is
@@ -212,6 +218,86 @@ packed kernels, which compute the fix-up in every lane, cost 16 to 54% more on `
 105% more on `mul_2_2` with it. Loops of independent operations are what the packed kernels, and
 the batch kernels that D5 plans without the fix-up, are for.
 
+## Intervals
+
+**An `Interval<T, k>` is one of two kinds of set**
+([Values of an interval](../developer/design/milestone2.md#values-of-an-interval)): a *nonempty
+interval* $[\ell, h]$, the real numbers between two bounds, each a number of `T` or of two limbs,
+or $-\infty$ below and $+\infty$ above ($[1, +\infty]$ is a half-line, and does not contain
+$+\infty$: the members are real numbers); or the *empty set*, stored as $(+\infty, -\infty)$. There
+is no NaN interval. `Interval(lo, hi)` makes $[lo, hi]$ when $lo \le hi$, $lo < +\infty$ and
+$hi > -\infty$; **the whole line when a bound is a NaN**, whatever the other bound is (a NaN says
+that something failed upstream, and the whole line is the answer that is always true); and the
+empty set otherwise: reversed bounds, $[+\infty, +\infty]$ and $[-\infty, -\infty]$. So
+`Interval(a)` of an infinite `a` is the empty set, no real number being infinite, where `Ball(a)`
+is the whole line. `Interval()` is $[0, 0]$.
+
+**What is proved of every operation**, in Flocq's model of IEEE 754 with overflow, infinities and
+NaN, for canonical operands $X$, $Y$ and the result $Z$ of `X + Y`, `X - Y`, `X * Y` or `-X`
+(statements I1 to I5 of
+[What is stated of an interval kernel](../developer/design/milestone2.md#what-is-stated-of-an-interval-kernel)):
+**I1** $Z$ is canonical; **I2** it is empty exactly when an operand is; **I3** it contains
+$x \circ y$ for every real $x \in X$ and $y \in Y$, unbounded operands included; **I4** how far its
+bounds are from those of the exact range $\{x \circ y\}$; **I5** when it is bounded. The interval
+kernels have no statement of their own in the real model: their statements are the IEEE model's,
+since infinite bounds are ordinary values of an interval.
+
+| | One limb | Two limbs |
+|---|---|---|
+| `X + Y`, `X - Y` | the tightest interval of `T`: the exact bounds rounded outward, $\mathrm{RD}(\ell)$ and $\mathrm{RU}(h)$; for bounded operands, bounded exactly when the exact range is within $\Omega$, and $[\Omega, +\infty]$ when a sum of bounds overflows | each bound within $A\lvert v\rvert + B$ of the exact bound $v$, $A$ about $8u^2$ and $B$ about $2^{-1021}$ for `double` ([`interval_add_2`](../reference/interval_add_2.md) gives them); a bound of the exact range that is zero is returned as zero, so $[0, 0] + [0, 0] = [0, 0]$; bounded when the exact range is within $2^{e_{\max}-2}$ |
+| `X * Y` | the tightest interval of `T` when each product of a finite bound of $X$ and one of $Y$ is zero or at least $2^{2p-1}\eta$ in magnitude ($2^{-969}$ for `double`); otherwise each bound that rounding outward or one number of `T` further; bounded exactly when the exact range is within $\Omega$ | each bound within $A\lvert v\rvert + B$ of $v$, $A$ about $10u^2$ ([`interval_mul_2`](../reference/interval_mul_2.md)), no bound claimed exact; $[0, 0] \cdot X = [0, 0]$ for every nonempty $X$, unbounded included; bounded when the exact range is within $2^{e_{\max}-2}$ |
+| `-X` | exact | exact |
+| `X.hull(Y)`, `X.intersection(Y)` | exact: the smallest interval that contains both, and the common part, the empty set included | the same |
+
+For two limbs the result is an enclosure within a stated bound of the exact range, not the
+tightest interval of two limbs: each bound is the round-to-nearest result moved outward by a bound
+of its own error, so $[1, 1] + [1, 1]$ is not $[2, 2]$ but an interval of width $2d$ around 2, $d$
+being that bound for the sum of two-limb numbers (about $3u^2$ relative to the sum), and only a
+zero is kept exact. Bounded operands whose sum or product overflows give the
+infinite bound on that side, or the whole line, where one limb gives $[\Omega, +\infty]$.
+
+**Midpoint, radius, split and conversions, for one limb**
+([Midpoint, radius and the conversions](../developer/design/milestone2.md#midpoint-radius-and-the-conversions)).
+For a bounded $[\ell, h]$, `X.midpoint()` is a number of `T` in $[\ell, h]$ within
+$u\,\lvert\tfrac{\ell+h}{2}\rvert + \eta$ of the midpoint, and `X.radius()` the smallest number of
+`T` for which the midpoint plus or minus it covers $X$; the whole line gives $0$ and $+\infty$,
+$[\ell, +\infty]$ gives $\Omega$ and $+\infty$, $[-\infty, h]$ gives $-\Omega$ and $+\infty$, the
+empty set two NaN, as `mid` and `rad` of IEEE 1788. `X.split()` returns two intervals whose union
+is $X$, both empty for the empty set; the point at which they meet is a point of $X$, the midpoint
+of the listing ($0$ for the whole line), and only that it is a point of $X$ is claimed.
+`Ball<T, 1>(X)` contains $X$, with the midpoint and the smallest radius, and is the whole line for
+an unbounded $X$ (a ball cannot be a half-line); `Interval<T, 1>(B)` is the smallest interval of `T`
+that contains the ball, $[\mathrm{RD}(c - r), \mathrm{RU}(c + r)]$. Both conversions are explicit:
+each widens the set. Of a `Ball`, `X.lower_as<T>()` and `X.upper_as<T>()` are bounds of every
+member as numbers of `T`, $+\infty$ and $-\infty$ for the empty set: exactly $\mathrm{RD}(c - r)$
+and $\mathrm{RU}(c + r)$ for one limb, and for two within $5u(\lvert c\rvert + r) + 3\eta$ of
+$c \mp r$, no number of steps of `T` being claimed (the center is rounded to `T` first, which moves
+the bound by up to a gap of `T` at $c$); `Ball<T, 2>::from_interval(lo, hi)` contains $[lo, hi]$,
+with the exact midpoint for its center when $lo/2$ and $hi/2$ are numbers of `T`, and has the
+special states of `Interval(lo, hi)`; `Ball<T, 1>(X)` of a ball of two limbs contains it.
+
+**Not claimed, and not here yet.** The sign of a zero bound. The tightest interval of a product of
+one limb in the underflow range above, or of any operation of two limbs. That a product of two
+limbs whose exact range has a bound at zero keeps it: $[0, a] \cdot [b, c]$ gets the lower bound
+of $ab$ moved outward. The constructor of two limbs from a `T` is `make_2`, which gives the number
+exactly, followed by the constructor of an interval of two limbs: a composition of two proved
+kernels, argued and not machine-checked as one statement. Not in the headers yet, their kernels
+being still to come: the predicates and comparisons (`is_empty`, `is_entire`, `contains`, the signs,
+the three-valued comparisons, the relations of IEEE 1788), and for two limbs the midpoint, the
+radius, the split and the conversions between an interval and a ball; no operation takes a number
+as an operand (`X + a`), since no kernel does: `X + Interval(a)` is what a program writes.
+
+**Where Kairn departs from IEEE 1788** ([IEEE 1788](../developer/design/milestone2.md#ieee-1788)).
+Kairn is modeled on the set-based intervals of IEEE Std 1788.1-2017 and is not a conforming
+implementation: it has no decorations, no exceptions, no text input or output, and not the
+standard's required functions (division, square root, `wid`, `mag`, ...). It differs on purpose in
+three points: a NaN bound given to the constructor gives the whole line, where the standard returns
+the empty set and signals; the sign of a zero bound is not specified, where the standard returns
+$-0$ for a zero lower bound and $+0$ otherwise; and a product of one limb in the underflow range is
+*accurate* in the standard's sense, the tightest result widened by at most one number on each side,
+where the standard asks for the tightest. Intervals of two limbs and of `float` are not types of the
+standard, whose one interval type has bounds of `binary64`.
+
 ## Products the program passes in
 
 Kairn's kernels are written so that no compiler can fuse a product into one of their additions
@@ -231,7 +317,8 @@ plus $+0$ is at most fused into one FMA that rounds the product, and its result 
 nothing later can fuse; a compiler that honors signed zeros cannot remove the addition. The guard
 is in the kernels that receive such a value: `add_2_1` (and through it `sub_2_1`, `sub_1_2` and
 their full kernels) on its limb operand, the constructors `make_2`, `make_2_limbs`,
-`ball_make_1` and `ball_make_2` on what they are given, and the entry forms of the building blocks
+`ball_make_1`, `ball_make_2` and `interval_make_1` and the ball from an interval of two `T`
+(`ball_from_interval_2`) on what they are given, and the entry forms of the building blocks
 that add their operands (`two_sum_entry`, `fast_two_sum_entry`, `radd_entry` and the four directed
 sums), on both: `two_sum(a * b, c)` would otherwise not be error-free. A limb operand that a kernel
 only multiplies or compares needs none (`x * a`, comparisons, the scaling of a ball, `ldexp`,
@@ -264,11 +351,19 @@ the comparisons and conversions, every operation of one limb, a ball's negation,
 predicates and constants, `kairn::finite::add`, `sub` and `add_fast`, `rational` and `integer`
 (below), and the building blocks on `T` but `mul_down` and `mul_up`: `next_up`, `next_down`,
 `radd` and `rmul` with the same bits as at run time, the others with the same values (`two_prod`
-through Dekker's product, the same values when its product is exact). Not yet: the products of two
-limbs, `ldexp` and `half` on two limbs and on balls, and the Ball arithmetic, whose kernels contain
-fused operations without a constant-evaluation variant, or whose code is where
-`KAIRN_ENCLOSURE_CODE` puts it; and, by design, `mul_down` and `mul_up`, whose statements are about
-the fused product, which constant evaluation does not have.
+through Dekker's product, the same values when its product is exact). Of intervals: the
+constructors and states, the bounds, the negation, the hull, the intersection, the midpoint, the
+radius, the split and the conversions, and of a ball the functions of the interface it shares with
+intervals (`lower_as`, `upper_as`, `lower`, `upper`, `midpoint`, `from_interval`, the narrowing).
+Not yet: the products of two limbs, `ldexp` and `half` on two limbs and on balls, and the Ball and
+Interval arithmetic, whose kernels contain fused operations without a constant-evaluation variant,
+or whose code is where `KAIRN_ENCLOSURE_CODE` puts it (the sum and the difference of intervals of
+one limb, whose kernels are `constexpr`, among them); and, by design, `mul_down` and `mul_up`, whose
+statements are about the fused product, which constant evaluation does not have. Some special
+values are not constant expressions, though their functions are `constexpr`: the midpoint, the
+radius, the split and the conversion to a ball of the empty set, and the bounds and conversions of
+the empty ball and of the whole line, whose listings compute a NaN or $\infty - \infty$ before
+selecting their result, which GCC and Clang refuse at compile time.
 The canonical infinities and NaN come out of the constructors at compile time
 (`Expansion<double, 2>(INFINITY)` is $(+\infty, 0)$), and so do the states of a ball. GCC and
 Clang refuse, at compile time, an operation that produces an infinity from finite operands or a
@@ -322,12 +417,18 @@ flush-to-zero are in their default state; Kairn never changes them. In a build w
 (or with `KAIRN_CHECKS` defined to 1), every operation checks the environment, then its operands:
 an operator or a function of `kairn::` requires canonical two-limb operands (finite and
 normalized, $(\pm\infty, 0)$ or (NaN, NaN)), a function of `kairn::finite::` normalized ones or a
-leading limb that is not finite, a `Ball` operation canonical balls; `from_limbs` and the
-constructors of `Ball` check what they are given in the same way. A failed check stops the
+leading limb that is not finite, a `Ball` operation canonical balls, an `Interval` operation
+canonical intervals; `from_limbs` and the constructors of `Ball` and of `Interval` check what they
+are given in the same way (reversed bounds and a NaN bound are not reported: they make the empty
+set and the whole line). A failed check stops the
 program with a message, the environment's when the environment is wrong. A program that defines
 `KAIRN_ENVIRONMENT_FAILURE` to a statement that returns gets that statement instead, and the
 operation then goes on without checking its operands, with no guarantee for its result. A function
 whose result cannot depend on the rounding mode (negation, `abs`, the comparisons, the
 conversions to `T`, the accessors and the negation of a `Ball`, the constructors of a `Ball` from a
-`T` or a one-limb number) does not check the rounding mode, so that a program may call it under a
+`T` or a one-limb number, the constructors, the bounds, the negation, the hull and the intersection
+of an `Interval`) does not check the rounding mode, so that a program may call it under a
 directed one; [Getting started](index.md#when-a-check-of-a-build-without-ndebug-fails) lists them.
+The midpoint, the radius and the split of an interval, the conversions between an interval and a
+ball, and the bounds of a ball as numbers of `T` compute sums and halvings under rounding to
+nearest, and are checked as every operation that rounds.

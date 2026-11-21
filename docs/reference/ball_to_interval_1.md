@@ -12,7 +12,11 @@ $$Z = [\mathrm{RD}(c - r), \mathrm{RU}(c + r)].$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `Interval<T, 1>(X)` | `Ball<T, 1>` | `Interval<T, 1>` | explicit; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

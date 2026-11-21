@@ -23,6 +23,16 @@
 //          control turns KAIRN_RATIONAL_CHECK off)
 //   27-28  kairn::mul_down and kairn::mul_up in a constant expression, which they are not usable in
 //          (blocks.hpp says why); the control computes the same at run time
+//   32-37  intervals: an operation of intervals of one and of two limbs, an interval and a number
+//          (no kernel takes one), the implicit conversions of a ball to an interval, of an
+//          interval to a ball and of a ball of two limbs to one (each widens the set, so each is
+//          explicit), and an interval of two limbs from one of one limb (no kernel converts); each
+//          control writes what compiles instead (two intervals of one K, the interval of the
+//          point, the explicit conversion, the bounds)
+//   38     the sum of intervals in a constant expression, which it is not usable in (its code is
+//          where KAIRN_ENCLOSURE_CODE puts it); the control computes the same at run time
+//   39-41  an UNVERIFIED interval operation, constructor and conversion to a ball, written
+//          without the marker, against headers in which every kernel is unverified (as 1-14)
 //   29-31  an UNVERIFIED building block (two_sum, next_up) and the scaling of a ball by a power of
 //          two (half), written without the marker, against headers in which every kernel is
 #if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
@@ -45,7 +55,10 @@
 
 using E1 = kairn::Expansion<double, 1>;
 using E2 = kairn::Expansion<double, 2>;
+using B1 = kairn::Ball<double, 1>;
 using B2 = kairn::Ball<double, 2>;
+using I1 = kairn::Interval<double, 1>;
+using I2 = kairn::Interval<double, 2>;
 
 int main() {
     volatile double v = 1.5;
@@ -54,6 +67,9 @@ int main() {
     [[maybe_unused]] E2 x(kairn::unverified(double(v))), y(kairn::unverified(2 * v));
     [[maybe_unused]] E1 a(v), b(2 * v);
     [[maybe_unused]] B2 p(kairn::unverified(x), 0.5), q(kairn::unverified(y), 0.25);
+    [[maybe_unused]] B1 o(kairn::unverified(a), 0.5);
+    [[maybe_unused]] I1 i(kairn::unverified(double(v)), 2 * v);
+    [[maybe_unused]] I2 j(kairn::unverified(x), y);
     [[maybe_unused]] double s = v;
     double sink = 0;
 #if KAIRN_TEST_CASE == 1
@@ -145,6 +161,59 @@ int main() {
     sink = kairn::next_up(MARK(s));
 #elif KAIRN_TEST_CASE == 31
     sink = kairn::half(MARK(p)).radius();
+#elif KAIRN_TEST_CASE == 32
+#if defined(KAIRN_TEST_CONTROL)
+    sink = (j + j).lower().limb[0];
+#else
+    sink = (i + j).lower().limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 33
+#if defined(KAIRN_TEST_CONTROL)
+    sink = (i + I1(s)).lower().limb[0];
+#else
+    sink = (i + s).lower().limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 34
+#if defined(KAIRN_TEST_CONTROL)
+    const I1 z(o);
+#else
+    const I1 z = o;
+#endif
+    sink = z.lower().limb[0];
+#elif KAIRN_TEST_CASE == 35
+#if defined(KAIRN_TEST_CONTROL)
+    const B1 z(i);
+#else
+    const B1 z = i;
+#endif
+    sink = z.radius();
+#elif KAIRN_TEST_CASE == 36
+#if defined(KAIRN_TEST_CONTROL)
+    const B1 z(p);
+#else
+    const B1 z = p;
+#endif
+    sink = z.radius();
+#elif KAIRN_TEST_CASE == 37
+#if defined(KAIRN_TEST_CONTROL)
+    const I2 z(i.lower(), i.upper());
+#else
+    const I2 z(i);
+#endif
+    sink = z.lower().limb[0];
+#elif KAIRN_TEST_CASE == 38
+#if defined(KAIRN_TEST_CONTROL)
+    const I1 z = I1(1.0, 2.0) + I1(3.0);
+#else
+    constexpr I1 z = I1(1.0, 2.0) + I1(3.0);
+#endif
+    sink = z.lower().limb[0];
+#elif KAIRN_TEST_CASE == 39
+    sink = (MARK(i) + i).lower().limb[0];
+#elif KAIRN_TEST_CASE == 40
+    sink = I1(MARK(s), s).lower().limb[0];
+#elif KAIRN_TEST_CASE == 41
+    sink = B1(MARK(i)).radius();
 #endif
     return sink == 12345 ? 1 : 0;
 }

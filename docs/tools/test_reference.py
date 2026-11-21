@@ -64,6 +64,8 @@ def param_type(param, context):
         return context
     if t == "Ball":
         return "Ball<T, K>"
+    if t == "Interval":
+        return "Interval<T, K>"
     return t
 
 
@@ -83,7 +85,7 @@ def header_operations(root, known):
     """[(where, key, kernels)] for every public declaration whose /// comment names a kernel; key
     is ('op', name, operand types) for an operation and ('traits', 'traits<...>::member')."""
     found = []
-    for fname in ("expansion.hpp", "ball.hpp", "traits.hpp", "blocks.hpp"):
+    for fname in ("expansion.hpp", "ball.hpp", "interval.hpp", "traits.hpp", "blocks.hpp"):
         path = os.path.join(root, "include", "kairn", fname)
         lines = reference.read(path).split("\n")
         context, detail, comment, prefix = None, False, [], ""
@@ -97,9 +99,11 @@ def header_operations(root, known):
                 prefix = "finite::"                              # kairn::finite::add(x, y)
             elif s.startswith("}  // namespace finite"):
                 prefix = ""
-            m = re.match(r"(?:struct|class) (Expansion<T, [12]>|Ball|traits_one_limb|traits<Expansion<T, 2>>) \{", s)
+            m = re.match(r"(?:struct|class) (Expansion<T, [12]>|Ball|Interval|traits_one_limb|traits<Expansion<T, 2>>) \{",
+                         s)
             if m:
-                context = {"Ball": "Ball<T, K>", "traits_one_limb": "traits<T>"}.get(m.group(1), m.group(1))
+                context = {"Ball": "Ball<T, K>", "Interval": "Interval<T, K>",
+                           "traits_one_limb": "traits<T>"}.get(m.group(1), m.group(1))
                 comment = []
                 continue
             if s == "};":
@@ -160,7 +164,7 @@ def form_key(f):
     m = re.fullmatch(r"-(\w+)", code)
     if m:
         return ("op", "operator-", tuple(f["operands"]))
-    m = re.fullmatch(r"\w+\.(\w+)\(\)", code)                     # a member function, X.name()
+    m = re.fullmatch(r"\w+\.(\w+)(?:<[^>]*>)?\((?:\w+)?\)", code)  # a member function, X.name(), X.name<T>(), X.name(Y)
     if m:
         return ("op", m.group(1), tuple(f["operands"][1:]))
     m = re.fullmatch(r"([\w:]+(?:<[^>]*>)?)\((.*)\)", code)
@@ -273,6 +277,18 @@ class Table(unittest.TestCase):
         self.assertIn((("op", "certainly_positive", ()), ("lt_1_2",)), keys)
         self.assertIn((("op", "Ball<T, K>", ("Constant<Expansion<T, K>>",)), ("ball_make_1", "ball_make_2")), keys)
         self.assertIn((("traits", "traits<Expansion<T, 2>>::sub_limb"), ("sub_2_1", "sub_1_2")), keys)
+        # Intervals, and the functions of a Ball of the interface the two share.
+        self.assertIn((("op", "operator*", ("Interval<T, K>", "Interval<T, K>")), ("interval_mul_1", "interval_mul_2")),
+                      keys)
+        self.assertIn((("op", "Interval<T, K>", ("Expansion<T, K>", "Expansion<T, K>")),
+                       ("interval_make_1", "interval_make_2")), keys)
+        self.assertIn((("op", "hull", ("Interval<T, K>",)), ("interval_hull_1", "interval_hull_2")), keys)
+        self.assertIn((("op", "split", ()), ("interval_split_1",)), keys)
+        self.assertIn((("op", "lower_as", ()), ("to_down_2",)), keys)
+        self.assertIn((("op", "lower_as", ()), ("ball_lower_as_1", "ball_lower_as_2")), keys)
+        self.assertIn((("op", "Ball<T, K>", ("Interval<T, K>",)), ("interval_to_ball_1",)), keys)
+        self.assertIn((("op", "Ball<T, K>", ("Ball<T, 2>",)), ("ball_narrow_2_1",)), keys)
+        self.assertIn((("op", "from_interval", ("T", "T")), ("ball_from_interval_2",)), keys)
 
 
 # --- The tool on modified copies ---------------------------------------------------------------

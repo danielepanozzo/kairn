@@ -94,7 +94,9 @@ ENCLOSURE_UNIT = os.path.join(HERE, 'enclosure_unit.cpp')
 # macros, and whether the operation's definition is in the object ('in') or outside it ('out').
 ENCLOSURE_KERNELS = ['ball_add_1_full', 'ball_sub_1_full', 'ball_mul_1_full', 'ball_scale_1_full',
                      'ball_add_2_full', 'ball_sub_2_full', 'ball_mul_2_full', 'ball_scale_2_full',
-                     'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full']
+                     'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full',
+                     'interval_add_1', 'interval_sub_1', 'interval_mul_1',
+                     'interval_add_2', 'interval_sub_2', 'interval_mul_2']
 ENCLOSURE_FORMS = [
     ('outlined', ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_OUTLINED'], 'in'),
     ('external', ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL'], 'out'),
@@ -827,9 +829,22 @@ def control_vectorized(tools, workdir, expected, limb_types, folds=None):
             + ['    ' + text for _, text in failures]), False
 
 
+def ordinary_inline(kernel):
+    """Whether the kernel's C++ is an ordinary inline function, not forced inline: the field
+    ordinary_inline of its description in gen/kernels (gen/README.md)."""
+    path = os.path.join(ROOT, 'gen', 'kernels', f'{kernel}.kernel')
+    with open(path, encoding='utf-8') as f:
+        return any(line.startswith('ordinary_inline:') for line in f)
+
+
 def control_enclosures(tools, workdir, expected, limb_types):
-    """(lines, ok): enclosure_unit.cpp compiled with the operations of Ball inline, as by default,
-    and judged as the outlined form: every function must fail, its operation not being a call."""
+    """(lines, ok): enclosure_unit.cpp compiled with the operations of Ball and Interval inline, as
+    by default, and judged as the outlined form. Every function must fail, its operation not being
+    a call, but two kinds, whose expectation the data say: an operation whose kernel has no fused
+    multiply-add and no product (gen/objcode.json: interval_add_1, interval_sub_1) has nothing that
+    tells its inline code from a call, so it is not judged; and an operation whose kernel is an
+    ordinary inline function (gen/kernels, ordinary_inline: interval_mul_2) may be a call of the
+    kernel in the inline setting too, by design, so what the compiler did is reported, not judged."""
     config = next(c for c in configurations(tools.family, 'quick') if c[0] not in ('-O0', '/Od'))
     obj = os.path.join(workdir, f'enclosure-inline.{"obj" if tools.msvc_style else "o"}')
     try:
@@ -838,13 +853,27 @@ def control_enclosures(tools, workdir, expected, limb_types):
                       ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_INLINE', 'KAIRN_CHECKS=0'], False, workdir)
         program = disasm.Program(tools.disassemble(obj, workdir))
         failures, n = check_enclosure_program(program, expected, limb_types, 'in')
+        form = unit_form(program)
     except (Failure, ValueError) as e:
-        return [f'the operations of Ball inline, judged as outlined, {label(config)}: FAILED: {e}'], False
-    not_calls = [text for _, text in failures if 'the operation is not a call' in text]
-    ok = n == len(ENCLOSURE_KERNELS) * len(limb_types) and len(not_calls) == n
-    return [f'the operations of Ball inline (KAIRN_ENCLOSURE_CODE_INLINE), judged as outlined, {label(config)}: '
-            f'the check fails on {len(not_calls)} of {n} functions as not a call'
-            + ('' if ok else ': FAILED, expected every one')], ok
+        return [f'the operations of Ball and Interval inline, judged as outlined, {label(config)}: FAILED: {e}'], False
+    # The functions the check failed as not a call: (kernel, limb type), the type first in the text.
+    not_call = {(k, text.split()[0]) for k, text in failures if 'the operation is not a call' in text}
+    nothing = [(k, t) for k in ENCLOSURE_KERNELS for t in limb_types
+               if expected[k][form][t]['fma'] == 0 and expected[k][form][t]['mul'] == 0]
+    ordinary = [(k, t) for k in ENCLOSURE_KERNELS for t in limb_types if ordinary_inline(k)]
+    judged = [(k, t) for k in ENCLOSURE_KERNELS for t in limb_types if (k, t) not in nothing + ordinary]
+    failed = [kt for kt in judged if kt in not_call]
+    ok = n == len(ENCLOSURE_KERNELS) * len(limb_types) and len(failed) == len(judged)
+    lines = [f'the operations of Ball and Interval inline (KAIRN_ENCLOSURE_CODE_INLINE), judged as outlined, '
+             f'{label(config)}: the check fails on {len(failed)} of the {len(judged)} functions it can tell from '
+             f'a call as not a call' + ('' if ok else ': FAILED, expected every one')]
+    if nothing:
+        lines.append('    not judged, their kernels having no fused multiply-add and no product: '
+                     + ', '.join(f'{t} {k}' for k, t in nothing))
+    for k, t in ordinary:
+        how = 'inlined the kernel' if (k, t) in not_call else 'called the kernel, an ordinary inline function'
+        lines.append(f'    {t} {k}: the compiler {how} (reported, not judged)')
+    return lines, ok
 
 
 # A fused instruction that operates on a vector register: x86-64 vfmadd213pd and the like (pd, ps),

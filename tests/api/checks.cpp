@@ -83,6 +83,17 @@ const OperandCase operand_cases[] = {
      [] { return (unverified(B1(kairn::detail::kernel_result, E1(v_a), -v_r)) + o.q).radius(); }},
     {"ball.negation", "a ball: is not canonical",
      [] { return (-unverified(B2(kairn::detail::kernel_result, raw(1.0, double(v_a)), v_r))).radius(); }},
+    // An interval that is not canonical cannot be made through the public constructors either: the
+    // internal one makes reversed bounds, and a NaN bound, given to a sum and to a negation; a bound
+    // of two limbs that is not canonical given to the constructor, and an interval with one to the
+    // hull.
+    {"interval.operand", "an interval: is not canonical",
+     [] { return (unverified(I1(kairn::detail::kernel_result, E1(v_c), E1(v_a))) + o.iy).lower().limb[0]; }},
+    {"interval.negation", "an interval: is not canonical",
+     [] { return (-unverified(I1(kairn::detail::kernel_result, E1(not_a_number), E1(v_a)))).lower().limb[0]; }},
+    {"interval.bound", not_canonical, [] { return I2(unverified(raw(1.0, double(v_a))), o.y).lower().limb[1]; }},
+    {"interval.hull", "an interval: is not canonical",
+     [] { return o.jx.hull(unverified(I2(kairn::detail::kernel_result, raw(1.0, double(v_a)), o.y))).lower().limb[1]; }},
     // fast_two_sum's requirement, |a| >= |b|: 2^-60 and 1.5 in the wrong order.
     {"fast_two_sum.order", "fast_two_sum: [|]a[|] < [|]b[|]", [] { return kairn::fast_two_sum(double(v_b), double(v_a)).sum; }},
     // The corner of two_sum: b the largest finite number, a sum that is finite, and an error term
@@ -117,6 +128,15 @@ const Accepted accepted[] = {
     {"fast_two_sum with a NaN operand", [] { return kairn::fast_two_sum(not_a_number, double(v_a)).sum; }},
     {"(NaN, NaN) of two_sum, converted", [] { return E2(kairn::two_sum(not_a_number, double(v_a))).limb[0]; }},
     {"half of the whole line", [] { return kairn::half(unverified(B2::whole())).radius(); }},
+    // Intervals: bounds that are a NaN or reversed, which make the whole line and the empty set
+    // without a report, and the two states as operands.
+    {"Interval(NaN, 1)", [] { return I1(unverified(not_a_number), v_a).upper().limb[0]; }},
+    {"Interval(2.25, 1.5)", [] { return I1(unverified(double(v_c)), v_a).lower().limb[0]; }},
+    {"Interval((+inf, 0), (NaN, NaN))", [] { return I2(unverified(pair(infinity, 0.0)), pair(not_a_number, not_a_number)).upper().limb[0]; }},
+    {"empty + interval", [] { return (unverified(I1::empty()) + o.iy).lower().limb[0]; }},
+    {"whole * interval", [] { return (unverified(I2::whole()) * o.jy).upper().limb[0]; }},
+    {"midpoint of the empty set", [] { return I1::empty().midpoint().limb[0]; }},
+    {"the bounds of the empty ball", [] { return B2::empty().lower_as<double>(); }},
 };
 
 void say(const char* format, const char* a = "", const char* b = "") {

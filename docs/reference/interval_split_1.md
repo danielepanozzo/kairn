@@ -12,7 +12,11 @@ $$X = [a_l, a_u] \cup [b_l, b_u].$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.split()` | `Interval<T, 1>` | `Split<Interval<T, 1>>` | `left` is $[a_l, a_u]$ and `right` is $[b_l, b_u]$; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

@@ -35,7 +35,8 @@
 #   rational_runner.cpp (../crosscheck.py compiled). The full tier has more cases, through the runner of every
 #   flag set too, and rational.cpp built with every flag set.
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
-#   api.example.accurate_sums.* also compares it with the text its tutorial shows.
+#   api.example.accurate_sums.* and api.example.intervals.* also compare it with the text their
+#   tutorials show.
 
 set(_api_include "${PROJECT_SOURCE_DIR}/include")
 if(_msvc_style)
@@ -63,13 +64,12 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 # --- The public interface against the oracle --------------------------------------------------
 #
 # The building blocks, which no public operation computes on its own, and the entry kernels that no
-# public operation calls yet; runner.cpp lists the same, with why.
-# The interval kernels of Milestone 2 are in neither list: the oracle does not judge them yet
-# (KAIRN_NOT_YET_CROSS_CHECKED, ../CMakeLists.txt), and coverage.cmake requires such a kernel to be
-# in none of the runner's lists. When the oracle reads them, the building blocks among them
-# (mul_dir_1, the bounds of two limbs, mul_ext_2_2) go in the first, the others in the second.
+# public operation calls yet; runner.cpp lists the same, with why. The building blocks of the
+# interval kernels of Milestone 2 (mul_dir_1, the bounds of two limbs, mul_ext_2_2) are in the
+# first; every other interval kernel is reached by a public form.
 set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
-  sub_up_1)
+  sub_up_1 mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2
+  mul_ext_2_2)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2
   ball_mul_pow2_1 ball_mul_pow2_2)
 set(KAIRN_API_CASES 10000 CACHE STRING
@@ -503,7 +503,7 @@ endif()
 foreach(_case_name IN ITEMS 1:sub_2_2_full 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_1 6:ball_add_2_full
                             7:sub_2_2_full_assign 8:mul_pow2_2_full 9:ball_scale_2_full 10:traits_constant
                             12:to_nearest_2_narrowing 13:make_2 14:ball_make_2 29:two_sum_entry 30:next_up
-                            31:ball_mul_pow2_2_full)
+                            31:ball_mul_pow2_2_full 39:interval_add_1 40:interval_make_1 41:interval_to_ball_1)
   string(REPLACE ":" ";" _pair "${_case_name}")
   list(GET _pair 0 _case)
   list(GET _pair 1 _name)
@@ -532,6 +532,22 @@ endforeach()
 # control is the same call at run time.
 _kairn_api_reject(not_constexpr.mul_down 27 "constant|constexpr")
 _kairn_api_reject(not_constexpr.mul_up 28 "constant|constexpr")
+# Intervals (interval.hpp): no operation mixes numbers of limbs, or an interval with a number; the
+# conversions between Ball and Interval, and the narrowing of a ball, are explicit; no conversion
+# makes an interval of two limbs of one of one limb; the sum is not constexpr (its code is where
+# KAIRN_ENCLOSURE_CODE puts it). Each control writes what compiles instead.
+# MSVC says C2676, "does not define this operator or a conversion to a type acceptable to the
+# predefined operator", when the left operand is a class with no such operator at all.
+set(_api_no_operator "invalid operands|no match for|no operator found|does not define this operator")
+set(_api_no_conversion "no viable conversion|conversion from|cannot convert|no suitable")
+set(_api_no_constructor "no matching|cannot convert|no overloaded function|no suitable")
+_kairn_api_reject(interval.mixed_limbs 32 "${_api_no_operator}")
+_kairn_api_reject(interval.number_operand 33 "${_api_no_operator}")
+_kairn_api_reject(interval.implicit_from_ball 34 "${_api_no_conversion}")
+_kairn_api_reject(interval.implicit_to_ball 35 "${_api_no_conversion}")
+_kairn_api_reject(ball.implicit_narrowing 36 "${_api_no_conversion}")
+_kairn_api_reject(interval.from_one_limb 37 "${_api_no_constructor}")
+_kairn_api_reject(not_constexpr.interval_add 38 "constant|constexpr")
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
 _kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")
@@ -643,6 +659,14 @@ foreach(_i RANGE 0 ${_last} 2)
       "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/accurate_sums.txt"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
   set_tests_properties(api.example.accurate_sums${_suffix} PROPERTIES LABELS "api;example")
+  # The tutorial on intervals (docs/tutorials/intervals.md), the same way.
+  _kairn_api_program(kairn-example-intervals${_target_suffix} "${PROJECT_SOURCE_DIR}/docs/examples/cpp/intervals.cpp"
+    ${_option})
+  add_test(NAME api.example.intervals${_suffix}
+    COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-intervals${_target_suffix}>"
+      "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/intervals.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+  set_tests_properties(api.example.intervals${_suffix} PROPERTIES LABELS "api;example")
 endforeach()
 set_tests_properties(api.constexpr api.environment PROPERTIES LABELS api)
 

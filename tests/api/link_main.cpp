@@ -1,6 +1,7 @@
 // The program of the link tests of KAIRN_ENCLOSURE_CODE (link_fail.cmake): one operation of each
-// kind of Ball, whose definitions, in the external setting, are those of definitions.cpp, the
-// program's other translation unit. Exits 0 when the results are what they must be.
+// kind of Ball and of Interval, whose definitions, in the external setting, are those of
+// definitions.cpp, the program's other translation unit. Exits 0 when the results are what they
+// must be.
 #include <kairn/kairn.hpp>
 
 #include <cstdio>
@@ -15,6 +16,13 @@ int main() {
                     (x * y).center().limb[0] == 2.0 && (x * double(two)).center().limb[0] == 2.0 &&
                     (p * p).center().limb[0] == 4.0 && (f + f).center().limb[0] == 2.0f &&
                     kairn::half(x).radius() == 0x1p-31 && kairn::ldexp(p, 3).center().limb[0] == 16.0;
-    std::printf("%s\n", ok ? "ok" : "FAILED: a result is not what it must be");
-    return ok ? 0 : 1;
+    const kairn::Interval<double, 1> i{double(one), double(two)};
+    const kairn::Interval<double, 2> j{double(one), double(two)};
+    const kairn::Interval<float, 2> k{float(one), float(two)};
+    const bool intervals = (i + i).upper().limb[0] == 4.0 && (i - i).lower().limb[0] == -1.0 &&
+                           (i * i).upper().limb[0] == 4.0 && (j + j).upper().limb[0] == 4.0 &&
+                           (j - j).lower().limb[0] == -1.0 && (j * j).lower().limb[0] == 1.0 &&
+                           (k * k).upper().limb[0] == 4.0f;
+    std::printf("%s\n", ok && intervals ? "ok" : "FAILED: a result is not what it must be");
+    return ok && intervals ? 0 : 1;
 }

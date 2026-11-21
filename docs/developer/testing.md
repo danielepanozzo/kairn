@@ -57,9 +57,9 @@ The tests of the public interface (`tests/api/`, label `api`):
 
 | Test | Checks |
 |---|---|
-| `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls, built through the public constructors. Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly, a sign predicate of a ball a line of its comparison kernel whose operands are a center and a radius, the conversion of the result of `two_sum` to two limbs a finite error term); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. The building blocks on `T` are their kernels' forms as they are (`two_sum` is the form of `two_sum_entry`), and the scalings of a ball by a power of two are reached through `ldexp(X, n)` with $2^n$ the case's power of two, through `half` of a ball scaled first by $2^{n+1}$ exactly, and through the steps of `ldexp` from a ball scaled exactly by another power. |
-| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the ten finite cores of the Ball operations, those of the scalings by a power of two among them: the operators and `ldexp` call the full kernels, and `kairn::finite` has no Ball forms); no entry kernel is a building block. The kernels of the folds' stage, which no public operation calls yet (`KAIRN_NOT_PUBLIC_YET`, [Cross-checks](#cross-checks)), are on none of the runner's lists. |
-| `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them, the building blocks on `T` against values computed by hand (every row of the table of `next_up` and `next_down`); the same results at run time, with the same bits where Milestone 2 says so and the same values where a zero can differ in sign; `mul_down`, `mul_up`, `ldexp` and `half` of a ball, which are not `constexpr`, at run time against values computed by hand; the properties of the types; that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved; that a building block is not found by argument-dependent lookup for a `T` and does not hide a program's own function of the same name; and `KAIRN_VERSION_AT_LEAST`. |
+| `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls and intervals, built through the public constructors (an interval through `Interval(lo, hi)`, the empty set as its reversed bounds). Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`, `X.midpoint()` and `X.radius()` together for `interval_mid_rad_1`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly, a sign predicate of a ball a line of its comparison kernel whose operands are a center and a radius, the conversion of the result of `two_sum` to two limbs a finite error term, the interval of a point a line whose two bounds are one value, the bounds of an interval of two limbs as numbers of `T` a line of `to_down_2` or `to_up_2` whose operand is not a NaN); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. The building blocks on `T` are their kernels' forms as they are (`two_sum` is the form of `two_sum_entry`), and the scalings of a ball by a power of two are reached through `ldexp(X, n)` with $2^n$ the case's power of two, through `half` of a ball scaled first by $2^{n+1}$ exactly, and through the steps of `ldexp` from a ball scaled exactly by another power. |
+| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the ten finite cores of the Ball operations, those of the scalings by a power of two among them: the operators and `ldexp` call the full kernels, and `kairn::finite` has no Ball forms); no entry kernel is a building block. The building blocks include the nine of the interval kernels (`mul_dir_1`, the bounds of two limbs, `mul_ext_2_2`). The kernels of the folds' stage and of the maps, which no public operation calls yet (`KAIRN_NOT_PUBLIC_YET`, [Cross-checks](#cross-checks)), are on none of the runner's lists. |
+| `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them, the building blocks on `T` against values computed by hand (every row of the table of `next_up` and `next_down`); of intervals the constructors, the states, the bounds, the negation, the hull, the intersection, the midpoint, the radius, the split and the conversions, and of a ball the functions of the interface it shares with intervals, with the empty set and the whole line where constant evaluation takes them (on the empty set the midpoint, the radius, the split and the conversion to a ball, and on the states of a ball its bounds, the conversion to an interval, the narrowing and the ball from an infinite or NaN bound, compute a NaN or $\infty - \infty$ on the way, which GCC and Clang refuse at compile time: those are checked at run time); the same results at run time, with the same bits where Milestone 2 says so and the same values where a zero can differ in sign; `mul_down`, `mul_up`, `ldexp` and `half` of a ball, and the arithmetic of intervals of one and two limbs, which are not `constexpr`, at run time against values computed by hand (the tightest interval of `T` for a sum of one limb, $[\Omega, +\infty]$ at an overflow, $[0, 0] \cdot X = [0, 0]$ for an unbounded $X$, two limbs within $8.1u^2$ and $10.1u^2$ of the exact bounds, $[0, 0] + [0, 0] = [0, 0]$); the properties of the types; that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved; that a building block is not found by argument-dependent lookup for a `T` and does not hide a program's own function of the same name; and `KAIRN_VERSION_AT_LEAST`. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
 | `api.flags.debug.self_test`, `api.flags.debug.constexpr`, `api.flags.debug.rational` | `kairn::self_test()` and `kairn::environment_ok()`, compiled as the [debug build](#flag-sets), pass (`runner.cpp --self-test`); `tests/api/constexpr.cpp` and `tests/api/rational.cpp` built so, their constant expressions evaluated with the checks on; `kairn::rational`, which does not round, runs under each directed rounding mode without the checks stopping the program. |
 | `api.checks.debug.G`, `api.checks.release.G`, `api.checks.handler` | The [checks of a debug build](#the-checks-of-a-debug-build), in the debug build and with the build's own flags and `KAIRN_CHECKS` defined to 1, on a table of every public function: in the default environment each runs (G = `default`); under each directed rounding mode (`rounding`) `environment_ok()` is false and each function that rounds stops the program with the environment's message, while each function that does not round gives the same bits as to nearest on its corpus, without a report; under each state of flush to zero (`flush`) each function that checks anything stops it; every operand that is not canonical, and every negative radius, stops it (`operands`); a `KAIRN_ENVIRONMENT_FAILURE` of the program's own is called instead, by exactly the functions that must report the state, and every function goes on, without the checks of its operands (`handler`). |
@@ -67,12 +67,12 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.platform_macros` | The headers compile and work after a platform header that defines `min`, `max`, `small`, `near`, `far`, `hyper` and `interface` as macros: `<windows.h>` itself on Windows, without `NOMINMAX`, and the same macros defined by the test on every platform. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break the kernels and define no macro (reassociation; `-ffp-model=fast`; with Apple clang on AArch64, `-fno-signed-zeros` with `-ffp-contract=fast`, which Clang 18 was measured not to break the kernels with): `kairn::self_test()` must fail. |
 | `api.link.external.S` | With `KAIRN_ENCLOSURE_CODE_EXTERNAL`, `tests/api/link_main.cpp` linked with the definitions (`tests/api/definitions.cpp`) compiled with another `KAIRN_CHECKS` (S = `checks`), with the outlined setting (`setting`), or without them (`missing`) must not link, with the undefined operation in the message (`kairn::detail::external_checked::` or `external::`, or MSVC's LNK2038); its control, both files with the same options, links and runs (`tests/api/link_fail.cmake`). |
-| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three (`enclosure_code.*`: an unknown name, nothing, a bare `-D`); each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`); `mul_down` and `mul_up` in a constant expression, whose control computes the same at run time (`not_constexpr.*`), so that a change cannot make them `constexpr` by accident; `kairn::rational` in a constant expression with a zero denominator, and with a result that fails its check, against a copy of the headers with a wrong flag planted in it, whose control turns `KAIRN_RATIONAL_CHECK` off (`rational.*`). |
+| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three (`enclosure_code.*`: an unknown name, nothing, a bare `-D`); each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`); `mul_down` and `mul_up` in a constant expression, whose control computes the same at run time (`not_constexpr.*`), so that a change cannot make them `constexpr` by accident, and the sum of intervals likewise (`not_constexpr.interval_add`); of intervals (`interval.*`, `ball.implicit_narrowing`), an operation of intervals of one and of two limbs, an interval and a number (no kernel takes one), the implicit conversions of a ball to an interval, of an interval to a ball and of a ball of two limbs to one (each widens the set, so each is explicit), and an interval of two limbs from one of one limb, each control writing what compiles instead; an interval operation, constructor and conversion written without the marker against the copy of the headers in which every kernel is unverified (`unverified.interval_add_1`, `.interval_make_1`, `.interval_to_ball_1`); `kairn::rational` in a constant expression with a zero denominator, and with a result that fails its check, against a copy of the headers with a wrong flag planted in it, whose control turns `KAIRN_RATIONAL_CHECK` off (`rational.*`). |
 | `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
 | `api.k1.zero_cost` | The instructions emitted for one operation and for loops over `Expansion<double, 1>` against the same code over `double` (`tests/api/k1/zero_cost.py`); with MSVC it also fails when one of these functions has a `/GS` stack cookie ([costs](results/costs-milestone1.md#3-msvc-and-the-gs-stack-cookie)). |
 | `api.rational.K.F` | `kairn::rational` with K limbs of format F ([Constants from fractions](../reference/rational.md)) on 2 000 cases of the oracle's generator of `rational_K` (`KAIRN_RATIONAL_QUICK_CASES`, seed `KAIRN_API_SEED`), computed at run time by `tests/api/rational_runner.cpp`, which also requires `kairn::is_rational_result` to accept each result; the oracle compares every limb, the error and the flag with its own, for equality, and the guards require what the cross-checks of `rational_K` must have seen ([Cross-checks](#cross-checks); `tests/crosscheck.py compiled --kernel rational_K`, one process, as for a kernel). |
 | `api.rational.constexpr` | `tests/api/rational.cpp`: `static_assert`s of the results of two dozen fractions and six integers, for `float` and `double`, one and two limbs, against values computed from the specification with exact rationals; `kairn::is_rational_result` refusing each result changed by one unit; and a corpus of 104 fractions, each computed in a constant expression and at run time under each of the four rounding modes, with the same bits. |
-| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*`, built under each contraction setting, also compares it with the text its tutorial shows ([Documentation](documentation.md#examples)). |
+| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*` and `api.example.intervals.*`, built under each contraction setting, also compare it with the text their tutorials show ([Documentation](documentation.md#examples)). |
 
 ## The full tier
 
@@ -165,8 +165,11 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   of a claim with `up( )`, and an entry about an output group other than the first;
   `oracle/README.md`, "The kinds of the interval kernels"). They are cross-checked as every
   kernel is, on fewer cases in the quick tier (`KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES`, 2 000, the
-  first of the full tier's 20 000: [Time](#time)), and are on `KAIRN_NOT_PUBLIC_YET` with the
-  folds' stage until `Interval` and the conversions of a `Ball` are public.
+  first of the full tier's 20 000: [Time](#time)). They left `KAIRN_NOT_PUBLIC_YET` with
+  `kairn/interval.hpp`: the public interface reaches the 24 entry kernels among them through
+  `Interval` and the functions of a `Ball` of the enclosure interface, and lists the other nine
+  (`mul_dir_1`, the bounds of two limbs `add_ball_2_2` to `mul_dir_2_2`, and `mul_ext_2_2`) as
+  building blocks.
 - **Every fold** in the list `"folds"` of `gen/claims.json` gets tests of its own, under the same
   names: `crosscheck.compiled.F.FORMAT` in the quick tier runs the scalar runners on 300 random
   arrays (`KAIRN_CROSSCHECK_FOLD_QUICK_CASES`) of lengths 0 to 256
@@ -736,10 +739,12 @@ call these kernels; nvcc, Metal and AVX-512, which have no backend yet.
 
 With `KAIRN_ENCLOSURE_CODE` set to `KAIRN_ENCLOSURE_CODE_OUTLINED` or
 `KAIRN_ENCLOSURE_CODE_EXTERNAL` ([Getting started](../getting-started/index.md#compile-time-and-the-operations-of-ball)),
-the operations of `Ball` that round are functions of their own, into which the generated kernel is
-inlined. `tests/objcode/enclosure_unit.cpp` has one function per operation (`+`, `-`, `*`, `half` and the
-scaling, one and two limbs) and limb type, externally visible and never inlined, that applies the
-public operator, and the check compiles it three times in each configuration that compiles both
+the operations of `Ball` that round, and the arithmetic of `Interval`, are functions of their own,
+into which the generated kernel is inlined (but `interval_mul_2`, an ordinary inline function,
+which the compiler may call from them). `tests/objcode/enclosure_unit.cpp` has one function per
+operation (of a ball `+`, `-`, `*`, `half` and the scaling, of an interval `+`, `-`, `*`, one and two
+limbs) and limb type, 32 in all, externally visible and never inlined, that applies the public
+operator, and the check compiles it three times in each configuration that compiles both
 forms of the fix-ups (every configuration of the full tier, the one with contraction forced on at
 `-O2` or `/O2` of the quick tier), with `KAIRN_CHECKS` 0, as a release build has it:
 
@@ -752,11 +757,20 @@ forms of the fix-ups (every configuration of the full tier, the one with contrac
   instantiations are then in the object, and each function as in the outlined form.
 
 `objcode.controls` compiles the same unit with the operations inline, the default, judged as the
-outlined form: the check must fail on every function, the operation not being a call. On the Mac
+outlined form: the check must fail on every function, the operation not being a call, but two
+kinds, whose expectation the data give. The sum and the difference of intervals of one limb have
+no fused multiply-add and no product (`gen/objcode.json`), so nothing tells their inline code from
+a call, and they are not judged. The product of intervals of two limbs has a kernel that is an
+ordinary inline function (`ordinary_inline` in its description), so in the inline setting too the
+compiler may call it rather than inline it: what it did is reported, not judged. On the Mac
 on 2026-11-20 the 72 checks of the full tier (24 configurations, three forms) passed with Apple clang
 21 and GCC 16, and the control failed on 16 of 16 functions with each; with `half` of a ball of one
 and of two limbs in the unit, 20 functions, the same day, the same 72 passed and the control failed
-on 20 of 20, with each compiler.
+on 20 of 20, with each compiler. With the arithmetic of intervals in the unit, 32 functions, the
+72 checks of the full tier passed with Apple clang 21 and GCC 16 on the Mac, and the control failed
+on 26 of the 26 functions it judges with each, as with GCC 13 and Clang 18 on x86-64; all four, at
+`-O2`, called `interval_mul_2` from the inline product, for `double` and `float`, rather than
+inline it.
 
 ### The flag matrix
 
@@ -1022,23 +1036,33 @@ defined to 1 (`api.checks.release.*`, where an optimizer could move or drop a ch
 `tests/api/checks.cmake` judges each case from the program's exit status and output:
 
 The cases are a table of every public function of the headers, one entry per form that reaches a
-function of its own in `kairn::detail` (102 today), each marked with what the checks do before it:
-`rounds` (72: every operation that rounds, the compound assignments, the functions of
-`kairn::finite::`, `is_normalized` of two limbs, and the constructors whose checks round),
-`exact` (22: the functions that do not round and are checked without the rounding mode) or
-`unchecked` (8: the functions with no check at all). A function that rounds is run on the operands
+function of its own in `kairn::detail` (131 today), each marked with what the checks do before it:
+`rounds` (93: every operation that rounds, the compound assignments, the functions of
+`kairn::finite::`, `is_normalized` of two limbs, the constructors whose checks round, and the
+functions of the enclosure interface that compute bounds or centers: the midpoint, the radius
+and the split of an interval, the conversions between an interval and a ball, the ball from an
+interval of two `T`, the bounds of a ball as numbers of `T` and its narrowing),
+`exact` (29: the functions that do not round and are checked without the rounding mode, the
+negation, the hull and the intersection of intervals, the bounds of an interval of two limbs as
+numbers of `T` and the constructors of intervals among them) or
+`unchecked` (9: the functions with no check at all, the accessors of an interval and its states
+among them). A function that rounds is run on the operands
 below; one that does not round, on a corpus, for `double` and for `float`: zeros of both signs,
 subnormal numbers, the smallest normal number, the largest finite number, the infinities and NaN,
 alone and in canonical pairs (a zero of either sign in each limb, a subnormal leading limb and a
 subnormal tail, the ties of the test of a canonical pair, tails next to the largest finite
-number), and balls of one and two limbs with radii from 0 to the largest finite number, the whole
-line and the empty set; the comparisons on every pair of it, the constructors of a ball on every
-center and every radius that is not negative.
+number), balls of one and two limbs with radii from 0 to the largest finite number, the whole
+line and the empty set, and the intervals of one and two limbs that the constructor makes of the
+pairs of those values and pairs, the empty set and the whole line among them; the comparisons on
+every pair of it, the hull and the intersection on every pair of intervals, the constructors of a
+ball on every center and every radius that is not negative, those of an interval on every pair of
+bounds.
 
 - `default`: in the default environment `environment_ok()` is true, and every function of the
-  table runs, as do 16 operands the checks must let through: the canonical infinities and NaN,
-  the empty set and the whole line, a NaN and a $-0$ radius, and what a finite core returns,
-  given back to `kairn::finite::`.
+  table runs, as do 23 operands the checks must let through: the canonical infinities and NaN,
+  the empty set and the whole line, a NaN and a $-0$ radius, what a finite core returns, given
+  back to `kairn::finite::`, the bounds of an interval that are a NaN or reversed (which make the
+  whole line and the empty set without a report), and the two states of an interval as operands.
 - `rounding`: for each directed rounding mode and each function of the table, a run of its own:
   `environment_ok()` is true, the mode is set and `environment_ok()` is false. A function that
   rounds must stop the program, with an exit status other than 0 (`SIGABRT`; exit status 3 with
@@ -1057,18 +1081,20 @@ center and every radius that is not negative.
   runner, MSVC 19.51 at `/O2` let the guard's $-0$ through that rule under rounding downward
   (19.52 compiles it as a comparison and a blend). On a difference the program prints both bit
   patterns. So the table cannot rot either way: a function marked as not rounding that checks the
-  mode, or rounds, fails, and so does one marked as rounding that does not check it. 306 runs.
+  mode, or rounds, fails, and so does one marked as rounding that does not check it. 393 runs.
 - `flush`: the same with FTZ and with DAZ of MXCSR on x86-64, and FZ of FPCR on AArch64, under
   which every function that rounds and every function that does not round but is checked must
-  stop the program; the 8 with no check at all are not run. On those targets a program that can
+  stop the program; the 9 with no check at all are not run. On those targets a program that can
   set no such state fails the test.
-- `operands`: 19 operands that are not canonical, each given to an operation, must stop the
+- `operands`: 23 operands that are not canonical, each given to an operation, must stop the
   program with their message: pairs that are not canonical given to `from_limbs`, to an operator,
   a comparison, a conversion, a negation, `ldexp` and `kairn::finite::add`, what a finite core
   returns after an overflow given to an operator, negative radii ($-\infty$ among them), a center
   that is not canonical, and a ball that is not canonical, made by the internal constructor that
   takes a kernel's result as it is, the only way to make one, given to a sum and to a negation;
-  and the two operands of the building blocks that a debug build refuses: `fast_two_sum` with
+  an interval that is not canonical, made the same way (reversed bounds, a NaN bound, a bound of
+  two limbs that is not canonical), given to a sum, a negation and a hull, and a bound of two limbs
+  that is not canonical given to the constructor of an interval; and the two operands of the building blocks that a debug build refuses: `fast_two_sum` with
   $\lvert a\rvert < \lvert b\rvert$, and the conversion to two limbs of the result of `two_sum`
   whose error term is a NaN although its sum is finite ($b = \Omega$, $a = -1.5$ ulps of $\Omega$).
 
@@ -1309,6 +1335,31 @@ each, back to back on the Mac under a load average of 18 to 42, took 80.4 and 75
 74.2 and 64.3 s after (314 and 295, 288 and 250 s of test time): at that load the difference is
 the load's, not the change's. The full tier after took 1 059 s with Apple clang and 752 s with
 GCC 16 (load 13 to 36).
+
+**`Interval` and the functions of a `Ball` of the enclosure interface** were measured on
+2026-11-20 against the commit before them, the quick tiers back to back on the Mac,
+`--parallel 4`, under a load average of 12 to 49 from other jobs:
+
+| Where | Quick tier, before | Quick tier, after | Full tier, after |
+|---|---|---|---|
+| Mac, Apple clang 21 | 571 tests, 84.2 s | 633 tests, 109.8 s (load 49 at its end) | 980 tests, 1 236 s |
+| Mac, GCC 16 | 572 tests, 87.2 s | 634 tests, 91.3 s | 980 tests, 1 276 s |
+| Linux, 16 threads, GCC 13 | | 634 tests, 179.8 s | 980 tests, 1 985 s |
+| Linux, 16 threads, Clang 18 | | 631 tests, 183.2 s | 980 tests, 1 980 s |
+
+The quick tier gains 62 tests: `api.oracle.K.F` for the 24 kernels that became public (48), ten
+of `api.reject.*` (five `interval.*`, `ball.implicit_narrowing`, `not_constexpr.interval_add` and
+three `unverified.*`), and `api.example.intervals` under each contraction setting (4); the checks
+of a debug build run 29 functions more. The full tier gains 96, the same 24 kernels in
+`full.api.oracle.K.F` and `full.api.flags.oracle.K.F`.
+
+The full tier's cross-checks of the maps and folds write a summary of each run of up to 1.7 GB
+(`full.crosscheck.compiled.add_2.binary64`, `axpy_2`), some 18 GB in all for one run on the Mac. In
+both runs above the Mac's disk was nearly full, from other jobs too, and some of these
+cross-checks failed for want of space: 79 of 980 with Apple clang (the disk had 105 MB free) and 7
+with GCC 16; each passed when rerun (`ctest --rerun-failed`) with the summaries of finished runs
+deleted as they came. None of them is about intervals; a run of the full tier needs that space
+free.
 
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:

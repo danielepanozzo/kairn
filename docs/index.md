@@ -87,6 +87,8 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 - [Getting started](getting-started/index.md): build and test the repository, and a first program.
 - [Accurate sums and dot products](tutorials/accurate-sums.md): a tutorial with two-limb numbers
   and balls, on a sum that `double` gets entirely wrong.
+- [The range of a polynomial](tutorials/intervals.md): a tutorial with intervals and balls, on the
+  dependency problem and how splitting the interval narrows the result.
 - [Reference](reference/index.md): every operation, with its proved statement, its theorem, and
   what the brute-force runs measured.
 - [What holds today](getting-started/guarantees.md): which operations are proved, and what is not

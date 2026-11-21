@@ -22,7 +22,9 @@
 // Some forms can compute only some lines of their kernel: ldexp needs a power of two among the
 // operands of mul_1_1, half needs an operand it can halve back exactly, a point form needs a ball
 // of radius zero, a sign predicate of a ball a line whose two operands are a ball's center and
-// radius, the conversion of a SumAndError to a two-limb number a finite error term. On the other
+// radius, the conversion of a SumAndError to a two-limb number a finite error term, the interval of
+// a point a line whose two bounds are one value, and the bounds of an interval of two limbs as
+// numbers of T a line of to_down_2 or to_up_2 whose operand is not a NaN. On the other
 // lines such a form computes the plain operation (written beside it), and it fails at the end of a
 // stream of at least 1000 lines in which it computed none: a pass must mean that the form itself
 // was judged.
@@ -75,6 +77,10 @@ template <class T>
 using B1 = kairn::Ball<T, 1>;
 template <class T>
 using B2 = kairn::Ball<T, 2>;
+template <class T>
+using I1 = kairn::Interval<T, 1>;
+template <class T>
+using I2 = kairn::Interval<T, 2>;
 namespace bounds = kairn::gen::bounds;
 namespace finite = kairn::finite;
 
@@ -130,6 +136,22 @@ template <class T, int K>
 void put(T* out, const kairn::Ball<T, K>& z) {
     put(out, z.center());
     out[K] = z.radius();
+}
+// An interval operand from the limbs the oracle gives, a canonical interval, lower bound first,
+// through the public constructor from two bounds: the empty set (+inf, -inf) is reversed bounds,
+// which the constructor makes the empty set. A result: its bounds, the lower one first.
+template <class T>
+I1<T> iv1(const T* in) {
+    return I1<T>(AS(interval_make_1, in[0]), in[1]);
+}
+template <class T>
+I2<T> iv2(const T* in) {
+    return I2<T>(AS(interval_make_2, two(in)), two(in + 2));
+}
+template <class T, int K>
+void put(T* out, const kairn::Interval<T, K>& z) {
+    put(out, z.lower());
+    put(out + K, z.upper());
 }
 
 // How often a conditional form computed its own operation (see the top of the file).
@@ -539,6 +561,86 @@ FORM(ball_mul_2_full_center_times, if (!center_point<T, 2>(in)) { put(out, ball2
 FORM(ball_scale_1_full_scale_one, put(out, AS(ball_scale_1_full, ball1(in)) * one(in + 2)))
 FORM(ball_scale_1_full_one_scale, put(out, one(in + 2) * AS(ball_scale_1_full, ball1(in))))
 
+// Intervals: construction. From two values of T, from two numbers of one or two limbs, and, on the
+// lines whose two bounds are one value (the same bits, or two NaN), from that point; for two limbs
+// from two values of T on the lines whose bounds are such values (a second limb zero, or the NaN
+// pair), converted to two limbs first. The plain constructor of two bounds otherwise.
+template <class T>
+bool same_value(T a, T b) {
+    return (a == b && std::signbit(a) == std::signbit(b)) || (a != a && b != b);
+}
+template <class T>
+bool a_limb(const T* x) {
+    return x[1] == 0 || x[0] != x[0];
+}
+FORM(interval_make_1_bounds, put(out, I1<T>(AS(interval_make_1, in[0]), in[1])))
+FORM(interval_make_1_bounds_one, put(out, I1<T>(AS(interval_make_1, one(in)), one(in + 1))))
+FORM(interval_make_1_marked, put(out, I1<T>(kairn::unverified(in[0]), in[1])))
+FORM(interval_make_1_point, if (!same_value(in[0], in[1])) { put(out, I1<T>(in[0], in[1])); return; } ++reached;
+     put(out, I1<T>(AS(interval_make_1, in[0]))))
+FORM(interval_make_1_point_one, if (!same_value(in[0], in[1])) { put(out, I1<T>(in[0], in[1])); return; } ++reached;
+     put(out, I1<T>(AS(interval_make_1, one(in)))))
+FORM(interval_make_2_bounds, put(out, I2<T>(AS(interval_make_2, two(in)), two(in + 2))))
+FORM(interval_make_2_marked, put(out, I2<T>(kairn::unverified(two(in)), two(in + 2))))
+FORM(interval_make_2_point,
+     if (!same_value(in[0], in[2]) || !same_value(in[1], in[3])) { put(out, I2<T>(two(in), two(in + 2))); return; }
+     ++reached; put(out, I2<T>(AS(interval_make_2, two(in)))))
+FORM(interval_make_2_point_limb,
+     if (!same_value(in[0], in[2]) || !same_value(in[1], in[3]) || !a_limb(in)) { put(out, I2<T>(two(in), two(in + 2))); return; }
+     ++reached; put(out, I2<T>(AS(interval_make_2, in[0]))))
+FORM(interval_make_2_limbs, if (!a_limb(in) || !a_limb(in + 2)) { put(out, I2<T>(two(in), two(in + 2))); return; } ++reached;
+     put(out, I2<T>(AS(interval_make_2, in[0]), in[2])))
+
+// Intervals: arithmetic, the hull and the intersection.
+#define INTERVAL_FORMS(K, IV)                                                                                       \
+    FORM(interval_neg_##K##_negate, put(out, -AS(interval_neg_##K, IV(in))))                                         \
+    FORM(interval_neg_##K##_marked, put(out, -kairn::unverified(IV(in))))                                            \
+    FORM(interval_add_##K##_plus, put(out, AS(interval_add_##K, IV(in)) + IV(in + 2 * K)))                           \
+    FORM(interval_add_##K##_plus_assign, auto x = IV(in); x += AS(interval_add_##K, IV(in + 2 * K)); put(out, x))    \
+    FORM(interval_add_##K##_marked, put(out, IV(in) + kairn::unverified(IV(in + 2 * K))))                            \
+    FORM(interval_sub_##K##_minus, put(out, AS(interval_sub_##K, IV(in)) - IV(in + 2 * K)))                          \
+    FORM(interval_sub_##K##_minus_assign, auto x = IV(in); x -= AS(interval_sub_##K, IV(in + 2 * K)); put(out, x))   \
+    FORM(interval_sub_##K##_marked, put(out, kairn::unverified(IV(in)) - IV(in + 2 * K)))                            \
+    FORM(interval_mul_##K##_times, put(out, AS(interval_mul_##K, IV(in)) * IV(in + 2 * K)))                          \
+    FORM(interval_mul_##K##_times_assign, auto x = IV(in); x *= AS(interval_mul_##K, IV(in + 2 * K)); put(out, x))   \
+    FORM(interval_mul_##K##_marked, put(out, IV(in) * kairn::unverified(IV(in + 2 * K))))                            \
+    FORM(interval_hull_##K##_hull, put(out, IV(in).hull(AS(interval_hull_##K, IV(in + 2 * K)))))                    \
+    FORM(interval_hull_##K##_marked, put(out, IV(in).hull(kairn::unverified(IV(in + 2 * K)))))                       \
+    FORM(interval_intersection_##K##_intersection,                                                                   \
+         put(out, IV(in).intersection(AS(interval_intersection_##K, IV(in + 2 * K)))))                               \
+    FORM(interval_intersection_##K##_marked, put(out, IV(in).intersection(kairn::unverified(IV(in + 2 * K)))))
+INTERVAL_FORMS(1, iv1)
+INTERVAL_FORMS(2, iv2)
+
+// Intervals of one limb: the midpoint and the radius (one kernel for both), the split, and the
+// conversions between an interval and a ball.
+FORM(interval_mid_rad_1_midpoint_radius, const I1<T> x = iv1(in); out[0] = x.midpoint().limb[0]; out[1] = x.radius())
+FORM(interval_split_1_split, const kairn::Split<I1<T>> s = iv1(in).split(); put(out, s.left); put(out + 2, s.right))
+FORM(interval_to_ball_1_to_ball, put(out, B1<T>(AS(interval_to_ball_1, iv1(in)))))
+FORM(interval_to_ball_1_marked, put(out, B1<T>(kairn::unverified(iv1(in)))))
+FORM(ball_to_interval_1_to_interval, put(out, I1<T>(AS(ball_to_interval_1, ball1(in)))))
+FORM(ball_to_interval_1_marked, put(out, I1<T>(kairn::unverified(ball1(in)))))
+// The bounds of an interval of two limbs as numbers of T, which are to_down_2 and to_up_2 of the
+// bound: on a line of to_down_2 whose x is not a NaN, the interval [x, +inf] (empty for x = +inf,
+// whose lower bound is then +inf, which is to_down(+inf)); [-inf, x] for to_up_2. The rounding
+// otherwise.
+FORM(to_down_2_interval_lower_as, if (in[0] != in[0]) { out[0] = kairn::to_down(two(in)); return; } ++reached;
+     out[0] = I2<T>(two(in), E2<T>(std::numeric_limits<T>::infinity())).template lower_as<T>())
+FORM(to_up_2_interval_upper_as, if (in[0] != in[0]) { out[0] = kairn::to_up(two(in)); return; } ++reached;
+     out[0] = I2<T>(E2<T>(-std::numeric_limits<T>::infinity()), two(in)).template upper_as<T>())
+
+// Balls: the functions of the interface they share with intervals.
+FORM(ball_from_interval_2_from_interval, put(out, B2<T>::from_interval(AS(ball_from_interval_2, in[0]), in[1])))
+FORM(ball_from_interval_2_marked, put(out, B2<T>::from_interval(kairn::unverified(in[0]), in[1])))
+FORM(ball_lower_as_1_lower_as, out[0] = ball1(in).template lower_as<T>())
+FORM(ball_lower_as_1_lower, out[0] = ball1(in).lower().limb[0])
+FORM(ball_upper_as_1_upper_as, out[0] = ball1(in).template upper_as<T>())
+FORM(ball_upper_as_1_upper, out[0] = ball1(in).upper().limb[0])
+FORM(ball_lower_as_2_lower_as, out[0] = ball2(in).template lower_as<T>())
+FORM(ball_upper_as_2_upper_as, out[0] = ball2(in).template upper_as<T>())
+FORM(ball_narrow_2_1_narrow, put(out, B1<T>(AS(ball_narrow_2_1, ball2(in)))))
+FORM(ball_narrow_2_1_marked, put(out, B1<T>(kairn::unverified(ball2(in)))))
+
 struct Form {
     const char* kernel;
     const char* name;
@@ -579,6 +681,23 @@ struct Form {
     ROW(ball_scale_##K##_full, marked, IN_SCALE, OUT)    \
     ROW(ball_neg_##K, negate, IN_NEG, OUT)               \
     ROW(ball_neg_##K, marked, IN_NEG, OUT)
+// One interval is ONE limbs (K a bound), two are TWO.
+#define INTERVAL_ROWS(K, ONE, TWO)                                 \
+    ROW(interval_neg_##K, negate, ONE, ONE)                        \
+    ROW(interval_neg_##K, marked, ONE, ONE)                        \
+    ROW(interval_add_##K, plus, TWO, ONE)                          \
+    ROW(interval_add_##K, plus_assign, TWO, ONE)                   \
+    ROW(interval_add_##K, marked, TWO, ONE)                        \
+    ROW(interval_sub_##K, minus, TWO, ONE)                         \
+    ROW(interval_sub_##K, minus_assign, TWO, ONE)                  \
+    ROW(interval_sub_##K, marked, TWO, ONE)                        \
+    ROW(interval_mul_##K, times, TWO, ONE)                         \
+    ROW(interval_mul_##K, times_assign, TWO, ONE)                  \
+    ROW(interval_mul_##K, marked, TWO, ONE)                        \
+    ROW(interval_hull_##K, hull, TWO, ONE)                         \
+    ROW(interval_hull_##K, marked, TWO, ONE)                       \
+    ROW(interval_intersection_##K, intersection, TWO, ONE)         \
+    ROW(interval_intersection_##K, marked, TWO, ONE)
 
 // The first form of each kernel is its canonical one.
 const Form forms[] = {
@@ -757,6 +876,36 @@ const Form forms[] = {
     ROW(ball_mul_pow2_2_full, marked, "llll", "lll")
     SOME(ball_mul_pow2_2_full, half, "llll", "lll")
     SOME(ball_mul_pow2_2_full, ldexp_far, "llll", "lll")
+    ROW(interval_make_1, bounds, "ll", "ll")
+    ROW(interval_make_1, bounds_one, "ll", "ll")
+    ROW(interval_make_1, marked, "ll", "ll")
+    SOME(interval_make_1, point, "ll", "ll")
+    SOME(interval_make_1, point_one, "ll", "ll")
+    ROW(interval_make_2, bounds, "llll", "llll")
+    ROW(interval_make_2, marked, "llll", "llll")
+    SOME(interval_make_2, point, "llll", "llll")
+    SOME(interval_make_2, point_limb, "llll", "llll")
+    SOME(interval_make_2, limbs, "llll", "llll")
+    INTERVAL_ROWS(1, "ll", "llll")
+    INTERVAL_ROWS(2, "llll", "llllllll")
+    ROW(interval_mid_rad_1, midpoint_radius, "ll", "ll")
+    ROW(interval_split_1, split, "ll", "llll")
+    ROW(interval_to_ball_1, to_ball, "ll", "ll")
+    ROW(interval_to_ball_1, marked, "ll", "ll")
+    ROW(ball_to_interval_1, to_interval, "ll", "ll")
+    ROW(ball_to_interval_1, marked, "ll", "ll")
+    SOME(to_down_2, interval_lower_as, "ll", "l")
+    SOME(to_up_2, interval_upper_as, "ll", "l")
+    ROW(ball_from_interval_2, from_interval, "ll", "lll")
+    ROW(ball_from_interval_2, marked, "ll", "lll")
+    ROW(ball_lower_as_1, lower_as, "ll", "l")
+    ROW(ball_lower_as_1, lower, "ll", "l")
+    ROW(ball_upper_as_1, upper_as, "ll", "l")
+    ROW(ball_upper_as_1, upper, "ll", "l")
+    ROW(ball_lower_as_2, lower_as, "lll", "l")
+    ROW(ball_upper_as_2, upper_as, "lll", "l")
+    ROW(ball_narrow_2_1, narrow, "lll", "ll")
+    ROW(ball_narrow_2_1, marked, "lll", "ll")
 };
 
 // Kernels that are parts of other kernels and that no public operation calls on its own. Every
@@ -767,6 +916,10 @@ const char* const internal[] = {
     "radd",                                  // radius arithmetic of the first Ball design
     "two_sum_ord",                           // Milestone 2: building blocks of the directed sums
     "add_down_1", "add_up_1", "sub_down_1", "sub_up_1",
+    // Milestone 2, building blocks of the interval kernels: the directed products of one limb, the
+    // bounds of two limbs of a sum and of a product, and the product of two bounds of two limbs.
+    "mul_dir_1", "add_ball_2_2", "mul_ball_2_2", "add_down_2_2", "add_up_2_2", "sub_down_2_2", "sub_up_2_2",
+    "mul_dir_2_2", "mul_ext_2_2",
 };
 // Entry kernels (entry: yes in gen/kernels) that no public operation calls yet, and why.
 struct NotPublic {
@@ -780,13 +933,11 @@ const NotPublic not_public[] = {
     {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core}, {"ball_scale_2", ball_core},
     {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
 };
-// The interval kernels of Milestone 2 are in neither list: the oracle does not judge them yet
-// (KAIRN_NOT_YET_CROSS_CHECKED of tests/CMakeLists.txt), and such a kernel is in none of these lists
-// (coverage.cmake). When it reads them, mul_dir_1, the bounds of two limbs and mul_ext_2_2 are
-// building blocks of the interval kernels; the other interval kernels are for the Interval types
-// (milestone2.md, "Interval kernels"), and the bounds, conversions and narrowing of a Ball are
-// functions of the enclosure interface (milestone2.md, "One enclosure interface"), which come
-// with the public headers of the milestone.
+// The interval kernels of Milestone 2 are reached by the forms of Interval (interval.hpp) and of
+// the functions of a Ball of the enclosure interface (ball.hpp); their building blocks are in
+// `internal` above. The kernels of the folds' stage and of the maps, which no public operation
+// calls yet, are in none of these lists (KAIRN_NOT_PUBLIC_YET of tests/CMakeLists.txt,
+// coverage.cmake).
 
 constexpr int max_limbs = 16;
 long lineno = 0;
