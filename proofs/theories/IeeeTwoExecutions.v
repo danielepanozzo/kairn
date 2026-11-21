@@ -3,9 +3,16 @@
 
    Such a kernel runs with each `prod a b` computed as fma(a, b, +0) at run time and as the
    plain product a * b in constant evaluation. IeeeProduct.v compares the two products.
-   This file compares the two executions of a whole kernel, for the eight kernels of the
-   rule that are more than one product: split, two_prod_dekker, mul_pow2_2,
-   mul_pow2_2_full, ball_mul_pow2_1, ball_mul_pow2_2 and the full forms of the last two.
+   This file compares the two executions of a whole kernel, for every kernel that the rule
+   makes constexpr: the thirty of proofs/gen/IeeeWith.v. They are the products and
+   scalings mul_1_1, rmul, mul_pow2_step_1, scale_step_1, mul_pow2_2, mul_pow2_2_full,
+   mul_pow2_step_2, split and two_prod_dekker; the steps of axpy, axpy_step_1 and
+   axpy_entry_step_1; the scalings of a ball, ball_mul_pow2_1, ball_mul_pow2_2 and their
+   full forms, and the steps of the scaling of a ball vector, bv_mul_pow2_radius,
+   bv_mul_pow2_step_1 and bv_mul_pow2_step_2; the bound kernels of the folds, bound_sum_1,
+   bound_sum_2, bound_dot_1 and bound_dot_2; and the conversions that halve with `prod`:
+   interval_mid_rad_1, interval_to_ball_1, interval_split_1, interval_split_2,
+   ball_from_interval_1, ball_from_interval_2, ball_hull_1 and ball_intersection_1.
 
    Same value. Two limbs have the same value when they stand for the same extended real
    number (xval a = xval b). That is: they are equal, or both are zeros (of any signs), or
@@ -23,50 +30,84 @@
      prod a b       xround RN (xmul (xval a) (xval b))               xval_prod
      a * b (plain)  xround RN (xmul (xval a) (xval b))               xval_mult
      abs a          xabs (xval a)                                    xval_abs
+     neg a          xopp (xval a)                                    xval_neg (IeeeDirected.v)
      succ a         xsucc (xval a)                                   next_up_ieee (IeeeEntry.v)
+     pred a         xpred (xval a)                                   next_down_ieee (IeeeEntry.v)
+     guard a        xval a                                           xval_guard (IeeeEntry.v)
      times_inf t    xmul (xval t) (+infinity)                        xval_times_inf
-     lt, eq         xlt, xeq of the values                           lt_xval, eq_xval (IeeeExt.v)
+     lt, le, eq     xlt, xle, xeq of the values                      lt_xval, le_xval, eq_xval
+                                                                     (IeeeExt.v)
+     const nan      NaN                                              same_cnan
 
-   and likewise neg, pred, le and guard, which these kernels do not use (xval_neg of
-   IeeeDirected.v, next_down_ieee and xval_guard of IeeeEntry.v, le_xval of IeeeExt.v).
    xround, xadd, xmul are those of IeeeVocabulary.v: the exact result rounded to nearest,
    with the infinity of its sign when the rounding reaches 2^emax, and the sums and
-   products of IEEE 754 on infinities and NaN. A select returns one of its arms, and the
-   constants are the same in both executions.
+   products of IEEE 754 on infinities and NaN. A select returns one of its arms, a mask
+   operation (and, or, not) is one of its masks, and the other constants (+0, +infinity,
+   the constants up(EXPR) of the listings) are the same in both executions.
 
    Hence each operation is compatible with "same value": operands of the same value give
    results of the same value, and comparisons the same mask (the lemmas same_add, same_sub,
-   same_prod, same_mult, same_mult_prod, same_abs, same_succ, same_times_inf, same_lt,
-   same_eq, same_select, and same_neg, same_pred, same_le, same_guard). None of these
-   operations tells the two zeros apart in its value, and none lets the sign or the payload
-   of a NaN reach a comparison: zero times infinity is a NaN for either zero, the step from
-   either zero is the smallest positive number, and a comparison with a NaN is false. The
-   two families of NaN functions of the statements (nan_plus and nan_plus', and so on) say
-   that the two executions need not return the same NaN from any operation.
+   same_prod, same_mult, same_mult_prod, same_abs, same_neg, same_succ, same_pred,
+   same_guard, same_times_inf, same_lt, same_le, same_eq, same_select, same_cnan). None of
+   these operations tells the two zeros apart in its value, and none lets the sign or the
+   payload of a NaN reach a comparison: zero times infinity is a NaN for either zero, the
+   step up from either zero is the smallest positive number and the step down its
+   opposite, the guard and the absolute value of either zero are +0 and its opposite is a
+   zero, and a comparison with a NaN is false. The IR has no division, no copy of a sign
+   and no test of a sign bit. The two families of NaN functions of the statements
+   (nan_plus and nan_plus', and so on) say that the two executions need not return the
+   same NaN from any operation, nor be the same NaN for `const nan`.
 
-   The kernels. The generator emits one IEEE model per kernel, with `prod` the fused
-   product; it does not emit the model of the plain-product execution. So each of the eight
-   listings is written here once more with the product as an argument (K_with p ...), and
-   two facts tie it down:
-   - K_with_prod: with p the fused product it is the generated definition IeeeModel.K, by
-     reflexivity, so a change of a generated listing that is not made here stops the build;
+   The kernels. The generator emits the IEEE model of each kernel with `prod` the fused
+   product (IeeeModel.K), and, for each kernel of the rule, the same listing with the
+   product as an argument (proofs/gen/IeeeWith.v: K_with p_, in which a call of another
+   kernel of the rule is that kernel's K_with p_). Three facts tie the two executions:
+   - K_with_prod: with p_ the fused product, K_with is the generated definition
+     IeeeModel.K, by reflexivity, so that the build stops if the two files disagree;
    - K_same: for two products p and p' that give results of the same value on operands of
-     the same value, K_with p and K_with p' give outputs of the same value on operands of
-     the same value.
-   The theorems K_two_executions follow: on all operands, the listing with the plain
-   product and the generated kernel return outputs of the same value.
+     the same value, K_with p and K_with p', each with its own NaN functions, give outputs
+     of the same value and the same masks on operands of the same value. Each is proved
+     by going through the two listings together, one definition at a time (the tactic
+     lockstep): each value defined has the same value in both, by the compatibility lemma
+     of its operation, each mask is the same, and a call of another kernel gives outputs
+     of the same value by that kernel's lemma: K_same for a kernel of the rule, and for a
+     kernel of IeeeModel.v without a product the lemmas of the first part of the last
+     section (two_sum, two_sum_ord, the directed sums and differences of one limb,
+     ball_to_interval_1, interval_hull_1, add_2_2, lt_2_2). The eight kernels proved first
+     (split, two_prod_dekker, mul_pow2_2, mul_pow2_2_full, ball_mul_pow2_k and their full
+     forms) keep the statements of their K_same with fst and snd; the others use the
+     relations same_pair, same_triple, same_value_mask, same_pair_mask, same_four and
+     same_eight, which unfold to the conjunction of the statements;
+   - K_two_executions: on all operands (finite numbers, signed zeros, infinities, NaN),
+     K_with with the plain product and the NaN functions of one execution, and the
+     generated kernel IeeeModel.K with those of the other, return outputs of the same
+     value and the same masks. No hypothesis on the operands.
+
+   The names. rmul_two_executions and mul_1_1_two_executions of this file are not the
+   corollaries of the same names of IeeeProduct.v, which say more of fewer operands (the
+   same bits unless the product is a NaN, or a NaN or an exact zero): these are the same
+   values on all operands, in the form of the others. A file that imports both names them
+   IeeeProduct.K_two_executions and IeeeTwoExecutions.K_two_executions.
 
    What this does not say. That the C++ of constant evaluation is K_with with the plain
-   product rests on the listings written here, not on a generated definition. And the
-   outputs have the same value, not the same bits: a zero output may differ in sign and a
-   NaN output in sign and payload. (For rmul and mul_1_1, IeeeProduct.v says more.) *)
+   product rests on the generator: it prints IeeeWith.v, IeeeModel.v and the C++ from the
+   same listing, and its tests compare the two executions of the C++. Two more operations
+   are executed differently in constant evaluation, and K_with keeps their run-time form:
+   the guard, which there returns its operand without adding +0 (axpy_entry_step_1,
+   ball_from_interval_1, ball_from_interval_2), and times_inf, which there compares
+   instead of multiplying (times_inf_ce of the C++, in mul_pow2_2_full). Each has the value
+   of its run-time form (for the guard, same_guard_operand), so that a listing with those
+   forms would have outputs of the same value too, by the same compatibility lemmas; but
+   no theorem here is about such a listing, since IeeeWith.v takes only the product as an
+   argument. And the outputs have the same value, not the same bits: a zero output may
+   differ in sign and a NaN output in sign and payload. *)
 From Stdlib Require Import Reals ZArith Bool Lia Lra.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements.
 From Kairn Require Import Format IeeeBridge IeeeVocabulary IeeeOps IeeeExt IeeeDirected
   IeeeDirectedProd IeeeEntry IeeeProduct.
 From Kairn Require IeeeOperations.
-From Kairn.Gen Require IeeeModel.
+From Kairn.Gen Require IeeeModel IeeeWith.
 Open Scope R_scope.
 
 (** * Limbs of the same value *)
@@ -167,10 +208,48 @@ intros a b H. apply same_value_iff in H. destruct H as [E|[[[s E] [s' E']]|[N N'
   destruct b as [sb|sb|sb pb Hb|sb mb eb Hb]; try discriminate N'. reflexivity.
 Qed.
 
+(* Outputs of the same value: each limb of the same value as the one in the same place, and
+   each mask (a bool) equal. These unfold to the conjunctions of the theorems below. *)
+Definition same_pair (x y : float * float) : Prop :=
+  let '(a, b) := x in let '(a', b') := y in same_value a a' /\ same_value b b'.
+
+Definition same_triple (x y : float * float * float) : Prop :=
+  let '(a, b, c) := x in let '(a', b', c') := y in
+  same_value a a' /\ same_value b b' /\ same_value c c'.
+
+Definition same_value_mask (x y : float * bool) : Prop :=
+  let '(a, m) := x in let '(a', m') := y in same_value a a' /\ m = m'.
+
+Definition same_pair_mask (x y : float * float * bool) : Prop :=
+  let '(a, b, m) := x in let '(a', b', m') := y in
+  same_value a a' /\ same_value b b' /\ m = m'.
+
+Definition same_four (x y : float * float * float * float) : Prop :=
+  let '(a, b, c, d) := x in let '(a', b', c', d') := y in
+  same_value a a' /\ same_value b b' /\ same_value c c' /\ same_value d d'.
+
+Definition same_eight
+  (x y : float * float * float * float * float * float * float * float) : Prop :=
+  let '(a, b, c, d, e, f, g, h) := x in let '(a', b', c', d', e', f', g', h') := y in
+  same_value a a' /\ same_value b b' /\ same_value c c' /\ same_value d d' /\
+  same_value e e' /\ same_value f f' /\ same_value g g' /\ same_value h h'.
+
+(* The form of the lemmas of the first eight kernels, with fst and snd, is same_pair. *)
+Lemma same_pair_fst_snd :
+  forall x y : float * float,
+  same_value (fst x) (fst y) /\ same_value (snd x) (snd y) -> same_pair x y.
+Proof. intros [a b] [a' b'] H. exact H. Qed.
+
 End SameValue.
 
 Arguments same_value {prec emax} a b.
 Arguments same_products {prec emax} p p'.
+Arguments same_pair {prec emax} x y.
+Arguments same_triple {prec emax} x y.
+Arguments same_value_mask {prec emax} x y.
+Arguments same_pair_mask {prec emax} x y.
+Arguments same_four {prec emax} x y.
+Arguments same_eight {prec emax} x y.
 
 (** * The value of each operation, as a function of the values of its operands *)
 
@@ -446,9 +525,12 @@ Variable nan_opp nan_opp' : float -> nan_of.
 Variable nan_abs nan_abs' : float -> nan_of.
 Variable nan_fma nan_fma' : float -> float -> float -> nan_of.
 Variable nan_mult nan_mult' : float -> float -> nan_of.
+Variable nan_const nan_const' : nan_of.
 
 Notation xv := (@xval prec emax).
 Notation sv := (@same_value prec emax).
+Notation cnan := (IeeeOperations.cnan prec emax nan_const).
+Notation cnan' := (IeeeOperations.cnan prec emax nan_const').
 Notation add := (IeeeOperations.add prec emax nan_plus).
 Notation add' := (IeeeOperations.add prec emax nan_plus').
 Notation sub := (IeeeOperations.sub prec emax nan_minus).
@@ -550,6 +632,18 @@ unfold same_value. intros a a' Ha.
 now rewrite (xval_guard prec emax nan_plus), (xval_guard prec emax nan_plus'), Ha.
 Qed.
 
+(* In constant evaluation the guard returns its operand: the same value as at run time. *)
+Lemma same_guard_operand : forall a a' : float, sv a a' -> sv (guard a) a'.
+Proof. unfold same_value. intros a a' Ha. now rewrite (xval_guard prec emax nan_plus), Ha. Qed.
+
+(* The NaN of `const nan`: a NaN in each execution, not necessarily the same one. *)
+Lemma same_cnan : sv cnan cnan'.
+Proof.
+unfold same_value, IeeeOperations.cnan.
+now rewrite (xval_nan prec emax _ (proj2_sig nan_const)),
+  (xval_nan prec emax _ (proj2_sig nan_const')).
+Qed.
+
 (* Comparisons give the same mask, and a select the same value. *)
 Lemma same_lt : forall a a' b b' : float, sv a a' -> sv b b' -> flt a b = flt a' b'.
 Proof.
@@ -586,11 +680,11 @@ Proof. intros a a' b b'. apply same_mult. Qed.
 
 End Compatible.
 
-(** * The eight listings, with the product as an argument *)
+(** * The generated listings with the fused product are the generated kernels *)
 
-(* Each definition is the one of proofs/gen/IeeeModel.v with every `prod` replaced by the
-   argument p, and with a call of one of these kernels replaced by its definition here.
-   The names of the values are those of the kernel descriptions. *)
+(* Each K_with of proofs/gen/IeeeWith.v with the fused product as its argument is the
+   generated definition IeeeModel.K: the two are convertible, so that the build stops here if
+   the two generated files disagree. *)
 Section Listings.
 Variable prec emax : Z.
 Context {prec_gt_0_ : Prec_gt_0 prec}.
@@ -600,178 +694,203 @@ Notation float := (binary_float prec emax).
 Notation nan_of := {x : float | is_nan prec emax x = true}.
 Variable nan_plus : float -> float -> nan_of.
 Variable nan_minus : float -> float -> nan_of.
+Variable nan_opp : float -> nan_of.
 Variable nan_abs : float -> nan_of.
 Variable nan_fma : float -> float -> float -> nan_of.
 Variable nan_mult : float -> float -> nan_of.
+Variable nan_const : nan_of.
 
-Notation pzero := (IeeeOperations.pzero prec emax).
-Notation pinf := (IeeeOperations.pinf prec emax).
-Notation add := (IeeeOperations.add prec emax nan_plus).
-Notation sub := (IeeeOperations.sub prec emax nan_minus).
-Notation fabs := (IeeeOperations.abs prec emax nan_abs).
 Notation prod := (IeeeOperations.prod prec emax nan_fma).
-Notation times_inf := (IeeeOperations.times_inf prec emax nan_mult).
-Notation flt := (IeeeOperations.lt prec emax).
-Notation feq := (IeeeOperations.eq prec emax).
-Notation fsucc := (IeeeOperations.succ prec emax).
-Notation splitter := (IeeeModel.splitter prec emax).
-Notation up_ball_mul_pow2_1_0 := (IeeeModel.up_ball_mul_pow2_1_0 prec emax).
-Notation fast_two_sum := (IeeeModel.fast_two_sum prec emax nan_plus nan_minus).
 
-Definition split_with (p : float -> float -> float) (a : float) : float * float :=
-  let g := p splitter a in
-  let d := sub a g in
-  let ah := add g d in
-  let al := sub a ah in
-  (ah, al).
+Lemma mul_1_1_with_prod :
+  forall a b : float,
+  IeeeWith.mul_1_1_with prec emax prod a b = IeeeModel.mul_1_1 prec emax nan_fma a b.
+Proof. reflexivity. Qed.
 
-Definition two_prod_dekker_with (p : float -> float -> float) (a b : float) : float * float :=
-  let '(ah, al) := split_with p a in
-  let '(bh, bl) := split_with p b in
-  let pr := p a b in
-  let q0 := p ah bh in
-  let t1 := sub q0 pr in
-  let q1 := p ah bl in
-  let t2 := add t1 q1 in
-  let q2 := p al bh in
-  let t3 := add t2 q2 in
-  let q3 := p al bl in
-  let e := add t3 q3 in
-  (pr, e).
+Lemma axpy_entry_step_1_with_prod :
+  forall a x y : float,
+  IeeeWith.axpy_entry_step_1_with prec emax nan_plus prod a x y
+  = IeeeModel.axpy_entry_step_1 prec emax nan_plus nan_fma a x y.
+Proof. reflexivity. Qed.
 
-Definition mul_pow2_2_with (p : float -> float -> float) (x0 x1 c : float) : float * float :=
-  let h := p x0 c in
-  let l := p x1 c in
-  let '(z0, z1) := fast_two_sum h l in
-  (z0, z1).
+Lemma axpy_step_1_with_prod :
+  forall a x y : float,
+  IeeeWith.axpy_step_1_with prec emax nan_plus prod a x y
+  = IeeeModel.axpy_step_1 prec emax nan_plus nan_fma a x y.
+Proof. reflexivity. Qed.
 
-Definition mul_pow2_2_full_with (p : float -> float -> float) (x0 x1 c : float)
-  : float * float :=
-  let '(z0, z1) := mul_pow2_2_with p x0 x1 c in
-  let t := p x0 c in
-  let a := fabs z0 in
-  let f := flt a pinf in
-  let r0 := times_inf t in
-  let n := feq r0 r0 in
-  let r1 := if n then pzero else r0 in
-  let w0 := if f then z0 else r0 in
-  let w1 := if f then z1 else r1 in
-  (w0, w1).
+Lemma interval_mid_rad_1_with_prod :
+  forall xl xu : float,
+  IeeeWith.interval_mid_rad_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const prod
+    xl xu
+  = IeeeModel.interval_mid_rad_1 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
+      xl xu.
+Proof. reflexivity. Qed.
 
-Definition ball_mul_pow2_1_with (p : float -> float -> float) (cx rx c : float)
-  : float * float :=
-  let cz := p cx c in
-  let rr := p rx c in
-  let am := fabs cz in
-  let bc := flt up_ball_mul_pow2_1_0 am in
-  let zc := feq cx pzero in
-  let ec := orb bc zc in
-  let br := flt up_ball_mul_pow2_1_0 rr in
-  let zr := feq rx pzero in
-  let er := orb br zr in
-  let ex := andb ec er in
-  let su := fsucc rr in
-  let rw := fsucc su in
-  let rz := if ex then rr else rw in
-  (cz, rz).
+Lemma interval_to_ball_1_with_prod :
+  forall xl xu : float,
+  IeeeWith.interval_to_ball_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const prod
+    xl xu
+  = IeeeModel.interval_to_ball_1 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
+      xl xu.
+Proof. reflexivity. Qed.
 
-Definition ball_mul_pow2_1_full_with (p : float -> float -> float) (cx rx c : float)
-  : float * float :=
-  let '(cz, rz) := ball_mul_pow2_1_with p cx rx c in
-  let e := feq rx rx in
-  let az := fabs cz in
-  let f1 := flt az pinf in
-  let f2 := flt rz pinf in
-  let f := andb f1 f2 in
-  let c0 := if f then cz else pzero in
-  let r := if f then rz else pinf in
-  let cw := if e then c0 else rx in
-  let rw := if e then r else rx in
-  (cw, rw).
+Lemma ball_from_interval_1_with_prod :
+  forall lo hi : float,
+  IeeeWith.ball_from_interval_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const prod
+    lo hi
+  = IeeeModel.ball_from_interval_1 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+      nan_const lo hi.
+Proof. reflexivity. Qed.
 
-Definition ball_mul_pow2_2_with (p : float -> float -> float) (cx0 cx1 rx c : float)
-  : float * float * float :=
-  let h := p cx0 c in
-  let l := p cx1 c in
-  let '(cz0, cz1) := fast_two_sum h l in
-  let rr := p rx c in
-  let ze := feq cx1 pzero in
-  let m := if ze then h else l in
-  let am := fabs m in
-  let bc := flt up_ball_mul_pow2_1_0 am in
-  let zc := feq cx0 pzero in
-  let ec := orb bc zc in
-  let br := flt up_ball_mul_pow2_1_0 rr in
-  let zr := feq rx pzero in
-  let er := orb br zr in
-  let ex := andb ec er in
-  let su := fsucc rr in
-  let rw := fsucc su in
-  let rz := if ex then rr else rw in
-  (cz0, cz1, rz).
+Lemma ball_from_interval_2_with_prod :
+  forall lo hi : float,
+  IeeeWith.ball_from_interval_2_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const prod
+    lo hi
+  = IeeeModel.ball_from_interval_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+      nan_const lo hi.
+Proof. reflexivity. Qed.
 
-Definition ball_mul_pow2_2_full_with (p : float -> float -> float) (cx0 cx1 rx c : float)
-  : float * float * float :=
-  let '(cz0, cz1, rz) := ball_mul_pow2_2_with p cx0 cx1 rx c in
-  let e := feq rx rx in
-  let az := fabs cz0 in
-  let f1 := flt az pinf in
-  let f2 := flt rz pinf in
-  let f := andb f1 f2 in
-  let c0 := if f then cz0 else pzero in
-  let c1 := if f then cz1 else pzero in
-  let r := if f then rz else pinf in
-  let cw0 := if e then c0 else rx in
-  let cw1 := if e then c1 else rx in
-  let rw := if e then r else rx in
-  (cw0, cw1, rw).
+Lemma ball_hull_1_with_prod :
+  forall cx rx cy ry : float,
+  IeeeWith.ball_hull_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const prod
+    cx rx cy ry
+  = IeeeModel.ball_hull_1 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
+      cx rx cy ry.
+Proof. reflexivity. Qed.
 
-(* With the fused product, each listing is the generated definition: the two are
-   convertible, so that a change of a generated listing that is not made above stops the
-   build here. *)
+Lemma ball_intersection_1_with_prod :
+  forall cx rx cy ry : float,
+  IeeeWith.ball_intersection_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const prod
+    cx rx cy ry
+  = IeeeModel.ball_intersection_1 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+      nan_const cx rx cy ry.
+Proof. reflexivity. Qed.
+
+Lemma ball_mul_pow2_1_with_prod :
+  forall cx rx c : float,
+  IeeeWith.ball_mul_pow2_1_with prec emax nan_abs prod cx rx c
+  = IeeeModel.ball_mul_pow2_1 prec emax nan_abs nan_fma cx rx c.
+Proof. reflexivity. Qed.
+
+Lemma ball_mul_pow2_1_full_with_prod :
+  forall cx rx c : float,
+  IeeeWith.ball_mul_pow2_1_full_with prec emax nan_abs prod cx rx c
+  = IeeeModel.ball_mul_pow2_1_full prec emax nan_abs nan_fma cx rx c.
+Proof. reflexivity. Qed.
+
+Lemma bound_dot_1_with_prod :
+  forall m : float,
+  IeeeWith.bound_dot_1_with prec emax nan_plus prod m
+  = IeeeModel.bound_dot_1 prec emax nan_plus nan_fma m.
+Proof. reflexivity. Qed.
+
+Lemma bound_dot_2_with_prod :
+  forall m : float,
+  IeeeWith.bound_dot_2_with prec emax nan_plus prod m
+  = IeeeModel.bound_dot_2 prec emax nan_plus nan_fma m.
+Proof. reflexivity. Qed.
+
+Lemma bound_sum_1_with_prod :
+  forall m : float,
+  IeeeWith.bound_sum_1_with prec emax nan_plus prod m
+  = IeeeModel.bound_sum_1 prec emax nan_plus nan_fma m.
+Proof. reflexivity. Qed.
+
+Lemma bound_sum_2_with_prod :
+  forall m : float,
+  IeeeWith.bound_sum_2_with prec emax nan_plus prod m
+  = IeeeModel.bound_sum_2 prec emax nan_plus nan_fma m.
+Proof. reflexivity. Qed.
+
+Lemma bv_mul_pow2_radius_with_prod :
+  forall (m : float) (ex : bool) (rx c : float),
+  IeeeWith.bv_mul_pow2_radius_with prec emax nan_plus nan_minus prod m ex rx c
+  = IeeeModel.bv_mul_pow2_radius prec emax nan_plus nan_minus nan_fma m ex rx c.
+Proof. reflexivity. Qed.
+
+Lemma bv_mul_pow2_step_1_with_prod :
+  forall x c : float,
+  IeeeWith.bv_mul_pow2_step_1_with prec emax nan_abs prod x c
+  = IeeeModel.bv_mul_pow2_step_1 prec emax nan_abs nan_fma x c.
+Proof. reflexivity. Qed.
+
+Lemma interval_split_1_with_prod :
+  forall xl xu : float,
+  IeeeWith.interval_split_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const prod
+    xl xu
+  = IeeeModel.interval_split_1 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
+      xl xu.
+Proof. reflexivity. Qed.
+
+Lemma mul_pow2_step_1_with_prod :
+  forall x c : float,
+  IeeeWith.mul_pow2_step_1_with prec emax prod x c
+  = IeeeModel.mul_pow2_step_1 prec emax nan_fma x c.
+Proof. reflexivity. Qed.
+
+Lemma rmul_with_prod :
+  forall a b : float,
+  IeeeWith.rmul_with prec emax prod a b = IeeeModel.rmul prec emax nan_fma a b.
+Proof. reflexivity. Qed.
+
+Lemma scale_step_1_with_prod :
+  forall x a : float,
+  IeeeWith.scale_step_1_with prec emax prod x a = IeeeModel.scale_step_1 prec emax nan_fma x a.
+Proof. reflexivity. Qed.
+
 Lemma split_with_prod :
   forall a : float,
-  split_with prod a = IeeeModel.split prec emax nan_plus nan_minus nan_fma a.
+  IeeeWith.split_with prec emax nan_plus nan_minus prod a
+  = IeeeModel.split prec emax nan_plus nan_minus nan_fma a.
 Proof. reflexivity. Qed.
 
 Lemma two_prod_dekker_with_prod :
   forall a b : float,
-  two_prod_dekker_with prod a b
+  IeeeWith.two_prod_dekker_with prec emax nan_plus nan_minus prod a b
   = IeeeModel.two_prod_dekker prec emax nan_plus nan_minus nan_fma a b.
 Proof. reflexivity. Qed.
 
 Lemma mul_pow2_2_with_prod :
   forall x0 x1 c : float,
-  mul_pow2_2_with prod x0 x1 c = IeeeModel.mul_pow2_2 prec emax nan_plus nan_minus nan_fma x0 x1 c.
-Proof. reflexivity. Qed.
-
-Lemma mul_pow2_2_full_with_prod :
-  forall x0 x1 c : float,
-  mul_pow2_2_full_with prod x0 x1 c
-  = IeeeModel.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma nan_mult x0 x1 c.
-Proof. reflexivity. Qed.
-
-Lemma ball_mul_pow2_1_with_prod :
-  forall cx rx c : float,
-  ball_mul_pow2_1_with prod cx rx c = IeeeModel.ball_mul_pow2_1 prec emax nan_abs nan_fma cx rx c.
-Proof. reflexivity. Qed.
-
-Lemma ball_mul_pow2_1_full_with_prod :
-  forall cx rx c : float,
-  ball_mul_pow2_1_full_with prod cx rx c
-  = IeeeModel.ball_mul_pow2_1_full prec emax nan_abs nan_fma cx rx c.
+  IeeeWith.mul_pow2_2_with prec emax nan_plus nan_minus prod x0 x1 c
+  = IeeeModel.mul_pow2_2 prec emax nan_plus nan_minus nan_fma x0 x1 c.
 Proof. reflexivity. Qed.
 
 Lemma ball_mul_pow2_2_with_prod :
   forall cx0 cx1 rx c : float,
-  ball_mul_pow2_2_with prod cx0 cx1 rx c
+  IeeeWith.ball_mul_pow2_2_with prec emax nan_plus nan_minus nan_abs prod cx0 cx1 rx c
   = IeeeModel.ball_mul_pow2_2 prec emax nan_plus nan_minus nan_abs nan_fma cx0 cx1 rx c.
 Proof. reflexivity. Qed.
 
 Lemma ball_mul_pow2_2_full_with_prod :
   forall cx0 cx1 rx c : float,
-  ball_mul_pow2_2_full_with prod cx0 cx1 rx c
+  IeeeWith.ball_mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs prod cx0 cx1 rx c
   = IeeeModel.ball_mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma cx0 cx1 rx c.
+Proof. reflexivity. Qed.
+
+Lemma bv_mul_pow2_step_2_with_prod :
+  forall x0 x1 c : float,
+  IeeeWith.bv_mul_pow2_step_2_with prec emax nan_plus nan_minus nan_abs prod x0 x1 c
+  = IeeeModel.bv_mul_pow2_step_2 prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 c.
+Proof. reflexivity. Qed.
+
+Lemma interval_split_2_with_prod :
+  forall xl0 xl1 xu0 xu1 : float,
+  IeeeWith.interval_split_2_with prec emax nan_plus nan_minus nan_opp prod xl0 xl1 xu0 xu1
+  = IeeeModel.interval_split_2 prec emax nan_plus nan_minus nan_opp nan_fma xl0 xl1 xu0 xu1.
+Proof. reflexivity. Qed.
+
+Lemma mul_pow2_2_full_with_prod :
+  forall x0 x1 c : float,
+  IeeeWith.mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs nan_mult prod x0 x1 c
+  = IeeeModel.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma nan_mult x0 x1 c.
+Proof. reflexivity. Qed.
+
+Lemma mul_pow2_step_2_with_prod :
+  forall x0 x1 c : float,
+  IeeeWith.mul_pow2_step_2_with prec emax nan_plus nan_minus prod x0 x1 c
+  = IeeeModel.mul_pow2_step_2 prec emax nan_plus nan_minus nan_fma x0 x1 c.
 Proof. reflexivity. Qed.
 
 End Listings.
@@ -788,33 +907,127 @@ Notation nan_of := {x : float | is_nan prec emax x = true}.
 (* The NaN functions of the first execution, and those of the second. *)
 Variable nan_plus nan_plus' : float -> float -> nan_of.
 Variable nan_minus nan_minus' : float -> float -> nan_of.
+Variable nan_opp nan_opp' : float -> nan_of.
 Variable nan_abs nan_abs' : float -> nan_of.
 Variable nan_fma' : float -> float -> float -> nan_of.
 Variable nan_mult nan_mult' : float -> float -> nan_of.
+Variable nan_const nan_const' : nan_of.
 
 Notation sv := (@same_value prec emax).
 Notation same_ps := (@same_products prec emax).
 (* The plain product of constant evaluation, and the fused product of run time. *)
 Notation mult := (Bmult prec emax prec_gt_0_ prec_lt_emax_ nan_mult BinarySingleNaN.mode_NE).
 Notation prod' := (IeeeOperations.prod prec emax nan_fma').
+
+(* The kernels of IeeeModel.v without a product that the listings call. *)
 Notation fts := (IeeeModel.fast_two_sum prec emax nan_plus nan_minus).
 Notation fts' := (IeeeModel.fast_two_sum prec emax nan_plus' nan_minus').
-Notation split1 := (split_with prec emax nan_plus nan_minus).
-Notation split2 := (split_with prec emax nan_plus' nan_minus').
-Notation dekker1 := (two_prod_dekker_with prec emax nan_plus nan_minus).
-Notation dekker2 := (two_prod_dekker_with prec emax nan_plus' nan_minus').
-Notation scale1 := (mul_pow2_2_with prec emax nan_plus nan_minus).
-Notation scale2 := (mul_pow2_2_with prec emax nan_plus' nan_minus').
-Notation scale_full1 := (mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs nan_mult).
-Notation scale_full2 := (mul_pow2_2_full_with prec emax nan_plus' nan_minus' nan_abs' nan_mult').
-Notation ball1 := (ball_mul_pow2_1_with prec emax nan_abs).
-Notation ball2 := (ball_mul_pow2_1_with prec emax nan_abs').
-Notation ball_full1 := (ball_mul_pow2_1_full_with prec emax nan_abs).
-Notation ball_full2 := (ball_mul_pow2_1_full_with prec emax nan_abs').
-Notation bball1 := (ball_mul_pow2_2_with prec emax nan_plus nan_minus nan_abs).
-Notation bball2 := (ball_mul_pow2_2_with prec emax nan_plus' nan_minus' nan_abs').
-Notation bball_full1 := (ball_mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs).
-Notation bball_full2 := (ball_mul_pow2_2_full_with prec emax nan_plus' nan_minus' nan_abs').
+Notation m_add_1_1 := (IeeeModel.add_1_1 prec emax nan_plus).
+Notation m_add_1_1' := (IeeeModel.add_1_1 prec emax nan_plus').
+Notation m_two_sum := (IeeeModel.two_sum prec emax nan_plus nan_minus).
+Notation m_two_sum' := (IeeeModel.two_sum prec emax nan_plus' nan_minus').
+Notation m_two_sum_ord := (IeeeModel.two_sum_ord prec emax nan_plus nan_minus nan_abs).
+Notation m_two_sum_ord' := (IeeeModel.two_sum_ord prec emax nan_plus' nan_minus' nan_abs').
+Notation m_add_up_1 := (IeeeModel.add_up_1 prec emax nan_plus nan_minus nan_abs).
+Notation m_add_up_1' := (IeeeModel.add_up_1 prec emax nan_plus' nan_minus' nan_abs').
+Notation m_add_down_1 := (IeeeModel.add_down_1 prec emax nan_plus nan_minus nan_abs).
+Notation m_add_down_1' := (IeeeModel.add_down_1 prec emax nan_plus' nan_minus' nan_abs').
+Notation m_sub_up_1 := (IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs).
+Notation m_sub_up_1' := (IeeeModel.sub_up_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs').
+Notation m_sub_down_1 := (IeeeModel.sub_down_1 prec emax nan_plus nan_minus nan_opp nan_abs).
+Notation m_sub_down_1' := (IeeeModel.sub_down_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs').
+Notation m_ball_to_interval_1 :=
+  (IeeeModel.ball_to_interval_1 prec emax nan_plus nan_minus nan_opp nan_abs).
+Notation m_ball_to_interval_1' :=
+  (IeeeModel.ball_to_interval_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs').
+Notation m_interval_hull_1 := (IeeeModel.interval_hull_1 prec emax).
+Notation m_add_2_2 := (IeeeModel.add_2_2 prec emax nan_plus nan_minus).
+Notation m_add_2_2' := (IeeeModel.add_2_2 prec emax nan_plus' nan_minus').
+Notation m_lt_2_2 := (IeeeModel.lt_2_2 prec emax).
+
+(* The listings of proofs/gen/IeeeWith.v, with the NaN functions of each execution. *)
+Notation split1 := (IeeeWith.split_with prec emax nan_plus nan_minus).
+Notation split2 := (IeeeWith.split_with prec emax nan_plus' nan_minus').
+Notation dekker1 := (IeeeWith.two_prod_dekker_with prec emax nan_plus nan_minus).
+Notation dekker2 := (IeeeWith.two_prod_dekker_with prec emax nan_plus' nan_minus').
+Notation scale1 := (IeeeWith.mul_pow2_2_with prec emax nan_plus nan_minus).
+Notation scale2 := (IeeeWith.mul_pow2_2_with prec emax nan_plus' nan_minus').
+Notation scale_full1 :=
+  (IeeeWith.mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs nan_mult).
+Notation scale_full2 :=
+  (IeeeWith.mul_pow2_2_full_with prec emax nan_plus' nan_minus' nan_abs' nan_mult').
+Notation ball1 := (IeeeWith.ball_mul_pow2_1_with prec emax nan_abs).
+Notation ball2 := (IeeeWith.ball_mul_pow2_1_with prec emax nan_abs').
+Notation ball_full1 := (IeeeWith.ball_mul_pow2_1_full_with prec emax nan_abs).
+Notation ball_full2 := (IeeeWith.ball_mul_pow2_1_full_with prec emax nan_abs').
+Notation bball1 := (IeeeWith.ball_mul_pow2_2_with prec emax nan_plus nan_minus nan_abs).
+Notation bball2 := (IeeeWith.ball_mul_pow2_2_with prec emax nan_plus' nan_minus' nan_abs').
+Notation bball_full1 := (IeeeWith.ball_mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs).
+Notation bball_full2 :=
+  (IeeeWith.ball_mul_pow2_2_full_with prec emax nan_plus' nan_minus' nan_abs').
+
+Notation w_mul_1_1 := (IeeeWith.mul_1_1_with prec emax).
+Notation w_axpy_entry_step_1 := (IeeeWith.axpy_entry_step_1_with prec emax nan_plus).
+Notation w_axpy_entry_step_1' := (IeeeWith.axpy_entry_step_1_with prec emax nan_plus').
+Notation w_axpy_step_1 := (IeeeWith.axpy_step_1_with prec emax nan_plus).
+Notation w_axpy_step_1' := (IeeeWith.axpy_step_1_with prec emax nan_plus').
+Notation w_interval_mid_rad_1 :=
+  (IeeeWith.interval_mid_rad_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const).
+Notation w_interval_mid_rad_1' :=
+  (IeeeWith.interval_mid_rad_1_with prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_const').
+Notation w_interval_to_ball_1 :=
+  (IeeeWith.interval_to_ball_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const).
+Notation w_interval_to_ball_1' :=
+  (IeeeWith.interval_to_ball_1_with prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_const').
+Notation w_ball_from_interval_1 :=
+  (IeeeWith.ball_from_interval_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const).
+Notation w_ball_from_interval_1' :=
+  (IeeeWith.ball_from_interval_1_with prec emax nan_plus' nan_minus' nan_opp' nan_abs'
+     nan_const').
+Notation w_ball_from_interval_2 :=
+  (IeeeWith.ball_from_interval_2_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const).
+Notation w_ball_from_interval_2' :=
+  (IeeeWith.ball_from_interval_2_with prec emax nan_plus' nan_minus' nan_opp' nan_abs'
+     nan_const').
+Notation w_ball_hull_1 :=
+  (IeeeWith.ball_hull_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const).
+Notation w_ball_hull_1' :=
+  (IeeeWith.ball_hull_1_with prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_const').
+Notation w_ball_intersection_1 :=
+  (IeeeWith.ball_intersection_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const).
+Notation w_ball_intersection_1' :=
+  (IeeeWith.ball_intersection_1_with prec emax nan_plus' nan_minus' nan_opp' nan_abs'
+     nan_const').
+Notation w_bound_dot_1 := (IeeeWith.bound_dot_1_with prec emax nan_plus).
+Notation w_bound_dot_1' := (IeeeWith.bound_dot_1_with prec emax nan_plus').
+Notation w_bound_dot_2 := (IeeeWith.bound_dot_2_with prec emax nan_plus).
+Notation w_bound_dot_2' := (IeeeWith.bound_dot_2_with prec emax nan_plus').
+Notation w_bound_sum_1 := (IeeeWith.bound_sum_1_with prec emax nan_plus).
+Notation w_bound_sum_1' := (IeeeWith.bound_sum_1_with prec emax nan_plus').
+Notation w_bound_sum_2 := (IeeeWith.bound_sum_2_with prec emax nan_plus).
+Notation w_bound_sum_2' := (IeeeWith.bound_sum_2_with prec emax nan_plus').
+Notation w_bv_mul_pow2_radius := (IeeeWith.bv_mul_pow2_radius_with prec emax nan_plus nan_minus).
+Notation w_bv_mul_pow2_radius' :=
+  (IeeeWith.bv_mul_pow2_radius_with prec emax nan_plus' nan_minus').
+Notation w_bv_mul_pow2_step_1 := (IeeeWith.bv_mul_pow2_step_1_with prec emax nan_abs).
+Notation w_bv_mul_pow2_step_1' := (IeeeWith.bv_mul_pow2_step_1_with prec emax nan_abs').
+Notation w_interval_split_1 :=
+  (IeeeWith.interval_split_1_with prec emax nan_plus nan_minus nan_opp nan_abs nan_const).
+Notation w_interval_split_1' :=
+  (IeeeWith.interval_split_1_with prec emax nan_plus' nan_minus' nan_opp' nan_abs' nan_const').
+Notation w_mul_pow2_step_1 := (IeeeWith.mul_pow2_step_1_with prec emax).
+Notation w_rmul := (IeeeWith.rmul_with prec emax).
+Notation w_scale_step_1 := (IeeeWith.scale_step_1_with prec emax).
+Notation w_bv_mul_pow2_step_2 :=
+  (IeeeWith.bv_mul_pow2_step_2_with prec emax nan_plus nan_minus nan_abs).
+Notation w_bv_mul_pow2_step_2' :=
+  (IeeeWith.bv_mul_pow2_step_2_with prec emax nan_plus' nan_minus' nan_abs').
+Notation w_interval_split_2 :=
+  (IeeeWith.interval_split_2_with prec emax nan_plus nan_minus nan_opp).
+Notation w_interval_split_2' :=
+  (IeeeWith.interval_split_2_with prec emax nan_plus' nan_minus' nan_opp').
+Notation w_mul_pow2_step_2 := (IeeeWith.mul_pow2_step_2_with prec emax nan_plus nan_minus).
+Notation w_mul_pow2_step_2' := (IeeeWith.mul_pow2_step_2_with prec emax nan_plus' nan_minus').
 
 (* One step per operation: the two sides are the same operation, of the first execution on
    the left and of the second on the right, on operands of the same value. *)
@@ -827,7 +1040,85 @@ Ltac same_ops :=
     | apply same_times_inf | apply same_select | apply same_lt | apply same_eq
     | apply (f_equal2 orb) | apply (f_equal2 andb) ].
 
-(** ** For any two products of the same value, on operands of the same value *)
+(** ** Two listings in lockstep *)
+
+(* A let of a value, a let of a mask, and the pair of values that a call returns: when the
+   two definitions have the same value (are the same mask), the rest of each listing may be
+   taken on any two values of the same value (on the same mask). *)
+Lemma let_value :
+  forall (A B : Type) (R : A -> B -> Prop) (e e' : float) (f : float -> A) (g : float -> B),
+  sv e e' -> (forall x x' : float, sv x x' -> R (f x) (g x')) ->
+  R (let x := e in f x) (let x' := e' in g x').
+Proof. intros A B R e e' f g H K. exact (K e e' H). Qed.
+
+Lemma let_mask :
+  forall (A B : Type) (R : A -> B -> Prop) (e e' : bool) (f : bool -> A) (g : bool -> B),
+  e = e' -> (forall m : bool, R (f m) (g m)) -> R (let m := e in f m) (let m' := e' in g m').
+Proof. intros A B R e e' f g H K. rewrite <- H. exact (K e). Qed.
+
+Lemma let_pair :
+  forall (A B : Type) (R : A -> B -> Prop) (c c' : float * float)
+    (f : float -> float -> A) (g : float -> float -> B),
+  same_pair c c' -> (forall x x' y y' : float, sv x x' -> sv y y' -> R (f x y) (g x' y')) ->
+  R (let '(x, y) := c in f x y) (let '(x', y') := c' in g x' y').
+Proof.
+intros A B R [x y] [x' y'] f g [Hx Hy] K. exact (K x x' y y' Hx Hy).
+Qed.
+
+(* An operand: a value already compared, a constant of the listing (the same in both), or
+   the NaN of `const nan`. *)
+Ltac leaf :=
+  first [ assumption
+        | match goal with |- same_value ?a ?a => apply same_refl end
+        | apply same_cnan ].
+
+(* One operation on values and masks already compared; `calls` proves the calls of other
+   kernels. *)
+Ltac same_op calls :=
+  lazymatch goal with
+  | |- @eq bool ?m ?m => reflexivity
+  | |- @eq bool _ _ =>
+      first [ apply same_lt; leaf | apply same_le; leaf | apply same_eq; leaf | solve [calls] ]
+  | |- same_value (if _ then _ else _) _ => apply same_select; [reflexivity | leaf | leaf]
+  | |- same_value _ _ =>
+      first [ leaf
+            | match goal with
+              | Hp : same_products ?p ?p' |- same_value (?p _ _) (?p' _ _) => apply Hp; leaf
+              end
+            | apply same_add; leaf | apply same_sub; leaf | apply same_neg; leaf
+            | apply same_abs; leaf | apply same_succ; leaf | apply same_pred; leaf
+            | apply same_guard; leaf | apply same_times_inf; leaf | solve [calls] ]
+  | |- _ => solve [calls]
+  end.
+
+(* Through the two listings, one definition at a time: the goal is R (listing) (listing'),
+   for one of the relations same_value, same_pair, ... and equality of masks. *)
+Ltac step calls :=
+  lazymatch goal with
+  | |- ?R (let x := ?e in @?f x) (let y := ?e' in @?g y) =>
+      lazymatch type of e with
+      | bool => refine (let_mask _ _ R e e' f g _ _); [same_op calls | intros ?; cbv beta]
+      | _ => refine (let_value _ _ R e e' f g _ _); [same_op calls | intros ? ? ?; cbv beta]
+      end
+  | |- ?R (match ?c with pair x y => @?f x y end) (match ?c' with pair x' y' => @?g x' y' end) =>
+      refine (let_pair _ _ R c c' f g _ _); [solve [calls] | intros ? ? ? ? ? ?; cbv beta]
+  end.
+
+(* The outputs: limbs of the same value and the same masks. *)
+Ltac finish :=
+  cbv beta iota delta [same_pair same_triple same_value_mask same_pair_mask same_four
+                       same_eight];
+  repeat match goal with |- _ /\ _ => split end;
+  first [ leaf | reflexivity ].
+
+Ltac lockstep calls :=
+  lazymatch goal with
+  | |- ?R (let _ := _ in _) _ => step calls; lockstep calls
+  | |- ?R (match _ with pair _ _ => _ end) _ => step calls; lockstep calls
+  | |- _ => finish
+  end.
+
+(** ** The kernels of IeeeModel.v without a product that the listings call *)
 
 Lemma fast_two_sum_same :
   forall h h' l l' : float, sv h h' -> sv l l' ->
@@ -837,12 +1128,98 @@ intros h h' l l' Hh Hl. unfold IeeeModel.fast_two_sum. cbv zeta. cbn [fst snd].
 split; same_ops.
 Qed.
 
+Lemma fast_two_sum_pair :
+  forall h h' l l' : float, sv h h' -> sv l l' -> same_pair (fts h l) (fts' h' l').
+Proof. intros h h' l l' Hh Hl. apply same_pair_fst_snd. now apply fast_two_sum_same. Qed.
+
+Lemma add_1_1_same :
+  forall a a' b b' : float, sv a a' -> sv b b' -> sv (m_add_1_1 a b) (m_add_1_1' a' b').
+Proof. intros a a' b b' Ha Hb. cbv beta delta [IeeeModel.add_1_1]. lockstep fail. Qed.
+
+Lemma two_sum_same :
+  forall a a' b b' : float, sv a a' -> sv b b' -> same_pair (m_two_sum a b) (m_two_sum' a' b').
+Proof. intros a a' b b' Ha Hb. cbv beta delta [IeeeModel.two_sum]. lockstep fail. Qed.
+
+Lemma two_sum_ord_same :
+  forall a a' b b' : float, sv a a' -> sv b b' ->
+  same_pair (m_two_sum_ord a b) (m_two_sum_ord' a' b').
+Proof.
+intros a a' b b' Ha Hb. cbv beta delta [IeeeModel.two_sum_ord].
+lockstep ltac:(apply fast_two_sum_pair; leaf).
+Qed.
+
+Lemma add_up_1_same :
+  forall a a' b b' : float, sv a a' -> sv b b' -> sv (m_add_up_1 a b) (m_add_up_1' a' b').
+Proof.
+intros a a' b b' Ha Hb. cbv beta delta [IeeeModel.add_up_1].
+lockstep ltac:(apply two_sum_ord_same; leaf).
+Qed.
+
+Lemma add_down_1_same :
+  forall a a' b b' : float, sv a a' -> sv b b' -> sv (m_add_down_1 a b) (m_add_down_1' a' b').
+Proof.
+intros a a' b b' Ha Hb. cbv beta delta [IeeeModel.add_down_1].
+lockstep ltac:(apply two_sum_ord_same; leaf).
+Qed.
+
+Lemma sub_up_1_same :
+  forall a a' b b' : float, sv a a' -> sv b b' -> sv (m_sub_up_1 a b) (m_sub_up_1' a' b').
+Proof.
+intros a a' b b' Ha Hb. cbv beta delta [IeeeModel.sub_up_1].
+lockstep ltac:(apply add_up_1_same; leaf).
+Qed.
+
+Lemma sub_down_1_same :
+  forall a a' b b' : float, sv a a' -> sv b b' -> sv (m_sub_down_1 a b) (m_sub_down_1' a' b').
+Proof.
+intros a a' b b' Ha Hb. cbv beta delta [IeeeModel.sub_down_1].
+lockstep ltac:(apply add_down_1_same; leaf).
+Qed.
+
+Lemma ball_to_interval_1_same :
+  forall c c' r r' : float, sv c c' -> sv r r' ->
+  same_pair (m_ball_to_interval_1 c r) (m_ball_to_interval_1' c' r').
+Proof.
+intros c c' r r' Hc Hr. cbv beta delta [IeeeModel.ball_to_interval_1].
+lockstep ltac:(first [apply sub_down_1_same; leaf | apply add_up_1_same; leaf]).
+Qed.
+
+Lemma interval_hull_1_same :
+  forall xl xl' xu xu' yl yl' yu yu' : float,
+  sv xl xl' -> sv xu xu' -> sv yl yl' -> sv yu yu' ->
+  same_pair (m_interval_hull_1 xl xu yl yu) (m_interval_hull_1 xl' xu' yl' yu').
+Proof.
+intros xl xl' xu xu' yl yl' yu yu' Hxl Hxu Hyl Hyu. cbv beta delta [IeeeModel.interval_hull_1].
+lockstep fail.
+Qed.
+
+Lemma add_2_2_same :
+  forall x0 x0' x1 x1' y0 y0' y1 y1' : float,
+  sv x0 x0' -> sv x1 x1' -> sv y0 y0' -> sv y1 y1' ->
+  same_pair (m_add_2_2 x0 x1 y0 y1) (m_add_2_2' x0' x1' y0' y1').
+Proof.
+intros x0 x0' x1 x1' y0 y0' y1 y1' H0 H1 K0 K1. cbv beta delta [IeeeModel.add_2_2].
+lockstep ltac:(first [apply two_sum_same; leaf | apply fast_two_sum_pair; leaf]).
+Qed.
+
+Lemma lt_2_2_same :
+  forall x0 x0' x1 x1' y0 y0' y1 y1' : float,
+  sv x0 x0' -> sv x1 x1' -> sv y0 y0' -> sv y1 y1' ->
+  m_lt_2_2 x0 x1 y0 y1 = m_lt_2_2 x0' x1' y0' y1'.
+Proof.
+intros x0 x0' x1 x1' y0 y0' y1 y1' H0 H1 K0 K1. cbv beta delta [IeeeModel.lt_2_2].
+lockstep fail.
+Qed.
+
+(** ** The kernels of the rule, for any two products of the same value *)
+
+(* The eight kernels proved first, with fst and snd. *)
 Lemma split_same :
   forall p p' : float -> float -> float, same_ps p p' ->
   forall a a' : float, sv a a' ->
   sv (fst (split1 p a)) (fst (split2 p' a')) /\ sv (snd (split1 p a)) (snd (split2 p' a')).
 Proof.
-intros p p' Hp a a' Ha. unfold split_with. cbv zeta. cbn [fst snd]. split; same_ops.
+intros p p' Hp a a' Ha. unfold IeeeWith.split_with. cbv zeta. cbn [fst snd]. split; same_ops.
 Qed.
 
 Lemma two_prod_dekker_same :
@@ -851,7 +1228,7 @@ Lemma two_prod_dekker_same :
   sv (fst (dekker1 p a b)) (fst (dekker2 p' a' b')) /\
   sv (snd (dekker1 p a b)) (snd (dekker2 p' a' b')).
 Proof.
-intros p p' Hp a a' b b' Ha Hb. unfold two_prod_dekker_with.
+intros p p' Hp a a' b b' Ha Hb. unfold IeeeWith.two_prod_dekker_with.
 generalize (split_same p p' Hp a a' Ha) (split_same p p' Hp b b' Hb).
 destruct (split1 p a) as [ah al]. destruct (split2 p' a') as [ah' al'].
 destruct (split1 p b) as [bh bl]. destruct (split2 p' b') as [bh' bl'].
@@ -864,7 +1241,7 @@ Lemma mul_pow2_2_same :
   sv (fst (scale1 p x0 x1 c)) (fst (scale2 p' x0' x1' c')) /\
   sv (snd (scale1 p x0 x1 c)) (snd (scale2 p' x0' x1' c')).
 Proof.
-intros p p' Hp x0 x0' x1 x1' c c' H0 H1 Hc. unfold mul_pow2_2_with. cbv zeta.
+intros p p' Hp x0 x0' x1 x1' c c' H0 H1 Hc. unfold IeeeWith.mul_pow2_2_with. cbv zeta.
 generalize (fast_two_sum_same (p x0 c) (p' x0' c') (p x1 c) (p' x1' c')
               (Hp _ _ _ _ H0 Hc) (Hp _ _ _ _ H1 Hc)).
 destruct (fts (p x0 c) (p x1 c)) as [z0 z1].
@@ -878,7 +1255,7 @@ Lemma mul_pow2_2_full_same :
   sv (fst (scale_full1 p x0 x1 c)) (fst (scale_full2 p' x0' x1' c')) /\
   sv (snd (scale_full1 p x0 x1 c)) (snd (scale_full2 p' x0' x1' c')).
 Proof.
-intros p p' Hp x0 x0' x1 x1' c c' H0 H1 Hc. unfold mul_pow2_2_full_with.
+intros p p' Hp x0 x0' x1 x1' c c' H0 H1 Hc. unfold IeeeWith.mul_pow2_2_full_with.
 generalize (mul_pow2_2_same p p' Hp x0 x0' x1 x1' c c' H0 H1 Hc).
 destruct (scale1 p x0 x1 c) as [z0 z1]. destruct (scale2 p' x0' x1' c') as [z0' z1'].
 cbn [fst snd]. intros [Hz0 Hz1]. split; same_ops.
@@ -890,7 +1267,7 @@ Lemma ball_mul_pow2_1_same :
   sv (fst (ball1 p cx rx c)) (fst (ball2 p' cx' rx' c')) /\
   sv (snd (ball1 p cx rx c)) (snd (ball2 p' cx' rx' c')).
 Proof.
-intros p p' Hp cx cx' rx rx' c c' Hx Hr Hc. unfold ball_mul_pow2_1_with. cbv zeta.
+intros p p' Hp cx cx' rx rx' c c' Hx Hr Hc. unfold IeeeWith.ball_mul_pow2_1_with. cbv zeta.
 cbn [fst snd]. split; same_ops.
 Qed.
 
@@ -900,7 +1277,7 @@ Lemma ball_mul_pow2_1_full_same :
   sv (fst (ball_full1 p cx rx c)) (fst (ball_full2 p' cx' rx' c')) /\
   sv (snd (ball_full1 p cx rx c)) (snd (ball_full2 p' cx' rx' c')).
 Proof.
-intros p p' Hp cx cx' rx rx' c c' Hx Hr Hc. unfold ball_mul_pow2_1_full_with.
+intros p p' Hp cx cx' rx rx' c c' Hx Hr Hc. unfold IeeeWith.ball_mul_pow2_1_full_with.
 generalize (ball_mul_pow2_1_same p p' Hp cx cx' rx rx' c c' Hx Hr Hc).
 destruct (ball1 p cx rx c) as [cz rz]. destruct (ball2 p' cx' rx' c') as [cz' rz'].
 cbn [fst snd]. intros [Hz Hrz]. split; same_ops.
@@ -915,7 +1292,7 @@ Lemma ball_mul_pow2_2_same :
   sv (snd (bball1 p cx0 cx1 rx c)) (snd (bball2 p' cx0' cx1' rx' c')).
 Proof.
 intros p p' Hp cx0 cx0' cx1 cx1' rx rx' c c' H0 H1 Hr Hc.
-unfold ball_mul_pow2_2_with. cbv zeta.
+unfold IeeeWith.ball_mul_pow2_2_with. cbv zeta.
 generalize (fast_two_sum_same (p cx0 c) (p' cx0' c') (p cx1 c) (p' cx1' c')
               (Hp _ _ _ _ H0 Hc) (Hp _ _ _ _ H1 Hc)).
 destruct (fts (p cx0 c) (p cx1 c)) as [cz0 cz1].
@@ -932,11 +1309,205 @@ Lemma ball_mul_pow2_2_full_same :
   sv (snd (bball_full1 p cx0 cx1 rx c)) (snd (bball_full2 p' cx0' cx1' rx' c')).
 Proof.
 intros p p' Hp cx0 cx0' cx1 cx1' rx rx' c c' H0 H1 Hr Hc.
-unfold ball_mul_pow2_2_full_with.
+unfold IeeeWith.ball_mul_pow2_2_full_with.
 generalize (ball_mul_pow2_2_same p p' Hp cx0 cx0' cx1 cx1' rx rx' c c' H0 H1 Hr Hc).
 destruct (bball1 p cx0 cx1 rx c) as [[cz0 cz1] rz].
 destruct (bball2 p' cx0' cx1' rx' c') as [[cz0' cz1'] rz'].
 cbn [fst snd]. intros [Hz0 [Hz1 Hrz]]. split; [|split]; same_ops.
+Qed.
+
+Lemma mul_pow2_2_pair :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall x0 x0' x1 x1' c c' : float, sv x0 x0' -> sv x1 x1' -> sv c c' ->
+  same_pair (scale1 p x0 x1 c) (scale2 p' x0' x1' c').
+Proof.
+intros p p' Hp x0 x0' x1 x1' c c' H0 H1 Hc. apply same_pair_fst_snd.
+now apply mul_pow2_2_same.
+Qed.
+
+(* The others, in the order of IeeeWith.v. *)
+Lemma mul_1_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall a a' b b' : float, sv a a' -> sv b b' -> sv (w_mul_1_1 p a b) (w_mul_1_1 p' a' b').
+Proof. intros p p' Hp a a' b b' Ha Hb. cbv beta delta [IeeeWith.mul_1_1_with]. lockstep fail. Qed.
+
+Lemma axpy_entry_step_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall a a' x x' y y' : float, sv a a' -> sv x x' -> sv y y' ->
+  sv (w_axpy_entry_step_1 p a x y) (w_axpy_entry_step_1' p' a' x' y').
+Proof.
+intros p p' Hp a a' x x' y y' Ha Hx Hy. cbv beta delta [IeeeWith.axpy_entry_step_1_with].
+lockstep ltac:(first [apply mul_1_1_same; leaf | apply add_1_1_same; leaf]).
+Qed.
+
+Lemma axpy_step_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall a a' x x' y y' : float, sv a a' -> sv x x' -> sv y y' ->
+  sv (w_axpy_step_1 p a x y) (w_axpy_step_1' p' a' x' y').
+Proof.
+intros p p' Hp a a' x x' y y' Ha Hx Hy. cbv beta delta [IeeeWith.axpy_step_1_with].
+lockstep ltac:(first [apply mul_1_1_same; leaf | apply add_1_1_same; leaf]).
+Qed.
+
+Lemma interval_mid_rad_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall xl xl' xu xu' : float, sv xl xl' -> sv xu xu' ->
+  same_pair (w_interval_mid_rad_1 p xl xu) (w_interval_mid_rad_1' p' xl' xu').
+Proof.
+intros p p' Hp xl xl' xu xu' Hl Hu. cbv beta delta [IeeeWith.interval_mid_rad_1_with].
+lockstep ltac:(apply sub_up_1_same; leaf).
+Qed.
+
+Lemma interval_to_ball_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall xl xl' xu xu' : float, sv xl xl' -> sv xu xu' ->
+  same_pair (w_interval_to_ball_1 p xl xu) (w_interval_to_ball_1' p' xl' xu').
+Proof.
+intros p p' Hp xl xl' xu xu' Hl Hu. cbv beta delta [IeeeWith.interval_to_ball_1_with].
+lockstep ltac:(apply interval_mid_rad_1_same; leaf).
+Qed.
+
+Lemma ball_from_interval_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall lo lo' hi hi' : float, sv lo lo' -> sv hi hi' ->
+  same_pair (w_ball_from_interval_1 p lo hi) (w_ball_from_interval_1' p' lo' hi').
+Proof.
+intros p p' Hp lo lo' hi hi' Hl Hh. cbv beta delta [IeeeWith.ball_from_interval_1_with].
+lockstep ltac:(apply interval_to_ball_1_same; leaf).
+Qed.
+
+Lemma ball_from_interval_2_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall lo lo' hi hi' : float, sv lo lo' -> sv hi hi' ->
+  same_triple (w_ball_from_interval_2 p lo hi) (w_ball_from_interval_2' p' lo' hi').
+Proof.
+intros p p' Hp lo lo' hi hi' Hl Hh. cbv beta delta [IeeeWith.ball_from_interval_2_with].
+lockstep ltac:(first [apply two_sum_ord_same; leaf | apply add_up_1_same; leaf]).
+Qed.
+
+Lemma ball_hull_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall cx cx' rx rx' cy cy' ry ry' : float,
+  sv cx cx' -> sv rx rx' -> sv cy cy' -> sv ry ry' ->
+  same_pair (w_ball_hull_1 p cx rx cy ry) (w_ball_hull_1' p' cx' rx' cy' ry').
+Proof.
+intros p p' Hp cx cx' rx rx' cy cy' ry ry' Hcx Hrx Hcy Hry.
+cbv beta delta [IeeeWith.ball_hull_1_with].
+lockstep ltac:(first [ apply ball_to_interval_1_same; leaf | apply interval_hull_1_same; leaf
+                     | apply interval_to_ball_1_same; leaf ]).
+Qed.
+
+Lemma ball_intersection_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall cx cx' rx rx' cy cy' ry ry' : float,
+  sv cx cx' -> sv rx rx' -> sv cy cy' -> sv ry ry' ->
+  same_pair (w_ball_intersection_1 p cx rx cy ry) (w_ball_intersection_1' p' cx' rx' cy' ry').
+Proof.
+intros p p' Hp cx cx' rx rx' cy cy' ry ry' Hcx Hrx Hcy Hry.
+cbv beta delta [IeeeWith.ball_intersection_1_with].
+lockstep ltac:(first [ apply sub_down_1_same; leaf | apply add_up_1_same; leaf
+                     | apply interval_to_ball_1_same; leaf ]).
+Qed.
+
+Lemma bound_dot_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall m m' : float, sv m m' -> same_pair_mask (w_bound_dot_1 p m) (w_bound_dot_1' p' m').
+Proof. intros p p' Hp m m' Hm. cbv beta delta [IeeeWith.bound_dot_1_with]. lockstep fail. Qed.
+
+Lemma bound_dot_2_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall m m' : float, sv m m' -> same_pair_mask (w_bound_dot_2 p m) (w_bound_dot_2' p' m').
+Proof. intros p p' Hp m m' Hm. cbv beta delta [IeeeWith.bound_dot_2_with]. lockstep fail. Qed.
+
+Lemma bound_sum_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall m m' : float, sv m m' -> same_value_mask (w_bound_sum_1 p m) (w_bound_sum_1' p' m').
+Proof. intros p p' Hp m m' Hm. cbv beta delta [IeeeWith.bound_sum_1_with]. lockstep fail. Qed.
+
+Lemma bound_sum_2_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall m m' : float, sv m m' -> same_value_mask (w_bound_sum_2 p m) (w_bound_sum_2' p' m').
+Proof. intros p p' Hp m m' Hm. cbv beta delta [IeeeWith.bound_sum_2_with]. lockstep fail. Qed.
+
+(* The mask ex is an operand: the same in both executions. *)
+Lemma bv_mul_pow2_radius_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall (m m' : float) (ex : bool) (rx rx' c c' : float), sv m m' -> sv rx rx' -> sv c c' ->
+  sv (w_bv_mul_pow2_radius p m ex rx c) (w_bv_mul_pow2_radius' p' m' ex rx' c').
+Proof.
+intros p p' Hp m m' ex rx rx' c c' Hm Hr Hc. cbv beta delta [IeeeWith.bv_mul_pow2_radius_with].
+lockstep fail.
+Qed.
+
+Lemma bv_mul_pow2_step_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall x x' c c' : float, sv x x' -> sv c c' ->
+  same_value_mask (w_bv_mul_pow2_step_1 p x c) (w_bv_mul_pow2_step_1' p' x' c').
+Proof.
+intros p p' Hp x x' c c' Hx Hc. cbv beta delta [IeeeWith.bv_mul_pow2_step_1_with].
+lockstep fail.
+Qed.
+
+Lemma interval_split_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall xl xl' xu xu' : float, sv xl xl' -> sv xu xu' ->
+  same_four (w_interval_split_1 p xl xu) (w_interval_split_1' p' xl' xu').
+Proof.
+intros p p' Hp xl xl' xu xu' Hl Hu. cbv beta delta [IeeeWith.interval_split_1_with].
+lockstep ltac:(apply interval_mid_rad_1_same; leaf).
+Qed.
+
+Lemma mul_pow2_step_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall x x' c c' : float, sv x x' -> sv c c' ->
+  sv (w_mul_pow2_step_1 p x c) (w_mul_pow2_step_1 p' x' c').
+Proof.
+intros p p' Hp x x' c c' Hx Hc. cbv beta delta [IeeeWith.mul_pow2_step_1_with].
+lockstep fail.
+Qed.
+
+Lemma rmul_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall a a' b b' : float, sv a a' -> sv b b' -> sv (w_rmul p a b) (w_rmul p' a' b').
+Proof. intros p p' Hp a a' b b' Ha Hb. cbv beta delta [IeeeWith.rmul_with]. lockstep fail. Qed.
+
+Lemma scale_step_1_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall x x' a a' : float, sv x x' -> sv a a' ->
+  sv (w_scale_step_1 p x a) (w_scale_step_1 p' x' a').
+Proof.
+intros p p' Hp x x' a a' Hx Ha. cbv beta delta [IeeeWith.scale_step_1_with].
+lockstep ltac:(apply mul_1_1_same; leaf).
+Qed.
+
+Lemma bv_mul_pow2_step_2_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall x0 x0' x1 x1' c c' : float, sv x0 x0' -> sv x1 x1' -> sv c c' ->
+  same_pair_mask (w_bv_mul_pow2_step_2 p x0 x1 c) (w_bv_mul_pow2_step_2' p' x0' x1' c').
+Proof.
+intros p p' Hp x0 x0' x1 x1' c c' H0 H1 Hc. cbv beta delta [IeeeWith.bv_mul_pow2_step_2_with].
+lockstep ltac:(apply fast_two_sum_pair; leaf).
+Qed.
+
+Lemma interval_split_2_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall xl0 xl0' xl1 xl1' xu0 xu0' xu1 xu1' : float,
+  sv xl0 xl0' -> sv xl1 xl1' -> sv xu0 xu0' -> sv xu1 xu1' ->
+  same_eight (w_interval_split_2 p xl0 xl1 xu0 xu1) (w_interval_split_2' p' xl0' xl1' xu0' xu1').
+Proof.
+intros p p' Hp xl0 xl0' xl1 xl1' xu0 xu0' xu1 xu1' Hl0 Hl1 Hu0 Hu1.
+cbv beta delta [IeeeWith.interval_split_2_with].
+lockstep ltac:(first [ apply mul_pow2_2_pair; leaf | apply add_2_2_same; leaf
+                     | apply lt_2_2_same; leaf ]).
+Qed.
+
+Lemma mul_pow2_step_2_same :
+  forall p p' : float -> float -> float, same_ps p p' ->
+  forall x0 x0' x1 x1' c c' : float, sv x0 x0' -> sv x1 x1' -> sv c c' ->
+  same_pair (w_mul_pow2_step_2 p x0 x1 c) (w_mul_pow2_step_2' p' x0' x1' c').
+Proof.
+intros p p' Hp x0 x0' x1 x1' c c' H0 H1 Hc. cbv beta delta [IeeeWith.mul_pow2_step_2_with].
+lockstep ltac:(apply mul_pow2_2_pair; leaf).
 Qed.
 
 (** ** The plain product against the generated kernel, on the same operands *)
@@ -947,6 +1518,7 @@ Qed.
 Let Hmp : same_ps mult prod'.
 Proof. exact (mult_prod_products prec emax nan_fma' nan_mult). Qed.
 
+(* The eight kernels proved first. *)
 Theorem split_two_executions :
   forall a : float,
   let '(ah, al) := split1 mult a in
@@ -1064,6 +1636,243 @@ generalize (ball_mul_pow2_2_full_same mult prod' Hmp cx0 cx0 cx1 cx1 rx rx c c
 destruct (bball_full1 mult cx0 cx1 rx c) as [[cz0 cz1] rz].
 destruct (bball_full2 prod' cx0 cx1 rx c) as [[cw0 cw1] rw].
 exact (fun H => H).
+Qed.
+
+(* The others, in the order of IeeeWith.v. Each is its lemma K_same on the plain product and
+   the fused one, on the same operands. *)
+Theorem mul_1_1_two_executions :
+  forall a b : float, sv (w_mul_1_1 mult a b) (IeeeModel.mul_1_1 prec emax nan_fma' a b).
+Proof.
+intros a b. rewrite <- mul_1_1_with_prod.
+exact (mul_1_1_same mult prod' Hmp a a b b (same_refl prec emax a) (same_refl prec emax b)).
+Qed.
+
+Theorem axpy_entry_step_1_two_executions :
+  forall a x y : float,
+  sv (w_axpy_entry_step_1 mult a x y)
+     (IeeeModel.axpy_entry_step_1 prec emax nan_plus' nan_fma' a x y).
+Proof.
+intros a x y. rewrite <- axpy_entry_step_1_with_prod.
+exact (axpy_entry_step_1_same mult prod' Hmp a a x x y y (same_refl prec emax a)
+         (same_refl prec emax x) (same_refl prec emax y)).
+Qed.
+
+Theorem axpy_step_1_two_executions :
+  forall a x y : float,
+  sv (w_axpy_step_1 mult a x y) (IeeeModel.axpy_step_1 prec emax nan_plus' nan_fma' a x y).
+Proof.
+intros a x y. rewrite <- axpy_step_1_with_prod.
+exact (axpy_step_1_same mult prod' Hmp a a x x y y (same_refl prec emax a)
+         (same_refl prec emax x) (same_refl prec emax y)).
+Qed.
+
+Theorem interval_mid_rad_1_two_executions :
+  forall xl xu : float,
+  let '(m, r) := w_interval_mid_rad_1 mult xl xu in
+  let '(m', r') := IeeeModel.interval_mid_rad_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs'
+                     nan_fma' nan_const' xl xu in
+  sv m m' /\ sv r r'.
+Proof.
+intros xl xu. rewrite <- interval_mid_rad_1_with_prod.
+exact (interval_mid_rad_1_same mult prod' Hmp xl xl xu xu (same_refl prec emax xl)
+         (same_refl prec emax xu)).
+Qed.
+
+Theorem interval_to_ball_1_two_executions :
+  forall xl xu : float,
+  let '(c, r) := w_interval_to_ball_1 mult xl xu in
+  let '(c', r') := IeeeModel.interval_to_ball_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs'
+                     nan_fma' nan_const' xl xu in
+  sv c c' /\ sv r r'.
+Proof.
+intros xl xu. rewrite <- interval_to_ball_1_with_prod.
+exact (interval_to_ball_1_same mult prod' Hmp xl xl xu xu (same_refl prec emax xl)
+         (same_refl prec emax xu)).
+Qed.
+
+Theorem ball_from_interval_1_two_executions :
+  forall lo hi : float,
+  let '(c, r) := w_ball_from_interval_1 mult lo hi in
+  let '(c', r') := IeeeModel.ball_from_interval_1 prec emax nan_plus' nan_minus' nan_opp'
+                     nan_abs' nan_fma' nan_const' lo hi in
+  sv c c' /\ sv r r'.
+Proof.
+intros lo hi. rewrite <- ball_from_interval_1_with_prod.
+exact (ball_from_interval_1_same mult prod' Hmp lo lo hi hi (same_refl prec emax lo)
+         (same_refl prec emax hi)).
+Qed.
+
+Theorem ball_from_interval_2_two_executions :
+  forall lo hi : float,
+  let '(c0, c1, r) := w_ball_from_interval_2 mult lo hi in
+  let '(c0', c1', r') := IeeeModel.ball_from_interval_2 prec emax nan_plus' nan_minus' nan_opp'
+                           nan_abs' nan_fma' nan_const' lo hi in
+  sv c0 c0' /\ sv c1 c1' /\ sv r r'.
+Proof.
+intros lo hi. rewrite <- ball_from_interval_2_with_prod.
+exact (ball_from_interval_2_same mult prod' Hmp lo lo hi hi (same_refl prec emax lo)
+         (same_refl prec emax hi)).
+Qed.
+
+Theorem ball_hull_1_two_executions :
+  forall cx rx cy ry : float,
+  let '(c, r) := w_ball_hull_1 mult cx rx cy ry in
+  let '(c', r') := IeeeModel.ball_hull_1 prec emax nan_plus' nan_minus' nan_opp' nan_abs'
+                     nan_fma' nan_const' cx rx cy ry in
+  sv c c' /\ sv r r'.
+Proof.
+intros cx rx cy ry. rewrite <- ball_hull_1_with_prod.
+exact (ball_hull_1_same mult prod' Hmp cx cx rx rx cy cy ry ry (same_refl prec emax cx)
+         (same_refl prec emax rx) (same_refl prec emax cy) (same_refl prec emax ry)).
+Qed.
+
+Theorem ball_intersection_1_two_executions :
+  forall cx rx cy ry : float,
+  let '(c, r) := w_ball_intersection_1 mult cx rx cy ry in
+  let '(c', r') := IeeeModel.ball_intersection_1 prec emax nan_plus' nan_minus' nan_opp'
+                     nan_abs' nan_fma' nan_const' cx rx cy ry in
+  sv c c' /\ sv r r'.
+Proof.
+intros cx rx cy ry. rewrite <- ball_intersection_1_with_prod.
+exact (ball_intersection_1_same mult prod' Hmp cx cx rx rx cy cy ry ry (same_refl prec emax cx)
+         (same_refl prec emax rx) (same_refl prec emax cy) (same_refl prec emax ry)).
+Qed.
+
+Theorem bound_dot_1_two_executions :
+  forall m : float,
+  let '(g, t, ok) := w_bound_dot_1 mult m in
+  let '(g', t', ok') := IeeeModel.bound_dot_1 prec emax nan_plus' nan_fma' m in
+  sv g g' /\ sv t t' /\ ok = ok'.
+Proof.
+intros m. rewrite <- bound_dot_1_with_prod.
+exact (bound_dot_1_same mult prod' Hmp m m (same_refl prec emax m)).
+Qed.
+
+Theorem bound_dot_2_two_executions :
+  forall m : float,
+  let '(g, t, ok) := w_bound_dot_2 mult m in
+  let '(g', t', ok') := IeeeModel.bound_dot_2 prec emax nan_plus' nan_fma' m in
+  sv g g' /\ sv t t' /\ ok = ok'.
+Proof.
+intros m. rewrite <- bound_dot_2_with_prod.
+exact (bound_dot_2_same mult prod' Hmp m m (same_refl prec emax m)).
+Qed.
+
+Theorem bound_sum_1_two_executions :
+  forall m : float,
+  let '(g, ok) := w_bound_sum_1 mult m in
+  let '(g', ok') := IeeeModel.bound_sum_1 prec emax nan_plus' nan_fma' m in
+  sv g g' /\ ok = ok'.
+Proof.
+intros m. rewrite <- bound_sum_1_with_prod.
+exact (bound_sum_1_same mult prod' Hmp m m (same_refl prec emax m)).
+Qed.
+
+Theorem bound_sum_2_two_executions :
+  forall m : float,
+  let '(g, ok) := w_bound_sum_2 mult m in
+  let '(g', ok') := IeeeModel.bound_sum_2 prec emax nan_plus' nan_fma' m in
+  sv g g' /\ ok = ok'.
+Proof.
+intros m. rewrite <- bound_sum_2_with_prod.
+exact (bound_sum_2_same mult prod' Hmp m m (same_refl prec emax m)).
+Qed.
+
+Theorem bv_mul_pow2_radius_two_executions :
+  forall (m : float) (ex : bool) (rx c : float),
+  sv (w_bv_mul_pow2_radius mult m ex rx c)
+     (IeeeModel.bv_mul_pow2_radius prec emax nan_plus' nan_minus' nan_fma' m ex rx c).
+Proof.
+intros m ex rx c. rewrite <- bv_mul_pow2_radius_with_prod.
+exact (bv_mul_pow2_radius_same mult prod' Hmp m m ex rx rx c c (same_refl prec emax m)
+         (same_refl prec emax rx) (same_refl prec emax c)).
+Qed.
+
+Theorem bv_mul_pow2_step_1_two_executions :
+  forall x c : float,
+  let '(z, e) := w_bv_mul_pow2_step_1 mult x c in
+  let '(z', e') := IeeeModel.bv_mul_pow2_step_1 prec emax nan_abs' nan_fma' x c in
+  sv z z' /\ e = e'.
+Proof.
+intros x c. rewrite <- bv_mul_pow2_step_1_with_prod.
+exact (bv_mul_pow2_step_1_same mult prod' Hmp x x c c (same_refl prec emax x)
+         (same_refl prec emax c)).
+Qed.
+
+Theorem interval_split_1_two_executions :
+  forall xl xu : float,
+  let '(al, au, bl, bu) := w_interval_split_1 mult xl xu in
+  let '(al', au', bl', bu') := IeeeModel.interval_split_1 prec emax nan_plus' nan_minus' nan_opp'
+                                 nan_abs' nan_fma' nan_const' xl xu in
+  sv al al' /\ sv au au' /\ sv bl bl' /\ sv bu bu'.
+Proof.
+intros xl xu. rewrite <- interval_split_1_with_prod.
+exact (interval_split_1_same mult prod' Hmp xl xl xu xu (same_refl prec emax xl)
+         (same_refl prec emax xu)).
+Qed.
+
+Theorem mul_pow2_step_1_two_executions :
+  forall x c : float,
+  sv (w_mul_pow2_step_1 mult x c) (IeeeModel.mul_pow2_step_1 prec emax nan_fma' x c).
+Proof.
+intros x c. rewrite <- mul_pow2_step_1_with_prod.
+exact (mul_pow2_step_1_same mult prod' Hmp x x c c (same_refl prec emax x)
+         (same_refl prec emax c)).
+Qed.
+
+Theorem rmul_two_executions :
+  forall a b : float, sv (w_rmul mult a b) (IeeeModel.rmul prec emax nan_fma' a b).
+Proof.
+intros a b. rewrite <- rmul_with_prod.
+exact (rmul_same mult prod' Hmp a a b b (same_refl prec emax a) (same_refl prec emax b)).
+Qed.
+
+Theorem scale_step_1_two_executions :
+  forall x a : float,
+  sv (w_scale_step_1 mult x a) (IeeeModel.scale_step_1 prec emax nan_fma' x a).
+Proof.
+intros x a. rewrite <- scale_step_1_with_prod.
+exact (scale_step_1_same mult prod' Hmp x x a a (same_refl prec emax x)
+         (same_refl prec emax a)).
+Qed.
+
+Theorem bv_mul_pow2_step_2_two_executions :
+  forall x0 x1 c : float,
+  let '(z0, z1, e) := w_bv_mul_pow2_step_2 mult x0 x1 c in
+  let '(z0', z1', e') := IeeeModel.bv_mul_pow2_step_2 prec emax nan_plus' nan_minus' nan_abs'
+                           nan_fma' x0 x1 c in
+  sv z0 z0' /\ sv z1 z1' /\ e = e'.
+Proof.
+intros x0 x1 c. rewrite <- bv_mul_pow2_step_2_with_prod.
+exact (bv_mul_pow2_step_2_same mult prod' Hmp x0 x0 x1 x1 c c (same_refl prec emax x0)
+         (same_refl prec emax x1) (same_refl prec emax c)).
+Qed.
+
+Theorem interval_split_2_two_executions :
+  forall xl0 xl1 xu0 xu1 : float,
+  let '(al0, al1, au0, au1, bl0, bl1, bu0, bu1) := w_interval_split_2 mult xl0 xl1 xu0 xu1 in
+  let '(al0', al1', au0', au1', bl0', bl1', bu0', bu1') :=
+    IeeeModel.interval_split_2 prec emax nan_plus' nan_minus' nan_opp' nan_fma'
+      xl0 xl1 xu0 xu1 in
+  sv al0 al0' /\ sv al1 al1' /\ sv au0 au0' /\ sv au1 au1' /\
+  sv bl0 bl0' /\ sv bl1 bl1' /\ sv bu0 bu0' /\ sv bu1 bu1'.
+Proof.
+intros xl0 xl1 xu0 xu1. rewrite <- interval_split_2_with_prod.
+exact (interval_split_2_same mult prod' Hmp xl0 xl0 xl1 xl1 xu0 xu0 xu1 xu1
+         (same_refl prec emax xl0) (same_refl prec emax xl1) (same_refl prec emax xu0)
+         (same_refl prec emax xu1)).
+Qed.
+
+Theorem mul_pow2_step_2_two_executions :
+  forall x0 x1 c : float,
+  let '(z0, z1) := w_mul_pow2_step_2 mult x0 x1 c in
+  let '(z0', z1') := IeeeModel.mul_pow2_step_2 prec emax nan_plus' nan_minus' nan_fma'
+                       x0 x1 c in
+  sv z0 z0' /\ sv z1 z1'.
+Proof.
+intros x0 x1 c. rewrite <- mul_pow2_step_2_with_prod.
+exact (mul_pow2_step_2_same mult prod' Hmp x0 x0 x1 x1 c c (same_refl prec emax x0)
+         (same_refl prec emax x1) (same_refl prec emax c)).
 Qed.
 
 End TwoExecutions.
