@@ -1665,8 +1665,13 @@ nearest of a nonnegative $y$ is above $y$ (`up_above`, `Directed.v`), and the nu
 number is at least $\eta$ above it, the smallest gap of the format. In the IEEE model the number after
 $\Omega$ is $+\infty$, as before. *Checked:* `scaling.py`, every center, radius and power of
 two of four formats: containment always, and exactness in every case the statement says; the
-script and the two descriptions are with the generator now, where the listing above is run.
-*Smallest precision:* 2. *Risk: low.*
+two descriptions are in `gen/kernels` now, and `scaling.py` runs them from there (the first
+version of this sentence put the script with the generator too).
+*Smallest precision:* 2. *Risk: low.* *As built (2026-11-21):* the four kernels are this
+listing and its one-limb form, proved in the real model (`BallPow2.v`) and the full forms in the
+IEEE model (`IeeeBallPow2.v`), with the claims above, from precision 2; `ldexp` and `half` of a
+`Ball` call the full forms, and the composition for a $2^n$ that is not a number of `T` stays the
+header's, as in Milestone 1.
 
 *`constexpr`:* yes, by [the rule of the product](#the-two-executions-of-a-product): the only
 fused operations are `prod`. The two executions give the same values; a zero limb of the center
@@ -1714,6 +1719,38 @@ writes:    (none)                         arrays written, one element per step, 
 finish:    (none)                         a straight-line kernel on the final state
 ```
 
+*As built (2026-11-21)*, `gen/kernels/dot_2.fold` (the comment and the source fields left out):
+
+```
+fold:          dot_2
+arrays:        supplied x = x0 x1, supplied y = y0 y1
+state:         s = s0 s1
+step:          s = dot_step_2(s, x, y)
+combine:       s = add_2_2(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r = r0 r1
+output:        mask flag
+finish:        (r, flag) = fold_finish_2(s)
+value:         x*y
+requires:      canonical x
+requires:      canonical y
+ensures:       normalized r
+ensures:       fold_error r eps=3*u^2/(1-4*u) term=4*u^2 tau=3/2*eta rel=n-1 abs=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 4
+```
+
+An array is `stored` or `supplied` (below); every fold that returns a number has a finish,
+`fold_finish_k`, which returns the canonical NaN and a false flag when the leading limb of the
+final state is not finite; the claim of a fold is `fold_error`, the bound of the theorem below
+with the heights of each order. The generator has five more kinds of loop, each a description
+of the same file type with fields of its own ([Folds](../architecture.md#folds) and the sections
+after it): a *map* (`writes:` an array, a mask as its state, `check:` the finish of an element),
+a *fold of maxima* (`norm_upper_k`), a *convolution* (`coefficients:` the fold of each
+coefficient, the sequential order only), a *ball vector* (`scalars:`, `record:`, `radius:`) and
+the *product of two BallVectors* (`centers:`, `count:`, `bound:`). In all, 44 loops.
+
 - **The step** is an ordinary kernel, with its own listing, model and theorem:
   `dot_step_2(s, x, y)` is `p = mul_2_2(x, y); s = add_2_2(s, p)`.
 - **The orders** are the two that are emitted. *Sequential:* the state after element $i$ is the
@@ -1760,6 +1797,11 @@ finish:    (none)                         a straight-line kernel on the final st
   to the step: a limb that the step *adds* passes through `guard` first. `dot`, `scale` and the
   `x` of `axpy` only multiply their elements and need none; `sum`, and the `y` of `axpy`, need
   one addition per limb. For one limb this is a real cost, and [question 19](#open-questions).
+  *As built:* a fold that adds the elements of a supplied array is a fold of its own, named
+  `_entry`, whose step guards (`sum_1_entry`, `sum_2_entry`, `sum_fast_2_entry`, `add_k_entry`,
+  `sub_k_entry`, `axpy_1_entry`, `axpy_2_entry`, `axpy_2_1_entry`), beside the form on stored
+  arrays (for `axpy`, a supplied `x` and a stored `y`); `dot_k`, `scale_k`, `mul_pow2_map_k` and
+  `conv_k` read supplied arrays, which they only multiply.
 
 *What the generator enforces on a fold:* the step and the combination pass every rule of a
 kernel (R1 to R3 among them); the types of the state agree; and, for a fold whose combination
@@ -1786,7 +1828,10 @@ product of one limb uses properties 1, 2 and 4 only: its step rounds even from t
 
 *Risk:* **medium to high**, and it is generator work, not
 proof work: a second printer path for loops in scalar and packed code, and arrays in the
-interpreter and in both test tiers.
+interpreter and in both test tiers. *As built (2026-11-21):* done, the two orders in scalar code
+and the lane order in packed code (AVX2 and NEON), for every loop but the convolutions and the
+products of BallVectors, which have the sequential order only; the models of the loops are those
+of `fold_seq` and `fold_lanes` (`proofs/gen/FoldModel.v`, `IeeeFoldModel.v`).
 
 ### Summation over any tree
 
@@ -1886,6 +1931,31 @@ generated fold has the shape these theorems are stated for.
 $\oplus$ and $\otimes$ are `add_2_2` and `mul_2_2` (the finite cores), `mul_2_1` when the scalar
 of `axpy` or `scale` is a `T`, and the operations of `T` for one limb.
 
+*As built (2026-11-21)*, the loops of this table in `gen/kernels/`, all proved in both models:
+
+| Loop | Step | Orders | Claim | $p \ge$ |
+|---|---|---|---|---|
+| `sum_1`, `sum_1_entry` | `add_1_1`, `sum_entry_step_1` | sequential, lanes | `fold_error`, $\varepsilon = \tfrac{u}{1+u}$, height $n - 1$ | 1 |
+| `sum_2`, `sum_2_entry` | `add_2_2`, `sum_entry_step_2` | sequential, lanes | `normalized`; `fold_error`, $\varepsilon = \tfrac{3u^2}{1-4u}$, height $n - 1$ | 3 |
+| `sum_fast_2`, `sum_fast_2_entry` | `add_fast_2_2`, `sum_fast_entry_step_2` | sequential, lanes | `normalized`; `fold_error`, $\varepsilon = 3u^2$, height $n - 1$ | 2 |
+| `dot_1` | `dot_step_1` | sequential, lanes | `fold_error`, heights $n$ and $n - 1$, $\tau = \tfrac12\eta$ | 1 |
+| `dot_2` | `dot_step_2` | sequential, lanes | `normalized`; `fold_error`, $4u^2$ and $\tau = \tfrac32\eta$ | 4 |
+| `add_1`, `add_1_entry`, `sub_1`, `sub_1_entry` | `add_1_1`, `sub_1_1` and their entry steps | sequential, lanes | `entries` | 1 |
+| `add_2`, `add_2_entry`, `sub_2`, `sub_2_entry` | `add_2_2`, `sub_2_2` and their entry steps | sequential, lanes | `entries` | 3 |
+| `axpy_1`, `axpy_1_entry` | `axpy_step_1`, `axpy_entry_step_1` | sequential, lanes | `entries` | 1 |
+| `axpy_2_1`, `axpy_2_1_entry` (a scalar `T`) | `axpy_step_2_1`, `axpy_entry_step_2_1` | sequential, lanes | `entries` | 3 |
+| `axpy_2`, `axpy_2_entry` | `axpy_step_2`, `axpy_entry_step_2` | sequential, lanes | `entries` | 4 |
+| `scale_1`, `scale_2` | `scale_step_k` | sequential, lanes | `entries` | 1, 2 |
+| `mul_pow2_map_1`, `mul_pow2_map_2` (first named `mul_pow2_k`) | `mul_pow2_step_k` | sequential, lanes | `entries` | 1, 2 |
+| `conv_1`, `conv_2` | the coefficients of `dot_1`, `dot_2` | sequential | `coefficients` | 1, 4 |
+| `norm_upper_1`, `norm_upper_2` | `norm_step_k`, combined by `norm_combine` | sequential, lanes | `upper` over `max`, steps 0 and 1 | 1 |
+
+Every one has `finite_or_nan` with its flag, in the extended domain: the flag is true exactly when
+every result is finite, and a result that is not finite is the canonical NaN. The claim `entries`
+of a map is that every element written satisfies the claims of the step; for the steps of `axpy`
+that is an error relative to the terms (the form `T`), $\lvert z - (a x + y)\rvert \le c\,u^k
+(\lvert a x\rvert + \lvert y\rvert) + t\,\eta$, the exported form named below.
+
 **Statement of `sum_k`.** If every $x_i$ is valid and the result is finite, the result is valid
 (normalized, for two limbs) and
 
@@ -1957,12 +2027,17 @@ named with each statement. What they are about is the two functions on lists of
 yet proved, because the generator has no folds yet: that the model generated for a fold is
 that function of that step; the statements in the IEEE model, with the flag
 ([below](#sum-dot-axpy-convolution), "When something is not finite"); and `axpy_k`, `conv_k`
-and the maps, which follow from the theorems of their kernels entry by entry.
+and the maps, which follow from the theorems of their kernels entry by entry. *As built
+(2026-11-21):* all of it is proved against the generated statements, for every length and every
+number of lanes: the sums and dot products in `FoldSums.v` and `IeeeFolds.v`, the maps in
+`FoldMaps.v` and `IeeeFoldMaps.v`, the convolutions in `FoldConv.v` and `IeeeFoldConv.v`, the
+folds of maxima in `FoldNorm.v` and `IeeeFoldNorm.v`.
 *Checked:* `batch.py`: 2 500 dot products of two limbs per format in four orders, with operands
 down to the underflow range, at most 0.72 of the bound; and 4 000 fused dot products of one
 limb per format, of up to 12 terms, in the sequential order and with 2, 4 and 8 lanes as
-`Folds.v` defines them: the largest error was 0.94 to 0.99 of the proved bound, and 0.56 to
-0.66 of the exported one. A term of $\tfrac12\eta$ per rounded addition, the additions that
+`Folds.v` defines them: the largest error was 0.94 to 0.99 of the proved bound, and 0.46 to
+0.53 of the exported one (`results/batch.txt`; the first version of this sentence said 0.56 to
+0.66). A term of $\tfrac12\eta$ per rounded addition, the additions that
 combine the lanes included, exceeded what the statement of `bound_dot_1` promises in 173 of
 the 11 259 runs in a lane order; it never exceeded the values that the listing returns, whose
 constants have room. *Smallest precision:* that
@@ -2076,7 +2151,9 @@ kernels contain no fused operation but `prod`
 a false `ok` is a compile error with a message, which is the precondition "checked at compile
 time when $n$ is a constant". `traits<X>::axpy` is a constant, like the bounds of Milestone 1.
 A bound of the sum for a known height, `sum_height(h)`, is the same kernel and is offered for an
-order that the program knows.
+order that the program knows. *State on 2026-11-21:* the four kernels are generated and proved
+(`BoundKernels.v`), and no public function calls them yet (`KAIRN_NOT_PUBLIC_YET` of
+`tests/CMakeLists.txt`): this paragraph is the design of their header.
 
 *Not claimed:* the smallest number of `T` above the real bound; a bound when
 $n\varepsilon$ exceeds about $\tfrac14$, where it would be a third of the sum of magnitudes
@@ -2108,6 +2185,44 @@ $\sum_i\lvert x_i y_i\rvert \le (1+u)^{n+2}\,(a + \tfrac12 n\eta)$, by the leadi
 *Checked:* `batch.py` asserts that inequality on every dot product it runs. *Proof:* the tree
 theorem and `chain_step` (`Ball2.v`); `acc_radius_k` has the form of
 [`conv_radius`](#ballvector). *Risk: medium*: three kernels and a class, none of them hard.
+
+*As built (2026-11-21).* The eight kernels are generated and proved (`AccKernels.v`,
+`IeeeAccKernels.v`): `acc_add_k` (the element guarded, rule R3), `acc_mul_k` (`t = fma(x, y, s)`
+for one limb, `dot_step_2` for two) and `acc_merge_k` claim what `add_1_1`, `add_2_2` or the step
+of `dot_k` claims of the running sum, and `rounded b nearest` of the sum of magnitudes with a value
+of its own (`a+abs(x)`, `a+abs(x[0])*abs(y[0])`, `a+c`), read where $b$ is finite. The page gave
+`acc_radius_k` no listing; this one was proposed and checked by `accumulator.py`:
+
+```
+acc_radius_1(a, m, g, t) -> (r, ok)                  acc_radius_2: the same, with the (g, t) of bound_dot_2
+  q  = prod(m, const up((1+u)*u+eta/(2*u)))          >= m u
+  d  = prod(q, const up(2))                          2q, exact
+  w  = fma(q, d, q)                                  >= q + 2q^2
+  c  = fma(m, const N, a)                            >= a + m eta/2
+  e  = fma(c, w, c);  f = prod(e, g);  s = add(f, t)
+  r  = fma(s, const up((1+u)^8), const up((1+u)^7*eta/2+eta/(2*u)))
+  oq = le(d, const up(1))                            m u <= 1/2
+  z  = sub(a, a);  fa = eq(z, z)                     a is finite
+  ok = and(oq, fa)
+```
+
+Its claim: when `ok`, $m u \le \tfrac12$ and
+$r \ge (1+u)^2 g\,(1 + m u + 2 m^2 u^2)(a + \tfrac12 m\eta) + t$. What is proved of the class
+(`Accumulator.v`, `IeeeAccumulator.v`), more precise than the statement above: for every
+history of `add`, `add_product` and `merge`, a merge being a node of the tree, with elements that
+are numbers of the format (normalized pairs for two limbs), with $(g, t, ok)$ =
+`bound_dot_k(m)` and $(r, ok')$ = `acc_radius_k(a, m, g, t)` for a count $m$ of `T` that is $0$ or
+at least $1$ and at least $n$: if `ok` and `ok'` are true (and, in the IEEE model, the running sum
+and the radius are finite), then $\lvert s - \Sigma\rvert \le g\sum\lvert x_i y_i\rvert + t \le r$.
+The inequality on the magnitudes has the exponent $n$ for one limb, where the magnitudes are those
+of the terms, and $n + 2$ for two: $\sum_i\lvert x_i y_i\rvert \le (1+u)^n(a + \tfrac12 n\eta)$
+and $(1+u)^{n+2}(a + \tfrac12 n\eta)$. From precision 2 for one limb and 4 for two, in a format
+that contains $\tfrac12$. *Not machine-checked:* the count, an integer of the header, and its
+conversion to `T` (a count of `T` at least $n$ is what the theorem asks), the whole line that the
+header returns when a mask is false, and that the header calls the kernels in this way. No public
+`Accumulator` exists on this tree yet. `accumulator.py` asserts the inequality on the magnitudes
+(A1), the claim of the radius (A2), the chain with `bound_dot_k` (A3), and that `ok` is false for
+a sum of magnitudes that is $+\infty$ or a NaN (A5).
 
 *Not claimed, and left for later:* an accumulator that keeps unnormalized limbs and normalizes
 once at the end (the "fused" loop of the [brief](brief.md)). Its statement would be that of
