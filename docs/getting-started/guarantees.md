@@ -49,8 +49,9 @@ of an UNVERIFIED one has `verified == false` and no constants to read, so that n
 be built on a number that is only a target.
 
 In this version every kernel that an operation of these headers calls is proved, so no operation
-needs the marker; the kernels of Milestone 2 written so far are proved too, and those of the loops
-over arrays are not called by any operation yet ([reference](../reference/index.md)). It is how the
+needs the marker; the kernels of Milestone 2 written so far are proved too, and the functions on
+arrays call loops all of whose kernels are proved ([below](#sums-dot-products-and-maps-of-arrays));
+a function on arrays has no marked form, and compiles only while the kernels of its loop are. It is how the
 operations still to come (three and four limbs, division, square root) will ship before their
 proofs.
 
@@ -443,6 +444,35 @@ come back with the other sign, through the guard of `from_limbs`); with `KAIRN_C
 two limbs is `from_limbs`, checked; a view never allocates, and an `SoA` allocates only in the
 functions that say so. Not provided: a packed `Ball` or `Interval`, dispatch at run time, and an
 alignment requirement (loads and stores are unaligned; an `SoA` aligns its arrays to 64 bytes).
+
+## Sums, dot products and maps of arrays
+
+The functions of `kairn/batch.hpp` ([reference](../reference/batch.md)) take arrays as views,
+`SoAView<T, k>`, and each calls one generated loop: `sum`, `sum_fast` and `dot` (a number), the
+maps `add`, `sub`, `scale`, `mul_pow2` and `axpy` (an array, element by element), `conv` (the
+coefficients of the product of two polynomials) and `norm_upper` (at least the largest magnitude).
+**The statement of each loop is proved, in the real model and in the IEEE model, for every length
+of array and every number of lanes**: a sum of $n$ numbers is within
+$\gamma_{n-1}(e)\sum_i\lvert x_i\rvert$ of the exact sum, $e = u/(1+u)$ for one limb and
+$3u^2/(1-4u)$ for two, in whatever order the loop adds; a dot product within its own bound, with an
+underflow term of $\eta$ per term; every element a map writes satisfies the claims of the operation
+on one element; a coefficient of a convolution the statement of a dot product of its terms;
+`norm_upper` is the largest magnitude for one limb and at most one step of `T` above it for two.
+The header adds nothing to the arithmetic.
+
+By default a sum and a dot product use the lane order of the build's form of `Packed`, the packed
+loop, whose bits depend on the instruction set; with `kairn::sequential` the sequential order,
+whose bits are the same everywhere. Both have the same statement. A result that is not finite (an
+infinite or NaN element, an overflow) is the canonical NaN with the flag `finite` false; a map's
+flag is false exactly when an element it wrote is not finite, and those elements are the canonical
+NaN. Arrays that the program fills with products may be passed straight in: the loops guard every
+limb they add ([above](#products-the-program-passes-in)). A map may write in place, an array it
+reads exactly; no other overlap is supported. With `KAIRN_CHECKS` each function checks the
+environment, the lengths, the arrays that alias and its elements.
+
+Not provided: a product by a two-limb scalar without an addition (`axpy` with `y` zero), an order
+of a number of lanes other than the build's, and constant evaluation (the loops are not
+`constexpr`).
 
 ## The environment
 

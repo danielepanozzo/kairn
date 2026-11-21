@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $s = s_0 + s_1$, $x = x_0 
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call its core, [`dot_step_2`](dot_step_2.md), instead.
 
 ## Requires
 

@@ -10,7 +10,7 @@ on each distinct output and, for the kernels' runners, the guards (docs/develope
         [(--packed-runner LABEL EXECUTABLE)... --packed-lanes W [--packed-count N]]
     python3 tests/crosscheck.py api --kernel K --format F --seed S --count N --summary-dir DIR
         (--runner LABEL EXECUTABLE)... [--first-form LABEL]... [--same-as LABEL OTHER]...
-        [--claims FILE]
+        [--claims FILE] [--orders O1,O2,...] [--max-length L] [--inplace]
 
 Each output is that of the pipeline
 
@@ -71,7 +71,10 @@ kernel fails when it computed none), if the oracle fails an output, if it judged
 output, if an output has no case of a stratum the generator's header announced, or if a summary
 exceeds the guards' bound (crosscheck_guards.SUMMARY_BYTES); and, for each
 --same-as LABEL OTHER, if a form of runner LABEL wrote other bytes than the same form of runner
-OTHER (the settings of KAIRN_ENCLOSURE_CODE, which must compute the same bits).
+OTHER (the settings of KAIRN_ENCLOSURE_CODE, which must compute the same bits). K may be a fold
+whose requests carry arrays (the functions of kairn/batch.hpp): --orders and --max-length go to
+the oracle's gen, and --inplace, for a map, adds a second stream whose requests are in place (gen
+--inplace), through every form, judged as the first, its outputs and summaries named K.F.inplace.
 
 --claims FILE, in both modes: the claims the oracle's gen and check read (and the guards, through
 the summary), gen/claims.json by default (tests/CMakeLists.txt, KAIRN_ORACLE_CLAIMS).
@@ -541,13 +544,32 @@ def api(a):
     fresh(work)
     claims = ["--claims", a.claims] if a.claims else []
     gen = ["gen", kernel, fmt, "--seed", a.seed, "--count", a.count] + claims
-    status, requests = generate(gen, work)
-    if status != 0:
-        print("the request generator failed (%s) for %s %s" % (status, kernel, fmt))
-        return 1
+    # A fold: the orders and the largest length of its requests (gen --orders, --max-length).
+    if a.orders:
+        gen += ["--orders", a.orders]
+    if a.max_length is not None:
+        gen += ["--max-length", a.max_length]
     if not a.runner:
         print("crosscheck.py: no runner (--runner LABEL EXECUTABLE)", file=sys.stderr)
         return 2
+    # A map: a second stream, its requests in place (gen --inplace), judged as the first.
+    streams = [("", gen)] + ([(".inplace", gen + ["--inplace"])] if a.inplace else [])
+    failed = 0
+    for suffix, argv in streams:
+        failed += api_stream(a, kernel, fmt, summary_dir, work, claims, suffix, argv)
+    if failed:
+        return 1
+    shutil.rmtree(work, ignore_errors=True)
+    return 0
+
+
+def api_stream(a, kernel, fmt, summary_dir, work, claims, suffix, gen):
+    """One stream of requests through every form of every runner: 0 if it passed, 1 otherwise. A
+    stream in place (SUFFIX .inplace) has its requests, its outputs and its summaries named with it."""
+    status, requests = generate(gen, work, "requests%s.txt" % suffix)
+    if status != 0:
+        print("the request generator failed (%s) for %s %s" % (status, kernel, fmt))
+        return 1
 
     # Every form of every runner on the same requests, each named LABEL.FORM.
     runs = []
@@ -594,7 +616,7 @@ def api(a):
         what = what_of[name]
         if status != 0:
             say("== %s %s, %s: the runner failed (%s)" % (kernel, fmt, what, status))
-            keep(work, name, output)
+            keep(work, name + suffix, output)
             failed.append("%s (runner %s; 0 is success)" % (what, status))
             continue
         if first != name:
@@ -607,27 +629,26 @@ def api(a):
             continue
         n_judged += 1
         say("== %s %s, %s" % (kernel, fmt, what))
-        summary = os.path.join(summary_dir, "%s.%s.%s.json" % (kernel, fmt, name))
+        summary = os.path.join(summary_dir, "%s.%s%s.%s.json" % (kernel, fmt, suffix, name))
         failure = judge_api(output, summary, a.count, claims)
         failure_of[name] = failure
         if failure:
-            keep(work, name, output)
+            keep(work, name + suffix, output)
             failed.append("%s (%s)" % (what, failure))
 
     if failed:
-        one = [sys.executable, ORACLE, "gen", kernel, fmt, "--seed", a.seed, "--start", "INDEX",
-               "--count", "1"] + claims
-        print("the public interface failed the claims of %s %s in:\n  %s\n"
+        at = gen.index("--count")
+        one = [sys.executable, ORACLE] + gen[:at] + gen[at + 2:] + ["--start", "INDEX", "--count", "1"]
+        print("the public interface failed the claims of %s %s%s in:\n  %s\n"
               "To rerun case INDEX of form F: %s | RUNNER --form F | %s\n"
               "with RUNNER one of:%s\n"
               "The requests and the outputs that failed are in %s"
-              % (kernel, fmt, "\n  ".join(failed), shell(one),
+              % (kernel, fmt, suffix and " (in place)", "\n  ".join(failed), shell(one),
                  shell([sys.executable, ORACLE] + API_CHECK + claims),
                  "".join("\n  %s: %s" % (label, exe) for label, exe in a.runner), work), flush=True)
         return 1
-    shutil.rmtree(work, ignore_errors=True)
-    say("%s %s: %d forms of the public interface passed (distinct outputs judged: %d)%s"
-        % (kernel, fmt, len(runs), n_judged,
+    say("%s %s%s: %d forms of the public interface passed (distinct outputs judged: %d)%s"
+        % (kernel, fmt, suffix and " (in place)", len(runs), n_judged,
            "; %d forms the same bytes as their twins (--same-as)" % n_same if a.same_as else ""))
     return 0
 
@@ -682,6 +703,10 @@ def main(argv=None):
                    help="every form of runner LABEL must write the same bytes as the same form of "
                         "runner OTHER")
     p.add_argument("--claims", help="the claims file of the oracle (default gen/claims.json)")
+    p.add_argument("--orders", help="a fold: the orders of the requests (gen --orders)")
+    p.add_argument("--max-length", help="a fold: the largest length (gen --max-length)")
+    p.add_argument("--inplace", action="store_true",
+                   help="a map: one more stream of every form, its requests in place (gen --inplace)")
     a = ap.parse_args(argv)
     if a.mode == "compiled":
         if not a.exhaustive and (a.seed is None or a.count is None):

@@ -8,8 +8,15 @@
 //   runner --internal         the building blocks: kernels that are parts of other kernels
 //   runner --not-public       entry kernels that no public operation calls yet, each with why
 //   runner --packed-list      every kernel that some packed form maps to
+//   runner --fold-list        every fold (gen/claims.json, "folds") that some form of the
+//                             functions on arrays maps to (runner_arrays.hpp)
+//   runner --folds-not-public the folds that no public function calls, each with why
 //   runner --self-test        kairn::self_test() and kairn::environment_ok() as built here: exit
 //                             0 if both pass (the tests of the flag sets, tests/api/flags/)
+//
+// The requests of the loops over arrays (folds, maps, convolutions, folds of maxima) are completed
+// at once through the functions of kairn/batch.hpp, on views of the line's arrays
+// (runner_arrays.hpp, which says how a form chooses its order and computes in place).
 //
 // The packed forms (named packed_NAME, listed after a kernel's scalar forms) compute through
 // Packed<T, k> (kairn/packed.hpp) and the views of kairn/soa.hpp, in whichever form this build
@@ -69,6 +76,9 @@
 #endif
 
 #include "no_crash_reports.hpp"
+// The functions on arrays (kairn/batch.hpp): the requests of the loops over arrays, completed
+// through them.
+#include "runner_arrays.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -1269,6 +1279,11 @@ const char* const internal[] = {
     // bounds of two limbs of a sum and of a product, and the product of two bounds of two limbs.
     "mul_dir_1", "add_ball_2_2", "mul_ball_2_2", "add_down_2_2", "add_up_2_2", "sub_down_2_2", "sub_up_2_2",
     "mul_dir_2_2", "mul_ext_2_2",
+    // Milestone 2, the parts of the loops over arrays of kairn/batch.hpp that are not entry kernels:
+    // the finish of the folds and maps, and the kernels of the folds of maxima (norm_upper_k), which
+    // the public functions reach inside their loops, judged as api.oracle.FOLD.FORMAT.
+    "fold_finish_1", "fold_finish_2", "norm_combine", "norm_step_1", "norm_step_2", "norm_finish_1",
+    "norm_finish_2",
 };
 // Entry kernels (entry: yes in gen/kernels) that no public operation calls yet, and why.
 struct NotPublic {
@@ -1277,16 +1292,26 @@ struct NotPublic {
 };
 const char* const ball_core = "the finite core of a Ball operation: the operators call the full kernel, and "
                               "kairn::finite has no Ball forms (decision D5 names the Expansion arithmetic)";
+const char* const fold_step = "the step of a loop over arrays of the program (kairn/batch.hpp): the public "
+                              "function calls the loop, not the step on its own, and the oracle judges the "
+                              "loop's claims through it (api.oracle.FOLD.FORMAT)";
 const NotPublic not_public[] = {
     {"ball_add_1", ball_core}, {"ball_sub_1", ball_core}, {"ball_mul_1", ball_core}, {"ball_scale_1", ball_core},
     {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core}, {"ball_scale_2", ball_core},
     {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
+    {"sum_entry_step_1", fold_step}, {"sum_entry_step_2", fold_step}, {"sum_fast_entry_step_2", fold_step},
+    {"dot_step_1", fold_step}, {"dot_step_2", fold_step}, {"add_entry_step_1", fold_step},
+    {"add_entry_step_2", fold_step}, {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step},
+    {"scale_step_1", fold_step}, {"scale_step_2", fold_step}, {"mul_pow2_step_1", fold_step},
+    {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},
+    {"axpy_entry_step_2", fold_step},
 };
 // The interval kernels of Milestone 2 are reached by the forms of Interval (interval.hpp) and of
 // the functions of a Ball of the enclosure interface (ball.hpp); their building blocks are in
-// `internal` above. The kernels of the folds' stage and of the maps, which no public operation
-// calls yet, are in none of these lists (KAIRN_NOT_PUBLIC_YET of tests/CMakeLists.txt,
-// coverage.cmake).
+// `internal` above. The kernels of the loops over arrays that kairn/batch.hpp calls are in the two
+// lists above; those that no public operation calls yet (the steps of the maps on stored arrays,
+// the bounds as functions of n, the accumulator, the ball vectors) are in none of these lists
+// (KAIRN_NOT_PUBLIC_YET of tests/CMakeLists.txt, coverage.cmake).
 
 constexpr int max_limbs = 16;
 long lineno = 0;
@@ -1328,7 +1353,7 @@ void put_limb(double v, std::string& out) {
 int usage() {
     std::fprintf(stderr,
                  "usage: runner [--form NAME] | --forms KERNEL | --list | --packed-list | --internal | --not-public | "
-                 "--self-test\n");
+                 "--fold-list | --folds-not-public | --self-test\n");
     return 2;
 }
 
@@ -1520,6 +1545,24 @@ int main(int argc, char** argv) {
 #endif
         for (const PackedForm& f : packed_forms)
             if (std::strcmp(f.kernel, argv[2]) == 0) std::printf("%s\n", f.name);
+        for (const ArrayForm& f : array_forms)
+            if (array_form_listed(f) && std::strcmp(f.fold, argv[2]) == 0) std::printf("%s\n", f.name);
+        return 0;
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--fold-list") == 0) {
+        std::vector<std::string> seen;
+        for (const ArrayForm& f : array_forms) {
+            bool known = !array_form_listed(f);
+            for (const std::string& s : seen) known = known || s == f.fold;
+            if (!known) {
+                seen.push_back(f.fold);
+                std::printf("%s\n", f.fold);
+            }
+        }
+        return 0;
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--folds-not-public") == 0) {
+        for (const FoldNotPublic& k : folds_not_public) std::printf("%s\t%s\n", k.fold, k.why);
         return 0;
     }
     if (argc == 2 && std::strcmp(argv[1], "--list") == 0) {
@@ -1592,6 +1635,26 @@ int main(int argc, char** argv) {
         }
         if (fields.back()[0] == '#') fields.pop_back();  // the tag
         if (fields.size() < 2) fail("expected KERNEL FORMAT LIMB ... [#TAG]");
+        // A loop over arrays: completed at once, through the function of kairn/batch.hpp.
+        const ArrayForm* af = nullptr;
+        for (const ArrayForm& f : array_forms) {
+            if (!array_form_listed(f) || fields[0] != f.fold) continue;
+            if (form_name ? std::strcmp(form_name, f.name) == 0 : af == nullptr) af = &f;
+        }
+        if (af) {
+            if (batch.active) fail("a packed form's stream has lines of packed forms only");
+            ++lines;
+            if (fields[1] != "binary64" && fields[1] != "binary32")
+                fail("this runner knows binary64 and binary32, not " + fields[1]);
+            out += " ->";
+            const std::string why = fields[1] == "binary64"
+                                        ? complete_array_line<double>(*af, fields, out, parse, put_limb)
+                                        : complete_array_line<float>(*af, fields, out, parse, put_limb);
+            if (!why.empty()) fail(why);
+            out += '\n';
+            std::fwrite(out.data(), 1, out.size(), stdout);
+            continue;
+        }
         const Form* k = nullptr;
         const PackedForm* pk = nullptr;
         for (const Form& f : forms) {

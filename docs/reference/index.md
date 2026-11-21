@@ -295,15 +295,15 @@ Kernels that other kernels call, and that no public operation computes on its ow
 
 ## Sums and dot products of arrays
 
-The kernels of the loops over arrays (the folds of Milestone 2): their steps, the finish of their result, and the bounds of a sum and of a dot product as a function of the number of terms. The functions on arrays of the public headers come later.
+The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batch.hpp` calls: the steps of the sums and dot products, the finish of their result, the kernels of `norm_upper`, and the bounds of a sum and of a dot product as a function of the number of terms. Each function on arrays calls a loop made of these, whose claims are those of the whole array ([Functions on arrays](batch.md)); a step's page states what one step claims.
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| not yet called by the public headers | - | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
-| not yet called by the public headers | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
-| not yet called by the public headers | - | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
-| not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
-| not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |
+| `dot(x, y)`, `dot(x, y, sequential)`, `conv(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
+| `dot(x, y)`, `dot(x, y, sequential)`, `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
+| `sum(x)`, `sum(x, sequential)`, `sum_fast(x)` | `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
+| `sum(x)`, `sum(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
+| `sum_fast(x)`, `sum_fast(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |
 | none (internal) | - | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_1`](fold_finish_1.md) |
 | none (internal) | - | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_2`](fold_finish_2.md) |
 | none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - m \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bound_sum_1`](bound_sum_1.md) |
@@ -343,25 +343,25 @@ The kernels of the loops over arrays (the folds of Milestone 2): their steps, th
 
 ## Operations on arrays, entry by entry
 
-The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the operation of one entry, on an array the program supplies where it says so. The functions on arrays of the public headers come later.
+The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the operation of one entry, on an array the program supplies where it says so, and every element a map of `kairn/batch.hpp` writes satisfies its claims ([Functions on arrays](batch.md)). The steps of the maps on stored arrays have no caller there.
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
 | none (internal) | - | $s = \mathrm{RN}(a - b)$; $\lvert s - (a - b)\rvert \le \frac{u}{1 + u}\,\lvert a - b\rvert$ | [`sub_1_1`](sub_1_1.md) |
-| not yet called by the public headers | - | $z = \mathrm{RN}(x + y)$; $\lvert z - (x + y)\rvert \le \frac{u}{1 + u}\,\lvert x + y\rvert$ | [`add_entry_step_1`](add_entry_step_1.md) |
-| not yet called by the public headers | - | $z = \mathrm{RN}(x - y)$; $\lvert z - (x - y)\rvert \le \frac{u}{1 + u}\,\lvert x - y\rvert$ | [`sub_entry_step_1`](sub_entry_step_1.md) |
-| not yet called by the public headers | - | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$, normalized | [`add_entry_step_2`](add_entry_step_2.md) |
-| not yet called by the public headers | - | $\lvert z - (x - y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x - y\rvert$, normalized | [`sub_entry_step_2`](sub_entry_step_2.md) |
-| not yet called by the public headers | - | $z = \mathrm{RN}(x a)$; $\lvert z - x a\rvert \le \frac{u}{1 + u}\,\lvert x a\rvert + \tfrac{1}{2}\,\eta$ | [`scale_step_1`](scale_step_1.md) |
-| not yet called by the public headers | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_step_2`](scale_step_2.md) |
-| not yet called by the public headers | - | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`mul_pow2_step_1`](mul_pow2_step_1.md) |
-| not yet called by the public headers | - | $\lvert z - x c\rvert \le \eta$, normalized | [`mul_pow2_step_2`](mul_pow2_step_2.md) |
+| `add(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>`, `SoAView<T, 1>` | $z = \mathrm{RN}(x + y)$; $\lvert z - (x + y)\rvert \le \frac{u}{1 + u}\,\lvert x + y\rvert$ | [`add_entry_step_1`](add_entry_step_1.md) |
+| `sub(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>`, `SoAView<T, 1>` | $z = \mathrm{RN}(x - y)$; $\lvert z - (x - y)\rvert \le \frac{u}{1 + u}\,\lvert x - y\rvert$ | [`sub_entry_step_1`](sub_entry_step_1.md) |
+| `add(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$, normalized | [`add_entry_step_2`](add_entry_step_2.md) |
+| `sub(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (x - y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x - y\rvert$, normalized | [`sub_entry_step_2`](sub_entry_step_2.md) |
+| `scale(x, a, z)` | `SoAView<const T, 1>`, `T`, `SoAView<T, 1>` | $z = \mathrm{RN}(x a)$; $\lvert z - x a\rvert \le \frac{u}{1 + u}\,\lvert x a\rvert + \tfrac{1}{2}\,\eta$ | [`scale_step_1`](scale_step_1.md) |
+| `scale(x, a, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_step_2`](scale_step_2.md) |
+| `mul_pow2(x, c, z)` | `SoAView<const T, 1>`, `T`, `SoAView<T, 1>` | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`mul_pow2_step_1`](mul_pow2_step_1.md) |
+| `mul_pow2(x, c, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | $\lvert z - x c\rvert \le \eta$, normalized | [`mul_pow2_step_2`](mul_pow2_step_2.md) |
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{2 + 3u}{(1 + u) (1 + u)}\right) u\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{2}{3}\,\eta$ | [`axpy_step_1`](axpy_step_1.md) |
-| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{2 + 3u}{(1 + u) (1 + u)}\right) u\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{2}{3}\,\eta$ | [`axpy_entry_step_1`](axpy_entry_step_1.md) |
+| `axpy(a, x, y, z)` | `T`, `SoAView<const T, 1>`, `SoAView<const T, 1>`, `SoAView<T, 1>` | $\lvert z - (a x + y)\rvert \le \left(\frac{2 + 3u}{(1 + u) (1 + u)}\right) u\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{2}{3}\,\eta$ | [`axpy_entry_step_1`](axpy_entry_step_1.md) |
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + 2\,\eta$, normalized | [`axpy_step_2`](axpy_step_2.md) |
-| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + 2\,\eta$, normalized | [`axpy_entry_step_2`](axpy_entry_step_2.md) |
+| `axpy(a, x, y, z)` | `Expansion<T, 2>`, `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + 2\,\eta$, normalized | [`axpy_entry_step_2`](axpy_entry_step_2.md) |
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_step_2_1`](axpy_step_2_1.md) |
-| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_entry_step_2_1`](axpy_entry_step_2_1.md) |
+| `axpy(a, x, y, z)` | `T`, `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_entry_step_2_1`](axpy_entry_step_2_1.md) |
 
 ## The radius of a BallVector
 

@@ -668,21 +668,26 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   interval_mid_rad_2 interval_to_ball_2 interval_split_2 ball_to_interval_2 ball_from_interval_1 ball_hull_2
   ball_intersection_2)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
+# The folds that no public function calls yet and that the public interface's runner lists in none
+# of its lists (api/coverage.cmake): those of BallVector (architecture.md, "Ball vectors"), whose
+# header comes later. Cross-checked like every fold; the public interface has no form of them.
+set(KAIRN_NOT_PUBLIC_YET_FOLDS
+  bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2 bv_neg_1 bv_neg_2 bv_mul_pow2_1 bv_mul_pow2_2
+  bv_make_1 bv_make_2 bv_conv_1 bv_conv_2)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
-# none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
-# whose public functions (sum, dot, the bounds as functions of n) come with BallVector, and the
-# steps of the maps and the kernels of the folds of maxima (architecture.md, "Maps", "Folds of
-# maxima"), whose public functions come with BallVector too; and the kernels of the ball vectors
-# (architecture.md, "Ball vectors"), which only the folds of BallVector call. They are
-# cross-checked like every kernel; the public interface has no form of them. (The interval kernels left this list with
-# include/kairn/interval.hpp: the public interface reaches each, or lists it as a building block.)
+# none of its lists (api/CMakeLists.txt, api/coverage.cmake): the bounds as functions of n, whose
+# public functions are the coming kairn::traits<X>::sum(n) and dot(n); the steps of the maps on
+# stored arrays, which no public function calls (include/kairn/batch.hpp calls the maps on supplied
+# arrays: sub_1_1 is the step of sub_1, axpy_step_k of axpy_k); the kernels of the accumulator; and
+# the kernels of the ball vectors (architecture.md, "Ball vectors"), which only the folds of
+# BallVector call. They are cross-checked like every kernel; the public interface has no form of
+# them. (The interval kernels left this list with include/kairn/interval.hpp, and the steps,
+# finishes and kernels of the folds of maxima that kairn/batch.hpp calls with it: the public
+# interface reaches each through its fold, which api.oracle.FOLD.FORMAT judges, and lists it as a
+# building block or as not public on its own.)
 set(KAIRN_NOT_PUBLIC_YET
-  bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
-  sum_fast_entry_step_2 fold_finish_1 fold_finish_2
-  sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
-  mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
-  axpy_entry_step_2_1
-  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
+  bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2
+  sub_1_1 axpy_step_1 axpy_step_2 axpy_step_2_1
   acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
   bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2 bv_center_entry_1 bv_center_2
   bv_make_radius bv_make_finish neg_1 bv_neg_radius bv_mul_pow2_step_1 bv_mul_pow2_step_2

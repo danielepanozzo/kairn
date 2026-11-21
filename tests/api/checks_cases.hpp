@@ -5,6 +5,7 @@
 // this file.
 #pragma once
 
+#include <kairn/batch.hpp>
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
@@ -14,6 +15,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 #include <vector>
 
 #if defined(__x86_64__) || defined(_M_X64)
@@ -506,10 +508,103 @@ inline const Operation operations[] = {
          put(b, kairn::SoAView<const double, 2>(a.h, a.l, 16).load(1));
      }},
 
+    // The functions on arrays (kairn/batch.hpp), on arrays of the operands above: each checks the
+    // environment once, then the lengths, the arrays that alias and every element.
+    {"batch.sum", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x);
+         put(b, kairn::sum(kairn::SoAView<const double, 2>(a.h, a.l, 16)).value);
+     }},
+    {"batch.sum_sequential", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.y);
+         put(b, kairn::sum(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::sequential).value);
+     }},
+    {"batch.sum_one_limb", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x);
+         put(b, kairn::sum(kairn::SoAView<const double, 1>(a.h, 16)).value);
+     }},
+    {"batch.sum_fast", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x);
+         put(b, kairn::sum_fast(kairn::SoAView<const double, 2>(a.h, a.l, 16)).value);
+     }},
+    {"batch.sum_fast_sequential", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x);
+         put(b, kairn::sum_fast(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::sequential).value);
+     }},
+    {"batch.dot", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x), c(o.y);
+         put(b, kairn::dot(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16)).value);
+     }},
+    {"batch.dot_sequential", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x), c(o.y);
+         put(b, kairn::dot(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
+                           kairn::sequential).value);
+     }},
+    {"batch.add", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x), c(o.y);
+         Arrays z(o.x);
+         put(b, kairn::add(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
+                           kairn::SoAView<double, 2>(z.h, z.l, 16)));
+         put(b, z.h[3]);
+     }},
+    {"batch.sub_in_place", Kind::rounds, [](Bits& b) {
+         Arrays a(o.x);
+         const Arrays c(o.y);
+         const kairn::SoAView<double, 2> x(a.h, a.l, 16);
+         put(b, kairn::sub(x, kairn::SoAView<const double, 2>(c.h, c.l, 16), x));
+         put(b, a.h[5]);
+     }},
+    {"batch.scale", Kind::rounds, [](Bits& b) {
+         Arrays a(o.x);
+         const kairn::SoAView<double, 2> x(a.h, a.l, 16);
+         put(b, kairn::scale(x, double(v_c), x));
+     }},
+    {"batch.mul_pow2", Kind::rounds, [](Bits& b) {
+         Arrays a(o.x);
+         const kairn::SoAView<double, 2> x(a.h, a.l, 16);
+         put(b, kairn::mul_pow2(x, 0.25, x));
+     }},
+    {"batch.axpy", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x);
+         Arrays c(o.y);
+         const kairn::SoAView<double, 2> y(c.h, c.l, 16);
+         put(b, kairn::axpy(double(v_c), kairn::SoAView<const double, 2>(a.h, a.l, 16), y, y));
+     }},
+    {"batch.axpy_two_limbs", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x);
+         Arrays c(o.y);
+         const kairn::SoAView<double, 2> y(c.h, c.l, 16);
+         put(b, kairn::axpy(o.x, kairn::SoAView<const double, 2>(a.h, a.l, 16), y, y));
+     }},
+    {"batch.conv", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x), c(o.y);
+         double h[31], l[31];
+         put(b, kairn::conv(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
+                            kairn::SoAView<double, 2>(h, l, 31)));
+         put(b, h[7]);
+     }},
+
     // The functions that do not round, each on its whole corpus, for double and float.
     {"e1.neg", Kind::exact, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              for (auto a : c.one) put(out, -kairn::Expansion<decltype(a), 1>(a));
+         });
+     }},
+    {"batch.norm_upper", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = typename std::decay_t<decltype(c.one)>::value_type;
+             for (const T& a : c.one) put(out, kairn::norm_upper(kairn::SoAView<const T, 1>(&a, 1)).value);
+             const kairn::Reduction<T> r1 = kairn::norm_upper(kairn::SoAView<const T, 1>(c.one.data(), c.one.size()));
+             put(out, r1.value);
+             put(out, r1.finite);
+             std::vector<T> h, l;
+             for (const auto& x : c.two) {
+                 h.push_back(x.limb[0]);
+                 l.push_back(x.limb[1]);
+                 const kairn::Reduction<T> e = kairn::norm_upper(kairn::SoAView<const T, 2>(&x.limb[0], &x.limb[1], 1));
+                 put(out, e.value);
+                 put(out, e.finite);
+             }
+             put(out, kairn::norm_upper(kairn::SoAView<const T, 2>(h.data(), l.data(), h.size())).value);
          });
      }},
     {"e1.abs", Kind::exact, [](Bits& b) {

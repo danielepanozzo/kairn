@@ -163,7 +163,7 @@ public:
     /// Whether N is zero.
     constexpr bool empty() const noexcept { return size_ == 0; }
     /// The array of limb j, 0 for the leading limbs, of size() elements: with the length, what a
-    /// view is made of, and what the functions on arrays will take.
+    /// view is made of; the functions on arrays of batch.hpp take the view itself.
     constexpr T* limb(int j) const noexcept { return limb_[j]; }
     /// The count elements from offset on, offset + count <= N.
     constexpr SoAView subview(std::size_t offset, std::size_t count) const noexcept {

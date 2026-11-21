@@ -44,6 +44,10 @@
 //          kernels); the control negates, and adds a Packed<T, 1> to a Packed<T, 2>
 //   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
 //          is not a form, or a form the target does not have (the generated header's #error)
+//   54-58  the functions on arrays (batch.hpp): a map and axpy writing through a view of const
+//          limbs, a dot product of views of two limb types, and of one and of two limbs, and a
+//          scaling by a two-limb number (no loop scales by one); each control writes what compiles
+//          instead (a view of mutable limbs written, views of one type, a scalar of T)
 //   29-31  an UNVERIFIED building block (two_sum, next_up) and the scaling of a ball by a power of
 //          two (half), written without the marker, against headers in which every kernel is
 #if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
@@ -62,6 +66,9 @@
 #if KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 53
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
+#endif
+#if KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58
+#include <kairn/batch.hpp>
 #endif
 
 #if defined(KAIRN_TEST_CONTROL)
@@ -309,6 +316,44 @@ int main() {
     sink = (px + px).lane(0).limb[0] + double((pf + pf).lane(0).limb[0]);
 #else
     sink = (px + pf).lane(0).limb[0];
+#endif
+#endif
+#elif KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58
+    double h[4] = {1, 2, 3, 4}, l[4] = {0, 0, 0, 0};
+    float fh[4] = {1, 2, 3, 4}, fl[4] = {0, 0, 0, 0};
+    const kairn::SoAView<double, 2> mv(h, l, 4);
+    const kairn::SoAView<const double, 2> cv = mv;
+    [[maybe_unused]] const kairn::SoAView<const float, 2> fv(fh, fl, 4);
+    [[maybe_unused]] const kairn::SoAView<const double, 1> one(h, 4);
+#if KAIRN_TEST_CASE == 54
+#if defined(KAIRN_TEST_CONTROL)
+    sink = double(kairn::add(cv, cv, mv));
+#else
+    sink = double(kairn::add(cv, cv, cv));
+#endif
+#elif KAIRN_TEST_CASE == 55
+#if defined(KAIRN_TEST_CONTROL)
+    sink = double(kairn::axpy(2.0, cv, mv, mv));
+#else
+    sink = double(kairn::axpy(2.0, cv, mv, cv));
+#endif
+#elif KAIRN_TEST_CASE == 56
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::dot(cv, cv).value.limb[0] + double(kairn::dot(fv, fv).value.limb[0]);
+#else
+    sink = kairn::dot(cv, fv).value.limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 57
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::dot(one, one).value.limb[0] + kairn::dot(cv, cv).value.limb[0];
+#else
+    sink = kairn::dot(cv, one).value.limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 58
+#if defined(KAIRN_TEST_CONTROL)
+    sink = double(kairn::scale(cv, 2.0, mv));
+#else
+    sink = double(kairn::scale(cv, E2(2.0), mv));
 #endif
 #endif
 #endif

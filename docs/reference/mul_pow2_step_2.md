@@ -14,7 +14,11 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $z = z_0 
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call its core, [`mul_pow2_2`](mul_pow2_2.md), instead.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `mul_pow2(x, c, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | `bool` | the step of the loop the function calls, once per element; not `constexpr`; rounds (loop `mul_pow2_map_2`) |
+
+`T` is `float` or `double`; the functions are in namespace `kairn`, header `kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken where the table writes a view of `const T`. They take no marker: a function on arrays compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).
 
 ## Requires
 

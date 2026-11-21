@@ -55,8 +55,8 @@ template <class T, int K> class SoA {            // the same element access, and
 A view is $k$ pointers and a length, trivially copyable, cheap to pass by value. It is how a
 program maps its own buffers: `SoAView<double, 2> v(hi.data(), lo.data(), n)` sees the numbers
 whose limbs are `hi[i]` and `lo[i]`, and writes through `v` go to those arrays. At $k = 1$ a view
-is one plain array of `T`. `limb(j)` gives the array back, which with `size()` is what the
-functions on arrays will take; `subview(offset, count)` sees a part.
+is one plain array of `T`. `limb(j)` gives the array back, and `subview(offset, count)` sees a
+part; the functions on arrays of [`kairn/batch.hpp`](batch.md) take the view itself.
 
 A view of `T` converts to a view of `const T`, not back; through a view of `const T` nothing
 can be written (`v[i] = x`, `set`, `store` do not compile, nor does one element of it assigned

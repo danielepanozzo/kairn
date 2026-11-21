@@ -12,7 +12,11 @@ $$z \approx a x + y.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call its core, [`mul_1_1`](mul_1_1.md) and [`add_1_1`](add_1_1.md), instead.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `axpy(a, x, y, z)` | `T`, `SoAView<const T, 1>`, `SoAView<const T, 1>`, `SoAView<T, 1>` | `bool` | the step of the loop the function calls, once per element; not `constexpr`; rounds (loop `axpy_1_entry`) |
+
+`T` is `float` or `double`; the functions are in namespace `kairn`, header `kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken where the table writes a view of `const T`. They take no marker: a function on arrays compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).
 
 ## Requires
 

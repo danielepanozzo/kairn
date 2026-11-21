@@ -337,6 +337,27 @@ foreach(_kernel IN LISTS _api_oracle_kernels)
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle")
   endforeach()
 endforeach()
+# The functions on arrays (kairn/batch.hpp): full.api.oracle.FOLD.FORMAT, every public form of each
+# fold that api/CMakeLists.txt registers, with the same runners as the kernels above, on as many
+# and as long arrays as the full tier's cross-checks of that kind of fold
+# (KAIRN_CROSSCHECK_FOLD_CASES and _LENGTH, _MAP_LENGTH, _CONV_CASES and _LENGTH), a map also in
+# place; and full.api.flags.oracle.FOLD.FORMAT, through the runner of each flag set, on the quick
+# tier's arrays.
+foreach(_fold IN LISTS _api_oracle_folds)
+  foreach(_format binary64 binary32)
+    set(_name full.api.oracle.${_fold}.${_format})
+    add_test(NAME ${_name}
+      COMMAND ${_crosscheck} api --kernel ${_fold} --format ${_format} --count ${_api_fold_${_fold}_full_count}
+        --max-length ${_api_fold_${_fold}_full_length} ${_api_fold_${_fold}_args}
+        --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-oracle" ${_api_full_common} ${_api_fold_${_fold}_extra})
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 900 LABELS "full;api;oracle;arrays")
+    set(_name full.api.flags.oracle.${_fold}.${_format})
+    add_test(NAME ${_name}
+      COMMAND ${_crosscheck} api --kernel ${_fold} --format ${_format} ${_api_fold_${_fold}_quick}
+        ${_api_fold_${_fold}_args} --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-flags" ${_api_flags_common})
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle;flags;arrays")
+  endforeach()
+endforeach()
 
 # --- The flag sets (api/flags/) -----------------------------------------------------------------
 #

@@ -311,6 +311,7 @@ nav:
           - Two accumulators of two limbs into one: reference/acc_merge_2.md
           - The radius of an accumulator of one limb: reference/acc_radius_1.md
           - The radius of an accumulator of two limbs: reference/acc_radius_2.md
+          - Functions on arrays: reference/batch.md
       - "Vector loops: Packed and the containers":
           - Packed numbers in registers: reference/packed.md
           - "Arrays of numbers: SoA and its views": reference/soa.md

@@ -14,8 +14,13 @@
 # (runner --packed-list), and each is reached by a scalar public form too: every operation of
 # Packed is judged, and judged against the claims of a kernel the scalar interface has.
 #
+# And every fold of gen/claims.json is reached by a form of the functions on arrays (runner
+# --fold-list), or has no public caller, with the reason (runner --folds-not-public, the list
+# FOLDS_NOT_PUBLIC), or is one of FOLDS_NOT_CHECKED: exactly one.
+#
 #   cmake -DRUNNER=... -DCLAIMS=gen/claims.json -DKERNELS=gen/kernels "-DINTERNAL=a;b"
-#         "-DNOT_PUBLIC=c;d" "-DNOT_CHECKED=e;f" [-DPACKED_HEADER=...] -P coverage.cmake
+#         "-DNOT_PUBLIC=c;d" "-DNOT_CHECKED=e;f" "-DFOLDS_NOT_PUBLIC=g;h" "-DFOLDS_NOT_CHECKED=i;j"
+#         [-DPACKED_HEADER=...] -P coverage.cmake
 cmake_minimum_required(VERSION 3.21)
 
 set(_whats list internal not-public)
@@ -128,6 +133,66 @@ foreach(_k IN LISTS _runner_not_public)
     list(APPEND _problems "${_k} is listed as not public yet, but it is not an entry kernel")
   endif()
 endforeach()
+# The folds (gen/claims.json, "folds"): each is reached by a form of the functions on arrays
+# (runner --fold-list), or listed with why no public function calls it (runner --folds-not-public,
+# the same list as FOLDS_NOT_PUBLIC), or is one of FOLDS_NOT_CHECKED (KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
+# and KAIRN_NOT_PUBLIC_YET_FOLDS of tests/CMakeLists.txt): exactly one of the three.
+foreach(_what fold-list folds-not-public)
+  execute_process(COMMAND "${RUNNER}" --${_what} OUTPUT_VARIABLE _out RESULT_VARIABLE _status)
+  if(NOT _status STREQUAL "0")
+    message(FATAL_ERROR "${RUNNER} --${_what} failed: ${_status}")
+  endif()
+  string(STRIP "${_out}" _out)
+  string(REPLACE "\n" ";" _lines "${_out}")
+  set(_names "")
+  foreach(_line IN LISTS _lines)
+    string(REGEX REPLACE "\t.*" "" _name "${_line}")
+    if(_what STREQUAL "folds-not-public" AND _name STREQUAL _line)
+      message(FATAL_ERROR "runner --folds-not-public: ${_name} has no reason beside it")
+    endif()
+    list(APPEND _names "${_name}")
+  endforeach()
+  list(SORT _names)
+  string(REPLACE "-" "_" _var "${_what}")
+  set(_runner_${_var} ${_names})
+endforeach()
+set(_folds_not_public ${FOLDS_NOT_PUBLIC})
+list(SORT _folds_not_public)
+if(NOT _runner_folds_not_public STREQUAL _folds_not_public)
+  list(APPEND _problems "folds not public in tests/api/CMakeLists.txt: ${_folds_not_public}; in tests/api/runner_arrays.hpp: ${_runner_folds_not_public}")
+endif()
+string(JSON _fold_count ERROR_VARIABLE _no_folds LENGTH "${_json}" folds)
+set(_claim_folds "")
+if(NOT _no_folds AND _fold_count GREATER 0)
+  math(EXPR _fold_last "${_fold_count} - 1")
+  foreach(_i RANGE ${_fold_last})
+    string(JSON _f GET "${_json}" folds ${_i} name)
+    list(APPEND _claim_folds ${_f})
+  endforeach()
+endif()
+set(_folds_not_checked ${FOLDS_NOT_CHECKED})
+foreach(_f IN LISTS _claim_folds)
+  set(_n 0)
+  foreach(_group fold_list folds_not_public)
+    if(_f IN_LIST _runner_${_group})
+      math(EXPR _n "${_n} + 1")
+    endif()
+  endforeach()
+  if(_f IN_LIST _folds_not_checked)
+    math(EXPR _n "${_n} + 1")
+  endif()
+  if(NOT _n EQUAL 1)
+    list(APPEND _problems "the fold ${_f} is in ${_n} of the runner's fold lists and FOLDS_NOT_CHECKED, not in one")
+  endif()
+endforeach()
+foreach(_f IN LISTS _runner_fold_list _runner_folds_not_public _folds_not_checked)
+  if(NOT _f IN_LIST _claim_folds)
+    list(APPEND _problems "${_f}, in a list of folds, is not a fold of ${CLAIMS}")
+  endif()
+endforeach()
+list(LENGTH _runner_fold_list _fold_forms_n)
+list(LENGTH _runner_folds_not_public _folds_np_n)
+
 set(_packed_message "")
 if(PACKED_HEADER)
   file(READ "${PACKED_HEADER}" _text)
@@ -165,4 +230,5 @@ list(LENGTH _entry _e)
 list(LENGTH _not_checked _q)
 message(STATUS "${_n} kernels reached by public forms, ${_m} building blocks, ${_p} entry kernels not public yet "
   "(${_e} entry kernels in all), ${_q} kernels in none of the runner's lists (not cross-checked "
-  "or not public yet)${_packed_message}")
+  "or not public yet)${_packed_message}; ${_fold_forms_n} folds reached by the functions on arrays, "
+  "${_folds_np_n} with no public caller")

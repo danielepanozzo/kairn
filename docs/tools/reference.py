@@ -1759,11 +1759,19 @@ class Site:
             for f in p["forms"]:
                 rows.append("| `%s` | %s | `%s` | %s |" % (f["code"], operand_types(f), f["result"], f["note"] or ""))
             constructors = [f for f in p["forms"] if re.match(r"(Expansion|Ball)<", f["code"])]
-            text = "\n".join(rows) + "\n\n" + (
-                "`T` is `float` or `double`; the operations are in namespace `kairn`, header "
-                "`kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` "
-                "on an operand, which they need while the kernel is UNVERIFIED%s." % (
-                    " (a constructor does not take it)" if constructors else ""))
+            if any("SoAView" in t for f in p["forms"] for t in f["operands"]):
+                # The functions on arrays (kairn/batch.hpp): a header of their own, and no marker.
+                text = "\n".join(rows) + "\n\n" + (
+                    "`T` is `float` or `double`; the functions are in namespace `kairn`, header "
+                    "`kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken "
+                    "where the table writes a view of `const T`. They take no marker: a function on arrays "
+                    "compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).")
+            else:
+                text = "\n".join(rows) + "\n\n" + (
+                    "`T` is `float` or `double`; the operations are in namespace `kairn`, header "
+                    "`kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` "
+                    "on an operand, which they need while the kernel is UNVERIFIED%s." % (
+                        " (a constructor does not take it)" if constructors else ""))
             if p["note"]:
                 text += "\n\n" + p["note"]
             return text
