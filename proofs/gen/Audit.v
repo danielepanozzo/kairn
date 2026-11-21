@@ -12,6 +12,9 @@ From Kairn Require Import AddFast22.
 From Kairn Require Import Ball2.
 From Kairn Require Import BallPow2.
 From Kairn Require Import BoundKernels.
+From Kairn Require Import BvConv.
+From Kairn Require Import BvNegMake.
+From Kairn Require Import BvPow2.
 From Kairn Require Import BvRadius.
 From Kairn Require Import BvReal.
 From Kairn Require Import Compare.
@@ -138,11 +141,29 @@ Print Assumptions bv_add_radius_1_correct.
 Definition bv_add_radius_2_audit : bv_add_radius_2_spec := bv_add_radius_2_correct.
 Print Assumptions bv_add_radius_2_correct.
 
+Definition bv_center_entry_1_audit : bv_center_entry_1_spec := bv_center_entry_1_correct.
+Print Assumptions bv_center_entry_1_correct.
+
+Definition bv_make_radius_audit : bv_make_radius_spec := bv_make_radius_correct.
+Print Assumptions bv_make_radius_correct.
+
+Definition bv_mul_pow2_radius_audit : bv_mul_pow2_radius_spec := bv_mul_pow2_radius_correct.
+Print Assumptions bv_mul_pow2_radius_correct.
+
+Definition bv_mul_pow2_step_1_audit : bv_mul_pow2_step_1_spec := bv_mul_pow2_step_1_correct.
+Print Assumptions bv_mul_pow2_step_1_correct.
+
+Definition bv_neg_radius_audit : bv_neg_radius_spec := bv_neg_radius_correct.
+Print Assumptions bv_neg_radius_correct.
+
 Definition bv_scale_radius_1_audit : bv_scale_radius_1_spec := bv_scale_radius_1_correct.
 Print Assumptions bv_scale_radius_1_correct.
 
 Definition bv_scale_radius_2_audit : bv_scale_radius_2_spec := bv_scale_radius_2_correct.
 Print Assumptions bv_scale_radius_2_correct.
+
+Definition conv_radius_audit : conv_radius_spec := conv_radius_correct.
+Print Assumptions conv_radius_correct.
 
 Definition dot_step_1_audit : dot_step_1_spec := dot_step_1_correct.
 Print Assumptions dot_step_1_correct.
@@ -164,6 +185,9 @@ Print Assumptions mul_pow2_step_1_correct.
 
 Definition mul_up_1_audit : mul_up_1_spec := mul_up_1_correct.
 Print Assumptions mul_up_1_correct.
+
+Definition neg_1_audit : neg_1_spec := neg_1_correct.
+Print Assumptions neg_1_correct.
 
 Definition next_down_audit : next_down_spec := next_down_correct.
 Print Assumptions next_down_correct.
@@ -312,6 +336,12 @@ Print Assumptions ball_sub_2_correct.
 Definition eq_2_1_audit : eq_2_1_spec := eq_2_1_correct.
 Print Assumptions eq_2_1_correct.
 
+Definition bv_center_2_audit : bv_center_2_spec := bv_center_2_correct.
+Print Assumptions bv_center_2_correct.
+
+Definition bv_mul_pow2_step_2_audit : bv_mul_pow2_step_2_spec := bv_mul_pow2_step_2_correct.
+Print Assumptions bv_mul_pow2_step_2_correct.
+
 Definition mul_ball_2_2_audit : mul_ball_2_2_spec := mul_ball_2_2_correct.
 Print Assumptions mul_ball_2_2_correct.
 
@@ -392,6 +422,30 @@ Print Assumptions bv_add_1_correct.
 
 Definition bv_add_2_audit : bv_add_2_spec := bv_add_2_correct.
 Print Assumptions bv_add_2_correct.
+
+Definition bv_conv_1_audit : bv_conv_1_spec := bv_conv_1_correct.
+Print Assumptions bv_conv_1_correct.
+
+Definition bv_conv_2_audit : bv_conv_2_spec := bv_conv_2_correct.
+Print Assumptions bv_conv_2_correct.
+
+Definition bv_make_1_audit : bv_make_1_spec := bv_make_1_correct.
+Print Assumptions bv_make_1_correct.
+
+Definition bv_make_2_audit : bv_make_2_spec := bv_make_2_correct.
+Print Assumptions bv_make_2_correct.
+
+Definition bv_mul_pow2_1_audit : bv_mul_pow2_1_spec := bv_mul_pow2_1_correct.
+Print Assumptions bv_mul_pow2_1_correct.
+
+Definition bv_mul_pow2_2_audit : bv_mul_pow2_2_spec := bv_mul_pow2_2_correct.
+Print Assumptions bv_mul_pow2_2_correct.
+
+Definition bv_neg_1_audit : bv_neg_1_spec := bv_neg_1_correct.
+Print Assumptions bv_neg_1_correct.
+
+Definition bv_neg_2_audit : bv_neg_2_spec := bv_neg_2_correct.
+Print Assumptions bv_neg_2_correct.
 
 Definition bv_scale_1_audit : bv_scale_1_spec := bv_scale_1_correct.
 Print Assumptions bv_scale_1_correct.

@@ -22,6 +22,7 @@ requires:      ball_vector x rx
 ensures:       encloses_entries z r x*a x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*a,-2) radii_when=abs_le(rx*a,-2)
 min_precision: 2
 theorem:       proofs/theories/BvReal.v
+ieee_theorem:  proofs/theories/IeeeBv.v
 status:        proved
 domain:        extended
 source:        mul_2_1 on the centers, the radius of ball_scale_2 at the largest center (milestone2.md, BallVector)

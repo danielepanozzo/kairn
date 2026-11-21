@@ -92,11 +92,15 @@
      is, and the facts about a normalized pair behind the bound of two limbs; in the
      IEEE model (theories/IeeeFoldNorm.v), that the two orders return the same result
      and the same flag on every input, the statements of the sequential order with the
-     elements as finite normalized pairs, and when the flag is true;
+     elements as finite normalized pairs, and when the flag is true, the first and the
+     last also as the generated statements F_orders_ieee_spec and F_flag_ieee_spec, which
+     no field of a description names;
    - the convolutions (theories/FoldConv.v), beside their theorems, which
      proofs/gen/Audit.v lists: what the terms of a coefficient are, which the generated
      statements name and do not describe, how many there are, and that one answer of
-     the bound kernel of the dot product covers every coefficient;
+     the bound kernel of the dot product covers every coefficient; three of these also as
+     the generated statements conv_terms_eq_spec, conv_terms_count_spec and
+     conv_terms_length_spec, which no field of a description names;
    - the accumulator, beside the theorems of the generated statements of its eight
      kernels, which the generated audits list: the lemmas of its radius
      (theories/AccKernels.v, IeeeAccKernels.v), and what a user of the accumulator relies
@@ -104,11 +108,23 @@
      theories/IeeeAccumulator.v in the IEEE model): for any history of add, add_product
      and merge, the bound of the sum of magnitudes, the error of the running sum in the
      form of the statement of dot_k, and the error within the radius of error_bound();
-   - the ball vectors in the IEEE model, whose generated statements are to be restated and
-     whose descriptions name no IEEE-model theorem yet: the lemmas of theories/IeeeBv.v
-     the restated statements will rest on, V1 to V4 of each ball vector in both orders (V4
-     in the form ruled for the restatement), and that the lane order returns what the
-     sequential order returns.
+   - the ball vectors bv_add_k, bv_sub_k and bv_scale_k in the IEEE model, beside the
+     theorems of their generated statements, which proofs/gen/IeeeAudit.v lists: the lemmas
+     of theories/IeeeBv.v those theorems put together, V1 to V4 of each ball vector in both
+     orders, and that the lane order returns what the sequential order returns;
+   - the negation and the constructor of a ball vector, beside the theorems of their
+     generated statements, which the generated audits list: the leading limbs of the two
+     steps of the extended domain (neg_2, bv_center_2) as their generated statements, which
+     no field can name, and the lemmas of theories/BvNegMake.v and IeeeBvNegMake.v the
+     theorems rest on;
+   - the scaling of a ball vector by a power of two, beside the theorems of its generated
+     statements, which the generated audits list: the lemmas of theories/BvPow2.v and
+     IeeeBvPow2.v the theorems rest on;
+   - the product of two ball vectors, beside the theorems of the generated statements of its
+     radius kernel and of the folds in the real model, which proofs/gen/Audit.v lists: the
+     lemmas of theories/BvConv.v they rest on, and in the IEEE model what the finish
+     bv_conv_finish returns, with the proof that its generated statement is false
+     (theories/IeeeBvConv.v).
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -1137,6 +1153,27 @@ Print Assumptions norm_upper_2_seq_ieee_facts.
 Print Assumptions norm_upper_1_seq_ieee_flag.
 Print Assumptions norm_upper_2_seq_ieee_flag.
 
+(* The last two of these facts as the generated statements F_orders_ieee_spec and
+   F_flag_ieee_spec of proofs/gen/IeeeFoldStatements.v, which no field of a description names
+   yet (so the generated audit does not list them): the theorems of IeeeFoldNorm.v with the
+   variables of its section bound. *)
+From Kairn.Gen Require IeeeFoldStatements.
+Definition norm_upper_1_orders_ieee_audit : IeeeFoldStatements.norm_upper_1_orders_ieee_spec :=
+  norm_upper_1_orders_ieee_correct.
+Print Assumptions norm_upper_1_orders_ieee_correct.
+
+Definition norm_upper_1_flag_ieee_audit : IeeeFoldStatements.norm_upper_1_flag_ieee_spec :=
+  norm_upper_1_flag_ieee_correct.
+Print Assumptions norm_upper_1_flag_ieee_correct.
+
+Definition norm_upper_2_orders_ieee_audit : IeeeFoldStatements.norm_upper_2_orders_ieee_spec :=
+  norm_upper_2_orders_ieee_correct.
+Print Assumptions norm_upper_2_orders_ieee_correct.
+
+Definition norm_upper_2_flag_ieee_audit : IeeeFoldStatements.norm_upper_2_flag_ieee_spec :=
+  norm_upper_2_flag_ieee_correct.
+Print Assumptions norm_upper_2_flag_ieee_correct.
+
 (* The convolutions (theories/FoldConv.v): the theorems of their generated statements are
    listed by proofs/gen/Audit.v; these are beside them. The terms of coefficient j, the
    list conv_terms xs ys j of proofs/gen/FoldModel.v: they satisfy the requirements of
@@ -1153,6 +1190,20 @@ Print Assumptions conv_terms_count.
 Print Assumptions conv_terms_nonempty.
 Print Assumptions conv_terms_nth.
 Print Assumptions conv_terms_eq.
+
+(* Three of them as the generated statements of proofs/gen/FoldStatements.v,
+   conv_terms_eq_spec, conv_terms_count_spec and conv_terms_length_spec, which no field of a
+   description names yet (so the generated audit does not list them). *)
+From Kairn.Gen Require FoldStatements.
+Definition conv_terms_eq_audit : FoldStatements.conv_terms_eq_spec := conv_terms_eq_correct.
+Print Assumptions conv_terms_eq_correct.
+
+Definition conv_terms_count_audit : FoldStatements.conv_terms_count_spec := conv_terms_count_correct.
+Print Assumptions conv_terms_count_correct.
+
+Definition conv_terms_length_audit : FoldStatements.conv_terms_length_spec :=
+  conv_terms_length_correct.
+Print Assumptions conv_terms_length_correct.
 Print Assumptions Forall2_seq_nth.
 Print Assumptions conv_1_bound.
 Print Assumptions conv_2_bound.
@@ -1201,9 +1252,10 @@ Print Assumptions run2i_real.
 Print Assumptions bound_dot_2_real.
 Print Assumptions acc_2_ieee_bound.
 
-(* The ball vectors in the IEEE model, prepared for the restatement of their generated
-   statements (theories/IeeeBv.v): for each, the lane order returns what the sequential
-   order returns, and V1 to V4 in both orders. *)
+(* The ball vectors in the IEEE model (theories/IeeeBv.v): the theorems of their generated
+   statements are listed by proofs/gen/IeeeAudit.v; these are the lemmas they put together:
+   for each, the lane order returns what the sequential order returns, and V1 to V4 in both
+   orders. *)
 From Kairn Require Import IeeeBv.
 Print Assumptions bv_add_1_lanes_seq_ieee.
 Print Assumptions bv_add_1_seq_ieee_v1.
@@ -1259,3 +1311,102 @@ Print Assumptions bv_scale_2_lanes_ieee_v1.
 Print Assumptions bv_scale_2_lanes_ieee_v2.
 Print Assumptions bv_scale_2_lanes_ieee_v3.
 Print Assumptions bv_scale_2_lanes_ieee_v4.
+
+(* The negation and the constructor of a ball vector (theories/BvNegMake.v,
+   IeeeBvNegMake.v): the theorems of their generated statements are listed by the generated
+   audits; these are beside them. The leading limbs of neg_2 and bv_center_2, the steps of
+   bv_neg_2 and bv_make_2, as their generated statements K_ieee_lead_spec, which a kernel of
+   the extended domain cannot name (ieee_lead_theorem belongs to the finite domain); in the
+   real model, that the radius kernel of the constructor returns the radius given and that
+   the ball of a negated center is exactly the image of the operand's ball; in the IEEE
+   model, the radius kernel of the constructor, the result of each fold in closed form (a
+   finite ball vector, or the whole space), and that the lane order returns what the
+   sequential order returns. *)
+From Kairn Require Import BvNegMake IeeeBvNegMake.
+Definition neg_2_ieee_lead_audit : IeeeFoldStatements.neg_2_ieee_lead_spec := neg_2_ieee_lead.
+Print Assumptions neg_2_ieee_lead.
+
+Definition bv_center_2_ieee_lead_audit : IeeeFoldStatements.bv_center_2_ieee_lead_spec :=
+  bv_center_2_ieee_lead.
+Print Assumptions bv_center_2_ieee_lead.
+
+Print Assumptions bv_make_radius_value.
+Print Assumptions neg_ball_image.
+Print Assumptions make_radius_ieee.
+Print Assumptions bv_neg_1_result.
+Print Assumptions bv_neg_2_result.
+Print Assumptions bv_make_1_result.
+Print Assumptions bv_make_2_result.
+Print Assumptions bv_neg_1_lanes_seq_ieee.
+Print Assumptions bv_neg_2_lanes_seq_ieee.
+Print Assumptions bv_make_1_lanes_seq_ieee.
+Print Assumptions bv_make_2_lanes_seq_ieee.
+
+(* The scaling of a ball vector by a power of two (theories/BvPow2.v, IeeeBvPow2.v): the
+   theorems of the generated statements are listed by the generated audits; these are
+   beside them. In the real model, the condition of exactness on a product, that the mask
+   of a step is true exactly when its products are zero or above the smallest normal number
+   (and that the rounding is then exact), that the radius kernel does not depend on m and
+   what it gives at c = 2^n, that c times a ball is the ball of c times its center, and the
+   containment of a scaled member; in the IEEE model, a list lemma on forallb, that a step
+   on finite operands with a finite center is the real model's (masks included) and its
+   leading limb, the radius kernel, the result of each fold in closed form and its flag
+   under the conditions of V4, and that the lane order returns what the sequential order
+   returns. *)
+From Kairn Require Import BvPow2 IeeeBvPow2.
+Print Assumptions BvPow2.cond_mul.
+Print Assumptions BvPow2.step_mask_1.
+Print Assumptions BvPow2.step_mask_2.
+Print Assumptions BvPow2.radius_any_m.
+Print Assumptions BvPow2.radius_facts.
+Print Assumptions BvPow2.pow2_ball_image.
+Print Assumptions BvPow2.pow2_member.
+Print Assumptions IeeeBvPow2.forallb_map_ext.
+Print Assumptions IeeeBvPow2.step_1_values.
+Print Assumptions IeeeBvPow2.step_2_values.
+Print Assumptions IeeeBvPow2.step_1_lead.
+Print Assumptions IeeeBvPow2.step_2_lead.
+Print Assumptions IeeeBvPow2.real_radius_eq.
+Print Assumptions IeeeBvPow2.radius_ieee.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_1_result.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_1_finite.
+Print Assumptions IeeeBvPow2.record_2_seq.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_2_result.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_2_finite.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_1_lanes_seq_ieee.
+Print Assumptions IeeeBvPow2.bv_mul_pow2_2_lanes_seq_ieee.
+
+(* The product of two ball vectors (theories/BvConv.v, IeeeBvConv.v): the theorems of the
+   generated statements of conv_radius and of bv_conv_k in the real model are listed by
+   proofs/gen/Audit.v; these are beside them. In the real model, the claim of conv_radius
+   with its hypotheses written out, one rounding in the normal range, the requirement
+   at_most(g, 1) that a true mask of bound_dot_k gives, the facts of the count rounded up,
+   lists related entry by entry, the terms of a coefficient of members, the product and the
+   sum of products of members against those of the centers, and the bound of a coefficient
+   of members. In the IEEE model, what bv_conv_finish returns, and that its generated
+   statement is false: a finite radius with a false mask of the convolution gives a false
+   flag (the statement leaves out the masks of if_all); and, for the IEEE-model statements of
+   the folds, not proved yet, that the radius kernel on nonnegative operands is nonnegative,
+   +infinity or a NaN, and when finite the real model's. *)
+From Kairn Require Import BvConv IeeeBvConv.
+Print Assumptions BvConv.rnd_lower_normal_conv.
+Print Assumptions BvConv.conv_radius_facts.
+Print Assumptions BvConv.bound_dot_1_at_most.
+Print Assumptions BvConv.bound_dot_2_at_most.
+Print Assumptions BvConv.count_facts.
+Print Assumptions BvConv.Forall2_firstn_l.
+Print Assumptions BvConv.Forall2_skipn_l.
+Print Assumptions BvConv.Forall2_rev_l.
+Print Assumptions BvConv.Forall2_combine_l.
+Print Assumptions BvConv.conv_terms_Forall2.
+Print Assumptions BvConv.Forall2_Forall_r.
+Print Assumptions BvConv.member_product.
+Print Assumptions BvConv.sum_members.
+Print Assumptions BvConv.sumR_le_count.
+Print Assumptions BvConv.coef_bound.
+Print Assumptions IeeeBvConv.bv_conv_finish_facts.
+Print Assumptions IeeeBvConv.bv_conv_finish_spec_counterexample.
+Print Assumptions IeeeBvConv.not_bv_conv_finish_spec.
+Print Assumptions IeeeBvConv.up_const_cases.
+Print Assumptions IeeeBvConv.conv_radius_ieee.
+

@@ -17,9 +17,12 @@ requires:      power_of_two c
 ensures:       rounded z nearest
 ensures:       error z R c=0 k=1 t=1/2 exact_when=zero_or_abs_gt(x*c,eta/(2*u)) exact_flag=e
 min_precision: 1
+theorem:       proofs/theories/BvPow2.v bv_mul_pow2_step_1_correct
+ieee_spec_theorem: proofs/theories/IeeeBvPow2.v bv_mul_pow2_step_1_ieee_correct
+ieee_lead_theorem: proofs/theories/IeeeBvPow2.v bv_mul_pow2_step_1_ieee_lead
 source:        mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 ieee:          spec
 

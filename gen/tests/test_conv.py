@@ -389,7 +389,8 @@ class Printers(unittest.TestCase):
         # its one statement.
         import copy
         ks = copy.deepcopy(self.ks)
-        for name in ('conv_1', 'conv_2'):
+        # (and the products of two BallVectors, proved too, BvConv.v, whose names contain conv_1)
+        for name in ('conv_1', 'conv_2', 'bv_conv_1', 'bv_conv_2'):
             ks.folds[name].status, ks.folds[name].theorem = 'unverified', None
         self.assertNotIn('conv_1', rocq.audit(ks))
         ks.folds['conv_1'].status, ks.folds['conv_1'].theorem = 'proved', 'proofs/theories/FoldConv.v'

@@ -10,9 +10,10 @@ output:        rz
 value:         r
 ensures:       rounded rz nearest
 min_precision: 1
+theorem:       proofs/theories/BvNegMake.v bv_make_radius_correct
 source:        the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 
 g  = guard(r)

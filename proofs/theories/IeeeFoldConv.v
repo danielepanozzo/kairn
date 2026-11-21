@@ -12,8 +12,8 @@
    coefficients): if the leading limb of a coefficient is finite, every limb of every
    term is finite, the values are those of the real-model dot product on the values of
    the terms, and the conclusions of dot_k_seq_spec hold of them; otherwise every limb of
-   the coefficient is a NaN; and the mask is true exactly when the leading limb of every
-   coefficient is finite.
+   the coefficient is a NaN and the mask is false; and the mask is true exactly when the
+   leading limb of every coefficient is finite.
 
    How. The mask and the second pass are those of a map whose step, on an index j, is the
    state of the dot product on the terms of j: map_k_true and map_k_false of
@@ -73,7 +73,7 @@ match goal with |- context [forallb ?t (map ?f ?l)] => destruct (forallb t (map 
     * intros N. contradiction.
   + intros j w _ _ Nw. cbv beta iota zeta. split.
     * intros Fw. exfalso. exact (nan_1_not_finite _ _ w Nw Fw).
-    * intros _. split; [exact Nw | reflexivity].
+    * intros _. split. exact Nw. reflexivity.
 Qed.
 
 Theorem conv_2_ieee_correct : conv_2_ieee_spec.
@@ -125,5 +125,5 @@ match goal with |- context [forallb ?t (map ?f ?l)] => destruct (forallb t (map 
     * intros N. contradiction.
   + intros j [w0 w1] _ _ [N0 N1]. cbv beta iota zeta. cbn [fst snd] in *. split.
     * intros Fw. exfalso. exact (nan_1_not_finite _ _ w0 N0 Fw).
-    * intros _. split; [assumption | split; [assumption | reflexivity]].
+    * intros _. split. exact N0. split. exact N1. reflexivity.
 Qed.

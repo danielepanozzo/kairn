@@ -14,9 +14,10 @@ ensures:       finite_or_nan r flag=flag if=ok nonneg
 min_precision: 1
 source:        the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values)
 license:       proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBvNegMake.v bv_make_finish_correct
 cone_exempt:   the outputs are those of norm_finish_1, after a test of the sign, which is what the kernel claims
 
 p         = le(0, rz)

@@ -723,3 +723,32 @@ generalize (norm_upper_2_seq_ieee_correct prec emax Hg Hl nan_abs nan_const Hp x
 destruct (IeeeFoldModel.norm_upper_2_seq prec emax nan_abs nan_const xs) as [r flag].
 cbv zeta. rewrite norm_upper_2_lanes_seq. intros H. exact H.
 Qed.
+
+(** * The generated statements of the orders and the flag *)
+
+(* F_orders_ieee_spec and F_flag_ieee_spec (proofs/gen/IeeeFoldStatements.v): the lane order
+   computes the state of the sequential order, and when exactly the flag of the sequential
+   order is true; the theorems of the section above with its variables bound. *)
+Theorem norm_upper_1_orders_ieee_correct : norm_upper_1_orders_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_abs W xs.
+exact (norm_upper_1_lanes_seq_state prec emax nan_abs W xs).
+Qed.
+
+Theorem norm_upper_1_flag_ieee_correct : norm_upper_1_flag_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_abs nan_const xs.
+exact (norm_upper_1_seq_ieee_flag prec emax nan_abs nan_const xs).
+Qed.
+
+Theorem norm_upper_2_orders_ieee_correct : norm_upper_2_orders_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_abs W xs.
+exact (norm_upper_2_lanes_seq_state prec emax nan_abs W xs).
+Qed.
+
+Theorem norm_upper_2_flag_ieee_correct : norm_upper_2_flag_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_abs nan_const xs.
+exact (norm_upper_2_seq_ieee_flag prec emax nan_abs nan_const xs).
+Qed.

@@ -966,6 +966,12 @@ class Rocq(unittest.TestCase):
     # definition and statement were added, every earlier line kept; its two constants are new
     # (gen/constant_names.json); Audit.v is the same. Merged here: the regeneration of the merged
     # descriptions.
+    # Then the five kernels of the negation and of the constructor of BallVector with a real-model
+    # statement were proved, and the four folds (BvNegMake.v): in Statements.v only the comments above
+    # their five statements changed, and Audit.v lists their nine theorems, every earlier line kept, in
+    # its order; Model.v is the same. Then the three kernels of the scaling by a power of two and its
+    # two folds (BvPow2.v): three comments more, and five theorems. Then conv_radius and the two products
+    # of BallVectors (BvConv.v): one comment more, and three theorems.
     # On another line, from the joined tree of stage B1 (a35501e): the predicates and comparisons of
     # an interval of stage B2, which have no real-model
     # statement, changed the order of the three files only: le_2_2, which interval_contains_2
@@ -974,9 +980,12 @@ class Rocq(unittest.TestCase):
     # real-model statement either: the order of the three files only, every block the same. Then
     # the conversions of two limbs of stage B2: the order again, every block the same. Merged here:
     # the regeneration of the merged descriptions.
+    # Then the proofs of the ball vectors above met them in a merge: the regeneration of the merged
+    # descriptions (Model.v that of this line, Statements.v and Audit.v those of the ball vectors
+    # in the order of this line).
     DIGESTS = {'Model.v': '784bec01ec24ef2bdcd764c46228f787286560359461c5f976f90a80a6d2efc8',
-               'Statements.v': 'eb91699c8b7fa36e586e1580ca272a08d3ef32f39d5b31f07e8004320d4815cc',
-               'Audit.v': 'b7305fa936822f1a0d2d7407e59de085079fff67a3857241a4aba8852ecf98c9'}
+               'Statements.v': '953938a44e69028d7710b7f912245506fe398aac44e6f156cecf98a36d72e05a',
+               'Audit.v': 'd66239165eb54b7cf9aceade205c0fd9576f0192f49874bf1270f592e59d2836'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

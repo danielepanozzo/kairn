@@ -20,9 +20,10 @@ requires:      power_of_two c
 ensures:       upper rz value=rx*c exact_when=mask(ex);zero_or_abs_gt(rx*c,eta/(2*u))
 ensures:       upper rz value=rx*c+eta unless=ex
 min_precision: 2
+theorem:       proofs/theories/BvPow2.v bv_mul_pow2_radius_correct
 source:        the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 cone_exempt:   the radius is selected and stepped, as in ball_mul_pow2_k; an infinite largest magnitude reaches it through m - m, and the finish tests it
 

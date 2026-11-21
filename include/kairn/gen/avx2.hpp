@@ -16659,7 +16659,7 @@ KAIRN_GEN_NOINLINE void bv_add_1_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_add_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step add_1_1, record norm_step_1, radius bv_add_radius_1: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_add_1_packed(const double* x_in, const double* y_in, std::size_t n, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -16739,7 +16739,7 @@ KAIRN_GEN_NOINLINE void bv_add_1_packed_end(float m, bool ok, float rx, float ry
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_add_1_packed(const float* x_in, const float* y_in, std::size_t n, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 m_lane_ = _mm256_setzero_ps();
@@ -16821,7 +16821,7 @@ KAIRN_GEN_NOINLINE void bv_add_2_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_add_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step add_2_2, record norm_step_2, radius bv_add_radius_2: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_add_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -16956,7 +16956,7 @@ KAIRN_GEN_NOINLINE void bv_add_2_packed_end(float m, bool ok, float rx, float ry
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_add_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 m_lane_ = _mm256_setzero_ps();
@@ -17096,7 +17096,7 @@ KAIRN_GEN_NOINLINE void bv_make_1_packed_end(double m, bool ok, double r, double
 }
 // ball vector bv_make_1(supplied c, supplied r) -> z, rr, finite: step bv_center_entry_1, record norm_step_1, radius bv_make_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_1_packed(const double* c_in, std::size_t n, double r, double* z_out, double& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -17177,7 +17177,7 @@ KAIRN_GEN_NOINLINE void bv_make_1_packed_end(float m, bool ok, float r, float& r
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_1_packed(const float* c_in, std::size_t n, float r, float* z_out, float& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 m_lane_ = _mm256_setzero_ps();
@@ -17260,7 +17260,7 @@ KAIRN_GEN_NOINLINE void bv_make_2_packed_end(double m, bool ok, double r, double
 }
 // ball vector bv_make_2(stored c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_2, record norm_step_2, radius bv_make_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_2_packed(const double* c0_in, const double* c1_in, std::size_t n, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -17350,7 +17350,7 @@ KAIRN_GEN_NOINLINE void bv_make_2_packed_end(float m, bool ok, float r, float& r
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_2_packed(const float* c0_in, const float* c1_in, std::size_t n, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 m_lane_ = _mm256_setzero_ps();
@@ -17446,7 +17446,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_1_packed_end(double m, bool ok, bool ex, dou
 }
 // ball vector bv_mul_pow2_1(stored x, stored rx, supplied c) -> z, r, finite: step bv_mul_pow2_step_1, record norm_step_1, radius bv_mul_pow2_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_mul_pow2_1_packed(const double* x_in, std::size_t n, double rx, double c, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d c_v_ = _mm256_set1_pd(c);
@@ -17547,7 +17547,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_1_packed_end(float m, bool ok, bool ex, floa
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_mul_pow2_1_packed(const float* x_in, std::size_t n, float rx, float c, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 c_v_ = _mm256_set1_ps(c);
@@ -17650,7 +17650,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_2_packed_end(double m, bool ok, bool ex, dou
 }
 // ball vector bv_mul_pow2_2(stored x = (x0, x1), stored rx, supplied c) -> z = (z0, z1), r, finite: step bv_mul_pow2_step_2, record norm_step_2, radius bv_mul_pow2_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_mul_pow2_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double c, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d c_v_ = _mm256_set1_pd(c);
@@ -17772,7 +17772,7 @@ KAIRN_GEN_NOINLINE void bv_mul_pow2_2_packed_end(float m, bool ok, bool ex, floa
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_mul_pow2_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float c, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 c_v_ = _mm256_set1_ps(c);
@@ -17887,7 +17887,7 @@ KAIRN_GEN_NOINLINE void bv_neg_1_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_neg_1(stored x, stored rx) -> z, r, finite: step neg_1, record norm_step_1, radius bv_neg_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_1_packed(const double* x_in, std::size_t n, double rx, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -17963,7 +17963,7 @@ KAIRN_GEN_NOINLINE void bv_neg_1_packed_end(float m, bool ok, float rx, float& r
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_1_packed(const float* x_in, std::size_t n, float rx, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 m_lane_ = _mm256_setzero_ps();
@@ -18041,7 +18041,7 @@ KAIRN_GEN_NOINLINE void bv_neg_2_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_neg_2(stored x = (x0, x1), stored rx) -> z = (z0, z1), r, finite: step neg_2, record norm_step_2, radius bv_neg_radius: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -18126,7 +18126,7 @@ KAIRN_GEN_NOINLINE void bv_neg_2_packed_end(float m, bool ok, float rx, float& r
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 m_lane_ = _mm256_setzero_ps();
@@ -18216,7 +18216,7 @@ KAIRN_GEN_NOINLINE void bv_scale_1_packed_end(double m, bool ok, double rx, doub
 }
 // ball vector bv_scale_1(stored x, stored rx, supplied a) -> z, r, finite: step scale_step_1, record norm_step_1, radius bv_scale_radius_1: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_scale_1_packed(const double* x_in, std::size_t n, double rx, double a, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a_v_ = _mm256_set1_pd(a);
@@ -18298,7 +18298,7 @@ KAIRN_GEN_NOINLINE void bv_scale_1_packed_end(float m, bool ok, float rx, float 
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_scale_1_packed(const float* x_in, std::size_t n, float rx, float a, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a_v_ = _mm256_set1_ps(a);
@@ -18382,7 +18382,7 @@ KAIRN_GEN_NOINLINE void bv_scale_2_packed_end(double m, bool ok, double rx, doub
 }
 // ball vector bv_scale_2(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_scale_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double a, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a_v_ = _mm256_set1_pd(a);
@@ -18485,7 +18485,7 @@ KAIRN_GEN_NOINLINE void bv_scale_2_packed_end(float m, bool ok, float rx, float 
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_scale_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float a, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a_v_ = _mm256_set1_ps(a);
@@ -18589,7 +18589,7 @@ KAIRN_GEN_NOINLINE void bv_sub_1_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_sub_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step sub_1_1, record norm_step_1, radius bv_add_radius_1: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_sub_1_packed(const double* x_in, const double* y_in, std::size_t n, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -18669,7 +18669,7 @@ KAIRN_GEN_NOINLINE void bv_sub_1_packed_end(float m, bool ok, float rx, float ry
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_sub_1_packed(const float* x_in, const float* y_in, std::size_t n, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 m_lane_ = _mm256_setzero_ps();
@@ -18751,7 +18751,7 @@ KAIRN_GEN_NOINLINE void bv_sub_2_packed_end(double m, bool ok, double rx, double
 }
 // ball vector bv_sub_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step sub_2_2, record norm_step_2, radius bv_add_radius_2: in the lane order with the lanes of a register.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_sub_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -18892,7 +18892,7 @@ KAIRN_GEN_NOINLINE void bv_sub_2_packed_end(float m, bool ok, float rx, float ry
     fin_out_ = fin_flag;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_sub_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 m_lane_ = _mm256_setzero_ps();

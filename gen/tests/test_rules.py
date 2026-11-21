@@ -1487,9 +1487,13 @@ class TheKernels(unittest.TestCase):
     BV |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
     # And the radius (finite domain) and the finish of the product of two BallVectors.
     BV |= {'conv_radius', 'bv_conv_finish'}
-    # Of these, the kernels of the constructor, the negation, the scaling by a power of two and the
-    # product of two BallVectors are unverified (the first radius kernels are proved: BvRadius.v).
-    BV_LATER = BV - {f'bv_{op}_radius_{k}' for op in ('add', 'scale') for k in (1, 2)}
+    # Of the kernels of the BallVectors, those that are still unverified, and of those of the extended
+    # domain, those whose IEEE-model statement is. (The kernels of the constructor and of the negation
+    # are proved, BvNegMake.v, IeeeBvNegMake.v, and those of the scaling by a power of two, BvPow2.v,
+    # IeeeBvPow2.v, and the radius of the product, BvConv.v; the IEEE-model statement of the finish of
+    # the product is false, IeeeBvConv.v.)
+    BV_UNVERIFIED = {'bv_conv_finish'}
+    BV_IEEE_UNVERIFIED = {'bv_conv_finish'}
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # which were unverified until their proofs were about the generated text: the interval kernels of one
@@ -1589,13 +1593,15 @@ class TheKernels(unittest.TestCase):
         # (BvRadius.v).
         # The two constructors of a ball are proved for the rule of 2026-11-20, that a NaN radius
         # gives the whole line (IeeeMake.v).
+        # The kernels of the constructor, the negation, the scaling by a power of two and the product
+        # of BallVectors are proved but the finish of the product (BV_UNVERIFIED).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.BV_LATER) | self.WAVE_2_PROVED)
-        # The kernels of wave 2 were unverified, in both models, until their proofs were about the
-        # generated text, and so were those of the accumulator and the radius kernels of BallVector
-        # (BvRadius.v); the kernels of the later ball vectors are unverified (BV_LATER).
+                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.BV_UNVERIFIED) | self.WAVE_2_PROVED)
+        # No other kernel is unverified: the kernels of wave 2 were, in both models, until their proofs
+        # were about the generated text, and so were those of the accumulator and the radius
+        # kernels of BallVector (BvRadius.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
-                         (self.WAVE_2 - self.WAVE_2_PROVED) | self.BV_LATER)
+                         (self.WAVE_2 - self.WAVE_2_PROVED) | self.BV_UNVERIFIED)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
@@ -1609,16 +1615,17 @@ class TheKernels(unittest.TestCase):
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
                                             | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.FOLDS_FINISH
-                                            | (self.NORM_FINISH - self.BV_LATER) | (self.WAVE_2_PROVED - self.WAVE_2_CORES),
-                                            'proved'),
+                                            | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
+                                            | (self.WAVE_2_PROVED - self.WAVE_2_CORES), 'proved'),
                               **dict.fromkeys(((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED)
-                                              | (self.NORM_FINISH & self.BV_LATER) | {'bv_center_2'},
+                                              | self.BV_IEEE_UNVERIFIED,
                                               'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
-                         | self.WAVE_1_FULL | self.FOLDS_FINISH | (self.NORM_FINISH - self.BV_LATER)
+                         | self.WAVE_1_FULL | self.FOLDS_FINISH
+                         | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
                          | (self.WAVE_2_PROVED - self.WAVE_2_CORES))
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H

@@ -19,9 +19,12 @@ requires:      power_of_two c
 ensures:       normalized z
 ensures:       error z R c=0 k=2 t=1 exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u)) exact_flag=e
 min_precision: 2
+theorem:       proofs/theories/BvPow2.v bv_mul_pow2_step_2_correct
+ieee_spec_theorem: proofs/theories/IeeeBvPow2.v bv_mul_pow2_step_2_ieee_correct
+ieee_lead_theorem: proofs/theories/IeeeBvPow2.v bv_mul_pow2_step_2_ieee_lead
 source:        mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 ieee:          spec
 cone_exempt:   the mask e is a comparison of the scaled last nonzero limb, a select of the two products; the center is mul_pow2_2's

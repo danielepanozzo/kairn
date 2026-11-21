@@ -114,8 +114,11 @@ lists:
   polynomials, over the real numbers and with overflow, infinities and NaN (`FoldConv.v`,
   `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); of the radius kernels of the
   ball vectors and of the ball vectors themselves, over the real numbers (`BvRadius.v`,
-  `BvReal.v`), and the lemmas of the ball vectors in the model with overflow that their
-  statements, to be restated, will rest on (`IeeeBv.v`; [below](#ball-vectors)); and of the
+  `BvReal.v`), and with overflow, infinities and NaN (`IeeeBv.v`), and of the negation and
+  the constructor of a ball vector and its scaling by a power of two, in both models
+  (`BvNegMake.v`, `IeeeBvNegMake.v`, `BvPow2.v`, `IeeeBvPow2.v`), and of the product of two ball
+  vectors over the real numbers, with what holds of its finish with overflow (`BvConv.v`,
+  `IeeeBvConv.v`; [below](#ball-vectors)); and of the
   kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
@@ -181,7 +184,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  97 files: no Admitted, admit, Axiom or Parameter
+  113 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -474,7 +477,11 @@ the same result and the same flag on every input, NaN and infinities included
 finite (`norm_upper_1_seq_ieee_flag`); for two limbs, exactly when every leading limb is finite
 and the step up from the largest of them is finite (`norm_upper_2_seq_ieee_flag`). So
 `norm_upper_2` can answer with a false flag on an array of finite numbers, when the bound one
-step above the largest leading limb would not be a number of the format.
+step above the largest leading limb would not be a number of the format. That the lane order
+computes the state of the sequential order, and when exactly the flag is true, are also
+generated statements, `F_orders_ieee_spec` and `F_flag_ieee_spec`, whose theorems
+`F_orders_ieee_correct` and `F_flag_ieee_correct` are the lemmas above with their variables
+bound; no field of a description names them, so step 3 audits them.
 
 ## The product of two polynomials
 
@@ -496,6 +503,10 @@ has at least one term and at most $\min(n_x, n_y)$ (`conv_terms_nonempty`,
 `conv_terms_length`); and if the bound kernel of the dot product answers `ok` for a count of at
 least $\min(n_x, n_y)$, its two numbers bound the error of every coefficient (`conv_1_bound`,
 `conv_2_bound`, from the theorems of [the two together](#sums-and-dot-products-of-arrays)).
+Three of these facts are also generated statements, `conv_terms_eq_spec`,
+`conv_terms_count_spec` and `conv_terms_length_spec`, whose theorems `conv_terms_eq_correct`,
+`conv_terms_count_correct` and `conv_terms_length_correct` are those lemmas; no field of a
+description names them, so step 3 audits them.
 
 These are statements of the real model, as for a map. No theorem is about the product as a
 polynomial (its value at a point).
@@ -507,8 +518,8 @@ coefficient, and when it is false every coefficient is replaced by what the chec
 it, as a map does. For canonical entries of the two polynomials, coefficient by coefficient:
 if its leading limb is finite, every limb of every term is finite, the values are those of
 the dot product of the real model on the values of the terms, and the conclusions of its
-statement hold; otherwise every limb of the coefficient is a NaN; and the mask is true exactly
-when every leading limb is finite. The proof reads the IEEE-model theorem of the dot product
+statement hold; otherwise every limb of the coefficient is a NaN and the mask is false; and the
+mask is true exactly when every leading limb is finite. The proof reads the IEEE-model theorem of the dot product
 (`dot_k_seq_ieee_correct`, about the finish of that state) on the state: the finish of a state
 whose leading limb is finite returns it, with the flag true.
 
@@ -542,10 +553,10 @@ the rounded radius lines as functions of $m$ is needed: that they are nondecreas
 makes the one radius the largest of the radii the Ball kernel would compute entry by entry, is
 true but not proved.
 
-**The ball vectors in the model with overflow** (`IeeeBv.v`): not proved against their
-generated statements, which are to be restated (their fourth clause), and so still
-unverified. What is proved, for both orders, as lemmas the restated statements will rest
-on, for canonical operands (a finite nonnegative radius with finite centers, or the radius
+**The ball vectors in the model with overflow** (`IeeeBv.v`): `F_seq_ieee_correct` and
+`F_lanes_ieee_correct` have the generated statements of the six in their two orders as types,
+each the conjunction of four lemmas (`F_O_ieee_v1` to `F_O_ieee_v4`, audited in step 3). For
+canonical operands (a finite nonnegative radius with finite centers, or the radius
 $+\infty$ with zero centers): the result is a finite ball vector or the whole space (zero
 centers, radius $+\infty$), and the flag is true exactly when the radius is finite (V1);
 entry by entry, the value of the operation on members of the operands' balls is in the ball
@@ -559,9 +570,65 @@ radius kernel's result is finite, so the record and every center written are, an
 lemmas of the maps and of the folds of maxima in this model give the values of the real
 model, where `BvReal.v` applies; when it is false the result is the whole space. V4 is the
 finiteness of the Ball kernels' radius (`IeeeBallFinite.v`) at the largest magnitude. At
-precision 1, where the statements of one limb start, the clause is false: with
+precision 1, where the other clauses of one limb start, V4 would be false: with
 $e_{\max} = 2$ a constant of the radius lines rounds up to $2^{e_{\max}}$, so every radius is
-$+\infty$ or a NaN.
+$+\infty$ or a NaN; the statements claim it from precision 2 (`finite_from=2`).
+
+**The negation and the constructor** (`BvNegMake.v`, `IeeeBvNegMake.v`): every kernel of
+`bv_neg_k` and `bv_make_k` and the four folds have their generated statements, in both models
+and both orders, as types. The negation is exact: the centers are negated and the radius is
+the operand's, so the ball of each center written is exactly the set of the negated members of
+the operand's ball (`neg_ball_image`); a canonical operand has finite or zero centers, so the
+result is the negated finite ball vector, or the whole space when the operand is. The
+constructor returns the centers and the radius given (a guard, or a copy, and the radius
+kernel $(r + 0) + (m - m)$ is $r$ for a finite largest magnitude $m$), and the whole space
+exactly when the radius is negative, a NaN or $+\infty$ or a center (its leading limb) is not
+finite: the radius kernel is finite only from a finite $m$ and a finite $r$, $m$ is finite with
+the record's mask true exactly when every center is, and the finish tests the sign of the
+radius (`bv_make_finish`). The leading limbs of `neg_2` and `bv_center_2`, the steps of
+two limbs, are generated statements that no field of a description can name (they are kernels
+of the extended domain): their theorems are audited in step 3.
+
+**The scaling by a power of two** (`BvPow2.v`, `IeeeBvPow2.v`): the two steps, the radius kernel
+and `bv_mul_pow2_k` have their generated statements, in both models and both orders, as types.
+With $c = 2^n$ and $N = \eta / (2u)$ the smallest normal number: each step scales the center as
+`mul_pow2_step_1` or `mul_pow2_2` does, within $\eta/2$ (one limb) or $\eta$ (two limbs) of
+$c\,x$, and its mask is true exactly when every scaled limb is zero or above $N$ in magnitude, in
+which case the center is $c\,x$ exactly (`step_mask_k`: a rounded product above $N$ comes from a
+product above $N$, which is a number of the format). The radius is $c\,r_x$ when the mask of every
+entry is true and $c\,r_x$ is zero or above $N$, at least $c\,r_x$ always, and at least
+$c\,r_x + \eta$ when some mask is false (two steps above the rounded $c\,r_x$); the largest
+magnitude enters only as $m - m$, which is $0$ in the real model and a NaN for an infinite $m$ in
+the IEEE model. So the one radius covers every entry, and under the conditions of `exact_when`
+(every scaled limb and $c\,r_x$ zero or above $N$) the result is exactly $c$ times the operand: a
+polynomial halved again and again keeps the radius $r/2^i$ exactly, until something underflows.
+In the IEEE model a finite result is the real model's on the values, masks included; V4 holds
+because under its conditions every scaled center and the radius lines stay below $2^{e_{\max}}$.
+
+**The product of two ball vectors** (`BvConv.v`): the radius kernel `conv_radius` and
+`bv_conv_k` have their generated statements of the real model as types. The radius: each of the
+six first lines is one rounding of a nonnegative value, which loses at most a factor $1+u$ and
+$\eta/2$; chained, with $g \le 1$, they leave the bound of the claim times $(1+u)^5$ plus at most
+$(1+u)^5\eta/2 + 5(1+u)^4 m\,\eta/2$, which the last line covers: its factor
+$\mathrm{RU}((1+u)^7)$, and its term $m\,\mathrm{RU}(4(1+u)^8\eta + \eta/(2u))$, in the normal
+range for $m \ge 1$ (with no term, $m = 0$, the claim is $t \le r_z$). The requirement $g \le 1$ is
+what a true mask of `bound_dot_k` gives (`bound_dot_k_at_most`: its listing tests $g$ against
+$\mathrm{up}(1) = 1$). The fold: coefficient $j$ is within $g\sum\lvert c_x c_y\rvert + t$ of the
+exact sum of the products of the centers of its terms (`conv_k_bound` of `FoldConv.v`, for the
+count $m \ge \min(n_x, n_y)$ rounded up), and for members $x_i$, $y_k$ chosen independently in
+their balls, the terms of the coefficient of the members are those of the centers term by term
+(`conv_terms_Forall2`), each product within $\lvert c_x\rvert r_y + \lvert c_y\rvert r_x + r_x
+r_y$ of the product of the centers (`member_product`), every center at most $(1+u)M$ (one limb:
+$M$) with $M$ the largest magnitude of a leading limb, and at most $m$ terms: so the exact
+coefficient of the members is within the radius's claim of the coefficient written
+(`coef_bound`).
+
+**Not proved: the product in the model with overflow.** `bv_conv_k` in the IEEE model (V1 to V4)
+is unverified, and so is the finish `bv_conv_finish`, whose generated statement is false
+(`not_bv_conv_finish_spec` of `IeeeBvConv.v`, audited in step 3): it says that the flag is true
+exactly when the radius is finite, for any masks, while a false mask of the convolution gives a
+false flag with a finite radius; what holds is the same with both masks true
+(`bv_conv_finish_facts`).
 
 ## The accumulator
 

@@ -483,8 +483,13 @@ class Statements(unittest.TestCase):
         # comparisons of balls of two limbs (250), and interval_mid_rad_2 and interval_split_2
         # (252), and ball_contains_point_2 (253), and interval_to_ball_2 (254), and the hull and
         # the intersection of balls of one limb and of two (258); and ball_from_interval_1, proved
-        # again for the rule of 2026-11-20 with its listing corrected (259).
-        self.assertEqual(text.count('Print Assumptions'), 259)
+        # again for the rule of 2026-11-20 with its listing corrected (259). And of the six ball
+        # vectors bv_add_k, bv_sub_k and bv_scale_k in their two orders (12); and of the negation and the
+        # constructor of a BallVector: bv_center_2 and bv_make_finish (2), the bridges and the leading
+        # limbs of neg_1 and bv_center_entry_1 (4), and bv_neg_k and bv_make_k in their two orders (8); and of
+        # the scaling by a power of two: the claims and the leading limbs of its two steps (4), and
+        # bv_mul_pow2_k in its two orders (4): 293.
+        self.assertEqual(text.count('Print Assumptions'), 293)
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
         self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
@@ -568,6 +573,10 @@ class CheckedFiles(unittest.TestCase):
     # bv_conv_finish, of the product of two BallVectors (unverified): their definitions, the two
     # constants of conv_radius and the statement of bv_conv_finish (finite_or_nan with if_all) were
     # added, every earlier line kept. Merged here: the regeneration of the merged descriptions.
+    # On that line, after that merge: the kernels of the negation and of the constructor
+    # were proved (IeeeBvNegMake.v): the comments above the statements of neg_1, bv_center_entry_1,
+    # bv_center_2 and bv_make_finish say proved, and nothing else changed. Then the two steps of the
+    # scaling by a power of two (IeeeBvPow2.v): two comments more.
     # On another line, from the joined tree of stage B1 (a35501e): the 26 predicates and three-valued comparisons of an interval of stage B2, unverified,
     # were added: their definitions and statements (certain and trit), every earlier definition
     # and statement the same, byte for byte, some printed earlier (le_2_2 before lt_2_2, callees
@@ -617,8 +626,10 @@ class CheckedFiles(unittest.TestCase):
     # definition and the source line of its comments changed, and nothing else. Then its theorem
     # was proved again for that listing and its statement (IeeeBallSets.v): the statements file
     # prints its status, proved, one word more, and make -C proofs passed on these files.
+    # Then the proofs of the ball vectors met them in a merge: the regeneration of the merged
+    # descriptions.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'c1dafcb503776af9a0ccc273cbb68029dad60d53ea214bf104cd6b2e826968aa',
-               'proofs/gen/IeeeStatements.v': 'f532230e1425d76fb4559d6239dd0abf19f1162a94523d76ade42caab30b31fb'}
+               'proofs/gen/IeeeStatements.v': '11c994939978813a575fe16b2344778f9b8c63495d17f51931b9e9c19878b32e'}
 
 
     def test_the_checked_files(self):

@@ -27,7 +27,9 @@ requires:      ball_vector x rx
 requires:      power_of_two c
 ensures:       encloses_entries z r x*c x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*c,-2) radii_when=abs_le(rx*c,-2) exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))
 min_precision: 2
-status:        unverified
+theorem:       proofs/theories/BvPow2.v
+ieee_theorem:  proofs/theories/IeeeBvPow2.v
+status:        proved
 domain:        extended
 source:        mul_pow2_2 on the centers, the radius of ball_mul_pow2_2 with the exactness of every entry (milestone2.md, BallVector)
 license:       algorithm and proof: MIT

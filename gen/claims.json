@@ -3823,8 +3823,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_center_entry_1_correct"
+      },
       "source": {
         "cite": "the guard of a constructor (milestone2.md, BallVector, Values)",
         "license": "algorithm and proof: MIT"
@@ -4033,9 +4036,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBvNegMake.v",
+        "name": "bv_make_finish_correct"
+      },
       "source": {
         "cite": "the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values)",
         "license": "proof: MIT"
@@ -4074,8 +4081,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_make_radius_correct"
+      },
       "source": {
         "cite": "the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values)",
         "license": "algorithm and proof: MIT"
@@ -4141,8 +4151,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_radius_correct"
+      },
       "source": {
         "cite": "the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -4204,8 +4217,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_step_1_correct"
+      },
       "source": {
         "cite": "mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -4254,8 +4270,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_neg_radius_correct"
+      },
       "source": {
         "cite": "the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -4420,8 +4439,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvConv.v",
+        "name": "conv_radius_correct"
+      },
       "source": {
         "cite": "the radius of the product of polynomials of BallVector (milestone2.md, conv_radius)",
         "license": "algorithm and proof: MIT"
@@ -6351,8 +6373,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "neg_1_correct"
+      },
       "source": {
         "cite": "a change of sign (milestone2.md, BallVector, bv_neg_k)",
         "license": "algorithm and proof: MIT"
@@ -11496,9 +11521,16 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_center_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBvNegMake.v",
+        "name": "bv_center_2_ieee_correct"
+      },
       "source": {
         "cite": "a copy of a canonical pair (milestone2.md, BallVector, Values)",
         "license": "algorithm and proof: MIT"
@@ -11574,8 +11606,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_step_2_correct"
+      },
       "source": {
         "cite": "mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -15575,8 +15610,11 @@
       ],
       "finish": "bv_conv_finish",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvConv.v",
+        "name": "bv_conv_1_correct"
+      },
       "source": {
         "cite": "conv_1 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)",
         "license": "algorithm and proof: MIT"
@@ -15699,8 +15737,11 @@
       ],
       "finish": "bv_conv_finish",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvConv.v",
+        "name": "bv_conv_2_correct"
+      },
       "source": {
         "cite": "conv_2 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)",
         "license": "algorithm and proof: MIT"
@@ -15782,8 +15823,11 @@
       ],
       "finish": "bv_make_finish",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_make_1_correct"
+      },
       "source": {
         "cite": "the constructor of a BallVector: the centers and the radius given, or the whole space (milestone2.md, BallVector, Values)",
         "license": "algorithm and proof: MIT"
@@ -15867,8 +15911,11 @@
       ],
       "finish": "bv_make_finish",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_make_2_correct"
+      },
       "source": {
         "cite": "the constructor of a BallVector: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values)",
         "license": "algorithm and proof: MIT"
@@ -15990,8 +16037,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_1_correct"
+      },
       "source": {
         "cite": "mul_pow2_step_1 on the centers, the radius of ball_mul_pow2_1 with the exactness of every entry (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -16117,8 +16167,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvPow2.v",
+        "name": "bv_mul_pow2_2_correct"
+      },
       "source": {
         "cite": "mul_pow2_2 on the centers, the radius of ball_mul_pow2_2 with the exactness of every entry (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -16218,8 +16271,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_neg_1_correct"
+      },
       "source": {
         "cite": "the negation of each center, the radius of ball_neg_1 (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -16319,8 +16375,11 @@
       ],
       "finish": "norm_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_neg_2_correct"
+      },
       "source": {
         "cite": "neg_2 on each center, the radius of ball_neg_2 (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"

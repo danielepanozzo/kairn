@@ -774,7 +774,7 @@ Definition ball_zero_1_spec : Prop :=
     ~ ball_empty_1 c r /\
     (forall x : R, in_ball_1 c r x -> x = 0)).
 
-(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). IEEE-model status: unverified. *)
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). IEEE-model status: proved. *)
 Definition bv_center_entry_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -824,7 +824,7 @@ Definition bv_conv_finish_spec : Prop :=
   (flag = true -> r = rz) /\
   (flag = false -> nan r).
 
-(* bv_make_finish: the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). IEEE-model status: unverified. *)
+(* bv_make_finish: the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). IEEE-model status: proved. *)
 Definition bv_make_finish_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -836,7 +836,7 @@ Definition bv_make_finish_spec : Prop :=
   (flag = true -> r = rz) /\
   (flag = false -> nan r).
 
-(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). IEEE-model status: unverified. *)
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). IEEE-model status: proved. *)
 Definition bv_mul_pow2_step_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1302,7 +1302,7 @@ Definition mul_up_1_ieee_spec : Prop :=
     (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
    xval r = xru prec emax (xmul (xval a) (xval b))).
 
-(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). IEEE-model status: unverified. *)
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). IEEE-model status: proved. *)
 Definition neg_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2746,7 +2746,7 @@ Definition ball_zero_2_spec : Prop :=
     ~ ball_empty_2 c0 c1 r /\
     (forall x : R, in_ball_2 c0 c1 r x -> x = 0)).
 
-(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). IEEE-model status: unverified. *)
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). IEEE-model status: proved. *)
 Definition bv_center_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -2758,7 +2758,7 @@ Definition bv_center_2_ieee_spec : Prop :=
   xval_2 z0 z1 = xval_2 x0 x1 /\
   (finite x0 -> val z0 = val x0 /\ val z1 = val x1).
 
-(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). IEEE-model status: unverified. *)
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). IEEE-model status: proved. *)
 Definition bv_mul_pow2_step_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
