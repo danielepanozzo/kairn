@@ -538,7 +538,7 @@ FORM(ball_make_2_constant, if (stopped_by_checks(in[2])) { put(out, B2<T>::empty
 // Balls: arithmetic. Operands are (center limbs, radius); a scaling's last operand is a T. A point
 // form takes the other ball of the line as a point when its radius is zero (and, for a point of
 // type T with two limbs, its second limb too), and is the operation of balls otherwise.
-#define BALL_FORMS(K, BALL)                                                                                          \
+#define BALL_FORMS(K, BALL, SCALE)                                                                                        \
     FORM(ball_add_##K##_full_plus, put(out, AS(ball_add_##K##_full, BALL(in)) + BALL(in + K + 1)))                 \
     FORM(ball_add_##K##_full_plus_assign, auto x = BALL(in); x += AS(ball_add_##K##_full, BALL(in + K + 1)); put(out, x)) \
     FORM(ball_add_##K##_full_marked, put(out, BALL(in) + kairn::unverified(BALL(in + K + 1))))                    \
@@ -548,14 +548,16 @@ FORM(ball_make_2_constant, if (stopped_by_checks(in[2])) { put(out, B2<T>::empty
     FORM(ball_mul_##K##_full_times, put(out, AS(ball_mul_##K##_full, BALL(in)) * BALL(in + K + 1)))                \
     FORM(ball_mul_##K##_full_times_assign, auto x = BALL(in); x *= AS(ball_mul_##K##_full, BALL(in + K + 1)); put(out, x)) \
     FORM(ball_mul_##K##_full_marked, put(out, BALL(in) * kairn::unverified(BALL(in + K + 1))))                    \
-    FORM(ball_scale_##K##_full_scale, put(out, AS(ball_scale_##K##_full, BALL(in)) * in[K + 1]))                   \
-    FORM(ball_scale_##K##_full_scale_rev, put(out, in[K + 1] * AS(ball_scale_##K##_full, BALL(in))))               \
-    FORM(ball_scale_##K##_full_scale_assign, auto x = BALL(in); x *= AS(ball_scale_##K##_full, in[K + 1]); put(out, x)) \
-    FORM(ball_scale_##K##_full_marked, put(out, kairn::unverified(BALL(in)) * in[K + 1]))                         \
+    FORM(SCALE##_scale, put(out, AS(SCALE, BALL(in)) * in[K + 1]))                                               \
+    FORM(SCALE##_scale_rev, put(out, in[K + 1] * AS(SCALE, BALL(in))))                                           \
+    FORM(SCALE##_scale_assign, auto x = BALL(in); x *= AS(SCALE, in[K + 1]); put(out, x))                         \
+    FORM(SCALE##_marked, put(out, kairn::unverified(BALL(in)) * in[K + 1]))                                       \
     FORM(ball_neg_##K##_negate, put(out, -AS(ball_neg_##K, BALL(in))))                                             \
     FORM(ball_neg_##K##_marked, put(out, -kairn::unverified(BALL(in))))
-BALL_FORMS(1, ball1)
-BALL_FORMS(2, ball2)
+// The scaling of a ball of two limbs calls ball_scale_2_full_entry, which guards a first (rule R3,
+// the factors of a fused operation).
+BALL_FORMS(1, ball1, ball_scale_1_full)
+BALL_FORMS(2, ball2, ball_scale_2_full_entry)
 
 // The scaling of a ball by a power of two c = 2^m: ldexp(X, m), its marked form, half(Y) with
 // Y = X 2^(m + 1) exactly, and ldexp(Y, m - k) with Y = X 2^k exactly and m - k beyond the powers
@@ -1005,7 +1007,7 @@ struct Form {
 
 #define ROW(KERNEL, NAME, IN, OUT) {#KERNEL, #NAME, IN, OUT, false, KERNEL##_##NAME<double>, KERNEL##_##NAME<float>},
 #define SOME(KERNEL, NAME, IN, OUT) {#KERNEL, #NAME, IN, OUT, true, KERNEL##_##NAME<double>, KERNEL##_##NAME<float>},
-#define BALL_ROWS(K, IN, OUT, IN_SCALE, IN_NEG)            \
+#define BALL_ROWS(K, SCALE, IN, OUT, IN_SCALE, IN_NEG)     \
     ROW(ball_add_##K##_full, plus, IN, OUT)              \
     ROW(ball_add_##K##_full, plus_assign, IN, OUT)       \
     ROW(ball_add_##K##_full, marked, IN, OUT)            \
@@ -1027,10 +1029,10 @@ struct Form {
     ROW(ball_mul_##K##_full, times, IN, OUT)             \
     ROW(ball_mul_##K##_full, times_assign, IN, OUT)      \
     ROW(ball_mul_##K##_full, marked, IN, OUT)            \
-    ROW(ball_scale_##K##_full, scale, IN_SCALE, OUT)     \
-    ROW(ball_scale_##K##_full, scale_rev, IN_SCALE, OUT) \
-    ROW(ball_scale_##K##_full, scale_assign, IN_SCALE, OUT) \
-    ROW(ball_scale_##K##_full, marked, IN_SCALE, OUT)    \
+    ROW(SCALE, scale, IN_SCALE, OUT)                     \
+    ROW(SCALE, scale_rev, IN_SCALE, OUT)                 \
+    ROW(SCALE, scale_assign, IN_SCALE, OUT)              \
+    ROW(SCALE, marked, IN_SCALE, OUT)                    \
     ROW(ball_neg_##K, negate, IN_NEG, OUT)               \
     ROW(ball_neg_##K, marked, IN_NEG, OUT)
 // One interval is ONE limbs (K a bound), two are TWO.
@@ -1228,8 +1230,8 @@ const Form forms[] = {
     ROW(ball_make_2, center_radius, "lll", "lll")
     ROW(ball_make_1, constant, "ll", "ll")
     ROW(ball_make_2, constant, "lll", "lll")
-    BALL_ROWS(1, "llll", "ll", "lll", "ll")
-    BALL_ROWS(2, "llllll", "lll", "llll", "lll")
+    BALL_ROWS(1, ball_scale_1_full, "llll", "ll", "lll", "ll")
+    BALL_ROWS(2, ball_scale_2_full_entry, "llllll", "lll", "llll", "lll")
     SOME(ball_mul_2_full, times_center, "llllll", "lll")
     SOME(ball_mul_2_full, center_times, "llllll", "lll")
     ROW(ball_scale_1_full, scale_one, "lll", "ll")
@@ -1370,6 +1372,9 @@ const char* const internal[] = {
     // the products of two limbs), mul_down_1 and mul_up_1 (mul_down_entry, mul_up_entry), mul_2_1
     // (mul_2_1_entry, and inside the scalings) and mul_2_1_full (mul_2_1_full_entry).
     "two_prod", "mul_down_1", "mul_up_1", "mul_2_1", "mul_2_1_full",
+    // And the scaling of a ball of two limbs, core and full form, which the operators reach through
+    // ball_scale_2_full_entry, which guards the scalar first.
+    "ball_scale_2", "ball_scale_2_full",
     "radd",                                  // radius arithmetic of the first Ball design
     "two_sum_ord",                           // Milestone 2: building blocks of the directed sums
     "add_down_1", "add_up_1", "sub_down_1", "sub_up_1",
@@ -1403,7 +1408,7 @@ const char* const factors_unguarded = "acc_mul_1 takes its factors unguarded: Ac
                                       "of a fused operation)";
 const NotPublic not_public[] = {
     {"ball_add_1", ball_core}, {"ball_sub_1", ball_core}, {"ball_mul_1", ball_core}, {"ball_scale_1", ball_core},
-    {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core}, {"ball_scale_2", ball_core},
+    {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core},
     {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
     {"sum_entry_step_1", fold_step}, {"sum_entry_step_2", fold_step}, {"sum_fast_entry_step_2", fold_step},
     {"dot_step_1", fold_step}, {"dot_entry_step_1", fold_step}, {"dot_step_2", fold_step}, {"add_entry_step_1", fold_step},

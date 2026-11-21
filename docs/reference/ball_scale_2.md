@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $c_x = c_{x0} + c_{x1}$, $
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call [`ball_scale_2_full`](ball_scale_2_full.md), which computes this kernel and then the fix-up of its results.
+No public operation computes this kernel on its own. It is part of [`ball_scale_2_full`](ball_scale_2_full.md).
 
 ## Requires
 
@@ -73,6 +73,8 @@ It calls [`mul_2_1`](mul_2_1.md).
 
 ```
 # A ball times a number a of the format, with a 2-limb center: the center by mul_2_1, the radius in the second design.
+# Reached through ball_scale_2_full, which the operators reach through ball_scale_2_full_entry,
+# which guards a first (rule R3, the factors of a fused operation).
 # The radius is evaluated by operations rounded to nearest on nonnegative values and inflated
 # once (milestone1.md, "The radius, second design"): E turns the error bound of the center
 # kernel mul_2_1 into a multiple of |cz0|, G covers the roundings of the radius, H what underflow

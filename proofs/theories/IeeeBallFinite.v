@@ -1471,3 +1471,25 @@ split; [exact B1|split; [exact B2|split; [|split]]].
 - intros Fa. apply (every_case_scale_2 prec emax (fun x : R => x * val a) _ _ _ _ _ _ B1 B2).
   intros Fw. destruct (B3 Fw) as [[Fx _] C]. split; [exact Fx|exact C].
 Qed.
+
+(* Ball<T, 2> * T (rule R3, the factors of a fused operation): ball_scale_2_full on the guarded
+   scalar. The statement says of a only whether it is finite and its value, which the guard keeps
+   (guard_finite, guard_val), so it is that of ball_scale_2_full on the guarded a. *)
+Theorem ball_scale_2_full_entry_correct : ball_scale_2_full_entry_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp2 cx0 cx1 rx a Bx.
+generalize (ball_scale_2_full_correct prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp2
+              cx0 cx1 rx (IeeeOperations.guard prec emax nan_plus a) Bx).
+unfold IeeeModel.ball_scale_2_full_entry. cbv zeta.
+destruct (IeeeModel.ball_scale_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx
+            (IeeeOperations.guard prec emax nan_plus a)) as [[cw0 cw1] rw].
+assert (Fa : finite (IeeeOperations.guard prec emax nan_plus a) <-> finite a).
+{ unfold finite. rewrite (guard_finite prec emax nan_plus). tauto. }
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a)
+  by exact (guard_val prec emax nan_plus a).
+rewrite Va. intros [B1 [B2 [B3 [B4 B5]]]].
+split; [exact B1|split; [exact B2|split; [|split]]].
+- intros Fw. destruct (B3 Fw) as [Fx [Ga C]]. split; [exact Fx|split; [now apply Fa|exact C]].
+- intros Fx Ga Hc. apply (B4 Fx); [now apply Fa|exact Hc].
+- intros Ga. apply B5. now apply Fa.
+Qed.

@@ -2748,6 +2748,26 @@ Definition ball_scale_2_full_spec : Prop :=
    ball_finite_2 cw0 cw1 rw) /\
   (finite a -> forall x : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cw0 cw1 rw (x * val a)).
 
+(* ball_scale_2_full_entry: ball_scale_2_full on its guarded scalar (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+Definition ball_scale_2_full_entry_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall cx0 cx1 rx a : binary_float prec emax,
+  ball_2 cx0 cx1 rx ->
+  let '(cw0, cw1, rw) := IeeeModel.ball_scale_2_full_entry prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx a in
+  ball_2 cw0 cw1 rw /\
+  (ball_empty_2 cw0 cw1 rw <-> ball_empty_2 cx0 cx1 rx) /\
+  (ball_finite_2 cw0 cw1 rw ->
+   ball_finite_2 cx0 cx1 rx /\ finite a /\
+   (forall x : R, Rabs (x - (val cx0 + val cx1)) <= val rx ->
+    Rabs ((x * val a) - (val cw0 + val cw1)) <= val rw)) /\
+  (ball_finite_2 cx0 cx1 rx -> finite a ->
+   Rabs (((Rabs (val cx0 + val cx1)) + val rx) * val a) <= bpow radix2 (emax - 2) ->
+   ball_finite_2 cw0 cw1 rw) /\
+  (finite a -> forall x : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cw0 cw1 rw (x * val a)).
+
 (* ball_split_2: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_split_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)

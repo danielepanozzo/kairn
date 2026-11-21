@@ -396,8 +396,10 @@ class Statements(unittest.TestCase):
                 out = ' '.join(k.output_limbs)
                 clause = f'->\n   ball_finite_{len(k.outputs[0].limbs)} {out}) /\\\n'
                 self.assertEqual(s.count(clause), 1 if enc[0]['finite_when'] else 0, name)
-                # ball_narrow_2_1 (Milestone 2) has a condition too: its radius can overflow.
-                self.assertEqual(bool(enc[0]['finite_when']), name.endswith('_full') or name == 'ball_narrow_2_1', name)
+                # ball_narrow_2_1 (Milestone 2) has a condition too: its radius can overflow; and the
+                # entry form of ball_scale_2_full, which has its claims (rule R3, the factors).
+                self.assertEqual(bool(enc[0]['finite_when']),
+                                 name.endswith(('_full', '_full_entry')) or name == 'ball_narrow_2_1', name)
 
     def test_the_finite_when_of_a_ball(self):
         # The same kernel with its conditions taken away, and with two of them.
@@ -501,8 +503,9 @@ class Statements(unittest.TestCase):
         # And five with the guarded forms of rule R3 on the factors of a fused operation:
         # acc_mul_entry_1, dot_entry_step_1 (bridge and lead) and dot_1_entry in both orders. And six
         # with the entry forms of the products: two_prod_entry, mul_down_entry, mul_up_entry,
-        # mul_2_1_entry (bridge and statement) and mul_2_1_full_entry.
-        self.assertEqual(text.count('Print Assumptions'), 313)
+        # mul_2_1_entry (bridge and statement) and mul_2_1_full_entry; and one with that of the scaling
+        # of a ball of two limbs, ball_scale_2_full_entry.
+        self.assertEqual(text.count('Print Assumptions'), 314)
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
         self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
@@ -655,8 +658,9 @@ class CheckedFiles(unittest.TestCase):
     # two_prod_entry, mul_down_entry, mul_up_entry, mul_2_1_entry and mul_2_1_full_entry (their
     # models, the programs of the first and the fourth, and their statements), added and nothing
     # else changed; make -C proofs passed on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '8c8aadb99d4c986af21d2cd0690524b6c0c84739c7e8ce70975bbb4839afb7b2',
-               'proofs/gen/IeeeStatements.v': 'b6f1f636cef6d5c86c7f9d7d03a69f58d38da2126d668ae2a515a8d678ae33d1'}
+    # Then ball_scale_2_full_entry (the same rule): its model and statement added, nothing else changed.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '30b659b5096f21119030530f79a6bf2641edeae4549afc6ddf690b9e3041fd24',
+               'proofs/gen/IeeeStatements.v': 'ccac59319d657e722c159de84d770b7c25b575858c13c8a98af69e44486d7b8b'}
 
 
     def test_the_checked_files(self):

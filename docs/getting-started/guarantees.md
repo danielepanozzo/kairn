@@ -337,11 +337,11 @@ that add their operands (`two_sum_entry`, `fast_two_sum_entry`, `radd_entry` and
 sums), on both: `two_sum(a * b, c)` would otherwise not be error-free. A limb operand that is a
 factor of a fused operation is guarded too, because a compiler that sees the other factor to be 1
 rewrites `fma(x, 1, s)` as `x + s` and fuses the program's product into it: `x * a`, `a * x`,
-`x *= a` and `finite::mul(x, a)` of two limbs and of `Packed`, `two_prod`, `mul_down` and
-`mul_up` call entry forms that guard it (`mul_2_1_full_entry`, `mul_2_1_entry`, `two_prod_entry`,
-`mul_down_entry`, `mul_up_entry`). A limb operand that a kernel only rounds as a product alone,
-compares or steps needs none (comparisons, the scaling of a ball, `ldexp`, `rmul`, `next_up` and
-`next_down`). Limbs
+`x *= a` and `finite::mul(x, a)` of two limbs and of `Packed`, the scaling `X * a` of a ball of two
+limbs, `two_prod`, `mul_down` and `mul_up` call entry forms that guard it (`mul_2_1_full_entry`,
+`mul_2_1_entry`, `ball_scale_2_full_entry`, `two_prod_entry`, `mul_down_entry`, `mul_up_entry`). A
+limb operand that a kernel only rounds as a product alone, compares or steps needs none
+(comparisons, the scaling of a ball of one limb, `ldexp`, `rmul`, `next_up` and `next_down`). Limbs
 written directly into `limb[]` are not guarded: a limb written that way must not be a product the
 compiler can see being computed; `from_limbs` is the way to build a number from computed values.
 

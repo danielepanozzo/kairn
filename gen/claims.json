@@ -11370,6 +11370,76 @@
       }
     },
     {
+      "name": "ball_scale_2_full_entry",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*a",
+      "requires": [
+        "ball(cx, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x*a",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "(abs(cx)+rx)*a",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallFinite.v",
+        "name": "ball_scale_2_full_entry_correct"
+      },
+      "source": {
+        "cite": "ball_scale_2_full on its guarded scalar (rule R3, the factors of a fused operation)",
+        "license": "core: as ball_scale_2; fix-up: MIT"
+      },
+      "flops": 10,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_split_2",
       "domain": "extended",
       "ieee_only": true,

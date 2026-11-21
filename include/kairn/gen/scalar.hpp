@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_down_entry, mul_up_1, mul_up_entry, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_entry, mul_2_1_full, mul_2_1_full_entry, mul_2_2_full, scale_step_2.
+// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_down_entry, mul_up_1, mul_up_entry, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_scale_2_full_entry, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_entry, mul_2_1_full, mul_2_1_full_entry, mul_2_2_full, scale_step_2.
 #pragma once
 
 #include <cstddef>
@@ -12508,6 +12508,75 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float cx0, float cx1, float rx, flo
         rw_out = rw;
 #endif
     }
+}
+
+// ball_scale_2_full_entry(cx = (cx0, cx1), rx, a) -> cw = (cw0, cw1), rw
+// ball_scale_2_full on its guarded scalar (rule R3, the factors of a fused operation). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void ball_scale_2_full_entry(double cx0, double cx1, double rx, double a, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
+    const double ga = a + 0.0;
+    // (cw0, cw1, rw) = ball_scale_2_full(cx0, cx1, rx, ga)
+    // (cw0_cz0, cw0_cz1, cw0_rz) = ball_scale_2(cx0, cx1, rx, ga)
+    // (cw0_cz0, cw0_cz1) = mul_2_1(cx0, cx1, ga)
+    // (cw0_cz0_ch, cw0_cz0_cl1) = two_prod(cx0, ga)
+    const double cw0_cz0_ch = fma_rn(cx0, ga, 0.0);
+    const double cw0_cz0_cl1 = fma_rn(cx0, ga, -cw0_cz0_ch);
+    const double cw0_cz0_cl3 = fma_rn(cx1, ga, cw0_cz0_cl1);
+    // (cw0_cz0, cw0_cz1) = fast_two_sum(cw0_cz0_ch, cw0_cz0_cl3)
+    const double cw0_cz0 = cw0_cz0_ch + cw0_cz0_cl3;
+    const double cw0_cz0_z = cw0_cz0 - cw0_cz0_ch;
+    const double cw0_cz1 = cw0_cz0_cl3 - cw0_cz0_z;
+    const double cw0_cz0_aa = abs_bits(ga);
+    const double cw0_cz0_az = abs_bits(cw0_cz0);
+    const double cw0_cz0_p = fma_rn(cw0_cz0_aa, rx, 0.0);
+    const double cw0_cz0_t = fma_rn(cw0_cz0_az, 0x1.0000000000001p-105, cw0_cz0_p);
+    const double cw0_rz = fma_rn(cw0_cz0_t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
+    const bool cw0_e = rx == rx;
+    const double cw0_az = abs_bits(cw0_cz0);
+    const bool cw0_f1 = std::numeric_limits<double>::infinity() > cw0_az;
+    const bool cw0_f2 = std::numeric_limits<double>::infinity() > cw0_rz;
+    const bool cw0_f = cw0_f1 & cw0_f2;
+    const double cw0_c0 = cw0_f ? cw0_cz0 : 0.0;
+    const double cw0_c1 = cw0_f ? cw0_cz1 : 0.0;
+    const double cw0_r = cw0_f ? cw0_rz : std::numeric_limits<double>::infinity();
+    const double cw0 = cw0_e ? cw0_c0 : rx;
+    const double cw1 = cw0_e ? cw0_c1 : rx;
+    const double rw = cw0_e ? cw0_r : rx;
+    cw0_out = cw0;
+    cw1_out = cw1;
+    rw_out = rw;
+}
+KAIRN_GEN_FORCEINLINE void ball_scale_2_full_entry(float cx0, float cx1, float rx, float a, float& cw0_out, float& cw1_out, float& rw_out) noexcept {
+    const float ga = a + 0.0f;
+    // (cw0, cw1, rw) = ball_scale_2_full(cx0, cx1, rx, ga)
+    // (cw0_cz0, cw0_cz1, cw0_rz) = ball_scale_2(cx0, cx1, rx, ga)
+    // (cw0_cz0, cw0_cz1) = mul_2_1(cx0, cx1, ga)
+    // (cw0_cz0_ch, cw0_cz0_cl1) = two_prod(cx0, ga)
+    const float cw0_cz0_ch = fma_rn(cx0, ga, 0.0f);
+    const float cw0_cz0_cl1 = fma_rn(cx0, ga, -cw0_cz0_ch);
+    const float cw0_cz0_cl3 = fma_rn(cx1, ga, cw0_cz0_cl1);
+    // (cw0_cz0, cw0_cz1) = fast_two_sum(cw0_cz0_ch, cw0_cz0_cl3)
+    const float cw0_cz0 = cw0_cz0_ch + cw0_cz0_cl3;
+    const float cw0_cz0_z = cw0_cz0 - cw0_cz0_ch;
+    const float cw0_cz1 = cw0_cz0_cl3 - cw0_cz0_z;
+    const float cw0_cz0_aa = abs_bits(ga);
+    const float cw0_cz0_az = abs_bits(cw0_cz0);
+    const float cw0_cz0_p = fma_rn(cw0_cz0_aa, rx, 0.0f);
+    const float cw0_cz0_t = fma_rn(cw0_cz0_az, 0x1.000002p-47f, cw0_cz0_p);
+    const float cw0_rz = fma_rn(cw0_cz0_t, 0x1.000004p+0f, 0x1.000006p-126f);
+    const bool cw0_e = rx == rx;
+    const float cw0_az = abs_bits(cw0_cz0);
+    const bool cw0_f1 = std::numeric_limits<float>::infinity() > cw0_az;
+    const bool cw0_f2 = std::numeric_limits<float>::infinity() > cw0_rz;
+    const bool cw0_f = cw0_f1 & cw0_f2;
+    const float cw0_c0 = cw0_f ? cw0_cz0 : 0.0f;
+    const float cw0_c1 = cw0_f ? cw0_cz1 : 0.0f;
+    const float cw0_r = cw0_f ? cw0_rz : std::numeric_limits<float>::infinity();
+    const float cw0 = cw0_e ? cw0_c0 : rx;
+    const float cw1 = cw0_e ? cw0_c1 : rx;
+    const float rw = cw0_e ? cw0_r : rx;
+    cw0_out = cw0;
+    cw1_out = cw1;
+    rw_out = rw;
 }
 
 // ball_split_2(c = (c0, c1), r) -> ca = (ca0, ca1), ra, cb = (cb0, cb1), rb

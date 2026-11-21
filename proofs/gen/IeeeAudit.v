@@ -363,6 +363,9 @@ Print Assumptions ball_positive_2_correct.
 Definition ball_scale_2_full_audit : ball_scale_2_full_spec := ball_scale_2_full_correct.
 Print Assumptions ball_scale_2_full_correct.
 
+Definition ball_scale_2_full_entry_audit : ball_scale_2_full_entry_spec := ball_scale_2_full_entry_correct.
+Print Assumptions ball_scale_2_full_entry_correct.
+
 Definition ball_split_2_audit : ball_split_2_spec := ball_split_2_correct.
 Print Assumptions ball_split_2_correct.
 

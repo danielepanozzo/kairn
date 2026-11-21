@@ -1021,15 +1021,18 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   product through $F = \pm 1$ into `two_prod` (both outputs, and the error alone; every round),
   `mul_down` and `mul_up` (half the rounds), `finite::mul(E2, T)` (every round) and, in the NEON
   form, the product `Packed<T, 2> * Packed<T, 1>` and its `finite::mul` (every register; the scalar
-  form's `finite::mul` too): those kernels, `two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1` and
-  `mul_2_1_full`, took their factors unguarded. The public products now call their entry forms,
-  which guard the factors first (`two_prod_entry`, `mul_down_entry`, `mul_up_entry`,
-  `mul_2_1_entry`, `mul_2_1_full_entry`; rule R3, the factors of a fused operation), and with them
+  form's `finite::mul` too); and in the Release build of the tests (`NDEBUG`, which takes the debug
+  checks out of the operators), also the scalar `x * a`, `a * x` and `x *= a` of `Expansion<T, 2>`
+  (with a `T` and with an `Expansion<T, 1>`) and the three products of a `Ball<T, 2>` by a `T`
+  (every round; without `NDEBUG` none of these). Those kernels, `two_prod`, `mul_down_1`,
+  `mul_up_1`, `mul_2_1`, `mul_2_1_full` and `ball_scale_2_full`, took their factors unguarded. The
+  public products now call their entry forms, which guard the factors first (`two_prod_entry`,
+  `mul_down_entry`, `mul_up_entry`, `mul_2_1_entry`, `mul_2_1_full_entry`,
+  `ball_scale_2_full_entry`; rule R3, the factors of a fused operation), and with them
   `api.boundary.contract-fast` and `api.boundary.packed.native.contract-fast` (and `.scalar.`)
   pass with Apple clang; their controls, with those guards taken out, require the difference
   there, and report elsewhere. GCC 13 and 16 and Clang 18 on x86-64 fused none of these forms at
-  any setting, and the scalar `operator*` of `Expansion` and the products of a ball by a `T` fused
-  with no compiler.
+  any setting.
 - **The bounds as functions of the length** (`traits<X>::sum(n)`, `sum_height(h)`, `dot(n)`, the
   kernels `bound_sum_k` and `bound_dot_k`). The oracle judges the kernels through them
   (`api.oracle.bound_sum_k.F`, `api.oracle.bound_dot_k.F`, the forms `traits_sum_height`,

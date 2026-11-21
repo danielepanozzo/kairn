@@ -504,7 +504,7 @@ KERNELS = {
         form("X * c", B1, E1, result=B1, note="the limb of the `Expansion<T, 1>` operand is the scalar $a$"),
         form("c * X", E1, B1, result=B1, note="the limb of the `Expansion<T, 1>` operand is the scalar $a$"),
     ),
-    "ball_scale_2_full": page(
+    "ball_scale_2_full_entry": page(
         "ball", "A ball times a limb, two-limb center",
         form("X * a", B2, T, result=B2),
         form("a * X", T, B2, result=B2),
@@ -527,6 +527,7 @@ KERNELS = {
     "ball_mul_2": page("ball", "Product of balls, two-limb center, finite core"),
     "ball_scale_1": page("ball", "A ball times a limb, one-limb center, finite core"),
     "ball_scale_2": page("ball", "A ball times a limb, two-limb center, finite core"),
+    "ball_scale_2_full": page("building-blocks", "A ball times a limb, two-limb center, its factor unguarded"),
     # --- Milestone 2: the scaling of a ball by a power of two ----------------------------------
     "ball_mul_pow2_1": page("ball", "A ball times a power of two, one-limb center, finite core"),
     "ball_mul_pow2_2": page("ball", "A ball times a power of two, two-limb center, finite core"),

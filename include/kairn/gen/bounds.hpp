@@ -1988,6 +1988,15 @@ template <> struct ball_scale_2_full<float> {
     static constexpr bool proved = true;
 };
 
+// ball_scale_2_full_entry: proved. Claims: encloses.
+template <class T> struct ball_scale_2_full_entry;
+template <> struct ball_scale_2_full_entry<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_scale_2_full_entry<float> {
+    static constexpr bool proved = true;
+};
+
 // ball_split_2: proved. Claims: ball_splits.
 template <class T> struct ball_split_2;
 template <> struct ball_split_2<double> {

@@ -1,4 +1,6 @@
 # A ball times a number a of the format, with a 2-limb center: the center by mul_2_1, the radius in the second design.
+# Reached through ball_scale_2_full, which the operators reach through ball_scale_2_full_entry,
+# which guards a first (rule R3, the factors of a fused operation).
 # The radius is evaluated by operations rounded to nearest on nonnegative values and inflated
 # once (milestone1.md, "The radius, second design"): E turns the error bound of the center
 # kernel mul_2_1 into a multiple of |cz0|, G covers the roundings of the radius, H what underflow
@@ -8,7 +10,7 @@
 # operand is slow on some processors (decisions.md, the log of 2026-11-19).
 kernel:        ball_scale_2
 input:         cx = cx0 cx1
-input:         stored rx
+input:         rx
 input:         a
 output:        cz = cz0 cz1
 output:        rz
@@ -22,7 +24,6 @@ theorem:       proofs/theories/Ball2.v ball_scale_2_correct
 source:        midpoint-radius scaling (Milestone 1 listing, second radius design)
 license:       algorithm and proof: MIT
 status:        proved
-entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 (cz0, cz1)  = mul_2_1(cx0, cx1, a)

@@ -1,0 +1,32 @@
+# Ball<T, 2> * T, T * Ball<T, 2> and *= (rule R3, the factors of a fused operation:
+# architecture.md): a passes through guard, then ball_scale_2_full. ball_scale_2_full only multiplies
+# a (in the core's mul_2_1 and in the product of the radius), which R3 alone does not guard; but a
+# compiler that sees the leading limb of the center to be 1 fuses a product a = y z of the program
+# into the fms of the core's two_prod, as it does in mul_2_1 (Apple clang 21 under
+# -ffp-contract=fast, measured there). The guard is placed here, not in ball_scale_2: the core is
+# reached only through ball_scale_2_full, so one guard either way, and the listings of both, with
+# their theorems of Milestone 1, are kept. rx is the radius of a ball of the library. Its claims are
+# those of ball_scale_2_full: they say of a only whether it is finite and its value, which the
+# guard keeps.
+kernel:        ball_scale_2_full_entry
+input:         cx = cx0 cx1
+input:         stored rx
+input:         a
+output:        cw = cw0 cw1
+output:        rw
+value:         cx*a
+requires:      ball cx rx
+ensures:       encloses cw rw x*a x=cx,rx finite_when=abs_le((abs(cx)+rx)*a,-2)
+min_precision: 2
+source:        ball_scale_2_full on its guarded scalar (rule R3, the factors of a fused operation)
+license:       core: as ball_scale_2; fix-up: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallFinite.v ball_scale_2_full_entry_correct
+entry:         yes
+ieee_only:     yes
+cone_exempt:   through ball_scale_2_full, whose fix-up selects after explicit tests that the center and the radius are finite and that no operand is empty; B1 to B4 of milestone1.md, "Ball kernels", state what comes out
+
+ga                = guard(a)
+(cw0, cw1, rw)    = ball_scale_2_full(cx0, cx1, rx, ga)

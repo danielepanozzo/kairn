@@ -10845,6 +10845,74 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float32x4_t cx0, float32x4_t cx1, f
     rw_out = rw;
 }
 
+// ball_scale_2_full_entry(cx = (cx0, cx1), rx, a) -> cw = (cw0, cw1), rw
+KAIRN_GEN_FORCEINLINE void ball_scale_2_full_entry(float64x2_t cx0, float64x2_t cx1, float64x2_t rx, float64x2_t a, float64x2_t& cw0_out, float64x2_t& cw1_out, float64x2_t& rw_out) noexcept {
+    const float64x2_t ga = vaddq_f64(a, vdupq_n_f64(0.0));
+    // (cw0, cw1, rw) = ball_scale_2_full(cx0, cx1, rx, ga)
+    // (cw0_cz0, cw0_cz1, cw0_rz) = ball_scale_2(cx0, cx1, rx, ga)
+    // (cw0_cz0, cw0_cz1) = mul_2_1(cx0, cx1, ga)
+    // (cw0_cz0_ch, cw0_cz0_cl1) = two_prod(cx0, ga)
+    const float64x2_t cw0_cz0_ch = vfmaq_f64(vdupq_n_f64(0.0), cx0, ga);
+    const float64x2_t cw0_cz0_cl1 = vfmaq_f64(vnegq_f64(cw0_cz0_ch), cx0, ga);
+    const float64x2_t cw0_cz0_cl3 = vfmaq_f64(cw0_cz0_cl1, cx1, ga);
+    // (cw0_cz0, cw0_cz1) = fast_two_sum(cw0_cz0_ch, cw0_cz0_cl3)
+    const float64x2_t cw0_cz0 = vaddq_f64(cw0_cz0_ch, cw0_cz0_cl3);
+    const float64x2_t cw0_cz0_z = vsubq_f64(cw0_cz0, cw0_cz0_ch);
+    const float64x2_t cw0_cz1 = vsubq_f64(cw0_cz0_cl3, cw0_cz0_z);
+    const float64x2_t cw0_cz0_aa = vabsq_f64(ga);
+    const float64x2_t cw0_cz0_az = vabsq_f64(cw0_cz0);
+    const float64x2_t cw0_cz0_p = vfmaq_f64(vdupq_n_f64(0.0), cw0_cz0_aa, rx);
+    const float64x2_t cw0_cz0_t = vfmaq_f64(cw0_cz0_p, cw0_cz0_az, vdupq_n_f64(0x1.0000000000001p-105));
+    const float64x2_t cw0_rz = vfmaq_f64(vdupq_n_f64(0x1.0000000000003p-1022), cw0_cz0_t, vdupq_n_f64(0x1.0000000000002p+0));
+    const uint64x2_t cw0_e = vceqq_f64(rx, rx);
+    const float64x2_t cw0_az = vabsq_f64(cw0_cz0);
+    const uint64x2_t cw0_f1 = vcltq_f64(cw0_az, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t cw0_f2 = vcltq_f64(cw0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t cw0_f = vandq_u64(cw0_f1, cw0_f2);
+    const float64x2_t cw0_c0 = vbslq_f64(cw0_f, cw0_cz0, vdupq_n_f64(0.0));
+    const float64x2_t cw0_c1 = vbslq_f64(cw0_f, cw0_cz1, vdupq_n_f64(0.0));
+    const float64x2_t cw0_r = vbslq_f64(cw0_f, cw0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t cw0 = vbslq_f64(cw0_e, cw0_c0, rx);
+    const float64x2_t cw1 = vbslq_f64(cw0_e, cw0_c1, rx);
+    const float64x2_t rw = vbslq_f64(cw0_e, cw0_r, rx);
+    cw0_out = cw0;
+    cw1_out = cw1;
+    rw_out = rw;
+}
+KAIRN_GEN_FORCEINLINE void ball_scale_2_full_entry(float32x4_t cx0, float32x4_t cx1, float32x4_t rx, float32x4_t a, float32x4_t& cw0_out, float32x4_t& cw1_out, float32x4_t& rw_out) noexcept {
+    const float32x4_t ga = vaddq_f32(a, vdupq_n_f32(0.0f));
+    // (cw0, cw1, rw) = ball_scale_2_full(cx0, cx1, rx, ga)
+    // (cw0_cz0, cw0_cz1, cw0_rz) = ball_scale_2(cx0, cx1, rx, ga)
+    // (cw0_cz0, cw0_cz1) = mul_2_1(cx0, cx1, ga)
+    // (cw0_cz0_ch, cw0_cz0_cl1) = two_prod(cx0, ga)
+    const float32x4_t cw0_cz0_ch = vfmaq_f32(vdupq_n_f32(0.0f), cx0, ga);
+    const float32x4_t cw0_cz0_cl1 = vfmaq_f32(vnegq_f32(cw0_cz0_ch), cx0, ga);
+    const float32x4_t cw0_cz0_cl3 = vfmaq_f32(cw0_cz0_cl1, cx1, ga);
+    // (cw0_cz0, cw0_cz1) = fast_two_sum(cw0_cz0_ch, cw0_cz0_cl3)
+    const float32x4_t cw0_cz0 = vaddq_f32(cw0_cz0_ch, cw0_cz0_cl3);
+    const float32x4_t cw0_cz0_z = vsubq_f32(cw0_cz0, cw0_cz0_ch);
+    const float32x4_t cw0_cz1 = vsubq_f32(cw0_cz0_cl3, cw0_cz0_z);
+    const float32x4_t cw0_cz0_aa = vabsq_f32(ga);
+    const float32x4_t cw0_cz0_az = vabsq_f32(cw0_cz0);
+    const float32x4_t cw0_cz0_p = vfmaq_f32(vdupq_n_f32(0.0f), cw0_cz0_aa, rx);
+    const float32x4_t cw0_cz0_t = vfmaq_f32(cw0_cz0_p, cw0_cz0_az, vdupq_n_f32(0x1.000002p-47f));
+    const float32x4_t cw0_rz = vfmaq_f32(vdupq_n_f32(0x1.000006p-126f), cw0_cz0_t, vdupq_n_f32(0x1.000004p+0f));
+    const uint32x4_t cw0_e = vceqq_f32(rx, rx);
+    const float32x4_t cw0_az = vabsq_f32(cw0_cz0);
+    const uint32x4_t cw0_f1 = vcltq_f32(cw0_az, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t cw0_f2 = vcltq_f32(cw0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t cw0_f = vandq_u32(cw0_f1, cw0_f2);
+    const float32x4_t cw0_c0 = vbslq_f32(cw0_f, cw0_cz0, vdupq_n_f32(0.0f));
+    const float32x4_t cw0_c1 = vbslq_f32(cw0_f, cw0_cz1, vdupq_n_f32(0.0f));
+    const float32x4_t cw0_r = vbslq_f32(cw0_f, cw0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t cw0 = vbslq_f32(cw0_e, cw0_c0, rx);
+    const float32x4_t cw1 = vbslq_f32(cw0_e, cw0_c1, rx);
+    const float32x4_t rw = vbslq_f32(cw0_e, cw0_r, rx);
+    cw0_out = cw0;
+    cw1_out = cw1;
+    rw_out = rw;
+}
+
 // ball_split_2(c = (c0, c1), r) -> ca = (ca0, ca1), ra, cb = (cb0, cb1), rb
 KAIRN_GEN_FORCEINLINE void ball_split_2(float64x2_t c0, float64x2_t c1, float64x2_t r, float64x2_t& ca0_out, float64x2_t& ca1_out, float64x2_t& ra_out, float64x2_t& cb0_out, float64x2_t& cb1_out, float64x2_t& rb_out) noexcept {
     const float64x2_t h = vfmaq_f64(vdupq_n_f64(0.0), r, vdupq_n_f64(0x1p-1));

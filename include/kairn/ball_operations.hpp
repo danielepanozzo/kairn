@@ -84,8 +84,10 @@ KAIRN_DETAIL_ENCLOSURE Ball<T, 2> mul(const Ball<T, 2>& x, std::type_identity_t<
     check_ball(x);
     Expansion<T, 2> c;
     T r = T(0);
-    // a is only multiplied (mul_2_1 on the center, abs(a) times the radius): no guard needed.
-    gen::ball_scale_2_full(x.center().limb[0], x.center().limb[1], x.radius(), a, c.limb[0], c.limb[1], r);
+    // a is guarded by the kernel (ball_scale_2_full_entry): it is a factor of the fused operations of
+    // mul_2_1 on the center, and a compiler that sees the center to be 1 would fuse a product of the
+    // program into one.
+    gen::ball_scale_2_full_entry(x.center().limb[0], x.center().limb[1], x.radius(), a, c.limb[0], c.limb[1], r);
     return Ball<T, 2>(kernel_result, c, r);
 }
 // The scaling by a power of two of T, c > 0, that ldexp and half compute (ball.hpp, detail::ldexp):

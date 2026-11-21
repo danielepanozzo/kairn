@@ -178,6 +178,7 @@ KAIRN_RUNNER_KERNEL(lt_1_2, "lll", "m", kairn::gen::lt_1_2(in[0], in[1], in[2], 
 KAIRN_RUNNER_KERNEL(ball_positive_2, "lll", "m", kairn::gen::ball_positive_2(in[0], in[1], in[2], mo[0]))
 KAIRN_RUNNER_KERNEL(ball_scale_2, "llll", "lll", kairn::gen::ball_scale_2(in[0], in[1], in[2], in[3], out[0], out[1], out[2]))
 KAIRN_RUNNER_KERNEL(ball_scale_2_full, "llll", "lll", kairn::gen::ball_scale_2_full(in[0], in[1], in[2], in[3], out[0], out[1], out[2]))
+KAIRN_RUNNER_KERNEL(ball_scale_2_full_entry, "llll", "lll", kairn::gen::ball_scale_2_full_entry(in[0], in[1], in[2], in[3], out[0], out[1], out[2]))
 KAIRN_RUNNER_KERNEL(ball_split_2, "lll", "llllll", kairn::gen::ball_split_2(in[0], in[1], in[2], out[0], out[1], out[2], out[3], out[4], out[5]))
 KAIRN_RUNNER_KERNEL(ball_sub_2, "llllll", "lll", kairn::gen::ball_sub_2(in[0], in[1], in[2], in[3], in[4], in[5], out[0], out[1], out[2]))
 KAIRN_RUNNER_KERNEL(ball_sub_2_full, "llllll", "lll", kairn::gen::ball_sub_2_full(in[0], in[1], in[2], in[3], in[4], in[5], out[0], out[1], out[2]))

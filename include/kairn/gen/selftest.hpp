@@ -5335,6 +5335,54 @@ inline const char* ball_scale_2_full_nonfinite_float() noexcept {
     return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) || !same(o2, std::numeric_limits<float>::quiet_NaN()) ? "ball_scale_2_full (float, a non-finite operand)" : nullptr;
 }
 
+// ball_scale_2_full_entry (double)
+inline const char* ball_scale_2_full_entry_double() noexcept {
+    volatile double i0 = 0x1.e71ae0634daaep-2;
+    volatile double i1 = 0x1.e03cf9a1e5dc4p-56;
+    volatile double i2 = 0x1.0036fc57c6cb1p-20;
+    volatile double i3 = 0x1.0128a6c608c51p+0;
+    double o0;
+    double o1;
+    double o2;
+    ball_scale_2_full_entry(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, 0x1.e94f54cafd767p-2) || !same(o1, 0x1.b57d15c3519a5p-57) || !same(o2, 0x1.015fe2d567381p-20) ? "ball_scale_2_full_entry (double)" : nullptr;
+}
+inline const char* ball_scale_2_full_entry_nonfinite_double() noexcept {
+    volatile double i0 = 0.0;
+    volatile double i1 = 0.0;
+    volatile double i2 = std::numeric_limits<double>::infinity();
+    volatile double i3 = 0x1.0128a6c608c51p+0;
+    double o0;
+    double o1;
+    double o2;
+    ball_scale_2_full_entry(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, 0.0) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) ? "ball_scale_2_full_entry (double, a non-finite operand)" : nullptr;
+}
+
+// ball_scale_2_full_entry (float)
+inline const char* ball_scale_2_full_entry_float() noexcept {
+    volatile float i0 = 0x1.e9ac58p+0f;
+    volatile float i1 = 0x1.647b12p-25f;
+    volatile float i2 = 0x1.b4ed2ep-21f;
+    volatile float i3 = -0x1.e88f56p-3f;
+    float o0;
+    float o1;
+    float o2;
+    ball_scale_2_full_entry(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, -0x1.d3415ap-2f) || !same(o1, -0x1.b26d52p-28f) || !same(o2, 0x1.a0ec68p-23f) ? "ball_scale_2_full_entry (float)" : nullptr;
+}
+inline const char* ball_scale_2_full_entry_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i2 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i3 = -0x1.e88f56p-3f;
+    float o0;
+    float o1;
+    float o2;
+    ball_scale_2_full_entry(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) || !same(o2, std::numeric_limits<float>::quiet_NaN()) ? "ball_scale_2_full_entry (float, a non-finite operand)" : nullptr;
+}
+
 // ball_split_2 (double)
 inline const char* ball_split_2_double() noexcept {
     volatile double i0 = 0x1.f988e737ef5a2p+3;
@@ -7937,6 +7985,10 @@ inline const char* run() noexcept {
         ball_scale_2_full_nonfinite_double,
         ball_scale_2_full_float,
         ball_scale_2_full_nonfinite_float,
+        ball_scale_2_full_entry_double,
+        ball_scale_2_full_entry_nonfinite_double,
+        ball_scale_2_full_entry_float,
+        ball_scale_2_full_entry_nonfinite_float,
         ball_split_2_double,
         ball_split_2_nonfinite_double,
         ball_split_2_float,

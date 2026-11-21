@@ -606,8 +606,6 @@ EXPOSED = {
     ('kernel', 'axpy_entry_step_2_1', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
     ('kernel', 'axpy_step_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('kernel', 'axpy_step_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
-    ('kernel', 'ball_scale_2', 'ball_scale_2'): ['a'],
-    ('kernel', 'ball_scale_2_full', 'ball_scale_2_full'): ['a'],
     ('kernel', 'scale_step_2', 'scale_step_2'): ['a', 'x0', 'x1'],
     ('loop', 'axpy_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('loop', 'axpy_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
@@ -1182,15 +1180,19 @@ class R3OfTheKernels(unittest.TestCase):
              'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'ball_neg_1', 'ball_neg_2'}
     # The cores of the Ball operations are entry kernels (a center or a radius of the program may
     # reach them), but the headers call them only inside the full Ball kernels: they have no
-    # kairn::finite form yet.
-    BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    # kairn::finite form yet. But ball_scale_2, which the operators reach only through
+    # ball_scale_2_full_entry, the entry form of its full kernel that guards the scalar first (rule
+    # R3, the factors of a fused operation): it is not an entry kernel.
+    BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)} - {'ball_scale_2'}
     # The full kernels and the constructors that the headers call: those of milestone1.md, but for
     # mul_2_1_full, whose public forms call mul_2_1_full_entry, the same with the core mul_2_1_entry,
-    # which guards the factor first (rule R3, the factors of a fused operation). (A function: TheKernels
-    # is defined below.)
+    # which guards the factor first (rule R3, the factors of a fused operation), and ball_scale_2_full,
+    # whose operators call ball_scale_2_full_entry, the same on the guarded scalar. (A function:
+    # TheKernels is defined below.)
     @staticmethod
     def full_entry():
-        return (TheKernels.NON_FINITE - {'mul_2_1_full'}) | {'mul_2_1_full_entry'}
+        return (TheKernels.NON_FINITE - {'mul_2_1_full', 'ball_scale_2_full'}) | \
+            {'mul_2_1_full_entry', 'ball_scale_2_full_entry'}
     # The kernels that a public header calls and that are not entry kernels: an argued exemption,
     # not a waiver. Each entry names the header function that calls the kernel (as
     # build.header_calls finds it: moving the call means arguing again) and, for EVERY input group
@@ -1752,12 +1754,14 @@ class TheKernels(unittest.TestCase):
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # The entry forms of the products that the public headers call, which guard the factors of their
     # fused operations first (rule R3, the factors of a fused operation: architecture.md), proved by
-    # reduction to the kernels they guard for (EntryKernels.v, IeeeEntry.v, IeeeFull.v).
-    FACTOR_ENTRY = {'two_prod_entry', 'mul_down_entry', 'mul_up_entry', 'mul_2_1_entry', 'mul_2_1_full_entry'}
+    # reduction to the kernels they guard for (EntryKernels.v, IeeeEntry.v, IeeeFull.v,
+    # IeeeBallFinite.v).
+    FACTOR_ENTRY = {'two_prod_entry', 'mul_down_entry', 'mul_up_entry', 'mul_2_1_entry', 'mul_2_1_full_entry',
+                    'ball_scale_2_full_entry'}
     # Of them, those of the extended domain (as the kernels they guard for), proved in the IEEE model,
-    # and the one with the IEEE-model statement only (a full kernel).
-    FACTOR_ENTRY_EXTENDED = {'mul_down_entry', 'mul_up_entry', 'mul_2_1_full_entry'}
-    FACTOR_ENTRY_IEEE_ONLY = {'mul_2_1_full_entry'}
+    # and those with the IEEE-model statement only (full kernels).
+    FACTOR_ENTRY_EXTENDED = {'mul_down_entry', 'mul_up_entry', 'mul_2_1_full_entry', 'ball_scale_2_full_entry'}
+    FACTOR_ENTRY_IEEE_ONLY = {'mul_2_1_full_entry', 'ball_scale_2_full_entry'}
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # which were unverified until their proofs were about the generated text: the interval kernels of one
     # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain

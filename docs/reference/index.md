@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 230 kernels are proved.
+All 231 kernels are proved.
 
 35 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -139,7 +139,7 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `X * Y`, `X *= Y` | `Ball<T, 1>`, `Ball<T, 1>` | a canonical ball that contains every $x y$; the empty set and the whole line included | [`ball_mul_1_full`](ball_mul_1_full.md) |
 | `X * Y`, `X *= Y`, `X * c`, `c * X` | `Ball<T, 2>`, `Ball<T, 2>` | a canonical ball that contains every $x y$; the empty set and the whole line included | [`ball_mul_2_full`](ball_mul_2_full.md) |
 | `X * a`, `a * X`, `X *= a`, `X * c`, `c * X` | `Ball<T, 1>`, `T` | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_1_full`](ball_scale_1_full.md) |
-| `X * a`, `a * X`, `X *= a` | `Ball<T, 2>`, `T` | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_2_full`](ball_scale_2_full.md) |
+| `X * a`, `a * X`, `X *= a` | `Ball<T, 2>`, `T` | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_2_full_entry`](ball_scale_2_full_entry.md) |
 | `-X` | `Ball<T, 1>` | contains every $-x$ | [`ball_neg_1`](ball_neg_1.md) |
 | `-X` | `Ball<T, 2>` | contains every $-x$, normalized | [`ball_neg_2`](ball_neg_2.md) |
 | not yet called by the public headers | - | contains every $x + y$ | [`ball_add_1`](ball_add_1.md) |
@@ -149,7 +149,7 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | not yet called by the public headers | - | contains every $x y$ | [`ball_mul_1`](ball_mul_1.md) |
 | not yet called by the public headers | - | contains every $x y$, normalized | [`ball_mul_2`](ball_mul_2.md) |
 | not yet called by the public headers | - | contains every $x a$ | [`ball_scale_1`](ball_scale_1.md) |
-| not yet called by the public headers | - | contains every $x a$, normalized | [`ball_scale_2`](ball_scale_2.md) |
+| none (internal) | - | contains every $x a$, normalized | [`ball_scale_2`](ball_scale_2.md) |
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows | [`ball_mul_pow2_1`](ball_mul_pow2_1.md) |
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows, normalized | [`ball_mul_pow2_2`](ball_mul_pow2_2.md) |
 | `X.lower_as<T>()`, `X.lower()` | `Ball<T, 1>` | a lower bound of the ball, rounded; $+\infty$ for the empty ball | [`ball_lower_as_1`](ball_lower_as_1.md) |
@@ -273,6 +273,7 @@ Kernels that other kernels call, and that no public operation computes on its ow
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
+| none (internal) | - | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_2_full`](ball_scale_2_full.md) |
 | none (internal) | - | $d \le a b$, at most 1 step below $\mathrm{RD}(a b)$; $v \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_dir_1`](mul_dir_1.md) |
 | none (internal) | - | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$; $\lvert (x + y) - z\rvert \le d$, normalized | [`add_ball_2_2`](add_ball_2_2.md) |
 | none (internal) | - | $\lvert z - x y\rvert \le 4\,u^2\,\lvert x y\rvert + \tfrac{3}{2}\,\eta$; $\lvert (x y) - z\rvert \le d$, normalized | [`mul_ball_2_2`](mul_ball_2_2.md) |

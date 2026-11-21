@@ -82,12 +82,13 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 # not entry kernels, are building blocks, and the steps, which are, are on the second list. The
 # products that the public operations reach through their entry forms, which guard the factors first
 # (rule R3, the factors of a fused operation), are building blocks too: two_prod, mul_down_1,
-# mul_up_1, mul_2_1 and mul_2_1_full.
+# mul_up_1, mul_2_1 and mul_2_1_full, and the scaling of a ball of two limbs, ball_scale_2 and
+# ball_scale_2_full, which the operators reach through ball_scale_2_full_entry.
 set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
   sub_up_1 mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2
   mul_ext_2_2 fold_finish_1 fold_finish_2 norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
-  acc_radius_1 acc_radius_2 two_prod mul_down_1 mul_up_1 mul_2_1 mul_2_1_full)
-set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2
+  acc_radius_1 acc_radius_2 two_prod mul_down_1 mul_up_1 mul_2_1 mul_2_1_full ball_scale_2 ball_scale_2_full)
+set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2
   ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2 dot_step_1 dot_step_2
   add_entry_step_1 add_entry_step_2 sub_entry_step_1 sub_entry_step_2 scale_step_1 scale_step_2 mul_pow2_step_1
   mul_pow2_step_2 axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1 acc_mul_1)
@@ -876,7 +877,7 @@ else()
   set(_api_unmarked "proof_checked|invalid argument type")
 endif()
 foreach(_case_name IN ITEMS 1:sub_2_2_full 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_1 6:ball_add_2_full
-                            7:sub_2_2_full_assign 8:mul_pow2_2_full 9:ball_scale_2_full 10:traits_constant
+                            7:sub_2_2_full_assign 8:mul_pow2_2_full 9:ball_scale_2_full_entry 10:traits_constant
                             12:to_nearest_2_narrowing 13:make_2 14:ball_make_2 29:two_sum_entry 30:next_up
                             31:ball_mul_pow2_2_full 39:interval_add_1 40:interval_make_1 41:interval_to_ball_1)
   string(REPLACE ":" ";" _pair "${_case_name}")
@@ -892,7 +893,7 @@ endforeach()
 # One kernel unverified, the others proved: the operation must not compile through a conversion to
 # another, proved kernel (x + a as x + Expansion(a), a scaling as a product with a point ball).
 foreach(_case_name IN ITEMS 20:add_2_1_full:limb 21:add_2_1_full:one_limb 22:sub_1_2_full:limb
-                            23:mul_2_1_full_entry:limb 24:ball_scale_2_full:limb 25:ball_make_2:point
+                            23:mul_2_1_full_entry:limb 24:ball_scale_2_full_entry:limb 25:ball_make_2:point
                             26:lt_2_1:limb)
   string(REPLACE ":" ";" _triple "${_case_name}")
   list(GET _triple 0 _case)

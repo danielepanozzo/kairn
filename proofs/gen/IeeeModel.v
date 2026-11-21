@@ -2044,6 +2044,12 @@ Definition ball_scale_2_full (cx0 cx1 rx a : float) : float * float * float :=
   let rw := if e then r else rx in
   (cw0, cw1, rw).
 
+(* ball_scale_2_full_entry: ball_scale_2_full on its guarded scalar (rule R3, the factors of a fused operation). *)
+Definition ball_scale_2_full_entry (cx0 cx1 rx a : float) : float * float * float :=
+  let ga := guard a in
+  let '(cw0, cw1, rw) := ball_scale_2_full cx0 cx1 rx ga in
+  (cw0, cw1, rw).
+
 (* ball_split_2: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). *)
 Definition ball_split_2 (c0 c1 r : float) : float * float * float * float * float * float :=
   let h := prod r up_ball_from_interval_2_0 in

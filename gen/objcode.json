@@ -889,6 +889,11 @@
    "scalar_call": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
    "packed": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]}
   },
+  "ball_scale_2_full_entry": {
+   "scalar": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
+   "scalar_call": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
+   "packed": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]}
+  },
   "ball_split_2": {
    "scalar": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
    "scalar_call": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
