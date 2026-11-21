@@ -160,6 +160,38 @@ both are explicit), and `Ball<T, 2>::from_interval(lo, hi)` makes a ball of two 
 is the exact midpoint of two numbers of `T`. What each function guarantees is in
 [What holds today](guarantees.md#intervals).
 
+## Vector loops
+
+A loop over many numbers can be written three ways. Each gives, for each operation, the same
+guarantee: that of the operation of `Expansion` it is, whose bound the reference page of its
+kernel states.
+
+- **A plain loop of `Expansion<T, k>`**, one number at a time. The simplest, and the one to start
+  with: it works on any data structure, and in a loop of independent operations the processor
+  overlaps them and the compiler may vectorize them; whether it does depends on the compiler and
+  the loop.
+- **`kairn::Packed<T, k>`** ([reference](../reference/packed.md)), $W$ numbers at a time in SIMD
+  registers: 4 `double` with AVX2, 2 with the Advanced SIMD of AArch64, and 1 on a target with
+  neither, from one source. Each operation of `Packed` is, in each lane, the operation of
+  `Expansion` of the same name, computed by the packed form of its kernel, which the generator
+  writes from the same description and tests lane by lane: the arithmetic of two limbs, and for
+  one limb the operations that do not round (`Packed<T, 1>` has no arithmetic). It is for a loop the program writes
+  itself, over numbers stored as one array per limb, which [`kairn/soa.hpp`](../reference/soa.md)
+  holds or maps over the program's own arrays. The [tutorial](../tutorials/vector-loop.md) writes
+  one and says what can be claimed about it: each operation's bound, per lane, and nothing about
+  an order the program did not choose.
+- **The functions on arrays** (sum, dot product, `axpy`, convolution) will be loops of this kind
+  with a bound proved for the whole loop as a function of the length, in Higham's form
+  ([Milestone 2 statements](../developer/design/milestone2.md#sum-dot-axpy-convolution)). Their
+  kernels are written and tested, but the public headers do not call them yet; when they do, they
+  are the choice for those four operations.
+
+`kairn/packed.hpp` and `kairn/soa.hpp` are not included by `kairn/kairn.hpp`, which they would
+make two to three times as long to compile where the target has SIMD
+([Packed](../reference/packed.md#compile-time)). On x86-64,
+`kairn::fma` adds `-mfma` only, which gives the form of one lane: the AVX2 form needs `-mavx2
+-mfma`, `-march=x86-64-v3` or later, or `/arch:AVX2`. There is no dispatch at run time.
+
 ## Constants from fractions
 
 A constant such as 1/10 or 1/3 is not a `double`, nor the sum of two. `kairn::rational<X>(num,

@@ -342,7 +342,11 @@ So the program may pass its own products to Kairn under every contraction settin
 `api.boundary.*` checks each guarded form with the product written in the call against the same
 operation on the rounded product, bit for bit, under each contraction setting of the compiler, and
 `api.boundary.unguarded.*` builds the same test against a copy of the headers with the guard taken
-out of the generated kernels, and checks that the compilers above do fuse then. A guarded $-0$
+out of the generated kernels, and checks that the compilers above do fuse then. `api.boundary.packed.*`
+does the same for the products a program passes into `Packed` and the containers, computed in
+registers with the intrinsics of the form or in `T` into arrays, in each form of `Packed`, the
+guard of the packed kernels taken out of the copy as well
+([Testing](../developer/testing.md#packed-and-the-containers)). A guarded $-0$
 enters as $+0$; Kairn leaves the sign of a zero unspecified anyway.
 
 One-limb values themselves are not guarded: they behave like `T`, contraction included, so an
@@ -411,6 +415,34 @@ default contraction a product followed by a sum is fused for `double` and not fo
 [D6](../developer/design/phase0/decisions.md#d6-one-limb-and-contraction-under-clang)), unless the
 program defines `KAIRN_K1_CONTRACT`. MSVC does not vectorize a loop over the wrapper where it
 vectorizes the loop over `double`.
+
+## Packed numbers and arrays
+
+`Packed<T, k>` ([reference](../reference/packed.md)) holds $W$ numbers in registers ($W$ = 4 for
+`double` and 8 for `float` with AVX2, 2 and 4 on AArch64, 1 elsewhere). **Each of its operations
+has, in each lane, the statement of the operation of `Expansion` of the same name, which is
+proved**: it is the packed form of that operation's kernel, which the generator writes from the
+same description as the scalar kernel and tests lane by lane against it, bit for bit. The oracle
+also judges every packed operation through the public interface, one oracle case per lane, beside
+the other lanes, in the quick and the full tier, and a test compares every operation with the
+scalar one on every pair of a corpus of special values. Nothing is stated across lanes, and
+nothing about a loop as a whole: a program composes the bounds of its operations over the order it
+wrote, which depends on $W$, so that the same loop can give different bits on different targets,
+each within its own bound ([A vector loop](../tutorials/vector-loop.md)).
+
+The operations are those of two limbs, and of one limb those that do not round (negation, `abs`,
+the comparisons, the conversions): `Packed<T, 1>` has no arithmetic, because the kernels of the
+arithmetic of one limb are not entry kernels, the only kernels a public header may call
+([Packed](../reference/packed.md#the-operations)). One composition is written by hand, as for
+`Expansion`: `ldexp` and `half` beyond the powers of two of `T` (argued and tested, not
+machine-checked, [above](#overflow-and-non-finite-values)).
+
+`SoA<T, k>` and its views ([reference](../reference/soa.md)) hold numbers as one array per limb and
+compute nothing: an element read is the value written (its limbs, but that a zero limb of two may
+come back with the other sign, through the guard of `from_limbs`); with `KAIRN_CHECKS` each read of
+two limbs is `from_limbs`, checked; a view never allocates, and an `SoA` allocates only in the
+functions that say so. Not provided: a packed `Ball` or `Interval`, dispatch at run time, and an
+alignment requirement (loads and stores are unaligned; an `SoA` aligns its arrays to 64 bytes).
 
 ## The environment
 

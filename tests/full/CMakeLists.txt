@@ -145,11 +145,17 @@ endif()
 # (crosscheck.cmake, the three stages of the pipeline at once); and every compiled runner on
 # KAIRN_CROSSCHECK_CASES cases of each format, with the kernels' runners of the flag sets
 # (api/flags/: the debug build, and one set at -O1 or /O1), in one Python process
-# (tests/crosscheck.py).
+# (tests/crosscheck.py); every packed runner with both assignments of its lanes, the permuted
+# and the consecutive one (_compiled_both of tests/CMakeLists.txt).
 set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
-set(_compiled_full ${_compiled})
+set(_compiled_full ${_compiled_both})
 foreach(_runner _label IN ZIP_LISTS _flags_gen_runners _flags_gen_labels)
-  list(APPEND _compiled_full --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+  if(_label MATCHES "^cxx")
+    list(APPEND _compiled_full --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+  else()
+    list(APPEND _compiled_full --packed-kernels "${_label}" "$<TARGET_FILE:${_runner}>"
+      "permuted,consecutive")
+  endif()
 endforeach()
 foreach(_kernel IN LISTS _full_kernels)
   set(_this ${_full_${_kernel}_this})
@@ -298,12 +304,18 @@ set(_api_full_common ${_api_oracle_common} ${_api_debug_runner} --first-form deb
 foreach(_set IN LISTS _flags_enclosure_sets)
   list(APPEND _api_full_common --runner ${_set} "$<TARGET_FILE:kairn-api-runner-${_set}>" --same-as ${_set} build)
 endforeach()
+# The runner of the packed forms alone, built for AVX2 where the build's flags give the scalar form
+# of Packed (api/CMakeLists.txt), on the kernels that packed.hpp calls.
 foreach(_kernel IN LISTS _api_oracle_kernels)
+  set(_extra "")
+  if(_kernel IN_LIST _api_packed_kernels)
+    set(_extra ${_api_packed_runner})
+  endif()
   foreach(_format binary64 binary32)
     set(_name full.api.oracle.${_kernel}.${_format})
     add_test(NAME ${_name}
       COMMAND ${_crosscheck} api --kernel ${_kernel} --format ${_format} --count ${KAIRN_API_CASES}
-        --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-oracle" ${_api_full_common})
+        --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-oracle" ${_api_full_common} ${_extra})
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle")
   endforeach()
 endforeach()

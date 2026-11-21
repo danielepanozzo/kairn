@@ -263,6 +263,23 @@ The kernels of the loops over arrays (the folds of Milestone 2): their steps, th
 | none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_1`](norm_finish_1.md) |
 | none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_2`](norm_finish_2.md) |
 
+## Vector loops: Packed and the containers
+
+`Packed<T, k>` (`kairn/packed.hpp`) holds W numbers in registers; its operations are those of `Expansion` that have a kernel, under the same names, each the packed form of that kernel, with its statement in every lane ([Packed numbers in registers](packed.md)). `SoA<T, k>` and its views (`kairn/soa.hpp`) hold numbers as one array per limb and compute nothing ([Arrays of numbers](soa.md)). `kairn/kairn.hpp` includes neither.
+
+| C++ | Operands | What it gives | Kernel |
+|---|---|---|---|
+| `x + y, x - y, x * y, x += y, x -= y, x *= y, -x, abs(x), add_fast(x, y), ldexp(x, n), half(x)` | `Packed<T, 2>`, `Packed<T, 2>` | in each lane, the operation of `Expansion<T, 2>` of the same name, with its statement; a `Packed<T, 1>` operand is the limb of the mixed forms | that of `Expansion` ([Packed](packed.md#the-operations)) |
+| `x + a, a + x, x - a, a - x, x * a, a * x` | `Packed<T, 2>`, `Packed<T, 1>` | in each lane, the operation of `Expansion<T, 2>` of the same name, with its statement; a `Packed<T, 1>` operand is the limb of the mixed forms | that of `Expansion` ([Packed](packed.md#the-operations)) |
+| `x < y, x > y, x <= y, x >= y, x == y, x != y` | `Packed<T, K>`, `Packed<T, K>` | in each lane, the comparison of `Expansion`: a mask of W truth values | that of `Expansion`, or none for one limb |
+| `to_nearest(x), to_down(x), to_up(x), abs_upper(x), Packed<T, 1>(x)` | `Packed<T, 2>` | in each lane, the conversion of `Expansion<T, 2>` to one limb | that of `Expansion` |
+| `finite::add, finite::sub, finite::mul, finite::add_fast, finite::ldexp` | `Packed<T, 2>`, `Packed<T, K>` | in each lane, the function of `kairn::finite` of the same name: the core, without the fix-up | that of `Expansion` |
+| `-x, abs(x), x < y, x == y, to_nearest(x), to_down(x), to_up(x), abs_upper(x)` | `Packed<T, 1>`, `Packed<T, 1>` | one limb: the exact operations of `T`, as for `Expansion<T, 1>`; no arithmetic, whose kernels are not entry kernels ([Packed](packed.md#the-operations)) | none |
+| `Packed<T, K>(), Packed<T, K>::broadcast(x), p.lane(i), p.set_lane(i, x), select(m, a, b)` | `Packed<T, K>` | moves: zero, one number in every lane, a lane read or written, a select by a mask; limbs copied, nothing computed | none |
+| `all(m), any(m), m.lane(i), m & n, !m` | `PackedMask<T>` | whether every lane, some lane, or lane i of a mask is true; and, or and not, lane by lane (`&`, the bar, `!`) | none |
+| `Packed<T, 2>::load(x0, x1), p.store(x0, x1), load_partial(x0, x1, n, fill)` | `const T*`, `const T*` | W numbers from arrays, or into them, unaligned; a two-limb load is `from_limbs` in each lane (guarded, and checked with `KAIRN_CHECKS`); the tail with `load_partial` and `store_partial` | `make_2_limbs` (a load), or none |
+| `v[i], v.get(i), v.set(i, x), v.load(i), v.store(i, p)` | `SoAView<T, K>`, `std::size_t` | element i of an array of numbers, read as `from_limbs` (checked with `KAIRN_CHECKS`) or written (limbs copied); W of them as a `Packed` ([Arrays of numbers](soa.md)) | `make_2_limbs` (a read), or none |
+
 ## Operations on arrays, entry by entry
 
 The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the operation of one entry, on an array the program supplies where it says so. The functions on arrays of the public headers come later.

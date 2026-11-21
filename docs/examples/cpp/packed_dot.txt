@@ -1,0 +1,4 @@
+Dot product of 1003 pairs: exact value 33566778
+  double            33566821 (error 43)
+  Packed<double, 2> 33566778 + 0 (exact)
+  3 sets of 1003 random pairs: every result within the bound of its operations

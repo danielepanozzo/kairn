@@ -16,7 +16,7 @@ include/kairn/
   expansion.hpp          Expansion<T, 1>, Expansion<T, 2>
   expansion3.hpp, expansion4.hpp, expansion8.hpp, expansion_n.hpp     one header per size
   interval.hpp, ball.hpp, ball_vector.hpp
-  simd.hpp, soa.hpp      packed lanes; structure-of-arrays containers and views
+  packed.hpp, soa.hpp    packed lanes; structure-of-arrays containers and views (not included by kairn.hpp)
   batch/                 sum, dot, axpy, convolution, gemv, gemm, map, accumulator
   io.hpp                 decimal and hexadecimal input and output
   math/                  one header per elementary function
@@ -194,7 +194,7 @@ What makes this fit a client templated on its scalar:
   own kernels; device code has no recursion, no allocation and only plain structs. Warp helpers
   shuffle and reduce k-numbers limb by limb. In MSL the same operations are functions on small
   structs.
-- `simd.hpp` exposes the generated per-ISA networks as a packed type (`W` numbers in registers,
+- `packed.hpp` (first planned as `simd.hpp`) exposes the generated per-ISA networks as a packed type (`W` numbers in registers,
   limb $i$ of all of them in one register), and `soa.hpp` containers and views with proxy element
   access, so that clients write their own vector loops over the proven networks.
 

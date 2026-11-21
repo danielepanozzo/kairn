@@ -7,9 +7,19 @@
 //   runner --list             every kernel that some form maps to
 //   runner --internal         the building blocks: kernels that are parts of other kernels
 //   runner --not-public       entry kernels that no public operation calls yet, each with why
+//   runner --packed-list      every kernel that some packed form maps to
 //   runner --self-test        kairn::self_test() and kairn::environment_ok() as built here: exit
 //                             0 if both pass (the tests of the flag sets, tests/api/flags/)
 //
+// The packed forms (named packed_NAME, listed after a kernel's scalar forms) compute through
+// Packed<T, k> (kairn/packed.hpp) and the views of kairn/soa.hpp, in whichever form this build
+// compiles (AVX2, NEON, or one lane): the stream is held until its end, and each line is
+// completed in one lane of a register whose other lanes hold other lines, drawn so that registers
+// mix the oracle's strata and every lane position takes its share of lines ("The packed forms",
+// below). A packed form also fails at the end of a stream of at least 1000 lines that left a lane
+// position without a line, or whose non-finite operands or results never shared a register with
+// finite ones. Built with KAIRN_TEST_PACKED_ONLY, the runner lists only its packed forms
+// (tests/api/CMakeLists.txt builds one so for AVX2 where the build's flags do not give it).
 // Each public operation is mapped to the kernel it calls, whose claims it must satisfy; a kernel
 // can have several forms (x + a and a + x, x += y, the marked and the unmarked operator). The
 // kernels of the extended domain (the full kernels, the constructors, the comparisons and
@@ -52,6 +62,8 @@
 #define KAIRN_CHECKS 0
 #endif
 #include <kairn/kairn.hpp>
+#include <kairn/packed.hpp>
+#include <kairn/soa.hpp>
 #if defined(KAIRN_TEST_CHECKS) && KAIRN_CHECKS != 1
 #error "built with KAIRN_TEST_CHECKS, the runner must have KAIRN_CHECKS 1: build it without NDEBUG"
 #endif
@@ -59,12 +71,14 @@
 #include "no_crash_reports.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -644,6 +658,252 @@ FORM(ball_upper_as_2_upper_as, out[0] = ball2(in).template upper_as<T>())
 FORM(ball_narrow_2_1_narrow, put(out, B1<T>(AS(ball_narrow_2_1, ball2(in)))))
 FORM(ball_narrow_2_1_marked, put(out, B1<T>(kairn::unverified(ball2(in)))))
 
+// --- The packed forms ---------------------------------------------------------------------------
+//
+// The operations of Packed<T, k> (kairn/packed.hpp) and the reads of kairn/soa.hpp, one lane per
+// line: the main loop gives a packed form W consecutive lines of one format (W the lanes of the
+// limb type, fewer at the end of the stream or before a comment), lane (j + b) mod W to the j-th
+// line of the b-th batch, so that every line meets every lane position in turn and shares its
+// register with the lines beside it, a NaN or an overflow with finite numbers. A lane without a
+// line computes a copy of the first line of the batch, and its results are not written. Each
+// operand is loaded from arrays as a program loads it (Packed::load, which is from_limbs in each
+// lane). A form is the packed counterpart of the scalar form of the same name, named
+// packed_NAME; on the lines that a conditional form cannot compute (see the top of the file), it
+// computes, in that lane, the plain operation, packed too.
+template <class T>
+using PK1 = kairn::Packed<T, 1>;
+template <class T>
+using PK2 = kairn::Packed<T, 2>;
+template <class T>
+inline constexpr int lanes_of = kairn::Packed<T, 1>::lanes;
+template <class T>
+struct Lanes {
+    const T* in[lanes_of<T>];   // the inputs of the line of each lane
+    T* out[lanes_of<T>];
+    bool* mo[lanes_of<T>];
+};
+
+// Operands: the limbs at k of every lane, loaded.
+template <class T>
+PK1<T> pone(const Lanes<T>& b, int k) {
+    T a[lanes_of<T>];
+    for (int i = 0; i < lanes_of<T>; ++i) a[i] = b.in[i][k];
+    return PK1<T>::load(a);
+}
+template <class T>
+PK2<T> ptwo(const Lanes<T>& b, int k) {
+    T h[lanes_of<T>], l[lanes_of<T>];
+    for (int i = 0; i < lanes_of<T>; ++i) {
+        h[i] = b.in[i][k];
+        l[i] = b.in[i][k + 1];
+    }
+    return PK2<T>::load(h, l);
+}
+// Results: stored into arrays, then into the outputs of each lane.
+template <class T>
+void pput(const Lanes<T>& b, const PK1<T>& z) {
+    T a[lanes_of<T>];
+    z.store(a);
+    for (int i = 0; i < lanes_of<T>; ++i) b.out[i][0] = a[i];
+}
+template <class T>
+void pput(const Lanes<T>& b, const PK2<T>& z) {
+    T h[lanes_of<T>], l[lanes_of<T>];
+    z.store(h, l);
+    for (int i = 0; i < lanes_of<T>; ++i) {
+        b.out[i][0] = h[i];
+        b.out[i][1] = l[i];
+    }
+}
+template <class T>
+void pmask(const Lanes<T>& b, const kairn::PackedMask<T>& m) {
+    for (int i = 0; i < lanes_of<T>; ++i) b.mo[i][0] = m.lane(i);
+}
+// Lane i of a result into the outputs of lane i only.
+template <class T, int K>
+void put_lane(const Lanes<T>& b, int i, const kairn::Packed<T, K>& z) {
+    put(b.out[i], z.lane(i));
+}
+
+// One packed form, compiled only where its kernel is proved: Packed has no marked operations.
+#define PFORM(NAME, KERNEL, ...)                                                    \
+    template <class T>                                                              \
+    void packed_##KERNEL##_##NAME([[maybe_unused]] const Lanes<T>& b) {            \
+        if constexpr (PROVED(KERNEL)) {                                             \
+            __VA_ARGS__;                                                            \
+        } else {                                                                    \
+            std::abort();                                                           \
+        }                                                                           \
+    }
+
+// Two limbs: construction, from a one-limb number, and the loads; the reads of a view.
+PFORM(from_one, make_2, pput(b, PK2<T>(pone(b, 0))))
+PFORM(load, make_2_limbs, pput(b, ptwo(b, 0)))
+template <class T>
+void packed_load_unchecked(const Lanes<T>& b) {
+    T h[lanes_of<T>], l[lanes_of<T>];
+    for (int i = 0; i < lanes_of<T>; ++i) {
+        h[i] = b.in[i][0];
+        l[i] = b.in[i][1];
+    }
+    pput(b, PK2<T>::load_unchecked(h, l));
+}
+PFORM(load_unchecked, make_2_limbs, packed_load_unchecked<T>(b))
+PFORM(from_limbs, make_2_limbs, const PK2<T> x = ptwo(b, 0); pput(b, PK2<T>::from_limbs(x.limb[0], x.limb[1])))
+// Through views of the line's limbs as arrays: element i of the view read as a number (the proxy
+// converted), and the W elements loaded as a Packed; and, from the second lane on, the tail rule:
+// load_partial of the last lanes - 1 elements, which reads exactly those.
+template <class T, int Mode>
+void packed_soa(const Lanes<T>& b) {
+    T h[lanes_of<T>], l[lanes_of<T>];
+    for (int i = 0; i < lanes_of<T>; ++i) {
+        h[i] = b.in[i][0];
+        l[i] = b.in[i][1];
+    }
+    const kairn::SoAView<const T, 2> v(h, l, std::size_t(lanes_of<T>));
+    if constexpr (Mode == 0) {
+        for (int i = 0; i < lanes_of<T>; ++i) put(b.out[i], E2<T>(v[std::size_t(i)]));
+    } else if constexpr (Mode == 1) {
+        pput(b, v.load(0));
+    } else {
+        // Lane 0 from load, the others from load_partial at 1 of the rest; lane 0 of that is
+        // element 1.
+        const PK2<T> head = v.load(0);
+        const PK2<T> tail = v.load_partial(1, lanes_of<T> - 1);
+        put_lane(b, 0, head);
+        for (int i = 1; i < lanes_of<T>; ++i) put(b.out[i], tail.lane(i - 1));
+    }
+}
+PFORM(soa_get, make_2_limbs, packed_soa<T, 0>(b))
+PFORM(soa_load, make_2_limbs, packed_soa<T, 1>(b))
+PFORM(soa_load_partial, make_2_limbs, packed_soa<T, 2>(b))
+
+// Two limbs: arithmetic, the full kernels.
+PFORM(plus, add_2_2_full, pput(b, ptwo(b, 0) + ptwo(b, 2)))
+PFORM(plus_assign, add_2_2_full, PK2<T> x = ptwo(b, 0); x += ptwo(b, 2); pput(b, x))
+PFORM(plus, add_2_1_full, pput(b, ptwo(b, 0) + pone(b, 2)))
+PFORM(limb_plus, add_2_1_full, pput(b, pone(b, 2) + ptwo(b, 0)))
+PFORM(plus_assign, add_2_1_full, PK2<T> x = ptwo(b, 0); x += pone(b, 2); pput(b, x))
+PFORM(minus, sub_2_2_full, pput(b, ptwo(b, 0) - ptwo(b, 2)))
+PFORM(minus_assign, sub_2_2_full, PK2<T> x = ptwo(b, 0); x -= ptwo(b, 2); pput(b, x))
+PFORM(minus, sub_2_1_full, pput(b, ptwo(b, 0) - pone(b, 2)))
+PFORM(minus_assign, sub_2_1_full, PK2<T> x = ptwo(b, 0); x -= pone(b, 2); pput(b, x))
+PFORM(minus, sub_1_2_full, pput(b, pone(b, 0) - ptwo(b, 1)))
+PFORM(times, mul_2_2_full, pput(b, ptwo(b, 0) * ptwo(b, 2)))
+PFORM(times_assign, mul_2_2_full, PK2<T> x = ptwo(b, 0); x *= ptwo(b, 2); pput(b, x))
+PFORM(times, mul_2_1_full, pput(b, ptwo(b, 0) * pone(b, 2)))
+PFORM(limb_times, mul_2_1_full, pput(b, pone(b, 2) * ptwo(b, 0)))
+PFORM(times_assign, mul_2_1_full, PK2<T> x = ptwo(b, 0); x *= pone(b, 2); pput(b, x))
+PFORM(add_fast, add_fast_2_2_full, pput(b, kairn::add_fast(ptwo(b, 0), ptwo(b, 2))))
+// ldexp(x, ilogb(c)) with each lane's c in turn; half and the steps of ldexp where the scalar
+// forms compute them, ldexp in the other lanes.
+template <class T, bool Finite>
+void packed_ldexp_2(const Lanes<T>& b) {
+    const PK2<T> x = ptwo(b, 0);
+    for (int i = 0; i < lanes_of<T>; ++i) {
+        if constexpr (Finite) put_lane(b, i, finite::ldexp(x, std::ilogb(b.in[i][2])));
+        else put_lane(b, i, kairn::ldexp(x, std::ilogb(b.in[i][2])));
+    }
+}
+PFORM(ldexp, mul_pow2_2_full, packed_ldexp_2<T, false>(b))
+template <class T>
+void packed_half_2(const Lanes<T>& b) {
+    const PK2<T> x = ptwo(b, 0);
+    T h[lanes_of<T>], l[lanes_of<T>];
+    bool use[lanes_of<T>];
+    for (int i = 0; i < lanes_of<T>; ++i) {
+        T y[2];
+        use[i] = std::isfinite(b.in[i][0]) && exact_scale(b.in[i], 2, std::ilogb(b.in[i][2]) + 1, y);
+        h[i] = use[i] ? y[0] : b.in[i][0];
+        l[i] = use[i] ? y[1] : b.in[i][1];
+    }
+    const PK2<T> z = kairn::half(PK2<T>::load(h, l));
+    for (int i = 0; i < lanes_of<T>; ++i) {
+        if (!use[i]) {
+            put_lane(b, i, kairn::ldexp(x, std::ilogb(b.in[i][2])));
+            continue;
+        }
+        ++reached;
+        put_lane(b, i, z);
+    }
+}
+PFORM(half, mul_pow2_2_full, packed_half_2<T>(b))
+template <class T, bool Finite>
+void packed_ldexp_far_2(const Lanes<T>& b) {
+    const PK2<T> x = ptwo(b, 0);
+    T h[lanes_of<T>], l[lanes_of<T>];
+    int n[lanes_of<T>] = {};
+    bool use[lanes_of<T>];
+    for (int i = 0; i < lanes_of<T>; ++i) {
+        T y[2];
+        use[i] = (Finite || std::isfinite(b.in[i][0])) && far_split(b.in[i], 2, std::ilogb(b.in[i][2]), y, n[i]);
+        h[i] = use[i] ? y[0] : b.in[i][0];
+        l[i] = use[i] ? y[1] : b.in[i][1];
+    }
+    const PK2<T> yy = PK2<T>::load(h, l);
+    for (int i = 0; i < lanes_of<T>; ++i) {
+        const int m = std::ilogb(b.in[i][2]);
+        if (!use[i]) {
+            if constexpr (Finite) put_lane(b, i, finite::ldexp(x, m));
+            else put_lane(b, i, kairn::ldexp(x, m));
+            continue;
+        }
+        ++reached;
+        if constexpr (Finite) put_lane(b, i, finite::ldexp(yy, n[i]));
+        else put_lane(b, i, kairn::ldexp(yy, n[i]));
+    }
+}
+PFORM(ldexp_far, mul_pow2_2_full, packed_ldexp_far_2<T, false>(b))
+
+// Two limbs: the finite cores.
+PFORM(finite_add, add_2_2, pput(b, finite::add(ptwo(b, 0), ptwo(b, 2))))
+PFORM(finite_add, add_2_1, pput(b, finite::add(ptwo(b, 0), pone(b, 2))))
+PFORM(finite_limb_add, add_2_1, pput(b, finite::add(pone(b, 2), ptwo(b, 0))))
+PFORM(finite_sub, sub_2_2, pput(b, finite::sub(ptwo(b, 0), ptwo(b, 2))))
+PFORM(finite_sub, sub_2_1, pput(b, finite::sub(ptwo(b, 0), pone(b, 2))))
+PFORM(finite_sub, sub_1_2, pput(b, finite::sub(pone(b, 0), ptwo(b, 1))))
+PFORM(finite_mul, mul_2_2, pput(b, finite::mul(ptwo(b, 0), ptwo(b, 2))))
+PFORM(finite_mul, mul_2_1, pput(b, finite::mul(ptwo(b, 0), pone(b, 2))))
+PFORM(finite_limb_mul, mul_2_1, pput(b, finite::mul(pone(b, 2), ptwo(b, 0))))
+PFORM(finite_add_fast, add_fast_2_2, pput(b, finite::add_fast(ptwo(b, 0), ptwo(b, 2))))
+PFORM(finite_ldexp, mul_pow2_2, packed_ldexp_2<T, true>(b))
+PFORM(finite_ldexp_far, mul_pow2_2, packed_ldexp_far_2<T, true>(b))
+
+// Two limbs: negation, absolute value, comparisons (and a select on one), conversions to T.
+PFORM(negate, neg_2, pput(b, -ptwo(b, 0)))
+PFORM(abs, abs_2, pput(b, kairn::abs(ptwo(b, 0))))
+PFORM(less, lt_2_2, pmask(b, ptwo(b, 0) < ptwo(b, 2)))
+PFORM(greater, lt_2_2, pmask(b, ptwo(b, 2) > ptwo(b, 0)))
+// The comparison through select: 1 where it holds, 0 elsewhere, read back as the mask.
+template <class T>
+void packed_select(const Lanes<T>& b) {
+    const PK1<T> z = kairn::select(ptwo(b, 0) < ptwo(b, 2), PK1<T>::broadcast(E1<T>(T(1))), PK1<T>());
+    for (int i = 0; i < lanes_of<T>; ++i) b.mo[i][0] = z.lane(i).limb[0] == T(1);
+}
+PFORM(select, lt_2_2, packed_select<T>(b))
+PFORM(less_equal, le_2_2, pmask(b, ptwo(b, 0) <= ptwo(b, 2)))
+PFORM(greater_equal, le_2_2, pmask(b, ptwo(b, 2) >= ptwo(b, 0)))
+PFORM(equal, eq_2_2, pmask(b, ptwo(b, 0) == ptwo(b, 2)))
+PFORM(not_unequal, eq_2_2, pmask(b, !(ptwo(b, 0) != ptwo(b, 2))))
+PFORM(less, lt_2_1, pmask(b, ptwo(b, 0) < pone(b, 2)))
+PFORM(greater, lt_2_1, pmask(b, pone(b, 2) > ptwo(b, 0)))
+PFORM(less_equal, le_2_1, pmask(b, ptwo(b, 0) <= pone(b, 2)))
+PFORM(greater_equal, le_2_1, pmask(b, pone(b, 2) >= ptwo(b, 0)))
+PFORM(equal, eq_2_1, pmask(b, ptwo(b, 0) == pone(b, 2)))
+PFORM(equal_rev, eq_2_1, pmask(b, pone(b, 2) == ptwo(b, 0)))
+PFORM(not_unequal, eq_2_1, pmask(b, !(ptwo(b, 0) != pone(b, 2))))
+PFORM(not_unequal_rev, eq_2_1, pmask(b, !(pone(b, 2) != ptwo(b, 0))))
+PFORM(less, lt_1_2, pmask(b, pone(b, 0) < ptwo(b, 1)))
+PFORM(greater, lt_1_2, pmask(b, ptwo(b, 1) > pone(b, 0)))
+PFORM(less_equal, le_1_2, pmask(b, pone(b, 0) <= ptwo(b, 1)))
+PFORM(greater_equal, le_1_2, pmask(b, ptwo(b, 1) >= pone(b, 0)))
+PFORM(to_nearest, to_nearest_2, pput(b, kairn::to_nearest(ptwo(b, 0))))
+PFORM(narrow, to_nearest_2, pput(b, PK1<T>(ptwo(b, 0))))
+PFORM(to_down, to_down_2, pput(b, kairn::to_down(ptwo(b, 0))))
+PFORM(to_up, to_up_2, pput(b, kairn::to_up(ptwo(b, 0))))
+PFORM(abs_upper, abs_upper_2, pput(b, kairn::abs_upper(ptwo(b, 0))))
+#undef PFORM
+
 struct Form {
     const char* kernel;
     const char* name;
@@ -911,6 +1171,92 @@ const Form forms[] = {
     ROW(ball_narrow_2_1, marked, "lll", "ll")
 };
 
+// The packed forms: each kernel's after its scalar ones, so that a kernel's first form stays the
+// scalar one (the debug build's runner runs that one only). A runner built with
+// KAIRN_TEST_PACKED_ONLY lists these alone (the runner of the AVX2 form where the build's flags do
+// not have it, tests/api/CMakeLists.txt).
+struct PackedForm {
+    const char* kernel;
+    const char* name;
+    const char* in_kinds;
+    const char* out_kinds;
+    bool conditional;
+    void (*binary64)(const Lanes<double>&);
+    void (*binary32)(const Lanes<float>&);
+};
+#define PROW(KERNEL, NAME, IN, OUT) \
+    {#KERNEL, "packed_" #NAME, IN, OUT, false, packed_##KERNEL##_##NAME<double>, packed_##KERNEL##_##NAME<float>},
+#define PSOME(KERNEL, NAME, IN, OUT) \
+    {#KERNEL, "packed_" #NAME, IN, OUT, true, packed_##KERNEL##_##NAME<double>, packed_##KERNEL##_##NAME<float>},
+const PackedForm packed_forms[] = {
+    PROW(make_2, from_one, "l", "ll")
+    PROW(make_2_limbs, load, "ll", "ll")
+    PROW(make_2_limbs, load_unchecked, "ll", "ll")
+    PROW(make_2_limbs, from_limbs, "ll", "ll")
+    PROW(make_2_limbs, soa_get, "ll", "ll")
+    PROW(make_2_limbs, soa_load, "ll", "ll")
+    PROW(make_2_limbs, soa_load_partial, "ll", "ll")
+    PROW(add_2_2_full, plus, "llll", "ll")
+    PROW(add_2_2_full, plus_assign, "llll", "ll")
+    PROW(add_2_1_full, plus, "lll", "ll")
+    PROW(add_2_1_full, limb_plus, "lll", "ll")
+    PROW(add_2_1_full, plus_assign, "lll", "ll")
+    PROW(sub_2_2_full, minus, "llll", "ll")
+    PROW(sub_2_2_full, minus_assign, "llll", "ll")
+    PROW(sub_2_1_full, minus, "lll", "ll")
+    PROW(sub_2_1_full, minus_assign, "lll", "ll")
+    PROW(sub_1_2_full, minus, "lll", "ll")
+    PROW(mul_2_2_full, times, "llll", "ll")
+    PROW(mul_2_2_full, times_assign, "llll", "ll")
+    PROW(mul_2_1_full, times, "lll", "ll")
+    PROW(mul_2_1_full, limb_times, "lll", "ll")
+    PROW(mul_2_1_full, times_assign, "lll", "ll")
+    PROW(add_fast_2_2_full, add_fast, "llll", "ll")
+    PROW(mul_pow2_2_full, ldexp, "lll", "ll")
+    PSOME(mul_pow2_2_full, half, "lll", "ll")
+    PSOME(mul_pow2_2_full, ldexp_far, "lll", "ll")
+    PROW(add_2_2, finite_add, "llll", "ll")
+    PROW(add_2_1, finite_add, "lll", "ll")
+    PROW(add_2_1, finite_limb_add, "lll", "ll")
+    PROW(sub_2_2, finite_sub, "llll", "ll")
+    PROW(sub_2_1, finite_sub, "lll", "ll")
+    PROW(sub_1_2, finite_sub, "lll", "ll")
+    PROW(mul_2_2, finite_mul, "llll", "ll")
+    PROW(mul_2_1, finite_mul, "lll", "ll")
+    PROW(mul_2_1, finite_limb_mul, "lll", "ll")
+    PROW(add_fast_2_2, finite_add_fast, "llll", "ll")
+    PROW(mul_pow2_2, finite_ldexp, "lll", "ll")
+    PSOME(mul_pow2_2, finite_ldexp_far, "lll", "ll")
+    PROW(neg_2, negate, "ll", "ll")
+    PROW(abs_2, abs, "ll", "ll")
+    PROW(lt_2_2, less, "llll", "m")
+    PROW(lt_2_2, greater, "llll", "m")
+    PROW(lt_2_2, select, "llll", "m")
+    PROW(le_2_2, less_equal, "llll", "m")
+    PROW(le_2_2, greater_equal, "llll", "m")
+    PROW(eq_2_2, equal, "llll", "m")
+    PROW(eq_2_2, not_unequal, "llll", "m")
+    PROW(lt_2_1, less, "lll", "m")
+    PROW(lt_2_1, greater, "lll", "m")
+    PROW(le_2_1, less_equal, "lll", "m")
+    PROW(le_2_1, greater_equal, "lll", "m")
+    PROW(eq_2_1, equal, "lll", "m")
+    PROW(eq_2_1, equal_rev, "lll", "m")
+    PROW(eq_2_1, not_unequal, "lll", "m")
+    PROW(eq_2_1, not_unequal_rev, "lll", "m")
+    PROW(lt_1_2, less, "lll", "m")
+    PROW(lt_1_2, greater, "lll", "m")
+    PROW(le_1_2, less_equal, "lll", "m")
+    PROW(le_1_2, greater_equal, "lll", "m")
+    PROW(to_nearest_2, to_nearest, "ll", "l")
+    PROW(to_nearest_2, narrow, "ll", "l")
+    PROW(to_down_2, to_down, "ll", "l")
+    PROW(to_up_2, to_up, "ll", "l")
+    PROW(abs_upper_2, abs_upper, "ll", "l")
+};
+#undef PROW
+#undef PSOME
+
 // Kernels that are parts of other kernels and that no public operation calls on its own. Every
 // kernel of gen/claims.json is mapped above, listed here, or listed below (coverage.cmake).
 const char* const internal[] = {
@@ -981,7 +1327,8 @@ void put_limb(double v, std::string& out) {
 
 int usage() {
     std::fprintf(stderr,
-                 "usage: runner [--form NAME] | --forms KERNEL | --list | --internal | --not-public | --self-test\n");
+                 "usage: runner [--form NAME] | --forms KERNEL | --list | --packed-list | --internal | --not-public | "
+                 "--self-test\n");
     return 2;
 }
 
@@ -994,6 +1341,172 @@ int self_test() {
     return s.ok() && env ? 0 : 1;
 }
 
+// The stream of a packed form, held until its end: each request line is completed in a register
+// with W - 1 others (see "The packed forms" above). The lines of one kernel's form and one format
+// (a stream may have lines of several kernels with a form of that name, as the regression cases
+// do) are put in an order drawn by a fixed pseudo-random sequence, the same on every platform, and
+// fill the registers W at a time, in that order: the oracle writes its strata in a fixed pattern,
+// which consecutive or strided lines would follow, so that a NaN might never share a register with
+// a finite number, nor a stratum take every lane position. A lane without a line (in the last
+// register) computes a copy of the register's first line, and its results are not written.
+struct Pending {
+    std::string line;
+    const PackedForm* form = nullptr;  // none for a comment
+    bool binary64 = true;
+    double in64[max_limbs] = {};
+    float in32[max_limbs] = {};
+    bool nonfinite = false;      // an input limb that is an infinity or a NaN
+    double res[max_limbs] = {};  // the results, float ones converted exactly
+    bool mo[max_limbs] = {};
+};
+// What one packed form computed.
+struct Stats {
+    const PackedForm* form = nullptr;
+    int width = 1;
+    long registers = 0, lines = 0;
+    long per_lane[16] = {};
+    long nonfinite_in = 0, nonfinite_out = 0;  // lines with a non-finite input, output
+    long mixed_in = 0, mixed_out = 0;          // registers mixing finite and non-finite lines
+};
+struct Batches {
+    std::vector<Pending> entries;
+    std::vector<Stats> stats;
+    bool active = false;  // the stream is that of a packed form
+
+    template <class T>
+    void complete(const PackedForm* form, const std::vector<std::size_t>& index, Stats& st) {
+        constexpr int w = lanes_of<T>;
+        st.width = w;
+        // The order: Fisher-Yates with SplitMix64, seeded once per group.
+        std::vector<std::size_t> order = index;
+        std::uint64_t state = 0x6b6169726e;
+        for (std::size_t i = order.size(); i > 1; --i) {
+            std::uint64_t z = (state += 0x9e3779b97f4a7c15u);
+            z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9u;
+            z = (z ^ (z >> 27)) * 0x94d049bb133111ebu;
+            z ^= z >> 31;
+            std::swap(order[i - 1], order[std::size_t(z % i)]);
+        }
+        const std::size_t n = order.size(), rows = (n + w - 1) / w;
+        const int outputs = int(std::strlen(form->out_kinds));
+        for (std::size_t r = 0; r < rows; ++r) {
+            Pending* at[w];
+            T res[w][max_limbs] = {};
+            bool mo[w][max_limbs] = {};
+            Lanes<T> b{};
+            for (int l = 0; l < w; ++l) {
+                const std::size_t t = r * std::size_t(w) + std::size_t(l);
+                at[l] = t < n ? &entries[order[t]] : nullptr;
+                const Pending& p = at[l] ? *at[l] : entries[order[r * std::size_t(w)]];
+                if constexpr (sizeof(T) == 8) {
+                    b.in[l] = p.in64;
+                } else {
+                    b.in[l] = p.in32;
+                }
+                b.out[l] = res[l];
+                b.mo[l] = mo[l];
+            }
+            if constexpr (sizeof(T) == 8) {
+                form->binary64(b);
+            } else {
+                form->binary32(b);
+            }
+            ++st.registers;
+            bool finite_in = false, other_in = false, finite_out = false, other_out = false;
+            for (int l = 0; l < w; ++l) {
+                Pending* p = at[l];
+                if (!p) continue;
+                ++st.per_lane[l];
+                ++st.lines;
+                bool nonfinite = false;
+                for (int i = 0; i < outputs; ++i) {
+                    p->res[i] = static_cast<double>(res[l][i]);
+                    p->mo[i] = mo[l][i];
+                    if (form->out_kinds[i] != 'm') nonfinite = nonfinite || !std::isfinite(p->res[i]);
+                }
+                (p->nonfinite ? other_in : finite_in) = true;
+                (nonfinite ? other_out : finite_out) = true;
+                st.nonfinite_in += p->nonfinite;
+                st.nonfinite_out += nonfinite;
+            }
+            st.mixed_in += finite_in && other_in;
+            st.mixed_out += finite_out && other_out;
+        }
+    }
+    // Completes every line and writes the stream, in its order.
+    void finish() {
+        if (!active) return;
+        // Not named forms: MSVC's C4459 reports a local that hides the table of that name.
+        std::vector<const PackedForm*> used;
+        for (const Pending& p : entries) {
+            bool known = !p.form;
+            for (const PackedForm* f : used) known = known || f == p.form;
+            if (!known) used.push_back(p.form);
+        }
+        for (const PackedForm* f : used) {
+            stats.push_back(Stats{});
+            Stats& st = stats.back();
+            st.form = f;
+            for (bool b64 : {true, false}) {
+                std::vector<std::size_t> index;
+                for (std::size_t e = 0; e < entries.size(); ++e)
+                    if (entries[e].form == f && entries[e].binary64 == b64) index.push_back(e);
+                if (index.empty()) continue;
+                if (b64) {
+                    complete<double>(f, index, st);
+                } else {
+                    complete<float>(f, index, st);
+                }
+            }
+        }
+        std::string out;
+        for (const Pending& p : entries) {
+            out = p.line;
+            if (p.form) {
+                out += " ->";
+                const int outputs = int(std::strlen(p.form->out_kinds));
+                for (int i = 0; i < outputs; ++i) {
+                    out += ' ';
+                    if (p.form->out_kinds[i] == 'm') out += p.mo[i] ? '1' : '0';
+                    else put_limb(p.res[i], out);
+                }
+            }
+            out += '\n';
+            std::fwrite(out.data(), 1, out.size(), stdout);
+        }
+    }
+    // What each packed form computed, on the standard error; false if a stream, long enough, left
+    // a lane position without a line, or had non-finite operands or results that never shared a
+    // register with finite ones: the batching did not do what it is for.
+    bool report() const {
+        bool ok = true;
+        for (const Stats& st : stats) {
+            std::string per;
+            bool every_lane = true;
+            for (int l = 0; l < st.width; ++l) {
+                per += (l ? " " : "") + std::to_string(st.per_lane[l]);
+                every_lane = every_lane && st.per_lane[l] > 0;
+            }
+            std::fprintf(stderr,
+                         "runner: packed form %s of %s: %ld lines in %ld registers of %d lanes; lines per lane: %s; "
+                         "registers with finite and non-finite operands: %ld (lines with a non-finite operand: "
+                         "%ld), results: %ld (%ld)\n",
+                         st.form->name, st.form->kernel, st.lines, st.registers, st.width, per.c_str(), st.mixed_in,
+                         st.nonfinite_in, st.mixed_out, st.nonfinite_out);
+            if (st.width == 1 || st.lines < 1000) continue;
+            const bool mixed = (st.nonfinite_in == 0 || st.nonfinite_in == st.lines || st.mixed_in > 0) &&
+                               (st.nonfinite_out == 0 || st.nonfinite_out == st.lines || st.mixed_out > 0);
+            if (!every_lane || !mixed) {
+                std::fprintf(stderr, "runner: packed form %s of %s: %s\n", st.form->name, st.form->kernel,
+                             !every_lane ? "a lane position computed no line"
+                                         : "no register mixed finite and non-finite lines");
+                ok = false;
+            }
+        }
+        return ok;
+    }
+};
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1001,13 +1514,29 @@ int main(int argc, char** argv) {
     const char* form_name = nullptr;
     if (argc == 2 && std::strcmp(argv[1], "--self-test") == 0) return self_test();
     if (argc == 3 && std::strcmp(argv[1], "--forms") == 0) {
+#if !defined(KAIRN_TEST_PACKED_ONLY)
         for (const Form& f : forms)
+            if (std::strcmp(f.kernel, argv[2]) == 0) std::printf("%s\n", f.name);
+#endif
+        for (const PackedForm& f : packed_forms)
             if (std::strcmp(f.kernel, argv[2]) == 0) std::printf("%s\n", f.name);
         return 0;
     }
     if (argc == 2 && std::strcmp(argv[1], "--list") == 0) {
         std::vector<std::string> seen;
         for (const Form& f : forms) {
+            bool known = false;
+            for (const std::string& s : seen) known = known || s == f.kernel;
+            if (!known) {
+                seen.push_back(f.kernel);
+                std::printf("%s\n", f.kernel);
+            }
+        }
+        return 0;
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--packed-list") == 0) {
+        std::vector<std::string> seen;
+        for (const PackedForm& f : packed_forms) {
             bool known = false;
             for (const std::string& s : seen) known = known || s == f.kernel;
             if (!known) {
@@ -1036,11 +1565,19 @@ int main(int argc, char** argv) {
     std::vector<std::string> fields;
     long lines = 0;
     const Form* conditional = nullptr;
+    const PackedForm* packed_conditional = nullptr;
+    Batches batch;
     while (std::getline(std::cin, line)) {
         ++lineno;
         if (!line.empty() && line.back() == '\r') line.pop_back();
         out = line;
         if (line.empty() || line[0] == '#') {
+            if (batch.active) {
+                Pending p;
+                p.line = line;
+                batch.entries.push_back(p);
+                continue;
+            }
             out += '\n';
             std::fwrite(out.data(), 1, out.size(), stdout);
             continue;
@@ -1056,58 +1593,92 @@ int main(int argc, char** argv) {
         if (fields.back()[0] == '#') fields.pop_back();  // the tag
         if (fields.size() < 2) fail("expected KERNEL FORMAT LIMB ... [#TAG]");
         const Form* k = nullptr;
+        const PackedForm* pk = nullptr;
         for (const Form& f : forms) {
             if (fields[0] != f.kernel) continue;
             if (form_name ? std::strcmp(form_name, f.name) == 0 : k == nullptr) k = &f;
         }
-        if (!k) fail("no public operation maps to " + fields[0] + (form_name ? std::string(" as form ") + form_name : ""));
-        if (k->conditional) conditional = k;
+        if (!k && form_name)
+            for (const PackedForm& f : packed_forms)
+                if (fields[0] == f.kernel && std::strcmp(form_name, f.name) == 0) pk = &f;
+        if (!k && !pk)
+            fail("no public operation maps to " + fields[0] + (form_name ? std::string(" as form ") + form_name : ""));
         ++lines;
-        const int inputs = int(std::strlen(k->in_kinds)), outputs = int(std::strlen(k->out_kinds));
+        const char* in_kinds = k ? k->in_kinds : pk->in_kinds;
+        const int inputs = int(std::strlen(in_kinds));
         if (int(fields.size()) - 2 != inputs) fail(fields[0] + " takes " + std::to_string(inputs) + " limbs");
+        if (fields[1] != "binary64" && fields[1] != "binary32")
+            fail("this runner knows binary64 and binary32, not " + fields[1]);
+        const bool binary64 = fields[1] == "binary64";
+        double in64[max_limbs] = {};
+        float in32[max_limbs] = {};
+        for (int i = 0; i < inputs; ++i) {
+            const double v = parse(fields[2 + i]);
+            in64[i] = v;
+            if (!binary64) {
+                const double top = std::numeric_limits<float>::max();
+                if (v == v && v - v == 0 && (v > top || v < -top)) fail(fields[2 + i] + " is not a binary32 number");
+                in32[i] = static_cast<float>(v);
+                if (static_cast<double>(in32[i]) != v && v == v) fail(fields[2 + i] + " is not a binary32 number");
+            }
+        }
+        if (pk || batch.active) {
+            // A packed form: the line waits for the end of the stream (Batches).
+            if (!pk) fail("a packed form's stream has lines of packed forms only");
+            if (pk->conditional) packed_conditional = pk;
+            batch.active = true;
+            Pending p;
+            p.line = line;
+            p.form = pk;
+            p.binary64 = binary64;
+            for (int i = 0; i < inputs; ++i) {
+                p.in64[i] = in64[i];
+                p.in32[i] = in32[i];
+                p.nonfinite = p.nonfinite || !std::isfinite(in64[i]);
+            }
+            batch.entries.push_back(p);
+            continue;
+        }
+        if (k->conditional) conditional = k;
+        const int outputs = int(std::strlen(k->out_kinds));
         bool mo[max_limbs] = {};
         out += " ->";
-        if (fields[1] == "binary64") {
-            double in[max_limbs] = {}, res[max_limbs] = {};
-            for (int i = 0; i < inputs; ++i) in[i] = parse(fields[2 + i]);
-            k->binary64(in, res, mo);
+        if (binary64) {
+            double res[max_limbs] = {};
+            k->binary64(in64, res, mo);
             for (int i = 0; i < outputs; ++i) {
                 out += ' ';
                 if (k->out_kinds[i] == 'm') out += mo[i] ? '1' : '0';
                 else put_limb(res[i], out);
             }
-        } else if (fields[1] == "binary32") {
-            float in[max_limbs] = {}, res[max_limbs] = {};
-            for (int i = 0; i < inputs; ++i) {
-                const double v = parse(fields[2 + i]);
-                const double top = std::numeric_limits<float>::max();
-                if (v == v && v - v == 0 && (v > top || v < -top)) fail(fields[2 + i] + " is not a binary32 number");
-                in[i] = static_cast<float>(v);
-                if (static_cast<double>(in[i]) != v && v == v) fail(fields[2 + i] + " is not a binary32 number");
-            }
-            k->binary32(in, res, mo);
+        } else {
+            float res[max_limbs] = {};
+            k->binary32(in32, res, mo);
             for (int i = 0; i < outputs; ++i) {
                 out += ' ';
                 if (k->out_kinds[i] == 'm') out += mo[i] ? '1' : '0';
                 else put_limb(static_cast<double>(res[i]), out);
             }
-        } else {
-            fail("this runner knows binary64 and binary32, not " + fields[1]);
         }
         out += '\n';
         std::fwrite(out.data(), 1, out.size(), stdout);
     }
+    batch.finish();
     if (stopped > 0)
         std::fprintf(stderr, "runner: KAIRN_CHECKS stops a negative radius: Ball::empty() on %ld of %ld lines\n",
                      stopped, lines);
-    if (conditional) {
-        std::fprintf(stderr, "runner: form %s of %s computed its own operation on %ld of %ld lines\n", conditional->name,
-                     conditional->kernel, reached, lines);
+    const char* cond_name = conditional ? conditional->name : packed_conditional ? packed_conditional->name : nullptr;
+    const char* cond_kernel =
+        conditional ? conditional->kernel : packed_conditional ? packed_conditional->kernel : nullptr;
+    if (cond_name) {
+        std::fprintf(stderr, "runner: form %s of %s computed its own operation on %ld of %ld lines\n", cond_name,
+                     cond_kernel, reached, lines);
         if (lines >= 1000 && reached == 0) {
-            std::fprintf(stderr, "runner: form %s of %s computed its own operation on none of %ld lines\n",
-                         conditional->name, conditional->kernel, lines);
+            std::fprintf(stderr, "runner: form %s of %s computed its own operation on none of %ld lines\n", cond_name,
+                         cond_kernel, lines);
             return 3;
         }
     }
+    if (!batch.report()) return 3;
     return 0;
 }

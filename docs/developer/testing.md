@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 633 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 669 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -40,7 +40,8 @@ The tests that `ctest` runs in the build directory, by name:
 | `kairn-gen.check` | Every committed generated file is what `python3 gen/kairn-gen build` writes. |
 | `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
 | `docs.reference.check` | The reference pages of the site are what `docs/tools/reference.py` writes ([Documentation](documentation.md#reference-pages)). |
-| `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum. |
+| `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum; the packed runners with the requests assigned to the lanes by a seeded permutation, under the guard that the registers mixed kinds, and the one with the build's flags also consecutively ([below](#packed-kernels)). |
+| `crosscheck.lanes.fault.F` | A packed runner with a fault planted in a copy of `mul_2_2_full` (its special-value select reads the mask of the neighboring lane, `tests/lanes/`) passes the cross-check of format F with the consecutive assignment where no register mixes a non-finite operand with finite ones, and fails it, by the oracle's verdict, with the permuted one; the guard refuses the consecutive assignment of the same stream ([below](#packed-kernels)). |
 | `crosscheck.compiled.FOLD.F` | A fold (a sum or a dot product over arrays) compiled likewise: the scalar runners on 300 random arrays of format F, of every length class and in every order, and the packed runners on 200 arrays in the lane order of their register ([below](#cross-checks)). A map, a fold of maxima and a convolution likewise, on 100 arrays of up to 24 elements (pairs of polynomials of up to 20 coefficients for a convolution, which has no packed form). |
 | `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)); and in one of them the operations of `Ball` outlined and external, each a call of a function with the counts of its kernel ([below](#the-operations-of-ball-outlined-and-external)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
@@ -58,7 +59,8 @@ The tests of the public interface (`tests/api/`, label `api`):
 | Test | Checks |
 |---|---|
 | `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls and intervals, built through the public constructors (an interval through `Interval(lo, hi)`, the empty set as its reversed bounds). Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`, `X.midpoint()` and `X.radius()` together for `interval_mid_rad_1`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly, a sign predicate of a ball a line of its comparison kernel whose operands are a center and a radius, the conversion of the result of `two_sum` to two limbs a finite error term, the interval of a point a line whose two bounds are one value, the bounds of an interval of two limbs as numbers of `T` a line of `to_down_2` or `to_up_2` whose operand is not a NaN); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. The building blocks on `T` are their kernels' forms as they are (`two_sum` is the form of `two_sum_entry`), and the scalings of a ball by a power of two are reached through `ldexp(X, n)` with $2^n$ the case's power of two, through `half` of a ball scaled first by $2^{n+1}$ exactly, and through the steps of `ldexp` from a ball scaled exactly by another power. |
-| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the ten finite cores of the Ball operations, those of the scalings by a power of two among them: the operators and `ldexp` call the full kernels, and `kairn::finite` has no Ball forms); no entry kernel is a building block. The building blocks include the nine of the interval kernels (`mul_dir_1`, the bounds of two limbs, `mul_ext_2_2`). The kernels of the folds' stage and of the maps, which no public operation calls yet (`KAIRN_NOT_PUBLIC_YET`, [Cross-checks](#cross-checks)), are on none of the runner's lists. |
+| `api.oracle.K.F`, the packed forms | The same cases through `Packed` and the views of `kairn/soa.hpp` (the runner's forms `packed_NAME`, after the scalar ones): each line completed in one lane of a register whose other lanes hold other lines of the stream, the form of `Packed` being that of the build (AVX2, NEON or one lane) and, where the build's flags give the scalar form on x86-64, also AVX2, through a third runner of the packed forms alone, on the kernels that `kairn/packed.hpp` calls ([below](#packed-and-the-containers)). |
+| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the ten finite cores of the Ball operations, those of the scalings by a power of two among them: the operators and `ldexp` call the full kernels, and `kairn::finite` has no Ball forms); no entry kernel is a building block. The building blocks include the nine of the interval kernels (`mul_dir_1`, the bounds of two limbs, `mul_ext_2_2`). The kernels of the folds' stage and of the maps, which no public operation calls yet (`KAIRN_NOT_PUBLIC_YET`, [Cross-checks](#cross-checks)), are on none of the runner's lists. The kernels that `kairn/packed.hpp` calls are exactly those of the runner's packed forms (`runner --packed-list`), each with a scalar form too. |
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them, the building blocks on `T` against values computed by hand (every row of the table of `next_up` and `next_down`); of intervals the constructors (an infinite point and the same infinity twice the whole line, reversed bounds the empty set), the states, the bounds, the negation, the hull, the intersection, the midpoint, the radius, the split and the conversions, and of a ball the functions of the interface it shares with intervals, with the empty set and the whole line where constant evaluation takes them (on the empty set the midpoint, the radius, the split and the conversion to a ball, and on the states of a ball its bounds, the conversion to an interval, the narrowing and the ball from an infinite or NaN bound, compute a NaN or $\infty - \infty$ on the way, which GCC and Clang refuse at compile time: those are checked at run time); the same results at run time, with the same bits where Milestone 2 says so and the same values where a zero can differ in sign; `mul_down`, `mul_up`, `ldexp` and `half` of a ball, and the arithmetic of intervals of one and two limbs, which are not `constexpr`, at run time against values computed by hand (the tightest interval of `T` for a sum of one limb, $[\Omega, +\infty]$ at an overflow, $[0, 0] \cdot X = [0, 0]$ for an unbounded $X$, two limbs within $8.1u^2$ and $10.1u^2$ of the exact bounds, $[0, 0] + [0, 0] = [0, 0]$); the properties of the types; that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved; that a building block is not found by argument-dependent lookup for a `T` and does not hide a program's own function of the same name; and `KAIRN_VERSION_AT_LEAST`. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
 | `api.flags.debug.self_test`, `api.flags.debug.constexpr`, `api.flags.debug.rational` | `kairn::self_test()` and `kairn::environment_ok()`, compiled as the [debug build](#flag-sets), pass (`runner.cpp --self-test`); `tests/api/constexpr.cpp` and `tests/api/rational.cpp` built so, their constant expressions evaluated with the checks on; `kairn::rational`, which does not round, runs under each directed rounding mode without the checks stopping the program. |
@@ -67,12 +69,15 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.platform_macros` | The headers compile and work after a platform header that defines `min`, `max`, `small`, `near`, `far`, `hyper` and `interface` as macros: `<windows.h>` itself on Windows, without `NOMINMAX`, and the same macros defined by the test on every platform. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break the kernels and define no macro (reassociation; `-ffp-model=fast`; with Apple clang on AArch64, `-fno-signed-zeros` with `-ffp-contract=fast`, which Clang 18 was measured not to break the kernels with): `kairn::self_test()` must fail. |
 | `api.link.external.S` | With `KAIRN_ENCLOSURE_CODE_EXTERNAL`, `tests/api/link_main.cpp` linked with the definitions (`tests/api/definitions.cpp`) compiled with another `KAIRN_CHECKS` (S = `checks`), with the outlined setting (`setting`), or without them (`missing`) must not link, with the undefined operation in the message (`kairn::detail::external_checked::` or `external::`, or MSVC's LNK2038); its control, both files with the same options, links and runs (`tests/api/link_fail.cmake`). |
-| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three (`enclosure_code.*`: an unknown name, nothing, a bare `-D`); each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`); `mul_down` and `mul_up` in a constant expression, whose control computes the same at run time (`not_constexpr.*`), so that a change cannot make them `constexpr` by accident, and the sum of intervals likewise (`not_constexpr.interval_add`); of intervals (`interval.*`, `ball.implicit_narrowing`), an operation of intervals of one and of two limbs, an interval and a number (no kernel takes one), the implicit conversions of a ball to an interval, of an interval to a ball and of a ball of two limbs to one (each widens the set, so each is explicit), and an interval of two limbs from one of one limb, each control writing what compiles instead; an interval operation, constructor and conversion written without the marker against the copy of the headers in which every kernel is unverified (`unverified.interval_add_1`, `.interval_make_1`, `.interval_to_ball_1`); `kairn::rational` in a constant expression with a zero denominator, and with a result that fails its check, against a copy of the headers with a wrong flag planted in it, whose control turns `KAIRN_RATIONAL_CHECK` off (`rational.*`). |
+| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three (`enclosure_code.*`: an unknown name, nothing, a bare `-D`); each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`); `mul_down` and `mul_up` in a constant expression, whose control computes the same at run time (`not_constexpr.*`), so that a change cannot make them `constexpr` by accident, and the sum of intervals likewise (`not_constexpr.interval_add`); of intervals (`interval.*`, `ball.implicit_narrowing`), an operation of intervals of one and of two limbs, an interval and a number (no kernel takes one), the implicit conversions of a ball to an interval, of an interval to a ball and of a ball of two limbs to one (each widens the set, so each is explicit), and an interval of two limbs from one of one limb, each control writing what compiles instead; an interval operation, constructor and conversion written without the marker against the copy of the headers in which every kernel is unverified (`unverified.interval_add_1`, `.interval_make_1`, `.interval_to_ball_1`); `kairn::rational` in a constant expression with a zero denominator, and with a result that fails its check, against a copy of the headers with a wrong flag planted in it, whose control turns `KAIRN_RATIONAL_CHECK` off (`rational.*`).; of the containers (`soa.*`), a write through a view of `const T` (an element, `set`, `store`, an element assigned from another) and a view of mutable limbs made of a view of `const T` or of a const `SoA`; of `Packed` (`packed.*`), an operation with an `Expansion` or a `T` operand (no packed kernel takes one), the narrowing to one limb written as an implicit conversion, and an operation of two limb types; the arithmetic of `Packed<T, 1>`, which has none (`packed.one_limb_arithmetic`); and a
+`KAIRN_PACKED_FORM` that is not a form (`packed_form.unknown`, `.bare`) or the form of another target (`packed_form.other_target`, which the generated header's `#error` refuses). |
 | `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
+| `api.boundary.packed.FORM.S`, `api.boundary.packed.unguarded.FORM.S` | The same for `Packed` and the containers, in each form FORM of `Packed` ([below](#packed-and-the-containers)): a product the program computes in the registers of the form, or in `T` into an array, passed into `Packed<T, 1>::from_limbs` and then the mixed forms, into `Packed<T, 2>::from_limbs`, a load, a view or an `SoA` (`tests/api/boundary_packed.cpp`); the copy without the guard also takes it out of `gen/avx2.hpp` and `gen/neon.hpp`. |
 | `api.k1.zero_cost` | The instructions emitted for one operation and for loops over `Expansion<double, 1>` against the same code over `double` (`tests/api/k1/zero_cost.py`); with MSVC it also fails when one of these functions has a `/GS` stack cookie ([costs](results/costs-milestone1.md#3-msvc-and-the-gs-stack-cookie)). |
 | `api.rational.K.F` | `kairn::rational` with K limbs of format F ([Constants from fractions](../reference/rational.md)) on 2 000 cases of the oracle's generator of `rational_K` (`KAIRN_RATIONAL_QUICK_CASES`, seed `KAIRN_API_SEED`), computed at run time by `tests/api/rational_runner.cpp`, which also requires `kairn::is_rational_result` to accept each result; the oracle compares every limb, the error and the flag with its own, for equality, and the guards require what the cross-checks of `rational_K` must have seen ([Cross-checks](#cross-checks); `tests/crosscheck.py compiled --kernel rational_K`, one process, as for a kernel). |
 | `api.rational.constexpr` | `tests/api/rational.cpp`: `static_assert`s of the results of two dozen fractions and six integers, for `float` and `double`, one and two limbs, against values computed from the specification with exact rationals; `kairn::is_rational_result` refusing each result changed by one unit; and a corpus of 104 fractions, each computed in a constant expression and at run time under each of the four rounding modes, with the same bits. |
-| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*` and `api.example.intervals.*`, built under each contraction setting, also compare it with the text their tutorials show ([Documentation](documentation.md#examples)). |
+| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*` and `api.example.intervals.*`, built under each contraction setting, also compare it with the text their tutorials show ([Documentation](documentation.md#examples)). `api.example.packed_dot.FORM`, the tutorial's vector loop in each form of `Packed`, compares it too, and checks each result against the bound the tutorial states ([below](#packed-and-the-containers)). |
+| `api.packed.FORM`, `api.soa.FORM` | `Packed` against the scalar operations, lane by lane and bit for bit, and the containers of `kairn/soa.hpp` ([below](#packed-and-the-containers)). |
 
 ## The full tier
 
@@ -82,7 +87,7 @@ front:
 
 | Test | Checks |
 |---|---|
-| `full.crosscheck.compiled.K.F` | `crosscheck.compiled.K.F` on 20 000 cases instead of 6 000: the cases of the same seed from case 0, so that the quick tier's are the first 6 000 of these; with the kernels' runners, scalar and packed, of two [flag sets](#flag-sets) as well: the debug build (`-O0`, `/Od`) and one at `-O1` (`/O1`). |
+| `full.crosscheck.compiled.K.F` | `crosscheck.compiled.K.F` on 20 000 cases instead of 6 000: the cases of the same seed from case 0, so that the quick tier's are the first 6 000 of these; with the kernels' runners, scalar and packed, of two [flag sets](#flag-sets) as well: the debug build (`-O0`, `/Od`) and one at `-O1` (`/O1`); every packed runner with both assignments of the lanes, the permuted and the consecutive one ([Packed kernels](#packed-kernels)). |
 | `full.api.oracle.K.F` | `api.oracle.K.F` on 10 000 cases instead of 2 000, the quick tier's among them, and by a third runner, the [debug build](#flag-sets)'s, with the checks, on the first form of K only; and by the runners of the [flag sets](#flag-sets) `O3-outlined` and `O3-external` (`O2-` with MSVC and clang-cl), the operations of `Ball` outlined and external, every form of which must write the same bytes as the same form of the runner with the build's flags (`tests/crosscheck.py api --same-as`). |
 | `full.api.flags.oracle.K.F` | Every public form of kernel K through the runner of each [flag set](#flag-sets), the debug build's included, on the quick tier's 2 000 cases of format F. |
 | `full.api.flags.S.self_test`, `full.api.flags.S.constexpr`, `full.api.flags.S.rational` | `api.flags.debug.*` for each other flag set S, the outlined and external ones among them. |
@@ -581,21 +586,270 @@ that cannot be read, a summary padded beyond the bound on its size); and both dr
 reason, and on good ones: `tests/crosscheck.py compiled` with the interpreter as its runner
 (`--interp`), `tests/crosscheck.py api` with the build's runner of the public interface (a good
 run, one of 5 cases, which misses strata, and a kernel it maps no form to), and
-`tests/crosscheck.cmake`.
+`tests/crosscheck.cmake`; and `tests/crosscheck.py compiled` on the reports of a packed runner's
+lanes (`LaneReports`): a good one passes, and one of another assignment, of no segment or of
+another stream, one whose guard failed and one that cannot be read fail
+([Packed kernels](#packed-kernels)).
 
 ## Packed kernels
 
 `gen/tests/packed_runner.cpp` runs the packed kernels of `kairn/gen/neon.hpp` (two doubles or four
-floats per register) or `kairn/gen/avx2.hpp` (four or eight), whichever the target has:
-consecutive requests for one kernel and format are evaluated together, one per lane. The oracle
-judges its output like the scalar runner's, on the same cases, under the same contraction
-settings.
+floats per register) or `kairn/gen/avx2.hpp` (four or eight), whichever the target has: the
+requests for one kernel and format are evaluated $W$ at a time, one per lane of a register of
+$W$ lanes, and the completed lines are printed in the order of the requests. The oracle judges
+its output like the scalar runner's, on the same cases, under the same contraction settings, and
+needs to know nothing of the lanes.
 
 The backend and its option are chosen as `kairn::fma`'s option is: NEON if the backend's header
 compiles with the build's flags (AArch64), otherwise AVX2 with nothing added if the flags already
 enable it, or with `-mavx2 -mfma` (GCC, Clang) or `/arch:AVX2` (MSVC, clang-cl), each tried by
 compiling the header. On a target with neither, no packed runner is built, and configuring says
 so. On x86-64 the CPU that runs the tests needs AVX2 as well as FMA.
+
+### The two assignments of the lanes
+
+A packed kernel selects in each lane between its ordinary result and its special results (an
+infinity, a NaN, the whole line). A fault that lets one lane's selection reach another (a mask
+built from the wrong lane, a blend with the lanes exchanged, a horizontal test where a per-lane
+one is needed) changes a result only in a register whose lanes hold different kinds of values.
+Until 2026-11-21 the runner filled each register with consecutive requests, and the oracle's
+stream takes its strata in turn, so a register held requests of one kind. Counted on the
+quick tier's stream of each kernel (seed 0, 6 000 cases), a register mixing a request with a
+non-finite limb and one whose limbs are all finite, for W = 2 / 4 / 8:
+
+| Kernel | Consecutive | Permuted (seed 0) |
+|---|---|---|
+| `mul_2_2_full` | 0 / 0 / 300 | 942 / 882 / 625 |
+| `add_2_2_full` | 0 / 333 / 333 | 588 / 553 / 464 |
+| `neg_2`, `to_down_2`, `abs_2` | 0 / 600 / 600 | 970 / 875 / 637 |
+| `lt_2_2` | 0 / 375 / 375 | 646 / 611 / 486 |
+
+of 3 000, 1 500 and 750 registers (the same counts in `binary64` and `binary32`, whose streams
+have the same strata). With the consecutive assignment no register mixed at W = 2, the NEON form
+of `double`; and some kinds (a stratum with finite or non-finite limbs) never reached some lanes:
+5 to 12 of the pairs of a kind and a lane at W = 2, 20 to 88 at W = 8. With the permuted one,
+every kind of at least W requests reaches every lane.
+
+The runner now reads a whole **segment**, a run of requests for one kernel and one format (a
+comment, an empty line, a fold, a map, a request of another kernel or format, or the end of the
+input ends it), assigns its $n$ requests to the slots of $R = \lceil n/W \rceil$ registers, calls
+the packed kernel once per register, and prints the $n$ lines in order. The **kind** of a request
+is its stratum (the label of its tag `#STRATUM:INDEX`; none for another tag) and whether one of
+its limbs is not finite. Two assignments, chosen by `--lanes`:
+
+- **permuted** (the default): the requests grouped by kind, in the order the kinds first appear,
+  the requests of each kind shuffled; the groups, one after the other, fill the slots register by
+  register, so that a kind of $c$ requests takes $c$ consecutive slots and is in every lane once
+  $c \ge W$; then the slots of each lane are shuffled among the registers, an independent
+  permutation of the $R$ registers per lane, so that the lanes of a register hold kinds drawn
+  independently. The random numbers are SplitMix64 on 64-bit unsigned integers, seeded from
+  `--lane-seed` (default 0; the cross-checks pass their `--seed`) and the segment's number, an
+  integer below $m$ drawn by rejection of the draws below $2^{64} \bmod m$, and Fisher–Yates
+  shuffles: integer arithmetic only, no `std::shuffle` or distribution of the standard library,
+  so the same requests and seed give the same assignment with every compiler and on every target.
+  The generator's tests compute the plan again in Python and require every build to report the
+  same one (`Lanes` of `gen/tests/test_simd.py`).
+- **consecutive**: request $k$ in lane $k \bmod W$ of register $\lfloor k/W \rfloor$, the old
+  assignment. Registers of one kind are a case too, and the generator's special groups (one
+  special operand in each lane in turn) are aligned with these registers.
+
+The quick tier runs every packed runner with the permuted assignment (labelled as before:
+`neon`, `neon-contract-off`, ...) and the runner with the build's flags also with the
+consecutive one (`neon.consecutive`); the full tier runs every packed runner, the flag sets'
+included, with both. A correct runner writes the same bytes with both, which then share the
+verdict of the scalar runner's output and cost the oracle nothing; each run costs the runner's
+own time, some 70 ms on 6 000 lines. The generator's tests run both on every build of their
+matrix. `tests/regression/run.py` and the brute-force driver run the default, permuted.
+
+**The guard.** Under the permuted assignment (and under the consecutive one with
+`--lane-guard`), on a segment of at least 256 requests, every kind of at least W requests must
+have been in every lane, and if at least 16 requests have a non-finite limb and 16 only finite
+ones, at least one register must have held both. Otherwise the runner prints the segment's lines,
+says which kind missed which lane or that no register mixed, and exits with 3. A kind of fewer
+than W requests cannot reach every lane and is not asked to. The construction makes the first
+condition hold whenever the assignment is the one described; the second fails by chance with a
+probability below $10^{-12}$ at these sizes. Applied to the consecutive assignment of the oracle's
+stream of `mul_2_2_full`, the guard refuses it at every W (`crosscheck.lanes.fault.F` checks
+so).
+
+**What a test keeps.** `--lane-report FILE` writes, per segment, the kernel, format, requests,
+lanes, registers, padding, the registers that mixed (non-finite with finite, and two strata), the
+requests of each kind in each lane, and the guard's verdict. `tests/crosscheck.py` gives each
+packed run such a file, fails the test unless it reports one segment of every request with the
+assignment asked for and, for the permuted one, the guard passed (or not applied to a stream of
+fewer than 256 requests), keeps it next to the summaries as `crosscheck.compiled.K.F.LABEL.lanes.json`
+(1 to 2 KB), and prints its counts with the pass, for example `lanes of neon: 2 lanes, the
+permuted assignment (seed 0): 3000 registers, 942 of them mixing a non-finite limb with finite
+ones (1200 and 4800 requests), ...`. `--lane-plan FILE` writes the slot of every request
+(`SEGMENT REGISTER LANE LINE`): a case that fails only beside the other lanes of its register
+fails only in the whole stream with the same seed, not alone, and the plan says which requests
+shared its register (the failure text of a packed run says how).
+
+**A register that is not full.** The last $RW - n < W$ slots (at the end of the last register
+with the consecutive assignment, in random registers and lanes with the permuted one) are
+padding. Until 2026-11-21 they repeated the batch's first request, which could have a non-finite
+limb, and their results were dropped; the cross-checks never had one (6 000 and 2 000 are
+multiples of 8). They now hold a copy of the segment's first request whose limbs are all finite
+(its first request if none is: a request the kernel accepts in any case), and their results are
+dropped; the report names the line copied. The generator's tests run streams of 1, $W - 1$,
+$W + 1$, $2W + 1$ and 257 requests whose first request is non-finite, with both assignments,
+on every build: every line as the scalar runner completes it, the padding the first finite
+request (the only request, in a stream of one).
+
+**The planted fault.** `tests/lanes/lane_fault.hpp` is a copy of the generated `mul_2_2_full`
+whose select returns the core's product where its leading limb is finite and the four limbs of
+the operands are finite, the second mask taken from the neighboring lane (lane $i$ reads lane
+$i + 1$). The second condition is redundant in the correct kernel, so the copy is right in every
+lane whose neighbor's operands are of its kind, and gives an infinity or a NaN in place of the
+product of finite operands beside a non-finite one. `crosscheck.lanes.fault.F` builds the packed
+runner with it (`KAIRN_RUNNER_HEADER`, and `KAIRN_RUNNER_TABLE` for a table of this kernel alone)
+and runs the cross-check of the quick tier's 6 000 cases (`tests/lanes/lane_fault.py`):
+
+| Form | W | Consecutive | Permuted |
+|---|---|---|---|
+| NEON, `binary64` | 2 | 0 of 3 000 registers mix: passes | 942 mix: the oracle fails 768 lines |
+| NEON, `binary32` | 4 | 0 of 1 500: passes | 882 mix: fails 792 lines |
+| AVX2, `binary64` | 4 | 0 of 1 500: passes | 882 mix: fails 806 lines |
+| AVX2, `binary32` | 8 | 300 of 750 mix: fails 251 lines (printed, not required) | 625 mix: fails 795 lines |
+
+(the oracle's failures are F3, a result that is not finite although every `finite_when`
+condition holds, and F4). The test requires the consecutive cross-check to pass where no register
+mixed and the permuted one to fail by the oracle's verdict, not the runner's or the guards'. The
+fault is planted in the operands' mask and not in the generated one (the core's product finite)
+because that one also fails for finite operands whose product overflows, which the strata
+`edge`, `threshold` and `overflow` put next to products that do not in consecutive lines: the
+same neighbor's mask planted there is caught by both assignments (598 lines with the consecutive
+one at W = 2).
+
+**The folds and the maps** have no such assignment: `F_packed` deals the elements of one array
+to the lanes, $W$ consecutive elements per register, and runs the last $n \bmod W$ in a scalar
+loop (no padding), and the runner calls it once per request line. Counted on the streams the
+packed runners get (seed 0, every fold and map with a packed form, both formats, both backends),
+the lengths are not the weakness: in the quick tier (200 arrays of up to 256 elements for a fold,
+100 of up to 24 for a map or a fold of maxima) 6 to 12 arrays are empty, 6 to 72 shorter than W,
+and 45 to 81 % leave a remainder. Nor are arrays of one kind: almost every array with a
+non-finite element has finite ones too. The weakness is how few non-finite elements there are: in
+the quick tier 6 of 100 arrays of a map have one (15 of 200 for a sum or a dot product, 14 to 16
+of 100 for a fold of maxima), 7 to 34 elements of a stream, and 3 to 27 registers of a stream mix
+one with finite ones; so at W = 8 (`binary32` with AVX2) 27 of the 28 streams leave one to six of
+the eight lanes without a non-finite element in a register (`axpy_1_entry`: 1 and 3 elements in
+two lanes, none in the other six), and at W = 4 14 of 56 leave one or two. In the full tier (500
+arrays) every lane has some at W = 2 and 4 (46 to 144 elements per stream), and 2 of 28 streams
+leave one lane without at W = 8. A fix belongs to the oracle's generator of arrays (more arrays
+with non-finite elements, or their positions spread over the lanes), not to the runner, and is
+left for it; the packed loops' own tests in the generator's suite (lengths 0, 1, $W - 1$, $W$,
+$W + 1$, $2W$ and random ones, non-finite elements among them) also reach those lanes.
+
+## Packed and the containers
+
+`Packed<T, k>` ([reference](../reference/packed.md)) and the containers of `kairn/soa.hpp`
+([reference](../reference/soa.md)) are tested in every form of `Packed` the build can make: the
+form of the build's flags (`native`: AVX2, NEON, or the scalar form of one lane), the scalar form
+forced with `KAIRN_PACKED_FORM_SCALAR` (`scalar`), and, on x86-64 where the build's flags give the
+scalar form and the compiler can target AVX2 with the packed backend's option (`-mavx2 -mfma`, as
+for the packed runner above), `avx2`. That is the case of the default build with GCC and Clang
+there, whose `kairn::fma` adds `-mfma` alone; with MSVC and clang-cl `/arch:AVX2` gives the AVX2
+form natively, and on AArch64 NEON.
+
+- **The oracle, through the public interface.** The runner of the public interface has a packed
+  form for each of its forms that `Packed` or a view has (`packed_plus` of `add_2_2_full`,
+  `packed_less` of `lt_2_2`, `packed_soa_load` of `make_2_limbs`, ...): 64, for the 34 kernels that
+  `kairn/packed.hpp` calls. A packed form holds the stream until its end, puts its lines in an order
+  drawn by a fixed pseudo-random sequence, and fills the registers $W$ lines at a time in that
+  order: the oracle writes its strata in a fixed pattern, so that consecutive or strided lines would
+  put the non-finite cases together and a stratum always in one lane position. Each operand is loaded
+  from arrays as a program loads it (`Packed::load`), each result stored and written on its line;
+  the oracle judges the output against the claims of the scalar kernel, as for any form, and an
+  output identical byte for byte to the scalar form's is not judged again. The runner prints, per
+  packed form, the lines per lane position and the registers that mixed finite and non-finite
+  operands and results, and fails a stream of 1 000 lines or more that left a lane position without
+  a line, or whose non-finite operands or results never shared a register with finite ones. The
+  packed forms are in every runner of the public interface: the quick tier's two (the build's flags,
+  contraction forced on), the full tier's flag sets and settings of `KAIRN_ENCLOSURE_CODE`, and,
+  where the `avx2` form applies, a third, `kairn-api-runner-avx2`, built for AVX2 with
+  `KAIRN_TEST_PACKED_ONLY` so that it lists only its packed forms, in `api.oracle.K.F` and
+  `full.api.oracle.K.F` of the kernels K that `kairn/packed.hpp` calls (found in its text at
+  configure time, the set `api.oracle.coverage` checks against the runner's packed forms).
+- **Bit for bit against the scalar operations** (`api.packed.FORM`, `tests/api/packed.cpp`). Every
+  operation of `Packed`, for `float` and `double`, one and two limbs, against the public operation
+  of `Expansion` of the same name, lane by lane: on every pair (or operand) of a corpus of zeros of
+  both signs, subnormal numbers, the smallest normal number, ordinary and random numbers across the
+  range, the largest finite number and pairs near it whose results overflow, the infinities and
+  NaN, the pair in lane $k mod W$ for the $k$-th pair and the other lanes filled from the corpus
+  by a fixed sequence; every limb of every lane compared, a NaN as a NaN, and with MSVC a zero as
+  a zero of either sign: MSVC removes the addition of $+0$ that guards an operand of a packed
+  kernel, so a limb $-0$ keeps its sign there
+  ([Packed](../reference/packed.md#packed-numbers-in-registers); the reads of `api.soa.FORM`
+  through `Packed` are compared the same way, and what a store writes to an array bit for bit
+  with every compiler). It fails if an operation of the extended domain met no register mixing finite and non-finite
+  operands (or results, an overflow in one lane only). Also the masks (`any`, `all`, `lane`, `&`,
+  `|`, `!`, `select`, a mask with each lane alone set), the moves against the scalar constructors
+  (`broadcast`, `lane`, `set_lane`, `load` and `store` from arrays one element off any register
+  alignment, `load_partial` and `store_partial` for every count, `from_limbs`), and the type's
+  properties.
+- **A product of the program** (`api.boundary.packed.FORM.S`, `tests/api/boundary_packed.cpp`),
+  what `api.boundary.S` checks for `Expansion` and `Ball`
+  ([above](#the-quick-tier)), for each way a register or a value enters
+  `Packed`: `Packed<T, 1>::from_limbs` of a register followed by `x + a`, `a + x`, `x - a`, `a - x`,
+  `+=`, `-=`, `Packed<T, 2>(a)`, `add_fast`, the functions of `kairn::finite`, after a negation, an
+  `abs` or a `select`; `Packed<T, 2>::from_limbs` and `from_limbs_unchecked` with the product as the
+  leading limb; `broadcast` and `set_lane` of a number made from a product in `T`; `load`,
+  `load_unchecked` and `load_partial` (the product as `fill` too) of arrays the program fills with
+  products, or stores a register of products into; views of those arrays (`load`, `load_partial`,
+  the proxy, `get`, `set`, an assignment through the proxy, `store`); and an `SoA` whose limbs or
+  elements the program writes. Each form is computed with the product written in place (`a * b`
+  in `T`, or the form's own intrinsic, `_mm256_mul_pd`, `vmulq_f64` and their `float` forms) and
+  with the rounded product (through a `volatile`, in a function that is not inlined), on factors
+  in $[1/2, 1)$ and a leading limb within a few units of $\mp$ their product, so that the sums
+  cancel, a different pair in each lane; every limb of every lane is compared bit for bit, a zero
+  as a zero with MSVC. `double` and `float`, 40 000 registers of each per form, in the forms
+  `native` (where it has more than one lane), `scalar` and `avx2` (where it applies), at `-O2`
+  under each contraction setting of `api.boundary.S`. Products that are only multiplied or
+  compared (`x * a`, `a * x`, `*=`, `kairn::finite::mul`, the comparisons) need no guard and must
+  agree in every build. The control, `api.boundary.packed.unguarded.FORM.S`, builds the test
+  against the copy of the headers without the guard, which also keeps only `a` of every
+  `_mm256_add_pd(a, _mm256_setzero_pd())` of `gen/avx2.hpp` and `vaddq_f64(a, vdupq_n_f64(0.0))`
+  of `gen/neon.hpp` (and their `float` forms), and requires that some form differ where the
+  compiler was measured to fuse: GCC by default and under `-ffp-contract=fast` (GCC 16 on
+  AArch64 in the forms NEON and scalar, GCC 13 on x86-64 in AVX2 and scalar), and Clang under
+  `-ffp-contract=fast` on AArch64 (Apple clang 21, NEON and scalar; Clang 18 on Linux in the
+  scalar form only: it fused no product written with the NEON intrinsics, in any of 40 000
+  registers of any form, so its NEON build only reports). A form that differs there
+  differs in every register, in every lane position. Which forms differ depends on the compiler
+  and the form (with GCC 13 and AVX2, 18 of the 42 that need the guard; with Apple clang and NEON,
+  35), and each of the 42 differs on one of them at least, but `abs` and the four forms of
+  `load_partial`, which none of them fused even without the guard: for those, the test shows only
+  that nothing fused them. Clang 18 on x86-64 fused nothing without the guard, in either form and under every
+  setting, and MSVC and clang-cl were not measured with `Packed`: their controls only report,
+  and say that nothing differed when nothing did. With the guard no form differs, on any of these
+  compilers, in any form or setting.
+- **The containers** (`api.soa.FORM`, `tests/api/soa.cpp`): an element read is the value written,
+  for every index of arrays of 0, 1, $W - 1$, $W$, $W + 1$, $2W - 1$, $2W + 1$ and 37 elements,
+  through the proxy, `get`, a const view, a const `SoA` and `load` (the limbs of `from_limbs` of the
+  limbs written, which are in the arrays bit for bit); the tail rule, which reads and writes exactly
+  the $N$ elements; views of `std::vector` and plain arrays, `subview`, a view of one limb over a
+  plain array; the properties of the types (trivially copyable views, the conversions that exist
+  and those that must not, `set` and `store` absent from a view of `const T`); and allocations,
+  counted by the program's own replacement of `operator new`: views, proxies, element access, load
+  and store allocate nothing, an `SoA` once per constructor with a size, copy and `resize`, never
+  in a move, and its arrays start at multiples of 64 bytes.
+- **What must not compile** (`api.reject.soa.*`, `api.reject.packed.*`,
+  `api.reject.packed_form.*`, in the table above; `tests/api/reject.cpp` includes the two headers
+  in their cases only, since every case is compiled twice).
+- **The checks** (`api.checks.*`): the table of `checks_cases.hpp` has operations of `Packed` and
+  of the views of each kind: eleven that round (sums and products of two limbs and their mixed
+  forms with a limb, `float` and `double`, `ldexp`, a finite core, a load, `from_limbs` and three
+  reads of an element, which are `from_limbs`), each of which must stop the program under each state of the
+  environment, every operation of a kind having the same check (`packed.hpp`); the comparisons,
+  negations, `abs` and conversions to one limb, run on the corpus $W$ values at a time, which must
+  give the same bits under every rounding mode; and the moves and the constructor from one limb,
+  checked for nothing; and the operand cases have a lane that is not canonical among canonical ones given
+  to a load, `from_limbs`, an operator, a comparison and a finite core, and an element of a view
+  read through `get`, the proxy and `load`, each of which must stop the program with its message.
+- **The tutorial's vector loop** (`api.example.packed_dot.FORM`, `docs/examples/cpp/packed_dot.cpp`),
+  in each form: its output, which is the same in every form, against `packed_dot.txt`, and each of
+  its results against the bound the tutorial states, decided against an exact reference in 192-bit
+  integer arithmetic.
 
 ## Contraction
 
@@ -1353,6 +1607,48 @@ of `api.reject.*` (five `interval.*`, `ball.implicit_narrowing`, `not_constexpr.
 three `unverified.*`), and `api.example.intervals` under each contraction setting (4); the checks
 of a debug build run 29 functions more. The full tier gains 96, the same 24 kernels in
 `full.api.oracle.K.F` and `full.api.flags.oracle.K.F`.
+
+**`Packed` and the containers** were measured on 2026-11-21 against the commit before them, the
+quick tiers on the Mac under a load average of 8 to 13 from other jobs, and those of the Linux
+machine on 16 of its threads:
+
+| Where | Quick tier, before | Quick tier, after | Full tier, before | Full tier, after |
+|---|---|---|---|---|
+| Mac, Apple clang 21 | 633 tests, 88 s | 653 tests, 89 s | | |
+| Mac, GCC 16 | 634 tests, 82 s | 654 tests, 95 s | | |
+| Linux, 16 threads, GCC 13 | 634 tests, 137 s | 657 tests, 169 s | 980 tests, 1 894 s | 980 tests, 1 924 s |
+| Linux, 16 threads, Clang 18 | | 654 tests, 196 s | | |
+
+The quick tier gains 20 tests on the Mac (`api.packed.FORM`, `api.soa.FORM` and
+`api.example.packed_dot.FORM` in two forms, and 14 of `api.reject.*`) and 23 on x86-64 with GCC 13,
+whose default build makes the AVX2 form as well. The packed forms of the kernels add no test of their
+own but longer runs of the runner in `api.oracle.*` (4 to 7 seconds of test time on the Mac) and of
+the checks. The test time of the quick tier grew from 336 to 346 seconds with Apple clang and from
+305 to 353 with GCC 16, 20 of those 48 seconds in `api.reject.*`, whose new cases compile
+`kairn/packed.hpp` twice each (GCC parses `arm_neon.h` and the generated header slowly:
+[Packed](../reference/packed.md#compile-time)). On the Linux machine with GCC 13 it grew from 504 to
+615 seconds: 61 in `api.oracle.*`, where the packed forms run in three runners (the third built for
+AVX2), 26 for the new tests, 22 in `api.checks.*` and 9 in `api.reject.*`. The full tier has the same
+980 tests, the packed forms joining `full.api.oracle.*` and `full.api.flags.oracle.*`.
+
+**The test of a product passed into `Packed`** (`api.boundary.packed.*`) was measured the same day
+against the commit before it, on the Linux machine in the default build and with `-mavx2 -mfma`
+in the build's flags:
+
+| Where | Quick tier, before | Quick tier, after | Of which `api.boundary.packed.*` | Full tier, before | Full tier, after |
+|---|---|---|---|---|---|
+| Mac, Apple clang 21 | 653 tests, 89 s | 669 tests, 93 s | 11.0 s of test time | | |
+| Mac, GCC 16 | 654 tests, 89 s | 670 tests, 94 s | 10.9 s | | |
+| Linux, 16 threads, GCC 13 | 657 tests, 145 s | 673 tests, 174 s | 24.9 s | 980 tests, 1 939 s | 980 tests, 2 009 s |
+| Linux, 16 threads, Clang 18 | 654 tests, 150 s | 670 tests, 200 s | 21.0 s | | |
+| Linux, 16 threads, GCC 13, `-mavx2 -mfma` | 654 tests, 152 s | 670 tests, 178 s | 32.5 s | | |
+| Linux, 16 threads, Clang 18, `-mavx2 -mfma` | 651 tests, 151 s | 667 tests, 193 s | 22.1 s | | |
+
+It adds 16 tests to every quick tier (two forms, four contraction settings, the test and its
+control), each under two seconds, and none to the full tier. On the Linux machine the other tests
+took 60 to 160 seconds of test time more in the runs after than in the runs before, which ran
+later: the machine's load (a load average of 24 to 27 from other jobs), since none of those
+tests changed.
 
 The full tier's cross-checks of the maps and folds write a summary of each run of up to 1.7 GB
 (`full.crosscheck.compiled.add_2.binary64`, `axpy_2`), some 18 GB in all for one run on the Mac. In
