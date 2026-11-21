@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "what": "kairn-bench-m2-modes",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "compiler": "GCC 13.3.0",
+  "flags": "-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off",
+  "check": {"directed_results": 1024, "differ_from_nearest": 512, "wrong": 0},
+  "results": [
+    {"op": "add", "mode": "nearest", "ns_min": 0.3329, "ns_median": 0.3375},
+    {"op": "add", "mode": "downward", "ns_min": 0.3327, "ns_median": 0.3337},
+    {"op": "add", "mode": "upward", "ns_min": 0.3324, "ns_median": 0.3337},
+    {"op": "add", "mode": "towardzero", "ns_min": 0.3327, "ns_median": 0.3349},
+    {"op": "mul", "mode": "nearest", "ns_min": 0.3327, "ns_median": 0.3347},
+    {"op": "mul", "mode": "downward", "ns_min": 0.3329, "ns_median": 0.3338},
+    {"op": "mul", "mode": "upward", "ns_min": 0.3329, "ns_median": 0.3357},
+    {"op": "mul", "mode": "towardzero", "ns_min": 0.3329, "ns_median": 0.3339}
+  ]
+}

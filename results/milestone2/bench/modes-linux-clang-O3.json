@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "what": "kairn-bench-m2-modes",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "compiler": "Clang 18.1.3 (1ubuntu1)",
+  "flags": "-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off",
+  "check": {"directed_results": 1024, "differ_from_nearest": 512, "wrong": 0},
+  "results": [
+    {"op": "add", "mode": "nearest", "ns_min": 0.2328, "ns_median": 0.2346},
+    {"op": "add", "mode": "downward", "ns_min": 0.2327, "ns_median": 0.2346},
+    {"op": "add", "mode": "upward", "ns_min": 0.2334, "ns_median": 0.235},
+    {"op": "add", "mode": "towardzero", "ns_min": 0.2326, "ns_median": 0.2345},
+    {"op": "mul", "mode": "nearest", "ns_min": 0.2328, "ns_median": 0.2349},
+    {"op": "mul", "mode": "downward", "ns_min": 0.2339, "ns_median": 0.2353},
+    {"op": "mul", "mode": "upward", "ns_min": 0.2329, "ns_median": 0.2352},
+    {"op": "mul", "mode": "towardzero", "ns_min": 0.233, "ns_median": 0.235}
+  ]
+}

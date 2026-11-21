@@ -6,7 +6,8 @@ times what a client gets, the generated kernels of `include/kairn/gen/` and the 
 answers five questions: what the opaque product costs, what the fix-up for non-finite results
 costs, what a `Ball` operation costs, how Kairn compares with textbook double-word arithmetic, and
 how `float` limbs compare with `double` limbs. No external benchmark library; MPFR is timed for
-scale when it is already installed.
+scale when it is already installed. The harness of Milestone 2, a program of its own, is described
+[below](#milestone-2).
 
 Nothing here is part of the library. The props (`props.hpp`, `props_packed.hpp`) are not
 verified and must not be used elsewhere. Each is the baseline of one comparison: a core with the
@@ -132,6 +133,78 @@ python3 bench/report.py results/milestone1/bench
 prints the tables of the results page from the stored JSON: a cell is the lowest and highest
 value of a ratio over the repeated runs of a configuration.
 
+## Milestone 2
+
+The harness behind [Benchmarks, Milestone 2](../docs/developer/results/bench-milestone2.md): what
+Milestone 2 has made public, next to the classical way of rounding down and up (changing the
+rounding mode), plain floors of `T`, and `Ball`. Its own program, `kairn-bench-m2-LEVEL` (and
+`kairn-bench-m2-outlined-LEVEL`, `kairn-bench-m2-external-LEVEL` in the other settings of
+`KAIRN_ENCLOSURE_CODE`), built with the same option and flags as `kairn-bench`; the program of
+Milestone 1 is unchanged.
+
+| File | What it holds |
+|---|---|
+| `m2_data.hpp` | what the files share: `Raw<T>`, every operand as plain arrays of `T` laid out as the public types lay out their limbs, and the outputs; `Entry`, one timed function; the regions a function writes |
+| `m2.cpp` | the functions that use Kairn, for `double` (backend `m2`) and `float` (`m2f`): the building blocks, `Interval<T, 1>` and `<T, 2>`, `Ball<T, 1>` and `<T, 2>`, Horner, the additions to `Ball`, `rational`; the generated scalar kernels on one array per limb (`m2s`); the data, and the tightness of Horner |
+| `m2_fenv.cpp` | the props that change the rounding mode, compiled with `-frounding-math` (`/fp:strict`) and, with Clang, `#pragma STDC FENV_ACCESS ON`; it does not include Kairn |
+| `m2_packed.cpp`, `m2_fenv_packed.cpp` | packed code (`m2p`), binary64: the generated kernels, and the props that change the mode once around a packed loop |
+| `m2_main.cpp`, `bench_util.hpp` | the driver: checks, tightness, timing, JSON |
+
+Every timed function is one row of an X-macro list (`KB_LIST` in `m2.cpp`, `KB_FLIST` in
+`m2_fenv.cpp`, `KB_SLIST`, `KB_PLIST`, `KB_FPLIST`): `X(BACKEND, SUFFIX, T, KIND, KERNEL,
+VARIANT, REGION, VALUES, CHECK, BODY)`, which the file expands twice, into the function
+`kb_m2_SUFFIX_KIND_KERNEL__VARIANT` and into its row of the table. `KIND` is `tp` (a loop of
+independent operations over arrays of 256, time per operation), `sum`, `prod`, `step` (a dependent
+chain, time per step) or `lat` (dependent evaluations, time per evaluation). The variants:
+
+| Variant | What it is |
+|---|---|
+| `kairn` | the generated kernel called on the limbs: the reference of every other variant of the kernel |
+| `op` | the public operation, written as a client writes it, on arrays of the public types |
+| `flat` | the public operation in a function compiled with `__attribute__((flatten))`, which inlines what the compiler would call: the product of intervals of two limbs is an ordinary function, not forced inline |
+| `plain` | the same values with the operations of `T`; a kernel named `pair_*`, `plain4_*`, `plain_*` is a floor of plain arithmetic, whose `kairn` reference computes the same values with the generated one-limb kernels |
+| `fenv` | `std::fesetround` to downward or upward around each operation, and back to nearest |
+| `csr` | the same, writing MXCSR or FPCR directly with values computed once |
+| `fenv_loop` | the mode set once around the whole loop or chain; intervals upward only, $\mathrm{RD}(t) = -\mathrm{RU}(-t)$ |
+| `nextafter` | `std::nextafter` |
+
+Before anything is timed, every function is checked against `BACKEND/KIND/KERNEL/kairn` (`m2p`
+against `m2s`), byte for byte, or by its own check (`kairn::rational` by `is_rational_result`); for
+each rounding-mode prop the driver counts how many of its values differ from the same operation
+rounded to nearest (what a prop that ignored the mode would have returned); and the props of the
+building blocks are compared with Kairn's on a wide sample, $2^{16}$ pairs per operation, limb type
+and variant, half of them over every finite value of `T` (`--wide N`): equal, but for the sign of a
+zero result and, below $2^{2p-1}\eta$, a product of Kairn one number wider on its side, as the
+statement of `mul_down` allows. A failed check stops the run. The driver then measures the
+tightness of the Horner evaluation in four regimes (a point, a few units in the last place, the
+narrow sets of the timing, wide sets) against the exact range of $T_8$, and times.
+
+```sh
+build-bench/bench/kairn-bench-m2-O2 --check-only        # the checks and the tightness
+taskset -c 50 build-bench/bench/kairn-bench-m2-O2 --cpu 50 --reps 31 \
+    --machine "..." --commit "$(git rev-parse --short HEAD)" --json results/milestone2/bench/linux-gcc-O2-r1.json
+python3 bench/m2_report.py results/milestone2/bench   # the tables of the results page
+```
+
+`kairn-bench-m2-modes-LEVEL` (`m2_modes.cpp`, no Kairn header) times a loop of additions and one
+of products under each of the four rounding modes, compiled as plain code, and checks that they
+computed under the mode set: whether a directed mode, once set, costs anything
+(`--json results/milestone2/bench/modes-MACHINE-COMPILER-LEVEL.json`).
+
+The options are those of `kairn-bench` (`--filter` takes several texts, separated by commas), and
+`--wide N`. The JSON has, besides the times, the load average at the start and the end of the
+timing, the checks (with the counts against rounding to nearest and the wide sample) and the
+tightness.
+
+**Adding the functions on arrays, `BallVector` and the accumulator.** Add their operands to
+`Raw<T>` (plain arrays) and, as public types, to `Data<T>` in `m2.cpp`; their outputs to `Data<T>`
+with a new `Region` (and its line in `region_of`); then rows to `KB_LIST`: for a function on arrays
+of length `n` a `tp` row whose body is one call over the arrays (set `ops` to the number of
+elements by a row macro of its own, as the table rows set `kN` now), its `kairn` reference the
+generated fold (`kg::sum_2_seq`, `kg::dot_2_lanes`, ...) on the limbs, its `op` the public function,
+and its floors in plain `T` with a `kairn` reference; packed folds go to `KB_PLIST`. The report
+takes a new table as a list of ratios of names (`m2_report.py`).
+
 ## Other costs
 
 The tools behind [Compile times and other costs, Milestone
@@ -181,7 +254,9 @@ with an empty table and once per kernel with that kernel alone: the difference i
 costs. `phases` asks the compiler where the time goes (GCC `-ftime-report`, Clang `-ftime-trace`,
 MSVC `/Bt+`). `kernels` counts the lines and operations of every generated kernel. `--cpu` pins
 the script, and every compiler it starts, to one logical processor (Linux, Windows). Every
-compilation has a timeout, and on a timeout only the process the script started is terminated.
+compilation has a timeout, and on a timeout only the process the script started is terminated,
+after (on Linux and macOS) the processes it started itself: the compiler proper, which a driver
+runs as its child and which would otherwise keep running on the same core.
 
 ### Constants from fractions
 
@@ -196,6 +271,11 @@ python3 bench/rational_cost.py compile --cxx g++ --reps 5 --flags=-mfma
 python3 bench/rational_cost.py compile --cxx cl --msvc --flags=/arch:AVX2 --json rational-msvc.json
 python3 bench/rational_cost.py run --cxx clang++ --flags=-mfma
 ```
+
+`--types e1,e2` makes the units for `Expansion<double, 1>` as well, `--counts 10,100,1000` the
+counts of Milestone 2's page (`results/milestone2/bench/rational-compile-*.json`, printed by
+`m2_report.py`), `--cpu N` pins (Linux). The time of one call at run time is also timed by
+`kairn-bench-m2` (`m2/tp/rational_*`), for small and 64-bit terms.
 
 ### The settings of `KAIRN_ENCLOSURE_CODE`
 
@@ -219,6 +299,23 @@ cost the compiler.
 python3 bench/enclosure_costs.py compile --cxx g++-16 --reps 3 --workdir /tmp/enclosure \
     --machine "..." --commit "$(git rev-parse --short HEAD)" --json results/milestone2/costs/compile-gcc16.json
 python3 bench/enclosure_costs.py report results/milestone2/costs
+```
+
+`--kind interval1`, `interval2` or `mixed` writes units of intervals, or of `Ball<double, 2>`,
+`Interval<double, 1>` and `Interval<double, 2>` in turn, in which each operation takes one of the
+eight values of its type computed last and one of eight inputs near 1, so that every value stays a
+finite enclosure; with `--run` the object of the first compilation of each unit is linked with a
+driver that `enclosure_costs.py` writes (and, external, with `definitions.cpp`) and run: the time
+per operation of the unit itself, in each setting. `--flags` adds options to every compilation
+(Clang 18 on Linux needs `--flags=--gcc-install-dir=...`), `--cpu N` pins the script and what it
+starts (Linux). [Benchmarks, Milestone 2](../docs/developer/results/bench-milestone2.md) reports
+these units, with the measurements in `results/milestone2/bench/compile-*.json`:
+
+```sh
+python3 bench/enclosure_costs.py compile --cxx g++ --kind mixed --cpu 26 --sizes 100,1000,10000 \
+    --settings inline,outlined,external,calls --reps 3 --run --run-reps 21 --workdir ... \
+    --machine "..." --commit "..." --json results/milestone2/bench/compile-linux-gcc-mixed.json
+python3 bench/enclosure_costs.py report results/milestone2/bench
 ```
 
 At run time, the harness above is built once more per setting, `kairn-bench-outlined-LEVEL` and

@@ -1,0 +1,93 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-21",
+ "commit": "dee8ecd",
+ "machine": {
+  "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU; shared with other jobs",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "pinning": "pinned to logical CPU 53"
+ },
+ "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+ "cxx": "g++",
+ "flags": "",
+ "kind": "mixed",
+ "timeout": 3600,
+ "reps": 1,
+ "run_reps": 21,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    20.71
+   ],
+   "cpu": [
+    20.692
+   ],
+   "peak_mb": [
+    544.6
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 807640,
+   "run": {
+    "ns_per_op_min": 22.74,
+    "ns_per_op_median": 22.92,
+    "calls_per_sample": 15,
+    "samples": 21,
+    "finite": 10000,
+    "written": 4000
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    24.93
+   ],
+   "cpu": [
+    24.907
+   ],
+   "peak_mb": [
+    556.0
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 791488,
+   "run": {
+    "ns_per_op_min": 22.31,
+    "ns_per_op_median": 22.5,
+    "calls_per_sample": 16,
+    "samples": 21,
+    "finite": 10000,
+    "written": 4000
+   }
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.867
+   ],
+   "cpu": [
+    0.865
+   ],
+   "peak_mb": [
+    91.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 44888
+  }
+ ]
+}
