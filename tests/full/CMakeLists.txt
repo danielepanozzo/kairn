@@ -127,6 +127,10 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py")
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
     set_tests_properties(full.tools.crosscheck.guards.${_class} PROPERTIES TIMEOUT 900
       LABELS "full;tools;crosscheck")
+    if(KAIRN_ORACLE_CLAIMS)
+      set_tests_properties(full.tools.crosscheck.guards.${_class} PROPERTIES
+        ENVIRONMENT "KAIRN_ORACLE_CLAIMS=${_oracle_claims}")
+    endif()
   endforeach()
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/docs/tools/test_reference.py")
@@ -283,7 +287,7 @@ if(TARGET kairn-gen-runner)
   add_test(NAME full.search.compiled
     COMMAND "${Python3_EXECUTABLE}" oracle/kairn-oracle search all binary64,binary32
       --runner "$<TARGET_FILE:kairn-gen-runner>" --evals 5000 --jobs 4 --quiet
-      --fail-on-suspicious --suspicious-ok split,two_prod_dekker
+      --fail-on-suspicious --suspicious-ok split,two_prod_dekker ${_oracle_claims_arg}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(full.search.compiled PROPERTIES TIMEOUT 600 PROCESSORS 4
     LABELS "full;search")

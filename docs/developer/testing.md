@@ -2032,6 +2032,26 @@ the label of the first runner that wrote it, the second `K.F.LABEL.FORM.json` in
 `--interp` adds the generator's interpreter as one more runner, and `--exhaustive` with
 `--restrict` an enumeration, as for `gen`.
 
+### Against other claims
+
+The tests judge against `gen/claims.json` unless the CMake variable `KAIRN_ORACLE_CLAIMS` names
+another file of the same form. `tests/CMakeLists.txt` and `tests/api/CMakeLists.txt` then read the
+kernels and folds they register tests for from that file, and every test that runs the oracle
+passes it on: `--claims FILE` to `tests/crosscheck.py` (both modes), `tests/regression/run.py`, the
+oracle's `check --claims-only` (`kairn-oracle.claims`) and `search` (`full.search.compiled`);
+`-DCLAIMS=FILE` to `tests/crosscheck.cmake`; and the environment variable `KAIRN_ORACLE_CLAIMS` to
+`tests/test_crosscheck_guards.py` (`full.tools.crosscheck.guards.*`), which passes it to every run
+of the oracle and of the drivers. It is for a branch of the oracle that reads only some of the
+claims of `gen/claims.json` (the oracle fails every run while the claims hold anything it cannot
+read): its tiers run against a copy of the claims without the objects it does not read yet, which
+are then simply absent, and the objects it does read are judged as they will be against the whole
+file.
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DKAIRN_ORACLE_CLAIMS=/path/to/claims.json
+KAIRN_ORACLE_CLAIMS=/path/to/claims.json python3 tests/test_crosscheck_guards.py
+```
+
 ## Rerunning one case
 
 Every request line carries a tag, copied by the runner, that says which case it is:

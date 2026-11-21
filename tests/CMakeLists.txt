@@ -50,6 +50,25 @@ else()
   set(_full_tier OFF)
 endif()
 
+# The claims the oracle judges against, gen/claims.json unless KAIRN_ORACLE_CLAIMS names another
+# file of the same form: the kernels and folds this file and api/ register tests for are read from
+# it, and every test that runs the oracle passes it on (--claims to crosscheck.py, run.py, the
+# oracle's check and search; -DCLAIMS= to crosscheck.cmake). For a branch of the oracle that reads
+# some of the claims only: its tests run against a copy of gen/claims.json without the objects it
+# does not read yet, and the objects removed are simply absent (docs/developer/testing.md, "Against
+# other claims").
+set(KAIRN_ORACLE_CLAIMS "" CACHE FILEPATH
+  "The claims file of the oracle's tests (empty: gen/claims.json)")
+if(KAIRN_ORACLE_CLAIMS)
+  get_filename_component(_oracle_claims "${KAIRN_ORACLE_CLAIMS}" ABSOLUTE)
+  set(_oracle_claims_arg --claims "${_oracle_claims}")
+  set(_oracle_claims_define "-DCLAIMS=${_oracle_claims}")
+else()
+  set(_oracle_claims "${PROJECT_SOURCE_DIR}/gen/claims.json")
+  set(_oracle_claims_arg "")
+  set(_oracle_claims_define "")
+endif()
+
 # --- The entry points ---------------------------------------------------------------------------
 #
 # Each is "SCRIPT COMMAND" from the repository root, run as python3 SCRIPT COMMAND ARGS:
@@ -96,7 +115,7 @@ foreach(_entry IN LISTS _entries)
   get_filename_component(_name "${_script}" NAME)
   set(_args "${_command}")
   if(_entry STREQUAL "oracle/kairn-oracle claims")
-    set(_args check --claims gen/claims.json --claims-only)
+    set(_args check --claims "${_oracle_claims}" --claims-only)
   endif()
   add_test(NAME "${_name}.${_command}"
     COMMAND "${Python3_EXECUTABLE}" "${_script}" ${_args}
@@ -725,7 +744,7 @@ set(KAIRN_CROSSCHECK_CONV_LENGTH 64 CACHE STRING
 # fails its cross-check (--fail-on-suspicious).
 set(_intermediate_overflow split two_prod_dekker)
 
-set(_claims_file "${PROJECT_SOURCE_DIR}/gen/claims.json")
+set(_claims_file "${_oracle_claims}")
 if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_claims_file}")
   file(READ "${_claims_file}" _claims)
@@ -734,7 +753,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   set(_driver "${CMAKE_CURRENT_SOURCE_DIR}/crosscheck.cmake")
   set(_crosscheck "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/crosscheck.py")
   set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
-  set(_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}")
+  set(_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    ${_oracle_claims_define})
   set(_random "-DCOUNT=${KAIRN_CROSSCHECK_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}")
   set(_random_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_CASES}")
   set(_random_quick_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_QUICK_CASES}")
@@ -851,7 +871,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       set(_suspicious_arg "")
     endif()
     set(_this ${_common} "-DKERNEL=${_kernel}" "-DFAIL_ON_SUSPICIOUS=${_fail_on_suspicious}")
-    set(_this_compiled compiled --kernel "${_kernel}" ${_suspicious_arg})
+    set(_this_compiled compiled --kernel "${_kernel}" ${_suspicious_arg} ${_oracle_claims_arg})
 
     # The interpreter, on every operand of the toy format, or of a restricted domain of it and
     # on random cases of all of it.
@@ -1011,7 +1031,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       list(APPEND _full_folds ${_fold})
       set(_full_fold_${_fold}_toy "${_toy}")
       set(_full_fold_${_fold}_error "${_error}")
-      set(_this_fold compiled --kernel "${_fold}" --fail-on-suspicious)
+      set(_this_fold compiled --kernel "${_fold}" --fail-on-suspicious ${_oracle_claims_arg})
       set(_full_fold_${_fold}_compiled ${_this_fold})
       foreach(_format binary64 binary32)
         set(_packed_args "")
@@ -1135,6 +1155,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/regression/
   add_test(NAME regression.cases
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/regression/run.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/regression/cases.txt" ${_regression_args}
+      ${_oracle_claims_arg}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(regression.cases PROPERTIES TIMEOUT 300 LABELS regression)
 endif()

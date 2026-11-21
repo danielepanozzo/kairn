@@ -18,6 +18,10 @@ invalid case must fail the run. With CMAKE, the path of cmake, it
 runs crosscheck.cmake, the driver of the interpreter's enumerations, likewise; with API_RUNNER,
 the public interface's runner (tests/api/runner.cpp), crosscheck.py api on a good run, on one
 whose cases miss a stratum, and on a kernel the runner maps no form to.
+
+The oracle reads gen/claims.json, or the claims file named by the environment variable
+KAIRN_ORACLE_CLAIMS (which the full tier sets from the CMake variable of that name), passed to
+every run of the oracle and of the drivers as --claims FILE (-DCLAIMS=FILE for crosscheck.cmake).
 """
 import copy
 import json
@@ -32,6 +36,10 @@ ROOT = os.path.dirname(TESTS)
 PY = sys.executable
 CMAKE = None
 API_RUNNER = None
+CLAIMS = os.environ.get("KAIRN_ORACLE_CLAIMS") or os.path.join(ROOT, "gen", "claims.json")
+CLAIMS_ARGS = ["--claims", CLAIMS] if os.environ.get("KAIRN_ORACLE_CLAIMS") else []
+# crosscheck.py MODE ...: its mode first, then --claims (both modes take it).
+CLAIMS_DRIVER = [PY, os.path.join(TESTS, "crosscheck.py")]
 
 
 def pipeline(kernel, fmt, *gen_args, fail_on_suspicious=True):
@@ -41,14 +49,16 @@ def pipeline(kernel, fmt, *gen_args, fail_on_suspicious=True):
     with tempfile.TemporaryDirectory() as d:
         js = os.path.join(d, "s.json")
         gen = subprocess.run([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "gen", kernel, fmt]
-                             + list(gen_args), capture_output=True, text=True, cwd=ROOT)
+                             + list(gen_args) + CLAIMS_ARGS, capture_output=True, text=True,
+                             cwd=ROOT)
         assert gen.returncode == 0, gen.stderr
         runner = ([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "refrun"]
                   if kernel.startswith("rational_") else
                   [PY, os.path.join(ROOT, "gen", "kairn-gen"), "interp"])
         run = subprocess.run(runner, input=gen.stdout, capture_output=True, text=True, cwd=ROOT)
         assert run.returncode == 0, run.stderr
-        check = [PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "check", "--json", js]
+        check = ([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "check", "--json", js]
+                 + CLAIMS_ARGS)
         if fail_on_suspicious:
             check.append("--fail-on-suspicious")
         ok = subprocess.run(check, input=run.stdout, capture_output=True, text=True, cwd=ROOT)
@@ -243,7 +253,7 @@ class RationalGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(*args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", "rational_2",
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", "rational_2",
                      "--format", "binary32", "--summary", os.path.join(d, "r.json"),
                      "--fail-on-suspicious", "--refrun"] + list(args),
                     capture_output=True, text=True)
@@ -392,7 +402,7 @@ class ExtendedGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, fmt, *args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", kernel,
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", kernel,
                      "--format", fmt, "--summary", os.path.join(d, kernel + ".json"),
                      "--fail-on-suspicious", "--interp"] + list(args),
                     capture_output=True, text=True)
@@ -453,7 +463,7 @@ sys.stdout.write("\\n".join(lines))
 
             def drive(name, change):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", "add_2_2",
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", "add_2_2",
                      "--format", "binary64", "--seed", "1", "--count", "1000",
                      "--summary", os.path.join(d, name + ".json"), "--fail-on-suspicious",
                      "--runner", name, runner(name, change)],
@@ -476,7 +486,7 @@ sys.stdout.write("\\n".join(lines))
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, count):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "api", "--kernel", kernel,
+                    CLAIMS_DRIVER + ["api"] + CLAIMS_ARGS + ["--kernel", kernel,
                      "--format", "binary64", "--seed", "1", "--count", str(count),
                      "--summary-dir", d, "--runner", "build", API_RUNNER],
                     capture_output=True, text=True)
@@ -501,8 +511,9 @@ sys.stdout.write("\\n".join(lines))
                     [CMAKE, "-DPYTHON=" + PY, "-DSOURCE_DIR=" + ROOT, "-DKERNEL=" + kernel,
                      "-DFORMAT=" + fmt, "-DRUNNER=interp", "-DEXHAUSTIVE=ON",
                      "-DRESTRICT=" + restrict,
-                     "-DSUMMARY=" + os.path.join(d, kernel + ".json"), "-DFAIL_ON_SUSPICIOUS=ON",
-                     "-P", os.path.join(TESTS, "crosscheck.cmake")],
+                     "-DSUMMARY=" + os.path.join(d, kernel + ".json"), "-DFAIL_ON_SUSPICIOUS=ON"]
+                    + ["-DCLAIMS=" + c for c in CLAIMS_ARGS[1:]]
+                    + ["-P", os.path.join(TESTS, "crosscheck.cmake")],
                     capture_output=True, text=True)
             bad = drive("mul_2_2", "fp:3:-3:2")
             self.assertNotEqual(bad.returncode, 0)
@@ -793,7 +804,7 @@ class FoldGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(fold, fmt, *args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", fold,
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", fold,
                      "--format", fmt, "--summary", os.path.join(d, fold + ".json"),
                      "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
                     capture_output=True, text=True)
@@ -857,7 +868,7 @@ class IntervalGuards(unittest.TestCase):
         self.assertEqual(len(CG.IV_MAKE_CELLS), 17)
         for kernel, tiny in (("interval_make_1", "fp:2:-2:1"), ("interval_make_2", "fp:2:-2:1"),
                              ("ball_from_interval_2", "fp:2:-2:1")):
-            with open(os.path.join(ROOT, "gen", "claims.json"), encoding="utf-8") as f:
+            with open(CLAIMS, encoding="utf-8") as f:
                 k = next(k for k in json.load(f)["kernels"] if k["name"] == kernel)
             two = kernel == "interval_make_2"
             good = pipeline(kernel, IV, *self.args)
@@ -999,7 +1010,7 @@ class IntervalGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(kernel, *args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", kernel,
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", kernel,
                      "--format", IV, "--summary", os.path.join(d, kernel + ".json"),
                      "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
                     capture_output=True, text=True)
@@ -1167,7 +1178,7 @@ class StageBGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def drive(name, fmt, *args):
                 return subprocess.run(
-                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", name,
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", name,
                      "--format", fmt, "--summary", os.path.join(d, name + ".json"),
                      "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
                     capture_output=True, text=True)

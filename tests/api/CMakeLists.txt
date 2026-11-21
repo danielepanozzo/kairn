@@ -97,7 +97,7 @@ _kairn_api_program(kairn-api-runner-contract-fast runner.cpp ${_api_contract})
 # kernel must have computed one (runner.cpp); 2000, because with 1000 three more of the faults
 # planted in the kernels that the full tier caught went unseen (docs/developer/testing.md,
 # "Time").
-set(_api_claims "${PROJECT_SOURCE_DIR}/gen/claims.json")
+set(_api_claims "${_oracle_claims}")
 # --- The flag sets (flags/) -------------------------------------------------------------------
 #
 # flags/ builds the public interface's runner and programs once per flag set of
@@ -125,7 +125,7 @@ set(_flags_gen_labels ${_flags_gen_labels} PARENT_SCOPE)
 # --- The end of the flag sets' runners ---------------------------------------------------------
 if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_crosscheck "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/crosscheck.py")
-  set(_api_common --seed "${KAIRN_API_SEED}" ${_api_runners})
+  set(_api_common --seed "${KAIRN_API_SEED}" ${_api_runners} ${_oracle_claims_arg})
   file(READ "${_api_claims}" _api_json)
   string(JSON _api_count LENGTH "${_api_json}" kernels)
   math(EXPR _api_last "${_api_count} - 1")

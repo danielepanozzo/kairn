@@ -6,7 +6,11 @@
 #
 #   cmake -DPYTHON=... -DSOURCE_DIR=... -DKERNEL=... -DFORMAT=... -DSUMMARY=FILE -DRUNNER=interp
 #         (-DEXHAUSTIVE=ON [-DRESTRICT=R1,R2,...] | -DCOUNT=N -DSEED=S)
-#         [-DMAX_LENGTH=L] [-DORDERS=O1,O2,...] [-DFAIL_ON_SUSPICIOUS=ON] -P crosscheck.cmake
+#         [-DMAX_LENGTH=L] [-DORDERS=O1,O2,...] [-DFAIL_ON_SUSPICIOUS=ON] [-DCLAIMS=FILE]
+#         -P crosscheck.cmake
+#
+# CLAIMS is the claims file the oracle's gen and check read, gen/claims.json when it is not set
+# (tests/CMakeLists.txt, KAIRN_ORACLE_CLAIMS).
 #
 # KERNEL may be a fold, whose requests carry arrays: MAX_LENGTH is then the largest length (of
 # every array enumerated, or of the random ones) and ORDERS the orders of a random run.
@@ -48,7 +52,11 @@ endforeach()
 get_filename_component(SUMMARY "${SUMMARY}" ABSOLUTE)
 
 set(_oracle "${PYTHON}" "${SOURCE_DIR}/oracle/kairn-oracle")
-set(_gen ${_oracle} gen "${KERNEL}" "${FORMAT}")
+set(_claims "")
+if(DEFINED CLAIMS AND CLAIMS)
+  set(_claims --claims "${CLAIMS}")
+endif()
+set(_gen ${_oracle} gen "${KERNEL}" "${FORMAT}" ${_claims})
 set(_guards "${PYTHON}" "${CMAKE_CURRENT_LIST_DIR}/crosscheck_guards.py")
 set(_guard_args --kernel "${KERNEL}" --format "${FORMAT}")
 if(EXHAUSTIVE)
@@ -80,7 +88,7 @@ if(DEFINED ORDERS)
   list(APPEND _gen --orders "${ORDERS}")
   list(APPEND _guard_args --orders "${ORDERS}")
 endif()
-set(_check ${_oracle} check --expect-valid)
+set(_check ${_oracle} check --expect-valid ${_claims})
 if(FAIL_ON_SUSPICIOUS)
   list(APPEND _check --fail-on-suspicious)
 endif()
