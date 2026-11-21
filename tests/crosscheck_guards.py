@@ -65,10 +65,11 @@ overflow, heavy cancellation, for a dot product the term tau mattering, and an e
 1/2 (one limb) or 1/16 (two limbs) of the bound (fold_problems).
 
 Whatever the run, the summary must not exceed SUMMARY_BYTES: what the oracle keeps of a run is a
-fixed set of statistics, each with at most one line, whose number does not depend on how many
-lines or elements it judged (oracle/README.md, "The size of a summary"); a larger summary means
-that something it keeps grows with them, as the profile of a map's step once kept the map's whole
-line once per distance (1.5 GB for a run of the full tier).
+fixed set of statistics, each with at most one line, whose number the claims and the format bound
+whatever the number of lines or elements it judged (the profile of (a) one per distance, some
+3 200 in binary64: oracle/README.md, "The size of a summary"); a larger summary means that
+something it keeps grows with them, as the profile of a map's step once kept the map's whole line
+once per distance (1.7 GB for a run of the full tier).
 
 The claims are those the oracle judged against, the file its summary names (or --claims).
 
@@ -95,7 +96,8 @@ import os
 import re
 import sys
 
-# The largest summary a run may leave, in bytes. The largest of the full tier are about 0.3 MB
+# The largest summary a run may leave, in bytes. The largest of the full tier are 2.0 to 2.7 MB,
+# those of exact operations in binary64, whose profiles keep every distance seen
 # (docs/developer/testing.md, "The size of the summaries").
 SUMMARY_BYTES = 4 << 20
 

@@ -698,16 +698,16 @@ B.json ...` merges summaries (counts add, maxima combine, coverage ranges unite)
 
 #### The size of a summary
 
-What a summary keeps does not grow with the number of lines or of elements judged. Per key
-(kernel, format, stratum) it holds counters, the reasons of failures with their counts (a map's
-name the element, so that a failing run has at most one per element index and reason) and at
-most `--max-examples` examples of each kind (failure, invalid, suspicious), each a whole line;
-per entry of the claims a fixed set of statistics: the
-largest ratio and (b), each named maximum and minimum, each with one case; counts, whose names
-the claims and the format fix (a histogram has a bin per binade at most); and the profile of (a),
-at most one record per distance $D$, whose range the format fixes (some 2 100 values in
-binary64, a few tens in a toy format), each with one case. A case is a line of the kernel
-judged, except in two places:
+What a summary keeps is bounded by the claims and the format, whatever the number of lines or of
+elements judged. Per key (kernel, format, stratum) it holds counters, the reasons of failures
+with their counts (a map's name the element, so that a failing run has at most one per element
+index and reason) and at most `--max-examples` examples of each kind (failure, invalid,
+suspicious), each a whole line; per entry of the claims a fixed set of statistics: the largest
+ratio and (b), each named maximum and minimum, each with one case; counts, whose names the claims
+and the format fix (a histogram has a bin per binade at most); and the profile of (a), at most
+one record per distance $D$, whose range the format fixes (in binary64 from about $-1\,180$, a
+product of two subnormal numbers, to about $2\,045$: some 3 200 values; a few tens in a toy
+format), each with one case. A case is a line of the kernel judged, except in two places:
 
 - the statistics of a map's step (the entries `entries(z), step K: ...`) keep the line of the
   element that attains them, a completed line of the step spelled with the map's own tokens,
@@ -721,11 +721,20 @@ judged, except in two places:
   (`tests/brute/brute.py`, `observed_c`), is what the whole profile gave; `profile_distances`
   lists every distance seen (an integer alone or a range `[lo, hi]`), so that a merge orders
   equal ratios as before. A summary read back holds the other distances without their ratios.
+  Equal ratios are all records, so a profile whose ratios are all equal, that of an exact
+  operation (every ratio 0), keeps every distance seen: up to the range of $D$, whatever the
+  number of lines.
 
 A fold's or a convolution's statistics keep the fold's line (one per statistic, not per
-distance). The largest summaries of the full tier are about 0.3 MB; before the two changes above
-a map's was up to 1.6 GB, 99% of it the profile's cases, each a whole map line. The cross-checks
-fail a summary above 4 MiB (`tests/crosscheck_guards.py`, `SUMMARY_BYTES`).
+distance). The largest summaries of the full tier are those of exact operations in binary64,
+whose profiles keep nearly every distance of their strata: 2.0 MB for `two_prod` and
+`two_prod_dekker` (some 13 000 records), 2.1 to 2.7 MB for the map `mul_pow2_map_1` (10 strata,
+up to 2 100 distances each, a step's line of 144 bytes per record). Every other one is below
+1.2 MB, and those above 0.5 MB are likewise of operations exact on all or most of their cases
+(`two_sum` and its forms, `split`, `neg_2`, `abs_2`, the scalings by a power of two, `scale_1`).
+Before the two changes above a map's was up to 1.7 GB, 99% of it the profile's cases, each a
+whole map line. The cross-checks fail a summary above 4 MiB (`tests/crosscheck_guards.py`,
+`SUMMARY_BYTES`), 1.55 times the largest.
 
 ### Claims as read
 
@@ -1574,13 +1583,16 @@ one per format, Ball kernel and constant), which the selftest computes with the 
 ## selftest
 
 ```
-python3 oracle/kairn-oracle selftest              # about three minutes
+python3 oracle/kairn-oracle selftest              # about eight minutes
 python3 oracle/kairn-oracle selftest --quick      # smaller samples, about 90 seconds
-python3 oracle/selftest/mutants.py --jobs 6       # tests the selftest, about fifteen minutes
+python3 oracle/selftest/mutants.py --jobs 7 --fail-fast   # tests the selftest, 45 minutes
 ```
 
 The exhaustive tests run one worker process per CPU; `--jobs N` (or `KAIRN_ORACLE_JOBS=N`)
-caps them. The times are for an Apple M3 Max with `--jobs 6`. `--only NAMES` runs only the tests
+caps them. The times: the whole selftest, 474 seconds on an Apple M3 Max with 8 workers
+(`KAIRN_ORACLE_JOBS=8`) beside a build of the library, and the 234 mutants, 2 703 seconds on 14
+hardware threads of the Linux machine with two workers each (`KAIRN_ORACLE_JOBS=2`), both on
+2026-11-20; `--quick` earlier, on the M3 Max with `--jobs 6`. `--only NAMES` runs only the tests
 named (comma-separated), `--skip NAMES` all but those, `--last NAMES` runs those after the others
 and `--fail-fast` stops at the first failing test; a name that is not a test's is an error.
 ctest's full tier runs it in two parts: `--quick` with `--skip` for the six enumerations of toy
