@@ -470,9 +470,22 @@ limb they add ([above](#products-the-program-passes-in)). A map may write in pla
 reads exactly; no other overlap is supported. With `KAIRN_CHECKS` each function checks the
 environment, the lengths, the arrays that alias and its elements.
 
+**The bound as a function of the length.** `kairn::traits<X>::sum(n)` and `dot(n)` give the bound
+of a sum and of a dot product of $n$ terms as numbers of `T` (`unit`, and `tiny` for the underflow
+term of a dot product), computed by the proved kernels `bound_sum_k` and `bound_dot_k`: at least
+$\gamma_{n-1}(e)$ and $\gamma_n(e)$, so that $\lvert s - \sum_i x_i\rvert \le
+\mathit{unit}\sum_i\lvert x_i\rvert$ for a sum returned finite, and likewise for a dot product
+with `tiny` added ([reference](../reference/batch.md#the-bound-as-a-function-of-the-length)).
+They are `constexpr`. Beyond the lengths the kernels bound, about $n e = \tfrac14$, they are
+$+\infty$, which claims nothing (a compile error in a constant expression). **Not
+machine-checked**: the header gives the kernel the count $n$ as the smallest number of `T` not
+below it, in integer code, rounded up where it is not a number of `T` (beyond $2^{24}$ for
+`float`), which is safe because what the kernels bound grows with the count; argued in the header
+and tested at and beyond those counts in exact arithmetic.
+
 Not provided: a product by a two-limb scalar without an addition (`axpy` with `y` zero), an order
-of a number of lanes other than the build's, and constant evaluation (the loops are not
-`constexpr`).
+of a number of lanes other than the build's, and constant evaluation of the functions on arrays
+(the loops are not `constexpr`).
 
 ## The environment
 

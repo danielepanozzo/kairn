@@ -1759,7 +1759,16 @@ class Site:
             for f in p["forms"]:
                 rows.append("| `%s` | %s | `%s` | %s |" % (f["code"], operand_types(f), f["result"], f["note"] or ""))
             constructors = [f for f in p["forms"] if re.match(r"(Expansion|Ball)<", f["code"])]
-            if any("SoAView" in t for f in p["forms"] for t in f["operands"]):
+            if all(f["code"].startswith("traits<") for f in p["forms"]):
+                # The bounds as functions of the length: static member functions of kairn::traits.
+                text = "\n".join(rows) + "\n\n" + (
+                    "`T` is `float` or `double`; `kairn::traits<T>` is also `kairn::traits<float>`, "
+                    "`kairn::traits<double>` and `kairn::traits<Expansion<T, 1>>`; header `kairn/kairn.hpp` "
+                    "(`traits.hpp`). `constexpr`, with the same bits at compile time and at run time; where "
+                    "the mask is false the result's `unit` and `tiny` are $+\\infty$, which claims nothing, "
+                    "and in a constant expression the call does not compile ([Functions on "
+                    "arrays](batch.md#the-bound-as-a-function-of-the-length)).")
+            elif any("SoAView" in t for f in p["forms"] for t in f["operands"]):
                 # The functions on arrays (kairn/batch.hpp): a header of their own, and no marker.
                 text = "\n".join(rows) + "\n\n" + (
                     "`T` is `float` or `double`; the functions are in namespace `kairn`, header "
@@ -2886,6 +2895,11 @@ class Site:
                 meaning = ("`unit` and `tiny` bound the error relative to the sum of the magnitudes of the "
                            "operands (`reference` is `BoundForm::operands`); no bound relative to the computed "
                            "value follows, and `unit_computed` and `tiny_computed` are $+\\infty$")
+            elif forms == {"T"}:
+                meaning = ("`unit` and `tiny` bound the error relative to the sum of the magnitudes of the "
+                           "terms of the exact value ($\\lvert a x\\rvert + \\lvert y\\rvert$ for $a x + y$; "
+                           "`reference` is `BoundForm::terms`); no bound relative to the computed value follows, "
+                           "and `unit_computed` and `tiny_computed` are $+\\infty$")
             else:
                 fail("kernel %s: its unconditional error claims have the forms %s, which the constants "
                      "sentence has no template for" % (k.name, sorted(forms)))

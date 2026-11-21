@@ -50,9 +50,15 @@ into the loop's first addition, and the sum would not be that of the numbers in 
 *supplied* arrays: the sums and the maps that add an element are the loops named `_entry`, whose
 steps pass each limb they add through the guard $a + 0$ first; `dot`, `scale`, `mul_pow2`, the `x`
 of `axpy` and `conv` only multiply their elements and need none. With the guard taken out, GCC 16
-at `-O3` and Apple clang 21 with `-ffp-contract=fast` do fuse such products into the sum of one
-limb and its difference; with it, no form differs (`api.boundary.arrays.*`,
-[Testing](../developer/testing.md#the-functions-on-arrays)).
+at `-O3`, Apple clang 21 and Clang 18 with `-ffp-contract=fast` do fuse such products into the sum
+of one limb and its difference; with it, no form differs (`api.boundary.arrays.*`,
+[Testing](../developer/testing.md#the-functions-on-arrays)). **One exception was found**: when the
+other factor of a dot product of one limb is a 1 that the compiler sees (an array of ones filled in
+the same function), Clang 18 on x86-64 at `-O3` with `-ffp-contract=fast` removes the
+multiplication, `fma(x, 1, s)` becoming `x + s`, and fuses the program's product into that
+addition, so that `dot` gives the dot product of the exact products rather than of the numbers in
+the array. A program that sums an array of products should call `sum`, which guards; the step of
+`dot_1` does not guard what it only multiplies.
 
 ## The order of a sum
 
@@ -132,6 +138,70 @@ $V = 0$ for no element: when `finite`, `value` is $V$ for one limb, and for two
 $V \le \mathit{value} \le \mathrm{succ}(\mathrm{RU}(V))$, at most one step of `T` above the smallest
 number of `T` not below $V$. So no element gives 0 for one limb and $\eta$ for two. It does not
 round.
+
+## The bound as a function of the length
+
+Kairn's units are not powers of two, so a program that wrote $n u$ in its own analysis cannot
+write $\gamma_{n-1}(3u^2/(1-4u))$ exactly in floating point. `kairn::traits<X>` gives the bound as
+a number of `T` that is certainly at least it, computed by a generated, proved kernel
+([`bound_sum_1`](bound_sum_1.md), [`bound_sum_2`](bound_sum_2.md), [`bound_dot_1`](bound_dot_1.md),
+[`bound_dot_2`](bound_dot_2.md)), with `X` = `double`, `float` or `Expansion<T, k>`:
+
+```cpp
+using X = kairn::Expansion<double, 2>;
+const kairn::Bound<double> s = kairn::traits<X>::sum(n);         // a sum of n numbers
+const kairn::Bound<double> h = kairn::traits<X>::sum_height(h);  // a summation tree of height h
+const kairn::Bound<double> d = kairn::traits<X>::dot(n);         // a dot product of n terms
+kairn::traits<X>::axpy;  kairn::traits<X>::axpy_limb;            // one element of axpy (constants)
+```
+
+Each is a `Bound<T>` of `reference` `BoundForm::terms`. **What a program may write with them**,
+for arrays of $n$ = `x.size()` elements whose `finite` is true, $x_i$ and $y_i$ the exact values
+of the elements (for two limbs $x_{i,0} + x_{i,1}$):
+
+- `r = kairn::sum(x)`, in either order, and `kairn::sum_fast(x)`, with `b = traits<X>::sum(n)`:
+  $\lvert r.\mathit{value} - \sum_i x_i\rvert \le b.\mathit{unit}\,\sum_i \lvert x_i\rvert$, and
+  `b.tiny` is 0. $b.\mathit{unit} \ge \gamma_{n-1}(e)$. The same bound holds for any sum of $n$
+  numbers made by $n - 1$ additions of Kairn of `X` in any tree, and `sum_height(h)` for a tree of
+  height $h$, $\gamma_h(e)$;
+- `r = kairn::dot(x, y)`, in either order, with `b = traits<X>::dot(n)`:
+  $\lvert r.\mathit{value} - \sum_i x_i y_i\rvert \le b.\mathit{unit}\,\sum_i \lvert x_i y_i\rvert +
+  b.\mathit{tiny}$, where $b.\mathit{unit} \ge \gamma_n(e_\times)$ ($e_\times = u/(1+u)$ for one
+  limb, $4u^2$ for two) and $b.\mathit{tiny} \ge n\,\tau\,(1 + b.\mathit{unit})$ ($\tau =
+  \tfrac12\eta$, $\tfrac32\eta$): the two terms dominate those of the statement of `dot`;
+- `kairn::conv(x, y, z)`: every coefficient, with `b = traits<X>::dot(min(x.size(), y.size()))`
+  and the sum over its own terms;
+- `kairn::axpy(a, x, y, z)`: every element, with `traits<X>::axpy_limb` (or `axpy` for a two-limb
+  `a`; for one limb `traits<T>::axpy`): $\lvert z_i - (a x_i + y_i)\rvert \le \mathit{unit}\,(\lvert
+  a x_i\rvert + \lvert y_i\rvert) + \mathit{tiny}$.
+
+These are inequalities between real numbers. A program that evaluates the right side in floating
+point rounds it up to keep it a bound: with `kairn::rmul` and `kairn::radd`
+([Building blocks](index.md#building-blocks-on-t)), and an upper bound of $\sum_i\lvert x_i\rvert$
+(for example `norm_upper(x)` times $n$, rounded up).
+
+**Where no bound is given.** The kernels bound lengths up to about $n e \le \tfrac14$, where the
+bound would be a third of the sum of magnitudes anyway: for one limb up to about $2^{51}$ terms of
+`double` and $2^{22}$ of `float`; for two limbs of `float` about $2^{44}$; for two limbs of `double`
+more than $2^{101}$, so every `std::size_t`. Beyond, `unit` and `tiny` are $+\infty$, which claims
+nothing and cannot be mistaken for a bound: any expression of it is $+\infty$ or a NaN. The
+functions are `constexpr`, with the same bits at compile time and at run time (the kernels have no
+fused operation but products of nonnegative numbers), and in a constant expression a length beyond
+is a compile error that names `no_bound_for_this_length`.
+
+**The count.** The kernels take the count as a number of `T`. The header gives them the smallest
+number of `T` not below it ($n - 1$ for `sum`, $n$ for `dot`, $h$ for `sum_height`), computed in
+integers: exact up to $2^p$ ($2^{53}$ for `double`, $2^{24}$ for `float`), rounded up beyond, and
+$2^{64}$ for the largest. Up, because what the kernels bound grows with the count, and their
+statements ask of it only that it be a number of `T`, 0 or at least 1: a bound for a larger count
+is a bound for $n$, and a conversion to nearest could give a smaller one. This conversion is the
+header's and is not machine-checked; `tests/api/constexpr.cpp` checks it at and beyond $2^p$ and
+`api.arrays.exact.bounds` checks every bound at those lengths, at every power of two and near the
+largest `std::size_t` against $\gamma$ in exact rational arithmetic.
+
+*Not claimed:* the smallest number of `T` at least the bound (`unit` exceeds $\gamma$ by a factor of
+about $(1 + 2x)(1 - x)$, $x = n e$: a few $u$ for short arrays, an eighth at $x = \tfrac14$); a bound
+beyond $n e$ about $\tfrac14$.
 
 ## When something is not finite
 

@@ -293,6 +293,56 @@ FORM(next_up_next_up, out[0] = kairn::next_up(AS(next_up, in[0])))
 FORM(next_up_marked, out[0] = kairn::next_up(kairn::unverified(in[0])))
 FORM(next_down_next_down, out[0] = kairn::next_down(AS(next_down, in[0])))
 FORM(next_down_marked, out[0] = kairn::next_down(kairn::unverified(in[0])))
+// The bounds as functions of the length (traits.hpp): through kairn::traits<X>::sum_height(h),
+// sum(n) and dot(n), on the lines whose count m is an integer that a std::size_t holds (h = m,
+// n = m + 1 for sum, n = m for dot), the result's unit (and tiny) as g (and t), and the mask true
+// exactly when the unit is finite, as the function gives it (+inf where the kernel's mask is
+// false). A count that no program can give as a length (a fraction, or 2^64 and more, which the
+// oracle draws to reach the limit of the kernel) is completed by the kernel itself, so that the
+// stream is whole; each form computes its own operation on the integer lines, and fails if a stream
+// of 1000 lines reached none.
+template <class T>
+bool as_length(T m, std::size_t& n) {
+    if (!(m >= T(0)) || !(T(0x1p64) > m) || std::floor(m) != m) return false;
+    const std::uint64_t v = static_cast<std::uint64_t>(m);
+    if (v >= std::uint64_t(std::numeric_limits<std::size_t>::max())) return false;
+    n = static_cast<std::size_t>(v);
+    return true;
+}
+template <class T, int K>
+using traits_k = std::conditional_t<K == 1, kairn::traits<T>, kairn::traits<E2<T>>>;
+// Which: 0 sum_height(h), 1 sum(n), 2 dot(n).
+template <class T, int K, int Which>
+void length_bound(const T* in, T* out, bool* mo) {
+    std::size_t n = 0;
+    if (!as_length(in[0], n)) {
+        if constexpr (Which == 2) {
+            if constexpr (K == 1) kairn::gen::bound_dot_1(in[0], out[0], out[1], mo[2]);
+            else kairn::gen::bound_dot_2(in[0], out[0], out[1], mo[2]);
+        } else {
+            if constexpr (K == 1) kairn::gen::bound_sum_1(in[0], out[0], mo[1]);
+            else kairn::gen::bound_sum_2(in[0], out[0], mo[1]);
+        }
+        return;
+    }
+    ++reached;
+    if constexpr (Which == 2) {
+        const kairn::Bound<T> b = traits_k<T, K>::dot(n);
+        out[0] = b.unit;
+        out[1] = b.tiny;
+        mo[2] = std::isfinite(b.unit);
+    } else {
+        const kairn::Bound<T> b = Which == 0 ? traits_k<T, K>::sum_height(n) : traits_k<T, K>::sum(n + 1);
+        out[0] = b.unit;
+        mo[1] = std::isfinite(b.unit);
+    }
+}
+FORM(bound_sum_1_traits_sum_height, length_bound<T, 1, 0>(in, out, mo))
+FORM(bound_sum_1_traits_sum, length_bound<T, 1, 1>(in, out, mo))
+FORM(bound_sum_2_traits_sum_height, length_bound<T, 2, 0>(in, out, mo))
+FORM(bound_sum_2_traits_sum, length_bound<T, 2, 1>(in, out, mo))
+FORM(bound_dot_1_traits_dot, length_bound<T, 1, 2>(in, out, mo))
+FORM(bound_dot_2_traits_dot, length_bound<T, 2, 2>(in, out, mo))
 FORM(radd_entry_radd, out[0] = kairn::radd(AS(radd_entry, in[0]), in[1]))
 FORM(radd_entry_marked, out[0] = kairn::radd(in[0], kairn::unverified(in[1])))
 FORM(rmul_rmul, out[0] = kairn::rmul(AS(rmul, in[0]), in[1]))
@@ -990,6 +1040,12 @@ const Form forms[] = {
     ROW(radd_entry, marked, "ll", "l")
     ROW(rmul, rmul, "ll", "l")
     ROW(rmul, marked, "ll", "l")
+    SOME(bound_sum_1, traits_sum_height, "l", "lm")
+    SOME(bound_sum_1, traits_sum, "l", "lm")
+    SOME(bound_sum_2, traits_sum_height, "l", "lm")
+    SOME(bound_sum_2, traits_sum, "l", "lm")
+    SOME(bound_dot_1, traits_dot, "l", "llm")
+    SOME(bound_dot_2, traits_dot, "l", "llm")
     ROW(add_down_entry, add_down, "ll", "l")
     ROW(add_down_entry, marked, "ll", "l")
     ROW(add_up_entry, add_up, "ll", "l")

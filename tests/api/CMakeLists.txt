@@ -358,6 +358,22 @@ foreach(_form IN LISTS _api_packed_forms)
   set_tests_properties(api.batch.${_form} PROPERTIES TIMEOUT 120 LABELS "api;packed;arrays")
 endforeach()
 
+# --- The bounds as functions of the length, and the accumulator, in exact arithmetic -----------
+#
+# api.arrays.exact.KIND (arrays_exact.cpp computes through the public headers, arrays_exact.py
+# checks with Python's fractions): bounds, kairn::traits<X>::sum(n) and dot(n) at the lengths where
+# the count is converted to T exactly and where it is rounded up, against gamma_m(e) and the
+# underflow term of the proved statements, +infinity exactly where no bound is given.
+_kairn_api_program(kairn-api-arrays-exact arrays_exact.cpp)
+if(Python3_Interpreter_FOUND)
+  foreach(_kind bounds)
+    add_test(NAME api.arrays.exact.${_kind}
+      COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/arrays_exact.py"
+        "$<TARGET_FILE:kairn-api-arrays-exact>" ${_kind})
+    set_tests_properties(api.arrays.exact.${_kind} PROPERTIES TIMEOUT 300 LABELS "api;arrays")
+  endforeach()
+endif()
+
 # --- kairn::rational -------------------------------------------------------------------------
 #
 # rational.hpp computes with integers only, so contraction and the other flags cannot change its
@@ -569,7 +585,8 @@ foreach(_i RANGE 0 ${_last} 2)
     # the copy without the guard then shows nothing). Measured to fuse without the guard (the sums
     # of one limb in both forms, and the difference of one limb in the scalar form): GCC 16 on
     # AArch64 by default and with =fast, and Apple clang 21 with =fast, in the NEON and the scalar
-    # forms; GCC 13 and Clang 18 on x86-64 as the comment below says. Elsewhere it only reports.
+    # forms; Clang 18 on x86-64 with =fast, in the scalar and the AVX2 forms. GCC 13 on x86-64 fused
+    # nothing without the guard, in either form, under any setting. Elsewhere it only reports.
     set(_target kairn-api-boundary-arrays-${_form}${_target_suffix})
     set(_o3 "")
     if(NOT _msvc_style)
@@ -588,6 +605,9 @@ foreach(_i RANGE 0 ${_last} 2)
        AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
       set(_fuses_arrays ON)
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast")
+      set(_fuses_arrays ON)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT _msvc_style AND _variant STREQUAL "contract-fast"
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
       set(_fuses_arrays ON)
     endif()
     if(_fuses_arrays)
@@ -878,6 +898,9 @@ _kairn_api_reject(batch.axpy_into_const 55 "${_api_no_function}")
 _kairn_api_reject(batch.mixed_limb_types 56 "${_api_no_function}")
 _kairn_api_reject(batch.mixed_limbs 57 "${_api_no_function}")
 _kairn_api_reject(batch.scale_by_two_limbs 58 "${_api_no_function}")
+# A bound as a function of the length that the kernel does not give, in a constant expression: a
+# compile error (traits.hpp); the control computes it at run time, where it is +infinity.
+_kairn_api_reject(traits.length_beyond 59 "constant|constexpr")
 # KAIRN_PACKED_FORM (packed.hpp): a value that is not a form, a bare -D, and the form of another
 # target, which the generated header refuses.
 _kairn_api_reject(packed_form.unknown 52 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"
@@ -1028,6 +1051,16 @@ foreach(_form IN LISTS _api_packed_forms)
       "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/packed_dot.txt"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
   set_tests_properties(api.example.packed_dot.${_form} PROPERTIES LABELS "api;example;packed")
+  # The tutorial on sums and dot products of arrays (docs/tutorials/arrays.md): the results of the
+  # sequential order, the same in every form, which the program checks against an exact reference
+  # and the bounds of kairn::traits, as the results of the lane order of the form, which it prints
+  # to the standard error only.
+  _kairn_api_program(kairn-example-arrays-${_form} "${PROJECT_SOURCE_DIR}/docs/examples/cpp/arrays.cpp" ${_options})
+  add_test(NAME api.example.arrays.${_form}
+    COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-arrays-${_form}>"
+      "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/arrays.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+  set_tests_properties(api.example.arrays.${_form} PROPERTIES LABELS "api;example;arrays")
 endforeach()
 set_tests_properties(api.constexpr api.environment PROPERTIES LABELS api)
 

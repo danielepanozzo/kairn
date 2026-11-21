@@ -33,7 +33,7 @@ When the requirements hold and no operation of the kernel overflows:
 - $z$ is normalized: $z_0 = \mathrm{RN}(z_0 + z_1)$.
 - $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$.
 
-The constants of the bound, for each limb type, from `gen/claims.json`:
+The constants of the bound, for each limb type, from `gen/claims.json`; `kairn::traits` exports them rounded up to `T`:
 
 | | `double` | `float` |
 |---|---|---|
@@ -41,6 +41,8 @@ The constants of the bound, for each limb type, from `gen/claims.json`:
 | relative term $c\,u^2$ | $\approx 6.163 \times 10^{-32}$ | $\approx 1.7764 \times 10^{-14}$ |
 | absolute term $t\,\eta$ | $5 \cdot 2^{-1076} \approx 6.1758 \times 10^{-324}$ | $5 \cdot 2^{-151} \approx 1.7516 \times 10^{-45}$ |
 | `unit`, `tiny`, as compiled | `0x1.4000000000002p-104`, `0x1p-1073` | `0x1.400004p-46f`, `0x1p-148f` |
+
+The compiled constants are the entry `axpy_limb` of `kairn::traits<Expansion<T, 2>>`: `unit` and `tiny` bound the error relative to the sum of the magnitudes of the terms of the exact value ($\lvert a x\rvert + \lvert y\rvert$ for $a x + y$; `reference` is `BoundForm::terms`); no bound relative to the computed value follows, and `unit_computed` and `tiny_computed` are $+\infty$.
 
 Proved for every binary format with a precision of at least 3 bits, rounding to nearest with ties to even and with gradual underflow, in the model where no operation overflows. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 

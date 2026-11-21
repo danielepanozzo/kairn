@@ -1,0 +1,8 @@
+Dot product of 1000 pairs, exact value 3.9474287051852984e+18
+  one limb   0x1.b640abf1a6002p+61, error / bound 0.0049, bound 1.11e-13 of the magnitudes
+  two limbs  0x1.b640abf1a5ffdp+61 + -0x1.aad4e47da32ccp+6, error / bound 0.00011, bound 4.93e-29 of the magnitudes
+Sum of the 1000 products
+  one limb   0x1.b640abf1a6002p+61, error / bound 0.0049
+  two limbs  0x1.b640abf1a5ffdp+61 + -0x1.aad4e47da32ccp+6, error / bound 0.00014
+axpy in place: every element finite, then with a NaN at 7: not every element finite, element 7 NaN, element 6 finite
+every result within its bound

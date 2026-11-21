@@ -127,6 +127,12 @@ def header_operations(root, known):
             if t:
                 found.append((where, ("traits", "%s::%s" % (context, t.group(1))), names))
                 continue
+            # A function of traits (the bounds as functions of the length): traits<...>::name(n).
+            t = re.match(r"static constexpr auto (\w+)\(([^)]*)\)", s)
+            if t and (context or "").startswith("traits"):
+                operands = tuple(param_type(p, context) for p in split_params(t.group(2)))
+                found.append((where, ("op", "%s::%s" % (context, t.group(1)), operands), names))
+                continue
             f = re.search(r"(operator(?:\+=|-=|\*=|==|!=|<=|>=|[-+*<>])|\b[A-Za-z_]\w*)\(([^)]*)\)", s)
             if not f:
                 raise AssertionError("%s: cannot read the declaration %r" % (where, s))
@@ -164,6 +170,9 @@ def form_key(f):
     m = re.fullmatch(r"-(\w+)", code)
     if m:
         return ("op", "operator-", tuple(f["operands"]))
+    m = re.fullmatch(r"(traits<.*>::\w+)\((.*)\)", code)  # a function of traits: traits<X>::sum(n)
+    if m:
+        return ("op", m.group(1), tuple(f["operands"]))
     m = re.fullmatch(r"\w+\.(\w+)(?:<[^>]*>)?\((?:\w+)?\)", code)  # a member function, X.name(), X.name<T>(), X.name(Y)
     if m:
         return ("op", m.group(1), tuple(f["operands"][1:]))

@@ -101,6 +101,7 @@ nav:
       - Accurate sums and dot products: tutorials/accurate-sums.md
       - The range of a polynomial: tutorials/intervals.md
       - A vector loop: tutorials/vector-loop.md
+      - Sums and dot products of arrays: tutorials/arrays.md
   # BEGIN reference: written by docs/tools/reference.py; do not edit by hand
   - Reference:
       - reference/index.md

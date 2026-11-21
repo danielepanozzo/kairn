@@ -77,9 +77,10 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.k1.zero_cost` | The instructions emitted for one operation and for loops over `Expansion<double, 1>` against the same code over `double` (`tests/api/k1/zero_cost.py`); with MSVC it also fails when one of these functions has a `/GS` stack cookie ([costs](results/costs-milestone1.md#3-msvc-and-the-gs-stack-cookie)). |
 | `api.rational.K.F` | `kairn::rational` with K limbs of format F ([Constants from fractions](../reference/rational.md)) on 2 000 cases of the oracle's generator of `rational_K` (`KAIRN_RATIONAL_QUICK_CASES`, seed `KAIRN_API_SEED`), computed at run time by `tests/api/rational_runner.cpp`, which also requires `kairn::is_rational_result` to accept each result; the oracle compares every limb, the error and the flag with its own, for equality, and the guards require what the cross-checks of `rational_K` must have seen ([Cross-checks](#cross-checks); `tests/crosscheck.py compiled --kernel rational_K`, one process, as for a kernel). |
 | `api.rational.constexpr` | `tests/api/rational.cpp`: `static_assert`s of the results of two dozen fractions and six integers, for `float` and `double`, one and two limbs, against values computed from the specification with exact rationals; `kairn::is_rational_result` refusing each result changed by one unit; and a corpus of 104 fractions, each computed in a constant expression and at run time under each of the four rounding modes, with the same bits. |
-| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*` and `api.example.intervals.*`, built under each contraction setting, also compare it with the text their tutorials show ([Documentation](documentation.md#examples)). `api.example.packed_dot.FORM`, the tutorial's vector loop in each form of `Packed`, compares it too, and checks each result against the bound the tutorial states ([below](#packed-and-the-containers)). |
+| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*` and `api.example.intervals.*`, built under each contraction setting, also compare it with the text their tutorials show ([Documentation](documentation.md#examples)). `api.example.packed_dot.FORM`, the tutorial's vector loop in each form of `Packed`, compares it too, and checks each result against the bound the tutorial states ([below](#packed-and-the-containers)); `api.example.arrays.FORM`, the tutorial on the functions on arrays, likewise, against the bounds of `kairn::traits` ([below](#the-functions-on-arrays)). |
 | `api.packed.FORM`, `api.soa.FORM` | `Packed` against the scalar operations, lane by lane and bit for bit, and the containers of `kairn/soa.hpp` ([below](#packed-and-the-containers)). |
 | `api.batch.FORM` | The functions on arrays, in each form of `Packed`: each calls its loop in the order it says, bit for bit, the flags and the canonical NaN, the edges ([below](#the-functions-on-arrays)). |
+| `api.arrays.exact.bounds` | `kairn::traits<X>::sum(n)` and `dot(n)` for `float` and `double`, one and two limbs, at the lengths where the count is converted to `T` exactly and where it is rounded up (around $2^{24}$ and $2^{53}$ and a few multiples), at every power of two and its neighbors, near the largest `std::size_t` and at 400 random lengths, checked in exact rational arithmetic (`tests/api/arrays_exact.py`, Python's `fractions`) against $\gamma$ of the proved statements and their underflow terms, and $+\infty$ for `unit` and `tiny` exactly where no bound is given ([below](#the-functions-on-arrays)). |
 | `api.boundary.arrays.FORM.S`, `api.boundary.arrays.unguarded.FORM.S` | An array the program fills with products in the same function, passed into a sum, a map or `axpy`, gives the result of the same function on the rounded products, at `-O3` under each contraction setting, in each form; the control, against the copy of the headers without the guard, must differ where the compiler was measured to fuse ([below](#the-functions-on-arrays), `tests/api/boundary_batch.cpp`). |
 
 ## The full tier
@@ -978,14 +979,49 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   every limb of the result compared bit for bit (a zero as a zero with MSVC), 20 000 rounds per
   form, `double` and `float`, arrays of two registers of `float` and three elements more. At `-O3`:
   at `-O2` neither GCC 16 nor Apple clang 21 inlined a loop into the function that fills the array,
-  and the control showed nothing. Arrays only multiplied or compared (`dot`, `scale`, `mul_pow2`,
-  the `x` of `axpy`, `norm_upper`, `conv`) need no guard and must agree in every build. The control
+  and the control showed nothing. Arrays only multiplied or compared (`dot`, in both orders, on a
+  factor 1 read at run time, `scale`, `mul_pow2`, the `x` of `axpy`, `norm_upper`, `conv`) need no
+  guard by the generator's rule R3 and must agree in every build. The control
   (`api.boundary.arrays.unguarded.FORM.S`), against the copy of the headers without the guard,
   must differ where the compiler was measured to fuse: GCC 16 on AArch64 by default and under
-  `-ffp-contract=fast`, and Apple clang 21 under `-ffp-contract=fast`, in the NEON and the scalar
-  forms (the sequential sum of one limb in the NEON form; the sums of one limb and the difference
-  of one limb in the scalar form, about one round in ten to seven in ten); elsewhere it only
-  reports. With the guard no form differs, on any compiler, form or setting measured.
+  `-ffp-contract=fast` and Apple clang 21 under `-ffp-contract=fast`, in the NEON and the scalar
+  forms, and Clang 18 on x86-64 under `-ffp-contract=fast`, in the scalar and the AVX2 forms (the
+  sums of one limb and, in the scalar form with GCC, the difference of one limb, in one round in
+  ten to seven in ten); GCC 13 on x86-64 fused nothing without the guard, in either form, under any
+  setting, and its controls only report, as do MSVC's and clang-cl's, not measured. With the guard
+  no form of these differs, on any of the four compilers, in any form or setting.
+  **A finding: a factor the compiler knows to be 1.** The test has a third kind of form, the
+  multiplied ones with the other factor a 1 that the compiler sees (an array of ones the function
+  fills, `axpy` and `scale` with `a = 1`). Clang 18 on x86-64 at `-O3` under `-ffp-contract=fast`
+  removes the multiplication of the step of the dot product of one limb, `fma(x, 1, s)` becoming
+  `x + s`, and fuses the program's product into that addition: `kairn::dot` of one limb, in both
+  orders and in the scalar and the AVX2 forms, then gives the result of the exact products and not
+  of the products the array holds, in 5 to 38 per cent of the rounds; no other form, compiler or
+  setting measured does (GCC 13 and 16, Apple clang 21, two limbs, `axpy` and `scale` by 1). The
+  step `dot_step_1` takes its operands unguarded because it only multiplies them (rule R3); the
+  test prints these forms with the word FINDING and their count, and does not fail on them, so that
+  the other forms keep being judged. Whether the claim of `dot_1` still holds of the values in the
+  array is argued (each fused step is the step of an exact product, which adds at most one
+  rounding to a term, and the claim's height $n$ for the relative term leaves room for it, the first
+  step from zero being exact) and not tested.
+- **The bounds as functions of the length** (`traits<X>::sum(n)`, `sum_height(h)`, `dot(n)`, the
+  kernels `bound_sum_k` and `bound_dot_k`). The oracle judges the kernels through them
+  (`api.oracle.bound_sum_k.F`, `api.oracle.bound_dot_k.F`, the forms `traits_sum_height`,
+  `traits_sum` and `traits_dot` of the runner): on a line whose count $m$ is an integer that a
+  `std::size_t` holds, the form calls the function with $h = m$, $n = m + 1$ or $n = m$, and writes
+  `unit` (and `tiny`) as the kernel's $g$ (and $t$), and the mask true exactly when `unit` is
+  finite; the oracle draws counts that are not lengths too (fractions, which the kernels' `count()`
+  allows, and counts beyond $2^{64}$, where the limit of two limbs of `double` is), which the form
+  completes with the kernel itself so that the stream is whole, and the form fails if a stream of
+  1 000 lines reached none of its own (about 70% of the lines are lengths). The conversion of the
+  count to `T`, the header's own code, is where the oracle cannot reach, the oracle's counts being
+  numbers of `T`: `api.constexpr` checks it in `static_assert`s at and beyond $2^p$ (exact below,
+  the next number of `T` above beyond, $2^{64}$ for the largest), and `api.arrays.exact.bounds`
+  checks the bounds there against $\gamma$ in exact arithmetic. `api.constexpr` also checks the
+  constants against the kernels' statements at small lengths, $+\infty$ beyond the lengths bounded
+  at run time, and the same bits at run time as in constant evaluation;
+  `api.reject.traits.length_beyond`, that a bound not given does not compile in a constant
+  expression.
 - **What must not compile** (`api.reject.batch.*`): a map and `axpy` writing through a view of
   `const T`, a dot product of views of `double` and `float`, and of one and two limbs, a scaling by
   a two-limb number; each control writes what compiles instead.

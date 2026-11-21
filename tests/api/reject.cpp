@@ -44,6 +44,8 @@
 //          kernels); the control negates, and adds a Packed<T, 1> to a Packed<T, 2>
 //   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
 //          is not a form, or a form the target does not have (the generated header's #error)
+//   59     a bound as a function of the length that is not given (traits<X>::sum(n) beyond the
+//          lengths its kernel bounds) in a constant expression; the control computes it at run time
 //   54-58  the functions on arrays (batch.hpp): a map and axpy writing through a view of const
 //          limbs, a dot product of views of two limb types, and of one and of two limbs, and a
 //          scaling by a two-limb number (no loop scales by one); each control writes what compiles
@@ -318,6 +320,13 @@ int main() {
     sink = (px + pf).lane(0).limb[0];
 #endif
 #endif
+#elif KAIRN_TEST_CASE == 59
+#if defined(KAIRN_TEST_CONTROL)
+    const kairn::Bound<float> length_bound = kairn::traits<float>::sum(std::size_t{1} << 30);
+#else
+    constexpr kairn::Bound<float> length_bound = kairn::traits<float>::sum(std::size_t{1} << 30);
+#endif
+    sink = double(length_bound.unit);
 #elif KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58
     double h[4] = {1, 2, 3, 4}, l[4] = {0, 0, 0, 0};
     float fh[4] = {1, 2, 3, 4}, fl[4] = {0, 0, 0, 0};

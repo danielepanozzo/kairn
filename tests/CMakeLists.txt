@@ -675,18 +675,17 @@ set(KAIRN_NOT_PUBLIC_YET_FOLDS
   bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2 bv_neg_1 bv_neg_2 bv_mul_pow2_1 bv_mul_pow2_2
   bv_make_1 bv_make_2 bv_conv_1 bv_conv_2)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
-# none of its lists (api/CMakeLists.txt, api/coverage.cmake): the bounds as functions of n, whose
-# public functions are the coming kairn::traits<X>::sum(n) and dot(n); the steps of the maps on
-# stored arrays, which no public function calls (include/kairn/batch.hpp calls the maps on supplied
+# none of its lists (api/CMakeLists.txt, api/coverage.cmake): the steps of the maps on stored
+# arrays, which no public function calls (include/kairn/batch.hpp calls the maps on supplied
 # arrays: sub_1_1 is the step of sub_1, axpy_step_k of axpy_k); the kernels of the accumulator; and
 # the kernels of the ball vectors (architecture.md, "Ball vectors"), which only the folds of
 # BallVector call. They are cross-checked like every kernel; the public interface has no form of
-# them. (The interval kernels left this list with include/kairn/interval.hpp, and the steps,
-# finishes and kernels of the folds of maxima that kairn/batch.hpp calls with it: the public
-# interface reaches each through its fold, which api.oracle.FOLD.FORMAT judges, and lists it as a
-# building block or as not public on its own.)
+# them. (The interval kernels left this list with include/kairn/interval.hpp; the steps, finishes
+# and kernels of the folds of maxima that kairn/batch.hpp calls with it, the public interface
+# reaching each through its fold, which api.oracle.FOLD.FORMAT judges, and listing it as a
+# building block or as not public on its own; and the bounds as functions of n with
+# kairn::traits<X>::sum(n), sum_height(h) and dot(n), the forms of api.oracle.bound_*.)
 set(KAIRN_NOT_PUBLIC_YET
-  bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2
   sub_1_1 axpy_step_1 axpy_step_2 axpy_step_2_1
   acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
   bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2 bv_center_entry_1 bv_center_2
