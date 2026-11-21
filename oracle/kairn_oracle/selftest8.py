@@ -60,10 +60,17 @@ PLANTED = {
                           FORMATS),
     "iv-neg-not-swapped": ({"interval_neg_1": {"encloses_interval"},
                             "interval_neg_2": {"encloses_interval"}}, FORMATS),
+    # The constructors under the rule of 2026-11-20: a NaN bound or the same infinity twice gives
+    # the whole line, reversed bounds the empty set.
     "iv-make-nan-empty": ({"interval_make_1": {"makes_interval"},
+                           "interval_make_2": {"makes_interval"}}, FORMATS),
+    "iv-make-inf-empty": ({"interval_make_1": {"makes_interval"},
                            "interval_make_2": {"makes_interval"}}, FORMATS),
     "iv-make-reversed": ({"interval_make_1": {"makes_interval"},
                           "interval_make_2": {"makes_interval"}}, FORMATS),
+    "iv-make-reversed-whole": ({"interval_make_1": {"makes_interval"},
+                                "interval_make_2": {"makes_interval"}}, FORMATS),
+    "iv2-make-reversed-lead": ({"interval_make_2": {"makes_interval"}}, FORMATS),
     "iv2-no-zero-rule": (dict({k: {"outward"} for k in SUMS},
                               interval_add_2={"encloses_interval"},
                               interval_sub_2={"encloses_interval"}), FORMATS),
@@ -95,6 +102,8 @@ PLANTED = {
     "iv-ballbound-empty-nan": ({k: {"set_bound"} for k in BALL_BOUNDS}, FORMATS),
     "iv-fromint-no-step": ({"ball_from_interval_2": {"makes_ball"}}, FORMATS),
     "iv-fromint-nan-empty": ({"ball_from_interval_2": {"makes_ball"}}, FORMATS),
+    "iv-fromint-inf-empty": ({"ball_from_interval_2": {"makes_ball"}}, FORMATS),
+    "iv-fromint-reversed-whole": ({"ball_from_interval_2": {"makes_ball"}}, FORMATS),
     "iv-narrow-no-tail": ({"ball_narrow_2_1": {"encloses"}}, FORMATS),
     # d = H is enough for a sum whose error is below the smallest normal number: in a format of
     # few exponents (fp:4:-6:1) every sum is so; the two-limb bounds built on it may fail too.
@@ -526,7 +535,9 @@ def _enum_one(args):
 def iv_exhaustive(ctx):
     """The reference runner on every case of tiny formats for every interval kernel (the two-limb
     products of two intervals on a restricted domain): no failure, invalid or suspicious case; and
-    the planted faults that a tiny format can show caught there, in their entries only."""
+    the planted faults that a tiny format can show caught there, in their entries only (of the
+    constructors: a NaN bound, the same infinity twice and reversed bounds each read the old or
+    a wrong way, and reversed bounds of two limbs told by their leading limbs alone)."""
     cl = claims6(ctx)
     tasks = []
     for k in KERNELS:
@@ -539,6 +550,9 @@ def iv_exhaustive(ctx):
             restrict = ("xl.in=0x0p+0/0x1p+0/-0x1p-1", "xu.in=0x0p+0/0x1p+0/0x1.8p+0")
         tasks.append((k, fmt, restrict, "correct"))
     faults = {"iv-neg-not-swapped": "interval_neg_1", "iv-make-nan-empty": "interval_make_1",
+              "iv-make-inf-empty": "interval_make_2", "iv-fromint-inf-empty": "ball_from_interval_2",
+              "iv-make-reversed-whole": "interval_make_1",
+              "iv2-make-reversed-lead": "interval_make_2",
               "iv-empty-whole": "interval_add_1", "iv-hull-as-intersection": "interval_hull_1",
               "iv-split-gap": "interval_split_1", "iv2-no-zero-rule": "add_down_2_2",
               "iv-ballbound-empty-nan": "ball_lower_as_1", "iv-mul-zero-nan": "mul_dir_1"}
@@ -565,32 +579,70 @@ def iv_exhaustive(ctx):
     return "%d enumerations, %d cases" % (len(results), cases)
 
 
+def _inputs(line):
+    return [t for t in line.partition(" -> ")[0].split()[2:] if not t.startswith("#")]
+
+
+def _opposite_inf_tails(fmt, line):
+    """The same infinity twice with second limbs that are zeros of opposite signs, as (+inf, 0)
+    and (+inf, -0)."""
+    lo0, lo1, hi0, hi1 = _inputs(line)
+    return lo0 == hi0 and lo0 in ("inf", "-inf") and lo1.startswith("-") != hi1.startswith("-")
+
+
+def _reversed_equal_leads(fmt, line):
+    """Finite bounds of two limbs with equal leading limbs and lo > hi, as (1, 2^-4) and (1, 0)."""
+    lo0, lo1, hi0, hi1 = (F.parse_limb(fmt, t) for t in _inputs(line))
+    return (all(type(v) is int for v in (lo0, lo1, hi0, hi1)) and lo0 == hi0 and lo1 > hi1)
+
+
+# The lines a planted fault of the constructors of two limbs is about: each fault's streams of the
+# kernel must have such lines in every format, and each must fail.
+TARGETED = {"iv-make-inf-empty": ("interval_make_2", _opposite_inf_tails),
+            "iv2-make-reversed-lead": ("interval_make_2", _reversed_equal_leads)}
+
+
 def _planted_one(args):
     variant, fname, count = args
     claims = load_claims(FIXTURE6)
     expected, formats = PLANTED[variant]
     strata = PLANTED_STRATA.get(variant)
+    fmt = F.parse_format(fname)
     out = []
+    targeted = None
     for k in KERNELS:
-        g = G.RandomGen(claims.get(k), F.parse_format(fname), "selftest8",
+        g = G.RandomGen(claims.get(k), fmt, "selftest8",
                         strata.split(",") if strata and k in expected else None)
-        s = judge(run6(g.lines(0, count), variant), claims)
+        lines = list(g.lines(0, count))
+        s = judge(run6(lines, variant), claims)
         t = totals(s)
         out.append((k, t["failed"] + t["invalid"] + t["suspicious"], t["invalid"],
                     t["suspicious"], failing_kinds(s, k)))
-    return variant, fname, out
+        if TARGETED.get(variant, ("",))[0] == k:
+            aimed = [ln for ln in lines if not ln.startswith("#") and TARGETED[variant][1](fmt, ln)]
+            targeted = (len(aimed), totals(judge(run6(aimed, variant), claims))["failed"])
+    return variant, fname, out, targeted
 
 
 @test
 def iv_planted(ctx):
     """Every planted fault of the interval kernels (refrun VARIANTS iv-...) caught in the kernels
     and entries where it belongs, in every format where it must be (PLANTED), and in no other
-    kernel; never as an invalid or a suspicious case."""
+    kernel; never as an invalid or a suspicious case. The faults of the constructors of two limbs
+    that are about particular lines (TARGETED: the same infinity with zeros of opposite signs,
+    reversed bounds with equal leading limbs) fail on every such line of their streams, and the
+    streams have some in every format."""
     n = ctx.n(1200, 400)
     tasks = [(v, f, n) for v in PLANTED for f in FORMATS]
     with cf.ProcessPoolExecutor(ctx.jobs) as ex:
         results = list(ex.map(_planted_one, tasks))
-    for variant, fname, out in results:
+    aimed = []
+    for variant, fname, out, targeted in results:
+        if targeted is not None:
+            expect(targeted[0] > 0 and targeted[1] == targeted[0],
+                   "%s %s: %d of the %d lines it is about failed" % (variant, fname, targeted[1],
+                                                                    targeted[0]))
+            aimed.append("%s %s %d" % (variant, fname, targeted[0]))
         expected, formats = PLANTED[variant]
         for k, bad, inv, sus, kinds in out:
             expect(not inv and not sus, "%s %s: %s gave %d invalid, %d suspicious"
@@ -607,7 +659,8 @@ def iv_planted(ctx):
                                                                         "mul_ball_2_2"}
             expect(need <= caught, "%s %s: not caught in %s" % (variant, fname,
                                                                 sorted(need - caught)))
-    return "%d planted faults in %d formats" % (len(PLANTED), len(FORMATS))
+    return "%d planted faults in %d formats; the lines aimed at: %s" % (
+        len(PLANTED), len(FORMATS), ", ".join(aimed))
 
 
 # Hand-written lines: (line, kernel, the statements that must fail, or () for a pass).
@@ -724,10 +777,43 @@ HAND = [
     ("interval_make_1 binary64 nan 0x1p+1 -> inf -inf", ("makes_interval",)),
     ("interval_make_1 binary64 0x1p+1 0x1p+0 -> inf -inf", ()),
     ("interval_make_1 binary64 0x1p+1 0x1p+0 -> 0x1p+1 0x1p+0", ("makes_interval",)),
-    ("interval_make_1 binary64 inf inf -> inf -inf", ()),
+    # The same infinity twice is the whole line (the owner's decision of 2026-11-20; it was the
+    # empty set, as in IEEE 1788); reversed bounds, infinite ones included, the empty set.
+    ("interval_make_1 binary64 inf inf -> -inf inf", ()),
+    ("interval_make_1 binary64 inf inf -> inf -inf", ("makes_interval",)),
+    ("interval_make_1 binary64 -inf -inf -> -inf inf", ()),
+    ("interval_make_1 binary64 -inf -inf -> inf -inf", ("makes_interval",)),
+    ("interval_make_1 binary64 inf inf -> inf inf", ("makes_interval",)),
+    ("interval_make_1 binary64 inf -inf -> inf -inf", ()),
+    ("interval_make_1 binary64 inf -inf -> -inf inf", ("makes_interval",)),
+    ("interval_make_1 binary64 inf 0x1p+0 -> inf -inf", ()),
+    ("interval_make_1 binary64 inf 0x1p+0 -> -inf inf", ("makes_interval",)),
+    ("interval_make_1 binary64 0x1p+0 -inf -> inf -inf", ()),
+    ("interval_make_1 binary64 0x1p+0 -inf -> -inf inf", ("makes_interval",)),
+    ("interval_make_1 binary64 nan inf -> -inf inf", ()),
+    ("interval_make_1 binary64 -inf nan -> -inf inf", ()),
+    ("interval_make_1 binary64 nan nan -> -inf inf", ()),
     ("interval_make_1 binary64 -inf inf -> -inf inf", ()),
+    ("interval_make_1 binary64 0x0p+0 -0x0p+0 -> -0x0p+0 0x0p+0", ()),
     ("interval_make_2 binary64 nan nan 0x1p+0 0x0p+0 -> -inf 0x0p+0 inf 0x0p+0", ()),
     ("interval_make_2 binary64 0x1p+0 0x1p-60 0x1p+0 0x1p-61 -> inf 0x0p+0 -inf 0x0p+0", ()),
+    # Two limbs: (+inf, 0) and (+inf, -0) are the same infinity twice; reversed bounds with equal
+    # leading limbs are reversed.
+    ("interval_make_2 binary64 inf 0x0p+0 inf -0x0p+0 -> -inf 0x0p+0 inf 0x0p+0", ()),
+    ("interval_make_2 binary64 inf 0x0p+0 inf -0x0p+0 -> inf 0x0p+0 -inf 0x0p+0",
+     ("makes_interval",)),
+    ("interval_make_2 binary64 -inf -0x0p+0 -inf 0x0p+0 -> -inf -0x0p+0 inf -0x0p+0", ()),
+    ("interval_make_2 binary64 -inf -0x0p+0 -inf 0x0p+0 -> inf 0x0p+0 -inf 0x0p+0",
+     ("makes_interval",)),
+    ("interval_make_2 binary64 inf 0x0p+0 -inf 0x0p+0 -> inf 0x0p+0 -inf 0x0p+0", ()),
+    ("interval_make_2 binary64 inf 0x0p+0 -inf 0x0p+0 -> -inf 0x0p+0 inf 0x0p+0",
+     ("makes_interval",)),
+    ("interval_make_2 binary64 inf -0x0p+0 0x1p+0 0x0p+0 -> inf 0x0p+0 -inf 0x0p+0", ()),
+    ("interval_make_2 binary64 0x1p+0 0x1p-60 0x1p+0 0x0p+0 -> inf 0x0p+0 -inf 0x0p+0", ()),
+    ("interval_make_2 binary64 0x1p+0 0x1p-60 0x1p+0 0x0p+0 -> -inf 0x0p+0 inf 0x0p+0",
+     ("makes_interval",)),
+    ("interval_make_2 binary64 0x1p+0 0x0p+0 0x1p+0 0x1p-60 -> 0x1p+0 0x0p+0 0x1p+0 0x1p-60", ()),
+    ("interval_make_2 binary64 -inf 0x0p+0 0x1p+0 -0x1p-60 -> -inf -0x0p+0 0x1p+0 -0x1p-60", ()),
     ("ball_from_interval_2 binary64 0x1p+0 0x1.8p+1 -> 0x1p+1 0x0p+0 0x1p+0", ()),
     ("ball_from_interval_2 binary64 0x1p+0 0x1.8p+1 -> 0x1p+1 0x0p+0 0x1p+1", ("makes_ball",)),
     ("ball_from_interval_2 binary64 0x1p+0 0x1.8p+1 -> 0x1p+1 0x1p-60 0x1.0000000000001p+0",
@@ -739,9 +825,24 @@ HAND = [
     ("ball_from_interval_2 binary64 -0x1p+0 0x1p+53 -> 0x1p+52 0x0p+0 0x1.0000000000001p+52",
      ("makes_ball",)),
     ("ball_from_interval_2 binary64 nan 0x1p+0 -> 0x0p+0 0x0p+0 inf", ()),
+    ("ball_from_interval_2 binary64 nan 0x1p+0 -> nan nan nan", ("makes_ball",)),
+    ("ball_from_interval_2 binary64 nan nan -> 0x0p+0 0x0p+0 inf", ()),
     ("ball_from_interval_2 binary64 0x1p+1 0x1p+0 -> nan nan nan", ()),
+    ("ball_from_interval_2 binary64 0x1p+1 0x1p+0 -> 0x0p+0 0x0p+0 inf", ("makes_ball",)),
     ("ball_from_interval_2 binary64 0x1p+0 inf -> 0x0p+0 0x0p+0 inf", ()),
     ("ball_from_interval_2 binary64 0x1p+0 inf -> nan nan nan", ("makes_ball",)),
+    # The same infinity twice: the whole line (2026-11-20; it was the empty set); reversed bounds,
+    # infinite ones included, the empty set.
+    ("ball_from_interval_2 binary64 inf inf -> 0x0p+0 0x0p+0 inf", ()),
+    ("ball_from_interval_2 binary64 inf inf -> nan nan nan", ("makes_ball",)),
+    ("ball_from_interval_2 binary64 -inf -inf -> -0x0p+0 0x0p+0 inf", ()),
+    ("ball_from_interval_2 binary64 -inf -inf -> nan nan nan", ("makes_ball",)),
+    ("ball_from_interval_2 binary64 inf -inf -> nan nan nan", ()),
+    ("ball_from_interval_2 binary64 inf -inf -> 0x0p+0 0x0p+0 inf", ("makes_ball",)),
+    ("ball_from_interval_2 binary64 inf 0x1p+0 -> nan nan nan", ()),
+    ("ball_from_interval_2 binary64 inf 0x1p+0 -> 0x0p+0 0x0p+0 inf", ("makes_ball",)),
+    ("ball_from_interval_2 binary64 0x1p+0 -inf -> nan nan nan", ()),
+    ("ball_from_interval_2 binary64 -inf inf -> 0x0p+0 0x0p+0 inf", ()),
     # [eta, 3 eta]: neither half is a number; a ball that contains the interval passes.
     ("ball_from_interval_2 binary64 0x1p-1074 0x1.8p-1073 -> 0x1p-1073 0x0p+0 0x1p-1073", ()),
     ("ball_from_interval_2 binary64 0x1p-1074 0x1.8p-1073 -> 0x1p-1073 0x0p+0 0x0p+0",
@@ -816,6 +917,57 @@ INVALID = [
 ]
 
 
+# The given state of the constructors' bounds, counted by the first case that applies: a NaN bound
+# (whatever the other: NaN with the same infinity too), the same infinity twice, reversed bounds,
+# otherwise a point, an interval or an unbounded interval. Each line as worked out by hand.
+GIVEN = [
+    ("interval_make_1 binary64 nan nan -> -inf inf", IV.MAKE_NAN),
+    ("interval_make_1 binary64 nan -inf -> -inf inf", IV.MAKE_NAN),
+    ("interval_make_1 binary64 inf nan -> -inf inf", IV.MAKE_NAN),
+    ("interval_make_1 binary64 inf inf -> -inf inf", IV.MAKE_EQUAL_INF),
+    ("interval_make_1 binary64 -inf -inf -> -inf inf", IV.MAKE_EQUAL_INF),
+    ("interval_make_1 binary64 inf -inf -> inf -inf", IV.MAKE_REVERSED),
+    ("interval_make_1 binary64 inf 0x1p+0 -> inf -inf", IV.MAKE_REVERSED),
+    ("interval_make_1 binary64 0x1p+0 -inf -> inf -inf", IV.MAKE_REVERSED),
+    ("interval_make_1 binary64 0x1p+1 0x1p+0 -> inf -inf", IV.MAKE_REVERSED),
+    ("interval_make_1 binary64 0x1p+0 0x1p+0 -> 0x1p+0 0x1p+0", IV.MAKE_POINT),
+    ("interval_make_1 binary64 0x0p+0 -0x0p+0 -> 0x0p+0 0x0p+0", IV.MAKE_POINT),
+    ("interval_make_1 binary64 0x1p+0 0x1p+1 -> 0x1p+0 0x1p+1", IV.MAKE_INTERVAL),
+    ("interval_make_1 binary64 -inf inf -> -inf inf", IV.MAKE_UNBOUNDED),
+    ("interval_make_1 binary64 0x1p+0 inf -> 0x1p+0 inf", IV.MAKE_UNBOUNDED),
+    ("interval_make_2 binary64 nan nan inf 0x0p+0 -> -inf 0x0p+0 inf 0x0p+0", IV.MAKE_NAN),
+    ("interval_make_2 binary64 inf 0x0p+0 inf -0x0p+0 -> -inf 0x0p+0 inf 0x0p+0",
+     IV.MAKE_EQUAL_INF),
+    ("interval_make_2 binary64 0x1p+0 0x1p-60 0x1p+0 0x0p+0 -> inf 0x0p+0 -inf 0x0p+0",
+     IV.MAKE_REVERSED),
+    ("interval_make_2 binary64 0x1p+0 0x1p-60 0x1p+0 0x1p-60 -> 0x1p+0 0x1p-60 0x1p+0 0x1p-60",
+     IV.MAKE_POINT),
+    ("interval_make_2 binary64 0x1p+0 0x0p+0 0x1p+0 0x1p-60 -> 0x1p+0 0x0p+0 0x1p+0 0x1p-60",
+     IV.MAKE_INTERVAL),
+    ("ball_from_interval_2 binary64 nan inf -> 0x0p+0 0x0p+0 inf", IV.MAKE_NAN),
+    ("ball_from_interval_2 binary64 -inf -inf -> 0x0p+0 0x0p+0 inf", IV.MAKE_EQUAL_INF),
+    ("ball_from_interval_2 binary64 inf 0x1p+0 -> nan nan nan", IV.MAKE_REVERSED),
+    ("ball_from_interval_2 binary64 0x1p+0 0x1p+0 -> 0x1p+0 0x0p+0 0x0p+0", IV.MAKE_POINT),
+    ("ball_from_interval_2 binary64 -inf 0x1p+0 -> 0x0p+0 0x0p+0 inf", IV.MAKE_UNBOUNDED),
+]
+GIVEN_STATES = (IV.MAKE_NAN, IV.MAKE_EQUAL_INF, IV.MAKE_REVERSED, IV.MAKE_POINT, IV.MAKE_INTERVAL,
+                IV.MAKE_UNBOUNDED)
+
+
+def _given_states(ctx):
+    """Each line of GIVEN passes and counts its given state, and no other."""
+    cl = claims6(ctx)
+    for line, want in GIVEN:
+        kernel = line.split()[0]
+        s = judge([line], cl)
+        t = totals(s)
+        expect(t["judged"] == 1 and t["failed"] == 0, "%s: %s" % (line, t))
+        (counts,) = [d[3] for d in entry_stats(s, kernel).values()]
+        got = [c for c in GIVEN_STATES if counts.get(c)]
+        expect(got == [want] and counts[want] == 1, "%s: counted %s, not %s" % (line, got, want))
+    return len(GIVEN)
+
+
 def _failed_statements(summary, kernel):
     """What failed: the statements (I1 to I6, the parts of ball_of_interval and interval_of_ball)
     for the kinds that count them, the kind of the entry otherwise."""
@@ -870,7 +1022,9 @@ def iv_judge(ctx):
     t = totals(s)
     expect(t["judged"] == 0 and t["nonfinite"] == 1 and t["suspicious"] == 1,
            "both bounds infinite on small operands: %s" % t)
-    return "%d hand-written lines, %d invalid ones, three of the groups" % (n, len(INVALID))
+    g = _given_states(ctx)
+    return "%d hand-written lines, %d invalid ones, three of the groups, %d given states" % (
+        n, len(INVALID), g)
 
 
 def _brute_intervals(fmt, limbs):

@@ -466,9 +466,35 @@ MUTANTS = {
     "outward: an infinity on the wrong side accepted": (
         "intervals.py", "        if w0 != (NINF if below else INF) or any(t != 0 for t in w[1:]):",
         "        if any(t != 0 for t in w[1:]):"),
+    # The constructors under the rule of 2026-11-20: a NaN bound or the same infinity twice gives
+    # the whole line, reversed bounds the empty set.
     "makes_interval: a NaN bound gives the empty set": (
-        "intervals.py", "        want = (\"nonempty\", NINF, INF)\n    elif L != INF",
-        "        want = (\"empty\", INF, NINF)\n    elif L != INF"),
+        "intervals.py", "    if given in (MAKE_NAN, MAKE_EQUAL_INF):\n        want = (\"nonempty\", NINF, INF)\n    elif given == MAKE_REVERSED:",
+        "    if given == MAKE_EQUAL_INF:\n        want = (\"nonempty\", NINF, INF)\n    elif given in (MAKE_REVERSED, MAKE_NAN):"),
+    "makes_interval: the same infinity twice gives the empty set (the old rule)": (
+        "intervals.py", "    if given in (MAKE_NAN, MAKE_EQUAL_INF):\n        want = (\"nonempty\", NINF, INF)\n    elif given == MAKE_REVERSED:",
+        "    if given == MAKE_NAN:\n        want = (\"nonempty\", NINF, INF)\n    elif given in (MAKE_REVERSED, MAKE_EQUAL_INF):"),
+    "makes_interval: reversed bounds give the whole line": (
+        "intervals.py", "    if given in (MAKE_NAN, MAKE_EQUAL_INF):\n        want = (\"nonempty\", NINF, INF)\n    elif given == MAKE_REVERSED:",
+        "    if given in (MAKE_NAN, MAKE_EQUAL_INF, MAKE_REVERSED):\n        want = (\"nonempty\", NINF, INF)\n    elif False:"),
+    "makes_interval: bounds of two limbs compared by their leading limbs": (
+        "intervals.py", "    L, U = bound_value(fmt, x[a0:a1]), bound_value(fmt, x[b0:b1])\n    es.applicable += 1\n    given",
+        "    L, U = x[a0], x[b0]\n    es.applicable += 1\n    given"),
+    "makes_ball from an interval: the same infinity twice gives the empty set (the old rule)": (
+        "intervals.py", "    if given == MAKE_REVERSED:\n        want = \"empty\"",
+        "    if given in (MAKE_REVERSED, MAKE_EQUAL_INF):\n        want = \"empty\""),
+    "makes_ball from an interval: a NaN bound gives the empty set": (
+        "intervals.py", "    if given == MAKE_REVERSED:\n        want = \"empty\"",
+        "    if given in (MAKE_REVERSED, MAKE_NAN):\n        want = \"empty\""),
+    "constructors: the same infinity twice classed as reversed bounds": (
+        "intervals.py", "    if L == U and type(L) is not int:\n        return MAKE_EQUAL_INF",
+        "    if L == U and type(L) is not int:\n        return MAKE_REVERSED"),
+    "constructors: a NaN bound tested after the same infinity": (
+        "intervals.py", "    if L == NAN or U == NAN:\n        return MAKE_NAN\n    if L == U and type(L) is not int:\n        return MAKE_EQUAL_INF",
+        "    if L == U and type(L) is not int:\n        return MAKE_EQUAL_INF\n    if L == NAN or U == NAN:\n        return MAKE_NAN"),
+    "gen6: the infinities stratum never gives the same infinity twice": (
+        "gen6.py", "        a = _inf(k, rng.sign()) if rng.chance(2, 3) else _number(fmt, rng, k, \"uniform\")\n        b = _inf(k, rng.sign())",
+        "        a = _inf(k, -1) if rng.chance(2, 3) else _number(fmt, rng, k, \"uniform\")\n        b = _inf(k, 1)"),
     "set_bound: an empty ball not judged": (
         "intervals.py", "        if o != want:\n            es.count(\"failed: empty ball\")",
         "        if False:\n            es.count(\"failed: empty ball\")"),
