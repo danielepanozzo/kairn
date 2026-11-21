@@ -2086,8 +2086,10 @@ by the ratios above 15 to 20 seconds of the hosted ctest step. It was done next
 After the tools' tests left the quick tier, its ctest step on the hosted Windows runners took 71
 to 154 seconds with MSVC and 70 to 96 with clang-cl in the first three runs (`1bd3182`, `eed45fe`,
 `d31a81a`): over two minutes on one of the six, and the whole job over two minutes on five; 44 to
-45 on Linux x86-64, 31 to 35 on arm64, 69 to 75 on macOS. On 2026-11-20 the owner chose to run each
-cross-check in one process, which loses no check, rather than fewer cases. Since then each test
+45 on Linux x86-64, 31 to 35 on arm64, 69 to 75 on macOS. On 2026-11-20 running each cross-check
+in one process, which loses no check, rather than fewer cases, was put to the owner as a default
+and not objected to ([Milestone 1 report](results/milestone1.md#decided-by-the-owner), item 5).
+Since then each test
 `crosscheck.compiled.K.F` and `api.oracle.K.F`, and each of the full tier's tests of the same
 families, is one Python process, `tests/crosscheck.py` ([Cross-checks](#cross-checks)); before, it
 was a CMake script that started the oracle's `gen`, `tests/run_runners.py` (which ran the
