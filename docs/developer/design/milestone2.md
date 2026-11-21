@@ -81,7 +81,7 @@ work changed one, or found a consequence that the decision did not state.
 | 8. `BallVector` | adopted | The radius of a sum, a difference and a scaling *equals* the largest entrywise `Ball` radius. That of a convolution comes from the theorem of the dot product and is not compared with a ball-by-ball evaluation. A kernel whose operations are exact adds nothing to the radius. There is no empty state |
 | 9. Public building blocks | adopted | A building block that adds its operands needs the guard of rule R3 once it is public, hence *entry* forms of seven of them. `rmul` and the scalings by a power of two become `constexpr` by a rule of the printer and one lemma, without variant kernels |
 | 10. Constants at compile time | adopted | The second limb cannot be "the rounding of what the first left": that pair is not always normalized. The value is fixed uniquely all the same |
-| 11. Limbs of another type | adopted | Needs kernels with two formats, which the IR does not have |
+| 11. Limbs of another type | adopted; **moved to Milestone 3** on 2026-11-20 | Needs kernels with two formats, which the IR does not have. The decision allowed the move if the work did not fit, and it does not: [its section](#limbs-of-another-type) says why |
 | 12. IEEE 1788 | adopted | The test cases of ITF1788 that came from libieeep1788 are under the Apache license and can be used; those from MPFI, FI_LIB and C-XSC are under the LGPL and are not copied |
 
 ## Notation and vocabulary
@@ -2071,6 +2071,24 @@ independent oracle; not machine-checked". *Risk: low to medium* (edge cases of i
 
 ## Limbs of another type
 
+**State on 2026-11-20: moved to Milestone 3.** Nothing of this section is implemented in
+Milestone 2, and no kernel of it is generated. The decision that adopted it allowed the move
+([question 11](#open-questions): "moved to the next milestone if it does not fit"), and this
+page put it first among the things to give up ([Order of implementation](#order-of-implementation)).
+The reasons, as they stand at the end of the milestone's generator work:
+
+- It needs a format on every value of the IR, a real model with two roundings, and an oracle
+  and an interpreter that carry two formats: the largest change of the generator that is left,
+  in the part of Kairn that everything else trusts.
+- What it serves is a pass on a device, in `float`, of data built in `double` on the host, and
+  the device code is Milestone 3's.
+- Nothing that ends Milestone 2 uses it: the first client's ball path has `double` limbs
+  throughout.
+
+`lower_as<U>` and `upper_as<U>` for a limb type `U` other than the enclosure's
+([question 16](#open-questions)) move with it. The design below is unchanged and is where
+Milestone 3 starts.
+
 A program that builds its data in `double` on the host and computes in `float` on a device
 needs to move numbers and balls from one limb type to the other without losing the enclosure.
 Going from `float` limbs to `double` limbs loses nothing. Going the other way rounds, and the
@@ -2278,7 +2296,7 @@ from. `k` stands for 1 and 2.
 | `norm_upper_k`, `bv_norm_upper_k` | an array $\to r$ | valid | `upper`, at most one step above the smallest | `normalized_2_between` | 1 | core | low |
 | `bv_neg_k`, `bv_add_k`, `bv_sub_k`, `bv_scale_k`, `bv_mul_pow2_k`, `bv_axpy_k`, with `bv_add_radius_k`, `bv_scale_radius_k` | ball vectors $\to$ a ball vector and a flag | canonical | V1 to V4 | the `Ball` theorems entry by entry; `round_le` | as `Ball` | only | medium: the fold, and the second pass |
 | `bv_conv_k`, with `conv_radius` | two ball vectors $\to$ one | canonical | V1 to V4 | the statement of `dot`; `radius_4`'s chain | 4 | only | medium |
-| `narrow_1_1`, `narrow_1_2`, `narrow_2_2`, `widen_2_1`, `widen_2_2`, `narrow_up`, `ball_narrow_k` | a number or ball of one limb type $\to$ of the other | normalized; $N$ inside $W$ | [stated above](#limbs-of-another-type) | Sterbenz; the one-limb bounds | 2 | both | medium to high: two formats in the IR |
+| `narrow_1_1`, `narrow_1_2`, `narrow_2_2`, `widen_2_1`, `widen_2_2`, `narrow_up`, `ball_narrow_k` (**moved to Milestone 3**) | a number or ball of one limb type $\to$ of the other | normalized; $N$ inside $W$ | [stated above](#limbs-of-another-type) | Sterbenz; the one-limb bounds | 2 | both | medium to high: two formats in the IR |
 
 That is roughly ninety kernels, counting each number of limbs and each direction, of which
 roughly thirty have a listing that is not a composition of two others. `rational` is not among
@@ -2338,7 +2356,8 @@ path.
 **Wave 4: BallVector.** Depends on wave 3 and on 1.3: the kernels, their radii, the flag and
 the second pass; `conv_radius`; V1 to V4.
 
-**Wave 5: closing.** The conversions between limb types (G first: two formats). D throughout,
+**Wave 5: closing.** The conversions between limb types (G first: two formats) were to be
+here; they moved to Milestone 3 on 2026-11-20 ([Limbs of another type](#limbs-of-another-type)). D throughout,
 and here the pages that the brief asks of the milestone: the concepts (intervals, balls,
 `BallVector`, when to use which), a tutorial per new type, the reference pages. T: the
 brute-force tier and the exhaustive tier on the new kernels, the three inlining modes, compile
@@ -2347,7 +2366,7 @@ times, benchmarks; the report.
 **What is at risk of not fitting**, in the order I would give them up:
 
 1. The conversions between limb types: they need a second format in the IR and serve a pass on
-   a device that is the next milestone's.
+   a device that is the next milestone's. *Given up on 2026-11-20:* moved to Milestone 3.
 2. The lane order of the folds in packed code, if the generator's work on loops runs long: the
    sequential order alone already gives the statements, the bounds and `BallVector`.
 3. The proof of `interval_mul_2`. Its containment can be tested exhaustively on small formats
@@ -2446,7 +2465,8 @@ Each with the options and what I recommend.
     the interval. *Recommended: (a)*.
 11. **The conversions between limb types.** (a) Generated, with two formats in the IR.
     (b) Written by hand in the header, argued and tested, as `ldexp`'s steps. *Recommended:
-    (a)*, moved to the next milestone if it does not fit.
+    (a)*, moved to the next milestone if it does not fit. *Moved to Milestone 3 on
+    2026-11-20*, with (a) kept as the way to do it.
 12. **An accumulator of unnormalized limbs.** Not stated. Options: leave it to a later
     milestone; or state the bound of cascaded summation as a target now and prove it with
     three and four limbs. *Recommended: later*, with a benchmark first of what it would save.
@@ -2461,7 +2481,7 @@ Each with the options and what I recommend.
     undecided case below $2^{2p-1}\eta$ has to be carried in the pair. *Recommended: (a) now*,
     (b) as an optimization with its own proof once a benchmark shows the steps dominate.
 16. **`lower_as<U>` for a limb type `U` other than the enclosure's.** It needs the conversions
-    of question 11; until then only `U = T`.
+    of question 11; until then only `U = T`. With them it is Milestone 3's.
 17. **The band test of the directed product**: `lt(ap, P)` with the new lemma, or `le(ap, P)`
     with Flocq's lemma only and a statement that excludes $\lvert ab\rvert = P$.
     *Recommended:* the first; the second is the fallback.
