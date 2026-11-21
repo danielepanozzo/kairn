@@ -473,26 +473,15 @@ inline const Operation operations[] = {
     {"ball2.upper_as", Kind::rounds, [](Bits& b) { put(b, o.bp.upper_as<double>()); }},
     {"ball2.narrow", Kind::rounds, [](Bits& b) { put(b, B1(unverified(o.bp))); }},
 
-    // Packed (kairn/packed.hpp) and the containers (kairn/soa.hpp): each operation checks the
-    // environment once, then every lane; the loads and the reads of an element are from_limbs.
+    // Packed (kairn/packed.hpp) and the containers (kairn/soa.hpp), one of each form of check: each
+    // operation checks the environment once, then every lane (the same code for every operation
+    // of a kind, packed.hpp); the loads and the reads of an element are from_limbs.
     {"packed2.add", Kind::rounds, [](Bits& b) { put(b, P2::broadcast(o.x) + P2::broadcast(o.y)); }},
-    {"packed2.add_limb", Kind::rounds, [](Bits& b) { put(b, P2::broadcast(o.x) + P1::broadcast(E1(v_c))); }},
     {"packed2.limb_sub", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_c)) - P2::broadcast(o.x)); }},
-    {"packed2.mul", Kind::rounds, [](Bits& b) { put(b, P2::broadcast(o.x) * P2::broadcast(o.y)); }},
     {"packed2.mul_limb", Kind::rounds, [](Bits& b) { put(b, P2::broadcast(o.x) * P1::broadcast(E1(v_c))); }},
-    {"packed2.mul_assign", Kind::rounds, [](Bits& b) {
-         P2 z = P2::broadcast(o.x);
-         z *= P2::broadcast(o.y);
-         put(b, z);
-     }},
-    {"packed2.add_fast", Kind::rounds, [](Bits& b) { put(b, kairn::add_fast(P2::broadcast(o.x), P2::broadcast(o.y))); }},
     {"packed2.ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::ldexp(P2::broadcast(o.x), -2000)); }},
-    {"packed2.half", Kind::rounds, [](Bits& b) { put(b, kairn::half(P2::broadcast(o.x))); }},
     {"packed2.finite_add", Kind::rounds, [](Bits& b) { put(b, kairn::finite::add(P2::broadcast(o.x), P2::broadcast(o.y))); }},
-    {"packed2.finite_ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::finite::ldexp(P2::broadcast(o.x), 9)); }},
-    {"packed1.add", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_a)) + P1::broadcast(E1(v_c))); }},
     {"packed1.mul", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_a)) * P1::broadcast(E1(v_c))); }},
-    {"packed1.ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::ldexp(P1::broadcast(E1(v_a)), 3)); }},
     {"packedf.add", Kind::rounds, [](Bits& b) {
          using F = kairn::Packed<float, 2>;
          put(b, F::broadcast(o.fx) + F::broadcast(o.fx));
@@ -500,10 +489,6 @@ inline const Operation operations[] = {
     {"packed2.load", Kind::rounds, [](Bits& b) {
          const Arrays a(o.y);
          put(b, P2::load(a.h, a.l));
-     }},
-    {"packed2.load_partial", Kind::rounds, [](Bits& b) {
-         const Arrays a(o.x);
-         put(b, P2::load_partial(a.h, a.l, P2::lanes - 1, o.y));
      }},
     {"packed2.from_limbs", Kind::rounds, [](Bits& b) {
          const P2 x = P2::broadcast(o.x);

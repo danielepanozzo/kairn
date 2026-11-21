@@ -40,8 +40,8 @@
 //   48-51  Packed (packed.hpp): an operation with a number or a T operand (no packed form takes
 //          one), the narrowing of two limbs to one written as an implicit conversion, and an
 //          operation of two limb types; each control writes what compiles instead
-//   0      with -DKAIRN_PACKED_FORM= a value that is not a form, or a form the target does not
-//          have (the generated header's #error)
+//   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
+//          is not a form, or a form the target does not have (the generated header's #error)
 //   29-31  an UNVERIFIED building block (two_sum, next_up) and the scaling of a ball by a power of
 //          two (half), written without the marker, against headers in which every kernel is
 #if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
@@ -55,8 +55,12 @@
 #define KAIRN_RATIONAL_CHECK 0
 #endif
 #include <kairn/kairn.hpp>
+// The headers that kairn.hpp does not include, in the cases about them only: each case is compiled
+// twice, and they would add their cost to every one.
+#if KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 52
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
+#endif
 
 #if defined(KAIRN_TEST_CONTROL)
 #define MARK(x) kairn::unverified(x)

@@ -671,15 +671,15 @@ _kairn_api_reject(packed.implicit_narrowing 50 "${_api_no_conversion}")
 _kairn_api_reject(packed.mixed_limb_types 51 "${_api_no_operator}")
 # KAIRN_PACKED_FORM (packed.hpp): a value that is not a form, a bare -D, and the form of another
 # target, which the generated header refuses.
-_kairn_api_reject(packed_form.unknown 0 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"
+_kairn_api_reject(packed_form.unknown 52 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"
   "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM=avx2")
-_kairn_api_reject(packed_form.bare 0 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"
+_kairn_api_reject(packed_form.bare 52 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"
   "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM")
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
-  _kairn_api_reject(packed_form.other_target 0 "needs AVX2 and FMA"
+  _kairn_api_reject(packed_form.other_target 52 "needs AVX2 and FMA"
     "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM=KAIRN_PACKED_FORM_AVX2")
 else()
-  _kairn_api_reject(packed_form.other_target 0 "needs AArch64"
+  _kairn_api_reject(packed_form.other_target 52 "needs AArch64"
     "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM=KAIRN_PACKED_FORM_NEON")
 endif()
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")

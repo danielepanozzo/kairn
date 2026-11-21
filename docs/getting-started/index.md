@@ -186,7 +186,8 @@ kernel states.
   are the choice for those four operations.
 
 `kairn/packed.hpp` and `kairn/soa.hpp` are not included by `kairn/kairn.hpp`, which they would
-make more than twice as long to compile ([Packed](../reference/packed.md#compile-time)). On x86-64,
+make two to three times as long to compile where the target has SIMD
+([Packed](../reference/packed.md#compile-time)). On x86-64,
 `kairn::fma` adds `-mfma` only, which gives the form of one lane: the AVX2 form needs `-mavx2
 -mfma`, `-march=x86-64-v3` or later, or `/arch:AVX2`. There is no dispatch at run time.
 

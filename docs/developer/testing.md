@@ -654,13 +654,16 @@ form natively, and on AArch64 NEON.
   and store allocate nothing, an `SoA` once per constructor with a size, copy and `resize`, never
   in a move, and its arrays start at multiples of 64 bytes.
 - **What must not compile** (`api.reject.soa.*`, `api.reject.packed.*`,
-  `api.reject.packed_form.*`, in the table above).
-- **The checks** (`api.checks.*`): the table of `checks_cases.hpp` has the operations of `Packed`
-  and of the views, each of its kind (an operation that rounds, a load and an element read, which
-  are `from_limbs`, must stop the program under each state of the environment; the comparisons,
-  negations, `abs` and conversions to one limb, run on the corpus $W$ values at a time, must give
-  the same bits under every rounding mode; the moves and the constructor from one limb are checked
-  for nothing), and the operand cases have a lane that is not canonical among canonical ones given
+  `api.reject.packed_form.*`, in the table above; `tests/api/reject.cpp` includes the two headers
+  in their cases only, since every case is compiled twice).
+- **The checks** (`api.checks.*`): the table of `checks_cases.hpp` has operations of `Packed` and
+  of the views of each kind: twelve that round (sums, products and their mixed forms of one and two
+  limbs, `float` and `double`, `ldexp`, a finite core, a load, `from_limbs` and three reads of an
+  element, which are `from_limbs`), each of which must stop the program under each state of the
+  environment, every operation of a kind having the same check (`packed.hpp`); the comparisons,
+  negations, `abs` and conversions to one limb, run on the corpus $W$ values at a time, which must
+  give the same bits under every rounding mode; and the moves and the constructor from one limb,
+  checked for nothing; and the operand cases have a lane that is not canonical among canonical ones given
   to a load, `from_limbs`, an operator, a comparison and a finite core, and an element of a view
   read through `get`, the proxy and `load`, each of which must stop the program with its message.
 - **The tutorial's vector loop** (`api.example.packed_dot.FORM`, `docs/examples/cpp/packed_dot.cpp`),

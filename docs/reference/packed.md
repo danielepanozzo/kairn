@@ -168,12 +168,20 @@ in `kairn/packed.hpp` has global state.
 ## Compile time
 
 Including `kairn/packed.hpp` parses the generated header of its form and the compiler's intrinsics
-header. Measured on an Apple M3 Max, a file that includes `kairn/kairn.hpp` and has an empty
-`main`, at `-O2`, median of seven compilations: 0.115 s with Apple clang 21, 0.21 s with GCC 16;
-with `kairn/packed.hpp` and `kairn/soa.hpp` as well, 0.46 s (NEON) and 0.50 s (AVX2) with Apple
-clang, 0.49 s with GCC 16 (NEON), and 0.36 s with Apple clang in the scalar form. That more than
-doubles the cost of `kairn/kairn.hpp`, which therefore does not include them: a program includes
-`kairn/packed.hpp` or `kairn/soa.hpp` itself.
+header. Measured for a file that includes `kairn/kairn.hpp` and has an empty `main`, compiled at
+`-O2`, the median of seven compilations, and the same file including `kairn/packed.hpp` and
+`kairn/soa.hpp` as well:
+
+| Machine, compiler, form | `kairn/kairn.hpp` | and the two headers |
+|---|---|---|
+| Apple M3 Max, Apple clang 21, NEON | 0.106 s | 0.218 s |
+| Apple M3 Max, GCC 16, NEON | 0.194 s | 0.428 s |
+| AMD EPYC 7452, GCC 13, AVX2 (`-mavx2 -mfma`) | 0.318 s | 1.001 s |
+| AMD EPYC 7452, Clang 18, AVX2 | 0.489 s | 1.216 s |
+| the same four in the scalar form | | 0.01 to 0.04 s more than `kairn/kairn.hpp` |
+
+In the forms with SIMD the two headers double or triple the cost of `kairn/kairn.hpp`, which
+therefore does not include them: a program includes `kairn/packed.hpp` or `kairn/soa.hpp` itself.
 
 ## What is tested
 
