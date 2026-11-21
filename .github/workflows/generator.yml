@@ -28,7 +28,10 @@ jobs:
   test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # The suite grows with every kernel (it compiles each in every configuration): with the
+    # kernels of the intervals and of the loops over arrays the macOS job, which also builds and
+    # runs the x86-64 forms under Rosetta, was cancelled at 30 minutes, and Clang on Linux took 29.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
