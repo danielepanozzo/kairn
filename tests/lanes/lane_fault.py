@@ -17,7 +17,11 @@ runner as the only one, once with each assignment of lanes, and the runner once 
   oracle's stream at W = 2 and 4 (binary64 with NEON, binary64 with AVX2, binary32 with NEON);
   at W = 8 (binary32 with AVX2) a fifth of the registers mix, and the outcome is printed only.
 - permuted: the cross-check must fail, by the oracle's verdict on the output (not by the runner,
-  nor by the guards), with registers that mixed.
+  nor by the guards), with registers that mixed. The verdict is read from the oracle's summary of
+  the output: cases that failed the claims of mul_2_2_full. The oracle's check exits with 1 also
+  when it refuses the claims (a kernel whose claims it cannot read: the run fails, whatever the
+  output); such a refusal is an error of this test, never the failure it expects, in either
+  assignment.
 - the consecutive assignment under the guard (--lane-guard), on the same requests: the runner
   must refuse it, with 3, as not mixed.
 
@@ -45,7 +49,7 @@ KERNEL = "mul_2_2_full"
 
 def crosscheck(a, assignment, log):
     """crosscheck.py compiled with the planted runner and ASSIGNMENT: (exit status, its output, the
-    report of the lanes, the summary's base path)."""
+    report of the lanes, the summary's base path, the oracle's outcome on the output)."""
     base = os.path.join(a.summary_dir, "lane_fault.%s.%s" % (a.format, assignment))
     label = "planted"
     command = [sys.executable, CROSSCHECK, "compiled", "--kernel", KERNEL, "--format", a.format,
@@ -64,7 +68,33 @@ def crosscheck(a, assignment, log):
             report = json.load(f)["segments"][0]
     except (OSError, ValueError, KeyError, IndexError):
         pass
-    return p.returncode, text, report, base
+    return p.returncode, text, report, base, oracle_outcome("%s.%s.json" % (base, name))
+
+
+def oracle_outcome(summary):
+    """What the oracle said of an output, from the summary its check wrote (crosscheck.py writes it
+    whether the check passed or not): ("refused", REASONS) when it refused the claims, which makes
+    its check exit with 1 as a violated claim does, though nothing was judged of the output;
+    ("failed", N) with the N cases that failed their claims; ("passed", 0); or ("unread", WHY)
+    when there is no summary to read."""
+    try:
+        with open(summary, encoding="utf-8") as f:
+            s = json.load(f)
+        errors = s.get("claims_errors") or []
+        failed = sum(k["stats"]["counts"]["failed"] for k in s["keys"])
+    except (OSError, ValueError, KeyError, TypeError) as ex:
+        return "unread", "%s: %s" % (type(ex).__name__, ex)
+    if errors:
+        return "refused", errors
+    return ("failed", failed) if failed else ("passed", 0)
+
+
+def refusal(outcome):
+    """The text of a refusal of the claims, or None."""
+    if outcome[0] != "refused":
+        return None
+    return "the oracle refused the claims (%s%s), an error of the test" % (
+        outcome[1][0], " and %d more" % (len(outcome[1]) - 1) if len(outcome[1]) > 1 else "")
 
 
 def verdict(text):
@@ -88,9 +118,11 @@ def main(argv=None):
 
     # The consecutive assignment.
     log = os.path.join(a.summary_dir, "lane_fault.%s.consecutive.log" % a.format)
-    status, text, lanes, base = crosscheck(a, "consecutive", log)
+    status, text, lanes, base, outcome = crosscheck(a, "consecutive", log)
     if not lanes:
         wrong.append("consecutive: no report of the lanes (exit %s); see %s" % (status, log))
+    elif refusal(outcome):
+        wrong.append("consecutive: %s (exit %d); see %s" % (refusal(outcome), status, log))
     else:
         w, mixed = lanes["lanes"], lanes["mixed"]
         print("consecutive, W = %d: %d of %d registers mixed a non-finite operand with finite ones; "
@@ -105,15 +137,20 @@ def main(argv=None):
 
     # The permuted assignment: the oracle must fail the output.
     log = os.path.join(a.summary_dir, "lane_fault.%s.permuted.log" % a.format)
-    status, text, lanes, base = crosscheck(a, "permuted", log)
-    judged = "planted: oracle check 1 (0 is success)" in text
+    status, text, lanes, base, outcome = crosscheck(a, "permuted", log)
+    # The oracle's verdict: its check failed the output (crosscheck.py's message) and its summary
+    # has cases that failed, not a refusal of the claims.
+    judged = "planted: oracle check 1 (0 is success)" in text and outcome[0] == "failed"
     if lanes:
         print("permuted, W = %d: %d of %d registers mixed a non-finite operand with finite ones "
               "(guard: %s); the cross-check %s (exit %d)%s" % (
                   lanes["lanes"], lanes["mixed"], lanes["registers"], lanes["guard"],
                   "passed" if status == 0 else "failed", status,
                   ", by the oracle's verdict" if judged else ""))
-    if status != 1 or not judged or not lanes or lanes["mixed"] == 0:
+    if refusal(outcome):
+        wrong.append("permuted: %s, not its verdict on the output (exit %s); see %s"
+                     % (refusal(outcome), status, log))
+    elif status != 1 or not judged or not lanes or lanes["mixed"] == 0:
         wrong.append("permuted: the cross-check must fail by the oracle's verdict on the output, "
                      "with registers that mixed (exit %s); see %s" % (status, log))
     else:

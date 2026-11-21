@@ -786,6 +786,11 @@ and runs the cross-check of the quick tier's 6 000 cases (`tests/lanes/lane_faul
 (the oracle's failures are F3, a result that is not finite although every `finite_when`
 condition holds, and F4). The test requires the consecutive cross-check to pass where no register
 mixed and the permuted one to fail by the oracle's verdict, not the runner's or the guards'. The
+verdict is read from the oracle's summary of the output, failed lines and no claims error: the
+oracle's check exits with 1 also when it refuses the claims (a kernel whose claims it cannot read
+fails every run), and such a refusal is an error of the test in either assignment, never the
+failure it expects (`full.tools.crosscheck.guards.LaneFaultVerdicts` checks the reading on real
+summaries of both). The
 fault is planted in the operands' mask and not in the generated one (the core's product finite)
 because that one also fails for finite operands whose product overflows, which the strata
 `edge`, `threshold` and `overflow` put next to products that do not in consecutive lines: the

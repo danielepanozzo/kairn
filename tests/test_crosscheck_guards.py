@@ -1536,6 +1536,57 @@ class LaneReports(unittest.TestCase):
                 self.assertIn("ASSIGNMENTS is permuted, consecutive or both", r.stderr)
 
 
+class LaneFaultVerdicts(unittest.TestCase):
+    """tests/lanes/lane_fault.py takes the oracle's verdict on an output from the summary of its
+    check, and tells it from a refusal of the claims: the check exits with 1 in both cases, and a
+    refusal is an error of the test, never the failure the planted fault must cause."""
+
+    def test_a_refusal_is_not_a_verdict(self):
+        sys.path.insert(0, os.path.join(TESTS, "lanes"))
+        import lane_fault as LF
+        oracle = [PY, os.path.join(ROOT, "oracle", "kairn-oracle")]
+        with tempfile.TemporaryDirectory() as d:
+            gen = subprocess.run(oracle + ["gen", "mul_2_2_full", "binary64", "--seed", "0",
+                                           "--count", "200"] + CLAIMS_ARGS,
+                                 capture_output=True, text=True, cwd=ROOT)
+            self.assertEqual(gen.returncode, 0, gen.stderr)
+            done = subprocess.run([PY, os.path.join(ROOT, "gen", "kairn-gen"), "interp"],
+                                  input=gen.stdout, capture_output=True, text=True, cwd=ROOT)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            good = done.stdout
+            # A wrong output: one result's first limb negated.
+            lines = good.splitlines(True)
+            j = next(i for i, ln in enumerate(lines) if " -> 0x1" in ln)
+            head, _, tail = lines[j].partition(" -> ")
+            lines[j] = head + " -> -" + tail
+            wrong = "".join(lines)
+            # Claims the oracle refuses: an entry of another kernel of an unknown kind.
+            with open(CLAIMS, encoding="utf-8") as f:
+                claims = json.load(f)
+            k = next(k for k in claims["kernels"] if k["name"] == "two_sum")
+            k["ensures"][0]["kind"] = "not_a_kind"
+            refused = os.path.join(d, "claims-refused.json")
+            with open(refused, "w", encoding="utf-8") as f:
+                json.dump(claims, f)
+
+            def check(name, claims_args, output):
+                js = os.path.join(d, name + ".json")
+                r = subprocess.run(oracle + ["check", "--quiet", "--json", js] + claims_args,
+                                   input=output, capture_output=True, text=True, cwd=ROOT)
+                return r.returncode, LF.oracle_outcome(js)
+
+            self.assertEqual(check("pass", CLAIMS_ARGS, good), (0, ("passed", 0)))
+            self.assertEqual(check("verdict", CLAIMS_ARGS, wrong), (1, ("failed", 1)))
+            for name, output in (("refused", good), ("refused-wrong", wrong)):
+                status, outcome = check(name, ["--claims", refused], output)
+                self.assertEqual(status, 1, name)
+                self.assertEqual(outcome[0], "refused", name)
+                self.assertIn("two_sum", outcome[1][0])
+                self.assertIn("the oracle refused the claims", LF.refusal(outcome))
+            self.assertIsNone(LF.refusal(("failed", 1)))
+            self.assertEqual(LF.oracle_outcome(os.path.join(d, "none.json"))[0], "unread")
+
+
 class EnclosureGuards(unittest.TestCase):
     """The enclosure interface of stage B2: the predicates and comparisons of an interval and a ball
     (the relation both ways, every answer, every class of each set and point, the special states,
