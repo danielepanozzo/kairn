@@ -1,10 +1,14 @@
 # An interval from two canonical 2-limb values (milestone2.md, "Interval kernels", "Values of an
-# interval"): the listing of interval_make_1 on the comparisons of two limbs, le_2_2 for the order
-# of the bounds and the leading limbs for the tests against infinity and of a NaN (a canonical NaN
-# is all NaN). The values are limbs of objects, already canonical, so nothing is guarded. [lo, hi]
-# when lo <= hi, lo < +inf and hi > -inf, an infinite bound returned as (+-inf, 0); the whole line
-# when a bound is a NaN, whatever the other bound is (decided on 2026-11-20); the empty set
-# otherwise, that is for lo > hi, [+inf, +inf] and [-inf, -inf]. For every precision.
+# interval"): the listing of interval_make_1 on the comparisons of two limbs, le_2_2 and lt_2_2 for
+# the order of the bounds and the leading limbs for the tests against infinity (a canonical NaN is
+# all NaN, and a comparison with it is false). The values are limbs of objects, already canonical,
+# so nothing is guarded. The whole line when a bound is a NaN, whatever the other bound is, and when
+# both bounds are the same infinity (decided on 2026-11-20, as for interval_make_1); otherwise the
+# empty set when lo > hi (rv); otherwise [lo, hi], an infinite bound returned as (+-inf, 0). For
+# every precision.
+# The IEEE-model proof (proofs/theories/IeeeIntervalExact.v) is of the rule before, that the two
+# pairs of the same infinity give the empty set, and is being redone for this one: unverified until
+# then.
 kernel:        interval_make_2
 input:         lo = lo0 lo1
 input:         hi = hi0 hi1
@@ -14,12 +18,11 @@ requires:      canonical lo
 requires:      canonical hi
 ensures:       makes_interval zl zu from=lo,hi
 min_precision: 1
-source:        constructor of an interval of two limbs (Milestone 2 listing)
+source:        constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20)
 license:       algorithm and proof: MIT
-status:        proved
+status:        unverified
 domain:        extended
-ieee_status:   proved
-ieee_theorem:  proofs/theories/IeeeIntervalExact.v interval_make_2_correct
+ieee_status:   unverified
 entry:         yes
 cone_exempt:   every output is selected after explicit tests of the bounds; makes_interval states what comes out
 
@@ -29,11 +32,9 @@ mi  = neg(const inf)
 nu  = lt(mi, hi0)
 va  = and(ok, nl)
 v   = and(va, nu)
-ql  = eq(lo0, lo0)
-qu  = eq(hi0, hi0)
-nn  = and(ql, qu)
-el  = select(nn, const inf, mi)
-eu  = select(nn, mi, const inf)
+rv  = lt_2_2(hi0, hi1, lo0, lo1)
+el  = select(rv, const inf, mi)
+eu  = select(rv, mi, const inf)
 zl0 = select(v, lo0, el)
 zl1 = select(v, lo1, 0)
 zu0 = select(v, hi0, eu)

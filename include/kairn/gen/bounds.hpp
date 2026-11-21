@@ -204,14 +204,10 @@ template <> struct ball_add_1_full<float> {
     static constexpr bool proved = true;
 };
 
-// ball_from_interval_2: proved. Claims: makes_ball.
+// ball_from_interval_2: UNVERIFIED. Claims: makes_ball.
 template <class T> struct ball_from_interval_2;
-template <> struct ball_from_interval_2<double> {
-    static constexpr bool proved = true;
-};
-template <> struct ball_from_interval_2<float> {
-    static constexpr bool proved = true;
-};
+template <> struct ball_from_interval_2<double> { static constexpr bool proved = false; };
+template <> struct ball_from_interval_2<float> { static constexpr bool proved = false; };
 
 // sub_down_1: proved. Claims: rounded.
 template <class T> struct sub_down_1;
@@ -439,14 +435,10 @@ template <> struct interval_intersection_1<float> {
     static constexpr bool proved = true;
 };
 
-// interval_make_1: proved. Claims: makes_interval.
+// interval_make_1: UNVERIFIED. Claims: makes_interval.
 template <class T> struct interval_make_1;
-template <> struct interval_make_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct interval_make_1<float> {
-    static constexpr bool proved = true;
-};
+template <> struct interval_make_1<double> { static constexpr bool proved = false; };
+template <> struct interval_make_1<float> { static constexpr bool proved = false; };
 
 // sub_up_1: proved. Claims: rounded.
 template <class T> struct sub_up_1;
@@ -1369,14 +1361,10 @@ template <> struct interval_intersection_2<float> {
     static constexpr bool proved = true;
 };
 
-// interval_make_2: proved. Claims: makes_interval.
+// interval_make_2: UNVERIFIED. Claims: makes_interval.
 template <class T> struct interval_make_2;
-template <> struct interval_make_2<double> {
-    static constexpr bool proved = true;
-};
-template <> struct interval_make_2<float> {
-    static constexpr bool proved = true;
-};
+template <> struct interval_make_2<double> { static constexpr bool proved = false; };
+template <> struct interval_make_2<float> { static constexpr bool proved = false; };
 
 // mul_ball_2_2: proved. Claims: normalized; error, form R, c = 4, k = 2, t = 3/2; encloses.
 template <class T> struct mul_ball_2_2;

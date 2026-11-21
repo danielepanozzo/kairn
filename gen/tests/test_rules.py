@@ -1482,7 +1482,12 @@ class TheKernels(unittest.TestCase):
     # the midpoint and the split (IeeeIntervalConvert.v), and mul_ext_2_2 with the product of two
     # limbs (IeeeIntervalMul2.v).
     WAVE_2_B1_PROVED = WAVE_2_B1 | {'mul_ext_2_2'}
-    WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED
+    # The constructors of an interval and the ball from an interval of two T, proved for the rule
+    # before 2026-11-20 (the same infinity twice the empty set) and unverified until their proofs
+    # (IeeeInterval1.v, IeeeIntervalExact.v, IeeeBallConvert.v) are redone for the rule of that day
+    # (the same infinity twice the whole line).
+    REDO = {'interval_make_1', 'interval_make_2', 'ball_from_interval_2'}
+    WAVE_2_PROVED = ((WAVE_2 - WAVE_2_B1 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED) - REDO
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()

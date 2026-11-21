@@ -830,15 +830,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "proved",
+      "status": "unverified",
+      "ieee_status": "unverified",
       "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeBallConvert.v",
-        "name": "ball_from_interval_2_correct"
-      },
       "source": {
-        "cite": "the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing)",
+        "cite": "the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 13,
@@ -2438,15 +2434,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
+      "status": "unverified",
+      "ieee_status": "unverified",
       "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeInterval1.v",
-        "name": "interval_make_1_correct"
-      },
       "source": {
-        "cite": "constructor of an interval (Milestone 2 listing)",
+        "cite": "constructor of an interval (Milestone 2 listing; equal infinities the whole line, 2026-11-20)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 2,
@@ -7405,15 +7397,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
+      "status": "unverified",
+      "ieee_status": "unverified",
       "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeIntervalExact.v",
-        "name": "interval_make_2_correct"
-      },
       "source": {
-        "cite": "constructor of an interval of two limbs (Milestone 2 listing)",
+        "cite": "constructor of an interval of two limbs (Milestone 2 listing; equal infinities the whole line, 2026-11-20)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,

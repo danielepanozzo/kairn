@@ -89,7 +89,7 @@ Definition axpy_step_1_with (p_ : float -> float -> float) (a x y : float) : flo
   let z := add_1_1 p y in
   z.
 
-(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). *)
+(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing; equal infinities the whole line, 2026-11-20). *)
 Definition ball_from_interval_2_with (p_ : float -> float -> float) (lo hi : float) : float * float * float :=
   let gl := guard lo in
   let gu := guard hi in
@@ -118,11 +118,9 @@ Definition ball_from_interval_2_with (p_ : float -> float -> float) (lo hi : flo
   let k0 := if f then c0 else pzero in
   let k1 := if f then c1 else pzero in
   let s := if f then r else pinf in
-  let ql := eq gl gl in
-  let qu := eq gu gu in
-  let nn := andb ql qu in
-  let wc := if nn then cnan else pzero in
-  let wr := if nn then cnan else pinf in
+  let rv := lt gu gl in
+  let wc := if rv then cnan else pzero in
+  let wr := if rv then cnan else pinf in
   let cw0 := if v then k0 else wc in
   let cw1 := if v then k1 else wc in
   let rw := if v then s else wr in

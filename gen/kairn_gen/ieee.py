@@ -846,10 +846,19 @@ def _interval_spec(k, kernels, e):
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 
+def _same_infinity(lo, hi):
+    """Both given bounds are the same infinity, [+inf, +inf] or [-inf, -inf], as extended real
+    numbers (a canonical 2-limb value stands for an infinity exactly when its leading limb is one)."""
+    return f'(exists s : bool, {_xv(lo)} = XInf s /\\ {_xv(hi)} = XInf s)'
+
+
 def _makes_interval_spec(k, kernels, e):
     """The constructor of an interval (milestone2.md, "Values of an interval"), in the shape of
-    interval_make_1_correct: the result is canonical; the interval of the given bounds when they
-    describe a nonempty one; the whole line when a bound is a NaN; the empty set otherwise."""
+    interval_make_1_correct: the result is canonical; the whole line when a bound is a NaN or both
+    are the same infinity (the owner's decision of 2026-11-20: a value from the program that is not
+    finite never makes the empty set); the empty set when the bounds are reversed, lo > hi as
+    extended real numbers; the interval of the given bounds when they describe a nonempty one. The
+    three conditions are disjoint and cover every pair of values."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
         [_let(k, kernels)]
@@ -864,8 +873,8 @@ def _makes_interval_spec(k, kernels, e):
              f'{zl[0]} = infinity prec emax true /\\ {zu[0]} = infinity prec emax false{zeros}')
     claims = [f'interval_{n} {z}',
               f'({nonempty} -> {_xv(zl)} = {_xv(lo)} /\\ {_xv(zu)} = {_xv(hi)})',
-              f'(nan {lo[0]} \\/ nan {hi[0]} -> {whole})',
-              f'(~ nan {lo[0]} -> ~ nan {hi[0]} -> ~ {nonempty} -> interval_empty_{n} {z})']
+              f'(nan {lo[0]} \\/ nan {hi[0]} \\/ {_same_infinity(lo, hi)} ->\n   {whole})',
+              f'(xlt ({_xv(hi)}) ({_xv(lo)}) = true -> interval_empty_{n} {z})']
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
@@ -874,8 +883,9 @@ def _makes_ball_interval_spec(k, kernels, e):
     """A ball from the bounds of an interval (milestone2.md, "A ball from an interval of two T"):
     canonical; for finite lo <= hi a finite ball that contains [lo, hi], with the exact midpoint
     for center and the radius rounded up when the conditions of midpoint_when hold; the whole line
-    for a NaN bound and for an interval that is not empty with an infinite bound; the empty set
-    otherwise."""
+    for an interval that is not empty with an infinite bound, for a NaN bound and for two bounds
+    that are the same infinity (the owner's decision of 2026-11-20, as for makes_interval); the
+    empty set for reversed bounds, lo > hi as extended real numbers."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels)) + _hyps_extended(k, t) + [_let(k, kernels)]
     c_out, r_out = _limbs(k, t.outs[e['center']].limbs, e['center'], (1, 2)), e['radius']
@@ -893,8 +903,8 @@ def _makes_ball_interval_spec(k, kernels, e):
                       f'   {_val_sum(c_out)} = (val {lo} + val {hi}) / 2 /\\\n'
                       f'   val {r_out} = RU {EMIN} prec ((val {hi} - val {lo}) / 2))')
     claims += [f'({nonempty} -> ~ (finite {lo} /\\ finite {hi}) -> ball_whole_{n} {out})',
-               f'(nan {lo} \\/ nan {hi} -> ball_whole_{n} {out})',
-               f'(~ nan {lo} -> ~ nan {hi} -> ~ {nonempty} -> ball_empty_{n} {out})']
+               f'(nan {lo} \\/ nan {hi} \\/ {_same_infinity([lo], [hi])} ->\n   ball_whole_{n} {out})',
+               f'(xlt (xval {hi}) (xval {lo}) = true -> ball_empty_{n} {out})']
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
