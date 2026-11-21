@@ -265,7 +265,7 @@ void allocation() {
             v.set(i, c.get(i));
         }
         P p = c.load(0);
-        p = p + c.load_partial(W, 3);
+        p = kairn::select(p < c.load_partial(W, 3), p, c.load_partial(W, 3));
         v.store(8, p);
         v.store_partial(0, p, 2);
         const E e = v[1];
