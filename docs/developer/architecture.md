@@ -286,7 +286,9 @@ ensures:       normalized r
 ensures:       fold_error r eps=3*u^2/(1-4*u) term=4*u^2 tau=3/2*eta rel=n-1 abs=n-1
 ensures:       finite_or_nan r flag=flag
 min_precision: 4
-status:        unverified
+theorem:       proofs/theories/FoldSums.v
+ieee_theorem:  proofs/theories/IeeeFolds.v
+status:        proved
 domain:        extended
 source:        Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22)
 license:       bound: published; proof: MIT
@@ -416,7 +418,9 @@ requires:      canonical y
 ensures:       entries z
 ensures:       finite_or_nan z flag=finite
 min_precision: 4
-status:        unverified
+theorem:       proofs/theories/FoldMaps.v
+ieee_theorem:  proofs/theories/IeeeFoldMaps.v
+status:        proved
 domain:        extended
 ```
 
@@ -498,7 +502,9 @@ requires:      canonical x
 ensures:       upper r max steps=1
 ensures:       finite_or_nan r flag=flag
 min_precision: 1
-status:        unverified
+theorem:       proofs/theories/FoldNorm.v
+ieee_theorem:  proofs/theories/IeeeFoldNorm.v
+status:        proved
 domain:        extended
 ```
 
@@ -678,7 +684,10 @@ requires:      canonical y
 ensures:       coefficients z
 ensures:       finite_or_nan z flag=finite
 min_precision: 4
-status:        unverified
+theorem:       proofs/theories/FoldConv.v
+ieee_theorem:  proofs/theories/IeeeFoldConv.v
+terms_theorem: proofs/theories/FoldConv.v
+status:        proved
 domain:        extended
 ```
 
@@ -962,7 +971,9 @@ requires:      ball_vector x rx
 requires:      ball_vector y ry
 ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2) radii_when=abs_le(rx+ry,-2)
 min_precision: 3
-status:        unverified
+theorem:       proofs/theories/BvReal.v
+ieee_theorem:  proofs/theories/IeeeBv.v
+status:        proved
 domain:        extended
 ```
 
@@ -1253,7 +1264,9 @@ requires:      ball_vector x rx
 requires:      power_of_two c
 ensures:       encloses_entries z r x*c x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*c,-2) radii_when=abs_le(rx*c,-2) exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))
 min_precision: 2
-status:        unverified
+theorem:       proofs/theories/BvPow2.v
+ieee_theorem:  proofs/theories/IeeeBvPow2.v
+status:        proved
 domain:        extended
 ```
 
@@ -1362,7 +1375,9 @@ requires:      ball_vector x rx
 requires:      ball_vector y ry
 ensures:       encloses_coefficients z r x*y x=x,rx y=y,ry flag=flag finite_when=abs_le(n*(abs(x)+rx)*(abs(y)+ry),-2);abs_le((abs(x)+rx)*ry,-2);abs_le((abs(y)+ry)*rx,-2) radii_when=abs_le(rx*ry,-2) count_when=le(n*(unit(mul_2_2)+eta/(2*u)),1/16)
 min_precision: 4
-status:        unverified
+theorem:       proofs/theories/BvConv.v
+ieee_theorem:  proofs/theories/IeeeBvConvFinite2.v
+status:        proved
 domain:        extended
 ```
 
@@ -3122,7 +3137,7 @@ those of `interval_intersection_2`, `interval_to_ball_1`, `interval_neg_2` and `
 - `interval_hull_2` is `interval_hull_1` with bounds of two limbs, and `interval_intersection_1` is `interval_intersection_2` with bounds of one limb.
 - `interval_sub_2` is `interval_add_2` with the set `x-y` and `exact_when` `{"lower": [{"zero": "xl-yu"}], "upper": [{"zero": "xu-yl"}]}`. Its `bounded_when` is `{"abs_le": "x-y", "exp": -2}`, not exactly.
 
-**Not claimed.** A two-limb form is part of this stage only where it is the listing of one limb on the comparisons of two limbs: the hull and the intersection. `interval_mid_rad_2`, `interval_to_ball_2`, `ball_to_interval_2` and `interval_split_2` are other listings (the halves by `mul_pow2_2`, the radius by `add_ball_2_2`), with claims that this vocabulary would state with `ball_of_interval` without `smallest_radius` and `interval_of_ball` with an outward tightness. They are left for a later stage.
+**Not claimed.** A two-limb form is part of this stage only where it is the listing of one limb on the comparisons of two limbs: the hull and the intersection. `interval_mid_rad_2`, `interval_to_ball_2`, `ball_to_interval_2` and `interval_split_2` are other listings (the halves by `mul_pow2_2`, the radius by `add_ball_2_2`), with claims that this vocabulary would state with `ball_of_interval` without `smallest_radius` and `interval_of_ball` with an outward tightness. They are claimed so since: [the conversions of two limbs](#claims-of-the-enclosure-interface-the-conversions-of-two-limbs).
 
 **In the formal models.** IEEE model only, in the vocabulary of `IeeeIntervalVocabulary.v` and `IeeeVocabulary.v`:
 - `interval_set`: the set is the predicate `(fun z : R => in_interval_n X z \/ in_interval_n Y z)`, with `/\` for the intersection. Containment is a `forall z`. The emptiness rule is `interval_empty_n X /\ interval_empty_n Y` for the union and `~ (exists z : R, ...)` for the intersection. Exactness is that a result that is not empty has the bounds `range_lower` and `range_upper` of the set.

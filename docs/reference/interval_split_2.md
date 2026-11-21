@@ -58,8 +58,8 @@ It calls [`mul_pow2_2`](mul_pow2_2.md), [`add_2_2`](add_2_2.md), [`lt_2_2`](lt_2
 # An interval with 2-limb bounds split at its midpoint (milestone2.md, "One enclosure interface", the
 # row of split() and "The empty set and the whole line"): [xl, m] and [m, xu], m the midpoint of
 # interval_mid_rad_2, which is in [xl, xu]; their union is the interval. The whole line gives [-inf,
-# 0] and [0, +inf], a half-line [l, +inf] gives [l, Omega] and [Omega, +inf], and the empty set the
-# empty set twice. One step more than for one limb: a bound of two limbs can be beyond Omega (Omega plus less than half a
+# 0] and [0, +inf], a half-line [l, +inf] gives [l, Omega] and [Omega, +inf] (when l is not beyond
+# Omega: see the step below), and the empty set the empty set twice. One step more than for one limb: a bound of two limbs can be beyond Omega (Omega plus less than half a
 # gap), and the midpoint +-Omega of a half-line is then outside the interval; the point of the split
 # is the midpoint moved into [xl, xu] by lt_2_2, the bound itself in that case. The midpoint is
 # computed by the steps of interval_mid_rad_2 that make it, without its radius: interval_mid_rad_2 is
