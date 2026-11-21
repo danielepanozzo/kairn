@@ -58,7 +58,9 @@
      the predicates, comparisons and relations of intervals of stage B2, each relation on the
      bounds as extended real numbers and the facts about members it rests on; for those of
      balls of one limb, a ball as an interval of extended real numbers, the exact pairs of
-     two_sum_ord and their comparisons, and each kernel as a boolean of the bounds;
+     two_sum_ord and their comparisons, and each kernel as a boolean of the bounds; for the
+     ball of one limb from an interval and the split of a ball, the rest of a halving and a
+     point plus a ball;
    - the theorems about the folds that have no generated statement: that a fold of the
      model with overflow is the fold of the real model whenever its result is finite
      (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
@@ -818,6 +820,17 @@ Print Assumptions radii_cases.
 Print Assumptions ball_less_1_bools.
 Print Assumptions ball_less_equal_1_bools.
 Print Assumptions ball_equal_1_bools.
+
+(* The ball of one limb made from an interval of two numbers and the split of a ball of one
+   limb, in the IEEE model (theories/IeeeBallSets.v): the theorems of their generated
+   statements are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they rest on: the rest of
+   a halving is a number of the format, a point plus a ball contains the shifted ball, and the
+   two statements in the names of this file. *)
+From Kairn Require Import IeeeBallSets.
+Print Assumptions half_rest_format.
+Print Assumptions point_plus.
+Print Assumptions ball_from_interval_1_all.
+Print Assumptions ball_split_1_all.
 
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
 Print Assumptions fold_seq_transfer.

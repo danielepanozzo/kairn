@@ -257,7 +257,7 @@ Definition interval_to_ball_1_spec : Prop :=
    (forall z : R, in_interval_1 xl xu z -> Rabs (z - val c) <= val r) /\
    val r = RU (ieee_emin prec emax) prec (Rmax (val c - val xl) (val xu - val c))).
 
-(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_from_interval_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -569,7 +569,7 @@ Definition ball_scale_1_full_spec : Prop :=
    ball_finite_1 cw rw) /\
   (finite a -> forall x : R, in_ball_1 cx rx x -> in_ball_1 cw rw (x * val a)).
 
-(* ball_split_1: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_split_1: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_split_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

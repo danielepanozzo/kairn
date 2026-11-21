@@ -10,6 +10,7 @@ From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeBallPow2.
 From Kairn Require Import IeeeBallPredicates.
+From Kairn Require Import IeeeBallSets.
 From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
@@ -73,6 +74,9 @@ Print Assumptions interval_mid_rad_1_correct.
 Definition interval_to_ball_1_audit : interval_to_ball_1_spec := interval_to_ball_1_correct.
 Print Assumptions interval_to_ball_1_correct.
 
+Definition ball_from_interval_1_audit : ball_from_interval_1_spec := ball_from_interval_1_correct.
+Print Assumptions ball_from_interval_1_correct.
+
 Definition ball_from_interval_2_audit : ball_from_interval_2_spec := ball_from_interval_2_correct.
 Print Assumptions ball_from_interval_2_correct.
 
@@ -114,6 +118,9 @@ Print Assumptions ball_positive_1_correct.
 
 Definition ball_scale_1_full_audit : ball_scale_1_full_spec := ball_scale_1_full_correct.
 Print Assumptions ball_scale_1_full_correct.
+
+Definition ball_split_1_audit : ball_split_1_spec := ball_split_1_correct.
+Print Assumptions ball_split_1_correct.
 
 Definition ball_sub_1_full_audit : ball_sub_1_full_spec := ball_sub_1_full_correct.
 Print Assumptions ball_sub_1_full_correct.

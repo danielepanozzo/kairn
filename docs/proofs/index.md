@@ -86,8 +86,9 @@ lists:
   with the product of two bounds on all values (`IeeeIntervalMul2.v`), and the predicates, the
   three-valued comparisons and the relations of IEEE 1788 of intervals with bounds of one and
   of two limbs, all exact (`IeeeIntervalPredicates.v`), and the predicates and the three-valued
-  comparisons of balls with a center of one limb, on exact pairs (`IeeeBallPredicates.v`); and
-  the theorems of the
+  comparisons of balls with a center of one limb, on exact pairs (`IeeeBallPredicates.v`), and
+  the ball of one limb made from an interval of two numbers and the split of a ball of one
+  limb (`IeeeBallSets.v`); and the theorems of the
   folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
   finishes and bound kernels
   (`StepKernels.v`, `IeeeFoldFinish.v`, `BoundKernels.v`), of the two together
@@ -149,7 +150,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  89 files: no Admitted, admit, Axiom or Parameter
+  90 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec

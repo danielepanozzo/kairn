@@ -304,10 +304,14 @@ template <> struct interval_to_ball_1<float> {
     static constexpr bool proved = true;
 };
 
-// ball_from_interval_1: UNVERIFIED. Claims: makes_ball.
+// ball_from_interval_1: proved. Claims: makes_ball.
 template <class T> struct ball_from_interval_1;
-template <> struct ball_from_interval_1<double> { static constexpr bool proved = false; };
-template <> struct ball_from_interval_1<float> { static constexpr bool proved = false; };
+template <> struct ball_from_interval_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_from_interval_1<float> {
+    static constexpr bool proved = true;
+};
 
 // ball_from_interval_2: proved. Claims: makes_ball.
 template <class T> struct ball_from_interval_2;
@@ -472,10 +476,14 @@ template <> struct ball_scale_1_full<float> {
     static constexpr bool proved = true;
 };
 
-// ball_split_1: UNVERIFIED. Claims: ball_splits.
+// ball_split_1: proved. Claims: ball_splits.
 template <class T> struct ball_split_1;
-template <> struct ball_split_1<double> { static constexpr bool proved = false; };
-template <> struct ball_split_1<float> { static constexpr bool proved = false; };
+template <> struct ball_split_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_split_1<float> {
+    static constexpr bool proved = true;
+};
 
 // ball_sub_1: proved. Claims: encloses.
 template <class T> struct ball_sub_1;

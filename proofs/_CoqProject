@@ -93,3 +93,4 @@ theories/IeeeIntervalConvert.v
 theories/IeeeIntervalMul2.v
 theories/IeeeIntervalPredicates.v
 theories/IeeeBallPredicates.v
+theories/IeeeBallSets.v

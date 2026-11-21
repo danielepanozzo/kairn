@@ -1454,9 +1454,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallSets.v",
+        "name": "ball_from_interval_1_correct"
+      },
       "source": {
         "cite": "interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2796,9 +2800,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallSets.v",
+        "name": "ball_split_1_correct"
+      },
       "source": {
         "cite": "the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

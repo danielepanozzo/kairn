@@ -1033,7 +1033,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_to_ball_1(float xl, float xu, floa
 }
 
 // ball_from_interval_1(lo, hi) -> cw, rw
-// interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_from_interval_1(double gl, double gu, bool v, double r, double c) noexcept {
@@ -3029,7 +3029,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(float cx, float rx, float a, float&
 }
 
 // ball_split_1(c, r) -> ca, ra, cb, rb
-// the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> ball_split_1(double c, double r, bool fr, double a0, double a1, double b0, double b1) noexcept {
