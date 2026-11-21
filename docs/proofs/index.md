@@ -101,7 +101,7 @@ lists:
   `BvReal.v`), and with overflow, infinities and NaN (`IeeeBv.v`), and of the negation and
   the constructor of a ball vector and its scaling by a power of two, in both models
   (`BvNegMake.v`, `IeeeBvNegMake.v`, `BvPow2.v`, `IeeeBvPow2.v`), and of the product of two ball
-  vectors over the real numbers, with what holds of its finish with overflow (`BvConv.v`,
+  vectors over the real numbers, and of its finish with overflow (`BvConv.v`,
   `IeeeBvConv.v`; [below](#ball-vectors)); and of the
   kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
@@ -581,12 +581,16 @@ $M$) with $M$ the largest magnitude of a leading limb, and at most $m$ terms: so
 coefficient of the members is within the radius's claim of the coefficient written
 (`coef_bound`).
 
+**The finish of the product in the model with overflow** (`IeeeBvConv.v`): `bv_conv_finish` has
+its generated statement as type: the flag is true exactly when both masks (the convolution's and
+the bound's) are true and the radius is finite, the result is then the radius, and otherwise a
+NaN. (The statement was first printed without the two masks, "the flag is true exactly when the
+radius is finite", which was false: a false mask of the convolution gives a false flag with a
+finite radius. The generator now prints the masks of `if_all`, as it prints the one mask of
+`if`.)
+
 **Not proved: the product in the model with overflow.** `bv_conv_k` in the IEEE model (V1 to V4)
-is unverified, and so is the finish `bv_conv_finish`, whose generated statement is false
-(`not_bv_conv_finish_spec` of `IeeeBvConv.v`, audited in step 3): it says that the flag is true
-exactly when the radius is finite, for any masks, while a false mask of the convolution gives a
-false flag with a finite radius; what holds is the same with both masks true
-(`bv_conv_finish_facts`).
+is unverified.
 
 ## The accumulator
 

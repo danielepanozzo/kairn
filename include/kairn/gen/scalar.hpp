@@ -1770,7 +1770,7 @@ KAIRN_GEN_FORCEINLINE constexpr void norm_finish_1(float m, bool ok, float& r_ou
 }
 
 // bv_conv_finish(rz, mask okc, mask okg) -> r, mask flag
-// the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+// the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void bv_conv_finish(double rz, bool okc, bool okg, double& r_out, bool& flag_out) noexcept {
     const bool q = okc & okg;
     // (r, flag) = norm_finish_1(rz, q)

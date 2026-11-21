@@ -485,10 +485,14 @@ template <> struct norm_finish_1<float> {
     static constexpr bool proved = true;
 };
 
-// bv_conv_finish: UNVERIFIED. Claims: finite_or_nan.
+// bv_conv_finish: proved. Claims: finite_or_nan.
 template <class T> struct bv_conv_finish;
-template <> struct bv_conv_finish<double> { static constexpr bool proved = false; };
-template <> struct bv_conv_finish<float> { static constexpr bool proved = false; };
+template <> struct bv_conv_finish<double> {
+    static constexpr bool proved = true;
+};
+template <> struct bv_conv_finish<float> {
+    static constexpr bool proved = true;
+};
 
 // bv_make_finish: proved. Claims: finite_or_nan.
 template <class T> struct bv_make_finish;

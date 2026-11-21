@@ -526,6 +526,27 @@ class Printers(unittest.TestCase):
                                  {'record': 2, 'step': 1, 'check': 1, 'bound': 1, 'radius': 1, 'finish': 1})
                 self.assertEqual(parts['radius']['fma'], 8)
 
+    def test_the_finish_statement_has_the_masks(self):
+        """The IEEE-model statement of bv_conv_finish says what its claim finite_or_nan ... if_all=okc,okg
+        means: the flag is true exactly when both masks are true and the radius is finite, as the
+        statement of norm_finish_1 prints its if=ok. (Printed without the masks, the first clause was
+        false: a finite radius under a false mask gives the flag false.)"""
+        from kairn_gen import ieee
+        text = ieee.statements(self.ks)
+        s = text.split('Definition bv_conv_finish_spec : Prop :=\n', 1)[1].split('\n\n', 1)[0]
+        self.assertIn('  forall okc okg : bool,\n', s)
+        self.assertIn('  (flag = true <-> okc = true /\\ okg = true /\\ finite rz) /\\\n'
+                      '  (flag = true -> r = rz) /\\\n'
+                      '  (flag = false -> nan r).', s)
+        self.assertNotIn('(flag = true <-> finite rz)', s)
+        n = text.split('Definition norm_finish_1_spec : Prop :=\n', 1)[1].split('\n\n', 1)[0]
+        self.assertIn('  (flag = true <-> ok = true /\\ finite m) /\\\n', n)
+        # A list of three masks prints the three, in their order.
+        k = self.ks['bv_conv_finish']
+        e = dict(k.ensures[0], if_all=['okc', 'okg', 'okc'])
+        lines = '\n'.join(ieee._finite_or_nan_spec(k, self.ks, e))
+        self.assertIn('(flag = true <-> okc = true /\\ okg = true /\\ okc = true /\\ finite rz)', lines)
+
     def test_the_models_and_statements(self):
         from kairn_gen import ieee
         m, s = rocq.fold_model(self.ks), rocq.fold_statements(self.ks)

@@ -1265,6 +1265,22 @@ class NonFinite(unittest.TestCase):
         self.assertEqual(judge_represents(ks['make_2'], ks, fmt, rep, {'a': [NINF]}, {'x': [NINF, ZERO]}, None), [])
         self.assertEqual(judge_represents(ks['make_2'], ks, fmt, rep, {'a': [NINF]}, {'x': [NINF, NaN]}, None),
                          ['represents (canonical)'])
+        # The finish of the product of two BallVectors (finite_or_nan with if_all): a finite radius
+        # gives the flag true only when both masks are true.
+        cf = ks['bv_conv_finish']
+        ce = cf.ensures[0]
+        self.assertEqual(ce.get('if_all'), ['okc', 'okg'])
+        both = {'rz': [one], 'okc': [True], 'okg': [True]}
+        self.assertEqual(judge_finite_or_nan(cf, ks, fmt, ce, both, {'r': [one], 'flag': [True]}, None), [])
+        self.assertEqual(judge_finite_or_nan(cf, ks, fmt, ce, both, {'r': [NaN], 'flag': [False]}, None),
+                         ['finite_or_nan (flag)'])
+        for okc, okg in ((False, True), (True, False), (False, False)):
+            masks = {'rz': [one], 'okc': [okc], 'okg': [okg]}
+            self.assertEqual(judge_finite_or_nan(cf, ks, fmt, ce, masks, {'r': [NaN], 'flag': [False]}, None), [])
+            self.assertEqual(judge_finite_or_nan(cf, ks, fmt, ce, masks, {'r': [one], 'flag': [True]}, None),
+                             ['finite_or_nan (flag)'])
+        self.assertEqual(judge_finite_or_nan(cf, ks, fmt, ce, dict(both, rz=[PINF]), {'r': [NaN], 'flag': [False]},
+                                             None), [])
         self.assertEqual(fmt.ieee_round(F(15), 'nearest'), PINF)           # 15 is a tie between 14 and 16
         self.assertEqual(fmt.ieee_round(F(29, 2), 'down'), make(F(14)))
         self.assertEqual(fmt.ieee_round(F(-29, 2), 'down'), NINF)

@@ -741,8 +741,9 @@ def _makes_ball_spec(k, kernels, e):
 
 def _finite_or_nan_spec(k, kernels, e):
     """The finish of a fold (milestone2.md, "When something is not finite"): the flag is true
-    exactly when limb 0 of the value is finite; the output is then the value, limb for limb, and
-    otherwise every limb of it is a NaN. For every input: the statement has no hypothesis."""
+    exactly when limb 0 of the value is finite (and the mask of `if`, or every mask of `if_all`,
+    is true); the output is then the value, limb for limb, and otherwise every limb of it is a
+    NaN. For every input: the statement has no hypothesis."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=False) + _hyps_extended(k, t) + [_let(k, kernels)]
     src, out, flag = list(t.ins[k.value].limbs), t.outs[e['of']].limbs, e['flag']
@@ -755,6 +756,10 @@ def _finite_or_nan_spec(k, kernels, e):
         finite = f'{finite} /\\ 0 <= val {src[0]}'
     if 'if' in e:
         finite = f'{e["if"]} = true /\\ {finite}'
+    # The finish of the product of two BallVectors: under every mask of the list (if_all), as
+    # under the one mask of if.
+    for name in reversed(e.get('if_all', [])):
+        finite = f'{name} = true /\\ {finite}'
     lines += [f'  ({flag} = true <-> {finite}) /\\',
               f'  ({flag} = true -> ' + ' /\\ '.join(f'{o} = {i}' for o, i in zip(out, src)) + ') /\\',
               f'  ({flag} = false -> ' + ' /\\ '.join(f'nan {o}' for o in out) + ').']

@@ -2663,9 +2663,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBvConv.v",
+        "name": "bv_conv_finish_correct"
+      },
       "source": {
         "cite": "the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md)",
         "license": "proof: MIT"

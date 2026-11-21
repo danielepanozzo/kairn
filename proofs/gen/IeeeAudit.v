@@ -11,6 +11,7 @@ From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeBallPow2.
 From Kairn Require Import IeeeBv.
+From Kairn Require Import IeeeBvConv.
 From Kairn Require Import IeeeBvNegMake.
 From Kairn Require Import IeeeBvPow2.
 From Kairn Require Import IeeeDirected.
@@ -86,6 +87,9 @@ Print Assumptions fold_finish_1_correct.
 
 Definition norm_finish_1_audit : norm_finish_1_spec := norm_finish_1_correct.
 Print Assumptions norm_finish_1_correct.
+
+Definition bv_conv_finish_audit : bv_conv_finish_spec := bv_conv_finish_correct.
+Print Assumptions bv_conv_finish_correct.
 
 Definition bv_make_finish_audit : bv_make_finish_spec := bv_make_finish_correct.
 Print Assumptions bv_make_finish_correct.

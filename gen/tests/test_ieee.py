@@ -401,8 +401,9 @@ class Statements(unittest.TestCase):
         # constructor of a BallVector: bv_center_2 and bv_make_finish (2), the bridges and the leading
         # limbs of neg_1 and bv_center_entry_1 (4), and bv_neg_k and bv_make_k in their two orders (8); and of
         # the scaling by a power of two: the claims and the leading limbs of its two steps (4), and
-        # bv_mul_pow2_k in its two orders (4).
-        self.assertEqual(text.count('Print Assumptions'), 240)
+        # bv_mul_pow2_k in its two orders (4); and the finish of the product of two BallVectors,
+        # bv_conv_finish (1).
+        self.assertEqual(text.count('Print Assumptions'), 241)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -485,8 +486,13 @@ class CheckedFiles(unittest.TestCase):
     # were proved (IeeeBvNegMake.v): the comments above the statements of neg_1, bv_center_entry_1,
     # bv_center_2 and bv_make_finish say proved, and nothing else changed. Then the two steps of the
     # scaling by a power of two (IeeeBvPow2.v): two comments more.
+    # Then the printer of finite_or_nan wrote the masks of if_all, which it had left out: the first
+    # clause of the statement of bv_conv_finish, the only kernel with if_all, says
+    # flag = true <-> okc = true /\ okg = true /\ finite rz (it said flag = true <-> finite rz, which
+    # was false), and nothing else changed; then that statement was proved (IeeeBvConv.v): one
+    # comment more. make -C proofs passed on these files.
     DIGESTS = {'proofs/gen/IeeeModel.v': '767697da2d8c9427dfc78858b27e17f481d44666aba4708bf7364652bdafd652',
-               'proofs/gen/IeeeStatements.v': 'b78285d71c900001a7408a4411ce7f9d73d83ba4009039c99cff971834b1dd9a'}
+               'proofs/gen/IeeeStatements.v': 'b707d32964169c679095610394ead2b281a7e0b4bdd997fc2df08dade57bfa04'}
 
 
     def test_the_checked_files(self):

@@ -1,17 +1,14 @@
-(* The product of two ball vectors in the IEEE model: what holds of its finish,
-   bv_conv_finish (proofs/gen/IeeeModel.v).
+(* The product of two ball vectors in the IEEE model: its finish bv_conv_finish
+   (proofs/gen/IeeeModel.v), and what its radius kernel conv_radius returns.
 
    bv_conv_finish is norm_finish_1 under the and of the convolution's mask and the bound's:
    its flag is true exactly when both masks are true and the radius is finite, and then the
    result is the radius; otherwise it is a NaN (bv_conv_finish_facts, from
-   norm_finish_1_correct of IeeeFoldNorm.v).
-
-   The generated statement bv_conv_finish_spec (proofs/gen/IeeeStatements.v) is not proved:
-   its first clause, flag = true <-> finite rz, leaves out the two masks of if_all and is
-   false. For rz = +0, okc = false and okg = true (any format), q = false, so norm_finish_1
-   tests the canonical NaN and its flag is false, while rz is finite. The clause the claim
-   finite_or_nan r flag=flag if_all=okc,okg means is the first conjunct of
-   bv_conv_finish_facts, as the statement of norm_finish_1 prints its if=ok. *)
+   norm_finish_1_correct of IeeeFoldNorm.v). That is the generated statement
+   bv_conv_finish_spec (proofs/gen/IeeeStatements.v): bv_conv_finish_correct. The statement
+   was first printed without the two masks of if_all (flag = true <-> finite rz), which was
+   false: for rz = +0, okc = false and okg = true the flag is false. The printer now writes the
+   masks, as it writes the one mask of if in the statement of norm_finish_1. *)
 From Stdlib Require Import Reals ZArith List Bool Lia Lra.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements.
@@ -40,37 +37,11 @@ rewrite H1, andb_true_iff. split.
 - intros [A [B C]]. split. split. exact A. exact B. exact C.
 Qed.
 
-(* The kernel counterexample to the first clause of bv_conv_finish_spec: a finite radius and a
-   false mask of the convolution give a false flag. *)
-Lemma bv_conv_finish_spec_counterexample :
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
-  let rz := IeeeOperations.pzero prec emax in
-  finite rz /\
-  snd (IeeeModel.bv_conv_finish prec emax nan_abs nan_const rz false true) = false.
+(* The generated statement. *)
+Theorem bv_conv_finish_correct : bv_conv_finish_spec.
 Proof.
-intros prec emax Hp He nan_abs nan_const rz. split. reflexivity.
-generalize (bv_conv_finish_facts prec emax Hp He nan_abs nan_const rz false true).
-destruct (IeeeModel.bv_conv_finish prec emax nan_abs nan_const rz false true) as [r flag].
-intros [H1 _]. cbn [snd]. destruct flag; [|reflexivity].
-destruct (proj1 H1 eq_refl) as [E _]. discriminate E.
-Qed.
-
-(* Hence the generated statement is false, in binary64 for instance. *)
-Lemma not_bv_conv_finish_spec : ~ bv_conv_finish_spec.
-Proof.
-intros S.
-pose (nn := B754_nan 53 1024 false 1 eq_refl).
-assert (Nn : is_nan 53 1024 nn = true) by reflexivity.
-pose (na := fun _ : binary_float 53 1024 => exist (fun x => is_nan 53 1024 x = true) nn Nn).
-pose (nc := exist (fun x => is_nan 53 1024 x = true) nn Nn).
-generalize (S 53%Z 1024%Z eq_refl eq_refl na nc (IeeeOperations.pzero 53 1024) false true)
-           (bv_conv_finish_spec_counterexample 53%Z 1024%Z eq_refl eq_refl na nc).
-cbv zeta.
-destruct (IeeeModel.bv_conv_finish 53 1024 na nc (IeeeOperations.pzero 53 1024) false true)
-  as [r flag].
-cbn [snd]. intros [[_ B] _] [F E]. rewrite E in B. discriminate (B F).
+intros prec emax Hp He nan_abs nan_const rz okc okg.
+exact (bv_conv_finish_facts prec emax Hp He nan_abs nan_const rz okc okg).
 Qed.
 
 (** * The radius kernel in the IEEE model *)
