@@ -589,8 +589,29 @@ radius is finite", which was false: a false mask of the convolution gives a fals
 finite radius. The generator now prints the masks of `if_all`, as it prints the one mask of
 `if`.)
 
-**Not proved: the product in the model with overflow.** `bv_conv_k` in the IEEE model (V1 to V4)
-is unverified.
+**The product in the model with overflow: V1 to V3 proved, the statement not.** `bv_conv_k` in the
+IEEE model is unverified: its generated statement is one conjunction, V1 to V4, and V4 is not
+proved. V1 to V3 are, as lemmas of their own in the vocabulary of the statement
+(`bv_conv_k_ieee_v1`, `_v2`, `_v3` of `IeeeBvConv.v`, audited in step 3), for canonical operands,
+infinite radii (the whole space) included: the result is a finite ball vector or the whole space,
+with $n_x + n_y - 1$ coefficients (none when an operand is empty), and the flag is true exactly when
+the radius is finite; for all members of the operands' balls, each entry chosen independently,
+coefficient $j$ of their exact product is in the ball of coefficient $j$ written (the whole space
+contains everything); and a finite radius comes from finite radii, with the coefficients and the
+radius of the real model on the values, so that V2 is the real-model theorem read on the values.
+
+**V4 of `bv_conv_2` is false as printed.** In a format of precision $p \ge 8$ with
+$p < e_{\max} \le 2p - 7$, the condition on the count, $n\,(4u^2 + \eta) \le \tfrac1{16}$, admits
+$n = 2^{e_{\max}}$, and every $n$ above the largest number $\Omega = (1 - 2^{-p})\,2^{e_{\max}}$
+makes the count rounded up overflow to $+\infty$; `bound_dot_2(+\infty)` then has its mask false and
+the product is the whole space, although the operands are finite and meet every condition. For
+instance $p = 8$, $e_{\max} = 9$ ($\eta = 2^{-14}$, $\Omega = 510$), both operands 511 entries
+$(+0, +0)$ with radii $+0$: $511\,(2^{-14} + 2^{-14}) = 511/8192 \le 1/16$, every other condition is
+$0 \le 2^{7}$, and the interpreter returns 1021 zero coefficients, the radius $+\infty$ and the flag
+false (with 510 entries the count is 510 and the product is finite). `binary32` and `binary64` are
+not affected (the condition bounds $n$ by $2^{42}$ and $2^{100}$). The condition of the count would
+need the smallest normal number $\eta/(2u)$ in place of $\eta$, which bounds $n$ by
+$2^{e_{\max} - 6}$; that is a change of the claim, left to its author.
 
 ## The accumulator
 

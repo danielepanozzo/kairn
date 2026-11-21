@@ -1106,7 +1106,11 @@ Print Assumptions IeeeBvPow2.bv_mul_pow2_2_lanes_seq_ieee.
    listed by proofs/gen/IeeeAudit.v), what bv_conv_finish returns, in the form of its
    statement; and, for the IEEE-model statements of the folds, that the radius kernel on
    nonnegative operands is nonnegative, +infinity or a NaN, and when finite the real
-   model's. *)
+   model's, the same of the count and of the bound, lists related entry by entry, and V1 to V3
+   of bv_conv_1 and bv_conv_2 (bv_conv_k_ieee_v1, _v2, _v3), each a clause of the generated
+   statement bv_conv_k_ieee_spec, with what they rest on (bv_conv_k_parts). V4 of bv_conv_2 is
+   false in formats where the count overflows (docs/proofs/index.md), so its generated
+   statement is not proved. *)
 From Kairn Require Import BvConv IeeeBvConv.
 Print Assumptions BvConv.rnd_lower_normal_conv.
 Print Assumptions BvConv.conv_radius_facts.
@@ -1126,4 +1130,28 @@ Print Assumptions BvConv.coef_bound.
 Print Assumptions IeeeBvConv.bv_conv_finish_facts.
 Print Assumptions IeeeBvConv.up_const_cases.
 Print Assumptions IeeeBvConv.conv_radius_ieee.
+Print Assumptions IeeeBvConv.count_ieee.
+Print Assumptions IeeeBvConv.up_nonneg.
+Print Assumptions IeeeBvConv.bound_dot_1_nonneg.
+Print Assumptions IeeeBvConv.bound_dot_2_nonneg.
+Print Assumptions IeeeBvConv.combine_map_map.
+Print Assumptions IeeeBvConv.conv_terms_map.
+Print Assumptions IeeeBvConv.Forall2_flip_map_with.
+Print Assumptions IeeeBvConv.Forall2_join.
+Print Assumptions IeeeBvConv.Forall2_all_map.
+Print Assumptions IeeeBvConv.Forall2_map_l_intro.
+Print Assumptions IeeeBvConv.canonical_1_finite.
+Print Assumptions IeeeBvConv.Forall2_Forall_l.
+Print Assumptions IeeeBvConv.conv_1_length.
+Print Assumptions IeeeBvConv.bv_conv_1_parts.
+Print Assumptions IeeeBvConv.bv_conv_1_ieee_v1.
+Print Assumptions IeeeBvConv.bv_conv_1_ieee_v2.
+Print Assumptions IeeeBvConv.bv_conv_1_ieee_v3.
+Print Assumptions IeeeBvConv.canonical_2_finite.
+Print Assumptions IeeeBvConv.conv_2_length.
+Print Assumptions IeeeBvConv.record_2_lead.
+Print Assumptions IeeeBvConv.bv_conv_2_parts.
+Print Assumptions IeeeBvConv.bv_conv_2_ieee_v1.
+Print Assumptions IeeeBvConv.bv_conv_2_ieee_v2.
+Print Assumptions IeeeBvConv.bv_conv_2_ieee_v3.
 
