@@ -599,7 +599,7 @@ MUTANTS = {
     "conv: the two lengths read swapped": (
         "maps.py", "    nx, ny = int(lt[3]), int(lt[4])", "    ny, nx = int(lt[3]), int(lt[4])"),
     "claims: a convolution read in the order of the list": (
-        "claims.py", "            for raw in [r for r in fl if not any(r is c for c in convs)] + convs:",
+        "claims.py", "            for raw in [r for r in fl if not any(r is c for c in later)] + later:",
         "            for raw in fl:"),
     "maxima: a result below V accepted": (
         "folds.py", "    if rc < Vc:\n        # (Beyond Omega too", "    if False:\n        # (Beyond Omega too"),
@@ -800,6 +800,150 @@ MUTANTS = {
         "gen8.py", "        x = fmt.omega if rng.bits(1) else F.pred(fmt, fmt.omega)", "        x = fmt.lam"),
     "gen8: masks always true": (
         "gen8.py", "            vals[n] = [1 if rng.chance(2, 3) else 0]", "            vals[n] = [1]"),
+    # The folds of the ball vectors and the requests in place (bvfolds.py, genbv.py, maps.py,
+    # genmap.py).
+    "bv: V1 not judged": (
+        "bvfolds.py", "    # V1: canonical; the flag.\n    res = _state(fmt, zs, r)\n    if res is None:",
+        "    # V1: canonical; the flag.\n    res = _state(fmt, zs, r)\n    if False:"),
+    "bv: the flag not judged": (
+        "bvfolds.py", "            flag, \"finite\" if type(r) is int else F.fixed_hex(fmt, r)))\n"
+        "    if f.kind == \"makes_ball_vector\":",
+        "            flag, \"finite\" if type(r) is int else F.fixed_hex(fmt, r))) if False else "
+        "None\n    if f.kind == \"makes_ball_vector\":"),
+    "bv: the flag read the other way": (
+        "bvfolds.py", "    if flag != (1 if type(r) is int else 0):\n        fail(\"flag\", \"the flag is %d "
+        "although the radius is %s\" % (\n            flag, \"finite\" if type(r) is int else "
+        "F.fixed_hex(fmt, r)))\n    if f.kind",
+        "    if flag != (0 if type(r) is int else 1):\n        fail(\"flag\", \"the flag is %d "
+        "although the radius is %s\" % (\n            flag, \"finite\" if type(r) is int else "
+        "F.fixed_hex(fmt, r)))\n    if f.kind"),
+    "bv: conv: the flag not judged": (
+        "bvfolds.py", "    if flag != (1 if type(r) is int else 0):\n        fail(\"flag\", \"the flag is %d "
+        "although the radius is %s\" % (\n            flag, \"finite\" if type(r) is int else "
+        "F.fixed_hex(fmt, r)))\n    whole = ",
+        "    if False:\n        fail(\"flag\", \"the flag is %d "
+        "although the radius is %s\" % (\n            flag, \"finite\" if type(r) is int else "
+        "F.fixed_hex(fmt, r)))\n    whole = "),
+    "bv: conv: V1 not judged": (
+        "bvfolds.py", "    res = _state(fmt, zs, r)\n    if res is None:\n        fail(\"V1\", \"the result is "
+        "neither a finite ball vector nor the whole space\")",
+        "    res = _state(fmt, zs, r)\n    if False:\n        fail(\"V1\", \"the result is "
+        "neither a finite ball vector nor the whole space\")"),
+    "bv: inplace= beyond the arrays accepted": (
+        "bvfolds.py", "        if m is None or int(m.group(1)) >= len(f.arrays) or",
+        "        if m is None or int(m.group(1)) > len(f.arrays) or"),
+    "bv: inplace= not a number accepted": (
+        "bvfolds.py", '_INPLACE = re.compile(r"inplace=(0|[1-9][0-9]*)\\Z")',
+        '_INPLACE = re.compile(r"inplace=([0-9]+)\\Z")'),
+    "bv: in place not counted": (
+        "bvfolds.py", "        es.count(INPLACE % inplace)", "        pass"),
+    "bv: a finite result beside a whole operand accepted": (
+        "bvfolds.py", "    if finite and (whole_op or not scal_fin):\n        fail(\"V3\"",
+        "    if False:\n        fail(\"V3\""),
+    "bv: V2 not judged": (
+        "bvfolds.py", "            if rmin > rr:\n                fail(\"V2\", \"entry %d: the set",
+        "            if False:\n                fail(\"V2\", \"entry %d: the set"),
+    "bv: V2 on one side of the center": (
+        "bvfolds.py", "            rmin = max(c - lo, hi - c)\n            if rmin > rr:",
+        "            rmin = hi - c\n            if rmin > rr:"),
+    "bv: V2 an unbounded set accepted": (
+        "bvfolds.py", "            if type(lo) is not int or type(hi) is not int:\n                "
+        "fail(\"V2\", \"entry %d: the set is unbounded",
+        "            if False:\n                fail(\"V2\", \"entry %d: the set is unbounded"),
+    "bv: V3 of the step not judged": (
+        "bvfolds.py", "        v = ck.verdict(sp, sub, xs, z, el)", "        v = (\"ok\", [])"),
+    "bv: V3 of the radius kernel not judged": (
+        "bvfolds.py", "    for w in BV.radius_reasons(rk, sub_r, xr, [r], line):\n        fail(\"V3\"",
+        "    for w in []:\n        fail(\"V3\""),
+    "bv: the radius kernel at m = +0": (
+        "bvfolds.py", "    m = max((abs(z[0]) for z in zs), default=0)\n    rk = pl.radius",
+        "    m = 0\n    rk = pl.radius"),
+    "bv: V4 not judged": (
+        "bvfolds.py", "            if not finite:\n                fail(\"V4\", \"every operand",
+        "            if False:\n                fail(\"V4\", \"every operand"),
+    "bv: V4 without radii_when": (
+        "bvfolds.py", "        elif all(h(tuple(sc) + (0,) * pl.L) for h in pl.rw) and all(",
+        "        elif all("),
+    "bv: V4 without finite_when": (
+        "bvfolds.py", "                h(x) for x in elems for h in pl.fw):",
+        "                True for x in elems):"),
+    "bv: V4 claimed below finite_from": (
+        "bvfolds.py", "        elif not pl.v4:\n            es.count(V4_BELOW)",
+        "        elif False:\n            es.count(V4_BELOW)"),
+    "bv: V4 judged in every format": (
+        "bvfolds.py", "    return fmt.qmax >= 1 and fmt.qmin <= 3 - fmt.qmax - 2 * fmt.p",
+        "    return True"),
+    "bv: V4 judged where eta is above binary_float's": (
+        "bvfolds.py", "    return fmt.qmax >= 1 and fmt.qmin <= 3 - fmt.qmax - 2 * fmt.p",
+        "    return fmt.qmax >= 1"),
+    "bv: exactness not judged": (
+        "bvfolds.py", "                if c - rr != lo or c + rr != hi:",
+        "                if False:"),
+    "bv: exactness judged where exact_when fails": (
+        "bvfolds.py", "        if not failing and elems:\n            es.count(EXACT_HOLDS)",
+        "        if elems:\n            es.count(EXACT_HOLDS)"),
+    "bv: makes: a center not finite ignored": (
+        "bvfolds.py", "    whole = rg == NAN or rg == INF or rg == NINF or (type(rg) is int and rg < 0) "
+        "or nonfin",
+        "    whole = rg == NAN or rg == INF or rg == NINF or (type(rg) is int and rg < 0)"),
+    "bv: makes: a negative radius kept": (
+        "bvfolds.py", "    whole = rg == NAN or rg == INF or rg == NINF or (type(rg) is int and rg < 0) "
+        "or nonfin",
+        "    whole = rg == NAN or rg == INF or rg == NINF or nonfin"),
+    "bv: makes: a NaN radius kept": (
+        "bvfolds.py", "    whole = rg == NAN or rg == INF or rg == NINF or (type(rg) is int and rg < 0) "
+        "or nonfin",
+        "    whole = rg == INF or rg == NINF or (type(rg) is int and rg < 0) or nonfin"),
+    "bv: makes: the radius not compared": (
+        "bvfolds.py", "    if r != rg:\n        fail(\"makes_ball_vector\"",
+        "    if False:\n        fail(\"makes_ball_vector\""),
+    "bv: makes: the centers not compared": (
+        "bvfolds.py", "        if list(z) != list(x[lo:hi]):", "        if False:"),
+    "bv: makes: the sign of a zero radius not read": (
+        "bvfolds.py", "        rcls = \"-0\" if tok[i].startswith(\"-\") else \"+0\"",
+        "        rcls = \"+0\""),
+    "bv: conv: V2 not judged": (
+        "bvfolds.py", "            if max(c - lo, hi - c) > rr:\n                fail(\"V2\", \"coefficient",
+        "            if False:\n                fail(\"V2\", \"coefficient"),
+    "bv: conv: count_when ignored": (
+        "bvfolds.py", "            if CX.evaluate(tree, env) > CX.evaluate(kt, env):\n                cw = False",
+        "            if False:\n                cw = False"),
+    "bv: conv: the count the larger length": (
+        "bvfolds.py", "        n = min(nx, ny)\n        cw = True",
+        "        n = max(nx, ny)\n        cw = True"),
+    "bv: conv: V3 the radius below the stated value accepted": (
+        "bvfolds.py", "    if r * eta < v:\n        fail(\"V3\", \"the radius is below",
+        "    if False:\n        fail(\"V3\", \"the radius is below"),
+    "bv: conv: the bound's stated values taken zero": (
+        "bvfolds.py", "                bnames[out] = CX.evaluate(pl.bound_values[out], pl.env(dict(bnames)))",
+        "                bnames[out] = Fraction(0)"),
+    "bv: conv: V4 not judged": (
+        "bvfolds.py", "            if not finite:\n                fail(\"V4\", \"both operands",
+        "            if False:\n                fail(\"V4\", \"both operands"),
+    "genbv: the count stratum away from the edge": (
+        "genbv.py", "        if g._edge < L and rng.chance(3, 4):", "        if False:"),
+    "genbv: in place, array 0 only": (
+        "genbv.py", "        self.inplace = [i for i, (_n, l) in enumerate(f.arrays) if l == f.wlimbs] "
+        "if inplace else []",
+        "        self.inplace = [0] if inplace else []"),
+    "genbv: the stratum whole without the whole space": (
+        "genbv.py", "            vals[a] = [[0] * k for _ in range(n)]\n            sc[radius_of[a]] = INF",
+        "            vals[a] = [[0] * k for _ in range(n)]\n            sc[radius_of[a]] = 0"),
+    "genbv: the enumeration without the whole space": (
+        "genbv.py", "        return len(self.radii) * len(self.entries) ** n + 1",
+        "        return len(self.radii) * len(self.entries) ** n"),
+    "genbv: the enumeration without the lane orders": (
+        "genbv.py", "            orders = [\"seq\"] + ([] if self.conv else [\"lanes:%d\" % W",
+        "            orders = [\"seq\"] + ([] if True else [\"lanes:%d\" % W"),
+    "maps: in place not counted": (
+        "maps.py", "        es_e.count(\"in place: array %d\" % inplace)", "        pass"),
+    "genmap: in place, array 0 only": (
+        "genmap.py", "        self.inplace = [i for i, (_n, l) in enumerate(m.arrays) if l == m.wlimbs] "
+        "if inplace else []",
+        "        self.inplace = [0] if inplace else []"),
+    "genmap: the header of a run in place": (
+        "genmap.py", "(\" inplace=yes\" if getattr(g, \"inplace\", None)",
+        "(\"\" if getattr(g, \"inplace\", None)"),
 }
 
 

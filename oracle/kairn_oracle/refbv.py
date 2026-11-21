@@ -326,12 +326,229 @@ class BvKernels:
         return self.acc_radius_1(a, m, g, t)
 
 
+
+
+# ---------------------------------------------------------------------------
+# The ball vectors (architecture.md, "Ball vectors"): a map of the centers whose state is that of
+# a fold of maxima of the centers written, its finish the one radius; when the flag is false a
+# second pass writes every center zero and the radius is +inf, the whole space.
+
+# name: (step, its operands by position (("s", i) scalar i, ("a", 0) the entry), limbs, the
+# scalars, the radius kernel, its arguments after m (("ex",) the mask of exactness, ("s", i)), the
+# finish).
+BVS = {
+    "bv_add_1": ("add_1_1", (("a", 0), ("a", 1)), 1, 2, "bv_add_radius_1", (("s", 0), ("s", 1)),
+                 "norm_finish_1"),
+    "bv_add_2": ("add_2_2", (("a", 0), ("a", 1)), 2, 2, "bv_add_radius_2", (("s", 0), ("s", 1)),
+                 "norm_finish_1"),
+    "bv_sub_1": ("sub_1_1", (("a", 0), ("a", 1)), 1, 2, "bv_add_radius_1", (("s", 0), ("s", 1)),
+                 "norm_finish_1"),
+    "bv_sub_2": ("sub_2_2", (("a", 0), ("a", 1)), 2, 2, "bv_add_radius_2", (("s", 0), ("s", 1)),
+                 "norm_finish_1"),
+    "bv_scale_1": ("scale_step_1", (("a", 0), ("s", 1)), 1, 2, "bv_scale_radius_1",
+                   (("s", 0), ("s", 1)), "norm_finish_1"),
+    "bv_scale_2": ("scale_step_2", (("a", 0), ("s", 1)), 2, 2, "bv_scale_radius_2",
+                   (("s", 0), ("s", 1)), "norm_finish_1"),
+    "bv_neg_1": ("neg_1", (("a", 0),), 1, 1, "bv_neg_radius", (("s", 0),), "norm_finish_1"),
+    "bv_neg_2": ("neg_2", (("a", 0),), 2, 1, "bv_neg_radius", (("s", 0),), "norm_finish_1"),
+    "bv_mul_pow2_1": ("bv_mul_pow2_step_1", (("a", 0), ("s", 1)), 1, 2, "bv_mul_pow2_radius",
+                      (("ex",), ("s", 0), ("s", 1)), "norm_finish_1"),
+    "bv_mul_pow2_2": ("bv_mul_pow2_step_2", (("a", 0), ("s", 1)), 2, 2, "bv_mul_pow2_radius",
+                      (("ex",), ("s", 0), ("s", 1)), "norm_finish_1"),
+    "bv_make_1": ("bv_center_entry_1", (("a", 0),), 1, 1, "bv_make_radius", (("s", 0),),
+                  "bv_make_finish"),
+    "bv_make_2": ("bv_center_2", (("a", 0),), 2, 1, "bv_make_radius", (("s", 0),),
+                  "bv_make_finish"),
+}
+# The number of arrays read of each.
+BV_ARRAYS = {k: 1 + any(a == ("a", 1) for a in v[1]) for k, v in BVS.items()}
+BVCONVS = {"bv_conv_1": ("conv_1", "bound_dot_1", 1), "bv_conv_2": ("conv_2", "bound_dot_2", 2)}
+
+FOLD_VARIANTS = {
+    "bv-radius-no-m": "the ball vectors compute their radius at the largest magnitude +0",
+    "bv-whole-omega": "the ball vectors return the whole space as zero centers and the radius Omega",
+    "bv-flag-true": "the ball vectors return the flag true whatever the radius",
+    "bv-no-second-pass": "the ball vectors keep their centers as computed when the flag is false",
+    "bv-drop-last": "the ball vectors leave their last center zero",
+    "bv-lanes-swap": "the ball vectors in a lane order of two lanes or more write the centers of "
+                     "lanes 0 and 1 of each block in each other's place",
+    "bv-spurious-whole": "the ball vectors return the whole space when a center written is above "
+                         "2^(emax-8) in magnitude",
+    "bv-not-exact": "bv_neg_k and bv_mul_pow2_k return their radius one step up",
+    "bv-make-negative": "the constructors keep a negative radius",
+    "bv-make-nan-finite": "the constructors keep a NaN radius with finite centers",
+    "bvc-drop-term": "each coefficient of a product of BallVectors leaves out its last term",
+    "bvc-radius-no-rr": "the product of BallVectors computes its radius with ry = 0",
+    "bvc-bound-false": "the product of BallVectors takes the bound's mask false for every count",
+    "bvc-flag-true": "the product of BallVectors returns the flag true whatever the radius",
+}
+
+
+class BvFolds:
+    """The folds of the ball vectors, installed on refrun.Kernels."""
+
+    def ball_vector(self, name, order, scalars, elems):
+        """(centers written, radius, flag) of a ball vector in an order (None for the sequential
+        one, W for the lanes): the step on each entry, the record of the largest magnitude of a
+        leading limb written (and the and of the step's masks), the radius, the finish."""
+        step, args, k, _ns, radius, rargs, finish = BVS[name]
+        v = self.v
+        A = self.A
+        out, masks = [], []
+        for e in elems:
+            ops = []
+            for where, j in args:
+                ops.extend([scalars[j]] if where == "s" else e[j])
+            res = list(getattr(self, step)(*ops))
+            out.append(res[:k])
+            masks.append(bool(res[k]) if len(res) > k else True)
+        if v == "bv-drop-last" and out:
+            out[-1] = [0] * k
+        if v == "bv-lanes-swap" and order is not None and order >= 2:
+            for b in range(0, order * (len(out) // order), order):
+                out[b], out[b + 1] = out[b + 1], out[b]
+        rec = self.norm_step_1 if k == 1 else (lambda m, ok, *z: self.norm_step_2(m, ok, *z))
+
+        def run(state, zs):
+            m, ok, ex = state
+            for z, e in zs:
+                m, ok = rec(m, ok, *z)
+                ex = ex and e
+            return (m, ok, ex)
+        pairs = list(zip(out, masks))
+        n = len(pairs)
+        zero = (0, True, True)
+        if order is None or order <= 1:
+            m, ok, ex = run(zero, pairs)
+        else:
+            W = order
+            full = W * (n // W)
+            lanes = [run(zero, pairs[j:full:W]) for j in range(W)]
+            s = lanes[0]
+            for l in lanes[1:]:
+                mm, oo = self.norm_combine(s[0], s[1], l[0], l[1])
+                s = (mm, oo, s[2] and l[2])
+            m, ok, ex = run(s, pairs[full:])
+        if v == "bv-radius-no-m":
+            m = 0
+        ra = [m]
+        for a in rargs:
+            ra.append(ex if a == ("ex",) else scalars[a[1]])
+        rz = getattr(self, radius)(*ra)[0]
+        if v == "bv-not-exact" and name.startswith(("bv_neg", "bv_mul_pow2")) and type(rz) is int:
+            rz = A.next_up(rz)
+        r, flag = getattr(self, finish)(rz, ok)
+        if v == "bv-spurious-whole" and any(type(z[0]) is int and abs(z[0]) > 1 << max(
+                0, A.qmax + A.p - 1 - 8 - A.qmin) for z in out):
+            flag = False
+        if v == "bv-make-negative" and name.startswith("bv_make") and type(scalars[0]) is int \
+                and scalars[0] < 0 and ok:
+            r, flag = scalars[0], True
+        if v == "bv-make-nan-finite" and name.startswith("bv_make") and scalars[0] != scalars[0] \
+                and ok:
+            r, flag = NAN, True
+        if not flag:
+            if v == "bv-whole-omega":
+                return [[0] * k for _ in out], A.omega, True
+            if v != "bv-no-second-pass":
+                out = [[0] * k for _ in out]
+            r = INF
+        if v == "bv-flag-true":
+            flag = True
+        return out, r, flag
+
+    def bv_product(self, name, rx, ry, xs, ys):
+        """(coefficients, radius, flag) of a product of two BallVectors: the convolution of the
+        centers (its mask), the maxima of the operands' leading limbs, the count rounded up, the
+        bound of dot, conv_radius, the finish."""
+        conv, bound, k = BVCONVS[name]
+        v = self.v
+        A = self.A
+        nx, ny = len(xs), len(ys)
+        nz = nx + ny - 1 if nx and ny else 0
+        fold = "dot_1" if k == 1 else "dot_2"
+        check = self.fold_finish_1 if k == 1 else self.fold_finish_2
+        out = []
+        for j in range(nz):
+            terms = [(i, j - i) for i in range(max(0, j - ny + 1), min(j, nx - 1) + 1)]
+            if v == "bvc-drop-term" and terms:
+                terms = terms[:-1]
+            out.append(list(self.fold(fold, None, [tuple(xs[i]) + tuple(ys[t]) for i, t in terms],
+                                      raw=True)))
+        finite = True
+        for z in out:
+            finite = check(*z)[-1] and finite
+        rec = self.norm_step_1 if k == 1 else (lambda m, ok, *z: self.norm_step_2(m, ok, *z))
+        ma, oka = 0, True
+        for x in xs:
+            ma, oka = rec(ma, oka, *x)
+        mb, okb = 0, True
+        for y in ys:
+            mb, okb = rec(mb, okb, *y)
+        n = min(nx, ny)
+        per = Fraction(1 << -A.qmin) if A.qmin < 0 else Fraction(1, 1 << A.qmin)
+        m = A.round_up_fraction(Fraction(n) * per) if n else 0
+        g, t, okg = self._bound(bound, m)
+        if v == "bvc-bound-false":
+            okg = False
+        rz = self.conv_radius(ma, mb, rx, 0 if v == "bvc-radius-no-rr" else ry, m, g, t)[0]
+        r, flag = self.bv_conv_finish(rz, finite, okg)
+        if not flag:
+            out = [[0] * k for _ in out]
+            r = INF
+        if v == "bvc-flag-true":
+            flag = True
+        return out, r, flag
+
+
+def bv_line(R, line, toks, tag):
+    """BV FORMAT ORDER N [inplace=I] SCALAR... LIMB... [#TAG] -> Z... R FLAG (the in-place field
+    changes nothing that is computed)."""
+    name, fname, order, n = toks[0], toks[1], toks[2], int(toks[3])
+    K = R.kernels(fname)
+    A = K.A
+    rest = toks[4:]
+    if rest and rest[0].startswith("inplace="):
+        rest = rest[1:]
+    _step, _args, k, ns, _r, _ra, _f = BVS[name]
+    na = BV_ARRAYS[name]
+    if len(rest) != ns + n * na * k:
+        raise ValueError("cannot run %r with %d limbs for %d entries" % (name, len(rest), n))
+    vals = [A.read(t) for t in rest]
+    scalars = vals[:ns]
+    cols = [vals[ns + j * n:ns + (j + 1) * n] for j in range(na * k)]
+    elems = [[[cols[a * k + t][i] for t in range(k)] for a in range(na)] for i in range(n)]
+    W = None if order == "seq" else int(order[6:])
+    out, r, flag = K.ball_vector(name, W, scalars, elems)
+    res = [A.write(z[t]) for t in range(k) for z in out] + [A.write(r), "1" if flag else "0"]
+    return [line + " -> " + " ".join(res)]
+
+
+def bvconv_line(R, line, toks, tag):
+    """BV_CONV FORMAT seq N_X N_Y RX RY LIMB... [#TAG] -> Z... R FLAG."""
+    name, fname, nx, ny = toks[0], toks[1], int(toks[3]), int(toks[4])
+    K = R.kernels(fname)
+    A = K.A
+    k = BVCONVS[name][2]
+    vals = [A.read(t) for t in toks[5:]]
+    rx, ry = vals[0], vals[1]
+    base = 2
+    xs = [[vals[base + t * nx + i] for t in range(k)] for i in range(nx)]
+    base += nx * k
+    ys = [[vals[base + t * ny + i] for t in range(k)] for i in range(ny)]
+    out, r, flag = K.bv_product(name, rx, ry, xs, ys)
+    res = [A.write(z[t]) for t in range(k) for z in out] + [A.write(r), "1" if flag else "0"]
+    return [line + " -> " + " ".join(res)]
+
+
 def install(R):
-    """Add the kernels to refrun.Kernels, their arities and mask inputs to refrun's tables, and the
-    variants to refrun.VARIANTS."""
-    for name, fn in vars(BvKernels).items():
-        if callable(fn) and not name.startswith("__"):
-            setattr(R.Kernels, name, fn)
+    """Add the kernels and folds to refrun.Kernels, their arities and mask inputs to refrun's
+    tables, and the variants to refrun.VARIANTS."""
+    for cls in (BvKernels, BvFolds):
+        for name, fn in vars(cls).items():
+            if callable(fn) and not name.startswith("__"):
+                setattr(R.Kernels, name, fn)
     R.ARITY.update(ARITY)
     R.MASK_INPUTS.update(MASK_INPUTS)
     R.VARIANTS.update(VARIANTS)
+    R.VARIANTS.update(FOLD_VARIANTS)

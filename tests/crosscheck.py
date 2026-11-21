@@ -5,7 +5,7 @@ on each distinct output and, for the kernels' runners, the guards (docs/develope
     python3 tests/crosscheck.py compiled --kernel K --format F --summary FILE
         (--seed S --count N | --exhaustive [--restrict R1,R2,...]) [--fail-on-suspicious]
         (--runner LABEL EXECUTABLE)... [--interp] [--refrun] [--claims FILE]
-        [--orders O1,O2,...] [--max-length L]
+        [--orders O1,O2,...] [--max-length L] [--inplace]
         [(--packed-runner LABEL EXECUTABLE)... --packed-lanes W [--packed-count N]]
     python3 tests/crosscheck.py api --kernel K --format F --seed S --count N --summary-dir DIR
         (--runner LABEL EXECUTABLE)... [--first-form LABEL]... [--same-as LABEL OTHER]...
@@ -266,6 +266,10 @@ def compiled(a):
         runs.append(("refrun", REFRUN))
     if runs:
         streams.append(("requests", a.orders, a.count, runs))
+        if a.inplace:
+            # A map or a ball vector in place (architecture.md, "The line protocol": inplace=I):
+            # the same runners on requests that each write an array they read.
+            streams.append(("requests-inplace", a.orders, a.count, runs))
     if a.packed_runner:
         if not a.packed_lanes:
             print("crosscheck.py: --packed-runner needs --packed-lanes W", file=sys.stderr)
@@ -273,6 +277,10 @@ def compiled(a):
         streams.append(("requests-packed", "lanes:%s" % a.packed_lanes,
                         a.packed_count or a.count,
                         [(label, [exe]) for label, exe in a.packed_runner]))
+        if a.inplace:
+            streams.append(("requests-packed-inplace", "lanes:%s" % a.packed_lanes,
+                            a.packed_count or a.count,
+                            [(label, [exe]) for label, exe in a.packed_runner]))
     if not streams:
         print("crosscheck.py: no runner (--runner LABEL EXECUTABLE, --interp, --refrun, "
               "--packed-runner LABEL EXECUTABLE)", file=sys.stderr)
@@ -315,6 +323,9 @@ def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, repor
     if a.max_length is not None:
         gen += ["--max-length", a.max_length]
         guard_args += ["--max-length", a.max_length]
+    if name.endswith("-inplace"):
+        gen.append("--inplace")
+        guard_args.append("--inplace")
     one = gen + ["--start", "INDEX", "--count", "1"]
     if not a.exhaustive:
         gen += ["--count", count]
@@ -541,6 +552,9 @@ def main(argv=None):
     c.add_argument("--packed-count", help="a fold: the cases of the packed runners (default "
                                           "--count)")
     c.add_argument("--claims", help="the claims file of the oracle (default gen/claims.json)")
+    c.add_argument("--inplace", action="store_true",
+                   help="a map or a ball vector: one more stream of every runner, its requests in "
+                        "place (gen --inplace)")
     p = sub.add_parser("api", help="the runners of the public interface, with their forms")
     p.add_argument("--kernel", required=True)
     p.add_argument("--format", required=True)

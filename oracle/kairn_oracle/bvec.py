@@ -460,6 +460,45 @@ def judge_radius(ck, pl, st, x, z, line):
             ck._fail(st, line, "output limb not a number of the format")
             return
     st.c["judged"] += 1
+    reasons, sus = radius_entries(pl, st.entries, x, z, line)
+    if sus:
+        st.c["suspicious"] += 1
+        st.example("suspicious", line, "; ".join(sus), ck.max_examples)
+    if reasons:
+        st.c["failed"] += 1
+        for r in reasons:
+            st.reason(r)
+        st.example("failure", line, "; ".join(reasons), ck.max_examples)
+    else:
+        st.c["passed"] += 1
+
+
+def radius_reasons(pl, ents, x, z, line):
+    """The failures of a radius kernel's claims on its inputs x and output z (the radius of a ball
+    vector, V3), with the statistics in ents: its upper entries with a value, or its rounding to
+    nearest of its value (bv_neg_radius)."""
+    if getattr(pl.kernel, "bv_radius", False):
+        reasons, _sus = radius_entries(pl, ents, x, z, line)
+        return reasons
+    out = []
+    fmt = pl.fmt
+    for i, c in enumerate(pl.entries):
+        es = ents[i]
+        es.applicable += 1
+        r = F.rn(fmt, pl.value_fn(x), pl.sv)
+        es.count(ACC_EXACT if type(r) is int and (r << pl.sh_out) == (pl.value_fn(x) << pl.sh_val)
+                 else ACC_INEXACT)
+        if z[c["first"]] != r:
+            es.failures += 1
+            out.append("rounded(%s): the radius is not its value rounded to nearest"
+                       % "+".join(pl.kernel.ensures[i].of))
+    return out
+
+
+def radius_entries(pl, ents, x, z, line):
+    """(reasons, suspicious) of every entry of a radius kernel (an upper with a value of its own and
+    no if), with the statistics in ents."""
+    fmt = pl.fmt
     eta = format_u_eta(fmt)[1]
     names = {}
     for n, (lo, hi) in pl.in_slices.items():
@@ -470,7 +509,7 @@ def judge_radius(ck, pl, st, x, z, line):
             names[n] = z[lo] * eta
     reasons, sus = [], []
     for i, c in enumerate(pl.entries):
-        es = st.entries[i]
+        es = ents[i]
         o = z[c["first"]]
         if c["unless"] is not None and x[c["unless"]] == 1:
             es.count(UP_UNLESS % pl.kernel.ensures[i].unless)
@@ -533,16 +572,7 @@ def judge_radius(ck, pl, st, x, z, line):
         if why:
             es.failures += 1
             reasons.append(why)
-    if sus:
-        st.c["suspicious"] += 1
-        st.example("suspicious", line, "; ".join(sus), ck.max_examples)
-    if reasons:
-        st.c["failed"] += 1
-        for r in reasons:
-            st.reason(r)
-        st.example("failure", line, "; ".join(reasons), ck.max_examples)
-    else:
-        st.c["passed"] += 1
+    return reasons, sus
 
 
 def judge_exact_flag(ck, pl, e, es, x, z):

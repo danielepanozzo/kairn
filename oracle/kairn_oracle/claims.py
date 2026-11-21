@@ -1250,7 +1250,10 @@ class Claims:
             # ("conv": true) are read by maps.py, every other fold by folds.py.
             convs = [r for r in fl if isinstance(r, dict) and r.get("conv") is True
                      and "map" not in r]
-            for raw in [r for r in fl if not any(r is c for c in convs)] + convs:
+            # The products of two BallVectors name a convolution (their centers'): after them.
+            bvconvs = [r for r in fl if isinstance(r, dict) and "bv_conv" in r]
+            later = convs + bvconvs
+            for raw in [r for r in fl if not any(r is c for c in later)] + later:
                 name = raw.get("name") if isinstance(raw, dict) else None
                 name = name if isinstance(name, str) else "<fold without a name>"
                 if name in self.kernel_names:
@@ -1262,7 +1265,12 @@ class Claims:
                     self.broken[name] = "%s: listed twice" % name
                     continue
                 try:
-                    if raw.get("map") is not None and "conv" not in raw:
+                    if "bv" in raw or "bv_conv" in raw:
+                        # The ball vectors (bvfolds.py).
+                        from . import bvfolds as BF
+                        self.folds[name] = (BF.BvConv if "bv_conv" in raw else BF.BallVector)(
+                            raw, self)
+                    elif raw.get("map") is not None and "conv" not in raw:
                         self.folds[name] = MP.Map(raw, self)
                     elif raw.get("conv") is not None and "map" not in raw:
                         self.folds[name] = MP.Conv(raw, self)

@@ -564,7 +564,12 @@ def judge_line(ck, line, lt, sep, right, tag):
     fold = ck.claims.get_fold(lt[0])
     if not isinstance(fold, Fold):
         from . import maps as MP
-        if isinstance(fold, MP.Map):
+        from . import bvfolds as BF
+        if isinstance(fold, BF.BallVector):
+            BF.judge_bv_line(ck, line, lt, sep, right, tag)
+        elif isinstance(fold, BF.BvConv):
+            BF.judge_bvconv_line(ck, line, lt, sep, right, tag)
+        elif isinstance(fold, MP.Map):
             MP.judge_map_line(ck, line, lt, sep, right, tag)
         else:
             MP.judge_conv_line(ck, line, lt, sep, right, tag)

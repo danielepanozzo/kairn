@@ -232,11 +232,14 @@ foreach(_fold IN LISTS _full_folds)
     list(GET _toy 0 _toy_enum)
     list(GET _toy 1 _toy_length)
     list(GET _toy 2 _toy_sampled)
-    set(_name full.crosscheck.interp.${_fold})
-    add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_enum}"
-      -DRUNNER=interp -DEXHAUSTIVE=ON "-DMAX_LENGTH=${_toy_length}"
-      "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
-    set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "full;python;crosscheck;interp;fold")
+    # "-": no enumeration (tests/CMakeLists.txt, the products of BallVectors), the random runs only.
+    if(NOT _toy_enum STREQUAL "-")
+      set(_name full.crosscheck.interp.${_fold})
+      add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_enum}"
+        -DRUNNER=interp -DEXHAUSTIVE=ON "-DMAX_LENGTH=${_toy_length}"
+        "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "full;python;crosscheck;interp;fold")
+    endif()
     set(_name full.crosscheck.interp-sampled.${_fold})
     add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_sampled}"
       -DRUNNER=interp "-DCOUNT=${_full_fold_${_fold}_cases}" "-DSEED=${KAIRN_CROSSCHECK_SEED}"

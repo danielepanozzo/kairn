@@ -1163,15 +1163,20 @@ forms: exactly 1 at a tie; axpy $1 - O(u)$), $1 - 8u$ for the sums of two limbs 
 the full tier's 1 000 arrays 0.61 to 0.71 for `axpy_2`, 0.77 to 0.80 for `axpy_2_1`, 0.75 for
 `mul_pow2_map_2`, 0.98 to 0.99 for `scale_2`, and in its toy formats 0.44 to 1.
 
-**In-place use** (architecture.md: an array written may be exactly one of the arrays read) is not
-in the line protocol: a request gives the operands, and every runner writes into an array of its
-own, so the lines judge the elements and not the aliasing. A request for it would need a field
-the runners read, `ORDER` followed by `/inplace:NAME` (say `lanes:4/inplace:y`), naming the array
-read that the runner passes as the array written, the same pointer; and the runners of the line
-protocol (the interpreter, the compiled and packed runners) to copy that array into the output
-buffer and pass it as both. The oracle's judgement would be the same, element by element against
-the operands of the request, which is what in-place use must preserve (every element read whole
-before it is written); the generator's `test_maps.Aliasing` runs every map in place today.
+**In-place use** (architecture.md, "The line protocol": an array written may be exactly one of the
+arrays read): a request `MAP FORMAT ORDER N inplace=I SCALAR... LIMB...`, the field after the
+length, asks the runner to pass array I (counted from 0 among the arrays read, one of the limbs of
+the array written) as the array written, the same storage. The operands are those of the request,
+and the oracle judges the line as it judges the request without the field, element by element,
+which is what in-place use must preserve (every element read whole before it is written), and
+counts `in place: array I`; a field that names no array read of the limbs of the array written,
+or is not a number written without leading zeros, makes the line malformed. `gen --inplace` (a
+map's or a ball vector's random run) writes every request with the field, I in turn over the
+arrays that can be written, the header `inplace=yes`, a stream of its own seed; a fold without an
+in-place form refuses it. `tests/crosscheck.py --inplace` runs it through every runner as one more
+stream (and for the packed runners one more), which the guards require to be in place, every
+array of them seen (`in place: array I`); the reference runner reads the field and computes the
+same values.
 
 ### Folds of maxima
 
@@ -1387,6 +1392,114 @@ NaN for an overflow, the radius of a scaling grown where exact or not grown wher
 does not negate, a constructor's radius zero, `bv_center_2` without its second limb, a finish that
 ignores the sign or a mask, a sum of magnitudes signed or $\Omega$ at an overflow, the radius of an
 accumulator with `ok` always true or without $t$.
+
+### Their folds
+
+The ball vectors (architecture.md, "Ball vectors", and "Claims of Milestone 2", the kinds
+`encloses_entries`, `makes_ball_vector` and `encloses_coefficients`), read by `bvfolds.py` from a
+fold with `"bv": true` or `"bv_conv": true` and judged by it (`folds.judge_line` hands it the
+line); their requests `genbv.py`; their reference `refbv.py`. A request is a fold's (`BV FORMAT
+ORDER N [inplace=I] SCALAR... LIMB... -> Z... R FLAG`, the scalars first, the radii among them,
+each array's limbs column by column); a product's `BV_CONV FORMAT seq N_X N_Y RX RY LIMB... -> Z...
+R FLAG`, $n_x + n_y - 1$ coefficients (none when a length is 0).
+
+- **`encloses_entries`** (`bv_add_k`, `bv_sub_k`, `bv_scale_k`, `bv_neg_k`, `bv_mul_pow2_k`): an
+  operand is a BallVector when its radius is finite and nonnegative with every center finite and
+  normalized, or its radius $+\infty$ with every center zero (the whole space); any other operand
+  makes the line **invalid**, as a scalar under `power_of_two( )` that is not a positive power of
+  two. **V1**: the result is one of the two (`failed V1`). **The flag** is true exactly when the
+  radius is finite. **V2**: where the result is finite, for every entry the set's range over the
+  balls (exact, over the extended reals) is within the radius of the center written (`max(c - lo,
+  hi - c) <= r`), and an unbounded range fails. **V3**: a finite result comes only from finite
+  BallVectors and finite scalars; then each center written satisfies the step's claims on its
+  entry (the step's own plan: `error`, `normalized`, `rounded`; the masks of a scaling's step
+  through its `exact_flag`), and the radius those of the radius kernel at m, the largest magnitude
+  of a leading limb written (+0 for no entry), the scalars and, for a scaling, the and of the
+  step's masks: the readings of the brief and of the listings, which architecture.md's V3 states
+  less of ("the radius is finite"). **V4**: where every operand is a finite BallVector, every
+  scalar finite, and every condition of `radii_when` (on the scalars) and of `finite_when` (each
+  entry) holds, the result is finite; claimed from `finite_from` (the precision; below it `V4 not
+  claimed: below finite_from`) and judged only in the formats its statements quantify over (below).
+  **Exactness**: where the operands and the result are finite and every condition of
+  `exact_when` holds (always, for `[]`), every entry's ball is exactly the set's range (`c - r =
+  lo` and `c + r = hi`); each failing condition is counted.
+- **`makes_ball_vector`** (`bv_make_k`): the whole space exactly when the radius given is negative,
+  a NaN or $\pm\infty$, or the leading limb of a center given is not finite; otherwise the centers
+  and the radius given, as values (the sign of a zero is not part of the claim); `canonical(c)` of
+  two limbs required (invalid otherwise).
+- **`encloses_coefficients`** (`bv_conv_k`): V1, the flag and V2 as above, coefficient by
+  coefficient, the set's range a sum over the terms of the coefficient; V3: a finite result only
+  from finite operands, each coefficient the fold's centers on its terms (the convolution's
+  `normalized` and `fold_error` judged as `conv_k`'s), and the radius at least `conv_radius`'s
+  stated value at the maxima of the leading limbs, the count $\min(n_x, n_y)$ rounded up and the
+  smallest $g$ and $t$ of the bound's claims; V4 where every condition of `count_when` holds,
+  each an expression **evaluated with `n`** the count (`le(EXPR, K)`: EXPR $\le$ K), and
+  `radii_when` and `finite_when` (per pair, per entry of either array with the other's radius,
+  or once) hold.
+
+**The formats of V4.** architecture.md ("From which precision each clause holds") states the
+clauses for `binary_float prec emax` (Flocq's), which asks $p < e_{\max}$ and whose smallest
+positive number is $2^{3 - e_{\max} - p}$: in this oracle's terms $q_{\max} \ge 1$ and
+$q_{\min} = 3 - q_{\max} - 2p$. V4 is judged there and in formats of a wider subnormal range
+($q_{\min}$ below), and counted `V4 not claimed: a format of no statement` elsewhere
+(`bvfolds.v4_range`). Outside them V4 fails as written: in `fp:2:-1:0` ($e_{\max} = 1 < p$) the
+constant `up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u))` of `bv_add_radius_1` is $3 = \Omega$ and
+`bv_add_1 fp:2:-1:0 seq 0 0x1p-1 0x0p+0 -> inf 0` (the interpreter's line) is the whole space
+from $r_x = \tfrac12$; in `fp:2:-1:1` (an $\eta$ of $\tfrac12$, twice binary_float's) `bv_add_1`,
+`bv_sub_1`, `bv_scale_1` and `bv_scale_2` fail likewise (144 of 14 722 requests of one entry for
+`bv_add_1`). These are not findings: no statement covers those formats.
+
+**Requests** (`genbv.py`): the folds' random mode (the 17 places of lengths, the orders per case)
+with strata of their own, in the header and as tags:
+
+| Shape | Strata |
+|---|---|
+| ball vectors | `one`, `wide` (radii above the centers), `zeroradius`, `whole` (an operand, or both, the whole space), `overflow`, `threshold` (the largest value of a condition of `finite_when`, or `radii_when` with no entry, in (lim/4, lim] or just above), `cancel`, `underflow`, `zeros`, `nonfinite` (a scalar not a radius, infinite or a NaN; `bv_scale_k`), `exact` (`exact_when`: the limbs and the radius times $c$ at, just below and just above $N$, or zero), `tail` (two limbs: second limbs at the extremes of the invariant) |
+| constructors | `one`, `badradius` (each class of the radius given: negative, $-\infty$, NaN, $+\infty$, $+0$, $-0$, positive), `badcenter` (a center infinite or a NaN), `zeros`, `overflow`, `underflow`, `tail` |
+| products | the strata of a ball vector but `nonfinite` and `exact`, and `count` (the count at the edge of `count_when`, from one below to two above the largest count of which it holds, where that is within the largest length) |
+
+`gen --exhaustive` enumerates every canonical BallVector of a tiny format up to a length (every
+nonnegative radius with every finite entry, normalized pairs for two limbs, and the whole space),
+every value of the other scalars (the positive powers of two under `power_of_two( )`, every value
+and $\pm\infty$ and a NaN otherwise), every order that differs (`seq`, `lanes:W` for
+$2 \le W \le n$); for a constructor every radius and center given (canonical pairs); for a product
+both lengths up to the largest.
+
+**Statistics** (the guards read them, on the fold's claim): `result: finite ball vector`, `result:
+whole space`, `operands: a whole-space operand`, `operands: a scalar not finite`, `operands: finite
+ball vectors, finite scalars`, `V4 applies`, `V4 applies, no entry`, `V4 not claimed: below
+finite_from`, `V4 not claimed: a format of no statement (...)`, `exact: every condition holds`,
+`exact_when fails: COND`, `in place: array I`, the lengths and orders of a fold; for a constructor
+`given radius CLASS, centers finite` (and `not all finite`); for a product `n_x = 0`, `n_y = 1`,
+`n_x != n_y` and the like, `count_when fails: EXPR <= K`, `V3: the radius at least conv_radius's
+stated value`; the failures as `failed V1`, `flag`, `V2`, `V3`, `V4`, `exact`,
+`makes_ball_vector`; the smallest slack of the radius in gaps and the largest ratio of the radius
+to the smallest enclosing one. The step's and the radius kernel's entries follow the claim's, as
+for a map.
+
+**`count_when`** (the coordinator's question of 2026-11-21): `bv_conv_2` of two operands of 511
+entries $(+0, +0)$ and radii $+0$ in `fp:8:-15:2` meets the listing's `count_when`,
+$n(\mathrm{unit}(\mathtt{mul\_2\_2}) + \eta) \le \tfrac1{16}$ ($511 \cdot 3 \cdot 2^{-15}$), and not
+$n(\mathrm{unit}(\mathtt{mul\_2\_2}) + \eta/(2u)) \le \tfrac1{16}$; a whole space there fails V4
+under the first and passes under the second (`bv_folds_judge`). The interpreter's line at 5247eff is
+finite (the radius `0x1.16p+2`, the flag true), as at 510, so no stream of the base reaches the
+failure; the stratum `count` reaches both sides of the edge in the full tier's `fp:5:-12:5`
+(lengths to 64, the edge at 15).
+
+**Readings chosen**: the formats of V4 above; V3 beyond architecture.md's sentence, as the brief
+asks; an operand that is not a BallVector, or a scalar not a power of two under `power_of_two( )`,
+invalid (the requirements); `count_when` of a product evaluated at $\min(n_x, n_y)$, the fold's
+`count`; the bound's $g$ and $t$ in `conv_radius`'s stated value the smallest its claims allow.
+
+**Not judged**: V4's equality of the documents' real-model statements (`exists x_ ...` of an exact
+ball vector) beyond the range: the IEEE statement under `finite r_` is what the lines show.
+
+The reference runner's variants of the folds (`bv-*`, `bvc-*`) plant one fault each: the radius
+at the largest magnitude $+0$, the whole space as zero centers and $\Omega$, the flag always true,
+no second pass, the last center zero, two lanes swapped, a spurious whole space above
+$2^{e_{\max} - 8}$, an exact radius one step up, a constructor that keeps a negative or a NaN
+radius, a product without the last term of a coefficient or without $r_y$ in its radius, the
+bound's mask false, a product's flag always true.
 
 ## brute
 
@@ -1882,6 +1995,14 @@ follows from both parts being canonical.
 | `gen_wave8` | a kernel of the family given another family, case $i$ alone not case $i$ of its run, a seed that does not matter, an invalid case, a stratum of the header without a case |
 | `gen_wave8_strata` | a stratum of `gen8.py` off its corner (an output $+\infty$ from `huge`, every operand zero from `zeros`, $r_x c = N$ from `atnormal`, operands $2^p$ apart from `mixed`; a sum of magnitudes $+\infty$ beside a finite running sum from `atop`, a cancellation, three quarters ties and exact sums from `tie` and `exactprod`, $a$ apart; the mask both ways at `limit`, false `beyond`, nine tenths integers up to $2^p$ from `integer`, $a$ in the top binades; each class of value of the finishes) |
 | `merging_wave8` | the merge of the summaries of two halves of streams of the family's kernels differs from the whole |
+| `claims_reading_bv_folds` | a fold of the ball vectors of the fixture unread, or one of 33 malformed folds not set aside alone with its reason (a kind, a requirement of a BallVector missing or shared, a condition not a list, an exponent, an expression, a name, a radius or step kernel not of the claims, two arrays written, the outputs, the limbs, the orders, the status, the minimum precision, a radius under `power_of_two`, a limb of `exact_when`, a threshold, `count_when`, a constructor's shape) |
+| `bv_folds_reference` | the reference runner failing a ball vector, a constructor or a product, or an invalid or suspicious case, on random cases of `binary64`, `binary32` and a toy format, and in place; a class the guards ask for not met (both results, a whole-space operand, V4 with and without entries, exactness, each radius given, the lengths 0 and 1 of a product, every array in place) |
+| `bv_folds_planted` | a planted fault of the folds (`bv-*`, `bvc-*`) not caught in its class (V1, the flag, V2, V3, V4, exact, `makes_ball_vector`), or caught in a fold it does not touch |
+| `bv_folds_exhaustive` | the reference runner failing a request of the enumerations of tiny formats (six folds; twelve without `--quick`), an index seen twice or missed, a class of results or the lane orders missing, V4 judged outside its formats or not judged inside; a planted fault not caught there |
+| `bv_folds_judge` | one of 64 hand-written lines judged otherwise than worked out by hand (the radius at, below and above its kernel's value, below the set, a center off the middle or not the step's, the flag, the whole space where V4 claims finite and beyond, of no entry, `radii_when`, below `finite_from`, outside the formats of V4, the lanes, in place and a malformed `inplace=`, operands that are not BallVectors, the exactness of a negation and of a scaling, each case of a constructor, a product of one entry each, a non-canonical product); `count_when` evaluated otherwise than by hand under the listing's expression and under the coordinator's (511 entries of $(+0, +0)$ in `fp:8:-15:2`) |
+| `gen_bv_folds` | case $i$ of a fold of the ball vectors alone not case $i$ of its run, a seed that does not matter, an invalid case, the strata not those of the shape or without cases, `whole` without a radius $+\infty$, `zeroradius` without $+0$; in place, a request without `inplace=I` over every array that can be written, a product that does not refuse it; the stratum `count` not on both sides of `count_when` |
+| `merging_bv_folds` | the merge of the summaries of two halves of streams of the folds differs from the whole |
+| `maps_inplace` | a map's run in place without its header or its field over every array that can be written, failing through the reference runner, an array not counted in place; `inplace=` beyond the arrays, not a number or negative not malformed; a fold of maxima not refusing `--inplace` |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.

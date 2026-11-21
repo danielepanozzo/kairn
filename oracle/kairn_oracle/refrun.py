@@ -2069,12 +2069,15 @@ class Runner:
         return k
 
     def map_line(self, line, toks, tag):
-        """MAP FORMAT ORDER N SCALAR... LIMB... [#TAG] -> Z... MASK."""
+        """MAP FORMAT ORDER N [inplace=I] SCALAR... LIMB... [#TAG] -> Z... MASK (in place, the same
+        values: architecture.md, "The line protocol")."""
         name, fname, order, n = toks[0], toks[1], toks[2], int(toks[3])
         K = self.kernels(fname)
         A = K.A
         _step, sl, al, k, _args = MAPS[name]
         limbs = toks[4:]
+        if limbs and limbs[0].startswith("inplace="):
+            limbs = limbs[1:]
         ns = sum(sl)
         if len(limbs) != ns + n * sum(al):
             raise ValueError("cannot run %r with %d limbs for %d elements" % (name, len(limbs), n))
@@ -2150,6 +2153,10 @@ class Runner:
             return self.map_line(line, toks, tag)
         if kname in CONVS:
             return self.conv_line(line, toks, tag)
+        if kname in _refbv.BVS:
+            return _refbv.bv_line(self, line, toks, tag)
+        if kname in _refbv.BVCONVS:
+            return _refbv.bvconv_line(self, line, toks, tag)
         K = self.kernels(fname)
         A = K.A
         if ARITY.get(kname) != len(args):

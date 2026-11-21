@@ -658,12 +658,7 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   ball_hull_1 ball_intersection_1 ball_split_1 ball_split_2
   interval_mid_rad_2 interval_to_ball_2 interval_split_2 ball_to_interval_2 ball_from_interval_1 ball_hull_2
   ball_intersection_2)
-set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
-  bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2
-  bv_make_1 bv_make_2
-  bv_neg_1 bv_neg_2
-  bv_mul_pow2_1 bv_mul_pow2_2
-  bv_conv_1 bv_conv_2)
+set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
 # whose public functions (sum, dot, the bounds as functions of n) come with BallVector, and the
@@ -758,6 +753,46 @@ set(_fold_toy_max_1 fp:3:-3:0 3 fp:5:-7:4)
 set(_fold_toy_max_2 fp:3:-4:1 2 fp:4:-7:2)
 set(_fold_toy_conv_1_1 fp:2:-1:0 2 fp:5:-12:-1)
 set(_fold_toy_conv_2_2 fp:4:-4:-1 1 fp:4:-7:-3)
+
+# The ball vectors (architecture.md, "Ball vectors"), each its own toy formats (_fold_toy_kernel_F,
+# read first): every canonical BallVector (every nonnegative radius with every entry, and the
+# whole space) up to the length given, every value of the other scalars, every order that differs,
+# and random arrays of a format of more bits; their quick tier is the maps' (KAIRN_CROSSCHECK_MAP_*),
+# a product of BallVectors the convolutions' lengths. "-" for the enumeration: none, where every
+# format of the fold's minimum precision has more than a few million cases (a product of
+# BallVectors, at p = 4 10 million arrays of one entry each), and the random runs alone. The
+# oracle judges V4 in the formats of its statements, binary_float (q_max >= 1, q_min =
+# 3 - q_max - 2p) or of a wider subnormal range (architecture.md, "From which precision each clause
+# holds"; oracle/README.md, "Ball vectors and the accumulator"): every format below but
+# fp:3:-2:-1, where the smallest such format of precision 3, fp:3:-4:1, has some 10^8 requests of
+# one entry each (V4 of bv_add_2 and bv_sub_2 is judged in their random arrays).
+#
+#   folds                          every operand of                    random arrays of
+#   bv_add_1, bv_sub_1             fp:2:-2:1, one entry:        36 602 fp:5:-11:4
+#   bv_add_2, bv_sub_2             fp:3:-2:-1, one entry:      121 970 fp:4:-7:2
+#   bv_scale_1                     fp:2:-2:1 up to 2:          163 328 fp:5:-12:5
+#   bv_scale_2                     fp:2:-2:1, one entry:        12 364 fp:4:-8:2
+#   bv_neg_1                       fp:2:-2:1 up to 2:            7 424 fp:5:-11:4
+#   bv_neg_2                       fp:2:-2:1 up to 2:           61 064 fp:4:-7:2
+#   bv_mul_pow2_1                  fp:2:-2:1 up to 2:           37 120 fp:5:-9:2
+#   bv_mul_pow2_2                  fp:2:-2:1 up to 2:          305 320 fp:5:-9:2
+#   bv_make_1                      fp:2:-2:1 up to 2:           21 802 fp:5:-11:4
+#   bv_make_2                      fp:2:-2:1 up to 2:          149 314 fp:4:-7:2
+#   bv_conv_1, bv_conv_2           -                                   fp:5:-12:5
+set(_fold_toy_kernel_bv_add_1 fp:2:-2:1 1 fp:5:-11:4)
+set(_fold_toy_kernel_bv_sub_1 fp:2:-2:1 1 fp:5:-11:4)
+set(_fold_toy_kernel_bv_add_2 fp:3:-2:-1 1 fp:4:-7:2)
+set(_fold_toy_kernel_bv_sub_2 fp:3:-2:-1 1 fp:4:-7:2)
+set(_fold_toy_kernel_bv_scale_1 fp:2:-2:1 2 fp:5:-12:5)
+set(_fold_toy_kernel_bv_scale_2 fp:2:-2:1 1 fp:4:-8:2)
+set(_fold_toy_kernel_bv_neg_1 fp:2:-2:1 2 fp:5:-11:4)
+set(_fold_toy_kernel_bv_neg_2 fp:2:-2:1 2 fp:4:-7:2)
+set(_fold_toy_kernel_bv_mul_pow2_1 fp:2:-2:1 2 fp:5:-9:2)
+set(_fold_toy_kernel_bv_mul_pow2_2 fp:2:-2:1 2 fp:5:-9:2)
+set(_fold_toy_kernel_bv_make_1 fp:2:-2:1 2 fp:5:-11:4)
+set(_fold_toy_kernel_bv_make_2 fp:2:-2:1 2 fp:4:-7:2)
+set(_fold_toy_kernel_bv_conv_1 - 0 fp:5:-12:5)
+set(_fold_toy_kernel_bv_conv_2 - 0 fp:5:-12:5)
 set(KAIRN_CROSSCHECK_MAP_QUICK_CASES 100 CACHE STRING
   "Random arrays in each cross-check of a map, a convolution or a fold of maxima, quick tier")
 set(KAIRN_CROSSCHECK_MAP_QUICK_LENGTH 24 CACHE STRING
@@ -1001,6 +1036,14 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       string(JSON _is_map ERROR_VARIABLE _no_map GET "${_claims}" folds ${_i} map)
       string(JSON _is_conv ERROR_VARIABLE _no_conv GET "${_claims}" folds ${_i} conv)
       string(JSON _kind0 ERROR_VARIABLE _no_kind0 GET "${_claims}" folds ${_i} ensures 0 kind)
+      string(JSON _is_bv ERROR_VARIABLE _no_bv GET "${_claims}" folds ${_i} bv)
+      string(JSON _is_bvconv ERROR_VARIABLE _no_bvconv GET "${_claims}" folds ${_i} bv_conv)
+      if(_no_bv)
+        set(_is_bv OFF)
+      endif()
+      if(_no_bvconv)
+        set(_is_bvconv OFF)
+      endif()
       set(_shape "")
       set(_quick_count ${KAIRN_CROSSCHECK_FOLD_QUICK_CASES})
       set(_quick_packed ${KAIRN_CROSSCHECK_FOLD_PACKED_QUICK_CASES})
@@ -1008,7 +1051,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       set(_full_fold_${_fold}_cases ${KAIRN_CROSSCHECK_FOLD_CASES})
       set(_full_fold_${_fold}_length ${KAIRN_CROSSCHECK_FOLD_LENGTH})
       set(_full_fold_${_fold}_sampled_length 1024)
-      if(_is_map OR _is_conv OR _kind0 STREQUAL "upper")
+      if(_is_map OR _is_conv OR _kind0 STREQUAL "upper" OR _is_bv OR _is_bvconv)
         set(_quick_count ${KAIRN_CROSSCHECK_MAP_QUICK_CASES})
         set(_quick_packed ${KAIRN_CROSSCHECK_MAP_QUICK_CASES})
         set(_quick_length ${KAIRN_CROSSCHECK_MAP_QUICK_LENGTH})
@@ -1030,7 +1073,10 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
             endif()
           endforeach()
         endif()
-      elseif(_is_conv)
+      elseif(_is_bv)
+        set(_shape "_bv")
+        set(_full_fold_${_fold}_length ${KAIRN_CROSSCHECK_MAP_LENGTH})
+      elseif(_is_conv OR _is_bvconv)
         set(_shape "_conv")
         set(_quick_length ${KAIRN_CROSSCHECK_CONV_QUICK_LENGTH})
         set(_full_fold_${_fold}_cases ${KAIRN_CROSSCHECK_CONV_CASES})
@@ -1046,6 +1092,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       endforeach()
       # The toy formats of the full tier: the enumeration's format and length, the sampled format.
       set(_toy "${_fold_toy${_shape}}")
+      if(DEFINED _fold_toy_kernel_${_fold})
+        set(_toy "${_fold_toy_kernel_${_fold}}")
+      endif()
       set(_error "")
       if(NOT _toy)
         string(REPLACE "_" " " _operands "${_shape}")
@@ -1056,6 +1105,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
         list(GET _toy 1 _toy_length)
         list(GET _toy 2 _toy_sampled)
         foreach(_f IN ITEMS ${_toy_enum} ${_toy_sampled})
+          if(_f STREQUAL "-")
+            continue()
+          endif()
           string(REGEX REPLACE "^fp:([0-9]+):.*" "\\1" _p "${_f}")
           if(_min MATCHES "^[0-9]+$" AND _p LESS _min)
             set(_error "the toy format ${_f} of ${_fold} is below its min_precision ${_min}: "
@@ -1068,6 +1120,11 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       set(_full_fold_${_fold}_toy "${_toy}")
       set(_full_fold_${_fold}_error "${_error}")
       set(_this_fold compiled --kernel "${_fold}" --fail-on-suspicious ${_oracle_claims_arg})
+      # A map or a ball vector writes an array that may be one it reads: its requests in place
+      # too, a stream of their own through every runner (crosscheck.py --inplace).
+      if(_is_map OR _is_bv)
+        list(APPEND _this_fold --inplace)
+      endif()
       set(_full_fold_${_fold}_compiled ${_this_fold})
       foreach(_format binary64 binary32)
         set(_packed_args "")

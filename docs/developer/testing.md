@@ -142,19 +142,22 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `tests/CMakeLists.txt`, kernels whose claims the oracle cannot read yet; with them
   `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS` for folds. No cross-check, no enumeration of a toy format,
   no brute-force run and no test of the public interface is registered for a name of these lists,
-  and configuring says how many are left out. **On them today**: the kernels of the accumulator
-  ([The accumulator](architecture.md#the-accumulator); a `rounded` entry with a value of its own),
-  and the ball vectors, the products of two of them and their kernels
-  ([Ball vectors](architecture.md#ball-vectors); the folds with `"bv"` and `"bv_conv"`, the
-  requirement `ball_vector`, the claims `encloses_entries`, `makes_ball_vector` and
-  `encloses_coefficients`, and what their kernels claim); and the kernels of stage B2 of the
+  and configuring says how many are left out. **On them today**: `conv_radius`, the radius kernel
+  of the products of two BallVectors, for the oracle's finding (a NaN where `prod(ma, mb)`
+  overflows and `g` or `m` is zero; `oracle/README.md`, "Ball vectors and the accumulator"); and the kernels of stage B2 of the
   intervals, the predicates and comparisons of an interval and of a ball, the set operations of a
   ball and the conversions of two limbs ([Claims of the enclosure interface: predicates and
   comparisons](architecture.md#claims-of-the-enclosure-interface-predicates-and-comparisons) and the
   two sections after it: the kinds `certain`, `trit`, `ball_set` and `ball_splits`, the condition
   `abs_le` of their `exact_when`, and the new fields of `ball_of_interval`, `interval_of_ball` and
   `makes_ball`); what was on them before left them with the interval stage and stage B of
-  Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
+  Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since the ball
+  vectors' stage the oracle reads and judges the ball vectors, their constructors, the products of
+  two BallVectors and their kernels, and the accumulator's kernels (`oracle/README.md`, "Ball
+  vectors and the accumulator", "Their kernels", "Their folds"): they are cross-checked as the maps
+  are, V4 in the formats its statements quantify over. Every map and every ball vector is
+  cross-checked in place too (`tests/crosscheck.py --inplace`, a stream of requests `inplace=I`
+  through every runner, the packed ones included, with its guards). Since stage B of
   Milestone 2 the oracle reads and judges the maps, the folds of maxima and the convolutions, and
   their kernels (`oracle/README.md`, "Maps", "Folds of maxima", "Convolutions"): they are
   cross-checked as the folds are, and the steps of the maps and the kernels of the folds of maxima
@@ -1887,9 +1890,9 @@ against the statement, the claims of the step in exact arithmetic with the expon
 the lead statement of the step of every map on operands of any value; and every build of the
 runner on the same requests in `binary64` and `binary32`. No case contradicts a statement.
 
-**The ball vectors** ([Architecture](architecture.md#ball-vectors)), which the oracle does not judge
-yet (they and their radius kernels are on the lists of [Cross-checks](#cross-checks)), are tested
-here only, by `gen/tests/test_bv.py`: each check of `rules.bv_rules` refuses what it is for; the
+**The ball vectors** ([Architecture](architecture.md#ball-vectors)), which the oracle also judges
+([Cross-checks](#cross-checks); `oracle/README.md`, "Their folds"), are tested here by
+`gen/tests/test_bv.py`: each check of `rules.bv_rules` refuses what it is for; the
 interpreter, on formats of the IEEE shape of two to five bits and in `binary64` and `binary32`, on
 canonical BallVectors with the whole space among them and any value of a scalar that is not a
 radius, in the sequential order and with 0 to 4 lanes, satisfies V1 to V4 and the flag in exact
@@ -1911,8 +1914,8 @@ and every ball vector, with each array read that can be the array written, throu
 the runner and of the packed runner, completes exactly as the same request without the field.
 
 **The products of two BallVectors** `bv_conv_1` and `bv_conv_2` ([Architecture](architecture.md#ball-vectors)),
-which the oracle does not judge yet either (they and `conv_radius`, `bv_conv_finish` are on the lists of
-[Cross-checks](#cross-checks)), are tested by `gen/tests/test_bv_conv.py`: each check of
+which the oracle judges too (`conv_radius` stays on the list of [Cross-checks](#cross-checks) for the
+oracle's finding), are tested by `gen/tests/test_bv_conv.py`: each check of
 `rules.bv_conv_rules` refuses what it is for, and the rules of the claims refuse `at_most` and `if_all`
 where they do not belong; the interpreter, on six formats of the IEEE shape of four to six bits
 (precision 4 to 6, $e_{\max}$ 7 to 14) and in `binary64` and `binary32`, on canonical BallVectors of

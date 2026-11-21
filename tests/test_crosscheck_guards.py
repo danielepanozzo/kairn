@@ -1277,6 +1277,129 @@ class BallVectorKernelGuards(unittest.TestCase):
         self.fails(s, "acc_radius_1", fmt, *BV_ARGS, reason='saw no case of "holds"')
 
 
+class BallVectorFoldGuards(unittest.TestCase):
+    """The folds of the ball vectors: both results, an operand that is the whole space, V4 applying
+    (with no entry too, and the format's scope and finite_from said where it does not), the
+    conditions of exactness each failing and all holding, every class of a radius given of a
+    constructor, the lengths 0 and 1 on each side of a product and count_when failing in a toy
+    format, the strata of the shape, a stream in place and its arrays."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.args = ("--seed", "0", "--count", "300", "--max-length", "24")
+        cls.cargs = ("--seed", "0", "--count", "200", "--max-length", "64")
+        cls.iargs = cls.args + ("--inplace",)
+        cls.add = pipeline("bv_add_2", "fp:4:-7:2", *cls.args)
+        cls.add_in = pipeline("bv_add_2", "fp:4:-7:2", *cls.iargs)
+        cls.pow2 = pipeline("bv_mul_pow2_1", "binary64", *cls.args)
+        cls.make = pipeline("bv_make_2", "binary64", *cls.args)
+        cls.conv = pipeline("bv_conv_2", "fp:5:-12:5", *cls.cargs)
+        cls.narrow = pipeline("bv_scale_1", "fp:4:-4:-1", *cls.args)
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        out = self.passes(self.add, "bv_add_2", "fp:4:-7:2", *self.args)
+        self.assertIn("ball vector: ", out)
+        self.passes(self.add_in, "bv_add_2", "fp:4:-7:2", *self.iargs)
+        self.passes(self.pow2, "bv_mul_pow2_1", "binary64", *self.args)
+        self.passes(self.make, "bv_make_2", "binary64", *self.args)
+        self.passes(self.conv, "bv_conv_2", "fp:5:-12:5", *self.cargs)
+        self.passes(self.narrow, "bv_scale_1", "fp:4:-4:-1", *self.args)
+        for name, fmt, L in (("bv_neg_1", "fp:2:-2:1", "2"), ("bv_make_1", "fp:2:-2:1", "1"),
+                             ("bv_add_1", "fp:2:-1:0", "1")):
+            e = pipeline(name, fmt, "--exhaustive", "--max-length", L)
+            self.passes(e, name, fmt, "--exhaustive", "--max-length", L)
+
+    def test_a_ball_vector_without_a_class(self):
+        for name in ("result: whole space", "result: finite ball vector",
+                     "operands: a whole-space operand", "V4 applies", "V4 applies, no entry",
+                     "length 0", "order: lanes, W = 3"):
+            s = edited(self.add, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "bv_add_2", "fp:4:-7:2", *self.args,
+                       reason=name.split(": ", 1)[1] if name.startswith("order") else
+                       "length 0" if name == "length 0" else 'saw no case "%s"' % name)
+
+    def test_exactness_without_a_condition(self):
+        for name in ("exact: every condition holds",
+                     "exact_when fails: rx*c = 0 or |rx*c| > eta/(2*u)",
+                     "exact_when fails: x*c = 0 or |x*c| > eta/(2*u)"):
+            s = edited(self.pow2, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "bv_mul_pow2_1", "binary64", *self.args, reason='saw no case "%s"' % name)
+
+    def test_a_constructor_without_a_radius(self):
+        for name in ("given radius negative, centers finite", "given radius NaN, centers finite",
+                     "given radius -0, centers finite", "given radius -inf, centers finite",
+                     "given radius positive, centers not all finite"):
+            s = edited(self.make, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "bv_make_2", "binary64", *self.args, reason='saw no case "%s"' % name)
+
+    def test_a_product_without_a_class(self):
+        for name in ("n_x = 0", "n_y = 1", "n_x != n_y",
+                     "V3: the radius at least conv_radius's stated value",
+                     "count_when fails: n*(unit(mul_2_2)+eta) <= 1/16", "V4 applies"):
+            s = edited(self.conv, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "bv_conv_2", "fp:5:-12:5", *self.cargs, reason='saw no case "%s"' % name)
+
+    def test_v4_outside_its_formats_or_below_finite_from(self):
+        name = "V4 not claimed: a format of no statement (e_max <= p, or eta above binary_float's)"
+        s = edited(self.narrow, 0, lambda e: e["counts"].pop(name, None))
+        self.fails(s, "bv_scale_1", "fp:4:-4:-1", *self.args, reason='saw no case "%s"' % name)
+        # Below finite_from (precision 1, where the interpreter refuses bv_add_1's constants): the
+        # summary of a run at precision 2 read as one of precision 1 must show the count.
+        s = pipeline("bv_add_1", "fp:2:-2:1", *self.args)
+        self.passes(s, "bv_add_1", "fp:2:-2:1", *self.args)
+        for k in s["keys"]:
+            k["stats"]["p"] = 1
+        self.fails(s, "bv_add_1", "fp:2:-2:1", *self.args, reason="below finite_from")
+
+    def test_in_place(self):
+        s = edited(self.add_in, 0, lambda e: e["counts"].pop("in place: array 1", None))
+        self.fails(s, "bv_add_2", "fp:4:-7:2", *self.iargs, reason='saw no case "in place: array 1"')
+        self.fails(self.add, "bv_add_2", "fp:4:-7:2", *self.iargs,
+                   reason="the stream is not in place, though --inplace was asked")
+        self.fails(self.add_in, "bv_add_2", "fp:4:-7:2", *self.args,
+                   reason="the stream is in place, though --inplace was not asked")
+
+    def test_strata_of_the_shape_not_promised(self):
+        s = pipeline("bv_add_2", "fp:4:-7:2", *self.args, "--strata",
+                     "one,wide,zeroradius,whole,overflow,threshold,cancel,underflow,tail")
+        self.fails(s, "bv_add_2", "fp:4:-7:2", *self.args, reason="without zeros")
+        s = pipeline("bv_mul_pow2_1", "binary64", *self.args, "--strata",
+                     "one,wide,zeroradius,whole,overflow,threshold,cancel,underflow,zeros")
+        self.fails(s, "bv_mul_pow2_1", "binary64", *self.args, reason="without exact")
+
+
+class MapInPlaceGuards(unittest.TestCase):
+    """A map's stream in place: every array of the limbs of the array written seen in place, and
+    the stream in place exactly when --inplace was asked."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.args = ("--seed", "0", "--count", "120", "--max-length", "24")
+        cls.iargs = cls.args + ("--inplace",)
+        cls.map = pipeline("add_1", "fp:5:-12:6", *cls.iargs)
+
+    def test_in_place(self):
+        status, out = guards(self.map, "add_1", "fp:5:-12:6", *self.iargs)
+        self.assertEqual(status, 0, out)
+        s = edited(self.map, 0, lambda e: e["counts"].pop("in place: array 0", None))
+        status, out = guards(s, "add_1", "fp:5:-12:6", *self.iargs)
+        self.assertEqual(status, 1, out)
+        self.assertIn("saw no request in place of array 0", out)
+        status, out = guards(self.map, "add_1", "fp:5:-12:6", *self.args)
+        self.assertEqual(status, 1, out)
+        self.assertIn("the stream is in place, though --inplace was not asked", out)
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)
