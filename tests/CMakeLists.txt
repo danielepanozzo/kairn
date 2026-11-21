@@ -288,6 +288,35 @@ foreach(_kind scalar packed)
   endforeach()
 endforeach()
 
+# --- The emulated formats (begin) ---------------------------------------------------------------
+#
+# tests/emulated/number.hpp is a floating-point type of a format chosen at run time, computed with
+# integers only (kairn-emulated), for the exhaustive tier of docs/developer/testing.md ("The
+# emulated formats"). Its own tests: emulated.arith here and full.emulated.arith in the full tier
+# (test_emulated.py through kairn-emulated-selftest: every operation against the oracle's exact
+# rounding in toy formats and against the machine's float and double, and with each fault planted
+# in its rounding, which each comparison must catch). It needs nothing of the machine's floating
+# point and nothing of include/: the build's flags and warnings, C++20.
+set(_emulated_dir "${CMAKE_CURRENT_SOURCE_DIR}/emulated")
+set(_emulated OFF)
+if(EXISTS "${_emulated_dir}/number.cpp")
+  set(_emulated ON)
+  add_library(kairn-emulated STATIC "${_emulated_dir}/number.cpp")
+  target_compile_features(kairn-emulated PUBLIC cxx_std_20)
+  target_compile_options(kairn-emulated PRIVATE ${_warnings})
+  add_executable(kairn-emulated-selftest "${_emulated_dir}/selftest.cpp")
+  target_link_libraries(kairn-emulated-selftest PRIVATE kairn-emulated)
+  target_compile_options(kairn-emulated-selftest PRIVATE ${_warnings})
+  if(Python3_Interpreter_FOUND)
+    add_test(NAME emulated.arith
+      COMMAND "${Python3_EXECUTABLE}" "${_emulated_dir}/test_emulated.py"
+        --selftest "$<TARGET_FILE:kairn-emulated-selftest>"
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+    set_tests_properties(emulated.arith PROPERTIES TIMEOUT 300 LABELS emulated)
+  endif()
+endif()
+# --- The emulated formats (end) -----------------------------------------------------------------
+
 # --- The object code ----------------------------------------------------------------------------
 #
 # objcode/objcode.py compiles objcode/unit.cpp, which has a function for every kernel and limb

@@ -281,6 +281,21 @@ foreach(_fold IN LISTS _full_folds)
   endif()
 endforeach()
 
+# --- The emulated formats (begin) ---------------------------------------------------------------
+#
+# full.emulated.arith: emulated.arith of tests/CMakeLists.txt at the full tier's sizes (every
+# operand of formats of one to five bits, every triple of the smallest, 4 000 random pairs and
+# triples in each format of the tier, and 2 million stratified cases of every operation against
+# the machine's float and double), with the planted faults, which it must catch.
+if(_emulated AND Python3_Interpreter_FOUND)
+  add_test(NAME full.emulated.arith
+    COMMAND "${Python3_EXECUTABLE}" "${_emulated_dir}/test_emulated.py"
+      --selftest "$<TARGET_FILE:kairn-emulated-selftest>" --full
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.emulated.arith PROPERTIES TIMEOUT 600 LABELS "full;emulated")
+endif()
+# --- The emulated formats (end) -----------------------------------------------------------------
+
 # --- The object code ----------------------------------------------------------------------------
 #
 # objcode.check and objcode.controls of tests/CMakeLists.txt on every configuration of the
