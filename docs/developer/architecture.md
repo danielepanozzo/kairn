@@ -599,6 +599,42 @@ claims; a false flag, a NaN. The steps and the combination of a fold of maxima h
 statement (`K_ieee_lead_spec`): their maximum keeps a finite state when the element is a NaN, so
 the statement would be false of them, and the mask says it instead.
 
+Two more statements of the IEEE model, for each fold of maxima of both orders (`ieee.max_orders_statement`,
+`ieee.max_flag_statement`), with no requirement on the elements (any value, NaNs and infinities
+included) and for every precision: `F_orders_ieee_spec`, that the lane order computes the state of the
+sequential order, for every number of lanes $W$ (so its finish gives the same result and the same flag),
+
+```coq
+Definition norm_upper_2_orders_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax),
+  forall (W : nat) (xs : list (binary_float prec emax * binary_float prec emax)),
+  fold_lanes (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeFoldModel.norm_upper_2_combine prec emax) (IeeeOperations.pzero prec emax, true) W xs =
+  fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs.
+```
+
+and `F_flag_ieee_spec`, when exactly the flag of the sequential order is true: when the leading limb
+of every element is finite and the largest magnitude, the limb of the final state stepped up as the
+finish does (`steps` of its `finite_or_nan`), is finite; with no step (`norm_upper_1`), when every
+element is finite:
+
+```coq
+Definition norm_upper_2_flag_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall xs : list (binary_float prec emax * binary_float prec emax),
+  snd (IeeeFoldModel.norm_upper_2_seq prec emax nan_abs nan_const xs) = true <->
+  Forall (fun x => finite (fst x)) xs /\
+  finite (IeeeOperations.succ prec emax (fst (fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs))).
+```
+
+Both are unverified until a proof is pointed at them: they are the types of the hand-written
+theorems of these facts (`norm_upper_k_lanes_seq_state`, `norm_upper_k_seq_ieee_flag`) once their
+section's variables are bound, so that those theorems can prove generated statements rather than
+statements of their own. No audit lists them yet.
+
 ### Convolutions
 
 A convolution writes the coefficients of the product of two polynomials: `conv_k`
@@ -735,6 +771,14 @@ Lemma conv_terms_nth :
 generator's tests check that list against the definition on every pair of lengths up to 7,
 `test_conv.Printers.test_conv_terms_is_the_terms`). The statements of a convolution and of a map in
 the IEEE model are below ([In the IEEE model](#maps-and-convolutions-in-the-ieee-model)).
+
+`FoldStatements.v` states three of these facts about `conv_terms` itself, after the folds, when there
+is a convolution or a product of BallVectors (`rocq.conv_terms_statements`), with the types of the
+lemmas of `FoldConv.v` so that they can prove them: `conv_terms_eq_spec` (the list is `map (fun i =>
+(nth i xs a, nth (j - i)%nat ys b)) (seq (j - (length ys - 1))%nat (length (conv_terms xs ys j)))`),
+`conv_terms_count_spec` (with at least one $y$, coefficient $j$ has $\min(j + 1, n_x) - (j - (n_y -
+1))$ terms, a subtraction of natural numbers) and `conv_terms_length_spec` (at most $\min(n_x, n_y)$,
+which the products of two BallVectors need). Unverified, as statements of no kernel or fold.
 
 ### Maps and convolutions in the IEEE model
 

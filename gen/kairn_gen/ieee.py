@@ -1822,6 +1822,82 @@ def fold_statement(fd, kernels, order):
     return lines
 
 
+# --- Folds of maxima: the two orders, and the flag ----------------------------------------------------
+#
+# Two statements more for a fold of maxima of both orders, of the IEEE model only (the real model's
+# maximum has no flag, and its lane order is its own definition): that the lane order computes the
+# state of the sequential order, for every number of lanes and every list, NaNs and infinities among
+# the elements; and when exactly the flag of the sequential order is true. With the first, the second
+# is the lane order's too. The hand-written theorems of these facts (IeeeFoldNorm.v of the proofs) have
+# exactly these types once the section's variables are bound.
+
+def _max_parts(fd, kernels):
+    """The step and the combination of a fold of maxima as terms of IeeeFoldModel.v, each with the NaN
+    choices it takes; the zero state; and the NaN choices of both, in section order."""
+    step, combine, _ = _fold_parts(fd, kernels)
+    snans = [n for n, _ in NANS if n in _used_nans(step, kernels)]
+    cnans = [n for n, _ in NANS if n in _used_nans(combine, kernels)]
+    stp = ' '.join([f'IeeeFoldModel.{fd.name}_step', 'prec', 'emax'] + snans)
+    cmb = ' '.join([f'IeeeFoldModel.{fd.name}_combine', 'prec', 'emax'] + cnans)
+    zero = rocq.state_zero(fd, 'IeeeOperations.pzero prec emax', 'true')
+    return stp, cmb, zero, [n for n, _ in NANS if n in set(snans) | set(cnans)]
+
+
+def _max_head(nans):
+    return ['  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+            '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+            (f'\n         {_binders(nans)},' if nans else ',')]
+
+
+def max_orders_statement(fd, kernels):
+    """F_orders_ieee_spec, of a fold of maxima in both orders: the lane order computes the state of the
+    sequential order, for every number of lanes W and every list, whatever its elements; its finish
+    then gives the same result and the same flag. For every precision: no minimum."""
+    _, el, xs = rocq._fold_binders(fd)
+    stp, cmb, zero, nans = _max_parts(fd, kernels)
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    return ([f'(* {fd.name}: the lane order computes the state of the sequential order, for every number of '
+             'lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: '
+             'unverified. *)',
+             f'Definition {fd.name}_orders_ieee_spec : Prop :='] + _max_head(nans) +
+            [f'  forall (W : nat) ({xs} : list ({etype})),',
+             f'  fold_lanes ({stp}) ({cmb}) {zero} W {xs} =',
+             f'  fold_seq ({stp}) {zero} {xs}.'])
+
+
+def max_flag_statement(fd, kernels):
+    """F_flag_ieee_spec, of a fold of maxima: the flag of the sequential order is true exactly when the
+    leading limb of every element is finite and the limb of the final state, stepped up as the finish
+    does (the steps of its finite_or_nan), is finite; with no step, exactly when every leading limb
+    is finite (the largest of finite magnitudes is finite). No requirement on the elements: any
+    value, canonical or not. The lane order's flag is the same (F_orders_ieee_spec)."""
+    _, el, xs = rocq._fold_binders(fd)
+    stp, _, zero, _ = _max_parts(fd, kernels)
+    _, _, finish = _fold_parts(fd, kernels)
+    nans = _fold_nans(fd, kernels, 'sequential')
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    groups = rocq.fold_groups(fd, el)
+    g = fd.arrays[0]
+    lead = rocq.tuple_parts(groups[g.name], len(g.limbs))[0]
+    steps = next(e.get('steps', 0) for e in finish.ensures if e['kind'] == 'finite_or_nan')
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_seq', 'prec', 'emax'] + nans + [xs])
+    conds = [f'Forall (fun {el} => finite {rocq._paren(lead)}) {xs}']
+    what = 'every leading limb is finite'
+    if steps:
+        m = rocq.state_groups(fd, f'(fold_seq ({stp}) {zero} {xs})')[fd.states[0].name][0]
+        for _ in range(steps):
+            m = f'IeeeOperations.succ prec emax ({m})'
+        conds.append(f'finite ({m})')
+        what += (' and the largest magnitude, the limb of the final state, stepped up ' +
+                 ('once' if steps == 1 else f'{steps} times') + ' as the finish does, is finite')
+    return ([f'(* {fd.name}: the flag of the sequential order is true exactly when {what}, in the IEEE model. '
+             'Status: unverified. *)',
+             f'Definition {fd.name}_flag_ieee_spec : Prop :='] + _max_head(nans) +
+            [f'  forall {xs} : list ({etype}),',
+             f'  snd ({call}) = true <->',
+             '  ' + ' /\\\n  '.join(conds) + '.'])
+
+
 def _writer_nans(fd, kernels, parts):
     used = set()
     for k in parts + [kernels[fd.check]]:
@@ -2421,4 +2497,6 @@ def fold_statements(kernels):
         for order in ir.ORDERS:
             if order in fd.orders:
                 lines += [''] + (map_statement if getattr(fd, 'is_map', False) else fold_statement)(fd, kernels, order)
+        if getattr(fd, 'is_max', False) and set(ir.ORDERS) <= set(fd.orders):
+            lines += [''] + max_orders_statement(fd, kernels) + [''] + max_flag_statement(fd, kernels)
     return '\n'.join(lines) + '\n'

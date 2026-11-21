@@ -408,6 +408,24 @@ Definition norm_upper_1_lanes_ieee_spec : Prop :=
    r_ <= RU (ieee_emin prec emax) prec v_) /\
   (flag = false -> nan r).
 
+(* norm_upper_1: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: unverified. *)
+Definition norm_upper_1_orders_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax),
+  forall (W : nat) (xs : list (binary_float prec emax)),
+  fold_lanes (IeeeFoldModel.norm_upper_1_step prec emax nan_abs) (IeeeFoldModel.norm_upper_1_combine prec emax) (IeeeOperations.pzero prec emax, true) W xs =
+  fold_seq (IeeeFoldModel.norm_upper_1_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs.
+
+(* norm_upper_1: the flag of the sequential order is true exactly when every leading limb is finite, in the IEEE model. Status: unverified. *)
+Definition norm_upper_1_flag_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall xs : list (binary_float prec emax),
+  snd (IeeeFoldModel.norm_upper_1_seq prec emax nan_abs nan_const xs) = true <->
+  Forall (fun x => finite x) xs.
+
 (* norm_upper_2, the sequential order, in the IEEE model. Status: unverified. *)
 Definition norm_upper_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -451,6 +469,25 @@ Definition norm_upper_2_lanes_ieee_spec : Prop :=
    v_ <= r_ /\
    r_ <= succ radix2 (FLT_exp (ieee_emin prec emax) prec) (RU (ieee_emin prec emax) prec v_)) /\
   (flag = false -> nan r).
+
+(* norm_upper_2: the lane order computes the state of the sequential order, for every number of lanes W and every list, in the IEEE model; its finish then gives the same result and flag. Status: unverified. *)
+Definition norm_upper_2_orders_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax),
+  forall (W : nat) (xs : list (binary_float prec emax * binary_float prec emax)),
+  fold_lanes (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeFoldModel.norm_upper_2_combine prec emax) (IeeeOperations.pzero prec emax, true) W xs =
+  fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs.
+
+(* norm_upper_2: the flag of the sequential order is true exactly when every leading limb is finite and the largest magnitude, the limb of the final state, stepped up once as the finish does, is finite, in the IEEE model. Status: unverified. *)
+Definition norm_upper_2_flag_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall xs : list (binary_float prec emax * binary_float prec emax),
+  snd (IeeeFoldModel.norm_upper_2_seq prec emax nan_abs nan_const xs) = true <->
+  Forall (fun x => finite (fst x)) xs /\
+  finite (IeeeOperations.succ prec emax (fst (fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs))).
 
 (* sum_1, the sequential order, in the IEEE model. Status: unverified. *)
 Definition sum_1_seq_ieee_spec : Prop :=

@@ -732,3 +732,26 @@ Definition sum_fast_2_entry_lanes_spec : Prop :=
   normalized_2 emin prec (fst s) (snd s) /\
   Rabs ((fst s + snd s) - sumR (map (fun x => (fst x + snd x)) xs)) <=
     ((1 + (3 * (u prec ^ 2))) ^ (length xs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) xs).
+
+(* The terms of coefficient j of a convolution (conv_terms of FoldModel.v): the pairs (x_i, y_(j-i))
+   for the consecutive i from j - (n_y - 1) on, a subtraction of natural numbers (0 when it would be
+   negative), in increasing order, as many as conv_terms has; a and b are any elements. Status:
+   unverified. *)
+Definition conv_terms_eq_spec : Prop :=
+  forall (A B : Type) (xs : list A) (ys : list B) (j : nat) (a : A) (b : B),
+  conv_terms xs ys j =
+  map (fun i => (nth i xs a, nth (j - i)%nat ys b))
+      (seq (j - (length ys - 1))%nat (length (conv_terms xs ys j))).
+
+(* How many terms coefficient j has, with at least one y: min(j + 1, n_x) - (j - (n_y - 1)), so that
+   i goes from max(0, j - n_y + 1) to min(j, n_x - 1). Status: unverified. *)
+Definition conv_terms_count_spec : Prop :=
+  forall (A B : Type) (xs : list A) (ys : list B) (j : nat),
+  (0 < length ys)%nat ->
+  length (conv_terms xs ys j) = (Nat.min (S j) (length xs) - (j - (length ys - 1)))%nat.
+
+(* Every coefficient has at most min(n_x, n_y) terms: one bound of dot for that count covers them
+   all (the products of two BallVectors). Status: unverified. *)
+Definition conv_terms_length_spec : Prop :=
+  forall (A B : Type) (xs : list A) (ys : list B) (j : nat),
+  (length (conv_terms xs ys j) <= Nat.min (length xs) (length ys))%nat.
