@@ -114,6 +114,39 @@ class Plan(unittest.TestCase):
         self.assertEqual(balls - complete, set())
 
 
+class Runners(unittest.TestCase):
+    """Which targets of the build are runners of the library (brute.runner_target)."""
+
+    def test_the_runners_and_their_suffixes(self):
+        self.assertEqual(brute.runner_target("kairn-gen-runner"), (False, None))
+        self.assertEqual(brute.runner_target("kairn-gen-runner-fp-contract"), (False, "fp-contract"))
+        self.assertEqual(brute.runner_target("kairn-gen-packed-runner"), (True, None))
+        self.assertEqual(brute.runner_target("kairn-gen-packed-runner-contract-off"), (True, "contract-off"))
+        self.assertIsNone(brute.runner_target("kairn-api-runner"))
+        self.assertIsNone(brute.runner_target("kairn-gen-runnerx"))
+
+    def test_a_planted_fault_is_not_a_runner(self):
+        # The packed runner of crosscheck.lanes.fault.*, built with a kernel that is wrong on
+        # purpose: an enumeration that took it for the library failed every night.
+        self.assertIsNone(brute.runner_target("kairn-gen-packed-runner-lane-fault"))
+        self.assertIsNone(brute.runner_target("kairn-gen-runner-fault"))
+        self.assertIsNone(brute.runner_target("kairn-gen-packed-runner-o1-fault"))
+        self.assertIsNotNone(brute.runner_target("kairn-gen-packed-runner-default"))
+
+    def test_every_runner_target_of_the_build_is_classified(self):
+        # Every target tests/CMakeLists.txt names kairn-gen-...runner...: a runner of the library,
+        # or a planted fault, whose name must then end in "fault" so that it is never run as one.
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, "CMakeLists.txt"), encoding="utf-8") as fh:
+            text = fh.read()
+        import re
+        names = set(re.findall(r"add_executable\((kairn-gen-[A-Za-z0-9_-]*runner[A-Za-z0-9_-]*)", text))
+        self.assertIn("kairn-gen-packed-runner-lane-fault", names)
+        planted = {n for n in names if brute.runner_target(n) is None}
+        self.assertEqual(planted, {n for n in names if n.endswith("fault")})
+        self.assertEqual(planted, {"kairn-gen-packed-runner-lane-fault"})
+
+
 class Widen(unittest.TestCase):
     def test_non_finite_results_are_overflows(self):
         # A small format of the kernel the oracle's suspicious test does not apply to: every
