@@ -536,7 +536,9 @@ _kairn_api_reject(not_constexpr.mul_up 28 "constant|constexpr")
 # conversions between Ball and Interval, and the narrowing of a ball, are explicit; no conversion
 # makes an interval of two limbs of one of one limb; the sum is not constexpr (its code is where
 # KAIRN_ENCLOSURE_CODE puts it). Each control writes what compiles instead.
-set(_api_no_operator "invalid operands|no match for|no operator found")
+# MSVC says C2676, "does not define this operator or a conversion to a type acceptable to the
+# predefined operator", when the left operand is a class with no such operator at all.
+set(_api_no_operator "invalid operands|no match for|no operator found|does not define this operator")
 set(_api_no_conversion "no viable conversion|conversion from|cannot convert|no suitable")
 set(_api_no_constructor "no matching|cannot convert|no overloaded function|no suitable")
 _kairn_api_reject(interval.mixed_limbs 32 "${_api_no_operator}")
