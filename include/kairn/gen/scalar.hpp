@@ -8015,7 +8015,7 @@ KAIRN_GEN_FORCEINLINE void interval_mid_rad_2(float xl0, float xl1, float xu0, f
 }
 
 // interval_to_ball_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> c = (c0, c1), r
-// interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void interval_to_ball_2(double xl0, double xl1, double xu0, double xu1, double& c0_out, double& c1_out, double& r_out) noexcept {
     // (m0, m1, r) = interval_mid_rad_2(xl0, xl1, xu0, xu1)
     const double m0_om = next_down_bits(std::numeric_limits<double>::infinity());

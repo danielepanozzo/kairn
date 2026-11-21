@@ -8277,9 +8277,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert2.v",
+        "name": "interval_to_ball_2_correct"
+      },
       "source": {
         "cite": "interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

@@ -280,6 +280,9 @@ Print Assumptions interval_hull_2_correct.
 Definition interval_mid_rad_2_audit : interval_mid_rad_2_spec := interval_mid_rad_2_correct.
 Print Assumptions interval_mid_rad_2_correct.
 
+Definition interval_to_ball_2_audit : interval_to_ball_2_spec := interval_to_ball_2_correct.
+Print Assumptions interval_to_ball_2_correct.
+
 Definition interval_intersection_2_audit : interval_intersection_2_spec := interval_intersection_2_correct.
 Print Assumptions interval_intersection_2_correct.
 

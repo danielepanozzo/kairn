@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 200 kernels, 195 are proved and 5 are **UNVERIFIED**: [`ball_hull_1`](ball_hull_1.md), [`ball_hull_2`](ball_hull_2.md), [`ball_intersection_1`](ball_intersection_1.md), [`ball_intersection_2`](ball_intersection_2.md), [`interval_to_ball_2`](interval_to_ball_2.md).
+Of the 200 kernels, 196 are proved and 4 are **UNVERIFIED**: [`ball_hull_1`](ball_hull_1.md), [`ball_hull_2`](ball_hull_2.md), [`ball_intersection_1`](ball_intersection_1.md), [`ball_intersection_2`](ball_intersection_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -236,7 +236,7 @@ Arithmetic on intervals of numbers of `T` and of two limbs: the result contains 
 | not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`interval_rel_interior_2`](interval_rel_interior_2.md) |
 | not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`interval_rel_disjoint_2`](interval_rel_disjoint_2.md) |
 | not yet called by the public headers | - | the midpoint and radius, the values of IEEE 1788 when unbounded or empty | [`interval_mid_rad_2`](interval_mid_rad_2.md) |
-| not yet called by the public headers | - | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_2`](interval_to_ball_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_2`](interval_to_ball_2.md) |
 | not yet called by the public headers | - | two intervals that together are the operand, split at a point of it | [`interval_split_2`](interval_split_2.md) |
 
 ## Building blocks on T

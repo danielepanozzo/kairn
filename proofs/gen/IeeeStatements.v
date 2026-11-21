@@ -1820,7 +1820,7 @@ Definition interval_mid_rad_2_spec : Prop :=
    (r = infinity prec emax false \/ (finite r /\ (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> Rabs (z - (val m0 + val m1)) <= val r))) /\
    (Rabs (val xl0 + val xl1) <= bpow radix2 (emax - 2) -> Rabs (val xu0 + val xu1) <= bpow radix2 (emax - 2) -> finite r)).
 
-(* interval_to_ball_2: interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_to_ball_2: interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_to_ball_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

@@ -15,9 +15,10 @@ ensures:       ball_of_interval c r from=xl,xu special=ball rel=3*u^2/(1-4*u) ab
 min_precision: 3
 source:        interval_mid_rad_2, an infinite radius made the whole line (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalConvert2.v interval_to_ball_2_correct
 entry:         yes
 cone_exempt:   the center is selected after the test of the radius that tells an unbounded interval; ball_of_interval states what comes out for every canonical interval
 

@@ -1460,10 +1460,14 @@ template <> struct interval_mid_rad_2<float> {
     static constexpr bool proved = true;
 };
 
-// interval_to_ball_2: UNVERIFIED. Claims: ball_of_interval.
+// interval_to_ball_2: proved. Claims: ball_of_interval.
 template <class T> struct interval_to_ball_2;
-template <> struct interval_to_ball_2<double> { static constexpr bool proved = false; };
-template <> struct interval_to_ball_2<float> { static constexpr bool proved = false; };
+template <> struct interval_to_ball_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_to_ball_2<float> {
+    static constexpr bool proved = true;
+};
 
 // ball_hull_2: UNVERIFIED. Claims: ball_set.
 template <class T> struct ball_hull_2;
