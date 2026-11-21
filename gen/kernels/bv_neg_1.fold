@@ -20,7 +20,9 @@ value:         -x
 requires:      ball_vector x rx
 ensures:       encloses_entries z r -x x=x,rx flag=finite finite_when=abs_le(abs(x)+rx,1) radii_when=abs_le(rx,1) exact
 min_precision: 1
-status:        unverified
+theorem:       proofs/theories/BvNegMake.v
+ieee_theorem:  proofs/theories/IeeeBvNegMake.v
+status:        proved
 domain:        extended
 source:        the negation of each center, the radius of ball_neg_1 (milestone2.md, BallVector)
 license:       algorithm and proof: MIT

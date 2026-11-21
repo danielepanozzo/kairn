@@ -414,7 +414,7 @@ Definition bv_add_radius_2_spec : Prop :=
   fmt emin prec rz /\
   ((rx + ry) + (((m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) / (1 - ((3 / (1 - (4 * u prec))) * u prec ^ 2))) * (1 + u prec))) <= rz.
 
-(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). Status: unverified. *)
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). Status: proved. *)
 Definition bv_center_entry_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall c : R,
@@ -423,7 +423,7 @@ Definition bv_center_entry_1_spec : Prop :=
   fmt emin prec z /\
   z = RN emin prec c.
 
-(* bv_make_radius: the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). Status: unverified. *)
+(* bv_make_radius: the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). Status: proved. *)
 Definition bv_make_radius_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m r : R,
@@ -466,7 +466,7 @@ Definition bv_mul_pow2_step_1_spec : Prop :=
    z = (x * c)) /\
   (e = true <-> ((x * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x * c))).
 
-(* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). Status: unverified. *)
+(* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). Status: proved. *)
 Definition bv_neg_radius_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m rx : R,
@@ -619,7 +619,7 @@ Definition mul_up_1_spec : Prop :=
   (a * b) <= r /\ r <= succ radix2 (FLT_exp emin prec) (RU emin prec (a * b)) /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> r = RU emin prec (a * b)).
 
-(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). Status: unverified. *)
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). Status: proved. *)
 Definition neg_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall x : R,
@@ -1143,7 +1143,7 @@ Definition ball_sub_2_spec : Prop :=
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x - y) - (cz0 + cz1)) <= rz).
 
-(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). Status: unverified. *)
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). Status: proved. *)
 Definition bv_center_2_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall x0 x1 : R,

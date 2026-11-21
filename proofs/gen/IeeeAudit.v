@@ -11,6 +11,7 @@ From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeBallPow2.
 From Kairn Require Import IeeeBv.
+From Kairn Require Import IeeeBvNegMake.
 From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
@@ -84,6 +85,9 @@ Print Assumptions fold_finish_1_correct.
 
 Definition norm_finish_1_audit : norm_finish_1_spec := norm_finish_1_correct.
 Print Assumptions norm_finish_1_correct.
+
+Definition bv_make_finish_audit : bv_make_finish_spec := bv_make_finish_correct.
+Print Assumptions bv_make_finish_correct.
 
 Definition interval_add_1_audit : interval_add_1_spec := interval_add_1_correct.
 Print Assumptions interval_add_1_correct.
@@ -208,6 +212,9 @@ Print Assumptions ball_sub_2_full_correct.
 Definition ball_upper_as_2_audit : ball_upper_as_2_spec := ball_upper_as_2_correct.
 Print Assumptions ball_upper_as_2_correct.
 
+Definition bv_center_2_ieee_audit : bv_center_2_ieee_spec := bv_center_2_ieee_correct.
+Print Assumptions bv_center_2_ieee_correct.
+
 Definition eq_2_1_ieee_audit : eq_2_1_ieee_spec := eq_2_1_ieee_correct.
 Print Assumptions eq_2_1_ieee_correct.
 
@@ -315,11 +322,17 @@ Print Assumptions axpy_entry_step_1_ieee_bridge.
 Definition axpy_step_1_ieee_bridge_audit : axpy_step_1_ieee_bridge_spec := axpy_step_1_ieee_bridge.
 Print Assumptions axpy_step_1_ieee_bridge.
 
+Definition bv_center_entry_1_ieee_bridge_audit : bv_center_entry_1_ieee_bridge_spec := bv_center_entry_1_ieee_bridge.
+Print Assumptions bv_center_entry_1_ieee_bridge.
+
 Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
 Print Assumptions dot_step_1_ieee_bridge.
 
 Definition mul_pow2_step_1_ieee_bridge_audit : mul_pow2_step_1_ieee_bridge_spec := mul_pow2_step_1_ieee_bridge.
 Print Assumptions mul_pow2_step_1_ieee_bridge.
+
+Definition neg_1_ieee_bridge_audit : neg_1_ieee_bridge_spec := neg_1_ieee_bridge.
+Print Assumptions neg_1_ieee_bridge.
 
 Definition scale_step_1_ieee_bridge_audit : scale_step_1_ieee_bridge_spec := scale_step_1_ieee_bridge.
 Print Assumptions scale_step_1_ieee_bridge.
@@ -420,11 +433,17 @@ Print Assumptions axpy_entry_step_1_ieee_lead.
 Definition axpy_step_1_ieee_lead_audit : axpy_step_1_ieee_lead_spec := axpy_step_1_ieee_lead.
 Print Assumptions axpy_step_1_ieee_lead.
 
+Definition bv_center_entry_1_ieee_lead_audit : bv_center_entry_1_ieee_lead_spec := bv_center_entry_1_ieee_lead.
+Print Assumptions bv_center_entry_1_ieee_lead.
+
 Definition dot_step_1_ieee_lead_audit : dot_step_1_ieee_lead_spec := dot_step_1_ieee_lead.
 Print Assumptions dot_step_1_ieee_lead.
 
 Definition mul_pow2_step_1_ieee_lead_audit : mul_pow2_step_1_ieee_lead_spec := mul_pow2_step_1_ieee_lead.
 Print Assumptions mul_pow2_step_1_ieee_lead.
+
+Definition neg_1_ieee_lead_audit : neg_1_ieee_lead_spec := neg_1_ieee_lead.
+Print Assumptions neg_1_ieee_lead.
 
 Definition scale_step_1_ieee_lead_audit : scale_step_1_ieee_lead_spec := scale_step_1_ieee_lead.
 Print Assumptions scale_step_1_ieee_lead.
@@ -665,6 +684,30 @@ Print Assumptions bv_add_2_seq_ieee_correct.
 
 Definition bv_add_2_lanes_ieee_audit : bv_add_2_lanes_ieee_spec := bv_add_2_lanes_ieee_correct.
 Print Assumptions bv_add_2_lanes_ieee_correct.
+
+Definition bv_make_1_seq_ieee_audit : bv_make_1_seq_ieee_spec := bv_make_1_seq_ieee_correct.
+Print Assumptions bv_make_1_seq_ieee_correct.
+
+Definition bv_make_1_lanes_ieee_audit : bv_make_1_lanes_ieee_spec := bv_make_1_lanes_ieee_correct.
+Print Assumptions bv_make_1_lanes_ieee_correct.
+
+Definition bv_make_2_seq_ieee_audit : bv_make_2_seq_ieee_spec := bv_make_2_seq_ieee_correct.
+Print Assumptions bv_make_2_seq_ieee_correct.
+
+Definition bv_make_2_lanes_ieee_audit : bv_make_2_lanes_ieee_spec := bv_make_2_lanes_ieee_correct.
+Print Assumptions bv_make_2_lanes_ieee_correct.
+
+Definition bv_neg_1_seq_ieee_audit : bv_neg_1_seq_ieee_spec := bv_neg_1_seq_ieee_correct.
+Print Assumptions bv_neg_1_seq_ieee_correct.
+
+Definition bv_neg_1_lanes_ieee_audit : bv_neg_1_lanes_ieee_spec := bv_neg_1_lanes_ieee_correct.
+Print Assumptions bv_neg_1_lanes_ieee_correct.
+
+Definition bv_neg_2_seq_ieee_audit : bv_neg_2_seq_ieee_spec := bv_neg_2_seq_ieee_correct.
+Print Assumptions bv_neg_2_seq_ieee_correct.
+
+Definition bv_neg_2_lanes_ieee_audit : bv_neg_2_lanes_ieee_spec := bv_neg_2_lanes_ieee_correct.
+Print Assumptions bv_neg_2_lanes_ieee_correct.
 
 Definition bv_scale_1_seq_ieee_audit : bv_scale_1_seq_ieee_spec := bv_scale_1_seq_ieee_correct.
 Print Assumptions bv_scale_1_seq_ieee_correct.

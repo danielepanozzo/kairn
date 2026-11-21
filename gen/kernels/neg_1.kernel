@@ -6,9 +6,12 @@ output:        z
 value:         -x
 ensures:       rounded z nearest
 min_precision: 1
+theorem:       proofs/theories/BvNegMake.v neg_1_correct
+ieee_bridge_theorem: proofs/theories/IeeeBvNegMake.v neg_1_ieee_bridge
+ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v neg_1_ieee_lead
 source:        a change of sign (milestone2.md, BallVector, bv_neg_k)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 ieee:          bridge
 
 z = neg(x)

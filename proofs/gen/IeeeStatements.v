@@ -438,7 +438,7 @@ Definition ball_upper_as_1_spec : Prop :=
   (ball_empty_1 c r -> h = infinity prec emax true) /\
   (~ ball_empty_1 c r -> forall hi : xreal, range_upper (in_ball_1 c r) hi -> xval h = xru prec emax hi).
 
-(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). IEEE-model status: unverified. *)
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). IEEE-model status: proved. *)
 Definition bv_center_entry_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -488,7 +488,7 @@ Definition bv_conv_finish_spec : Prop :=
   (flag = true -> r = rz) /\
   (flag = false -> nan r).
 
-(* bv_make_finish: the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). IEEE-model status: unverified. *)
+(* bv_make_finish: the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). IEEE-model status: proved. *)
 Definition bv_make_finish_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -871,7 +871,7 @@ Definition mul_up_1_ieee_spec : Prop :=
     (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
    xval r = xru prec emax (xmul (xval a) (xval b))).
 
-(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). IEEE-model status: unverified. *)
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). IEEE-model status: proved. *)
 Definition neg_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1934,7 +1934,7 @@ Definition ball_upper_as_2_spec : Prop :=
   (finite c0 /\ finite c1 /\ finite r -> finite h ->
    Rabs (val h - ((val c0 + val c1) + val r)) <= 5 * u prec ^ 1 * (Rabs (val c0 + val c1) + Rabs (val r)) + 3 * eta (ieee_emin prec emax)).
 
-(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). IEEE-model status: unverified. *)
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). IEEE-model status: proved. *)
 Definition bv_center_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),

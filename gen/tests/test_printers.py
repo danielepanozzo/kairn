@@ -940,9 +940,13 @@ class Rocq(unittest.TestCase):
     # definition and statement were added, every earlier line kept; its two constants are new
     # (gen/constant_names.json); Audit.v is the same. Merged here: the regeneration of the merged
     # descriptions.
+    # Then the five kernels of the negation and of the constructor of BallVector with a real-model
+    # statement were proved, and the four folds (BvNegMake.v): in Statements.v only the comments above
+    # their five statements changed, and Audit.v lists their nine theorems, every earlier line kept, in
+    # its order; Model.v is the same.
     DIGESTS = {'Model.v': '92ef82134249c903891247c27a7528c22b1055c1cf4a1b308ba445ed3fa949f3',
-               'Statements.v': '1726773db8522b0feba51c423deb13f8d14e9f165aef7d23c72b1b9bcea4359b',
-               'Audit.v': 'e76cdd765815b00e0722da5629e4fb754286787457f55d19fdad27615d94f40e'}
+               'Statements.v': '62093edc4ed99675cd7a45241ed3598a04e3436160277fa7fead2cc09ebf8657',
+               'Audit.v': '8a77d924640aac3cc7c131e21d5f470322c26f479ad7146105ed2faf68411574'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

@@ -218,7 +218,7 @@ Definition bv_conv_2_spec : Prop :=
    Forall2 (fun j s => Rabs (sumR (map (fun xy => fst xy * snd xy) (conv_terms xs_ ys_ j)) - (fst s + snd s)) <= r_)
      (seq 0 (conv_length (length xs) (length ys))) (conv_2_conv emin prec tie_even xs ys)).
 
-(* bv_make_1, the centers it writes and its radius: the constructor of a BallVector: the centers and the radius given, or the whole space (milestone2.md, BallVector, Values). Status: unverified. *)
+(* bv_make_1, the centers it writes and its radius: the constructor of a BallVector: the centers and the radius given, or the whole space (milestone2.md, BallVector, Values). Status: proved. *)
 Definition bv_make_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (r : R) (cs : list R),
@@ -227,7 +227,7 @@ Definition bv_make_1_spec : Prop :=
   bv_make_1_radius emin prec tie_even r cs = r /\
   Forall2 (fun c w_ => w_ = c) cs (bv_make_1_map emin prec tie_even cs).
 
-(* bv_make_2, the centers it writes and its radius: the constructor of a BallVector: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values). Status: unverified. *)
+(* bv_make_2, the centers it writes and its radius: the constructor of a BallVector: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values). Status: proved. *)
 Definition bv_make_2_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (r : R) (cs : list (R * R)),
@@ -287,7 +287,7 @@ Definition bv_mul_pow2_2_spec : Prop :=
      forall v_ : R, Rabs (v_ - (z0 + z1)) <= r_ -> exists x_ : R, Rabs (x_ - (x0 + x1)) <= rx /\ v_ = (x_ * c))
      xs (bv_mul_pow2_2_map emin prec tie_even c xs)).
 
-(* bv_neg_1, each center it writes and its one radius: the negation of each center, the radius of ball_neg_1 (milestone2.md, BallVector). Status: unverified. *)
+(* bv_neg_1, each center it writes and its one radius: the negation of each center, the radius of ball_neg_1 (milestone2.md, BallVector). Status: proved. *)
 Definition bv_neg_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (rx : R) (xs : list R),
@@ -303,7 +303,7 @@ Definition bv_neg_1_spec : Prop :=
     (forall v_ : R, Rabs (v_ - z) <= r_ -> exists x_ : R, Rabs (x_ - x) <= rx /\ v_ = (- x_)))
     xs (bv_neg_1_map xs).
 
-(* bv_neg_2, each center it writes and its one radius: neg_2 on each center, the radius of ball_neg_2 (milestone2.md, BallVector). Status: unverified. *)
+(* bv_neg_2, each center it writes and its one radius: neg_2 on each center, the radius of ball_neg_2 (milestone2.md, BallVector). Status: proved. *)
 Definition bv_neg_2_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (rx : R) (xs : list (R * R)),

@@ -21,7 +21,9 @@ value:         c
 requires:      canonical c
 ensures:       makes_ball_vector z rr from=c,r flag=finite
 min_precision: 1
-status:        unverified
+theorem:       proofs/theories/BvNegMake.v
+ieee_theorem:  proofs/theories/IeeeBvNegMake.v
+status:        proved
 domain:        extended
 source:        the constructor of a BallVector: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values)
 license:       algorithm and proof: MIT

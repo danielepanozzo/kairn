@@ -97,7 +97,12 @@
    - the ball vectors bv_add_k, bv_sub_k and bv_scale_k in the IEEE model, beside the
      theorems of their generated statements, which proofs/gen/IeeeAudit.v lists: the lemmas
      of theories/IeeeBv.v those theorems put together, V1 to V4 of each ball vector in both
-     orders, and that the lane order returns what the sequential order returns.
+     orders, and that the lane order returns what the sequential order returns;
+   - the negation and the constructor of a ball vector, beside the theorems of their
+     generated statements, which the generated audits list: the leading limbs of the two
+     steps of the extended domain (neg_2, bv_center_2) as their generated statements, which
+     no field can name, and the lemmas of theories/BvNegMake.v and IeeeBvNegMake.v the
+     theorems rest on.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -1017,3 +1022,33 @@ Print Assumptions bv_scale_2_lanes_ieee_v1.
 Print Assumptions bv_scale_2_lanes_ieee_v2.
 Print Assumptions bv_scale_2_lanes_ieee_v3.
 Print Assumptions bv_scale_2_lanes_ieee_v4.
+
+(* The negation and the constructor of a ball vector (theories/BvNegMake.v,
+   IeeeBvNegMake.v): the theorems of their generated statements are listed by the generated
+   audits; these are beside them. The leading limbs of neg_2 and bv_center_2, the steps of
+   bv_neg_2 and bv_make_2, as their generated statements K_ieee_lead_spec, which a kernel of
+   the extended domain cannot name (ieee_lead_theorem belongs to the finite domain); in the
+   real model, that the radius kernel of the constructor returns the radius given and that
+   the ball of a negated center is exactly the image of the operand's ball; in the IEEE
+   model, the radius kernel of the constructor, the result of each fold in closed form (a
+   finite ball vector, or the whole space), and that the lane order returns what the
+   sequential order returns. *)
+From Kairn Require Import BvNegMake IeeeBvNegMake.
+Definition neg_2_ieee_lead_audit : IeeeFoldStatements.neg_2_ieee_lead_spec := neg_2_ieee_lead.
+Print Assumptions neg_2_ieee_lead.
+
+Definition bv_center_2_ieee_lead_audit : IeeeFoldStatements.bv_center_2_ieee_lead_spec :=
+  bv_center_2_ieee_lead.
+Print Assumptions bv_center_2_ieee_lead.
+
+Print Assumptions bv_make_radius_value.
+Print Assumptions neg_ball_image.
+Print Assumptions make_radius_ieee.
+Print Assumptions bv_neg_1_result.
+Print Assumptions bv_neg_2_result.
+Print Assumptions bv_make_1_result.
+Print Assumptions bv_make_2_result.
+Print Assumptions bv_neg_1_lanes_seq_ieee.
+Print Assumptions bv_neg_2_lanes_seq_ieee.
+Print Assumptions bv_make_1_lanes_seq_ieee.
+Print Assumptions bv_make_2_lanes_seq_ieee.

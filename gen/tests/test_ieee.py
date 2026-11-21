@@ -397,8 +397,10 @@ class Statements(unittest.TestCase):
         # IEEE-model statements of the eight kernels of the accumulator (8); and those of the
         # 16 steps of the maps, 16 bridges, 8 correctness statements and 16 leading limbs (40),
         # of the 18 maps in their two orders (36) and of the two convolutions (2); and of the six ball
-        # vectors bv_add_k, bv_sub_k and bv_scale_k in their two orders (12).
-        self.assertEqual(text.count('Print Assumptions'), 218)
+        # vectors bv_add_k, bv_sub_k and bv_scale_k in their two orders (12); and of the negation and the
+        # constructor of a BallVector: bv_center_2 and bv_make_finish (2), the bridges and the leading
+        # limbs of neg_1 and bv_center_entry_1 (4), and bv_neg_k and bv_make_k in their two orders (8).
+        self.assertEqual(text.count('Print Assumptions'), 232)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -477,9 +479,11 @@ class CheckedFiles(unittest.TestCase):
     # and bv_conv_finish, of the product of two BallVectors (unverified): their definitions, the two
     # constants of conv_radius and the statement of bv_conv_finish (finite_or_nan with if_all) were
     # added, every earlier line kept. Merged here: the regeneration of the merged descriptions, and
-    # make -C proofs passed on these files.
+    # make -C proofs passed on these files. Then the kernels of the negation and of the constructor
+    # were proved (IeeeBvNegMake.v): the comments above the statements of neg_1, bv_center_entry_1,
+    # bv_center_2 and bv_make_finish say proved, and nothing else changed.
     DIGESTS = {'proofs/gen/IeeeModel.v': '767697da2d8c9427dfc78858b27e17f481d44666aba4708bf7364652bdafd652',
-               'proofs/gen/IeeeStatements.v': 'd6b2acaacbfba69692fa56f2af743761d24b3a56da4814882068171c27402d0e'}
+               'proofs/gen/IeeeStatements.v': '2e25d6749e782c83af2c6afe0e0481b5a0d343fb9e0214a8ff49185359d81bcb'}
 
 
     def test_the_checked_files(self):

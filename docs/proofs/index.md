@@ -98,7 +98,8 @@ lists:
   polynomials, over the real numbers and with overflow, infinities and NaN (`FoldConv.v`,
   `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); of the radius kernels of the
   ball vectors and of the ball vectors themselves, over the real numbers (`BvRadius.v`,
-  `BvReal.v`), and with overflow, infinities and NaN (`IeeeBv.v`;
+  `BvReal.v`), and with overflow, infinities and NaN (`IeeeBv.v`), and of the negation and
+  the constructor of a ball vector, in both models (`BvNegMake.v`, `IeeeBvNegMake.v`;
   [below](#ball-vectors)); and of the
   kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
@@ -528,6 +529,21 @@ finiteness of the Ball kernels' radius (`IeeeBallFinite.v`) at the largest magni
 precision 1, where the other clauses of one limb start, V4 would be false: with
 $e_{\max} = 2$ a constant of the radius lines rounds up to $2^{e_{\max}}$, so every radius is
 $+\infty$ or a NaN; the statements claim it from precision 2 (`finite_from=2`).
+
+**The negation and the constructor** (`BvNegMake.v`, `IeeeBvNegMake.v`): every kernel of
+`bv_neg_k` and `bv_make_k` and the four folds have their generated statements, in both models
+and both orders, as types. The negation is exact: the centers are negated and the radius is
+the operand's, so the ball of each center written is exactly the set of the negated members of
+the operand's ball (`neg_ball_image`); a canonical operand has finite or zero centers, so the
+result is the negated finite ball vector, or the whole space when the operand is. The
+constructor returns the centers and the radius given (a guard, or a copy, and the radius
+kernel $(r + 0) + (m - m)$ is $r$ for a finite largest magnitude $m$), and the whole space
+exactly when the radius is negative, a NaN or $+\infty$ or a center (its leading limb) is not
+finite: the radius kernel is finite only from a finite $m$ and a finite $r$, $m$ is finite with
+the record's mask true exactly when every center is, and the finish tests the sign of the
+radius (`bv_make_finish`). The leading limbs of `neg_2` and `bv_center_2`, the steps of
+two limbs, are generated statements that no field of a description can name (they are kernels
+of the extended domain): their theorems are audited in step 3.
 
 ## The accumulator
 

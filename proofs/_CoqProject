@@ -52,6 +52,7 @@ theories/FoldGuarantee.v
 theories/FoldConv.v
 theories/BvRadius.v
 theories/BvReal.v
+theories/BvNegMake.v
 theories/AccKernels.v
 theories/Accumulator.v
 theories/IeeeOperations.v
@@ -93,6 +94,7 @@ theories/IeeeMapSteps.v
 theories/IeeeFoldMaps.v
 theories/IeeeFoldConv.v
 theories/IeeeBv.v
+theories/IeeeBvNegMake.v
 theories/IeeeFoldNorm.v
 theories/IeeeBallConvert.v
 theories/IeeeIntervalExact.v

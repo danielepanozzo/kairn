@@ -1721,7 +1721,7 @@ KAIRN_GEN_FORCEINLINE void bv_add_radius_2(float m, float rx, float ry, float& r
 }
 
 // bv_center_entry_1(c) -> z
-// the guard of a constructor (milestone2.md, BallVector, Values). Status: unverified; constexpr.
+// the guard of a constructor (milestone2.md, BallVector, Values). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void bv_center_entry_1(double c, double& z_out) noexcept {
     const double z = __builtin_is_constant_evaluated() ? c : c + 0.0;
     z_out = z;
@@ -1795,7 +1795,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bv_conv_finish(float rz, bool okc, bool okg
 }
 
 // bv_make_finish(rz, mask ok) -> r, mask flag
-// the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). Status: unverified (IEEE model only); constexpr.
+// the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void bv_make_finish(double rz, bool ok, double& r_out, bool& flag_out) noexcept {
     const bool p = rz >= 0.0;
     const bool q = ok & p;
@@ -1822,7 +1822,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bv_make_finish(float rz, bool ok, float& r_
 }
 
 // bv_make_radius(m, r) -> rz
-// the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). Status: unverified; constexpr.
+// the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void bv_make_radius(double m, double r, double& rz_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
     const double d = m - m;
@@ -1887,7 +1887,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_1(float x, float c, float&
 }
 
 // bv_neg_radius(m, rx) -> rz
-// the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). Status: unverified; constexpr.
+// the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void bv_neg_radius([[maybe_unused]] double m, double rx, double& rz_out) noexcept {
     const double rz = rx;
     rz_out = rz;
@@ -3362,7 +3362,7 @@ KAIRN_GEN_FORCEINLINE void mul_up_1(float a, float b, float& r_out) noexcept {
 }
 
 // neg_1(x) -> z
-// a change of sign (milestone2.md, BallVector, bv_neg_k). Status: unverified; constexpr.
+// a change of sign (milestone2.md, BallVector, bv_neg_k). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void neg_1(double x, double& z_out) noexcept {
     const double z = -x;
     z_out = z;
@@ -6671,7 +6671,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_upper_as_2(float c0, float c1, float r
 }
 
 // bv_center_2(x = (x0, x1)) -> z = (z0, z1)
-// a copy of a canonical pair (milestone2.md, BallVector, Values). Status: unverified (real model), unverified (IEEE model); constexpr.
+// a copy of a canonical pair (milestone2.md, BallVector, Values). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void bv_center_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
     const double z0 = x0;
     const double z1 = x1;
@@ -14542,7 +14542,7 @@ KAIRN_GEN_NOINLINE void bv_make_1_end(float m, bool ok, float r, float& rad_out_
 
 // ball vector bv_make_1(supplied c, supplied r) -> z, rr, finite: step bv_center_entry_1, record norm_step_1, radius bv_make_radius: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_1_seq(const double* c_in, std::size_t n, double r, double* z_out, double& rr_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -14573,7 +14573,7 @@ inline void bv_make_1_seq(const double* c_in, std::size_t n, double r, double* z
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_1_seq(const float* c_in, std::size_t n, float r, float* z_out, float& rr_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -14606,7 +14606,7 @@ inline void bv_make_1_seq(const float* c_in, std::size_t n, float r, float* z_ou
 
 // ball vector bv_make_1(supplied c, supplied r) -> z, rr, finite: step bv_center_entry_1, record norm_step_1, radius bv_make_radius: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_1_lanes(const double* c_in, std::size_t n, std::size_t lanes, double r, double* z_out, double& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -14668,7 +14668,7 @@ inline void bv_make_1_lanes(const double* c_in, std::size_t n, std::size_t lanes
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_1_lanes(const float* c_in, std::size_t n, std::size_t lanes, float r, float* z_out, float& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
@@ -14772,7 +14772,7 @@ KAIRN_GEN_NOINLINE void bv_make_2_end(float m, bool ok, float r, float& rad_out_
 
 // ball vector bv_make_2(stored c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_2, record norm_step_2, radius bv_make_radius: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_2_seq(const double* c0_in, const double* c1_in, std::size_t n, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -14808,7 +14808,7 @@ inline void bv_make_2_seq(const double* c0_in, const double* c1_in, std::size_t 
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_2_seq(const float* c0_in, const float* c1_in, std::size_t n, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -14846,7 +14846,7 @@ inline void bv_make_2_seq(const float* c0_in, const float* c1_in, std::size_t n,
 
 // ball vector bv_make_2(stored c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_2, record norm_step_2, radius bv_make_radius: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_2_lanes(const double* c0_in, const double* c1_in, std::size_t n, std::size_t lanes, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -14917,7 +14917,7 @@ inline void bv_make_2_lanes(const double* c0_in, const double* c1_in, std::size_
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_make_2_lanes(const float* c0_in, const float* c1_in, std::size_t n, std::size_t lanes, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
@@ -15640,7 +15640,7 @@ KAIRN_GEN_NOINLINE void bv_neg_1_end(float m, bool ok, float rx, float& rad_out_
 
 // ball vector bv_neg_1(stored x, stored rx) -> z, r, finite: step neg_1, record norm_step_1, radius bv_neg_radius: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_1_seq(const double* x_in, std::size_t n, double rx, double* z_out, double& r_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -15671,7 +15671,7 @@ inline void bv_neg_1_seq(const double* x_in, std::size_t n, double rx, double* z
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_1_seq(const float* x_in, std::size_t n, float rx, float* z_out, float& r_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -15704,7 +15704,7 @@ inline void bv_neg_1_seq(const float* x_in, std::size_t n, float rx, float* z_ou
 
 // ball vector bv_neg_1(stored x, stored rx) -> z, r, finite: step neg_1, record norm_step_1, radius bv_neg_radius: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double rx, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -15766,7 +15766,7 @@ inline void bv_neg_1_lanes(const double* x_in, std::size_t n, std::size_t lanes,
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float rx, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
@@ -15860,7 +15860,7 @@ KAIRN_GEN_NOINLINE void bv_neg_2_end(float m, bool ok, float rx, float& rad_out_
 
 // ball vector bv_neg_2(stored x = (x0, x1), stored rx) -> z = (z0, z1), r, finite: step neg_2, record norm_step_2, radius bv_neg_radius: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double rx, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -15896,7 +15896,7 @@ inline void bv_neg_2_seq(const double* x0_in, const double* x1_in, std::size_t n
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float rx, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -15934,7 +15934,7 @@ inline void bv_neg_2_seq(const float* x0_in, const float* x1_in, std::size_t n, 
 
 // ball vector bv_neg_2(stored x = (x0, x1), stored rx) -> z = (z0, z1), r, finite: step neg_2, record norm_step_2, radius bv_neg_radius: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double rx, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -16005,7 +16005,7 @@ inline void bv_neg_2_lanes(const double* x0_in, const double* x1_in, std::size_t
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_neg_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float rx, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
