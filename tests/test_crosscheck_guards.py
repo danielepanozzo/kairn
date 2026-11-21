@@ -1190,6 +1190,93 @@ class StageBGuards(unittest.TestCase):
             self.assertIn("did not check what it set out to", bad.stdout)
 
 
+# The kernels of the ball vectors and of the accumulator (crosscheck_guards.py, bv_problems):
+# random runs of the interpreter on toy formats of tests/CMakeLists.txt.
+BV_ARGS = ("--seed", "0", "--count", "400")
+
+
+class BallVectorKernelGuards(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.runs = {}
+        for kernel, fmt in (("bv_mul_pow2_radius", "fp:4:-4:2"), ("bv_add_radius_2", "fp:3:-5:3"),
+                            ("bv_mul_pow2_step_1", "fp:7:-14:6"), ("bv_conv_finish", "fp:10:-27:9"),
+                            ("bv_make_finish", "fp:11:-29:10"), ("acc_add_2", "fp:3:-2:0"),
+                            ("acc_radius_1", "fp:3:-2:0"), ("neg_1", "fp:11:-30:10")):
+            cls.runs[kernel] = (pipeline(kernel, fmt, *BV_ARGS), fmt)
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def without(self, kernel, entry, name):
+        """The good run of KERNEL with the count NAME of entry ENTRY taken out."""
+        s, fmt = self.runs[kernel]
+        s = copy.deepcopy(s)
+        for k in s["keys"]:
+            k["stats"]["entries"][entry]["counts"].pop(name, None)
+        return s, fmt
+
+    def test_good_runs_pass(self):
+        for kernel, (s, fmt) in self.runs.items():
+            self.passes(s, kernel, fmt, *BV_ARGS)
+
+    # A copy or a negation is exact on every operand: no inexact case is asked of it.
+    def test_identity_rounded_exact_only(self):
+        s, fmt = self.runs["neg_1"]
+        counts = {}
+        for k in s["keys"]:
+            for name, n in k["stats"]["entries"][0]["counts"].items():
+                counts[name] = counts.get(name, 0) + n
+        self.assertEqual(set(counts), {"exact"})
+        self.passes(s, "neg_1", fmt, *BV_ARGS)
+
+    def test_radius_without_a_class(self):
+        for entry, name in ((0, "exact_when holds"), (0, "exact_when fails: ex true"),
+                            (0, "exact_when fails: rx*c = 0 or |rx*c| > eta/(2*u)"),
+                            (1, "ex true: nothing claimed"), (0, "output +inf"),
+                            (1, "output finite, at least the stated value")):
+            s, fmt = self.without("bv_mul_pow2_radius", entry, name)
+            self.fails(s, "bv_mul_pow2_radius", fmt, *BV_ARGS, reason='saw no case of "%s"' % name)
+
+    def test_radius_without_a_stratum(self):
+        for stratum in ("atnormal", "huge", "zeros", "mixed"):
+            s, fmt = self.runs["bv_add_radius_2"]
+            s = copy.deepcopy(s)
+            d = s["coverage"][0]["desc"]
+            d["strata"] = ",".join(x for x in d["strata"].split(",") if x != stratum)
+            s["keys"] = [k for k in s["keys"] if k["tag"] != stratum]
+            self.fails(s, "bv_add_radius_2", fmt, *BV_ARGS, reason="without %s" % stratum)
+
+    def test_step_without_a_false_mask(self):
+        s, fmt = self.without("bv_mul_pow2_step_1", 1, "exact_flag false")
+        self.fails(s, "bv_mul_pow2_step_1", fmt, *BV_ARGS, reason='saw no case of "exact_flag false"')
+
+    def test_finish_without_a_cell(self):
+        for kernel, name in (("bv_conv_finish", "a mask false: okg"), ("bv_conv_finish", "value: NaN"),
+                             ("bv_conv_finish", "value: -inf"), ("bv_conv_finish", "value zero"),
+                             ("bv_make_finish", "value finite, below zero"),
+                             ("bv_make_finish", "a mask false: ok")):
+            s, fmt = self.without(kernel, 0, name)
+            self.fails(s, kernel, fmt, *BV_ARGS, reason='saw no case of "%s"' % name)
+
+    def test_accumulator_without_a_class(self):
+        for entry, name in ((2, "inexact"), (2, "exact"),
+                            (2, "the leading limb of its output is not finite: nothing claimed")):
+            s, fmt = self.without("acc_add_2", entry, name)
+            self.fails(s, "acc_add_2", fmt, *BV_ARGS, reason='saw no case of "%s"' % name)
+        s, fmt = self.without("acc_radius_1", 0, "ok false: nothing claimed")
+        self.fails(s, "acc_radius_1", fmt, *BV_ARGS, reason='saw no case of "ok false: nothing claimed"')
+        s, fmt = self.without("acc_radius_1", 1, "holds")
+        self.fails(s, "acc_radius_1", fmt, *BV_ARGS, reason='saw no case of "holds"')
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)

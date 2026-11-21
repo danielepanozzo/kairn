@@ -5,7 +5,9 @@ the `value` of an `upper` entry that carries one, the `args` of `holds`, and the
 Grammar: integers, `u`, `eta`, names (inputs and one-limb outputs of a kernel, where the caller
 allows them), `unit(K)` and `tiny(K)` (the constants c u^k and t eta of the error entry of kernel
 K), binary `+`, `-`, `*`, `/`, unary minus, parentheses, and integer powers `^` whose exponent is
-a constant (possibly negative, `2^-3`).  A unary minus binds less tightly than `^` (`-2^2` is -4)
+a constant (possibly negative, `2^-3`); and, where the caller allows it (parse(text, abs_ok=True):
+the value of an `upper` entry, architecture.md, "Claims of Milestone 2", the radius kernels of the
+ball vectors), `abs(NAME)`, the exact magnitude of a name.  A unary minus binds less tightly than `^` (`-2^2` is -4)
 and `^` groups to the right, as in claims.eval_const.  The value is a Fraction, computed exactly;
 these expressions are few per line (the bound kernels) or per format (the folds' constants), so
 Fractions cost nothing here, and the verdicts that compare with limbs still clear denominators
@@ -26,9 +28,10 @@ class CExprError(ValueError):
 _TOKEN = re.compile(r"\s*(?:(\d+)|([-+*/^()])|([A-Za-z_][A-Za-z0-9_]*))")
 
 
-def parse(text):
+def parse(text, abs_ok=False):
     """The syntax tree of an expression: ("int", n), ("u",), ("eta",), ("name", s),
-    ("unit", K), ("tiny", K), ("neg", a), and (op, a, b) for op in + - * / ^."""
+    ("unit", K), ("tiny", K), ("neg", a), and (op, a, b) for op in + - * / ^; with abs_ok,
+    ("abs", ("name", s)) too."""
     if isinstance(text, bool) or not isinstance(text, (str, int)):
         raise CExprError("expression %r is not a string" % (text,))
     s = str(text).strip()
@@ -99,6 +102,15 @@ def parse(text):
                 return ("u",)
             if w == "eta":
                 return ("eta",)
+            if w == "abs" and abs_ok:
+                if take() != ("op", "("):
+                    raise CExprError("abs must be followed by '(' in %r" % text)
+                k = take()
+                if k[0] != "word" or k[1] in RESERVED or k[1] == "abs":
+                    raise CExprError("abs( ) takes a name in %r" % text)
+                if take() != ("op", ")"):
+                    raise CExprError("abs( ) takes one name, then ')', in %r" % text)
+                return ("abs", ("name", k[1]))
             if w in FUNCTIONS:
                 if take() != ("op", "("):
                     raise CExprError("%s must be followed by '(' in %r" % (w, text))
@@ -129,7 +141,7 @@ def names(tree, out=None):
     out = [] if out is None else out
     if tree[0] == "name":
         out.append(tree[1])
-    elif tree[0] in ("neg", "+", "-", "*", "/", "^"):
+    elif tree[0] in ("neg", "abs", "+", "-", "*", "/", "^"):
         for sub in tree[1:]:
             names(sub, out)
     return out
@@ -140,7 +152,7 @@ def calls(tree, out=None):
     out = [] if out is None else out
     if tree[0] in FUNCTIONS:
         out.append((tree[0], tree[1]))
-    elif tree[0] in ("neg", "+", "-", "*", "/", "^"):
+    elif tree[0] in ("neg", "abs", "+", "-", "*", "/", "^"):
         for sub in tree[1:]:
             calls(sub, out)
     return out
@@ -163,6 +175,8 @@ def evaluate(tree, env):
         return env[k](tree[1])
     if k == "neg":
         return -evaluate(tree[1], env)
+    if k == "abs":
+        return abs(evaluate(tree[1], env))
     a = evaluate(tree[1], env)
     b = evaluate(tree[2], env)
     if k == "+":
@@ -197,4 +211,6 @@ def to_text(tree):
         return "%s(%s)" % (k, tree[1])
     if k == "neg":
         return "-(%s)" % to_text(tree[1])
+    if k == "abs":
+        return "abs(%s)" % to_text(tree[1])
     return "(%s %s %s)" % (to_text(tree[1]), k, to_text(tree[2]))

@@ -657,6 +657,149 @@ MUTANTS = {
     "gen2: the one-limb scale family's operand of two limbs": (
         "gen2.py", "    vals[xn] = [x]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals",
         "    vals[xn] = [x, 0]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals"),
+    # The kernels of the ball vectors and of the accumulator (bvec.py, gen8.py, cexpr.py).
+    "radius: an output below the stated value accepted": (
+        "bvec.py", "            if ov < v:\n                es.count(\"below the stated value\")",
+        "            if False:\n                es.count(\"below the stated value\")"),
+    "radius: a NaN output accepted": (
+        "bvec.py", "        if o == NAN or o == NINF:\n            why = \"upper: the output is",
+        "        if o == NINF:\n            why = \"upper: the output is"),
+    "radius: -inf accepted": (
+        "bvec.py", "        if o == NAN or o == NINF:\n            why = \"upper: the output is",
+        "        if o == NAN:\n            why = \"upper: the output is"),
+    "radius: unless ignored": (
+        "bvec.py", '        if c["unless"] is not None and x[c["unless"]] == 1:',
+        "        if False:"),
+    "radius: unless read the other way": (
+        "bvec.py", '        if c["unless"] is not None and x[c["unless"]] == 1:',
+        '        if c["unless"] is not None and x[c["unless"]] == 0:'),
+    "radius: the equality of exact_when not judged": (
+        "bvec.py", "                if conds_hold and d != 0:", "                if False:"),
+    "radius: +inf accepted where exact_when holds": (
+        "bvec.py", "            if conds_hold:\n                why = \"upper: exact_when holds but the output is +inf",
+        "            if False:\n                why = \"upper: exact_when holds but the output is +inf"),
+    "radius: a mask condition always true": (
+        "bvec.py", "conds.append((lambda x, slot=slot: x[slot] == 1,",
+        "conds.append((lambda x, slot=slot: x[slot] >= 0,"),
+    "radius: the equality judged beyond Omega": (
+        "bvec.py", "                if v > Fraction(fmt.omega) * eta:", "                if False:"),
+    "radius: +inf from small operands not suspicious": (
+        "bvec.py", "            elif _small(pl, x, v):", "            elif False:"),
+    "radius: abs( ) of a value ignored": (
+        "cexpr.py", "        return abs(evaluate(tree[1], env))", "        return evaluate(tree[1], env)"),
+    "exact_flag: not compared": (
+        "bvec.py", "    if f != (1 if holds else 0):", "    if False:"),
+    "exact_flag: read inverted": (
+        "bvec.py", '    holds = all(h(x) for h, _t in e["exact"])',
+        '    holds = not all(h(x) for h, _t in e["exact"])'),
+    "finish: nonneg ignored": (
+        "bvec.py", "    want = not off and type(v) is int and (not nonneg or v >= 0)",
+        "    want = not off and type(v) is int"),
+    "finish: a zero read as below zero": (
+        "bvec.py", "    want = not off and type(v) is int and (not nonneg or v >= 0)",
+        "    want = not off and type(v) is int and (not nonneg or v > 0)"),
+    "finish: if_all read as its first mask": (
+        "bvec.py", "    off = [n for n, i in zip(names, slots) if x[i] != 1]",
+        "    off = [n for n, i in zip(names[:1], slots[:1]) if x[i] != 1]"),
+    "finish: the output not compared": (
+        "bvec.py", "        if len(w) != 1 or w[0] != v:", "        if False:"),
+    "finish: the NaN of a false flag not required": (
+        "bvec.py", "    elif not all(t == NAN for t in w):\n        out.append(\"finite_or_nan: the flag is false, and the output is not a NaN\")",
+        "    elif False:\n        out.append(\"finite_or_nan: the flag is false, and the output is not a NaN\")"),
+    "acc: a value of its own read as the kernel's": (
+        "bvec.py", '        if c["kind"] == "rounded" and "own" in c:', "        if False:"),
+    "acc: a finite b beyond Omega accepted": (
+        "bvec.py", "        es.count(ACC_BEYOND)\n        return (\"rounded(%s): the output is finite, and its value",
+        "        es.count(ACC_BEYOND)\n        return None and (\"rounded(%s): the output is finite, and its value"),
+    "acc: its own rounding not compared": (
+        "bvec.py", "    if o != r:\n        return \"rounded(%s): the output is not its value",
+        "    if False:\n        return \"rounded(%s): the output is not its value"),
+    "acc: judged where its group is not finite": (
+        "bvec.py", "        if type(z[rg[0][0]]) is not int:\n            es.count(GROUP_NONFINITE)",
+        "        if False:\n            es.count(GROUP_NONFINITE)"),
+    "at_most not checked": (
+        "check.py", "                if BV.at_most_violated(r, x):", "                if False:"),
+    "at_most: the bound one more": (
+        "bvec.py", "    return (v << q) > k if q >= 0 else v > (k << -q)",
+        "    return (v << q) > k + 1 if q >= 0 else v > ((k + 1) << -q)"),
+    "at_most: the enumeration up to twice the bound": (
+        "gen.py", "                    d = [t for t in d if not ((sum(t) << q) > r[2] if q >= 0\n                                              else sum(t) > (r[2] << -q))]",
+        "                    d = [t for t in d if not ((sum(t) << q) > 2 * r[2] if q >= 0\n                                              else sum(t) > (2 * r[2] << -q))]"),
+    "conditional: an infinite output with ok true never suspicious": (
+        "check.py", "                if BV.small_inputs(pl, x) and BV.small_stated(pl, c, x, z):",
+        "                if False:"),
+    "claims: unless naming any input accepted": (
+        "bvec.py", "    if not isinstance(name, str) or name not in kernel.input_names or name not in kernel.masks:",
+        "    if not isinstance(name, str) or name not in kernel.input_names:"),
+    "claims: exact_flag naming any output accepted": (
+        "bvec.py", "    if not isinstance(m, str) or m not in dict(kernel.outputs) or m not in kernel.masks:",
+        "    if not isinstance(m, str) or m not in dict(kernel.outputs):"),
+    "claims: nonneg false accepted": (
+        "bvec.py", '        if raw["nonneg"] is not True:', "        if False:"),
+    "claims: if_all of one mask accepted": (
+        "bvec.py", "        if not isinstance(lst, list) or len(lst) < 2 or",
+        "        if not isinstance(lst, list) or len(lst) < 1 or"),
+    "claims: a limb of the value of rounded beyond the input's": (
+        "bvec.py", "            raise ClaimsError(\"%s: value: %s[%d] is not a limb of %s, which has %d\" % (",
+        "            pass\n        if False:\n            raise ClaimsError(\"%s: value: %s[%d] is not a limb of %s, which has %d\" % ("),
+    "claims: an upper entry with gaps and a value of its own accepted": (
+        "bvec.py", "    if \"gaps\" in raw:\n        raise ClaimsError(\"%s: an upper entry has gaps, or a value of its own",
+        "    if False:\n        raise ClaimsError(\"%s: an upper entry has gaps, or a value of its own"),
+    "claims: a radius kernel with entries of other kinds accepted": (
+        "bvec.py", "    if radius and len(radius) != len(kernel.ensures):", "    if False:"),
+    "claims: exact_when of masks alone accepted": (
+        "bvec.py", '    if masks and all(c[0] == "mask" for c in out):', "    if False:"),
+    "claims: at_most of 0 accepted": (
+        "bvec.py", "    if k < 1:\n        raise ClaimsError(\"%s: requirement %r: the bound of at_most()",
+        "    if k < 0:\n        raise ClaimsError(\"%s: requirement %r: the bound of at_most()"),
+    "gen8: huge without the top binades": (
+        "gen8.py", "        v = G2._top(fmt, rng) if rng.chance(2, 3) else _pos(fmt, rng, rng.between(\n            max(fmt.qmin, fmt.emax - fmt.p), fmt.emax))",
+        "        v = _pos(fmt, rng, G2._e_any(fmt, rng))"),
+    "gen8: zeros not zero": (
+        "gen8.py", '        v = 0 if rng.chance(3, 4) else _pos(fmt, rng, G2._e_any(fmt, rng))',
+        '        v = _pos(fmt, rng, G2._e_any(fmt, rng))'),
+    "gen8: atnormal off N": (
+        "gen8.py", "            N = fmt.lam\n", "            N = 3 * fmt.lam\n"),
+    "gen8: mixed of one magnitude": (
+        "gen8.py", "            d = 0 if n == big else rng.between(fmt.p, 3 * fmt.p + 4)",
+        "            d = 0"),
+    "gen8: atop not at the top": (
+        "gen8.py", "            vals[n] = [abs(G2._top(fmt, rng))]",
+        "            vals[n] = [abs(G2.limb(fmt, rng, \"uniform\")) >> 8]"),
+    "gen8: cancel not cancelling": (
+        "gen8.py", "            t = [-v for v in s]\n", "            t = [v for v in s]\n"),
+    "gen8: tie off the tie": (
+        "gen8.py", "                h = (u0 // 2) * (2 * rng.below(3) + 1)",
+        "                h = (u0 // 4) * (2 * rng.below(3) + 1)"),
+    "gen8: apart not apart": (
+        "gen8.py", "        d = rng.between(p + 2, 3 * p + 4) * (1 if rng.bits(1) else -1)",
+        "        d = 0"),
+    "gen8: exactprod of long significands": (
+        "gen8.py", '            vals[n] = [_pos(fmt, rng, e, "short" if stratum in ("exactprod", "tie") else "uniform")]',
+        '            vals[n] = [_pos(fmt, rng, e, "short" if stratum in ("tie",) else "uniform")]'),
+    "gen8: limit far from the limit": (
+        "gen8.py", "                x = Fraction(1, 2) * (1 + Fraction(rng.between(-64, 64), 256))",
+        "                x = Fraction(1, 8) * (1 + Fraction(rng.between(-64, 64), 256))"),
+    "gen8: beyond below the limit": (
+        "gen8.py", "                x = Fraction(1, 2) * (2 ** rng.between(1, max(1, fmt.p)))",
+        "                x = Fraction(1, 4)"),
+    "gen8: integer counts not integers": (
+        "gen8.py", '    if stratum == "integer" or rng.chance(1, 2):',
+        '    if rng.chance(1, 2):'),
+    "gen8: abig not big": (
+        "gen8.py", "            vals[a] = [_pos(fmt, rng, rng.between(max(fmt.qmin, fmt.emax - fmt.p), fmt.emax - 4))]",
+        "            vals[a] = [_pos(fmt, rng, G2._e_any(fmt, rng) // 2)]"),
+    "gen8: negative not negative": (
+        "gen8.py", "        x = -(1 if k == 0 else fmt.lam if k == 1 else fmt.omega if k == 2 else",
+        "        x = +(1 if k == 0 else fmt.lam if k == 1 else fmt.omega if k == 2 else"),
+    "gen8: nonfinite finite": (
+        "gen8.py", "        x = (INF, NINF, NAN)[rng.below(3)]", "        x = fmt.lam"),
+    "gen8: zeros of the finishes not zero": (
+        "gen8.py", '    elif stratum == "zeros":\n        x = 0\n', '    elif stratum == "zeros":\n        x = 1\n'),
+    "gen8: top not at the top": (
+        "gen8.py", "        x = fmt.omega if rng.bits(1) else F.pred(fmt, fmt.omega)", "        x = fmt.lam"),
+    "gen8: masks always true": (
+        "gen8.py", "            vals[n] = [1 if rng.chance(2, 3) else 0]", "            vals[n] = [1]"),
 }
 
 

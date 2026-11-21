@@ -532,6 +532,42 @@ set(_toy_1_m_1_sum fp:5:-7:0)
 set(_toy_1_m_2_sum fp:3:-6:2)
 set(_toy_ext_1_m_sum fp:11:-29:10)
 
+# The kernels of the ball vectors and of the accumulator (architecture.md, "Ball vectors", "The
+# accumulator"), with the steps of the scalings, the copies and bv_make_finish in the shapes above
+# (mul_pow2_step_k's, split's, the sums of one limb, neg_2's, norm_finish_1's); every constant of
+# their listings a finite number of these formats, and the radius of an accumulator at p >= 3 (at
+# p = 2 its factor (1+u)^8 rounded up is 6, and from a stated value of Omega/6 the radius
+# overflows inside, a non-finite result from small operands that the cross-checks fail):
+#
+#   inputs       kernels                                  format         cases
+#   r r r        bv_add_radius_k (m, rx, ry)              fp:3:-5:3       64 000
+#   r r 1        bv_scale_radius_k (m, rx, a)             fp:3:-5:3      126 400
+#   r m r c      bv_mul_pow2_radius (m, ex, rx, c)        fp:4:-4:2       81 920
+#   ext 1 m m    bv_conv_finish (rz, okc, okg)            fp:10:-27:9    155 656
+#   1 r 1        acc_add_1 (s, a, x)                      fp:3:-3:1       53 016
+#   2 r 2        acc_add_2                                fp:3:-2:0       55 696
+#   1 r 1 1 *    acc_mul_1                                fp:2:-2:1       68 590
+#   2 r 2 2 *    acc_mul_2: a in {0, 1/2, 3/2}, s and x   fp:4:-3:-2     105 408 of 5.4 million
+#                with leading limbs in [1/2, 2)
+#   1 r 1 r      acc_merge_1 (ball_add_1's shape)         fp:2:-3:1       76 176
+#   2 r 2 r      acc_merge_2 (of its own, against         fp:3:-2:0       55 696 of 891 136
+#                ball_add_2's): a in {0, 1/4, 5/4, 3/2},
+#                c in {0, 1/2, 5/4, 7/4}
+#   r n r r      acc_radius_k (a, m, g, t)                fp:3:-2:0       53 248
+#
+# A kernel whose shape is another's, with another domain, has an entry _toy_kernel_KERNEL, read
+# first.
+set(_toy_r_r_r_sum fp:3:-5:3)
+set(_toy_r_r_1_sum fp:3:-5:3)
+set(_toy_r_m_r_c_sum fp:4:-4:2)
+set(_toy_ext_1_m_m_sum fp:10:-27:9)
+set(_toy_1_r_1_sum fp:3:-3:1)
+set(_toy_2_r_2_sum fp:3:-2:0)
+set(_toy_1_r_1_1_product fp:2:-2:1)
+set(_toy_2_r_2_2_product fp:4:-3:-2 "a.in=0x0p+0/0x1p-1/0x1.8p+0,s.lead=-1:0,x.lead=-1:0")
+set(_toy_kernel_acc_merge_2 fp:3:-2:0 "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0,c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0")
+set(_toy_r_n_r_r_sum fp:3:-2:0)
+
 # The interval kernels of Milestone 2, in the extended domain: i1 and i2 an interval of one limb
 # and of two, its two bounds together (interval()), which the oracle enumerates as one operand:
 # the empty set, and every pair l <= h of bounds with l a number or -inf and h a number or +inf.
@@ -585,19 +621,17 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # their kernels, and the convolutions (oracle/README.md, "Maps", "Folds of maxima",
 # "Convolutions"): none of those is on the lists. On the lists:
 #
-# - the kernels of the accumulator (architecture.md, "The accumulator"): the oracle reads neither a
-#   rounded entry with a value of its own (value=) yet, and acc_radius_k is on the list with them;
-# - the ball vectors (architecture.md, "Ball vectors") and their radius kernels: the oracle reads
-#   neither the folds with "bv": true (their requests, the requirement ball_vector, the claim
-#   encloses_entries) nor abs( ) in the value of an upper entry yet;
-# - the scalings of a BallVector by a power of two (architecture.md, "Ball vectors") and their
-#   kernels: besides what the other ball vectors need, the oracle reads neither exact_when with
-#   conditions in encloses_entries, nor exact_flag of an error entry, nor unless and exact_when of an
-#   upper entry, nor the condition mask(NAME) of exact_when, yet;
-# - the products of two BallVectors (architecture.md, "Ball vectors": the product of polynomials) and
-#   their kernels: the oracle reads neither the folds with "bv_conv": true (their requests of two
-#   lengths and two radii, the claim encloses_coefficients with count_when) nor the requirement
-#   at_most nor finite_or_nan with if_all, yet;
+# - the ball vectors (architecture.md, "Ball vectors"): the oracle reads neither the folds with
+#   "bv": true (their requests, the requirement ball_vector, the claims encloses_entries and
+#   makes_ball_vector) nor those with "bv_conv": true (their requests of two lengths and two radii,
+#   the claim encloses_coefficients with count_when) yet. Their kernels and those of the
+#   accumulator are judged (oracle/README.md, "Ball vectors and the accumulator") and on no list
+#   but conv_radius: its claim upper with a value of its own says that its output is at least that
+#   value or +inf, and the listing returns a NaN where the product ma*mb overflows and g or m is
+#   zero (0 * inf; conv_radius binary64 0x1p+1000 0x1p+1000 0x0p+0 0x0p+0 0x0p+0 0x0p+0 0x0p+0 ->
+#   nan, a stated value of 0), and +inf from operands and a stated value far below Omega: a
+#   finding, which its cross-checks fail; it stays here until the listing or the claim changes
+#   (the product of BallVectors never passes it such operands: m is 0 only where ma or mb is);
 # - the predicates and three-valued comparisons of the enclosure interface, of an interval and of a
 #   ball, of stage B2 (architecture.md, "Claims of the enclosure interface: predicates and
 #   comparisons"): the oracle reads neither the claims certain and trit nor the condition abs_le of
@@ -612,12 +646,7 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
 set(KAIRN_NOT_YET_CROSS_CHECKED
-  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
-  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2
-  bv_center_entry_1 bv_center_2 bv_make_radius bv_make_finish
-  neg_1 bv_neg_radius
-  bv_mul_pow2_step_1 bv_mul_pow2_step_2 bv_mul_pow2_radius
-  conv_radius bv_conv_finish
+  conv_radius
   interval_empty_1 interval_entire_1 interval_contains_1 interval_subset_1 interval_positive_1 interval_negative_1
   interval_zero_1 interval_less_1 interval_less_equal_1 interval_equal_1 interval_rel_equal_1 interval_rel_interior_1
   interval_rel_disjoint_1 interval_empty_2 interval_entire_2 interval_contains_2 interval_subset_2 interval_positive_2
@@ -639,8 +668,9 @@ set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
 # whose public functions (sum, dot, the bounds as functions of n) come with BallVector, and the
 # steps of the maps and the kernels of the folds of maxima (architecture.md, "Maps", "Folds of
-# maxima"), whose public functions come with BallVector too. They are cross-checked like every
-# kernel; the public interface has no form of them. (The interval kernels left this list with
+# maxima"), whose public functions come with BallVector too; and the kernels of the ball vectors
+# (architecture.md, "Ball vectors"), which only the folds of BallVector call. They are
+# cross-checked like every kernel; the public interface has no form of them. (The interval kernels left this list with
 # include/kairn/interval.hpp: the public interface reaches each, or lists it as a building block.)
 set(KAIRN_NOT_PUBLIC_YET
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
@@ -649,7 +679,10 @@ set(KAIRN_NOT_PUBLIC_YET
   mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
   axpy_entry_step_2_1
   norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
-  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2)
+  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
+  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2 bv_center_entry_1 bv_center_2
+  bv_make_radius bv_make_finish neg_1 bv_neg_radius bv_mul_pow2_step_1 bv_mul_pow2_step_2
+  bv_mul_pow2_radius bv_conv_finish)
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than
@@ -876,6 +909,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     # The interpreter, on every operand of the toy format, or of a restricted domain of it and
     # on random cases of all of it.
     set(_toy "${_toy${_shape}}")
+    if(DEFINED _toy_kernel_${_kernel})
+      set(_toy "${_toy_kernel_${_kernel}}")
+    endif()
     list(LENGTH _toy _toy_length)
     set(_restrict "")
     if(_toy_length GREATER 1)

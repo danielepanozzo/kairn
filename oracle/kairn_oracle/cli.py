@@ -334,6 +334,9 @@ def main(argv=None):
     s.add_argument("--suspicious-ok", metavar="KERNELS",
                    help="with --fail-on-suspicious: kernels whose suspicious results are not "
                         "failures (the cross-checks exempt split,two_prod_dekker)")
+    s.add_argument("--except", dest="except_", metavar="KERNELS",
+                   help="with 'all': kernels left out (comma-separated; the full tier passes the "
+                        "kernels the oracle's tests leave out, KAIRN_NOT_YET_CROSS_CHECKED)")
     s.add_argument("--jobs", type=int, default=1, help="kernel and format pairs at once")
     s.add_argument("--json", help="write the results here")
     s.add_argument("--quiet", action="store_true",

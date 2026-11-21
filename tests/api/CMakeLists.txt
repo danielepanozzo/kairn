@@ -130,8 +130,10 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   string(JSON _api_count LENGTH "${_api_json}" kernels)
   math(EXPR _api_last "${_api_count} - 1")
   set(_api_mapped "")
+  set(_api_names "")
   foreach(_i RANGE ${_api_last})
     string(JSON _kernel GET "${_api_json}" kernels ${_i} name)
+    list(APPEND _api_names ${_kernel})
     if(_kernel IN_LIST _api_internal OR _kernel IN_LIST _api_not_public)
       continue()
     endif()
@@ -157,6 +159,17 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_oracle_common ${_api_common} PARENT_SCOPE)
   set(_api_flags_common --seed "${KAIRN_API_SEED}" ${_flags_runners} PARENT_SCOPE)
   set(_api_unlisted ${KAIRN_NOT_YET_CROSS_CHECKED} ${KAIRN_NOT_PUBLIC_YET})
+  if(KAIRN_ORACLE_CLAIMS)
+    # Against other claims (../CMakeLists.txt, KAIRN_ORACLE_CLAIMS): a name of the lists that is
+    # no kernel of that file is one of the objects left out of it, absent rather than unknown.
+    set(_api_present "")
+    foreach(_k IN LISTS _api_unlisted)
+      if(_k IN_LIST _api_names)
+        list(APPEND _api_present ${_k})
+      endif()
+    endforeach()
+    set(_api_unlisted ${_api_present})
+  endif()
   add_test(NAME api.oracle.coverage
     COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"

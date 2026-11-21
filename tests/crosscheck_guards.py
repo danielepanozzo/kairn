@@ -267,6 +267,10 @@ def two_operands(kernel):
 def m2_family(kernel):
     """The family the oracle's generator has for a kernel of Milestone 2 (gen4.family_of), or
     None."""
+    if bv_family(kernel):
+        # The kernels of the ball vectors and of the accumulator: families of their own, chosen
+        # before every other (gen8.py, bv_family).
+        return None
     ens = kernel.get("ensures", [])
     kinds = {e.get("kind") for e in ens}
     req = [r.replace(" ", "") for r in kernel.get("requires", [])]
@@ -364,11 +368,107 @@ def m2_needs(kernel, e, extended):
         need += [EXACT_FAILS + ew_text(c) for c in e["exact_when"] if isinstance(c, dict)]
     if kind == "maximum":
         need += MAXIMUM_COUNTS
-    if kind == "finite_or_nan" and ("if" in e or "steps" in e):
+    if kind == "finite_or_nan" and ("if" in e or "steps" in e) and "nonneg" not in e:
         need += FINISH_IF_COUNTS
         if isinstance(e.get("steps"), int) and e.get("steps") >= 1:
             need.append(FINISH_STEP_COUNT)
     return need
+
+
+# The kernels of the ball vectors and of the accumulator (architecture.md, "Ball vectors", "The
+# accumulator"; oracle/README.md, "Ball vectors and the accumulator"): the families of the
+# oracle's generator (gen8.py) with the strata of their own, and the counts of their entries
+# (oracle/kairn_oracle/bvec.py).
+BV_STRATA = {"radius": ("huge", "zeros", "mixed", "atnormal"),
+             "acc": ("cancel", "tie", "apart", "atop", "exactprod"),
+             "accradius": ("integer", "limit", "beyond", "abig"),
+             "bvfinish": ("nonfinite", "negative", "zeros", "top", "masks")}
+BV_UP_FINITE = "output finite, at least the stated value"
+BV_UP_INF = "output +inf"
+BV_UP_UNLESS = "%s true: nothing claimed"
+BV_FLAG = ("exact_flag true", "exact_flag false")
+BV_FIN_VALUES = ("value finite, above zero", "value zero", "value: NaN", "value: +inf",
+                 "value: -inf")
+BV_FIN_NEG = "value finite, below zero"
+BV_GROUP_LOST = "the leading limb of its output is not finite: nothing claimed"
+
+
+def bv_family(kernel):
+    """The family the oracle's generator has for a kernel of the ball vectors or of the
+    accumulator (gen8.family_of), or None."""
+    ens = kernel.get("ensures", [])
+    if ens and all(e.get("kind") == "upper" and "value" in e and "if" not in e for e in ens):
+        return "radius"
+    if any(e.get("kind") == "rounded" and "value" in e for e in ens):
+        return "acc"
+    if any(e.get("kind") == "finite_or_nan" and ("nonneg" in e or "if_all" in e) for e in ens):
+        return "bvfinish"
+    req = [r.replace(" ", "") for r in kernel.get("requires", [])]
+    if (ens and all("if" in e for e in ens) and any(r.startswith("count(") for r in req)
+            and not any(re.search(r"\b(unit|tiny)\(", str(t)) for e in ens
+                        for t in [e.get("value") or ""] + list(e.get("args") or []))):
+        return "accradius"
+    return None
+
+
+def identity_value(kernel, e):
+    """A rounding to nearest of an input's value, or of its negation (a copy, a negation, a
+    guard: bv_center_entry_1, neg_1, bv_neg_radius, bv_make_radius), is exact on every operand:
+    no run can see an inexact case."""
+    if e.get("kind") != "rounded" or "value" in e:
+        return False
+    v = (kernel.get("value") or "").replace(" ", "")
+    names = {i.get("name") for i in kernel.get("inputs", []) if i.get("type") != "mask"}
+    return v in names or (v.startswith("-") and v[1:] in names)
+
+
+def bv_needs(kernel, e, a):
+    """The counts an entry of a kernel of the ball vectors or of the accumulator must have seen."""
+    kind = e.get("kind")
+    need = []
+    if kind == "upper" and "value" in e and "if" not in e:
+        need.append(BV_UP_FINITE)
+        if not a.exhaustive:
+            need.append(BV_UP_INF)
+        if "unless" in e:
+            need.append(BV_UP_UNLESS % e["unless"])
+        if e.get("exact_when"):
+            need.append(EXACT_HOLDS)
+            for c in e["exact_when"]:
+                if isinstance(c, dict) and "mask" in c:
+                    need.append(EXACT_FAILS + "%s true" % c["mask"])
+                elif isinstance(c, dict):
+                    need.append(EXACT_FAILS + ew_text(c))
+    elif kind == "error" and "exact_flag" in e:
+        need += BV_FLAG
+    elif kind == "finite_or_nan" and ("nonneg" in e or "if_all" in e):
+        need.append("every mask true")
+        masks = [e["if"]] if "if" in e else list(e.get("if_all") or [])
+        need += ["a mask false: %s" % m for m in masks]
+        need += BV_FIN_VALUES
+        if "nonneg" in e:
+            need.append(BV_FIN_NEG)
+    elif kind == "rounded" and "value" in e:
+        need += ["exact", "inexact"]
+        if not a.exhaustive:
+            need.append(BV_GROUP_LOST)
+    elif "if" in e and bv_family(kernel) == "accradius":
+        need.append("%s false: nothing claimed" % e["if"])
+        if kind == "holds":
+            need.append("holds")
+    return need
+
+
+def bv_problems(kernel, entries, merged, a):
+    """The guards of the kernels of the ball vectors and of the accumulator."""
+    for j, e in enumerate(kernel.get("ensures", [])):
+        if j >= len(entries) or entries[j]["kind"] != e.get("kind"):
+            return
+        label, counts = entries[j]["label"], merged[j]
+        for name in bv_needs(kernel, e, a):
+            if not counts.get(name):
+                yield ('the claim "%s" saw no case of "%s", so its statement was not checked '
+                       'there' % (label, name))
 
 
 def not_nan_operands(kernel, two):
@@ -1131,6 +1231,12 @@ def problems(summary, a):
             if s not in strata:
                 yield ("the oracle's generator lists the strata %s, without %s, which its family "
                        "%s has (Milestone 2)" % (",".join(strata), s, family))
+        # The families of the ball vectors and of the accumulator (gen8.py).
+        for s in BV_STRATA.get(bv_family(kernel), ()):
+            if s not in strata:
+                yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                       "%s has (the ball vectors and the accumulator)"
+                       % (",".join(strata), s, bv_family(kernel)))
         # The families of the interval kernels (gen6.py).
         for s in iv_strata(kernel):
             if s not in strata:
@@ -1182,13 +1288,16 @@ def problems(summary, a):
                     yield ('the claim "%s" was never %s, so the comparison was not checked both '
                            'ways' % (label, outcome))
         elif e["kind"] == "rounded" and "nearest" in label:
-            if not counts.get("inexact") and not counts.get("tie"):
+            own = kernel.get("ensures", [])
+            if (not counts.get("inexact") and not counts.get("tie")
+                    and not (j < len(own) and identity_value(kernel, own[j]))):
                 yield 'the claim "%s" saw only exact cases' % label
         elif e["kind"] == "rounded":
             if not counts.get("inexact, != RN"):
                 yield ('the claim "%s" never differed from the rounding to nearest, so the '
                        'direction was not checked' % label)
     yield from m2_problems(kernel, entries, merged, extended)
+    yield from bv_problems(kernel, entries, merged, a)
     yield from iv_problems(kernel, entries, merged, keys, a)
     yield from count_problems(kernel, keys, a)
     yield from axpy_problems(kernel, keys, a)
@@ -1211,8 +1320,8 @@ def problems(summary, a):
             need = []           # a ball from the bounds of an interval: iv_needs
         elif e.get("kind") == "makes_ball":
             need += make_radius_needs(getattr(a, "exhaustive", False))
-        if e.get("kind") == "finite_or_nan" and ("if" in e or "steps" in e):
-            need = []
+        if e.get("kind") == "finite_or_nan" and ("if" in e or "steps" in e or "if_all" in e):
+            need = []           # with nonneg or if_all: bv_needs
         elif e.get("kind") == "finite_or_nan":
             ins = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
             if ins.get((kernel.get("value") or "").strip(), 1) > 1:

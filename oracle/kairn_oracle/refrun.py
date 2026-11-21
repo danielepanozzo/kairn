@@ -2045,7 +2045,8 @@ PAIRS = {"add_2_2": (0, 2), "add_2_1": (0,), "mul_2_2": (0, 2), "mul_2_1": (0,),
 
 
 class Runner:
-    def __init__(self, variant="correct", center_claims=None, radius="first", bound_claims=None):
+    def __init__(self, variant="correct", center_claims=None, radius="first", bound_claims=None,
+                 bv_claims=None):
         if variant not in VARIANTS:
             raise ValueError("unknown variant %r (known: %s)" % (variant, ", ".join(VARIANTS)))
         if radius not in RADIUS_DESIGNS:
@@ -2054,6 +2055,9 @@ class Runner:
         self.center_claims = center_claims or DEFAULT_CENTER_CLAIMS
         self.bound_claims = bound_claims or DEFAULT_BOUND_CLAIMS
         self.radius = radius
+        # The claims of the kernels whose unit( ) and tiny( ) the kernels of the ball vectors and of
+        # the accumulator name (refbv.py; the fixture claims-wave8.json by default).
+        self.bv_claims = bv_claims
         self.cache = {}
 
     def kernels(self, fmtname):
@@ -2061,6 +2065,7 @@ class Runner:
         if k is None:
             k = self.cache[fmtname] = Kernels(Arith(parse_format_triple(fmtname), self.variant),
                                               self.center_claims, self.radius, self.bound_claims)
+            k.bv_claims = self.bv_claims
         return k
 
     def map_line(self, line, toks, tag):
@@ -2305,6 +2310,11 @@ class Runner:
                 w("\n")
 
 
+# The kernels and folds of the ball vectors and of the accumulator (refbv.py).
+from . import refbv as _refbv  # noqa: E402
+_refbv.install(sys.modules[__name__])
+
+
 def main(argv):
     import argparse
     ap = argparse.ArgumentParser(prog="kairn-oracle refrun",
@@ -2315,6 +2325,10 @@ def main(argv):
                     help="claims file whose bounds of add_1_1, add_2_2, mul_1_1 and mul_2_2 give "
                          "the constants of the bound kernels of the folds (default: the oracle's "
                          "fixture of the folds' stage, claims-wave5.json)")
+    ap.add_argument("--bv-claims",
+                    help="claims file whose bounds of add_1_1, add_2_2, mul_1_1, mul_2_1 and mul_2_2 "
+                         "give the constants of the kernels of the ball vectors and of the "
+                         "accumulator (default: the oracle's fixture claims-wave8.json)")
     ap.add_argument("--center-claims",
                     help="claims file whose bounds of add_2_2, mul_2_2 and mul_2_1 give the Ball "
                          "constants U and V (default: the oracle's first-wave fixture)")
@@ -2349,6 +2363,7 @@ def main(argv):
             for which, v in zip("EGH", consts):
                 print("%s.%s.%s=%s" % (a.print_constants, kname, which, ar.write(v)))
         return 0
-    Runner(a.variant, a.center_claims, a.radius, a.bound_claims).run(sys.stdin, sys.stdout)
+    Runner(a.variant, a.center_claims, a.radius, a.bound_claims, a.bv_claims).run(sys.stdin,
+                                                                                   sys.stdout)
     sys.stdout.flush()
     return 0
