@@ -73,7 +73,8 @@ not claimed.
 - **Two questions of this page were decided on 2026-11-20 and are applied in its listings.** A
   NaN given as a bound of an interval, or of a ball built from an interval, gives the whole
   line and not the empty set of IEEE 1788: a NaN says that something failed upstream, and a
-  search must not discard a box for that. And a sum of two-limb numbers that is exactly zero
+  search must not discard a box for that. (Later the same day the owner gave the same rule to
+  the same infinity given as both bounds, and to a NaN radius given to `Ball(c, r)`.) And a sum of two-limb numbers that is exactly zero
   gets the exact zero as its bounds, so that $[0, 0] + [0, 0]$ is $[0, 0]$.
 - **Batch kernels** are folds of the proved kernels of Milestone 1 over arrays. One theorem
   covers every order of summation, and it is proved, with the bounds of the sums and dot
@@ -105,7 +106,7 @@ work changed one, or found a consequence that the decision did not state.
 | 2. `Interval<T, 1>` | adopted, with one departure decided since | A product costs eight steps to a neighbor; in packed code each is about ten integer operations. The semantics differ from IEEE 1788 in the four points that [its section](#ieee-1788) marks. Two were decided by the owner on 2026-11-20: a NaN bound given to the constructor ([question 1](#open-questions)), and the same infinity given as both bounds, give the whole line, where the standard gives the empty set |
 | 3. `Interval<T, 2>` | **changed** | `Fast2Sum(z0, RD(z1 - d))` is replaced by `two_sum_ord`: the requirement of `Fast2Sum` does not hold when $\lvert z_0\rvert$ is below about the smallest normal number (and the bound subtracted is not zero). The bound $d$ is the radius of the Milestone 1 ball with radii zero, bit for bit, with one exception settled on 2026-11-20 ([question 2](#open-questions)): in the directed sums it is replaced by zero when the computed sum is zero. As first decided, the sum of two zero intervals was $[-H, H]$; it is now $[0, 0]$. *As built (2026-11-21):* $\mathrm{RD}(z_1 - d)$ is computed as $-\mathrm{RU}(d - z_1)$, the same value, because the generator refuses the negation of a fused result ([below](#bounds-of-two-limbs)) |
 | 4. Statements in the IEEE model | adopted | For one limb, "bounded" has an exact condition, not only a sufficient one |
-| 5. One enclosure interface | adopted | For `Ball<T, 2>` the tests of membership and the comparisons are *certain*, not exact: they never answer wrongly, and may decline to answer within a few $u^2$ of the boundary. `lower_as` of a `Ball<T, 2>` is a valid bound within two steps of `T`, not the exact rounding. *As built (2026-11-21):* the band where they decline is not claimed, and is wider than a few $u^2$: about two gaps of `T` at the radius ([Certain](#one-enclosure-interface)). **Claimed less than this page asks:** `lower_as` of a `Ball<T, 2>` is a bound on its side within $5u(\lvert c\rvert + r) + 3\eta$ of $c - r$, not within two steps ([Midpoint, radius and the conversions](#midpoint-radius-and-the-conversions)) |
+| 5. One enclosure interface | adopted | For `Ball<T, 2>` the tests of membership and the comparisons are *certain*, not exact: they never answer wrongly, and may decline to answer within a few $u^2$ of the boundary. `lower_as` of a `Ball<T, 2>` is a valid bound within two steps of `T`, not the exact rounding. *As built (2026-11-21):* the band where they decline is not claimed, and is wider than a few $u^2$: three or four gaps of `T` at the radius or the distance, besides twice the error bound $e$ ([Certain](#one-enclosure-interface)). **Claimed less than this page asks:** `lower_as` of a `Ball<T, 2>` is a bound on its side within $5u(\lvert c\rvert + r) + 3\eta$ of $c - r$, not within two steps ([Midpoint, radius and the conversions](#midpoint-radius-and-the-conversions)) |
 | 6. Three-valued comparisons | adopted | With an empty operand the answer is *unknown*; the relations of IEEE 1788 keep the standard's conventions |
 | 7. Batch kernels | adopted; the theorem is proved | The theorem needs less than asked: an error relative to the operands of each addition suffices, so it also covers the fast addition. The exported bound is finite for $n\varepsilon \le \tfrac14$ and not for all $n\varepsilon < 1$, and avoids a division. The proof asked more of the zero state of a fold than this page first did, and gave the dot product of one limb its own statement ([below](#sum-dot-axpy-convolution)) |
 | 8. `BallVector` | adopted | The radius of a sum, a difference and a scaling *equals* the largest entrywise `Ball` radius. That of a convolution comes from the theorem of the dot product and is not compared with a ball-by-ball evaluation. A kernel whose operations are exact adds nothing to the radius. There is no empty state. **Claimed less than this page asks** (2026-11-21): the equality is what the listings compute and what the tests find, not a claim ([BallVector](#ballvector)) |
@@ -1023,7 +1024,10 @@ output read in extended real numbers, with `zero_factor`, rather than as a `boun
   does not decrease, since $A < 1$: the least of four values each close to its product is close
   to the least product. An infinite bound of the exact range is returned as that infinity.
 - **I5.** For bounded operands, $Z$ is bounded when no member of the exact range exceeds
-  $2^{e_{\max}-2}$ in magnitude, a quarter of the overflow threshold.
+  $2^{e_{\max}-2}$ in magnitude, a quarter of the overflow threshold. (*As built:* claimed so.
+  The milestone also proved that `add_2_2` itself does not overflow while both leading limbs are
+  at most $\Omega/2$, half the range, `IeeeAdd22Top.v`; the midpoint of two limbs uses it. The
+  outward move and the renormalization are not covered by that proof, and I5 keeps the quarter.)
 - **Zero, for the sum and the difference.** A bound of the exact range that is zero is returned
   as zero. So $[0, 0] + [0, 0]$ is $[0, 0]$, and $X - X$ is $[0, 0]$ when $X$ is one point. This
   is the third item of the statement of the directed sums; a sum of bounds that is zero is far
