@@ -1518,14 +1518,25 @@ stated value`; the failures as `failed V1`, `flag`, `V2`, `V3`, `V4`, `exact`,
 to the smallest enclosing one. The step's and the radius kernel's entries follow the claim's, as
 for a map.
 
-**`count_when`** (the coordinator's question of 2026-11-21): `bv_conv_2` of two operands of 511
-entries $(+0, +0)$ and radii $+0$ in `fp:8:-15:2` meets the listing's `count_when`,
-$n(\mathrm{unit}(\mathtt{mul\_2\_2}) + \eta) \le \tfrac1{16}$ ($511 \cdot 3 \cdot 2^{-15}$), and not
-$n(\mathrm{unit}(\mathtt{mul\_2\_2}) + \eta/(2u)) \le \tfrac1{16}$; a whole space there fails V4
-under the first and passes under the second (`bv_folds_judge`). The interpreter's line at 5247eff is
-finite (the radius `0x1.16p+2`, the flag true), as at 510, so no stream of the base reaches the
-failure; the stratum `count` reaches both sides of the edge in the full tier's `fp:5:-12:5`
-(lengths to 64, the edge at 15).
+**`count_when`**, evaluated as an expression in $n$ (`le(EXPR, K)` with $n = \min(n_x, n_y)$),
+reads the claim as it stands: `bv_conv_2`'s condition was restated after the line's base,
+$n(\mathrm{unit}(\mathtt{mul\_2\_2}) + \eta/(2u)) \le \tfrac1{16}$ in place of
+$n(\mathrm{unit}(\mathtt{mul\_2\_2}) + \eta) \le \tfrac1{16}$, because the old form let the length
+exceed the largest number in formats of a small exponent range. The fixture `claims-wave8.json`
+has the claim as it stands, and `bv_folds_judge` judges its regression under both expressions in
+`fp:8:-14:1`, precision 8 with $e_{\max} = 9$ ($q_{\max} = e_{\max} - p = 1$, $q_{\min} = 3 -
+e_{\max} - p = -14$; the largest number is 510): with both operands of $n$ entries $(+0, +0)$ and
+radii $+0$, $\mathrm{unit}(\mathtt{mul\_2\_2}) = 4u^2 = 2^{-14}$ and $\eta/(2u) = 2^{-7}$, so the
+claim admits $n$ up to 7 and the old expression up to 512. The interpreter (`gen/kairn-gen interp`,
+run on these requests) gives the whole space at 511 (the count 511 rounds up to 512, beyond 510,
+and the bound of `dot` is not given) and at 512, the radius `0x1.18p+3` with the flag true at 510,
+and `0x1.d8p-4` at 7, the largest length the claim admits (and `0x1.0ep-3` at 8). The whole space
+at 511 fails V4 under the old expression and passes under the claim as it stands, whose condition
+does not hold there; the finite results at 510 and 7 pass under both; a whole space at 7 fails
+under both, at 8 and 510 under the old only. (The line's first form of this test was in
+`fp:8:-15:2`, $e_{\max} = 10$, whose largest number is 1020: nothing overflows there, and the
+interpreter's line at 511 is finite.) The stratum `count` reaches both sides of the edge in the
+full tier's `fp:5:-12:5` (lengths to 64, the edge at 8; 15 under the old expression).
 
 **Readings chosen**: the formats of V4 above; V3 beyond architecture.md's sentence, as the brief
 asks; an operand that is not a BallVector, or a scalar not a power of two under `power_of_two( )`,
@@ -2040,7 +2051,7 @@ follows from both parts being canonical.
 | `bv_folds_reference` | the reference runner failing a ball vector, a constructor or a product, or an invalid or suspicious case, on random cases of `binary64`, `binary32` and a toy format, and in place; a class the guards ask for not met (both results, a whole-space operand, V4 with and without entries, exactness, each radius given, the lengths 0 and 1 of a product, every array in place) |
 | `bv_folds_planted` | a planted fault of the folds (`bv-*`, `bvc-*`) not caught in its class (V1, the flag, V2, V3, V4, exact, `makes_ball_vector`), or caught in a fold it does not touch |
 | `bv_folds_exhaustive` | the reference runner failing a request of the enumerations of tiny formats (six folds; twelve without `--quick`), an index seen twice or missed, a class of results or the lane orders missing, V4 judged outside its formats or not judged inside; a planted fault not caught there |
-| `bv_folds_judge` | one of 66 hand-written lines judged otherwise than worked out by hand (the radius at, below and above its kernel's value, below the set, a center off the middle or not the step's, the flag, the whole space where V4 claims finite and beyond, of no entry, `radii_when`, below `finite_from`, outside the formats of V4, in a format of a wider subnormal range, where a failure says that it is a finding, the lanes, in place and a malformed `inplace=`, operands that are not BallVectors, the exactness of a negation and of a scaling, each case of a constructor, a product of one entry each, a non-canonical product); `count_when` evaluated otherwise than by hand under the listing's expression and under the coordinator's (511 entries of $(+0, +0)$ in `fp:8:-15:2`) |
+| `bv_folds_judge` | one of 74 hand-written lines judged otherwise than worked out by hand (the radius at, below and above its kernel's value, below the set, a center off the middle or not the step's, the flag, the whole space where V4 claims finite and beyond, of no entry, `radii_when`, below `finite_from`, outside the formats of V4, in a format of a wider subnormal range, where a failure says that it is a finding, the lanes, in place and a malformed `inplace=`, operands that are not BallVectors, the exactness of a negation and of a scaling, each case of a constructor, a product of one entry each, a non-canonical product); `count_when` evaluated otherwise than by hand under the claim as it stands and under its old expression (operands of 511, 512, 510, 8 and 7 entries $(+0, +0)$ in `fp:8:-14:1`, the interpreter's results and the whole space, and 511 entries against 1), or the fixture's `count_when` not the claim as it stands |
 | `gen_bv_folds` | case $i$ of a fold of the ball vectors alone not case $i$ of its run, a seed that does not matter, an invalid case, the strata not those of the shape or without cases, `whole` without a radius $+\infty$, `zeroradius` without $+0$; in place, a request without `inplace=I` over every array that can be written, a product that does not refuse it; the stratum `count` not on both sides of `count_when` |
 | `merging_bv_folds` | the merge of the summaries of two halves of streams of the folds differs from the whole |
 | `maps_inplace` | a map's run in place without its header or its field over every array that can be written, failing through the reference runner, an array not counted in place; `inplace=` beyond the arrays, not a number or negative not malformed; a fold of maxima not refusing `--inplace` |

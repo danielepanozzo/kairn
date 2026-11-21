@@ -428,15 +428,16 @@ JUDGE11 = [
 ]
 
 
-def _conv_zero_line(n, out_whole, ny=None, fmtname="fp:8:-15:2"):
+def _conv_zero_line(n, radius, ny=None, fmtname="fp:8:-14:1"):
     """bv_conv_2 on two operands of n (and ny) entries (+0, +0), radii +0, and the output given:
-    the whole space, or zeros with the radius 0x1.16p+2 that the generator's interpreter writes for
-    n = 511 (oracle/README.md, "Ball vectors and the accumulator")."""
+    the whole space for radius None, otherwise zero coefficients, that radius and the flag true.
+    fp:8:-14:1 is precision 8 with e_max = 9 (q_max = e_max - p = 1, q_min = 3 - e_max - p = -14),
+    whose largest number is 510 (oracle/README.md, "Ball vectors and the accumulator")."""
     ny = n if ny is None else ny
     req = ["bv_conv_2", fmtname, "seq", str(n), str(ny), "0x0p+0", "0x0p+0"] + ["0x0p+0"] * (
         2 * (n + ny))
     coeff = max(0, n + ny - 1) if n and ny else 0
-    out = ["0x0p+0"] * (2 * coeff) + (["inf", "0"] if out_whole else ["0x1.16p+2", "1"])
+    out = ["0x0p+0"] * (2 * coeff) + (["inf", "0"] if radius is None else [radius, "1"])
     return " ".join(req + ["->"] + out)
 
 
@@ -447,10 +448,16 @@ def bv_folds_judge(ctx):
     radius, the whole space where V4 claims a finite result and beyond it, a whole space with a
     center, a whole-space operand, no entry, the lanes, in place, operands that are not
     BallVectors; the exactness of a negation and of a scaling; each case of a constructor; a
-    product of one entry each.  And count_when as an expression: in fp:8:-15:2, with both
-    operands of 511 entries (+0, +0) and radii +0, the whole space fails V4 under the listing's
-    count_when, n (unit(mul_2_2) + eta) <= 1/16 (511 * 3 * 2^-15 < 1/16), and passes under
-    n (unit(mul_2_2) + eta/(2u)) <= 1/16, which 511 does not satisfy."""
+    product of one entry each.  And count_when as an expression, the regression of its
+    restatement: in fp:8:-14:1 (precision 8, e_max = 9: the largest number is 510), with both
+    operands of n entries (+0, +0) and radii +0, unit(mul_2_2) = 4u^2 = 2^-14 and eta/(2u) = 2^-7.
+    The claim as it stands, n (unit(mul_2_2) + eta/(2u)) <= 1/16, admits n up to 7; the old
+    expression, n (unit(mul_2_2) + eta) <= 1/16, up to 512, beyond the largest number.  The
+    interpreter gives the whole space at 511 (the count 511 rounds up to 512, beyond 510, and the
+    bound of dot is not given) and at 512, the radius 0x1.18p+3 at 510 and 0x1.d8p-4 at 7: the
+    whole space at 511 fails V4 under the old expression and passes under the claim as it stands;
+    a finite result passes under both; the whole space at 7, which both admit, fails under both,
+    and at 8 only under the old."""
     cl = claims8(ctx)
     n = 0
     for case in JUDGE11:
@@ -473,16 +480,24 @@ def bv_folds_judge(ctx):
             line, t, want, " in " + cls if cls else "", reasons, sorted(classes11(s, name))))
         n += 1
     raw = raw8()
-    new = copy.deepcopy(raw)
-    _fold_raw(new, "bv_conv_2")["ensures"][0]["count_when"] = [
-        {"le": "n*(unit(mul_2_2)+eta/(2*u))", "than": "1/16"}]
-    alt = Claims(new, FIXTURE8)
-    expect(not alt.broken, "the claims with the other count_when: %s" % alt.broken)
-    # The count is min(n_x, n_y): 511 and 1 entries give the count 1, of which both hold.
-    for line, base_ok, alt_ok in ((_conv_zero_line(511, True), False, True),
-                                  (_conv_zero_line(511, False), True, True),
-                                  (_conv_zero_line(510, True), False, True),
-                                  (_conv_zero_line(511, True, 1), False, False)):
+    cw = _fold_raw(raw, "bv_conv_2")["ensures"][0]["count_when"]
+    expect(cw == [{"le": "n*(unit(mul_2_2)+eta/(2*u))", "than": "1/16"}],
+           "the fixture's count_when is not the claim as it stands: %s" % cw)
+    old = copy.deepcopy(raw)
+    _fold_raw(old, "bv_conv_2")["ensures"][0]["count_when"] = [
+        {"le": "n*(unit(mul_2_2)+eta)", "than": "1/16"}]
+    alt = Claims(old, FIXTURE8)
+    expect(not alt.broken, "the claims with the old count_when: %s" % alt.broken)
+    # (line, passes under the claim as it stands, passes under the old expression).  The count
+    # is min(n_x, n_y): 511 and 1 entries give the count 1, of which both hold.
+    for line, base_ok, alt_ok in ((_conv_zero_line(511, None), True, False),
+                                  (_conv_zero_line(512, None), True, False),
+                                  (_conv_zero_line(510, "0x1.18p+3"), True, True),
+                                  (_conv_zero_line(510, None), True, False),
+                                  (_conv_zero_line(7, "0x1.d8p-4"), True, True),
+                                  (_conv_zero_line(7, None), False, False),
+                                  (_conv_zero_line(8, None), True, False),
+                                  (_conv_zero_line(511, None, 1), False, False)):
         for c, ok in ((cl, base_ok), (alt, alt_ok)):
             s = judge([line], c)
             t = totals(s)
@@ -490,7 +505,7 @@ def bv_folds_judge(ctx):
                                                "V4" in classes11(s, "bv_conv_2"))
             expect(got, "bv_conv_2 of %s entries, %s, under %s: %s %s" % (
                 line.split()[3], "whole" if line.endswith("inf 0") else "finite",
-                "the listing's count_when" if c is cl else "the other", t,
+                "the claim as it stands" if c is cl else "the old count_when", t,
                 sorted(classes11(s, "bv_conv_2"))))
             n += 1
     return "%d lines" % n

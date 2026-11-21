@@ -9,7 +9,9 @@ with: the reference runner (refbv.py, written from the listings of gen/kernels/)
 and on every operand of tiny formats; planted faults that must be caught in the entry where they
 belong and nowhere else; hand-written lines whose verdicts are worked out by hand.  The fixture,
 oracle/selftest/claims-wave8.json, holds the kernels and folds of the family and the kernels and
-folds they name, frozen from the claims of 2026-11-21.
+folds they name, frozen from the claims of 2026-11-21 (the joined tree of 5247eff), with the
+count_when of bv_conv_2 as it was restated after it, n*(unit(mul_2_2)+eta/(2*u)) <= 1/16 (it
+was n*(unit(mul_2_2)+eta) <= 1/16).
 """
 
 import copy
