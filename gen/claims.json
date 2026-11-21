@@ -2478,6 +2478,473 @@
       }
     },
     {
+      "name": "bv_center_entry_1",
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "value": "c",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "z",
+          "mode": "nearest"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the guard of a constructor (milestone2.md, BallVector, Values)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "fold_finish_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "s",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFoldFinish.v",
+        "name": "fold_finish_1_correct"
+      },
+      "source": {
+        "cite": "the finish of a fold: the state or the canonical NaN (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "norm_finish_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "m",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag",
+          "if": "ok"
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFoldNorm.v",
+        "name": "norm_finish_1_correct"
+      },
+      "source": {
+        "cite": "the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bv_conv_finish",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        },
+        {
+          "name": "okc",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "okg",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "rz",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag",
+          "if_all": [
+            "okc",
+            "okg"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bv_make_finish",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "rz",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag",
+          "if": "ok",
+          "nonneg": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bv_make_radius",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "r",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "rz",
+          "mode": "nearest"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bv_mul_pow2_radius",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "ex",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "nonneg(m)",
+        "nonneg(rx)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "rz",
+          "value": "rx*c",
+          "exact_when": [
+            {
+              "mask": "ex"
+            },
+            {
+              "zero_or_abs_gt": "rx*c",
+              "than": "eta/(2*u)"
+            }
+          ]
+        },
+        {
+          "kind": "upper",
+          "of": "rz",
+          "value": "rx*c+eta",
+          "unless": "ex"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bv_mul_pow2_step_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        },
+        {
+          "name": "e",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "z",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 1,
+          "t": "1/2",
+          "when": null,
+          "exact_when": [
+            {
+              "zero_or_abs_gt": "x*c",
+              "than": "eta/(2*u)"
+            }
+          ],
+          "exact_flag": "e"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "1/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "bv_neg_radius",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "rx",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "rz",
+          "mode": "nearest"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "bv_scale_radius_1",
       "inputs": [
         {
@@ -2570,6 +3037,74 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "conv_radius",
+      "inputs": [
+        {
+          "name": "ma",
+          "limbs": 1
+        },
+        {
+          "name": "mb",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        },
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "g",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "nonneg(ma)",
+        "nonneg(mb)",
+        "nonneg(rx)",
+        "nonneg(ry)",
+        "count(m)",
+        "nonneg(g)",
+        "at_most(g, 1)",
+        "nonneg(t)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "rz",
+          "value": "m*((1+u)*ma*ry+(1+u)*mb*rx+rx*ry)+g*m*(1+u)^2*ma*mb+t"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius of the product of polynomials of BallVector (milestone2.md, conv_radius)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 8,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2687,54 +3222,6 @@
             "abs": "0"
           }
         ]
-      }
-    },
-    {
-      "name": "fold_finish_1",
-      "domain": "extended",
-      "ieee_only": true,
-      "inputs": [
-        {
-          "name": "s",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "r",
-          "limbs": 1
-        },
-        {
-          "name": "flag",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "s",
-      "requires": [],
-      "ensures": [
-        {
-          "kind": "finite_or_nan",
-          "of": "r",
-          "flag": "flag"
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeFoldFinish.v",
-        "name": "fold_finish_1_correct"
-      },
-      "source": {
-        "cite": "the finish of a fold: the state or the canonical NaN (milestone2.md)",
-        "license": "proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
       }
     },
     {
@@ -3869,6 +4356,42 @@
       }
     },
     {
+      "name": "neg_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "value": "-x",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "z",
+          "mode": "nearest"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "a change of sign (milestone2.md, BallVector, bv_neg_k)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "next_down",
       "domain": "extended",
       "inputs": [
@@ -4010,60 +4533,6 @@
       },
       "source": {
         "cite": "the larger of two numbers, by a comparison (milestone2.md, norm_upper_k)",
-        "license": "proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "norm_finish_1",
-      "domain": "extended",
-      "ieee_only": true,
-      "inputs": [
-        {
-          "name": "m",
-          "limbs": 1
-        },
-        {
-          "name": "ok",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "r",
-          "limbs": 1
-        },
-        {
-          "name": "flag",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "m",
-      "requires": [],
-      "ensures": [
-        {
-          "kind": "finite_or_nan",
-          "of": "r",
-          "flag": "flag",
-          "if": "ok"
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeFoldNorm.v",
-        "name": "norm_finish_1_correct"
-      },
-      "source": {
-        "cite": "the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md)",
         "license": "proof: MIT"
       },
       "flops": 0,
@@ -7661,6 +8130,145 @@
       }
     },
     {
+      "name": "bv_center_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "represents",
+          "of": "z"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "a copy of a canonical pair (milestone2.md, BallVector, Values)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "bv_mul_pow2_step_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        },
+        {
+          "name": "e",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "normalized(x)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "1",
+          "when": null,
+          "exact_when": [
+            {
+              "zero_or_abs_gt": "x[0]*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "x[1]*c",
+              "than": "eta/(2*u)"
+            }
+          ],
+          "exact_flag": "e"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "1/713623846352979940529142984724747568191373312"
+          }
+        ]
+      }
+    },
+    {
       "name": "eq_2_1",
       "domain": "extended",
       "inputs": [
@@ -10992,7 +11600,14 @@
               "abs_le": "abs(x+y)+rx+ry",
               "exp": -2
             }
-          ]
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx+ry",
+              "exp": -2
+            }
+          ],
+          "finite_from": 2
         }
       ],
       "orders": [
@@ -11106,6 +11721,12 @@
               "abs_le": "abs(x+y)+rx+ry",
               "exp": -2
             }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx+ry",
+              "exp": -2
+            }
           ]
         }
       ],
@@ -11145,6 +11766,874 @@
       },
       "source": {
         "cite": "add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_conv_1",
+      "bv_conv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "ry",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "ball_vector(x, rx)",
+        "ball_vector(y, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_coefficients",
+          "center": "z",
+          "radius": "r",
+          "flag": "flag",
+          "set": "x*y",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "y",
+              "radius": "ry"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "n*(abs(x)+rx)*(abs(y)+ry)",
+              "exp": -2
+            },
+            {
+              "abs_le": "(abs(x)+rx)*ry",
+              "exp": -2
+            },
+            {
+              "abs_le": "(abs(y)+ry)*rx",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*ry",
+              "exp": -2
+            }
+          ],
+          "count_when": [
+            {
+              "le": "n*(unit(mul_1_1)+eta)",
+              "than": "1/16"
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential"
+      ],
+      "centers": "conv_1",
+      "records": [
+        "norm_step_1",
+        "norm_step_1"
+      ],
+      "count": "min(n_x,n_y)",
+      "bound": "bound_dot_1",
+      "radius": "conv_radius",
+      "radius_args": [
+        "ma",
+        "mb",
+        "rx",
+        "ry",
+        "m",
+        "g",
+        "t"
+      ],
+      "finish": "bv_conv_finish",
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "conv_1 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_conv_2",
+      "bv_conv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "ry",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "ball_vector(x, rx)",
+        "ball_vector(y, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_coefficients",
+          "center": "z",
+          "radius": "r",
+          "flag": "flag",
+          "set": "x*y",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "y",
+              "radius": "ry"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "n*(abs(x)+rx)*(abs(y)+ry)",
+              "exp": -2
+            },
+            {
+              "abs_le": "(abs(x)+rx)*ry",
+              "exp": -2
+            },
+            {
+              "abs_le": "(abs(y)+ry)*rx",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*ry",
+              "exp": -2
+            }
+          ],
+          "count_when": [
+            {
+              "le": "n*(unit(mul_2_2)+eta)",
+              "than": "1/16"
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential"
+      ],
+      "centers": "conv_2",
+      "records": [
+        "norm_step_2",
+        "norm_step_2"
+      ],
+      "count": "min(n_x,n_y)",
+      "bound": "bound_dot_2",
+      "radius": "conv_radius",
+      "radius_args": [
+        "ma",
+        "mb",
+        "rx",
+        "ry",
+        "m",
+        "g",
+        "t"
+      ],
+      "finish": "bv_conv_finish",
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "conv_2 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_make_1",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "c",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "r",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rr",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "c",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "makes_ball_vector",
+          "center": "z",
+          "radius": "rr",
+          "flag": "finite",
+          "from": {
+            "center": "c",
+            "radius": "r"
+          }
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "bv_center_entry_1",
+      "step_args": [
+        "c"
+      ],
+      "record": "norm_step_1",
+      "combine": "norm_combine",
+      "radius": "bv_make_radius",
+      "radius_args": [
+        "m",
+        "r"
+      ],
+      "finish": "bv_make_finish",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the constructor of a BallVector: the centers and the radius given, or the whole space (milestone2.md, BallVector, Values)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_make_2",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "c",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "r",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rr",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "c",
+      "requires": [
+        "canonical(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "makes_ball_vector",
+          "center": "z",
+          "radius": "rr",
+          "flag": "finite",
+          "from": {
+            "center": "c",
+            "radius": "r"
+          }
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "bv_center_2",
+      "step_args": [
+        "c"
+      ],
+      "record": "norm_step_2",
+      "combine": "norm_combine",
+      "radius": "bv_make_radius",
+      "radius_args": [
+        "m",
+        "r"
+      ],
+      "finish": "bv_make_finish",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the constructor of a BallVector: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_mul_pow2_1",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "c",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "ball_vector(x, rx)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "x*c",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "(abs(x)+rx)*c",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*c",
+              "exp": -2
+            }
+          ],
+          "exact_when": [
+            {
+              "zero_or_abs_gt": "x*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "rx*c",
+              "than": "eta/(2*u)"
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "bv_mul_pow2_step_1",
+      "step_args": [
+        "x",
+        "c"
+      ],
+      "record": "norm_step_1",
+      "exactness": {
+        "mask": "e",
+        "state": "ex"
+      },
+      "combine": "norm_combine",
+      "radius": "bv_mul_pow2_radius",
+      "radius_args": [
+        "m",
+        "ex",
+        "rx",
+        "c"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_pow2_step_1 on the centers, the radius of ball_mul_pow2_1 with the exactness of every entry (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_mul_pow2_2",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "c",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "ball_vector(x, rx)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "x*c",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "(abs(x)+rx)*c",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*c",
+              "exp": -2
+            }
+          ],
+          "exact_when": [
+            {
+              "zero_or_abs_gt": "x[0]*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "x[1]*c",
+              "than": "eta/(2*u)"
+            },
+            {
+              "zero_or_abs_gt": "rx*c",
+              "than": "eta/(2*u)"
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "bv_mul_pow2_step_2",
+      "step_args": [
+        "x",
+        "c"
+      ],
+      "record": "norm_step_2",
+      "exactness": {
+        "mask": "e",
+        "state": "ex"
+      },
+      "combine": "norm_combine",
+      "radius": "bv_mul_pow2_radius",
+      "radius_args": [
+        "m",
+        "ex",
+        "rx",
+        "c"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_pow2_2 on the centers, the radius of ball_mul_pow2_2 with the exactness of every entry (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_neg_1",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "-x",
+      "requires": [
+        "ball_vector(x, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "-x",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "abs(x)+rx",
+              "exp": 1
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx",
+              "exp": 1
+            }
+          ],
+          "exact_when": []
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "neg_1",
+      "step_args": [
+        "x"
+      ],
+      "record": "norm_step_1",
+      "combine": "norm_combine",
+      "radius": "bv_neg_radius",
+      "radius_args": [
+        "m",
+        "rx"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the negation of each center, the radius of ball_neg_1 (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_neg_2",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "-x",
+      "requires": [
+        "ball_vector(x, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "-x",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "abs(x)+rx",
+              "exp": 1
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx",
+              "exp": 1
+            }
+          ],
+          "exact_when": []
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "neg_2",
+      "step_args": [
+        "x"
+      ],
+      "record": "norm_step_2",
+      "combine": "norm_combine",
+      "radius": "bv_neg_radius",
+      "radius_args": [
+        "m",
+        "rx"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "neg_2 on each center, the radius of ball_neg_2 (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
       }
     },
@@ -11210,7 +12699,14 @@
               "abs_le": "(abs(x)+rx)*a",
               "exp": -2
             }
-          ]
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*a",
+              "exp": -2
+            }
+          ],
+          "finite_from": 2
         }
       ],
       "orders": [
@@ -11312,6 +12808,12 @@
           "finite_when": [
             {
               "abs_le": "(abs(x)+rx)*a",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*a",
               "exp": -2
             }
           ]
@@ -11428,7 +12930,14 @@
               "abs_le": "abs(x-y)+rx+ry",
               "exp": -2
             }
-          ]
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx+ry",
+              "exp": -2
+            }
+          ],
+          "finite_from": 2
         }
       ],
       "orders": [
@@ -11540,6 +13049,12 @@
           "finite_when": [
             {
               "abs_le": "abs(x-y)+rx+ry",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx+ry",
               "exp": -2
             }
           ]

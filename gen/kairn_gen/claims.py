@@ -153,7 +153,42 @@ def bv_claims(fd, kernels):
     out['step'] = fd.step[0]
     out['step_args'] = list(fd.step[1])
     out['record'] = fd.record[0]
+    if fd.exact_mask is not None:
+        # Exact under conditions (bv_mul_pow2_k): the step's second output, the mask that its entry is
+        # exact, and-ed over the entries into the state's mask, which the radius takes (radius_args).
+        out['exactness'] = {'mask': fd.exact_mask[1], 'state': fd.exact_mask[0]}
     out['combine'] = fd.combine[0]
+    out['radius'] = fd.radius[0]
+    out['radius_args'] = list(fd.radius[1])
+    out['finish'] = fd.finish[0]
+    out['min_precision'] = fd.min_precision
+    out['status'] = fd.status
+    out['theorem'] = {'file': fd.theorem, 'name': f'{fd.name}_correct'} if fd.theorem else None
+    out['source'] = {'cite': fd.source, 'license': fd.license}
+    return out
+
+
+def bv_conv_claims(fd, kernels):
+    """One product of two BallVectors' entry (architecture.md, "Claims of Milestone 2", the product of two
+    BallVectors): the two arrays of centers, each of its own length, the radii, the coefficients written,
+    the radius and the flag; the value of a term; ball_vector of each operand; encloses_coefficients; the
+    parts (the convolution of the centers, the records of the maxima, the count, the bound, the radius,
+    the finish); the order; the statuses."""
+    out = {'name': fd.name, 'bv_conv': True}
+    if fd.extended:
+        out['domain'] = 'extended'
+    out['arrays'] = [{'name': g.name, 'limbs': len(g.limbs), 'role': fd.roles[g.name]} for g in fd.arrays]
+    out['scalars'] = [{'name': g.name, 'limbs': len(g.limbs), 'role': fd.roles[g.name]} for g in fd.scalars]
+    out['writes'] = [_group(g) for g in fd.writes]
+    out['outputs'] = [_group(g) for g in fd.outputs]
+    out['value'] = fd.value
+    out['requires'] = [_requires(r) for r in fd.requires]
+    out['ensures'] = [dict(e) for e in fd.ensures]
+    out['orders'] = list(fd.orders)
+    out['centers'] = fd.centers
+    out['records'] = [r[0] for r in fd.records]
+    out['count'] = 'min(n_x,n_y)'
+    out['bound'] = fd.bound[0]
     out['radius'] = fd.radius[0]
     out['radius_args'] = list(fd.radius[1])
     out['finish'] = fd.finish[0]
@@ -205,5 +240,5 @@ def claims(kernels):
     folds = getattr(kernels, 'folds', {})
     if folds:
         doc['folds'] = [(map_claims if fd.is_map else conv_claims if fd.is_conv else bv_claims if fd.is_bv else
-                         fold_claims)(fd, kernels) for fd in folds.values()]
+                         bv_conv_claims if fd.is_bv_conv else fold_claims)(fd, kernels) for fd in folds.values()]
     return json.dumps(doc, indent=2) + '\n'

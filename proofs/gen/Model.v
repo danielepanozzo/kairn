@@ -142,6 +142,14 @@ Definition up_bound_sum_2_0 : R :=
 Definition up_bound_sum_2_1 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) ^ 2) * (((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2) + bpow radix2 emin)).
 
+(* up(4*(1+u)^8*eta+eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_conv_radius_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((4 * ((1 + bpow radix2 (- prec)) ^ 8)) * bpow radix2 emin) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
+
+(* up((1+u)^7): the smallest number of the format not below it. *)
+Definition up_conv_radius_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 7).
+
 (* up(eta/(2*u^2)): the smallest number of the format not below it. *)
 Definition up_mul_down_1_0 : R :=
   round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin / (2 * (bpow radix2 (- prec) ^ 2))).
@@ -397,6 +405,46 @@ Definition bv_add_radius_2 (m rx ry : R) : R :=
   let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
   rz.
 
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). *)
+Definition bv_center_entry_1 (c : R) : R :=
+  let z := rnd (c + 0) in
+  z.
+
+(* bv_make_radius: the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). *)
+Definition bv_make_radius (m r : R) : R :=
+  let g := rnd (r + 0) in
+  let d := rnd (m - m) in
+  let rz := rnd (g + d) in
+  rz.
+
+(* bv_mul_pow2_radius: the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_radius (m : R) (ex : bool) (rx c : R) : R :=
+  let rr := rnd (rx * c + 0) in
+  let br := Rlt_bool up_ball_mul_pow2_1_0 rr in
+  let zr := Req_bool rx 0 in
+  let er := orb br zr in
+  let q := andb ex er in
+  let su := succ radix2 (FLT_exp emin prec) rr in
+  let rw := succ radix2 (FLT_exp emin prec) su in
+  let rs := if q then rr else rw in
+  let d := rnd (m - m) in
+  let rz := rnd (rs + d) in
+  rz.
+
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_1 (x c : R) : R * bool :=
+  let z := rnd (x * c + 0) in
+  let am := Rabs z in
+  let bc := Rlt_bool up_ball_mul_pow2_1_0 am in
+  let zc := Req_bool x 0 in
+  let e := orb bc zc in
+  (z, e).
+
+(* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). *)
+Definition bv_neg_radius (m rx : R) : R :=
+  let rz := rx in
+  rz.
+
 (* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
 Definition bv_scale_radius_1 (m rx a : R) : R :=
   let aa := Rabs a in
@@ -411,6 +459,18 @@ Definition bv_scale_radius_2 (m rx a : R) : R :=
   let p := rnd (aa * rx + 0) in
   let t := rnd (m * up_ball_scale_2_0 + p) in
   let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_2_2) in
+  rz.
+
+(* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). *)
+Definition conv_radius (ma mb rx ry m g t : R) : R :=
+  let p := rnd (rx * ry + 0) in
+  let q := rnd (mb * rx + p) in
+  let w := rnd (ma * ry + q) in
+  let ab := rnd (ma * mb + 0) in
+  let e := rnd (ab * g + w) in
+  let s := rnd (m * e + t) in
+  let hm := rnd (m * up_conv_radius_0 + 0) in
+  let rz := rnd (s * up_conv_radius_1 + hm) in
   rz.
 
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)
@@ -497,6 +557,11 @@ Definition mul_up_1 (a b : R) : R :=
   let zz := orb za zb in
   let r := if zz then p else v in
   r.
+
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). *)
+Definition neg_1 (x : R) : R :=
+  let z := - x in
+  z.
 
 (* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). *)
 Definition next_down (a : R) : R :=
@@ -854,6 +919,25 @@ Definition ball_sub_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let '(n0, n1) := neg_2 cy0 cy1 in
   let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in
   (cz0, cz1, rz).
+
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). *)
+Definition bv_center_2 (x0 x1 : R) : R * R :=
+  let z0 := x0 in
+  let z1 := x1 in
+  (z0, z1).
+
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_2 (x0 x1 c : R) : R * R * bool :=
+  let h := rnd (x0 * c + 0) in
+  let l := rnd (x1 * c + 0) in
+  let '(z0, z1) := fast_two_sum h l in
+  let ze := Req_bool x1 0 in
+  let mm := if ze then h else l in
+  let am := Rabs mm in
+  let bc := Rlt_bool up_ball_mul_pow2_1_0 am in
+  let zc := Req_bool x0 0 in
+  let e := orb bc zc in
+  (z0, z1, e).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : R) : bool :=

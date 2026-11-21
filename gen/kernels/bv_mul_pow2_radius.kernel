@@ -1,0 +1,38 @@
+# The one radius of a BallVector times a positive power of two c (milestone2.md, "BallVector":
+# bv_mul_pow2_k; "Scaling a ball by a power of two"): the radius lines of ball_mul_pow2_k with the
+# exactness of the centers over all entries, ex, the and of the masks of the step (bv_mul_pow2_step_k).
+# When every center was scaled exactly and so was the radius (c rx zero or above the smallest normal
+# number N = eta / (2u)), the radius is c rx itself: the result is c X. Otherwise it is the second
+# number after RN(c rx), which is above c rx + eta: the first step covers a radius whose scaling was
+# rounded, the second the eta that a center may have lost (the bound of mul_pow2_2; half of it for one
+# limb). The radius does not grow with the centers, so the largest magnitude m enters only as m - m:
+# +0 for a finite m and a NaN for an infinite one (a center that overflowed), which the addition carries
+# into the radius and the finish tests. The program gives c (an entry kernel): it is only multiplied.
+kernel:        bv_mul_pow2_radius
+input:         stored m
+input:         mask ex
+input:         stored rx
+input:         c
+output:        rz
+requires:      nonneg m
+requires:      nonneg rx
+requires:      power_of_two c
+ensures:       upper rz value=rx*c exact_when=mask(ex);zero_or_abs_gt(rx*c,eta/(2*u))
+ensures:       upper rz value=rx*c+eta unless=ex
+min_precision: 2
+source:        the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector)
+license:       algorithm and proof: MIT
+status:        unverified
+entry:         yes
+cone_exempt:   the radius is selected and stepped, as in ball_mul_pow2_k; an infinite largest magnitude reaches it through m - m, and the finish tests it
+
+rr = prod(rx, c)
+br = lt(const up(eta/(2*u)), rr)
+zr = eq(rx, 0)
+er = or(br, zr)
+q  = and(ex, er)
+su = succ(rr)
+rw = succ(su)
+rs = select(q, rr, rw)
+d  = sub(m, m)
+rz = add(rs, d)

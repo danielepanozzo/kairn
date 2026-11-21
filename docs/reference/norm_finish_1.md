@@ -12,7 +12,7 @@ $$r = m \ \text{when } \mathit{ok} \text{ is true and } m \text{ is finite}, \qq
 
 ## C++
 
-No public operation computes this kernel on its own.
+No public operation computes this kernel on its own. It is part of [`bv_conv_finish`](bv_conv_finish.md), [`bv_make_finish`](bv_make_finish.md).
 
 ## Requires
 

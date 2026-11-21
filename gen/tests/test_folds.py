@@ -45,6 +45,15 @@ MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 
         'mul_pow2_map_1', 'mul_pow2_map_2'}
 # The ball vectors, maps of the centers with the state of a fold of maxima (test_bv.py).
 BVS = {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2'}
+# And the constructors of a BallVector (test_bv.py).
+BVS |= {'bv_make_1', 'bv_make_2'}
+# And the negations.
+BVS |= {'bv_neg_1', 'bv_neg_2'}
+# And the scalings by a power of two, exact under conditions.
+BVS |= {'bv_mul_pow2_1', 'bv_mul_pow2_2'}
+# The products of two BallVectors, a convolution of the centers with the maxima of both operands
+# (test_bv_conv.py).
+PRODUCTS = {'bv_conv_1', 'bv_conv_2'}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -183,7 +192,7 @@ t         = select(ok, s, const nan)
 class Rules(unittest.TestCase):
     def test_the_folds_are_accepted(self):
         ks = common.kernels()
-        self.assertEqual(set(ks.folds), set(ALL) | MAPS | CONVS | BVS)
+        self.assertEqual(set(ks.folds), set(ALL) | MAPS | CONVS | BVS | PRODUCTS)
         self.assertEqual({n for n, fd in ks.folds.items() if fd.is_max}, set(MAX_FOLDS))
         self.assertEqual({n for n, fd in ks.folds.items() if fd.is_map}, MAPS)
         for fd in ks.folds.values():
@@ -986,7 +995,18 @@ class Printers(unittest.TestCase):
         self.assertIn('    (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * '
                       '((3 / 2) * eta emin)).', s)
         self.assertIn('    ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs', s)
-        self.assertEqual(s.count('_spec : Prop'), 2 * len(ALL) + len(MAPS) + len(CONVS) + len(BVS))
+        # And three of conv_terms, which every convolution shares (rocq.conv_terms_statements).
+        self.assertEqual(s.count('_spec : Prop'), 2 * len(ALL) + len(MAPS) + len(CONVS) + len(BVS) + len(PRODUCTS) + 3)
+        self.assertIn('Definition conv_terms_eq_spec : Prop :=\n'
+                      '  forall (A B : Type) (xs : list A) (ys : list B) (j : nat) (a : A) (b : B),\n'
+                      '  conv_terms xs ys j =\n'
+                      '  map (fun i => (nth i xs a, nth (j - i)%nat ys b))\n'
+                      '      (seq (j - (length ys - 1))%nat (length (conv_terms xs ys j))).', s)
+        self.assertIn('  (0 < length ys)%nat ->\n'
+                      '  length (conv_terms xs ys j) = (Nat.min (S j) (length xs) - (j - (length ys - 1)))%nat.', s)
+        self.assertIn('  (length (conv_terms xs ys j) <= Nat.min (length xs) (length ys))%nat.', s)
+        # Without a convolution, not those three.
+        self.assertNotIn('conv_terms', rocq.fold_statements(common.kernels(common.TEST_KERNELS)))
         # A fold of maxima: its result is the limb of the state stepped up as the finish does, a
         # number of the format between the largest magnitude and that rounded up and stepped up.
         self.assertIn('Definition norm_upper_2_seq_spec : Prop :=\n'
@@ -1039,11 +1059,28 @@ class Printers(unittest.TestCase):
         for name in ALL:
             self.assertIn(f'Definition {name}_seq_ieee_spec : Prop :=', s)
             self.assertIn(f'Definition {name}_lanes_ieee_spec : Prop :=', s)
+        # A fold of maxima has two more (ieee.max_orders_statement, ieee.max_flag_statement): its lane
+        # order computes the state of the sequential order, and when exactly its flag is true.
+        self.assertEqual(set(re.findall(r'^Definition (\w+)_orders_ieee_spec', s, flags=re.M)), set(MAX_FOLDS))
+        self.assertEqual(set(re.findall(r'^Definition (\w+)_flag_ieee_spec', s, flags=re.M)), set(MAX_FOLDS))
+        self.assertIn('  forall (W : nat) (xs : list (binary_float prec emax * binary_float prec emax)),\n'
+                      '  fold_lanes (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) '
+                      '(IeeeFoldModel.norm_upper_2_combine prec emax) (IeeeOperations.pzero prec emax, true) W xs =\n'
+                      '  fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) '
+                      '(IeeeOperations.pzero prec emax, true) xs.', s)
+        self.assertIn('  snd (IeeeFoldModel.norm_upper_1_seq prec emax nan_abs nan_const xs) = true <->\n'
+                      '  Forall (fun x => finite x) xs.', s)
+        self.assertIn('  snd (IeeeFoldModel.norm_upper_2_seq prec emax nan_abs nan_const xs) = true <->\n'
+                      '  Forall (fun x => finite (fst x)) xs /\\\n'
+                      '  finite (IeeeOperations.succ prec emax (fst (fold_seq (IeeeFoldModel.norm_upper_2_step prec emax '
+                      'nan_abs) (IeeeOperations.pzero prec emax, true) xs))).', s)
         # Not the steps and the combination of the folds of maxima, whose maximum keeps a finite
         # state for a NaN element (their mask says it instead).
         parts = {self.ks.folds[n].step[0] for n in FOLDS} | {self.ks.folds[n].combine[0] for n in FOLDS}
         # And the steps of the maps (their combination is the operation and).
         parts |= {self.ks.folds[n].step[0] for n in MAPS}
+        # And the steps of the ball vectors (most are steps of maps).
+        parts |= {self.ks.folds[n].step[0] for n in BVS}
         self.assertIn('   let s := FoldModel.norm_upper_2_lanes W vs in\n'
                       '   let r_ := succ radix2 (FLT_exp (ieee_emin prec emax) prec) (fst s) in\n'
                       '   let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) vs) in\n'
@@ -1120,7 +1157,7 @@ class Printers(unittest.TestCase):
         of its kernel's listing, the step's fused operations those of the step kernel."""
         doc = json.loads(objcode.objcode(self.ks))
         self.assertEqual(doc['fold_forms'], ['seq', 'lanes', 'packed'])
-        self.assertEqual(set(doc['folds']), set(ALL) | MAPS | CONVS | BVS)
+        self.assertEqual(set(doc['folds']), set(ALL) | MAPS | CONVS | BVS | PRODUCTS)
         names = doc['fold_parts']
         for name in ALL:
             fd = self.ks.folds[name]

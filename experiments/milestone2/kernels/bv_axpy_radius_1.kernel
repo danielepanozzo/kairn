@@ -1,0 +1,14 @@
+# Proposed (milestone2.md, "BallVector": bv_axpy_k): the one radius of a X + Y with one-limb centers,
+# bv_add_radius_1(M, bv_scale_radius_1(M', rx, a), ry) (bv_axpy_radius_2, bv_proposals.py).
+kernel:        bv_axpy_radius_1
+input:         stored m
+input:         stored mp
+input:         stored rx
+input:         stored ry
+input:         a
+output:        rz
+status:        unverified
+entry:         yes
+
+s  = bv_scale_radius_1(mp, rx, a)
+rz = bv_add_radius_1(m, s, ry)

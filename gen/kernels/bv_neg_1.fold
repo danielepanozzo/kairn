@@ -1,0 +1,26 @@
+# The negation of a BallVector with one-limb centers (milestone2.md, "BallVector": bv_neg_k): each
+# center negated (neg_1), the radius unchanged (bv_neg_radius): exact, the result is exactly the set
+# of the negated members. The state is that of norm_upper_1 on the centers written, as for every ball
+# vector, and the finish norm_finish_1: the operand that is the whole space (radius +infinity) gives
+# the whole space, every center written zero.
+fold:          bv_neg_1
+arrays:        stored x
+scalars:       stored rx
+state:         m, mask ok
+step:          z = neg_1(x)
+record:        (m, ok) = norm_step_1(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_neg_radius(m, rx)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z
+output:        r
+output:        mask finite
+value:         -x
+requires:      ball_vector x rx
+ensures:       encloses_entries z r -x x=x,rx flag=finite finite_when=abs_le(abs(x)+rx,1) radii_when=abs_le(rx,1) exact
+min_precision: 1
+status:        unverified
+domain:        extended
+source:        the negation of each center, the radius of ball_neg_1 (milestone2.md, BallVector)
+license:       algorithm and proof: MIT

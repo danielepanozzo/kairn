@@ -579,6 +579,176 @@ Definition bv_add_2_lanes (W : nat) (rx : float) (ry : float) (xys : list ((floa
   let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
   (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
 
+(* bv_make_1: a ball vector; step bv_center_entry_1, record norm_step_1, combination norm_combine, radius bv_make_radius, finish bv_make_finish. *)
+Definition bv_make_1_step (c : float) : float :=
+  IeeeModel.bv_center_entry_1 prec emax nan_plus c.
+
+Definition bv_make_1_map (cs : list float) : list float :=
+  map bv_make_1_step cs.
+
+Definition bv_make_1_record (mok : float * bool) (w_ : float) : float * bool :=
+  IeeeModel.norm_step_1 prec emax nan_abs (fst mok) (snd mok) w_.
+
+Definition bv_make_1_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_make_1_seq (r : float) (cs : list float) : list float * float * bool :=
+  let ws_ := map bv_make_1_step cs in
+  let s_ := fold_seq bv_make_1_record (pzero, true) ws_ in
+  let rz_ := IeeeModel.bv_make_radius prec emax nan_plus nan_minus (fst s_) r in
+  let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => pzero) ws_, pinf), snd f_).
+
+Definition bv_make_1_lanes (W : nat) (r : float) (cs : list float) : list float * float * bool :=
+  let ws_ := map bv_make_1_step cs in
+  let s_ := fold_lanes bv_make_1_record bv_make_1_combine (pzero, true) W ws_ in
+  let rz_ := IeeeModel.bv_make_radius prec emax nan_plus nan_minus (fst s_) r in
+  let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => pzero) ws_, pinf), snd f_).
+
+(* bv_make_2: a ball vector; step bv_center_2, record norm_step_2, combination norm_combine, radius bv_make_radius, finish bv_make_finish. *)
+Definition bv_make_2_step (c : float * float) : float * float :=
+  IeeeModel.bv_center_2 prec emax (fst c) (snd c).
+
+Definition bv_make_2_map (cs : list (float * float)) : list (float * float) :=
+  map bv_make_2_step cs.
+
+Definition bv_make_2_record (mok : float * bool) (w_ : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_make_2_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_make_2_seq (r : float) (cs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map bv_make_2_step cs in
+  let s_ := fold_seq bv_make_2_record (pzero, true) ws_ in
+  let rz_ := IeeeModel.bv_make_radius prec emax nan_plus nan_minus (fst s_) r in
+  let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+Definition bv_make_2_lanes (W : nat) (r : float) (cs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map bv_make_2_step cs in
+  let s_ := fold_lanes bv_make_2_record bv_make_2_combine (pzero, true) W ws_ in
+  let rz_ := IeeeModel.bv_make_radius prec emax nan_plus nan_minus (fst s_) r in
+  let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+(* bv_mul_pow2_1: a ball vector; step bv_mul_pow2_step_1, record norm_step_1, combination norm_combine, radius bv_mul_pow2_radius, finish norm_finish_1, the and of the step's masks of exactness. *)
+Definition bv_mul_pow2_1_step (c : float) (x : float) : float * bool :=
+  IeeeModel.bv_mul_pow2_step_1 prec emax nan_abs nan_fma x c.
+
+Definition bv_mul_pow2_1_map (c : float) (xs : list float) : list float :=
+  map (fun x => fst (bv_mul_pow2_1_step c x)) xs.
+
+Definition bv_mul_pow2_1_record (mok : float * bool) (w_ : float) : float * bool :=
+  IeeeModel.norm_step_1 prec emax nan_abs (fst mok) (snd mok) w_.
+
+Definition bv_mul_pow2_1_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_mul_pow2_1_seq (rx : float) (c : float) (xs : list float) : list float * float * bool :=
+  let es_ := map (bv_mul_pow2_1_step c) xs in
+  let ws_ := map fst es_ in
+  let s_ := fold_seq bv_mul_pow2_1_record (pzero, true) ws_ in
+  let ex_ := fold_seq (fun m_ e_ => andb m_ (snd e_)) true es_ in
+  let rz_ := IeeeModel.bv_mul_pow2_radius prec emax nan_plus nan_minus nan_fma (fst s_) ex_ rx c in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => pzero) ws_, pinf), snd f_).
+
+Definition bv_mul_pow2_1_lanes (W : nat) (rx : float) (c : float) (xs : list float) : list float * float * bool :=
+  let es_ := map (bv_mul_pow2_1_step c) xs in
+  let ws_ := map fst es_ in
+  let s_ := fold_lanes bv_mul_pow2_1_record bv_mul_pow2_1_combine (pzero, true) W ws_ in
+  let ex_ := fold_lanes (fun m_ e_ => andb m_ (snd e_)) andb true W es_ in
+  let rz_ := IeeeModel.bv_mul_pow2_radius prec emax nan_plus nan_minus nan_fma (fst s_) ex_ rx c in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => pzero) ws_, pinf), snd f_).
+
+(* bv_mul_pow2_2: a ball vector; step bv_mul_pow2_step_2, record norm_step_2, combination norm_combine, radius bv_mul_pow2_radius, finish norm_finish_1, the and of the step's masks of exactness. *)
+Definition bv_mul_pow2_2_step (c : float) (x : float * float) : float * float * bool :=
+  IeeeModel.bv_mul_pow2_step_2 prec emax nan_plus nan_minus nan_abs nan_fma (fst x) (snd x) c.
+
+Definition bv_mul_pow2_2_map (c : float) (xs : list (float * float)) : list (float * float) :=
+  map (fun x => fst (bv_mul_pow2_2_step c x)) xs.
+
+Definition bv_mul_pow2_2_record (mok : float * bool) (w_ : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_mul_pow2_2_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_mul_pow2_2_seq (rx : float) (c : float) (xs : list (float * float)) : list (float * float) * float * bool :=
+  let es_ := map (bv_mul_pow2_2_step c) xs in
+  let ws_ := map fst es_ in
+  let s_ := fold_seq bv_mul_pow2_2_record (pzero, true) ws_ in
+  let ex_ := fold_seq (fun m_ e_ => andb m_ (snd e_)) true es_ in
+  let rz_ := IeeeModel.bv_mul_pow2_radius prec emax nan_plus nan_minus nan_fma (fst s_) ex_ rx c in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+Definition bv_mul_pow2_2_lanes (W : nat) (rx : float) (c : float) (xs : list (float * float)) : list (float * float) * float * bool :=
+  let es_ := map (bv_mul_pow2_2_step c) xs in
+  let ws_ := map fst es_ in
+  let s_ := fold_lanes bv_mul_pow2_2_record bv_mul_pow2_2_combine (pzero, true) W ws_ in
+  let ex_ := fold_lanes (fun m_ e_ => andb m_ (snd e_)) andb true W es_ in
+  let rz_ := IeeeModel.bv_mul_pow2_radius prec emax nan_plus nan_minus nan_fma (fst s_) ex_ rx c in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+(* bv_neg_1: a ball vector; step neg_1, record norm_step_1, combination norm_combine, radius bv_neg_radius, finish norm_finish_1. *)
+Definition bv_neg_1_step (x : float) : float :=
+  IeeeModel.neg_1 prec emax nan_opp x.
+
+Definition bv_neg_1_map (xs : list float) : list float :=
+  map bv_neg_1_step xs.
+
+Definition bv_neg_1_record (mok : float * bool) (w_ : float) : float * bool :=
+  IeeeModel.norm_step_1 prec emax nan_abs (fst mok) (snd mok) w_.
+
+Definition bv_neg_1_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_neg_1_seq (rx : float) (xs : list float) : list float * float * bool :=
+  let ws_ := map bv_neg_1_step xs in
+  let s_ := fold_seq bv_neg_1_record (pzero, true) ws_ in
+  let rz_ := IeeeModel.bv_neg_radius prec emax (fst s_) rx in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => pzero) ws_, pinf), snd f_).
+
+Definition bv_neg_1_lanes (W : nat) (rx : float) (xs : list float) : list float * float * bool :=
+  let ws_ := map bv_neg_1_step xs in
+  let s_ := fold_lanes bv_neg_1_record bv_neg_1_combine (pzero, true) W ws_ in
+  let rz_ := IeeeModel.bv_neg_radius prec emax (fst s_) rx in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => pzero) ws_, pinf), snd f_).
+
+(* bv_neg_2: a ball vector; step neg_2, record norm_step_2, combination norm_combine, radius bv_neg_radius, finish norm_finish_1. *)
+Definition bv_neg_2_step (x : float * float) : float * float :=
+  IeeeModel.neg_2 prec emax nan_opp (fst x) (snd x).
+
+Definition bv_neg_2_map (xs : list (float * float)) : list (float * float) :=
+  map bv_neg_2_step xs.
+
+Definition bv_neg_2_record (mok : float * bool) (w_ : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_neg_2_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_neg_2_seq (rx : float) (xs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map bv_neg_2_step xs in
+  let s_ := fold_seq bv_neg_2_record (pzero, true) ws_ in
+  let rz_ := IeeeModel.bv_neg_radius prec emax (fst s_) rx in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+Definition bv_neg_2_lanes (W : nat) (rx : float) (xs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map bv_neg_2_step xs in
+  let s_ := fold_lanes bv_neg_2_record bv_neg_2_combine (pzero, true) W ws_ in
+  let rz_ := IeeeModel.bv_neg_radius prec emax (fst s_) rx in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
 (* bv_scale_1: a ball vector; step scale_step_1, record norm_step_1, combination norm_combine, radius bv_scale_radius_1, finish norm_finish_1. *)
 Definition bv_scale_1_step (a : float) (x : float) : float :=
   IeeeModel.scale_step_1 prec emax nan_fma x a.
@@ -686,5 +856,47 @@ Definition bv_sub_2_lanes (W : nat) (rx : float) (ry : float) (xys : list ((floa
   let rz_ := IeeeModel.bv_add_radius_2 prec emax nan_plus nan_fma (fst s_) rx ry in
   let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
   (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+(* The products of two ball vectors (architecture.md, "Ball vectors"): the coefficients and the
+   mask of the convolution of the centers (F_conv of the convolution named); the maxima of the
+   operands' centers, fold_seq of F_record over each list; the count min(n_x, n_y) rounded up
+   (F_count, binary_normalize upward); the bound of dot for it; the radius kernel on the maxima,
+   the radii, the count and the bound; the finish on the radius, the convolution's mask and the
+   bound's; when its flag is false, every coefficient is zero and the radius +infinity (the whole
+   space). F_conv returns the coefficients, the radius and the flag. *)
+
+(* bv_conv_1: the product of two ball vectors; centers conv_1, records norm_step_1, bound bound_dot_1, radius conv_radius, finish bv_conv_finish. *)
+Definition bv_conv_1_record (mok : float * bool) (w_ : float) : float * bool :=
+  IeeeModel.norm_step_1 prec emax nan_abs (fst mok) (snd mok) w_.
+
+Definition bv_conv_1_count (xs ys : list float) : float :=
+  binary_normalize prec emax prec_gt_0_ prec_lt_emax_ BinarySingleNaN.mode_UP (Z.of_nat (Nat.min (length xs) (length ys))) 0 false.
+
+Definition bv_conv_1_conv (rx : float) (ry : float) (xs ys : list float) : list float * float * bool :=
+  let c_ := conv_1_conv xs ys in
+  let sa_ := fold_seq bv_conv_1_record (pzero, true) xs in
+  let sb_ := fold_seq bv_conv_1_record (pzero, true) ys in
+  let m_ := bv_conv_1_count xs ys in
+  let b_ := IeeeModel.bound_dot_1 prec emax nan_plus nan_fma m_ in
+  let rz_ := IeeeModel.conv_radius prec emax nan_fma (fst sa_) (fst sb_) rx ry m_ (fst (fst b_)) (snd (fst b_)) in
+  let f_ := IeeeModel.bv_conv_finish prec emax nan_abs nan_const rz_ (snd c_) (snd b_) in
+  (if snd f_ then (fst c_, fst f_) else (map (fun _ => pzero) (fst c_), pinf), snd f_).
+
+(* bv_conv_2: the product of two ball vectors; centers conv_2, records norm_step_2, bound bound_dot_2, radius conv_radius, finish bv_conv_finish. *)
+Definition bv_conv_2_record (mok : float * bool) (w_ : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_conv_2_count (xs ys : list (float * float)) : float :=
+  binary_normalize prec emax prec_gt_0_ prec_lt_emax_ BinarySingleNaN.mode_UP (Z.of_nat (Nat.min (length xs) (length ys))) 0 false.
+
+Definition bv_conv_2_conv (rx : float) (ry : float) (xs ys : list (float * float)) : list (float * float) * float * bool :=
+  let c_ := conv_2_conv xs ys in
+  let sa_ := fold_seq bv_conv_2_record (pzero, true) xs in
+  let sb_ := fold_seq bv_conv_2_record (pzero, true) ys in
+  let m_ := bv_conv_2_count xs ys in
+  let b_ := IeeeModel.bound_dot_2 prec emax nan_plus nan_fma m_ in
+  let rz_ := IeeeModel.conv_radius prec emax nan_fma (fst sa_) (fst sb_) rx ry m_ (fst (fst b_)) (snd (fst b_)) in
+  let f_ := IeeeModel.bv_conv_finish prec emax nan_abs nan_const rz_ (snd c_) (snd b_) in
+  (if snd f_ then (fst c_, fst f_) else (map (fun _ => (pzero, pzero)) (fst c_), pinf), snd f_).
 
 End IeeeFolds.

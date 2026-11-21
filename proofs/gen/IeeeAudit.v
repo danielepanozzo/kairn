@@ -81,6 +81,9 @@ Print Assumptions ball_upper_as_1_correct.
 Definition fold_finish_1_audit : fold_finish_1_spec := fold_finish_1_correct.
 Print Assumptions fold_finish_1_correct.
 
+Definition norm_finish_1_audit : norm_finish_1_spec := norm_finish_1_correct.
+Print Assumptions norm_finish_1_correct.
+
 Definition interval_add_1_audit : interval_add_1_spec := interval_add_1_correct.
 Print Assumptions interval_add_1_correct.
 
@@ -131,9 +134,6 @@ Print Assumptions next_down_ieee_correct.
 
 Definition next_up_ieee_audit : next_up_ieee_spec := next_up_ieee_correct.
 Print Assumptions next_up_ieee_correct.
-
-Definition norm_finish_1_audit : norm_finish_1_spec := norm_finish_1_correct.
-Print Assumptions norm_finish_1_correct.
 
 Definition norm_finish_2_audit : norm_finish_2_spec := norm_finish_2_correct.
 Print Assumptions norm_finish_2_correct.

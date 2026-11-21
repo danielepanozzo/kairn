@@ -142,8 +142,13 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `tests/CMakeLists.txt`, kernels whose claims the oracle cannot read yet; with them
   `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS` for folds. No cross-check, no enumeration of a toy format,
   no brute-force run and no test of the public interface is registered for a name of these lists,
-  and configuring says how many are left out. **On them today**: nothing, since the interval
-  stage and stage B of Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
+  and configuring says how many are left out. **On them today**: the kernels of the accumulator
+  ([The accumulator](architecture.md#the-accumulator); a `rounded` entry with a value of its own),
+  and the ball vectors, the products of two of them and their kernels
+  ([Ball vectors](architecture.md#ball-vectors); the folds with `"bv"` and `"bv_conv"`, the
+  requirement `ball_vector`, the claims `encloses_entries`, `makes_ball_vector` and
+  `encloses_coefficients`, and what their kernels claim); what was on them before left them with
+  the interval stage and stage B of Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
   Milestone 2 the oracle reads and judges the maps, the folds of maxima and the convolutions, and
   their kernels (`oracle/README.md`, "Maps", "Folds of maxima", "Convolutions"): they are
   cross-checked as the folds are, and the steps of the maps and the kernels of the folds of maxima
@@ -1779,11 +1784,42 @@ here only, by `gen/tests/test_bv.py`: each check of `rules.bv_rules` refuses wha
 interpreter, on formats of the IEEE shape of two to five bits and in `binary64` and `binary32`, on
 canonical BallVectors with the whole space among them and any value of a scalar that is not a
 radius, in the sequential order and with 0 to 4 lanes, satisfies V1 to V4 and the flag in exact
-arithmetic (containment entry by entry against the exact range of the operation on the balls), every
-order the same; on finite operands the one radius equals the largest radius the entrywise Ball kernel
-returns, in every case compared; the compiled `F_seq`, `F_lanes` (0 to 8 lanes) and `F_packed` of
+arithmetic (containment entry by entry against the exact range of the operation on the balls; V4 of
+every length, and of the vector with no entry with its radii on each side of the limit of
+`radii_when`, which the conditions of an entry imply), every order the same; on finite operands the one radius equals the largest radius the entrywise Ball kernel
+returns, in every case compared; the scalings by a power of two, `bv_mul_pow2_k`, are exactly the set,
+their radius exactly $c\,r_x$, in every case where their conditions of `exact_when` hold, and a BallVector
+halved sixty times in a row keeps a radius of exactly $r_x/2^i$ (where `bv_scale_k` by $\tfrac12$ grows
+it), and gets the second number after the halved radius once a center falls below the smallest normal
+number; the compiled `F_seq`, `F_lanes` (0 to 8 lanes) and `F_packed` of
 every build are bit for bit the interpreter's, on the lengths of the folds; the line protocol, the
-printers, the counts of the loops and the claims (with the entries of architecture.md).
+printers, the counts of the loops and the claims (with the entries of architecture.md). The same file
+tests the constructors (`makes_ball_vector` on every small case and at random, every order), the
+negations (exactness), and `bv_norm_upper_k` as the header writes it, `norm_upper_k` then `add_up_1`
+of the radius: every member at most the bound, the bound at most one rounding up above the claims of
+the two calls, in exact arithmetic. And the request form `inplace=I` of the line protocol: every map
+and every ball vector, with each array read that can be the array written, through every build of
+the runner and of the packed runner, completes exactly as the same request without the field.
+
+**The products of two BallVectors** `bv_conv_1` and `bv_conv_2` ([Architecture](architecture.md#ball-vectors)),
+which the oracle does not judge yet either (they and `conv_radius`, `bv_conv_finish` are on the lists of
+[Cross-checks](#cross-checks)), are tested by `gen/tests/test_bv_conv.py`: each check of
+`rules.bv_conv_rules` refuses what it is for, and the rules of the claims refuse `at_most` and `if_all`
+where they do not belong; the interpreter, on six formats of the IEEE shape of four to six bits
+(precision 4 to 6, $e_{\max}$ 7 to 14) and in `binary64` and `binary32`, on canonical BallVectors of
+lengths 0 to 4 with the whole space among them, satisfies V1 to V4 and the flag in exact arithmetic
+(containment coefficient by coefficient against the exact range of the sum of the products, each
+entry ranging independently over its ball; the coefficients those of `conv_k`); and on cases drawn at
+the limits of the conditions of V4 (entries and radii near the bound of each condition, a quarter of
+them with $n_x = 0$ and a quarter with $n_y = 0$), V4 holds; the count rounded up is the least number of
+the format at least $n$; `count_when` gives the bound, for every $n$ within it (up to 3 000 of them) in 36
+formats of precisions 4 to 9; an empty operand with a radius whose product with the other's maximum
+overflows gives the whole space, and does not meet the condition of V4 of that array. The compiled
+`F_seq` of every build is bit for bit the interpreter's, in `binary64` and `binary32`, on every pair of
+lengths 0 to 5, on longer operands (up to 60, and a few of up to 300 entries, 2 000 in the full tier) and
+on cases near the limits of V4; the line protocol, through the interpreter and the runner; the printers
+(the C++, the counts of the loops, the claims with the entries of architecture.md, the models and the
+statements).
 
 **The folds, and the kernels of their stage**, are cross-checked by the oracle like every kernel
 ([above](#cross-checks)), and tested here too. `gen/tests/test_folds.py` checks:

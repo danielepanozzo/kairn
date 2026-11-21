@@ -458,6 +458,59 @@ template <> struct bv_add_radius_2<float> {
     static constexpr bool proved = true;
 };
 
+// bv_center_entry_1: UNVERIFIED. Claims: rounded.
+template <class T> struct bv_center_entry_1;
+template <> struct bv_center_entry_1<double> { static constexpr bool proved = false; };
+template <> struct bv_center_entry_1<float> { static constexpr bool proved = false; };
+
+// fold_finish_1: proved. Claims: finite_or_nan.
+template <class T> struct fold_finish_1;
+template <> struct fold_finish_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct fold_finish_1<float> {
+    static constexpr bool proved = true;
+};
+
+// norm_finish_1: proved. Claims: finite_or_nan.
+template <class T> struct norm_finish_1;
+template <> struct norm_finish_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct norm_finish_1<float> {
+    static constexpr bool proved = true;
+};
+
+// bv_conv_finish: UNVERIFIED. Claims: finite_or_nan.
+template <class T> struct bv_conv_finish;
+template <> struct bv_conv_finish<double> { static constexpr bool proved = false; };
+template <> struct bv_conv_finish<float> { static constexpr bool proved = false; };
+
+// bv_make_finish: UNVERIFIED. Claims: finite_or_nan.
+template <class T> struct bv_make_finish;
+template <> struct bv_make_finish<double> { static constexpr bool proved = false; };
+template <> struct bv_make_finish<float> { static constexpr bool proved = false; };
+
+// bv_make_radius: UNVERIFIED. Claims: rounded.
+template <class T> struct bv_make_radius;
+template <> struct bv_make_radius<double> { static constexpr bool proved = false; };
+template <> struct bv_make_radius<float> { static constexpr bool proved = false; };
+
+// bv_mul_pow2_radius: UNVERIFIED. Claims: upper; upper.
+template <class T> struct bv_mul_pow2_radius;
+template <> struct bv_mul_pow2_radius<double> { static constexpr bool proved = false; };
+template <> struct bv_mul_pow2_radius<float> { static constexpr bool proved = false; };
+
+// bv_mul_pow2_step_1: UNVERIFIED. Claims: rounded; error, form R, c = 0, k = 1, t = 1/2.
+template <class T> struct bv_mul_pow2_step_1;
+template <> struct bv_mul_pow2_step_1<double> { static constexpr bool proved = false; };
+template <> struct bv_mul_pow2_step_1<float> { static constexpr bool proved = false; };
+
+// bv_neg_radius: UNVERIFIED. Claims: rounded.
+template <class T> struct bv_neg_radius;
+template <> struct bv_neg_radius<double> { static constexpr bool proved = false; };
+template <> struct bv_neg_radius<float> { static constexpr bool proved = false; };
+
 // bv_scale_radius_1: proved. Claims: upper.
 template <class T> struct bv_scale_radius_1;
 template <> struct bv_scale_radius_1<double> {
@@ -475,6 +528,11 @@ template <> struct bv_scale_radius_2<double> {
 template <> struct bv_scale_radius_2<float> {
     static constexpr bool proved = true;
 };
+
+// conv_radius: UNVERIFIED. Claims: upper.
+template <class T> struct conv_radius;
+template <> struct conv_radius<double> { static constexpr bool proved = false; };
+template <> struct conv_radius<float> { static constexpr bool proved = false; };
 
 // dot_step_1: proved. Claims: rounded.
 template <class T> struct dot_step_1;
@@ -502,15 +560,6 @@ template <> struct fast_two_sum_entry<float> {
     static constexpr float tiny = 0.0f;
     static constexpr float unit_computed = 0.0f;
     static constexpr float tiny_computed = 0.0f;
-};
-
-// fold_finish_1: proved. Claims: finite_or_nan.
-template <class T> struct fold_finish_1;
-template <> struct fold_finish_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct fold_finish_1<float> {
-    static constexpr bool proved = true;
 };
 
 // interval_add_1: proved. Claims: encloses_interval.
@@ -686,6 +735,11 @@ template <> struct mul_up_1<float> {
     static constexpr bool proved = true;
 };
 
+// neg_1: UNVERIFIED. Claims: rounded.
+template <class T> struct neg_1;
+template <> struct neg_1<double> { static constexpr bool proved = false; };
+template <> struct neg_1<float> { static constexpr bool proved = false; };
+
 // next_down: proved. Claims: neighbor.
 template <class T> struct next_down;
 template <> struct next_down<double> {
@@ -710,15 +764,6 @@ template <> struct norm_combine<double> {
     static constexpr bool proved = true;
 };
 template <> struct norm_combine<float> {
-    static constexpr bool proved = true;
-};
-
-// norm_finish_1: proved. Claims: finite_or_nan.
-template <class T> struct norm_finish_1;
-template <> struct norm_finish_1<double> {
-    static constexpr bool proved = true;
-};
-template <> struct norm_finish_1<float> {
     static constexpr bool proved = true;
 };
 
@@ -1450,6 +1495,16 @@ template <> struct ball_upper_as_2<float> {
     static constexpr float unit = 0x1.4p-22f;
     static constexpr float tiny = 0x1.8p-148f;
 };
+
+// bv_center_2: UNVERIFIED. Claims: normalized; error, form R, c = 0, k = 2, t = 0; represents.
+template <class T> struct bv_center_2;
+template <> struct bv_center_2<double> { static constexpr bool proved = false; };
+template <> struct bv_center_2<float> { static constexpr bool proved = false; };
+
+// bv_mul_pow2_step_2: UNVERIFIED. Claims: normalized; error, form R, c = 0, k = 2, t = 1.
+template <class T> struct bv_mul_pow2_step_2;
+template <> struct bv_mul_pow2_step_2<double> { static constexpr bool proved = false; };
+template <> struct bv_mul_pow2_step_2<float> { static constexpr bool proved = false; };
 
 // eq_2_1: proved. Claims: predicate.
 template <class T> struct eq_2_1;

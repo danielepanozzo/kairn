@@ -20,7 +20,7 @@ output:        mask finite
 value:         x-y
 requires:      ball_vector x rx
 requires:      ball_vector y ry
-ensures:       encloses_entries z r x-y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x-y)+rx+ry,-2)
+ensures:       encloses_entries z r x-y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x-y)+rx+ry,-2) radii_when=abs_le(rx+ry,-2)
 min_precision: 3
 theorem:       proofs/theories/BvReal.v
 status:        proved

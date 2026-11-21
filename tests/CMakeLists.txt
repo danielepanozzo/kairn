@@ -571,14 +571,30 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # - the ball vectors (architecture.md, "Ball vectors") and their radius kernels: the oracle reads
 #   neither the folds with "bv": true (their requests, the requirement ball_vector, the claim
 #   encloses_entries) nor abs( ) in the value of an upper entry yet.
+# - the scalings of a BallVector by a power of two (architecture.md, "Ball vectors") and their
+#   kernels: besides what the other ball vectors need, the oracle reads neither exact_when with
+#   conditions in encloses_entries, nor exact_flag of an error entry, nor unless and exact_when of an
+#   upper entry, nor the condition mask(NAME) of exact_when, yet.
+# - the products of two BallVectors (architecture.md, "Ball vectors": the product of polynomials) and
+#   their kernels: the oracle reads neither the folds with "bv_conv": true (their requests of two
+#   lengths and two radii, the claim encloses_coefficients with count_when) nor the requirement
+#   at_most nor finite_or_nan with if_all, yet.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
 set(KAIRN_NOT_YET_CROSS_CHECKED
   acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
-  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2)
+  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2
+  bv_center_entry_1 bv_center_2 bv_make_radius bv_make_finish
+  neg_1 bv_neg_radius
+  bv_mul_pow2_step_1 bv_mul_pow2_step_2 bv_mul_pow2_radius
+  conv_radius bv_conv_finish)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
-  bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2)
+  bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2
+  bv_make_1 bv_make_2
+  bv_neg_1 bv_neg_2
+  bv_mul_pow2_1 bv_mul_pow2_2
+  bv_conv_1 bv_conv_2)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
 # whose public functions (sum, dot, the bounds as functions of n) come with BallVector, and the

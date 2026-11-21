@@ -134,6 +134,9 @@ class Space:
             if 'power_of_two' in want:   # a reduced fraction of two powers of two is one
                 vals = [v for v in vals if not v[0] and v[1] > 0 and v[1].numerator & (v[1].numerator - 1) == 0
                         and v[1].denominator & (v[1].denominator - 1) == 0]
+            for w in want:
+                if w.startswith('at_most:'):
+                    vals = [v for v in vals if signed(v) <= int(w[len('at_most:'):])]
             self.kind, self.items = 'list', [(v,) for v in vals]
         elif len(g.limbs) == 2 and want & {'normalized', 'canonical'}:
             # x1 lies within half a gap of x0 on either side: a range of the sorted numbers.
@@ -184,6 +187,9 @@ def cases(fmt, kernel, seed):
         if r[0] == 'ball':      # in the real model: a normalized center and a nonnegative radius
             req.setdefault(r[1], set()).add('normalized')
             req.setdefault(r[2], set()).add('nonneg')
+            continue
+        if r[0] == 'at_most':   # at most a positive integer (g of conv_radius)
+            req.setdefault(r[1], set()).add(f'at_most:{r[2]}')
             continue
         for n in r[1:]:
             req.setdefault(n, set()).add(r[0])
@@ -262,6 +268,11 @@ def exact_conditions(e, fmt, ins, limbs, conditions=None):
     EXPR over the inputs' values and limbs, K over u and eta; or EXPR = 0 (zero, Milestone 2)."""
     env = dict(ins, **limbs)
     for c in e['exact_when'] if conditions is None else conditions:
+        if 'mask' in c:
+            # mask(NAME): the mask input is true (the radius of the scaling of a BallVector).
+            if env[c['mask']] is not True:
+                return False
+            continue
         if 'zero' in c:
             if expr.evaluate(expr.parse(c['zero']), env) != 0:
                 return False
@@ -314,6 +325,8 @@ def holds(e, k, fmt, ins, outs, limbs=None, kernels=None):
         return {'lt': a < b, 'le': a <= b, 'eq': a == b}[e['rel']]
     if kind == 'upper' and 'if' in e and not outs[e['if']][0]:
         return True
+    if kind == 'upper' and 'unless' in e and ins[e['unless']]:
+        return True          # unless: the bound holds when the mask input is false
     if kind == 'encloses':
         c, r = outs[e['center']], outs[e['radius']][0]
         if not all(isinstance(x, F) for x in c) or r is None:
@@ -366,6 +379,8 @@ def holds(e, k, fmt, ins, outs, limbs=None, kernels=None):
             value = constant(e['value'], k, fmt, ins, outs, kernels)
         if not value <= r:
             return False
+        if 'exact_when' in e and exact_conditions(e, fmt, ins, limbs or {}) and r != value:
+            return False     # the value itself when the conditions hold, a mask input among them
         if 'gaps' not in e:
             return True
         gaps = expr.evaluate(expr.parse(e['gaps']), {})
@@ -382,6 +397,8 @@ def holds(e, k, fmt, ins, outs, limbs=None, kernels=None):
     if kind == 'error':
         if 'exact_when' in e and exact_conditions(e, fmt, ins, limbs) and sum(out) != value:
             return False
+        if 'exact_flag' in e and outs[e['exact_flag']][0] != exact_conditions(e, fmt, ins, limbs):
+            return False     # the mask output is true exactly when the conditions hold
         if e['when'] == 'product_large' and not product_large(fmt, value):
             return True
         c = expr.evaluate(expr.parse(e['c']), {'u': fmt.u}) * fmt.u ** e['k']

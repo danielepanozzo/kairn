@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""The constructor of a BallVector (milestone2.md, "BallVector", "Values"), proposed in kernels/:
-bv_make_1.fold and bv_make_2.fold, with bv_center_entry_1, bv_center_2, bv_make_radius and
-bv_make_finish. The page says what a constructor returns and gives no listing:
+"""The constructor of a BallVector (milestone2.md, "BallVector", "Values"), proposed here first and
+in gen/kernels now: bv_make_1.fold and bv_make_2.fold, with bv_center_entry_1, bv_center_2,
+bv_make_radius and bv_make_finish, read from gen/kernels (the listings proposed here, with their
+claims). The page says what a constructor returns and gives no listing:
 
   "A value is canonical when it is a finite ball (every center finite, and normalized for two limbs;
    the radius finite and nonnegative) or the whole space: every center zero and the radius +inf.
@@ -27,13 +28,13 @@ import os
 import random
 import sys
 
-from common import HERE, KERNELS, NaN, NINF, PINF, ZERO, interp, ir, is_fin, normalized_pairs, num, val
+from common import KERNELS, ROOT, NaN, NINF, PINF, ZERO, interp, ir, is_fin, normalized_pairs, num, val
 
 
 def load_folds():
     folds = {}
     for fn in ('bv_make_1.fold', 'bv_make_2.fold'):
-        with open(os.path.join(HERE, 'kernels', fn), encoding='utf-8') as f:
+        with open(os.path.join(ROOT, 'gen', 'kernels', fn), encoding='utf-8') as f:
             fd = ir.parse_fold(f.read(), fn)
         folds[fd.name] = fd
     return ir.KernelSet(dict(KERNELS), folds=folds)

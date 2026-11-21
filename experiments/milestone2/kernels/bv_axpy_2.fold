@@ -1,0 +1,29 @@
+# Proposed (milestone2.md, "BallVector": bv_axpy_k, the radius
+# bv_add_radius_k(M, bv_scale_radius_k(M', rx, a), ry)). Not readable by the generator as it is: a ball
+# vector of gen/kernels records one maximum, of the centers written (architecture.md, "Ball vectors");
+# this one records two, of the centers written (M) and of the scaled centers (M'), the second output
+# of its step. bv_proposals.py runs it by composing its kernels with the interpreter, as the generated code
+# would, and finds it bit for bit the composition bv_add_2(bv_scale_2(X, a), Y) of two ball vectors of
+# gen/kernels: centers, radius and flag.
+fold:          bv_axpy_2
+arrays:        stored x = x0 x1, stored y = y0 y1
+scalars:       stored rx, stored ry, supplied a
+state:         m, mask ok, mp, mask okp
+step:          (z, p) = bv_axpy_step_2(x, y, a)
+record:        (m, ok) = norm_step_2(m, ok, z)
+record:        (mp, okp) = norm_step_2(mp, okp, p)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+combine:       (mp, okp) = norm_combine(mp, okp, mp, okp)
+radius:        rz = bv_axpy_radius_2(m, mp, rx, ry, a)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         a*x+y
+requires:      ball_vector x rx
+requires:      ball_vector y ry
+ensures:       encloses_entries z r a*x+y x=x,rx y=y,ry flag=finite finite_when=abs_le((abs(x)+rx)*a,-2);abs_le(abs(a*x+y)+abs(a)*rx+ry,-3) radii_when=abs_le(rx*a,-2);abs_le(abs(a)*rx+ry,-3)
+min_precision: 3
+status:        unverified
+domain:        extended

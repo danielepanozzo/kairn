@@ -3,6 +3,7 @@
 Each rule is a short traversal of the kernel's dataflow graph and refuses with a message that
 names the kernel, the value and the rule. Nothing is printed for any kernel while one is refused.
 """
+import re
 from fractions import Fraction
 
 from . import consts, cpp, expr, ieee, ir, rocq, simd
@@ -587,16 +588,25 @@ def claims(k, kernels):
         elif one and len(g.limbs) != 1:
             err(f'ensures {what} of {name!r}: the output must have one limb')
 
-    def exact_when(e, conds=None, zero=False):
+    mask_ins = {n for n, g in ins.items() if g.kind == ir.MASK}
+
+    def exact_when(e, conds=None, zero=False, mask=False):
         """The conditions of an exact_when: each EXPR = 0 or |EXPR| > K (or >= K), EXPR over the
         input names and their limbs, K an exact positive expression over u, eta and integers; and,
-        where `zero` (outward, and the outward tightness of an interval), EXPR = 0."""
+        where `zero` (outward, and the outward tightness of an interval), EXPR = 0; and, where `mask`
+        (an upper entry: the radius of the scaling of a BallVector), that a mask input is true."""
         conds = e.get('exact_when') if conds is None else conds
         if conds is None:
             return
         if not conds:
             err(f'ensures {e["kind"]}: exact_when needs at least one condition')
         for c in conds:
+            if set(c) == {ir.MASK_CONDITION}:
+                if not mask:
+                    err(f'exact_when {c!r}: mask(NAME) is a condition of an upper entry only')
+                elif c[ir.MASK_CONDITION] not in mask_ins:
+                    err(f'exact_when {c!r}: mask(NAME) names a mask input')
+                continue
             if set(c) == {ir.ZERO_CONDITION}:
                 if not zero:
                     err(f'exact_when {c!r}: zero(EXPR) is a condition of outward and of the outward tightness of '
@@ -735,6 +745,14 @@ def claims(k, kernels):
             elif k.extended:
                 err('requires format half: a requirement of the finite domain')
             continue
+        if req[0] == 'at_most':
+            # A one-limb input at most a positive integer (g of conv_radius, the exported bound of a
+            # dot product, which is at most 1 when it is given), in the finite domain.
+            if len(req) != 3 or req[1] not in one_limb_ins or not re.fullmatch(r'[1-9][0-9]*', req[2]):
+                err(f'requires {" ".join(req)!r}: "at_most INPUT K", a one-limb input and a positive integer')
+            elif k.extended:
+                err('requires at_most: a requirement of the finite domain')
+            continue
         n = REQUIRES.get(req[0])
         names = req[1:]
         if n is not None and len(names) == n and all(x in limb_ins for x in names):
@@ -784,6 +802,13 @@ def claims(k, kernels):
             if e['when'] is not None and e['when'] not in WHEN:
                 err(f'when={e["when"]!r}: the vocabulary is {", ".join(WHEN)}')
             exact_when(e)
+            if 'exact_flag' in e:
+                # The mask output that says whether the conditions of exact_when hold (the step of
+                # the scaling of a BallVector by a power of two), in the finite domain.
+                output(e['exact_flag'], 'error exact_flag', kind=ir.MASK)
+                if 'exact_when' not in e or k.extended:
+                    err('error exact_flag: the mask of the conditions of exact_when, which the entry has, in the '
+                        'finite domain')
         elif kind == 'rounded':
             output(e['of'], kind, one=True)
             if e['mode'] not in ROUNDING_MODES:
@@ -865,6 +890,17 @@ def claims(k, kernels):
                                      'upper value', CONSTANT_TREES | {'abs'})
             if 'if' in e and e['if'] not in mask_outs:
                 err(f'upper if={e["if"]}: the condition is a mask output')
+            # unless: the bound when a mask input is false; exact_when: the output is the value
+            # exactly when the conditions hold, one of them possibly a mask input (mask(NAME)). Of an
+            # entry with a value of its own and no other condition, in the finite domain.
+            if ('unless' in e or 'exact_when' in e) and ('value' not in e or 'if' in e or 'gaps' in e or k.extended):
+                err('upper unless= and exact_when=: of an entry with a value of its own, without if= or gaps=, in the '
+                    'finite domain')
+            if 'unless' in e and e['unless'] not in mask_ins:
+                err(f'upper unless={e["unless"]}: the condition is a mask input')
+            if 'unless' in e and 'exact_when' in e:
+                err('upper: unless= and exact_when= are two entries')
+            exact_when(e, mask=True)
         elif kind == 'holds':
             if e['rel'] not in RELATIONS:
                 err(f'holds relation {e["rel"]!r}: it is {", ".join(RELATIONS)}')
@@ -883,6 +919,14 @@ def claims(k, kernels):
                 err(f'finite_or_nan if={e["if"]}: the condition is a mask input')
             if 'steps' in e and (e['steps'] < 1 or g is None or len(g.limbs) != 1):
                 err(f'finite_or_nan steps={e["steps"]}: a number of steps up, at least 1, from a one-limb value')
+            if e.get('nonneg') and ('if' not in e or 'steps' in e or g is None or len(g.limbs) != 1):
+                err('finite_or_nan nonneg: the finish of a constructor, of a one-limb value under a mask (if=), '
+                    'without steps')
+            if 'if_all' in e and (len(set(e['if_all'])) != len(e['if_all']) or len(e['if_all']) < 2 or
+                                  any(n not in ins or ins[n].kind != ir.MASK for n in e['if_all']) or
+                                  set(e) & {'if', 'steps', 'nonneg'} or g is None or len(g.limbs) != 1):
+                err('finite_or_nan if_all: two mask inputs or more, distinct, of a one-limb value, without if, steps '
+                    'or nonneg (the finish of the product of two BallVectors)')
         elif kind == 'maximum':
             output(e['of'], kind, one=True)
             for a in e['args']:
@@ -1447,7 +1491,11 @@ def fold_names(fd):
         out += [f'{fd.name}_{s}' for s in ('conv', 'spec', 'correct', 'audit', 'check', 'ieee_spec', 'ieee_correct',
                                            'ieee_audit')]
     if fd.is_bv:
-        out += [f'{fd.name}_{s}' for s in ('map', 'record', 'radius', 'spec', 'correct', 'audit', 'end', 'packed_end')]
+        out += [f'{fd.name}_{s}' for s in ('map', 'record', 'radius', 'spec', 'correct', 'audit', 'end', 'packed_end',
+                                           'exact')]
+    if fd.is_bv_conv:
+        out += [f'{fd.name}_{s}' for s in ('conv', 'record', 'count', 'bound', 'ok', 'radius', 'spec', 'correct', 'audit', 'end',
+                                           'ieee_spec', 'ieee_correct', 'ieee_audit')]
     for order in fd.orders:
         base = f'{fd.name}_{ir.ORDER_SUFFIX.get(order, order)}'
         out += [base, f'{base}_spec', f'{base}_correct', f'{base}_audit', f'{base}_ieee_spec', f'{base}_ieee_correct',
@@ -1485,13 +1533,22 @@ def fold_rules(fd, kernels):
     # The state: a group of limbs; a map's, one mask; a fold of maxima's, a value of one limb and a
     # mask (FoldsOfMaxima below).
     shapes = [_shape(g) for g in fd.states]
+    if fd.is_bv_conv:
+        # The product of two BallVectors: the states of two folds of maxima, of the arrays read.
+        return errs + bv_conv_rules(fd, kernels, reserved)
     if fd.is_bv:
-        # A ball vector: the state of a fold of maxima, then its own rules.
-        if shapes != [(1, ir.LIMB), (1, ir.MASK)]:
+        # A ball vector: the state of a fold of maxima, and for one exact under conditions a mask of
+        # the exactness of every entry; then its own rules.
+        if shapes not in ([(1, ir.LIMB), (1, ir.MASK)], [(1, ir.LIMB), (1, ir.MASK), (1, ir.MASK)]):
             err('-', WELL_FORMED, 'the state of a ball vector is that of a fold of maxima: a limb and a mask '
-                                  '(state: m, mask ok)')
+                                  '(state: m, mask ok), and a mask of exactness for one exact under conditions '
+                                  '(state: m, mask ok, mask ex)')
             return errs
         return errs + bv_rules(fd, kernels, reserved)
+    if len(fd.records) > 1 or len(fd.combines) > 1:
+        err('-', WELL_FORMED, 'one record line and one combine line: only a ball vector exact under conditions has '
+                              'a second of each, the and of a mask into its state')
+        return errs
     writer = fd.is_map or fd.is_conv
     if not fd.states or (not writer and shapes != [(len(fd.state.limbs), ir.LIMB)] and
                          not (fd.is_max and shapes == [(1, ir.LIMB), (1, ir.MASK)])):
@@ -1695,7 +1752,10 @@ def bv_rules(fd, kernels, reserved):
         err('a ball vector writes one array of centers (writes: NAME = LIMB ...)')
         return errs
     written = fd.writes[0]
-    m, ok = fd.states
+    m, ok = fd.states[:2]
+    # A ball vector exact under conditions: the state's mask of exactness, and the name the step gives
+    # its mask (the second destination of the step line).
+    ex = fd.states[2] if len(fd.states) == 3 else None
     binders = fold_binders(fd)
     if len(set(binders)) < 3 or any(b in reserved | {'a', 'b'} for b in binders):
         err(f'the binders of the model, {", ".join(binders)} (the state, the arrays\' names joined, and that and s), '
@@ -1711,8 +1771,18 @@ def bv_rules(fd, kernels, reserved):
         err(f'step: {fd.step[0] if fd.step else "(none)"} is not a kernel')
         return errs
     _, args, dsts = fd.step
-    if dsts != (written.name,):
+    emask = None
+    if ex is None and dsts != (written.name,):
         err(f'step: it gives the center written, {written.name} = {step.name}(...), and takes no state')
+    if ex is not None:
+        # Exact under conditions: the step gives the center and the mask that its entry is exact.
+        emask = dsts[1] if len(dsts) == 2 else None
+        taken = {g.name for g in fd.arrays + fd.scalars + list(fd.states) + fd.outputs + fd.writes} | \
+            set(fd.write_limbs())
+        if len(dsts) != 2 or dsts[0] != written.name or emask in taken or emask in reserved or emask in kernels:
+            err(f'step: it gives the center written and a mask of a name of its own, ({written.name}, E) = '
+                f'{step.name}(...)')
+            emask = None
     if sorted(a for a in args if a in {g.name for g in fd.arrays}) != sorted(g.name for g in fd.arrays) or \
             len(set(args)) < len(args) or set(args) - set(groups_of):
         err('step: its arguments are every array once, and scalars')
@@ -1723,8 +1793,10 @@ def bv_rules(fd, kernels, reserved):
             if _shape(g) != _shape(groups_of[a]):
                 err(f'step: {step.name} takes {g.name} of {len(g.limbs)} limbs where the fold passes {a} of '
                     f'{len(groups_of[a].limbs)}', a)
-    if len(step.outputs) != 1 or _shape(step.outputs[0]) != _shape(written):
-        err(f'step: {step.name} returns one group of the shape of {written.name}')
+    want_out = [_shape(written)] + ([(1, ir.MASK)] if ex is not None else [])
+    if [_shape(g) for g in step.outputs] != want_out:
+        err(f'step: {step.name} returns one group of the shape of {written.name}' +
+            (', then a mask' if ex is not None else ''))
     if not step.real_model:
         err(f'step: {step.name} has no real-model statement, and the step is in the real model', rule=DOMAIN)
     # The record and the combination: the step and the combination of a fold of maxima of the set
@@ -1744,6 +1816,19 @@ def bv_rules(fd, kernels, reserved):
             fd.combine[1:] != (want_state + want_state, want_state):
         err(f'combine: ({m.name}, {ok.name}) = {h.combine[0]}({m.name}, {ok.name}, {m.name}, {ok.name}), the '
             f'combination of {h.name}')
+    # Exact under conditions: the step's mask and-ed into the state's mask of exactness, and two such
+    # masks and-ed (exact, associative and commutative, as a map's mask; true is its identity).
+    want_records = [fd.record] + ([('and', (ex.name, emask), (ex.name,))] if ex is not None else [])
+    want_combines = [fd.combine] + ([('and', (ex.name, ex.name), (ex.name,))] if ex is not None else [])
+    if ex is not None and emask is not None and fd.records[1:] != want_records[1:]:
+        err(f'record: {ex.name} = and({ex.name}, {emask}), the second record line: the mask of exactness of every '
+            'entry')
+    elif ex is None and len(fd.records) > 1:
+        err('record: one line, the step of a fold of maxima (a second, the and of a mask, only with the mask of '
+            'exactness in the state)')
+    if fd.combines[1:] != want_combines[1:]:
+        err(f'combine: {ex.name} = and({ex.name}, {ex.name}), the second combine line' if ex is not None else
+            'combine: one line, the combination of a fold of maxima')
     # The radius: a kernel with a real-model statement, on the state's limb and scalars, to one limb.
     radius = kernels.get(fd.radius[0]) if fd.radius else None
     if radius is None:
@@ -1754,29 +1839,39 @@ def bv_rules(fd, kernels, reserved):
             rname[0] in {g.name for g in fd.outputs + fd.writes} or rname[0] in fd.write_limbs() or \
             rname[0] in kernels or not ir.VALUE_NAME.match(rname[0]):
         err('radius: it gives one value of a name of its own, RZ = KERNEL(STATE LIMB, SCALAR, ...)')
-    if not fd.radius[1] or fd.radius[1][0] != m.name or set(fd.radius[1][1:]) - {g.name for g in fd.scalars} or \
+    lead = (m.name,) + ((ex.name,) if ex is not None else ())
+    if tuple(fd.radius[1][:len(lead)]) != lead or set(fd.radius[1][len(lead):]) - {g.name for g in fd.scalars} or \
             len(set(fd.radius[1])) < len(fd.radius[1]):
-        err(f'radius: its arguments are the state\'s limb {m.name}, then scalars, each once')
+        err(f'radius: its arguments are the state\'s limb {m.name}, ' +
+            (f'then its mask of exactness {ex.name}, ' if ex is not None else '') + 'then scalars, each once')
         return errs
-    if [_shape(g) for g in radius.inputs] != [(1, ir.LIMB)] + [_shape(groups_of[a]) for a in fd.radius[1][1:]] or \
+    if [_shape(g) for g in radius.inputs] != [(1, ir.LIMB)] + [(1, ir.MASK)] * (ex is not None) + \
+            [_shape(groups_of[a]) for a in fd.radius[1][len(lead):]] or \
             [_shape(g) for g in radius.outputs] != [(1, ir.LIMB)]:
-        err(f'radius: {radius.name} takes one limb for each argument and returns one')
+        err(f'radius: {radius.name} takes one limb for each argument' + (' (a mask for the mask)' if ex else '') +
+            ' and returns one')
     if not radius.real_model:
         err(f'radius: {radius.name} has no real-model statement, and the radius is in the real model', rule=DOMAIN)
+    if ex is not None and (fd.ensures and fd.ensures[0]['kind'] == 'makes_ball_vector'):
+        err('a constructor of a ball vector has no mask of exactness')
     used = set(args) | set(fd.radius[1])
     for g in fd.scalars:
         if g.name not in used:
             err(f'scalar {g.name}: neither the step nor the radius takes it', g.name)
     # The finish: the radius and the state's mask to the radius returned and the flag, finite_or_nan
-    # under that mask with no step (norm_finish_1).
+    # under that mask with no step (norm_finish_1); for a constructor, which is given a radius that may
+    # be negative, also the test of its sign (nonneg: bv_make_finish).
+    make = bool(fd.ensures) and fd.ensures[0]['kind'] == 'makes_ball_vector'
     finish = kernels.get(fd.finish[0]) if fd.finish else None
     fin = [e for e in finish.ensures if e['kind'] == 'finite_or_nan'] if finish else []
     if finish is None or [_shape(g) for g in finish.inputs] != [(1, ir.LIMB), (1, ir.MASK)] or \
             [_shape(g) for g in finish.outputs] != [(1, ir.LIMB), (1, ir.MASK)] or len(fin) != 1 or \
             fin[0].get('if') != finish.inputs[1].name or fin[0].get('steps', 0) != 0 or \
-            fin[0]['of'] != finish.outputs[0].name or fin[0]['flag'] != finish.outputs[1].name:
+            fin[0]['of'] != finish.outputs[0].name or fin[0]['flag'] != finish.outputs[1].name or \
+            bool(fin[0].get('nonneg')) != make:
         err('finish: a kernel of the radius and a mask to the radius and a flag, finite_or_nan under the mask with no '
-            'step (norm_finish_1)')
+            'step (norm_finish_1); for a constructor (makes_ball_vector), and only there, with nonneg '
+            '(bv_make_finish)')
     elif fd.finish[1] != (rname[0], ok.name):
         err(f'finish: (R, FLAG) = {finish.name}({rname[0]}, {ok.name}): the radius and the state\'s mask')
     if [_shape(g) for g in fd.outputs] != [(1, ir.LIMB), (1, ir.MASK)] or \
@@ -1786,8 +1881,60 @@ def bv_rules(fd, kernels, reserved):
         return errs
     errs += _map_r3(fd, step, kernels)
     errs += _bv_radius_r3(fd, radius, kernels)
-    errs += _bv_claims(fd, kernels, step, radius, h)
+    errs += (_bv_make_claims if make else _bv_claims)(fd, kernels, step, radius, h)
     errs += _fold_theorem(fd)
+    return errs
+
+
+def _bv_make_claims(fd, kernels, step, radius, host):
+    """The claims of a constructor of a BallVector (milestone2.md, "BallVector", "Values"): it reads one
+    array, the centers given, and one scalar, the radius the program supplies; its value is the array's
+    name, the step's value of what it passes; the centers are required canonical (two limbs) or any
+    value (one limb); it claims makes_ball_vector of the centers written, the radius and the flag, from
+    the array and the scalar."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', CLAIMS, msg))
+
+    if not fd.extended:
+        err('a constructor of a ball vector is of the extended domain: it may return the whole space')
+    if len(fd.arrays) != 1 or len(fd.scalars) != 1 or len(fd.scalars[0].limbs) != 1 or \
+            fd.roles[fd.scalars[0].name] != 'supplied':
+        err('a constructor reads one array, the centers given, and one scalar of one limb, the radius the program '
+            'supplies')
+        return errs
+    c, r = fd.arrays[0], fd.scalars[0]
+    written = fd.writes[0]
+    if fd.value != c.name:
+        err(f'value: the value of a center written is the center given, {c.name}')
+    elif step.value is None or _renamed(expr.parse(step.value), {g.name: a for a, g in zip(fd.step[1], step.inputs)}) \
+            != expr.parse(fd.value):
+        err(f'value {fd.value!r}: not the value of the step {step.name} of what the fold passes it')
+    want = [('canonical', c.name)] if len(c.limbs) > 1 else []
+    if [tuple(x) for x in fd.requires] != want:
+        err(f'requires: a constructor requires {"canonical " + c.name if want else "nothing"} of the centers given '
+            '(any value of the format for one limb)')
+    passed = dict(zip((g.name for g in step.inputs), fd.step[1]))
+    for x in step.requires:
+        if x[0] not in ('normalized', 'canonical') or passed.get(x[1]) != c.name or not want:
+            err(f'the step {step.name} requires {" ".join(x)}, which no requirement of the fold gives')
+    if radius.requires:
+        err(f'the radius {radius.name} of a constructor requires nothing: it is given any value')
+    if fd.radius[1] != (fd.states[0].name, r.name):
+        err(f'radius: RZ = {radius.name}({fd.states[0].name}, {r.name}), the largest magnitude and the radius given')
+    outs = [g.name for g in fd.outputs]
+    want_e = {'kind': 'makes_ball_vector', 'center': written.name, 'radius': outs[0], 'flag': outs[1],
+              'from': {'center': c.name, 'radius': r.name}}
+    if fd.ensures != [want_e]:
+        err(f'ensures: a constructor claims makes_ball_vector {written.name} {outs[0]} from={c.name},{r.name} '
+            f'flag={outs[1]}, and nothing else')
+    if fd.min_precision is None or fd.min_precision < 1:
+        err('min_precision: an integer, at least 1')
+    else:
+        for k in (step, radius, kernels[host.step[0]], kernels[fd.finish[0]]):
+            if (k.min_precision or 1) > fd.min_precision:
+                err(f'min_precision {fd.min_precision}: the claims of {k.name} hold from precision {k.min_precision} on')
     return errs
 
 
@@ -1812,6 +1959,88 @@ def _bv_radius_r3(fd, radius, kernels):
         errs.append(RuleError(fd.name, sorted(origins)[0], RULE_R3,
                               f'a limb the program supplies reaches {where} in the radius {radius.name} without '
                               'passing through guard'))
+    return errs
+
+
+def _renamed_all(tree, rename):
+    """An expression tree with its names renamed, the groups of its limbs NAME[I] too."""
+    if isinstance(tree, tuple):
+        if tree and tree[0] == 'name':
+            return ('name', rename.get(tree[1], tree[1]))
+        if tree and tree[0] == 'limb':
+            return ('limb', rename.get(tree[1], tree[1])) + tuple(tree[2:])
+        return tuple(_renamed_all(t, rename) for t in tree)
+    return tree
+
+
+def _condition_key(c, rename):
+    """A condition of exact_when as a comparable value: its kind, its expression renamed, its threshold."""
+    kind = next(x for x in ir.EXACT_CONDITIONS if x in c)
+    return kind, _renamed_all(expr.parse(c[kind]), rename), expr.parse(c['than'])
+
+
+def _bv_exact(fd, kernels, step, radius, e, arrays, scalars):
+    """The exactness of a ball vector under conditions (bv_mul_pow2_k; architecture.md, "Claims of
+    Milestone 2", ball vectors): its exact_when lists conditions of an entry (EXPR names an array) and of
+    the scalars (EXPR names scalars only), each EXPR = 0 or |EXPR| > K (>= K) over the arrays' names and
+    limbs and the scalars' names. The fold has the state's mask of exactness (exact_mask); the conditions
+    of an entry are those of the exact_when of the step's error entry whose exact_flag is the step's mask
+    (renamed to what the fold passes), and those of the scalars are those of the exact_when of the radius
+    kernel's upper entry that names its mask input as a condition, mask(EX), the others renamed. So the
+    step's claim says that its mask is true exactly when an entry's conditions hold, and the radius
+    kernel's that it is its value (c rx) when the mask and the scalars' conditions hold."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', CLAIMS, msg))
+
+    conds = e.get('exact_when')
+    if not conds:
+        if fd.exact_mask is not None:
+            err('state: a mask of exactness is for a ball vector exact under conditions (exact_when=CONDITIONS)')
+        return errs
+    if fd.exact_mask is None:
+        err('encloses_entries exact_when: conditions need the mask of exactness in the state (state: m, mask ok, '
+            'mask EX) and from the step')
+        return errs
+    entry, scalar = [], []
+    for c in conds:
+        keys = set(c) - {'than'}
+        if 'than' not in c or len(keys) != 1 or not keys <= set(ir.EXACT_CONDITIONS):
+            err(f'encloses_entries exact_when {c!r}: a condition is zero_or_abs_gt(EXPR,K) or zero_or_abs_ge(EXPR,K)')
+            continue
+        try:
+            tree, bound = expr.parse(c[next(iter(keys))]), expr.parse(c['than'])
+        except expr.ExprError as x:
+            err(f'encloses_entries exact_when: {x}')
+            continue
+        names = expr.names(tree)
+        if names - set(arrays) - set(scalars) or not _only(tree, EXACT_TREES) or \
+                any(g not in arrays or i >= len(arrays[g].limbs) for g, i in expr.limbs(tree)):
+            err(f'encloses_entries exact_when {c!r}: an expression of the arrays\' names and limbs and the scalars\' '
+                'names')
+            continue
+        if expr.names(bound) - {'u', 'eta'} or not _only(bound, THRESHOLD_TREES):
+            err(f'encloses_entries exact_when {c!r}: the threshold is an exact expression over u, eta and integers')
+            continue
+        (entry if names & set(arrays) else scalar).append(c)
+    if errs:
+        return errs
+    mask = step.outputs[1].name if len(step.outputs) == 2 else None
+    flagged = [x for x in step.ensures if x['kind'] == 'error' and x.get('exact_flag') == mask and mask]
+    srename = {g.name: a for g, a in zip(step.inputs, fd.step[1])}
+    if len(flagged) != 1 or sorted((_condition_key(c, srename) for c in flagged[0].get('exact_when', [])), key=repr) != \
+            sorted((_condition_key(c, {}) for c in entry), key=repr):
+        err(f'encloses_entries exact_when: the conditions of an entry are those of the error entry of the step '
+            f'{step.name} whose exact_flag is its mask {mask}, renamed to what the fold passes')
+    rmask = radius.inputs[1].name if len(radius.inputs) > 1 and radius.inputs[1].kind == ir.MASK else None
+    rrename = {g.name: a for g, a in zip(radius.inputs, fd.radius[1])}
+    exacts = [x for x in radius.ensures if x['kind'] == 'upper' and {ir.MASK_CONDITION: rmask} in x.get('exact_when', [])]
+    if len(exacts) != 1 or sorted((_condition_key(c, rrename) for c in exacts[0]['exact_when']
+                                   if ir.MASK_CONDITION not in c), key=repr) != \
+            sorted((_condition_key(c, {}) for c in scalar), key=repr):
+        err(f'encloses_entries exact_when: the conditions of the scalars are those of the upper entry of the radius '
+            f'{radius.name} whose exact_when holds mask({rmask}), the others renamed to what the fold passes')
     return errs
 
 
@@ -1844,30 +2073,45 @@ def _bv_claims(fd, kernels, step, radius, host):
         rename = {g.name: a for a, g in zip(fd.step[1], step.inputs)}
         if _renamed(expr.parse(step.value), rename) != tree:
             err(f'value {fd.value!r}: not the value of the step {step.name}, {step.value}, of what the fold passes it')
-    vectors = {}
+    vectors, pow2 = {}, set()
     for r in fd.requires:
         if r[0] == 'ball_vector' and len(r) == 3 and r[1] in arrays and r[2] in scalars and \
                 len(scalars[r[2]].limbs) == 1 and fd.roles[r[2]] == 'stored' and r[1] not in vectors and \
                 r[2] not in vectors.values():
             vectors[r[1]] = r[2]
             continue
+        if r[0] == 'power_of_two' and len(r) == 2 and r[1] in scalars and len(scalars[r[1]].limbs) == 1 and \
+                fd.roles[r[1]] == 'supplied' and r[1] not in pow2:
+            # A scalar the program supplies that is a positive power of two (bv_mul_pow2_k), as for a map.
+            pow2.add(r[1])
+            continue
         err(f'requires {" ".join(r)!r}: a ball vector requires "ball_vector ARRAY RADIUS", each array once with a '
-            'stored scalar of one limb, its radius')
+            'stored scalar of one limb, its radius, and "power_of_two SCALAR" of a scalar of one limb the program '
+            'supplies')
     if set(vectors) != set(arrays):
         err('requires: every array is the centers of a BallVector, ball_vector ARRAY RADIUS')
     radii = set(vectors.values())
+    if pow2 & radii:
+        err('requires: a radius is not a power of two')
+    masks = {g.name for g in fd.states[2:]}
     for a in fd.radius[1][1:]:
-        if a not in radii and fd.roles[a] != 'supplied':
+        if a not in masks and a not in radii and fd.roles[a] != 'supplied':
             err(f'radius: {a} is neither the radius of an operand nor a scalar the program supplies')
-    # The step's requirements are what a canonical BallVector gives: a normalized center (two limbs).
+    # The step's requirements are what a canonical BallVector gives: a normalized center (two limbs);
+    # and the scalars' requirements (power_of_two).
     passed = dict(zip((g.name for g in step.inputs), fd.step[1]))
     for r in step.requires:
-        if r[0] != 'normalized' or passed.get(r[1]) not in vectors:
+        # canonical: a step of the extended domain with a real-model statement (neg_2), where it is
+        # normalized; a finite center of a canonical BallVector is either.
+        if not ((r[0] in ('normalized', 'canonical') and passed.get(r[1]) in vectors) or
+                (r[0] == 'power_of_two' and passed.get(r[1]) in pow2)):
             err(f'the step {step.name} requires {" ".join(r)}, which no requirement of the fold gives')
     rpassed = dict(zip((g.name for g in radius.inputs), fd.radius[1]))
     for r in radius.requires:
-        if r[0] != 'nonneg' or (r[1] != radius.inputs[0].name and rpassed.get(r[1]) not in radii):
-            err(f'the radius {radius.name} requires {" ".join(r)}: of the largest magnitude and of the radii only')
+        if not ((r[0] == 'nonneg' and (r[1] == radius.inputs[0].name or rpassed.get(r[1]) in radii)) or
+                (r[0] == 'power_of_two' and rpassed.get(r[1]) in pow2)):
+            err(f'the radius {radius.name} requires {" ".join(r)}: of the largest magnitude and of the radii only '
+                '(nonneg), and of a scalar the fold requires power_of_two')
     if len(fd.ensures) != 1 or fd.ensures[0]['kind'] != 'encloses_entries':
         err('ensures: a ball vector claims one encloses_entries, of the centers written, its radius and its flag')
         return errs
@@ -1890,12 +2134,69 @@ def _bv_claims(fd, kernels, step, radius, host):
                 err(f'finite_when {c["abs_le"]!r}: an expression of the arrays\' and the scalars\' names')
         except expr.ExprError as x:
             err(f'finite_when: {x}')
+    # V4 is a statement of every length: with no entry, finite_when says nothing, and the radius,
+    # computed from the radii alone, can overflow; radii_when is the radii's own condition, over the
+    # scalars only, which finite_when at any entry implies (the tests check both, in exact arithmetic).
+    if bool(e['finite_when']) != bool(e.get('radii_when')):
+        err('encloses_entries: finite_when and radii_when come together (V4 for every length, the empty vector '
+            'included, needs the condition on the radii alone)')
+    for c in e.get('radii_when', []):
+        try:
+            ctree = expr.parse(c['abs_le'])
+            if expr.names(ctree) - set(scalars) or not _only(ctree, VALUE_TREES):
+                err(f'radii_when {c["abs_le"]!r}: an expression of the scalars\' names only')
+        except expr.ExprError as x:
+            err(f'radii_when: {x}')
+    # exact_when: the result is exactly the set, entry by entry: always (the empty list, the word
+    # exact: bv_neg_k), or under conditions (bv_mul_pow2_k), those of every entry and of the scalars,
+    # which must be the conditions under which the step's mask is true and the radius is its value.
+    errs += _bv_exact(fd, kernels, step, radius, e, arrays, scalars)
     if fd.min_precision is None or fd.min_precision < 1:
         err('min_precision: an integer, at least 1')
     else:
         for k in (step, radius, kernels[host.step[0]]):
             if (k.min_precision or 1) > fd.min_precision:
                 err(f'min_precision {fd.min_precision}: the claims of {k.name} hold from precision {k.min_precision} on')
+        parts = [step, kernels[host.step[0]], radius] + ([kernels[fd.finish[0]]] if fd.finish else [])
+        errs += _finite_from(fd, e, kernels, parts)
+    return errs
+
+
+def _finite_from(fd, e, kernels, parts):
+    """The precision from which V4 is claimed: finite_from when the claim says it, which is then above the
+    fold's minimum precision and comes with finite_when; otherwise the minimum precision. V4 promises a
+    finite result, so from that precision on every constant of the fold's kernels (PARTS, their callees
+    included) must be a finite number of the smallest format the statement admits: that precision, with
+    emax = prec + 1 (binary_float asks prec < emax), qmin = 2 - 2 prec, qmax = 1. A constant that
+    overflows there (bv_add_radius_1's up((1+u)^3) at precision 1: 27/8 rounded up is 4 = 2^emax) makes
+    the radius +infinity or a NaN whatever the operands: V1 to V3 still hold (the whole space), V4 not."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', CLAIMS, msg))
+
+    if 'finite_from' in e:
+        if not e['finite_when']:
+            err('finite_from: the precision from which V4 is claimed, which needs finite_when')
+            return errs
+        if fd.min_precision is not None and e['finite_from'] <= fd.min_precision:
+            err(f'finite_from={e["finite_from"]}: above the minimum precision {fd.min_precision} (at or below it, '
+                'leave it out)')
+            return errs
+    if not e['finite_when'] or fd.min_precision is None:
+        return errs
+    p = e.get('finite_from', fd.min_precision)
+    names = set()
+    for k in parts:
+        for prim in ir.prims(k, kernels):
+            names |= {a.name for a in prim.args if a.const}
+    for c in sorted(names - {ir.ZERO, 'inf', 'nan'}):
+        try:
+            consts.value(c, kernels, p, 2 - 2 * p, 1)
+        except consts.ConstError as x:
+            err(f'V4 is claimed from precision {p}, but in the smallest format of that precision (emax {p + 1}) {x}: '
+                'claim it from a precision where every constant of the fold is finite (finite_from=P)')
+            break
     return errs
 
 
@@ -1965,6 +2266,228 @@ def conv_rules(fd, kernels, reserved):
     if fd.min_precision is None or fd.min_precision < (cf.min_precision or 1):
         err(f'min_precision: at least that of {cf.name}, {cf.min_precision}', CLAIMS)
     errs += _fold_theorem(fd)
+    return errs
+
+
+# --- The product of two BallVectors ------------------------------------------------------------------
+#
+# The product of two polynomials whose coefficients are BallVectors (architecture.md, "Ball vectors";
+# milestone2.md, "The product of polynomials"): the convolution `centers` of the centers, its mask
+# included; the maxima of the operands' centers, by two records, the steps of folds of maxima, one on
+# each array read; the count min(n_x, n_y) as a number of T; the kernel of the bound of dot for that
+# many terms, on the count; the radius kernel on the maxima, the radii, the count and the bound; and
+# the finish on the radius, the convolution's mask and the bound's. When the finish's flag is false,
+# every coefficient written is zero and the radius +infinity, the whole space.
+BV_CONV_ENSURES = ('encloses_coefficients',)
+# The name of the count in the conditions of V4 (finite_when, count_when): n = min(n_x, n_y), an integer.
+COUNT_NAME = 'n'
+
+
+def bv_conv_rules(fd, kernels, reserved):
+    """Every refusal of one product of two BallVectors, after the names (fold_rules)."""
+    errs = []
+
+    def err(msg, rule=WELL_FORMED):
+        errs.append(RuleError(fd.name, '-', rule, msg))
+
+    folds = getattr(kernels, 'folds', {})
+    conv = folds.get(fd.centers)
+    if conv is None or not conv.is_conv:
+        err(f'centers: {fd.centers} is not a convolution (a fold with coefficients:)')
+        return errs
+    cf = folds[conv.coefficients]
+    if fd.step is not None or fd.coefficients is not None or fd.check is not None or fd.combine is not None:
+        err(f'the product of two BallVectors has no step, coefficients, check or combination of its own: its centers '
+            f'are those of {conv.name}')
+    if fd.orders != ('sequential',):
+        err(f'orders: sequential, the order of {conv.name}')
+    if [(g.name, g.limbs) for g in fd.arrays] != [(g.name, g.limbs) for g in conv.arrays] or \
+            any(fd.roles[g.name] != 'stored' for g in fd.arrays):
+        err(f'arrays: those of {conv.name}, names and limbs, stored (the centers of BallVectors)')
+        return errs
+    if [(g.name, g.limbs) for g in fd.writes] != [(g.name, g.limbs) for g in conv.writes]:
+        err(f'writes: the array {conv.name} writes')
+    if [_shape(g) for g in fd.states] != [(1, ir.LIMB), (1, ir.MASK)] * 2:
+        err('state: those of two folds of maxima, one of each array read (state: ma, mask oka, mb, mask okb)')
+        return errs
+    names = fd.state_names()
+    host = []
+    for i, (g, rec) in enumerate(zip(fd.arrays, fd.records)):
+        want = (names[2 * i], names[2 * i + 1])
+        hs = [h for h in folds.values() if h.is_max and h.step and h.step[0] == rec[0] and
+              _shape(h.arrays[0]) == _shape(g)]
+        if not hs or rec[1:] != (want + (g.name,), want):
+            err(f'record: ({want[0]}, {want[1]}) = NORM_STEP({want[0]}, {want[1]}, {g.name}), the step of a fold of '
+                f'maxima of an array of the shape of {g.name}, in the order of the arrays')
+        else:
+            host.append(hs[0])
+    if len(fd.records) != 2:
+        err('record: two lines, the maxima of the centers of each operand')
+    elif fd.records[0][0] != fd.records[1][0]:
+        # The models have one F_record, of both operands (rocq.bv_conv_model, ieee.bv_conv_model).
+        err('record: the same step of a fold of maxima for both operands')
+    if errs:
+        return errs
+    # The count, the bound, the radius, the finish: names of their own.
+    taken = {g.name for g in fd.arrays + fd.scalars + list(fd.states) + fd.outputs + fd.writes} | \
+        set(fd.write_limbs()) | {conv.state.name} | {g.name for g in cf.states} | set(cf.state_limbs())
+    bound = kernels.get(fd.bound[0]) if fd.bound else None
+    radius = kernels.get(fd.radius[0]) if fd.radius else None
+    finish = kernels.get(fd.finish[0]) if fd.finish else None
+    if not fd.count or bound is None or radius is None or finish is None:
+        err('count:, bound:, radius: and finish: name a count, and kernels')
+        return errs
+    own = [fd.count] + list(fd.bound[2]) + list(fd.radius[2])
+    if len(set(own)) < len(own) or set(own) & (taken | reserved | set(kernels)) or \
+            not all(ir.VALUE_NAME.match(n) for n in own):
+        err('count:, bound: and radius: give values of names of their own')
+    # The bound of dot for the count: one limb in, g and t and a mask out, the claims of bound_dot_k
+    # (holds and upper under its mask), covering the products of the fold of the coefficients (unit and tiny
+    # of its kernel at least the term, or eps, and the tau of that fold's fold_error).
+    if [_shape(g) for g in bound.inputs] != [(1, ir.LIMB)] or \
+            [_shape(g) for g in bound.outputs] != [(1, ir.LIMB), (1, ir.LIMB), (1, ir.MASK)] or \
+            fd.bound[1] != (fd.count,) or ('count', bound.inputs[0].name) not in bound.requires:
+        err(f'bound: (G, T, OK) = {bound.name}({fd.count}): a kernel of the count, required count, to two limbs and '
+            'a mask')
+        return errs
+    errs += _bv_conv_bound(fd, bound, cf, kernels)
+    # The radius: the maxima, the radii, the count and the bound's limbs, each once, to one limb.
+    allowed = {names[0], names[2], fd.count, fd.bound[2][0], fd.bound[2][1]} | {g.name for g in fd.scalars}
+    if len(fd.radius[2]) != 1 or set(fd.radius[1]) - allowed or len(set(fd.radius[1])) < len(fd.radius[1]) or \
+            [_shape(g) for g in radius.inputs] != [(1, ir.LIMB)] * len(fd.radius[1]) or \
+            [_shape(g) for g in radius.outputs] != [(1, ir.LIMB)]:
+        err(f'radius: RZ = {radius.name}(...) on the maxima, the radii, the count and the bound\'s two limbs, each '
+            'once, to one limb')
+    if not radius.real_model:
+        err(f'radius: {radius.name} has no real-model statement, and the radius is in the real model', rule=DOMAIN)
+    used = set(fd.radius[1])
+    for g in fd.scalars:
+        if g.name not in used or len(g.limbs) != 1 or fd.roles[g.name] != 'stored':
+            err(f'scalar {g.name}: a radius, stored, of one limb, which the radius takes', g.name)
+    # The finish: the radius, the convolution's mask and the bound's, to the radius returned and the flag,
+    # finite_or_nan under the two masks (if_all), with no step.
+    fin = [e for e in finish.ensures if e['kind'] == 'finite_or_nan']
+    if [_shape(g) for g in finish.inputs] != [(1, ir.LIMB), (1, ir.MASK), (1, ir.MASK)] or \
+            [_shape(g) for g in finish.outputs] != [(1, ir.LIMB), (1, ir.MASK)] or len(fin) != 1 or \
+            fin[0].get('if_all') != [finish.inputs[1].name, finish.inputs[2].name] or \
+            fd.finish[1] != (fd.radius[2][0], conv.state.name, fd.bound[2][2]) or \
+            fd.finish[2] != tuple(g.name for g in fd.outputs) or \
+            [_shape(g) for g in fd.outputs] != [(1, ir.LIMB), (1, ir.MASK)]:
+        err(f'finish: (R, FLAG) = {finish.name}(RZ, {conv.state.name}, OK), the radius, the mask of {conv.name} and '
+            'the bound\'s, claiming finite_or_nan under both (if_all); the outputs the radius and the flag')
+    if errs:
+        return errs
+    errs += _bv_radius_r3(fd, radius, kernels)
+    errs += _bv_conv_claims(fd, kernels, conv, [radius, finish, bound] + [kernels[h.step[0]] for h in host])
+    if not errs and fd.ensures and fd.ensures[0].get('kind') == 'encloses_coefficients':
+        # V4 from its precision: the constants of every part, the coefficients' step and check included.
+        parts = [radius, finish, bound, kernels[cf.step[0]]] + [kernels[h.step[0]] for h in host] + \
+            ([kernels[conv.check]] if conv.check in kernels else [])
+        errs += _finite_from(fd, fd.ensures[0], kernels, parts)
+    errs += _fold_theorem(fd)
+    return errs
+
+
+def _bv_conv_bound(fd, bound, cf, kernels):
+    """The bound kernel covers the fold of the coefficients: unit(X) and tiny(X) of its upper entries are
+    at least the constants of that fold's fold_error (term, or eps when term is 0, and tau), in binary64
+    and binary32. Its g and t grow with both, so a bound of larger constants still bounds the error of
+    every coefficient; equal constants are the bound of exactly that fold (bound_dot_k for dot_k)."""
+    e = next((x for x in cf.ensures if x['kind'] == 'fold_error'), None)
+    calls = set()
+    for x in bound.ensures:
+        for key in ('value',) if x['kind'] == 'upper' else ('args',) if x['kind'] == 'holds' else ():
+            for text in ([x[key]] if key == 'value' else x[key]):
+                calls |= {kname for _, kname in expr.calls(expr.parse(text))}
+    if e is None or len(calls) != 1:
+        return [RuleError(fd.name, '-', CLAIMS, f'bound: {bound.name} claims a bound of one kernel\'s products, and '
+                                                f'the fold of the coefficients a fold_error')]
+    x = calls.pop()
+    unit = e['term'] if e['term'] != '0' else e['eps']
+    for p, qmin in ((53, -1074), (24, -149)):
+        try:
+            ours = [consts.evaluate(expr.parse(f'{fn}({x})'), kernels, p, qmin) for fn in ('unit', 'tiny')]
+            theirs = [consts.evaluate(expr.parse(t), kernels, p, qmin) for t in (unit, e['tau'])]
+        except (expr.ExprError, consts.ConstError) as err:
+            return [RuleError(fd.name, '-', CLAIMS, f'bound: {err}')]
+        if any(o < t for o, t in zip(ours, theirs)):
+            return [RuleError(fd.name, '-', CLAIMS, f'bound: {bound.name} bounds the products of {x}, whose unit and '
+                                                    f'tiny are below the term and tau of the fold of the coefficients '
+                                                    f'{cf.name}')]
+    return []
+
+
+def _bv_conv_claims(fd, kernels, conv, parts):
+    """The claims of the product of two BallVectors (architecture.md, "Claims of Milestone 2"): its value
+    and requirements those of the convolution, each array required ball_vector with its radius; one
+    encloses_coefficients of the coefficients written, the radius and the flag, over that value, one ball
+    name per array; finite_when over the arrays' names, the scalars' and the count n; radii_when over the
+    scalars alone, present exactly when finite_when is; count_when over n and the constants of the
+    format; the extended domain; the minimum precision."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', CLAIMS, msg))
+
+    arrays = {g.name: g for g in fd.arrays}
+    scalars = {g.name: g for g in fd.scalars}
+    if not fd.extended:
+        err('the product of two BallVectors is of the extended domain: its result may be the whole space')
+    if fd.value != conv.value:
+        err(f'value {fd.value!r}: that of a term of {conv.name}, {conv.value}')
+    vectors = {}
+    for r in fd.requires:
+        if r[0] == 'ball_vector' and len(r) == 3 and r[1] in arrays and r[2] in scalars and r[1] not in vectors and \
+                r[2] not in vectors.values():
+            vectors[r[1]] = r[2]
+            continue
+        err(f'requires {" ".join(r)!r}: the product requires "ball_vector ARRAY RADIUS", each array once')
+    if set(vectors) != set(arrays):
+        err('requires: every array is the centers of a BallVector, ball_vector ARRAY RADIUS')
+    if len(fd.ensures) != 1 or fd.ensures[0]['kind'] != 'encloses_coefficients':
+        err('ensures: one encloses_coefficients, of the coefficients written, its radius and its flag')
+        return errs
+    e = fd.ensures[0]
+    outs = [g.name for g in fd.outputs]
+    if (e['center'], e['radius'], e['flag']) != (fd.writes[0].name, outs[0], outs[1]):
+        err(f'encloses_coefficients: the center is {fd.writes[0].name}, the radius {outs[0]} and the flag {outs[1]}')
+    if set(e['balls']) != set(vectors) or any((v['center'], v['radius']) != (b, vectors.get(b))
+                                              for b, v in e['balls'].items()):
+        err('encloses_coefficients: one ball name per array, the name of the array, with its radius (x=x,rx)')
+    try:
+        if expr.parse(e['set']) != expr.parse(fd.value):
+            err(f'encloses_coefficients: the set {e["set"]!r} is the value of the fold, {fd.value}')
+    except expr.ExprError as x:
+        err(f'encloses_coefficients set: {x}')
+    for key, allowed in (('finite_when', set(arrays) | set(scalars) | {COUNT_NAME}), ('radii_when', set(scalars))):
+        for c in e.get(key, []):
+            try:
+                ctree = expr.parse(c['abs_le'])
+                if expr.names(ctree) - allowed or not _only(ctree, VALUE_TREES):
+                    err(f'{key} {c["abs_le"]!r}: an expression of ' +
+                        ("the arrays' names, the scalars' and the count n" if key == 'finite_when' else
+                         "the scalars' names only"))
+            except expr.ExprError as x:
+                err(f'{key}: {x}')
+    if bool(e['finite_when']) != bool(e.get('radii_when')):
+        err('encloses_coefficients: finite_when and radii_when come together (V4 for every length, an empty operand '
+            'included)')
+    if bool(e['finite_when']) != bool(e.get('count_when')):
+        err('encloses_coefficients: count_when comes with finite_when (V4 needs the bound of dot for n terms)')
+    for c in e.get('count_when', []):
+        try:
+            tree = expr.parse(c['le'])
+            if expr.names(tree) - {COUNT_NAME, 'u', 'eta'} or not _only(tree, CONSTANT_TREES) or \
+                    any(kname not in kernels for _, kname in expr.calls(tree)):
+                err(f'count_when {c["le"]!r}: an expression of the count n, u, eta, unit(K) and tiny(K)')
+            bound = expr.parse(c['than'])
+            if expr.names(bound) or not expr.evaluate(bound, {}) > 0:
+                err(f'count_when than={c["than"]!r}: a positive rational')
+        except (expr.ExprError, consts.ConstError) as x:
+            err(f'count_when: {x}')
+    if fd.min_precision is None or fd.min_precision < (conv.min_precision or 1) or \
+            any((k.min_precision or 1) > fd.min_precision for k in parts):
+        err(f'min_precision: at least that of {conv.name} and of every part')
     return errs
 
 

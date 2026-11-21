@@ -1,0 +1,16 @@
+# Proposed (milestone2.md, "BallVector": bv_axpy_k): the step of bv_axpy_2, a x + y with a of T, the
+# operations of axpy_step_2_1 (mul_2_1, then add_2_2), returning the scaled center p as a second
+# output, whose largest leading magnitude is the M' of the page's radius
+# bv_add_radius_2(M, bv_scale_radius_2(M', rx, a), ry). A ball vector of gen/kernels records one
+# maximum, of the centers written; this one records two (bv_proposals.py checks it).
+kernel:        bv_axpy_step_2
+input:         x = x0 x1
+input:         y = y0 y1
+input:         a
+output:        z = z0 z1
+output:        p = p0 p1
+status:        unverified
+entry:         yes
+
+(p0, p1) = mul_2_1(x0, x1, a)
+(z0, z1) = add_2_2(p0, p1, y0, y1)

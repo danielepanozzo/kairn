@@ -501,6 +501,20 @@ domain:        extended
   So the step is the combination of the state and of a function of the element, and the
   combination is associative, commutative and idempotent on every state: every order computes
   the same final state.
+- **The masks of the combination and of the step are claimed by nothing.** Their outputs `okr` are
+  the `and` of the incoming masks (`norm_combine`) and that and "the element's leading limb is not a
+  NaN" (`norm_step_k`), and no kind of the vocabulary says that of a mask: `predicate` is a relation
+  between the exact values of two expressions, false for a NaN operand, and a mask input is no value.
+  The entries of `gen/claims.json` for these two kernels have only `maximum` of the limb. It is
+  safe: the masks are only ever combined and given to a finish, and what comes out of the finish is
+  claimed (`finite_or_nan` with `if=ok` of `norm_finish_k`, `upper r max` and `finite_or_nan` of the
+  fold, `encloses_entries` of a ball vector), so a wrong mask makes a claim of the fold or of the
+  ball vector false wherever it matters (a NaN element whose mask stayed true gives a finite result
+  from a NaN element, which the fold's reading forbids). And the generator checks the definitions by
+  rule (`rules.max_rules`: the operation that defines the combination's mask is the `and` of its two
+  masks, and the step is the combination on the state and on `(abs(x0), eq(abs(x0), abs(x0)))`, its
+  listing with its calls inlined). A reader that judges these kernels alone can judge the limb, and
+  may check the masks against that definition as a test of its own, not as a claim.
 - **The finish** returns the limb when the mask is true and its result is finite, stepped up
   `steps` times: `norm_finish_1` returns $m$, `norm_finish_2` returns $\mathrm{succ}(m)$, which is
   above every element (a normalized pair is strictly between the neighbors of its leading limb,
@@ -584,6 +598,42 @@ finite result whose value is that $r$ of the real model on the values of the ele
 claims; a false flag, a NaN. The steps and the combination of a fold of maxima have no lead
 statement (`K_ieee_lead_spec`): their maximum keeps a finite state when the element is a NaN, so
 the statement would be false of them, and the mask says it instead.
+
+Two more statements of the IEEE model, for each fold of maxima of both orders (`ieee.max_orders_statement`,
+`ieee.max_flag_statement`), with no requirement on the elements (any value, NaNs and infinities
+included) and for every precision: `F_orders_ieee_spec`, that the lane order computes the state of the
+sequential order, for every number of lanes $W$ (so its finish gives the same result and the same flag),
+
+```coq
+Definition norm_upper_2_orders_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax),
+  forall (W : nat) (xs : list (binary_float prec emax * binary_float prec emax)),
+  fold_lanes (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeFoldModel.norm_upper_2_combine prec emax) (IeeeOperations.pzero prec emax, true) W xs =
+  fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs.
+```
+
+and `F_flag_ieee_spec`, when exactly the flag of the sequential order is true: when the leading limb
+of every element is finite and the largest magnitude, the limb of the final state stepped up as the
+finish does (`steps` of its `finite_or_nan`), is finite; with no step (`norm_upper_1`), when every
+element is finite:
+
+```coq
+Definition norm_upper_2_flag_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall xs : list (binary_float prec emax * binary_float prec emax),
+  snd (IeeeFoldModel.norm_upper_2_seq prec emax nan_abs nan_const xs) = true <->
+  Forall (fun x => finite (fst x)) xs /\
+  finite (IeeeOperations.succ prec emax (fst (fold_seq (IeeeFoldModel.norm_upper_2_step prec emax nan_abs) (IeeeOperations.pzero prec emax, true) xs))).
+```
+
+Both are unverified until a proof is pointed at them: they are the types of the hand-written
+theorems of these facts (`norm_upper_k_lanes_seq_state`, `norm_upper_k_seq_ieee_flag`) once their
+section's variables are bound, so that those theorems can prove generated statements rather than
+statements of their own. No audit lists them yet.
 
 ### Convolutions
 
@@ -722,6 +772,14 @@ generator's tests check that list against the definition on every pair of length
 `test_conv.Printers.test_conv_terms_is_the_terms`). The statements of a convolution and of a map in
 the IEEE model are below ([In the IEEE model](#maps-and-convolutions-in-the-ieee-model)).
 
+`FoldStatements.v` states three of these facts about `conv_terms` itself, after the folds, when there
+is a convolution or a product of BallVectors (`rocq.conv_terms_statements`), with the types of the
+lemmas of `FoldConv.v` so that they can prove them: `conv_terms_eq_spec` (the list is `map (fun i =>
+(nth i xs a, nth (j - i)%nat ys b)) (seq (j - (length ys - 1))%nat (length (conv_terms xs ys j)))`),
+`conv_terms_count_spec` (with at least one $y$, coefficient $j$ has $\min(j + 1, n_x) - (j - (n_y -
+1))$ terms, a subtraction of natural numbers) and `conv_terms_length_spec` (at most $\min(n_x, n_y)$,
+which the products of two BallVectors need). Unverified, as statements of no kernel or fold.
+
 ### Maps and convolutions in the IEEE model
 
 A map and a convolution have, besides the real-model statement above, a model and a statement in
@@ -823,7 +881,8 @@ Definition axpy_2_seq_ieee_spec : Prop :=
 - if the leading limb of coefficient $j$ is finite: every limb of every term of `conv_terms xs ys j`
   and of the coefficient is finite, its values are those of the real model `D_seq` (`FoldModel.v`)
   on the values of those terms, and the conclusions of `D_seq_spec` hold of them;
-- otherwise: every limb of the coefficient is a NaN;
+- otherwise: every limb of the coefficient is a NaN, and `flag_ = false` (as in a map's statement;
+  until 2026-11-20 the convolution's left the flag out of this branch, which the last line implies);
 
 and `flag_ = true` exactly when the leading limb of every coefficient is finite.
 
@@ -877,7 +936,7 @@ output:        mask finite
 value:         x+y
 requires:      ball_vector x rx
 requires:      ball_vector y ry
-ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2)
+ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2) radii_when=abs_le(rx+ry,-2)
 min_precision: 3
 status:        unverified
 domain:        extended
@@ -918,8 +977,15 @@ outputs are the radius and the flag; rule R3 on the step (supplied arrays and sc
 map) and on the radius (a supplied scalar it takes is a value of the program there); each array is
 required `ball_vector` with a stored scalar of one limb as its radius; the one claim is
 `encloses_entries` of the centers written, the radius and the flag, over the fold's value, one ball
-name per array; the extended domain; the minimum precision, at least that of the step, the record and
-the radius; the status.
+name per array, with `radii_when` over the scalars alone exactly when `finite_when` is not empty;
+the extended domain; the minimum precision, at least that of the step, the record and
+the radius; the status. A ball vector exact under conditions ([below](#ball-vectors),
+`bv_mul_pow2_k`) is checked for the rest of its shape: the state's third group a mask; the step's two
+destinations the center and a mask of a name of its own, its outputs a center and a mask; the second
+record line `EX = and(EX, E)` and the second combine line `EX = and(EX, EX)`; the radius's arguments
+the state's limb, then `EX`, then scalars; a scalar it requires `power_of_two` supplied and of one limb;
+and the coherence of the conditions of `exact_when` with those of the step and of the radius
+(`rules._bv_exact`). A second record or combine line in any other fold is refused.
 
 **In C++** a ball vector has the three functions of a map, with the radius and the flag by
 reference after the arrays written:
@@ -1004,13 +1070,21 @@ radius, with `(ws_, r_, flag_)` the result:
   (`in_ball_k`, for the whole space every real);
 - **V3** if `r_` is finite, every scalar is finite, the centers' values are those of the real-model
   step on the values given, and the radius is `FoldModel.F_radius` on the values;
-- **V4** if every scalar is finite, the vector is not empty, and every entry satisfies the
-  conditions of `finite_when` ($\lvert$EXPR$\rvert \le 2^{e_{\max} + E}$ with EXPR over the values of
-  the entry's centers and the scalars), `r_` is finite.
+- **V4** if every scalar is finite, the scalars satisfy the conditions of `radii_when`, and every
+  entry satisfies the conditions of `finite_when` ($\lvert$EXPR$\rvert \le 2^{e_{\max} + E}$ with
+  EXPR over the values of the entry's centers and the scalars, and for `radii_when` over the scalars
+  alone), `r_` is finite. It is stated for every length, the empty list included.
 
-V4 is stated for a vector that is not empty: with no entry the conditions say nothing, and a radius
-computed from radii near the overflow threshold alone can overflow (`bv_add_radius_k` of two radii
-of about $\Omega/2$), so the page's V4, read for $N = 0$, would be false.
+V4 has the condition on the radii as a hypothesis of its own, `radii_when`: with no entry the
+conditions of `finite_when` say nothing, and a radius computed from radii near the overflow
+threshold alone can overflow (`bv_add_radius_k` of two radii of about $\Omega/2$), so the page's V4,
+read for $N = 0$ with the entries' conditions alone, would be false. `radii_when` is
+$r_x + r_y$ within $2^{e_{\max}-2}$ for `bv_add_k` and `bv_sub_k`, and $\lvert a\rvert r_x$ for
+`bv_scale_k`: what the condition of an entry says with its centers zero. At any entry the conditions
+of `finite_when` imply it (EXPR of `finite_when` is at least EXPR of `radii_when` in magnitude), so for
+a vector with entries V4 is the statement it was, and the hypothesis adds nothing; for the empty
+vector it is the whole condition. The first form of V4, of 2026-11-20, assumed the vector not empty
+instead.
 
 **What their proofs need**: the theorems of the step (bridge and claims, as for a map), of the
 record and the combination (`maximum`, and in the IEEE model that the record keeps a finite state on
@@ -1018,20 +1092,415 @@ a finite center and records a NaN or an infinity), of the radius kernel (`upper`
 model that a finite radius from finite operands is the real model's), of `norm_finish_1`; for the
 lane order, `fold_lanes_aci_step` (the state of the lane order is that of the sequential order); and
 for V4, B4 of the entrywise full Ball kernel at the entry of the largest magnitude, whose radius is
-the one radius (`ball_add_k_full`, `ball_scale_k_full`: the same lines).
+the one radius (`ball_add_k_full`, `ball_scale_k_full`: the same lines), and for the empty vector the
+same at the magnitude $+0$ of the zero state: the radius kernel on $+0$ and radii within `radii_when`
+is finite (each of its roundings is of a nonnegative value at most a few units above $2^{e_{\max}-2}$).
 
-**`bv_norm_upper_k`** ([BallVector](design/milestone2.md#ballvector)) is `norm_upper_k` on the
-centers, which are stored and canonical: it needs no kernel of its own, and the header of `BallVector`
-calls `norm_upper_k`. It bounds the magnitudes of the centers, not of the members: for the whole
-space it returns $0$ (one limb) or $\eta$ (two), with the flag true.
+**`bv_norm_upper_k`** ([BallVector](design/milestone2.md#ballvector)), an upper bound of the largest
+magnitude of any member of a BallVector $X$ of centers $c_i$ and radius $r$, needs no kernel and no
+fold of its own: it is two calls that exist, and the header of `BallVector` writes it as
 
-**Not yet generated.** The constructor, whose listing the page does not give, is proposed in
-`experiments/milestone2/kernels/` (`bv_make_1.fold`, `bv_make_2.fold`; checked by `ballvector.py`):
-its finish must also test the sign of the radius, which `norm_finish_1` does not and whose claim the
-vocabulary has no word for. `bv_neg_k`, `bv_mul_pow2_k` (its radius needs the exactness of every
-entry, a state that is not a maximum), `bv_axpy_k` (two maxima, of the scaled centers and of the
-results), and `bv_conv_k` with `conv_radius` (a convolution with the maxima of its two operands)
-come later.
+```
+(n, ok) = norm_upper_k(c)                 the fold of maxima on the centers, stored and canonical
+b       = ok ? add_up_1(n, r) : +infinity
+```
+
+What is claimed, and by what: `norm_upper_k` claims `upper n max steps=S` with its flag
+([Folds of maxima](#folds-of-maxima)): when `ok` is true, $V \le n \le \mathrm{RU}(V)$ stepped up $S$
+times, $V = \max_i \lvert c_i\rvert$ ($S = 0$ for one limb, $1$ for two); `add_up_1` claims `rounded b
+up` of $n + r$ in the extended domain (the sum of a finite $n$ and $r = +\infty$, the whole space, is
+$+\infty$). Every member $x$ of entry $i$ has $\lvert x\rvert \le \lvert c_i\rvert + r \le V + r \le n
++ r \le b$: so $b$ is an upper bound of every member, and $b \le \mathrm{RU}(\mathrm{RU}(V)\uparrow^S +
+r)$, at most one rounding up and $S$ steps above the smallest. The inequality chain is the header's
+argument from the two claims, not a claim of one kernel; the test of the composition is
+`test_bv.Interp.test_the_norm_of_a_ball_vector`, in exact arithmetic. `ok` is false for a vector of
+finite centers only when the step up from the largest leading limb is $+\infty$ (two limbs, a leading
+limb of magnitude $\Omega$): there the bound is $+\infty$, which bounds everything. For the whole space
+$n$ is $0$ (one limb) or $\eta$ (two) and $b = +\infty$. `norm_upper_k` alone bounds the magnitudes of
+the centers, not of the members.
+
+**The constructor**, `bv_make_1` and `bv_make_2` (the page says what a constructor returns and gives no
+listing: "a constructor given a radius that is negative or a NaN, or a center that is not finite,
+returns the whole space"), is a ball vector of the same kind, first proposed in
+`experiments/milestone2/kernels/` and checked there by `ballvector.py`, which now runs the generated
+descriptions:
+
+```
+fold:          bv_make_1
+arrays:        supplied c
+scalars:       supplied r
+state:         m, mask ok
+step:          z = bv_center_entry_1(c)          z = guard(c)
+record:        (m, ok) = norm_step_1(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_make_radius(m, r)         g = guard(r); d = sub(m, m); rz = add(g, d)
+finish:        (rr, finite) = bv_make_finish(rz, ok)
+                                                 p = le(0, rz); q = and(ok, p); (r, flag) = norm_finish_1(rz, q)
+orders:        sequential, lanes
+writes:        z
+output:        rr
+output:        mask finite
+value:         c
+ensures:       makes_ball_vector z rr from=c,r flag=finite
+```
+
+The centers and the radius come from the program (rule R3), so the step and the radius guard them;
+`bv_make_2` takes its centers as `Expansion<T, 2>`, canonical and stored, and copies them
+(`bv_center_2`, the claims of `neg_2` with the value `x`), and requires `canonical c`. A center that is
+not finite makes `m` infinite or the mask false; `m - m` carries an infinite `m` into the radius as a
+NaN; and the finish tests, besides the mask and the finiteness of the radius, its sign: `le(0, rz)` is
+false for a negative radius and for a NaN, true for either zero. That is the one thing a finish of the
+other ball vectors does not do (their radii are nonnegative by construction), and its claim is
+`finite_or_nan` with the field `nonneg` ([Claims of Milestone 2](#claims-of-milestone-2)). A radius of
+$+\infty$ is not finite: the whole space. The rules of a ball vector apply, with these differences
+(`rules._bv_make_claims`): one array and one scalar of one limb, supplied, the radius; the value the
+array's name; `canonical` of the centers for two limbs and nothing for one; the radius kernel requires
+nothing and takes `(m, r)`; the finish claims `nonneg` (and a finish that claims it is refused in any
+other ball vector); the one claim is `makes_ball_vector`. Centers given as two arrays of limbs of the
+program's own, which need not be normalized, are not covered: their step would be `make_2_limbs`, which
+has no real-model statement.
+
+In Rocq the model is that of every ball vector. `FoldStatements.v` has `F_spec`: for a radius and
+centers that are numbers of the format (normalized pairs for two limbs), `F_radius r cs = r` and the
+centers written are those given, `Forall2 (fun c w_ => w_ = c) cs (F_map cs)`. `IeeeFoldStatements.v`
+has `F_seq_ieee_spec` and `F_lanes_ieee_spec`, for any radius and any centers (canonical pairs for two
+limbs): the result is canonical (V1); `flag_ = true` exactly when `r_` is finite; `flag_ = true` exactly
+when `finite r /\ 0 <= val r` and the leading limb of every center is finite; and then the values of
+the centers written are those given, limb for limb, and `val r_ = val r`:
+
+```coq
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_make_2_seq prec emax ... r cs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  (flag_ = true <-> finite r /\ 0 <= val r /\ Forall (fun c => finite (fst c)) cs) /\
+  Forall2 (fun c w_ =>
+    let '(c0, c1) := c in
+    let '(z0, z1) := w_ in
+    flag_ = true -> val z0 = val c0 /\ val z1 = val c1) cs ws_ /\
+  (flag_ = true -> val r_ = val r).
+```
+
+Their proofs need: the claims of the step (a guard is the value; a copy is the pair), of the record
+and the combination (as for every ball vector), of `bv_make_radius` in the IEEE model ($m - m$ is $+0$
+for a finite $m$ and a NaN otherwise, and the guarded radius plus $+0$ is the radius, a $-0$ made
+$+0$), and of `bv_make_finish` (`finite_or_nan` with `nonneg`).
+
+**The negation**, `bv_neg_1` and `bv_neg_2`, is a ball vector of the same kind: the step `neg_1`
+(`z = neg(x)`, value `-x`, `rounded z nearest`) or `neg_2`, the radius kernel `bv_neg_radius`
+(`rz = copy(rx)`, value `rx`, `m` unused), the finish `norm_finish_1`. It is exact, which its claim
+says with the word `exact` (`"exact_when": []`, [below](#claims-of-milestone-2)): the result is exactly
+the set of the negated members, entry by entry. Its `finite_when` is `abs_le(abs(x)+rx,1)` and its
+`radii_when` `abs_le(rx,1)`, which every finite operand satisfies ($\lvert x\rvert + r_x \le 2\Omega
+< 2^{q_{\max} + p + 1}$): a finite operand gives a finite result. The statements of an exact ball
+vector have one more conjunct: in the real model, entry by entry, every real within `r_` of the center
+written is the set's value at some members of the operands' balls (`exists x_ : R, Rabs (x_ - (x0 +
+x1)) <= rx /\ v_ = (- x_)`); in the IEEE model the same under `finite r_`, with `in_ball_k`.
+
+**The scaling by a power of two**, `bv_mul_pow2_1` and `bv_mul_pow2_2`
+([milestone2.md, "BallVector"](design/milestone2.md#ballvector), `bv_mul_pow2_k`; [Scaling a ball by a
+power of two](design/milestone2.md#scaling-a-ball-by-a-power-of-two)), is exact when nothing underflows,
+so that a polynomial halved again and again (subdivision by de Casteljau) keeps its radius $r/2^i$
+exactly. Its radius needs the exactness of every entry ("with `ec` over all entries"), which the centers
+written cannot tell (a second limb scaled to zero leaves a pair that looks exact), so the ball vector
+has, **as the one extension of the shape**, a mask of exactness: a third group of the state, a mask from
+true; a step that returns the center and a mask; a second record line and a second combine line, the
+`and` of that mask into the state and of two such states, as a map's mask; and a radius kernel that
+takes the state's mask after its limb. `bv_mul_pow2_2` in full:
+
+```
+fold:          bv_mul_pow2_2
+arrays:        stored x = x0 x1
+scalars:       stored rx, supplied c
+state:         m, mask ok, mask ex
+step:          (z, e) = bv_mul_pow2_step_2(x, c)
+record:        (m, ok) = norm_step_2(m, ok, z)
+record:        ex = and(ex, e)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+combine:       ex = and(ex, ex)
+radius:        rz = bv_mul_pow2_radius(m, ex, rx, c)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x*c
+requires:      ball_vector x rx
+requires:      power_of_two c
+ensures:       encloses_entries z r x*c x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*c,-2) radii_when=abs_le(rx*c,-2) exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))
+min_precision: 2
+status:        unverified
+domain:        extended
+```
+
+- **The step** `bv_mul_pow2_step_2` is `ball_mul_pow2_2` without its radius: the center as `mul_pow2_2`
+  scales it ($h = c\,x_0$, $l = c\,x_1$, `fast_two_sum`), and the mask `ec` of that kernel, `e`: the
+  scaled last nonzero limb above the smallest normal number $N = \eta/(2u)$ in magnitude, or the center
+  zero. `bv_mul_pow2_step_1` is `z = prod(x, c)` with `e` the same test of `z`. Each claims what the
+  step of the map `mul_pow2_map_k` claims (`normalized`, or `rounded z nearest`, and the error of
+  `mul_pow2_2`, $\eta$ for two limbs and $\tfrac12\eta$ for one), with `exact_when` the conditions of
+  `ball_mul_pow2_k` on the center (each limb times $c$ zero or above $N$: `zero_or_abs_gt(x[0]*c,
+  eta/(2*u))` and the same of `x[1]`, or of `x` for one limb), and **`exact_flag=e`**: the mask is true
+  exactly when those conditions hold ([below](#claims-of-milestone-2)). That is true because a product
+  by a power of two above $N$ in magnitude is a number of the format, so its rounding is above $N$
+  exactly when the product is; for two limbs, a nonzero second limb of a normalized pair makes the first
+  nonzero and larger. The steps have `ieee: spec` (their claims for finite operands) and no bridge,
+  which a kernel with a mask output or a constant operand cannot have (`ieee.program`).
+- **The record** of `m, ok` is that of every ball vector (`norm_step_k` on the center written); the
+  second, `ex = and(ex, e)`, ands the step's mask into the state; the combination of the lanes ands two
+  of them. So the final `ex` is true exactly when every entry's mask is, in every order.
+- **The radius** `bv_mul_pow2_radius(m, ex, rx, c)` is the radius lines of `ball_mul_pow2_k` with `ex` in
+  place of one entry's `ec`: `rr = prod(rx, c)`; `er` its exactness, $c\,r_x$ zero or above $N$; `rs =
+  select(and(ex, er), rr, succ(succ(rr)))`; and `rz = add(rs, sub(m, m))`. The radius does not grow
+  with the centers, so the largest magnitude enters only as $m - m$, $+0$ for a finite $m$ and a NaN for
+  an infinite one (a center that overflowed), which the addition carries into the radius and the finish
+  tests (`bv_make_radius` does the same). Its claims are two entries `upper` of new forms
+  ([below](#claims-of-milestone-2)): `upper rz value=rx*c exact_when=mask(ex);zero_or_abs_gt(rx*c,
+  eta/(2*u))`, at least $c\,r_x$, and exactly $c\,r_x$ when `ex` is true and $c\,r_x$ is zero or above
+  $N$; and `upper rz value=rx*c+eta unless=ex`, at least $c\,r_x + \eta$ when `ex` is false. The second
+  number after $\mathrm{RN}(c\,r_x)$ is above $c\,r_x + \eta$: the number after $\mathrm{RN}(y)$ is above
+  $y$ for every $y \ge 0$, and the next adds at least $\eta$.
+- **The claim** is `encloses_entries` with `exact_when` and conditions: when the result is a finite ball
+  vector, the scalars satisfy the conditions that name only scalars ($c\,r_x$ zero or above $N$) and every
+  entry those that name an array, the result is exactly the set, $c\,X$ itself: each center $c\,x_i$
+  and the radius $c\,r_x$. The rules (`rules._bv_exact`) require that the conditions of an entry are,
+  renamed to what the fold passes, those of the `exact_when` of the step's error entry whose
+  `exact_flag` is the step's mask, and the conditions of the scalars those of the radius kernel's
+  `upper` entry whose `exact_when` holds `mask(EX)` of its mask input. `finite_when` and `radii_when` are
+  those of `ball_mul_pow2_k_full` (B4) and of `bv_scale_k`: $(\lvert x\rvert + r_x)\,c$ and $r_x\,c$
+  within $2^{e_{\max}-2}$.
+- **Against `ball_mul_pow2_k`**, the page's "equal: $c\,r_x$ when every entry is exact": with at least one
+  entry, the one radius *is* the largest of the radii that `ball_mul_pow2_k` returns entry by entry,
+  because that kernel's radius is `select(and(ec, er), rr, succ(succ(rr)))` of the same `rr`, and the
+  second arm is the larger; the largest over the entries is `rr` exactly when every `ec` is true, which is
+  `ex`. What is **claimed** of it is the equality where the page states one, $c\,r_x$ when every entry
+  and the radius satisfy the conditions (the exactness of the result), and the upper bounds of the radius
+  kernel; the equality with the entrywise radii in the other case is what the listing computes and what
+  `test_bv.py` finds in every case it compares, not a claim (no claim names another kernel's
+  computation, as for `bv_add_k`).
+
+In C++ the state's mask `ex` is a `bool` (a lane mask in packed code) declared after `ok`, and-ed after
+the record (`ex = ex & step_e;`), and-ed in the combination of the lanes, passed to `F_end` after `ok`
+and to the radius after the largest magnitude. In Rocq the model keeps the state of the fold of maxima
+as it is for every ball vector and computes the mask apart, as a map's: `FoldModel.F_exact c xs`, the
+`forallb` of the step's masks, is the radius kernel's second argument in `F_radius`; `F_step` returns the
+center and the mask, and `F_map` the centers (`map (fun x => fst (F_step c x)) xs`). In `IeeeFoldModel.v`,
+`F_seq` and `F_lanes W` compute `es_ := map F_step xs`, `ws_ := map fst es_`, the state of `m, ok` on
+`ws_` as for every ball vector, and `ex_ := fold_seq (fun m_ e_ => andb m_ (snd e_)) true es_` (in the
+lane order `fold_lanes (...) andb true W es_`, the form of a map's mask), which the radius takes. Their
+statements: the real model's `F_spec` has, after containment entry by entry, the conjunct of exactness
+under the conditions (the conditions of the scalars, then those of an entry at every entry, `Forall`, then
+for every entry every real within `r_` of the center written is $c\,x$ for some member $x$ of the ball);
+the IEEE model's has the same under `finite r_` with `in_ball_k`, the requirement `finite c /\ (exists n :
+Z, val c = bpow radix2 n)` of the power of two, and in V3 the center the first component of the real
+model's step (`fst (bv_mul_pow2_step_2 ...)`). The line protocol is that of every ball vector:
+`bv_mul_pow2_2 binary64 seq 2 0x1p-4 0x1p-1 0x1p+0 0x1p+1 0x1p-60 0x0p+0` ($r_x = \tfrac1{16}$, $c =
+\tfrac12$, $x = (1, 2^{-60}), (2, 0)$) is completed with ` -> 0x1p-1 0x1p+0 0x1p-61 0x0p+0 0x1p-5 1`,
+the radius exactly $\tfrac1{32}$.
+
+**What their proofs need** besides those of every ball vector: of the step, its claims in both models
+(the error of `mul_pow2_2`, `mul_pow2_2_exact` under the conditions, and that the mask is true exactly
+when they hold: `round_abs_le`, a rounded product above $N$ comes from an exact product above $N$, and
+`normalized_2_tail_rel` for two limbs), and in the IEEE model a lemma in place of the bridge it cannot
+have (a finite center from finite operands is the real model's, center and mask); of the radius, its two
+`upper` entries (`up_above` of `Directed.v` and the smallest gap $\eta$, as for `ball_mul_pow2_k`) and in
+the IEEE model that a finite radius from finite operands is the real model's ($m - m$ is $+0$ for a
+finite $m$); `fold_seq_and` and `fold_lanes_and` (`Folds.v`) for the mask; and for exactness, that the
+conditions of every entry make `ex` true (the step's `exact_flag`), hence the radius $c\,r_x$, and every
+center $c\,x_i$ (the step's `exact_when`), so that the ball of each center written is $c$ times the ball
+of the operand's.
+
+**The product of polynomials**, `bv_conv_1` and `bv_conv_2` ([milestone2.md, "The product of
+polynomials"](design/milestone2.md#the-product-of-polynomials): `bv_conv_k` with `conv_radius`), first
+proposed in `experiments/milestone2/kernels/` and checked there by `bv_conv.py`, which now runs the
+generated descriptions. It is a fold of a kind of its own, *the product of two BallVectors*: the
+convolution of the centers, named and not described again, with what a ball vector adds to it.
+`bv_conv_2` in full:
+
+```
+fold:          bv_conv_2
+arrays:        stored x = x0 x1, stored y = y0 y1
+scalars:       stored rx, stored ry
+centers:       conv_2
+state:         ma, mask oka, mb, mask okb
+record:        (ma, oka) = norm_step_2(ma, oka, x)
+record:        (mb, okb) = norm_step_2(mb, okb, y)
+count:         m = min(n_x, n_y)
+bound:         (g, t, okg) = bound_dot_2(m)
+radius:        rz = conv_radius(ma, mb, rx, ry, m, g, t)
+finish:        (r, flag) = bv_conv_finish(rz, finite, okg)
+orders:        sequential
+writes:        z = z0 z1
+output:        r
+output:        mask flag
+value:         x*y
+requires:      ball_vector x rx
+requires:      ball_vector y ry
+ensures:       encloses_coefficients z r x*y x=x,rx y=y,ry flag=flag finite_when=abs_le(n*(abs(x)+rx)*(abs(y)+ry),-2);abs_le((abs(x)+rx)*ry,-2);abs_le((abs(y)+ry)*rx,-2) radii_when=abs_le(rx*ry,-2) count_when=le(n*(unit(mul_2_2)+eta),1/16)
+min_precision: 4
+status:        unverified
+domain:        extended
+```
+
+- **The centers** are the coefficients of the convolution `centers:` (`conv_2`, `conv_1` for one limb),
+  its arrays and its array written (names and limbs), its mask `finite` included: coefficient $j$ is
+  `dot_k` in its sequential order on the terms $(x_i, y_{j-i})$. The arrays are `stored` (centers of
+  BallVectors), where the convolution's are `supplied` (rule R3 asks nothing of a stored array).
+- **The records**, one per array read, in the order of the arrays: the step of a fold of maxima on the
+  entries of that array (`norm_step_k`), from $(+0, \text{true})$; $M_a$ = `ma` and $M_b$ = `mb` are the
+  largest magnitudes of the leading limbs of the operands' centers. These are maxima of what is read,
+  not of what is written. (`oka` and `okb` are carried, as in every fold of maxima, and used by nothing
+  else: a canonical BallVector has no NaN center.)
+- **The count** `m = min(n_x, n_y)`, the largest number of terms of a coefficient (`conv_terms_length`),
+  is a number of `T` rounded up: $n$ itself below $2^p$, otherwise the smallest number of `T` above it
+  (`interp.count_up`; in C++ the conversion of the integer, then one step up when it is below $n$,
+  compared as integers below $2^{64}$).
+- **The bound** is one call of `bound_dot_k(m)`, `(g, t, okg)`, whose bound covers every coefficient (each
+  has at most $m$ terms). The rules check that it covers the dot product of the coefficients:
+  `unit(K)` and `tiny(K)` of its claims are at least the `term` (or `eps`) and `tau` of that fold's
+  `fold_error`, in `binary64` and `binary32` (its $g$ and $t$ grow with both; `bound_dot_k` has exactly
+  those of `dot_k`, and `bound_dot_1` for the coefficients of `dot_2`, or `bound_dot_2` for those of
+  `dot_1`, is refused).
+- **The radius** is the page's `conv_radius(ma, mb, rx, ry, m, g, t)` (`gen/kernels/conv_radius.kernel`,
+  the listing of the page): $r_z \ge m\bigl((1+u)M_a r_y + (1+u)M_b r_x + r_x r_y\bigr) + g\,m\,(1+u)^2 M_a
+  M_b + t$, claimed as `upper rz value=...`, with the requirements that every input is nonnegative,
+  `count m`, and the new requirement **`at_most(g, 1)`** (below), from precision 2 (below it the
+  constant of `hm` is above the largest number of formats of few exponents).
+- **The finish** `bv_conv_finish(rz, finite, okg)` is `norm_finish_1` under the `and` of the
+  convolution's mask and the bound's: the radius, with the flag true, when every coefficient is finite,
+  the bound is given and the radius is finite; it claims `finite_or_nan r flag=flag if_all=finite,okg`
+  (below). **When the flag is false** every coefficient written is zero and the radius $+\infty$: the
+  whole space. An operand that is the whole space, a bound not given (the count too large for the
+  format), or an overflow anywhere, give the whole space.
+
+**What the generator checks of it** (`rules.bv_conv_rules`), besides the names: the convolution named is
+one; no step, coefficients, check or combination of its own; the order `sequential`; the arrays those
+of the convolution, stored; the array written the convolution's; the state two folds of maxima, one per
+array, each record the step of a fold of maxima of an array of that array's shape, the same step for
+both (the models have one `F_record`; with arrays of one shape there is one such step today); the count, the
+bound's destinations and the radius's of names of their own; the bound a kernel of the count (required
+`count`) to two limbs and a mask, covering the coefficients' dot product; the radius on the
+maxima, the radii, the count and the bound's two limbs, to one limb, with a real-model statement;
+each scalar a stored radius of one limb that the radius takes; the finish on the radius, the
+convolution's mask and the bound's, claiming `finite_or_nan` under both (`if_all`); rule R3 on the
+radius; the claim below; the extended domain; the minimum precision, at least that of the convolution
+and of every part.
+
+**The claim**, `encloses_coefficients` ([below](#claims-of-milestone-2)): V1 (canonical, $n_x + n_y - 1$
+coefficients, none when a length is $0$), the flag, V2 coefficient by coefficient for the set $\sum_i
+x_i y_{j-i}$ with every $x_i$ and $y_k$ ranging independently over its ball (each entry appears once in
+a coefficient, so the exact range of the sum is the sum of the ranges of the products), V3 (a finite
+result has finite radii, the convolution's coefficients and the radius kernel's radius on the values),
+and **V4**, which the page left to the proof and which is now, exactly: *if both operands are finite
+ball vectors, $n\,(\mathrm{unit}(K) + \eta) \le \tfrac1{16}$ with $n = \min(n_x, n_y)$ and $K$ the
+products' kernel (`mul_2_2`, `mul_1_1`), $r_x r_y \le 2^{e_{\max}-2}$, every entry $x_i$ has $(\lvert
+x_i\rvert + r_x)\,r_y \le 2^{e_{\max}-2}$, every entry $y_k$ has $(\lvert y_k\rvert + r_y)\,r_x \le
+2^{e_{\max}-2}$, and every pair has $n\,(\lvert x_i\rvert + r_x)(\lvert y_k\rvert + r_y) \le
+2^{e_{\max}-2}$, then the result is a finite ball vector.* The condition of the pairs is the bound of the
+radius and of the coefficients: every value `conv_radius` and the dot products compute is at most
+$(1+u)^{14}(1+2u)(1-u)^{-2}\,n\,A\,B$, with $A$ and $B$ the largest $\lvert x_i\rvert + r_x$ and $\lvert
+y_k\rvert + r_y$, which is below $0.75 \cdot 2^{e_{\max}}$ from $p = 4$ (hence the minimum precision 4
+of both folds; at $p = 3$ the factor is 6.5 and $2^{e_{\max}-2}$ would not do). The conditions of each
+array alone are what an empty operand needs: with $n_x = 0$ there is no coefficient and no pair, $m =
+0$, and yet `conv_radius` computes $M_b r_x + r_x r_y$ before multiplying it by $m$, and $0 \cdot
+\infty$ is a NaN: `test_bv_conv.Interp.test_an_empty_operand_with_a_large_radius` runs that case
+($n_x = 0$, $y_0 = r_x = 2^{600}$ in `binary64`: the whole space, and the condition $(\lvert y\rvert +
+r_y)\,r_x$ not met). The radii's own condition is the case of two empty operands. With both operands not
+empty the condition of the pairs implies the others, as `finite_when` implies `radii_when` for every
+ball vector. The condition on the count is the bound's: `bound_dot_k(m)` refuses a count beyond about
+$\tfrac14 / \mathrm{unit}(K)$ (in formats of few bits, a few terms), and then the result is the whole
+space whatever the values; $n\,(\mathrm{unit}(K) + \eta) \le \tfrac1{16}$ makes it given in every format
+from $p = 4$ (`test_bv_conv.Interp.test_the_count_gives_the_bound`: every such $n$, up to 3 000 of them,
+in 36 formats of precisions 4 to 9, `ok` true; the $\eta$ covers formats whose $\eta$ is not small
+against $\mathrm{unit}(K)$). How it was checked: in exact arithmetic on the interpreter, at random
+(`test_v1_to_v4`) and on cases aimed at the limits of the conditions, a quarter with $n_x = 0$ and a
+quarter with $n_y = 0$ (`test_v4_at_its_limits`), in six formats of the IEEE shape of four to six bits
+and in `binary64` and `binary32`, with no failure; and the compiled code computes what the interpreter
+computes on the same corpus, bit for bit (`test_bv_conv.Cxx`), cases near the limits among them. The
+first experiments put the fraction at $2^{e_{\max}-1}$ without a failure, but the bound above does not
+reach it at $p = 4$, so $-2$ is what is stated.
+
+**In C++** one function per limb type, with each array's length after its limb pointers and the radii
+after the arrays, as a convolution's with the radius and the flag of a ball vector:
+
+```
+void bv_conv_2_seq(const T* x0_in, const T* x1_in, std::size_t n_x, const T* y0_in, const T* y1_in,
+                   std::size_t n_y, T rx, T ry, T* z0_out, T* z1_out, T& r_out, bool& flag_out)
+```
+
+Two loops, the maxima of each operand's centers; the loop of `conv_seq` (its mask, not its second
+pass); then a call of `bv_conv_2_end(ma, mb, min(n_x, n_y), finite, rx, ry, ...)`, never inlined as
+every end of a ball vector, which computes the count, the bound, the radius and the finish (the maxima
+through volatile copies); and the zeros of the whole space as volatile stores. No packed form: that of
+a convolution has none. Aliasing: a convolution's, the array written overlaps neither array read.
+
+**In Rocq**, `FoldModel.v` has `F_record`, `F_count` (`round radix2 (FLT_exp emin prec) Zceil (INR
+(Nat.min (length xs) (length ys)))`), `F_bound`, `F_ok` (the bound's mask) and `F_radius`; the
+coefficients are `F_conv` of the convolution named. `FoldStatements.v` has `F_spec`: for nonnegative
+radii, valid centers, a format that contains $\tfrac12$ and the bound given (`F_ok xs ys = true`), the
+radius is a number of the format, every coefficient is valid, and for all lists of members `xs_`,
+`ys_` within the radii of the centers, entry by entry (`Forall2`), coefficient $j$ of their exact
+product, `sumR (map (fun xy => fst xy * snd xy) (conv_terms xs_ ys_ j))`, is within `r_` of coefficient
+$j$ written. `IeeeFoldModel.v` has `F_record`, `F_count` (`binary_normalize ... BinarySingleNaN.mode_UP
+(Z.of_nat (Nat.min (length xs) (length ys))) 0 false`, the count rounded up) and `F_conv rx ry xs ys`,
+which returns the coefficients, the radius and the flag, the code above; `IeeeFoldStatements.v` has
+`F_ieee_spec`, V1 to V4 and the flag as above, with `in_ball_k` for the members and the whole space, and
+the length of the coefficients `FoldModel.conv_length`. **What their proofs need**: the theorems of the
+convolution (`conv_k_spec` and `conv_k_ieee_spec`), of the records (`maximum`, and in the IEEE model
+that the record keeps a finite state on a finite center), of `bound_dot_k` (its claims, and that its
+`ok` true gives $g \le 1$, the requirement `at_most` of `conv_radius`: a lemma by unfolding its listing,
+`ob = le(g, 1)`), of `conv_radius` (`upper`, and in the IEEE model that a finite radius from finite
+operands is the real model's), of `bv_conv_finish`; `conv_terms_Forall` and `conv_terms_length`, and the
+containment of a sum of products of independent members (each $\lvert x_i y_{j-i} - c_{x,i} c_{y,j-i}
+\rvert \le \lvert c_{x,i}\rvert r_y + \lvert c_{y,j-i}\rvert r_x + r_x r_y$, summed over at most $m$ terms,
+with $\lvert c\rvert \le (1+u)\lvert c_0\rvert \le (1+u)M$ for a normalized pair); for V4, the bound of
+the values above, and that `count_when` makes the bound given.
+
+The line protocol is a convolution's with the two radii between the lengths and the arrays:
+`bv_conv_K FORMAT seq N_X N_Y RX RY LIMB...`, completed with the $N_Z$ coefficients (limb array after
+limb array), the radius and the flag ([The line protocol](#the-line-protocol)).
+
+**Not yet generated: a proposal.** One kernel of the page is not generated (`experiments/milestone2/
+kernels/`, checked there): `bv_axpy_k` (`bv_axpy_2.fold`, `bv_axpy_step_k`, `bv_axpy_radius_k`;
+`bv_proposals.py`), whose radius $\mathrm{bv\_add\_radius}_k(M, \mathrm{bv\_scale\_radius}_k(M', r_x, a),
+r_y)$ needs a second maximum, of the scaled centers. See [`axpy` of ball vectors](#axpy-of-ball-vectors),
+below.
+
+#### axpy of ball vectors
+
+**`bv_axpy_k(a, X, Y)` $= aX + Y$ is the composition** of two ball vectors that are generated: the
+public header of `BallVector` calls `bv_scale_k(X, a)`, then `bv_add_k` of what it
+wrote and $Y$, in place (the centers written may be exactly one of the arrays read, [Maps](#maps)): the
+scaled centers into the array of the result, then their sum with $Y$ into that same array, or into the
+array of $Y$ when $Y$ is the one to overwrite. No kernel of the generator is `axpy` of ball vectors.
+
+**What is claimed of it** is the two kernels' claims, composed, and nothing of its own: $S$ =
+`bv_scale_k(X, a)` (`encloses_entries` of `x*a`: V1 to V4 with `finite_when=abs_le((abs(x)+rx)*a,-2)`
+and `radii_when=abs_le(rx*a,-2)`), then $Z$ = `bv_add_k(S, Y)` (`encloses_entries` of `x+y`, its V4 with
+`abs(x+y)+rx+ry` and `rx+ry` within $2^{e_{\max}-2}$, read on the values of $S$ and its radius). V2
+composes: for $x$ in the ball of entry $i$ of $X$ and $y$ in that of $Y$, $a x$ is in the ball of entry
+$i$ of $S$, so $a x + y$ is in the ball of entry $i$ of $Z$. V1 and the flag are $Z$'s; the whole space
+propagates (an operand of `bv_add_k` that is the whole space gives the whole space). V3: a finite $Z$
+has a finite $S$, so finite $X$, $Y$ and $a$. V4 is that of each call in turn, the second on the
+computed $S$: it is not stated once of $X$, $Y$ and $a$; `bv_proposals.py` finds that
+$(\lvert x\rvert + r_x)\lvert a\rvert \le 2^{e_{\max}-2}$ and $\lvert a x + y\rvert + \lvert a\rvert r_x +
+r_y \le 2^{e_{\max}-3}$ at every entry, with the radii's conditions, give a finite result, on every case it
+runs. The radius is at least the largest of the entrywise radii of `ball_add_k(ball_scale_k(x_i, r_x, a),
+y_i, r_y)`, and equal to it when one entry has both maxima, of the scaled centers and of the results
+(the page's "at least the largest; equal when one entry has both maxima"), tested by `bv_proposals.py`,
+not claimed.
+
+**What the one-pass kernel would add**: one pass over memory in place of two (it reads $X$ and $Y$
+once and writes $Z$ once; the composition reads $X$, writes $S$, reads $S$ and $Y$ and writes $Z$), and
+no temporary array when neither $X$ nor $Y$ may be overwritten. Its results are those of the
+composition, bit for bit: the centers, the radius and the flag, in every case `bv_proposals.py` runs (1 500
+per toy format, 400 in `binary64` and `binary32`, lengths 0 to 5, the whole space and non-finite `a`
+among them), because its radius is `bv_add_radius_k` of the largest result and of `bv_scale_radius_k` of
+the largest scaled center, which is what the second call computes from the first's radius. What it needs
+of the generator, and what the extension of `bv_mul_pow2_k` (a mask and-ed into the state) does not give:
+a second fold of maxima in the state, of a second *limb* output of the step (the scaled center), its
+record and its combination (`norm_step_k`, `norm_combine` again), and a radius kernel on two maxima. That
+is not done: the composition computes the same.
 
 ### The accumulator
 
@@ -1254,7 +1723,9 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`; a fold or a map, `ieee_theorem: FILE`,
   whose theorems are `F_seq_ieee_correct` and `F_lanes_ieee_correct`, and a convolution the same
   field, whose theorem is `F_ieee_correct`. The comment above a statement
-  says `proved` when its theorem is named and `unverified` otherwise, and `IeeeAudit.v` checks
+  says `proved` when its theorem is named and `unverified` otherwise. The comment above a fold's C++
+  function gives both, as a kernel's does: `Status: proved (real model), unverified (IEEE model)` for
+  `sum_2` (`cpp.fold_status`; until 2026-11-20 it gave the real model's alone). `IeeeAudit.v` checks
   every named theorem against its statement (`Definition S_audit : S := theorem.` and `Print
   Assumptions`), after the theorems of the extended domain, importing `IeeeFoldStatements` only
   when one of them is about a fold. Without any of these fields every generated file is what it
@@ -1616,6 +2087,8 @@ $\eta$ preceded by one.
 
 - `{"zero_or_abs_gt": EXPR, "than": K}`: EXPR $= 0$ or $\lvert\mathrm{EXPR}\rvert > K$;
 - `{"zero_or_abs_ge": EXPR, "than": K}`: EXPR $= 0$ or $\lvert\mathrm{EXPR}\rvert \ge K$;
+- `{"mask": NAME}`, in the `exact_when` of an `upper` entry only (the radius of the scaling of a
+  BallVector by a power of two, [below](#claims-of-milestone-2)): the mask input NAME is true;
 
 and the list holds when every condition does. EXPR is an expression of the language of `value`
 (input names, `+`, `-`, `*`, unary minus, `abs( )`, parentheses) in which, besides an input's
@@ -1856,6 +2329,13 @@ short here):
 - `entries`, the claim kind of a map: every written element $z_i$ satisfies every `ensures` entry
   of the kernel `kernel` (the step), whose inputs are given, in order, the groups of `step_args`:
   the scalars, and element $i$ of each array. `value` is the step's value of those.
+- **The map's `value` and `requires` are the step's**, a rule of the generator (`rules.map_rules`)
+  that a reader may rely on: the map's `value` is the step's `value` with each input of the step
+  renamed to the group of `step_args` at its position (`axpy_step_2(a, x, y)` has the value
+  `a*x+y` over its own inputs `a`, `x`, `y`; a step `scale_step_1(x, a)` with `step_args`
+  `["x", "a"]` gives `x*a`), as expressions, not only as values; and every requirement of the step on
+  what the map passes is a requirement of the map, `normalized` read as `canonical`, `power_of_two`
+  as it is. So the claims of `entries` are about exactly the operands the map's `requires` describe.
 - `finite_or_nan` of a written array: the flag is true exactly when the leading limb of every
   written element is finite; when it is false, every element whose leading limb is not finite has
   every limb a NaN, and the others are as computed.
@@ -1865,6 +2345,20 @@ short here):
   that is not finite (an operand not finite, or an overflow) is the canonical NaN. The order makes
   no difference: `F_seq`, `F_lanes` with any $W$ and `F_packed` write the same elements and the
   same flag.
+- **What is a violation**, for a reader that judges a written element. A written element whose
+  leading limb is finite and that has a lower limb that is not finite violates the claim: it is not
+  canonical (`entries` includes `normalized` of the step, and the IEEE-model statement says that a
+  finite leading limb means every limb finite). So does a written element whose leading limb is
+  finite though a rounding inside the step overflowed, or though an operand is not finite: in the
+  extended domain a finite leading limb claims finite operands and a computation in which nothing
+  overflowed, so that the values are those the step computes without overflow (the IEEE-model
+  statement: those of the real model) and the step's claims hold; a reader that cannot see inside
+  the step judges this through those claims, `normalized` and `error`, in exact arithmetic. A
+  written element that is not finite (the canonical NaN) from finite operands far below
+  the overflow threshold violates nothing: a map claims nothing about when its elements are finite
+  (it has no `finite_when`), so that is at most suspicious; the same holds of a coefficient of a
+  convolution. The flag that is false while every element written is finite, or true while one is
+  not, violates `finite_or_nan`.
 
 **The folds of maxima** ([Folds of maxima](#folds-of-maxima)) and their kernels add one kind of
 claim of a kernel, two fields of `finite_or_nan`, and one kind of claim of a fold:
@@ -1872,13 +2366,20 @@ claim of a kernel, two fields of `finite_or_nan`, and one kind of claim of a fol
 | Kind | Fields | Meaning |
 |---|---|---|
 | `maximum` (a kernel, the finite domain) | `of` (a one-limb output), `args`: two expressions | the output is the larger of the exact values of the two expressions, which are expressions of the language of `value` in which `NAME[I]` is limb I of an input, as in `exact_when`: `{"kind": "maximum", "of": "r", "args": ["m", "abs(x[0])"]}` |
-| `finite_or_nan` with `if` and `steps` (a kernel, the extended domain) | `if`: a mask input; `steps`: an integer $S \ge 1$ | let $t$ be `value` stepped up $S$ times ($S = 0$ when the field is absent), each step IEEE 754's nextUp (a NaN stays a NaN, $+\infty$ stays $+\infty$, $\Omega$ goes to $+\infty$). The flag is true exactly when the mask `if` is true and $t$ is finite; the output is then $t$; otherwise it is a NaN. `{"kind": "finite_or_nan", "of": "r", "flag": "flag", "if": "ok", "steps": 1}` |
+| `finite_or_nan` with `if` and `steps` (a kernel, the extended domain) | `if`: a mask input; `steps`: an integer $S \ge 1$ | let $t$ be `value` stepped up $S$ times ($S = 0$ when the field is absent), each step IEEE 754's nextUp (a NaN stays a NaN, $+\infty$ stays $+\infty$, $\Omega$ goes to $+\infty$, and $-\infty$ goes to $-\Omega$, the most negative finite number, which is finite: the table of `neighbor`). The flag is true exactly when the mask `if` is true and $t$ is finite; the output is then $t$; otherwise it is a NaN. `{"kind": "finite_or_nan", "of": "r", "flag": "flag", "if": "ok", "steps": 1}` |
 | `upper` with `over` (a fold) | `of`, `over`: `max`, `steps`: an integer $S \ge 0$ | with $v_i$ the value of element $i$ and $V = \max_i v_i$ ($0$ for no element): $V \le r \le \mathrm{RU}(V)$ stepped up $S$ times, $\mathrm{RU}$ in the format with overflow (so that a $V$ above $\Omega$ makes the bound $+\infty$, and then no finite $r$ satisfies the first inequality). `{"kind": "upper", "of": "r", "over": "max", "steps": 1}` |
 
 A fold with an `upper` entry has no `fold_error` entry, and its `instances` are empty lists. Its
 reading in the extended domain is that of the other folds: the flag is true exactly when the
 result is finite, and then every element is finite and the claim holds; a NaN or infinite element,
-or a result whose step up is infinite, gives the flag false and a NaN.
+or a result whose step up is infinite, gives the flag false and a NaN. As a rule: **the flag is true
+exactly when the leading limb of every element is finite and the largest of their magnitudes,
+stepped up $S$ times, is finite**. So with finite elements the flag is false exactly when that step
+up is $+\infty$: never for one limb ($S = 0$), and for two limbs ($S = 1$) exactly when a leading
+limb is $\pm\Omega$ (the step up from $\Omega$ is $+\infty$). The proofs established it in this form
+(for two limbs, the flag is true exactly when every leading limb is finite and the step up from the
+largest is finite); the generator's tests check it in every order (`test_folds.py`, the folds of
+maxima).
 
 **Convolutions** ([Convolutions](#convolutions)) are in the list `"folds"` too, with `"conv":
 true` (and no `"map"`):
@@ -1926,7 +2427,8 @@ true` (and no `"map"`):
   "requires": ["ball_vector(x, rx)", "ball_vector(y, ry)"],
   "ensures": [{"kind": "encloses_entries", "center": "z", "radius": "r", "flag": "finite", "set": "x+y",
                "balls": {"x": {"center": "x", "radius": "rx"}, "y": {"center": "y", "radius": "ry"}},
-               "finite_when": [{"abs_le": "abs(x+y)+rx+ry", "exp": -2}]}],
+               "finite_when": [{"abs_le": "abs(x+y)+rx+ry", "exp": -2}],
+               "radii_when": [{"abs_le": "rx+ry", "exp": -2}]}],
   "orders": ["sequential", "lanes"],
   "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
   "step": "add_2_2", "step_args": ["x", "y"], "record": "norm_step_2", "combine": "norm_combine",
@@ -1945,7 +2447,8 @@ true` (and no `"map"`):
   "requires": ["ball_vector(x, rx)"],
   "ensures": [{"kind": "encloses_entries", "center": "z", "radius": "r", "flag": "finite", "set": "x*a",
                "balls": {"x": {"center": "x", "radius": "rx"}},
-               "finite_when": [{"abs_le": "(abs(x)+rx)*a", "exp": -2}]}],
+               "finite_when": [{"abs_le": "(abs(x)+rx)*a", "exp": -2}],
+               "radii_when": [{"abs_le": "rx*a", "exp": -2}], "finite_from": 2}],
   "orders": ["sequential", "lanes"],
   "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
   "step": "scale_step_1", "step_args": ["x", "a"], "record": "norm_step_1", "combine": "norm_combine",
@@ -1968,7 +2471,9 @@ true` (and no `"map"`):
   `flag` the outputs, `set` an expression over the ball names and the other scalars (the language of
   `value`), `balls` for each ball name its `center` (an array read) and `radius` (a scalar), and
   `finite_when` a list of conditions `{"abs_le": EXPR, "exp": E}` as for `encloses`, EXPR over the
-  arrays' names (an entry's value) and the scalars'. For canonical operands:
+  arrays' names (an entry's value) and the scalars', and `radii_when` a list of the same conditions
+  with EXPR over the scalars' names alone (the radii and the other scalars), present exactly when
+  `finite_when` is not empty. For canonical operands:
     - **V1**: the result is canonical: a finite ball vector (`radius` finite and nonnegative, every
       entry written finite and, for two limbs, normalized) or the whole space (`radius` $= +\infty$,
       every limb of every entry written a zero);
@@ -1979,10 +2484,78 @@ true` (and no `"map"`):
       $i$ written; for the whole space, trivially;
     - **V3**: if the result is a finite ball vector, every operand is one and every scalar is
       finite;
-    - **V4**: if every operand is a finite ball vector, every scalar is finite, $n \ge 1$, and every
-      entry $i$ satisfies every condition of `finite_when` ($\lvert$EXPR$\rvert \le 2^{q_{\max} + p
-      + E}$, EXPR evaluated on the values of entry $i$ of the arrays and on the scalars), the result
-      is a finite ball vector. An empty list claims nothing about when the result is finite.
+    - **V4**, for every $n$, $0$ included: if every operand is a finite ball vector, every scalar is
+      finite, the scalars satisfy every condition of `radii_when` ($\lvert$EXPR$\rvert \le 2^{q_{\max}
+      + p + E}$, EXPR evaluated on the scalars), and every entry $i$ satisfies every condition of
+      `finite_when` (EXPR evaluated on the values of entry $i$ of the arrays and on the scalars), the
+      result is a finite ball vector. For $n = 0$ only `radii_when` is a condition. An empty
+      `finite_when` (and so no `radii_when`) claims nothing about when the result is finite. At any
+      entry the conditions of `finite_when` imply those of `radii_when`: for `bv_add_2`,
+      $\lvert x + y\rvert + r_x + r_y \ge r_x + r_y$, and for `bv_scale_1`,
+      $(\lvert x\rvert + r_x)\lvert a\rvert \ge r_x\lvert a\rvert$. (Until 2026-11-20 V4 was stated
+      for $n \ge 1$ only and `radii_when` did not exist.)
+    - **`finite_from`**, an integer, written after `radii_when` and only in an entry that has it
+      (`bv_add_1`, `bv_sub_1`, `bv_scale_1`: `"finite_from": 2`): the precision from which V4 is
+      claimed, above the fold's `min_precision`. V1 to V3 and the flag are claimed from `min_precision`,
+      V4 from `finite_from` (from `min_precision` when there is none). A reader judges V4 only in
+      formats of at least that precision.
+
+**From which precision each clause holds.** The statements quantify over every `emax` above the
+precision (`binary_float` asks $p < e_{\max}$), so the smallest format of precision $p$ has
+$e_{\max} = p + 1$: the finite numbers below $2^{p+1}$. V1 to V3 and the flag hold from the fold's
+minimum precision, whatever the constants: a constant of the radius kernel that overflows is
+$+\infty$ in the IEEE model, so the radius it enters is $+\infty$ or a NaN (an FMA of $+0$ and
+$+\infty$), the finish returns the whole space with the flag false, and V1 (the whole space is
+canonical), the flag, V2 (the whole space contains every set) and V3 (its premise is a finite result)
+hold of it. V4 alone promises a finite result, so it needs every constant of the fold's kernels to be
+finite in the smallest format: at precision 1, $e_{\max} = 2$ (the finite numbers $0$, $1$, $2$),
+`up((1+u)^3)` of `bv_add_radius_1` and `bv_scale_radius_1` is $27/8$ rounded up, $4 = 2^{e_{\max}}$,
+and so is `up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u))`: `bv_add_1` of one entry $(+0, +0)$ with the radii
+$+0$ meets every premise of V4 and returns the whole space. The rules check it
+(`rules._finite_from`): from the precision V4 is claimed from, every constant of the fold's step,
+records, radius and finish (and of the bound, the coefficients' step and check of a product of
+BallVectors), their callees included, must be a finite number of the smallest format of that
+precision; otherwise the description must say `finite_from=P`. The precisions:
+
+| Ball vectors | V1 to V3, the flag | V4 |
+|---|---|---|
+| `bv_add_1`, `bv_sub_1`, `bv_scale_1` | 1 | 2 (`finite_from=2`) |
+| `bv_neg_1`, `bv_neg_2` (no constant) | 1 | 1 |
+| `bv_make_1`, `bv_make_2` (`makes_ball_vector`: the whole space exactly when, no constant) | 1 | 1 |
+| `bv_scale_2`, `bv_mul_pow2_1`, `bv_mul_pow2_2` | 2 | 2 |
+| `bv_add_2`, `bv_sub_2` | 3 | 3 |
+| `bv_conv_1`, `bv_conv_2` | 4 | 4 |
+
+The tests of V4 (`test_bv.py`, `test_bv_conv.py`) run, besides their toy formats, the smallest format
+of the precision V4 is claimed from ($e_{\max} = p + 1$); below `finite_from` the interpreter refuses
+the format, whose constant overflows (an `InterpError`), and `test_bv.Interp.test_v4_is_false_at_precision_1`
+checks that overflow. (Until 2026-11-20 V4 of the three was claimed from precision 1, which is false.)
+
+    - **Exact**, with `"exact_when": []` (written last, only in an entry that has it: `bv_neg_k`, the
+      word `exact` of the description): if the result is a finite ball vector, it is exactly the set,
+      entry by entry: besides V2, every real within `radius` of entry $i$ written is a value of `set`
+      with each ball name at some real within its radius of entry $i$ of its center. The list is
+      that of the conditions of `exact_when` of `encloses`, and the empty list always holds.
+    - **Exact under conditions**, with `"exact_when": [CONDITION, ...]`, a list that is not empty
+      (`bv_mul_pow2_k`), written last like the empty list. Each condition is
+      `{"zero_or_abs_gt": EXPR, "than": K}` or `{"zero_or_abs_ge": EXPR, "than": K}`, as for `encloses`
+      ([the conditions of `exact_when`](#claims-of-milestone-2), below the table of `neighbor`): EXPR $= 0$
+      or $\lvert\mathrm{EXPR}\rvert > K$ (or $\ge K$), K an exact positive expression over `u`, `eta` and
+      integers, EXPR an expression of the language of `value` over the arrays' names (the exact value of
+      an entry, the sum of its limbs), their limbs `NAME[I]` (limb I of the entry, the leading limb
+      `NAME[0]`) and the scalars' names. A condition whose EXPR names an array is **a condition of an
+      entry**, evaluated at each entry $i$ on the limbs of entry $i$ and on the scalars; one whose EXPR
+      names scalars only is **a condition of the scalars**. The claim: if the result is a finite ball
+      vector, every condition of the scalars holds, and every entry satisfies every condition of an
+      entry, then the result is exactly the set at every entry, as for the empty list. One entry that
+      fails its conditions takes the exactness from every entry (the radius is one for all), so nothing
+      is claimed then beyond V1 to V4; for $n = 0$ nothing is claimed beyond them either. For
+      `bv_mul_pow2_2` the conditions are `x[0]*c` and `x[1]*c` (of an entry) and `rx*c` (of the
+      scalars), each zero or above $N = \eta/(2u)$ in magnitude: when they hold the centers written are
+      $c\,x_i$ and the radius $c\,r_x$, exactly. A reader judges it by computing, in exact arithmetic,
+      whether every condition holds, and if so whether $[z_i - r, z_i + r]$ is exactly the exact range of
+      `set` over the operands' balls at every entry (for a product by a positive $c$, the endpoints
+      $c(x_i \mp r_x)$).
 
     What is claimed of the one radius is that and nothing more: containment (V2) and when it is
     finite (V4). That it is the largest of the $n$ radii the entrywise Ball kernel (`ball_add_k`,
@@ -1992,9 +2565,118 @@ true` (and no `"map"`):
 - `step`, `step_args`, `record`, `combine`, `radius`, `radius_args` and `finish` name the parts:
   the step on the scalars and arrays of `step_args`, the record and the combination of the state
   `m, ok`, the radius kernel on `radius_args` (`m`, the limb of the state, then scalars), the finish.
-  They are for reading; the oracle judges the claim.
+  They are for reading; the oracle judges the claim. A ball vector exact under conditions also has
+  `"exactness": {"mask": "e", "state": "ex"}`, after `record` and only there: the step's second
+  output `e` (the mask that its entry is exact, claimed by the step's `exact_flag`) and-ed over the
+  entries into the state's mask `ex`, which `radius_args` names after `m`.
+- **`power_of_two(SCALAR)`**, a requirement of a scalar the program supplies (`c` of `bv_mul_pow2_k`):
+  the scalar is a positive power of two of the format, finite, $c = 2^k$, as for a map; no other value
+  is a valid operand.
 - In the extended domain, as for a map: the order makes no difference, `F_seq`, `F_lanes` with any
   $W$ and `F_packed` write the same centers and return the same radius and flag.
+
+**The products of two BallVectors** `bv_conv_1` and `bv_conv_2` ([the product of
+polynomials](#ball-vectors)) are in the list `"folds"` with `"bv_conv": true` (and no `"bv"`, `"conv"`
+or `"map"`: their requests have two lengths, and two radii). The entry of `bv_conv_2` as the generator
+writes it (`source` left out):
+
+```json
+{
+  "name": "bv_conv_2", "bv_conv": true, "domain": "extended",
+  "arrays": [{"name": "x", "limbs": 2, "role": "stored"}, {"name": "y", "limbs": 2, "role": "stored"}],
+  "scalars": [{"name": "rx", "limbs": 1, "role": "stored"}, {"name": "ry", "limbs": 1, "role": "stored"}],
+  "writes": [{"name": "z", "limbs": 2}],
+  "outputs": [{"name": "r", "limbs": 1}, {"name": "flag", "limbs": 1, "type": "mask"}],
+  "value": "x*y",
+  "requires": ["ball_vector(x, rx)", "ball_vector(y, ry)"],
+  "ensures": [{"kind": "encloses_coefficients", "center": "z", "radius": "r", "flag": "flag", "set": "x*y",
+               "balls": {"x": {"center": "x", "radius": "rx"}, "y": {"center": "y", "radius": "ry"}},
+               "finite_when": [{"abs_le": "n*(abs(x)+rx)*(abs(y)+ry)", "exp": -2}, {"abs_le": "(abs(x)+rx)*ry", "exp": -2},
+                               {"abs_le": "(abs(y)+ry)*rx", "exp": -2}],
+               "radii_when": [{"abs_le": "rx*ry", "exp": -2}],
+               "count_when": [{"le": "n*(unit(mul_2_2)+eta)", "than": "1/16"}]}],
+  "orders": ["sequential"],
+  "centers": "conv_2", "records": ["norm_step_2", "norm_step_2"], "count": "min(n_x,n_y)", "bound": "bound_dot_2",
+  "radius": "conv_radius", "radius_args": ["ma", "mb", "rx", "ry", "m", "g", "t"], "finish": "bv_conv_finish",
+  "min_precision": 4, "status": "unverified", "theorem": null
+}
+```
+
+- `arrays` are the two polynomials, the centers of two BallVectors $X$ of $n_x$ entries and $Y$ of $n_y$,
+  each of its own length (the line protocol gives both); `scalars` their radii; `writes` the $n_z = n_x +
+  n_y - 1$ coefficients of the product, none when a length is $0$; `outputs` its radius and the flag.
+  `ball_vector(ARRAY, RADIUS)` as for the other ball vectors.
+- **`encloses_coefficients`**, `center` the array written, `radius` and `flag` the outputs, `set` an
+  expression of the ball names (the value of a term, `x*y`), `balls` for each ball name its array and
+  radius. For canonical operands:
+    - **V1**: the result is canonical, a finite ball vector or the whole space (every limb of every
+      coefficient a zero, the radius $+\infty$), of $n_z$ coefficients;
+    - the flag is true exactly when `radius` is finite;
+    - **V2**, coefficient by coefficient: for all reals $x_i$ within $r_x$ of entry $i$ of $X$ and $y_k$
+      within $r_y$ of entry $k$ of $Y$, each chosen independently (for an operand that is the whole
+      space, any reals), coefficient $j$ of their product, $\sum_i x_i y_{j-i}$ over $i$ from $\max(0, j -
+      n_y + 1)$ to $\min(j, n_x - 1)$, is within `radius` of coefficient $j$ written. Each entry occurs
+      once in a coefficient, so a reader computes the exact range of that sum as the sum of the ranges
+      of its products (each the least and the greatest of the four products of the ends of the two
+      balls) and checks it against $[z_j - r, z_j + r]$;
+    - **V3**: if the result is a finite ball vector, both operands are (finite radii);
+    - **V4**: if both operands are finite ball vectors, every condition of `count_when` holds, every
+      condition of `radii_when` holds, and every condition of `finite_when` holds where it applies, the
+      result is a finite ball vector. A condition `{"abs_le": EXPR, "exp": E}` is $\lvert
+      \mathrm{EXPR}\rvert \le 2^{q_{\max} + p + E}$, EXPR in the language of `value` over the arrays'
+      names (the exact value of an entry), the scalars' names and **`n`**, the count $\min(n_x, n_y)$, an
+      integer. It applies at **every pair of entries** $(x_i, y_k)$, $0 \le i < n_x$, $0 \le k < n_y$,
+      when EXPR names both arrays (every such pair is a term of coefficient $i + k$); at every entry of
+      one array when it names that array only; once when it names neither (`radii_when` names scalars
+      only). A condition of **`count_when`**, `{"le": EXPR, "than": K}`, is EXPR $\le$ K, EXPR an exact
+      expression over `n`, `u`, `eta`, integers and `unit(K)`, `tiny(K)` of a kernel's bound, K a positive
+      rational: here $n\,(4u^2 + \eta) \le \tfrac1{16}$ (`unit(mul_1_1)` $= u/(1+u)$ for `bv_conv_1`), which
+      makes the bound of `dot` for $n$ terms given (`bound_dot_k`'s mask true). For $n_x = 0$ or $n_y = 0$
+      there is no pair, and the conditions of the other array and of the radii are the whole of V4.
+  `finite_when`, `radii_when` and `count_when` are present together or not at all.
+- `centers` (the convolution of the centers, an entry of the list with `"conv": true`), `records`,
+  `count`, `bound`, `radius`, `radius_args` (the maxima `ma`, `mb` of the records, the radii, the count
+  `m`, the bound's `g` and `t`) and `finish` name the parts, for reading; the oracle judges the claim.
+- The order makes no difference: there is one, `sequential`, and no packed form.
+
+Two new forms in the entries of their kernels:
+
+- **`at_most(NAME, K)`**, a requirement of `conv_radius`: the one-limb input NAME is at most the positive
+  integer K (`at_most(g, 1)`: the bound of `dot` is at most 1, which `bound_dot_k` gives when its mask is
+  true). A reader draws no operand beyond it. In the formal model, `g <= 1`.
+- **`finite_or_nan` with `if_all`**, `{"kind": "finite_or_nan", "of": "r", "flag": "flag", "if_all": ["okc",
+  "okg"]}`, of `bv_conv_finish`: as `finite_or_nan` with `if` of one mask, with the list of two mask inputs
+  or more: the flag is true exactly when every mask of the list is true and the value is finite, and the
+  output is then the value; otherwise a NaN. The field is written only where it is, without `if`, `steps`
+  or `nonneg`.
+
+**The constructors** `bv_make_1` and `bv_make_2` are ball vectors too (`"bv": true`), with one array of
+the centers given and one scalar, the radius given, both `supplied` for one limb (`bv_make_2` reads its
+centers `stored`: they are `Expansion<T, 2>`), and a claim of a kind of their own:
+
+```json
+{"kind": "makes_ball_vector", "center": "z", "radius": "rr", "flag": "finite", "from": {"center": "c", "radius": "r"}}
+```
+
+- **`makes_ball_vector`**, `center` the array written, `radius` and `flag` the outputs, `from` the array
+  read (the centers given) and the scalar (the radius given). `requires` is empty for one limb, where a
+  center is any value of the format, and `canonical(c)` for two limbs; the radius is any value of the
+  format. The result is canonical (V1 above). The flag is true exactly when the radius returned is
+  finite. The result is the whole space (every limb of every center written a zero, the radius
+  $+\infty$, the flag false) exactly when the radius given is negative, a NaN or $+\infty$ (so $-\infty$
+  too), or the leading limb of a center given is not finite. Otherwise the centers written are those
+  given, limb for limb, and the radius is the radius given, as values: the sign of a zero is not part
+  of the claim (a center or a radius of $-0$ comes out as $+0$ for one limb, through the guard).
+- **`finite_or_nan` with `nonneg`**, `{"kind": "finite_or_nan", "of": "r", "flag": "flag", "if": "ok",
+  "nonneg": true}`, of `bv_make_finish`: as `finite_or_nan` with `if`, and the value must also not be
+  negative: the flag is true exactly when the mask `if` is true, the value is finite and it is not below
+  zero (either zero is not); the output is then the value, otherwise a NaN. The field is written only
+  where it is true, with `if` and without `steps`.
+
+The other kernels of the constructors claim kinds that exist: `bv_center_entry_1` (`guard(c)`) and
+`bv_make_radius` (`rz = guard(r) + (m - m)`, value `r`) claim `rounded` to nearest of their value,
+which is the value itself, in the finite domain; `bv_center_2` (a copy) claims what `neg_2` claims with
+the value `x`.
 
 The radius kernels are kernels with an entry `upper` with a value of its own, as the bound kernels
 are, whose value may hold `abs( )` of an input (`abs(a)*rx`), now in the language of that value:
@@ -2010,6 +2692,38 @@ Two things in those entries are new forms, which a reader of the claims must lea
 requirements): the output is at least the exact value of `value`, whether it is finite or the
 rounding has overflowed to $+\infty$. Nothing is said of how far above. And `value` may hold
 `abs(X)` of an input `X`, its exact magnitude.
+
+**The kernels of the scaling of a BallVector by a power of two** (`bv_mul_pow2_k`) add three fields, each
+written only in an entry that has it, in the finite domain:
+
+| Field | Of | Meaning |
+|---|---|---|
+| `exact_flag`: a mask output | an `error` entry with `exact_when` | the mask output is true exactly when every condition of the entry's `exact_when` holds (and then, by `exact_when`, the output is `value` exactly); like the rest of the entry, it holds where output limb 0 is finite |
+| `unless`: a mask input | an `upper` entry with `value` and without `if` or `gaps` | when the mask input is false, the output is at least the exact value of `value`; when it is true, the entry says nothing |
+| `exact_when`: a list of conditions | an `upper` entry with `value` and without `if`, `gaps` or `unless` | the output is at least `value`, as without the field, and equals it exactly when every condition holds |
+
+and one condition of `exact_when`, **`{"mask": NAME}`**, in the `exact_when` of an `upper` entry only:
+NAME is a mask input, and the condition holds when it is true. The two steps and the radius, as the
+generator writes them:
+
+```json
+{"kind": "error", "of": "z", "form": "R", "c": "0", "k": 2, "t": "1", "when": null,
+ "exact_when": [{"zero_or_abs_gt": "x[0]*c", "than": "eta/(2*u)"}, {"zero_or_abs_gt": "x[1]*c", "than": "eta/(2*u)"}],
+ "exact_flag": "e"}
+{"kind": "upper", "of": "rz", "value": "rx*c",
+ "exact_when": [{"mask": "ex"}, {"zero_or_abs_gt": "rx*c", "than": "eta/(2*u)"}]}
+{"kind": "upper", "of": "rz", "value": "rx*c+eta", "unless": "ex"}
+```
+
+The first is of `bv_mul_pow2_step_2` (with `normalized z` before it; `bv_mul_pow2_step_1` has `rounded z
+nearest` and the error `t=1/2` with the one condition `x*c`), whose outputs are the center `z` and the
+mask `e`; the others are the two entries of `bv_mul_pow2_radius`, whose inputs are `m`, the mask `ex`, `rx`
+and `c`, and which requires `nonneg(m)`, `nonneg(rx)`, `power_of_two(c)`. A reader judges them as the
+other entries of their kinds: the mask `e` against the conditions, evaluated exactly on the input limbs
+($x_1 c = 0$ or $\lvert x_1 c\rvert > \eta/(2u)$, $\eta/(2u)$ the smallest normal number of the format);
+`rz` against $r_x c$ always, against $r_x c + \eta$ when the input `ex` is `0`, and for equality with $r_x
+c$ when `ex` is `1` and the condition on $r_x c$ holds. In the formal models: `(e = true <-> CONDITIONS)`,
+`(ex = false -> rx * c + eta emin <= rz)`, and `(ex = true /\ CONDITIONS -> rz = rx * c)` after `rx * c <= rz`.
 
 ### Claims of the interval kernels
 
@@ -2384,9 +3098,27 @@ centers. The result is, for each limb array of centers written, most significant
 entries, then the radius, then the flag: for `bv_add_1 binary64 seq 2 0x1p-4 0x1p-4 0x1p+0 0x1p+1
 0x1p+0 0x1p+0` ($x = (1, 2)$, $y = (1, 1)$, both of radius $\tfrac1{16}$) the completion
 ` -> 0x1p+1 0x1.8p+1 R 1`, R the radius, a little above $\tfrac18$; when the flag is `0` the centers
-are `0x0p+0` and the radius `inf`, the whole space. The interpreter, the compiled runner (`F_seq`,
-`F_lanes` for any W) and the packed runner (`F_packed`, its register's W only) complete them, with
-the same bits.
+are `0x0p+0` and the radius `inf`, the whole space. The constructor has the same form, its one scalar
+the radius given: `bv_make_1 binary64 seq 2 0x1p-4 -0x1p+0 0x1p+1` is completed with
+` -> -0x1p+0 0x1p+1 0x1p-4 1`, and the same request with the radius `-0x1p-4` with
+` -> 0x0p+0 0x0p+0 inf 0`. The interpreter, the compiled runner (`F_seq`, `F_lanes` for any W) and the
+packed runner (`F_packed`, its register's W only) complete them, with the same bits.
+
+**In place.** A map or a ball vector may write the array it reads (the array written being exactly
+one of the arrays read, [Maps](#maps)). A request asks for that with one more field, `inplace=I`,
+right after the length: `MAP FORMAT ORDER N inplace=I SCALAR... LIMB...`, I the index (from 0, in the
+order of the fold's `arrays`) of an array read whose limbs are as many as those of the array written.
+The compiled runners and the packed runner then pass that array's buffers as the array written; the
+interpreter computes as without the field. The completion is that of the request without the field,
+the field copied with the rest of the line before the arrow, and every claim is judged as for that
+request: in place changes nothing that is claimed. For example `add_2 binary64 seq 2 inplace=1 0x1p+0
+0x1p+1 0x0p+0 0x0p+0 0x1p-1 0x1p-1 0x0p+0 0x0p+0` ($y \leftarrow x + y$, $x = (1, 2)$, $y = (\tfrac12,
+\tfrac12)$) is completed with ` -> 0x1.8p+0 0x1.4p+1 0x0p+0 0x0p+0 1`, and `bv_add_1 binary64 lanes:2 2
+inplace=0 0x1p-4 0x1p-4 0x1p+0 0x1p+1 0x1p+0 0x1p+0` ($x \leftarrow x + y$) as the same request without
+`inplace=0`. A request whose I is not such an array, or of a fold that is not a map or a ball vector,
+is refused. The generator's tests (`test_bv.Cxx.test_in_place`, `test_bv.Packed.test_in_place`) run
+every map and every ball vector in place this way, with each array that can be written, through every
+build of the runners, and find the completions of the requests without the field.
 
 **Convolutions** have two lengths, and the sequential order only:
 
@@ -2408,6 +3140,24 @@ $y = 1, \tfrac12$: the product of $1 + 2t + 4t^2$ and $1 + \tfrac12 t$) is compl
 ` -> 0x1p+0 0x1.4p+1 0x1.4p+2 0x1p+1 1` ($1, \tfrac52, 5, 2$), and `conv_2 binary64 seq 0 1 0x1p+0
 0x0p+0` with ` -> 1`. The interpreter and the compiled runner (`F_seq`) complete them, with the same
 bits; the packed runner refuses them, a convolution having no packed form.
+
+**The products of two BallVectors** have the requests of convolutions, with the limbs of the scalars,
+the two radii in the order of the fold's `scalars`, between the lengths and the arrays:
+
+```
+request:    BV_CONV FORMAT seq N_X N_Y RX RY LIMB ... [#TAG]
+completed:  BV_CONV FORMAT seq N_X N_Y RX RY LIMB ... [#TAG] -> RESULT ...
+```
+
+The result is, for each limb array written, most significant first, its $N_Z$ coefficients, then the
+radius, then the flag; when the flag is `0` the coefficients are `0x0p+0` and the radius `inf`, the whole
+space. For example `bv_conv_1 binary64 seq 3 2 0x1p-4 0x1p-3 0x1p+0 0x1p+1 0x1p+2 0x1p+0 0x1p-1` ($x = 1,
+2, 4$ of radius $\tfrac1{16}$ and $y = 1, \tfrac12$ of radius $\tfrac18$) is completed with ` -> 0x1p+0
+0x1.4p+1 0x1.4p+2 0x1p+1 R 1`, R the radius, `0x1.240000000000dp+0`, a little above $2(4 \cdot \tfrac18 +
+1 \cdot \tfrac1{16} + \tfrac1{128}) = 1.140625$ ($m = 2$, $M_a = 4$, $M_b = 1$); and
+`bv_conv_2 binary64 seq 0 1 0x1p-4 0x1p-3 0x1p+0 0x0p+0`, an empty operand, with ` -> 0x0p+0 1`, no
+coefficient and the radius $+0$. The interpreter and the compiled runner (`F_seq`) complete them, with the
+same bits; the packed runner refuses them.
 
 The constants of `include/kairn/rational.hpp`, which are not kernels, have lines of their own
 ([Constants from fractions](../reference/rational.md)): `rational_K FORMAT NUM DEN [#TAG]`, with K
