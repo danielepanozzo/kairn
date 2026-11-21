@@ -264,10 +264,16 @@ compiled at `-O2`, the median of seven compilations interleaved:
 
 | Machine, compiler, form | `kairn/kairn.hpp` | and `packed.hpp`, `soa.hpp` | and `ball_vector.hpp` | every operation used |
 |---|---|---|---|---|
-| Apple M3 Max, Apple clang 21, NEON | 0.186 s | 0.353 s | 0.507 s | 0.757 s |
+| Apple M3 Max, Apple clang 21, NEON | 0.156 s | 0.310 s | 0.460 s | 0.650 s |
+| Apple M3 Max, GCC 16, NEON | 0.327 s | 0.692 s | 0.718 s | 1.176 s |
+| AMD EPYC 7452, GCC 13, AVX2 (`-mavx2 -mfma`), under a load average of about 40 | 0.465 s | 1.290 s | 1.314 s | 1.964 s |
+| AMD EPYC 7452, Clang 18, AVX2, the same | 0.680 s | 1.594 s | 1.658 s | 2.178 s |
 
-So `kairn/kairn.hpp`, which stays cheap to include, does not include it: a program includes
-`kairn/ball_vector.hpp` itself.
+The last column is a file that calls every operation of one and two limbs once (each loop
+instantiated for `double`). Of what the header adds to `kairn/packed.hpp` and `kairn/soa.hpp` with
+Apple clang, about 0.09 s is libc++'s `<array>`, which the constructor from an `std::array` needs.
+`kairn/kairn.hpp`, which stays cheap to include, therefore does not include it, as it does not
+include `kairn/packed.hpp` and `kairn/soa.hpp`: a program includes `kairn/ball_vector.hpp` itself.
 
 ## What is tested
 
