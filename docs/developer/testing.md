@@ -582,7 +582,10 @@ that cannot be read, a summary padded beyond the bound on its size); and both dr
 reason, and on good ones: `tests/crosscheck.py compiled` with the interpreter as its runner
 (`--interp`), `tests/crosscheck.py api` with the build's runner of the public interface (a good
 run, one of 5 cases, which misses strata, and a kernel it maps no form to), and
-`tests/crosscheck.cmake`.
+`tests/crosscheck.cmake`; and `tests/crosscheck.py compiled` on the reports of a packed runner's
+lanes (`LaneReports`): a good one passes, and one of another assignment, of no segment or of
+another stream, one whose guard failed and one that cannot be read fail
+([Packed kernels](#packed-kernels)).
 
 ## Packed kernels
 
@@ -662,7 +665,8 @@ says which kind missed which lane or that no register mixed, and exits with 3. A
 than W requests cannot reach every lane and is not asked to. The construction makes the first
 condition hold whenever the assignment is the one described; the second fails by chance with a
 probability below $10^{-12}$ at these sizes. Applied to the consecutive assignment of the oracle's
-stream, the guard refuses it at every W (`crosscheck.lanes.fault.F` checks so).
+stream of `mul_2_2_full`, the guard refuses it at every W (`crosscheck.lanes.fault.F` checks
+so).
 
 **What a test keeps.** `--lane-report FILE` writes, per segment, the kernel, format, requests,
 lanes, registers, padding, the registers that mixed (non-finite with finite, and two strata), the
@@ -686,7 +690,7 @@ multiples of 8). They now hold a copy of the segment's first request whose limbs
 dropped; the report names the line copied. The generator's tests run streams of 1, $W - 1$,
 $W + 1$, $2W + 1$ and 257 requests whose first request is non-finite, with both assignments,
 on every build: every line as the scalar runner completes it, the padding the first finite
-request.
+request (the only request, in a stream of one).
 
 **The planted fault.** `tests/lanes/lane_fault.hpp` is a copy of the generated `mul_2_2_full`
 whose select returns the core's product where its leading limb is finite and the four limbs of
