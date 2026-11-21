@@ -380,6 +380,17 @@ public:
     }
     /// The array of limb j of the centers (0 for the leading limbs), of size() elements, read-only.
     constexpr const V* limb(int j) const noexcept { return limb_[j]; }
+    /// The count entries from offset on, offset + count <= size() (not checked, as for std::span),
+    /// with the same radius: a ball vector of count entries that contains the part of every member,
+    /// as the shifted operands of a subdivision need. Only for a view of const limbs: an operation
+    /// that wrote a part of a ball vector would change the one radius of every entry.
+    constexpr BallVectorView subview(std::size_t offset, std::size_t count) const noexcept
+        requires(std::is_const_v<T>)
+    {
+        T* arrays[K];
+        for (int j = 0; j < K; ++j) arrays[j] = limb_[j] + offset;
+        return BallVectorView(arrays, count, radius_);
+    }
 
 private:
     template <class U, int J>

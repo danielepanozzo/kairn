@@ -217,8 +217,12 @@ void constructors() {
             for (std::size_t i = 0; i < 3; ++i)
                 for (int j = 0; j < K; ++j) expect(x.center(i).limb[j] == c[i].limb[j], "the centers given");
         }
-        // The copy of a view: the same bits.
+        // The copy of a view: the same bits. A part of a read-only view: its entries, the same radius.
         expect(same(kairn::BallVector<T, K, 3>(v), v), "BallVector(view): a copy");
+        const kairn::BallVectorView<const T, K> part = kairn::BallVectorView<const T, K>(v).subview(1, 2);
+        expect(part.size() == 2 && same_limb(part.radius(), v.radius()) && part.limb(0) == v.limb(0) + 1 &&
+                   part.limb(K - 1) == v.limb(K - 1) + 1,
+               "subview");
     }
     // A center that is not finite: the whole space, whatever the radius.
     for (T bad : {inf, -inf, nan}) {

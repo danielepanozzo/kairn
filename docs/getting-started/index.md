@@ -192,6 +192,39 @@ make two to three times as long to compile where the target has SIMD
 `kairn::fma` adds `-mfma` only, which gives the form of one lane: the AVX2 form needs `-mavx2
 -mfma`, `-march=x86-64-v3` or later, or `/arch:AVX2`. There is no dispatch at run time.
 
+## Ball vectors
+
+A vector of $N$ values each known to within an error, such as the coefficients of a polynomial
+computed from data, can be held as $N$ `Ball`s or as one `kairn::BallVector<T, k, N>`
+([reference](../reference/ball_vector.md)): $N$ centers and **one** radius, the set of the vectors
+each of whose entries is within the radius of its center. Its operations (sums, differences, the
+negation, scalings by a `T` and by a power of two, `axpy`, the product of two polynomials, a bound of
+every entry) are each one generated loop over the arrays of the centers, proved, and contain the
+exact result for every member of the operands, entry by entry.
+
+- **Cost.** An operation on a `BallVector` is one kernel per entry for the centers and a few
+  operations for the radius, once; $N$ `Ball`s compute $N$ radii. The loops run in the lanes of
+  [`Packed`](../reference/packed.md) where the target has them.
+- **Tightness.** The one radius is as wide as the widest entry needs. For a sum, a difference and a
+  scaling it is, in every case measured, the largest of the $N$ radii the entrywise `Ball`
+  operations would give: nothing is lost on the widest entry, and the narrower entries get its
+  radius. That is what the loops compute, not a claim. The product of two polynomials takes the
+  largest centers of each operand for every coefficient: the right order for coefficients of
+  comparable size, as in the Bernstein basis, and pessimistic, up to the number of terms, when they
+  differ much in size.
+- **Exact halvings.** `half` and `ldexp` are exact when nothing underflows: a subdivision that
+  halves again and again keeps its radius $r / 2^i$.
+- **What it is not.** A `BallVector` is not $N$ independent balls; `entry(i)` is the ball of center
+  $i$ and the shared radius, a copy. It has two states, a finite ball vector and the whole space
+  (every center zero, the radius $+\infty$), and no empty one. Values whose errors differ much in
+  size are better held as `Ball`s.
+
+`kairn/kairn.hpp` does not include `kairn/ball_vector.hpp`, which costs about as much again to
+compile as `kairn/packed.hpp` and `kairn/soa.hpp`, which it includes
+([Compile time](../reference/ball_vector.md#compile-time)). The
+[tutorial](../tutorials/ball-vectors.md) subdivides a polynomial in the Bernstein basis and
+multiplies two polynomials, and checks both against exact arithmetic.
+
 ## Constants from fractions
 
 A constant such as 1/10 or 1/3 is not a `double`, nor the sum of two. `kairn::rational<X>(num,

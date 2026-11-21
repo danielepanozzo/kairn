@@ -12,7 +12,7 @@ $$g \ge \frac{m \mathrm{unit}(\mathtt{mul\_2\_2})}{1 - m \mathrm{unit}(\mathtt{m
 
 ## C++
 
-No public operation computes this kernel on its own.
+No public operation computes this kernel on its own. It is part of the loop `bv_conv_2`, called by `convolution`, the product of polynomials, of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

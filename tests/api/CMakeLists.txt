@@ -37,8 +37,10 @@
 #   rational_runner.cpp (../crosscheck.py compiled). The full tier has more cases, through the runner of every
 #   flag set too, and rational.cpp built with every flag set.
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
-#   api.example.accurate_sums.*, api.example.intervals.* and api.example.packed_dot.* also compare
-#   it with the text their tutorials show.
+#   api.example.accurate_sums.*, api.example.intervals.*, api.example.ball_vectors.* and
+#   api.example.packed_dot.* also compare it with the text their tutorials show.
+# - api.ball_vector.FORM, api.boundary.ball_vector.*, api.reject.ball_vector.*: BallVector
+#   (ball_vector.hpp), below; its loops join api.oracle.* as api.oracle.LOOP.FORMAT.
 # - api.packed.FORM, api.soa.FORM, api.example.packed_dot.FORM: Packed (packed.hpp) against the
 #   scalar operations, bit for bit, lane by lane (packed.cpp); the containers of soa.hpp (soa.cpp);
 #   and the tutorial's vector loop, whose results are checked against the bound it states; each in
@@ -847,6 +849,7 @@ _kairn_api_reject(ball_vector.no_entry 60 "N is at least 1")
 _kairn_api_reject(ball_vector.with_ball 61 "${_api_no_operator}")
 _kairn_api_reject(ball_vector.not_constexpr 62 "constant|constexpr")
 _kairn_api_reject(ball_vector.view_of_const_limbs 63 "${_api_no_constructor}")
+_kairn_api_reject(ball_vector.part_of_mutable_view 64 "${_api_no_member}")
 # KAIRN_PACKED_FORM (packed.hpp): a value that is not a form, a bare -D, and the form of another
 # target, which the generated header refuses.
 _kairn_api_reject(packed_form.unknown 52 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"
@@ -979,6 +982,16 @@ foreach(_i RANGE 0 ${_last} 2)
       "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/intervals.txt"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
   set_tests_properties(api.example.intervals${_suffix} PROPERTIES LABELS "api;example")
+  # The tutorial on ball vectors (docs/tutorials/ball-vectors.md), the same way: its program checks
+  # every result against exact arithmetic, and prints the same text in every form of Packed (the two
+  # orders give the same bits).
+  _kairn_api_program(kairn-example-ball-vectors${_target_suffix}
+    "${PROJECT_SOURCE_DIR}/docs/examples/cpp/ball_vectors.cpp" ${_option})
+  add_test(NAME api.example.ball_vectors${_suffix}
+    COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-ball-vectors${_target_suffix}>"
+      "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/ball_vectors.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+  set_tests_properties(api.example.ball_vectors${_suffix} PROPERTIES LABELS "api;example;ball_vector")
 endforeach()
 # The tutorial on a vector loop (docs/tutorials/vector-loop.md), in every form of Packed (above):
 # the same text in each, which the program checks against an exact reference and the bound it

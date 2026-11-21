@@ -12,7 +12,7 @@ $$r = \max(m, \lvert x\rvert).$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`norm_step_2`](norm_step_2.md).
+No public operation computes this kernel on its own. It is part of [`norm_step_2`](norm_step_2.md). It is part of the loop `bv_make_1`, called by the constructors of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_neg_1`, called by `-x` and `neg(x, z)` of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_add_1`, called by `x + y`, `x += y`, `add(x, y, z)` and `axpy` of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_sub_1`, called by `x - y`, `x -= y` and `sub(x, y, z)` of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_scale_1`, called by `x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_mul_pow2_1`, called by `ldexp` and `half` of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_conv_1`, called by `convolution`, the product of polynomials, of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `norm_upper_1`, called by `norm_upper` of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

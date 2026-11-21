@@ -12,7 +12,7 @@ $$t = \mathrm{RN}(s + x y).$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+No public operation computes this kernel on its own. It is part of the loop `bv_conv_1`, called by `convolution`, the product of polynomials, of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

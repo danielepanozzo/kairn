@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $s = s_0 + s_1$, $x = x_0 
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call its core, [`mul_2_2`](mul_2_2.md) and [`add_2_2`](add_2_2.md), instead.
+No public operation computes this kernel on its own. It is part of [`acc_mul_2`](acc_mul_2.md). It is part of the loop `bv_conv_2`, called by `convolution`, the product of polynomials, of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

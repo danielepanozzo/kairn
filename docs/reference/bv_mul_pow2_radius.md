@@ -12,7 +12,7 @@ $$r_z \ge r_x c.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+No public operation computes this kernel on its own. It is part of the loop `bv_mul_pow2_1`, called by `ldexp` and `half` of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_mul_pow2_2`, called by `ldexp` and `half` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

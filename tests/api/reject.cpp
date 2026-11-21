@@ -42,13 +42,14 @@
 //          operation of two limb types; each control writes what compiles instead
 //   53     the arithmetic of Packed<T, 1>, which there is none of (its kernels are not entry
 //          kernels); the control negates, and adds a Packed<T, 1> to a Packed<T, 2>
-//   54-63  BallVector (ball_vector.hpp): an operation writing a const BallVector and a view of
+//   54-64  BallVector (ball_vector.hpp): an operation writing a const BallVector and a view of
 //          const limbs, ball vectors whose types fix lengths that differ, two limb types, a view of
 //          mutable limbs made of a view of const ones, a view converted to a BallVector implicitly
 //          (the length is checked at run time only: the conversion is explicit), a BallVector of no
 //          entry, a ball vector and a Ball in one operation, an operation in a constant
 //          expression (the loops are not constexpr), a view made over arrays of const limbs (its
-//          constructor writes them); each control writes what compiles instead
+//          constructor writes them), a part of a view of mutable limbs (an operation that wrote it
+//          would change the radius of every entry); each control writes what compiles instead
 //   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
 //          is not a form, or a form the target does not have (the generated header's #error)
 //   29-31  an UNVERIFIED building block (two_sum, next_up) and the scaling of a ball by a power of
@@ -70,7 +71,7 @@
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
 #endif
-#if KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 63
+#if KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 64
 #include <kairn/ball_vector.hpp>
 #endif
 
@@ -321,7 +322,7 @@ int main() {
     sink = (px + pf).lane(0).limb[0];
 #endif
 #endif
-#elif KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 63
+#elif KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 64
     using BV = kairn::BallVector<double, 1, 3>;
     const BV bx({1.0, 2.0, double(v)}, 0.5);
     BV bz;
@@ -410,6 +411,14 @@ int main() {
     const kairn::BallVectorView<double, 1> w(kairn::SoAView<const double, 1>(cc2, 3), rr);
 #endif
     sink += w.radius();
+#elif KAIRN_TEST_CASE == 64
+    // A part of a view of mutable limbs: an operation that wrote it would change the one radius of
+    // every entry.
+#if defined(KAIRN_TEST_CONTROL)
+    sink = cvw.subview(1, 2).radius();
+#else
+    sink = mvw.subview(1, 2).radius();
+#endif
 #endif
     sink += bz.radius();
 #endif

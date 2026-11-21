@@ -60,7 +60,8 @@ The tests of the public interface (`tests/api/`, label `api`):
 |---|---|
 | `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls and intervals, built through the public constructors (an interval through `Interval(lo, hi)`, the empty set as its reversed bounds). Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`, `X.midpoint()` and `X.radius()` together for `interval_mid_rad_1`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly, a sign predicate of a ball a line of its comparison kernel whose operands are a center and a radius, the conversion of the result of `two_sum` to two limbs a finite error term, the interval of a point a line whose two bounds are one value, the bounds of an interval of two limbs as numbers of `T` a line of `to_down_2` or `to_up_2` whose operand is not a NaN); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. The building blocks on `T` are their kernels' forms as they are (`two_sum` is the form of `two_sum_entry`), and the scalings of a ball by a power of two are reached through `ldexp(X, n)` with $2^n$ the case's power of two, through `half` of a ball scaled first by $2^{n+1}$ exactly, and through the steps of `ldexp` from a ball scaled exactly by another power. |
 | `api.oracle.K.F`, the packed forms | The same cases through `Packed` and the views of `kairn/soa.hpp` (the runner's forms `packed_NAME`, after the scalar ones): each line completed in one lane of a register whose other lanes hold other lines of the stream, the form of `Packed` being that of the build (AVX2, NEON or one lane) and, where the build's flags give the scalar form on x86-64, also AVX2, through a third runner of the packed forms alone, on the kernels that `kairn/packed.hpp` calls ([below](#packed-and-the-containers)). |
-| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the ten finite cores of the Ball operations, those of the scalings by a power of two among them: the operators and `ldexp` call the full kernels, and `kairn::finite` has no Ball forms); no entry kernel is a building block. The building blocks include the nine of the interval kernels (`mul_dir_1`, the bounds of two limbs, `mul_ext_2_2`). The kernels of the folds' stage and of the maps, which no public operation calls yet (`KAIRN_NOT_PUBLIC_YET`, [Cross-checks](#cross-checks)), are on none of the runner's lists. The kernels that `kairn/packed.hpp` calls are exactly those of the runner's packed forms (`runner --packed-list`), each with a scalar form too. |
+| `api.oracle.LOOP.F` | A loop over arrays that public operations call (the sixteen of `kairn/ball_vector.hpp`: the ball vectors `bv_*_k` and the folds of maxima `norm_upper_k`), on 1 000 random requests of format F (`KAIRN_API_LOOP_QUICK_CASES`) with arrays of every length class up to 256, judged by the oracle against the loop's claims, through every form the runner has of it (`tests/api/runner_ball_vector.hpp`: the constructors, the functions on views, the operators and functions of `BallVector`, in place, in the fast and the sequential order), by the same two runners, and by the runner of the packed forms alone on the loops with forms in the fast order ([Ball vectors](#ball-vectors)). |
+| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the ten finite cores of the Ball operations, those of the scalings by a power of two among them: the operators and `ldexp` call the full kernels, and `kairn::finite` has no Ball forms), or is a part of a loop that public operations call (`runner --loop-parts`, each with its loop, which must name it in its description in `gen/kernels/LOOP.fold`, directly or through the folds it names as its centers or coefficients; such a kernel may be an entry kernel); no entry kernel is a building block. The loops the runner has forms of (`runner --loops`) are folds of the claims, and every kernel they name is public. The building blocks include the nine of the interval kernels (`mul_dir_1`, the bounds of two limbs, `mul_ext_2_2`). The kernels of the folds' stage and of the maps that no public operation calls yet (`KAIRN_NOT_PUBLIC_YET`, [Cross-checks](#cross-checks)) are on none of the runner's lists. The kernels that `kairn/packed.hpp` calls are exactly those of the runner's packed forms (`runner --packed-list`), each with a scalar form too. |
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them, the building blocks on `T` against values computed by hand (every row of the table of `next_up` and `next_down`); of intervals the constructors (an infinite point and the same infinity twice the whole line, reversed bounds the empty set), the states, the bounds, the negation, the hull, the intersection, the midpoint, the radius, the split and the conversions, and of a ball the functions of the interface it shares with intervals, with the empty set and the whole line where constant evaluation takes them (on the empty set the midpoint, the radius, the split and the conversion to a ball, and on the states of a ball its bounds, the conversion to an interval, the narrowing and the ball from an infinite or NaN bound, compute a NaN or $\infty - \infty$ on the way, which GCC and Clang refuse at compile time: those are checked at run time); the same results at run time, with the same bits where Milestone 2 says so and the same values where a zero can differ in sign; `mul_down`, `mul_up`, `ldexp` and `half` of a ball, and the arithmetic of intervals of one and two limbs, which are not `constexpr`, at run time against values computed by hand (the tightest interval of `T` for a sum of one limb, $[\Omega, +\infty]$ at an overflow, $[0, 0] \cdot X = [0, 0]$ for an unbounded $X$, two limbs within $8.1u^2$ and $10.1u^2$ of the exact bounds, $[0, 0] + [0, 0] = [0, 0]$); the properties of the types; that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved; that a building block is not found by argument-dependent lookup for a `T` and does not hide a program's own function of the same name; and `KAIRN_VERSION_AT_LEAST`. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
 | `api.flags.debug.self_test`, `api.flags.debug.constexpr`, `api.flags.debug.rational` | `kairn::self_test()` and `kairn::environment_ok()`, compiled as the [debug build](#flag-sets), pass (`runner.cpp --self-test`); `tests/api/constexpr.cpp` and `tests/api/rational.cpp` built so, their constant expressions evaluated with the checks on; `kairn::rational`, which does not round, runs under each directed rounding mode without the checks stopping the program. |
@@ -76,8 +77,9 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.k1.zero_cost` | The instructions emitted for one operation and for loops over `Expansion<double, 1>` against the same code over `double` (`tests/api/k1/zero_cost.py`); with MSVC it also fails when one of these functions has a `/GS` stack cookie ([costs](results/costs-milestone1.md#3-msvc-and-the-gs-stack-cookie)). |
 | `api.rational.K.F` | `kairn::rational` with K limbs of format F ([Constants from fractions](../reference/rational.md)) on 2 000 cases of the oracle's generator of `rational_K` (`KAIRN_RATIONAL_QUICK_CASES`, seed `KAIRN_API_SEED`), computed at run time by `tests/api/rational_runner.cpp`, which also requires `kairn::is_rational_result` to accept each result; the oracle compares every limb, the error and the flag with its own, for equality, and the guards require what the cross-checks of `rational_K` must have seen ([Cross-checks](#cross-checks); `tests/crosscheck.py compiled --kernel rational_K`, one process, as for a kernel). |
 | `api.rational.constexpr` | `tests/api/rational.cpp`: `static_assert`s of the results of two dozen fractions and six integers, for `float` and `double`, one and two limbs, against values computed from the specification with exact rationals; `kairn::is_rational_result` refusing each result changed by one unit; and a corpus of 104 fractions, each computed in a constant expression and at run time under each of the four rounding modes, with the same bits. |
-| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*` and `api.example.intervals.*`, built under each contraction setting, also compare it with the text their tutorials show ([Documentation](documentation.md#examples)). `api.example.packed_dot.FORM`, the tutorial's vector loop in each form of `Packed`, compares it too, and checks each result against the bound the tutorial states ([below](#packed-and-the-containers)). |
+| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*`, `api.example.intervals.*` and `api.example.ball_vectors.*`, built under each contraction setting, also compare it with the text their tutorials show ([Documentation](documentation.md#examples)); the last checks each result of the subdivision and of the product of polynomials against exact arithmetic on members. `api.example.packed_dot.FORM`, the tutorial's vector loop in each form of `Packed`, compares it too, and checks each result against the bound the tutorial states ([below](#packed-and-the-containers)). |
 | `api.packed.FORM`, `api.soa.FORM` | `Packed` against the scalar operations, lane by lane and bit for bit, and the containers of `kairn/soa.hpp` ([below](#packed-and-the-containers)). |
+| `api.ball_vector.FORM`, `api.boundary.ball_vector.S`, `api.boundary.ball_vector.unguarded.S` | `BallVector` and its views in each form of `Packed`, and the products of the program passed into them under each contraction setting ([Ball vectors](#ball-vectors)). |
 
 ## The full tier
 
@@ -912,6 +914,72 @@ form natively, and on AArch64 NEON.
   in each form: its output, which is the same in every form, against `packed_dot.txt`, and each of
   its results against the bound the tutorial states, decided against an exact reference in 192-bit
   integer arithmetic.
+
+## Ball vectors
+
+`BallVector<T, k, N>` and `BallVectorView<T, k>` (`include/kairn/ball_vector.hpp`,
+[reference](../reference/ball_vector.md)) call sixteen loops: the ball vectors `bv_make_k`,
+`bv_neg_k`, `bv_add_k`, `bv_sub_k`, `bv_scale_k`, `bv_mul_pow2_k`, `bv_conv_k`, and the folds of
+maxima `norm_upper_k`. What is tested of them:
+
+- **Against the oracle, through the public interface** (`api.oracle.LOOP.F`, and in the full tier
+  `full.api.oracle.LOOP.F` on `KAIRN_API_LOOP_CASES` = 4 000 requests with the debug build's runner on
+  the first form and the runners of the other settings of `KAIRN_ENCLOSURE_CODE`, which must write the
+  same bytes, and `full.api.flags.oracle.LOOP.F` through the runner of every flag set). The runner of
+  the public interface completes the lines of a loop (the line protocol's `BV` and `BV_CONV` requests,
+  and those of a fold of maxima, [The line protocol](architecture.md#the-line-protocol)) with forms of
+  its own (`tests/api/runner_ball_vector.hpp`): each builds its operands as a program does, the line's
+  arrays copied into arrays of the form's own and made a ball vector by `BallVectorView`'s constructor,
+  or a `BallVector<T, k, N>` made from an `std::array`, and calls a public function: on views, on
+  `BallVector`s (on the lines whose lengths are among those the value forms instantiate, the oracle's
+  lengths up to 17; the conditional forms of the runner otherwise), in place into the first or the
+  second operand, and in the fast and the sequential order. A line names an order; the statements of a
+  loop are proved for every order and the oracle judges a line by them, so each form computes every
+  line in the order of the function it calls. The compositions of the header are judged where their
+  results must satisfy a loop's claims: `axpy(1, X, Y)` those of `bv_add_k`, `axpy(-1, Y, X)` those of
+  `bv_sub_k`, `axpy(a, X, 0)` those of `bv_scale_k`, and `norm_upper` of a ball vector of radius 0,
+  which is the bound of its centers, those of `norm_upper_k`. A constructor's line with a negative
+  radius, which stops the debug build's runner, is completed with the whole space without the call, as
+  for `Ball`. The forms in the fast order join the runner of the packed forms alone, built for AVX2
+  where the build's flags do not give it.
+- **The kernels that are parts of those loops** (`runner --loop-parts`) are judged through the
+  loops, and on their own by the kernels' cross-checks; `api.oracle.coverage` checks the list against
+  the loops' descriptions.
+- **`api.ball_vector.FORM`** (`tests/api/ball_vector.cpp`, in every form of `Packed` the build has):
+  the properties of the types (trivially copyable, standard-layout, the size, the conversions that
+  exist and those that do not, what the functions accept); the constructors on each class of radius
+  (negative, $-\infty$, NaN, $+\infty$, $\pm 0$, positive, the smallest and the largest) and on
+  centers that are not finite, through each constructor; on 2 400 ball vectors of lengths 0 to 37
+  and up to 200, of centers near the top of the range and in the subnormal range among them: every
+  operation in the fast and the sequential order, bit for bit (a zero as a zero under MSVC), in place
+  and not, each center against the entrywise `Ball` operation and the one radius against the largest
+  of the entrywise radii (equal in every case), `axpy` bit for bit its two calls, and the argument of
+  `norm_upper` exactly (the bound of the centers at least each center, compared limb by limb, and the
+  bound at least that plus the radius, by an exact TwoSum); the value forms against the views; and the
+  exact scaling by a power of two, the steps of `ldexp` beyond the powers of two of `T` included.
+- **The checks of a debug build** (`api.checks.*`): every operation that rounds, the constructors of
+  two limbs and a view's constructor among them, must stop the program under each state of the
+  environment; the negation and the constructors of one limb, which do not round, give the same bits
+  (values for the constructors) under every rounding mode on a corpus of ball vectors; and the operand
+  cases (a negative radius, a center of two limbs that is not canonical, the arrays of a view written
+  by the program after it was made, operands of other lengths, `axpy` writing `y`, a product writing
+  an operand) must stop it with their messages; a NaN or infinite radius, a center that is not
+  finite, the whole space as an operand and views of no entry must not.
+- **The products of the program passed in** (`api.boundary.ball_vector.S`,
+  `tests/api/boundary_ball_vector.cpp`): an array of centers and a radius that the program fills with
+  products, given to each constructor and then summed with a vector that cancels them, give the bits
+  of the same with the rounded products. Against the copy of the headers without the guards no
+  compiler measured fused a product into a ball vector (GCC 13 and 16, Apple clang 21, Clang 18, each
+  contraction setting): the constructors' loops and the operations are calls of their own, and the
+  unguarded build only reports.
+- **What must not compile** (`api.reject.ball_vector.*`): writing a const `BallVector` or a view of
+  `const T`, lengths that the types fix and that differ, two limb types, a view of mutable limbs made
+  of one of `const T` or over arrays of `const T`, the implicit conversion of a view to a
+  `BallVector`, a `BallVector` of no entry, a ball vector with a `Ball`, an operation in a constant
+  expression, and a part of a view of mutable limbs; each with its control.
+- **The program's names** (`api.shadow`) and **the platform's macros** (`api.platform_macros`) cover
+  every function and operator of the header; the tutorial's program (`api.example.ball_vectors.*`)
+  checks its results in exact arithmetic.
 
 ## Contraction
 

@@ -1140,6 +1140,10 @@ fold of its own: it is two calls that exist, and the header of `BallVector` writ
 b       = ok ? add_up_1(n, r) : +infinity
 ```
 
+(`include/kairn/ball_vector.hpp` calls `add_up_1` through its entry form `add_up_entry`, the public
+`add_up` of `blocks.hpp`: a public header calls only entry kernels, and the guard of each operand is
+the identity on its value.)
+
 What is claimed, and by what: `norm_upper_k` claims `upper n max steps=S` with its flag
 ([Folds of maxima](#folds-of-maxima)): when `ok` is true, $V \le n \le \mathrm{RU}(V)$ stepped up $S$
 times, $V = \max_i \lvert c_i\rvert$ ($S = 0$ for one limb, $1$ for two); `add_up_1` claims `rounded b

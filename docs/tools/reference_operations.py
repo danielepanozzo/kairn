@@ -80,8 +80,10 @@ GROUPS = [
      "Kernels that other kernels call, and that no public operation computes on its own."),
     ("arrays", "Sums and dot products of arrays",
      "The kernels of the loops over arrays (the folds of Milestone 2): their steps, the finish of their "
-     "result, and the bounds of a sum and of a dot product as a function of the number of terms. The "
-     "functions on arrays of the public headers come later."),
+     "result, and the bounds of a sum and of a dot product as a function of the number of terms, and of the "
+     "folds of maxima. The functions on plain arrays of the public headers come later; the operations of a "
+     "ball vector ([Ball vectors](ball_vector.md)) already call the steps of the dot products, their bound and "
+     "the finishes in the product of polynomials, and the folds of maxima in every loop."),
     ("packed", "Vector loops: Packed and the containers",
      "`Packed<T, k>` (`kairn/packed.hpp`) holds W numbers in registers; its operations are those of `Expansion` "
      "that have a kernel, under the same names, each the packed form of that kernel, with its statement in every "
@@ -89,13 +91,43 @@ GROUPS = [
      "one array per limb and compute nothing ([Arrays of numbers](soa.md)). `kairn/kairn.hpp` includes neither."),
     ("maps", "Operations on arrays, entry by entry",
      "The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the "
-     "operation of one entry, on an array the program supplies where it says so. The functions on arrays of "
-     "the public headers come later."),
-    ("ball-vectors", "The radius of a BallVector",
-     "The one radius of the result of the BallVector kernels of Milestone 2 (the sum, the difference, the "
-     "scaling), from the largest magnitude of a center of the result: the radius lines of the entrywise Ball "
-     "operation. The public header of BallVector comes later."),
+     "operation of one entry, on an array the program supplies where it says so. The functions on plain arrays "
+     "of the public headers come later; the operations of a ball vector already call the difference of one "
+     "limb and the steps of the scaling."),
+    ("ball-vectors", "Ball vectors: N centers and one radius",
+     "`BallVector<T, k, N>` and `BallVectorView<T, k>` (`kairn/ball_vector.hpp`, "
+     "[Ball vectors](ball_vector.md)): each operation is one generated loop over the arrays of the centers, "
+     "and the kernels here are parts of those loops: the radius of the result, from the largest magnitude "
+     "of a center (the radius lines of the entrywise Ball operation), the guards and the finish of the "
+     "constructor, the scaling by a power of two with its mask of exactness, the radius of the product of "
+     "polynomials. `kairn/kairn.hpp` does not include the header."),
 ]
+
+# The loops over arrays (the folds of gen/claims.json) that public operations call, each with those
+# operations. The kernels a loop's description names (gen/kernels/LOOP.fold: its step, records,
+# combinations, radius, bound, finish or check, and those of the folds it names as its centers or
+# coefficients) are parts of it: their pages say which loop, and which operations call it, in place
+# of "not yet called". tests/api/coverage.cmake checks the same loops against the runner of the
+# public interface.
+BV_OPS = "of `BallVector<T, %s, N>` and `BallVectorView<T, %s>` ([Ball vectors](ball_vector.md))"
+LOOPS = {
+    "bv_make_1": "the constructors " + BV_OPS % (1, 1),
+    "bv_make_2": "the constructors " + BV_OPS % (2, 2),
+    "bv_neg_1": "`-x` and `neg(x, z)` " + BV_OPS % (1, 1),
+    "bv_neg_2": "`-x` and `neg(x, z)` " + BV_OPS % (2, 2),
+    "bv_add_1": "`x + y`, `x += y`, `add(x, y, z)` and `axpy` " + BV_OPS % (1, 1),
+    "bv_add_2": "`x + y`, `x += y`, `add(x, y, z)` and `axpy` " + BV_OPS % (2, 2),
+    "bv_sub_1": "`x - y`, `x -= y` and `sub(x, y, z)` " + BV_OPS % (1, 1),
+    "bv_sub_2": "`x - y`, `x -= y` and `sub(x, y, z)` " + BV_OPS % (2, 2),
+    "bv_scale_1": "`x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` " + BV_OPS % (1, 1),
+    "bv_scale_2": "`x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` " + BV_OPS % (2, 2),
+    "bv_mul_pow2_1": "`ldexp` and `half` " + BV_OPS % (1, 1),
+    "bv_mul_pow2_2": "`ldexp` and `half` " + BV_OPS % (2, 2),
+    "bv_conv_1": "`convolution`, the product of polynomials, " + BV_OPS % (1, 1),
+    "bv_conv_2": "`convolution`, the product of polynomials, " + BV_OPS % (2, 2),
+    "norm_upper_1": "`norm_upper` " + BV_OPS % (1, 1),
+    "norm_upper_2": "`norm_upper` " + BV_OPS % (2, 2),
+}
 
 
 def form(code, *operands, result, group=None, note=None):
@@ -979,4 +1011,38 @@ PAGES = [
     ("construction", "Constants from fractions", "rational"),
     ("packed", "Packed numbers in registers", "packed"),
     ("packed", "Arrays of numbers: SoA and its views", "soa"),
+    ("ball-vectors", "Ball vectors: BallVector and its views", "ball_vector"),
+]
+
+# BallVector (kairn/ball_vector.hpp): each operation is a loop over arrays, not a kernel, whose parts
+# are the kernels of the group (LOOPS above); the rows of the index name the loop.
+BVK = "BallVector<T, K, N>"
+BVV = "BallVectorView<T, K>"
+EXACT += [
+    exact("ball-vectors", "the ball vector of the centers and the radius given; the whole space when the radius "
+          "is negative, a NaN or +inf, or a center is not finite ([Ball vectors](ball_vector.md#construction))",
+          form("BallVector<T, K, N>(c, r)", "std::array<Expansion<T, K>, N>", T, result=BVK),
+          form("BallVectorView<T, K>(c, r)", "SoAView<T, K>", "T&", result=BVV),
+          kernel="the loop `bv_make_k`"),
+    exact("ball-vectors", "the point 0, the whole space, a copy of a view, the views; the radius, a center, entry "
+          "i as a `Ball` (a copy); limbs copied, nothing computed",
+          form("BallVector<T, K, N>(), whole(), x.view(), x.radius(), x.center(i), x.entry(i)", BVK, result=BVK)),
+    exact("ball-vectors", "exactly the negated set ([Ball vectors](ball_vector.md#the-operations))",
+          form("-x, neg(x, z)", BVK, result=BVK), kernel="the loop `bv_neg_k`"),
+    exact("ball-vectors", "an enclosure of every sum or difference of members, entry by entry",
+          form("x + y, x - y, x += y, x -= y, add(x, y, z), sub(x, y, z)", BVK, BVK, result=BVK),
+          kernel="the loops `bv_add_k`, `bv_sub_k`"),
+    exact("ball-vectors", "an enclosure of every member times a",
+          form("x * a, a * x, x *= a, scale(x, a, z)", BVK, T, result=BVK), kernel="the loop `bv_scale_k`"),
+    exact("ball-vectors", "every member times 2^n, exactly when nothing underflows",
+          form("ldexp(x, n), half(x), ldexp(x, n, z), half(x, z)", BVK, "int", result=BVK),
+          kernel="the loop `bv_mul_pow2_k`, two or three calls beyond the powers of two of `T`"),
+    exact("ball-vectors", "an enclosure of every a x + y: a composition of two loops made in the header",
+          form("axpy(a, x, y), axpy(a, x, y, z)", T, BVK, BVK, result=BVK),
+          kernel="the loops `bv_scale_k`, then `bv_add_k`"),
+    exact("ball-vectors", "an enclosure of every coefficient of the product of members as polynomials, of "
+          "N + M - 1 coefficients", form("convolution(x, y), convolution(x, y, z)", BVK, "BallVector<T, K, M>",
+                                         result="BallVector<T, K, N + M - 1>"), kernel="the loop `bv_conv_k`"),
+    exact("ball-vectors", "an upper bound of the magnitude of every entry of every member: a composition made in "
+          "the header", form("norm_upper(x)", BVK, result=T), kernel="the loop `norm_upper_k`, then `add_up_entry`"),
 ]

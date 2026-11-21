@@ -87,6 +87,7 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 | `Interval`: `X + Y`, `X - Y`, `X * Y` (`interval_add_k`, `interval_sub_k`, `interval_mul_k`) | | I1 to I5 ([below](#intervals)): containment in every case, unbounded and empty operands included; one limb: the tightest interval of `T` for sums and differences, for products the tightest or one number of `T` wider on each side; two limbs: each bound within about $8u^2$ (sums) or $10u^2$ (products) of the exact one, relative to it, plus about twice the smallest normal number |
 | `Interval<T, 1>`: `X.midpoint()`, `X.radius()`, `X.split()`, `Ball<T, 1>(X)`, `Interval<T, 1>(B)` ([`interval_mid_rad_1`](../reference/interval_mid_rad_1.md), [`interval_split_1`](../reference/interval_split_1.md), [`interval_to_ball_1`](../reference/interval_to_ball_1.md), [`ball_to_interval_1`](../reference/ball_to_interval_1.md)) | | the midpoint within one rounding and $\eta$ of the exact one, inside the interval, with the smallest radius of `T` for it; the values of `mid` and `rad` of IEEE 1788 on the special intervals; two parts whose union is the interval; the conversions contain what they convert, the interval of a ball being the smallest of `T` |
 | `Ball`: `X.lower_as<T>()`, `X.upper_as<T>()`, `lower()`, `upper()` of one limb, `Ball<T, 2>::from_interval(lo, hi)`, `Ball<T, 1>(X)` of a ball of two limbs ([`ball_lower_as_1`](../reference/ball_lower_as_1.md), [`ball_lower_as_2`](../reference/ball_lower_as_2.md), [`ball_from_interval_2`](../reference/ball_from_interval_2.md), [`ball_narrow_2_1`](../reference/ball_narrow_2_1.md)) | | a bound of every member, $+\infty$ and $-\infty$ for the empty set: for one limb exactly $\mathrm{RD}(c - r)$ and $\mathrm{RU}(c + r)$, for two within $5u(\lvert c\rvert + r) + 3\eta$ of $c \mp r$; a ball of two limbs that contains $[lo, hi]$, with the exact midpoint for its center when the halves are; a ball of one limb that contains the ball of two |
+| `BallVector`: constructors, `-x`, `x + y`, `x - y`, `x * a`, `ldexp`, `half`, `convolution` (the loops `bv_make_k`, `bv_neg_k`, `bv_add_k`, `bv_sub_k`, `bv_scale_k`, `bv_mul_pow2_k`, `bv_conv_k`: [Ball vectors](../reference/ball_vector.md)); `axpy` and `norm_upper`, compositions of two loops | containment of every result on members, entry by entry or coefficient by coefficient | V1 to V4 ([below](#ball-vectors)): canonical, containment in every case, a finite result from finite operands under the stated conditions; the negation exact, the scaling by a power of two exact when nothing underflows |
 | `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states, an interval's bounds | exact (no kernel) | |
 | `rational<X>(num, den)`, `integer<X>(n)` (no kernel: [Constants from fractions](../reference/rational.md)) | specified exactly, bit for bit; tested for equality with the oracle; **not machine-checked** ([below](#constants-from-fractions)) | integer arithmetic only: the same result in every environment; for `den` = 0, the canonical NaN at run time |
 
@@ -443,6 +444,33 @@ come back with the other sign, through the guard of `from_limbs`); with `KAIRN_C
 two limbs is `from_limbs`, checked; a view never allocates, and an `SoA` allocates only in the
 functions that say so. Not provided: a packed `Ball` or `Interval`, dispatch at run time, and an
 alignment requirement (loads and stores are unaligned; an `SoA` aligns its arrays to 64 bytes).
+
+## Ball vectors
+
+`BallVector<T, k, N>` and `BallVectorView<T, k>` ([reference](../reference/ball_vector.md)) hold
+$N$ centers and one radius. **Each operation is one generated loop, proved in the real and the IEEE
+model in each of its orders** (the sequential one, and the lane order of every number of lanes but
+for the product of polynomials, which has the sequential order only), and judged by the
+oracle through the public interface: the constructors (`bv_make_k`), the negation, the sum, the
+difference, the scaling by a `T`, the scaling by a power of two and the product of polynomials. What
+each states, for canonical operands: the result is canonical, a finite ball vector or the whole
+space (V1); it contains $f(x, y)$ for every member $x$ of $X$ and $y$ of $Y$, entry by entry, in
+every case (V2); if it is finite, so are the operands, and its centers and radius are those of the
+loop's kernels (V3); and it is finite under conditions that each operation states, a quarter of the
+overflow threshold on its entries and on its radii, and for the product a condition on the length
+(V4). The negation is exact, and the scaling by a power of two is exact when nothing underflows.
+The constructors make the whole space of a radius that is negative, a NaN or $+\infty$, or of a
+center that is not finite: there is no empty ball vector.
+
+Three operations are compositions made in the header, whose statements are those of their calls
+composed, argued and tested and not machine-checked as one: `axpy` (the scaling, then the sum in
+place), `norm_upper` (the bound of the centers, then the radius added, rounded up), and `ldexp`
+beyond the powers of two of `T`, as for a `Ball`. **Not claimed**: that the one radius of a sum, a
+difference or a scaling equals the largest of the radii of the entrywise `Ball` operations (it does
+in every case the tests compare); that the two orders give the same bits (they do on this tree, a
+zero compared as a zero under MSVC). Not provided: an empty state, a radius per entry, the product
+in the lane order, operations with a `Ball` or a number but the scaling, constant evaluation of any
+operation.
 
 ## The environment
 

@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $z = z_0 
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+No public operation computes this kernel on its own. It is part of the loop `bv_mul_pow2_2`, called by `ldexp` and `half` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

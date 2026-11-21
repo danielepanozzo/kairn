@@ -12,7 +12,7 @@ $$r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - \mathrm{uni
 
 ## C++
 
-No public operation computes this kernel on its own.
+No public operation computes this kernel on its own. It is part of the loop `bv_add_2`, called by `x + y`, `x += y`, `add(x, y, z)` and `axpy` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)); and of the loop `bv_sub_2`, called by `x - y`, `x -= y` and `sub(x, y, z)` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

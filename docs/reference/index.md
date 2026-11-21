@@ -295,26 +295,26 @@ Kernels that other kernels call, and that no public operation computes on its ow
 
 ## Sums and dot products of arrays
 
-The kernels of the loops over arrays (the folds of Milestone 2): their steps, the finish of their result, and the bounds of a sum and of a dot product as a function of the number of terms. The functions on arrays of the public headers come later.
+The kernels of the loops over arrays (the folds of Milestone 2): their steps, the finish of their result, and the bounds of a sum and of a dot product as a function of the number of terms, and of the folds of maxima. The functions on plain arrays of the public headers come later; the operations of a ball vector ([Ball vectors](ball_vector.md)) already call the steps of the dot products, their bound and the finishes in the product of polynomials, and the folds of maxima in every loop.
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| not yet called by the public headers | - | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
-| not yet called by the public headers | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
+| none of its own (in the loop `bv_conv_1`) | - | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
+| none of its own (in the loop `bv_conv_2`) | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
 | not yet called by the public headers | - | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
 | not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
 | not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |
-| none (internal) | - | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_1`](fold_finish_1.md) |
-| none (internal) | - | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_2`](fold_finish_2.md) |
+| none of its own (in the loop `bv_conv_1`) | - | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_1`](fold_finish_1.md) |
+| none of its own (in the loop `bv_conv_2`) | - | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_2`](fold_finish_2.md) |
 | none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - m \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bound_sum_1`](bound_sum_1.md) |
 | none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - m \mathrm{unit}(\mathtt{add\_2\_2})}$ | [`bound_sum_2`](bound_sum_2.md) |
-| none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - m \mathrm{unit}(\mathtt{mul\_1\_1})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_1\_1}) (1 + g)$ | [`bound_dot_1`](bound_dot_1.md) |
-| none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_2\_2})}{1 - m \mathrm{unit}(\mathtt{mul\_2\_2})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_2\_2}) (1 + g)$ | [`bound_dot_2`](bound_dot_2.md) |
-| none (internal) | - | $r = \max(m, n)$ | [`norm_combine`](norm_combine.md) |
-| none (internal) | - | $r = \max(m, \lvert x\rvert)$ | [`norm_step_1`](norm_step_1.md) |
-| none (internal) | - | $r = \max(m, \lvert x_0\rvert)$ | [`norm_step_2`](norm_step_2.md) |
-| none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_1`](norm_finish_1.md) |
-| none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_2`](norm_finish_2.md) |
+| none of its own (in the loop `bv_conv_1`) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - m \mathrm{unit}(\mathtt{mul\_1\_1})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_1\_1}) (1 + g)$ | [`bound_dot_1`](bound_dot_1.md) |
+| none of its own (in the loop `bv_conv_2`) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_2\_2})}{1 - m \mathrm{unit}(\mathtt{mul\_2\_2})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_2\_2}) (1 + g)$ | [`bound_dot_2`](bound_dot_2.md) |
+| none of its own (in the loops `bv_make_1`, `bv_make_2`, `bv_neg_1`, `bv_neg_2`, `bv_add_1`, `bv_add_2`, `bv_sub_1`, `bv_sub_2`, `bv_scale_1`, `bv_scale_2`, `bv_mul_pow2_1`, `bv_mul_pow2_2`, `norm_upper_1`, `norm_upper_2`) | - | $r = \max(m, n)$ | [`norm_combine`](norm_combine.md) |
+| none of its own (in the loops `bv_make_1`, `bv_neg_1`, `bv_add_1`, `bv_sub_1`, `bv_scale_1`, `bv_mul_pow2_1`, `bv_conv_1`, `norm_upper_1`) | - | $r = \max(m, \lvert x\rvert)$ | [`norm_step_1`](norm_step_1.md) |
+| none of its own (in the loops `bv_make_2`, `bv_neg_2`, `bv_add_2`, `bv_sub_2`, `bv_scale_2`, `bv_mul_pow2_2`, `bv_conv_2`, `norm_upper_2`) | - | $r = \max(m, \lvert x_0\rvert)$ | [`norm_step_2`](norm_step_2.md) |
+| none of its own (in the loops `bv_neg_1`, `bv_neg_2`, `bv_add_1`, `bv_add_2`, `bv_sub_1`, `bv_sub_2`, `bv_scale_1`, `bv_scale_2`, `bv_mul_pow2_1`, `bv_mul_pow2_2`, `norm_upper_1`) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_1`](norm_finish_1.md) |
+| none of its own (in the loop `norm_upper_2`) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_2`](norm_finish_2.md) |
 | not yet called by the public headers | - | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x\rvert)$ | [`acc_add_1`](acc_add_1.md) |
 | not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x_0\rvert)$, normalized | [`acc_add_2`](acc_add_2.md) |
 | not yet called by the public headers | - | $t = \mathrm{RN}(s + x y)$; $b = \mathrm{RN}(a + \lvert x\rvert \lvert y\rvert)$ | [`acc_mul_1`](acc_mul_1.md) |
@@ -343,17 +343,17 @@ The kernels of the loops over arrays (the folds of Milestone 2): their steps, th
 
 ## Operations on arrays, entry by entry
 
-The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the operation of one entry, on an array the program supplies where it says so. The functions on arrays of the public headers come later.
+The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the operation of one entry, on an array the program supplies where it says so. The functions on plain arrays of the public headers come later; the operations of a ball vector already call the difference of one limb and the steps of the scaling.
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| none (internal) | - | $s = \mathrm{RN}(a - b)$; $\lvert s - (a - b)\rvert \le \frac{u}{1 + u}\,\lvert a - b\rvert$ | [`sub_1_1`](sub_1_1.md) |
+| none of its own (in the loop `bv_sub_1`) | - | $s = \mathrm{RN}(a - b)$; $\lvert s - (a - b)\rvert \le \frac{u}{1 + u}\,\lvert a - b\rvert$ | [`sub_1_1`](sub_1_1.md) |
 | not yet called by the public headers | - | $z = \mathrm{RN}(x + y)$; $\lvert z - (x + y)\rvert \le \frac{u}{1 + u}\,\lvert x + y\rvert$ | [`add_entry_step_1`](add_entry_step_1.md) |
 | not yet called by the public headers | - | $z = \mathrm{RN}(x - y)$; $\lvert z - (x - y)\rvert \le \frac{u}{1 + u}\,\lvert x - y\rvert$ | [`sub_entry_step_1`](sub_entry_step_1.md) |
 | not yet called by the public headers | - | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$, normalized | [`add_entry_step_2`](add_entry_step_2.md) |
 | not yet called by the public headers | - | $\lvert z - (x - y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x - y\rvert$, normalized | [`sub_entry_step_2`](sub_entry_step_2.md) |
-| not yet called by the public headers | - | $z = \mathrm{RN}(x a)$; $\lvert z - x a\rvert \le \frac{u}{1 + u}\,\lvert x a\rvert + \tfrac{1}{2}\,\eta$ | [`scale_step_1`](scale_step_1.md) |
-| not yet called by the public headers | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_step_2`](scale_step_2.md) |
+| none of its own (in the loop `bv_scale_1`) | - | $z = \mathrm{RN}(x a)$; $\lvert z - x a\rvert \le \frac{u}{1 + u}\,\lvert x a\rvert + \tfrac{1}{2}\,\eta$ | [`scale_step_1`](scale_step_1.md) |
+| none of its own (in the loop `bv_scale_2`) | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_step_2`](scale_step_2.md) |
 | not yet called by the public headers | - | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`mul_pow2_step_1`](mul_pow2_step_1.md) |
 | not yet called by the public headers | - | $\lvert z - x c\rvert \le \eta$, normalized | [`mul_pow2_step_2`](mul_pow2_step_2.md) |
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{2 + 3u}{(1 + u) (1 + u)}\right) u\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{2}{3}\,\eta$ | [`axpy_step_1`](axpy_step_1.md) |
@@ -363,25 +363,35 @@ The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry 
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_step_2_1`](axpy_step_2_1.md) |
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_entry_step_2_1`](axpy_entry_step_2_1.md) |
 
-## The radius of a BallVector
+## Ball vectors: N centers and one radius
 
-The one radius of the result of the BallVector kernels of Milestone 2 (the sum, the difference, the scaling), from the largest magnitude of a center of the result: the radius lines of the entrywise Ball operation. The public header of BallVector comes later.
+`BallVector<T, k, N>` and `BallVectorView<T, k>` (`kairn/ball_vector.hpp`, [Ball vectors](ball_vector.md)): each operation is one generated loop over the arrays of the centers, and the kernels here are parts of those loops: the radius of the result, from the largest magnitude of a center (the radius lines of the entrywise Ball operation), the guards and the finish of the constructor, the scaling by a power of two with its mask of exactness, the radius of the product of polynomials. `kairn/kairn.hpp` does not include the header.
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| none (internal) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bv_add_radius_1`](bv_add_radius_1.md) |
-| none (internal) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - \mathrm{unit}(\mathtt{add\_2\_2})} (1 + u)$ | [`bv_add_radius_2`](bv_add_radius_2.md) |
-| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})} + \frac{\mathrm{tiny}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})}$ | [`bv_scale_radius_1`](bv_scale_radius_1.md) |
-| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_2`](bv_scale_radius_2.md) |
-| not yet called by the public headers | - | $z = \mathrm{RN}(c)$ | [`bv_center_entry_1`](bv_center_entry_1.md) |
-| none (internal) | - | $z = x$ exactly, normalized | [`bv_center_2`](bv_center_2.md) |
-| not yet called by the public headers | - | $r_z = \mathrm{RN}(r)$ | [`bv_make_radius`](bv_make_radius.md) |
-| none (internal) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_make_finish`](bv_make_finish.md) |
-| none (internal) | - | $z = \mathrm{RN}(-x)$ | [`neg_1`](neg_1.md) |
-| none (internal) | - | $r_z = \mathrm{RN}(r_x)$ | [`bv_neg_radius`](bv_neg_radius.md) |
-| not yet called by the public headers | - | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md) |
-| not yet called by the public headers | - | $\lvert z - x c\rvert \le \eta$, normalized | [`bv_mul_pow2_step_2`](bv_mul_pow2_step_2.md) |
-| not yet called by the public headers | - | $r_z \ge r_x c$; when $e_x$ is false, $r_z \ge r_x c + \eta$ | [`bv_mul_pow2_radius`](bv_mul_pow2_radius.md) |
-| none (internal) | - | $r_z \ge m ((1 + u) m_a r_y + (1 + u) m_b r_x + r_x r_y) + g m (1 + u)^{2} m_a m_b + t$ | [`conv_radius`](conv_radius.md) |
-| none (internal) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_conv_finish`](bv_conv_finish.md) |
+| none of its own (in the loops `bv_add_1`, `bv_sub_1`) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bv_add_radius_1`](bv_add_radius_1.md) |
+| none of its own (in the loops `bv_add_2`, `bv_sub_2`) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - \mathrm{unit}(\mathtt{add\_2\_2})} (1 + u)$ | [`bv_add_radius_2`](bv_add_radius_2.md) |
+| none of its own (in the loop `bv_scale_1`) | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})} + \frac{\mathrm{tiny}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})}$ | [`bv_scale_radius_1`](bv_scale_radius_1.md) |
+| none of its own (in the loop `bv_scale_2`) | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_2`](bv_scale_radius_2.md) |
+| none of its own (in the loop `bv_make_1`) | - | $z = \mathrm{RN}(c)$ | [`bv_center_entry_1`](bv_center_entry_1.md) |
+| none of its own (in the loop `bv_make_2`) | - | $z = x$ exactly, normalized | [`bv_center_2`](bv_center_2.md) |
+| none of its own (in the loops `bv_make_1`, `bv_make_2`) | - | $r_z = \mathrm{RN}(r)$ | [`bv_make_radius`](bv_make_radius.md) |
+| none of its own (in the loops `bv_make_1`, `bv_make_2`) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_make_finish`](bv_make_finish.md) |
+| none of its own (in the loop `bv_neg_1`) | - | $z = \mathrm{RN}(-x)$ | [`neg_1`](neg_1.md) |
+| none of its own (in the loops `bv_neg_1`, `bv_neg_2`) | - | $r_z = \mathrm{RN}(r_x)$ | [`bv_neg_radius`](bv_neg_radius.md) |
+| none of its own (in the loop `bv_mul_pow2_1`) | - | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md) |
+| none of its own (in the loop `bv_mul_pow2_2`) | - | $\lvert z - x c\rvert \le \eta$, normalized | [`bv_mul_pow2_step_2`](bv_mul_pow2_step_2.md) |
+| none of its own (in the loops `bv_mul_pow2_1`, `bv_mul_pow2_2`) | - | $r_z \ge r_x c$; when $e_x$ is false, $r_z \ge r_x c + \eta$ | [`bv_mul_pow2_radius`](bv_mul_pow2_radius.md) |
+| none of its own (in the loops `bv_conv_1`, `bv_conv_2`) | - | $r_z \ge m ((1 + u) m_a r_y + (1 + u) m_b r_x + r_x r_y) + g m (1 + u)^{2} m_a m_b + t$ | [`conv_radius`](conv_radius.md) |
+| none of its own (in the loops `bv_conv_1`, `bv_conv_2`) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_conv_finish`](bv_conv_finish.md) |
+| `BallVector<T, K, N>(c, r)` | `std::array<Expansion<T, K>, N>`, `T` | the ball vector of the centers and the radius given; the whole space when the radius is negative, a NaN or +inf, or a center is not finite ([Ball vectors](ball_vector.md#construction)) | the loop `bv_make_k` |
+| `BallVectorView<T, K>(c, r)` | `SoAView<T, K>`, `T&` | the ball vector of the centers and the radius given; the whole space when the radius is negative, a NaN or +inf, or a center is not finite ([Ball vectors](ball_vector.md#construction)) | the loop `bv_make_k` |
+| `BallVector<T, K, N>(), whole(), x.view(), x.radius(), x.center(i), x.entry(i)` | `BallVector<T, K, N>` | the point 0, the whole space, a copy of a view, the views; the radius, a center, entry i as a `Ball` (a copy); limbs copied, nothing computed | none |
+| `-x, neg(x, z)` | `BallVector<T, K, N>` | exactly the negated set ([Ball vectors](ball_vector.md#the-operations)) | the loop `bv_neg_k` |
+| `x + y, x - y, x += y, x -= y, add(x, y, z), sub(x, y, z)` | `BallVector<T, K, N>`, `BallVector<T, K, N>` | an enclosure of every sum or difference of members, entry by entry | the loops `bv_add_k`, `bv_sub_k` |
+| `x * a, a * x, x *= a, scale(x, a, z)` | `BallVector<T, K, N>`, `T` | an enclosure of every member times a | the loop `bv_scale_k` |
+| `ldexp(x, n), half(x), ldexp(x, n, z), half(x, z)` | `BallVector<T, K, N>`, `int` | every member times 2^n, exactly when nothing underflows | the loop `bv_mul_pow2_k`, two or three calls beyond the powers of two of `T` |
+| `axpy(a, x, y), axpy(a, x, y, z)` | `T`, `BallVector<T, K, N>`, `BallVector<T, K, N>` | an enclosure of every a x + y: a composition of two loops made in the header | the loops `bv_scale_k`, then `bv_add_k` |
+| `convolution(x, y), convolution(x, y, z)` | `BallVector<T, K, N>`, `BallVector<T, K, M>` | an enclosure of every coefficient of the product of members as polynomials, of N + M - 1 coefficients | the loop `bv_conv_k` |
+| `norm_upper(x)` | `BallVector<T, K, N>` | an upper bound of the magnitude of every entry of every member: a composition made in the header | the loop `norm_upper_k`, then `add_up_entry` |
 

@@ -101,6 +101,7 @@ nav:
       - Accurate sums and dot products: tutorials/accurate-sums.md
       - The range of a polynomial: tutorials/intervals.md
       - A vector loop: tutorials/vector-loop.md
+      - Polynomials as ball vectors: tutorials/ball-vectors.md
   # BEGIN reference: written by docs/tools/reference.py; do not edit by hand
   - Reference:
       - reference/index.md
@@ -330,7 +331,7 @@ nav:
           - "a x + y of two limbs, y of the program": reference/axpy_entry_step_2.md
           - "a x + y of two limbs, a of T, y stored": reference/axpy_step_2_1.md
           - "a x + y of two limbs, a of T, y of the program": reference/axpy_entry_step_2_1.md
-      - The radius of a BallVector:
+      - "Ball vectors: N centers and one radius":
           - The radius of the sum or the difference of two BallVectors of one limb: reference/bv_add_radius_1.md
           - The radius of the sum or the difference of two BallVectors of two limbs: reference/bv_add_radius_2.md
           - The radius of a BallVector of one limb times a number of T: reference/bv_scale_radius_1.md
@@ -346,6 +347,7 @@ nav:
           - "The radius of a BallVector times a power of two: exact when nothing underflows": reference/bv_mul_pow2_radius.md
           - The radius of the product of two polynomials whose coefficients are BallVectors: reference/conv_radius.md
           - "The result of the product of two BallVectors: the radius, or NaN": reference/bv_conv_finish.md
+          - "Ball vectors: BallVector and its views": reference/ball_vector.md
   # END reference
   - Proofs: proofs/index.md
   - Developer guide:
