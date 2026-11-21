@@ -273,16 +273,16 @@ double use_every_operation(UseT use_a, UseT use_b) {
                  kairn::finite::mul(use_px, use_py) + kairn::finite::mul(use_px, use_pa) +
                  kairn::finite::mul(use_pa, use_px) + kairn::finite::add_fast(use_px, use_py) +
                  kairn::finite::ldexp(use_px, -2) + use_pz;
-        P1 use_pq = use_pa + use_pb - use_pc * use_pa;
-        use_pq += use_pa;
-        use_pq -= use_pa;
-        use_pq *= use_pa;
-        use_pq = -use_pq + kairn::abs(use_pq) + kairn::add_fast(use_pq, use_pa) + kairn::ldexp(use_pq, 1) +
-                 kairn::half(use_pq) + kairn::to_nearest(use_pq) + kairn::to_down(use_pq) + kairn::to_up(use_pq) +
-                 kairn::abs_upper(use_pq) + kairn::to_nearest(use_px) + kairn::to_down(use_px) + kairn::to_up(use_px) +
-                 kairn::abs_upper(use_px) + P1(use_px) + kairn::finite::add(use_pq, use_pa) +
-                 kairn::finite::sub(use_pq, use_pa) + kairn::finite::mul(use_pq, use_pa) +
-                 kairn::finite::add_fast(use_pq, use_pa) + kairn::finite::ldexp(use_pq, 1);
+        P1 use_pq = -use_pa;
+        use_pq = -use_pq;
+        use_pq = kairn::abs(use_pq);
+        use_pq = kairn::to_nearest(use_pq);
+        use_pq = kairn::to_down(use_pq);
+        use_pq = kairn::to_up(use_pq);
+        use_pq = kairn::abs_upper(use_pq);
+        use_pq = kairn::select(use_pq < use_pc, use_pq, kairn::to_nearest(use_px));
+        use_pq = kairn::select(use_pq < use_pc, kairn::to_down(use_px), kairn::to_up(use_px));
+        use_pq = kairn::select(use_pq < use_pc, kairn::abs_upper(use_px), P1(use_px));
         const kairn::PackedMask<UseT> use_mask = (use_px < use_py) | (use_px > use_py) | (use_px <= use_py) |
                                                  (use_px >= use_py) | (use_px == use_py) | (use_px != use_py) |
                                                  (use_px < use_pa) | (use_px > use_pa) | (use_px <= use_pa) |

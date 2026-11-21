@@ -1,6 +1,6 @@
 // Every operation of Packed<T, k> (include/kairn/packed.hpp) against the public operation of
 // Expansion<T, k> of the same name, lane by lane and bit for bit, for T = double and float and
-// k = 1 and 2, on a corpus of operands that has every kind of value: zeros of both signs,
+// k = 1 (the operations that do not round, Packed<T, 1> having no arithmetic) and 2, on a corpus of operands that has every kind of value: zeros of both signs,
 // subnormal numbers, the smallest normal number, ordinary and random numbers, the largest finite
 // number and pairs near it whose results overflow, the infinities and NaN. Each operation is run
 // on every pair (or every operand) of the corpus, one per lane position in turn, with the other
@@ -83,21 +83,6 @@ bool same(const kairn::Expansion<T, K>& a, const kairn::Expansion<T, K>& b) {
     return true;
 }
 bool same(bool a, bool b) { return a == b; }
-// The products of one limb (x * y, half, ldexp, finite::mul of Packed<T, 1>) are the kernel
-// mul_1_1, the opaque product fma(a, b, +0), which gives +0 where T's product a * b, the scalar
-// operation of Expansion<T, 1>, gives -0. Their zero results are compared by value, and counted.
-long zero_signs = 0;
-template <class T, int K>
-bool same_value(const kairn::Expansion<T, K>& a, const kairn::Expansion<T, K>& b) {
-    if (same(a, b)) return true;
-    if constexpr (K == 1) {
-        if (a.limb[0] == 0 && b.limb[0] == 0) {
-            ++zero_signs;
-            return true;
-        }
-    }
-    return false;
-}
 
 template <class T, int K>
 void print(const kairn::Expansion<T, K>& x) {
@@ -221,7 +206,7 @@ void count_mixed(const V* lanes, int w, long& counter) {
 
 // A unary operation: on every operand of the corpus at every lane position in turn.
 template <class T, int KX, class PF, class SF>
-Mixed unary(const char* op, const Corpus<T>& c, PF pf, SF sf, bool zero_by_value = false) {
+Mixed unary(const char* op, const Corpus<T>& c, PF pf, SF sf) {
     using X = kairn::Packed<T, KX>;
     constexpr int W = X::lanes;
     const auto& xs = values(c, std::integral_constant<int, KX>());
@@ -241,10 +226,7 @@ Mixed unary(const char* op, const Corpus<T>& c, PF pf, SF sf, bool zero_by_value
         for (int i = 0; i < W; ++i) {
             want[i] = sf(xl[i]);
             ++checked;
-            bool ok = false;
-            if constexpr (std::is_same_v<decltype(want[i]), bool&>) ok = same(lane_of(z, i), want[i]);
-            else ok = zero_by_value ? same_value(lane_of(z, i), want[i]) : same(lane_of(z, i), want[i]);
-            if (!ok) report(op, type_name<T>(), i, lane_of(z, i), want[i]);
+            if (!same(lane_of(z, i), want[i])) report(op, type_name<T>(), i, lane_of(z, i), want[i]);
         }
         count_mixed(want, W, mixed.results);
         if (failures > before + 4) break;
@@ -254,7 +236,7 @@ Mixed unary(const char* op, const Corpus<T>& c, PF pf, SF sf, bool zero_by_value
 
 // A binary operation: on every pair of the corpus, at lane k mod W for the k-th pair.
 template <class T, int KX, int KY, class PF, class SF>
-Mixed binary(const char* op, const Corpus<T>& c, PF pf, SF sf, bool zero_by_value = false) {
+Mixed binary(const char* op, const Corpus<T>& c, PF pf, SF sf) {
     using X = kairn::Packed<T, KX>;
     using Y = kairn::Packed<T, KY>;
     constexpr int W = X::lanes;
@@ -283,10 +265,7 @@ Mixed binary(const char* op, const Corpus<T>& c, PF pf, SF sf, bool zero_by_valu
             for (int i = 0; i < W; ++i) {
                 want[i] = sf(xl[i], yl[i]);
                 ++checked;
-                bool ok = false;
-                if constexpr (std::is_same_v<decltype(want[i]), bool&>) ok = same(lane_of(z, i), want[i]);
-                else ok = zero_by_value ? same_value(lane_of(z, i), want[i]) : same(lane_of(z, i), want[i]);
-                if (!ok) report(op, type_name<T>(), i, lane_of(z, i), want[i]);
+                if (!same(lane_of(z, i), want[i])) report(op, type_name<T>(), i, lane_of(z, i), want[i]);
             }
             count_mixed(want, W, mixed.results);
             if (failures > before + 4) return mixed;
@@ -312,40 +291,15 @@ template <class T>
 void arithmetic(const Corpus<T>& c) {
     using A1 = E1<T>;
     using A2 = E2<T>;
-    // One limb.
-    expect_mixed("p1 + p1", binary<T, 1, 1>("p1 + p1", c, [](P1<T> x, P1<T> y) { return x + y; },
-                                            [](A1 x, A1 y) { return x + y; }), true);
-    binary<T, 1, 1>("p1 - p1", c, [](P1<T> x, P1<T> y) { return x - y; }, [](A1 x, A1 y) { return x - y; });
-    expect_mixed("p1 * p1", binary<T, 1, 1>("p1 * p1", c, [](P1<T> x, P1<T> y) { return x * y; },
-                                            [](A1 x, A1 y) { return x * y; }, true), true);
-    binary<T, 1, 1>("p1 += p1", c, [](P1<T> x, P1<T> y) { return x += y; }, [](A1 x, A1 y) { return x += y; });
-    binary<T, 1, 1>("p1 -= p1", c, [](P1<T> x, P1<T> y) { return x -= y; }, [](A1 x, A1 y) { return x -= y; });
-    binary<T, 1, 1>("p1 *= p1", c, [](P1<T> x, P1<T> y) { return x *= y; }, [](A1 x, A1 y) { return x *= y; }, true);
-    binary<T, 1, 1>("add_fast p1", c, [](P1<T> x, P1<T> y) { return kairn::add_fast(x, y); },
-                    [](A1 x, A1 y) { return kairn::add_fast(x, y); });
-    binary<T, 1, 1>("finite::add p1", c, [](P1<T> x, P1<T> y) { return kairn::finite::add(x, y); },
-                    [](A1 x, A1 y) { return kairn::finite::add(x, y); });
-    binary<T, 1, 1>("finite::sub p1", c, [](P1<T> x, P1<T> y) { return kairn::finite::sub(x, y); },
-                    [](A1 x, A1 y) { return kairn::finite::sub(x, y); });
-    binary<T, 1, 1>("finite::mul p1", c, [](P1<T> x, P1<T> y) { return kairn::finite::mul(x, y); },
-                    [](A1 x, A1 y) { return kairn::finite::mul(x, y); }, true);
-    binary<T, 1, 1>("finite::add_fast p1", c, [](P1<T> x, P1<T> y) { return kairn::finite::add_fast(x, y); },
-                    [](A1 x, A1 y) { return kairn::finite::add_fast(x, y); });
+    // One limb: the operations that do not round (Packed<T, 1> has no arithmetic).
     unary<T, 1>("-p1", c, [](P1<T> x) { return -x; }, [](A1 x) { return -x; });
     unary<T, 1>("abs p1", c, [](P1<T> x) { return kairn::abs(x); }, [](A1 x) { return kairn::abs(x); });
-    unary<T, 1>("half p1", c, [](P1<T> x) { return kairn::half(x); }, [](A1 x) { return kairn::half(x); }, true);
     unary<T, 1>("to_nearest p1", c, [](P1<T> x) { return kairn::to_nearest(x); },
                 [](A1 x) { return A1(kairn::to_nearest(x)); });
     unary<T, 1>("to_down p1", c, [](P1<T> x) { return kairn::to_down(x); }, [](A1 x) { return A1(kairn::to_down(x)); });
     unary<T, 1>("to_up p1", c, [](P1<T> x) { return kairn::to_up(x); }, [](A1 x) { return A1(kairn::to_up(x)); });
     unary<T, 1>("abs_upper p1", c, [](P1<T> x) { return kairn::abs_upper(x); },
                 [](A1 x) { return A1(kairn::abs_upper(x)); });
-    for (int n : {-2200, -1100, -1075, -1074, -1060, -1022, -150, -149, -126, -60, -1, 0, 1, 3, 60, 127, 128,
-                  1023, 1024, 2000, 2200}) {
-        unary<T, 1>("ldexp p1", c, [n](P1<T> x) { return kairn::ldexp(x, n); }, [n](A1 x) { return kairn::ldexp(x, n); }, true);
-        unary<T, 1>("finite::ldexp p1", c, [n](P1<T> x) { return kairn::finite::ldexp(x, n); },
-                    [n](A1 x) { return kairn::finite::ldexp(x, n); }, true);
-    }
 
     // Two limbs: the full kernels and their mixed forms (a T operand is a lane of a Packed<T, 1>).
     expect_mixed("p2 + p2", binary<T, 2, 2>("p2 + p2", c, [](P2<T> x, P2<T> y) { return x + y; },
@@ -623,8 +577,6 @@ int main() {
         std::printf("FAILED: %ld differences\n", failures);
         return 1;
     }
-    std::printf("ok: every operation of Packed gives, in every lane, the bits of the scalar operation; the products "
-                "of one limb gave +0 where T's product gives -0 in %ld lanes (the kernel mul_1_1 is fma(a, b, +0))\n",
-                zero_signs);
+    std::printf("ok: every operation of Packed gives, in every lane, the bits of the scalar operation\n");
     return 0;
 }

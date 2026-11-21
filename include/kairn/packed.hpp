@@ -20,17 +20,16 @@
 /// the three. There is no dispatch at run time: the code is that of the instruction set the
 /// translation unit is compiled for.
 ///
-/// One limb: the operations whose two-limb form calls a kernel. The sum, the difference and the
-/// product call the packed forms of add_1_1 and mul_1_1 (x - y is add_1_1 on x and -y, as for
-/// Expansion<T, 1>); negation, abs, the comparisons and the conversions to one limb are, as for
-/// Expansion<T, 1>, the exact IEEE 754 operations of T, computed with the instructions the
-/// generated kernels use for them (a sign bit flipped or cleared, a comparison of lanes). The
-/// product of one limb is the kernel mul_1_1, whose code is the opaque product fma(a, b, +0) in
-/// its scalar and packed forms alike, where Expansion<T, 1>'s x * y is T's product: the same value,
-/// but +0 where T's product is -0 (-1 * 0, or a negative product that underflows), and so for
-/// x * y, half, ldexp and finite::mul of Packed<T, 1>. Kairn gives the sign of a zero no meaning.
+/// One limb: Packed<T, 1> is the packed T, the limb operand of the mixed forms of two limbs
+/// (x + a, a - x, x < a), and it has negation, abs, the comparisons and the conversions to one
+/// limb, which are, as for Expansion<T, 1>, the exact IEEE 754 operations of T, computed with the
+/// instructions the generated kernels use for them (a sign bit flipped or cleared, a comparison of
+/// lanes). It has no arithmetic: the kernels the arithmetic of Expansion<T, 1> names, add_1_1 and
+/// mul_1_1, are not entry kernels, the only ones a public header may call (rule R3, which
+/// gen/tests/test_rules.py checks), and Expansion<T, 1> computes the operations of T itself, which
+/// Packed does not do: none of its operations rounds but through a kernel.
 ///
-/// Not here: sign, isfinite and is_normalized (no kernel computes them; is_normalized of two limbs
+/// Not here: the arithmetic of one limb (above), sign, isfinite and is_normalized (no kernel computes them; is_normalized of two limbs
 /// rounds), the operands marked kairn::unverified (every kernel these operations call is proved
 /// today; an operation whose kernel is not proved does not compile, and has no marked form), the
 /// building blocks of blocks.hpp, Ball and Interval, a reduction across lanes (a program writes it
@@ -572,26 +571,6 @@ KAIRN_FORCEINLINE Packed<T, 2> ldexp_steps(Packed<T, 2> x, int n) noexcept {
     }
     return packed_detail::scale2<Full>(x, kairn::detail::pow2<T>(n));
 }
-// One limb: the steps of detail::ldexp, each a product (kernel mul_1_1).
-template <class T>
-KAIRN_FORCEINLINE Packed<T, 1> ldexp_steps(const Packed<T, 1>& x, int n) noexcept {
-    constexpr int lo = kairn::detail::pow2_min<T>, hi = kairn::detail::pow2_max<T>;
-    constexpr int up = hi + 1 - lo, down = lo - hi - 2;
-    Packed<T, 1> a = x;
-    if (n > up) n = up;
-    if (down > n) n = down;
-    if (lo > n) {
-        gen::mul_1_1(a.limb[0], ops<T>::broadcast(kairn::detail::pow2<T>(n - lo)), a.limb[0]);
-        n = lo;
-    }
-    while (n > hi) {
-        gen::mul_1_1(a.limb[0], ops<T>::broadcast(kairn::detail::pow2<T>(hi)), a.limb[0]);
-        n -= hi;
-    }
-    gen::mul_1_1(a.limb[0], ops<T>::broadcast(kairn::detail::pow2<T>(n)), a.limb[0]);
-    return a;
-}
-
 }  // namespace packed_detail
 
 KAIRN_DETAIL_PACKED_END
@@ -638,51 +617,6 @@ KAIRN_FORCEINLINE Packed<T, K> select(const PackedMask<T>& m, const Packed<T, K>
 
 // --- One limb ----------------------------------------------------------------------------------
 
-/// In each lane, x + y rounded to nearest (kernel add_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::add_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> operator+(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    packed_detail::check(x, y);
-    Packed<T, 1> z;
-    gen::add_1_1(x.limb[0], y.limb[0], z.limb[0]);
-    return z;
-}
-/// In each lane, x - y rounded to nearest (kernel add_1_1 on x and -y).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::add_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> operator-(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    packed_detail::check(x, y);
-    Packed<T, 1> z;
-    gen::add_1_1(x.limb[0], packed_detail::ops<T>::neg(y.limb[0]), z.limb[0]);
-    return z;
-}
-/// In each lane, x * y rounded to nearest (kernel mul_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> operator*(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    packed_detail::check(x, y);
-    Packed<T, 1> z;
-    gen::mul_1_1(x.limb[0], y.limb[0], z.limb[0]);
-    return z;
-}
-/// x = x + y (kernel add_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::add_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1>& operator+=(Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    return x = x + y;
-}
-/// x = x - y (kernel add_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::add_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1>& operator-=(Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    return x = x - y;
-}
-/// x = x * y (kernel mul_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1>& operator*=(Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    return x = x * y;
-}
 /// In each lane, -x exactly: the sign bit flipped.
 /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
@@ -741,30 +675,6 @@ KAIRN_FORCEINLINE Packed<T, 1> abs(const Packed<T, 1>& x) noexcept {
     packed_detail::check_exact(x);
     Packed<T, 1> z;
     z.limb[0] = packed_detail::ops<T>::abs(x.limb[0]);
-    return z;
-}
-/// The fast addition, for one limb: x + y (kernel add_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::add_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> add_fast(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    return x + y;
-}
-/// In each lane, x times 2^n rounded once, for every n: kairn::ldexp of the lane, in the same steps
-/// (kernel mul_1_1, with b a power of two of T; two or three products when 2^n is not one, argued
-/// and tested through the oracle, not machine-checked).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> ldexp(const Packed<T, 1>& x, int n) noexcept {
-    packed_detail::check(x);
-    return packed_detail::ldexp_steps(x, n);
-}
-/// In each lane, x / 2 rounded once (kernel mul_1_1, with b = 1/2).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> half(const Packed<T, 1>& x) noexcept {
-    packed_detail::check(x);
-    Packed<T, 1> z;
-    gen::mul_1_1(x.limb[0], packed_detail::ops<T>::broadcast(T(0.5)), z.limb[0]);
     return z;
 }
 /// x itself: in each lane, the one-limb number rounded to nearest is itself.
@@ -1149,7 +1059,7 @@ KAIRN_FORCEINLINE Packed<T, 1> abs_upper(const Packed<T, 2>& x) noexcept {
 /// The finite cores (decision D5), lane by lane: the functions of kairn::finite of expansion.hpp
 /// for packed operands, each the packed form of the core that the function of the same name
 /// calls, with its contract in each lane (a lane whose leading limb is not finite is not canonical:
-/// select or test it before passing it to an operator). For one limb, each is the operator.
+/// select or test it before passing it to an operator). None for one limb, which has no arithmetic.
 namespace finite {
 
 /// In each lane, x + y, the core alone (kernel add_2_2).
@@ -1242,37 +1152,6 @@ template <class T>
 KAIRN_FORCEINLINE Packed<T, 2> ldexp(const Packed<T, 2>& x, int n) noexcept {
     packed_detail::check_core(x);
     return packed_detail::ldexp_steps<false>(x, n);
-}
-
-/// x + y for one limb: the operator (kernel add_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::add_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> add(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    return x + y;
-}
-/// x - y for one limb (kernel add_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::add_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> sub(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    return x - y;
-}
-/// x * y for one limb (kernel mul_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> mul(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    return x * y;
-}
-/// The fast addition for one limb: x + y (kernel add_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::add_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> add_fast(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
-    return x + y;
-}
-/// x times 2^n for one limb: kairn::ldexp (kernel mul_1_1).
-template <class T>
-    requires kairn::detail::proof_checked<gen::bounds::mul_1_1<T>>
-KAIRN_FORCEINLINE Packed<T, 1> ldexp(const Packed<T, 1>& x, int n) noexcept {
-    return kairn::ldexp(x, n);
 }
 
 }  // namespace finite

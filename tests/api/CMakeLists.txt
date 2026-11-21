@@ -655,8 +655,8 @@ _kairn_api_reject(interval.from_one_limb 37 "${_api_no_constructor}")
 _kairn_api_reject(not_constexpr.interval_add 38 "constant|constexpr")
 # The containers (soa.hpp): nothing writes through a view of const limbs or a const SoA, and no
 # view of mutable limbs is made of one. Packed (packed.hpp): no packed operation takes a number or
-# a T (no packed kernel does: a program broadcasts it), the narrowing to one limb is explicit, and
-# no operation mixes limb types. Each control writes what compiles instead.
+# a T (no packed kernel does: a program broadcasts it), the narrowing to one limb is explicit, no
+# operation mixes limb types, and Packed<T, 1> has no arithmetic. Each control writes what compiles instead.
 set(_api_no_assignment "no viable overloaded|no match for|binary '='|no operator found|constraints")
 set(_api_no_member "constraints not satisfied|no matching|no overloaded function|associated constraints")
 _kairn_api_reject(soa.assign_const_element 42 "${_api_no_assignment}")
@@ -669,6 +669,7 @@ _kairn_api_reject(packed.number_operand 48 "${_api_no_operator}")
 _kairn_api_reject(packed.limb_operand 49 "${_api_no_operator}")
 _kairn_api_reject(packed.implicit_narrowing 50 "${_api_no_conversion}")
 _kairn_api_reject(packed.mixed_limb_types 51 "${_api_no_operator}")
+_kairn_api_reject(packed.one_limb_arithmetic 53 "${_api_no_operator}")
 # KAIRN_PACKED_FORM (packed.hpp): a value that is not a form, a bare -D, and the form of another
 # target, which the generated header refuses.
 _kairn_api_reject(packed_form.unknown 52 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"

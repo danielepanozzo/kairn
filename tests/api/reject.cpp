@@ -40,6 +40,8 @@
 //   48-51  Packed (packed.hpp): an operation with a number or a T operand (no packed form takes
 //          one), the narrowing of two limbs to one written as an implicit conversion, and an
 //          operation of two limb types; each control writes what compiles instead
+//   53     the arithmetic of Packed<T, 1>, which there is none of (its kernels are not entry
+//          kernels); the control negates, and adds a Packed<T, 1> to a Packed<T, 2>
 //   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
 //          is not a form, or a form the target does not have (the generated header's #error)
 //   29-31  an UNVERIFIED building block (two_sum, next_up) and the scaling of a ball by a power of
@@ -57,7 +59,7 @@
 #include <kairn/kairn.hpp>
 // The headers that kairn.hpp does not include, in the cases about them only: each case is compiled
 // twice, and they would add their cost to every one.
-#if KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 52
+#if KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 53
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
 #endif
@@ -229,7 +231,7 @@ int main() {
     sink = I1(MARK(s), s).lower().limb[0];
 #elif KAIRN_TEST_CASE == 41
     sink = B1(MARK(i)).radius();
-#elif KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 51
+#elif (KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 51) || KAIRN_TEST_CASE == 53
     double h[4] = {1, 2, 3, 4}, l[4] = {0, 0, 0, 0};
     const kairn::SoAView<double, 2> mv(h, l, 4);
     [[maybe_unused]] const kairn::SoAView<const double, 2> cv = mv;
@@ -295,6 +297,12 @@ int main() {
     const P1 z = px;
 #endif
     sink = z.lane(0).limb[0];
+#elif KAIRN_TEST_CASE == 53
+#if defined(KAIRN_TEST_CONTROL)
+    sink = (-pa).lane(0).limb[0] + (P2(pa) + pa).lane(0).limb[0];
+#else
+    sink = (pa + pa).lane(0).limb[0];
+#endif
 #elif KAIRN_TEST_CASE == 51
     const kairn::Packed<float, 2> pf;
 #if defined(KAIRN_TEST_CONTROL)

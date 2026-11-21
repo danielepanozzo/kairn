@@ -414,11 +414,12 @@ nothing about a loop as a whole: a program composes the bounds of its operations
 wrote, which depends on $W$, so that the same loop can give different bits on different targets,
 each within its own bound ([A vector loop](../tutorials/vector-loop.md)).
 
-Two compositions are written by hand, as for `Expansion`: `ldexp` and `half` beyond the powers of
-two of `T` (argued and tested, not machine-checked, [above](#overflow-and-non-finite-values)).
-One difference from `Expansion<T, 1>`: the products of one limb are the kernel `mul_1_1`, whose
-code is $\mathrm{fma}(a, b, +0)$, so a zero product is $+0$ where `T`'s product, which
-`Expansion<T, 1>` uses, gives $-0$. Kairn gives the sign of a zero no meaning.
+The operations are those of two limbs, and of one limb those that do not round (negation, `abs`,
+the comparisons, the conversions): `Packed<T, 1>` has no arithmetic, because the kernels of the
+arithmetic of one limb are not entry kernels, the only kernels a public header may call
+([Packed](../reference/packed.md#the-operations)). One composition is written by hand, as for
+`Expansion`: `ldexp` and `half` beyond the powers of two of `T` (argued and tested, not
+machine-checked, [above](#overflow-and-non-finite-values)).
 
 `SoA<T, k>` and its views ([reference](../reference/soa.md)) hold numbers as one array per limb and
 compute nothing: an element read is the value written (its limbs, but that a zero limb of two may

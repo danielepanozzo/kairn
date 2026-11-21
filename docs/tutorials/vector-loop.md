@@ -68,12 +68,12 @@ The program computes it so:
 --8<-- "docs/examples/cpp/packed_dot.cpp:bound"
 ```
 
-Three things the bound does not say. It says nothing about the order of the additions beyond the
-one the loop wrote: that order depends on $W$, so the same source gives different bits on
-different targets (the program's random sets do, below its output), each within the bound computed
-with its own $W$. It is not a bound Kairn proves: the theorems are about each operation, and the
-composition is the program's, as it would be for `double`. And it assumes canonical operands, which
-a build with checks verifies at each load (`from_limbs` in each lane).
+Three things to keep in mind. The bound is about the order of the additions the loop wrote, and
+that order depends on $W$: the same source gives different bits on different targets (the
+program's random sets do, [below](#the-whole-output)), each within the bound computed with its own
+$W$. It is not a bound Kairn proves: the theorems are about each operation, and the composition is
+the program's, as it would be for `double`. And it assumes canonical operands, which a build with
+checks verifies at each load (`from_limbs` in each lane).
 
 ## The whole output
 

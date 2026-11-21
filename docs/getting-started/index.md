@@ -174,7 +174,8 @@ kernel states.
   registers: 4 `double` with AVX2, 2 with the Advanced SIMD of AArch64, and 1 on a target with
   neither, from one source. Each operation of `Packed` is, in each lane, the operation of
   `Expansion` of the same name, computed by the packed form of its kernel, which the generator
-  writes from the same description and tests lane by lane. It is for a loop the program writes
+  writes from the same description and tests lane by lane: the arithmetic of two limbs, and for
+  one limb the operations that do not round (`Packed<T, 1>` has no arithmetic). It is for a loop the program writes
   itself, over numbers stored as one array per limb, which [`kairn/soa.hpp`](../reference/soa.md)
   holds or maps over the program's own arrays. The [tutorial](../tutorials/vector-loop.md) writes
   one and says what can be claimed about it: each operation's bound, per lane, and nothing about

@@ -2,8 +2,9 @@
 
 `kairn::Packed<T, k>` holds $W$ numbers of $k$ limbs of type `T` in SIMD registers, limb $j$ of
 all $W$ numbers in one register, for `T` = `float` or `double` and $k = 1$ or $2$. Its operations
-are those of [`Expansion<T, k>`](index.md) that have a kernel, under the same names, computed by
-the packed form of that kernel. `kairn::PackedMask<T>` holds the $W$ truth values that a
+are those of [`Expansion<T, k>`](index.md) that have an entry kernel, under the same names,
+computed by the packed form of that kernel: the arithmetic, the comparisons and the conversions of
+two limbs, and for one limb the operations that do not round ([below](#the-operations)). `kairn::PackedMask<T>` holds the $W$ truth values that a
 comparison returns. They are in `kairn/packed.hpp`, which `kairn/kairn.hpp` does not include
 ([below](#compile-time)).
 
@@ -98,23 +99,19 @@ the fix-up; `ldexp` and `half` beyond the powers of two of `T` take the same ste
 a composition argued and tested but not machine-checked
 ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)).
 
-**One limb.** `x + y`, `x - y` (which is `add_1_1` on `x` and $-y$, as for `Expansion<T, 1>`),
-`x * y`, the compound forms, `add_fast`, `ldexp`, `half` and the functions of `kairn::finite` call
-the packed forms of [`add_1_1`](add_1_1.md) and [`mul_1_1`](mul_1_1.md). Negation, `abs`, the six
-comparisons and `to_nearest`, `to_down`, `to_up`, `abs_upper` are, as for `Expansion<T, 1>`, the
-exact operations of `T`: a sign bit flipped or cleared, a comparison of lanes, the value itself.
-They have no kernel; they are there because the operations of two limbs are, so that a loop over
-$k$ reads the same for both.
+**One limb.** `Packed<T, 1>` is the packed `T`, the limb operand of the mixed forms above, and has
+negation, `abs`, the six comparisons and `to_nearest`, `to_down`, `to_up`, `abs_upper`, which are,
+as for `Expansion<T, 1>`, the exact operations of `T`: a sign bit flipped or cleared, a comparison
+of lanes, the value itself. **It has no arithmetic**: no `+`, `-`, `*`, `add_fast`, `ldexp`, `half`
+and no function of `kairn::finite`. The kernels that the arithmetic of `Expansion<T, 1>` names,
+[`add_1_1`](add_1_1.md) and [`mul_1_1`](mul_1_1.md), have packed forms, but they are not *entry*
+kernels, the only kernels a public header may call ([rule
+R3](../developer/architecture.md#the-kernel-ir): an entry kernel guards the values that enter from
+the program; the generator's tests check that no header calls another); `Expansion<T, 1>` computes
+the operations of `T` itself, and nothing in `Packed` rounds but through a kernel. A loop of one
+limb is a loop of `T`, or of `Expansion<T, 1>`.
 
-One difference from `Expansion<T, 1>`, in the sign of a zero only. The product of one limb is the
-kernel `mul_1_1`, whose code is the opaque product $\mathrm{fma}(a, b, +0)$, the same in its scalar
-and packed forms; `Expansion<T, 1>`'s `x * y` is the product of `T`. They give the same value, but
-where the product of `T` is $-0$ (as for $-1 \cdot 0$, or a negative product that underflows),
-the kernel gives $+0$. So `x * y`, `x *= y`, `half`, `ldexp` and `finite::mul` of `Packed<T, 1>`
-can give $+0$ where `Expansion<T, 1>` gives $-0$. Kairn gives the sign of a zero no meaning, and
-the oracle does not judge it.
-
-**Not here**, with the reason: `sign`, `isfinite` and `is_normalized` (no kernel computes them;
+**Not here**, with the reason: the arithmetic of one limb (above); `sign`, `isfinite` and `is_normalized` (no kernel computes them;
 `is_normalized` of two limbs rounds); the marked forms of `kairn::unverified`; the building blocks
 of `kairn/blocks.hpp`; `Ball` and `Interval` (no packed type); a sum or any other combination of
 the lanes (a program writes it with `lane()` and the operators of `Expansion`, in the order it
@@ -195,7 +192,6 @@ therefore does not include them: a program includes `kairn/packed.hpp` or `kairn
 - **Bit for bit against the scalar operations** (`tests/api/packed.cpp`): every operation above,
   `float` and `double`, one and two limbs, on every pair of a corpus of every kind of value, one
   pair per lane position in turn, in the form of the build, the scalar form and, where it applies,
-  AVX2. Every limb of every lane equals the scalar result (a NaN compared as a NaN), but for the
-  sign of a zero product of one limb, above.
+  AVX2. Every limb of every lane equals the scalar result, a NaN compared as a NaN.
 - **The checks**, the compile-fail cases and the tutorial's loop in the three forms:
   [Testing](../developer/testing.md#packed-and-the-containers).

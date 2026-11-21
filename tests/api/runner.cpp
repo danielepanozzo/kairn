@@ -680,17 +680,11 @@ struct Lanes {
     bool* mo[lanes_of<T>];
 };
 
-// Operands: the limbs at k of every lane, loaded; pneg the same negated (exact).
+// Operands: the limbs at k of every lane, loaded.
 template <class T>
 PK1<T> pone(const Lanes<T>& b, int k) {
     T a[lanes_of<T>];
     for (int i = 0; i < lanes_of<T>; ++i) a[i] = b.in[i][k];
-    return PK1<T>::load(a);
-}
-template <class T>
-PK1<T> pneg(const Lanes<T>& b, int k) {
-    T a[lanes_of<T>];
-    for (int i = 0; i < lanes_of<T>; ++i) a[i] = -b.in[i][k];
     return PK1<T>::load(a);
 }
 template <class T>
@@ -738,83 +732,6 @@ void put_lane(const Lanes<T>& b, int i, const kairn::Packed<T, K>& z) {
             std::abort();                                                           \
         }                                                                           \
     }
-
-// One limb. As for the scalar forms, x - (-b) asks for the rounded sum.
-PFORM(plus, add_1_1, pput(b, pone(b, 0) + pone(b, 1)))
-PFORM(plus_assign, add_1_1, PK1<T> x = pone(b, 0); x += pone(b, 1); pput(b, x))
-PFORM(minus, add_1_1, pput(b, pone(b, 0) - pneg(b, 1)))
-PFORM(minus_assign, add_1_1, PK1<T> x = pone(b, 0); x -= pneg(b, 1); pput(b, x))
-PFORM(add_fast, add_1_1, pput(b, kairn::add_fast(pone(b, 0), pone(b, 1))))
-PFORM(finite_add, add_1_1, pput(b, finite::add(pone(b, 0), pone(b, 1))))
-PFORM(finite_sub, add_1_1, pput(b, finite::sub(pone(b, 0), pneg(b, 1))))
-PFORM(finite_add_fast, add_1_1, pput(b, finite::add_fast(pone(b, 0), pone(b, 1))))
-PFORM(times, mul_1_1, pput(b, pone(b, 0) * pone(b, 1)))
-PFORM(times_assign, mul_1_1, PK1<T> x = pone(b, 0); x *= pone(b, 1); pput(b, x))
-PFORM(finite_mul, mul_1_1, pput(b, finite::mul(pone(b, 0), pone(b, 1))))
-// ldexp, half and the steps of ldexp on the lanes whose b is +-2^m (each lane's n in turn, the
-// other lanes computed beside it); the product in the other lanes.
-template <class T, bool Finite>
-void packed_ldexp_1(const Lanes<T>& b) {
-    const PK1<T> x = pone(b, 0), p = x * pone(b, 1);
-    for (int i = 0; i < lanes_of<T>; ++i) {
-        int m = 0;
-        if (!power_of_two(b.in[i][1], m)) {
-            put_lane(b, i, p);
-            continue;
-        }
-        ++reached;
-        PK1<T> z;
-        if constexpr (Finite) z = finite::ldexp(x, m);
-        else z = kairn::ldexp(x, m);
-        put_lane(b, i, b.in[i][1] > 0 ? z : -z);
-    }
-}
-PFORM(ldexp, mul_1_1, packed_ldexp_1<T, false>(b))
-PFORM(finite_ldexp, mul_1_1, packed_ldexp_1<T, true>(b))
-template <class T>
-void packed_half_1(const Lanes<T>& b) {
-    const PK1<T> p = pone(b, 0) * pone(b, 1);
-    T y[lanes_of<T>];
-    bool use[lanes_of<T>];
-    for (int i = 0; i < lanes_of<T>; ++i) {
-        int m = 0;
-        use[i] = power_of_two(b.in[i][1], m) && exact_scale(b.in[i], 1, m + 1, y + i);
-        if (!use[i]) y[i] = b.in[i][0];
-    }
-    const PK1<T> z = kairn::half(PK1<T>::load(y));
-    for (int i = 0; i < lanes_of<T>; ++i) {
-        if (!use[i]) {
-            put_lane(b, i, p);
-            continue;
-        }
-        ++reached;
-        put_lane(b, i, b.in[i][1] > 0 ? z : -z);
-    }
-}
-PFORM(half, mul_1_1, packed_half_1<T>(b))
-template <class T>
-void packed_ldexp_far_1(const Lanes<T>& b) {
-    const PK1<T> p = pone(b, 0) * pone(b, 1);
-    T y[lanes_of<T>];
-    int n[lanes_of<T>] = {};
-    bool use[lanes_of<T>];
-    for (int i = 0; i < lanes_of<T>; ++i) {
-        int m = 0;
-        use[i] = power_of_two(b.in[i][1], m) && far_split(b.in[i], 1, m, y + i, n[i]);
-        if (!use[i]) y[i] = b.in[i][0];
-    }
-    const PK1<T> yy = PK1<T>::load(y);
-    for (int i = 0; i < lanes_of<T>; ++i) {
-        if (!use[i]) {
-            put_lane(b, i, p);
-            continue;
-        }
-        ++reached;
-        const PK1<T> z = kairn::ldexp(yy, n[i]);
-        put_lane(b, i, b.in[i][1] > 0 ? z : -z);
-    }
-}
-PFORM(ldexp_far, mul_1_1, packed_ldexp_far_1<T>(b))
 
 // Two limbs: construction, from a one-limb number, and the loads; the reads of a view.
 PFORM(from_one, make_2, pput(b, PK2<T>(pone(b, 0))))
@@ -1269,21 +1186,6 @@ struct PackedForm {
 #define PSOME(KERNEL, NAME, IN, OUT) \
     {#KERNEL, "packed_" #NAME, IN, OUT, true, packed_##KERNEL##_##NAME<double>, packed_##KERNEL##_##NAME<float>},
 const PackedForm packed_forms[] = {
-    PROW(add_1_1, plus, "ll", "l")
-    PROW(add_1_1, plus_assign, "ll", "l")
-    PROW(add_1_1, minus, "ll", "l")
-    PROW(add_1_1, minus_assign, "ll", "l")
-    PROW(add_1_1, add_fast, "ll", "l")
-    PROW(add_1_1, finite_add, "ll", "l")
-    PROW(add_1_1, finite_sub, "ll", "l")
-    PROW(add_1_1, finite_add_fast, "ll", "l")
-    PROW(mul_1_1, times, "ll", "l")
-    PROW(mul_1_1, times_assign, "ll", "l")
-    PROW(mul_1_1, finite_mul, "ll", "l")
-    PSOME(mul_1_1, ldexp, "ll", "l")
-    PSOME(mul_1_1, finite_ldexp, "ll", "l")
-    PSOME(mul_1_1, half, "ll", "l")
-    PSOME(mul_1_1, ldexp_far, "ll", "l")
     PROW(make_2, from_one, "l", "ll")
     PROW(make_2_limbs, load, "ll", "ll")
     PROW(make_2_limbs, load_unchecked, "ll", "ll")

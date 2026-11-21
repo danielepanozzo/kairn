@@ -862,12 +862,11 @@ EXACT = [
           form("to_nearest(x), to_down(x), to_up(x), abs_upper(x), Packed<T, 1>(x)", P2, result=P1),
           kernel="that of `Expansion`"),
     exact("packed", "in each lane, the function of `kairn::finite` of the same name: the core, without the fix-up",
-          form("finite::add, finite::sub, finite::mul, finite::add_fast, finite::ldexp", PK, PK, result=PK),
+          form("finite::add, finite::sub, finite::mul, finite::add_fast, finite::ldexp", P2, PK, result=P2),
           kernel="that of `Expansion`"),
-    exact("packed", "one limb: the operations of `Expansion<T, 1>`; the products are the kernel `mul_1_1`, "
-          "$\\mathrm{fma}(a, b, +0)$, so a zero product is $+0$ ([Packed](packed.md#the-operations))",
-          form("x + y, x - y, x * y, -x, abs(x), x < y, to_down(x), ldexp(x, n)", P1, P1, result=P1),
-          kernel="`add_1_1`, `mul_1_1`, or none"),
+    exact("packed", "one limb: the exact operations of `T`, as for `Expansion<T, 1>`; no arithmetic, whose "
+          "kernels are not entry kernels ([Packed](packed.md#the-operations))",
+          form("-x, abs(x), x < y, x == y, to_nearest(x), to_down(x), to_up(x), abs_upper(x)", P1, P1, result=P1)),
     exact("packed", "moves: zero, one number in every lane, a lane read or written, a select by a mask; limbs "
           "copied, nothing computed",
           form("Packed<T, K>(), Packed<T, K>::broadcast(x), p.lane(i), p.set_lane(i, x), select(m, a, b)", PK,

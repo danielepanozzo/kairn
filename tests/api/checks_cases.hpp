@@ -481,7 +481,6 @@ inline const Operation operations[] = {
     {"packed2.mul_limb", Kind::rounds, [](Bits& b) { put(b, P2::broadcast(o.x) * P1::broadcast(E1(v_c))); }},
     {"packed2.ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::ldexp(P2::broadcast(o.x), -2000)); }},
     {"packed2.finite_add", Kind::rounds, [](Bits& b) { put(b, kairn::finite::add(P2::broadcast(o.x), P2::broadcast(o.y))); }},
-    {"packed1.mul", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_a)) * P1::broadcast(E1(v_c))); }},
     {"packedf.add", Kind::rounds, [](Bits& b) {
          using F = kairn::Packed<float, 2>;
          put(b, F::broadcast(o.fx) + F::broadcast(o.fx));

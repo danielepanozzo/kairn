@@ -1,7 +1,8 @@
 // The dot product of the tutorial docs/tutorials/vector-loop.md written three ways and timed: a
 // plain loop of T for scale, a loop of kairn::Expansion<T, k> one number at a time, and the loop of
-// the tutorial with kairn::Packed<T, k>, for T = double and float, k = 1 and 2, over arrays that fit
-// in the first-level cache and arrays that do not. README.md says how to build and run it and
+// the tutorial with kairn::Packed<T, 2>, for T = double and float, k = 1 and 2 (Packed<T, 1> has no
+// arithmetic, so one limb has no packed loop), over arrays that fit in the first-level cache and
+// arrays that do not. README.md says how to build and run it and
 // what the numbers show. Not part of the library, and not a test.
 #include <kairn/kairn.hpp>
 #include <kairn/soa.hpp>
@@ -50,8 +51,9 @@ DOT_NOINLINE kairn::Expansion<T, K> dot_expansion(View<T, K> x, View<T, K> y) {
     return s;
 }
 
-// The loop of the tutorial.
+// The loop of the tutorial (two limbs).
 template <class T, int K>
+    requires(K == 2)
 DOT_NOINLINE kairn::Expansion<T, K> dot_packed(View<T, K> x, View<T, K> y) {
     using P = kairn::Packed<T, K>;
     constexpr int W = P::lanes;
@@ -141,18 +143,23 @@ Row measure(std::size_t n, int reps, double sample_elements) {
     row.bytes = 2 * K * n * sizeof(T);
     // The results, before anything is timed: the two loops of k limbs agree to within their
     // bounds, which are far below what the printout resolves.
-    const kairn::Expansion<T, K> e = dot_expansion<T, K>(x, y), p = dot_packed<T, K>(x, y);
-    const double ev = double(e.limb[0]) + (K == 2 ? double(e.limb[K - 1]) : 0.0);
-    const double pv = double(p.limb[0]) + (K == 2 ? double(p.limb[K - 1]) : 0.0);
-    row.agreement = std::fabs(pv - ev) / std::fabs(ev);
+    row.agreement = 0;
+    if constexpr (K == 2) {
+        const kairn::Expansion<T, K> e = dot_expansion<T, K>(x, y), p = dot_packed<T, K>(x, y);
+        const double ev = double(e.limb[0]) + double(e.limb[1]), pv = double(p.limb[0]) + double(p.limb[1]);
+        row.agreement = std::fabs(pv - ev) / std::fabs(ev);
+    }
     // Each loop called through a pointer read from a volatile object, so that no compiler sees what
     // a call computes and hoists it out of the repetitions (bench/bench.hpp does the same).
     static T (*volatile plain)(const T*, const T*, std::size_t) = dot_plain<T>;
     static kairn::Expansion<T, K> (*volatile expansion)(View<T, K>, View<T, K>) = dot_expansion<T, K>;
-    static kairn::Expansion<T, K> (*volatile packed)(View<T, K>, View<T, K>) = dot_packed<T, K>;
     row.plain = time_it([&] { return double(plain(x.limb(0), y.limb(0), n)); }, n, reps, passes);
     row.expansion = time_it([&] { return double(expansion(x, y).limb[0]); }, n, reps, passes);
-    row.packed = time_it([&] { return double(packed(x, y).limb[0]); }, n, reps, passes);
+    row.packed = {0, 0};
+    if constexpr (K == 2) {
+        static kairn::Expansion<T, K> (*volatile packed)(View<T, K>, View<T, K>) = dot_packed<T, K>;
+        row.packed = time_it([&] { return double(packed(x, y).limb[0]); }, n, reps, passes);
+    }
     return row;
 }
 
@@ -198,12 +205,17 @@ int main(int argc, char** argv) {
                 "Expansion / Packed | agreement |\n|---|---|---|---|---|---|---|---|---|---|\n");
     double worst = 1;
     for (const Row& r : rows) {
-        std::printf("| %s | %d | %d | %zu | %.3g MB | %.3f (%.2f) | %.3f (%.2f) | %.3f (%.2f) | %.2f | %.1e |\n",
-                    r.type.c_str(), r.k, r.w, r.n, double(r.bytes) / 1e6, r.plain.median, r.plain.median / r.plain.minimum,
-                    r.expansion.median, r.expansion.median / r.expansion.minimum, r.packed.median,
-                    r.packed.median / r.packed.minimum, r.expansion.median / r.packed.median, r.agreement);
-        worst = std::max({worst, r.plain.median / r.plain.minimum, r.expansion.median / r.expansion.minimum,
-                          r.packed.median / r.packed.minimum});
+        std::printf("| %s | %d | %d | %zu | %.3g MB | %.3f (%.2f) | %.3f (%.2f) | ", r.type.c_str(), r.k, r.w, r.n,
+                    double(r.bytes) / 1e6, r.plain.median, r.plain.median / r.plain.minimum, r.expansion.median,
+                    r.expansion.median / r.expansion.minimum);
+        if (r.k == 2) {
+            std::printf("%.3f (%.2f) | %.2f | %.1e |\n", r.packed.median, r.packed.median / r.packed.minimum,
+                        r.expansion.median / r.packed.median, r.agreement);
+            worst = std::max(worst, r.packed.median / r.packed.minimum);
+        } else {
+            std::printf("- | - | - |\n");
+        }
+        worst = std::max({worst, r.plain.median / r.plain.minimum, r.expansion.median / r.expansion.minimum});
     }
     std::printf("\nlargest spread: %.3f\n", worst);
     return 0;
