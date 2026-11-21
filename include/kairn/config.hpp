@@ -208,8 +208,9 @@
 /// definitions are missing, or were compiled with another setting or another KAIRN_CHECKS, does
 /// not link (an undefined kairn::detail::external... or external_checked:: function). With MSVC
 /// and clang-cl a program whose translation units disagree in any way does not link (LNK2038,
-/// "mismatch detected for 'kairn_enclosure_code'"). Any other value does not compile. BallVector,
-/// when it exists, will follow the same setting.
+/// "mismatch detected for 'kairn_enclosure_code'"). Any other value does not compile. The
+/// operations of BallVector (ball_vector.hpp) are ordinary inline functions in every setting: each
+/// calls one generated loop, itself an ordinary inline function whose end is never inlined.
 #if !defined(KAIRN_ENCLOSURE_CODE)
 #define KAIRN_ENCLOSURE_CODE KAIRN_ENCLOSURE_CODE_INLINE
 #endif

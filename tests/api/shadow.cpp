@@ -13,6 +13,7 @@
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
+#include <kairn/ball_vector.hpp>
 
 namespace use_test {
 
@@ -314,6 +315,37 @@ double use_every_operation(UseT use_a, UseT use_b) {
         use_add(E2(use_read[1]).limb[0] + use_read.subview(1, 1).get(0).limb[0] + double(use_read.size()) +
                 use_plain.get(0).limb[0] + use_copy.get(0).limb[0] + use_soa.limb(0)[0] + use_soa.view().limb(1)[0] +
                 E2(use_copy[0]).limb[0] + use_copy.load(0).lane(0).limb[0] + double(use_soa.empty()));
+    }
+
+    // Ball vectors (kairn/ball_vector.hpp): every function and operator once, of one and two limbs.
+    {
+        using BV1 = kairn::BallVector<UseT, 1, 3>;
+        using BV2 = kairn::BallVector<UseT, 2, 3>;
+        const BV1 use_bv_u({use_a, use_b, use_a}, use_b);
+        BV2 use_bv_w({use_x, use_y, use_x}, use_b);
+        UseT use_bv_c3[3] = {use_a, use_b, use_a}, use_bv_r3 = use_b;
+        const kairn::BallVectorView<UseT, 1> use_bv_m(kairn::SoAView<UseT, 1>(use_bv_c3, 3), use_bv_r3);
+        const kairn::BallVectorView<const UseT, 1> use_bv_c = use_bv_m;
+        BV1 use_bv_v = -use_bv_u + use_bv_u - use_bv_u * use_a;
+        use_bv_v += use_bv_u;
+        use_bv_v -= use_bv_u;
+        use_bv_v *= use_b;
+        use_bv_v = kairn::ldexp(use_a * use_bv_v, 3) + kairn::half(use_bv_v) + kairn::axpy(use_a, use_bv_u, use_bv_v);
+        use_bv_v = kairn::ldexp(kairn::sequential, use_bv_v, -2000) + kairn::half(kairn::sequential, use_bv_v) +
+                kairn::axpy(kairn::sequential, use_b, use_bv_u, use_bv_v) + BV1(use_bv_c) + BV1(use_bv_u.centers(), use_a);
+        kairn::neg(use_bv_c, use_bv_m);
+        kairn::add(use_bv_u, use_bv_c, use_bv_v);
+        kairn::sub(kairn::sequential, use_bv_u, use_bv_v, use_bv_m);
+        kairn::scale(use_bv_c, use_a, use_bv_v);
+        kairn::ldexp(use_bv_u, -3, use_bv_m);
+        kairn::half(kairn::sequential, use_bv_v, use_bv_v);
+        kairn::axpy(use_a, use_bv_u, use_bv_c, use_bv_v);
+        use_bv_w = -use_bv_w + use_bv_w * use_b;
+        const auto use_bv_p = kairn::convolution(use_bv_u, use_bv_v);
+        const auto use_bv_q = kairn::convolution(kairn::sequential, use_bv_w, use_bv_w);
+        use_add(use_bv_v.radius() + use_bv_m.radius() + use_bv_p.entry(1).radius() + use_bv_q.center(4).limb[1] +
+                kairn::norm_upper(use_bv_w) + kairn::norm_upper(kairn::sequential, use_bv_c) +
+                double(BV2::whole().is_whole()) + double(use_bv_c.is_finite()) + use_bv_c.limb(0)[1]);
     }
 
     // Constants from fractions: rational and integer, in constant evaluation and at run time, and

@@ -8,7 +8,9 @@
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
+#include <kairn/ball_vector.hpp>
 
+#include <array>
 #include <bit>
 #include <cfenv>
 #include <cmath>
@@ -66,6 +68,12 @@ struct Operands {
     I2 jx, jy;
 };
 inline Operands o;
+// Ball vectors (kairn/ball_vector.hpp) of five entries: the centers 1.5, 2.25 and the two-limb
+// operands above, the radius 2^-20.
+using BV1 = kairn::BallVector<double, 1, 5>;
+using BV2 = kairn::BallVector<double, 2, 5>;
+inline BV1 bv1x, bv1y;
+inline BV2 bv2x, bv2y;
 
 // The corpus of the functions that do not round, for one limb type: values of one limb (zeros of
 // both signs, subnormal numbers, the smallest normal number, ordinary numbers, the largest finite
@@ -88,6 +96,11 @@ struct Corpus {
     // two (a NaN bound gives the whole line, reversed ones the empty set), each once.
     std::vector<kairn::Interval<T, 1>> intervals1;
     std::vector<kairn::Interval<T, 2>> intervals2;
+    // Ball vectors of five entries: five consecutive values of one (with wrap-around) with each
+    // radius, and five consecutive finite pairs of two with each radius, as the constructor makes
+    // them (the whole space of a radius +inf or a NaN, or of a center that is not finite).
+    std::vector<kairn::BallVector<T, 1, 5>> bvs1;
+    std::vector<kairn::BallVector<T, 2, 5>> bvs2;
 };
 template <class T>
 inline T opaque(T x) {
@@ -148,6 +161,21 @@ inline Corpus<T> make_corpus() {
         }
     c.intervals2.push_back(kairn::Interval<T, 2>::empty());
     c.intervals2.push_back(kairn::Interval<T, 2>::whole());
+    std::vector<kairn::Expansion<T, 2>> pairs;
+    for (const auto& x : c.two)
+        if (kairn::isfinite(x)) pairs.push_back(x);
+    for (std::size_t k = 0; k < c.one.size(); ++k)
+        for (T r : c.radii) {
+            std::array<kairn::Expansion<T, 1>, 5> one5;
+            for (std::size_t i = 0; i < 5; ++i) one5[i] = kairn::Expansion<T, 1>(c.one[(k + i) % c.one.size()]);
+            c.bvs1.push_back(kairn::BallVector<T, 1, 5>(one5, r));
+        }
+    for (std::size_t k = 0; k < pairs.size(); ++k)
+        for (T r : c.radii) {
+            std::array<kairn::Expansion<T, 2>, 5> two5;
+            for (std::size_t i = 0; i < 5; ++i) two5[i] = pairs[(k + i) % pairs.size()];
+            c.bvs2.push_back(kairn::BallVector<T, 2, 5>(two5, r));
+        }
     return c;
 }
 inline Corpus<double> corpus_d;
@@ -166,6 +194,10 @@ inline void make_operands() {
     o.iy = I1(unverified(double(v_a)), v_c);
     o.jx = I2(unverified(o.y), o.y);
     o.jy = I2(unverified(o.x), o.y);
+    bv1x = BV1({E1(v_a), E1(v_c), E1(-v_a), E1(v_b), E1(v_c)}, v_r);
+    bv1y = BV1({E1(v_c), E1(v_a), E1(v_d), E1(v_a), E1(-v_c)}, v_r);
+    bv2x = BV2({o.x, o.y, o.x, o.y, o.x}, v_r);
+    bv2y = BV2({o.y, o.x, o.y, o.x, o.y}, v_r);
     corpus_d = make_corpus<double>();
     corpus_f = make_corpus<float>();
 }
@@ -219,6 +251,16 @@ inline void put(Bits& out, const kairn::Split<X>& s) {
     put(out, s.left);
     put(out, s.right);
 }
+template <class T, int K, std::size_t N>
+inline void put(Bits& out, const kairn::BallVector<T, K, N>& x) {
+    for (std::size_t i = 0; i < N; ++i) put(out, x.center(i));
+    put(out, x.radius());
+}
+template <class T, int K>
+inline void put(Bits& out, const kairn::BallVectorView<T, K>& x) {
+    for (std::size_t i = 0; i < x.size(); ++i) put(out, x.center(i));
+    put(out, x.radius());
+}
 // The value, a zero without its sign: what a constructor must keep under every rounding mode (its
 // guard, a + 0, gives -0 + 0 = -0 when rounding downward and +0 otherwise). Decided on the bit
 // pattern of a copy read back from memory, never as x == 0 ? 0 : x in floating point: that rule
@@ -247,6 +289,11 @@ template <class T, int K>
 inline void put_value(Bits& out, const kairn::Interval<T, K>& x) {
     put_value(out, x.lower());
     put_value(out, x.upper());
+}
+template <class X>
+inline void put_value_bv(Bits& out, const X& x) {
+    for (std::size_t i = 0; i < x.size(); ++i) put_value(out, x.center(i));
+    put_value(out, x.radius());
 }
 
 // Packed numbers (kairn/packed.hpp): the results of every lane, and the values of a corpus W at a
@@ -796,7 +843,79 @@ inline const Operation operations[] = {
              }
          });
      }},
+    // Ball vectors (kairn/ball_vector.hpp): the functions that round, each the loop it calls (or the
+    // composition), with the checks of the environment and of every operand; the construction of
+    // two limbs, whose test of a canonical center rounds.
+    {"bv1.add", Kind::rounds, [](Bits& b) { put(b, bv1x + bv1y); }},
+    {"bv1.add_sequential", Kind::rounds, [](Bits& b) {
+         BV1 z;
+         kairn::add(kairn::sequential, bv1x, bv1y, z);
+         put(b, z);
+     }},
+    {"bv2.sub", Kind::rounds, [](Bits& b) { put(b, bv2x - bv2y); }},
+    {"bv2.scale", Kind::rounds, [](Bits& b) { put(b, bv2x * double(v_c)); }},
+    {"bv1.ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::ldexp(bv1x, -3)); }},
+    {"bv2.half", Kind::rounds, [](Bits& b) { put(b, kairn::half(bv2x)); }},
+    {"bv2.axpy", Kind::rounds, [](Bits& b) { put(b, kairn::axpy(double(v_c), bv2x, bv2y)); }},
+    {"bv1.convolution", Kind::rounds, [](Bits& b) { put(b, kairn::convolution(bv1x, bv1y)); }},
+    {"bv2.norm_upper", Kind::rounds, [](Bits& b) { put(b, kairn::norm_upper(bv2x)); }},
+    {"bv2.make", Kind::rounds, [](Bits& b) { put(b, BV2({o.y, o.x, o.y, o.x, o.y}, v_r)); }},
+    {"bv2.view_make", Kind::rounds, [](Bits& b) {
+         Arrays a(o.x);
+         double r = v_r;
+         put(b, kairn::BallVectorView<double, 2>(kairn::SoAView<double, 2>(a.h, a.l, 16), r));
+     }},
+
+    // Ball vectors: the functions that do not round, each on ball vectors of the corpus: the
+    // negation (sign bits, a copy of the radius, and the fold of maxima, which compares), the same
+    // bits; the constructors of one limb, whose only rounded operations are the guards a + 0 and the
+    // loop's m - m (+0 or -0 for a finite m under every rounding mode), the same values.
+    {"bv1.neg", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.bvs1) put(out, -x);
+         });
+     }},
+    {"bv2.neg", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.bvs2) {
+                 auto z = x;
+                 kairn::neg(kairn::sequential, x, z);
+                 put(out, z);
+                 put(out, -x);
+             }
+         });
+     }},
+    {"bv1.make", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (std::size_t k = 0; k < c.one.size(); ++k)
+                 for (auto r : c.radii) {
+                     std::array<kairn::Expansion<T, 1>, 5> one5;
+                     for (std::size_t i = 0; i < 5; ++i) one5[i] = kairn::Expansion<T, 1>(c.one[(k + i) % c.one.size()]);
+                     put_value_bv(out, kairn::BallVector<T, 1, 5>(one5, r));
+                     T limbs[5];
+                     for (std::size_t i = 0; i < 5; ++i) limbs[i] = c.one[(k + i) % c.one.size()];
+                     T radius = r;
+                     put_value_bv(out, kairn::BallVectorView<T, 1>(kairn::SoAView<T, 1>(limbs, 5), radius));
+                 }
+         });
+     }},
+
     // The functions that do not round and have no check at all.
+    // Ball vectors: the accessors, the whole space, the views and the copy of a view.
+    {"bv.access", Kind::unchecked, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             const auto w = kairn::BallVector<T, 2, 5>::whole();
+             put(out, w);
+             put(out, w.entry(3));
+             const kairn::BallVectorView<const T, 2> v = w;
+             put(out, kairn::BallVector<T, 2, 5>(v));
+             put(out, v.is_finite());
+             put(out, v.center(1));
+             put(out, kairn::BallVector<T, 1, 3>().entry(2));
+         });
+     }},
     // Packed and the views: the constructor from one limb (its guards, as Expansion<T, 2>(a)), the
     // loads without the check, and the moves (broadcast, lane, set_lane, select, store), and the
     // writes of a view, which copy limbs.

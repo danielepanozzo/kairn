@@ -82,6 +82,25 @@ set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord ad
   mul_ext_2_2)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2
   ball_mul_pow2_1 ball_mul_pow2_2)
+# The loops over arrays that public operations call (kairn/ball_vector.hpp; runner_ball_vector.hpp
+# has their forms), each judged as a kernel is, api.oracle.LOOP.FORMAT, on KAIRN_API_LOOP_QUICK_CASES
+# requests (KAIRN_API_LOOP_CASES in the full tier); those of them that have forms in the fast order,
+# which the runner of the packed forms alone also runs; and the kernels that are parts of those
+# loops and that no public operation calls on its own (runner --loop-parts, with the loop of each),
+# judged through the loops' forms and, on their own, by the kernels' cross-checks.
+set(_api_loops bv_make_1 bv_make_2 bv_neg_1 bv_neg_2 bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2
+  bv_mul_pow2_1 bv_mul_pow2_2 bv_conv_1 bv_conv_2 norm_upper_1 norm_upper_2)
+set(_api_loops_fast bv_neg_1 bv_neg_2 bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2 bv_mul_pow2_1
+  bv_mul_pow2_2 norm_upper_1 norm_upper_2)
+set(_api_loop_parts bv_center_entry_1 bv_center_2 bv_make_radius bv_make_finish neg_1 bv_neg_radius sub_1_1
+  bv_add_radius_1 bv_add_radius_2 scale_step_1 scale_step_2 bv_scale_radius_1 bv_scale_radius_2
+  bv_mul_pow2_step_1 bv_mul_pow2_step_2 bv_mul_pow2_radius norm_step_1 norm_step_2 norm_combine norm_finish_1
+  norm_finish_2 conv_radius bv_conv_finish bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 fold_finish_1
+  fold_finish_2)
+set(KAIRN_API_LOOP_CASES 4000 CACHE STRING
+  "Random requests per loop, format and form of the public interface judged by the oracle, in the full tier")
+set(KAIRN_API_LOOP_QUICK_CASES 1000 CACHE STRING
+  "Random requests per loop, format and form of the public interface judged by the oracle, in the quick tier")
 set(KAIRN_API_CASES 10000 CACHE STRING
   "Random cases per kernel, format and form of the public interface judged by the oracle, in the full tier")
 set(KAIRN_API_QUICK_CASES 2000 CACHE STRING
@@ -204,7 +223,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_mapped "")
   foreach(_i RANGE ${_api_last})
     string(JSON _kernel GET "${_api_json}" kernels ${_i} name)
-    if(_kernel IN_LIST _api_internal OR _kernel IN_LIST _api_not_public)
+    if(_kernel IN_LIST _api_internal OR _kernel IN_LIST _api_not_public OR _kernel IN_LIST _api_loop_parts)
       continue()
     endif()
     # The kernels the oracle does not judge yet (KAIRN_NOT_YET_CROSS_CHECKED, ../CMakeLists.txt),
@@ -227,6 +246,36 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle")
     endforeach()
   endforeach()
+  # The loops, by their names in the claims' "folds" (a loop the claims in use do not have is left
+  # out, as a kernel is).
+  string(JSON _api_n_folds LENGTH "${_api_json}" folds)
+  math(EXPR _api_last_fold "${_api_n_folds} - 1")
+  set(_api_folds "")
+  foreach(_i RANGE ${_api_last_fold})
+    string(JSON _fold GET "${_api_json}" folds ${_i} name)
+    list(APPEND _api_folds ${_fold})
+  endforeach()
+  set(_api_mapped_loops "")
+  foreach(_loop IN LISTS _api_loops)
+    if(NOT _loop IN_LIST _api_folds OR _loop IN_LIST KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
+      continue()
+    endif()
+    list(APPEND _api_mapped_loops ${_loop})
+    set(_extra "")
+    if(_loop IN_LIST _api_loops_fast)
+      set(_extra ${_api_packed_runner})
+    endif()
+    foreach(_format binary64 binary32)
+      set(_name api.oracle.${_loop}.${_format})
+      add_test(NAME ${_name}
+        COMMAND ${_api_crosscheck} api --kernel ${_loop} --format ${_format}
+          --count ${KAIRN_API_LOOP_QUICK_CASES} --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/oracle"
+          ${_api_common} ${_extra})
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle")
+    endforeach()
+  endforeach()
+  set(_api_oracle_loops ${_api_mapped_loops} PARENT_SCOPE)
+  set(_api_loops_fast ${_api_loops_fast} PARENT_SCOPE)
   # For ../full/CMakeLists.txt, which registers the same on KAIRN_API_CASES cases, and every form of
   # the flag sets' runners on KAIRN_API_QUICK_CASES.
   set(_api_oracle_kernels ${_api_mapped} PARENT_SCOPE)
@@ -241,6 +290,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
       "-DCLAIMS=${PROJECT_SOURCE_DIR}/gen/claims.json"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
       "-DNOT_PUBLIC=${_api_not_public}" "-DNOT_CHECKED=${_api_unlisted}"
+      "-DLOOPS=${_api_loops}" "-DLOOP_PARTS=${_api_loop_parts}"
       "-DPACKED_HEADER=${_api_include}/kairn/packed.hpp" -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
   set_tests_properties(api.oracle.coverage PROPERTIES LABELS "api;oracle")
   list(LENGTH _api_mapped _n)
@@ -252,7 +302,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
     set(_api_packed_note " (the third, of the packed forms alone, for AVX2, on the kernels of packed.hpp)")
   endif()
   list(JOIN _api_packed_forms ", " _api_forms_text)
-  message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with ${_api_n_runners} "
+  list(LENGTH _api_mapped_loops _n_loops)
+  message(STATUS "Kairn tests: the public interface of ${_n} kernels and ${_n_loops} loops against the oracle, with ${_api_n_runners} "
     "runners${_api_packed_note}, and in the full tier the debug build's on the first form of each and the runners "
     "of ${_n_flags} flag sets; Packed in the forms ${_api_forms_text}")
 endif()
@@ -278,6 +329,13 @@ foreach(_form IN LISTS _api_packed_forms)
   _kairn_api_program(kairn-api-soa-${_form} soa.cpp ${_options})
   add_test(NAME api.soa.${_form} COMMAND kairn-api-soa-${_form})
   set_tests_properties(api.packed.${_form} api.soa.${_form} PROPERTIES TIMEOUT 120 LABELS "api;packed")
+  # api.ball_vector.FORM (ball_vector.cpp): BallVector and its views, in this form of Packed, whose
+  # lane order is the fast order of the functions on arrays: the types, the constructors, the two
+  # orders bit for bit, in place, the value forms, Ball entry by entry, the composition of axpy, the
+  # argument of norm_upper, the exact scaling by a power of two.
+  _kairn_api_program(kairn-api-ball-vector-${_form} ball_vector.cpp ${_options})
+  add_test(NAME api.ball_vector.${_form} COMMAND kairn-api-ball-vector-${_form})
+  set_tests_properties(api.ball_vector.${_form} PROPERTIES TIMEOUT 120 LABELS "api;packed;ball_vector")
 endforeach()
 
 # --- kairn::rational -------------------------------------------------------------------------
@@ -442,6 +500,25 @@ foreach(_i RANGE 0 ${_last} 2)
     add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect report)
   endif()
   set_tests_properties(api.boundary${_suffix} api.boundary.unguarded${_suffix} PROPERTIES LABELS "api;boundary")
+  # The same for BallVector (boundary_ball_vector.cpp, in the build's form of Packed): a center, a
+  # radius and arrays of centers that the program computes as products, into each constructor.
+  # Against the copy without the guards no compiler measured fused a product into a ball vector
+  # (GCC 13 and 16, Apple clang 21 and Clang 18, at -O2 and -O3, each contraction setting: the
+  # loops of the constructors and of the operations are calls of their own there), so that build
+  # only reports.
+  _kairn_api_program(kairn-api-boundary-ball-vector${_target_suffix} boundary_ball_vector.cpp ${_level} ${_option})
+  add_test(NAME api.boundary.ball_vector${_suffix} COMMAND kairn-api-boundary-ball-vector${_target_suffix} --expect none)
+  add_executable(kairn-api-boundary-ball-vector-unguarded${_target_suffix} boundary_ball_vector.cpp)
+  target_include_directories(kairn-api-boundary-ball-vector-unguarded${_target_suffix} BEFORE PRIVATE "${_api_unguarded}")
+  target_link_libraries(kairn-api-boundary-ball-vector-unguarded${_target_suffix} PRIVATE kairn::fma)
+  target_compile_features(kairn-api-boundary-ball-vector-unguarded${_target_suffix} PRIVATE cxx_std_20)
+  target_compile_options(kairn-api-boundary-ball-vector-unguarded${_target_suffix} PRIVATE ${_api_warnings} ${_level}
+    ${_option})
+  target_compile_definitions(kairn-api-boundary-ball-vector-unguarded${_target_suffix} PRIVATE KAIRN_TEST_UNGUARDED_COPY)
+  add_test(NAME api.boundary.ball_vector.unguarded${_suffix}
+    COMMAND kairn-api-boundary-ball-vector-unguarded${_target_suffix} --expect report)
+  set_tests_properties(api.boundary.ball_vector${_suffix} api.boundary.ball_vector.unguarded${_suffix}
+    PROPERTIES LABELS "api;boundary;ball_vector")
   # The same for Packed and the containers (boundary_packed.cpp), in each form above:
   # api.boundary.packed.FORM.*, and against the copy without the guard, the packed guards taken out
   # too, api.boundary.packed.unguarded.FORM.*.
@@ -755,6 +832,21 @@ _kairn_api_reject(packed.limb_operand 49 "${_api_no_operator}")
 _kairn_api_reject(packed.implicit_narrowing 50 "${_api_no_conversion}")
 _kairn_api_reject(packed.mixed_limb_types 51 "${_api_no_operator}")
 _kairn_api_reject(packed.one_limb_arithmetic 53 "${_api_no_operator}")
+# BallVector (ball_vector.hpp): nothing writes a const BallVector or a view of const limbs, no
+# operation mixes lengths fixed by the types, limb types, or a ball vector with a Ball, no view of
+# mutable limbs is made of one of const limbs nor over arrays of const limbs, a view becomes a
+# BallVector only explicitly, a BallVector has at least one entry, and no operation is constexpr.
+# Each control writes what compiles instead.
+_kairn_api_reject(ball_vector.write_const 54 "${_api_no_member}")
+_kairn_api_reject(ball_vector.write_const_view 55 "${_api_no_member}")
+_kairn_api_reject(ball_vector.lengths 56 "${_api_no_operator}")
+_kairn_api_reject(ball_vector.limb_types 57 "${_api_no_operator}")
+_kairn_api_reject(ball_vector.mutable_from_const_view 58 "${_api_no_conversion}")
+_kairn_api_reject(ball_vector.implicit_from_view 59 "${_api_no_conversion}")
+_kairn_api_reject(ball_vector.no_entry 60 "N is at least 1")
+_kairn_api_reject(ball_vector.with_ball 61 "${_api_no_operator}")
+_kairn_api_reject(ball_vector.not_constexpr 62 "constant|constexpr")
+_kairn_api_reject(ball_vector.view_of_const_limbs 63 "${_api_no_constructor}")
 # KAIRN_PACKED_FORM (packed.hpp): a value that is not a form, a bare -D, and the form of another
 # target, which the generated header refuses.
 _kairn_api_reject(packed_form.unknown 52 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"

@@ -141,6 +141,51 @@ const OperandCase operand_cases[] = {
          a.h[3] = 1.0;
          return kairn::SoAView<const double, 2>(a.h, a.l, 16).load(3).lane(0).limb[1];
      }},
+    // Ball vectors (kairn/ball_vector.hpp): a negative radius given to a constructor, a center of two
+    // limbs that is not canonical; the arrays of a view that the program wrote after making it (a
+    // radius made a NaN, a center made not normalized), given to an operation that rounds and to
+    // the negation; operands of other lengths; axpy writing y, and a product writing an operand.
+    {"ball_vector.negative_radius_1", "a ball vector: has a negative radius", [] { return BV1(bv1x.centers(), -v_r).radius(); }},
+    {"ball_vector.negative_radius_2", "a ball vector: has a negative radius",
+     [] { return BV2({o.x, o.y, o.x, o.y, o.x}, -v_r).radius(); }},
+    {"ball_vector.center", "a ball vector: has a center that is not canonical",
+     [] { return BV2({o.x, raw(1.0, double(v_a)), o.x, o.y, o.x}, v_r).radius(); }},
+    {"ball_vector.operand", "a ball vector: is not canonical", [] {
+         double c[3] = {v_a, v_c, v_b}, r = v_r;
+         kairn::BallVectorView<double, 1> v(kairn::SoAView<double, 1>(c, 3), r);
+         r = not_a_number;
+         BV1 z;
+         kairn::add(v, v, kairn::BallVectorView<double, 1>(z.view()));
+         return z.radius();
+     }},
+    {"ball_vector.negation", "a ball vector: is not canonical", [] {
+         Arrays a(o.y);
+         double r = v_r;
+         kairn::BallVectorView<double, 2> v(kairn::SoAView<double, 2>(a.h, a.l, 16), r);
+         a.h[4] = 1.0;
+         a.l[4] = v_a;
+         kairn::neg(v, v);
+         return r;
+     }},
+    {"ball_vector.lengths", "ball vectors: of lengths that do not match", [] {
+         double c[3] = {v_a, v_c, v_b}, r = v_r;
+         kairn::BallVectorView<double, 1> v(kairn::SoAView<double, 1>(c, 3), r);
+         BV1 z;
+         kairn::add(v, bv1x, z);
+         return z.radius();
+     }},
+    {"ball_vector.axpy_writes_y", "axpy: writes the array of y", [] {
+         BV2 y = bv2y;
+         kairn::axpy(double(v_c), bv2x, y, y);
+         return y.radius();
+     }},
+    {"ball_vector.product_writes_an_operand", "convolution: writes an array that it reads", [] {
+         double c[8] = {v_a, v_c, v_b, v_a, v_c, v_b, v_a, v_c}, rx = v_r, rz = v_r;
+         const kairn::BallVectorView<double, 1> x(kairn::SoAView<double, 1>(c, 3), rx);
+         const kairn::BallVectorView<double, 1> z(kairn::SoAView<double, 1>(c + 2, 5), rz);
+         kairn::convolution(x, kairn::BallVector<double, 1, 3>(x), z);
+         return rz;
+     }},
     // fast_two_sum's requirement, |a| >= |b|: 2^-60 and 1.5 in the wrong order.
     {"fast_two_sum.order", "fast_two_sum: [|]a[|] < [|]b[|]", [] { return kairn::fast_two_sum(double(v_b), double(v_a)).sum; }},
     // The corner of two_sum: b the largest finite number, a sum that is finite, and an error term
@@ -199,6 +244,25 @@ const Accepted accepted[] = {
          P2 x = P2::broadcast(o.y);
          x.set_lane(0, raw(infinity, not_a_number));
          return kairn::finite::add(x, P2::broadcast(o.y)).lane(1).limb[0];
+     }},
+    // Ball vectors: a radius that is a NaN or +inf and a center that is not finite, which make the
+    // whole space without a report; the whole space as an operand; views of no entry.
+    {"BallVector(c, NaN)", [] { return BV1(bv1x.centers(), not_a_number).radius(); }},
+    {"BallVector(c, +inf)", [] { return BV2({o.x, o.y, o.x, o.y, o.x}, infinity).radius(); }},
+    {"BallVector with a center +inf",
+     [] { return BV1({E1(v_a), E1(infinity), E1(v_c), E1(v_a), E1(v_b)}, v_r).radius(); }},
+    {"BallVector with a center (NaN, NaN)",
+     [] { return BV2({o.x, pair(not_a_number, not_a_number), o.y, o.x, o.y}, v_r).radius(); }},
+    {"the whole space + x", [] { return (BV2::whole() + bv2x).radius(); }},
+    {"the whole space * a", [] { return (BV1::whole() * double(v_c)).radius(); }},
+    {"norm_upper of the whole space", [] { return kairn::norm_upper(BV2::whole()); }},
+    {"views of no entry", [] {
+         double r = v_r, s = v_r, t = 0.0;
+         const kairn::BallVectorView<double, 2> x(kairn::SoAView<double, 2>(nullptr, nullptr, 0), r);
+         const kairn::BallVectorView<double, 2> y(kairn::SoAView<double, 2>(nullptr, nullptr, 0), s);
+         const kairn::BallVectorView<double, 2> z(kairn::SoAView<double, 2>(nullptr, nullptr, 0), t);
+         kairn::add(x, y, z);
+         return t;
      }},
 };
 
