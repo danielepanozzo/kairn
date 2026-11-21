@@ -4,11 +4,12 @@ on each distinct output and, for the kernels' runners, the guards (docs/develope
 
     python3 tests/crosscheck.py compiled --kernel K --format F --summary FILE
         (--seed S --count N | --exhaustive [--restrict R1,R2,...]) [--fail-on-suspicious]
-        (--runner LABEL EXECUTABLE)... [--interp] [--refrun]
-        [--orders O1,O2,...] [--max-length L]
+        (--runner LABEL EXECUTABLE)... [--interp] [--refrun] [--claims FILE]
+        [--orders O1,O2,...] [--max-length L] [--inplace]
         [(--packed-runner LABEL EXECUTABLE)... --packed-lanes W [--packed-count N]]
     python3 tests/crosscheck.py api --kernel K --format F --seed S --count N --summary-dir DIR
         (--runner LABEL EXECUTABLE)... [--first-form LABEL]... [--same-as LABEL OTHER]...
+        [--claims FILE]
 
 Each output is that of the pipeline
 
@@ -62,6 +63,9 @@ output, if an output has no case of a stratum the generator's header announced, 
 exceeds the guards' bound (crosscheck_guards.SUMMARY_BYTES); and, for each
 --same-as LABEL OTHER, if a form of runner LABEL wrote other bytes than the same form of runner
 OTHER (the settings of KAIRN_ENCLOSURE_CODE, which must compute the same bits).
+
+--claims FILE, in both modes: the claims the oracle's gen and check read (and the guards, through
+the summary), gen/claims.json by default (tests/CMakeLists.txt, KAIRN_ORACLE_CLAIMS).
 
 The oracle's report is printed for every output judged. On a failure, the test says which runner
 and form failed and how, prints the command that reruns one case by hand from the tag of its line
@@ -262,6 +266,10 @@ def compiled(a):
         runs.append(("refrun", REFRUN))
     if runs:
         streams.append(("requests", a.orders, a.count, runs))
+        if a.inplace:
+            # A map or a ball vector in place (architecture.md, "The line protocol": inplace=I):
+            # the same runners on requests that each write an array they read.
+            streams.append(("requests-inplace", a.orders, a.count, runs))
     if a.packed_runner:
         if not a.packed_lanes:
             print("crosscheck.py: --packed-runner needs --packed-lanes W", file=sys.stderr)
@@ -269,6 +277,10 @@ def compiled(a):
         streams.append(("requests-packed", "lanes:%s" % a.packed_lanes,
                         a.packed_count or a.count,
                         [(label, [exe]) for label, exe in a.packed_runner]))
+        if a.inplace:
+            streams.append(("requests-packed-inplace", "lanes:%s" % a.packed_lanes,
+                            a.packed_count or a.count,
+                            [(label, [exe]) for label, exe in a.packed_runner]))
     if not streams:
         print("crosscheck.py: no runner (--runner LABEL EXECUTABLE, --interp, --refrun, "
               "--packed-runner LABEL EXECUTABLE)", file=sys.stderr)
@@ -291,7 +303,8 @@ def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, repor
     """One stream of requests through its runners: the texts of the failures (and, on a pass, what
     was checked, appended to reports)."""
     kernel, fmt = a.kernel, a.format
-    gen = ["gen", kernel, fmt]
+    claims = ["--claims", a.claims] if a.claims else []
+    gen = ["gen", kernel, fmt] + claims
     guard_args = ["--kernel", kernel, "--format", fmt]
     if a.exhaustive:
         gen.append("--exhaustive")
@@ -310,10 +323,14 @@ def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, repor
     if a.max_length is not None:
         gen += ["--max-length", a.max_length]
         guard_args += ["--max-length", a.max_length]
+    if name.endswith("-inplace"):
+        gen.append("--inplace")
+        guard_args.append("--inplace")
     one = gen + ["--start", "INDEX", "--count", "1"]
     if not a.exhaustive:
         gen += ["--count", count]
-    check = ["check", "--expect-valid"] + (["--fail-on-suspicious"] if a.fail_on_suspicious else [])
+    check = (["check", "--expect-valid"] + (["--fail-on-suspicious"] if a.fail_on_suspicious else [])
+             + claims)
     python_oracle = [sys.executable, ORACLE]
 
     status, requests = generate(gen, work, name + ".txt")
@@ -378,12 +395,12 @@ def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, repor
 API_CHECK = ["check", "--expect-valid", "--fail-on-suspicious"]
 
 
-def judge_api(output, summary, count):
+def judge_api(output, summary, count, claims=()):
     """The verdict on one output of a form of the public interface: "" if it passed, the reason
     otherwise. Beyond the oracle's verdict, something was judged, in every stratum the generator
     announced."""
     remove(summary)
-    status = judge(API_CHECK + ["--json", summary], output)
+    status = judge(API_CHECK + list(claims) + ["--json", summary], output)
     if status != 0:
         return "oracle check %s; 0 is success" % status
     try:
@@ -413,7 +430,8 @@ def api(a):
     summary_dir = os.path.abspath(a.summary_dir)
     work = os.path.join(summary_dir, "%s.%s.work" % (kernel, fmt))
     fresh(work)
-    gen = ["gen", kernel, fmt, "--seed", a.seed, "--count", a.count]
+    claims = ["--claims", a.claims] if a.claims else []
+    gen = ["gen", kernel, fmt, "--seed", a.seed, "--count", a.count] + claims
     status, requests = generate(gen, work)
     if status != 0:
         print("the request generator failed (%s) for %s %s" % (status, kernel, fmt))
@@ -481,7 +499,7 @@ def api(a):
         n_judged += 1
         say("== %s %s, %s" % (kernel, fmt, what))
         summary = os.path.join(summary_dir, "%s.%s.%s.json" % (kernel, fmt, name))
-        failure = judge_api(output, summary, a.count)
+        failure = judge_api(output, summary, a.count, claims)
         failure_of[name] = failure
         if failure:
             keep(work, name, output)
@@ -489,13 +507,13 @@ def api(a):
 
     if failed:
         one = [sys.executable, ORACLE, "gen", kernel, fmt, "--seed", a.seed, "--start", "INDEX",
-               "--count", "1"]
+               "--count", "1"] + claims
         print("the public interface failed the claims of %s %s in:\n  %s\n"
               "To rerun case INDEX of form F: %s | RUNNER --form F | %s\n"
               "with RUNNER one of:%s\n"
               "The requests and the outputs that failed are in %s"
               % (kernel, fmt, "\n  ".join(failed), shell(one),
-                 shell([sys.executable, ORACLE] + API_CHECK),
+                 shell([sys.executable, ORACLE] + API_CHECK + claims),
                  "".join("\n  %s: %s" % (label, exe) for label, exe in a.runner), work), flush=True)
         return 1
     shutil.rmtree(work, ignore_errors=True)
@@ -533,6 +551,10 @@ def main(argv=None):
     c.add_argument("--packed-lanes", help="a fold: W, the lanes of the packed runners' register")
     c.add_argument("--packed-count", help="a fold: the cases of the packed runners (default "
                                           "--count)")
+    c.add_argument("--claims", help="the claims file of the oracle (default gen/claims.json)")
+    c.add_argument("--inplace", action="store_true",
+                   help="a map or a ball vector: one more stream of every runner, its requests in "
+                        "place (gen --inplace)")
     p = sub.add_parser("api", help="the runners of the public interface, with their forms")
     p.add_argument("--kernel", required=True)
     p.add_argument("--format", required=True)
@@ -545,6 +567,7 @@ def main(argv=None):
     p.add_argument("--same-as", nargs=2, action="append", metavar=("LABEL", "OTHER"),
                    help="every form of runner LABEL must write the same bytes as the same form of "
                         "runner OTHER")
+    p.add_argument("--claims", help="the claims file of the oracle (default gen/claims.json)")
     a = ap.parse_args(argv)
     if a.mode == "compiled":
         if not a.exhaustive and (a.seed is None or a.count is None):

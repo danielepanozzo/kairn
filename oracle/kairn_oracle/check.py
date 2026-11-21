@@ -11,6 +11,7 @@ import re
 import sys
 from fractions import Fraction
 
+from . import bvec as BV
 from . import cexpr as CX
 from . import directed as D
 from . import expr as EX
@@ -486,6 +487,9 @@ class Plan:
         for r in kernel.requires:
             if r[0] == "abs_ge":
                 self.requires.append(("abs_ge", r, self.in_slices[r[1]], self.in_slices[r[2]]))
+            elif r[0] == "at_most":
+                # at_most(NAME, K) (bvec.py).
+                self.requires.append(BV.plan_requirement(self, r))
             else:
                 self.requires.append((r[0], r[1], self.in_slices[r[1]]))
         # product_large: value = 0 or |value| >= 2^(2p-1) eta, as a fixed value at scale sv.
@@ -500,7 +504,8 @@ class Plan:
         self.rounded = []                            # indices of the rounded entries
         self.neighbors = []                          # ... of the neighbor entries
         self.bounds = []                             # ... of the bound entries
-        self.uppers = [e for e in kernel.ensures if e.kind == "upper" and e.cond is None]
+        self.uppers = [e for e in kernel.ensures if e.kind == "upper" and e.cond is None
+                       and not getattr(e, "bv", False)]
         self.balls = None
         # The kernels of the bounds (every entry under a mask): unit(K) and tiny(K) of the kernels
         # their expressions name, and the count whose classes the statistics give.
@@ -551,10 +556,14 @@ class Plan:
                     c["terms"] = terms
                 if e.exact_when is not None:
                     c["exact"] = self._exact_conditions(e)
+                if getattr(e, "exact_flag", None):
+                    c.update(BV.plan_exact_flag(self, e))
             elif e.kind == "rounded":
                 c["mode"] = e.mode
                 c["when"] = e.when
                 self.rounded.append(len(self.entries))
+                if getattr(e, "own_tree", None) is not None:
+                    c.update(BV.plan_rounded(self, e))
             elif e.kind == "neighbor":
                 c["side"] = e.side
                 self.neighbors.append(len(self.entries))
@@ -572,6 +581,9 @@ class Plan:
                          trees=trees)
                 if e.kind == "holds":
                     c["rel"] = e.rel
+            elif e.kind == "upper" and getattr(e, "bv", False):
+                # A value of its own and no mask (bvec.py).
+                c.update(BV.plan_upper(self, e, claims))
             elif e.kind == "upper":
                 c.update(gn=e.gaps.numerator, gd=e.gaps.denominator)
             elif e.kind == "finite_or_nan":
@@ -580,6 +592,8 @@ class Plan:
                     # The finishes of the folds of maxima: the mask input and the steps up.
                     c.update(cond_in=(self.in_slices[e.cond_in][0] if e.cond_in is not None
                                       else None), steps=e.steps)
+                if getattr(e, "nonneg", False) or getattr(e, "if_all", None):
+                    c.update(BV.plan_finish(self, e))
             elif e.kind == "maximum":
                 (a, sa), (b, sb) = [EX.compile_tree(t, self._leaf) for t in e.margs]
                 s = min(sa, sb, q)
@@ -898,6 +912,14 @@ class Checker:
             # line, by the masks (_conditional).
             self._conditional(pl, st, x, z, line)
             return
+        if getattr(pl.kernel, "bv_radius", False):
+            # Every entry an upper with a value of its own and no mask (bvec.py).
+            BV.judge_radius(self, pl, st, x, z, line)
+            return
+        if getattr(pl.kernel, "acc", False):
+            # A rounded entry with a value of its own: the accumulator (bvec.py).
+            BV.judge_acc(self, pl, st, x, z, line)
+            return
         if pl.by_groups:
             # Entries about output groups other than the first (intervals.py).
             IV.judge_by_groups(self, pl, st, x, z, line)
@@ -949,6 +971,9 @@ class Checker:
                 v = sum(x[lo:hi])
                 if v != 0 and v < pl.one:
                     return "requires count(%s)" % r[1]
+            elif r[0] == "at_most":
+                if BV.at_most_violated(r, x):
+                    return "requires at_most(%s, %d)" % (r[1], r[3])
             else:
                 (alo, ahi), (blo, bhi) = r[2], r[3]
                 if abs(sum(x[alo:ahi])) < abs(sum(x[blo:bhi])):
@@ -1057,6 +1082,12 @@ class Checker:
                         es.failures += 1
                         es.count("failed exact_when")
                         reasons.append(inexact)
+                    if "exact_flag" in e:
+                        # The mask that says the conditions hold (bvec.py).
+                        why = BV.judge_exact_flag(self, pl, e, es, x, z)
+                        if why:
+                            es.failures += 1
+                            reasons.append(why)
                 if e["when"] == "product_large" and not (V == 0 or abs(V) >= pl.pl_thr):
                     continue
                 if e["when"] == "limb_products_normal" and not pl.limb_products_normal(x):
@@ -1324,8 +1355,12 @@ class Checker:
                 continue
             if any(type(z[s]) is not int for s in c["used"]):
                 es.count("%s true, an output not finite: nothing claimed" % c["cond_name"])
-                sus.append("%s: an output is not finite although %s is true" % (
-                    es.label, c["cond_name"]))
+                # Suspicious as everywhere in the finite domain: where every input limb and value
+                # is below Omega/4 (the radius of an accumulator overflows inside for a sum of
+                # magnitudes near Omega, a case of no bound kernel).
+                if BV.small_inputs(pl, x) and BV.small_stated(pl, c, x, z):
+                    sus.append("%s: an output is not finite although %s is true" % (
+                        es.label, c["cond_name"]))
                 continue
             es.applicable += 1
             if names is None:

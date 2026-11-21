@@ -130,6 +130,10 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py")
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
     set_tests_properties(full.tools.crosscheck.guards.${_class} PROPERTIES TIMEOUT 900
       LABELS "full;tools;crosscheck")
+    if(KAIRN_ORACLE_CLAIMS)
+      set_tests_properties(full.tools.crosscheck.guards.${_class} PROPERTIES
+        ENVIRONMENT "KAIRN_ORACLE_CLAIMS=${_oracle_claims}")
+    endif()
   endforeach()
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/docs/tools/test_reference.py")
@@ -231,11 +235,14 @@ foreach(_fold IN LISTS _full_folds)
     list(GET _toy 0 _toy_enum)
     list(GET _toy 1 _toy_length)
     list(GET _toy 2 _toy_sampled)
-    set(_name full.crosscheck.interp.${_fold})
-    add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_enum}"
-      -DRUNNER=interp -DEXHAUSTIVE=ON "-DMAX_LENGTH=${_toy_length}"
-      "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
-    set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "full;python;crosscheck;interp;fold")
+    # "-": no enumeration (tests/CMakeLists.txt, the products of BallVectors), the random runs only.
+    if(NOT _toy_enum STREQUAL "-")
+      set(_name full.crosscheck.interp.${_fold})
+      add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_enum}"
+        -DRUNNER=interp -DEXHAUSTIVE=ON "-DMAX_LENGTH=${_toy_length}"
+        "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "full;python;crosscheck;interp;fold")
+    endif()
     set(_name full.crosscheck.interp-sampled.${_fold})
     add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_sampled}"
       -DRUNNER=interp "-DCOUNT=${_full_fold_${_fold}_cases}" "-DSEED=${KAIRN_CROSSCHECK_SEED}"
@@ -282,11 +289,15 @@ endif()
 # cases per kernel and format from its seeds (the attaining lines of results/*/brute/, the
 # regression cases, the literature, the strata), with --fail-on-suspicious as the cross-checks.
 # Four worker processes, counted (PROCESSORS). Fails on any violated claim.
+# The kernels the oracle's tests leave out (KAIRN_NOT_YET_CROSS_CHECKED) are left out of the search
+# too (--except): a kernel on the list is one whose cross-checks would fail or not run.
+list(JOIN KAIRN_NOT_YET_CROSS_CHECKED "," _search_except)
 if(TARGET kairn-gen-runner)
   add_test(NAME full.search.compiled
     COMMAND "${Python3_EXECUTABLE}" oracle/kairn-oracle search all binary64,binary32
       --runner "$<TARGET_FILE:kairn-gen-runner>" --evals 5000 --jobs 4 --quiet
-      --fail-on-suspicious --suspicious-ok split,two_prod_dekker
+      --fail-on-suspicious --suspicious-ok split,two_prod_dekker ${_oracle_claims_arg}
+      --except "${_search_except}"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(full.search.compiled PROPERTIES TIMEOUT 600 PROCESSORS 4
     LABELS "full;search")

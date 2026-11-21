@@ -813,6 +813,10 @@ def k_finite_or_nan(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     w = _gather(z, c["ranges"])
     f = z[c["flag"]]
     es.applicable += 1
+    if "bvfinish" in c:
+        # nonneg, if_all: the finishes of the ball vectors (bvec.py).
+        from . import bvec as BV
+        return BV.k_finish(pl, c, es, x, s, w, f)
     if "steps" in c:
         return _finite_or_nan_if(pl, c, es, x, s, w, f)
     lead = type(s[0]) is int

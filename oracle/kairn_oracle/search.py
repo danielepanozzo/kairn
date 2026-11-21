@@ -125,9 +125,16 @@ class Problem:
         from . import gen5
         from . import gen6
         from . import gen7
+        from . import gen8
         self.valid5 = None
         try:
-            if gen6.family_of(kernel) is not None:
+            if gen8.family_of(kernel) is not None:
+                # The kernels of the ball vectors and of the accumulator (gen8.py).
+                self.view = kernel
+                self.shape = gen8.Shape8(kernel)
+                self.make, self.strata = gen8.make_case, tuple(self.shape.strata)
+                self.valid5 = gen8.valid8
+            elif gen6.family_of(kernel) is not None:
                 # The interval kernels: their own families (gen6.py), whose cases are checked by
                 # gen6.valid6 (the search keeps the finite ones).
                 self.view = kernel
@@ -610,7 +617,8 @@ class Judge:
             if kind == "error":
                 self.objectives.append(Objective(i, label, kind, "ratio", 1))
                 self.objectives.append(Objective(i, label, kind, "c", 1))
-            elif kind == "upper" and i < self.n_own and kernel.ensures[i].cond is not None:
+            elif kind == "upper" and i < self.n_own and (kernel.ensures[i].cond is not None
+                                                         or getattr(kernel.ensures[i], "bv", False)):
                 # An upper bound with a value of its own (the bounds of the folds' stage): how
                 # close the output comes to its stated value, in gaps (below zero: under it).
                 self.objectives.append(Objective(i, label, kind, "stated", -1))
@@ -1097,6 +1105,9 @@ def main(a):
         print("kairn-oracle search: %s" % ex, file=sys.stderr)
         return 2
     kernels = searched_kernels(claims) if a.kernels == "all" else a.kernels.split(",")
+    if getattr(a, "except_", None):
+        left = set(a.except_.split(","))
+        kernels = [k for k in kernels if k not in left]
     formats = a.formats.split(",")
     for k in kernels:
         if claims.get(k) is None:

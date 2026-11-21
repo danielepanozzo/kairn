@@ -115,8 +115,12 @@ def _gen_fold(a, fold):
         else:
             strata = a.strata.split(",") if a.strata else None
             orders = a.orders.split(",") if a.orders else None
+            if getattr(a, "inplace", False) and not other:
+                print("kairn-oracle gen: --inplace is for a map or a ball vector", file=sys.stderr)
+                return 2
             g = (GM.random_gen(fold, fmt, a.seed, strata, orders, a.max_length,
-                               index_tags=not a.no_index) if other else
+                               index_tags=not a.no_index, inplace=getattr(a, "inplace", False))
+                 if other else
                  GF.RandomFoldGen(fold, fmt, a.seed, strata, orders, a.max_length,
                                   index_tags=not a.no_index))
             G.write_lines(g.lines(a.start, 1000 if a.count is None else a.count))
@@ -262,6 +266,9 @@ def main(argv=None):
     g.add_argument("--max-length", type=int, default=None,
                    help="a fold: the largest random length (default 256), or, with --exhaustive, "
                         "the largest length enumerated")
+    g.add_argument("--inplace", action="store_true",
+                   help="a map or a ball vector's random run: every request in place, inplace=I "
+                        "after the length, I in turn over the arrays read that can be written")
     g.set_defaults(func=cmd_gen)
 
     c = sub.add_parser("check", help="judge completed lines")
@@ -334,6 +341,9 @@ def main(argv=None):
     s.add_argument("--suspicious-ok", metavar="KERNELS",
                    help="with --fail-on-suspicious: kernels whose suspicious results are not "
                         "failures (the cross-checks exempt split,two_prod_dekker)")
+    s.add_argument("--except", dest="except_", metavar="KERNELS",
+                   help="with 'all': kernels left out (comma-separated; the full tier passes the "
+                        "kernels the oracle's tests leave out, KAIRN_NOT_YET_CROSS_CHECKED)")
     s.add_argument("--jobs", type=int, default=1, help="kernel and format pairs at once")
     s.add_argument("--json", help="write the results here")
     s.add_argument("--quiet", action="store_true",

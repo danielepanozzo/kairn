@@ -389,6 +389,9 @@ class Entry:
             raise ClaimsError("%s: 'of' names the mask %s" % (where, masks[0]))
         # An upper entry with a value of its own does not use the kernel's.
         own_value = self.kind == "upper" and ("value" in raw or "if" in raw)
+        if self.kind == "upper":
+            # unless and exact_when: the radius kernels of the ball vectors (bvec.py).
+            BV.check_upper_fields(raw, where)
         if (self.kind in ("error", "leading_rounded", "rounded", "upper", "extends", "represents",
                           "neighbor", "bound", "finite_or_nan")
                 and kernel.value_tree is None and not own_value):
@@ -414,6 +417,9 @@ class Entry:
             if self.when is not None and self.mode == "nearest":
                 raise ClaimsError("%s: a condition on a rounding to nearest is not in the "
                                   "vocabulary" % where)
+            if "value" in raw:
+                # A value of its own (the accumulator's sum of magnitudes, bvec.py).
+                BV.read_rounded_value(self, kernel, raw, where)
         elif self.kind == "neighbor":
             self.side = raw.get("side")
             if self.side not in NEIGHBOR_SIDES:
@@ -431,6 +437,9 @@ class Entry:
             if (not isinstance(self.steps, int) or isinstance(self.steps, bool)
                     or self.steps < 0):
                 raise ClaimsError("%s: steps must be an integer >= 0, got %r" % (where, self.steps))
+        elif self.kind == "upper" and own_value and "if" not in raw:
+            # A value of its own and no mask: the radius kernels of the ball vectors (bvec.py).
+            BV.read_upper(self, kernel, raw, where)
         elif self.kind == "upper" and own_value:
             # The folds' stage: value and if in place of gaps.  When the mask is true the output
             # is at least the exact value of value; nothing else is said.
@@ -480,6 +489,9 @@ class Entry:
             self.entry_instances = raw.get("instances")
             if "exact_when" in raw:
                 self.exact_when = self._read_exact_when(kernel, raw, where)
+            if "exact_flag" in raw:
+                # The steps of the scalings of a ball vector (bvec.py).
+                BV.read_exact_flag(self, kernel, raw, where)
         self.label = self._label()
         if self.kind in ("bound", "rounded"):
             # zero_factor (the interval kernels): a zero operand gives a zero output.
@@ -588,6 +600,8 @@ class Entry:
         if self.steps and limbs != 1:
             raise ClaimsError("%s: steps of a value of %d limbs (a step is of one number)"
                               % (where, limbs))
+        # nonneg and if_all: the finishes of the ball vectors (bvec.py).
+        BV.read_finish_fields(self, kernel, raw, where)
 
     def _read_exact_when(self, kernel, raw, where):
         """[(tree, text, op, K)]: each condition {"zero_or_abs_gt": EXPR, "than": K} or
@@ -807,17 +821,19 @@ class Entry:
                 s += ", when %s" % self.when
             if self.exact_when is not None:
                 s += ", exact when %s" % _ew_text(self.exact_when)
-            return s
+            return s + BV.label_suffix(self)
         if self.kind == "rounded":
             if self.when:
                 return "rounded(%s) %s, when %s" % (of, self.mode, self.when)
-            return "rounded(%s) %s" % (of, self.mode)
+            return "rounded(%s) %s" % (of, self.mode) + BV.label_suffix(self)
         if self.kind == "neighbor":
             return "neighbor(%s) %s of %s" % (of, self.side, self.operand)
         if self.kind == "bound":
             return "bound(%s) %s, steps=%d" % (of, self.side, self.steps)
         if self.kind == "upper" and self.cond is not None:
             return "upper(%s) >= %s if %s" % (of, self.cvalue_text, self.cond)
+        if self.kind == "upper" and getattr(self, "bv", False):
+            return BV.label(self)
         if self.kind == "upper":
             return "upper(%s) gaps=%s" % (of, self.gaps)
         if self.kind == "holds":
@@ -829,7 +845,7 @@ class Entry:
                 s += " if %s" % self.cond_in
             if self.steps:
                 s += ", stepped up %d" % self.steps
-            return s
+            return s + BV.label_suffix(self)
         if self.kind == "maximum":
             return "maximum(%s) of %s, %s" % (of, self.args_text[0], self.args_text[1])
         if self.kind == "predicate":
@@ -961,10 +977,14 @@ class Kernel:
                 continue
             if IV.read_requirement(self, r, limbs):
                 continue
+            if BV.read_requirement(self, r, limbs):
+                # at_most(NAME, K): conv_radius (bvec.py).
+                continue
             raise ClaimsError("%s: requirement %r is outside the vocabulary "
                               "(normalized(NAME), abs_ge(NAME, NAME), power_of_two(NAME), "
-                              "nonneg(NAME), count(NAME), format(half); in the extended domain "
-                              "canonical(NAME), ball(CENTER, RADIUS))" % (self.name, r))
+                              "nonneg(NAME), count(NAME), format(half), at_most(NAME, K); in the "
+                              "extended domain canonical(NAME), ball(CENTER, RADIUS))"
+                              % (self.name, r))
         IV.finish_requirements(self)
         ens = raw.get("ensures")
         if not isinstance(ens, list):
@@ -998,6 +1018,8 @@ class Kernel:
             raise ClaimsError("%s: entries that hold under a mask (if) are read in a kernel of "
                               "the finite domain whose every entry has one" % self.name)
         self.conditional = bool(conditional)
+        # The radius kernels and the accumulator (bvec.py).
+        BV.finish_kernel(self)
         # null means that the smallest precision for which the claims hold is not known yet
         # (an unproved kernel): every format is then in scope, which is the strict reading.
         mp = raw.get("min_precision", 2)
@@ -1228,7 +1250,10 @@ class Claims:
             # ("conv": true) are read by maps.py, every other fold by folds.py.
             convs = [r for r in fl if isinstance(r, dict) and r.get("conv") is True
                      and "map" not in r]
-            for raw in [r for r in fl if not any(r is c for c in convs)] + convs:
+            # The products of two BallVectors name a convolution (their centers'): after them.
+            bvconvs = [r for r in fl if isinstance(r, dict) and "bv_conv" in r]
+            later = convs + bvconvs
+            for raw in [r for r in fl if not any(r is c for c in later)] + later:
                 name = raw.get("name") if isinstance(raw, dict) else None
                 name = name if isinstance(name, str) else "<fold without a name>"
                 if name in self.kernel_names:
@@ -1240,7 +1265,12 @@ class Claims:
                     self.broken[name] = "%s: listed twice" % name
                     continue
                 try:
-                    if raw.get("map") is not None and "conv" not in raw:
+                    if "bv" in raw or "bv_conv" in raw:
+                        # The ball vectors (bvfolds.py).
+                        from . import bvfolds as BF
+                        self.folds[name] = (BF.BvConv if "bv_conv" in raw else BF.BallVector)(
+                            raw, self)
+                    elif raw.get("map") is not None and "conv" not in raw:
                         self.folds[name] = MP.Map(raw, self)
                     elif raw.get("conv") is not None and "map" not in raw:
                         self.folds[name] = MP.Conv(raw, self)
@@ -1409,4 +1439,8 @@ def load_claims(path):
 from . import intervals as IV  # noqa: E402
 Entry.KNOWN.update(IV.KNOWN)
 for _kind, _fields in IV.ADDED_FIELDS.items():
+    Entry.KNOWN[_kind] = Entry.KNOWN[_kind] | _fields
+# The kernels of the ball vectors and of the accumulator (bvec.py): the fields they add.
+from . import bvec as BV  # noqa: E402
+for _kind, _fields in BV.ADDED_FIELDS.items():
     Entry.KNOWN[_kind] = Entry.KNOWN[_kind] | _fields

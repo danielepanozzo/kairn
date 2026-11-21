@@ -8,15 +8,15 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | with `--parallel 4`, on 2026-11-20 with 571 and 572 tests, 79 seconds on the Mac with Apple clang, 97 with GCC 16 and 125 to 127 on 16 threads of the Linux machine with GCC 13 ([The size of the summaries](#the-size-of-the-summaries)); with 421 to 452 tests, 25 to 34 seconds on the Mac, 37 to 47 on the Linux machine and 52 to 58 on the Windows machine (73 on 4 logical processors); on the hosted runners, measured before each cross-check ran in one process, 31 to 45 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest runner seen ([Time](#each-cross-check-in-one-process)) |
-| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | with `--parallel 4`, on 2026-11-20 with 884 tests, 20 minutes on the Mac with Apple clang and 32 on 16 threads of the Linux machine with GCC 13; it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
+| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | on 2026-11-21, with the ball vectors and the accumulator judged (against claims without the 53 objects of stage B2 of the intervals, `KAIRN_ORACLE_CLAIMS`), 705 tests and 127 seconds on the Mac with Apple clang (`--parallel 4`; 633 tests and 92 seconds before them), 706 tests and 48 seconds with GCC 13 and 703 and 54 with Clang 18 on the Linux machine (`--parallel 16`; 634 tests and 46 seconds before them with GCC 13); with `--parallel 4`, on 2026-11-20 with 571 and 572 tests, 79 seconds on the Mac with Apple clang, 97 with GCC 16 and 125 to 127 on 16 threads of the Linux machine with GCC 13 ([The size of the summaries](#the-size-of-the-summaries)); with 421 to 452 tests, 25 to 34 seconds on the Mac, 37 to 47 on the Linux machine and 52 to 58 on the Windows machine (73 on 4 logical processors); on the hosted runners, measured before each cross-check ran in one process, 31 to 45 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest runner seen ([Time](#each-cross-check-in-one-process)) |
+| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | on 2026-11-21, with the ball vectors and the accumulator judged (against claims without the 53 objects of stage B2 of the intervals), 1 105 tests and 14 minutes with GCC 13 on the Linux machine (`--parallel 16`; 980 tests and 12 minutes before them), the largest summary 2.7 MB (`mul_pow2_map_1`; of the ball vectors 0.9 MB, `bv_neg_2`); with `--parallel 4`, on 2026-11-20 with 884 tests, 20 minutes on the Mac with Apple clang and 32 on 16 threads of the Linux machine with GCC 13; it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
 | Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), and the interpreter on every operand of larger toy formats, with the same guards and a time budget | by hand on the test machines before each milestone report (`tests/brute/README.md`; results in [Brute force, Milestone 1](results/brute-milestone1.md)); and every night on the hosted runners with a smaller budget (`nightly.yml`), on new random cases and one fortieth of the enumerations | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine; a night on the hosted runners, under two hours per platform |
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 633 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 705 tests. The full tier, 1105 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -142,19 +142,22 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `tests/CMakeLists.txt`, kernels whose claims the oracle cannot read yet; with them
   `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS` for folds. No cross-check, no enumeration of a toy format,
   no brute-force run and no test of the public interface is registered for a name of these lists,
-  and configuring says how many are left out. **On them today**: the kernels of the accumulator
-  ([The accumulator](architecture.md#the-accumulator); a `rounded` entry with a value of its own),
-  and the ball vectors, the products of two of them and their kernels
-  ([Ball vectors](architecture.md#ball-vectors); the folds with `"bv"` and `"bv_conv"`, the
-  requirement `ball_vector`, the claims `encloses_entries`, `makes_ball_vector` and
-  `encloses_coefficients`, and what their kernels claim); and the kernels of stage B2 of the
+  and configuring says how many are left out. **On them today**: `conv_radius`, the radius kernel
+  of the products of two BallVectors, for the oracle's finding (a NaN where `prod(ma, mb)`
+  overflows and `g` or `m` is zero; `oracle/README.md`, "Ball vectors and the accumulator"); and the kernels of stage B2 of the
   intervals, the predicates and comparisons of an interval and of a ball, the set operations of a
   ball and the conversions of two limbs ([Claims of the enclosure interface: predicates and
   comparisons](architecture.md#claims-of-the-enclosure-interface-predicates-and-comparisons) and the
   two sections after it: the kinds `certain`, `trit`, `ball_set` and `ball_splits`, the condition
   `abs_le` of their `exact_when`, and the new fields of `ball_of_interval`, `interval_of_ball` and
   `makes_ball`); what was on them before left them with the interval stage and stage B of
-  Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
+  Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since the ball
+  vectors' stage the oracle reads and judges the ball vectors, their constructors, the products of
+  two BallVectors and their kernels, and the accumulator's kernels (`oracle/README.md`, "Ball
+  vectors and the accumulator", "Their kernels", "Their folds"): they are cross-checked as the maps
+  are, V4 in the formats its statements quantify over. Every map and every ball vector is
+  cross-checked in place too (`tests/crosscheck.py --inplace`, a stream of requests `inplace=I`
+  through every runner, the packed ones included, with its guards). Since stage B of
   Milestone 2 the oracle reads and judges the maps, the folds of maxima and the convolutions, and
   their kernels (`oracle/README.md`, "Maps", "Folds of maxima", "Convolutions"): they are
   cross-checked as the folds are, and the steps of the maps and the kernels of the folds of maxima
@@ -516,6 +519,33 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     length of a convolution, a coefficient's class, cancellation, its error far from the bound, an
     order other than `seq`; the strata of the families of the kernels, axpy far from its bound, a
     class of a finish or of a maximum) and must fail them.
+
+- **The ball vectors and the accumulator** (`oracle/README.md`, "Ball vectors and the
+  accumulator", "Their kernels", "Their folds"). A random run's header lists the strata of the
+  generator: for the kernels the families of `gen8.py` (`radius`: `huge`, `zeros`, `mixed`,
+  `atnormal`; `acc`: `cancel`, `tie`, `exactprod`, `apart`, `atop`; `accradius`: `integer`, `limit`,
+  `beyond`, `abig`; `bvfinish`: `nonfinite`, `negative`, `zeros`, `top`, `masks`); for the folds
+  those of `genbv.py` by shape (a ball vector `one`, `wide`, `zeroradius`, `whole`, `overflow`,
+  `threshold`, `cancel`, `underflow`, `zeros`, and `nonfinite`, `exact` and `tail` where they apply;
+  a constructor `one`, `badradius`, `badcenter`, `zeros`, `overflow`, `underflow`; a product those
+  of a ball vector, `count` among them). Then:
+
+    | Objects | Cases the run must have seen |
+    |---|---|
+    | a radius kernel | an output $+\infty$ and a finite one at least the stated value; with `exact_when`, the conditions holding and each failing, the output exactly the stated value, the mask true where nothing is claimed |
+    | a step of a scaling | `exact_flag` true and false, `exact_when` holding |
+    | a finish | every mask true and each false, a value zero, below zero, above zero, a NaN, $\pm\infty$ |
+    | a step of the accumulator | a rounding inexact, an output group not finite (nothing claimed) |
+    | a ball vector | every length class and order asked for (as a fold); a finite result and the whole space; an operand that is the whole space and finite operands; V4 applying, of no entry too, or the count `V4 not claimed` below `finite_from` or in a format of no statement of V4; with `exact_when`, every condition holding and each failing; in place (`--inplace`), every array of the limbs of the array written |
+    | a constructor | each class of the radius given (negative, $-\infty$, NaN, $+\infty$, $\pm 0$, positive) with finite centers, and a positive radius with centers not all finite |
+    | a product of BallVectors | lengths 0 and 1 of each array, unequal lengths; both results, a whole-space operand, V4 applying; the radius at least `conv_radius`'s stated value; in a toy format `count_when` failing |
+
+    `full.tools.crosscheck.guards` has runs and altered summaries that miss each of these (a
+    class of a radius, a stratum, a mask of a step, a cell of a finish or of an accumulator; a
+    class of results, of operands, of V4 or of exactness of a ball vector, a class of radius of a
+    constructor, a length, the count or the radius of a product, `count_when` never failing, V4
+    outside its formats or below `finite_from` not said; a stream in place without its arrays, or
+    in place when it was not asked, and the reverse) and must fail them.
 
 - **The interval kernels of Milestone 2** (`oracle/README.md`, "The kinds of the interval
   kernels"). A random run's header lists the strata of the family (`gen6.py`: `special`, `point`,
@@ -1887,9 +1917,9 @@ against the statement, the claims of the step in exact arithmetic with the expon
 the lead statement of the step of every map on operands of any value; and every build of the
 runner on the same requests in `binary64` and `binary32`. No case contradicts a statement.
 
-**The ball vectors** ([Architecture](architecture.md#ball-vectors)), which the oracle does not judge
-yet (they and their radius kernels are on the lists of [Cross-checks](#cross-checks)), are tested
-here only, by `gen/tests/test_bv.py`: each check of `rules.bv_rules` refuses what it is for; the
+**The ball vectors** ([Architecture](architecture.md#ball-vectors)), which the oracle also judges
+([Cross-checks](#cross-checks); `oracle/README.md`, "Their folds"), are tested here by
+`gen/tests/test_bv.py`: each check of `rules.bv_rules` refuses what it is for; the
 interpreter, on formats of the IEEE shape of two to five bits and in `binary64` and `binary32`, on
 canonical BallVectors with the whole space among them and any value of a scalar that is not a
 radius, in the sequential order and with 0 to 4 lanes, satisfies V1 to V4 and the flag in exact
@@ -1911,8 +1941,8 @@ and every ball vector, with each array read that can be the array written, throu
 the runner and of the packed runner, completes exactly as the same request without the field.
 
 **The products of two BallVectors** `bv_conv_1` and `bv_conv_2` ([Architecture](architecture.md#ball-vectors)),
-which the oracle does not judge yet either (they and `conv_radius`, `bv_conv_finish` are on the lists of
-[Cross-checks](#cross-checks)), are tested by `gen/tests/test_bv_conv.py`: each check of
+which the oracle judges too (`conv_radius` stays on the list of [Cross-checks](#cross-checks) for the
+oracle's finding), are tested by `gen/tests/test_bv_conv.py`: each check of
 `rules.bv_conv_rules` refuses what it is for, and the rules of the claims refuse `at_most` and `if_all`
 where they do not belong; the interpreter, on six formats of the IEEE shape of four to six bits
 (precision 4 to 6, $e_{\max}$ 7 to 14) and in `binary64` and `binary32`, on canonical BallVectors of
@@ -2031,6 +2061,26 @@ The first writes the oracle's summary of each distinct output next to `--summary
 the label of the first runner that wrote it, the second `K.F.LABEL.FORM.json` in `--summary-dir`;
 `--interp` adds the generator's interpreter as one more runner, and `--exhaustive` with
 `--restrict` an enumeration, as for `gen`.
+
+### Against other claims
+
+The tests judge against `gen/claims.json` unless the CMake variable `KAIRN_ORACLE_CLAIMS` names
+another file of the same form. `tests/CMakeLists.txt` and `tests/api/CMakeLists.txt` then read the
+kernels and folds they register tests for from that file, and every test that runs the oracle
+passes it on: `--claims FILE` to `tests/crosscheck.py` (both modes), `tests/regression/run.py`, the
+oracle's `check --claims-only` (`kairn-oracle.claims`) and `search` (`full.search.compiled`);
+`-DCLAIMS=FILE` to `tests/crosscheck.cmake`; and the environment variable `KAIRN_ORACLE_CLAIMS` to
+`tests/test_crosscheck_guards.py` (`full.tools.crosscheck.guards.*`), which passes it to every run
+of the oracle and of the drivers. It is for a branch of the oracle that reads only some of the
+claims of `gen/claims.json` (the oracle fails every run while the claims hold anything it cannot
+read): its tiers run against a copy of the claims without the objects it does not read yet, which
+are then simply absent, and the objects it does read are judged as they will be against the whole
+file.
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DKAIRN_ORACLE_CLAIMS=/path/to/claims.json
+KAIRN_ORACLE_CLAIMS=/path/to/claims.json python3 tests/test_crosscheck_guards.py
+```
 
 ## Rerunning one case
 

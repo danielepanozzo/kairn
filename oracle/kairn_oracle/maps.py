@@ -559,6 +559,17 @@ def judge_map_line(ck, line, lt, sep, right, tag):
     n = int(lt[3])
     order_name = "sequential" if order is None else "lanes"
     ins = lt[4:]
+    inplace = None
+    if ins and ins[0].startswith("inplace="):
+        # In place (architecture.md, "The line protocol"): an array read of the limbs of the array
+        # written, its buffers passed as the array written; judged as the request without it.
+        mi = re.match(r"inplace=(0|[1-9][0-9]*)\Z", ins[0])
+        if mi is None or int(mi.group(1)) >= len(m.arrays) or m.arrays[int(mi.group(1))][1] != m.wlimbs:
+            ck._fail(st, line, "malformed: %s names no array read of the limbs of the array "
+                     "written" % ins[0])
+            return
+        inplace = int(mi.group(1))
+        ins = ins[1:]
     outs = right.split(" ")
     if len(ins) != pl.n_scalar + n * pl.L or "" in ins:
         ck._fail(st, line, "malformed: %d input limbs, %d of scalars and %d elements of %d limbs "
@@ -611,6 +622,8 @@ def judge_map_line(ck, line, lt, sep, right, tag):
     etag = _map_tag(m, line)
     for k in [FO.length_class(n)] + FO.order_classes(order, n):
         es_e.count(k)
+    if inplace is not None:
+        es_e.count("in place: array %d" % inplace)
     bad_e = []
     for i in range(n):
         x = []

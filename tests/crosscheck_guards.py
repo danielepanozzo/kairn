@@ -267,6 +267,10 @@ def two_operands(kernel):
 def m2_family(kernel):
     """The family the oracle's generator has for a kernel of Milestone 2 (gen4.family_of), or
     None."""
+    if bv_family(kernel):
+        # The kernels of the ball vectors and of the accumulator: families of their own, chosen
+        # before every other (gen8.py, bv_family).
+        return None
     ens = kernel.get("ensures", [])
     kinds = {e.get("kind") for e in ens}
     req = [r.replace(" ", "") for r in kernel.get("requires", [])]
@@ -364,11 +368,107 @@ def m2_needs(kernel, e, extended):
         need += [EXACT_FAILS + ew_text(c) for c in e["exact_when"] if isinstance(c, dict)]
     if kind == "maximum":
         need += MAXIMUM_COUNTS
-    if kind == "finite_or_nan" and ("if" in e or "steps" in e):
+    if kind == "finite_or_nan" and ("if" in e or "steps" in e) and "nonneg" not in e:
         need += FINISH_IF_COUNTS
         if isinstance(e.get("steps"), int) and e.get("steps") >= 1:
             need.append(FINISH_STEP_COUNT)
     return need
+
+
+# The kernels of the ball vectors and of the accumulator (architecture.md, "Ball vectors", "The
+# accumulator"; oracle/README.md, "Ball vectors and the accumulator"): the families of the
+# oracle's generator (gen8.py) with the strata of their own, and the counts of their entries
+# (oracle/kairn_oracle/bvec.py).
+BV_STRATA = {"radius": ("huge", "zeros", "mixed", "atnormal"),
+             "acc": ("cancel", "tie", "apart", "atop", "exactprod"),
+             "accradius": ("integer", "limit", "beyond", "abig"),
+             "bvfinish": ("nonfinite", "negative", "zeros", "top", "masks")}
+BV_UP_FINITE = "output finite, at least the stated value"
+BV_UP_INF = "output +inf"
+BV_UP_UNLESS = "%s true: nothing claimed"
+BV_FLAG = ("exact_flag true", "exact_flag false")
+BV_FIN_VALUES = ("value finite, above zero", "value zero", "value: NaN", "value: +inf",
+                 "value: -inf")
+BV_FIN_NEG = "value finite, below zero"
+BV_GROUP_LOST = "the leading limb of its output is not finite: nothing claimed"
+
+
+def bv_family(kernel):
+    """The family the oracle's generator has for a kernel of the ball vectors or of the
+    accumulator (gen8.family_of), or None."""
+    ens = kernel.get("ensures", [])
+    if ens and all(e.get("kind") == "upper" and "value" in e and "if" not in e for e in ens):
+        return "radius"
+    if any(e.get("kind") == "rounded" and "value" in e for e in ens):
+        return "acc"
+    if any(e.get("kind") == "finite_or_nan" and ("nonneg" in e or "if_all" in e) for e in ens):
+        return "bvfinish"
+    req = [r.replace(" ", "") for r in kernel.get("requires", [])]
+    if (ens and all("if" in e for e in ens) and any(r.startswith("count(") for r in req)
+            and not any(re.search(r"\b(unit|tiny)\(", str(t)) for e in ens
+                        for t in [e.get("value") or ""] + list(e.get("args") or []))):
+        return "accradius"
+    return None
+
+
+def identity_value(kernel, e):
+    """A rounding to nearest of an input's value, or of its negation (a copy, a negation, a
+    guard: bv_center_entry_1, neg_1, bv_neg_radius, bv_make_radius), is exact on every operand:
+    no run can see an inexact case."""
+    if e.get("kind") != "rounded" or "value" in e:
+        return False
+    v = (kernel.get("value") or "").replace(" ", "")
+    names = {i.get("name") for i in kernel.get("inputs", []) if i.get("type") != "mask"}
+    return v in names or (v.startswith("-") and v[1:] in names)
+
+
+def bv_needs(kernel, e, a):
+    """The counts an entry of a kernel of the ball vectors or of the accumulator must have seen."""
+    kind = e.get("kind")
+    need = []
+    if kind == "upper" and "value" in e and "if" not in e:
+        need.append(BV_UP_FINITE)
+        if not a.exhaustive:
+            need.append(BV_UP_INF)
+        if "unless" in e:
+            need.append(BV_UP_UNLESS % e["unless"])
+        if e.get("exact_when"):
+            need.append(EXACT_HOLDS)
+            for c in e["exact_when"]:
+                if isinstance(c, dict) and "mask" in c:
+                    need.append(EXACT_FAILS + "%s true" % c["mask"])
+                elif isinstance(c, dict):
+                    need.append(EXACT_FAILS + ew_text(c))
+    elif kind == "error" and "exact_flag" in e:
+        need += BV_FLAG
+    elif kind == "finite_or_nan" and ("nonneg" in e or "if_all" in e):
+        need.append("every mask true")
+        masks = [e["if"]] if "if" in e else list(e.get("if_all") or [])
+        need += ["a mask false: %s" % m for m in masks]
+        need += BV_FIN_VALUES
+        if "nonneg" in e:
+            need.append(BV_FIN_NEG)
+    elif kind == "rounded" and "value" in e:
+        need += ["exact", "inexact"]
+        if not a.exhaustive:
+            need.append(BV_GROUP_LOST)
+    elif "if" in e and bv_family(kernel) == "accradius":
+        need.append("%s false: nothing claimed" % e["if"])
+        if kind == "holds":
+            need.append("holds")
+    return need
+
+
+def bv_problems(kernel, entries, merged, a):
+    """The guards of the kernels of the ball vectors and of the accumulator."""
+    for j, e in enumerate(kernel.get("ensures", [])):
+        if j >= len(entries) or entries[j]["kind"] != e.get("kind"):
+            return
+        label, counts = entries[j]["label"], merged[j]
+        for name in bv_needs(kernel, e, a):
+            if not counts.get(name):
+                yield ('the claim "%s" saw no case of "%s", so its statement was not checked '
+                       'there' % (label, name))
 
 
 def not_nan_operands(kernel, two):
@@ -772,6 +872,9 @@ def axpy_problems(kernel, keys, a):
 def fold_problems(fold, summary, a, desc, ranges):
     """The guards of a fold (oracle/README.md, "Folds"; docs/developer/testing.md, "What a pass
     requires")."""
+    if fold.get("bv") or fold.get("bv_conv"):
+        yield from bv_fold_problems(fold, summary, a, desc, ranges)
+        return
     if fold.get("map") or fold.get("conv") or any(e.get("kind") == "upper"
                                                   for e in fold.get("ensures", [])):
         yield from other_fold_problems(fold, summary, a, desc, ranges)
@@ -975,6 +1078,8 @@ def other_fold_problems(fold, summary, a, desc, ranges):
                        "for %s" % (",".join(strata), x, a.kernel))
         lengths = [n for n in FOLD_LENGTHS if n <= want_max]
         orders = sorted(set(want_orders.split(",")))
+    if fold.get("map"):
+        yield from inplace_problems(fold, desc, a)
     keys = [k for k in summary.get("keys", []) if (k["kernel"], k["format"]) == (a.kernel, a.format)]
     if len(keys) != len(summary.get("keys", [])):
         yield "the summary has lines of other kernels or formats"
@@ -1013,6 +1118,10 @@ def other_fold_problems(fold, summary, a, desc, ranges):
             yield 'the claim "%s" applied to no judged case, so it was not checked' % label
             continue
         k = e["kind"]
+        if k == "entries" and getattr(a, "inplace", False):
+            for i in inplace_arrays(fold):
+                if not counts.get("in place: array %d" % i):
+                    yield 'the claim "%s" saw no request in place of array %d' % (label, i)
         if k == "entries":
             yield from _lengths_orders(counts, label, lengths, orders, a, want_max)
             for name in MAP_ELEMENTS:
@@ -1073,6 +1182,171 @@ def other_fold_problems(fold, summary, a, desc, ranges):
             yield from _fraction(label, best, num, den)
 
 
+def inplace_arrays(fold):
+    """The arrays a map or a ball vector may write: those of the limbs of the array written."""
+    w = (fold.get("writes") or [{}])[0].get("limbs", 1)
+    return [i for i, x in enumerate(fold.get("arrays", [])) if x.get("limbs", 1) == w]
+
+
+def inplace_problems(fold, desc, a):
+    """A stream asked in place (--inplace) has the generator's header that says so, and only
+    then."""
+    if getattr(a, "inplace", False) and desc.get("inplace") != "yes":
+        yield "the stream is not in place, though --inplace was asked"
+    if not getattr(a, "inplace", False) and desc.get("inplace"):
+        yield "the stream is in place, though --inplace was not asked"
+
+
+# The ball vectors (architecture.md, "Ball vectors"; oracle/README.md, "Ball vectors and the
+# accumulator"): the strata of the oracle's generator (genbv.py) by shape, and the classes of the
+# judge (bvfolds.py).
+BV_FOLD_STRATA = ("one", "wide", "zeroradius", "whole", "overflow", "threshold", "cancel",
+                  "underflow", "zeros")
+BV_MAKE_STRATA = ("one", "badradius", "badcenter", "zeros", "overflow", "underflow")
+BV_CONV_STRATA = ("one", "wide", "zeroradius", "whole", "overflow", "threshold", "cancel",
+                  "underflow", "zeros", "count")
+BV_RESULTS = ("result: finite ball vector", "result: whole space")
+BV_OPERANDS = ("operands: a whole-space operand", "operands: finite ball vectors, finite scalars")
+BV_RADIUS_CLASSES = ("negative", "-inf", "NaN", "+inf", "+0", "-0", "positive")
+
+
+def bv_strata(fold):
+    """The strata the oracle's generator lists for a ball vector or a product (genbv.strata_of)."""
+    two = (fold.get("writes") or [{}])[0].get("limbs", 1) >= 2
+    if fold.get("bv_conv"):
+        st = list(BV_CONV_STRATA)
+    elif (fold.get("ensures") or [{}])[0].get("kind") == "makes_ball_vector":
+        st = list(BV_MAKE_STRATA)
+    else:
+        st = list(BV_FOLD_STRATA)
+        radii = set()
+        for r in fold.get("requires", []):
+            m = re.match(r"\s*ball_vector\(\s*\w+\s*,\s*(\w+)\s*\)", r)
+            if m:
+                radii.add(m.group(1))
+        pow2 = {m.group(1) for r in fold.get("requires", [])
+                for m in [re.match(r"\s*power_of_two\(\s*(\w+)\s*\)", r)] if m}
+        if [x for x in fold.get("scalars", []) if x["name"] not in radii | pow2]:
+            st.append("nonfinite")
+        if "exact_when" in (fold.get("ensures") or [{}])[0]:
+            st.append("exact")
+    if two:
+        st.append("tail")
+    return st
+
+
+def bv_fold_problems(fold, summary, a, desc, ranges):
+    """The guards of a ball vector, a constructor and a product of BallVectors: the stream asked
+    for, every stratum of the shape, the results finite and the whole space, an operand that is
+    the whole space, V4 applying (with no entry too), the conditions of exactness each failing and
+    all holding, every class of the radius given of a constructor, the lengths 0 and 1 on each
+    side of a product, the lengths and orders of a fold, every array written in place."""
+    conv = bool(fold.get("bv_conv"))
+    e0 = (fold.get("ensures") or [{}])[0]
+    makes = e0.get("kind") == "makes_ball_vector"
+    maxlen = getattr(a, "max_length", None)
+    maxlen = int(maxlen) if maxlen is not None else None
+    default_orders = "seq" if conv else FOLD_DEFAULT_ORDERS
+    if a.exhaustive:
+        total = int(desc.get("total", -1))
+        if ranges != [[0, total]]:
+            yield "the enumeration of %d cases was not covered (indices seen: %s)" % (total, ranges)
+        if maxlen is None or desc.get("maxlen") != str(maxlen):
+            yield ("the enumeration is of arrays up to length %s, not %s"
+                   % (desc.get("maxlen"), maxlen))
+        strata = ["exhaustive"]
+        want_max = maxlen or 0
+        lengths = list(range(want_max + 1))
+        orders = ["seq"] + (["lanes:%d" % W for W in range(2, want_max + 1)] if not conv else [])
+    else:
+        if desc.get("seed") != a.seed or ranges != [[0, a.count]]:
+            yield ("the stream is indices %s of seed %s, not cases 0 to %d of seed %s"
+                   % (ranges, desc.get("seed"), a.count, a.seed))
+        want_orders = getattr(a, "orders", None) or default_orders
+        if desc.get("orders") != want_orders:
+            yield "the stream's orders are %s, not %s" % (desc.get("orders"), want_orders)
+        want_max = maxlen if maxlen is not None else FOLD_DEFAULT_MAX_LENGTH
+        if desc.get("maxlen") != str(want_max):
+            yield "the stream's largest length is %s, not %s" % (desc.get("maxlen"), want_max)
+        strata = [x for x in desc.get("strata", "").split(",") if x]
+        for x in bv_strata(fold):
+            if x not in strata:
+                yield ("the oracle's generator lists the strata %s, without %s, which it writes "
+                       "for %s" % (",".join(strata), x, a.kernel))
+        lengths = [n for n in FOLD_LENGTHS if n <= want_max]
+        orders = sorted(set(want_orders.split(",")))
+    if not conv:
+        yield from inplace_problems(fold, desc, a)
+    keys = [k for k in summary.get("keys", []) if (k["kernel"], k["format"]) == (a.kernel, a.format)]
+    if len(keys) != len(summary.get("keys", [])):
+        yield "the summary has lines of other kernels or formats"
+    tags = {k["tag"] for k in keys}
+    for x in strata:
+        if x not in tags:
+            yield "no case of stratum %s, although the oracle's generator lists it" % x
+    for t in sorted(tags - set(strata)):
+        yield "lines tagged %s, which the generator's header does not list" % t
+    if not sum(k["stats"]["counts"]["judged"] for k in keys):
+        yield "the oracle passed it, but judged no case, so nothing was checked"
+        return
+    entries = keys[0]["stats"]["entries"]
+    if not entries or entries[0]["kind"] != e0.get("kind"):
+        yield ("the summary's first entry (%s) is not the claim of %s (%s)"
+               % (entries[0]["kind"] if entries else "none", a.kernel, e0.get("kind")))
+        return
+    counts, applicable, _best = _merged(keys, 0)
+    label = entries[0]["label"]
+    if not applicable:
+        yield 'the claim "%s" applied to no judged case, so it was not checked' % label
+        return
+    need = list(BV_RESULTS)
+    if makes:
+        for r in BV_RADIUS_CLASSES:
+            if a.exhaustive and r == "-0":
+                continue
+            need.append("given radius %s, centers finite" % r)
+        if not a.exhaustive or want_max >= 1:
+            need.append("given radius positive, centers not all finite")
+    else:
+        need += BV_OPERANDS
+        # V4 is claimed from the precision finite_from (when given), in formats of e_max at least
+        # p: elsewhere, the judge says so.
+        p = next((k["stats"].get("p") for k in keys if k["stats"].get("p")), None)
+        below = e0.get("finite_from") is not None and p is not None and p < e0["finite_from"]
+        m = re.fullmatch(r"fp:(\d+):(-?\d+):(-?\d+)", a.format)
+        narrow = m is not None and not (int(m.group(3)) >= 1 and int(m.group(2)) <= 3 - int(
+            m.group(3)) - 2 * int(m.group(1)))
+        if e0.get("finite_when") and narrow:
+            need.append("V4 not claimed: a format of no statement (e_max <= p, or eta above "
+                        "binary_float's)")
+        elif e0.get("finite_when") and below:
+            need.append("V4 not claimed: below finite_from")
+        elif e0.get("finite_when"):
+            need.append("V4 applies")
+            if not conv:
+                need.append("V4 applies, no entry")
+        if e0.get("exact_when"):
+            need.append("exact: every condition holds")
+            for c in e0["exact_when"]:
+                need.append("exact_when fails: " + ew_text(c))
+        elif "exact_when" in e0:
+            need.append("exact: every condition holds")
+    if conv:
+        need += [c for c in CONV_LENGTHS if not a.exhaustive or want_max >= 1]
+        need.append("V3: the radius at least conv_radius's stated value")
+        # In a toy format the edge of count_when is within the lengths (the count stratum).
+        if not a.exhaustive and a.format.startswith("fp:"):
+            need += ["count_when fails: %s <= %s" % (c["le"], c["than"])
+                     for c in e0.get("count_when", [])]
+    else:
+        yield from _lengths_orders(counts, label, lengths, orders, a, want_max)
+        if getattr(a, "inplace", False):
+            need += ["in place: array %d" % i for i in inplace_arrays(fold)]
+    for name in need:
+        if not counts.get(name):
+            yield 'the claim "%s" saw no case "%s"' % (label, name)
+
+
 def problems(summary, a):
     what = "%s %s" % (a.kernel, a.format)
     cov = summary.get("coverage", [])
@@ -1131,6 +1405,12 @@ def problems(summary, a):
             if s not in strata:
                 yield ("the oracle's generator lists the strata %s, without %s, which its family "
                        "%s has (Milestone 2)" % (",".join(strata), s, family))
+        # The families of the ball vectors and of the accumulator (gen8.py).
+        for s in BV_STRATA.get(bv_family(kernel), ()):
+            if s not in strata:
+                yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                       "%s has (the ball vectors and the accumulator)"
+                       % (",".join(strata), s, bv_family(kernel)))
         # The families of the interval kernels (gen6.py).
         for s in iv_strata(kernel):
             if s not in strata:
@@ -1182,13 +1462,16 @@ def problems(summary, a):
                     yield ('the claim "%s" was never %s, so the comparison was not checked both '
                            'ways' % (label, outcome))
         elif e["kind"] == "rounded" and "nearest" in label:
-            if not counts.get("inexact") and not counts.get("tie"):
+            own = kernel.get("ensures", [])
+            if (not counts.get("inexact") and not counts.get("tie")
+                    and not (j < len(own) and identity_value(kernel, own[j]))):
                 yield 'the claim "%s" saw only exact cases' % label
         elif e["kind"] == "rounded":
             if not counts.get("inexact, != RN"):
                 yield ('the claim "%s" never differed from the rounding to nearest, so the '
                        'direction was not checked' % label)
     yield from m2_problems(kernel, entries, merged, extended)
+    yield from bv_problems(kernel, entries, merged, a)
     yield from iv_problems(kernel, entries, merged, keys, a)
     yield from count_problems(kernel, keys, a)
     yield from axpy_problems(kernel, keys, a)
@@ -1211,8 +1494,8 @@ def problems(summary, a):
             need = []           # a ball from the bounds of an interval: iv_needs
         elif e.get("kind") == "makes_ball":
             need += make_radius_needs(getattr(a, "exhaustive", False))
-        if e.get("kind") == "finite_or_nan" and ("if" in e or "steps" in e):
-            need = []
+        if e.get("kind") == "finite_or_nan" and ("if" in e or "steps" in e or "if_all" in e):
+            need = []           # with nonneg or if_all: bv_needs
         elif e.get("kind") == "finite_or_nan":
             ins = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
             if ins.get((kernel.get("value") or "").strip(), 1) > 1:
@@ -1319,6 +1602,12 @@ def describe(summary, a):
             "exact", "inexact", "den = 0", "first rounding a tie", "second rounding a tie",
             "naive pair not normalized", "second limb subnormal"))
     fold, _ = kernel_claims(summary, a, folds=True)
+    if fold is not None and (fold.get("bv") or fold.get("bv_conv")) and summary["keys"]:
+        counts, _app, _best = _merged(summary["keys"], 0)
+        return text + "; ball vector: " + ", ".join(
+            "%s %d" % (n, counts[n]) for n in sorted(counts) if n.startswith((
+                "result", "operands", "V4", "exact", "count_when", "in place", "given radius",
+                "V3: the radius")))
     if fold is not None and (fold.get("map") or fold.get("conv") or any(
             e.get("kind") == "upper" for e in fold.get("ensures", []))):
         out = []
@@ -1394,6 +1683,8 @@ def parser():
     p.add_argument("--claims", help="the claims file (default: the one the summary names)")
     p.add_argument("--orders", help="a fold: the orders asked of the generator (gen --orders)")
     p.add_argument("--max-length", help="a fold: the largest length asked (gen --max-length)")
+    p.add_argument("--inplace", action="store_true",
+                   help="a map or a ball vector: the stream asked in place (gen --inplace)")
     return p
 
 
