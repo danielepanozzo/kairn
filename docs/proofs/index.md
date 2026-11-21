@@ -432,7 +432,11 @@ the same result and the same flag on every input, NaN and infinities included
 finite (`norm_upper_1_seq_ieee_flag`); for two limbs, exactly when every leading limb is finite
 and the step up from the largest of them is finite (`norm_upper_2_seq_ieee_flag`). So
 `norm_upper_2` can answer with a false flag on an array of finite numbers, when the bound one
-step above the largest leading limb would not be a number of the format.
+step above the largest leading limb would not be a number of the format. That the lane order
+computes the state of the sequential order, and when exactly the flag is true, are also
+generated statements, `F_orders_ieee_spec` and `F_flag_ieee_spec`, whose theorems
+`F_orders_ieee_correct` and `F_flag_ieee_correct` are the lemmas above with their variables
+bound; no field of a description names them, so step 3 audits them.
 
 ## The product of two polynomials
 
@@ -454,6 +458,10 @@ has at least one term and at most $\min(n_x, n_y)$ (`conv_terms_nonempty`,
 `conv_terms_length`); and if the bound kernel of the dot product answers `ok` for a count of at
 least $\min(n_x, n_y)$, its two numbers bound the error of every coefficient (`conv_1_bound`,
 `conv_2_bound`, from the theorems of [the two together](#sums-and-dot-products-of-arrays)).
+Three of these facts are also generated statements, `conv_terms_eq_spec`,
+`conv_terms_count_spec` and `conv_terms_length_spec`, whose theorems `conv_terms_eq_correct`,
+`conv_terms_count_correct` and `conv_terms_length_correct` are those lemmas; no field of a
+description names them, so step 3 audits them.
 
 These are statements of the real model, as for a map. No theorem is about the product as a
 polynomial (its value at a point).
@@ -465,8 +473,8 @@ coefficient, and when it is false every coefficient is replaced by what the chec
 it, as a map does. For canonical entries of the two polynomials, coefficient by coefficient:
 if its leading limb is finite, every limb of every term is finite, the values are those of
 the dot product of the real model on the values of the terms, and the conclusions of its
-statement hold; otherwise every limb of the coefficient is a NaN; and the mask is true exactly
-when every leading limb is finite. The proof reads the IEEE-model theorem of the dot product
+statement hold; otherwise every limb of the coefficient is a NaN and the mask is false; and the
+mask is true exactly when every leading limb is finite. The proof reads the IEEE-model theorem of the dot product
 (`dot_k_seq_ieee_correct`, about the finish of that state) on the state: the finish of a state
 whose leading limb is finite returns it, with the flag true.
 

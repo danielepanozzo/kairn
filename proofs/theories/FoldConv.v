@@ -282,3 +282,16 @@ exact (dot_2_seq_bound emin prec Hp Hh (conv_terms xs ys j) m g t
          (conv_terms_Forall _ _ _ _ xs ys j Hx Hy) Fm Hm
          (conv_terms_count_le _ _ xs ys j m Hn) Hb).
 Qed.
+
+(** * The generated statements of conv_terms *)
+
+(* conv_terms_eq_spec, conv_terms_count_spec and conv_terms_length_spec
+   (proofs/gen/FoldStatements.v) have the types of the lemmas above. *)
+Theorem conv_terms_eq_correct : conv_terms_eq_spec.
+Proof. exact conv_terms_eq. Qed.
+
+Theorem conv_terms_count_correct : conv_terms_count_spec.
+Proof. exact conv_terms_count. Qed.
+
+Theorem conv_terms_length_correct : conv_terms_length_spec.
+Proof. exact conv_terms_length. Qed.
