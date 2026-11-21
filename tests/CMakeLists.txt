@@ -21,7 +21,8 @@
 #   build's compiler and flags, on random binary64 and binary32 cases, once as the flags stand and
 #   once per contraction setting that matters to this compiler: the scalar kernels
 #   (gen/tests/runner.cpp), and the packed kernels of the target's backend, NEON or AVX2
-#   (gen/tests/packed_runner.cpp); in the full tier on more cases, and also as run by the
+#   (gen/tests/packed_runner.cpp), with the lanes of each register assigned by a seeded
+#   permutation and consecutively; in the full tier on more cases, and also as run by the
 #   generator's interpreter on every operand of a toy format (or, where that is too many, on every
 #   operand of a restricted domain and on random cases of the whole format).
 # - The consumer checks (consume/): a project that uses kairn::kairn and kairn::fma through
@@ -142,7 +143,8 @@ endif()
 # --- The compiled runners -----------------------------------------------------------------------
 #
 # gen/tests/runner.cpp runs the generated scalar kernels on the line protocol, and
-# gen/tests/packed_runner.cpp the packed ones, consecutive requests one per lane. Each is built
+# gen/tests/packed_runner.cpp the packed ones, one request per lane, the requests assigned to the
+# lanes by a seeded permutation (or consecutively, --lanes consecutive). Each is built
 # with this build's compiler and flags (kairn-gen-runner, kairn-gen-packed-runner), and once more
 # for each contraction setting that matters to the compiler, appended to those flags: the
 # regression test of the contraction experiment of docs/developer/design/phase0/environment.md.
@@ -691,10 +693,27 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   set(_random "-DCOUNT=${KAIRN_CROSSCHECK_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}")
   set(_random_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_CASES}")
   set(_random_quick_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_QUICK_CASES}")
-  # Every compiled runner, as --runner LABEL EXECUTABLE for crosscheck.py.
+  # Every compiled runner for crosscheck.py: the scalar ones as --runner LABEL EXECUTABLE, the
+  # packed ones as --packed-kernels LABEL EXECUTABLE ASSIGNMENTS, with the lanes of their
+  # registers assigned by the seeded permutation (each under the guard that the lanes mixed), and
+  # also consecutively (LABEL.consecutive, registers of one kind): in the quick tier the second
+  # for the runner with the build's flags only, in the full tier (_compiled_both) for every one
+  # (docs/developer/testing.md, "Packed kernels").
   set(_compiled "")
+  set(_compiled_both "")
   foreach(_runner _label IN ZIP_LISTS _runners _runner_labels)
-    list(APPEND _compiled --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+    if(_label MATCHES "^cxx")
+      list(APPEND _compiled --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+      list(APPEND _compiled_both --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+    else()
+      set(_assignments permuted)
+      if(_label STREQUAL "${_packed_backend}")
+        set(_assignments "permuted,consecutive")
+      endif()
+      list(APPEND _compiled --packed-kernels "${_label}" "$<TARGET_FILE:${_runner}>" "${_assignments}")
+      list(APPEND _compiled_both --packed-kernels "${_label}" "$<TARGET_FILE:${_runner}>"
+        "permuted,consecutive")
+    endif()
   endforeach()
   # What full/CMakeLists.txt registers, kernel by kernel, for the full tier.
   set(_full_kernels "")

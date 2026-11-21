@@ -1179,6 +1179,96 @@ class StageBGuards(unittest.TestCase):
             self.assertIn("did not check what it set out to", bad.stdout)
 
 
+class LaneReports(unittest.TestCase):
+    """crosscheck.py's reading of a packed runner's report of its lanes (--packed-kernels): a run
+    passes only with one segment of every request, the assignment asked for, and for the permuted
+    one the guard passed (gen/tests/packed_runner.cpp; docs/developer/testing.md, "Packed
+    kernels"). The runner's own guard, and these reports as it writes them, are tested by the
+    generator's tests (gen/tests/test_simd.py, Lanes) and by tests/lanes/lane_fault.py."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, TESTS)
+        import crosscheck
+        cls.cc = crosscheck
+
+    def report(self, d, **changes):
+        segment = {"kernel": "mul_2_2_full", "format": "binary64", "first_line": 2, "requests": 6000,
+                   "lanes": 2, "registers": 3000, "padding": 0, "padding_line": None,
+                   "padding_finite": True, "with_nonfinite": 1200, "with_finite": 4800, "mixed": 942,
+                   "mixed_strata": 2703, "guard": "passed",
+                   "kinds": [{"stratum": "close", "nonfinite": False, "requests": 900, "lanes": [450, 450]},
+                             {"stratum": "nonfinite", "nonfinite": True, "requests": 600, "lanes": [300, 300]}]}
+        r = {"runner": "packed", "assignment": "permuted", "seed": 0,
+             "guard": {"applied": True, "lines": 256, "cases": 16}, "segments": [segment]}
+        for key, value in changes.items():
+            if key in ("assignment", "seed", "segments"):
+                r[key] = value
+            else:
+                segment[key] = value
+        path = os.path.join(d, "r.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(r, f)
+        return path
+
+    def check(self, d, asked="permuted", **changes):
+        return self.cc.check_lanes(self.report(d, **changes), asked, "mul_2_2_full", "binary64", 6000)
+
+    def test_a_good_report(self):
+        with tempfile.TemporaryDirectory() as d:
+            why, line = self.check(d)
+            self.assertEqual(why, "")
+            self.assertIn("942 of them mixing a non-finite limb with finite ones", line)
+            self.assertIn("each of at least 2 requests in every lane", line)
+            why, line = self.check(d, "consecutive", assignment="consecutive", mixed=0,
+                                   guard="not applied: the consecutive assignment",
+                                   kinds=[{"stratum": "uniform", "nonfinite": False, "requests": 300,
+                                           "lanes": [0, 300]}])
+            self.assertEqual(why, "")
+            self.assertIn("1 of at least 2 requests missing from a lane", line)
+            # A stream too short for the guard is not a failure of the permuted assignment.
+            why, _ = self.check(d, guard="not applied: fewer than 256 requests")
+            self.assertEqual(why, "")
+
+    def test_reports_that_fail(self):
+        with tempfile.TemporaryDirectory() as d:
+            for changes, words in (({"assignment": "consecutive"}, "consecutive assignment, not permuted"),
+                                   ({"segments": []}, "0 segments"),
+                                   ({"requests": 5999}, "5999 requests"),
+                                   ({"kernel": "mul_2_2"}, "of mul_2_2 binary64"),
+                                   ({"guard": "failed: no register held"}, "guard: failed")):
+                why, _ = self.check(d, **changes)
+                self.assertIn(words, why, changes)
+            why, _ = self.cc.check_lanes(os.path.join(d, "none.json"), "permuted", "mul_2_2_full",
+                                         "binary64", 6000)
+            self.assertIn("no report of its lanes", why)
+            with open(os.path.join(d, "bad.json"), "w") as f:
+                f.write("{")
+            why, _ = self.cc.check_lanes(os.path.join(d, "bad.json"), "permuted", "mul_2_2_full",
+                                         "binary64", 6000)
+            self.assertIn("no report of its lanes", why)
+
+    def test_runs_and_options(self):
+        class A:
+            seed = "0"
+            packed_kernels = [["neon", "/p", "permuted,consecutive"], ["neon-x", "/q", "permuted"]]
+        runs = self.cc.packed_kernel_runs(A, "/w")
+        self.assertEqual([r[0] for r in runs], ["neon", "neon.consecutive", "neon-x"])
+        self.assertEqual(runs[1][1][:5], ["/p", "--lanes", "consecutive", "--lane-seed", "0"])
+        self.assertEqual(self.cc.lane_seed("12"), "12")
+        self.assertEqual(self.cc.lane_seed(None), "0")
+        self.assertTrue(self.cc.lane_seed("a seed").isdigit())
+        self.assertEqual(self.cc.lane_seed("a seed"), self.cc.lane_seed("a seed"))
+        with tempfile.TemporaryDirectory() as d:
+            for assignments in ("sideways", "permuted,permuted", ""):
+                r = subprocess.run([PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel",
+                                    "two_sum", "--format", "binary64", "--seed", "0", "--count", "10",
+                                    "--summary", os.path.join(d, "s.json"), "--packed-kernels", "p",
+                                    "/p", assignments], capture_output=True, text=True)
+                self.assertEqual(r.returncode, 2, assignments)
+                self.assertIn("ASSIGNMENTS is permuted, consecutive or both", r.stderr)
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)
