@@ -710,10 +710,10 @@ def fold_kernels(fd, kernels):
 # What is left are the loops over arrays of two limbs and the convolutions, with their steps; no
 # compiler was measured to fuse a product of the program into any of them (architecture.md, R3, the
 # factors of a fused operation), and each needs new loops with their theorems in both models.
-_DOT = ('the step of the dot product and of the coefficients of the convolution: closing it takes the '
-        'loops dot_2_entry (step dot_entry_step_2, the twin guarding x and y) and conv_K_entry (the '
-        'coefficients by dot_K_entry), with their theorems; conv_K itself is also the loop of the centers '
-        'of bv_conv_K, on stored arrays, which must not pay for guards')
+_DOT = ('the step of the dot product and of the coefficients of the convolution of two limbs: closing it '
+        'takes the loops dot_2_entry (step dot_entry_step_2, the twin guarding x and y) and conv_2_entry (the '
+        'coefficients by dot_2_entry, as conv_1_entry), with their theorems; conv_2 itself is also the loop '
+        'of the centers of bv_conv_2, on stored arrays, which must not pay for guards')
 _SCALE = ('the step of scale_2 (x and a supplied) and of bv_scale_2 (x stored, a supplied): closing it takes '
           'a twin guarding x and a for scale_2 and one guarding a for bv_scale_2, with the theorems of the '
           'maps and of the ball vector')
@@ -722,16 +722,13 @@ _AXPY = ('the step of the axpy of two limbs: its own guards on a and x, which ch
 _AXPY_STORED = ('the step of a loop that no header calls, whose description says the program supplies a and '
                 'x: its own guards on them, with its theorems and its loop\'s proved again')
 FACTOR_PENDING = {
-    'dot_step_1': "dot of one limb calls dot_1_entry; still " + _DOT,
     'dot_step_2': 'dot of two limbs calls it; ' + _DOT,
     'scale_step_2': _SCALE, 'axpy_entry_step_2': _AXPY, 'axpy_entry_step_2_1': _AXPY,
     'axpy_step_2': _AXPY_STORED, 'axpy_step_2_1': _AXPY_STORED,
     'loop axpy_2': 'its step: ' + _AXPY_STORED, 'loop axpy_2_1': 'its step: ' + _AXPY_STORED,
     'loop axpy_2_1_entry': 'its step: ' + _AXPY, 'loop axpy_2_entry': 'its step: ' + _AXPY,
     'loop bv_scale_2': 'its step: ' + _SCALE, 'loop scale_2': 'its step: ' + _SCALE,
-    'loop conv_1': 'its coefficients, dot_1: ' + _DOT, 'loop conv_2': 'its coefficients, dot_2: ' + _DOT,
-    'loop dot_1': 'no header calls it (dot of one limb calls dot_1_entry), but conv_1 runs it for its '
-                  'coefficients, and a fold of supplied arrays must have an entry step: ' + _DOT,
+    'loop conv_2': 'its coefficients, dot_2: ' + _DOT,
     'loop dot_2': 'its step: ' + _DOT,
 }
 

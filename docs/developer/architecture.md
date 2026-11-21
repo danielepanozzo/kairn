@@ -197,13 +197,15 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    `Expansion<T, 2>` and of `Packed`), `mul_2_1_full_entry` (`x * a`, `a * x`, `x *= a` of both),
    `ball_scale_2_full_entry` (the scaling of a `Ball<T, 2>` by a `T`), `acc_mul_entry_1` and
    `acc_mul_entry_2` (`Accumulator::add_product`), and `dot_entry_step_1`, the step of `dot_1_entry`
-   (`dot` of one limb). The kernels they guard for (`two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1`,
-   `mul_2_1_full`, `ball_scale_2`, `ball_scale_2_full`, `acc_mul_1`, `acc_mul_2`) are no longer entry
-   kernels. The objects not closed yet are listed in `rules.FACTOR_PENDING`, each with its reason:
-   the loops over arrays of two limbs (`dot`, `axpy`, `scale`), the convolutions and the scaling of a
-   ball vector, with their steps. Of these, Apple clang 21 under `-ffp-contract=fast` at `-O2` with
-   `NDEBUG` was measured to fuse a product of the program through a visible 1 into `conv` of one limb
-   and `scale` of two limbs (every round); no compiler into the others. R3 accepts their exposed
+   (`dot` of one limb) and of the coefficients of `conv_1_entry` (`conv` of one limb); `dot_1` and
+   `conv_1`, on stored arrays, are the loops of the centers of `bv_conv_1`. The kernels they guard for
+   (`two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1`, `mul_2_1_full`, `ball_scale_2`,
+   `ball_scale_2_full`, `acc_mul_1`, `acc_mul_2`, `dot_step_1`) are no longer entry kernels. The objects not closed yet are listed in `rules.FACTOR_PENDING`, each with its reason:
+   the loops over arrays of two limbs (`dot`, `axpy`, `scale`, `conv`) and the scaling of a ball
+   vector, with their steps. Of these, Apple clang 21 under `-ffp-contract=fast` at `-O2` with
+   `NDEBUG` was measured to fuse a product of the program through a visible 1 into `scale` of two
+   limbs (every round), as it did into `conv` of one limb before that called `conv_1_entry`; no
+   compiler into the others. R3 accepts their exposed
    operands, and refuses an entry there that has none; `build` prints them as PENDING. The measurements are in [Testing](testing.md#the-functions-on-arrays), "A factor the
    compiler sees".
 

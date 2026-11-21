@@ -17432,12 +17432,12 @@
         {
           "name": "x",
           "limbs": 1,
-          "role": "supplied"
+          "role": "stored"
         },
         {
           "name": "y",
           "limbs": 1,
-          "role": "supplied"
+          "role": "stored"
         }
       ],
       "writes": [
@@ -17480,6 +17480,65 @@
       },
       "source": {
         "cite": "dot_1 on the terms of each coefficient",
+        "license": "bound: published; proof: MIT"
+      }
+    },
+    {
+      "name": "conv_1_entry",
+      "conv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "coefficients",
+          "of": "z",
+          "fold": "dot_1_entry"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential"
+      ],
+      "coefficients": "dot_1_entry",
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldConv.v",
+        "name": "conv_1_entry_correct"
+      },
+      "source": {
+        "cite": "dot_1_entry on the terms of each coefficient",
         "license": "bound: published; proof: MIT"
       }
     },
@@ -17552,12 +17611,12 @@
         {
           "name": "x",
           "limbs": 1,
-          "role": "supplied"
+          "role": "stored"
         },
         {
           "name": "y",
           "limbs": 1,
-          "role": "supplied"
+          "role": "stored"
         }
       ],
       "outputs": [

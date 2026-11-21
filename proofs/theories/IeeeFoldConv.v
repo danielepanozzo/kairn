@@ -76,6 +76,51 @@ match goal with |- context [forallb ?t (map ?f ?l)] => destruct (forallb t (map 
     * intros _. split. exact Nw. reflexivity.
 Qed.
 
+(* conv_1_entry: conv_1 with the coefficients by dot_1_entry, whose step guards both factors (rule
+   R3, the factors of a fused operation): the same proof, with dot_1_entry's theorem. *)
+Theorem conv_1_entry_ieee_correct : conv_1_entry_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_abs nan_fma nan_const Hp1 xs ys.
+(* A coefficient whose leading limb is finite. *)
+assert (Good : forall (j : nat) (w : binary_float prec emax),
+  fold_seq (IeeeFoldModel.dot_1_entry_step prec emax nan_plus nan_fma) (IeeeOperations.pzero prec emax)
+    (conv_terms xs ys j) = w -> finite w ->
+  let xys := conv_terms xs ys j in
+  Forall (fun xy => finite (fst xy) /\ finite (snd xy)) xys /\
+  let vs := map (fun xy => (val (fst xy), val (snd xy))) xys in
+  let s := FoldModel.dot_1_entry_seq (ieee_emin prec emax) prec tie_even vs in
+  val w = s /\ fmt (ieee_emin prec emax) prec s /\
+  Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) vs)) <=
+     ((1 + (u prec / (1 + u prec))) ^ length vs - 1) *
+       sumabs (map (fun xy => (fst xy * snd xy)) vs) +
+     (1 + (u prec / (1 + u prec))) ^ (length vs - 1) *
+       (INR (length vs) * (eta (ieee_emin prec emax) / 2))).
+{ intros j w Ew Fw.
+  generalize (dot_1_entry_seq_ieee_correct prec emax Hp He nan_plus nan_abs nan_fma nan_const Hp1
+                (conv_terms xs ys j)).
+  unfold IeeeFoldModel.dot_1_entry_seq. cbv zeta. rewrite Ew.
+  generalize (fold_finish_1_correct prec emax Hp He nan_abs nan_const w).
+  destruct (IeeeModel.fold_finish_1 prec emax nan_abs nan_const w) as [r flag].
+  intros [F1 [F2 _]] [H1 _].
+  assert (Ef : flag = true) by (apply F1; exact Fw).
+  specialize (H1 Ef). rewrite (F2 Ef) in H1.
+  destruct H1 as [HF [_ R]]. split. exact HF. exact R. }
+unfold IeeeFoldModel.conv_1_entry_conv. cbv zeta. rewrite fold_seq_and.
+match goal with |- context [forallb ?t (map ?f ?l)] => destruct (forallb t (map f l)) eqn:? end;
+  cbv beta iota.
+- eapply map_1_true; try exact (Forall_True _ _); try eassumption.
+  intros j w _ Ew Fw. cbv beta iota zeta. split.
+  + intros _. exact (Good j w Ew Fw).
+  + intros N. contradiction.
+- eapply map_1_false; try exact (Forall_True _ _); try eassumption.
+  + intros j w _ Ew Fw. cbv beta iota zeta. split.
+    * intros _. exact (Good j w Ew Fw).
+    * intros N. contradiction.
+  + intros j w _ _ Nw. cbv beta iota zeta. split.
+    * intros Fw. exfalso. exact (nan_1_not_finite _ _ w Nw Fw).
+    * intros _. split. exact Nw. reflexivity.
+Qed.
+
 Theorem conv_2_ieee_correct : conv_2_ieee_spec.
 Proof.
 intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp4 xs ys Hx Hy.

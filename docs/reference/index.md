@@ -305,8 +305,8 @@ The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batc
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| `conv(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>`, `SoAView<T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
-| `dot(x, y)`, `dot(x, y, sequential)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_entry_step_1`](dot_entry_step_1.md) |
+| none (internal) | - | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
+| `dot(x, y)`, `dot(x, y, sequential)`, `conv(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_entry_step_1`](dot_entry_step_1.md) |
 | `dot(x, y)`, `dot(x, y, sequential)`, `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
 | `sum(x)`, `sum(x, sequential)`, `sum_fast(x)` | `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
 | `sum(x)`, `sum(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |

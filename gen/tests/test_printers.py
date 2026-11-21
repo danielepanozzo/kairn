@@ -1014,9 +1014,10 @@ class Rocq(unittest.TestCase):
     # Then the entry forms of the products (the same rule): two_prod_entry, mul_down_entry,
     # mul_up_entry and mul_2_1_entry, their models, statements and audit lines added, every earlier
     # line kept. Then acc_mul_entry_2 (the same rule), its model, statement and audit line added.
+    # Then the fold conv_1_entry (the same rule): its audit line added; Model.v and Statements.v the same.
     DIGESTS = {'Model.v': '4638afc7a907a7dc198ea2fb82cb44368818135d24b75db5b2825ef3294b175e',
                'Statements.v': 'f714e41646935a828d991adac9a6643738fedebb6b898d8396036f20d4be064f',
-               'Audit.v': 'b15e6daa08c537682f266c32b70c4997418bd18edd6123d8f8c3a922d1baf6e0'}
+               'Audit.v': 'd4f2d9fc3b5fe39f48242f51ca04e655884908ba8fa7d4e20895d5132b2e78e5'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

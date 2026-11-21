@@ -483,6 +483,9 @@ Print Assumptions bv_sub_2_correct.
 Definition conv_1_audit : conv_1_spec := conv_1_correct.
 Print Assumptions conv_1_correct.
 
+Definition conv_1_entry_audit : conv_1_entry_spec := conv_1_entry_correct.
+Print Assumptions conv_1_entry_correct.
+
 Definition conv_2_audit : conv_2_spec := conv_2_correct.
 Print Assumptions conv_2_correct.
 

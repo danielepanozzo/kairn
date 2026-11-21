@@ -1,9 +1,10 @@
 # The step of the dot product of one limb (milestone2.md, "sum, dot, axpy, convolution"): one
 # fused operation, s <- RN(x y + s). No product is rounded: the step is the addition of the state
-# and of the exact product. Its elements come from arrays the program supplies; it only multiplies
-# them, so rule R3 asks no guard of them (an entry kernel whose x and y enter from the program).
+# and of the exact product. The step of dot_1, on stored arrays; kairn::dot of one limb calls
+# dot_1_entry, whose step dot_entry_step_1 guards both factors first (rule R3, the factors of a
+# fused operation). Not an entry kernel.
 kernel:        dot_step_1
-input:         stored s
+input:         s
 input:         x
 input:         y
 output:        t
@@ -16,7 +17,6 @@ ieee_lead_theorem: proofs/theories/IeeeFolds.v dot_step_1_ieee_lead
 source:        the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md)
 license:       proof: MIT
 status:        proved
-entry:         yes
 ieee:          bridge
 
 t = fma(x, y, s)

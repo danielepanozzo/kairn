@@ -40,7 +40,7 @@ FOLDS += ('dot_1_entry',)
 MAX_FOLDS = ('norm_upper_1', 'norm_upper_2')
 ALL = FOLDS + MAX_FOLDS
 # The convolutions, which write an array, have tests of their own (test_conv.py).
-CONVS = {'conv_1', 'conv_2'}
+CONVS = {'conv_1', 'conv_2', 'conv_1_entry'}
 # The maps, the folds that write an array, have tests of their own (test_maps.py).
 MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 'sub_2', 'sub_2_entry', 'axpy_1',
         'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2',

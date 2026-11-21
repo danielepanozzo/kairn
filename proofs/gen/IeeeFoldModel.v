@@ -522,6 +522,16 @@ Definition conv_1_conv (xs : list float) (ys : list float) : list float * bool :
   let m_ := fold_seq (fun m_ w_ => andb m_ (snd (conv_1_check w_))) true ws_ in
   (if m_ then ws_ else map (fun w_ => fst (conv_1_check w_)) ws_, m_).
 
+(* conv_1_entry: a convolution; coefficient j is dot_1_entry in the sequential order on the terms FoldModel.conv_terms xs ys j, checked by fold_finish_1. *)
+Definition conv_1_entry_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition conv_1_entry_conv (xs : list float) (ys : list float) : list float * bool :=
+  let ws_ := map (fun j => fold_seq dot_1_entry_step pzero (FoldModel.conv_terms xs ys j))
+                 (seq 0 (FoldModel.conv_length (length xs) (length ys))) in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (conv_1_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (conv_1_entry_check w_)) ws_, m_).
+
 (* conv_2: a convolution; coefficient j is dot_2 in the sequential order on the terms FoldModel.conv_terms xs ys j, checked by fold_finish_2. *)
 Definition conv_2_check (w_ : float * float) : float * float * bool :=
   IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).

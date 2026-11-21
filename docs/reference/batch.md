@@ -128,7 +128,7 @@ limbs and `a` of `T` ([`axpy_entry_step_2_1`](axpy_entry_step_2_1.md)), and
 $c = 3(1+4u^2)/(1-4u) + 4$, $t = 2$ for a two-limb `a`
 ([`axpy_entry_step_2`](axpy_entry_step_2.md)).
 
-**`conv(x, y, z)`** (loops `conv_1`, `conv_2`) writes the $n_x + n_y - 1$ coefficients of the
+**`conv(x, y, z)`** (loops `conv_1_entry`, `conv_2`; the coefficients of one limb by `dot_1_entry`, which guards both factors) writes the $n_x + n_y - 1$ coefficients of the
 product of the polynomials $x$ and $y$, none when either is empty: coefficient $j$ is `dot`, in its
 sequential order, of the terms $(x_i, y_{j-i})$ in increasing $i$, and satisfies the statement of
 `dot` for its own $m_j \le \min(n_x, n_y)$ terms.

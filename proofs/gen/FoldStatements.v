@@ -403,6 +403,20 @@ Definition conv_1_spec : Prop :=
       (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)))
     (seq 0 (conv_length (length xs) (length ys))) (conv_1_conv emin prec tie_even xs ys).
 
+(* conv_1_entry, each coefficient it writes: dot_1_entry on the terms of each coefficient. Status: proved. *)
+Definition conv_1_entry_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall xs ys : list R,
+  Forall (fun x => fmt emin prec x) xs ->
+  Forall (fun y => fmt emin prec y) ys ->
+  Forall2 (fun j s =>
+    let xys := conv_terms xs ys j in
+    fmt emin prec s /\
+    Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) xys)) <=
+      ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs (map (fun xy => (fst xy * snd xy)) xys) +
+      (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)))
+    (seq 0 (conv_length (length xs) (length ys))) (conv_1_entry_conv emin prec tie_even xs ys).
+
 (* conv_2, each coefficient it writes: dot_2 on the terms of each coefficient. Status: proved. *)
 Definition conv_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->

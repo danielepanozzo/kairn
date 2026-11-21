@@ -565,7 +565,6 @@ class R3Factors(unittest.TestCase):
         xy2 = ['x0', 'x1', 'y0', 'y1']
         ax2 = ['a0', 'a1', 'x0', 'x1']
         self.assertEqual(found, EXPOSED)
-        self.assertEqual(EXPOSED[('kernel', 'dot_step_1', 'dot_step_1')], ['x', 'y'])
         self.assertEqual(EXPOSED[('kernel', 'dot_step_2', 'dot_step_2')], xy2)
         self.assertEqual(EXPOSED[('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2')], ax2)
 
@@ -576,9 +575,10 @@ class R3Factors(unittest.TestCase):
         head = [ln for ln in lines if ln.startswith('R3, factors of a fused operation')]
         self.assertEqual(len(head), 1)
         self.assertIn(f'{len(found)} objects with exposed operands', head[0])
-        self.assertIn('  kernel dot_step_1: x: a factor of fma at t; y: a factor of fma at t; 1 operations, 3 with '
-                      'the guards; reached by batch.hpp conv(SoAView<T, K> x, SoAView<U, K> y, SoAView<V, K> z)',
-                      '\n'.join(lines))
+        self.assertIn('  kernel axpy_step_2_1: a: a factor of fms at e in two_prod (called for ch) in mul_2_1 (called '
+                      'for p0), a factor of fma at cl3 in mul_2_1 (called for p0); x0: a factor of fms at e in two_prod '
+                      '(called for ch) in mul_2_1 (called for p0); x1: a factor of fma at cl3 in mul_2_1 (called for p0); '
+                      '26 operations, 29 with the guards; reached by no public header', '\n'.join(lines))
         for e in found:
             self.assertTrue(any(ln.startswith(f'  {e.kind} {e.name}') for ln in lines), e.name)
 
@@ -598,7 +598,6 @@ class R3Factors(unittest.TestCase):
 # The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the
 # kernel analyzed) -> the exposed limbs of that kernel.
 EXPOSED = {
-    ('kernel', 'dot_step_1', 'dot_step_1'): ['x', 'y'],
     ('kernel', 'dot_step_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
     ('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('kernel', 'axpy_entry_step_2_1', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
@@ -610,9 +609,7 @@ EXPOSED = {
     ('loop', 'axpy_2_1_entry', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
     ('loop', 'axpy_2_entry', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('loop', 'bv_scale_2', 'scale_step_2'): ['a'],
-    ('loop', 'conv_1', 'dot_step_1'): ['x', 'y'],
     ('loop', 'conv_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-    ('loop', 'dot_1', 'dot_step_1'): ['x', 'y'],
     ('loop', 'dot_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
     ('loop', 'scale_2', 'scale_step_2'): ['a', 'x0', 'x1'],
 }
@@ -1285,7 +1282,9 @@ class R3OfTheKernels(unittest.TestCase):
     # The steps of the folds whose arrays the program supplies (milestone2.md, "Arrays that the
     # program fills"): those of the sums guard the element, those of the dot products only multiply
     # it. The functions on arrays of the public headers, which come later, call them through the folds.
-    FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_1', 'dot_step_2'}
+    FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_2'}
+    # dot_step_1 is not: the step of dot_1, on stored arrays (rule R3, the factors of a fused operation:
+    # kairn::dot and kairn::conv of one limb call dot_1_entry and conv_1_entry).
     # And the step of dot_1_entry, which guards both factors of its fused operation (rule R3, the
     # factors of a fused operation: architecture.md).
     FOLD_STEPS |= {'dot_entry_step_1'}
@@ -1395,7 +1394,7 @@ class R3OfTheKernels(unittest.TestCase):
         lines = build.summary(ks)
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2', 'dot_1_entry',
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
-                                         'conv_1', 'conv_2'} | MAPS |
+                                         'conv_1', 'conv_2', 'conv_1_entry'} | MAPS |
                          {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
                           'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'} |
                          {'bv_conv_1', 'bv_conv_2'})

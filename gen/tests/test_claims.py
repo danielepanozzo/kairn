@@ -711,7 +711,7 @@ class FoldClaims(unittest.TestCase):
     def test_the_folds(self):
         maps = {name for name, fd in self.ks.folds.items() if fd.is_map}
         convs = {name for name, fd in self.ks.folds.items() if fd.is_conv}
-        self.assertEqual(convs, {'conv_1', 'conv_2'})
+        self.assertEqual(convs, {'conv_1', 'conv_2', 'conv_1_entry'})
         self.assertTrue(all(self.by[n]['conv'] is True and 'map' not in self.by[n] for n in convs))
         # The ball vectors (test_bv.py), with "bv": true.
         bvs = {name for name, fd in self.ks.folds.items() if fd.is_bv}

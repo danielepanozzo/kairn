@@ -296,6 +296,7 @@ KAIRN_RUNNER_BV(bv_sub_2, "22", 2, 2, kairn::gen::bv_sub_2_seq(in[0], in[1], in[
 // lengths, w[i] limb array i written (T*), mo[0] the mask.
 #if defined(KAIRN_RUNNER_CONV)
 KAIRN_RUNNER_CONV(conv_1, "11", 1, kairn::gen::conv_1_seq(in[0], nx, in[1], ny, w[0], mo[0]))
+KAIRN_RUNNER_CONV(conv_1_entry, "11", 1, kairn::gen::conv_1_entry_seq(in[0], nx, in[1], ny, w[0], mo[0]))
 KAIRN_RUNNER_CONV(conv_2, "22", 2, kairn::gen::conv_2_seq(in[0], in[1], nx, in[2], in[3], ny, w[0], w[1], mo[0]))
 #endif
 // The products of ball vectors, for a runner that defines KAIRN_RUNNER_BV_CONV: as a convolution,

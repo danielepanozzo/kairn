@@ -24394,7 +24394,7 @@ inline void bv_sub_2_lanes(const float* x0_in, const float* x1_in, const float* 
     finite_out = rad_f_;
 }
 
-// convolution conv_1(supplied x, supplied y) -> z: coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_1 in its
+// convolution conv_1(stored x, stored y) -> z: coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_1 in its
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
 // overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
 inline void conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double* z_out, bool& finite_out) noexcept {
@@ -24443,6 +24443,80 @@ inline void conv_1_seq(const float* x_in, std::size_t n_x, const float* y_in, st
             const float y = y_in[j_ - i_];
             // (step_t) = dot_step_1(s, x, y)
             const float step_t = fma_rn(x, y, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const float chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// convolution conv_1_entry(supplied x, supplied y) -> z: coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_1_entry in its
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
+inline void conv_1_entry_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double* z_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        double s = 0.0;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const double x = x_in[i_];
+            const double y = y_in[j_ - i_];
+            // (step_t) = dot_entry_step_1(s, x, y)
+            const double step_gx = x + 0.0;
+            const double step_gy = y + 0.0;
+            const double step_t = fma_rn(step_gx, step_gy, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const double chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
+inline void conv_1_entry_seq(const float* x_in, std::size_t n_x, const float* y_in, std::size_t n_y, float* z_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        float s = 0.0f;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const float x = x_in[i_];
+            const float y = y_in[j_ - i_];
+            // (step_t) = dot_entry_step_1(s, x, y)
+            const float step_gx = x + 0.0f;
+            const float step_gy = y + 0.0f;
+            const float step_t = fma_rn(step_gx, step_gy, s);
             s = step_t;
         }
         z_out[j_] = s;
@@ -24622,7 +24696,7 @@ inline void conv_2_seq(const float* x0_in, const float* x1_in, std::size_t n_x, 
     finite_out = finite;
 }
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
+// fold dot_1(stored x, stored y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void dot_1_seq(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double s = 0.0;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -24656,7 +24730,7 @@ inline void dot_1_seq(const float* x_in, const float* y_in, std::size_t n, float
     flag_out = fin_flag;
 }
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
+// fold dot_1(stored x, stored y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void dot_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s = 0.0;

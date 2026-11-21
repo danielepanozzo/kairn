@@ -2752,6 +2752,11 @@ template <class T> struct conv_1;
 template <> struct conv_1<double> { static constexpr bool proved = true; };
 template <> struct conv_1<float> { static constexpr bool proved = true; };
 
+// conv_1_entry: proved. Runs add_1_1, dot_entry_step_1, fold_finish_1, the loop dot_1_entry.
+template <class T> struct conv_1_entry;
+template <> struct conv_1_entry<double> { static constexpr bool proved = true; };
+template <> struct conv_1_entry<float> { static constexpr bool proved = true; };
+
 // conv_2: proved. Runs add_2_2, dot_step_2, fold_finish_2, the loop dot_2.
 template <class T> struct conv_2;
 template <> struct conv_2<double> { static constexpr bool proved = true; };

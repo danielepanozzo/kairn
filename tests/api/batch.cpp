@@ -278,7 +278,7 @@ void convolutions_and_norms(Random& rnd) {
             const bool f = kairn::conv(a.view(), b.view(), z.view());
             bool fr = false;
             if constexpr (K == 1) {
-                kairn::gen::conv_1_seq(a.limb[0].data(), nx, b.limb[0].data(), ny, ref.limb[0].data(), fr);
+                kairn::gen::conv_1_entry_seq(a.limb[0].data(), nx, b.limb[0].data(), ny, ref.limb[0].data(), fr);
             } else {
                 kairn::gen::conv_2_seq(a.limb[0].data(), a.limb[1].data(), nx, b.limb[0].data(), b.limb[1].data(), ny,
                                        ref.limb[0].data(), ref.limb[1].data(), fr);

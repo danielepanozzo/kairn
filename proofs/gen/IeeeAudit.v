@@ -914,6 +914,9 @@ Print Assumptions sub_2_entry_lanes_ieee_correct.
 Definition conv_1_ieee_audit : conv_1_ieee_spec := conv_1_ieee_correct.
 Print Assumptions conv_1_ieee_correct.
 
+Definition conv_1_entry_ieee_audit : conv_1_entry_ieee_spec := conv_1_entry_ieee_correct.
+Print Assumptions conv_1_entry_ieee_correct.
+
 Definition conv_2_ieee_audit : conv_2_ieee_spec := conv_2_ieee_correct.
 Print Assumptions conv_2_ieee_correct.
 

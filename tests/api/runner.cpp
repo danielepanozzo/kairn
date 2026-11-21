@@ -1375,6 +1375,9 @@ const char* const internal[] = {
     // And the products of the accumulator, which add_product reaches through acc_mul_entry_1 and
     // acc_mul_entry_2, which guard the factors first.
     "acc_mul_1", "acc_mul_2",
+    // And the step of the dot product of one limb, of dot_1 on stored arrays: kairn::dot and kairn::conv
+    // of one limb call dot_1_entry and conv_1_entry, whose step guards the factors.
+    "dot_step_1",
     // And the scaling of a ball of two limbs, core and full form, which the operators reach through
     // ball_scale_2_full_entry, which guards the scalar first.
     "ball_scale_2", "ball_scale_2_full",
@@ -1411,7 +1414,7 @@ const NotPublic not_public[] = {
     {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core},
     {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
     {"sum_entry_step_1", fold_step}, {"sum_entry_step_2", fold_step}, {"sum_fast_entry_step_2", fold_step},
-    {"dot_step_1", fold_step}, {"dot_entry_step_1", fold_step}, {"dot_step_2", fold_step}, {"add_entry_step_1", fold_step},
+    {"dot_entry_step_1", fold_step}, {"dot_step_2", fold_step}, {"add_entry_step_1", fold_step},
     {"add_entry_step_2", fold_step}, {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step},
     {"scale_step_1", fold_step}, {"scale_step_2", fold_step}, {"mul_pow2_step_1", fold_step},
     {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},

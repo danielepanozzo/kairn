@@ -504,8 +504,9 @@ class Statements(unittest.TestCase):
         # acc_mul_entry_1, dot_entry_step_1 (bridge and lead) and dot_1_entry in both orders. And six
         # with the entry forms of the products: two_prod_entry, mul_down_entry, mul_up_entry,
         # mul_2_1_entry (bridge and statement) and mul_2_1_full_entry; and one with that of the scaling
-        # of a ball of two limbs, ball_scale_2_full_entry; and one with acc_mul_entry_2.
-        self.assertEqual(text.count('Print Assumptions'), 315)
+        # of a ball of two limbs, ball_scale_2_full_entry; and one with acc_mul_entry_2; and one with
+        # conv_1_entry, the convolution of one limb on its factors guarded.
+        self.assertEqual(text.count('Print Assumptions'), 316)
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
         self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'

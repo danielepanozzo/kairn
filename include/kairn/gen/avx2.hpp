@@ -19411,7 +19411,7 @@ inline void bv_sub_2_packed(const float* x0_in, const float* x1_in, const float*
     finite_out = rad_f_;
 }
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), proved (IEEE model).
+// fold dot_1(stored x, stored y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved (real model), proved (IEEE model).
 inline void dot_1_packed(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d s_lane_ = _mm256_setzero_pd();

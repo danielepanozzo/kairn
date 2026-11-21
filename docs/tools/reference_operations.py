@@ -832,14 +832,14 @@ KERNELS = {
     "sub_down_1": page("building-blocks", "A difference of two limbs rounded down"),
     "sub_up_1": page("building-blocks", "A difference of two limbs rounded up"),
     # --- Milestone 2, the folds: the steps, the finishes, the exported bounds ---------------------
-    "dot_step_1": page("arrays", "The step of a dot product of one limb: one fused multiply-add",
-                       form("conv(x, y, z)", V1, V1, W1, result="bool", note="each coefficient a sequential `dot_1` "
-                            "(loop `conv_1`)")),
+    "dot_step_1": page("arrays", "The step of a dot product of one limb, on stored arrays: one fused multiply-add"),
     "dot_entry_step_1": page("arrays", "The step of a dot product of one limb, on arrays of the program: one fused "
                              "multiply-add of the guarded elements",
                              form("dot(x, y)", V1, V1, result=R1, note=STEP_ORDER + " (loop `dot_1_entry`; each "
                                   "factor guarded, rule R3 on the factors of a fused operation)"),
-                             form("dot(x, y, sequential)", V1, V1, SEQ, result=R1)),
+                             form("dot(x, y, sequential)", V1, V1, SEQ, result=R1),
+                             form("conv(x, y, z)", V1, V1, W1, result="bool", note="each coefficient a sequential "
+                                  "`dot_1_entry` (loop `conv_1_entry`; each factor guarded)")),
     "dot_step_2": page("arrays", "The step of a dot product of two limbs",
                        form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2`)"),
                        form("dot(x, y, sequential)", V2, V2, SEQ, result=R2),

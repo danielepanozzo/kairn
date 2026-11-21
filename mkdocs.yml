@@ -294,7 +294,7 @@ nav:
           - A difference of two limbs rounded down: reference/sub_down_1.md
           - A difference of two limbs rounded up: reference/sub_up_1.md
       - Sums and dot products of arrays:
-          - "The step of a dot product of one limb: one fused multiply-add": reference/dot_step_1.md
+          - "The step of a dot product of one limb, on stored arrays: one fused multiply-add": reference/dot_step_1.md
           - "The step of a dot product of one limb, on arrays of the program: one fused multiply-add of the guarded elements": reference/dot_entry_step_1.md
           - The step of a dot product of two limbs: reference/dot_step_2.md
           - The step of a sum of one limb, on an array of the program: reference/sum_entry_step_1.md

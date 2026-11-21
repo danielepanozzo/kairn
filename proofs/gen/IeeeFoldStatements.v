@@ -1541,6 +1541,29 @@ Definition conv_1_ieee_spec : Prop :=
     (seq 0 (conv_length (length xs) (length ys))) ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
+(* conv_1_entry, each coefficient it writes, and its mask, in the IEEE model. Status: proved. *)
+Definition conv_1_entry_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall xs ys : list (binary_float prec emax),
+  let '(ws_, flag_) := IeeeFoldModel.conv_1_entry_conv prec emax nan_plus nan_abs nan_fma nan_const xs ys in
+  Forall2 (fun j w_ =>
+    let xys := conv_terms xs ys j in
+    (finite w_ ->
+     Forall (fun xy => finite (fst xy) /\ finite (snd xy)) xys /\
+     let vs := map (fun xy => (val (fst xy), val (snd xy))) xys in
+     let s := FoldModel.dot_1_entry_seq (ieee_emin prec emax) prec tie_even vs in
+     val w_ = s /\
+     fmt (ieee_emin prec emax) prec s /\
+     Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) vs)) <=
+         ((1 + (u prec / (1 + u prec))) ^ length vs - 1) * sumabs (map (fun xy => (fst xy * snd xy)) vs) +
+         (1 + (u prec / (1 + u prec))) ^ (length vs - 1) * (INR (length vs) * (eta (ieee_emin prec emax) / 2))) /\
+    (~ finite w_ -> nan w_ /\ flag_ = false))
+    (seq 0 (conv_length (length xs) (length ys))) ws_ /\
+  (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
+
 (* conv_2, each coefficient it writes, and its mask, in the IEEE model. Status: proved. *)
 Definition conv_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
