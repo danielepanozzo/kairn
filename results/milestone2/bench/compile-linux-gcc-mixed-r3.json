@@ -1,0 +1,382 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-21",
+ "commit": "dee8ecd",
+ "machine": {
+  "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU; shared with other jobs",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "pinning": "pinned to logical CPU 49"
+ },
+ "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+ "cxx": "g++",
+ "flags": "",
+ "kind": "mixed",
+ "timeout": 3600,
+ "reps": 1,
+ "run_reps": 21,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    3.247
+   ],
+   "cpu": [
+    3.241
+   ],
+   "peak_mb": [
+    152.2
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 81000,
+   "run": {
+    "ns_per_op_min": 18.73,
+    "ns_per_op_median": 18.8,
+    "calls_per_sample": 2126,
+    "samples": 21,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    0.608
+   ],
+   "cpu": [
+    0.606
+   ],
+   "peak_mb": [
+    85.0
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 26936,
+   "run": {
+    "ns_per_op_min": 20.21,
+    "ns_per_op_median": 20.29,
+    "calls_per_sample": 1965,
+    "samples": 21,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.386
+   ],
+   "cpu": [
+    0.383
+   ],
+   "peak_mb": [
+    75.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 10808,
+   "run": {
+    "ns_per_op_min": 20.16,
+    "ns_per_op_median": 20.32,
+    "calls_per_sample": 1966,
+    "samples": 21,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    3.363
+   ],
+   "cpu": [
+    3.358
+   ],
+   "peak_mb": [
+    149.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 80872,
+   "run": {
+    "ns_per_op_min": 18.86,
+    "ns_per_op_median": 19.01,
+    "calls_per_sample": 2114,
+    "samples": 21,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    0.623
+   ],
+   "cpu": [
+    0.62
+   ],
+   "peak_mb": [
+    85.0
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 26936,
+   "run": {
+    "ns_per_op_min": 20.01,
+    "ns_per_op_median": 20.15,
+    "calls_per_sample": 1899,
+    "samples": 21,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.385
+   ],
+   "cpu": [
+    0.383
+   ],
+   "peak_mb": [
+    75.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 10808,
+   "run": {
+    "ns_per_op_min": 20.02,
+    "ns_per_op_median": 20.18,
+    "calls_per_sample": 1992,
+    "samples": 21,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    117.386
+   ],
+   "cpu": [
+    117.353
+   ],
+   "peak_mb": [
+    755.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 797584,
+   "run": {
+    "ns_per_op_min": 21.22,
+    "ns_per_op_median": 21.35,
+    "calls_per_sample": 185,
+    "samples": 21,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    1.357
+   ],
+   "cpu": [
+    1.354
+   ],
+   "peak_mb": [
+    124.4
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 98040,
+   "run": {
+    "ns_per_op_min": 19.23,
+    "ns_per_op_median": 19.29,
+    "calls_per_sample": 200,
+    "samples": 21,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    1.059
+   ],
+   "cpu": [
+    1.056
+   ],
+   "peak_mb": [
+    116.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 81896,
+   "run": {
+    "ns_per_op_min": 19.27,
+    "ns_per_op_median": 19.3,
+    "calls_per_sample": 206,
+    "samples": 21,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    118.599
+   ],
+   "cpu": [
+    118.559
+   ],
+   "peak_mb": [
+    756.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 797232,
+   "run": {
+    "ns_per_op_min": 20.21,
+    "ns_per_op_median": 20.37,
+    "calls_per_sample": 177,
+    "samples": 21,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    1.36
+   ],
+   "cpu": [
+    1.358
+   ],
+   "peak_mb": [
+    124.9
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 98040,
+   "run": {
+    "ns_per_op_min": 19.23,
+    "ns_per_op_median": 19.27,
+    "calls_per_sample": 207,
+    "samples": 21,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    1.067
+   ],
+   "cpu": [
+    1.064
+   ],
+   "peak_mb": [
+    117.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 81896,
+   "run": {
+    "ns_per_op_min": 19.27,
+    "ns_per_op_median": 19.3,
+    "calls_per_sample": 207,
+    "samples": 21,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.855
+   ],
+   "cpu": [
+    0.853
+   ],
+   "peak_mb": [
+    91.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 44888
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.862
+   ],
+   "cpu": [
+    0.859
+   ],
+   "peak_mb": [
+    91.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 44888
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "what": "kairn-bench-m2-modes",
+  "cpu": "Apple M3 Max",
+  "compiler": "GCC 16.2.0",
+  "flags": "-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off",
+  "check": {"directed_results": 1024, "differ_from_nearest": 512, "wrong": 0},
+  "results": [
+    {"op": "add", "mode": "nearest", "ns_min": 0.3079, "ns_median": 0.3083},
+    {"op": "add", "mode": "downward", "ns_min": 0.3079, "ns_median": 0.3082},
+    {"op": "add", "mode": "upward", "ns_min": 0.3079, "ns_median": 0.3083},
+    {"op": "add", "mode": "towardzero", "ns_min": 0.3079, "ns_median": 0.3083},
+    {"op": "mul", "mode": "nearest", "ns_min": 0.3076, "ns_median": 0.3079},
+    {"op": "mul", "mode": "downward", "ns_min": 0.3076, "ns_median": 0.3078},
+    {"op": "mul", "mode": "upward", "ns_min": 0.3076, "ns_median": 0.308},
+    {"op": "mul", "mode": "towardzero", "ns_min": 0.3075, "ns_median": 0.3079}
+  ]
+}

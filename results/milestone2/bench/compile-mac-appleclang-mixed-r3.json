@@ -1,0 +1,382 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-21",
+ "commit": "dee8ecd",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity); shared with other jobs",
+  "cpu": "Apple M3 Max",
+  "pinning": "not pinned"
+ },
+ "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+ "cxx": "c++",
+ "flags": "",
+ "kind": "mixed",
+ "timeout": 3600,
+ "reps": 1,
+ "run_reps": 41,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    0.477
+   ],
+   "cpu": [
+    0.472
+   ],
+   "peak_mb": [
+    79.6
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 41128,
+   "run": {
+    "ns_per_op_min": 7.568,
+    "ns_per_op_median": 7.983,
+    "calls_per_sample": 5041,
+    "samples": 41,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    0.229
+   ],
+   "cpu": [
+    0.225
+   ],
+   "peak_mb": [
+    66.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 12968,
+   "run": {
+    "ns_per_op_min": 8.211,
+    "ns_per_op_median": 8.222,
+    "calls_per_sample": 4858,
+    "samples": 41,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.156
+   ],
+   "cpu": [
+    0.152
+   ],
+   "peak_mb": [
+    58.9
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 5432,
+   "run": {
+    "ns_per_op_min": 8.198,
+    "ns_per_op_median": 8.407,
+    "calls_per_sample": 4755,
+    "samples": 41,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    0.478
+   ],
+   "cpu": [
+    0.473
+   ],
+   "peak_mb": [
+    79.3
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 41144,
+   "run": {
+    "ns_per_op_min": 7.577,
+    "ns_per_op_median": 7.998,
+    "calls_per_sample": 4924,
+    "samples": 41,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    0.231
+   ],
+   "cpu": [
+    0.227
+   ],
+   "peak_mb": [
+    66.2
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 12968,
+   "run": {
+    "ns_per_op_min": 6.861,
+    "ns_per_op_median": 7.469,
+    "calls_per_sample": 5759,
+    "samples": 41,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.159
+   ],
+   "cpu": [
+    0.154
+   ],
+   "peak_mb": [
+    59.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 5432,
+   "run": {
+    "ns_per_op_min": 7.821,
+    "ns_per_op_median": 8.268,
+    "calls_per_sample": 4775,
+    "samples": 41,
+    "finite": 100,
+    "written": 40
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    3.514
+   ],
+   "cpu": [
+    3.508
+   ],
+   "peak_mb": [
+    260.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 366280,
+   "run": {
+    "ns_per_op_min": 6.386,
+    "ns_per_op_median": 6.434,
+    "calls_per_sample": 619,
+    "samples": 41,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    0.388
+   ],
+   "cpu": [
+    0.384
+   ],
+   "peak_mb": [
+    88.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 58856,
+   "run": {
+    "ns_per_op_min": 6.795,
+    "ns_per_op_median": 6.849,
+    "calls_per_sample": 586,
+    "samples": 41,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.337
+   ],
+   "cpu": [
+    0.333
+   ],
+   "peak_mb": [
+    82.7
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 51328,
+   "run": {
+    "ns_per_op_min": 6.585,
+    "ns_per_op_median": 6.873,
+    "calls_per_sample": 582,
+    "samples": 41,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    3.428
+   ],
+   "cpu": [
+    3.422
+   ],
+   "peak_mb": [
+    258.7
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 366360,
+   "run": {
+    "ns_per_op_min": 6.39,
+    "ns_per_op_median": 6.406,
+    "calls_per_sample": 617,
+    "samples": 41,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    0.391
+   ],
+   "cpu": [
+    0.387
+   ],
+   "peak_mb": [
+    88.6
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 58856,
+   "run": {
+    "ns_per_op_min": 6.801,
+    "ns_per_op_median": 6.832,
+    "calls_per_sample": 584,
+    "samples": 41,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.333
+   ],
+   "cpu": [
+    0.329
+   ],
+   "peak_mb": [
+    82.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 51328,
+   "run": {
+    "ns_per_op_min": 6.933,
+    "ns_per_op_median": 6.954,
+    "calls_per_sample": 577,
+    "samples": 41,
+    "finite": 1000,
+    "written": 400
+   }
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.212
+   ],
+   "cpu": [
+    0.208
+   ],
+   "peak_mb": [
+    69.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 23024
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.215
+   ],
+   "cpu": [
+    0.211
+   ],
+   "peak_mb": [
+    69.9
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 23024
+  }
+ ]
+}

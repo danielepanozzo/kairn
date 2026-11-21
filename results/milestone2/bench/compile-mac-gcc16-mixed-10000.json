@@ -1,0 +1,147 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-21",
+ "commit": "dee8ecd",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity); shared with other jobs",
+  "cpu": "Apple M3 Max",
+  "pinning": "not pinned"
+ },
+ "compiler": "g++-16 (Homebrew GCC 16.2.0) 16.2.0",
+ "cxx": "g++-16",
+ "flags": "",
+ "kind": "mixed",
+ "timeout": 1800,
+ "reps": 3,
+ "run_reps": 41,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    433.594
+   ],
+   "cpu": [
+    433.58
+   ],
+   "peak_mb": [
+    12776.7
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 4881808,
+   "run": {
+    "ns_per_op_min": 8.9,
+    "ns_per_op_median": 9.2,
+    "calls_per_sample": 1,
+    "samples": 41,
+    "finite": 10000,
+    "written": 4000
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    23.693
+   ],
+   "cpu": [
+    23.684
+   ],
+   "peak_mb": [
+    1217.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 943456,
+   "run": {
+    "ns_per_op_min": 6.628,
+    "ns_per_op_median": 6.653,
+    "calls_per_sample": 60,
+    "samples": 41,
+    "finite": 10000,
+    "written": 4000
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    25.142
+   ],
+   "cpu": [
+    25.128
+   ],
+   "peak_mb": [
+    1212.0
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 935352,
+   "run": {
+    "ns_per_op_min": 10.13,
+    "ns_per_op_median": 11.3,
+    "calls_per_sample": 3,
+    "samples": 41,
+    "finite": 10000,
+    "written": 4000
+   }
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "calls",
+   "wall": [
+    14.375
+   ],
+   "cpu": [
+    14.367
+   ],
+   "peak_mb": [
+    948.9
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 831880
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.498,
+    0.498,
+    0.495
+   ],
+   "cpu": [
+    0.49,
+    0.49,
+    0.488
+   ],
+   "peak_mb": [
+    102.4,
+    102.4,
+    102.4
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 22112
+  }
+ ]
+}
