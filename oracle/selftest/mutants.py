@@ -1175,6 +1175,28 @@ MUTANTS.update({
         '        if False:\n            es.count("failed: center")'),
     "makes_ball with rel: rel without abs accepted": (
         "intervals.py", '        if "rel" not in raw or "abs" not in raw:', "        if False:"),
+    # The formats of the statements (the owner's ruling of 2026-11-21) for finite_when of
+    # ball_of_interval and bounded_when of interval_of_ball with bounds of two limbs.
+    "finite_when: claimed in every format (the ruling of 2026-11-21 not applied)": (
+        "intervals.py",
+        "    claimed, beyond = statement_format(fmt)\n    holds, ratio = _fw_conditions(",
+        "    claimed, beyond = True, statement_format(fmt)[1]\n    holds, ratio = _fw_conditions("),
+    "finite_when: a format of no statement not counted": (
+        "intervals.py", "        es.count(FW_RANGE)\n", ""),
+    "finite_when: the conditions counted in a format of no statement": (
+        "intervals.py", "_fw_conditions(fmt, c, x, es if claimed else None)",
+        "_fw_conditions(fmt, c, x, es)"),
+    "finite_when: a failure in a wider subnormal range not said to be a finding": (
+        "intervals.py", '"every condition of finite_when holds and the radius is +inf"\n                 + beyond)',
+        '"every condition of finite_when holds and the radius is +inf")'),
+    "bounded_when of two limbs: claimed in every format (the ruling of 2026-11-21 not applied)": (
+        "intervals.py", '    claimed, beyond = statement_format(fmt)\n    if c["bw"] and not claimed:',
+        '    claimed, beyond = True, statement_format(fmt)[1]\n    if c["bw"] and not claimed:'),
+    "bounded_when of two limbs: a format of no statement not counted": (
+        "intervals.py", "        es.count(I5_RANGE)\n", "        pass\n"),
+    "bounded_when of two limbs: a failure in a wider subnormal range not said to be a finding": (
+        "intervals.py", '"bounded_when gives an unbounded result" + beyond)',
+        '"bounded_when gives an unbounded result")'),
     # The strata of the family (genenc.py) and of the conversions of two limbs (gen6.py).
     "genenc: special without the empty set or the whole line": (
         "genenc.py", '        ivs[j] = _special_iv(fmt, rng, k, ("empty", "whole")[rng.below(2)])', "        pass"),

@@ -1677,6 +1677,20 @@ class EnclosureGuards(unittest.TestCase):
             s = edited(good, 0, lambda e: e["maxima"].update({CG.ENC_BAND_UNITS: [["3", "1"], ""]}))
             self.passes(s, k, IV, *self.args)
 
+    def test_the_formats_of_the_statements(self):
+        # finite_when and bounded_when of two limbs in a format of no statement (q_max < 1): not
+        # claimed (the owner's ruling of 2026-11-21), and the guards ask for the judge's count of
+        # that in place of the conditions'.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        for k, name in (("interval_mid_rad_2", CG.IV_FW_RANGE),
+                        ("interval_to_ball_2", CG.IV_FW_RANGE),
+                        ("ball_to_interval_2", CG.IV_I5_RANGE)):
+            s = pipeline(k, "fp:3:-2:-1", "--exhaustive")
+            self.passes(s, k, "fp:3:-2:-1", "--exhaustive")
+            bad = edited(s, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(bad, k, "fp:3:-2:-1", "--exhaustive", reason='saw no case of "%s"' % name)
+
     def test_the_bounds_far_from_reached(self):
         name = "lower: distance from the range bound / (rel*|bound| + abs)"
         s = edited(self.runs["ball_to_interval_2"], 0, lambda e: e["maxima"].update(

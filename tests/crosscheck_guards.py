@@ -697,7 +697,9 @@ def iv_needs(kernel, e, a):
             for c in ((e.get("tight") or {}).get("exact_when") or {}).get(s, []):
                 need.append("%s: exact_when holds" % s)
                 need.append("%s: exact_when fails: %s" % (s, iv_condition_text(c)))
-        if e.get("bounded_when"):
+        if e.get("bounded_when") and outside_statements(a):
+            need.append(IV_I5_RANGE)
+        elif e.get("bounded_when"):
             need += IV_I5
     elif kind in ("set_bound", "interval_of_ball"):
         need += IV_BALLS
@@ -714,10 +716,14 @@ def iv_needs(kernel, e, a):
             need.append(IV_ODD)
         if e.get("finite_when"):
             # finite_when (the conversions of two limbs): each condition holding and failing, and
-            # the radius +inf (the whole line, for a ball) of a bounded interval.
-            need.append(IV_FW_HOLDS)
-            for c in e["finite_when"]:
-                need.append(IV_FW_FAILS + iv_bound_condition_text(c))
+            # the radius +inf (the whole line, for a ball) of a bounded interval; in a format of
+            # no statement (outside_statements) the judge's count that nothing is claimed there.
+            if outside_statements(a):
+                need.append(IV_FW_RANGE)
+            else:
+                need.append(IV_FW_HOLDS)
+                for c in e["finite_when"]:
+                    need.append(IV_FW_FAILS + iv_bound_condition_text(c))
             need.append(IV_FW_INFINITE if e.get("special") == "ieee1788" else IV_FW_WHOLE)
     elif kind in ("bound", "rounded") and e.get("zero_factor"):
         need += IV_ZF
@@ -729,6 +735,20 @@ IV_FW_HOLDS = "finite_when holds"
 IV_FW_FAILS = "finite_when fails: "
 IV_FW_INFINITE = "bounded X, the radius +inf"
 IV_FW_WHOLE = "bounded X, the whole line"
+IV_FW_RANGE = ("finite_when not claimed: a format of no statement (e_max <= p, or eta above "
+               "binary_float's)")
+IV_I5_RANGE = ("bounded_when not claimed: a format of no statement (e_max <= p, or eta above "
+               "binary_float's)")
+
+
+def outside_statements(a):
+    """Whether the run's format is one of no statement: a toy format fp:p:qmin:qmax with
+    q_max < 1 or q_min > 3 - q_max - 2p (the owner's ruling of 2026-11-21, architecture.md, "The
+    formats of the statements"), where a clause that promises a finite or bounded result is not
+    claimed and the judge counts that (as for V4 of the ball vectors, bv_problems)."""
+    m = re.fullmatch(r"fp:(\d+):(-?\d+):(-?\d+)", getattr(a, "format", None) or "")
+    return m is not None and not (int(m.group(3)) >= 1 and int(m.group(2)) <= 3 - int(
+        m.group(3)) - 2 * int(m.group(1)))
 
 
 def iv_bound_condition_text(c):

@@ -1926,7 +1926,11 @@ def _interval_of_ball_two(pl, c, es, x, z, fail, out, line):
             fail("tight", "the %s bound is farther from the set than rel*|bound| + abs" % name)
     if not bounded(zs):
         es.count(BOUNDED_TO_UNBOUNDED)
-    if c["bw"]:
+    # bounded_when, in the formats of statement_format (counted as not claimed in any other).
+    claimed, beyond = statement_format(fmt)
+    if c["bw"] and not claimed:
+        es.count(I5_RANGE)
+    elif c["bw"]:
         holds = True
         for kind, e in c["bw"]:
             a1, b1 = _limit_ratio(fmt, kind, e, lo, s)
@@ -1938,7 +1942,7 @@ def _interval_of_ball_two(pl, c, es, x, z, fail, out, line):
             es.track_max(I5_NEAR_HOLDS, r, line)
             if not bounded(zs):
                 fail("bounded_when", "a finite ball whose members are within the limit of "
-                                     "bounded_when gives an unbounded result")
+                                     "bounded_when gives an unbounded result" + beyond)
         else:
             es.track_min(I5_NEAR_FAILS, r, line)
     return out
@@ -2070,11 +2074,25 @@ FW_WHOLE = "bounded X, the whole line"
 FW_FINITE_FAILS = "finite_when fails and the ball is finite (its center not claimed)"
 FW_RATIO_FINITE = "a finite radius: largest max|bound| / 2^(qmax+p)"
 FW_RATIO_INFINITE = "the radius +inf: smallest max|bound| / 2^(qmax+p)"
+FW_RANGE = "finite_when not claimed: a format of no statement (e_max <= p, or eta above binary_float's)"
+I5_RANGE = "bounded_when not claimed: a format of no statement (e_max <= p, or eta above binary_float's)"
+
+
+def statement_format(fmt):
+    """(claimed, beyond) for a clause that promises a finite or bounded result, by the owner's
+    ruling of 2026-11-21 (architecture.md, "The formats of the statements"): claimed in the formats
+    of binary_float's shape, and judged in those of a wider subnormal range too, where a failure
+    is a finding to report, not a violated claim (beyond, the text its failure carries); not
+    claimed in any other toy format. The rule of V4 of the ball vectors, bvfolds.v4_range and
+    bvfolds.v4_beyond, for finite_when of ball_of_interval and bounded_when of interval_of_ball
+    with bounds of two limbs."""
+    from . import bvfolds as BF
+    return BF.v4_range(fmt), BF.v4_beyond(fmt)
 
 
 def _fw_conditions(fmt, c, x, es):
-    """Whether every condition of finite_when holds of the bounded interval x (counted), and
-    max|bound| / 2^(qmax+p) as a fraction."""
+    """Whether every condition of finite_when holds of the bounded interval x (counted, unless es
+    is None), and max|bound| / 2^(qmax+p) as a fraction."""
     q = fmt.qmin
     bad = []
     big = 0
@@ -2085,9 +2103,9 @@ def _fw_conditions(fmt, c, x, es):
         ok = v <= (1 << k) if k >= 0 else (v << -k) <= 1
         if not ok:
             bad.append("|%s| <= 2^(qmax+p%+d)" % (n, ex) if ex else "|%s| <= 2^(qmax+p)" % n)
-    for t in bad:
+    for t in (bad if es is not None else ()):
         es.count(FW_FAILS + t)
-    if not bad:
+    if not bad and es is not None:
         es.count(FW_HOLDS)
     T = fmt.qmax + fmt.p - q
     return not bad, (big, 1 << T) if T >= 0 else (big << -T, 1)
@@ -2098,13 +2116,19 @@ def _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line):
     "... the conversions of two limbs"): with ieee1788 the center finite, between the bounds and
     within rel*|m| + abs of m, the radius +inf or a finite number with which the center contains X,
     finite when every condition holds; with ball a canonical ball that contains X, and when every
-    condition holds a finite one whose center is as without the field."""
+    condition holds a finite one whose center is as without the field. The clause of the
+    conditions is claimed in the formats of statement_format, and counted as not claimed in any
+    other (then the radius may be +inf, and with ball the center is not claimed)."""
     fmt = pl.fmt
     q = fmt.qmin
     L, U = X_[1], X_[2]
     if _odd_eta_low(fmt, L) or _odd_eta_low(fmt, U):
         es.count(X_ODD)
-    holds, ratio = _fw_conditions(fmt, c, x, es)
+    claimed, beyond = statement_format(fmt)
+    holds, ratio = _fw_conditions(fmt, c, x, es if claimed else None)
+    if not claimed:
+        es.count(FW_RANGE)
+        holds = False
     if ieee:
         if (not all(type(v) is int for v in cw) or not F.normalized_limbs(fmt, cw)
                 or not (r == INF or (type(r) is int and r >= 0))):
@@ -2123,15 +2147,18 @@ def _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line):
         finite_center = stt == "finite"
     if r == INF:
         es.count(FW_INFINITE if ieee else FW_WHOLE)
-        es.track_min(FW_RATIO_INFINITE, ratio, line)
+        if claimed:
+            es.track_min(FW_RATIO_INFINITE, ratio, line)
         if holds:
-            fail("finite_when", "every condition of finite_when holds and the radius is +inf")
+            fail("finite_when", "every condition of finite_when holds and the radius is +inf"
+                 + beyond)
             return out
         if not ieee:
             return out
     else:
-        es.track_max(FW_RATIO_FINITE, ratio, line)
-        if not holds and not ieee:
+        if claimed:
+            es.track_max(FW_RATIO_FINITE, ratio, line)
+        if not holds and not ieee and claimed:
             es.count(FW_FINITE_FAILS)
     cv = sum(cw)
     if type(r) is int and (cv - r > L or cv + r < U):

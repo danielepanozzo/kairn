@@ -1202,6 +1202,48 @@ HAND = [
 ]
 
 
+# The formats of the statements (the owner's ruling of 2026-11-21; architecture.md, "The formats of
+# the statements"): finite_when of ball_of_interval and bounded_when of interval_of_ball with
+# bounds of two limbs are claimed in the formats of binary_float's shape (q_max >= 1, q_min = 3 -
+# q_max - 2p), judged in a format of a wider subnormal range, where a failure says that it is a
+# finding, and counted as not claimed in any other. The same X = [1/2, 1] (and the ball 1/2 +- 1/4,
+# members in [1/4, 3/4]), within the limit 2^(q_max+p-2) of every format below, in fp:3:-4:1 (the
+# shape: the limit 4), fp:3:-5:1 (a wider subnormal range) and fp:3:-2:-1 (q_max < 1: no
+# statement; the limit 1). Each case: the line, the statements that fail, a text of the reason,
+# a count of the entry.
+FORMAT_RULE = [
+    ("interval_mid_rad_2 fp:3:-4:1 0x1p-1 0x0p+0 0x1p+0 0x0p+0 -> 0x1.8p-1 0x0p+0 inf",
+     ("finite_when",), "the radius is +inf", IV.FW_HOLDS),
+    ("interval_mid_rad_2 fp:3:-5:1 0x1p-1 0x0p+0 0x1p+0 0x0p+0 -> 0x1.8p-1 0x0p+0 inf",
+     ("finite_when",), "a finding to report", IV.FW_HOLDS),
+    ("interval_mid_rad_2 fp:3:-2:-1 0x1p-1 0x0p+0 0x1p+0 0x0p+0 -> 0x1.8p-1 0x0p+0 inf",
+     (), None, IV.FW_RANGE),
+    ("interval_mid_rad_2 fp:3:-2:-1 0x1p-1 0x0p+0 0x1p+0 0x0p+0 -> 0x1.8p-1 0x0p+0 0x1p-2",
+     (), None, IV.FW_RANGE),
+    # The center of 1788 is claimed in every format, the clause of the conditions or not: 5/4 is
+    # outside X (and within rel|m| + abs of the midpoint, abs = 2 eta = 1/2 there).
+    ("interval_mid_rad_2 fp:3:-2:-1 0x1p-1 0x0p+0 0x1p+0 0x0p+0 -> 0x1.4p+0 0x0p+0 inf",
+     ("center",), None, IV.FW_RANGE),
+    ("interval_to_ball_2 fp:3:-4:1 0x1p-1 0x0p+0 0x1p+0 0x0p+0 -> 0x0p+0 0x0p+0 inf",
+     ("finite_when",), "the radius is +inf", IV.FW_HOLDS),
+    ("interval_to_ball_2 fp:3:-2:-1 0x1p-1 0x0p+0 0x1p+0 0x0p+0 -> 0x0p+0 0x0p+0 inf",
+     (), None, IV.FW_RANGE),
+    # With ball, the center is claimed with the clause: a finite ball centered at 1.
+    ("interval_to_ball_2 fp:3:-4:1 0x1p-1 0x0p+0 0x1p+0 0x0p+0 -> 0x1p+0 0x0p+0 0x1p-1",
+     ("midpoint",), None, IV.FW_HOLDS),
+    ("interval_to_ball_2 fp:3:-2:-1 0x1p-1 0x0p+0 0x1p+0 0x0p+0 -> 0x1p+0 0x0p+0 0x1p-1",
+     (), None, IV.FW_RANGE),
+    ("ball_to_interval_2 fp:3:-4:1 0x1p-1 0x0p+0 0x1p-2 -> -inf 0x0p+0 0x1.8p-1 0x0p+0",
+     ("bounded_when",), "gives an unbounded result", IV.I5_HOLDS),
+    ("ball_to_interval_2 fp:3:-5:1 0x1p-1 0x0p+0 0x1p-2 -> -inf 0x0p+0 0x1.8p-1 0x0p+0",
+     ("bounded_when",), "a finding to report", IV.I5_HOLDS),
+    ("ball_to_interval_2 fp:3:-2:-1 0x1p-1 0x0p+0 0x1p-2 -> -inf 0x0p+0 0x1.8p-1 0x0p+0",
+     (), None, IV.I5_RANGE),
+    ("ball_to_interval_2 fp:3:-2:-1 0x1p-1 0x0p+0 0x1p-2 -> 0x1p-2 0x0p+0 0x1.8p-1 0x0p+0",
+     (), None, IV.I5_RANGE),
+]
+
+
 @test
 def enc_judge(ctx):
     """Hand-written lines judged as worked out by hand, each failure in its statement: one or more
@@ -1227,9 +1269,27 @@ def enc_judge(ctx):
     for line in INVALID:
         t = totals(judge([line], cl))
         expect(t["invalid"] == 1, "%s: not invalid (%s)" % (line, t))
+    for line, want, why, count in FORMAT_RULE:
+        kernel = line.split()[0]
+        s = judge([line], cl)
+        t = totals(s)
+        expect(t["invalid"] == 0 and t["judged"] == 1, "%s: not judged (%s)" % (line, t))
+        got = failed_statements(s, kernel)
+        expect(t["failed"] == (1 if want else 0) and got == set(want),
+               "%s: failed %s, not %s" % (line, sorted(got), list(want)))
+        reasons = " ".join(r for st in s.keys.values() for r in st.reasons)
+        expect(why is None or why in reasons, "%s: failed for %r, not %r" % (line, reasons, why))
+        expect(("a finding to report" in reasons) == (why == "a finding to report"),
+               "%s: a finding said, or not said, otherwise (%r)" % (line, reasons))
+        counts = {c for d in entry_stats(s, kernel).values() for c in d[3]}
+        expect(count in counts, "%s: %r not counted (%s)" % (line, count, sorted(counts)))
+        if count in (IV.FW_RANGE, IV.I5_RANGE):
+            expect(not counts & {IV.FW_HOLDS, IV.I5_HOLDS, IV.I5_FAILS} and not any(
+                c.startswith(IV.FW_FAILS) for c in counts),
+                "%s: the conditions counted where nothing is claimed (%s)" % (line, sorted(counts)))
     cells = _cells(cl)
-    return "%d hand-written lines, %d invalid ones, %d lines of the cells of the constructors" % (
-        n, len(INVALID), cells)
+    return ("%d hand-written lines, %d invalid ones, %d lines of the formats of the statements, "
+            "%d lines of the cells of the constructors" % (n, len(INVALID), len(FORMAT_RULE), cells))
 
 
 INVALID = [

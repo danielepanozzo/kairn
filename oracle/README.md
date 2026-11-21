@@ -743,7 +743,9 @@ checks this reading against the definitions quantified over the members of sets 
   where every condition holds a finite one whose center is as without the field. With `ieee1788`
   and a center of two limbs the center is canonical on every line (**canonical**), the special
   values of 1788 as before. `finite_when` and `smallest_radius` together are refused (the radius
-  may be $+\infty$, which is not the smallest).
+  may be $+\infty$, which is not the smallest). The clause of the conditions (with `ball`, the
+  finite ball and its center) is claimed in the formats of the statements only ("The formats of
+  V4", below, the ruling of 2026-11-21).
 - **`interval_of_ball` with bounds of two limbs** (`ball_to_interval_2`): `tight` must be the
   outward tightness (a rounded one is refused for two limbs), with `rel`, `abs` and `exact_when`
   by side; the result canonical, empty exactly when the ball is, containing the set
@@ -752,8 +754,8 @@ checks this reading against the definitions quantified over the members of sets 
   a side whose conditions hold the set's bound exactly (**exact_when**), whether or not the result
   is bounded (the stricter reading, as for `encloses_interval`); and for a finite ball a result
   that is bounded where every member is within the limit of `bounded_when` (**bounded_when**, not
-  exactly). `bounded_when` is for bounds of two limbs only, of the form
-  `{"abs_le": SET, "exp": E}`, SET the entry's own set.
+  exactly), in the formats of the statements only (the ruling of 2026-11-21). `bounded_when` is
+  for bounds of two limbs only, of the form `{"abs_le": SET, "exp": E}`, SET the entry's own set.
 - **`makes_ball` from an interval with `rel`, `abs` and `smallest_radius`**
   (`ball_from_interval_1`; `rel` and `abs` together, `smallest_radius` only with them): the table
   of the constructors as before, and for finite bounds $lo \le hi$ the center between them
@@ -797,8 +799,8 @@ enumerations of the toy formats. Away from the boundary the answers are given: o
 cases of `ball_less_2` in `binary64`, the strata `uniform` and `pow2` left 1 unanswered of 2 223,
 and the others are in the strata aimed at the boundary (`boundary`, `near`, `points`, `zero`) or
 at overflow (`huge`, `overflow`). The yes of `ball_equal_2`
-is exact, architecture.md says (both balls the same point), but the claim does not say so: an
-unknown there passes (a hand-written line has it).
+(both balls the same point) is not claimed exact, as its generated statement has it and
+architecture.md says: an unknown there passes (a hand-written line has it).
 
 Statistics, per entry (the cross-checks' guards read them; `enclosure.py` names them): for
 `certain` and `trit` the relation (`the relation holds`, `does not hold`, `fails for every choice`,
@@ -1649,6 +1651,19 @@ that.*
   and $q_{\min} \le 3 - q_{\max} - 2p$, a failure in a format of a wider subnormal range saying
   that it is a finding, not a violated claim (`bvfolds.v4_beyond`), and counted `V4 not claimed:
   a format of no statement (e_max <= p, or eta above binary_float's)` elsewhere.
+- `finite_when` of `ball_of_interval` (`interval_mid_rad_2`, `interval_to_ball_2`) and
+  `bounded_when` of `interval_of_ball` with bounds of two limbs (`ball_to_interval_2`), the
+  conversions of two limbs of stage B2, follow it too (`intervals.statement_format`, which reads
+  `bvfolds.v4_range` and `bvfolds.v4_beyond`): judged in the same formats, a failure in a format of
+  a wider subnormal range saying that it is a finding, and counted `finite_when not claimed: a
+  format of no statement (e_max <= p, or eta above binary_float's)` (`bounded_when not claimed:
+  ...`) elsewhere, the conditions then not counted, which the guards ask a run in such a format to
+  say; with `ball` the center, which is claimed with the clause, is not judged there either, and
+  with `ieee1788` the center of 1788 is judged in every format. The formats of their cross-checks
+  (`binary64`, `binary32`, `fp:3:-4:1`, `fp:4:-6:1`) are all of `binary_float`'s shape, so the
+  rule changes no verdict there; the selftest's enumerations in `fp:3:-2:-1` ($q_{\max} < 1$)
+  count the clause as not claimed, where it was judged (and passed) before. 13 hand-judged lines
+  (`enc_judge`) and seven mutants hold it.
 - The `finite_when` of the Milestone 1 kernels (F3 of `extends`, B4 of `encloses`: the full
   kernels, the full Ball kernels, `ball_narrow_2_1`) and the `bounded_when` of the interval
   kernels (I5), clauses of the same sort, are judged in **every** format, those outside
@@ -2148,9 +2163,11 @@ as half of $\Omega$, both answers, the operands as they are and the clause of X 
 special, the sign of a zero, a NaN against a NaN, emptiness, containment, the parts of a split,
 `finite_when` and its limit one binade off either way, the center of 1788 beyond the limit, the
 canonical center, the tightness, `exact_when` and `bounded_when` of two limbs, the center, midpoint
-and smallest radius of a ball from an interval), a relation read on the wrong side, with the
-wrong strictness or without its empty set or infinite bound, a set without its radius, a count
-the guards read not counted, a stratum that does not reach what it is for) and requires
+and smallest radius of a ball from an interval; the formats of the statements not applied to
+`finite_when` and `bounded_when` of two limbs, not counted, the conditions counted outside them, a
+failure in a wider subnormal range not said to be a finding), a relation read on the wrong side,
+with the wrong strictness or without its empty set or infinite bound, a set without its radius, a
+count the guards read not counted, a stratum that does not reach what it is for) and requires
 `selftest --quick` to fail on the copy. With
 `--fail-fast` each copy's selftest stops at its first failing test and runs the longest tests
 (`LONG` in `mutants.py`) last (`selftest --fail-fast --last NAMES`), so a mutant is caught in
@@ -2270,7 +2287,7 @@ follows from both parts being canonical.
 | `enc_reference` | the reference runner (the listings of gen/kernels/) failing a kernel of the family, or an invalid or suspicious case, on random streams of 1 500 cases (500 with `--quick`) of every kernel in `binary64`, `binary32` and `fp:4:-6:1`; a stratum of the header without a case; an entry never applied; a class the guards ask for never reached in `binary64` or `binary32` |
 | `enc_exhaustive` | the reference runner failing any case of the enumerations of tiny formats of every kernel (two intervals or two balls of two limbs on a restricted domain: 70 enumerations, 1.5 million cases with `--quick`), a line not judged, a cell of the table of the constructors never met by `ball_from_interval_k`; 16 planted faults not caught there, caught in another entry, or, for a kernel whose claim fixes the output, not failing every line they change |
 | `enc_planted` | a planted fault of the family (68: `refrun` variants `en-`, `enb-`, `ens-`, `enc-`) not caught in the kernels and entries where it belongs, in `binary64`, `binary32` and `fp:4:-6:1`, caught in a kernel that does not use it, seen as invalid or suspicious; a line it changes of a kernel whose claim fixes the output not failing; a line of the class it is about not failing (two whole lines of zeros of different signs, a zero passed through as it is, the whole line, a half-line, the empty set, an exact zero end, a NaN bound, the same infinity twice, reversed bounds) |
-| `enc_judge` | one of 228 hand-written lines judged otherwise than worked out by hand, each failure in its statement (every cell of the table of `rel` and of the special states of the predicates of an interval and a ball, of the clauses of `ball_set` with the signs of zeros, of `ball_splits`, of the conversions of two limbs: the special values of 1788, a canonical center, `finite_when` at and beyond its limit, the center claimed beyond it, `exact_when`, the tightness, containment and `bounded_when` of two limbs, the center, midpoint and smallest radius of `ball_from_interval_1`); one of 10 lines outside the requirements not invalid; a cell of the table of the constructors for `ball_from_interval_1` (17) passing its wrong result, failing its right one or counting another cell |
+| `enc_judge` | one of 228 hand-written lines judged otherwise than worked out by hand, each failure in its statement (every cell of the table of `rel` and of the special states of the predicates of an interval and a ball, of the clauses of `ball_set` with the signs of zeros, of `ball_splits`, of the conversions of two limbs: the special values of 1788, a canonical center, `finite_when` at and beyond its limit, the center claimed beyond it, `exact_when`, the tightness, containment and `bounded_when` of two limbs, the center, midpoint and smallest radius of `ball_from_interval_1`); one of 10 lines outside the requirements not invalid; one of 13 lines of the formats of the statements judged otherwise (`finite_when` and `bounded_when` of two limbs failing in `fp:3:-4:1`, failing as a finding in `fp:3:-5:1`, counted as not claimed in `fp:3:-2:-1` with the conditions not counted and the center of 1788 still judged); a cell of the table of the constructors for `ball_from_interval_1` (17) passing its wrong result, failing its right one or counting another cell |
 | `enc_gen` | case $i$ alone not case $i$ of its run, a seed not mattering, a stratum of the header without a case or a case of none, an invalid case, in every kernel of the family in two formats; no center $-0$ of the whole line in the streams of the set operations |
 | `enc_strata` | a stratum of the family (or of the conversions of two limbs in `gen6.py`) whose cases do not have what it is for, in `binary64` and `fp:4:-6:1` (every case, or the fraction given: an operand special, intervals touching, nested, disjoint or with an equal bound, balls on the boundary of the relation, huge, of radius zero, both special, a center near $\Omega$, a bound beyond $\Omega$, at the limit of `finite_when` or `bounded_when`, an end exactly zero) |
 | `enc_merging` | the merge of the summaries of two halves of streams of seven kernels of the family differs from the whole |

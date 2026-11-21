@@ -211,7 +211,11 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   wider subnormal range, where nothing is proved and a failure would be a finding to report, not a
   violated claim; in any other toy format it is not claimed, and the oracle counts that.* V4 of the
   ball vectors and of the products of two BallVectors follows it (counted `V4 not claimed: a format
-  of no statement` outside, which the guards ask a run in such a format to say). The `finite_when`
+  of no statement` outside, which the guards ask a run in such a format to say), and so do
+  `finite_when` of `ball_of_interval` and `bounded_when` of `interval_of_ball` with bounds of two
+  limbs, the conversions of two limbs of stage B2 (counted `finite_when not claimed: ...` and
+  `bounded_when not claimed: ...` outside, the guards asking for those counts there; every format
+  of their cross-checks is of `binary_float`'s shape). The `finite_when`
   of the Milestone 1 kernels (F3, B4) and the `bounded_when` of the interval kernels (I5) are
   judged in every format, those outside `binary_float`'s included, where 13 of the 28 kernels
   judged with such a clause have the toy format of their full tier (`mul_2_2_full` in
