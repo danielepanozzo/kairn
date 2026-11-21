@@ -304,7 +304,9 @@ okg)`, whose kernel claims `finite_or_nan r flag=flag if_all=okc,okg`). Its arra
 `ball_vector`, and it claims `encloses_coefficients z r SET NAME=ARRAY,RADIUS... flag=F
 finite_when=... radii_when=... count_when=le(EXPR,K)...`, the conditions of `finite_when` on pairs of
 entries, on one array's entries or on the scalars, and `count_when` on the count `n` with `unit(K)` of a
-kernel. Its radius kernel may require `at_most NAME K`. `rules.bv_conv_rules` checks it (with
+kernel, `u` and `eta` (`bv_conv_2` has the smallest normal number `eta/(2*u)` there, so that the count
+is a number of the format: architecture.md, "Ball vectors"). Its radius kernel may require `at_most
+NAME K`. `rules.bv_conv_rules` checks it (with
 `rules._bv_conv_bound`, that the bound is that of the products of the convolution's dot product);
 `cpp.bv_conv_seq` prints it (no packed form, with the end function `bv_conv_end_function`);
 `rocq.bv_conv_model` and `rocq.bv_conv_statement` give it a model and a statement (containment

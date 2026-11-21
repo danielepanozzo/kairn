@@ -12024,7 +12024,7 @@
           ],
           "count_when": [
             {
-              "le": "n*(unit(mul_2_2)+eta)",
+              "le": "n*(unit(mul_2_2)+eta/(2*u))",
               "than": "1/16"
             }
           ]

@@ -596,7 +596,8 @@ description names the file and the generated audit checks it against the generat
 step 5. (A product of two BallVectors has one statement, `bv_conv_1_ieee_spec`, as a convolution
 has; the generator's audit first named it `bv_conv_1_seq_ieee_spec`, a statement that does not
 exist, and the theorem was checked in step 3 until the printer was mended.) For `bv_conv_2` the
-statement is not proved: its V4 is false (below). V1 to V3 are proved for both, as lemmas of their own in the
+statement is not proved yet: its V4 was false as first printed, and its condition on the count is
+restated (below). V1 to V3 are proved for both, as lemmas of their own in the
 vocabulary of the statement (`bv_conv_k_ieee_v1`, `_v2`, `_v3` of `IeeeBvConv.v`, audited in step
 3), for canonical operands,
 infinite radii (the whole space) included: the result is a finite ball vector or the whole space,
@@ -620,18 +621,21 @@ products each at most $Q/n$; and with $P = (M_a + r_x)(M_b + r_y)$, the largest 
 attained, $P \le Q$ and $n P \le Q$ (the pairs' condition with both operands nonempty, an array's
 own condition or the radii's otherwise), and the radius kernel stays at most $3.2\,Q$.
 
-**V4 of `bv_conv_2` is false as printed.** In a format of precision $p \ge 8$ with
-$p < e_{\max} \le 2p - 7$, the condition on the count, $n\,(4u^2 + \eta) \le \tfrac1{16}$, admits
-$n = 2^{e_{\max}}$, and every $n$ above the largest number $\Omega = (1 - 2^{-p})\,2^{e_{\max}}$
-makes the count rounded up overflow to $+\infty$; `bound_dot_2(+\infty)` then has its mask false and
-the product is the whole space, although the operands are finite and meet every condition. For
-instance $p = 8$, $e_{\max} = 9$ ($\eta = 2^{-14}$, $\Omega = 510$), both operands 511 entries
-$(+0, +0)$ with radii $+0$: $511\,(2^{-14} + 2^{-14}) = 511/8192 \le 1/16$, every other condition is
-$0 \le 2^{7}$, and the interpreter returns 1021 zero coefficients, the radius $+\infty$ and the flag
-false (with 510 entries the count is 510 and the product is finite). `binary32` and `binary64` are
-not affected (the condition bounds $n$ by $2^{42}$ and $2^{100}$). The condition of the count would
-need the smallest normal number $\eta/(2u)$ in place of $\eta$, which bounds $n$ by
-$2^{e_{\max} - 6}$; that is a change of the claim, left to its author.
+**V4 of `bv_conv_2` was false as first printed, and its claim is restated.** In a format of
+precision $p \ge 8$ with $p < e_{\max} \le 2p - 7$, the condition on the count as first printed,
+$n\,(4u^2 + \eta) \le \tfrac1{16}$, admits $n = 2^{e_{\max}}$, and every $n$ above the largest number
+$\Omega = (1 - 2^{-p})\,2^{e_{\max}}$ makes the count rounded up overflow to $+\infty$;
+`bound_dot_2(+\infty)` then has its mask false and the product is the whole space, although the
+operands are finite and meet every condition. For instance $p = 8$, $e_{\max} = 9$ ($\eta =
+2^{-14}$, $\Omega = 510$), both operands 511 entries $(+0, +0)$ with radii $+0$: $511\,(2^{-14} +
+2^{-14}) = 511/8192 \le 1/16$, every other condition is $0 \le 2^{7}$, and the interpreter returns
+1021 zero coefficients, the radius $+\infty$ and the flag false (with 510 entries the count is 510
+and the product is finite). The condition now has the smallest normal number $\eta/(2u) =
+2^{2 - e_{\max}}$ in place of $\eta$, $n\,(4u^2 + \eta/(2u)) \le \tfrac1{16}$, which bounds $n$ by
+$2^{e_{\max} - 6}$ whatever the precision, so that the count is a number of the format; in that
+format it admits $n \le 7$. `binary32` and `binary64` admit exactly the same counts under both forms
+(up to $2^{42} - 1$ and $2^{100} - 1$: the $4u^2$ is what bounds them).
+`test_bv_conv.Interp.test_the_count_overflowed` keeps the counterexample.
 
 ## The accumulator
 

@@ -2345,7 +2345,7 @@ Definition bv_conv_2_ieee_spec : Prop :=
    Forall2 (fun w_ s_ => (val (fst w_), val (snd w_)) = s_) ws_ (FoldModel.conv_2_conv (ieee_emin prec emax) prec tie_even (map (fun x => (val (fst x), val (snd x))) xs) (map (fun y => (val (fst y), val (snd y))) ys)) /\
    val r_ = FoldModel.bv_conv_2_radius (ieee_emin prec emax) prec tie_even (val rx) (val ry) (map (fun x => (val (fst x), val (snd x))) xs) (map (fun y => (val (fst y), val (snd y))) ys)) /\
   (finite rx -> finite ry ->
-   ((INR (Nat.min (length xs) (length ys))) * ((4 * u prec ^ 2) + eta (ieee_emin prec emax))) <= (1 / 16) ->
+   ((INR (Nat.min (length xs) (length ys))) * ((4 * u prec ^ 2) + (eta (ieee_emin prec emax) / (2 * u prec)))) <= (1 / 16) ->
    Rabs (val rx * val ry) <= bpow radix2 (emax - 2) ->
    Forall (fun x => let '(x0, x1) := x in Rabs (((Rabs (val x0 + val x1)) + val rx) * val ry) <= bpow radix2 (emax - 2)) xs ->
    Forall (fun y => let '(y0, y1) := y in Rabs (((Rabs (val y0 + val y1)) + val ry) * val rx) <= bpow radix2 (emax - 2)) ys ->

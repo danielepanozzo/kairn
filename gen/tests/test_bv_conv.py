@@ -230,6 +230,34 @@ def formats():
     return [(p, emax) for p, emax in ((4, 5), (4, 7), (4, 9), (5, 8), (5, 12), (6, 10), (6, 14))]
 
 
+# The condition on the count as first claimed for bv_conv_2, n (unit(mul_2_2) + eta) <= 1/16: in a format
+# of precision p >= 8 with p < emax <= 2p - 7 it admits counts above the largest number, whose count
+# rounded up is +infinity, and then the product is the whole space (docs/proofs/index.md). Restated with
+# the smallest normal number eta/(2u) in place of eta, which bounds n by 2^(emax - 6).
+FIRST_COUNT_WHEN = 'n*(unit(mul_2_2)+eta)'
+
+
+def count_formats():
+    """(p, emax) of formats of the IEEE shape for the count: precisions 4 to 12, each with its smallest
+    exponent range (emax = p + 1) and a few more, among them, from p = 8 on, those with emax at most
+    2p - 7, where the largest number is below counts that FIRST_COUNT_WHEN admits."""
+    return [(p, emax) for p in range(4, 13)
+            for emax in sorted({p + 1, p + 2, p + 3, 2 * p - 8, 2 * p - 7, 2 * p - 6, 2 * p, 2 * p + 8}) if emax > p]
+
+
+def count_limit(fd, f, text=None):
+    """The largest n that the condition on the count of fd (or the condition `text`) admits in format f."""
+    ks = common.kernels()
+    c = fd.ensures[0]['count_when'][0]
+    tree, limit = expr.parse(text or c['le']), expr.evaluate(expr.parse(c['than']), {})
+    top = int(limit / consts.evaluate(tree, ks, f.p, f.qmin, {rules.COUNT_NAME: F(1)}))
+    while consts.evaluate(tree, ks, f.p, f.qmin, {rules.COUNT_NAME: F(top)}) > limit:
+        top -= 1
+    while consts.evaluate(tree, ks, f.p, f.qmin, {rules.COUNT_NAME: F(top + 1)}) <= limit:
+        top += 1
+    return top
+
+
 class Rules(unittest.TestCase):
     BASE = open(f'{common.GEN}/kernels/bv_conv_2.fold', encoding='utf-8').read().replace(
         'fold:          bv_conv_2', 'fold:          tb')
@@ -268,7 +296,7 @@ class Rules(unittest.TestCase):
                  'radius:        rz = conv_radius(ma, oka, rx, ry, m, g, t)', 'radius:'),
                 ('count:         m = min(n_x, n_y)', 'count:         ma = min(n_x, n_y)', 'names of their own'),
                 ('requires:      ball_vector y ry\n', '', 'every array is the centers of a BallVector'),
-                (' count_when=le(n*(unit(mul_2_2)+eta),1/16)', '', 'count_when comes with finite_when'),
+                (' count_when=le(n*(unit(mul_2_2)+eta/(2*u)),1/16)', '', 'count_when comes with finite_when'),
                 (' radii_when=abs_le(rx*ry,-2)', '', 'finite_when and radii_when come together'),
                 ('radii_when=abs_le(rx*ry,-2)', 'radii_when=abs_le(x*ry,-2)', "the scalars' names only"),
                 ('flag=flag', 'flag=finite', 'the flag flag'),
@@ -322,27 +350,93 @@ class Interp(unittest.TestCase):
             self.assertGreater(sum(r[2] for r in results if r[0] == name), 1000, name)
 
     def test_the_count_gives_the_bound(self):
-        """count_when, n (unit(K) + eta) <= 1/16: bound_dot_k(n rounded up) is ok for every such n, in
-        formats of precisions 4 to 9 and many exponent ranges, every n up to the limit (or 3000 of them)."""
+        """count_when gives the bound: for every n it admits, the count rounded up is a number of the format
+        (not +infinity) and bound_dot_k of it is ok. In 36 formats of precisions 4 to 9 with room above and
+        many exponent ranges, and in formats of the IEEE shape of precisions 4 to 12 (count_formats), each
+        with its smallest exponent range and, from p = 8 on, those with p < emax <= 2p - 7, where
+        FIRST_COUNT_WHEN admitted counts above the largest number (checked here too); every n up to the
+        limit, or 3000 of them and the limit. binary32 and binary64 admit the same counts as with
+        FIRST_COUNT_WHEN."""
         ks = common.kernels()
         m = interp.Machine(ks)
-        tried = 0
+        tried, ieee_shaped, overflowed = 0, 0, set()
         for name in PRODUCTS:
             fd = ks.folds[name]
             c = fd.ensures[0]['count_when'][0]
-            for p in range(4, 10):
-                for qmin in (-1, -2, -4, -8, -16, -40):
-                    f = interp.Format(f'fp:{p}:{qmin}:{20}', p, qmin, 20)
-                    limit = expr.evaluate(expr.parse(c['than']), {})
-                    unit = consts.evaluate(expr.parse(c['le']), ks, p, qmin, {rules.COUNT_NAME: F(1)})
-                    top = int(limit / unit)
-                    for n in sorted(set(range(0, min(top, 3000) + 1)) | {top}):
-                        if consts.evaluate(expr.parse(c['le']), ks, p, qmin, {rules.COUNT_NAME: F(n)}) > limit:
-                            continue
-                        g, t, ok = m.run(fd.bound[0], f, [interp.count_up(f, n)])
-                        self.assertTrue(ok, (name, f.name, n))
-                        tried += 1
+            limit = expr.evaluate(expr.parse(c['than']), {})
+            fmts = [interp.Format(f'fp:{p}:{qmin}:{20}', p, qmin, 20)
+                    for p in range(4, 10) for qmin in (-1, -2, -4, -8, -16, -40)]
+            fmts += [writers.ieee_format(p, emax) for p, emax in count_formats()]
+            for f in fmts:
+                top = count_limit(fd, f)
+                for n in sorted(set(range(0, min(top, 3000) + 1)) | {top}):
+                    self.assertLessEqual(consts.evaluate(expr.parse(c['le']), ks, f.p, f.qmin,
+                                                         {rules.COUNT_NAME: F(n)}), limit)
+                    count = interp.count_up(f, n)
+                    self.assertTrue(finite(count), (name, f.name, n))
+                    g, t, ok = m.run(fd.bound[0], f, [count])
+                    self.assertTrue(ok, (name, f.name, n))
+                    tried += 1
+                    ieee_shaped += f.qmax + f.p + f.qmin + f.p == 3
+                if name == 'bv_conv_2' and f.qmax + f.p + f.qmin + f.p == 3:
+                    first = count_limit(fd, f, FIRST_COUNT_WHEN)
+                    if not finite(interp.count_up(f, first)):
+                        overflowed.add((f.p, f.qmax + f.p))
+            for fmt in ('binary32', 'binary64'):
+                f = interp.parse_format(fmt)
+                if name == 'bv_conv_2':
+                    self.assertEqual(count_limit(fd, f), count_limit(fd, f, FIRST_COUNT_WHEN), fmt)
         self.assertGreater(tried, 5000)
+        self.assertGreater(ieee_shaped, 1000)
+        want = {(p, emax) for p, emax in count_formats() if p >= 8 and emax <= 2 * p - 7}
+        self.assertGreaterEqual(len(want), 10)
+        self.assertEqual(overflowed, want)
+
+    def test_the_count_overflowed(self):
+        """The counterexample to V4 of bv_conv_2 with FIRST_COUNT_WHEN, a regression case: precision 8,
+        emax 9 (the largest number 510), both operands 511 entries (+0, +0) with radii +0, which met every
+        condition as first stated, and the product is the whole space (the count rounded up is +infinity).
+        The condition as restated is not met there; at the largest n it admits in that format, 7, the
+        product of those operands is finite, and so are the products of operands at the limits of the
+        other conditions."""
+        ks = common.kernels()
+        m = interp.Machine(ks)
+        fd = ks.folds['bv_conv_2']
+        f = writers.ieee_format(8, 9)
+        self.assertEqual(exact(interp.largest(f, False)), 510)
+        zeros = [[ZERO, ZERO]] * 511
+        self.assertLessEqual(consts.evaluate(expr.parse(FIRST_COUNT_WHEN), ks, f.p, f.qmin,
+                                             {rules.COUNT_NAME: F(511)}), F(1, 16))
+        self.assertEqual(interp.count_up(f, 511), PINF)
+        zs, r, flag = run(m, fd, f, [ZERO, ZERO], zeros, zeros)
+        self.assertEqual((len(zs), r, flag), (1021, PINF, False))
+        self.assertFalse(conditions(fd, f, [ZERO, ZERO], zeros, zeros))
+        self.assertEqual(judge(m, ks, fd, f, [ZERO, ZERO], zeros, zeros, (zs, r, flag)), [])
+        top = count_limit(fd, f)
+        self.assertEqual(top, 7)
+        zeros = [[ZERO, ZERO]] * top
+        self.assertTrue(conditions(fd, f, [ZERO, ZERO], zeros, zeros))
+        zs, r, flag = run(m, fd, f, [ZERO, ZERO], zeros, zeros)
+        self.assertEqual((len(zs), flag), (13, True))
+        self.assertTrue(finite(r))
+        self.assertEqual(judge(m, ks, fd, f, [ZERO, ZERO], zeros, zeros, (zs, r, flag)), [])
+        self.assertFalse(conditions(fd, f, [ZERO, ZERO], [[ZERO, ZERO]] * (top + 1), [[ZERO, ZERO]] * (top + 1)))
+        # At the largest count, operands at the limits of the conditions of the pairs, the entries and the radii.
+        rng = random.Random('bv_conv the count overflowed')
+        e = f.qmax + f.p + fd.ensures[0]['finite_when'][0]['exp'] - top.bit_length()
+        within = 0
+        for _ in range(400):
+            hx = e // 2 + rng.randint(-2, 2)
+            xs = [near(f, rng, hx - rng.randint(1, 3), 2) for _ in range(top)]
+            ys = [near(f, rng, e - hx - rng.randint(1, 3), 2) for _ in range(top + rng.randint(0, 2))]
+            scalars = [radius_near(f, rng, hx - rng.randint(2, 6)), radius_near(f, rng, e - hx - rng.randint(2, 6))]
+            if not conditions(fd, f, scalars, xs, ys):
+                continue
+            within += 1
+            out = run(m, fd, f, scalars, xs, ys)
+            self.assertTrue(finite(out[1]), (xs, ys, scalars))
+            self.assertEqual(judge(m, ks, fd, f, scalars, xs, ys, out), [])
+        self.assertGreater(within, 50)
 
     def test_the_count_rounded_up(self):
         f = writers.ieee_format(4, 9)
@@ -496,14 +590,14 @@ class Printers(unittest.TestCase):
             'finite_when': [{'abs_le': 'n*(abs(x)+rx)*(abs(y)+ry)', 'exp': -2}, {'abs_le': '(abs(x)+rx)*ry', 'exp': -2},
                             {'abs_le': '(abs(y)+ry)*rx', 'exp': -2}],
             'radii_when': [{'abs_le': 'rx*ry', 'exp': -2}],
-            'count_when': [{'le': 'n*(unit(mul_2_2)+eta)', 'than': '1/16'}]}])
+            'count_when': [{'le': 'n*(unit(mul_2_2)+eta/(2*u))', 'than': '1/16'}]}])
         kernels = {k['name']: k for k in doc['kernels']}
         self.assertIn('at_most(g, 1)', kernels['conv_radius']['requires'])
         self.assertEqual(kernels['bv_conv_finish']['ensures'], [
             {'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag', 'if_all': ['okc', 'okg']}])
         with open(f'{common.ROOT}/docs/developer/architecture.md', encoding='utf-8') as fh:
             text = fh.read()
-        self.assertIn('"count_when": [{"le": "n*(unit(mul_2_2)+eta)", "than": "1/16"}]', text)
+        self.assertIn('"count_when": [{"le": "n*(unit(mul_2_2)+eta/(2*u))", "than": "1/16"}]', text)
 
     def test_the_cxx_and_the_counts(self):
         import json
