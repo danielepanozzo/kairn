@@ -12,7 +12,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 | Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | on 2026-11-21, with `two_prod` refused in constant evaluation where Dekker's product overflows, the same 1 497 tests and 18 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one worker, the oracle's own quick selftest among the rest); before it, with the public functions of the enclosure interface, 1 497 tests and 18 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one worker, and the oracle's own quick selftest alone after the rest, 4 minutes more; [Time](#time)); before them, on the tree that joins the oracle of stage B2 to the join (against `gen/claims.json`, nothing left out), 1 285 tests and 17 minutes with GCC 13 on the Linux machine (`--parallel 16`, under a load average of about 40 from other jobs), the largest summary 2.7 MB (`mul_pow2_map_1`); before it, on the tree that joins the ball vectors, the lanes of the packed runners and `Packed` and the containers (against claims without the 53 objects of stage B2), 1 110 tests and 17 minutes with GCC 13 on the Linux machine (`--parallel 16`, under a load average of about 50 from other jobs); with the ball vectors and the accumulator judged (against claims without the 53 objects of stage B2 of the intervals), 1 105 tests and 14 minutes with GCC 13 on the Linux machine (`--parallel 16`; 980 tests and 12 minutes before them), the largest summary 2.7 MB (`mul_pow2_map_1`; of the ball vectors 0.9 MB, `bv_neg_2`); with `--parallel 4`, on 2026-11-20 with 884 tests, 20 minutes on the Mac with Apple clang and 32 on 16 threads of the Linux machine with GCC 13; it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
-| Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), and the interpreter on every operand of larger toy formats, with the same guards and a time budget | by hand on the test machines before each milestone report (`tests/brute/README.md`; results in [Brute force, Milestone 1](results/brute-milestone1.md)); and every night on the hosted runners with a smaller budget (`nightly.yml`), on new random cases and one fortieth of the enumerations | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine; a night on the hosted runners, under two hours per platform |
+| Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), and the interpreter on every operand of larger toy formats, with the same guards and a time budget. Many of those formats are of no statement ($q_{\max} < 1$, or $\eta$ above `binary_float`'s: 582 of the plan's 1 239 enumerations, [The formats of the statements](architecture.md#number-formats); 104 more have a wider subnormal range, where such a clause is judged and a failure is a finding), and there a clause that promises a finite result is counted as not claimed (V4 of the ball vectors, the `finite_when` of `ball_of_interval` and the `bounded_when` of `interval_of_ball` of two limbs, the midpoint of a bounded interval of `ball_of_interval` with `ieee1788` and the parts of a split that rest on it; F3, B4 and I5 are judged there too, below): in `fp:4:-4:-1` and `fp:4:-5:0` the sum of the two halves of a bounded interval beside $\pm\Omega$ overflows, and the midpoint of `interval_mid_rad_2` and the point of split of `interval_split_2` are a NaN (12 and 60 lines), counted as not claimed | by hand on the test machines before each milestone report (`tests/brute/README.md`; results in [Brute force, Milestone 1](results/brute-milestone1.md)); and every night on the hosted runners with a smaller budget (`nightly.yml`), on new random cases and one fortieth of the enumerations | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine; a night on the hosted runners, under two hours per platform |
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
@@ -215,7 +215,11 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `finite_when` of `ball_of_interval` and `bounded_when` of `interval_of_ball` with bounds of two
   limbs, the conversions of two limbs of stage B2 (counted `finite_when not claimed: ...` and
   `bounded_when not claimed: ...` outside, the guards asking for those counts there; every format
-  of their cross-checks is of `binary_float`'s shape). The `finite_when`
+  of their cross-checks is of `binary_float`'s shape), and, by a second ruling of that
+  day, the midpoint of a bounded interval of `ball_of_interval` with `ieee1788`, a finite canonical
+  number, and what `splits` claims of the parts that rest on it (counted `a finite center not
+  claimed: ...` and `a split at a point of X not claimed: ...` outside, the guards asking for those
+  counts there). The `finite_when`
   of the Milestone 1 kernels (F3, B4) and the `bounded_when` of the interval kernels (I5) are
   judged in every format, those outside `binary_float`'s included, where 13 of the 28 kernels
   judged with such a clause have the toy format of their full tier (`mul_2_2_full` in
@@ -1526,6 +1530,23 @@ Clang) or `/arch:AVX2` (MSVC and clang-cl) when the build's flags do not already
 
 ## Time
 
+**The quick tier at the end of Milestone 2** (`main` at `7e12621`, 2026-11-21, 984 to 988 tests
+by platform). On the hosted runners of the CI the test step of the quick tier,
+`ctest --parallel 4`, took 227 s with GCC and 233 s with Clang on Linux x86-64, 174 s and 183 s
+on Linux arm64, 205 s on macOS arm64, and 599 s with MSVC and 503 s with clang-cl on Windows (the
+times of the CI's logs of that commit; no copy is stored under `results/`). The brief and the
+plan ask for under about two minutes per platform: the quick tier is over that on every
+platform, from 1.45 to 5 times the budget
+([deviation 24](design/phase0/decisions.md#deviations-from-the-brief-flagged)). It had 288 to 293
+tests at the Milestone 1 report ([report](results/milestone1.md#tests-and-ci)): the work of
+Milestone 2 more than tripled them. No time of the quick tier with `--parallel 4` on a developer
+machine with the present number of tests is recorded. The last measured with `--parallel 4`,
+below, are those of the oracle of stage B2, 737 to 740 tests: 105.1 s on the Mac with Apple clang,
+164.6 s and 182.2 s on 16 threads of the Linux machine with GCC 13 and Clang 18. With 982 to 988
+tests, the times below are with `--parallel 8` on the Mac (81.2 s and 84.6 s) and `--parallel 16`
+on the Linux machine (67.3 s to 108 s). The paragraphs that follow are the history, in order, each
+with its date.
+
 Each time below is the wall time of one ctest run after the build, with `--parallel 4` unless
 noted: `ctest --test-dir build --output-on-failure --parallel 4` for the quick tier, and the same
 with `build/tests/full` for the full tier, measured when the full tier was introduced. The Mac is
@@ -2097,8 +2118,10 @@ by the ratios above 15 to 20 seconds of the hosted ctest step. It was done next
 After the tools' tests left the quick tier, its ctest step on the hosted Windows runners took 71
 to 154 seconds with MSVC and 70 to 96 with clang-cl in the first three runs (`1bd3182`, `eed45fe`,
 `d31a81a`): over two minutes on one of the six, and the whole job over two minutes on five; 44 to
-45 on Linux x86-64, 31 to 35 on arm64, 69 to 75 on macOS. On 2026-11-20 the owner chose to run each
-cross-check in one process, which loses no check, rather than fewer cases. Since then each test
+45 on Linux x86-64, 31 to 35 on arm64, 69 to 75 on macOS. On 2026-11-20 running each cross-check
+in one process, which loses no check, rather than fewer cases, was put to the owner as a default
+and not objected to ([Milestone 1 report](results/milestone1.md#decided-by-the-owner), item 5).
+Since then each test
 `crosscheck.compiled.K.F` and `api.oracle.K.F`, and each of the full tier's tests of the same
 families, is one Python process, `tests/crosscheck.py` ([Cross-checks](#cross-checks)); before, it
 was a CMake script that started the oracle's `gen`, `tests/run_runners.py` (which ran the
@@ -2766,8 +2789,10 @@ name of a form).
 
 ## Continuous integration
 
-Five workflows under `.github/workflows/`, each on pushes to `main` and on pull requests, one run
-per branch at a time (a new push cancels the run in progress); their jobs all start at once:
+Six workflows under `.github/workflows/`, one run per branch at a time (a new push cancels the run
+in progress). Five run on pushes to `main` and on pull requests, and their jobs all start at once;
+the sixth, `nightly.yml`, runs every night, by hand, and on a pull request that changes it or its
+driver:
 
 | Workflow | Jobs |
 |---|---|

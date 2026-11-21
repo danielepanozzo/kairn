@@ -286,6 +286,9 @@ VARIANTS.update({
                                "smallest radius for it",
     "enc-split2-no-move": "interval_split_2 without the move of the point of split into [xl, xu]",
     "enc-split2-gap": "interval_split_2 starts the second part one number after the point",
+    "enc-mid2-nan": "interval_mid_rad_2 gives a bounded interval the midpoint (NaN, NaN) and the "
+                    "radius +inf, interval_split_2 the point of split (NaN, NaN): what a format of "
+                    "no statement may give, and a format of the statements must not",
 })
 
 ORACLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -2579,6 +2582,8 @@ class Kernels:
             mf = (0, 1)
         rd = INF if ml or mu else rc
         ne = xl0 < INF
+        if self.v == "enc-mid2-nan" and self._finite(xl0, xu0):
+            return NAN, NAN, INF
         return (mf + (rd,)) if ne else (NAN, NAN, NAN)
 
     def interval_to_ball_2(self, xl0, xl1, xu0, xu1):
@@ -2597,6 +2602,8 @@ class Kernels:
         p = (xu0, xu1) if self._lt2((xu0, xu1), n) else n
         if self.v == "enc-split2-no-move":
             p = m
+        if self.v == "enc-mid2-nan" and self._finite(xl0, xu0):
+            p = (NAN, NAN)
         q = p
         if self.v == "enc-split2-gap" and type(p[0]) is int:
             q = (self.A.next_up(p[0]), 0)

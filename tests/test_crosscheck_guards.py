@@ -1680,16 +1680,27 @@ class EnclosureGuards(unittest.TestCase):
     def test_the_formats_of_the_statements(self):
         # finite_when and bounded_when of two limbs in a format of no statement (q_max < 1): not
         # claimed (the ruling of 2026-11-21), and the guards ask for the judge's count of
-        # that in place of the conditions'.
+        # that in place of the conditions'; so is the midpoint of a bounded interval of 1788 a
+        # finite number, and what a split claims of the parts that rest on it (the second ruling
+        # of 2026-11-21), of one limb and of two. In a format of the statements no such count is
+        # asked for.
         sys.path.insert(0, TESTS)
         import crosscheck_guards as CG
         for k, name in (("interval_mid_rad_2", CG.IV_FW_RANGE),
                         ("interval_to_ball_2", CG.IV_FW_RANGE),
-                        ("ball_to_interval_2", CG.IV_I5_RANGE)):
+                        ("ball_to_interval_2", CG.IV_I5_RANGE),
+                        ("interval_mid_rad_2", CG.IV_CENTER_RANGE),
+                        ("interval_split_2", CG.IV_SPLIT_RANGE),
+                        ("interval_mid_rad_1", CG.IV_CENTER_RANGE),
+                        ("interval_split_1", CG.IV_SPLIT_RANGE)):
             s = pipeline(k, "fp:3:-2:-1", "--exhaustive")
             self.passes(s, k, "fp:3:-2:-1", "--exhaustive")
             bad = edited(s, 0, lambda e: e["counts"].pop(name, None))
             self.fails(bad, k, "fp:3:-2:-1", "--exhaustive", reason='saw no case of "%s"' % name)
+        for k in ("interval_mid_rad_2", "interval_split_2"):
+            self.assertNotIn(CG.IV_CENTER_RANGE if k == "interval_mid_rad_2" else
+                             CG.IV_SPLIT_RANGE, json.dumps(self.runs[k]))
+            self.passes(self.runs[k], k, IV, *self.args)
 
     def test_the_bounds_far_from_reached(self):
         name = "lower: distance from the range bound / (rel*|bound| + abs)"

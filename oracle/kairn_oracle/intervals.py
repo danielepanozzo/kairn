@@ -2008,14 +2008,26 @@ def k_ball_of_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     cw = z[c["center"][0]:c["center"][1]]
     r = z[c["radius"]]
     ieee = c["special"] == "ieee1788"
-    if ieee and len(cw) == 2 and not XT.canonical(fmt, cw):
+    # With ieee1788 the midpoint of a bounded X is a finite canonical number: a clause that
+    # promises a finite result (the sum of the two halves is proved finite where p < e_max), so
+    # by the ruling of 2026-11-21 it is claimed in the formats of statement_format, its
+    # failure in a wider subnormal range a finding (beyond), and in any other format counted as
+    # not claimed (CENTER_RANGE); there a center that is not finite (lost: a limb a NaN or an
+    # infinity) is judged by containment alone (_center_lost).
+    lost, beyond = False, ""
+    if ieee and X_[0] != "empty" and bounded(X_):
+        claimed, beyond = statement_format(fmt)
+        if not claimed:
+            es.count(CENTER_RANGE)
+            lost = not all(type(v) is int for v in cw)
+    if ieee and len(cw) == 2 and not lost and not XT.canonical(fmt, cw):
         # The midpoint of two limbs is a canonical number, for every X (architecture.md, "... the
         # conversions of two limbs").
-        fail("canonical", "the center (%s) is not a canonical number of two limbs"
-             % " ".join(F.fixed_hex(fmt, v) for v in cw))
+        fail("canonical", "the center (%s) is not a canonical number of two limbs%s"
+             % (" ".join(F.fixed_hex(fmt, v) for v in cw), beyond))
         return out
     if X_[0] != "empty" and bounded(X_) and c.get("fw"):
-        return _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line)
+        return _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line, lost)
     if X_[0] == "empty" or not bounded(X_):
         if ieee:
             if X_[0] == "empty":
@@ -2037,9 +2049,11 @@ def k_ball_of_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     L, U = X_[1], X_[2]
     if _odd_eta_low(fmt, L) or _odd_eta_low(fmt, U):
         es.count(X_ODD)
+    if lost:
+        return _center_lost(es, r, fail, out)
     if not all(type(v) is int for v in cw) or type(r) is not int or not F.normalized_limbs(fmt, cw):
         fail("finite", "a bounded interval gives a center or a radius that is not finite (or a "
-                       "center that is not normalized)")
+                       "center that is not normalized)" + beyond)
         return out
     cv = sum(cw)
     if r < 0:
@@ -2076,6 +2090,29 @@ FW_RATIO_FINITE = "a finite radius: largest max|bound| / 2^(qmax+p)"
 FW_RATIO_INFINITE = "the radius +inf: smallest max|bound| / 2^(qmax+p)"
 FW_RANGE = "finite_when not claimed: a format of no statement (e_max <= p, or eta above binary_float's)"
 I5_RANGE = "bounded_when not claimed: a format of no statement (e_max <= p, or eta above binary_float's)"
+# The midpoint of a bounded X (ball_of_interval with ieee1788) and the parts of a split that rest
+# on it, by the ruling of 2026-11-21: counted on every bounded X in a format of no
+# statement, and the lines where the center (the point of split) is not finite.
+CENTER_RANGE = ("a finite center not claimed: a format of no statement (e_max <= p, or eta above "
+                "binary_float's)")
+CENTER_LOST = "bounded X, the center not finite (not claimed)"
+SPLIT_RANGE = ("a split at a point of X not claimed: a format of no statement (e_max <= p, or eta "
+               "above binary_float's)")
+SPLIT_LOST = "bounded X, the point of split not finite (not claimed)"
+
+
+def _center_lost(es, r, fail, out):
+    """ball_of_interval with ieee1788, a bounded X in a format of no statement whose center is not
+    finite (a limb a NaN or an infinity): the clauses that rest on a finite center (finite and
+    canonical, between the bounds, near the midpoint, the smallest radius about it) are not
+    claimed, and the line is counted; containment, which does not rest on it, is judged: no real
+    number is within a finite radius of a center that is not finite, so only the radius +inf
+    contains X."""
+    es.count(CENTER_LOST)
+    if r != INF:
+        fail("containment", "the center is not finite and the radius is not +inf: [c - r, c + r] "
+                            "does not contain the interval")
+    return out
 
 
 def statement_format(fmt):
@@ -2111,14 +2148,16 @@ def _fw_conditions(fmt, c, x, es):
     return not bad, (big, 1 << T) if T >= 0 else (big << -T, 1)
 
 
-def _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line):
+def _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line, lost=False):
     """ball_of_interval with finite_when, for a bounded X = [l, h], m = (l + h)/2 (architecture.md,
     "... the conversions of two limbs"): with ieee1788 the center finite, between the bounds and
     within rel*|m| + abs of m, the radius +inf or a finite number with which the center contains X,
     finite when every condition holds; with ball a canonical ball that contains X, and when every
     condition holds a finite one whose center is as without the field. The clause of the
     conditions is claimed in the formats of statement_format, and counted as not claimed in any
-    other (then the radius may be +inf, and with ball the center is not claimed)."""
+    other (then the radius may be +inf, and with ball the center is not claimed); so is, with
+    ieee1788, the finite center (lost: in a format of no statement a center that is not finite,
+    judged by containment alone, k_ball_of_interval)."""
     fmt = pl.fmt
     q = fmt.qmin
     L, U = X_[1], X_[2]
@@ -2130,10 +2169,15 @@ def _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line):
         es.count(FW_RANGE)
         holds = False
     if ieee:
-        if (not all(type(v) is int for v in cw) or not F.normalized_limbs(fmt, cw)
-                or not (r == INF or (type(r) is int and r >= 0))):
+        if lost:
+            if r == INF:
+                es.count(FW_INFINITE)
+            return _center_lost(es, r, fail, out)
+        bad_c = not all(type(v) is int for v in cw) or not F.normalized_limbs(fmt, cw)
+        if bad_c or not (r == INF or (type(r) is int and r >= 0)):
             fail("finite", "a bounded interval gives a center that is not a finite normalized "
-                           "number, or a radius that is neither finite and nonnegative nor +inf")
+                           "number, or a radius that is neither finite and nonnegative nor +inf"
+                 + (beyond if bad_c else ""))
             return out
         finite_center = True
     else:
@@ -2184,10 +2228,24 @@ def k_splits(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     es.applicable += 1
     X_ = _state_of(fmt, x, c["given"])
     es.count(interval_class(X_))
+    # For a bounded X the point of split is the midpoint, and that the parts are canonical
+    # intervals meeting at a point of X rests on it being finite: by the ruling of
+    # 2026-11-21 claimed in the formats of statement_format (a failure in a wider subnormal range
+    # a finding, beyond), and in any other format counted as not claimed (SPLIT_RANGE), where a
+    # point of split that is not finite is judged by the rest of the clause alone (_split_lost).
+    beyond = ""
+    if X_[0] != "empty" and bounded(X_):
+        claimed, beyond = statement_format(fmt)
+        if not claimed:
+            es.count(SPLIT_RANGE)
+            inner = [z[c["parts"][0][1][0]:c["parts"][0][1][1]],
+                     z[c["parts"][1][0][0]:c["parts"][1][0][1]]]
+            if not all(type(v) is int for v in inner[0] + inner[1]):
+                return _split_lost(fmt, c, es, X_, z, inner)
     parts = [interval_state(fmt, z[a[0]:a[1]], z[b[0]:b[1]]) for a, b in c["parts"]]
     if None in parts:
         es.count("failed: a part not canonical")
-        return ["splits: a part is not a canonical interval"]
+        return ["splits: a part is not a canonical interval" + beyond]
     A, B = parts
     if X_[0] == "empty":
         if A[0] != "empty" or B[0] != "empty":
@@ -2203,10 +2261,32 @@ def k_splits(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     if B[2] != X_[2]:
         why.append("the second part's upper bound is not X's")
     if A[2] != B[1]:
-        why.append("the first part's upper bound is not the second part's lower bound")
+        why.append("the first part's upper bound is not the second part's lower bound" + beyond)
     m = A[2]
     if type(m) is not int or XT.x_cmp(m, 0, X_[1], 0) < 0 or XT.x_cmp(m, 0, X_[2], 0) > 0:
-        why.append("the split point %s is not a member of X" % F.fixed_hex(fmt, m))
+        why.append("the split point %s is not a member of X%s" % (F.fixed_hex(fmt, m), beyond))
+    if why:
+        es.count("failed: not a split")
+        return ["splits: " + "; ".join(why)]
+    return []
+
+
+def _split_lost(fmt, c, es, X_, z, inner):
+    """splits of a bounded X in a format of no statement whose point of split is not finite (a limb
+    of the first part's upper bound or of the second part's lower bound a NaN or an infinity): that
+    the parts are canonical intervals meeting at a point of X rests on that point and is not
+    claimed, and the line is counted; what does not rest on it is judged: the first part's lower
+    bound is X's, the second part's upper bound X's, and the first part ends with the limbs the
+    second begins with (a NaN matching a NaN)."""
+    es.count(SPLIT_LOST)
+    (a0, a1), (b0, b1) = c["parts"][0][0], c["parts"][1][1]
+    why = []
+    if bound_value(fmt, z[a0:a1]) != X_[1]:
+        why.append("the first part's lower bound is not X's")
+    if bound_value(fmt, z[b0:b1]) != X_[2]:
+        why.append("the second part's upper bound is not X's")
+    if inner[0] != inner[1]:
+        why.append("the first part's upper bound is not the second part's lower bound")
     if why:
         es.count("failed: not a split")
         return ["splits: " + "; ".join(why)]

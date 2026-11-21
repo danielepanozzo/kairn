@@ -194,7 +194,9 @@ kernel's page in the [reference](../reference/index.md) gives its theorem).
 
 **Not proved yet.** The two statements about `ldexp` when $2^n$ is not a number of `T`, above,
 the one about `ldexp` on one limb, and the end of the steps of `ldexp` of a ball; `rational`
-([below](#constants-from-fractions)).
+([below](#constants-from-fractions)), and with it that the ball of a constant, `Ball<T, k>(q)`
+for a result `q` of `rational` or `integer`, contains the fraction: its constructor is a proved
+kernel, but the center and the radius it is given are those of `rational`.
 And thresholds sharper than those stated. For the two-limb arithmetic, exhaustive runs on small
 formats first see an overflow at 0.55 of the overflow threshold or above for the additions and
 0.86 or above for the products, where the proved conditions are a quarter and a half of it

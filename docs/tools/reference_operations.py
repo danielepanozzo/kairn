@@ -64,8 +64,8 @@ GROUPS = [
     ("ball", "Ball operations", "Arithmetic on balls: the result contains every result on points of the operands; "
      "and the interface a ball shares with an interval ([One enclosure interface](enclosure.md)): its bounds, the "
      "member and subset tests, the signs, the three-valued comparisons, the hull, the intersection, the split and "
-     "the conversions. Of one limb the predicates and the comparisons are exact; of two they are certain but the "
-     "signs, which are exact."),
+     "the conversions. Of one limb the predicates are exact, and the comparisons exact when the sum of the radii "
+     "is at most the largest finite number of `T`; of two they are certain but the signs, which are exact."),
     ("intervals", "Interval operations",
      "`Interval<T, k>` (`kairn/interval.hpp`): its constructors, the arithmetic of intervals of numbers of `T` and "
      "of two limbs, whose result contains every result on members of the operands, unbounded and empty intervals "

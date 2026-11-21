@@ -3,9 +3,12 @@
 /// when the two differ, so they are changed together.
 ///
 /// 0.2.0 is the development line of Milestone 2, in progress: it has KAIRN_ENCLOSURE_CODE, the
-/// building blocks on T of blocks.hpp, the exact scaling of a Ball by a power of two (ldexp, half),
-/// a Ball from a kairn::rational constant, and the sign predicates of a Ball. Until 1.0 a minor
-/// version may change the interface; 0.2.0 names what is there now, not a release.
+/// building blocks on T of blocks.hpp, the constants of rational.hpp (kairn::rational,
+/// kairn::integer), the exact scaling of a Ball by a power of two (ldexp, half), a Ball from such a
+/// constant, Interval of interval.hpp, the enclosure interface that Interval and Ball share
+/// (enclosure.hpp), and Packed and the containers of packed.hpp and soa.hpp. Not yet: the functions
+/// on arrays, the accumulator and BallVector. Until 1.0 a minor version may change the interface;
+/// 0.2.0 names what is there now, not a release.
 #pragma once
 
 /// The major version.
