@@ -1526,6 +1526,23 @@ Clang) or `/arch:AVX2` (MSVC and clang-cl) when the build's flags do not already
 
 ## Time
 
+**The quick tier at the end of Milestone 2** (`main` at `7e12621`, 2026-11-21, 984 to 988 tests
+by platform). On the hosted runners of the CI the test step of the quick tier,
+`ctest --parallel 4`, took 227 s with GCC and 233 s with Clang on Linux x86-64, 174 s and 183 s
+on Linux arm64, 205 s on macOS arm64, and 599 s with MSVC and 503 s with clang-cl on Windows (the
+times of the CI's logs of that commit; no copy is stored under `results/`). The brief and the
+plan ask for under about two minutes per platform: the quick tier is over that on every
+platform, from 1.45 to 5 times the budget
+([deviation 24](design/phase0/decisions.md#deviations-from-the-brief-flagged)). It had 288 to 293
+tests at the Milestone 1 report ([report](results/milestone1.md#tests-and-ci)): the work of
+Milestone 2 more than tripled them. No time of the quick tier with `--parallel 4` on a developer
+machine with the present number of tests is recorded. The last measured with `--parallel 4`,
+below, are those of the oracle of stage B2, 737 to 740 tests: 105.1 s on the Mac with Apple clang,
+164.6 s and 182.2 s on 16 threads of the Linux machine with GCC 13 and Clang 18. With 982 to 988
+tests, the times below are with `--parallel 8` on the Mac (81.2 s and 84.6 s) and `--parallel 16`
+on the Linux machine (67.3 s to 108 s). The paragraphs that follow are the history, in order, each
+with its date.
+
 Each time below is the wall time of one ctest run after the build, with `--parallel 4` unless
 noted: `ctest --test-dir build --output-on-failure --parallel 4` for the quick tier, and the same
 with `build/tests/full` for the full tier, measured when the full tier was introduced. The Mac is

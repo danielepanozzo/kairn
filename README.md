@@ -77,11 +77,13 @@ cmake --install build --prefix PREFIX    # optional: then find_package(kairn) wi
 ```
 
 With Visual Studio or Xcode, add `--config Release` to the build and `-C Release` to `ctest`. The
-tests are the quick tier, under two minutes with `--parallel 4`, the library with this compiler and
-its flags: cross-checks in which the oracle judges every kernel compiled on random `binary64` and
-`binary32` operands, under each contraction setting of the compiler, the tests of the public
-interface, whose every operation the oracle judges too, the stored regression cases and the
-examples of the documentation. The full tier, `ctest --test-dir build/tests/full`, runs the rest:
+tests are the quick tier, the library with this compiler and its flags: cross-checks in which the
+oracle judges every kernel compiled on random `binary64` and `binary32` operands, under each
+contraction setting of the compiler, the tests of the public interface, whose every operation the
+oracle judges too, the stored regression cases and the examples of the documentation. At the end
+of Milestone 2 its test step took 174 to 599 seconds with `--parallel 4` on the hosted runners of
+the CI, over the two minutes per platform that the plan asks
+([Testing](docs/developer/testing.md#time)). The full tier, `ctest --test-dir build/tests/full`, runs the rest:
 the same on more operands, every operand of small formats through the generator's interpreter, and
 the own tests of the generator, the oracle and the other tools. They are listed in
 [Getting started](docs/getting-started/index.md#configure-build-and-test) and explained in

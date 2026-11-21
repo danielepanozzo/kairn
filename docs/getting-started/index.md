@@ -357,11 +357,15 @@ ctest --test-dir build --output-on-failure
 Built on its own, Kairn defaults to a `Release` build, because its contraction tests check what an
 optimizing compiler does. With a multi-configuration generator (Visual Studio, Xcode), name the
 configuration instead: `cmake --build build --config Release` and `ctest --test-dir build -C
-Release --output-on-failure`. Add `--parallel N` to both of the last two commands to use N cores;
-with four, the tests took 31 to 41 seconds on an Apple M3 Max, 47 to 54 on 16 threads of a 2019
-x86-64 server and 63 to 71 on a Windows machine with 8 logical processors, and without, 133
-seconds on the first and 189 on the second
-([Time](../developer/testing.md#the-tools-tests-leave-the-quick-tier)).
+Release --output-on-failure`. Add `--parallel N` to both of the last two commands to use N cores.
+With the tests of Milestone 1, on 2026-11-19, with four, they took 31 to 41 seconds on an Apple M3
+Max, 47 to 54 on 16 threads of a 2019 x86-64 server and 63 to 71 on a Windows machine with 8
+logical processors, and without, 133 seconds on the first and 189 on the second
+([Time](../developer/testing.md#the-tools-tests-leave-the-quick-tier)). Milestone 2 more than
+tripled the tests: at its end, with four, their test step took 174 to 599 seconds on the hosted
+runners of the CI, and on the test machines 81 to 85 seconds with eight on the Mac and 67 to 108
+with sixteen on the Linux machine; no time with four on a test machine is recorded for them
+([Time](../developer/testing.md#time)).
 
 These commands run the quick tier, the tests of the library with your compiler and flags, and
 ctest says so when it starts and when it ends. The full tier, everything that left the quick tier
@@ -373,9 +377,11 @@ is one more command after the same build:
 ctest --test-dir build/tests/full --output-on-failure
 ```
 
-With `--parallel 4` it took five to six minutes on the Mac, nine and a half on the Linux machine
-and eleven on the Windows machine. [Testing](../developer/testing.md#the-full-tier) lists its
-tests, and the CI runs both tiers on every push and pull request.
+With the tests of Milestone 1, on 2026-11-19, with `--parallel 4`, it took five to six minutes on
+the Mac, nine and a half on the Linux machine and eleven on the Windows machine; with those of
+Milestone 2, longer ([Time](../developer/testing.md#time)).
+[Testing](../developer/testing.md#the-full-tier) lists its tests, and the CI runs both tiers on
+every push and pull request.
 
 The tests of the quick tier:
 
