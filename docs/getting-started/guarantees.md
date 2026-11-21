@@ -232,7 +232,8 @@ reversed, $lo > hi$ ($[+\infty, -\infty]$ and $+\infty$ with a finite upper boun
 otherwise $[lo, hi]$, the half-lines and $[-\infty, +\infty]$ included. A value from the program
 that is not finite says that something failed or overflowed upstream, and nothing about where the
 true value is: the whole line is the answer that is always true, and the empty set, which says that
-there is no value, never comes out of it. So `Interval(a)` of an infinite `a` is the whole line, as
+there is no value, never comes out of a NaN or of an infinite point; only reversed bounds give it.
+So `Interval(a)` of an infinite `a` is the whole line, as
 `Ball(a)` is: its `lower()` is $-\infty$, its `upper()` $+\infty$. `Interval()` is $[0, 0]$.
 [The case analysis](../developer/architecture.md#the-constructors-on-every-pair-of-values) gives
 every pair of values.
@@ -300,8 +301,9 @@ four points: a NaN bound given to the constructor gives the whole line, where th
 the empty set and signals; the same infinity given as both bounds, $[+\infty, +\infty]$ or
 $[-\infty, -\infty]$, and so `Interval(a)` of an infinite `a`, gives the whole line, where the
 standard returns the empty set because no real number is infinite (Kairn reads an infinity from the
-program as a value that overflowed or failed, whose true value may be anywhere, and never makes the
-empty set of it, as it does not of a NaN; reversed bounds stay the empty set, as in the standard);
+program as a value that overflowed or failed, whose true value may be anywhere, and does not make
+the empty set of an infinite point, as it does not of a NaN bound; reversed bounds, with an infinite
+bound or not, stay the empty set, as in the standard);
 the sign of a zero bound is not specified, where the standard returns
 $-0$ for a zero lower bound and $+0$ otherwise; and a product of one limb in the underflow range is
 *accurate* in the standard's sense, the tightest result widened by at most one number on each side,

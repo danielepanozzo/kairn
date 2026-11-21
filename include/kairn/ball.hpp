@@ -609,14 +609,14 @@ public:
     /// the IEEE model, for any two values of T: the ball is canonical, and it is, by the first case
     /// that applies, the whole line, center 0 and radius +inf, when a bound is a NaN, whatever the
     /// other, and when both bounds are the same infinity, [+inf, +inf] or [-inf, -inf] (a value from
-    /// the program that is not finite says that something failed or overflowed upstream, and never
-    /// makes the empty set); the empty set when the bounds are reversed, lo > hi, as
-    /// Interval(lo, hi); when both are finite (lo <= hi), a finite ball that contains [lo, hi], and
-    /// when moreover lo/2 and hi/2 are numbers of T (neither bound an odd multiple of eta below twice
-    /// the smallest normal number) its center is (lo + hi)/2 exactly, the sum of the halves as two
-    /// limbs, and its radius RU((hi - lo)/2), the smallest of T for that center; and the whole line
-    /// when a bound is infinite (lo <= hi, [lo, +inf], [-inf, hi], [-inf, +inf]): a ball cannot be a
-    /// half-line.
+    /// the program that is not finite says that something failed or overflowed upstream, and the
+    /// empty set would say that there is no value); the empty set when the bounds are reversed,
+    /// lo > hi, as Interval(lo, hi); when both are finite (lo <= hi), a finite ball that contains
+    /// [lo, hi], and when moreover lo/2 and hi/2 are numbers of T (neither bound an odd multiple of
+    /// eta below twice the smallest normal number) its center is (lo + hi)/2 exactly, the sum of the
+    /// halves as two limbs, and its radius RU((hi - lo)/2), the smallest of T for that center; and
+    /// the whole line when a bound is infinite (lo <= hi, [lo, +inf], [-inf, hi], [-inf, +inf]): a
+    /// ball cannot be a half-line.
     /// Rounds (halvings and a difference rounded up): preceded, when KAIRN_CHECKS is 1, by the check
     /// of the environment, the rounding mode included; every value of T is accepted. constexpr.
     static constexpr Ball from_interval(T lo, T hi) noexcept
