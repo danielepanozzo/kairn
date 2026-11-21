@@ -659,6 +659,227 @@ MUTANTS = {
         "    vals[xn] = [x, 0]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals"),
 }
 
+# The enclosure interface: the predicates, comparisons and set operations of a ball (enclosure.py,
+# genenc.py) and the conversions of two limbs (intervals.py, gen6.py); selftest_enc catches each.
+MUTANTS.update({
+    # Reading certain, trit, ball_set, ball_splits.
+    "enc claims: an unknown relation accepted": (
+        "enclosure.py", "    if e.rel not in allowed:", "    if False:"),
+    "enc claims: trit with a relation of certain accepted": (
+        "enclosure.py", 'allowed = TRIT_RELS if e.kind == "trit" else RELS', "allowed = RELS"),
+    "enc claims: the number of arguments not checked": (
+        "enclosure.py", "    if not isinstance(args, list) or len(args) != arity:",
+        "    if not isinstance(args, list):"),
+    "enc claims: an argument that is not a set accepted": (
+        "enclosure.py", "            elif isinstance(a, str) and a in e.sets:",
+        "            elif isinstance(a, str):"),
+    "enc claims: 0 as both arguments accepted": (
+        "enclosure.py", '        if e.args == ["0", "0"]:', "        if False:"),
+    "enc claims: intervals and balls together accepted": (
+        "enclosure.py", "    if has_iv == has_ball:", "    if not has_iv and not has_ball:"),
+    "enc claims: a set that is no argument accepted": (
+        "enclosure.py", "    if unused:", "    if False:"),
+    "enc claims: exact and exact_when together accepted": (
+        "enclosure.py", "        if e.exact:\n            raise _error(\"%s: exact and exact_when",
+        "        if False:\n            raise _error(\"%s: exact and exact_when"),
+    "enc claims: abs_le without omega true accepted": (
+        "enclosure.py", '                or cond["omega"] is not True or not isinstance(cond["abs_le"], str)):',
+        '                or not isinstance(cond["abs_le"], str)):'),
+    "enc claims: a name of exact_when not checked": (
+        "enclosure.py", "            if n not in dict(kernel.inputs) or n in kernel.masks:\n"
+        "                raise _error(\"%s: %r is not a limb input\" % (w, n))",
+        "            if False:\n                raise _error(\"%s: %r is not a limb input\" % (w, n))"),
+    "enc claims: of a limb output accepted": (
+        "enclosure.py", "    if not isinstance(n, str) or n not in dict(kernel.outputs) or n not in kernel.masks:",
+        "    if not isinstance(n, str) or n not in dict(kernel.outputs):"),
+    "enc claims: yes and no the same output accepted": (
+        "enclosure.py", "        if e.yes == e.no:", "        if False:"),
+    "enc claims: the point inside a set accepted": (
+        "enclosure.py", "                or t in inset:", "                or False:"),
+    "enc claims: a point of two limbs without canonical() accepted": (
+        "enclosure.py", '        if k not in (1, 2) or (k == 2 and ("canonical", t) not in kernel.requires):',
+        "        if k not in (1, 2):"),
+    "enc claims: the same set twice accepted": (
+        "enclosure.py", "        if len(set(args)) != len(args):", "        if False:"),
+    "enc claims: ball_set of one ball accepted": (
+        "enclosure.py", "    if len(e.balls) != 2:", "    if False:"),
+    "enc claims: ball_set centers of other limbs accepted": (
+        "enclosure.py", "        if kernel.limbs_of(c) != cl:", "        if False:"),
+    "enc claims: ball_splits of one part accepted": (
+        "enclosure.py", "    if not isinstance(parts, list) or len(parts) != 2:",
+        "    if not isinstance(parts, list):"),
+    "enc claims: an output of two parts accepted": (
+        "enclosure.py", "            if n in seen:", "            if False:"),
+    # (No mutant of the test that the kinds belong to the extended domain: in the finite domain no
+    # interval() or ball() requirement reads, so the sets of an entry never do either.)
+    # The judges of certain and trit.
+    "certain: a true mask where the relation fails accepted": (
+        "enclosure.py", '    if m and not R:\n        fail("sound"', '    if False:\n        fail("sound"'),
+    "certain: exactness not judged": (
+        "enclosure.py", "        if R and not m:\n            fail(how,", "        if False:\n            fail(how,"),
+    "trit: yes and no both true accepted": (
+        "enclosure.py", '    if yes and no:\n        fail("both"', '    if False:\n        fail("both"'),
+    "trit: a yes where the relation fails accepted": (
+        "enclosure.py", '    if yes and not R:\n        fail("yes"', '    if False:\n        fail("yes"'),
+    "trit: a no where the relation holds accepted": (
+        "enclosure.py", '    if no and not N:\n        fail("no"', '    if False:\n        fail("no"'),
+    "trit: the exactness of yes not judged": (
+        "enclosure.py", "        if R and not yes:\n            fail(how,",
+        "        if False:\n            fail(how,"),
+    "trit: the exactness of no not judged": (
+        "enclosure.py", "        if N and not no:\n            fail(how,",
+        "        if False:\n            fail(how,"),
+    "certain and trit: special operands not exact": (
+        "enclosure.py", '    if special:\n        return "special"', '    if False:\n        return "special"'),
+    "certain and trit: exact_when not judged": (
+        "enclosure.py", '            es.count(EW_HOLDS)\n            return "exact_when"',
+        "            es.count(EW_HOLDS)\n            return None"),
+    "certain and trit: abs_le read as half of Omega": (
+        "enclosure.py", "(abs(fn(x)) << d) <= fmt.omega)", "(abs(fn(x)) << d) <= fmt.omega // 2)"),
+    "certain and trit: a point not finite not special": (
+        "enclosure.py", "            if type(point) is not int:\n                special = True",
+        "            if False:\n                special = True"),
+    "certain and trit: the whole line of a ball not special": (
+        "enclosure.py", '        return ("nonempty", NINF, INF), "whole line", False, True, None',
+        '        return ("nonempty", NINF, INF), "whole line", False, False, None'),
+    "certain and trit: a ball without its radius": (
+        "enclosure.py", '    return ("nonempty", cv - r, cv + r), ("a point" if r == 0 else "finite"), True, False, (cv, r)',
+        '    return ("nonempty", cv, cv), ("a point" if r == 0 else "finite"), True, False, (cv, r)'),
+    "certain and trit: an argument 0 read as [0, 1]": (
+        "enclosure.py", '            vals.append(("nonempty", 0, 0))', '            vals.append(("nonempty", 0, 1))'),
+    "certain and trit: the classes of a set not counted": (
+        "enclosure.py", "        es.count(CLASS % (n, cls))", "        pass"),
+    # The relations.
+    "relation: lt read as le": (
+        "enclosure.py", "            return _lt(Ua, Lb), _le(Ub, La)", "            return _le(Ua, Lb), _le(Ub, La)"),
+    "relation: the failure of le read with le": (
+        "enclosure.py", "            return _le(Ua, Lb), _lt(Ub, La)", "            return _le(Ua, Lb), _le(Ub, La)"),
+    "relation: eq read as equal lower bounds": (
+        "enclosure.py", "        same = La == Ua == Lb == Ub", "        same = La == Lb"),
+    "relation: touching sets fail eq for every choice": (
+        "enclosure.py", "        return same, _lt(Ua, Lb) or _lt(Ub, La)",
+        "        return same, _le(Ua, Lb) or _le(Ub, La)"),
+    "relation: lt holds of the empty set": (
+        "enclosure.py", "            return False, False", "            return True, False"),
+    "relation: an infinite point a member": (
+        "enclosure.py", '        r = type(t) is int and A[0] != "empty"', '        r = t != NAN and A[0] != "empty"'),
+    "relation: the empty set no subset": (
+        "enclosure.py", '            return True, None\n        return B[0] != "empty" and _le(B[1], A[1])',
+        '            return False, None\n        return B[0] != "empty" and _le(B[1], A[1])'),
+    "relation: the empty set equal to every set": (
+        "enclosure.py", "            return A[0] == B[0], None", "            return True, None"),
+    "relation: interior with closed bounds": (
+        "enclosure.py", "        lo = B[1] == NINF or _lt(B[1], A[1])", "        lo = B[1] == NINF or _le(B[1], A[1])"),
+    "relation: interior without the infinite bound": (
+        "enclosure.py", "        hi = B[2] == INF or _lt(A[2], B[2])", "        hi = _lt(A[2], B[2])"),
+    "relation: touching sets disjoint": (
+        "enclosure.py", "    return _lt(A[2], B[1]) or _lt(B[2], A[1]), None",
+        "    return _le(A[2], B[1]) or _le(B[2], A[1]), None"),
+    "relation: the empty set not disjoint": (
+        "enclosure.py", '    if A[0] == "empty" or B[0] == "empty":\n        return True, None',
+        '    if A[0] == "empty" or B[0] == "empty":\n        return False, None'),
+    "relation: entire read on the lower bound": (
+        "enclosure.py", '        return A[0] != "empty" and A[1] == NINF and A[2] == INF, None',
+        '        return A[0] != "empty" and A[1] == NINF, None'),
+    # ball_set and ball_splits.
+    "ball_set: Y as it is not judged": (
+        "enclosure.py", "        if not all(same_limb(fmt, a, b) for a, b in zip(zt, yt)):", "        if False:"),
+    "ball_set: X as it is not judged": (
+        "enclosure.py", "        if not all(same_limb(fmt, a, b) for a, b in zip(zt, xt)):", "        if False:"),
+    "ball_set: X as it is also when X is special (the reading before the correction)": (
+        "enclosure.py", "    elif sy == special:\n        es.count(SET_X_AS_IS)",
+        "    if sy == special:\n        es.count(SET_X_AS_IS)"),
+    "ball_set: the sign of a zero not compared": (
+        "enclosure.py", '    return va != 0 or a.startswith("-") == b.startswith("-")', "    return True"),
+    "ball_set: a NaN not matching a NaN": (
+        "enclosure.py", "    if va == NAN or vb == NAN:\n        return va == vb",
+        "    if va == NAN or vb == NAN:\n        return False"),
+    "ball_set: the empty union not judged": (
+        "enclosure.py", '        if (sz == "empty") != want_empty:', "        if False:"),
+    "ball_set: the empty intersection not judged": (
+        "enclosure.py", '    elif (sx == "empty" or sy == "empty") and sz != "empty":', "    elif False:"),
+    "ball_set: containment not judged": (
+        "enclosure.py", "            if not (_le(Z_[1], s[1]) and _le(s[2], Z_[2])):", "            if False:"),
+    "ball_set: the members due of the intersection read as the union's": (
+        "enclosure.py", "    if union:\n        due = [s for s in (X_, Y_) if s != EMPTY]",
+        "    if True:\n        due = [s for s in (X_, Y_) if s != EMPTY]"),
+    "ball_set: the zero signs of two whole lines not counted": (
+        "enclosure.py", "        es.count(SET_ZERO_SIGNS)", "        pass"),
+    "ball_splits: the first part not judged": (
+        "enclosure.py", '        if s == "empty" or not (P[1] <= lo and hi <= P[2]):', "        if False:"),
+    "ball_splits: the second part read as the first": (
+        "enclosure.py", "    for j, (lo, hi) in enumerate(((cv - r, cv), (cv, cv + r))):",
+        "    for j, (lo, hi) in enumerate(((cv - r, cv), (cv - r, cv))):"),
+    "ball_splits: the special states not judged": (
+        "enclosure.py", "            if s != sx:\n                fail(STATE_NAME[sx]",
+        "            if False:\n                fail(STATE_NAME[sx]"),
+    "ball_splits: a zero radius not counted": (
+        "enclosure.py", "        es.count(SPLIT_ZERO)", "        pass"),
+    # The conversions of two limbs (intervals.py).
+    "finite_when: not judged": (
+        "intervals.py", '        if holds:\n            fail("finite_when"', '        if False:\n            fail("finite_when"'),
+    "finite_when: the limit one binade higher": (
+        "intervals.py", "        k = fmt.qmax + fmt.p + ex - q", "        k = fmt.qmax + fmt.p + ex + 1 - q"),
+    "finite_when: the limit one binade lower": (
+        "intervals.py", "        k = fmt.qmax + fmt.p + ex - q", "        k = fmt.qmax + fmt.p + ex - 1 - q"),
+    "finite_when: containment not judged": (
+        "intervals.py", "    if type(r) is int and (cv - r > L or cv + r < U):", "    if False:"),
+    "finite_when: the center of 1788 judged only where the conditions hold": (
+        "intervals.py", "    if not finite_center or (not ieee and not holds):",
+        "    if not finite_center or not holds:"),
+    "finite_when: the conditions not counted": (
+        "intervals.py", "        es.count(FW_HOLDS)", "        pass"),
+    "midpoint of two limbs: a center that is not canonical accepted": (
+        "intervals.py", "    if ieee and len(cw) == 2 and not XT.canonical(fmt, cw):", "    if False:"),
+    "interval_of_ball of two limbs: the tightness not judged": (
+        "intervals.py", '        if not ok:\n            fail("tight"', '        if False:\n            fail("tight"'),
+    "interval_of_ball of two limbs: exact_when not judged": (
+        "intervals.py", '            if _cmp(zv, q, v, s) != 0:\n                fail("exact_when"',
+        '            if False:\n                fail("exact_when"'),
+    "interval_of_ball of two limbs: bounded_when not judged": (
+        "intervals.py", '            if not bounded(zs):\n                fail("bounded_when"',
+        '            if False:\n                fail("bounded_when"'),
+    "interval_of_ball of two limbs: containment below not judged": (
+        "intervals.py", "    if _cmp(zl, q, lo, s) > 0:\n        fail(\"containment\", \"the lower bound %s is above the set's",
+        "    if False:\n        fail(\"containment\", \"the lower bound %s is above the set's"),
+    "interval_of_ball of two limbs: rounded tightness accepted": (
+        "intervals.py", '    if not isinstance(t, dict) or t.get("kind") != "outward":', "    if False:"),
+    "makes_ball with rel: the midpoint not judged": (
+        "intervals.py", '        if not ok:\n            es.count("failed: midpoint")',
+        '        if False:\n            es.count("failed: midpoint")'),
+    "makes_ball with rel: smallest_radius not judged": (
+        "intervals.py", '            if r != want:\n                es.count("failed: smallest_radius")',
+        '            if False:\n                es.count("failed: smallest_radius")'),
+    "makes_ball with rel: the center outside the bounds accepted": (
+        "intervals.py", '        if cv < lo or cv > hi:\n            es.count("failed: center")',
+        '        if False:\n            es.count("failed: center")'),
+    "makes_ball with rel: rel without abs accepted": (
+        "intervals.py", '        if "rel" not in raw or "abs" not in raw:', "        if False:"),
+    # The strata of the family (genenc.py) and of the conversions of two limbs (gen6.py).
+    "genenc: special without the empty set or the whole line": (
+        "genenc.py", '        ivs[j] = _special_iv(fmt, rng, k, ("empty", "whole")[rng.below(2)])', "        pass"),
+    "genenc: touching intervals apart": (
+        "genenc.py", "            ivs = [(a, b), (list(b), d)]", "            ivs = [(a, b), (c, d)]"),
+    "genenc: boundary balls moved off the boundary": (
+        "genenc.py", "    if near:\n        if rng.bits(1):\n            cy = _moved",
+        "    if True:\n        if rng.bits(1):\n            cy = _moved"),
+    "genenc: both special, one of them finite": (
+        "genenc.py", '            balls = [_ball_state(k, "empty"), _ball_state(k, "empty")]',
+        '            balls = [_ball_state(k, "empty"), _ball(fmt, rng, k)]'),
+    "genenc: no radius zero among the points": (
+        "genenc.py", "        balls = [(c, [0])] + [", "        balls = [(c, [1])] + ["),
+    "genenc: no huge radius": (
+        "genenc.py", "        balls[j] = (balls[j][0], [abs(G2._top(fmt, rng)) >> rng.below(3)])", "        pass"),
+    "gen6: no bound beyond Omega": (
+        "gen6.py", "    pair = [om, t]\n", "    pair = [om, 0]\n"),
+    "gen6: the threshold one binade lower": (
+        "gen6.py", "    T = 1 << (fmt.qmax + fmt.p - 2 - fmt.qmin)\n    j = rng.below(4)\n    if j == 0:\n        v = [T]",
+        "    T = 1 << (fmt.qmax + fmt.p - 4 - fmt.qmin)\n    j = rng.below(4)\n    if j == 0:\n        v = [T]"),
+    "gen6: an end of the ball not zero": (
+        "gen6.py", "    return {cn: c, rn: [a]}", "    return {cn: c, rn: [a >> 1]}"),
+})
+LONG_ENCLOSURE = ("enc_exhaustive", "enc_planted")
+
 
 # The selftest's longest tests (the exhaustive ones, the planted faults on every case), which
 # --fail-fast runs after the others: a mutant is caught at the first test that fails, and most
@@ -666,6 +887,7 @@ MUTANTS = {
 LONG = ("correct_runner_toy_exhaustive", "exhaustive_wave2", "injected_wave2_exhaustive",
         "injected_wave3_exhaustive", "exhaustive_wave3", "iv_planted", "fold_planted",
         "injected_wave3", "injected_exhaustive", "fold_brackets", "fold_reference", "iv_exhaustive")
+LONG = LONG + LONG_ENCLOSURE
 FAIL_FAST = False
 
 

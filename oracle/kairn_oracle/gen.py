@@ -449,7 +449,15 @@ class RandomGen:
         from . import gen5
         from . import gen6
         from . import gen7
-        if gen6.family_of(kernel) is not None:
+        from . import genenc
+        if genenc.family_of(kernel) is not None:
+            # The predicates, comparisons and set operations of a ball of the enclosure
+            # interface (genenc.py).
+            self.shape = genenc.ShapeEnc(kernel)
+            known, schedule = self.shape.strata, self.shape.schedule
+            self.make = genenc.make_case
+            self.valid = gen6.valid6
+        elif gen6.family_of(kernel) is not None:
             # The interval kernels (gen6.py).
             self.shape = gen6.Shape6(kernel)
             known, schedule = self.shape.strata, self.shape.schedule

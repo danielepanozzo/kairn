@@ -44,8 +44,11 @@ finishes and bounds, and the kernels whose bounds they name, frozen from the cla
 `add_2_2` and `mul_2_2`, whose bounds their constants name, frozen from the claims of
 2026-11-20) and `oracle/selftest/claims-wave7.json` (stage B: the eighteen maps and their
 steps, the folds of maxima and their kernels, the convolutions, and the kernels and folds
-they name, frozen from the claims of 2026-11-20), so that it does not depend on the
-generator.
+they name, frozen from the claims of 2026-11-20) and `oracle/selftest/claims-enclosure.json`
+(stage B2 of the enclosure interface: the 53 kernels of the predicates and comparisons of an
+interval and a ball, the set operations of a ball and the conversions of two limbs, with
+`ball_from_interval_2` and `add_2_2`, frozen from the claims of 2026-11-21), so that it does not
+depend on the generator.
 
 ## gen
 
@@ -674,6 +677,165 @@ $2N$) and 0.97 of it at `fp:5:-9:2`; the error of `ball_lower_as_2` and `ball_up
 `interval_mul_1` and `mul_dir_1` are one step beyond the directed rounding, all their `steps`
 allow, on 22 000 to 35 000 lines a side.
 
+### The kinds of the enclosure interface
+
+architecture.md, "Claims of the enclosure interface: predicates and comparisons", "... the set
+operations of a ball" and "... the conversions of two limbs", read with milestone2.md, "One
+enclosure interface" and "IEEE 1788" (`enclosure.py` for the new kinds, `intervals.py` for the
+fields added to its kinds; `genenc.py` and `gen6.py` generate their requests). The members of a
+set are real numbers: between the bounds of an interval ($[1, +\infty]$ does not contain
+$+\infty$), within the radius of a finite ball's center ($[c - r, c + r]$, $c$ the exact sum of
+the center's limbs), every real number for the whole line, none for the empty set. A set is
+written as the empty set or the pair of its greatest lower and least upper bound in the extended
+reals, and every relation is decided on those bounds with integers (`enclosure.relation`):
+
+| `rel` | holds (for every choice of members) | fails for every choice (`trit`) |
+|---|---|---|
+| `lt` | both nonempty, $U_a < L_b$ | both nonempty, $L_a \ge U_b$ |
+| `le` | both nonempty, $U_a \le L_b$ | both nonempty, $L_a > U_b$ |
+| `eq` | both nonempty, $L_a = U_a = L_b = U_b$ (the same point) | both nonempty, $U_a < L_b$ or $U_b < L_a$ |
+| `member` | the point finite and $L \le t \le U$ | otherwise |
+| `subset` | $X$ empty, or $Y$ nonempty, $L_y \le L_x$, $U_x \le U_y$ | |
+| `equal` | both empty, or both nonempty with the same bounds | |
+| `interior` | $X$ empty, or $Y$ nonempty, ($L_y = -\infty$ or $L_y < L_x$) and ($U_y = +\infty$ or $U_x < U_y$) | |
+| `disjoint` | an operand empty, or $U_x < L_y$ or $U_y < L_x$ | |
+| `empty`, `entire` | $X$ empty; $X$ the whole line | |
+
+An infinite bound needs no case of its own: $U_a < L_b$ is false when $U_a = +\infty$ (the members
+are unbounded above) and when $L_b = -\infty$. The argument `0` is the set $\{0\}$. The selftest
+checks this reading against the definitions quantified over the members of sets of rationals
+(`enc_relations`).
+
+- **`certain`** (`of` a mask; `rel`, `args`; `intervals` or `balls`, the one or the other;
+  `exact`, written only when true; `exact_when`, a nonempty list of
+  `{"abs_le": EXPR, "omega": true}`, $\lvert\text{EXPR}\rvert \le \Omega$ on finite operands, EXPR
+  over the limb inputs): **sound**, a true mask only where the relation holds, on every line; and
+  exactly the relation (failing as **`exact`**, **`special`** or **`exact_when`**, by where the
+  claim says so) with `exact` always, on a line with an operand that is not finite (the empty set
+  or the whole line; a point that is not a finite number), and with `exact_when` where every
+  operand is finite (a bounded interval, a finite ball, a finite point) and every condition holds.
+- **`trit`** (`yes`, `no`: two masks; the same fields, `rel` one of `lt`, `le`, `eq`, `member`):
+  **yes** only where the relation holds for every choice, **no** only where it fails for every
+  choice, never **both**; and both exactly so where `certain` would be exact. A wrong answer where
+  the relation neither holds nor fails fails `yes` or `no` alone: the exactness is about the
+  answers due.
+- **`ball_set`** (`center`, `radius`; `set` `union` or `intersection`; `balls`: two, of the
+  center's limbs): the result a canonical ball (**canonical**) that contains every member of
+  $X \cup Y$ ($X \cap Y$) (**containment**); for the union empty exactly when both operands are,
+  for the intersection empty when an operand is (**empty**); and the operands **as they are**, in
+  the corrected reading of architecture.md (the clause that gives X has the condition that X is not
+  itself special): for the union, X empty gives Y as it is (**Y as it is**), and Y empty with X not
+  empty gives X as it is (**X as it is**); for the intersection the same with the whole line. As
+  it is: the limbs as the line writes them, the sign of a zero compared (the one place where it is,
+  read from the text), a NaN matching a NaN. Nothing more: Z need not be the smallest ball, nor
+  inside X or Y, nor empty for disjoint balls.
+- **`ball_splits`** (`parts`: two balls; `from`: a ball): both canonical; the empty set gives the
+  empty set twice (**empty set**), the whole line the whole line twice (**whole line**); for a
+  finite ball, $[c - r, c]$ inside the first part (**first part**) and $[c, c + r]$ inside the
+  second (**second part**); a part that is the whole line contains everything.
+- **`ball_of_interval` with `finite_when`** (`interval_mid_rad_2`, `interval_to_ball_2`): for a
+  bounded $X$, with `ieee1788` the center finite and normalized, between the bounds and within
+  `rel`$\lvert m\rvert$ + `abs` of the midpoint on every line, the radius $+\infty$ or a finite
+  radius that contains $X$, finite where every condition $\lvert\text{BOUND}\rvert \le
+  2^{q_{\max}+p+E}$ holds (**finite_when**); with `ball` a canonical ball that contains $X$, and
+  where every condition holds a finite one whose center is as without the field. With `ieee1788`
+  and a center of two limbs the center is canonical on every line (**canonical**), the special
+  values of 1788 as before. `finite_when` and `smallest_radius` together are refused (the radius
+  may be $+\infty$, which is not the smallest).
+- **`interval_of_ball` with bounds of two limbs** (`ball_to_interval_2`): `tight` must be the
+  outward tightness (a rounded one is refused for two limbs), with `rel`, `abs` and `exact_when`
+  by side; the result canonical, empty exactly when the ball is, containing the set
+  (**containment**); for a finite ball and a bounded result each bound within
+  `rel`$\lvert\text{bound}\rvert$ + `abs` of the set's on its side (**tight**); for a finite ball,
+  a side whose conditions hold the set's bound exactly (**exact_when**), whether or not the result
+  is bounded (the stricter reading, as for `encloses_interval`); and for a finite ball a result
+  that is bounded where every member is within the limit of `bounded_when` (**bounded_when**, not
+  exactly). `bounded_when` is for bounds of two limbs only, of the form
+  `{"abs_le": SET, "exp": E}`, SET the entry's own set.
+- **`makes_ball` from an interval with `rel`, `abs` and `smallest_radius`**
+  (`ball_from_interval_1`; `rel` and `abs` together, `smallest_radius` only with them): the table
+  of the constructors as before, and for finite bounds $lo \le hi$ the center between them
+  (**center**), within `rel`$\lvert m\rvert$ + `abs` of $m = (lo + hi)/2$ (**midpoint**), the
+  radius $\mathrm{RU}(\max(c - lo, hi - c))$ (**smallest_radius**). `ball_from_interval_2` is
+  judged as before (`midpoint_when`), and both follow the rule of 2026-11-20: the same infinity
+  twice is the whole line.
+
+Readings chosen where the documents leave a choice, the stricter where they differ:
+
+- `exact` and `exact_when` on one entry are refused (with `exact` the claim is `m = true <-> R`
+  alone); a set named in `intervals` or `balls` that is no argument is refused, and so is the same
+  set twice; the argument `0` is the string `"0"` or the integer 0.
+- The kinds belong to the extended domain (refused elsewhere; in the finite domain no
+  `interval()` or `ball()` reads, so the sets never do either).
+- A half-line is neither a special operand nor a finite one: a claim without `exact` says only
+  that its answers are sound there. (Every claim over intervals is `exact`.)
+- `ball_set` compares the operands as they are in the line's text, which writes every NaN as
+  `nan`: two empty balls whose NaNs differ in sign or payload (the case the proofs found, which
+  made the clause of X conditional) cannot be written in the line protocol, and their lines, both
+  empty, are judged as NaN matching NaN; two whole lines whose centers are zeros of different
+  signs can, and the generator writes them (`bothspecial`).
+
+**What is not claimed, and so not judged.** An answer not given by a kernel whose claim is not
+exact there (the predicates of two limbs of a ball, and the comparisons of one limb where
+$r_x + r_y > \Omega$): architecture.md, "The band is not claimed". It is counted (`mask false
+although the relation holds (not claimed)`, `unknown although the relation holds (not claimed)`,
+`... fails for every choice ...`) and measured: the largest margin of such an answer (the distance
+from the boundary of the relation: $\bigl\lvert\lvert t - c\rvert - r\bigr\rvert$ for `member`,
+the gap between the balls for `lt` and `le`, $r_x - (\lvert c_y - c_x\rvert + r_y)$ for `subset`)
+over the largest radius, and over $u^2$ times the distance of the centers (`an answer not given:
+largest margin / largest radius`, `... / (u^2 * distance)`). There is no guard on it: the bands
+architecture.md gives ($2e + 3G$, $2e + 4G$) are in units of $e$, the radius of `add_ball_2_2`
+inside the kernel, which no output shows and no claim bounds from above. The yes of `ball_equal_2`
+is exact, architecture.md says (both balls the same point), but the claim does not say so: an
+unknown there passes (a hand-written line has it).
+
+Statistics, per entry (the cross-checks' guards read them; `enclosure.py` names them): for
+`certain` and `trit` the relation (`the relation holds`, `does not hold`, `fails for every choice`,
+`neither holds nor fails for every choice`), the answers (`mask true`, `mask false`, `answer yes`,
+`no`, `unknown`), the class of each set (`x: empty`, `whole line`, `half-line`, `bounded`, `a point`
+for an interval; `empty`, `whole line`, `finite`, `a point` for a ball) and of a point (`t: finite`,
+`infinite`, `NaN`), `an operand not finite: exact (claimed)`, `every operand finite`, `exact_when
+holds` and `exact_when fails: |EXPR| <= Omega`, and the answers not given above; for `ball_set` the
+cell of the states (`X empty, Y finite`, ..., nine), `Y as it is (claimed)`, `X as it is (claimed)`,
+the finite operands `disjoint`, `touching (one common point)`, `overlapping`, `one inside the
+other`, `both the whole line, centers zeros of different signs in the line`, the result's state,
+`result the whole line from finite operands` and the largest radius over the smallest one that
+contains what is due; for `ball_splits` the state of X, `X: a point (radius 0)`, the states of the
+parts and the largest part radius over $r/2$; for `finite_when` `finite_when holds`, `finite_when
+fails: |xl| <= 2^(qmax+p-2)`, `bounded X, the radius +inf` (`... the whole line` for a ball), the
+largest $\max\lvert\text{bound}\rvert/2^{q_{\max}+p}$ with a finite radius and the smallest with an
+infinite one; for `interval_of_ball` of two limbs the ball's state, the result's, each side's
+`exact_when` and distance over its bound, `bounded_when` both ways; for `makes_ball` with `rel`
+the center the midpoint or not and the largest distance over its bound.
+
+**Strata.** The predicates, comparisons and set operations of a ball have families of their own
+(`genenc.py`), chosen from their claims before those of `gen6.py`; each has the common strata,
+read for its operands, and strata of its own, coming round twice per cycle, by its operands (one
+set or two, a point, one limb or two):
+
+| Family | Kernels | Strata of its own |
+|---|---|---|
+| `ivpred` | `certain`, `trit` over intervals | `special` (an operand the empty set or the whole line, the other any), `nearzero` ($[0, 0]$, $[-\eta, 0]$, $[0, \eta]$, half-lines ending at zero, intervals about zero), and by shape: `point` (one interval: points and intervals one step wide), `member` (the point a bound, one step inside or outside, infinite, NaN), or `touch`, `equal` (the same interval, the same point, an equal bound, half-lines), `nested` (with equal ends, half-lines), `disjoint` (one step apart or more); `tails` (two limbs: bounds of equal leading limbs and other second limbs) |
+| `ballpred` | `certain`, `trit` over balls | `ballstates` (an operand empty or the whole line; a point infinite or NaN), `nearzero` (one ball: $c = \pm r$ exactly and one unit off, $[0 \pm 0]$, $[0 \pm \eta]$), or `boundary` (exactly on the boundary of the relation: the point $c \pm r$, balls touching, one inside the other with an equal end, the same point) and `near` (one to three units of the last limb off it); `huge` (a radius in the top binades, centers of opposite signs near $\Omega$), `points` (zero radii), `wide` (two balls: radii much wider or narrower than the distance) |
+| `ballset` | `ball_set` | `ballstates` (both special an eighth of the time), `bothspecial` (both empty, both the whole line with zeros of either sign, one of each), `disjoint`, `touch`, `nested`, `overlap`, `wide` (huge radii, centers near $\Omega$), `point` |
+| `ballsplit` | `ball_splits` | `ballstates`, `radii` (zero, $\eta$, odd multiples of $\eta$, subnormal, $\Omega$ and its predecessor, wide), `top` (centers near $\pm\Omega$) |
+
+The conversions of two limbs keep the families of `gen6.py` (`ivmid`, `ballbound`, `ivmake`) with
+two strata more for the bounds of two limbs (an operation key of their own, so that the families'
+other kernels keep their streams): `beyond` (a bound $(\pm\Omega, \pm t)$, beyond $\Omega$ three
+times in four: half-lines, points, bounded intervals) and `threshold` (a bound at
+$2^{q_{\max}+p-2}$, the limit of `finite_when`, or a neighbour or a small tail off it) for
+`interval_mid_rad_2`, `interval_to_ball_2` and `interval_split_2`; `threshold` ($\lvert c\rvert +
+r$ about $2^{q_{\max}+p-2}$) and `zeroend` ($c = \pm r$: an end exactly zero) for
+`ball_to_interval_2`; `ball_from_interval_1` has the strata of `ball_from_interval_2`. `enc_strata`
+checks that the cases of each stratum have what it is for.
+
+**What the reference runner, the interpreter and the compiled kernels reach** (2 000 cases per
+format of seed 0): the centers of two limbs come to 0.08 to 0.25 of $3u^2/(1-4u)\lvert m\rvert +
+2\eta$ in `binary64` and `binary32` and 0.5 in `fp:4:-6:1` (no floor: the bound is not claimed
+tight); the bounds of `ball_to_interval_2` to 0.43 to 0.51 of theirs; the center of
+`ball_from_interval_1` to 0.4 to 0.85 of $u\lvert m\rvert + \eta$.
+
 ### Statistics
 
 Per (kernel, format, tag) and aggregated per (kernel, format): cases, judged, failed, invalid,
@@ -826,6 +988,16 @@ whole map line. The cross-checks fail a summary above 4 MiB (`tests/crosscheck_g
   `encloses` with `"balls": {}` in the finite domain only; `makes_ball` with `from` `lower` and
   `upper` (one limb each) and `midpoint_when`; `zero_factor` on `bound` and `rounded`. Anything
   else in these is refused, as everywhere.
+- The enclosure interface ([above](#the-kinds-of-the-enclosure-interface)): `certain` (`of` a
+  mask, `rel`, `args`, `intervals` or `balls`, `exact` or `exact_when`) and `trit` (`yes` and `no`,
+  two masks, a `rel` of `lt`, `le`, `eq`, `member`), the extended domain only, each set of an
+  `interval()` or a `ball()` requirement and an argument, the point of `member` a limb input
+  outside the sets, of one limb or of two required `canonical()`; `ball_set` (`center`, `radius`,
+  `set`, two `balls` of the center's limbs) and `ball_splits` (`parts`, two balls of the center's
+  limbs, `from` a ball); `finite_when` of `ball_of_interval` (`[{"abs_le": BOUND, "exp": E}]`,
+  BOUND an input of `from`), the outward `tight` and `bounded_when` of `interval_of_ball` with
+  bounds of two limbs, `rel`, `abs` and `smallest_radius` of `makes_ball` from an interval. A
+  reason names the kernel, the entry and the field, a constant's included.
 - `of` names one output; a list of names, or `"s+e"`, concatenates outputs in that order, which is
   how a pair of 1-limb results `(s, e)` is read as one 2-limb number. Absent means all outputs.
 - `instances` is a list with one object per `error` entry, in their order, each mapping a format
@@ -1592,6 +1764,25 @@ last term of coefficient $j - 1$ in place of its own), `conv-flag-true`. The ste
 the canonical NaN by themselves wherever the result is not finite, so `map-no-second-pass`
 changes nothing on the maps of two limbs but `mul_pow2_map_2`.
 
+**The enclosure interface (stage B2).** `refrun` runs the 53 kernels of the predicates and
+comparisons of an interval and a ball, the set operations of a ball and the conversions of two
+limbs as their listings in `gen/kernels/` write them, on IEEE values, through the kernels they
+call (`two_sum_ord`, `abs_2`, the comparisons of two limbs, `add_ball_2_2`, `radd`, `to_down_2`,
+`to_up_2`, `mul_pow2_2`, `add_2_2`, `make_2`, `ball_add_k_full`, the directed sums of two limbs,
+`ball_to_interval_1`, the hulls and intersections, `interval_to_ball_1`): an operand returned as
+it is by a select is its token as the line wrote it, the sign of a zero kept. Its variants plant one
+fault each (`refrun --list-variants`, 68 of them, `en-` for the predicates of an interval, `enb-`
+and `enb2-` for those of a ball, `ens-` for the set operations of a ball, `enc-` for the
+conversions): a relation read on the wrong side or strictness, an emptiness or infinity test left
+out, the comparisons of two limbs on the leading limbs alone, a yes or a no where the relation
+does not hold or fails, both answers, the special states answered wrong, the selects of the
+operands as they are left out, swapped (`ens-int-swapped`: the reading before the correction),
+or writing a zero as $+0$, a radius halved or one number smaller, the empty set or the whole line
+of the parts of a split exchanged, the midpoint of two limbs not moved into $[l, h]$, a center of
+the whole line that is not canonical, $\Omega$ where $+\infty$ is due, an infinite radius below the
+limit of `finite_when`, an exact zero end off by $\eta$, infinite bounds below the limit of
+`bounded_when`, the rules of the constructors before 2026-11-20, a center one number off.
+
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
 `g++`, or `--cxx`) with `-std=c++17 -O2 -ffp-contract=off -fno-fast-math` (`/std:c++17 /O2
@@ -1667,7 +1858,17 @@ read before its fold, a maximum below $V$ or a step above $\mathrm{RU}(V)$ more 
 element's other than the largest, a false flag with a finite top accepted, `maximum` not compared,
 reversed or its outcomes swapped, the mask, the steps or nextUp of $-\infty$ of a finish wrong,
 `steps` 0 or an `if` naming an output accepted, a stratum without overflow, a tight case or an
-empty polynomial) and requires `selftest --quick` to fail on the copy. With
+empty polynomial; for the enclosure interface of stage B2, a reader check of `certain`, `trit`,
+`ball_set`, `ball_splits` or of the fields new to the kinds that exist left out, a clause of each
+judge not judged (soundness, exactness, the special states, `exact_when` and its condition read
+as half of $\Omega$, both answers, the operands as they are and the clause of X also where X is
+special, the sign of a zero, a NaN against a NaN, emptiness, containment, the parts of a split,
+`finite_when` and its limit one binade off either way, the center of 1788 beyond the limit, the
+canonical center, the tightness, `exact_when` and `bounded_when` of two limbs, the center, midpoint
+and smallest radius of a ball from an interval), a relation read on the wrong side, with the
+wrong strictness or without its empty set or infinite bound, a set without its radius, a count
+the guards read not counted, a stratum that does not reach what it is for) and requires
+`selftest --quick` to fail on the copy. With
 `--fail-fast` each copy's selftest stops at its first failing test and runs the longest tests
 (`LONG` in `mutants.py`) last (`selftest --fail-fast --last NAMES`), so a mutant is caught in
 seconds; a survivor still runs every test, and the tests listed are then the first that failed
@@ -1765,6 +1966,15 @@ follows from both parts being canonical.
 | `gen_maps` | case $i$ of a map, a fold of maxima or a convolution alone not case $i$ of its run, a seed or the largest length not mattering, a length above the largest, a stratum missing or not listed, an invalid case, an unknown stratum accepted, a convolution accepting the lane order |
 | `merging_wave7` | the merge of summaries of stage B differs from the whole |
 | `summary_bounds` | a statistic of a map's step keeping anything but the line of its element of the step (or one that does not pass when judged again), a summary of a map above 1 MB, a distance of the profile kept that is not a record; on 3 000 random profiles with many equal ratios, merged in order from summaries read back, (a) for some $F$ (value or case) or the merged summary differing between the records and every distance |
+| `claims_reading_enc` | the fixture of the enclosure interface unreadable, or its kinds and fields read otherwise (`certain`, `trit`, the argument `0`, a point, `exact_when`, `ball_set`, `finite_when`, the outward `tight` and `bounded_when` of two limbs, `rel` and `abs` of `makes_ball`); 65 malformed kernels not set aside with a reason that names the kernel, the entry and the field, or making another kernel unreadable (an unknown field, `rel` or arity; a `rel` of `certain` in `trit`; an argument that is no set, `0` twice, the same set twice, a set that is no argument; `intervals` and `balls` together or neither; `exact` false, with `exact_when`; `exact_when` empty, without `omega` true, with `exp`, over an unknown name, malformed; `of` an input or a limb output; `yes` and `no` the same, `no` missing; a point inside a set or of two limbs without `canonical()`; the finite domain; a ball without its requirement; `ball_set` with another `set`, one ball, a radius or center that is no output of the right limbs; `ball_splits` with one part, an output twice, a malformed part, `from` without `ball()`, a center of other limbs; `finite_when` empty, not a list, over an output, with an exponent that is a string or a boolean, with `omega`, beside `smallest_radius`; `interval_of_ball` of two limbs rounded, with `steps`, without `abs`, with `exact_when` a list, `bounded_when` empty, over another set, with `omega` or a fractional exponent; `makes_ball` with `rel` and no `abs`, `smallest_radius` without them or false, a malformed constant); `rel` on a ball from a center; `ball_set` in the finite domain |
+| `enc_relations` | `enclosure.relation` other than the definitions of architecture.md's table, quantified over the members, on every pair of 27 sets (the empty set, half-lines, the whole line, bounds in -2..2), every relation, and `member` of every point of -3..3, the infinities and NaN (5 508 relations) |
+| `enc_reference` | the reference runner (the listings of gen/kernels/) failing a kernel of the family, or an invalid or suspicious case, on random streams of 1 500 cases (500 with `--quick`) of every kernel in `binary64`, `binary32` and `fp:4:-6:1`; a stratum of the header without a case; an entry never applied; a class the guards ask for never reached in `binary64` or `binary32` |
+| `enc_exhaustive` | the reference runner failing any case of the enumerations of tiny formats of every kernel (two intervals or two balls of two limbs on a restricted domain: 70 enumerations, 1.5 million cases with `--quick`), a line not judged, a cell of the table of the constructors never met by `ball_from_interval_k`; 16 planted faults not caught there, caught in another entry, or, for a kernel whose claim fixes the output, not failing every line they change |
+| `enc_planted` | a planted fault of the family (68: `refrun` variants `en-`, `enb-`, `ens-`, `enc-`) not caught in the kernels and entries where it belongs, in `binary64`, `binary32` and `fp:4:-6:1`, caught in a kernel that does not use it, seen as invalid or suspicious; a line it changes of a kernel whose claim fixes the output not failing; a line of the class it is about not failing (two whole lines of zeros of different signs, a zero passed through as it is, the whole line, a half-line, the empty set, an exact zero end, a NaN bound, the same infinity twice, reversed bounds) |
+| `enc_judge` | one of 228 hand-written lines judged otherwise than worked out by hand, each failure in its statement (every cell of the table of `rel` and of the special states of the predicates of an interval and a ball, of the clauses of `ball_set` with the signs of zeros, of `ball_splits`, of the conversions of two limbs: the special values of 1788, a canonical center, `finite_when` at and beyond its limit, the center claimed beyond it, `exact_when`, the tightness, containment and `bounded_when` of two limbs, the center, midpoint and smallest radius of `ball_from_interval_1`); one of 10 lines outside the requirements not invalid; a cell of the table of the constructors for `ball_from_interval_1` (17) passing its wrong result, failing its right one or counting another cell |
+| `enc_gen` | case $i$ alone not case $i$ of its run, a seed not mattering, a stratum of the header without a case or a case of none, an invalid case, in every kernel of the family in two formats; no center $-0$ of the whole line in the streams of the set operations |
+| `enc_strata` | a stratum of the family (or of the conversions of two limbs in `gen6.py`) whose cases do not have what it is for, in `binary64` and `fp:4:-6:1` (every case, or the fraction given: an operand special, intervals touching, nested, disjoint or with an equal bound, balls on the boundary of the relation, huge, of radius zero, both special, a center near $\Omega$, a bound beyond $\Omega$, at the limit of `finite_when` or `bounded_when`, an end exactly zero) |
+| `enc_merging` | the merge of the summaries of two halves of streams of seven kernels of the family differs from the whole |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.

@@ -911,6 +911,9 @@ from . import selftest6  # noqa: E402,F401
 from . import selftest7  # noqa: E402,F401
 from . import selftest8  # noqa: E402,F401
 from . import selftest9  # noqa: E402,F401
+# The predicates, comparisons, set operations of a ball and conversions of two limbs of the
+# enclosure interface (selftest_enc).
+from . import selftest_enc  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------
