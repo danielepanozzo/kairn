@@ -100,6 +100,7 @@ nav:
   - Tutorials:
       - Accurate sums and dot products: tutorials/accurate-sums.md
       - The range of a polynomial: tutorials/intervals.md
+      - A vector loop: tutorials/vector-loop.md
   # BEGIN reference: written by docs/tools/reference.py; do not edit by hand
   - Reference:
       - reference/index.md
@@ -310,6 +311,9 @@ nav:
           - Two accumulators of two limbs into one: reference/acc_merge_2.md
           - The radius of an accumulator of one limb: reference/acc_radius_1.md
           - The radius of an accumulator of two limbs: reference/acc_radius_2.md
+      - "Vector loops: Packed and the containers":
+          - Packed numbers in registers: reference/packed.md
+          - "Arrays of numbers: SoA and its views": reference/soa.md
       - Operations on arrays, entry by entry:
           - The difference of two numbers of one limb, rounded to nearest: reference/sub_1_1.md
           - "x + y of one limb, on arrays of the program": reference/add_entry_step_1.md

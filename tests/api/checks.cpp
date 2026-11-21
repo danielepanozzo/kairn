@@ -94,6 +94,53 @@ const OperandCase operand_cases[] = {
     {"interval.bound", not_canonical, [] { return I2(unverified(raw(1.0, double(v_a))), o.y).lower().limb[1]; }},
     {"interval.hull", "an interval: is not canonical",
      [] { return o.jx.hull(unverified(I2(kairn::detail::kernel_result, raw(1.0, double(v_a)), o.y))).lower().limb[1]; }},
+    // Packed and the containers: a lane that is not canonical among canonical ones, given to a
+    // load (the message of from_limbs), to an operator, a comparison and a finite core; and an
+    // element of a view, read through get, the proxy and load.
+    {"packed.load.unnormalized", not_a_pair, [] {
+         Arrays a(o.y);
+         a.h[P2::lanes - 1] = 1.0;
+         a.l[P2::lanes - 1] = v_a;
+         return P2::load(a.h, a.l).lane(0).limb[1];
+     }},
+    {"packed.from_limbs.unnormalized", not_a_pair, [] {
+         P2 x = P2::broadcast(o.y);
+         x.set_lane(0, raw(1.0, double(v_a)));
+         return P2::from_limbs(x.limb[0], x.limb[1]).lane(0).limb[1];
+     }},
+    {"packed.operator.unnormalized", not_canonical, [] {
+         P2 x = P2::broadcast(o.y);
+         x.set_lane(P2::lanes - 1, raw(1.0, double(v_a)));
+         return (x + P2::broadcast(o.y)).lane(0).limb[1];
+     }},
+    {"packed.comparison.unnormalized", not_canonical, [] {
+         P2 x = P2::broadcast(o.y);
+         x.set_lane(P2::lanes - 1, raw(1.0, double(v_a)));
+         return double(kairn::any(P2::broadcast(o.x) < x));
+     }},
+    {"packed.finite.unnormalized", "an operand: is not normalized", [] {
+         P2 x = P2::broadcast(o.y);
+         x.set_lane(0, raw(1.0, double(v_a)));
+         return kairn::finite::add(x, P2::broadcast(o.y)).lane(0).limb[1];
+     }},
+    {"soa.get.unnormalized", not_a_pair, [] {
+         Arrays a(o.y);
+         a.l[2] = v_a;
+         a.h[2] = 1.0;
+         return kairn::SoAView<const double, 2>(a.h, a.l, 16).get(2).limb[1];
+     }},
+    {"soa.element.unnormalized", not_a_pair, [] {
+         Arrays a(o.y);
+         a.l[7] = v_a;
+         a.h[7] = 1.0;
+         return E2(kairn::SoAView<double, 2>(a.h, a.l, 16)[7]).limb[1];
+     }},
+    {"soa.load.unnormalized", not_a_pair, [] {
+         Arrays a(o.y);
+         a.l[3] = v_a;
+         a.h[3] = 1.0;
+         return kairn::SoAView<const double, 2>(a.h, a.l, 16).load(3).lane(0).limb[1];
+     }},
     // fast_two_sum's requirement, |a| >= |b|: 2^-60 and 1.5 in the wrong order.
     {"fast_two_sum.order", "fast_two_sum: [|]a[|] < [|]b[|]", [] { return kairn::fast_two_sum(double(v_b), double(v_a)).sum; }},
     // The corner of two_sum: b the largest finite number, a sum that is finite, and an error term
@@ -137,6 +184,22 @@ const Accepted accepted[] = {
     {"whole * interval", [] { return (unverified(I2::whole()) * o.jy).upper().limb[0]; }},
     {"midpoint of the empty set", [] { return I1::empty().midpoint().limb[0]; }},
     {"the bounds of the empty ball", [] { return B2::empty().lower_as<double>(); }},
+    // Packed and the views: canonical lanes that are not finite, and what a core returns.
+    {"P2::load of (+inf, 0) and (NaN, NaN)", [] {
+         Arrays a(pair(infinity, 0.0));
+         a.h[0] = a.l[0] = not_a_number;
+         return P2::load(a.h, a.l).lane(1).limb[0];
+     }},
+    {"a view of (-inf, -0)", [] {
+         Arrays a(pair(-infinity, 0.0));
+         a.l[1] = -0.0;
+         return kairn::SoAView<const double, 2>(a.h, a.l, 16).get(1).limb[0];
+     }},
+    {"kairn::finite::add on a lane (inf, NaN)", [] {
+         P2 x = P2::broadcast(o.y);
+         x.set_lane(0, raw(infinity, not_a_number));
+         return kairn::finite::add(x, P2::broadcast(o.y)).lane(1).limb[0];
+     }},
 };
 
 void say(const char* format, const char* a = "", const char* b = "") {

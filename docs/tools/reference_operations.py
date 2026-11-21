@@ -44,6 +44,9 @@ B2 = "Ball<T, 2>"
 I1 = "Interval<T, 1>"
 I2 = "Interval<T, 2>"
 T = "T"
+P1 = "Packed<T, 1>"
+P2 = "Packed<T, 2>"
+PK = "Packed<T, K>"
 
 # The groups of the index, in order: (id, title, what the group is).
 GROUPS = [
@@ -79,6 +82,11 @@ GROUPS = [
      "The kernels of the loops over arrays (the folds of Milestone 2): their steps, the finish of their "
      "result, and the bounds of a sum and of a dot product as a function of the number of terms. The "
      "functions on arrays of the public headers come later."),
+    ("packed", "Vector loops: Packed and the containers",
+     "`Packed<T, k>` (`kairn/packed.hpp`) holds W numbers in registers; its operations are those of `Expansion` "
+     "that have a kernel, under the same names, each the packed form of that kernel, with its statement in every "
+     "lane ([Packed numbers in registers](packed.md)). `SoA<T, k>` and its views (`kairn/soa.hpp`) hold numbers as "
+     "one array per limb and compute nothing ([Arrays of numbers](soa.md)). `kairn/kairn.hpp` includes neither."),
     ("maps", "Operations on arrays, entry by entry",
      "The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the "
      "operation of one entry, on an array the program supplies where it says so. The functions on arrays of "
@@ -854,8 +862,8 @@ KERNELS = {
 }
 
 
-def exact(group, does, *forms):
-    return {"group": group, "does": does, "forms": list(forms)}
+def exact(group, does, *forms, kernel="none"):
+    return {"group": group, "does": does, "forms": list(forms), "kernel": kernel}
 
 
 # Operations that call no kernel. `does` is what the header comment says the operation does.
@@ -928,8 +936,47 @@ EXACT = [
     exact("construction", "whether `c` is what `rational<X>(num, den)` returns, decided with multiplications and "
           "comparisons of integers ([the check](rational.md#the-check))",
           form("is_rational_result(c, num, den)", "Constant<X>", "long long", "long long", result="bool")),
+    # Packed (kairn/packed.hpp) and the containers (kairn/soa.hpp): the kernels are those of the
+    # operations of Expansion of the same name, in every lane; their pages are the forms' pages.
+    exact("packed", "in each lane, the operation of `Expansion<T, 2>` of the same name, with its statement; a "
+          "`Packed<T, 1>` operand is the limb of the mixed forms",
+          form("x + y, x - y, x * y, x += y, x -= y, x *= y, -x, abs(x), add_fast(x, y), ldexp(x, n), half(x)",
+               P2, P2, result=P2),
+          form("x + a, a + x, x - a, a - x, x * a, a * x", P2, P1, result=P2),
+          kernel="that of `Expansion` ([Packed](packed.md#the-operations))"),
+    exact("packed", "in each lane, the comparison of `Expansion`: a mask of W truth values",
+          form("x < y, x > y, x <= y, x >= y, x == y, x != y", PK, PK, result="PackedMask<T>"),
+          kernel="that of `Expansion`, or none for one limb"),
+    exact("packed", "in each lane, the conversion of `Expansion<T, 2>` to one limb",
+          form("to_nearest(x), to_down(x), to_up(x), abs_upper(x), Packed<T, 1>(x)", P2, result=P1),
+          kernel="that of `Expansion`"),
+    exact("packed", "in each lane, the function of `kairn::finite` of the same name: the core, without the fix-up",
+          form("finite::add, finite::sub, finite::mul, finite::add_fast, finite::ldexp", P2, PK, result=P2),
+          kernel="that of `Expansion`"),
+    exact("packed", "one limb: the exact operations of `T`, as for `Expansion<T, 1>`; no arithmetic, whose "
+          "kernels are not entry kernels ([Packed](packed.md#the-operations))",
+          form("-x, abs(x), x < y, x == y, to_nearest(x), to_down(x), to_up(x), abs_upper(x)", P1, P1, result=P1)),
+    exact("packed", "moves: zero, one number in every lane, a lane read or written, a select by a mask; limbs "
+          "copied, nothing computed",
+          form("Packed<T, K>(), Packed<T, K>::broadcast(x), p.lane(i), p.set_lane(i, x), select(m, a, b)", PK,
+               result=PK)),
+    exact("packed", "whether every lane, some lane, or lane i of a mask is true; and, or and not, lane by lane "
+          "(`&`, the bar, `!`)",
+          form("all(m), any(m), m.lane(i), m & n, !m", "PackedMask<T>", result="bool")),
+    exact("packed", "W numbers from arrays, or into them, unaligned; a two-limb load is `from_limbs` in each lane "
+          "(guarded, and checked with `KAIRN_CHECKS`); the tail with `load_partial` and `store_partial`",
+          form("Packed<T, 2>::load(x0, x1), p.store(x0, x1), load_partial(x0, x1, n, fill)", "const T*", "const T*",
+               result=P2),
+          kernel="`make_2_limbs` (a load), or none"),
+    exact("packed", "element i of an array of numbers, read as `from_limbs` (checked with `KAIRN_CHECKS`) or "
+          "written (limbs copied); W of them as a `Packed` ([Arrays of numbers](soa.md))",
+          form("v[i], v.get(i), v.set(i, x), v.load(i), v.store(i, p)", "SoAView<T, K>", "std::size_t",
+               result="Expansion<T, K>"),
+          kernel="`make_2_limbs` (a read), or none"),
 ]
 
 PAGES = [
     ("construction", "Constants from fractions", "rational"),
+    ("packed", "Packed numbers in registers", "packed"),
+    ("packed", "Arrays of numbers: SoA and its views", "soa"),
 ]
