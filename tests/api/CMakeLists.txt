@@ -125,7 +125,9 @@ set(_flags_gen_labels ${_flags_gen_labels} PARENT_SCOPE)
 # --- The end of the flag sets' runners ---------------------------------------------------------
 if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_crosscheck "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/crosscheck.py")
-  set(_api_common --seed "${KAIRN_API_SEED}" ${_api_runners})
+  # The claims the oracle reads (KAIRN_ORACLE_CLAIMS, ../CMakeLists.txt); the kernels registered
+  # and api.oracle.coverage are those of gen/claims.json.
+  set(_api_common --seed "${KAIRN_API_SEED}" ${_api_runners} --claims "${KAIRN_ORACLE_CLAIMS}")
   file(READ "${_api_claims}" _api_json)
   string(JSON _api_count LENGTH "${_api_json}" kernels)
   math(EXPR _api_last "${_api_count} - 1")
@@ -155,7 +157,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   # the flag sets' runners on KAIRN_API_QUICK_CASES.
   set(_api_oracle_kernels ${_api_mapped} PARENT_SCOPE)
   set(_api_oracle_common ${_api_common} PARENT_SCOPE)
-  set(_api_flags_common --seed "${KAIRN_API_SEED}" ${_flags_runners} PARENT_SCOPE)
+  set(_api_flags_common --seed "${KAIRN_API_SEED}" ${_flags_runners} --claims "${KAIRN_ORACLE_CLAIMS}"
+    PARENT_SCOPE)
   set(_api_unlisted ${KAIRN_NOT_YET_CROSS_CHECKED} ${KAIRN_NOT_PUBLIC_YET})
   add_test(NAME api.oracle.coverage
     COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
@@ -190,7 +193,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-orac
   # claims; ../crosscheck_guards.py: every stratum, exact and inexact cases, den = 0 and, for two
   # limbs, a pair that the two roundings alone do not normalize).
   set(_api_rational_common "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/crosscheck.py" compiled
-    --seed "${KAIRN_API_SEED}" --fail-on-suspicious)
+    --seed "${KAIRN_API_SEED}" --fail-on-suspicious --claims "${KAIRN_ORACLE_CLAIMS}")
   foreach(_kind 1 2)
     foreach(_format binary64 binary32)
       set(_name api.rational.${_kind}.${_format})

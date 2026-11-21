@@ -6,7 +6,8 @@
 #
 #   cmake -DPYTHON=... -DSOURCE_DIR=... -DKERNEL=... -DFORMAT=... -DSUMMARY=FILE -DRUNNER=interp
 #         (-DEXHAUSTIVE=ON [-DRESTRICT=R1,R2,...] | -DCOUNT=N -DSEED=S)
-#         [-DMAX_LENGTH=L] [-DORDERS=O1,O2,...] [-DFAIL_ON_SUSPICIOUS=ON] -P crosscheck.cmake
+#         [-DMAX_LENGTH=L] [-DORDERS=O1,O2,...] [-DFAIL_ON_SUSPICIOUS=ON] [-DCLAIMS=FILE]
+#         -P crosscheck.cmake
 #
 # KERNEL may be a fold, whose requests carry arrays: MAX_LENGTH is then the largest length (of
 # every array enumerated, or of the random ones) and ORDERS the orders of a random run.
@@ -81,6 +82,12 @@ if(DEFINED ORDERS)
   list(APPEND _guard_args --orders "${ORDERS}")
 endif()
 set(_check ${_oracle} check --expect-valid)
+# -DCLAIMS=FILE: the claims the oracle reads instead of gen/claims.json (KAIRN_ORACLE_CLAIMS of
+# tests/CMakeLists.txt); the guards read the file the summary names.
+if(CLAIMS)
+  list(APPEND _gen --claims "${CLAIMS}")
+  list(APPEND _check --claims "${CLAIMS}")
+endif()
 if(FAIL_ON_SUSPICIOUS)
   list(APPEND _check --fail-on-suspicious)
 endif()

@@ -286,6 +286,7 @@ if(TARGET kairn-gen-runner)
   add_test(NAME full.search.compiled
     COMMAND "${Python3_EXECUTABLE}" oracle/kairn-oracle search all binary64,binary32
       --runner "$<TARGET_FILE:kairn-gen-runner>" --evals 5000 --jobs 4 --quiet
+      --claims "${KAIRN_ORACLE_CLAIMS}"
       --fail-on-suspicious --suspicious-ok split,two_prod_dekker
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(full.search.compiled PROPERTIES TIMEOUT 600 PROCESSORS 4
