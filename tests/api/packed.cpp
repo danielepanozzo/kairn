@@ -90,9 +90,11 @@ long zero_signs = 0;
 template <class T, int K>
 bool same_value(const kairn::Expansion<T, K>& a, const kairn::Expansion<T, K>& b) {
     if (same(a, b)) return true;
-    if (K == 1 && a.limb[0] == 0 && b.limb[0] == 0) {
-        ++zero_signs;
-        return true;
+    if constexpr (K == 1) {
+        if (a.limb[0] == 0 && b.limb[0] == 0) {
+            ++zero_signs;
+            return true;
+        }
     }
     return false;
 }
@@ -294,13 +296,15 @@ Mixed binary(const char* op, const Corpus<T>& c, PF pf, SF sf, bool zero_by_valu
 }
 
 // The operations of the extended domain must have met registers of mixed kinds.
-void expect_mixed(const char* op, const Mixed& m, bool results) {
-    if (lanes_double == 1) return;  // one lane: nothing to mix
-    if (m.operands == 0 || (results && m.results == 0)) {
-        ++failures;
-        std::printf("FAILED %s: no register mixed finite and non-finite %s (%ld operand registers, %ld result "
-                    "registers)\n",
-                    op, m.operands == 0 ? "operands" : "results", m.operands, m.results);
+// With one lane there is nothing to mix. (if constexpr: MSVC reports a constant condition, C4127.)
+void expect_mixed([[maybe_unused]] const char* op, [[maybe_unused]] const Mixed& m, [[maybe_unused]] bool results) {
+    if constexpr (lanes_double > 1) {
+        if (m.operands == 0 || (results && m.results == 0)) {
+            ++failures;
+            std::printf("FAILED %s: no register mixed finite and non-finite %s (%ld operand registers, %ld result "
+                        "registers)\n",
+                        op, m.operands == 0 ? "operands" : "results", m.operands, m.results);
+        }
     }
 }
 
