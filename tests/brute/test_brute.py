@@ -52,6 +52,8 @@ class Plan(unittest.TestCase):
             cm = f.read()
         for shape, formats in brute.FOLD_SHAPES.items():
             m = brute.re.search(r"^set\(_fold_toy_%s (\S+) (\d+) " % shape, cm, brute.re.M)
+            if shape.startswith("kernel_"):
+                self.assertEqual(brute.fold_shape(folds[shape[7:]]), shape, shape)
             self.assertIsNotNone(m, shape)
             self.assertEqual((m.group(1), int(m.group(2))), formats[0], shape)
 
