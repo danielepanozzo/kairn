@@ -808,6 +808,17 @@ def v4_range(fmt):
     return fmt.qmax >= 1 and fmt.qmin <= 3 - fmt.qmax - 2 * fmt.p
 
 
+def v4_beyond(fmt):
+    """The text a failure of V4 carries in a format of a wider subnormal range than binary_float's
+    (q_min below 3 - q_max - 2p), where V4 is judged and nothing is proved: by the owner's ruling
+    of 2026-11-21 (architecture.md, "The formats of the statements") a failure there is a finding
+    to report, not a violated claim."""
+    if fmt.qmax >= 1 and fmt.qmin < 3 - fmt.qmax - 2 * fmt.p:
+        return (" (in a format of a wider subnormal range than binary_float's, where nothing is "
+                "proved: a finding to report, not a violated claim)")
+    return ""
+
+
 def judge_bv_line(ck, line, lt, sep, right, tag):
     """BV FORMAT ORDER N [inplace=I] SCALAR... LIMB... [#TAG] -> Z... R FLAG."""
     f = ck.claims.get_fold(lt[0])
@@ -1016,8 +1027,8 @@ def _encloses(ck, pl, es, fail, sc, elems, zs, r, res, states, line, sus, st, in
                 es.count(V4_EMPTY)
             if not finite:
                 fail("V4", "every operand is a finite ball vector, every scalar finite, every "
-                     "condition holds (%s), and the result is the whole space"
-                     % " and ".join(pl.fw_text))
+                     "condition holds (%s), and the result is the whole space%s"
+                     % (" and ".join(pl.fw_text), v4_beyond(fmt)))
     # Exactness: where the operands and the result are finite and every condition holds.
     if f.exact_when is not None and finite and not whole_op and scal_fin:
         failing = [t for h, t in pl.scalar_conds if not h(tuple(sc) + (0,) * pl.L)]
@@ -1327,7 +1338,7 @@ def judge_bvconv_line(ck, line, lt, sep, right, tag):
                 es.count(V4_EMPTY)
             if not finite:
                 fail("V4", "both operands are finite ball vectors, count_when, radii_when and "
-                     "finite_when hold, and the result is the whole space")
+                     "finite_when hold, and the result is the whole space" + v4_beyond(fmt))
     if fail.reasons:
         es.failures += 1
     MP._finish(ck, st, line, fail.reasons, sus)

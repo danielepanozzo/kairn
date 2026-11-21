@@ -419,6 +419,12 @@ JUDGE11 = [
     ("bv_add_1 fp:2:-1:1 seq 0 0x1p-1 0x0p+0 -> inf 0", "pass", None),
     ("bv_add_1 fp:2:-2:1 seq 0 0x1p-1 0x0p+0 -> 0x1p+1 1", "pass", None),
     ("bv_add_1 fp:2:-2:1 seq 0 0x1p-1 0x0p+0 -> inf 0", "fail", "V4"),
+    # fp:2:-3:1, a wider subnormal range than binary_float's (q_min = -3 < 3 - 1 - 4): V4 is
+    # judged there, and its failure says that it is a finding, not a violated claim (the owner's
+    # ruling of 2026-11-21); in fp:2:-2:1, of binary_float's shape, it does not.  The
+    # interpreter's line is 0x1p+1 1 in both.
+    ("bv_add_1 fp:2:-3:1 seq 0 0x1p-1 0x0p+0 -> 0x1p+1 1", "pass", None),
+    ("bv_add_1 fp:2:-3:1 seq 0 0x1p-1 0x0p+0 -> inf 0", "fail", "V4", "a finding to report"),
 ]
 
 

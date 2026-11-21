@@ -83,6 +83,20 @@ Toy formats exist so that statements can be tested on *all* operands before anyo
 them. Every number of a toy format with $p \le 53$ inside `binary64`'s range is a `double`, so the
 same tools and the same line protocol handle them.
 
+**The formats of the statements** (the owner's ruling of 2026-11-21). The generated statements of
+the IEEE model quantify over the formats of Flocq's `binary_float prec emax`: $e_{\max} > p$, and
+the smallest exponent $3 - e_{\max} - p$; with $q_{\max} = e_{\max} - p$ that is $q_{\max} \ge 1$
+and $q_{\min} = 3 - q_{\max} - 2p$ (`binary64` and `binary32` are of that shape, and so is
+`fp:8:-14:1`, precision 8 with $e_{\max} = 9$). A clause that promises a finite result (V4 of a
+ball vector or of a product of two BallVectors with its `finite_when`, `radii_when` and
+`count_when`; the `finite_when` of `extends`, `encloses` and `ball_of_interval`; the
+`bounded_when` of the interval kernels) is claimed in those formats. A reader may also judge it in
+a format of a wider subnormal range ($q_{\max} \ge 1$ and $q_{\min} < 3 - q_{\max} - 2p$), where
+nothing is proved and a failure is a finding to report, not a violated claim; in any other toy
+format it is not claimed, and a reader counts that it was not judged. In `fp:2:-1:0`
+($e_{\max} = 1 < p$), for example, a constant of the radius of `bv_add_1` is the largest number of
+the format, and V4 is false as written there.
+
 ## The kernel IR
 
 A kernel is a straight-line program in static single assignment form. Values are limbs (numbers
@@ -1979,7 +1993,9 @@ the radii, and the expression is the largest magnitude of a member of the exact 
 ([when the result is a finite ball](design/milestone1.md#when-the-result-is-a-finite-ball)). The
 list is empty when no condition is claimed, and an empty list claims nothing about when the
 result is finite: it does not say that it always is. Every full kernel and every full Ball
-kernel has a condition; `ball_neg_k` has none.
+kernel has a condition; `ball_neg_k` has none. The promise of a finite result (F3, B4) is claimed
+in the formats of the statements, `binary_float`'s ([The formats of the statements](#number-formats)),
+not in every toy format.
 
 **`upper` of a kernel of the finite domain with several operations.** The row of `upper` above is
 about the building blocks of one operation of the extended domain. A kernel of the finite domain
@@ -2548,7 +2564,8 @@ true` (and no `"map"`):
       formats of at least that precision.
 
 **From which precision each clause holds.** The statements quantify over every `emax` above the
-precision (`binary_float` asks $p < e_{\max}$), so the smallest format of precision $p$ has
+precision (`binary_float` asks $p < e_{\max}$; V4 is claimed in those formats only, [The formats
+of the statements](#number-formats)), so the smallest format of precision $p$ has
 $e_{\max} = p + 1$: the finite numbers below $2^{p+1}$. V1 to V3 and the flag hold from the fold's
 minimum precision, whatever the constants: a constant of the radius kernel that overflows is
 $+\infty$ in the IEEE model, so the radius it enters is $+\infty$ or a NaN (an FMA of $+0$ and

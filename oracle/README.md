@@ -1453,12 +1453,37 @@ R FLAG`, $n_x + n_y - 1$ coefficients (none when a length is 0).
   `radii_when` and `finite_when` (per pair, per entry of either array with the other's radius,
   or once) hold.
 
-**The formats of V4.** architecture.md ("From which precision each clause holds") states the
-clauses for `binary_float prec emax` (Flocq's), which asks $p < e_{\max}$ and whose smallest
-positive number is $2^{3 - e_{\max} - p}$: in this oracle's terms $q_{\max} \ge 1$ and
-$q_{\min} = 3 - q_{\max} - 2p$. V4 is judged there and in formats of a wider subnormal range
-($q_{\min}$ below), and counted `V4 not claimed: a format of no statement` elsewhere
-(`bvfolds.v4_range`). Outside them V4 fails as written: in `fp:2:-1:0` ($e_{\max} = 1 < p$) the
+**The formats of V4**, and of every clause that promises a finite result. The rule, by the
+owner's ruling of 2026-11-21 (architecture.md, "Number formats", "The formats of the statements"),
+in the same words in docs/developer/testing.md: *the generated statements quantify over the
+formats of `binary_float` ($e_{\max} > p$, smallest exponent $3 - e_{\max} - p$; in this oracle's
+terms $q_{\max} \ge 1$ and $q_{\min} = 3 - q_{\max} - 2p$); a clause that promises a finite result
+(V4, `finite_when`, `radii_when`, `count_when`) is claimed there, and the oracle may also judge it
+in a format with a wider subnormal range, where nothing is proved and a failure would be a finding
+to report, not a violated claim; in any other toy format it is not claimed, and the oracle counts
+that.*
+
+- V4 of the ball vectors and of the products of two BallVectors, with their `finite_when`,
+  `radii_when` and `count_when`, follows it (`bvfolds.v4_range`): judged where $q_{\max} \ge 1$
+  and $q_{\min} \le 3 - q_{\max} - 2p$, a failure in a format of a wider subnormal range saying
+  that it is a finding, not a violated claim (`bvfolds.v4_beyond`), and counted `V4 not claimed:
+  a format of no statement (e_max <= p, or eta above binary_float's)` elsewhere.
+- The `finite_when` of the Milestone 1 kernels (F3 of `extends`, B4 of `encloses`: the full
+  kernels, the full Ball kernels, `ball_narrow_2_1`) and the `bounded_when` of the interval
+  kernels (I5), clauses of the same sort, are judged in **every** format, those outside
+  `binary_float`'s included: stricter than the rule. Thirteen of the 28 kernels judged with such a
+  clause have the toy format of their full tier outside it (`add_2_1_full`, `sub_1_2_full`,
+  `sub_2_1_full`, `mul_2_1_full` in `fp:4:-5:0`, `mul_pow2_2_full` in `fp:5:-7:0`,
+  `mul_2_2_full` and `ball_mul_2_full` in `fp:4:-4:-1`, `ball_add_2_full`, `ball_sub_2_full`,
+  `interval_add_2` and `interval_sub_2` in `fp:3:-2:-1`, `ball_scale_2_full` in `fp:3:-3:0`,
+  `interval_mul_2` in `fp:4:-3:-2`), and `interval_add_1` and `interval_sub_1` their sampled
+  format `fp:5:-7:0`; there the clause is judged and passes (F3 applies on 15 165 of the 62 500
+  operands of `mul_2_2_full` in `fp:4:-4:-1`, B4 on 1 525 of the 122 500 of `ball_add_2_full` in
+  `fp:3:-2:-1`, every one finite). To count those lines as not claimed would stop judging lines
+  that pass today, so they are judged as before; a failure there would be a finding, not a
+  violated claim.
+
+Outside the formats of V4 it fails as written: in `fp:2:-1:0` ($e_{\max} = 1 < p$) the
 constant `up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u))` of `bv_add_radius_1` is $3 = \Omega$ and
 `bv_add_1 fp:2:-1:0 seq 0 0x1p-1 0x0p+0 -> inf 0` (the interpreter's line) is the whole space
 from $r_x = \tfrac12$; in `fp:2:-1:1` (an $\eta$ of $\tfrac12$, twice binary_float's) `bv_add_1`,
@@ -2015,7 +2040,7 @@ follows from both parts being canonical.
 | `bv_folds_reference` | the reference runner failing a ball vector, a constructor or a product, or an invalid or suspicious case, on random cases of `binary64`, `binary32` and a toy format, and in place; a class the guards ask for not met (both results, a whole-space operand, V4 with and without entries, exactness, each radius given, the lengths 0 and 1 of a product, every array in place) |
 | `bv_folds_planted` | a planted fault of the folds (`bv-*`, `bvc-*`) not caught in its class (V1, the flag, V2, V3, V4, exact, `makes_ball_vector`), or caught in a fold it does not touch |
 | `bv_folds_exhaustive` | the reference runner failing a request of the enumerations of tiny formats (six folds; twelve without `--quick`), an index seen twice or missed, a class of results or the lane orders missing, V4 judged outside its formats or not judged inside; a planted fault not caught there |
-| `bv_folds_judge` | one of 64 hand-written lines judged otherwise than worked out by hand (the radius at, below and above its kernel's value, below the set, a center off the middle or not the step's, the flag, the whole space where V4 claims finite and beyond, of no entry, `radii_when`, below `finite_from`, outside the formats of V4, the lanes, in place and a malformed `inplace=`, operands that are not BallVectors, the exactness of a negation and of a scaling, each case of a constructor, a product of one entry each, a non-canonical product); `count_when` evaluated otherwise than by hand under the listing's expression and under the coordinator's (511 entries of $(+0, +0)$ in `fp:8:-15:2`) |
+| `bv_folds_judge` | one of 66 hand-written lines judged otherwise than worked out by hand (the radius at, below and above its kernel's value, below the set, a center off the middle or not the step's, the flag, the whole space where V4 claims finite and beyond, of no entry, `radii_when`, below `finite_from`, outside the formats of V4, in a format of a wider subnormal range, where a failure says that it is a finding, the lanes, in place and a malformed `inplace=`, operands that are not BallVectors, the exactness of a negation and of a scaling, each case of a constructor, a product of one entry each, a non-canonical product); `count_when` evaluated otherwise than by hand under the listing's expression and under the coordinator's (511 entries of $(+0, +0)$ in `fp:8:-15:2`) |
 | `gen_bv_folds` | case $i$ of a fold of the ball vectors alone not case $i$ of its run, a seed that does not matter, an invalid case, the strata not those of the shape or without cases, `whole` without a radius $+\infty$, `zeroradius` without $+0$; in place, a request without `inplace=I` over every array that can be written, a product that does not refuse it; the stratum `count` not on both sides of `count_when` |
 | `merging_bv_folds` | the merge of the summaries of two halves of streams of the folds differs from the whole |
 | `maps_inplace` | a map's run in place without its header or its field over every array that can be written, failing through the reference runner, an array not counted in place; `inplace=` beyond the arrays, not a number or negative not malformed; a fold of maxima not refusing `--inplace` |

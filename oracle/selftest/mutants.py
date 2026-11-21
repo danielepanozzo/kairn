@@ -821,6 +821,11 @@ MUTANTS = {
         "gen8.py", "            vals[n] = [1 if rng.chance(2, 3) else 0]", "            vals[n] = [1]"),
     # The folds of the ball vectors and the requests in place (bvfolds.py, genbv.py, maps.py,
     # genmap.py).
+    # The owner's ruling of 2026-11-21 on the formats of the statements: a failure of V4 in a
+    # format of a wider subnormal range than binary_float's is a finding, and says so.
+    "bv: a failure of V4 in a wider subnormal range not said to be a finding": (
+        "bvfolds.py", "    if fmt.qmax >= 1 and fmt.qmin < 3 - fmt.qmax - 2 * fmt.p:\n        return (",
+        "    if False:\n        return ("),
     "bv: V1 not judged": (
         "bvfolds.py", "    # V1: canonical; the flag.\n    res = _state(fmt, zs, r)\n    if res is None:",
         "    # V1: canonical; the flag.\n    res = _state(fmt, zs, r)\n    if False:"),

@@ -188,6 +188,22 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `Interval` and the functions of a `Ball` of the enclosure interface, and lists the other nine
   (`mul_dir_1`, the bounds of two limbs `add_ball_2_2` to `mul_dir_2_2`, and `mul_ext_2_2`) as
   building blocks.
+- **The formats of the statements** (the owner's ruling of 2026-11-21; [Number
+  formats](architecture.md#number-formats)), in the same words in `oracle/README.md`: *the
+  generated statements quantify over the formats of `binary_float` ($e_{\max} > p$, smallest
+  exponent $3 - e_{\max} - p$; in the oracle's terms $q_{\max} \ge 1$ and
+  $q_{\min} = 3 - q_{\max} - 2p$); a clause that promises a finite result (V4, `finite_when`,
+  `radii_when`, `count_when`) is claimed there, and the oracle may also judge it in a format with a
+  wider subnormal range, where nothing is proved and a failure would be a finding to report, not a
+  violated claim; in any other toy format it is not claimed, and the oracle counts that.* V4 of the
+  ball vectors and of the products of two BallVectors follows it (counted `V4 not claimed: a format
+  of no statement` outside, which the guards ask a run in such a format to say). The `finite_when`
+  of the Milestone 1 kernels (F3, B4) and the `bounded_when` of the interval kernels (I5) are
+  judged in every format, those outside `binary_float`'s included, where 13 of the 28 kernels
+  judged with such a clause have the toy format of their full tier (`mul_2_2_full` in
+  `fp:4:-4:-1`, `ball_add_2_full` in `fp:3:-2:-1`, ...) and pass: stricter than the rule, and left
+  so, since counting those lines as not claimed would stop judging lines that pass today
+  (`oracle/README.md`, "The formats of V4").
 - **Every fold** in the list `"folds"` of `gen/claims.json` gets tests of its own, under the same
   names: `crosscheck.compiled.F.FORMAT` in the quick tier runs the scalar runners on 300 random
   arrays (`KAIRN_CROSSCHECK_FOLD_QUICK_CASES`) of lengths 0 to 256
