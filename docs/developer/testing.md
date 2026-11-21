@@ -40,7 +40,8 @@ The tests that `ctest` runs in the build directory, by name:
 | `kairn-gen.check` | Every committed generated file is what `python3 gen/kairn-gen build` writes. |
 | `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
 | `docs.reference.check` | The reference pages of the site are what `docs/tools/reference.py` writes ([Documentation](documentation.md#reference-pages)). |
-| `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum. |
+| `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum; the packed runners with the requests assigned to the lanes by a seeded permutation, under the guard that the registers mixed kinds, and the one with the build's flags also consecutively ([below](#packed-kernels)). |
+| `crosscheck.lanes.fault.F` | A packed runner with a fault planted in a copy of `mul_2_2_full` (its special-value select reads the mask of the neighboring lane, `tests/lanes/`) passes the cross-check of format F with the consecutive assignment where no register mixes a non-finite operand with finite ones, and fails it, by the oracle's verdict, with the permuted one; the guard refuses the consecutive assignment of the same stream ([below](#packed-kernels)). |
 | `crosscheck.compiled.FOLD.F` | A fold (a sum or a dot product over arrays) compiled likewise: the scalar runners on 300 random arrays of format F, of every length class and in every order, and the packed runners on 200 arrays in the lane order of their register ([below](#cross-checks)). A map, a fold of maxima and a convolution likewise, on 100 arrays of up to 24 elements (pairs of polynomials of up to 20 coefficients for a convolution, which has no packed form). |
 | `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)); and in one of them the operations of `Ball` outlined and external, each a call of a function with the counts of its kernel ([below](#the-operations-of-ball-outlined-and-external)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
@@ -82,7 +83,7 @@ front:
 
 | Test | Checks |
 |---|---|
-| `full.crosscheck.compiled.K.F` | `crosscheck.compiled.K.F` on 20 000 cases instead of 6 000: the cases of the same seed from case 0, so that the quick tier's are the first 6 000 of these; with the kernels' runners, scalar and packed, of two [flag sets](#flag-sets) as well: the debug build (`-O0`, `/Od`) and one at `-O1` (`/O1`). |
+| `full.crosscheck.compiled.K.F` | `crosscheck.compiled.K.F` on 20 000 cases instead of 6 000: the cases of the same seed from case 0, so that the quick tier's are the first 6 000 of these; with the kernels' runners, scalar and packed, of two [flag sets](#flag-sets) as well: the debug build (`-O0`, `/Od`) and one at `-O1` (`/O1`); every packed runner with both assignments of the lanes, the permuted and the consecutive one ([Packed kernels](#packed-kernels)). |
 | `full.api.oracle.K.F` | `api.oracle.K.F` on 10 000 cases instead of 2 000, the quick tier's among them, and by a third runner, the [debug build](#flag-sets)'s, with the checks, on the first form of K only; and by the runners of the [flag sets](#flag-sets) `O3-outlined` and `O3-external` (`O2-` with MSVC and clang-cl), the operations of `Ball` outlined and external, every form of which must write the same bytes as the same form of the runner with the build's flags (`tests/crosscheck.py api --same-as`). |
 | `full.api.flags.oracle.K.F` | Every public form of kernel K through the runner of each [flag set](#flag-sets), the debug build's included, on the quick tier's 2 000 cases of format F. |
 | `full.api.flags.S.self_test`, `full.api.flags.S.constexpr`, `full.api.flags.S.rational` | `api.flags.debug.*` for each other flag set S, the outlined and external ones among them. |
@@ -643,21 +644,159 @@ that cannot be read, a summary padded beyond the bound on its size); and both dr
 reason, and on good ones: `tests/crosscheck.py compiled` with the interpreter as its runner
 (`--interp`), `tests/crosscheck.py api` with the build's runner of the public interface (a good
 run, one of 5 cases, which misses strata, and a kernel it maps no form to), and
-`tests/crosscheck.cmake`.
+`tests/crosscheck.cmake`; and `tests/crosscheck.py compiled` on the reports of a packed runner's
+lanes (`LaneReports`): a good one passes, and one of another assignment, of no segment or of
+another stream, one whose guard failed and one that cannot be read fail
+([Packed kernels](#packed-kernels)).
 
 ## Packed kernels
 
 `gen/tests/packed_runner.cpp` runs the packed kernels of `kairn/gen/neon.hpp` (two doubles or four
-floats per register) or `kairn/gen/avx2.hpp` (four or eight), whichever the target has:
-consecutive requests for one kernel and format are evaluated together, one per lane. The oracle
-judges its output like the scalar runner's, on the same cases, under the same contraction
-settings.
+floats per register) or `kairn/gen/avx2.hpp` (four or eight), whichever the target has: the
+requests for one kernel and format are evaluated $W$ at a time, one per lane of a register of
+$W$ lanes, and the completed lines are printed in the order of the requests. The oracle judges
+its output like the scalar runner's, on the same cases, under the same contraction settings, and
+needs to know nothing of the lanes.
 
 The backend and its option are chosen as `kairn::fma`'s option is: NEON if the backend's header
 compiles with the build's flags (AArch64), otherwise AVX2 with nothing added if the flags already
 enable it, or with `-mavx2 -mfma` (GCC, Clang) or `/arch:AVX2` (MSVC, clang-cl), each tried by
 compiling the header. On a target with neither, no packed runner is built, and configuring says
 so. On x86-64 the CPU that runs the tests needs AVX2 as well as FMA.
+
+### The two assignments of the lanes
+
+A packed kernel selects in each lane between its ordinary result and its special results (an
+infinity, a NaN, the whole line). A fault that lets one lane's selection reach another (a mask
+built from the wrong lane, a blend with the lanes exchanged, a horizontal test where a per-lane
+one is needed) changes a result only in a register whose lanes hold different kinds of values.
+Until 2026-11-21 the runner filled each register with consecutive requests, and the oracle's
+stream takes its strata in turn, so a register held requests of one kind. Counted on the
+quick tier's stream of each kernel (seed 0, 6 000 cases), a register mixing a request with a
+non-finite limb and one whose limbs are all finite, for W = 2 / 4 / 8:
+
+| Kernel | Consecutive | Permuted (seed 0) |
+|---|---|---|
+| `mul_2_2_full` | 0 / 0 / 300 | 942 / 882 / 625 |
+| `add_2_2_full` | 0 / 333 / 333 | 588 / 553 / 464 |
+| `neg_2`, `to_down_2`, `abs_2` | 0 / 600 / 600 | 970 / 875 / 637 |
+| `lt_2_2` | 0 / 375 / 375 | 646 / 611 / 486 |
+
+of 3 000, 1 500 and 750 registers (the same counts in `binary64` and `binary32`, whose streams
+have the same strata). With the consecutive assignment no register mixed at W = 2, the NEON form
+of `double`; and some kinds (a stratum with finite or non-finite limbs) never reached some lanes:
+5 to 12 of the pairs of a kind and a lane at W = 2, 20 to 88 at W = 8. With the permuted one,
+every kind of at least W requests reaches every lane.
+
+The runner now reads a whole **segment**, a run of requests for one kernel and one format (a
+comment, an empty line, a fold, a map, a request of another kernel or format, or the end of the
+input ends it), assigns its $n$ requests to the slots of $R = \lceil n/W \rceil$ registers, calls
+the packed kernel once per register, and prints the $n$ lines in order. The **kind** of a request
+is its stratum (the label of its tag `#STRATUM:INDEX`; none for another tag) and whether one of
+its limbs is not finite. Two assignments, chosen by `--lanes`:
+
+- **permuted** (the default): the requests grouped by kind, in the order the kinds first appear,
+  the requests of each kind shuffled; the groups, one after the other, fill the slots register by
+  register, so that a kind of $c$ requests takes $c$ consecutive slots and is in every lane once
+  $c \ge W$; then the slots of each lane are shuffled among the registers, an independent
+  permutation of the $R$ registers per lane, so that the lanes of a register hold kinds drawn
+  independently. The random numbers are SplitMix64 on 64-bit unsigned integers, seeded from
+  `--lane-seed` (default 0; the cross-checks pass their `--seed`) and the segment's number, an
+  integer below $m$ drawn by rejection of the draws below $2^{64} \bmod m$, and Fisher–Yates
+  shuffles: integer arithmetic only, no `std::shuffle` or distribution of the standard library,
+  so the same requests and seed give the same assignment with every compiler and on every target.
+  The generator's tests compute the plan again in Python and require every build to report the
+  same one (`Lanes` of `gen/tests/test_simd.py`).
+- **consecutive**: request $k$ in lane $k \bmod W$ of register $\lfloor k/W \rfloor$, the old
+  assignment. Registers of one kind are a case too, and the generator's special groups (one
+  special operand in each lane in turn) are aligned with these registers.
+
+The quick tier runs every packed runner with the permuted assignment (labelled as before:
+`neon`, `neon-contract-off`, ...) and the runner with the build's flags also with the
+consecutive one (`neon.consecutive`); the full tier runs every packed runner, the flag sets'
+included, with both. A correct runner writes the same bytes with both, which then share the
+verdict of the scalar runner's output and cost the oracle nothing; each run costs the runner's
+own time, some 70 ms on 6 000 lines. The generator's tests run both on every build of their
+matrix. `tests/regression/run.py` and the brute-force driver run the default, permuted.
+
+**The guard.** Under the permuted assignment (and under the consecutive one with
+`--lane-guard`), on a segment of at least 256 requests, every kind of at least W requests must
+have been in every lane, and if at least 16 requests have a non-finite limb and 16 only finite
+ones, at least one register must have held both. Otherwise the runner prints the segment's lines,
+says which kind missed which lane or that no register mixed, and exits with 3. A kind of fewer
+than W requests cannot reach every lane and is not asked to. The construction makes the first
+condition hold whenever the assignment is the one described; the second fails by chance with a
+probability below $10^{-12}$ at these sizes. Applied to the consecutive assignment of the oracle's
+stream of `mul_2_2_full`, the guard refuses it at every W (`crosscheck.lanes.fault.F` checks
+so).
+
+**What a test keeps.** `--lane-report FILE` writes, per segment, the kernel, format, requests,
+lanes, registers, padding, the registers that mixed (non-finite with finite, and two strata), the
+requests of each kind in each lane, and the guard's verdict. `tests/crosscheck.py` gives each
+packed run such a file, fails the test unless it reports one segment of every request with the
+assignment asked for and, for the permuted one, the guard passed (or not applied to a stream of
+fewer than 256 requests), keeps it next to the summaries as `crosscheck.compiled.K.F.LABEL.lanes.json`
+(1 to 2 KB), and prints its counts with the pass, for example `lanes of neon: 2 lanes, the
+permuted assignment (seed 0): 3000 registers, 942 of them mixing a non-finite limb with finite
+ones (1200 and 4800 requests), ...`. `--lane-plan FILE` writes the slot of every request
+(`SEGMENT REGISTER LANE LINE`): a case that fails only beside the other lanes of its register
+fails only in the whole stream with the same seed, not alone, and the plan says which requests
+shared its register (the failure text of a packed run says how).
+
+**A register that is not full.** The last $RW - n < W$ slots (at the end of the last register
+with the consecutive assignment, in random registers and lanes with the permuted one) are
+padding. Until 2026-11-21 they repeated the batch's first request, which could have a non-finite
+limb, and their results were dropped; the cross-checks never had one (6 000 and 2 000 are
+multiples of 8). They now hold a copy of the segment's first request whose limbs are all finite
+(its first request if none is: a request the kernel accepts in any case), and their results are
+dropped; the report names the line copied. The generator's tests run streams of 1, $W - 1$,
+$W + 1$, $2W + 1$ and 257 requests whose first request is non-finite, with both assignments,
+on every build: every line as the scalar runner completes it, the padding the first finite
+request (the only request, in a stream of one).
+
+**The planted fault.** `tests/lanes/lane_fault.hpp` is a copy of the generated `mul_2_2_full`
+whose select returns the core's product where its leading limb is finite and the four limbs of
+the operands are finite, the second mask taken from the neighboring lane (lane $i$ reads lane
+$i + 1$). The second condition is redundant in the correct kernel, so the copy is right in every
+lane whose neighbor's operands are of its kind, and gives an infinity or a NaN in place of the
+product of finite operands beside a non-finite one. `crosscheck.lanes.fault.F` builds the packed
+runner with it (`KAIRN_RUNNER_HEADER`, and `KAIRN_RUNNER_TABLE` for a table of this kernel alone)
+and runs the cross-check of the quick tier's 6 000 cases (`tests/lanes/lane_fault.py`):
+
+| Form | W | Consecutive | Permuted |
+|---|---|---|---|
+| NEON, `binary64` | 2 | 0 of 3 000 registers mix: passes | 942 mix: the oracle fails 768 lines |
+| NEON, `binary32` | 4 | 0 of 1 500: passes | 882 mix: fails 792 lines |
+| AVX2, `binary64` | 4 | 0 of 1 500: passes | 882 mix: fails 806 lines |
+| AVX2, `binary32` | 8 | 300 of 750 mix: fails 251 lines (printed, not required) | 625 mix: fails 795 lines |
+
+(the oracle's failures are F3, a result that is not finite although every `finite_when`
+condition holds, and F4). The test requires the consecutive cross-check to pass where no register
+mixed and the permuted one to fail by the oracle's verdict, not the runner's or the guards'. The
+fault is planted in the operands' mask and not in the generated one (the core's product finite)
+because that one also fails for finite operands whose product overflows, which the strata
+`edge`, `threshold` and `overflow` put next to products that do not in consecutive lines: the
+same neighbor's mask planted there is caught by both assignments (598 lines with the consecutive
+one at W = 2).
+
+**The folds and the maps** have no such assignment: `F_packed` deals the elements of one array
+to the lanes, $W$ consecutive elements per register, and runs the last $n \bmod W$ in a scalar
+loop (no padding), and the runner calls it once per request line. Counted on the streams the
+packed runners get (seed 0, every fold and map with a packed form, both formats, both backends),
+the lengths are not the weakness: in the quick tier (200 arrays of up to 256 elements for a fold,
+100 of up to 24 for a map or a fold of maxima) 6 to 12 arrays are empty, 6 to 72 shorter than W,
+and 45 to 81 % leave a remainder. Nor are arrays of one kind: almost every array with a
+non-finite element has finite ones too. The weakness is how few non-finite elements there are: in
+the quick tier 6 of 100 arrays of a map have one (15 of 200 for a sum or a dot product, 14 to 16
+of 100 for a fold of maxima), 7 to 34 elements of a stream, and 3 to 27 registers of a stream mix
+one with finite ones; so at W = 8 (`binary32` with AVX2) 27 of the 28 streams leave one to six of
+the eight lanes without a non-finite element in a register (`axpy_1_entry`: 1 and 3 elements in
+two lanes, none in the other six), and at W = 4 14 of 56 leave one or two. In the full tier (500
+arrays) every lane has some at W = 2 and 4 (46 to 144 elements per stream), and 2 of 28 streams
+leave one lane without at W = 8. A fix belongs to the oracle's generator of arrays (more arrays
+with non-finite elements, or their positions spread over the lanes), not to the runner, and is
+left for it; the packed loops' own tests in the generator's suite (lengths 0, 1, $W - 1$, $W$,
+$W + 1$, $2W$ and random ones, non-finite elements among them) also reach those lanes.
 
 ## Contraction
 
@@ -2088,8 +2227,10 @@ the label of the first runner that wrote it, the second `K.F.LABEL.FORM.json` in
 The tests judge against `gen/claims.json` unless the CMake variable `KAIRN_ORACLE_CLAIMS` names
 another file of the same form. `tests/CMakeLists.txt` and `tests/api/CMakeLists.txt` then read the
 kernels and folds they register tests for from that file, and every test that runs the oracle
-passes it on: `--claims FILE` to `tests/crosscheck.py` (both modes), `tests/regression/run.py`, the
-oracle's `check --claims-only` (`kairn-oracle.claims`) and `search` (`full.search.compiled`);
+passes it on: `--claims FILE` to `tests/crosscheck.py` (both modes), `tests/regression/run.py`,
+`tests/lanes/lane_fault.py` (`crosscheck.lanes.fault.F`, which gives it to its cross-checks and to
+the requests of its run under the guard), the oracle's `check --claims-only`
+(`kairn-oracle.claims`) and `search` (`full.search.compiled`);
 `-DCLAIMS=FILE` to `tests/crosscheck.cmake`; and the environment variable `KAIRN_ORACLE_CLAIMS` to
 `tests/test_crosscheck_guards.py` (`full.tools.crosscheck.guards.*`), which passes it to every run
 of the oracle and of the drivers. It is for a branch of the oracle that reads only some of the
