@@ -225,6 +225,8 @@ class Cpp(unittest.TestCase):
     # The accumulator: the fma of the step of dot_1 and of the magnitudes (acc_mul_1), dot_step_2
     # (acc_mul_2), and the fma of the radius (acc_radius_k).
     NOT_CONSTEXPR |= {'acc_mul_1', 'acc_mul_2', 'acc_radius_1', 'acc_radius_2'}
+    # The guarded forms of dot_step_1 and acc_mul_1 (rule R3, the factors of a fused operation).
+    NOT_CONSTEXPR |= {'dot_entry_step_1', 'acc_mul_entry_1'}
     # BallVector: the fmas of the radius kernels (bv_add_radius_k, bv_scale_radius_k).
     NOT_CONSTEXPR |= {'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2'}
     # The product of two BallVectors: the fmas of conv_radius.
@@ -789,9 +791,11 @@ class Rocq(unittest.TestCase):
         # bv_make_radius, the kernels of the constructor (bv_center_2 is normalized); and z of neg_1
         # and rz of bv_neg_radius, of the negation; and z of bv_mul_pow2_step_1 and rz of
         # bv_mul_pow2_radius, of the scaling by a power of two (bv_mul_pow2_step_2 is normalized); and rz
-        # of conv_radius, of the product of two BallVectors.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1)
+        # of conv_radius, of the product of two BallVectors. And the guarded forms of rule R3 on the
+        # factors of a fused operation: t of dot_entry_step_1, t and b of acc_mul_entry_1, 3 limbs in
+        # 2 kernels.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1 + 3)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1 + 2)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -987,9 +991,12 @@ class Rocq(unittest.TestCase):
     # file of the theorems of the three statements of conv_terms (terms_theorem): Audit.v checks them
     # after those of the folds, every earlier line kept; Model.v and Statements.v are the same.
     # Merged here: the regeneration of the merged descriptions.
-    DIGESTS = {'Model.v': '784bec01ec24ef2bdcd764c46228f787286560359461c5f976f90a80a6d2efc8',
-               'Statements.v': '953938a44e69028d7710b7f912245506fe398aac44e6f156cecf98a36d72e05a',
-               'Audit.v': '6f20785e7951c4c074f8e38bec683fded7ad979e875eb07c71005a3eaa604d58'}
+    # Then the guarded forms of rule R3 on the factors of a fused operation: the kernels
+    # dot_entry_step_1 and acc_mul_entry_1 and the fold dot_1_entry, their models, statements and
+    # audit lines added, every earlier line kept.
+    DIGESTS = {'Model.v': '33104d2c43439ac4595c18649e43e8101e48910b7c67a24715333bacc690a2d3',
+               'Statements.v': 'f991ac9db9fd99d3c2c843ddd624d81ead0aa541e41cdfae6d81ee32ab3ff80d',
+               'Audit.v': 'decd20fc4818e1167b137d256075b5a5165e2804bbf56c1d0f563de8a56816dc'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -1025,8 +1032,9 @@ class Rocq(unittest.TestCase):
         # and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and the
         # seven bounds of two limbs; and the eight kernels of the accumulator; and the four radius
         # kernels of BallVector; and the three of its constructor that have one; and the two of its
-        # negation; and the three of its scaling by a power of two; and conv_radius, of its product.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1)
+        # negation; and the three of its scaling by a power of two; and conv_radius, of its product;
+        # and the two guarded forms of rule R3 on the factors, dot_entry_step_1 and acc_mul_entry_1.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

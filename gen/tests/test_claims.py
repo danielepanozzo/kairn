@@ -718,7 +718,7 @@ class FoldClaims(unittest.TestCase):
         self.assertTrue(all(self.by[n]['bv_conv'] is True and not ({'map', 'conv', 'bv'} & set(self.by[n]))
                             for n in products))
         self.assertEqual(set(self.by) - maps - convs - bvs - products, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
-                                                      'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1',
+                                                      'sum_fast_2_entry', 'dot_1', 'dot_1_entry', 'dot_2', 'norm_upper_1',
                                                       'norm_upper_2'})
         self.assertEqual(list(self.doc), ['schema', 'kernels', 'folds'])
         # Without folds the file has the shape it had: the test kernels have none.
