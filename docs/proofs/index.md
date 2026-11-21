@@ -91,7 +91,10 @@ lists:
   limb (`IeeeBallSets.v`), the signs and the split of a ball with a center of two limbs
   (`IeeeBallPredicates2.v`), and the interval of a ball of two limbs, the sum of [c, c] and
   [-r, r] (`IeeeBallConvert2.v`), and the comparisons of balls of two limbs, certain, by the
-  distance of the centers that add_ball_2_2 bounds (`IeeeBallCompare2.v`); and the theorems of
+  distance of the centers that add_ball_2_2 bounds (`IeeeBallCompare2.v`), and the sum of two
+  2-limb numbers at the top of the range: it does not overflow when the leading limbs of both
+  operands are at most half the largest finite number, a threshold that cannot be raised
+  (`IeeeAdd22Top.v`); and the theorems of
   the
   folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
   finishes and bound kernels
@@ -128,7 +131,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    domain (these have generated statements as their types, checked by a definition of the same
    form; their descriptions do not name them yet),
    a few facts whose statements are written by hand because they say more about a kernel than
-   its claims can express, the theorems about sums and dot products of arrays, which are
+   its claims can express (among them that the sum of two 2-limb numbers does not overflow up
+   to half the range, where its claim says a quarter), the theorems about sums and dot
+   products of arrays, which are
    about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
    not generated statements, among them what is proved of `mul_dir_1`, of the interval
    kernels with bounds of one limb, of the bounds of two limbs, of the sum of two intervals
@@ -154,7 +159,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  93 files: no Admitted, admit, Axiom or Parameter
+  94 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec

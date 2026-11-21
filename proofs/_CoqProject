@@ -66,6 +66,7 @@ gen/IeeeFoldModel.v
 gen/IeeeFoldStatements.v
 theories/IeeeOps.v
 theories/IeeeRange.v
+theories/IeeeAdd22Top.v
 theories/IeeeFull.v
 theories/IeeeMake.v
 theories/IeeeFinite.v

@@ -20,7 +20,8 @@
    - theorems whose statements are written by hand because the generator does not print
      them: two_sum in the IEEE model (the exact condition under which its error term is
      finite is not a claim), the guard (an operation, not a kernel), the threshold of
-     mul_pow2_2 for a scalar that is not a power of two, and statements that say more
+     mul_pow2_2 for a scalar that is not a power of two, the threshold of add_2_2 at half
+     the range (its claim has a quarter), and statements that say more
      about a kernel than its generated statement does (the parts of a split, the
      exactness of mul_pow2_2, further bounds on radd and rmul);
    - the theorems of summation, which are about no single kernel and have no generated
@@ -98,6 +99,7 @@
    the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements IeeeStatements.
 From Kairn Require Import IeeeVocabulary IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore IeeeSub IeeeFinite.
+From Kairn Require Import IeeeAdd22Top.
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeOps.
 From Kairn Require Import Folds Summation SummationKernels.
@@ -129,6 +131,16 @@ Print Assumptions add_2_2_ieee_correct.
 
 Definition add_2_2_ieee_finite_audit : add_2_2_ieee_finite_spec := add_2_2_ieee_finite.
 Print Assumptions add_2_2_ieee_finite.
+
+(* The IEEE model: add_2_2 with leading limbs below half the range, 2^(emax - 1) (statements
+   written by hand, in theories/IeeeAdd22Top.v: the claim of the kernel has a quarter). *)
+Definition add_2_2_ieee_finite_half_audit : add_2_2_ieee_finite_half_spec :=
+  add_2_2_ieee_finite_half.
+Print Assumptions add_2_2_ieee_finite_half.
+
+Definition add_2_2_ieee_finite_half_values_audit : add_2_2_ieee_finite_half_values_spec :=
+  add_2_2_ieee_finite_half_values.
+Print Assumptions add_2_2_ieee_finite_half_values.
 
 (* The IEEE model: mul_2_2. *)
 Definition mul_2_2_ieee_bridge_audit : mul_2_2_ieee_bridge_spec := mul_2_2_ieee_bridge.
