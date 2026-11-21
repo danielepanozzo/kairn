@@ -98,8 +98,8 @@ lists:
   polynomials, over the real numbers and with overflow, infinities and NaN (`FoldConv.v`,
   `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); of the radius kernels of the
   ball vectors and of the ball vectors themselves, over the real numbers (`BvRadius.v`,
-  `BvReal.v`), and the lemmas of the ball vectors in the model with overflow that their
-  statements, to be restated, will rest on (`IeeeBv.v`; [below](#ball-vectors)); and of the
+  `BvReal.v`), and with overflow, infinities and NaN (`IeeeBv.v`;
+  [below](#ball-vectors)); and of the
   kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
@@ -508,10 +508,10 @@ the rounded radius lines as functions of $m$ is needed: that they are nondecreas
 makes the one radius the largest of the radii the Ball kernel would compute entry by entry, is
 true but not proved.
 
-**The ball vectors in the model with overflow** (`IeeeBv.v`): not proved against their
-generated statements, which are to be restated (their fourth clause), and so still
-unverified. What is proved, for both orders, as lemmas the restated statements will rest
-on, for canonical operands (a finite nonnegative radius with finite centers, or the radius
+**The ball vectors in the model with overflow** (`IeeeBv.v`): `F_seq_ieee_correct` and
+`F_lanes_ieee_correct` have the generated statements of the six in their two orders as types,
+each the conjunction of four lemmas (`F_O_ieee_v1` to `F_O_ieee_v4`, audited in step 3). For
+canonical operands (a finite nonnegative radius with finite centers, or the radius
 $+\infty$ with zero centers): the result is a finite ball vector or the whole space (zero
 centers, radius $+\infty$), and the flag is true exactly when the radius is finite (V1);
 entry by entry, the value of the operation on members of the operands' balls is in the ball
@@ -525,9 +525,9 @@ radius kernel's result is finite, so the record and every center written are, an
 lemmas of the maps and of the folds of maxima in this model give the values of the real
 model, where `BvReal.v` applies; when it is false the result is the whole space. V4 is the
 finiteness of the Ball kernels' radius (`IeeeBallFinite.v`) at the largest magnitude. At
-precision 1, where the statements of one limb start, the clause is false: with
+precision 1, where the other clauses of one limb start, V4 would be false: with
 $e_{\max} = 2$ a constant of the radius lines rounds up to $2^{e_{\max}}$, so every radius is
-$+\infty$ or a NaN.
+$+\infty$ or a NaN; the statements claim it from precision 2 (`finite_from=2`).
 
 ## The accumulator
 

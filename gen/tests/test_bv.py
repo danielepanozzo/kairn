@@ -1144,7 +1144,7 @@ class Printers(unittest.TestCase):
         self.assertIn('// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), '
                       'unverified (IEEE model).', text)
         self.assertIn('the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved '
-                      '(real model), unverified (IEEE model).', text)
+                      '(real model), proved (IEEE model).', text)
         self.assertNotRegex(text, r'Status: (proved|unverified)\.\n(inline|KAIRN_GEN_NOINLINE) [^\n]*_(seq|lanes)\(')
 
     def test_the_models_and_statements(self):

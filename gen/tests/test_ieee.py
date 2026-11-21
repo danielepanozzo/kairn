@@ -396,8 +396,9 @@ class Statements(unittest.TestCase):
         # their two orders (32); and the two folds of maxima in their two orders (4); and the
         # IEEE-model statements of the eight kernels of the accumulator (8); and those of the
         # 16 steps of the maps, 16 bridges, 8 correctness statements and 16 leading limbs (40),
-        # of the 18 maps in their two orders (36) and of the two convolutions (2).
-        self.assertEqual(text.count('Print Assumptions'), 206)
+        # of the 18 maps in their two orders (36) and of the two convolutions (2); and of the six ball
+        # vectors bv_add_k, bv_sub_k and bv_scale_k in their two orders (12).
+        self.assertEqual(text.count('Print Assumptions'), 218)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)

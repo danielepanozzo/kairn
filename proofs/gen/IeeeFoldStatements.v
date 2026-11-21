@@ -1518,7 +1518,7 @@ Definition conv_2_ieee_spec : Prop :=
     (seq 0 (conv_length (length xs) (length ys))) ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* bv_add_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_add_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_add_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1552,7 +1552,7 @@ Definition bv_add_1_seq_ieee_spec : Prop :=
      Rabs (((Rabs (val x + val y)) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
 
-(* bv_add_1, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_add_1, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_add_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1586,7 +1586,7 @@ Definition bv_add_1_lanes_ieee_spec : Prop :=
      Rabs (((Rabs (val x + val y)) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
 
-(* bv_add_2, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_add_2, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_add_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1620,7 +1620,7 @@ Definition bv_add_2_seq_ieee_spec : Prop :=
      Rabs (((Rabs ((val x0 + val x1) + (val y0 + val y1))) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
 
-(* bv_add_2, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_add_2, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_add_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2028,7 +2028,7 @@ Definition bv_neg_2_lanes_ieee_spec : Prop :=
      Rabs ((Rabs (val x0 + val x1)) + val rx) <= bpow radix2 (emax + 1)) xs ->
    finite r_).
 
-(* bv_scale_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_scale_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_scale_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2057,7 +2057,7 @@ Definition bv_scale_1_seq_ieee_spec : Prop :=
      Rabs (((Rabs (val x)) + val rx) * val a) <= bpow radix2 (emax - 2)) xs ->
    finite r_).
 
-(* bv_scale_1, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_scale_1, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_scale_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2086,7 +2086,7 @@ Definition bv_scale_1_lanes_ieee_spec : Prop :=
      Rabs (((Rabs (val x)) + val rx) * val a) <= bpow radix2 (emax - 2)) xs ->
    finite r_).
 
-(* bv_scale_2, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_scale_2, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_scale_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2118,7 +2118,7 @@ Definition bv_scale_2_seq_ieee_spec : Prop :=
      Rabs (((Rabs (val x0 + val x1)) + val rx) * val a) <= bpow radix2 (emax - 2)) xs ->
    finite r_).
 
-(* bv_scale_2, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_scale_2, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_scale_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2150,7 +2150,7 @@ Definition bv_scale_2_lanes_ieee_spec : Prop :=
      Rabs (((Rabs (val x0 + val x1)) + val rx) * val a) <= bpow radix2 (emax - 2)) xs ->
    finite r_).
 
-(* bv_sub_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_sub_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_sub_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2184,7 +2184,7 @@ Definition bv_sub_1_seq_ieee_spec : Prop :=
      Rabs (((Rabs (val x - val y)) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
 
-(* bv_sub_1, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_sub_1, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_sub_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2218,7 +2218,7 @@ Definition bv_sub_1_lanes_ieee_spec : Prop :=
      Rabs (((Rabs (val x - val y)) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
 
-(* bv_sub_2, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_sub_2, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_sub_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2252,7 +2252,7 @@ Definition bv_sub_2_seq_ieee_spec : Prop :=
      Rabs (((Rabs ((val x0 + val x1) - (val y0 + val y1))) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
 
-(* bv_sub_2, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_sub_2, the lane order, for every number of lanes W, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_sub_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

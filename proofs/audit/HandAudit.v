@@ -94,11 +94,10 @@
      theories/IeeeAccumulator.v in the IEEE model): for any history of add, add_product
      and merge, the bound of the sum of magnitudes, the error of the running sum in the
      form of the statement of dot_k, and the error within the radius of error_bound();
-   - the ball vectors in the IEEE model, whose generated statements are to be restated and
-     whose descriptions name no IEEE-model theorem yet: the lemmas of theories/IeeeBv.v
-     the restated statements will rest on, V1 to V4 of each ball vector in both orders (V4
-     in the form ruled for the restatement), and that the lane order returns what the
-     sequential order returns.
+   - the ball vectors bv_add_k, bv_sub_k and bv_scale_k in the IEEE model, beside the
+     theorems of their generated statements, which proofs/gen/IeeeAudit.v lists: the lemmas
+     of theories/IeeeBv.v those theorems put together, V1 to V4 of each ball vector in both
+     orders, and that the lane order returns what the sequential order returns.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -959,9 +958,10 @@ Print Assumptions run2i_real.
 Print Assumptions bound_dot_2_real.
 Print Assumptions acc_2_ieee_bound.
 
-(* The ball vectors in the IEEE model, prepared for the restatement of their generated
-   statements (theories/IeeeBv.v): for each, the lane order returns what the sequential
-   order returns, and V1 to V4 in both orders. *)
+(* The ball vectors in the IEEE model (theories/IeeeBv.v): the theorems of their generated
+   statements are listed by proofs/gen/IeeeAudit.v; these are the lemmas they put together:
+   for each, the lane order returns what the sequential order returns, and V1 to V4 in both
+   orders. *)
 From Kairn Require Import IeeeBv.
 Print Assumptions bv_add_1_lanes_seq_ieee.
 Print Assumptions bv_add_1_seq_ieee_v1.

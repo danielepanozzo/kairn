@@ -1,11 +1,13 @@
-(* The ball vectors in the IEEE model: what the generated statements F_seq_ieee_spec and
-   F_lanes_ieee_spec of bv_add_k, bv_sub_k and bv_scale_k (proofs/gen/IeeeFoldStatements.v)
-   say, proved as lemmas of their own, for both orders. The statements themselves are to be
-   restated (their fourth clause, V4: the form of the developer page is false for an empty
-   vector; the printed form asks a nonempty vector, and for one limb, printed from precision
-   1, it is false at precision 1, see bv_add_1_seq_ieee_v4), so these lemmas are not named
-   by the descriptions yet; each is stated in the vocabulary and with the binders of the
-   generated statements, so that the restated statements follow from them.
+(* The ball vectors in the IEEE model: the generated statements F_seq_ieee_spec and
+   F_lanes_ieee_spec of bv_add_k, bv_sub_k and bv_scale_k (proofs/gen/IeeeFoldStatements.v),
+   F_seq_ieee_correct and F_lanes_ieee_correct at the end of this file, each the conjunction
+   of four lemmas of its own, for both orders. The lemmas were written before the
+   statements were restated (their fourth clause, V4: the first form, of the developer
+   page, was false for an empty vector; the next asked a nonempty vector, and for one limb,
+   printed from precision 1, it was false at precision 1, see bv_add_1_seq_ieee_v4), in the
+   vocabulary and with the binders of the generated statements; the restated statements
+   (V4 under radii_when for every length, and from precision 2 for one limb, finite_from=2)
+   follow from them clause by clause.
 
    The model (proofs/gen/IeeeFoldModel.v). A ball vector writes the centers by the step of
    a map, ws = map F_step xs; folds the record, the step of the fold of maxima norm_step_k,
@@ -3533,4 +3535,201 @@ intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp2 
 rewrite bv_scale_2_lanes_seq_ieee.
 exact (bv_scale_2_seq_ieee_v4 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
     Hp2 rx a xs HX).
+Qed.
+
+(** * The generated statements: V1 to V4 and the flag, in both orders *)
+
+(* Each theorem is the conjunction of the lemmas above, which have its binders and its
+   clauses: V1 and the flag (F_O_ieee_v1), V2, V3, and V4 (F_O_ieee_v4), the last stated for
+   every length of the vector under the radii's own condition (radii_when), for one limb from
+   precision 2, the inner hypothesis (2 <= prec)%Z of the statement (finite_from=2), and for
+   two limbs from the precision of the statement. *)
+
+Theorem bv_add_1_seq_ieee_correct : bv_add_1_seq_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_abs nan_fma nan_const Hq rx ry xys HX HY.
+pose proof (bv_add_1_seq_ieee_v1 prec emax Hp He nan_plus nan_abs nan_fma nan_const Hq rx ry xys HX
+  HY) as V1.
+pose proof (bv_add_1_seq_ieee_v2 prec emax Hp He nan_plus nan_abs nan_fma nan_const Hq rx ry xys HX
+  HY) as V2.
+pose proof (bv_add_1_seq_ieee_v3 prec emax Hp He nan_plus nan_abs nan_fma nan_const Hq rx ry xys HX
+  HY) as V3.
+pose proof (fun H2 => bv_add_1_seq_ieee_v4 prec emax Hp He nan_plus nan_abs nan_fma nan_const H2 rx
+  ry xys HX HY) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_add_1_lanes_ieee_correct : bv_add_1_lanes_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_abs nan_fma nan_const Hq W rx ry xys HX HY.
+pose proof (bv_add_1_lanes_ieee_v1 prec emax Hp He nan_plus nan_abs nan_fma nan_const Hq W rx ry xys
+  HX HY) as V1.
+pose proof (bv_add_1_lanes_ieee_v2 prec emax Hp He nan_plus nan_abs nan_fma nan_const Hq W rx ry xys
+  HX HY) as V2.
+pose proof (bv_add_1_lanes_ieee_v3 prec emax Hp He nan_plus nan_abs nan_fma nan_const Hq W rx ry xys
+  HX HY) as V3.
+pose proof (fun H2 => bv_add_1_lanes_ieee_v4 prec emax Hp He nan_plus nan_abs nan_fma nan_const H2 W
+  rx ry xys HX HY) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_sub_1_seq_ieee_correct : bv_sub_1_seq_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq rx ry xys HX HY.
+pose proof (bv_sub_1_seq_ieee_v1 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq rx
+  ry xys HX HY) as V1.
+pose proof (bv_sub_1_seq_ieee_v2 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq rx
+  ry xys HX HY) as V2.
+pose proof (bv_sub_1_seq_ieee_v3 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq rx
+  ry xys HX HY) as V3.
+pose proof (fun H2 => bv_sub_1_seq_ieee_v4 prec emax Hp He nan_plus nan_minus nan_abs nan_fma
+  nan_const H2 rx ry xys HX HY) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_sub_1_lanes_ieee_correct : bv_sub_1_lanes_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq W rx ry xys HX HY.
+pose proof (bv_sub_1_lanes_ieee_v1 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq W
+  rx ry xys HX HY) as V1.
+pose proof (bv_sub_1_lanes_ieee_v2 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq W
+  rx ry xys HX HY) as V2.
+pose proof (bv_sub_1_lanes_ieee_v3 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq W
+  rx ry xys HX HY) as V3.
+pose proof (fun H2 => bv_sub_1_lanes_ieee_v4 prec emax Hp He nan_plus nan_minus nan_abs nan_fma
+  nan_const H2 W rx ry xys HX HY) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_scale_1_seq_ieee_correct : bv_scale_1_seq_ieee_spec.
+Proof.
+intros prec emax Hp He nan_abs nan_fma nan_const Hq rx a xs HX.
+pose proof (bv_scale_1_seq_ieee_v1 prec emax Hp He nan_abs nan_fma nan_const Hq rx a xs HX) as V1.
+pose proof (bv_scale_1_seq_ieee_v2 prec emax Hp He nan_abs nan_fma nan_const Hq rx a xs HX) as V2.
+pose proof (bv_scale_1_seq_ieee_v3 prec emax Hp He nan_abs nan_fma nan_const Hq rx a xs HX) as V3.
+pose proof (fun H2 => bv_scale_1_seq_ieee_v4 prec emax Hp He nan_abs nan_fma nan_const H2 rx a xs
+  HX) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_scale_1_lanes_ieee_correct : bv_scale_1_lanes_ieee_spec.
+Proof.
+intros prec emax Hp He nan_abs nan_fma nan_const Hq W rx a xs HX.
+pose proof (bv_scale_1_lanes_ieee_v1 prec emax Hp He nan_abs nan_fma nan_const Hq W rx a xs HX) as
+  V1.
+pose proof (bv_scale_1_lanes_ieee_v2 prec emax Hp He nan_abs nan_fma nan_const Hq W rx a xs HX) as
+  V2.
+pose proof (bv_scale_1_lanes_ieee_v3 prec emax Hp He nan_abs nan_fma nan_const Hq W rx a xs HX) as
+  V3.
+pose proof (fun H2 => bv_scale_1_lanes_ieee_v4 prec emax Hp He nan_abs nan_fma nan_const H2 W rx a
+  xs HX) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_add_2_seq_ieee_correct : bv_add_2_seq_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq rx ry xys HX HY.
+pose proof (bv_add_2_seq_ieee_v1 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq rx
+  ry xys HX HY) as V1.
+pose proof (bv_add_2_seq_ieee_v2 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq rx
+  ry xys HX HY) as V2.
+pose proof (bv_add_2_seq_ieee_v3 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq rx
+  ry xys HX HY) as V3.
+pose proof (bv_add_2_seq_ieee_v4 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq rx
+  ry xys HX HY) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_add_2_lanes_ieee_correct : bv_add_2_lanes_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq W rx ry xys HX HY.
+pose proof (bv_add_2_lanes_ieee_v1 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq W
+  rx ry xys HX HY) as V1.
+pose proof (bv_add_2_lanes_ieee_v2 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq W
+  rx ry xys HX HY) as V2.
+pose proof (bv_add_2_lanes_ieee_v3 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq W
+  rx ry xys HX HY) as V3.
+pose proof (bv_add_2_lanes_ieee_v4 prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_const Hq W
+  rx ry xys HX HY) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_sub_2_seq_ieee_correct : bv_sub_2_seq_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hq rx ry xys HX HY.
+pose proof (bv_sub_2_seq_ieee_v1 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq rx ry xys HX HY) as V1.
+pose proof (bv_sub_2_seq_ieee_v2 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq rx ry xys HX HY) as V2.
+pose proof (bv_sub_2_seq_ieee_v3 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq rx ry xys HX HY) as V3.
+pose proof (bv_sub_2_seq_ieee_v4 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq rx ry xys HX HY) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_sub_2_lanes_ieee_correct : bv_sub_2_lanes_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hq W rx ry xys HX HY.
+pose proof (bv_sub_2_lanes_ieee_v1 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq W rx ry xys HX HY) as V1.
+pose proof (bv_sub_2_lanes_ieee_v2 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq W rx ry xys HX HY) as V2.
+pose proof (bv_sub_2_lanes_ieee_v3 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq W rx ry xys HX HY) as V3.
+pose proof (bv_sub_2_lanes_ieee_v4 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq W rx ry xys HX HY) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_scale_2_seq_ieee_correct : bv_scale_2_seq_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hq rx a xs HX.
+pose proof (bv_scale_2_seq_ieee_v1 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq rx a xs HX) as V1.
+pose proof (bv_scale_2_seq_ieee_v2 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq rx a xs HX) as V2.
+pose proof (bv_scale_2_seq_ieee_v3 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq rx a xs HX) as V3.
+pose proof (bv_scale_2_seq_ieee_v4 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq rx a xs HX) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
+Qed.
+
+Theorem bv_scale_2_lanes_ieee_correct : bv_scale_2_lanes_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hq W rx a xs HX.
+pose proof (bv_scale_2_lanes_ieee_v1 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq W rx a xs HX) as V1.
+pose proof (bv_scale_2_lanes_ieee_v2 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq W rx a xs HX) as V2.
+pose proof (bv_scale_2_lanes_ieee_v3 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq W rx a xs HX) as V3.
+pose proof (bv_scale_2_lanes_ieee_v4 prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+  nan_const Hq W rx a xs HX) as V4.
+match goal with |- match ?c with _ => _ end =>
+  revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
+exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
 Qed.

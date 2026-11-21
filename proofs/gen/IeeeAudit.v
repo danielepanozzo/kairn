@@ -10,6 +10,7 @@ From Kairn Require Import IeeeBallConvert.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeBallPow2.
+From Kairn Require Import IeeeBv.
 From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
@@ -652,3 +653,39 @@ Print Assumptions conv_1_ieee_correct.
 
 Definition conv_2_ieee_audit : conv_2_ieee_spec := conv_2_ieee_correct.
 Print Assumptions conv_2_ieee_correct.
+
+Definition bv_add_1_seq_ieee_audit : bv_add_1_seq_ieee_spec := bv_add_1_seq_ieee_correct.
+Print Assumptions bv_add_1_seq_ieee_correct.
+
+Definition bv_add_1_lanes_ieee_audit : bv_add_1_lanes_ieee_spec := bv_add_1_lanes_ieee_correct.
+Print Assumptions bv_add_1_lanes_ieee_correct.
+
+Definition bv_add_2_seq_ieee_audit : bv_add_2_seq_ieee_spec := bv_add_2_seq_ieee_correct.
+Print Assumptions bv_add_2_seq_ieee_correct.
+
+Definition bv_add_2_lanes_ieee_audit : bv_add_2_lanes_ieee_spec := bv_add_2_lanes_ieee_correct.
+Print Assumptions bv_add_2_lanes_ieee_correct.
+
+Definition bv_scale_1_seq_ieee_audit : bv_scale_1_seq_ieee_spec := bv_scale_1_seq_ieee_correct.
+Print Assumptions bv_scale_1_seq_ieee_correct.
+
+Definition bv_scale_1_lanes_ieee_audit : bv_scale_1_lanes_ieee_spec := bv_scale_1_lanes_ieee_correct.
+Print Assumptions bv_scale_1_lanes_ieee_correct.
+
+Definition bv_scale_2_seq_ieee_audit : bv_scale_2_seq_ieee_spec := bv_scale_2_seq_ieee_correct.
+Print Assumptions bv_scale_2_seq_ieee_correct.
+
+Definition bv_scale_2_lanes_ieee_audit : bv_scale_2_lanes_ieee_spec := bv_scale_2_lanes_ieee_correct.
+Print Assumptions bv_scale_2_lanes_ieee_correct.
+
+Definition bv_sub_1_seq_ieee_audit : bv_sub_1_seq_ieee_spec := bv_sub_1_seq_ieee_correct.
+Print Assumptions bv_sub_1_seq_ieee_correct.
+
+Definition bv_sub_1_lanes_ieee_audit : bv_sub_1_lanes_ieee_spec := bv_sub_1_lanes_ieee_correct.
+Print Assumptions bv_sub_1_lanes_ieee_correct.
+
+Definition bv_sub_2_seq_ieee_audit : bv_sub_2_seq_ieee_spec := bv_sub_2_seq_ieee_correct.
+Print Assumptions bv_sub_2_seq_ieee_correct.
+
+Definition bv_sub_2_lanes_ieee_audit : bv_sub_2_lanes_ieee_spec := bv_sub_2_lanes_ieee_correct.
+Print Assumptions bv_sub_2_lanes_ieee_correct.
