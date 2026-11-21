@@ -175,6 +175,11 @@ t        = add(x0, y0)
   values of its own (`norm_combine`, `norm_step_k` have no `value:`); and
   `finite_or_nan r flag=f if=ok steps=1`, the finish of such a fold: the value stepped up that many
   times, a NaN when the mask input `ok` is false. A kernel may have mask inputs (`input: mask ok`).
+- The scaling of a BallVector by a power of two (architecture.md, "Ball vectors" and "Claims of
+  Milestone 2"): `exact_flag=e` after the `exact_when=` of an `error` entry, the mask output `e` true
+  exactly when those conditions hold; and of an `upper` entry with a value of its own, `unless=ex`, the
+  bound when the mask input `ex` is false, and `exact_when=mask(ex);zero_or_abs_gt(rx*c,eta/(2*u))`, the
+  output the value exactly when the conditions hold, `mask(NAME)` a condition that a mask input is true.
 
 ## A fold description
 
@@ -265,13 +270,49 @@ written, `combine:` is that fold's combination, `radius: rz = bv_add_radius_k(m,
 one radius from the largest magnitude and the scalars, and `finish: (r, finite) = norm_finish_1(rz,
 ok)` tests it; when the flag is false a second pass writes every center zero and the radius is
 +infinity, the whole space. Each array is required `ball_vector ARRAY RADIUS`, and the fold claims
-`encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=...]`. `rules.bv_rules` checks
+`encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=... radii_when=... finite_from=P]`,
+`radii_when` the conditions of V4 on the scalars alone, so that V4 holds of every length, the empty vector
+included (it comes with `finite_when`), `finite_from` the precision from which V4 is claimed when it is
+above the fold's minimum precision (`rules._finite_from`: from that precision every constant of the
+fold must be finite in the smallest format, emax = prec + 1; `bv_add_1`, `bv_sub_1`, `bv_scale_1` say
+`finite_from=2`), and the word `exact` (`"exact_when": []`) for a ball vector that
+is exactly the set (`bv_neg_k`), or `exact_when=CONDITIONS` for one exact under conditions
+(`bv_mul_pow2_k`): its state has a third group, `mask ex`; its step returns the center and a mask, `(z, e)
+= STEP(...)`; a second `record:` line `ex = and(ex, e)` and a second `combine:` line `ex = and(ex, ex)`
+and the mask into the state; the radius takes `ex` after the state's limb; the conditions are those of
+the step's `exact_flag` and of the radius's exact `upper` entry (`rules._bv_exact`); a scalar may be
+required `power_of_two`. A constructor (`bv_make_k`) reads the centers and the radius
+given and claims `makes_ball_vector z rr from=c,r flag=F`; its finish claims
+`finite_or_nan r flag=flag if=ok nonneg`, the value also not negative (`rules._bv_make_claims`).
+`rules.bv_rules` checks
 it; `cpp.bv_seq`, `cpp.bv_lanes` and `simd.bv_packed` print it; `rocq.bv_model` and
 `rocq.bv_statement` give it a model (the centers and the radius) and a statement (containment entry
 by entry); `ieee.bv_model` and `ieee.bv_statement` its IEEE model and V1 to V4 of milestone2.md;
 `claims.bv_claims`, its entry of `"folds"`, with `"bv": true`; the interpreter runs it
 (`Machine.run_fold`), and the runners complete its requests (`KAIRN_RUNNER_BV` of
-`runner_kernels.inc`), the centers written, then the radius and the flag.
+`runner_kernels.inc`), the centers written, then the radius and the flag. The requests of a map and of a
+ball vector may say `inplace=I` after the length (architecture.md, "The line protocol"): the runners
+then pass array I as the array written, and the interpreter computes as without the field.
+
+The product of two BallVectors (architecture.md, "Ball vectors": `bv_conv_k`) names a convolution for
+its centers (`centers: conv_2`) and has no step: one `record:` line per array read, the step of a fold
+of maxima on that array's entries (`(ma, oka) = norm_step_2(ma, oka, x)`), a count made from the lengths
+(`count: m = min(n_x, n_y)`, a number of `T` rounded up), a kernel of that count run once (`bound: (g,
+t, okg) = bound_dot_2(m)`), the radius on the maxima, the radii, the count and the bound, and a finish
+on the radius, the convolution's mask and the bound's (`finish: (r, flag) = bv_conv_finish(rz, finite,
+okg)`, whose kernel claims `finite_or_nan r flag=flag if_all=okc,okg`). Its arrays are required
+`ball_vector`, and it claims `encloses_coefficients z r SET NAME=ARRAY,RADIUS... flag=F
+finite_when=... radii_when=... count_when=le(EXPR,K)...`, the conditions of `finite_when` on pairs of
+entries, on one array's entries or on the scalars, and `count_when` on the count `n` with `unit(K)` of a
+kernel. Its radius kernel may require `at_most NAME K`. `rules.bv_conv_rules` checks it (with
+`rules._bv_conv_bound`, that the bound is that of the products of the convolution's dot product);
+`cpp.bv_conv_seq` prints it (no packed form, with the end function `bv_conv_end_function`);
+`rocq.bv_conv_model` and `rocq.bv_conv_statement` give it a model and a statement (containment
+coefficient by coefficient for members chosen independently); `ieee.bv_conv_model` and
+`ieee.bv_conv_statement` its IEEE model and V1 to V4; `claims.bv_conv_claims`, its entry of `"folds"`,
+with `"bv_conv": true`; the interpreter runs it (`Machine.run_fold`) and completes its requests, which
+have two lengths and two radii (`interp.complete_conv`), and so does the compiled runner
+(`KAIRN_RUNNER_BV_CONV` of `runner_kernels.inc`).
 
 ## The operations
 
@@ -563,7 +604,9 @@ statement uses too is `Model.v`'s, under one name: the doubling of `ball_from_in
 - the ball vectors (`test_bv.py`): the rules of a ball vector; V1 to V4 of milestone2.md and the
   flag in exact arithmetic on the interpreter, on formats of the IEEE shape of a few bits and in
   `binary64` and `binary32`, the whole space among the operands, in every order; the one radius
-  equal to the largest of the entrywise radii of the Ball kernel; the compiled `F_seq`, `F_lanes`
+  equal to the largest of the entrywise radii of the Ball kernel; the scalings by a power of two
+  exactly the set (and the radius $c\,r_x$) wherever their conditions hold, and sixty halvings in a row
+  exact; the compiled `F_seq`, `F_lanes`
   and `F_packed` bit for bit against the interpreter; the line protocol; the printers and the claims,
   and the entries that architecture.md writes out;
 - the convolutions (`test_conv.py`): the rules of a convolution; the interpreter, each coefficient

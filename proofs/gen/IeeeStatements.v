@@ -438,6 +438,85 @@ Definition ball_upper_as_1_spec : Prop :=
   (ball_empty_1 c r -> h = infinity prec emax true) /\
   (~ ball_empty_1 c r -> forall hi : xreal, range_upper (in_ball_1 c r) hi -> xval h = xru prec emax hi).
 
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). IEEE-model status: unverified. *)
+Definition bv_center_entry_1_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (1 <= prec)%Z ->
+  forall c : binary_float prec emax,
+  finite c ->
+  let z := IeeeModel.bv_center_entry_1 prec emax nan_plus c in
+  finite z ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.bv_center_entry_1_prog [c]) /\
+  (val z)
+  = bv_center_entry_1 (ieee_emin prec emax) prec tie_even (val c).
+
+(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
+Definition fold_finish_1_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall s : binary_float prec emax,
+  let '(r, flag) := IeeeModel.fold_finish_1 prec emax nan_abs nan_const s in
+  (flag = true <-> finite s) /\
+  (flag = true -> r = s) /\
+  (flag = false -> nan r).
+
+(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
+Definition norm_finish_1_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall m : binary_float prec emax,
+  forall ok : bool,
+  let '(r, flag) := IeeeModel.norm_finish_1 prec emax nan_abs nan_const m ok in
+  (flag = true <-> ok = true /\ finite m) /\
+  (flag = true -> r = m) /\
+  (flag = false -> nan r).
+
+(* bv_conv_finish: the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+Definition bv_conv_finish_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall rz : binary_float prec emax,
+  forall okc okg : bool,
+  let '(r, flag) := IeeeModel.bv_conv_finish prec emax nan_abs nan_const rz okc okg in
+  (flag = true <-> finite rz) /\
+  (flag = true -> r = rz) /\
+  (flag = false -> nan r).
+
+(* bv_make_finish: the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). IEEE-model status: unverified. *)
+Definition bv_make_finish_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall rz : binary_float prec emax,
+  forall ok : bool,
+  let '(r, flag) := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz ok in
+  (flag = true <-> ok = true /\ finite rz /\ 0 <= val rz) /\
+  (flag = true -> r = rz) /\
+  (flag = false -> nan r).
+
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). IEEE-model status: unverified. *)
+Definition bv_mul_pow2_step_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (1 <= prec)%Z ->
+  forall x c : binary_float prec emax,
+  finite x -> finite c ->
+  (exists n : Z, val c = bpow radix2 n) ->
+  let '(z, e) := IeeeModel.bv_mul_pow2_step_1 prec emax nan_abs nan_fma x c in
+  finite z ->
+  val z = RN (ieee_emin prec emax) prec (val x * val c) /\
+  Rabs (val z - (val x * val c)) <= (1 / 2) * eta (ieee_emin prec emax) /\
+  (((val x * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x * val c)) ->
+   val z = (val x * val c)) /\
+  (e = true <-> ((val x * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x * val c))).
+
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). IEEE-model status: proved. *)
 Definition dot_step_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -468,17 +547,6 @@ Definition fast_two_sum_entry_ieee_spec : Prop :=
   val s = RN (ieee_emin prec emax) prec (val a + val b) /\
   (val s + val e) = (val a + val b) /\
   normalized_2 (ieee_emin prec emax) prec (val s) (val e).
-
-(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
-Definition fold_finish_1_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
-  forall s : binary_float prec emax,
-  let '(r, flag) := IeeeModel.fold_finish_1 prec emax nan_abs nan_const s in
-  (flag = true <-> finite s) /\
-  (flag = true -> r = s) /\
-  (flag = false -> nan r).
 
 (* interval_add_1: directed sums of the bounds (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_add_1_spec : Prop :=
@@ -803,6 +871,21 @@ Definition mul_up_1_ieee_spec : Prop :=
     (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
    xval r = xru prec emax (xmul (xval a) (xval b))).
 
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). IEEE-model status: unverified. *)
+Definition neg_1_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (1 <= prec)%Z ->
+  forall x : binary_float prec emax,
+  finite x ->
+  let z := IeeeModel.neg_1 prec emax nan_opp x in
+  finite z ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.neg_1_prog [x]) /\
+  (val z)
+  = neg_1 (val x).
+
 (* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). IEEE-model status: proved. *)
 Definition next_down_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -820,18 +903,6 @@ Definition next_up_ieee_spec : Prop :=
   forall a : binary_float prec emax,
   let r := IeeeModel.next_up prec emax a in
   xval r = xsucc prec emax (xval a).
-
-(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
-Definition norm_finish_1_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
-  forall m : binary_float prec emax,
-  forall ok : bool,
-  let '(r, flag) := IeeeModel.norm_finish_1 prec emax nan_abs nan_const m ok in
-  (flag = true <-> ok = true /\ finite m) /\
-  (flag = true -> r = m) /\
-  (flag = false -> nan r).
 
 (* norm_finish_2: the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
 Definition norm_finish_2_spec : Prop :=
@@ -1862,6 +1933,37 @@ Definition ball_upper_as_2_spec : Prop :=
   (~ ball_empty_2 c0 c1 r -> forall hi : xreal, range_upper (in_ball_2 c0 c1 r) hi -> xle hi (xval h) = true) /\
   (finite c0 /\ finite c1 /\ finite r -> finite h ->
    Rabs (val h - ((val c0 + val c1) + val r)) <= 5 * u prec ^ 1 * (Rabs (val c0 + val c1) + Rabs (val r)) + 3 * eta (ieee_emin prec emax)).
+
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). IEEE-model status: unverified. *)
+Definition bv_center_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let '(z0, z1) := IeeeModel.bv_center_2 prec emax x0 x1 in
+  canonical_2 z0 z1 /\
+  xval_2 z0 z1 = xval_2 x0 x1 /\
+  (finite x0 -> val z0 = val x0 /\ val z1 = val x1).
+
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). IEEE-model status: unverified. *)
+Definition bv_mul_pow2_step_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 c : binary_float prec emax,
+  finite x0 -> finite x1 -> finite c ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  (exists n : Z, val c = bpow radix2 n) ->
+  let '(z0, z1, e) := IeeeModel.bv_mul_pow2_step_2 prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 c in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) * val c)) <= 1 * eta (ieee_emin prec emax) /\
+  (((val x0 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x0 * val c)) /\ ((val x1 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x1 * val c)) ->
+   (val z0 + val z1) = ((val x0 + val x1) * val c)) /\
+  (e = true <-> ((val x0 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x0 * val c)) /\ ((val x1 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x1 * val c))).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). IEEE-model status: proved. *)
 Definition eq_2_1_ieee_spec : Prop :=

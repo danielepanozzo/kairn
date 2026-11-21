@@ -48,8 +48,10 @@ def functions(text, fixups=False):
             m = re.match(r'KAIRN_GEN_COLD (constexpr )?result<(double|float), [0-9]+> (\w+)\(', line)
             key = (m.group(3), m.group(2)) if m else None
         else:
-            m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((double|float) ', line) or \
-                re.match(r'inline (constexpr )?void (\w+)\((double|float) ', line)
+            # (A first input that the kernel ignores is [[maybe_unused]]: bv_neg_radius.)
+            m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ',
+                         line) or \
+                re.match(r'inline (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ', line)
             key = (m.group(2), m.group(3)) if m else None
         if m:
             current = out.setdefault(key, {'constexpr': bool(m.group(1)), 'lines': [], 'head': line})
@@ -212,6 +214,8 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR |= {'acc_mul_1', 'acc_mul_2', 'acc_radius_1', 'acc_radius_2'}
     # BallVector: the fmas of the radius kernels (bv_add_radius_k, bv_scale_radius_k).
     NOT_CONSTEXPR |= {'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2'}
+    # The product of two BallVectors: the fmas of conv_radius.
+    NOT_CONSTEXPR |= {'conv_radius'}
     # The full kernels are constexpr where their cores are: their fix-up turns t into an infinity
     # with times_inf, which is no fused operation. Those of the products of two limbs are not, nor
     # are the full Ball kernels but the scalings by a power of two. The constructors are.
@@ -237,6 +241,9 @@ class Cpp(unittest.TestCase):
     # Stage B1: the midpoint and radius of an interval, which halves its bounds with prod, and the
     # conversion to a ball and the split that call it.
     PRODUCT_RULE |= {'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'}
+    # The steps and the radius of the scaling of a BallVector by a power of two, whose products are
+    # those of mul_pow2_step_1, mul_pow2_2 and ball_mul_pow2_k.
+    PRODUCT_RULE |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
     # The kernels that are ordinary inline functions, not forced inline (ordinary_inline:).
     ORDINARY_INLINE = {'interval_mul_2'}
 
@@ -733,7 +740,8 @@ class Rocq(unittest.TestCase):
                 # it says what normalized with an exact error says. An exact_when adds a conjunct
                 # after its claim's own (ball_mul_pow2_k).
                 printed = [e for e in k.ensures if e['kind'] != 'represents']
-                printed += [e for e in printed if 'exact_when' in e]
+                # exact_flag one more, the mask of those conditions (bv_mul_pow2_step_k).
+                printed += [e for e in printed if 'exact_when' in e] + [e for e in printed if 'exact_flag' in e]
                 # outward (Milestone 2) says its side and its distance: two conjuncts before the exact.
                 printed += [e for e in k.ensures if e['kind'] == 'outward']
                 self.assertEqual(len(conjuncts), len(want) + len(printed), name)
@@ -751,9 +759,13 @@ class Rocq(unittest.TestCase):
         # limbs are normalized), 4 limbs in 3 kernels. With the accumulator: t and b of acc_add_1,
         # acc_mul_1 and acc_merge_1, b of acc_add_2, acc_mul_2 and acc_merge_2, and r of acc_radius_1
         # and acc_radius_2 (claimed under the mask), 11 limbs in 8 kernels. With BallVector: rz of the
-        # four radius kernels, 4 limbs in 4 kernels.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4)
+        # four radius kernels, 4 limbs in 4 kernels; and z of bv_center_entry_1 and rz of
+        # bv_make_radius, the kernels of the constructor (bv_center_2 is normalized); and z of neg_1
+        # and rz of bv_neg_radius, of the negation; and z of bv_mul_pow2_step_1 and rz of
+        # bv_mul_pow2_radius, of the scaling by a power of two (bv_mul_pow2_step_2 is normalized); and rz
+        # of conv_radius, of the product of two BallVectors.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -917,8 +929,19 @@ class Rocq(unittest.TestCase):
     # in its order; Model.v is the same. Then the six ball vectors were proved (BvReal.v): Audit.v
     # lists their six theorems among those of the folds, every earlier line kept, in its order;
     # Model.v and Statements.v are the same.
-    DIGESTS = {'Model.v': '852cded22919dbde42ddc40eec7f67444a76a7e6bb03018ec69df53022dd5c6e',
-               'Statements.v': '21cc4fd9de3c7b7729aa4ac7a4213374a9df630833f9f49ed4e5f541a39db804',
+    # On another line, after the four radius kernels of BallVector, the three kernels of the
+    # constructor of BallVector with a real-model statement (bv_center_entry_1, bv_center_2,
+    # bv_make_radius; unverified): their definitions and statements were added, every earlier line
+    # kept; no constant; Audit.v is the same. Then neg_1 and bv_neg_radius, of the negation of a
+    # BallVector (unverified), in the same way. Then the two steps and the radius of the scaling of a
+    # BallVector by a power of two (unverified): their definitions and statements were added, every
+    # earlier line kept; their one constant is N of ball_mul_pow2_k, under the name it had; Audit.v is
+    # the same. Then conv_radius, the radius of the product of two BallVectors (unverified): its
+    # definition and statement were added, every earlier line kept; its two constants are new
+    # (gen/constant_names.json); Audit.v is the same. Merged here: the regeneration of the merged
+    # descriptions.
+    DIGESTS = {'Model.v': '92ef82134249c903891247c27a7528c22b1055c1cf4a1b308ba445ed3fa949f3',
+               'Statements.v': '1726773db8522b0feba51c423deb13f8d14e9f165aef7d23c72b1b9bcea4359b',
                'Audit.v': 'e76cdd765815b00e0722da5629e4fb754286787457f55d19fdad27615d94f40e'}
 
 
@@ -954,8 +977,9 @@ class Rocq(unittest.TestCase):
         # 60; the nine of the folds' stage, the fifteen steps of the maps, the three of norm_upper_k;
         # and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and the
         # seven bounds of two limbs; and the eight kernels of the accumulator; and the four radius
-        # kernels of BallVector.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4)
+        # kernels of BallVector; and the three of its constructor that have one; and the two of its
+        # negation; and the three of its scaling by a power of two; and conv_radius, of its product.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

@@ -1,0 +1,24 @@
+# The finish of bv_make_k, the constructors of a BallVector (milestone2.md, "BallVector", "Values":
+# "a constructor given a radius that is negative or a NaN, or a center that is not finite, returns the
+# whole space"): norm_finish_1 under the state's mask and the test that the radius is not negative
+# (le(0, rz), false for a NaN and for a negative number, true for either zero). The other ball vectors
+# have norm_finish_1, which does not test the sign: their radii are nonnegative by construction. The
+# claim says the test: finite_or_nan with nonneg.
+kernel:        bv_make_finish
+input:         rz
+input:         mask ok
+output:        r
+output:        mask flag
+value:         rz
+ensures:       finite_or_nan r flag=flag if=ok nonneg
+min_precision: 1
+source:        the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values)
+license:       proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+cone_exempt:   the outputs are those of norm_finish_1, after a test of the sign, which is what the kernel claims
+
+p         = le(0, rz)
+q         = and(ok, p)
+(r, flag) = norm_finish_1(rz, q)

@@ -150,6 +150,12 @@ Definition up_bound_sum_2_0 : float := const_of (Model.up_bound_sum_2_0 (3 - ema
 (* up((1+u)^2*(unit(add_2_2)+eta)), as a number of the format. *)
 Definition up_bound_sum_2_1 : float := const_of (Model.up_bound_sum_2_1 (3 - emax - prec) prec).
 
+(* up(4*(1+u)^8*eta+eta/(2*u)), as a number of the format. *)
+Definition up_conv_radius_0 : float := const_of (Model.up_conv_radius_0 (3 - emax - prec) prec).
+
+(* up((1+u)^7), as a number of the format. *)
+Definition up_conv_radius_1 : float := const_of (Model.up_conv_radius_1 (3 - emax - prec) prec).
+
 (* up(eta/(2*u^2)), as a number of the format. *)
 Definition up_mul_down_1_0 : float := const_of (Model.up_mul_down_1_0 (3 - emax - prec) prec).
 
@@ -557,6 +563,72 @@ Definition bv_add_radius_2 (m rx ry : float) : float :=
   let rz := fma t up_ball_add_1_1 up_ball_add_1_2 in
   rz.
 
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). *)
+Definition bv_center_entry_1 (c : float) : float :=
+  let z := guard c in
+  z.
+
+(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). *)
+Definition fold_finish_1 (s : float) : float * bool :=
+  let a := abs s in
+  let flag := lt a pinf in
+  let r := if flag then s else cnan in
+  (r, flag).
+
+(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). *)
+Definition norm_finish_1 (m : float) (ok : bool) : float * bool :=
+  let t := if ok then m else cnan in
+  let '(r, flag) := fold_finish_1 t in
+  (r, flag).
+
+(* bv_conv_finish: the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). *)
+Definition bv_conv_finish (rz : float) (okc okg : bool) : float * bool :=
+  let q := andb okc okg in
+  let '(r, flag) := norm_finish_1 rz q in
+  (r, flag).
+
+(* bv_make_finish: the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). *)
+Definition bv_make_finish (rz : float) (ok : bool) : float * bool :=
+  let p := le pzero rz in
+  let q := andb ok p in
+  let '(r, flag) := norm_finish_1 rz q in
+  (r, flag).
+
+(* bv_make_radius: the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). *)
+Definition bv_make_radius (m r : float) : float :=
+  let g := guard r in
+  let d := sub m m in
+  let rz := add g d in
+  rz.
+
+(* bv_mul_pow2_radius: the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_radius (m : float) (ex : bool) (rx c : float) : float :=
+  let rr := prod rx c in
+  let br := lt up_ball_mul_pow2_1_0 rr in
+  let zr := eq rx pzero in
+  let er := orb br zr in
+  let q := andb ex er in
+  let su := succ rr in
+  let rw := succ su in
+  let rs := if q then rr else rw in
+  let d := sub m m in
+  let rz := add rs d in
+  rz.
+
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_1 (x c : float) : float * bool :=
+  let z := prod x c in
+  let am := abs z in
+  let bc := lt up_ball_mul_pow2_1_0 am in
+  let zc := eq x pzero in
+  let e := orb bc zc in
+  (z, e).
+
+(* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). *)
+Definition bv_neg_radius (m rx : float) : float :=
+  let rz := rx in
+  rz.
+
 (* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
 Definition bv_scale_radius_1 (m rx a : float) : float :=
   let aa := abs a in
@@ -573,6 +645,18 @@ Definition bv_scale_radius_2 (m rx a : float) : float :=
   let rz := fma t up_ball_add_1_1 up_ball_scale_2_2 in
   rz.
 
+(* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). *)
+Definition conv_radius (ma mb rx ry m g t : float) : float :=
+  let p := prod rx ry in
+  let q := fma mb rx p in
+  let w := fma ma ry q in
+  let ab := prod ma mb in
+  let e := fma ab g w in
+  let s := fma m e t in
+  let hm := prod m up_conv_radius_0 in
+  let rz := fma s up_conv_radius_1 hm in
+  rz.
+
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)
 Definition dot_step_1 (s x y : float) : float :=
   let t := fma x y s in
@@ -584,13 +668,6 @@ Definition fast_two_sum_entry (a b : float) : float * float :=
   let gb := guard b in
   let '(s, e) := fast_two_sum ga gb in
   (s, e).
-
-(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). *)
-Definition fold_finish_1 (s : float) : float * bool :=
-  let a := abs s in
-  let flag := lt a pinf in
-  let r := if flag then s else cnan in
-  (r, flag).
 
 (* interval_add_1: directed sums of the bounds (Milestone 2 listing). *)
 Definition interval_add_1 (xl xu yl yu : float) : float * float :=
@@ -815,6 +892,11 @@ Definition mul_up_1 (a b : float) : float :=
   let r := if zz then p else v in
   r.
 
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). *)
+Definition neg_1 (x : float) : float :=
+  let z := neg x in
+  z.
+
 (* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). *)
 Definition next_down (a : float) : float :=
   let r := pred a in
@@ -831,12 +913,6 @@ Definition norm_combine (m : float) (ok : bool) (n : float) (okn : bool) : float
   let r := if c then n else m in
   let okr := andb ok okn in
   (r, okr).
-
-(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). *)
-Definition norm_finish_1 (m : float) (ok : bool) : float * bool :=
-  let t := if ok then m else cnan in
-  let '(r, flag) := fold_finish_1 t in
-  (r, flag).
 
 (* norm_finish_2: the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). *)
 Definition norm_finish_2 (m : float) (ok : bool) : float * bool :=
@@ -1350,6 +1426,25 @@ Definition ball_upper_as_2 (c0 c1 r : float) : float :=
   let h := if ne then t else mi in
   h.
 
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). *)
+Definition bv_center_2 (x0 x1 : float) : float * float :=
+  let z0 := x0 in
+  let z1 := x1 in
+  (z0, z1).
+
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_2 (x0 x1 c : float) : float * float * bool :=
+  let h := prod x0 c in
+  let l := prod x1 c in
+  let '(z0, z1) := fast_two_sum h l in
+  let ze := eq x1 pzero in
+  let mm := if ze then h else l in
+  let am := abs mm in
+  let bc := lt up_ball_mul_pow2_1_0 am in
+  let zc := eq x0 pzero in
+  let e := orb bc zc in
+  (z0, z1, e).
+
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : float) : bool :=
   let h := eq x0 a in
@@ -1824,6 +1919,11 @@ Definition axpy_step_1_prog : list instr :=
   ; Iadd 3 2   (*  4 z *)
   ].
 
+(* inputs: 0 c *)
+Definition bv_center_entry_1_prog : list instr :=
+  [ Iguard 0  (*  1 z *)
+  ].
+
 (* inputs: 0 s, 1 x, 2 y *)
 Definition dot_step_1_prog : list instr :=
   [ Ifma 1 2 0  (*  3 t *)
@@ -1847,6 +1947,11 @@ Definition two_prod_prog : list instr :=
 (* inputs: 0 x, 1 c *)
 Definition mul_pow2_step_1_prog : list instr :=
   [ Iprod 0 1  (*  2 z *)
+  ].
+
+(* inputs: 0 x *)
+Definition neg_1_prog : list instr :=
+  [ Ineg 0  (*  1 z *)
   ].
 
 (* inputs: 0 x, 1 a *)

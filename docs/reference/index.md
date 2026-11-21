@@ -6,9 +6,9 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 159 kernels are proved.
+Of the 170 kernels, 159 are proved and 11 are **UNVERIFIED**: [`bv_center_2`](bv_center_2.md), [`bv_center_entry_1`](bv_center_entry_1.md), [`bv_conv_finish`](bv_conv_finish.md), [`bv_make_finish`](bv_make_finish.md), [`bv_make_radius`](bv_make_radius.md), [`bv_mul_pow2_radius`](bv_mul_pow2_radius.md), [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md), [`bv_mul_pow2_step_2`](bv_mul_pow2_step_2.md), [`bv_neg_radius`](bv_neg_radius.md), [`conv_radius`](conv_radius.md), [`neg_1`](neg_1.md).
 
-32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
+33 kernels have a statement on finite operands and one on infinite and NaN operands; the second is **UNVERIFIED** for [`bv_center_2`](bv_center_2.md).
 
 No public operation calls an UNVERIFIED kernel, so none needs the marker `kairn::unverified`.
 
@@ -295,4 +295,15 @@ The one radius of the result of the BallVector kernels of Milestone 2 (the sum, 
 | none (internal) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - \mathrm{unit}(\mathtt{add\_2\_2})} (1 + u)$ | [`bv_add_radius_2`](bv_add_radius_2.md) |
 | not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})} + \frac{\mathrm{tiny}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})}$ | [`bv_scale_radius_1`](bv_scale_radius_1.md) |
 | not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_2`](bv_scale_radius_2.md) |
+| not yet called by the public headers | - | $z = \mathrm{RN}(c)$ | [`bv_center_entry_1`](bv_center_entry_1.md) **UNVERIFIED** |
+| none (internal) | - | $z = x$ exactly, normalized | [`bv_center_2`](bv_center_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r_z = \mathrm{RN}(r)$ | [`bv_make_radius`](bv_make_radius.md) **UNVERIFIED** |
+| none (internal) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_make_finish`](bv_make_finish.md) **UNVERIFIED** |
+| none (internal) | - | $z = \mathrm{RN}(-x)$ | [`neg_1`](neg_1.md) **UNVERIFIED** |
+| none (internal) | - | $r_z = \mathrm{RN}(r_x)$ | [`bv_neg_radius`](bv_neg_radius.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $\lvert z - x c\rvert \le \eta$, normalized | [`bv_mul_pow2_step_2`](bv_mul_pow2_step_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r_z \ge r_x c$; when $e_x$ is false, $r_z \ge r_x c + \eta$ | [`bv_mul_pow2_radius`](bv_mul_pow2_radius.md) **UNVERIFIED** |
+| none (internal) | - | $r_z \ge m ((1 + u) m_a r_y + (1 + u) m_b r_x + r_x r_y) + g m (1 + u)^{2} m_a m_b + t$ | [`conv_radius`](conv_radius.md) **UNVERIFIED** |
+| none (internal) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_conv_finish`](bv_conv_finish.md) **UNVERIFIED** |
 

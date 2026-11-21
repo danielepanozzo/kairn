@@ -132,7 +132,8 @@ class Counts(unittest.TestCase):
                                         'ball_mul_pow2_2_full', 'bound_sum_1', 'bound_sum_2', 'bound_dot_1',
                                         'bound_dot_2', 'scale_step_1', 'mul_pow2_step_1', 'mul_pow2_step_2',
                                         'axpy_step_1', 'axpy_entry_step_1', 'ball_from_interval_2',
-                                        'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'})
+                                        'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1',
+                                        'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'})
         self.assertEqual(differ, {'mul_2_1_full', 'mul_2_2_full', 'mul_pow2_2_full', 'mul_ext_2_2', 'two_prod'} |
                          product_rule)
         for name in product_rule:

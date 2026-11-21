@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: acc_mul_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_up_1, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_full, mul_2_2_full, scale_step_2.
+// Not constexpr: acc_mul_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_up_1, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_full, mul_2_2_full, scale_step_2.
 #pragma once
 
 #include <cstddef>
@@ -1720,6 +1720,183 @@ KAIRN_GEN_FORCEINLINE void bv_add_radius_2(float m, float rx, float ry, float& r
     rz_out = rz;
 }
 
+// bv_center_entry_1(c) -> z
+// the guard of a constructor (milestone2.md, BallVector, Values). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void bv_center_entry_1(double c, double& z_out) noexcept {
+    const double z = __builtin_is_constant_evaluated() ? c : c + 0.0;
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_center_entry_1(float c, float& z_out) noexcept {
+    const float z = __builtin_is_constant_evaluated() ? c : c + 0.0f;
+    z_out = z;
+}
+
+// fold_finish_1(s) -> r, mask flag
+// the finish of a fold: the state or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void fold_finish_1(double s, double& r_out, bool& flag_out) noexcept {
+    const double a = abs_bits(s);
+    const bool flag = std::numeric_limits<double>::infinity() > a;
+    const double r = flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE constexpr void fold_finish_1(float s, float& r_out, bool& flag_out) noexcept {
+    const float a = abs_bits(s);
+    const bool flag = std::numeric_limits<float>::infinity() > a;
+    const float r = flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+
+// norm_finish_1(m, mask ok) -> r, mask flag
+// the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void norm_finish_1(double m, bool ok, double& r_out, bool& flag_out) noexcept {
+    const double t = ok ? m : std::numeric_limits<double>::quiet_NaN();
+    // (r, flag) = fold_finish_1(t)
+    const double r_a = abs_bits(t);
+    const bool flag = std::numeric_limits<double>::infinity() > r_a;
+    const double r = flag ? t : std::numeric_limits<double>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE constexpr void norm_finish_1(float m, bool ok, float& r_out, bool& flag_out) noexcept {
+    const float t = ok ? m : std::numeric_limits<float>::quiet_NaN();
+    // (r, flag) = fold_finish_1(t)
+    const float r_a = abs_bits(t);
+    const bool flag = std::numeric_limits<float>::infinity() > r_a;
+    const float r = flag ? t : std::numeric_limits<float>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+
+// bv_conv_finish(rz, mask okc, mask okg) -> r, mask flag
+// the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void bv_conv_finish(double rz, bool okc, bool okg, double& r_out, bool& flag_out) noexcept {
+    const bool q = okc & okg;
+    // (r, flag) = norm_finish_1(rz, q)
+    const double r_t = q ? rz : std::numeric_limits<double>::quiet_NaN();
+    // (r, flag) = fold_finish_1(r_t)
+    const double r_a = abs_bits(r_t);
+    const bool flag = std::numeric_limits<double>::infinity() > r_a;
+    const double r = flag ? r_t : std::numeric_limits<double>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_conv_finish(float rz, bool okc, bool okg, float& r_out, bool& flag_out) noexcept {
+    const bool q = okc & okg;
+    // (r, flag) = norm_finish_1(rz, q)
+    const float r_t = q ? rz : std::numeric_limits<float>::quiet_NaN();
+    // (r, flag) = fold_finish_1(r_t)
+    const float r_a = abs_bits(r_t);
+    const bool flag = std::numeric_limits<float>::infinity() > r_a;
+    const float r = flag ? r_t : std::numeric_limits<float>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+
+// bv_make_finish(rz, mask ok) -> r, mask flag
+// the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void bv_make_finish(double rz, bool ok, double& r_out, bool& flag_out) noexcept {
+    const bool p = rz >= 0.0;
+    const bool q = ok & p;
+    // (r, flag) = norm_finish_1(rz, q)
+    const double r_t = q ? rz : std::numeric_limits<double>::quiet_NaN();
+    // (r, flag) = fold_finish_1(r_t)
+    const double r_a = abs_bits(r_t);
+    const bool flag = std::numeric_limits<double>::infinity() > r_a;
+    const double r = flag ? r_t : std::numeric_limits<double>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_make_finish(float rz, bool ok, float& r_out, bool& flag_out) noexcept {
+    const bool p = rz >= 0.0f;
+    const bool q = ok & p;
+    // (r, flag) = norm_finish_1(rz, q)
+    const float r_t = q ? rz : std::numeric_limits<float>::quiet_NaN();
+    // (r, flag) = fold_finish_1(r_t)
+    const float r_a = abs_bits(r_t);
+    const bool flag = std::numeric_limits<float>::infinity() > r_a;
+    const float r = flag ? r_t : std::numeric_limits<float>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+
+// bv_make_radius(m, r) -> rz
+// the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void bv_make_radius(double m, double r, double& rz_out) noexcept {
+    const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
+    const double d = m - m;
+    const double rz = g + d;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_make_radius(float m, float r, float& rz_out) noexcept {
+    const float g = __builtin_is_constant_evaluated() ? r : r + 0.0f;
+    const float d = m - m;
+    const float rz = g + d;
+    rz_out = rz;
+}
+
+// bv_mul_pow2_radius(m, mask ex, rx, c) -> rz
+// the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_radius(double m, bool ex, double rx, double c, double& rz_out) noexcept {
+    const double rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0);
+    const bool br = rr > 0x1p-1022;
+    const bool zr = rx == 0.0;
+    const bool er = br | zr;
+    const bool q = ex & er;
+    const double su = next_up_bits(rr);
+    const double rw = next_up_bits(su);
+    const double rs = q ? rr : rw;
+    const double d = m - m;
+    const double rz = rs + d;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_radius(float m, bool ex, float rx, float c, float& rz_out) noexcept {
+    const float rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0f);
+    const bool br = rr > 0x1p-126f;
+    const bool zr = rx == 0.0f;
+    const bool er = br | zr;
+    const bool q = ex & er;
+    const float su = next_up_bits(rr);
+    const float rw = next_up_bits(su);
+    const float rs = q ? rr : rw;
+    const float d = m - m;
+    const float rz = rs + d;
+    rz_out = rz;
+}
+
+// bv_mul_pow2_step_1(x, c) -> z, mask e
+// mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_1(double x, double c, double& z_out, bool& e_out) noexcept {
+    const double z = __builtin_is_constant_evaluated() ? x * c : fma_rn(x, c, 0.0);
+    const double am = abs_bits(z);
+    const bool bc = am > 0x1p-1022;
+    const bool zc = x == 0.0;
+    const bool e = bc | zc;
+    z_out = z;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_1(float x, float c, float& z_out, bool& e_out) noexcept {
+    const float z = __builtin_is_constant_evaluated() ? x * c : fma_rn(x, c, 0.0f);
+    const float am = abs_bits(z);
+    const bool bc = am > 0x1p-126f;
+    const bool zc = x == 0.0f;
+    const bool e = bc | zc;
+    z_out = z;
+    e_out = e;
+}
+
+// bv_neg_radius(m, rx) -> rz
+// the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void bv_neg_radius([[maybe_unused]] double m, double rx, double& rz_out) noexcept {
+    const double rz = rx;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_neg_radius([[maybe_unused]] float m, float rx, float& rz_out) noexcept {
+    const float rz = rx;
+    rz_out = rz;
+}
+
 // bv_scale_radius_1(m, rx, a) -> rz
 // the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void bv_scale_radius_1(double m, double rx, double a, double& rz_out) noexcept {
@@ -1751,6 +1928,31 @@ KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(float m, float rx, float a, float& 
     const float p = fma_rn(aa, rx, 0.0f);
     const float t = fma_rn(m, 0x1.000002p-47f, p);
     const float rz = fma_rn(t, 0x1.000004p+0f, 0x1.000006p-126f);
+    rz_out = rz;
+}
+
+// conv_radius(ma, mb, rx, ry, m, g, t) -> rz
+// the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void conv_radius(double ma, double mb, double rx, double ry, double m, double g, double t, double& rz_out) noexcept {
+    const double p = fma_rn(rx, ry, 0.0);
+    const double q = fma_rn(mb, rx, p);
+    const double w = fma_rn(ma, ry, q);
+    const double ab = fma_rn(ma, mb, 0.0);
+    const double e = fma_rn(ab, g, w);
+    const double s = fma_rn(m, e, t);
+    const double hm = fma_rn(m, 0x1.0000000000005p-1022, 0.0);
+    const double rz = fma_rn(s, 0x1.0000000000004p+0, hm);
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void conv_radius(float ma, float mb, float rx, float ry, float m, float g, float t, float& rz_out) noexcept {
+    const float p = fma_rn(rx, ry, 0.0f);
+    const float q = fma_rn(mb, rx, p);
+    const float w = fma_rn(ma, ry, q);
+    const float ab = fma_rn(ma, mb, 0.0f);
+    const float e = fma_rn(ab, g, w);
+    const float s = fma_rn(m, e, t);
+    const float hm = fma_rn(m, 0x1.00000ap-126f, 0.0f);
+    const float rz = fma_rn(s, 0x1.000008p+0f, hm);
     rz_out = rz;
 }
 
@@ -1786,23 +1988,6 @@ KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(float a, float b, float&
     const float e = gb - s_z;
     s_out = s;
     e_out = e;
-}
-
-// fold_finish_1(s) -> r, mask flag
-// the finish of a fold: the state or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
-KAIRN_GEN_FORCEINLINE constexpr void fold_finish_1(double s, double& r_out, bool& flag_out) noexcept {
-    const double a = abs_bits(s);
-    const bool flag = std::numeric_limits<double>::infinity() > a;
-    const double r = flag ? s : std::numeric_limits<double>::quiet_NaN();
-    r_out = r;
-    flag_out = flag;
-}
-KAIRN_GEN_FORCEINLINE constexpr void fold_finish_1(float s, float& r_out, bool& flag_out) noexcept {
-    const float a = abs_bits(s);
-    const bool flag = std::numeric_limits<float>::infinity() > a;
-    const float r = flag ? s : std::numeric_limits<float>::quiet_NaN();
-    r_out = r;
-    flag_out = flag;
 }
 
 // interval_add_1(xl, xu, yl, yu) -> zl, zu
@@ -3176,6 +3361,17 @@ KAIRN_GEN_FORCEINLINE void mul_up_1(float a, float b, float& r_out) noexcept {
     r_out = r;
 }
 
+// neg_1(x) -> z
+// a change of sign (milestone2.md, BallVector, bv_neg_k). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void neg_1(double x, double& z_out) noexcept {
+    const double z = -x;
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE constexpr void neg_1(float x, float& z_out) noexcept {
+    const float z = -x;
+    z_out = z;
+}
+
 // next_down(a) -> r
 // IEEE 754 nextDown on the bit pattern (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void next_down(double a, double& r_out) noexcept {
@@ -3213,27 +3409,6 @@ KAIRN_GEN_FORCEINLINE constexpr void norm_combine(float m, bool ok, float n, boo
     const bool okr = ok & okn;
     r_out = r;
     okr_out = okr;
-}
-
-// norm_finish_1(m, mask ok) -> r, mask flag
-// the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
-KAIRN_GEN_FORCEINLINE constexpr void norm_finish_1(double m, bool ok, double& r_out, bool& flag_out) noexcept {
-    const double t = ok ? m : std::numeric_limits<double>::quiet_NaN();
-    // (r, flag) = fold_finish_1(t)
-    const double r_a = abs_bits(t);
-    const bool flag = std::numeric_limits<double>::infinity() > r_a;
-    const double r = flag ? t : std::numeric_limits<double>::quiet_NaN();
-    r_out = r;
-    flag_out = flag;
-}
-KAIRN_GEN_FORCEINLINE constexpr void norm_finish_1(float m, bool ok, float& r_out, bool& flag_out) noexcept {
-    const float t = ok ? m : std::numeric_limits<float>::quiet_NaN();
-    // (r, flag) = fold_finish_1(t)
-    const float r_a = abs_bits(t);
-    const bool flag = std::numeric_limits<float>::infinity() > r_a;
-    const float r = flag ? t : std::numeric_limits<float>::quiet_NaN();
-    r_out = r;
-    flag_out = flag;
 }
 
 // norm_finish_2(m, mask ok) -> r, mask flag
@@ -6493,6 +6668,58 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_upper_as_2(float c0, float c1, float r
         h_out = h;
 #endif
     }
+}
+
+// bv_center_2(x = (x0, x1)) -> z = (z0, z1)
+// a copy of a canonical pair (milestone2.md, BallVector, Values). Status: unverified (real model), unverified (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void bv_center_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
+    const double z0 = x0;
+    const double z1 = x1;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_center_2(float x0, float x1, float& z0_out, float& z1_out) noexcept {
+    const float z0 = x0;
+    const float z1 = x1;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// bv_mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1), mask e
+// mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_2(double x0, double x1, double c, double& z0_out, double& z1_out, bool& e_out) noexcept {
+    const double h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);
+    const double l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0);
+    // (z0, z1) = fast_two_sum(h, l)
+    const double z0 = h + l;
+    const double z0_z = z0 - h;
+    const double z1 = l - z0_z;
+    const bool ze = x1 == 0.0;
+    const double mm = ze ? h : l;
+    const double am = abs_bits(mm);
+    const bool bc = am > 0x1p-1022;
+    const bool zc = x0 == 0.0;
+    const bool e = bc | zc;
+    z0_out = z0;
+    z1_out = z1;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_2(float x0, float x1, float c, float& z0_out, float& z1_out, bool& e_out) noexcept {
+    const float h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0f);
+    const float l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0f);
+    // (z0, z1) = fast_two_sum(h, l)
+    const float z0 = h + l;
+    const float z0_z = z0 - h;
+    const float z1 = l - z0_z;
+    const bool ze = x1 == 0.0f;
+    const float mm = ze ? h : l;
+    const float am = abs_bits(mm);
+    const bool bc = am > 0x1p-126f;
+    const bool zc = x0 == 0.0f;
+    const bool e = bc | zc;
+    z0_out = z0;
+    z1_out = z1;
+    e_out = e;
 }
 
 // eq_2_1(x = (x0, x1), a) -> mask m
@@ -10356,7 +10583,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(float x0, [[maybe_unused]] flo
 // of the finish fin_V; the loop's own variables end with an underscore.
 
 // map add_1(stored x, stored y) -> z, step add_1_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_1_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10382,7 +10609,7 @@ inline void add_1_seq(const double* x_in, const double* y_in, std::size_t n, dou
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_1_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10410,7 +10637,7 @@ inline void add_1_seq(const float* x_in, const float* y_in, std::size_t n, float
 }
 
 // map add_1(stored x, stored y) -> z, step add_1_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10452,7 +10679,7 @@ inline void add_1_lanes(const double* x_in, const double* y_in, std::size_t n, s
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10496,7 +10723,7 @@ inline void add_1_lanes(const float* x_in, const float* y_in, std::size_t n, std
 }
 
 // map add_1_entry(supplied x, supplied y) -> z, step add_entry_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10525,7 +10752,7 @@ inline void add_1_entry_seq(const double* x_in, const double* y_in, std::size_t 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10556,7 +10783,7 @@ inline void add_1_entry_seq(const float* x_in, const float* y_in, std::size_t n,
 }
 
 // map add_1_entry(supplied x, supplied y) -> z, step add_entry_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10604,7 +10831,7 @@ inline void add_1_entry_lanes(const double* x_in, const double* y_in, std::size_
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10654,7 +10881,7 @@ inline void add_1_entry_lanes(const float* x_in, const float* y_in, std::size_t 
 }
 
 // map add_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step add_2_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10709,7 +10936,7 @@ inline void add_2_seq(const double* x0_in, const double* x1_in, const double* y0
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10766,7 +10993,7 @@ inline void add_2_seq(const float* x0_in, const float* x1_in, const float* y0_in
 }
 
 // map add_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step add_2_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10863,7 +11090,7 @@ inline void add_2_lanes(const double* x0_in, const double* x1_in, const double* 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10962,7 +11189,7 @@ inline void add_2_lanes(const float* x0_in, const float* x1_in, const float* y0_
 }
 
 // map add_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step add_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -11022,7 +11249,7 @@ inline void add_2_entry_seq(const double* x0_in, const double* x1_in, const doub
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -11084,7 +11311,7 @@ inline void add_2_entry_seq(const float* x0_in, const float* x1_in, const float*
 }
 
 // map add_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step add_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -11191,7 +11418,7 @@ inline void add_2_entry_lanes(const double* x0_in, const double* x1_in, const do
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void add_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -11300,7 +11527,7 @@ inline void add_2_entry_lanes(const float* x0_in, const float* x1_in, const floa
 }
 
 // map axpy_1(supplied x, stored y, supplied a) -> z, step axpy_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_1_seq(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -11329,7 +11556,7 @@ inline void axpy_1_seq(const double* x_in, const double* y_in, std::size_t n, do
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_1_seq(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -11360,7 +11587,7 @@ inline void axpy_1_seq(const float* x_in, const float* y_in, std::size_t n, floa
 }
 
 // map axpy_1(supplied x, stored y, supplied a) -> z, step axpy_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -11408,7 +11635,7 @@ inline void axpy_1_lanes(const double* x_in, const double* y_in, std::size_t n, 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -11458,7 +11685,7 @@ inline void axpy_1_lanes(const float* x_in, const float* y_in, std::size_t n, st
 }
 
 // map axpy_1_entry(supplied x, supplied y, supplied a) -> z, step axpy_entry_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -11488,7 +11715,7 @@ inline void axpy_1_entry_seq(const double* x_in, const double* y_in, std::size_t
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -11520,7 +11747,7 @@ inline void axpy_1_entry_seq(const float* x_in, const float* y_in, std::size_t n
 }
 
 // map axpy_1_entry(supplied x, supplied y, supplied a) -> z, step axpy_entry_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -11570,7 +11797,7 @@ inline void axpy_1_entry_lanes(const double* x_in, const double* y_in, std::size
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -11622,7 +11849,7 @@ inline void axpy_1_entry_lanes(const float* x_in, const float* y_in, std::size_t
 }
 
 // map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -11690,7 +11917,7 @@ inline void axpy_2_seq(const double* x0_in, const double* x1_in, const double* y
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -11760,7 +11987,7 @@ inline void axpy_2_seq(const float* x0_in, const float* x1_in, const float* y0_i
 }
 
 // map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -11883,7 +12110,7 @@ inline void axpy_2_lanes(const double* x0_in, const double* x1_in, const double*
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -12008,7 +12235,7 @@ inline void axpy_2_lanes(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -12073,7 +12300,7 @@ inline void axpy_2_1_seq(const double* x0_in, const double* x1_in, const double*
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -12140,7 +12367,7 @@ inline void axpy_2_1_seq(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -12257,7 +12484,7 @@ inline void axpy_2_1_lanes(const double* x0_in, const double* x1_in, const doubl
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -12376,7 +12603,7 @@ inline void axpy_2_1_lanes(const float* x0_in, const float* x1_in, const float* 
 }
 
 // map axpy_2_1_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_entry_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -12443,7 +12670,7 @@ inline void axpy_2_1_entry_seq(const double* x0_in, const double* x1_in, const d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -12512,7 +12739,7 @@ inline void axpy_2_1_entry_seq(const float* x0_in, const float* x1_in, const flo
 }
 
 // map axpy_2_1_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_entry_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -12633,7 +12860,7 @@ inline void axpy_2_1_entry_lanes(const double* x0_in, const double* x1_in, const
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -12756,7 +12983,7 @@ inline void axpy_2_1_entry_lanes(const float* x0_in, const float* x1_in, const f
 }
 
 // map axpy_2_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -12826,7 +13053,7 @@ inline void axpy_2_entry_seq(const double* x0_in, const double* x1_in, const dou
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -12898,7 +13125,7 @@ inline void axpy_2_entry_seq(const float* x0_in, const float* x1_in, const float
 }
 
 // map axpy_2_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -13025,7 +13252,7 @@ inline void axpy_2_entry_lanes(const double* x0_in, const double* x1_in, const d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -13189,7 +13416,7 @@ KAIRN_GEN_NOINLINE void bv_add_1_end(float m, bool ok, float rx, float ry, float
 
 // ball vector bv_add_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step add_1_1, record norm_step_1, radius bv_add_radius_1: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_add_1_seq(const double* x_in, const double* y_in, std::size_t n, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -13221,7 +13448,7 @@ inline void bv_add_1_seq(const double* x_in, const double* y_in, std::size_t n, 
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_add_1_seq(const float* x_in, const float* y_in, std::size_t n, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -13255,7 +13482,7 @@ inline void bv_add_1_seq(const float* x_in, const float* y_in, std::size_t n, fl
 
 // ball vector bv_add_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step add_1_1, record norm_step_1, radius bv_add_radius_1: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_add_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -13319,7 +13546,7 @@ inline void bv_add_1_lanes(const double* x_in, const double* y_in, std::size_t n
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_add_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
@@ -13419,7 +13646,7 @@ KAIRN_GEN_NOINLINE void bv_add_2_end(float m, bool ok, float rx, float ry, float
 
 // ball vector bv_add_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step add_2_2, record norm_step_2, radius bv_add_radius_2: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_add_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -13479,7 +13706,7 @@ inline void bv_add_2_seq(const double* x0_in, const double* x1_in, const double*
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_add_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -13541,7 +13768,7 @@ inline void bv_add_2_seq(const float* x0_in, const float* x1_in, const float* y0
 
 // ball vector bv_add_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step add_2_2, record norm_step_2, radius bv_add_radius_2: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_add_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -13660,7 +13887,7 @@ inline void bv_add_2_lanes(const double* x0_in, const double* x1_in, const doubl
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_add_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
@@ -13779,6 +14006,2076 @@ inline void bv_add_2_lanes(const float* x0_in, const float* x1_in, const float* 
     finite_out = rad_f_;
 }
 
+// The end of the product of ball vectors bv_conv_1: its count, its bound bound_dot_1, its radius conv_radius and its finish bv_conv_finish.
+KAIRN_GEN_NOINLINE void bv_conv_1_end(double ma, double mb, std::size_t nm_, bool finite, double rx, double ry, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double ma_v_ = ma;
+    const double ma_e_ = ma_v_;
+    volatile double mb_v_ = mb;
+    const double mb_e_ = mb_v_;
+    const double m_r_ = static_cast<double>(nm_);
+    const double m = m_r_ < 0x1p64 && static_cast<std::size_t>(m_r_) < nm_ ? next_up_bits(m_r_) : m_r_;
+    // (bnd_g, bnd_t, bnd_ok) = bound_dot_1(m)
+    const double bnd_a = fma_rn(m, 0x1.0000000000001p-53, 0.0);
+    const double bnd_aa = fma_rn(m, 0x1.0000000000001p-53, 0.0);
+    const double bnd_d = fma_rn(bnd_a, 0x1p+1, 0.0);
+    const double bnd_w = bnd_d + 0x1.0000000000001p+0;
+    const double bnd_g = fma_rn(bnd_aa, bnd_w, 0.0);
+    const double bnd_tm = fma_rn(m, 0x1.0000000000002p-1022, 0.0);
+    const double bnd_wg = bnd_g + 0x1.0000000000001p+0;
+    const double bnd_t = fma_rn(bnd_tm, bnd_wg, 0.0);
+    const bool bnd_oa = 0x1p-2 >= bnd_a;
+    const bool bnd_ob = 0x1p+0 >= bnd_g;
+    const bool bnd_ok = bnd_oa & bnd_ob;
+    // (rad_rz) = conv_radius(ma_e_, mb_e_, rx, ry, m, bnd_g, bnd_t)
+    const double rad_p = fma_rn(rx, ry, 0.0);
+    const double rad_q = fma_rn(mb_e_, rx, rad_p);
+    const double rad_w = fma_rn(ma_e_, ry, rad_q);
+    const double rad_ab = fma_rn(ma_e_, mb_e_, 0.0);
+    const double rad_e = fma_rn(rad_ab, bnd_g, rad_w);
+    const double rad_s = fma_rn(m, rad_e, bnd_t);
+    const double rad_hm = fma_rn(m, 0x1.0000000000005p-1022, 0.0);
+    const double rad_rz = fma_rn(rad_s, 0x1.0000000000004p+0, rad_hm);
+    // (fin_r, fin_flag) = bv_conv_finish(rad_rz, finite, bnd_ok)
+    const bool fin_q = finite & bnd_ok;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_conv_1_end(float ma, float mb, std::size_t nm_, bool finite, float rx, float ry, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float ma_v_ = ma;
+    const float ma_e_ = ma_v_;
+    volatile float mb_v_ = mb;
+    const float mb_e_ = mb_v_;
+    const float m_r_ = static_cast<float>(nm_);
+    const float m = m_r_ < 0x1p64f && static_cast<std::size_t>(m_r_) < nm_ ? next_up_bits(m_r_) : m_r_;
+    // (bnd_g, bnd_t, bnd_ok) = bound_dot_1(m)
+    const float bnd_a = fma_rn(m, 0x1.000002p-24f, 0.0f);
+    const float bnd_aa = fma_rn(m, 0x1.000002p-24f, 0.0f);
+    const float bnd_d = fma_rn(bnd_a, 0x1p+1f, 0.0f);
+    const float bnd_w = bnd_d + 0x1.000002p+0f;
+    const float bnd_g = fma_rn(bnd_aa, bnd_w, 0.0f);
+    const float bnd_tm = fma_rn(m, 0x1.000004p-126f, 0.0f);
+    const float bnd_wg = bnd_g + 0x1.000002p+0f;
+    const float bnd_t = fma_rn(bnd_tm, bnd_wg, 0.0f);
+    const bool bnd_oa = 0x1p-2f >= bnd_a;
+    const bool bnd_ob = 0x1p+0f >= bnd_g;
+    const bool bnd_ok = bnd_oa & bnd_ob;
+    // (rad_rz) = conv_radius(ma_e_, mb_e_, rx, ry, m, bnd_g, bnd_t)
+    const float rad_p = fma_rn(rx, ry, 0.0f);
+    const float rad_q = fma_rn(mb_e_, rx, rad_p);
+    const float rad_w = fma_rn(ma_e_, ry, rad_q);
+    const float rad_ab = fma_rn(ma_e_, mb_e_, 0.0f);
+    const float rad_e = fma_rn(rad_ab, bnd_g, rad_w);
+    const float rad_s = fma_rn(m, rad_e, bnd_t);
+    const float rad_hm = fma_rn(m, 0x1.00000ap-126f, 0.0f);
+    const float rad_rz = fma_rn(rad_s, 0x1.000008p+0f, rad_hm);
+    // (fin_r, fin_flag) = bv_conv_finish(rad_rz, finite, bnd_ok)
+    const bool fin_q = finite & bnd_ok;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// product of ball vectors bv_conv_1(stored x, stored y, stored rx, stored ry) -> z, r, flag: the convolution conv_1 of the centers,
+// the maxima by norm_step_1, the bound bound_dot_1 of min(n_x, n_y) terms, the radius conv_radius, the finish bv_conv_finish. The whole space
+// (every coefficient zero, the radius +infinity) when the flag is false. The array written overlaps neither x nor y.
+// Status: unverified (real model), unverified (IEEE model).
+inline void bv_conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double rx, double ry, double* z_out, double& r_out, bool& flag_out) noexcept {
+    double ma = 0.0;
+    bool oka = true;
+    for (std::size_t i_ = 0; i_ < n_x; ++i_) {
+        const double x = x_in[i_];
+        // (rec_r, rec_okr) = norm_step_1(ma, oka, x)
+        const double rec_a = abs_bits(x);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(ma, oka, rec_a, rec_e)
+        const bool rec_r_c = rec_a > ma;
+        const double rec_r = rec_r_c ? rec_a : ma;
+        const bool rec_okr = oka & rec_e;
+        ma = rec_r;
+        oka = rec_okr;
+    }
+    double mb = 0.0;
+    bool okb = true;
+    for (std::size_t i_ = 0; i_ < n_y; ++i_) {
+        const double y = y_in[i_];
+        // (rec_r, rec_okr) = norm_step_1(mb, okb, y)
+        const double rec_a = abs_bits(y);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(mb, okb, rec_a, rec_e)
+        const bool rec_r_c = rec_a > mb;
+        const double rec_r = rec_r_c ? rec_a : mb;
+        const bool rec_okr = okb & rec_e;
+        mb = rec_r;
+        okb = rec_okr;
+    }
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        double s = 0.0;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const double x = x_in[i_];
+            const double y = y_in[j_ - i_];
+            // (step_t) = dot_step_1(s, x, y)
+            const double step_t = fma_rn(x, y, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const double chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_conv_1_end(ma, mb, n_x < n_y ? n_x : n_y, finite, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    flag_out = rad_f_;
+}
+inline void bv_conv_1_seq(const float* x_in, std::size_t n_x, const float* y_in, std::size_t n_y, float rx, float ry, float* z_out, float& r_out, bool& flag_out) noexcept {
+    float ma = 0.0f;
+    bool oka = true;
+    for (std::size_t i_ = 0; i_ < n_x; ++i_) {
+        const float x = x_in[i_];
+        // (rec_r, rec_okr) = norm_step_1(ma, oka, x)
+        const float rec_a = abs_bits(x);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(ma, oka, rec_a, rec_e)
+        const bool rec_r_c = rec_a > ma;
+        const float rec_r = rec_r_c ? rec_a : ma;
+        const bool rec_okr = oka & rec_e;
+        ma = rec_r;
+        oka = rec_okr;
+    }
+    float mb = 0.0f;
+    bool okb = true;
+    for (std::size_t i_ = 0; i_ < n_y; ++i_) {
+        const float y = y_in[i_];
+        // (rec_r, rec_okr) = norm_step_1(mb, okb, y)
+        const float rec_a = abs_bits(y);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(mb, okb, rec_a, rec_e)
+        const bool rec_r_c = rec_a > mb;
+        const float rec_r = rec_r_c ? rec_a : mb;
+        const bool rec_okr = okb & rec_e;
+        mb = rec_r;
+        okb = rec_okr;
+    }
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        float s = 0.0f;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const float x = x_in[i_];
+            const float y = y_in[j_ - i_];
+            // (step_t) = dot_step_1(s, x, y)
+            const float step_t = fma_rn(x, y, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const float chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_conv_1_end(ma, mb, n_x < n_y ? n_x : n_y, finite, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    flag_out = rad_f_;
+}
+
+// The end of the product of ball vectors bv_conv_2: its count, its bound bound_dot_2, its radius conv_radius and its finish bv_conv_finish.
+KAIRN_GEN_NOINLINE void bv_conv_2_end(double ma, double mb, std::size_t nm_, bool finite, double rx, double ry, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double ma_v_ = ma;
+    const double ma_e_ = ma_v_;
+    volatile double mb_v_ = mb;
+    const double mb_e_ = mb_v_;
+    const double m_r_ = static_cast<double>(nm_);
+    const double m = m_r_ < 0x1p64 && static_cast<std::size_t>(m_r_) < nm_ ? next_up_bits(m_r_) : m_r_;
+    // (bnd_g, bnd_t, bnd_ok) = bound_dot_2(m)
+    const double bnd_a = fma_rn(m, 0x1.0000000000001p-104, 0.0);
+    const double bnd_aa = fma_rn(m, 0x1.0000000000002p-104, 0.0);
+    const double bnd_d = fma_rn(bnd_a, 0x1p+1, 0.0);
+    const double bnd_w = bnd_d + 0x1.0000000000001p+0;
+    const double bnd_g = fma_rn(bnd_aa, bnd_w, 0.0);
+    const double bnd_tm = fma_rn(m, 0x1.0000000000003p-1022, 0.0);
+    const double bnd_wg = bnd_g + 0x1.0000000000001p+0;
+    const double bnd_t = fma_rn(bnd_tm, bnd_wg, 0.0);
+    const bool bnd_oa = 0x1p-2 >= bnd_a;
+    const bool bnd_ob = 0x1p+0 >= bnd_g;
+    const bool bnd_ok = bnd_oa & bnd_ob;
+    // (rad_rz) = conv_radius(ma_e_, mb_e_, rx, ry, m, bnd_g, bnd_t)
+    const double rad_p = fma_rn(rx, ry, 0.0);
+    const double rad_q = fma_rn(mb_e_, rx, rad_p);
+    const double rad_w = fma_rn(ma_e_, ry, rad_q);
+    const double rad_ab = fma_rn(ma_e_, mb_e_, 0.0);
+    const double rad_e = fma_rn(rad_ab, bnd_g, rad_w);
+    const double rad_s = fma_rn(m, rad_e, bnd_t);
+    const double rad_hm = fma_rn(m, 0x1.0000000000005p-1022, 0.0);
+    const double rad_rz = fma_rn(rad_s, 0x1.0000000000004p+0, rad_hm);
+    // (fin_r, fin_flag) = bv_conv_finish(rad_rz, finite, bnd_ok)
+    const bool fin_q = finite & bnd_ok;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_conv_2_end(float ma, float mb, std::size_t nm_, bool finite, float rx, float ry, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float ma_v_ = ma;
+    const float ma_e_ = ma_v_;
+    volatile float mb_v_ = mb;
+    const float mb_e_ = mb_v_;
+    const float m_r_ = static_cast<float>(nm_);
+    const float m = m_r_ < 0x1p64f && static_cast<std::size_t>(m_r_) < nm_ ? next_up_bits(m_r_) : m_r_;
+    // (bnd_g, bnd_t, bnd_ok) = bound_dot_2(m)
+    const float bnd_a = fma_rn(m, 0x1.000002p-46f, 0.0f);
+    const float bnd_aa = fma_rn(m, 0x1.000004p-46f, 0.0f);
+    const float bnd_d = fma_rn(bnd_a, 0x1p+1f, 0.0f);
+    const float bnd_w = bnd_d + 0x1.000002p+0f;
+    const float bnd_g = fma_rn(bnd_aa, bnd_w, 0.0f);
+    const float bnd_tm = fma_rn(m, 0x1.000006p-126f, 0.0f);
+    const float bnd_wg = bnd_g + 0x1.000002p+0f;
+    const float bnd_t = fma_rn(bnd_tm, bnd_wg, 0.0f);
+    const bool bnd_oa = 0x1p-2f >= bnd_a;
+    const bool bnd_ob = 0x1p+0f >= bnd_g;
+    const bool bnd_ok = bnd_oa & bnd_ob;
+    // (rad_rz) = conv_radius(ma_e_, mb_e_, rx, ry, m, bnd_g, bnd_t)
+    const float rad_p = fma_rn(rx, ry, 0.0f);
+    const float rad_q = fma_rn(mb_e_, rx, rad_p);
+    const float rad_w = fma_rn(ma_e_, ry, rad_q);
+    const float rad_ab = fma_rn(ma_e_, mb_e_, 0.0f);
+    const float rad_e = fma_rn(rad_ab, bnd_g, rad_w);
+    const float rad_s = fma_rn(m, rad_e, bnd_t);
+    const float rad_hm = fma_rn(m, 0x1.00000ap-126f, 0.0f);
+    const float rad_rz = fma_rn(rad_s, 0x1.000008p+0f, rad_hm);
+    // (fin_r, fin_flag) = bv_conv_finish(rad_rz, finite, bnd_ok)
+    const bool fin_q = finite & bnd_ok;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// product of ball vectors bv_conv_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, flag: the convolution conv_2 of the centers,
+// the maxima by norm_step_2, the bound bound_dot_2 of min(n_x, n_y) terms, the radius conv_radius, the finish bv_conv_finish. The whole space
+// (every coefficient zero, the radius +infinity) when the flag is false. The array written overlaps neither x nor y.
+// Status: unverified (real model), unverified (IEEE model).
+inline void bv_conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x, const double* y0_in, const double* y1_in, std::size_t n_y, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& flag_out) noexcept {
+    double ma = 0.0;
+    bool oka = true;
+    for (std::size_t i_ = 0; i_ < n_x; ++i_) {
+        const double x0 = x0_in[i_];
+        // (rec_r, rec_okr) = norm_step_2(ma, oka, x0, x1)
+        // (rec_r, rec_okr) = norm_step_1(ma, oka, x0)
+        const double rec_r_a = abs_bits(x0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(ma, oka, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > ma;
+        const double rec_r = rec_r_c ? rec_r_a : ma;
+        const bool rec_okr = oka & rec_r_e;
+        ma = rec_r;
+        oka = rec_okr;
+    }
+    double mb = 0.0;
+    bool okb = true;
+    for (std::size_t i_ = 0; i_ < n_y; ++i_) {
+        const double y0 = y0_in[i_];
+        // (rec_r, rec_okr) = norm_step_2(mb, okb, y0, y1)
+        // (rec_r, rec_okr) = norm_step_1(mb, okb, y0)
+        const double rec_r_a = abs_bits(y0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(mb, okb, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > mb;
+        const double rec_r = rec_r_c ? rec_r_a : mb;
+        const bool rec_okr = okb & rec_r_e;
+        mb = rec_r;
+        okb = rec_okr;
+    }
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        double s0 = 0.0;
+        double s1 = 0.0;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[j_ - i_];
+            const double y1 = y1_in[j_ - i_];
+            // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+            const double step_p0_ch = fma_rn(x0, y0, 0.0);
+            const double step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+            const double step_p0_tl0 = fma_rn(x1, y1, 0.0);
+            const double step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+            const double step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+            const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const double step_p0 = step_p0_ch + step_p0_cl3;
+            const double step_p0_z = step_p0 - step_p0_ch;
+            const double step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+            const double step_t0_sh = s0 + step_p0;
+            const double step_t0_sh_bb = step_t0_sh - s0;
+            const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+            const double step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+            const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+            const double step_t0_th = s1 + step_p1;
+            const double step_t0_th_bb = step_t0_th - s1;
+            const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const double step_t0_th_t1 = s1 - step_t0_th_t0;
+            const double step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const double step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const double step_t0_vh = step_t0_sh + step_t0_c;
+            const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const double step_t0_vl = step_t0_c - step_t0_vh_z;
+            const double step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const double step_t0 = step_t0_vh + step_t0_w;
+            const double step_t0_z = step_t0 - step_t0_vh;
+            const double step_t1 = step_t0_w - step_t0_z;
+            s0 = step_t0;
+            s1 = step_t1;
+        }
+        z0_out[j_] = s0;
+        z1_out[j_] = s1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(s0, s1)
+        const double chk_a = abs_bits(s0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_conv_2_end(ma, mb, n_x < n_y ? n_x : n_y, finite, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    flag_out = rad_f_;
+}
+inline void bv_conv_2_seq(const float* x0_in, const float* x1_in, std::size_t n_x, const float* y0_in, const float* y1_in, std::size_t n_y, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& flag_out) noexcept {
+    float ma = 0.0f;
+    bool oka = true;
+    for (std::size_t i_ = 0; i_ < n_x; ++i_) {
+        const float x0 = x0_in[i_];
+        // (rec_r, rec_okr) = norm_step_2(ma, oka, x0, x1)
+        // (rec_r, rec_okr) = norm_step_1(ma, oka, x0)
+        const float rec_r_a = abs_bits(x0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(ma, oka, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > ma;
+        const float rec_r = rec_r_c ? rec_r_a : ma;
+        const bool rec_okr = oka & rec_r_e;
+        ma = rec_r;
+        oka = rec_okr;
+    }
+    float mb = 0.0f;
+    bool okb = true;
+    for (std::size_t i_ = 0; i_ < n_y; ++i_) {
+        const float y0 = y0_in[i_];
+        // (rec_r, rec_okr) = norm_step_2(mb, okb, y0, y1)
+        // (rec_r, rec_okr) = norm_step_1(mb, okb, y0)
+        const float rec_r_a = abs_bits(y0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(mb, okb, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > mb;
+        const float rec_r = rec_r_c ? rec_r_a : mb;
+        const bool rec_okr = okb & rec_r_e;
+        mb = rec_r;
+        okb = rec_okr;
+    }
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        float s0 = 0.0f;
+        float s1 = 0.0f;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[j_ - i_];
+            const float y1 = y1_in[j_ - i_];
+            // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+            const float step_p0_ch = fma_rn(x0, y0, 0.0f);
+            const float step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+            const float step_p0_tl0 = fma_rn(x1, y1, 0.0f);
+            const float step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+            const float step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+            const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const float step_p0 = step_p0_ch + step_p0_cl3;
+            const float step_p0_z = step_p0 - step_p0_ch;
+            const float step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+            const float step_t0_sh = s0 + step_p0;
+            const float step_t0_sh_bb = step_t0_sh - s0;
+            const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+            const float step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+            const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+            const float step_t0_th = s1 + step_p1;
+            const float step_t0_th_bb = step_t0_th - s1;
+            const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const float step_t0_th_t1 = s1 - step_t0_th_t0;
+            const float step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const float step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const float step_t0_vh = step_t0_sh + step_t0_c;
+            const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const float step_t0_vl = step_t0_c - step_t0_vh_z;
+            const float step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const float step_t0 = step_t0_vh + step_t0_w;
+            const float step_t0_z = step_t0 - step_t0_vh;
+            const float step_t1 = step_t0_w - step_t0_z;
+            s0 = step_t0;
+            s1 = step_t1;
+        }
+        z0_out[j_] = s0;
+        z1_out[j_] = s1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(s0, s1)
+        const float chk_a = abs_bits(s0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_conv_2_end(ma, mb, n_x < n_y ? n_x : n_y, finite, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    flag_out = rad_f_;
+}
+
+// The end of ball vector bv_make_1: its radius bv_make_radius and its finish bv_make_finish.
+KAIRN_GEN_NOINLINE void bv_make_1_end(double m, bool ok, double r, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const double rad_g = r + 0.0;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_make_1_end(float m, bool ok, float r, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const float rad_g = r + 0.0f;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0f;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_make_1(supplied c, supplied r) -> z, rr, finite: step bv_center_entry_1, record norm_step_1, radius bv_make_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_make_1_seq(const double* c_in, std::size_t n, double r, double* z_out, double& rr_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double c = c_in[i_];
+        // (step_z) = bv_center_entry_1(c)
+        const double step_z = c + 0.0;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_1_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_make_1_seq(const float* c_in, std::size_t n, float r, float* z_out, float& rr_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float c = c_in[i_];
+        // (step_z) = bv_center_entry_1(c)
+        const float step_z = c + 0.0f;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_1_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_make_1(supplied c, supplied r) -> z, rr, finite: step bv_center_entry_1, record norm_step_1, radius bv_make_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_make_1_lanes(const double* c_in, std::size_t n, std::size_t lanes, double r, double* z_out, double& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double c = c_in[i_];
+            // (step_z) = bv_center_entry_1(c)
+            const double step_z = c + 0.0;
+            z_out[i_] = step_z;
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+            const double rec_a = abs_bits(step_z);
+            const bool rec_e = rec_a == rec_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+            const bool rec_r_c = rec_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double c = c_in[i_];
+        // (step_z) = bv_center_entry_1(c)
+        const double step_z = c + 0.0;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_1_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_make_1_lanes(const float* c_in, std::size_t n, std::size_t lanes, float r, float* z_out, float& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float c = c_in[i_];
+            // (step_z) = bv_center_entry_1(c)
+            const float step_z = c + 0.0f;
+            z_out[i_] = step_z;
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+            const float rec_a = abs_bits(step_z);
+            const bool rec_e = rec_a == rec_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+            const bool rec_r_c = rec_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float c = c_in[i_];
+        // (step_z) = bv_center_entry_1(c)
+        const float step_z = c + 0.0f;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_1_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_make_2: its radius bv_make_radius and its finish bv_make_finish.
+KAIRN_GEN_NOINLINE void bv_make_2_end(double m, bool ok, double r, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const double rad_g = r + 0.0;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_make_2_end(float m, bool ok, float r, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const float rad_g = r + 0.0f;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0f;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_make_2(stored c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_2, record norm_step_2, radius bv_make_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_make_2_seq(const double* c0_in, const double* c1_in, std::size_t n, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double c0 = c0_in[i_];
+        const double c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_2(c0, c1)
+        const double step_z0 = c0;
+        const double step_z1 = c1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_2_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_make_2_seq(const float* c0_in, const float* c1_in, std::size_t n, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float c0 = c0_in[i_];
+        const float c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_2(c0, c1)
+        const float step_z0 = c0;
+        const float step_z1 = c1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_2_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_make_2(stored c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_2, record norm_step_2, radius bv_make_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_make_2_lanes(const double* c0_in, const double* c1_in, std::size_t n, std::size_t lanes, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double c0 = c0_in[i_];
+            const double c1 = c1_in[i_];
+            // (step_z0, step_z1) = bv_center_2(c0, c1)
+            const double step_z0 = c0;
+            const double step_z1 = c1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const double rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double c0 = c0_in[i_];
+        const double c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_2(c0, c1)
+        const double step_z0 = c0;
+        const double step_z1 = c1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_2_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_make_2_lanes(const float* c0_in, const float* c1_in, std::size_t n, std::size_t lanes, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float c0 = c0_in[i_];
+            const float c1 = c1_in[i_];
+            // (step_z0, step_z1) = bv_center_2(c0, c1)
+            const float step_z0 = c0;
+            const float step_z1 = c1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const float rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float c0 = c0_in[i_];
+        const float c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_2(c0, c1)
+        const float step_z0 = c0;
+        const float step_z1 = c1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_2_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_mul_pow2_1: its radius bv_mul_pow2_radius and its finish norm_finish_1.
+KAIRN_GEN_NOINLINE void bv_mul_pow2_1_end(double m, bool ok, bool ex, double rx, double c, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const double rad_rr = fma_rn(rx, c, 0.0);
+    const bool rad_br = rad_rr > 0x1p-1022;
+    const bool rad_zr = rx == 0.0;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const double rad_su = next_up_bits(rad_rr);
+    const double rad_rw = next_up_bits(rad_su);
+    const double rad_rs = rad_q ? rad_rr : rad_rw;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_mul_pow2_1_end(float m, bool ok, bool ex, float rx, float c, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const float rad_rr = fma_rn(rx, c, 0.0f);
+    const bool rad_br = rad_rr > 0x1p-126f;
+    const bool rad_zr = rx == 0.0f;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const float rad_su = next_up_bits(rad_rr);
+    const float rad_rw = next_up_bits(rad_su);
+    const float rad_rs = rad_q ? rad_rr : rad_rw;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_mul_pow2_1(stored x, stored rx, supplied c) -> z, r, finite: step bv_mul_pow2_step_1, record norm_step_1, radius bv_mul_pow2_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_mul_pow2_1_seq(const double* x_in, std::size_t n, double rx, double c, double* z_out, double& r_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const double step_z = fma_rn(x, c, 0.0);
+        const double step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_mul_pow2_1_seq(const float* x_in, std::size_t n, float rx, float c, float* z_out, float& r_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const float step_z = fma_rn(x, c, 0.0f);
+        const float step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_mul_pow2_1(stored x, stored rx, supplied c) -> z, r, finite: step bv_mul_pow2_step_1, record norm_step_1, radius bv_mul_pow2_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_mul_pow2_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double rx, double c, double* z_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        bool ex_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+            const double step_z = fma_rn(x, c, 0.0);
+            const double step_am = abs_bits(step_z);
+            const bool step_bc = step_am > 0x1p-1022;
+            const bool step_zc = x == 0.0;
+            const bool step_e = step_bc | step_zc;
+            z_out[i_] = step_z;
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+            const double rec_a = abs_bits(step_z);
+            const bool rec_e = rec_a == rec_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+            const bool rec_r_c = rec_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+            ex_lane_ = ex_lane_ & step_e;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+            ex = ex_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+            ex = ex & ex_lane_;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const double step_z = fma_rn(x, c, 0.0);
+        const double step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_mul_pow2_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float rx, float c, float* z_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        bool ex_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+            const float step_z = fma_rn(x, c, 0.0f);
+            const float step_am = abs_bits(step_z);
+            const bool step_bc = step_am > 0x1p-126f;
+            const bool step_zc = x == 0.0f;
+            const bool step_e = step_bc | step_zc;
+            z_out[i_] = step_z;
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+            const float rec_a = abs_bits(step_z);
+            const bool rec_e = rec_a == rec_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+            const bool rec_r_c = rec_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+            ex_lane_ = ex_lane_ & step_e;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+            ex = ex_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+            ex = ex & ex_lane_;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const float step_z = fma_rn(x, c, 0.0f);
+        const float step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_mul_pow2_2: its radius bv_mul_pow2_radius and its finish norm_finish_1.
+KAIRN_GEN_NOINLINE void bv_mul_pow2_2_end(double m, bool ok, bool ex, double rx, double c, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const double rad_rr = fma_rn(rx, c, 0.0);
+    const bool rad_br = rad_rr > 0x1p-1022;
+    const bool rad_zr = rx == 0.0;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const double rad_su = next_up_bits(rad_rr);
+    const double rad_rw = next_up_bits(rad_su);
+    const double rad_rs = rad_q ? rad_rr : rad_rw;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_mul_pow2_2_end(float m, bool ok, bool ex, float rx, float c, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const float rad_rr = fma_rn(rx, c, 0.0f);
+    const bool rad_br = rad_rr > 0x1p-126f;
+    const bool rad_zr = rx == 0.0f;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const float rad_su = next_up_bits(rad_rr);
+    const float rad_rw = next_up_bits(rad_su);
+    const float rad_rs = rad_q ? rad_rr : rad_rw;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_mul_pow2_2(stored x = (x0, x1), stored rx, supplied c) -> z = (z0, z1), r, finite: step bv_mul_pow2_step_2, record norm_step_2, radius bv_mul_pow2_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_mul_pow2_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double rx, double c, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const double step_h = fma_rn(x0, c, 0.0);
+        const double step_l = fma_rn(x1, c, 0.0);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const double step_z0 = step_h + step_l;
+        const double step_z0_z = step_z0 - step_h;
+        const double step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0;
+        const double step_mm = step_ze ? step_h : step_l;
+        const double step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x0 == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_mul_pow2_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float rx, float c, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const float step_h = fma_rn(x0, c, 0.0f);
+        const float step_l = fma_rn(x1, c, 0.0f);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const float step_z0 = step_h + step_l;
+        const float step_z0_z = step_z0 - step_h;
+        const float step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0f;
+        const float step_mm = step_ze ? step_h : step_l;
+        const float step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x0 == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_mul_pow2_2(stored x = (x0, x1), stored rx, supplied c) -> z = (z0, z1), r, finite: step bv_mul_pow2_step_2, record norm_step_2, radius bv_mul_pow2_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_mul_pow2_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double rx, double c, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        bool ex_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+            const double step_h = fma_rn(x0, c, 0.0);
+            const double step_l = fma_rn(x1, c, 0.0);
+            // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+            const double step_z0 = step_h + step_l;
+            const double step_z0_z = step_z0 - step_h;
+            const double step_z1 = step_l - step_z0_z;
+            const bool step_ze = x1 == 0.0;
+            const double step_mm = step_ze ? step_h : step_l;
+            const double step_am = abs_bits(step_mm);
+            const bool step_bc = step_am > 0x1p-1022;
+            const bool step_zc = x0 == 0.0;
+            const bool step_e = step_bc | step_zc;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const double rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+            ex_lane_ = ex_lane_ & step_e;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+            ex = ex_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+            ex = ex & ex_lane_;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const double step_h = fma_rn(x0, c, 0.0);
+        const double step_l = fma_rn(x1, c, 0.0);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const double step_z0 = step_h + step_l;
+        const double step_z0_z = step_z0 - step_h;
+        const double step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0;
+        const double step_mm = step_ze ? step_h : step_l;
+        const double step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x0 == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_mul_pow2_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float rx, float c, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        bool ex_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+            const float step_h = fma_rn(x0, c, 0.0f);
+            const float step_l = fma_rn(x1, c, 0.0f);
+            // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+            const float step_z0 = step_h + step_l;
+            const float step_z0_z = step_z0 - step_h;
+            const float step_z1 = step_l - step_z0_z;
+            const bool step_ze = x1 == 0.0f;
+            const float step_mm = step_ze ? step_h : step_l;
+            const float step_am = abs_bits(step_mm);
+            const bool step_bc = step_am > 0x1p-126f;
+            const bool step_zc = x0 == 0.0f;
+            const bool step_e = step_bc | step_zc;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const float rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+            ex_lane_ = ex_lane_ & step_e;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+            ex = ex_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+            ex = ex & ex_lane_;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const float step_h = fma_rn(x0, c, 0.0f);
+        const float step_l = fma_rn(x1, c, 0.0f);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const float step_z0 = step_h + step_l;
+        const float step_z0_z = step_z0 - step_h;
+        const float step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0f;
+        const float step_mm = step_ze ? step_h : step_l;
+        const float step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x0 == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_neg_1: its radius bv_neg_radius and its finish norm_finish_1.
+KAIRN_GEN_NOINLINE void bv_neg_1_end(double m, bool ok, double rx, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    [[maybe_unused]] const double m_e_ = m_v_;
+    // (rad_rz) = bv_neg_radius(m_e_, rx)
+    const double rad_rz = rx;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_neg_1_end(float m, bool ok, float rx, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    [[maybe_unused]] const float m_e_ = m_v_;
+    // (rad_rz) = bv_neg_radius(m_e_, rx)
+    const float rad_rz = rx;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_neg_1(stored x, stored rx) -> z, r, finite: step neg_1, record norm_step_1, radius bv_neg_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_neg_1_seq(const double* x_in, std::size_t n, double rx, double* z_out, double& r_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z) = neg_1(x)
+        const double step_z = -x;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_neg_1_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_neg_1_seq(const float* x_in, std::size_t n, float rx, float* z_out, float& r_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z) = neg_1(x)
+        const float step_z = -x;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_neg_1_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_neg_1(stored x, stored rx) -> z, r, finite: step neg_1, record norm_step_1, radius bv_neg_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_neg_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double rx, double* z_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            // (step_z) = neg_1(x)
+            const double step_z = -x;
+            z_out[i_] = step_z;
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+            const double rec_a = abs_bits(step_z);
+            const bool rec_e = rec_a == rec_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+            const bool rec_r_c = rec_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z) = neg_1(x)
+        const double step_z = -x;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_neg_1_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_neg_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float rx, float* z_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            // (step_z) = neg_1(x)
+            const float step_z = -x;
+            z_out[i_] = step_z;
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+            const float rec_a = abs_bits(step_z);
+            const bool rec_e = rec_a == rec_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+            const bool rec_r_c = rec_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z) = neg_1(x)
+        const float step_z = -x;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_neg_1_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_neg_2: its radius bv_neg_radius and its finish norm_finish_1.
+KAIRN_GEN_NOINLINE void bv_neg_2_end(double m, bool ok, double rx, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    [[maybe_unused]] const double m_e_ = m_v_;
+    // (rad_rz) = bv_neg_radius(m_e_, rx)
+    const double rad_rz = rx;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_neg_2_end(float m, bool ok, float rx, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    [[maybe_unused]] const float m_e_ = m_v_;
+    // (rad_rz) = bv_neg_radius(m_e_, rx)
+    const float rad_rz = rx;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_neg_2(stored x = (x0, x1), stored rx) -> z = (z0, z1), r, finite: step neg_2, record norm_step_2, radius bv_neg_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_neg_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double rx, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = neg_2(x0, x1)
+        const double step_z0 = -x0;
+        const double step_z1 = -x1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_neg_2_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_neg_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float rx, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = neg_2(x0, x1)
+        const float step_z0 = -x0;
+        const float step_z1 = -x1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_neg_2_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_neg_2(stored x = (x0, x1), stored rx) -> z = (z0, z1), r, finite: step neg_2, record norm_step_2, radius bv_neg_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_neg_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double rx, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_z0, step_z1) = neg_2(x0, x1)
+            const double step_z0 = -x0;
+            const double step_z1 = -x1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const double rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = neg_2(x0, x1)
+        const double step_z0 = -x0;
+        const double step_z1 = -x1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_neg_2_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified (real model), unverified (IEEE model).
+inline void bv_neg_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float rx, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_z0, step_z1) = neg_2(x0, x1)
+            const float step_z0 = -x0;
+            const float step_z1 = -x1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const float rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = neg_2(x0, x1)
+        const float step_z0 = -x0;
+        const float step_z1 = -x1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_neg_2_end(m, ok, rx, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
 // The end of ball vector bv_scale_1: its radius bv_scale_radius_1 and its finish norm_finish_1.
 KAIRN_GEN_NOINLINE void bv_scale_1_end(double m, bool ok, double rx, double a, double& rad_out_, bool& fin_out_) noexcept {
     volatile double m_v_ = m;
@@ -13817,7 +16114,7 @@ KAIRN_GEN_NOINLINE void bv_scale_1_end(float m, bool ok, float rx, float a, floa
 
 // ball vector bv_scale_1(stored x, stored rx, supplied a) -> z, r, finite: step scale_step_1, record norm_step_1, radius bv_scale_radius_1: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_scale_1_seq(const double* x_in, std::size_t n, double rx, double a, double* z_out, double& r_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -13849,7 +16146,7 @@ inline void bv_scale_1_seq(const double* x_in, std::size_t n, double rx, double 
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_scale_1_seq(const float* x_in, std::size_t n, float rx, float a, float* z_out, float& r_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -13883,7 +16180,7 @@ inline void bv_scale_1_seq(const float* x_in, std::size_t n, float rx, float a, 
 
 // ball vector bv_scale_1(stored x, stored rx, supplied a) -> z, r, finite: step scale_step_1, record norm_step_1, radius bv_scale_radius_1: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_scale_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double rx, double a, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -13947,7 +16244,7 @@ inline void bv_scale_1_lanes(const double* x_in, std::size_t n, std::size_t lane
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_scale_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float rx, float a, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
@@ -14049,7 +16346,7 @@ KAIRN_GEN_NOINLINE void bv_scale_2_end(float m, bool ok, float rx, float a, floa
 
 // ball vector bv_scale_2(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_scale_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double rx, double a, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -14092,7 +16389,7 @@ inline void bv_scale_2_seq(const double* x0_in, const double* x1_in, std::size_t
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_scale_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float rx, float a, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -14137,7 +16434,7 @@ inline void bv_scale_2_seq(const float* x0_in, const float* x1_in, std::size_t n
 
 // ball vector bv_scale_2(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_scale_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double rx, double a, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -14222,7 +16519,7 @@ inline void bv_scale_2_lanes(const double* x0_in, const double* x1_in, std::size
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_scale_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float rx, float a, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
@@ -14343,7 +16640,7 @@ KAIRN_GEN_NOINLINE void bv_sub_1_end(float m, bool ok, float rx, float ry, float
 
 // ball vector bv_sub_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step sub_1_1, record norm_step_1, radius bv_add_radius_1: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_sub_1_seq(const double* x_in, const double* y_in, std::size_t n, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -14375,7 +16672,7 @@ inline void bv_sub_1_seq(const double* x_in, const double* y_in, std::size_t n, 
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_sub_1_seq(const float* x_in, const float* y_in, std::size_t n, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -14409,7 +16706,7 @@ inline void bv_sub_1_seq(const float* x_in, const float* y_in, std::size_t n, fl
 
 // ball vector bv_sub_1(stored x, stored y, stored rx, stored ry) -> z, r, finite: step sub_1_1, record norm_step_1, radius bv_add_radius_1: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_sub_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double rx, double ry, double* z_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -14473,7 +16770,7 @@ inline void bv_sub_1_lanes(const double* x_in, const double* y_in, std::size_t n
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_sub_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float rx, float ry, float* z_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
@@ -14573,7 +16870,7 @@ KAIRN_GEN_NOINLINE void bv_sub_2_end(float m, bool ok, float rx, float ry, float
 
 // ball vector bv_sub_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step sub_2_2, record norm_step_2, radius bv_add_radius_2: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_sub_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -14636,7 +16933,7 @@ inline void bv_sub_2_seq(const double* x0_in, const double* x1_in, const double*
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_sub_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     float m = 0.0f;
     bool ok = true;
@@ -14701,7 +16998,7 @@ inline void bv_sub_2_seq(const float* x0_in, const float* x1_in, const float* y0
 
 // ball vector bv_sub_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, finite: step sub_2_2, record norm_step_2, radius bv_add_radius_2: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_sub_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -14826,7 +17123,7 @@ inline void bv_sub_2_lanes(const double* x0_in, const double* x1_in, const doubl
     finite_out = rad_f_;
 }
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
-// of the arrays read (in place) or overlaps none of them. Status: proved.
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), unverified (IEEE model).
 inline void bv_sub_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     float m = 0.0f;
@@ -14953,7 +17250,7 @@ inline void bv_sub_2_lanes(const float* x0_in, const float* x1_in, const float* 
 
 // convolution conv_1(supplied x, supplied y) -> z: coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_1 in its
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
-// overlaps neither x nor y. Status: proved.
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
 inline void conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double* z_out, bool& finite_out) noexcept {
     const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
     bool finite = true;
@@ -14987,7 +17284,7 @@ inline void conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, 
     finite_out = finite;
 }
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
-// overlaps neither x nor y. Status: proved.
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
 inline void conv_1_seq(const float* x_in, std::size_t n_x, const float* y_in, std::size_t n_y, float* z_out, bool& finite_out) noexcept {
     const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
     bool finite = true;
@@ -15023,7 +17320,7 @@ inline void conv_1_seq(const float* x_in, std::size_t n_x, const float* y_in, st
 
 // convolution conv_2(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1): coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_2 in its
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
-// overlaps neither x nor y. Status: proved.
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
 inline void conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x, const double* y0_in, const double* y1_in, std::size_t n_y, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
     bool finite = true;
@@ -15101,7 +17398,7 @@ inline void conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x
     finite_out = finite;
 }
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
-// overlaps neither x nor y. Status: proved.
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
 inline void conv_2_seq(const float* x0_in, const float* x1_in, std::size_t n_x, const float* y0_in, const float* y1_in, std::size_t n_y, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
     bool finite = true;
@@ -15179,7 +17476,7 @@ inline void conv_2_seq(const float* x0_in, const float* x1_in, std::size_t n_x, 
     finite_out = finite;
 }
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void dot_1_seq(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double s = 0.0;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -15213,7 +17510,7 @@ inline void dot_1_seq(const float* x_in, const float* y_in, std::size_t n, float
     flag_out = fin_flag;
 }
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void dot_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s = 0.0;
@@ -15283,7 +17580,7 @@ inline void dot_1_lanes(const float* x_in, const float* y_in, std::size_t n, std
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void dot_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -15401,7 +17698,7 @@ inline void dot_2_seq(const float* x0_in, const float* x1_in, const float* y0_in
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void dot_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;
@@ -15686,7 +17983,7 @@ inline void dot_2_lanes(const float* x0_in, const float* x1_in, const float* y0_
 }
 
 // map mul_pow2_map_1(supplied x, supplied c) -> z, step mul_pow2_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void mul_pow2_map_1_seq(const double* x_in, std::size_t n, double c, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -15711,7 +18008,7 @@ inline void mul_pow2_map_1_seq(const double* x_in, std::size_t n, double c, doub
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void mul_pow2_map_1_seq(const float* x_in, std::size_t n, float c, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -15738,7 +18035,7 @@ inline void mul_pow2_map_1_seq(const float* x_in, std::size_t n, float c, float*
 }
 
 // map mul_pow2_map_1(supplied x, supplied c) -> z, step mul_pow2_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void mul_pow2_map_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double c, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -15778,7 +18075,7 @@ inline void mul_pow2_map_1_lanes(const double* x_in, std::size_t n, std::size_t 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void mul_pow2_map_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float c, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -15820,7 +18117,7 @@ inline void mul_pow2_map_1_lanes(const float* x_in, std::size_t n, std::size_t l
 }
 
 // map mul_pow2_map_2(supplied x = (x0, x1), supplied c) -> z = (z0, z1), step mul_pow2_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void mul_pow2_map_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double c, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -15856,7 +18153,7 @@ inline void mul_pow2_map_2_seq(const double* x0_in, const double* x1_in, std::si
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void mul_pow2_map_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float c, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -15894,7 +18191,7 @@ inline void mul_pow2_map_2_seq(const float* x0_in, const float* x1_in, std::size
 }
 
 // map mul_pow2_map_2(supplied x = (x0, x1), supplied c) -> z = (z0, z1), step mul_pow2_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void mul_pow2_map_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double c, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -15953,7 +18250,7 @@ inline void mul_pow2_map_2_lanes(const double* x0_in, const double* x1_in, std::
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void mul_pow2_map_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float c, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -16013,7 +18310,7 @@ inline void mul_pow2_map_2_lanes(const float* x0_in, const float* x1_in, std::si
     finite_out = finite;
 }
 
-// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void norm_upper_1_seq(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -16063,7 +18360,7 @@ inline void norm_upper_1_seq(const float* x_in, std::size_t n, float& r_out, boo
     flag_out = fin_flag;
 }
 
-// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void norm_upper_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -16169,7 +18466,7 @@ inline void norm_upper_1_lanes(const float* x_in, std::size_t n, std::size_t lan
     flag_out = fin_flag;
 }
 
-// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void norm_upper_2_seq(const double* x0_in, [[maybe_unused]] const double* x1_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -16223,7 +18520,7 @@ inline void norm_upper_2_seq(const float* x0_in, [[maybe_unused]] const float* x
     flag_out = fin_flag;
 }
 
-// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void norm_upper_2_lanes(const double* x0_in, [[maybe_unused]] const double* x1_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -16336,7 +18633,7 @@ inline void norm_upper_2_lanes(const float* x0_in, [[maybe_unused]] const float*
 }
 
 // map scale_1(supplied x, supplied a) -> z, step scale_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_1_seq(const double* x_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -16362,7 +18659,7 @@ inline void scale_1_seq(const double* x_in, std::size_t n, double a, double* z_o
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_1_seq(const float* x_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -16390,7 +18687,7 @@ inline void scale_1_seq(const float* x_in, std::size_t n, float a, float* z_out,
 }
 
 // map scale_1(supplied x, supplied a) -> z, step scale_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -16432,7 +18729,7 @@ inline void scale_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -16476,7 +18773,7 @@ inline void scale_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, f
 }
 
 // map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -16514,7 +18811,7 @@ inline void scale_2_seq(const double* x0_in, const double* x1_in, std::size_t n,
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -16554,7 +18851,7 @@ inline void scale_2_seq(const float* x0_in, const float* x1_in, std::size_t n, f
 }
 
 // map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -16617,7 +18914,7 @@ inline void scale_2_lanes(const double* x0_in, const double* x1_in, std::size_t 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -16682,7 +18979,7 @@ inline void scale_2_lanes(const float* x0_in, const float* x1_in, std::size_t n,
 }
 
 // map sub_1(stored x, stored y) -> z, step sub_1_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_1_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -16708,7 +19005,7 @@ inline void sub_1_seq(const double* x_in, const double* y_in, std::size_t n, dou
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_1_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -16736,7 +19033,7 @@ inline void sub_1_seq(const float* x_in, const float* y_in, std::size_t n, float
 }
 
 // map sub_1(stored x, stored y) -> z, step sub_1_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -16778,7 +19075,7 @@ inline void sub_1_lanes(const double* x_in, const double* y_in, std::size_t n, s
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -16822,7 +19119,7 @@ inline void sub_1_lanes(const float* x_in, const float* y_in, std::size_t n, std
 }
 
 // map sub_1_entry(supplied x, supplied y) -> z, step sub_entry_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -16851,7 +19148,7 @@ inline void sub_1_entry_seq(const double* x_in, const double* y_in, std::size_t 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -16882,7 +19179,7 @@ inline void sub_1_entry_seq(const float* x_in, const float* y_in, std::size_t n,
 }
 
 // map sub_1_entry(supplied x, supplied y) -> z, step sub_entry_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -16930,7 +19227,7 @@ inline void sub_1_entry_lanes(const double* x_in, const double* y_in, std::size_
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -16980,7 +19277,7 @@ inline void sub_1_entry_lanes(const float* x_in, const float* y_in, std::size_t 
 }
 
 // map sub_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step sub_2_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -17038,7 +19335,7 @@ inline void sub_2_seq(const double* x0_in, const double* x1_in, const double* y0
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -17098,7 +19395,7 @@ inline void sub_2_seq(const float* x0_in, const float* x1_in, const float* y0_in
 }
 
 // map sub_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step sub_2_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -17201,7 +19498,7 @@ inline void sub_2_lanes(const double* x0_in, const double* x1_in, const double* 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -17306,7 +19603,7 @@ inline void sub_2_lanes(const float* x0_in, const float* x1_in, const float* y0_
 }
 
 // map sub_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step sub_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -17369,7 +19666,7 @@ inline void sub_2_entry_seq(const double* x0_in, const double* x1_in, const doub
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -17434,7 +19731,7 @@ inline void sub_2_entry_seq(const float* x0_in, const float* x1_in, const float*
 }
 
 // map sub_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step sub_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -17547,7 +19844,7 @@ inline void sub_2_entry_lanes(const double* x0_in, const double* x1_in, const do
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void sub_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -17661,7 +19958,7 @@ inline void sub_2_entry_lanes(const float* x0_in, const float* x1_in, const floa
     finite_out = finite;
 }
 
-// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void sum_1_seq(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double s = 0.0;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -17693,7 +19990,7 @@ inline void sum_1_seq(const float* x_in, std::size_t n, float& r_out, bool& flag
     flag_out = fin_flag;
 }
 
-// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void sum_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s = 0.0;
@@ -17759,7 +20056,7 @@ inline void sum_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, flo
     flag_out = fin_flag;
 }
 
-// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void sum_1_entry_seq(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double s = 0.0;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -17793,7 +20090,7 @@ inline void sum_1_entry_seq(const float* x_in, std::size_t n, float& r_out, bool
     flag_out = fin_flag;
 }
 
-// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void sum_1_entry_lanes(const double* x_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s = 0.0;
@@ -17863,7 +20160,7 @@ inline void sum_1_entry_lanes(const float* x_in, std::size_t n, std::size_t lane
     flag_out = fin_flag;
 }
 
-// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void sum_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -17951,7 +20248,7 @@ inline void sum_2_seq(const float* x0_in, const float* x1_in, std::size_t n, flo
     flag_out = fin_flag;
 }
 
-// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void sum_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;
@@ -18175,7 +20472,7 @@ inline void sum_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, s
     flag_out = fin_flag;
 }
 
-// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void sum_2_entry_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -18269,7 +20566,7 @@ inline void sum_2_entry_seq(const float* x0_in, const float* x1_in, std::size_t 
     flag_out = fin_flag;
 }
 
-// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void sum_2_entry_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;
@@ -18505,7 +20802,7 @@ inline void sum_2_entry_lanes(const float* x0_in, const float* x1_in, std::size_
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void sum_fast_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -18571,7 +20868,7 @@ inline void sum_fast_2_seq(const float* x0_in, const float* x1_in, std::size_t n
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void sum_fast_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;
@@ -18729,7 +21026,7 @@ inline void sum_fast_2_lanes(const float* x0_in, const float* x1_in, std::size_t
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
+// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void sum_fast_2_entry_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -18801,7 +21098,7 @@ inline void sum_fast_2_entry_seq(const float* x0_in, const float* x1_in, std::si
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
+// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void sum_fast_2_entry_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;

@@ -38,6 +38,10 @@ PROGRAMS += ['acc_merge_1', 'acc_merge_2']
 PROGRAMS += ['add_1_1', 'sub_1_1', 'add_entry_step_1', 'sub_entry_step_1', 'scale_step_1', 'mul_pow2_step_1',
              'axpy_step_1', 'axpy_entry_step_1', 'mul_1_1', 'add_entry_step_2', 'sub_entry_step_2', 'scale_step_2',
              'mul_pow2_step_2', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1']
+# And the step of the constructor of a BallVector of one limb (ieee: bridge).
+PROGRAMS += ['bv_center_entry_1']
+# And the step of the negation of a BallVector of one limb.
+PROGRAMS += ['neg_1']
 
 
 def read(rel):
@@ -109,8 +113,9 @@ class Model(unittest.TestCase):
         # scalings of a ball and the directed products); the fourteen distinct ones of the four
         # bound kernels of the folds (bound_sum_k: 4 and 2; bound_dot_k: 4 and 3, 2, 1 + 2u, 1/4 and
         # 1 shared); the one above; and the three of acc_radius_1 that no other kernel has
-        # ((1+u) u + N, (1+u)^8, (1+u)^7 eta/2 + N).
-        self.assertEqual(len(ups), 33)
+        # ((1+u) u + N, (1+u)^8, (1+u)^7 eta/2 + N); and the two of conv_radius (4 (1+u)^8 eta + eta/(2u),
+        # (1+u)^7).
+        self.assertEqual(len(ups), 35)
         self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
@@ -462,8 +467,18 @@ class CheckedFiles(unittest.TestCase):
     # maps named the theorems of their bridges and, for those of two limbs, of their claims
     # (IeeeMapSteps.v): the comments above those twenty-four statements say proved, and nothing
     # else changed.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '7f91c92badfbe635ff194dde541692f258f1dac33c0aa85f714d3a4940c3c02e',
-               'proofs/gen/IeeeStatements.v': 'eeaf3e81071891ecd32f7493a38e555347facfa2232219e4e1261025bd0d9e43'}
+    # On another line, after the radius kernels of BallVector, the four kernels of the constructor of
+    # BallVector (unverified): their definitions, the program of bv_center_entry_1 and their statements
+    # were added, every earlier line kept. Then neg_1 and bv_neg_radius, of the negation of a
+    # BallVector (unverified), in the same way. Then the two steps and the radius of the scaling of a
+    # BallVector by a power of two (unverified): their definitions and the statements of the steps
+    # (ieee: spec, with the mask of exact_flag) were added, every earlier line kept. Then conv_radius
+    # and bv_conv_finish, of the product of two BallVectors (unverified): their definitions, the two
+    # constants of conv_radius and the statement of bv_conv_finish (finite_or_nan with if_all) were
+    # added, every earlier line kept. Merged here: the regeneration of the merged descriptions, and
+    # make -C proofs passed on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '767697da2d8c9427dfc78858b27e17f481d44666aba4708bf7364652bdafd652',
+               'proofs/gen/IeeeStatements.v': 'd6b2acaacbfba69692fa56f2af743761d24b3a56da4814882068171c27402d0e'}
 
 
     def test_the_checked_files(self):
@@ -616,12 +631,24 @@ class TheoremFields(unittest.TestCase):
         self.assertEqual(rules.check_all(ks), [])
         before, after = build.outputs(self.kernels_with()), build.outputs(ks)
         changed = sorted(rel for rel in after if after[rel] != before[rel])
-        self.assertEqual(changed, ['proofs/gen/IeeeAudit.v', 'proofs/gen/IeeeFoldStatements.v',
-                                   'proofs/gen/IeeeStatements.v'])
+        # The C++ headers too, since the comment of a fold's function gives the status of each model
+        # (cpp.fold_status): only the comments of dot_2's functions, from unverified to proved.
+        self.assertEqual(changed, ['include/kairn/gen/avx2.hpp', 'include/kairn/gen/neon.hpp',
+                                   'include/kairn/gen/scalar.hpp', 'proofs/gen/IeeeAudit.v',
+                                   'proofs/gen/IeeeFoldStatements.v', 'proofs/gen/IeeeStatements.v'])
 
         def diff(rel):
             old, new = before[rel].splitlines(), after[rel].splitlines()
             return [a for a in new if a not in old], [a for a in old if a not in new]
+
+        for rel in changed[:3]:
+            added, gone = diff(rel)
+            self.assertEqual(len(added), len(gone), rel)
+            self.assertTrue(added, rel)
+            self.assertEqual(sorted(a.replace('proved (IEEE model)', 'unverified (IEEE model)') for a in added),
+                             sorted(gone), rel)
+            self.assertTrue(all(a.startswith('// fold dot_2(') and a.endswith('(real model), proved (IEEE model).')
+                                for a in added), (rel, added))
 
         added, gone = diff('proofs/gen/IeeeStatements.v')
         self.assertEqual(len(added), 2)

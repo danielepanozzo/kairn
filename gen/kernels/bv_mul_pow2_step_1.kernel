@@ -1,0 +1,30 @@
+# The step of bv_mul_pow2_1, a BallVector with one-limb centers times a positive power of two c
+# (milestone2.md, "BallVector": bv_mul_pow2_k, "the same kernel along the entries, with ec true only
+# when it is for every entry"): the center scaled as mul_pow2_step_1 does, and as a second output the
+# mask ec of ball_mul_pow2_1, that this entry's scaling is exact: the scaled center above the smallest
+# normal number N = eta / (2u) in magnitude, or the center zero. The ball vector ands it over the
+# entries into a mask of its state, which its radius takes. The mask is true exactly when the
+# condition of exact_when holds (exact_flag): a product by a power of two above N in magnitude is a
+# number of the format, so its rounding is above N exactly when it is. The center is stored (written
+# through Kairn) and only multiplied; the program gives c, which is only multiplied (rule R3).
+kernel:        bv_mul_pow2_step_1
+input:         stored x
+input:         c
+output:        z
+output:        mask e
+value:         x*c
+requires:      power_of_two c
+ensures:       rounded z nearest
+ensures:       error z R c=0 k=1 t=1/2 exact_when=zero_or_abs_gt(x*c,eta/(2*u)) exact_flag=e
+min_precision: 1
+source:        mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector)
+license:       algorithm and proof: MIT
+status:        unverified
+entry:         yes
+ieee:          spec
+
+z  = prod(x, c)
+am = abs(z)
+bc = lt(const up(eta/(2*u)), am)
+zc = eq(x, 0)
+e  = or(bc, zc)

@@ -1,0 +1,32 @@
+# The product of two polynomials whose coefficients are BallVectors of one-limb centers (milestone2.md,
+# "The product of polynomials": bv_conv_k with conv_radius). The centers are the convolution conv_1
+# (dot_1, the fused dot product, on the terms of each coefficient), its mask included; besides, the
+# largest magnitudes of the operands' centers, ma and mb (norm_step_1 on the arrays read); the count
+# m = min(n_x, n_y) as a number of T rounded up; one call of bound_dot_1(m); the radius conv_radius;
+# and the finish bv_conv_finish. When its flag is false every coefficient written is zero and the
+# radius +infinity, the whole space. V4 as for bv_conv_2, with the bound of mul_1_1. From precision 4:
+# below it the factors (1+u) of conv_radius are too large for the fraction 2^(emax - 2) of V4.
+fold:          bv_conv_1
+arrays:        stored x, stored y
+scalars:       stored rx, stored ry
+centers:       conv_1
+state:         ma, mask oka, mb, mask okb
+record:        (ma, oka) = norm_step_1(ma, oka, x)
+record:        (mb, okb) = norm_step_1(mb, okb, y)
+count:         m = min(n_x, n_y)
+bound:         (g, t, okg) = bound_dot_1(m)
+radius:        rz = conv_radius(ma, mb, rx, ry, m, g, t)
+finish:        (r, flag) = bv_conv_finish(rz, finite, okg)
+orders:        sequential
+writes:        z
+output:        r
+output:        mask flag
+value:         x*y
+requires:      ball_vector x rx
+requires:      ball_vector y ry
+ensures:       encloses_coefficients z r x*y x=x,rx y=y,ry flag=flag finite_when=abs_le(n*(abs(x)+rx)*(abs(y)+ry),-2);abs_le((abs(x)+rx)*ry,-2);abs_le((abs(y)+ry)*rx,-2) radii_when=abs_le(rx*ry,-2) count_when=le(n*(unit(mul_1_1)+eta),1/16)
+min_precision: 4
+status:        unverified
+domain:        extended
+source:        conv_1 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)
+license:       algorithm and proof: MIT

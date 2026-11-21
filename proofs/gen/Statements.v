@@ -414,6 +414,68 @@ Definition bv_add_radius_2_spec : Prop :=
   fmt emin prec rz /\
   ((rx + ry) + (((m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) / (1 - ((3 / (1 - (4 * u prec))) * u prec ^ 2))) * (1 + u prec))) <= rz.
 
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). Status: unverified. *)
+Definition bv_center_entry_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall c : R,
+  fmt emin prec c ->
+  let z := bv_center_entry_1 emin prec tie_even c in
+  fmt emin prec z /\
+  z = RN emin prec c.
+
+(* bv_make_radius: the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). Status: unverified. *)
+Definition bv_make_radius_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m r : R,
+  fmt emin prec m ->
+  fmt emin prec r ->
+  let rz := bv_make_radius emin prec tie_even m r in
+  fmt emin prec rz /\
+  rz = RN emin prec r.
+
+(* bv_mul_pow2_radius: the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_mul_pow2_radius_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall m rx c : R,
+  forall ex : bool,
+  fmt emin prec m ->
+  fmt emin prec rx ->
+  fmt emin prec c ->
+  0 <= m ->
+  0 <= rx ->
+  (exists n : Z, c = bpow radix2 n) ->
+  let rz := bv_mul_pow2_radius emin prec tie_even m ex rx c in
+  fmt emin prec rz /\
+  (rx * c) <= rz /\
+  (ex = true /\ ((rx * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (rx * c)) ->
+   rz = (rx * c)) /\
+  (ex = false -> ((rx * c) + eta emin) <= rz).
+
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_mul_pow2_step_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x c : R,
+  fmt emin prec x ->
+  fmt emin prec c ->
+  (exists n : Z, c = bpow radix2 n) ->
+  let '(z, e) := bv_mul_pow2_step_1 emin prec tie_even x c in
+  fmt emin prec z /\
+  z = RN emin prec (x * c) /\
+  Rabs (z - (x * c)) <= (1 / 2) * eta emin /\
+  (((x * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x * c)) ->
+   z = (x * c)) /\
+  (e = true <-> ((x * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x * c))).
+
+(* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_neg_radius_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m rx : R,
+  fmt emin prec m ->
+  fmt emin prec rx ->
+  let rz := bv_neg_radius m rx in
+  fmt emin prec rz /\
+  rz = RN emin prec rx.
+
 (* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved. *)
 Definition bv_scale_radius_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -439,6 +501,29 @@ Definition bv_scale_radius_2_spec : Prop :=
   let rz := bv_scale_radius_2 emin prec tie_even m rx a in
   fmt emin prec rz /\
   ((((Rabs a) * rx) + (((m * (2 * u prec ^ 2)) / (1 - (2 * u prec ^ 2))) * (1 + u prec))) + ((1 * eta emin) / (1 - (2 * u prec ^ 2)))) <= rz.
+
+(* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: unverified. *)
+Definition conv_radius_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall ma mb rx ry m g t : R,
+  fmt emin prec ma ->
+  fmt emin prec mb ->
+  fmt emin prec rx ->
+  fmt emin prec ry ->
+  fmt emin prec m ->
+  fmt emin prec g ->
+  fmt emin prec t ->
+  0 <= ma ->
+  0 <= mb ->
+  0 <= rx ->
+  0 <= ry ->
+  (m = 0 \/ 1 <= m) ->
+  0 <= g ->
+  g <= 1 ->
+  0 <= t ->
+  let rz := conv_radius emin prec tie_even ma mb rx ry m g t in
+  fmt emin prec rz /\
+  (((m * (((((1 + u prec) * ma) * ry) + (((1 + u prec) * mb) * rx)) + (rx * ry))) + ((((g * m) * ((1 + u prec) ^ 2)) * ma) * mb)) + t) <= rz.
 
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). Status: proved. *)
 Definition dot_step_1_spec : Prop :=
@@ -533,6 +618,15 @@ Definition mul_up_1_spec : Prop :=
   fmt emin prec r /\
   (a * b) <= r /\ r <= succ radix2 (FLT_exp emin prec) (RU emin prec (a * b)) /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> r = RU emin prec (a * b)).
+
+(* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). Status: unverified. *)
+Definition neg_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x : R,
+  fmt emin prec x ->
+  let z := neg_1 x in
+  fmt emin prec z /\
+  z = RN emin prec (- x).
 
 (* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). Status: proved. *)
 Definition next_down_spec : Prop :=
@@ -1048,6 +1142,29 @@ Definition ball_sub_2_spec : Prop :=
   fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x - y) - (cz0 + cz1)) <= rz).
+
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). Status: unverified. *)
+Definition bv_center_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let '(z0, z1) := bv_center_2 x0 x1 in
+  normalized_2 emin prec z0 z1 /\
+  (z0 + z1) = (x0 + x1).
+
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_mul_pow2_step_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall x0 x1 c : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec c ->
+  (exists n : Z, c = bpow radix2 n) ->
+  let '(z0, z1, e) := bv_mul_pow2_step_2 emin prec tie_even x0 x1 c in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin /\
+  (((x0 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x0 * c)) /\ ((x1 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x1 * c)) ->
+   (z0 + z1) = ((x0 + x1) * c)) /\
+  (e = true <-> ((x0 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x0 * c)) /\ ((x1 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x1 * c))).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
 Definition eq_2_1_spec : Prop :=

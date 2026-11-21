@@ -931,7 +931,12 @@ def judge_finite_or_nan(k, ks, fmt, e, ins, outs, values):
     # false.
     for _ in range(e.get('steps', 0)):
         src = [interp.succ(fmt.f, v) for v in src]
-    if flag != (finite(src[0]) and ins[e['if']][0] if 'if' in e else finite(src[0])):
+    # The finish of a constructor of a BallVector (nonneg): the value is also not negative (a zero of
+    # either sign is not).
+    sign = not e.get('nonneg') or (finite(src[0]) and not (src[0][1] and src[0][2]))
+    # The finish of the product of two BallVectors (if_all): every mask true.
+    gate = all(ins[n][0] for n in e.get('if_all', [])) and (ins[e['if']][0] if 'if' in e else True)
+    if flag != (finite(src[0]) and gate and sign):
         return ['finite_or_nan (flag)']
     if flag:
         return [] if out == src else ['finite_or_nan (not the value)']
@@ -1031,8 +1036,10 @@ class NonFinite(unittest.TestCase):
         # the directed sums and products, five entry forms, the full scalings by a power of two),
         # and 13 of wave 2: the interval kernels, mul_dir_1, the bounds of a ball as numbers of T,
         # the ball from an interval and the narrowing of a ball; and 13 of stage B1; and the two
-        # finishes of the folds, and the two of the folds of maxima.
-        self.assertEqual(len(self.names), 54 + 13 + 13 + 4)
+        # finishes of the folds, and the two of the folds of maxima; and the copy and the finish of the
+        # constructors of a BallVector, bv_center_2 and bv_make_finish; and the finish of the product of two
+        # BallVectors, bv_conv_finish.
+        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 2 + 1)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite

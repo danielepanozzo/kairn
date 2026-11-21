@@ -1,0 +1,19 @@
+# The one radius of the negation of a BallVector (milestone2.md, "BallVector": bv_neg_k): the radius of
+# the operand, unchanged, as ball_neg_k returns it entry by entry. The negation of a center is exact,
+# so nothing is added: the result is exactly the set of the negated members. The largest magnitude of
+# a center, which every radius kernel of a ball vector takes, is not needed: a canonical operand has
+# finite centers or zero ones, and so has its negation.
+kernel:        bv_neg_radius
+input:         m
+input:         rx
+output:        rz
+value:         rx
+ensures:       rounded rz nearest
+min_precision: 1
+source:        the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector)
+license:       algorithm and proof: MIT
+status:        unverified
+unused:        m the negation of a canonical BallVector is canonical: its centers are those of the operand negated, finite or zero, and the radius is the operand's
+cone_exempt:   m is unused: the centers of a canonical operand are finite or zero, and so are their negations, and the finish tests the radius
+
+rz = copy(rx)

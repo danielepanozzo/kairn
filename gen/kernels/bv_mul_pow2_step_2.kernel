@@ -1,0 +1,37 @@
+# The step of bv_mul_pow2_2, a BallVector with 2-limb centers times a positive power of two c
+# (milestone2.md, "BallVector": bv_mul_pow2_k, "with ec over all entries"): the center scaled as
+# mul_pow2_2 does (the step of the map mul_pow2_map_2), and as a second output the mask ec of
+# ball_mul_pow2_2, that this entry's scaling is exact: the scaled last nonzero limb above the smallest
+# normal number N = eta / (2u) in magnitude, or the center zero. The written center cannot tell it (a
+# second limb scaled to zero leaves a pair that looks exact), so the step says it, and the ball vector
+# ands it over the entries into a mask of its state, which its radius takes. The mask is true exactly
+# when the conditions of exact_when hold (exact_flag), written limb by limb as for ball_mul_pow2_2: a
+# nonzero second limb of a normalized pair makes the first nonzero and larger in magnitude. The
+# center is stored and only multiplied; the program gives c, only multiplied (rule R3).
+kernel:        bv_mul_pow2_step_2
+input:         x = x0 x1
+input:         c
+output:        z = z0 z1
+output:        mask e
+value:         x*c
+requires:      normalized x
+requires:      power_of_two c
+ensures:       normalized z
+ensures:       error z R c=0 k=2 t=1 exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u)) exact_flag=e
+min_precision: 2
+source:        mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector)
+license:       algorithm and proof: MIT
+status:        unverified
+entry:         yes
+ieee:          spec
+cone_exempt:   the mask e is a comparison of the scaled last nonzero limb, a select of the two products; the center is mul_pow2_2's
+
+h        = prod(x0, c)
+l        = prod(x1, c)
+(z0, z1) = fast_two_sum(h, l)
+ze       = eq(x1, 0)
+mm       = select(ze, h, l)
+am       = abs(mm)
+bc       = lt(const up(eta/(2*u)), am)
+zc       = eq(x0, 0)
+e        = or(bc, zc)

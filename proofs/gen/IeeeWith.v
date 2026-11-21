@@ -209,6 +209,29 @@ Definition bound_sum_2_with (p_ : float -> float -> float) (m : float) : float *
   let ok := le a up_bound_dot_1_5 in
   (g, ok).
 
+(* bv_mul_pow2_radius: the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_radius_with (p_ : float -> float -> float) (m : float) (ex : bool) (rx c : float) : float :=
+  let rr := p_ rx c in
+  let br := lt up_ball_mul_pow2_1_0 rr in
+  let zr := eq rx pzero in
+  let er := orb br zr in
+  let q := andb ex er in
+  let su := succ rr in
+  let rw := succ su in
+  let rs := if q then rr else rw in
+  let d := sub m m in
+  let rz := add rs d in
+  rz.
+
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_1_with (p_ : float -> float -> float) (x c : float) : float * bool :=
+  let z := p_ x c in
+  let am := abs z in
+  let bc := lt up_ball_mul_pow2_1_0 am in
+  let zc := eq x pzero in
+  let e := orb bc zc in
+  (z, e).
+
 (* interval_mid_rad_1: the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). *)
 Definition interval_mid_rad_1_with (p_ : float -> float -> float) (xl xu : float) : float * float :=
   let om := pred pinf in
@@ -332,6 +355,19 @@ Definition ball_mul_pow2_2_full_with (p_ : float -> float -> float) (cx0 cx1 rx 
   let cw1 := if e then c1 else rx in
   let rw := if e then r else rx in
   (cw0, cw1, rw).
+
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_2_with (p_ : float -> float -> float) (x0 x1 c : float) : float * float * bool :=
+  let h := p_ x0 c in
+  let l := p_ x1 c in
+  let '(z0, z1) := fast_two_sum h l in
+  let ze := eq x1 pzero in
+  let mm := if ze then h else l in
+  let am := abs mm in
+  let bc := lt up_ball_mul_pow2_1_0 am in
+  let zc := eq x0 pzero in
+  let e := orb bc zc in
+  (z0, z1, e).
 
 (* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
 Definition mul_pow2_2_with (p_ : float -> float -> float) (x0 x1 c : float) : float * float :=
