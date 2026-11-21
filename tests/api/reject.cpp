@@ -33,6 +33,15 @@
 //          where KAIRN_ENCLOSURE_CODE puts it); the control computes the same at run time
 //   39-41  an UNVERIFIED interval operation, constructor and conversion to a ball, written
 //          without the marker, against headers in which every kernel is unverified (as 1-14)
+//   42-47  the containers (soa.hpp): writing through a view of const limbs (an element, set,
+//          store), a view of mutable limbs from a view of const ones and from a const SoA, and an
+//          element of a view of const limbs assigned from another; each control does the same
+//          through a mutable view, or makes the view of const limbs
+//   48-51  Packed (packed.hpp): an operation with a number or a T operand (no packed form takes
+//          one), the narrowing of two limbs to one written as an implicit conversion, and an
+//          operation of two limb types; each control writes what compiles instead
+//   0      with -DKAIRN_PACKED_FORM= a value that is not a form, or a form the target does not
+//          have (the generated header's #error)
 //   29-31  an UNVERIFIED building block (two_sum, next_up) and the scaling of a ball by a power of
 //          two (half), written without the marker, against headers in which every kernel is
 #if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
@@ -46,6 +55,8 @@
 #define KAIRN_RATIONAL_CHECK 0
 #endif
 #include <kairn/kairn.hpp>
+#include <kairn/packed.hpp>
+#include <kairn/soa.hpp>
 
 #if defined(KAIRN_TEST_CONTROL)
 #define MARK(x) kairn::unverified(x)
@@ -214,6 +225,80 @@ int main() {
     sink = I1(MARK(s), s).lower().limb[0];
 #elif KAIRN_TEST_CASE == 41
     sink = B1(MARK(i)).radius();
+#elif KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 51
+    double h[4] = {1, 2, 3, 4}, l[4] = {0, 0, 0, 0};
+    const kairn::SoAView<double, 2> mv(h, l, 4);
+    [[maybe_unused]] const kairn::SoAView<const double, 2> cv = mv;
+    using P1 = kairn::Packed<double, 1>;
+    using P2 = kairn::Packed<double, 2>;
+    [[maybe_unused]] const P2 px = P2::load(h, l);
+    [[maybe_unused]] const P1 pa = P1::load(h);
+#if KAIRN_TEST_CASE == 42
+#if defined(KAIRN_TEST_CONTROL)
+    mv[0] = E2(kairn::unverified(2.0));
+#else
+    cv[0] = E2(kairn::unverified(2.0));
+#endif
+#elif KAIRN_TEST_CASE == 43
+#if defined(KAIRN_TEST_CONTROL)
+    mv.set(1, E2(kairn::unverified(2.0)));
+#else
+    cv.set(1, E2(kairn::unverified(2.0)));
+#endif
+#elif KAIRN_TEST_CASE == 44
+#if defined(KAIRN_TEST_CONTROL)
+    mv.store(0, px);
+#else
+    cv.store(0, px);
+#endif
+#elif KAIRN_TEST_CASE == 45
+#if defined(KAIRN_TEST_CONTROL)
+    const kairn::SoAView<const double, 2> w = mv;
+#else
+    const kairn::SoAView<double, 2> w = cv;
+#endif
+    sink = double(w.size());
+#elif KAIRN_TEST_CASE == 46
+    const kairn::SoA<double, 2> owned(4);
+#if defined(KAIRN_TEST_CONTROL)
+    const kairn::SoAView<const double, 2> w = owned;
+#else
+    const kairn::SoAView<double, 2> w = owned;
+#endif
+    sink = double(w.size());
+#elif KAIRN_TEST_CASE == 47
+#if defined(KAIRN_TEST_CONTROL)
+    mv[0] = mv[1];
+#else
+    cv[0] = cv[1];
+#endif
+#elif KAIRN_TEST_CASE == 48
+#if defined(KAIRN_TEST_CONTROL)
+    sink = (px + P2::broadcast(x)).lane(0).limb[0];
+#else
+    sink = (px + x).lane(0).limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 49
+#if defined(KAIRN_TEST_CONTROL)
+    sink = (px * P1::broadcast(E1(2.0))).lane(0).limb[0];
+#else
+    sink = (px * 2.0).lane(0).limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 50
+#if defined(KAIRN_TEST_CONTROL)
+    const P1 z(px);
+#else
+    const P1 z = px;
+#endif
+    sink = z.lane(0).limb[0];
+#elif KAIRN_TEST_CASE == 51
+    const kairn::Packed<float, 2> pf;
+#if defined(KAIRN_TEST_CONTROL)
+    sink = (px + px).lane(0).limb[0] + double((pf + pf).lane(0).limb[0]);
+#else
+    sink = (px + pf).lane(0).limb[0];
+#endif
+#endif
 #endif
     return sink == 12345 ? 1 : 0;
 }

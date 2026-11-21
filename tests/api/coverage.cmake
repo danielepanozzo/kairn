@@ -9,11 +9,20 @@
 # Milestone 2, judged by the oracle, whose public functions come later) of tests/CMakeLists.txt,
 # are in none of the runner's lists, and no public operation calls them yet.
 #
+# With -DPACKED_HEADER=include/kairn/packed.hpp, also: the kernels that header calls (gen::NAME(
+# with NAME a kernel of the claims) are exactly those that the runner's packed forms map to
+# (runner --packed-list), and each is reached by a scalar public form too: every operation of
+# Packed is judged, and judged against the claims of a kernel the scalar interface has.
+#
 #   cmake -DRUNNER=... -DCLAIMS=gen/claims.json -DKERNELS=gen/kernels "-DINTERNAL=a;b"
-#         "-DNOT_PUBLIC=c;d" "-DNOT_CHECKED=e;f" -P coverage.cmake
+#         "-DNOT_PUBLIC=c;d" "-DNOT_CHECKED=e;f" [-DPACKED_HEADER=...] -P coverage.cmake
 cmake_minimum_required(VERSION 3.21)
 
-foreach(_what list internal not-public)
+set(_whats list internal not-public)
+if(PACKED_HEADER)
+  list(APPEND _whats packed-list)
+endif()
+foreach(_what IN LISTS _whats)
   execute_process(COMMAND "${RUNNER}" --${_what} OUTPUT_VARIABLE _out RESULT_VARIABLE _status)
   if(NOT _status STREQUAL "0")
     message(FATAL_ERROR "${RUNNER} --${_what} failed: ${_status}")
@@ -119,6 +128,32 @@ foreach(_k IN LISTS _runner_not_public)
     list(APPEND _problems "${_k} is listed as not public yet, but it is not an entry kernel")
   endif()
 endforeach()
+set(_packed_message "")
+if(PACKED_HEADER)
+  file(READ "${PACKED_HEADER}" _text)
+  string(REGEX MATCHALL "gen::[a-z0-9_]+\\(" _calls "${_text}")
+  set(_called "")
+  foreach(_call IN LISTS _calls)
+    string(REGEX REPLACE "gen::([a-z0-9_]+)\\(" "\\1" _k "${_call}")
+    if(_k IN_LIST _claims AND NOT _k IN_LIST _called)
+      list(APPEND _called ${_k})
+    endif()
+  endforeach()
+  list(SORT _called)
+  if(NOT _called)
+    list(APPEND _problems "${PACKED_HEADER} calls no kernel: the scan is broken")
+  endif()
+  if(NOT _called STREQUAL _runner_packed_list)
+    list(APPEND _problems "the kernels ${PACKED_HEADER} calls: ${_called}; those of the runner's packed forms: ${_runner_packed_list}")
+  endif()
+  foreach(_k IN LISTS _runner_packed_list)
+    if(NOT _k IN_LIST _runner_list)
+      list(APPEND _problems "${_k} has a packed form but no scalar public form")
+    endif()
+  endforeach()
+  list(LENGTH _called _c)
+  set(_packed_message "; the ${_c} kernels packed.hpp calls are those of the packed forms")
+endif()
 if(_problems)
   string(JOIN "\n" _problems ${_problems})
   message(FATAL_ERROR "${_problems}")
@@ -130,4 +165,4 @@ list(LENGTH _entry _e)
 list(LENGTH _not_checked _q)
 message(STATUS "${_n} kernels reached by public forms, ${_m} building blocks, ${_p} entry kernels not public yet "
   "(${_e} entry kernels in all), ${_q} kernels in none of the runner's lists (not cross-checked "
-  "or not public yet)")
+  "or not public yet)${_packed_message}")

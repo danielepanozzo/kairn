@@ -35,8 +35,15 @@
 #   rational_runner.cpp (../crosscheck.py compiled). The full tier has more cases, through the runner of every
 #   flag set too, and rational.cpp built with every flag set.
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
-#   api.example.accurate_sums.* and api.example.intervals.* also compare it with the text their
-#   tutorials show.
+#   api.example.accurate_sums.*, api.example.intervals.* and api.example.packed_dot.* also compare
+#   it with the text their tutorials show.
+# - api.packed.FORM, api.soa.FORM, api.example.packed_dot.FORM: Packed (packed.hpp) against the
+#   scalar operations, bit for bit, lane by lane (packed.cpp); the containers of soa.hpp (soa.cpp);
+#   and the tutorial's vector loop, whose results are checked against the bound it states; each in
+#   every form of Packed this compiler can build here: native (the build's flags), scalar (one
+#   lane, KAIRN_PACKED_FORM_SCALAR) and, on x86-64 where the build's flags do not give AVX2,
+#   avx2. The runner's packed forms (runner.cpp) join api.oracle.*; where the build's flags do not
+#   give AVX2 and the compiler can, a runner of the packed forms alone built for AVX2 joins them.
 
 set(_api_include "${PROJECT_SOURCE_DIR}/include")
 if(_msvc_style)
@@ -89,6 +96,50 @@ else()
 endif()
 _kairn_api_program(kairn-api-runner-contract-fast runner.cpp ${_api_contract})
 
+# The forms of Packed (include/kairn/packed.hpp) that the tests build: native, with the build's
+# flags and kairn::fma's option (AVX2, NEON, or the scalar form of one lane, by what they give),
+# scalar (forced), and avx2 where the native form is the scalar one on x86-64 and the compiler
+# can target AVX2 with the packed backend's option (../CMakeLists.txt, _kairn_packed_backend, as
+# for the generator's packed runner: -mavx2 -mfma), which is the case with GCC and Clang there,
+# whose kairn::fma adds -mfma alone. KAIRN_TESTS_API_PACKED_SIMD: whether the native form has
+# more than one lane.
+function(_kairn_api_packed_native out)
+  set(CMAKE_CXX_STANDARD 20)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  cmake_push_check_state(RESET)
+  set(CMAKE_REQUIRED_INCLUDES "${_api_include}")
+  get_target_property(_fma kairn::fma INTERFACE_COMPILE_OPTIONS)
+  if(_fma)
+    list(JOIN _fma " " CMAKE_REQUIRED_FLAGS)
+  endif()
+  set(CMAKE_REQUIRED_QUIET ON)
+  check_cxx_source_compiles("#include <kairn/packed.hpp>
+#if KAIRN_PACKED_FORM == KAIRN_PACKED_FORM_SCALAR
+#error the scalar form
+#endif
+int main() { return 0; }
+" KAIRN_TESTS_API_PACKED_SIMD)
+  cmake_pop_check_state()
+  set(${out} "${KAIRN_TESTS_API_PACKED_SIMD}" PARENT_SCOPE)
+endfunction()
+include(CheckCXXSourceCompiles)
+include(CMakePushCheckState)
+_kairn_api_packed_native(_api_packed_simd)
+if(_msvc_style)
+  set(_api_scalar_form /DKAIRN_PACKED_FORM=KAIRN_PACKED_FORM_SCALAR)
+else()
+  set(_api_scalar_form -DKAIRN_PACKED_FORM=KAIRN_PACKED_FORM_SCALAR)
+endif()
+set(_api_packed_forms native scalar)
+set(_api_packed_avx2 OFF)
+if(NOT _api_packed_simd AND _packed_backend STREQUAL "avx2" AND _isa_option)
+  set(_api_packed_avx2 ON)
+  list(APPEND _api_packed_forms avx2)
+  # The packed forms alone, for AVX2, beside the build's runners in api.oracle.* and full.api.oracle.*.
+  _kairn_api_program(kairn-api-runner-avx2 runner.cpp ${_isa_option})
+  target_compile_definitions(kairn-api-runner-avx2 PRIVATE KAIRN_TEST_PACKED_ONLY)
+endif()
+
 # Each test runs the runners, the one with the build's flags and the one with contraction forced
 # on (in the full tier, the debug build's too, below), on the same requests, generated once, and
 # the oracle on each distinct output, in one Python process (../crosscheck.py api: the oracle's
@@ -113,6 +164,9 @@ add_subdirectory(flags)
 # The runners as --runner LABEL EXECUTABLE for ../crosscheck.py.
 set(_api_runners --runner build "$<TARGET_FILE:kairn-api-runner>"
   --runner contract-fast "$<TARGET_FILE:kairn-api-runner-contract-fast>")
+if(_api_packed_avx2)
+  list(APPEND _api_runners --runner avx2 "$<TARGET_FILE:kairn-api-runner-avx2>")
+endif()
 set(_api_debug_runner --runner debug "$<TARGET_FILE:kairn-api-runner-debug>" PARENT_SCOPE)
 set(_flags_runners "")
 foreach(_set IN LISTS _flags_names)
@@ -161,13 +215,44 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
     COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
       "-DNOT_PUBLIC=${_api_not_public}" "-DNOT_CHECKED=${_api_unlisted}"
-      -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
+      "-DPACKED_HEADER=${_api_include}/kairn/packed.hpp" -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
   set_tests_properties(api.oracle.coverage PROPERTIES LABELS "api;oracle")
   list(LENGTH _api_mapped _n)
   list(LENGTH _flags_names _n_flags)
-  message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with 2 runners, "
-    "and in the full tier the debug build's on the first form of each and the runners of ${_n_flags} flag sets")
+  set(_api_n_runners 2)
+  set(_api_packed_note "")
+  if(_api_packed_avx2)
+    set(_api_n_runners 3)
+    set(_api_packed_note " (the third: the packed forms alone, for AVX2)")
+  endif()
+  list(JOIN _api_packed_forms ", " _api_forms_text)
+  message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with ${_api_n_runners} "
+    "runners${_api_packed_note}, and in the full tier the debug build's on the first form of each and the runners "
+    "of ${_n_flags} flag sets; Packed in the forms ${_api_forms_text}")
 endif()
+
+# --- Packed and the containers ----------------------------------------------------------------
+#
+# api.packed.FORM (packed.cpp): every operation of Packed against the scalar operation of
+# Expansion, lane by lane, bit for bit (the products of one limb but for the sign of a zero), on a
+# corpus with every kind of value; api.soa.FORM (soa.cpp): the containers, element read equals
+# value written, the tail rule, views of the program's arrays, the types' properties and the
+# allocations. FORM as above (native, scalar, and avx2 where it applies). Their compile-fail cases
+# are api.reject.soa.* and api.reject.packed.* (below), their checks with KAIRN_CHECKS
+# api.checks.* (checks.cpp, checks_cases.hpp).
+foreach(_form IN LISTS _api_packed_forms)
+  set(_options "")
+  if(_form STREQUAL "scalar")
+    set(_options ${_api_scalar_form})
+  elseif(_form STREQUAL "avx2")
+    set(_options ${_isa_option})
+  endif()
+  _kairn_api_program(kairn-api-packed-${_form} packed.cpp ${_options})
+  add_test(NAME api.packed.${_form} COMMAND kairn-api-packed-${_form})
+  _kairn_api_program(kairn-api-soa-${_form} soa.cpp ${_options})
+  add_test(NAME api.soa.${_form} COMMAND kairn-api-soa-${_form})
+  set_tests_properties(api.packed.${_form} api.soa.${_form} PROPERTIES TIMEOUT 120 LABELS "api;packed")
+endforeach()
 
 # --- kairn::rational -------------------------------------------------------------------------
 #
@@ -548,6 +633,35 @@ _kairn_api_reject(interval.implicit_to_ball 35 "${_api_no_conversion}")
 _kairn_api_reject(ball.implicit_narrowing 36 "${_api_no_conversion}")
 _kairn_api_reject(interval.from_one_limb 37 "${_api_no_constructor}")
 _kairn_api_reject(not_constexpr.interval_add 38 "constant|constexpr")
+# The containers (soa.hpp): nothing writes through a view of const limbs or a const SoA, and no
+# view of mutable limbs is made of one. Packed (packed.hpp): no packed operation takes a number or
+# a T (no packed kernel does: a program broadcasts it), the narrowing to one limb is explicit, and
+# no operation mixes limb types. Each control writes what compiles instead.
+set(_api_no_assignment "no viable overloaded|no match for|binary '='|no operator found")
+set(_api_no_member "constraints not satisfied|no matching|no overloaded function|associated constraints")
+_kairn_api_reject(soa.assign_const_element 42 "${_api_no_assignment}")
+_kairn_api_reject(soa.set_const 43 "${_api_no_member}")
+_kairn_api_reject(soa.store_const 44 "${_api_no_member}")
+_kairn_api_reject(soa.mutable_from_const_view 45 "${_api_no_conversion}")
+_kairn_api_reject(soa.mutable_from_const_soa 46 "${_api_no_conversion}")
+_kairn_api_reject(soa.assign_const_from_const 47 "${_api_no_assignment}")
+_kairn_api_reject(packed.number_operand 48 "${_api_no_operator}")
+_kairn_api_reject(packed.limb_operand 49 "${_api_no_operator}")
+_kairn_api_reject(packed.implicit_narrowing 50 "${_api_no_conversion}")
+_kairn_api_reject(packed.mixed_limb_types 51 "${_api_no_operator}")
+# KAIRN_PACKED_FORM (packed.hpp): a value that is not a form, a bare -D, and the form of another
+# target, which the generated header refuses.
+_kairn_api_reject(packed_form.unknown 0 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"
+  "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM=avx2")
+_kairn_api_reject(packed_form.bare 0 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"
+  "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
+  _kairn_api_reject(packed_form.other_target 0 "needs AVX2 and FMA"
+    "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM=KAIRN_PACKED_FORM_AVX2")
+else()
+  _kairn_api_reject(packed_form.other_target 0 "needs AArch64"
+    "-DOPTIONS=${_api_define}KAIRN_PACKED_FORM=KAIRN_PACKED_FORM_NEON")
+endif()
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
 _kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")
@@ -667,6 +781,24 @@ foreach(_i RANGE 0 ${_last} 2)
       "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/intervals.txt"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
   set_tests_properties(api.example.intervals${_suffix} PROPERTIES LABELS "api;example")
+endforeach()
+# The tutorial on a vector loop (docs/tutorials/vector-loop.md), in every form of Packed (above):
+# the same text in each, which the program checks against an exact reference and the bound it
+# states, and which the tutorial shows.
+foreach(_form IN LISTS _api_packed_forms)
+  set(_options "")
+  if(_form STREQUAL "scalar")
+    set(_options ${_api_scalar_form})
+  elseif(_form STREQUAL "avx2")
+    set(_options ${_isa_option})
+  endif()
+  _kairn_api_program(kairn-example-packed-dot-${_form} "${PROJECT_SOURCE_DIR}/docs/examples/cpp/packed_dot.cpp"
+    ${_options})
+  add_test(NAME api.example.packed_dot.${_form}
+    COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-packed-dot-${_form}>"
+      "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/packed_dot.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+  set_tests_properties(api.example.packed_dot.${_form} PROPERTIES LABELS "api;example;packed")
 endforeach()
 set_tests_properties(api.constexpr api.environment PROPERTIES LABELS api)
 

@@ -6,6 +6,8 @@
 #pragma once
 
 #include <kairn/kairn.hpp>
+#include <kairn/packed.hpp>
+#include <kairn/soa.hpp>
 
 #include <bit>
 #include <cfenv>
@@ -247,6 +249,56 @@ inline void put_value(Bits& out, const kairn::Interval<T, K>& x) {
     put_value(out, x.upper());
 }
 
+// Packed numbers (kairn/packed.hpp): the results of every lane, and the values of a corpus W at a
+// time, the last register filled with the first value.
+template <class T, int K>
+inline void put(Bits& out, const kairn::Packed<T, K>& p) {
+    for (int i = 0; i < kairn::Packed<T, K>::lanes; ++i) put(out, p.lane(i));
+}
+template <class T>
+inline void put(Bits& out, const kairn::PackedMask<T>& m) {
+    for (int i = 0; i < kairn::PackedMask<T>::lanes; ++i) put(out, m.lane(i));
+}
+template <class T, int K>
+inline void put_value(Bits& out, const kairn::Packed<T, K>& p) {
+    for (int i = 0; i < kairn::Packed<T, K>::lanes; ++i) put_value(out, p.lane(i));
+}
+template <class T>
+inline std::vector<kairn::Packed<T, 1>> pack(const std::vector<T>& values) {
+    constexpr int w = kairn::Packed<T, 1>::lanes;
+    std::vector<kairn::Packed<T, 1>> r;
+    for (std::size_t i = 0; i < values.size(); i += w) {
+        kairn::Packed<T, 1> p;
+        for (int l = 0; l < w; ++l)
+            p.set_lane(l, kairn::Expansion<T, 1>(i + std::size_t(l) < values.size() ? values[i + std::size_t(l)] : values[0]));
+        r.push_back(p);
+    }
+    return r;
+}
+template <class T>
+inline std::vector<kairn::Packed<T, 2>> pack(const std::vector<kairn::Expansion<T, 2>>& values) {
+    constexpr int w = kairn::Packed<T, 2>::lanes;
+    std::vector<kairn::Packed<T, 2>> r;
+    for (std::size_t i = 0; i < values.size(); i += w) {
+        kairn::Packed<T, 2> p;
+        for (int l = 0; l < w; ++l) p.set_lane(l, i + std::size_t(l) < values.size() ? values[i + std::size_t(l)] : values[0]);
+        r.push_back(p);
+    }
+    return r;
+}
+using P1 = kairn::Packed<double, 1>;
+using P2 = kairn::Packed<double, 2>;
+// The limbs of a two-limb number in every element of two arrays, for the loads and the views.
+struct Arrays {
+    double h[16], l[16];
+    explicit Arrays(const E2& x) {
+        for (int i = 0; i < 16; ++i) {
+            h[i] = x.limb[0];
+            l[i] = x.limb[1];
+        }
+    }
+};
+
 // The six comparisons of a pair of operands.
 template <class X, class Y>
 inline void compare(Bits& out, const X& x, const Y& y) {
@@ -420,6 +472,55 @@ inline const Operation operations[] = {
     {"ball2.lower_as", Kind::rounds, [](Bits& b) { put(b, o.bp.lower_as<double>()); }},
     {"ball2.upper_as", Kind::rounds, [](Bits& b) { put(b, o.bp.upper_as<double>()); }},
     {"ball2.narrow", Kind::rounds, [](Bits& b) { put(b, B1(unverified(o.bp))); }},
+
+    // Packed (kairn/packed.hpp) and the containers (kairn/soa.hpp): each operation checks the
+    // environment once, then every lane; the loads and the reads of an element are from_limbs.
+    {"packed2.add", Kind::rounds, [](Bits& b) { put(b, P2::broadcast(o.x) + P2::broadcast(o.y)); }},
+    {"packed2.add_limb", Kind::rounds, [](Bits& b) { put(b, P2::broadcast(o.x) + P1::broadcast(E1(v_c))); }},
+    {"packed2.limb_sub", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_c)) - P2::broadcast(o.x)); }},
+    {"packed2.mul", Kind::rounds, [](Bits& b) { put(b, P2::broadcast(o.x) * P2::broadcast(o.y)); }},
+    {"packed2.mul_limb", Kind::rounds, [](Bits& b) { put(b, P2::broadcast(o.x) * P1::broadcast(E1(v_c))); }},
+    {"packed2.mul_assign", Kind::rounds, [](Bits& b) {
+         P2 z = P2::broadcast(o.x);
+         z *= P2::broadcast(o.y);
+         put(b, z);
+     }},
+    {"packed2.add_fast", Kind::rounds, [](Bits& b) { put(b, kairn::add_fast(P2::broadcast(o.x), P2::broadcast(o.y))); }},
+    {"packed2.ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::ldexp(P2::broadcast(o.x), -2000)); }},
+    {"packed2.half", Kind::rounds, [](Bits& b) { put(b, kairn::half(P2::broadcast(o.x))); }},
+    {"packed2.finite_add", Kind::rounds, [](Bits& b) { put(b, kairn::finite::add(P2::broadcast(o.x), P2::broadcast(o.y))); }},
+    {"packed2.finite_ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::finite::ldexp(P2::broadcast(o.x), 9)); }},
+    {"packed1.add", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_a)) + P1::broadcast(E1(v_c))); }},
+    {"packed1.mul", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_a)) * P1::broadcast(E1(v_c))); }},
+    {"packed1.ldexp", Kind::rounds, [](Bits& b) { put(b, kairn::ldexp(P1::broadcast(E1(v_a)), 3)); }},
+    {"packedf.add", Kind::rounds, [](Bits& b) {
+         using F = kairn::Packed<float, 2>;
+         put(b, F::broadcast(o.fx) + F::broadcast(o.fx));
+     }},
+    {"packed2.load", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.y);
+         put(b, P2::load(a.h, a.l));
+     }},
+    {"packed2.load_partial", Kind::rounds, [](Bits& b) {
+         const Arrays a(o.x);
+         put(b, P2::load_partial(a.h, a.l, P2::lanes - 1, o.y));
+     }},
+    {"packed2.from_limbs", Kind::rounds, [](Bits& b) {
+         const P2 x = P2::broadcast(o.x);
+         put(b, P2::from_limbs(x.limb[0], x.limb[1]));
+     }},
+    {"soa.get", Kind::rounds, [](Bits& b) {
+         Arrays a(o.x);
+         put(b, kairn::SoAView<const double, 2>(a.h, a.l, 16).get(3));
+     }},
+    {"soa.element", Kind::rounds, [](Bits& b) {
+         Arrays a(o.y);
+         put(b, E2(kairn::SoAView<double, 2>(a.h, a.l, 16)[5]));
+     }},
+    {"soa.load", Kind::rounds, [](Bits& b) {
+         Arrays a(o.x);
+         put(b, kairn::SoAView<const double, 2>(a.h, a.l, 16).load(1));
+     }},
 
     // The functions that do not round, each on its whole corpus, for double and float.
     {"e1.neg", Kind::exact, [](Bits& b) {
@@ -648,7 +749,105 @@ inline const Operation operations[] = {
              for (const auto& r : c.sums) put_value(out, kairn::Expansion<T, 2>(r));
          });
      }},
+    // Packed: the functions that do not round, on the corpus W values at a time.
+    {"packed1.neg_abs", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : pack(c.one)) {
+                 put(out, -x);
+                 put(out, kairn::abs(x));
+             }
+         });
+     }},
+    {"packed1.compare", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             const auto ps = pack(c.one);
+             for (const auto& x : ps)
+                 for (const auto& y : ps) compare(out, x, y);
+         });
+     }},
+    {"packed1.conversions", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : pack(c.one)) {
+                 put(out, kairn::to_nearest(x));
+                 put(out, kairn::to_down(x));
+                 put(out, kairn::to_up(x));
+                 put(out, kairn::abs_upper(x));
+             }
+         });
+     }},
+    {"packed2.neg_abs", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : pack(c.two)) {
+                 put(out, -x);
+                 put(out, kairn::abs(x));
+             }
+         });
+     }},
+    {"packed2.compare", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             const auto ps = pack(c.two);
+             for (const auto& x : ps)
+                 for (const auto& y : ps) compare(out, x, y);
+         });
+     }},
+    {"packed2.compare_limb", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             const auto ps = pack(c.two);
+             const auto qs = pack(c.one);
+             for (const auto& x : ps)
+                 for (const auto& a : qs) {
+                     compare(out, x, a);
+                     compare(out, a, x);
+                 }
+         });
+     }},
+    {"packed2.conversions", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : pack(c.two)) {
+                 put(out, kairn::to_nearest(x));
+                 put(out, kairn::to_down(x));
+                 put(out, kairn::to_up(x));
+                 put(out, kairn::abs_upper(x));
+                 put(out, kairn::Packed<typename std::decay_t<decltype(x)>::limb_type, 1>(x));
+             }
+         });
+     }},
     // The functions that do not round and have no check at all.
+    // Packed and the views: the constructor from one limb (its guards, as Expansion<T, 2>(a)), the
+    // loads without the check, and the moves (broadcast, lane, set_lane, select, store), and the
+    // writes of a view, which copy limbs.
+    {"packed.moves", Kind::unchecked, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             using Q1 = kairn::Packed<T, 1>;
+             using Q2 = kairn::Packed<T, 2>;
+             const auto ps = pack(c.two);
+             for (const auto& a : pack(c.one)) {
+                 put_value(out, Q2(a));
+                 T h[16];
+                 a.store(h);
+                 put(out, Q1::load(h));
+                 put(out, Q1::load_unchecked(h));
+             }
+             for (const auto& x : ps) {
+                 T h[16], l[16];
+                 x.store(h, l);
+                 put_value(out, Q2::load_unchecked(h, l));
+                 put_value(out, Q2::from_limbs_unchecked(x.limb[0], x.limb[1]));
+                 put(out, Q2::broadcast(x.lane(0)));
+                 Q2 y = x;
+                 y.set_lane(Q2::lanes - 1, x.lane(0));
+                 put(out, y);
+                 put(out, kairn::select(x < ps[0], x, ps[0]));
+                 kairn::SoAView<T, 2> v(h, l, std::size_t(Q2::lanes));
+                 v.set(0, x.lane(Q2::lanes - 1));
+                 v[Q2::lanes - 1] = x.lane(0);
+                 v.store_partial(0, y, 1);
+                 put(out, h[0]);
+                 put(out, l[0]);
+             }
+         });
+     }},
     {"e2.make", Kind::unchecked, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = std::decay_t<decltype(c.one[0])>;
