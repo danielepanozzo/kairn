@@ -47,9 +47,12 @@ lists:
   function of Flocq's binary floating-point numbers, where operations overflow and operands may
   be infinite or NaN, and its statements there;
 - `proofs/gen/IeeeWith.v`, generated too: each kernel that is `constexpr` by the rule of the
-  product, in the same model with the product as an argument, so that the same listing stands
-  for its execution at run time (the fused product) and in constant evaluation (the plain
-  product);
+  product, in the same model with the operations that constant evaluation computes otherwise as
+  arguments (the product, and the guard and the multiplication by infinity of a fix-up where the
+  kernel has them), so that the same listing stands for its execution at run time (the fused
+  product, the guard that adds $+0$, the multiplication) and in constant evaluation (the plain
+  product, the guard that returns its operand, the comparisons of `times_inf_ce`, defined there
+  from the C++);
 - `proofs/gen/FoldModel.v` and `proofs/gen/FoldStatements.v`, generated too: each fold (a loop
   of kernels along arrays: the sums, the dot products and the largest magnitude) as a function
   on lists, in the two orders in which the library runs it, and its statement in each order;

@@ -1778,14 +1778,29 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   when one of them is about a fold. Without any of these fields every generated file is what it
   was before they existed.
 - `IeeeWith.v`: the kernels that `build` lists as `constexpr` by the rule of the product, in the
-  IEEE model with the product as an argument. `K_with p_` is the definition of `IeeeModel.K` with
-  every `prod a b` written `p_ a b` and every call of another such kernel written as its
-  `K_with p_`; any other call stays a call of `IeeeModel`. With `p_` the fused product it is
-  `IeeeModel.K` by conversion; with the plain product of constant evaluation it is the listing
-  that constant evaluation runs, which the theorems `K_two_executions`
-  (`proofs/theories/IeeeTwoExecutions.v`) compare with the run-time one. The definitions of
-  `IeeeModel.v` are not changed by it, and the argument's name has an underscore, which no value
-  of a listing has.
+  IEEE model with the operations that constant evaluation runs differently as arguments. These
+  are the operations whose C++ in a kernel `constexpr` without a variant dispatches on
+  `__builtin_is_constant_evaluated()` (`cpp.SPELL_PLAIN`): `prod`, `guard` and `times_inf`
+  (`ieee.CE_OPERATIONS`; the printer refuses to print the file if the C++ printer dispatches on
+  any other). `K_with` is the definition of `IeeeModel.K` with every `prod a b` written `p_ a b`,
+  every `guard a` written `g_ a` and every `times_inf t` written `t_ t`, for those of the three
+  that the kernel computes, in its listing or a callee's (`K_with p_` for most, `K_with p_ g_`
+  for `axpy_entry_step_1`, `ball_from_interval_1` and `ball_from_interval_2`, `K_with p_ t_` for
+  `mul_pow2_2_full`), and every call of another such kernel written as its `K_with` on the
+  arguments it takes; any other call stays a call of `IeeeModel`, and the printer refuses one
+  whose callee computes `guard` or `times_inf` (its listing would keep the form of run time
+  there). The section defines the three operations as constant evaluation computes them:
+  `prod_ce`, the plain product `a * b` (Flocq's `Bmult`, rounded to nearest); `guard_ce`, the
+  identity (the C++ is `h` where run time computes `h + 0.0`); and `times_inf_ce`, the function
+  of the same name of `prelude.hpp`, comparison by comparison:
+  `t > 0 ? +inf : 0 > t ? -inf : quiet_NaN()` is
+  `if lt pzero t then pinf else if lt t pzero then B754_infinity prec emax true else cnan`, the
+  NaN being that of `const nan`, which the C++ writes the same way. With the operations of run
+  time (`IeeeOperations.prod`, `guard`, `times_inf`) `K_with` is `IeeeModel.K` by conversion (the
+  lemmas `K_with_prod` of `proofs/theories/IeeeTwoExecutions.v`); with `prod_ce`, `guard_ce` and
+  `times_inf_ce` it is the listing that constant evaluation runs, which the theorems
+  `K_two_executions` compare with the run-time one. The definitions of `IeeeModel.v` are not
+  changed by it, and the arguments' names have an underscore, which no value of a listing has.
 - `Audit.v`: for every kernel not marked `unverified`, a silent definition
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The
