@@ -7669,9 +7669,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCompare2.v",
+        "name": "ball_contains_ball_2_correct"
+      },
       "source": {
         "cite": "an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7913,9 +7917,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCompare2.v",
+        "name": "ball_equal_2_correct"
+      },
       "source": {
         "cite": "the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -8543,9 +8551,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCompare2.v",
+        "name": "ball_less_2_correct"
+      },
       "source": {
         "cite": "a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -8617,9 +8629,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCompare2.v",
+        "name": "ball_less_equal_2_correct"
+      },
       "source": {
         "cite": "a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

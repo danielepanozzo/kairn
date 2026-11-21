@@ -6766,7 +6766,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float cx0, float cx1, float rx, float
 }
 
 // ball_contains_ball_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask m
-// an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_contains_ball_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, bool& m_out) noexcept {
     const double ncx0 = -cx0;
     const double ncx1 = -cx1;
@@ -7082,7 +7082,7 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(float x0, float x1, float y0, float 
 }
 
 // ball_equal_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask yes, mask no
-// the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_equal_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, bool& yes_out, bool& no_out) noexcept {
     const bool ea = rx == 0.0;
     const bool eb = ry == 0.0;
@@ -10475,7 +10475,7 @@ KAIRN_GEN_FORCEINLINE void ball_intersection_2(float cx0, float cx1, float rx, f
 }
 
 // ball_less_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask yes, mask no
-// a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_less_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, bool& yes_out, bool& no_out) noexcept {
     const double ncx0 = -cx0;
     const double ncx1 = -cx1;
@@ -10654,7 +10654,7 @@ KAIRN_GEN_FORCEINLINE void ball_less_2(float cx0, float cx1, float rx, float cy0
 }
 
 // ball_less_equal_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask yes, mask no
-// a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_less_equal_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, bool& yes_out, bool& no_out) noexcept {
     const double ncx0 = -cx0;
     const double ncx1 = -cx1;

@@ -5,6 +5,7 @@
    for the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import IeeeStatements.
 From Kairn.Gen Require Import IeeeFoldStatements.
+From Kairn Require Import IeeeBallCompare2.
 From Kairn Require Import IeeeBallConvert.
 From Kairn Require Import IeeeBallConvert2.
 From Kairn Require Import IeeeBallCores.
@@ -253,11 +254,17 @@ Print Assumptions add_fast_2_2_full_correct.
 Definition ball_add_2_full_audit : ball_add_2_full_spec := ball_add_2_full_correct.
 Print Assumptions ball_add_2_full_correct.
 
+Definition ball_contains_ball_2_audit : ball_contains_ball_2_spec := ball_contains_ball_2_correct.
+Print Assumptions ball_contains_ball_2_correct.
+
 Definition to_down_2_ieee_audit : to_down_2_ieee_spec := to_down_2_ieee_correct.
 Print Assumptions to_down_2_ieee_correct.
 
 Definition eq_2_2_ieee_audit : eq_2_2_ieee_spec := eq_2_2_ieee_correct.
 Print Assumptions eq_2_2_ieee_correct.
+
+Definition ball_equal_2_audit : ball_equal_2_spec := ball_equal_2_correct.
+Print Assumptions ball_equal_2_correct.
 
 Definition ball_to_interval_2_audit : ball_to_interval_2_spec := ball_to_interval_2_correct.
 Print Assumptions ball_to_interval_2_correct.
@@ -267,6 +274,12 @@ Print Assumptions interval_hull_2_correct.
 
 Definition interval_intersection_2_audit : interval_intersection_2_spec := interval_intersection_2_correct.
 Print Assumptions interval_intersection_2_correct.
+
+Definition ball_less_2_audit : ball_less_2_spec := ball_less_2_correct.
+Print Assumptions ball_less_2_correct.
+
+Definition ball_less_equal_2_audit : ball_less_equal_2_spec := ball_less_equal_2_correct.
+Print Assumptions ball_less_equal_2_correct.
 
 Definition ball_lower_as_2_audit : ball_lower_as_2_spec := ball_lower_as_2_correct.
 Print Assumptions ball_lower_as_2_correct.

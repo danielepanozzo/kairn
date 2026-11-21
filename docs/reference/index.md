@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 200 kernels, 188 are proved and 12 are **UNVERIFIED**: [`ball_contains_ball_2`](ball_contains_ball_2.md), [`ball_contains_point_2`](ball_contains_point_2.md), [`ball_equal_2`](ball_equal_2.md), [`ball_hull_1`](ball_hull_1.md), [`ball_hull_2`](ball_hull_2.md), [`ball_intersection_1`](ball_intersection_1.md), [`ball_intersection_2`](ball_intersection_2.md), [`ball_less_2`](ball_less_2.md), [`ball_less_equal_2`](ball_less_equal_2.md), [`interval_mid_rad_2`](interval_mid_rad_2.md), [`interval_split_2`](interval_split_2.md), [`interval_to_ball_2`](interval_to_ball_2.md).
+Of the 200 kernels, 192 are proved and 8 are **UNVERIFIED**: [`ball_contains_point_2`](ball_contains_point_2.md), [`ball_hull_1`](ball_hull_1.md), [`ball_hull_2`](ball_hull_2.md), [`ball_intersection_1`](ball_intersection_1.md), [`ball_intersection_2`](ball_intersection_2.md), [`interval_mid_rad_2`](interval_mid_rad_2.md), [`interval_split_2`](interval_split_2.md), [`interval_to_ball_2`](interval_to_ball_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -175,13 +175,13 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_equal_1`](ball_less_equal_1.md) |
 | not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_equal_1`](ball_equal_1.md) |
 | not yet called by the public headers | - | yes, no or unknown: whether $t = t_0 + t_1 \in X$; never wrong | [`ball_contains_point_2`](ball_contains_point_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $Y \subseteq X$; true only if it holds | [`ball_contains_ball_2`](ball_contains_ball_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $Y \subseteq X$; true only if it holds | [`ball_contains_ball_2`](ball_contains_ball_2.md) |
 | not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`ball_positive_2`](ball_positive_2.md) |
 | not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`ball_negative_2`](ball_negative_2.md) |
 | not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`ball_zero_2`](ball_zero_2.md) |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_2`](ball_less_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_equal_2`](ball_less_equal_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_equal_2`](ball_equal_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_2`](ball_less_2.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_less_equal_2`](ball_less_equal_2.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; never wrong | [`ball_equal_2`](ball_equal_2.md) |
 | `X.certainly_positive()` | `Ball<T, 1>` | whether every member is positive: $r < c$, the comparison of `T`; false for the empty set and the whole line | none |
 | `X.certainly_negative()` | `Ball<T, 1>` | whether every member is negative: $c < -r$, the comparison of `T`; false for the empty set and the whole line | none |
 | `X.certainly_zero()` | `Ball<T, 1>` | whether the ball is the point 0: $c = 0$ and $r = 0$; false for the empty set and the whole line | none |

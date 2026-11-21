@@ -61,7 +61,9 @@
      two_sum_ord and their comparisons, and each kernel as a boolean of the bounds; for the
      ball of one limb from an interval and the split of a ball, the rest of a halving and a
      point plus a ball; for the signs and the split of a ball of two limbs and its interval,
-     the ball as an interval of extended real numbers and the interval as a sum;
+     the ball as an interval of extended real numbers and the interval as a sum; for the
+     comparisons of balls of two limbs, the distance of the centers by add_ball_2_2 and the
+     directed bounds the kernels compute from it;
    - the theorems about the folds that have no generated statement: that a fold of the
      model with overflow is the fold of the real model whenever its result is finite
      (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
@@ -852,6 +854,34 @@ Print Assumptions ball_zero_2_bool.
 Print Assumptions point_plus_2.
 Print Assumptions ball_split_2_all.
 Print Assumptions ball_to_interval_2_as_add.
+
+(* The comparisons of balls of two limbs, in the IEEE model (theories/IeeeBallCompare2.v): the
+   theorems of their generated statements are listed by proofs/gen/IeeeAudit.v. Here, the
+   lemmas they rest on: the distance of two centers by add_ball_2_2 and its bound; the directed
+   operations on finite values; the bounds of the distance that the comparisons compute; the
+   sum of the radii; each kernel's answers as facts about the real values; and the relations on
+   the bounds of balls that are not finite. *)
+From Kairn Require Import IeeeBallCompare2.
+Print Assumptions dist_2.
+Print Assumptions add_up_1_ge.
+Print Assumptions to_down_2_below.
+Print Assumptions to_up_2_above.
+Print Assumptions nonneg_lt_fin.
+Print Assumptions nonneg_le_fin.
+Print Assumptions radius_2_nonneg.
+Print Assumptions ball_2_fin_r.
+Print Assumptions bounds_dl_ml.
+Print Assumptions radii_sum_2.
+Print Assumptions ball_less_2_facts.
+Print Assumptions ball_less_equal_2_facts.
+Print Assumptions xlohi_2_cases.
+Print Assumptions special_rels_2.
+Print Assumptions special_nonfin_2.
+Print Assumptions abs_upper_2_any.
+Print Assumptions abs_upper_2_ge.
+Print Assumptions ball_contains_ball_2_facts.
+Print Assumptions ball_equal_2_facts.
+Print Assumptions trit_certain.
 
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
 Print Assumptions fold_seq_transfer.

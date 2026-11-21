@@ -17,9 +17,10 @@ ensures:       certain m subset y x x=cx,rx y=cy,ry
 min_precision: 3
 source:        an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallCompare2.v ball_contains_ball_2_correct
 entry:         yes
 cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
 

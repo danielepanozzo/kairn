@@ -1619,7 +1619,7 @@ Definition ball_add_2_full_spec : Prop :=
    ball_finite_2 cw0 cw1 rw) /\
   (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x + y)).
 
-(* ball_contains_ball_2: an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_contains_ball_2: an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_contains_ball_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1677,7 +1677,7 @@ Definition eq_2_2_ieee_spec : Prop :=
   let m := IeeeModel.eq_2_2 prec emax x0 x1 y0 y1 in
   m = xeq (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* ball_equal_2: the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_equal_2: the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_equal_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1890,7 +1890,7 @@ Definition ball_intersection_2_spec : Prop :=
   (ball_whole_2 cy0 cy1 ry -> cz0 = cx0 /\ cz1 = cx1 /\ rz = rx) /\
   (forall z : R, in_ball_2 cx0 cx1 rx z /\ in_ball_2 cy0 cy1 ry z -> in_ball_2 cz0 cz1 rz z).
 
-(* ball_less_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_less_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_less_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1915,7 +1915,7 @@ Definition ball_less_2_spec : Prop :=
     ~ ball_empty_2 cx0 cx1 rx /\ ~ ball_empty_2 cy0 cy1 ry /\
     (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> ~ (x < y)))).
 
-(* ball_less_equal_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_less_equal_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_less_equal_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

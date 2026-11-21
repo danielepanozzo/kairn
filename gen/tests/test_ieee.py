@@ -438,8 +438,8 @@ class Statements(unittest.TestCase):
         # predicates, comparisons and relations of an interval of stage B2 (146), and the eight
         # predicates and comparisons of a ball of one limb (154), and ball_from_interval_1 and
         # ball_split_1 (156), and the signs and the split of a ball of two limbs and
-        # ball_to_interval_2 (161).
-        self.assertEqual(text.count('Print Assumptions'), 161)
+        # ball_to_interval_2 (161), and four comparisons of balls of two limbs (165).
+        self.assertEqual(text.count('Print Assumptions'), 165)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -512,9 +512,10 @@ class CheckedFiles(unittest.TestCase):
     # predicates and comparisons of a ball of one limb (IeeeBallPredicates.v): eight words more.
     # Then for ball_from_interval_1 and ball_split_1 (IeeeBallSets.v): two words more. Then for
     # the signs and the split of a ball of two limbs (IeeeBallPredicates2.v) and
-    # ball_to_interval_2 (IeeeBallConvert2.v): five words more.
+    # ball_to_interval_2 (IeeeBallConvert2.v): five words more. Then for four comparisons of
+    # balls of two limbs (IeeeBallCompare2.v): four words more.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'df13c0d5952de12186558d54ea83fa18307794c804c3fdd8cedcfeab42cad214',
-               'proofs/gen/IeeeStatements.v': '161177ac3225999eee00ae8fe344b291f0493d0c86425522e8bc9f096528e875'}
+               'proofs/gen/IeeeStatements.v': 'ee0276ae034ba97c8c219c035d5adde07873d774497c8b673a995bcffb1006de'}
 
 
     def test_the_checked_files(self):

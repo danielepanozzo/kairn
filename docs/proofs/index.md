@@ -90,7 +90,9 @@ lists:
   the ball of one limb made from an interval of two numbers and the split of a ball of one
   limb (`IeeeBallSets.v`), the signs and the split of a ball with a center of two limbs
   (`IeeeBallPredicates2.v`), and the interval of a ball of two limbs, the sum of [c, c] and
-  [-r, r] (`IeeeBallConvert2.v`); and the theorems of the
+  [-r, r] (`IeeeBallConvert2.v`), and the comparisons of balls of two limbs, certain, by the
+  distance of the centers that add_ball_2_2 bounds (`IeeeBallCompare2.v`); and the theorems of
+  the
   folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
   finishes and bound kernels
   (`StepKernels.v`, `IeeeFoldFinish.v`, `BoundKernels.v`), of the two together
@@ -152,7 +154,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  92 files: no Admitted, admit, Axiom or Parameter
+  93 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
