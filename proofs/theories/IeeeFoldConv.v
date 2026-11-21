@@ -73,7 +73,7 @@ match goal with |- context [forallb ?t (map ?f ?l)] => destruct (forallb t (map 
     * intros N. contradiction.
   + intros j w _ _ Nw. cbv beta iota zeta. split.
     * intros Fw. exfalso. exact (nan_1_not_finite _ _ w Nw Fw).
-    * intros _. exact Nw.
+    * intros _. split; [exact Nw | reflexivity].
 Qed.
 
 Theorem conv_2_ieee_correct : conv_2_ieee_spec.
@@ -125,5 +125,5 @@ match goal with |- context [forallb ?t (map ?f ?l)] => destruct (forallb t (map 
     * intros N. contradiction.
   + intros j [w0 w1] _ _ [N0 N1]. cbv beta iota zeta. cbn [fst snd] in *. split.
     * intros Fw. exfalso. exact (nan_1_not_finite _ _ w0 N0 Fw).
-    * intros _. split; assumption.
+    * intros _. split; [assumption | split; [assumption | reflexivity]].
 Qed.
