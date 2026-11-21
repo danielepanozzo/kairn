@@ -1113,9 +1113,7 @@ KAIRN_GEN_FORCEINLINE void ball_from_interval_1(float64x2_t lo, float64x2_t hi, 
     const uint64x2_t nu = vcltq_f64(mi, gu);
     const uint64x2_t va = vandq_u64(ok, nl);
     const uint64x2_t v = vandq_u64(va, nu);
-    const uint64x2_t ql = vceqq_f64(gl, gl);
-    const uint64x2_t qu = vceqq_f64(gu, gu);
-    const uint64x2_t nn = vandq_u64(ql, qu);
+    const uint64x2_t rv = vcltq_f64(gu, gl);
     const float64x2_t tl = vbslq_f64(v, gl, vdupq_n_f64(0.0));
     const float64x2_t tu = vbslq_f64(v, gu, vdupq_n_f64(0.0));
     // (c, r) = interval_to_ball_1(tl, tu)
@@ -1178,8 +1176,8 @@ KAIRN_GEN_FORCEINLINE void ball_from_interval_1(float64x2_t lo, float64x2_t hi, 
     const float64x2_t r = vbslq_f64(c_m_ne, c_m_rd, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
     const uint64x2_t c_un = vceqq_f64(r, vdupq_n_f64(std::numeric_limits<double>::infinity()));
     const float64x2_t c = vbslq_f64(c_un, vdupq_n_f64(0.0), c_m);
-    const float64x2_t ec = vbslq_f64(nn, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()), vdupq_n_f64(0.0));
-    const float64x2_t er = vbslq_f64(nn, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()), vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t ec = vbslq_f64(rv, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()), vdupq_n_f64(0.0));
+    const float64x2_t er = vbslq_f64(rv, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()), vdupq_n_f64(std::numeric_limits<double>::infinity()));
     const float64x2_t cw = vbslq_f64(v, c, ec);
     const float64x2_t rw = vbslq_f64(v, r, er);
     cw_out = cw;
@@ -1194,9 +1192,7 @@ KAIRN_GEN_FORCEINLINE void ball_from_interval_1(float32x4_t lo, float32x4_t hi, 
     const uint32x4_t nu = vcltq_f32(mi, gu);
     const uint32x4_t va = vandq_u32(ok, nl);
     const uint32x4_t v = vandq_u32(va, nu);
-    const uint32x4_t ql = vceqq_f32(gl, gl);
-    const uint32x4_t qu = vceqq_f32(gu, gu);
-    const uint32x4_t nn = vandq_u32(ql, qu);
+    const uint32x4_t rv = vcltq_f32(gu, gl);
     const float32x4_t tl = vbslq_f32(v, gl, vdupq_n_f32(0.0f));
     const float32x4_t tu = vbslq_f32(v, gu, vdupq_n_f32(0.0f));
     // (c, r) = interval_to_ball_1(tl, tu)
@@ -1259,8 +1255,8 @@ KAIRN_GEN_FORCEINLINE void ball_from_interval_1(float32x4_t lo, float32x4_t hi, 
     const float32x4_t r = vbslq_f32(c_m_ne, c_m_rd, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
     const uint32x4_t c_un = vceqq_f32(r, vdupq_n_f32(std::numeric_limits<float>::infinity()));
     const float32x4_t c = vbslq_f32(c_un, vdupq_n_f32(0.0f), c_m);
-    const float32x4_t ec = vbslq_f32(nn, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()), vdupq_n_f32(0.0f));
-    const float32x4_t er = vbslq_f32(nn, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()), vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t ec = vbslq_f32(rv, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()), vdupq_n_f32(0.0f));
+    const float32x4_t er = vbslq_f32(rv, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()), vdupq_n_f32(std::numeric_limits<float>::infinity()));
     const float32x4_t cw = vbslq_f32(v, c, ec);
     const float32x4_t rw = vbslq_f32(v, r, er);
     cw_out = cw;

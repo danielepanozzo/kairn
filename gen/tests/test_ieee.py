@@ -609,8 +609,11 @@ class CheckedFiles(unittest.TestCase):
     # Merged here: the regeneration of the merged descriptions. ball_from_interval_1 is printed
     # unverified: the theorem of that line is of its statement before the rule of the same
     # infinity twice, which its listing does not follow yet.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '4314901cbfe423a65e1ed75713ce60d0be72c7f7d5b6e683fc405d3837882658',
-               'proofs/gen/IeeeStatements.v': 'f674ad8d548a59c2423db6cb02a699c520f7d12735f3e6a6d28b050d0596c74f'}
+    # Then the listing of ball_from_interval_1 was corrected for that rule (the owner's ruling of
+    # 2026-11-21: rv = lt(gu, gl) selects the empty ball where it tested for a NaN): its
+    # definition and the source line of its comments changed, and nothing else.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'c1dafcb503776af9a0ccc273cbb68029dad60d53ea214bf104cd6b2e826968aa',
+               'proofs/gen/IeeeStatements.v': '528f8f96edd7b687680321259ff372072983b7c9a8a2a216320987baa695f80a'}
 
 
     def test_the_checked_files(self):

@@ -1158,25 +1158,21 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_to_ball_1(float xl, float xu, floa
 }
 
 // ball_from_interval_1(lo, hi) -> cw, rw
-// interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_from_interval_1(double gl, double gu, bool v, double r, double c) noexcept {
-    const bool ql = gl == gl;
-    const bool qu = gu == gu;
-    const bool nn = ql & qu;
-    const double ec = nn ? std::numeric_limits<double>::quiet_NaN() : 0.0;
-    const double er = nn ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
+    const bool rv = gl > gu;
+    const double ec = rv ? std::numeric_limits<double>::quiet_NaN() : 0.0;
+    const double er = rv ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
     const double cw = v ? c : ec;
     const double rw = v ? r : er;
     return {{cw, rw}};
 }
 KAIRN_GEN_COLD constexpr result<float, 2> ball_from_interval_1(float gl, float gu, bool v, float r, float c) noexcept {
-    const bool ql = gl == gl;
-    const bool qu = gu == gu;
-    const bool nn = ql & qu;
-    const float ec = nn ? std::numeric_limits<float>::quiet_NaN() : 0.0f;
-    const float er = nn ? std::numeric_limits<float>::quiet_NaN() : std::numeric_limits<float>::infinity();
+    const bool rv = gl > gu;
+    const float ec = rv ? std::numeric_limits<float>::quiet_NaN() : 0.0f;
+    const float er = rv ? std::numeric_limits<float>::quiet_NaN() : std::numeric_limits<float>::infinity();
     const float cw = v ? c : ec;
     const float rw = v ? r : er;
     return {{cw, rw}};
@@ -1263,11 +1259,9 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_from_interval_1(double lo, double hi, 
         cw_out = fixed_.limb[0];
         rw_out = fixed_.limb[1];
 #else
-        const bool ql = gl == gl;
-        const bool qu = gu == gu;
-        const bool nn = ql & qu;
-        const double ec = nn ? std::numeric_limits<double>::quiet_NaN() : 0.0;
-        const double er = nn ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
+        const bool rv = gl > gu;
+        const double ec = rv ? std::numeric_limits<double>::quiet_NaN() : 0.0;
+        const double er = rv ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
         const double cw = v ? c : ec;
         const double rw = v ? r : er;
         cw_out = cw;
@@ -1355,11 +1349,9 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_from_interval_1(float lo, float hi, fl
         cw_out = fixed_.limb[0];
         rw_out = fixed_.limb[1];
 #else
-        const bool ql = gl == gl;
-        const bool qu = gu == gu;
-        const bool nn = ql & qu;
-        const float ec = nn ? std::numeric_limits<float>::quiet_NaN() : 0.0f;
-        const float er = nn ? std::numeric_limits<float>::quiet_NaN() : std::numeric_limits<float>::infinity();
+        const bool rv = gl > gu;
+        const float ec = rv ? std::numeric_limits<float>::quiet_NaN() : 0.0f;
+        const float er = rv ? std::numeric_limits<float>::quiet_NaN() : std::numeric_limits<float>::infinity();
         const float cw = v ? c : ec;
         const float rw = v ? r : er;
         cw_out = cw;

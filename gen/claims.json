@@ -1822,7 +1822,7 @@
       "ieee_status": "unverified",
       "theorem": null,
       "source": {
-        "cite": "interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing)",
+        "cite": "interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 11,

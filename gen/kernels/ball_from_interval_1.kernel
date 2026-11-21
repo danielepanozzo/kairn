@@ -1,14 +1,17 @@
 # A ball with a one-limb center from an interval [lo, hi] of two values of T supplied by the program
 # (milestone2.md, "One enclosure interface", "A ball from an interval of two T"): the values of
 # interval_make_1, which guards the bounds (rule R3), followed by interval_to_ball_1, as the page says
-# of Ball<T, 1> from two T. So it has the three cases of ball_from_interval_2: a NaN bound gives the
-# whole line through the whole-line interval, lo > hi, [+inf, +inf] and [-inf, -inf] the empty ball
-# through the empty interval, and an interval with an infinite bound the whole line; finite bounds
+# of Ball<T, 1> from two T. So it has the three cases of ball_from_interval_2: a NaN bound, and two
+# bounds that are the same infinity, [+inf, +inf] or [-inf, -inf], give the whole line through the
+# whole-line interval (decided on 2026-11-20, as for interval_make_1: a value from the program that is
+# not finite never makes the empty set); lo > hi (rv, false with a NaN) gives the empty ball through
+# the empty interval, and only it; and an interval with an infinite bound the whole line; finite bounds
 # lo <= hi give the ball of interval_to_ball_1: its center within u |m| + eta of the midpoint m and in
 # [lo, hi], and the smallest radius of T for that center. The listing computes those values in
 # another order: interval_to_ball_1 of the guarded bounds where interval_make_1 returns them (v), of
-# [0, 0] otherwise, then, where v is false, the ball that interval_to_ball_1 makes of the whole line
-# (center 0, radius +inf) or of the empty interval (a NaN center and radius). Where interval_make_1
+# [0, 0] otherwise, then, where v is false, the ball that interval_to_ball_1 makes of the empty
+# interval (a NaN center and radius) where the bounds are reversed (rv), and of the whole line
+# (center 0, radius +inf) otherwise. Where interval_make_1
 # selects those intervals before the halving of interval_mid_rad_1, GCC 13 on x86-64 duplicates the
 # halving on the path of a constant bound (3 fused multiply-adds for 2, which the object-code check
 # refuses); selected after it, the products are computed once. [0, 0] rather than the bounds as they
@@ -22,7 +25,7 @@ output:        cw
 output:        rw
 ensures:       makes_ball cw rw from_interval=lo,hi rel=u abs=eta smallest_radius
 min_precision: 2
-source:        interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing)
+source:        interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20)
 license:       algorithm and proof: MIT
 status:        unverified
 domain:        extended
@@ -38,13 +41,11 @@ mi     = neg(const inf)
 nu     = lt(mi, gu)
 va     = and(ok, nl)
 v      = and(va, nu)
-ql     = eq(gl, gl)
-qu     = eq(gu, gu)
-nn     = and(ql, qu)
+rv     = lt(gu, gl)
 tl     = select(v, gl, 0)
 tu     = select(v, gu, 0)
 (c, r) = interval_to_ball_1(tl, tu)
-ec     = select(nn, const nan, 0)
-er     = select(nn, const nan, const inf)
+ec     = select(rv, const nan, 0)
+er     = select(rv, const nan, const inf)
 cw     = select(v, c, ec)
 rw     = select(v, r, er)

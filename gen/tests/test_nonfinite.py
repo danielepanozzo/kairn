@@ -1273,13 +1273,7 @@ def run_all(names, seed):
 # The (kernel, statement) pairs that fail somewhere in the enumeration, as findings to report: the
 # statements of milestone1.md are targets, and a failing one is a question for the design, not
 # something to fix here. Empty when every target holds on every case tried.
-# Since the owner's decision of 2026-11-20 that the same infinity twice is the whole line, met in
-# the join of stage B2: ball_from_interval_1 (unverified), whose listing has the tests of
-# interval_make_1 as they were before that decision (nn = and(eq(gl, gl), eq(gu, gu))), returns
-# the empty ball for [+inf, +inf] and [-inf, -inf] (fp:2:-2:1 inf inf -> nan nan, and the same in
-# every format tried), where its claim, makes_ball from an interval, now says the whole line. The
-# listing is left as it is for a change of its own, which removes this entry.
-KNOWN = {('ball_from_interval_1', 'makes_ball (line expected)')}
+KNOWN = set()
 
 
 class NonFinite(unittest.TestCase):

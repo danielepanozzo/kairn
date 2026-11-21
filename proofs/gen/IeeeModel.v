@@ -420,7 +420,7 @@ Definition interval_to_ball_1 (xl xu : float) : float * float :=
   let c := if un then pzero else m in
   (c, r).
 
-(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing). *)
+(* ball_from_interval_1: interval_make_1, then interval_to_ball_1, the special balls selected last (Milestone 2 listing; equal infinities the whole line, 2026-11-20). *)
 Definition ball_from_interval_1 (lo hi : float) : float * float :=
   let gl := guard lo in
   let gu := guard hi in
@@ -430,14 +430,12 @@ Definition ball_from_interval_1 (lo hi : float) : float * float :=
   let nu := lt mi gu in
   let va := andb ok nl in
   let v := andb va nu in
-  let ql := eq gl gl in
-  let qu := eq gu gu in
-  let nn := andb ql qu in
+  let rv := lt gu gl in
   let tl := if v then gl else pzero in
   let tu := if v then gu else pzero in
   let '(c, r) := interval_to_ball_1 tl tu in
-  let ec := if nn then cnan else pzero in
-  let er := if nn then cnan else pinf in
+  let ec := if rv then cnan else pzero in
+  let er := if rv then cnan else pinf in
   let cw := if v then c else ec in
   let rw := if v then r else er in
   (cw, rw).

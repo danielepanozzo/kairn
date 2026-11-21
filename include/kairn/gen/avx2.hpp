@@ -1125,9 +1125,7 @@ KAIRN_GEN_FORCEINLINE void ball_from_interval_1(__m256d lo, __m256d hi, __m256d&
     const __m256d nu = _mm256_cmp_pd(mi, gu, _CMP_LT_OQ);
     const __m256d va = _mm256_and_pd(ok, nl);
     const __m256d v = _mm256_and_pd(va, nu);
-    const __m256d ql = _mm256_cmp_pd(gl, gl, _CMP_EQ_OQ);
-    const __m256d qu = _mm256_cmp_pd(gu, gu, _CMP_EQ_OQ);
-    const __m256d nn = _mm256_and_pd(ql, qu);
+    const __m256d rv = _mm256_cmp_pd(gu, gl, _CMP_LT_OQ);
     const __m256d tl = _mm256_blendv_pd(_mm256_setzero_pd(), gl, v);
     const __m256d tu = _mm256_blendv_pd(_mm256_setzero_pd(), gu, v);
     // (c, r) = interval_to_ball_1(tl, tu)
@@ -1190,8 +1188,8 @@ KAIRN_GEN_FORCEINLINE void ball_from_interval_1(__m256d lo, __m256d hi, __m256d&
     const __m256d r = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), c_m_rd, c_m_ne);
     const __m256d c_un = _mm256_cmp_pd(r, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
     const __m256d c = _mm256_blendv_pd(c_m, _mm256_setzero_pd(), c_un);
-    const __m256d ec = _mm256_blendv_pd(_mm256_setzero_pd(), _mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), nn);
-    const __m256d er = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), nn);
+    const __m256d ec = _mm256_blendv_pd(_mm256_setzero_pd(), _mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), rv);
+    const __m256d er = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), rv);
     const __m256d cw = _mm256_blendv_pd(ec, c, v);
     const __m256d rw = _mm256_blendv_pd(er, r, v);
     cw_out = cw;
@@ -1206,9 +1204,7 @@ KAIRN_GEN_FORCEINLINE void ball_from_interval_1(__m256 lo, __m256 hi, __m256& cw
     const __m256 nu = _mm256_cmp_ps(mi, gu, _CMP_LT_OQ);
     const __m256 va = _mm256_and_ps(ok, nl);
     const __m256 v = _mm256_and_ps(va, nu);
-    const __m256 ql = _mm256_cmp_ps(gl, gl, _CMP_EQ_OQ);
-    const __m256 qu = _mm256_cmp_ps(gu, gu, _CMP_EQ_OQ);
-    const __m256 nn = _mm256_and_ps(ql, qu);
+    const __m256 rv = _mm256_cmp_ps(gu, gl, _CMP_LT_OQ);
     const __m256 tl = _mm256_blendv_ps(_mm256_setzero_ps(), gl, v);
     const __m256 tu = _mm256_blendv_ps(_mm256_setzero_ps(), gu, v);
     // (c, r) = interval_to_ball_1(tl, tu)
@@ -1271,8 +1267,8 @@ KAIRN_GEN_FORCEINLINE void ball_from_interval_1(__m256 lo, __m256 hi, __m256& cw
     const __m256 r = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), c_m_rd, c_m_ne);
     const __m256 c_un = _mm256_cmp_ps(r, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
     const __m256 c = _mm256_blendv_ps(c_m, _mm256_setzero_ps(), c_un);
-    const __m256 ec = _mm256_blendv_ps(_mm256_setzero_ps(), _mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), nn);
-    const __m256 er = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), nn);
+    const __m256 ec = _mm256_blendv_ps(_mm256_setzero_ps(), _mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), rv);
+    const __m256 er = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), rv);
     const __m256 cw = _mm256_blendv_ps(ec, c, v);
     const __m256 rw = _mm256_blendv_ps(er, r, v);
     cw_out = cw;
