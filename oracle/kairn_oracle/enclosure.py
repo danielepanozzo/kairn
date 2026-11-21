@@ -84,6 +84,8 @@ UNDECIDED_FAILS = "unknown although the relation fails for every choice (not cla
 FALSE_HOLDS = "mask false although the relation holds (not claimed)"
 BAND_RADIUS = "an answer not given: largest margin / largest radius"
 BAND_DISTANCE = "an answer not given: largest margin / (u^2 * distance)"
+BAND_UNITS = ("an answer not given: largest margin / (2e + G), e = 3 u^2 distance + 2 lambda, G the "
+              "gap at max(radius, distance), both below Omega/4")
 # The class of an operand, per name: "x: empty", ...
 CLASS = "%s: %s"
 IV_CLASSES = ("empty", "whole line", "half-line", "bounded", "a point")
@@ -492,6 +494,16 @@ def _band(es, fmt, rel, vals, holds, balls, point, line):
         if d:
             # u^2 = 2^(2 - 2p): margin / (u^2 d) = margin 2^(2p - 2) / d.
             es.track_max(BAND_DISTANCE, (m << (2 * fmt.p - 2), d), line)
+        # In the units of architecture.md's band, 2e + G, with its estimate of e (3 u^2 d plus
+        # twice the smallest normal number) and G the gap of T at the larger of the radius and the
+        # distance: m / (6 u^2 d + 4 lambda + G), times 2^(2p - 2) above and below. Near the top
+        # of the range the radius e of add_ball_2_2 (or the difference itself) overflows and the
+        # band is the whole line: measured where the distance and the radius are below Omega/4,
+        # the bound of the suspicious cases.
+        if 4 * d <= fmt.omega and 4 * rmax <= fmt.omega:
+            g = F.ulp(fmt, min(max(rmax, d, 1), fmt.omega))
+            sh = 2 * fmt.p - 2
+            es.track_max(BAND_UNITS, (m << sh, 6 * d + ((4 * fmt.lam + g) << sh)), line)
 
 
 # ---------------------------------------------------------------------------

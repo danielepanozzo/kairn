@@ -157,7 +157,10 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   cross-checked by every compiled runner, scalar and packed, on 2 000 cases per format in the quick
   tier (`KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES`) and 20 000 in the full tier, and the interpreter
   enumerates their toy formats; no public operation calls them yet, so they are on
-  `KAIRN_NOT_PUBLIC_YET` (below) and have no `api.oracle` test. Since stage B of
+  `KAIRN_NOT_PUBLIC_YET` (below) and have no `api.oracle` test. Their guards ask for every class of
+  each claim, and hold the answers that the comparisons of balls of two limbs leave unknown to the
+  band architecture.md gives, $2e + 4G$ (`ENC_BAND_LIMIT`: an answer is not claimed there, but a
+  run that leaves one far from the boundary does not pass). Since stage B of
   Milestone 2 the oracle reads and judges the maps, the folds of maxima and the convolutions, and
   their kernels (`oracle/README.md`, "Maps", "Folds of maxima", "Convolutions"): they are
   cross-checked as the folds are, and the steps of the maps and the kernels of the folds of maxima

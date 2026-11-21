@@ -782,10 +782,19 @@ although the relation holds (not claimed)`, `unknown although the relation holds
 `... fails for every choice ...`) and measured: the largest margin of such an answer (the distance
 from the boundary of the relation: $\bigl\lvert\lvert t - c\rvert - r\bigr\rvert$ for `member`,
 the gap between the balls for `lt` and `le`, $r_x - (\lvert c_y - c_x\rvert + r_y)$ for `subset`)
-over the largest radius, and over $u^2$ times the distance of the centers (`an answer not given:
-largest margin / largest radius`, `... / (u^2 * distance)`). There is no guard on it: the bands
-architecture.md gives ($2e + 3G$, $2e + 4G$) are in units of $e$, the radius of `add_ball_2_2`
-inside the kernel, which no output shows and no claim bounds from above. The yes of `ball_equal_2`
+over the largest radius, over $u^2$ times the distance of the centers (`an answer not given:
+largest margin / largest radius`, `... / (u^2 * distance)`), and in the units of architecture.md's
+band, $2e + G$, with its estimate of $e$, the radius of `add_ball_2_2` inside the kernel, which no
+output shows ($3u^2$ times the distance plus $2\lambda$; $G$ the gap of `T` at the larger of the
+radius and the distance), where the distance and the radius are below $\Omega/4$ (above, $e$ or the
+difference itself overflows and the band is the whole line). The cross-checks' guards hold that
+largest margin to 4 units, the documentation's largest band, $2e + 4G \le 4(2e + G)$
+(`tests/crosscheck_guards.py`, `ENC_BAND_LIMIT`): it measured 0.67 to 2.5 on 20 000 random cases of
+`binary64`, `binary32` and `fp:4:-6:1` (architecture.md's experiment: 2.3) and 0.17 to 0.42 on the
+enumerations of the toy formats. Away from the boundary the answers are given: of 20 000 random
+cases of `ball_less_2` in `binary64`, the strata `uniform` and `pow2` left 1 unanswered of 2 223,
+and the others are in the strata aimed at the boundary (`boundary`, `near`, `points`, `zero`) or
+at overflow (`huge`, `overflow`). The yes of `ball_equal_2`
 is exact, architecture.md says (both balls the same point), but the claim does not say so: an
 unknown there passes (a hand-written line has it).
 

@@ -58,7 +58,10 @@ EXACT = IV_PRED + ("ball_contains_point_1", "ball_contains_ball_1", "ball_positi
                    "ball_negative_1", "ball_zero_1", "ball_positive_2", "ball_negative_2",
                    "ball_zero_2")
 FORMATS = ("binary64", "binary32", "fp:4:-6:1")
-TINY = {1: "fp:2:-2:1", 2: "fp:2:-2:1", 3: "fp:3:-2:-1"}
+# The kernels whose answers may be not given (certain and trit not exact on finite balls).
+BAND_KERNELS = ("ball_contains_point_2", "ball_contains_ball_2", "ball_less_2",
+                "ball_less_equal_2", "ball_equal_2")
+TINY ={1: "fp:2:-2:1", 2: "fp:2:-2:1", 3: "fp:3:-2:-1"}
 LOGICAL = ("certain", "trit")
 
 
@@ -486,10 +489,15 @@ def enc_reference(ctx):
         if fname == "fp:4:-6:1":
             continue
         e = cl.get(kernel).ensures[0]
-        counts = next(iter(ents.values()))[3]
+        counts, maxima = next(iter(ents.values()))[3], next(iter(ents.values()))[4]
         for c in _needs(kernel, e):
             if not counts.get(c):
                 missing.append("%s %s: %s" % (kernel, fname, c))
+        if kernel in BAND_KERNELS:
+            # The band of the answers not given, within architecture.md's 2e + 4G.
+            b = maxima.get(EN.BAND_UNITS)
+            if b is None or not 0 < b <= 4:
+                missing.append("%s %s: the band measured %s units of 2e + G" % (kernel, fname, b))
     expect(not missing, "classes never reached: %s" % "; ".join(missing[:12]))
     return "%d streams of %d cases" % (len(tasks), n)
 

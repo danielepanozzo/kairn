@@ -1279,6 +1279,18 @@ class EnclosureGuards(unittest.TestCase):
             s = pipeline(k, IV, *self.args, "--strata", strata)
             self.fails(s, k, IV, *self.args, reason="without %s, which its family" % missing)
 
+    def test_an_answer_not_given_far_from_the_boundary(self):
+        # The band of the answers not given held to architecture.md's 2e + 4G: an answer left five
+        # units of 2e + G from the boundary fails the run; one of three units passes.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        for k in ("ball_contains_ball_2", "ball_contains_point_2"):
+            good = self.runs[k]
+            s = edited(good, 0, lambda e: e["maxima"].update({CG.ENC_BAND_UNITS: [["5", "1"], ""]}))
+            self.fails(s, k, IV, *self.args, reason="beyond the 4 of architecture.md's band")
+            s = edited(good, 0, lambda e: e["maxima"].update({CG.ENC_BAND_UNITS: [["3", "1"], ""]}))
+            self.passes(s, k, IV, *self.args)
+
     def test_the_bounds_far_from_reached(self):
         name = "lower: distance from the range bound / (rel*|bound| + abs)"
         s = edited(self.runs["ball_to_interval_2"], 0, lambda e: e["maxima"].update(

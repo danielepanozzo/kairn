@@ -686,8 +686,9 @@ def iv_problems(kernel, entries, merged, keys, a):
 # operations of a ball"; oracle/README.md, "The kinds of the enclosure interface";
 # oracle/kairn_oracle/enclosure.py and genenc.py): the strata of their families and the classes
 # each entry must have seen. An answer not given (certain and trit without exact, exact_when
-# failing) is not claimed: its distance from the boundary is a statistic, not a guard
-# (architecture.md: "The band is not claimed").
+# failing) is not claimed (architecture.md: "The band is not claimed"); its distance from the
+# boundary is held to the band the documentation gives (ENC_BAND_LIMIT), which is not a claim of
+# the kernel but what a pass of its run must look like.
 ENC_KINDS = ("certain", "trit", "ball_set", "ball_splits")
 ENC_ORDER_RELS = ("lt", "le", "eq")
 ENC_CLASSES = {"intervals": ("empty", "whole line", "half-line", "bounded", "a point"),
@@ -702,6 +703,16 @@ ENC_SET_COUNTS = ("Y as it is (claimed)", "X as it is (claimed)", "finite operan
                   "finite operands, touching (one common point)")
 ENC_SET_ZERO_SIGNS = "both the whole line, centers zeros of different signs in the line"
 ENC_SPLIT_COUNTS = ("X: empty", "X: whole line", "X: finite", "X: a point (radius 0)")
+# The band of the answers not given (architecture.md: an answer is given unless the margin is
+# below 2e + 3G for contains(t), 2e + 4G for the others, e about 3 u^2 times the distance plus twice
+# the smallest normal number, G the gap of T at the larger of the radius and the distance): the
+# oracle measures the largest margin of an answer not given in units of 2e + G with that estimate
+# of e, away from overflow (distance and radius below Omega/4), and the guards hold it to 4, the
+# documentation's largest, 2e + 4G <= 4 (2e + G). Measured: 0.67 to 2.5 on 20 000 random cases of
+# binary64, binary32 and fp:4:-6:1, 0.17 to 0.42 on the enumerations of the toy formats.
+ENC_BAND_UNITS = ("an answer not given: largest margin / (2e + G), e = 3 u^2 distance + 2 lambda, "
+                  "G the gap at max(radius, distance), both below Omega/4")
+ENC_BAND_LIMIT = 4
 
 
 def enc_entry(kernel):
@@ -777,8 +788,9 @@ def enc_needs(kernel, e, a):
     return need
 
 
-def enc_problems(kernel, entries, merged, a):
-    """The guards of the family on each entry of the kernel's own claims (enc_needs)."""
+def enc_problems(kernel, entries, merged, keys, a):
+    """The guards of the family on each entry of the kernel's own claims (enc_needs), and the band
+    of the answers not given held to architecture.md's (ENC_BAND_LIMIT)."""
     for j, e in enumerate(kernel.get("ensures", [])):
         if j >= len(entries) or entries[j]["kind"] != e.get("kind"):
             return
@@ -787,6 +799,12 @@ def enc_problems(kernel, entries, merged, a):
             if not counts.get(name):
                 yield ('the claim "%s" saw no case of "%s", so its statement was not checked '
                        'there' % (label, name))
+        if e.get("kind") in ("certain", "trit"):
+            r = _iv_ratio(keys, j, ENC_BAND_UNITS)
+            if r is not None and r[1] and r[0] > ENC_BAND_LIMIT * r[1]:
+                yield ('the claim "%s" left an answer %s units of 2e + G from the boundary of its '
+                       'relation, beyond the %d of architecture.md\'s band (2e + 4G)'
+                       % (label, _ratio(r[0], r[1], 3), ENC_BAND_LIMIT))
 
 
 def extended_strata(kernel):
@@ -1356,7 +1374,7 @@ def problems(summary, a):
                        'direction was not checked' % label)
     yield from m2_problems(kernel, entries, merged, extended)
     yield from iv_problems(kernel, entries, merged, keys, a)
-    yield from enc_problems(kernel, entries, merged, a)
+    yield from enc_problems(kernel, entries, merged, keys, a)
     yield from count_problems(kernel, keys, a)
     yield from axpy_problems(kernel, keys, a)
     if not extended:

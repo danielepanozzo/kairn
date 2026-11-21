@@ -747,6 +747,10 @@ MUTANTS.update({
         '    return ("nonempty", cv, cv), ("a point" if r == 0 else "finite"), True, False, (cv, r)'),
     "certain and trit: an argument 0 read as [0, 1]": (
         "enclosure.py", '            vals.append(("nonempty", 0, 0))', '            vals.append(("nonempty", 0, 1))'),
+    "certain and trit: the band of the answers not given not measured": (
+        "enclosure.py", "        if 4 * d <= fmt.omega and 4 * rmax <= fmt.omega:", "        if False:"),
+    "certain and trit: the band without G": (
+        "enclosure.py", "6 * d + ((4 * fmt.lam + g) << sh)", "6 * d + ((4 * fmt.lam) << sh)"),
     "certain and trit: the classes of a set not counted": (
         "enclosure.py", "        es.count(CLASS % (n, cls))", "        pass"),
     # The relations.
