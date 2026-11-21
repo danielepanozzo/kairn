@@ -80,6 +80,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*` and `api.example.intervals.*`, built under each contraction setting, also compare it with the text their tutorials show ([Documentation](documentation.md#examples)). `api.example.packed_dot.FORM`, the tutorial's vector loop in each form of `Packed`, compares it too, and checks each result against the bound the tutorial states ([below](#packed-and-the-containers)); `api.example.arrays.FORM`, the tutorial on the functions on arrays, likewise, against the bounds of `kairn::traits` ([below](#the-functions-on-arrays)). |
 | `api.packed.FORM`, `api.soa.FORM` | `Packed` against the scalar operations, lane by lane and bit for bit, and the containers of `kairn/soa.hpp` ([below](#packed-and-the-containers)). |
 | `api.batch.FORM` | The functions on arrays, in each form of `Packed`: each calls its loop in the order it says, bit for bit, the flags and the canonical NaN, the edges ([below](#the-functions-on-arrays)). |
+| `api.accumulator`, `api.arrays.exact.accumulator` | `kairn::Accumulator`: in constant evaluation (the same bits at run time), its merges (with itself, with an empty one, of empty ones), `from_state` of the state read back, the count and where a radius is given, and what it returns when something is not finite (`tests/api/accumulator.cpp`); and histories in exact rational arithmetic (`tests/api/arrays_exact.py`): random trees of `add`, `add_product` and `merge`, counts around and beyond $2^p$, a saturated count, overflows, terms that are not finite, $\lvert s - \Sigma\rvert \le r$ wherever $r$ is finite and $+\infty$ wherever the theorem gives nothing ([below](#the-functions-on-arrays)). |
 | `api.arrays.exact.bounds` | `kairn::traits<X>::sum(n)` and `dot(n)` for `float` and `double`, one and two limbs, at the lengths where the count is converted to `T` exactly and where it is rounded up (around $2^{24}$ and $2^{53}$ and a few multiples), at every power of two and its neighbors, near the largest `std::size_t` and at 400 random lengths, checked in exact rational arithmetic (`tests/api/arrays_exact.py`, Python's `fractions`) against $\gamma$ of the proved statements and their underflow terms, and $+\infty$ for `unit` and `tiny` exactly where no bound is given ([below](#the-functions-on-arrays)). |
 | `api.boundary.arrays.FORM.S`, `api.boundary.arrays.unguarded.FORM.S` | An array the program fills with products in the same function, passed into a sum, a map or `axpy`, gives the result of the same function on the rounded products, at `-O3` under each contraction setting, in each form; the control, against the copy of the headers without the guard, must differ where the compiler was measured to fuse ([below](#the-functions-on-arrays), `tests/api/boundary_batch.cpp`). |
 
@@ -1022,6 +1023,26 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   at run time, and the same bits at run time as in constant evaluation;
   `api.reject.traits.length_beyond`, that a bound not given does not compile in a constant
   expression.
+- **The accumulator** (`kairn/accumulator.hpp`). The oracle judges `add`, `add_product` and
+  `merge` through the public class (`api.oracle.acc_add_k.F`, `acc_mul_k`, `acc_merge_k`, the
+  forms `add`, `add_limb`, `add_product`, `add_product_limbs`, `merge` of the runner): the line's
+  state made with `Accumulator::from_state`, the operation, and the state read back with
+  `running_sum()` and `magnitudes()`. The radius kernel `acc_radius_k`, which `error_bound()` calls
+  only on the $(g, t)$ of `bound_dot_k` for the count, is a building block of the runner's list
+  and cross-checked on its own; what the header composes of it, with the count and its conversion,
+  is judged end to end by `api.arrays.exact.accumulator`: 300 random trees per type and number of
+  limbs (leaves of up to 40 random `add`, `add_product` and `add` of a `T`, merged in a random
+  order), empty accumulators merged, counts $2^k + 1$ and $3 \cdot 2^k + 1$ for $k$ around $p$ and
+  beyond (a history merged with itself $k$ times, every multiplicity tracked), a count that
+  saturates, the running sum and the sum of magnitudes overflowing, an infinity, a NaN and an
+  infinity times zero among the terms; for each, in exact rationals, the count, $\lvert s -
+  \Sigma\rvert \le r$ wherever `error_bound()` is finite (with `ball()` that ball), $+\infty$ and
+  the whole line wherever the theorem gives nothing, and a finite radius where every value is finite
+  and the count well within $m u \le \tfrac12$. `api.accumulator` checks constant evaluation,
+  merges, `from_state` and the same edges in C++; the boundary test adds `acc.add(a * b)` (guarded)
+  and `acc.add_product(a * b, 1)` (with a 1 read at run time, and one the compiler sees); the checks
+  have its operations and its operand cases; `api.reject.accumulator.mixed_limb_types`,
+  `api.reject.not_constexpr.add_product` and `.error_bound` what must not compile.
 - **What must not compile** (`api.reject.batch.*`): a map and `axpy` writing through a view of
   `const T`, a dot product of views of `double` and `float`, and of one and two limbs, a scaling by
   a two-limb number; each control writes what compiles instead.

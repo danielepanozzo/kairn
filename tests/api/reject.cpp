@@ -46,6 +46,9 @@
 //          is not a form, or a form the target does not have (the generated header's #error)
 //   59     a bound as a function of the length that is not given (traits<X>::sum(n) beyond the
 //          lengths its kernel bounds) in a constant expression; the control computes it at run time
+//   60-62  the accumulator (accumulator.hpp): a merge of accumulators of two limb types (the control
+//          merges two of one type), and add_product and error_bound in a constant expression,
+//          which they are not usable in (fused multiply-adds); the controls compute them at run time
 //   54-58  the functions on arrays (batch.hpp): a map and axpy writing through a view of const
 //          limbs, a dot product of views of two limb types, and of one and of two limbs, and a
 //          scaling by a two-limb number (no loop scales by one); each control writes what compiles
@@ -71,6 +74,9 @@
 #endif
 #if KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58
 #include <kairn/batch.hpp>
+#endif
+#if KAIRN_TEST_CASE >= 60 && KAIRN_TEST_CASE <= 62
+#include <kairn/accumulator.hpp>
 #endif
 
 #if defined(KAIRN_TEST_CONTROL)
@@ -327,6 +333,34 @@ int main() {
     constexpr kairn::Bound<float> length_bound = kairn::traits<float>::sum(std::size_t{1} << 30);
 #endif
     sink = double(length_bound.unit);
+#elif KAIRN_TEST_CASE == 60
+    kairn::Accumulator<double, 2> acc_double;
+    const kairn::Accumulator<float, 2> acc_float;
+#if defined(KAIRN_TEST_CONTROL)
+    acc_double.merge(kairn::Accumulator<double, 2>());
+    sink = double(acc_float.count());
+#else
+    acc_double.merge(acc_float);
+#endif
+    sink += double(acc_double.count());
+#elif KAIRN_TEST_CASE == 61
+#if defined(KAIRN_TEST_CONTROL)
+    const kairn::Accumulator<double, 1> acc_product = [] {
+#else
+    constexpr kairn::Accumulator<double, 1> acc_product = [] {
+#endif
+        kairn::Accumulator<double, 1> a;
+        a.add_product(2.0, 3.0);
+        return a;
+    }();
+    sink = acc_product.sum().value.limb[0];
+#elif KAIRN_TEST_CASE == 62
+#if defined(KAIRN_TEST_CONTROL)
+    const double acc_radius = kairn::Accumulator<double, 2>().error_bound();
+#else
+    constexpr double acc_radius = kairn::Accumulator<double, 2>().error_bound();
+#endif
+    sink = acc_radius;
 #elif KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58
     double h[4] = {1, 2, 3, 4}, l[4] = {0, 0, 0, 0};
     float fh[4] = {1, 2, 3, 4}, fl[4] = {0, 0, 0, 0};

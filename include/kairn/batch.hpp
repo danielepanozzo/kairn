@@ -76,6 +76,7 @@
 /// docs/reference/batch.md, states what a program may write with them.
 #pragma once
 
+#include "reduction.hpp"
 #include "soa.hpp"
 #include "traits.hpp"
 
@@ -100,16 +101,6 @@ struct Sequential {
 /// bits on every platform and in every form of Packed. Without it they use the lane order of the
 /// translation unit's form, the packed loop.
 inline constexpr Sequential sequential{};
-
-/// The result of a function on arrays that returns one number: the number and whether it is
-/// finite. An aggregate, so `auto [s, finite] = kairn::sum(x);` binds them in that order.
-template <class X>
-struct Reduction {
-    /// The result when finite is true; the canonical NaN (every limb a NaN) when it is false.
-    X value{};
-    /// True exactly when value is finite: every element was finite and nothing overflowed.
-    bool finite = true;
-};
 
 namespace detail {
 

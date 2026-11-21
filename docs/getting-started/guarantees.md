@@ -1,7 +1,8 @@
 # What holds today
 
 Kairn's public headers cover `Expansion<T, 1>`, `Expansion<T, 2>`, `Ball<T, 1>`, `Ball<T, 2>` and
-`Interval<T, 1>`, `Interval<T, 2>` for `T` = `float` and `double`. This page says, for each
+`Interval<T, 1>`, `Interval<T, 2>` for `T` = `float` and `double`, `Packed` and the arrays of
+numbers, the functions on arrays and the accumulator. This page says, for each
 operation, what is proved, what the
 library returns at overflow and for infinite and NaN values, and what is not proved yet. It
 describes the repository as `gen/claims.json` stands in this version; the compiler enforces the
@@ -486,6 +487,18 @@ and tested at and beyond those counts in exact arithmetic.
 Not provided: a product by a two-limb scalar without an addition (`axpy` with `y` zero), an order
 of a number of lanes other than the build's, and constant evaluation of the functions on arrays
 (the loops are not `constexpr`).
+
+**The accumulator.** `kairn::Accumulator<T, k>` ([reference](../reference/accumulator.md)) holds a
+running sum, the running sum of the magnitudes of what was added, and the count; `add`,
+`add_product` and `merge` are proved kernels, and **what is proved is a bound for every history**
+of them, a merge being a node of the summation tree: whenever the running sum is finite and the
+kernels' masks are true, $\lvert s - \Sigma\rvert \le$ `error_bound()`, $\Sigma$ the exact sum of
+what was added, whatever the order. **Not machine-checked**, and tested hard instead: the count,
+an integer of the header that saturates at $2^{64} - 1$ (no bound then), its conversion to `T`
+(rounded up; exact wherever a radius is given), and what is returned when a mask is false or a
+value is not finite: `error_bound()` $+\infty$ and `ball()` the whole line, never a finite ball the
+theorem does not give. A radius is given up to about $2^{22}$ terms of `float` and $2^{51}$ of
+`double`, for one and two limbs, since the magnitudes are summed in `T`.
 
 ## The environment
 

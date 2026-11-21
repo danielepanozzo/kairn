@@ -12,7 +12,11 @@ $$t = \mathrm{RN}(s + v), \qquad b = \mathrm{RN}(a + c).$$
 
 ## C++
 
-No public operation computes this kernel on its own.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `A.merge(B)` | `Accumulator<T, 1>`, `Accumulator<T, 1>` | `void` | a node of the summation tree; the counts added |
+
+`T` is `float` or `double`; `A` and `B` are accumulators, `kairn::Accumulator<T, k>`, header `kairn/accumulator.hpp`, which `kairn/kairn.hpp` includes. They take no marker: an operation of an accumulator compiles only while its kernels are proved ([The accumulator](accumulator.md)).
 
 ## Requires
 

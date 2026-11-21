@@ -1,6 +1,7 @@
-// boundary.cpp for the functions on arrays (batch.hpp): an array that the program fills with
-// products in the same function and passes straight into a sum, a map or axpy must give the same
-// result as the same function on the array of those products rounded first. The loops on arrays of
+// boundary.cpp for the functions on arrays (batch.hpp) and the accumulator (accumulator.hpp): an
+// array that the program fills with products in the same function and passes straight into a sum,
+// a map or axpy, or a product it computes and adds to an accumulator, must give the same result as
+// the same function on those products rounded first. The loops on arrays of
 // the program are the _entry loops, whose steps guard each limb they add (rule R3: a + 0 in the
 // scalar loops, the form's intrinsic in the packed ones), so that a compiler that inlines the loop
 // and forwards the stores cannot fuse a product into the loop's first addition. Each form is
@@ -27,6 +28,7 @@
 // on the headers as they are (the step of dot_1 does not guard its operands, which it only
 // multiplies): the test prints it, with the count, and does not fail on it, so that the other forms
 // keep being judged; docs/developer/testing.md records it.
+#include <kairn/accumulator.hpp>
 #include <kairn/batch.hpp>
 
 #include <cstdint>
@@ -90,6 +92,11 @@ ALWAYS_INLINE kairn::SoAView<T, K> out_view(T* h, T* l, int n) {
     } else {
         return kairn::SoAView<T, 2>(h, l, std::size_t(n));
     }
+}
+template <class T, int K>
+ALWAYS_INLINE void put_acc(T* out, const kairn::Accumulator<T, K>& acc) {
+    for (int j = 0; j < K; ++j) out[j] = acc.running_sum().limb[j];
+    out[K] = acc.magnitudes();
 }
 template <class T, int K>
 ALWAYS_INLINE void put(T* out, const kairn::Reduction<kairn::Expansion<T, K>>& r) {
@@ -183,6 +190,21 @@ FORM(dot2_one, MIXED(s, t) const T zero[N] = {}; T ones[N];
 FORM(axpy1_one, MAP(1, kairn::axpy(T(1), view<1>(s, t, N), CANCEL(1), z)))
 FORM(axpy2_one, MAP(2, kairn::axpy(T(1), view<2>(s, t, N), CANCEL(2), z)))
 FORM(scale2_one, MAP(2, kairn::scale(view<2>(s, t, N), T(1), z)))
+// The accumulator: products added (guarded by acc_add_k), and products times a factor read at run
+// time, or a 1 the compiler sees, added with add_product (only multiplied), with the cancelling
+// elements between them.
+FORM(acc_add1, kairn::Accumulator<T, 1> acc; for (int i = 0; i < N / 2; ++i) { acc.add(M::one(a, b, i)); acc.add(c[i]); }
+     put_acc(out, acc);)
+FORM(acc_add2, kairn::Accumulator<T, 2> acc; for (int i = 0; i < N / 2; ++i) { acc.add(M::one(a, b, i)); acc.add(c[i]); }
+     put_acc(out, acc);)
+FORM(acc_product1, kairn::Accumulator<T, 1> acc; const T one = run_time_one<T>();
+     for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), one); acc.add(c[i]); } put_acc(out, acc);)
+FORM(acc_product2, kairn::Accumulator<T, 2> acc; const T one = run_time_one<T>();
+     for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), one); acc.add(c[i]); } put_acc(out, acc);)
+FORM(acc_product1_one, kairn::Accumulator<T, 1> acc;
+     for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), T(1)); acc.add(c[i]); } put_acc(out, acc);)
+FORM(acc_product2_one, kairn::Accumulator<T, 2> acc;
+     for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), T(1)); acc.add(c[i]); } put_acc(out, acc);)
 FORM(scale1, MAP(1, kairn::scale(view<1>(s, t, N), T(3), z)))
 FORM(scale2, MAP(2, kairn::scale(view<2>(s, t, N), T(3), z)))
 FORM(mul_pow2_2, MAP(2, kairn::mul_pow2(view<2>(s, t, N), T(0.5), z)))
@@ -255,6 +277,8 @@ void run(const char* type, long rounds, Totals& totals) {
         ROW(axpy1, "axpy(-1, c, {a*b}, z)", true),
         ROW(axpy2_1, "axpy(-1, c, {a*b}, z), 2 limbs", true),
         ROW(axpy2, "axpy(E2(-1), c, {a*b}, z)", true),
+        ROW(acc_add1, "acc.add(a*b), 1 limb", true),
+        ROW(acc_add2, "acc.add(a*b), 2 limbs", true),
         ROW(dot1, "dot({a*b, c, ...}, {1})", false),
         ROW(dot1_seq, "dot({a*b, c, ...}, {1}, sequential)", false),
         ROW(dot2, "dot({a*b, c, ...}, {1}), 2 limbs", false),
@@ -264,12 +288,16 @@ void run(const char* type, long rounds, Totals& totals) {
         ROW(axpy2_x, "axpy(3, {a*b}, c, z)", false),
         ROW(norm2, "norm_upper({a*b})", false),
         ROW(conv2, "conv({a*b}, {1, 1}, z)", false),
+        ROW(acc_product1, "acc.add_product(a*b, 1), 1 limb", false),
+        ROW(acc_product2, "acc.add_product(a*b, 1), 2 limbs", false),
         ONE(dot1_one, "dot(.., {1} seen), 1 limb"),
         ONE(dot1_seq_one, "dot(.., {1} seen, sequential), 1 limb"),
         ONE(dot2_one, "dot(.., {1} seen), 2 limbs"),
         ONE(axpy1_one, "axpy(1, {a*b}, c, z)"),
         ONE(axpy2_one, "axpy(1, {a*b}, c, z), 2 limbs"),
         ONE(scale2_one, "scale({a*b}, 1, z), 2 limbs"),
+        ONE(acc_product1_one, "acc.add_product(a*b, 1 seen), 1 limb"),
+        ONE(acc_product2_one, "acc.add_product(a*b, 1 seen), 2 limbs"),
     };
     constexpr int n_forms = int(sizeof forms / sizeof forms[0]);
     long differ[n_forms] = {};

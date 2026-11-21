@@ -55,6 +55,10 @@ W2 = "SoAView<T, 2>"
 R1 = "Reduction<Expansion<T, 1>>"
 R2 = "Reduction<Expansion<T, 2>>"
 SEQ = "Sequential"
+A1 = "Accumulator<T, 1>"
+A2 = "Accumulator<T, 2>"
+# The accumulator (kairn/accumulator.hpp): what each operation does to its state.
+ACC = "one more term; the bound of the whole history is `A.error_bound()` ([Accumulator](accumulator.md))"
 
 # The groups of the index, in order: (id, title, what the group is).
 GROUPS = [
@@ -837,8 +841,12 @@ KERNELS = {
                                             "the program",
                                   form("sum_fast(x)", V2, result=R2, note=STEP_ORDER + " (loop `sum_fast_2_entry`)"),
                                   form("sum_fast(x, sequential)", V2, SEQ, result=R2)),
-    "fold_finish_1": page("arrays", "The result of a fold of one limb: the state, or NaN"),
-    "fold_finish_2": page("arrays", "The result of a fold of two limbs: the state, or NaN"),
+    "fold_finish_1": page("arrays", "The result of a fold of one limb: the state, or NaN",
+                          form("A.sum()", A1, result=R1, note="the running sum of an accumulator, canonical; "
+                               "the finish of the loops of `kairn/batch.hpp` too")),
+    "fold_finish_2": page("arrays", "The result of a fold of two limbs: the state, or NaN",
+                          form("A.sum()", A2, result=R2, note="the running sum of an accumulator, canonical; "
+                               "the finish of the loops of `kairn/batch.hpp` too")),
     "bound_sum_1": page("arrays", "The bound of a sum of one limb, as a function of the number of additions",
                         form("traits<T>::sum(n)", "std::size_t", result="Bound<T>",
                              note="$m = n - 1$ (0 for $n = 0$), a count of `T` rounded up; `unit` is $g$"),
@@ -891,14 +899,34 @@ KERNELS = {
     "norm_finish_1": page("arrays", "The result of a fold of maxima of one limb: the maximum, or NaN"),
     "norm_finish_2": page("arrays", "The result of a fold of maxima of two limbs: one step above the maximum, or NaN"),
     # --- Milestone 2, the accumulator ----------------------------------------------------------------
-    "acc_add_1": page("arrays", "An accumulator of one limb: add a number of the program"),
-    "acc_add_2": page("arrays", "An accumulator of two limbs: add a number of the program"),
-    "acc_mul_1": page("arrays", "An accumulator of one limb: add a product"),
-    "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product"),
-    "acc_merge_1": page("arrays", "Two accumulators of one limb into one"),
-    "acc_merge_2": page("arrays", "Two accumulators of two limbs into one"),
-    "acc_radius_1": page("arrays", "The radius of an accumulator of one limb"),
-    "acc_radius_2": page("arrays", "The radius of an accumulator of two limbs"),
+    "acc_add_1": page("arrays", "An accumulator of one limb: add a number of the program",
+                      form("A.add(x)", A1, E1, result="void", note=ACC),
+                      form("A.add(a)", A1, T, result="void")),
+    "acc_add_2": page("arrays", "An accumulator of two limbs: add a number of the program",
+                      form("A.add(x)", A2, E2, result="void", note=ACC),
+                      form("A.add(a)", A2, T, result="void", note=TO_TWO_LIMBS)),
+    "acc_mul_1": page("arrays", "An accumulator of one limb: add a product",
+                      form("A.add_product(x, y)", A1, E1, E1, result="void", note=ACC + "; not `constexpr`"),
+                      form("A.add_product(a, b)", A1, T, T, result="void")),
+    "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product",
+                      form("A.add_product(x, y)", A2, E2, E2, result="void", note=ACC + "; not `constexpr`"),
+                      form("A.add_product(a, b)", A2, T, T, result="void", note=TO_TWO_LIMBS)),
+    "acc_merge_1": page("arrays", "Two accumulators of one limb into one",
+                        form("A.merge(B)", A1, A1, result="void", note="a node of the summation tree; the counts "
+                             "added")),
+    "acc_merge_2": page("arrays", "Two accumulators of two limbs into one",
+                        form("A.merge(B)", A2, A2, result="void", note="a node of the summation tree; the counts "
+                             "added")),
+    "acc_radius_1": page("arrays", "The radius of an accumulator of one limb",
+                         form("A.error_bound()", A1, result=T, note="with $(g, t)$ = `bound_dot_1` of the count "
+                              "as a number of `T` rounded up, $+\\infty$ where a mask is false or a value is not "
+                              "finite; not `constexpr`"),
+                         form("A.ball()", A1, result=B1, note="the whole line where `error_bound()` is $+\\infty$")),
+    "acc_radius_2": page("arrays", "The radius of an accumulator of two limbs",
+                         form("A.error_bound()", A2, result=T, note="with $(g, t)$ = `bound_dot_2` of the count "
+                              "as a number of `T` rounded up, $+\\infty$ where a mask is false or a value is not "
+                              "finite; not `constexpr`"),
+                         form("A.ball()", A2, result=B2, note="the whole line where `error_bound()` is $+\\infty$")),
     # --- Milestone 2, BallVector ---------------------------------------------------------------------
     "bv_add_radius_1": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of one limb"),
     "bv_add_radius_2": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of two limbs"),
@@ -1037,4 +1065,5 @@ PAGES = [
     ("packed", "Packed numbers in registers", "packed"),
     ("packed", "Arrays of numbers: SoA and its views", "soa"),
     ("arrays", "Functions on arrays", "batch"),
+    ("arrays", "The accumulator", "accumulator"),
 ]

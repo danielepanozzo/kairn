@@ -5,6 +5,7 @@
 // this file.
 #pragma once
 
+#include <kairn/accumulator.hpp>
 #include <kairn/batch.hpp>
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
@@ -581,6 +582,69 @@ inline const Operation operations[] = {
          put(b, kairn::conv(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
                             kairn::SoAView<double, 2>(h, l, 31)));
          put(b, h[7]);
+     }},
+
+    // The accumulator (kairn/accumulator.hpp): its operations that round, on the operands above.
+    {"acc.add", Kind::rounds, [](Bits& b) {
+         kairn::Accumulator<double, 2> a;
+         a.add(o.x);
+         put(b, a.running_sum());
+     }},
+    {"acc.add_limb", Kind::rounds, [](Bits& b) {
+         kairn::Accumulator<double, 2> a;
+         a.add(double(v_c));
+         put(b, a.magnitudes());
+     }},
+    {"acc.add_one_limb", Kind::rounds, [](Bits& b) {
+         kairn::Accumulator<double, 1> a;
+         a.add(double(v_c));
+         put(b, a.magnitudes());
+     }},
+    {"acc.add_product", Kind::rounds, [](Bits& b) {
+         kairn::Accumulator<double, 2> a;
+         a.add_product(o.x, o.y);
+         put(b, a.running_sum());
+     }},
+    {"acc.add_product_limbs", Kind::rounds, [](Bits& b) {
+         kairn::Accumulator<double, 1> a;
+         a.add_product(double(v_a), double(v_c));
+         put(b, a.running_sum());
+     }},
+    {"acc.merge", Kind::rounds, [](Bits& b) {
+         const kairn::Accumulator<double, 2> a = kairn::Accumulator<double, 2>::from_state(o.x, 1.5, 3);
+         kairn::Accumulator<double, 2> c = kairn::Accumulator<double, 2>::from_state(o.y, 2.25, 4);
+         c.merge(a);
+         put(b, c.running_sum());
+     }},
+    {"acc.error_bound", Kind::rounds, [](Bits& b) {
+         put(b, kairn::Accumulator<double, 2>::from_state(o.x, 1.5, 3).error_bound());
+     }},
+    {"acc.ball", Kind::rounds, [](Bits& b) {
+         put(b, kairn::Accumulator<double, 1>::from_state(E1(v_a), 1.5, 3).ball());
+     }},
+    // and those that do not round: from_state, on the corpus (canonical pairs and magnitudes, among
+    // them +0, -0, subnormal numbers, the infinities and NaN); the accessors, checked for nothing.
+    {"acc.from_state", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = typename std::decay_t<decltype(c.one)>::value_type;
+             for (const auto& x : c.two)
+                 for (const T& r : c.radii) {
+                     const auto a = kairn::Accumulator<T, 2>::from_state(x, r, 5);
+                     put(out, a.running_sum());
+                     put(out, a.magnitudes());
+                 }
+         });
+     }},
+    {"acc.sum", Kind::unchecked, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = typename std::decay_t<decltype(c.one)>::value_type;
+             for (const auto& x : c.two) {
+                 const kairn::Accumulator<T, 2> a = kairn::Accumulator<T, 2>::from_state(x, T(1), 2);
+                 put(out, a.sum().value);
+                 put(out, a.sum().finite);
+                 put(out, int(a.count()));
+             }
+         });
      }},
 
     // The functions that do not round, each on its whole corpus, for double and float.

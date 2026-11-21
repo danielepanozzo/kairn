@@ -12,7 +12,12 @@ $$r \ge g (1 + u)^{2} (1 + m u + 2m^{2} u^{2}) (a + \frac{m \eta}{2}) + t.$$
 
 ## C++
 
-No public operation computes this kernel on its own.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `A.error_bound()` | `Accumulator<T, 2>` | `T` | with $(g, t)$ = `bound_dot_2` of the count as a number of `T` rounded up, $+\infty$ where a mask is false or a value is not finite; not `constexpr` |
+| `A.ball()` | `Accumulator<T, 2>` | `Ball<T, 2>` | the whole line where `error_bound()` is $+\infty$ |
+
+`T` is `float` or `double`; `A` and `B` are accumulators, `kairn::Accumulator<T, k>`, header `kairn/accumulator.hpp`, which `kairn/kairn.hpp` includes. They take no marker: an operation of an accumulator compiles only while its kernels are proved ([The accumulator](accumulator.md)).
 
 ## Requires
 

@@ -12,7 +12,12 @@ $$t = \mathrm{RN}(s + x), \qquad b = \mathrm{RN}(a + \lvert x\rvert).$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `A.add(x)` | `Accumulator<T, 1>`, `Expansion<T, 1>` | `void` | one more term; the bound of the whole history is `A.error_bound()` ([Accumulator](accumulator.md)) |
+| `A.add(a)` | `Accumulator<T, 1>`, `T` | `void` |  |
+
+`T` is `float` or `double`; `A` and `B` are accumulators, `kairn::Accumulator<T, k>`, header `kairn/accumulator.hpp`, which `kairn/kairn.hpp` includes. They take no marker: an operation of an accumulator compiles only while its kernels are proved ([The accumulator](accumulator.md)).
 
 ## Requires
 

@@ -304,8 +304,8 @@ The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batc
 | `sum(x)`, `sum(x, sequential)`, `sum_fast(x)` | `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
 | `sum(x)`, `sum(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
 | `sum_fast(x)`, `sum_fast(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |
-| none (internal) | - | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_1`](fold_finish_1.md) |
-| none (internal) | - | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_2`](fold_finish_2.md) |
+| `A.sum()` | `Accumulator<T, 1>` | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_1`](fold_finish_1.md) |
+| `A.sum()` | `Accumulator<T, 2>` | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_2`](fold_finish_2.md) |
 | `traits<T>::sum(n)`, `traits<T>::sum_height(h)` | `std::size_t` | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - m \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bound_sum_1`](bound_sum_1.md) |
 | `traits<Expansion<T, 2>>::sum(n)`, `traits<Expansion<T, 2>>::sum_height(h)` | `std::size_t` | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - m \mathrm{unit}(\mathtt{add\_2\_2})}$ | [`bound_sum_2`](bound_sum_2.md) |
 | `traits<T>::dot(n)` | `std::size_t` | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - m \mathrm{unit}(\mathtt{mul\_1\_1})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_1\_1}) (1 + g)$ | [`bound_dot_1`](bound_dot_1.md) |
@@ -315,14 +315,14 @@ The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batc
 | none (internal) | - | $r = \max(m, \lvert x_0\rvert)$ | [`norm_step_2`](norm_step_2.md) |
 | none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_1`](norm_finish_1.md) |
 | none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_2`](norm_finish_2.md) |
-| not yet called by the public headers | - | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x\rvert)$ | [`acc_add_1`](acc_add_1.md) |
-| not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x_0\rvert)$, normalized | [`acc_add_2`](acc_add_2.md) |
-| not yet called by the public headers | - | $t = \mathrm{RN}(s + x y)$; $b = \mathrm{RN}(a + \lvert x\rvert \lvert y\rvert)$ | [`acc_mul_1`](acc_mul_1.md) |
-| not yet called by the public headers | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$; $b = \mathrm{RN}(a + \lvert x_0\rvert \lvert y_0\rvert)$, normalized | [`acc_mul_2`](acc_mul_2.md) |
-| none (internal) | - | $t = \mathrm{RN}(s + v)$; $\lvert t - (s + v)\rvert \le \frac{u}{1 + u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$ | [`acc_merge_1`](acc_merge_1.md) |
-| none (internal) | - | $\lvert t - (s + v)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$, normalized | [`acc_merge_2`](acc_merge_2.md) |
-| none (internal) | - | when $\mathit{ok}$ is true, $r \ge g (1 + u)^{2} (1 + m u + 2m^{2} u^{2}) (a + \frac{m \eta}{2}) + t$; when $\mathit{ok}$ is true, $m u \le \frac{1}{2}$ | [`acc_radius_1`](acc_radius_1.md) |
-| none (internal) | - | when $\mathit{ok}$ is true, $r \ge g (1 + u)^{2} (1 + m u + 2m^{2} u^{2}) (a + \frac{m \eta}{2}) + t$; when $\mathit{ok}$ is true, $m u \le \frac{1}{2}$ | [`acc_radius_2`](acc_radius_2.md) |
+| `A.add(x)`, `A.add(a)` | `Accumulator<T, 1>`, `Expansion<T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x\rvert)$ | [`acc_add_1`](acc_add_1.md) |
+| `A.add(x)`, `A.add(a)` | `Accumulator<T, 2>`, `Expansion<T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x_0\rvert)$, normalized | [`acc_add_2`](acc_add_2.md) |
+| `A.add_product(x, y)`, `A.add_product(a, b)` | `Accumulator<T, 1>`, `Expansion<T, 1>`, `Expansion<T, 1>` | $t = \mathrm{RN}(s + x y)$; $b = \mathrm{RN}(a + \lvert x\rvert \lvert y\rvert)$ | [`acc_mul_1`](acc_mul_1.md) |
+| `A.add_product(x, y)`, `A.add_product(a, b)` | `Accumulator<T, 2>`, `Expansion<T, 2>`, `Expansion<T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$; $b = \mathrm{RN}(a + \lvert x_0\rvert \lvert y_0\rvert)$, normalized | [`acc_mul_2`](acc_mul_2.md) |
+| `A.merge(B)` | `Accumulator<T, 1>`, `Accumulator<T, 1>` | $t = \mathrm{RN}(s + v)$; $\lvert t - (s + v)\rvert \le \frac{u}{1 + u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$ | [`acc_merge_1`](acc_merge_1.md) |
+| `A.merge(B)` | `Accumulator<T, 2>`, `Accumulator<T, 2>` | $\lvert t - (s + v)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$, normalized | [`acc_merge_2`](acc_merge_2.md) |
+| `A.error_bound()`, `A.ball()` | `Accumulator<T, 1>` | when $\mathit{ok}$ is true, $r \ge g (1 + u)^{2} (1 + m u + 2m^{2} u^{2}) (a + \frac{m \eta}{2}) + t$; when $\mathit{ok}$ is true, $m u \le \frac{1}{2}$ | [`acc_radius_1`](acc_radius_1.md) |
+| `A.error_bound()`, `A.ball()` | `Accumulator<T, 2>` | when $\mathit{ok}$ is true, $r \ge g (1 + u)^{2} (1 + m u + 2m^{2} u^{2}) (a + \frac{m \eta}{2}) + t$; when $\mathit{ok}$ is true, $m u \le \frac{1}{2}$ | [`acc_radius_2`](acc_radius_2.md) |
 
 ## Vector loops: Packed and the containers
 

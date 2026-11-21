@@ -677,17 +677,16 @@ set(KAIRN_NOT_PUBLIC_YET_FOLDS
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the steps of the maps on stored
 # arrays, which no public function calls (include/kairn/batch.hpp calls the maps on supplied
-# arrays: sub_1_1 is the step of sub_1, axpy_step_k of axpy_k); the kernels of the accumulator; and
-# the kernels of the ball vectors (architecture.md, "Ball vectors"), which only the folds of
-# BallVector call. They are cross-checked like every kernel; the public interface has no form of
+# arrays: sub_1_1 is the step of sub_1, axpy_step_k of axpy_k); and the kernels of the ball vectors
+# (architecture.md, "Ball vectors"), which only the folds of BallVector call. They are cross-checked like every kernel; the public interface has no form of
 # them. (The interval kernels left this list with include/kairn/interval.hpp; the steps, finishes
 # and kernels of the folds of maxima that kairn/batch.hpp calls with it, the public interface
 # reaching each through its fold, which api.oracle.FOLD.FORMAT judges, and listing it as a
-# building block or as not public on its own; and the bounds as functions of n with
-# kairn::traits<X>::sum(n), sum_height(h) and dot(n), the forms of api.oracle.bound_*.)
+# building block or as not public on its own; the bounds as functions of n with
+# kairn::traits<X>::sum(n), sum_height(h) and dot(n), the forms of api.oracle.bound_*; and the kernels
+# of the accumulator with include/kairn/accumulator.hpp, acc_radius_k as a building block.)
 set(KAIRN_NOT_PUBLIC_YET
   sub_1_1 axpy_step_1 axpy_step_2 axpy_step_2_1
-  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
   bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2 bv_center_entry_1 bv_center_2
   bv_make_radius bv_make_finish neg_1 bv_neg_radius bv_mul_pow2_step_1 bv_mul_pow2_step_2
   bv_mul_pow2_radius conv_radius bv_conv_finish)

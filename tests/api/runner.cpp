@@ -68,6 +68,7 @@
 #if !defined(KAIRN_TEST_CHECKS)
 #define KAIRN_CHECKS 0
 #endif
+#include <kairn/accumulator.hpp>
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
@@ -343,6 +344,34 @@ FORM(bound_sum_2_traits_sum_height, length_bound<T, 2, 0>(in, out, mo))
 FORM(bound_sum_2_traits_sum, length_bound<T, 2, 1>(in, out, mo))
 FORM(bound_dot_1_traits_dot, length_bound<T, 1, 2>(in, out, mo))
 FORM(bound_dot_2_traits_dot, length_bound<T, 2, 2>(in, out, mo))
+// The accumulator (accumulator.hpp): the state of the line made with Accumulator::from_state, then
+// add, add_product or merge, and the state read back (running_sum(), magnitudes()), the kernel's
+// outputs t and b. The other accumulator of a merge is made the same way.
+template <class T, int K>
+kairn::Accumulator<T, K> acc_of(const T* in) {
+    if constexpr (K == 1) return kairn::Accumulator<T, 1>::from_state(E1<T>(in[0]), in[1], 0);
+    else return kairn::Accumulator<T, 2>::from_state(two(in), in[2], 0);
+}
+template <class T, int K>
+void put_acc(T* out, const kairn::Accumulator<T, K>& acc) {
+    put(out, acc.running_sum());
+    out[K] = acc.magnitudes();
+}
+template <class T, int K>
+auto number_k(const T* in) {
+    if constexpr (K == 1) return one(in);
+    else return two(in);
+}
+FORM(acc_add_1_add, auto acc = acc_of<T, 1>(in); acc.add(number_k<T, 1>(in + 2)); put_acc(out, acc))
+FORM(acc_add_1_add_limb, auto acc = acc_of<T, 1>(in); acc.add(in[2]); put_acc(out, acc))
+FORM(acc_add_2_add, auto acc = acc_of<T, 2>(in); acc.add(number_k<T, 2>(in + 3)); put_acc(out, acc))
+FORM(acc_mul_1_add_product, auto acc = acc_of<T, 1>(in); acc.add_product(number_k<T, 1>(in + 2), number_k<T, 1>(in + 3));
+     put_acc(out, acc))
+FORM(acc_mul_1_add_product_limbs, auto acc = acc_of<T, 1>(in); acc.add_product(in[2], in[3]); put_acc(out, acc))
+FORM(acc_mul_2_add_product, auto acc = acc_of<T, 2>(in); acc.add_product(number_k<T, 2>(in + 3), number_k<T, 2>(in + 5));
+     put_acc(out, acc))
+FORM(acc_merge_1_merge, auto acc = acc_of<T, 1>(in); acc.merge(acc_of<T, 1>(in + 2)); put_acc(out, acc))
+FORM(acc_merge_2_merge, auto acc = acc_of<T, 2>(in); acc.merge(acc_of<T, 2>(in + 3)); put_acc(out, acc))
 FORM(radd_entry_radd, out[0] = kairn::radd(AS(radd_entry, in[0]), in[1]))
 FORM(radd_entry_marked, out[0] = kairn::radd(in[0], kairn::unverified(in[1])))
 FORM(rmul_rmul, out[0] = kairn::rmul(AS(rmul, in[0]), in[1]))
@@ -1046,6 +1075,14 @@ const Form forms[] = {
     SOME(bound_sum_2, traits_sum, "l", "lm")
     SOME(bound_dot_1, traits_dot, "l", "llm")
     SOME(bound_dot_2, traits_dot, "l", "llm")
+    ROW(acc_add_1, add, "lll", "ll")
+    ROW(acc_add_1, add_limb, "lll", "ll")
+    ROW(acc_add_2, add, "lllll", "lll")
+    ROW(acc_mul_1, add_product, "llll", "ll")
+    ROW(acc_mul_1, add_product_limbs, "llll", "ll")
+    ROW(acc_mul_2, add_product, "lllllll", "lll")
+    ROW(acc_merge_1, merge, "llll", "ll")
+    ROW(acc_merge_2, merge, "llllll", "lll")
     ROW(add_down_entry, add_down, "ll", "l")
     ROW(add_down_entry, marked, "ll", "l")
     ROW(add_up_entry, add_up, "ll", "l")
@@ -1340,6 +1377,11 @@ const char* const internal[] = {
     // the public functions reach inside their loops, judged as api.oracle.FOLD.FORMAT.
     "fold_finish_1", "fold_finish_2", "norm_combine", "norm_step_1", "norm_step_2", "norm_finish_1",
     "norm_finish_2",
+    // The radius of an accumulator (accumulator.hpp): Accumulator::error_bound() calls it on the
+    // (g, t) that bound_dot_k gives for the count, never on given ones, so no form computes the
+    // kernel on a line's own (g, t); the composition is judged end to end in exact arithmetic
+    // (api.arrays.exact.accumulator).
+    "acc_radius_1", "acc_radius_2",
 };
 // Entry kernels (entry: yes in gen/kernels) that no public operation calls yet, and why.
 struct NotPublic {

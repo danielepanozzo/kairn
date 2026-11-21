@@ -1768,6 +1768,13 @@ class Site:
                     "the mask is false the result's `unit` and `tiny` are $+\\infty$, which claims nothing, "
                     "and in a constant expression the call does not compile ([Functions on "
                     "arrays](batch.md#the-bound-as-a-function-of-the-length)).")
+            elif any(t.startswith("Accumulator") for f in p["forms"] for t in f["operands"]):
+                # The accumulator (kairn/accumulator.hpp): member functions, no marker.
+                text = "\n".join(rows) + "\n\n" + (
+                    "`T` is `float` or `double`; `A` and `B` are accumulators, `kairn::Accumulator<T, k>`, header "
+                    "`kairn/accumulator.hpp`, which `kairn/kairn.hpp` includes. They take no marker: an "
+                    "operation of an accumulator compiles only while its kernels are proved "
+                    "([The accumulator](accumulator.md)).")
             elif any("SoAView" in t for f in p["forms"] for t in f["operands"]):
                 # The functions on arrays (kairn/batch.hpp): a header of their own, and no marker.
                 text = "\n".join(rows) + "\n\n" + (

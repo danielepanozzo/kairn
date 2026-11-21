@@ -81,6 +81,23 @@ today](../getting-started/guarantees.md#products-the-program-passes-in)).
 returns `true` exactly when every element written is finite; when it is false, each element that
 is not finite is the canonical NaN and the others are as computed.
 
+## An accumulator, in parts
+
+A sum that no function of `kairn/batch.hpp` computes, or one computed in parts, goes through
+[`kairn::Accumulator`](../reference/accumulator.md):
+
+```cpp
+--8<-- "docs/examples/cpp/arrays.cpp:accumulator"
+```
+
+Each `add_product` and each `merge` is a proved kernel; what is proved is a bound for **every
+history** of additions, products and merges, a merge being a node of the summation tree: the
+radius that `error_bound()` gives, and `ball()` with it, bounds the error of the running sum after
+whatever the program did. Here four accumulators take every fourth term, as four threads would,
+and are merged. When something is not finite, or the count is beyond what the kernels bound (about
+$2^{51}$ terms of `double`), the radius is $+\infty$ and the ball the whole line: never a finite
+ball the theorem does not give.
+
 ## The whole output
 
 ```text

@@ -173,7 +173,7 @@ def form_key(f):
     m = re.fullmatch(r"(traits<.*>::\w+)\((.*)\)", code)  # a function of traits: traits<X>::sum(n)
     if m:
         return ("op", m.group(1), tuple(f["operands"]))
-    m = re.fullmatch(r"\w+\.(\w+)(?:<[^>]*>)?\((?:\w+)?\)", code)  # a member function, X.name(), X.name<T>(), X.name(Y)
+    m = re.fullmatch(r"\w+\.(\w+)(?:<[^>]*>)?\((?:\w+(?:, \w+)*)?\)", code)  # a member function, X.name(), X.name<T>(), X.name(Y, Z)
     if m:
         return ("op", m.group(1), tuple(f["operands"][1:]))
     m = re.fullmatch(r"([\w:]+(?:<[^>]*>)?)\((.*)\)", code)

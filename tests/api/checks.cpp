@@ -227,6 +227,22 @@ const OperandCase operand_cases[] = {
          return double(kairn::conv(kairn::SoAView<const double, 1>(a.h, 8), kairn::SoAView<const double, 1>(c.h, 8),
                                    kairn::SoAView<double, 1>(a.h + 1, 15)));
      }},
+    // The accumulator: an operand that is not canonical; a state given to from_state that is not
+    // one (a sum that is not canonical, negative magnitudes).
+    {"acc.add.unnormalized", not_canonical, [] {
+         kairn::Accumulator<double, 2> a;
+         a.add(raw(1.0, double(v_a)));
+         return a.running_sum().limb[0];
+     }},
+    {"acc.add_product.unnormalized", not_canonical, [] {
+         kairn::Accumulator<double, 2> a;
+         a.add_product(o.x, raw(1.0, double(v_a)));
+         return a.running_sum().limb[0];
+     }},
+    {"acc.from_state.unnormalized", "Accumulator::from_state: the running sum is not canonical",
+     [] { return kairn::Accumulator<double, 2>::from_state(raw(1.0, double(v_a)), 1.0, 2).magnitudes(); }},
+    {"acc.from_state.negative", "Accumulator::from_state: the sum of magnitudes is negative",
+     [] { return kairn::Accumulator<double, 2>::from_state(o.x, -double(v_a), 2).magnitudes(); }},
     {"batch.norm_upper.unnormalized", "norm_upper: an element of x is not canonical", [] {
          Arrays a(o.y);
          a.h[4] = 1.0;
@@ -290,6 +306,9 @@ const Accepted accepted[] = {
          const Arrays c(o.y);
          const kairn::SoAView<double, 2> x(a.h, a.l, 16);
          return double(kairn::axpy(o.y, x, kairn::SoAView<const double, 2>(c.h, c.l, 16), x));
+     }},
+    {"an accumulator from the state (+inf, 0), +inf", [] {
+         return kairn::Accumulator<double, 2>::from_state(pair(infinity, 0.0), infinity, 3).error_bound();
      }},
     {"conv of empty polynomials", [] {
          return double(kairn::conv(kairn::SoAView<const double, 2>(), kairn::SoAView<const double, 2>(),

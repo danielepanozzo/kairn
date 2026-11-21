@@ -1,4 +1,5 @@
-// Sums and dot products of arrays: the program of the tutorial docs/tutorials/arrays.md. ctest builds
+// Sums and dot products of arrays, and the accumulator: the program of the tutorial
+// docs/tutorials/arrays.md. ctest builds
 // it in each form of Packed the target has (AVX2, NEON, and the scalar form of one lane:
 // tests/api/CMakeLists.txt), runs it, and compares what it prints with arrays.txt, which is the
 // same for every form: it prints the results of the sequential order, whose bits are the same
@@ -189,6 +190,20 @@ int main() {
     std::printf("axpy in place: %s, then with a NaN at 7: %s, element 7 %s, element 6 %s\n",
                 all_finite ? "every element finite" : "NOT FINITE", still_finite ? "FINITE" : "not every element finite",
                 std::isnan(h[7]) ? "NaN" : "NOT NaN", std::isfinite(h[6]) ? "finite" : "NOT FINITE");
+
+    // --8<-- [start:accumulator]
+    // The same dot product in four parts, each in an accumulator of its own (as four threads would
+    // compute it), merged at the end; its ball contains the exact value.
+    kairn::Accumulator<double, 2> parts[4];
+    for (std::size_t i = 0; i < n; ++i) parts[i % 4].add_product(x[i], y[i]);
+    for (int k = 1; k < 4; ++k) parts[0].merge(parts[k]);
+    const kairn::Ball<double, 2> ball = parts[0].ball();
+    // --8<-- [end:accumulator]
+    double ra = 0;
+    const kairn::Bound<double> radius{0.0, ball.radius(), 0.0, 0.0, kairn::BoundForm::terms};
+    ok = ball.is_finite() && within(exact, magnitudes, ball.center().limb, 2, radius, ra) && ok;
+    std::printf("Accumulators in 4 parts, merged: %llu terms, radius %.3g, error / radius %.2g\n",
+                static_cast<unsigned long long>(parts[0].count()), ball.radius(), ra);
 
     std::printf("%s\n", ok ? "every result within its bound" : "A RESULT OUTSIDE ITS BOUND");
     return ok ? 0 : 1;

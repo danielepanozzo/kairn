@@ -14,7 +14,11 @@ A number of several limbs stands for their exact sum: $s = s_0 + s_1$, $r = r_0 
 
 ## C++
 
-No public operation computes this kernel on its own.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `A.sum()` | `Accumulator<T, 2>` | `Reduction<Expansion<T, 2>>` | the running sum of an accumulator, canonical; the finish of the loops of `kairn/batch.hpp` too |
+
+`T` is `float` or `double`; `A` and `B` are accumulators, `kairn::Accumulator<T, k>`, header `kairn/accumulator.hpp`, which `kairn/kairn.hpp` includes. They take no marker: an operation of an accumulator compiles only while its kernels are proved ([The accumulator](accumulator.md)).
 
 ## Requires
 

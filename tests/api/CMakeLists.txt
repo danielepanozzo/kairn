@@ -82,7 +82,8 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 # not entry kernels, are building blocks, and the steps, which are, are on the second list.
 set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
   sub_up_1 mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2
-  mul_ext_2_2 fold_finish_1 fold_finish_2 norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2)
+  mul_ext_2_2 fold_finish_1 fold_finish_2 norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
+  acc_radius_1 acc_radius_2)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2
   ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2 dot_step_1 dot_step_2
   add_entry_step_1 add_entry_step_2 sub_entry_step_1 sub_entry_step_2 scale_step_1 scale_step_2 mul_pow2_step_1
@@ -363,10 +364,18 @@ endforeach()
 # api.arrays.exact.KIND (arrays_exact.cpp computes through the public headers, arrays_exact.py
 # checks with Python's fractions): bounds, kairn::traits<X>::sum(n) and dot(n) at the lengths where
 # the count is converted to T exactly and where it is rounded up, against gamma_m(e) and the
-# underflow term of the proved statements, +infinity exactly where no bound is given.
+# underflow term of the proved statements, +infinity exactly where no bound is given; accumulator,
+# histories of kairn::Accumulator (random trees of add, add_product and merge, empty ones, counts
+# where their conversion to T rounds, a count that saturates, overflows, terms that are not finite)
+# against their exact sums, the radius never finite where the theorem gives none.
 _kairn_api_program(kairn-api-arrays-exact arrays_exact.cpp)
+# api.accumulator (accumulator.cpp): the accumulator in constant evaluation, its merges, from_state,
+# the count and what it returns when something is not finite.
+_kairn_api_program(kairn-api-accumulator accumulator.cpp)
+add_test(NAME api.accumulator COMMAND kairn-api-accumulator)
+set_tests_properties(api.accumulator PROPERTIES TIMEOUT 120 LABELS "api;arrays")
 if(Python3_Interpreter_FOUND)
-  foreach(_kind bounds)
+  foreach(_kind bounds accumulator)
     add_test(NAME api.arrays.exact.${_kind}
       COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/arrays_exact.py"
         "$<TARGET_FILE:kairn-api-arrays-exact>" ${_kind})
@@ -892,7 +901,7 @@ _kairn_api_reject(packed.one_limb_arithmetic 53 "${_api_no_operator}")
 # The functions on arrays (batch.hpp): nothing writes through a view of const limbs, every view of
 # one call has one limb type and one number of limbs, and nothing scales by a two-limb number (no
 # loop does). Each control writes what compiles instead.
-set(_api_no_function "no matching|no overloaded function|constraints|could not deduce|conflicting")
+set(_api_no_function "no matching|no overloaded function|constraints|could not deduce|conflicting|cannot convert")
 _kairn_api_reject(batch.map_into_const 54 "${_api_no_function}")
 _kairn_api_reject(batch.axpy_into_const 55 "${_api_no_function}")
 _kairn_api_reject(batch.mixed_limb_types 56 "${_api_no_function}")
@@ -901,6 +910,12 @@ _kairn_api_reject(batch.scale_by_two_limbs 58 "${_api_no_function}")
 # A bound as a function of the length that the kernel does not give, in a constant expression: a
 # compile error (traits.hpp); the control computes it at run time, where it is +infinity.
 _kairn_api_reject(traits.length_beyond 59 "constant|constexpr")
+# The accumulator (accumulator.hpp): no merge of accumulators of two limb types; add_product and
+# error_bound are not constexpr (their kernels have fused multiply-adds); each control writes what
+# compiles instead.
+_kairn_api_reject(accumulator.mixed_limb_types 60 "${_api_no_conversion}|${_api_no_function}")
+_kairn_api_reject(not_constexpr.add_product 61 "constant|constexpr")
+_kairn_api_reject(not_constexpr.error_bound 62 "constant|constexpr")
 # KAIRN_PACKED_FORM (packed.hpp): a value that is not a form, a bare -D, and the form of another
 # target, which the generated header refuses.
 _kairn_api_reject(packed_form.unknown 52 "KAIRN_PACKED_FORM must be KAIRN_PACKED_FORM_SCALAR"

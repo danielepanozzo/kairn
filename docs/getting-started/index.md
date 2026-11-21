@@ -191,6 +191,11 @@ the operation of `Expansion` it is, whose bound the reference page of its kernel
   program writes has to make its own analysis of the order it chose. By default a sum adds in the
   lane order of the build, whose bits depend on the instruction set; `kairn::sequential` gives the
   same bits everywhere. The [tutorial](../tutorials/arrays.md) checks both against their bound.
+- **[`kairn::Accumulator<T, k>`](../reference/accumulator.md)**, for a sum or a dot product the
+  program computes term by term, in an order of its own or in parts merged at the end (one
+  accumulator per thread): its radius bounds the error of the result after any history of
+  additions, products and merges, and `ball()` contains the exact sum. `kairn/kairn.hpp` includes
+  it.
 
 `kairn/packed.hpp`, `kairn/soa.hpp` and `kairn/batch.hpp` are not included by `kairn/kairn.hpp`, which they would
 make two to three times as long to compile where the target has SIMD
