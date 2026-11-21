@@ -404,6 +404,11 @@ before, such a case was shown and the run passed). `tests/crosscheck_guards.py` 
 oracle's summary (`check --json`) whether the run checked what it set out to; `tests/crosscheck.py`
 calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
 
+- **The summary stays small**: at most 4 MiB (`SUMMARY_BYTES`), checked before anything else and
+  also by `tests/crosscheck.py api`. What the oracle keeps of a run does not grow with the number
+  of lines or elements it judged (`oracle/README.md`, "The size of a summary"); a larger summary
+  means that something does, as a map's once did ([The size of the
+  summaries](#the-size-of-the-summaries)).
 - **The stream is the one asked for**: one generator header, for this kernel, format and mode (and
   seed), and every index of it seen.
 - **An enumeration is what it claims**: it covers every index of its enumeration, over every
@@ -567,7 +572,7 @@ or where `finite_when` never holds, one of `ball_add_1_full` whose radius makes 
 finite operands the whole line, random runs without non-finite operands, without the empty set or
 without one of a constructor's outcomes, a constructor's good run with one class of radius taken out of its summary, headers without the strata of the layer), and summaries
 altered where no stream can produce the fault (entries that are not those of the claims, claims
-that cannot be read); and both drivers on such runs, which they must fail with the guards'
+that cannot be read, a summary padded beyond the bound on its size); and both drivers on such runs, which they must fail with the guards'
 reason, and on good ones: `tests/crosscheck.py compiled` with the interpreter as its runner
 (`--interp`), `tests/crosscheck.py api` with the build's runner of the public interface (a good
 run, one of 5 cases, which misses strata, and a kernel it maps no form to), and
@@ -1654,6 +1659,56 @@ same among the runners of one build. Smaller: one process per runner of the publ
 all of its forms, instead of one per form (0.013 to 0.017 seconds a process on the Windows
 machine), and a cache of the oracle's compiled modules in the build tree (their import from
 source takes 0.04 to 0.07 seconds a process, 0.01 to 0.03 from a cache).
+
+### The size of the summaries
+
+Until 2026-11-20 a map's summary in the full tier took 1.3 to 1.7 GB
+(`full.crosscheck.compiled.sub_2.binary64.cxx.json` 1.57 GB) and a build tree after the full tier
+38.6 GB, nearly all of it in its 526 summaries: it filled a disk, made another agent's tests fail,
+and is the likely reason the hosted Windows full tier went from 27 to 40 minutes.
+
+**The cause**, measured on a summary of `sub_2` in `binary64` of 60 arrays of up to 256 elements
+(44.8 MB, 11 strata, each with the map's two entries and the step's `normalized` and `error`):
+99.1% of it (44.3 MB) was the profile of (a) of the step's `error` entries, 1 902 distances each
+with its case, and the case was the whole map line (23 KB on average: the longest lines set most
+of the extremes); the cases of the largest ratio and of (b) took 0.4 MB more, the ratios 0.3 MB,
+everything else 25 KB. In the full tier, arrays of up to 1 024 elements, the profile holds up to
+some 2 000 distances per stratum, each with a line of up to 150 KB.
+
+**The fix** (`oracle/README.md`, "The size of a summary"): the statistics of a map's step keep
+the line of the element of the step that attains them, `STEP FORMAT OPERAND...
+#MAP:STRATUM:INDEX:element:I -> OUTPUT...` (a few limbs, which runs again as a line of the step),
+and a summary keeps the profile's records only, the distances whose ratio is at least every ratio
+at a larger distance, which give (a) for every $F$, value and case, as the whole profile did,
+also through merges. The same summary takes 0.11 MB (232 records with their cases, 72 KB, and
+the distances seen, 9 KB). What a summary keeps is a fixed set of statistics, each with at most
+one case, whose number the claims and the format fix; each case is a line of a kernel or of a
+step, or (a fold's or a convolution's own statistics, one per statistic) a fold's line. The
+guards fail a summary above 4 MiB ([What a pass requires](#what-a-pass-requires)), more than
+ten times the largest of the full tier.
+
+**What changed shape**: in a summary, the profile (its records only, and `profile_distances`, the
+distances seen) and, for a map, the cases of the step's entries (the element's line, not the
+map's); in a report, those cases (`at` under the step's entries of a map), and with `--verbose`
+after a merge, the profile's rows (its records). Nothing else: on 215 runs of the old and the new
+oracle on the same outputs of the reference runner (every map, fold of maxima and convolution in
+`binary64`, `binary32` and a toy format; each of them with the planted faults of stage B; a
+quarter of the kernels, the steps, the kernels of the folds of maxima, and kernels and folds with
+planted faults; two seeds each, then merged), the exit status and the report were the same, byte
+for byte, but for 1 134 lines, each the case of a map's step; every counter, reason, example,
+value of a statistic and every other case was the same, and the new profile was the records of the
+old; the guards, old and new, decided the same on the old and the new summaries, with the same
+output, the new ones failing the 91 old summaries above 4 MiB for their size alone; and the
+brute-force driver's statistics of the merged summaries (`entry_stats`) were the same but for the
+cases of the maps' steps.
+
+**Measured** on the Linux machine (16 threads, GCC 13, `--parallel 4`) before the fix: the quick
+tier left 410 summaries of 144 MB in all (the largest 2.25 MB, 47 above 1 MiB) in a build tree of
+334 MB, in 125 seconds. After it, a map's summary of the full tier's size (1 000 arrays of up to
+1 024 elements, through the reference runner) takes 0.12 MB (`sub_2`) to 0.30 MB
+(`axpy_2_1_entry`), a fold's of 4 096 elements 0.06 MB, a kernel's of 20 000 cases 0.16 MB (2.7 MB
+before), and the oracle judges the 1 000 arrays of `sub_2` in 2.2 seconds with 48 MB of memory
+at most (on the Mac).
 
 ## The generator's tier
 

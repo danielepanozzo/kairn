@@ -676,7 +676,8 @@ and failures; for `error` entries:
 - **(b)** $\max (|\text{err}| - \mathrm{rel}\,\rho) / \eta$ over all cases: the smallest $t$ the
   data needs given the claimed $c$ (none when it is $\le 0$).
 - The profile of (a) by distance $D = \lfloor \log_2(u^k\rho/\eta) \rfloor$ (`--verbose`), from
-  which (a) for any other $F$ can be read.
+  which (a) for any other $F$ can be read. A summary keeps its records only (below, "The size of a
+  summary"), which give (a) for every $F$: `--verbose` on merged summaries lists those.
 
 For the kinds of the second wave, the statistics that show a loose or a tight claim:
 
@@ -694,6 +695,37 @@ For the kinds of the second wave, the statistics that show a loose or a tight cl
 
 `--json FILE` writes all of this, with exact fractions as decimal strings; `check --merge A.json
 B.json ...` merges summaries (counts add, maxima combine, coverage ranges unite).
+
+#### The size of a summary
+
+What a summary keeps does not grow with the number of lines or of elements judged. Per key
+(kernel, format, stratum) it holds counters, the reasons of failures with their counts (a map's
+name the element, so that a failing run has at most one per element index and reason) and at
+most `--max-examples` examples of each kind (failure, invalid, suspicious), each a whole line;
+per entry of the claims a fixed set of statistics: the
+largest ratio and (b), each named maximum and minimum, each with one case; counts, whose names
+the claims and the format fix (a histogram has a bin per binade at most); and the profile of (a),
+at most one record per distance $D$, whose range the format fixes (some 2 100 values in
+binary64, a few tens in a toy format), each with one case. A case is a line of the kernel
+judged, except in two places:
+
+- the statistics of a map's step (the entries `entries(z), step K: ...`) keep the line of the
+  element that attains them, a completed line of the step spelled with the map's own tokens,
+  `STEP FORMAT OPERAND... #MAP:STRATUM:INDEX:element:I -> OUTPUT...`, which runs again as a line
+  of the step with the same verdict (`maps.ElementLine`), never the map's line, which holds
+  thousands of limbs;
+- the profile keeps its records (`check.EntryStats.profile_records`): the distances whose ratio
+  is at least every ratio at a larger distance, with their cases. The largest ratio over
+  $D \ge F$, and its case, is a record's for every $F$, and the records of a merge are those of
+  the merge of the records, so that (a) for any $F$, here and in the brute-force driver
+  (`tests/brute/brute.py`, `observed_c`), is what the whole profile gave; `profile_distances`
+  lists every distance seen (an integer alone or a range `[lo, hi]`), so that a merge orders
+  equal ratios as before. A summary read back holds the other distances without their ratios.
+
+A fold's or a convolution's statistics keep the fold's line (one per statistic, not per
+distance). The largest summaries of the full tier are about 0.3 MB; before the two changes above
+a map's was up to 1.6 GB, 99% of it the profile's cases, each a whole map line. The cross-checks
+fail a summary above 4 MiB (`tests/crosscheck_guards.py`, `SUMMARY_BYTES`).
 
 ### Claims as read
 
@@ -1045,7 +1077,8 @@ each limb of the written array, most significant first, its N entries, then the 
       the one a line of the step would get, by the same code (`check.Checker.verdict`, the
       requirements first by `check.Checker.violated`): its failures are failures of `entries`,
       and the statistics of each entry of the step are kept in entries of their own, after the
-      map's two (`entries(z), step K: ...`). Where the step's claims leave a finite result
+      map's two (`entries(z), step K: ...`), with the element's line of the step as their cases
+      ("The size of a summary"). Where the step's claims leave a finite result
       unclaimed in the finite domain, the map's reading does not: a finite element whose step's
       exact result rounds beyond $\Omega$ (`rounded` of a one-limb step), or with a lower limb that
       is not finite, fails `entries`;
@@ -1690,6 +1723,7 @@ follows from both parts being canonical.
 | `maps_judge` | one of 91 hand-written lines of stage B judged otherwise than worked out by hand (a written element off, a flag that lies both ways, a missing second pass, a finite element from a non-finite operand and from a sum that rounds beyond $\Omega$, the empty array with a NaN scalar, malformed lines, invalid scalars and elements; the maxima at, one and two steps above $\mathrm{RU}(V)$, a lost NaN, the bound's top beyond $\Omega$ and finite; the convolutions of architecture.md's examples, a coefficient off, $0 \cdot \infty$, lengths that do not match the limbs; `maximum`, the finishes on $\Omega$, $-\eta$, $-\infty$, a NaN and a false mask; the tight case of `axpy_step_1`) |
 | `gen_maps` | case $i$ of a map, a fold of maxima or a convolution alone not case $i$ of its run, a seed or the largest length not mattering, a length above the largest, a stratum missing or not listed, an invalid case, an unknown stratum accepted, a convolution accepting the lane order |
 | `merging_wave7` | the merge of summaries of stage B differs from the whole |
+| `summary_bounds` | a statistic of a map's step keeping anything but the line of its element of the step (or one that does not pass when judged again), a summary of a map above 1 MB, a distance of the profile kept that is not a record; on 3 000 random profiles with many equal ratios, merged in order from summaries read back, (a) for some $F$ (value or case) or the merged summary differing between the records and every distance |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.
