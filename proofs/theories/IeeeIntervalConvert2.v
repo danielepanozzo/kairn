@@ -20,8 +20,9 @@
      midpoint +-Omega on its side and the radius +infinity; and a bounded interval a finite m
      with l <= m <= h and |m - mid| <= rel2 |mid| + 2 eta, and a radius that is +infinity or a
      finite number with which every member of [l, h] is within r of m; the radius is finite
-     when both bounds are at most 2^(emax - 2) in magnitude. Beyond the generated statement
-     (interval_mid_rad_2_all): the midpoint of a bounded interval is a normalized pair.
+     when both bounds are at most 2^(emax - 2) in magnitude. And for every canonical interval
+     the midpoint is a canonical 2-limb value, the invariant of the type of the midpoint: two
+     NaN, a zero twice, (+-Omega, +0), or a normalized pair.
 
    - interval_to_ball_2 (interval_to_ball_2_correct): a canonical ball, empty exactly when the
      interval is, the whole line for an unbounded nonempty interval, a ball that contains a
@@ -828,13 +829,17 @@ Ltac absurd_case xl0 xl1 xu0 xu1 :=
   | K : finite xu0 |- _ => apply (fun F => xval_2_fin prec emax xu0 xu1 F) in K
   end; congruence.
 
-(* interval_mid_rad_2, for a canonical interval, from precision 3: the generated statement,
-   and that the midpoint of a bounded interval is a normalized pair. *)
+(* interval_mid_rad_2, for a canonical interval, from precision 3: the generated statement
+   (first, the midpoint is a canonical 2-limb value: two NaN for the empty set, a zero twice
+   for the whole line, (+-Omega, +0) for a half-line, a normalized pair for a bounded
+   interval), and that the midpoint of a bounded interval is a normalized pair, in the form the
+   proof of interval_to_ball_2 uses. *)
 Theorem interval_mid_rad_2_all :
   (3 <= prec)%Z ->
   forall xl0 xl1 xu0 xu1 : float, interval_2 xl0 xl1 xu0 xu1 ->
   let '(m0, m1, r) := interval_mid_rad_2 xl0 xl1 xu0 xu1 in
-  ((interval_empty_2 xl0 xl1 xu0 xu1 -> nan m0 /\ nan m1 /\ nan r) /\
+  (canonical_2 m0 m1 /\
+   (interval_empty_2 xl0 xl1 xu0 xu1 -> nan m0 /\ nan m1 /\ nan r) /\
    (xval_2 xl0 xl1 = XInf true -> xval_2 xu0 xu1 = XInf false ->
     zero m0 /\ zero m1 /\ r = infinity prec emax false) /\
    (finite xl0 -> xval_2 xu0 xu1 = XInf false ->
@@ -870,6 +875,7 @@ destruct (interval_2_cases xl0 xl1 xu0 xu1 CX)
   rewrite Vl0. cbn [xlt andb orb negb].
   match goal with |- context [mid_core2 ?a ?b ?c ?d] => destruct (mid_core2 a b c d) as [mc0 mc1] end.
   split; [|absurd_case xl0 xl1 xu0 xu1].
+  split; [right; right; split; exact Ncnan|].
   split; [intros _; repeat split; exact Ncnan|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
@@ -878,6 +884,7 @@ destruct (interval_2_cases xl0 xl1 xu0 xu1 CX)
   rewrite Wl0, Wu0. cbn [xlt andb orb negb].
   match goal with |- context [mid_core2 ?a ?b ?c ?d] => destruct (mid_core2 a b c d) as [mc0 mc1] end.
   split; [|absurd_case xl0 xl1 xu0 xu1].
+  split; [apply canonical_single; reflexivity|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
   split; [intros _ _; split; [exists false; reflexivity|split; [exists false; reflexivity|reflexivity]]|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
@@ -889,6 +896,7 @@ destruct (interval_2_cases xl0 xl1 xu0 xu1 CX)
   cbn [andb orb].
   match goal with |- context [mid_core2 ?a ?b ?c ?d] => destruct (mid_core2 a b c d) as [mc0 mc1] end.
   split; [|absurd_case xl0 xl1 xu0 xu1].
+  split; [exact (canonical_single _ Fom)|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
   split; [intros _ _; split; [|reflexivity]|].
@@ -902,6 +910,7 @@ destruct (interval_2_cases xl0 xl1 xu0 xu1 CX)
   cbn [andb orb].
   match goal with |- context [mid_core2 ?a ?b ?c ?d] => destruct (mid_core2 a b c d) as [mc0 mc1] end.
   split; [|absurd_case xl0 xl1 xu0 xu1].
+  split; [exact (canonical_single _ Fmo)|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
@@ -924,6 +933,7 @@ destruct (interval_2_cases xl0 xl1 xu0 xu1 CX)
   assert (RF := rad_core2_facts Hp xl0 xl1 xu0 xu1 mc0 mc1 Cl Cu Cm Bm).
   assert (Ht : 0 < u prec <= / 8) by exact (Ball2.u_bounds prec 3 Hp).
   split; [|intros _; exact Nm].
+  split; [exact Cm|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
   split; [absurd_case xl0 xl1 xu0 xu1|].
@@ -972,7 +982,7 @@ intros Hp xl0 xl1 xu0 xu1 CX.
 generalize (interval_mid_rad_2_all Hp xl0 xl1 xu0 xu1 CX).
 unfold IeeeModel.interval_to_ball_2.
 destruct (interval_mid_rad_2 xl0 xl1 xu0 xu1) as [[m0 m1] r]. cbv zeta.
-intros [[M1 [M2 [M3 [M4 M5]]]] MN].
+intros [[_ [M1 [M2 [M3 [M4 M5]]]]] MN].
 rewrite (eq_xval prec emax r pinf). change (xv pinf) with (XInf false).
 assert (WholeZ : ball_2 pzero pzero (infinity prec emax false) /\
                  ~ ball_empty_2 pzero pzero (infinity prec emax false) /\

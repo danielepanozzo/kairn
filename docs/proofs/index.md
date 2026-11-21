@@ -268,7 +268,8 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   $-\infty$ for the empty ball, and they are the bounds rounded outward for a center of one
   limb; a ball of two limbs narrowed to one limb, and a ball of two limbs made from an interval
   of two numbers of `T`, are canonical and contain what they are made from, whatever the
-  operands are. For an interval whose bounds have two limbs: the midpoint of a bounded
+  operands are. For an interval whose bounds have two limbs: the midpoint is a canonical
+  number of two limbs for every interval (two NaN for the empty set), and that of a bounded
   interval is finite, in the interval and within $3u^2/(1-4u)\,\lvert m\rvert + 2\eta$ of the
   exact midpoint $m$; its radius is $+\infty$ or a finite number with which the midpoint
   contains the interval, and it is finite when both bounds are within a quarter of the

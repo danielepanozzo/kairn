@@ -12,7 +12,9 @@
 # with which every ball contains the interval; the radius is finite when both bounds are at most
 # 2^(emax-2) in magnitude, where add_2_2 stays finite. As for one limb: the whole
 # line has midpoint 0, a half-line the largest finite number of its sign, both with radius +inf (the
-# values of IEEE 1788); the empty set gives three NaN.
+# values of IEEE 1788); the empty set gives three NaN. In every case the midpoint is a canonical
+# 2-limb number, the invariant of the k-number midpoint() returns: two NaN, two zeros, (+-Omega, +0),
+# or a normalized pair (ball_of_interval with ieee1788 and a center of two limbs claims it).
 kernel:        interval_mid_rad_2
 input:         xl = xl0 xl1
 input:         xu = xu0 xu1

@@ -1,8 +1,9 @@
 # A ball with a 2-limb center that contains two such balls (milestone2.md, "One enclosure interface",
 # "Hull, intersection and split of balls"): ball_hull_1 on the conversions of two limbs, both balls to
 # intervals (ball_to_interval_2), the hull of the intervals (interval_hull_2), back to a ball
-# (interval_to_ball_2). If an operand is empty the other is returned as it is, by the tests of the
-# radii; the selects choose the composition when both operands are not empty (qx, qy). The whole
+# (interval_to_ball_2). If X is empty Y is returned as it is, and if Y is empty and X is not, X (the
+# same limbs), by the tests of the radii (two empty balls give Y); the selects choose the composition
+# when both operands are not empty (qx, qy). The whole
 # line gives the whole line through the conversions, and so does a hull whose radius overflows near
 # the top of the range. Not claimed: the smallest such ball.
 kernel:        ball_hull_2

@@ -355,7 +355,7 @@ Definition ball_hull_1_spec : Prop :=
   ball_1 cz rz /\
   (ball_empty_1 cz rz <-> ball_empty_1 cx rx /\ ball_empty_1 cy ry) /\
   (ball_empty_1 cx rx -> cz = cy /\ rz = ry) /\
-  (ball_empty_1 cy ry -> cz = cx /\ rz = rx) /\
+  (ball_empty_1 cy ry /\ ~ ball_empty_1 cx rx -> cz = cx /\ rz = rx) /\
   (forall z : R, in_ball_1 cx rx z \/ in_ball_1 cy ry z -> in_ball_1 cz rz z).
 
 (* ball_intersection_1: both balls to intervals, their intersection, back to a ball, the empty set selected last (Milestone 2 listing). IEEE-model status: unverified. *)
@@ -371,7 +371,7 @@ Definition ball_intersection_1_spec : Prop :=
   ball_1 cz rz /\
   (ball_empty_1 cx rx \/ ball_empty_1 cy ry -> ball_empty_1 cz rz) /\
   (ball_whole_1 cx rx -> cz = cy /\ rz = ry) /\
-  (ball_whole_1 cy ry -> cz = cx /\ rz = rx) /\
+  (ball_whole_1 cy ry /\ ~ ball_whole_1 cx rx -> cz = cx /\ rz = rx) /\
   (forall z : R, in_ball_1 cx rx z /\ in_ball_1 cy ry z -> in_ball_1 cz rz z).
 
 (* ball_less_1: the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing). IEEE-model status: proved. *)
@@ -1809,6 +1809,7 @@ Definition interval_mid_rad_2_spec : Prop :=
   forall xl0 xl1 xu0 xu1 : binary_float prec emax,
   interval_2 xl0 xl1 xu0 xu1 ->
   let '(m0, m1, r) := IeeeModel.interval_mid_rad_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const xl0 xl1 xu0 xu1 in
+  canonical_2 m0 m1 /\
   (interval_empty_2 xl0 xl1 xu0 xu1 -> nan m0 /\ nan m1 /\ nan r) /\
   (xval_2 xl0 xl1 = XInf true -> xval_2 xu0 xu1 = XInf false -> zero m0 /\ zero m1 /\ r = infinity prec emax false) /\
   (finite xl0 -> xval_2 xu0 xu1 = XInf false -> xval_2 m0 m1 = XFin (omega prec emax) /\ r = infinity prec emax false) /\
@@ -1853,7 +1854,7 @@ Definition ball_hull_2_spec : Prop :=
   ball_2 cz0 cz1 rz /\
   (ball_empty_2 cz0 cz1 rz <-> ball_empty_2 cx0 cx1 rx /\ ball_empty_2 cy0 cy1 ry) /\
   (ball_empty_2 cx0 cx1 rx -> cz0 = cy0 /\ cz1 = cy1 /\ rz = ry) /\
-  (ball_empty_2 cy0 cy1 ry -> cz0 = cx0 /\ cz1 = cx1 /\ rz = rx) /\
+  (ball_empty_2 cy0 cy1 ry /\ ~ ball_empty_2 cx0 cx1 rx -> cz0 = cx0 /\ cz1 = cx1 /\ rz = rx) /\
   (forall z : R, in_ball_2 cx0 cx1 rx z \/ in_ball_2 cy0 cy1 ry z -> in_ball_2 cz0 cz1 rz z).
 
 (* interval_intersection_2: the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). IEEE-model status: proved. *)
@@ -1887,7 +1888,7 @@ Definition ball_intersection_2_spec : Prop :=
   ball_2 cz0 cz1 rz /\
   (ball_empty_2 cx0 cx1 rx \/ ball_empty_2 cy0 cy1 ry -> ball_empty_2 cz0 cz1 rz) /\
   (ball_whole_2 cx0 cx1 rx -> cz0 = cy0 /\ cz1 = cy1 /\ rz = ry) /\
-  (ball_whole_2 cy0 cy1 ry -> cz0 = cx0 /\ cz1 = cx1 /\ rz = rx) /\
+  (ball_whole_2 cy0 cy1 ry /\ ~ ball_whole_2 cx0 cx1 rx -> cz0 = cx0 /\ cz1 = cx1 /\ rz = rx) /\
   (forall z : R, in_ball_2 cx0 cx1 rx z /\ in_ball_2 cy0 cy1 ry z -> in_ball_2 cz0 cz1 rz z).
 
 (* ball_less_2: a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing). IEEE-model status: proved. *)

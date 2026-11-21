@@ -49,11 +49,12 @@ It calls [`ball_to_interval_1`](ball_to_interval_1.md), [`interval_hull_1`](inte
 # A ball with a one-limb center that contains two such balls (milestone2.md, "One enclosure
 # interface", "Hull, intersection and split of balls"): both balls to intervals (ball_to_interval_1,
 # the smallest intervals of T that contain them), the hull of the intervals (interval_hull_1), back to
-# a ball (interval_to_ball_1). If an operand is empty the other is returned as it is, by the tests of
-# the radii (a NaN radius is the empty ball); the composition alone would return it converted twice.
-# The whole line gives the whole line through the conversions. The selects choose the composition
-# when both operands are not empty (qx, qy), the case the scalar printer puts first. Not claimed: the
-# smallest such ball.
+# a ball (interval_to_ball_1). If X is empty Y is returned as it is, and if Y is empty and X is not, X
+# (the same limbs), by the tests of the radii (a NaN radius is the empty ball); the composition alone
+# would return it converted twice. Two empty balls give Y, whose NaNs need not be X's, which is why
+# the second clause has its condition. The whole line gives the whole line through the conversions.
+# The selects choose the composition when both operands are not empty (qx, qy), the case the scalar
+# printer puts first. Not claimed: the smallest such ball.
 
 (xl, xu) = ball_to_interval_1(cx, rx)
 (yl, yu) = ball_to_interval_1(cy, ry)

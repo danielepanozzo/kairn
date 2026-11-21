@@ -929,8 +929,9 @@ Print Assumptions ball_equal_2_facts.
    an interval, and the midpoint of a bounded interval; the distance by add_ball_2_2 with its
    relative bound, a side of the radius, when it is finite, and the radius; each listing with
    its cores named; the statement of the midpoint and the radius with the midpoint of a
-   bounded interval as a normalized pair, which the generated statement does not say; the
-   statement of the ball; and the point of the split, on extended real numbers and on limbs. *)
+   bounded interval as a normalized pair, in the form the proof of the ball uses (the generated
+   statement says that the midpoint is canonical); the statement of the ball; and the point of
+   the split, on extended real numbers and on limbs. *)
 From Kairn Require Import IeeeIntervalConvert2.
 Print Assumptions rel2_le.
 Print Assumptions two_eta_le.

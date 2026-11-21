@@ -68,7 +68,9 @@ It calls [`mul_pow2_2`](mul_pow2_2.md), [`add_2_2`](add_2_2.md), [`lt_2_2`](lt_2
 # with which every ball contains the interval; the radius is finite when both bounds are at most
 # 2^(emax-2) in magnitude, where add_2_2 stays finite. As for one limb: the whole
 # line has midpoint 0, a half-line the largest finite number of its sign, both with radius +inf (the
-# values of IEEE 1788); the empty set gives three NaN.
+# values of IEEE 1788); the empty set gives three NaN. In every case the midpoint is a canonical
+# 2-limb number, the invariant of the k-number midpoint() returns: two NaN, two zeros, (+-Omega, +0),
+# or a normalized pair (ball_of_interval with ieee1788 and a center of two limbs claims it).
 
 om             = pred(const inf)
 mo             = neg(om)

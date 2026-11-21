@@ -48,9 +48,11 @@ It calls [`sub_down_1`](sub_down_1.md), [`add_up_1`](add_up_1.md), [`interval_to
 ```
 # A ball with a one-limb center that contains the intersection of two such balls (milestone2.md,
 # "One enclosure interface", "Hull, intersection and split of balls"): the values of the composition
-# of ball_to_interval_1 of each ball, interval_intersection_1 and interval_to_ball_1. If an operand is
-# the whole line the other is returned as it is, by the tests of the radii; an empty operand gives the
-# empty set, and so do two balls whose intervals do not meet. The listing computes those values in
+# of ball_to_interval_1 of each ball, interval_intersection_1 and interval_to_ball_1. If X is the whole
+# line Y is returned as it is, and if Y is the whole line and X is not, X (the same limbs), by the
+# tests of the radii; two whole lines give Y, whose center may be -0 where X's is +0, which is why
+# the second clause has its condition. An empty operand gives the empty set, and so do two balls
+# whose intervals do not meet. The listing computes those values in
 # another order: the directed bounds of both balls and their intersection [l, h] as they are, the
 # ball of interval_to_ball_1 of [l, h], and only then the empty set selected, when a radius is a NaN
 # (an empty ball, which ball_to_interval_1 makes the empty interval) or l > h (which

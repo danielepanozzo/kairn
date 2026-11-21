@@ -293,13 +293,28 @@ class Statements(unittest.TestCase):
         s = spec('ball_contains_ball_2')
         self.assertIn('  (m = true ->\n    (forall z : R, in_ball_2 cy0 cy1 ry z -> in_ball_2 cx0 cx1 rx z)) /\\\n', s)
         # The set operations of a ball.
+        # An operand returned as it is, the limbs themselves: Y when X is special, X when Y is
+        # and X is not (when both are, the result is Y, and need not be X: two NaNs of different
+        # signs, two whole lines of centers +0 and -0).
         s = spec('ball_hull_1')
         self.assertIn('  (ball_empty_1 cz rz <-> ball_empty_1 cx rx /\\ ball_empty_1 cy ry) /\\\n'
-                      '  (ball_empty_1 cx rx -> cz = cy /\\ rz = ry) /\\\n', s)
+                      '  (ball_empty_1 cx rx -> cz = cy /\\ rz = ry) /\\\n'
+                      '  (ball_empty_1 cy ry /\\ ~ ball_empty_1 cx rx -> cz = cx /\\ rz = rx) /\\\n', s)
         self.assertIn('  (forall z : R, in_ball_1 cx rx z \\/ in_ball_1 cy ry z -> in_ball_1 cz rz z)', s)
         s = spec('ball_intersection_1')
-        self.assertIn('  (ball_whole_1 cy ry -> cz = cx /\\ rz = rx) /\\\n', s)
-        # The conversions of two limbs.
+        self.assertIn('  (ball_whole_1 cx rx -> cz = cy /\\ rz = ry) /\\\n'
+                      '  (ball_whole_1 cy ry /\\ ~ ball_whole_1 cx rx -> cz = cx /\\ rz = rx) /\\\n', s)
+        self.assertIn('  (ball_whole_2 cy0 cy1 ry /\\ ~ ball_whole_2 cx0 cx1 rx -> cz0 = cx0 /\\ cz1 = cx1 /\\ rz = rx)',
+                      spec('ball_intersection_2'))
+        self.assertIn('  (ball_empty_2 cy0 cy1 ry /\\ ~ ball_empty_2 cx0 cx1 rx -> cz0 = cx0 /\\ cz1 = cx1 /\\ rz = rx)',
+                      spec('ball_hull_2'))
+        # The conversions of two limbs. The midpoint of two limbs is a number, canonical for every
+        # canonical interval; a midpoint of one limb has no such clause, and the center of a ball
+        # (interval_to_ball_2) is canonical as part of ball_2.
+        self.assertIn(' xl0 xl1 xu0 xu1 in\n  canonical_2 m0 m1 /\\\n  (interval_empty_2 xl0 xl1 xu0 xu1 -> nan m0',
+                      spec('interval_mid_rad_2'))
+        self.assertNotIn('canonical_2', spec('interval_mid_rad_1'))
+        self.assertNotIn('canonical_2', spec('interval_to_ball_2'))
         s = spec('interval_mid_rad_2')
         self.assertIn('   (r = infinity prec emax false \\/ (finite r /\\ (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> '
                       'Rabs (z - (val m0 + val m1)) <= val r))) /\\\n', s)
@@ -519,8 +534,14 @@ class CheckedFiles(unittest.TestCase):
     # interval_split_2 (IeeeIntervalConvert2.v): two words more. Then for ball_contains_point_2
     # (IeeeBallContains2.v): one word more. Then for interval_to_ball_2 (IeeeIntervalConvert2.v):
     # one word more.
+    # Then the statements of ball_set were corrected (the proof of the other kernels of the stage
+    # refuted them): an empty X still gives Y as it is (the whole line X, for the intersection),
+    # and an empty Y gives X as it is only when X is not empty (the whole line Y when X is not the
+    # whole line); and ball_of_interval with ieee1788 and a center of two limbs says first that
+    # the center is canonical (interval_mid_rad_2, proved again). Five lines changed, the four
+    # kernels of ball_set still unverified; make -C proofs passed on these files.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'df13c0d5952de12186558d54ea83fa18307794c804c3fdd8cedcfeab42cad214',
-               'proofs/gen/IeeeStatements.v': '539e7121319f9ff9a2cc9bef123d625984b2f602bb5c01422788abdbc2faafba'}
+               'proofs/gen/IeeeStatements.v': 'e6005bafa9b42df9004a7fd3bdd7f797442129c57fc929dd4e785749b43ccc25'}
 
 
     def test_the_checked_files(self):
