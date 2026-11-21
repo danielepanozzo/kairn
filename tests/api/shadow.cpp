@@ -11,6 +11,8 @@
 #endif
 #define KAIRN_CHECKS 1
 #include <kairn/kairn.hpp>
+#include <kairn/packed.hpp>
+#include <kairn/soa.hpp>
 
 namespace use_test {
 
@@ -244,6 +246,75 @@ double use_every_operation(UseT use_a, UseT use_b) {
             TE2::add_fast.verified + TE2::sub.verified + TE2::sub_limb.verified + TE2::mul.verified +
             TE2::mul_limb.verified + TE2::ldexp.verified + TE1::mul.verified);
     use_add(UseT(unverified(use_a)));
+
+    // Packed (kairn/packed.hpp) and the containers (kairn/soa.hpp): every operation once.
+    {
+        using P1 = kairn::Packed<UseT, 1>;
+        using P2 = kairn::Packed<UseT, 2>;
+        constexpr int use_lanes = P2::lanes;
+        UseT use_h[2 * use_lanes] = {}, use_k[2 * use_lanes] = {};
+        for (int use_i = 0; use_i < 2 * use_lanes; ++use_i) use_h[use_i] = use_a + UseT(use_i);
+        P2 use_px = P2::load(use_h, use_k), use_py = P2::load_unchecked(use_h, use_k);
+        P2 use_pz = P2::load_partial(use_h, use_k, use_lanes - 1, use_x);
+        const P1 use_pa = P1::load(use_h), use_pb = P1::load_partial(use_h, 1, use_p), use_pc = P1::load_unchecked(use_k);
+        use_px = P2::from_limbs(use_px.limb[0], use_px.limb[1]) + P2::from_limbs_unchecked(use_py.limb[0], use_py.limb[1]);
+        use_pz = use_px + use_py + use_pa + (use_pa + use_px) - use_py - use_pa + (use_pa - use_px) * use_py * use_pa;
+        use_pz += use_py;
+        use_pz += use_pa;
+        use_pz -= use_py;
+        use_pz -= use_pa;
+        use_pz *= use_py;
+        use_pz *= use_pa;
+        use_pz = (use_pa * use_pz) + (-use_pz) + kairn::abs(use_pz) + kairn::add_fast(use_pz, use_px) +
+                 kairn::ldexp(use_pz, 3) + kairn::half(use_pz) + P2(use_pa) + P2::broadcast(use_x);
+        use_pz = kairn::finite::add(use_px, use_py) + kairn::finite::add(use_px, use_pa) +
+                 kairn::finite::add(use_pa, use_px) + kairn::finite::sub(use_px, use_py) +
+                 kairn::finite::sub(use_px, use_pa) + kairn::finite::sub(use_pa, use_px) +
+                 kairn::finite::mul(use_px, use_py) + kairn::finite::mul(use_px, use_pa) +
+                 kairn::finite::mul(use_pa, use_px) + kairn::finite::add_fast(use_px, use_py) +
+                 kairn::finite::ldexp(use_px, -2) + use_pz;
+        P1 use_pq = use_pa + use_pb - use_pc * use_pa;
+        use_pq += use_pa;
+        use_pq -= use_pa;
+        use_pq *= use_pa;
+        use_pq = -use_pq + kairn::abs(use_pq) + kairn::add_fast(use_pq, use_pa) + kairn::ldexp(use_pq, 1) +
+                 kairn::half(use_pq) + kairn::to_nearest(use_pq) + kairn::to_down(use_pq) + kairn::to_up(use_pq) +
+                 kairn::abs_upper(use_pq) + kairn::to_nearest(use_px) + kairn::to_down(use_px) + kairn::to_up(use_px) +
+                 kairn::abs_upper(use_px) + P1(use_px) + kairn::finite::add(use_pq, use_pa) +
+                 kairn::finite::sub(use_pq, use_pa) + kairn::finite::mul(use_pq, use_pa) +
+                 kairn::finite::add_fast(use_pq, use_pa) + kairn::finite::ldexp(use_pq, 1);
+        const kairn::PackedMask<UseT> use_mask = (use_px < use_py) | (use_px > use_py) | (use_px <= use_py) |
+                                                 (use_px >= use_py) | (use_px == use_py) | (use_px != use_py) |
+                                                 (use_px < use_pa) | (use_px > use_pa) | (use_px <= use_pa) |
+                                                 (use_px >= use_pa) | (use_px == use_pa) | (use_px != use_pa) |
+                                                 (use_pa < use_px) | (use_pa > use_px) | (use_pa <= use_px) |
+                                                 (use_pa >= use_px) | (use_pa == use_px) | (use_pa != use_px) |
+                                                 (use_pa < use_pb) | (use_pa > use_pb) | (use_pa <= use_pb) |
+                                                 (use_pa >= use_pb) | (use_pa == use_pb) | !(use_pa != use_pb);
+        use_pz = kairn::select(use_mask & use_mask, use_pz, use_px);
+        use_pz.set_lane(0, use_x);
+        use_pz.store(use_h, use_k);
+        use_pz.store_partial(use_h, use_k, 1);
+        use_pq.store(use_h);
+        use_pq.store_partial(use_h, 1);
+        use_add(use_pz.lane(0).limb[1] + use_pq.lane(0).limb[0] + kairn::any(use_mask) + kairn::all(use_mask) +
+                use_mask.lane(0));
+        kairn::SoA<UseT, 2> use_soa(std::size_t(2 * use_lanes), use_x), use_copy = use_soa;
+        use_copy.resize(std::size_t(2 * use_lanes + 1));
+        const kairn::SoAView<UseT, 2> use_view = use_soa;
+        const kairn::SoAView<const UseT, 2> use_read = use_view;
+        const kairn::SoAView<UseT, 1> use_plain(use_h, std::size_t(2 * use_lanes));
+        use_view[0] = use_y;
+        use_view[1] = use_view[0];
+        use_view.set(2, use_read.get(1));
+        use_view.store(0, use_read.load(1));
+        use_view.store_partial(1, use_read.load_partial(0, 1, use_x), 1);
+        use_plain[0] = E1(use_read.get(0));
+        use_copy.swap(use_soa);
+        use_add(E2(use_read[1]).limb[0] + use_read.subview(1, 1).get(0).limb[0] + double(use_read.size()) +
+                use_plain.get(0).limb[0] + use_copy.get(0).limb[0] + use_soa.limb(0)[0] + use_soa.view().limb(1)[0] +
+                E2(use_copy[0]).limb[0] + use_copy.load(0).lane(0).limb[0] + double(use_soa.empty()));
+    }
 
     // Constants from fractions: rational and integer, in constant evaluation and at run time, and
     // the checker.

@@ -38,6 +38,10 @@
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic ignored "-Wmismatched-new-delete"
 #endif
+// MSVC compares the annotations of a replaced operator new with those of its declaration (C28251).
+#if defined(_MSC_VER)
+#pragma warning(disable : 28251)
+#endif
 namespace {
 long allocations = 0;
 }

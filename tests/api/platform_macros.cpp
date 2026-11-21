@@ -32,6 +32,8 @@
 #endif
 
 #include <kairn/kairn.hpp>
+#include <kairn/packed.hpp>
+#include <kairn/soa.hpp>
 
 #include <cstdio>
 
@@ -84,6 +86,11 @@ static int run() {
         I1(B1(T(2), T(1))).upper().limb[0] != T(3) || kairn::Ball<T, 2>::from_interval(T(1), T(3)).radius() != T(1) ||
         B1(B2(T(3))).center().limb[0] != T(3) || B1(T(2), T(1)).template lower_as<T>() != T(1))
         ++failures;
+    // Packed and an array of numbers, whose names are none of the macros' either.
+    kairn::SoA<T, 2> arr(std::size_t(kairn::Packed<T, 2>::lanes), x);
+    const kairn::Packed<T, 2> px = arr.load(0) * kairn::Packed<T, 1>::broadcast(E1(T(2)));
+    arr.store(0, px);
+    if (arr.get(0).limb[0] != T(3) || !kairn::all(px == kairn::Packed<T, 2>::broadcast(E2(T(3))))) ++failures;
     if (y.limb[0] != T(0.75) || y.limb[1] != T(0)) ++failures;
     if (a.limb[0] != T(0.75)) ++failures;
     if (z.limb[0] != T(12) || z.limb[1] != T(0)) ++failures;

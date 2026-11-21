@@ -637,7 +637,7 @@ _kairn_api_reject(not_constexpr.interval_add 38 "constant|constexpr")
 # view of mutable limbs is made of one. Packed (packed.hpp): no packed operation takes a number or
 # a T (no packed kernel does: a program broadcasts it), the narrowing to one limb is explicit, and
 # no operation mixes limb types. Each control writes what compiles instead.
-set(_api_no_assignment "no viable overloaded|no match for|binary '='|no operator found")
+set(_api_no_assignment "no viable overloaded|no match for|binary '='|no operator found|constraints")
 set(_api_no_member "constraints not satisfied|no matching|no overloaded function|associated constraints")
 _kairn_api_reject(soa.assign_const_element 42 "${_api_no_assignment}")
 _kairn_api_reject(soa.set_const 43 "${_api_no_member}")
