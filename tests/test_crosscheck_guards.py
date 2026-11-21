@@ -1089,6 +1089,32 @@ class StageBGuards(unittest.TestCase):
                      "uniform,underflow,overflow,zero,pow2,extreme,equal,neighbor")
         self.fails(s, "norm_combine", "binary64", *self.kargs, reason="without negative")
 
+    def test_the_size_of_a_summary(self):
+        # What a summary keeps does not grow with the lines judged: the step's entries of a map
+        # keep the line of the element of the step that attains a statistic, not the map's line,
+        # and only the records of the profile; a summary above the bound fails whatever it holds.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards
+        bound = crosscheck_guards.SUMMARY_BYTES
+        self.passes(self.map2, "axpy_2_1", "binary64", *self.args)
+        self.assertLess(len(json.dumps(self.map2)), bound // 16)
+        cases = 0
+        for k in self.map2["keys"]:
+            for e in k["stats"]["entries"][2:]:
+                kept = [e["max_ratio_case"], e["b_case"]]
+                kept += [c for _, c in e["profile"].values()]
+                kept += [c for _, c in list(e["maxima"].values()) + list(e["minima"].values())]
+                for c in kept:
+                    if c is not None:
+                        cases += 1
+                        self.assertIn(":element:", c)
+                        self.assertLess(len(c.split(" ")), 16, c)
+        self.assertGreater(cases, 0)
+        s = copy.deepcopy(self.map2)
+        s["padding"] = "x" * bound
+        self.fails(s, "axpy_2_1", "binary64", *self.args,
+                   reason="bytes, above the %d a summary may take" % bound)
+
     def test_the_one_process_driver(self):
         with tempfile.TemporaryDirectory() as d:
             def drive(name, fmt, *args):

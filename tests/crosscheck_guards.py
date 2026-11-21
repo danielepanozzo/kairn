@@ -64,6 +64,12 @@ every length class and order asked for, both outcomes of its flag and no false o
 overflow, heavy cancellation, for a dot product the term tau mattering, and an error of at least
 1/2 (one limb) or 1/16 (two limbs) of the bound (fold_problems).
 
+Whatever the run, the summary must not exceed SUMMARY_BYTES: what the oracle keeps of a run is a
+fixed set of statistics, each with at most one line, whose number does not depend on how many
+lines or elements it judged (oracle/README.md, "The size of a summary"); a larger summary means
+that something it keeps grows with them, as the profile of a map's step once kept the map's whole
+line once per distance (1.5 GB for a run of the full tier).
+
 The claims are those the oracle judged against, the file its summary names (or --claims).
 
 rational_1 and rational_2, kairn::rational<X>(num, den), have no claims: the oracle computes their
@@ -84,8 +90,13 @@ extended domain", "The kinds of Milestone 2" and "rational").
 """
 import argparse
 import json
+import os
 import re
 import sys
+
+# The largest summary a run may leave, in bytes. The largest of the full tier are about 0.3 MB
+# (docs/developer/testing.md, "The size of the summaries").
+SUMMARY_BYTES = 4 << 20
 
 # The strata of every family of the oracle's generator (oracle/README.md, "gen").
 COMMON_STRATA = ("uniform", "underflow", "overflow", "zero", "pow2", "extreme")
@@ -1353,6 +1364,11 @@ def run(a):
     if not a.exhaustive and (a.count is None or a.seed is None):
         return 2, ["a random run needs --count and --seed"]
     try:
+        size = os.path.getsize(a.summary)
+        if size > SUMMARY_BYTES:
+            return 1, ["the oracle's summary %s is %d bytes, above the %d a summary may take: "
+                       "something the oracle keeps grows with the number of lines judged"
+                       % (a.summary, size, SUMMARY_BYTES)]
         with open(a.summary, encoding="utf-8") as f:
             summary = json.load(f)
     except (OSError, ValueError) as ex:
