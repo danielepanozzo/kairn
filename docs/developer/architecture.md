@@ -2600,7 +2600,7 @@ writes it (`source` left out):
   "orders": ["sequential"],
   "centers": "conv_2", "records": ["norm_step_2", "norm_step_2"], "count": "min(n_x,n_y)", "bound": "bound_dot_2",
   "radius": "conv_radius", "radius_args": ["ma", "mb", "rx", "ry", "m", "g", "t"], "finish": "bv_conv_finish",
-  "min_precision": 4, "status": "unverified", "theorem": null
+  "min_precision": 4, "status": "proved", "theorem": {"file": "proofs/theories/BvConv.v", "name": "bv_conv_2_correct"}
 }
 ```
 
