@@ -15,6 +15,8 @@
 # - api.boundary.*: a product the program computes and passes in gives the result of the same
 #   operation on the rounded product, under each contraction setting; with the generated guard
 #   taken out of a copy of the headers, it must not where the compiler fuses.
+#   api.boundary.packed.FORM.*: the same for a product the program computes in registers or arrays
+#   and passes into Packed and the containers, in each form of Packed.
 # - api.environment: environment_ok() and self_test() pass in the default environment and detect
 #   a changed rounding mode and flush-to-zero.
 # - api.self_test.unsafe.*: with Clang, a build whose flags break Kairn without a macro to show it,
@@ -346,6 +348,42 @@ if(_api_n EQUAL 0 OR _api_left)
   message(FATAL_ERROR "tests/api: could not take the guard out of ${_api_scalar} (${_api_n} found)")
 endif()
 file(WRITE "${_api_unguarded}/kairn/gen/scalar.hpp" "${_api_text}")
+# The packed kernels write the same guard with the intrinsics of their form:
+# `_mm256_add_pd(a, _mm256_setzero_pd())` in include/kairn/gen/avx2.hpp and
+# `vaddq_f64(a, vdupq_n_f64(0.0))` in gen/neon.hpp, and the same for float. Each such addition keeps
+# only `a` in the copy, for boundary_packed.cpp (below), with the same failure if a header has none
+# or keeps one. Neither header has another addition of zero.
+foreach(_api_form avx2 neon)
+  set(_api_header "${_api_include}/kairn/gen/${_api_form}.hpp")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_api_header}")
+  file(READ "${_api_header}" _api_text)
+  if(_api_form STREQUAL "avx2")
+    set(_api_guard "_mm256_add_p[sd]\\(([A-Za-z0-9_]+), _mm256_setzero_p[sd]\\(\\)\\)")
+    set(_api_kept "\\1")
+    set(_api_rest "_mm256_add_p[sd]\\([A-Za-z0-9_]+, _mm256_setzero_p[sd]\\(\\)\\)")
+  else()
+    set(_api_guard "vaddq_f(64|32)\\(([A-Za-z0-9_]+), vdupq_n_f(64|32)\\(0\\.0f?\\)\\)")
+    set(_api_kept "\\2")
+    set(_api_rest "vaddq_f(64|32)\\([A-Za-z0-9_]+, vdupq_n_f(64|32)\\(0\\.0f?\\)\\)")
+  endif()
+  string(REGEX MATCHALL "${_api_guard}" _api_guards "${_api_text}")
+  list(LENGTH _api_guards _api_n)
+  string(REGEX REPLACE "${_api_guard}" "${_api_kept}" _api_text "${_api_text}")
+  string(REGEX MATCHALL "${_api_rest}" _api_left "${_api_text}")
+  if(_api_n EQUAL 0 OR _api_left)
+    message(FATAL_ERROR "tests/api: could not take the guard out of ${_api_header} (${_api_n} found)")
+  endif()
+  file(WRITE "${_api_unguarded}/kairn/gen/${_api_form}.hpp" "${_api_text}")
+endforeach()
+# The forms of Packed for boundary_packed.cpp: native where it has more than one lane (elsewhere it
+# is the scalar form), scalar, and avx2 where it applies (above).
+set(_api_boundary_forms scalar)
+if(_api_packed_simd)
+  list(PREPEND _api_boundary_forms native)
+endif()
+if(_api_packed_avx2)
+  list(APPEND _api_boundary_forms avx2)
+endif()
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   set(_api_contraction "" "" fp-precise /fp:precise fp-contract /fp:contract fp-strict /fp:strict)
 elseif(_msvc_style)
@@ -400,6 +438,47 @@ foreach(_i RANGE 0 ${_last} 2)
     add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect report)
   endif()
   set_tests_properties(api.boundary${_suffix} api.boundary.unguarded${_suffix} PROPERTIES LABELS "api;boundary")
+  # The same for Packed and the containers (boundary_packed.cpp), in each form above:
+  # api.boundary.packed.FORM.*, and against the copy without the guard, the packed guards taken out
+  # too, api.boundary.packed.unguarded.FORM.*.
+  foreach(_form IN LISTS _api_boundary_forms)
+    set(_form_options "")
+    if(_form STREQUAL "scalar")
+      set(_form_options ${_api_scalar_form})
+    elseif(_form STREQUAL "avx2")
+      set(_form_options ${_isa_option})
+    endif()
+    set(_target kairn-api-boundary-packed-${_form}${_target_suffix})
+    _kairn_api_program(${_target} boundary_packed.cpp ${_level} ${_option} ${_form_options})
+    add_test(NAME api.boundary.packed.${_form}${_suffix} COMMAND ${_target} --expect none)
+    add_executable(${_target}-unguarded boundary_packed.cpp)
+    target_include_directories(${_target}-unguarded BEFORE PRIVATE "${_api_unguarded}")
+    target_link_libraries(${_target}-unguarded PRIVATE kairn::fma)
+    target_compile_features(${_target}-unguarded PRIVATE cxx_std_20)
+    target_compile_options(${_target}-unguarded PRIVATE ${_api_warnings} ${_level} ${_option} ${_form_options})
+    target_compile_definitions(${_target}-unguarded PRIVATE KAIRN_TEST_UNGUARDED_COPY)
+    # Where the unguarded build was measured to fuse a product into Packed: GCC by default and with
+    # =fast, in every form (GCC 16 on AArch64, NEON and scalar; GCC 13 on x86-64, AVX2 and scalar,
+    # with and without -mavx2 -mfma in the build's flags); Clang with =fast on AArch64, NEON and
+    # scalar (Apple clang 21). Clang 18 on x86-64 fused nothing without the guard, in either form
+    # and at any setting, and MSVC and clang-cl were not measured with Packed: their builds only
+    # report.
+    set(_fuses_packed OFF)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND (_variant STREQUAL "" OR _variant STREQUAL "contract-fast"))
+      set(_fuses_packed ON)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT _msvc_style AND _variant STREQUAL "contract-fast"
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
+      set(_fuses_packed ON)
+    endif()
+    if(_fuses_packed)
+      set(_expect some)
+    else()
+      set(_expect report)
+    endif()
+    add_test(NAME api.boundary.packed.unguarded.${_form}${_suffix} COMMAND ${_target}-unguarded --expect ${_expect})
+    set_tests_properties(api.boundary.packed.${_form}${_suffix} api.boundary.packed.unguarded.${_form}${_suffix}
+      PROPERTIES LABELS "api;boundary;packed")
+  endforeach()
 endforeach()
 
 # --- The environment and the self-test --------------------------------------------------------
