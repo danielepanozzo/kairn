@@ -94,8 +94,10 @@ revised with them.
 
 - A NaN given as a bound gives the whole line, where the first version gave the empty set, as
   IEEE 1788 does: `interval_make_1` and `ball_from_interval_2`, judged on every pair of values
-  by `interval_1.py` and `enclosure_1.py`. Reversed bounds, $[+\infty, +\infty]$ and
-  $[-\infty, -\infty]$ still give the empty set.
+  by `interval_1.py` and `enclosure_1.py`. Reversed bounds still give the empty set. Later on
+  the same day the owner decided that the same infinity twice, $[+\infty, +\infty]$ or
+  $[-\infty, -\infty]$ (an interval of an infinite point), gives the whole line too, where
+  IEEE 1788 gives the empty set; the two scripts judge that rule.
 - The directed sums of two limbs take the bound zero when the computed sum is zero:
   `add_down_2_2` and `add_up_2_2`. This is sound because the bound of `add_2_2` is relative, so
   the computed sum is zero exactly when the exact one is; `directed_2.py` asserts that on every
