@@ -54,7 +54,8 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
       --only "${_oracle_full_names}" --jobs 4 --cxx "${CMAKE_CXX_COMPILER}"
       --workdir "${CMAKE_CURRENT_BINARY_DIR}/oracle-selftest"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(full.kairn-oracle.selftest PROPERTIES TIMEOUT 600 PROCESSORS 4
+  # 1800 s, as its neighbor below: the self-test has 119 tests since the kinds of Milestone 2.
+  set_tests_properties(full.kairn-oracle.selftest PROPERTIES TIMEOUT 1800 PROCESSORS 4
     LABELS "full;python"
     FAIL_REGULAR_EXPRESSION "SKIP [^\n]*(no C\\+\\+ compiler|compiling the C\\+\\+ runner)")
 endif()
@@ -108,7 +109,10 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
       --skip "${_oracle_full_names}" --cxx "${CMAKE_CXX_COMPILER}"
       --workdir "${CMAKE_CURRENT_BINARY_DIR}/oracle-selftest-tools"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(full.tools.kairn-oracle.selftest PROPERTIES TIMEOUT 600 LABELS "full;tools"
+  # 1800 s: with the kinds of Milestone 2 the oracle's self-test was stopped at its limit of 600 s
+  # on a hosted Linux runner (GCC), where it runs beside three other tests; it passed within the
+  # limit with the other compilers of the same run. A limit is a net for a run that hangs.
+  set_tests_properties(full.tools.kairn-oracle.selftest PROPERTIES TIMEOUT 1800 LABELS "full;tools"
     FAIL_REGULAR_EXPRESSION "SKIP [^\n]*(no C\\+\\+ compiler|compiling the C\\+\\+ runner)")
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py")
