@@ -268,7 +268,18 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   $-\infty$ for the empty ball, and they are the bounds rounded outward for a center of one
   limb; a ball of two limbs narrowed to one limb, and a ball of two limbs made from an interval
   of two numbers of `T`, are canonical and contain what they are made from, whatever the
-  operands are.
+  operands are. For an interval whose bounds have two limbs: the midpoint of a bounded
+  interval is finite, in the interval and within $3u^2/(1-4u)\,\lvert m\rvert + 2\eta$ of the
+  exact midpoint $m$; its radius is $+\infty$ or a finite number with which the midpoint
+  contains the interval, and it is finite when both bounds are within a quarter of the
+  overflow threshold; the ball made of the two contains the interval; the split at the
+  midpoint gives two canonical intervals with a common finite bound; and the empty set, the
+  whole line and the half-lines give the values of IEEE 1788. That the midpoint is finite
+  rests on a fact about the sum of two 2-limb numbers, proved here: it does not overflow when
+  the leading limbs of both operands are at most half the largest finite number. And whether
+  a ball of two limbs contains a point of two limbs: a yes or a no is given only when it is
+  right, never both, and exactly when it is right if the ball is the empty set or the whole
+  line or the point is not a finite number.
 
 These statements and the models of the kernels they are about are generated from the kernel
 descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Three files are
