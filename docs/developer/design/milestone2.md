@@ -558,7 +558,7 @@ reversed, which one comparison tells, and that comparison is false with a NaN.
 listing on the comparisons of two limbs: `le_2_2` and `lt_2_2` (the leading limbs alone would
 not tell reversed bounds: $(1, 2^{-4})$ and $(1, 0)$ are reversed and have equal leading
 limbs), and the leading limbs for the tests against infinity.
-An infinite bound is returned as $(\pm\infty, 0)$.
+An infinite bound is returned as it is given, $(\pm\infty, \pm 0)$: the second limb is a zero of either sign.
 
 *Checked:* `interval_1.py`, every pair of values of five formats, NaN and infinities included:
 in the smallest, of 484 pairs, 229 give their interval, the 43 with a NaN and the 2 of the same

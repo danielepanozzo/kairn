@@ -637,6 +637,23 @@ MUTANTS = {
         "genmap.py", 'CONV_LENGTHS = ((0, 0), (0, "s"), ("s", 0),', 'CONV_LENGTHS = ((1, 1), (1, "s"), ("s", 1),'),
     "gen7: the tight case of axpy off the tie": (
         "gen7.py", "        y = _scaled_exact(fmt, (4 * j + 1) * u, E)", "        y = _scaled_exact(fmt, (4 * j + 3) * u, E)"),
+    # What a summary keeps (oracle/README.md, "The size of a summary").
+    "summary: the step's statistics keep the map's line": (
+        "maps.py", "            v = ck.verdict(pl.step, sub, x, z, ElementLine(m.step, fname, pl, ins, outs, n, i,\n"
+        "                                                           etag))",
+        "            v = ck.verdict(pl.step, sub, x, z, line)"),
+    "summary: an element line with the outputs of the next element": (
+        "maps.py", "        z = self.z or [self.outs[j * n + i] for j in range(pl.W)]",
+        "        z = self.z or [self.outs[j * n + i + 1] for j in range(pl.W)]"),
+    "summary: the profile keeps every distance": (
+        "check.py", "            if best is None or not _gt(best, v[0]):", "            if True:"),
+    "summary: a record only when strictly larger": (
+        "check.py", "            if best is None or not _gt(best, v[0]):",
+        "            if best is None or _gt(v[0], best):"),
+    "summary: a distance without its ratio loses its place in a merge": (
+        "check.py", "                self.profile.setdefault(d, None)", "                pass"),
+    "summary: the distances not read back": (
+        "check.py", "            present.update(range(lo, hi + 1))", "            pass"),
     "gen2: the one-limb scale family's operand of two limbs": (
         "gen2.py", "    vals[xn] = [x]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals",
         "    vals[xn] = [x, 0]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals"),

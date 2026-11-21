@@ -95,6 +95,24 @@ def frac_dec(r, digits=6):
     return "%s%s%se%+03d" % (sign, s[0], "." + s[1:] if len(s) > 1 else "", e)
 
 
+def _case(line):
+    """A case as stored: the line, or the text of an object that stands for one (a written
+    element of a map, maps.ElementLine), made only when it is stored."""
+    return line if line is None or type(line) is str else str(line)
+
+
+def _ranges(ds):
+    """The integers of ds as their runs in increasing order: an integer alone, or the inclusive
+    range [lo, hi] of two or more."""
+    runs = []
+    for d in sorted(ds):
+        if runs and runs[-1][1] == d - 1:
+            runs[-1][1] = d
+        else:
+            runs.append([d, d])
+    return [lo if lo == hi else [lo, hi] for lo, hi in runs]
+
+
 class EntryStats:
     __slots__ = ("label", "kind", "applicable", "failures", "max_ratio", "max_ratio_case",
                  "profile", "b_max", "b_case", "bound_source", "counts", "maxima", "minima")
@@ -107,7 +125,8 @@ class EntryStats:
         self.max_ratio = None          # largest |error| / allowed, as (num, den)
         self.max_ratio_case = None
         # Observed constant (a) by distance from underflow: D = floor(log2(u^k rho / eta))
-        # maps to the largest |error| / (u^k rho) among cases at that distance.
+        # maps to the largest |error| / (u^k rho) among cases at that distance, with its case; or
+        # to None, in a summary read back, for a distance that was not a record (to_json).
         self.profile = {}
         self.b_max = None              # largest (|error| - rel*rho) / eta
         self.b_case = None
@@ -124,22 +143,26 @@ class EntryStats:
     def track_max(self, name, r, line):
         cur = self.maxima.get(name)
         if cur is None or _gt(r, cur[0]):
-            self.maxima[name] = (_reduce(*r), line)
+            self.maxima[name] = (_reduce(*r), _case(line))
 
     def track_min(self, name, r, line):
         cur = self.minima.get(name)
         if cur is None or _gt(cur[0], r):
-            self.minima[name] = (_reduce(*r), line)
+            self.minima[name] = (_reduce(*r), _case(line))
 
     def merge(self, o):
         self.applicable += o.applicable
         self.failures += o.failures
         if o.max_ratio is not None and (self.max_ratio is None or _gt(o.max_ratio, self.max_ratio)):
             self.max_ratio, self.max_ratio_case = o.max_ratio, o.max_ratio_case
-        for d, (r, case) in o.profile.items():
+        # A distance keeps its place in the order of first appearance, which decides between
+        # equal ratios in observed_a, whether it comes with its ratio or without (None).
+        for d, v in o.profile.items():
             cur = self.profile.get(d)
-            if cur is None or _gt(r, cur[0]):
-                self.profile[d] = (r, case)
+            if v is None:
+                self.profile.setdefault(d, None)
+            elif cur is None or _gt(v[0], cur[0]):
+                self.profile[d] = v
         if o.b_max is not None and (self.b_max is None or _gt(o.b_max, self.b_max)):
             self.b_max, self.b_case = o.b_max, o.b_case
         self.bound_source = self.bound_source or o.bound_source
@@ -152,17 +175,34 @@ class EntryStats:
 
     def observed_a(self, far):
         best = None
-        for d, (r, case) in self.profile.items():
-            if d >= far and (best is None or _gt(r, best[0])):
-                best = (r, case)
+        for d, v in self.profile.items():
+            if v is not None and d >= far and (best is None or _gt(v[0], best[0])):
+                best = v
         return best
+
+    def profile_records(self):
+        """The distances of the profile whose ratio is at least every ratio at a larger
+        distance, with their ratios and cases, in increasing order.  The largest ratio over the
+        distances D >= F, and the first of its cases in increasing D, is a record's for every F,
+        and the records of a merge are those of the merge of the records: a summary keeps these
+        (to_json), at most one per distance whatever the number of lines."""
+        out = []
+        best = None
+        for d, v in sorted(((d, v) for d, v in self.profile.items() if v is not None),
+                           reverse=True):
+            if best is None or not _gt(best, v[0]):
+                out.append((d, v))
+                best = v[0]
+        out.reverse()
+        return out
 
     def to_json(self):
         enc = lambda r: None if r is None else [str(r[0]), str(r[1])]
         return {"label": self.label, "kind": self.kind, "applicable": self.applicable,
                 "failures": self.failures, "max_ratio": enc(self.max_ratio),
                 "max_ratio_case": self.max_ratio_case,
-                "profile": {str(d): [enc(r), c] for d, (r, c) in sorted(self.profile.items())},
+                "profile": {str(d): [enc(r), c] for d, (r, c) in self.profile_records()},
+                "profile_distances": _ranges(self.profile),
                 "b_max": enc(self.b_max), "b_case": self.b_case,
                 "bound_source": self.bound_source,
                 "counts": dict(sorted(self.counts.items())),
@@ -177,7 +217,12 @@ class EntryStats:
         s.failures = j["failures"]
         s.max_ratio = dec(j["max_ratio"])
         s.max_ratio_case = j["max_ratio_case"]
-        s.profile = {int(d): (dec(v[0]), v[1]) for d, v in j["profile"].items()}
+        rec = {int(d): (dec(v[0]), v[1]) for d, v in j["profile"].items()}
+        present = set(rec)
+        for run in j.get("profile_distances", []):
+            lo, hi = (run, run) if type(run) is int else run
+            present.update(range(lo, hi + 1))
+        s.profile = {d: rec.get(d) for d in sorted(present)}
         s.b_max = dec(j["b_max"])
         s.b_case = j["b_case"]
         s.bound_source = j.get("bound_source")
@@ -1047,18 +1092,18 @@ class Checker:
                 # compares above every finite ratio, for an inexact one.
                 ratio = (num, den) if den else ((0, 1) if num == 0 else (1, 0))
                 if es.max_ratio is None or _gt(ratio, es.max_ratio):
-                    es.max_ratio, es.max_ratio_case = _reduce(*ratio), line
+                    es.max_ratio, es.max_ratio_case = _reduce(*ratio), _case(line)
                 if rho:
                     a = (Err << e["kp"], rho)
                     dd = rho.bit_length() - 1 + pl.sc - e["kp"] - fmt.qmin
                     cur = es.profile.get(dd)
                     if cur is None or _gt(a, cur[0]):
-                        es.profile[dd] = (_reduce(*a), line)
+                        es.profile[dd] = (_reduce(*a), _case(line))
                 bn = Err * rd - rn_ * rho
                 sh = pl.sc - fmt.qmin
                 b = (bn << sh, rd) if sh >= 0 else (bn, rd << -sh)
                 if es.b_max is None or _gt(b, es.b_max):
-                    es.b_max, es.b_case = _reduce(*b), line
+                    es.b_max, es.b_case = _reduce(*b), _case(line)
         return reasons
 
     # -- the kinds of the second wave: each returns the reason of a failure, or None ----------
@@ -1489,8 +1534,9 @@ def report(summary, out=sys.stdout, far=None, fail_on_suspicious=False, expect_v
                 w("      %s" % es.b_case)
             if verbose and es.profile:
                 w("    profile of (a) by D = floor(log2(u^k rho/eta)):")
-                for d, (r, _) in sorted(es.profile.items()):
-                    w("      D=%4d  %s" % (d, frac_dec(r)))
+                for d, v in sorted(es.profile.items()):
+                    if v is not None:
+                        w("      D=%4d  %s" % (d, frac_dec(v[0])))
         for kind in ("failure", "invalid", "suspicious"):
             for line, why in agg.examples[kind]:
                 w("  %s: %s" % (kind.upper(), why))

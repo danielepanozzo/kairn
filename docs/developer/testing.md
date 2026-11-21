@@ -8,15 +8,15 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | 25 to 34 seconds on the Mac, 37 to 47 on the Linux machine and 52 to 58 on the Windows machine (73 on 4 logical processors) with `--parallel 4`; on the hosted runners, measured before each cross-check ran in one process, 31 to 45 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest runner seen ([Time](#each-cross-check-in-one-process)) |
-| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | five to eleven minutes with `--parallel 4` |
+| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | with `--parallel 4`, on 2026-11-20 with 571 and 572 tests, 79 seconds on the Mac with Apple clang, 97 with GCC 16 and 125 to 127 on 16 threads of the Linux machine with GCC 13 ([The size of the summaries](#the-size-of-the-summaries)); with 421 to 452 tests, 25 to 34 seconds on the Mac, 37 to 47 on the Linux machine and 52 to 58 on the Windows machine (73 on 4 logical processors); on the hosted runners, measured before each cross-check ran in one process, 31 to 45 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest runner seen ([Time](#each-cross-check-in-one-process)) |
+| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | with `--parallel 4`, on 2026-11-20 with 884 tests, 20 minutes on the Mac with Apple clang and 32 on 16 threads of the Linux machine with GCC 13; it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
 | Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), and the interpreter on every operand of larger toy formats, with the same guards and a time budget | by hand on the test machines before each milestone report (`tests/brute/README.md`; results in [Brute force, Milestone 1](results/brute-milestone1.md)); and every night on the hosted runners with a smaller budget (`nightly.yml`), on new random cases and one fortieth of the enumerations | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine; a night on the hosted runners, under two hours per platform |
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 421 tests. The full tier, 621 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 633 tests. The full tier, 980 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -407,6 +407,12 @@ before, such a case was shown and the run passed). `tests/crosscheck_guards.py` 
 oracle's summary (`check --json`) whether the run checked what it set out to; `tests/crosscheck.py`
 calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
 
+- **The summary stays small**: at most 4 MiB (`SUMMARY_BYTES`), checked before anything else and
+  also by `tests/crosscheck.py api`. What the oracle keeps of a run is bounded by the claims and
+  the format, whatever the number of lines or elements it judged (`oracle/README.md`, "The size
+  of a summary"); the largest summaries of the full tier take 2.0 to 2.7 MB, and a larger summary
+  means that something grows with the lines, as a map's once did ([The size of the
+  summaries](#the-size-of-the-summaries)).
 - **The stream is the one asked for**: one generator header, for this kernel, format and mode (and
   seed), and every index of it seen.
 - **An enumeration is what it claims**: it covers every index of its enumeration, over every
@@ -571,7 +577,7 @@ or where `finite_when` never holds, one of `ball_add_1_full` whose radius makes 
 finite operands the whole line, random runs without non-finite operands, without the empty set or
 without one of a constructor's outcomes, a constructor's good run with one class of radius taken out of its summary, headers without the strata of the layer), and summaries
 altered where no stream can produce the fault (entries that are not those of the claims, claims
-that cannot be read); and both drivers on such runs, which they must fail with the guards'
+that cannot be read, a summary padded beyond the bound on its size); and both drivers on such runs, which they must fail with the guards'
 reason, and on good ones: `tests/crosscheck.py compiled` with the interpreter as its runner
 (`--interp`), `tests/crosscheck.py api` with the build's runner of the public interface (a good
 run, one of 5 cases, which misses strata, and a kernel it maps no form to), and
@@ -1353,8 +1359,9 @@ The full tier's cross-checks of the maps and folds write a summary of each run o
 both runs above the Mac's disk was nearly full, from other jobs too, and some of these
 cross-checks failed for want of space: 79 of 980 with Apple clang (the disk had 105 MB free) and 7
 with GCC 16; each passed when rerun (`ctest --rerun-failed`) with the summaries of finished runs
-deleted as they came. None of them is about intervals; a run of the full tier needs that space
-free.
+deleted as they came. None of them is about intervals. Summaries of that size were a defect,
+fixed since ([The size of the summaries](#the-size-of-the-summaries)): a full-tier build tree is
+now about half a GB.
 
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:
@@ -1706,6 +1713,96 @@ same among the runners of one build. Smaller: one process per runner of the publ
 all of its forms, instead of one per form (0.013 to 0.017 seconds a process on the Windows
 machine), and a cache of the oracle's compiled modules in the build tree (their import from
 source takes 0.04 to 0.07 seconds a process, 0.01 to 0.03 from a cache).
+
+### The size of the summaries
+
+Until 2026-11-20 a map's summary in the full tier took up to 1.7 GB: on the Linux machine with
+GCC 13, 17 summaries of the full tier were above 1 GB
+(`full.crosscheck.compiled.sub_2.binary64.cxx.json` 1.70 GB) and 73 above 4 MiB, and a build
+tree after both tiers took 41.0 GB, 40.6 GB of it in its 1 041 summaries. It filled a disk, made
+another agent's tests fail, and was suspected of lengthening the hosted Windows full tier (27 to
+40 minutes); on the Linux machine it did not change the full tier's time
+([below](#before-and-after)).
+
+**The cause**, measured on a summary of `sub_2` in `binary64` of 60 arrays of up to 256 elements
+(44.8 MB, 11 strata, each with the map's two entries and the step's `normalized` and `error`):
+99.1% of it (44.3 MB) was the profile of (a) of the step's `error` entries, 1 902 distances each
+with its case, and the case was the whole map line (23 KB on average: the longest lines set most
+of the extremes); the cases of the largest ratio and of (b) took 0.4 MB more, the ratios 0.3 MB,
+everything else 25 KB. In the full tier, arrays of up to 1 024 elements, the profile holds up to
+some 2 000 distances per stratum, each with a line of up to 150 KB.
+
+**The fix** (`oracle/README.md`, "The size of a summary"): the statistics of a map's step keep
+the line of the element of the step that attains them, `STEP FORMAT OPERAND...
+#MAP:STRATUM:INDEX:element:I -> OUTPUT...` (a few limbs, which runs again as a line of the step),
+and a summary keeps the profile's records only, the distances whose ratio is at least every ratio
+at a larger distance, which give (a) for every $F$, value and case, as the whole profile did,
+also through merges. The same summary takes 0.11 MB (232 records with their cases, 72 KB, and
+the distances seen, 9 KB). What a summary keeps is a fixed set of statistics, each with at most
+one case, whose number the claims and the format fix; each case is a line of a kernel or of a
+step, or (a fold's or a convolution's own statistics, one per statistic) a fold's line. Equal
+ratios are all records, so that the case of (a) stays the whole profile's: a profile whose
+ratios are all equal, that of an exact operation (every ratio 0), keeps every distance seen,
+which the range of $D$ bounds (some 3 200 values in binary64), not the number of lines. These
+are now the largest summaries: 2.0 MB for `two_prod` and 2.7 MB for the map `mul_pow2_map_1` in
+the full tier, every other one below 1.2 MB (`oracle/README.md`, "The size of a summary"). The
+guards fail a summary above 4 MiB ([What a pass requires](#what-a-pass-requires)), 1.55 times
+the largest of the full tier.
+
+**What changed shape**: in a summary, the profile (its records only, and `profile_distances`, the
+distances seen) and, for a map, the cases of the step's entries (the element's line, not the
+map's); in a report, those cases (`at` under the step's entries of a map), and with `--verbose`
+after a merge, the profile's rows (its records). Nothing else: on 215 runs of the old and the new
+oracle on the same outputs of the reference runner (every map, fold of maxima and convolution in
+`binary64`, `binary32` and a toy format; each of them with the planted faults of stage B; a
+quarter of the kernels, the steps, the kernels of the folds of maxima, and kernels and folds with
+planted faults; two seeds each, then merged), the exit status and the report were the same, byte
+for byte, but for 1 134 lines, each the case of a map's step; every counter, reason, example,
+value of a statistic and every other case was the same, and the new profile was the records of the
+old; the guards, old and new, decided the same on the old and the new summaries, with the same
+output, the new ones failing the 91 old summaries above 4 MiB for their size alone (on 14 runs of
+planted faults both crashed alike, on a ratio beyond the range of a float, which the guards now
+print); and the brute-force driver's statistics of the merged summaries (`entry_stats`) were the
+same but for the cases of the maps' steps.
+
+#### Before and after
+
+Measured on 2026-11-20 on the Linux machine: `main` (`e2edab5`) and the fix (`5d0177b`), one
+after the other, each configured with GCC 13 (Ninja, `Release`), both tiers run with
+`--parallel 4` on 16 hardware threads (`taskset`); other users loaded the machine (load average
+8 to 18), and the oracle's mutants ran on 14 other threads during the fix's tiers and the last
+minutes of `main`'s full tier. The oracle's time and memory are those of its `check` alone, on
+the output of the first runner of `full.crosscheck.compiled.sub_2.binary64` (1 000 arrays of up
+to 1 024 elements), on one thread. MB and GB are $10^6$ and $10^9$ bytes.
+
+| Linux machine, GCC 13 | `main` | The fix |
+|---|---|---|
+| Quick tier: tests, wall time | 572 passed, 125 s | 572 passed, 127 s |
+| Build tree after the quick tier | 334 MB | 210 MB |
+| Its summaries: number, total, largest | 410, 144 MB, 2.25 MB (`axpy_2_entry`; 47 above 1 MiB) | 410, 28.4 MB, 0.98 MB (`two_prod_dekker`) |
+| Full tier: tests, wall time | 884 passed, 1 906 s | 884 passed, 1 920 s |
+| Build tree after the full tier | 41.0 GB | 0.46 GB |
+| The full tier's summaries: number, total, largest | 631, 40.5 GB, 1.70 GB (`sub_2`; 17 above 1 GB, 73 above 4 MiB) | 631, 63.7 MB, 2.70 MB (`mul_pow2_map_1`; 5 above 1 MiB) |
+| The oracle on `sub_2`'s stream: time, peak memory, summary | 9.5 s, 51 MB, 1.70 GB | 4.8 s, 37 MB, 0.12 MB |
+
+The full tier took as long: its wall time is set by its longest tests (the generator's and the
+oracle's pools, the interpreter's enumerations), beside which the machine wrote the 40 GB. Nor
+was memory the cost: the old profile held one reference to each map line, which only the JSON
+repeated, once per distance. On the Mac with Apple clang 21 (the fix and the change to the guards
+after it, under the load of other jobs), the quick tier (571 tests) took 79 seconds and left a
+build tree of 219 MB, the full tier (884 tests) 1 180 seconds and a build tree of 476 MB, 92 MB of
+it in 1 041 summaries, the largest 2.70 MB; with GCC 16 the quick tier (572 tests) took 97
+seconds and left 209 MB.
+
+The old and the new oracle were also compared, as above, at the full tier's size: the maps
+`sub_2`, `add_2_entry`, `axpy_2_entry` and `axpy_2_1` and the fold of maxima `norm_upper_2` on
+1 000 arrays of up to 1 024 elements, the convolution `conv_2` on 300 pairs of up to 64
+coefficients, in binary64, through the reference runner, two seeds each and then merged. The exit
+status (0), every counter, statistic and case but those of the maps' steps, the guards' decisions
+and output, and the brute-force driver's statistics but the steps' cases were the same; the
+reports (18 448 lines) differed in 36 lines, the cases of the maps' steps. The old maps'
+summaries took 1.50 to 1.72 GB, the new ones 0.12 to 0.39 MB, and the new guards failed the 8
+old ones for their size alone.
 
 ## The generator's tier
 
