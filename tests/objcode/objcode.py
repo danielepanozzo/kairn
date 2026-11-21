@@ -207,6 +207,11 @@ class Tools:
         else:
             self.vendor = self.family
         self.apple = 'apple' in ((args.compiler_id or '') + ' ' + version).lower()
+        # The major version of a compiler with GNU options, from its own words ("clang version
+        # 18.1.3", "Apple clang version 21.0.0", "g++ (GCC) 13.3.0"): what a compiler packs is
+        # recorded for the versions it was measured with (vectorized_failures).
+        m = re.search(r'version (\d+)\.|\) (\d+)\.\d+', version)
+        self.major = int(m.group(1) or m.group(2)) if m else None
         # The compiler's own vectorization, off in every compilation of the check (NO_VECTORIZE).
         self.no_vectorize = list(NO_VECTORIZE[self.vendor])
         self.flags = args.flags.split()
@@ -755,27 +760,45 @@ def control_counts(tools, workdir, expected, limb_types, folds=None):
 # fmla on .2d or .2s, in the form of the fix-ups that is a call (measured with Clang 18, Apple
 # clang 21 and GCC 16 on the joined tree of the folds and the intervals; GCC packs none). An entry
 # that stops holding, a compiler that stops packing or another that starts, fails the control: the
-# table is what we know, not what we expect.
+# table is what we know, not what we expect. It is what we know of the VERSIONS measured: of
+# another version, or of a compiler never measured (clang-cl, Clang on AArch64), the control
+# reports what it packs and does not judge it. The hosted runners of CI showed why: their Apple
+# clang packs interval_mul_1 and not the two of the table, Clang on AArch64 packs three kernels,
+# and clang-cl, in its first optimized configuration, none.
+RECORDED_VERSIONS = {'clang x86-64': (18,), 'apple clang aarch64': (21,), 'gcc': (13, 16)}
 VECTORIZED_SCALAR = {'clang x86-64': ('ball_from_interval_2', 'interval_add_2', 'interval_mul_1', 'interval_sub_2'),
                      'apple clang aarch64': ('interval_add_2', 'interval_sub_2')}
 
 
 def vectorized_failures(tools, packed):
+    """The functions on which the check fails when the compiler vectorizes by itself, sorted; None
+    when nothing is recorded for this compiler and version."""
     machine = platform.machine().lower()
-    if tools.vendor in ('clang', 'clang-cl') and not tools.apple and machine in ('x86_64', 'amd64'):
+    if tools.vendor == 'msvc':
+        return []       # its vectorization cannot be turned off: the check itself is the record
+    if tools.vendor == 'gcc':
+        return [] if tools.major in RECORDED_VERSIONS['gcc'] else None
+    if tools.vendor != 'clang':
+        return None     # clang-cl: never measured
+    if not tools.apple and machine in ('x86_64', 'amd64'):
+        if tools.major not in RECORDED_VERSIONS['clang x86-64']:
+            return None
         forms = ['seq'] + (['packed'] if packed else [])
         return sorted([f'fold {fold} {form} double' for fold in ('axpy_2', 'axpy_2_entry') for form in forms]
                       + [f'scalar {t} {k} (scalar)' for k in VECTORIZED_SCALAR['clang x86-64']
                          for t in ('double', 'float')])
-    if tools.vendor == 'clang' and tools.apple and machine in ('arm64', 'aarch64'):
+    if tools.apple and machine in ('arm64', 'aarch64'):
+        if tools.major not in RECORDED_VERSIONS['apple clang aarch64']:
+            return None
         return sorted(f'scalar {t} {k} (scalar_call)' for k in VECTORIZED_SCALAR['apple clang aarch64']
                       for t in ('double', 'float'))
-    return []
+    return None
 
 
 def control_vectorized(tools, workdir, expected, limb_types, folds=None):
     """(lines, ok): the unit compiled with the compiler's own vectorization, as by default, and
-    judged by the same rule: it must fail on exactly the functions of vectorized_failures."""
+    judged by the same rule: it must fail on exactly the functions of vectorized_failures, when
+    they are recorded for this compiler and version; otherwise what it fails on is reported."""
     config = next(c for c in configurations(tools.family, 'quick') if c[0] not in ('-O0', '/Od'))
     obj = os.path.join(workdir, f'unit-vectorized.{"obj" if tools.msvc_style else "o"}')
     packed = tools.packed != 'none'
@@ -788,6 +811,13 @@ def control_vectorized(tools, workdir, expected, limb_types, folds=None):
         return [f'with the compiler\'s own vectorization, {label(config)}: FAILED: {e}'], False
     found = sorted(text.split(':')[0] for _, text in failures)
     want = vectorized_failures(tools, packed)
+    if want is None:
+        version = f' {tools.major}' if tools.major else ''
+        return [f'with the compiler\'s own vectorization (no {" ".join(tools.no_vectorize)}), {label(config)}: '
+                f'the check fails on {len(found)} of {n} functions'
+                + (f' ({", ".join(found)})' if found else '')
+                + f' (reported, not judged: nothing is recorded for {tools.name}{version} on '
+                  f'{platform.machine().lower()})'], True
     ok = found == want
     head = (f'with the compiler\'s own vectorization (no {" ".join(tools.no_vectorize)}), {label(config)}: '
             f'the check fails on {len(found)} of {n} functions'

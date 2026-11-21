@@ -842,15 +842,21 @@ least one configuration of the tier to fuse the loop.
 
 The vectorization control compiles the unit once more, in the first optimized configuration of
 the quick tier, *with* the compiler's own vectorization, and judges every function of it by the
-same rule. It records what the check then finds per compiler: with Clang on x86-64 (clang++ and
-clang-cl), the packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for
+same rule. It records what the check then finds, per compiler and version measured: with Clang 18
+on x86-64, the packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for
 `double`, and the scalar functions of `ball_from_interval_2`, `interval_add_2`, `interval_mul_1`
-and `interval_sub_2` for `double` and `float` (those the packing control finds; measured with
-Clang 18 on 2026-11-20, clang-cl by analogy); with Apple clang 21 on AArch64, the scalar functions
-of `interval_add_2` and `interval_sub_2` for `double` and `float`, in the form of the fix-ups that
-is a call; with GCC 13 on x86-64 and GCC 16 on AArch64, nothing. Their vectorized loops hold whole
-copies of the step. A compiler that stops packing, or one that starts, fails the control, so that
-we learn it.
+and `interval_sub_2` for `double` and `float` (those the packing control finds; measured on
+2026-11-20); with Apple clang 21 on AArch64, the scalar functions of `interval_add_2` and
+`interval_sub_2` for `double` and `float`, in the form of the fix-ups that is a call; with GCC 13
+on x86-64 and GCC 16 on AArch64, nothing. Their vectorized loops hold whole copies of the step.
+With one of these versions, a compiler that stops packing, or one that starts, fails the control,
+so that we learn it. With any other version, and with a compiler never measured, the control
+reports what the check finds and does not judge it: what a vectorizer packs changes from one
+version to the next, and the hosted runners of CI showed it the first time this control ran there
+(their Apple clang packs `interval_mul_1` and not the two above; Clang on AArch64 packs
+`interval_add_2`, `interval_mul_1` and `interval_sub_2`; clang-cl, in its first optimized
+configuration, which is `/fp:strict`, packs nothing, against what had been assumed of it by
+analogy). The check itself does not depend on any of this: it compiles with the vectorization off.
 
 Where each compiler fused the textbook product in the configurations of the full tier, measured on
 2026-11-19; it fused nowhere else, and the check failed on exactly these:
