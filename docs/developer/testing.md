@@ -1411,6 +1411,33 @@ deleted as they came. None of them is about intervals. Summaries of that size we
 fixed since ([The size of the summaries](#the-size-of-the-summaries)): a full-tier build tree is
 now about half a GB.
 
+**The oracle of stage B2 of the enclosure interface** (the predicates and comparisons of an
+interval and of a ball, the set operations of a ball, the conversions of two limbs: 53 kernels)
+was measured on 2026-11-21 against the commit before it, `--parallel 4`, the Linux machine on 16
+threads. Before it, the claims of two families were unreadable and every test that runs the
+oracle failed for that alone; after it, the tiers ran against `gen/claims.json` without the other
+family, the accumulator and the ball vectors (`-DKAIRN_ORACLE_CLAIMS=FILE`, [Cross-checks](#cross-checks)),
+so that the counts below lack that family's tests. A test that fails on the claims fails at once,
+so the times before are short of what those tests take; and the Linux machine was shared with
+other jobs, so its times vary from run to run (its quick tier with GCC took 178 s and 165 s on two
+runs of the stage, a commit apart that adds only a guard):
+
+| Where | Quick tier, before | Quick tier, after | Full tier, before | Full tier, after |
+|---|---|---|---|---|
+| Mac, Apple clang 21 | 633 tests, 534 failing, 90.9 s | 739 tests, 105.1 s | | |
+| Linux, GCC 13 | 634 tests, 534 failing, 161.1 s | 740 tests, 164.6 s | 980 tests, 934 failing, 2 482 s | 1 154 tests, 2 874 s |
+| Linux, Clang 18 | 631 tests, 534 failing, 159.6 s | 737 tests, 182.2 s | | |
+
+The quick tier gains 106 tests, `crosscheck.compiled.K.F` of the 53 kernels in two formats, on
+2 000 cases each (`KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES`); the full tier 174: the same on 20 000
+cases (106), the interpreter's enumerations of their toy formats (53) and the sampled runs of
+the kernels of two intervals (14), and `full.tools.crosscheck.guards.EnclosureGuards`. The largest
+summary of a kernel of the stage in the quick tier is 36 KB (`interval_mid_rad_2`), and in the full
+tier none is among the ten largest (the tenth is 0.96 MB); the largest of the quick tier is still
+`two_prod_dekker`'s, 0.98 MB, and of the full tier `mul_pow2_map_1`'s, 2.7 MB (`binary64`, `cxx`). The oracle's whole selftest
+takes 529 s on the Mac with 8 workers (103 tests, nine of them the stage's), and of its 338
+mutants (`oracle/selftest/mutants.py`) 90 are the stage's.
+
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:
 

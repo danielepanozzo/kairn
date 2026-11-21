@@ -2144,8 +2144,8 @@ def _ball_of_interval_fw(pl, c, es, x, X_, cw, r, ieee, fail, out, line):
     ok, rr = ratio_le(abs(C2 - M2), abs(M2), c["consts"]["rel"], c["consts"]["abs"], q - 1)
     es.track_max(MID_RATIO, rr, line)
     es.count(MID_EXACT if C2 == M2 else MID_INEXACT)
-    if not ok:
-        fail("midpoint", "the center is farther from the midpoint than rel*|m| + abs")
+    if not ok:   # (worded apart from k_ball_of_interval's, that a mutant finds each once)
+        fail("midpoint", "the center is farther from the midpoint than rel*|m| + abs (finite_when)")
     return out
 
 

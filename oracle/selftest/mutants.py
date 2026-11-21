@@ -833,6 +833,11 @@ MUTANTS.update({
         "    if not finite_center or not holds:"),
     "finite_when: the conditions not counted": (
         "intervals.py", "        es.count(FW_HOLDS)", "        pass"),
+    "finite_when: the midpoint not judged": (
+        "intervals.py", "    if not ok:   # (worded apart", "    if False:   # (worded apart"),
+    "finite_when: the center inside the interval not judged": (
+        "intervals.py", "        return out\n    if cv < L or cv > U:\n        fail(\"center\", \"the center is outside the interval\")\n    M2, C2 = L + U, 2 * cv",
+        "        return out\n    if False:\n        fail(\"center\", \"the center is outside the interval\")\n    M2, C2 = L + U, 2 * cv"),
     "midpoint of two limbs: a center that is not canonical accepted": (
         "intervals.py", "    if ieee and len(cw) == 2 and not XT.canonical(fmt, cw):", "    if False:"),
     "interval_of_ball of two limbs: the tightness not judged": (
