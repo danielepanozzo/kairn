@@ -610,10 +610,41 @@ def _reversed_equal_leads(fmt, line):
     return (all(type(v) is int for v in (lo0, lo1, hi0, hi1)) and lo0 == hi0 and lo1 > hi1)
 
 
-# The lines a planted fault of the constructors of two limbs is about: each fault's streams of the
-# kernel must have such lines in every format, and each must fail.
-TARGETED = {"iv-make-inf-empty": ("interval_make_2", _opposite_inf_tails),
-            "iv2-make-reversed-lead": ("interval_make_2", _reversed_equal_leads)}
+def _bounds(line):
+    """The leading limbs' texts of the two given bounds of a constructor's line."""
+    t = _inputs(line)
+    return (t[0], t[1]) if len(t) == 2 else (t[0], t[2])
+
+
+def _same_inf(fmt, line):
+    lo, hi = _bounds(line)
+    return lo == hi and lo in ("inf", "-inf")
+
+
+def _a_nan(fmt, line):
+    return "nan" in _bounds(line)
+
+
+def _reversed_inf(fmt, line):
+    """Reversed bounds with an infinity: [+inf, -inf], [+inf, h], [l, -inf]."""
+    lo, hi = _bounds(line)
+    return "nan" not in (lo, hi) and ((lo == "inf" and hi != "inf")
+                                      or (hi == "-inf" and lo != "-inf"))
+
+
+# The lines a planted fault of the constructors is about: each fault's streams of the kernel must
+# have such lines in every format, and each such line must fail.
+TARGETED = {
+    "iv-make-inf-empty": (("interval_make_1", _same_inf), ("interval_make_2", _same_inf),
+                          ("interval_make_2", _opposite_inf_tails)),
+    "iv-fromint-inf-empty": (("ball_from_interval_2", _same_inf),),
+    "iv-make-nan-empty": (("interval_make_1", _a_nan), ("interval_make_2", _a_nan)),
+    "iv-fromint-nan-empty": (("ball_from_interval_2", _a_nan),),
+    "iv-make-reversed-whole": (("interval_make_1", _reversed_inf),
+                               ("interval_make_2", _reversed_inf)),
+    "iv-fromint-reversed-whole": (("ball_from_interval_2", _reversed_inf),),
+    "iv2-make-reversed-lead": (("interval_make_2", _reversed_equal_leads),),
+}
 
 
 def _planted_one(args):
@@ -623,7 +654,7 @@ def _planted_one(args):
     strata = PLANTED_STRATA.get(variant)
     fmt = F.parse_format(fname)
     out = []
-    targeted = None
+    targeted = []
     for k in KERNELS:
         g = G.RandomGen(claims.get(k), fmt, "selftest8",
                         strata.split(",") if strata and k in expected else None)
@@ -632,9 +663,11 @@ def _planted_one(args):
         t = totals(s)
         out.append((k, t["failed"] + t["invalid"] + t["suspicious"], t["invalid"],
                     t["suspicious"], failing_kinds(s, k)))
-        if TARGETED.get(variant, ("",))[0] == k:
-            aimed = [ln for ln in lines if not ln.startswith("#") and TARGETED[variant][1](fmt, ln)]
-            targeted = (len(aimed), totals(judge(run6(aimed, variant), claims))["failed"])
+        for tk, pred in TARGETED.get(variant, ()):
+            if tk == k:
+                aimed = [ln for ln in lines if not ln.startswith("#") and pred(fmt, ln)]
+                targeted.append((k, pred.__name__.strip("_"), len(aimed),
+                                 totals(judge(run6(aimed, variant), claims))["failed"]))
     return variant, fname, out, targeted
 
 
@@ -642,21 +675,21 @@ def _planted_one(args):
 def iv_planted(ctx):
     """Every planted fault of the interval kernels (refrun VARIANTS iv-...) caught in the kernels
     and entries where it belongs, in every format where it must be (PLANTED), and in no other
-    kernel; never as an invalid or a suspicious case. The faults of the constructors of two limbs
-    that are about particular lines (TARGETED: the same infinity with zeros of opposite signs,
-    reversed bounds with equal leading limbs) fail on every such line of their streams, and the
-    streams have some in every format."""
+    kernel; never as an invalid or a suspicious case. The faults of the constructors fail on every
+    line of their streams that they are about (TARGETED: a NaN bound, the same infinity twice, for
+    two limbs with zeros of opposite signs too, reversed bounds with an infinity, reversed bounds
+    of two limbs with equal leading limbs), and the streams have some in every format."""
     n = ctx.n(1200, 400)
     tasks = [(v, f, n) for v in PLANTED for f in FORMATS]
     with cf.ProcessPoolExecutor(ctx.jobs) as ex:
         results = list(ex.map(_planted_one, tasks))
-    aimed = []
+    aimed = 0
     for variant, fname, out, targeted in results:
-        if targeted is not None:
-            expect(targeted[0] > 0 and targeted[1] == targeted[0],
-                   "%s %s: %d of the %d lines it is about failed" % (variant, fname, targeted[1],
-                                                                    targeted[0]))
-            aimed.append("%s %s %d" % (variant, fname, targeted[0]))
+        for k, what, n_aimed, n_failed in targeted:
+            expect(n_aimed > 0 and n_failed == n_aimed,
+                   "%s %s: %s, %d of the %d lines of %s failed" % (variant, fname, k, n_failed,
+                                                                  n_aimed, what))
+            aimed += n_aimed
         expected, formats = PLANTED[variant]
         for k, bad, inv, sus, kinds in out:
             expect(not inv and not sus, "%s %s: %s gave %d invalid, %d suspicious"
@@ -673,8 +706,8 @@ def iv_planted(ctx):
                                                                         "mul_ball_2_2"}
             expect(need <= caught, "%s %s: not caught in %s" % (variant, fname,
                                                                 sorted(need - caught)))
-    return "%d planted faults in %d formats; the lines aimed at: %s" % (
-        len(PLANTED), len(FORMATS), ", ".join(aimed))
+    return "%d planted faults in %d formats; %d lines a fault of the constructors is about, each " \
+           "failed" % (len(PLANTED), len(FORMATS), aimed)
 
 
 # Hand-written lines: (line, kernel, the statements that must fail, or () for a pass).
