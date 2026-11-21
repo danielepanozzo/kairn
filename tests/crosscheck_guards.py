@@ -89,6 +89,7 @@ nothing from the oracle but the format of its summary (oracle/README.md, "Statis
 extended domain", "The kinds of Milestone 2" and "rational").
 """
 import argparse
+import decimal
 import json
 import os
 import re
@@ -464,6 +465,19 @@ def iv_strata(kernel):
     return own
 
 
+def _ratio(num, den, digits):
+    """num / den (den > 0) to DIGITS significant digits, as %g prints it, also beyond the range
+    of a float, where a planted fault's ratio can be (the oracle fails such a run, and the
+    drivers run the guards only on runs it passed)."""
+    try:
+        return "%.*g" % (digits, num / den)
+    except OverflowError:
+        with decimal.localcontext() as c:
+            c.prec, c.Emax = digits, decimal.MAX_EMAX
+            q = (decimal.Decimal(num) / decimal.Decimal(den)).normalize()
+            return format(q, ".%dg" % digits)
+
+
 def _iv_ratio(keys, j, name, which="maxima"):
     """The largest (or smallest) named fraction of entry j over the keys, as (num, den)."""
     best = None
@@ -569,11 +583,11 @@ def iv_problems(kernel, entries, merged, keys, a):
             if hi is None or 2 * hi[0] < hi[1]:
                 yield ('the claim "%s" never came within a factor 2 below the limit of '
                        'bounded_when (largest %s)' % (label, "none" if hi is None else
-                                                      "%.3g" % (hi[0] / hi[1])))
+                                                      _ratio(hi[0], hi[1], 3)))
             if lo is None or lo[0] > 2 * lo[1]:
                 yield ('the claim "%s" never came within a factor 2 above the limit of '
                        'bounded_when (smallest %s)' % (label, "none" if lo is None else
-                                                       "%.3g" % (lo[0] / lo[1])))
+                                                       _ratio(lo[0], lo[1], 3)))
         ratios = []
         if kind == "outward" or (kind == "encloses_interval"
                                  and (e.get("tight") or {}).get("kind") == "outward"):
@@ -587,7 +601,7 @@ def iv_problems(kernel, entries, merged, keys, a):
             if r is None or r[1] == 0 or r[0] * den < num * r[1]:
                 yield ('the claim "%s" came to at most %s of its bound (%s), below %d/%d: a bound '
                        'far too loose would pass' % (label, "nothing" if r is None else
-                                                     "%.3g" % (r[0] / r[1]) if r[1] else "inf",
+                                                     _ratio(r[0], r[1], 3) if r[1] else "inf",
                                                      name, num, den))
 
 
@@ -728,7 +742,7 @@ def axpy_problems(kernel, keys, a):
             yield ('the claim "%s" came to at most %s of its bound, below %d/%d: a bound far too '
                    'loose would pass' % (keys[0]["stats"]["entries"][j]["label"] if keys else
                                          e.get("kind"), "nothing" if best is None else
-                                         "%.3g" % (best[0] / best[1]), num, den))
+                                         _ratio(best[0], best[1], 3), num, den))
 
 
 def fold_problems(fold, summary, a, desc, ranges):
@@ -847,7 +861,7 @@ def fold_problems(fold, summary, a, desc, ranges):
         if r is None or r[1] == 0 or r[0] * den < num * r[1]:
             yield ('the claim "%s" came to at most %s of its bound, below %d/%d: a bound far too '
                    'loose would pass' % (label, "nothing" if r is None else
-                                         "%.3g" % (r[0] / r[1]) if r[1] else "inf", num, den))
+                                         _ratio(r[0], r[1], 3) if r[1] else "inf", num, den))
 
 
 def _merged(keys, j):
@@ -894,7 +908,7 @@ def _fraction(label, best, num, den):
     if best is None or best[1] == 0 or best[0] * den < num * best[1]:
         yield ('the claim "%s" came to at most %s of its bound, below %d/%d: a bound far too '
                'loose would pass' % (label, "nothing" if best is None else
-                                     "%.3g" % (best[0] / best[1]) if best[1] else "inf", num, den))
+                                     _ratio(best[0], best[1], 3) if best[1] else "inf", num, den))
 
 
 def other_fold_problems(fold, summary, a, desc, ranges):
@@ -1288,8 +1302,8 @@ def describe(summary, a):
         for j, e in enumerate(entries):
             counts, _app, best = _merged(summary["keys"], j)
             if e["kind"] in ("error", "fold_error") and best is not None and best[1]:
-                out.append("%s: largest error/allowed %.4g" % (e["label"].split(":")[0],
-                                                               best[0] / best[1]))
+                out.append("%s: largest error/allowed %s" % (e["label"].split(":")[0],
+                                                             _ratio(best[0], best[1], 4)))
             elif e["kind"] == "finite_or_nan":
                 out += ["%s %d" % (n, counts.get(n, 0)) for n in sorted(counts)
                         if n.startswith("flag")]
@@ -1306,9 +1320,10 @@ def describe(summary, a):
                 for k in summary["keys"]:
                     r = k["stats"]["entries"][j].get("max_ratio")
                     if r is not None and int(r[1]):
-                        v = int(r[0]) / int(r[1])
-                        best = v if best is None or v > best else best
-                out.append("largest error/allowed %s" % ("-" if best is None else "%.4g" % best))
+                        v = (int(r[0]), int(r[1]))
+                        best = v if best is None or v[0] * best[1] > best[0] * v[1] else best
+                out.append("largest error/allowed %s" % ("-" if best is None else
+                                                         _ratio(best[0], best[1], 4)))
                 out += ["%s %d" % (n, counts.get(n, 0)) for n in (FOLD_CANCEL,) + FOLD_TAU
                         if counts.get(n)]
             elif f.get("kind") == "finite_or_nan":

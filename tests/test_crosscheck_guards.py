@@ -715,6 +715,12 @@ class FoldGuards(unittest.TestCase):
         s = edited(self.sum, 0, lambda e: e.update(max_ratio=["1", "3"]))
         self.fails(s, "sum_1", "fp:4:-6:1", *self.args, reason="below 1/2")
 
+    def test_a_ratio_beyond_the_floats(self):
+        # As StageBGuards.test_a_ratio_beyond_the_floats, for a fold: the ratio is printed.
+        s = edited(self.sum, 0, lambda e: e.update(max_ratio=[str(25 * 10 ** 399), "1"]))
+        out = self.passes(s, "sum_1", "fp:4:-6:1", *self.args)
+        self.assertIn("fold: largest error/allowed 2.5e+400", out)
+
     def test_an_enumeration_where_every_sum_is_exact(self):
         # Four binades: every sum of two pairs is a pair, so the run puts nothing of the bound to
         # the test.
@@ -1114,6 +1120,13 @@ class StageBGuards(unittest.TestCase):
         s["padding"] = "x" * bound
         self.fails(s, "axpy_2_1", "binary64", *self.args,
                    reason="bytes, above the %d a summary may take" % bound)
+
+    def test_a_ratio_beyond_the_floats(self):
+        # What the guards print of a ratio beyond the range of a float, a planted fault's (which
+        # the oracle fails, so that the drivers do not run the guards on it): the ratio itself.
+        s = edited(self.map2, 3, lambda e: e.update(max_ratio=[str(25 * 10 ** 399), "1"]))
+        out = self.passes(s, "axpy_2_1", "binary64", *self.args)
+        self.assertIn("largest error/allowed 2.5e+400", out)
 
     def test_the_one_process_driver(self):
         with tempfile.TemporaryDirectory() as d:
