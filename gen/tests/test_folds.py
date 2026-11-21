@@ -51,6 +51,9 @@ BVS |= {'bv_make_1', 'bv_make_2'}
 BVS |= {'bv_neg_1', 'bv_neg_2'}
 # And the scalings by a power of two, exact under conditions.
 BVS |= {'bv_mul_pow2_1', 'bv_mul_pow2_2'}
+# The products of two BallVectors, a convolution of the centers with the maxima of both operands
+# (test_bv_conv.py).
+PRODUCTS = {'bv_conv_1', 'bv_conv_2'}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -189,7 +192,7 @@ t         = select(ok, s, const nan)
 class Rules(unittest.TestCase):
     def test_the_folds_are_accepted(self):
         ks = common.kernels()
-        self.assertEqual(set(ks.folds), set(ALL) | MAPS | CONVS | BVS)
+        self.assertEqual(set(ks.folds), set(ALL) | MAPS | CONVS | BVS | PRODUCTS)
         self.assertEqual({n for n, fd in ks.folds.items() if fd.is_max}, set(MAX_FOLDS))
         self.assertEqual({n for n, fd in ks.folds.items() if fd.is_map}, MAPS)
         for fd in ks.folds.values():
@@ -992,7 +995,7 @@ class Printers(unittest.TestCase):
         self.assertIn('    (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * '
                       '((3 / 2) * eta emin)).', s)
         self.assertIn('    ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs', s)
-        self.assertEqual(s.count('_spec : Prop'), 2 * len(ALL) + len(MAPS) + len(CONVS) + len(BVS))
+        self.assertEqual(s.count('_spec : Prop'), 2 * len(ALL) + len(MAPS) + len(CONVS) + len(BVS) + len(PRODUCTS))
         # A fold of maxima: its result is the limb of the state stepped up as the finish does, a
         # number of the format between the largest magnitude and that rounded up and stepped up.
         self.assertIn('Definition norm_upper_2_seq_spec : Prop :=\n'
@@ -1126,7 +1129,7 @@ class Printers(unittest.TestCase):
         of its kernel's listing, the step's fused operations those of the step kernel."""
         doc = json.loads(objcode.objcode(self.ks))
         self.assertEqual(doc['fold_forms'], ['seq', 'lanes', 'packed'])
-        self.assertEqual(set(doc['folds']), set(ALL) | MAPS | CONVS | BVS)
+        self.assertEqual(set(doc['folds']), set(ALL) | MAPS | CONVS | BVS | PRODUCTS)
         names = doc['fold_parts']
         for name in ALL:
             fd = self.ks.folds[name]

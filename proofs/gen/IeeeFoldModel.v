@@ -857,4 +857,46 @@ Definition bv_sub_2_lanes (W : nat) (rx : float) (ry : float) (xys : list ((floa
   let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
   (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
 
+(* The products of two ball vectors (architecture.md, "Ball vectors"): the coefficients and the
+   mask of the convolution of the centers (F_conv of the convolution named); the maxima of the
+   operands' centers, fold_seq of F_record over each list; the count min(n_x, n_y) rounded up
+   (F_count, binary_normalize upward); the bound of dot for it; the radius kernel on the maxima,
+   the radii, the count and the bound; the finish on the radius, the convolution's mask and the
+   bound's; when its flag is false, every coefficient is zero and the radius +infinity (the whole
+   space). F_conv returns the coefficients, the radius and the flag. *)
+
+(* bv_conv_1: the product of two ball vectors; centers conv_1, records norm_step_1, bound bound_dot_1, radius conv_radius, finish bv_conv_finish. *)
+Definition bv_conv_1_record (mok : float * bool) (w_ : float) : float * bool :=
+  IeeeModel.norm_step_1 prec emax nan_abs (fst mok) (snd mok) w_.
+
+Definition bv_conv_1_count (xs ys : list float) : float :=
+  binary_normalize prec emax prec_gt_0_ prec_lt_emax_ BinarySingleNaN.mode_UP (Z.of_nat (Nat.min (length xs) (length ys))) 0 false.
+
+Definition bv_conv_1_conv (rx : float) (ry : float) (xs ys : list float) : list float * float * bool :=
+  let c_ := conv_1_conv xs ys in
+  let sa_ := fold_seq bv_conv_1_record (pzero, true) xs in
+  let sb_ := fold_seq bv_conv_1_record (pzero, true) ys in
+  let m_ := bv_conv_1_count xs ys in
+  let b_ := IeeeModel.bound_dot_1 prec emax nan_plus nan_fma m_ in
+  let rz_ := IeeeModel.conv_radius prec emax nan_fma (fst sa_) (fst sb_) rx ry m_ (fst (fst b_)) (snd (fst b_)) in
+  let f_ := IeeeModel.bv_conv_finish prec emax nan_abs nan_const rz_ (snd c_) (snd b_) in
+  (if snd f_ then (fst c_, fst f_) else (map (fun _ => pzero) (fst c_), pinf), snd f_).
+
+(* bv_conv_2: the product of two ball vectors; centers conv_2, records norm_step_2, bound bound_dot_2, radius conv_radius, finish bv_conv_finish. *)
+Definition bv_conv_2_record (mok : float * bool) (w_ : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_conv_2_count (xs ys : list (float * float)) : float :=
+  binary_normalize prec emax prec_gt_0_ prec_lt_emax_ BinarySingleNaN.mode_UP (Z.of_nat (Nat.min (length xs) (length ys))) 0 false.
+
+Definition bv_conv_2_conv (rx : float) (ry : float) (xs ys : list (float * float)) : list (float * float) * float * bool :=
+  let c_ := conv_2_conv xs ys in
+  let sa_ := fold_seq bv_conv_2_record (pzero, true) xs in
+  let sb_ := fold_seq bv_conv_2_record (pzero, true) ys in
+  let m_ := bv_conv_2_count xs ys in
+  let b_ := IeeeModel.bound_dot_2 prec emax nan_plus nan_fma m_ in
+  let rz_ := IeeeModel.conv_radius prec emax nan_fma (fst sa_) (fst sb_) rx ry m_ (fst (fst b_)) (snd (fst b_)) in
+  let f_ := IeeeModel.bv_conv_finish prec emax nan_abs nan_const rz_ (snd c_) (snd b_) in
+  (if snd f_ then (fst c_, fst f_) else (map (fun _ => (pzero, pzero)) (fst c_), pinf), snd f_).
+
 End IeeeFolds.

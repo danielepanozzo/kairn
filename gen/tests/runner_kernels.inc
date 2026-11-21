@@ -43,6 +43,7 @@ KAIRN_RUNNER_KERNEL(bv_add_radius_2, "lll", "l", kairn::gen::bv_add_radius_2(in[
 KAIRN_RUNNER_KERNEL(bv_center_entry_1, "l", "l", kairn::gen::bv_center_entry_1(in[0], out[0]))
 KAIRN_RUNNER_KERNEL(fold_finish_1, "l", "lm", kairn::gen::fold_finish_1(in[0], out[0], mo[1]))
 KAIRN_RUNNER_KERNEL(norm_finish_1, "lm", "lm", kairn::gen::norm_finish_1(in[0], mi[1], out[0], mo[1]))
+KAIRN_RUNNER_KERNEL(bv_conv_finish, "lmm", "lm", kairn::gen::bv_conv_finish(in[0], mi[1], mi[2], out[0], mo[1]))
 KAIRN_RUNNER_KERNEL(bv_make_finish, "lm", "lm", kairn::gen::bv_make_finish(in[0], mi[1], out[0], mo[1]))
 KAIRN_RUNNER_KERNEL(bv_make_radius, "ll", "l", kairn::gen::bv_make_radius(in[0], in[1], out[0]))
 KAIRN_RUNNER_KERNEL(bv_mul_pow2_radius, "lmll", "l", kairn::gen::bv_mul_pow2_radius(in[0], mi[1], in[2], in[3], out[0]))
@@ -50,6 +51,7 @@ KAIRN_RUNNER_KERNEL(bv_mul_pow2_step_1, "ll", "lm", kairn::gen::bv_mul_pow2_step
 KAIRN_RUNNER_KERNEL(bv_neg_radius, "ll", "l", kairn::gen::bv_neg_radius(in[0], in[1], out[0]))
 KAIRN_RUNNER_KERNEL(bv_scale_radius_1, "lll", "l", kairn::gen::bv_scale_radius_1(in[0], in[1], in[2], out[0]))
 KAIRN_RUNNER_KERNEL(bv_scale_radius_2, "lll", "l", kairn::gen::bv_scale_radius_2(in[0], in[1], in[2], out[0]))
+KAIRN_RUNNER_KERNEL(conv_radius, "lllllll", "l", kairn::gen::conv_radius(in[0], in[1], in[2], in[3], in[4], in[5], in[6], out[0]))
 KAIRN_RUNNER_KERNEL(dot_step_1, "lll", "l", kairn::gen::dot_step_1(in[0], in[1], in[2], out[0]))
 KAIRN_RUNNER_KERNEL(fast_two_sum_entry, "ll", "ll", kairn::gen::fast_two_sum_entry(in[0], in[1], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(interval_add_1, "llll", "ll", kairn::gen::interval_add_1(in[0], in[1], in[2], in[3], out[0], out[1]))
@@ -232,4 +234,11 @@ KAIRN_RUNNER_BV(bv_sub_2, "22", 2, 2, kairn::gen::bv_sub_2_seq(in[0], in[1], in[
 #if defined(KAIRN_RUNNER_CONV)
 KAIRN_RUNNER_CONV(conv_1, "11", 1, kairn::gen::conv_1_seq(in[0], nx, in[1], ny, w[0], mo[0]))
 KAIRN_RUNNER_CONV(conv_2, "22", 2, kairn::gen::conv_2_seq(in[0], in[1], nx, in[2], in[3], ny, w[0], w[1], mo[0]))
+#endif
+// The products of ball vectors, for a runner that defines KAIRN_RUNNER_BV_CONV: as a convolution,
+// with the number of scalar limbs, sc[i] scalar limb i (T), and the radius out[0] (T&) before the
+// flag mo[0].
+#if defined(KAIRN_RUNNER_BV_CONV)
+KAIRN_RUNNER_BV_CONV(bv_conv_1, "11", 2, 1, kairn::gen::bv_conv_1_seq(in[0], nx, in[1], ny, sc[0], sc[1], w[0], out[0], mo[0]))
+KAIRN_RUNNER_BV_CONV(bv_conv_2, "22", 2, 2, kairn::gen::bv_conv_2_seq(in[0], in[1], nx, in[2], in[3], ny, sc[0], sc[1], w[0], w[1], out[0], mo[0]))
 #endif

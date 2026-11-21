@@ -108,23 +108,33 @@ const Map maps[] = {
 // The convolutions: CONV FORMAT seq N_X N_Y LIMB..., the N_X entries of each limb array of the first
 // array, then the N_Y entries of each of the second; the result is each limb array written, with
 // n_x + n_y - 1 entries (none when a length is 0), then the mask. The sequential order only.
+// The products of ball vectors have the requests of convolutions, with the limbs of their scalars (the
+// radii) after the two lengths, and return, after the coefficients, their radius, then the flag.
 struct Conv {
     const char* name;
     const char* arrays;
+    int scalars;
     int writes;
-    void (*seq64)(const double* const* in, std::size_t nx, std::size_t ny, double* const* w, bool* mo);
-    void (*seq32)(const float* const* in, std::size_t nx, std::size_t ny, float* const* w, bool* mo);
+    int radius;     // 1 for a product of ball vectors
+    void (*seq64)(const double* const* in, std::size_t nx, std::size_t ny, const double* sc, double* const* w,
+                  double* out, bool* mo);
+    void (*seq32)(const float* const* in, std::size_t nx, std::size_t ny, const float* sc, float* const* w,
+                  float* out, bool* mo);
 };
 #define KAIRN_RUNNER_CONV_ARGS(T)                                                                   \
     [[maybe_unused]] const T* const* in, [[maybe_unused]] std::size_t nx, [[maybe_unused]] std::size_t ny, \
-        [[maybe_unused]] T* const* w, [[maybe_unused]] bool* mo
+        [[maybe_unused]] const T* sc, [[maybe_unused]] T* const* w, [[maybe_unused]] T* out, [[maybe_unused]] bool* mo
 #define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED)
 #define KAIRN_RUNNER_CONV(NAME, ARRAYS, WRITES, SEQ) \
-    {#NAME, ARRAYS, WRITES, [](KAIRN_RUNNER_CONV_ARGS(double)) { SEQ; }, [](KAIRN_RUNNER_CONV_ARGS(float)) { SEQ; }},
+    {#NAME, ARRAYS, 0, WRITES, 0, [](KAIRN_RUNNER_CONV_ARGS(double)) { SEQ; }, [](KAIRN_RUNNER_CONV_ARGS(float)) { SEQ; }},
+#define KAIRN_RUNNER_BV_CONV(NAME, ARRAYS, SCALARS, WRITES, SEQ)                                     \
+    {#NAME, ARRAYS, SCALARS, WRITES, 1, [](KAIRN_RUNNER_CONV_ARGS(double)) { SEQ; },                  \
+     [](KAIRN_RUNNER_CONV_ARGS(float)) { SEQ; }},
 const Conv convs[] = {
 #include "runner_kernels.inc"
-    {nullptr, nullptr, 0, nullptr, nullptr},
+    {nullptr, nullptr, 0, 0, 0, nullptr, nullptr},
 };
+#undef KAIRN_RUNNER_BV_CONV
 
 long lineno = 0;
 
@@ -282,18 +292,20 @@ void complete_map(const Map& m, const std::vector<std::string>& fields, std::str
 
 template <class T>
 void complete_conv(const Conv& c, const std::vector<std::string>& fields, std::string& out,
-                   void (*seq)(const T* const*, std::size_t, std::size_t, T* const*, bool*)) {
+                   void (*seq)(const T* const*, std::size_t, std::size_t, const T*, T* const*, T*, bool*)) {
     if (fields.size() < 5) fail(std::string("expected ") + c.name + " FORMAT seq N_X N_Y LIMB ... [#TAG]");
     std::size_t lanes = 0;
     if (lane_order(fields[2], lanes)) fail(std::string(c.name) + " has the sequential order only (seq)");
     const std::size_t nx = length(fields[3]), ny = length(fields[4]);
     if (std::strlen(c.arrays) != 2) fail("a convolution reads two arrays");
     const std::size_t lx = std::size_t(c.arrays[0] - '0'), ly = std::size_t(c.arrays[1] - '0');
-    if (fields.size() - 5 != lx * nx + ly * ny)
+    const std::size_t scalars = std::size_t(c.scalars);
+    if (fields.size() - 5 != scalars + lx * nx + ly * ny)
         fail(std::string(c.name) + " of lengths " + fields[3] + " and " + fields[4] + " takes " +
-             std::to_string(lx * nx + ly * ny) + " limbs");
-    std::vector<T> data(lx * nx + ly * ny + 1);
-    for (std::size_t i = 0; i + 5 < fields.size(); ++i) data[i] = limb(T(), fields[5 + i]);
+             std::to_string(scalars + lx * nx + ly * ny) + " limbs");
+    std::vector<T> sc(scalars + 1), data(lx * nx + ly * ny + 1);
+    for (std::size_t i = 0; i < scalars; ++i) sc[i] = limb(T(), fields[5 + i]);
+    for (std::size_t i = 0; i + 5 + scalars < fields.size(); ++i) data[i] = limb(T(), fields[5 + scalars + i]);
     std::vector<const T*> in(lx + ly + 1);
     for (std::size_t l = 0; l < lx; ++l) in[l] = data.data() + l * nx;
     for (std::size_t l = 0; l < ly; ++l) in[lx + l] = data.data() + lx * nx + l * ny;
@@ -302,10 +314,15 @@ void complete_conv(const Conv& c, const std::vector<std::string>& fields, std::s
     std::vector<T*> w(std::size_t(c.writes) + 1);
     for (int l = 0; l < c.writes; ++l) w[std::size_t(l)] = written.data() + std::size_t(l) * nz;
     bool mo[1] = {};
-    seq(in.data(), nx, ny, w.data(), mo);
+    T res[1] = {};
+    seq(in.data(), nx, ny, sc.data(), w.data(), res, mo);
     for (std::size_t i = 0; i < std::size_t(c.writes) * nz; ++i) {
         out += ' ';
         put(static_cast<double>(written[i]), out);
+    }
+    if (c.radius) {
+        out += ' ';
+        put(static_cast<double>(res[0]), out);
     }
     out += mo[0] ? " 1" : " 0";
 }

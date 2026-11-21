@@ -142,6 +142,14 @@ Definition up_bound_sum_2_0 : R :=
 Definition up_bound_sum_2_1 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) ^ 2) * (((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2) + bpow radix2 emin)).
 
+(* up(4*(1+u)^8*eta+eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_conv_radius_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((4 * ((1 + bpow radix2 (- prec)) ^ 8)) * bpow radix2 emin) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
+
+(* up((1+u)^7): the smallest number of the format not below it. *)
+Definition up_conv_radius_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 7).
+
 (* up(eta/(2*u^2)): the smallest number of the format not below it. *)
 Definition up_mul_down_1_0 : R :=
   round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin / (2 * (bpow radix2 (- prec) ^ 2))).
@@ -451,6 +459,18 @@ Definition bv_scale_radius_2 (m rx a : R) : R :=
   let p := rnd (aa * rx + 0) in
   let t := rnd (m * up_ball_scale_2_0 + p) in
   let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_2_2) in
+  rz.
+
+(* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). *)
+Definition conv_radius (ma mb rx ry m g t : R) : R :=
+  let p := rnd (rx * ry + 0) in
+  let q := rnd (mb * rx + p) in
+  let w := rnd (ma * ry + q) in
+  let ab := rnd (ma * mb + 0) in
+  let e := rnd (ab * g + w) in
+  let s := rnd (m * e + t) in
+  let hm := rnd (m * up_conv_radius_0 + 0) in
+  let rz := rnd (s * up_conv_radius_1 + hm) in
   rz.
 
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)

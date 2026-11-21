@@ -171,6 +171,20 @@ def fold_counts(fd, kernels):
         step, check = kernels[kernels.folds[fd.coefficients].step[0]], kernels[fd.check]
         return {'seq': {t: [_part('step', step, 1, kernels, t), _part('check', check, 2, kernels, t)]
                         for t in LIMB_TYPES}}
+    if fd.is_bv_conv:
+        # The product of two BallVectors: the records in the two loops of the maxima (one kernel, or two,
+        # each at least once per array), the step of the fold of the coefficients in the loop over the
+        # terms, the check of the convolution once (the first pass; the whole space computes nothing),
+        # and the bound, the radius and the finish once, in F_end.
+        conv = kernels.folds[fd.centers]
+        step, check = kernels[kernels.folds[conv.coefficients].step[0]], kernels[conv.check]
+        recs = {}
+        for r in fd.records:
+            recs[r[0]] = recs.get(r[0], 0) + 1
+        parts = [('record', kernels[name], n) for name, n in recs.items()] + \
+            [('step', step, 1), ('check', check, 1), ('bound', kernels[fd.bound[0]], 1),
+             ('radius', kernels[fd.radius[0]], 1), ('finish', kernels[fd.finish[0]], 1)]
+        return {'seq': {t: [_part(name, k, m, kernels, t) for name, k, m in parts] for t in LIMB_TYPES}}
     if fd.is_bv:
         # A ball vector: the step and the record per element (the scalar step and record twice in
         # F_lanes, the lanes and the rest), the combination of the lanes, the radius and the finish

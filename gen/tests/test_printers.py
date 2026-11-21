@@ -211,6 +211,8 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR |= {'acc_mul_1', 'acc_mul_2', 'acc_radius_1', 'acc_radius_2'}
     # BallVector: the fmas of the radius kernels (bv_add_radius_k, bv_scale_radius_k).
     NOT_CONSTEXPR |= {'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2'}
+    # The product of two BallVectors: the fmas of conv_radius.
+    NOT_CONSTEXPR |= {'conv_radius'}
     # The full kernels are constexpr where their cores are: their fix-up turns t into an infinity
     # with times_inf, which is no fused operation. Those of the products of two limbs are not, nor
     # are the full Ball kernels but the scalings by a power of two. The constructors are.
@@ -756,9 +758,10 @@ class Rocq(unittest.TestCase):
         # four radius kernels, 4 limbs in 4 kernels; and z of bv_center_entry_1 and rz of
         # bv_make_radius, the kernels of the constructor (bv_center_2 is normalized); and z of neg_1
         # and rz of bv_neg_radius, of the negation; and z of bv_mul_pow2_step_1 and rz of
-        # bv_mul_pow2_radius, of the scaling by a power of two (bv_mul_pow2_step_2 is normalized).
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2)
+        # bv_mul_pow2_radius, of the scaling by a power of two (bv_mul_pow2_step_2 is normalized); and rz
+        # of conv_radius, of the product of two BallVectors.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -904,9 +907,11 @@ class Rocq(unittest.TestCase):
     # bv_neg_radius, of the negation of a BallVector (unverified), in the same way. Then the two steps
     # and the radius of the scaling of a BallVector by a power of two (unverified): their definitions
     # and statements were added, every earlier line kept; their one constant is N of ball_mul_pow2_k,
-    # under the name it had; Audit.v is the same.
-    DIGESTS = {'Model.v': 'ac8fa622f0f50cb7d8723273d0540c77104f71cf2fa0fa5771eedb2d2cf152cf',
-               'Statements.v': '0f275945d69bdff464fec89542964a5da926ff41ab2f17976f17760582ae487c',
+    # under the name it had; Audit.v is the same. Then conv_radius, the radius of the product of two
+    # BallVectors (unverified): its definition and statement were added, every earlier line kept; its two
+    # constants are new (gen/constant_names.json); Audit.v is the same.
+    DIGESTS = {'Model.v': '92ef82134249c903891247c27a7528c22b1055c1cf4a1b308ba445ed3fa949f3',
+               'Statements.v': '86a68ca8334578bda3bb0b8be7b5b693102bb82e764971cbd4e753a372a73eab',
                'Audit.v': '3e9f61c2f0dd8093ddf5bf2cec8e3a9f7a36a12b8a126b372af5ebb2a55f47ce'}
 
 
@@ -943,8 +948,8 @@ class Rocq(unittest.TestCase):
         # and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and the
         # seven bounds of two limbs; and the eight kernels of the accumulator; and the four radius
         # kernels of BallVector; and the three of its constructor that have one; and the two of its
-        # negation; and the three of its scaling by a power of two.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3)
+        # negation; and the three of its scaling by a power of two; and conv_radius, of its product.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

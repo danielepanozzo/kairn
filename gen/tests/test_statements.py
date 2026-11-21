@@ -134,6 +134,9 @@ class Space:
             if 'power_of_two' in want:   # a reduced fraction of two powers of two is one
                 vals = [v for v in vals if not v[0] and v[1] > 0 and v[1].numerator & (v[1].numerator - 1) == 0
                         and v[1].denominator & (v[1].denominator - 1) == 0]
+            for w in want:
+                if w.startswith('at_most:'):
+                    vals = [v for v in vals if signed(v) <= int(w[len('at_most:'):])]
             self.kind, self.items = 'list', [(v,) for v in vals]
         elif len(g.limbs) == 2 and want & {'normalized', 'canonical'}:
             # x1 lies within half a gap of x0 on either side: a range of the sorted numbers.
@@ -184,6 +187,9 @@ def cases(fmt, kernel, seed):
         if r[0] == 'ball':      # in the real model: a normalized center and a nonnegative radius
             req.setdefault(r[1], set()).add('normalized')
             req.setdefault(r[2], set()).add('nonneg')
+            continue
+        if r[0] == 'at_most':   # at most a positive integer (g of conv_radius)
+            req.setdefault(r[1], set()).add(f'at_most:{r[2]}')
             continue
         for n in r[1:]:
             req.setdefault(n, set()).add(r[0])

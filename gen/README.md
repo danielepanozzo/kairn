@@ -291,6 +291,26 @@ by entry); `ieee.bv_model` and `ieee.bv_statement` its IEEE model and V1 to V4 o
 ball vector may say `inplace=I` after the length (architecture.md, "The line protocol"): the runners
 then pass array I as the array written, and the interpreter computes as without the field.
 
+The product of two BallVectors (architecture.md, "Ball vectors": `bv_conv_k`) names a convolution for
+its centers (`centers: conv_2`) and has no step: one `record:` line per array read, the step of a fold
+of maxima on that array's entries (`(ma, oka) = norm_step_2(ma, oka, x)`), a count made from the lengths
+(`count: m = min(n_x, n_y)`, a number of `T` rounded up), a kernel of that count run once (`bound: (g,
+t, okg) = bound_dot_2(m)`), the radius on the maxima, the radii, the count and the bound, and a finish
+on the radius, the convolution's mask and the bound's (`finish: (r, flag) = bv_conv_finish(rz, finite,
+okg)`, whose kernel claims `finite_or_nan r flag=flag if_all=okc,okg`). Its arrays are required
+`ball_vector`, and it claims `encloses_coefficients z r SET NAME=ARRAY,RADIUS... flag=F
+finite_when=... radii_when=... count_when=le(EXPR,K)...`, the conditions of `finite_when` on pairs of
+entries, on one array's entries or on the scalars, and `count_when` on the count `n` with `unit(K)` of a
+kernel. Its radius kernel may require `at_most NAME K`. `rules.bv_conv_rules` checks it (with
+`rules._bv_conv_bound`, that the bound is that of the products of the convolution's dot product);
+`cpp.bv_conv_seq` prints it (no packed form, with the end function `bv_conv_end_function`);
+`rocq.bv_conv_model` and `rocq.bv_conv_statement` give it a model and a statement (containment
+coefficient by coefficient for members chosen independently); `ieee.bv_conv_model` and
+`ieee.bv_conv_statement` its IEEE model and V1 to V4; `claims.bv_conv_claims`, its entry of `"folds"`,
+with `"bv_conv": true`; the interpreter runs it (`Machine.run_fold`) and completes its requests, which
+have two lengths and two radii (`interp.complete_conv`), and so does the compiled runner
+(`KAIRN_RUNNER_BV_CONV` of `runner_kernels.inc`).
+
 ## The operations
 
 | IR | Interpreter | Rocq (`rnd` rounds to nearest) | C++ | AVX2 (`pd`; `ps` for float) | NEON (`f64`; `f32`) |

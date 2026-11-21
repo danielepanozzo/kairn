@@ -137,7 +137,7 @@ KIND_OPTIONAL = {"rounded": {"when", "zero_factor", "value"},
                  "upper": {"gaps", "value", "if", "unless", "exact_when"},
                  # the finish of a fold of maxima: under a mask (if), the value stepped up (steps); of a
                  # constructor of a BallVector, the value also not negative (nonneg)
-                 "finite_or_nan": {"if", "steps", "nonneg"}}
+                 "finite_or_nan": {"if", "steps", "nonneg", "if_all"}}
 # Which kinds and requirements each domain has a reading of.
 DOMAIN_KINDS = {
     "finite": {"normalized", "error", "leading_rounded", "rounded", "upper", "predicate", "encloses",
@@ -148,7 +148,7 @@ DOMAIN_KINDS = {
                  "splits"},
 }
 DOMAIN_REQUIRES = {
-    "finite": {"normalized", "abs_ge", "nonneg", "power_of_two", "count", "format"},
+    "finite": {"normalized", "abs_ge", "nonneg", "power_of_two", "count", "format", "at_most"},
     "extended": {"canonical", "ball", "nonneg", "power_of_two", "interval", "not_nan"},
 }
 # The kinds that exist only for a kernel without a statement on finite operands (a full kernel, a
@@ -692,6 +692,11 @@ class Kernel:
                     fail("%s: the requirement %r has no template" % (where, req))
                 self.requires.append(("format", args))
                 continue
+            if m.group(1) == "at_most":               # at_most(g, 1): an input at most a positive integer
+                if len(args) != 2 or args[0] not in self.inputs or not re.fullmatch(r"[1-9][0-9]*", args[1]):
+                    fail("%s: the requirement %r has no template" % (where, req))
+                self.requires.append(("at_most", args))
+                continue
             for a in args:
                 if a not in self.inputs:
                     fail("%s: the requirement %r names %r, which is not an input" % (where, req, a))
@@ -878,6 +883,8 @@ class Kernel:
             return ["$%s = 0$ or $%s \\ge 1$, as a number of terms is" % (m, m)]
         if kind == "format":
             return ["The format contains $\\tfrac12$: $\\eta \\le \\tfrac12$, as `float` and `double` do"]
+        if kind == "at_most":
+            return ["$%s \\le %s$" % (name_tex(args[0]), args[1])]
         if kind == "not_nan":                         # a finite operand is not a NaN
             return []
         fail("kernel %s: the requirement %s has no reading on finite operands" % (self.name, kind))
@@ -1798,12 +1805,14 @@ class Site:
                 lines.extend(self.extended_encloses(k, x))
             elif kind == "makes_ball":
                 lines.extend(self.extended_makes_ball(k, x))
-            elif kind == "finite_or_nan" and ("if" in x or "steps" in x):
+            elif kind == "finite_or_nan" and ("if" in x or "steps" in x or "if_all" in x):
                 # The finish of a fold of maxima: the value stepped up, under the mask of the state.
                 r, f, s = name_tex(x["of"]), name_tex(x["flag"]), tex(k.value)
                 for _ in range(x.get("steps", 0)):
                     s = "\\mathrm{succ}(%s)" % s
                 gate = ("$%s$ is true and " % name_tex(x["if"])) if "if" in x else ""
+                if "if_all" in x:      # the finish of the product of two BallVectors: several masks
+                    gate = " and ".join("$%s$" % name_tex(n) for n in x["if_all"]) + " are true and "
                 sign = " and not negative (a zero of either sign is not)" if x.get("nonneg") else ""
                 lines += ["$%s$ is true exactly when %s$%s$ is finite%s." % (f, gate, s, sign),
                           "When it is, $%s = %s$." % (r, s),
@@ -2238,7 +2247,7 @@ class Site:
             return ("$%s$ with results like those of `T` for infinite and NaN operands and on overflow: the "
                     "result of its core, %s, when that is finite, and otherwise a canonical infinity or NaN:"
                     "\n\n$$%s \\approx %s.$$" % (v, self.link(self.core[k.name]), w, v))
-        if "finite_or_nan" in kinds and any("if" in x or "steps" in x for x in e["ensures"]):
+        if "finite_or_nan" in kinds and any("if" in x or "steps" in x or "if_all" in x for x in e["ensures"]):
             # The finish of a fold of maxima (architecture.md, "Folds of maxima").
             x = next(x for x in e["ensures"] if x["kind"] == "finite_or_nan")
             m, r, f = k.value[1], x["of"], x["flag"]
@@ -2248,6 +2257,16 @@ class Site:
             gate = name_tex(x["if"]) if "if" in x else None
             when = ("\\text{when } %s \\text{ is true and } %s \\text{ is finite}" % (gate, s) if gate else
                     "\\text{when } %s \\text{ is finite}" % s)
+            if "if_all" in x:
+                # The finish of the product of two BallVectors (architecture.md, "Ball vectors").
+                masks = " \\text{ and } ".join(name_tex(n) for n in x["if_all"])
+                return ("The result of the product of two BallVectors from its radius $%s$, the mask $%s$ that every "
+                        "coefficient is finite and the mask $%s$ that the bound of the dot product was given: $%s$ when "
+                        "both are true and $%s$ is finite, with the flag $%s$ true; otherwise a NaN and the flag false, "
+                        "and the product is the whole space:\n\n$$%s = %s \\ \\text{when } %s \\text{ are true and } %s "
+                        "\\text{ is finite}, \\qquad %s = \\mathrm{NaN} \\text{ otherwise}.$$"
+                        % (s, name_tex(x["if_all"][0]), name_tex(x["if_all"][1]), s, s, name_tex(f), name_tex(r), s,
+                           masks, s, name_tex(r)))
             if x.get("nonneg"):
                 # The finish of a constructor of a BallVector (architecture.md, "Ball vectors").
                 return ("The result of the constructor of a BallVector from its radius $%s$ and the mask $%s$ that no "

@@ -176,6 +176,48 @@ Definition bv_add_2_spec : Prop :=
     forall x_ y_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs (y_ - (y0 + y1)) <= ry -> Rabs ((x_ + y_) - (z0 + z1)) <= r_)
     xys (bv_add_2_map emin prec tie_even xys).
 
+(* bv_conv_1, each coefficient it writes and its one radius: conv_1 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials). Status: unverified. *)
+Definition bv_conv_1_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall (rx ry : R) (xs ys : list R),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec ry ->
+  0 <= ry ->
+  Forall (fun x => fmt emin prec x) xs ->
+  Forall (fun y => fmt emin prec y) ys ->
+  eta emin <= / 2 ->
+  bv_conv_1_ok emin prec tie_even xs ys = true ->
+  let r_ := bv_conv_1_radius emin prec tie_even rx ry xs ys in
+  fmt emin prec r_ /\
+  Forall (fun s => fmt emin prec s) (conv_1_conv emin prec tie_even xs ys) /\
+  (forall xs_ ys_ : list R,
+   Forall2 (fun x x_ => Rabs (x_ - x) <= rx) xs xs_ ->
+   Forall2 (fun y y_ => Rabs (y_ - y) <= ry) ys ys_ ->
+   Forall2 (fun j s => Rabs (sumR (map (fun xy => fst xy * snd xy) (conv_terms xs_ ys_ j)) - s) <= r_)
+     (seq 0 (conv_length (length xs) (length ys))) (conv_1_conv emin prec tie_even xs ys)).
+
+(* bv_conv_2, each coefficient it writes and its one radius: conv_2 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials). Status: unverified. *)
+Definition bv_conv_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall (rx ry : R) (xs ys : list (R * R)),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec ry ->
+  0 <= ry ->
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  Forall (fun y => normalized_2 emin prec (fst y) (snd y)) ys ->
+  eta emin <= / 2 ->
+  bv_conv_2_ok emin prec tie_even xs ys = true ->
+  let r_ := bv_conv_2_radius emin prec tie_even rx ry xs ys in
+  fmt emin prec r_ /\
+  Forall (fun s => normalized_2 emin prec (fst s) (snd s)) (conv_2_conv emin prec tie_even xs ys) /\
+  (forall xs_ ys_ : list R,
+   Forall2 (fun x x_ => Rabs (x_ - (fst x + snd x)) <= rx) xs xs_ ->
+   Forall2 (fun y y_ => Rabs (y_ - (fst y + snd y)) <= ry) ys ys_ ->
+   Forall2 (fun j s => Rabs (sumR (map (fun xy => fst xy * snd xy) (conv_terms xs_ ys_ j)) - (fst s + snd s)) <= r_)
+     (seq 0 (conv_length (length xs) (length ys))) (conv_2_conv emin prec tie_even xs ys)).
+
 (* bv_make_1, the centers it writes and its radius: the constructor of a BallVector: the centers and the radius given, or the whole space (milestone2.md, BallVector, Values). Status: unverified. *)
 Definition bv_make_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->

@@ -150,6 +150,12 @@ Definition up_bound_sum_2_0 : float := const_of (Model.up_bound_sum_2_0 (3 - ema
 (* up((1+u)^2*(unit(add_2_2)+eta)), as a number of the format. *)
 Definition up_bound_sum_2_1 : float := const_of (Model.up_bound_sum_2_1 (3 - emax - prec) prec).
 
+(* up(4*(1+u)^8*eta+eta/(2*u)), as a number of the format. *)
+Definition up_conv_radius_0 : float := const_of (Model.up_conv_radius_0 (3 - emax - prec) prec).
+
+(* up((1+u)^7), as a number of the format. *)
+Definition up_conv_radius_1 : float := const_of (Model.up_conv_radius_1 (3 - emax - prec) prec).
+
 (* up(eta/(2*u^2)), as a number of the format. *)
 Definition up_mul_down_1_0 : float := const_of (Model.up_mul_down_1_0 (3 - emax - prec) prec).
 
@@ -574,6 +580,12 @@ Definition norm_finish_1 (m : float) (ok : bool) : float * bool :=
   let '(r, flag) := fold_finish_1 t in
   (r, flag).
 
+(* bv_conv_finish: the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). *)
+Definition bv_conv_finish (rz : float) (okc okg : bool) : float * bool :=
+  let q := andb okc okg in
+  let '(r, flag) := norm_finish_1 rz q in
+  (r, flag).
+
 (* bv_make_finish: the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). *)
 Definition bv_make_finish (rz : float) (ok : bool) : float * bool :=
   let p := le pzero rz in
@@ -630,6 +642,18 @@ Definition bv_scale_radius_2 (m rx a : float) : float :=
   let p := prod aa rx in
   let t := fma m up_ball_scale_2_0 p in
   let rz := fma t up_ball_add_1_1 up_ball_scale_2_2 in
+  rz.
+
+(* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). *)
+Definition conv_radius (ma mb rx ry m g t : float) : float :=
+  let p := prod rx ry in
+  let q := fma mb rx p in
+  let w := fma ma ry q in
+  let ab := prod ma mb in
+  let e := fma ab g w in
+  let s := fma m e t in
+  let hm := prod m up_conv_radius_0 in
+  let rz := fma s up_conv_radius_1 hm in
   rz.
 
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)

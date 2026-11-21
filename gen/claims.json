@@ -2575,6 +2575,64 @@
       }
     },
     {
+      "name": "bv_conv_finish",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        },
+        {
+          "name": "okc",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "okg",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "rz",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag",
+          "if_all": [
+            "okc",
+            "okg"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "bv_make_finish",
       "domain": "extended",
       "ieee_only": true,
@@ -2932,6 +2990,74 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "conv_radius",
+      "inputs": [
+        {
+          "name": "ma",
+          "limbs": 1
+        },
+        {
+          "name": "mb",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        },
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "g",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "nonneg(ma)",
+        "nonneg(mb)",
+        "nonneg(rx)",
+        "nonneg(ry)",
+        "count(m)",
+        "nonneg(g)",
+        "at_most(g, 1)",
+        "nonneg(t)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "rz",
+          "value": "m*((1+u)*ma*ry+(1+u)*mb*rx+rx*ry)+g*m*(1+u)^2*ma*mb+t"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius of the product of polynomials of BallVector (milestone2.md, conv_radius)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 8,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -11422,6 +11548,254 @@
       "theorem": null,
       "source": {
         "cite": "add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_conv_1",
+      "bv_conv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "ry",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "ball_vector(x, rx)",
+        "ball_vector(y, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_coefficients",
+          "center": "z",
+          "radius": "r",
+          "flag": "flag",
+          "set": "x*y",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "y",
+              "radius": "ry"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "n*(abs(x)+rx)*(abs(y)+ry)",
+              "exp": -2
+            },
+            {
+              "abs_le": "(abs(x)+rx)*ry",
+              "exp": -2
+            },
+            {
+              "abs_le": "(abs(y)+ry)*rx",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*ry",
+              "exp": -2
+            }
+          ],
+          "count_when": [
+            {
+              "le": "n*(unit(mul_1_1)+eta)",
+              "than": "1/16"
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential"
+      ],
+      "centers": "conv_1",
+      "records": [
+        "norm_step_1",
+        "norm_step_1"
+      ],
+      "count": "min(n_x,n_y)",
+      "bound": "bound_dot_1",
+      "radius": "conv_radius",
+      "radius_args": [
+        "ma",
+        "mb",
+        "rx",
+        "ry",
+        "m",
+        "g",
+        "t"
+      ],
+      "finish": "bv_conv_finish",
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "conv_1 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_conv_2",
+      "bv_conv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "ry",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "ball_vector(x, rx)",
+        "ball_vector(y, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_coefficients",
+          "center": "z",
+          "radius": "r",
+          "flag": "flag",
+          "set": "x*y",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "y",
+              "radius": "ry"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "n*(abs(x)+rx)*(abs(y)+ry)",
+              "exp": -2
+            },
+            {
+              "abs_le": "(abs(x)+rx)*ry",
+              "exp": -2
+            },
+            {
+              "abs_le": "(abs(y)+ry)*rx",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*ry",
+              "exp": -2
+            }
+          ],
+          "count_when": [
+            {
+              "le": "n*(unit(mul_2_2)+eta)",
+              "than": "1/16"
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential"
+      ],
+      "centers": "conv_2",
+      "records": [
+        "norm_step_2",
+        "norm_step_2"
+      ],
+      "count": "min(n_x,n_y)",
+      "bound": "bound_dot_2",
+      "radius": "conv_radius",
+      "radius_args": [
+        "ma",
+        "mb",
+        "rx",
+        "ry",
+        "m",
+        "g",
+        "t"
+      ],
+      "finish": "bv_conv_finish",
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "conv_2 on the centers, conv_radius with the maxima of the operands and the bound of dot for min(n_x, n_y) terms (milestone2.md, The product of polynomials)",
         "license": "algorithm and proof: MIT"
       }
     },

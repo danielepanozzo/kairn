@@ -458,4 +458,36 @@ Definition conv_1_conv (xs : list R) (ys : list R) : list R :=
 Definition conv_2_conv (xs : list (R * R)) (ys : list (R * R)) : list (R * R) :=
   map (fun j => dot_2_seq (conv_terms xs ys j)) (seq 0 (conv_length (length xs) (length ys))).
 
+(* bv_conv_1: the product of two ball vectors; arrays stored x, stored y; its coefficients are conv_1_conv; the maxima of the operands' centers by norm_step_1, the count min(length xs, length ys) rounded up, the bound of dot for it by bound_dot_1, the radius by conv_radius. *)
+Definition bv_conv_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_conv_1_count (xs ys : list R) : R :=
+  round radix2 (FLT_exp emin prec) Zceil (INR (Nat.min (length xs) (length ys))).
+
+Definition bv_conv_1_bound (xs ys : list R) : R * R * bool :=
+  bound_dot_1 emin prec choice (bv_conv_1_count xs ys).
+
+Definition bv_conv_1_ok (xs ys : list R) : bool :=
+  snd (bv_conv_1_bound xs ys).
+
+Definition bv_conv_1_radius (rx : R) (ry : R) (xs ys : list R) : R :=
+  conv_radius emin prec choice (fst (fold_seq bv_conv_1_record (0, true) xs)) (fst (fold_seq bv_conv_1_record (0, true) ys)) rx ry (bv_conv_1_count xs ys) (fst (fst (bv_conv_1_bound xs ys))) (snd (fst (bv_conv_1_bound xs ys))).
+
+(* bv_conv_2: the product of two ball vectors; arrays stored x, stored y; its coefficients are conv_2_conv; the maxima of the operands' centers by norm_step_2, the count min(length xs, length ys) rounded up, the bound of dot for it by bound_dot_2, the radius by conv_radius. *)
+Definition bv_conv_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_conv_2_count (xs ys : list (R * R)) : R :=
+  round radix2 (FLT_exp emin prec) Zceil (INR (Nat.min (length xs) (length ys))).
+
+Definition bv_conv_2_bound (xs ys : list (R * R)) : R * R * bool :=
+  bound_dot_2 emin prec choice (bv_conv_2_count xs ys).
+
+Definition bv_conv_2_ok (xs ys : list (R * R)) : bool :=
+  snd (bv_conv_2_bound xs ys).
+
+Definition bv_conv_2_radius (rx : R) (ry : R) (xs ys : list (R * R)) : R :=
+  conv_radius emin prec choice (fst (fold_seq bv_conv_2_record (0, true) xs)) (fst (fold_seq bv_conv_2_record (0, true) ys)) rx ry (bv_conv_2_count xs ys) (fst (fst (bv_conv_2_bound xs ys))) (snd (fst (bv_conv_2_bound xs ys))).
+
 End Folds.

@@ -1389,6 +1389,30 @@ KAIRN_GEN_FORCEINLINE void norm_finish_1(__m256 m, __m256 ok, __m256& r_out, __m
     flag_out = flag;
 }
 
+// bv_conv_finish(rz, mask okc, mask okg) -> r, mask flag
+KAIRN_GEN_FORCEINLINE void bv_conv_finish(__m256d rz, __m256d okc, __m256d okg, __m256d& r_out, __m256d& flag_out) noexcept {
+    const __m256d q = _mm256_and_pd(okc, okg);
+    // (r, flag) = norm_finish_1(rz, q)
+    const __m256d r_t = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), rz, q);
+    // (r, flag) = fold_finish_1(r_t)
+    const __m256d r_a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), r_t);
+    const __m256d flag = _mm256_cmp_pd(r_a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d r = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), r_t, flag);
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE void bv_conv_finish(__m256 rz, __m256 okc, __m256 okg, __m256& r_out, __m256& flag_out) noexcept {
+    const __m256 q = _mm256_and_ps(okc, okg);
+    // (r, flag) = norm_finish_1(rz, q)
+    const __m256 r_t = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), rz, q);
+    // (r, flag) = fold_finish_1(r_t)
+    const __m256 r_a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), r_t);
+    const __m256 flag = _mm256_cmp_ps(r_a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 r = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), r_t, flag);
+    r_out = r;
+    flag_out = flag;
+}
+
 // bv_make_finish(rz, mask ok) -> r, mask flag
 KAIRN_GEN_FORCEINLINE void bv_make_finish(__m256d rz, __m256d ok, __m256d& r_out, __m256d& flag_out) noexcept {
     const __m256d p = _mm256_cmp_pd(_mm256_setzero_pd(), rz, _CMP_LE_OQ);
@@ -1516,6 +1540,30 @@ KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(__m256 m, __m256 rx, __m256 a, __m2
     const __m256 p = _mm256_fmadd_ps(aa, rx, _mm256_setzero_ps());
     const __m256 t = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-47f), p);
     const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000006p-126f));
+    rz_out = rz;
+}
+
+// conv_radius(ma, mb, rx, ry, m, g, t) -> rz
+KAIRN_GEN_FORCEINLINE void conv_radius(__m256d ma, __m256d mb, __m256d rx, __m256d ry, __m256d m, __m256d g, __m256d t, __m256d& rz_out) noexcept {
+    const __m256d p = _mm256_fmadd_pd(rx, ry, _mm256_setzero_pd());
+    const __m256d q = _mm256_fmadd_pd(mb, rx, p);
+    const __m256d w = _mm256_fmadd_pd(ma, ry, q);
+    const __m256d ab = _mm256_fmadd_pd(ma, mb, _mm256_setzero_pd());
+    const __m256d e = _mm256_fmadd_pd(ab, g, w);
+    const __m256d s = _mm256_fmadd_pd(m, e, t);
+    const __m256d hm = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000005p-1022), _mm256_setzero_pd());
+    const __m256d rz = _mm256_fmadd_pd(s, _mm256_set1_pd(0x1.0000000000004p+0), hm);
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void conv_radius(__m256 ma, __m256 mb, __m256 rx, __m256 ry, __m256 m, __m256 g, __m256 t, __m256& rz_out) noexcept {
+    const __m256 p = _mm256_fmadd_ps(rx, ry, _mm256_setzero_ps());
+    const __m256 q = _mm256_fmadd_ps(mb, rx, p);
+    const __m256 w = _mm256_fmadd_ps(ma, ry, q);
+    const __m256 ab = _mm256_fmadd_ps(ma, mb, _mm256_setzero_ps());
+    const __m256 e = _mm256_fmadd_ps(ab, g, w);
+    const __m256 s = _mm256_fmadd_ps(m, e, t);
+    const __m256 hm = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.00000ap-126f), _mm256_setzero_ps());
+    const __m256 rz = _mm256_fmadd_ps(s, _mm256_set1_ps(0x1.000008p+0f), hm);
     rz_out = rz;
 }
 

@@ -1540,6 +1540,26 @@ the two calls, in exact arithmetic. And the request form `inplace=I` of the line
 and every ball vector, with each array read that can be the array written, through every build of
 the runner and of the packed runner, completes exactly as the same request without the field.
 
+**The products of two BallVectors** `bv_conv_1` and `bv_conv_2` ([Architecture](architecture.md#ball-vectors)),
+which the oracle does not judge yet either (they and `conv_radius`, `bv_conv_finish` are on the lists of
+[Cross-checks](#cross-checks)), are tested by `gen/tests/test_bv_conv.py`: each check of
+`rules.bv_conv_rules` refuses what it is for, and the rules of the claims refuse `at_most` and `if_all`
+where they do not belong; the interpreter, on six formats of the IEEE shape of four to six bits
+(precision 4 to 6, $e_{\max}$ 7 to 14) and in `binary64` and `binary32`, on canonical BallVectors of
+lengths 0 to 4 with the whole space among them, satisfies V1 to V4 and the flag in exact arithmetic
+(containment coefficient by coefficient against the exact range of the sum of the products, each
+entry ranging independently over its ball; the coefficients those of `conv_k`); and on cases drawn at
+the limits of the conditions of V4 (entries and radii near the bound of each condition, a quarter of
+them with $n_x = 0$ and a quarter with $n_y = 0$), V4 holds; the count rounded up is the least number of
+the format at least $n$; `count_when` gives the bound, for every $n$ within it (up to 3 000 of them) in 36
+formats of precisions 4 to 9; an empty operand with a radius whose product with the other's maximum
+overflows gives the whole space, and does not meet the condition of V4 of that array. The compiled
+`F_seq` of every build is bit for bit the interpreter's, in `binary64` and `binary32`, on every pair of
+lengths 0 to 5, on longer operands (up to 60, and a few of up to 300 entries, 2 000 in the full tier) and
+on cases near the limits of V4; the line protocol, through the interpreter and the runner; the printers
+(the C++, the counts of the loops, the claims with the entries of architecture.md, the models and the
+statements).
+
 **The folds, and the kernels of their stage**, are cross-checked by the oracle like every kernel
 ([above](#cross-checks)), and tested here too. `gen/tests/test_folds.py` checks:
 

@@ -1377,6 +1377,30 @@ KAIRN_GEN_FORCEINLINE void norm_finish_1(float32x4_t m, uint32x4_t ok, float32x4
     flag_out = flag;
 }
 
+// bv_conv_finish(rz, mask okc, mask okg) -> r, mask flag
+KAIRN_GEN_FORCEINLINE void bv_conv_finish(float64x2_t rz, uint64x2_t okc, uint64x2_t okg, float64x2_t& r_out, uint64x2_t& flag_out) noexcept {
+    const uint64x2_t q = vandq_u64(okc, okg);
+    // (r, flag) = norm_finish_1(rz, q)
+    const float64x2_t r_t = vbslq_f64(q, rz, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    // (r, flag) = fold_finish_1(r_t)
+    const float64x2_t r_a = vabsq_f64(r_t);
+    const uint64x2_t flag = vcltq_f64(r_a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t r = vbslq_f64(flag, r_t, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE void bv_conv_finish(float32x4_t rz, uint32x4_t okc, uint32x4_t okg, float32x4_t& r_out, uint32x4_t& flag_out) noexcept {
+    const uint32x4_t q = vandq_u32(okc, okg);
+    // (r, flag) = norm_finish_1(rz, q)
+    const float32x4_t r_t = vbslq_f32(q, rz, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    // (r, flag) = fold_finish_1(r_t)
+    const float32x4_t r_a = vabsq_f32(r_t);
+    const uint32x4_t flag = vcltq_f32(r_a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t r = vbslq_f32(flag, r_t, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    r_out = r;
+    flag_out = flag;
+}
+
 // bv_make_finish(rz, mask ok) -> r, mask flag
 KAIRN_GEN_FORCEINLINE void bv_make_finish(float64x2_t rz, uint64x2_t ok, float64x2_t& r_out, uint64x2_t& flag_out) noexcept {
     const uint64x2_t p = vcleq_f64(vdupq_n_f64(0.0), rz);
@@ -1504,6 +1528,30 @@ KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(float32x4_t m, float32x4_t rx, floa
     const float32x4_t p = vfmaq_f32(vdupq_n_f32(0.0f), aa, rx);
     const float32x4_t t = vfmaq_f32(p, m, vdupq_n_f32(0x1.000002p-47f));
     const float32x4_t rz = vfmaq_f32(vdupq_n_f32(0x1.000006p-126f), t, vdupq_n_f32(0x1.000004p+0f));
+    rz_out = rz;
+}
+
+// conv_radius(ma, mb, rx, ry, m, g, t) -> rz
+KAIRN_GEN_FORCEINLINE void conv_radius(float64x2_t ma, float64x2_t mb, float64x2_t rx, float64x2_t ry, float64x2_t m, float64x2_t g, float64x2_t t, float64x2_t& rz_out) noexcept {
+    const float64x2_t p = vfmaq_f64(vdupq_n_f64(0.0), rx, ry);
+    const float64x2_t q = vfmaq_f64(p, mb, rx);
+    const float64x2_t w = vfmaq_f64(q, ma, ry);
+    const float64x2_t ab = vfmaq_f64(vdupq_n_f64(0.0), ma, mb);
+    const float64x2_t e = vfmaq_f64(w, ab, g);
+    const float64x2_t s = vfmaq_f64(t, m, e);
+    const float64x2_t hm = vfmaq_f64(vdupq_n_f64(0.0), m, vdupq_n_f64(0x1.0000000000005p-1022));
+    const float64x2_t rz = vfmaq_f64(hm, s, vdupq_n_f64(0x1.0000000000004p+0));
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void conv_radius(float32x4_t ma, float32x4_t mb, float32x4_t rx, float32x4_t ry, float32x4_t m, float32x4_t g, float32x4_t t, float32x4_t& rz_out) noexcept {
+    const float32x4_t p = vfmaq_f32(vdupq_n_f32(0.0f), rx, ry);
+    const float32x4_t q = vfmaq_f32(p, mb, rx);
+    const float32x4_t w = vfmaq_f32(q, ma, ry);
+    const float32x4_t ab = vfmaq_f32(vdupq_n_f32(0.0f), ma, mb);
+    const float32x4_t e = vfmaq_f32(w, ab, g);
+    const float32x4_t s = vfmaq_f32(t, m, e);
+    const float32x4_t hm = vfmaq_f32(vdupq_n_f32(0.0f), m, vdupq_n_f32(0x1.00000ap-126f));
+    const float32x4_t rz = vfmaq_f32(hm, s, vdupq_n_f32(0x1.000008p+0f));
     rz_out = rz;
 }
 

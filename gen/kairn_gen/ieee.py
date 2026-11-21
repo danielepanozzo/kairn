@@ -1517,7 +1517,9 @@ def _folds_in_order(kernels):
     maps = [fd for fd in folds if getattr(fd, 'is_map', False)]
     convs = [fd for fd in folds if getattr(fd, 'is_conv', False)]
     bvs = [fd for fd in folds if getattr(fd, 'is_bv', False)]
-    return [fd for fd in folds if fd not in maps + convs + bvs] + maps + convs + bvs
+    # The products of two BallVectors name convolutions: last.
+    products = [fd for fd in folds if getattr(fd, 'is_bv_conv', False)]
+    return [fd for fd in folds if fd not in maps + convs + bvs + products] + maps + convs + bvs + products
 
 
 def fold_model(kernels):
@@ -1527,9 +1529,10 @@ def fold_model(kernels):
     from the zero state, every limb +0; F_lanes W the finish on fold_lanes W. Then the maps and the
     convolutions (map_model, conv_model)."""
     every = _folds_in_order(kernels)
+    products = [fd for fd in every if getattr(fd, 'is_bv_conv', False)]
     folds = [fd for fd in every if not getattr(fd, 'is_map', False) and not getattr(fd, 'is_conv', False)
-             and not getattr(fd, 'is_bv', False)]
-    writers = [fd for fd in every if fd not in folds and not getattr(fd, 'is_bv', False)]
+             and not getattr(fd, 'is_bv', False) and fd not in products]
+    writers = [fd for fd in every if fd not in folds and not getattr(fd, 'is_bv', False) and fd not in products]
     bvs = [fd for fd in every if getattr(fd, 'is_bv', False)]
     lines = [HEADER, '',
              '(* The folds in the IEEE model (docs/developer/architecture.md, "Folds"), in the shape of their',
@@ -1616,8 +1619,58 @@ def fold_model(kernels):
                   '   and the radius +infinity (the whole space). They return the centers, the radius and the flag. *)']
     for fd in bvs:
         lines += bv_model(fd, kernels)
+    if products:
+        lines += ['', '(* The products of two ball vectors (architecture.md, "Ball vectors"): the coefficients and the',
+                  '   mask of the convolution of the centers (F_conv of the convolution named); the maxima of the',
+                  '   operands\' centers, fold_seq of F_record over each list; the count min(n_x, n_y) rounded up',
+                  '   (F_count, binary_normalize upward); the bound of dot for it; the radius kernel on the maxima,',
+                  '   the radii, the count and the bound; the finish on the radius, the convolution\'s mask and the',
+                  '   bound\'s; when its flag is false, every coefficient is zero and the radius +infinity (the whole',
+                  '   space). F_conv returns the coefficients, the radius and the flag. *)']
+    for fd in products:
+        lines += bv_conv_model(fd, kernels)
     lines += ['', 'End IeeeFolds.']
     return '\n'.join(lines) + '\n'
+
+
+def bv_conv_model(fd, kernels):
+    """The product of two BallVectors in the IEEE model: F_record, F_count and F_conv (the code of
+    cpp.bv_conv_seq and cpp.bv_conv_end_function)."""
+    conv = kernels.folds[fd.centers]
+    record, bound, radius, finish = (kernels[c[0]] for c in (fd.records[0], fd.bound, fd.radius, fd.finish))
+    x, y = fd.arrays
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    tx = _ftype(len(x.limbs))
+    lx = f'list ({tx})' if ' ' in tx else f'list {tx}'
+    n = len(fd.writes[0].limbs)
+    wtype = _ftype(n)
+    lw = f'list ({wtype})' if ' ' in wtype else f'list {wtype}'
+    zeros = '(' + ', '.join(['pzero'] * n) + ')' if n > 1 else 'pzero'
+    names = fd.state_names()
+    env = {names[0]: 'fst sa_', names[2]: 'fst sb_', fd.count: 'm_', fd.bound[2][0]: 'fst (fst b_)',
+           fd.bound[2][1]: 'snd (fst b_)'}
+    env.update({g.name: g.name for g in fd.scalars})
+    rad = _kernel_call(radius, kernels, [env[a] for a in fd.radius[1]])
+    fin = _kernel_call(finish, kernels, ['rz_', 'snd c_', 'snd b_'])
+    params = ''.join(f' ({g.name} : float)' for g in fd.scalars)
+    return ['', f'(* {fd.name}: the product of two ball vectors; centers {conv.name}, records {record.name}, bound '
+                f'{bound.name}, radius {radius.name}, finish {finish.name}. *)',
+            f'Definition {fd.name}_record (mok : float * bool) (w_ : {tx}) : float * bool :=',
+            f'  {_kernel_call(record, kernels, rocq.tuple_parts("mok", 2) + rocq.tuple_parts("w_", len(x.limbs)))}.',
+            '',
+            f'Definition {fd.name}_count ({xs} {ys} : {lx}) : float :=',
+            f'  binary_normalize prec emax prec_gt_0_ prec_lt_emax_ BinarySingleNaN.mode_UP (Z.of_nat (Nat.min (length {xs}) '
+            f'(length {ys}))) 0 false.',
+            '',
+            f'Definition {fd.name}_conv{params} ({xs} {ys} : {lx}) : {lw} * float * bool :=',
+            f'  let c_ := {conv.name}_conv {xs} {ys} in',
+            f'  let sa_ := fold_seq {fd.name}_record (pzero, true) {xs} in',
+            f'  let sb_ := fold_seq {fd.name}_record (pzero, true) {ys} in',
+            f'  let m_ := {fd.name}_count {xs} {ys} in',
+            f'  let b_ := {_kernel_call(bound, kernels, ["m_"])} in',
+            f'  let rz_ := {rad} in',
+            f'  let f_ := {fin} in',
+            f'  (if snd f_ then (fst c_, fst f_) else (map (fun _ => {zeros}) (fst c_), pinf), snd f_).']
 
 
 def _check_model(fd, kernels):
@@ -2136,6 +2189,121 @@ def bv_statement(fd, kernels, order):
     return lines
 
 
+def bv_conv_statement(fd, kernels):
+    """F_ieee_spec of the product of two BallVectors: V1 (canonical, of n_x + n_y - 1 coefficients, none
+    when a length is 0), the flag, V2 (containment coefficient by coefficient, for all members of the
+    operands' balls, each entry ranging independently over its ball), V3 (a finite result has finite
+    radii, the real model's coefficients and radius on the values), V4 (finite radii, the count
+    within count_when, the radii within radii_when, every entry of each array and every pair of
+    entries within finite_when: a finite result), for canonical BallVectors."""
+    conv = kernels.folds[fd.centers]
+    cf = kernels.folds[conv.coefficients]
+    parts = [kernels[cf.step[0]], kernels[conv.check]] + [kernels[c[0]] for c in (fd.records[0], fd.bound, fd.radius,
+                                                                                   fd.finish)]
+    used = set()
+    for k in parts:
+        used.update(_used_nans(k, kernels))
+    nans = [x for x, _ in NANS if x in used]
+    x, y = fd.arrays
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    vectors = {r[1]: r[2] for r in fd.requires if r[0] == 'ball_vector'}
+    k = len(fd.writes[0].limbs)
+    tx = _ftype(len(x.limbs)).replace('float', 'binary_float prec emax')
+    scalar_limbs = [v for g in fd.scalars for v in g.limbs]
+    hyps = [_bv_vector(g.name, g.limbs, vectors[g.name], l, g.name, g.name) for g, l in ((x, xs), (y, ys))]
+    entry = fd.ensures[0]
+    wcs = ' '.join(rocq._paren(v) for v in rocq.tuple_parts('w_', k))
+    inb = [f'Forall2 (fun {g.name} {rocq.bv_member(g.name)} => in_ball_{len(g.limbs)} '
+           f'{" ".join(rocq._paren(v) for v in rocq.tuple_parts(g.name, len(g.limbs)))} {vectors[g.name]} '
+           f'{rocq.bv_member(g.name)}) {l} {l}_' for g, l in ((x, xs), (y, ys))]
+    product = f'sumR (map (fun xy => fst xy * snd xy) (FoldModel.conv_terms {xs}_ {ys}_ j))'
+    count = f'INR (Nat.min (length {xs}) (length {ys}))'
+
+    def value(g):
+        ps = [f'val {rocq._paren(v)}' for v in rocq.tuple_parts(g.name, len(g.limbs))]
+        return ps[0] if len(ps) == 1 else '(' + ', '.join(ps) + ')'
+    vx, vy = (f'(map (fun {g.name} => {value(g)}) {l})' for g, l in ((x, xs), (y, ys)))
+    tie = {'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}
+    sec_c = [tie[v] for v in rocq.fold_section_args([kernels[cf.step[0]]], kernels)]
+    sec_r = [tie[v] for v in rocq.fold_section_args([kernels[fd.records[0][0]], kernels[fd.bound[0]],
+                                                      kernels[fd.radius[0]]], kernels)]
+    wv = f'val {rocq._paren("w_")}' if k == 1 else '(' + ', '.join(f'val {rocq._paren(v)}' for v in rocq.tuple_parts('w_', k)) + ')'
+
+    def term(text, names):
+        def name(nm):
+            if nm == rules_count():
+                return f'({count})'
+            if nm in names:
+                return names[nm]
+            g = next(h for h in fd.scalars if h.name == nm)
+            return _val_sum(g.limbs)
+        return rocq._term(expr.parse(text), name)
+
+    def bound(e):
+        b = 'emax' if e == 0 else f'(emax {"-" if e < 0 else "+"} {abs(e)})'
+        return f'bpow radix2 {b}'
+    conds = {'x': [], 'y': [], 'both': [], 'none': []}
+    for c in entry['finite_when'] + entry.get('radii_when', []):
+        names = expr.names(expr.parse(c['abs_le']))
+        where = 'both' if {x.name, y.name} <= names else 'x' if x.name in names else 'y' if y.name in names else 'none'
+        own = {x.name: _val_sum(x.limbs), y.name: _val_sum(y.limbs)}
+        conds[where].append(f'Rabs {_paren(term(c["abs_le"], own))} <= {bound(c["exp"])}')
+
+    def constant(text):
+        def name(nm):
+            return {'u': 'u prec', 'eta': f'eta {EMIN}', rules_count(): f'({count})'}[nm]
+        return rocq._term(expr.parse(text), name,
+                          lambda fn, kname: rocq.constant_call(fn, kname, kernels, 'u prec', f'eta {EMIN}'))
+    counts = [f'{constant(c["le"])} <= {constant(c["than"])}' for c in entry.get('count_when', [])]
+    lets = {g.name: rocq._let(rocq._pattern(list(g.limbs)), g.name) if rocq._pattern(list(g.limbs)) != g.name else ''
+            for g in (x, y)}
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_conv', 'prec', 'emax'] + nans + scalar_limbs + [xs, ys])
+    lines = [f'(* {fd.name}, in the IEEE model: V1 to V4 and the flag. Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_ieee_spec : Prop :=',
+             '  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+             '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+             (f'\n         {_binders(nans)},' if nans else ','),
+             f'  ({fd.min_precision} <= prec)%Z ->',
+             f'  forall ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} {ys} : list ({tx})),']
+    lines += [f'  ({h}) ->' for h in hyps]
+    lines += [f"  let '(ws_, r_, flag_) := {call} in",
+              f'  ((finite r_ /\\ 0 <= val r_ /\\ Forall (fun w_ => ball_finite_{k} {wcs} r_) ws_) \\/',
+              f'   (r_ = infinity prec emax false /\\ Forall (fun w_ => ball_whole_{k} {wcs} r_) ws_)) /\\',
+              f'  length ws_ = FoldModel.conv_length (length {xs}) (length {ys}) /\\',
+              '  (flag_ = true <-> finite r_) /\\',
+              f'  (forall {xs}_ {ys}_ : list R,',
+              f'   {inb[0]} ->',
+              f'   {inb[1]} ->',
+              f'   Forall2 (fun j w_ => in_ball_{k} {wcs} r_ ({product}))',
+              f'     (seq 0 (FoldModel.conv_length (length {xs}) (length {ys}))) ws_) /\\',
+              '  (finite r_ ->',
+              '   ' + ' /\\ '.join(f'finite {v}' for v in scalar_limbs) + ' /\\',
+              f'   Forall2 (fun w_ s_ => {wv} = s_) ws_ ({" ".join([f"FoldModel.{conv.name}_conv"] + sec_c + [vx, vy])}) /\\',
+              f'   val r_ = {" ".join([f"FoldModel.{fd.name}_radius"] + sec_r + [f"(val {v})" for v in scalar_limbs] + [vx, vy])})' +
+              (' /\\' if entry['finite_when'] else '.')]
+    if entry['finite_when']:
+        hyp = ['  (' + ' -> '.join(f'finite {v}' for v in scalar_limbs) + ' ->']
+        hyp += [f'   {c} ->' for c in counts + conds['none']]
+        for where, g, l in (('x', x, xs), ('y', y, ys)):
+            if conds[where]:
+                body = ' /\\ '.join(conds[where])
+                let = f'{lets[g.name]} ' if lets[g.name] else ''
+                hyp.append(f'   Forall (fun {g.name} => {let}{body}) {l} ->')
+        if conds['both']:
+            body = ' /\\ '.join(conds['both'])
+            lx, ly = (f'{lets[g.name]} ' if lets[g.name] else '' for g in (x, y))
+            hyp.append(f'   Forall (fun {x.name} => Forall (fun {y.name} => {lx}{ly}{body}) {ys}) {xs} ->')
+        lines += hyp + ['   finite r_).']
+    return lines
+
+
+def rules_count():
+    """The name of the count in the conditions of V4 of the product of two BallVectors."""
+    from . import rules
+    return rules.COUNT_NAME
+
+
 def bv_make_statement(fd, kernels, order):
     """F_seq_ieee_spec or F_lanes_ieee_spec of a constructor of a BallVector (makes_ball_vector;
     milestone2.md, "BallVector", "Values"), for any radius and any centers (canonical pairs for two
@@ -2197,7 +2365,7 @@ def bv_make_statement(fd, kernels, order):
 def lead_kernels(kernels):
     names = set()
     for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_max', False) or getattr(fd, 'is_conv', False):
+        if getattr(fd, 'is_max', False) or getattr(fd, 'is_conv', False) or getattr(fd, 'is_bv_conv', False):
             continue
         names.add(fd.step[0])
         # A map's combination is the operation and, not a kernel; its step's operands are the
@@ -2241,6 +2409,9 @@ def fold_statements(kernels):
     for fd in _folds_in_order(kernels):
         if getattr(fd, 'is_conv', False):
             lines += [''] + conv_statement(fd, kernels)
+            continue
+        if getattr(fd, 'is_bv_conv', False):
+            lines += [''] + bv_conv_statement(fd, kernels)
             continue
         if getattr(fd, 'is_bv', False):
             for order in ir.ORDERS:

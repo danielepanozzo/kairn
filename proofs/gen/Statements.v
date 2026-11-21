@@ -502,6 +502,29 @@ Definition bv_scale_radius_2_spec : Prop :=
   fmt emin prec rz /\
   ((((Rabs a) * rx) + (((m * (2 * u prec ^ 2)) / (1 - (2 * u prec ^ 2))) * (1 + u prec))) + ((1 * eta emin) / (1 - (2 * u prec ^ 2)))) <= rz.
 
+(* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: unverified. *)
+Definition conv_radius_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall ma mb rx ry m g t : R,
+  fmt emin prec ma ->
+  fmt emin prec mb ->
+  fmt emin prec rx ->
+  fmt emin prec ry ->
+  fmt emin prec m ->
+  fmt emin prec g ->
+  fmt emin prec t ->
+  0 <= ma ->
+  0 <= mb ->
+  0 <= rx ->
+  0 <= ry ->
+  (m = 0 \/ 1 <= m) ->
+  0 <= g ->
+  g <= 1 ->
+  0 <= t ->
+  let rz := conv_radius emin prec tie_even ma mb rx ry m g t in
+  fmt emin prec rz /\
+  (((m * (((((1 + u prec) * ma) * ry) + (((1 + u prec) * mb) * rx)) + (rx * ry))) + ((((g * m) * ((1 + u prec) ^ 2)) * ma) * mb)) + t) <= rz.
+
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). Status: proved. *)
 Definition dot_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->

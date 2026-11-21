@@ -570,6 +570,8 @@ KERNELS = {
     "bv_mul_pow2_step_2": page("ball-vectors", "A center of two limbs times a power of two, and whether it is exact"),
     "bv_mul_pow2_radius": page("ball-vectors", "The radius of a BallVector times a power of two: exact when nothing "
                                                "underflows"),
+    "conv_radius": page("ball-vectors", "The radius of the product of two polynomials whose coefficients are BallVectors"),
+    "bv_conv_finish": page("ball-vectors", "The result of the product of two BallVectors: the radius, or NaN"),
 }
 
 

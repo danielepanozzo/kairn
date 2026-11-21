@@ -413,6 +413,11 @@ template <class T> struct norm_finish_1;
 template <> struct norm_finish_1<double> { static constexpr bool proved = false; };
 template <> struct norm_finish_1<float> { static constexpr bool proved = false; };
 
+// bv_conv_finish: UNVERIFIED. Claims: finite_or_nan.
+template <class T> struct bv_conv_finish;
+template <> struct bv_conv_finish<double> { static constexpr bool proved = false; };
+template <> struct bv_conv_finish<float> { static constexpr bool proved = false; };
+
 // bv_make_finish: UNVERIFIED. Claims: finite_or_nan.
 template <class T> struct bv_make_finish;
 template <> struct bv_make_finish<double> { static constexpr bool proved = false; };
@@ -447,6 +452,11 @@ template <> struct bv_scale_radius_1<float> { static constexpr bool proved = fal
 template <class T> struct bv_scale_radius_2;
 template <> struct bv_scale_radius_2<double> { static constexpr bool proved = false; };
 template <> struct bv_scale_radius_2<float> { static constexpr bool proved = false; };
+
+// conv_radius: UNVERIFIED. Claims: upper.
+template <class T> struct conv_radius;
+template <> struct conv_radius<double> { static constexpr bool proved = false; };
+template <> struct conv_radius<float> { static constexpr bool proved = false; };
 
 // dot_step_1: proved. Claims: rounded.
 template <class T> struct dot_step_1;

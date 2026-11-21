@@ -637,6 +637,8 @@ def _hypotheses(k, ins):
             hyps.append(f'({r[1]} = 0 \\/ 1 <= {r[1]})')
         elif r[0] == 'format':           # format half: the format contains 1/2
             hyps.append('eta emin <= / 2')
+        elif r[0] == 'at_most':          # at most a positive integer (g of conv_radius)
+            hyps.append(f'{r[1]} <= {r[2]}')
     return hyps
 
 
@@ -841,13 +843,18 @@ def fold_model(kernels):
     lines += ['Section Folds.',
               'Variable emin prec : Z.',
               'Variable choice : Z -> bool.']
-    # A convolution names the sequential order of the fold of its coefficients: after the others.
-    for fd in [fd for fd in folds.values() if not fd.is_conv] + [fd for fd in folds.values() if fd.is_conv]:
+    # A convolution names the sequential order of the fold of its coefficients: after the others; and the
+    # product of two BallVectors the convolution of its centers: after the convolutions.
+    for fd in [fd for fd in folds.values() if not fd.is_conv and not fd.is_bv_conv] + \
+            [fd for fd in folds.values() if fd.is_conv] + [fd for fd in folds.values() if fd.is_bv_conv]:
         if fd.is_map:
             lines += map_model(fd, kernels)
             continue
         if fd.is_conv:
             lines += conv_model(fd, kernels)
+            continue
+        if fd.is_bv_conv:
+            lines += bv_conv_model(fd, kernels)
             continue
         if fd.is_bv:
             lines += bv_model(fd, kernels)
@@ -1054,6 +1061,9 @@ def fold_statements(kernels):
             continue
         if fd.is_conv:
             lines += [''] + conv_statement(fd, kernels)
+            continue
+        if fd.is_bv_conv:
+            lines += [''] + bv_conv_statement(fd, kernels)
             continue
         for order in ir.ORDERS:
             if order in fd.orders:
@@ -1454,6 +1464,115 @@ def conv_statement(fd, kernels):
     return lines
 
 
+# --- The product of two BallVectors ---------------------------------------------------------------------
+#
+# The product of two BallVectors (rules.py, "The product of two BallVectors") is in the real model the
+# convolution of its centers (F_conv of the convolution it names) and its radius: the radius kernel on
+# the maxima of the operands' centers (the sequential fold of the record on each list, from (0, true)),
+# the radii, the count min(length xs, length ys) rounded up to the format, and the bound of dot for it.
+# Its statement says, when the bound is given (F_ok), that the radius is a number of the format, every
+# coefficient written is valid, and for all members of the operands' balls (lists of reals, entry by
+# entry within the radius of the centers), coefficient j of their exact product, the sum over the terms
+# conv_terms xs_ ys_ j of the products, is within the radius of coefficient j written.
+
+def bv_conv_terms(fd, kernels):
+    """{name of the fold: its term in the real model}, for the arguments of the radius kernel."""
+    names = fd.state_names()
+    x, y = fd.arrays
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    count = f'({fd.name}_count {xs} {ys})'
+    bound = f'({fd.name}_bound {xs} {ys})'
+    out = {names[0]: f'(fst (fold_seq {fd.name}_record (0, true) {xs}))',
+           names[2]: f'(fst (fold_seq {fd.name}_record (0, true) {ys}))',
+           fd.count: count, fd.bound[2][0]: f'(fst (fst {bound}))', fd.bound[2][1]: f'(snd (fst {bound}))'}
+    out.update({g.name: g.name for g in fd.scalars})
+    return out
+
+
+def bv_conv_model(fd, kernels):
+    """F_record (the maxima), F_count, F_bound, F_ok and F_radius of the product of two BallVectors; its
+    centers are F_conv of the convolution it names."""
+    conv = kernels.folds[fd.centers]
+    record, bound, radius = kernels[fd.records[0][0]], kernels[fd.bound[0]], kernels[fd.radius[0]]
+    x, y = fd.arrays
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    tx = tuple_type(len(x.limbs))
+    lx = f'list ({tx})' if ' ' in tx else f'list {tx}'
+    terms = bv_conv_terms(fd, kernels)
+    rec_args = tuple_parts('mok', 2) + tuple_parts('w_', len(x.limbs))
+    btype = ' * '.join('bool' if g.kind == ir.MASK else 'R' for g in bound.outputs)
+    params = ''.join(f' ({g.name} : R)' for g in fd.scalars)
+    return ['', f'(* {fd.name}: the product of two ball vectors; arrays {fd.roles[x.name]} {x.name}, {fd.roles[y.name]} '
+                f'{y.name}; its coefficients are {conv.name}_conv; the maxima of the operands\' centers by {record.name}, '
+                f'the count min(length {xs}, length {ys}) rounded up, the bound of dot for it by {bound.name}, the '
+                f'radius by {radius.name}. *)',
+            f'Definition {fd.name}_record (mok : R * bool) (w_ : {tx}) : R * bool :=',
+            f'  {_apply(record, kernels, rec_args)}.',
+            '',
+            f'Definition {fd.name}_count ({xs} {ys} : {lx}) : R :=',
+            f'  round radix2 (FLT_exp emin prec) Zceil (INR (Nat.min (length {xs}) (length {ys}))).',
+            '',
+            f'Definition {fd.name}_bound ({xs} {ys} : {lx}) : {btype} :=',
+            f'  {_apply(bound, kernels, [f"{fd.name}_count {xs} {ys}"])}.',
+            '',
+            f'Definition {fd.name}_ok ({xs} {ys} : {lx}) : bool :=',
+            f'  snd ({fd.name}_bound {xs} {ys}).',
+            '',
+            f'Definition {fd.name}_radius{params} ({xs} {ys} : {lx}) : R :=',
+            f'  {_apply(radius, kernels, [terms[a] for a in fd.radius[1]])}.']
+
+
+def bv_conv_statement(fd, kernels):
+    """The Definition F_spec : Prop of the product of two BallVectors (bv_conv_model)."""
+    conv = kernels.folds[fd.centers]
+    cf = kernels.folds[conv.coefficients]
+    record, bound, radius = kernels[fd.records[0][0]], kernels[fd.bound[0]], kernels[fd.radius[0]]
+    x, y = fd.arrays
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    tx = tuple_type(len(x.limbs))
+    lx = f'list ({tx})' if ' ' in tx else f'list {tx}'
+    tie = {'choice': 'tie_even'}
+    sec_c = [tie.get(v, v) for v in fold_section_args([kernels[cf.step[0]]], kernels)]
+    sec_r = [tie.get(v, v) for v in fold_section_args([record, bound, radius], kernels)]
+    sec_ok = [tie.get(v, v) for v in fold_section_args([bound], kernels)]
+    vectors = {r[1]: r[2] for r in fd.requires if r[0] == 'ball_vector'}
+    hyps = []
+    for g in fd.scalars:
+        hyps += [f'fmt emin prec {g.name}', f'0 <= {g.name}']
+    for g, l in ((x, xs), (y, ys)):
+        limbs = tuple_parts(g.name, len(g.limbs))
+        valid = (f'normalized_{len(limbs)} emin prec {" ".join(_paren(v) for v in limbs)}' if len(limbs) > 1 else
+                 f'fmt emin prec {g.name}')
+        hyps.append(f'Forall (fun {g.name} => {valid}) {l}')
+    hyps += ['eta emin <= / 2', f'{" ".join([f"{fd.name}_ok"] + sec_ok + [xs, ys])} = true']
+    w = fd.writes[0]
+    s = tuple_parts('s', len(w.limbs))
+    valid_s = (f'normalized_{len(s)} emin prec {" ".join(_paren(v) for v in s)}' if len(s) > 1 else 'fmt emin prec s')
+    call_c = ' '.join([f'{conv.name}_conv'] + sec_c + [xs, ys])
+    call_r = ' '.join([f'{fd.name}_radius'] + sec_r + [g.name for g in fd.scalars] + [xs, ys])
+    near = []
+    for g, l in ((x, xs), (y, ys)):
+        member = bv_member(g.name)
+        near.append(f'Forall2 (fun {g.name} {member} => Rabs ({member} - {_sum(tuple_parts(g.name, len(g.limbs)))}) <= '
+                    f'{vectors[g.name]}) {l} {l}_')
+    product = f'sumR (map (fun xy => fst xy * snd xy) (conv_terms {xs}_ {ys}_ j))'
+    lines = [f'(* {fd.name}, each coefficient it writes and its one radius: {fd.source or "no source given"}. Status: '
+             f'{fd.status}. *)',
+             f'Definition {fd.name}_spec : Prop :=',
+             f'  forall emin prec : Z, ({fd.min_precision} <= prec)%Z ->',
+             f'  forall ({" ".join(g.name for g in fd.scalars)} : R) ({xs} {ys} : {lx}),']
+    lines += [f'  {h} ->' for h in hyps]
+    lines += [f'  let r_ := {call_r} in',
+              '  fmt emin prec r_ /\\',
+              f'  Forall (fun s => {valid_s}) ({call_c}) /\\',
+              f'  (forall {xs}_ {ys}_ : list R,',
+              f'   {near[0]} ->',
+              f'   {near[1]} ->',
+              f'   Forall2 (fun j s => Rabs ({product} - {_sum(s)}) <= r_)',
+              f'     (seq 0 (conv_length (length {xs}) (length {ys}))) ({call_c})).']
+    return lines
+
+
 def theory_module(path):
     """proofs/theories/A/B.v -> A.B"""
     return path[len('proofs/theories/'):-len('.v')].replace('/', '.')
@@ -1480,7 +1599,7 @@ def audit(kernels):
                   f'Print Assumptions {k.name}_correct.']
     for fd in folds:
         # A map and a convolution have one statement each, F_spec, not one per order.
-        names = [fd.name] if fd.is_map or fd.is_conv or fd.is_bv else \
+        names = [fd.name] if fd.is_map or fd.is_conv or fd.is_bv or fd.is_bv_conv else \
             [f'{fd.name}_{ir.ORDER_SUFFIX[order]}' for order in ir.ORDERS if order in fd.orders]
         for name in names:
             lines += ['', f'Definition {name}_audit : {name}_spec := {name}_correct.',

@@ -407,8 +407,8 @@ class Specials(unittest.TestCase):
         # ball_from_interval_2. Stage B1: 1/2 of interval_mid_rad_1. The accumulator: the six of
         # acc_radius_1, which acc_radius_2 calls. BallVector: E, G, H of the four radius kernels
         # (bv_add_radius_k, bv_scale_radius_k), those of ball_add_k and ball_scale_k; and N of the two
-        # steps and of the radius of the scaling of a BallVector by a power of two.
-        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7 + 3 * 2 + 1 + 2 + 1 + 6 + 3 * 4 + 3))
+        # steps and of the radius of the scaling of a BallVector by a power of two; the two of conv_radius.
+        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7 + 3 * 2 + 1 + 2 + 1 + 6 + 3 * 4 + 3 + 2))
         # The constant of tm in bound_dot_k, (1 + u)^2 (tiny + eta) of milestone2.md, is subnormal: it
         # holds the smallest normal number besides, as H does (1 + 5/2 eta or 3/2 eta, rounded up).
         for name, more in (('bound_dot_1', 2), ('bound_dot_2', 3)):

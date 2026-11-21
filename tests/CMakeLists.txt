@@ -509,6 +509,10 @@ set(_toy_ext_a2 fp:5:-7:0)
 #   kernels: besides what the other ball vectors need, the oracle reads neither exact_when with
 #   conditions in encloses_entries, nor exact_flag of an error entry, nor unless and exact_when of an
 #   upper entry, nor the condition mask(NAME) of exact_when, yet.
+# - the products of two BallVectors (architecture.md, "Ball vectors": the product of polynomials) and
+#   their kernels: the oracle reads neither the folds with "bv_conv": true (their requests of two
+#   lengths and two radii, the claim encloses_coefficients with count_when) nor the requirement
+#   at_most nor finite_or_nan with if_all, yet.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -526,7 +530,8 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2
   bv_center_entry_1 bv_center_2 bv_make_radius bv_make_finish
   neg_1 bv_neg_radius
-  bv_mul_pow2_step_1 bv_mul_pow2_step_2 bv_mul_pow2_radius)
+  bv_mul_pow2_step_1 bv_mul_pow2_step_2 bv_mul_pow2_radius
+  conv_radius bv_conv_finish)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
   axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2
@@ -535,7 +540,8 @@ set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2
   bv_make_1 bv_make_2
   bv_neg_1 bv_neg_2
-  bv_mul_pow2_1 bv_mul_pow2_2)
+  bv_mul_pow2_1 bv_mul_pow2_2
+  bv_conv_1 bv_conv_2)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
 # whose public functions (sum, dot, the bounds as functions of n) come with BallVector. They are

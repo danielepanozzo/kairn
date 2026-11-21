@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """The product of two polynomials whose coefficients are BallVectors (milestone2.md, "The product of
-polynomials": bv_conv_k with conv_radius), proposed in kernels/ (bv_conv_2.fold, conv_radius,
-bv_conv_finish) and run here by composing generated parts with the interpreter: the centers are the
-convolution conv_k of gen/kernels; ma and mb the largest leading magnitudes of the centers of the
-operands (norm_step_k, sequentially); m = min(n_x, n_y), the largest number of terms of a coefficient;
-(g, t, okg) = bound_dot_k(m), one call for every coefficient; the radius conv_radius(ma, mb, rx, ry, m,
-g, t); the finish bv_conv_finish(rz, the mask of conv_k, okg); the whole space when its flag is false.
+polynomials": bv_conv_k with conv_radius), first proposed in kernels/ (bv_conv_2.fold, conv_radius,
+bv_conv_finish) and now in gen/kernels (bv_conv_1.fold, bv_conv_2.fold, with the same listings), run
+here as the generated descriptions: the centers are the convolution conv_k; ma and mb the largest
+leading magnitudes of the centers of the operands (norm_step_k, sequentially); m = min(n_x, n_y), the
+largest number of terms of a coefficient, rounded up to the format; (g, t, okg) = bound_dot_k(m), one
+call for every coefficient; the radius conv_radius(ma, mb, rx, ry, m, g, t); the finish
+bv_conv_finish(rz, the mask of conv_k, okg); the whole space when its flag is false.
 
 Statements judged, in exact arithmetic, on canonical BallVectors of lengths 0 to 4 (finite ones and
 the whole space), in toy formats of the IEEE shape of four and five bits and in binary64 and binary32:
@@ -17,7 +18,8 @@ the whole space), in toy formats of the IEEE shape of four and five bits and in 
       sum of the ranges of the products, each the least and greatest of four corners);
   C3  V3: a finite result has finite operands; its coefficients are those of conv_k;
   and counted: how often the result is finite, and the largest needed radius over the radius, as in
-  batch.py. V4 is not judged: the page leaves its fraction to the proof.
+  batch.py. V4 is not judged here: the generator states it (finite_when, radii_when and count_when of
+  encloses_coefficients), and gen/tests/test_bv_conv.py judges it.
 """
 import os
 import random
@@ -40,34 +42,15 @@ def ieee_format(p, emax):
     return interp.Format(f'fp:{p}:{3 - emax - p}:{emax - p}', p, 3 - emax - p, emax - p)
 
 
-def count_of(f, n):
-    """n as a number of the format, rounded up."""
-    v = interp.canon(False, n, 0) if n else ZERO
-    if n and not (interp.member(f, v) and val(v) == n):
-        v = interp.succ(f, interp.rnd(f, False, n, 0))
-    return v
-
-
 def run(k, f, xs, ys, rx, ry):
-    nx, ny = len(xs), len(ys)
+    """bv_conv_k as generated (gen/kernels/bv_conv_k.fold, Machine.run_fold): the coefficients, the radius
+    and the flag. The proposal of this directory composed the same kernels (conv_k, norm_step_k on each
+    operand, the count, bound_dot_k, conv_radius, bv_conv_finish), and gave the same results."""
     arrays = [[x[j] for x in xs] for j in range(k)] + [[y[j] for y in ys] for j in range(k)]
-    out = M.run_fold(f'conv_{k}', f, 'sequential', 0, arrays)
-    coeffs, mask = out[:-1], out[-1]
-    state = []
-    for vs in (xs, ys):
-        s = [ZERO, True]
-        for v in vs:
-            s = M.run(f'norm_step_{k}', f, s + list(v))
-        state.append(s)
-    m = count_of(f, min(nx, ny))
-    g, t, okg = M.run(f'bound_dot_{k}', f, [m])
-    rz = M.run('conv_radius', f, [state[0][0], state[1][0], rx, ry, m, g, t])[0]
-    r, flag = M.run('bv_conv_finish', f, [rz, mask, okg])
-    nz = len(coeffs[0]) if coeffs else 0
-    zs = [[c[i] for c in coeffs] for i in range(nz)]
-    if not flag:
-        return [[ZERO] * k for _ in zs], PINF, False, zs
-    return zs, r, True, zs
+    out = M.run_fold(f'bv_conv_{k}', f, 'sequential', 0, arrays, [rx, ry])
+    nz = len(out[0])
+    zs = [[a[i] for a in out[:-2]] for i in range(nz)]
+    return zs, out[-2], out[-1], zs
 
 
 class Draw:

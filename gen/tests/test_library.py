@@ -276,6 +276,8 @@ class Selftest(unittest.TestCase):
                     self.assertFalse(env[r[1]][1], (fn, r))
                 elif r[0] == 'abs_ge':
                     self.assertTrue(interp.le(interp.absolute(env[r[2]]), interp.absolute(env[r[1]])), (fn, r))
+                elif r[0] == 'at_most':         # at most a positive integer
+                    self.assertTrue(interp.le(env[r[1]], interp.canon(False, int(r[2]), 0)), (fn, r))
                 elif r[0] == 'count':           # zero or at least 1: the self-test takes an integer >= 1
                     self.assertTrue(not env[r[1]][1] and env[r[1]][3] >= 0 and env[r[1]][2] >= 1, (fn, r))
                 elif r == ('format', 'half'):   # binary64 and binary32 contain 1/2

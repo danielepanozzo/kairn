@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: acc_mul_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_up_1, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_full, mul_2_2_full, scale_step_2.
+// Not constexpr: acc_mul_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_up_1, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_full, mul_2_2_full, scale_step_2.
 #pragma once
 
 #include <cstddef>
@@ -1767,6 +1767,31 @@ KAIRN_GEN_FORCEINLINE constexpr void norm_finish_1(float m, bool ok, float& r_ou
     flag_out = flag;
 }
 
+// bv_conv_finish(rz, mask okc, mask okg) -> r, mask flag
+// the finish of the product of polynomials of BallVector: the radius or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void bv_conv_finish(double rz, bool okc, bool okg, double& r_out, bool& flag_out) noexcept {
+    const bool q = okc & okg;
+    // (r, flag) = norm_finish_1(rz, q)
+    const double r_t = q ? rz : std::numeric_limits<double>::quiet_NaN();
+    // (r, flag) = fold_finish_1(r_t)
+    const double r_a = abs_bits(r_t);
+    const bool flag = std::numeric_limits<double>::infinity() > r_a;
+    const double r = flag ? r_t : std::numeric_limits<double>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_conv_finish(float rz, bool okc, bool okg, float& r_out, bool& flag_out) noexcept {
+    const bool q = okc & okg;
+    // (r, flag) = norm_finish_1(rz, q)
+    const float r_t = q ? rz : std::numeric_limits<float>::quiet_NaN();
+    // (r, flag) = fold_finish_1(r_t)
+    const float r_a = abs_bits(r_t);
+    const bool flag = std::numeric_limits<float>::infinity() > r_a;
+    const float r = flag ? r_t : std::numeric_limits<float>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+
 // bv_make_finish(rz, mask ok) -> r, mask flag
 // the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). Status: unverified (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void bv_make_finish(double rz, bool ok, double& r_out, bool& flag_out) noexcept {
@@ -1901,6 +1926,31 @@ KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(float m, float rx, float a, float& 
     const float p = fma_rn(aa, rx, 0.0f);
     const float t = fma_rn(m, 0x1.000002p-47f, p);
     const float rz = fma_rn(t, 0x1.000004p+0f, 0x1.000006p-126f);
+    rz_out = rz;
+}
+
+// conv_radius(ma, mb, rx, ry, m, g, t) -> rz
+// the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void conv_radius(double ma, double mb, double rx, double ry, double m, double g, double t, double& rz_out) noexcept {
+    const double p = fma_rn(rx, ry, 0.0);
+    const double q = fma_rn(mb, rx, p);
+    const double w = fma_rn(ma, ry, q);
+    const double ab = fma_rn(ma, mb, 0.0);
+    const double e = fma_rn(ab, g, w);
+    const double s = fma_rn(m, e, t);
+    const double hm = fma_rn(m, 0x1.0000000000005p-1022, 0.0);
+    const double rz = fma_rn(s, 0x1.0000000000004p+0, hm);
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void conv_radius(float ma, float mb, float rx, float ry, float m, float g, float t, float& rz_out) noexcept {
+    const float p = fma_rn(rx, ry, 0.0f);
+    const float q = fma_rn(mb, rx, p);
+    const float w = fma_rn(ma, ry, q);
+    const float ab = fma_rn(ma, mb, 0.0f);
+    const float e = fma_rn(ab, g, w);
+    const float s = fma_rn(m, e, t);
+    const float hm = fma_rn(m, 0x1.00000ap-126f, 0.0f);
+    const float rz = fma_rn(s, 0x1.000008p+0f, hm);
     rz_out = rz;
 }
 
@@ -13950,6 +14000,500 @@ inline void bv_add_2_lanes(const float* x0_in, const float* x1_in, const float* 
     }
     r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
     finite_out = rad_f_;
+}
+
+// The end of the product of ball vectors bv_conv_1: its count, its bound bound_dot_1, its radius conv_radius and its finish bv_conv_finish.
+KAIRN_GEN_NOINLINE void bv_conv_1_end(double ma, double mb, std::size_t nm_, bool finite, double rx, double ry, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double ma_v_ = ma;
+    const double ma_e_ = ma_v_;
+    volatile double mb_v_ = mb;
+    const double mb_e_ = mb_v_;
+    const double m_r_ = static_cast<double>(nm_);
+    const double m = m_r_ < 0x1p64 && static_cast<std::size_t>(m_r_) < nm_ ? next_up_bits(m_r_) : m_r_;
+    // (bnd_g, bnd_t, bnd_ok) = bound_dot_1(m)
+    const double bnd_a = fma_rn(m, 0x1.0000000000001p-53, 0.0);
+    const double bnd_aa = fma_rn(m, 0x1.0000000000001p-53, 0.0);
+    const double bnd_d = fma_rn(bnd_a, 0x1p+1, 0.0);
+    const double bnd_w = bnd_d + 0x1.0000000000001p+0;
+    const double bnd_g = fma_rn(bnd_aa, bnd_w, 0.0);
+    const double bnd_tm = fma_rn(m, 0x1.0000000000002p-1022, 0.0);
+    const double bnd_wg = bnd_g + 0x1.0000000000001p+0;
+    const double bnd_t = fma_rn(bnd_tm, bnd_wg, 0.0);
+    const bool bnd_oa = 0x1p-2 >= bnd_a;
+    const bool bnd_ob = 0x1p+0 >= bnd_g;
+    const bool bnd_ok = bnd_oa & bnd_ob;
+    // (rad_rz) = conv_radius(ma_e_, mb_e_, rx, ry, m, bnd_g, bnd_t)
+    const double rad_p = fma_rn(rx, ry, 0.0);
+    const double rad_q = fma_rn(mb_e_, rx, rad_p);
+    const double rad_w = fma_rn(ma_e_, ry, rad_q);
+    const double rad_ab = fma_rn(ma_e_, mb_e_, 0.0);
+    const double rad_e = fma_rn(rad_ab, bnd_g, rad_w);
+    const double rad_s = fma_rn(m, rad_e, bnd_t);
+    const double rad_hm = fma_rn(m, 0x1.0000000000005p-1022, 0.0);
+    const double rad_rz = fma_rn(rad_s, 0x1.0000000000004p+0, rad_hm);
+    // (fin_r, fin_flag) = bv_conv_finish(rad_rz, finite, bnd_ok)
+    const bool fin_q = finite & bnd_ok;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_conv_1_end(float ma, float mb, std::size_t nm_, bool finite, float rx, float ry, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float ma_v_ = ma;
+    const float ma_e_ = ma_v_;
+    volatile float mb_v_ = mb;
+    const float mb_e_ = mb_v_;
+    const float m_r_ = static_cast<float>(nm_);
+    const float m = m_r_ < 0x1p64f && static_cast<std::size_t>(m_r_) < nm_ ? next_up_bits(m_r_) : m_r_;
+    // (bnd_g, bnd_t, bnd_ok) = bound_dot_1(m)
+    const float bnd_a = fma_rn(m, 0x1.000002p-24f, 0.0f);
+    const float bnd_aa = fma_rn(m, 0x1.000002p-24f, 0.0f);
+    const float bnd_d = fma_rn(bnd_a, 0x1p+1f, 0.0f);
+    const float bnd_w = bnd_d + 0x1.000002p+0f;
+    const float bnd_g = fma_rn(bnd_aa, bnd_w, 0.0f);
+    const float bnd_tm = fma_rn(m, 0x1.000004p-126f, 0.0f);
+    const float bnd_wg = bnd_g + 0x1.000002p+0f;
+    const float bnd_t = fma_rn(bnd_tm, bnd_wg, 0.0f);
+    const bool bnd_oa = 0x1p-2f >= bnd_a;
+    const bool bnd_ob = 0x1p+0f >= bnd_g;
+    const bool bnd_ok = bnd_oa & bnd_ob;
+    // (rad_rz) = conv_radius(ma_e_, mb_e_, rx, ry, m, bnd_g, bnd_t)
+    const float rad_p = fma_rn(rx, ry, 0.0f);
+    const float rad_q = fma_rn(mb_e_, rx, rad_p);
+    const float rad_w = fma_rn(ma_e_, ry, rad_q);
+    const float rad_ab = fma_rn(ma_e_, mb_e_, 0.0f);
+    const float rad_e = fma_rn(rad_ab, bnd_g, rad_w);
+    const float rad_s = fma_rn(m, rad_e, bnd_t);
+    const float rad_hm = fma_rn(m, 0x1.00000ap-126f, 0.0f);
+    const float rad_rz = fma_rn(rad_s, 0x1.000008p+0f, rad_hm);
+    // (fin_r, fin_flag) = bv_conv_finish(rad_rz, finite, bnd_ok)
+    const bool fin_q = finite & bnd_ok;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// product of ball vectors bv_conv_1(stored x, stored y, stored rx, stored ry) -> z, r, flag: the convolution conv_1 of the centers,
+// the maxima by norm_step_1, the bound bound_dot_1 of min(n_x, n_y) terms, the radius conv_radius, the finish bv_conv_finish. The whole space
+// (every coefficient zero, the radius +infinity) when the flag is false. The array written overlaps neither x nor y.
+// Status: unverified.
+inline void bv_conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double rx, double ry, double* z_out, double& r_out, bool& flag_out) noexcept {
+    double ma = 0.0;
+    bool oka = true;
+    for (std::size_t i_ = 0; i_ < n_x; ++i_) {
+        const double x = x_in[i_];
+        // (rec_r, rec_okr) = norm_step_1(ma, oka, x)
+        const double rec_a = abs_bits(x);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(ma, oka, rec_a, rec_e)
+        const bool rec_r_c = rec_a > ma;
+        const double rec_r = rec_r_c ? rec_a : ma;
+        const bool rec_okr = oka & rec_e;
+        ma = rec_r;
+        oka = rec_okr;
+    }
+    double mb = 0.0;
+    bool okb = true;
+    for (std::size_t i_ = 0; i_ < n_y; ++i_) {
+        const double y = y_in[i_];
+        // (rec_r, rec_okr) = norm_step_1(mb, okb, y)
+        const double rec_a = abs_bits(y);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(mb, okb, rec_a, rec_e)
+        const bool rec_r_c = rec_a > mb;
+        const double rec_r = rec_r_c ? rec_a : mb;
+        const bool rec_okr = okb & rec_e;
+        mb = rec_r;
+        okb = rec_okr;
+    }
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        double s = 0.0;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const double x = x_in[i_];
+            const double y = y_in[j_ - i_];
+            // (step_t) = dot_step_1(s, x, y)
+            const double step_t = fma_rn(x, y, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const double chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_conv_1_end(ma, mb, n_x < n_y ? n_x : n_y, finite, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    flag_out = rad_f_;
+}
+inline void bv_conv_1_seq(const float* x_in, std::size_t n_x, const float* y_in, std::size_t n_y, float rx, float ry, float* z_out, float& r_out, bool& flag_out) noexcept {
+    float ma = 0.0f;
+    bool oka = true;
+    for (std::size_t i_ = 0; i_ < n_x; ++i_) {
+        const float x = x_in[i_];
+        // (rec_r, rec_okr) = norm_step_1(ma, oka, x)
+        const float rec_a = abs_bits(x);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(ma, oka, rec_a, rec_e)
+        const bool rec_r_c = rec_a > ma;
+        const float rec_r = rec_r_c ? rec_a : ma;
+        const bool rec_okr = oka & rec_e;
+        ma = rec_r;
+        oka = rec_okr;
+    }
+    float mb = 0.0f;
+    bool okb = true;
+    for (std::size_t i_ = 0; i_ < n_y; ++i_) {
+        const float y = y_in[i_];
+        // (rec_r, rec_okr) = norm_step_1(mb, okb, y)
+        const float rec_a = abs_bits(y);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(mb, okb, rec_a, rec_e)
+        const bool rec_r_c = rec_a > mb;
+        const float rec_r = rec_r_c ? rec_a : mb;
+        const bool rec_okr = okb & rec_e;
+        mb = rec_r;
+        okb = rec_okr;
+    }
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        float s = 0.0f;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const float x = x_in[i_];
+            const float y = y_in[j_ - i_];
+            // (step_t) = dot_step_1(s, x, y)
+            const float step_t = fma_rn(x, y, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const float chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_conv_1_end(ma, mb, n_x < n_y ? n_x : n_y, finite, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    flag_out = rad_f_;
+}
+
+// The end of the product of ball vectors bv_conv_2: its count, its bound bound_dot_2, its radius conv_radius and its finish bv_conv_finish.
+KAIRN_GEN_NOINLINE void bv_conv_2_end(double ma, double mb, std::size_t nm_, bool finite, double rx, double ry, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double ma_v_ = ma;
+    const double ma_e_ = ma_v_;
+    volatile double mb_v_ = mb;
+    const double mb_e_ = mb_v_;
+    const double m_r_ = static_cast<double>(nm_);
+    const double m = m_r_ < 0x1p64 && static_cast<std::size_t>(m_r_) < nm_ ? next_up_bits(m_r_) : m_r_;
+    // (bnd_g, bnd_t, bnd_ok) = bound_dot_2(m)
+    const double bnd_a = fma_rn(m, 0x1.0000000000001p-104, 0.0);
+    const double bnd_aa = fma_rn(m, 0x1.0000000000002p-104, 0.0);
+    const double bnd_d = fma_rn(bnd_a, 0x1p+1, 0.0);
+    const double bnd_w = bnd_d + 0x1.0000000000001p+0;
+    const double bnd_g = fma_rn(bnd_aa, bnd_w, 0.0);
+    const double bnd_tm = fma_rn(m, 0x1.0000000000003p-1022, 0.0);
+    const double bnd_wg = bnd_g + 0x1.0000000000001p+0;
+    const double bnd_t = fma_rn(bnd_tm, bnd_wg, 0.0);
+    const bool bnd_oa = 0x1p-2 >= bnd_a;
+    const bool bnd_ob = 0x1p+0 >= bnd_g;
+    const bool bnd_ok = bnd_oa & bnd_ob;
+    // (rad_rz) = conv_radius(ma_e_, mb_e_, rx, ry, m, bnd_g, bnd_t)
+    const double rad_p = fma_rn(rx, ry, 0.0);
+    const double rad_q = fma_rn(mb_e_, rx, rad_p);
+    const double rad_w = fma_rn(ma_e_, ry, rad_q);
+    const double rad_ab = fma_rn(ma_e_, mb_e_, 0.0);
+    const double rad_e = fma_rn(rad_ab, bnd_g, rad_w);
+    const double rad_s = fma_rn(m, rad_e, bnd_t);
+    const double rad_hm = fma_rn(m, 0x1.0000000000005p-1022, 0.0);
+    const double rad_rz = fma_rn(rad_s, 0x1.0000000000004p+0, rad_hm);
+    // (fin_r, fin_flag) = bv_conv_finish(rad_rz, finite, bnd_ok)
+    const bool fin_q = finite & bnd_ok;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_conv_2_end(float ma, float mb, std::size_t nm_, bool finite, float rx, float ry, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float ma_v_ = ma;
+    const float ma_e_ = ma_v_;
+    volatile float mb_v_ = mb;
+    const float mb_e_ = mb_v_;
+    const float m_r_ = static_cast<float>(nm_);
+    const float m = m_r_ < 0x1p64f && static_cast<std::size_t>(m_r_) < nm_ ? next_up_bits(m_r_) : m_r_;
+    // (bnd_g, bnd_t, bnd_ok) = bound_dot_2(m)
+    const float bnd_a = fma_rn(m, 0x1.000002p-46f, 0.0f);
+    const float bnd_aa = fma_rn(m, 0x1.000004p-46f, 0.0f);
+    const float bnd_d = fma_rn(bnd_a, 0x1p+1f, 0.0f);
+    const float bnd_w = bnd_d + 0x1.000002p+0f;
+    const float bnd_g = fma_rn(bnd_aa, bnd_w, 0.0f);
+    const float bnd_tm = fma_rn(m, 0x1.000006p-126f, 0.0f);
+    const float bnd_wg = bnd_g + 0x1.000002p+0f;
+    const float bnd_t = fma_rn(bnd_tm, bnd_wg, 0.0f);
+    const bool bnd_oa = 0x1p-2f >= bnd_a;
+    const bool bnd_ob = 0x1p+0f >= bnd_g;
+    const bool bnd_ok = bnd_oa & bnd_ob;
+    // (rad_rz) = conv_radius(ma_e_, mb_e_, rx, ry, m, bnd_g, bnd_t)
+    const float rad_p = fma_rn(rx, ry, 0.0f);
+    const float rad_q = fma_rn(mb_e_, rx, rad_p);
+    const float rad_w = fma_rn(ma_e_, ry, rad_q);
+    const float rad_ab = fma_rn(ma_e_, mb_e_, 0.0f);
+    const float rad_e = fma_rn(rad_ab, bnd_g, rad_w);
+    const float rad_s = fma_rn(m, rad_e, bnd_t);
+    const float rad_hm = fma_rn(m, 0x1.00000ap-126f, 0.0f);
+    const float rad_rz = fma_rn(rad_s, 0x1.000008p+0f, rad_hm);
+    // (fin_r, fin_flag) = bv_conv_finish(rad_rz, finite, bnd_ok)
+    const bool fin_q = finite & bnd_ok;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// product of ball vectors bv_conv_2(stored x = (x0, x1), stored y = (y0, y1), stored rx, stored ry) -> z = (z0, z1), r, flag: the convolution conv_2 of the centers,
+// the maxima by norm_step_2, the bound bound_dot_2 of min(n_x, n_y) terms, the radius conv_radius, the finish bv_conv_finish. The whole space
+// (every coefficient zero, the radius +infinity) when the flag is false. The array written overlaps neither x nor y.
+// Status: unverified.
+inline void bv_conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x, const double* y0_in, const double* y1_in, std::size_t n_y, double rx, double ry, double* z0_out, double* z1_out, double& r_out, bool& flag_out) noexcept {
+    double ma = 0.0;
+    bool oka = true;
+    for (std::size_t i_ = 0; i_ < n_x; ++i_) {
+        const double x0 = x0_in[i_];
+        // (rec_r, rec_okr) = norm_step_2(ma, oka, x0, x1)
+        // (rec_r, rec_okr) = norm_step_1(ma, oka, x0)
+        const double rec_r_a = abs_bits(x0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(ma, oka, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > ma;
+        const double rec_r = rec_r_c ? rec_r_a : ma;
+        const bool rec_okr = oka & rec_r_e;
+        ma = rec_r;
+        oka = rec_okr;
+    }
+    double mb = 0.0;
+    bool okb = true;
+    for (std::size_t i_ = 0; i_ < n_y; ++i_) {
+        const double y0 = y0_in[i_];
+        // (rec_r, rec_okr) = norm_step_2(mb, okb, y0, y1)
+        // (rec_r, rec_okr) = norm_step_1(mb, okb, y0)
+        const double rec_r_a = abs_bits(y0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(mb, okb, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > mb;
+        const double rec_r = rec_r_c ? rec_r_a : mb;
+        const bool rec_okr = okb & rec_r_e;
+        mb = rec_r;
+        okb = rec_okr;
+    }
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        double s0 = 0.0;
+        double s1 = 0.0;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[j_ - i_];
+            const double y1 = y1_in[j_ - i_];
+            // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+            const double step_p0_ch = fma_rn(x0, y0, 0.0);
+            const double step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+            const double step_p0_tl0 = fma_rn(x1, y1, 0.0);
+            const double step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+            const double step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+            const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const double step_p0 = step_p0_ch + step_p0_cl3;
+            const double step_p0_z = step_p0 - step_p0_ch;
+            const double step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+            const double step_t0_sh = s0 + step_p0;
+            const double step_t0_sh_bb = step_t0_sh - s0;
+            const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+            const double step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+            const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+            const double step_t0_th = s1 + step_p1;
+            const double step_t0_th_bb = step_t0_th - s1;
+            const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const double step_t0_th_t1 = s1 - step_t0_th_t0;
+            const double step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const double step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const double step_t0_vh = step_t0_sh + step_t0_c;
+            const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const double step_t0_vl = step_t0_c - step_t0_vh_z;
+            const double step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const double step_t0 = step_t0_vh + step_t0_w;
+            const double step_t0_z = step_t0 - step_t0_vh;
+            const double step_t1 = step_t0_w - step_t0_z;
+            s0 = step_t0;
+            s1 = step_t1;
+        }
+        z0_out[j_] = s0;
+        z1_out[j_] = s1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(s0, s1)
+        const double chk_a = abs_bits(s0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_conv_2_end(ma, mb, n_x < n_y ? n_x : n_y, finite, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    flag_out = rad_f_;
+}
+inline void bv_conv_2_seq(const float* x0_in, const float* x1_in, std::size_t n_x, const float* y0_in, const float* y1_in, std::size_t n_y, float rx, float ry, float* z0_out, float* z1_out, float& r_out, bool& flag_out) noexcept {
+    float ma = 0.0f;
+    bool oka = true;
+    for (std::size_t i_ = 0; i_ < n_x; ++i_) {
+        const float x0 = x0_in[i_];
+        // (rec_r, rec_okr) = norm_step_2(ma, oka, x0, x1)
+        // (rec_r, rec_okr) = norm_step_1(ma, oka, x0)
+        const float rec_r_a = abs_bits(x0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(ma, oka, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > ma;
+        const float rec_r = rec_r_c ? rec_r_a : ma;
+        const bool rec_okr = oka & rec_r_e;
+        ma = rec_r;
+        oka = rec_okr;
+    }
+    float mb = 0.0f;
+    bool okb = true;
+    for (std::size_t i_ = 0; i_ < n_y; ++i_) {
+        const float y0 = y0_in[i_];
+        // (rec_r, rec_okr) = norm_step_2(mb, okb, y0, y1)
+        // (rec_r, rec_okr) = norm_step_1(mb, okb, y0)
+        const float rec_r_a = abs_bits(y0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(mb, okb, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > mb;
+        const float rec_r = rec_r_c ? rec_r_a : mb;
+        const bool rec_okr = okb & rec_r_e;
+        mb = rec_r;
+        okb = rec_okr;
+    }
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        float s0 = 0.0f;
+        float s1 = 0.0f;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[j_ - i_];
+            const float y1 = y1_in[j_ - i_];
+            // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+            const float step_p0_ch = fma_rn(x0, y0, 0.0f);
+            const float step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+            const float step_p0_tl0 = fma_rn(x1, y1, 0.0f);
+            const float step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+            const float step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+            const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const float step_p0 = step_p0_ch + step_p0_cl3;
+            const float step_p0_z = step_p0 - step_p0_ch;
+            const float step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+            const float step_t0_sh = s0 + step_p0;
+            const float step_t0_sh_bb = step_t0_sh - s0;
+            const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+            const float step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+            const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+            const float step_t0_th = s1 + step_p1;
+            const float step_t0_th_bb = step_t0_th - s1;
+            const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const float step_t0_th_t1 = s1 - step_t0_th_t0;
+            const float step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const float step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const float step_t0_vh = step_t0_sh + step_t0_c;
+            const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const float step_t0_vl = step_t0_c - step_t0_vh_z;
+            const float step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const float step_t0 = step_t0_vh + step_t0_w;
+            const float step_t0_z = step_t0 - step_t0_vh;
+            const float step_t1 = step_t0_w - step_t0_z;
+            s0 = step_t0;
+            s1 = step_t1;
+        }
+        z0_out[j_] = s0;
+        z1_out[j_] = s1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(s0, s1)
+        const float chk_a = abs_bits(s0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_conv_2_end(ma, mb, n_x < n_y ? n_x : n_y, finite, rx, ry, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    flag_out = rad_f_;
 }
 
 // The end of ball vector bv_make_1: its radius bv_make_radius and its finish bv_make_finish.

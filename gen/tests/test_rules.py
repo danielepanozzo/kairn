@@ -1099,7 +1099,8 @@ class R3OfTheKernels(unittest.TestCase):
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
                                          'conv_1', 'conv_2'} | MAPS |
                          {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
-                          'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'})
+                          'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'} |
+                         {'bv_conv_1', 'bv_conv_2'})
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
         self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)
@@ -1423,6 +1424,8 @@ class TheKernels(unittest.TestCase):
     NORM_FINISH = {'norm_finish_1', 'norm_finish_2'}
     # And the finish of the constructors of a BallVector, of the IEEE model only too.
     NORM_FINISH |= {'bv_make_finish'}
+    # And the finish of the product of two BallVectors, of the IEEE model only too.
+    NORM_FINISH |= {'bv_conv_finish'}
     NORM = {'norm_combine', 'norm_step_1', 'norm_step_2'} | NORM_FINISH
     # The kernels of the accumulator (milestone2.md, "The accumulator"), of the finite domain.
     ACC = {f'acc_{op}_{k}' for op in ('add', 'mul', 'merge', 'radius') for k in (1, 2)}
@@ -1435,6 +1438,8 @@ class TheKernels(unittest.TestCase):
     BV |= {'neg_1', 'bv_neg_radius'}
     # And the steps and the radius of the scaling of a BallVector by a power of two (finite domain).
     BV |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
+    # And the radius (finite domain) and the finish of the product of two BallVectors.
+    BV |= {'conv_radius', 'bv_conv_finish'}
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # unverified until their proofs are pointed at the generated text: the interval kernels of one
@@ -1558,6 +1563,9 @@ class TheKernels(unittest.TestCase):
             # and of the scaling by a power of two: the step of one limb from 1 (mul_pow2_step_1's), the
             # others from the precision of ball_mul_pow2_k, 2.
             'bv_mul_pow2_step_1': 1, 'bv_mul_pow2_step_2': 2, 'bv_mul_pow2_radius': 2,
+            # and the radius of the product of two BallVectors, from 2 (below, its constant hm is above
+            # the largest number of formats of few exponents).
+            'conv_radius': 2,
             # Wave 2 (as the proofs found them): mul_dir_1 from 2, the sums of two limbs from 3, the
             # products from 4.
             'mul_dir_1': 2, 'add_ball_2_2': 3, 'add_down_2_2': 3, 'add_up_2_2': 3, 'sub_down_2_2': 3,

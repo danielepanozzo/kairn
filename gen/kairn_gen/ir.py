@@ -733,6 +733,13 @@ def _ensures(words, where):
                 # The finish of a constructor of a BallVector: the value is also not negative.
                 entry['nonneg'] = True
                 continue
+            if w.startswith('if_all=') and 'if_all' not in entry and 'if' not in entry:
+                # The finish of the product of two BallVectors: under several mask inputs, all true.
+                names = w[len('if_all='):].split(',')
+                if len(names) < 2 or not all(VALUE_NAME.match(n) for n in names):
+                    raise DescriptionError(f'{where}: if_all=MASK,MASK,...: the names of two mask inputs or more')
+                entry['if_all'] = names
+                continue
             key, eq, val = w.partition('=')
             if not eq or key not in ('if', 'steps') or key in entry or not val or 'nonneg' in entry:
                 raise DescriptionError(f'{where}: bad or repeated field {w!r} in finite_or_nan entry')
@@ -920,6 +927,41 @@ def _ensures(words, where):
             entry['radii_when'] = radii_when
         if exact:
             entry['exact_when'] = [] if exact is True else exact
+        return entry
+    if kind == 'encloses_coefficients' and len(words) >= 5:
+        # The product of two BallVectors (milestone2.md, "The product of polynomials"): the coefficients
+        # written, the one radius and the flag; each ball name an array of centers and its radius.
+        # finite_when: conditions of V4 over a pair of entries, one of each array (EXPR names both),
+        # an entry of one array, or the count n = min(n_x, n_y); radii_when over the scalars alone;
+        # count_when, conditions on the count, n, under which the bound of dot for n terms is given.
+        balls, opts, flag = {}, {}, None
+        for w in words[4:]:
+            key, eq, val = w.partition('=')
+            if key in ('finite_when', 'radii_when', 'count_when') and eq and key not in opts:
+                opts[key] = val
+                continue
+            if key == 'flag' and eq and val and flag is None:
+                flag = val
+                continue
+            m = re.fullmatch(r'([a-z][a-z0-9]*)=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', w)
+            if not m or m.group(1) in balls:
+                raise DescriptionError(f'{where}: bad or repeated ball vector {w!r}: NAME=CENTERS,RADIUS')
+            balls[m.group(1)] = {'center': m.group(2), 'radius': m.group(3)}
+        if not flag:
+            raise DescriptionError(f'{where}: an encloses_coefficients entry needs flag=MASK')
+        entry = {'kind': kind, 'center': words[1], 'radius': words[2], 'flag': flag, 'set': words[3], 'balls': balls,
+                 'finite_when': _finite_when(opts.get('finite_when', ''), where)}
+        if 'radii_when' in opts:
+            entry['radii_when'] = _finite_when(opts['radii_when'], where)
+        if 'count_when' in opts:
+            conds = []
+            for part in opts['count_when'].split(';'):
+                c = re.fullmatch(r'le\((.+)\)', part)
+                args = _arguments(c.group(1), where) if c else []
+                if len(args) != 2 or not all(args):
+                    raise DescriptionError(f'{where}: a condition of count_when is le(EXPR,K), got {part!r}')
+                conds.append({'le': args[0], 'than': args[1]})
+            entry['count_when'] = conds
         return entry
     if kind == 'error' and len(words) >= 3:
         entry = {'kind': 'error', 'of': words[1], 'form': words[2],
@@ -1113,6 +1155,12 @@ class Fold:
     records: list = field(default_factory=list)
     combines: list = field(default_factory=list)
     radius: tuple = None        # a ball vector: the kernel of its radius, on the state's limb and scalars
+    # The product of two BallVectors (bv_conv_k): the convolution of its centers (a fold with
+    # coefficients:), the count min(n_x, n_y) as a number of T (its name), and the kernel of the bound
+    # of a dot product of that many terms, run once (a call on the count).
+    centers: str = None
+    count: str = None
+    bound: tuple = None
     finish: tuple = None        # (kernel, argument group names, destination group names), or None
     orders: tuple = ()
     writes: list = field(default_factory=list)      # Groups: the arrays a map writes, one element per step
@@ -1144,7 +1192,14 @@ class Fold:
     def is_bv(self):
         """A ball vector (milestone2.md, "BallVector"): a map whose state is that of a fold of maxima,
         updated by `record` from each element written, and whose finish gives one radius."""
-        return bool(self.record)
+        return bool(self.record) and not self.centers
+
+    @property
+    def is_bv_conv(self):
+        """The product of two BallVectors (milestone2.md, "The product of polynomials"): the
+        convolution `centers` of their centers, the maxima of the operands' centers by `record` lines
+        on the arrays read, the count, the bound, the radius and a finish of two masks."""
+        return bool(self.centers)
 
     @property
     def exact_mask(self):
@@ -1195,7 +1250,7 @@ class Fold:
     def ieee_theorem_name(self, order):
         """The theorem of the IEEE-model statement of one order (of a convolution, of its one
         statement: F_ieee_correct)."""
-        if self.is_conv:
+        if self.is_conv or self.is_bv_conv:
             return f'{self.name}_ieee_correct'
         return f'{self.name}_{ORDER_SUFFIX[order]}_ieee_correct'
 
@@ -1226,7 +1281,7 @@ def parse_fold(text, path):
     # a mask of the step into the state); the rules say which folds may.
     single = {'fold', 'arrays', 'scalars', 'state', 'step', 'orders', 'writes', 'check', 'finish',
               'value', 'min_precision', 'theorem', 'source', 'license', 'status', 'domain', 'coefficients',
-              'radius'}
+              'radius', 'centers', 'count', 'bound'}
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
         where = f'{path}:{lineno}'
@@ -1263,8 +1318,19 @@ def parse_fold(text, path):
             if key not in fd.declared:
                 fd.declared.add(key)
                 setattr(fd, key, call)
-        elif key in ('step', 'radius'):
+        elif key in ('step', 'radius', 'bound'):
             setattr(fd, key, _fold_call(val, where, key))
+        elif key == 'centers':
+            if not KERNEL_NAME.match(val):
+                raise DescriptionError(f'{where}: expected "centers: CONVOLUTION", got {val!r}')
+            fd.centers = val
+        elif key == 'count':
+            # The one count a fold may make: the smaller of the lengths of its two arrays, as a number
+            # of T rounded up (exact below 2^p), the largest number of terms of a coefficient.
+            m = re.fullmatch(r'([a-z][a-z0-9]*)\s*=\s*min\(n_x,\s*n_y\)', val)
+            if not m:
+                raise DescriptionError(f'{where}: expected "count: NAME = min(n_x, n_y)", got {val!r}')
+            fd.count = m.group(1)
         elif key == 'finish':
             fd.finish = None if val == 'none' else _fold_call(val, where, key)
         elif key == 'orders':
@@ -1312,8 +1378,9 @@ def parse_fold(text, path):
         raise DescriptionError(f'{path}: no "fold:" line')
     if not KERNEL_NAME.match(fd.name):
         raise DescriptionError(f'{path}: bad fold name {fd.name!r}')
-    # A convolution has no step of its own: that of the fold of its coefficients.
-    for key in ('arrays', 'state', 'orders', 'writes', 'finish') + (() if fd.coefficients else ('step',)):
+    # A convolution has no step of its own: that of the fold of its coefficients; nor has the product
+    # of two BallVectors, whose centers are a convolution's.
+    for key in ('arrays', 'state', 'orders', 'writes', 'finish') + (() if fd.coefficients or fd.centers else ('step',)):
         if key not in fd.declared:
             raise DescriptionError(f'{path}: a fold needs "{key}:"' +
                                    (' (none, when there is none)' if key in ('writes', 'finish') else ''))

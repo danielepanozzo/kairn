@@ -2248,3 +2248,69 @@ Definition bv_sub_2_lanes_ieee_spec : Prop :=
      let '((x0, x1), (y0, y1)) := xy in
      Rabs (((Rabs ((val x0 + val x1) - (val y0 + val y1))) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
+
+(* bv_conv_1, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+Definition bv_conv_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (4 <= prec)%Z ->
+  forall (rx ry : binary_float prec emax) (xs ys : list (binary_float prec emax)),
+  ((finite rx /\ 0 <= val rx /\ Forall (fun x => ball_finite_1 x rx) xs) \/
+  (rx = infinity prec emax false /\ Forall (fun x => ball_whole_1 x rx) xs)) ->
+  ((finite ry /\ 0 <= val ry /\ Forall (fun y => ball_finite_1 y ry) ys) \/
+  (ry = infinity prec emax false /\ Forall (fun y => ball_whole_1 y ry) ys)) ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_conv_1_conv prec emax nan_plus nan_abs nan_fma nan_const rx ry xs ys in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_1 w_ r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_1 w_ r_) ws_)) /\
+  length ws_ = FoldModel.conv_length (length xs) (length ys) /\
+  (flag_ = true <-> finite r_) /\
+  (forall xs_ ys_ : list R,
+   Forall2 (fun x x_ => in_ball_1 x rx x_) xs xs_ ->
+   Forall2 (fun y y_ => in_ball_1 y ry y_) ys ys_ ->
+   Forall2 (fun j w_ => in_ball_1 w_ r_ (sumR (map (fun xy => fst xy * snd xy) (FoldModel.conv_terms xs_ ys_ j))))
+     (seq 0 (FoldModel.conv_length (length xs) (length ys))) ws_) /\
+  (finite r_ ->
+   finite rx /\ finite ry /\
+   Forall2 (fun w_ s_ => val w_ = s_) ws_ (FoldModel.conv_1_conv (ieee_emin prec emax) prec tie_even (map (fun x => val x) xs) (map (fun y => val y) ys)) /\
+   val r_ = FoldModel.bv_conv_1_radius (ieee_emin prec emax) prec tie_even (val rx) (val ry) (map (fun x => val x) xs) (map (fun y => val y) ys)) /\
+  (finite rx -> finite ry ->
+   ((INR (Nat.min (length xs) (length ys))) * (((1 / (1 + u prec)) * u prec ^ 1) + eta (ieee_emin prec emax))) <= (1 / 16) ->
+   Rabs (val rx * val ry) <= bpow radix2 (emax - 2) ->
+   Forall (fun x => Rabs (((Rabs (val x)) + val rx) * val ry) <= bpow radix2 (emax - 2)) xs ->
+   Forall (fun y => Rabs (((Rabs (val y)) + val ry) * val rx) <= bpow radix2 (emax - 2)) ys ->
+   Forall (fun x => Forall (fun y => Rabs (((INR (Nat.min (length xs) (length ys))) * ((Rabs (val x)) + val rx)) * ((Rabs (val y)) + val ry)) <= bpow radix2 (emax - 2)) ys) xs ->
+   finite r_).
+
+(* bv_conv_2, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+Definition bv_conv_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (4 <= prec)%Z ->
+  forall (rx ry : binary_float prec emax) (xs ys : list (binary_float prec emax * binary_float prec emax)),
+  ((finite rx /\ 0 <= val rx /\ Forall (fun x => ball_finite_2 (fst x) (snd x) rx) xs) \/
+  (rx = infinity prec emax false /\ Forall (fun x => ball_whole_2 (fst x) (snd x) rx) xs)) ->
+  ((finite ry /\ 0 <= val ry /\ Forall (fun y => ball_finite_2 (fst y) (snd y) ry) ys) \/
+  (ry = infinity prec emax false /\ Forall (fun y => ball_whole_2 (fst y) (snd y) ry) ys)) ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_conv_2_conv prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const rx ry xs ys in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
+  length ws_ = FoldModel.conv_length (length xs) (length ys) /\
+  (flag_ = true <-> finite r_) /\
+  (forall xs_ ys_ : list R,
+   Forall2 (fun x x_ => in_ball_2 (fst x) (snd x) rx x_) xs xs_ ->
+   Forall2 (fun y y_ => in_ball_2 (fst y) (snd y) ry y_) ys ys_ ->
+   Forall2 (fun j w_ => in_ball_2 (fst w_) (snd w_) r_ (sumR (map (fun xy => fst xy * snd xy) (FoldModel.conv_terms xs_ ys_ j))))
+     (seq 0 (FoldModel.conv_length (length xs) (length ys))) ws_) /\
+  (finite r_ ->
+   finite rx /\ finite ry /\
+   Forall2 (fun w_ s_ => (val (fst w_), val (snd w_)) = s_) ws_ (FoldModel.conv_2_conv (ieee_emin prec emax) prec tie_even (map (fun x => (val (fst x), val (snd x))) xs) (map (fun y => (val (fst y), val (snd y))) ys)) /\
+   val r_ = FoldModel.bv_conv_2_radius (ieee_emin prec emax) prec tie_even (val rx) (val ry) (map (fun x => (val (fst x), val (snd x))) xs) (map (fun y => (val (fst y), val (snd y))) ys)) /\
+  (finite rx -> finite ry ->
+   ((INR (Nat.min (length xs) (length ys))) * ((4 * u prec ^ 2) + eta (ieee_emin prec emax))) <= (1 / 16) ->
+   Rabs (val rx * val ry) <= bpow radix2 (emax - 2) ->
+   Forall (fun x => let '(x0, x1) := x in Rabs (((Rabs (val x0 + val x1)) + val rx) * val ry) <= bpow radix2 (emax - 2)) xs ->
+   Forall (fun y => let '(y0, y1) := y in Rabs (((Rabs (val y0 + val y1)) + val ry) * val rx) <= bpow radix2 (emax - 2)) ys ->
+   Forall (fun x => Forall (fun y => let '(x0, x1) := x in let '(y0, y1) := y in Rabs (((INR (Nat.min (length xs) (length ys))) * ((Rabs (val x0 + val x1)) + val rx)) * ((Rabs (val y0 + val y1)) + val ry)) <= bpow radix2 (emax - 2)) ys) xs ->
+   finite r_).

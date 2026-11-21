@@ -79,6 +79,17 @@ def rnd(f, neg, m, e):
     return canon(neg, m, e)
 
 
+def count_up(f, n):
+    """A count n >= 0 as a number of format f, rounded up: n itself when it is one, otherwise the
+    smallest number above it (+infinity beyond the largest): RN(n), then one step up when RN(n) < n."""
+    if n == 0:
+        return (NUM, False, 0, 0)
+    r = rnd(f, False, n, 0)
+    if r[0] == NUM and (r[2] << r[3] if r[3] >= 0 else r[2] >> -r[3]) < n:   # r is an integer: n >= 1
+        r = succ(f, r)
+    return r
+
+
 def member(f, v):
     """Whether v is a number of format f (infinities and NaN count as members)."""
     if v[0] != NUM or v[2] == 0:
@@ -315,6 +326,8 @@ class Machine:
             raise InterpError(f'{name} reads {len(limbs)} limb arrays, not {len(arrays)}')
         if fd.is_conv:
             return self._run_conv(fd, f, arrays)
+        if fd.is_bv_conv:
+            return self._run_bv_conv(fd, f, arrays, list(scalars))
         n = len(arrays[0]) if arrays else 0
         if any(len(a) != n for a in arrays):
             raise InterpError(f'{name}: the limb arrays have different lengths')
@@ -504,6 +517,41 @@ class Machine:
         width = len(fd.write_limbs())
         return [[w[k] for w in written] for k in range(width)] + [mask]
 
+    def _run_bv_conv(self, fd, f, arrays, scalars):
+        """The product of two BallVectors (rules.py, "The product of two BallVectors"): `arrays` the limb
+        arrays of x, then of y, each of its own length. The coefficients and the mask are the
+        convolution's (_run_conv); the maxima of the centers of each operand are the sequential fold of
+        its record over the entries of its array, from (+0, true); the count is min(n_x, n_y) rounded up
+        to the format (count_up); the bound kernel runs once on it; the radius on the maxima, the radii,
+        the count and the bound; the finish on the radius, the convolution's mask and the bound's. When
+        its flag is false every coefficient is zero and the radius +infinity. Returns one list of
+        coefficients per limb array written, then the radius and the flag."""
+        conv = self.kernels.folds[fd.centers]
+        if len(scalars) != len(fd.scalar_limbs()):
+            raise InterpError(f'{fd.name} takes {len(fd.scalar_limbs())} scalar limbs, not {len(scalars)}')
+        for v in scalars:
+            if isinstance(v, bool) or not member(f, v):
+                raise InterpError(f'{v} is not a number of format {f.name}')
+        out = self._run_conv(conv, f, arrays)
+        written, mask = out[:-1], out[-1]
+        gx = fd.arrays[0]
+        parts = (arrays[:len(gx.limbs)], arrays[len(gx.limbs):])
+        env = {g.name: v for g, v in zip(fd.scalars, scalars)}
+        for rec, part in zip(fd.records, parts):
+            k, state = self.kernels[rec[0]], [(NUM, False, 0, 0), True]
+            for i in range(len(part[0])):
+                state = self._eval(k, f, state + [a[i] for a in part], False)
+            env.update(zip(rec[2], state))
+        env[fd.count] = count_up(f, min(len(parts[0][0]), len(parts[1][0])))
+        env.update(zip(fd.bound[2], self._eval(self.kernels[fd.bound[0]], f, [env[fd.count]], False)))
+        env.update(zip(fd.radius[2], self._eval(self.kernels[fd.radius[0]], f, [env[a] for a in fd.radius[1]], False)))
+        env[conv.state.name] = mask
+        r, flag = self._eval(self.kernels[fd.finish[0]], f, [env[a] for a in fd.finish[1]], False)
+        if not flag:
+            written = [[(NUM, False, 0, 0)] * len(w) for w in written]
+            r = (INF, False)
+        return written + [r, flag]
+
     def _const(self, f, name):
         if name == 'inf':
             return (INF, False)
@@ -626,7 +674,7 @@ def complete_fold(machine, fd, f, fields):
     """The output fields of a request of a fold: ORDER N, then the limbs of the scalars (a map),
     then for each array of the fold in order, for each of its limbs, the N entries of that limb
     array. A map's result is, for each limb of the array it writes, its N entries, then the mask."""
-    if fd.is_conv:
+    if fd.is_conv or fd.is_bv_conv:
         return complete_conv(machine, fd, f, fields)
     if len(fields) < 2:
         raise InterpError(f'expected "{fd.name} FORMAT ORDER N LIMB ... [#TAG]"')
@@ -679,14 +727,20 @@ def complete_conv(machine, fd, f, fields):
             raise InterpError(f'not a length: {t!r} (a decimal number)')
     nx, ny = int(fields[1]), int(fields[2])
     gx, gy = fd.arrays
-    want = nx * len(gx.limbs) + ny * len(gy.limbs)
+    # The product of two BallVectors has the limbs of its scalars, the radii, after the lengths.
+    given = len(fd.scalar_limbs())
+    want = given + nx * len(gx.limbs) + ny * len(gy.limbs)
     if len(fields) - 3 != want:
         raise InterpError(f'{fd.name} of lengths {nx} and {ny} takes {want} limbs, not {len(fields) - 3}')
     values = [parse_limb(t) for t in fields[3:]]
+    scalars, values = values[:given], values[given:]
     arrays = [values[i * nx:(i + 1) * nx] for i in range(len(gx.limbs))]
     rest = values[nx * len(gx.limbs):]
     arrays += [rest[i * ny:(i + 1) * ny] for i in range(len(gy.limbs))]
-    out = machine.run_fold(fd.name, f, 'sequential', 0, arrays)
+    out = machine.run_fold(fd.name, f, 'sequential', 0, arrays, scalars)
+    if fd.is_bv_conv:
+        # The coefficients written, limb array after limb array, then the radius and the flag.
+        return ' '.join([format_limb(v) for a in out[:-2] for v in a] + [format_limb(out[-2]), format_mask(out[-1])])
     return ' '.join([format_limb(v) for a in out[:-1] for v in a] + [format_mask(out[-1])])
 
 

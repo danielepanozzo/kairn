@@ -113,8 +113,9 @@ class Model(unittest.TestCase):
         # scalings of a ball and the directed products); the fourteen distinct ones of the four
         # bound kernels of the folds (bound_sum_k: 4 and 2; bound_dot_k: 4 and 3, 2, 1 + 2u, 1/4 and
         # 1 shared); the one above; and the three of acc_radius_1 that no other kernel has
-        # ((1+u) u + N, (1+u)^8, (1+u)^7 eta/2 + N).
-        self.assertEqual(len(ups), 33)
+        # ((1+u) u + N, (1+u)^8, (1+u)^7 eta/2 + N); and the two of conv_radius (4 (1+u)^8 eta + eta/(2u),
+        # (1+u)^7).
+        self.assertEqual(len(ups), 35)
         self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
@@ -430,9 +431,11 @@ class CheckedFiles(unittest.TestCase):
     # earlier line kept. Then neg_1 and bv_neg_radius, of the negation of a BallVector (unverified),
     # in the same way. Then the two steps and the radius of the scaling of a BallVector by a power of
     # two (unverified): their definitions and the statements of the steps (ieee: spec, with the mask
-    # of exact_flag) were added, every earlier line kept.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '4af625f41158ac45d627238ed168f88b7c48f6ac26c7e2dacf536ad5d3ca42db',
-               'proofs/gen/IeeeStatements.v': '1f5cba7bcbcbac26d130f489c275b5ed58cb73444b1d6dc0e2b6c301b10c0dd0'}
+    # of exact_flag) were added, every earlier line kept. Then conv_radius and bv_conv_finish, of the product
+    # of two BallVectors (unverified): their definitions, the two constants of conv_radius and the statement
+    # of bv_conv_finish (finite_or_nan with if_all) were added, every earlier line kept.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'd0170149f5ce94ccf94811daed1a4b4ea21c8179cb249a6871c9c49362b7e494',
+               'proofs/gen/IeeeStatements.v': '21babfecb790e281bcb59bcef386bfc6f6f988bd20b2c8c39f5966011cc57255'}
 
 
     def test_the_checked_files(self):
