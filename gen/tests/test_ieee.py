@@ -402,8 +402,9 @@ class Statements(unittest.TestCase):
         # limbs of neg_1 and bv_center_entry_1 (4), and bv_neg_k and bv_make_k in their two orders (8); and of
         # the scaling by a power of two: the claims and the leading limbs of its two steps (4), and
         # bv_mul_pow2_k in its two orders (4); and the finish of the product of two BallVectors,
-        # bv_conv_finish (1), and the product bv_conv_1 (1: one statement, as a convolution's).
-        self.assertEqual(text.count('Print Assumptions'), 242)
+        # bv_conv_finish (1), and the products bv_conv_1 and bv_conv_2 (2: one statement each, as a
+        # convolution's).
+        self.assertEqual(text.count('Print Assumptions'), 243)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)

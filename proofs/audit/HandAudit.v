@@ -111,9 +111,9 @@
      lemmas of theories/BvConv.v they rest on, and in the IEEE model the lemmas of
      theories/IeeeBvConv.v beside the theorem of the finish bv_conv_finish, which
      proofs/gen/IeeeAudit.v lists: V1 to V3 of both products, and, from
-     theories/IeeeBvConvFinite.v, V4 of bv_conv_1 and the lemmas it rests on, beside the
-     theorem of its generated statement bv_conv_1_ieee_spec, which proofs/gen/IeeeAudit.v
-     lists.
+     theories/IeeeBvConvFinite.v and IeeeBvConvFinite2.v, V4 of bv_conv_1 and of bv_conv_2
+     and the lemmas they rest on, beside the theorems of their generated statements
+     bv_conv_k_ieee_spec, which proofs/gen/IeeeAudit.v lists.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -1111,9 +1111,8 @@ Print Assumptions IeeeBvPow2.bv_mul_pow2_2_lanes_seq_ieee.
    nonnegative operands is nonnegative, +infinity or a NaN, and when finite the real
    model's, the same of the count and of the bound, lists related entry by entry, and V1 to V3
    of bv_conv_1 and bv_conv_2 (bv_conv_k_ieee_v1, _v2, _v3), each a clause of the generated
-   statement bv_conv_k_ieee_spec, with what they rest on (bv_conv_k_parts). V4 of bv_conv_2 is
-   false in formats where the count overflows (docs/proofs/index.md), so its generated
-   statement is not proved. *)
+   statement bv_conv_k_ieee_spec, with what they rest on (bv_conv_k_parts). The theorems of the
+   generated statements bv_conv_k_ieee_spec are listed by proofs/gen/IeeeAudit.v. *)
 From Kairn Require Import BvConv IeeeBvConv.
 Print Assumptions BvConv.rnd_lower_normal_conv.
 Print Assumptions BvConv.conv_radius_facts.
@@ -1196,4 +1195,30 @@ Print Assumptions IeeeBvConvFinite.conv_radius_given.
 Print Assumptions IeeeBvConvFinite.maxl_values.
 Print Assumptions IeeeBvConvFinite.P_bound.
 Print Assumptions IeeeBvConvFinite.bv_conv_1_finite_parts.
+
+(* V4 of bv_conv_2 in the IEEE model under its restated condition on the count, and the lemmas it
+   rests on (theories/IeeeBvConvFinite2.v), beside the theorem of its generated statement,
+   bv_conv_2_ieee_correct, which the description names and proofs/gen/IeeeAudit.v lists:
+   add_2_2 finite when both leading limbs are at most 5/4 2^(emax - 2), the count, the bound,
+   the dot product of two limbs of every coefficient and the radius bounded below the largest
+   number. *)
+From Kairn Require Import IeeeBvConvFinite2.
+Print Assumptions IeeeBvConvFinite2.add_2_2_range_wide.
+Print Assumptions IeeeBvConvFinite2.add_2_2_values_finite_wide.
+Print Assumptions IeeeBvConvFinite2.sumabs_scaled_2.
+Print Assumptions IeeeBvConvFinite2.P_bound_K.
+Print Assumptions IeeeBvConvFinite2.ee_2u_eq.
+Print Assumptions IeeeBvConvFinite2.ee_split.
+Print Assumptions IeeeBvConvFinite2.four_u2.
+Print Assumptions IeeeBvConvFinite2.count_parts.
+Print Assumptions IeeeBvConvFinite2.count_bounded.
+Print Assumptions IeeeBvConvFinite2.bound_dot_2_given.
+Print Assumptions IeeeBvConvFinite2.dot_step_2_forward.
+Print Assumptions IeeeBvConvFinite2.dot_2_forward.
+Print Assumptions IeeeBvConvFinite2.coef_prefix_2.
+Print Assumptions IeeeBvConvFinite2.conv_2_mask_true.
+Print Assumptions IeeeBvConvFinite2.conv_radius_given_2.
+Print Assumptions IeeeBvConvFinite2.P_bound_2.
+Print Assumptions IeeeBvConvFinite2.bv_conv_2_finite_parts.
+Print Assumptions IeeeBvConvFinite2.bv_conv_2_ieee_v4.
 

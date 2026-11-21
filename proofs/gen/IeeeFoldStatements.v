@@ -2319,7 +2319,7 @@ Definition bv_conv_1_ieee_spec : Prop :=
    Forall (fun x => Forall (fun y => Rabs (((INR (Nat.min (length xs) (length ys))) * ((Rabs (val x)) + val rx)) * ((Rabs (val y)) + val ry)) <= bpow radix2 (emax - 2)) ys) xs ->
    finite r_).
 
-(* bv_conv_2, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
+(* bv_conv_2, in the IEEE model: V1 to V4 and the flag. Status: proved. *)
 Definition bv_conv_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

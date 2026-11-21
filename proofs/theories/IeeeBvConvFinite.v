@@ -29,8 +29,7 @@
      condition when both operands have entries, the conditions of one array or of the radii
      otherwise, P_bound); the chain of the radius kernel is then at most 1.2745 P + 3 eta at
      e, 1.65 Q at s, 0.15 Q at hm, and 3.21 Q at the radius (conv_radius_given).
-   The two-limb product is not here: as printed, its V4 is false where the count overflows
-   (docs/proofs/index.md). *)
+   The two-limb product is in IeeeBvConvFinite2.v, with the lemmas here. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra Psatz.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements FoldStatements IeeeFoldStatements.

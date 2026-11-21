@@ -42,10 +42,11 @@
    everything.
 
    V4 is not proved here: for bv_conv_1 it is, with the generated statement, in
-   IeeeBvConvFinite.v. As printed for bv_conv_2 it is false in formats of precision 8 and more
-   whose emax is at most 2 prec - 7: its condition on the count admits counts above the largest
-   number, which round up to +infinity, and then the bound is not given and the product is the
-   whole space (docs/proofs/index.md). *)
+   IeeeBvConvFinite.v, and for bv_conv_2 in IeeeBvConvFinite2.v. (As first printed for
+   bv_conv_2 it was false in formats of precision 8 and more whose emax is at most 2 prec - 7:
+   its condition on the count admitted counts above the largest number, which round up to
+   +infinity, and then the bound is not given and the product is the whole space. The condition
+   now has the smallest normal number in place of eta: docs/proofs/index.md.) *)
 From Stdlib Require Import Reals ZArith List Bool Lia Lra.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements.

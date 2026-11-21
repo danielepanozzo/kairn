@@ -595,9 +595,9 @@ V4. For `bv_conv_1` it is proved (`bv_conv_1_ieee_correct` of `IeeeBvConvFinite.
 description names the file and the generated audit checks it against the generated statement in
 step 5. (A product of two BallVectors has one statement, `bv_conv_1_ieee_spec`, as a convolution
 has; the generator's audit first named it `bv_conv_1_seq_ieee_spec`, a statement that does not
-exist, and the theorem was checked in step 3 until the printer was mended.) For `bv_conv_2` the
-statement is not proved yet: its V4 was false as first printed, and its condition on the count is
-restated (below). V1 to V3 are proved for both, as lemmas of their own in the
+exist, and the theorem was checked in step 3 until the printer was mended.) For `bv_conv_2` it is
+proved too (`bv_conv_2_ieee_correct` of `IeeeBvConvFinite2.v`, audited in step 5), under the
+condition on the count as restated: as first printed its V4 was false (below). V1 to V3 are proved for both, as lemmas of their own in the
 vocabulary of the statement (`bv_conv_k_ieee_v1`, `_v2`, `_v3` of `IeeeBvConv.v`, audited in step
 3), for canonical operands,
 infinite radii (the whole space) included: the result is a finite ball vector or the whole space,
@@ -636,6 +636,24 @@ $2^{e_{\max} - 6}$ whatever the precision, so that the count is a number of the 
 format it admits $n \le 7$. `binary32` and `binary64` admit exactly the same counts under both forms
 (up to $2^{42} - 1$ and $2^{100} - 1$: the $4u^2$ is what bounds them).
 `test_bv_conv.Interp.test_the_count_overflowed` keeps the counterexample.
+
+**V4 of `bv_conv_2`** (`bv_conv_2_ieee_v4`), in the manner of one limb: finite radii, $n\,(4u^2 +
+\eta/(2u)) \le \tfrac1{16}$, and the conditions on the radii, the entries and the pairs as for
+`bv_conv_1` with each entry's value $x_0 + x_1$, give a finite product in every format of the
+statement (precision at least 4, $e_{\max} > p$). The count: $n \le 2^{e_{\max}-6}$, so $m$, $n$
+rounded up, is finite and at most $(1+2u)\,n \le \tfrac98 n$ (`count_bounded`), and $m\,4u^2$ and
+$m\,\eta/(2u)$ are at most $\tfrac9{128}$. The bound's mask is true ($a \le 0.115$, $g \le 0.23$) and
+its $t$ at most $\tfrac14$. The coefficients: each step of the dot product of two limbs is `mul_2_2`,
+finite when the exact product is at most $2^{e_{\max}-1}$ (`IeeeMul22.v`), then `add_2_2`, finite
+when both leading limbs are at most $\tfrac54 Q$ (`add_2_2_values_finite_wide`: the bounds of
+`IeeeAdd22.v` with $\tfrac54 Q$ for $Q$, which precision 4 still allows); every state of the real
+model is within $(1 + 4u^2)(1 + 3u^2/(1-4u))^{k-1} \le \tfrac{65}{64}\cdot\tfrac{16}{15}$ of a sum of
+at most $n$ products each at most $Q/n$, so its leading limb is at most $1.16\,Q$, and the leading limb
+of each product at most $1.09\,Q$; so every IEEE state is finite and the real model's
+(`dot_2_forward`). The radius: the largest leading limbs are at most $(1+u)$ times their entries'
+magnitudes, so $P \le (1+u)^2 Q$ and $m P \le \tfrac98 (1+u)^2 Q$, and the radius kernel stays at most
+$3.35\,Q$. The theorem of the generated statement, `bv_conv_2_ieee_correct`, is V1 to V3 of
+`IeeeBvConv.v` with V4.
 
 ## The accumulator
 

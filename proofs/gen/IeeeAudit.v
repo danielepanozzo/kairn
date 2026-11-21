@@ -13,6 +13,7 @@ From Kairn Require Import IeeeBallPow2.
 From Kairn Require Import IeeeBv.
 From Kairn Require Import IeeeBvConv.
 From Kairn Require Import IeeeBvConvFinite.
+From Kairn Require Import IeeeBvConvFinite2.
 From Kairn Require Import IeeeBvNegMake.
 From Kairn Require Import IeeeBvPow2.
 From Kairn Require Import IeeeDirected.
@@ -765,3 +766,6 @@ Print Assumptions bv_sub_2_lanes_ieee_correct.
 
 Definition bv_conv_1_ieee_audit : bv_conv_1_ieee_spec := bv_conv_1_ieee_correct.
 Print Assumptions bv_conv_1_ieee_correct.
+
+Definition bv_conv_2_ieee_audit : bv_conv_2_ieee_spec := bv_conv_2_ieee_correct.
+Print Assumptions bv_conv_2_ieee_correct.

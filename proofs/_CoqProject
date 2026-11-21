@@ -100,6 +100,7 @@ theories/IeeeBvNegMake.v
 theories/IeeeBvPow2.v
 theories/IeeeBvConv.v
 theories/IeeeBvConvFinite.v
+theories/IeeeBvConvFinite2.v
 theories/IeeeFoldNorm.v
 theories/IeeeBallConvert.v
 theories/IeeeIntervalExact.v
