@@ -3,11 +3,13 @@
 run time, with and without the check of its results in constant evaluation (KAIRN_RATIONAL_CHECK).
 
   rational_cost.py compile --cxx CXX [--msvc] [--flags "..."] [--reps R] [--counts 1,100,1000]
-                           [--workdir DIR] [--json FILE]
+                           [--types e2[,e1]] [--cpu N] [--workdir DIR] [--json FILE]
       Compiles, R times in rounds, a translation unit that includes kairn/kairn.hpp and defines N
-      constants rational<Expansion<double, 2>>(num, den) with distinct random 64-bit terms (fixed
-      seed), for each N of --counts, with KAIRN_RATIONAL_CHECK 0 and 1, and the same unit with no
-      constant; prints the median wall time of each and what the constants add per constant.
+      constants rational<Expansion<double, 2>>(num, den) (e2; e1 for Expansion<double, 1>) with
+      distinct random 64-bit terms (fixed seed), for each N of --counts, with KAIRN_RATIONAL_CHECK 0
+      and 1, and the same unit with no constant; prints the median wall time of each and what the
+      constants add per constant. --cpu pins the script and the compilers to one logical processor
+      (Linux).
   rational_cost.py run --cxx CXX [--msvc] [--flags "..."] [--workdir DIR] [--json FILE]
       Builds and runs a program that times, per call, kairn::rational<X>(num, den) for X =
       Expansion<double, 1>, Expansion<double, 2>, Expansion<float, 1>, Expansion<float, 2> on 4096
@@ -47,8 +49,8 @@ def literal(n):
     return "(-9223372036854775807LL - 1)" if n == -BIG else "%dLL" % n
 
 
-def unit(n):
-    lines = ["#include <kairn/kairn.hpp>", "using X = kairn::Expansion<double, 2>;"]
+def unit(n, typ="e2"):
+    lines = ["#include <kairn/kairn.hpp>", "using X = kairn::Expansion<double, %d>;" % (2 if typ == "e2" else 1)]
     for i, (num, den) in enumerate(fractions(n)):
         lines.append("constexpr kairn::Constant<X> c%d = kairn::rational<X>(%s, %s);" % (i, literal(num), literal(den)))
     # One use, so that the unit has an object to emit.
@@ -80,31 +82,39 @@ def timed(cmd, timeout):
 
 def compile_times(a):
     os.makedirs(a.workdir, exist_ok=True)
+    if a.cpu is not None and sys.platform.startswith("linux"):
+        os.sched_setaffinity(0, {a.cpu})
     counts = [int(c) for c in a.counts.split(",")]
-    jobs = [("none", 0, 1)] + [(n, check, check) for n in counts for check in (0, 1)]
+    types = a.types.split(",")
+    jobs = [("none", "e2", 0)] + [(n, typ, check) for typ in types for n in counts for check in (0, 1)]
     sources = {}
-    for n in [0] + counts:
-        path = os.path.join(a.workdir, "rational_%d.cpp" % n)
-        with open(path, "w") as f:
-            f.write(unit(n))
-        sources[n] = path
-    times = {(n, check): [] for n, check, _ in jobs}
+    for typ in types:
+        for n in [0] + counts:
+            path = os.path.join(a.workdir, "rational_%s_%d.cpp" % (typ, n))
+            with open(path, "w") as f:
+                f.write(unit(n, typ))
+            sources[(typ, n)] = path
+    times = {(n, typ, check): [] for n, typ, check in jobs}
     for _ in range(a.reps):
-        for n, check, _ in jobs:
-            times[(n, check)].append(timed(compile_command(a, sources[0 if n == "none" else n], check), a.timeout))
-    base = statistics.median(times[("none", 0)])
+        for n, typ, check in jobs:
+            src = sources[(typ, 0 if n == "none" else n)]
+            times[(n, typ, check)].append(timed(compile_command(a, src, check), a.timeout))
+    base = statistics.median(times[("none", "e2", 0)])
     rows = []
-    print("%-28s %10s %14s" % ("unit", "median s", "per constant"))
-    print("%-28s %10.3f %14s" % ("include only", base, "-"))
-    for n in counts:
-        for check in (0, 1):
-            med = statistics.median(times[(n, check)])
-            per = (med - base) / n * 1000
-            rows.append({"constants": n, "check": check, "median_s": med, "per_constant_ms": per,
-                         "samples": times[(n, check)]})
-            print("%-28s %10.3f %11.3f ms" % ("%d constants, check %d" % (n, check), med, per))
-    return {"compiler": a.cxx, "flags": a.flags, "reps": a.reps, "include_only_s": base,
-            "include_only_samples": times[("none", 0)], "rows": rows}
+    print("%-34s %10s %14s" % ("unit", "median s", "per constant"))
+    print("%-34s %10.3f %14s" % ("include only", base, "-"))
+    for typ in types:
+        for n in counts:
+            for check in (0, 1):
+                med = statistics.median(times[(n, typ, check)])
+                per = (med - base) / n * 1000
+                rows.append({"type": typ, "constants": n, "check": check, "median_s": med, "per_constant_ms": per,
+                             "samples": times[(n, typ, check)]})
+                print("%-34s %10.3f %11.3f ms" % ("%s, %d constants, check %d" % (typ, n, check), med, per))
+    version = subprocess.run([a.cxx, "--version"] + a.flags.split(), capture_output=True, text=True).stdout
+    return {"compiler": a.cxx, "version": version.strip().splitlines()[0] if version.strip() else "",
+            "flags": a.flags, "reps": a.reps, "cpu": a.cpu, "include_only_s": base,
+            "include_only_samples": times[("none", "e2", 0)], "rows": rows}
 
 
 RUN_SOURCE = r"""
@@ -198,6 +208,8 @@ def main(argv):
     ap.add_argument("--flags", default="")
     ap.add_argument("--reps", type=int, default=5)
     ap.add_argument("--counts", default="1,100,1000")
+    ap.add_argument("--types", default="e2")
+    ap.add_argument("--cpu", type=int)
     ap.add_argument("--timeout", type=float, default=600)
     ap.add_argument("--workdir", default="build-rational-cost")
     ap.add_argument("--json")

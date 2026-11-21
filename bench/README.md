@@ -132,6 +132,73 @@ python3 bench/report.py results/milestone1/bench
 prints the tables of the results page from the stored JSON: a cell is the lowest and highest
 value of a ratio over the repeated runs of a configuration.
 
+## Milestone 2
+
+The harness behind [Benchmarks, Milestone 2](../docs/developer/results/bench-milestone2.md): what
+Milestone 2 has made public, next to the classical way of rounding down and up (changing the
+rounding mode), plain floors of `T`, and `Ball`. Its own program, `kairn-bench-m2-LEVEL` (and
+`kairn-bench-m2-outlined-LEVEL`, `kairn-bench-m2-external-LEVEL` in the other settings of
+`KAIRN_ENCLOSURE_CODE`), built with the same option and flags as `kairn-bench`; the program of
+Milestone 1 is unchanged.
+
+| File | What it holds |
+|---|---|
+| `m2_data.hpp` | what the files share: `Raw<T>`, every operand as plain arrays of `T` laid out as the public types lay out their limbs, and the outputs; `Entry`, one timed function; the regions a function writes |
+| `m2.cpp` | the functions that use Kairn, for `double` (backend `m2`) and `float` (`m2f`): the building blocks, `Interval<T, 1>` and `<T, 2>`, `Ball<T, 1>` and `<T, 2>`, Horner, the additions to `Ball`, `rational`; the generated scalar kernels on one array per limb (`m2s`); the data, and the tightness of Horner |
+| `m2_fenv.cpp` | the props that change the rounding mode, compiled with `-frounding-math` (`/fp:strict`) and, with Clang, `#pragma STDC FENV_ACCESS ON`; it does not include Kairn |
+| `m2_packed.cpp`, `m2_fenv_packed.cpp` | packed code (`m2p`), binary64: the generated kernels, and the props that change the mode once around a packed loop |
+| `m2_main.cpp`, `bench_util.hpp` | the driver: checks, tightness, timing, JSON |
+
+Every timed function is one row of an X-macro list (`KB_LIST` in `m2.cpp`, `KB_FLIST` in
+`m2_fenv.cpp`, `KB_SLIST`, `KB_PLIST`, `KB_FPLIST`): `X(BACKEND, SUFFIX, T, KIND, KERNEL,
+VARIANT, REGION, VALUES, CHECK, BODY)`, which the file expands twice, into the function
+`kb_m2_SUFFIX_KIND_KERNEL__VARIANT` and into its row of the table. `KIND` is `tp` (a loop of
+independent operations over arrays of 256, time per operation), `sum`, `prod`, `step` (a dependent
+chain, time per step) or `lat` (dependent evaluations, time per evaluation). The variants:
+
+| Variant | What it is |
+|---|---|
+| `kairn` | the generated kernel called on the limbs: the reference of every other variant of the kernel |
+| `op` | the public operation, written as a client writes it, on arrays of the public types |
+| `flat` | the public operation in a function compiled with `__attribute__((flatten))`, which inlines what the compiler would call: the product of intervals of two limbs is an ordinary function, not forced inline |
+| `plain` | the same values with the operations of `T`; a kernel named `pair_*`, `plain4_*`, `plain_*` is a floor of plain arithmetic, whose `kairn` reference computes the same values with the generated one-limb kernels |
+| `fenv` | `std::fesetround` to downward or upward around each operation, and back to nearest |
+| `csr` | the same, writing MXCSR or FPCR directly with values computed once |
+| `fenv_loop` | the mode set once around the whole loop or chain; intervals upward only, $\mathrm{RD}(t) = -\mathrm{RU}(-t)$ |
+| `nextafter` | `std::nextafter` |
+
+Before anything is timed, every function is checked against `BACKEND/KIND/KERNEL/kairn` (`m2p`
+against `m2s`), byte for byte, or by its own check (`kairn::rational` by `is_rational_result`); for
+each rounding-mode prop the driver counts how many of its values differ from the same operation
+rounded to nearest (what a prop that ignored the mode would have returned); and the props of the
+building blocks are compared with Kairn's on a wide sample, $2^{16}$ pairs per operation, limb type
+and variant, half of them over every finite value of `T` (`--wide N`): equal, but for the sign of a
+zero result and, below $2^{2p-1}\eta$, a product of Kairn one number wider on its side, as the
+statement of `mul_down` allows. A failed check stops the run. The driver then measures the
+tightness of the Horner evaluation in four regimes (a point, a few units in the last place, the
+narrow sets of the timing, wide sets) against the exact range of $T_8$, and times.
+
+```sh
+build-bench/bench/kairn-bench-m2-O2 --check-only        # the checks and the tightness
+taskset -c 50 build-bench/bench/kairn-bench-m2-O2 --cpu 50 --reps 31 \
+    --machine "..." --commit "$(git rev-parse --short HEAD)" --json results/milestone2/bench/linux-gcc-O2-r1.json
+python3 bench/m2_report.py results/milestone2/bench   # the tables of the results page
+```
+
+The options are those of `kairn-bench` (`--filter` takes several texts, separated by commas), and
+`--wide N`. The JSON has, besides the times, the load average at the start and the end of the
+timing, the checks (with the counts against rounding to nearest and the wide sample) and the
+tightness.
+
+**Adding the functions on arrays, `BallVector` and the accumulator.** Add their operands to
+`Raw<T>` (plain arrays) and, as public types, to `Data<T>` in `m2.cpp`; their outputs to `Data<T>`
+with a new `Region` (and its line in `region_of`); then rows to `KB_LIST`: for a function on arrays
+of length `n` a `tp` row whose body is one call over the arrays (set `ops` to the number of
+elements by a row macro of its own, as the table rows set `kN` now), its `kairn` reference the
+generated fold (`kg::sum_2_seq`, `kg::dot_2_lanes`, ...) on the limbs, its `op` the public function,
+and its floors in plain `T` with a `kairn` reference; packed folds go to `KB_PLIST`. The report
+takes a new table as a list of ratios of names (`m2_report.py`).
+
 ## Other costs
 
 The tools behind [Compile times and other costs, Milestone

@@ -124,3 +124,46 @@ foreach(_level IN ITEMS O0 ${_levels})
     target_compile_definitions(${_target} PRIVATE "KAIRN_BENCH_FLAGS=\"${_flags}\"" KAIRN_CHECKS=${_checks})
   endforeach()
 endforeach()
+
+# The benchmark of Milestone 2 (bench/m2_data.hpp; bench/README.md, "Milestone 2"):
+# kairn-bench-m2-LEVEL, and the same with the operations of Ball and Interval outlined and external
+# (kairn-bench-m2-outlined-LEVEL, kairn-bench-m2-external-LEVEL). m2_fenv.cpp and
+# m2_fenv_packed.cpp hold the props that change the rounding mode: they are compiled so that the
+# compiler honors a change of mode (-frounding-math; /fp:strict with MSVC), and they do not include
+# Kairn. The packed files are compiled for AVX2 on x86-64, as packed.cpp.
+if(_opt_O2 STREQUAL "/O2")
+  set(_rounding_math /fp:strict)
+else()
+  set(_rounding_math -frounding-math)
+endif()
+set_source_files_properties(m2_fenv.cpp PROPERTIES COMPILE_OPTIONS "${_rounding_math}")
+set_source_files_properties(m2_fenv_packed.cpp PROPERTIES COMPILE_OPTIONS "${_rounding_math};${_packed_isa}")
+set_source_files_properties(m2_packed.cpp PROPERTIES COMPILE_OPTIONS "${_packed_isa}")
+string(REPLACE ";" " " _rounding_math_text "${_rounding_math}")
+foreach(_code INLINE OUTLINED EXTERNAL)
+  string(TOLOWER "${_code}" _name)
+  foreach(_level IN LISTS _levels)
+    if(_code STREQUAL "INLINE")
+      set(_target kairn-bench-m2-${_level})
+    else()
+      set(_target kairn-bench-m2-${_name}-${_level})
+    endif()
+    add_executable(${_target} m2_main.cpp m2.cpp m2_fenv.cpp m2_packed.cpp m2_fenv_packed.cpp)
+    if(_code STREQUAL "EXTERNAL")
+      target_sources(${_target} PRIVATE definitions.cpp)
+    endif()
+    target_link_libraries(${_target} PRIVATE kairn::kairn kairn::fma)
+    target_compile_options(${_target} PRIVATE ${_opt_${_level}} ${_no_contract})
+    string(STRIP "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_config}} ${_opt_${_level}} ${_no_contract} ${_fma}" _flags)
+    if(NOT _code STREQUAL "INLINE")
+      string(APPEND _flags " -DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_${_code}")
+    endif()
+    string(REGEX REPLACE " +" " " _flags "${_flags}")
+    if(_packed_isa_text)
+      string(APPEND _flags " (packed code also ${_packed_isa_text})")
+    endif()
+    target_compile_definitions(${_target} PRIVATE "KAIRN_BENCH_FLAGS=\"${_flags}\""
+      "KAIRN_BENCH_FENV_FLAGS=\"${_flags} ${_rounding_math_text}\"" "KAIRN_BENCH_SETTING=\"${_name}\""
+      KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_${_code})
+  endforeach()
+endforeach()

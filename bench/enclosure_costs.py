@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
 """enclosure_costs.py: what the settings of KAIRN_ENCLOSURE_CODE cost and save (include/kairn/config.hpp;
-docs/developer/results/costs-milestone2.md).
+docs/developer/results/costs-milestone2.md, docs/developer/results/bench-milestone2.md).
 
-  enclosure_costs.py source N
-      Prints a translation unit with N operations of Ball<double, 2> in straight-line code, in one
-      function: a mix of +, -, * and the scaling by a double, in turn, each on two of the eight
-      values computed last (chosen by a fixed seed), each result stored, so that none is dead.
-  enclosure_costs.py compile --cxx CXX [--msvc] [--sizes 100,1000,10000] [--configs O2,O3]
+  enclosure_costs.py source N [--kind KIND]
+      Prints a translation unit with N operations in straight-line code, in one function. KIND
+      ball2 (the default, the unit of costs-milestone2.md): operations of Ball<double, 2>, a mix of
+      +, -, * and the scaling by a double, in turn, each on two of the eight values computed last
+      (chosen by a fixed seed), each result stored, so that none is dead. KIND interval1,
+      interval2 or mixed: operations of Interval<double, 1>, of Interval<double, 2>, or of the three
+      types Ball<double, 2>, Interval<double, 1> and Interval<double, 2> in turn (+, * and - of each,
+      and the scaling of a ball), each on one of the eight values of its type computed last and one
+      of eight inputs, each result stored: a unit whose values stay bounded, so that it can be run
+      (--run) and measures the arithmetic, not the special values of an overflow.
+  enclosure_costs.py compile --cxx CXX [--msvc] [--flags "..."] [--kind KIND] [--cpu N]
+                     [--sizes 100,1000,10000] [--configs O2,O3]
                      [--settings inline,outlined,external[,calls]] [--reps R] [--timeout S]
+                     [--run [--run-reps R]]
                      --workdir DIR --machine TEXT --commit TEXT --json FILE
       Writes those units into DIR and compiles each (nothing is linked) with each configuration and
       setting, R times in rounds over all of them (once for the units of the largest size), and
       records the wall time, the processor time and the peak memory of each compilation, and the
       size of the object; and the same for bench/definitions.cpp, the translation unit that defines
       the operations for the external setting, which a program compiles once. The setting calls is
-      the same code without Kairn, B a structure of three doubles and the operations functions
-      declared only: what the calls themselves cost the compiler.
+      the same code without Kairn, the types structures of doubles and the operations functions
+      declared only: what the calls themselves cost the compiler. With --run (KIND interval1,
+      interval2 or mixed), the object of the first compilation of each unit is linked with a small
+      driver (and, external, with the definitions) and run: the time per operation of one call of
+      the unit, the minimum and the median over --run-reps samples of about 4 ms.
   enclosure_costs.py report DIR
       The tables of docs/developer/results/costs-milestone2.md from DIR: compile-*.json, written by
       compile, and run-COMPILER-SETTING-LEVEL.json, written by kairn-bench-LEVEL,
@@ -23,7 +34,8 @@ docs/developer/results/costs-milestone2.md).
 
 Measured as bench/compile_time.py measures (its measure()): the largest resident set of the
 compiler and the processes it waits for. On a timeout only the process this script started is
-terminated, and the compilation is recorded as such. Run from the repository root.
+terminated, and the compilation is recorded as such. Run from the repository root. --cpu pins the
+script, and every compiler and program it starts, to one logical processor (Linux).
 """
 import argparse
 import datetime
@@ -31,6 +43,7 @@ import glob
 import json
 import os
 import random
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -90,8 +103,132 @@ def source(n, seed=1, calls=False):
     return '\n'.join(out) + '\n'
 
 
+# The types of the new kinds, their stand-ins without Kairn (setting calls), and the operations of
+# each kind in turn: (type, operator), 's' the scaling of a ball by a double.
+TYPES = {'B': 'kairn::Ball<double, 2>', 'I': 'kairn::Interval<double, 1>', 'J': 'kairn::Interval<double, 2>'}
+STAND_INS = {'B': 'double c0, c1, r;', 'I': 'double lo, hi;', 'J': 'double l0, l1, h0, h1;'}
+KINDS = {'interval1': [('I', '+'), ('I', '*'), ('I', '-')],
+         'interval2': [('J', '+'), ('J', '*'), ('J', '-')],
+         'mixed': [('B', '+'), ('I', '+'), ('J', '+'), ('B', '*'), ('I', '*'), ('J', '*'), ('B', '-'),
+                   ('I', '-'), ('J', '-'), ('B', 's')]}
+UNIT_SIGNATURE = ('void enclosure_unit(const B* inb, const I* ini, const J* inj, const double* s, B* outb, '
+                  'I* outi, J* outj)')
+
+
+def source_kind(n, kind, seed=1, calls=False):
+    """A unit of n operations of KIND (interval1, interval2, mixed): each on one of the eight values
+    of its type computed last and one of the eight inputs of that type, each result stored."""
+    rng = random.Random(seed)
+    ops = KINDS[kind]
+    used = sorted({t for t, _ in ops})
+    out = ['// Written by bench/enclosure_costs.py: %d operations (%s) in straight-line code, each result stored.'
+           % (n, kind) + (' The same calls without Kairn: functions declared only.' if calls else '')]
+    if calls:
+        for t in 'BIJ':
+            out.append('struct %s {' % t)
+            out.append('    ' + STAND_INS[t])
+            out.append('};')
+        for t in used:
+            for o in '+-*':
+                out.append('%s operator%s(const %s&, const %s&) noexcept;' % (t, o, t, t))
+        if 'B' in used:
+            out.append('B operator*(const B&, double) noexcept;')
+    else:
+        out += ['#include <kairn/kairn.hpp>', '']
+        for t in 'BIJ':
+            out.append('using %s = %s;' % (t, TYPES[t]))
+    out += ['', UNIT_SIGNATURE + ' {']
+    live, count = {}, {}
+    for t in used:
+        live[t] = []
+        count[t] = 0
+        for i in range(8):
+            out.append('    const %s %s%d = in%s[%d];' % (t, t.lower(), i, t.lower(), i))
+            live[t].append('%s%d' % (t.lower(), i))
+    for i in range(n):
+        t, o = ops[i % len(ops)]
+        a = live[t][-1 - rng.randrange(8)]
+        k = rng.randrange(8)
+        expr = '%s * s[%d]' % (a, k) if o == 's' else '%s %s %s%d' % (a, o, t.lower(), k)
+        name = 't%d' % i
+        out.append('    const %s %s = %s;' % (t, name, expr))
+        out.append('    out%s[%d] = %s;' % (t.lower(), count[t], name))
+        count[t] += 1
+        live[t].append(name)
+    out.append('}')
+    return '\n'.join(out) + '\n'
+
+
+# The driver that runs a unit of a new kind: inputs near 1 with small widths and radii, so that every
+# value stays a finite enclosure of moderate magnitude; the minimum and the median time per operation
+# over the samples, and the number of results that are finite enclosures.
+DRIVER = r"""// Written by bench/enclosure_costs.py: runs enclosure_unit and times it.
+#include <kairn/kairn.hpp>
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+
+using B = kairn::Ball<double, 2>;
+using I = kairn::Interval<double, 1>;
+using J = kairn::Interval<double, 2>;
+using E = kairn::Expansion<double, 2>;
+void enclosure_unit(const B* inb, const I* ini, const J* inj, const double* s, B* outb, I* outi, J* outj);
+
+int main(int argc, char** argv) {
+    const int n = std::atoi(argv[1]), reps = std::atoi(argv[2]);
+    const double sample_ns = 4e6;
+    B inb[8];
+    I ini[8];
+    J inj[8];
+    double s[8];
+    for (int k = 0; k < 8; ++k) {
+        const double v = 0.99 + 0.0025 * k;   // inputs near 1: products by them stay in range
+        inb[k] = B(E(v), 0x1p-80);
+        ini[k] = I(kairn::Expansion<double, 1>(v), kairn::Expansion<double, 1>(v + v * 0x1p-40));
+        inj[k] = J(E(v), E(v) + E(v * 0x1p-80));
+        s[k] = 0.5 + 0.0625 * k;
+    }
+    std::vector<B> ob(std::size_t(n) + 1);
+    std::vector<I> oi(std::size_t(n) + 1);
+    std::vector<J> oj(std::size_t(n) + 1);
+    auto once = [&] { enclosure_unit(inb, ini, inj, s, ob.data(), oi.data(), oj.data()); };
+    using clock = std::chrono::steady_clock;
+    auto time = [&](long calls) {
+        const auto t0 = clock::now();
+        for (long c = 0; c < calls; ++c) once();
+        return std::chrono::duration<double, std::nano>(clock::now() - t0).count();
+    };
+    long calls = 1;
+    double t = time(calls);
+    while (t < 0.25 * sample_ns) t = time(calls *= 2);
+    calls = std::max(1L, long(double(calls) * sample_ns / t));
+    time(calls);
+    std::vector<double> ns;
+    for (int r = 0; r < reps; ++r) ns.push_back(time(calls) / (double(calls) * n));
+    std::sort(ns.begin(), ns.end());
+    long finite = 0, written = 0;
+    for (int i = 0; i < n; ++i) {
+        const std::size_t j = std::size_t(i);
+        // Each type's results fill its array from the start; an untouched element is the point 0.
+        finite += std::isfinite(ob[j].radius()) && std::isfinite(oi[j].upper().limb[0] - oi[j].lower().limb[0]) &&
+                  std::isfinite(oj[j].upper().limb[0] - oj[j].lower().limb[0]);
+        written += ob[j].radius() != 0 || oi[j].upper().limb[0] != oi[j].lower().limb[0] ||
+                   oj[j].upper().limb[0] != oj[j].lower().limb[0];
+    }
+    std::printf("{\"ns_per_op_min\": %.4g, \"ns_per_op_median\": %.4g, \"calls_per_sample\": %ld, \"samples\": %d, "
+                "\"finite\": %ld, \"written\": %ld}\n",
+                ns.front(), ns[ns.size() / 2], calls, reps, finite, written);
+    return 0;
+}
+"""
+
+
 def cmd_source(args):
-    sys.stdout.write(source(args.n))
+    sys.stdout.write(source(args.n) if args.kind == 'ball2' else source_kind(args.n, args.kind))
     return 0
 
 
@@ -103,29 +240,68 @@ def compile_command(args, src, config, setting, obj):
         return [args.cxx, '/nologo', '/std:c++20', '/EHsc', '/arch:AVX2', '/I', include, '/D' + define] + \
             CONFIGS[family][config] + ['/c', src, '/Fo' + obj]
     isa = ['-mfma'] if compile_time.x86() else []
-    return [args.cxx, '-std=c++20', '-I', include, '-D' + define] + isa + CONFIGS[family][config] + \
+    extra = args.flags.split() if args.flags else []
+    return [args.cxx, '-std=c++20', '-I', include, '-D' + define] + isa + extra + CONFIGS[family][config] + \
         ['-c', src, '-o', obj]
+
+
+def link_and_run(args, workdir, n, config, setting, unit_obj, cache):
+    """Links the object of a unit with the driver (and the definitions, external) and runs it; the
+    driver and the definitions are compiled once per configuration and setting (cache)."""
+    def build(name, src):
+        key = (name, config, setting)
+        if key not in cache:
+            path = os.path.join(workdir, '%s.cpp' % name) if src is not None else os.path.join(HERE, 'definitions.cpp')
+            if src is not None:
+                with open(path, 'w') as f:
+                    f.write(src)
+            obj = os.path.join(workdir, '%s-%s-%s.o' % (name, config, setting))
+            cmd = compile_command(args, path, config, setting, obj)
+            status, _, _, _, text = compile_time.measure(cmd, args.timeout, cwd=workdir)
+            if status != 0:
+                raise SystemExit('failed: %s\n%s' % (' '.join(cmd), text[-3000:]))
+            cache[key] = obj
+        return cache[key]
+    objs = [unit_obj, build('driver', DRIVER)]
+    if setting == 'external':
+        objs.append(build('definitions', None))
+    exe = os.path.join(workdir, 'run-%d-%s-%s' % (n, config, setting))
+    extra = args.flags.split() if args.flags else []
+    status, _, _, _, text = compile_time.measure([args.cxx] + extra + objs + ['-o', exe], args.timeout, cwd=workdir)
+    if status != 0:
+        raise SystemExit('link failed:\n' + text[-3000:])
+    done = subprocess.run([exe, str(n), str(args.run_reps)], capture_output=True, text=True, timeout=args.timeout)
+    if done.returncode != 0:
+        raise SystemExit('run failed: %s' % done.stderr[-2000:])
+    os.remove(exe)
+    return json.loads(done.stdout.strip().splitlines()[-1])
 
 
 def cmd_compile(args):
     os.makedirs(args.workdir, exist_ok=True)
+    pinning = compile_time.pin(args.cpu)
     sizes = [int(x) for x in args.sizes.split(',')]
     configs = args.configs.split(',')
     settings = args.settings.split(',')
+    if args.run and args.kind == 'ball2':
+        raise SystemExit('--run needs --kind interval1, interval2 or mixed: the values of the ball2 unit overflow')
+    make = (lambda n, calls=False: source(n, calls=calls)) if args.kind == 'ball2' else \
+        (lambda n, calls=False: source_kind(n, args.kind, calls=calls))
     units = []
     for n in sizes:
         path = os.path.join(args.workdir, 'unit-%d.cpp' % n)
         with open(path, 'w') as f:
-            f.write(source(n))
+            f.write(make(n))
         calls = os.path.join(args.workdir, 'calls-%d.cpp' % n)
         with open(calls, 'w') as f:
-            f.write(source(n, calls=True))
+            f.write(make(n, calls=True))
         for config in configs:
             for setting in settings:
                 units.append(('unit', n, config, setting, calls if setting == 'calls' else path))
     for config in configs if 'external' in settings else []:
         units.append(('definitions', 0, config, 'external', os.path.join(HERE, 'definitions.cpp')))
     results = {}
+    run_cache = {}
     largest = max(sizes)
     for rep in range(args.reps):
         for kind, n, config, setting, path in units:
@@ -144,6 +320,10 @@ def cmd_compile(args):
             r['status'].append(status)
             if status == 0:
                 r['object_bytes'] = os.path.getsize(obj)
+                if args.run and rep == 0 and kind == 'unit' and setting != 'calls':
+                    r['run'] = link_and_run(args, args.workdir, n, config, setting, obj, run_cache)
+                    print('%-40s run: %.3g ns per operation, %d of %d finite' % (
+                        key, r['run']['ns_per_op_min'], r['run']['finite'], n), flush=True)
             else:
                 r['error'] = text[-2000:]
             print('%-40s %8.2f s %8.1f MB %s' % (key, wall, peak, 'ok' if status == 0 else
@@ -151,9 +331,11 @@ def cmd_compile(args):
                   flush=True)
     data = {'schema': 1, 'what': 'enclosure compile', 'date': args.date or datetime.date.today().isoformat(),
             'commit': args.commit,
-            'machine': {'description': args.machine, 'cpu': compile_time.cpu_brand()},
-            'compiler': compile_time.compiler_version(argparse.Namespace(msvc=args.msvc, cxx=args.cxx, flags='')),
-            'cxx': os.path.basename(args.cxx), 'timeout': args.timeout, 'reps': args.reps,
+            'machine': {'description': args.machine, 'cpu': compile_time.cpu_brand(), 'pinning': pinning},
+            'compiler': compile_time.compiler_version(argparse.Namespace(msvc=args.msvc, cxx=args.cxx,
+                                                                         flags=args.flags)),
+            'cxx': os.path.basename(args.cxx), 'flags': args.flags, 'kind': args.kind, 'timeout': args.timeout,
+            'reps': args.reps, 'run_reps': args.run_reps if args.run else 0,
             'results': list(results.values())}
     os.makedirs(os.path.dirname(os.path.abspath(args.json)), exist_ok=True)
     with open(args.json, 'w') as f:
@@ -245,9 +427,15 @@ def main():
     sub = p.add_subparsers(dest='cmd', required=True)
     s = sub.add_parser('source')
     s.add_argument('n', type=int)
+    s.add_argument('--kind', default='ball2', choices=['ball2'] + sorted(KINDS))
     c = sub.add_parser('compile')
     c.add_argument('--cxx', required=True)
     c.add_argument('--msvc', action='store_true')
+    c.add_argument('--flags', default='')
+    c.add_argument('--kind', default='ball2', choices=['ball2'] + sorted(KINDS))
+    c.add_argument('--cpu', type=int)
+    c.add_argument('--run', action='store_true')
+    c.add_argument('--run-reps', type=int, default=21)
     c.add_argument('--sizes', default='100,1000,10000')
     c.add_argument('--configs', default='O2,O3')
     c.add_argument('--settings', default='inline,outlined,external')
