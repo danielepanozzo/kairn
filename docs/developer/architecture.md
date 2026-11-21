@@ -207,23 +207,34 @@ product of negative sign is $-0$ as `a * b` and $+0$ as `fma(a, b, +0)`. The IEE
 product too because they are about values, in which the two zeros are the same, except where a
 fix-up returns its own literal zero, which no product reaches: F4 and F5 of `mul_pow2_2_full`
 say that its second limb is the `+0` of the fix-up, a constant of the listing and the same in
-both executions. What is proved (`proofs/theories/IeeeTwoExecutions.v`) is that the eight kernels
-of the rule that are more than one product give outputs of the same value in both executions, on
-all operands (finite, infinite and NaN): each listing is written there once more with the
-product as a parameter, which with the FMA is the generated model by `reflexivity`, and with the
-plain product is the execution of constant evaluation (`IeeeProduct.v` compares the two products
-of `rmul` and `mul_1_1`); what is tested rather than proved is that the C++ compiled for
-constant evaluation is that listing: the generator's tests check that the two executions give
-the same bits, or for the kernels whose outputs can be an exact zero product the same values
-(`gen/tests/test_interp.py`, `TwoExecutionsOfAProduct`; `test_cxx.py` ties the C++ to them). The
-kernels `constexpr` by this rule are `rmul`, `mul_1_1`, `split`, `two_prod_dekker`, `mul_pow2_2`,
-`mul_pow2_2_full`, `ball_mul_pow2_k` with its full form, and the bound kernels of the folds,
-`bound_sum_k` and `bound_dot_k`; and, unverified, of Milestone 2, `ball_from_interval_2`,
-`interval_mid_rad_1` and the two kernels that call it, `interval_to_ball_1` and
-`interval_split_1`, which halve with `prod` (their two executions are compared by the tests only);
-and of stage B2, through `interval_to_ball_1`, `ball_hull_1`, `ball_intersection_1` and
-`ball_from_interval_1`, and `interval_split_2`, whose midpoint halves the bounds with `mul_pow2_2`;
-`build` lists them.
+both executions. What is proved (`proofs/theories/IeeeTwoExecutions.v`) is that every kernel of
+the rule gives outputs of the same value, and the same masks, in both executions, on all operands
+(finite, infinite and NaN) and for every choice of NaN in each, with no hypothesis: each listing
+is written there once more with the operations that constant evaluation computes otherwise as
+parameters (`proofs/gen/IeeeWith.v`: the product, and the guard and `times_inf` where the kernel
+has them), which with the operations of run time is the generated model by `reflexivity`, and
+with those of constant evaluation (`prod_ce`, the plain product; `guard_ce`, the operand itself;
+`times_inf_ce`, the comparisons of `prelude.hpp`) is the execution of constant evaluation; each
+of the three gives the value of its form of run time on every operand. The theorem of each kernel
+has the generated statement `K_two_executions_spec` as its type, which `proofs/gen/IeeeAudit.v`
+checks, so that a kernel that joins the rule without its theorem fails the proofs build
+(`IeeeProduct.v` compares the two products of `rmul` and `mul_1_1` bit by bit). What is tested
+rather than proved is that the C++ compiled for constant evaluation is that listing: the generator
+prints the C++, `IeeeModel.v` and `IeeeWith.v` from one listing, and its tests check that the two
+executions give the same bits, or for the kernels whose outputs can be an exact zero product the
+same values (`gen/tests/test_interp.py`, `TwoExecutionsOfAProduct`; `test_cxx.py` ties the C++ to
+them). The kernels `constexpr` by this rule are thirty, which `build` lists: `rmul`, `mul_1_1`,
+`split`, `two_prod_dekker`, `mul_pow2_2`, `mul_pow2_2_full`, `ball_mul_pow2_k` with its full form,
+and the bound kernels of the folds, `bound_sum_k` and `bound_dot_k`; the steps of `axpy` and of
+the scalings, `axpy_step_1`, `axpy_entry_step_1`, `mul_pow2_step_k`, `scale_step_1` and the three
+of `bv_mul_pow2_k`; and of Milestone 2, `ball_from_interval_2`, `interval_mid_rad_1` and the two
+kernels that call it, `interval_to_ball_1` and `interval_split_1`, which halve with `prod`, and of
+stage B2, through `interval_to_ball_1`, `ball_hull_1`, `ball_intersection_1` and
+`ball_from_interval_1`, and `interval_split_2`, whose midpoint halves the bounds with `mul_pow2_2`.
+Thirty-three kernels that are `constexpr` without any product compute a `guard` or a `times_inf`,
+and so compute it otherwise in constant evaluation too: the entry kernels and constructors that
+guard their operands, and the full sums and differences, whose fix-ups use `times_inf`. No
+theorem compares their two executions yet.
 
 C++ emission rules: non-template functions, one overload per limb type; one operation per
 statement; kernels of at most two limbs are force-inlined, but a kernel that says

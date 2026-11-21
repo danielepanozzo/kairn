@@ -449,6 +449,27 @@ returned is unspecified in both.
 - `next_up`, `next_down` and `radd` are `constexpr` today, with the same bits, which the
   generator's tests assert for every kernel without a fused operation.
 
+**State on 2026-11-21.** Proved now, in the IEEE model, for all thirty kernels that the rule makes
+`constexpr` (the ten named above, the bound kernels of the folds, the steps of `axpy` and of the
+scalings, and the conversions of intervals and balls that halve with `prod`; `build` lists them):
+on every operand, finite, infinite or NaN, and for every choice of NaN in each execution, the
+listing as constant evaluation runs it and the generated model of run time return outputs of the
+same value and the same masks, with no hypothesis (`IeeeTwoExecutions.v`, one theorem
+`K_two_executions` per kernel). The model of constant evaluation now covers the three operations
+whose C++ differs there, not the product alone: the plain product; the guard, which returns its
+operand where run time adds $+0$ (`axpy_entry_step_1`, `ball_from_interval_1`,
+`ball_from_interval_2`); and `times_inf`, which compares instead of multiplying (`times_inf_ce`,
+in `mul_pow2_2_full`). `IeeeWith.v` takes the three as arguments and defines their forms of
+constant evaluation from the C++, and each is proved to give the value of its form of run time
+on every operand. Each theorem has as its type a statement the generator prints,
+`K_two_executions_spec`, which the generated audit checks, so that a kernel that joins the rule
+without its theorem fails the proofs build. Still resting on the generator and its tests rather
+than on a proof: that the compiled C++ is the listing (one listing prints both), and that the
+compiler evaluates constant expressions as IEEE 754 does. The 33 kernels that are `constexpr`
+without any product, but whose guard or `times_inf` constant evaluation computes in the same
+other way (the entry kernels, the constructors, the full sums and differences), have no such
+theorem yet.
+
 *Risk: low.*
 
 ### Functions that do not round
