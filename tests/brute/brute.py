@@ -2475,6 +2475,35 @@ def short(dec, digits=6):
     return text
 
 
+LINE_SHOWN = 400
+
+
+def short_line(line):
+    """A line as the report shows it: whole when short; else (a fold's array of up to 4 096
+    elements) its head, the number of words left out, its tag, and the head of its result. The
+    stored summary keeps the whole line, and the tag with the machine's seed regenerates it."""
+    if len(line) <= LINE_SHOWN:
+        return line
+    req, _, res = line.partition(" -> ")
+    words = req.split()
+    tag = words[-1] if words and words[-1].startswith("#") else ""
+    body = words[:-1] if tag else words
+    head = []
+    for w in body:
+        if len(" ".join(head + [w])) > LINE_SHOWN // 2:
+            break
+        head.append(w)
+    rw = res.split()
+    rhead = []
+    for w in rw:
+        if len(" ".join(rhead + [w])) > LINE_SHOWN // 4:
+            break
+        rhead.append(w)
+    return "%s ... (%d more) %s -> %s%s" % (
+        " ".join(head), len(body) - len(head), tag, " ".join(rhead),
+        " ... (%d more)" % (len(rw) - len(rhead)) if len(rw) > len(rhead) else "")
+
+
 def near_one(dec, attains):
     """A ratio that rounds to 1 at ten digits without being 1: say so rather than print 1."""
     return (not attains and dec is not None and decimal.Decimal(dec) <= 1
@@ -2482,6 +2511,50 @@ def near_one(dec, attains):
 
 
 B4_APPLIES = "B4 applies: finite operands, every finite_when condition holds"
+
+
+SLACK = "slack in gaps of the radius"
+SLACK_WORST = "slack in gaps of the radius (the worst entry)"
+STATED_EXCESS = "excess over a positive stated value, in gaps of the output"
+STEPS_ABOVE = "steps above RU(V)"
+FOLD_RATIO = "error / allowed, order "
+
+
+def entry_headlines(e):
+    """[(table, column title, field, name, sign)]: the statistics of an entry of the oracle that say
+    how close its claim came, best first (sign 1: larger is closer; -1: smaller is), by the kind
+    of the entry and the statistics its summary holds; [] for an entry with no such statistic.
+    The table groups the entries that measure the same thing: the error over its bound (a kernel's
+    `error`, a fold's `fold_error` per order), the excess of an `upper` bound in gaps of the
+    result (`gaps=`), the steps of a fold of maxima above RU(V), the excess of an upper bound over
+    a stated value (the bounds of the folds and the radii of the ball vectors: 0 would be the
+    value itself), and the slack of a radius (a ball, or the worst entry of a ball vector)."""
+    lab, kind = e["label"], e["kind"]
+    mx, mn = e.get("maxima", {}), e.get("minima", {})
+    if kind == "error":
+        return [("error", "largest error / bound", "max_ratio", None, 1)]
+    if kind == "fold_error":
+        return [("error", "largest error / bound, order " + n[len(FOLD_RATIO):], "maxima", n, 1)
+                for n in sorted(mx) if n.startswith(FOLD_RATIO)]
+    if kind == "upper":
+        g = re.search(r"\bgaps=(\S+)", lab)
+        s = re.search(r"\bsteps=(\S+)", lab)
+        if g:
+            return [("upper", "largest excess, gaps (claim %s)" % g.group(1), "maxima",
+                     "excess in gaps", 1)]
+        if s or STEPS_ABOVE in mx:
+            return [("steps", "largest steps above RU(V) (claim %s)" % (s.group(1) if s else "-"),
+                     "maxima", STEPS_ABOVE, 1)]
+        if STATED_EXCESS in mn:
+            return [("stated", "smallest excess over the stated value, gaps", "minima",
+                     STATED_EXCESS, -1)]
+        return []
+    if kind == "encloses":
+        return [("encloses", "smallest radius slack, gaps", "minima", SLACK, -1)]
+    if kind in ("encloses_entries", "encloses_coefficients"):
+        return [("encloses", "smallest radius slack, gaps (the worst entry)", "minima", SLACK_WORST,
+                 -1)] if SLACK_WORST in mn else []
+    return []
 
 
 def headline_columns(entries):
@@ -2495,9 +2568,9 @@ def headline_columns(entries):
                                                     if several else ""),
                          j, "max_ratio", None, 1))
             cols.append(("observed c", j, "observed_c", None, 1))
-        elif e["kind"] == "upper":
-            cols.append(("largest excess, gaps (claim %s)" % lab.split("gaps=")[1].split()[0],
-                         j, "maxima", "excess in gaps", 1))
+        elif e["kind"] in ("upper", "fold_error", "encloses_entries", "encloses_coefficients"):
+            cols += [(title, j, field, name, sign)
+                     for _, title, field, name, sign in entry_headlines(e)]
         elif e["kind"] == "encloses":
             cols.append(("smallest radius slack, gaps", j, "minima",
                          "slack in gaps of the radius", -1))
@@ -2590,29 +2663,32 @@ def cmd_report(a):
                         per.setdefault(e["label"], {"kind": e["kind"], "c": [], "i": []})[
                             "i"].append(dict(e, _fmt=r["format"]))
         for label, x in per.items():
-            if x["kind"] == "error":
-                get, sign = (lambda e: e.get("max_ratio")), 1
-            elif x["kind"] == "upper":
-                get, sign = (lambda e: e.get("maxima", {}).get("excess in gaps")), 1
-            elif x["kind"] == "encloses":
-                get, sign = (lambda e: e.get("minima", {}).get("slack in gaps of the radius")), -1
-            else:
-                continue
-            c = best_of([get(e) for e in x["c"]], sign)
-            i = best_of([get(e) and get(e)[:2] + [e["_fmt"]] for e in x["i"]], sign)
-            ca = any(e.get("attains_claim") for e in x["c"])
-            ia = any(e.get("attains_claim") for e in x["i"])
-            rank.append((x["kind"], k, label, c and c + [ca], i and i + [ia]))
+            # Every statistic of the entry that says how close it came (a fold's error per
+            # order), from whichever of its rows holds the most of them.
+            heads = max((entry_headlines(e) for e in x["c"] + x["i"]), key=len, default=[])
+            for table, title, field, name, sign in heads:
+                def get(e, field=field, name=name):
+                    return col_value(e, field, name)
+                c = best_of([get(e) for e in x["c"]], sign)
+                i = best_of([get(e) and get(e)[:2] + [e["_fmt"]] for e in x["i"]], sign)
+                ca = any(e.get("attains_claim") for e in x["c"])
+                ia = any(e.get("attains_claim") for e in x["i"])
+                shown = label if len(heads) == 1 else "%s (%s)" % (label, title.rsplit(", ", 1)[-1])
+                rank.append((table, k, shown, c and c + [ca], i and i + [ia]))
     for kind, title, note in (
             ("error", "Largest error over its bound", "1 is the bound"),
             ("upper", "Largest excess of an upper bound, in gaps",
              "the claim is the `gaps=` of the entry"),
+            ("steps", "Largest steps of a fold of maxima above RU(V)",
+             "the claim is the `steps=` of the entry"),
+            ("stated", "Smallest excess of an upper bound over the value it states, in gaps of "
+             "the output", "0 would be the stated value itself; below 0 the claim fails"),
             ("encloses", "Smallest slack of a Ball radius, in gaps of the radius",
              "below 1, a radius one unit in the last place smaller would not enclose")):
         rs = [r for r in rank if r[0] == kind]
         if not rs:
             continue
-        sign = -1 if kind == "encloses" else 1
+        sign = -1 if kind in ("encloses", "stated") else 1
         rs.sort(key=lambda r: -sign * max(
             [decimal.Decimal(v[0]) * sign for v in (r[3], r[4]) if v] or [decimal.Decimal(0)]))
         w("")
@@ -2774,7 +2850,7 @@ def cmd_report(a):
                     value = "1 - ε, ε < 10⁻⁹"
                 w("%s, %s %s%s:" % (name, "compiled" if compiled else "interpreter", value,
                                     where))
-                w("  " + v[1])
+                w("  " + short_line(v[1]))
             w("```")
     print("\n".join(out))
     return 0
@@ -2859,17 +2935,25 @@ def report_agreement(docs, w):
     format; the exceptions."""
     diff = []
     n = 0
+    folds = {f["name"] for f in load_folds()}
     for d in docs:
         for k, fmts in sorted(d["compiled"]["kernels"].items()):
             for fmt, s in sorted(fmts.items()):
                 n += 1
-                rows = {rid: (tuple(v[:len(RUNNER_COUNTS)]), json.dumps(v[-1]))
-                        for rid, v in s["runners"].items()}
-                if len(set(rows.values())) > 1:
-                    groups = {}
-                    for rid, v in sorted(rows.items()):
-                        groups.setdefault(v, []).append(rid)
-                    diff.append((d["name"], k, fmt, groups))
+                # A fold's scalar runners judge one stream and its packed runners of each backend
+                # another (the lane order of their register): each group is compared within.
+                streams = {}
+                for rid, v in s["runners"].items():
+                    r = d["runners"].get(rid, {})
+                    group = r.get("backend", "scalar") if k in folds else ""
+                    streams.setdefault(group, {})[rid] = (tuple(v[:len(RUNNER_COUNTS)]),
+                                                          json.dumps(v[-1]))
+                for rows in streams.values():
+                    if len(set(rows.values())) > 1:
+                        groups = {}
+                        for rid, v in sorted(rows.items()):
+                            groups.setdefault(v, []).append(rid)
+                        diff.append((d["name"], k, fmt, groups))
     w("")
     w("<!-- Agreement of the runners of a machine (they judge the same cases) -->")
     if not diff:

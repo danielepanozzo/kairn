@@ -230,6 +230,98 @@ class ReportEmulated(unittest.TestCase):
         self.assertEqual(out, [])
 
 
+class ReportKinds(unittest.TestCase):
+    """report on the entries of Milestone 2: an upper bound without gaps= (the radius of a ball
+    vector, the bounds of the folds), the steps of a fold of maxima, a fold's error per order, the
+    worst entry of a ball vector; the runners of a fold compared within their streams; the long
+    lines of a fold shortened."""
+
+    def test_headlines(self):
+        h = brute.entry_headlines
+        self.assertEqual(h({"kind": "upper", "label": "upper(r) gaps=3/2", "maxima": {}})[0][:2],
+                         ("upper", "largest excess, gaps (claim 3/2)"))
+        self.assertEqual(h({"kind": "upper", "label": "upper(r) over max, steps=0",
+                            "maxima": {brute.STEPS_ABOVE: ["0", "l"]}})[0][3], brute.STEPS_ABOVE)
+        self.assertEqual(h({"kind": "upper", "label": "V3, radius bv_add_radius_2: upper(rz) >= rx",
+                            "minima": {brute.STATED_EXCESS: ["1.5", "l"]}})[0][0], "stated")
+        self.assertEqual(h({"kind": "upper", "label": "upper(g) >= gamma", "maxima": {}}), [])
+        fe = h({"kind": "fold_error", "label": "fold_error(r)", "maxima": {
+            "error / allowed, order lanes": ["0.1", "l"], "error / allowed, order sequential": ["0.2", "l"]}})
+        self.assertEqual([x[1] for x in fe], ["largest error / bound, order lanes",
+                                              "largest error / bound, order sequential"])
+        self.assertEqual(h({"kind": "encloses_entries", "label": "encloses_entries(z, r)",
+                            "minima": {brute.SLACK_WORST: ["1.5", "l"]}})[0][0], "encloses")
+        self.assertEqual(h({"kind": "certain", "label": "certain(m)"}), [])
+
+    def test_fold_streams_are_compared_apart(self):
+        # Scalar and packed runners of a fold judged different streams: no disagreement; two
+        # scalar runners that differ are reported.
+        fold = brute.load_folds()[0]["name"]
+        head = [None, None]
+        doc = {"name": "m", "runners": {"a/cxx": {"kind": "scalar", "backend": "scalar"},
+                                        "b/cxx": {"kind": "scalar", "backend": "scalar"},
+                                        "a/avx2": {"kind": "packed", "backend": "avx2"}},
+               "compiled": {"kernels": {fold: {"binary64": {"runners": {
+                   "a/cxx": [100, 100, 0, 0, 0, 0, head], "b/cxx": [100, 100, 0, 0, 0, 0, head],
+                   "a/avx2": [100, 99, 0, 0, 1, 0, head]}}}}}}
+        out = []
+        brute.report_agreement([doc], out.append)
+        self.assertIn("every runner gave the same counts", "\n".join(out))
+        doc["compiled"]["kernels"][fold]["binary64"]["runners"]["b/cxx"][1] = 98
+        out = []
+        brute.report_agreement([doc], out.append)
+        self.assertIn("disagree", "\n".join(out))
+
+    def test_short_line(self):
+        self.assertEqual(brute.short_line("a b #t:1 -> c"), "a b #t:1 -> c")
+        long = "sum_2 binary64 seq 4096 " + " ".join(["0x1.fffffffffffffp+1023"] * 8192) + \
+            " #one:7 -> " + " ".join(["0x1p+0"] * 3)
+        s = brute.short_line(long)
+        self.assertLess(len(s), brute.LINE_SHOWN)
+        self.assertIn("#one:7 -> 0x1p+0 0x1p+0 0x1p+0", s)
+        self.assertTrue(s.startswith("sum_2 binary64 seq 4096 0x1.f"))
+        self.assertIn("more) #one:7", s)
+
+
+class Lengths(unittest.TestCase):
+    """lengths.py: a run's arrays of a fold, judged apart by the oracle's length class."""
+
+    def test_split(self):
+        import lengths
+        lengths.CONV.update({"conv_2"})
+        text = ("# kairn-oracle gen event=begin kernel=sum_2 format=binary64 mode=random seed=s\n"
+                "sum_2 binary64 seq 0 #one:0 -> 0x0p+0 0x0p+0 1\n"
+                "sum_2 binary64 lanes:2 2 0x1p+0 0x0p+0 0x1p+0 0x0p+0 #wide:1 -> 0x1p+1 0x0p+0 1\n"
+                "sum_2 binary64 seq 40 #wide:2 -> 0x0p+0 0x0p+0 1\n"
+                "# kairn-oracle gen event=end lines=3\n")
+        head, groups = lengths.split(text)
+        self.assertEqual(len(head), 1)
+        self.assertEqual(sorted(groups), ["length 0", "length 18 to 64", "length 2"])
+        self.assertEqual(lengths.length_of("conv_2 binary64 seq 9 3 #x:0"), "length 3")
+        self.assertEqual(sorted(["length above 4096", "length 18 to 64", "length 3", "length 17"],
+                                key=lengths.class_key),
+                         ["length 3", "length 17", "length 18 to 64", "length above 4096"])
+
+    def test_a_run_through_the_interpreter(self):
+        # Random arrays of a toy format, the interpreter, every class judged with no problem; the
+        # classes together are the arrays asked for.
+        import json
+        import tempfile
+        import lengths
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "l.json")
+            rc = lengths.main(["--runner", "interp", "--seed", "t", "--cases", "60",
+                               "--folds", "sum_1", "--formats", "fp:5:-7:4", "--out", out,
+                               "--jobs", "1"])
+            with open(out, encoding="utf-8") as f:
+                res = json.load(f)["folds"]["sum_1"]["fp:5:-7:4"]
+        self.assertEqual(rc, 0)
+        self.assertEqual(sum(c["lines"] for c in res.values()), 60)
+        self.assertTrue(all(c["problems"] == [] and c["counts"]["cases"] == c["lines"]
+                            for c in res.values()))
+        self.assertIn("length 0", res)
+
+
 class Runners(unittest.TestCase):
     """Which targets of the build are runners of the library (brute.runner_target)."""
 

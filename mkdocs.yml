@@ -381,6 +381,7 @@ nav:
       - Results:
           - Milestone 1 report: developer/results/milestone1.md
           - Brute force, Milestone 1: developer/results/brute-milestone1.md
+          - Brute force, Milestone 2: developer/results/brute-milestone2.md
           - Benchmarks, Milestone 1: developer/results/bench-milestone1.md
           - Compile times and other costs, Milestone 1: developer/results/costs-milestone1.md
           - Compile times and other costs, Milestone 2: developer/results/costs-milestone2.md
