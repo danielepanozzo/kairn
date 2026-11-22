@@ -23,5 +23,5 @@ theorem:       proofs/theories/FoldMaps.v
 ieee_theorem:  proofs/theories/IeeeFoldMaps.v
 status:        proved
 domain:        extended
-source:        sub_2_2 on each element, guarded
+source:        sub_2_2, add_2_2 (JMP17 Alg. 6, bound from MR22) on -y, on each element, guarded
 license:       algorithm: published; proof: MIT

@@ -72,7 +72,7 @@ Which of them the proof of `scale_step_1_correct` depends on is not copied here:
 
 ## Source
 
-**Algorithm:** mul_1_1, one rounding to nearest. **License:** bound: published; proof: MIT.
+**Algorithm:** mul_1_1, one rounding to nearest, the bound u/(1+u) of [JR18](../developer/design/phase0/references.md#jr18). **License:** bound: published; proof: MIT.
 
 ## Listing
 

@@ -63,7 +63,7 @@ Which of them the proof of `two_sum_entry_correct` depends on is not copied here
 
 ## Source
 
-**Algorithm:** two_sum on its guarded operands (Milestone 2 listing). **License:** algorithm: published; proof: MIT.
+**Algorithm:** TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing). **License:** algorithm: published; proof: MIT.
 
 ## Listing
 

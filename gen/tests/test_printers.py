@@ -1030,9 +1030,10 @@ class Rocq(unittest.TestCase):
     # their models on every limb guarded, then axpy_step_2 and axpy_step_2_1, printed after them; every
     # statement the same, but for the source lines of their comments.
     # Then bv_scale_step_2, bv_scale_radius_entry_2 and the fold bv_scale_2_entry (the same rule): their
-    # models, statements and audit lines added.
-    DIGESTS = {'Model.v': 'f57b63a1d7bc1a048996ac30f41b51a5d8d8848180489a2071fb29ef39ec584a',
-               'Statements.v': 'd944d4bf89451a553a73e2d6c28824d995f3a85b071ad320736b7edb00185d94',
+    # models, statements and audit lines added. Then the source fields that cite their publications
+    # (JR18, JMP17, Dekker, Knuth and Moller): the comments of Model.v and Statements.v only.
+    DIGESTS = {'Model.v': '4356a111790d3db2452f380ea4ebbf62848d156d11c812a4620991e7928ceaa4',
+               'Statements.v': '8e544365965bc867bf9133ed2f21e241d9ae10b258a8622e3fb9532f1a828dc2',
                'Audit.v': '40a725805d38fa6e90561f26a36c293fe5b7a2a12bb7bdf1a258bde4f0ebbd47'}
 
 

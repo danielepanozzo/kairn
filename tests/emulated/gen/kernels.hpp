@@ -109,7 +109,7 @@ KAIRN_GEN_FORCEINLINE void acc_radius_2(kairn::emulated::Number a, kairn::emulat
 }
 
 // add_1_1(a, b) -> s
-// one rounding to nearest. Status: proved; constexpr.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void add_1_1(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& s_out) noexcept {
     const kairn::emulated::Number s = a + b;
     s_out = s;
@@ -183,7 +183,7 @@ KAIRN_GEN_FORCEINLINE void add_down_entry(kairn::emulated::Number a, kairn::emul
 }
 
 // add_entry_step_1(x, y) -> z
-// add_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved; constexpr.
+// add_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void add_entry_step_1(kairn::emulated::Number x, kairn::emulated::Number y, kairn::emulated::Number& z_out) noexcept {
     const kairn::emulated::Number gx = kairn::emulated::constant_evaluation() ? x : x + kairn::emulated::constant(0);
     const kairn::emulated::Number gy = kairn::emulated::constant_evaluation() ? y : y + kairn::emulated::constant(0);
@@ -234,14 +234,14 @@ KAIRN_GEN_FORCEINLINE void add_up_entry(kairn::emulated::Number a, kairn::emulat
 }
 
 // mul_1_1(a, b) -> p
-// one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void mul_1_1(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& p_out) noexcept {
     const kairn::emulated::Number p = kairn::emulated::constant_evaluation() ? a * b : fma_rn(a, b, kairn::emulated::constant(0));
     p_out = p;
 }
 
 // axpy_entry_step_1(a, x, y) -> z
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void axpy_entry_step_1(kairn::emulated::Number a, kairn::emulated::Number x, kairn::emulated::Number y, kairn::emulated::Number& z_out) noexcept {
     // (p) = mul_1_1(a, x)
     const kairn::emulated::Number p = kairn::emulated::constant_evaluation() ? a * x : fma_rn(a, x, kairn::emulated::constant(0));
@@ -252,7 +252,7 @@ KAIRN_GEN_FORCEINLINE void axpy_entry_step_1(kairn::emulated::Number a, kairn::e
 }
 
 // axpy_step_1(a, x, y) -> z
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void axpy_step_1(kairn::emulated::Number a, kairn::emulated::Number x, kairn::emulated::Number y, kairn::emulated::Number& z_out) noexcept {
     // (p) = mul_1_1(a, x)
     const kairn::emulated::Number p = kairn::emulated::constant_evaluation() ? a * x : fma_rn(a, x, kairn::emulated::constant(0));
@@ -2135,7 +2135,7 @@ KAIRN_GEN_FORCEINLINE void dot_step_1(kairn::emulated::Number s, kairn::emulated
 }
 
 // fast_two_sum_entry(a, b) -> r = (s, e)
-// fast_two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
+// Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void fast_two_sum_entry(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& s_out, kairn::emulated::Number& e_out) noexcept {
     const kairn::emulated::Number ga = kairn::emulated::constant_evaluation() ? a : a + kairn::emulated::constant(0);
     const kairn::emulated::Number gb = kairn::emulated::constant_evaluation() ? b : b + kairn::emulated::constant(0);
@@ -2973,7 +2973,7 @@ KAIRN_GEN_FORCEINLINE void rmul(kairn::emulated::Number a, kairn::emulated::Numb
 }
 
 // scale_step_1(x, a) -> z
-// mul_1_1, one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void scale_step_1(kairn::emulated::Number x, kairn::emulated::Number a, kairn::emulated::Number& z_out) noexcept {
     // (z) = mul_1_1(x, a)
     const kairn::emulated::Number z = kairn::emulated::constant_evaluation() ? x * a : fma_rn(x, a, kairn::emulated::constant(0));
@@ -2992,7 +2992,7 @@ KAIRN_GEN_FORCEINLINE void split(kairn::emulated::Number a, kairn::emulated::Num
 }
 
 // sub_1_1(a, b) -> s
-// one rounding to nearest. Status: proved; constexpr.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void sub_1_1(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& s_out) noexcept {
     const kairn::emulated::Number s = a - b;
     s_out = s;
@@ -3023,7 +3023,7 @@ KAIRN_GEN_FORCEINLINE void sub_down_entry(kairn::emulated::Number a, kairn::emul
 }
 
 // sub_entry_step_1(x, y) -> z
-// sub_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved; constexpr.
+// sub_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void sub_entry_step_1(kairn::emulated::Number x, kairn::emulated::Number y, kairn::emulated::Number& z_out) noexcept {
     const kairn::emulated::Number gx = kairn::emulated::constant_evaluation() ? x : x + kairn::emulated::constant(0);
     const kairn::emulated::Number gy = kairn::emulated::constant_evaluation() ? y : y + kairn::emulated::constant(0);
@@ -3141,7 +3141,7 @@ KAIRN_GEN_FORCEINLINE void two_sum(kairn::emulated::Number a, kairn::emulated::N
 }
 
 // two_sum_entry(a, b) -> r = (s, e)
-// two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
+// TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void two_sum_entry(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& s_out, kairn::emulated::Number& e_out) noexcept {
     const kairn::emulated::Number ga = kairn::emulated::constant_evaluation() ? a : a + kairn::emulated::constant(0);
     const kairn::emulated::Number gb = kairn::emulated::constant_evaluation() ? b : b + kairn::emulated::constant(0);
@@ -3859,7 +3859,7 @@ KAIRN_GEN_FORCEINLINE void add_up_2_2(kairn::emulated::Number x0, kairn::emulate
 }
 
 // axpy_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_step_2(kairn::emulated::Number a0, kairn::emulated::Number a1, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
     // (p0, p1) = mul_2_2(a0, a1, x0, x1)
     // (p0_ch, p0_cl1) = two_prod(a0, x0)
@@ -3903,7 +3903,7 @@ KAIRN_GEN_FORCEINLINE void axpy_step_2(kairn::emulated::Number a0, kairn::emulat
 }
 
 // axpy_entry_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// axpy_step_2, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(kairn::emulated::Number a0, kairn::emulated::Number a1, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
     const kairn::emulated::Number ga0 = a0 + kairn::emulated::constant(0);
     const kairn::emulated::Number ga1 = a1 + kairn::emulated::constant(0);
@@ -3969,7 +3969,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1(kairn::emulated::Number x0, kairn::emulated::
 }
 
 // axpy_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_step_2_1(kairn::emulated::Number a, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
     // (p0, p1) = mul_2_1(x0, x1, a)
     // (p0_ch, p0_cl1) = two_prod(x0, a)
@@ -4010,7 +4010,7 @@ KAIRN_GEN_FORCEINLINE void axpy_step_2_1(kairn::emulated::Number a, kairn::emula
 }
 
 // axpy_entry_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// axpy_step_2_1, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(kairn::emulated::Number a, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
     const kairn::emulated::Number ga = a + kairn::emulated::constant(0);
     const kairn::emulated::Number gx0 = x0 + kairn::emulated::constant(0);
@@ -9045,7 +9045,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(kairn::emulated::Number x0, kairn::em
 }
 
 // mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1)
-// mul_pow2_2, the two limbs scaled and renormalized. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void mul_pow2_step_2(kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number c, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
     // (z0, z1) = mul_pow2_2(x0, x1, c)
     const kairn::emulated::Number z0_h = kairn::emulated::constant_evaluation() ? x0 * c : fma_rn(x0, c, kairn::emulated::constant(0));

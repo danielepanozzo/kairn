@@ -134,7 +134,7 @@ Definition acc_radius_2_spec : Prop :=
   (ok = true -> ((((g * ((1 + u prec) ^ 2)) * ((1 + (m * u prec)) + ((2 * (m ^ 2)) * (u prec ^ 2)))) * (a + ((m * eta emin) / 2))) + t) <= r) /\
   (ok = true -> (m * u prec) <= (1 / 2)).
 
-(* add_1_1: one rounding to nearest. Status: proved. *)
+(* add_1_1: one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition add_1_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall a b : R,
@@ -188,7 +188,7 @@ Definition add_down_entry_spec : Prop :=
   fmt emin prec r /\
   r = RD emin prec (a + b).
 
-(* add_entry_step_1: add_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved. *)
+(* add_entry_step_1: add_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition add_entry_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall x y : R,
@@ -219,7 +219,7 @@ Definition add_up_entry_spec : Prop :=
   fmt emin prec r /\
   r = RU emin prec (a + b).
 
-(* mul_1_1: one rounding to nearest. Status: proved. *)
+(* mul_1_1: one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition mul_1_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall a b : R,
@@ -230,7 +230,7 @@ Definition mul_1_1_spec : Prop :=
   p = RN emin prec (a * b) /\
   Rabs (p - (a * b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a * b) + (1 / 2) * eta emin.
 
-(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. Status: proved. *)
+(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition axpy_entry_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall a x y : R,
@@ -241,7 +241,7 @@ Definition axpy_entry_step_1_spec : Prop :=
   fmt emin prec z /\
   Rabs (z - ((a * x) + y)) <= ((2 + (3 * u prec)) / ((1 + u prec) * (1 + u prec))) * u prec ^ 1 * (Rabs (a * x) + Rabs y) + (2 / 3) * eta emin.
 
-(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. Status: proved. *)
+(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition axpy_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall a x y : R,
@@ -621,7 +621,7 @@ Definition dot_step_1_spec : Prop :=
   fmt emin prec t /\
   t = RN emin prec (s + (x * y)).
 
-(* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). Status: proved. *)
+(* fast_two_sum_entry: Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing). Status: proved. *)
 Definition fast_two_sum_entry_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
@@ -801,7 +801,7 @@ Definition rmul_spec : Prop :=
   fmt emin prec r /\
   (a * b) <= r /\ r - (a * b) <= (3 / 2) * (r - pred radix2 (FLT_exp emin prec) r).
 
-(* scale_step_1: mul_1_1, one rounding to nearest. Status: proved. *)
+(* scale_step_1: mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition scale_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall x a : R,
@@ -822,7 +822,7 @@ Definition split_spec : Prop :=
   fmt emin prec al /\
   (ah + al) = a.
 
-(* sub_1_1: one rounding to nearest. Status: proved. *)
+(* sub_1_1: one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition sub_1_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall a b : R,
@@ -843,7 +843,7 @@ Definition sub_down_entry_spec : Prop :=
   fmt emin prec r /\
   r = RD emin prec (a - b).
 
-(* sub_entry_step_1: sub_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved. *)
+(* sub_entry_step_1: sub_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition sub_entry_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall x y : R,
@@ -913,7 +913,7 @@ Definition two_sum_spec : Prop :=
   s = RN emin prec (a + b) /\
   (s + e) = (a + b).
 
-(* two_sum_entry: two_sum on its guarded operands (Milestone 2 listing). Status: proved. *)
+(* two_sum_entry: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing). Status: proved. *)
 Definition two_sum_entry_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
@@ -1100,7 +1100,7 @@ Definition add_up_2_2_spec : Prop :=
   Rabs ((h0 + h1) - ((x0 + x1) + (y0 + y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs ((x0 + x1) + (y0 + y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 emin prec) * eta emin) + up_ball_add_1_2 emin prec)) + eta emin) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0)) /\
   (((x0 + x1) + (y0 + y1)) = 0 -> (h0 + h1) = ((x0 + x1) + (y0 + y1))).
 
-(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. Status: proved. *)
+(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved. *)
 Definition axpy_step_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall a0 a1 x0 x1 y0 y1 : R,
@@ -1111,7 +1111,7 @@ Definition axpy_step_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - (((a0 + a1) * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((a0 + a1) * (x0 + x1)) + Rabs (y0 + y1)) + 2 * eta emin.
 
-(* axpy_entry_step_2: axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved. *)
+(* axpy_entry_step_2: axpy_step_2, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved. *)
 Definition axpy_entry_step_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall a0 a1 x0 x1 y0 y1 : R,
@@ -1132,7 +1132,7 @@ Definition mul_2_1_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
 
-(* axpy_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. Status: proved. *)
+(* axpy_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved. *)
 Definition axpy_step_2_1_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall a x0 x1 y0 y1 : R,
@@ -1143,7 +1143,7 @@ Definition axpy_step_2_1_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((a * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((2 * u prec) * u prec))) / (1 - (4 * u prec))) + 2) * u prec ^ 2 * (Rabs (a * (x0 + x1)) + Rabs (y0 + y1)) + (5 / 4) * eta emin.
 
-(* axpy_entry_step_2_1: axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved. *)
+(* axpy_entry_step_2_1: axpy_step_2_1, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved. *)
 Definition axpy_entry_step_2_1_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall a x0 x1 y0 y1 : R,
@@ -1429,7 +1429,7 @@ Definition mul_2_1_entry_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
 
-(* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. Status: proved. *)
+(* mul_pow2_step_2: as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved. *)
 Definition mul_pow2_step_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall x0 x1 c : R,

@@ -10,7 +10,7 @@ ensures:       rounded p nearest
 ensures:       error p R c=1/(1+u) k=1 t=1/2
 min_precision: 1
 theorem:       proofs/theories/OneLimb.v mul_1_1_correct
-source:        one rounding to nearest
+source:        one rounding to nearest, the bound u/(1+u) of JR18
 license:       bound: published; proof: MIT
 status:        proved
 

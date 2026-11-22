@@ -24,7 +24,7 @@ theorem:       proofs/theories/MapSteps.v axpy_entry_step_2_correct
 ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v axpy_entry_step_2_ieee_bridge
 ieee_spec_theorem: proofs/theories/IeeeMapSteps.v axpy_entry_step_2_ieee_correct
 ieee_lead_theorem: proofs/theories/IeeeMapSteps.v axpy_entry_step_2_ieee_lead
-source:        axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22
+source:        axpy_step_2, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
 entry:         yes

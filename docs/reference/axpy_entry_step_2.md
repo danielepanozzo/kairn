@@ -78,7 +78,7 @@ Which of them the proof of `axpy_entry_step_2_correct` depends on is not copied 
 
 ## Source
 
-**Algorithm:** axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from [MR22](../developer/design/phase0/references.md#mr22). **License:** algorithm: published; proof: MIT.
+**Algorithm:** axpy_step_2, mul_2_2 ([JMP17](../developer/design/phase0/references.md#jmp17) Alg. 12) then add_2_2 ([JMP17](../developer/design/phase0/references.md#jmp17) Alg. 6), on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from [MR22](../developer/design/phase0/references.md#mr22). **License:** algorithm: published; proof: MIT.
 
 ## Listing
 

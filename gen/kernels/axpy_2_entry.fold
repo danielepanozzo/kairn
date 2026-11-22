@@ -26,5 +26,5 @@ theorem:       proofs/theories/FoldMaps.v
 ieee_theorem:  proofs/theories/IeeeFoldMaps.v
 status:        proved
 domain:        extended
-source:        axpy_entry_step_2 on each element
+source:        axpy_entry_step_2 on each element: mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), bounds from MR22, every limb guarded
 license:       algorithm: published; proof: MIT

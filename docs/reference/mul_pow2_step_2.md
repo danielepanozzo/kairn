@@ -75,7 +75,7 @@ Which of them the proof of `mul_pow2_step_2_correct` depends on is not copied he
 
 ## Source
 
-**Algorithm:** mul_pow2_2, the two limbs scaled and renormalized. **License:** algorithm: published; proof: MIT.
+**Algorithm:** as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). **License:** algorithm and proof: MIT.
 
 ## Listing
 

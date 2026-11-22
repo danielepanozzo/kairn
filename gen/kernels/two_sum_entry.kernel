@@ -11,7 +11,7 @@ value:         a+b
 ensures:       leading_rounded r
 ensures:       error r R c=0 k=2 t=0
 min_precision: 2
-source:        two_sum on its guarded operands (Milestone 2 listing)
+source:        TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing)
 license:       algorithm: published; proof: MIT
 theorem:       proofs/theories/EntryKernels.v two_sum_entry_correct
 status:        proved

@@ -207,7 +207,7 @@ Definition acc_radius_2 (a m g t : R) : R * bool :=
   let '(r, ok) := acc_radius_1 a m g t in
   (r, ok).
 
-(* add_1_1: one rounding to nearest. *)
+(* add_1_1: one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition add_1_1 (a b : R) : R :=
   let s := rnd (a + b) in
   s.
@@ -244,7 +244,7 @@ Definition add_down_entry (a b : R) : R :=
   let r := add_down_1 ga gb in
   r.
 
-(* add_entry_step_1: add_1_1 on guarded operands (rule R3); one rounding to nearest. *)
+(* add_entry_step_1: add_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition add_entry_step_1 (x y : R) : R :=
   let gx := rnd (x + 0) in
   let gy := rnd (y + 0) in
@@ -266,19 +266,19 @@ Definition add_up_entry (a b : R) : R :=
   let r := add_up_1 ga gb in
   r.
 
-(* mul_1_1: one rounding to nearest. *)
+(* mul_1_1: one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition mul_1_1 (a b : R) : R :=
   let p := rnd (a * b + 0) in
   p.
 
-(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. *)
+(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition axpy_entry_step_1 (a x y : R) : R :=
   let p := mul_1_1 a x in
   let gy := rnd (y + 0) in
   let z := add_1_1 p gy in
   z.
 
-(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. *)
+(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition axpy_step_1 (a x y : R) : R :=
   let p := mul_1_1 a x in
   let z := add_1_1 p y in
@@ -543,7 +543,7 @@ Definition dot_step_1 (s x y : R) : R :=
   let t := rnd (x * y + s) in
   t.
 
-(* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). *)
+(* fast_two_sum_entry: Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing). *)
 Definition fast_two_sum_entry (a b : R) : R * R :=
   let ga := rnd (a + 0) in
   let gb := rnd (b + 0) in
@@ -679,7 +679,7 @@ Definition rmul (a b : R) : R :=
   let r := succ radix2 (FLT_exp emin prec) p in
   r.
 
-(* scale_step_1: mul_1_1, one rounding to nearest. *)
+(* scale_step_1: mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition scale_step_1 (x a : R) : R :=
   let z := mul_1_1 x a in
   z.
@@ -692,7 +692,7 @@ Definition split (a : R) : R * R :=
   let al := rnd (a - ah) in
   (ah, al).
 
-(* sub_1_1: one rounding to nearest. *)
+(* sub_1_1: one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition sub_1_1 (a b : R) : R :=
   let s := rnd (a - b) in
   s.
@@ -704,7 +704,7 @@ Definition sub_down_entry (a b : R) : R :=
   let r := sub_down_1 ga gb in
   r.
 
-(* sub_entry_step_1: sub_1_1 on guarded operands (rule R3); one rounding to nearest. *)
+(* sub_entry_step_1: sub_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition sub_entry_step_1 (x y : R) : R :=
   let gx := rnd (x + 0) in
   let gy := rnd (y + 0) in
@@ -756,7 +756,7 @@ Definition two_sum (a b : R) : R * R :=
   let e := rnd (t1 + t2) in
   (s, e).
 
-(* two_sum_entry: two_sum on its guarded operands (Milestone 2 listing). *)
+(* two_sum_entry: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing). *)
 Definition two_sum_entry (a b : R) : R * R :=
   let ga := rnd (a + 0) in
   let gb := rnd (b + 0) in
@@ -887,13 +887,13 @@ Definition add_up_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(h0, h1) := two_sum_ord z0 w in
   (h0, h1).
 
-(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. *)
+(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6); bounds from MR22. *)
 Definition axpy_step_2 (a0 a1 x0 x1 y0 y1 : R) : R * R :=
   let '(p0, p1) := mul_2_2 a0 a1 x0 x1 in
   let '(z0, z1) := add_2_2 p0 p1 y0 y1 in
   (z0, z1).
 
-(* axpy_entry_step_2: axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. *)
+(* axpy_entry_step_2: axpy_step_2, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. *)
 Definition axpy_entry_step_2 (a0 a1 x0 x1 y0 y1 : R) : R * R :=
   let ga0 := rnd (a0 + 0) in
   let ga1 := rnd (a1 + 0) in
@@ -911,13 +911,13 @@ Definition mul_2_1 (x0 x1 a : R) : R * R :=
   let '(z0, z1) := fast_two_sum ch cl3 in
   (z0, z1).
 
-(* axpy_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. *)
+(* axpy_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6); bounds from MR22. *)
 Definition axpy_step_2_1 (a x0 x1 y0 y1 : R) : R * R :=
   let '(p0, p1) := mul_2_1 x0 x1 a in
   let '(z0, z1) := add_2_2 p0 p1 y0 y1 in
   (z0, z1).
 
-(* axpy_entry_step_2_1: axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. *)
+(* axpy_entry_step_2_1: axpy_step_2_1, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. *)
 Definition axpy_entry_step_2_1 (a x0 x1 y0 y1 : R) : R * R :=
   let ga := rnd (a + 0) in
   let gx0 := rnd (x0 + 0) in
@@ -1129,7 +1129,7 @@ Definition mul_2_1_entry (x0 x1 a : R) : R * R :=
   let '(z0, z1) := mul_2_1 x0 x1 ga in
   (z0, z1).
 
-(* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. *)
+(* mul_pow2_step_2: as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
 Definition mul_pow2_step_2 (x0 x1 c : R) : R * R :=
   let '(z0, z1) := mul_pow2_2 x0 x1 c in
   (z0, z1).

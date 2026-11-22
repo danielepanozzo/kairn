@@ -12,7 +12,7 @@ ensures:       leading_rounded r
 ensures:       error r R c=0 k=2 t=0
 ensures:       normalized r
 min_precision: 2
-source:        fast_two_sum on its guarded operands (Milestone 2 listing)
+source:        Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing)
 license:       algorithm: published; proof: MIT
 theorem:       proofs/theories/EntryKernels.v fast_two_sum_entry_correct
 status:        proved

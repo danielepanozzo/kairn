@@ -15,8 +15,8 @@ theorem:       proofs/theories/MapSteps.v mul_pow2_step_2_correct
 ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v mul_pow2_step_2_ieee_bridge
 ieee_spec_theorem: proofs/theories/IeeeMapSteps.v mul_pow2_step_2_ieee_correct
 ieee_lead_theorem: proofs/theories/IeeeMapSteps.v mul_pow2_step_2_ieee_lead
-source:        mul_pow2_2, the two limbs scaled and renormalized
-license:       algorithm: published; proof: MIT
+source:        as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing)
+license:       algorithm and proof: MIT
 status:        proved
 entry:         yes
 ieee:          bridge spec

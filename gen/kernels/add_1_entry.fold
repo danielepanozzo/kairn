@@ -21,5 +21,5 @@ theorem:       proofs/theories/FoldMaps.v
 ieee_theorem:  proofs/theories/IeeeFoldMaps.v
 status:        proved
 domain:        extended
-source:        add_1_1 on each element, guarded
+source:        add_1_1 on each element, guarded, one rounding to nearest, the bound u/(1+u) of JR18
 license:       algorithm: published; proof: MIT

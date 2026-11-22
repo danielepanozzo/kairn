@@ -12,7 +12,7 @@ From Kairn.Gen Require Import Model Statements FoldModel.
 From Kairn Require Import Folds Summation.
 Open Scope R_scope.
 
-(* add_1, each element it writes: add_1_1 on each element. Status: proved. *)
+(* add_1, each element it writes: add_1_1 on each element, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition add_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xys : list (R * R),
@@ -25,7 +25,7 @@ Definition add_1_spec : Prop :=
     Rabs (s - (a + b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a + b))
     xys (add_1_map emin prec tie_even xys).
 
-(* add_1_entry, each element it writes: add_1_1 on each element, guarded. Status: proved. *)
+(* add_1_entry, each element it writes: add_1_1 on each element, guarded, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition add_1_entry_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xys : list (R * R),
@@ -38,7 +38,7 @@ Definition add_1_entry_spec : Prop :=
     Rabs (z - (x + y)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (x + y))
     xys (add_1_entry_map emin prec tie_even xys).
 
-(* add_2, each element it writes: add_2_2 on each element. Status: proved. *)
+(* add_2, each element it writes: add_2_2 (JMP17 Alg. 6, bound from MR22) on each element. Status: proved. *)
 Definition add_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall xys : list ((R * R) * (R * R)),
@@ -50,7 +50,7 @@ Definition add_2_spec : Prop :=
     Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) + (y0 + y1)))
     xys (add_2_map emin prec tie_even xys).
 
-(* add_2_entry, each element it writes: add_2_2 on each element, guarded. Status: proved. *)
+(* add_2_entry, each element it writes: add_2_2 (JMP17 Alg. 6, bound from MR22) on each element, guarded. Status: proved. *)
 Definition add_2_entry_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall xys : list ((R * R) * (R * R)),
@@ -62,7 +62,7 @@ Definition add_2_entry_spec : Prop :=
     Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) + (y0 + y1)))
     xys (add_2_entry_map emin prec tie_even xys).
 
-(* axpy_1, each element it writes: axpy_step_1 on each element. Status: proved. *)
+(* axpy_1, each element it writes: axpy_step_1 on each element: mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition axpy_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (a : R) (xys : list (R * R)),
@@ -75,7 +75,7 @@ Definition axpy_1_spec : Prop :=
     Rabs (z - ((a * x) + y)) <= ((2 + (3 * u prec)) / ((1 + u prec) * (1 + u prec))) * u prec ^ 1 * (Rabs (a * x) + Rabs y) + (2 / 3) * eta emin)
     xys (axpy_1_map emin prec tie_even a xys).
 
-(* axpy_1_entry, each element it writes: axpy_entry_step_1 on each element. Status: proved. *)
+(* axpy_1_entry, each element it writes: axpy_entry_step_1 on each element: mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition axpy_1_entry_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (a : R) (xys : list (R * R)),
@@ -88,7 +88,7 @@ Definition axpy_1_entry_spec : Prop :=
     Rabs (z - ((a * x) + y)) <= ((2 + (3 * u prec)) / ((1 + u prec) * (1 + u prec))) * u prec ^ 1 * (Rabs (a * x) + Rabs y) + (2 / 3) * eta emin)
     xys (axpy_1_entry_map emin prec tie_even a xys).
 
-(* axpy_2, each element it writes: axpy_step_2 on each element. Status: proved. *)
+(* axpy_2, each element it writes: axpy_step_2 on each element: mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), bounds from MR22. Status: proved. *)
 Definition axpy_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall (a0 a1 : R) (xys : list ((R * R) * (R * R))),
@@ -101,7 +101,7 @@ Definition axpy_2_spec : Prop :=
     Rabs ((z0 + z1) - (((a0 + a1) * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((a0 + a1) * (x0 + x1)) + Rabs (y0 + y1)) + 2 * eta emin)
     xys (axpy_2_map emin prec tie_even (a0, a1) xys).
 
-(* axpy_2_1, each element it writes: axpy_step_2_1 on each element. Status: proved. *)
+(* axpy_2_1, each element it writes: axpy_step_2_1 on each element: mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), bounds from MR22. Status: proved. *)
 Definition axpy_2_1_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall (a : R) (xys : list ((R * R) * (R * R))),
@@ -114,7 +114,7 @@ Definition axpy_2_1_spec : Prop :=
     Rabs ((z0 + z1) - ((a * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((2 * u prec) * u prec))) / (1 - (4 * u prec))) + 2) * u prec ^ 2 * (Rabs (a * (x0 + x1)) + Rabs (y0 + y1)) + (5 / 4) * eta emin)
     xys (axpy_2_1_map emin prec tie_even a xys).
 
-(* axpy_2_1_entry, each element it writes: axpy_entry_step_2_1 on each element. Status: proved. *)
+(* axpy_2_1_entry, each element it writes: axpy_entry_step_2_1 on each element: mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), bounds from MR22, a and every limb guarded. Status: proved. *)
 Definition axpy_2_1_entry_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall (a : R) (xys : list ((R * R) * (R * R))),
@@ -127,7 +127,7 @@ Definition axpy_2_1_entry_spec : Prop :=
     Rabs ((z0 + z1) - ((a * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((2 * u prec) * u prec))) / (1 - (4 * u prec))) + 2) * u prec ^ 2 * (Rabs (a * (x0 + x1)) + Rabs (y0 + y1)) + (5 / 4) * eta emin)
     xys (axpy_2_1_entry_map emin prec tie_even a xys).
 
-(* axpy_2_entry, each element it writes: axpy_entry_step_2 on each element. Status: proved. *)
+(* axpy_2_entry, each element it writes: axpy_entry_step_2 on each element: mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), bounds from MR22, every limb guarded. Status: proved. *)
 Definition axpy_2_entry_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall (a0 a1 : R) (xys : list ((R * R) * (R * R))),
@@ -406,7 +406,7 @@ Definition bv_sub_2_spec : Prop :=
     forall x_ y_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs (y_ - (y0 + y1)) <= ry -> Rabs ((x_ - y_) - (z0 + z1)) <= r_)
     xys (bv_sub_2_map emin prec tie_even xys).
 
-(* conv_1, each coefficient it writes: dot_1 on the terms of each coefficient. Status: proved. *)
+(* conv_1, each coefficient it writes: dot_1 on the terms of each coefficient: Higham's bound for summation over any tree, through dot_1. Status: proved. *)
 Definition conv_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xs ys : list R,
@@ -420,7 +420,7 @@ Definition conv_1_spec : Prop :=
       (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)))
     (seq 0 (conv_length (length xs) (length ys))) (conv_1_conv emin prec tie_even xs ys).
 
-(* conv_1_entry, each coefficient it writes: dot_1_entry on the terms of each coefficient. Status: proved. *)
+(* conv_1_entry, each coefficient it writes: dot_1_entry on the terms of each coefficient: Higham's bound for summation over any tree, through dot_1_entry. Status: proved. *)
 Definition conv_1_entry_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xs ys : list R,
@@ -434,7 +434,7 @@ Definition conv_1_entry_spec : Prop :=
       (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)))
     (seq 0 (conv_length (length xs) (length ys))) (conv_1_entry_conv emin prec tie_even xs ys).
 
-(* conv_2, each coefficient it writes: dot_2 on the terms of each coefficient. Status: proved. *)
+(* conv_2, each coefficient it writes: dot_2 on the terms of each coefficient: Higham's bound for summation over any tree, through dot_2. Status: proved. *)
 Definition conv_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall xs ys : list (R * R),
@@ -448,7 +448,7 @@ Definition conv_2_spec : Prop :=
       (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * ((3 / 2) * eta emin)))
     (seq 0 (conv_length (length xs) (length ys))) (conv_2_conv emin prec tie_even xs ys).
 
-(* conv_2_entry, each coefficient it writes: dot_2_entry on the terms of each coefficient. Status: proved. *)
+(* conv_2_entry, each coefficient it writes: dot_2_entry on the terms of each coefficient: Higham's bound for summation over any tree, through dot_2_entry. Status: proved. *)
 Definition conv_2_entry_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall xs ys : list (R * R),
@@ -564,7 +564,7 @@ Definition mul_pow2_map_1_spec : Prop :=
     Rabs (z - (x * c)) <= (1 / 2) * eta emin)
     xs (mul_pow2_map_1_map emin prec tie_even c xs).
 
-(* mul_pow2_map_2, each element it writes: mul_pow2_2 on each element. Status: proved. *)
+(* mul_pow2_map_2, each element it writes: mul_pow2_step_2 on each element: as mul_pow2_2, both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved. *)
 Definition mul_pow2_map_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall (c : R) (xs : list (R * R)),
@@ -626,7 +626,7 @@ Definition norm_upper_2_lanes_spec : Prop :=
   v_ <= r_ /\
   r_ <= succ radix2 (FLT_exp emin prec) (RU emin prec v_).
 
-(* scale_1, each element it writes: mul_1_1 on each element. Status: proved. *)
+(* scale_1, each element it writes: mul_1_1 on each element, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition scale_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (a : R) (xs : list R),
@@ -639,7 +639,7 @@ Definition scale_1_spec : Prop :=
     Rabs (z - (x * a)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (x * a) + (1 / 2) * eta emin)
     xs (scale_1_map emin prec tie_even a xs).
 
-(* scale_2, each element it writes: mul_2_1 on each element. Status: proved. *)
+(* scale_2, each element it writes: mul_2_1 (JMP17 Alg. 9, bound from MR22) on each element. Status: proved. *)
 Definition scale_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall (a : R) (xs : list (R * R)),
@@ -652,7 +652,7 @@ Definition scale_2_spec : Prop :=
     Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin)
     xs (scale_2_map emin prec tie_even a xs).
 
-(* scale_2_entry, each element it writes: mul_2_1 on each element, its limbs and the scalar guarded (scale_entry_step_2). Status: proved. *)
+(* scale_2_entry, each element it writes: mul_2_1 (JMP17 Alg. 9, bound from MR22) on each element, its limbs and the scalar guarded (scale_entry_step_2). Status: proved. *)
 Definition scale_2_entry_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall (a : R) (xs : list (R * R)),
@@ -665,7 +665,7 @@ Definition scale_2_entry_spec : Prop :=
     Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin)
     xs (scale_2_entry_map emin prec tie_even a xs).
 
-(* sub_1, each element it writes: sub_1_1 on each element. Status: proved. *)
+(* sub_1, each element it writes: sub_1_1 on each element, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition sub_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xys : list (R * R),
@@ -678,7 +678,7 @@ Definition sub_1_spec : Prop :=
     Rabs (s - (a - b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a - b))
     xys (sub_1_map emin prec tie_even xys).
 
-(* sub_1_entry, each element it writes: sub_1_1 on each element, guarded. Status: proved. *)
+(* sub_1_entry, each element it writes: sub_1_1 on each element, guarded, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved. *)
 Definition sub_1_entry_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xys : list (R * R),
@@ -691,7 +691,7 @@ Definition sub_1_entry_spec : Prop :=
     Rabs (z - (x - y)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (x - y))
     xys (sub_1_entry_map emin prec tie_even xys).
 
-(* sub_2, each element it writes: sub_2_2 on each element. Status: proved. *)
+(* sub_2, each element it writes: sub_2_2, add_2_2 (JMP17 Alg. 6, bound from MR22) on -y, on each element. Status: proved. *)
 Definition sub_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall xys : list ((R * R) * (R * R)),
@@ -703,7 +703,7 @@ Definition sub_2_spec : Prop :=
     Rabs ((z0 + z1) - ((x0 + x1) - (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) - (y0 + y1)))
     xys (sub_2_map emin prec tie_even xys).
 
-(* sub_2_entry, each element it writes: sub_2_2 on each element, guarded. Status: proved. *)
+(* sub_2_entry, each element it writes: sub_2_2, add_2_2 (JMP17 Alg. 6, bound from MR22) on -y, on each element, guarded. Status: proved. *)
 Definition sub_2_entry_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall xys : list ((R * R) * (R * R)),

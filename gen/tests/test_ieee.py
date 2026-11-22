@@ -687,9 +687,10 @@ class CheckedFiles(unittest.TestCase):
     # with every limb of a, x and y guarded and then axpy_step_2 and axpy_step_2_1, printed after them;
     # every statement the same, but for the source lines of their comments.
     # Then bv_scale_step_2 and bv_scale_radius_entry_2 (the same rule): their models, the program and the
-    # statements of the first added, nothing else changed.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'd16e2e6c109987fdfea0faa040412a83c8ea0b5b770461d3c43027917083c453',
-               'proofs/gen/IeeeStatements.v': '630e25aa1741bbd60d3fc8d4eef2cd2578cc312d1419b4ae2c90aa6d053a0c01'}
+    # statements of the first added, nothing else changed. Then the source fields that cite their
+    # publications (JR18, JMP17, Dekker, Knuth and Moller): the comments only.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '28c333d258cf35ebb82c5eecdbfd8dd44788aff98031fd87679de0ee1690f134',
+               'proofs/gen/IeeeStatements.v': 'ef4b2daefbcf5e3b7f8fc74f19f1e8b26208839418093ff7dab58812d95e3fa2'}
 
 
     def test_the_checked_files(self):

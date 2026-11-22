@@ -72,7 +72,7 @@ Which of them the proof of `axpy_step_2_correct` depends on is not copied here: 
 
 ## Source
 
-**Algorithm:** the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from [MR22](../developer/design/phase0/references.md#mr22). **License:** algorithm: published; proof: MIT.
+**Algorithm:** the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 ([JMP17](../developer/design/phase0/references.md#jmp17) Alg. 12) then add_2_2 ([JMP17](../developer/design/phase0/references.md#jmp17) Alg. 6); bounds from [MR22](../developer/design/phase0/references.md#mr22). **License:** algorithm: published; proof: MIT.
 
 ## Listing
 

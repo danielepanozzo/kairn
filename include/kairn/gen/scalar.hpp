@@ -168,7 +168,7 @@ KAIRN_GEN_FORCEINLINE void acc_radius_2(float a, float m, float g, float t, floa
 }
 
 // add_1_1(a, b) -> s
-// one rounding to nearest. Status: proved; constexpr.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_1_1(double a, double b, double& s_out) noexcept {
     const double s = a + b;
     s_out = s;
@@ -301,7 +301,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_down_entry(float a, float b, float& r_o
 }
 
 // add_entry_step_1(x, y) -> z
-// add_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved; constexpr.
+// add_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_entry_step_1(double x, double y, double& z_out) noexcept {
     const double gx = __builtin_is_constant_evaluated() ? x : x + 0.0;
     const double gy = __builtin_is_constant_evaluated() ? y : y + 0.0;
@@ -394,7 +394,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_up_entry(float a, float b, float& r_out
 }
 
 // mul_1_1(a, b) -> p
-// one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(double a, double b, double& p_out) noexcept {
     const double p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0);
     p_out = p;
@@ -405,7 +405,7 @@ KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(float a, float b, float& p_out) noe
 }
 
 // axpy_entry_step_1(a, x, y) -> z
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void axpy_entry_step_1(double a, double x, double y, double& z_out) noexcept {
     // (p) = mul_1_1(a, x)
     const double p = __builtin_is_constant_evaluated() ? a * x : fma_rn(a, x, 0.0);
@@ -424,7 +424,7 @@ KAIRN_GEN_FORCEINLINE constexpr void axpy_entry_step_1(float a, float x, float y
 }
 
 // axpy_step_1(a, x, y) -> z
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void axpy_step_1(double a, double x, double y, double& z_out) noexcept {
     // (p) = mul_1_1(a, x)
     const double p = __builtin_is_constant_evaluated() ? a * x : fma_rn(a, x, 0.0);
@@ -3953,7 +3953,7 @@ KAIRN_GEN_FORCEINLINE void dot_step_1(float s, float x, float y, float& t_out) n
 }
 
 // fast_two_sum_entry(a, b) -> r = (s, e)
-// fast_two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
+// Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -5495,7 +5495,7 @@ KAIRN_GEN_FORCEINLINE constexpr void rmul(float a, float b, float& r_out) noexce
 }
 
 // scale_step_1(x, a) -> z
-// mul_1_1, one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void scale_step_1(double x, double a, double& z_out) noexcept {
     // (z) = mul_1_1(x, a)
     const double z = __builtin_is_constant_evaluated() ? x * a : fma_rn(x, a, 0.0);
@@ -5527,7 +5527,7 @@ KAIRN_GEN_FORCEINLINE constexpr void split(float a, float& ah_out, float& al_out
 }
 
 // sub_1_1(a, b) -> s
-// one rounding to nearest. Status: proved; constexpr.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_1_1(double a, double b, double& s_out) noexcept {
     const double s = a - b;
     s_out = s;
@@ -5583,7 +5583,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_down_entry(float a, float b, float& r_o
 }
 
 // sub_entry_step_1(x, y) -> z
-// sub_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved; constexpr.
+// sub_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_entry_step_1(double x, double y, double& z_out) noexcept {
     const double gx = __builtin_is_constant_evaluated() ? x : x + 0.0;
     const double gy = __builtin_is_constant_evaluated() ? y : y + 0.0;
@@ -5801,7 +5801,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum(float a, float b, float& s_out, flo
 }
 
 // two_sum_entry(a, b) -> r = (s, e)
-// two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
+// TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -7168,7 +7168,7 @@ KAIRN_GEN_FORCEINLINE void add_up_2_2(float x0, float x1, float y0, float y1, fl
 }
 
 // axpy_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_step_2(double a0, double a1, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     // (p0, p1) = mul_2_2(a0, a1, x0, x1)
     // (p0_ch, p0_cl1) = two_prod(a0, x0)
@@ -7253,7 +7253,7 @@ KAIRN_GEN_FORCEINLINE void axpy_step_2(float a0, float a1, float x0, float x1, f
 }
 
 // axpy_entry_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// axpy_step_2, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(double a0, double a1, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     const double ga0 = a0 + 0.0;
     const double ga1 = a1 + 0.0;
@@ -7379,7 +7379,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, f
 }
 
 // axpy_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_step_2_1(double a, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     // (p0, p1) = mul_2_1(x0, x1, a)
     // (p0_ch, p0_cl1) = two_prod(x0, a)
@@ -7458,7 +7458,7 @@ KAIRN_GEN_FORCEINLINE void axpy_step_2_1(float a, float x0, float x1, float y0, 
 }
 
 // axpy_entry_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// axpy_step_2_1, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(double a, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     const double ga = a + 0.0;
     const double gx0 = x0 + 0.0;
@@ -17201,7 +17201,7 @@ KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_2_full(float x0, float x1, float c
 }
 
 // mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1)
-// mul_pow2_2, the two limbs scaled and renormalized. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_step_2(double x0, double x1, double c, double& z0_out, double& z1_out) noexcept {
     // (z0, z1) = mul_pow2_2(x0, x1, c)
     const double z0_h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);

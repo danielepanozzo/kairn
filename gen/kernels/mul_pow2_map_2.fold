@@ -23,5 +23,5 @@ theorem:       proofs/theories/FoldMaps.v
 ieee_theorem:  proofs/theories/IeeeFoldMaps.v
 status:        proved
 domain:        extended
-source:        mul_pow2_2 on each element
-license:       algorithm: published; proof: MIT
+source:        mul_pow2_step_2 on each element: as mul_pow2_2, both limbs scaled, then Fast2Sum (Milestone 1 listing)
+license:       algorithm and proof: MIT

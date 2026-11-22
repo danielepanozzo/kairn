@@ -25,5 +25,5 @@ ieee_theorem:  proofs/theories/IeeeFoldConv.v
 terms_theorem: proofs/theories/FoldConv.v
 status:        proved
 domain:        extended
-source:        dot_1 on the terms of each coefficient
+source:        dot_1 on the terms of each coefficient: Higham's bound for summation over any tree, through dot_1
 license:       bound: published; proof: MIT

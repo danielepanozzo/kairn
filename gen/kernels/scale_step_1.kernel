@@ -12,7 +12,7 @@ min_precision: 1
 theorem:       proofs/theories/MapSteps.v scale_step_1_correct
 ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v scale_step_1_ieee_bridge
 ieee_lead_theorem: proofs/theories/IeeeMapSteps.v scale_step_1_ieee_lead
-source:        mul_1_1, one rounding to nearest
+source:        mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18
 license:       bound: published; proof: MIT
 status:        proved
 entry:         yes

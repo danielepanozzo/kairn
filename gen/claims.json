@@ -471,7 +471,7 @@
         "name": "add_1_1_correct"
       },
       "source": {
-        "cite": "one rounding to nearest",
+        "cite": "one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "bound: published; proof: MIT"
       },
       "flops": 1,
@@ -763,7 +763,7 @@
         "name": "add_entry_step_1_correct"
       },
       "source": {
-        "cite": "add_1_1 on guarded operands (rule R3); one rounding to nearest",
+        "cite": "add_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "bound: published; proof: MIT"
       },
       "flops": 3,
@@ -923,7 +923,7 @@
         "name": "mul_1_1_correct"
       },
       "source": {
-        "cite": "one rounding to nearest",
+        "cite": "one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "bound: published; proof: MIT"
       },
       "flops": 1,
@@ -984,7 +984,7 @@
         "name": "axpy_entry_step_1_correct"
       },
       "source": {
-        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y",
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 3,
@@ -1045,7 +1045,7 @@
         "name": "axpy_step_1_correct"
       },
       "source": {
-        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_1_1 then add_1_1",
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 2,
@@ -4712,7 +4712,7 @@
         "name": "fast_two_sum_entry_correct"
       },
       "source": {
-        "cite": "fast_two_sum on its guarded operands (Milestone 2 listing)",
+        "cite": "Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing)",
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 5,
@@ -7122,7 +7122,7 @@
         "name": "scale_step_1_correct"
       },
       "source": {
-        "cite": "mul_1_1, one rounding to nearest",
+        "cite": "mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "bound: published; proof: MIT"
       },
       "flops": 1,
@@ -7237,7 +7237,7 @@
         "name": "sub_1_1_correct"
       },
       "source": {
-        "cite": "one rounding to nearest",
+        "cite": "one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "bound: published; proof: MIT"
       },
       "flops": 1,
@@ -7348,7 +7348,7 @@
         "name": "sub_entry_step_1_correct"
       },
       "source": {
-        "cite": "sub_1_1 on guarded operands (rule R3); one rounding to nearest",
+        "cite": "sub_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "bound: published; proof: MIT"
       },
       "flops": 3,
@@ -7737,7 +7737,7 @@
         "name": "two_sum_entry_correct"
       },
       "source": {
-        "cite": "two_sum on its guarded operands (Milestone 2 listing)",
+        "cite": "TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing)",
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 8,
@@ -8990,7 +8990,7 @@
         "name": "axpy_step_2_correct"
       },
       "source": {
-        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22",
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6); bounds from MR22",
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 29,
@@ -9059,7 +9059,7 @@
         "name": "axpy_entry_step_2_correct"
       },
       "source": {
-        "cite": "axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22",
+        "cite": "axpy_step_2, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22",
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 35,
@@ -9190,7 +9190,7 @@
         "name": "axpy_step_2_1_correct"
       },
       "source": {
-        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22",
+        "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6); bounds from MR22",
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 26,
@@ -9258,7 +9258,7 @@
         "name": "axpy_entry_step_2_1_correct"
       },
       "source": {
-        "cite": "axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22",
+        "cite": "axpy_step_2_1, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22",
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 31,
@@ -14510,8 +14510,8 @@
         "name": "mul_pow2_step_2_correct"
       },
       "source": {
-        "cite": "mul_pow2_2, the two limbs scaled and renormalized",
-        "license": "algorithm: published; proof: MIT"
+        "cite": "as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
       },
       "flops": 5,
       "instances": {
@@ -15332,7 +15332,7 @@
         "name": "add_1_correct"
       },
       "source": {
-        "cite": "add_1_1 on each element",
+        "cite": "add_1_1 on each element, one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -15407,7 +15407,7 @@
         "name": "add_1_entry_correct"
       },
       "source": {
-        "cite": "add_1_1 on each element, guarded",
+        "cite": "add_1_1 on each element, guarded, one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -15485,7 +15485,7 @@
         "name": "add_2_correct"
       },
       "source": {
-        "cite": "add_2_2 on each element",
+        "cite": "add_2_2 (JMP17 Alg. 6, bound from MR22) on each element",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -15563,7 +15563,7 @@
         "name": "add_2_entry_correct"
       },
       "source": {
-        "cite": "add_2_2 on each element, guarded",
+        "cite": "add_2_2 (JMP17 Alg. 6, bound from MR22) on each element, guarded",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -15645,7 +15645,7 @@
         "name": "axpy_1_correct"
       },
       "source": {
-        "cite": "axpy_step_1 on each element",
+        "cite": "axpy_step_1 on each element: mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -15727,7 +15727,7 @@
         "name": "axpy_1_entry_correct"
       },
       "source": {
-        "cite": "axpy_entry_step_1 on each element",
+        "cite": "axpy_entry_step_1 on each element: mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -15813,7 +15813,7 @@
         "name": "axpy_2_correct"
       },
       "source": {
-        "cite": "axpy_step_2 on each element",
+        "cite": "axpy_step_2 on each element: mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), bounds from MR22",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -15898,7 +15898,7 @@
         "name": "axpy_2_1_correct"
       },
       "source": {
-        "cite": "axpy_step_2_1 on each element",
+        "cite": "axpy_step_2_1 on each element: mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), bounds from MR22",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -15983,7 +15983,7 @@
         "name": "axpy_2_1_entry_correct"
       },
       "source": {
-        "cite": "axpy_entry_step_2_1 on each element",
+        "cite": "axpy_entry_step_2_1 on each element: mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), bounds from MR22, a and every limb guarded",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -16069,7 +16069,7 @@
         "name": "axpy_2_entry_correct"
       },
       "source": {
-        "cite": "axpy_entry_step_2 on each element",
+        "cite": "axpy_entry_step_2 on each element: mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), bounds from MR22, every limb guarded",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -17833,7 +17833,7 @@
         "name": "conv_1_correct"
       },
       "source": {
-        "cite": "dot_1 on the terms of each coefficient",
+        "cite": "dot_1 on the terms of each coefficient: Higham's bound for summation over any tree, through dot_1",
         "license": "bound: published; proof: MIT"
       }
     },
@@ -17892,7 +17892,7 @@
         "name": "conv_1_entry_correct"
       },
       "source": {
-        "cite": "dot_1_entry on the terms of each coefficient",
+        "cite": "dot_1_entry on the terms of each coefficient: Higham's bound for summation over any tree, through dot_1_entry",
         "license": "bound: published; proof: MIT"
       }
     },
@@ -17954,7 +17954,7 @@
         "name": "conv_2_correct"
       },
       "source": {
-        "cite": "dot_2 on the terms of each coefficient",
+        "cite": "dot_2 on the terms of each coefficient: Higham's bound for summation over any tree, through dot_2",
         "license": "bound: published; proof: MIT"
       }
     },
@@ -18016,7 +18016,7 @@
         "name": "conv_2_entry_correct"
       },
       "source": {
-        "cite": "dot_2_entry on the terms of each coefficient",
+        "cite": "dot_2_entry on the terms of each coefficient: Higham's bound for summation over any tree, through dot_2_entry",
         "license": "bound: published; proof: MIT"
       }
     },
@@ -18595,8 +18595,8 @@
         "name": "mul_pow2_map_2_correct"
       },
       "source": {
-        "cite": "mul_pow2_2 on each element",
-        "license": "algorithm: published; proof: MIT"
+        "cite": "mul_pow2_step_2 on each element: as mul_pow2_2, both limbs scaled, then Fast2Sum (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
       }
     },
     {
@@ -18821,7 +18821,7 @@
         "name": "scale_1_correct"
       },
       "source": {
-        "cite": "mul_1_1 on each element",
+        "cite": "mul_1_1 on each element, one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -18899,7 +18899,7 @@
         "name": "scale_2_correct"
       },
       "source": {
-        "cite": "mul_2_1 on each element",
+        "cite": "mul_2_1 (JMP17 Alg. 9, bound from MR22) on each element",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -18977,7 +18977,7 @@
         "name": "scale_2_entry_correct"
       },
       "source": {
-        "cite": "mul_2_1 on each element, its limbs and the scalar guarded (scale_entry_step_2)",
+        "cite": "mul_2_1 (JMP17 Alg. 9, bound from MR22) on each element, its limbs and the scalar guarded (scale_entry_step_2)",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -19052,7 +19052,7 @@
         "name": "sub_1_correct"
       },
       "source": {
-        "cite": "sub_1_1 on each element",
+        "cite": "sub_1_1 on each element, one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -19127,7 +19127,7 @@
         "name": "sub_1_entry_correct"
       },
       "source": {
-        "cite": "sub_1_1 on each element, guarded",
+        "cite": "sub_1_1 on each element, guarded, one rounding to nearest, the bound u/(1+u) of JR18",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -19205,7 +19205,7 @@
         "name": "sub_2_correct"
       },
       "source": {
-        "cite": "sub_2_2 on each element",
+        "cite": "sub_2_2, add_2_2 (JMP17 Alg. 6, bound from MR22) on -y, on each element",
         "license": "algorithm: published; proof: MIT"
       }
     },
@@ -19283,7 +19283,7 @@
         "name": "sub_2_entry_correct"
       },
       "source": {
-        "cite": "sub_2_2 on each element, guarded",
+        "cite": "sub_2_2, add_2_2 (JMP17 Alg. 6, bound from MR22) on -y, on each element, guarded",
         "license": "algorithm: published; proof: MIT"
       }
     },

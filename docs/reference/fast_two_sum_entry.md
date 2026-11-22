@@ -65,7 +65,7 @@ Which of them the proof of `fast_two_sum_entry_correct` depends on is not copied
 
 ## Source
 
-**Algorithm:** fast_two_sum on its guarded operands (Milestone 2 listing). **License:** algorithm: published; proof: MIT.
+**Algorithm:** Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing). **License:** algorithm: published; proof: MIT.
 
 ## Listing
 

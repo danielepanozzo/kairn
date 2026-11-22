@@ -123,7 +123,7 @@ Definition add_down_entry_with (g_ : float -> float) (a b : float) : float :=
   let r := add_down_1 ga gb in
   r.
 
-(* add_entry_step_1: add_1_1 on guarded operands (rule R3); one rounding to nearest. *)
+(* add_entry_step_1: add_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition add_entry_step_1_with (g_ : float -> float) (x y : float) : float :=
   let gx := g_ x in
   let gy := g_ y in
@@ -137,19 +137,19 @@ Definition add_up_entry_with (g_ : float -> float) (a b : float) : float :=
   let r := add_up_1 ga gb in
   r.
 
-(* mul_1_1: one rounding to nearest. *)
+(* mul_1_1: one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition mul_1_1_with (p_ : float -> float -> float) (a b : float) : float :=
   let p := p_ a b in
   p.
 
-(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. *)
+(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition axpy_entry_step_1_with (p_ : float -> float -> float) (g_ : float -> float) (a x y : float) : float :=
   let p := mul_1_1_with p_ a x in
   let gy := g_ y in
   let z := add_1_1 p gy in
   z.
 
-(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. *)
+(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition axpy_step_1_with (p_ : float -> float -> float) (a x y : float) : float :=
   let p := mul_1_1_with p_ a x in
   let z := add_1_1 p y in
@@ -432,7 +432,7 @@ Definition bv_mul_pow2_step_1_with (p_ : float -> float -> float) (x c : float) 
   let e := orb bc zc in
   (z, e).
 
-(* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). *)
+(* fast_two_sum_entry: Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing). *)
 Definition fast_two_sum_entry_with (g_ : float -> float) (a b : float) : float * float :=
   let ga := g_ a in
   let gb := g_ b in
@@ -492,7 +492,7 @@ Definition rmul_with (p_ : float -> float -> float) (a b : float) : float :=
   let r := succ p in
   r.
 
-(* scale_step_1: mul_1_1, one rounding to nearest. *)
+(* scale_step_1: mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition scale_step_1_with (p_ : float -> float -> float) (x a : float) : float :=
   let z := mul_1_1_with p_ x a in
   z.
@@ -512,7 +512,7 @@ Definition sub_down_entry_with (g_ : float -> float) (a b : float) : float :=
   let r := sub_down_1 ga gb in
   r.
 
-(* sub_entry_step_1: sub_1_1 on guarded operands (rule R3); one rounding to nearest. *)
+(* sub_entry_step_1: sub_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. *)
 Definition sub_entry_step_1_with (g_ : float -> float) (x y : float) : float :=
   let gx := g_ x in
   let gy := g_ y in
@@ -547,7 +547,7 @@ Definition two_prod_dekker_with (p_ : float -> float -> float) (a b : float) : f
   let e := add t3 q3 in
   (p, e).
 
-(* two_sum_entry: two_sum on its guarded operands (Milestone 2 listing). *)
+(* two_sum_entry: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing). *)
 Definition two_sum_entry_with (g_ : float -> float) (a b : float) : float * float :=
   let ga := g_ a in
   let gb := g_ b in
@@ -757,7 +757,7 @@ Definition mul_pow2_2_full_with (p_ : float -> float -> float) (t_ : float -> fl
   let w1 := if f then z1 else r1 in
   (w0, w1).
 
-(* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. *)
+(* mul_pow2_step_2: as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
 Definition mul_pow2_step_2_with (p_ : float -> float -> float) (x0 x1 c : float) : float * float :=
   let '(z0, z1) := mul_pow2_2_with p_ x0 x1 c in
   (z0, z1).
@@ -868,7 +868,7 @@ Definition add_down_entry_two_executions_spec : Prop :=
   forall a b : binary_float prec emax,
   xval (add_down_entry_with prec emax nan_plus nan_minus nan_abs (guard_ce prec emax) a b) = xval (IeeeModel.add_down_entry prec emax nan_plus' nan_minus' nan_abs' a b).
 
-(* add_entry_step_1: add_1_1 on guarded operands (rule R3); one rounding to nearest. The two executions. *)
+(* add_entry_step_1: add_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. The two executions. *)
 Definition add_entry_step_1_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -884,7 +884,7 @@ Definition add_up_entry_two_executions_spec : Prop :=
   forall a b : binary_float prec emax,
   xval (add_up_entry_with prec emax nan_plus nan_minus nan_abs (guard_ce prec emax) a b) = xval (IeeeModel.add_up_entry prec emax nan_plus' nan_minus' nan_abs' a b).
 
-(* mul_1_1: one rounding to nearest. The two executions. *)
+(* mul_1_1: one rounding to nearest, the bound u/(1+u) of JR18. The two executions. *)
 Definition mul_1_1_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -892,7 +892,7 @@ Definition mul_1_1_two_executions_spec : Prop :=
   forall a b : binary_float prec emax,
   xval (mul_1_1_with prec emax (prod_ce prec emax nan_mult) a b) = xval (IeeeModel.mul_1_1 prec emax nan_fma' a b).
 
-(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. The two executions. *)
+(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18. The two executions. *)
 Definition axpy_entry_step_1_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -900,7 +900,7 @@ Definition axpy_entry_step_1_two_executions_spec : Prop :=
   forall a x y : binary_float prec emax,
   xval (axpy_entry_step_1_with prec emax nan_plus (prod_ce prec emax nan_mult) (guard_ce prec emax) a x y) = xval (IeeeModel.axpy_entry_step_1 prec emax nan_plus' nan_fma' a x y).
 
-(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. The two executions. *)
+(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18. The two executions. *)
 Definition axpy_step_1_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1080,7 +1080,7 @@ Definition bv_mul_pow2_step_1_two_executions_spec : Prop :=
   let '(z', e') := IeeeModel.bv_mul_pow2_step_1 prec emax nan_abs' nan_fma' x c in
   xval z = xval z' /\ e = e'.
 
-(* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). The two executions. *)
+(* fast_two_sum_entry: Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing). The two executions. *)
 Definition fast_two_sum_entry_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1144,7 +1144,7 @@ Definition rmul_two_executions_spec : Prop :=
   forall a b : binary_float prec emax,
   xval (rmul_with prec emax (prod_ce prec emax nan_mult) a b) = xval (IeeeModel.rmul prec emax nan_fma' a b).
 
-(* scale_step_1: mul_1_1, one rounding to nearest. The two executions. *)
+(* scale_step_1: mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18. The two executions. *)
 Definition scale_step_1_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1170,7 +1170,7 @@ Definition sub_down_entry_two_executions_spec : Prop :=
   forall a b : binary_float prec emax,
   xval (sub_down_entry_with prec emax nan_plus nan_minus nan_opp nan_abs (guard_ce prec emax) a b) = xval (IeeeModel.sub_down_entry prec emax nan_plus' nan_minus' nan_opp' nan_abs' a b).
 
-(* sub_entry_step_1: sub_1_1 on guarded operands (rule R3); one rounding to nearest. The two executions. *)
+(* sub_entry_step_1: sub_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. The two executions. *)
 Definition sub_entry_step_1_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1204,7 +1204,7 @@ Definition two_prod_dekker_two_executions_spec : Prop :=
   let '(p', e') := IeeeModel.two_prod_dekker prec emax nan_plus' nan_minus' nan_fma' a b in
   xval p = xval p' /\ xval e = xval e'.
 
-(* two_sum_entry: two_sum on its guarded operands (Milestone 2 listing). The two executions. *)
+(* two_sum_entry: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing). The two executions. *)
 Definition two_sum_entry_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1354,7 +1354,7 @@ Definition mul_pow2_2_full_two_executions_spec : Prop :=
   let '(w0', w1') := IeeeModel.mul_pow2_2_full prec emax nan_plus' nan_minus' nan_abs' nan_fma' nan_mult' x0 x1 c in
   xval w0 = xval w0' /\ xval w1 = xval w1'.
 
-(* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. The two executions. *)
+(* mul_pow2_step_2: as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). The two executions. *)
 Definition mul_pow2_step_2_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
