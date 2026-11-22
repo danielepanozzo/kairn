@@ -2006,6 +2006,79 @@ sizes are those of question 13.
 - Where nothing is guarded the two loops are the same: `scale` of one limb, and `dot`, `axpy` (but
   for `y`) and `conv` of two limbs, whose factors are on the pending list of the factor rule.
 
+### 16. The accumulator
+
+What does an `Accumulator` cost per term against `sum` and `dot` over the same array, and what do
+partial sums cost, as a program makes them across threads? `add` and `add_product` in a loop over
+the arrays of question 13 (in L1 and in the last-level cache), one accumulator, element after
+element; a two-limb accumulator fed values of `double` (`add(double)`, `add_product(double, double)`:
+an accurate sum and dot product of doubles); the array cut into 4 or 16 contiguous parts, one
+accumulator for each, one after another, then merged in order (single-threaded here: the cost of the
+partial accumulators and the merges, not of threads); element $i$ to accumulator $i \bmod W$, as the
+lane order deals them, merged from the first; and `merge` of 256 accumulators into one, `sum()`,
+`error_bound()` and `ball()` of each of 256 accumulators, the time per call. Each accumulator's state
+is checked against the generated kernels called directly on a state of plain `T` (variant `kairn`)
+byte for byte, and its running sum against the exact sum of its terms within its own
+`error_bound()`. The sums and dot products it is compared with are in the same runs.
+
+| The accumulator: ns per element (selection) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, one limb, L1 | 1.3 to 1.31 | 0.884 to 0.897 |
+| `add_product`, one limb, L1 | 1.53 | 1.48 to 1.5 |
+| `add`, two limbs, L1 | 10.2 | 10.1 to 10.2 |
+| `add_product`, two limbs, L1 | 10.2 | 10.2 to 10.3 |
+| `add` of a value of T, two limbs, L1 | 10.1 to 10.2 | 10.1 to 10.3 |
+| `add` into 16 accumulators merged, two limbs, L1 | 12.2 to 12.3 | 9.98 to 10.1 |
+| `add` into W accumulators in the lane order, two limbs, L1 | 4.82 to 4.83 | 3.99 to 4.05 |
+
+| The accumulator over the functions on arrays (selection) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, one limb, over `sum` sequential, L1 | 1.47 (-O2), 1.52 (-O3) | 1.03 |
+| `add`, one limb, over `sum`, L1 | 5.50 to 5.65 | 4.50 to 4.51 |
+| `add_product`, one limb, over `dot` sequential, L1 | 1.05 | 1.03 |
+| `add`, two limbs, over `sum` sequential, L1 | 1.00 | 1.00 |
+| `add`, two limbs, over `sum`, L1 | 3.82 to 3.92 | 3.91 to 3.92 |
+| `add_product`, two limbs, over `dot` sequential, L1 | 1.00 | 0.98 to 0.99 |
+| `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, L1 | 1.00 | 1.00 |
+| 4 accumulators merged over one, one limb, L1 | 2.38 to 2.44 (-O2), 2.37 to 2.43 (-O3) | 0.92 to 0.93 |
+| 16 accumulators merged over one, two limbs, L1 | 1.20 to 1.21 | 0.99 |
+| W accumulators in the lane order over one, one limb, L1 | 3.20 to 3.37 (-O2), 0.45 to 0.46 (-O3) | 0.47 |
+| W accumulators in the lane order over one, two limbs, L1 | 0.47 | 0.39 to 0.40 |
+| W accumulators in the lane order over `sum`, two limbs, L1 | 1.80 to 1.85 | 1.54 to 1.56 |
+
+| The accumulator: ns per call | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `merge`, 1 limb | 0.902 to 0.91 | 0.811 to 0.825 |
+| `merge`, 2 limbs | 10.2 | 10.1 to 10.3 |
+| `sum()`, 1 limb | 1.21 (-O2), 0.933 to 0.934 (-O3) | 0.826 to 0.843 |
+| `sum()`, 2 limbs | 1.34 (-O2), 1.25 to 1.26 (-O3) | 1.18 to 1.2 |
+| `error_bound()`, 1 limb | 6.35 (-O2), 4.72 (-O3) | 6 to 6.17 |
+| `error_bound()`, 2 limbs | 6.64 to 6.66 (-O2), 5.53 to 5.55 (-O3) | 6.48 to 6.6 |
+| `ball()`, 1 limb | 7.28 to 7.34 (-O2), 6.62 to 6.63 (-O3) | 8.04 to 8.18 |
+| `ball()`, 2 limbs | 7.97 to 7.99 (-O2), 7.29 to 7.32 (-O3) | 8.54 to 8.68 |
+
+- **An accumulator fed term by term costs what the sequential `sum` and `dot` cost**: on Zen 2 1.00
+  to 1.05 times them for two limbs (10.1 to 10.3 ns per term) and for `add_product` of one limb (1.5
+  ns), 1.00 to 1.52 for `add` of one limb (0.88 to 1.31 ns), and 3.8 to 5.8 times the default order
+  of the functions on arrays, which runs four chains. A two-limb accumulator fed values of `double`,
+  an accurate sum of doubles, costs what `sum` of two limbs of the same data costs sequentially
+  (1.00).
+- **Partial sums, as threads would make them** (one after another here, in one thread: what the
+  partial accumulators and the merges cost, not the threads): 4 or 16 contiguous parts, one
+  accumulator for each, merged in order, cost 1.00 times one accumulator with Clang 18 for two limbs
+  and 1.20 to 1.23 with GCC 13; for one limb 0.70 to 1.00 with Clang 18 and 1.7 to 2.6 with GCC 13.
+  W accumulators fed in the lane order, as a program would write the lane order by hand, take 0.39
+  to 0.47 of one for two limbs, 1.5 to 1.9 times `sum` of two limbs, and for one limb 0.45 to 0.47
+  but with GCC 13 at `-O2` 3.2 to 3.4 times one accumulator (17.6 to 19.2 times `sum`): GCC keeps the
+  array of accumulators in memory there, each addition loading and storing its running sum, and
+  compiles the saturating count into 128-bit integer operations (`vpsubq`, `vpunpcklqdq`); at `-O3`
+  the states stay in registers.
+- **The results**: a `merge` costs a two-limb addition (10.1 to 10.3 ns in a chain; 0.8 to 0.9 for
+  one limb); `sum()` 0.8 to 1.3 ns; `error_bound()` 4.7 to 6.6 ns, the two kernels of the bound and of
+  the radius; `ball()` 6.6 to 8.7 ns, the radius and the constructor of the ball.
+- **The guards of `add_product`** cost nothing (1.00 to 1.01, [question 15](#15-the-guards-of-supplied-factors)),
+  and the public member costs what its kernels without the guards cost (1.00 to 1.04).
+
 ### What the machine code shows (third part)
 
 The loops of the new timed functions were summarized by `bench/asm_summary.py` as in the earlier
@@ -5491,3 +5564,80 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `add_product`, two limbs (every limb guarded), LLC | 1.00 | 1.00 |
 | `add_product`, one limb, the public member over the kernels without the guards, LLC | 1.00 to 1.01 | 1.00 |
 | `add_product`, two limbs, the same, LLC | 1.00 | 1.00 |
+
+#### Question 16: the accumulator
+
+| The accumulator: ns per element | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, one limb, L1 | 1.3 to 1.31 | 0.884 to 0.897 |
+| `add_product`, one limb, L1 | 1.53 | 1.48 to 1.5 |
+| `add`, two limbs, L1 | 10.2 | 10.1 to 10.2 |
+| `add_product`, two limbs, L1 | 10.2 | 10.2 to 10.3 |
+| `add` of a value of T, two limbs, L1 | 10.1 to 10.2 | 10.1 to 10.3 |
+| `add_product` of two values of T, two limbs, L1 | 10.2 | 10.2 to 10.4 |
+| `add` into 4 accumulators merged, one limb, L1 | 3.09 to 3.17 | 0.819 to 0.833 |
+| `add` into 16 accumulators merged, two limbs, L1 | 12.2 to 12.3 | 9.98 to 10.1 |
+| `add` into W accumulators in the lane order, two limbs, L1 | 4.82 to 4.83 | 3.99 to 4.05 |
+| `add`, one limb, LLC | 1.3 to 1.31 | 0.901 to 0.919 |
+| `add_product`, one limb, LLC | 1.51 to 1.52 | 1.5 to 1.53 |
+| `add`, two limbs, LLC | 10.2 | 10.1 to 10.3 |
+| `add_product`, two limbs, LLC | 10.2 | 10.2 to 10.4 |
+| `add` of a value of T, two limbs, LLC | 10.2 | 10.2 to 10.3 |
+| `add_product` of two values of T, two limbs, LLC | 10.2 to 10.3 | 10.2 to 10.4 |
+| `add` into 4 accumulators merged, one limb, LLC | 3.31 to 3.39 | 0.902 to 0.917 |
+| `add` into 16 accumulators merged, two limbs, LLC | 12.5 | 10.1 to 10.3 |
+| `add` into W accumulators in the lane order, two limbs, LLC | 4.77 to 4.78 | 3.96 to 4.02 |
+
+| The accumulator over the functions on arrays | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, one limb, over `sum` sequential, L1 | 1.47 (-O2), 1.52 (-O3) | 1.03 |
+| `add`, one limb, over `sum`, L1 | 5.50 to 5.65 | 4.50 to 4.51 |
+| `add_product`, one limb, over `dot` sequential, L1 | 1.05 | 1.03 |
+| `add_product`, one limb, over `dot`, L1 | 4.32 to 4.37 | 4.57 to 4.58 |
+| `add`, two limbs, over `sum` sequential, L1 | 1.00 | 1.00 |
+| `add`, two limbs, over `sum`, L1 | 3.82 to 3.92 | 3.91 to 3.92 |
+| `add_product`, two limbs, over `dot` sequential, L1 | 1.00 | 0.98 to 0.99 |
+| `add_product`, two limbs, over `dot`, L1 | 3.83 to 3.92 | 3.87 to 3.90 |
+| `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, L1 | 1.00 | 1.00 |
+| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, L1 | 1.00 | 0.99 to 1.00 |
+| 4 accumulators merged over one, one limb, L1 | 2.38 to 2.44 (-O2), 2.37 to 2.43 (-O3) | 0.92 to 0.93 |
+| 16 accumulators merged over one, one limb, L1 | 1.74 to 1.77 | 0.70 to 0.71 |
+| W accumulators in the lane order over one, one limb, L1 | 3.20 to 3.37 (-O2), 0.45 to 0.46 (-O3) | 0.47 |
+| W accumulators in the lane order over `sum`, one limb, L1 | 17.6 to 18.6 (-O2), 2.56 (-O3) | 2.11 to 2.12 |
+| 4 accumulators merged over one, two limbs, L1 | 1.21 to 1.22 | 1.00 |
+| 16 accumulators merged over one, two limbs, L1 | 1.20 to 1.21 | 0.99 |
+| W accumulators in the lane order over one, two limbs, L1 | 0.47 | 0.39 to 0.40 |
+| W accumulators in the lane order over `sum`, two limbs, L1 | 1.80 to 1.85 | 1.54 to 1.56 |
+| the public members over the kernels, `add`, two limbs, L1 | 1.00 | 1.00 |
+| the public members over the kernels, `add_product`, two limbs, L1 | 1.00 | 1.00 |
+| `add`, one limb, over `sum` sequential, LLC | 1.44 to 1.45 | 1.00 |
+| `add`, one limb, over `sum`, LLC | 5.73 to 5.76 | 3.98 to 4.00 |
+| `add_product`, one limb, over `dot` sequential, LLC | 1.00 to 1.01 | 1.00 |
+| `add_product`, one limb, over `dot`, LLC | 3.99 to 4.01 | 3.97 to 3.99 |
+| `add`, two limbs, over `sum` sequential, LLC | 1.00 | 1.00 |
+| `add`, two limbs, over `sum`, LLC | 3.99 to 4.00 | 3.98 to 3.99 |
+| `add_product`, two limbs, over `dot` sequential, LLC | 1.00 | 0.99 to 1.00 |
+| `add_product`, two limbs, over `dot`, LLC | 3.98 to 4.00 | 3.96 to 3.97 |
+| `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, LLC | 1.00 | 1.00 |
+| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, LLC | 1.00 | 0.99 to 1.00 |
+| 4 accumulators merged over one, one limb, LLC | 2.54 to 2.60 | 1.00 |
+| 16 accumulators merged over one, one limb, LLC | 2.56 to 2.57 | 1.00 |
+| W accumulators in the lane order over one, one limb, LLC | 3.17 to 3.34 (-O2), 0.45 (-O3) | 0.45 |
+| W accumulators in the lane order over `sum`, one limb, LLC | 18.1 to 19.2 (-O2), 2.60 to 2.61 (-O3) | 1.78 to 1.79 |
+| 4 accumulators merged over one, two limbs, LLC | 1.22 to 1.23 | 1.00 |
+| 16 accumulators merged over one, two limbs, LLC | 1.22 | 1.00 |
+| W accumulators in the lane order over one, two limbs, LLC | 0.47 | 0.39 |
+| W accumulators in the lane order over `sum`, two limbs, LLC | 1.86 to 1.87 | 1.56 to 1.57 |
+| the public members over the kernels, `add`, two limbs, LLC | 1.00 | 1.00 |
+| the public members over the kernels, `add_product`, two limbs, LLC | 1.00 | 1.00 |
+
+| The accumulator: ns per call | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `merge`, 1 limb | 0.902 to 0.91 | 0.811 to 0.825 |
+| `merge`, 2 limbs | 10.2 | 10.1 to 10.3 |
+| `sum()`, 1 limb | 1.21 (-O2), 0.933 to 0.934 (-O3) | 0.826 to 0.843 |
+| `sum()`, 2 limbs | 1.34 (-O2), 1.25 to 1.26 (-O3) | 1.18 to 1.2 |
+| `error_bound()`, 1 limb | 6.35 (-O2), 4.72 (-O3) | 6 to 6.17 |
+| `error_bound()`, 2 limbs | 6.64 to 6.66 (-O2), 5.53 to 5.55 (-O3) | 6.48 to 6.6 |
+| `ball()`, 1 limb | 7.28 to 7.34 (-O2), 6.62 to 6.63 (-O3) | 8.04 to 8.18 |
+| `ball()`, 2 limbs | 7.97 to 7.99 (-O2), 7.29 to 7.32 (-O3) | 8.54 to 8.68 |
