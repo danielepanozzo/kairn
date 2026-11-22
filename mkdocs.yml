@@ -124,7 +124,7 @@ nav:
           - A two-limb number minus a limb: reference/sub_2_1_full.md
           - A limb minus a two-limb number: reference/sub_1_2_full.md
           - Product of two two-limb numbers: reference/mul_2_2_full.md
-          - Product of a two-limb number and a limb: reference/mul_2_1_full.md
+          - Product of a two-limb number and a limb: reference/mul_2_1_full_entry.md
           - Fast sum of two two-limb numbers: reference/add_fast_2_2_full.md
           - Negation, two limbs: reference/neg_2.md
           - Absolute value, two limbs: reference/abs_2.md
@@ -135,7 +135,7 @@ nav:
           - A two-limb number minus a limb, finite core: reference/sub_2_1.md
           - A limb minus a two-limb number, finite core: reference/sub_1_2.md
           - Product of two two-limb numbers, finite core: reference/mul_2_2.md
-          - Product of a two-limb number and a limb, finite core: reference/mul_2_1.md
+          - Product of a two-limb number and a limb, finite core: reference/mul_2_1_entry.md
           - Fast sum of two two-limb numbers, finite core: reference/add_fast_2_2.md
           - Scaling a two-limb number by a power of two, finite core: reference/mul_pow2_2.md
       - Comparisons:
@@ -162,7 +162,7 @@ nav:
           - Product of balls, one-limb center: reference/ball_mul_1_full.md
           - Product of balls, two-limb center: reference/ball_mul_2_full.md
           - A ball times a limb, one-limb center: reference/ball_scale_1_full.md
-          - A ball times a limb, two-limb center: reference/ball_scale_2_full.md
+          - A ball times a limb, two-limb center: reference/ball_scale_2_full_entry.md
           - Negation of a ball, one-limb center: reference/ball_neg_1.md
           - Negation of a ball, two-limb center: reference/ball_neg_2.md
           - Sum of balls, one-limb center, finite core: reference/ball_add_1.md
@@ -259,7 +259,7 @@ nav:
       - Building blocks on T:
           - TwoSum on values of the program: reference/two_sum_entry.md
           - Fast2Sum on values of the program: reference/fast_two_sum_entry.md
-          - "TwoProd: an exact product as two limbs": reference/two_prod.md
+          - TwoProd on values of the program: reference/two_prod_entry.md
           - The next number of T above a value: reference/next_up.md
           - The next number of T below a value: reference/next_down.md
           - An upper bound of a sum, for radii, on values of the program: reference/radd_entry.md
@@ -268,9 +268,10 @@ nav:
           - A sum of two limbs rounded up, on values of the program: reference/add_up_entry.md
           - A difference of two limbs rounded down, on values of the program: reference/sub_down_entry.md
           - A difference of two limbs rounded up, on values of the program: reference/sub_up_entry.md
-          - A lower bound of a product of two limbs: reference/mul_down_1.md
-          - An upper bound of a product of two limbs: reference/mul_up_1.md
+          - A lower bound of a product of two limbs, on values of the program: reference/mul_down_entry.md
+          - An upper bound of a product of two limbs, on values of the program: reference/mul_up_entry.md
       - Parts of other kernels:
+          - A ball times a limb, two-limb center, its factor unguarded: reference/ball_scale_2_full.md
           - Both directed products of two limbs, a zero factor giving zero: reference/mul_dir_1.md
           - A sum of two-limb numbers with a bound of its error: reference/add_ball_2_2.md
           - A product of two-limb numbers with a bound of its error: reference/mul_ball_2_2.md
@@ -281,6 +282,11 @@ nav:
           - Two bounds of a product of two-limb numbers: reference/mul_dir_2_2.md
           - Two bounds of a product of two bounds of intervals, two limbs: reference/mul_ext_2_2.md
           - "TwoSum: an exact sum as two limbs": reference/two_sum.md
+          - "TwoProd: an exact product as two limbs": reference/two_prod.md
+          - A lower bound of a product of two limbs: reference/mul_down_1.md
+          - An upper bound of a product of two limbs: reference/mul_up_1.md
+          - Product of a two-limb number and a limb: reference/mul_2_1.md
+          - Product of a two-limb number and a limb, with IEEE-like results: reference/mul_2_1_full.md
           - "Fast2Sum: an exact sum of ordered operands": reference/fast_two_sum.md
           - "Dekker's product: TwoProd without an FMA": reference/two_prod_dekker.md
           - Veltkamp's split: reference/split.md
@@ -291,7 +297,7 @@ nav:
           - A difference of two limbs rounded down: reference/sub_down_1.md
           - A difference of two limbs rounded up: reference/sub_up_1.md
       - Sums and dot products of arrays:
-          - "The step of a dot product of one limb: one fused multiply-add": reference/dot_step_1.md
+          - "The step of a dot product of one limb, on stored arrays: one fused multiply-add": reference/dot_step_1.md
           - "The step of a dot product of one limb, on arrays of the program: one fused multiply-add of the guarded elements": reference/dot_entry_step_1.md
           - The step of a dot product of two limbs: reference/dot_step_2.md
           - The step of a sum of one limb, on an array of the program: reference/sum_entry_step_1.md
@@ -312,7 +318,8 @@ nav:
           - "An accumulator of two limbs: add a number of the program": reference/acc_add_2.md
           - "An accumulator of one limb: add a product (its factors unguarded; `add_product` calls `acc_mul_entry_1`)": reference/acc_mul_1.md
           - "An accumulator of one limb: add a product of the guarded factors": reference/acc_mul_entry_1.md
-          - "An accumulator of two limbs: add a product": reference/acc_mul_2.md
+          - "An accumulator of two limbs: add a product (its factors unguarded; `add_product` calls `acc_mul_entry_2`)": reference/acc_mul_2.md
+          - "An accumulator of two limbs: add a product of the guarded factors": reference/acc_mul_entry_2.md
           - Two accumulators of one limb into one: reference/acc_merge_1.md
           - Two accumulators of two limbs into one: reference/acc_merge_2.md
           - The radius of an accumulator of one limb: reference/acc_radius_1.md
@@ -329,7 +336,8 @@ nav:
           - "x + y of two limbs, on arrays of the program": reference/add_entry_step_2.md
           - x - y of two limbs, on arrays of the program: reference/sub_entry_step_2.md
           - x a of one limb, a of T: reference/scale_step_1.md
-          - x a of two limbs, a of T: reference/scale_step_2.md
+          - "x a of two limbs, a of T, its operands unguarded (the step of `bv_scale_2`)": reference/scale_step_2.md
+          - x a of two limbs, a of T, on the guarded limbs and scalar: reference/scale_entry_step_2.md
           - x c of one limb, c a power of two: reference/mul_pow2_step_1.md
           - x c of two limbs, c a power of two: reference/mul_pow2_step_2.md
           - "a x + y of one limb, y stored": reference/axpy_step_1.md

@@ -26,7 +26,7 @@ import test_cxx as cxx
 import test_folds as folds_tests
 from kairn_gen import claims, consts, cpp, expr, interp, ir, objcode, rocq, rules
 
-CONVS = ('conv_1', 'conv_2')
+CONVS = ('conv_1', 'conv_2', 'conv_1_entry')
 
 BASE = '''
 fold:          tc
@@ -389,8 +389,9 @@ class Printers(unittest.TestCase):
         # its one statement.
         import copy
         ks = copy.deepcopy(self.ks)
-        # (and the products of two BallVectors, proved too, BvConv.v, whose names contain conv_1)
-        for name in ('conv_1', 'conv_2', 'bv_conv_1', 'bv_conv_2'):
+        # (and the products of two BallVectors, proved too, BvConv.v, whose names contain conv_1, and
+        # conv_1_entry, the convolution of one limb on its factors guarded, rule R3)
+        for name in ('conv_1', 'conv_2', 'bv_conv_1', 'bv_conv_2', 'conv_1_entry'):
             ks.folds[name].status, ks.folds[name].theorem = 'unverified', None
         self.assertNotIn('conv_1', rocq.audit(ks))
         ks.folds['conv_1'].status, ks.folds['conv_1'].theorem = 'proved', 'proofs/theories/FoldConv.v'

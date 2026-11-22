@@ -117,7 +117,8 @@ element: `add` and `sub` (steps [`add_entry_step_1`](add_entry_step_1.md),
 [`add_entry_step_2`](add_entry_step_2.md), [`sub_entry_step_1`](sub_entry_step_1.md),
 [`sub_entry_step_2`](sub_entry_step_2.md)) the sum or difference rounded to nearest for one limb,
 and for two a normalized result within $3u^2/(1-4u)$ of it, relative; `scale` (by `a` of `T`,
-[`scale_step_1`](scale_step_1.md), [`scale_step_2`](scale_step_2.md)) the product rounded to
+[`scale_step_1`](scale_step_1.md), [`scale_entry_step_2`](scale_entry_step_2.md), which guards the limbs
+and `a`) the product rounded to
 nearest, or within $2u^2\lvert x_i a\rvert + \eta$; `mul_pow2` (by `c` a positive power of two,
 [`mul_pow2_step_1`](mul_pow2_step_1.md), [`mul_pow2_step_2`](mul_pow2_step_2.md)) the product,
 exact but below the smallest normal number, within $\eta/2$ and $\eta$; `axpy` an error relative to
@@ -128,7 +129,7 @@ limbs and `a` of `T` ([`axpy_entry_step_2_1`](axpy_entry_step_2_1.md)), and
 $c = 3(1+4u^2)/(1-4u) + 4$, $t = 2$ for a two-limb `a`
 ([`axpy_entry_step_2`](axpy_entry_step_2.md)).
 
-**`conv(x, y, z)`** (loops `conv_1`, `conv_2`) writes the $n_x + n_y - 1$ coefficients of the
+**`conv(x, y, z)`** (loops `conv_1_entry`, `conv_2`; the coefficients of one limb by `dot_1_entry`, which guards both factors) writes the $n_x + n_y - 1$ coefficients of the
 product of the polynomials $x$ and $y$, none when either is empty: coefficient $j$ is `dot`, in its
 sequential order, of the terms $(x_i, y_{j-i})$ in increasing $i$, and satisfies the statement of
 `dot` for its own $m_j \le \min(n_x, n_y)$ terms.

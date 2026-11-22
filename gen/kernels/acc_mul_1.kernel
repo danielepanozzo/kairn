@@ -1,10 +1,11 @@
 # acc.add_product(x, y) of Accumulator<T, 1> (milestone2.md, "The accumulator"): the running sum s
 # plus the exact product x y, rounded once (the step of dot_1, s <- RN(x y + s)), and the running sum
-# a of the magnitudes plus |x| |y|, rounded once (a <- RN(|x| |y| + a)). x and y are values of the
-# program that are only multiplied: rule R3 asks no guard of them.
+# a of the magnitudes plus |x| |y|, rounded once (a <- RN(|x| |y| + a)). add_product of one limb
+# calls acc_mul_entry_1, which guards x and y first (rule R3, the factors of a fused operation);
+# this listing is its core.
 kernel:        acc_mul_1
-input:         stored s
-input:         stored a
+input:         s
+input:         a
 input:         x
 input:         y
 output:        t
@@ -20,7 +21,6 @@ source:        the step of the fused dot product of one limb, and the sum of the
 license:       proof: MIT
 status:        proved
 ieee:          spec
-entry:         yes
 cone_exempt:   b, the sum of magnitudes, does not reach t: its claim is read where b is finite (an entry about an output group other than the first), and where b is +inf the mask ok of acc_radius_k is false
 
 t  = fma(x, y, s)

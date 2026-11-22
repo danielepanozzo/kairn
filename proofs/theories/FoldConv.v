@@ -216,6 +216,16 @@ exact (dot_1_seq_correct emin prec Hp (conv_terms xs ys j)
          (conv_terms_Forall _ _ _ _ xs ys j Hx Hy)).
 Qed.
 
+(* conv_1_entry: the coefficients by dot_1_entry, whose step guards both factors (rule R3, the
+   factors of a fused operation): its theorem, on the terms, numbers of the format. *)
+Theorem conv_1_entry_correct : conv_1_entry_spec.
+Proof.
+intros emin prec Hp xs ys Hx Hy. unfold conv_1_entry_conv. apply Forall2_map_r.
+apply Forall_forall. intros j _.
+exact (dot_1_entry_seq_correct emin prec Hp (conv_terms xs ys j)
+         (conv_terms_Forall _ _ _ _ xs ys j Hx Hy)).
+Qed.
+
 Theorem conv_2_correct : conv_2_spec.
 Proof.
 intros emin prec Hp xs ys Hx Hy. unfold conv_2_conv. apply Forall2_map_r.

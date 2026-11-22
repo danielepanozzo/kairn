@@ -1,0 +1,32 @@
+# mul_down_1 for the public building block kairn::mul_down (milestone2.md, "Rounding a product down
+# and up"): both operands pass through guard, then mul_down_1 (rule R3, the factors of a fused
+# operation: architecture.md). mul_down_1 only multiplies a and b, in the fms of its two_prod, which
+# R3 alone does not guard; but a compiler that sees one of them to be 1 rewrites fms(a, 1, p) as
+# a - p and fuses a product a = x y of the program into it, so that the sign of the error term that
+# chooses the lower bound is that of the exact product (Apple clang 21 under -ffp-contract=fast,
+# measured). After the guards each is a number of the format. A twin rather than a guard in
+# mul_down_1: mul_dir_1 returns what mul_down_1 returns, a lemma of both models for every operand
+# (DirectedProd.v, IeeeDirectedProd.v), which a guard in mul_down_1 would break for a NaN. Its
+# claims are those of mul_down_1, in both models: the guard keeps the value of a finite number, an
+# infinity, and a NaN a NaN. Not claimed: the sign of a zero result, which the guard can change.
+kernel:        mul_down_entry
+input:         a
+input:         b
+output:        r
+value:         a*b
+ensures:       bound r below steps=1
+ensures:       rounded r down when=product_large
+min_precision: 2
+source:        mul_down_1 on its guarded operands (rule R3, the factors of a fused operation)
+license:       algorithm and proof: MIT
+theorem:       proofs/theories/EntryKernels.v mul_down_entry_correct
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeEntry.v mul_down_entry_ieee_correct
+entry:         yes
+cone_exempt:   through mul_down_1, whose result is selected; the bound and rounded claims state the output for infinite and NaN operands
+
+ga = guard(a)
+gb = guard(b)
+r  = mul_down_1(ga, gb)

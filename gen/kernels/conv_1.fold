@@ -4,9 +4,11 @@
 # (x_i, y_(j-i)), i from max(0, j - n_y + 1) to min(j, n_x - 1) in increasing order: each
 # coefficient that is finite satisfies the statement of dot_1 for its own m_j terms,
 # m_j <= min(n_x, n_y). A convolution (architecture.md, "Convolutions"), with the mask and the second
-# pass of a map; the array written overlaps neither x nor y.
+# pass of a map; the array written overlaps neither x nor y. Its arrays are stored, written through
+# Kairn (the centers of bv_conv_1): kairn::conv of one limb calls conv_1_entry, whose coefficients
+# guard their factors (rule R3, the factors of a fused operation).
 fold:          conv_1
-arrays:        supplied x, supplied y
+arrays:        stored x, stored y
 coefficients:  dot_1
 state:         mask finite
 combine:       finite = and(finite, finite)

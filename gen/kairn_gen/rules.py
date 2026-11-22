@@ -708,21 +708,29 @@ def fold_kernels(fd, kernels):
 # The objects of gen/kernels whose exposed operands are not closed yet, each with its reason (the
 # owner's decision of 2026-11-21: the strict rule, every exposed operand guarded). R3 refuses an
 # exposed operand of any other object, and an entry here that has none; `build` prints the list.
-# The plan of each: a guarded entry twin where the kernel is also called inside kernels on limbs
-# that kernels wrote, a guard in the entry kernel itself where it has no internal caller.
-_TWIN = 'called inside other kernels on limbs that kernels wrote: a guarded entry twin is to come'
-_OWN = 'no internal caller on such limbs: its own guard on the supplied operand is to come'
-_LOOP = 'its step is to be the guarded form'
+# What is left are the loops over arrays of two limbs and the convolutions, with their steps; no
+# compiler was measured to fuse a product of the program into any of them (architecture.md, R3, the
+# factors of a fused operation), and each needs new loops with their theorems in both models.
+_DOT = ('the step of the dot product and of the coefficients of the convolution of two limbs: closing it '
+        'takes the loops dot_2_entry (step dot_entry_step_2, the twin guarding x and y) and conv_2_entry (the '
+        'coefficients by dot_2_entry, as conv_1_entry), with their theorems; conv_2 itself is also the loop '
+        'of the centers of bv_conv_2, on stored arrays, which must not pay for guards')
+_SCALE = ('the step of bv_scale_2 (x stored, a supplied; kairn::scale calls scale_2_entry): closing it '
+          'takes a step guarding a only (or a guard of a once, outside the loop, which a fold cannot express '
+          'yet), with the theorems of the ball vector; bv_scale_2 is not public on this branch')
+_AXPY = ('the step of the axpy of two limbs: its own guards on a and x, which change its listing, so its '
+         'bridge and its theorems in both models and those of its loop are to be proved again')
+_AXPY_STORED = ('the step of a loop that no header calls, whose description says the program supplies a and '
+                'x: its own guards on them, with its theorems and its loop\'s proved again')
 FACTOR_PENDING = {
-    'acc_mul_1': 'replaced in the headers by acc_mul_entry_1; ' + _OWN,
-    'dot_step_1': "replaced in dot by dot_entry_step_1; conv_1's coefficients still run it: " + _TWIN,
-    'two_prod': _TWIN, 'mul_2_1': _TWIN, 'mul_2_1_full': _TWIN, 'ball_scale_2': _TWIN,
-    'mul_down_1': _OWN, 'mul_up_1': _OWN, 'ball_scale_2_full': _OWN, 'dot_step_2': _TWIN,
-    'acc_mul_2': _OWN, 'scale_step_2': _TWIN, 'axpy_entry_step_2': _OWN, 'axpy_entry_step_2_1': _OWN,
-    'axpy_step_2': _OWN, 'axpy_step_2_1': _OWN,
-    'loop axpy_2': _LOOP, 'loop axpy_2_1': _LOOP, 'loop axpy_2_1_entry': _LOOP, 'loop axpy_2_entry': _LOOP,
-    'loop bv_scale_2': _LOOP, 'loop conv_1': _LOOP, 'loop conv_2': _LOOP, 'loop dot_1': _LOOP,
-    'loop dot_2': _LOOP, 'loop scale_2': _LOOP,
+    'dot_step_2': 'dot of two limbs calls it; ' + _DOT,
+    'scale_step_2': _SCALE, 'axpy_entry_step_2': _AXPY, 'axpy_entry_step_2_1': _AXPY,
+    'axpy_step_2': _AXPY_STORED, 'axpy_step_2_1': _AXPY_STORED,
+    'loop axpy_2': 'its step: ' + _AXPY_STORED, 'loop axpy_2_1': 'its step: ' + _AXPY_STORED,
+    'loop axpy_2_1_entry': 'its step: ' + _AXPY, 'loop axpy_2_entry': 'its step: ' + _AXPY,
+    'loop bv_scale_2': 'its step: ' + _SCALE,
+    'loop conv_2': 'its coefficients, dot_2: ' + _DOT,
+    'loop dot_2': 'its step: ' + _DOT,
 }
 
 

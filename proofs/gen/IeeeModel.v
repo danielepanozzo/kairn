@@ -1212,6 +1212,13 @@ Definition mul_down_1 (a b : float) : float :=
   let r := if zz then p else d in
   r.
 
+(* mul_down_entry: mul_down_1 on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition mul_down_entry (a b : float) : float :=
+  let ga := guard a in
+  let gb := guard b in
+  let r := mul_down_1 ga gb in
+  r.
+
 (* mul_pow2_step_1: one rounding to nearest of a product by a power of two. *)
 Definition mul_pow2_step_1 (x c : float) : float :=
   let z := prod x c in
@@ -1232,6 +1239,13 @@ Definition mul_up_1 (a b : float) : float :=
   let zb := eq b pzero in
   let zz := orb za zb in
   let r := if zz then p else v in
+  r.
+
+(* mul_up_entry: mul_up_1 on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition mul_up_entry (a b : float) : float :=
+  let ga := guard a in
+  let gb := guard b in
+  let r := mul_up_1 ga gb in
   r.
 
 (* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). *)
@@ -1349,6 +1363,13 @@ Definition two_prod_dekker (a b : float) : float * float :=
   let e := add t3 q3 in
   (p, e).
 
+(* two_prod_entry: two_prod on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition two_prod_entry (a b : float) : float * float :=
+  let ga := guard a in
+  let gb := guard b in
+  let '(p, e) := two_prod ga gb in
+  (p, e).
+
 (* two_sum: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965). *)
 Definition two_sum (a b : float) : float * float :=
   let s := add a b in
@@ -1426,6 +1447,15 @@ Definition acc_mul_2 (s0 s1 a x0 x1 y0 y1 : float) : float * float * float :=
   let ax := abs x0 in
   let ay := abs y0 in
   let b := fma ax ay a in
+  (t0, t1, b).
+
+(* acc_mul_entry_2: acc_mul_2 on the guarded limbs of x and y (rule R3, the factors of a fused operation). *)
+Definition acc_mul_entry_2 (s0 s1 a x0 x1 y0 y1 : float) : float * float * float :=
+  let gx0 := guard x0 in
+  let gx1 := guard x1 in
+  let gy0 := guard y0 in
+  let gy1 := guard y1 in
+  let '(t0, t1, b) := acc_mul_2 s0 s1 a gx0 gx1 gy0 gy1 in
   (t0, t1, b).
 
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
@@ -2023,6 +2053,23 @@ Definition ball_scale_2_full (cx0 cx1 rx a : float) : float * float * float :=
   let rw := if e then r else rx in
   (cw0, cw1, rw).
 
+(* ball_scale_2_full_entry: ball_scale_2 on its guarded scalar, then the fix-up of ball_scale_2_full (rule R3, the factors of a fused operation). *)
+Definition ball_scale_2_full_entry (cx0 cx1 rx a : float) : float * float * float :=
+  let ga := guard a in
+  let '(cz0, cz1, rz) := ball_scale_2 cx0 cx1 rx ga in
+  let e := eq rx rx in
+  let az := abs cz0 in
+  let f1 := lt az pinf in
+  let f2 := lt rz pinf in
+  let f := andb f1 f2 in
+  let c0 := if f then cz0 else pzero in
+  let c1 := if f then cz1 else pzero in
+  let r := if f then rz else pinf in
+  let cw0 := if e then c0 else rx in
+  let cw1 := if e then c1 else rx in
+  let rw := if e then r else rx in
+  (cw0, cw1, rw).
+
 (* ball_split_2: the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). *)
 Definition ball_split_2 (c0 c1 r : float) : float * float * float * float * float * float :=
   let h := prod r up_ball_from_interval_2_0 in
@@ -2471,9 +2518,28 @@ Definition make_2_limbs (h l : float) : float * float :=
   let x1 := guard l in
   (x0, x1).
 
+(* mul_2_1_entry: mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). *)
+Definition mul_2_1_entry (x0 x1 a : float) : float * float :=
+  let ga := guard a in
+  let '(z0, z1) := mul_2_1 x0 x1 ga in
+  (z0, z1).
+
 (* mul_2_1_full: mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). *)
 Definition mul_2_1_full (x0 x1 a : float) : float * float :=
   let '(z0, z1) := mul_2_1 x0 x1 a in
+  let t := prod x0 a in
+  let az := abs z0 in
+  let f := lt az pinf in
+  let r0 := times_inf t in
+  let n := eq r0 r0 in
+  let r1 := if n then pzero else r0 in
+  let w0 := if f then z0 else r0 in
+  let w1 := if f then z1 else r1 in
+  (w0, w1).
+
+(* mul_2_1_full_entry: mul_2_1_entry, then the fix-up of IEEE-like results (rule R3, the factors of a fused operation). *)
+Definition mul_2_1_full_entry (x0 x1 a : float) : float * float :=
+  let '(z0, z1) := mul_2_1_entry x0 x1 a in
   let t := prod x0 a in
   let az := abs z0 in
   let f := lt az pinf in
@@ -2523,6 +2589,14 @@ Definition norm_step_2 (m : float) (ok : bool) (x0 x1 : float) : float * bool :=
 (* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. *)
 Definition scale_step_2 (x0 x1 a : float) : float * float :=
   let '(z0, z1) := mul_2_1 x0 x1 a in
+  (z0, z1).
+
+(* scale_entry_step_2: scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation). *)
+Definition scale_entry_step_2 (x0 x1 a : float) : float * float :=
+  let gx0 := guard x0 in
+  let gx1 := guard x1 in
+  let ga := guard a in
+  let '(z0, z1) := scale_step_2 gx0 gx1 ga in
   (z0, z1).
 
 (* sub_1_2: add_2_1 (JMP17 Alg. 4) on -y and a. *)
@@ -2727,6 +2801,14 @@ Definition sub_entry_step_1_prog : list instr :=
 Definition sum_entry_step_1_prog : list instr :=
   [ Iguard 1  (*  2 g *)
   ; Iadd 0 2  (*  3 t *)
+  ].
+
+(* inputs: 0 a, 1 b *)
+Definition two_prod_entry_prog : list instr :=
+  [ Iguard 0    (*  2 ga *)
+  ; Iguard 1    (*  3 gb *)
+  ; Iprod 2 3   (*  4 p *)
+  ; Ifms 2 3 4  (*  5 e *)
   ].
 
 (* inputs: 0 a, 1 b *)
@@ -3041,6 +3123,17 @@ Definition mul_pow2_2_prog : list instr :=
   ; Isub 4 6   (*  7 z1 *)
   ].
 
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition mul_2_1_entry_prog : list instr :=
+  [ Iguard 2    (*  3 ga *)
+  ; Iprod 0 3   (*  4 z0_ch *)
+  ; Ifms 0 3 4  (*  5 z0_cl1 *)
+  ; Ifma 1 3 5  (*  6 z0_cl3 *)
+  ; Iadd 4 6    (*  7 z0 *)
+  ; Isub 7 4    (*  8 z0_z *)
+  ; Isub 6 8    (*  9 z1 *)
+  ].
+
 (* inputs: 0 x0, 1 x1, 2 c *)
 Definition mul_pow2_step_2_prog : list instr :=
   [ Iprod 0 2  (*  3 z0_h *)
@@ -3058,6 +3151,19 @@ Definition scale_step_2_prog : list instr :=
   ; Iadd 3 5    (*  6 z0 *)
   ; Isub 6 3    (*  7 z0_z *)
   ; Isub 5 7    (*  8 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition scale_entry_step_2_prog : list instr :=
+  [ Iguard 0    (*  3 gx0 *)
+  ; Iguard 1    (*  4 gx1 *)
+  ; Iguard 2    (*  5 ga *)
+  ; Iprod 3 5   (*  6 z0_ch *)
+  ; Ifms 3 5 6  (*  7 z0_cl1 *)
+  ; Ifma 4 5 7  (*  8 z0_cl3 *)
+  ; Iadd 6 8    (*  9 z0 *)
+  ; Isub 9 6    (* 10 z0_z *)
+  ; Isub 8 10   (* 11 z1 *)
   ].
 
 (* inputs: 0 a, 1 y0, 2 y1 *)

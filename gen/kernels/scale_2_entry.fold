@@ -1,0 +1,27 @@
+# x a, element by element, for arrays x of two limbs and a scalar a that the program supplies (rule
+# R3, the factors of a fused operation: architecture.md): the map scale_2 with the step
+# scale_entry_step_2, which guards the limbs of each element and a first. scale_2's step only
+# multiplies them; but a compiler that sees the elements of x to be 1 fuses a product a = y z of the
+# program into the fms of mul_2_1 (Apple clang 21 under -ffp-contract=fast at -O2 with NDEBUG,
+# measured: every round). Three additions more per element. Its claims are those of scale_2.
+fold:          scale_2_entry
+arrays:        supplied x = x0 x1
+scalars:       supplied a
+state:         mask finite
+step:          z = scale_entry_step_2(x, a)
+combine:       finite = and(finite, finite)
+orders:        sequential, lanes
+writes:        z = z0 z1
+check:         fold_finish_2
+finish:        none
+value:         x*a
+requires:      canonical x
+ensures:       entries z
+ensures:       finite_or_nan z flag=finite
+min_precision: 2
+theorem:       proofs/theories/FoldMaps.v
+ieee_theorem:  proofs/theories/IeeeFoldMaps.v
+status:        proved
+domain:        extended
+source:        mul_2_1 on each element, its limbs and the scalar guarded (scale_entry_step_2)
+license:       algorithm: published; proof: MIT

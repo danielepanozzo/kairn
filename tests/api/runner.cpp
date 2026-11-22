@@ -310,8 +310,8 @@ FORM(fast_two_sum_entry_fast_two_sum, put_pair(out, kairn::fast_two_sum(AS(fast_
 FORM(fast_two_sum_entry_marked, put_pair(out, kairn::fast_two_sum(kairn::unverified(in[0]), in[1])))
 FORM(fast_two_sum_entry_to_expansion,
      put_converted(out, kairn::fast_two_sum(AS(fast_two_sum_entry, in[0]), in[1])))
-FORM(two_prod_two_prod, put_pair(out, kairn::two_prod(AS(two_prod, in[0]), in[1])))
-FORM(two_prod_marked, put_pair(out, kairn::two_prod(kairn::unverified(in[0]), in[1])))
+FORM(two_prod_entry_two_prod, put_pair(out, kairn::two_prod(AS(two_prod_entry, in[0]), in[1])))
+FORM(two_prod_entry_marked, put_pair(out, kairn::two_prod(kairn::unverified(in[0]), in[1])))
 FORM(next_up_next_up, out[0] = kairn::next_up(AS(next_up, in[0])))
 FORM(next_up_marked, out[0] = kairn::next_up(kairn::unverified(in[0])))
 FORM(next_down_next_down, out[0] = kairn::next_down(AS(next_down, in[0])))
@@ -390,7 +390,7 @@ FORM(acc_add_2_add, auto acc = acc_of<T, 2>(in); acc.add(number_k<T, 2>(in + 3))
 FORM(acc_mul_entry_1_add_product, auto acc = acc_of<T, 1>(in); acc.add_product(number_k<T, 1>(in + 2), number_k<T, 1>(in + 3));
      put_acc(out, acc))
 FORM(acc_mul_entry_1_add_product_limbs, auto acc = acc_of<T, 1>(in); acc.add_product(in[2], in[3]); put_acc(out, acc))
-FORM(acc_mul_2_add_product, auto acc = acc_of<T, 2>(in); acc.add_product(number_k<T, 2>(in + 3), number_k<T, 2>(in + 5));
+FORM(acc_mul_entry_2_add_product, auto acc = acc_of<T, 2>(in); acc.add_product(number_k<T, 2>(in + 3), number_k<T, 2>(in + 5));
      put_acc(out, acc))
 FORM(acc_merge_1_merge, auto acc = acc_of<T, 1>(in); acc.merge(acc_of<T, 1>(in + 2)); put_acc(out, acc))
 FORM(acc_merge_2_merge, auto acc = acc_of<T, 2>(in); acc.merge(acc_of<T, 2>(in + 3)); put_acc(out, acc))
@@ -406,10 +406,10 @@ FORM(sub_down_entry_sub_down, out[0] = kairn::sub_down(AS(sub_down_entry, in[0])
 FORM(sub_down_entry_marked, out[0] = kairn::sub_down(in[0], kairn::unverified(in[1])))
 FORM(sub_up_entry_sub_up, out[0] = kairn::sub_up(AS(sub_up_entry, in[0]), in[1]))
 FORM(sub_up_entry_marked, out[0] = kairn::sub_up(in[0], kairn::unverified(in[1])))
-FORM(mul_down_1_mul_down, out[0] = kairn::mul_down(AS(mul_down_1, in[0]), in[1]))
-FORM(mul_down_1_marked, out[0] = kairn::mul_down(kairn::unverified(in[0]), in[1]))
-FORM(mul_up_1_mul_up, out[0] = kairn::mul_up(AS(mul_up_1, in[0]), in[1]))
-FORM(mul_up_1_marked, out[0] = kairn::mul_up(kairn::unverified(in[0]), in[1]))
+FORM(mul_down_entry_mul_down, out[0] = kairn::mul_down(AS(mul_down_entry, in[0]), in[1]))
+FORM(mul_down_entry_marked, out[0] = kairn::mul_down(kairn::unverified(in[0]), in[1]))
+FORM(mul_up_entry_mul_up, out[0] = kairn::mul_up(AS(mul_up_entry, in[0]), in[1]))
+FORM(mul_up_entry_marked, out[0] = kairn::mul_up(kairn::unverified(in[0]), in[1]))
 
 // Two limbs: construction.
 FORM(make_2_from_limb, put(out, E2<T>(AS(make_2, in[0]))))
@@ -443,13 +443,13 @@ FORM(sub_1_2_full_marked, put(out, kairn::unverified(in[0]) - two(in + 1)))
 FORM(mul_2_2_full_times, put(out, AS(mul_2_2_full, two(in)) * two(in + 2)))
 FORM(mul_2_2_full_times_assign, E2<T> x = two(in); x *= AS(mul_2_2_full, two(in + 2)); put(out, x))
 FORM(mul_2_2_full_marked, put(out, two(in) * kairn::unverified(two(in + 2))))
-FORM(mul_2_1_full_times, put(out, AS(mul_2_1_full, two(in)) * in[2]))
-FORM(mul_2_1_full_limb_times, put(out, in[2] * AS(mul_2_1_full, two(in))))
-FORM(mul_2_1_full_times_assign, E2<T> x = two(in); x *= AS(mul_2_1_full, in[2]); put(out, x))
-FORM(mul_2_1_full_times_one, put(out, AS(mul_2_1_full, two(in)) * one(in + 2)))
-FORM(mul_2_1_full_one_times, put(out, one(in + 2) * AS(mul_2_1_full, two(in))))
-FORM(mul_2_1_full_times_assign_one, E2<T> x = two(in); x *= AS(mul_2_1_full, one(in + 2)); put(out, x))
-FORM(mul_2_1_full_marked, put(out, kairn::unverified(two(in)) * in[2]))
+FORM(mul_2_1_full_entry_times, put(out, AS(mul_2_1_full_entry, two(in)) * in[2]))
+FORM(mul_2_1_full_entry_limb_times, put(out, in[2] * AS(mul_2_1_full_entry, two(in))))
+FORM(mul_2_1_full_entry_times_assign, E2<T> x = two(in); x *= AS(mul_2_1_full_entry, in[2]); put(out, x))
+FORM(mul_2_1_full_entry_times_one, put(out, AS(mul_2_1_full_entry, two(in)) * one(in + 2)))
+FORM(mul_2_1_full_entry_one_times, put(out, one(in + 2) * AS(mul_2_1_full_entry, two(in))))
+FORM(mul_2_1_full_entry_times_assign_one, E2<T> x = two(in); x *= AS(mul_2_1_full_entry, one(in + 2)); put(out, x))
+FORM(mul_2_1_full_entry_marked, put(out, kairn::unverified(two(in)) * in[2]))
 FORM(add_fast_2_2_full_add_fast, put(out, kairn::add_fast(AS(add_fast_2_2_full, two(in)), two(in + 2))))
 FORM(add_fast_2_2_full_marked, put(out, kairn::add_fast(two(in), kairn::unverified(two(in + 2)))))
 // c is a positive power of two of T, 2^m with m = ilogb(c) (subnormal powers included).
@@ -477,10 +477,10 @@ FORM(sub_2_1_finite_sub_one, put(out, finite::sub(AS(sub_2_1, two(in)), one(in +
 FORM(sub_1_2_finite_sub, put(out, finite::sub(in[0], AS(sub_1_2, two(in + 1)))))
 FORM(sub_1_2_finite_one_sub, put(out, finite::sub(one(in), AS(sub_1_2, two(in + 1)))))
 FORM(mul_2_2_finite_mul, put(out, finite::mul(AS(mul_2_2, two(in)), two(in + 2))))
-FORM(mul_2_1_finite_mul, put(out, finite::mul(AS(mul_2_1, two(in)), in[2])))
-FORM(mul_2_1_finite_limb_mul, put(out, finite::mul(in[2], AS(mul_2_1, two(in)))))
-FORM(mul_2_1_finite_mul_one, put(out, finite::mul(AS(mul_2_1, two(in)), one(in + 2))))
-FORM(mul_2_1_finite_one_mul, put(out, finite::mul(one(in + 2), AS(mul_2_1, two(in)))))
+FORM(mul_2_1_entry_finite_mul, put(out, finite::mul(AS(mul_2_1_entry, two(in)), in[2])))
+FORM(mul_2_1_entry_finite_limb_mul, put(out, finite::mul(in[2], AS(mul_2_1_entry, two(in)))))
+FORM(mul_2_1_entry_finite_mul_one, put(out, finite::mul(AS(mul_2_1_entry, two(in)), one(in + 2))))
+FORM(mul_2_1_entry_finite_one_mul, put(out, finite::mul(one(in + 2), AS(mul_2_1_entry, two(in)))))
 FORM(add_fast_2_2_finite_add_fast, put(out, finite::add_fast(AS(add_fast_2_2, two(in)), two(in + 2))))
 FORM(mul_pow2_2_finite_ldexp, put(out, finite::ldexp(AS(mul_pow2_2, two(in)), std::ilogb(in[2]))))
 FORM(mul_pow2_2_finite_ldexp_far, int n = 0; T y[2];
@@ -560,7 +560,7 @@ FORM(ball_make_2_constant, if (stopped_by_checks(in[2])) { put(out, B2<T>::empty
 // Balls: arithmetic. Operands are (center limbs, radius); a scaling's last operand is a T. A point
 // form takes the other ball of the line as a point when its radius is zero (and, for a point of
 // type T with two limbs, its second limb too), and is the operation of balls otherwise.
-#define BALL_FORMS(K, BALL)                                                                                          \
+#define BALL_FORMS(K, BALL, SCALE)                                                                                        \
     FORM(ball_add_##K##_full_plus, put(out, AS(ball_add_##K##_full, BALL(in)) + BALL(in + K + 1)))                 \
     FORM(ball_add_##K##_full_plus_assign, auto x = BALL(in); x += AS(ball_add_##K##_full, BALL(in + K + 1)); put(out, x)) \
     FORM(ball_add_##K##_full_marked, put(out, BALL(in) + kairn::unverified(BALL(in + K + 1))))                    \
@@ -570,14 +570,16 @@ FORM(ball_make_2_constant, if (stopped_by_checks(in[2])) { put(out, B2<T>::empty
     FORM(ball_mul_##K##_full_times, put(out, AS(ball_mul_##K##_full, BALL(in)) * BALL(in + K + 1)))                \
     FORM(ball_mul_##K##_full_times_assign, auto x = BALL(in); x *= AS(ball_mul_##K##_full, BALL(in + K + 1)); put(out, x)) \
     FORM(ball_mul_##K##_full_marked, put(out, BALL(in) * kairn::unverified(BALL(in + K + 1))))                    \
-    FORM(ball_scale_##K##_full_scale, put(out, AS(ball_scale_##K##_full, BALL(in)) * in[K + 1]))                   \
-    FORM(ball_scale_##K##_full_scale_rev, put(out, in[K + 1] * AS(ball_scale_##K##_full, BALL(in))))               \
-    FORM(ball_scale_##K##_full_scale_assign, auto x = BALL(in); x *= AS(ball_scale_##K##_full, in[K + 1]); put(out, x)) \
-    FORM(ball_scale_##K##_full_marked, put(out, kairn::unverified(BALL(in)) * in[K + 1]))                         \
+    FORM(SCALE##_scale, put(out, AS(SCALE, BALL(in)) * in[K + 1]))                                               \
+    FORM(SCALE##_scale_rev, put(out, in[K + 1] * AS(SCALE, BALL(in))))                                           \
+    FORM(SCALE##_scale_assign, auto x = BALL(in); x *= AS(SCALE, in[K + 1]); put(out, x))                         \
+    FORM(SCALE##_marked, put(out, kairn::unverified(BALL(in)) * in[K + 1]))                                       \
     FORM(ball_neg_##K##_negate, put(out, -AS(ball_neg_##K, BALL(in))))                                             \
     FORM(ball_neg_##K##_marked, put(out, -kairn::unverified(BALL(in))))
-BALL_FORMS(1, ball1)
-BALL_FORMS(2, ball2)
+// The scaling of a ball of two limbs calls ball_scale_2_full_entry, which guards a first (rule R3,
+// the factors of a fused operation).
+BALL_FORMS(1, ball1, ball_scale_1_full)
+BALL_FORMS(2, ball2, ball_scale_2_full_entry)
 
 // The scaling of a ball by a power of two c = 2^m: ldexp(X, m), its marked form, half(Y) with
 // Y = X 2^(m + 1) exactly, and ldexp(Y, m - k) with Y = X 2^k exactly and m - k beyond the powers
@@ -1023,9 +1025,9 @@ PFORM(minus_assign, sub_2_1_full, PK2<T> x = ptwo(b, 0); x -= pone(b, 2); pput(b
 PFORM(minus, sub_1_2_full, pput(b, pone(b, 0) - ptwo(b, 1)))
 PFORM(times, mul_2_2_full, pput(b, ptwo(b, 0) * ptwo(b, 2)))
 PFORM(times_assign, mul_2_2_full, PK2<T> x = ptwo(b, 0); x *= ptwo(b, 2); pput(b, x))
-PFORM(times, mul_2_1_full, pput(b, ptwo(b, 0) * pone(b, 2)))
-PFORM(limb_times, mul_2_1_full, pput(b, pone(b, 2) * ptwo(b, 0)))
-PFORM(times_assign, mul_2_1_full, PK2<T> x = ptwo(b, 0); x *= pone(b, 2); pput(b, x))
+PFORM(times, mul_2_1_full_entry, pput(b, ptwo(b, 0) * pone(b, 2)))
+PFORM(limb_times, mul_2_1_full_entry, pput(b, pone(b, 2) * ptwo(b, 0)))
+PFORM(times_assign, mul_2_1_full_entry, PK2<T> x = ptwo(b, 0); x *= pone(b, 2); pput(b, x))
 PFORM(add_fast, add_fast_2_2_full, pput(b, kairn::add_fast(ptwo(b, 0), ptwo(b, 2))))
 // ldexp(x, ilogb(c)) with each lane's c in turn; half and the steps of ldexp where the scalar
 // forms compute them, ldexp in the other lanes.
@@ -1095,8 +1097,8 @@ PFORM(finite_sub, sub_2_2, pput(b, finite::sub(ptwo(b, 0), ptwo(b, 2))))
 PFORM(finite_sub, sub_2_1, pput(b, finite::sub(ptwo(b, 0), pone(b, 2))))
 PFORM(finite_sub, sub_1_2, pput(b, finite::sub(pone(b, 0), ptwo(b, 1))))
 PFORM(finite_mul, mul_2_2, pput(b, finite::mul(ptwo(b, 0), ptwo(b, 2))))
-PFORM(finite_mul, mul_2_1, pput(b, finite::mul(ptwo(b, 0), pone(b, 2))))
-PFORM(finite_limb_mul, mul_2_1, pput(b, finite::mul(pone(b, 2), ptwo(b, 0))))
+PFORM(finite_mul, mul_2_1_entry, pput(b, finite::mul(ptwo(b, 0), pone(b, 2))))
+PFORM(finite_limb_mul, mul_2_1_entry, pput(b, finite::mul(pone(b, 2), ptwo(b, 0))))
 PFORM(finite_add_fast, add_fast_2_2, pput(b, finite::add_fast(ptwo(b, 0), ptwo(b, 2))))
 PFORM(finite_ldexp, mul_pow2_2, packed_ldexp_2<T, true>(b))
 PFORM(finite_ldexp_far, mul_pow2_2, packed_ldexp_far_2<T, true>(b))
@@ -1148,7 +1150,7 @@ struct Form {
 
 #define ROW(KERNEL, NAME, IN, OUT) {#KERNEL, #NAME, IN, OUT, false, KERNEL##_##NAME<double>, KERNEL##_##NAME<float>},
 #define SOME(KERNEL, NAME, IN, OUT) {#KERNEL, #NAME, IN, OUT, true, KERNEL##_##NAME<double>, KERNEL##_##NAME<float>},
-#define BALL_ROWS(K, IN, OUT, IN_SCALE, IN_NEG)            \
+#define BALL_ROWS(K, SCALE, IN, OUT, IN_SCALE, IN_NEG)     \
     ROW(ball_add_##K##_full, plus, IN, OUT)              \
     ROW(ball_add_##K##_full, plus_assign, IN, OUT)       \
     ROW(ball_add_##K##_full, marked, IN, OUT)            \
@@ -1170,10 +1172,10 @@ struct Form {
     ROW(ball_mul_##K##_full, times, IN, OUT)             \
     ROW(ball_mul_##K##_full, times_assign, IN, OUT)      \
     ROW(ball_mul_##K##_full, marked, IN, OUT)            \
-    ROW(ball_scale_##K##_full, scale, IN_SCALE, OUT)     \
-    ROW(ball_scale_##K##_full, scale_rev, IN_SCALE, OUT) \
-    ROW(ball_scale_##K##_full, scale_assign, IN_SCALE, OUT) \
-    ROW(ball_scale_##K##_full, marked, IN_SCALE, OUT)    \
+    ROW(SCALE, scale, IN_SCALE, OUT)                     \
+    ROW(SCALE, scale_rev, IN_SCALE, OUT)                 \
+    ROW(SCALE, scale_assign, IN_SCALE, OUT)              \
+    ROW(SCALE, marked, IN_SCALE, OUT)                    \
     ROW(ball_neg_##K, negate, IN_NEG, OUT)               \
     ROW(ball_neg_##K, marked, IN_NEG, OUT)
 // One interval is ONE limbs (K a bound), two are TWO.
@@ -1249,8 +1251,8 @@ const Form forms[] = {
     ROW(fast_two_sum_entry, fast_two_sum, "ll", "ll")
     ROW(fast_two_sum_entry, marked, "ll", "ll")
     SOME(fast_two_sum_entry, to_expansion, "ll", "ll")
-    ROW(two_prod, two_prod, "ll", "ll")
-    ROW(two_prod, marked, "ll", "ll")
+    ROW(two_prod_entry, two_prod, "ll", "ll")
+    ROW(two_prod_entry, marked, "ll", "ll")
     ROW(next_up, next_up, "l", "l")
     ROW(next_up, marked, "l", "l")
     ROW(next_down, next_down, "l", "l")
@@ -1270,7 +1272,7 @@ const Form forms[] = {
     ROW(acc_add_2, add, "lllll", "lll")
     ROW(acc_mul_entry_1, add_product, "llll", "ll")
     ROW(acc_mul_entry_1, add_product_limbs, "llll", "ll")
-    ROW(acc_mul_2, add_product, "lllllll", "lll")
+    ROW(acc_mul_entry_2, add_product, "lllllll", "lll")
     ROW(acc_merge_1, merge, "llll", "ll")
     ROW(acc_merge_2, merge, "llllll", "lll")
     ROW(add_down_entry, add_down, "ll", "l")
@@ -1281,10 +1283,10 @@ const Form forms[] = {
     ROW(sub_down_entry, marked, "ll", "l")
     ROW(sub_up_entry, sub_up, "ll", "l")
     ROW(sub_up_entry, marked, "ll", "l")
-    ROW(mul_down_1, mul_down, "ll", "l")
-    ROW(mul_down_1, marked, "ll", "l")
-    ROW(mul_up_1, mul_up, "ll", "l")
-    ROW(mul_up_1, marked, "ll", "l")
+    ROW(mul_down_entry, mul_down, "ll", "l")
+    ROW(mul_down_entry, marked, "ll", "l")
+    ROW(mul_up_entry, mul_up, "ll", "l")
+    ROW(mul_up_entry, marked, "ll", "l")
     ROW(add_1_1, plus, "ll", "l")
     ROW(add_1_1, plus_limb, "ll", "l")
     ROW(add_1_1, limb_plus, "ll", "l")
@@ -1340,13 +1342,13 @@ const Form forms[] = {
     ROW(mul_2_2_full, times, "llll", "ll")
     ROW(mul_2_2_full, times_assign, "llll", "ll")
     ROW(mul_2_2_full, marked, "llll", "ll")
-    ROW(mul_2_1_full, times, "lll", "ll")
-    ROW(mul_2_1_full, limb_times, "lll", "ll")
-    ROW(mul_2_1_full, times_assign, "lll", "ll")
-    ROW(mul_2_1_full, times_one, "lll", "ll")
-    ROW(mul_2_1_full, one_times, "lll", "ll")
-    ROW(mul_2_1_full, times_assign_one, "lll", "ll")
-    ROW(mul_2_1_full, marked, "lll", "ll")
+    ROW(mul_2_1_full_entry, times, "lll", "ll")
+    ROW(mul_2_1_full_entry, limb_times, "lll", "ll")
+    ROW(mul_2_1_full_entry, times_assign, "lll", "ll")
+    ROW(mul_2_1_full_entry, times_one, "lll", "ll")
+    ROW(mul_2_1_full_entry, one_times, "lll", "ll")
+    ROW(mul_2_1_full_entry, times_assign_one, "lll", "ll")
+    ROW(mul_2_1_full_entry, marked, "lll", "ll")
     ROW(add_fast_2_2_full, add_fast, "llll", "ll")
     ROW(add_fast_2_2_full, marked, "llll", "ll")
     ROW(mul_pow2_2_full, ldexp, "lll", "ll")
@@ -1365,10 +1367,10 @@ const Form forms[] = {
     ROW(sub_1_2, finite_sub, "lll", "ll")
     ROW(sub_1_2, finite_one_sub, "lll", "ll")
     ROW(mul_2_2, finite_mul, "llll", "ll")
-    ROW(mul_2_1, finite_mul, "lll", "ll")
-    ROW(mul_2_1, finite_limb_mul, "lll", "ll")
-    ROW(mul_2_1, finite_mul_one, "lll", "ll")
-    ROW(mul_2_1, finite_one_mul, "lll", "ll")
+    ROW(mul_2_1_entry, finite_mul, "lll", "ll")
+    ROW(mul_2_1_entry, finite_limb_mul, "lll", "ll")
+    ROW(mul_2_1_entry, finite_mul_one, "lll", "ll")
+    ROW(mul_2_1_entry, finite_one_mul, "lll", "ll")
     ROW(add_fast_2_2, finite_add_fast, "llll", "ll")
     ROW(mul_pow2_2, finite_ldexp, "lll", "ll")
     SOME(mul_pow2_2, finite_ldexp_far, "lll", "ll")
@@ -1415,8 +1417,8 @@ const Form forms[] = {
     ROW(ball_make_2, center_radius, "lll", "lll")
     ROW(ball_make_1, constant, "ll", "ll")
     ROW(ball_make_2, constant, "lll", "lll")
-    BALL_ROWS(1, "llll", "ll", "lll", "ll")
-    BALL_ROWS(2, "llllll", "lll", "llll", "lll")
+    BALL_ROWS(1, ball_scale_1_full, "llll", "ll", "lll", "ll")
+    BALL_ROWS(2, ball_scale_2_full_entry, "llllll", "lll", "llll", "lll")
     SOME(ball_mul_2_full, times_center, "llllll", "lll")
     SOME(ball_mul_2_full, center_times, "llllll", "lll")
     ROW(ball_scale_1_full, scale_one, "lll", "ll")
@@ -1534,9 +1536,9 @@ const PackedForm packed_forms[] = {
     PROW(sub_1_2_full, minus, "lll", "ll")
     PROW(mul_2_2_full, times, "llll", "ll")
     PROW(mul_2_2_full, times_assign, "llll", "ll")
-    PROW(mul_2_1_full, times, "lll", "ll")
-    PROW(mul_2_1_full, limb_times, "lll", "ll")
-    PROW(mul_2_1_full, times_assign, "lll", "ll")
+    PROW(mul_2_1_full_entry, times, "lll", "ll")
+    PROW(mul_2_1_full_entry, limb_times, "lll", "ll")
+    PROW(mul_2_1_full_entry, times_assign, "lll", "ll")
     PROW(add_fast_2_2_full, add_fast, "llll", "ll")
     PROW(mul_pow2_2_full, ldexp, "lll", "ll")
     PSOME(mul_pow2_2_full, half, "lll", "ll")
@@ -1548,8 +1550,8 @@ const PackedForm packed_forms[] = {
     PROW(sub_2_1, finite_sub, "lll", "ll")
     PROW(sub_1_2, finite_sub, "lll", "ll")
     PROW(mul_2_2, finite_mul, "llll", "ll")
-    PROW(mul_2_1, finite_mul, "lll", "ll")
-    PROW(mul_2_1, finite_limb_mul, "lll", "ll")
+    PROW(mul_2_1_entry, finite_mul, "lll", "ll")
+    PROW(mul_2_1_entry, finite_limb_mul, "lll", "ll")
     PROW(add_fast_2_2, finite_add_fast, "llll", "ll")
     PROW(mul_pow2_2, finite_ldexp, "lll", "ll")
     PSOME(mul_pow2_2, finite_ldexp_far, "lll", "ll")
@@ -1587,7 +1589,18 @@ const PackedForm packed_forms[] = {
 // kernel of gen/claims.json is mapped above, listed here, or listed below (coverage.cmake).
 const char* const internal[] = {
     "two_sum", "fast_two_sum",               // building blocks of the kernels above
-    "split", "two_prod_dekker",              // the constant-evaluation variant of two_prod
+    "split", "two_prod_dekker",              // the constant-evaluation variant of two_prod and two_prod_entry
+    // The products that the public operations call through their entry forms, which guard the
+    // operands first (rule R3, the factors of a fused operation): two_prod (two_prod_entry, and inside
+    // the products of two limbs), mul_down_1 and mul_up_1 (mul_down_entry, mul_up_entry), mul_2_1
+    // (mul_2_1_entry, and inside the scalings) and mul_2_1_full (mul_2_1_full_entry).
+    "two_prod", "mul_down_1", "mul_up_1", "mul_2_1", "mul_2_1_full",
+    // And the products of the accumulator, which add_product reaches through acc_mul_entry_1 and
+    // acc_mul_entry_2, which guard the factors first.
+    "acc_mul_1", "acc_mul_2",
+    // And the scaling of a ball of two limbs, core and full form, which the operators reach through
+    // ball_scale_2_full_entry, which guards the scalar first.
+    "ball_scale_2", "ball_scale_2_full",
     "radd",                                  // radius arithmetic of the first Ball design
     "two_sum_ord",                           // Milestone 2: building blocks of the directed sums
     "add_down_1", "add_up_1", "sub_down_1", "sub_up_1",
@@ -1616,29 +1629,28 @@ const char* const ball_core = "the finite core of a Ball operation: the operator
 const char* const fold_step = "the step of a loop over arrays of the program (kairn/batch.hpp): the public "
                               "function calls the loop, not the step on its own, and the oracle judges the "
                               "loop's claims through it (api.oracle.FOLD.FORMAT)";
-const char* const factors_unguarded = "acc_mul_1 takes its factors unguarded: Accumulator::add_product of one limb "
-                                      "calls acc_mul_entry_1, acc_mul_1 on its factors guarded (rule R3, the factors "
-                                      "of a fused operation)";
 const NotPublic not_public[] = {
     {"ball_add_1", ball_core}, {"ball_sub_1", ball_core}, {"ball_mul_1", ball_core}, {"ball_scale_1", ball_core},
-    {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core}, {"ball_scale_2", ball_core},
+    {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core},
     {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
     {"sum_entry_step_1", fold_step}, {"sum_entry_step_2", fold_step}, {"sum_fast_entry_step_2", fold_step},
     {"dot_entry_step_1", fold_step}, {"add_entry_step_1", fold_step}, {"add_entry_step_2", fold_step},
-    {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step}, {"mul_pow2_step_1", fold_step},
+    {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step}, {"scale_entry_step_2", fold_step},
+    {"mul_pow2_step_1", fold_step},
     {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},
-    {"axpy_entry_step_2", fold_step}, {"acc_mul_1", factors_unguarded},
+    {"axpy_entry_step_2", fold_step},
 };
 // The interval kernels of Milestone 2 are reached by the forms of Interval (interval.hpp) and of
 // the functions of a Ball of the enclosure interface (ball.hpp), and so are the 53 kernels of the
 // enclosure interface of stage B2 (predicates, comparisons, relations of IEEE 1788, set operations
 // of a ball, conversions of two limbs); their building blocks are in `internal` above. The kernels
 // of the loops over arrays that kairn/batch.hpp calls are in the two lists above, but the steps of
-// the scalings and of the dot products (scale_step_k, dot_step_k), which the loops of
-// kairn/ball_vector.hpp call too, and the other parts of those loops, which are on its list of loop
-// parts (runner_ball_vector.hpp, loop_parts). Those that no public operation calls (the steps of
-// the maps on stored arrays) are in none of these lists (KAIRN_NOT_PUBLIC_YET of
-// tests/CMakeLists.txt, coverage.cmake).
+// the scalings and of the dot products that the loops of kairn/ball_vector.hpp call (scale_step_k,
+// dot_step_k: dot_step_1, the step of dot_1 on stored arrays, is the coefficients' step of
+// bv_conv_1, while kairn::dot and kairn::conv of one limb call dot_1_entry and conv_1_entry), and
+// the other parts of those loops, which are on its list of loop parts (runner_ball_vector.hpp,
+// loop_parts). Those that no public operation calls (the steps of the maps on stored arrays) are in
+// none of these lists (KAIRN_NOT_PUBLIC_YET of tests/CMakeLists.txt, coverage.cmake).
 
 constexpr int max_limbs = 16;
 long lineno = 0;

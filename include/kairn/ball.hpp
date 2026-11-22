@@ -74,7 +74,7 @@ struct ball_kernels<T, 2> {
     using add = gen::bounds::ball_add_2_full<T>;
     using sub = gen::bounds::ball_sub_2_full<T>;
     using mul = gen::bounds::ball_mul_2_full<T>;
-    using scale = gen::bounds::ball_scale_2_full<T>;
+    using scale = gen::bounds::ball_scale_2_full_entry<T>;
     using scale_pow2 = gen::bounds::ball_mul_pow2_2_full<T>;
     using neg = gen::bounds::ball_neg_2<T>;
     using make = gen::bounds::ball_make_2<T>;
@@ -1082,14 +1082,14 @@ template <class T, int K>
 KAIRN_FORCEINLINE Ball<T, K> operator*(const Ball<T, K>& x, const Ball<T, K>& y) noexcept {
     return detail::mul(x, y);
 }
-/// X a, the scaling by a T (kernel ball_scale_1_full or ball_scale_2_full). An infinite or NaN a
+/// X a, the scaling by a T (kernel ball_scale_1_full or ball_scale_2_full_entry). An infinite or NaN a
 /// gives the whole line, or the empty set if X is empty.
 template <class T, int K>
     requires detail::proof_checked<typename detail::ball_kernels<T, K>::scale>
 KAIRN_FORCEINLINE Ball<T, K> operator*(const Ball<T, K>& x, std::type_identity_t<T> a) noexcept {
     return detail::mul(x, a);
 }
-/// a X: as X a (kernel ball_scale_1_full or ball_scale_2_full).
+/// a X: as X a (kernel ball_scale_1_full or ball_scale_2_full_entry).
 template <class T, int K>
     requires detail::proof_checked<typename detail::ball_kernels<T, K>::scale>
 KAIRN_FORCEINLINE Ball<T, K> operator*(std::type_identity_t<T> a, const Ball<T, K>& x) noexcept {
@@ -1169,7 +1169,7 @@ template <class T, int K>
 KAIRN_FORCEINLINE Ball<T, K>& operator*=(Ball<T, K>& x, const Ball<T, K>& y) noexcept {
     return x = detail::mul(x, y);
 }
-/// X = X a (kernel ball_scale_1_full or ball_scale_2_full).
+/// X = X a (kernel ball_scale_1_full or ball_scale_2_full_entry).
 template <class T, int K>
     requires detail::proof_checked<typename detail::ball_kernels<T, K>::scale>
 KAIRN_FORCEINLINE Ball<T, K>& operator*=(Ball<T, K>& x, std::type_identity_t<T> a) noexcept {

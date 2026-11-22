@@ -27,8 +27,8 @@
                   the leading limbs that is not zero has the sign of the exact result;
      non-finite   t is not finite when an operand is not.
 
-   The nine full kernels are add_2_2_full and mul_2_2_full (first), then
-   add_fast_2_2_full, add_2_1_full, mul_2_1_full, mul_pow2_2_full and the three
+   The ten full kernels are add_2_2_full and mul_2_2_full (first), then
+   add_fast_2_2_full, add_2_1_full, mul_2_1_full, mul_2_1_full_entry, mul_pow2_2_full and the three
    subtractions, for which the five facts are stated once per core (K_core). A
    subtraction is the addition of the opposite of an operand (sub_2_2_eq, sub_2_1_eq,
    sub_1_2_eq), so its facts are those of the addition's core; a one-limb operand
@@ -1146,6 +1146,81 @@ apply (full_template z0 z1 _ (fin x0 /\ fin a)
 - intros K. apply (prod_not_finite prec emax nan_fma). now apply not_both_finite.
 Qed.
 
+(** ** mul_2_1_full_entry *)
+
+(* The products of the program by a number of the format (rule R3, the factors of a fused
+   operation): mul_2_1_full with the core mul_2_1_entry, which guards a first. The core's facts
+   are those of mul_2_1 on the guarded a, which the guard keeps finite or not and of the same
+   value (guard_finite, guard_val); t is prod x0 a, as in mul_2_1_full; so the proof is that of
+   mul_2_1_full. *)
+
+Notation mul_2_1_entry := (IeeeModel.mul_2_1_entry prec emax nan_plus nan_minus nan_opp nan_fma).
+Notation mul_2_1_full_entry :=
+  (IeeeModel.mul_2_1_full_entry prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult).
+
+Lemma mul_2_1_entry_core :
+  (2 <= prec)%Z ->
+  forall x0 x1 a : float,
+  let '(z0, z1) := mul_2_1_entry x0 x1 a in
+  (fin z0 -> fin x0 /\ fin a) /\
+  (fin x0 -> fin x1 -> fin a -> normalized_2 emin prec (b2r x0) (b2r x1) ->
+   (fin z0 ->
+    fin z1 /\ normalized_2 emin prec (b2r z0) (b2r z1) /\
+    Rabs ((b2r z0 + b2r z1) - ((b2r x0 + b2r x1) * b2r a))
+    <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) * b2r a) + 1 * eta emin) /\
+   (Rabs ((b2r x0 + b2r x1) * b2r a) <= bpow radix2 (emax - 1) -> fin z0) /\
+   (is_finite prec emax z0 = false -> rnd (b2r x0 * b2r a + 0) <> 0)).
+Proof.
+intros Hp x0 x1 a. unfold IeeeModel.mul_2_1_entry. cbv zeta.
+generalize (mul_2_1_core Hp x0 x1 (guard a)).
+destruct (mul_2_1 x0 x1 (guard a)) as [z0 z1].
+rewrite (guard_finite prec emax nan_plus a), (guard_val prec emax nan_plus a).
+intros H. exact H.
+Qed.
+
+Lemma mul_2_1_full_entry_eq :
+  forall x0 x1 a : float,
+  mul_2_1_full_entry x0 x1 a =
+  fixup (fst (mul_2_1_entry x0 x1 a)) (snd (mul_2_1_entry x0 x1 a)) (prod x0 a).
+Proof.
+intros. unfold IeeeModel.mul_2_1_full_entry.
+destruct (IeeeModel.mul_2_1_entry prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a) as [z0 z1].
+reflexivity.
+Qed.
+
+Lemma mul_2_1_full_entry_facts :
+  (2 <= prec)%Z ->
+  forall x0 x1 a : float, canonical_2 x0 x1 ->
+  let '(w0, w1) := mul_2_1_full_entry x0 x1 a in
+  canonical_2 w0 w1 /\
+  (fin w0 -> (fin x0 /\ fin a) /\ fin w1 /\ normalized_2 emin prec (b2r w0) (b2r w1) /\
+   Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) * b2r a))
+   <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) * b2r a) + 1 * eta emin) /\
+  (fin x0 /\ fin a -> Rabs ((b2r x0 + b2r x1) * b2r a) <= bpow radix2 (emax - 1) -> fin w0) /\
+  (fin x0 /\ fin a -> ~ fin w0 ->
+   w0 = B754_infinity prec emax (Rlt_bool ((b2r x0 + b2r x1) * b2r a) 0) /\ w1 = pzero) /\
+  (~ (fin x0 /\ fin a) -> canonical_of (prod x0 a) w0 w1).
+Proof.
+intros Hp x0 x1 a Cx. rewrite mul_2_1_full_entry_eq.
+generalize (mul_2_1_entry_core Hp x0 x1 a).
+destruct (mul_2_1_entry x0 x1 a) as [z0 z1]. cbn [fst snd]. intros [Cone Core].
+apply (full_template z0 z1 _ (fin x0 /\ fin a)
+         (Rabs ((b2r x0 + b2r x1) * b2r a) <= bpow radix2 (emax - 1))
+         (fun w0 w1 => Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) * b2r a))
+            <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) * b2r a) + 1 * eta emin)).
+- exact Cone.
+- intros [F0 Fa]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (Core F0 F1 Fa Nx)).
+- intros [F0 Fa] Hxa. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (proj2 (Core F0 F1 Fa Nx)) Hxa).
+- intros [F0 Fa] Fz. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  generalize (proj2 (proj2 (Core F0 F1 Fa Nx)) Fz). intros Z.
+  assert (Zp : b2r x0 * b2r a <> 0).
+  { intros K. apply Z. rewrite K, Rplus_0_r. apply round_0; auto with typeclass_instances. }
+  rewrite <- (prod_sign_1 _ _ _ Nx Zp). now apply lead_prod.
+- intros K. apply (prod_not_finite prec emax nan_fma). now apply not_both_finite.
+Qed.
+
 (** ** mul_pow2_2_full *)
 
 Notation mul_pow2_2_full :=
@@ -1292,6 +1367,17 @@ intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult Hp2 x
 generalize (mul_2_1_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult
               Hp2 x0 x1 a Cx).
 destruct (IeeeModel.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult x0 x1 a)
+  as [w0 w1].
+generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
+intros Gx. full_glue.
+Qed.
+
+Theorem mul_2_1_full_entry_correct : mul_2_1_full_entry_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult Hp2 x0 x1 a Cx t. subst t.
+generalize (mul_2_1_full_entry_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult
+              Hp2 x0 x1 a Cx).
+destruct (IeeeModel.mul_2_1_full_entry prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult x0 x1 a)
   as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
 intros Gx. full_glue.

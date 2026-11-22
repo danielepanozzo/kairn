@@ -444,6 +444,23 @@ Definition scale_2_lanes (W : nat) (a : float) (xs : list (float * float)) : lis
   let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (scale_2_check w_))) andb true W ws_ in
   (if m_ then ws_ else map (fun w_ => fst (scale_2_check w_)) ws_, m_).
 
+(* scale_2_entry: a map; step scale_entry_step_2, check fold_finish_2. *)
+Definition scale_2_entry_step (a : float) (x : float * float) : float * float :=
+  IeeeModel.scale_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst x) (snd x) a.
+
+Definition scale_2_entry_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition scale_2_entry_seq (a : float) (xs : list (float * float)) : list (float * float) * bool :=
+  let ws_ := map (scale_2_entry_step a) xs in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (scale_2_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (scale_2_entry_check w_)) ws_, m_).
+
+Definition scale_2_entry_lanes (W : nat) (a : float) (xs : list (float * float)) : list (float * float) * bool :=
+  let ws_ := map (scale_2_entry_step a) xs in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (scale_2_entry_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (scale_2_entry_check w_)) ws_, m_).
+
 (* sub_1: a map; step sub_1_1, check fold_finish_1. *)
 Definition sub_1_step (xy : float * float) : float :=
   IeeeModel.sub_1_1 prec emax nan_minus (fst xy) (snd xy).
@@ -521,6 +538,16 @@ Definition conv_1_conv (xs : list float) (ys : list float) : list float * bool :
                  (seq 0 (FoldModel.conv_length (length xs) (length ys))) in
   let m_ := fold_seq (fun m_ w_ => andb m_ (snd (conv_1_check w_))) true ws_ in
   (if m_ then ws_ else map (fun w_ => fst (conv_1_check w_)) ws_, m_).
+
+(* conv_1_entry: a convolution; coefficient j is dot_1_entry in the sequential order on the terms FoldModel.conv_terms xs ys j, checked by fold_finish_1. *)
+Definition conv_1_entry_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition conv_1_entry_conv (xs : list float) (ys : list float) : list float * bool :=
+  let ws_ := map (fun j => fold_seq dot_1_entry_step pzero (FoldModel.conv_terms xs ys j))
+                 (seq 0 (FoldModel.conv_length (length xs) (length ys))) in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (conv_1_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (conv_1_entry_check w_)) ws_, m_).
 
 (* conv_2: a convolution; coefficient j is dot_2 in the sequential order on the terms FoldModel.conv_terms xs ys j, checked by fold_finish_2. *)
 Definition conv_2_check (w_ : float * float) : float * float * bool :=

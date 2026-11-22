@@ -236,8 +236,14 @@ Print Assumptions make_2_correct.
 Definition mul_down_1_ieee_audit : mul_down_1_ieee_spec := mul_down_1_ieee_correct.
 Print Assumptions mul_down_1_ieee_correct.
 
+Definition mul_down_entry_ieee_audit : mul_down_entry_ieee_spec := mul_down_entry_ieee_correct.
+Print Assumptions mul_down_entry_ieee_correct.
+
 Definition mul_up_1_ieee_audit : mul_up_1_ieee_spec := mul_up_1_ieee_correct.
 Print Assumptions mul_up_1_ieee_correct.
+
+Definition mul_up_entry_ieee_audit : mul_up_entry_ieee_spec := mul_up_entry_ieee_correct.
+Print Assumptions mul_up_entry_ieee_correct.
 
 Definition next_down_ieee_audit : next_down_ieee_spec := next_down_ieee_correct.
 Print Assumptions next_down_ieee_correct.
@@ -359,6 +365,9 @@ Print Assumptions ball_positive_2_correct.
 Definition ball_scale_2_full_audit : ball_scale_2_full_spec := ball_scale_2_full_correct.
 Print Assumptions ball_scale_2_full_correct.
 
+Definition ball_scale_2_full_entry_audit : ball_scale_2_full_entry_spec := ball_scale_2_full_entry_correct.
+Print Assumptions ball_scale_2_full_entry_correct.
+
 Definition ball_split_2_audit : ball_split_2_spec := ball_split_2_correct.
 Print Assumptions ball_split_2_correct.
 
@@ -449,6 +458,9 @@ Print Assumptions make_2_limbs_correct.
 Definition mul_2_1_full_audit : mul_2_1_full_spec := mul_2_1_full_correct.
 Print Assumptions mul_2_1_full_correct.
 
+Definition mul_2_1_full_entry_audit : mul_2_1_full_entry_spec := mul_2_1_full_entry_correct.
+Print Assumptions mul_2_1_full_entry_correct.
+
 Definition mul_2_2_full_audit : mul_2_2_full_spec := mul_2_2_full_correct.
 Print Assumptions mul_2_2_full_correct.
 
@@ -532,6 +544,9 @@ Print Assumptions sub_entry_step_1_ieee_bridge.
 Definition sum_entry_step_1_ieee_bridge_audit : sum_entry_step_1_ieee_bridge_spec := sum_entry_step_1_ieee_bridge.
 Print Assumptions sum_entry_step_1_ieee_bridge.
 
+Definition two_prod_entry_ieee_audit : two_prod_entry_ieee_spec := two_prod_entry_ieee_correct.
+Print Assumptions two_prod_entry_ieee_correct.
+
 Definition acc_add_2_ieee_audit : acc_add_2_ieee_spec := acc_add_2_ieee_correct.
 Print Assumptions acc_add_2_ieee_correct.
 
@@ -546,6 +561,9 @@ Print Assumptions dot_step_2_ieee_correct.
 
 Definition acc_mul_2_ieee_audit : acc_mul_2_ieee_spec := acc_mul_2_ieee_correct.
 Print Assumptions acc_mul_2_ieee_correct.
+
+Definition acc_mul_entry_2_ieee_audit : acc_mul_entry_2_ieee_spec := acc_mul_entry_2_ieee_correct.
+Print Assumptions acc_mul_entry_2_ieee_correct.
 
 Definition add_entry_step_2_ieee_bridge_audit : add_entry_step_2_ieee_bridge_spec := add_entry_step_2_ieee_bridge.
 Print Assumptions add_entry_step_2_ieee_bridge.
@@ -580,6 +598,12 @@ Print Assumptions axpy_step_2_1_ieee_correct.
 Definition bv_mul_pow2_step_2_ieee_audit : bv_mul_pow2_step_2_ieee_spec := bv_mul_pow2_step_2_ieee_correct.
 Print Assumptions bv_mul_pow2_step_2_ieee_correct.
 
+Definition mul_2_1_entry_ieee_bridge_audit : mul_2_1_entry_ieee_bridge_spec := mul_2_1_entry_ieee_bridge.
+Print Assumptions mul_2_1_entry_ieee_bridge.
+
+Definition mul_2_1_entry_ieee_audit : mul_2_1_entry_ieee_spec := mul_2_1_entry_ieee_correct.
+Print Assumptions mul_2_1_entry_ieee_correct.
+
 Definition mul_pow2_step_2_ieee_bridge_audit : mul_pow2_step_2_ieee_bridge_spec := mul_pow2_step_2_ieee_bridge.
 Print Assumptions mul_pow2_step_2_ieee_bridge.
 
@@ -591,6 +615,12 @@ Print Assumptions scale_step_2_ieee_bridge.
 
 Definition scale_step_2_ieee_audit : scale_step_2_ieee_spec := scale_step_2_ieee_correct.
 Print Assumptions scale_step_2_ieee_correct.
+
+Definition scale_entry_step_2_ieee_bridge_audit : scale_entry_step_2_ieee_bridge_spec := scale_entry_step_2_ieee_bridge.
+Print Assumptions scale_entry_step_2_ieee_bridge.
+
+Definition scale_entry_step_2_ieee_audit : scale_entry_step_2_ieee_spec := scale_entry_step_2_ieee_correct.
+Print Assumptions scale_entry_step_2_ieee_correct.
 
 Definition sub_entry_step_2_ieee_bridge_audit : sub_entry_step_2_ieee_bridge_spec := sub_entry_step_2_ieee_bridge.
 Print Assumptions sub_entry_step_2_ieee_bridge.
@@ -690,6 +720,9 @@ Print Assumptions mul_pow2_step_2_ieee_lead.
 
 Definition scale_step_2_ieee_lead_audit : scale_step_2_ieee_lead_spec := scale_step_2_ieee_lead.
 Print Assumptions scale_step_2_ieee_lead.
+
+Definition scale_entry_step_2_ieee_lead_audit : scale_entry_step_2_ieee_lead_spec := scale_entry_step_2_ieee_lead.
+Print Assumptions scale_entry_step_2_ieee_lead.
 
 Definition sub_2_2_ieee_lead_audit : sub_2_2_ieee_lead_spec := sub_2_2_ieee_lead.
 Print Assumptions sub_2_2_ieee_lead.
@@ -865,6 +898,12 @@ Print Assumptions scale_2_seq_ieee_correct.
 Definition scale_2_lanes_ieee_audit : scale_2_lanes_ieee_spec := scale_2_lanes_ieee_correct.
 Print Assumptions scale_2_lanes_ieee_correct.
 
+Definition scale_2_entry_seq_ieee_audit : scale_2_entry_seq_ieee_spec := scale_2_entry_seq_ieee_correct.
+Print Assumptions scale_2_entry_seq_ieee_correct.
+
+Definition scale_2_entry_lanes_ieee_audit : scale_2_entry_lanes_ieee_spec := scale_2_entry_lanes_ieee_correct.
+Print Assumptions scale_2_entry_lanes_ieee_correct.
+
 Definition sub_1_seq_ieee_audit : sub_1_seq_ieee_spec := sub_1_seq_ieee_correct.
 Print Assumptions sub_1_seq_ieee_correct.
 
@@ -891,6 +930,9 @@ Print Assumptions sub_2_entry_lanes_ieee_correct.
 
 Definition conv_1_ieee_audit : conv_1_ieee_spec := conv_1_ieee_correct.
 Print Assumptions conv_1_ieee_correct.
+
+Definition conv_1_entry_ieee_audit : conv_1_entry_ieee_spec := conv_1_entry_ieee_correct.
+Print Assumptions conv_1_entry_ieee_correct.
 
 Definition conv_2_ieee_audit : conv_2_ieee_spec := conv_2_ieee_correct.
 Print Assumptions conv_2_ieee_correct.

@@ -1083,27 +1083,23 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   same kind is in `api.boundary.S` and `api.boundary.packed.FORM.S`: the products of `Expansion<T,
   2>` and of a ball by a `T` (`x * a`, `a * x`, `*=`, `finite::mul`, with a one-limb `a` too), of
   one limb, `two_prod`, `rmul`, `mul_down` and `mul_up`, and the products of `Packed<T, 2>` and
-  `Packed<T, 1>`, with the other factor $F$. **A finding of the first importance, kept failing:**
-  Apple clang 21 under `-ffp-contract=fast`, at `-O1` and `-O2`, fuses the program's product through
-  $F = \pm 1$ into `two_prod` (both outputs, and the error alone; every round), `mul_down` and
-  `mul_up` (half the rounds), `finite::mul(E2, T)` (every round) and, in the NEON form, the product
-  `Packed<T, 2> * Packed<T, 1>` and its `finite::mul` (every register; the scalar form's
-  `finite::mul` too): their kernels, `two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1` and
-  `mul_2_1_full`, take their factors unguarded and are kernels of Milestone 1 and of the blocks of
-  Milestone 2 whose headers that stage did not change. `api.boundary.contract-fast` and
-  `api.boundary.packed.native.contract-fast` (and `.scalar.`) fail with Apple clang until these
-  kernels, on the pending list of the factor rule (`rules.FACTOR_PENDING`), are closed: the owner
-  decided the strict rule on 2026-11-21 (every factor that the program supplies to a fused
-  operation with an addend that is not zero is guarded), and the kernels on that list are being
-  closed. Their controls require the difference there, and report elsewhere. GCC 13 and 16 and
-  Clang 18 on x86-64 fused none of these forms at any setting. Those measurements had the checks of
-  a debug build on (no `NDEBUG`); built as the test builds them (Release, `-O3 -DNDEBUG -O2
-  -ffp-contract=fast`), Apple clang 21 also fuses through $F = \pm 1$ the scalar `operator*` of an
-  `Expansion<T, 2>` and a `T` (both orders and `*=`), of an `Expansion<T, 2>` and an
-  `Expansion<T, 1>` (both orders, and `finite::mul`) and of a `Ball<T, 2>` and a `T` (both orders
-  and `*=`), every round, in `double` and `float` (measured on 2026-11-21 on the commit of this
-  stage and on the joined tree, the same 18 forms: [Time](#time)); their kernels, `mul_2_1_full`
-  and `ball_scale_2_full`, are on the same pending list.
+  `Packed<T, 1>`, with the other factor $F$. **A finding of the first importance:** with their
+  first kernels, Apple clang 21 under `-ffp-contract=fast`, at `-O1` and `-O2`, fused the program's
+  product through $F = \pm 1$ into `two_prod` (both outputs, and the error alone; every round),
+  `mul_down` and `mul_up` (half the rounds), `finite::mul(E2, T)` (every round) and, in the NEON
+  form, the product `Packed<T, 2> * Packed<T, 1>` and its `finite::mul` (every register; the scalar
+  form's `finite::mul` too); and in the Release build of the tests (`NDEBUG`, which takes the debug
+  checks out of the operators), also the scalar `x * a`, `a * x` and `x *= a` of `Expansion<T, 2>`
+  (with a `T` and with an `Expansion<T, 1>`) and the three products of a `Ball<T, 2>` by a `T`
+  (every round; without `NDEBUG` none of these). Those kernels, `two_prod`, `mul_down_1`,
+  `mul_up_1`, `mul_2_1`, `mul_2_1_full` and `ball_scale_2_full`, took their factors unguarded. The
+  public products now call their entry forms, which guard the factors first (`two_prod_entry`,
+  `mul_down_entry`, `mul_up_entry`, `mul_2_1_entry`, `mul_2_1_full_entry`,
+  `ball_scale_2_full_entry`; rule R3, the factors of a fused operation), and with them
+  `api.boundary.contract-fast` and `api.boundary.packed.native.contract-fast` (and `.scalar.`)
+  pass with Apple clang; their controls, with those guards taken out, require the difference
+  there, and report elsewhere. GCC 13 and 16 and Clang 18 on x86-64 fused none of these forms at
+  any setting.
 - **The bounds as functions of the length** (`traits<X>::sum(n)`, `sum_height(h)`, `dot(n)`, the
   kernels `bound_sum_k` and `bound_dot_k`). The oracle judges the kernels through them
   (`api.oracle.bound_sum_k.F`, `api.oracle.bound_dot_k.F`, the forms `traits_sum_height`,

@@ -12,7 +12,7 @@ $$p + e \approx a b.$$
 
 ## C++
 
-No public operation computes this kernel on its own. It replaces [`two_prod`](two_prod.md) in constant evaluation, where there is no fused multiply-add.
+No public operation computes this kernel on its own. It replaces [`two_prod_entry`](two_prod_entry.md) in constant evaluation, where there is no fused multiply-add.
 
 ## Requires
 

@@ -82,19 +82,27 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 # first; every other interval kernel is reached by a public form. The functions on arrays
 # (kairn/batch.hpp) reach the kernels of their loops only inside the loops, which the oracle judges
 # (api.oracle.FOLD.FORMAT, below): the finishes and the kernels of the folds of maxima, which are
-# not entry kernels, are building blocks, and the steps, which are, are on the second list.
+# not entry kernels, are building blocks, and the steps, which are, are on the second list. The
+# products that the public operations reach through their entry forms, which guard the factors first
+# (rule R3, the factors of a fused operation), are building blocks too: two_prod, mul_down_1,
+# mul_up_1, mul_2_1 and mul_2_1_full, and the scaling of a ball of two limbs, ball_scale_2 and
+# ball_scale_2_full, which the operators reach through ball_scale_2_full_entry; and the products of
+# the accumulator, acc_mul_1 and acc_mul_2, which add_product reaches through acc_mul_entry_1 and
+# acc_mul_entry_2.
 set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
   sub_up_1 mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2
   mul_ext_2_2 fold_finish_1 fold_finish_2 norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
-  acc_radius_1 acc_radius_2)
-set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2
+  acc_radius_1 acc_radius_2 two_prod mul_down_1 mul_up_1 mul_2_1 mul_2_1_full ball_scale_2 ball_scale_2_full
+  acc_mul_1 acc_mul_2)
+set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2
   ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2 add_entry_step_1
-  add_entry_step_2 sub_entry_step_1 sub_entry_step_2 mul_pow2_step_1 mul_pow2_step_2 axpy_entry_step_1
-  axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1 acc_mul_1)
+  add_entry_step_2 sub_entry_step_1 sub_entry_step_2 scale_entry_step_2 mul_pow2_step_1 mul_pow2_step_2
+  axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1)
 # The folds that no public function calls (runner_arrays.hpp lists the same, with why): the loops
 # on stored arrays, whose callers here call the loops on supplied arrays instead (kairn/batch.hpp),
-# and dot_1, whose caller calls dot_1_entry, the same loop with its factors guarded.
-set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 axpy_2 axpy_2_1 dot_1)
+# and dot_1, conv_1 and scale_2, whose callers call dot_1_entry, conv_1_entry and scale_2_entry, the
+# same loops with their factors guarded.
+set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 axpy_2 axpy_2_1 dot_1 conv_1 scale_2)
 # The loops over arrays that public operations call (kairn/ball_vector.hpp; runner_ball_vector.hpp
 # has their forms), each judged as a kernel is, api.oracle.LOOP.FORMAT, on KAIRN_API_LOOP_QUICK_CASES
 # requests (KAIRN_API_LOOP_CASES in the full tier); those of them that have forms in the fast order,
@@ -614,10 +622,12 @@ foreach(_i RANGE 0 ${_last} 2)
   # the copy without the guard requires a difference where a compiler was measured to fuse such a
   # product. Measured (docs/developer/testing.md, "Products of the program passed into Kairn"): Apple
   # clang 21 on AArch64 with =fast, at -O1 and -O2, in two_prod, mul_down, mul_up and
-  # finite::mul(E2, T), whose kernels have no guard on their factors, so that this build fails with
-  # the guard too, a finding kept failing until those kernels, on the pending list of the factor
-  # rule (the strict rule, which the owner decided on 2026-11-21), are closed; GCC 13 and 16 and Clang 18 on
-  # x86-64 fused none of these forms, at any setting. Elsewhere the copy only reports.
+  # finite::mul(E2, T), and, built as here (-DNDEBUG), in the products of an Expansion<T, 2> and of a
+  # Ball<T, 2> by a T, whose kernels had no guard on their factors then; the public forms call the
+  # entry forms now, which guard them (two_prod_entry, mul_down_entry, mul_up_entry, mul_2_1_entry,
+  # mul_2_1_full_entry, ball_scale_2_full_entry: the strict rule, which the owner decided on
+  # 2026-11-21), and with them no form differs. GCC 13 and 16 and Clang 18 on x86-64 fused none of
+  # these forms, at any setting. Elsewhere the copy only reports.
   set(_factor report)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast")
     set(_factor some)
@@ -707,8 +717,8 @@ foreach(_i RANGE 0 ${_last} 2)
     endif()
     # The products of Packed with a factor the compiler sees (--factor): measured to fuse with Apple
     # clang 21 and =fast at -O2, in the NEON form (every product of Packed<T, 2> and Packed<T, 1>)
-    # and the scalar form (finite::mul); with the guard too, as in boundary.cpp. Nothing fused with
-    # GCC 13 and 16 and Clang 18 on x86-64, in any form.
+    # and the scalar form (finite::mul), before the products called the entry forms, as in
+    # boundary.cpp. Nothing fused with GCC 13 and 16 and Clang 18 on x86-64, in any form.
     set(_factor_packed report)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast"
        AND (_form STREQUAL "native" OR _form STREQUAL "scalar"))
@@ -978,7 +988,7 @@ else()
   set(_api_unmarked "proof_checked|invalid argument type")
 endif()
 foreach(_case_name IN ITEMS 1:sub_2_2_full 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_1 6:ball_add_2_full
-                            7:sub_2_2_full_assign 8:mul_pow2_2_full 9:ball_scale_2_full 10:traits_constant
+                            7:sub_2_2_full_assign 8:mul_pow2_2_full 9:ball_scale_2_full_entry 10:traits_constant
                             12:to_nearest_2_narrowing 13:make_2 14:ball_make_2 29:two_sum_entry 30:next_up
                             31:ball_mul_pow2_2_full 39:interval_add_1 40:interval_make_1 41:interval_to_ball_1)
   string(REPLACE ":" ";" _pair "${_case_name}")
@@ -994,7 +1004,7 @@ endforeach()
 # One kernel unverified, the others proved: the operation must not compile through a conversion to
 # another, proved kernel (x + a as x + Expansion(a), a scaling as a product with a point ball).
 foreach(_case_name IN ITEMS 20:add_2_1_full:limb 21:add_2_1_full:one_limb 22:sub_1_2_full:limb
-                            23:mul_2_1_full:limb 24:ball_scale_2_full:limb 25:ball_make_2:point
+                            23:mul_2_1_full_entry:limb 24:ball_scale_2_full_entry:limb 25:ball_make_2:point
                             26:lt_2_1:limb)
   string(REPLACE ":" ";" _triple "${_case_name}")
   list(GET _triple 0 _case)

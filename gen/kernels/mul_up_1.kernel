@@ -3,6 +3,8 @@
 # the format after it. The listing of mul_down_1 on the other side; like it, evaluated with the
 # FMA of two_prod only, and not constexpr in this milestone. An infinite or NaN operand gives the
 # product of IEEE 754.
+# The public building block kairn::mul_up calls mul_up_entry, which guards the operands first
+# (rule R3, the factors of a fused operation).
 kernel:        mul_up_1
 input:         a
 input:         b
@@ -18,7 +20,6 @@ status:        proved
 domain:        extended
 ieee_status:   proved
 ieee_theorem:  proofs/theories/IeeeDirectedProd.v mul_up_1_ieee_correct
-entry:         yes
 cone_exempt:   r is p or succ(p), chosen by select, and succ(-inf) is finite; the bound and rounded claims state the output for infinite and NaN operands
 
 (p, e) = two_prod(a, b)

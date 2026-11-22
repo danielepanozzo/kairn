@@ -1,0 +1,28 @@
+# The coefficients of the product of two polynomials of coefficients of one limb that the program
+# supplies (milestone2.md, "sum, dot, axpy, convolution": conv_k): conv_1 with the coefficients by
+# dot_1_entry, whose step guards both factors (rule R3, the factors of a fused operation:
+# architecture.md). conv_1's step only multiplies the coefficients; but a compiler that sees one
+# polynomial to hold ones fuses a product the program stored into the other into it (Apple clang 21
+# under -ffp-contract=fast at -O2 with NDEBUG, measured: every round). Two additions more per term,
+# and the statement of conv_1 holds of the values in the arrays whatever the compiler does. Its
+# claims are those of conv_1.
+fold:          conv_1_entry
+arrays:        supplied x, supplied y
+coefficients:  dot_1_entry
+state:         mask finite
+combine:       finite = and(finite, finite)
+orders:        sequential
+writes:        z
+check:         fold_finish_1
+finish:        none
+value:         x*y
+ensures:       coefficients z
+ensures:       finite_or_nan z flag=finite
+min_precision: 1
+theorem:       proofs/theories/FoldConv.v
+ieee_theorem:  proofs/theories/IeeeFoldConv.v
+terms_theorem: proofs/theories/FoldConv.v
+status:        proved
+domain:        extended
+source:        dot_1_entry on the terms of each coefficient
+license:       bound: published; proof: MIT

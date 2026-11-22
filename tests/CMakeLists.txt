@@ -414,10 +414,11 @@ set(_enclosure_kernels
 #   1 1      two_sum, fast_two_sum, add_1_1,          fp:5:-7:4      172 225
 #            two_sum_ord, two_sum_entry,
 #            fast_two_sum_entry
-#            two_prod, two_prod_dekker, mul_1_1       fp:5:-12:-1    172 225
+#            two_prod, two_prod_entry,                fp:5:-12:-1    172 225
+#            two_prod_dekker, mul_1_1
 #   2 1      add_2_1, sub_2_1                         fp:4:-4:2      221 361
 #   1 2      sub_1_2                                  fp:4:-4:2      221 361
-#   2 1      mul_2_1                                  fp:4:-8:-2     221 361
+#   2 1      mul_2_1, mul_2_1_entry                   fp:4:-8:-2     221 361
 #   2 2      add_2_2, add_fast_2_2, sub_2_2           fp:3:-3:2      178 929
 #   2 2      mul_2_2                                  fp:4:-7:-3     245 025
 #   2 c      mul_pow2_2                               fp:5:-6:2      144 755
@@ -472,11 +473,12 @@ set(_toy_2_r_2_r_product fp:4:-5:1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0,
 #   r r      radd, rmul, radd_entry                   fp:6:-10:1     174 724
 #   1 1      ball_make_1, the directed sums of one    fp:5:-7:0       84 100
 #            limb and their entry forms
-#            mul_down_1, mul_up_1 (their constant     fp:5:-7:0       84 100
-#            2^(2p-1) eta must be a number of the
-#            format)
+#            mul_down_1, mul_up_1 and their entry     fp:5:-7:0       84 100
+#            forms (their constant 2^(2p-1) eta
+#            must be a number of the format)
 #   2 1      add_2_1_full, sub_2_1_full, mul_2_1_full, fp:4:-5:0     113 316
-#            comparisons, ball_make_2
+#            mul_2_1_full_entry, comparisons,
+#            ball_make_2
 #   1 2      sub_1_2_full, comparisons                fp:4:-5:0      113 316
 #   2 c      mul_pow2_2_full                          fp:5:-7:0       84 888
 #   2 2      add_2_2_full, add_fast_2_2_full,         fp:3:-4:1      181 476

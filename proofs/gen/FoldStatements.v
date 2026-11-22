@@ -403,6 +403,20 @@ Definition conv_1_spec : Prop :=
       (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)))
     (seq 0 (conv_length (length xs) (length ys))) (conv_1_conv emin prec tie_even xs ys).
 
+(* conv_1_entry, each coefficient it writes: dot_1_entry on the terms of each coefficient. Status: proved. *)
+Definition conv_1_entry_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall xs ys : list R,
+  Forall (fun x => fmt emin prec x) xs ->
+  Forall (fun y => fmt emin prec y) ys ->
+  Forall2 (fun j s =>
+    let xys := conv_terms xs ys j in
+    fmt emin prec s /\
+    Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) xys)) <=
+      ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs (map (fun xy => (fst xy * snd xy)) xys) +
+      (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)))
+    (seq 0 (conv_length (length xs) (length ys))) (conv_1_entry_conv emin prec tie_even xs ys).
+
 (* conv_2, each coefficient it writes: dot_2 on the terms of each coefficient. Status: proved. *)
 Definition conv_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
@@ -584,6 +598,19 @@ Definition scale_2_spec : Prop :=
     normalized_2 emin prec z0 z1 /\
     Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin)
     xs (scale_2_map emin prec tie_even a xs).
+
+(* scale_2_entry, each element it writes: mul_2_1 on each element, its limbs and the scalar guarded (scale_entry_step_2). Status: proved. *)
+Definition scale_2_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall (a : R) (xs : list (R * R)),
+  fmt emin prec a ->
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  Forall2 (fun x w_ =>
+    let '(x0, x1) := x in
+    let '(z0, z1) := w_ in
+    normalized_2 emin prec z0 z1 /\
+    Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin)
+    xs (scale_2_entry_map emin prec tie_even a xs).
 
 (* sub_1, each element it writes: sub_1_1 on each element. Status: proved. *)
 Definition sub_1_spec : Prop :=

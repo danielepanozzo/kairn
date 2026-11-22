@@ -589,6 +589,13 @@ Definition mul_down_1 (a b : R) : R :=
   let r := if zz then p else d in
   r.
 
+(* mul_down_entry: mul_down_1 on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition mul_down_entry (a b : R) : R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let r := mul_down_1 ga gb in
+  r.
+
 (* mul_pow2_step_1: one rounding to nearest of a product by a power of two. *)
 Definition mul_pow2_step_1 (x c : R) : R :=
   let z := rnd (x * c + 0) in
@@ -609,6 +616,13 @@ Definition mul_up_1 (a b : R) : R :=
   let zb := Req_bool b 0 in
   let zz := orb za zb in
   let r := if zz then p else v in
+  r.
+
+(* mul_up_entry: mul_up_1 on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition mul_up_entry (a b : R) : R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let r := mul_up_1 ga gb in
   r.
 
 (* neg_1: a change of sign (milestone2.md, BallVector, bv_neg_k). *)
@@ -719,6 +733,13 @@ Definition two_prod_dekker (a b : R) : R * R :=
   let e := rnd (t3 + q3) in
   (p, e).
 
+(* two_prod_entry: two_prod on its guarded operands (rule R3, the factors of a fused operation). *)
+Definition two_prod_entry (a b : R) : R * R :=
+  let ga := rnd (a + 0) in
+  let gb := rnd (b + 0) in
+  let '(p, e) := two_prod ga gb in
+  (p, e).
+
 (* two_sum: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965). *)
 Definition two_sum (a b : R) : R * R :=
   let s := rnd (a + b) in
@@ -796,6 +817,15 @@ Definition acc_mul_2 (s0 s1 a x0 x1 y0 y1 : R) : R * R * R :=
   let ax := Rabs x0 in
   let ay := Rabs y0 in
   let b := rnd (ax * ay + a) in
+  (t0, t1, b).
+
+(* acc_mul_entry_2: acc_mul_2 on the guarded limbs of x and y (rule R3, the factors of a fused operation). *)
+Definition acc_mul_entry_2 (s0 s1 a x0 x1 y0 y1 : R) : R * R * R :=
+  let gx0 := rnd (x0 + 0) in
+  let gx1 := rnd (x1 + 0) in
+  let gy0 := rnd (y0 + 0) in
+  let gy1 := rnd (y1 + 0) in
+  let '(t0, t1, b) := acc_mul_2 s0 s1 a gx0 gx1 gy0 gy1 in
   (t0, t1, b).
 
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
@@ -1062,6 +1092,12 @@ Definition le_1_2 (a y0 y1 : R) : bool :=
   let m := orb h t in
   m.
 
+(* mul_2_1_entry: mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). *)
+Definition mul_2_1_entry (x0 x1 a : R) : R * R :=
+  let ga := rnd (a + 0) in
+  let '(z0, z1) := mul_2_1 x0 x1 ga in
+  (z0, z1).
+
 (* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. *)
 Definition mul_pow2_step_2 (x0 x1 c : R) : R * R :=
   let '(z0, z1) := mul_pow2_2 x0 x1 c in
@@ -1075,6 +1111,14 @@ Definition norm_step_2 (m : R) (ok : bool) (x0 x1 : R) : R * bool :=
 (* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. *)
 Definition scale_step_2 (x0 x1 a : R) : R * R :=
   let '(z0, z1) := mul_2_1 x0 x1 a in
+  (z0, z1).
+
+(* scale_entry_step_2: scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation). *)
+Definition scale_entry_step_2 (x0 x1 a : R) : R * R :=
+  let gx0 := rnd (x0 + 0) in
+  let gx1 := rnd (x1 + 0) in
+  let ga := rnd (a + 0) in
+  let '(z0, z1) := scale_step_2 gx0 gx1 ga in
   (z0, z1).
 
 (* sub_1_2: add_2_1 (JMP17 Alg. 4) on -y and a. *)

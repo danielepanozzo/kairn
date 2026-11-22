@@ -225,6 +225,13 @@ KERNEL_FORMATS = {
         ("fp:4:-3:-2", [_R_ACC_MUL, "s.lead=-1:0"]),
         ("fp:3:-2:-1", []),
     ]),
+    # And its entry form, acc_mul_2 on the guarded limbs of its factors (rule R3, the factors of a
+    # fused operation), which add_product of two limbs calls: the same plan.
+    "acc_mul_entry_2": ("fp:4:-3:-2", [
+        ("fp:4:-3:-2", [_R_ACC_MUL, "s.lead=-1:0", "x.lead=-1:0"]),
+        ("fp:4:-3:-2", [_R_ACC_MUL, "s.lead=-1:0"]),
+        ("fp:3:-2:-1", []),
+    ]),
     "acc_merge_2": ("fp:3:-2:0", [
         ("fp:3:-2:0", [_R_ACC_A, _R_ACC_C]),
         ("fp:3:-2:-1", []),

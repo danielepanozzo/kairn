@@ -32,6 +32,11 @@ PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_
 PROGRAMS += ['dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2']
 # And the step of dot_1_entry, dot_step_1 on its factors guarded.
 PROGRAMS += ['dot_entry_step_1']
+# And the entry forms of two_prod and mul_2_1, which guard the factors first (rule R3, the factors of
+# a fused operation).
+PROGRAMS += ['two_prod_entry', 'mul_2_1_entry']
+# And the step of scale_2, scale_step_2 on its operands guarded (the same rule).
+PROGRAMS += ['scale_entry_step_2']
 # And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
 # Program.v (acc_merge_k: additions; the others guard or take an absolute value).
 PROGRAMS += ['acc_merge_1', 'acc_merge_2']
@@ -393,8 +398,10 @@ class Statements(unittest.TestCase):
                 out = ' '.join(k.output_limbs)
                 clause = f'->\n   ball_finite_{len(k.outputs[0].limbs)} {out}) /\\\n'
                 self.assertEqual(s.count(clause), 1 if enc[0]['finite_when'] else 0, name)
-                # ball_narrow_2_1 (Milestone 2) has a condition too: its radius can overflow.
-                self.assertEqual(bool(enc[0]['finite_when']), name.endswith('_full') or name == 'ball_narrow_2_1', name)
+                # ball_narrow_2_1 (Milestone 2) has a condition too: its radius can overflow; and the
+                # entry form of ball_scale_2_full, which has its claims (rule R3, the factors).
+                self.assertEqual(bool(enc[0]['finite_when']),
+                                 name.endswith(('_full', '_full_entry')) or name == 'ball_narrow_2_1', name)
 
     def test_the_finite_when_of_a_ball(self):
         # The same kernel with its conditions taken away, and with two of them.
@@ -496,10 +503,18 @@ class Statements(unittest.TestCase):
         # (2), and the two statements more of the two folds of maxima, F_orders_ieee_spec and
         # F_flag_ieee_spec (4): 302. And five with the guarded forms of rule R3 on the factors of a
         # fused operation: acc_mul_entry_1, dot_entry_step_1 (bridge and lead) and dot_1_entry in
-        # both orders: 307. Then the statements of the two executions of the thirty kernels of
-        # IeeeWith.v, K_two_executions_spec, whose theorems no description names (30): 337. Then
-        # those of the 33 kernels without a product that IeeeWith.v has since (33): 370.
-        self.assertEqual(text.count('Print Assumptions'), 370)
+        # both orders: 307. And six with the entry forms of the products: two_prod_entry,
+        # mul_down_entry, mul_up_entry, mul_2_1_entry (bridge and statement) and mul_2_1_full_entry;
+        # and one with that of the scaling of a ball of two limbs, ball_scale_2_full_entry; and one
+        # with acc_mul_entry_2; and one with conv_1_entry, the convolution of one limb on its factors
+        # guarded; and five with the scaling of two limbs on its operands guarded:
+        # scale_entry_step_2 (bridge, statement, leading limb) and scale_2_entry in both orders: 321.
+        # Then the statements of the two executions of the thirty kernels of IeeeWith.v,
+        # K_two_executions_spec, whose theorems no description names (30): 351. Then those of the 33
+        # kernels without a product that IeeeWith.v has since (33): 384. (None of the entry forms of
+        # rule R3 on the factors is among them: two_prod_entry is constexpr through its variant, as
+        # two_prod is, and the others are not constexpr.)
+        self.assertEqual(text.count('Print Assumptions'), 384)
         self.assertEqual(text.count('Print Assumptions IeeeTwoExecutions.'), len(ieee.with_kernels(self.ks)))
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
@@ -649,8 +664,18 @@ class CheckedFiles(unittest.TestCase):
     # Then the guarded forms of rule R3 on the factors of a fused operation: the kernels
     # dot_entry_step_1 and acc_mul_entry_1 (their models, the program of the first, and their
     # statements), added and nothing else changed; make -C proofs passed on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'f00665b46037e1f91036eaf3bba3479b7f30bbca181ac71458465f62ad388bf1',
-               'proofs/gen/IeeeStatements.v': '32d46f34055618792cc8e3623891c4cccabe1fc58a68a4d039c090a3453fd27e'}
+    # Then the entry forms of the products (rule R3, the factors of a fused operation): the kernels
+    # two_prod_entry, mul_down_entry, mul_up_entry, mul_2_1_entry and mul_2_1_full_entry (their
+    # models, the programs of the first and the fourth, and their statements), added and nothing
+    # else changed; make -C proofs passed on these files.
+    # Then ball_scale_2_full_entry (the same rule): its model and statement added, nothing else changed.
+    # Then acc_mul_entry_2 (the same rule): its model and statement added, nothing else changed.
+    # Then scale_entry_step_2 (the same rule): its model, program and statements added, nothing else
+    # changed.
+    # Then ball_scale_2_full_entry with the fix-up of ball_scale_2_full written out (behind the printer's
+    # branch): its definition and the source line of its statement changed, and nothing else.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '44aaa46a4cf110784541124de175f7901d1f25e04c19a79ec87e1a9015a48a6f',
+               'proofs/gen/IeeeStatements.v': '499d30cbb5e908b763f476bbac0c671451f2294f1b4fd0d08d4ed18bc7dcd905'}
 
 
     def test_the_checked_files(self):

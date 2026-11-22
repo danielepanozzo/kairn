@@ -196,13 +196,13 @@ const ArrayForm array_forms[] = {
     AROW(sub_1_entry, sub, 'm', 1, 2, "", true, af_sub, 1)
     AROW(sub_2_entry, sub, 'm', 2, 2, "", true, af_sub, 2)
     AROW(scale_1, scale, 'm', 1, 1, "1", true, af_scale, 1)
-    AROW(scale_2, scale, 'm', 2, 1, "1", true, af_scale, 2)
+    AROW(scale_2_entry, scale, 'm', 2, 1, "1", true, af_scale, 2)
     AROW(mul_pow2_map_1, mul_pow2, 'm', 1, 1, "1", true, af_mul_pow2, 1)
     AROW(mul_pow2_map_2, mul_pow2, 'm', 2, 1, "1", true, af_mul_pow2, 2)
     AROW(axpy_1_entry, axpy, 'm', 1, 2, "1", true, af_axpy, 1)
     AROW(axpy_2_1_entry, axpy, 'm', 2, 2, "1", true, af_axpy, 2)
     AROW(axpy_2_entry, axpy, 'm', 2, 2, "2", true, af_axpy_2, 2)
-    AROW(conv_1, conv, 'c', 1, 2, "", false, af_conv, 1)
+    AROW(conv_1_entry, conv, 'c', 1, 2, "", false, af_conv, 1)
     AROW(conv_2, conv, 'c', 2, 2, "", false, af_conv, 2)
     AROW(norm_upper_1, norm_upper, 'n', 1, 1, "", true, af_norm_upper, 1)
     AROW(norm_upper_2, norm_upper, 'n', 2, 1, "", true, af_norm_upper, 2)
@@ -217,13 +217,13 @@ struct FoldNotPublic {
 const char* const stored_fold = "the loop on stored arrays, written through Kairn only: no container of the library "
                                 "holds such arrays, and the functions of kairn/batch.hpp call the loop on supplied "
                                 "arrays (_entry)";
-const char* const factors_fold = "the dot product of one limb with its factors unguarded: kairn::dot of one limb "
-                                 "calls dot_1_entry, whose step guards both factors (rule R3, the factors of a fused "
-                                 "operation), and conv_1 runs dot_1's step for each coefficient";
+const char* const factors_fold = "the loop of one limb on stored arrays, its factors unguarded: kairn::dot and "
+                                 "kairn::conv of one limb call dot_1_entry and conv_1_entry, which guard both factors "
+                                 "(rule R3, the factors of a fused operation)";
 const FoldNotPublic folds_not_public[] = {
     {"sum_1", stored_fold},  {"sum_2", stored_fold}, {"sum_fast_2", stored_fold}, {"add_1", stored_fold},
     {"add_2", stored_fold},  {"sub_1", stored_fold}, {"sub_2", stored_fold},      {"axpy_1", stored_fold},
-    {"axpy_2", stored_fold}, {"axpy_2_1", stored_fold}, {"dot_1", factors_fold},
+    {"axpy_2", stored_fold}, {"axpy_2_1", stored_fold}, {"dot_1", factors_fold}, {"conv_1", factors_fold}, {"scale_2", stored_fold},
 };
 
 // Whether a form of the array forms is listed by this runner: all of them, but in the runner of the

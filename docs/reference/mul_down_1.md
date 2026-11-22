@@ -12,11 +12,7 @@ $$r \le a b.$$
 
 ## C++
 
-| Form | Operands | Result | Note |
-|---|---|---|---|
-| `mul_down(a, b)` | `T`, `T` | `T` | not `constexpr`: its statement is about the fused product, which constant evaluation does not have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds |
-
-`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
+No public operation computes this kernel on its own. It is part of [`mul_down_entry`](mul_down_entry.md).
 
 ## Requires
 
@@ -98,6 +94,8 @@ It calls [`two_prod`](two_prod.md).
 # its constant-evaluation variant, whose error term below P can have the other sign. So the kernel
 # is not constexpr in this milestone (it has an fms). An infinite or NaN operand gives the product
 # of IEEE 754.
+# The public building block kairn::mul_down calls mul_down_entry, which guards the operands first
+# (rule R3, the factors of a fused operation).
 
 (p, e) = two_prod(a, b)
 ap     = abs(p)

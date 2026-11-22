@@ -1,5 +1,7 @@
 # TwoProd with an FMA. The rounded product is prod, an FMA with a zero addend, so that no compiler
-# can contract it into the additions that consume it. Exact unless the product is tiny.
+# can contract it into the additions that consume it. Exact unless the product is tiny. Inside other
+# kernels, on limbs that kernels wrote; the public building block kairn::two_prod calls
+# two_prod_entry, which guards the operands first (rule R3, the factors of a fused operation).
 kernel:        two_prod
 input:         a
 input:         b
@@ -15,7 +17,6 @@ license:       algorithm: published; proof: MIT
 status:        proved
 ieee:          spec
 ce_variant:    two_prod_dekker
-entry:         yes
 
 p = prod(a, b)
 e = fms(a, b, p)

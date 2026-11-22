@@ -193,6 +193,8 @@ HULL_NOTE = "contains both, not claimed the smallest; with an empty operand, the
 INTERSECTION_NOTE = ("contains the common members, not claimed the smallest nor inside either; with the whole line "
                      "as an operand, the other as it is")
 BALL_SPLIT = "covers $[c - r, c]$ and $[c, c + r]$; the parts are not claimed inside $X$, nor smaller than $X$"
+# The products that guard their operands, which are factors of a fused operation (rule R3).
+FACTORS = "; the operands are guarded, as factors of a fused operation ([rule R3](../developer/architecture.md#the-kernel-ir))"
 # The steps of ldexp beyond the powers of two of T are written in the header, not generated
 # (deviation 17 of docs/developer/design/phase0/decisions.md): every page that shows such a form
 # says so in these words.
@@ -317,7 +319,7 @@ KERNELS = {
         form("x * y", E2, E2, result=E2),
         form("x *= y", E2, E2, result=E2),
     ),
-    "mul_2_1_full": page(
+    "mul_2_1_full_entry": page(
         "arithmetic", "Product of a two-limb number and a limb",
         form("x * a", E2, T, result=E2),
         form("a * x", T, E2, result=E2),
@@ -374,13 +376,12 @@ KERNELS = {
         form("finite::mul(x, y)", E2, E2, result=E2, note=CORE),
         traits=["traits<Expansion<T, 2>>::mul"],
     ),
-    "mul_2_1": page(
+    "mul_2_1_entry": page(
         "finite", "Product of a two-limb number and a limb, finite core",
-        form("finite::mul(x, a)", E2, T, result=E2, note=CORE),
+        form("finite::mul(x, a)", E2, T, result=E2, note=CORE + FACTORS),
         form("finite::mul(a, x)", T, E2, result=E2),
         form("finite::mul(x, y)", E2, E1, result=E2, note=ONE),
         form("finite::mul(y, x)", E1, E2, result=E2, note=ONE),
-        traits=["traits<Expansion<T, 2>>::mul_limb"],
     ),
     "add_fast_2_2": page(
         "finite", "Fast sum of two two-limb numbers, finite core",
@@ -544,7 +545,7 @@ KERNELS = {
         form("X * c", B1, E1, result=B1, note="the limb of the `Expansion<T, 1>` operand is the scalar $a$"),
         form("c * X", E1, B1, result=B1, note="the limb of the `Expansion<T, 1>` operand is the scalar $a$"),
     ),
-    "ball_scale_2_full": page(
+    "ball_scale_2_full_entry": page(
         "ball", "A ball times a limb, two-limb center",
         form("X * a", B2, T, result=B2),
         form("a * X", T, B2, result=B2),
@@ -567,6 +568,7 @@ KERNELS = {
     "ball_mul_2": page("ball", "Product of balls, two-limb center, finite core"),
     "ball_scale_1": page("ball", "A ball times a limb, one-limb center, finite core"),
     "ball_scale_2": page("ball", "A ball times a limb, two-limb center, finite core"),
+    "ball_scale_2_full": page("building-blocks", "A ball times a limb, two-limb center, its factor unguarded"),
     # --- Milestone 2: the scaling of a ball by a power of two ----------------------------------
     "ball_mul_pow2_1": page("ball", "A ball times a power of two, one-limb center, finite core"),
     "ball_mul_pow2_2": page("ball", "A ball times a power of two, two-limb center, finite core"),
@@ -600,8 +602,8 @@ KERNELS = {
                   "checks; without it the sum is still $\\mathrm{RN}(a + b)$ and the error term a number of `T`, "
                   "but their sum need not be $a + b$"),
     ),
-    "two_prod": page(
-        "blocks", "TwoProd: an exact product as two limbs",
+    "two_prod_entry": page(
+        "blocks", "TwoProd on values of the program",
         form("two_prod(a, b)", T, T, result="ProductAndError<T>",
              note="`constexpr`, through Dekker's product ([`two_prod_dekker`](two_prod_dekker.md)) in constant "
                   "evaluation; not a constant expression on finite operands on which an operation of Dekker's "
@@ -610,7 +612,7 @@ KERNELS = {
                   "$\\lvert a\\rvert, \\lvert b\\rvert \\le 2^{996}$ and $\\lvert ab\\rvert \\le 2^{1023}$ "
                   "($2^{115}$ and $2^{127}$ for `float`), a sufficient condition, not an exact one; where it is "
                   "one, the same values when the product is exact, each its own error term below the threshold; "
-                  "rounds; `r.product` is $p$ and `r.error` is $e$"),
+                  "rounds; `r.product` is $p$ and `r.error` is $e$" + FACTORS),
     ),
     "next_up": page(
         "blocks", "The next number of T above a value",
@@ -654,17 +656,19 @@ KERNELS = {
         form("sub_up(a, b)", T, T, result=T,
              note=SAME_VALUES + ": computes under rounding to nearest what rounding up gives" + GUARDED),
     ),
-    "mul_down_1": page(
-        "blocks", "A lower bound of a product of two limbs",
+    "mul_down_entry": page(
+        "blocks", "A lower bound of a product of two limbs, on values of the program",
         form("mul_down(a, b)", T, T, result=T,
              note="not `constexpr`: its statement is about the fused product, which constant evaluation does not "
-                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"),
+                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"
+                  + FACTORS),
     ),
-    "mul_up_1": page(
-        "blocks", "An upper bound of a product of two limbs",
+    "mul_up_entry": page(
+        "blocks", "An upper bound of a product of two limbs, on values of the program",
         form("mul_up(a, b)", T, T, result=T,
              note="not `constexpr`: its statement is about the fused product, which constant evaluation does not "
-                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"),
+                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"
+                  + FACTORS),
     ),
     # --- Milestone 2, wave 2: the interval kernels (kairn/interval.hpp) --------------------------
     "interval_make_1": page(
@@ -968,6 +972,13 @@ KERNELS = {
     "mul_ext_2_2": page("building-blocks", "Two bounds of a product of two bounds of intervals, two limbs"),
     # --- Building blocks: no public form -------------------------------------------------------
     "two_sum": page("building-blocks", "TwoSum: an exact sum as two limbs"),
+    "two_prod": page("building-blocks", "TwoProd: an exact product as two limbs"),
+    "mul_down_1": page("building-blocks", "A lower bound of a product of two limbs"),
+    "mul_up_1": page("building-blocks", "An upper bound of a product of two limbs"),
+    # traits<Expansion<T, 2>>::mul_limb is the bound of mul_2_1 (traits.hpp), which mul_2_1_entry claims too.
+    "mul_2_1": page("building-blocks", "Product of a two-limb number and a limb",
+                    traits=["traits<Expansion<T, 2>>::mul_limb"]),
+    "mul_2_1_full": page("building-blocks", "Product of a two-limb number and a limb, with IEEE-like results"),
     "fast_two_sum": page("building-blocks", "Fast2Sum: an exact sum of ordered operands"),
     "two_prod_dekker": page("building-blocks", "Dekker's product: TwoProd without an FMA"),
     "split": page("building-blocks", "Veltkamp's split"),
@@ -978,14 +989,14 @@ KERNELS = {
     "sub_down_1": page("building-blocks", "A difference of two limbs rounded down"),
     "sub_up_1": page("building-blocks", "A difference of two limbs rounded up"),
     # --- Milestone 2, the folds: the steps, the finishes, the exported bounds ---------------------
-    "dot_step_1": page("arrays", "The step of a dot product of one limb: one fused multiply-add",
-                       form("conv(x, y, z)", V1, V1, W1, result="bool", note="each coefficient a sequential `dot_1` "
-                            "(loop `conv_1`)")),
+    "dot_step_1": page("arrays", "The step of a dot product of one limb, on stored arrays: one fused multiply-add"),
     "dot_entry_step_1": page("arrays", "The step of a dot product of one limb, on arrays of the program: one fused "
                              "multiply-add of the guarded elements",
                              form("dot(x, y)", V1, V1, result=R1, note=STEP_ORDER + " (loop `dot_1_entry`; each "
                                   "factor guarded, rule R3 on the factors of a fused operation)"),
-                             form("dot(x, y, sequential)", V1, V1, SEQ, result=R1)),
+                             form("dot(x, y, sequential)", V1, V1, SEQ, result=R1),
+                             form("conv(x, y, z)", V1, V1, W1, result="bool", note="each coefficient a sequential "
+                                  "`dot_1_entry` (loop `conv_1_entry`; each factor guarded)")),
     "dot_step_2": page("arrays", "The step of a dot product of two limbs",
                        form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2`)"),
                        form("dot(x, y, sequential)", V2, V2, SEQ, result=R2),
@@ -1034,8 +1045,11 @@ KERNELS = {
                              form("sub(x, y, z)", V2, V2, W2, result="bool", note=STEP + " (loop `sub_2_entry`)")),
     "scale_step_1": page("maps", "x a of one limb, a of T",
                          form("scale(x, a, z)", V1, T, W1, result="bool", note=STEP + " (loop `scale_1`)")),
-    "scale_step_2": page("maps", "x a of two limbs, a of T",
-                         form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2`)")),
+    "scale_step_2": page("maps", "x a of two limbs, a of T, its operands unguarded (the step of `bv_scale_2`)"),
+    "scale_entry_step_2": page("maps", "x a of two limbs, a of T, on the guarded limbs and scalar",
+                               form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2`; the "
+                                    "limbs of each element and a guarded, rule R3 on the factors of a fused "
+                                    "operation)")),
     "mul_pow2_step_1": page("maps", "x c of one limb, c a power of two",
                             form("mul_pow2(x, c, z)", V1, T, W1, result="bool", note=STEP + " (loop `mul_pow2_map_1`)")),
     "mul_pow2_step_2": page("maps", "x c of two limbs, c a power of two",
@@ -1072,9 +1086,13 @@ KERNELS = {
                             form("A.add_product(x, y)", A1, E1, E1, result="void", note=ACC + "; not `constexpr`; "
                                  "each factor guarded (rule R3 on the factors of a fused operation)"),
                             form("A.add_product(a, b)", A1, T, T, result="void")),
-    "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product",
-                      form("A.add_product(x, y)", A2, E2, E2, result="void", note=ACC + "; not `constexpr`"),
-                      form("A.add_product(a, b)", A2, T, T, result="void", note=TO_TWO_LIMBS)),
+    "acc_mul_2": page("arrays", "An accumulator of two limbs: add a product (its factors unguarded; "
+                      "`add_product` calls `acc_mul_entry_2`)"),
+    "acc_mul_entry_2": page("arrays", "An accumulator of two limbs: add a product of the guarded factors",
+                            form("A.add_product(x, y)", A2, E2, E2, result="void", note=ACC + "; not `constexpr`; "
+                                 "each limb of each factor guarded (rule R3 on the factors of a fused "
+                                 "operation)"),
+                            form("A.add_product(a, b)", A2, T, T, result="void", note=TO_TWO_LIMBS)),
     "acc_merge_1": page("arrays", "Two accumulators of one limb into one",
                         form("A.merge(B)", A1, A1, result="void", note="a node of the summation tree; the counts "
                              "added")),

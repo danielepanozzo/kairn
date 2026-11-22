@@ -6,9 +6,9 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 225 kernels are proved.
+All 233 kernels are proved.
 
-33 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
+35 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
 No public operation calls an UNVERIFIED kernel, so none needs the marker `kairn::unverified`.
 
@@ -59,7 +59,7 @@ Sums, differences, products, negation and absolute value. The operators of two l
 | `x - a`, `x -= a`, `x - y`, `x -= y` | `Expansion<T, 2>`, `T` | canonical; the result of [`sub_2_1`](sub_2_1.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`sub_2_1_full`](sub_2_1_full.md) |
 | `a - y`, `x - y` | `T`, `Expansion<T, 2>` | canonical; the result of [`sub_1_2`](sub_1_2.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`sub_1_2_full`](sub_1_2_full.md) |
 | `x * y`, `x *= y` | `Expansion<T, 2>`, `Expansion<T, 2>` | canonical; the result of [`mul_2_2`](mul_2_2.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`mul_2_2_full`](mul_2_2_full.md) |
-| `x * a`, `a * x`, `x *= a`, `x * y`, `y * x`, `x *= y` | `Expansion<T, 2>`, `T` | canonical; the result of [`mul_2_1`](mul_2_1.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`mul_2_1_full`](mul_2_1_full.md) |
+| `x * a`, `a * x`, `x *= a`, `x * y`, `y * x`, `x *= y` | `Expansion<T, 2>`, `T` | canonical; the result of [`mul_2_1_entry`](mul_2_1_entry.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`mul_2_1_full_entry`](mul_2_1_full_entry.md) |
 | `add_fast(x, y)` | `Expansion<T, 2>`, `Expansion<T, 2>` | canonical; the result of [`add_fast_2_2`](add_fast_2_2.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`add_fast_2_2_full`](add_fast_2_2_full.md) |
 | `-x` | `Expansion<T, 2>` | $z = -x$ exactly, normalized | [`neg_2`](neg_2.md) |
 | `abs(x)` | `Expansion<T, 2>` | $z = \lvert x\rvert$ exactly, normalized | [`abs_2`](abs_2.md) |
@@ -80,7 +80,7 @@ Sums, differences, products, negation and absolute value. The operators of two l
 | `finite::sub(x, a)`, `finite::sub(x, y)` | `Expansion<T, 2>`, `T` | $\lvert z - (x - a)\rvert \le 2\,u^2\,\lvert x - a\rvert$, normalized | [`sub_2_1`](sub_2_1.md) |
 | `finite::sub(a, y)`, `finite::sub(x, y)` | `T`, `Expansion<T, 2>` | $\lvert z - (a - y)\rvert \le 2\,u^2\,\lvert a - y\rvert$, normalized | [`sub_1_2`](sub_1_2.md) |
 | `finite::mul(x, y)` | `Expansion<T, 2>`, `Expansion<T, 2>` | $\lvert z - x y\rvert \le 4\,u^2\,\lvert x y\rvert + \tfrac{3}{2}\,\eta$, normalized | [`mul_2_2`](mul_2_2.md) |
-| `finite::mul(x, a)`, `finite::mul(a, x)`, `finite::mul(x, y)`, `finite::mul(y, x)` | `Expansion<T, 2>`, `T` | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`mul_2_1`](mul_2_1.md) |
+| `finite::mul(x, a)`, `finite::mul(a, x)`, `finite::mul(x, y)`, `finite::mul(y, x)` | `Expansion<T, 2>`, `T` | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`mul_2_1_entry`](mul_2_1_entry.md) |
 | `finite::add_fast(x, y)` | `Expansion<T, 2>`, `Expansion<T, 2>` | $\lvert z - (x + y)\rvert \le 3\,u^2\,(\lvert x\rvert + \lvert y\rvert)$, normalized | [`add_fast_2_2`](add_fast_2_2.md) |
 | `finite::ldexp(x, n)` | `Expansion<T, 2>`, `int` | $\lvert z - x c\rvert \le \eta$, normalized | [`mul_pow2_2`](mul_pow2_2.md) |
 
@@ -136,7 +136,7 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `X * Y`, `X *= Y` | `Ball<T, 1>`, `Ball<T, 1>` | a canonical ball that contains every $x y$; the empty set and the whole line included | [`ball_mul_1_full`](ball_mul_1_full.md) |
 | `X * Y`, `X *= Y`, `X * c`, `c * X` | `Ball<T, 2>`, `Ball<T, 2>` | a canonical ball that contains every $x y$; the empty set and the whole line included | [`ball_mul_2_full`](ball_mul_2_full.md) |
 | `X * a`, `a * X`, `X *= a`, `X * c`, `c * X` | `Ball<T, 1>`, `T` | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_1_full`](ball_scale_1_full.md) |
-| `X * a`, `a * X`, `X *= a` | `Ball<T, 2>`, `T` | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_2_full`](ball_scale_2_full.md) |
+| `X * a`, `a * X`, `X *= a` | `Ball<T, 2>`, `T` | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_2_full_entry`](ball_scale_2_full_entry.md) |
 | `-X` | `Ball<T, 1>` | contains every $-x$ | [`ball_neg_1`](ball_neg_1.md) |
 | `-X` | `Ball<T, 2>` | contains every $-x$, normalized | [`ball_neg_2`](ball_neg_2.md) |
 | not yet called by the public headers | - | contains every $x + y$ | [`ball_add_1`](ball_add_1.md) |
@@ -146,7 +146,7 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | not yet called by the public headers | - | contains every $x y$ | [`ball_mul_1`](ball_mul_1.md) |
 | not yet called by the public headers | - | contains every $x y$, normalized | [`ball_mul_2`](ball_mul_2.md) |
 | not yet called by the public headers | - | contains every $x a$ | [`ball_scale_1`](ball_scale_1.md) |
-| not yet called by the public headers | - | contains every $x a$, normalized | [`ball_scale_2`](ball_scale_2.md) |
+| none (internal) | - | contains every $x a$, normalized | [`ball_scale_2`](ball_scale_2.md) |
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows | [`ball_mul_pow2_1`](ball_mul_pow2_1.md) |
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows, normalized | [`ball_mul_pow2_2`](ball_mul_pow2_2.md) |
 | `X.lower_as<T>()`, `X.lower()` | `Ball<T, 1>` | a lower bound of the ball, rounded; $+\infty$ for the empty ball | [`ball_lower_as_1`](ball_lower_as_1.md) |
@@ -252,7 +252,7 @@ Functions of `float` and `double` (`kairn/blocks.hpp`) for a program's own tests
 |---|---|---|---|
 | `two_sum(a, b)` | `T`, `T` | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum_entry`](two_sum_entry.md) |
 | `fast_two_sum(a, b)` | `T`, `T` | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum_entry`](fast_two_sum_entry.md) |
-| `two_prod(a, b)` | `T`, `T` | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |
+| `two_prod(a, b)` | `T`, `T` | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod_entry`](two_prod_entry.md) |
 | `next_up(a)` | `T` | $r = \mathrm{succ}(a)$ | [`next_up`](next_up.md) |
 | `next_down(a)` | `T` | $r = \mathrm{pred}(a)$ | [`next_down`](next_down.md) |
 | `radd(a, b)` | `T`, `T` | $r \ge a + b$, at most $\tfrac{3}{2}$ gaps above | [`radd_entry`](radd_entry.md) |
@@ -261,8 +261,8 @@ Functions of `float` and `double` (`kairn/blocks.hpp`) for a program's own tests
 | `add_up(a, b)` | `T`, `T` | $r = \mathrm{RU}(a + b)$ | [`add_up_entry`](add_up_entry.md) |
 | `sub_down(a, b)` | `T`, `T` | $r = \mathrm{RD}(a - b)$ | [`sub_down_entry`](sub_down_entry.md) |
 | `sub_up(a, b)` | `T`, `T` | $r = \mathrm{RU}(a - b)$ | [`sub_up_entry`](sub_up_entry.md) |
-| `mul_down(a, b)` | `T`, `T` | $r \le a b$, at most 1 step below $\mathrm{RD}(a b)$ | [`mul_down_1`](mul_down_1.md) |
-| `mul_up(a, b)` | `T`, `T` | $r \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_up_1`](mul_up_1.md) |
+| `mul_down(a, b)` | `T`, `T` | $r \le a b$, at most 1 step below $\mathrm{RD}(a b)$ | [`mul_down_entry`](mul_down_entry.md) |
+| `mul_up(a, b)` | `T`, `T` | $r \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_up_entry`](mul_up_entry.md) |
 
 ## Parts of other kernels
 
@@ -270,6 +270,7 @@ Kernels that other kernels call, and that no public operation computes on its ow
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
+| none (internal) | - | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_2_full`](ball_scale_2_full.md) |
 | none (internal) | - | $d \le a b$, at most 1 step below $\mathrm{RD}(a b)$; $v \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_dir_1`](mul_dir_1.md) |
 | none (internal) | - | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$; $\lvert (x + y) - z\rvert \le d$, normalized | [`add_ball_2_2`](add_ball_2_2.md) |
 | none (internal) | - | $\lvert z - x y\rvert \le 4\,u^2\,\lvert x y\rvert + \tfrac{3}{2}\,\eta$; $\lvert (x y) - z\rvert \le d$, normalized | [`mul_ball_2_2`](mul_ball_2_2.md) |
@@ -280,6 +281,11 @@ Kernels that other kernels call, and that no public operation computes on its ow
 | none (internal) | - | $l \le x y$, within $A\lvert x y\rvert + B$; $h \ge x y$, within $A\lvert x y\rvert + B$, normalized | [`mul_dir_2_2`](mul_dir_2_2.md) |
 | none (internal) | - | $l$ canonical, normalized when finite; $h$ canonical, normalized when finite; a lower bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand; a upper bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand | [`mul_ext_2_2`](mul_ext_2_2.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum`](two_sum.md) |
+| none (internal) | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |
+| none (internal) | - | $r \le a b$, at most 1 step below $\mathrm{RD}(a b)$ | [`mul_down_1`](mul_down_1.md) |
+| none (internal) | - | $r \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_up_1`](mul_up_1.md) |
+| none (internal) | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`mul_2_1`](mul_2_1.md) |
+| none (internal) | - | canonical; the result of [`mul_2_1`](mul_2_1.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`mul_2_1_full`](mul_2_1_full.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum`](fast_two_sum.md) |
 | none (internal) | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{13}{8}\,\eta$ | [`two_prod_dekker`](two_prod_dekker.md) |
 | none (internal) | - | $a_h + a_l = a$ exactly | [`split`](split.md) |
@@ -296,8 +302,8 @@ The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batc
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| `conv(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>`, `SoAView<T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
-| `dot(x, y)`, `dot(x, y, sequential)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_entry_step_1`](dot_entry_step_1.md) |
+| none of its own (in the loop `bv_conv_1`) | - | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
+| `dot(x, y)`, `dot(x, y, sequential)`, `conv(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_entry_step_1`](dot_entry_step_1.md) |
 | `dot(x, y)`, `dot(x, y, sequential)`, `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
 | `sum(x)`, `sum(x, sequential)`, `sum_fast(x)` | `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
 | `sum(x)`, `sum(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
@@ -315,9 +321,10 @@ The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batc
 | none of its own (in the loop `norm_upper_2`) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_2`](norm_finish_2.md) |
 | `A.add(x)`, `A.add(a)` | `Accumulator<T, 1>`, `Expansion<T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x\rvert)$ | [`acc_add_1`](acc_add_1.md) |
 | `A.add(x)`, `A.add(a)` | `Accumulator<T, 2>`, `Expansion<T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x_0\rvert)$, normalized | [`acc_add_2`](acc_add_2.md) |
-| not yet called by the public headers | - | $t = \mathrm{RN}(s + x y)$; $b = \mathrm{RN}(a + \lvert x\rvert \lvert y\rvert)$ | [`acc_mul_1`](acc_mul_1.md) |
+| none (internal) | - | $t = \mathrm{RN}(s + x y)$; $b = \mathrm{RN}(a + \lvert x\rvert \lvert y\rvert)$ | [`acc_mul_1`](acc_mul_1.md) |
 | `A.add_product(x, y)`, `A.add_product(a, b)` | `Accumulator<T, 1>`, `Expansion<T, 1>`, `Expansion<T, 1>` | $t = \mathrm{RN}(s + x y)$; $b = \mathrm{RN}(a + \lvert x\rvert \lvert y\rvert)$ | [`acc_mul_entry_1`](acc_mul_entry_1.md) |
-| `A.add_product(x, y)`, `A.add_product(a, b)` | `Accumulator<T, 2>`, `Expansion<T, 2>`, `Expansion<T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$; $b = \mathrm{RN}(a + \lvert x_0\rvert \lvert y_0\rvert)$, normalized | [`acc_mul_2`](acc_mul_2.md) |
+| none (internal) | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$; $b = \mathrm{RN}(a + \lvert x_0\rvert \lvert y_0\rvert)$, normalized | [`acc_mul_2`](acc_mul_2.md) |
+| `A.add_product(x, y)`, `A.add_product(a, b)` | `Accumulator<T, 2>`, `Expansion<T, 2>`, `Expansion<T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$; $b = \mathrm{RN}(a + \lvert x_0\rvert \lvert y_0\rvert)$, normalized | [`acc_mul_entry_2`](acc_mul_entry_2.md) |
 | `A.merge(B)` | `Accumulator<T, 1>`, `Accumulator<T, 1>` | $t = \mathrm{RN}(s + v)$; $\lvert t - (s + v)\rvert \le \frac{u}{1 + u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$ | [`acc_merge_1`](acc_merge_1.md) |
 | `A.merge(B)` | `Accumulator<T, 2>`, `Accumulator<T, 2>` | $\lvert t - (s + v)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$, normalized | [`acc_merge_2`](acc_merge_2.md) |
 | `A.error_bound()`, `A.ball()` | `Accumulator<T, 1>` | when $\mathit{ok}$ is true, $r \ge g (1 + u)^{2} (1 + m u + 2m^{2} u^{2}) (a + \frac{m \eta}{2}) + t$; when $\mathit{ok}$ is true, $m u \le \frac{1}{2}$ | [`acc_radius_1`](acc_radius_1.md) |
@@ -352,7 +359,8 @@ The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry 
 | `add(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$, normalized | [`add_entry_step_2`](add_entry_step_2.md) |
 | `sub(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (x - y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x - y\rvert$, normalized | [`sub_entry_step_2`](sub_entry_step_2.md) |
 | `scale(x, a, z)` | `SoAView<const T, 1>`, `T`, `SoAView<T, 1>` | $z = \mathrm{RN}(x a)$; $\lvert z - x a\rvert \le \frac{u}{1 + u}\,\lvert x a\rvert + \tfrac{1}{2}\,\eta$ | [`scale_step_1`](scale_step_1.md) |
-| `scale(x, a, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_step_2`](scale_step_2.md) |
+| none of its own (in the loop `bv_scale_2`) | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_step_2`](scale_step_2.md) |
+| `scale(x, a, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_entry_step_2`](scale_entry_step_2.md) |
 | `mul_pow2(x, c, z)` | `SoAView<const T, 1>`, `T`, `SoAView<T, 1>` | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`mul_pow2_step_1`](mul_pow2_step_1.md) |
 | `mul_pow2(x, c, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | $\lvert z - x c\rvert \le \eta$, normalized | [`mul_pow2_step_2`](mul_pow2_step_2.md) |
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{2 + 3u}{(1 + u) (1 + u)}\right) u\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{2}{3}\,\eta$ | [`axpy_step_1`](axpy_step_1.md) |

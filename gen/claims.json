@@ -6344,6 +6344,62 @@
       }
     },
     {
+      "name": "mul_down_entry",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "bound",
+          "of": "r",
+          "side": "below",
+          "steps": 1
+        },
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "down",
+          "when": "product_large"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EntryKernels.v",
+        "name": "mul_down_entry_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeEntry.v",
+        "name": "mul_down_entry_ieee_correct"
+      },
+      "source": {
+        "cite": "mul_down_1 on its guarded operands (rule R3, the factors of a fused operation)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 4,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "mul_pow2_step_1",
       "inputs": [
         {
@@ -6458,6 +6514,62 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "mul_up_entry",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "bound",
+          "of": "r",
+          "side": "above",
+          "steps": 1
+        },
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "up",
+          "when": "product_large"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EntryKernels.v",
+        "name": "mul_up_entry_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeEntry.v",
+        "name": "mul_up_entry_ieee_correct"
+      },
+      "source": {
+        "cite": "mul_up_1 on its guarded operands (rule R3, the factors of a fused operation)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 4,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -7396,6 +7508,84 @@
       }
     },
     {
+      "name": "two_prod_entry",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "1/2",
+          "when": null
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": "product_large"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EntryKernels.v",
+        "name": "two_prod_entry_correct"
+      },
+      "source": {
+        "cite": "two_prod on its guarded operands (rule R3, the factors of a fused operation)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 4,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "1/1427247692705959881058285969449495136382746624"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
       "name": "two_sum",
       "inputs": [
         {
@@ -8040,6 +8230,90 @@
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 30,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "141976867225561656938833740038147/1645504557321205311404150517105891403140319507492070035382337536",
+            "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "164193714044929/6602345302066533842913591296",
+            "abs": "1/356811923176489970264571492362373784095686656"
+          }
+        ]
+      }
+    },
+    {
+      "name": "acc_mul_entry_2",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 2
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "value": "s+x*y",
+      "requires": [
+        "normalized(s)",
+        "normalized(x)",
+        "normalized(y)",
+        "nonneg(a)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "t"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "T",
+          "c": "3*(1+4*u*u)/(1-4*u)+4",
+          "k": 2,
+          "t": "2",
+          "when": null
+        },
+        {
+          "kind": "rounded",
+          "of": "b",
+          "mode": "nearest",
+          "value": "a+abs(x[0])*abs(y[0])"
+        }
+      ],
+      "min_precision": 4,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_mul_entry_2_correct"
+      },
+      "source": {
+        "cite": "acc_mul_2 on the guarded limbs of x and y (rule R3, the factors of a fused operation)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 34,
       "instances": {
         "binary64": [
           {
@@ -11180,6 +11454,76 @@
       }
     },
     {
+      "name": "ball_scale_2_full_entry",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*a",
+      "requires": [
+        "ball(cx, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x*a",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "(abs(cx)+rx)*a",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallFinite.v",
+        "name": "ball_scale_2_full_entry_correct"
+      },
+      "source": {
+        "cite": "ball_scale_2 on its guarded scalar, then the fix-up of ball_scale_2_full (rule R3, the factors of a fused operation)",
+        "license": "core: as ball_scale_2; fix-up: MIT"
+      },
+      "flops": 10,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_split_2",
       "domain": "extended",
       "ieee_only": true,
@@ -13589,6 +13933,69 @@
       }
     },
     {
+      "name": "mul_2_1_entry",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "2",
+          "k": 2,
+          "t": "1",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EntryKernels.v",
+        "name": "mul_2_1_entry_correct"
+      },
+      "source": {
+        "cite": "mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 7,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/40564819207303340847894502572032",
+            "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/140737488355328",
+            "abs": "1/713623846352979940529142984724747568191373312"
+          }
+        ]
+      }
+    },
+    {
       "name": "mul_2_1_full",
       "domain": "extended",
       "ieee_only": true,
@@ -13639,6 +14046,62 @@
         "license": "core: as mul_2_1; fix-up: MIT"
       },
       "flops": 8,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "mul_2_1_full_entry",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "mul_2_1_entry",
+          "lead": "mul",
+          "finite_when": [
+            {
+              "abs_le": "x*a",
+              "exp": -1
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "mul_2_1_full_entry_correct"
+      },
+      "source": {
+        "cite": "mul_2_1_entry, then the fix-up of IEEE-like results (rule R3, the factors of a fused operation)",
+        "license": "core: as mul_2_1; fix-up: MIT"
+      },
+      "flops": 9,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -13927,6 +14390,69 @@
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 6,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/40564819207303340847894502572032",
+            "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/140737488355328",
+            "abs": "1/713623846352979940529142984724747568191373312"
+          }
+        ]
+      }
+    },
+    {
+      "name": "scale_entry_step_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "2",
+          "k": 2,
+          "t": "1",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "scale_entry_step_2_correct"
+      },
+      "source": {
+        "cite": "scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 9,
       "instances": {
         "binary64": [
           {
@@ -16969,12 +17495,12 @@
         {
           "name": "x",
           "limbs": 1,
-          "role": "supplied"
+          "role": "stored"
         },
         {
           "name": "y",
           "limbs": 1,
-          "role": "supplied"
+          "role": "stored"
         }
       ],
       "writes": [
@@ -17017,6 +17543,65 @@
       },
       "source": {
         "cite": "dot_1 on the terms of each coefficient",
+        "license": "bound: published; proof: MIT"
+      }
+    },
+    {
+      "name": "conv_1_entry",
+      "conv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "coefficients",
+          "of": "z",
+          "fold": "dot_1_entry"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential"
+      ],
+      "coefficients": "dot_1_entry",
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldConv.v",
+        "name": "conv_1_entry_correct"
+      },
+      "source": {
+        "cite": "dot_1_entry on the terms of each coefficient",
         "license": "bound: published; proof: MIT"
       }
     },
@@ -17089,12 +17674,12 @@
         {
           "name": "x",
           "limbs": 1,
-          "role": "supplied"
+          "role": "stored"
         },
         {
           "name": "y",
           "limbs": 1,
-          "role": "supplied"
+          "role": "stored"
         }
       ],
       "outputs": [
@@ -17786,14 +18371,14 @@
         {
           "name": "x",
           "limbs": 2,
-          "role": "supplied"
+          "role": "stored"
         }
       ],
       "scalars": [
         {
           "name": "a",
           "limbs": 1,
-          "role": "supplied"
+          "role": "stored"
         }
       ],
       "writes": [
@@ -17853,6 +18438,84 @@
       },
       "source": {
         "cite": "mul_2_1 on each element",
+        "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "scale_2_entry",
+      "map": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "a",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "entries",
+          "of": "z",
+          "kernel": "scale_entry_step_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "scale_entry_step_2",
+      "step_args": [
+        "x",
+        "a"
+      ],
+      "check": "fold_finish_2",
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "scale_2_entry_correct"
+      },
+      "source": {
+        "cite": "mul_2_1 on each element, its limbs and the scalar guarded (scale_entry_step_2)",
         "license": "algorithm: published; proof: MIT"
       }
     },

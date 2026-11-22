@@ -1296,8 +1296,10 @@ class NonFinite(unittest.TestCase):
         # BallVectors, bv_conv_finish; and of stage B2, the 26 predicates and comparisons of an
         # interval and the 16 of a ball, the hull, the intersection and the split of a ball (4), the
         # conversions of two limbs and the ball from an interval of one limb (5), the hull and the
-        # intersection of two limbs (2).
-        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 2 + 1 + 26 + 16 + 4 + 5 + 2)
+        # intersection of two limbs (2); and the entry forms of the products of the extended domain,
+        # which guard the factors first (rule R3, the factors of a fused operation): mul_down_entry,
+        # mul_up_entry, mul_2_1_full_entry and ball_scale_2_full_entry (4).
+        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 2 + 1 + 26 + 16 + 4 + 5 + 2 + 4)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite

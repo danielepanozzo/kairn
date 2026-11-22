@@ -74,6 +74,20 @@ generalize (mul_2_1_correct emin prec Hp x0 x1 a Nx Fa).
 destruct (mul_2_1 emin prec tie_even x0 x1 a) as [z0 z1]. intros H. exact H.
 Qed.
 
+(* scale_step_2 on the limbs of x and on a guarded (rule R3, the factors of a fused operation): numbers
+   of the format pass the guard unchanged (guard_real_any), so the statement is that of
+   scale_step_2. *)
+Theorem scale_entry_step_2_correct : scale_entry_step_2_spec.
+Proof.
+intros emin prec Hp x0 x1 a Nx Fa. unfold scale_entry_step_2. cbv zeta.
+destruct Nx as [F0 [F1 Hx]].
+rewrite (guard_real_any emin prec tie_even x0 F0), (guard_real_any emin prec tie_even x1 F1),
+        (guard_real_any emin prec tie_even a Fa).
+assert (Nx : normalized_2 emin prec x0 x1) by (split; [exact F0 | split; [exact F1 | exact Hx]]).
+generalize (scale_step_2_correct emin prec Hp x0 x1 a Nx Fa).
+destruct (scale_step_2 emin prec tie_even x0 x1 a) as [z0 z1]. intros H. exact H.
+Qed.
+
 Theorem mul_pow2_step_2_correct : mul_pow2_step_2_spec.
 Proof.
 intros emin prec Hp x0 x1 c Nx Fc Hc.

@@ -8,6 +8,8 @@
 # its constant-evaluation variant, whose error term below P can have the other sign. So the kernel
 # is not constexpr in this milestone (it has an fms). An infinite or NaN operand gives the product
 # of IEEE 754.
+# The public building block kairn::mul_down calls mul_down_entry, which guards the operands first
+# (rule R3, the factors of a fused operation).
 kernel:        mul_down_1
 input:         a
 input:         b
@@ -23,7 +25,6 @@ status:        proved
 domain:        extended
 ieee_status:   proved
 ieee_theorem:  proofs/theories/IeeeDirectedProd.v mul_down_1_ieee_correct
-entry:         yes
 cone_exempt:   r is p or pred(p), chosen by select, and pred(+inf) is finite; the bound and rounded claims state the output for infinite and NaN operands
 
 (p, e) = two_prod(a, b)

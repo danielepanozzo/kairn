@@ -472,6 +472,34 @@ rewrite E. intros C. destruct (C Fz) as [_ [Nz B]].
 repeat (split; [assumption|]). exact B.
 Qed.
 
+(* The step of scale_2, scale_step_2 on its operands guarded (rule R3, the factors of a fused
+   operation): the same facts, from its own statements. *)
+Lemma scale_entry_step_2_entry :
+  (2 <= prec)%Z ->
+  forall x0 x1 a : float, canonical_2 x0 x1 ->
+  forall z0 z1 : float,
+  IeeeModel.scale_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a = (z0, z1) ->
+  finite z0 ->
+  finite x0 /\ finite x1 /\ finite a /\ finite z1 /\
+  (val z0, val z1) = scale_entry_step_2 emin prec tie_even (val x0) (val x1) (val a) /\
+  normalized_2 emin prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) * val a)) <=
+    2 * u prec ^ 2 * Rabs ((val x0 + val x1) * val a) + 1 * eta emin.
+Proof.
+intros Hp x0 x1 a Cx z0 z1 E Fz.
+generalize (scale_entry_step_2_ieee_lead prec emax prec_gt_0_ prec_lt_emax_ nan_plus nan_minus nan_opp
+              nan_fma x0 x1 a).
+rewrite E. intros L. destruct (L Fz) as [F0 Fa].
+destruct (canonical_lead x0 x1 Cx F0) as [F1 Nx].
+generalize (scale_entry_step_2_ieee_bridge prec emax prec_gt_0_ prec_lt_emax_ nan_plus nan_minus nan_opp
+              nan_fma Hp x0 x1 a F0 F1 Fa Nx).
+rewrite E. intros Br. destruct (Br Fz) as [_ [Fz1 V]].
+generalize (scale_entry_step_2_ieee_correct prec emax prec_gt_0_ prec_lt_emax_ nan_plus nan_minus nan_opp
+              nan_fma Hp x0 x1 a F0 F1 Fa Nx).
+rewrite E. intros C. destruct (C Fz) as [_ [Nz B]].
+repeat (split; [assumption|]). exact B.
+Qed.
+
 Lemma mul_pow2_step_2_entry :
   (2 <= prec)%Z ->
   forall x0 x1 c : float, finite c -> (exists n : Z, val c = bpow radix2 n) -> canonical_2 x0 x1 ->
@@ -823,6 +851,21 @@ Proof.
 intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp' W a xs HQ.
 unfold IeeeFoldModel.scale_2_lanes. masked_map HQ
     (scale_step_2_entry prec emax nan_plus nan_minus nan_opp nan_fma).
+Qed.
+
+(* scale_2_entry: the same, with the guarded step (rule R3, the factors of a fused operation). *)
+Theorem scale_2_entry_seq_ieee_correct : scale_2_entry_seq_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp' a xs HQ.
+unfold IeeeFoldModel.scale_2_entry_seq. masked_map HQ
+    (scale_entry_step_2_entry prec emax nan_plus nan_minus nan_opp nan_fma).
+Qed.
+
+Theorem scale_2_entry_lanes_ieee_correct : scale_2_entry_lanes_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp' W a xs HQ.
+unfold IeeeFoldModel.scale_2_entry_lanes. masked_map HQ
+    (scale_entry_step_2_entry prec emax nan_plus nan_minus nan_opp nan_fma).
 Qed.
 
 Theorem mul_pow2_map_2_seq_ieee_correct : mul_pow2_map_2_seq_ieee_spec.

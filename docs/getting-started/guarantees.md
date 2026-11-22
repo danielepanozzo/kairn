@@ -71,7 +71,7 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 | `x + y` ([`add_2_2_full`](../reference/add_2_2_full.md)) | $z$ normalized, $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\lvert x + y\rvert$ | F1 to F5; finite when $\lvert x\rvert, \lvert y\rvert \le 2^{e_{\max}-2}$ |
 | `x * y` ([`mul_2_2_full`](../reference/mul_2_2_full.md)) | $z$ normalized, $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + \tfrac32\eta$ | F1 to F5; finite when $\lvert xy\rvert \le 2^{e_{\max}-1}$ |
 | `x + a`, `a + x` ([`add_2_1_full`](../reference/add_2_1_full.md)) | $z$ normalized, $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ | F1 to F5; finite when $\lvert x\rvert, \lvert a\rvert \le 2^{e_{\max}-2}$ |
-| `x * a`, `a * x` ([`mul_2_1_full`](../reference/mul_2_1_full.md)) | $z$ normalized, $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ | F1 to F5; finite when $\lvert xa\rvert \le 2^{e_{\max}-1}$ |
+| `x * a`, `a * x` ([`mul_2_1_full_entry`](../reference/mul_2_1_full_entry.md)) | $z$ normalized, $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ | F1 to F5; finite when $\lvert xa\rvert \le 2^{e_{\max}-1}$ |
 | `add_fast(x, y)` ([`add_fast_2_2_full`](../reference/add_fast_2_2_full.md)) | $z$ normalized, $\lvert z - (x + y)\rvert \le 3u^2(\lvert x\rvert + \lvert y\rvert)$ | F1 to F5; finite as for `x + y` |
 | `x - y`, `x - a`, `a - x` ([`sub_2_2_full`](../reference/sub_2_2_full.md), [`sub_2_1_full`](../reference/sub_2_1_full.md), [`sub_1_2_full`](../reference/sub_1_2_full.md)) | those of `x + y` and `x + a` | F1 to F5; finite as for `x + y` and `x + a` |
 | `ldexp(x, n)`, `half(x)` ([`mul_pow2_2_full`](../reference/mul_pow2_2_full.md)) | $z$ normalized, $\lvert z - 2^n x\rvert \le \eta$, when $2^n$ is a number of `T` ([below](#overflow-and-non-finite-values) for the other $n$) | F1 to F5; finite when $\lvert 2^n x\rvert \le 2^{e_{\max}-1}$ |
@@ -365,9 +365,14 @@ their full kernels) on its limb operand, the constructors `make_2`, `make_2_limb
 `ball_make_1`, `ball_make_2` and `interval_make_1` and the ball from an interval of two `T`
 (`ball_from_interval_2`) on what they are given, and the entry forms of the building blocks
 that add their operands (`two_sum_entry`, `fast_two_sum_entry`, `radd_entry` and the four directed
-sums), on both: `two_sum(a * b, c)` would otherwise not be error-free. A limb operand that a kernel
-only multiplies or compares needs none (`x * a`, comparisons, the scaling of a ball, `ldexp`,
-`two_prod`, `rmul`, the directed products, `next_up` and `next_down`). Limbs
+sums), on both: `two_sum(a * b, c)` would otherwise not be error-free. A limb operand that is a
+factor of a fused operation is guarded too, because a compiler that sees the other factor to be 1
+rewrites `fma(x, 1, s)` as `x + s` and fuses the program's product into it: `x * a`, `a * x`,
+`x *= a` and `finite::mul(x, a)` of two limbs and of `Packed`, the scaling `X * a` of a ball of two
+limbs, `two_prod`, `mul_down` and `mul_up` call entry forms that guard it (`mul_2_1_full_entry`,
+`mul_2_1_entry`, `ball_scale_2_full_entry`, `two_prod_entry`, `mul_down_entry`, `mul_up_entry`). A
+limb operand that a kernel only rounds as a product alone, compares or steps needs none
+(comparisons, the scaling of a ball of one limb, `ldexp`, `rmul`, `next_up` and `next_down`). Limbs
 written directly into `limb[]` are not guarded: a limb written that way must not be a product the
 compiler can see being computed; `from_limbs` is the way to build a number from computed values.
 

@@ -111,6 +111,9 @@ BRANCHED_M1 = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BAL
 # a NaN radius, the whole line since 2026-11-20, fails the second test only.
 BRANCHED_M1.update({k: ('ok', 'f') for k in ('ball_make_1', 'ball_make_2')})
 BRANCHED = dict(BRANCHED_M1)
+# The entry forms of mul_2_1_full and ball_scale_2_full (rule R3, the factors of a fused operation):
+# their fix-ups, written out in their listings, as those of the kernels they guard for.
+BRANCHED.update(mul_2_1_full_entry=('f',), ball_scale_2_full_entry=('e', 'f'))
 # Milestone 2: the kernels without a real-model statement whose outputs are selects on one mask, the
 # test of empty operands (ne) of the interval kernels, the test of a pair that describes an interval
 # (v) of the constructors from bounds, then whether it is bounded (f), and the test that a ball is
@@ -227,6 +230,16 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR |= {'acc_mul_1', 'acc_mul_2', 'acc_radius_1', 'acc_radius_2'}
     # The guarded forms of dot_step_1 and acc_mul_1 (rule R3, the factors of a fused operation).
     NOT_CONSTEXPR |= {'dot_entry_step_1', 'acc_mul_entry_1'}
+    # And the entry forms of the products (rule R3, the factors of a fused operation): those of the
+    # directed products and of mul_2_1, with its full form. two_prod_entry is constexpr through
+    # two_prod's variant, Dekker's product.
+    NOT_CONSTEXPR |= {'mul_down_entry', 'mul_up_entry', 'mul_2_1_entry', 'mul_2_1_full_entry'}
+    # And that of the scaling of a ball of two limbs.
+    NOT_CONSTEXPR |= {'ball_scale_2_full_entry'}
+    # And the guarded form of acc_mul_2 (the same rule).
+    NOT_CONSTEXPR |= {'acc_mul_entry_2'}
+    # And the guarded step of scale_2 (the same rule).
+    NOT_CONSTEXPR |= {'scale_entry_step_2'}
     # BallVector: the fmas of the radius kernels (bv_add_radius_k, bv_scale_radius_k).
     NOT_CONSTEXPR |= {'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2'}
     # The product of two BallVectors: the fmas of conv_radius.
@@ -358,7 +371,9 @@ class Cpp(unittest.TestCase):
     def test_guard_and_the_non_finite_constants(self):
         # guard(a) is an addition of +0 of the limb type, never a subtraction of 0 or an addition
         # of -0, which compilers fold away; one guard per guard of the IR, and nothing else adds +0.
-        # In a constexpr kernel it is the operand itself in constant evaluation.
+        # In a constexpr kernel it is the operand itself in constant evaluation; in a kernel constexpr
+        # through a variant (two_prod_entry), constant evaluation runs the variant, on the operands
+        # themselves, and the guard is the addition alone.
         for fns, ks in ((self.fns, self.ks), (self.tfns, self.tks)):
             for (name, t), f in fns.items():
                 zero = '0.0f' if t == 'float' else '0.0'
@@ -369,7 +384,8 @@ class Cpp(unittest.TestCase):
                 for p in guards:
                     a = p.args[0].name
                     run_time = f'{a} + {zero}'
-                    want = f'__builtin_is_constant_evaluated() ? {a} : {run_time}' if f['constexpr'] else run_time
+                    plain = f['constexpr'] and not ks[name].ce_variant
+                    want = f'__builtin_is_constant_evaluated() ? {a} : {run_time}' if plain else run_time
                     self.assertIn(f'const {t} {p.dst} = {want};', [x.strip() for x in body], name)
                 self.assertFalse(any(x.endswith((f' - {zero};', f' + -{zero};')) for x in body), name)
         self.assertTrue(any(p.op == 'guard' for n in self.tks for p in ir.prims(self.tks[n], self.tks)))
@@ -793,9 +809,12 @@ class Rocq(unittest.TestCase):
         # bv_mul_pow2_radius, of the scaling by a power of two (bv_mul_pow2_step_2 is normalized); and rz
         # of conv_radius, of the product of two BallVectors. And the guarded forms of rule R3 on the
         # factors of a fused operation: t of dot_entry_step_1, t and b of acc_mul_entry_1, 3 limbs in
-        # 2 kernels.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1 + 3)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1 + 2)
+        # 2 kernels; and p and e of two_prod_entry and r of mul_down_entry and mul_up_entry, 4 limbs in
+        # 3 kernels (mul_2_1_entry is normalized); and b of acc_mul_entry_2, 1 limb in 1 kernel.
+        self.assertEqual(sum(uncovered[n] for n in self.ks),
+                         49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1 + 3 + 4 + 1)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]),
+                         38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1 + 2 + 3 + 1)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -994,9 +1013,15 @@ class Rocq(unittest.TestCase):
     # Then the guarded forms of rule R3 on the factors of a fused operation: the kernels
     # dot_entry_step_1 and acc_mul_entry_1 and the fold dot_1_entry, their models, statements and
     # audit lines added, every earlier line kept.
-    DIGESTS = {'Model.v': '33104d2c43439ac4595c18649e43e8101e48910b7c67a24715333bacc690a2d3',
-               'Statements.v': 'f991ac9db9fd99d3c2c843ddd624d81ead0aa541e41cdfae6d81ee32ab3ff80d',
-               'Audit.v': 'decd20fc4818e1167b137d256075b5a5165e2804bbf56c1d0f563de8a56816dc'}
+    # Then the entry forms of the products (the same rule): two_prod_entry, mul_down_entry,
+    # mul_up_entry and mul_2_1_entry, their models, statements and audit lines added, every earlier
+    # line kept. Then acc_mul_entry_2 (the same rule), its model, statement and audit line added.
+    # Then the fold conv_1_entry (the same rule): its audit line added; Model.v and Statements.v the same.
+    # Then scale_entry_step_2 and the fold scale_2_entry (the same rule): their models, statements and
+    # audit lines added.
+    DIGESTS = {'Model.v': '3ca6be4448165d1bbd30409e3ea95e04b5f121d2aa82d0959cb26738e5bc1fc6',
+               'Statements.v': '84389ef0e14e2d340827e525b7aec24f42e0e8d8bbdd43ea0c9aa0108108af50',
+               'Audit.v': '0ec0002ee720008635422ef3e2faf87205ac23909d7c4456c769011f0de62f1e'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -1033,8 +1058,10 @@ class Rocq(unittest.TestCase):
         # seven bounds of two limbs; and the eight kernels of the accumulator; and the four radius
         # kernels of BallVector; and the three of its constructor that have one; and the two of its
         # negation; and the three of its scaling by a power of two; and conv_radius, of its product;
-        # and the two guarded forms of rule R3 on the factors, dot_entry_step_1 and acc_mul_entry_1.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2)
+        # and the two guarded forms of rule R3 on the factors, dot_entry_step_1 and acc_mul_entry_1; and
+        # the four entry forms of the products with a real-model statement, two_prod_entry,
+        # mul_down_entry, mul_up_entry and mul_2_1_entry; and acc_mul_entry_2; and scale_entry_step_2.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2 + 4 + 1 + 1)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

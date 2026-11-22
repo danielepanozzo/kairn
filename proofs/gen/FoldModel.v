@@ -264,7 +264,7 @@ Definition bv_sub_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
 Definition bv_sub_2_radius (rx : R) (ry : R) (xys : list ((R * R) * (R * R))) : R :=
   bv_add_radius_2 emin prec choice (fst (fold_seq bv_sub_2_record (0, true) (bv_sub_2_map xys))) rx ry.
 
-(* dot_1: arrays supplied x, supplied y; state s of 1 limb; step dot_step_1, combination add_1_1. *)
+(* dot_1: arrays stored x, stored y; state s of 1 limb; step dot_step_1, combination add_1_1. *)
 Definition dot_1_step (s : R) (xy : R * R) : R :=
   dot_step_1 emin prec choice s (fst xy) (snd xy).
 
@@ -350,12 +350,19 @@ Definition scale_1_step (a : R) (x : R) : R :=
 Definition scale_1_map (a : R) (xs : list R) : list R :=
   map (scale_1_step a) xs.
 
-(* scale_2: a map; arrays supplied x; scalars supplied a; it writes z by the step scale_step_2. *)
+(* scale_2: a map; arrays stored x; scalars stored a; it writes z by the step scale_step_2. *)
 Definition scale_2_step (a : R) (x : R * R) : R * R :=
   scale_step_2 emin prec choice (fst x) (snd x) a.
 
 Definition scale_2_map (a : R) (xs : list (R * R)) : list (R * R) :=
   map (scale_2_step a) xs.
+
+(* scale_2_entry: a map; arrays supplied x; scalars supplied a; it writes z by the step scale_entry_step_2. *)
+Definition scale_2_entry_step (a : R) (x : R * R) : R * R :=
+  scale_entry_step_2 emin prec choice (fst x) (snd x) a.
+
+Definition scale_2_entry_map (a : R) (xs : list (R * R)) : list (R * R) :=
+  map (scale_2_entry_step a) xs.
 
 (* sub_1: a map; arrays stored x, stored y; it writes z by the step sub_1_1. *)
 Definition sub_1_step (xy : R * R) : R :=
@@ -463,9 +470,13 @@ Definition sum_fast_2_entry_seq (xs : list (R * R)) : R * R :=
 Definition sum_fast_2_entry_lanes (W : nat) (xs : list (R * R)) : R * R :=
   fold_lanes sum_fast_2_entry_step sum_fast_2_entry_combine (0, 0) W xs.
 
-(* conv_1: a convolution; arrays supplied x, supplied y; coefficient j is dot_1 in the sequential order on conv_terms xs ys j; it writes z. *)
+(* conv_1: a convolution; arrays stored x, stored y; coefficient j is dot_1 in the sequential order on conv_terms xs ys j; it writes z. *)
 Definition conv_1_conv (xs : list R) (ys : list R) : list R :=
   map (fun j => dot_1_seq (conv_terms xs ys j)) (seq 0 (conv_length (length xs) (length ys))).
+
+(* conv_1_entry: a convolution; arrays supplied x, supplied y; coefficient j is dot_1_entry in the sequential order on conv_terms xs ys j; it writes z. *)
+Definition conv_1_entry_conv (xs : list R) (ys : list R) : list R :=
+  map (fun j => dot_1_entry_seq (conv_terms xs ys j)) (seq 0 (conv_length (length xs) (length ys))).
 
 (* conv_2: a convolution; arrays supplied x, supplied y; coefficient j is dot_2 in the sequential order on conv_terms xs ys j; it writes z. *)
 Definition conv_2_conv (xs : list (R * R)) (ys : list (R * R)) : list (R * R) :=

@@ -26,7 +26,7 @@ Each operation that changes the state is one generated, proved kernel:
 | Operation | Kernel | Does |
 |---|---|---|
 | `add(x)` | [`acc_add_1`](acc_add_1.md), [`acc_add_2`](acc_add_2.md) | $s \leftarrow s + x$ (`add_1_1`, `add_2_2`, on $x$ guarded), $a \leftarrow \mathrm{RN}(a + \lvert x_0\rvert)$ |
-| `add_product(x, y)` | [`acc_mul_entry_1`](acc_mul_entry_1.md), [`acc_mul_2`](acc_mul_2.md) | $s \leftarrow s + x y$ (one fused operation of $x$ and $y$ guarded for one limb; `mul_2_2` then `add_2_2` for two), $a \leftarrow \mathrm{RN}(\lvert x_0\rvert\lvert y_0\rvert + a)$ |
+| `add_product(x, y)` | [`acc_mul_entry_1`](acc_mul_entry_1.md), [`acc_mul_entry_2`](acc_mul_entry_2.md) | $s \leftarrow s + x y$ (one fused operation of $x$ and $y$ guarded for one limb; `mul_2_2` then `add_2_2` on the guarded limbs for two), $a \leftarrow \mathrm{RN}(\lvert x_0\rvert\lvert y_0\rvert + a)$ |
 | `merge(other)` | [`acc_merge_1`](acc_merge_1.md), [`acc_merge_2`](acc_merge_2.md) | $s \leftarrow s + s'$, $a \leftarrow \mathrm{RN}(a + a')$, $n \leftarrow n + n'$ |
 | `error_bound()` | [`bound_dot_1`](bound_dot_1.md), [`bound_dot_2`](bound_dot_2.md), then [`acc_radius_1`](acc_radius_1.md), [`acc_radius_2`](acc_radius_2.md) | the radius $r$ from $a$ and the count |
 | `sum()` | [`fold_finish_1`](fold_finish_1.md), [`fold_finish_2`](fold_finish_2.md) | $s$, or the canonical NaN, with whether it is finite |
@@ -97,8 +97,9 @@ compiler that sees one factor to be 1 removes the multiplication, `fma(x, 1, s)`
 and fuses a product of the program passed as the other into that addition: Apple clang 21 with
 `-ffp-contract=fast` did so in `add_product(a * b, 1)` of one limb, and Clang 18 on x86-64 and Apple
 clang 21 in the dot product of one limb ([Functions on arrays](batch.md#arrays)). So
-`add_product` of one limb calls `acc_mul_entry_1`, which guards both factors; that of two limbs
-calls `acc_mul_2`, which does not, and in which no compiler measured fused such a product. A
+`add_product` of one limb calls `acc_mul_entry_1`, which guards both factors, and that of two limbs
+`acc_mul_entry_2`, which guards every limb of both (rule R3, the factors of a fused operation; no
+compiler was measured to fuse such a product there, and the rule asks the guard all the same). A
 program that adds a product of its own writes `acc.add(a * b)`, which guards, or
 `acc.add_product(a, b)`, which takes the exact product.
 

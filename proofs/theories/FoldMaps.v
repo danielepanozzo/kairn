@@ -156,6 +156,15 @@ intros [x0 x1] Nx.
 exact (scale_step_2_correct emin prec Hp x0 x1 a Nx Fa).
 Qed.
 
+(* scale_2_entry: scale_2 with the step scale_entry_step_2, which guards the limbs and the scalar
+   (rule R3, the factors of a fused operation). *)
+Theorem scale_2_entry_correct : scale_2_entry_spec.
+Proof.
+intros emin prec Hp a xs Fa H. unfold scale_2_entry_map. revert H. apply map_entries.
+intros [x0 x1] Nx.
+exact (scale_entry_step_2_correct emin prec Hp x0 x1 a Nx Fa).
+Qed.
+
 Theorem mul_pow2_map_1_correct : mul_pow2_map_1_spec.
 Proof.
 intros emin prec Hp c xs Fc Hc H. unfold mul_pow2_map_1_map. revert H. apply map_entries.

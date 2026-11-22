@@ -37,10 +37,10 @@ def check(*texts):
 # program supplies.
 MAP_STEPS = {'sub_1_1', 'add_entry_step_1', 'sub_entry_step_1', 'add_entry_step_2', 'sub_entry_step_2',
              'scale_step_1', 'scale_step_2', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1',
-             'axpy_entry_step_1', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1'}
+             'axpy_entry_step_1', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1', 'scale_entry_step_2'}
 # The maps (stage B).
 MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 'sub_2', 'sub_2_entry', 'axpy_1',
-        'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2',
+        'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2', 'scale_2_entry',
         'mul_pow2_map_1', 'mul_pow2_map_2'}
 
 
@@ -566,7 +566,6 @@ class R3Factors(unittest.TestCase):
         xy2 = ['x0', 'x1', 'y0', 'y1']
         ax2 = ['a0', 'a1', 'x0', 'x1']
         self.assertEqual(found, EXPOSED)
-        self.assertEqual(EXPOSED[('kernel', 'dot_step_1', 'dot_step_1')], ['x', 'y'])
         self.assertEqual(EXPOSED[('kernel', 'dot_step_2', 'dot_step_2')], xy2)
         self.assertEqual(EXPOSED[('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2')], ax2)
 
@@ -577,16 +576,21 @@ class R3Factors(unittest.TestCase):
         head = [ln for ln in lines if ln.startswith('R3, factors of a fused operation')]
         self.assertEqual(len(head), 1)
         self.assertIn(f'{len(found)} objects with exposed operands', head[0])
-        self.assertIn('  kernel two_prod: a: a factor of fms at e; b: a factor of fms at e; 2 operations, 4 with '
-                      'the guards; reached by blocks.hpp detail::two_prod(T a, T b)', '\n'.join(lines))
+        self.assertIn('  kernel axpy_step_2_1: a: a factor of fms at e in two_prod (called for ch) in mul_2_1 (called '
+                      'for p0), a factor of fma at cl3 in mul_2_1 (called for p0); x0: a factor of fms at e in two_prod '
+                      '(called for ch) in mul_2_1 (called for p0); x1: a factor of fma at cl3 in mul_2_1 (called for p0); '
+                      '26 operations, 29 with the guards; reached by no public header', '\n'.join(lines))
         for e in found:
             self.assertTrue(any(ln.startswith(f'  {e.kind} {e.name}') for ln in lines), e.name)
 
     def test_the_calls_of_the_headers(self):
         calls = build.header_calls(common.ROOT, common.kernels())
-        self.assertEqual(calls['two_prod'], ['blocks.hpp detail::two_prod(T a, T b)'])
-        self.assertEqual(calls['mul_2_1_full'], ['expansion.hpp detail::mul(Expansion<T, 2> x, std::type_identity_t<T> a)',
-                                                 'packed.hpp operator*(const Packed<T, 2>& x, const Packed<T, 1>& a)'])
+        self.assertEqual(calls['two_prod_entry'], ['blocks.hpp detail::two_prod(T a, T b)'])
+        self.assertEqual(calls['mul_2_1_full_entry'],
+                         ['expansion.hpp detail::mul(Expansion<T, 2> x, std::type_identity_t<T> a)',
+                          'packed.hpp operator*(const Packed<T, 2>& x, const Packed<T, 1>& a)'])
+        # The kernels that the entry forms of the products guard for are called by no header.
+        self.assertEqual({'two_prod', 'mul_down_1', 'mul_up_1', 'mul_2_1', 'mul_2_1_full'} & set(calls), set())
         self.assertIn('accumulator.hpp Accumulator::add_product(const Expansion<T, K>& x, const Expansion<T, K>& y)',
                       calls['acc_mul_entry_1'])
         self.assertEqual(calls['sum_1_entry'], ['batch.hpp sum(SoAView<T, K> x)', 'batch.hpp sum(SoAView<T, K> x, Sequential)'])
@@ -600,32 +604,19 @@ class R3Factors(unittest.TestCase):
 # The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the
 # kernel analyzed) -> the exposed limbs of that kernel.
 EXPOSED = {
-    ('kernel', 'acc_mul_1', 'acc_mul_1'): ['x', 'y'],
-    ('kernel', 'dot_step_1', 'dot_step_1'): ['x', 'y'],
-    ('kernel', 'two_prod', 'two_prod'): ['a', 'b'],
-    ('kernel', 'mul_down_1', 'mul_down_1'): ['a', 'b'],
-    ('kernel', 'mul_up_1', 'mul_up_1'): ['a', 'b'],
     ('kernel', 'dot_step_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-    ('kernel', 'acc_mul_2', 'acc_mul_2'): ['x0', 'x1', 'y0', 'y1'],
     ('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
-    ('kernel', 'mul_2_1', 'mul_2_1'): ['a'],
     ('kernel', 'axpy_entry_step_2_1', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
     ('kernel', 'axpy_step_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('kernel', 'axpy_step_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
-    ('kernel', 'ball_scale_2', 'ball_scale_2'): ['a'],
-    ('kernel', 'ball_scale_2_full', 'ball_scale_2_full'): ['a'],
-    ('kernel', 'mul_2_1_full', 'mul_2_1_full'): ['a'],
     ('kernel', 'scale_step_2', 'scale_step_2'): ['a', 'x0', 'x1'],
     ('loop', 'axpy_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('loop', 'axpy_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
     ('loop', 'axpy_2_1_entry', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
     ('loop', 'axpy_2_entry', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('loop', 'bv_scale_2', 'scale_step_2'): ['a'],
-    ('loop', 'conv_1', 'dot_step_1'): ['x', 'y'],
     ('loop', 'conv_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-    ('loop', 'dot_1', 'dot_step_1'): ['x', 'y'],
     ('loop', 'dot_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-    ('loop', 'scale_2', 'scale_step_2'): ['a', 'x0', 'x1'],
 }
 
 
@@ -1184,13 +1175,24 @@ class R3OfTheKernels(unittest.TestCase):
     # ball_operations.hpp): the cores, through kairn::finite and the kernels that need no fix-up,
     # and the full kernels and constructors (milestone1.md). Three of these comparisons, lt_1_2,
     # lt_2_1 and eq_2_1, also decide the signs of a ball of two limbs (ball.hpp, Milestone 2).
-    CORES = {'add_2_2', 'add_2_1', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_2_2', 'mul_2_1', 'neg_2', 'abs_2',
+    CORES = {'add_2_2', 'add_2_1', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_2_2', 'mul_2_1_entry', 'neg_2', 'abs_2',
              'add_fast_2_2', 'mul_pow2_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2',
              'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'ball_neg_1', 'ball_neg_2'}
     # The cores of the Ball operations are entry kernels (a center or a radius of the program may
     # reach them), but the headers call them only inside the full Ball kernels: they have no
-    # kairn::finite form yet.
-    BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    # kairn::finite form yet. But ball_scale_2, which the operators reach only through
+    # ball_scale_2_full_entry, the entry form of its full kernel that guards the scalar first (rule
+    # R3, the factors of a fused operation): it is not an entry kernel.
+    BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)} - {'ball_scale_2'}
+    # The full kernels and the constructors that the headers call: those of milestone1.md, but for
+    # mul_2_1_full, whose public forms call mul_2_1_full_entry, the same with the core mul_2_1_entry,
+    # which guards the factor first (rule R3, the factors of a fused operation), and ball_scale_2_full,
+    # whose operators call ball_scale_2_full_entry, the same on the guarded scalar. (A function:
+    # TheKernels is defined below.)
+    @staticmethod
+    def full_entry():
+        return (TheKernels.NON_FINITE - {'mul_2_1_full', 'ball_scale_2_full'}) | \
+            {'mul_2_1_full_entry', 'ball_scale_2_full_entry'}
     # The kernels that a public header calls and that are not entry kernels: an argued exemption,
     # not a waiver. Each entry names the header function that calls the kernel (as
     # build.header_calls finds it: moving the call means arguing again) and, for EVERY input group
@@ -1240,21 +1242,23 @@ class R3OfTheKernels(unittest.TestCase):
     # and products of the accumulator, which take what the program adds (acc_add_k guards it;
     # acc_mul_entry_1 guards both factors, rule R3 on the factors of a fused operation; acc_mul_2
     # only multiplies them, one of the exposed operands that build lists).
-    ARRAYS_CALLED = {'acc_add_1', 'acc_add_2', 'acc_mul_entry_1', 'acc_mul_2'}
+    ARRAYS_CALLED = {'acc_add_1', 'acc_add_2', 'acc_mul_entry_1', 'acc_mul_entry_2'}
     # The building blocks that milestone2.md makes public ("Building blocks on T"): the entry forms
-    # of the blocks that add their operands, the blocks that only multiply, compare or step theirs
-    # (entry kernels as they are: two_prod, rmul, the directed products, next_up, next_down), and the
-    # scalings of a ball by a power of two, core and full form ("Scaling a ball by a power of two").
+    # of the blocks that add their operands, and of two_prod and the directed products, whose
+    # operands are factors of a fused operation (rule R3, the factors of a fused operation); the
+    # blocks that only round a product, compare or step their operands (entry kernels as they are:
+    # rmul, next_up, next_down); and the scalings of a ball by a power of two, core and full form
+    # ("Scaling a ball by a power of two").
     WAVE_1 = {'two_sum_entry', 'fast_two_sum_entry', 'radd_entry', 'add_down_entry', 'add_up_entry', 'sub_down_entry',
-              'sub_up_entry', 'two_prod', 'rmul', 'mul_down_1', 'mul_up_1', 'next_up', 'next_down',
+              'sub_up_entry', 'two_prod_entry', 'rmul', 'mul_down_entry', 'mul_up_entry', 'next_up', 'next_down',
               'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
     # What the public headers of Milestone 2 call of them: each block of include/kairn/blocks.hpp
-    # calls its one kernel (two_sum, fast_two_sum, radd and the four directed sums the entry form;
-    # two_prod, rmul, mul_down, mul_up, next_up and next_down the kernel as it is), and ldexp and half
+    # calls its one kernel (two_sum, fast_two_sum, radd, the four directed sums, two_prod, mul_down
+    # and mul_up the entry form; rmul, next_up and next_down the kernel as it is), and ldexp and half
     # of a ball call the full scalings, through detail::scale_pow2 (ball_operations.hpp).
     WAVE_1_CALLED = {'two_sum_entry', 'fast_two_sum_entry', 'radd_entry', 'add_down_entry', 'add_up_entry',
-                     'sub_down_entry', 'sub_up_entry', 'two_prod', 'rmul', 'mul_down_1', 'mul_up_1', 'next_up',
-                     'next_down', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
+                     'sub_down_entry', 'sub_up_entry', 'two_prod_entry', 'rmul', 'mul_down_entry', 'mul_up_entry',
+                     'next_up', 'next_down', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
     # The cores of those scalings are entry kernels, but, like BALL_CORES, the headers call them only
     # inside their full form: they have no kairn::finite form yet.
     POW2_CORES = {'ball_mul_pow2_1', 'ball_mul_pow2_2'}
@@ -1283,7 +1287,9 @@ class R3OfTheKernels(unittest.TestCase):
     # The steps of the folds whose arrays the program supplies (milestone2.md, "Arrays that the
     # program fills"): those of the sums guard the element, those of the dot products only multiply
     # it. The functions on arrays of the public headers, which come later, call them through the folds.
-    FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_1', 'dot_step_2'}
+    FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_2'}
+    # dot_step_1 is not: the step of dot_1, on stored arrays (rule R3, the factors of a fused operation:
+    # kairn::dot and kairn::conv of one limb call dot_1_entry and conv_1_entry).
     # And the step of dot_1_entry, which guards both factors of its fused operation (rule R3, the
     # factors of a fused operation: architecture.md).
     FOLD_STEPS |= {'dot_entry_step_1'}
@@ -1291,7 +1297,9 @@ class R3OfTheKernels(unittest.TestCase):
     FOLD_STEPS |= MAP_STEPS - {'sub_1_1'}
     # And the kernels of the accumulator that take what the program adds (acc_merge_k takes two
     # accumulators, acc_radius_k a state); acc_mul_entry_1 is acc_mul_1 on its factors guarded.
-    FOLD_STEPS |= {'acc_add_1', 'acc_add_2', 'acc_mul_1', 'acc_mul_2', 'acc_mul_entry_1'}
+    # acc_mul_1 and acc_mul_2 are their cores, no longer entry kernels (rule R3, the factors of a fused
+    # operation): add_product calls acc_mul_entry_1 and acc_mul_entry_2.
+    FOLD_STEPS |= {'acc_add_1', 'acc_add_2', 'acc_mul_entry_1', 'acc_mul_entry_2'}
     # And the radius kernels of BallVector that take the scalar the program gives (bv_scale_radius_k;
     # bv_add_radius_k takes radii, limbs of objects, and the largest magnitude of a center).
     FOLD_STEPS |= {'bv_scale_radius_1', 'bv_scale_radius_2'}
@@ -1316,7 +1324,7 @@ class R3OfTheKernels(unittest.TestCase):
         # interface was completed (test_every_kernel_the_public_headers_call_is_an_entry_kernel).
         wave_2 |= TheKernels.WAVE_2_B2
         self.assertEqual({n for n, k in ks.items() if k.entry},
-                         self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1 | self.FOLD_STEPS | wave_2)
+                         self.CORES | self.BALL_CORES | self.full_entry() | self.WAVE_1 | self.FOLD_STEPS | wave_2)
 
     def test_every_kernel_the_public_headers_call_is_an_entry_kernel(self):
         ks = common.kernels()
@@ -1338,7 +1346,7 @@ class R3OfTheKernels(unittest.TestCase):
         self.assertEqual(TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS | TheKernels.WAVE_2_B1,
                          self.WAVE_2_CALLED)
         exempt = set(self.NOT_ENTRY_BUT_CALLED)
-        self.assertEqual(called - exempt, self.CORES | TheKernels.NON_FINITE | self.WAVE_1_CALLED |
+        self.assertEqual(called - exempt, self.CORES | self.full_entry() | self.WAVE_1_CALLED |
                          self.WAVE_2_CALLED | TheKernels.WAVE_2_B2 | self.ARRAYS_CALLED)
         self.assertTrue(all(ks[n].entry for n in called - exempt))
         self.assertFalse(any(ks[n].entry for n in exempt))
@@ -1392,7 +1400,7 @@ class R3OfTheKernels(unittest.TestCase):
         lines = build.summary(ks)
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2', 'dot_1_entry',
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
-                                         'conv_1', 'conv_2'} | MAPS |
+                                         'conv_1', 'conv_2', 'conv_1_entry'} | MAPS |
                          {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
                           'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'} |
                          {'bv_conv_1', 'bv_conv_2'})
@@ -1730,6 +1738,8 @@ class TheKernels(unittest.TestCase):
     # And acc_mul_1 on its factors guarded, which add_product of one limb calls (rule R3, the factors
     # of a fused operation), proved in AccKernels.v.
     ACC |= {'acc_mul_entry_1'}
+    # And acc_mul_2 on its factors guarded, which add_product of two limbs calls.
+    ACC |= {'acc_mul_entry_2'}
     # The radius kernels of BallVector (milestone2.md, "BallVector"), of the finite domain.
     BV = {f'bv_{op}_radius_{k}' for op in ('add', 'scale') for k in (1, 2)}
     # And the kernels of the constructor of a BallVector: its steps, its radius (finite domain; the copy
@@ -1749,6 +1759,16 @@ class TheKernels(unittest.TestCase):
     BV_UNVERIFIED = set()
     BV_IEEE_UNVERIFIED = set()
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
+    # The entry forms of the products that the public headers call, which guard the factors of their
+    # fused operations first (rule R3, the factors of a fused operation: architecture.md), proved by
+    # reduction to the kernels they guard for (EntryKernels.v, IeeeEntry.v, IeeeFull.v,
+    # IeeeBallFinite.v).
+    FACTOR_ENTRY = {'two_prod_entry', 'mul_down_entry', 'mul_up_entry', 'mul_2_1_entry', 'mul_2_1_full_entry',
+                    'ball_scale_2_full_entry'}
+    # Of them, those of the extended domain (as the kernels they guard for), proved in the IEEE model,
+    # and those with the IEEE-model statement only (full kernels).
+    FACTOR_ENTRY_EXTENDED = {'mul_down_entry', 'mul_up_entry', 'mul_2_1_full_entry', 'ball_scale_2_full_entry'}
+    FACTOR_ENTRY_IEEE_ONLY = {'mul_2_1_full_entry', 'ball_scale_2_full_entry'}
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # which were unverified until their proofs were about the generated text: the interval kernels of one
     # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain
@@ -1820,7 +1840,7 @@ class TheKernels(unittest.TestCase):
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
-        self.assertEqual(set(ks), self.MILESTONE1 | self.WAVE_1 | self.FOLDS | self.WAVE_2)
+        self.assertEqual(set(ks), self.MILESTONE1 | self.WAVE_1 | self.FOLDS | self.WAVE_2 | self.FACTOR_ENTRY)
         body = {name: [(st.dsts, st.op, tuple(map(str, st.args))) for st in k.body] for name, k in ks.items()}
         self.assertEqual(body['two_sum'], [
             (('s',), 'add', ('a', 'b')), (('bb',), 'sub', ('s', 'a')), (('t0',), 'sub', ('s', 'bb')),
@@ -1850,7 +1870,8 @@ class TheKernels(unittest.TestCase):
         # The kernels of the constructor, the negation, the scaling by a power of two and the product
         # of BallVectors are proved (BV_UNVERIFIED is empty).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.BV_UNVERIFIED) | self.WAVE_2_PROVED)
+                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.BV_UNVERIFIED) | self.WAVE_2_PROVED |
+                         self.FACTOR_ENTRY)
         # No other kernel is unverified: the kernels of wave 2 were, in both models, until their proofs
         # were about the generated text, and so were those of the accumulator and the radius
         # kernels of BallVector (BvRadius.v).
@@ -1861,16 +1882,19 @@ class TheKernels(unittest.TestCase):
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
         wave_2_ieee_only = self.WAVE_2_INTERVALS | self.WAVE_2_BALLS | self.WAVE_2_B1 | {'mul_ext_2_2'} | self.WAVE_2_B2
         self.assertEqual({name for name, k in ks.items() if not k.real_model},
-                         self.NON_FINITE | self.WAVE_1_FULL | self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only)
+                         self.NON_FINITE | self.WAVE_1_FULL | self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only |
+                         self.FACTOR_ENTRY_IEEE_ONLY)
         self.assertEqual({name for name, k in ks.items() if k.extended},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL |
-                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'} | {'bv_center_2'})
+                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'} | {'bv_center_2'} |
+                         self.FACTOR_ENTRY_EXTENDED)
         # (bv_center_2, the copy of the constructor of a BallVector, has both statements, as neg_2.)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
                                             | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.FOLDS_FINISH
                                             | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
-                                            | (self.WAVE_2_PROVED - self.WAVE_2_CORES), 'proved'),
+                                            | (self.WAVE_2_PROVED - self.WAVE_2_CORES)
+                                            | self.FACTOR_ENTRY_EXTENDED, 'proved'),
                               **dict.fromkeys(((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED)
                                               | self.BV_IEEE_UNVERIFIED,
                                               'unverified')))
@@ -1880,7 +1904,7 @@ class TheKernels(unittest.TestCase):
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
                          | self.WAVE_1_FULL | self.FOLDS_FINISH
                          | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
-                         | (self.WAVE_2_PROVED - self.WAVE_2_CORES))
+                         | (self.WAVE_2_PROVED - self.WAVE_2_CORES) | self.FACTOR_ENTRY_EXTENDED)
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
         # of the radius are below the overflow threshold (IeeeExtStatementsDraft.v). A
@@ -1906,12 +1930,15 @@ class TheKernels(unittest.TestCase):
             'sub_up_1': 2, 'mul_down_1': 2, 'mul_up_1': 2, 'two_sum_entry': 2, 'fast_two_sum_entry': 2,
             'radd_entry': 2, 'add_down_entry': 2, 'add_up_entry': 2, 'sub_down_entry': 2, 'sub_up_entry': 2,
             'ball_mul_pow2_1': 2, 'ball_mul_pow2_2': 2,
+            # the entry forms of the products (rule R3, the factors of a fused operation): those of
+            # the kernels they guard for
+            'two_prod_entry': 2, 'mul_down_entry': 2, 'mul_up_entry': 2, 'mul_2_1_entry': 2,
             # the folds' stage: that of the kernels of one limb and of add_2_2, add_fast_2_2, mul_2_2
             'dot_step_1': 1, 'dot_entry_step_1': 1, 'dot_step_2': 4, 'sum_entry_step_1': 1, 'sum_entry_step_2': 3,
             'sum_fast_entry_step_2': 2, 'bound_sum_1': 1, 'bound_sum_2': 3, 'bound_dot_1': 1, 'bound_dot_2': 4,
             # the steps of the maps: that of the kernels they call (axpy_step_2_1: mul_2_1 and add_2_2)
             'sub_1_1': 1, 'add_entry_step_1': 1, 'sub_entry_step_1': 1, 'add_entry_step_2': 3,
-            'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'mul_pow2_step_1': 1,
+            'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'scale_entry_step_2': 2, 'mul_pow2_step_1': 1,
             'mul_pow2_step_2': 2, 'axpy_step_1': 1, 'axpy_entry_step_1': 1, 'axpy_step_2': 4,
             'axpy_entry_step_2': 4, 'axpy_step_2_1': 3, 'axpy_entry_step_2_1': 3,
             # the folds of maxima: comparisons and selects, from one bit on
@@ -1919,7 +1946,7 @@ class TheKernels(unittest.TestCase):
             # the accumulator: that of add_1_1, add_2_2 and dot_step_2; the radius's constants are
             # numbers of the toy formats from two bits on ((1+u)^8 above the top of fp:1:-3:3)
             'acc_add_1': 1, 'acc_mul_1': 1, 'acc_mul_entry_1': 1, 'acc_merge_1': 1, 'acc_add_2': 3, 'acc_mul_2': 4,
-            'acc_merge_2': 3,
+            'acc_merge_2': 3, 'acc_mul_entry_2': 4,
             'acc_radius_1': 2, 'acc_radius_2': 2,
             # The radius kernels of BallVector, from the precision of the Ball kernel whose radius
             # lines they are.

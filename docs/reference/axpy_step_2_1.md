@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $y = y_0 
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call its core, [`mul_2_1`](mul_2_1.md) and [`add_2_2`](add_2_2.md), instead.
+**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call its core, [`add_2_2`](add_2_2.md), instead.
 
 ## Requires
 

@@ -658,6 +658,17 @@ Definition mul_down_1_spec : Prop :=
   r <= (a * b) /\ pred radix2 (FLT_exp emin prec) (RD emin prec (a * b)) <= r /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> r = RD emin prec (a * b)).
 
+(* mul_down_entry: mul_down_1 on its guarded operands (rule R3, the factors of a fused operation). Status: proved. *)
+Definition mul_down_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := mul_down_entry emin prec tie_even a b in
+  fmt emin prec r /\
+  r <= (a * b) /\ pred radix2 (FLT_exp emin prec) (RD emin prec (a * b)) <= r /\
+  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> r = RD emin prec (a * b)).
+
 (* mul_pow2_step_1: one rounding to nearest of a product by a power of two. Status: proved. *)
 Definition mul_pow2_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -677,6 +688,17 @@ Definition mul_up_1_spec : Prop :=
   fmt emin prec a ->
   fmt emin prec b ->
   let r := mul_up_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  (a * b) <= r /\ r <= succ radix2 (FLT_exp emin prec) (RU emin prec (a * b)) /\
+  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> r = RU emin prec (a * b)).
+
+(* mul_up_entry: mul_up_1 on its guarded operands (rule R3, the factors of a fused operation). Status: proved. *)
+Definition mul_up_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := mul_up_entry emin prec tie_even a b in
   fmt emin prec r /\
   (a * b) <= r /\ r <= succ radix2 (FLT_exp emin prec) (RU emin prec (a * b)) /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> r = RU emin prec (a * b)).
@@ -853,6 +875,19 @@ Definition two_prod_dekker_spec : Prop :=
   Rabs ((p + e) - (a * b)) <= (13 / 8) * eta emin /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
 
+(* two_prod_entry: two_prod on its guarded operands (rule R3, the factors of a fused operation). Status: proved. *)
+Definition two_prod_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let '(p, e) := two_prod_entry emin prec tie_even a b in
+  fmt emin prec p /\
+  fmt emin prec e /\
+  p = RN emin prec (a * b) /\
+  Rabs ((p + e) - (a * b)) <= (1 / 2) * eta emin /\
+  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
+
 (* two_sum: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965). Status: proved. *)
 Definition two_sum_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -966,6 +1001,21 @@ Definition acc_mul_2_spec : Prop :=
   normalized_2 emin prec y0 y1 ->
   0 <= a ->
   let '(t0, t1, b) := acc_mul_2 emin prec tie_even s0 s1 a x0 x1 y0 y1 in
+  fmt emin prec b /\
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin /\
+  b = RN emin prec (a + ((Rabs x0) * (Rabs y0))).
+
+(* acc_mul_entry_2: acc_mul_2 on the guarded limbs of x and y (rule R3, the factors of a fused operation). Status: proved. *)
+Definition acc_mul_entry_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall s0 s1 a x0 x1 y0 y1 : R,
+  normalized_2 emin prec s0 s1 ->
+  fmt emin prec a ->
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  0 <= a ->
+  let '(t0, t1, b) := acc_mul_entry_2 emin prec tie_even s0 s1 a x0 x1 y0 y1 in
   fmt emin prec b /\
   normalized_2 emin prec t0 t1 /\
   Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin /\
@@ -1325,6 +1375,16 @@ Definition le_1_2_spec : Prop :=
   let m := le_1_2 a y0 y1 in
   m = Rle_bool a (y0 + y1).
 
+(* mul_2_1_entry: mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). Status: proved. *)
+Definition mul_2_1_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let '(z0, z1) := mul_2_1_entry emin prec tie_even x0 x1 a in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
+
 (* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. Status: proved. *)
 Definition mul_pow2_step_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -1354,6 +1414,16 @@ Definition scale_step_2_spec : Prop :=
   normalized_2 emin prec x0 x1 ->
   fmt emin prec a ->
   let '(z0, z1) := scale_step_2 emin prec tie_even x0 x1 a in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
+
+(* scale_entry_step_2: scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation). Status: proved. *)
+Definition scale_entry_step_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let '(z0, z1) := scale_entry_step_2 emin prec tie_even x0 x1 a in
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
 

@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_up_1, mul_2_2, dot_step_2, acc_mul_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_full, mul_2_2_full, scale_step_2.
+// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_down_entry, mul_up_1, mul_up_entry, mul_2_2, dot_step_2, acc_mul_2, acc_mul_entry_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_scale_2_full_entry, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_entry, mul_2_1_full, mul_2_1_full_entry, mul_2_2_full, scale_step_2, scale_entry_step_2.
 #pragma once
 
 #include <cstddef>
@@ -5192,6 +5192,51 @@ KAIRN_GEN_FORCEINLINE void mul_down_1(float a, float b, float& r_out) noexcept {
     r_out = r;
 }
 
+// mul_down_entry(a, b) -> r
+// mul_down_1 on its guarded operands (rule R3, the factors of a fused operation). Status: proved (real model), proved (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_down_entry(double a, double b, double& r_out) noexcept {
+    const double ga = a + 0.0;
+    const double gb = b + 0.0;
+    // (r) = mul_down_1(ga, gb)
+    // (r_p, r_e) = two_prod(ga, gb)
+    const double r_p = fma_rn(ga, gb, 0.0);
+    const double r_e = fma_rn(ga, gb, -r_p);
+    const double r_ap = abs_bits(r_p);
+    const bool r_bd = 0x1p-969 > r_ap;
+    const bool r_ez = r_e == 0.0;
+    const bool r_un = r_bd & r_ez;
+    const bool r_n = 0.0 > r_e;
+    const bool r_sd = r_n | r_un;
+    const double r_pp = next_down_bits(r_p);
+    const double r_d = r_sd ? r_pp : r_p;
+    const bool r_za = ga == 0.0;
+    const bool r_zb = gb == 0.0;
+    const bool r_zz = r_za | r_zb;
+    const double r = r_zz ? r_p : r_d;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void mul_down_entry(float a, float b, float& r_out) noexcept {
+    const float ga = a + 0.0f;
+    const float gb = b + 0.0f;
+    // (r) = mul_down_1(ga, gb)
+    // (r_p, r_e) = two_prod(ga, gb)
+    const float r_p = fma_rn(ga, gb, 0.0f);
+    const float r_e = fma_rn(ga, gb, -r_p);
+    const float r_ap = abs_bits(r_p);
+    const bool r_bd = 0x1p-102f > r_ap;
+    const bool r_ez = r_e == 0.0f;
+    const bool r_un = r_bd & r_ez;
+    const bool r_n = 0.0f > r_e;
+    const bool r_sd = r_n | r_un;
+    const float r_pp = next_down_bits(r_p);
+    const float r_d = r_sd ? r_pp : r_p;
+    const bool r_za = ga == 0.0f;
+    const bool r_zb = gb == 0.0f;
+    const bool r_zz = r_za | r_zb;
+    const float r = r_zz ? r_p : r_d;
+    r_out = r;
+}
+
 // mul_pow2_step_1(x, c) -> z
 // one rounding to nearest of a product by a power of two. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_step_1(double x, double c, double& z_out) noexcept {
@@ -5239,6 +5284,51 @@ KAIRN_GEN_FORCEINLINE void mul_up_1(float a, float b, float& r_out) noexcept {
     const bool zb = b == 0.0f;
     const bool zz = za | zb;
     const float r = zz ? p : v;
+    r_out = r;
+}
+
+// mul_up_entry(a, b) -> r
+// mul_up_1 on its guarded operands (rule R3, the factors of a fused operation). Status: proved (real model), proved (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_up_entry(double a, double b, double& r_out) noexcept {
+    const double ga = a + 0.0;
+    const double gb = b + 0.0;
+    // (r) = mul_up_1(ga, gb)
+    // (r_p, r_e) = two_prod(ga, gb)
+    const double r_p = fma_rn(ga, gb, 0.0);
+    const double r_e = fma_rn(ga, gb, -r_p);
+    const double r_ap = abs_bits(r_p);
+    const bool r_bd = 0x1p-969 > r_ap;
+    const bool r_ez = r_e == 0.0;
+    const bool r_un = r_bd & r_ez;
+    const bool r_n = r_e > 0.0;
+    const bool r_su = r_n | r_un;
+    const double r_sp = next_up_bits(r_p);
+    const double r_v = r_su ? r_sp : r_p;
+    const bool r_za = ga == 0.0;
+    const bool r_zb = gb == 0.0;
+    const bool r_zz = r_za | r_zb;
+    const double r = r_zz ? r_p : r_v;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void mul_up_entry(float a, float b, float& r_out) noexcept {
+    const float ga = a + 0.0f;
+    const float gb = b + 0.0f;
+    // (r) = mul_up_1(ga, gb)
+    // (r_p, r_e) = two_prod(ga, gb)
+    const float r_p = fma_rn(ga, gb, 0.0f);
+    const float r_e = fma_rn(ga, gb, -r_p);
+    const float r_ap = abs_bits(r_p);
+    const bool r_bd = 0x1p-102f > r_ap;
+    const bool r_ez = r_e == 0.0f;
+    const bool r_un = r_bd & r_ez;
+    const bool r_n = r_e > 0.0f;
+    const bool r_su = r_n | r_un;
+    const float r_sp = next_up_bits(r_p);
+    const float r_v = r_su ? r_sp : r_p;
+    const bool r_za = ga == 0.0f;
+    const bool r_zb = gb == 0.0f;
+    const bool r_zz = r_za | r_zb;
+    const float r = r_zz ? r_p : r_v;
     r_out = r;
 }
 
@@ -5591,6 +5681,77 @@ KAIRN_GEN_FORCEINLINE constexpr void two_prod_dekker(float a, float b, float& p_
     const float t3 = t2 + q2;
     const float q3 = __builtin_is_constant_evaluated() ? al * bl : fma_rn(al, bl, 0.0f);
     const float e = t3 + q3;
+    p_out = p;
+    e_out = e;
+}
+
+// two_prod_entry(a, b) -> r = (p, e)
+// two_prod on its guarded operands (rule R3, the factors of a fused operation). Status: proved; constexpr through two_prod_dekker.
+KAIRN_GEN_FORCEINLINE constexpr void two_prod_entry(double a, double b, double& p_out, double& e_out) noexcept {
+    if (__builtin_is_constant_evaluated()) {
+        // two_prod_dekker, with each prod a plain product.
+        // (ah, al) = split(a)
+        const double ah_g = 0x1.0000002p+27 * a;
+        const double ah_d = a - ah_g;
+        const double ah = ah_g + ah_d;
+        const double al = a - ah;
+        // (bh, bl) = split(b)
+        const double bh_g = 0x1.0000002p+27 * b;
+        const double bh_d = b - bh_g;
+        const double bh = bh_g + bh_d;
+        const double bl = b - bh;
+        const double p = a * b;
+        const double q0 = ah * bh;
+        const double t1 = q0 - p;
+        const double q1 = ah * bl;
+        const double t2 = t1 + q1;
+        const double q2 = al * bh;
+        const double t3 = t2 + q2;
+        const double q3 = al * bl;
+        const double e = t3 + q3;
+        p_out = p;
+        e_out = e;
+        return;
+    }
+    const double ga = a + 0.0;
+    const double gb = b + 0.0;
+    // (p, e) = two_prod(ga, gb)
+    const double p = fma_rn(ga, gb, 0.0);
+    const double e = fma_rn(ga, gb, -p);
+    p_out = p;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE constexpr void two_prod_entry(float a, float b, float& p_out, float& e_out) noexcept {
+    if (__builtin_is_constant_evaluated()) {
+        // two_prod_dekker, with each prod a plain product.
+        // (ah, al) = split(a)
+        const float ah_g = 0x1.001p+12f * a;
+        const float ah_d = a - ah_g;
+        const float ah = ah_g + ah_d;
+        const float al = a - ah;
+        // (bh, bl) = split(b)
+        const float bh_g = 0x1.001p+12f * b;
+        const float bh_d = b - bh_g;
+        const float bh = bh_g + bh_d;
+        const float bl = b - bh;
+        const float p = a * b;
+        const float q0 = ah * bh;
+        const float t1 = q0 - p;
+        const float q1 = ah * bl;
+        const float t2 = t1 + q1;
+        const float q2 = al * bh;
+        const float t3 = t2 + q2;
+        const float q3 = al * bl;
+        const float e = t3 + q3;
+        p_out = p;
+        e_out = e;
+        return;
+    }
+    const float ga = a + 0.0f;
+    const float gb = b + 0.0f;
+    // (p, e) = two_prod(ga, gb)
+    const float p = fma_rn(ga, gb, 0.0f);
+    const float e = fma_rn(ga, gb, -p);
     p_out = p;
     e_out = e;
 }
@@ -6094,6 +6255,111 @@ KAIRN_GEN_FORCEINLINE void acc_mul_2(float s0, float s1, float a, float x0, floa
     const float ax = abs_bits(x0);
     const float ay = abs_bits(y0);
     const float b = fma_rn(ax, ay, a);
+    t0_out = t0;
+    t1_out = t1;
+    b_out = b;
+}
+
+// acc_mul_entry_2(s = (s0, s1), a, x = (x0, x1), y = (y0, y1)) -> t = (t0, t1), b
+// acc_mul_2 on the guarded limbs of x and y (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void acc_mul_entry_2(double s0, double s1, double a, double x0, double x1, double y0, double y1, double& t0_out, double& t1_out, double& b_out) noexcept {
+    const double gx0 = x0 + 0.0;
+    const double gx1 = x1 + 0.0;
+    const double gy0 = y0 + 0.0;
+    const double gy1 = y1 + 0.0;
+    // (t0, t1, b) = acc_mul_2(s0, s1, a, gx0, gx1, gy0, gy1)
+    // (t0, t1) = dot_step_2(s0, s1, gx0, gx1, gy0, gy1)
+    // (t0_p0, t0_p1) = mul_2_2(gx0, gx1, gy0, gy1)
+    // (t0_p0_ch, t0_p0_cl1) = two_prod(gx0, gy0)
+    const double t0_p0_ch = fma_rn(gx0, gy0, 0.0);
+    const double t0_p0_cl1 = fma_rn(gx0, gy0, -t0_p0_ch);
+    const double t0_p0_tl0 = fma_rn(gx1, gy1, 0.0);
+    const double t0_p0_tl1 = fma_rn(gx0, gy1, t0_p0_tl0);
+    const double t0_p0_cl2 = fma_rn(gx1, gy0, t0_p0_tl1);
+    const double t0_p0_cl3 = t0_p0_cl1 + t0_p0_cl2;
+    // (t0_p0, t0_p1) = fast_two_sum(t0_p0_ch, t0_p0_cl3)
+    const double t0_p0 = t0_p0_ch + t0_p0_cl3;
+    const double t0_p0_z = t0_p0 - t0_p0_ch;
+    const double t0_p1 = t0_p0_cl3 - t0_p0_z;
+    // (t0, t1) = add_2_2(s0, s1, t0_p0, t0_p1)
+    // (t0_sh, t0_sl) = two_sum(s0, t0_p0)
+    const double t0_sh = s0 + t0_p0;
+    const double t0_sh_bb = t0_sh - s0;
+    const double t0_sh_t0 = t0_sh - t0_sh_bb;
+    const double t0_sh_t1 = s0 - t0_sh_t0;
+    const double t0_sh_t2 = t0_p0 - t0_sh_bb;
+    const double t0_sl = t0_sh_t1 + t0_sh_t2;
+    // (t0_th, t0_tl) = two_sum(s1, t0_p1)
+    const double t0_th = s1 + t0_p1;
+    const double t0_th_bb = t0_th - s1;
+    const double t0_th_t0 = t0_th - t0_th_bb;
+    const double t0_th_t1 = s1 - t0_th_t0;
+    const double t0_th_t2 = t0_p1 - t0_th_bb;
+    const double t0_tl = t0_th_t1 + t0_th_t2;
+    const double t0_c = t0_sl + t0_th;
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const double t0_vh = t0_sh + t0_c;
+    const double t0_vh_z = t0_vh - t0_sh;
+    const double t0_vl = t0_c - t0_vh_z;
+    const double t0_w = t0_tl + t0_vl;
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const double t0 = t0_vh + t0_w;
+    const double t0_z = t0 - t0_vh;
+    const double t1 = t0_w - t0_z;
+    const double t0_ax = abs_bits(gx0);
+    const double t0_ay = abs_bits(gy0);
+    const double b = fma_rn(t0_ax, t0_ay, a);
+    t0_out = t0;
+    t1_out = t1;
+    b_out = b;
+}
+KAIRN_GEN_FORCEINLINE void acc_mul_entry_2(float s0, float s1, float a, float x0, float x1, float y0, float y1, float& t0_out, float& t1_out, float& b_out) noexcept {
+    const float gx0 = x0 + 0.0f;
+    const float gx1 = x1 + 0.0f;
+    const float gy0 = y0 + 0.0f;
+    const float gy1 = y1 + 0.0f;
+    // (t0, t1, b) = acc_mul_2(s0, s1, a, gx0, gx1, gy0, gy1)
+    // (t0, t1) = dot_step_2(s0, s1, gx0, gx1, gy0, gy1)
+    // (t0_p0, t0_p1) = mul_2_2(gx0, gx1, gy0, gy1)
+    // (t0_p0_ch, t0_p0_cl1) = two_prod(gx0, gy0)
+    const float t0_p0_ch = fma_rn(gx0, gy0, 0.0f);
+    const float t0_p0_cl1 = fma_rn(gx0, gy0, -t0_p0_ch);
+    const float t0_p0_tl0 = fma_rn(gx1, gy1, 0.0f);
+    const float t0_p0_tl1 = fma_rn(gx0, gy1, t0_p0_tl0);
+    const float t0_p0_cl2 = fma_rn(gx1, gy0, t0_p0_tl1);
+    const float t0_p0_cl3 = t0_p0_cl1 + t0_p0_cl2;
+    // (t0_p0, t0_p1) = fast_two_sum(t0_p0_ch, t0_p0_cl3)
+    const float t0_p0 = t0_p0_ch + t0_p0_cl3;
+    const float t0_p0_z = t0_p0 - t0_p0_ch;
+    const float t0_p1 = t0_p0_cl3 - t0_p0_z;
+    // (t0, t1) = add_2_2(s0, s1, t0_p0, t0_p1)
+    // (t0_sh, t0_sl) = two_sum(s0, t0_p0)
+    const float t0_sh = s0 + t0_p0;
+    const float t0_sh_bb = t0_sh - s0;
+    const float t0_sh_t0 = t0_sh - t0_sh_bb;
+    const float t0_sh_t1 = s0 - t0_sh_t0;
+    const float t0_sh_t2 = t0_p0 - t0_sh_bb;
+    const float t0_sl = t0_sh_t1 + t0_sh_t2;
+    // (t0_th, t0_tl) = two_sum(s1, t0_p1)
+    const float t0_th = s1 + t0_p1;
+    const float t0_th_bb = t0_th - s1;
+    const float t0_th_t0 = t0_th - t0_th_bb;
+    const float t0_th_t1 = s1 - t0_th_t0;
+    const float t0_th_t2 = t0_p1 - t0_th_bb;
+    const float t0_tl = t0_th_t1 + t0_th_t2;
+    const float t0_c = t0_sl + t0_th;
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float t0_vh = t0_sh + t0_c;
+    const float t0_vh_z = t0_vh - t0_sh;
+    const float t0_vl = t0_c - t0_vh_z;
+    const float t0_w = t0_tl + t0_vl;
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float t0 = t0_vh + t0_w;
+    const float t0_z = t0 - t0_vh;
+    const float t1 = t0_w - t0_z;
+    const float t0_ax = abs_bits(gx0);
+    const float t0_ay = abs_bits(gy0);
+    const float b = fma_rn(t0_ax, t0_ay, a);
     t0_out = t0;
     t1_out = t1;
     b_out = b;
@@ -12349,6 +12615,121 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float cx0, float cx1, float rx, flo
     }
 }
 
+// ball_scale_2_full_entry(cx = (cx0, cx1), rx, a) -> cw = (cw0, cw1), rw
+// ball_scale_2 on its guarded scalar, then the fix-up of ball_scale_2_full (rule R3, the factors of a fused operation). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD result<double, 3> ball_scale_2_full_entry(double rx, double cz0, double cz1, double rz, bool e, bool f) noexcept {
+    const double c0 = f ? cz0 : 0.0;
+    const double c1 = f ? cz1 : 0.0;
+    const double r = f ? rz : std::numeric_limits<double>::infinity();
+    const double cw0 = e ? c0 : rx;
+    const double cw1 = e ? c1 : rx;
+    const double rw = e ? r : rx;
+    return {{cw0, cw1, rw}};
+}
+KAIRN_GEN_COLD result<float, 3> ball_scale_2_full_entry(float rx, float cz0, float cz1, float rz, bool e, bool f) noexcept {
+    const float c0 = f ? cz0 : 0.0f;
+    const float c1 = f ? cz1 : 0.0f;
+    const float r = f ? rz : std::numeric_limits<float>::infinity();
+    const float cw0 = e ? c0 : rx;
+    const float cw1 = e ? c1 : rx;
+    const float rw = e ? r : rx;
+    return {{cw0, cw1, rw}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE void ball_scale_2_full_entry(double cx0, double cx1, double rx, double a, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
+    const double ga = a + 0.0;
+    // (cz0, cz1, rz) = ball_scale_2(cx0, cx1, rx, ga)
+    // (cz0, cz1) = mul_2_1(cx0, cx1, ga)
+    // (cz0_ch, cz0_cl1) = two_prod(cx0, ga)
+    const double cz0_ch = fma_rn(cx0, ga, 0.0);
+    const double cz0_cl1 = fma_rn(cx0, ga, -cz0_ch);
+    const double cz0_cl3 = fma_rn(cx1, ga, cz0_cl1);
+    // (cz0, cz1) = fast_two_sum(cz0_ch, cz0_cl3)
+    const double cz0 = cz0_ch + cz0_cl3;
+    const double cz0_z = cz0 - cz0_ch;
+    const double cz1 = cz0_cl3 - cz0_z;
+    const double cz0_aa = abs_bits(ga);
+    const double cz0_az = abs_bits(cz0);
+    const double cz0_p = fma_rn(cz0_aa, rx, 0.0);
+    const double cz0_t = fma_rn(cz0_az, 0x1.0000000000001p-105, cz0_p);
+    const double rz = fma_rn(cz0_t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
+    const bool e = rx == rx;
+    const double az = abs_bits(cz0);
+    const bool f1 = std::numeric_limits<double>::infinity() > az;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
+    const bool f = f1 & f2;
+    if (e & f) [[likely]] {
+        cw0_out = cz0;
+        cw1_out = cz1;
+        rw_out = rz;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 3> fixed_ = fixup::ball_scale_2_full_entry(rx, cz0, cz1, rz, e, f);
+        cw0_out = fixed_.limb[0];
+        cw1_out = fixed_.limb[1];
+        rw_out = fixed_.limb[2];
+#else
+        const double c0 = f ? cz0 : 0.0;
+        const double c1 = f ? cz1 : 0.0;
+        const double r = f ? rz : std::numeric_limits<double>::infinity();
+        const double cw0 = e ? c0 : rx;
+        const double cw1 = e ? c1 : rx;
+        const double rw = e ? r : rx;
+        cw0_out = cw0;
+        cw1_out = cw1;
+        rw_out = rw;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE void ball_scale_2_full_entry(float cx0, float cx1, float rx, float a, float& cw0_out, float& cw1_out, float& rw_out) noexcept {
+    const float ga = a + 0.0f;
+    // (cz0, cz1, rz) = ball_scale_2(cx0, cx1, rx, ga)
+    // (cz0, cz1) = mul_2_1(cx0, cx1, ga)
+    // (cz0_ch, cz0_cl1) = two_prod(cx0, ga)
+    const float cz0_ch = fma_rn(cx0, ga, 0.0f);
+    const float cz0_cl1 = fma_rn(cx0, ga, -cz0_ch);
+    const float cz0_cl3 = fma_rn(cx1, ga, cz0_cl1);
+    // (cz0, cz1) = fast_two_sum(cz0_ch, cz0_cl3)
+    const float cz0 = cz0_ch + cz0_cl3;
+    const float cz0_z = cz0 - cz0_ch;
+    const float cz1 = cz0_cl3 - cz0_z;
+    const float cz0_aa = abs_bits(ga);
+    const float cz0_az = abs_bits(cz0);
+    const float cz0_p = fma_rn(cz0_aa, rx, 0.0f);
+    const float cz0_t = fma_rn(cz0_az, 0x1.000002p-47f, cz0_p);
+    const float rz = fma_rn(cz0_t, 0x1.000004p+0f, 0x1.000006p-126f);
+    const bool e = rx == rx;
+    const float az = abs_bits(cz0);
+    const bool f1 = std::numeric_limits<float>::infinity() > az;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
+    const bool f = f1 & f2;
+    if (e & f) [[likely]] {
+        cw0_out = cz0;
+        cw1_out = cz1;
+        rw_out = rz;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 3> fixed_ = fixup::ball_scale_2_full_entry(rx, cz0, cz1, rz, e, f);
+        cw0_out = fixed_.limb[0];
+        cw1_out = fixed_.limb[1];
+        rw_out = fixed_.limb[2];
+#else
+        const float c0 = f ? cz0 : 0.0f;
+        const float c1 = f ? cz1 : 0.0f;
+        const float r = f ? rz : std::numeric_limits<float>::infinity();
+        const float cw0 = e ? c0 : rx;
+        const float cw1 = e ? c1 : rx;
+        const float rw = e ? r : rx;
+        cw0_out = cw0;
+        cw1_out = cw1;
+        rw_out = rw;
+#endif
+    }
+}
+
 // ball_split_2(c = (c0, c1), r) -> ca = (ca0, ca1), ra, cb = (cb0, cb1), rb
 // the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
@@ -16230,6 +16611,37 @@ KAIRN_GEN_FORCEINLINE constexpr void make_2_limbs(float h, float l, float& x0_ou
     x1_out = x1;
 }
 
+// mul_2_1_entry(x = (x0, x1), a) -> z = (z0, z1)
+// mul_2_1 on its guarded scalar (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_2_1_entry(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    const double ga = a + 0.0;
+    // (z0, z1) = mul_2_1(x0, x1, ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, ga)
+    const double z0_ch = fma_rn(x0, ga, 0.0);
+    const double z0_cl1 = fma_rn(x0, ga, -z0_ch);
+    const double z0_cl3 = fma_rn(x1, ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const double z0 = z0_ch + z0_cl3;
+    const double z0_z = z0 - z0_ch;
+    const double z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void mul_2_1_entry(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    const float ga = a + 0.0f;
+    // (z0, z1) = mul_2_1(x0, x1, ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, ga)
+    const float z0_ch = fma_rn(x0, ga, 0.0f);
+    const float z0_cl1 = fma_rn(x0, ga, -z0_ch);
+    const float z0_cl3 = fma_rn(x1, ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float z0 = z0_ch + z0_cl3;
+    const float z0_z = z0 - z0_ch;
+    const float z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // mul_2_1_full(x = (x0, x1), a) -> w = (w0, w1)
 // mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
@@ -16304,6 +16716,99 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(float x0, float x1, float a, float& w0_o
     } else {
 #if KAIRN_GEN_FIXUP_CALL
         const fixup::result<float, 2> fixed_ = fixup::mul_2_1_full(x0, a, z0, z1, f);
+        w0_out = fixed_.limb[0];
+        w1_out = fixed_.limb[1];
+#else
+        const float t = fma_rn(x0, a, 0.0f);
+        const float r0 = t * std::numeric_limits<float>::infinity();
+        const bool n = r0 == r0;
+        const float r1 = n ? 0.0f : r0;
+        const float w0 = f ? z0 : r0;
+        const float w1 = f ? z1 : r1;
+        w0_out = w0;
+        w1_out = w1;
+#endif
+    }
+}
+
+// mul_2_1_full_entry(x = (x0, x1), a) -> w = (w0, w1)
+// mul_2_1_entry, then the fix-up of IEEE-like results (rule R3, the factors of a fused operation). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD result<double, 2> mul_2_1_full_entry(double x0, double a, double z0, double z1, bool f) noexcept {
+    const double t = fma_rn(x0, a, 0.0);
+    const double r0 = t * std::numeric_limits<double>::infinity();
+    const bool n = r0 == r0;
+    const double r1 = n ? 0.0 : r0;
+    const double w0 = f ? z0 : r0;
+    const double w1 = f ? z1 : r1;
+    return {{w0, w1}};
+}
+KAIRN_GEN_COLD result<float, 2> mul_2_1_full_entry(float x0, float a, float z0, float z1, bool f) noexcept {
+    const float t = fma_rn(x0, a, 0.0f);
+    const float r0 = t * std::numeric_limits<float>::infinity();
+    const bool n = r0 == r0;
+    const float r1 = n ? 0.0f : r0;
+    const float w0 = f ? z0 : r0;
+    const float w1 = f ? z1 : r1;
+    return {{w0, w1}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE void mul_2_1_full_entry(double x0, double x1, double a, double& w0_out, double& w1_out) noexcept {
+    // (z0, z1) = mul_2_1_entry(x0, x1, a)
+    const double z0_ga = a + 0.0;
+    // (z0, z1) = mul_2_1(x0, x1, z0_ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, z0_ga)
+    const double z0_ch = fma_rn(x0, z0_ga, 0.0);
+    const double z0_cl1 = fma_rn(x0, z0_ga, -z0_ch);
+    const double z0_cl3 = fma_rn(x1, z0_ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const double z0 = z0_ch + z0_cl3;
+    const double z0_z = z0 - z0_ch;
+    const double z1 = z0_cl3 - z0_z;
+    const double az = abs_bits(z0);
+    const bool f = std::numeric_limits<double>::infinity() > az;
+    if (f) [[likely]] {
+        w0_out = z0;
+        w1_out = z1;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 2> fixed_ = fixup::mul_2_1_full_entry(x0, a, z0, z1, f);
+        w0_out = fixed_.limb[0];
+        w1_out = fixed_.limb[1];
+#else
+        const double t = fma_rn(x0, a, 0.0);
+        const double r0 = t * std::numeric_limits<double>::infinity();
+        const bool n = r0 == r0;
+        const double r1 = n ? 0.0 : r0;
+        const double w0 = f ? z0 : r0;
+        const double w1 = f ? z1 : r1;
+        w0_out = w0;
+        w1_out = w1;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE void mul_2_1_full_entry(float x0, float x1, float a, float& w0_out, float& w1_out) noexcept {
+    // (z0, z1) = mul_2_1_entry(x0, x1, a)
+    const float z0_ga = a + 0.0f;
+    // (z0, z1) = mul_2_1(x0, x1, z0_ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, z0_ga)
+    const float z0_ch = fma_rn(x0, z0_ga, 0.0f);
+    const float z0_cl1 = fma_rn(x0, z0_ga, -z0_ch);
+    const float z0_cl3 = fma_rn(x1, z0_ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float z0 = z0_ch + z0_cl3;
+    const float z0_z = z0 - z0_ch;
+    const float z1 = z0_cl3 - z0_z;
+    const float az = abs_bits(z0);
+    const bool f = std::numeric_limits<float>::infinity() > az;
+    if (f) [[likely]] {
+        w0_out = z0;
+        w1_out = z1;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 2> fixed_ = fixup::mul_2_1_full_entry(x0, a, z0, z1, f);
         w0_out = fixed_.limb[0];
         w1_out = fixed_.limb[1];
 #else
@@ -16570,6 +17075,43 @@ KAIRN_GEN_FORCEINLINE void scale_step_2(float x0, float x1, float a, float& z0_o
     const float z0_ch = fma_rn(x0, a, 0.0f);
     const float z0_cl1 = fma_rn(x0, a, -z0_ch);
     const float z0_cl3 = fma_rn(x1, a, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float z0 = z0_ch + z0_cl3;
+    const float z0_z = z0 - z0_ch;
+    const float z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// scale_entry_step_2(x = (x0, x1), a) -> z = (z0, z1)
+// scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void scale_entry_step_2(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    const double gx0 = x0 + 0.0;
+    const double gx1 = x1 + 0.0;
+    const double ga = a + 0.0;
+    // (z0, z1) = scale_step_2(gx0, gx1, ga)
+    // (z0, z1) = mul_2_1(gx0, gx1, ga)
+    // (z0_ch, z0_cl1) = two_prod(gx0, ga)
+    const double z0_ch = fma_rn(gx0, ga, 0.0);
+    const double z0_cl1 = fma_rn(gx0, ga, -z0_ch);
+    const double z0_cl3 = fma_rn(gx1, ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const double z0 = z0_ch + z0_cl3;
+    const double z0_z = z0 - z0_ch;
+    const double z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void scale_entry_step_2(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    const float gx0 = x0 + 0.0f;
+    const float gx1 = x1 + 0.0f;
+    const float ga = a + 0.0f;
+    // (z0, z1) = scale_step_2(gx0, gx1, ga)
+    // (z0, z1) = mul_2_1(gx0, gx1, ga)
+    // (z0_ch, z0_cl1) = two_prod(gx0, ga)
+    const float z0_ch = fma_rn(gx0, ga, 0.0f);
+    const float z0_cl1 = fma_rn(gx0, ga, -z0_ch);
+    const float z0_cl3 = fma_rn(gx1, ga, z0_cl1);
     // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
     const float z0 = z0_ch + z0_cl3;
     const float z0_z = z0 - z0_ch;
@@ -23935,7 +24477,7 @@ inline void bv_sub_2_lanes(const float* x0_in, const float* x1_in, const float* 
     finite_out = rad_f_;
 }
 
-// convolution conv_1(supplied x, supplied y) -> z: coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_1 in its
+// convolution conv_1(stored x, stored y) -> z: coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_1 in its
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
 // overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
 inline void conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double* z_out, bool& finite_out) noexcept {
@@ -23984,6 +24526,80 @@ inline void conv_1_seq(const float* x_in, std::size_t n_x, const float* y_in, st
             const float y = y_in[j_ - i_];
             // (step_t) = dot_step_1(s, x, y)
             const float step_t = fma_rn(x, y, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const float chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// convolution conv_1_entry(supplied x, supplied y) -> z: coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_1_entry in its
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
+inline void conv_1_entry_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double* z_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        double s = 0.0;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const double x = x_in[i_];
+            const double y = y_in[j_ - i_];
+            // (step_t) = dot_entry_step_1(s, x, y)
+            const double step_gx = x + 0.0;
+            const double step_gy = y + 0.0;
+            const double step_t = fma_rn(step_gx, step_gy, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const double chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
+inline void conv_1_entry_seq(const float* x_in, std::size_t n_x, const float* y_in, std::size_t n_y, float* z_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        float s = 0.0f;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const float x = x_in[i_];
+            const float y = y_in[j_ - i_];
+            // (step_t) = dot_entry_step_1(s, x, y)
+            const float step_gx = x + 0.0f;
+            const float step_gy = y + 0.0f;
+            const float step_t = fma_rn(step_gx, step_gy, s);
             s = step_t;
         }
         z_out[j_] = s;
@@ -24163,7 +24779,7 @@ inline void conv_2_seq(const float* x0_in, const float* x1_in, std::size_t n_x, 
     finite_out = finite;
 }
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
+// fold dot_1(stored x, stored y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void dot_1_seq(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double s = 0.0;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -24197,7 +24813,7 @@ inline void dot_1_seq(const float* x_in, const float* y_in, std::size_t n, float
     flag_out = fin_flag;
 }
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
+// fold dot_1(stored x, stored y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void dot_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s = 0.0;
@@ -25575,7 +26191,7 @@ inline void scale_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, f
     finite_out = finite;
 }
 
-// map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// map scale_2(stored x = (x0, x1), stored a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: element after element. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
@@ -25653,7 +26269,7 @@ inline void scale_2_seq(const float* x0_in, const float* x1_in, std::size_t n, f
     finite_out = finite;
 }
 
-// map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// map scale_2(stored x = (x0, x1), stored a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
@@ -25754,6 +26370,236 @@ inline void scale_2_lanes(const float* x0_in, const float* x1_in, std::size_t n,
         const float step_z0_ch = fma_rn(x0, a, 0.0f);
         const float step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
         const float step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float step_z0 = step_z0_ch + step_z0_cl3;
+        const float step_z0_z = step_z0 - step_z0_ch;
+        const float step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map scale_2_entry(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
+inline void scale_2_entry_seq(const double* x0_in, const double* x1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a)
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
+        const double step_ga = a + 0.0;
+        // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+        const double step_z0_ch = fma_rn(step_gx0, step_ga, 0.0);
+        const double step_z0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_ch);
+        const double step_z0_cl3 = fma_rn(step_gx1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const double step_z0 = step_z0_ch + step_z0_cl3;
+        const double step_z0_z = step_z0 - step_z0_ch;
+        const double step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
+inline void scale_2_entry_seq(const float* x0_in, const float* x1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a)
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
+        const float step_ga = a + 0.0f;
+        // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+        const float step_z0_ch = fma_rn(step_gx0, step_ga, 0.0f);
+        const float step_z0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_ch);
+        const float step_z0_cl3 = fma_rn(step_gx1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float step_z0 = step_z0_ch + step_z0_cl3;
+        const float step_z0_z = step_z0 - step_z0_ch;
+        const float step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map scale_2_entry(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
+inline void scale_2_entry_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a)
+            const double step_gx0 = x0 + 0.0;
+            const double step_gx1 = x1 + 0.0;
+            const double step_ga = a + 0.0;
+            // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+            // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+            // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+            const double step_z0_ch = fma_rn(step_gx0, step_ga, 0.0);
+            const double step_z0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_ch);
+            const double step_z0_cl3 = fma_rn(step_gx1, step_ga, step_z0_cl1);
+            // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+            const double step_z0 = step_z0_ch + step_z0_cl3;
+            const double step_z0_z = step_z0 - step_z0_ch;
+            const double step_z1 = step_z0_cl3 - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a)
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
+        const double step_ga = a + 0.0;
+        // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+        const double step_z0_ch = fma_rn(step_gx0, step_ga, 0.0);
+        const double step_z0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_ch);
+        const double step_z0_cl3 = fma_rn(step_gx1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const double step_z0 = step_z0_ch + step_z0_cl3;
+        const double step_z0_z = step_z0 - step_z0_ch;
+        const double step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
+inline void scale_2_entry_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a)
+            const float step_gx0 = x0 + 0.0f;
+            const float step_gx1 = x1 + 0.0f;
+            const float step_ga = a + 0.0f;
+            // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+            // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+            // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+            const float step_z0_ch = fma_rn(step_gx0, step_ga, 0.0f);
+            const float step_z0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_ch);
+            const float step_z0_cl3 = fma_rn(step_gx1, step_ga, step_z0_cl1);
+            // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+            const float step_z0 = step_z0_ch + step_z0_cl3;
+            const float step_z0_z = step_z0 - step_z0_ch;
+            const float step_z1 = step_z0_cl3 - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a)
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
+        const float step_ga = a + 0.0f;
+        // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+        const float step_z0_ch = fma_rn(step_gx0, step_ga, 0.0f);
+        const float step_z0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_ch);
+        const float step_z0_cl3 = fma_rn(step_gx1, step_ga, step_z0_cl1);
         // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
         const float step_z0 = step_z0_ch + step_z0_cl3;
         const float step_z0_z = step_z0 - step_z0_ch;

@@ -154,14 +154,16 @@ inline void two_prod_overflows_in_constant_evaluation() noexcept {
     fail("two_prod", "an operation of Dekker's product overflows in constant evaluation");
 }
 
-// a and b are only multiplied: two_prod needs no guard. In constant evaluation, where the kernel
-// runs Dekker's product, finite operands with an error term that is not finite are refused (bit
-// tests after the kernel, no arithmetic); at run time the test is not compiled.
+// a and b are guarded by the kernel (two_prod_entry): they are factors of the fms of TwoProd, and a
+// compiler that sees one of them to be 1 would fuse a product of the program into it. In constant
+// evaluation, where the kernel runs Dekker's product on the operands as they are, finite operands
+// with an error term that is not finite are refused (bit tests after the kernel, no arithmetic);
+// at run time the test is not compiled.
 template <limb T>
 KAIRN_FORCEINLINE constexpr ProductAndError<T> two_prod(T a, T b) noexcept {
     check_environment();
     ProductAndError<T> r;
-    gen::two_prod(a, b, r.product, r.error);
+    gen::two_prod_entry(a, b, r.product, r.error);
     if (__builtin_is_constant_evaluated() && finite(a) && finite(b) && !finite(r.error))
         two_prod_overflows_in_constant_evaluation();
     return r;
@@ -226,14 +228,14 @@ template <limb T>
 KAIRN_FORCEINLINE T mul_down(T a, T b) noexcept {
     check_environment();
     T r = T(0);
-    gen::mul_down_1(a, b, r);
+    gen::mul_down_entry(a, b, r);
     return r;
 }
 template <limb T>
 KAIRN_FORCEINLINE T mul_up(T a, T b) noexcept {
     check_environment();
     T r = T(0);
-    gen::mul_up_1(a, b, r);
+    gen::mul_up_entry(a, b, r);
     return r;
 }
 
@@ -293,8 +295,9 @@ KAIRN_FORCEINLINE constexpr auto fast_two_sum(const X& a, const Y& b) noexcept
     return detail::fast_two_sum(detail::unmark(a), detail::unmark(b));
 }
 
-/// a b as its rounded product and the error of that rounding (kernel two_prod: TwoProd with a
-/// fused multiply-add; in constant evaluation its variant two_prod_dekker, Dekker's product).
+/// a b as its rounded product and the error of that rounding (kernel two_prod_entry: TwoProd with a
+/// fused multiply-add on the guarded operands; in constant evaluation the variant two_prod_dekker,
+/// Dekker's product).
 /// Rounds; constexpr, on the operands given below.
 ///
 /// Statement, proved: product = RN(a b), |product + error - a b| <= eta/2, and product + error =
@@ -319,7 +322,7 @@ KAIRN_FORCEINLINE constexpr auto fast_two_sum(const X& a, const Y& b) noexcept
 /// (the split computes inf - inf); a NaN operand is not with Clang, and gives two NaN with GCC,
 /// as at run time.
 template <class T>
-    requires detail::limb<T> && detail::proof_checked<gen::bounds::two_prod<T>>
+    requires detail::limb<T> && detail::proof_checked<gen::bounds::two_prod_entry<T>>
 KAIRN_FORCEINLINE constexpr ProductAndError<T> two_prod(T a, T b) noexcept {
     return detail::two_prod(a, b);
 }
@@ -498,7 +501,7 @@ KAIRN_FORCEINLINE constexpr auto sub_up(const X& a, const Y& b) noexcept
 }
 
 /// A lower bound of a b: the product rounded to nearest, stepped down when the sign of the error
-/// term of TwoProd says that it is above a b (kernel mul_down_1). Rounds. Not usable in constant
+/// term of TwoProd says that it is above a b (kernel mul_down_entry). Rounds. Not usable in constant
 /// evaluation: its statement is about the fused product, whose error term below 2^(2p-1) eta
 /// Dekker's product, the only one constant evaluation has, computes otherwise and can give with
 /// the other sign (milestone2.md, "Building blocks on T").
@@ -508,7 +511,7 @@ KAIRN_FORCEINLINE constexpr auto sub_up(const X& a, const Y& b) noexcept
 /// double, 2^-102 for float), in the format with overflow (Omega for a product above Omega, -inf
 /// for one below -Omega); for an infinite or NaN operand, IEEE 754's product (a NaN for 0 inf).
 template <class T>
-    requires detail::limb<T> && detail::proof_checked<gen::bounds::mul_down_1<T>>
+    requires detail::limb<T> && detail::proof_checked<gen::bounds::mul_down_entry<T>>
 KAIRN_FORCEINLINE T mul_down(T a, T b) noexcept {
     return detail::mul_down(a, b);
 }
@@ -521,7 +524,7 @@ KAIRN_FORCEINLINE auto mul_down(const X& a, const Y& b) noexcept
 }
 
 /// An upper bound of a b: the product rounded to nearest, stepped up when the sign of the error
-/// term of TwoProd says that it is below a b (kernel mul_up_1). Rounds. Not usable in constant
+/// term of TwoProd says that it is below a b (kernel mul_up_entry). Rounds. Not usable in constant
 /// evaluation, for the reason given at mul_down.
 ///
 /// Statement, proved, for any two values of T: for finite operands, r >= a b, and r is RU(a b) or
@@ -529,7 +532,7 @@ KAIRN_FORCEINLINE auto mul_down(const X& a, const Y& b) noexcept
 /// with overflow (+inf for a product above Omega, -Omega for one below -Omega); for an infinite or
 /// NaN operand, IEEE 754's product.
 template <class T>
-    requires detail::limb<T> && detail::proof_checked<gen::bounds::mul_up_1<T>>
+    requires detail::limb<T> && detail::proof_checked<gen::bounds::mul_up_entry<T>>
 KAIRN_FORCEINLINE T mul_up(T a, T b) noexcept {
     return detail::mul_up(a, b);
 }

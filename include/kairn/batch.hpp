@@ -122,7 +122,7 @@ concept add_loop_proved = (K == 1 && loops::add_1_entry<T>::proved) || (K == 2 &
 template <class T, int K>
 concept sub_loop_proved = (K == 1 && loops::sub_1_entry<T>::proved) || (K == 2 && loops::sub_2_entry<T>::proved);
 template <class T, int K>
-concept scale_loop_proved = (K == 1 && loops::scale_1<T>::proved) || (K == 2 && loops::scale_2<T>::proved);
+concept scale_loop_proved = (K == 1 && loops::scale_1<T>::proved) || (K == 2 && loops::scale_2_entry<T>::proved);
 template <class T, int K>
 concept mul_pow2_loop_proved =
     (K == 1 && loops::mul_pow2_map_1<T>::proved) || (K == 2 && loops::mul_pow2_map_2<T>::proved);
@@ -133,7 +133,7 @@ concept axpy_limb_loop_proved =
 template <class T>
 concept axpy_loop_proved = loops::axpy_2_entry<T>::proved;
 template <class T, int K>
-concept conv_loop_proved = (K == 1 && loops::conv_1<T>::proved) || (K == 2 && loops::conv_2<T>::proved);
+concept conv_loop_proved = (K == 1 && loops::conv_1_entry<T>::proved) || (K == 2 && loops::conv_2<T>::proved);
 template <class T, int K>
 concept norm_loop_proved = (K == 1 && loops::norm_upper_1<T>::proved) || (K == 2 && loops::norm_upper_2<T>::proved);
 
@@ -539,9 +539,9 @@ bool scale(SoAView<T, K> x, std::type_identity_t<V> a, SoAView<V, K> z) noexcept
 #endif
     } else {
 #if KAIRN_DETAIL_BATCH_PACKED
-        gen::scale_2_packed(x.limb(0), x.limb(1), x.size(), a, z.limb(0), z.limb(1), finite);
+        gen::scale_2_entry_packed(x.limb(0), x.limb(1), x.size(), a, z.limb(0), z.limb(1), finite);
 #else
-        gen::scale_2_seq(x.limb(0), x.limb(1), x.size(), a, z.limb(0), z.limb(1), finite);
+        gen::scale_2_entry_seq(x.limb(0), x.limb(1), x.size(), a, z.limb(0), z.limb(1), finite);
 #endif
     }
     return finite;
@@ -650,9 +650,10 @@ bool axpy(const Expansion<V, 2>& a, SoAView<T, 2> x, SoAView<U, 2> y, SoAView<V,
 
 /// The coefficients of the product of the polynomials x (x.size() coefficients, the constant one
 /// first) and y: z_j = sum_i x_i y_(j-i), for j from 0 to x.size() + y.size() - 2, none when x or y
-/// is empty. Loop conv_1 for one limb, conv_2 for two: coefficient j is the dot product dot_1 or
-/// dot_2, in its sequential order, of its terms (x_i, y_(j-i)) in increasing i. Only multiplied: no
-/// guard. Sequential only (no packed loop). Rounds; not constexpr.
+/// is empty. Loop conv_1_entry for one limb, conv_2 for two: coefficient j is the dot product
+/// dot_1_entry or dot_2, in its sequential order, of its terms (x_i, y_(j-i)) in increasing i. One limb:
+/// both factors of each term guarded (rule R3, the factors of a fused operation). Sequential only (no
+/// packed loop). Rounds; not constexpr.
 ///
 /// Statement, proved: every coefficient that is finite satisfies the statement of dot (above) for
 /// its own m_j terms, m_j <= min(x.size(), y.size()), so traits<Expansion<T, K>>::dot(min(x.size(),
@@ -669,7 +670,7 @@ bool conv(SoAView<T, K> x, SoAView<U, K> y, SoAView<V, K> z) noexcept {
     detail::check_conv(x, y, z);
     bool finite = true;
     if constexpr (K == 1) {
-        gen::conv_1_seq(x.limb(0), x.size(), y.limb(0), y.size(), z.limb(0), finite);
+        gen::conv_1_entry_seq(x.limb(0), x.size(), y.limb(0), y.size(), z.limb(0), finite);
     } else {
         gen::conv_2_seq(x.limb(0), x.limb(1), x.size(), y.limb(0), y.limb(1), y.size(), z.limb(0), z.limb(1), finite);
     }

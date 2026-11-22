@@ -220,6 +220,34 @@ rewrite (abs_val prec emax nan_abs x0), (abs_val prec emax nan_abs y0).
 unfold RN. f_equal. ring.
 Qed.
 
+(* acc_mul_2 on the limbs of x and y guarded (rule R3, the factors of a fused operation): the guard
+   of a finite value is finite with the same value (guard_fin, guard_val), so the statement is
+   that of acc_mul_2 on the guarded limbs. *)
+Theorem acc_mul_entry_2_ieee_correct : acc_mul_entry_2_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp4
+  s0 s1 a x0 x1 y0 y1 Fs0 Fs1 Fa Fx0 Fx1 Fy0 Fy1 Ns Nx Ny Ha.
+assert (Vx0 : val (IeeeOperations.guard prec emax nan_plus x0) = val x0)
+  by exact (guard_val prec emax nan_plus x0).
+assert (Vx1 : val (IeeeOperations.guard prec emax nan_plus x1) = val x1)
+  by exact (guard_val prec emax nan_plus x1).
+assert (Vy0 : val (IeeeOperations.guard prec emax nan_plus y0) = val y0)
+  by exact (guard_val prec emax nan_plus y0).
+assert (Vy1 : val (IeeeOperations.guard prec emax nan_plus y1) = val y1)
+  by exact (guard_val prec emax nan_plus y1).
+generalize (acc_mul_2_ieee_correct prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp4
+              s0 s1 a _ _ _ _ Fs0 Fs1 Fa (guard_fin prec emax nan_plus x0 Fx0)
+              (guard_fin prec emax nan_plus x1 Fx1) (guard_fin prec emax nan_plus y0 Fy0)
+              (guard_fin prec emax nan_plus y1 Fy1)).
+rewrite Vx0, Vx1, Vy0, Vy1. intros K. specialize (K Ns Nx Ny Ha).
+unfold IeeeModel.acc_mul_entry_2. cbv zeta.
+destruct (IeeeModel.acc_mul_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma s0 s1 a
+            (IeeeOperations.guard prec emax nan_plus x0) (IeeeOperations.guard prec emax nan_plus x1)
+            (IeeeOperations.guard prec emax nan_plus y0) (IeeeOperations.guard prec emax nan_plus y1))
+  as [[t0 t1] b].
+exact K.
+Qed.
+
 (** * The radius *)
 
 Section IeeeRadius.

@@ -1,5 +1,7 @@
 # DWTimesFP3: a double-word number times a number of the format. The underflow term eta is
-# the proved one; exhaustive tests on toy formats approach it.
+# the proved one; exhaustive tests on toy formats approach it. Inside other kernels, on limbs
+# that kernels wrote; the public products call mul_2_1_entry, which guards a first (rule R3, the
+# factors of a fused operation).
 kernel:        mul_2_1
 input:         x = x0 x1
 input:         a
@@ -15,7 +17,6 @@ license:       algorithm: published; proof: MIT
 status:        proved
 ieee:          bridge spec
 ieee_finite:   abs_le(x*a,-1)
-entry:         yes
 
 (ch, cl1) = two_prod(x0, a)
 cl3       = fma(x1, a, cl1)
