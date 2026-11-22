@@ -7,7 +7,7 @@
 // 1. Makes the inputs from a fixed seed (m2_setup).
 // 2. Checks every function it will time (every function without --filter) against its reference,
 //    BACKEND/KIND/KERNEL/kairn (m2p against m2s), byte for byte, or by its own check (the functions
-//    of the second part: m2_soa.cpp, m2_enc.cpp, m2_run.cpp; of the third: m2_batch.cpp, m2_bv.cpp,
+//    of the second part: m2_soa.cpp, m2_enc.cpp, m2_run.cpp; of the third: m2_batch.cpp, m2_bv.cpp, m2_bvs.cpp,
 //    which also compare with exact results, m2_exact.hpp); counts, for each rounding-mode prop, how many of its
 //    results differ from the result rounded to nearest (a prop that ignored the mode would have
 //    returned those); and checks the props of the building blocks against Kairn's on a wide sample
@@ -69,7 +69,7 @@ std::vector<const m2::Entry*> all_entries() {
     std::vector<const m2::Entry*> v;
     for (const m2::Entry* t : {m2::m2_entries, m2::m2_fenv_entries, m2::m2_packed_entries, m2::m2_fenv_packed_entries,
                                m2::m2_soa_entries, m2::m2_soa_scalar_entries, m2::m2_enc_entries, m2::m2_run_entries,
-                               m2::m2_batch_entries, m2::m2_bv_entries})
+                               m2::m2_batch_entries, m2::m2_bv_entries, m2::m2_bvs_entries})
         for (const m2::Entry* e = t; e->name; ++e) v.push_back(e);
     return v;
 }

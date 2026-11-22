@@ -144,20 +144,27 @@ set_source_files_properties(m2_packed.cpp PROPERTIES COMPILE_OPTIONS "${_packed_
 # enclosure interface (m2_enc.cpp) and the whole computations (m2_run.cpp) as scalar code.
 set_source_files_properties(m2_soa.cpp m2_soa_scalar.cpp PROPERTIES COMPILE_OPTIONS "${_packed_isa}")
 # The third part: the functions on arrays, the accumulator (m2_batch.cpp) and the ball vectors
-# (m2_bv.cpp) are compiled as packed code, as a client's unit that wants their fast order is.
-set_source_files_properties(m2_batch.cpp m2_bv.cpp m2_accuracy.cpp PROPERTIES COMPILE_OPTIONS "${_packed_isa}")
+# (m2_bv.cpp, m2_bvs.cpp) are compiled as packed code, as a client's unit that wants their fast order is.
+set_source_files_properties(m2_batch.cpp m2_bv.cpp m2_bvs.cpp m2_accuracy.cpp PROPERTIES COMPILE_OPTIONS "${_packed_isa}")
 string(REPLACE ";" " " _rounding_math_text "${_rounding_math}")
 set(_m2_sources m2_main.cpp m2.cpp m2_fenv.cpp m2_packed.cpp m2_fenv_packed.cpp m2_soa.cpp m2_soa_scalar.cpp
-    m2_enc.cpp m2_run.cpp m2_batch.cpp m2_bv.cpp)
+    m2_enc.cpp m2_run.cpp m2_batch.cpp m2_bv.cpp m2_bvs.cpp)
 # kairn-bench-m2-nocheck-LEVEL, only when KAIRN_BENCH_NOCHECK_INCLUDE names a directory: the same
 # program compiled against the copy of the headers there, which bench/entry_check.py makes from
 # include/ with the check of the environment of the batch entries compiled out (never committed):
 # what that check costs is the ratio of a function's time in kairn-bench-m2-LEVEL to its time here.
 set(KAIRN_BENCH_NOCHECK_INCLUDE "" CACHE PATH
     "A copy of include/ made by bench/entry_check.py: builds kairn-bench-m2-nocheck-LEVEL against it")
+# kairn-bench-m2-cold-LEVEL likewise against KAIRN_BENCH_COLD_INCLUDE, a copy made with --variant cold
+# (the check kept, its report out of line and cold): a candidate change of the header, measured.
+set(KAIRN_BENCH_COLD_INCLUDE "" CACHE PATH
+    "A copy of include/ made by bench/entry_check.py --variant cold: builds kairn-bench-m2-cold-LEVEL against it")
 set(_m2_codes INLINE OUTLINED EXTERNAL CHECKS)
 if(KAIRN_BENCH_NOCHECK_INCLUDE)
   list(APPEND _m2_codes NOCHECK)
+endif()
+if(KAIRN_BENCH_COLD_INCLUDE)
+  list(APPEND _m2_codes COLD)
 endif()
 # kairn-bench-m2-checks-LEVEL: the inline setting with KAIRN_CHECKS 1 in every translation unit, for
 # what the checks cost (bench/README.md, "Milestone 2").
@@ -184,6 +191,10 @@ foreach(_code IN LISTS _m2_codes)
       string(APPEND _flags " (headers: a copy with the check of the environment of the batch entries compiled out)")
       set(_setting INLINE)
       target_include_directories(${_target} BEFORE PRIVATE "${KAIRN_BENCH_NOCHECK_INCLUDE}")
+    elseif(_code STREQUAL "COLD")
+      string(APPEND _flags " (headers: a copy with the report of the check of the environment of the batch entries out of line and cold)")
+      set(_setting INLINE)
+      target_include_directories(${_target} BEFORE PRIVATE "${KAIRN_BENCH_COLD_INCLUDE}")
     else()
       set(_setting ${_code})
     endif()
