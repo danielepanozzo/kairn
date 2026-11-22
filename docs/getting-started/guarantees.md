@@ -453,10 +453,17 @@ radius, the split and the conversion to a ball of the empty set, and the bounds 
 the empty ball and of the whole line, whose listings compute a NaN or $\infty - \infty$ before
 selecting their result, which GCC and Clang refuse at compile time.
 The canonical infinities and NaN come out of the constructors at compile time
-(`Expansion<double, 2>(INFINITY)` is $(+\infty, 0)$), and so do the states of a ball. GCC and
-Clang refuse, at compile time, an operation that produces an infinity from finite operands or a
-NaN, so an overflowing sum or an operation on an infinity is not a constant expression there,
-though it is evaluated as stated at run time. In constant evaluation the guard is not applied
+(`Expansion<double, 2>(INFINITY)` is $(+\infty, 0)$), and so do the states of a ball. What a
+compiler evaluates at compile time differs at these edges (measured with GCC 13 and 16, Clang 18
+and Apple clang 21). GCC refuses an operation that produces an infinity from finite operands, which
+Clang computes; both refuse one that produces a NaN from operands that are not. An operation of two
+limbs computes such a NaN on the way, before it selects its result, when it overflows or an operand
+is infinite: so with either compiler an overflowing sum of two limbs, or one of an infinity, is not
+a constant expression (of one limb, an overflowing sum is one with Clang, the infinity, and is not
+with GCC). MSVC refuses more, for `float`: a sum or a product whose exact value exceeds the largest
+finite number although it rounds to it, which is no overflow (seen with MSVC 19.52, in `two_prod`
+and in the check of a canonical pair of a debug build). Each of these is evaluated as stated at run
+time. In constant evaluation the guard is not applied
 (nothing is fused there), so a $-0$ keeps its sign. One compiler's constant evaluator takes
 `a < b` for true when an operand is a NaN: every comparison that can run at compile time, in the
 generated kernels and in the headers, is written `b > a` or `b >= a`, and `api.constexpr` checks
