@@ -520,9 +520,12 @@ coefficients of the product of two polynomials) and `norm_upper` (at least the l
 **The statement of each loop is proved, in the real model and in the IEEE model, for every length
 of array and every number of lanes**: a sum of $n$ numbers is within
 $\gamma_{n-1}(e)\sum_i\lvert x_i\rvert$ of the exact sum, $e = u/(1+u)$ for one limb and
-$3u^2/(1-4u)$ for two, in whatever order the loop adds; a dot product within its own bound, with an
-underflow term of $\eta$ per term; every element a map writes satisfies the claims of the operation
-on one element; a coefficient of a convolution the statement of a dot product of its terms;
+$3u^2/(1-4u)$ for two, in whatever order the loop adds; a dot product within its own bound, of the
+same shape relative to $\sum_i\lvert x_i y_i\rvert$, with an underflow term of
+$(1+e)^{n-1}\,n\,\tau$, about $\tau$ per term, $\tau = \tfrac12\eta$ for one limb and
+$\tfrac32\eta$ for two ([`dot`](../reference/batch.md#what-each-function-states)); every element a
+map writes satisfies the claims of the operation on one element; a coefficient of a convolution the
+statement of a dot product of its terms;
 `norm_upper` is the largest magnitude for one limb and at most one step of `T` above it for two.
 The header adds nothing to the arithmetic.
 
@@ -533,8 +536,9 @@ infinite or NaN element, an overflow) is the canonical NaN with the flag `finite
 flag is false exactly when an element it wrote is not finite, and those elements are the canonical
 NaN. Arrays that the program fills with products may be passed straight in: the loops guard every
 limb they add ([above](#products-the-program-passes-in)). A map may write in place, an array it
-reads exactly; no other overlap is supported. With `KAIRN_CHECKS` each function checks the
-environment, the lengths, the arrays that alias and its elements.
+reads exactly; no other overlap is supported. Each function checks the environment before its
+loop, in every build ([below](#the-environment)), and with `KAIRN_CHECKS` the lengths, the arrays
+that alias and its elements.
 
 **The bound as a function of the length.** `kairn::traits<X>::sum(n)` and `dot(n)` give the bound
 of a sum and of a dot product of $n$ terms as numbers of `T` (`unit`, and `tiny` for the underflow
