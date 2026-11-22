@@ -116,11 +116,11 @@ SPELL = {
 SPELL_CONSTEVAL = dict(SPELL, prod='{0} * {1}', guard='{0}', times_inf='times_inf_ce({0})')
 # In a kernel that is constexpr without a variant, guard and times_inf dispatch on constant
 # evaluation, as the hand-written detail::guard of include/kairn/expansion.hpp does, and so does
-# prod (the rule of the product): the plain product there, the opaque product at run time. {ce} is
-# the test, __builtin_is_constant_evaluated() (_consteval).
-SPELL_PLAIN = dict(SPELL, guard='{ce} ? {0} : {0} + {zero}',
-                   times_inf='{ce} ? times_inf_ce({0}) : {0} * {inf}',
-                   prod='{ce} ? {0} * {1} : fma_rn({0}, {1}, {zero})')
+# prod (the rule of the product): the plain product there, the opaque product at run time. For a
+# Limb, _statements writes its own test in place of __builtin_is_constant_evaluated() (_consteval).
+SPELL_PLAIN = dict(SPELL, guard='__builtin_is_constant_evaluated() ? {0} : {0} + {zero}',
+                   times_inf='__builtin_is_constant_evaluated() ? times_inf_ce({0}) : {0} * {inf}',
+                   prod='__builtin_is_constant_evaluated() ? {0} * {1} : fma_rn({0}, {1}, {zero})')
 
 # Names a value or a kernel must not take: keywords, alternative tokens, what the printed text
 # uses, and lowercase macros that common compilers and C libraries predefine.
@@ -288,7 +288,10 @@ def _statements(items, kernels, ctype, spell, pad):
             continue
         args = [literal(a.name, kernels, ctype) if a.const else a.name for a in it.args]
         vtype = ctype if ir.OPS[it.op][1] == ir.LIMB else 'bool'
-        lines.append(f'{pad}const {vtype} {it.dst} = {spell[it.op].format(*args, zero=zero, inf=inf, ce=ce)};')
+        text = spell[it.op].format(*args, zero=zero, inf=inf)
+        if isinstance(ctype, Limb):
+            text = text.replace('__builtin_is_constant_evaluated()', ce)
+        lines.append(f'{pad}const {vtype} {it.dst} = {text};')
     return lines
 
 
