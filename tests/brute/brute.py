@@ -78,7 +78,15 @@ INTERMEDIATE_OVERFLOW = ("split", "two_prod_dekker")
 # number is then no sign of a fault, in any exponent range, and the run does not fail on it;
 # tests/brute/widen.py is the exact test in its place (the result is infinite exactly when the
 # same computation in a wider exponent range exceeds the largest number).
-RADIUS_OVERFLOW = {("ball_mul_1", 1)}
+#
+# And the radius of an accumulator at precision 2 (the brute-force run of Milestone 2 stopped on
+# it): r = RN(s K + C) with K = up((1+u)^8), which at u = 1/4 is 6, the largest number of the
+# plan's fp:2:-1:1 (fp:2:-2:0 replaced, where it is not a number); with a factor of 6, above the 4
+# of the oracle's test, any s near a quarter of the largest number overflows in any exponent
+# range, and the claim (an upper bound, where the mask ok is true) says nothing of finiteness.
+# widen.py, which compares an output claimed only under a mask where that mask is true, is the
+# test in its place.
+RADIUS_OVERFLOW = {("ball_mul_1", 1), ("acc_radius_1", 2), ("acc_radius_2", 2)}
 
 
 def fails_on_suspicious(kernel, fmt):

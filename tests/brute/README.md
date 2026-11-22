@@ -52,11 +52,16 @@ Two parts:
   `--fail-on-suspicious` as in the compiled part, and not for `ball_mul_1` at precision 1 either
   (`RADIUS_OVERFLOW`): the oracle shows a non-finite result as suspicious when the operands and
   the exact set are within a quarter of the largest number, and with a factor of 8 the radius of
-  such a set can be beyond the largest number in any exponent range. `widen.py KERNEL FORMAT`
-  is the exact test in its place: every operand of the format through the interpreter, in the
-  format and in one with more exponents above, where nothing overflows; the result must be
-  non-finite exactly when the wide one exceeds the format's largest number, and equal to it
-  otherwise.
+  such a set can be beyond the largest number in any exponent range; nor for `acc_radius_1` and
+  `acc_radius_2` at precision 2, whose radius $\mathrm{RN}(sK + C)$ has the factor
+  $K = \mathrm{up}((1+u)^8) = 6$ at $u = 1/4$, the largest number of their format of the plan
+  (the run of Milestone 2 stopped on them: [its page](../../docs/developer/results/brute-milestone2.md)).
+  `widen.py KERNEL FORMAT` is the exact test in its place: every operand of the format through
+  the interpreter, in the format and in one with more exponents above, where nothing overflows;
+  the result must be non-finite exactly when the wide one exceeds the format's largest number,
+  and equal to it otherwise. An output that every claim of the kernel conditions on a mask
+  (`if` in `gen/claims.json`, the radius of an accumulator under `ok`) is compared only where
+  that mask is true.
   `--interp-bins N --interp-take LIST` splits the plan into N bins of about equal size and runs
   some of them, so that machines can share it; `--interp-match REGEX` keeps only the
   enumerations whose `KERNEL FORMAT` matches.

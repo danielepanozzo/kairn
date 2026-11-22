@@ -400,11 +400,26 @@ class Widen(unittest.TestCase):
         # A small format of the kernel the oracle's suspicious test does not apply to: every
         # infinite radius is that of a computation that exceeds the largest number.
         import widen
-        cases, equal, nonfinite, wide, bad = widen.compare("ball_mul_1", "fp:1:-2:3", 15)
-        self.assertEqual((cases, wide, bad), (8281, "fp:1:-2:18", []))
+        cases, equal, nonfinite, wide, bad, masked = widen.compare("ball_mul_1", "fp:1:-2:3", 15)
+        self.assertEqual((cases, wide, bad, masked), (8281, "fp:1:-2:18", [], 0))
         self.assertEqual(equal + nonfinite, cases)
         self.assertGreater(equal, 0)
         self.assertGreater(nonfinite, 0)
+
+    def test_the_radius_of_an_accumulator_at_precision_2(self):
+        # r = RN(s K + C), K = up((1+u)^8) = 6 = the largest number of fp:2:-1:1: every infinite
+        # radius where the mask ok is true is an overflow; where ok is false the claim says
+        # nothing of r, which is a NaN in some cases (0 times the infinite product of the count).
+        import widen
+        self.assertEqual(widen.conditional("acc_radius_1"), {0: 1})
+        self.assertEqual(widen.conditional("ball_mul_1"), {})
+        cases, equal, nonfinite, wide, bad, masked = widen.compare("acc_radius_1", "fp:2:-1:1", 13)
+        self.assertEqual((cases, nonfinite, bad, masked), (3584, 478, [], 3072))
+        self.assertEqual(equal + nonfinite, cases)
+        for k in ("acc_radius_1", "acc_radius_2"):
+            self.assertFalse(brute.fails_on_suspicious(k, "fp:2:-1:1"))
+            self.assertTrue(brute.fails_on_suspicious(k, "fp:3:-2:0"))
+            self.assertTrue(brute.fails_on_suspicious(k, "binary64"))
 
 
 class FixupForms(unittest.TestCase):
