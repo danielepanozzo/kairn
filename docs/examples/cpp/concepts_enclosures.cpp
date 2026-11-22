@@ -1,6 +1,7 @@
 // The examples of "Intervals, balls and ball vectors" (docs/concepts/enclosures.md): one sum in the
-// four enclosure types, an algorithm written once over Interval and Ball, and the one radius of a
-// BallVector next to the radii of separate balls. ctest builds and runs it (tests/api/CMakeLists.txt,
+// four enclosure types, an algorithm written once over Interval and Ball, the one radius of a
+// BallVector next to the radii of separate balls, and what X(a, b) and X::from_bounds(a, b) make of
+// each type. ctest builds and runs it (tests/api/CMakeLists.txt,
 // api.example.concepts_enclosures) and compares what it prints with concepts_enclosures.txt, which
 // the page shows; it also checks each result itself and exits with 1 if one is not what the page
 // says.
@@ -26,10 +27,13 @@ void check(bool ok, const char* what) {
 using concepts::hex;
 
 // --8<-- [start:generic]
-// Written once for every enclosure type S: a set that contains x (1 - x) for every x in X, and what
-// it says about the sign of that function there.
+// Written once for every enclosure type S: the set X of [lo, hi], a set that contains x (1 - x) for
+// every x in X, and what it says about the sign of that function there.
 template <class S>
-void report(const char* name, const S& x) {
+void report(const char* name, double lo, double hi) {
+    // S::from_bounds(lo, hi) is the one spelling for both types: [lo, hi] for an interval, a ball
+    // that contains [lo, hi] for a ball. Not S(lo, hi): for a ball, that is center lo, radius hi.
+    const S x = S::from_bounds(lo, hi);
     const S y = x * (S(1.0) - x);
     std::printf("  %-20s [%.6g, %.6g]  certainly positive: %s\n", name, y.template lower_as<double>(),
                 y.template upper_as<double>(), y.certainly_positive() ? "yes" : "no");
@@ -37,9 +41,9 @@ void report(const char* name, const S& x) {
 
 void on(double lo, double hi) {
     std::printf("x (1 - x) on [%g, %g]:\n", lo, hi);
-    report("Interval<double, 1>", kairn::Interval<double, 1>(lo, hi));
-    report("Ball<double, 1>", kairn::Ball<double, 1>::from_interval(lo, hi));
-    report("Ball<double, 2>", kairn::Ball<double, 2>::from_interval(lo, hi));
+    report<kairn::Interval<double, 1>>("Interval<double, 1>", lo, hi);
+    report<kairn::Ball<double, 1>>("Ball<double, 1>", lo, hi);
+    report<kairn::Ball<double, 2>>("Ball<double, 2>", lo, hi);
 }
 // --8<-- [end:generic]
 
@@ -92,5 +96,34 @@ int main() {
         check(v.entry(i).contains(c[i].limb[0]), "each entry contains its center");
         check(v.radius() >= entry.radius(), "the one radius is at least each entry's");
     }
+
+    // --8<-- [start:spelling]
+    // X(a, b) is two different sets for the two types; X::from_bounds(a, b) is one spelling of both.
+    const I1 interval(0.25, 0.75);                 // the interval [0.25, 0.75]
+    const B1 ball(0.25, 0.75);                     // the ball of center 0.25 and radius 0.75
+    const B1 ball1 = B1::from_bounds(0.25, 0.75);  // a ball that contains [0.25, 0.75]
+    const B2 ball2 = B2::from_bounds(0.25, 0.75);  // the same; here its center is the exact midpoint
+    // --8<-- [end:spelling]
+    std::printf("\nX(0.25, 0.75) and X::from_bounds(0.25, 0.75):\n");
+    std::printf("  Interval<double, 1>(0.25, 0.75)           [%g, %g]\n", interval.lower_as<double>(),
+                interval.upper_as<double>());
+    std::printf("  Ball<double, 1>(0.25, 0.75)               [%g, %g]\n", ball.lower_as<double>(),
+                ball.upper_as<double>());
+    std::printf("  Ball<double, 1>::from_bounds(0.25, 0.75)  center %g, radius %g: [%g, %g]\n",
+                ball1.center().limb[0], ball1.radius(), ball1.lower_as<double>(), ball1.upper_as<double>());
+    // (the second limb through hex, which prints a zero of either sign as 0)
+    std::printf("  Ball<double, 2>::from_bounds(0.25, 0.75)  center %g + %s, radius %g\n", ball2.center().limb[0],
+                hex(ball2.center().limb[1]).c_str(), ball2.radius());
+    const I1 interval_named = I1::from_bounds(0.25, 0.75);
+    check(interval_named.lower().limb[0] == interval.lower().limb[0] &&
+              interval_named.upper().limb[0] == interval.upper().limb[0],
+          "Interval::from_bounds(lo, hi) is Interval(lo, hi)");
+    check(ball.lower_as<double>() == -0.5 && ball.upper_as<double>() == 1.0, "Ball(c, r) is center c, radius r");
+    const B1 ball1_old = B1::from_interval(0.25, 0.75);
+    check(ball1.center().limb[0] == ball1_old.center().limb[0] && ball1.radius() == ball1_old.radius(),
+          "Ball::from_bounds(lo, hi) is Ball::from_interval(lo, hi)");
+    check(ball1.lower_as<double>() <= 0.25 && ball1.upper_as<double>() >= 0.75, "the ball contains [lo, hi]");
+    check(ball2.center().limb[0] == 0.5 && ball2.center().limb[1] == 0 && ball2.radius() == 0.25,
+          "two limbs, halves exact: the exact midpoint and the smallest radius");
     return failures == 0 ? 0 : 1;
 }

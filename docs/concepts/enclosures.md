@@ -136,10 +136,19 @@ written once for both.
 
 `Interval` and `Ball` answer the same questions under the same names: `lower()`, `upper()`,
 `lower_as<T>()`, `upper_as<T>()`, `midpoint()`, `radius()`, `mid_rad()`, `is_empty()`, `is_whole()`,
-`contains(t)`, `contains(Y)`, `certainly_positive()`, `certainly_negative()`, `certainly_zero()`,
-`hull`, `intersection`, `split`, and `kairn::less`, `less_equal`, `equal` and their mirrors
-([One enclosure interface](../reference/enclosure.md)). So an algorithm can be written once as a
-template and run on the type that suits the problem:
+`is_finite()` (a set neither empty nor unbounded: for an interval both bounds finite, so false for a
+half-line), `contains(t)`, `contains(Y)`, `certainly_positive()`, `certainly_negative()`,
+`certainly_zero()`, `hull`, `intersection`, `split`, `kairn::less`, `less_equal`, `equal` and their
+mirrors, and two constructors: `X::from_bounds(lo, hi)`, a set from two bounds, and
+`X::from_limbs(p)`, a set from the limbs read out of one, each type with its own layout of limbs
+([Plain values](values.md#plain-values)); [One enclosure interface](../reference/enclosure.md) has
+the table. So an algorithm can be written once as a template and run on the type that suits the
+problem.
+
+**`X(a, b)` is two different sets for the two types.** `Interval<T, k>(a, b)` is the interval
+$[a, b]$, but `Ball<T, k>(a, b)` is the ball of center $a$ and radius $b$: a template that writes
+`S(lo, hi)` compiles for both and means a different set for each. The one spelling of a set from
+two bounds is **`S::from_bounds(lo, hi)`**, and this template builds its set with it:
 
 ```cpp
 --8<-- "docs/examples/cpp/concepts_enclosures.cpp:generic"
@@ -153,9 +162,45 @@ On $[0.25, 0.75]$ the exact range of $x(1 - x)$ is $[0.1875, 0.25]$. The interva
 $[0.25, 0.75] \cdot [0.25, 0.75]$ gives $[0.0625, 0.5625]$, positive; the ball of center $0.5$ and
 radius $0.25$, times itself, has a radius of $0.5 \cdot 0.25 + 0.5 \cdot 0.25 + 0.25^2 = 0.3125$
 around $0.25$, and reaches below zero. On the narrow set $[0.49, 0.51]$ all three are positive.
-Each set is made from two numbers of the program per type, `Interval(lo, hi)` and
-`Ball::from_interval(lo, hi)`; [Zeros of a polynomial by bisection](../tutorials/bisection.md) is a
-longer algorithm written this way.
+[Zeros of a polynomial by bisection](../tutorials/bisection.md) is a longer algorithm written this
+way.
+
+The two spellings side by side:
+
+```cpp
+--8<-- "docs/examples/cpp/concepts_enclosures.cpp:spelling"
+```
+
+```text
+--8<-- "docs/examples/cpp/concepts_enclosures.txt:22:26"
+```
+
+What `from_bounds` claims is the claim of the kernel each type calls, for any two values of `T`,
+finite, infinite or NaN:
+
+- **Of an interval** it is `Interval(lo, hi)` under another name
+  ([`interval_make_1`](../reference/interval_make_1.md), [`interval_make_2`](../reference/interval_make_2.md)):
+  by the first case that applies, the whole line when a bound is a NaN, whatever the other, or when
+  both are the same infinity; the empty set when $lo > hi$; otherwise $[lo, hi]$, the half-lines and
+  $[-\infty, +\infty]$ included. It does not round. For two limbs each bound is first made a number
+  of two limbs by `make_2`, which gives it exactly: a composition of two proved kernels
+  ([What is not machine-checked](correctness.md#what-is-not-machine-checked)).
+- **Of a ball** it is `Ball::from_interval(lo, hi)` under another name
+  ([`ball_from_interval_1`](../reference/ball_from_interval_1.md),
+  [`ball_from_interval_2`](../reference/ball_from_interval_2.md)): a canonical ball, by the first
+  case that applies the whole line for a NaN bound or the same infinity twice, the empty set when
+  $lo > hi$, the whole line when a bound is infinite (a ball cannot be a half-line), and for finite
+  $lo \le hi$ a finite ball that **contains** $[lo, hi]$. Its center is the exact midpoint
+  $(lo + hi)/2$ only for two limbs and only when $lo/2$ and $hi/2$ are numbers of `T`, and its
+  radius is then the smallest of `T` for that center, as above; for two limbs with a halving that is
+  not exact only the containment is claimed; for one limb the center is a number of `T` between the
+  bounds within $u\lvert m\rvert + \eta$ of the midpoint $m$, with the smallest radius of `T` for
+  it.
+
+An interval also takes two numbers of $k$ limbs as bounds, and a ball of one limb two numbers of one
+limb; `Ball<T, 2>::from_bounds` takes two values of `T` only, since no kernel makes a ball of two
+bounds of two limbs (`Ball<T, 2>(Interval<T, 2>(lo, hi))` composes two kernels, each with its
+claim). The older spellings, `Interval(lo, hi)` and `Ball::from_interval(lo, hi)`, remain.
 
 ## One radius for many centers
 
