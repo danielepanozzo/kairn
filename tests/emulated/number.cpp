@@ -258,6 +258,27 @@ bool set_format(const Format& f, std::string* why) {
 
 const Format& format() noexcept { return current; }
 
+bool parse_format(const std::string& name, Format& out) {
+    if (name == "binary64") return out = {53, -1074, 971}, true;
+    if (name == "binary32") return out = {24, -149, 104}, true;
+    if (name.compare(0, 3, "fp:") != 0) return false;
+    long long v[3];
+    std::size_t at = 3;
+    for (int i = 0; i < 3; ++i) {
+        const std::size_t end = i < 2 ? name.find(':', at) : name.size();
+        if (end == std::string::npos) return false;
+        const std::string part = name.substr(at, end - at);
+        const std::size_t digits = part.size() - (part.empty() || part[0] != '-' ? 0 : 1);
+        if (digits == 0 || digits > 9 || (i == 0 && part[0] == '-') ||
+            part.find_first_not_of("0123456789", part.size() - digits) != std::string::npos)
+            return false;
+        v[i] = std::stoll(part);
+        at = end + 1;
+    }
+    out = {int(v[0]), int(v[1]), int(v[2])};
+    return true;
+}
+
 bool plant_fault(const std::string& name) noexcept {
     if (name.empty()) fault = Fault::none;
     else if (name == "tie-away") fault = Fault::tie_away;

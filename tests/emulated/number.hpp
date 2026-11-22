@@ -46,6 +46,9 @@ inline constexpr int max_precision = 62;
 // and says why.
 bool set_format(const Format& f, std::string* why = nullptr);
 const Format& format() noexcept;
+// The name of a format in the line protocol: binary64, binary32 or fp:P:QMIN:QMAX (decimal
+// integers, QMIN and QMAX with an optional minus sign). Returns false for anything else.
+bool parse_format(const std::string& name, Format& out);
 
 class Number {
 public:

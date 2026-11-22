@@ -125,13 +125,8 @@ void use_format(const std::string& name) {
     if (name == current) return;
     namespace g = kairn::emulated::generated;
     kairn::emulated::Format f;
-    if (name == "binary64") f = {53, -1074, 971};
-    else if (name == "binary32") f = {24, -149, 104};
-    else {
-        char tail = 0;
-        if (std::sscanf(name.c_str(), "fp:%d:%d:%d%c", &f.p, &f.qmin, &f.qmax, &tail) != 3)
-            fail("not a format: " + name + " (binary64, binary32 or fp:P:QMIN:QMAX)");
-    }
+    if (!kairn::emulated::parse_format(name, f))
+        fail("not a format: " + name + " (binary64, binary32 or fp:P:QMIN:QMAX)");
     const g::FormatConstants* table = nullptr;
     for (const auto& t : g::formats)
         if (t.p == f.p && t.qmin == f.qmin && t.qmax == f.qmax) table = &t;

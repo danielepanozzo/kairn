@@ -2959,7 +2959,7 @@ def cmd_plan(a):
     errors += ferrors
     for e in errors:
         print("PLAN ERROR: %s" % e)
-    plan = sized_plan(plan) if a.part != "emulated" else []
+    plan = sized_plan(plan, a.sizes) if a.part != "emulated" else []
     which, load = bins_of(plan, a.bins) if a.bins else ({}, [])
     total = 0
     for e in plan:
@@ -2973,7 +2973,7 @@ def cmd_plan(a):
         print("bins: " + ", ".join("%d: %s" % (i, "{:,}".format(n)) for i, n in enumerate(load)))
     if a.part in ("all", "emulated"):
         # The emulated part (above, "The plan of the emulated part").
-        emus = emulated_plan(kernels, load_folds(), only)
+        emus = emulated_plan(kernels, load_folds(), only, a.sizes)
         which, load = bins_of(emus, a.bins, emu_key) if a.bins else ({}, [])
         for e in emus:
             print("emulated %-16s %-13s %-10s %14s  %s%s" % (
@@ -3001,6 +3001,8 @@ def main(argv=None):
     p.add_argument("--kernels")
     p.add_argument("--part", choices=("all", "interp", "emulated"), default="all",
                    help="the interpreter's enumerations, the emulated part, or both (default)")
+    p.add_argument("--sizes", help="a JSON file of the sizes of the enumerations, read and written "
+                                   "(the oracle's gen --total of each, which takes minutes in all)")
     p.set_defaults(func=cmd_plan)
 
     r = sub.add_parser("run", help="build, run, and keep the summaries in the work directory")

@@ -251,12 +251,15 @@ int hardware(long count, std::uint64_t seed) {
         const std::string ta = kairn::emulated::to_text(ea);
         t.check("text", kairn::emulated::parse(ta, back) && (ea.is_nan() ? back.is_nan() : L::from_number(back) == L::bits(a)),
                 "text " + ta);
+        // Not with the C library of Windows, whose %a writes every digit of a double.
+#if !defined(_WIN32)
         if (L::precision == 24 && !std::isnan(a)) {
             char buf[64];
             if (std::isinf(a)) std::snprintf(buf, sizeof buf, "%s", a > 0 ? "inf" : "-inf");
             else std::snprintf(buf, sizeof buf, "%a", double(a));
             t.check("printf", ta == buf, "printf " + ta + " against " + buf);
         }
+#endif
         // A count to T and a value of T to a count.
         const std::uint64_t n = r.below(4) == 0 ? r.next() : r.next() >> r.below(64);
         t.check("from_size", same<L>(stored(static_cast<T>(std::size_t(n))), Number(std::size_t(n))),
@@ -284,7 +287,7 @@ int hardware(long count, std::uint64_t seed) {
 
 int ops(const std::string& name) {
     kairn::emulated::Format f;
-    if (std::sscanf(name.c_str(), "fp:%d:%d:%d", &f.p, &f.qmin, &f.qmax) != 3) {
+    if (!kairn::emulated::parse_format(name, f)) {
         std::fprintf(stderr, "selftest: not a format: %s\n", name.c_str());
         return 2;
     }
