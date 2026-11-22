@@ -120,8 +120,7 @@
 ///   Ball<T, 1>(c), Ball<T, 1>(c, r), Ball<T, 1>(q) and Ball<T, 2>(a); and the constructors of an
 ///   Interval, Interval::from_bounds among them: of one limb, and of two from a T, whose only
 ///   rounded operations are the guards; of two limbs from numbers of two limbs, comparisons and
-///   selects; and Interval::from_limbs and Ball::from_limbs of one limb, the guards and a test of
-///   the limbs that does not round. The only rounded operations of
+///   selects. The only rounded operations of
 ///   these are the guards a + 0, whose value is a under every rounding mode; only the sign of a
 ///   zero depends on the mode, and Kairn leaves it unspecified;
 /// - the conversion of a SumAndError (the result of two_sum or fast_two_sum) to Expansion<T, 2>:
@@ -143,8 +142,9 @@
 /// blocks of blocks.hpp but next_up and next_down (two_sum, fast_two_sum, which also checks
 /// |a| >= |b|, two_prod, radd, rmul, and the sums and products rounded down and up, which compute
 /// under rounding to nearest what rounding down or up gives), from_limbs and is_normalized of two
-/// limbs (each tests x0 + x1 == x0), Interval::from_limbs and Ball::from_limbs of two limbs (the
-/// same test of a bound or a center), the constructors of Ball<T, 2> from a center or a constant
+/// limbs (each tests x0 + x1 == x0), Interval::from_limbs and Ball::from_limbs (for two limbs the
+/// same test of a bound or a center; for one limb only the guards round, and the rounding mode is
+/// checked all the same), the constructors of Ball<T, 2> from a center or a constant
 /// (the test of a canonical center), and the functions of the interface that Ball and Interval
 /// share that compute bounds or centers (milestone2.md, "Functions that do not round", its second
 /// table): the midpoint, the radius, mid_rad and the split of an Interval, the conversions between

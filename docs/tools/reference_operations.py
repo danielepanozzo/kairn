@@ -223,10 +223,11 @@ KERNELS = {
         form("Expansion<T, 2>(a)", T, result=E2, note="implicit"),
         form("Expansion<T, 2>(a)", E1, result=E2, note="implicit; " + ONE),
         form("from_limbs(p)", "T*", result=I1, note=FROM_LIMBS % "Interval<T, 1>" + "; each bound through `make_2`, "
-             "of which the leading limb is kept, the bound itself; " + EXACT_INTERVAL),
+             "of which the leading limb is kept, the bound itself; `constexpr`; checks the rounding mode "
+             "for one limb and for two"),
         form("from_limbs(p)", "T*", result="Ball<T, K>", note=FROM_LIMBS % "Ball<T, K>" + "; the radius, and a center "
-             "of one limb, through `make_2`, of which the leading limb is kept, the value itself; `constexpr`; for one "
-             "limb does not round, for two the test of a canonical center does"),
+             "of one limb, through `make_2`, of which the leading limb is kept, the value itself; `constexpr`; checks "
+             "the rounding mode for one limb and for two"),
     ),
     "make_2_limbs": page(
         "construction", "A two-limb number from its limbs",

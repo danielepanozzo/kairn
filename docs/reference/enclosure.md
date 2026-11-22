@@ -231,7 +231,7 @@ with its contract.
   +\infty$, $hi > -\infty$, each of two limbs canonical; a ball: a finite ball with a canonical
   center and $r \ge 0$, the whole line, center 0 and radius $+\infty$, or the empty set, every limb
   a NaN). Nothing is checked in a release build. With `KAIRN_CHECKS` 1 the environment is checked
-  (for one limb without the rounding mode: the test of a canonical set of one limb does not round),
+  (the rounding mode included, for one limb as for two),
   then the limbs, and limbs that are not those of a canonical set stop the program with
   `from_limbs: the limbs are not those of a canonical interval` (or `ball`), or make a constant
   expression invalid.
@@ -343,8 +343,8 @@ a ball the signs. The others round and check it: the member and subset tests and
 balls (exact pairs by `two_sum_ord`, bounds by `add_ball_2_2`), the hull, the intersection and the
 split of balls, the midpoint, radius, split and conversions of intervals, and the ball from an
 interval of two `T` (`from_interval` and `from_bounds` of a ball; `from_bounds` of an interval, its
-constructor under another name, does not round). `from_limbs` checks the rounding mode for two
-limbs only, where the test of a canonical pair rounds. The states of a ball (`is_empty`,
+constructor under another name, does not round). `from_limbs` checks the rounding mode for one
+limb and for two (for two the test of a canonical pair rounds; for one only the guards do). The states of a ball (`is_empty`,
 `is_whole`, `is_finite`), `is_finite()` of an interval and `mid_rad()` of a ball, which read stored
 values, check nothing.
 
