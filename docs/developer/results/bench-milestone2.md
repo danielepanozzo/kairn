@@ -2079,6 +2079,150 @@ byte for byte, and its running sum against the exact sum of its terms within its
 - **The guards of `add_product`** cost nothing (1.00 to 1.01, [question 15](#15-the-guards-of-supplied-factors)),
   and the public member costs what its kernels without the guards cost (1.00 to 1.04).
 
+### 17. Accuracy for the price
+
+How much more accurate are the sums and dot products of two limbs than those of one, and than the
+compensated sum a numerical programmer writes, and how far above the error actually made is the bound
+the library states? `kairn-bench-m2-accuracy` (`bench/m2_accuracy.cpp`) makes data of `double` of a
+chosen condition as Ogita, Rump and Oishi make it ("Accurate sum and dot product", 2005, Algorithm
+6.1, GenDot): for a dot product of $n$ terms, the first half with random signs and exponents spread
+over $[0, b/2]$, $b = \log_2$ of the condition, the second half with exponents falling from $b/2$ to
+0, each $y_i$ chosen so that the dot product so far nearly cancels (from the exact dot product of the
+terms before it, rounded), then shuffled; for a sum of $n$ numbers, the two parts $p_i + e_i$ (by an
+FMA) of the $n/2$ products of such a dot product, shuffled. Ten targets from $10^4$ to $10^{40}$, and
+two regimes without cancellation by construction: numbers uniform in $[-1, 1]$ ("random signs") and
+in $[1, 2)$ ("positive", condition 1); lengths 10 to $10^6$, 20 trials of each up to $10^3$, 10 at
+$10^4$, 4 beyond. The exact results are computed by an exact sum of the harness's own
+(`bench/m2_exact.hpp`: a fixed-point number of 2240 bits that holds every `double` and every sum of
+them exactly; a product enters as its two parts by an FMA), not by the project's oracle; the error of
+a result of two limbs is its exact difference with that sum. The condition is
+$\kappa = \sum\lvert x_i\rvert / \lvert\sum x_i\rvert$ (for a dot product of the products), computed
+exactly; the targets of GenDot are approximate, so the tables group the trials by the condition they
+reached. Methods: the naive loop of `double` (`s = s + x[i]`, `s = s + x[i] * y[i]`, contraction off);
+`sum` and `dot` of one limb, default and `kairn::sequential`; the same of two limbs on the same data
+(the second limbs zero: an accurate sum of doubles with Kairn); Sum2 and Dot2 of the same authors,
+whose result is one `double`; and an `Accumulator` of one and of two limbs fed the numbers or pairs
+in order. The bounds: `traits<Expansion<double, k>>::sum(n).unit` times $\sum\lvert x_i\rvert$ (for a
+dot product `dot(n)`, `unit` times $\sum\lvert x_i y_i\rvert$ plus `tiny`), and the accumulators'
+`error_bound()`. No error made was above its bound, in any trial of any configuration. The errors do
+not depend on the compiler or the level: the four configurations of Zen 2 give the same numbers,
+which the tables give once.
+
+| Sums, linux (4 lanes): relative error, median over the trials, by condition | naive loop | Kairn, one limb | Sum2 | Kairn, two limbs | Accumulator, two limbs |
+|---|---|---|---|---|---|
+| n = 1000, condition 1e0 to 1e3 (40 trials) | 6.8e-16 | 1.9e-16 | 4.2e-17 | 0.0e+00 | 0.0e+00 |
+| n = 1000, condition 1e4 to 1e7 (20 trials) | 1.9e-11 | 1.8e-11 | 4.1e-17 | 1.3e-27 | 1.8e-27 |
+| n = 1000, condition 1e8 to 1e11 (20 trials) | 7.2e-08 | 6.0e-08 | 4.0e-17 | 5.7e-24 | 6.6e-24 |
+| n = 1000, condition 1e12 to 1e15 (20 trials) | 1.1e-03 | 4.3e-04 | 4.0e-17 | 5.5e-20 | 4.0e-20 |
+| n = 1000, condition 1e16 to 1e19 (20 trials) | 8.2e+00 | 7.1e+00 | 5.3e-15 | 4.1e-16 | 1.9e-16 |
+| n = 1000, condition 1e20 to 1e23 (20 trials) | 3.1e+04 | 1.8e+04 | 7.7e-12 | 1.1e-12 | 3.2e-12 |
+| n = 1000, condition 1e24 to 1e27 (20 trials) | 5.7e+08 | 4.0e+08 | 2.9e-07 | 4.1e-08 | 7.0e-08 |
+| n = 1000, condition 1e28 to 1e31 (20 trials) | 5.5e+12 | 5.2e+12 | 1.1e-03 | 2.4e-04 | 4.3e-04 |
+| n = 1000, condition 1e32 to 1e35 (22 trials) | 7.3e+16 | 2.4e+16 | 3.1e+01 | 7.2e+00 | 1.8e+00 |
+| n = 1000, condition 1e36 to 1e39 (20 trials) | 4.8e+20 | 3.3e+20 | 2.4e+05 | 1.5e+04 | 3.7e+04 |
+| n = 1000, condition 1e40 to 1e43 (18 trials) | 2.5e+24 | 2.7e+24 | 1.3e+09 | 1.8e+08 | 1.4e+08 |
+| n = 1000000, condition 1e0 to 1e3 (8 trials) | 4.5e-14 | 1.2e-14 | 2.0e-17 | 0.0e+00 | 0.0e+00 |
+| n = 1000000, condition 1e8 to 1e11 (5 trials) | 2.5e-08 | 4.8e-08 | 2.6e-17 | 3.7e-24 | 1.6e-23 |
+| n = 1000000, condition 1e12 to 1e15 (6 trials) | 2.5e-01 | 3.3e-01 | 6.4e-15 | 1.7e-17 | 7.2e-18 |
+| n = 1000000, condition 1e16 to 1e19 (3 trials) | 1.9e+02 | 1.1e+04 | 2.6e-11 | 2.0e-13 | 2.8e-13 |
+| n = 1000000, condition 1e20 to 1e23 (6 trials) | 4.9e+07 | 5.7e+07 | 1.8e-06 | 3.5e-09 | 4.7e-09 |
+| n = 1000000, condition 1e24 to 1e27 (3 trials) | 4.1e+11 | 7.1e+10 | 6.1e-03 | 1.8e-05 | 4.7e-05 |
+| n = 1000000, condition 1e28 to 1e31 (5 trials) | 4.0e+14 | 1.7e+15 | 7.2e+00 | 1.1e-01 | 1.5e-01 |
+| n = 1000000, condition 1e32 to 1e35 (4 trials) | 5.9e+18 | 1.2e+19 | 8.1e+05 | 3.0e+03 | 1.7e+03 |
+| n = 1000000, condition 1e36 to 1e39 (4 trials) | 1.0e+23 | 1.2e+23 | 2.6e+09 | 3.7e+07 | 4.2e+07 |
+| n = 1000000, condition 1e40 to 1e43 (4 trials) | 1.7e+27 | 1.3e+27 | 9.4e+12 | 6.9e+10 | 1.5e+11 |
+
+| Sums, linux: the stated bound over the error made, median (smallest) over the trials | Kairn, one limb | one limb, sequential | two limbs | two limbs, sequential | Accumulator, one limb | Accumulator, two limbs |
+|---|---|---|---|---|---|---|
+| positive, n = 10 | 17 (5.2), exact in 2 of 20 | 16 (5.5), exact in 1 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 18 (6.1), exact in 1 of 20 | –, exact in 20 of 20 |
+| positive, n = 100 | 2.2e+02 (55) | 64 (15) | –, exact in 20 of 20 | –, exact in 20 of 20 | 65 (15) | –, exact in 20 of 20 |
+| positive, n = 1000 | 1.2e+03 (3e+02) | 2.2e+02 (67) | –, exact in 20 of 20 | –, exact in 20 of 20 | 2.2e+02 (67) | –, exact in 20 of 20 |
+| positive, n = 10000 | 2.5e+03 (1.4e+03) | 5.3e+02 (2.5e+02) | –, exact in 10 of 10 | –, exact in 10 of 10 | 5.3e+02 (2.5e+02) | –, exact in 10 of 10 |
+| positive, n = 100000 | 5.6e+03 (4.6e+03) | 3.1e+03 (7.7e+02) | –, exact in 4 of 4 | –, exact in 4 of 4 | 3.1e+03 (7.7e+02) | –, exact in 4 of 4 |
+| positive, n = 1000000 | 2.2e+04 (9.6e+03) | 5.9e+03 (2.4e+03) | –, exact in 4 of 4 | –, exact in 4 of 4 | 5.9e+03 (2.4e+03) | –, exact in 4 of 4 |
+| random signs, n = 10 | 19 (8.7), exact in 14 of 20 | 24 (13), exact in 15 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 27 (14), exact in 15 of 20 | –, exact in 20 of 20 |
+| random signs, n = 100 | 6.5e+02 (2.8e+02), exact in 5 of 20 | 6.5e+02 (1.5e+02), exact in 1 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 6.5e+02 (1.5e+02), exact in 1 of 20 | –, exact in 20 of 20 |
+| random signs, n = 1000 | 1e+04 (1.6e+03) | 3.7e+03 (1.3e+03) | –, exact in 20 of 20 | –, exact in 20 of 20 | 3.7e+03 (1.3e+03) | –, exact in 20 of 20 |
+| random signs, n = 10000 | 5.5e+04 (2.8e+04) | 5.7e+04 (1.4e+04) | –, exact in 10 of 10 | –, exact in 10 of 10 | 5.7e+04 (1.4e+04) | –, exact in 10 of 10 |
+| random signs, n = 100000 | 8.5e+05 (5.6e+05) | 1.9e+06 (6.7e+05) | –, exact in 4 of 4 | –, exact in 4 of 4 | 1.9e+06 (6.7e+05) | –, exact in 4 of 4 |
+| random signs, n = 1000000 | 1.1e+07 (2.3e+06) | 4.3e+06 (3.6e+06) | –, exact in 4 of 4 | –, exact in 4 of 4 | 4.3e+06 (3.6e+06) | –, exact in 4 of 4 |
+| condition 1e4 to 1e40, n = 10 | 1.1e+02 (9.3) | 56 (10) | 1.2e+03 (37), exact in 14 of 200 | 6.6e+02 (43), exact in 9 of 200 | 62 (11) | 9.8e+02 (64), exact in 9 of 200 |
+| condition 1e4 to 1e40, n = 100 | 3.4e+02 (39) | 2.6e+02 (41) | 1.5e+03 (2.7e+02) | 1.1e+03 (1.4e+02) | 2.6e+02 (41) | 1.5e+03 (1.9e+02) |
+| condition 1e4 to 1e40, n = 1000 | 1.7e+03 (2.9e+02) | 1.5e+03 (1.8e+02) | 8.2e+03 (1.3e+03) | 7.2e+03 (7.3e+02) | 1.5e+03 (1.8e+02) | 9.6e+03 (9.8e+02) |
+| condition 1e4 to 1e40, n = 10000 | 1.3e+04 (2.1e+03) | 1.3e+04 (1.5e+03) | 5.7e+04 (1.3e+04) | 5.2e+04 (7.6e+03) | 1.3e+04 (1.5e+03) | 7e+04 (1e+04) |
+| condition 1e4 to 1e40, n = 100000 | 1.5e+05 (1.7e+04) | 1.4e+05 (1.9e+04) | 5.2e+05 (3.9e+04) | 4.8e+05 (1.2e+05) | 1.4e+05 (1.9e+04) | 6.4e+05 (1.6e+05) |
+| condition 1e4 to 1e40, n = 1000000 | 1.5e+06 (1.6e+05) | 1.3e+06 (2.9e+05) | 6.1e+06 (7.5e+05) | 3.7e+06 (5.6e+05) | 1.3e+06 (2.9e+05) | 5e+06 (7.5e+05) |
+
+| Dot products, linux (4 lanes): relative error, median over the trials, by condition | naive loop | Kairn, one limb | Dot2 | Kairn, two limbs | Accumulator, two limbs |
+|---|---|---|---|---|---|
+| n = 1000, condition 1e0 to 1e3 (40 trials) | 8.5e-16 | 3.7e-16 | 4.8e-17 | 1.7e-32 | 4.6e-32 |
+| n = 1000, condition 1e4 to 1e7 (20 trials) | 2.8e-11 | 2.8e-11 | 3.0e-17 | 2.6e-27 | 2.5e-27 |
+| n = 1000, condition 1e8 to 1e11 (20 trials) | 2.1e-07 | 2.2e-07 | 4.9e-17 | 7.6e-24 | 1.8e-23 |
+| n = 1000, condition 1e12 to 1e15 (20 trials) | 3.1e-03 | 1.8e-03 | 4.4e-17 | 7.3e-20 | 1.2e-19 |
+| n = 1000, condition 1e16 to 1e19 (20 trials) | 9.6e+00 | 9.8e+00 | 7.7e-15 | 1.4e-15 | 1.2e-15 |
+| n = 1000, condition 1e20 to 1e23 (20 trials) | 8.1e+04 | 8.6e+04 | 7.7e-11 | 3.1e-12 | 2.7e-12 |
+| n = 1000, condition 1e24 to 1e27 (20 trials) | 1.4e+09 | 1.6e+09 | 1.1e-06 | 9.3e-08 | 1.6e-07 |
+| n = 1000, condition 1e28 to 1e31 (20 trials) | 7.4e+12 | 7.1e+12 | 5.7e-03 | 7.0e-04 | 6.3e-04 |
+| n = 1000, condition 1e32 to 1e35 (20 trials) | 6.8e+16 | 7.4e+16 | 3.1e+01 | 3.0e+00 | 8.2e+00 |
+| n = 1000, condition 1e36 to 1e39 (20 trials) | 4.5e+20 | 3.4e+20 | 7.0e+05 | 4.7e+04 | 1.6e+05 |
+| n = 1000, condition 1e40 to 1e43 (20 trials) | 4.0e+24 | 5.0e+24 | 3.7e+09 | 4.0e+08 | 2.2e+08 |
+| n = 1000000, condition 1e0 to 1e3 (8 trials) | 1.8e-14 | 1.4e-14 | 2.8e-17 | 5.8e-31 | 1.8e-30 |
+| n = 1000000, condition 1e8 to 1e11 (5 trials) | 6.3e-08 | 4.3e-08 | 3.7e-17 | 1.5e-24 | 6.4e-24 |
+| n = 1000000, condition 1e12 to 1e15 (5 trials) | 3.3e-04 | 1.0e-03 | 2.4e-17 | 3.7e-20 | 2.4e-20 |
+| n = 1000000, condition 1e16 to 1e19 (4 trials) | 1.0e+03 | 1.8e+03 | 2.5e-10 | 2.1e-13 | 8.2e-14 |
+| n = 1000000, condition 1e20 to 1e23 (3 trials) | 9.6e+04 | 2.2e+04 | 3.9e-09 | 7.0e-12 | 5.9e-12 |
+| n = 1000000, condition 1e24 to 1e27 (6 trials) | 6.8e+10 | 1.0e+11 | 6.9e-04 | 2.3e-05 | 8.0e-06 |
+| n = 1000000, condition 1e28 to 1e31 (3 trials) | 1.6e+15 | 2.7e+14 | 1.1e+01 | 2.1e-01 | 4.5e-02 |
+| n = 1000000, condition 1e32 to 1e35 (6 trials) | 2.3e+19 | 7.6e+19 | 3.7e+05 | 5.5e+03 | 3.8e+03 |
+| n = 1000000, condition 1e36 to 1e39 (4 trials) | 1.9e+23 | 6.3e+22 | 4.3e+09 | 1.1e+07 | 4.2e+07 |
+| n = 1000000, condition 1e40 to 1e43 (4 trials) | 2.7e+27 | 4.3e+27 | 1.1e+14 | 4.5e+11 | 2.6e+11 |
+
+| Dot products, linux: the stated bound over the error made, median (smallest) over the trials | Kairn, one limb | one limb, sequential | two limbs | two limbs, sequential | Accumulator, one limb | Accumulator, two limbs |
+|---|---|---|---|---|---|---|
+| positive, n = 10 | 19 (6.1) | 27 (6.1) | 1e+02 (35), exact in 6 of 20 | 98 (35), exact in 3 of 20 | 27 (6.1) | 98 (35), exact in 3 of 20 |
+| positive, n = 100 | 1.7e+02 (55) | 1.2e+02 (16) | 2e+03 (4.8e+02), exact in 1 of 20 | 4.7e+02 (1e+02) | 1.2e+02 (16) | 4.7e+02 (1e+02) |
+| positive, n = 1000 | 6.4e+02 (2.2e+02) | 1.9e+02 (50) | 5.1e+03 (1.3e+03) | 1.2e+03 (3.8e+02) | 1.9e+02 (50) | 1.2e+03 (3.8e+02) |
+| positive, n = 10000 | 4.5e+03 (9.6e+02) | 5.7e+02 (2.6e+02) | 1.4e+04 (6.8e+03) | 3.9e+03 (8.7e+02) | 5.7e+02 (2.6e+02) | 3.9e+03 (8.7e+02) |
+| positive, n = 100000 | 5.7e+03 (3.1e+03) | 1.8e+03 (1.5e+03) | 2.9e+05 (3.4e+04) | 1.6e+05 (1.1e+04) | 1.8e+03 (1.5e+03) | 1.6e+05 (1.1e+04) |
+| positive, n = 1000000 | 1.3e+05 (6e+03) | 9.7e+03 (3.1e+03) | 1e+05 (5.8e+04) | 2.8e+04 (2e+04) | 9.7e+03 (3.1e+03) | 2.8e+04 (2e+04) |
+| random signs, n = 10 | 56 (7.2) | 68 (20) | –, exact in 20 of 20 | –, exact in 20 of 20 | 68 (20) | –, exact in 20 of 20 |
+| random signs, n = 100 | 6.7e+02 (2.9e+02) | 6.2e+02 (1.2e+02) | 2.5e+03 (2.1e+03), exact in 16 of 20 | 2.3e+03 (1.3e+03), exact in 15 of 20 | 6.2e+02 (1.2e+02) | 2.3e+03 (1.3e+03), exact in 15 of 20 |
+| random signs, n = 1000 | 6.3e+03 (2e+03) | 5.8e+03 (1.5e+03) | 8.4e+04 (1.9e+04), exact in 2 of 20 | 4.9e+04 (6.7e+03), exact in 2 of 20 | 5.8e+03 (1.5e+03) | 4.9e+04 (6.7e+03), exact in 2 of 20 |
+| random signs, n = 10000 | 1.9e+05 (2e+04) | 4.1e+04 (7.9e+03) | 8.6e+05 (1.5e+05) | 5.4e+05 (1.5e+05) | 4.1e+04 (7.9e+03) | 5.4e+05 (1.5e+05) |
+| random signs, n = 100000 | 2.8e+06 (6.1e+05) | 4.6e+05 (1e+05) | 3.1e+06 (2.6e+06) | 2e+06 (8.3e+05) | 4.6e+05 (1e+05) | 2e+06 (8.3e+05) |
+| random signs, n = 1000000 | 3.7e+06 (2.2e+06) | 9.4e+06 (2e+06) | 9.1e+07 (1.7e+07) | 5.6e+07 (1.2e+07) | 9.4e+06 (2e+06) | 5.6e+07 (1.2e+07) |
+| condition 1e4 to 1e40, n = 10 | 46 (9.3) | 47 (10) | 3.8e+02 (36), exact in 1 of 200 | 3.9e+02 (42) | 47 (10) | 3.9e+02 (42) |
+| condition 1e4 to 1e40, n = 100 | 3e+02 (40) | 2.4e+02 (30) | 1.5e+03 (2e+02) | 1.3e+03 (1.9e+02) | 2.4e+02 (30) | 1.3e+03 (1.9e+02) |
+| condition 1e4 to 1e40, n = 1000 | 1.4e+03 (1.8e+02) | 1.3e+03 (1.5e+02) | 9.5e+03 (8.6e+02) | 7.2e+03 (8e+02) | 1.3e+03 (1.5e+02) | 7.2e+03 (8e+02) |
+| condition 1e4 to 1e40, n = 10000 | 1.3e+04 (2.2e+03) | 1.1e+04 (1.8e+03) | 8.7e+04 (9.6e+03) | 6.1e+04 (8.1e+03) | 1.1e+04 (1.8e+03) | 6.1e+04 (8.1e+03) |
+| condition 1e4 to 1e40, n = 100000 | 1.6e+05 (3.2e+04) | 1.5e+05 (3.4e+04) | 7.1e+05 (1.8e+05) | 4.9e+05 (1.3e+05) | 1.5e+05 (3.4e+04) | 4.9e+05 (1.3e+05) |
+| condition 1e4 to 1e40, n = 1000000 | 2.2e+06 (3.1e+05) | 1.3e+06 (2.4e+05) | 7.4e+06 (1.8e+06) | 5.2e+06 (7e+05) | 1.3e+06 (2.4e+05) | 5.2e+06 (7e+05) |
+
+- **One limb is as accurate as the naive loop; two limbs move the limit by sixteen digits.** The
+  error of `sum` and `dot` of one limb, in either order, is that of the loop of `double`, about the
+  condition number times $u$ (a relative error of $6 \times 10^{-8}$ at a condition of $10^8$ to
+  $10^{11}$, no correct digit from about $10^{16}$); with two limbs, and with the accumulator of two
+  limbs, about the condition times $u^2$: $2$ to $4 \times 10^{-16}$ at $10^{16}$ to $10^{19}$, no
+  correct digit from about $10^{32}$.
+- **Against Sum2 and Dot2**, whose result is one `double`: they give every digit of a `double` (a
+  relative error of about $u/2$) up to a condition of about $10^{15}$ at $10^3$ terms and $10^{11}$
+  at $10^6$, as Kairn's two limbs do once rounded; beyond, their error grows with the length faster
+  than Kairn's: at $10^6$ terms and a condition of $10^{16}$ to $10^{31}$ Sum2's is 65 to 500 times
+  that of Kairn's two limbs, at $10^3$ terms 4 to 13 times. Kairn's two limbs take 1.7 to 1.8 times
+  Sum2's time in the default order and 7 times sequentially
+  ([question 13](#13-the-functions-on-arrays)).
+- **How far above the error made the stated bound is, as a function of the length**: for positive
+  numbers, where the bound is closest, the median ratio of the bound to the error grows from 16 to
+  27 at 10 terms to $5.9 \times 10^3$ to $1.3 \times 10^5$ at $10^6$, the smallest seen 5.2 (10
+  terms, one limb, the default order); for random signs from 19 to 68 at 10 terms to $4 \times 10^6$
+  to $9 \times 10^7$ at $10^6$; for the conditioned data from 46 to 110 at 10 terms to $1.3$ to
+  $2.2 \times 10^6$ at $10^6$ with one limb, and from 380 to 1 200 to $3.7$ to $7.4 \times 10^6$ with
+  two. The bound grows as the length, $\gamma_{n-1}(e)\sum\lvert x_i\rvert$; the error made grew
+  more slowly in every regime. The accumulators' `error_bound()` is within a factor of two of the
+  bound of `sum` and `dot` of the same limbs in the sequential order. No error was above its bound.
+  Sums of two limbs of numbers without cancellation were exact in every trial (the exact sum fits in
+  two limbs).
+
 ### What the machine code shows (third part)
 
 The loops of the new timed functions were summarized by `bench/asm_summary.py` as in the earlier
@@ -5641,3 +5785,95 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `error_bound()`, 2 limbs | 6.64 to 6.66 (-O2), 5.53 to 5.55 (-O3) | 6.48 to 6.6 |
 | `ball()`, 1 limb | 7.28 to 7.34 (-O2), 6.62 to 6.63 (-O3) | 8.04 to 8.18 |
 | `ball()`, 2 limbs | 7.97 to 7.99 (-O2), 7.29 to 7.32 (-O3) | 8.54 to 8.68 |
+
+#### Question 17: accuracy
+
+| Sums, linux (4 lanes): relative error, median over the trials, by condition | naive loop | Kairn, one limb | Sum2 | Kairn, two limbs | Accumulator, two limbs |
+|---|---|---|---|---|---|
+| n = 1000, condition 1e0 to 1e3 (40 trials) | 6.8e-16 | 1.9e-16 | 4.2e-17 | 0.0e+00 | 0.0e+00 |
+| n = 1000, condition 1e4 to 1e7 (20 trials) | 1.9e-11 | 1.8e-11 | 4.1e-17 | 1.3e-27 | 1.8e-27 |
+| n = 1000, condition 1e8 to 1e11 (20 trials) | 7.2e-08 | 6.0e-08 | 4.0e-17 | 5.7e-24 | 6.6e-24 |
+| n = 1000, condition 1e12 to 1e15 (20 trials) | 1.1e-03 | 4.3e-04 | 4.0e-17 | 5.5e-20 | 4.0e-20 |
+| n = 1000, condition 1e16 to 1e19 (20 trials) | 8.2e+00 | 7.1e+00 | 5.3e-15 | 4.1e-16 | 1.9e-16 |
+| n = 1000, condition 1e20 to 1e23 (20 trials) | 3.1e+04 | 1.8e+04 | 7.7e-12 | 1.1e-12 | 3.2e-12 |
+| n = 1000, condition 1e24 to 1e27 (20 trials) | 5.7e+08 | 4.0e+08 | 2.9e-07 | 4.1e-08 | 7.0e-08 |
+| n = 1000, condition 1e28 to 1e31 (20 trials) | 5.5e+12 | 5.2e+12 | 1.1e-03 | 2.4e-04 | 4.3e-04 |
+| n = 1000, condition 1e32 to 1e35 (22 trials) | 7.3e+16 | 2.4e+16 | 3.1e+01 | 7.2e+00 | 1.8e+00 |
+| n = 1000, condition 1e36 to 1e39 (20 trials) | 4.8e+20 | 3.3e+20 | 2.4e+05 | 1.5e+04 | 3.7e+04 |
+| n = 1000, condition 1e40 to 1e43 (18 trials) | 2.5e+24 | 2.7e+24 | 1.3e+09 | 1.8e+08 | 1.4e+08 |
+| n = 1000000, condition 1e0 to 1e3 (8 trials) | 4.5e-14 | 1.2e-14 | 2.0e-17 | 0.0e+00 | 0.0e+00 |
+| n = 1000000, condition 1e8 to 1e11 (5 trials) | 2.5e-08 | 4.8e-08 | 2.6e-17 | 3.7e-24 | 1.6e-23 |
+| n = 1000000, condition 1e12 to 1e15 (6 trials) | 2.5e-01 | 3.3e-01 | 6.4e-15 | 1.7e-17 | 7.2e-18 |
+| n = 1000000, condition 1e16 to 1e19 (3 trials) | 1.9e+02 | 1.1e+04 | 2.6e-11 | 2.0e-13 | 2.8e-13 |
+| n = 1000000, condition 1e20 to 1e23 (6 trials) | 4.9e+07 | 5.7e+07 | 1.8e-06 | 3.5e-09 | 4.7e-09 |
+| n = 1000000, condition 1e24 to 1e27 (3 trials) | 4.1e+11 | 7.1e+10 | 6.1e-03 | 1.8e-05 | 4.7e-05 |
+| n = 1000000, condition 1e28 to 1e31 (5 trials) | 4.0e+14 | 1.7e+15 | 7.2e+00 | 1.1e-01 | 1.5e-01 |
+| n = 1000000, condition 1e32 to 1e35 (4 trials) | 5.9e+18 | 1.2e+19 | 8.1e+05 | 3.0e+03 | 1.7e+03 |
+| n = 1000000, condition 1e36 to 1e39 (4 trials) | 1.0e+23 | 1.2e+23 | 2.6e+09 | 3.7e+07 | 4.2e+07 |
+| n = 1000000, condition 1e40 to 1e43 (4 trials) | 1.7e+27 | 1.3e+27 | 9.4e+12 | 6.9e+10 | 1.5e+11 |
+
+| Sums, linux: the stated bound over the error made, median (smallest) over the trials | Kairn, one limb | one limb, sequential | two limbs | two limbs, sequential | Accumulator, one limb | Accumulator, two limbs |
+|---|---|---|---|---|---|---|
+| positive, n = 10 | 17 (5.2), exact in 2 of 20 | 16 (5.5), exact in 1 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 18 (6.1), exact in 1 of 20 | –, exact in 20 of 20 |
+| positive, n = 100 | 2.2e+02 (55) | 64 (15) | –, exact in 20 of 20 | –, exact in 20 of 20 | 65 (15) | –, exact in 20 of 20 |
+| positive, n = 1000 | 1.2e+03 (3e+02) | 2.2e+02 (67) | –, exact in 20 of 20 | –, exact in 20 of 20 | 2.2e+02 (67) | –, exact in 20 of 20 |
+| positive, n = 10000 | 2.5e+03 (1.4e+03) | 5.3e+02 (2.5e+02) | –, exact in 10 of 10 | –, exact in 10 of 10 | 5.3e+02 (2.5e+02) | –, exact in 10 of 10 |
+| positive, n = 100000 | 5.6e+03 (4.6e+03) | 3.1e+03 (7.7e+02) | –, exact in 4 of 4 | –, exact in 4 of 4 | 3.1e+03 (7.7e+02) | –, exact in 4 of 4 |
+| positive, n = 1000000 | 2.2e+04 (9.6e+03) | 5.9e+03 (2.4e+03) | –, exact in 4 of 4 | –, exact in 4 of 4 | 5.9e+03 (2.4e+03) | –, exact in 4 of 4 |
+| random signs, n = 10 | 19 (8.7), exact in 14 of 20 | 24 (13), exact in 15 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 27 (14), exact in 15 of 20 | –, exact in 20 of 20 |
+| random signs, n = 100 | 6.5e+02 (2.8e+02), exact in 5 of 20 | 6.5e+02 (1.5e+02), exact in 1 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 6.5e+02 (1.5e+02), exact in 1 of 20 | –, exact in 20 of 20 |
+| random signs, n = 1000 | 1e+04 (1.6e+03) | 3.7e+03 (1.3e+03) | –, exact in 20 of 20 | –, exact in 20 of 20 | 3.7e+03 (1.3e+03) | –, exact in 20 of 20 |
+| random signs, n = 10000 | 5.5e+04 (2.8e+04) | 5.7e+04 (1.4e+04) | –, exact in 10 of 10 | –, exact in 10 of 10 | 5.7e+04 (1.4e+04) | –, exact in 10 of 10 |
+| random signs, n = 100000 | 8.5e+05 (5.6e+05) | 1.9e+06 (6.7e+05) | –, exact in 4 of 4 | –, exact in 4 of 4 | 1.9e+06 (6.7e+05) | –, exact in 4 of 4 |
+| random signs, n = 1000000 | 1.1e+07 (2.3e+06) | 4.3e+06 (3.6e+06) | –, exact in 4 of 4 | –, exact in 4 of 4 | 4.3e+06 (3.6e+06) | –, exact in 4 of 4 |
+| condition 1e4 to 1e40, n = 10 | 1.1e+02 (9.3) | 56 (10) | 1.2e+03 (37), exact in 14 of 200 | 6.6e+02 (43), exact in 9 of 200 | 62 (11) | 9.8e+02 (64), exact in 9 of 200 |
+| condition 1e4 to 1e40, n = 100 | 3.4e+02 (39) | 2.6e+02 (41) | 1.5e+03 (2.7e+02) | 1.1e+03 (1.4e+02) | 2.6e+02 (41) | 1.5e+03 (1.9e+02) |
+| condition 1e4 to 1e40, n = 1000 | 1.7e+03 (2.9e+02) | 1.5e+03 (1.8e+02) | 8.2e+03 (1.3e+03) | 7.2e+03 (7.3e+02) | 1.5e+03 (1.8e+02) | 9.6e+03 (9.8e+02) |
+| condition 1e4 to 1e40, n = 10000 | 1.3e+04 (2.1e+03) | 1.3e+04 (1.5e+03) | 5.7e+04 (1.3e+04) | 5.2e+04 (7.6e+03) | 1.3e+04 (1.5e+03) | 7e+04 (1e+04) |
+| condition 1e4 to 1e40, n = 100000 | 1.5e+05 (1.7e+04) | 1.4e+05 (1.9e+04) | 5.2e+05 (3.9e+04) | 4.8e+05 (1.2e+05) | 1.4e+05 (1.9e+04) | 6.4e+05 (1.6e+05) |
+| condition 1e4 to 1e40, n = 1000000 | 1.5e+06 (1.6e+05) | 1.3e+06 (2.9e+05) | 6.1e+06 (7.5e+05) | 3.7e+06 (5.6e+05) | 1.3e+06 (2.9e+05) | 5e+06 (7.5e+05) |
+
+| Dot products, linux (4 lanes): relative error, median over the trials, by condition | naive loop | Kairn, one limb | Dot2 | Kairn, two limbs | Accumulator, two limbs |
+|---|---|---|---|---|---|
+| n = 1000, condition 1e0 to 1e3 (40 trials) | 8.5e-16 | 3.7e-16 | 4.8e-17 | 1.7e-32 | 4.6e-32 |
+| n = 1000, condition 1e4 to 1e7 (20 trials) | 2.8e-11 | 2.8e-11 | 3.0e-17 | 2.6e-27 | 2.5e-27 |
+| n = 1000, condition 1e8 to 1e11 (20 trials) | 2.1e-07 | 2.2e-07 | 4.9e-17 | 7.6e-24 | 1.8e-23 |
+| n = 1000, condition 1e12 to 1e15 (20 trials) | 3.1e-03 | 1.8e-03 | 4.4e-17 | 7.3e-20 | 1.2e-19 |
+| n = 1000, condition 1e16 to 1e19 (20 trials) | 9.6e+00 | 9.8e+00 | 7.7e-15 | 1.4e-15 | 1.2e-15 |
+| n = 1000, condition 1e20 to 1e23 (20 trials) | 8.1e+04 | 8.6e+04 | 7.7e-11 | 3.1e-12 | 2.7e-12 |
+| n = 1000, condition 1e24 to 1e27 (20 trials) | 1.4e+09 | 1.6e+09 | 1.1e-06 | 9.3e-08 | 1.6e-07 |
+| n = 1000, condition 1e28 to 1e31 (20 trials) | 7.4e+12 | 7.1e+12 | 5.7e-03 | 7.0e-04 | 6.3e-04 |
+| n = 1000, condition 1e32 to 1e35 (20 trials) | 6.8e+16 | 7.4e+16 | 3.1e+01 | 3.0e+00 | 8.2e+00 |
+| n = 1000, condition 1e36 to 1e39 (20 trials) | 4.5e+20 | 3.4e+20 | 7.0e+05 | 4.7e+04 | 1.6e+05 |
+| n = 1000, condition 1e40 to 1e43 (20 trials) | 4.0e+24 | 5.0e+24 | 3.7e+09 | 4.0e+08 | 2.2e+08 |
+| n = 1000000, condition 1e0 to 1e3 (8 trials) | 1.8e-14 | 1.4e-14 | 2.8e-17 | 5.8e-31 | 1.8e-30 |
+| n = 1000000, condition 1e8 to 1e11 (5 trials) | 6.3e-08 | 4.3e-08 | 3.7e-17 | 1.5e-24 | 6.4e-24 |
+| n = 1000000, condition 1e12 to 1e15 (5 trials) | 3.3e-04 | 1.0e-03 | 2.4e-17 | 3.7e-20 | 2.4e-20 |
+| n = 1000000, condition 1e16 to 1e19 (4 trials) | 1.0e+03 | 1.8e+03 | 2.5e-10 | 2.1e-13 | 8.2e-14 |
+| n = 1000000, condition 1e20 to 1e23 (3 trials) | 9.6e+04 | 2.2e+04 | 3.9e-09 | 7.0e-12 | 5.9e-12 |
+| n = 1000000, condition 1e24 to 1e27 (6 trials) | 6.8e+10 | 1.0e+11 | 6.9e-04 | 2.3e-05 | 8.0e-06 |
+| n = 1000000, condition 1e28 to 1e31 (3 trials) | 1.6e+15 | 2.7e+14 | 1.1e+01 | 2.1e-01 | 4.5e-02 |
+| n = 1000000, condition 1e32 to 1e35 (6 trials) | 2.3e+19 | 7.6e+19 | 3.7e+05 | 5.5e+03 | 3.8e+03 |
+| n = 1000000, condition 1e36 to 1e39 (4 trials) | 1.9e+23 | 6.3e+22 | 4.3e+09 | 1.1e+07 | 4.2e+07 |
+| n = 1000000, condition 1e40 to 1e43 (4 trials) | 2.7e+27 | 4.3e+27 | 1.1e+14 | 4.5e+11 | 2.6e+11 |
+
+| Dot products, linux: the stated bound over the error made, median (smallest) over the trials | Kairn, one limb | one limb, sequential | two limbs | two limbs, sequential | Accumulator, one limb | Accumulator, two limbs |
+|---|---|---|---|---|---|---|
+| positive, n = 10 | 19 (6.1) | 27 (6.1) | 1e+02 (35), exact in 6 of 20 | 98 (35), exact in 3 of 20 | 27 (6.1) | 98 (35), exact in 3 of 20 |
+| positive, n = 100 | 1.7e+02 (55) | 1.2e+02 (16) | 2e+03 (4.8e+02), exact in 1 of 20 | 4.7e+02 (1e+02) | 1.2e+02 (16) | 4.7e+02 (1e+02) |
+| positive, n = 1000 | 6.4e+02 (2.2e+02) | 1.9e+02 (50) | 5.1e+03 (1.3e+03) | 1.2e+03 (3.8e+02) | 1.9e+02 (50) | 1.2e+03 (3.8e+02) |
+| positive, n = 10000 | 4.5e+03 (9.6e+02) | 5.7e+02 (2.6e+02) | 1.4e+04 (6.8e+03) | 3.9e+03 (8.7e+02) | 5.7e+02 (2.6e+02) | 3.9e+03 (8.7e+02) |
+| positive, n = 100000 | 5.7e+03 (3.1e+03) | 1.8e+03 (1.5e+03) | 2.9e+05 (3.4e+04) | 1.6e+05 (1.1e+04) | 1.8e+03 (1.5e+03) | 1.6e+05 (1.1e+04) |
+| positive, n = 1000000 | 1.3e+05 (6e+03) | 9.7e+03 (3.1e+03) | 1e+05 (5.8e+04) | 2.8e+04 (2e+04) | 9.7e+03 (3.1e+03) | 2.8e+04 (2e+04) |
+| random signs, n = 10 | 56 (7.2) | 68 (20) | –, exact in 20 of 20 | –, exact in 20 of 20 | 68 (20) | –, exact in 20 of 20 |
+| random signs, n = 100 | 6.7e+02 (2.9e+02) | 6.2e+02 (1.2e+02) | 2.5e+03 (2.1e+03), exact in 16 of 20 | 2.3e+03 (1.3e+03), exact in 15 of 20 | 6.2e+02 (1.2e+02) | 2.3e+03 (1.3e+03), exact in 15 of 20 |
+| random signs, n = 1000 | 6.3e+03 (2e+03) | 5.8e+03 (1.5e+03) | 8.4e+04 (1.9e+04), exact in 2 of 20 | 4.9e+04 (6.7e+03), exact in 2 of 20 | 5.8e+03 (1.5e+03) | 4.9e+04 (6.7e+03), exact in 2 of 20 |
+| random signs, n = 10000 | 1.9e+05 (2e+04) | 4.1e+04 (7.9e+03) | 8.6e+05 (1.5e+05) | 5.4e+05 (1.5e+05) | 4.1e+04 (7.9e+03) | 5.4e+05 (1.5e+05) |
+| random signs, n = 100000 | 2.8e+06 (6.1e+05) | 4.6e+05 (1e+05) | 3.1e+06 (2.6e+06) | 2e+06 (8.3e+05) | 4.6e+05 (1e+05) | 2e+06 (8.3e+05) |
+| random signs, n = 1000000 | 3.7e+06 (2.2e+06) | 9.4e+06 (2e+06) | 9.1e+07 (1.7e+07) | 5.6e+07 (1.2e+07) | 9.4e+06 (2e+06) | 5.6e+07 (1.2e+07) |
+| condition 1e4 to 1e40, n = 10 | 46 (9.3) | 47 (10) | 3.8e+02 (36), exact in 1 of 200 | 3.9e+02 (42) | 47 (10) | 3.9e+02 (42) |
+| condition 1e4 to 1e40, n = 100 | 3e+02 (40) | 2.4e+02 (30) | 1.5e+03 (2e+02) | 1.3e+03 (1.9e+02) | 2.4e+02 (30) | 1.3e+03 (1.9e+02) |
+| condition 1e4 to 1e40, n = 1000 | 1.4e+03 (1.8e+02) | 1.3e+03 (1.5e+02) | 9.5e+03 (8.6e+02) | 7.2e+03 (8e+02) | 1.3e+03 (1.5e+02) | 7.2e+03 (8e+02) |
+| condition 1e4 to 1e40, n = 10000 | 1.3e+04 (2.2e+03) | 1.1e+04 (1.8e+03) | 8.7e+04 (9.6e+03) | 6.1e+04 (8.1e+03) | 1.1e+04 (1.8e+03) | 6.1e+04 (8.1e+03) |
+| condition 1e4 to 1e40, n = 100000 | 1.6e+05 (3.2e+04) | 1.5e+05 (3.4e+04) | 7.1e+05 (1.8e+05) | 4.9e+05 (1.3e+05) | 1.5e+05 (3.4e+04) | 4.9e+05 (1.3e+05) |
+| condition 1e4 to 1e40, n = 1000000 | 2.2e+06 (3.1e+05) | 1.3e+06 (2.4e+05) | 7.4e+06 (1.8e+06) | 5.2e+06 (7e+05) | 1.3e+06 (2.4e+05) | 5.2e+06 (7e+05) |
