@@ -77,6 +77,33 @@ vectors yet (the list
 `KAIRN_NOT_PUBLIC_YET` of `tests/CMakeLists.txt`), so what this page says of those headers is
 still a design.
 
+**State on 2026-11-22.** The headers of the functions on arrays, of the accumulator and of the
+ball vectors are public (`kairn/batch.hpp`, `kairn/accumulator.hpp`, `kairn/ball_vector.hpp`;
+[Batch kernels](#batch-kernels), [BallVector](#ballvector)), so the last sentence above no longer
+holds: `KAIRN_NOT_PUBLIC_YET` names three steps of `axpy` on stored arrays and nothing else. Also
+since the state of 2026-11-21, each with its row in
+[the decisions log](phase0/decisions.md#decisions-log):
+
+- **Rule R3 is strict for the factors of a fused operation**, by the owner's decision: a value of
+  the program is guarded before it is a factor of a fused operation with a non-zero addend, after
+  compilers were measured fusing a program's product into `two_prod`, `mul_down`, `mul_up` and the
+  products of two limbs by a `T` when the other factor is 1 or −1
+  ([Architecture](../architecture.md#the-kernel-ir), rule R3, "The factors of a fused operation"). The public operations
+  call guarded entry forms (`two_prod_entry`, `mul_2_1_entry`, ...) proved by reduction to the
+  kernels of this page and of Milestone 1, whose listings and statements are unchanged. Thirteen
+  objects of the two-limb loops are still to close.
+- **The interface of the sets gained** `from_bounds` on both types, `Interval::is_finite()`, the
+  constructors `from_limbs` from stored limbs, and `ldexp` and `half` of two limbs in constant
+  expressions; **`kairn::sequential` is the first argument** wherever it appears; **every
+  function on arrays checks the floating-point environment at entry in every build**; the
+  version is 0.3.0.
+- **The exhaustive tier on emulated formats exists** (the note of this date
+  [below](#order-of-implementation)).
+- On this tree `gen/kernels/` holds 233 kernels and 47 loops, the ten kernels and three loops more
+  being the guarded entry forms, and the audits print the assumptions of 1 532 theorems (185, 384
+  and 963). The counts per model above are those of 2026-11-21 and do not include them; an entry
+  form has the statements of its core.
+
 How each section reads: two or three plain sentences on what is guaranteed and why it matters;
 the exact statement; the kernel, in the operations of the
 [IR](../architecture.md#the-kernel-ir); how it is to be proved and from which lemmas; what is
@@ -124,7 +151,10 @@ not claimed.
   compositions are `ldexp` beyond the powers of two of `T` (from Milestone 1), `axpy` and the
   norm of a `BallVector` ([BallVector](#ballvector)), and what the accumulator's header adds to
   its kernels: the count, its conversion to `T`, and the whole line returned when a mask is false
-  ([The accumulator](#the-accumulator)).
+  ([The accumulator](#the-accumulator)). *Since (2026-11-22):* also the constructors
+  `from_limbs` of an interval and of a ball, which pass each stored limb through a proved kernel
+  that guards it (the leading limb of `make_2`; a pair through `make_2_limbs`): no kernel states
+  "the argument, guarded" by itself.
 - **At the end of the milestone** (2026-11-21) every kernel and loop of this page is generated
   and proved but the three named at the top of this page; the statements that the proofs
   changed are marked where they are.
@@ -660,6 +690,19 @@ The tests hold a table of 80 public functions, each marked as rounding or not. *
 predicate of the whole line* is `is_whole` on both types, the name `Ball` has had since
 Milestone 1 (the ruling of 2026-11-21); the first version of this page wrote `is_entire`
 for both, and the kernels of `Interval` keep the name `interval_entire_k`.
+
+*As built (2026-11-22).* The table of the tests now holds 234 public functions (175 that round, 46
+that do not, 13 that check nothing). Three things changed since the decision. The functions on
+arrays and the operations on whole ball vectors check the environment at entry in every build, not
+only in a debug build ([the accumulator and the batch entries](#batch-kernels)); those that
+compute no sum, `norm_upper` and the negation of a ball vector, leave the rounding mode out. The
+constructor of a ball vector of one limb lost its exemption: with clang-cl, under rounding
+downward, it returned the whole space for finite centers, its radius being a zero whose sign
+depends on the mode ([decisions log](phase0/decisions.md#decisions-log), 2026-11-22). And
+`from_limbs` of a set checks the mode for every number of limbs. The other constructors of one limb
+are still exempt on the argument of the second table ("only the sign of a zero depends on the
+mode"); after the finding with clang-cl that argument needs a second look for each of them, which
+is an open issue of the milestone's report.
 
 ## Interval kernels
 
@@ -3130,7 +3173,7 @@ and the first part of the milestone's benchmarks is recorded
 ([Benchmarks, Milestone 2](../results/bench-milestone2.md)). Still not on `main`: the public
 functions on arrays, `traits<X>::sum(n)` and `dot(n)`, the accumulator's class and the public
 `BallVector`. Still no record of a run of the brute-force tier on the kernels of this milestone,
-and no report of the milestone.
+and no report of the milestone. (On 2026-11-22 those headers are public: the state of that date at the top of this page.)
 
 *The exhaustive tier on emulated formats (2026-11-22).* The plan lists it in this milestone and
 the brief describes it ("the scalar core instantiated on tiny emulated formats"); until the audit

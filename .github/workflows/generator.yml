@@ -70,6 +70,8 @@ jobs:
         with:
           python-version: "3.14"
 
-      # python: the 3.14 of setup-python, under the one name it has on every runner.
+      # python: the 3.14 of setup-python, under the one name it has on every runner. --durations:
+      # the 25 slowest tests of the job are printed after its summary, so that the limits and the
+      # shards can be sized from the times of the hosted runners themselves.
       - name: The generator's tests
-        run: python gen/kairn-gen test ${{ matrix.tests }}
+        run: python gen/kairn-gen test ${{ matrix.tests }} --durations 25

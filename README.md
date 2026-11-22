@@ -4,30 +4,44 @@ Rigorous floating-point expansions ("k-numbers") with interval and ball arithmet
 header-only C++20. Every error bound is meant to carry a machine-checked proof, and the shipped
 code is generated from the same source the proofs are about.
 
-**Status: pre-release. Phase 0 (specification and feasibility) and Milestone 1 are complete
-([report](docs/developer/results/milestone1.md)); Milestone 2 is in progress
-([what each milestone adds](#milestones)). Nothing here should be relied on yet.** The documentation is at <https://danielepanozzo.github.io/kairn/>. Public on `main`, for `T` = `float` or
-`double`: in `kairn/kairn.hpp`, the numbers of one and two limbs `kairn::Expansion<T, 1>` and
-`kairn::Expansion<T, 2>`; the balls `kairn::Ball<T, k>` and the intervals `kairn::Interval<T, k>`
-around them, with the enclosure interface the two share (predicates, three-valued comparisons,
-hull, intersection, split, midpoint and radius, the conversions between them); the building
-blocks on `T` (`two_sum`, `two_prod`, sums and products rounded down and up without changing the
-rounding mode); and constants built at compile time from an integer or a fraction
-(`kairn::rational`, `kairn::integer`); in `kairn/packed.hpp` and `kairn/soa.hpp`, which
-`kairn/kairn.hpp` does not include, the packed SIMD type `kairn::Packed<T, k>` and the containers
-in structure-of-arrays form. Not on `main` yet: the functions on arrays (sum, dot product, `axpy`,
-convolution, a bound of the norm), the accumulator and `BallVector`, which are in review, and the
-later milestones. The kernels these operations call have proved claims (error bounds and the
+**Status: pre-release (version 0.3.0). Phase 0 (specification and feasibility) and Milestone 1
+are complete ([report](docs/developer/results/milestone1.md)); Milestone 2 is in progress
+([what each milestone adds](#milestones)). Nothing here should be relied on yet.** The
+documentation is at <https://danielepanozzo.github.io/kairn/>.
+
+Public on `main`, for `T` = `float` or `double`:
+
+- in `kairn/kairn.hpp`: the numbers of one and two limbs, `kairn::Expansion<T, 1>` and
+  `kairn::Expansion<T, 2>`; the balls `kairn::Ball<T, k>` and the intervals `kairn::Interval<T, k>`
+  around them, with the enclosure interface the two share (predicates, three-valued comparisons,
+  hull, intersection, split, midpoint and radius, the conversions between them); the building
+  blocks on `T` (`two_sum`, `two_prod`, sums and products rounded down and up without changing the
+  rounding mode); constants built at compile time from an integer or a fraction
+  (`kairn::rational`, `kairn::integer`); and the accumulator `kairn::Accumulator<T, k>`, a running
+  sum with its error bound;
+- in `kairn/batch.hpp`: the functions on arrays (sum, dot product, `axpy`, scaling, convolution,
+  an upper bound of the norm), with their error bounds as functions of the length;
+- in `kairn/ball_vector.hpp`: `kairn::BallVector<T, k, N>`, N centers with one radius;
+- in `kairn/packed.hpp` and `kairn/soa.hpp`: the packed SIMD type `kairn::Packed<T, k>` and the
+  containers in structure-of-arrays form.
+
+`kairn/kairn.hpp` does not include the last four headers. The later milestones are not built.
+
+**What is proved.** The kernels these operations call have proved claims: error bounds and the
 containment of ball arithmetic in a model where nothing overflows; what happens at overflow and
-for infinities and NaN, and every claim of the intervals and of the interface of the sets, in a
-model of IEEE 754), and the operators return results like those of `T` at overflow and for
-infinities and NaN (a ball: the whole line or the empty set; an interval: an infinite bound, or
-the whole line); `kairn::finite::` skips that layer. Not machine-checked: `ldexp` by a power of
-two that the limb type cannot represent, whose steps are proved and whose composition is argued
-and tested; `kairn::rational` and `kairn::integer`, integer code that is specified exactly, tested
-for equality and, by default, checked against its statement for each constant computed at
-compile time, and with them that the ball of such a constant contains it; a few compositions of
-two proved kernels in the headers, argued and not proved as one statement; and the tests of bit
+for infinities and NaN, every claim of the intervals and of the interface of the sets, and the
+loops over arrays for every length and order of summation, in a model of IEEE 754. The operators
+return results like those of `T` at overflow and for infinities and NaN (a ball: the whole line or
+the empty set; an interval: an infinite bound, or the whole line); `kairn::finite::` skips that
+layer.
+
+**Not machine-checked:** `ldexp` by a power of two that the limb type cannot represent, whose
+steps are proved and whose composition is argued and tested; `kairn::rational` and
+`kairn::integer`, integer code that is specified exactly, tested for equality and, by default,
+checked against its statement for each constant computed at compile time, and with them that the
+ball of such a constant contains it; a few compositions of two proved kernels in the headers,
+argued and not proved as one statement; the integer bookkeeping of the bounds of arrays and of the
+accumulator (the count of terms and its conversion to the limb type); and the tests of bit
 patterns written by hand (`sign`, `isfinite`, `is_normalized`, the states of a ball).
 [What holds today](docs/getting-started/guarantees.md) says what is proved, in which model, and
 what is not yet.
