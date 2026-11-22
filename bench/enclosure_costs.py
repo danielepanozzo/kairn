@@ -15,12 +15,12 @@ docs/developer/results/costs-milestone2.md, docs/developer/results/bench-milesto
   enclosure_costs.py compile --cxx CXX [--msvc] [--flags "..."] [--kind KIND] [--cpu N]
                      [--sizes 100,1000,10000] [--configs O2,O3]
                      [--settings inline,outlined,external[,calls]] [--reps R] [--timeout S]
-                     [--run [--run-reps R]]
+                     [--run [--run-reps R]] [--once-from N]
                      --workdir DIR --machine TEXT --commit TEXT --json FILE
       Writes those units into DIR and compiles each (nothing is linked) with each configuration and
-      setting, R times in rounds over all of them (once for the units of the largest size), and
-      records the wall time, the processor time and the peak memory of each compilation, and the
-      size of the object; and the same for bench/definitions.cpp, the translation unit that defines
+      setting, R times in rounds over all of them (once for the units of the largest size, or of N
+      operations or more), and records the wall time, the processor time and the peak memory of
+      each compilation, and the size of the object; and the same for bench/definitions.cpp, the translation unit that defines
       the operations for the external setting, which a program compiles once. The setting calls is
       the same code without Kairn, the types structures of doubles and the operations functions
       declared only: what the calls themselves cost the compiler. With --run (KIND interval1,
@@ -369,10 +369,10 @@ def cmd_compile(args):
         units.append(('definitions', 0, config, 'external', os.path.join(HERE, 'definitions.cpp')))
     results = {}
     run_cache = {}
-    largest = max(sizes)
+    largest = args.once_from or max(sizes)   # units of at least this many operations are compiled once
     for rep in range(args.reps):
         for kind, n, config, setting, path in units:
-            if rep > 0 and n == largest:
+            if rep > 0 and n >= largest:
                 continue
             key = '%s %d %s %s' % (kind, n, config, setting)
             r = results.setdefault(key, {'kind': kind, 'operations': n, 'config': config, 'setting': setting,
@@ -524,6 +524,7 @@ def main():
     c.add_argument('--configs', default='O2,O3')
     c.add_argument('--settings', default='inline,outlined,external')
     c.add_argument('--reps', type=int, default=3)
+    c.add_argument('--once-from', type=int, help='compile units of at least this many operations once (default: the largest size)')
     c.add_argument('--timeout', type=int, default=3600)
     c.add_argument('--workdir', required=True)
     c.add_argument('--machine', required=True)
