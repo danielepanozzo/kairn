@@ -15964,4 +15964,11 @@ inline constexpr const char* not_constexpr[not_constexpr_count + 1] = {
     nullptr,
 };
 
+// The kernels whose path of constant evaluation is the listing of a variant: the kernel,
+// then its variant.
+inline constexpr const char* ce_variants[][2] = {
+    {"two_prod", "two_prod_dekker"},
+    {nullptr, nullptr},
+};
+
 }  // namespace kairn::emulated::generated

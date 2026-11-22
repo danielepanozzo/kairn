@@ -2,7 +2,7 @@
 calls run() in its own process, and tests/crosscheck.cmake, which runs this).
 
     python3 tests/crosscheck_guards.py SUMMARY --kernel K --format F
-        (--exhaustive [--restrict R1,R2,...] | --count N --seed S) [--claims FILE]
+        (--exhaustive [--restrict R1,R2,...] | --count N --seed S) [--claims FILE] [--emulated]
 
 SUMMARY is the oracle's summary of the run (check --json). The oracle has already passed the
 run: no claim violated, no broken stream, no invalid case (the cross-checks pass check
@@ -63,6 +63,10 @@ the finishes every class of their state; a fold (--orders, --max-length: the str
 every length class and order asked for, both outcomes of its flag and no false one far from
 overflow, heavy cancellation, for a dot product the term tau mattering, and an error of at least
 1/2 (one limb) or 1/16 (two limbs) of the bound (fold_problems).
+
+A run of the emulated tier (--emulated: the kernels printed for the emulated limb type,
+tests/emulated/runner.cpp) also fails when its format is not a format of the statements of
+precision 8 to 11, or when the oracle judged fewer than a quarter of its cases (emulated_problems).
 
 Whatever the run, the summary must not exceed SUMMARY_BYTES: what the oracle keeps of a run is a
 fixed set of statistics, each with at most one line, whose number the claims and the format bound
@@ -1904,7 +1908,46 @@ def parser():
     p.add_argument("--max-length", help="a fold: the largest length asked (gen --max-length)")
     p.add_argument("--inplace", action="store_true",
                    help="a map or a ball vector: the stream asked in place (gen --inplace)")
+    p.add_argument("--emulated", action="store_true",
+                   help="a run of the emulated tier (emulated_problems)")
     return p
+
+
+# --- The emulated tier (docs/developer/testing.md, "The emulated formats") -----------------------
+#
+# A run of the kernels printed for the emulated limb type (tests/emulated/runner.cpp) is the
+# exhaustive tier of the brief: the scalar kernels on every operand, or a dense sample, of tiny
+# formats of precision 8 to 11 in which the statements hold. So, besides everything above, it fails
+# when its format is not such a format (architecture.md, "The formats of the statements": qmax >= 1
+# and qmin = 3 - qmax - 2p; in another format the finiteness clauses are not claimed, and a format
+# outside 8 to 11 is not the tier's), and when the oracle judged fewer than a quarter of its cases:
+# in a format too narrow for the kernel most results overflow or vanish, and the run would put
+# little of the claims to the test (in fp:8:-14:1 every kernel and fold has at least 0.56 of its
+# cases judged: split and two_prod_dekker, whose product by the splitter overflows).
+EMULATED_PRECISIONS = (8, 11)
+EMULATED_JUDGED = (1, 4)
+
+
+def emulated_problems(summary, a):
+    m = re.fullmatch(r"fp:(\d+):(-?\d+):(-?\d+)", a.format)
+    lo, hi = EMULATED_PRECISIONS
+    if not m:
+        yield ("a run of the emulated tier is in a toy format of precision %d to %d, not %s"
+               % (lo, hi, a.format))
+        return
+    p, qmin, qmax = (int(g) for g in m.groups())
+    if not lo <= p <= hi:
+        yield "a run of the emulated tier has precision %d to %d, not %d (%s)" % (lo, hi, p, a.format)
+    if qmax < 1 or qmin != 3 - qmax - 2 * p:
+        yield ("a run of the emulated tier is in a format of the statements (qmax >= 1, qmin = 3 - qmax - "
+               "2p: fp:%d:%d:1 at this precision), not %s" % (p, 2 - 2 * p, a.format))
+    cases = sum(k["stats"]["counts"]["cases"] for k in summary.get("keys", []))
+    judged = sum(k["stats"]["counts"]["judged"] for k in summary.get("keys", []))
+    num, den = EMULATED_JUDGED
+    if cases and judged * den < cases * num:
+        yield ("the oracle judged %d of the %d cases, fewer than %d/%d: in %s most results are not "
+               "finite, and the run puts little of the claims to the test" % (judged, cases, num, den,
+                                                                              a.format))
 
 
 def run(a):
@@ -1923,9 +1966,14 @@ def run(a):
     except (OSError, ValueError) as ex:
         return 1, ["cannot read the oracle's summary %s: %s" % (a.summary, ex)]
     found = list(problems(summary, a))
+    if getattr(a, "emulated", False):
+        found += list(emulated_problems(summary, a))
     if found:
         return 1, found
-    return 0, [describe(summary, a)]
+    text = describe(summary, a)
+    if getattr(a, "emulated", False):
+        text += "; the emulated tier, %s" % a.format
+    return 0, [text]
 
 
 def main():

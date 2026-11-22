@@ -1721,6 +1721,93 @@ class EnclosureGuards(unittest.TestCase):
             self.assertIn("did not check what it set out to", bad.stdout)
 
 
+# The emulated tier (crosscheck_guards.py, emulated_problems; crosscheck.py --emulated): a run is in
+# a format of the statements of precision 8 to 11 and has a quarter of its cases judged; and the
+# driver fails an emulated runner whose lines are not the interpreter's, byte for byte. The
+# summaries come from the interpreter, whose lines the emulated runner's are.
+class EmulatedGuards(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.good = pipeline("next_up", "fp:8:-14:1", "--exhaustive")
+
+    def guard(self, summary, fmt, *args):
+        return guards(summary, "next_up", fmt, "--exhaustive", "--emulated", *args)
+
+    def test_a_format_of_the_tier(self):
+        status, out = self.guard(self.good, "fp:8:-14:1")
+        self.assertEqual(status, 0, out)
+        self.assertIn("every operand, 4354 cases", out)
+        self.assertIn("; the emulated tier, fp:8:-14:1", out)
+        # Precision 7, in a format of the statements: not the tier's.
+        s = pipeline("next_up", "fp:7:-12:1", "--exhaustive")
+        status, out = self.guard(s, "fp:7:-12:1")
+        self.assertEqual(status, 1, out)
+        self.assertIn("has precision 8 to 11, not 7", out)
+        # Precision 8 outside the formats of the statements (qmin + qmax + 2p is not 3).
+        s = pipeline("next_up", "fp:8:-10:-3", "--exhaustive")
+        status, out = self.guard(s, "fp:8:-10:-3")
+        self.assertEqual(status, 1, out)
+        self.assertIn("is in a format of the statements", out)
+        # Without --emulated the same runs pass.
+        status, out = guards(s, "next_up", "fp:8:-10:-3", "--exhaustive")
+        self.assertEqual(status, 0, out)
+
+    def test_too_few_cases_judged(self):
+        s = copy.deepcopy(self.good)
+        for k in s["keys"]:
+            c = k["stats"]["counts"]
+            moved = c["judged"] - c["judged"] // 5
+            c["judged"] -= moved
+            c["passed"] -= moved
+            c["nonfinite"] += moved
+        status, out = self.guard(s, "fp:8:-14:1")
+        self.assertEqual(status, 1, out)
+        self.assertIn("fewer than 1/4", out)
+
+    # The driver: an emulated runner (here the interpreter behind a script, with or without one
+    # result changed) beside the interpreter must write its bytes, whatever the oracle says.
+    def test_the_driver_compares_the_emulated_runner_with_the_interpreter(self):
+        body = """import subprocess, sys
+out = subprocess.run([sys.executable, %r, "interp"], stdin=sys.stdin.buffer,
+                     stdout=subprocess.PIPE, check=True).stdout.decode("ascii")
+lines = out.split("\\n")
+for i, line in enumerate(lines):
+    if CHANGE and " -> 0x1.04p+0" in line:
+        lines[i] = line.replace(" -> 0x1.04p+0", " -> 0x1.06p+0")
+sys.stdout.write("\\n".join(lines))
+""" % os.path.join(ROOT, "gen", "kairn-gen")
+        with tempfile.TemporaryDirectory() as d:
+            def runner(name, change):
+                script = os.path.join(d, name + ".py")
+                with open(script, "w", encoding="utf-8") as f:
+                    f.write("CHANGE = %r\n" % change + body)
+                if os.name == "nt":
+                    exe = os.path.join(d, name + ".cmd")
+                    with open(exe, "w", encoding="utf-8") as f:
+                        f.write('@"%s" "%s"\n' % (PY, script))
+                else:
+                    exe = os.path.join(d, name)
+                    with open(exe, "w", encoding="utf-8") as f:
+                        f.write('#!/bin/sh\nexec "%s" "%s"\n' % (PY, script))
+                    os.chmod(exe, 0o755)
+                return exe
+
+            def drive(name, change):
+                return subprocess.run(
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS + ["--kernel", "next_up",
+                     "--format", "fp:8:-14:1", "--exhaustive", "--summary", os.path.join(d, name + ".json"),
+                     "--fail-on-suspicious", "--interp", "--emulated", name, runner(name, change)],
+                    capture_output=True, text=True)
+            good = drive("same", False)
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            self.assertIn("with interp, same: passed", good.stdout)
+            self.assertIn("the emulated tier, fp:8:-14:1", good.stdout)
+            bad = drive("changed", True)
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("changed: other lines than interp's, which must be the same bytes", bad.stdout)
+            self.assertIn("-> 0x1.06p+0", bad.stdout)
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)

@@ -314,6 +314,28 @@ if(EXISTS "${_emulated_dir}/number.cpp")
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
     set_tests_properties(emulated.arith PROPERTIES TIMEOUT 300 LABELS emulated)
   endif()
+  # The runner of the kernels printed for the type (emulated/runner.cpp, gen/kernels.hpp, written
+  # by the generator): kairn-emulated-runner with the fix-ups inline, kairn-emulated-runner-fixup-call
+  # with each a function of its own (KAIRN_GEN_FIXUP_CALL), unless the build's flags choose one form
+  # for both (the brute-force driver's second build of each compiler does).
+  foreach(_form inline call)
+    if(_form STREQUAL "inline")
+      set(_target kairn-emulated-runner)
+      set(_call 0)
+    else()
+      set(_target kairn-emulated-runner-fixup-call)
+      set(_call 1)
+    endif()
+    add_executable(${_target} "${_emulated_dir}/runner.cpp")
+    target_include_directories(${_target} PRIVATE "${_emulated_dir}" "${PROJECT_SOURCE_DIR}/gen/tests")
+    target_link_libraries(${_target} PRIVATE kairn-emulated)
+    target_compile_options(${_target} PRIVATE ${_warnings})
+    if(NOT CMAKE_CXX_FLAGS MATCHES "KAIRN_GEN_FIXUP_CALL")
+      target_compile_definitions(${_target} PRIVATE KAIRN_GEN_FIXUP_CALL=${_call})
+    endif()
+  endforeach()
+  set(_emulated_runners --emulated emulated "$<TARGET_FILE:kairn-emulated-runner>"
+    --emulated emulated-fixup-call "$<TARGET_FILE:kairn-emulated-runner-fixup-call>" --emulated-ce)
 endif()
 # --- The emulated formats (end) -----------------------------------------------------------------
 
@@ -1060,6 +1082,24 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     set(_full_${_kernel}_error "${_error}")
     # A sampled format of its own (the interval kernels): random cases of it in the full tier.
     set(_full_${_kernel}_sampled "${_toy_sampled${_shape}}")
+    # The emulated tier (full/CMakeLists.txt, "The emulated formats"): every operand of its format
+    # when the kernel reads one limb (masks besides), random cases otherwise.
+    set(_emulated_limbs 0)
+    foreach(_j RANGE ${_in_last})
+      string(JSON _type ERROR_VARIABLE _no_type GET "${_claims}" kernels ${_i} inputs ${_j} type)
+      string(JSON _limbs ERROR_VARIABLE _no_limbs GET "${_claims}" kernels ${_i} inputs ${_j} limbs)
+      if(_no_limbs)
+        set(_limbs 1)
+      endif()
+      if(NOT _type STREQUAL "mask")
+        math(EXPR _emulated_limbs "${_emulated_limbs} + ${_limbs}")
+      endif()
+    endforeach()
+    if(_emulated_limbs EQUAL 1)
+      set(_full_${_kernel}_emulated_exhaustive ON)
+    else()
+      set(_full_${_kernel}_emulated_exhaustive OFF)
+    endif()
 
     # The compiled runners, on random cases of every stratum.
     if(_compiled)
@@ -1339,6 +1379,52 @@ if(KAIRN_INSTALL)
   set_tests_properties(consume.find_package PROPERTIES FIXTURES_REQUIRED kairn_installed)
 endif()
 add_subdirectory(api)
+
+# --- The emulated formats: the cross-checks (begin) ---------------------------------------------
+#
+# The kernels printed for the emulated type (above), run by kairn-emulated-runner and
+# kairn-emulated-runner-fixup-call, each on its run-time path and on its path of constant
+# evaluation where it has one (--ce), judged by the oracle against gen/claims.json in a format of
+# the statements of precision 8, and compared byte for byte with each other and with the
+# generator's interpreter (crosscheck.py --emulated, --emulated-ce, --interp). The quick tier keeps
+# the code from rotting: every operand of next_up, the run-time path and Dekker's of two_prod, the
+# fix-up branch of mul_2_2_full, an interval product and a fold of two limbs, a few seconds. The
+# full tier has every kernel and fold (full/CMakeLists.txt).
+set(KAIRN_EMULATED_FORMAT fp:8:-14:1 CACHE STRING
+  "The format of the cross-checks of the emulated kernels, quick and full tiers")
+# The bounds of the folds of two limbs, whose mask turns false where m unit(K) passes 1/5 to 1/2 of
+# the bound (unit(K) about 3u^2: m about 2^14 at precision 8), take a format of the statements with
+# counts that large: fp:8:-29:16, whose largest number is 255 2^16 (in fp:8:-14:1 the largest count
+# is 510, and the guards fail the run, which never saw the mask false).
+set(_emulated_format_kernel_bound_sum_2 fp:8:-29:16)
+set(_emulated_format_kernel_bound_dot_2 fp:8:-29:16)
+set(KAIRN_EMULATED_CASES 5000 CACHE STRING
+  "Random cases of each kernel of two limbs or more in the full tier's emulated cross-checks")
+set(KAIRN_EMULATED_FOLD_CASES 300 CACHE STRING
+  "Random arrays of each fold in the full tier's emulated cross-checks")
+set(KAIRN_EMULATED_FOLD_LENGTH 64 CACHE STRING
+  "The longest random array of the full tier's emulated cross-checks of folds")
+set(KAIRN_EMULATED_SAME_CASES 200 CACHE STRING
+  "Random cases of each kernel and fold that the emulated runners and the interpreter complete in full.crosscheck.emulated.same_lines")
+if(_emulated AND Python3_Interpreter_FOUND)
+  foreach(_case next_up two_prod mul_2_2_full interval_mul_1 sum_2)
+    if(_case STREQUAL "next_up")
+      set(_mode --exhaustive)
+    elseif(_case STREQUAL "sum_2")
+      set(_mode --seed "${KAIRN_CROSSCHECK_SEED}" --count 300 --max-length 64)
+    else()
+      set(_mode --seed "${KAIRN_CROSSCHECK_SEED}" --count 2000)
+    endif()
+    set(_name crosscheck.emulated.${_case})
+    add_test(NAME ${_name}
+      COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/crosscheck.py" compiled
+        --kernel ${_case} --format "${KAIRN_EMULATED_FORMAT}" ${_mode} --fail-on-suspicious
+        ${_oracle_claims_arg} --summary "${CMAKE_CURRENT_BINARY_DIR}/crosscheck/${_name}.json"
+        ${_emulated_runners} --interp)
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;emulated")
+  endforeach()
+endif()
+# --- The emulated formats: the cross-checks (end) -----------------------------------------------
 
 # --- The regression cases (begin) ---------------------------------------------------------------
 #

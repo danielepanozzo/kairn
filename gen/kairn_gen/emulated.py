@@ -12,7 +12,8 @@ It is a test file, written under tests/ and not shipped.
 
 After the kernels, the tables the runner (tests/emulated/runner.cpp) needs: the names of the
 constants by index, their exact values in each format of FORMATS, computed by consts.py as the
-literals of double and float are, and the kernels that have no path of constant evaluation.
+literals of double and float are, the kernels that have no path of constant evaluation, and those
+whose path is a variant's.
 """
 from fractions import Fraction
 
@@ -112,5 +113,10 @@ def header(kernels):
               f'inline constexpr int not_constexpr_count = {len(plain)};',
               'inline constexpr const char* not_constexpr[not_constexpr_count + 1] = {']
     lines += [f'    "{n}",' for n in plain] + ['    nullptr,', '};', '',
+              '// The kernels whose path of constant evaluation is the listing of a variant: the kernel,',
+              '// then its variant.',
+              'inline constexpr const char* ce_variants[][2] = {']
+    lines += [f'    {{"{k.name}", "{k.ce_variant}"}},' for k in kernels.values() if k.ce_variant]
+    lines += ['    {nullptr, nullptr},', '};', '',
               '}  // namespace kairn::emulated::generated']
     return text + '\n'.join(lines) + '\n'

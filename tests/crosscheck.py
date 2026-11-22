@@ -8,6 +8,7 @@ on each distinct output and, for the kernels' runners, the guards (docs/develope
         (--packed-kernels LABEL EXECUTABLE ASSIGNMENTS)...
         [--orders O1,O2,...] [--max-length L] [--inplace]
         [(--packed-runner LABEL EXECUTABLE)... --packed-lanes W [--packed-count N]]
+        [(--emulated LABEL EXECUTABLE)... [--emulated-ce]]
     python3 tests/crosscheck.py api --kernel K --format F --seed S --count N --summary-dir DIR
         (--runner LABEL EXECUTABLE)... [--first-form LABEL]... [--same-as LABEL OTHER]...
         [--claims FILE]
@@ -59,6 +60,19 @@ operands are outside the kernel's requirements and is not judged: check --expect
 did not check what it set out to check (tests/crosscheck_guards.py). An enumeration
 (--exhaustive) is supported as crosscheck.cmake supports it, though the tests run the interpreter's
 enumerations through crosscheck.cmake.
+
+--emulated adds a runner of the kernels printed for the emulated limb type (tests/emulated/runner.cpp,
+the tests full.crosscheck.emulated.K and crosscheck.emulated.K: docs/developer/testing.md, "The
+emulated formats"), labelled LABEL, a runner kind of its own: it is judged as every runner, the
+guards get --emulated (a format of the statements of precision 8 to 11, enough of the cases judged),
+and its output must be the same bytes as every other emulated runner's and, with --interp, the
+interpreter's: two implementations of the IR's semantics, the C++ printed for the type and the
+generator's evaluation of the IR, on one arithmetic (a difference fails the test, with the first
+line that differs, whatever the oracle says of either). --emulated-ce also runs each with --ce, the
+path of constant evaluation, as LABEL.ce, and with --interp the interpreter's --ce as interp.ce,
+when the kernel has that path (EXECUTABLE --ce-paths), the same bytes again; those are judged too,
+but for a kernel whose path is a variant of its own (two_prod: Dekker's product), which are compared
+only, the variant's claims being judged on the variant's requests.
 
 api, the tests api.oracle.K.F, full.api.oracle.K.F and full.api.flags.oracle.K.F: the runners of
 the public interface (tests/api/runner.cpp), each with every form it maps to the kernel
@@ -273,6 +287,8 @@ def compiled(a):
         runs.append(("interp", INTERP))
     if a.refrun:
         runs.append(("refrun", REFRUN))
+    emulated, a.same_groups, a.compared_only = emulated_runs(a)
+    runs += emulated
     lanes = packed_kernel_runs(a, work)
     runs += [(label, command) for label, command, _, _ in lanes]
     if runs:
@@ -310,6 +326,79 @@ def compiled(a):
         say(text)
     shutil.rmtree(work, ignore_errors=True)
     return 0
+
+
+def ce_paths(exe):
+    """{kernel: the kernel whose listing its path of constant evaluation runs}, from the emulated
+    runner (EXE --ce-paths): the kernel itself (the rule of the product) or its variant (two_prod:
+    two_prod_dekker); a kernel without such a path, or a fold, is not listed."""
+    p = subprocess.run([exe, "--ce-paths"], stdout=subprocess.PIPE, cwd=REPO)
+    if p.returncode != 0:
+        raise RuntimeError("%s --ce-paths failed (%d)" % (exe, p.returncode))
+    out = {}
+    for line in p.stdout.decode("ascii").split("\n"):
+        w = line.split()
+        if len(w) == 2:
+            out[w[0]] = w[1]
+    return out
+
+
+def emulated_runs(a):
+    """The runs of --emulated and --emulated-ce: [(label, command)]; the groups of runs whose
+    outputs must be the same bytes, because they compute the same listings of the IR in the same
+    arithmetic (the emulated runners, which run the C++ printed for the emulated type, and the
+    interpreter, which evaluates the IR, on each path); and the runs that are compared only: the
+    path of constant evaluation of a kernel that has a variant (two_prod runs two_prod_dekker's
+    listing there, whose claims are two_prod_dekker's and are judged on its own requests)."""
+    if not a.emulated:
+        return [], [], set()
+    runs = [(label, [exe]) for label, exe in a.emulated]
+    groups = [(["interp"] if a.interp else []) + [label for label, _ in a.emulated]]
+    compared = set()
+    if a.emulated_ce:
+        paths = ce_paths(a.emulated[0][1])
+        if a.kernel in paths:
+            ce = [(label + ".ce", [exe, "--ce"]) for label, exe in a.emulated]
+            if a.interp:
+                ce.insert(0, ("interp.ce", INTERP + ["--ce"]))
+            runs += ce
+            groups.append([label for label, _ in ce])
+            if paths[a.kernel] != a.kernel:
+                compared = {label for label, _ in ce}
+        else:
+            say("%s has no path of constant evaluation: the emulated runners run its run-time "
+                "path only" % a.kernel)
+    return runs, groups, compared
+
+
+def first_difference(x, y):
+    """The first lines of two outputs that differ, as text: (line number, x's, y's)."""
+    xs, ys = x.decode("ascii", "replace").split("\n"), y.decode("ascii", "replace").split("\n")
+    for i in range(max(len(xs), len(ys))):
+        a = xs[i] if i < len(xs) else "(no line)"
+        b = ys[i] if i < len(ys) else "(no line)"
+        if a != b:
+            return i + 1, a.strip(), b.strip()
+    return 0, "", ""
+
+
+def same_bytes(groups, results, work):
+    """The texts of the failures of the groups of runs that must write the same bytes: each run
+    that passed and wrote other bytes than the first of its group that passed."""
+    out = {label: (status, output) for label, status, output, _ in results}
+    failed = []
+    for group in groups:
+        done = [label for label in group if label in out and out[label][0] == 0]
+        for label in done[1:]:
+            if out[label][1] != out[done[0]][1]:
+                n, x, y = first_difference(out[done[0]][1], out[label][1])
+                keep(work, done[0], out[done[0]][1])
+                keep(work, label, out[label][1])
+                failed.append("%s: other lines than %s's, which must be the same bytes (the C++ printed "
+                              "for the emulated type and the interpreter compute one listing in one "
+                              "arithmetic); the first at line %d:\n  %s: %s\n  %s: %s"
+                              % (label, done[0], n, done[0], x, label, y))
+    return failed
 
 
 ASSIGNMENTS = ("permuted", "consecutive")
@@ -391,6 +480,8 @@ def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, repor
     claims = ["--claims", a.claims] if a.claims else []
     gen = ["gen", kernel, fmt] + claims
     guard_args = ["--kernel", kernel, "--format", fmt]
+    if getattr(a, "emulated", None):
+        guard_args.append("--emulated")
     if a.exhaustive:
         gen.append("--exhaustive")
         guard_args.append("--exhaustive")
@@ -435,7 +526,12 @@ def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, repor
     lanes_line = {}         # a packed kernels' run -> the counts of its lanes
     for label in lanes_of:
         remove(os.path.join(summary_dir, "%s.%s.lanes.json" % (base, label)))
-    for label, status, output, first in run_all(runs, requests):
+    results = run_all(runs, requests)
+    # The emulated runners and the interpreter: the same bytes in each group (emulated_runs).
+    for text in same_bytes(getattr(a, "same_groups", []), results, work):
+        say("cross-check of %s %s: %s" % (kernel, fmt, text))
+        failed.append(text)
+    for label, status, output, first in results:
         what = "cross-check of %s %s with %s" % (kernel, fmt, label)
         again = "  %s | %s | %s" % (shell(python_oracle + one), shell(command_of[label]),
                                     shell(python_oracle + check))
@@ -461,6 +557,12 @@ def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, repor
                 keep(work, label, output)
                 failed.append("%s: %s" % (label, why))
                 continue
+        if label in getattr(a, "compared_only", ()):
+            # The path of constant evaluation of a kernel with a variant: its claims are the
+            # variant's, judged on the variant's own requests; here it is compared only.
+            say("%s: compared with the other runs of the path of constant evaluation, not judged "
+                "(that path runs the variant of %s, whose claims are its own)" % (what, kernel))
+            continue
         if first != label:
             # The same bytes as an output judged above: the same verdict.
             say("%s: the same output, byte for byte, as %s's, judged above" % (what, first))
@@ -669,6 +771,18 @@ def main(argv=None):
     c.add_argument("--inplace", action="store_true",
                    help="a map or a ball vector: one more stream of every runner, its requests in "
                         "place (gen --inplace)")
+    c.add_argument("--emulated", nargs=2, action="append", metavar=("LABEL", "EXECUTABLE"),
+                   help="a runner of the emulated kernels (tests/emulated/runner.cpp): judged as "
+                        "every runner, and its lines must be those of the other emulated runners "
+                        "and of the interpreter, byte for byte")
+    c.add_argument("--exhaustive-up-to", type=int, metavar="N",
+                   help="every operand (--exhaustive) when the enumeration of the kernel in the "
+                        "format has at most N cases (gen --exhaustive --total), otherwise the random "
+                        "cases of --seed and --count")
+    c.add_argument("--emulated-ce", action="store_true",
+                   help="also each emulated runner with --ce, the path of constant evaluation "
+                        "(LABEL.ce), and with --interp the interpreter with --ce (interp.ce), where "
+                        "the kernel has that path")
     p = sub.add_parser("api", help="the runners of the public interface, with their forms")
     p.add_argument("--kernel", required=True)
     p.add_argument("--format", required=True)
@@ -684,6 +798,15 @@ def main(argv=None):
     p.add_argument("--claims", help="the claims file of the oracle (default gen/claims.json)")
     a = ap.parse_args(argv)
     if a.mode == "compiled":
+        if a.exhaustive_up_to is not None and not a.exhaustive and a.max_length is None:
+            claims = ["--claims", a.claims] if a.claims else []
+            status, text = oracle(["gen", a.kernel, a.format, "--exhaustive", "--total"] + claims,
+                                  capture=True)
+            words = (text or "").split()
+            if status == 0 and words and words[0].isdigit() and int(words[0]) <= a.exhaustive_up_to:
+                say("%s %s: every operand, %s cases (at most %d)" % (a.kernel, a.format, words[0],
+                                                                     a.exhaustive_up_to))
+                a.exhaustive = True
         if not a.exhaustive and (a.seed is None or a.count is None):
             ap.error("a random run needs --seed and --count")
         for _, _, assignments in a.packed_kernels or []:
