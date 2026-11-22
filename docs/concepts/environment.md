@@ -3,11 +3,12 @@
 Every guarantee of Kairn is a theorem about floating-point operations that round to nearest, keep
 subnormal numbers, and are executed as written. A two-limb operation is built from *error-free
 transformations*, short sequences such as TwoSum whose second result is exactly the rounding error
-of the first; they are exact only under those conditions. When one fails, nothing crashes: the
-result still looks like a two-limb number, and its second limb can be wrong (below, a measurement of
-exactly that). This page says what the
-library needs, what a compiler's contraction and fast-math do to it and what Kairn does about them,
-and the three checks it provides.
+of the first; they are exact only under those conditions. When one fails, the arithmetic itself
+reports nothing: the result still looks like a two-limb number, and its second limb can be wrong
+(below, a measurement of exactly that). This page says what the library needs, what a compiler's
+contraction and fast-math do to it and what Kairn does about them, and the checks that report a
+wrong environment: two that a program calls, one that every function on arrays makes in every build,
+and those of a build with `KAIRN_CHECKS`.
 
 ## The checks, in a program
 
@@ -112,13 +113,14 @@ they change ([When a file is compiled](../getting-started/index.md#when-a-file-i
 ([Products the program passes in](../getting-started/guarantees.md#products-the-program-passes-in));
 `-frounding-math` is ([Compiler flags](../developer/design/phase0/environment.md#compiler-flags)).
 
-## The three checks
+## The checks
 
 | Check | When | What it checks | What it costs |
 |---|---|---|---|
 | `kairn::self_test()` | once, at startup | with the flags of the file that calls it: rounding to nearest with ties to even, no flush to zero of results or operands, no reassociation, signed zeros respected by the FMA, a fused FMA, correctly rounded quotients and square roots; then every generated kernel, for `float` and `double`, on fixed operands, against the results the generator's exact interpreter computed | its run time is not measured; a file with one call compiled in 0.21 to 1.08 s at `-O2`, against 0.06 to 0.23 s for one that only includes `kairn/kairn.hpp` ([Compile times](../developer/results/costs-milestone1.md#1-compile-times)) |
 | `kairn::environment_ok()` | whenever the program may have changed the environment | the control register (MXCSR on x86-64, FPCR on AArch64): rounding to nearest, no FTZ, no DAZ | 0.36 to 0.39 ns on an Apple M3, 1.10 ns on an Intel i5, 6.2 to 6.5 ns on an AMD Zen 2 ([The cost of the environment check](../developer/results/costs-milestone1.md#2-the-cost-of-the-environment-check)) |
-| `KAIRN_CHECKS` 1, the default without `NDEBUG` | before every operation | the environment, then that every operand is canonical | for two-limb operations at most 14% in a chain, 1.26 to 3.00 times for `x + y` and 2.16 to 4.15 times for `x * y` in a loop; for one limb 1.6 to 8.0 times in a chain and 5.2 to 34.8 times in a loop (the same page) |
+| the check of a batch entry, **in every build** | before the loop of every function on arrays (`kairn/batch.hpp`) and of every operation on whole ball vectors (`kairn/ball_vector.hpp`, its constructors from centers and a radius included), `KAIRN_CHECKS` 1 or 0 | the control register, as `kairn::environment_ok()` reads it; `norm_upper` of an array and the negation of a ball vector, which compute no sum, leave the rounding mode out | one read of the register per call, whatever the length: 0 to 0.5 ns a call on an Apple M3 and about 6 ns on an AMD Zen 2, where reading MXCSR is slow (`sum` of one `double`: 0.49 ns before the check was added and 0.99 ns after on the M3, 1.22 and 7.22 ns on the Zen 2 with GCC 13), within the noise of the loop from about 64 elements of one limb, or a few of two ([The checks of a debug build](../developer/testing.md#the-checks-of-a-debug-build), the table of 2026-11-21) |
+| `KAIRN_CHECKS` 1, the default without `NDEBUG` | before every operation of `Expansion`, `Ball` and `Interval` that rounds, of the building blocks and of the accumulator; in the batch entries after their check of the environment | the environment, then that every operand is canonical; in the batch entries the operands, the lengths of the arrays and the arrays that alias | for two-limb operations at most 14% in a chain, 1.26 to 3.00 times for `x + y` and 2.16 to 4.15 times for `x * y` in a loop; for one limb 1.6 to 8.0 times in a chain and 5.2 to 34.8 times in a loop ([The cost of the environment check](../developer/results/costs-milestone1.md#2-the-cost-of-the-environment-check)) |
 
 - **`kairn::self_test()`** returns a `kairn::Status`: `ok()`, and `message()`, the first check that
   failed, with the kernel for a failed kernel; it never aborts and only reads. It tests the flags of
@@ -130,27 +132,48 @@ they change ([When a file is compiled](../getting-started/index.md#when-a-file-i
   zero set at startup by any object compiled with `-ffast-math`), and a program that calls such code
   checks and restores the environment before calling Kairn
   ([Troubleshooting](../getting-started/index.md#when-the-program-runs) shows how).
+- **The check of a batch entry** is made in every build, with `KAIRN_CHECKS` 1 or 0, with or without
+  `NDEBUG`. A *batch entry* is a function that runs a loop over arrays: every function of
+  `kairn/batch.hpp` (`sum`, `sum_fast`, `dot`, the maps, `conv`, `norm_upper`) and every operation
+  of `kairn/ball_vector.hpp` on whole ball vectors, its constructors from centers and a radius
+  included (its accessors and views, which copy, check nothing). Before its loop it reads the
+  control register once, as `kairn::environment_ok()` does, and if the environment is not the
+  default one calls the library's handler, `KAIRN_ENVIRONMENT_FAILURE`, with the message of a debug
+  build, which by default prints it and stops the program. The default environment is the
+  precondition of each of these functions, and this is that precondition, checked
+  ([Functions on arrays](../reference/batch.md#checks),
+  [Ball vectors](../reference/ball_vector.md#checks); the tests `api.checks.off.*` build them with
+  `KAIRN_CHECKS` 0 and require the stop). `norm_upper` and the negation of a ball vector, which
+  compute no sum, leave the rounding mode out (flush to zero still changes their comparisons).
+  **The scalar operations, `Packed` and the accumulator**, whose operations take one term at a
+  time, are no batch entries: they check the environment only with `KAIRN_CHECKS`
+  (`kairn/config.hpp`, `KAIRN_CHECKS`).
 - **`KAIRN_CHECKS`**, 1 by default when `NDEBUG` is not defined, as for `assert`, and the same in every
   file of a program: before every operation of `Expansion`, `Ball` and `Interval` that rounds, of
-  the building blocks, the functions on arrays, the accumulator and the ball vectors, it checks the
-  environment, then the operands (canonical numbers and sets, a radius that is not negative, the
-  lengths of arrays). A function whose result cannot depend on the rounding mode (negation, the
-  comparisons, the conversions to `T`, the predicates of an interval, and others) does not check the
-  rounding mode, so that a program may call it under a directed one
+  the building blocks and of the accumulator, it checks the environment, then the operands (canonical
+  numbers and sets, a radius that is not negative); in the functions on arrays and the operations on
+  ball vectors, after the check of a batch entry, it checks the operands, the lengths of the arrays
+  and the arrays that alias. A function whose result cannot depend on the rounding mode (negation,
+  the comparisons, the conversions to `T`, the predicates of an interval, and others) does not check
+  the rounding mode, so that a program may call it under a directed one
   ([the list](../getting-started/index.md#when-a-check-of-a-build-without-ndebug-fails)).
 
 ## When the environment is wrong
 
-Without the checks, nothing reports it: an operation under another rounding mode, under flush to
-zero, or compiled with a flag that rewrites its arithmetic returns a result with no guarantee, which
-can look like any other. That is why `kairn::self_test()` is to be called once and its failure taken
-as a reason not to use Kairn, and why a program that changes the environment checks it.
+Without `KAIRN_CHECKS`, a scalar operation does not report it: an operation under another rounding
+mode, under flush to zero, or compiled with a flag that rewrites its arithmetic returns a result with
+no guarantee, which can look like any other. A function on arrays and an operation on whole ball
+vectors still report it in every build: flush to zero, and, all but the two that compute no sum, a
+rounding mode that is not to nearest. A flag that rewrites the arithmetic and that the compiler does not announce to the
+headers is reported by no check of an operation: only `kairn::self_test()` can see it. That is why
+`kairn::self_test()` is to be called once and its failure taken as a reason not to use Kairn, and why
+a program that changes the environment checks it.
 
-With the checks, a wrong environment stops the program before the operation, with a message that
-says what is wrong (`kairn: the floating-point environment: the rounding mode is not to nearest
-(MXCSR.RC is not zero)`, and the others of
+With `KAIRN_CHECKS`, and at every batch entry in every build, a wrong environment stops the program
+before the operation, with a message that says what is wrong (`kairn: the floating-point
+environment: the rounding mode is not to nearest (MXCSR.RC is not zero)`, and the others of
 [Troubleshooting](../getting-started/index.md#when-a-check-of-a-build-without-ndebug-fails)), and
 `std::abort()`. A program that defines `KAIRN_ENVIRONMENT_FAILURE` to a statement that returns gets
 that statement instead; the operation then goes on, without checking its operands, and with no
 guarantee for its result. In the default environment, an operand that is not canonical stops the
-program with a message of its own.
+program with a message of its own, in a build with `KAIRN_CHECKS`.

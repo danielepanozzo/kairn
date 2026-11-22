@@ -26,8 +26,9 @@ Read them in this order:
    compiled code; what is proved in which model; what is not machine-checked; what *unverified*
    means, and how a program asks.
 5. [The floating-point environment](environment.md): rounding to nearest, no flush to zero, what a
-   compiler's contraction and fast-math do and what Kairn does about them, and the three checks,
-   `kairn::environment_ok()`, `kairn::self_test()` and `KAIRN_CHECKS`.
+   compiler's contraction and fast-math do and what Kairn does about them, and the checks:
+   `kairn::self_test()`, `kairn::environment_ok()`, the check of the environment that every function
+   on arrays makes in every build, and `KAIRN_CHECKS`.
 6. [Values, threads and constant expressions](values.md): the types as plain values, what is safe
    from several threads, and what can be computed at compile time.
 7. [Arrays](arrays.md): the containers and views, the packed type, the functions on arrays and the
