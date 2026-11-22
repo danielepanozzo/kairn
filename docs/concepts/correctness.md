@@ -1,10 +1,11 @@
 # What "correct" means here
 
 Kairn's results are rounded: a product of two-limb numbers is in general not the exact product,
-and a ball is wider than the set it encloses. What Kairn guarantees is a statement about how far a result can be
-from the exact one, or that a set contains it, proved for each operation. This page says what the
-kinds of statement are and how to read one, how each is established, in which model it is proved,
-what is not machine-checked, and what *unverified* means.
+and a ball is in general wider than the exact set it encloses. What Kairn guarantees is a statement
+about how far a result can be from the exact one, or that a set contains it, proved for the kernel
+each operation calls, with the exceptions listed below. This page says what the kinds of statement
+are and how to read one, how each is established, in which model it is proved, what is not
+machine-checked, and what *unverified* means.
 
 ## An example: a product and its bound
 
@@ -67,8 +68,9 @@ where it can and says where it does not:
   and differences, and for products but in the underflow range, where a bound may be one number of
   `T` further; of two limbs: each bound within a stated $A\lvert v\rvert + B$ of the exact one
   ([What holds today, Intervals](../getting-started/guarantees.md#intervals));
-- a ball, a ball vector: no tightness is claimed of the radius, only containment; neither is the
-  smallest hull or intersection of balls, nor the midpoint as the point where `split()` splits
+- a ball, a ball vector: no tightness is claimed of the radius, only containment; nor that the hull
+  and the intersection of balls are the smallest balls that contain what they must, nor that
+  `split()` splits at the midpoint
   ([One enclosure interface](../reference/enclosure.md#what-is-exact-what-is-certain-what-is-not-claimed));
 - the conditions under which a result is claimed finite are sufficient, not necessary
   ([Precision and magnitude](precision.md#the-four-types));
@@ -128,9 +130,9 @@ in the real model, 34 also have generated statements for finite operands proved 
 instead, 5 have only the theorems that the computation at compile time gives the values of the
 computation at run time, and 11 have no theorem of their own in the IEEE model (`two_sum_entry`,
 the kernel of the public `two_sum`, stated for finite operands, and parts of loops whose theorems in
-that model use them); and every loop is proved in both models. The tree has
-grown since the note was counted: `gen/claims.json` now has 225 kernels and 45 loops, every one with
-the status `proved` ([the reference](../reference/index.md) counts them).
+that model use them); and every loop is proved in both models. The tree has grown since the note
+was counted: `gen/claims.json` now has 225 kernels and 45 loops, every one with the status `proved`
+([the reference](../reference/index.md) counts them).
 
 ## What is not machine-checked
 

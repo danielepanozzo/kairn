@@ -35,7 +35,7 @@ All four contain $1 + 2^{-60}$, and they get there in two different ways:
   interval of positive width ([`interval_add_2`](../reference/interval_add_2.md)).
 - **A ball rounds its center to nearest and lets the radius absorb the error.** With one limb the
   center is $\mathrm{RN}(1 + 2^{-60}) = 1$, and the radius, just above $2^{-53}$, covers the radii of
-  the operands and the proved bound of that rounding, $u\lvert c\rvert$; with two limbs the center is
+  the operands and the proved bound of that rounding, about $u\lvert c\rvert$; with two limbs the center is
   $1 + 2^{-60}$ itself, and the radius, about $3u^2 = 3 \cdot 2^{-106}$, covers the bound of the
   two-limb sum, which the operation adds whether or not the sum was exact
   ([`ball_add_1_full`](../reference/ball_add_1_full.md), [`ball_add_2_full`](../reference/ball_add_2_full.md)).
@@ -57,7 +57,7 @@ Beyond it the three differ:
 | Stores | two bounds of $k$ limbs | a center of $k$ limbs, a radius of `T` | $N$ centers of $k$ limbs, one radius of `T` |
 | Can be | $[\ell, h]$, a half-line such as $[0, +\infty]$, the whole line, the empty set | a finite ball, the whole line, the empty set | a finite ball vector, the whole space; no empty set |
 | How close a sum or product is to the exact range | one limb: the bounds of the exact range rounded outward (a product in the underflow range: at most one number of `T` further); two limbs: each bound within about $8u^2$ (sums) or $10u^2$ (products) of the exact bound, relative to it, plus about $2^{-1021}$ for `double` | the radius covers the operands' radii and the bound of the center's rounding, as its reference page lists; how much wider than the exact range the ball is, is not claimed | the centers as a ball's, entry by entry; one radius, as wide as the widest entry needs; how much wider, not claimed |
-| When a finite result is claimed | one limb: exactly when the exact range is within $\Omega$; two limbs: when it is within a quarter of the overflow threshold | when no member of the exact result exceeds a quarter of the overflow threshold (a sixteenth for the product of balls of one limb) | under conditions each operation states, a quarter of the threshold on its entries and radii |
+| When a bounded result is claimed | one limb: exactly when the exact range is within $\Omega$; two limbs: when it is within a quarter of the overflow threshold | when no member of the exact result exceeds a quarter of the overflow threshold (a sixteenth for the product of balls of one limb) | under conditions each operation states, a quarter of the threshold on its entries and radii |
 | Sources | [What holds today, Intervals](../getting-started/guarantees.md#intervals) | [Overflow and non-finite values](../getting-started/guarantees.md#overflow-and-non-finite-values) | [Ball vectors](../reference/ball_vector.md) |
 
 $\Omega$ is the largest finite number of `T`; the overflow threshold is $2^{1024}$ for `double` and

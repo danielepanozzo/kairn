@@ -99,6 +99,9 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 ## Where to go next
 
 - [Getting started](getting-started/index.md): build and test the repository, and a first program.
+- [Concepts](concepts/index.md): what a number of several limbs is, how many digits it has at each
+  magnitude, intervals, balls and ball vectors and when to use which, what a guarantee says and how
+  it is established, what the library needs of the floating-point environment, and arrays.
 - [Accurate sums and dot products](tutorials/accurate-sums.md): a tutorial with two-limb numbers
   and balls, on a sum that `double` gets entirely wrong.
 - [The range of a polynomial](tutorials/intervals.md): a tutorial with intervals and balls, on the

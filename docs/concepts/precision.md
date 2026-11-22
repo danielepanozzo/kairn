@@ -18,12 +18,12 @@ operation as it is proved.
 --8<-- "docs/examples/cpp/concepts_precision.txt::4"
 ```
 
-$2^{200}$ is a `double`, and no number of `float` limbs holds it: the largest finite `float` is about
+$2^{200}$ is a `double`, and neither one `float` limb nor two hold it: the largest finite `float` is about
 $3.4 \times 10^{38}$, and a two-limb number overflows where its leading limb does. At the other end,
 $(1 + 2^{-60}) \cdot 2^{-1030}$ would need a second limb of $2^{-1090}$, which is below the smallest
 positive `double`, $2^{-1074}$: the product returns $2^{-1030}$ alone. That is within the bound of
 the operation, $2u^2\lvert xa\rvert + \eta$ with $\eta = 2^{-1074}$
-([`mul_2_1_full`](../reference/mul_2_1_full.md)): the term $\eta$ is there for exactly this. The
+([`mul_2_1_full`](../reference/mul_2_1_full.md)), whose absolute term $\eta$ covers such a loss. The
 program is
 [`docs/examples/cpp/concepts_precision.cpp`](https://github.com/danielepanozzo/kairn/blob/main/docs/examples/cpp/concepts_precision.cpp)
 (ctest: `api.example.concepts_precision`).
@@ -32,10 +32,11 @@ program is
 
 The notation of the rest of the site
 ([How to read a page](../reference/reading.md#notation)): $p$ is the precision of the limb type `T`
-(53 for `double`, 24 for `float`), $u = 2^{-p}$ its *unit roundoff*, the largest relative error of
-one rounding to nearest, $\eta$ its smallest positive number (a subnormal one), and $\Omega$ its
-largest finite number. The second and third columns are what a number of the type holds; the last
-two what its operations promise at the top of the range.
+(53 for `double`, 24 for `float`), $u = 2^{-p}$ its *unit roundoff*, a bound of the relative error of
+one rounding to nearest (whose exact largest value is $\frac{u}{1+u}$), $\eta$ its smallest positive
+number (a subnormal one), and $\Omega$ its largest finite number. The columns *Bits*, *All bits* and
+*Largest finite* say what a number of the type holds, the last two what its operations promise at
+the top of the range.
 
 | Type | Bits | All bits for $\lvert x\rvert \ge$ | Largest finite | Sums finite when | Products finite when |
 |---|---|---|---|---|---|
@@ -93,7 +94,7 @@ result. Each kernel's page gives the theorem and the file that prove it.
 | `-x`, `abs(x)`, comparisons | exact | exact |
 | `to_nearest`, `to_down`, `to_up` | the value itself | the exact rounding to `T` |
 
-The algorithms of two limbs are those of Joldes, Muller and Popescu
+The algorithms of the sums and products of two limbs are those of Joldes, Muller and Popescu
 ([JMP17](../developer/design/phase0/references.md#jmp17)), with bounds from Muller and Rideau's
 formalization or proved here, each page says which. The rows of `ldexp` hold when $2^n$ is a number of
 `T`; beyond, the header calls the kernel two or three times, and what it then returns is argued and

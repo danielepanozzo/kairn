@@ -59,7 +59,8 @@ to be within
 $$\Bigl\lvert s - \sum_i x_i\Bigr\rvert \le \bigl((1 + e)^{n-1} - 1\bigr)\sum_i\lvert x_i\rvert
 \le \gamma_{n-1}(e)\sum_i\lvert x_i\rvert, \qquad \gamma_m(e) = \frac{m e}{1 - m e},$$
 
-of the exact sum, whenever the result is finite, **in whatever order the loop adds**
+of the exact sum (the second inequality when $(n-1)e < 1$), whenever the result is finite, **in
+whatever order the loop adds**
 ([What each function states](../reference/batch.md#what-each-function-states)). In words: for
 $n e$ small the bound is about $(n - 1)\,e$ times the sum of the magnitudes, so it grows linearly
 with the length. $e$ is the bound of one addition: $\frac{u}{1+u}$ for one limb, $\frac{3u^2}{1-4u}$

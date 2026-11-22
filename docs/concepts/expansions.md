@@ -4,8 +4,9 @@ A `double` holds 53 significant bits. When a computation needs more, because a s
 because a result is wanted to more digits, Kairn stores a number as the exact, unevaluated sum of
 two `double`s (or two `float`s): `kairn::Expansion<T, 2>`, a *floating-point expansion*, also
 called a double-word or double-double number. Each of the two numbers is a *limb*. Arithmetic on
-such numbers is done with ordinary operations of `T`, arranged so that the rounding error of each
-step is caught and kept in the second limb. This page says what such a number is, what
+such numbers is a short, fixed sequence of ordinary operations of `T`, which computes the rounding
+errors of the main operations exactly (with *error-free transformations* such as TwoSum) and carries
+them in the second limb. This page says what such a number is, what
 "normalized" means and why it matters, and what the operators return when a value overflows or is
 not a number.
 
@@ -48,9 +49,9 @@ In words: the second limb is at most half a unit in the last place of the first,
 to change the first limb when the two are added, and the first limb is the value rounded to the
 nearest `double` ([Numbers](../developer/design/phase0/numbers.md#the-normalization-invariant)).
 For two limbs this fixes the representation: a value has one normalized pair, up to the signs of
-zero limbs. Here $1 + 2^{-53}$ lies exactly halfway between 1 and the next `double`, $1 + 2^{-52}$;
-rounding to nearest breaks the tie toward the even one, 1, so only the first of these two pairs is
-normalized:
+zero limbs. For example, $1 + 2^{-53}$ lies exactly halfway between 1 and the next `double`,
+$1 + 2^{-52}$; rounding to nearest breaks the tie toward the even one, 1, so of these two pairs with
+that value only the first is normalized:
 
 ```cpp
 --8<-- "docs/examples/cpp/concepts_expansions.cpp:normalized"
@@ -126,8 +127,8 @@ gives the canonical form of the operation of `T` on the leading limbs:
 --8<-- "docs/examples/cpp/concepts_expansions.txt:5:7"
 ```
 
-This is proved, in a model of IEEE 754 with overflow, as five statements about every operator's
-result $w$, for canonical operands ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values),
+This is proved, in a model of IEEE 754 with overflow, as five statements about the result $w$ of
+every arithmetic operator of two limbs, for canonical operands ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values),
 F1 to F5): $w$ is canonical; if its leading limb is finite, every operand was finite and $w$ is
 normalized and within the operation's bound, so that an overflow inside the computation can never
 give a finite wrong result; it is finite when the operands are below a stated threshold (a quarter

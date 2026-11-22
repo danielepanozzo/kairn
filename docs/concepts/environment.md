@@ -4,7 +4,8 @@ Every guarantee of Kairn is a theorem about floating-point operations that round
 subnormal numbers, and are executed as written. A two-limb operation is built from *error-free
 transformations*, short sequences such as TwoSum whose second result is exactly the rounding error
 of the first; they are exact only under those conditions. When one fails, nothing crashes: the
-result still looks like a two-limb number, and its second limb is noise. This page says what the
+result still looks like a two-limb number, and its second limb can be wrong (below, a measurement of
+exactly that). This page says what the
 library needs, what a compiler's contraction and fast-math do to it and what Kairn does about them,
 and the three checks it provides.
 
@@ -43,8 +44,8 @@ The contract ([Environment](../developer/design/phase0/environment.md#the-contra
 
 ## Contraction and fast-math
 
-**Contraction** is a compiler's right, which C and C++ grant, to compute `a * b + c` as one fused
-multiply-add, $\mathrm{RN}(ab + c)$, instead of two rounded operations. GCC does it by default in
+**Contraction** is a compiler's computing `a * b + c` as one fused multiply-add,
+$\mathrm{RN}(ab + c)$, instead of two rounded operations. GCC does it by default in
 C++ (`-ffp-contract=fast`), Clang under `-ffp-contract=on` and `=fast`, MSVC under `/fp:contract`. It
 changes the bits of a result, and it can break an error-free transformation: in Phase 0, a textbook
 double-word product compiled with Apple clang and `-ffp-contract=fast` or MSVC and `/fp:contract` came

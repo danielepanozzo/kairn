@@ -20,15 +20,14 @@ of two limbs and the intervals are also asserted to be standard-layout and of ex
 their limbs, $k$ for a number, 3 for a ball of two limbs, $2k$ for an interval
 (`tests/api/constexpr.cpp`, `api.constexpr`). Of that size, they have no room for a pointer, so they
 hold no heap memory, and a copy of their bytes is a copy of the value, which is what the program
-above does. The same holds of the
-other types, each by its own tests: `BallVector<T, k, N>` (trivially copyable, standard-layout,
+above does. The same holds of the other types, each by its own tests: `BallVector<T, k, N>` (trivially copyable, standard-layout,
 $kN + 1$ numbers of `T`; [Ball vectors](../reference/ball_vector.md#regular-type)), `Packed<T, k>`
 and `PackedMask<T>` ($k$ registers; [Packed](../reference/packed.md#regular-type)), the views of
 arrays, and `Accumulator<T, k>` ([The accumulator](../reference/accumulator.md#checks-and-constant-evaluation)).
 `SoA<T, k>` is the one type that owns memory: it allocates its arrays, in one block, in the
 functions that say so ([SoA](../reference/soa.md#soa)).
 
-Each type default-constructs to zero: `Expansion()` is 0, `Ball()` the point 0, `Interval()` the
+The value types default-construct to zero: `Expansion()` is 0, `Ball()` the point 0, `Interval()` the
 interval $[0, 0]$, `BallVector()` the point 0 of $N$ entries, `Accumulator()` the empty sum. The
 limbs of a number are public (`x.limb[i]`); a program that writes them must write a canonical pair,
 and `Expansion<T, 2>::from_limbs(p)` builds a number from computed limbs with the guard and, in a
@@ -116,7 +115,8 @@ time; in constant evaluation it comes from Dekker's product, another algorithm, 
 ```
 
 - When the product is zero or at least $2^{2p-1}\eta$ in magnitude ($2^{-969}$ for `double`,
-  $2^{-102}$ for `float`), both error terms are exact, so both executions give the same values.
+  $2^{-102}$ for `float`), both error terms are exact, so wherever `two_prod` is a constant expression
+  both executions give the same values.
 - Below that threshold each error term is within its own bound of the exact one, $\tfrac12\eta$ at
   run time and $\tfrac{13}{8}\eta$ at compile time, and the two can differ: the program checks only
   that they are within $2\eta$ of each other, which the two bounds imply.
