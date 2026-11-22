@@ -18,6 +18,18 @@
 //
 // The forms whose operand is only multiplied (the scaling by a product, axpy's a) need no guard and
 // must agree in every build.
+//
+// A third kind, as in boundary.cpp (rule R3, the factors of a fused operation:
+// docs/developer/architecture.md): the operations of a ball vector that take a value of T from the
+// program as a factor, with the other factor a constant the compiler sees, F = 1, -1 or 2, in double
+// and float: the scaling by a product of centers F and by F of centers that are products (x * a,
+// a * x, x *= a, scale(x, a, z), one and two limbs), and axpy with a product as its scalar a over
+// centers F, and with F as a over centers that are products. A compiler that sees F = 1 rewrites
+// fma(x, 1, s) as x + s and may fuse the program's product into that addition. With the headers as
+// they are every form must agree (--factor none); the build without the guards reports them
+// (--factor report: no compiler was measured to fuse one).
+//
+//   boundary_ball_vector --expect E --factor none|some|report
 #define KAIRN_CHECKS 0
 #include <kairn/ball_vector.hpp>
 
@@ -113,12 +125,139 @@ double uniform() {  // in [0.5, 1)
     return 0.5 + double(state >> 11) * 0x1p-54;
 }
 
+// The third kind: the other factor F, a constant the compiler sees. Each form is computed with the
+// product a*b in the call (NAME_inline) and with the rounded product (NAME_ref, which gets it as a),
+// and every limb of every center and the radius are compared.
+template <int C, class T>
+constexpr T known() {
+    return C == 0 ? T(1) : C == 1 ? T(-1) : T(2);
+}
+// Every limb of every center, then the radius.
+template <class T>
+struct Flat {
+    T v[2 * N + 1];
+};
+template <class T, int K>
+Flat<T> flat(const kairn::BallVector<T, K, N>& x) {
+    Flat<T> f{};
+    for (int j = 0; j < K; ++j)
+        for (std::size_t i = 0; i < N; ++i) f.v[std::size_t(j) * N + i] = x.limb(j)[i];
+    f.v[2 * N] = x.radius();
+    return f;
+}
+// A ball vector of N centers v and radius 2^-20.
+template <class T, int K>
+kairn::BallVector<T, K, N> filled(T v) {
+    std::array<kairn::Expansion<T, K>, N> c;
+    for (std::size_t i = 0; i < N; ++i) c[i] = kairn::Expansion<T, K>(v);
+    return kairn::BallVector<T, K, N>(c, T(0x1p-20));
+}
+#define KNOWN(NAME, ...)                                                                   \
+    template <class T, int C>                                                              \
+    inline Flat<T> NAME##_body(T q) {                                                      \
+        using V1 = kairn::BallVector<T, 1, N>;                                             \
+        using V2 = kairn::BallVector<T, 2, N>;                                             \
+        constexpr T F = known<C, T>();                                                     \
+        (void)sizeof(V1), (void)sizeof(V2), (void)F;                                       \
+        return flat(__VA_ARGS__);                                                          \
+    }                                                                                      \
+    template <class T, int C>                                                              \
+    NOINLINE Flat<T> NAME##_inline(T a, T b) { return NAME##_body<T, C>(a * b); }          \
+    template <class T, int C>                                                              \
+    NOINLINE Flat<T> NAME##_ref(T a, T) { return NAME##_body<T, C>(a); }
+
+// q is the product (a*b, or the rounded product); F the constant.
+KNOWN(k_scale1_by_f, filled<T, 1>(q) * F)
+KNOWN(k_scale2_by_f, filled<T, 2>(q) * F)
+KNOWN(k_scale1_of_f, filled<T, 1>(F) * q)
+KNOWN(k_scale2_of_f, filled<T, 2>(F) * q)
+KNOWN(k_scale2_of_f_rev, q * filled<T, 2>(F))
+KNOWN(k_scale2_of_f_assign, [&] { V2 x = filled<T, 2>(F); x *= q; return x; }())
+KNOWN(k_scale2_of_f_fn, [&] { V2 z; kairn::scale(filled<T, 2>(F), q, z); return z; }())
+KNOWN(k_axpy1_a, kairn::axpy(q, filled<T, 1>(F), filled<T, 1>(T(0.375))))
+KNOWN(k_axpy2_a, kairn::axpy(q, filled<T, 2>(F), filled<T, 2>(T(0.375))))
+KNOWN(k_axpy2_f, kairn::axpy(F, filled<T, 2>(q), filled<T, 2>(T(-0.375))))
+
+template <class T>
+using KnownFn = Flat<T> (*)(T, T);
+struct KnownForm {
+    const char* name;
+    KnownFn<double> d[3];
+    KnownFn<double> dr[3];
+    KnownFn<float> f[3];
+    KnownFn<float> fr[3];
+};
+#define KROW(NAME, TEXT)                                                                                       \
+    {TEXT,                                                                                                     \
+     {&NAME##_inline<double, 0>, &NAME##_inline<double, 1>, &NAME##_inline<double, 2>},                        \
+     {&NAME##_ref<double, 0>, &NAME##_ref<double, 1>, &NAME##_ref<double, 2>},                                 \
+     {&NAME##_inline<float, 0>, &NAME##_inline<float, 1>, &NAME##_inline<float, 2>},                           \
+     {&NAME##_ref<float, 0>, &NAME##_ref<float, 1>, &NAME##_ref<float, 2>}}
+const KnownForm known_forms[] = {
+    KROW(k_scale1_by_f, "BV1({a*b}, r) * F"),
+    KROW(k_scale2_by_f, "BV2({a*b}, r) * F"),
+    KROW(k_scale1_of_f, "BV1({F}, r) * (a*b)"),
+    KROW(k_scale2_of_f, "BV2({F}, r) * (a*b)"),
+    KROW(k_scale2_of_f_rev, "(a*b) * BV2({F}, r)"),
+    KROW(k_scale2_of_f_assign, "x = BV2({F}, r); x *= a*b"),
+    KROW(k_scale2_of_f_fn, "scale(BV2({F}, r), a*b, z)"),
+    KROW(k_axpy1_a, "axpy(a*b, BV1({F}, r), Y)"),
+    KROW(k_axpy2_a, "axpy(a*b, BV2({F}, r), Y)"),
+    KROW(k_axpy2_f, "axpy(F, BV2({a*b}, r), Y)"),
+};
+
+template <class T>
+T uniform_of() {
+    if constexpr (sizeof(T) == 8) {
+        return uniform();
+    } else {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        return 0.5f + float(state >> 40) * 0x1p-25f;
+    }
+}
+template <class T>
+NOINLINE T rounded_of(T a, T b) {
+    volatile T p = a * b;
+    return p;
+}
+template <class T>
+bool same_flat(const Flat<T>& u, const Flat<T>& v) {
+    for (std::size_t i = 0; i < 2 * N + 1; ++i) {
+        if (KAIRN_TEST_ZERO_SIGN_FREE && u.v[i] == 0 && v.v[i] == 0) continue;
+        if (std::memcmp(&u.v[i], &v.v[i], sizeof(T)) != 0) return false;
+    }
+    return true;
+}
+template <class T>
+long known_run(const KnownFn<T>* in, const KnownFn<T>* ref, long cases, const char* name, const char* type) {
+    long total = 0;
+    for (int c = 0; c < 3; ++c) {
+        long differ = 0;
+        for (long i = 0; i < cases; ++i) {
+            const T a = uniform_of<T>(), b = uniform_of<T>();
+            const T p = rounded_of(a, b);
+            differ += !same_flat(in[c](a, b), ref[c](p, T(1)));
+        }
+        if (differ)
+            std::printf("  %-30s %-6s F = %-2g differs in %6ld of %ld: a product of the program fused through "
+                        "the known factor\n", name, type, c == 0 ? 1.0 : c == 1 ? -1.0 : 2.0, differ, cases);
+        total += differ;
+    }
+    return total;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
-    const char* expect = argc == 3 && std::strcmp(argv[1], "--expect") == 0 ? argv[2] : "";
-    if (std::strcmp(expect, "none") != 0 && std::strcmp(expect, "some") != 0 && std::strcmp(expect, "report") != 0) {
-        std::fprintf(stderr, "usage: boundary_ball_vector --expect none|some|report\n");
+    const char* expect = argc == 5 && std::strcmp(argv[1], "--expect") == 0 ? argv[2] : "";
+    const char* factor = argc == 5 && std::strcmp(argv[3], "--factor") == 0 ? argv[4] : "";
+    const auto valid = [](const char* e) {
+        return std::strcmp(e, "none") == 0 || std::strcmp(e, "some") == 0 || std::strcmp(e, "report") == 0;
+    };
+    if (!valid(expect) || !valid(factor)) {
+        std::fprintf(stderr, "usage: boundary_ball_vector --expect none|some|report --factor none|some|report\n");
         return 2;
     }
 #ifdef KAIRN_TEST_UNGUARDED_COPY
@@ -170,10 +309,24 @@ int main(int argc, char** argv) {
     if (std::strcmp(expect, "report") == 0 && guarded == 0)
         std::printf("no form differs: this compiler and setting fused no product into a ball vector here, so this "
                     "build does not show that the guard is needed\n");
+    // The known factors.
+    const long known_cases = 20000;
+    long known_total = 0;
+    std::printf("the other factor a constant F the compiler sees (1, -1, 2), %ld pairs per form, type and F:\n",
+                known_cases);
+    for (const KnownForm& k : known_forms) {
+        known_total += known_run<double>(k.d, k.dr, known_cases, k.name, "double");
+        known_total += known_run<float>(k.f, k.fr, known_cases, k.name, "float");
+    }
+    std::printf("  %d forms: %ld cases differ%s\n", int(sizeof known_forms / sizeof known_forms[0]), known_total,
+                known_total ? "" : " (no form differs)");
     bool ok = multiplied == 0;
     if (std::strcmp(expect, "none") == 0) ok = ok && guarded == 0;
     if (std::strcmp(expect, "some") == 0) ok = ok && guarded > 0;
-    std::printf("%s (expected: %s)%s\n", ok ? "ok" : "FAILED", expect,
+    bool ok_known = true;
+    if (std::strcmp(factor, "none") == 0) ok_known = known_total == 0;
+    if (std::strcmp(factor, "some") == 0) ok_known = known_total > 0;
+    std::printf("%s (expected: %s; with a known factor: %s)%s\n", ok && ok_known ? "ok" : "FAILED", expect, factor,
                 KAIRN_TEST_ZERO_SIGN_FREE ? " (a zero limb compared as a zero: MSVC)" : "");
-    return ok ? 0 : 1;
+    return ok && ok_known ? 0 : 1;
 }

@@ -648,9 +648,12 @@ foreach(_i RANGE 0 ${_last} 2)
   # Against the copy without the guards no compiler measured fused a product into a ball vector
   # (GCC 13 and 16, Apple clang 21 and Clang 18, at -O2 and -O3, each contraction setting: the
   # loops of the constructors and of the operations are calls of their own there), so that build
-  # only reports.
+  # only reports. Its forms of the third kind, a product of the program as a factor beside a
+  # constant the compiler sees (the scalings and axpy, --factor): with the guards every form must
+  # agree; without them the copy reports, no compiler having been measured to fuse one.
   _kairn_api_program(kairn-api-boundary-ball-vector${_target_suffix} boundary_ball_vector.cpp ${_level} ${_option})
-  add_test(NAME api.boundary.ball_vector${_suffix} COMMAND kairn-api-boundary-ball-vector${_target_suffix} --expect none)
+  add_test(NAME api.boundary.ball_vector${_suffix}
+    COMMAND kairn-api-boundary-ball-vector${_target_suffix} --expect none --factor none)
   add_executable(kairn-api-boundary-ball-vector-unguarded${_target_suffix} boundary_ball_vector.cpp)
   target_include_directories(kairn-api-boundary-ball-vector-unguarded${_target_suffix} BEFORE PRIVATE "${_api_unguarded}")
   target_link_libraries(kairn-api-boundary-ball-vector-unguarded${_target_suffix} PRIVATE kairn::fma)
@@ -659,7 +662,7 @@ foreach(_i RANGE 0 ${_last} 2)
     ${_option})
   target_compile_definitions(kairn-api-boundary-ball-vector-unguarded${_target_suffix} PRIVATE KAIRN_TEST_UNGUARDED_COPY)
   add_test(NAME api.boundary.ball_vector.unguarded${_suffix}
-    COMMAND kairn-api-boundary-ball-vector-unguarded${_target_suffix} --expect report)
+    COMMAND kairn-api-boundary-ball-vector-unguarded${_target_suffix} --expect report --factor report)
   set_tests_properties(api.boundary.ball_vector${_suffix} api.boundary.ball_vector.unguarded${_suffix}
     PROPERTIES LABELS "api;boundary;ball_vector")
   # The same for Packed and the containers (boundary_packed.cpp), in each form above:
