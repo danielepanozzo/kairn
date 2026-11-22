@@ -127,6 +127,62 @@ class Plan(unittest.TestCase):
                 p, qmin, qmax = brute.parse_fmt(e["format"])
                 self.assertEqual(qmin + qmax, 3 - 2 * p, e)
 
+    def test_the_bounds_can_be_true_where_the_guards_look(self):
+        # The guards ask a bound's mask to be true somewhere in 1/5 < m unit(K) <= 1/4. The mask's
+        # test adds eta/2 per count to unit(K) (about c u^k, k the limbs of K), so every format of
+        # the plan has eta at most a sixteenth of u^k (the run of Milestone 2 failed on
+        # fp:16:-30:14 for the bounds of two limbs, where eta is about unit(K)).
+        limbs = {k["name"]: max(o.get("limbs", 1) for o in k["outputs"]) for k in self.kernels}
+        seen = 0
+        for k in self.kernels:
+            for e in k.get("ensures", []):
+                m = brute.re.search(r"unit\((\w+)\)", " ".join(map(str, e.get("args", []))))
+                if e["kind"] != "holds" or not m:
+                    continue
+                kk = limbs[m.group(1)]
+                for p in self.plan:
+                    if p["kernel"] == k["name"]:
+                        prec, qmin, _ = brute.parse_fmt(p["format"])
+                        self.assertLessEqual(qmin, -kk * prec - 4, (k["name"], p["format"]))
+                        seen += 1
+        self.assertGreater(seen, 0)
+
+    def test_a_rounding_to_nearest_of_the_accumulator_meets_an_inexact_case(self):
+        # Every enumeration of acc_merge_2 has magnitudes a, c whose sum rounds to nearest
+        # inexactly, not at a tie, below the largest number (the guards ask for such a case; with
+        # two exponents, and at precision 4 with the quick tier's values, there was none).
+        from fractions import Fraction as Q
+
+        def numbers(p, qmin, qmax):
+            out = {Q(m) * Q(2) ** qmin for m in range(2 ** p)}
+            for q in range(qmin + 1, qmax + 1):
+                out |= {Q(m) * Q(2) ** q for m in range(2 ** (p - 1), 2 ** p)}
+            return sorted(out)
+
+        mine = [e for e in self.plan if e["kernel"] == "acc_merge_2"]
+        self.assertTrue(mine)
+        for e in mine:
+            p, qmin, qmax = brute.parse_fmt(e["format"])
+            nums = numbers(p, qmin, qmax)
+            dom = {"a": nums, "c": nums}
+            for r in e["restrict"]:
+                name, _, vals = r.partition(".in=")
+                dom[name] = [Q(float.fromhex(v)) for v in vals.split("/")]
+            found = False
+            for a in dom["a"]:
+                for c in dom["c"]:
+                    s = a + c
+                    if s > nums[-1] or s in nums:
+                        continue
+                    lo = max(x for x in nums if x < s)
+                    hi = min(x for x in nums if x > s)
+                    if 2 * s != lo + hi:
+                        found = True
+                        break
+                if found:
+                    break
+            self.assertTrue(found, e)
+
     def test_every_ball_kernel_with_a_claim_of_containment_has_a_complete_enumeration(self):
         balls = {k["name"] for k in self.kernels if any(x["kind"] == "encloses"
                                                          for x in k.get("ensures", []))}

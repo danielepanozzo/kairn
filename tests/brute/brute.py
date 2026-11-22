@@ -199,6 +199,7 @@ SHAPES = {
 # (tests/CMakeLists.txt, _toy_kernel_acc_merge_2): the running sums every pair, the sums of
 # magnitudes a few values.
 _R_ACC_A = "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0"
+_R_ACC_A4 = "a.in=0x0p+0/0x1p-2/0x1.2p+0/0x1.4p+0/0x1.8p+0"
 _R_ACC_C = "c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2"
 _R_ACC_MUL = "a.in=0x0p+0/0x1p-1/0x1.8p+0"
 # conv_radius (seven operands; by the ruling of 2026-11-21 its claim is of finite results,
@@ -240,10 +241,30 @@ KERNEL_FORMATS = {
         ("fp:4:-3:-2", [_R_ACC_MUL, "s.lead=-1:0"]),
         ("fp:3:-2:-1", []),
     ]),
+    # The run of Milestone 2 found that two of these could not pass the guards: with two exponents
+    # (fp:3:-2:-1) every sum of magnitudes a + c is exact, a tie or beyond the largest number, and
+    # at precision 4 every sum of the values of _R_ACC_A and _R_ACC_C is exact or a tie (5/4 + 5),
+    # so that the rounding to nearest of b never met an inexact case. Three exponents complete
+    # (891 136 cases), and 9/8 among the values of a at precision 4 (9/8 + 5 is a quarter of the
+    # way from 6 to 13/2): 378 225.
     "acc_merge_2": ("fp:3:-2:0", [
         ("fp:3:-2:0", [_R_ACC_A, _R_ACC_C]),
-        ("fp:3:-2:-1", []),
-        ("fp:4:-3:-1", [_R_ACC_A, _R_ACC_C]),
+        ("fp:3:-3:-1", []),
+        ("fp:4:-3:-1", [_R_ACC_A4, _R_ACC_C]),
+    ]),
+    # The bounds of two limbs: m unit(K) (unit(K) about 3 u^2 or 4 u^2) must cross 1/5 and 1/4
+    # with the mask true, and the mask's test a = RN(m up((1+u)(unit(K) + eta/2))) <= up(1/4)
+    # adds eta/2 per count. The shape "n" gives fp:16:-30:14, whose eta = 2^-30 is about unit(K)
+    # there: the mask turns false near m unit(K) = 1/6, and the guards, which ask for a case with
+    # the mask true in (1/5, 1/4], failed the run of Milestone 2. Every other format of the shape,
+    # and fp:16:-50:14 in its place (eta 2^-20 of unit(K)), as these lists give them.
+    "bound_sum_2": ("fp:12:-30:12", [
+        ("fp:3:-30:12", []), ("fp:4:-30:12", []), ("fp:13:-30:12", []),
+        ("fp:16:-50:14", []), ("fp:20:-50:20", []),
+    ]),
+    "bound_dot_2": ("fp:12:-30:12", [
+        ("fp:4:-30:12", []), ("fp:5:-30:12", []), ("fp:13:-30:12", []),
+        ("fp:16:-50:14", []), ("fp:20:-50:20", []),
     ]),
 }
 
