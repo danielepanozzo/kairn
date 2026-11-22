@@ -934,10 +934,12 @@ class TheoremFields(unittest.TestCase):
         before, after = build.outputs(self.kernels_with()), build.outputs(ks)
         changed = sorted(rel for rel in after if after[rel] != before[rel])
         # The C++ headers too, since the comment of a fold's function gives the status of each model
-        # (cpp.fold_status): only the comments of dot_2's functions, from unverified to proved.
+        # (cpp.fold_status): only the comments of dot_2's functions, from unverified to proved; the
+        # emulated limb type's kernels are printed by the same printer (emulated.py).
         self.assertEqual(changed, ['include/kairn/gen/avx2.hpp', 'include/kairn/gen/neon.hpp',
                                    'include/kairn/gen/scalar.hpp', 'proofs/gen/IeeeAudit.v',
-                                   'proofs/gen/IeeeFoldStatements.v', 'proofs/gen/IeeeStatements.v'])
+                                   'proofs/gen/IeeeFoldStatements.v', 'proofs/gen/IeeeStatements.v',
+                                   'tests/emulated/gen/kernels.hpp'])
 
         def diff(rel):
             old, new = before[rel].splitlines(), after[rel].splitlines()
