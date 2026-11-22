@@ -127,7 +127,7 @@ int main() {
         state.set();
         sink = (unverified(raw(1.0, double(v_a))) + o.y).limb[1];
         state.restore();
-        if (checks_on) {
+        if constexpr (checks_on) {
             expect(calls > before, "x + y with an x that is not canonical calls the handler, and goes on", state.name);
         } else {
             expect(calls == before, "without the checks, x + y does not call the handler", state.name);

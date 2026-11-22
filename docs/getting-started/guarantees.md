@@ -435,7 +435,8 @@ constructors and states, the bounds, the negation, the hull, the intersection, t
 member and subset tests, the three-valued comparisons and the relations of IEEE 1788, the split,
 and of one limb the midpoint, the radius and the conversions; and of a ball the functions of the
 interface it shares with intervals, of one limb all but the split, of two limbs `lower_as`,
-`upper_as`, `midpoint`, `mid_rad`, the signs, `from_interval`, `from_bounds` and the narrowing
+`upper_as`, `midpoint`, `mid_rad`, the signs, `from_interval`, `from_bounds` and the narrowing; of
+both types `from_limbs` and `is_finite()`
 ([One enclosure interface](../reference/enclosure.md#constant-evaluation)).
 Not yet: the products of two limbs, whose kernels contain fused operations without a
 constant-evaluation variant; `ldexp` and `half` of balls and the Ball and Interval arithmetic, whose

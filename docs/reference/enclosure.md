@@ -354,7 +354,9 @@ values, check nothing.
 radius, `mid_rad()` and the conversions of two limbs (the split of two limbs is `constexpr`); on
 balls of one limb every function but the split; on balls of two limbs `lower_as`, `upper_as`,
 `midpoint()`, `mid_rad()`, the signs, the states, `from_interval` and `from_bounds`, and the narrowing
-`Ball<T, 1>(X)` of a ball of two limbs. The others compute with fused operations that have no
+`Ball<T, 1>(X)` of a ball of two limbs; `from_limbs`, `from_bounds` and `is_finite()` of both types,
+every number of limbs (`from_bounds` of a ball of one limb and of two limbs alike). The others
+compute with fused operations that have no
 variant for constant evaluation (`add_ball_2_2`, the sums of balls). On the empty set and the
 whole line the listings of balls compute a NaN or $\infty - \infty$ before the selects that
 return their result, and so do the midpoint, the radius and the split of the empty interval,
@@ -367,11 +369,20 @@ though they are evaluated as stated at run time (`api.constexpr` checks them at 
   the oracle against the kernel's claims on 2 000 random cases of `binary64` and `binary32` in the
   quick tier and 10 000 in the full tier, the empty set, the whole line, half-lines, infinite and
   NaN points among them; a `Trit` as the two masks of its kernel, and `member` on a kernel of one
-  exact mask never *unknown* ([Testing](../developer/testing.md#the-quick-tier)).
+  exact mask never *unknown* ([Testing](../developer/testing.md#the-quick-tier)). `from_bounds` is
+  judged among the forms of `interval_make_k` and `ball_from_interval_k`, and the guard of each limb
+  given to `from_limbs` among those of `make_2` and `make_2_limbs`, in every position a canonical
+  set can hold it.
 - `api.constexpr`: every `constexpr` function against values computed by hand, and the others at
   run time; the types, which exist exactly when their kernel is proved, take sets of one type only,
-  and have no comparison operators.
+  and have no comparison operators; `is_finite()` on every state; the round trip of `from_limbs`
+  on every state, bit for bit in constant evaluation and but the sign of a zero and a NaN's
+  payload at run time; which operand types `from_bounds` takes.
 - `api.reject.enclosure.*`: what must not compile (a `Trit` as a `bool`, a comparison operator,
-  sets of two types or numbers of limbs, a point converted to a set), each with its control.
-- `api.checks.*`, `api.boundary.*`, `api.shadow`: the checks of a debug build, a product the
-  program passes in as a point or as bounds, and the names of the headers.
+  sets of two types or numbers of limbs, a point converted to a set, a ball of two limbs from bounds
+  of two limbs), each with its control; `api.reject.unverified.from_bounds.*`, and
+  `api.reject.checks.interval_from_limbs_not_canonical` and `.ball_from_limbs_not_canonical`, limbs
+  of no canonical set given to `from_limbs` in a constant expression.
+- `api.checks.*`, `api.boundary.*`, `api.shadow`: the checks of a debug build (limbs of no
+  canonical set given to `from_limbs` among them), a product the program passes in as a point, as
+  bounds (`from_interval`, `from_bounds`) or as a limb (`from_limbs`), and the names of the headers.
