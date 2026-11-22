@@ -259,7 +259,7 @@ the public function without its check at entry) and `plain` (the same loop on `T
 element; for `dot` and `conv` of one limb with an FMA, as Kairn's step): `seq` (the public function
 with `kairn::sequential`), `kseq` (the generated sequential loop, for a map the loop of one lane),
 `bare` (the generated loop on stored arrays, the same steps without the guards of rule R3: `sum_1`,
-`dot_1`, `add_k`, `scale_2`, `axpy_k`, `conv_1`, the kernels `acc_mul_1` and `acc_mul_2`),
+`dot_k`, `add_k`, `scale_2`, `axpy_k`, `conv_k`, the kernels `acc_mul_1` and `acc_mul_2`),
 `plainw` (the plain loop in the lane order of the default), `textbook` (Sum2 and Dot2 for one limb;
 for two limbs the double-word arithmetic of `props.hpp` written out, element after element), and
 for ball vectors `balls` (the operators of `Ball`, entry by entry). Every function is checked
@@ -274,7 +274,23 @@ entries'). The runs are stored as `ITEM-MACHINE-COMPILER-LEVEL-rN.json`, ITEM `a
 triplets of the short ball vectors as `entryx-MACHINE-COMPILER-LEVEL-cK-rN.json`, K 1, 0 and `v` for
 `kairn-bench-m2-cold-LEVEL`, with the filter `m2x/,m2y/`; the errors as `accuracy-MACHINE-COMPILER-LEVEL.json`; the compile times as
 `headers-compile-MACHINE-COMPILER.json` and `compile-MACHINE-COMPILER-arrays.json`,
-`-ballvectors.json`. `m2_report.py --part 3` prints the tables:
+`-ballvectors.json`. Runs named `r3-ITEM-...` (the same items and programs) are the functions whose
+code changed when rule R3 on the factors of a fused operation was closed (`dot`, `axpy` and `conv` of
+two limbs, the scaling and the constructors of ball vectors of two limbs), measured again at that
+tree with the functions their ratios divide by; `m2_report.py` puts each in place of the same
+functions of the earlier run of the same index and configuration, and lists both in its table of the
+runs. The filters of those runs:
+
+| ITEM of `r3-` | Filter |
+|---|---|
+| `arrays` | `m2a/tp/dot`, `m2a/llc/dot`, `m2a/mem/dot` and the same for `axpy`, for `m2af/`, and `tp/conv1_`, `tp/conv2_` of both |
+| `short` | `sdot2_,sdot1_n` |
+| `acc` | `m2c/tp/acc2prod,m2c/llc/acc2prod,m2a/tp/dot2,m2a/llc/dot2` |
+| `bv` | `m2w/tp/scale_2_` |
+| `entry` (pairs) | `sdot2_,sdot1_n,m2w/tp/scale_2_,m2a/tp/dot2,m2a/tp/axpy2,m2a/tp/conv2_` |
+| `entryx` (triplets) | `scale_2_` and `make_2_` of `m2x/` and `m2y/`, `tp` and `lat` |
+
+`m2_report.py --part 3` prints the tables:
 
 ```sh
 python3 bench/entry_check.py copy /tmp/nocheck      # then -DKAIRN_BENCH_NOCHECK_INCLUDE=/tmp/nocheck

@@ -16,8 +16,10 @@ measurements, one JSON file per run, in
 [`results/milestone2/bench/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/bench).
 It is the first part of the milestone's benchmarks; [the second part](#the-second-part)
 (2026-11-22, commit `cbe3bb1`, the same machines and compilers) measures what reached `main` after it,
-and [the third part](#the-third-part) (2026-11-22, on the tree of `25cde04`, the same machines and compilers) the
-functions on arrays, the accumulator and the ball vectors, which reached `main` last
+and [the third part](#the-third-part) (2026-11-22, the same machines and compilers) the functions on
+arrays, the accumulator and the ball vectors, which reached `main` last: on the tree of `25cde04`, and
+the functions whose code changed when rule R3 on the factors of a fused operation was closed on
+`main` (`788d45f`) on that tree
 ([Still to come](#still-to-come) says what no part measures).
 
 "M3" and "Zen 2" are the two machines ([How it was measured](#how-it-was-measured)). A **loop** is a
@@ -104,7 +106,8 @@ harness, `BACKEND/KIND/KERNEL/VARIANT`: `m2` for `double` limbs, `m2f` for `floa
 
 - **Third part: an accurate sum costs 1.7 to 1.8 times Sum2 on Zen 2 and 4.5 to 4.9 times on the
   M3, in the default order.** A `sum` or `dot` of two limbs takes 2.6 to 2.9 ns per element on Zen 2
-  (four lanes) and 3.7 to 3.9 on the M3 (two); on data of `double` it costs 1.7 to 1.8 and 4.5 to 4.9
+  (four lanes) and 3.7 to 3.9 on the M3 (two; `dot` measured again there at `788d45f` under load,
+  3.6 to 4.6); on data of `double` it costs 1.7 to 1.8 and 4.5 to 4.9
   times Sum2 (1.5 to 1.7 and 4.0 to 4.6 times Dot2), 7 to 10 times with `kairn::sequential`, and
   beyond a condition of $10^{15}$ its error is 3 to 900 times smaller than theirs. One limb costs
   what the loop of `double` in the same order costs (0.87 to 1.13 times), a quarter (Zen 2) or a half
@@ -121,16 +124,18 @@ harness, `BACKEND/KIND/KERNEL/VARIANT`: `m2` for `double` limbs, `m2f` for `floa
   user's report it costs most operations the read or less (1.01 to 1.26 times for `x + y` of two
   limbs, where the report has 1.2 to 3.0); more only for constructors whose body the compiler stops
   inlining with it (Clang 18: +18 to +20 ns, 4 times, for `BallVector<double, 1, 3>`; GCC 13 at
-  `-O3` in a unit of many operations: +7 to +14 ns) or whose loops it places differently. A report
+  `-O3` in a unit of many operations: +6 to +14 ns) or whose loops it places differently. A report
   of the check out of line and cold removes GCC's excess, and with the constructors forced inline
   Clang's (tried in a copy of the headers, not made). On the M3 the same two causes show (+2 to +17
   ns for constructors), and in chains of short operations the read of FPCR itself costs 3 to 7 ns,
   1.5 to 2.7 times the operation, where the code differs by the read and its tests only
   ([question 14](#14-short-arrays-and-the-check-at-entry)).
 
-- **Third part: the guards of the factors a program supplies cost 0 to 22%**, nothing where the
-  loop waits for a chain (`dot` of one limb 0.98 to 1.06, `add_product` 0.99 to 1.10), 14 to 22% for
-  `scale` of two limbs, up to 15% for the product of short polynomials, on both machines
+- **Third part: the guards of the factors a program supplies cost 0 to 29%**, nothing where the
+  loop waits for a chain (`dot` of one limb 0.99 to 1.05, of two limbs 0.99 to 1.01, `add_product`
+  0.99 to 1.10), 14 to 22% for `scale` of two limbs, 8 to 18% for `axpy` of two limbs since rule R3 on
+  the factors of a fused operation was closed (which made it 11 to 13% slower on Zen 2), up to 29% for
+  the product of short polynomials, on both machines
   ([question 15](#15-the-guards-of-supplied-factors)). The accumulator costs what the sequential
   `sum` and `dot` cost, term by term ([question 16](#16-the-accumulator)).
 
@@ -1540,7 +1545,8 @@ tables:
 What reached `main` after the second part ([Still to come](#still-to-come)): the functions on arrays
 of `kairn/batch.hpp`, the accumulator of `kairn/accumulator.hpp` and the ball vectors of
 `kairn/ball_vector.hpp`, on the tree of `25cde04` and the harness of this part (commits `9e114bb`,
-`dae16be` and `be95dbb`, which change nothing under `include/`), 2026-11-22, on the same two machines and four compilers as the earlier parts (the M3 under load, [below](#how-the-third-part-was-measured)), `-O2` and
+`dae16be` and `be95dbb`, which change nothing under `include/`) and, for what changed afterwards, of
+`788d45f` ([below](#which-tree-measured-what)), 2026-11-22, on the same two machines and four compilers as the earlier parts (the M3 under load, [below](#how-the-third-part-was-measured)), `-O2` and
 `-O3`, three runs of each configuration: the functions on arrays against plain loops of `T` and the
 code a numerical programmer writes instead ([question 13](#13-the-functions-on-arrays)); short
 arrays, short ball vectors and the check of the environment at entry
@@ -1572,6 +1578,35 @@ loop on `T`, element after element and in the lane order), `textbook` (the code 
 programmer writes instead) and `balls` (an array of `Ball`).
 
 
+### Which tree measured what
+
+The third part was measured at `25cde04`. While it was measured, rule R3 on the factors of a fused
+operation was closed on `main` (`788d45f`), which changed the code of these functions: `dot` of two
+limbs (it calls `dot_2_entry_packed` and `dot_2_entry_seq`, which guard every limb of both factors),
+`conv` of two limbs (`conv_2_entry_seq`), `axpy` of two limbs with `a` of one or of two limbs (the
+limbs of `a` and `x` guarded as well as those of `y`), the scaling of a `BallVector` of two limbs
+(`bv_scale_2_entry`), its constructors from centers and a radius (`bv_make_2_entry_seq`), and
+`Accumulator::from_state` (the limbs of the state and `a` guarded). Those functions were measured
+again at `053f6e69`, the tree of `788d45f` with the harness of this part pointed at the new loops (the
+variants `kairn` and `kseq`, and `bare`, the loops on stored arrays without the guards, for `dot` and
+`conv` of two limbs), by the same method, together with the functions their ratios divide by: the
+runs `r3-*` of [`results/milestone2/bench/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/bench),
+which `m2_report.py` puts in place of the same functions of the earlier run of the same index
+([bench/README.md](https://github.com/danielepanozzo/kairn/tree/main/bench)). Every other cell is of
+`25cde04`, whose code for it is that of `788d45f`. Nothing in the harness times
+`Accumulator::from_state` (its accumulators are made by `add`). The errors of question 17 were not
+measured again ([question 17](#17-accuracy-for-the-price)); the compile times of question 19 and the
+summaries of the machine code (`asm3-*`) are all of `053f6e69`.
+
+Where the code is the same the two trees agree: the functions measured again beside the changed ones
+whose code did not change (the sums, dot products and `axpy` of one limb, the product of one limb,
+the short `dot` of one limb) took 0.993 to 0.997 times their earlier time at the median on Zen 2
+(0.97 to 1.06 for nine in ten), where the later runs were made at loads of 1.4 to 11. On the M3 the
+later runs were made at loads of 2.4 to 12.7, another author's campaign running again, and the same
+unchanged functions took 1.15 to 1.17 times their time in the earlier, quiet runs at the median: a
+whole run is slower there under load, and the M3's times of the changed functions are of those runs;
+their ratios to the functions measured beside them, which the answers quote, are not affected.
+
 ### 13. The functions on arrays
 
 What does an accurate sum or dot product cost against the loop a program writes on `T`, and against
@@ -1601,12 +1636,12 @@ one lane.
 | `sum`, two limbs, L1 | 3.65 to 3.89 (-O2), 3.75 to 3.89 (-O3) | 3.66 to 3.88 (-O2), 3.69 to 3.91 (-O3) | 2.6 to 2.67 | 2.58 to 2.62 |
 | `sum`, two limbs, memory | 3.73 to 3.95 (-O2), 3.74 to 3.97 (-O3) | 3.7 to 3.85 (-O2), 3.76 to 3.91 (-O3) | 2.58 to 2.63 | 2.56 to 2.6 |
 | `sum_fast`, two limbs, L1 | 2.19 | 2.22 to 2.23 | 1.67 to 1.71 | 1.66 to 1.75 (-O2), 1.66 to 1.72 (-O3) |
-| `dot`, one limb, L1 | 0.38 to 0.399 | 0.385 to 0.406 (-O2), 0.386 to 0.409 (-O3) | 0.35 to 0.358 (-O2), 0.335 to 0.356 (-O3) | 0.323 to 0.33 |
-| `dot`, two limbs, L1 | 3.77 to 3.84 | 3.7 to 3.85 | 2.61 to 2.68 | 2.62 to 2.69 |
+| `dot`, one limb, L1 | 0.377 to 0.465 (-O2), 0.378 to 0.466 (-O3) | 0.474 to 0.477 | 0.348 to 0.354 | 0.322 |
+| `dot`, two limbs, L1 | 3.6 to 4.44 (-O2), 3.86 to 4.51 (-O3) | 4.44 to 4.64 | 2.6 to 2.67 | 2.6 |
 | `add`, one limb, L1 | 0.273 to 0.275 | 0.244 to 0.251 | 0.214 to 0.219 (-O2), 0.214 to 0.226 (-O3) | 0.202 to 0.207 |
 | `add`, two limbs, L1 | 1.02 | 0.927 to 0.939 | 1.23 to 1.25 | 1.28 to 1.31 |
 | `scale`, two limbs, L1 | 0.483 to 0.489 | 0.42 to 0.422 | 0.505 to 0.522 | 0.499 to 0.512 |
-| `axpy`, two limbs, a of T, L1 | 1.29 | 1.21 | 1.74 to 1.79 | 1.77 to 1.81 |
+| `axpy`, two limbs, a of T, L1 | 1.38 to 1.59 (-O2), 1.38 to 1.66 (-O3) | 1.49 to 1.55 | 1.96 to 1.98 | 2 to 2.01 |
 | `norm_upper`, two limbs, L1 | 0.429 to 0.431 | 0.619 to 0.658 (-O2), 0.4 to 0.427 (-O3) | 0.184 to 0.188 (-O2), 0.176 to 0.181 (-O3) | 0.113 to 0.129 (-O2), 0.113 to 0.129 (-O3) |
 | `sum`, one limb, memory | 0.368 to 0.369 | 0.328 to 0.35 (-O2), 0.328 to 0.353 (-O3) | 0.434 to 0.453 | 0.422 to 0.434 |
 | a plain sum of T, one chain, L1 | 0.472 to 0.506 (-O2), 0.472 to 0.486 (-O3) | 0.559 to 0.597 (-O2), 0.558 to 0.593 (-O3) | 0.846 to 0.868 | 0.846 to 0.863 |
@@ -1617,11 +1652,11 @@ one lane.
 | `sum`, one limb, over the plain sum in the same order, L1 | 0.97 to 1.00 (-O2), 1.01 to 1.04 (-O3) | 0.98 to 1.03 | 1.09 to 1.13 (-O2), 0.87 to 0.95 (-O3) | 1.08 to 1.09 |
 | `sum`, one limb, over the plain sum, one chain, L1 | 0.50 to 0.55 | 0.44 to 0.46 | 0.25 to 0.28 | 0.23 |
 | `sum`, two limbs, over the plain sum of T in the same order, L1 | 14.4 to 14.9 (-O2), 14.9 to 15.6 (-O3) | 14.6 to 15.2 (-O2), 14.2 to 14.9 (-O3) | 12.5 (-O2), 10.6 to 10.9 (-O3) | 14.3 |
-| `dot`, one limb, over the plain dot product in the same order, L1 | 1.00 to 1.03 | 1.06 to 1.07 (-O2), 0.95 to 0.99 (-O3) | 1.06 to 1.09 (-O2), 0.91 to 0.97 (-O3) | 1.07 |
-| `dot`, two limbs, over the plain dot product of T in the same order, L1 | 9.9 to 10.3 (-O2), 9.8 to 10.1 (-O3) | 10.1 to 10.5 (-O2), 8.93 to 9.52 (-O3) | 7.91 to 8.11 (-O2), 7.11 to 7.28 (-O3) | 8.70 to 8.73 |
+| `dot`, one limb, over the plain dot product in the same order, L1 | 1.03 to 1.04 (-O2), 0.97 to 1.04 (-O3) | 1.07 (-O2), 0.96 (-O3) | 1.06 (-O2), 0.96 to 0.97 (-O3) | 1.07 |
+| `dot`, two limbs, over the plain dot product of T in the same order, L1 | 9.70 to 9.93 | 10.1 (-O2), 8.97 to 9.35 (-O3) | 7.92 to 7.95 (-O2), 7.26 to 7.27 (-O3) | 8.66 to 8.67 |
 | `add`, one limb, over `x + y` of T, L1 | 2.64 to 2.68 | 0.87 (-O2), 1.67 to 1.68 (-O3) | 0.67 (-O2), 1.83 to 2.09 (-O3) | 1.55 to 1.69 (-O2), 1.67 to 1.68 (-O3) |
 | `add`, two limbs, over `x + y` of T, L1 | 9.89 to 9.95 | 3.31 to 3.35 (-O2), 6.20 to 6.22 (-O3) | 3.84 to 3.86 (-O2), 10.2 to 12.0 (-O3) | 9.8 to 10.7 (-O2), 10.6 to 10.7 (-O3) |
-| `axpy`, two limbs, over `a x + y` of T, L1 | 12.6 to 12.7 | 4.32 to 4.33 (-O2), 8.09 to 8.12 (-O3) | 5.40 to 5.45 (-O2), 15.0 to 16.8 (-O3) | 14.6 to 14.8 |
+| `axpy`, two limbs, over `a x + y` of T, L1 | 13.6 to 13.7 | 4.64 to 4.66 (-O2), 8.68 to 9.00 (-O3) | 6.10 to 6.14 (-O2), 17.6 (-O3) | 16.6 to 16.7 |
 | `sum`, two limbs, over the plain sum of T in the same order, memory | 11.2 to 11.3 (-O2), 11.4 to 11.7 (-O3) | 10.4 to 10.8 (-O2), 11.0 to 11.3 (-O3) | 5.64 to 5.66 (-O2), 4.02 to 4.06 (-O3) | 5.52 to 5.62 |
 | `add`, two limbs, over `x + y` of T, memory | 4.84 to 4.86 | 3.54 to 3.64 (-O2), 4.46 (-O3) | 1.75 to 1.84 (-O2), 1.83 to 1.84 (-O3) | 1.81 to 1.84 (-O2), 1.79 to 1.90 (-O3) |
 
@@ -1629,23 +1664,23 @@ one lane.
 |---|---|---|---|---|
 | `sum` of two limbs of one-limb data, default, over Sum2, L1 | 4.62 to 4.63 (-O2), 4.62 to 4.85 (-O3) | 4.52 to 4.80 (-O2), 4.55 (-O3) | 1.83 | 1.78 to 1.80 |
 | `sum` of two limbs of one-limb data, sequential, over Sum2, L1 | 9.35 to 9.37 (-O2), 9.35 to 9.82 (-O3) | 9.14 to 9.72 (-O2), 9.21 to 9.22 (-O3) | 7.13 to 7.18 | 7.05 to 7.06 |
-| `dot` of two limbs of one-limb data, default, over Dot2, L1 | 4.22 to 4.53 (-O2), 4.22 to 4.53 (-O3) | 4.02 to 4.07 (-O2), 4.01 to 4.28 (-O3) | 1.66 to 1.67 (-O2), 1.66 to 1.72 (-O3) | 1.71 to 1.73 |
+| `dot` of two limbs of one-limb data, default, over Dot2, L1 | 4.55 to 4.56 (-O2), 4.36 to 4.55 (-O3) | 4.05 to 4.34 (-O2), 4.14 to 4.31 (-O3) | 1.66 to 1.68 | 1.71 to 1.72 |
 | `sum`, two limbs, sequential, over double-word sums written out, L1 | 1.02 to 1.09 (-O2), 1.02 to 1.06 (-O3) | 1.00 to 1.02 (-O2), 1.01 to 1.06 (-O3) | 1.00 | 1.02 to 1.03 |
 | `sum`, two limbs, default, over double-word sums written out, L1 | 0.51 to 0.54 | 0.50 to 0.54 | 0.25 to 0.26 | 0.26 |
-| `dot`, two limbs, sequential, over the double-word dot product written out, L1 | 1.00 to 1.02 (-O2), 1.00 to 1.07 (-O3) | 1.00 to 1.04 (-O2), 1.01 to 1.06 (-O3) | 1.00 to 1.01 | 1.01 to 1.02 |
-| `dot`, two limbs, default, over the double-word dot product written out, L1 | 0.50 to 0.53 | 0.51 to 0.53 | 0.26 | 0.26 |
+| `dot`, two limbs, sequential, over the double-word dot product written out, L1 | 1.01 | 1.00 to 1.04 | 1.00 | 1.01 |
+| `dot`, two limbs, default, over the double-word dot product written out, L1 | 0.50 to 0.51 | 0.50 to 0.52 | 0.26 | 0.26 |
 | `add`, two limbs, over AccurateDWPlusDW written out, L1 | 1.47 to 1.48 | 0.67 to 0.69 (-O2), 1.33 (-O3) | 0.33 (-O2), 1.28 to 1.30 (-O3) | 1.32 to 1.35 |
 | `scale`, two limbs, over DWTimesFP3 written out, L1 | 2.00 to 2.02 | 1.00 (-O2), 1.69 (-O3) | 0.49 (-O2), 1.83 to 1.84 (-O3) | 2.05 to 2.06 |
-| `axpy`, two limbs, a of T, over the same written out, L1 | 1.28 to 1.29 | 0.64 (-O2), 1.20 (-O3) | 0.30 (-O2), 1.17 to 1.18 (-O3) | 1.20 |
+| `axpy`, two limbs, a of T, over the same written out, L1 | 1.37 (-O2), 1.32 to 1.40 (-O3) | 0.69 (-O2), 1.29 to 1.34 (-O3) | 0.33 (-O2), 1.33 to 1.34 (-O3) | 1.36 |
 
 | kairn::sequential over the default order (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `sum`, one limb, L1 | 1.94 to 2.04 (-O2), 1.93 to 2.00 (-O3) | 2.28 to 2.32 (-O2), 2.20 to 2.22 (-O3) | 3.77 to 3.86 (-O2), 3.71 to 4.00 (-O3) | 4.40 to 4.43 |
 | `sum`, two limbs, L1 | 1.93 to 2.02 (-O2), 1.90 to 1.95 (-O3) | 1.92 to 2.00 (-O2), 1.91 to 2.00 (-O3) | 3.83 to 3.93 | 3.93 to 3.94 |
-| `dot`, one limb, L1 | 2.40 to 2.44 (-O2), 2.34 to 2.45 (-O3) | 2.27 to 2.39 (-O2), 2.19 to 2.30 (-O3) | 4.16 to 4.17 (-O2), 4.11 to 4.36 (-O3) | 4.42 to 4.45 |
-| `dot`, two limbs, L1 | 1.89 to 2.02 (-O2), 1.91 to 2.02 (-O3) | 1.95 to 2.01 (-O2), 1.91 to 2.01 (-O3) | 3.84 to 3.94 | 3.91 to 3.95 |
+| `dot`, one limb, L1 | 2.30 to 2.31 (-O2), 2.30 to 2.39 (-O3) | 2.27 to 2.29 | 4.09 to 4.17 | 4.44 |
+| `dot`, two limbs, L1 | 1.98 to 2.02 | 2.01 to 2.02 | 3.81 to 3.90 | 3.90 to 3.93 |
 | `add`, two limbs, one lane over the default, L1 | 0.90 to 0.91 | 3.07 (-O2), 1.01 (-O3) | 4.34 to 4.36 | 0.99 to 1.00 |
-| `axpy`, two limbs, one lane over the default, L1 | 0.93 to 0.94 | 2.26 to 2.40 (-O2), 1.00 (-O3) | 4.37 to 4.42 | 0.87 |
+| `axpy`, two limbs, one lane over the default, L1 | 0.96 to 0.97 | 2.22 to 2.23 (-O2), 1.00 to 1.01 (-O3) | 4.18 to 4.20 | 0.83 |
 | `sum`, one limb, memory | 1.89 to 1.93 (-O2), 1.83 to 1.94 (-O3) | 2.05 to 2.09 (-O2), 1.96 to 2.01 (-O3) | 2.10 to 2.15 | 2.17 to 2.26 (-O2), 2.15 to 2.19 (-O3) |
 | `sum`, two limbs, memory | 1.90 to 1.97 (-O2), 1.87 to 1.98 (-O3) | 1.92 to 2.00 (-O2), 1.91 to 1.97 (-O3) | 3.95 to 3.99 | 3.98 to 4.00 |
 
@@ -1653,25 +1688,25 @@ one lane.
 |---|---|---|---|---|
 | `sum`, one limb, L1 | 4.28 to 4.33 | 5.23 to 5.59 (-O2), 5.17 to 5.52 (-O3) | 7.38 to 7.42 (-O2), 7.00 to 7.40 (-O3) | 8.87 to 8.93 |
 | `sum`, two limbs, L1 | 3.83 to 4.09 (-O2), 3.84 to 4.09 (-O3) | 3.86 to 3.99 (-O2), 3.83 to 4.08 (-O3) | 7.21 to 7.31 | 7.29 to 7.33 |
-| `dot`, two limbs, L1 | 3.77 to 4.03 (-O2), 3.80 to 4.04 (-O3) | 3.76 to 4.03 (-O2), 3.92 to 4.03 (-O3) | 7.20 to 7.26 | 7.24 to 7.33 |
+| `dot`, two limbs, L1 | 4.03 to 4.04 | 4.03 to 4.04 | 7.21 to 7.24 | 7.26 to 7.27 |
 
 | The product of polynomials, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `conv`, one limb, 16 coefficients: ns per term | 0.39 | 0.47 (-O2), 0.38 to 0.39 (-O3) | 0.84 to 0.87 (-O2), 0.80 to 0.82 (-O3) | 0.77 to 0.78 (-O2), 0.69 to 0.70 (-O3) |
-| `conv`, two limbs, 16 coefficients: ns per term | 4.28 to 4.29 | 4.20 to 4.26 | 9.54 to 9.75 (-O2), 9.44 to 9.46 (-O3) | 9.46 to 9.68 |
-| `conv`, one limb, 16, over the plain loop of T (FMA) | 1.00 to 1.02 | 1.22 to 1.24 (-O2), 1.36 to 1.37 (-O3) | 1.29 to 1.33 | 1.31 to 1.32 (-O2), 1.19 to 1.20 (-O3) |
-| `conv`, two limbs, 16, over the plain loop of T (FMA) | 11.0 to 11.1 | 11.0 (-O2), 15.0 to 15.1 (-O3) | 14.6 (-O2), 15.2 to 15.6 (-O3) | 16.2 to 16.4 |
-| `conv`, two limbs, 16, over the double-word loop written out | 1.00 | 1.00 (-O2), 1.01 to 1.08 (-O3) | 1.03 to 1.04 | 1.04 |
-| `conv`, one limb, 64 coefficients: ns per term | 0.45 to 0.46 | 0.44 to 0.46 | 0.97 to 1.01 | 0.95 to 0.97 (-O2), 0.83 to 0.84 (-O3) |
-| `conv`, two limbs, 64 coefficients: ns per term | 6.05 to 6.49 (-O2), 6.16 to 6.48 (-O3) | 6.47 to 6.49 | 10.0 to 10.3 | 10.0 to 10.2 |
-| `conv`, one limb, 64, over the plain loop of T (FMA) | 1.03 to 1.07 | 1.08 (-O2), 1.02 to 1.03 (-O3) | 1.07 to 1.10 | 1.38 to 1.40 (-O2), 1.21 (-O3) |
-| `conv`, two limbs, 64, over the plain loop of T (FMA) | 13.8 to 14.9 (-O2), 14.2 to 15.0 (-O3) | 15.0 to 15.1 | 10.9 to 11.1 | 14.6 to 14.7 |
-| `conv`, two limbs, 64, over the double-word loop written out | 1.00 to 1.02 | 1.00 to 1.07 (-O2), 1.00 to 1.07 (-O3) | 1.00 to 1.01 | 1.02 |
-| `conv`, one limb, 512 coefficients: ns per term | 0.78 to 0.83 (-O2), 0.78 to 0.83 (-O3) | 0.78 to 0.84 (-O2), 0.78 to 0.83 (-O3) | 1.38 to 1.41 | 1.35 to 1.40 |
-| `conv`, two limbs, 512 coefficients: ns per term | 7.13 to 7.65 (-O2), 7.16 to 7.65 (-O3) | 7.13 to 7.16 (-O2), 7.14 to 7.66 (-O3) | 10.2 to 10.4 | 10.2 to 10.4 |
-| `conv`, one limb, 512, over the plain loop of T (FMA) | 1.02 to 1.03 (-O2), 0.96 to 1.03 (-O3) | 1.03 to 1.09 (-O2), 1.03 (-O3) | 1.00 to 1.01 | 1.02 to 1.04 |
-| `conv`, two limbs, 512, over the plain loop of T (FMA) | 8.98 to 9.43 (-O2), 8.83 to 9.43 (-O3) | 9.31 to 9.43 (-O2), 8.92 to 9.44 (-O3) | 7.38 to 7.42 | 7.69 to 7.75 |
-| `conv`, two limbs, 512, over the double-word loop written out | 1.00 to 1.02 | 1.00 to 1.01 | 1.00 | 1.01 to 1.02 |
+| `conv`, one limb, 16 coefficients: ns per term | 0.39 to 0.46 (-O2), 0.39 to 0.47 (-O3) | 0.56 to 0.57 (-O2), 0.49 (-O3) | 0.93 to 0.94 (-O2), 0.80 to 0.81 (-O3) | 0.76 (-O2), 0.69 (-O3) |
+| `conv`, two limbs, 16 coefficients: ns per term | 4.30 to 5.50 (-O2), 4.57 to 5.50 (-O3) | 5.19 to 5.43 (-O2), 5.39 (-O3) | 9.54 to 9.63 | 9.59 to 9.60 |
+| `conv`, one limb, 16, over the plain loop of T (FMA) | 0.98 to 1.01 | 1.25 to 1.28 (-O2), 1.44 to 1.45 (-O3) | 1.44 to 1.45 (-O2), 1.31 to 1.32 (-O3) | 1.33 to 1.34 (-O2), 1.19 to 1.20 (-O3) |
+| `conv`, two limbs, 16, over the plain loop of T (FMA) | 11.1 to 11.8 (-O2), 11.5 to 11.8 (-O3) | 11.8 to 12.2 (-O2), 15.9 (-O3) | 14.8 (-O2), 15.5 (-O3) | 16.5 to 16.8 |
+| `conv`, two limbs, 16, over the double-word loop written out | 1.06 to 1.08 | 1.06 to 1.10 | 1.04 to 1.05 | 1.05 to 1.06 |
+| `conv`, one limb, 64 coefficients: ns per term | 0.43 to 0.54 (-O2), 0.45 to 0.54 (-O3) | 0.53 to 0.55 | 1.05 to 1.06 (-O2), 0.98 to 0.99 (-O3) | 0.94 to 0.95 (-O2), 0.83 (-O3) |
+| `conv`, two limbs, 64 coefficients: ns per term | 6.13 to 7.56 (-O2), 6.57 to 7.63 (-O3) | 7.54 to 7.89 (-O2), 7.57 to 7.88 (-O3) | 10.0 | 10.0 |
+| `conv`, one limb, 64, over the plain loop of T (FMA) | 1.00 to 1.08 (-O2), 1.06 to 1.10 (-O3) | 1.03 to 1.08 (-O2), 1.05 to 1.10 (-O3) | 1.16 to 1.18 (-O2), 1.09 (-O3) | 1.38 (-O2), 1.21 (-O3) |
+| `conv`, two limbs, 64, over the plain loop of T (FMA) | 14.4 to 15.2 (-O2), 15.4 to 15.5 (-O3) | 15.4 to 15.5 (-O2), 15.3 to 15.9 (-O3) | 10.9 to 11.1 | 14.6 to 14.7 |
+| `conv`, two limbs, 64, over the double-word loop written out | 1.00 to 1.02 (-O2), 1.00 to 1.07 (-O3) | 1.01 to 1.06 | 1.00 to 1.01 | 1.02 |
+| `conv`, one limb, 512 coefficients: ns per term | 0.78 to 0.96 (-O2), 0.78 to 0.96 (-O3) | 0.96 to 1.00 | 1.38 to 1.39 | 1.34 to 1.38 |
+| `conv`, two limbs, 512 coefficients: ns per term | 7.17 to 8.85 (-O2), 7.70 to 9.25 (-O3) | 8.83 to 8.84 (-O2), 8.84 to 9.24 (-O3) | 10.1 to 10.2 | 10.1 to 10.2 |
+| `conv`, one limb, 512, over the plain loop of T (FMA) | 1.03 (-O2), 0.97 to 1.03 (-O3) | 1.03 | 0.99 to 1.02 | 1.02 to 1.04 |
+| `conv`, two limbs, 512, over the plain loop of T (FMA) | 9.49 (-O2), 9.49 to 9.89 (-O3) | 9.47 to 9.48 | 7.28 to 7.41 | 7.69 to 7.70 |
+| `conv`, two limbs, 512, over the double-word loop written out | 1.01 (-O2), 1.01 to 1.08 (-O3) | 1.00 | 0.99 to 1.00 | 1.01 |
 
 - **One limb costs what the loop of `T` in the same order costs; the order is what makes it fast.**
   On Zen 2, `sum` of one limb takes 0.20 to 0.24 ns per element in L1 and `dot` 0.32 to 0.36, 0.87
@@ -1684,8 +1719,8 @@ one lane.
   is cheap: with `kairn::sequential` it costs what the double-word loop written out from the
   listings costs (0.99 to 1.03, the same additions in the same chain), in the default order 0.25 to
   0.28 of it (four chains). As an accurate sum of doubles, `sum` of two limbs takes 1.7 to 1.8 times
-  Sum2's time in the default order and 6.8 to 7.2 times sequentially (`dot`: 1.5 to 1.7 and 5.7 to
-  6.8 times Dot2's), for a result of two limbs where Sum2's is one `double`
+  Sum2's time in the default order and 6.8 to 7.2 times sequentially (`dot`: 1.5 to 1.7 and 5.5 to
+  6.7 times Dot2's), for a result of two limbs where Sum2's is one `double`
   ([question 17](#17-accuracy-for-the-price)); for `float`, with eight lanes, the default order
   takes 0.96 to 0.98 of Sum2's time and 0.91 to 0.93 of Dot2's. `sum_fast` takes 0.62 to 0.68 of
   the time of `sum`. On the M3 the loops of two limbs take 3.7 to 3.9 ns per element, 14 to 16 times the loop of
@@ -1695,9 +1730,9 @@ one lane.
   with four lanes, 2.0 to 2.3 times): with half the lanes of Zen 2, the default order gains half as
   much over the textbook loop, which is one short chain on either machine.
 - **The maps** (`add`, `scale`, `axpy`) cost 0.15 to 0.23 ns per element of one limb and 0.5 to
-  2.0 of two in L1 on Zen 2. Against the plain loop of `T` it depends on whether the compiler
+  2.3 of two in L1 on Zen 2. Against the plain loop of `T` it depends on whether the compiler
   vectorizes that loop: GCC 13 at `-O2` does not, and Kairn's packed loop is faster (0.56 to 0.68 of
-  `x + y`, `x a` and `a x + y` of one limb, 0.29 to 0.49 of the double-word maps written out);
+  `x + y`, `x a` and `a x + y` of one limb, 0.33 to 0.49 of the double-word maps written out);
   GCC 13 at `-O3` and Clang 18 do, and Kairn's maps then take 0.9 to 2.1 times the loop of `T` for
   one limb and 1.2 to 2.1 times the double-word maps written out: the guards (18 to 44% of `add`,
   [question 15](#15-the-guards-of-supplied-factors)) and the test of every element written for the
@@ -1705,6 +1740,14 @@ one lane.
   to 1.09 ns per element, 0.85 to 0.99 of the loop of `T`). On the M3 the maps cost 0.22 to 0.28 ns per element of one limb and 0.42 to 1.4 of two in L1,
   0.78 to 2.8 times the loop of `T`, 0.63 to 2.0 times the double-word maps written out; beyond the
   cache 0.26 to 0.28 ns per element of one limb, the M3's memory keeping up.
+- **Since rule R3 on the factors of a fused operation was closed (`788d45f`), `axpy` of two limbs
+  guards the limbs of `a` and `x` as well as those of `y`, and takes 11 to 13% longer on Zen 2**:
+  1.74 to 2.01 ns per element in L1 at `25cde04`, 1.96 to 2.27 now; over the double-word loop written
+  out, 1.17 to 1.21 then and 1.33 to 1.38 now with GCC 13 at `-O3` and Clang 18; on the M3 1.26 to
+  1.30 then and 1.32 to 1.40 now with Apple clang. `dot` of two limbs, which guards every limb of both
+  factors now, did not move (2.55 to 2.67 ns per element in L1 and the last-level cache on Zen 2,
+  2.57 to 2.69 before; 0.99 to 1.01 times the same loop without the guards): each step waits for the
+  one before, and the guards are off that chain.
 - **The price of `kairn::sequential`: 3.7 to 4.5 times the default order for `sum` and `dot` in L1
   and the last-level cache on Zen 2, 7.0 to 9.0 times for `float`**, about the number of lanes (4
   and 8); beyond the cache 2.1 to 2.3 for one limb, which is then bound by memory, and 3.6 to 4.0
@@ -1718,11 +1761,14 @@ one lane.
   registers ([below](#what-the-machine-code-shows-third-part)); with GCC 16 1.0 at `-O3` and 2.4 to
   11.3 times at `-O2`, where it does not.
 - **The product of polynomials**: 0.69 to 1.41 ns per term for one limb on Zen 2 (1.0 to 1.4 times
-  the plain loop with an FMA; the guards of both factors cost up to 15% for short polynomials,
-  [question 15](#15-the-guards-of-supplied-factors)), 9.4 to 10.4 ns for two limbs, 1.00 to 1.04
-  times the double-word loop written out: each coefficient is a dot product in the sequential order,
+  the plain loop with an FMA; the guards of both factors cost up to 29% for short polynomials,
+  [question 15](#15-the-guards-of-supplied-factors)), 9.5 to 10.2 ns for two limbs, 0.99 to 1.06
+  times the double-word loop written out (at `788d45f`, which guards every limb of both factors: 1 to
+  2% more than before for 16 coefficients, nothing for more): each coefficient is a dot product in the sequential order,
   one chain, so the lanes do not help. On the M3 the product costs 0.38 to 0.84 ns per term of one limb (0.96 to 1.4 times the plain
-  loop) and 4.2 to 7.7 of two (1.00 to 1.08 times the double-word loop).
+  loop) and 4.3 to 9.3 of two (1.00 to 1.10 times the double-word loop; at 16 coefficients 1.06 to
+  1.10 now against 1.00 before the guards of two limbs, and the times of two limbs measured again
+  under load, [below](#which-tree-measured-what)).
 - **`norm_upper`** costs 0.11 to 0.19 ns per element in L1, 0.27 to 0.56 of a plain loop of the
   largest magnitude.
 
@@ -1759,8 +1805,8 @@ compiler (`NAME_kN`) are timed beside them.
 | `sum`, two limbs, n = 1 | 3.79 to 3.83 | 2.6 to 2.63 (-O2), 1.78 to 1.79 (-O3) | 32 to 32.2 (-O2), 8.11 to 8.12 (-O3) | 30.4 to 30.7 |
 | `sum`, two limbs, n = 4 | 6.78 to 7.03 | 6.25 to 6.34 (-O2), 6.61 to 6.63 (-O3) | 33 to 33.2 (-O2), 29.5 (-O3) | 31.6 to 31.9 |
 | `sum`, two limbs, n = 64 | 190 | 189 to 190 | 182 to 188 | 184 to 185 |
-| `dot`, one limb, n = 1 | 1.28 to 1.32 (-O2), 1.05 to 1.06 (-O3) | 1.3 to 1.32 | 6.91 to 7.23 | 6.92 to 7.26 |
-| `dot`, two limbs, n = 1 | 4.39 to 4.47 | 3.13 to 3.16 (-O2), 2.68 to 2.69 (-O3) | 34.2 to 34.5 (-O2), 9.16 (-O3) | 30.4 to 30.6 |
+| `dot`, one limb, n = 1 | 1.33 to 1.54 (-O2), 1.08 to 1.24 (-O3) | 1.49 to 1.55 | 6.9 to 7.2 | 6.9 to 7.2 |
+| `dot`, two limbs, n = 1 | 4.67 to 5.36 (-O2), 4.66 to 5.43 (-O3) | 3.56 to 3.67 (-O2), 3.32 to 3.44 (-O3) | 34.2 to 34.6 (-O2), 9.87 (-O3) | 30.5 to 30.6 |
 
 | The check at entry, independent calls: ns per call (with the check minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -1778,20 +1824,20 @@ compiler (`NAME_kN`) are timed beside them.
 | `sum`, two limbs, n = 16 | 0.12 to 0.37 (-O2), 0.74 to 0.81 (-O3) | -0.39 to 0.28 (-O2), -0.94 to 0.7 (-O3) | 1.06 to 1.26 (-O2), 1.18 to 1.33 (-O3) | 0.94 to 1.18 (-O2), 0.97 to 1.43 (-O3) |
 | `sum`, two limbs, n = 64 | 0 to 0.1 (-O2), 0 to 0.2 (-O3) | 0 to 0.2 (-O2), 0.1 to 0.4 (-O3) | 1.7 to 2.6 (-O2), 1 to 1.4 (-O3) | 0.5 to 1.5 (-O2), 0.8 to 1.6 (-O3) |
 | `sum`, two limbs, n = 1024 | -3 to 1 (-O2), 3 to 4 (-O3) | 1 to 2 (-O2), 0 to 3 (-O3) | 1 to 6 (-O2), 0 to 7 (-O3) | -24 to 9 (-O2), -5 to 13 (-O3) |
-| `dot`, one limb, n = 1 | 0.56 to 0.575 (-O2), 0.455 to 0.46 (-O3) | 0.025 to 0.061 (-O2), 0.002 to 0.033 (-O3) | 5.37 to 5.39 (-O2), 5.09 to 5.11 (-O3) | 5.38 to 5.41 |
-| `dot`, one limb, n = 2 | 0.524 to 0.56 (-O2), 0.407 to 0.408 (-O3) | 0.275 to 0.289 (-O2), 0.26 to 0.284 (-O3) | 5.08 to 5.1 (-O2), 5.39 to 5.4 (-O3) | 5.37 to 5.4 (-O2), 4.69 to 5.39 (-O3) |
-| `dot`, one limb, n = 4 | 0.377 to 0.386 (-O2), 0.217 to 0.223 (-O3) | 0.505 to 0.527 | 5.24 to 5.41 | 5.09 to 5.33 |
-| `dot`, one limb, n = 8 | 0.251 to 0.284 (-O2), 0.258 to 0.284 (-O3) | 0.465 to 0.546 (-O2), 0.494 to 0.505 (-O3) | 4.85 to 5.08 | 4.81 to 4.99 |
-| `dot`, one limb, n = 16 | 0.266 to 0.283 (-O2), 0.221 to 0.27 (-O3) | 0.486 to 0.525 (-O2), 0.476 to 0.526 (-O3) | 4.26 to 4.41 | 4.5 to 4.53 (-O2), 4.17 to 4.25 (-O3) |
-| `dot`, one limb, n = 64 | 0.11 to 0.38 (-O2), 0.21 to 0.5 (-O3) | 0.3 to 0.39 (-O2), 0.13 to 0.48 (-O3) | 2.15 to 2.24 | 3.84 to 4.21 (-O2), 1.11 to 1.19 (-O3) |
-| `dot`, one limb, n = 1024 | -0.6 to 32.5 (-O2), -1.4 to -0.1 (-O3) | 0 to 0.9 (-O2), 0.4 to 1.2 (-O3) | 14.2 to 15.4 (-O2), 11.5 to 12.1 (-O3) | 6.5 to 11.9 (-O2), 7 to 8.8 (-O3) |
-| `dot`, two limbs, n = 1 | -0.144 to 0.107 (-O2), 0.081 to 0.105 (-O3) | 0.503 to 0.523 (-O2), 0.119 to 0.211 (-O3) | 2.56 to 2.71 (-O2), 1.11 to 1.15 (-O3) | 1.32 to 1.64 (-O2), 1.46 to 1.74 (-O3) |
-| `dot`, two limbs, n = 2 | 0.017 to 0.062 (-O2), 0.074 to 0.21 (-O3) | 0.026 to 0.076 (-O2), 0.288 to 0.517 (-O3) | 2.51 to 2.91 (-O2), 0.85 to 0.9 (-O3) | 1.87 to 2.38 (-O2), 2.02 to 2.45 (-O3) |
-| `dot`, two limbs, n = 4 | -0.241 to 0.158 (-O2), -0.453 to 0.403 (-O3) | 0.249 to 0.362 (-O2), 0.196 to 0.819 (-O3) | 1.56 to 1.78 (-O2), -0.2 to -0.12 (-O3) | 0.85 to 1.18 (-O2), 0.92 to 1.26 (-O3) |
-| `dot`, two limbs, n = 8 | -0.09 to 0.08 (-O2), -0.06 to 0.25 (-O3) | -0.28 to 0.1 (-O2), 0.26 to 0.93 (-O3) | 1.49 to 1.65 (-O2), 1.04 to 1.19 (-O3) | 1.24 to 1.82 (-O2), 1.5 to 1.98 (-O3) |
-| `dot`, two limbs, n = 16 | -1.5 to 0.29 (-O2), -1.3 to 0.22 (-O3) | 0.06 to 0.66 (-O2), 0.12 to 1.46 (-O3) | 1.23 to 1.34 (-O2), 0.95 to 1.22 (-O3) | 0.89 to 1.2 (-O2), 0.78 to 1.34 (-O3) |
-| `dot`, two limbs, n = 64 | 0.2 to 0.3 (-O2), 0.2 to 0.4 (-O3) | -0.1 to 0.3 (-O2), -1.8 to 0.9 (-O3) | 1.6 to 2.3 (-O2), 0.9 to 1.4 (-O3) | 0.7 to 2.2 (-O2), 1.4 to 2.8 (-O3) |
-| `dot`, two limbs, n = 1024 | -1 to 1 (-O2), 0 to 1 (-O3) | -1 to 2 (-O2), 1 to 2 (-O3) | 2 to 6 (-O2), -5 to 5 (-O3) | -7 to 6 (-O2), -9 to 9 (-O3) |
+| `dot`, one limb, n = 1 | 0.579 to 0.675 (-O2), 0.48 to 0.541 (-O3) | -0.05 to 0.009 (-O2), 0.006 to 0.007 (-O3) | 5.06 to 5.07 | 5.35 to 5.46 |
+| `dot`, one limb, n = 2 | 0.519 to 0.608 (-O2), 0.375 to 0.475 (-O3) | 0.307 to 0.319 | 5.06 to 5.07 (-O2), 5.36 to 5.37 (-O3) | 5.38 to 5.4 (-O2), 4.47 (-O3) |
+| `dot`, one limb, n = 4 | 0.377 to 0.448 (-O2), 0.176 to 0.252 (-O3) | 0.54 to 0.607 (-O2), 0.597 to 0.603 (-O3) | 5.23 to 5.36 | 5.07 to 5.28 |
+| `dot`, one limb, n = 8 | 0.261 to 0.311 (-O2), 0.265 to 0.306 (-O3) | 0.529 to 0.608 (-O2), 0.606 to 0.607 (-O3) | 4.92 to 5.03 | 4.78 to 4.94 |
+| `dot`, one limb, n = 16 | 0.27 to 0.311 (-O2), -2.13 to -1.96 (-O3) | 0.603 to 0.799 (-O2), 0.605 to 0.61 (-O3) | 4.17 to 4.18 (-O2), 4.38 to 4.4 (-O3) | 4.48 to 4.5 (-O2), 4.2 to 4.21 (-O3) |
+| `dot`, one limb, n = 64 | 0.06 to 0.09 (-O2), 0.03 to 0.22 (-O3) | 0.07 to 0.49 (-O2), 0.43 to 0.52 (-O3) | 2.24 to 2.29 (-O2), 2.18 to 2.3 (-O3) | 3.95 to 3.99 (-O2), 2.1 to 2.13 (-O3) |
+| `dot`, one limb, n = 1024 | -0.1 to 0.1 (-O2), 0 to 0.5 (-O3) | 0.3 to 2.3 (-O2), 0.4 to 1 (-O3) | 12.2 to 13 (-O2), 9.2 to 10.3 (-O3) | 10.5 to 11.9 (-O2), 10.6 to 11 (-O3) |
+| `dot`, two limbs, n = 1 | -0.007 to 0.08 (-O2), -0.295 to 0.081 (-O3) | 0.291 (-O2), -0.057 to 0.094 (-O3) | 2.89 to 2.93 (-O2), 0.458 to 0.464 (-O3) | 2.04 to 2.19 (-O2), 2.06 to 2.14 (-O3) |
+| `dot`, two limbs, n = 2 | 0.044 to 0.066 (-O2), 0.005 to 0.221 (-O3) | 0.03 to 0.049 (-O2), 0.526 to 0.727 (-O3) | 2.46 to 2.59 (-O2), 1.5 to 1.58 (-O3) | 1.66 to 2.16 (-O2), 1.7 to 2 (-O3) |
+| `dot`, two limbs, n = 4 | -0.09 to 0.15 (-O2), -0.29 to 0.13 (-O3) | 0.05 to 0.06 (-O2), 0.55 to 0.56 (-O3) | 1.24 to 1.34 (-O2), 0.33 to 0.38 (-O3) | 1.35 to 1.42 (-O2), 1.38 to 1.42 (-O3) |
+| `dot`, two limbs, n = 8 | 0.05 to 0.08 (-O2), -0.68 to 0.24 (-O3) | 0.12 to 0.45 (-O2), 0.96 to 0.97 (-O3) | 1.98 to 2.1 (-O2), 0.99 to 1.05 (-O3) | 1.77 to 1.82 |
+| `dot`, two limbs, n = 16 | 0.04 to 0.31 (-O2), -2.51 to 0.01 (-O3) | 0.32 to 0.33 (-O2), 0.86 to 0.87 (-O3) | 1.56 to 1.6 (-O2), 0.94 to 1.2 (-O3) | 1.46 to 1.57 (-O2), 1.41 to 1.61 (-O3) |
+| `dot`, two limbs, n = 64 | 0.3 to 2.4 (-O2), -10.7 to 0.2 (-O3) | -0.3 to -0.2 (-O2), -6.1 to 0.9 (-O3) | 0.3 to 0.6 (-O2), 1.4 to 1.9 (-O3) | 1.1 to 1.5 (-O2), 1.4 to 1.5 (-O3) |
+| `dot`, two limbs, n = 1024 | -1 to 0 (-O2), -228 to 0 (-O3) | 0 (-O2), 7 to 8 (-O3) | -1 to 2 (-O2), 7 to 10 (-O3) | -3 to 1 (-O2), 2 (-O3) |
 
 | The check at entry, independent calls: its share of the call (1 - without over with) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -1809,39 +1855,39 @@ compiler (`NAME_kN`) are timed beside them.
 | `sum`, two limbs, n = 16 | 0.00 to 0.03 | -0.01 to 0.01 (-O2), -0.03 to 0.02 (-O3) | 0.02 | 0.02 |
 | `sum`, two limbs, n = 64 | 0.00 | 0.00 | 0.01 | 0.00 to 0.01 |
 | `sum`, two limbs, n = 1024 | -0.00 to 0.00 | 0.00 | 0.00 | -0.01 to 0.00 |
-| `dot`, one limb, n = 1 | 0.43 to 0.44 | 0.00 to 0.05 | 0.78 (-O2), 0.70 (-O3) | 0.74 to 0.78 |
-| `dot`, one limb, n = 2 | 0.38 to 0.42 | 0.20 to 0.21 | 0.70 to 0.72 | 0.71 to 0.72 (-O2), 0.65 to 0.74 (-O3) |
-| `dot`, one limb, n = 4 | 0.28 (-O2), 0.20 (-O3) | 0.32 to 0.33 | 0.72 | 0.70 to 0.74 |
-| `dot`, one limb, n = 8 | 0.12 to 0.13 | 0.18 to 0.21 | 0.64 to 0.67 | 0.64 (-O2), 0.68 to 0.69 (-O3) |
-| `dot`, one limb, n = 16 | 0.07 to 0.09 | 0.13 to 0.14 | 0.54 to 0.55 | 0.55 to 0.58 |
-| `dot`, one limb, n = 64 | 0.01 to 0.04 | 0.01 to 0.04 | 0.13 to 0.14 | 0.26 to 0.28 (-O2), 0.07 to 0.08 (-O3) |
-| `dot`, one limb, n = 1024 | -0.00 to 0.07 (-O2), -0.00 (-O3) | 0.00 | 0.03 to 0.04 | 0.02 to 0.03 |
-| `dot`, two limbs, n = 1 | -0.03 to 0.02 (-O2), 0.02 (-O3) | 0.16 to 0.17 (-O2), 0.05 to 0.08 (-O3) | 0.07 to 0.08 (-O2), 0.12 (-O3) | 0.04 to 0.06 |
-| `dot`, two limbs, n = 2 | 0.00 to 0.04 | 0.00 to 0.01 (-O2), 0.05 to 0.09 (-O3) | 0.05 to 0.07 | 0.05 to 0.06 |
-| `dot`, two limbs, n = 4 | -0.03 to 0.02 (-O2), -0.05 to 0.04 (-O3) | 0.03 to 0.04 (-O2), 0.02 to 0.09 (-O3) | 0.04 to 0.05 (-O2), -0.01 to -0.00 (-O3) | 0.02 to 0.03 |
-| `dot`, two limbs, n = 8 | -0.01 to 0.01 | -0.02 to 0.01 (-O2), 0.02 to 0.06 (-O3) | 0.02 to 0.03 | 0.03 to 0.04 |
-| `dot`, two limbs, n = 16 | -0.04 to 0.01 | 0.00 to 0.04 | 0.01 to 0.02 | 0.01 to 0.02 |
-| `dot`, two limbs, n = 64 | 0.00 | -0.01 to 0.00 | 0.00 to 0.01 | 0.00 to 0.01 |
-| `dot`, two limbs, n = 1024 | -0.00 to 0.00 | -0.00 to 0.00 | -0.00 to 0.00 | -0.00 to 0.00 |
+| `dot`, one limb, n = 1 | 0.43 to 0.44 | -0.03 to 0.01 | 0.70 to 0.73 | 0.76 to 0.78 |
+| `dot`, one limb, n = 2 | 0.35 to 0.39 | 0.20 | 0.70 to 0.72 | 0.72 (-O2), 0.62 (-O3) |
+| `dot`, one limb, n = 4 | 0.28 (-O2), 0.16 to 0.20 (-O3) | 0.30 to 0.33 | 0.72 | 0.70 to 0.73 |
+| `dot`, one limb, n = 8 | 0.12 to 0.13 | 0.17 to 0.20 | 0.65 to 0.67 | 0.64 to 0.69 |
+| `dot`, one limb, n = 16 | 0.08 (-O2), -0.58 (-O3) | 0.14 to 0.18 | 0.53 to 0.54 | 0.56 to 0.57 |
+| `dot`, one limb, n = 64 | 0.00 to 0.01 | 0.00 to 0.03 | 0.13 to 0.14 | 0.26 to 0.27 (-O2), 0.13 (-O3) |
+| `dot`, one limb, n = 1024 | -0.00 to 0.00 | 0.00 | 0.03 to 0.04 | 0.03 |
+| `dot`, two limbs, n = 1 | -0.00 to 0.01 (-O2), -0.06 to 0.02 (-O3) | 0.08 (-O2), -0.02 to 0.03 (-O3) | 0.05 to 0.09 | 0.07 |
+| `dot`, two limbs, n = 2 | 0.00 to 0.03 | 0.00 to 0.01 (-O2), 0.08 to 0.10 (-O3) | 0.06 to 0.09 | 0.04 to 0.05 |
+| `dot`, two limbs, n = 4 | -0.03 to 0.01 | 0.00 to 0.05 | 0.01 to 0.03 | 0.03 to 0.04 |
+| `dot`, two limbs, n = 8 | -0.03 to 0.01 | 0.01 to 0.05 | 0.02 to 0.04 | 0.04 |
+| `dot`, two limbs, n = 16 | 0.00 to 0.01 (-O2), -0.06 to 0.00 (-O3) | 0.01 to 0.02 | 0.01 to 0.02 | 0.02 |
+| `dot`, two limbs, n = 64 | 0.00 to 0.01 (-O2), -0.05 to 0.00 (-O3) | -0.03 to 0.00 | 0.00 to 0.01 | 0.01 |
+| `dot`, two limbs, n = 1024 | -0.00 to 0.00 (-O2), -0.06 to 0.00 (-O3) | 0.00 | -0.00 to 0.00 | -0.00 to 0.00 |
 
 | The check at entry, dependent calls: ns per call (with the check minus without) (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `sum`, one limb, n = 1 | 0.453 to 0.494 (-O2), 0.318 to 0.366 (-O3) | 0.267 to 0.343 (-O2), 0.264 to 0.339 (-O3) | 0.846 to 0.862 (-O2), 1.29 to 1.3 (-O3) | 0.07 to 0.112 (-O2), 0.031 to 0.081 (-O3) |
 | `sum`, one limb, n = 16 | 0 to 0.33 (-O2), -0.12 to 0.08 (-O3) | -0.07 to 0.15 (-O2), 0.3 to 1.04 (-O3) | 0.19 to 0.23 (-O2), 0.11 to 0.15 (-O3) | 0.12 to 0.21 (-O2), 0.17 to 0.19 (-O3) |
 | `sum`, two limbs, n = 1 | -0.11 to 0.91 (-O2), 4.04 to 4.78 (-O3) | -3.67 to -3.23 (-O2), -1.96 to -1.87 (-O3) | 1.18 to 1.45 (-O2), 0.2 to 0.22 (-O3) | 1.25 to 1.58 (-O2), 1.42 to 1.56 (-O3) |
-| `dot`, one limb, n = 1 | 2.74 to 3.62 (-O2), 4.74 to 5.31 (-O3) | 0.109 to 0.205 (-O2), 0.92 to 1.11 (-O3) | 0.07 to 0.103 (-O2), 0.322 to 0.332 (-O3) | 0.149 to 0.272 (-O2), 0.04 to 0.108 (-O3) |
-| `dot`, two limbs, n = 1 | -1.14 to 1.07 (-O2), -0.19 to 1.43 (-O3) | -0.37 to 0.86 (-O2), -1.17 to 0.21 (-O3) | 2.28 to 2.36 (-O2), 0.05 to 0.15 (-O3) | 0.42 to 0.78 (-O2), 0.62 to 0.95 (-O3) |
+| `dot`, one limb, n = 1 | 1.68 to 5.01 (-O2), 5.49 to 5.72 (-O3) | -0.067 to 0.156 (-O2), 0.491 to 1.04 (-O3) | 0.088 to 0.097 (-O2), 0.321 to 0.335 (-O3) | 0.206 to 0.254 (-O2), 0.037 to 0.082 (-O3) |
+| `dot`, two limbs, n = 1 | -0.29 to 0.21 (-O2), -0.51 to 0.43 (-O3) | 0.08 to 0.11 (-O2), -0.08 to -0.03 (-O3) | 2.28 to 2.34 (-O2), -0.24 to -0.22 (-O3) | 1.36 to 1.42 |
 
 | The check at entry is under 5%; 1% of the call from n = | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `sum`, one limb, independent | > 1024; > 1024 (-O2), 8; 1024 (-O3) | 64; 1024 (-O2), 8; 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) |
 | `sum`, two limbs, independent | 1; 64 (-O2), 16; 64 (-O3) | 8; 16 (-O2), 16; 64 (-O3) | 16; 1024 (-O2), 4; 64 (-O3) | 8; 64 (-O2), 8; 64 (-O3) |
-| `dot`, one limb, independent | > 1024; > 1024 (-O2), 64; 1024 (-O3) | 64; 1024 (-O2), 64; 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) |
-| `dot`, two limbs, independent | 1; 8 (-O2), 1; 16 (-O3) | 2; 64 (-O2), 16; 64 (-O3) | 4; 1024 (-O2), 4; 64 (-O3) | 4; 1024 (-O2), 4; 1024 (-O3) |
+| `dot`, one limb, independent | 64; 64 (-O2), 16; 1024 (-O3) | 64; 1024 (-O2), 64; 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) |
+| `dot`, two limbs, independent | 1; 1024 (-O2), 1; 16 (-O3) | 2; 16 (-O2), 4; 64 (-O3) | 4; 64 (-O2), 4; 1024 (-O3) | 4; 64 (-O2), 2; 64 (-O3) |
 | `sum`, one limb, dependent | 16; 1024 (-O2), 4; 16 (-O3) | 4; 64 (-O2), 64; 64 (-O3) | 2; 64 (-O2), 4; 64 (-O3) | 1; 1024 (-O2), 1; 64 (-O3) |
 | `sum`, two limbs, dependent | 2; 16 (-O2), 64; 1024 (-O3) | 1; 1 (-O2), 1; 16 (-O3) | 1; 4 (-O2), 1; 16 (-O3) | 1; 4 (-O2), 1; 8 (-O3) |
-| `dot`, one limb, dependent | > 1024; > 1024 (-O2), 4; > 1024 (-O3) | 1024; 1024 (-O2), 64; > 1024 (-O3) | 1; 16 (-O2), 1; 8 (-O3) | 1; 64 (-O2), 1; 64 (-O3) |
-| `dot`, two limbs, dependent | 1; 64 (-O2), 2; 64 (-O3) | 1; 16 (-O2), 1; 64 (-O3) | 2; 4 (-O2), 1; 1 (-O3) | 4; 4 (-O2), 4; 4 (-O3) |
+| `dot`, one limb, dependent | 4; 4 (-O2), 4; 4 (-O3) | 4; 4 (-O2), 2; 2 (-O3) | 1; 16 (-O2), 1; 1024 (-O3) | 1; 16 (-O2), 1; 64 (-O3) |
+| `dot`, two limbs, dependent | 1; 64 (-O2), 1; 64 (-O3) | 1; 1 (-O2), 1; 1 (-O3) | 4; 4 (-O2), 1; 16 (-O3) | 1; 4 (-O2), 1; 4 (-O3) |
 
 | The check at entry: with over without, controls and longer arrays | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -1850,7 +1896,7 @@ compiler (`NAME_kN`) are timed beside them.
 | control: the generated loop of `sum`, one limb, n = 1024, with over without | 0.95 to 1.03 (-O2), 1.00 (-O3) | 0.98 to 1.01 | 0.98 to 1.02 | 1.00 to 1.01 |
 | `sum`, one limb, 512 elements, with over without | 0.98 to 1.01 | 1.02 to 1.06 (-O2), 0.99 to 1.03 (-O3) | 1.04 to 1.05 | 1.01 to 1.02 |
 | `add`, one limb, 512 elements, with over without | 1.00 to 1.01 | 1.00 to 1.02 | 1.02 to 1.03 | 1.03 to 1.04 |
-| `dot`, two limbs, 512 elements, with over without | 0.94 to 1.00 (-O2), 0.96 to 1.00 (-O3) | 1.00 to 1.05 (-O2), 0.95 to 1.00 (-O3) | 1.00 | 1.00 to 1.01 |
+| `dot`, two limbs, 512 elements, with over without | 1.00 (-O2), 0.97 to 1.02 (-O3) | 0.96 to 1.02 (-O2), 1.00 to 1.04 (-O3) | 1.00 | 1.00 |
 
 - **On Zen 2 the check costs 4.8 to 5.7 ns per call of `sum` or `dot` of one limb up to 16
   elements, 64 to 82% of the call up to 8**: the call takes 6.9 to 7.7 ns, the loop alone 1.2 to
@@ -1911,11 +1957,11 @@ and one test of a mask (`stmxcsr`, `testl $0xe040`, a branch), the message and t
 | `add(x, y, z)`, 2 limbs, N = 18 | -0.05 to 0.21 (-O2), 0 to 0.05 (-O3) | 0.08 to 0.12 (-O2), 0.19 to 0.23 (-O3) | 4.53 to 4.64 (-O2), 4.37 to 4.47 (-O3) | 4.02 to 4.28 (-O2), 3.98 to 4.36 (-O3) |
 | `add(x, y, z)`, 2 limbs, N = 80 | 0.51 to 1.56 (-O2), 0.39 to 0.73 (-O3) | 0.2 to 0.25 (-O2), 0.3 to 0.38 (-O3) | 4.21 to 5.42 (-O2), 2.37 to 3.66 (-O3) | 2.62 to 4.31 (-O2), 3.6 to 4.65 (-O3) |
 | `z = x + y`, 2 limbs, N = 13 | -0.02 to 0.07 (-O2), -0.01 to 0.58 (-O3) | 0.24 to 0.25 (-O2), 1.49 (-O3) | 2.27 to 3.04 (-O2), 2.36 to 3.07 (-O3) | 0.44 to 3.77 (-O2), 2.01 to 2.34 (-O3) |
-| `scale`, 2 limbs, N = 13 | 0.068 to 0.309 (-O2), -0.236 to 0.293 (-O3) | 0.122 to 0.125 (-O2), 0.259 to 0.267 (-O3) | 2.83 to 2.85 (-O2), 2.31 to 2.47 (-O3) | 2.82 to 2.98 (-O2), 2.84 to 2.96 (-O3) |
+| `scale`, 2 limbs, N = 13 | 0.043 to 0.066 (-O2), -0.068 to -0.05 (-O3) | -0.04 to 0.08 (-O2), 0.026 to 0.672 (-O3) | 2.92 to 2.95 (-O2), 2.46 to 2.48 (-O3) | 2.79 to 2.88 |
 | `half`, 2 limbs, N = 13 | 0.04 to 0.16 (-O2), 0.17 to 0.3 (-O3) | 0.28 (-O2), 0.506 to 0.51 (-O3) | 1.6 to 1.78 (-O2), 3.33 to 3.53 (-O3) | 2.57 to 2.71 (-O2), 2.63 to 2.91 (-O3) |
 | the constructor, 1 limb, N = 3 | 2.02 to 10.5 (-O2), 1.88 to 5.24 (-O3) | 1.04 to 1.05 (-O2), 0.622 to 0.679 (-O3) | 5.6 to 6.62 (-O2), 5.95 to 7.52 (-O3) | 18.2 to 18.6 |
-| the constructor, 2 limbs, N = 3 | 9.21 to 12.6 (-O2), 1.81 to 13.2 (-O3) | 0.158 to 0.201 (-O2), 0.802 to 0.811 (-O3) | 5.45 to 6.32 (-O2), 5.8 to 6.36 (-O3) | 2.59 to 7.39 (-O2), 7.33 to 7.46 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.54 to 0.09 (-O2), -1.01 to 0.6 (-O3) | 0.09 to 0.13 (-O2), 0.259 to 0.292 (-O3) | 1.66 to 2.06 (-O2), 5.05 to 5.55 (-O3) | 0.15 to 0.87 (-O2), 0.74 to 2.14 (-O3) |
+| the constructor, 2 limbs, N = 3 | -2.34 to 0.93 (-O2), 10.5 to 11.9 (-O3) | -0.022 to 0.152 (-O2), 1.52 to 1.68 (-O3) | 6.02 to 6.95 (-O2), 3.31 to 4.8 (-O3) | -3.44 to 4.8 (-O2), 8.68 to 12.2 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.04 to 0.1 (-O2), -3.67 to -0.67 (-O3) | 0.07 to 0.49 (-O2), 4.3 to 5.04 (-O3) | -0.09 to 0.61 (-O2), 7.41 to 7.65 (-O3) | -0.68 to 3.23 (-O2), -0.46 to -0.28 (-O3) |
 
 | Short ball vectors, one operation per unit, many vectors: with the check over without (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -1925,23 +1971,23 @@ and one test of a mask (`stmxcsr`, `testl $0xe040`, a branch), the message and t
 | `add(x, y, z)`, 2 limbs, N = 80 | 1.01 to 1.02 | 1.00 to 1.01 | 1.03 to 1.06 | 1.03 to 1.05 |
 | `half`, 1 limb, N = 3 | 1.09 | 1.06 to 1.10 | 1.15 (-O2), 1.45 to 1.47 (-O3) | 1.37 to 1.39 |
 | the constructor, 1 limb, N = 3 | 1.63 to 4.32 (-O2), 1.58 to 2.63 (-O3) | 1.28 to 1.33 | 1.50 to 1.65 (-O2), 1.55 to 1.76 (-O3) | 4.02 to 4.10 |
-| the constructor, 2 limbs, N = 13 | 0.98 to 1.00 (-O2), 0.96 to 1.03 (-O3) | 1.00 to 1.03 | 1.04 to 1.06 (-O2), 1.29 to 1.32 (-O3) | 1.01 to 1.04 (-O2), 1.03 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.00 (-O2), 0.87 to 0.97 (-O3) | 1.00 to 1.01 (-O2), 1.37 to 1.43 (-O3) | 1.00 to 1.01 (-O2), 1.31 to 1.32 (-O3) | 0.98 to 1.10 (-O2), 0.99 (-O3) |
 
 | Short ball vectors, every size in one unit, many vectors: the check, ns per operation (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `add(x, y, z)`, 2 limbs, N = 13 | 0.19 to 0.39 (-O2), 0.3 to 0.45 (-O3) | 0.13 to 0.3 (-O2), -0.09 to 0.06 (-O3) | 2.81 to 3 (-O2), 2.93 to 3.18 (-O3) | 1.96 to 2.12 (-O2), 1.96 to 2.23 (-O3) |
 | the constructor, 1 limb, N = 7 | -1.67 to 0.52 (-O2), -1.62 to 0.75 (-O3) | 0.145 to 0.346 (-O2), 5.69 to 5.7 (-O3) | 4.71 to 4.82 (-O2), 7.58 to 8.06 (-O3) | -0.15 to 1.17 (-O2), -1.26 to 1.75 (-O3) |
-| the constructor, 2 limbs, N = 3 | 1.58 to 5.58 (-O2), 1.56 to 1.58 (-O3) | 0.176 to 0.225 (-O2), 2.92 to 2.96 (-O3) | 5.44 to 6.32 (-O2), 8.98 to 10.3 (-O3) | 2.58 to 7.48 (-O2), 7.48 to 7.51 (-O3) |
-| the constructor, 2 limbs, N = 7 | 0.66 to 1.6 (-O2), 0.24 to 0.72 (-O3) | 0.19 (-O2), 6.91 to 6.96 (-O3) | 2.51 to 2.95 (-O2), 10.9 to 11.8 (-O3) | -0.84 to 1.25 (-O2), 1.71 to 1.91 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.55 to 0.42 (-O2), -0.19 to 0.32 (-O3) | 0 to 0.07 (-O2), 15.7 to 16.7 (-O3) | -1.15 to -0.98 (-O2), 12 to 12.4 (-O3) | 0.24 to 0.76 (-O2), 0.45 to 2.1 (-O3) |
+| the constructor, 2 limbs, N = 3 | -0.18 to 1.41 (-O2), 9.76 to 12.9 (-O3) | -0.005 to 0.165 (-O2), 4.12 to 4.16 (-O3) | 6.09 to 6.96 (-O2), 6.19 to 8.14 (-O3) | -3.49 to 4.87 (-O2), 8.68 to 12.2 (-O3) |
+| the constructor, 2 limbs, N = 7 | -3.77 to -3.09 (-O2), -5.78 to -3.56 (-O3) | -0.63 to 0.13 (-O2), 8.57 to 9.12 (-O3) | 1 to 1.79 (-O2), 7.43 to 8.01 (-O3) | -2.64 to 3.84 (-O2), -3.15 to -0.39 (-O3) |
+| the constructor, 2 limbs, N = 13 | -0.16 to 0.36 (-O2), -3.37 to -1.41 (-O3) | 0.02 to 0.27 (-O2), 18.4 to 19 (-O3) | 0.18 to 0.66 (-O2), 8.44 to 8.79 (-O3) | -0.57 to 2.8 (-O2), -0.46 to -0.41 (-O3) |
 
 | The same with the cold variant (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `add(x, y, z)`, 2 limbs, N = 13 | -0.25 to -0.14 (-O2), 0.14 to 0.31 (-O3) | 0 to 0.2 (-O2), -0.31 to -0.09 (-O3) | 2.73 to 2.93 (-O2), 2.5 to 2.71 (-O3) | 2.18 to 2.29 (-O2), 2.15 to 2.43 (-O3) |
 | the constructor, 1 limb, N = 7 | -0.7 to -0.4 (-O2), -0.6 to 0.7 (-O3) | 0.392 to 0.499 (-O2), 0.098 to 0.113 (-O3) | 5.04 to 5.12 (-O2), 5.66 to 6.27 (-O3) | -0.03 to 1.76 (-O2), -1.17 to 1.81 (-O3) |
-| the constructor, 2 limbs, N = 3 | 1.9 to 1.93 (-O2), 1.77 to 1.79 (-O3) | 0.067 to 0.115 (-O2), -0.049 to -0.008 (-O3) | 5.46 to 6.36 (-O2), 5.63 to 6.28 (-O3) | 7.57 to 7.81 |
-| the constructor, 2 limbs, N = 7 | -2.59 to -1.7 (-O2), -1.94 to -1.82 (-O3) | 0.18 to 0.21 (-O2), 0.296 to 0.316 (-O3) | 2.72 to 2.97 (-O2), 6.07 to 6.91 (-O3) | 1.22 to 1.63 (-O2), -0.13 to 1.93 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.91 to 0.42 (-O2), -1.09 to 0.33 (-O3) | -0.08 to 0.02 (-O2), -0.292 to -0.289 (-O3) | 1.3 to 1.36 (-O2), 3.29 to 3.78 (-O3) | 0.95 to 2.06 (-O2), 0.54 to 6.13 (-O3) |
+| the constructor, 2 limbs, N = 3 | -1.03 to -0.89 (-O2), 6.66 to 7.36 (-O3) | -0.051 to 0.222 (-O2), 0.15 to 0.236 (-O3) | 7.77 to 8.41 (-O2), 7.57 to 7.81 (-O3) | 0.47 to 4.3 (-O2), 12.5 to 13 (-O3) |
+| the constructor, 2 limbs, N = 7 | -2.52 to -1.79 (-O2), -6.7 to -2.32 (-O3) | -0.44 to 0.88 (-O2), 0.383 to 0.876 (-O3) | 0.78 to 1.44 (-O2), 4.94 to 5.09 (-O3) | -0.06 to 2.94 (-O2), 0 to 0.84 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.23 to 0.48 (-O2), -8.31 to 0.13 (-O3) | -1.25 to 0.43 (-O2), -0.36 to 0.17 (-O3) | 0.48 to 0.65 (-O2), 3.98 to 4.02 (-O3) | 0.92 to 2.11 (-O2), -0.09 to 1.89 (-O3) |
 
 - **On Zen 2 the check costs most operations of short ball vectors the read or less, up to 7 ns**:
   1.2 to 1.8 times as long for one limb and N = 3 (operations of 8 to 20 ns), 1.01 to 1.27 for
@@ -1954,8 +2000,9 @@ and one test of a mask (`stmxcsr`, `testl $0xe040`, a branch), the message and t
   operations, sizes and kinds of each compiler, level and unit, the check cost more than 7 ns in every pair of
   runs only for constructors, in three groups: (1) with Clang 18, at both levels and in both units,
   the constructor of `BallVector<double, 1, 3>` (+18 to +20 ns, 4.0 to 4.1 times) and at `-O3` of
-  `BallVector<double, 2, 3>` (+7 to +9); (2) with GCC 13 at `-O3`, in the unit of every size, the
-  constructors of N = 3 to 80 (+7 to +14 ns, 1.1 to 1.6 times); (3) one chain, below. The machine
+  `BallVector<double, 2, 3>` (+8 to +12 at `788d45f`, +7 to +9 at `25cde04`); (2) with GCC 13 at
+  `-O3`, in the unit of every size, the constructors of N = 3 to 80 (+6 to +14 ns, 1.1 to 1.6 times);
+  (3) one chain, below. The machine
   code: without the check
   Clang inlines the constructor's body (`BallVector::make`) into the loop and unrolls the constructor's
   loop for the three entries; with it, the loop calls `BallVector<double, 1, 3>::make` for every
@@ -1971,18 +2018,19 @@ and one test of a mask (`stmxcsr`, `testl $0xe040`, a branch), the message and t
   than the read: which calls stay calls depends on the whole unit, and the cost moves with it.
   And where the code is the same but for the check, where it falls in memory can move a loop by
   more than the read: the chain of constructors of `BallVector<double, 2, 80>` with GCC 13 at `-O2`
-  (+21 to +25 ns, 13%; at `-O3` -2 to -5) has the same 128 instructions with the check as 117
-  without, but its three loops cross 32-byte boundaries with it and fit within them without it; the
+  (+24 to +27 ns, 11%, at `788d45f`; at `-O3` 0 to +1) has the same instructions but for the check,
+  134 with it and 122 without, and its two short loops cross 32-byte boundaries with it and fit
+  within them without it (at `25cde04` +21 to +25 ns, 128 and 117 instructions, the same pattern); the
   product of `BallVector<double, 1, 64>` with GCC 13 at `-O3` in `m2_bv.cpp` (+455 to +543 ns, 12 to
   14%) has the same six instructions in its inner loop, which starts 16 bytes past a 32-byte
   boundary with the check and on one without it (inferred from the addresses, not measured).
 - **The cold variant removes the excess of GCC and part of Clang's.** With the report out of line and
-  cold, GCC 13 at `-O3` inlines the constructor again (`bv_make_1_seq` and `bv_make_2_seq` inlined as
-  without the check: 226 and 264 instructions against 86 and 127 with the check as it is), and its
+  cold, GCC 13 at `-O3` inlines the constructor again (at `25cde04`, `bv_make_1_seq` and `bv_make_2_seq`
+  inlined as without the check: 226 and 264 instructions against 86 and 127 with the check as it is), and its
   excess drops to +1 to +7 ns, the read; Clang 18 still calls `make` for one limb and N = 3 (+18
-  to +20 ns at `-O2`, +12 to +14 at `-O3`) and for two limbs and N = 3 (+7 to +10); the chain of
-  constructors of `BallVector<double, 2, 80>` with GCC 13 at `-O2` keeps its +19 to +22, a matter of
-  where its loops fall. Where nothing was inlined differently, the cold variant costs what the
+  to +20 ns at `-O2`, +12 to +14 at `-O3`) and for two limbs and N = 3 (+1 to +13 at `788d45f`); the
+  chain of constructors of `BallVector<double, 2, 80>` with GCC 13 at `-O2` keeps its +23 to +24, a
+  matter of where its loops fall. Where nothing was inlined differently, the cold variant costs what the
   check costs (1 to 6 ns). Tried on the copy too, not
   timed: with the cold report **and** `KAIRN_FORCEINLINE` on `BallVector::make` and on the
   constructor from an `std::array`, Clang 18 inlines the whole constructor at both levels (87
@@ -1996,8 +2044,8 @@ and one test of a mask (`stmxcsr`, `testl $0xe040`, a branch), the message and t
   with the check, Apple clang calls `BallVector<double, 1, 3>::make`, which without it is inlined (the
   object of the unit has no copy of it), and with the cold variant calls the constructor instead (+2
   to +13 ns for N = 3, 1.4 to 4.3 times); GCC 16 at `-O3`, in the unit of every size, stops inlining
-  constructors (+6 to +17 ns for N = 7 and 13; the loop of N = 13 of two limbs is 98 instructions
-  with the check, 237 without it and 265 with the cold variant). And in chains, where each operation
+  constructors (+6 to +17 ns for N = 7 and 13; at `25cde04` the loop of N = 13 of two limbs was 98
+  instructions with the check, 237 without it and 265 with the cold variant). And in chains, where each operation
   waits for the one before, the check costs short operations of one limb 3 to 7 ns, in every round
   and with the cold variant as well: the chain of `scale` of `BallVector<double, 1, 3>` with Apple
   clang takes 13 to 14 ns, 1.47 to 1.59 times as long as without the check, and of `add(x, y, z)`
@@ -2015,67 +2063,80 @@ function on arrays calls its loop on supplied arrays, whose steps pass each valu
 factors of their fused operations, through the guard $a + 0$: `dot` of one limb is three operations
 per term (two guards and the fused multiply-add) where the loop on stored arrays has one; `scale` of
 two limbs guards the two limbs and `a`; `conv` of one limb both factors of each term;
-`Accumulator::add_product` both factors (one limb) or every limb (two). The loops on stored arrays of
-the generated headers are the same steps without the guards (`dot_1`, `scale_2`, `conv_1`, `sum_1`,
-`add_k`, `axpy_k`, the kernels `acc_mul_1`, `acc_mul_2`): this question calls them directly, as a
+`Accumulator::add_product` both factors (one limb) or every limb (two); and since rule R3 on the
+factors of a fused operation was closed (`788d45f`), `dot` and `conv` of two limbs every limb of both
+factors (`dot_2_entry`, `conv_2_entry_seq`) and `axpy` of two limbs the limbs of `a` and `x` as well
+as those of `y`. The loops on stored arrays of the generated headers are the same steps without the
+guards (`dot_1`, `dot_2`, `scale_2`, `conv_1`, `conv_2`, `sum_1`, `add_k`, `axpy_k`, the kernels
+`acc_mul_1`, `acc_mul_2`): this question calls them directly, as a
 control only (variant `bare`; no function of the library calls them), against the loop the public
 function calls (`kairn`, the public function without its check at entry), on the same arrays. Where
-nothing is guarded the two are the same loop: `scale` of one limb, `dot`, `axpy` (but for `y`) and
-`conv` of two limbs, whose factors are on the pending list of the factor rule. The data and the
-sizes are those of question 13.
+nothing is guarded the two are the same loop: `scale` of one limb, whose product has no addend. At
+`25cde04` `dot`, `axpy` (but for `y`) and `conv` of two limbs were not guarded either, their factors
+being on a list of the generator's rule still pending; the list is gone, and their rows here are of
+`788d45f`. The data and the sizes are those of question 13.
 
 | The guards: the loop with them over the same loop without, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `dot`, one limb (3 operations per term against 1), L1 | 1.02 to 1.09 (-O2), 1.02 to 1.03 (-O3) | 1.02 to 1.10 (-O2), 0.96 to 1.00 (-O3) | 1.01 to 1.02 (-O2), 0.83 to 1.01 (-O3) | 0.99 to 1.00 |
-| `axpy`, one limb (y guarded), L1 | 1.07 | 1.00 to 1.02 | 1.09 to 1.13 | 1.15 to 1.16 |
-| `axpy`, two limbs, a of T (y guarded), L1 | 1.04 to 1.05 | 1.05 to 1.06 | 1.00 | 1.00 |
-| `axpy`, two limbs, a of two limbs (y guarded), L1 | 1.03 | 1.04 to 1.09 | 0.99 to 1.00 | 1.00 |
+| `dot`, one limb (3 operations per term against 1), L1 | 1.02 to 1.03 | 1.00 to 1.05 | 1.02 to 1.03 | 0.99 |
+| `axpy`, one limb (y guarded), L1 | 1.07 | 1.00 to 1.03 | 1.09 to 1.13 | 1.15 to 1.16 |
+| `dot`, two limbs (every limb of both factors guarded), L1 | 1.01 | 1.00 to 1.01 | 1.00 | 0.99 to 1.00 |
+| `axpy`, two limbs, a of T (a, x and y guarded), L1 | 1.11 to 1.12 | 1.13 (-O2), 1.12 to 1.18 (-O3) | 1.13 | 1.14 |
+| `axpy`, two limbs, a of two limbs (a, x and y guarded), L1 | 1.10 to 1.14 | 1.11 to 1.15 | 1.11 to 1.12 | 1.16 to 1.17 |
 | `scale`, two limbs (the limbs and a guarded), L1 | 1.16 | 1.20 | 1.16 | 1.16 |
 | `sum`, one limb (the element guarded), L1 | 1.08 to 1.09 (-O2), 1.04 to 1.16 (-O3) | 1.06 to 1.07 (-O2), 1.09 to 1.15 (-O3) | 1.02 (-O2), 0.97 to 0.99 (-O3) | 1.01 to 1.02 |
 | `sum`, two limbs (the limbs guarded), L1 | 1.02 to 1.09 (-O2), 1.02 (-O3) | 0.99 to 1.01 | 1.01 | 1.01 to 1.02 |
 | `add`, one limb (both guarded), L1 | 1.12 | 1.07 to 1.10 | 1.19 to 1.20 (-O2), 1.19 to 1.45 (-O3) | 1.43 to 1.44 |
 | `add`, two limbs (every limb guarded), L1 | 1.13 to 1.16 | 1.15 to 1.18 | 1.19 | 1.20 to 1.21 |
-| `dot`, one limb (3 operations per term against 1), LLC | 0.97 to 1.00 (-O2), 1.00 to 1.04 (-O3) | 1.00 | 1.00 to 1.01 | 0.99 to 1.00 |
-| `axpy`, one limb (y guarded), LLC | 1.03 | 1.00 | 0.98 to 0.99 | 0.98 to 0.99 |
-| `axpy`, two limbs, a of T (y guarded), LLC | 1.04 to 1.05 | 1.05 | 0.99 to 1.00 | 0.99 to 1.01 |
-| `axpy`, two limbs, a of two limbs (y guarded), LLC | 1.03 to 1.04 | 1.04 to 1.05 | 0.99 to 1.00 | 0.99 to 1.00 |
+| `dot`, one limb (3 operations per term against 1), LLC | 1.00 | 1.00 | 1.00 | 1.00 |
+| `axpy`, one limb (y guarded), LLC | 1.01 to 1.03 | 0.96 to 1.00 | 0.98 to 0.99 | 0.98 |
+| `dot`, two limbs (every limb of both factors guarded), LLC | 1.00 to 1.01 | 1.00 to 1.01 | 1.00 | 0.99 |
+| `axpy`, two limbs, a of T (a, x and y guarded), LLC | 1.10 to 1.13 | 1.08 to 1.14 (-O2), 1.13 (-O3) | 1.12 to 1.13 | 1.13 |
+| `axpy`, two limbs, a of two limbs (a, x and y guarded), LLC | 1.09 to 1.10 (-O2), 1.08 to 1.15 (-O3) | 1.10 to 1.11 | 1.12 | 1.16 to 1.17 |
 | `scale`, two limbs (the limbs and a guarded), LLC | 1.15 to 1.16 | 1.19 to 1.20 | 1.14 to 1.15 | 1.14 to 1.15 |
 | `sum`, one limb (the element guarded), LLC | 1.02 to 1.04 | 0.95 to 1.00 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.01 | 0.99 to 1.00 |
 | `sum`, two limbs (the limbs guarded), LLC | 1.03 to 1.07 | 1.00 (-O2), 0.98 to 1.05 (-O3) | 1.01 to 1.02 | 1.02 to 1.03 |
 | `add`, one limb (both guarded), LLC | 1.04 | 1.00 | 0.96 to 0.97 | 0.97 to 0.98 |
 | `add`, two limbs (every limb guarded), LLC | 1.14 to 1.15 | 1.16 to 1.17 | 1.19 | 1.19 to 1.20 |
-| `conv`, one limb, 16 coefficients (both factors guarded) | 0.99 to 1.00 | 1.00 to 1.01 (-O2), 1.09 to 1.10 (-O3) | 1.06 to 1.10 (-O2), 1.13 to 1.15 (-O3) | 1.02 to 1.03 |
-| `conv`, one limb, 64 coefficients (both factors guarded) | 1.07 to 1.08 | 1.04 to 1.05 | 1.13 to 1.14 (-O2), 0.90 to 1.02 (-O3) | 1.14 to 1.15 |
-| `conv`, one limb, 512 coefficients (both factors guarded) | 1.02 to 1.06 | 1.01 to 1.04 | 1.00 to 1.02 | 1.01 |
+| `conv`, one limb, 16 coefficients (both factors guarded) | 0.97 to 1.01 | 0.98 to 1.02 (-O2), 1.09 (-O3) | 1.27 to 1.29 (-O2), 1.11 to 1.12 (-O3) | 1.02 to 1.03 |
+| `conv`, one limb, 64 coefficients (both factors guarded) | 1.06 to 1.08 (-O2), 1.07 to 1.11 (-O3) | 1.03 to 1.06 | 1.01 to 1.03 | 1.14 to 1.15 |
+| `conv`, one limb, 512 coefficients (both factors guarded) | 1.02 to 1.03 | 1.03 to 1.04 | 1.00 | 1.01 |
+| `conv`, two limbs, 16 coefficients (every limb of both factors guarded) | 1.06 to 1.07 | 1.05 to 1.08 | 1.01 to 1.02 | 1.02 to 1.03 |
+| `conv`, two limbs, 64 coefficients (every limb of both factors guarded) | 1.01 to 1.02 | 1.01 to 1.05 | 1.00 | 1.00 |
+| `conv`, two limbs, 512 coefficients (every limb of both factors guarded) | 1.01 | 1.00 | 0.99 to 1.00 | 0.99 to 1.00 |
 
 | The guards against the control of T, double (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `dot`, one limb, with the guards, over the plain FMA loop in the same order, L1 | 1.03 to 1.07 (-O2), 1.03 to 1.08 (-O3) | 1.07 to 1.13 (-O2), 0.95 to 0.96 (-O3) | 1.00 to 1.03 (-O2), 0.89 to 0.91 (-O3) | 1.04 to 1.05 |
-| `dot`, one limb, without them, over the same, L1 | 0.98 to 1.03 (-O2), 1.00 to 1.05 (-O3) | 1.02 to 1.05 (-O2), 0.95 to 1.00 (-O3) | 0.99 to 1.01 (-O2), 0.89 to 1.10 (-O3) | 1.05 to 1.06 |
+| `dot`, one limb, with the guards, over the plain FMA loop in the same order, L1 | 0.99 to 1.03 | 1.05 to 1.07 (-O2), 0.96 to 1.00 (-O3) | 1.00 (-O2), 0.90 to 0.91 (-O3) | 1.04 to 1.05 |
+| `dot`, one limb, without them, over the same, L1 | 0.97 to 1.01 | 1.01 to 1.05 (-O2), 0.95 (-O3) | 0.98 to 0.99 (-O2), 0.88 (-O3) | 1.05 |
 | `scale`, two limbs, with them, over `x a` of T, L1 | 5.53 to 5.59 | 1.50 to 1.52 (-O2), 2.78 to 2.79 (-O3) | 1.56 to 1.57 (-O2), 2.88 to 2.96 (-O3) | 5.98 to 6.02 |
 | `scale`, two limbs, without them, over the same, L1 | 4.76 to 4.82 | 1.24 to 1.27 (-O2), 2.32 (-O3) | 1.34 to 1.35 (-O2), 2.49 to 2.54 (-O3) | 5.15 to 5.18 |
-| `conv`, one limb, 16, with them, over the plain FMA loop | 0.99 to 1.01 | 1.08 to 1.11 (-O2), 1.20 (-O3) | 1.20 to 1.25 (-O2), 1.26 to 1.30 (-O3) | 1.16 to 1.17 |
-| `conv`, one limb, 16, without them, over the same | 1.00 to 1.01 | 1.09 to 1.10 | 1.10 to 1.15 | 1.13 to 1.15 |
+| `conv`, one limb, 16, with them, over the plain FMA loop | 0.98 to 1.01 | 1.08 to 1.12 (-O2), 1.19 (-O3) | 1.43 to 1.46 (-O2), 1.27 (-O3) | 1.16 to 1.19 |
+| `conv`, one limb, 16, without them, over the same | 0.99 to 1.01 | 1.09 to 1.10 | 1.13 to 1.14 | 1.14 to 1.16 |
 
 | The guards of the accumulator: with over without, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `add_product`, one limb (both factors guarded), L1 | 1.02 to 1.08 (-O2), 1.03 to 1.06 (-O3) | 1.03 to 1.08 (-O2), 1.03 to 1.10 (-O3) | 1.01 | 1.00 |
-| `add_product`, two limbs (every limb guarded), L1 | 0.99 to 1.02 | 1.00 to 1.03 | 1.00 | 1.00 |
+| `add_product`, two limbs (every limb guarded), L1 | 1.00 | 1.00 to 1.01 | 1.00 | 1.00 |
 | `add_product`, one limb, the public member over the kernels without the guards, L1 | 1.02 to 1.08 (-O2), 1.02 to 1.05 (-O3) | 1.03 to 1.07 | 1.03 to 1.04 | 1.00 |
-| `add_product`, two limbs, the same, L1 | 0.96 to 1.02 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.04 | 1.00 | 1.00 |
+| `add_product`, two limbs, the same, L1 | 1.00 | 1.00 to 1.06 (-O2), 1.00 (-O3) | 1.00 | 1.00 |
 | `add_product`, one limb (both factors guarded), LLC | 0.99 to 1.00 | 1.00 to 1.05 (-O2), 0.98 to 1.01 (-O3) | 1.00 | 1.00 |
-| `add_product`, two limbs (every limb guarded), LLC | 0.98 to 1.01 | 1.00 to 1.01 | 1.00 | 1.00 |
+| `add_product`, two limbs (every limb guarded), LLC | 1.00 (-O2), 0.94 to 1.00 (-O3) | 1.00 to 1.03 | 1.00 | 1.00 |
 | `add_product`, one limb, the public member over the kernels without the guards, LLC | 0.96 to 1.04 (-O2), 0.99 to 1.00 (-O3) | 1.02 to 1.05 (-O2), 0.98 to 1.00 (-O3) | 1.00 to 1.01 | 1.00 |
-| `add_product`, two limbs, the same, LLC | 0.98 to 1.00 | 1.00 | 1.00 | 1.00 |
+| `add_product`, two limbs, the same, LLC | 1.00 (-O2), 0.93 to 1.00 (-O3) | 1.00 to 1.04 | 1.00 | 1.00 |
 
-- **The guards of supplied factors cost nothing where the loop waits for a chain, and up to 17%
-  where it is bound by its throughput.** `dot` of one limb, three operations per term where the loop
-  on stored arrays has one, takes 0.98 to 1.02 times that loop on Zen 2: each lane waits for its fused
+- **The guards of supplied factors cost nothing where the loop waits for a chain, and up to about
+  20% where it is bound by its throughput.** `dot` of one limb, three operations per term where the loop
+  on stored arrays has one, takes 0.99 to 1.03 times that loop on Zen 2: each lane waits for its fused
   multiply-add, and the two guards are off that chain; `add_product` of the accumulator, one and two
   limbs, 1.00 to 1.01 for the same reason. `scale` of two limbs, whose loop has no chain, takes 1.14
-  to 1.17 times the loop without the guards; `conv` of one limb 1.02 to 1.15 for polynomials of 16
-  and 64 coefficients and 1.00 to 1.02 for 512, where the coefficients' long chains dominate. On the M3, `dot` of one limb 0.96 to 1.10, `scale` of two limbs 1.16 to 1.20, `conv` of one
-  limb 0.99 to 1.10.
+  to 1.17 times the loop without the guards; `conv` of one limb 1.01 to 1.29 for polynomials of 16
+  and 64 coefficients and 1.00 to 1.02 for 512, where the coefficients' long chains dominate (its
+  1.27 to 1.29 for 16 coefficients with GCC 13 at `-O2` are of the binary of `053f6e69`, measured
+  beside the changed functions; the same code took 1.06 to 1.10 in the binary of `25cde04`, its loop
+  with the guards 8 to 10% slower in the later one: a matter of the binary, not of the code, and not
+  looked into). On the M3, `dot` of one limb 1.00 to 1.05, `scale` of two limbs 1.16 to 1.20, `conv` of one
+  limb 0.97 to 1.11.
 - **Which of it is the guards**: against the loop of `T`, `scale` of two limbs costs 1.4 to 6.0
   times `x a` of `double` with its guards and 1.3 to 5.2 without them: the guards are the 14 to 17%
   between the two, the double-word product and the test of each element the rest; `dot` of one
@@ -2083,8 +2144,11 @@ sizes are those of question 13.
 - **The guards of the additions** (rule R3 for the values added, not the factors), for comparison:
   `add` 1.18 to 1.44 in L1, `axpy` 1.08 to 1.16 for one limb and 0.99 to 1.02 for two, `sum` 0.97 to
   1.03; in the last-level cache, where the maps of one limb wait for the memory, 0.96 to 0.99.
-- Where nothing is guarded the two loops are the same: `scale` of one limb, and `dot`, `axpy` (but
-  for `y`) and `conv` of two limbs, whose factors are on the pending list of the factor rule.
+- **The guards of two limbs since the rule was closed** (`788d45f`): `dot` of two limbs, every limb of
+  both factors guarded, takes 0.99 to 1.01 times the loop without them on both machines, a chain
+  again; `conv` of two limbs 1.01 to 1.08 for 16 coefficients and 0.99 to 1.05 for 64 and 512; `axpy`
+  of two limbs, whose loop has no chain, 1.08 to 1.18, where it took 0.99 to 1.09 with `y` alone
+  guarded at `25cde04`. Where nothing is guarded the two loops are the same: `scale` of one limb.
 
 ### 16. The accumulator
 
@@ -2106,7 +2170,7 @@ byte for byte, and its running sum against the exact sum of its terms within its
 | `add`, one limb, L1 | 0.616 to 0.642 | 0.642 to 0.665 (-O2), 0.606 to 0.675 (-O3) | 1.3 to 1.31 | 0.884 to 0.897 |
 | `add_product`, one limb, L1 | 0.994 to 1.03 | 0.976 to 1.04 (-O2), 0.974 to 1.05 (-O3) | 1.53 | 1.48 to 1.5 |
 | `add`, two limbs, L1 | 7.86 to 8.21 | 7.45 to 7.94 (-O2), 7.43 to 8.29 (-O3) | 10.2 | 10.1 to 10.2 |
-| `add_product`, two limbs, L1 | 7.83 to 8.17 | 7.31 to 8.15 (-O2), 7.27 to 8.13 (-O3) | 10.2 | 10.2 to 10.3 |
+| `add_product`, two limbs, L1 | 7.3 to 9.01 (-O2), 7.32 to 9.01 (-O3) | 8.76 to 9.02 | 10.2 | 10.1 to 10.2 |
 | `add` of a value of T, two limbs, L1 | 7.67 to 7.99 | 7.11 to 7.8 (-O2), 7.33 to 8.19 (-O3) | 10.1 to 10.2 | 10.1 to 10.3 |
 | `add` into 16 accumulators merged, two limbs, L1 | 6.38 to 6.55 | 5.92 to 6.41 (-O2), 5.89 to 6.6 (-O3) | 12.2 to 12.3 | 9.98 to 10.1 |
 | `add` into W accumulators in the lane order, two limbs, L1 | 4.01 to 4.18 | 5.89 to 6.34 (-O2), 3.73 to 4.17 (-O3) | 4.82 to 4.83 | 3.99 to 4.05 |
@@ -2118,7 +2182,7 @@ byte for byte, and its running sum against the exact sum of its terms within its
 | `add_product`, one limb, over `dot` sequential, L1 | 1.06 to 1.10 | 1.07 to 1.12 | 1.05 | 1.03 |
 | `add`, two limbs, over `sum` sequential, L1 | 1.00 to 1.02 | 0.96 to 1.02 (-O2), 0.97 to 1.01 (-O3) | 1.00 | 1.00 |
 | `add`, two limbs, over `sum`, L1 | 2.02 to 2.06 | 1.93 to 1.99 (-O2), 2.03 to 2.04 (-O3) | 3.82 to 3.92 | 3.91 to 3.92 |
-| `add_product`, two limbs, over `dot` sequential, L1 | 1.01 to 1.04 | 0.98 to 1.04 (-O2), 1.00 to 1.04 (-O3) | 1.00 | 0.98 to 0.99 |
+| `add_product`, two limbs, over `dot` sequential, L1 | 0.99 to 1.01 | 1.00 to 1.04 | 1.00 | 0.99 to 1.00 |
 | `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, L1 | 0.95 to 1.01 (-O2), 0.93 to 0.98 (-O3) | 0.97 to 1.00 | 1.00 | 1.00 |
 | 4 accumulators merged over one, one limb, L1 | 0.84 to 0.89 (-O2), 0.85 to 0.89 (-O3) | 0.85 to 0.86 (-O2), 0.87 to 0.91 (-O3) | 2.38 to 2.44 (-O2), 2.37 to 2.43 (-O3) | 0.92 to 0.93 |
 | 16 accumulators merged over one, two limbs, L1 | 0.78 to 0.82 | 0.79 to 0.81 | 1.20 to 1.21 | 0.99 |
@@ -2142,8 +2206,8 @@ byte for byte, and its running sum against the exact sum of its terms within its
   ns), 1.00 to 1.52 for `add` of one limb (0.88 to 1.31 ns), and 3.8 to 5.8 times the default order
   of the functions on arrays, which runs four chains. A two-limb accumulator fed values of `double`,
   an accurate sum of doubles, costs what `sum` of two limbs of the same data costs sequentially
-  (1.00) On the M3, with two lanes, `sum` takes 0.25 to 0.27 ns and `dot` 0.38 to 0.41, 0.95 to 1.07
-  times the plain loop in the same order and about half the loop of one chain.cc.
+  (1.00); on the M3 0.96 to 1.04 times them for two limbs (7.3 to 8.3 ns per term) and 1.0 to 1.2
+  for one limb, about twice the default order, which runs two chains there.
 - **Partial sums, as threads would make them** (one after another here, in one thread: what the
   partial accumulators and the merges cost, not the threads): 4 or 16 contiguous parts, one
   accumulator for each, merged in order, cost 1.00 times one accumulator with Clang 18 for two limbs
@@ -2153,16 +2217,16 @@ byte for byte, and its running sum against the exact sum of its terms within its
   but with GCC 13 at `-O2` 3.2 to 3.4 times one accumulator (17.6 to 19.2 times `sum`): GCC keeps the
   array of accumulators in memory there, each addition loading and storing its running sum, and
   compiles the saturating count into 128-bit integer operations (`vpsubq`, `vpunpcklqdq`); at `-O3`
-  the states stay in registers. On the M3, with two lanes, `sum` takes 0.25 to 0.27 ns and `dot` 0.38 to 0.41, 0.95 to 1.07
-  times the plain loop in the same order and about half the loop of one chain.cc2
+  the states stay in registers. On the M3 the partial accumulators take 0.62 to 1.02 times one accumulator, and W
+  accumulators in the lane order 0.49 to 0.57 of one (GCC 16 at `-O2`, two limbs: 0.79 to 0.80), 1.0
+  to 1.06 times `sum` of two limbs (GCC 16 at `-O2`: 1.5 to 1.6).
 - **The results**: a `merge` costs a two-limb addition (10.1 to 10.3 ns in a chain; 0.8 to 0.9 for
   one limb); `sum()` 0.8 to 1.3 ns; `error_bound()` 4.7 to 6.6 ns, the two kernels of the bound and of
-  the radius; `ball()` 6.6 to 8.7 ns, the radius and the constructor of the ball. On the M3, with two lanes, `sum` takes 0.25 to 0.27 ns and `dot` 0.38 to 0.41, 0.95 to 1.07
-  times the plain loop in the same order and about half the loop of one chain.cc3
+  the radius; `ball()` 6.6 to 8.7 ns, the radius and the constructor of the ball. On the M3 `merge` takes 0.59 to 0.79 ns (one limb) and 7.3 to 8.1 (two), `sum()` 0.40 to
+  0.73, `error_bound()` 1.7 to 3.1, `ball()` 2.5 to 3.8.
 - **The guards of `add_product`** cost nothing on Zen 2 (1.00 to 1.01,
   [question 15](#15-the-guards-of-supplied-factors)),
-  and the public member costs what its kernels without the guards cost (1.00 to 1.04). On the M3, with two lanes, `sum` takes 0.25 to 0.27 ns and `dot` 0.38 to 0.41, 0.95 to 1.07
-  times the plain loop in the same order and about half the loop of one chain.cc4
+  and the public member costs what its kernels without the guards cost (1.00 to 1.04). On the M3 1.00 to 1.10.
 
 ### 17. Accuracy for the price
 
@@ -2398,9 +2462,12 @@ slightly.
   two. The bound grows as the length, $\gamma_{n-1}(e)\sum\lvert x_i\rvert$; the error made grew
   more slowly in every regime. The accumulators' `error_bound()` is within a factor of two of the
   bound of `sum` and `dot` of the same limbs in the sequential order. No error was above its bound.
+  The guards that the close of rule R3 added to `dot` of two limbs are the identity in a correct
+  build, so these errors, measured at `25cde04`, are those of `788d45f`: the harness checks there,
+  before timing, that `dot` of two limbs gives the same bytes as before (against its loop without the
+  guards, `bare`, and its reference), on every configuration.
   Sums of two limbs of numbers without cancellation were exact in every trial (the exact sum fits in
-  two limbs). On the M3, with two lanes, `sum` takes 0.25 to 0.27 ns and `dot` 0.38 to 0.41, 0.95 to 1.07
-  times the plain loop in the same order and about half the loop of one chain.cc17
+  two limbs). The ranges here are those of both machines.
 
 ### 18. One radius for many centers
 
@@ -2448,7 +2515,7 @@ largest and over the median of the balls' radii.
 | `add`, 2 limbs, N = 4 | 1.48 to 1.59 (-O2), 1.46 to 1.52 (-O3) | 1.16 to 1.22 (-O2), 1.61 to 1.66 (-O3) | 1.15 to 1.16 (-O2), 1.84 to 1.85 (-O3) | 2.05 to 2.09 |
 | `add`, 2 limbs, N = 16 | 1.66 to 1.82 (-O2), 1.81 to 1.88 (-O3) | 1.73 to 1.77 (-O2), 1.83 to 1.97 (-O3) | 3.08 to 3.11 (-O2), 2.70 to 2.71 (-O3) | 3.73 to 3.76 |
 | `add`, 2 limbs, N = 64 | 1.98 to 2.05 (-O2), 1.96 to 2.10 (-O3) | 2.03 to 2.11 (-O2), 2.06 to 2.17 (-O3) | 4.46 to 4.48 (-O2), 4.14 to 4.18 (-O3) | 4.29 to 4.35 |
-| `scale`, 2 limbs, N = 16 | 1.63 to 1.95 (-O2), 1.64 to 2.00 (-O3) | 1.64 to 1.71 (-O2), 2.09 to 2.12 (-O3) | 2.49 to 2.50 (-O2), 3.33 to 3.34 (-O3) | 3.50 to 3.56 |
+| `scale`, 2 limbs, N = 16 | 1.60 to 1.94 (-O2), 1.88 to 1.94 (-O3) | 1.69 to 1.71 (-O2), 2.05 to 2.11 (-O3) | 2.43 to 2.46 (-O2), 3.30 to 3.31 (-O3) | 3.46 to 3.50 |
 | `axpy`, 2 limbs, N = 16 | 1.81 to 1.99 (-O2), 1.87 to 2.04 (-O3) | 1.77 to 1.81 (-O2), 1.83 to 1.89 (-O3) | 2.95 (-O2), 2.55 to 2.56 (-O3) | 4.21 to 4.26 |
 | `conv`, 1 limb, N = 16 | 4.50 to 4.55 | 4.21 to 4.34 (-O2), 5.86 to 6.19 (-O3) | 4.05 to 4.09 (-O2), 5.81 to 5.84 (-O3) | 5.05 to 5.11 |
 | `conv`, 2 limbs, N = 16 | 1.12 to 1.16 | 1.14 to 1.20 (-O2), 1.15 to 1.22 (-O3) | 1.07 to 1.08 | 1.01 to 1.02 |
@@ -2496,12 +2563,9 @@ largest and over the median of the balls' radii.
   balls (`add`, `sub`, `scale`, `axpy`: 3.3 to 6.2 times faster), 0.03 to 0.07 for `norm_upper`, and
   0.18 to 0.22 for the product of one limb; at 16 entries 2 to 4 times faster; at 4 entries the two
   cost about the same (0.71 to 2.1 times, the balls faster in a third of the configurations), the
-  check at entry and the radius's few operations being then a large part of a vector's operation. On the M3 the loops of two limbs take 3.7 to 3.9 ns per element, 14 to 16 times the loop of
-  `double` in the same order for `sum` and 9 to 11 for `dot`; sequentially 0.98 to 1.09 times the
-  double-word loop written out, in the default order 0.50 to 0.55 of it (two chains); against Sum2
-  and Dot2 4.0 to 4.9 times in the default order and 8.1 to 9.8 times sequentially (for `float`,
-  with four lanes, 2.0 to 2.3 times): with half the lanes of Zen 2, the default order gains half as
-  much over the textbook loop, which is one short chain on either machine.vtime The product of two limbs costs the same in both forms (0.85 to 1.09): it is a
+  check at entry and the radius's few operations being then a large part of a vector's operation. On the M3, with two lanes, a ball vector of 64 entries is 1.7 to 2.6 times faster than the
+  balls for `add`, `sub`, `scale` and `axpy` (1.6 to 2.7 at 16 entries, 0.77 to 1.7 at 4), 4.5 to 11
+  times for `norm_upper` and 5.2 to 5.7 for the product of one limb. The product of two limbs costs the same in both forms (0.85 to 1.09): it is a
   dot product per coefficient, sequential either way. The fast order gains over `kairn::sequential`
   only from about 16 entries (2.0 to 4.5 times at 64), and the public operations cost 0.8 to 1.4
   times their loops at 64 entries, 1.0 to 2.3 times at 4, the check included.
@@ -2558,52 +2622,57 @@ are ordinary inline functions in every setting), so only the inline setting was 
 
 | Compile time of the headers, s (minimum wall time; -O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| an empty unit | 0.02; 0.02 | 0.05; 0.05 | 0.01; 0.01 | 0.04; 0.04 |
-| `kairn/kairn.hpp` | 0.14; 0.14 | 0.26; 0.26 | 0.45; 0.45 | 0.70; 0.70 |
-| `kairn/kairn.hpp`, as packed code | 0.14; 0.14 | 0.26; 0.26 | 0.44; 0.44 | 0.70; 0.70 |
-| `kairn/accumulator.hpp` | 0.14; 0.14 | 0.26; 0.26 | 0.44; 0.44 | 0.70; 0.70 |
-| `kairn/batch.hpp`, as packed code | 0.27; 0.27 | 0.54; 0.54 | 1.21; 1.21 | 1.57; 1.57 |
-| `kairn/ball_vector.hpp`, as packed code | 0.40; 0.40 | 0.57; 0.57 | 1.26; 1.26 | 1.66; 1.66 |
-| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 0.28; 0.28 | 0.55; 0.55 | 1.24; 1.23 | 1.61; 1.61 |
-| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 0.40; 0.40 | 0.57; 0.57 | 1.27; 1.26 | 1.66; 1.66 |
+| an empty unit | 0.02; 0.02 | 0.06; 0.06 | 0.01; 0.01 | 0.04; 0.04 |
+| `kairn/kairn.hpp` | 0.17; 0.17 | 0.32; 0.32 | 0.45; 0.46 | 0.71; 0.71 |
+| `kairn/kairn.hpp`, as packed code | 0.17; 0.17 | 0.32; 0.32 | 0.46; 0.46 | 0.72; 0.72 |
+| `kairn/accumulator.hpp` | 0.17; 0.17 | 0.32; 0.32 | 0.46; 0.45 | 0.71; 0.71 |
+| `kairn/batch.hpp`, as packed code | 0.34; 0.33 | 0.66; 0.66 | 1.22; 1.23 | 1.60; 1.59 |
+| `kairn/ball_vector.hpp`, as packed code | 0.48; 0.48 | 0.69; 0.69 | 1.28; 1.28 | 1.68; 1.68 |
+| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 0.34; 0.35 | 0.68; 0.68 | 1.25; 1.25 | 1.64; 1.63 |
+| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 0.49; 0.49 | 0.70; 0.69 | 1.28; 1.29 | 1.68; 1.68 |
 
 | arrays: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| 100, inline | 0.44; 0.72 | 0.86; 0.94 | 1.60; 1.66 | 2.31; 2.52 |
-| 100, calls | 0.07; 0.07 | 0.18; 0.20 | 0.22; 0.22 | 0.23; 0.23 |
-| 1000, inline | 1.45; 4.61 | 2.70; 3.38 | 2.77; 2.85 | 8.85; 12.2 |
-| 1000, calls | 0.50; 0.52 | 2.16; 2.90 | 3.49; 3.48 | 1.56; 1.58 |
+| 100, inline | 0.54; 0.88 | 1.02; 1.13 | 1.59; 1.65 | 2.31; 2.54 |
+| 100, calls | 0.09; 0.09 | 0.22; 0.23 | 0.22; 0.22 | 0.22; 0.22 |
+| 1000, inline | 1.73; 5.59 | 3.26; 4.08 | 2.72; 2.80 | 8.95; 12.3 |
+| 1000, calls | 0.61; 0.64 | 2.58; 3.52 | 3.43; 3.43 | 1.54; 1.55 |
 
 | ballvectors: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| 100, inline | 0.53; 0.53 | 0.83; 0.97 | 1.72; 1.91 | 2.12; 2.12 |
-| 100, calls | 0.03; 0.03 | 0.09; 0.09 | 0.05; 0.05 | 0.06; 0.06 |
-| 1000, inline | 1.28; 1.32 | 1.48; 1.92 | 2.40; 3.12 | 4.37; 4.36 |
-| 1000, calls | 0.09; 0.09 | 0.44; 0.68 | 0.31; 0.31 | 0.21; 0.20 |
+| 100, inline | 0.65; 0.65 | 1.01; 1.18 | 1.68; 1.87 | 2.11; 2.11 |
+| 100, calls | 0.03; 0.03 | 0.10; 0.11 | 0.05; 0.05 | 0.06; 0.06 |
+| 1000, inline | 1.57; 1.62 | 1.81; 2.33 | 2.31; 2.98 | 4.24; 4.24 |
+| 1000, calls | 0.11; 0.11 | 0.53; 0.81 | 0.30; 0.30 | 0.20; 0.20 |
 
 | The functions on arrays: object, KB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| 1000, inline | 162; 527 | 56; 61 | 88; 89 | 461; 652 |
+| 1000, inline | 162; 527 | 56; 61 | 88; 89 | 457; 648 |
 | 1000, calls | 44; 44 | 55; 58 | 97; 97 | 111; 111 |
 
 - **Each of the two headers costs a unit about a second on Zen 2.** There a unit that includes
-  `kairn/batch.hpp` or `kairn/ball_vector.hpp` compiles in 1.21 to 1.27 s with GCC 13 and 1.57 to
-  1.66 s with Clang 18, against 0.44 to 0.45 and 0.70 s for `kairn/kairn.hpp`; beside
-  `kairn/kairn.hpp` they cost the same (1.23 to 1.27, 1.61 to 1.66): what they add is `soa.hpp` and
+  `kairn/batch.hpp` or `kairn/ball_vector.hpp` compiles in 1.22 to 1.28 s with GCC 13 and 1.59 to
+  1.68 s with Clang 18, against 0.45 to 0.46 and 0.71 to 0.72 s for `kairn/kairn.hpp`; beside
+  `kairn/kairn.hpp` they cost the same (1.25 to 1.29, 1.63 to 1.68): what they add is `soa.hpp` and
   `packed.hpp`, whose packed form includes the generated `gen/avx2.hpp` (1.3 MB; inferred from the
   includes, that header alone not timed here). `kairn/accumulator.hpp` alone costs what
-  `kairn/kairn.hpp` costs, which includes it. On the M3 they cost 0.27 to 0.57 s against 0.14 and 0.26 s for `kairn/kairn.hpp` (Apple clang,
-  GCC 16), the packed form there being `gen/neon.hpp`.
+  `kairn/kairn.hpp` costs, which includes it. On the M3 they cost 0.33 to 0.69 s against 0.17 and
+  0.32 s for `kairn/kairn.hpp` (Apple clang, GCC 16), the packed form there being `gen/neon.hpp`.
+  These are of `788d45f`, whose generated headers grew by about a third with the close of rule R3:
+  on Zen 2 they compile 0 to 2% more slowly than at `25cde04` (1.21 to 1.27 s and 1.57 to 1.66 s
+  then), on the M3 20 to 25% (0.27 to 0.57 s then), measured there under a load of 8.5 to 9.6 that
+  slowed the timed runs beside them by 15 to 17%.
 - **A function with many calls compiles quickly.** 1 000 calls of the functions on arrays in one
-  function compile in 2.8 to 2.9 s with GCC 13 and 8.9 to 12.2 s with Clang 18 (1.6 to 2.5 s for
-  100), the operations of ball vectors in 2.4 to 3.1 and 4.4 s (1.7 to 2.1 for 100), in 0.2 to 0.3 GB.
+  function compile in 2.7 to 2.8 s with GCC 13 and 9.0 to 12.3 s with Clang 18 (1.6 to 2.5 s for
+  100), the operations of ball vectors in 2.3 to 3.0 and 4.2 s (1.7 to 2.1 for 100), in 0.2 to 0.3 GB,
+  as at `25cde04`.
   The functions are ordinary inline functions; judging by the objects, GCC 13 calls them (an object of 88 KB for 1 000
-  calls, about what the unit without Kairn makes) where Clang 18 inlines them (461 to 652 KB).
+  calls, about what the unit without Kairn makes) where Clang 18 inlines them (457 to 648 KB).
   Nothing here approaches the comparisons of enclosures of
   [question 12](#12-compile-time-of-the-enclosure-interface) (4.5 to 62 s for 1 000 calls). The
-  unit of 1 000 calls without Kairn took 3.5 s with GCC 13, longer than with it; not investigated. On the M3 the maps cost 0.22 to 0.28 ns per element of one limb and 0.42 to 1.4 of two in L1,
-  0.78 to 2.8 times the loop of `T`, 0.63 to 2.0 times the double-word maps written out; beyond the
-  cache 0.26 to 0.28 ns per element of one limb, the M3's memory keeping up.ompile
+  unit of 1 000 calls without Kairn took 3.4 s with GCC 13, longer than with it; not investigated.
+  On the M3 1 000 calls of the functions on arrays compile in 1.7 to 5.6 s with Apple clang and 3.3
+  to 4.1 s with GCC 16, of the ball vectors in 1.6 s and 1.8 to 2.3 s (under the same load).
 
 ### What the machine code shows (third part)
 
@@ -2641,15 +2710,18 @@ the tables:
 
 | Machine | Configurations | Conditions |
 |---|---|---|
-| M3: macOS 26.6 arm64, Apple M3 Max (12 performance, 4 efficiency cores) | Apple clang 21, GCC 16.2; `-O2` and `-O3`; the files of the third part as packed code (NEON: 2 lanes of `double`, 4 of `float`) | shared with another author's test campaign (8 processes at full load, and builds): a run was to start when the 1-minute load average was under 4, waiting up to four hours in all; the four hours passed without it (10 to 18 in the last of them), and every item was measured after them, from 10:25, at loads of 3 to 21; the campaign paused at about 12:40, and the short arrays, the pairs and triplets of the check at entry and the functions on arrays were measured again from 12:49, at loads of 1.3 to 5.9: those are the runs here, the loaded ones set aside; the accumulator and the ball vectors were measured at loads of 1.8 to 8.7, the errors and the compile times at 2 to 3; no affinity, the thread asks for the user-interactive class; each run made once, whatever its median spread (1.002 to 1.06) |
-| Zen 2: Linux x86-64, AMD EPYC 7452, 2 × 32 cores | GCC 13.3, Clang 18.1; `-O2` and `-O3`; `-mfma`, the files of the third part `-mavx2 -mfma` (4 lanes of `double`, 8 of `float`) | a test campaign held the first socket, and builds of another author ran on the second with up to 16 jobs (load average 57 to 101 during the runs); each run pinned to the logical CPU of the second socket whose usage and its sibling's were the lowest over the 2 s before it, among those within 2% of the lowest the one in the least busy core complex; `mpstat` of the two every 5 s during the run; a run whose sibling was busy in more than 4 samples, or whose median function was more than 3% slower than in the fastest run of its configuration, set aside and repeated (six runs of the functions on arrays, made before the choice by core complex, of which one twice); the pairs and triplets of programs of question 14 run one after the other on the same CPU, and repeated whole |
+| M3: macOS 26.6 arm64, Apple M3 Max (12 performance, 4 efficiency cores) | Apple clang 21, GCC 16.2; `-O2` and `-O3`; the files of the third part as packed code (NEON: 2 lanes of `double`, 4 of `float`) | shared with another author's test campaign (8 processes at full load, and builds): a run was to start when the 1-minute load average was under 4, waiting up to four hours in all; the four hours passed without it (10 to 18 in the last of them), and every item was measured after them, from 10:25, at loads of 3 to 21; the campaign paused at about 12:40, and the short arrays, the pairs and triplets of the check at entry and the functions on arrays were measured again from 12:49, at loads of 1.3 to 5.9: those are the runs here, the loaded ones set aside; the accumulator and the ball vectors were measured at loads of 1.8 to 8.7, the errors at 2 to 3; no affinity, the thread asks for the user-interactive class; each run made once, whatever its median spread (1.002 to 1.06); the later runs (`r3-*`) at loads of 2.4 to 12.7, the campaign running again, each once, and the compile times of question 19 at 8.5 to 9.6 |
+| Zen 2: Linux x86-64, AMD EPYC 7452, 2 × 32 cores | GCC 13.3, Clang 18.1; `-O2` and `-O3`; `-mfma`, the files of the third part `-mavx2 -mfma` (4 lanes of `double`, 8 of `float`) | a test campaign held the first socket, and builds of another author ran on the second with up to 16 jobs (load average 57 to 101 during the runs); each run pinned to the logical CPU of the second socket whose usage and its sibling's were the lowest over the 2 s before it, among those within 2% of the lowest the one in the least busy core complex; `mpstat` of the two every 5 s during the run; a run whose sibling was busy in more than 4 samples, or whose median function was more than 3% slower than in the fastest run of its configuration, set aside and repeated (six runs of the functions on arrays, made before the choice by core complex, of which one twice); the pairs and triplets of programs of question 14 run one after the other on the same CPU, and repeated whole; the later runs (`r3-*`, [above](#which-tree-measured-what)) at loads of 1.4 to 11, the same rule repeating none (a sibling busy at most 6.9% of a run), the compile times pinned the same way at loads of 1.8 to 2.4 |
 
 - **Commits**: the functions on arrays at `9e114bb` (the harness of this part on the tree of
   `25cde04`; their six repeated runs at `be95dbb`), the short arrays and the pairs of programs of the
   check at entry at `dae16be` (which reads the lengths of the short arrays at run time and changes
   nothing else that is timed), the short ball vectors, the accumulator, the ball vectors and the
   errors at `be95dbb` (which adds the units of one operation and changes nothing else that is
-  timed); recorded in every file. None changes anything under `include/`.
+  timed); the functions that changed at `788d45f`, with those their ratios divide by, the compile
+  times and the summaries of the machine code at `053f6e69` (the tree of `788d45f` and the harness,
+  [above](#which-tree-measured-what)); recorded in every file. None changes anything under
+  `include/`.
 - **Flags**: those of the earlier parts; `m2_batch.cpp`, `m2_bv.cpp`, `m2_bvs.cpp` and
   `m2_accuracy.cpp` with the flags of packed code, so that the default order is the lane order of
   `Packed` (the speed-up over one lane is that of this order over `kairn::sequential`, whose loop is
@@ -2659,7 +2731,8 @@ the tables:
   minima within one run, and for the check at entry of the programs' runs made one after the other;
   a cell is the lowest and highest value over the three runs (or rounds of programs) of a
   configuration.
-- **Checks before timing**: every timed function, 1 472 of them in each configuration, against its
+- **Checks before timing**: every timed function, 1 472 of them in each configuration at `25cde04`
+  and 1 484 at `053f6e69` (with the variants `bare` of `dot` and `conv` of two limbs), against its
   reference byte for byte, and the references and the textbook loops against exact sums
   (`m2_exact.hpp`) within their stated bounds ([Runs of the third part](#runs-of-the-third-part));
   none failed in any run.
@@ -2680,7 +2753,7 @@ the tables:
 
 This page measures what `main` held at commit `dee8ecd` (the first part), at `aa168ee` (the
 second part, [above](#the-second-part)) and on the tree of `25cde04` (the third part,
-[above](#the-third-part)): nothing on `main` on 2026-11-22 is left out. What no part measures, and
+[above](#the-third-part)): nothing on `main` on 2026-11-22 (`788d45f`) is left out. What no part measures, and
 why, is in each part's list of what it did not measure: Windows and MSVC (no Windows machine in
 Milestone 2), Intel processors, AVX-512 and GPUs (none available), threads (the partial
 accumulators of question 16 are made in one thread), and `KAIRN_CHECKS` on `Packed`, the containers
@@ -4174,14 +4247,14 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 
 | Configuration (third part) | CPU | Compiler | Flags | Runs per item (arrays, short, entry pairs, short ball vectors triplets, acc, bv) | Dates, commits |
 |---|---|---|---|---|---|
-| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `be95dbb` |
-| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `be95dbb` |
-| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `be95dbb` |
-| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `be95dbb` |
+| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `053f6e69`, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `053f6e69`, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `053f6e69`, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `053f6e69`, `9e114bb`, `be95dbb`, `dae16be` |
+| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `053f6e69`, `be95dbb` |
+| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `053f6e69`, `be95dbb` |
+| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `053f6e69`, `be95dbb` |
+| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `053f6e69`, `be95dbb` |
 
 #### Runs of the third part
 
@@ -4403,6 +4476,222 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `entryx-mac-gcc16-O3-cv-r1.json` | 460, 0 | 1.000, 1.008 | 1.005 | 2.3, 1.9 |
 | `entryx-mac-gcc16-O3-cv-r2.json` | 460, 0 | 1.001, 1.028 | 1.004 | 1.5, 2.2 |
 | `entryx-mac-gcc16-O3-cv-r3.json` | 460, 0 | 1.001, 1.045 | 1.004 | 4.6, 3.6 |
+| `r3-arrays-linux-clang-O2-r1.json` | 246, 0 | 1.001, 1.012 | 1.003 | 1.8, 1.9 |
+| `r3-arrays-linux-clang-O2-r2.json` | 246, 0 | 1.001, 1.023 | 1.004 | 1.7, 1.7 |
+| `r3-arrays-linux-clang-O2-r3.json` | 246, 0 | 1.000, 1.004 | 1.004 | 1.9, 2.0 |
+| `r3-arrays-linux-clang-O3-r1.json` | 246, 0 | 1.001, 1.006 | 1.004 | 1.6, 1.8 |
+| `r3-arrays-linux-clang-O3-r2.json` | 246, 0 | 1.001, 1.006 | 1.004 | 1.8, 1.9 |
+| `r3-arrays-linux-clang-O3-r3.json` | 246, 0 | 1.001, 1.011 | 1.004 | 2.1, 2.2 |
+| `r3-arrays-linux-gcc-O2-r1.json` | 246, 0 | 1.001, 1.009 | 1.003 | 8.6, 4.5 |
+| `r3-arrays-linux-gcc-O2-r2.json` | 246, 0 | 1.000, 1.007 | 1.003 | 1.7, 1.8 |
+| `r3-arrays-linux-gcc-O2-r3.json` | 246, 0 | 1.000, 1.011 | 1.004 | 2.1, 2.0 |
+| `r3-arrays-linux-gcc-O3-r1.json` | 246, 0 | 1.001, 1.007 | 1.004 | 3.3, 2.7 |
+| `r3-arrays-linux-gcc-O3-r2.json` | 246, 0 | 1.000, 1.015 | 1.004 | 1.8, 2.3 |
+| `r3-arrays-linux-gcc-O3-r3.json` | 246, 0 | 1.001, 1.007 | 1.004 | 2.1, 1.8 |
+| `r3-arrays-mac-appleclang-O2-r1.json` | 246, 0 | 1.000, 1.000 | 1.009 | 2.4, 2.6 |
+| `r3-arrays-mac-appleclang-O2-r2.json` | 246, 0 | 1.233, 1.250 | 1.046 | 10.4, 9.0 |
+| `r3-arrays-mac-appleclang-O2-r3.json` | 246, 0 | 1.232, 1.235 | 1.046 | 8.9, 9.2 |
+| `r3-arrays-mac-appleclang-O3-r1.json` | 246, 0 | 1.000, 1.000 | 1.002 | 3.1, 4.1 |
+| `r3-arrays-mac-appleclang-O3-r2.json` | 246, 0 | 1.152, 1.200 | 1.047 | 8.9, 8.8 |
+| `r3-arrays-mac-appleclang-O3-r3.json` | 246, 0 | 1.156, 1.203 | 1.046 | 11.5, 12.7 |
+| `r3-arrays-mac-gcc16-O2-r1.json` | 246, 0 | 1.004, 1.045 | 1.046 | 8.6, 8.3 |
+| `r3-arrays-mac-gcc16-O2-r2.json` | 246, 0 | 1.001, 1.040 | 1.046 | 9.3, 8.7 |
+| `r3-arrays-mac-gcc16-O2-r3.json` | 246, 0 | 1.000, 1.001 | 1.047 | 9.1, 8.3 |
+| `r3-arrays-mac-gcc16-O3-r1.json` | 246, 0 | 1.003, 1.045 | 1.045 | 9.9, 8.9 |
+| `r3-arrays-mac-gcc16-O3-r2.json` | 246, 0 | 1.000, 1.033 | 1.046 | 8.8, 8.4 |
+| `r3-arrays-mac-gcc16-O3-r3.json` | 246, 0 | 1.000, 1.008 | 1.046 | 8.9, 8.5 |
+| `r3-short-linux-clang-O2-r1.json` | 84, 0 | 1.000, 1.001 | 1.003 | 1.8, 1.7 |
+| `r3-short-linux-clang-O2-r2.json` | 84, 0 | 1.001, 1.002 | 1.003 | 1.7, 1.7 |
+| `r3-short-linux-clang-O2-r3.json` | 84, 0 | 1.001, 1.001 | 1.003 | 2.1, 2.3 |
+| `r3-short-linux-clang-O3-r1.json` | 84, 0 | 1.000, 1.002 | 1.003 | 1.7, 1.8 |
+| `r3-short-linux-clang-O3-r2.json` | 84, 0 | 1.000, 1.001 | 1.003 | 1.7, 1.7 |
+| `r3-short-linux-clang-O3-r3.json` | 84, 0 | 1.000, 1.001 | 1.003 | 2.4, 2.2 |
+| `r3-short-linux-gcc-O2-r1.json` | 84, 0 | 1.000, 1.002 | 1.002 | 4.4, 4.2 |
+| `r3-short-linux-gcc-O2-r2.json` | 84, 0 | 1.001, 1.003 | 1.003 | 1.8, 2.0 |
+| `r3-short-linux-gcc-O2-r3.json` | 84, 0 | 1.000, 1.002 | 1.003 | 1.9, 1.9 |
+| `r3-short-linux-gcc-O3-r1.json` | 84, 0 | 1.000, 1.001 | 1.003 | 2.6, 2.5 |
+| `r3-short-linux-gcc-O3-r2.json` | 84, 0 | 1.000, 1.001 | 1.003 | 2.1, 2.0 |
+| `r3-short-linux-gcc-O3-r3.json` | 84, 0 | 1.000, 1.001 | 1.003 | 1.7, 1.6 |
+| `r3-short-mac-appleclang-O2-r1.json` | 84, 0 | 1.000, 1.000 | 1.017 | 2.6, 2.5 |
+| `r3-short-mac-appleclang-O2-r2.json` | 84, 0 | 1.162, 1.223 | 1.060 | 8.9, 8.5 |
+| `r3-short-mac-appleclang-O2-r3.json` | 84, 0 | 1.164, 1.234 | 1.046 | 9.2, 8.8 |
+| `r3-short-mac-appleclang-O3-r1.json` | 84, 0 | 1.000, 1.000 | 1.003 | 4.1, 3.5 |
+| `r3-short-mac-appleclang-O3-r2.json` | 84, 0 | 1.150, 1.151 | 1.046 | 8.8, 8.4 |
+| `r3-short-mac-appleclang-O3-r3.json` | 84, 0 | 1.150, 1.157 | 1.046 | 12.7, 11.7 |
+| `r3-short-mac-gcc16-O2-r1.json` | 84, 0 | 1.040, 1.069 | 1.046 | 8.4, 8.5 |
+| `r3-short-mac-gcc16-O2-r2.json` | 84, 0 | 1.000, 1.037 | 1.078 | 8.7, 8.8 |
+| `r3-short-mac-gcc16-O2-r3.json` | 84, 0 | 1.002, 1.040 | 1.048 | 8.3, 8.4 |
+| `r3-short-mac-gcc16-O3-r1.json` | 84, 0 | 1.000, 1.002 | 1.046 | 8.9, 9.0 |
+| `r3-short-mac-gcc16-O3-r2.json` | 84, 0 | 1.000, 1.001 | 1.046 | 8.4, 8.6 |
+| `r3-short-mac-gcc16-O3-r3.json` | 84, 0 | 1.001, 1.034 | 1.046 | 8.5, 8.7 |
+| `r3-acc-linux-clang-O2-r1.json` | 30, 0 | 1.000, 1.002 | 1.003 | 1.6, 1.5 |
+| `r3-acc-linux-clang-O2-r2.json` | 30, 0 | 1.000, 1.001 | 1.003 | 1.7, 1.9 |
+| `r3-acc-linux-clang-O2-r3.json` | 30, 0 | 1.000, 1.001 | 1.003 | 2.2, 2.2 |
+| `r3-acc-linux-clang-O3-r1.json` | 30, 0 | 1.001, 1.002 | 1.003 | 1.7, 1.8 |
+| `r3-acc-linux-clang-O3-r2.json` | 30, 0 | 1.000, 1.001 | 1.003 | 1.6, 1.6 |
+| `r3-acc-linux-clang-O3-r3.json` | 30, 0 | 1.001, 1.001 | 1.004 | 2.1, 2.1 |
+| `r3-acc-linux-gcc-O2-r1.json` | 30, 0 | 1.000, 1.001 | 1.002 | 4.1, 4.0 |
+| `r3-acc-linux-gcc-O2-r2.json` | 30, 0 | 1.000, 1.001 | 1.003 | 2.0, 1.9 |
+| `r3-acc-linux-gcc-O2-r3.json` | 30, 0 | 1.001, 1.002 | 1.003 | 1.8, 1.8 |
+| `r3-acc-linux-gcc-O3-r1.json` | 30, 0 | 1.000, 1.001 | 1.003 | 2.4, 2.5 |
+| `r3-acc-linux-gcc-O3-r2.json` | 30, 0 | 1.000, 1.001 | 1.003 | 1.8, 1.8 |
+| `r3-acc-linux-gcc-O3-r3.json` | 30, 0 | 1.000, 1.001 | 1.003 | 1.5, 1.7 |
+| `r3-acc-mac-appleclang-O2-r1.json` | 30, 0 | 1.000, 1.000 | 1.006 | 2.5, 2.4 |
+| `r3-acc-mac-appleclang-O2-r2.json` | 30, 0 | 1.234, 1.234 | 1.046 | 8.5, 8.7 |
+| `r3-acc-mac-appleclang-O2-r3.json` | 30, 0 | 1.234, 1.234 | 1.006 | 8.8, 8.8 |
+| `r3-acc-mac-appleclang-O3-r1.json` | 30, 0 | 1.000, 1.000 | 1.031 | 3.5, 3.3 |
+| `r3-acc-mac-appleclang-O3-r2.json` | 30, 0 | 1.183, 1.232 | 1.046 | 8.3, 8.2 |
+| `r3-acc-mac-appleclang-O3-r3.json` | 30, 0 | 1.183, 1.232 | 1.046 | 11.7, 11.4 |
+| `r3-acc-mac-gcc16-O2-r1.json` | 30, 0 | 1.055, 1.069 | 1.046 | 8.5, 8.6 |
+| `r3-acc-mac-gcc16-O2-r2.json` | 30, 0 | 1.024, 1.065 | 1.046 | 8.8, 8.8 |
+| `r3-acc-mac-gcc16-O2-r3.json` | 30, 0 | 1.000, 1.040 | 1.088 | 9.5, 9.5 |
+| `r3-acc-mac-gcc16-O3-r1.json` | 30, 0 | 1.000, 1.000 | 1.046 | 9.0, 8.9 |
+| `r3-acc-mac-gcc16-O3-r2.json` | 30, 0 | 1.000, 1.039 | 1.045 | 8.6, 8.6 |
+| `r3-acc-mac-gcc16-O3-r3.json` | 30, 0 | 1.000, 1.039 | 1.046 | 8.7, 8.7 |
+| `r3-bv-linux-clang-O2-r1.json` | 16, 0 | 1.000, 1.003 | 1.004 | 1.5, 1.5 |
+| `r3-bv-linux-clang-O2-r2.json` | 16, 0 | 1.001, 1.003 | 1.005 | 1.8, 1.8 |
+| `r3-bv-linux-clang-O2-r3.json` | 16, 0 | 1.001, 1.006 | 1.004 | 2.1, 2.1 |
+| `r3-bv-linux-clang-O3-r1.json` | 16, 0 | 1.001, 1.003 | 1.004 | 1.8, 1.8 |
+| `r3-bv-linux-clang-O3-r2.json` | 16, 0 | 1.000, 1.003 | 1.003 | 1.6, 1.5 |
+| `r3-bv-linux-clang-O3-r3.json` | 16, 0 | 1.001, 1.004 | 1.004 | 2.1, 2.0 |
+| `r3-bv-linux-gcc-O2-r1.json` | 16, 0 | 1.000, 1.004 | 1.003 | 4.0, 4.0 |
+| `r3-bv-linux-gcc-O2-r2.json` | 16, 0 | 1.001, 1.006 | 1.004 | 1.9, 1.8 |
+| `r3-bv-linux-gcc-O2-r3.json` | 16, 0 | 1.001, 1.003 | 1.004 | 1.8, 1.7 |
+| `r3-bv-linux-gcc-O3-r1.json` | 16, 0 | 1.000, 1.001 | 1.004 | 2.5, 2.5 |
+| `r3-bv-linux-gcc-O3-r2.json` | 16, 0 | 1.001, 1.003 | 1.004 | 1.8, 1.9 |
+| `r3-bv-linux-gcc-O3-r3.json` | 16, 0 | 1.000, 1.002 | 1.004 | 1.7, 1.6 |
+| `r3-bv-mac-appleclang-O2-r1.json` | 16, 0 | 1.000, 1.000 | 1.004 | 2.4, 2.4 |
+| `r3-bv-mac-appleclang-O2-r2.json` | 16, 0 | 1.155, 1.203 | 1.046 | 8.7, 8.7 |
+| `r3-bv-mac-appleclang-O2-r3.json` | 16, 0 | 1.202, 1.203 | 1.008 | 8.8, 8.6 |
+| `r3-bv-mac-appleclang-O3-r1.json` | 16, 0 | 1.000, 1.000 | 1.058 | 3.3, 3.3 |
+| `r3-bv-mac-appleclang-O3-r2.json` | 16, 0 | 1.195, 1.204 | 1.013 | 8.2, 8.2 |
+| `r3-bv-mac-appleclang-O3-r3.json` | 16, 0 | 1.203, 1.216 | 1.027 | 11.4, 11.2 |
+| `r3-bv-mac-gcc16-O2-r1.json` | 16, 0 | 1.045, 1.046 | 1.002 | 8.6, 8.6 |
+| `r3-bv-mac-gcc16-O2-r2.json` | 16, 0 | 1.000, 1.000 | 1.046 | 8.8, 8.7 |
+| `r3-bv-mac-gcc16-O2-r3.json` | 16, 0 | 1.001, 1.009 | 1.051 | 9.5, 9.5 |
+| `r3-bv-mac-gcc16-O3-r1.json` | 16, 0 | 1.039, 1.046 | 1.048 | 8.9, 8.8 |
+| `r3-bv-mac-gcc16-O3-r2.json` | 16, 0 | 1.046, 1.046 | 1.003 | 8.6, 8.6 |
+| `r3-bv-mac-gcc16-O3-r3.json` | 16, 0 | 1.000, 1.000 | 1.046 | 8.7, 8.7 |
+| `r3-entry-linux-clang-O2-c1-r1.json` | 132, 0 | 1.000, 1.002 | 1.003 | 1.5, 1.5 |
+| `r3-entry-linux-clang-O2-c1-r2.json` | 132, 0 | 1.000, 1.002 | 1.003 | 1.9, 1.8 |
+| `r3-entry-linux-clang-O2-c1-r3.json` | 132, 0 | 1.000, 1.001 | 1.003 | 2.0, 2.0 |
+| `r3-entry-linux-clang-O2-c0-r1.json` | 132, 0 | 1.000, 1.003 | 1.003 | 1.5, 1.4 |
+| `r3-entry-linux-clang-O2-c0-r2.json` | 132, 0 | 1.002, 1.003 | 1.003 | 2.0, 2.4 |
+| `r3-entry-linux-clang-O2-c0-r3.json` | 132, 0 | 1.000, 1.002 | 1.003 | 2.0, 2.4 |
+| `r3-entry-linux-clang-O3-c1-r1.json` | 132, 0 | 1.000, 1.002 | 1.003 | 1.7, 1.7 |
+| `r3-entry-linux-clang-O3-c1-r2.json` | 132, 0 | 1.000, 1.001 | 1.003 | 1.5, 1.9 |
+| `r3-entry-linux-clang-O3-c1-r3.json` | 132, 0 | 1.001, 1.002 | 1.003 | 2.0, 2.1 |
+| `r3-entry-linux-clang-O3-c0-r1.json` | 132, 0 | 1.000, 1.001 | 1.003 | 1.7, 1.7 |
+| `r3-entry-linux-clang-O3-c0-r2.json` | 132, 0 | 1.000, 1.002 | 1.003 | 1.8, 2.3 |
+| `r3-entry-linux-clang-O3-c0-r3.json` | 132, 0 | 1.000, 1.002 | 1.003 | 2.0, 1.8 |
+| `r3-entry-linux-gcc-O2-c1-r1.json` | 132, 0 | 1.002, 1.006 | 1.003 | 3.7, 3.4 |
+| `r3-entry-linux-gcc-O2-c1-r2.json` | 132, 0 | 1.000, 1.002 | 1.003 | 1.8, 1.8 |
+| `r3-entry-linux-gcc-O2-c1-r3.json` | 132, 0 | 1.000, 1.001 | 1.003 | 1.8, 1.7 |
+| `r3-entry-linux-gcc-O2-c0-r1.json` | 132, 0 | 1.002, 1.003 | 1.005 | 3.3, 5.5 |
+| `r3-entry-linux-gcc-O2-c0-r2.json` | 132, 0 | 1.000, 1.001 | 1.003 | 2.0, 1.8 |
+| `r3-entry-linux-gcc-O2-c0-r3.json` | 132, 0 | 1.000, 1.001 | 1.003 | 1.7, 1.7 |
+| `r3-entry-linux-gcc-O3-c1-r1.json` | 132, 0 | 1.000, 1.002 | 1.003 | 2.3, 2.1 |
+| `r3-entry-linux-gcc-O3-c1-r2.json` | 132, 0 | 1.000, 1.002 | 1.003 | 1.9, 1.7 |
+| `r3-entry-linux-gcc-O3-c1-r3.json` | 132, 0 | 1.001, 1.002 | 1.003 | 1.6, 1.7 |
+| `r3-entry-linux-gcc-O3-c0-r1.json` | 132, 0 | 1.000, 1.002 | 1.003 | 2.0, 1.9 |
+| `r3-entry-linux-gcc-O3-c0-r2.json` | 132, 0 | 1.000, 1.002 | 1.003 | 1.7, 1.7 |
+| `r3-entry-linux-gcc-O3-c0-r3.json` | 132, 0 | 1.001, 1.002 | 1.003 | 1.6, 1.5 |
+| `r3-entry-mac-appleclang-O2-c1-r1.json` | 132, 0 | 1.000, 1.000 | 1.011 | 2.4, 2.6 |
+| `r3-entry-mac-appleclang-O2-c1-r2.json` | 132, 0 | 1.164, 1.234 | 1.046 | 8.7, 8.6 |
+| `r3-entry-mac-appleclang-O2-c1-r3.json` | 132, 0 | 1.162, 1.234 | 1.046 | 8.6, 8.3 |
+| `r3-entry-mac-appleclang-O2-c0-r1.json` | 132, 0 | 1.000, 1.000 | 1.008 | 2.6, 4.1 |
+| `r3-entry-mac-appleclang-O2-c0-r2.json` | 132, 0 | 1.158, 1.234 | 1.046 | 8.6, 8.8 |
+| `r3-entry-mac-appleclang-O2-c0-r3.json` | 132, 0 | 1.158, 1.234 | 1.046 | 8.3, 8.0 |
+| `r3-entry-mac-appleclang-O3-c1-r1.json` | 132, 0 | 1.000, 1.000 | 1.118 | 3.3, 6.4 |
+| `r3-entry-mac-appleclang-O3-c1-r2.json` | 132, 0 | 1.103, 1.149 | 1.046 | 8.2, 7.9 |
+| `r3-entry-mac-appleclang-O3-c1-r3.json` | 132, 0 | 1.105, 1.150 | 1.046 | 11.2, 11.0 |
+| `r3-entry-mac-appleclang-O3-c0-r1.json` | 132, 0 | 1.000, 1.000 | 1.272 | 7.1, 9.5 |
+| `r3-entry-mac-appleclang-O3-c0-r2.json` | 132, 0 | 1.087, 1.088 | 1.046 | 7.9, 7.8 |
+| `r3-entry-mac-appleclang-O3-c0-r3.json` | 132, 0 | 1.087, 1.094 | 1.046 | 11.0, 10.7 |
+| `r3-entry-mac-gcc16-O2-c1-r1.json` | 132, 0 | 1.000, 1.036 | 1.046 | 8.8, 8.9 |
+| `r3-entry-mac-gcc16-O2-c1-r2.json` | 132, 0 | 1.000, 1.038 | 1.046 | 8.7, 8.8 |
+| `r3-entry-mac-gcc16-O2-c1-r3.json` | 132, 0 | 1.000, 1.000 | 1.046 | 9.5, 9.2 |
+| `r3-entry-mac-gcc16-O2-c0-r1.json` | 132, 0 | 1.000, 1.041 | 1.046 | 8.9, 9.1 |
+| `r3-entry-mac-gcc16-O2-c0-r2.json` | 132, 0 | 1.000, 1.001 | 1.046 | 8.8, 8.7 |
+| `r3-entry-mac-gcc16-O2-c0-r3.json` | 132, 0 | 1.000, 1.001 | 1.046 | 9.2, 9.0 |
+| `r3-entry-mac-gcc16-O3-c1-r1.json` | 132, 0 | 1.000, 1.024 | 1.046 | 8.8, 9.1 |
+| `r3-entry-mac-gcc16-O3-c1-r2.json` | 132, 0 | 1.000, 1.001 | 1.046 | 8.6, 9.1 |
+| `r3-entry-mac-gcc16-O3-c1-r3.json` | 132, 0 | 1.000, 1.035 | 1.046 | 8.7, 8.5 |
+| `r3-entry-mac-gcc16-O3-c0-r1.json` | 132, 0 | 1.000, 1.009 | 1.046 | 9.1, 9.2 |
+| `r3-entry-mac-gcc16-O3-c0-r2.json` | 132, 0 | 1.000, 1.008 | 1.046 | 9.1, 8.8 |
+| `r3-entry-mac-gcc16-O3-c0-r3.json` | 132, 0 | 1.000, 1.001 | 1.046 | 8.5, 8.6 |
+| `r3-entryx-linux-clang-O2-c0-r1.json` | 80, 0 | 1.001, 1.007 | 1.003 | 1.5, 1.6 |
+| `r3-entryx-linux-clang-O2-c0-r2.json` | 80, 0 | 1.001, 1.095 | 1.003 | 2.3, 2.1 |
+| `r3-entryx-linux-clang-O2-c0-r3.json` | 80, 0 | 1.000, 1.006 | 1.003 | 2.5, 2.4 |
+| `r3-entryx-linux-clang-O2-c1-r1.json` | 80, 0 | 1.001, 1.090 | 1.003 | 1.4, 1.5 |
+| `r3-entryx-linux-clang-O2-c1-r2.json` | 80, 0 | 1.001, 1.007 | 1.003 | 2.4, 2.5 |
+| `r3-entryx-linux-clang-O2-c1-r3.json` | 80, 0 | 1.001, 1.040 | 1.003 | 2.4, 2.7 |
+| `r3-entryx-linux-clang-O2-cv-r1.json` | 80, 0 | 1.001, 1.059 | 1.003 | 1.6, 1.7 |
+| `r3-entryx-linux-clang-O2-cv-r2.json` | 80, 0 | 1.001, 1.087 | 1.004 | 2.1, 2.1 |
+| `r3-entryx-linux-clang-O2-cv-r3.json` | 80, 0 | 1.001, 1.008 | 1.004 | 2.4, 2.2 |
+| `r3-entryx-linux-clang-O3-c0-r1.json` | 80, 0 | 1.001, 1.005 | 1.003 | 1.7, 2.0 |
+| `r3-entryx-linux-clang-O3-c0-r2.json` | 80, 0 | 1.001, 1.004 | 1.004 | 2.6, 2.5 |
+| `r3-entryx-linux-clang-O3-c0-r3.json` | 80, 0 | 1.001, 1.004 | 1.004 | 1.6, 1.7 |
+| `r3-entryx-linux-clang-O3-c1-r1.json` | 80, 0 | 1.000, 1.005 | 1.004 | 1.7, 1.7 |
+| `r3-entryx-linux-clang-O3-c1-r2.json` | 80, 0 | 1.001, 1.096 | 1.004 | 2.2, 2.6 |
+| `r3-entryx-linux-clang-O3-c1-r3.json` | 80, 0 | 1.001, 1.052 | 1.004 | 1.7, 1.6 |
+| `r3-entryx-linux-clang-O3-cv-r1.json` | 80, 0 | 1.002, 1.037 | 1.004 | 1.8, 1.8 |
+| `r3-entryx-linux-clang-O3-cv-r2.json` | 80, 0 | 1.001, 1.025 | 1.004 | 2.3, 2.2 |
+| `r3-entryx-linux-clang-O3-cv-r3.json` | 80, 0 | 1.001, 1.012 | 1.003 | 1.7, 2.0 |
+| `r3-entryx-linux-gcc-O2-c0-r1.json` | 80, 0 | 1.002, 1.008 | 1.004 | 4.6, 4.2 |
+| `r3-entryx-linux-gcc-O2-c0-r2.json` | 80, 0 | 1.001, 1.005 | 1.003 | 1.8, 1.7 |
+| `r3-entryx-linux-gcc-O2-c0-r3.json` | 80, 0 | 1.001, 1.007 | 1.004 | 1.7, 1.8 |
+| `r3-entryx-linux-gcc-O2-c1-r1.json` | 80, 0 | 1.001, 1.005 | 1.004 | 5.5, 4.9 |
+| `r3-entryx-linux-gcc-O2-c1-r2.json` | 80, 0 | 1.001, 1.013 | 1.004 | 1.9, 1.8 |
+| `r3-entryx-linux-gcc-O2-c1-r3.json` | 80, 0 | 1.002, 1.009 | 1.004 | 1.8, 1.7 |
+| `r3-entryx-linux-gcc-O2-cv-r1.json` | 80, 0 | 1.001, 1.008 | 1.004 | 4.2, 3.6 |
+| `r3-entryx-linux-gcc-O2-cv-r2.json` | 80, 0 | 1.001, 1.012 | 1.004 | 1.6, 1.5 |
+| `r3-entryx-linux-gcc-O2-cv-r3.json` | 80, 0 | 1.001, 1.009 | 1.004 | 1.7, 1.8 |
+| `r3-entryx-linux-gcc-O3-c0-r1.json` | 80, 0 | 1.000, 1.005 | 1.003 | 1.8, 1.7 |
+| `r3-entryx-linux-gcc-O3-c0-r2.json` | 80, 0 | 1.001, 1.011 | 1.003 | 1.5, 1.5 |
+| `r3-entryx-linux-gcc-O3-c0-r3.json` | 80, 0 | 1.001, 1.004 | 1.003 | 1.5, 1.6 |
+| `r3-entryx-linux-gcc-O3-c1-r1.json` | 80, 0 | 1.001, 1.004 | 1.003 | 1.9, 1.8 |
+| `r3-entryx-linux-gcc-O3-c1-r2.json` | 80, 0 | 1.001, 1.008 | 1.004 | 1.6, 1.5 |
+| `r3-entryx-linux-gcc-O3-c1-r3.json` | 80, 0 | 1.000, 1.008 | 1.003 | 1.4, 1.5 |
+| `r3-entryx-linux-gcc-O3-cv-r1.json` | 80, 0 | 1.000, 1.004 | 1.004 | 1.6, 1.8 |
+| `r3-entryx-linux-gcc-O3-cv-r2.json` | 80, 0 | 1.001, 1.014 | 1.003 | 1.5, 1.6 |
+| `r3-entryx-linux-gcc-O3-cv-r3.json` | 80, 0 | 1.001, 1.069 | 1.003 | 1.6, 1.5 |
+| `r3-entryx-mac-appleclang-O2-c0-r1.json` | 80, 0 | 1.000, 1.000 | 1.007 | 3.7, 3.5 |
+| `r3-entryx-mac-appleclang-O2-c0-r2.json` | 80, 0 | 1.151, 1.193 | 1.049 | 9.3, 9.2 |
+| `r3-entryx-mac-appleclang-O2-c0-r3.json` | 80, 0 | 1.151, 1.184 | 1.049 | 9.5, 11.6 |
+| `r3-entryx-mac-appleclang-O2-c1-r1.json` | 80, 0 | 1.000, 1.000 | 1.005 | 4.1, 3.7 |
+| `r3-entryx-mac-appleclang-O2-c1-r2.json` | 80, 0 | 1.152, 1.196 | 1.072 | 8.8, 9.3 |
+| `r3-entryx-mac-appleclang-O2-c1-r3.json` | 80, 0 | 1.150, 1.181 | 1.048 | 8.0, 9.5 |
+| `r3-entryx-mac-appleclang-O2-cv-r1.json` | 80, 0 | 1.000, 1.000 | 1.008 | 3.5, 3.2 |
+| `r3-entryx-mac-appleclang-O2-cv-r2.json` | 80, 0 | 1.163, 1.203 | 1.047 | 9.2, 9.0 |
+| `r3-entryx-mac-appleclang-O2-cv-r3.json` | 80, 0 | 1.186, 1.214 | 1.045 | 11.6, 11.7 |
+| `r3-entryx-mac-appleclang-O3-c0-r1.json` | 80, 0 | 1.166, 1.213 | 1.054 | 10.5, 11.4 |
+| `r3-entryx-mac-appleclang-O3-c0-r2.json` | 80, 0 | 1.000, 1.007 | 1.048 | 7.6, 9.2 |
+| `r3-entryx-mac-appleclang-O3-c0-r3.json` | 80, 0 | 1.001, 1.042 | 1.047 | 10.4, 10.1 |
+| `r3-entryx-mac-appleclang-O3-c1-r1.json` | 80, 0 | 1.108, 1.204 | 1.065 | 9.5, 10.5 |
+| `r3-entryx-mac-appleclang-O3-c1-r2.json` | 80, 0 | 1.000, 1.050 | 1.048 | 7.8, 7.6 |
+| `r3-entryx-mac-appleclang-O3-c1-r3.json` | 80, 0 | 1.001, 1.044 | 1.046 | 10.7, 10.4 |
+| `r3-entryx-mac-appleclang-O3-cv-r1.json` | 80, 0 | 1.000, 1.000 | 1.206 | 11.4, 10.9 |
+| `r3-entryx-mac-appleclang-O3-cv-r2.json` | 80, 0 | 1.151, 1.202 | 1.046 | 9.2, 9.0 |
+| `r3-entryx-mac-appleclang-O3-cv-r3.json` | 80, 0 | 1.148, 1.168 | 1.049 | 10.1, 9.6 |
+| `r3-entryx-mac-gcc16-O2-c0-r1.json` | 80, 0 | 1.045, 1.046 | 1.010 | 9.6, 10.3 |
+| `r3-entryx-mac-gcc16-O2-c0-r2.json` | 80, 0 | 1.000, 1.002 | 1.046 | 8.5, 8.8 |
+| `r3-entryx-mac-gcc16-O2-c0-r3.json` | 80, 0 | 1.030, 1.046 | 1.019 | 8.9, 9.1 |
+| `r3-entryx-mac-gcc16-O2-c1-r1.json` | 80, 0 | 1.044, 1.046 | 1.009 | 9.1, 9.6 |
+| `r3-entryx-mac-gcc16-O2-c1-r2.json` | 80, 0 | 1.000, 1.033 | 1.046 | 8.7, 8.5 |
+| `r3-entryx-mac-gcc16-O2-c1-r3.json` | 80, 0 | 1.001, 1.043 | 1.045 | 9.0, 8.9 |
+| `r3-entryx-mac-gcc16-O2-cv-r1.json` | 80, 0 | 1.000, 1.025 | 1.046 | 10.3, 9.9 |
+| `r3-entryx-mac-gcc16-O2-cv-r2.json` | 80, 0 | 1.033, 1.045 | 1.028 | 8.8, 8.8 |
+| `r3-entryx-mac-gcc16-O2-cv-r3.json` | 80, 0 | 1.000, 1.029 | 1.046 | 9.1, 8.9 |
+| `r3-entryx-mac-gcc16-O3-c0-r1.json` | 80, 0 | 1.008, 1.046 | 1.019 | 9.1, 9.8 |
+| `r3-entryx-mac-gcc16-O3-c0-r2.json` | 80, 0 | 1.000, 1.016 | 1.046 | 8.7, 9.3 |
+| `r3-entryx-mac-gcc16-O3-c0-r3.json` | 80, 0 | 1.018, 1.046 | 1.010 | 8.5, 8.5 |
+| `r3-entryx-mac-gcc16-O3-c1-r1.json` | 80, 0 | 1.026, 1.045 | 1.007 | 9.2, 9.1 |
+| `r3-entryx-mac-gcc16-O3-c1-r2.json` | 80, 0 | 1.039, 1.046 | 1.003 | 8.8, 8.7 |
+| `r3-entryx-mac-gcc16-O3-c1-r3.json` | 80, 0 | 1.000, 1.035 | 1.045 | 8.6, 8.5 |
+| `r3-entryx-mac-gcc16-O3-cv-r1.json` | 80, 0 | 1.043, 1.046 | 1.004 | 9.8, 9.5 |
+| `r3-entryx-mac-gcc16-O3-cv-r2.json` | 80, 0 | 1.045, 1.046 | 1.003 | 9.3, 9.2 |
+| `r3-entryx-mac-gcc16-O3-cv-r3.json` | 80, 0 | 1.000, 1.000 | 1.046 | 8.5, 8.6 |
 
 | Spread of (third part) | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |
 |---|---:|---|---|
@@ -4478,6 +4767,78 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | entryx mac-gcc16-O3 cold | 3 | 0.2%, 5.9%, 43.4% | `m2x/lat/make_2_3/kairn` |
 | entryx mac-gcc16-O3 inline | 3 | 0.2%, 4.8%, 31.5% | `m2y/lat/scale_1_3/kairn` |
 | entryx mac-gcc16-O3 nocheck | 3 | 0.1%, 4.8%, 41.0% | `m2y/lat/half_1_3/kairn` |
+| r3-arrays linux-clang-O2 | 3 | 0.2%, 3.1%, 15.0% | `m2a/llc/axpy1/plain` |
+| r3-arrays linux-clang-O3 | 3 | 0.2%, 2.1%, 14.8% | `m2af/llc/axpy1/plain` |
+| r3-arrays linux-gcc-O2 | 3 | 0.2%, 2.1%, 11.8% | `m2a/mem/dot1/textbook` |
+| r3-arrays linux-gcc-O3 | 3 | 0.2%, 1.9%, 8.9% | `m2a/mem/axpy22/op` |
+| r3-arrays mac-appleclang-O2 | 3 | 23.3%, 27.2%, 29.4% | `m2af/tp/dot1/bare` |
+| r3-arrays mac-appleclang-O3 | 3 | 16.0%, 20.4%, 28.7% | `m2a/tp/conv2_512/textbook` |
+| r3-arrays mac-gcc16-O2 | 3 | 0.7%, 4.6%, 8.3% | `m2af/mem/axpy1/plain` |
+| r3-arrays mac-gcc16-O3 | 3 | 1.3%, 4.5%, 6.2% | `m2af/mem/axpy1/plain` |
+| r3-short linux-clang-O2 | 3 | 0.1%, 0.2%, 0.4% | `m2k/tp/sdot1_n2/kairn` |
+| r3-short linux-clang-O3 | 3 | 0.1%, 0.2%, 0.6% | `m2k/tp/sdot2_n2/kairn` |
+| r3-short linux-gcc-O2 | 3 | 0.1%, 0.3%, 2.0% | `m2k/tp/sdot2_n2/op` |
+| r3-short linux-gcc-O3 | 3 | 0.1%, 0.2%, 0.4% | `m2k/tp/sdot2_k8/kairn` |
+| r3-short mac-appleclang-O2 | 3 | 16.5%, 23.4%, 112.8% | `m2k/lat/sdot1_n2/kairn` |
+| r3-short mac-appleclang-O3 | 3 | 15.0%, 16.3%, 23.9% | `m2k/lat/sdot1_n1/kairn` |
+| r3-short mac-gcc16-O2 | 3 | 4.0%, 6.9%, 8.7% | `m2k/tp/sdot2_n2/op` |
+| r3-short mac-gcc16-O3 | 3 | 0.1%, 3.5%, 8.8% | `m2k/lat/sdot1_n2/op` |
+| r3-acc linux-clang-O2 | 3 | 0.1%, 0.3%, 0.4% | `m2c/llc/acc2prod/kairn` |
+| r3-acc linux-clang-O3 | 3 | 0.1%, 0.2%, 0.3% | `m2a/llc/dot2/kseq` |
+| r3-acc linux-gcc-O2 | 3 | 0.1%, 0.2%, 0.2% | `m2a/llc/dot2/seq` |
+| r3-acc linux-gcc-O3 | 3 | 0.1%, 0.2%, 0.3% | `m2a/llc/dot2z/seq` |
+| r3-acc mac-appleclang-O2 | 3 | 23.4%, 23.4%, 23.5% | `m2c/tp/acc2prodd/kairn` |
+| r3-acc mac-appleclang-O3 | 3 | 18.3%, 23.2%, 23.4% | `m2c/tp/acc2prod/kairn` |
+| r3-acc mac-gcc16-O2 | 3 | 5.5%, 6.9%, 8.8% | `m2c/tp/acc2prod/bare` |
+| r3-acc mac-gcc16-O3 | 3 | 0.0%, 3.9%, 4.1% | `m2c/llc/acc2prodd/op` |
+| r3-bv linux-clang-O2 | 3 | 0.3%, 0.9%, 1.0% | `m2w/tp/scale_2_16/op` |
+| r3-bv linux-clang-O3 | 3 | 0.3%, 0.4%, 0.9% | `m2w/tp/scale_2_4/op` |
+| r3-bv linux-gcc-O2 | 3 | 0.3%, 0.8%, 1.4% | `m2w/tp/scale_2_16/op` |
+| r3-bv linux-gcc-O3 | 3 | 0.2%, 0.4%, 0.5% | `m2w/tp/scale_2_8/kairn` |
+| r3-bv mac-appleclang-O2 | 3 | 20.2%, 20.5%, 39.1% | `m2w/tp/scale_2_16/op` |
+| r3-bv mac-appleclang-O3 | 3 | 20.4%, 23.8%, 37.1% | `m2w/tp/scale_2_8/kairn` |
+| r3-bv mac-gcc16-O2 | 3 | 4.5%, 4.6%, 4.6% | `m2w/tp/scale_2_64/balls` |
+| r3-bv mac-gcc16-O3 | 3 | 4.6%, 4.6%, 5.9% | `m2w/tp/scale_2_16/kairn` |
+| r3-entry linux-clang-O2 inline | 3 | 0.1%, 0.2%, 6.2% | `m2k/tp/sdot1_n2/kairn` |
+| r3-entry linux-clang-O2 nocheck | 3 | 0.2%, 0.4%, 5.3% | `m2w/tp/scale_2_16/op` |
+| r3-entry linux-clang-O3 inline | 3 | 0.1%, 0.2%, 1.5% | `m2w/tp/scale_2_16/op` |
+| r3-entry linux-clang-O3 nocheck | 3 | 0.1%, 0.3%, 3.9% | `m2w/tp/scale_2_16/kairn` |
+| r3-entry linux-gcc-O2 inline | 3 | 0.2%, 0.9%, 104.4% | `m2k/tp/sdot2_n1/kairn` |
+| r3-entry linux-gcc-O2 nocheck | 3 | 0.2%, 0.3%, 0.9% | `m2k/lat/sdot2_n2/op` |
+| r3-entry linux-gcc-O3 inline | 3 | 0.1%, 0.3%, 1.2% | `m2k/lat/sdot1_n16/op` |
+| r3-entry linux-gcc-O3 nocheck | 3 | 0.1%, 0.2%, 0.8% | `m2k/tp/sdot1_n8/op` |
+| r3-entry mac-appleclang-O2 inline | 3 | 16.8%, 23.4%, 73.2% | `m2k/lat/sdot1_n1/op` |
+| r3-entry mac-appleclang-O2 nocheck | 3 | 16.2%, 23.4%, 32.4% | `m2w/tp/scale_2_8/kairn` |
+| r3-entry mac-appleclang-O3 inline | 3 | 10.5%, 15.0%, 37.4% | `m2w/tp/scale_2_16/kairn` |
+| r3-entry mac-appleclang-O3 nocheck | 3 | 8.7%, 9.6%, 35.5% | `m2k/lat/sdot1_n1/op` |
+| r3-entry mac-gcc16-O2 inline | 3 | 0.1%, 3.9%, 4.6% | `m2k/tp/sdot1_n16/op` |
+| r3-entry mac-gcc16-O2 nocheck | 3 | 0.1%, 4.1%, 4.6% | `m2w/tp/scale_2_16/kairn` |
+| r3-entry mac-gcc16-O3 inline | 3 | 0.1%, 3.6%, 13.5% | `m2k/lat/sdot1_n2/op` |
+| r3-entry mac-gcc16-O3 nocheck | 3 | 0.1%, 1.9%, 4.5% | `m2w/tp/scale_2_16/balls` |
+| r3-entryx linux-clang-O2 cold | 3 | 0.4%, 9.3%, 42.9% | `m2y/lat/scale_2_7/op` |
+| r3-entryx linux-clang-O2 inline | 3 | 0.3%, 10.9%, 19.9% | `m2x/tp/make_2_3/op` |
+| r3-entryx linux-clang-O2 nocheck | 3 | 0.3%, 11.3%, 32.6% | `m2y/lat/scale_2_7/kairn` |
+| r3-entryx linux-clang-O3 cold | 3 | 0.4%, 5.4%, 38.2% | `m2y/lat/make_2_13/kairn` |
+| r3-entryx linux-clang-O3 inline | 3 | 0.4%, 13.2%, 21.0% | `m2x/lat/make_2_18/op` |
+| r3-entryx linux-clang-O3 nocheck | 3 | 0.2%, 0.8%, 15.9% | `m2y/lat/make_2_18/kairn` |
+| r3-entryx linux-gcc-O2 cold | 3 | 0.4%, 2.3%, 12.6% | `m2y/lat/make_2_7/kairn` |
+| r3-entryx linux-gcc-O2 inline | 3 | 0.3%, 2.3%, 12.8% | `m2y/lat/scale_2_7/kairn` |
+| r3-entryx linux-gcc-O2 nocheck | 3 | 0.3%, 1.7%, 9.2% | `m2x/lat/make_2_13/op` |
+| r3-entryx linux-gcc-O3 cold | 3 | 0.3%, 8.2%, 45.7% | `m2y/lat/scale_2_3/op` |
+| r3-entryx linux-gcc-O3 inline | 3 | 0.2%, 2.0%, 27.4% | `m2x/lat/scale_2_3/op` |
+| r3-entryx linux-gcc-O3 nocheck | 3 | 0.2%, 2.0%, 8.8% | `m2y/lat/scale_2_13/kairn` |
+| r3-entryx mac-appleclang-O2 cold | 3 | 19.7%, 21.5%, 33.8% | `m2x/lat/make_2_7/op` |
+| r3-entryx mac-appleclang-O2 inline | 3 | 15.3%, 20.2%, 24.3% | `m2x/tp/make_2_3/op` |
+| r3-entryx mac-appleclang-O2 nocheck | 3 | 15.3%, 21.5%, 39.3% | `m2y/tp/make_2_3/op` |
+| r3-entryx mac-appleclang-O3 cold | 3 | 15.3%, 20.2%, 30.8% | `m2x/lat/make_2_7/op` |
+| r3-entryx mac-appleclang-O3 inline | 3 | 10.9%, 21.0%, 41.6% | `m2y/lat/make_2_7/op` |
+| r3-entryx mac-appleclang-O3 nocheck | 3 | 16.6%, 21.3%, 34.4% | `m2x/lat/make_2_13/kairn` |
+| r3-entryx mac-gcc16-O2 cold | 3 | 3.9%, 4.6%, 6.3% | `m2y/lat/scale_2_3/op` |
+| r3-entryx mac-gcc16-O2 inline | 3 | 4.5%, 4.7%, 11.7% | `m2y/lat/make_2_3/op` |
+| r3-entryx mac-gcc16-O2 nocheck | 3 | 4.5%, 4.6%, 12.1% | `m2y/lat/make_2_3/op` |
+| r3-entryx mac-gcc16-O3 cold | 3 | 4.5%, 4.6%, 35.5% | `m2x/lat/make_2_3/kairn` |
+| r3-entryx mac-gcc16-O3 inline | 3 | 4.2%, 4.6%, 20.9% | `m2y/lat/make_2_3/op` |
+| r3-entryx mac-gcc16-O3 nocheck | 3 | 4.3%, 4.6%, 31.7% | `m2x/lat/scale_2_3/op` |
 
 #### Question 13: the functions on arrays
 
@@ -4492,12 +4853,12 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum_fast`, two limbs, L1 | 2.19 | 2.22 to 2.23 | 1.67 to 1.71 | 1.66 to 1.75 (-O2), 1.66 to 1.72 (-O3) |
 | `sum_fast`, two limbs, LLC | 2.28 to 2.29 | 2.32 to 2.34 | 1.66 to 1.68 | 1.64 to 1.66 |
 | `sum_fast`, two limbs, memory | 2.29 to 2.38 | 2.33 to 2.35 | 1.71 to 1.73 | 1.68 to 1.72 |
-| `dot`, one limb, L1 | 0.38 to 0.399 | 0.385 to 0.406 (-O2), 0.386 to 0.409 (-O3) | 0.35 to 0.358 (-O2), 0.335 to 0.356 (-O3) | 0.323 to 0.33 |
-| `dot`, one limb, LLC | 0.493 to 0.523 (-O2), 0.493 to 0.522 (-O3) | 0.493 to 0.513 | 0.379 to 0.39 | 0.38 to 0.382 |
-| `dot`, one limb, memory | 0.493 to 0.513 | 0.493 to 0.504 | 0.7 to 0.727 | 0.707 to 0.718 |
-| `dot`, two limbs, L1 | 3.77 to 3.84 | 3.7 to 3.85 | 2.61 to 2.68 | 2.62 to 2.69 |
-| `dot`, two limbs, LLC | 3.91 to 3.92 | 3.92 to 3.93 | 2.57 to 2.64 | 2.58 to 2.65 |
-| `dot`, two limbs, memory | 3.84 to 3.92 | 3.83 to 3.93 | 2.85 to 2.9 | 2.79 to 2.89 |
+| `dot`, one limb, L1 | 0.377 to 0.465 (-O2), 0.378 to 0.466 (-O3) | 0.474 to 0.477 | 0.348 to 0.354 | 0.322 |
+| `dot`, one limb, LLC | 0.498 to 0.608 (-O2), 0.529 to 0.626 (-O3) | 0.608 | 0.38 | 0.38 to 0.382 |
+| `dot`, one limb, memory | 0.508 to 0.637 (-O2), 0.53 to 0.613 (-O3) | 0.609 to 0.637 | 0.706 to 0.739 | 0.714 to 0.728 |
+| `dot`, two limbs, L1 | 3.6 to 4.44 (-O2), 3.86 to 4.51 (-O3) | 4.44 to 4.64 | 2.6 to 2.67 | 2.6 |
+| `dot`, two limbs, LLC | 3.69 to 4.52 (-O2), 3.93 to 4.52 (-O3) | 4.52 to 4.54 | 2.55 to 2.56 | 2.56 to 2.57 |
+| `dot`, two limbs, memory | 3.68 to 4.59 (-O2), 3.94 to 4.54 (-O3) | 4.53 to 4.61 | 2.82 to 2.85 | 2.81 to 2.91 |
 | `add`, one limb, L1 | 0.273 to 0.275 | 0.244 to 0.251 | 0.214 to 0.219 (-O2), 0.214 to 0.226 (-O3) | 0.202 to 0.207 |
 | `add`, one limb, LLC | 0.271 to 0.274 | 0.265 to 0.268 | 0.288 to 0.303 | 0.289 to 0.299 |
 | `add`, one limb, memory | 0.273 to 0.276 (-O2), 0.263 to 0.274 (-O3) | 0.263 to 0.268 | 1.02 to 1.05 | 1.02 to 1.03 |
@@ -4510,15 +4871,15 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, two limbs, L1 | 0.483 to 0.489 | 0.42 to 0.422 | 0.505 to 0.522 | 0.499 to 0.512 |
 | `scale`, two limbs, LLC | 0.486 to 0.487 | 0.52 to 0.544 (-O2), 0.442 to 0.452 (-O3) | 0.5 to 0.516 | 0.501 to 0.513 |
 | `scale`, two limbs, memory | 0.487 to 0.488 | 0.416 | 1.35 to 1.41 (-O2), 1.34 to 1.38 (-O3) | 1.33 to 1.39 |
-| `axpy`, one limb, L1 | 0.275 to 0.276 | 0.247 | 0.217 to 0.228 | 0.209 to 0.214 |
-| `axpy`, one limb, LLC | 0.275 | 0.268 | 0.286 to 0.3 (-O2), 0.287 to 0.288 (-O3) | 0.285 to 0.294 |
-| `axpy`, one limb, memory | 0.277 to 0.278 | 0.268 to 0.269 | 1.06 to 1.09 | 1.07 to 1.08 |
-| `axpy`, two limbs, a of T, L1 | 1.29 | 1.21 | 1.74 to 1.79 | 1.77 to 1.81 |
-| `axpy`, two limbs, a of T, LLC | 1.3 | 1.22 to 1.23 | 1.74 to 1.8 | 1.74 to 1.79 |
-| `axpy`, two limbs, a of T, memory | 1.33 to 1.34 | 1.23 to 1.25 | 2.15 to 2.25 | 2.16 to 2.27 (-O2), 2.15 to 2.21 (-O3) |
-| `axpy`, two limbs, a of two limbs, L1 | 1.41 to 1.42 | 1.33 to 1.34 | 1.91 to 1.96 | 1.96 to 2.01 |
-| `axpy`, two limbs, a of two limbs, LLC | 1.43 | 1.35 | 1.91 to 1.97 | 1.92 to 1.97 |
-| `axpy`, two limbs, a of two limbs, memory | 1.44 to 1.45 | 1.35 to 1.36 | 2.22 to 2.33 (-O2), 2.28 to 2.35 (-O3) | 2.26 to 2.37 (-O2), 2.25 to 2.33 (-O3) |
+| `axpy`, one limb, L1 | 0.27 to 0.317 (-O2), 0.274 to 0.316 (-O3) | 0.271 to 0.284 | 0.216 to 0.224 | 0.208 to 0.21 |
+| `axpy`, one limb, LLC | 0.269 to 0.317 (-O2), 0.275 to 0.318 (-O3) | 0.299 to 0.308 | 0.287 to 0.291 | 0.288 to 0.291 |
+| `axpy`, one limb, memory | 0.272 to 0.318 (-O2), 0.277 to 0.319 (-O3) | 0.298 to 0.309 | 1.01 to 1.02 | 1.01 to 1.02 |
+| `axpy`, two limbs, a of T, L1 | 1.38 to 1.59 (-O2), 1.38 to 1.66 (-O3) | 1.49 to 1.55 | 1.96 to 1.98 | 2 to 2.01 |
+| `axpy`, two limbs, a of T, LLC | 1.39 to 1.67 (-O2), 1.39 to 1.68 (-O3) | 1.5 to 1.53 | 1.97 to 1.98 | 1.97 to 1.98 |
+| `axpy`, two limbs, a of T, memory | 1.41 to 1.66 (-O2), 1.41 to 1.66 (-O3) | 1.53 to 1.54 | 2.33 to 2.37 (-O2), 2.25 to 2.38 (-O3) | 2.24 to 2.38 (-O2), 2.26 to 2.32 (-O3) |
+| `axpy`, two limbs, a of two limbs, L1 | 1.51 to 1.74 (-O2), 1.51 to 1.81 (-O3) | 1.62 to 1.63 | 2.15 | 2.26 to 2.27 |
+| `axpy`, two limbs, a of two limbs, LLC | 1.53 to 1.83 (-O2), 1.52 to 1.84 (-O3) | 1.64 to 1.69 | 2.14 to 2.15 | 2.23 to 2.24 |
+| `axpy`, two limbs, a of two limbs, memory | 1.49 to 1.86 (-O2), 1.54 to 1.8 (-O3) | 1.67 to 1.74 | 2.44 to 2.47 (-O2), 2.36 to 2.57 (-O3) | 2.42 to 2.55 (-O2), 2.45 to 2.52 (-O3) |
 | `norm_upper`, one limb, L1 | 0.425 to 0.426 | 0.616 to 0.646 | 0.164 to 0.184 (-O2), 0.177 to 0.179 (-O3) | 0.11 to 0.128 (-O2), 0.11 to 0.128 (-O3) |
 | `norm_upper`, one limb, LLC | 0.529 | 0.793 (-O2), 0.716 to 0.732 (-O3) | 0.153 to 0.156 | 0.121 to 0.126 |
 | `norm_upper`, one limb, memory | 0.529 | 0.794 | 0.481 to 0.513 (-O2), 0.504 to 0.509 (-O3) | 0.487 to 0.49 |
@@ -4528,159 +4889,159 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | a plain sum of T, one chain, L1 | 0.472 to 0.506 (-O2), 0.472 to 0.486 (-O3) | 0.559 to 0.597 (-O2), 0.558 to 0.593 (-O3) | 0.846 to 0.868 | 0.846 to 0.863 |
 | a plain sum of T, one chain, LLC | 0.686 to 0.735 (-O2), 0.687 to 0.7 (-O3) | 0.666 to 0.712 (-O2), 0.67 to 0.715 (-O3) | 0.903 to 0.926 | 0.903 to 0.924 |
 | a plain sum of T, one chain, memory | 0.672 to 0.721 (-O2), 0.673 to 0.719 (-O3) | 0.608 to 0.658 (-O2), 0.599 to 0.677 (-O3) | 0.92 to 0.945 | 0.924 to 0.939 |
-| a plain dot product of T (FMA), one chain, L1 | 0.854 to 0.915 (-O2), 0.871 to 0.914 (-O3) | 0.853 to 0.871 (-O2), 0.852 to 0.915 (-O3) | 1.41 to 1.44 | 1.41 to 1.44 |
-| a plain dot product of T (FMA), one chain, LLC | 0.989 to 1.06 (-O2), 0.991 to 1.06 (-O3) | 0.986 to 1.01 | 1.5 to 1.54 | 1.5 to 1.54 |
-| a plain dot product of T (FMA), one chain, memory | 1 to 1.06 (-O2), 0.996 to 1.06 (-O3) | 0.986 to 1.06 (-O2), 0.986 to 1.06 (-O3) | 1.54 to 1.58 | 1.55 to 1.58 |
+| a plain dot product of T (FMA), one chain, L1 | 0.853 to 1.05 (-O2), 0.914 to 1.05 (-O3) | 1.01 to 1.05 | 1.4 | 1.4 to 1.41 |
+| a plain dot product of T (FMA), one chain, LLC | 0.986 to 1.22 (-O2), 1.06 to 1.22 (-O3) | 1.22 | 1.5 | 1.5 |
+| a plain dot product of T (FMA), one chain, memory | 0.986 to 1.22 (-O2), 1.06 to 1.26 (-O3) | 1.22 | 1.56 to 1.61 | 1.55 to 1.6 |
 | a plain `x + y` of T, L1 | 0.103 | 0.28 to 0.281 (-O2), 0.149 to 0.15 (-O3) | 0.319 to 0.325 (-O2), 0.103 to 0.123 (-O3) | 0.121 to 0.131 (-O2), 0.12 to 0.121 (-O3) |
 | a plain `x + y` of T, LLC | 0.161 to 0.213 (-O2), 0.159 to 0.212 (-O3) | 0.268 (-O2), 0.213 (-O3) | 0.392 to 0.403 (-O2), 0.261 to 0.298 (-O3) | 0.269 to 0.289 (-O2), 0.258 to 0.274 (-O3) |
 | a plain `x + y` of T, memory | 0.215 | 0.265 to 0.272 (-O2), 0.216 (-O3) | 1.13 to 1.17 (-O2), 1.11 to 1.13 (-O3) | 1.1 to 1.13 |
 | a plain `x a` of T, L1 | 0.0874 to 0.0885 | 0.275 to 0.28 (-O2), 0.15 (-O3) | 0.319 to 0.327 (-O2), 0.169 to 0.175 (-O3) | 0.0833 to 0.085 |
 | a plain `x a` of T, LLC | 0.0946 to 0.139 (-O2), 0.0979 to 0.14 (-O3) | 0.264 to 0.265 (-O2), 0.139 to 0.141 (-O3) | 0.346 to 0.607 (-O2), 0.206 to 0.207 (-O3) | 0.207 to 0.212 (-O2), 0.173 to 0.208 (-O3) |
 | a plain `x a` of T, memory | 0.143 | 0.261 to 0.266 (-O2), 0.143 to 0.144 (-O3) | 0.833 to 0.928 (-O2), 0.836 to 0.837 (-O3) | 0.893 to 0.897 |
-| a plain `a x + y` of T, L1 | 0.102 to 0.103 | 0.28 (-O2), 0.149 to 0.15 (-O3) | 0.322 to 0.328 (-O2), 0.104 to 0.117 (-O3) | 0.121 to 0.124 |
-| a plain `a x + y` of T, LLC | 0.158 to 0.213 (-O2), 0.158 to 0.212 (-O3) | 0.268 (-O2), 0.151 to 0.213 (-O3) | 0.395 to 0.406 (-O2), 0.257 to 0.26 (-O3) | 0.26 to 0.265 (-O2), 0.26 to 0.304 (-O3) |
-| a plain `a x + y` of T, memory | 0.211 to 0.215 | 0.272 to 0.273 (-O2), 0.215 to 0.216 (-O3) | 1.13 to 1.18 (-O2), 1.11 to 1.13 (-O3) | 1.09 to 1.12 |
+| a plain `a x + y` of T, L1 | 0.102 to 0.117 (-O2), 0.102 to 0.122 (-O3) | 0.322 (-O2), 0.171 to 0.173 (-O3) | 0.32 to 0.321 (-O2), 0.112 (-O3) | 0.12 to 0.121 |
+| a plain `a x + y` of T, LLC | 0.18 to 0.212 (-O2), 0.181 to 0.209 (-O3) | 0.308 to 0.31 (-O2), 0.184 to 0.185 (-O3) | 0.393 to 0.394 (-O2), 0.301 to 0.302 (-O3) | 0.261 to 0.299 (-O2), 0.27 to 0.302 (-O3) |
+| a plain `a x + y` of T, memory | 0.215 to 0.249 (-O2), 0.215 to 0.25 (-O3) | 0.313 to 0.315 (-O2), 0.248 to 0.251 (-O3) | 1.12 to 1.15 | 1.09 to 1.13 |
 | the plain sum of T in the lane order, L1 | 0.255 to 0.261 (-O2), 0.243 to 0.261 (-O3) | 0.248 to 0.266 (-O2), 0.259 to 0.264 (-O3) | 0.209 to 0.214 (-O2), 0.244 to 0.246 (-O3) | 0.18 to 0.183 |
 | the plain sum of T in the lane order, LLC | 0.331 to 0.348 (-O2), 0.317 to 0.331 (-O3) | 0.336 to 0.342 (-O2), 0.328 to 0.349 (-O3) | 0.226 to 0.233 (-O2), 0.244 to 0.245 (-O3) | 0.226 to 0.232 |
 | the plain sum of T in the lane order, memory | 0.331 to 0.348 (-O2), 0.329 to 0.349 (-O3) | 0.346 to 0.372 (-O2), 0.332 to 0.349 (-O3) | 0.459 to 0.464 (-O2), 0.635 to 0.642 (-O3) | 0.458 to 0.465 |
-| the plain dot product of T in the lane order, L1 | 0.373 to 0.391 | 0.359 to 0.381 (-O2), 0.404 to 0.431 (-O3) | 0.322 to 0.331 (-O2), 0.367 to 0.372 (-O3) | 0.3 to 0.308 |
-| the plain dot product of T in the lane order, LLC | 0.493 to 0.529 (-O2), 0.493 to 0.529 (-O3) | 0.493 to 0.523 (-O2), 0.493 to 0.502 (-O3) | 0.378 to 0.388 | 0.377 to 0.386 |
-| the plain dot product of T in the lane order, memory | 0.493 to 0.529 (-O2), 0.494 to 0.529 (-O3) | 0.493 to 0.529 (-O2), 0.493 to 0.529 (-O3) | 0.727 to 0.757 (-O2), 0.778 to 0.866 (-O3) | 0.75 to 0.759 |
+| the plain dot product of T in the lane order, L1 | 0.365 to 0.448 (-O2), 0.39 to 0.465 (-O3) | 0.442 (-O2), 0.495 to 0.496 (-O3) | 0.328 to 0.329 (-O2), 0.367 (-O3) | 0.3 |
+| the plain dot product of T in the lane order, LLC | 0.493 to 0.608 (-O2), 0.529 to 0.608 (-O3) | 0.608 | 0.376 to 0.377 | 0.375 to 0.378 |
+| the plain dot product of T in the lane order, memory | 0.493 to 0.609 (-O2), 0.529 to 0.609 (-O3) | 0.608 to 0.609 | 0.732 to 0.759 (-O2), 0.781 to 0.823 (-O3) | 0.76 to 0.766 |
 
 | The functions on arrays over the same loop of T, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `sum`, one limb, over the plain sum in the same order, L1 | 0.97 to 1.00 (-O2), 1.01 to 1.04 (-O3) | 0.98 to 1.03 | 1.09 to 1.13 (-O2), 0.87 to 0.95 (-O3) | 1.08 to 1.09 |
 | `sum`, one limb, over the plain sum, one chain, L1 | 0.50 to 0.55 | 0.44 to 0.46 | 0.25 to 0.28 | 0.23 |
 | `sum`, two limbs, over the plain sum of T in the same order, L1 | 14.4 to 14.9 (-O2), 14.9 to 15.6 (-O3) | 14.6 to 15.2 (-O2), 14.2 to 14.9 (-O3) | 12.5 (-O2), 10.6 to 10.9 (-O3) | 14.3 |
-| `dot`, one limb, over the plain dot product in the same order, L1 | 1.00 to 1.03 | 1.06 to 1.07 (-O2), 0.95 to 0.99 (-O3) | 1.06 to 1.09 (-O2), 0.91 to 0.97 (-O3) | 1.07 |
-| `dot`, two limbs, over the plain dot product of T in the same order, L1 | 9.9 to 10.3 (-O2), 9.8 to 10.1 (-O3) | 10.1 to 10.5 (-O2), 8.93 to 9.52 (-O3) | 7.91 to 8.11 (-O2), 7.11 to 7.28 (-O3) | 8.70 to 8.73 |
+| `dot`, one limb, over the plain dot product in the same order, L1 | 1.03 to 1.04 (-O2), 0.97 to 1.04 (-O3) | 1.07 (-O2), 0.96 (-O3) | 1.06 (-O2), 0.96 to 0.97 (-O3) | 1.07 |
+| `dot`, two limbs, over the plain dot product of T in the same order, L1 | 9.70 to 9.93 | 10.1 (-O2), 8.97 to 9.35 (-O3) | 7.92 to 7.95 (-O2), 7.26 to 7.27 (-O3) | 8.66 to 8.67 |
 | `add`, one limb, over `x + y` of T, L1 | 2.64 to 2.68 | 0.87 (-O2), 1.67 to 1.68 (-O3) | 0.67 (-O2), 1.83 to 2.09 (-O3) | 1.55 to 1.69 (-O2), 1.67 to 1.68 (-O3) |
 | `add`, two limbs, over `x + y` of T, L1 | 9.89 to 9.95 | 3.31 to 3.35 (-O2), 6.20 to 6.22 (-O3) | 3.84 to 3.86 (-O2), 10.2 to 12.0 (-O3) | 9.8 to 10.7 (-O2), 10.6 to 10.7 (-O3) |
 | `scale`, one limb, over `x a` of T, L1 | 2.74 to 2.78 | 0.78 to 0.79 (-O2), 1.46 (-O3) | 0.56 (-O2), 0.91 to 1.05 (-O3) | 1.73 to 1.75 |
 | `scale`, two limbs, over `x a` of T, L1 | 5.51 to 5.59 | 1.50 to 1.53 (-O2), 2.81 (-O3) | 1.60 (-O2), 2.93 to 2.99 (-O3) | 5.99 to 6.05 |
-| `axpy`, one limb, over `a x + y` of T, L1 | 2.68 to 2.70 | 0.88 (-O2), 1.65 to 1.66 (-O3) | 0.67 to 0.68 (-O2), 1.95 to 2.10 (-O3) | 1.73 to 1.75 |
-| `axpy`, two limbs, over `a x + y` of T, L1 | 12.6 to 12.7 | 4.32 to 4.33 (-O2), 8.09 to 8.12 (-O3) | 5.40 to 5.45 (-O2), 15.0 to 16.8 (-O3) | 14.6 to 14.8 |
+| `axpy`, one limb, over `a x + y` of T, L1 | 2.65 to 2.71 (-O2), 2.58 to 2.70 (-O3) | 0.84 to 0.88 (-O2), 1.65 to 1.66 (-O3) | 0.68 (-O2), 1.98 to 2.00 (-O3) | 1.73 to 1.74 |
+| `axpy`, two limbs, over `a x + y` of T, L1 | 13.6 to 13.7 | 4.64 to 4.66 (-O2), 8.68 to 9.00 (-O3) | 6.10 to 6.14 (-O2), 17.6 (-O3) | 16.6 to 16.7 |
 | `norm_upper`, one limb, over a plain largest magnitude, L1 | 0.85 | 1.34 to 1.39 (-O2), 1.23 to 1.33 (-O3) | 0.27 to 0.56 (-O2), 0.54 to 0.55 (-O3) | 0.36 to 0.42 (-O2), 0.36 to 0.42 (-O3) |
 | `sum`, one limb, over the plain sum in the same order, LLC | 0.99 to 1.04 (-O2), 1.11 to 1.13 (-O3) | 1.00 to 1.04 | 1.00 to 1.01 (-O2), 0.94 (-O3) | 1.01 |
 | `sum`, one limb, over the plain sum, one chain, LLC | 0.47 to 0.50 (-O2), 0.51 to 0.54 (-O3) | 0.48 to 0.51 | 0.25 | 0.25 |
 | `sum`, two limbs, over the plain sum of T in the same order, LLC | 11.4 to 11.9 (-O2), 11.7 to 12.1 (-O3) | 11.1 to 11.7 (-O2), 11.2 to 11.8 (-O3) | 11.3 (-O2), 10.5 (-O3) | 11.2 to 11.3 |
-| `dot`, one limb, over the plain dot product in the same order, LLC | 0.97 to 1.00 | 0.98 to 1.00 | 1.00 to 1.01 | 0.99 to 1.01 |
-| `dot`, two limbs, over the plain dot product of T in the same order, LLC | 7.40 to 7.95 (-O2), 7.40 to 7.94 (-O3) | 7.51 to 7.97 (-O2), 7.81 to 7.96 (-O3) | 6.78 to 6.82 | 6.83 to 6.88 |
+| `dot`, one limb, over the plain dot product in the same order, LLC | 1.00 to 1.03 | 1.00 | 1.01 | 1.01 |
+| `dot`, two limbs, over the plain dot product of T in the same order, LLC | 7.44 to 7.48 | 7.43 to 7.46 | 6.78 to 6.81 | 6.79 to 6.84 |
 | `add`, one limb, over `x + y` of T, LLC | 1.28 to 1.69 (-O2), 1.28 to 1.73 (-O3) | 0.99 (-O2), 1.24 to 1.26 (-O3) | 0.74 to 0.75 (-O2), 0.97 to 1.12 (-O3) | 1.01 to 1.11 (-O2), 1.06 to 1.13 (-O3) |
 | `add`, two limbs, over `x + y` of T, LLC | 4.86 to 6.42 (-O2), 4.86 to 6.51 (-O3) | 3.55 to 3.57 (-O2), 4.46 to 4.47 (-O3) | 3.14 to 3.15 (-O2), 4.14 to 4.72 (-O3) | 4.34 to 4.75 (-O2), 4.57 to 4.86 (-O3) |
 | `scale`, one limb, over `x a` of T, LLC | 1.92 to 2.83 (-O2), 1.91 to 2.72 (-O3) | 1.00 to 1.01 (-O2), 1.90 to 1.91 (-O3) | 0.33 to 0.58 (-O2), 0.97 to 0.98 (-O3) | 0.95 to 0.97 (-O2), 0.96 to 1.17 (-O3) |
 | `scale`, two limbs, over `x a` of T, LLC | 3.49 to 5.14 (-O2), 3.48 to 4.97 (-O3) | 1.97 to 2.06 (-O2), 3.17 to 3.22 (-O3) | 0.83 to 1.46 (-O2), 2.42 (-O3) | 2.41 to 2.42 (-O2), 2.41 to 2.91 (-O3) |
-| `axpy`, one limb, over `a x + y` of T, LLC | 1.29 to 1.74 (-O2), 1.29 to 1.74 (-O3) | 1.00 (-O2), 1.26 to 1.77 (-O3) | 0.72 to 0.74 (-O2), 1.11 to 1.12 (-O3) | 1.09 to 1.11 (-O2), 0.95 to 1.10 (-O3) |
-| `axpy`, two limbs, over `a x + y` of T, LLC | 6.12 to 8.23 (-O2), 6.12 to 8.23 (-O3) | 4.58 to 4.59 (-O2), 5.73 to 8.04 (-O3) | 4.43 (-O2), 6.71 to 6.81 (-O3) | 6.66 to 6.76 (-O2), 5.74 to 6.72 (-O3) |
+| `axpy`, one limb, over `a x + y` of T, LLC | 1.27 to 1.75 (-O2), 1.32 to 1.75 (-O3) | 0.97 to 1.00 (-O2), 1.67 to 1.68 (-O3) | 0.73 (-O2), 0.96 (-O3) | 0.96 to 1.11 (-O2), 0.96 to 1.07 (-O3) |
+| `axpy`, two limbs, over `a x + y` of T, LLC | 6.56 to 9.19 (-O2), 6.67 to 9.20 (-O3) | 4.91 to 4.95 (-O2), 8.17 to 8.18 (-O3) | 5.02 (-O2), 6.51 to 6.53 (-O3) | 6.60 to 7.59 (-O2), 6.51 to 7.32 (-O3) |
 | `norm_upper`, one limb, over a plain largest magnitude, LLC | 0.50 (-O2), 1.00 (-O3) | 1.50 to 1.61 (-O2), 1.38 to 1.46 (-O3) | 0.50 to 0.51 | 0.40 to 0.42 |
 | `sum`, one limb, over the plain sum in the same order, memory | 1.06 to 1.11 (-O2), 1.06 to 1.12 (-O3) | 0.94 to 0.96 (-O2), 0.99 to 1.01 (-O3) | 0.96 to 0.98 (-O2), 0.68 to 0.70 (-O3) | 0.91 to 0.94 |
 | `sum`, one limb, over the plain sum, one chain, memory | 0.51 to 0.55 | 0.52 to 0.56 | 0.47 to 0.48 | 0.45 to 0.47 |
 | `sum`, two limbs, over the plain sum of T in the same order, memory | 11.2 to 11.3 (-O2), 11.4 to 11.7 (-O3) | 10.4 to 10.8 (-O2), 11.0 to 11.3 (-O3) | 5.64 to 5.66 (-O2), 4.02 to 4.06 (-O3) | 5.52 to 5.62 |
-| `dot`, one limb, over the plain dot product in the same order, memory | 0.95 to 1.00 | 0.95 to 1.00 (-O2), 0.93 to 1.00 (-O3) | 0.96 to 0.97 (-O2), 0.84 to 0.91 (-O3) | 0.94 to 0.95 |
-| `dot`, two limbs, over the plain dot product of T in the same order, memory | 7.40 to 7.94 (-O2), 7.40 to 7.90 (-O3) | 7.42 to 7.83 (-O2), 7.42 to 7.96 (-O3) | 3.83 to 3.91 (-O2), 3.30 to 3.67 (-O3) | 3.72 to 3.82 (-O2), 3.69 to 3.82 (-O3) |
+| `dot`, one limb, over the plain dot product in the same order, memory | 1.00 to 1.05 | 1.00 to 1.05 | 0.96 to 0.97 (-O2), 0.86 to 0.92 (-O3) | 0.94 to 0.95 |
+| `dot`, two limbs, over the plain dot product of T in the same order, memory | 7.44 to 7.55 | 7.44 to 7.57 | 3.75 to 3.86 (-O2), 3.43 to 3.62 (-O3) | 3.68 to 3.80 (-O2), 3.68 to 3.78 (-O3) |
 | `add`, one limb, over `x + y` of T, memory | 1.27 to 1.28 (-O2), 1.22 to 1.27 (-O3) | 0.97 to 1.00 (-O2), 1.22 to 1.24 (-O3) | 0.90 to 0.92 | 0.91 to 0.93 |
 | `add`, two limbs, over `x + y` of T, memory | 4.84 to 4.86 | 3.54 to 3.64 (-O2), 4.46 (-O3) | 1.75 to 1.84 (-O2), 1.83 to 1.84 (-O3) | 1.81 to 1.84 (-O2), 1.79 to 1.90 (-O3) |
 | `scale`, one limb, over `x a` of T, memory | 1.87 to 1.88 | 1.00 to 1.02 (-O2), 1.86 (-O3) | 0.85 to 0.93 (-O2), 0.94 to 0.95 (-O3) | 0.88 to 0.89 |
 | `scale`, two limbs, over `x a` of T, memory | 3.40 to 3.41 | 1.57 to 1.60 (-O2), 2.89 to 2.90 (-O3) | 1.52 to 1.62 (-O2), 1.61 to 1.65 (-O3) | 1.50 to 1.55 (-O2), 1.50 to 1.51 (-O3) |
-| `axpy`, one limb, over `a x + y` of T, memory | 1.29 to 1.31 | 0.98 (-O2), 1.24 to 1.25 (-O3) | 0.93 to 0.97 | 0.95 to 0.99 |
-| `axpy`, two limbs, over `a x + y` of T, memory | 6.17 to 6.32 | 4.57 (-O2), 5.71 to 5.74 (-O3) | 1.88 to 1.96 (-O2), 1.96 to 2.01 (-O3) | 1.94 to 2.02 (-O2), 1.92 to 2.02 (-O3) |
+| `axpy`, one limb, over `a x + y` of T, memory | 1.25 to 1.28 (-O2), 1.23 to 1.29 (-O3) | 0.98 to 0.99 (-O2), 1.19 to 1.24 (-O3) | 0.89 to 0.91 | 0.90 to 0.93 |
+| `axpy`, two limbs, over `a x + y` of T, memory | 6.55 to 6.70 | 4.86 to 4.92 (-O2), 6.11 to 6.20 (-O3) | 2.02 to 2.11 (-O2), 2.00 to 2.13 (-O3) | 2.00 to 2.17 (-O2), 2.02 to 2.14 (-O3) |
 | `norm_upper`, one limb, over a plain largest magnitude, memory | 1.00 | 1.61 (-O2), 1.50 to 1.61 (-O3) | 0.72 to 0.75 | 0.74 to 0.76 |
 
 | The functions on arrays over the textbook code, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `sum` of two limbs of one-limb data, sequential, over Sum2, L1 | 9.35 to 9.37 (-O2), 9.35 to 9.82 (-O3) | 9.14 to 9.72 (-O2), 9.21 to 9.22 (-O3) | 7.13 to 7.18 | 7.05 to 7.06 |
 | `sum` of two limbs of one-limb data, default, over Sum2, L1 | 4.62 to 4.63 (-O2), 4.62 to 4.85 (-O3) | 4.52 to 4.80 (-O2), 4.55 (-O3) | 1.83 | 1.78 to 1.80 |
-| `dot` of two limbs of one-limb data, sequential, over Dot2, L1 | 8.50 to 9.12 (-O2), 8.51 to 8.76 (-O3) | 8.08 to 8.19 (-O2), 8.08 to 8.67 (-O3) | 6.51 to 6.57 | 6.72 to 6.78 |
-| `dot` of two limbs of one-limb data, default, over Dot2, L1 | 4.22 to 4.53 (-O2), 4.22 to 4.53 (-O3) | 4.02 to 4.07 (-O2), 4.01 to 4.28 (-O3) | 1.66 to 1.67 (-O2), 1.66 to 1.72 (-O3) | 1.71 to 1.73 |
+| `dot` of two limbs of one-limb data, sequential, over Dot2, L1 | 9.17 to 9.18 (-O2), 8.77 to 9.18 (-O3) | 8.16 to 8.73 (-O2), 8.36 to 8.70 (-O3) | 6.50 to 6.54 | 6.70 to 6.73 |
+| `dot` of two limbs of one-limb data, default, over Dot2, L1 | 4.55 to 4.56 (-O2), 4.36 to 4.55 (-O3) | 4.05 to 4.34 (-O2), 4.14 to 4.31 (-O3) | 1.66 to 1.68 | 1.71 to 1.72 |
 | `sum`, two limbs, sequential, over double-word sums written out, L1 | 1.02 to 1.09 (-O2), 1.02 to 1.06 (-O3) | 1.00 to 1.02 (-O2), 1.01 to 1.06 (-O3) | 1.00 | 1.02 to 1.03 |
 | `sum`, two limbs, default, over double-word sums written out, L1 | 0.51 to 0.54 | 0.50 to 0.54 | 0.25 to 0.26 | 0.26 |
 | `sum_fast`, sequential, over SloppyDWPlusDW written out, L1 | 0.99 to 1.00 | 0.98 to 0.99 | 1.00 | 1.02 to 1.03 |
-| `dot`, two limbs, sequential, over the double-word dot product written out, L1 | 1.00 to 1.02 (-O2), 1.00 to 1.07 (-O3) | 1.00 to 1.04 (-O2), 1.01 to 1.06 (-O3) | 1.00 to 1.01 | 1.01 to 1.02 |
-| `dot`, two limbs, default, over the double-word dot product written out, L1 | 0.50 to 0.53 | 0.51 to 0.53 | 0.26 | 0.26 |
+| `dot`, two limbs, sequential, over the double-word dot product written out, L1 | 1.01 | 1.00 to 1.04 | 1.00 | 1.01 |
+| `dot`, two limbs, default, over the double-word dot product written out, L1 | 0.50 to 0.51 | 0.50 to 0.52 | 0.26 | 0.26 |
 | `add`, two limbs, over AccurateDWPlusDW written out, L1 | 1.47 to 1.48 | 0.67 to 0.69 (-O2), 1.33 (-O3) | 0.33 (-O2), 1.28 to 1.30 (-O3) | 1.32 to 1.35 |
 | `scale`, two limbs, over DWTimesFP3 written out, L1 | 2.00 to 2.02 | 1.00 (-O2), 1.69 (-O3) | 0.49 (-O2), 1.83 to 1.84 (-O3) | 2.05 to 2.06 |
-| `axpy`, two limbs, a of T, over the same written out, L1 | 1.28 to 1.29 | 0.64 (-O2), 1.20 (-O3) | 0.30 (-O2), 1.17 to 1.18 (-O3) | 1.20 |
-| `axpy`, two limbs, a of two limbs, over the same written out, L1 | 1.26 to 1.30 | 0.63 (-O2), 1.23 (-O3) | 0.29 (-O2), 1.19 to 1.21 (-O3) | 1.19 to 1.20 |
+| `axpy`, two limbs, a of T, over the same written out, L1 | 1.37 (-O2), 1.32 to 1.40 (-O3) | 0.69 (-O2), 1.29 to 1.34 (-O3) | 0.33 (-O2), 1.33 to 1.34 (-O3) | 1.36 |
+| `axpy`, two limbs, a of two limbs, over the same written out, L1 | 1.34 to 1.35 | 0.66 (-O2), 1.27 (-O3) | 0.33 (-O2), 1.34 (-O3) | 1.38 |
 | `sum` of two limbs of one-limb data, sequential, over Sum2, LLC | 9.26 to 9.35 (-O2), 9.35 to 9.62 (-O3) | 9.15 to 9.30 (-O2), 9.14 to 9.46 (-O3) | 6.94 to 7.05 | 6.94 to 6.97 |
 | `sum` of two limbs of one-limb data, default, over Sum2, LLC | 4.66 to 4.67 (-O2), 4.65 to 4.82 (-O3) | 4.59 to 4.65 (-O2), 4.58 to 4.73 (-O3) | 1.74 to 1.76 | 1.74 |
-| `dot` of two limbs of one-limb data, sequential, over Dot2, LLC | 8.59 to 9.18 (-O2), 8.72 to 9.17 (-O3) | 8.20 to 8.73 (-O2), 8.12 to 8.74 (-O3) | 6.53 to 6.55 | 6.72 to 6.75 |
-| `dot` of two limbs of one-limb data, default, over Dot2, LLC | 4.30 to 4.59 (-O2), 4.36 to 4.59 (-O3) | 4.12 to 4.26 (-O2), 4.06 to 4.37 (-O3) | 1.63 to 1.64 | 1.68 to 1.69 |
+| `dot` of two limbs of one-limb data, sequential, over Dot2, LLC | 9.16 to 9.22 | 8.73 to 8.77 | 6.52 to 6.54 | 6.68 to 6.71 |
+| `dot` of two limbs of one-limb data, default, over Dot2, LLC | 4.59 to 4.62 | 4.36 to 4.40 | 1.64 | 1.67 to 1.68 |
 | `sum`, two limbs, sequential, over double-word sums written out, LLC | 1.03 to 1.09 (-O2), 1.02 to 1.09 (-O3) | 1.00 to 1.03 (-O2), 1.01 to 1.08 (-O3) | 0.99 to 1.00 | 1.02 |
 | `sum`, two limbs, default, over double-word sums written out, LLC | 0.51 to 0.55 | 0.51 to 0.54 | 0.25 | 0.25 to 0.26 |
 | `sum_fast`, sequential, over SloppyDWPlusDW written out, LLC | 0.94 to 1.00 (-O2), 1.00 (-O3) | 0.98 to 0.99 | 0.99 to 1.00 | 1.02 |
-| `dot`, two limbs, sequential, over the double-word dot product written out, LLC | 1.00 to 1.06 (-O2), 0.98 to 1.01 (-O3) | 1.03 to 1.07 (-O2), 1.00 to 1.07 (-O3) | 1.00 to 1.01 | 1.01 to 1.02 |
-| `dot`, two limbs, default, over the double-word dot product written out, LLC | 0.50 to 0.54 | 0.50 to 0.54 | 0.25 | 0.25 to 0.26 |
+| `dot`, two limbs, sequential, over the double-word dot product written out, LLC | 1.00 | 1.00 | 1.00 | 1.00 to 1.01 |
+| `dot`, two limbs, default, over the double-word dot product written out, LLC | 0.50 to 0.51 | 0.50 | 0.25 | 0.25 |
 | `add`, two limbs, over AccurateDWPlusDW written out, LLC | 1.47 to 1.48 | 0.68 (-O2), 1.35 (-O3) | 0.33 (-O2), 1.28 to 1.29 (-O3) | 1.30 to 1.31 |
 | `scale`, two limbs, over DWTimesFP3 written out, LLC | 1.70 (-O2), 1.70 to 1.95 (-O3) | 0.45 to 0.47 (-O2), 1.51 to 1.54 (-O3) | 0.48 to 0.49 (-O2), 1.29 to 1.30 (-O3) | 1.30 to 1.32 |
-| `axpy`, two limbs, a of T, over the same written out, LLC | 1.28 | 0.64 (-O2), 1.20 (-O3) | 0.30 (-O2), 1.17 to 1.18 (-O3) | 1.17 to 1.18 |
-| `axpy`, two limbs, a of two limbs, over the same written out, LLC | 1.26 to 1.28 | 0.62 to 0.63 (-O2), 1.20 (-O3) | 0.29 (-O2), 1.19 (-O3) | 1.16 |
+| `axpy`, two limbs, a of T, over the same written out, LLC | 1.36 to 1.41 | 0.67 to 0.68 (-O2), 1.28 to 1.29 (-O3) | 0.34 (-O2), 1.33 (-O3) | 1.33 to 1.34 |
+| `axpy`, two limbs, a of two limbs, over the same written out, LLC | 1.34 to 1.35 (-O2), 1.29 to 1.38 (-O3) | 0.66 to 0.67 (-O2), 1.23 to 1.27 (-O3) | 0.33 (-O2), 1.34 to 1.35 (-O3) | 1.35 |
 | `sum` of two limbs of one-limb data, sequential, over Sum2, memory | 9.26 to 9.36 | 9.08 to 9.55 (-O2), 9.11 to 9.16 (-O3) | 6.76 to 6.91 | 6.76 to 6.88 |
 | `sum` of two limbs of one-limb data, default, over Sum2, memory | 4.61 to 4.65 | 4.45 to 4.77 (-O2), 4.52 to 4.54 (-O3) | 1.70 to 1.75 (-O2), 1.72 to 1.75 (-O3) | 1.70 to 1.74 |
-| `dot` of two limbs of one-limb data, sequential, over Dot2, memory | 8.65 to 8.88 (-O2), 8.60 to 8.70 (-O3) | 8.14 to 8.31 | 5.83 to 6.29 (-O2), 5.67 to 6.24 (-O3) | 6.15 to 6.46 (-O2), 5.86 to 6.21 (-O3) |
-| `dot` of two limbs of one-limb data, default, over Dot2, memory | 4.33 to 4.53 (-O2), 4.31 to 4.56 (-O3) | 4.10 to 4.23 (-O2), 4.10 to 4.33 (-O3) | 1.50 to 1.59 (-O2), 1.48 to 1.59 (-O3) | 1.60 to 1.63 (-O2), 1.53 to 1.60 (-O3) |
+| `dot` of two limbs of one-limb data, sequential, over Dot2, memory | 9.16 to 9.19 (-O2), 8.63 to 9.17 (-O3) | 8.44 to 8.62 (-O2), 8.70 to 8.73 (-O3) | 5.54 to 6.13 (-O2), 6.00 to 6.17 (-O3) | 5.64 to 6.28 (-O2), 5.69 to 6.07 (-O3) |
+| `dot` of two limbs of one-limb data, default, over Dot2, memory | 4.56 to 4.60 | 4.22 to 4.36 (-O2), 4.34 to 4.36 (-O3) | 1.46 to 1.56 (-O2), 1.55 to 1.58 (-O3) | 1.47 to 1.60 (-O2), 1.49 to 1.56 (-O3) |
 | `sum`, two limbs, sequential, over double-word sums written out, memory | 1.00 to 1.01 | 0.97 to 0.98 | 1.00 to 1.01 | 1.02 |
 | `sum`, two limbs, default, over double-word sums written out, memory | 0.51 to 0.54 | 0.49 to 0.52 | 0.25 | 0.25 to 0.26 |
 | `sum_fast`, sequential, over SloppyDWPlusDW written out, memory | 1.00 to 1.06 (-O2), 1.00 (-O3) | 0.98 to 0.99 | 1.00 | 1.02 |
-| `dot`, two limbs, sequential, over the double-word dot product written out, memory | 1.00 to 1.04 | 1.00 to 1.05 (-O2), 1.00 (-O3) | 1.00 to 1.01 | 1.01 to 1.02 |
-| `dot`, two limbs, default, over the double-word dot product written out, memory | 0.50 to 0.54 | 0.51 to 0.54 | 0.27 to 0.28 | 0.27 to 0.28 |
+| `dot`, two limbs, sequential, over the double-word dot product written out, memory | 1.00 to 1.03 | 1.00 to 1.02 | 1.00 to 1.01 | 1.00 to 1.01 |
+| `dot`, two limbs, default, over the double-word dot product written out, memory | 0.50 to 0.52 | 0.50 to 0.52 | 0.27 to 0.28 | 0.27 to 0.28 |
 | `add`, two limbs, over AccurateDWPlusDW written out, memory | 1.42 to 1.43 | 0.66 (-O2), 1.31 to 1.32 (-O3) | 0.49 to 0.50 (-O2), 1.02 to 1.03 (-O3) | 1.01 to 1.04 |
 | `scale`, two limbs, over DWTimesFP3 written out, memory | 1.67 to 1.68 | 0.40 to 0.42 (-O2), 1.43 to 1.44 (-O3) | 0.91 to 0.94 (-O2), 0.95 to 0.97 (-O3) | 0.94 to 0.98 |
-| `axpy`, two limbs, a of T, over the same written out, memory | 1.28 | 0.63 (-O2), 1.19 (-O3) | 0.36 (-O2), 1.07 (-O3) | 1.06 to 1.08 |
-| `axpy`, two limbs, a of two limbs, over the same written out, memory | 1.25 to 1.26 | 0.61 (-O2), 1.17 to 1.18 (-O3) | 0.33 to 0.34 (-O2), 1.07 to 1.09 (-O3) | 1.07 to 1.08 |
+| `axpy`, two limbs, a of T, over the same written out, memory | 1.35 to 1.38 | 0.65 to 0.67 (-O2), 1.23 to 1.28 (-O3) | 0.38 (-O2), 1.11 to 1.13 (-O3) | 1.10 to 1.15 |
+| `axpy`, two limbs, a of two limbs, over the same written out, memory | 1.28 to 1.33 (-O2), 1.28 to 1.33 (-O3) | 0.63 to 0.67 (-O2), 1.24 to 1.25 (-O3) | 0.36 to 0.37 (-O2), 1.15 to 1.19 (-O3) | 1.16 to 1.19 |
 
 | kairn::sequential over the default order, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `sum`, one limb, L1 | 1.94 to 2.04 (-O2), 1.93 to 2.00 (-O3) | 2.28 to 2.32 (-O2), 2.20 to 2.22 (-O3) | 3.77 to 3.86 (-O2), 3.71 to 4.00 (-O3) | 4.40 to 4.43 |
 | `sum`, two limbs, L1 | 1.93 to 2.02 (-O2), 1.90 to 1.95 (-O3) | 1.92 to 2.00 (-O2), 1.91 to 2.00 (-O3) | 3.83 to 3.93 | 3.93 to 3.94 |
 | `sum_fast`, two limbs, L1 | 2.04 | 2.04 to 2.05 | 3.93 to 3.94 | 3.77 to 3.94 (-O2), 3.80 to 3.94 (-O3) |
-| `dot`, one limb, L1 | 2.40 to 2.44 (-O2), 2.34 to 2.45 (-O3) | 2.27 to 2.39 (-O2), 2.19 to 2.30 (-O3) | 4.16 to 4.17 (-O2), 4.11 to 4.36 (-O3) | 4.42 to 4.45 |
-| `dot`, two limbs, L1 | 1.89 to 2.02 (-O2), 1.91 to 2.02 (-O3) | 1.95 to 2.01 (-O2), 1.91 to 2.01 (-O3) | 3.84 to 3.94 | 3.91 to 3.95 |
+| `dot`, one limb, L1 | 2.30 to 2.31 (-O2), 2.30 to 2.39 (-O3) | 2.27 to 2.29 | 4.09 to 4.17 | 4.44 |
+| `dot`, two limbs, L1 | 1.98 to 2.02 | 2.01 to 2.02 | 3.81 to 3.90 | 3.90 to 3.93 |
 | `add`, one limb, one lane over the default, L1 | 0.75 | 11.2 (-O2), 1.01 (-O3) | 5.04 to 5.07 (-O2), 4.91 to 5.04 (-O3) | 1.25 to 1.26 |
 | `add`, two limbs, one lane over the default, L1 | 0.90 to 0.91 | 3.07 (-O2), 1.01 (-O3) | 4.34 to 4.36 | 0.99 to 1.00 |
 | `scale`, two limbs, one lane over the default, L1 | 1.03 | 6.65 (-O2), 1.00 (-O3) | 4.27 to 4.33 | 1.07 |
-| `axpy`, one limb, one lane over the default, L1 | 0.76 to 0.77 | 10.9 to 11.3 (-O2), 1.01 (-O3) | 4.99 to 5.04 (-O2), 4.86 to 4.97 (-O3) | 1.21 to 1.23 |
-| `axpy`, two limbs, one lane over the default, L1 | 0.93 to 0.94 | 2.26 to 2.40 (-O2), 1.00 (-O3) | 4.37 to 4.42 | 0.87 |
+| `axpy`, one limb, one lane over the default, L1 | 0.76 to 0.77 | 11.2 to 11.3 (-O2), 0.99 to 1.01 (-O3) | 4.91 to 5.04 | 1.22 |
+| `axpy`, two limbs, one lane over the default, L1 | 0.96 to 0.97 | 2.22 to 2.23 (-O2), 1.00 to 1.01 (-O3) | 4.18 to 4.20 | 0.83 |
 | `norm_upper`, two limbs, one lane over the default, L1 | 1.21 to 1.22 | 4.07 to 4.35 (-O2), 5.86 to 6.13 (-O3) | 4.94 to 5.02 (-O2), 4.78 to 5.00 (-O3) | 4.05 to 5.02 (-O2), 4.04 to 4.89 (-O3) |
 | `sum`, one limb, LLC | 1.97 to 2.07 (-O2), 1.91 to 1.92 (-O3) | 1.97 to 1.99 | 3.95 to 3.98 | 3.95 to 3.97 |
 | `sum`, two limbs, LLC | 1.87 to 2.00 (-O2), 1.99 to 2.00 (-O3) | 1.90 to 1.98 (-O2), 1.92 to 2.01 (-O3) | 3.97 to 4.00 | 3.98 to 4.00 |
 | `sum_fast`, two limbs, LLC | 2.00 | 2.00 | 3.98 to 4.00 | 3.99 to 4.03 |
-| `dot`, one limb, LLC | 2.02 to 2.09 (-O2), 2.03 to 2.07 (-O3) | 1.93 to 2.00 (-O2), 2.00 (-O3) | 3.94 to 3.97 | 3.96 to 4.03 |
-| `dot`, two limbs, LLC | 1.90 to 2.00 (-O2), 1.89 to 2.00 (-O3) | 1.92 to 2.00 (-O2), 1.94 to 1.99 (-O3) | 3.95 to 4.00 | 3.97 to 3.99 |
+| `dot`, one limb, LLC | 1.98 to 2.00 (-O2), 1.94 to 2.00 (-O3) | 2.00 | 3.95 | 3.94 to 3.95 |
+| `dot`, two limbs, LLC | 1.99 to 2.00 | 1.99 to 2.00 | 3.98 to 3.99 | 3.96 to 3.97 |
 | `add`, one limb, one lane over the default, LLC | 0.78 to 0.80 | 10.9 (-O2), 1.00 (-O3) | 3.59 to 3.68 | 1.01 to 1.02 |
 | `add`, two limbs, one lane over the default, LLC | 0.89 to 0.90 | 3.06 to 3.07 (-O2), 0.99 to 1.00 (-O3) | 4.35 to 4.39 | 1.00 to 1.01 |
 | `scale`, two limbs, one lane over the default, LLC | 1.04 to 1.05 | 6.93 to 6.97 (-O2), 1.00 (-O3) | 4.26 to 4.28 | 1.08 to 1.09 |
-| `axpy`, one limb, one lane over the default, LLC | 0.78 to 0.81 | 10.9 (-O2), 1.00 (-O3) | 3.59 to 3.69 | 1.01 to 1.03 |
-| `axpy`, two limbs, one lane over the default, LLC | 0.93 to 0.97 | 2.38 (-O2), 1.00 (-O3) | 4.40 to 4.42 | 0.88 |
+| `axpy`, one limb, one lane over the default, LLC | 0.81 | 10.9 (-O2), 1.00 (-O3) | 3.63 to 3.67 | 1.01 to 1.03 |
+| `axpy`, two limbs, one lane over the default, LLC | 0.96 to 0.98 | 2.20 to 2.31 (-O2), 1.00 (-O3) | 4.17 to 4.20 | 0.84 to 0.85 |
 | `norm_upper`, two limbs, one lane over the default, LLC | 1.00 (-O2), 1.00 to 1.07 (-O3) | 3.47 to 3.67 (-O2), 4.82 to 5.10 (-O3) | 5.25 to 5.32 | 3.92 to 4.03 (-O2), 3.92 to 4.05 (-O3) |
 | `sum`, one limb, memory | 1.89 to 1.93 (-O2), 1.83 to 1.94 (-O3) | 2.05 to 2.09 (-O2), 1.96 to 2.01 (-O3) | 2.10 to 2.15 | 2.17 to 2.26 (-O2), 2.15 to 2.19 (-O3) |
 | `sum`, two limbs, memory | 1.90 to 1.97 (-O2), 1.87 to 1.98 (-O3) | 1.92 to 2.00 (-O2), 1.91 to 1.97 (-O3) | 3.95 to 3.99 | 3.98 to 4.00 |
 | `sum_fast`, two limbs, memory | 2.00 to 2.04 | 2.00 | 3.89 to 3.93 | 3.90 to 3.93 |
-| `dot`, one limb, memory | 2.00 to 2.06 (-O2), 2.00 to 2.10 (-O3) | 2.00 to 2.10 (-O2), 2.00 (-O3) | 2.23 to 2.26 | 2.19 to 2.23 (-O2), 2.18 to 2.25 (-O3) |
-| `dot`, two limbs, memory | 1.87 to 2.00 (-O2), 1.87 to 1.97 (-O3) | 1.89 to 1.99 (-O2), 1.86 to 1.95 (-O3) | 3.62 to 3.66 | 3.63 to 3.72 |
+| `dot`, one limb, memory | 1.94 to 2.00 (-O2), 2.00 to 2.04 (-O3) | 1.98 to 2.00 | 2.22 to 2.24 | 2.18 to 2.24 |
+| `dot`, two limbs, memory | 1.99 to 2.00 | 1.95 to 2.00 | 3.62 to 3.65 | 3.56 to 3.66 |
 | `add`, one limb, one lane over the default, memory | 0.80 to 0.82 | 10.5 to 10.9 (-O2), 1.00 (-O3) | 1.22 to 1.29 (-O2), 1.19 to 1.22 (-O3) | 0.99 to 1.01 |
 | `add`, two limbs, one lane over the default, memory | 0.89 to 0.90 | 3.02 (-O2), 1.00 (-O3) | 2.75 to 2.80 | 0.99 to 1.01 |
 | `scale`, two limbs, one lane over the default, memory | 1.04 | 7.00 to 7.01 (-O2), 1.00 (-O3) | 1.64 to 1.68 | 1.00 |
-| `axpy`, one limb, one lane over the default, memory | 0.80 to 0.82 | 10.6 to 10.9 (-O2), 1.00 (-O3) | 1.23 to 1.26 | 1.02 to 1.04 |
-| `axpy`, two limbs, one lane over the default, memory | 0.96 to 0.98 | 2.34 (-O2), 1.00 (-O3) | 3.57 to 3.65 (-O2), 3.50 to 3.60 (-O3) | 0.94 to 0.97 |
+| `axpy`, one limb, one lane over the default, memory | 0.82 to 0.84 | 10.8 to 10.9 (-O2), 1.00 to 1.03 (-O3) | 1.20 to 1.24 | 0.99 to 1.02 |
+| `axpy`, two limbs, one lane over the default, memory | 0.97 to 0.99 | 2.16 to 2.19 (-O2), 1.00 to 1.01 (-O3) | 3.54 to 3.61 (-O2), 3.54 to 3.71 (-O3) | 0.94 to 0.95 |
 | `norm_upper`, two limbs, one lane over the default, memory | 0.96 to 1.00 | 5.14 to 5.29 (-O2), 5.14 to 5.50 (-O3) | 1.84 to 1.85 (-O2), 1.81 to 1.86 (-O3) | 1.52 to 1.53 |
 
 | The product of polynomials, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `conv`, one limb, 16 coefficients: ns per term | 0.39 | 0.47 (-O2), 0.38 to 0.39 (-O3) | 0.84 to 0.87 (-O2), 0.80 to 0.82 (-O3) | 0.77 to 0.78 (-O2), 0.69 to 0.70 (-O3) |
-| `conv`, two limbs, 16 coefficients: ns per term | 4.28 to 4.29 | 4.20 to 4.26 | 9.54 to 9.75 (-O2), 9.44 to 9.46 (-O3) | 9.46 to 9.68 |
-| `conv`, one limb, 16, over the plain loop of T (FMA) | 1.00 to 1.02 | 1.22 to 1.24 (-O2), 1.36 to 1.37 (-O3) | 1.29 to 1.33 | 1.31 to 1.32 (-O2), 1.19 to 1.20 (-O3) |
-| `conv`, two limbs, 16, over the plain loop of T (FMA) | 11.0 to 11.1 | 11.0 (-O2), 15.0 to 15.1 (-O3) | 14.6 (-O2), 15.2 to 15.6 (-O3) | 16.2 to 16.4 |
-| `conv`, two limbs, 16, over the double-word loop written out | 1.00 | 1.00 (-O2), 1.01 to 1.08 (-O3) | 1.03 to 1.04 | 1.04 |
-| `conv`, one limb, 64 coefficients: ns per term | 0.45 to 0.46 | 0.44 to 0.46 | 0.97 to 1.01 | 0.95 to 0.97 (-O2), 0.83 to 0.84 (-O3) |
-| `conv`, two limbs, 64 coefficients: ns per term | 6.05 to 6.49 (-O2), 6.16 to 6.48 (-O3) | 6.47 to 6.49 | 10.0 to 10.3 | 10.0 to 10.2 |
-| `conv`, one limb, 64, over the plain loop of T (FMA) | 1.03 to 1.07 | 1.08 (-O2), 1.02 to 1.03 (-O3) | 1.07 to 1.10 | 1.38 to 1.40 (-O2), 1.21 (-O3) |
-| `conv`, two limbs, 64, over the plain loop of T (FMA) | 13.8 to 14.9 (-O2), 14.2 to 15.0 (-O3) | 15.0 to 15.1 | 10.9 to 11.1 | 14.6 to 14.7 |
-| `conv`, two limbs, 64, over the double-word loop written out | 1.00 to 1.02 | 1.00 to 1.07 (-O2), 1.00 to 1.07 (-O3) | 1.00 to 1.01 | 1.02 |
-| `conv`, one limb, 512 coefficients: ns per term | 0.78 to 0.83 (-O2), 0.78 to 0.83 (-O3) | 0.78 to 0.84 (-O2), 0.78 to 0.83 (-O3) | 1.38 to 1.41 | 1.35 to 1.40 |
-| `conv`, two limbs, 512 coefficients: ns per term | 7.13 to 7.65 (-O2), 7.16 to 7.65 (-O3) | 7.13 to 7.16 (-O2), 7.14 to 7.66 (-O3) | 10.2 to 10.4 | 10.2 to 10.4 |
-| `conv`, one limb, 512, over the plain loop of T (FMA) | 1.02 to 1.03 (-O2), 0.96 to 1.03 (-O3) | 1.03 to 1.09 (-O2), 1.03 (-O3) | 1.00 to 1.01 | 1.02 to 1.04 |
-| `conv`, two limbs, 512, over the plain loop of T (FMA) | 8.98 to 9.43 (-O2), 8.83 to 9.43 (-O3) | 9.31 to 9.43 (-O2), 8.92 to 9.44 (-O3) | 7.38 to 7.42 | 7.69 to 7.75 |
-| `conv`, two limbs, 512, over the double-word loop written out | 1.00 to 1.02 | 1.00 to 1.01 | 1.00 | 1.01 to 1.02 |
+| `conv`, one limb, 16 coefficients: ns per term | 0.39 to 0.46 (-O2), 0.39 to 0.47 (-O3) | 0.56 to 0.57 (-O2), 0.49 (-O3) | 0.93 to 0.94 (-O2), 0.80 to 0.81 (-O3) | 0.76 (-O2), 0.69 (-O3) |
+| `conv`, two limbs, 16 coefficients: ns per term | 4.30 to 5.50 (-O2), 4.57 to 5.50 (-O3) | 5.19 to 5.43 (-O2), 5.39 (-O3) | 9.54 to 9.63 | 9.59 to 9.60 |
+| `conv`, one limb, 16, over the plain loop of T (FMA) | 0.98 to 1.01 | 1.25 to 1.28 (-O2), 1.44 to 1.45 (-O3) | 1.44 to 1.45 (-O2), 1.31 to 1.32 (-O3) | 1.33 to 1.34 (-O2), 1.19 to 1.20 (-O3) |
+| `conv`, two limbs, 16, over the plain loop of T (FMA) | 11.1 to 11.8 (-O2), 11.5 to 11.8 (-O3) | 11.8 to 12.2 (-O2), 15.9 (-O3) | 14.8 (-O2), 15.5 (-O3) | 16.5 to 16.8 |
+| `conv`, two limbs, 16, over the double-word loop written out | 1.06 to 1.08 | 1.06 to 1.10 | 1.04 to 1.05 | 1.05 to 1.06 |
+| `conv`, one limb, 64 coefficients: ns per term | 0.43 to 0.54 (-O2), 0.45 to 0.54 (-O3) | 0.53 to 0.55 | 1.05 to 1.06 (-O2), 0.98 to 0.99 (-O3) | 0.94 to 0.95 (-O2), 0.83 (-O3) |
+| `conv`, two limbs, 64 coefficients: ns per term | 6.13 to 7.56 (-O2), 6.57 to 7.63 (-O3) | 7.54 to 7.89 (-O2), 7.57 to 7.88 (-O3) | 10.0 | 10.0 |
+| `conv`, one limb, 64, over the plain loop of T (FMA) | 1.00 to 1.08 (-O2), 1.06 to 1.10 (-O3) | 1.03 to 1.08 (-O2), 1.05 to 1.10 (-O3) | 1.16 to 1.18 (-O2), 1.09 (-O3) | 1.38 (-O2), 1.21 (-O3) |
+| `conv`, two limbs, 64, over the plain loop of T (FMA) | 14.4 to 15.2 (-O2), 15.4 to 15.5 (-O3) | 15.4 to 15.5 (-O2), 15.3 to 15.9 (-O3) | 10.9 to 11.1 | 14.6 to 14.7 |
+| `conv`, two limbs, 64, over the double-word loop written out | 1.00 to 1.02 (-O2), 1.00 to 1.07 (-O3) | 1.01 to 1.06 | 1.00 to 1.01 | 1.02 |
+| `conv`, one limb, 512 coefficients: ns per term | 0.78 to 0.96 (-O2), 0.78 to 0.96 (-O3) | 0.96 to 1.00 | 1.38 to 1.39 | 1.34 to 1.38 |
+| `conv`, two limbs, 512 coefficients: ns per term | 7.17 to 8.85 (-O2), 7.70 to 9.25 (-O3) | 8.83 to 8.84 (-O2), 8.84 to 9.24 (-O3) | 10.1 to 10.2 | 10.1 to 10.2 |
+| `conv`, one limb, 512, over the plain loop of T (FMA) | 1.03 (-O2), 0.97 to 1.03 (-O3) | 1.03 | 0.99 to 1.02 | 1.02 to 1.04 |
+| `conv`, two limbs, 512, over the plain loop of T (FMA) | 9.49 (-O2), 9.49 to 9.89 (-O3) | 9.47 to 9.48 | 7.28 to 7.41 | 7.69 to 7.70 |
+| `conv`, two limbs, 512, over the double-word loop written out | 1.01 (-O2), 1.01 to 1.08 (-O3) | 1.00 | 0.99 to 1.00 | 1.01 |
 
 | The functions on arrays, float: ns per element | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -4693,12 +5054,12 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum_fast`, two limbs, L1 | 1.07 | 1.08 | 0.892 to 0.919 | 0.885 to 0.908 |
 | `sum_fast`, two limbs, LLC | 1.14 to 1.17 | 1.16 to 1.17 | 0.826 to 0.844 | 0.819 to 0.842 |
 | `sum_fast`, two limbs, memory | 1.14 to 1.19 | 1.16 to 1.17 | 0.85 to 0.863 | 0.838 to 0.86 |
-| `dot`, one limb, L1 | 0.151 to 0.157 | 0.144 to 0.152 (-O2), 0.151 to 0.158 (-O3) | 0.162 to 0.17 | 0.159 to 0.163 |
-| `dot`, one limb, LLC | 0.23 to 0.242 (-O2), 0.23 to 0.241 (-O3) | 0.229 to 0.24 | 0.19 to 0.195 | 0.19 to 0.194 |
-| `dot`, one limb, memory | 0.228 to 0.237 | 0.23 to 0.233 | 0.351 to 0.365 | 0.352 to 0.358 |
-| `dot`, two limbs, L1 | 1.92 | 1.92 (-O2), 1.81 to 1.92 (-O3) | 1.41 to 1.45 | 1.42 to 1.45 |
-| `dot`, two limbs, LLC | 1.93 to 1.96 | 1.96 to 1.97 | 1.28 to 1.32 | 1.29 to 1.33 |
-| `dot`, two limbs, memory | 1.92 to 1.96 | 1.87 to 1.96 | 1.41 to 1.46 | 1.39 to 1.47 (-O2), 1.39 to 1.41 (-O3) |
+| `dot`, one limb, L1 | 0.15 to 0.187 (-O2), 0.155 to 0.187 (-O3) | 0.177 to 0.179 (-O2), 0.184 to 0.192 (-O3) | 0.16 to 0.164 | 0.159 |
+| `dot`, one limb, LLC | 0.232 to 0.294 (-O2), 0.246 to 0.284 (-O3) | 0.283 to 0.284 | 0.19 | 0.19 to 0.191 |
+| `dot`, one limb, memory | 0.236 to 0.291 (-O2), 0.242 to 0.293 (-O3) | 0.283 to 0.296 | 0.355 to 0.364 | 0.355 to 0.365 |
+| `dot`, two limbs, L1 | 1.8 to 2.22 (-O2), 1.93 to 2.22 (-O3) | 2.21 to 2.22 | 1.4 to 1.41 | 1.41 |
+| `dot`, two limbs, LLC | 1.83 to 2.36 (-O2), 1.97 to 2.27 (-O3) | 2.26 to 2.28 | 1.28 | 1.28 |
+| `dot`, two limbs, memory | 1.84 to 2.31 (-O2), 1.97 to 2.32 (-O3) | 2.26 to 2.34 | 1.41 to 1.45 | 1.4 to 1.43 |
 | `add`, one limb, L1 | 0.141 to 0.143 | 0.118 to 0.119 | 0.105 to 0.108 (-O2), 0.106 to 0.111 (-O3) | 0.105 to 0.109 |
 | `add`, one limb, LLC | 0.136 to 0.137 | 0.131 to 0.133 | 0.143 to 0.151 (-O2), 0.144 to 0.147 (-O3) | 0.144 to 0.15 |
 | `add`, one limb, memory | 0.136 to 0.138 | 0.132 to 0.133 | 0.508 to 0.523 | 0.509 to 0.518 |
@@ -4711,15 +5072,15 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, two limbs, L1 | 0.247 | 0.214 to 0.218 | 0.251 to 0.258 | 0.249 to 0.255 |
 | `scale`, two limbs, LLC | 0.24 to 0.243 | 0.264 to 0.272 (-O2), 0.213 to 0.228 (-O3) | 0.251 to 0.258 | 0.251 to 0.257 |
 | `scale`, two limbs, memory | 0.242 to 0.243 | 0.208 | 0.67 to 0.696 | 0.673 to 0.691 |
-| `axpy`, one limb, L1 | 0.143 | 0.117 to 0.12 | 0.109 to 0.114 | 0.112 to 0.115 |
-| `axpy`, one limb, LLC | 0.137 to 0.138 | 0.134 | 0.142 to 0.15 (-O2), 0.143 to 0.145 (-O3) | 0.143 to 0.147 |
-| `axpy`, one limb, memory | 0.139 | 0.134 | 0.532 to 0.539 | 0.534 to 0.541 |
-| `axpy`, two limbs, a of T, L1 | 0.651 to 0.652 | 0.604 to 0.613 | 0.875 to 0.897 | 0.91 to 0.93 |
-| `axpy`, two limbs, a of T, LLC | 0.664 to 0.666 | 0.616 to 0.621 | 0.871 to 0.89 | 0.871 to 0.895 |
-| `axpy`, two limbs, a of T, memory | 0.663 to 0.668 | 0.618 to 0.622 | 1.08 to 1.14 (-O2), 1.07 to 1.11 (-O3) | 1.06 to 1.11 |
-| `axpy`, two limbs, a of two limbs, L1 | 0.711 to 0.715 | 0.657 to 0.672 | 0.962 to 0.978 | 1 to 1.02 |
-| `axpy`, two limbs, a of two limbs, LLC | 0.721 to 0.728 | 0.68 to 0.684 | 0.952 to 0.983 | 0.965 to 0.978 |
-| `axpy`, two limbs, a of two limbs, memory | 0.719 to 0.726 | 0.674 to 0.679 | 1.15 to 1.18 (-O2), 1.12 to 1.17 (-O3) | 1.12 to 1.18 (-O2), 1.11 to 1.16 (-O3) |
+| `axpy`, one limb, L1 | 0.14 to 0.165 (-O2), 0.142 to 0.164 (-O3) | 0.135 to 0.138 | 0.108 to 0.109 (-O2), 0.114 (-O3) | 0.112 to 0.113 |
+| `axpy`, one limb, LLC | 0.134 to 0.159 (-O2), 0.137 to 0.158 (-O3) | 0.154 | 0.142 to 0.145 | 0.143 to 0.147 |
+| `axpy`, one limb, memory | 0.134 to 0.16 (-O2), 0.138 to 0.16 (-O3) | 0.149 to 0.154 | 0.506 to 0.51 | 0.507 to 0.513 |
+| `axpy`, two limbs, a of T, L1 | 0.699 to 0.841 (-O2), 0.699 to 0.805 (-O3) | 0.752 to 0.786 | 0.984 to 0.988 | 1.02 to 1.03 |
+| `axpy`, two limbs, a of T, LLC | 0.709 to 0.856 (-O2), 0.706 to 0.826 (-O3) | 0.762 to 0.794 | 0.986 to 0.989 | 0.986 to 0.988 |
+| `axpy`, two limbs, a of T, memory | 0.707 to 0.822 (-O2), 0.709 to 0.829 (-O3) | 0.718 to 0.771 (-O2), 0.759 to 0.77 (-O3) | 1.13 to 1.19 (-O2), 1.17 to 1.2 (-O3) | 1.14 to 1.19 |
+| `axpy`, two limbs, a of two limbs, L1 | 0.757 to 0.911 (-O2), 0.757 to 0.87 (-O3) | 0.816 to 0.822 | 1.08 | 1.16 |
+| `axpy`, two limbs, a of two limbs, LLC | 0.766 to 0.933 (-O2), 0.77 to 0.928 (-O3) | 0.825 to 0.872 (-O2), 0.83 to 0.861 (-O3) | 1.07 to 1.08 | 1.12 |
+| `axpy`, two limbs, a of two limbs, memory | 0.77 to 0.902 (-O2), 0.769 to 0.898 (-O3) | 0.837 to 0.871 (-O2), 0.826 to 0.862 (-O3) | 1.2 to 1.25 | 1.23 to 1.28 |
 | `norm_upper`, one limb, L1 | 0.174 to 0.177 | 0.174 to 0.178 | 0.0909 to 0.0999 (-O2), 0.0888 to 0.0895 (-O3) | 0.0673 to 0.0721 (-O2), 0.0671 to 0.0714 (-O3) |
 | `norm_upper`, one limb, LLC | 0.264 | 0.264 | 0.0757 to 0.0775 | 0.06 to 0.0636 (-O2), 0.0594 to 0.0629 (-O3) |
 | `norm_upper`, one limb, memory | 0.265 | 0.265 | 0.238 to 0.246 (-O2), 0.253 to 0.254 (-O3) | 0.242 to 0.246 |
@@ -4729,159 +5090,159 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | a plain sum of T, one chain, L1 | 0.488 to 0.513 (-O2), 0.488 to 0.513 (-O3) | 0.555 to 0.594 (-O2), 0.561 to 0.594 (-O3) | 0.845 to 0.863 | 0.846 to 0.867 |
 | a plain sum of T, one chain, LLC | 0.67 to 0.717 (-O2), 0.667 to 0.688 (-O3) | 0.663 to 0.675 (-O2), 0.665 to 0.712 (-O3) | 0.903 to 0.925 | 0.902 to 0.921 |
 | a plain sum of T, one chain, memory | 0.658 to 0.707 (-O2), 0.658 to 0.68 (-O3) | 0.606 to 0.658 (-O2), 0.599 to 0.678 (-O3) | 0.923 to 0.947 | 0.918 to 0.937 |
-| a plain dot product of T (FMA), one chain, L1 | 0.816 to 0.835 | 0.801 to 0.831 | 1.41 to 1.44 | 1.41 to 1.44 |
-| a plain dot product of T (FMA), one chain, LLC | 0.91 to 0.97 (-O2), 0.946 to 0.972 (-O3) | 0.903 to 0.937 (-O2), 0.903 to 0.968 (-O3) | 1.5 to 1.53 | 1.5 to 1.54 |
-| a plain dot product of T (FMA), one chain, memory | 0.913 to 0.957 | 0.9 to 0.956 (-O2), 0.9 to 0.962 (-O3) | 1.51 to 1.56 | 1.51 to 1.56 |
+| a plain dot product of T (FMA), one chain, L1 | 0.778 to 1 (-O2), 0.833 to 0.96 (-O3) | 0.956 to 0.981 | 1.4 to 1.41 | 1.4 to 1.41 |
+| a plain dot product of T (FMA), one chain, LLC | 0.911 to 1.17 (-O2), 0.974 to 1.12 (-O3) | 1.11 to 1.16 (-O2), 1.1 to 1.15 (-O3) | 1.5 | 1.5 |
+| a plain dot product of T (FMA), one chain, memory | 0.899 to 1.12 (-O2), 0.95 to 1.12 (-O3) | 1.11 to 1.14 | 1.51 to 1.52 | 1.5 to 1.52 |
 | a plain `x + y` of T, L1 | 0.0525 to 0.0533 | 0.28 (-O2), 0.0783 (-O3) | 0.321 to 0.331 (-O2), 0.052 to 0.0593 (-O3) | 0.0646 to 0.0661 |
 | a plain `x + y` of T, LLC | 0.106 (-O2), 0.0766 to 0.106 (-O3) | 0.265 (-O2), 0.106 (-O3) | 0.344 to 0.351 (-O2), 0.13 to 0.137 (-O3) | 0.132 to 0.152 (-O2), 0.131 to 0.151 (-O3) |
 | a plain `x + y` of T, memory | 0.103 to 0.108 | 0.27 (-O2), 0.108 (-O3) | 0.73 to 0.753 (-O2), 0.553 to 0.558 (-O3) | 0.55 to 0.572 |
 | a plain `x a` of T, L1 | 0.0441 to 0.0448 | 0.276 to 0.28 (-O2), 0.078 (-O3) | 0.32 to 0.632 (-O2), 0.049 to 0.0895 (-O3) | 0.0448 to 0.0464 |
 | a plain `x a` of T, LLC | 0.0697 to 0.0699 (-O2), 0.0474 to 0.0697 (-O3) | 0.265 (-O2), 0.0701 to 0.0703 (-O3) | 0.31 to 0.317 (-O2), 0.103 (-O3) | 0.104 to 0.106 (-O2), 0.0869 to 0.104 (-O3) |
 | a plain `x a` of T, memory | 0.0696 to 0.0717 | 0.25 to 0.26 (-O2), 0.0708 to 0.0717 (-O3) | 0.519 to 0.69 (-O2), 0.4 to 0.402 (-O3) | 0.444 to 0.449 |
-| a plain `a x + y` of T, L1 | 0.0525 to 0.0532 | 0.28 (-O2), 0.0788 (-O3) | 0.323 to 0.332 (-O2), 0.0606 to 0.0837 (-O3) | 0.0642 to 0.0659 |
-| a plain `a x + y` of T, LLC | 0.106 (-O2), 0.0761 to 0.106 (-O3) | 0.265 to 0.266 (-O2), 0.106 (-O3) | 0.346 to 0.354 (-O2), 0.128 to 0.141 (-O3) | 0.129 to 0.133 |
-| a plain `a x + y` of T, memory | 0.103 to 0.108 | 0.27 (-O2), 0.108 (-O3) | 0.6 to 0.621 (-O2), 0.552 to 0.559 (-O3) | 0.548 to 0.569 |
+| a plain `a x + y` of T, L1 | 0.0526 to 0.0631 (-O2), 0.0525 to 0.0604 (-O3) | 0.322 to 0.33 (-O2), 0.09 (-O3) | 0.318 to 0.319 (-O2), 0.06 to 0.0613 (-O3) | 0.0642 to 0.0691 (-O2), 0.0636 to 0.0691 (-O3) |
+| a plain `a x + y` of T, LLC | 0.0926 to 0.106 (-O2), 0.0897 to 0.106 (-O3) | 0.307 to 0.319 (-O2), 0.0909 to 0.0928 (-O3) | 0.344 to 0.345 (-O2), 0.146 to 0.15 (-O3) | 0.131 to 0.15 (-O2), 0.132 to 0.151 (-O3) |
+| a plain `a x + y` of T, memory | 0.108 to 0.125 (-O2), 0.108 to 0.121 (-O3) | 0.287 to 0.311 (-O2), 0.12 to 0.128 (-O3) | 0.602 to 0.606 (-O2), 0.55 to 0.56 (-O3) | 0.547 to 0.567 |
 | the plain sum of T in the lane order, L1 | 0.138 to 0.14 (-O2), 0.143 to 0.146 (-O3) | 0.108 to 0.112 (-O2), 0.143 to 0.144 (-O3) | 0.0943 to 0.11 (-O2), 0.203 to 0.204 (-O3) | 0.0824 to 0.0844 |
 | the plain sum of T in the lane order, LLC | 0.177 to 0.182 | 0.165 to 0.168 (-O2), 0.183 to 0.189 (-O3) | 0.113 to 0.116 (-O2), 0.199 (-O3) | 0.113 to 0.115 |
 | the plain sum of T in the lane order, memory | 0.176 to 0.183 | 0.16 to 0.167 (-O2), 0.184 to 0.19 (-O3) | 0.217 to 0.232 (-O2), 0.325 to 0.341 (-O3) | 0.215 to 0.219 (-O2), 0.218 to 0.226 (-O3) |
-| the plain dot product of T in the lane order, L1 | 0.145 to 0.148 | 0.139 to 0.143 (-O2), 0.226 to 0.229 (-O3) | 0.14 to 0.148 (-O2), 0.208 to 0.21 (-O3) | 0.134 to 0.137 |
-| the plain dot product of T in the lane order, LLC | 0.22 to 0.236 (-O2), 0.22 to 0.236 (-O3) | 0.217 to 0.232 (-O2), 0.26 to 0.265 (-O3) | 0.189 to 0.193 | 0.189 to 0.193 |
-| the plain dot product of T in the lane order, memory | 0.22 to 0.236 (-O2), 0.222 to 0.236 (-O3) | 0.217 to 0.233 (-O2), 0.238 to 0.258 (-O3) | 0.358 to 0.373 (-O2), 0.397 to 0.414 (-O3) | 0.358 to 0.377 (-O2), 0.359 to 0.378 (-O3) |
+| the plain dot product of T in the lane order, L1 | 0.135 to 0.174 (-O2), 0.145 to 0.169 (-O3) | 0.164 to 0.165 (-O2), 0.244 to 0.245 (-O3) | 0.146 to 0.147 (-O2), 0.204 to 0.206 (-O3) | 0.133 to 0.134 |
+| the plain dot product of T in the lane order, LLC | 0.22 to 0.284 (-O2), 0.233 to 0.268 (-O3) | 0.267 to 0.268 (-O2), 0.292 to 0.305 (-O3) | 0.188 | 0.188 |
+| the plain dot product of T in the lane order, memory | 0.22 to 0.273 (-O2), 0.236 to 0.272 (-O3) | 0.268 to 0.269 (-O2), 0.286 to 0.287 (-O3) | 0.357 to 0.363 (-O2), 0.374 to 0.406 (-O3) | 0.357 to 0.361 |
 
 | The functions on arrays over the same loop of T, float | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `sum`, one limb, over the plain sum in the same order, L1 | 0.83 to 0.87 | 1.02 to 1.03 (-O2), 0.79 to 0.83 (-O3) | 1.11 to 1.27 (-O2), 0.57 to 0.60 (-O3) | 1.17 to 1.18 |
 | `sum`, one limb, over the plain sum, one chain, L1 | 0.23 to 0.25 | 0.19 to 0.20 | 0.14 to 0.15 | 0.11 |
 | `sum`, two limbs, over the plain sum of T in the same order, L1 | 13.8 to 13.9 (-O2), 13.2 to 13.4 (-O3) | 17.0 to 17.2 (-O2), 13.2 to 13.4 (-O3) | 13.0 to 15.0 (-O2), 6.86 to 6.87 (-O3) | 16.8 to 16.9 |
-| `dot`, one limb, over the plain dot product in the same order, L1 | 1.03 to 1.06 (-O2), 1.04 to 1.08 (-O3) | 1.03 to 1.07 (-O2), 0.67 to 0.69 (-O3) | 1.10 to 1.19 (-O2), 0.78 to 0.79 (-O3) | 1.19 |
-| `dot`, two limbs, over the plain dot product of T in the same order, L1 | 13.0 to 13.2 | 13.4 to 13.8 (-O2), 8.02 to 8.41 (-O3) | 9.6 to 10.1 (-O2), 6.71 to 6.75 (-O3) | 10.5 to 10.6 |
+| `dot`, one limb, over the plain dot product in the same order, L1 | 1.07 to 1.12 | 1.08 to 1.09 (-O2), 0.75 to 0.78 (-O3) | 1.09 (-O2), 0.79 to 0.80 (-O3) | 1.19 |
+| `dot`, two limbs, over the plain dot product of T in the same order, L1 | 12.7 to 13.3 (-O2), 13.1 to 13.3 (-O3) | 13.5 (-O2), 9.06 to 9.10 (-O3) | 9.60 to 9.63 (-O2), 6.82 to 6.89 (-O3) | 10.5 to 10.6 |
 | `add`, one limb, over `x + y` of T, L1 | 2.69 to 2.73 (-O2), 2.65 to 2.72 (-O3) | 0.42 (-O2), 1.51 to 1.52 (-O3) | 0.32 to 0.33 (-O2), 1.85 to 2.04 (-O3) | 1.62 to 1.65 |
 | `add`, two limbs, over `x + y` of T, L1 | 9.68 to 9.83 | 1.67 to 1.68 (-O2), 5.97 to 6.05 (-O3) | 1.89 to 1.92 (-O2), 10.4 to 11.8 (-O3) | 10.2 to 10.3 |
 | `scale`, one limb, over `x a` of T, L1 | 2.62 to 2.66 (-O2), 3.23 to 3.25 (-O3) | 0.36 (-O2), 1.28 (-O3) | 0.13 to 0.30 (-O2), 1.09 to 1.66 (-O3) | 1.78 to 1.82 |
 | `scale`, two limbs, over `x a` of T, L1 | 5.52 to 5.60 | 0.77 to 0.78 (-O2), 2.79 (-O3) | 0.41 to 0.79 (-O2), 2.85 to 5.14 (-O3) | 5.49 to 5.59 |
-| `axpy`, one limb, over `a x + y` of T, L1 | 2.68 to 2.73 | 0.43 (-O2), 1.49 (-O3) | 0.33 to 0.34 (-O2), 1.31 to 1.87 (-O3) | 1.72 to 1.76 |
-| `axpy`, two limbs, over `a x + y` of T, L1 | 12.2 to 12.4 | 2.18 to 2.19 (-O2), 7.67 to 7.70 (-O3) | 2.69 to 2.73 (-O2), 10.5 to 14.4 (-O3) | 14.0 to 14.2 |
+| `axpy`, one limb, over `a x + y` of T, L1 | 2.62 to 2.67 (-O2), 2.71 to 2.74 (-O3) | 0.42 to 0.43 (-O2), 1.50 (-O3) | 0.34 (-O2), 1.86 to 1.89 (-O3) | 1.63 to 1.74 (-O2), 1.64 to 1.77 (-O3) |
+| `axpy`, two limbs, over `a x + y` of T, L1 | 13.3 to 13.5 | 2.34 to 2.38 (-O2), 8.35 to 8.36 (-O3) | 3.09 to 3.10 (-O2), 16.1 to 16.5 (-O3) | 14.8 to 16.0 (-O2), 14.8 to 16.1 (-O3) |
 | `norm_upper`, one limb, over a plain largest magnitude, L1 | 0.35 | 0.35 to 0.38 | 0.16 to 0.28 (-O2), 0.14 to 0.27 (-O3) | 0.22 to 0.23 |
 | `sum`, one limb, over the plain sum in the same order, LLC | 0.99 to 1.04 (-O2), 1.04 to 1.05 (-O3) | 1.02 to 1.05 (-O2), 0.91 to 0.96 (-O3) | 1.01 (-O2), 0.57 to 0.58 (-O3) | 1.01 |
 | `sum`, one limb, over the plain sum, one chain, LLC | 0.26 to 0.28 | 0.25 to 0.26 | 0.13 | 0.12 to 0.13 |
 | `sum`, two limbs, over the plain sum of T in the same order, LLC | 10.4 to 11.1 (-O2), 11.0 to 11.1 (-O3) | 11.2 to 11.8 (-O2), 10.5 to 10.6 (-O3) | 11.2 to 11.3 (-O2), 6.44 to 6.45 (-O3) | 11.2 to 11.3 |
-| `dot`, one limb, over the plain dot product in the same order, LLC | 1.01 to 1.05 | 1.02 to 1.06 (-O2), 0.87 to 0.91 (-O3) | 1.00 to 1.01 | 1.00 to 1.01 |
-| `dot`, two limbs, over the plain dot product of T in the same order, LLC | 8.31 to 8.89 (-O2), 8.30 to 8.77 (-O3) | 8.46 to 9.06 (-O2), 7.41 to 7.53 (-O3) | 6.78 to 6.85 | 6.83 to 6.88 |
+| `dot`, one limb, over the plain dot product in the same order, LLC | 1.04 to 1.08 | 1.06 (-O2), 0.93 to 0.97 (-O3) | 1.01 | 1.01 to 1.02 |
+| `dot`, two limbs, over the plain dot product of T in the same order, LLC | 8.33 to 8.46 | 8.47 to 8.52 (-O2), 7.40 to 7.73 (-O3) | 6.79 to 6.80 | 6.82 to 6.84 |
 | `add`, one limb, over `x + y` of T, LLC | 1.27 to 1.29 (-O2), 1.28 to 1.77 (-O3) | 0.49 to 0.50 (-O2), 1.24 (-O3) | 0.42 to 0.43 (-O2), 1.05 to 1.13 (-O3) | 0.96 to 1.11 (-O2), 0.96 to 1.10 (-O3) |
 | `add`, two limbs, over `x + y` of T, LLC | 4.92 to 4.94 (-O2), 4.94 to 6.84 (-O3) | 1.83 (-O2), 4.53 to 4.54 (-O3) | 1.78 to 1.81 (-O2), 4.50 to 4.72 (-O3) | 4.15 to 4.76 (-O2), 4.14 to 4.81 (-O3) |
 | `scale`, one limb, over `x a` of T, LLC | 1.91 to 1.92 (-O2), 1.92 to 2.82 (-O3) | 0.50 (-O2), 1.89 to 1.90 (-O3) | 0.32 (-O2), 0.97 to 0.98 (-O3) | 0.95 to 0.96 (-O2), 0.96 to 1.16 (-O3) |
 | `scale`, two limbs, over `x a` of T, LLC | 3.48 to 3.50 (-O2), 3.45 to 5.12 (-O3) | 1.00 to 1.03 (-O2), 3.04 to 3.25 (-O3) | 0.81 (-O2), 2.43 (-O3) | 2.40 to 2.42 (-O2), 2.42 to 2.89 (-O3) |
-| `axpy`, one limb, over `a x + y` of T, LLC | 1.29 (-O2), 1.30 to 1.81 (-O3) | 0.50 (-O2), 1.26 to 1.27 (-O3) | 0.41 to 0.42 (-O2), 1.03 to 1.13 (-O3) | 1.09 to 1.11 |
-| `axpy`, two limbs, over `a x + y` of T, LLC | 6.24 to 6.26 (-O2), 6.28 to 8.76 (-O3) | 2.34 (-O2), 5.79 to 5.81 (-O3) | 2.51 to 2.52 (-O2), 6.23 to 6.80 (-O3) | 6.59 to 6.78 |
+| `axpy`, one limb, over `a x + y` of T, LLC | 1.27 to 1.72 (-O2), 1.29 to 1.76 (-O3) | 0.48 to 0.50 (-O2), 1.66 to 1.70 (-O3) | 0.42 (-O2), 0.95 to 0.98 (-O3) | 0.96 to 1.12 (-O2), 0.96 to 1.09 (-O3) |
+| `axpy`, two limbs, over `a x + y` of T, LLC | 6.69 to 9.25 (-O2), 6.65 to 9.20 (-O3) | 2.44 to 2.49 (-O2), 8.24 to 8.72 (-O3) | 2.86 to 2.87 (-O2), 6.57 to 6.78 (-O3) | 6.58 to 7.53 (-O2), 6.53 to 7.50 (-O3) |
 | `norm_upper`, one limb, over a plain largest magnitude, LLC | 0.50 | 0.50 to 0.54 | 0.13 to 0.25 (-O2), 0.25 (-O3) | 0.20 to 0.21 |
 | `sum`, one limb, over the plain sum in the same order, memory | 0.99 to 1.05 (-O2), 1.03 to 1.04 (-O3) | 1.06 to 1.11 (-O2), 0.88 to 0.93 (-O3) | 0.96 to 1.03 (-O2), 0.65 to 0.67 (-O3) | 0.96 to 0.99 |
 | `sum`, one limb, over the plain sum, one chain, memory | 0.26 to 0.28 | 0.26 to 0.28 | 0.23 to 0.24 | 0.23 |
 | `sum`, two limbs, over the plain sum of T in the same order, memory | 10.6 to 10.8 (-O2), 10.6 to 11.0 (-O3) | 11.4 to 11.6 (-O2), 10.0 to 10.4 (-O3) | 5.67 to 5.94 (-O2), 3.78 to 3.98 (-O3) | 5.88 to 6.09 (-O2), 5.67 to 5.90 (-O3) |
-| `dot`, one limb, over the plain dot product in the same order, memory | 1.00 to 1.03 (-O2), 0.97 to 1.03 (-O3) | 0.99 to 1.06 (-O2), 0.89 to 0.98 (-O3) | 0.97 to 0.98 (-O2), 0.87 to 0.90 (-O3) | 0.93 to 0.99 (-O2), 0.95 to 1.00 (-O3) |
-| `dot`, two limbs, over the plain dot product of T in the same order, memory | 8.29 to 8.72 (-O2), 8.29 to 8.67 (-O3) | 8.22 to 8.88 (-O2), 7.44 to 8.25 (-O3) | 3.89 to 3.97 (-O2), 3.46 to 3.55 (-O3) | 3.73 to 4.06 (-O2), 3.73 to 3.90 (-O3) |
+| `dot`, one limb, over the plain dot product in the same order, memory | 1.06 to 1.07 (-O2), 1.03 to 1.08 (-O3) | 1.06 (-O2), 0.99 to 1.04 (-O3) | 1.00 to 1.02 (-O2), 0.89 to 0.95 (-O3) | 0.99 to 1.01 |
+| `dot`, two limbs, over the plain dot product of T in the same order, memory | 8.34 to 8.54 | 8.42 to 8.48 (-O2), 7.88 to 8.18 (-O3) | 3.94 to 3.99 (-O2), 3.55 to 3.79 (-O3) | 3.90 to 3.98 |
 | `add`, one limb, over `x + y` of T, memory | 1.26 to 1.33 (-O2), 1.26 to 1.28 (-O3) | 0.49 (-O2), 1.23 (-O3) | 0.69 to 0.70 (-O2), 0.92 (-O3) | 0.90 to 0.93 |
 | `add`, two limbs, over `x + y` of T, memory | 4.84 to 5.06 (-O2), 4.84 to 4.88 (-O3) | 1.78 to 1.79 (-O2), 4.44 to 4.45 (-O3) | 1.37 to 1.40 (-O2), 1.79 to 1.87 (-O3) | 1.79 to 1.89 (-O2), 1.78 to 1.86 (-O3) |
 | `scale`, one limb, over `x a` of T, memory | 1.87 to 1.93 (-O2), 1.87 to 1.88 (-O3) | 0.51 to 0.53 (-O2), 1.85 to 1.88 (-O3) | 0.54 to 0.73 (-O2), 0.97 to 0.98 (-O3) | 0.88 to 0.89 |
 | `scale`, two limbs, over `x a` of T, memory | 3.39 to 3.50 (-O2), 3.39 to 3.40 (-O3) | 0.80 to 0.83 (-O2), 2.90 to 2.94 (-O3) | 0.99 to 1.31 (-O2), 1.68 to 1.70 (-O3) | 1.51 to 1.54 |
-| `axpy`, one limb, over `a x + y` of T, memory | 1.29 to 1.35 (-O2), 1.29 to 1.35 (-O3) | 0.50 (-O2), 1.24 (-O3) | 0.87 to 0.89 (-O2), 0.96 to 0.97 (-O3) | 0.95 to 0.98 |
-| `axpy`, two limbs, over `a x + y` of T, memory | 6.19 to 6.46 (-O2), 6.19 to 6.48 (-O3) | 2.30 to 2.31 (-O2), 5.73 to 5.74 (-O3) | 1.80 to 1.84 (-O2), 1.91 to 2.01 (-O3) | 1.90 to 2.01 (-O2), 1.91 to 2.00 (-O3) |
+| `axpy`, one limb, over `a x + y` of T, memory | 1.24 to 1.28 (-O2), 1.28 to 1.32 (-O3) | 0.48 to 0.52 (-O2), 1.20 to 1.28 (-O3) | 0.84 (-O2), 0.91 to 0.93 (-O3) | 0.90 to 0.93 |
+| `axpy`, two limbs, over `a x + y` of T, memory | 6.56 to 6.62 (-O2), 6.59 to 6.86 (-O3) | 2.47 to 2.50 (-O2), 6.03 to 6.35 (-O3) | 1.88 to 1.96 (-O2), 2.09 to 2.16 (-O3) | 2.09 to 2.13 (-O2), 2.03 to 2.06 (-O3) |
 | `norm_upper`, one limb, over a plain largest magnitude, memory | 0.50 | 0.50 to 0.54 | 0.51 to 0.53 (-O2), 0.36 to 0.37 (-O3) | 0.49 to 0.53 |
 
 | The functions on arrays over the textbook code, float | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `sum` of two limbs of one-limb data, sequential, over Sum2, L1 | 9.35 to 9.37 | 9.13 to 9.52 (-O2), 9.20 (-O3) | 7.08 to 7.11 | 7.06 to 7.11 |
 | `sum` of two limbs of one-limb data, default, over Sum2, L1 | 2.28 to 2.29 | 2.23 to 2.33 (-O2), 2.25 (-O3) | 0.97 to 0.98 | 0.96 to 0.97 |
-| `dot` of two limbs of one-limb data, sequential, over Dot2, L1 | 8.49 to 9.11 (-O2), 8.49 to 8.77 (-O3) | 8.09 to 8.50 (-O2), 8.07 to 8.67 (-O3) | 6.58 to 6.68 | 6.69 to 6.77 |
-| `dot` of two limbs of one-limb data, default, over Dot2, L1 | 2.10 to 2.26 (-O2), 2.10 to 2.26 (-O3) | 2.01 to 2.03 (-O2), 2.00 to 2.08 (-O3) | 0.91 to 0.93 | 0.93 |
+| `dot` of two limbs of one-limb data, sequential, over Dot2, L1 | 8.77 to 9.18 (-O2), 9.17 to 9.19 (-O3) | 8.67 to 8.73 | 6.66 to 6.70 | 6.68 to 6.73 |
+| `dot` of two limbs of one-limb data, default, over Dot2, L1 | 2.18 to 2.28 (-O2), 2.27 to 2.28 (-O3) | 2.15 to 2.16 | 0.92 to 0.93 | 0.92 to 0.93 |
 | `sum`, two limbs, sequential, over double-word sums written out, L1 | 1.02 to 1.09 (-O2), 1.03 to 1.09 (-O3) | 1.00 to 1.02 (-O2), 1.01 to 1.09 (-O3) | 1.00 | 1.02 to 1.03 |
 | `sum`, two limbs, default, over double-word sums written out, L1 | 0.27 | 0.25 to 0.27 | 0.14 | 0.14 |
 | `sum_fast`, sequential, over SloppyDWPlusDW written out, L1 | 0.98 to 1.00 | 0.97 to 0.99 | 1.00 | 1.02 to 1.03 |
-| `dot`, two limbs, sequential, over the double-word dot product written out, L1 | 1.00 to 1.02 (-O2), 1.00 to 1.07 (-O3) | 1.00 to 1.07 (-O2), 1.01 to 1.06 (-O3) | 1.00 | 1.01 to 1.02 |
-| `dot`, two limbs, default, over the double-word dot product written out, L1 | 0.25 to 0.27 | 0.25 to 0.27 | 0.14 | 0.14 |
+| `dot`, two limbs, sequential, over the double-word dot product written out, L1 | 0.99 to 1.01 | 1.00 | 1.00 | 1.01 |
+| `dot`, two limbs, default, over the double-word dot product written out, L1 | 0.25 | 0.25 | 0.14 | 0.14 |
 | `add`, two limbs, over AccurateDWPlusDW written out, L1 | 1.47 to 1.48 | 0.34 (-O2), 1.32 to 1.33 (-O3) | 0.16 (-O2), 1.28 to 1.29 (-O3) | 1.39 to 1.41 |
 | `scale`, two limbs, over DWTimesFP3 written out, L1 | 2.09 | 0.51 (-O2), 1.66 to 1.67 (-O3) | 0.24 (-O2), 1.88 to 1.90 (-O3) | 1.84 to 2.00 (-O2), 1.99 to 2.01 (-O3) |
-| `axpy`, two limbs, a of T, over the same written out, L1 | 1.29 | 0.32 (-O2), 1.19 to 1.20 (-O3) | 0.15 (-O2), 1.18 to 1.19 (-O3) | 1.23 to 1.24 |
-| `axpy`, two limbs, a of two limbs, over the same written out, L1 | 1.26 to 1.27 | 0.31 (-O2), 1.17 to 1.18 (-O3) | 0.15 (-O2), 1.19 to 1.20 (-O3) | 1.21 to 1.22 |
+| `axpy`, two limbs, a of T, over the same written out, L1 | 1.38 to 1.44 (-O2), 1.37 to 1.38 (-O3) | 0.34 to 0.36 (-O2), 1.26 to 1.29 (-O3) | 0.17 (-O2), 1.34 (-O3) | 1.38 to 1.39 |
+| `axpy`, two limbs, a of two limbs, over the same written out, L1 | 1.30 to 1.34 | 0.33 (-O2), 1.26 to 1.27 (-O3) | 0.17 (-O2), 1.34 (-O3) | 1.41 |
 | `sum` of two limbs of one-limb data, sequential, over Sum2, LLC | 9.24 to 9.57 (-O2), 9.27 to 9.31 (-O3) | 9.14 to 9.71 (-O2), 9.09 to 9.10 (-O3) | 6.98 to 7.06 | 6.95 to 7.12 |
 | `sum` of two limbs of one-limb data, default, over Sum2, LLC | 2.33 to 2.43 (-O2), 2.32 to 2.34 (-O3) | 2.30 to 2.44 (-O2), 2.28 to 2.29 (-O3) | 0.87 to 0.89 | 0.87 to 0.89 |
-| `dot` of two limbs of one-limb data, sequential, over Dot2, LLC | 8.54 to 9.17 (-O2), 8.54 to 9.17 (-O3) | 8.11 to 8.14 (-O2), 8.12 to 8.71 (-O3) | 6.66 to 6.71 | 6.72 to 6.75 |
-| `dot` of two limbs of one-limb data, default, over Dot2, LLC | 2.14 to 2.29 (-O2), 2.15 to 2.30 (-O3) | 2.04 to 2.05 (-O2), 2.03 to 2.18 (-O3) | 0.84 | 0.84 to 0.85 |
+| `dot` of two limbs of one-limb data, sequential, over Dot2, LLC | 8.85 to 9.23 (-O2), 9.22 to 9.24 (-O3) | 8.74 to 9.14 (-O2), 8.62 to 8.75 (-O3) | 6.68 to 6.70 | 6.67 to 6.70 |
+| `dot` of two limbs of one-limb data, default, over Dot2, LLC | 2.21 to 2.31 (-O2), 2.31 (-O3) | 2.19 to 2.29 (-O2), 2.15 to 2.19 (-O3) | 0.84 | 0.84 |
 | `sum`, two limbs, sequential, over double-word sums written out, LLC | 1.02 to 1.03 (-O2), 1.02 to 1.09 (-O3) | 0.99 to 1.03 | 1.00 | 1.02 |
 | `sum`, two limbs, default, over double-word sums written out, LLC | 0.26 to 0.28 | 0.25 to 0.27 | 0.13 | 0.13 |
 | `sum_fast`, sequential, over SloppyDWPlusDW written out, LLC | 1.00 to 1.07 (-O2), 1.00 (-O3) | 0.98 to 0.99 | 1.00 | 1.02 to 1.03 |
-| `dot`, two limbs, sequential, over the double-word dot product written out, LLC | 0.97 to 1.02 (-O2), 0.93 to 1.06 (-O3) | 1.01 to 1.04 (-O2), 1.00 to 1.07 (-O3) | 1.00 | 1.01 to 1.02 |
-| `dot`, two limbs, default, over the double-word dot product written out, LLC | 0.25 to 0.27 | 0.25 to 0.27 | 0.13 | 0.13 |
+| `dot`, two limbs, sequential, over the double-word dot product written out, LLC | 1.00 to 1.03 | 1.00 | 1.00 | 1.00 to 1.01 |
+| `dot`, two limbs, default, over the double-word dot product written out, LLC | 0.25 to 0.26 | 0.24 to 0.25 | 0.13 | 0.13 |
 | `add`, two limbs, over AccurateDWPlusDW written out, LLC | 1.43 to 1.44 | 0.34 (-O2), 1.32 (-O3) | 0.17 (-O2), 1.28 to 1.29 (-O3) | 1.31 to 1.32 |
 | `scale`, two limbs, over DWTimesFP3 written out, LLC | 1.70 to 1.71 (-O2), 1.68 to 2.01 (-O3) | 0.61 to 0.63 (-O2), 1.45 to 1.56 (-O3) | 0.24 (-O2), 1.30 to 1.31 (-O3) | 1.30 to 1.32 |
-| `axpy`, two limbs, a of T, over the same written out, LLC | 1.28 to 1.29 | 0.32 (-O2), 1.19 to 1.20 (-O3) | 0.15 (-O2), 1.17 to 1.18 (-O3) | 1.17 to 1.19 |
-| `axpy`, two limbs, a of two limbs, over the same written out, LLC | 1.25 to 1.27 | 0.31 (-O2), 1.19 to 1.20 (-O3) | 0.15 (-O2), 1.19 (-O3) | 1.16 to 1.17 |
+| `axpy`, two limbs, a of T, over the same written out, LLC | 1.34 to 1.41 (-O2), 1.32 to 1.37 (-O3) | 0.33 to 0.35 (-O2), 1.25 to 1.32 (-O3) | 0.17 (-O2), 1.34 (-O3) | 1.33 to 1.34 |
+| `axpy`, two limbs, a of two limbs, over the same written out, LLC | 1.29 to 1.34 (-O2), 1.31 to 1.34 (-O3) | 0.33 to 0.34 (-O2), 1.24 to 1.29 (-O3) | 0.17 (-O2), 1.34 (-O3) | 1.36 |
 | `sum` of two limbs of one-limb data, sequential, over Sum2, memory | 9.27 to 9.30 | 9.07 to 9.41 (-O2), 9.11 to 9.15 (-O3) | 6.87 to 6.99 | 6.88 to 7.03 (-O2), 6.80 to 6.88 (-O3) |
 | `sum` of two limbs of one-limb data, default, over Sum2, memory | 2.30 to 2.32 | 2.25 to 2.34 (-O2), 2.26 to 2.28 (-O3) | 0.87 to 0.88 | 0.86 to 0.89 |
-| `dot` of two limbs of one-limb data, sequential, over Dot2, memory | 8.54 to 8.76 | 8.11 to 8.21 | 6.31 to 6.51 (-O2), 6.33 to 6.45 (-O3) | 6.44 to 6.59 (-O2), 6.30 to 6.57 (-O3) |
-| `dot` of two limbs of one-limb data, default, over Dot2, memory | 2.14 to 2.29 (-O2), 2.14 to 2.28 (-O3) | 2.04 to 2.09 (-O2), 2.03 to 2.18 (-O3) | 0.82 to 0.84 | 0.83 to 0.84 |
+| `dot` of two limbs of one-limb data, sequential, over Dot2, memory | 8.76 to 9.24 (-O2), 8.69 to 9.04 (-O3) | 8.48 to 8.72 | 6.31 to 6.42 (-O2), 6.37 to 6.52 (-O3) | 6.29 to 6.49 (-O2), 6.39 to 6.52 (-O3) |
+| `dot` of two limbs of one-limb data, default, over Dot2, memory | 2.17 to 2.31 (-O2), 2.27 to 2.31 (-O3) | 2.12 to 2.18 (-O2), 2.12 to 2.14 (-O3) | 0.82 to 0.84 | 0.83 to 0.84 |
 | `sum`, two limbs, sequential, over double-word sums written out, memory | 1.00 to 1.01 | 0.97 to 0.98 | 1.00 | 1.02 |
 | `sum`, two limbs, default, over double-word sums written out, memory | 0.25 to 0.27 | 0.25 to 0.26 | 0.13 | 0.13 |
 | `sum_fast`, sequential, over SloppyDWPlusDW written out, memory | 1.00 to 1.01 | 0.98 to 0.99 | 1.00 | 1.02 |
-| `dot`, two limbs, sequential, over the double-word dot product written out, memory | 1.00 to 1.04 | 1.00 to 1.02 | 1.00 | 1.01 |
-| `dot`, two limbs, default, over the double-word dot product written out, memory | 0.26 to 0.27 | 0.26 to 0.27 | 0.14 | 0.14 |
+| `dot`, two limbs, sequential, over the double-word dot product written out, memory | 1.00 to 1.02 | 1.00 to 1.03 | 1.00 | 1.00 to 1.01 |
+| `dot`, two limbs, default, over the double-word dot product written out, memory | 0.25 to 0.27 | 0.25 to 0.26 | 0.14 | 0.14 |
 | `add`, two limbs, over AccurateDWPlusDW written out, memory | 1.42 to 1.43 | 0.34 (-O2), 1.31 (-O3) | 0.26 (-O2), 1.00 to 1.03 (-O3) | 1.01 to 1.04 |
 | `scale`, two limbs, over DWTimesFP3 written out, memory | 1.66 to 1.68 | 0.48 (-O2), 1.43 to 1.44 (-O3) | 0.57 to 0.58 (-O2), 0.95 to 0.96 (-O3) | 0.96 to 0.97 |
-| `axpy`, two limbs, a of T, over the same written out, memory | 1.28 | 0.32 (-O2), 1.19 (-O3) | 0.18 to 0.19 (-O2), 1.06 to 1.08 (-O3) | 1.05 to 1.07 |
-| `axpy`, two limbs, a of two limbs, over the same written out, memory | 1.25 to 1.26 | 0.31 (-O2), 1.17 to 1.18 (-O3) | 0.17 to 0.18 (-O2), 1.09 (-O3) | 1.07 to 1.08 |
+| `axpy`, two limbs, a of T, over the same written out, memory | 1.36 (-O2), 1.29 to 1.39 (-O3) | 0.32 to 0.34 (-O2), 1.23 to 1.27 (-O3) | 0.19 to 0.20 (-O2), 1.13 to 1.15 (-O3) | 1.12 to 1.14 |
+| `axpy`, two limbs, a of two limbs, over the same written out, memory | 1.32 to 1.35 | 0.32 to 0.34 (-O2), 1.19 to 1.25 (-O3) | 0.18 to 0.19 (-O2), 1.14 to 1.17 (-O3) | 1.16 to 1.19 |
 
 | kairn::sequential over the default order, float | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `sum`, one limb, L1 | 4.28 to 4.33 | 5.23 to 5.59 (-O2), 5.17 to 5.52 (-O3) | 7.38 to 7.42 (-O2), 7.00 to 7.40 (-O3) | 8.87 to 8.93 |
 | `sum`, two limbs, L1 | 3.83 to 4.09 (-O2), 3.84 to 4.09 (-O3) | 3.86 to 3.99 (-O2), 3.83 to 4.08 (-O3) | 7.21 to 7.31 | 7.29 to 7.33 |
 | `sum_fast`, two limbs, L1 | 4.18 to 4.20 | 4.21 to 4.22 | 7.30 to 7.38 | 7.34 to 7.37 |
-| `dot`, one limb, L1 | 5.58 to 5.73 (-O2), 5.56 to 5.77 (-O3) | 5.55 to 5.70 (-O2), 5.40 to 5.61 (-O3) | 8.76 to 8.97 | 8.95 to 9.02 |
-| `dot`, two limbs, L1 | 3.77 to 4.03 (-O2), 3.80 to 4.04 (-O3) | 3.76 to 4.03 (-O2), 3.92 to 4.03 (-O3) | 7.20 to 7.26 | 7.24 to 7.33 |
+| `dot`, one limb, L1 | 5.43 to 5.61 (-O2), 5.43 to 5.62 (-O3) | 5.59 to 5.64 (-O2), 5.35 to 5.47 (-O3) | 8.90 to 9.08 | 8.98 to 9.00 |
+| `dot`, two limbs, L1 | 4.03 to 4.04 | 4.03 to 4.04 | 7.21 to 7.24 | 7.26 to 7.27 |
 | `add`, one limb, one lane over the default, L1 | 0.73 | 23.4 to 23.5 (-O2), 1.06 to 1.07 (-O3) | 10.4 to 10.5 (-O2), 10.1 to 10.4 (-O3) | 1.24 to 1.26 |
 | `add`, two limbs, one lane over the default, L1 | 0.88 to 0.90 | 6.13 to 6.17 (-O2), 1.00 to 1.01 (-O3) | 8.69 to 8.84 | 0.99 to 1.00 |
 | `scale`, two limbs, one lane over the default, L1 | 1.02 to 1.03 | 12.9 to 13.1 (-O2), 1.00 (-O3) | 8.07 to 8.11 | 1.09 to 1.10 |
-| `axpy`, one limb, one lane over the default, L1 | 0.74 | 23.4 to 23.5 (-O2), 1.09 (-O3) | 10.3 (-O2), 9.8 to 10.3 (-O3) | 1.21 to 1.22 |
-| `axpy`, two limbs, one lane over the default, L1 | 0.93 | 4.64 to 4.74 (-O2), 1.01 (-O3) | 8.44 to 8.51 | 0.86 to 0.87 |
+| `axpy`, one limb, one lane over the default, L1 | 0.74 to 0.76 | 23.4 to 23.5 (-O2), 1.09 (-O3) | 10.2 to 10.3 (-O2), 9.77 to 9.78 (-O3) | 1.18 to 1.21 |
+| `axpy`, two limbs, one lane over the default, L1 | 0.94 to 0.95 | 4.42 (-O2), 1.01 to 1.03 (-O3) | 8.07 to 8.14 | 0.84 |
 | `norm_upper`, two limbs, one lane over the default, L1 | 2.92 to 2.93 | 15.0 to 15.8 (-O2), 15.8 to 16.0 (-O3) | 8.11 to 8.42 (-O2), 8.68 to 9.38 (-O3) | 7.01 to 8.52 (-O2), 7.02 to 8.52 (-O3) |
 | `sum`, one limb, LLC | 3.67 to 3.84 (-O2), 3.65 to 3.85 (-O3) | 3.94 to 3.97 (-O2), 3.78 to 3.93 (-O3) | 7.88 to 7.93 | 7.91 to 7.94 |
 | `sum`, two limbs, LLC | 3.73 to 3.94 (-O2), 3.81 to 3.98 (-O3) | 3.85 to 4.00 (-O2), 3.78 to 3.92 (-O3) | 7.97 to 8.01 | 7.98 to 8.01 |
 | `sum_fast`, two limbs, LLC | 4.00 to 4.20 (-O2), 4.00 (-O3) | 4.00 | 7.96 to 8.03 | 7.97 to 8.01 |
-| `dot`, one limb, LLC | 4.02 to 4.29 (-O2), 4.11 to 4.31 (-O3) | 4.00 to 4.16 (-O2), 4.00 to 4.11 (-O3) | 7.92 to 7.93 | 7.92 to 7.95 |
-| `dot`, two limbs, LLC | 3.76 to 3.86 (-O2), 3.73 to 4.00 (-O3) | 3.74 to 3.88 (-O2), 3.76 to 3.99 (-O3) | 7.90 to 7.96 | 7.91 to 7.97 |
+| `dot`, one limb, LLC | 3.98 to 4.08 | 3.99 to 4.02 | 7.88 to 7.90 | 7.87 to 7.91 |
+| `dot`, two limbs, LLC | 4.00 | 3.99 to 4.14 (-O2), 3.99 to 4.01 (-O3) | 7.95 to 7.97 | 7.91 to 7.95 |
 | `add`, one limb, one lane over the default, LLC | 0.75 to 0.77 | 21.7 to 21.8 (-O2), 1.00 (-O3) | 7.16 to 7.36 | 1.00 to 1.02 |
 | `add`, two limbs, one lane over the default, LLC | 0.88 to 0.89 | 6.04 to 6.05 (-O2), 1.00 (-O3) | 8.65 to 8.76 | 1.00 to 1.01 |
 | `scale`, two limbs, one lane over the default, LLC | 1.04 | 13.9 (-O2), 1.00 (-O3) | 7.92 to 7.99 | 1.08 to 1.09 |
-| `axpy`, one limb, one lane over the default, LLC | 0.76 to 0.77 | 21.7 (-O2), 1.00 (-O3) | 7.09 to 7.37 (-O2), 7.19 to 7.29 (-O3) | 1.01 to 1.02 |
-| `axpy`, two limbs, one lane over the default, LLC | 0.94 to 0.96 | 4.72 (-O2), 1.00 (-O3) | 8.45 to 8.50 | 0.88 to 0.89 |
+| `axpy`, one limb, one lane over the default, LLC | 0.77 to 0.80 | 21.7 to 21.9 (-O2), 1.00 to 1.01 (-O3) | 7.24 to 7.36 | 1.01 to 1.03 |
+| `axpy`, two limbs, one lane over the default, LLC | 0.97 to 1.01 | 4.39 to 4.44 (-O2), 0.99 to 1.03 (-O3) | 8.09 to 8.12 | 0.84 to 0.85 |
 | `norm_upper`, two limbs, one lane over the default, LLC | 1.97 to 2.00 | 10.3 to 11.0 (-O2), 10.4 to 11.0 (-O3) | 10.5 to 10.6 | 7.72 to 8.19 (-O2), 7.65 to 8.22 (-O3) |
 | `sum`, one limb, memory | 3.63 to 3.83 (-O2), 3.64 to 3.84 (-O3) | 3.69 to 3.84 (-O2), 4.02 to 4.20 (-O3) | 4.20 to 4.30 (-O2), 4.14 to 4.29 (-O3) | 4.34 to 4.44 (-O2), 4.30 to 4.33 (-O3) |
 | `sum`, two limbs, memory | 3.78 to 3.96 (-O2), 3.75 to 3.95 (-O3) | 3.84 to 3.99 (-O2), 3.76 to 3.95 (-O3) | 7.97 to 8.00 | 7.95 to 7.98 |
 | `sum_fast`, two limbs, memory | 3.90 to 4.01 | 4.00 to 4.01 | 7.75 to 7.85 | 7.80 to 7.83 |
-| `dot`, one limb, memory | 4.04 to 4.19 (-O2), 4.07 to 4.31 (-O3) | 4.00 (-O2), 3.99 to 4.22 (-O3) | 4.25 to 4.34 | 4.29 to 4.38 (-O2), 4.24 to 4.29 (-O3) |
-| `dot`, two limbs, memory | 3.75 to 3.99 (-O2), 3.74 to 3.79 (-O3) | 3.78 to 3.90 (-O2), 3.73 to 3.81 (-O3) | 7.16 to 7.30 | 7.24 to 7.45 (-O2), 7.36 to 7.48 (-O3) |
+| `dot`, one limb, memory | 3.91 to 3.98 (-O2), 4.00 to 4.10 (-O3) | 3.98 to 4.14 (-O2), 4.00 to 4.14 (-O3) | 4.21 to 4.28 | 4.19 to 4.25 |
+| `dot`, two limbs, memory | 3.93 to 3.99 (-O2), 3.75 to 4.00 (-O3) | 3.88 to 4.00 (-O2), 3.95 to 4.01 (-O3) | 7.13 to 7.27 | 7.14 to 7.32 |
 | `add`, one limb, one lane over the default, memory | 0.77 to 0.78 | 20.6 to 21.1 (-O2), 1.00 (-O3) | 2.03 to 2.13 (-O2), 2.06 to 2.13 (-O3) | 0.99 to 1.02 |
 | `add`, two limbs, one lane over the default, memory | 0.89 | 6.04 to 6.05 (-O2), 1.00 (-O3) | 5.37 to 5.47 (-O2), 5.28 to 5.49 (-O3) | 0.99 to 1.01 |
 | `scale`, two limbs, one lane over the default, memory | 1.04 | 13.6 to 14.0 (-O2), 1.00 (-O3) | 2.99 to 3.04 | 0.99 to 1.00 |
-| `axpy`, one limb, one lane over the default, memory | 0.77 to 0.78 | 20.8 to 21.6 (-O2), 1.00 (-O3) | 2.12 to 2.18 | 1.02 to 1.04 |
-| `axpy`, two limbs, one lane over the default, memory | 0.95 to 0.98 | 4.64 to 4.69 (-O2), 1.00 (-O3) | 6.79 to 6.89 (-O2), 6.76 to 7.01 (-O3) | 0.95 to 0.97 |
+| `axpy`, one limb, one lane over the default, memory | 0.77 to 0.79 | 21.7 to 22.1 (-O2), 0.98 to 1.01 (-O3) | 2.10 to 2.13 (-O2), 2.06 to 2.11 (-O3) | 1.00 to 1.02 (-O2), 1.01 to 1.06 (-O3) |
+| `axpy`, two limbs, one lane over the default, memory | 0.97 to 0.99 (-O2), 0.97 to 1.02 (-O3) | 4.26 to 4.38 (-O2), 1.00 to 1.02 (-O3) | 6.85 to 7.14 (-O2), 6.77 to 6.92 (-O3) | 0.93 to 0.95 |
 | `norm_upper`, two limbs, one lane over the default, memory | 2.00 to 2.14 (-O2), 2.00 to 2.02 (-O3) | 10.4 to 11.0 (-O2), 10.3 to 10.5 (-O3) | 3.61 to 3.80 (-O2), 3.43 to 3.47 (-O3) | 2.40 to 2.47 (-O2), 2.45 to 2.48 (-O3) |
 
 | The product of polynomials, float | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `conv`, one limb, 16 coefficients: ns per term | 0.39 | 0.47 (-O2), 0.36 to 0.37 (-O3) | 0.83 to 0.88 | 0.76 to 0.78 (-O2), 0.69 to 0.70 (-O3) |
-| `conv`, two limbs, 16 coefficients: ns per term | 4.28 | 4.21 to 4.25 | 9.34 to 9.59 | 9.45 to 9.59 |
-| `conv`, one limb, 16, over the plain loop of T (FMA) | 1.00 to 1.01 | 1.23 to 1.24 (-O2), 1.33 to 1.36 (-O3) | 1.02 to 1.05 (-O2), 1.36 to 1.42 (-O3) | 1.31 to 1.32 (-O2), 1.19 to 1.20 (-O3) |
-| `conv`, two limbs, 16, over the plain loop of T (FMA) | 11.0 to 11.1 | 11.0 to 11.1 (-O2), 15.5 to 15.6 (-O3) | 11.5 to 11.7 (-O2), 15.2 to 15.4 (-O3) | 16.1 to 16.4 |
-| `conv`, two limbs, 16, over the double-word loop written out | 1.00 to 1.06 (-O2), 1.00 to 1.04 (-O3) | 1.00 to 1.01 | 1.02 to 1.03 | 1.03 to 1.04 |
-| `conv`, one limb, 64 coefficients: ns per term | 0.43 to 0.44 | 0.42 to 0.44 | 0.97 to 1.01 | 0.95 to 0.97 (-O2), 0.83 to 0.84 (-O3) |
-| `conv`, two limbs, 64 coefficients: ns per term | 6.26 to 6.48 (-O2), 6.18 to 6.48 (-O3) | 6.35 to 6.46 (-O2), 6.06 to 6.48 (-O3) | 10.0 to 10.2 | 10.0 to 10.3 |
-| `conv`, one limb, 64, over the plain loop of T (FMA) | 1.07 to 1.09 | 1.05 to 1.09 | 0.95 to 0.96 (-O2), 0.98 to 1.10 (-O3) | 1.38 (-O2), 1.21 to 1.22 (-O3) |
-| `conv`, two limbs, 64, over the plain loop of T (FMA) | 15.6 to 16.1 (-O2), 15.8 to 16.5 (-O3) | 15.9 to 16.2 (-O2), 15.6 to 16.2 (-O3) | 9.76 to 9.88 (-O2), 9.7 to 11.0 (-O3) | 14.6 to 14.7 |
-| `conv`, two limbs, 64, over the double-word loop written out | 1.00 to 1.07 (-O2), 1.00 to 1.02 (-O3) | 1.00 to 1.07 (-O2), 1.00 to 1.02 (-O3) | 1.00 to 1.01 | 1.02 |
-| `conv`, one limb, 512 coefficients: ns per term | 0.72 to 0.77 (-O2), 0.72 to 0.77 (-O3) | 0.72 to 0.77 (-O2), 0.73 to 0.78 (-O3) | 1.38 to 1.41 | 1.38 to 1.41 (-O2), 1.35 (-O3) |
-| `conv`, two limbs, 512 coefficients: ns per term | 7.16 to 7.64 (-O2), 7.15 to 7.64 (-O3) | 7.11 to 7.41 (-O2), 7.13 to 7.63 (-O3) | 10.2 to 10.3 | 10.2 to 10.5 |
-| `conv`, one limb, 512, over the plain loop of T (FMA) | 0.99 to 1.05 (-O2), 0.98 to 1.05 (-O3) | 0.98 to 1.05 (-O2), 1.00 to 1.09 (-O3) | 0.99 to 1.01 | 1.02 to 1.05 |
-| `conv`, two limbs, 512, over the plain loop of T (FMA) | 9.9 to 10.5 (-O2), 9.8 to 10.4 (-O3) | 9.9 to 10.4 (-O2), 9.7 to 10.7 (-O3) | 7.25 to 7.41 | 7.72 to 7.76 |
-| `conv`, two limbs, 512, over the double-word loop written out | 1.01 to 1.07 (-O2), 1.00 to 1.04 (-O3) | 1.00 to 1.04 (-O2), 1.00 to 1.07 (-O3) | 0.99 to 1.00 | 1.01 to 1.02 |
+| `conv`, one limb, 16 coefficients: ns per term | 0.38 to 0.46 (-O2), 0.39 to 0.47 (-O3) | 0.55 to 0.56 (-O2), 0.47 to 0.49 (-O3) | 0.91 to 0.92 (-O2), 0.83 to 0.84 (-O3) | 0.84 to 0.85 (-O2), 0.69 (-O3) |
+| `conv`, two limbs, 16 coefficients: ns per term | 4.32 to 5.49 (-O2), 4.57 to 5.49 (-O3) | 5.20 to 5.22 (-O2), 5.20 to 5.39 (-O3) | 9.51 to 9.54 | 9.58 to 9.59 |
+| `conv`, one limb, 16, over the plain loop of T (FMA) | 0.98 to 1.01 | 1.24 to 1.26 (-O2), 1.44 to 1.48 (-O3) | 1.41 to 1.42 (-O2), 1.35 to 1.36 (-O3) | 1.46 to 1.47 (-O2), 1.19 (-O3) |
+| `conv`, two limbs, 16, over the plain loop of T (FMA) | 11.2 to 12.0 (-O2), 11.7 to 11.8 (-O3) | 11.6 to 11.8 (-O2), 16.2 to 16.3 (-O3) | 14.7 to 14.8 (-O2), 15.5 (-O3) | 16.6 to 16.7 |
+| `conv`, two limbs, 16, over the double-word loop written out | 1.07 to 1.12 | 1.06 to 1.08 | 1.05 | 1.05 to 1.06 |
+| `conv`, one limb, 64 coefficients: ns per term | 0.40 to 0.50 (-O2), 0.44 to 0.53 (-O3) | 0.49 to 0.51 | 1.05 to 1.07 (-O2), 0.99 to 1.00 (-O3) | 1.03 to 1.05 (-O2), 0.83 (-O3) |
+| `conv`, two limbs, 64 coefficients: ns per term | 6.15 to 7.56 (-O2), 6.58 to 7.91 (-O3) | 7.54 to 7.55 (-O2), 7.54 to 7.88 (-O3) | 9.96 to 9.98 | 10.0 |
+| `conv`, one limb, 64, over the plain loop of T (FMA) | 1.07 to 1.12 | 1.11 (-O2), 1.05 to 1.10 (-O3) | 1.17 to 1.18 (-O2), 1.09 to 1.10 (-O3) | 1.51 to 1.52 (-O2), 1.21 (-O3) |
+| `conv`, two limbs, 64, over the plain loop of T (FMA) | 16.4 to 16.6 | 16.6 to 16.7 (-O2), 16.2 to 16.7 (-O3) | 10.9 to 11.1 | 14.6 |
+| `conv`, two limbs, 64, over the double-word loop written out | 0.98 to 1.02 (-O2), 1.02 to 1.03 (-O3) | 1.01 to 1.02 | 1.01 | 1.02 |
+| `conv`, one limb, 512 coefficients: ns per term | 0.72 to 0.89 (-O2), 0.77 to 0.89 (-O3) | 0.89 to 0.94 | 1.38 to 1.39 | 1.34 to 1.39 |
+| `conv`, two limbs, 512 coefficients: ns per term | 7.18 to 8.86 (-O2), 7.70 to 9.26 (-O3) | 8.81 (-O2), 8.83 to 9.23 (-O3) | 10.1 | 10.1 to 10.2 |
+| `conv`, one limb, 512, over the plain loop of T (FMA) | 1.01 to 1.06 | 1.05 to 1.07 | 0.99 to 1.00 | 1.02 to 1.05 |
+| `conv`, two limbs, 512, over the plain loop of T (FMA) | 10.5 | 10.4 to 10.5 | 7.27 to 7.30 | 7.68 to 7.70 |
+| `conv`, two limbs, 512, over the double-word loop written out | 1.01 (-O2), 1.01 to 1.08 (-O3) | 1.00 to 1.05 | 1.00 | 1.01 |
 
 #### Question 14: short arrays and the check at entry
 
@@ -4901,20 +5262,20 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum`, two limbs, n = 16 | 29.7 to 29.9 | 28.4 to 29.1 | 63.6 to 63.9 (-O2), 59.5 to 59.6 (-O3) | 62.2 to 62.7 |
 | `sum`, two limbs, n = 64 | 190 | 189 to 190 | 182 to 188 | 184 to 185 |
 | `sum`, two limbs, n = 1024 | 3761 to 3763 | 3754 to 3781 | 2632 to 2655 | 2615 to 2631 |
-| `dot`, one limb, n = 1 | 1.28 to 1.32 (-O2), 1.05 to 1.06 (-O3) | 1.3 to 1.32 | 6.91 to 7.23 | 6.92 to 7.26 |
-| `dot`, one limb, n = 2 | 1.3 to 1.32 (-O2), 1.06 to 1.07 (-O3) | 1.33 to 1.34 | 7.22 to 7.53 | 7.24 to 7.56 |
-| `dot`, one limb, n = 4 | 1.36 to 1.38 (-O2), 1.08 (-O3) | 1.57 to 1.6 | 7.24 to 7.52 | 7.52 to 7.53 (-O2), 6.93 to 6.95 (-O3) |
-| `dot`, one limb, n = 8 | 2.06 to 2.12 | 2.61 to 2.63 | 7.52 to 7.58 | 7.21 to 7.57 |
-| `dot`, one limb, n = 16 | 3.15 to 3.17 | 3.65 to 3.68 | 7.82 to 8.13 | 7.54 to 7.9 |
-| `dot`, one limb, n = 64 | 13.2 to 13.3 | 13.1 to 13.2 | 16.4 to 16.8 | 15 to 15.2 (-O2), 15.8 to 15.9 (-O3) |
-| `dot`, one limb, n = 1024 | 444 to 476 (-O2), 444 (-O3) | 446 to 447 | 365 to 368 | 362 to 365 |
-| `dot`, two limbs, n = 1 | 4.39 to 4.47 | 3.13 to 3.16 (-O2), 2.68 to 2.69 (-O3) | 34.2 to 34.5 (-O2), 9.16 (-O3) | 30.4 to 30.6 |
-| `dot`, two limbs, n = 2 | 5.65 to 5.71 | 5.15 to 5.23 (-O2), 5.62 to 5.65 (-O3) | 43 to 43.7 (-O2), 16.3 to 16.4 (-O3) | 40.5 to 40.8 |
-| `dot`, two limbs, n = 4 | 8.83 to 9.51 (-O2), 9.11 to 9.3 (-O3) | 8.62 to 8.95 | 38.2 to 38.5 (-O2), 33.7 to 33.9 (-O3) | 36.8 to 37.1 |
-| `dot`, two limbs, n = 8 | 17.1 to 17.7 | 16.2 to 16.8 | 48.3 to 48.9 (-O2), 44.8 to 44.9 (-O3) | 47.1 to 47.4 |
-| `dot`, two limbs, n = 16 | 35.4 to 37.3 (-O2), 35.4 to 37.2 (-O3) | 34.1 to 35.3 | 68.9 to 69.5 (-O2), 65.1 to 65.2 (-O3) | 67.2 to 67.7 |
-| `dot`, two limbs, n = 64 | 197 | 196 to 197 | 187 to 192 | 191 to 193 |
-| `dot`, two limbs, n = 1024 | 3700 | 3708 to 3710 | 2629 to 2645 | 2655 to 2664 |
+| `dot`, one limb, n = 1 | 1.33 to 1.54 (-O2), 1.08 to 1.24 (-O3) | 1.49 to 1.55 | 6.9 to 7.2 | 6.9 to 7.2 |
+| `dot`, one limb, n = 2 | 1.33 to 1.54 (-O2), 1.08 to 1.24 (-O3) | 1.46 to 1.56 (-O2), 1.55 to 1.56 (-O3) | 7.2 to 7.5 | 7.2 to 7.51 |
+| `dot`, one limb, n = 4 | 1.36 to 1.58 (-O2), 1.09 to 1.25 (-O3) | 1.79 to 1.86 (-O2), 1.86 to 1.94 (-O3) | 7.22 to 7.5 | 7.5 to 7.51 (-O2), 6.9 to 6.91 (-O3) |
+| `dot`, one limb, n = 8 | 2.14 to 2.46 (-O2), 2.14 to 2.46 (-O3) | 3.06 to 3.07 | 7.5 to 7.55 | 7.21 to 7.51 |
+| `dot`, one limb, n = 16 | 3.2 to 3.68 (-O2), 3.2 to 3.68 (-O3) | 4.12 to 4.29 | 7.8 to 8.11 | 7.5 to 7.84 |
+| `dot`, one limb, n = 64 | 13.3 to 15.4 (-O2), 13.4 to 16.1 (-O3) | 15.3 to 15.9 | 16.4 to 16.7 | 15 (-O2), 15.8 (-O3) |
+| `dot`, one limb, n = 1024 | 455 to 547 (-O2), 476 to 547 (-O3) | 515 to 554 (-O2), 550 (-O3) | 363 to 364 | 361 to 362 |
+| `dot`, two limbs, n = 1 | 4.67 to 5.36 (-O2), 4.66 to 5.43 (-O3) | 3.56 to 3.67 (-O2), 3.32 to 3.44 (-O3) | 34.2 to 34.6 (-O2), 9.87 (-O3) | 30.5 to 30.6 |
+| `dot`, two limbs, n = 2 | 6.03 to 7.09 (-O2), 6.16 to 7.2 (-O3) | 6.24 to 6.79 (-O2), 6.96 to 7.06 (-O3) | 43.1 to 44 (-O2), 17.9 (-O3) | 40.5 to 40.8 |
+| `dot`, two limbs, n = 4 | 10.3 to 11.9 (-O2), 10.4 to 11.9 (-O3) | 10.2 to 11 (-O2), 11.2 (-O3) | 39.4 (-O2), 35.7 (-O3) | 38.6 to 38.7 |
+| `dot`, two limbs, n = 8 | 19 to 22 (-O2), 19.2 to 22.2 (-O3) | 19.8 to 20.7 (-O2), 21.2 to 21.5 (-O3) | 50 (-O2), 46.4 to 46.5 (-O3) | 48.9 to 49 |
+| `dot`, two limbs, n = 16 | 41.2 to 47.3 (-O2), 41.4 to 47.2 (-O3) | 43.6 to 44.7 | 66.9 to 70.1 | 69.2 to 69.3 |
+| `dot`, two limbs, n = 64 | 202 to 246 (-O2), 214 to 246 (-O3) | 235 to 246 | 189 to 192 | 192 |
+| `dot`, two limbs, n = 1024 | 3716 to 4585 (-O2), 3991 to 4588 (-O3) | 4303 to 4599 (-O2), 4589 to 4592 (-O3) | 2627 to 2635 | 2630 to 2635 |
 
 | Short arrays, dependent calls: ns per call | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -4932,20 +5293,20 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum`, two limbs, n = 16 | 76.8 to 77.5 | 73.9 to 74 (-O2), 70.4 (-O3) | 82.7 to 83.3 (-O2), 77.5 to 77.8 (-O3) | 80.1 to 80.8 |
 | `sum`, two limbs, n = 64 | 253 | 248 to 251 | 200 to 207 | 202 to 203 |
 | `sum`, two limbs, n = 1024 | 3817 to 3819 | 3819 to 3845 | 2650 to 2677 | 2634 to 2656 |
-| `dot`, one limb, n = 1 | 4.91 to 6.02 (-O2), 7.7 to 7.9 (-O3) | 5.61 to 5.74 (-O2), 4.84 to 4.94 (-O3) | 7.22 to 7.52 | 8.46 to 8.5 (-O2), 8.93 to 8.94 (-O3) |
-| `dot`, one limb, n = 2 | 7.33 to 7.73 (-O2), 2.82 (-O3) | 6.74 to 7.03 (-O2), 5.89 to 6.17 (-O3) | 8.65 to 8.9 | 9.91 to 9.98 (-O2), 10.4 to 10.5 (-O3) |
-| `dot`, one limb, n = 4 | 10.6 to 10.7 (-O2), 11.5 (-O3) | 8.24 to 8.84 (-O2), 8.71 to 8.72 (-O3) | 10.9 to 11 | 12.1 to 12.2 |
-| `dot`, one limb, n = 8 | 13 to 13.6 | 10.6 to 10.9 | 12.3 to 12.8 | 13.6 to 13.8 |
-| `dot`, one limb, n = 16 | 17.9 (-O2), 17 to 17.9 (-O3) | 14.8 to 15.2 | 15.3 to 15.5 | 16.6 to 16.7 |
-| `dot`, one limb, n = 64 | 42.8 to 43.5 | 38.9 to 40.2 | 33.2 to 33.5 | 34.5 to 34.8 |
-| `dot`, one limb, n = 1024 | 514 to 551 (-O2), 514 to 551 (-O3) | 511 to 512 | 394 to 397 | 395 to 398 |
-| `dot`, two limbs, n = 1 | 23.8 to 25 | 19.9 to 20.4 (-O2), 16.1 to 16.3 (-O3) | 34.5 to 34.8 (-O2), 21.4 (-O3) | 31.6 to 31.8 |
-| `dot`, two limbs, n = 2 | 29.9 to 30.9 | 27.6 to 28.1 (-O2), 23.6 to 23.7 (-O3) | 43.6 to 44.2 (-O2), 31.3 (-O3) | 42.5 to 42.7 |
-| `dot`, two limbs, n = 4 | 39 to 40 | 36 to 36.5 (-O2), 32 to 32.1 (-O3) | 58.2 to 58.5 (-O2), 52.5 to 52.7 (-O3) | 55.6 to 56.1 |
-| `dot`, two limbs, n = 8 | 53.4 to 55.1 | 50.3 to 50.7 (-O2), 47.3 to 47.4 (-O3) | 68.3 to 68.9 (-O2), 62.7 to 62.8 (-O3) | 66 to 66.5 |
-| `dot`, two limbs, n = 16 | 83.4 to 84.9 | 76.5 to 80.2 | 88.6 to 89.5 (-O2), 83.6 (-O3) | 86.4 to 87.1 |
-| `dot`, two limbs, n = 64 | 258 to 260 | 252 to 255 | 206 to 212 | 210 to 212 |
-| `dot`, two limbs, n = 1024 | 3759 to 3760 | 3762 to 3768 | 2649 to 2678 | 2677 to 2694 |
+| `dot`, one limb, n = 1 | 3.81 to 4.98 (-O2), 7.88 to 9.11 (-O3) | 6.51 to 6.91 (-O2), 5.68 to 6.01 (-O3) | 7.2 to 7.51 | 8.43 to 8.45 (-O2), 8.87 to 8.88 (-O3) |
+| `dot`, one limb, n = 2 | 7.92 to 10.4 (-O2), 2.82 to 3.24 (-O3) | 7.79 to 8.09 (-O2), 6.6 to 7.18 (-O3) | 8.64 to 8.88 | 9.88 to 9.9 (-O2), 10.4 (-O3) |
+| `dot`, one limb, n = 4 | 11.5 to 13.2 (-O2), 11.4 to 13.1 (-O3) | 9.89 to 10.2 | 10.9 | 12 to 12.1 |
+| `dot`, one limb, n = 8 | 13.6 to 15.6 (-O2), 13.6 to 15.6 (-O3) | 12.6 to 12.8 | 12.3 to 12.7 | 13.5 to 13.7 |
+| `dot`, one limb, n = 16 | 17.1 to 20.6 (-O2), 17.9 to 20.6 (-O3) | 16.9 to 17.5 | 15.3 to 15.4 | 16.5 to 16.6 |
+| `dot`, one limb, n = 64 | 43.5 to 50 (-O2), 43.5 to 52.3 (-O3) | 43.8 to 46.9 (-O2), 46.9 to 47.6 (-O3) | 33.1 to 33.5 | 34.4 to 34.5 |
+| `dot`, one limb, n = 1024 | 551 to 634 (-O2), 551 to 634 (-O3) | 607 to 659 (-O2), 631 to 632 (-O3) | 392 to 393 | 393 to 394 |
+| `dot`, two limbs, n = 1 | 25.4 to 29.6 (-O2), 25.7 to 29.6 (-O3) | 23.6 to 24.5 (-O2), 19.9 to 20.1 (-O3) | 34.6 (-O2), 21.9 to 22 (-O3) | 32 to 32.1 |
+| `dot`, two limbs, n = 2 | 33.2 to 38.5 (-O2), 33.5 to 38.5 (-O3) | 33.9 to 34.7 (-O2), 30.1 (-O3) | 43.6 to 43.7 (-O2), 32.2 (-O3) | 42.2 to 42.4 |
+| `dot`, two limbs, n = 4 | 41.7 to 48.7 (-O2), 42.5 to 48.9 (-O3) | 42.1 to 45 (-O2), 41.1 to 41.2 (-O3) | 59.3 (-O2), 53 to 53.1 (-O3) | 56.8 |
+| `dot`, two limbs, n = 8 | 56.5 to 65.4 (-O2), 56.6 to 65.1 (-O3) | 61.8 to 62.1 (-O2), 57.8 to 57.9 (-O3) | 68.9 to 69 (-O2), 63.7 to 63.8 (-O3) | 66.8 to 66.9 |
+| `dot`, two limbs, n = 16 | 84.1 to 103 (-O2), 91 to 105 (-O3) | 95.5 to 100 | 89.1 to 89.2 (-O2), 84.1 to 84.2 (-O3) | 87.1 to 87.2 |
+| `dot`, two limbs, n = 64 | 260 to 321 (-O2), 280 to 321 (-O3) | 297 to 317 (-O2), 312 (-O3) | 206 to 211 | 209 |
+| `dot`, two limbs, n = 1024 | 3779 to 4661 (-O2), 4054 to 4661 (-O3) | 4431 to 4671 (-O2), 4650 (-O3) | 2648 to 2658 | 2653 to 2657 |
 
 | Short arrays, independent calls: the length known to the compiler over read at run time | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -4963,20 +5324,20 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum`, two limbs, n = 16 | 1.00 | 0.98 to 1.00 | 0.98 to 1.00 | 1.00 |
 | `sum`, two limbs, n = 64 | 1.00 | 1.00 | 1.00 | 1.00 |
 | `sum`, two limbs, n = 1024 | 1.00 | 1.00 | 1.00 | 1.00 |
-| `dot`, one limb, n = 1 | 0.61 to 0.62 (-O2), 0.77 (-O3) | 0.61 (-O2), 0.80 to 0.81 (-O3) | 0.96 | 0.92 to 0.96 |
-| `dot`, one limb, n = 2 | 0.61 to 0.62 (-O2), 0.76 to 0.77 (-O3) | 0.61 (-O2), 0.79 (-O3) | 0.92 to 0.94 | 0.88 to 0.92 |
-| `dot`, one limb, n = 4 | 0.59 (-O2), 0.75 (-O3) | 0.51 to 0.62 (-O2), 0.67 (-O3) | 0.92 to 0.96 | 0.90 (-O2), 0.97 to 0.98 (-O3) |
-| `dot`, one limb, n = 8 | 0.56 to 0.57 | 0.80 (-O2), 0.50 (-O3) | 0.92 to 0.95 | 0.93 to 0.98 |
-| `dot`, one limb, n = 16 | 0.69 to 0.70 | 0.86 (-O2), 0.59 to 0.60 (-O3) | 0.96 (-O2), 0.91 (-O3) | 0.92 to 0.96 |
-| `dot`, one limb, n = 64 | 0.99 to 1.01 (-O2), 0.96 to 0.97 (-O3) | 1.00 to 1.01 (-O2), 1.35 to 1.36 (-O3) | 1.00 (-O2), 0.95 (-O3) | 1.00 (-O2), 0.95 (-O3) |
-| `dot`, one limb, n = 1024 | 0.93 to 1.00 (-O2), 1.00 to 1.01 (-O3) | 1.00 | 1.00 | 1.00 |
-| `dot`, two limbs, n = 1 | 0.99 to 1.00 | 0.96 (-O2), 0.86 to 0.87 (-O3) | 1.00 (-O2), 0.93 (-O3) | 1.00 |
-| `dot`, two limbs, n = 2 | 0.99 to 1.00 | 1.00 to 1.01 (-O2), 0.86 to 0.87 (-O3) | 1.00 (-O2), 0.94 to 0.95 (-O3) | 0.99 to 1.00 |
-| `dot`, two limbs, n = 4 | 0.99 to 1.04 | 0.96 to 0.97 (-O2), 0.88 to 0.89 (-O3) | 0.98 to 1.00 | 1.01 |
-| `dot`, two limbs, n = 8 | 0.99 to 1.01 | 1.00 to 1.01 (-O2), 0.93 to 0.94 (-O3) | 0.98 to 1.01 | 1.00 |
-| `dot`, two limbs, n = 16 | 1.00 to 1.01 | 0.99 to 1.00 | 0.97 to 1.01 | 1.00 |
-| `dot`, two limbs, n = 64 | 1.00 | 1.00 | 0.99 to 1.00 | 1.00 |
-| `dot`, two limbs, n = 1024 | 1.00 | 1.00 | 1.00 to 1.01 | 1.00 |
+| `dot`, one limb, n = 1 | 0.52 to 0.61 (-O2), 0.65 to 0.75 (-O3) | 0.52 to 0.54 (-O2), 0.68 to 0.71 (-O3) | 0.96 | 0.92 to 0.96 |
+| `dot`, one limb, n = 2 | 0.52 to 0.61 (-O2), 0.66 to 0.75 (-O3) | 0.52 to 0.55 (-O2), 0.68 (-O3) | 0.92 to 0.94 | 0.88 to 0.92 |
+| `dot`, one limb, n = 4 | 0.51 to 0.60 (-O2), 0.65 to 0.74 (-O3) | 0.45 to 0.55 (-O2), 0.55 to 0.58 (-O3) | 0.92 to 0.96 | 0.90 (-O2), 0.98 to 0.99 (-O3) |
+| `dot`, one limb, n = 8 | 0.48 to 0.56 (-O2), 0.48 to 0.55 (-O3) | 0.68 to 0.69 (-O2), 0.43 (-O3) | 0.92 to 0.96 | 0.94 to 0.98 |
+| `dot`, one limb, n = 16 | 0.60 to 0.69 (-O2), 0.59 to 0.69 (-O3) | 0.73 to 0.77 (-O2), 0.51 (-O3) | 0.96 to 0.97 (-O2), 0.91 (-O3) | 0.92 to 0.97 |
+| `dot`, one limb, n = 64 | 0.85 to 1.01 (-O2), 0.78 to 0.95 (-O3) | 0.84 to 0.86 (-O2), 1.14 to 1.17 (-O3) | 1.00 to 1.01 (-O2), 0.95 (-O3) | 1.00 to 1.01 (-O2), 0.96 (-O3) |
+| `dot`, one limb, n = 1024 | 0.81 to 0.98 (-O2), 0.81 to 0.95 (-O3) | 0.81 to 0.87 (-O2), 0.81 (-O3) | 1.00 to 1.01 | 1.00 to 1.01 |
+| `dot`, two limbs, n = 1 | 0.99 to 1.05 (-O2), 0.99 to 1.00 (-O3) | 1.00 to 1.03 (-O2), 0.88 to 0.91 (-O3) | 0.96 to 1.00 | 0.99 |
+| `dot`, two limbs, n = 2 | 0.96 to 1.01 | 0.95 to 1.04 (-O2), 0.85 to 0.86 (-O3) | 0.98 to 1.00 (-O2), 0.91 (-O3) | 1.00 |
+| `dot`, two limbs, n = 4 | 0.99 to 1.02 | 0.99 to 1.06 (-O2), 0.90 to 0.91 (-O3) | 0.97 to 1.00 | 1.00 |
+| `dot`, two limbs, n = 8 | 0.99 to 1.03 | 1.01 to 1.05 (-O2), 0.95 to 0.97 (-O3) | 0.98 to 1.00 | 1.00 |
+| `dot`, two limbs, n = 16 | 0.98 to 1.03 | 1.00 to 1.02 | 0.97 to 1.00 | 1.00 |
+| `dot`, two limbs, n = 64 | 0.96 to 1.01 | 1.00 to 1.01 | 1.00 | 1.00 |
+| `dot`, two limbs, n = 1024 | 0.96 to 1.00 (-O2), 0.94 to 1.00 (-O3) | 0.99 to 1.03 | 1.00 | 1.00 |
 
 | The public function minus the generated loop called directly, ns per call | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -4986,24 +5347,24 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum`, two limbs, n = 1, independent | 0.133 to 0.188 (-O2), 0.135 to 0.163 (-O3) | 0.204 to 0.232 (-O2), 0.014 to 0.022 (-O3) | 1.25 to 1.46 (-O2), 3.21 (-O3) | 1.78 to 1.87 (-O2), 1.75 to 1.85 (-O3) |
 | `sum`, two limbs, n = 16, independent | -0.89 to 0.81 (-O2), -0.74 to 0.75 (-O3) | 0.01 to 0.02 (-O2), 0.39 to 0.44 (-O3) | 1.01 to 1.33 (-O2), 0.88 to 1.07 (-O3) | 0.97 to 1.08 (-O2), 1.04 to 1.24 (-O3) |
 | `sum`, two limbs, n = 1024, independent | 4 to 5 (-O2), 5 to 6 (-O3) | -1 to 0 (-O2), 3 to 4 (-O3) | -4 to 21 (-O2), 0 to 5 (-O3) | -2 to 3 (-O2), -1 to 0 (-O3) |
-| `dot`, one limb, n = 1, independent | 0.523 to 0.566 (-O2), 0.44 to 0.447 (-O3) | -0.044 to -0.022 (-O2), -0.033 to -0.025 (-O3) | 5.08 to 5.09 | 5.08 to 5.1 (-O2), 5.38 to 5.39 (-O3) |
-| `dot`, one limb, n = 16, independent | 0.226 to 0.242 (-O2), 0.222 to 0.239 (-O3) | 0.45 to 0.48 (-O2), 0.476 to 0.479 (-O3) | 4.26 to 4.38 | 4.5 to 4.53 (-O2), 4.23 to 4.24 (-O3) |
-| `dot`, one limb, n = 1024, independent | 0.1 to 0.2 (-O2), -12.4 to 0.3 (-O3) | 0.1 to 0.3 (-O2), 0.3 to 0.6 (-O3) | 14.2 to 14.8 (-O2), 12.2 to 13.6 (-O3) | 11.1 to 12.4 (-O2), 9.2 to 10.8 (-O3) |
-| `dot`, two limbs, n = 1, independent | 0.256 to 0.326 (-O2), 0.249 to 0.288 (-O3) | 0.465 to 0.491 (-O2), 0.095 to 0.103 (-O3) | 2.63 to 2.7 (-O2), 1.07 to 1.09 (-O3) | 1.89 to 2.07 (-O2), 1.9 to 1.95 (-O3) |
-| `dot`, two limbs, n = 16, independent | -0.71 to 0.54 (-O2), -1.37 to 0.54 (-O3) | -0.76 to 0.11 (-O2), -1.05 to -0.41 (-O3) | 1.33 to 1.43 (-O2), 0.89 to 0.99 (-O3) | 0.93 to 1.01 (-O2), 0.88 to 1.1 (-O3) |
-| `dot`, two limbs, n = 1024, independent | 0 (-O2), -1 to 0 (-O3) | 0 to 1 (-O2), 1 to 2 (-O3) | -5 to 3 (-O2), -4 to -1 (-O3) | -11 to 1 (-O2), -2 to 6 (-O3) |
+| `dot`, one limb, n = 1, independent | 0.573 to 0.676 (-O2), 0.467 to 0.537 (-O3) | -0.02 to 0.009 (-O2), 0.006 to 0.008 (-O3) | 5.36 to 5.37 (-O2), 5.06 (-O3) | 5.36 to 5.46 |
+| `dot`, one limb, n = 16, independent | 0.27 to 0.31 (-O2), 0.267 to 0.309 (-O3) | 0.577 to 0.741 (-O2), 0.607 to 0.608 (-O3) | 4.15 to 4.18 (-O2), 4.38 to 4.4 (-O3) | 4.49 to 4.5 (-O2), 4.2 to 4.21 (-O3) |
+| `dot`, one limb, n = 1024, independent | -21 to 0 (-O2), -0.2 to 0.7 (-O3) | -20.5 to 0 (-O2), 0.3 to 0.8 (-O3) | 8.7 to 9.4 (-O2), 9.6 to 9.9 (-O3) | 11.4 to 11.7 (-O2), 10 to 10.4 (-O3) |
+| `dot`, two limbs, n = 1, independent | 0.316 to 0.44 (-O2), 0.308 to 0.423 (-O3) | 0.275 to 0.316 (-O2), -0.015 to 0.106 (-O3) | 2.89 to 3.25 (-O2), 0.455 to 0.461 (-O3) | 2.01 to 2.06 |
+| `dot`, two limbs, n = 16, independent | 1.64 to 2.61 (-O2), 1.55 to 1.63 (-O3) | -0.33 to 0.6 (-O2), 0.89 to 0.93 (-O3) | 1.51 to 1.64 (-O2), 1.18 to 1.2 (-O3) | 1.57 to 1.65 (-O2), 1.55 to 1.68 (-O3) |
+| `dot`, two limbs, n = 1024, independent | -5 to -4 (-O2), 2 to 3 (-O3) | -112 to 1 (-O2), 8 to 10 (-O3) | 0 to 2 (-O2), 7 to 10 (-O3) | 0 to 2 (-O2), 0 to 3 (-O3) |
 | `sum`, one limb, n = 1, dependent | -0.272 to 0.422 (-O2), 0.307 to 0.423 (-O3) | 0.264 to 0.351 (-O2), 0 to 0.108 (-O3) | 0.87 to 0.888 (-O2), 1.28 to 1.29 (-O3) | 0.082 to 0.102 (-O2), 0.033 to 0.04 (-O3) |
 | `sum`, one limb, n = 16, dependent | 0.31 to 0.76 (-O2), 0.56 to 0.81 (-O3) | 0.07 to 0.46 (-O2), -0.02 to 0.64 (-O3) | 0.18 to 0.22 (-O2), 0.11 to 0.13 (-O3) | 0.11 to 0.14 (-O2), 0.13 to 0.19 (-O3) |
 | `sum`, one limb, n = 1024, dependent | -18.7 to -16 (-O2), 0.9 to 1.2 (-O3) | -0.8 to -0.6 (-O2), -0.6 to 0.6 (-O3) | -0.6 to 0.2 (-O2), -0.1 to 0.2 (-O3) | 0.3 to 0.4 (-O2), 0.3 to 0.8 (-O3) |
 | `sum`, two limbs, n = 1, dependent | 4.29 to 5.14 (-O2), 5.96 to 7.06 (-O3) | -2.93 to -2.73 (-O2), -1.67 to -0.861 (-O3) | 1.02 to 1.56 (-O2), 0.15 to 0.18 (-O3) | 1.33 to 1.38 (-O2), 1.29 to 1.53 (-O3) |
 | `sum`, two limbs, n = 16, dependent | 4.69 to 5.43 (-O2), 4.69 to 5.33 (-O3) | -0.02 to 0.02 (-O2), 0.25 to 0.27 (-O3) | -0.4 to -0.15 (-O2), -0.03 to 0.05 (-O3) | 0.11 to 0.12 (-O2), 0.11 to 0.55 (-O3) |
 | `sum`, two limbs, n = 1024, dependent | 3 to 4 (-O2), 3 to 6 (-O3) | 1 to 3 (-O2), 6 to 8 (-O3) | 0 to 5 (-O2), 1 to 3 (-O3) | -2 to 8 (-O2), 0 to 9 (-O3) |
-| `dot`, one limb, n = 1, dependent | 1.02 to 2.37 (-O2), 2.32 to 4.46 (-O3) | 0.137 to 0.28 (-O2), 1.08 to 1.11 (-O3) | 0.074 to 0.088 (-O2), 0.321 to 0.327 (-O3) | 0.198 to 0.215 (-O2), 0.038 to 0.067 (-O3) |
-| `dot`, one limb, n = 16, dependent | 0 to 1.1 (-O2), 0 to 0.84 (-O3) | 0.73 to 1.02 (-O2), 0.88 to 0.95 (-O3) | 0.01 to 0.06 (-O2), -0.06 to -0.03 (-O3) | 0.11 to 0.18 (-O2), 0.2 to 0.24 (-O3) |
-| `dot`, one limb, n = 1024, dependent | 0 to 2.2 (-O2), 0 to 18 (-O3) | -0.3 to 0 (-O2), 0 to 0.1 (-O3) | -1.1 to 0.7 (-O2), 0.2 to 0.6 (-O3) | -0.1 to 0.4 (-O2), 0 to 2.1 (-O3) |
-| `dot`, two limbs, n = 1, dependent | 4.69 to 5.74 (-O2), 5.09 to 6.15 (-O3) | 0.75 to 1.21 (-O2), 0.37 to 0.57 (-O3) | 2.17 to 2.27 (-O2), 0.18 to 0.19 (-O3) | 1.03 to 1.12 (-O2), 1.05 to 1.09 (-O3) |
-| `dot`, two limbs, n = 16, dependent | 4.73 to 6.16 (-O2), 4.75 to 5.89 (-O3) | -0.09 to 0.14 (-O2), 0.7 to 0.78 (-O3) | 0.09 to 0.89 (-O2), 0.26 to 0.37 (-O3) | 0.13 to 0.21 (-O2), 0.04 to 0.29 (-O3) |
-| `dot`, two limbs, n = 1024, dependent | 2 to 3 (-O2), 3 to 4 (-O3) | -1 (-O2), 0 to 1 (-O3) | -3 to 15 (-O2), -8 to -6 (-O3) | -8 to 2 (-O2), -4 to 12 (-O3) |
+| `dot`, one limb, n = 1, dependent | -2.17 to 0.142 (-O2), 4.73 to 6.56 (-O3) | 0.1 to 0.174 (-O2), 0.836 to 1.27 (-O3) | 0.075 to 0.097 (-O2), 0.324 to 0.332 (-O3) | 0.234 to 0.258 (-O2), 0.051 to 0.074 (-O3) |
+| `dot`, one limb, n = 16, dependent | -0.64 to 0 (-O2), -0.24 to 0 (-O3) | -0.51 to 0.07 (-O2), 0.01 to 0.02 (-O3) | 0.04 to 0.1 (-O2), -0.05 to -0.03 (-O3) | 0.12 to 0.14 (-O2), 0.18 to 0.2 (-O3) |
+| `dot`, one limb, n = 1024, dependent | 0 (-O2), 0 to 0.2 (-O3) | -0.7 to 17.8 (-O2), 0.1 to 0.4 (-O3) | -1 to -0.3 (-O2), 0 to 0.3 (-O3) | -0.3 to -0.1 (-O2), -0.2 to 0 (-O3) |
+| `dot`, two limbs, n = 1, dependent | 4.48 to 5.75 (-O2), 4.58 to 5.24 (-O3) | 0.13 to 0.14 (-O2), -0.04 to 0.17 (-O3) | 2.25 to 2.29 (-O2), -0.26 to -0.21 (-O3) | 1.5 to 1.56 |
+| `dot`, two limbs, n = 16, dependent | 1.8 to 5 (-O2), 5.51 to 6.28 (-O3) | -2.11 to -0.1 (-O2), 0.93 to 1.02 (-O3) | 0.06 to 0.18 (-O2), 0.61 to 0.66 (-O3) | 0.05 to 0.27 (-O2), 0.17 to 0.35 (-O3) |
+| `dot`, two limbs, n = 1024, dependent | 5 to 144 (-O2), 8 to 167 (-O3) | -60 to 151 (-O2), 3 to 4 (-O3) | 0 to 1 (-O2), 8 to 12 (-O3) | 1 to 2 (-O2), -1 to 1 (-O3) |
 
 | The check at entry, independent calls: ns per call (with the check minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5021,20 +5382,20 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum`, two limbs, n = 16 | 0.12 to 0.37 (-O2), 0.74 to 0.81 (-O3) | -0.39 to 0.28 (-O2), -0.94 to 0.7 (-O3) | 1.06 to 1.26 (-O2), 1.18 to 1.33 (-O3) | 0.94 to 1.18 (-O2), 0.97 to 1.43 (-O3) |
 | `sum`, two limbs, n = 64 | 0 to 0.1 (-O2), 0 to 0.2 (-O3) | 0 to 0.2 (-O2), 0.1 to 0.4 (-O3) | 1.7 to 2.6 (-O2), 1 to 1.4 (-O3) | 0.5 to 1.5 (-O2), 0.8 to 1.6 (-O3) |
 | `sum`, two limbs, n = 1024 | -3 to 1 (-O2), 3 to 4 (-O3) | 1 to 2 (-O2), 0 to 3 (-O3) | 1 to 6 (-O2), 0 to 7 (-O3) | -24 to 9 (-O2), -5 to 13 (-O3) |
-| `dot`, one limb, n = 1 | 0.56 to 0.575 (-O2), 0.455 to 0.46 (-O3) | 0.025 to 0.061 (-O2), 0.002 to 0.033 (-O3) | 5.37 to 5.39 (-O2), 5.09 to 5.11 (-O3) | 5.38 to 5.41 |
-| `dot`, one limb, n = 2 | 0.524 to 0.56 (-O2), 0.407 to 0.408 (-O3) | 0.275 to 0.289 (-O2), 0.26 to 0.284 (-O3) | 5.08 to 5.1 (-O2), 5.39 to 5.4 (-O3) | 5.37 to 5.4 (-O2), 4.69 to 5.39 (-O3) |
-| `dot`, one limb, n = 4 | 0.377 to 0.386 (-O2), 0.217 to 0.223 (-O3) | 0.505 to 0.527 | 5.24 to 5.41 | 5.09 to 5.33 |
-| `dot`, one limb, n = 8 | 0.251 to 0.284 (-O2), 0.258 to 0.284 (-O3) | 0.465 to 0.546 (-O2), 0.494 to 0.505 (-O3) | 4.85 to 5.08 | 4.81 to 4.99 |
-| `dot`, one limb, n = 16 | 0.266 to 0.283 (-O2), 0.221 to 0.27 (-O3) | 0.486 to 0.525 (-O2), 0.476 to 0.526 (-O3) | 4.26 to 4.41 | 4.5 to 4.53 (-O2), 4.17 to 4.25 (-O3) |
-| `dot`, one limb, n = 64 | 0.11 to 0.38 (-O2), 0.21 to 0.5 (-O3) | 0.3 to 0.39 (-O2), 0.13 to 0.48 (-O3) | 2.15 to 2.24 | 3.84 to 4.21 (-O2), 1.11 to 1.19 (-O3) |
-| `dot`, one limb, n = 1024 | -0.6 to 32.5 (-O2), -1.4 to -0.1 (-O3) | 0 to 0.9 (-O2), 0.4 to 1.2 (-O3) | 14.2 to 15.4 (-O2), 11.5 to 12.1 (-O3) | 6.5 to 11.9 (-O2), 7 to 8.8 (-O3) |
-| `dot`, two limbs, n = 1 | -0.144 to 0.107 (-O2), 0.081 to 0.105 (-O3) | 0.503 to 0.523 (-O2), 0.119 to 0.211 (-O3) | 2.56 to 2.71 (-O2), 1.11 to 1.15 (-O3) | 1.32 to 1.64 (-O2), 1.46 to 1.74 (-O3) |
-| `dot`, two limbs, n = 2 | 0.017 to 0.062 (-O2), 0.074 to 0.21 (-O3) | 0.026 to 0.076 (-O2), 0.288 to 0.517 (-O3) | 2.51 to 2.91 (-O2), 0.85 to 0.9 (-O3) | 1.87 to 2.38 (-O2), 2.02 to 2.45 (-O3) |
-| `dot`, two limbs, n = 4 | -0.241 to 0.158 (-O2), -0.453 to 0.403 (-O3) | 0.249 to 0.362 (-O2), 0.196 to 0.819 (-O3) | 1.56 to 1.78 (-O2), -0.2 to -0.12 (-O3) | 0.85 to 1.18 (-O2), 0.92 to 1.26 (-O3) |
-| `dot`, two limbs, n = 8 | -0.09 to 0.08 (-O2), -0.06 to 0.25 (-O3) | -0.28 to 0.1 (-O2), 0.26 to 0.93 (-O3) | 1.49 to 1.65 (-O2), 1.04 to 1.19 (-O3) | 1.24 to 1.82 (-O2), 1.5 to 1.98 (-O3) |
-| `dot`, two limbs, n = 16 | -1.5 to 0.29 (-O2), -1.3 to 0.22 (-O3) | 0.06 to 0.66 (-O2), 0.12 to 1.46 (-O3) | 1.23 to 1.34 (-O2), 0.95 to 1.22 (-O3) | 0.89 to 1.2 (-O2), 0.78 to 1.34 (-O3) |
-| `dot`, two limbs, n = 64 | 0.2 to 0.3 (-O2), 0.2 to 0.4 (-O3) | -0.1 to 0.3 (-O2), -1.8 to 0.9 (-O3) | 1.6 to 2.3 (-O2), 0.9 to 1.4 (-O3) | 0.7 to 2.2 (-O2), 1.4 to 2.8 (-O3) |
-| `dot`, two limbs, n = 1024 | -1 to 1 (-O2), 0 to 1 (-O3) | -1 to 2 (-O2), 1 to 2 (-O3) | 2 to 6 (-O2), -5 to 5 (-O3) | -7 to 6 (-O2), -9 to 9 (-O3) |
+| `dot`, one limb, n = 1 | 0.579 to 0.675 (-O2), 0.48 to 0.541 (-O3) | -0.05 to 0.009 (-O2), 0.006 to 0.007 (-O3) | 5.06 to 5.07 | 5.35 to 5.46 |
+| `dot`, one limb, n = 2 | 0.519 to 0.608 (-O2), 0.375 to 0.475 (-O3) | 0.307 to 0.319 | 5.06 to 5.07 (-O2), 5.36 to 5.37 (-O3) | 5.38 to 5.4 (-O2), 4.47 (-O3) |
+| `dot`, one limb, n = 4 | 0.377 to 0.448 (-O2), 0.176 to 0.252 (-O3) | 0.54 to 0.607 (-O2), 0.597 to 0.603 (-O3) | 5.23 to 5.36 | 5.07 to 5.28 |
+| `dot`, one limb, n = 8 | 0.261 to 0.311 (-O2), 0.265 to 0.306 (-O3) | 0.529 to 0.608 (-O2), 0.606 to 0.607 (-O3) | 4.92 to 5.03 | 4.78 to 4.94 |
+| `dot`, one limb, n = 16 | 0.27 to 0.311 (-O2), -2.13 to -1.96 (-O3) | 0.603 to 0.799 (-O2), 0.605 to 0.61 (-O3) | 4.17 to 4.18 (-O2), 4.38 to 4.4 (-O3) | 4.48 to 4.5 (-O2), 4.2 to 4.21 (-O3) |
+| `dot`, one limb, n = 64 | 0.06 to 0.09 (-O2), 0.03 to 0.22 (-O3) | 0.07 to 0.49 (-O2), 0.43 to 0.52 (-O3) | 2.24 to 2.29 (-O2), 2.18 to 2.3 (-O3) | 3.95 to 3.99 (-O2), 2.1 to 2.13 (-O3) |
+| `dot`, one limb, n = 1024 | -0.1 to 0.1 (-O2), 0 to 0.5 (-O3) | 0.3 to 2.3 (-O2), 0.4 to 1 (-O3) | 12.2 to 13 (-O2), 9.2 to 10.3 (-O3) | 10.5 to 11.9 (-O2), 10.6 to 11 (-O3) |
+| `dot`, two limbs, n = 1 | -0.007 to 0.08 (-O2), -0.295 to 0.081 (-O3) | 0.291 (-O2), -0.057 to 0.094 (-O3) | 2.89 to 2.93 (-O2), 0.458 to 0.464 (-O3) | 2.04 to 2.19 (-O2), 2.06 to 2.14 (-O3) |
+| `dot`, two limbs, n = 2 | 0.044 to 0.066 (-O2), 0.005 to 0.221 (-O3) | 0.03 to 0.049 (-O2), 0.526 to 0.727 (-O3) | 2.46 to 2.59 (-O2), 1.5 to 1.58 (-O3) | 1.66 to 2.16 (-O2), 1.7 to 2 (-O3) |
+| `dot`, two limbs, n = 4 | -0.09 to 0.15 (-O2), -0.29 to 0.13 (-O3) | 0.05 to 0.06 (-O2), 0.55 to 0.56 (-O3) | 1.24 to 1.34 (-O2), 0.33 to 0.38 (-O3) | 1.35 to 1.42 (-O2), 1.38 to 1.42 (-O3) |
+| `dot`, two limbs, n = 8 | 0.05 to 0.08 (-O2), -0.68 to 0.24 (-O3) | 0.12 to 0.45 (-O2), 0.96 to 0.97 (-O3) | 1.98 to 2.1 (-O2), 0.99 to 1.05 (-O3) | 1.77 to 1.82 |
+| `dot`, two limbs, n = 16 | 0.04 to 0.31 (-O2), -2.51 to 0.01 (-O3) | 0.32 to 0.33 (-O2), 0.86 to 0.87 (-O3) | 1.56 to 1.6 (-O2), 0.94 to 1.2 (-O3) | 1.46 to 1.57 (-O2), 1.41 to 1.61 (-O3) |
+| `dot`, two limbs, n = 64 | 0.3 to 2.4 (-O2), -10.7 to 0.2 (-O3) | -0.3 to -0.2 (-O2), -6.1 to 0.9 (-O3) | 0.3 to 0.6 (-O2), 1.4 to 1.9 (-O3) | 1.1 to 1.5 (-O2), 1.4 to 1.5 (-O3) |
+| `dot`, two limbs, n = 1024 | -1 to 0 (-O2), -228 to 0 (-O3) | 0 (-O2), 7 to 8 (-O3) | -1 to 2 (-O2), 7 to 10 (-O3) | -3 to 1 (-O2), 2 (-O3) |
 
 | The check at entry, independent calls: its share of the call (1 - without over with) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5052,20 +5413,20 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum`, two limbs, n = 16 | 0.00 to 0.03 | -0.01 to 0.01 (-O2), -0.03 to 0.02 (-O3) | 0.02 | 0.02 |
 | `sum`, two limbs, n = 64 | 0.00 | 0.00 | 0.01 | 0.00 to 0.01 |
 | `sum`, two limbs, n = 1024 | -0.00 to 0.00 | 0.00 | 0.00 | -0.01 to 0.00 |
-| `dot`, one limb, n = 1 | 0.43 to 0.44 | 0.00 to 0.05 | 0.78 (-O2), 0.70 (-O3) | 0.74 to 0.78 |
-| `dot`, one limb, n = 2 | 0.38 to 0.42 | 0.20 to 0.21 | 0.70 to 0.72 | 0.71 to 0.72 (-O2), 0.65 to 0.74 (-O3) |
-| `dot`, one limb, n = 4 | 0.28 (-O2), 0.20 (-O3) | 0.32 to 0.33 | 0.72 | 0.70 to 0.74 |
-| `dot`, one limb, n = 8 | 0.12 to 0.13 | 0.18 to 0.21 | 0.64 to 0.67 | 0.64 (-O2), 0.68 to 0.69 (-O3) |
-| `dot`, one limb, n = 16 | 0.07 to 0.09 | 0.13 to 0.14 | 0.54 to 0.55 | 0.55 to 0.58 |
-| `dot`, one limb, n = 64 | 0.01 to 0.04 | 0.01 to 0.04 | 0.13 to 0.14 | 0.26 to 0.28 (-O2), 0.07 to 0.08 (-O3) |
-| `dot`, one limb, n = 1024 | -0.00 to 0.07 (-O2), -0.00 (-O3) | 0.00 | 0.03 to 0.04 | 0.02 to 0.03 |
-| `dot`, two limbs, n = 1 | -0.03 to 0.02 (-O2), 0.02 (-O3) | 0.16 to 0.17 (-O2), 0.05 to 0.08 (-O3) | 0.07 to 0.08 (-O2), 0.12 (-O3) | 0.04 to 0.06 |
-| `dot`, two limbs, n = 2 | 0.00 to 0.04 | 0.00 to 0.01 (-O2), 0.05 to 0.09 (-O3) | 0.05 to 0.07 | 0.05 to 0.06 |
-| `dot`, two limbs, n = 4 | -0.03 to 0.02 (-O2), -0.05 to 0.04 (-O3) | 0.03 to 0.04 (-O2), 0.02 to 0.09 (-O3) | 0.04 to 0.05 (-O2), -0.01 to -0.00 (-O3) | 0.02 to 0.03 |
-| `dot`, two limbs, n = 8 | -0.01 to 0.01 | -0.02 to 0.01 (-O2), 0.02 to 0.06 (-O3) | 0.02 to 0.03 | 0.03 to 0.04 |
-| `dot`, two limbs, n = 16 | -0.04 to 0.01 | 0.00 to 0.04 | 0.01 to 0.02 | 0.01 to 0.02 |
-| `dot`, two limbs, n = 64 | 0.00 | -0.01 to 0.00 | 0.00 to 0.01 | 0.00 to 0.01 |
-| `dot`, two limbs, n = 1024 | -0.00 to 0.00 | -0.00 to 0.00 | -0.00 to 0.00 | -0.00 to 0.00 |
+| `dot`, one limb, n = 1 | 0.43 to 0.44 | -0.03 to 0.01 | 0.70 to 0.73 | 0.76 to 0.78 |
+| `dot`, one limb, n = 2 | 0.35 to 0.39 | 0.20 | 0.70 to 0.72 | 0.72 (-O2), 0.62 (-O3) |
+| `dot`, one limb, n = 4 | 0.28 (-O2), 0.16 to 0.20 (-O3) | 0.30 to 0.33 | 0.72 | 0.70 to 0.73 |
+| `dot`, one limb, n = 8 | 0.12 to 0.13 | 0.17 to 0.20 | 0.65 to 0.67 | 0.64 to 0.69 |
+| `dot`, one limb, n = 16 | 0.08 (-O2), -0.58 (-O3) | 0.14 to 0.18 | 0.53 to 0.54 | 0.56 to 0.57 |
+| `dot`, one limb, n = 64 | 0.00 to 0.01 | 0.00 to 0.03 | 0.13 to 0.14 | 0.26 to 0.27 (-O2), 0.13 (-O3) |
+| `dot`, one limb, n = 1024 | -0.00 to 0.00 | 0.00 | 0.03 to 0.04 | 0.03 |
+| `dot`, two limbs, n = 1 | -0.00 to 0.01 (-O2), -0.06 to 0.02 (-O3) | 0.08 (-O2), -0.02 to 0.03 (-O3) | 0.05 to 0.09 | 0.07 |
+| `dot`, two limbs, n = 2 | 0.00 to 0.03 | 0.00 to 0.01 (-O2), 0.08 to 0.10 (-O3) | 0.06 to 0.09 | 0.04 to 0.05 |
+| `dot`, two limbs, n = 4 | -0.03 to 0.01 | 0.00 to 0.05 | 0.01 to 0.03 | 0.03 to 0.04 |
+| `dot`, two limbs, n = 8 | -0.03 to 0.01 | 0.01 to 0.05 | 0.02 to 0.04 | 0.04 |
+| `dot`, two limbs, n = 16 | 0.00 to 0.01 (-O2), -0.06 to 0.00 (-O3) | 0.01 to 0.02 | 0.01 to 0.02 | 0.02 |
+| `dot`, two limbs, n = 64 | 0.00 to 0.01 (-O2), -0.05 to 0.00 (-O3) | -0.03 to 0.00 | 0.00 to 0.01 | 0.01 |
+| `dot`, two limbs, n = 1024 | -0.00 to 0.00 (-O2), -0.06 to 0.00 (-O3) | 0.00 | -0.00 to 0.00 | -0.00 to 0.00 |
 
 | The check at entry, dependent calls: ns per call (with the check minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5083,20 +5444,20 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum`, two limbs, n = 16 | -0.47 to 0.51 (-O2), 4.69 to 5.25 (-O3) | -0.35 to 0.05 (-O2), -1.88 to 0.42 (-O3) | -0.17 to -0.03 (-O2), 0.05 to 0.12 (-O3) | -0.67 to 0.41 (-O2), 0.03 to 0.54 (-O3) |
 | `sum`, two limbs, n = 64 | 0.3 to 0.4 (-O2), 4.5 to 4.6 (-O3) | -0.1 to 0.1 (-O2), 0.4 (-O3) | -0.3 to 0.2 (-O2), 0.1 to 0.4 (-O3) | -2 to 0 (-O2), -0.4 to 0.6 (-O3) |
 | `sum`, two limbs, n = 1024 | 2 to 3 (-O2), 1 to 5 (-O3) | 1 to 2 (-O2), 6 to 7 (-O3) | -2 to 8 (-O2), 2 to 6 (-O3) | -30 to 8 (-O2), -3 to 14 (-O3) |
-| `dot`, one limb, n = 1 | 2.74 to 3.62 (-O2), 4.74 to 5.31 (-O3) | 0.109 to 0.205 (-O2), 0.92 to 1.11 (-O3) | 0.07 to 0.103 (-O2), 0.322 to 0.332 (-O3) | 0.149 to 0.272 (-O2), 0.04 to 0.108 (-O3) |
-| `dot`, one limb, n = 2 | -0.179 to 2.92 (-O2), 0.342 to 0.347 (-O3) | 1.82 to 1.91 (-O2), -0.178 to 0.141 (-O3) | 0.231 to 0.251 (-O2), 0.335 to 0.384 (-O3) | 0.247 to 0.304 (-O2), 0.21 to 0.22 (-O3) |
-| `dot`, one limb, n = 4 | -0.82 to -0.65 (-O2), -0.01 to 0 (-O3) | -0.296 to 0.327 (-O2), -0.242 to -0.24 (-O3) | 0.17 to 0.2 (-O2), 0.22 to 0.24 (-O3) | 0.2 to 0.25 (-O2), 0.12 to 0.22 (-O3) |
-| `dot`, one limb, n = 8 | 0.05 to 0.06 (-O2), 0.08 to 0.09 (-O3) | 0.04 to 0.07 (-O2), -0.62 to -0.05 (-O3) | 0.24 to 0.31 (-O2), -0.05 to -0.02 (-O3) | 0.38 to 0.44 (-O2), 0.11 to 0.25 (-O3) |
-| `dot`, one limb, n = 16 | 0 (-O2), -0.21 to 0.6 (-O3) | 0.07 to 1.08 (-O2), -0.18 to 1.05 (-O3) | 0.05 to 0.12 (-O2), -0.07 to -0.01 (-O3) | 0.09 to 0.21 (-O2), 0.19 to 0.34 (-O3) |
-| `dot`, one limb, n = 64 | 0 to 0.03 (-O2), 0 to 1.49 (-O3) | 0.04 to 2.67 (-O2), -2.78 to -0.51 (-O3) | -0.14 to -0.04 (-O2), -0.07 to -0.02 (-O3) | -0.05 to 0.2 (-O2), 0.01 to 0.19 (-O3) |
-| `dot`, one limb, n = 1024 | -28.6 to 37 (-O2), -2.6 to 6 (-O3) | -14.8 to -0.4 (-O2), -37.1 to 7.1 (-O3) | -0.3 to 0 (-O2), -0.5 to 1.7 (-O3) | 0.9 to 1.6 (-O2), -0.7 to 2.4 (-O3) |
-| `dot`, two limbs, n = 1 | -1.14 to 1.07 (-O2), -0.19 to 1.43 (-O3) | -0.37 to 0.86 (-O2), -1.17 to 0.21 (-O3) | 2.28 to 2.36 (-O2), 0.05 to 0.15 (-O3) | 0.42 to 0.78 (-O2), 0.62 to 0.95 (-O3) |
-| `dot`, two limbs, n = 2 | -1.46 to 0.56 (-O2), -0.19 to 0.65 (-O3) | -0.86 to 0.47 (-O2), -0.72 to 0.53 (-O3) | 1.91 to 2.12 (-O2), -0.16 to -0.08 (-O3) | 1.36 to 2.17 (-O2), 1.84 to 2.23 (-O3) |
-| `dot`, two limbs, n = 4 | -0.91 to 0.56 (-O2), -0.21 to 1.04 (-O3) | -1.03 to 0.78 (-O2), -1.67 to 1.38 (-O3) | -0.16 to -0.02 (-O2), -0.31 to 0.17 (-O3) | -0.47 to 0.14 (-O2), -0.05 to 0.33 (-O3) |
-| `dot`, two limbs, n = 8 | -1.69 to 0.54 (-O2), -0.4 to 0.07 (-O3) | -0.37 to 1.6 (-O2), -2.74 to 1.48 (-O3) | 0.17 to 0.37 (-O2), -0.21 to 0.04 (-O3) | 0.02 to 0.59 (-O2), 0.21 to 0.55 (-O3) |
-| `dot`, two limbs, n = 16 | -2.93 to 1.77 (-O2), 0.72 to 0.93 (-O3) | -2.1 to -0.13 (-O2), -4.42 to 2.8 (-O3) | 0.14 to 0.37 (-O2), 0.19 to 0.49 (-O3) | 0.31 to 0.72 (-O2), 0.18 to 0.68 (-O3) |
-| `dot`, two limbs, n = 64 | -11 to 0.9 (-O2), 0.5 to 0.9 (-O3) | -0.7 to -0.6 (-O2), -17.9 to 0.6 (-O3) | -0.1 to 0.6 (-O2), -0.4 to 0.5 (-O3) | -1.7 to 1.2 (-O2), 0 to 1.8 (-O3) |
-| `dot`, two limbs, n = 1024 | 1 | 0 to 1 (-O2), -2 to 0 (-O3) | 1 to 3 (-O2), -7 to -1 (-O3) | -17 to 6 (-O2), -4 to 16 (-O3) |
+| `dot`, one limb, n = 1 | 1.68 to 5.01 (-O2), 5.49 to 5.72 (-O3) | -0.067 to 0.156 (-O2), 0.491 to 1.04 (-O3) | 0.088 to 0.097 (-O2), 0.321 to 0.335 (-O3) | 0.206 to 0.254 (-O2), 0.037 to 0.082 (-O3) |
+| `dot`, one limb, n = 2 | 4.47 to 5.32 (-O2), 0.181 to 0.383 (-O3) | 2.17 to 2.19 (-O2), -0.847 to 0.007 (-O3) | 0.214 to 0.228 (-O2), 0.323 to 0.411 (-O3) | 0.242 to 0.261 (-O2), 0.2 to 0.21 (-O3) |
+| `dot`, one limb, n = 4 | 0.11 to 0.12 (-O2), -0.29 to -0.09 (-O3) | -0.35 to -0.13 (-O2), -0.28 to -0.26 (-O3) | 0.16 to 0.17 (-O2), 0.2 to 0.32 (-O3) | 0.17 to 0.18 (-O2), 0.13 to 0.14 (-O3) |
+| `dot`, one limb, n = 8 | 0.04 to 0.05 (-O2), 0.1 to 0.12 (-O3) | 0.03 to 0.04 (-O2), -0.06 to -0.04 (-O3) | 0.24 to 0.27 (-O2), -0.04 to 0.06 (-O3) | 0.36 to 0.38 (-O2), 0.13 to 0.15 (-O3) |
+| `dot`, one limb, n = 16 | 0 (-O2), -0.04 to 0 (-O3) | -0.59 to 0.09 (-O2), 0 to 0.02 (-O3) | 0.08 (-O2), -0.03 to 0.17 (-O3) | 0.08 to 0.16 (-O2), 0.23 to 0.26 (-O3) |
+| `dot`, one limb, n = 64 | 0 to 0.01 (-O2), -0.03 to 0.01 (-O3) | 0.03 to 0.04 (-O2), -0.13 to -0.02 (-O3) | -0.32 to -0.3 (-O2), 0.27 to 0.47 (-O3) | -0.09 to 0.12 (-O2), 0.06 to 0.13 (-O3) |
+| `dot`, one limb, n = 1024 | -35.4 to 0 (-O2), 0 (-O3) | -0.5 to 0.1 (-O2), -0.1 to 0.3 (-O3) | -0.3 to 0 (-O2), -0.4 to 0 (-O3) | -0.4 to -0.1 (-O2), -0.1 to 0.2 (-O3) |
+| `dot`, two limbs, n = 1 | -0.29 to 0.21 (-O2), -0.51 to 0.43 (-O3) | 0.08 to 0.11 (-O2), -0.08 to -0.03 (-O3) | 2.28 to 2.34 (-O2), -0.24 to -0.22 (-O3) | 1.36 to 1.42 |
+| `dot`, two limbs, n = 2 | -0.66 to 0.07 (-O2), 0.83 to 0.92 (-O3) | -0.03 to 0.09 (-O2), -0.74 to -0.3 (-O3) | 1.91 to 2.19 (-O2), 0.04 to 0.06 (-O3) | 1.77 to 1.84 (-O2), 1.72 to 1.82 (-O3) |
+| `dot`, two limbs, n = 4 | -0.18 to 0 (-O2), -0.11 to -0.05 (-O3) | -0.04 to 0 (-O2), 0.02 to 0.13 (-O3) | 0.38 to 0.46 (-O2), 0.07 to 0.16 (-O3) | 0.2 to 0.36 (-O2), 0.27 to 0.39 (-O3) |
+| `dot`, two limbs, n = 8 | -0.16 to 2.72 (-O2), -4.63 to -0.39 (-O3) | -0.17 to -0.12 (-O2), 0.21 to 0.33 (-O3) | 0.07 to 0.09 (-O2), 0.6 to 0.81 (-O3) | 0.07 to 0.09 (-O2), 0.08 to 0.22 (-O3) |
+| `dot`, two limbs, n = 16 | 0 to 2.07 (-O2), 1.4 to 1.5 (-O3) | -0.2 (-O2), 0.9 to 0.91 (-O3) | -0.04 to 0.22 (-O2), 0.54 to 0.71 (-O3) | 0.17 to 0.37 (-O2), 0.26 to 0.45 (-O3) |
+| `dot`, two limbs, n = 64 | -1 to 1.3 (-O2), -13.4 to 1.7 (-O3) | -0.7 to -0.6 (-O2), 0.7 to 0.8 (-O3) | 0.1 to 0.3 (-O2), 0.6 to 0.9 (-O3) | -0.2 to 0.1 (-O2), 0.1 to 0.3 (-O3) |
+| `dot`, two limbs, n = 1024 | 0 to 2 (-O2), -230 to 1 (-O3) | -2 to 0 (-O2), 3 to 4 (-O3) | -3 to 2 (-O2), 9 to 11 (-O3) | 1 to 3 (-O2), 2 to 3 (-O3) |
 
 | The check at entry, dependent calls: its share of the call (1 - without over with) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5114,44 +5475,44 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `sum`, two limbs, n = 16 | -0.01 to 0.01 (-O2), 0.06 to 0.07 (-O3) | -0.03 to 0.01 | -0.00 to 0.00 | -0.01 to 0.01 |
 | `sum`, two limbs, n = 64 | 0.00 to 0.02 | -0.00 to 0.00 | -0.00 to 0.00 | -0.01 to 0.00 |
 | `sum`, two limbs, n = 1024 | 0.00 | 0.00 | -0.00 to 0.00 | -0.01 to 0.01 |
-| `dot`, one limb, n = 1 | 0.51 to 0.58 (-O2), 0.60 to 0.66 (-O3) | 0.02 to 0.04 (-O2), 0.18 to 0.22 (-O3) | 0.01 to 0.04 | 0.00 to 0.03 |
-| `dot`, one limb, n = 2 | -0.04 to 0.41 (-O2), 0.12 (-O3) | 0.26 to 0.28 (-O2), -0.03 to 0.02 (-O3) | 0.03 to 0.04 | 0.02 to 0.03 |
-| `dot`, one limb, n = 4 | -0.08 to -0.06 (-O2), -0.00 to 0.00 (-O3) | -0.03 to 0.04 (-O2), -0.03 (-O3) | 0.02 | 0.01 to 0.02 |
-| `dot`, one limb, n = 8 | 0.00 to 0.01 | 0.00 to 0.01 (-O2), -0.06 to -0.00 (-O3) | -0.00 to 0.02 | 0.01 to 0.03 |
-| `dot`, one limb, n = 16 | -0.01 to 0.03 | 0.00 to 0.07 (-O2), -0.01 to 0.07 (-O3) | -0.00 to 0.01 | 0.01 to 0.02 |
-| `dot`, one limb, n = 64 | 0.00 to 0.03 | 0.00 to 0.07 (-O2), -0.07 to -0.01 (-O3) | -0.00 | -0.00 to 0.01 |
-| `dot`, one limb, n = 1024 | -0.05 to 0.07 (-O2), -0.01 to 0.01 (-O3) | -0.03 to -0.00 (-O2), -0.07 to 0.01 (-O3) | -0.00 to 0.00 | -0.00 to 0.01 |
-| `dot`, two limbs, n = 1 | -0.05 to 0.04 (-O2), -0.01 to 0.06 (-O3) | -0.02 to 0.04 (-O2), -0.07 to 0.01 (-O3) | 0.07 (-O2), 0.00 to 0.01 (-O3) | 0.01 to 0.03 |
-| `dot`, two limbs, n = 2 | -0.05 to 0.02 (-O2), -0.01 to 0.02 (-O3) | -0.03 to 0.02 (-O2), -0.03 to 0.02 (-O3) | 0.04 to 0.05 (-O2), -0.01 to -0.00 (-O3) | 0.03 to 0.05 |
-| `dot`, two limbs, n = 4 | -0.02 to 0.03 | -0.03 to 0.02 (-O2), -0.05 to 0.04 (-O3) | -0.01 to 0.00 | -0.01 to 0.01 |
-| `dot`, two limbs, n = 8 | -0.03 to 0.01 | -0.01 to 0.03 (-O2), -0.06 to 0.03 (-O3) | -0.00 to 0.01 | 0.00 to 0.01 |
-| `dot`, two limbs, n = 16 | -0.03 to 0.02 (-O2), 0.01 (-O3) | -0.03 to -0.00 (-O2), -0.06 to 0.04 (-O3) | 0.00 to 0.01 | 0.00 to 0.01 |
-| `dot`, two limbs, n = 64 | -0.04 to 0.00 | -0.00 (-O2), -0.07 to 0.00 (-O3) | -0.00 to 0.00 | -0.01 to 0.01 |
-| `dot`, two limbs, n = 1024 | 0.00 | -0.00 to 0.00 | -0.00 to 0.00 | -0.01 to 0.01 |
+| `dot`, one limb, n = 1 | 0.36 to 0.62 (-O2), 0.60 to 0.67 (-O3) | -0.01 to 0.02 (-O2), 0.09 to 0.18 (-O3) | 0.01 to 0.04 | 0.00 to 0.03 |
+| `dot`, one limb, n = 2 | 0.49 to 0.50 (-O2), 0.06 to 0.12 (-O3) | 0.27 (-O2), -0.13 to 0.00 (-O3) | 0.02 to 0.05 | 0.02 to 0.03 |
+| `dot`, one limb, n = 4 | -0.02 to 0.01 | -0.03 to -0.01 | 0.01 to 0.03 | 0.01 |
+| `dot`, one limb, n = 8 | 0.00 to 0.01 | -0.00 to 0.00 | -0.00 to 0.02 | 0.01 to 0.03 |
+| `dot`, one limb, n = 16 | -0.00 to 0.00 | -0.04 to 0.01 | -0.00 to 0.01 | 0.00 to 0.02 |
+| `dot`, one limb, n = 64 | -0.00 to 0.00 | -0.00 to 0.00 | -0.01 to 0.01 | -0.00 to 0.00 |
+| `dot`, one limb, n = 1024 | -0.07 to 0.00 (-O2), 0.00 (-O3) | -0.00 to 0.00 | -0.00 to 0.00 | -0.00 to 0.00 |
+| `dot`, two limbs, n = 1 | -0.02 to 0.01 | -0.00 to 0.00 | 0.07 (-O2), -0.01 (-O3) | 0.04 |
+| `dot`, two limbs, n = 2 | -0.02 to 0.02 | -0.02 to 0.00 | 0.00 to 0.05 | 0.04 |
+| `dot`, two limbs, n = 4 | -0.00 to 0.00 | -0.00 to 0.00 | 0.00 to 0.01 | 0.00 to 0.01 |
+| `dot`, two limbs, n = 8 | -0.00 to 0.05 (-O2), -0.08 to -0.01 (-O3) | -0.00 to 0.01 | 0.00 to 0.01 | 0.00 |
+| `dot`, two limbs, n = 16 | 0.00 to 0.02 | -0.00 to 0.01 | -0.00 to 0.01 | 0.00 to 0.01 |
+| `dot`, two limbs, n = 64 | -0.00 to 0.00 (-O2), -0.05 to 0.01 (-O3) | -0.00 to 0.00 | 0.00 | -0.00 to 0.00 |
+| `dot`, two limbs, n = 1024 | 0.00 (-O2), -0.06 to 0.00 (-O3) | -0.00 to 0.00 | -0.00 to 0.00 | 0.00 |
 
 | The check at entry: with over without (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | control: the generated loop of `sum`, one limb, n = 1, with over without | 0.99 to 1.02 | 1.00 to 1.04 | 1.00 (-O2), 0.88 (-O3) | 1.00 |
 | control: the generated loop of `sum`, one limb, n = 16, with over without | 1.00 to 1.03 | 1.00 to 1.05 (-O2), 1.00 to 1.03 (-O3) | 1.00 to 1.01 (-O2), 1.09 to 1.13 (-O3) | 0.99 to 1.01 |
 | control: the generated loop of `sum`, one limb, n = 1024, with over without | 0.95 to 1.03 (-O2), 1.00 (-O3) | 0.98 to 1.01 | 0.98 to 1.02 | 1.00 to 1.01 |
-| control: the generated loop of `dot`, two limbs, n = 1, with over without | 0.96 to 1.01 | 0.97 to 1.00 | 1.00 | 1.00 to 1.01 |
-| control: the generated loop of `dot`, two limbs, n = 16, with over without | 0.96 to 1.04 (-O2), 1.00 (-O3) | 0.99 to 1.05 (-O2), 1.00 (-O3) | 1.00 | 1.00 |
-| control: the generated loop of `dot`, two limbs, n = 1024, with over without | 1.00 | 1.00 | 1.00 | 0.99 to 1.00 |
+| control: the generated loop of `dot`, two limbs, n = 1, with over without | 0.99 to 1.00 | 0.97 to 1.00 | 1.00 to 2.04 (-O2), 1.00 (-O3) | 1.00 |
+| control: the generated loop of `dot`, two limbs, n = 16, with over without | 0.99 to 1.00 | 1.00 | 1.00 to 1.07 (-O2), 1.00 (-O3) | 1.00 |
+| control: the generated loop of `dot`, two limbs, n = 1024, with over without | 1.00 (-O2), 0.95 to 1.00 (-O3) | 1.00 | 1.00 | 1.00 |
 | `sum`, one limb, 512 elements, with over without | 0.98 to 1.01 | 1.02 to 1.06 (-O2), 0.99 to 1.03 (-O3) | 1.04 to 1.05 | 1.01 to 1.02 |
 | `sum`, two limbs, 512 elements, with over without | 0.97 to 1.02 | 0.99 to 1.03 (-O2), 0.95 to 1.00 (-O3) | 1.00 to 1.03 | 1.00 to 1.01 |
 | `dot`, one limb, 512 elements, with over without | 1.01 | 1.00 to 1.01 | 1.00 to 1.04 | 1.02 to 1.03 |
-| `dot`, two limbs, 512 elements, with over without | 0.94 to 1.00 (-O2), 0.96 to 1.00 (-O3) | 1.00 to 1.05 (-O2), 0.95 to 1.00 (-O3) | 1.00 | 1.00 to 1.01 |
+| `dot`, two limbs, 512 elements, with over without | 1.00 (-O2), 0.97 to 1.02 (-O3) | 0.96 to 1.02 (-O2), 1.00 to 1.04 (-O3) | 1.00 | 1.00 |
 | `add`, one limb, 512 elements, with over without | 1.00 to 1.01 | 1.00 to 1.02 | 1.02 to 1.03 | 1.03 to 1.04 |
 | `add`, two limbs, 512 elements, with over without | 1.00 | 0.99 to 1.00 | 1.00 to 1.01 | 1.02 to 1.03 |
-| `axpy`, two limbs, 512 elements, with over without | 0.98 to 1.00 | 0.99 to 1.00 | 1.00 to 1.02 | 0.99 to 1.03 |
+| `axpy`, two limbs, 512 elements, with over without | 0.97 to 1.00 | 1.00 to 1.01 | 1.00 | 1.00 to 1.02 |
 | ball vectors: `add`, 1 limb, 4 entries, with over without | 1.08 to 1.10 | 1.31 to 1.34 (-O2), 1.28 to 1.30 (-O3) | 1.24 (-O2), 1.40 (-O3) | 1.56 to 1.60 |
 | ball vectors: `add`, 1 limb, 64 entries, with over without | 0.99 to 1.02 | 0.99 to 1.03 | 1.06 to 1.07 (-O2), 1.12 to 1.17 (-O3) | 1.19 to 1.20 (-O2), 1.13 to 1.18 (-O3) |
 | ball vectors: `add`, 2 limbs, 4 entries, with over without | 1.01 to 1.04 | 1.00 to 1.03 (-O2), 1.06 to 1.11 (-O3) | 1.13 to 1.14 (-O2), 1.26 (-O3) | 1.20 to 1.21 |
 | ball vectors: `add`, 2 limbs, 64 entries, with over without | 1.00 to 1.04 | 1.00 to 1.03 (-O2), 1.07 to 1.08 (-O3) | 1.07 to 1.10 | 1.07 to 1.09 |
 | ball vectors: `scale`, 1 limb, 4 entries, with over without | 1.12 | 1.28 (-O2), 1.23 to 1.24 (-O3) | 1.24 (-O2), 1.39 (-O3) | 1.59 to 1.63 (-O2), 1.58 to 1.62 (-O3) |
 | ball vectors: `scale`, 1 limb, 64 entries, with over without | 1.00 to 1.01 | 0.98 to 1.00 | 1.09 to 1.12 | 1.19 (-O2), 0.97 to 1.20 (-O3) |
-| ball vectors: `scale`, 2 limbs, 4 entries, with over without | 1.01 to 1.03 | 1.05 (-O2), 1.16 to 1.25 (-O3) | 1.16 to 1.20 | 1.38 to 1.40 |
-| ball vectors: `scale`, 2 limbs, 64 entries, with over without | 0.93 to 1.00 (-O2), 1.00 to 1.02 (-O3) | 0.99 to 1.01 | 1.09 to 1.11 | 1.07 to 1.09 |
+| ball vectors: `scale`, 2 limbs, 4 entries, with over without | 1.00 to 1.03 (-O2), 0.86 to 1.02 (-O3) | 1.05 (-O2), 1.07 to 1.15 (-O3) | 1.18 to 1.20 | 1.38 to 1.40 |
+| ball vectors: `scale`, 2 limbs, 64 entries, with over without | 0.97 to 1.01 | 0.96 to 1.00 | 1.09 to 1.10 (-O2), 1.04 (-O3) | 1.10 to 1.12 |
 | ball vectors: `axpy`, 1 limb, 4 entries, with over without | 1.00 to 1.05 | 1.05 (-O2), 1.16 to 1.18 (-O3) | 1.15 to 1.17 (-O2), 1.23 to 1.24 (-O3) | 1.13 to 1.19 (-O2), 1.13 to 1.18 (-O3) |
 | ball vectors: `axpy`, 1 limb, 64 entries, with over without | 0.99 to 1.00 | 1.00 (-O2), 0.94 to 0.97 (-O3) | 1.03 to 1.55 (-O2), 1.19 to 1.22 (-O3) | 1.13 to 1.16 (-O2), 1.05 to 1.09 (-O3) |
 | ball vectors: `axpy`, 2 limbs, 4 entries, with over without | 0.99 to 1.01 | 1.13 to 1.15 (-O2), 1.07 to 1.21 (-O3) | 1.21 to 1.23 | 1.10 to 1.13 |
@@ -5173,8 +5534,8 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | ball vectors: `add`, 2 limbs, 64 entries | 0.03 to 0.11 (-O2), 0.84 to 2.72 (-O3) | 0.12 to 1.57 (-O2), 4.1 to 4.52 (-O3) | 5.27 to 6.01 (-O2), 7.13 to 7.69 (-O3) | 5.69 to 6.46 (-O2), 5.56 to 5.75 (-O3) |
 | ball vectors: `scale`, 1 limb, 4 entries | 0.261 to 0.268 | 0.657 to 0.663 (-O2), 0.536 to 0.549 (-O3) | 1.92 to 1.93 (-O2), 2.61 to 2.65 (-O3) | 3.17 to 3.28 (-O2), 3.1 to 3.28 (-O3) |
 | ball vectors: `scale`, 1 limb, 64 entries | 0.03 to 0.08 (-O2), 0.07 to 0.17 (-O3) | 0.1 to 0.11 (-O2), -0.34 to -0.31 (-O3) | 2.26 to 2.6 (-O2), 2.01 to 2.2 (-O3) | 3.03 to 3.05 (-O2), -0.59 to 3.75 (-O3) |
-| ball vectors: `scale`, 2 limbs, 4 entries | 0.027 to 0.085 (-O2), 0.05 to 0.081 (-O3) | 0.257 to 0.265 (-O2), 0.448 to 0.703 (-O3) | 2.39 to 2.56 (-O2), 1.7 to 1.71 (-O3) | 2.5 to 2.61 |
-| ball vectors: `scale`, 2 limbs, 64 entries | -2.3 to 0.11 (-O2), -0.08 to 0.51 (-O3) | -0.01 to 0.17 (-O2), -0.22 to 0.16 (-O3) | 3.69 to 4.15 (-O2), 3.98 to 4.11 (-O3) | 2.32 to 2.56 (-O2), 2.85 to 2.88 (-O3) |
+| ball vectors: `scale`, 2 limbs, 4 entries | 0.009 to 0.079 (-O2), -0.516 to 0.09 (-O3) | 0.267 to 0.277 (-O2), 0.227 to 0.487 (-O3) | 2.73 to 2.97 (-O2), 1.64 to 1.69 (-O3) | 2.51 to 2.63 |
+| ball vectors: `scale`, 2 limbs, 64 entries | -0.97 to 0.29 (-O2), -0.87 to -0.07 (-O3) | -1.54 to -0.15 (-O2), -1.39 to 0.06 (-O3) | 4.06 to 4.08 (-O2), 1.54 to 1.59 (-O3) | 3.61 to 3.69 (-O2), 3.98 to 4.2 (-O3) |
 | ball vectors: `axpy`, 1 limb, 4 entries | -0.012 to 0.168 (-O2), 0.205 to 0.26 (-O3) | 0.263 to 0.266 (-O2), 0.798 to 0.887 (-O3) | 2.38 to 2.62 (-O2), 3.15 to 3.27 (-O3) | 1.66 to 2.38 (-O2), 1.63 to 2.18 (-O3) |
 | ball vectors: `axpy`, 1 limb, 64 entries | -0.42 to -0.01 (-O2), -0.11 to 0.09 (-O3) | -0.21 to 0.08 (-O2), -2.45 to -1.21 (-O3) | 1.28 to 26.9 (-O2), 6.71 to 7.67 (-O3) | 4.12 to 4.88 (-O2), 1.61 to 2.94 (-O3) |
 | ball vectors: `axpy`, 2 limbs, 4 entries | -0.104 to 0.069 (-O2), 0.051 to 0.085 (-O3) | 1.45 to 1.65 (-O2), 0.581 to 1.69 (-O3) | 7.51 to 7.82 (-O2), 4.11 to 4.38 (-O3) | 1.82 to 2.39 (-O2), 2.29 to 2.35 (-O3) |
@@ -5192,12 +5553,12 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 |---|---|---|---|---|
 | `sum`, one limb, independent | > 1024; > 1024 (-O2), 8; 1024 (-O3) | 64; 1024 (-O2), 8; 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) |
 | `sum`, two limbs, independent | 1; 64 (-O2), 16; 64 (-O3) | 8; 16 (-O2), 16; 64 (-O3) | 16; 1024 (-O2), 4; 64 (-O3) | 8; 64 (-O2), 8; 64 (-O3) |
-| `dot`, one limb, independent | > 1024; > 1024 (-O2), 64; 1024 (-O3) | 64; 1024 (-O2), 64; 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) |
-| `dot`, two limbs, independent | 1; 8 (-O2), 1; 16 (-O3) | 2; 64 (-O2), 16; 64 (-O3) | 4; 1024 (-O2), 4; 64 (-O3) | 4; 1024 (-O2), 4; 1024 (-O3) |
+| `dot`, one limb, independent | 64; 64 (-O2), 16; 1024 (-O3) | 64; 1024 (-O2), 64; 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) | 1024; > 1024 (-O2), 1024; > 1024 (-O3) |
+| `dot`, two limbs, independent | 1; 1024 (-O2), 1; 16 (-O3) | 2; 16 (-O2), 4; 64 (-O3) | 4; 64 (-O2), 4; 1024 (-O3) | 4; 64 (-O2), 2; 64 (-O3) |
 | `sum`, one limb, dependent | 16; 1024 (-O2), 4; 16 (-O3) | 4; 64 (-O2), 64; 64 (-O3) | 2; 64 (-O2), 4; 64 (-O3) | 1; 1024 (-O2), 1; 64 (-O3) |
 | `sum`, two limbs, dependent | 2; 16 (-O2), 64; 1024 (-O3) | 1; 1 (-O2), 1; 16 (-O3) | 1; 4 (-O2), 1; 16 (-O3) | 1; 4 (-O2), 1; 8 (-O3) |
-| `dot`, one limb, dependent | > 1024; > 1024 (-O2), 4; > 1024 (-O3) | 1024; 1024 (-O2), 64; > 1024 (-O3) | 1; 16 (-O2), 1; 8 (-O3) | 1; 64 (-O2), 1; 64 (-O3) |
-| `dot`, two limbs, dependent | 1; 64 (-O2), 2; 64 (-O3) | 1; 16 (-O2), 1; 64 (-O3) | 2; 4 (-O2), 1; 1 (-O3) | 4; 4 (-O2), 4; 4 (-O3) |
+| `dot`, one limb, dependent | 4; 4 (-O2), 4; 4 (-O3) | 4; 4 (-O2), 2; 2 (-O3) | 1; 16 (-O2), 1; 1024 (-O3) | 1; 16 (-O2), 1; 64 (-O3) |
+| `dot`, two limbs, dependent | 1; 64 (-O2), 1; 64 (-O3) | 1; 1 (-O2), 1; 1 (-O3) | 4; 4 (-O2), 1; 16 (-O3) | 1; 4 (-O2), 1; 4 (-O3) |
 
 | Short ball vectors, one operation per unit, many vectors: ns per operation, with the check | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5236,11 +5597,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 4.18 to 4.23 | 5.06 to 5.09 (-O2), 4.31 to 4.32 (-O3) | 12.7 (-O2), 11.7 (-O3) | 9.53 to 9.61 |
 | `scale`, 1 limb, N = 18 | 5.61 (-O2), 5.57 to 5.93 (-O3) | 6.19 to 6.2 (-O2), 5.64 (-O3) | 13.9 to 14.1 (-O2), 12.9 to 13.1 (-O3) | 10.5 to 10.7 |
 | `scale`, 1 limb, N = 80 | 28.2 (-O2), 26.8 (-O3) | 29.4 to 30.4 (-O2), 24.9 (-O3) | 27.9 to 28 (-O2), 26.2 to 26.4 (-O3) | 20.2 to 20.3 (-O2), 27.6 to 28.1 (-O3) |
-| `scale`, 2 limbs, N = 3 | 3.13 to 3.14 | 4.78 (-O2), 3.22 (-O3) | 19.7 (-O2), 12 to 12.1 (-O3) | 9.97 to 10.1 |
-| `scale`, 2 limbs, N = 7 | 4.83 to 5.02 | 6.28 to 6.29 (-O2), 4.81 (-O3) | 22.2 (-O2), 15.9 (-O3) | 13.6 to 13.7 |
-| `scale`, 2 limbs, N = 13 | 7.18 to 7.5 | 8.53 (-O2), 7.24 (-O3) | 22.4 to 22.5 (-O2), 15.9 (-O3) | 13.8 to 13.9 |
-| `scale`, 2 limbs, N = 18 | 9.36 to 9.75 | 10.7 (-O2), 9.34 to 9.38 (-O3) | 25.4 to 25.5 (-O2), 19.3 to 19.4 (-O3) | 16.2 to 16.3 |
-| `scale`, 2 limbs, N = 80 | 39.8 to 39.9 | 38.3 to 40 | 53.5 to 54.6 (-O2), 47.8 to 48 (-O3) | 43.7 to 44.5 |
+| `scale`, 2 limbs, N = 3 | 3.22 to 3.86 (-O2), 3.7 to 4.12 (-O3) | 5.53 to 5.78 (-O2), 3.67 to 3.84 (-O3) | 19.5 to 19.6 (-O2), 12.2 (-O3) | 9.95 to 10 |
+| `scale`, 2 limbs, N = 7 | 5.2 to 6 (-O2), 5.8 to 6.39 (-O3) | 7.48 to 7.82 (-O2), 5.5 to 5.75 (-O3) | 22.4 (-O2), 15.9 (-O3) | 13.7 to 13.8 |
+| `scale`, 2 limbs, N = 13 | 7.44 to 8.55 (-O2), 8.53 to 9.41 (-O3) | 10.1 to 10.6 (-O2), 8.31 to 8.69 (-O3) | 22.9 (-O2), 15.8 to 15.9 (-O3) | 13.8 |
+| `scale`, 2 limbs, N = 18 | 9.88 to 11.4 (-O2), 11.3 to 13.2 (-O3) | 12.6 to 13.1 (-O2), 10.8 to 11.3 (-O3) | 25.5 to 25.7 (-O2), 19.4 (-O3) | 16.2 to 16.4 |
+| `scale`, 2 limbs, N = 80 | 39.8 to 46.7 (-O2), 47 to 51.3 (-O3) | 46.3 to 48.2 (-O2), 43.9 to 45.9 (-O3) | 53.1 to 53.9 (-O2), 47.4 to 47.5 (-O3) | 44.3 to 44.5 |
 | `half`, 1 limb, N = 3 | 3.49 to 3.5 | 4.79 (-O2), 2.94 (-O3) | 19.7 to 19.8 (-O2), 12.6 (-O3) | 12.1 to 12.2 |
 | `half`, 1 limb, N = 7 | 4.81 | 5.6 (-O2), 4.28 (-O3) | 21.1 to 21.2 (-O2), 15.6 (-O3) | 14.1 to 14.3 |
 | `half`, 1 limb, N = 13 | 7.07 to 7.12 | 7.49 (-O2), 6.17 (-O3) | 20 to 20.3 (-O2), 14.2 to 14.3 (-O3) | 14.1 to 14.3 |
@@ -5256,11 +5617,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 23.6 to 24.9 (-O2), 23.8 to 25 (-O3) | 17.5 to 17.6 (-O2), 7.36 (-O3) | 24.1 to 24.2 (-O2), 22 to 22.1 (-O3) | 33 to 33.4 |
 | the constructor, 1 limb, N = 18 | 18.3 (-O2), 25.1 to 26.8 (-O3) | 24.4 (-O2), 23.4 to 24.6 (-O3) | 28.9 to 29.9 | 24.5 to 25 (-O2), 36.1 to 37.1 (-O3) |
 | the constructor, 1 limb, N = 80 | 67.4 to 68.4 (-O2), 72.4 to 72.6 (-O3) | 196 to 209 (-O2), 199 to 209 (-O3) | 145 to 151 | 71.3 to 72.6 |
-| the constructor, 2 limbs, N = 3 | 13.7 to 17.1 (-O2), 6.19 to 17.7 (-O3) | 3.74 to 3.75 (-O2), 3.93 to 3.94 (-O3) | 16 to 16.3 | 11.2 to 16.1 (-O2), 16 (-O3) |
-| the constructor, 2 limbs, N = 7 | 19.9 to 20.8 | 12.4 (-O2), 6.45 to 6.47 (-O3) | 20.1 to 20.6 (-O2), 18.8 to 19.7 (-O3) | 15.7 to 17.4 (-O2), 17.7 to 18 (-O3) |
-| the constructor, 2 limbs, N = 13 | 22.5 to 23.2 (-O2), 22.9 to 23.9 (-O3) | 27.1 to 27.2 (-O2), 8.91 to 8.92 (-O3) | 39.1 to 39.2 (-O2), 22.5 to 22.9 (-O3) | 22.9 to 23.5 (-O2), 23.5 to 24.8 (-O3) |
-| the constructor, 2 limbs, N = 18 | 22.7 to 22.8 (-O2), 21 (-O3) | 40.3 to 40.7 (-O2), 35.5 (-O3) | 48.9 to 49.1 (-O2), 31 to 31.1 (-O3) | 36 to 36.8 |
-| the constructor, 2 limbs, N = 80 | 90.1 to 91.4 | 285 to 289 (-O2), 252 to 269 (-O3) | 210 to 211 (-O2), 158 to 164 (-O3) | 106 to 108 |
+| the constructor, 2 limbs, N = 3 | 14.9 to 17.1 (-O2), 16.8 to 19.2 (-O3) | 5.32 to 5.55 (-O2), 4.78 to 5 (-O3) | 19 to 19.4 (-O2), 16.5 to 17.1 (-O3) | 22 to 26.2 (-O2), 21.9 to 25.4 (-O3) |
+| the constructor, 2 limbs, N = 7 | 17.7 to 21.8 (-O2), 21.7 to 25.4 (-O3) | 20.3 to 21.2 (-O2), 7.96 to 8.33 (-O3) | 22.8 to 23.4 (-O2), 21.7 to 21.9 (-O3) | 27.7 to 31.6 (-O2), 27.8 to 30.5 (-O3) |
+| the constructor, 2 limbs, N = 13 | 19.8 to 22.9 (-O2), 22.5 to 24.9 (-O3) | 33.5 to 35.1 (-O2), 16.1 to 16.8 (-O3) | 45.4 to 45.7 (-O2), 31.3 to 31.6 (-O3) | 32.5 to 34.7 (-O2), 35.3 to 35.5 (-O3) |
+| the constructor, 2 limbs, N = 18 | 32.8 to 37.7 (-O2), 30.4 to 34.8 (-O3) | 75.8 to 79.3 (-O2), 43.7 to 45.1 (-O3) | 59 to 59.4 (-O2), 35.7 (-O3) | 46.5 to 46.8 (-O2), 37.7 to 42.7 (-O3) |
+| the constructor, 2 limbs, N = 80 | 92 to 106 (-O2), 106 to 116 (-O3) | 332 to 347 (-O2), 309 to 323 (-O3) | 223 to 225 (-O2), 194 to 195 (-O3) | 142 to 149 |
 
 | Short ball vectors, one operation per unit, many vectors: the check, ns per operation (with minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5299,11 +5660,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 0.081 to 0.085 (-O2), -0.049 to 0.025 (-O3) | 0.216 to 0.246 (-O2), 0.436 to 0.439 (-O3) | 2.35 to 2.48 (-O2), 2.52 to 2.62 (-O3) | 2.44 to 2.51 |
 | `scale`, 1 limb, N = 18 | -0.27 to 0.097 (-O2), -0.29 to 0.417 (-O3) | 0.278 to 0.298 (-O2), 0.607 to 0.608 (-O3) | 1.83 to 2.13 (-O2), 2.07 to 2.15 (-O3) | 2.61 to 2.67 (-O2), 2.61 to 2.76 (-O3) |
 | `scale`, 1 limb, N = 80 | 0.13 to 0.17 (-O2), 0.24 to 0.32 (-O3) | -0.14 to 0.88 (-O2), 0.23 (-O3) | 1.35 to 1.65 (-O2), 1.5 to 1.78 (-O3) | 2.58 to 2.86 (-O2), 4.24 to 5.34 (-O3) |
-| `scale`, 2 limbs, N = 3 | 0.005 to 0.092 (-O2), 0.091 to 0.106 (-O3) | 0.311 (-O2), 0.346 to 0.445 (-O3) | 2.93 to 2.95 (-O2), 2.43 to 2.52 (-O3) | 2.59 to 2.63 (-O2), 2.45 to 2.55 (-O3) |
-| `scale`, 2 limbs, N = 7 | 0.288 to 0.396 (-O2), 0.222 to 0.504 (-O3) | 0.102 to 0.106 (-O2), 0.359 to 0.372 (-O3) | 2.93 to 3.02 (-O2), 1.96 to 2.2 (-O3) | 2.75 to 2.83 (-O2), 2.73 to 2.88 (-O3) |
-| `scale`, 2 limbs, N = 13 | 0.068 to 0.309 (-O2), -0.236 to 0.293 (-O3) | 0.122 to 0.125 (-O2), 0.259 to 0.267 (-O3) | 2.83 to 2.85 (-O2), 2.31 to 2.47 (-O3) | 2.82 to 2.98 (-O2), 2.84 to 2.96 (-O3) |
-| `scale`, 2 limbs, N = 18 | 0.006 to 0.099 (-O2), -0.373 to -0.032 (-O3) | 0.07 to 0.08 (-O2), 0.147 to 0.189 (-O3) | 2.89 to 3.02 (-O2), 2.2 to 2.3 (-O3) | 1.62 to 1.84 (-O2), 1.66 to 1.81 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.16 to 0.2 (-O2), -0.24 to 0 (-O3) | 0.02 to 0.06 (-O2), 0.38 to 0.41 (-O3) | 3 to 4.19 (-O2), 0.24 to 0.67 (-O3) | 1.51 to 1.89 (-O2), 0.99 to 1.85 (-O3) |
+| `scale`, 2 limbs, N = 3 | 0.109 to 0.263 (-O2), -0.089 to 0.257 (-O3) | 0.238 to 0.387 (-O2), 0.418 to 0.581 (-O3) | 2.64 to 2.76 | 2.4 to 2.46 |
+| `scale`, 2 limbs, N = 7 | 0.565 to 0.622 (-O2), 0.114 to 0.713 (-O3) | 0.129 to 0.478 (-O2), 0.172 to 0.404 (-O3) | 3.04 to 3.1 (-O2), 2.24 to 2.31 (-O3) | 2.77 to 2.83 |
+| `scale`, 2 limbs, N = 13 | 0.043 to 0.066 (-O2), -0.068 to -0.05 (-O3) | -0.04 to 0.08 (-O2), 0.026 to 0.672 (-O3) | 2.92 to 2.95 (-O2), 2.46 to 2.48 (-O3) | 2.79 to 2.88 |
+| `scale`, 2 limbs, N = 18 | 0.17 to 0.26 (-O2), -0.39 to 0.52 (-O3) | -0.43 to 0.14 (-O2), -0.11 to 0.86 (-O3) | 2.65 to 2.85 (-O2), 2.39 to 2.45 (-O3) | 1.48 to 1.51 (-O2), 1.49 to 1.74 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.15 to 0.84 (-O2), -2.92 to 1.52 (-O3) | -1.65 to 0.26 (-O2), -1.59 to 2.07 (-O3) | 2.58 to 3.38 (-O2), 0.61 to 0.78 (-O3) | 1.49 to 1.8 (-O2), 1.76 to 1.95 (-O3) |
 | `half`, 1 limb, N = 3 | 0.285 to 0.29 | 0.264 to 0.269 | 2.5 to 2.58 (-O2), 3.91 to 4.03 (-O3) | 3.37 to 3.43 (-O2), 3.26 to 3.35 (-O3) |
 | `half`, 1 limb, N = 7 | 0.297 to 0.3 | 0.265 to 0.273 | 2.2 to 2.25 (-O2), 2.62 to 2.86 (-O3) | 2.24 to 2.29 (-O2), 2.34 to 2.41 (-O3) |
 | `half`, 1 limb, N = 13 | 0.171 to 0.176 (-O2), 0.13 to 0.132 (-O3) | 0.128 to 0.13 (-O2), 0.277 (-O3) | 2.52 to 2.88 (-O2), 1.89 to 2.07 (-O3) | 2.08 to 2.14 (-O2), 2.11 to 2.24 (-O3) |
@@ -5319,11 +5680,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | -0.2 to 1.49 (-O2), 0.82 to 1.62 (-O3) | 0.33 to 0.42 (-O2), 1.17 to 1.33 (-O3) | 2.22 to 2.72 (-O2), 2.99 to 3.31 (-O3) | -0.4 to 0.23 (-O2), -0.39 to 0.32 (-O3) |
 | the constructor, 1 limb, N = 18 | -1.68 to -1.29 (-O2), -0.02 to 1.69 (-O3) | -0.03 to -0.01 (-O2), 0.41 to 1.46 (-O3) | 2.23 to 3.15 (-O2), 2.48 to 3.18 (-O3) | -0.91 to -0.61 (-O2), 0.78 to 2.27 (-O3) |
 | the constructor, 1 limb, N = 80 | -3.45 to -2.2 (-O2), -0.36 to 0.6 (-O3) | -11.8 to 8 (-O2), -9 to 4.2 (-O3) | 2.4 to 6.8 (-O2), -2.3 to -1.2 (-O3) | 1.87 to 3.02 (-O2), 2.33 to 2.74 (-O3) |
-| the constructor, 2 limbs, N = 3 | 9.21 to 12.6 (-O2), 1.81 to 13.2 (-O3) | 0.158 to 0.201 (-O2), 0.802 to 0.811 (-O3) | 5.45 to 6.32 (-O2), 5.8 to 6.36 (-O3) | 2.59 to 7.39 (-O2), 7.33 to 7.46 (-O3) |
-| the constructor, 2 limbs, N = 7 | -0.53 to -0.46 (-O2), 0.72 to 1.49 (-O3) | 0.2 to 0.25 (-O2), 1.29 to 1.3 (-O3) | 2.45 to 2.81 (-O2), 7.17 to 8.08 (-O3) | -0.77 to 1.31 (-O2), 1.81 to 1.93 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.54 to 0.09 (-O2), -1.01 to 0.6 (-O3) | 0.09 to 0.13 (-O2), 0.259 to 0.292 (-O3) | 1.66 to 2.06 (-O2), 5.05 to 5.55 (-O3) | 0.15 to 0.87 (-O2), 0.74 to 2.14 (-O3) |
-| the constructor, 2 limbs, N = 18 | -0.55 to -0.27 (-O2), -1.25 to -1.11 (-O3) | -0.26 to -0.03 (-O2), 1.11 to 1.12 (-O3) | 1.08 to 1.27 (-O2), -9.03 to -8.59 (-O3) | 2.03 to 2.69 (-O2), 1.9 to 4.96 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.14 to 1.87 (-O2), -1.67 to 4.65 (-O3) | -4.3 to -0.3 (-O2), -16.6 to 0.5 (-O3) | 4.6 to 6 (-O2), -0.8 to 10 (-O3) | 2.8 to 6.61 (-O2), 4.5 to 8.34 (-O3) |
+| the constructor, 2 limbs, N = 3 | -2.34 to 0.93 (-O2), 10.5 to 11.9 (-O3) | -0.022 to 0.152 (-O2), 1.52 to 1.68 (-O3) | 6.02 to 6.95 (-O2), 3.31 to 4.8 (-O3) | -3.44 to 4.8 (-O2), 8.68 to 12.2 (-O3) |
+| the constructor, 2 limbs, N = 7 | -5.35 to -3.97 (-O2), -4.02 to -3.24 (-O3) | -0.3 to 0.01 (-O2), 2.29 to 2.91 (-O3) | 1.03 to 1.78 (-O2), 5.99 to 6.4 (-O3) | -2.66 to 3.92 (-O2), -3.05 to -0.3 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.04 to 0.1 (-O2), -3.67 to -0.67 (-O3) | 0.07 to 0.49 (-O2), 4.3 to 5.04 (-O3) | -0.09 to 0.61 (-O2), 7.41 to 7.65 (-O3) | -0.68 to 3.23 (-O2), -0.46 to -0.28 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.24 to 0.36 (-O2), -0.62 to 1.42 (-O3) | -3.44 to -0.04 (-O2), -0.97 to 2.16 (-O3) | 1.19 to 1.93 (-O2), -14.8 to -14.7 (-O3) | 0.51 to 1.27 (-O2), -4.97 to 0.16 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.22 to 0.3 (-O2), 0 to 0.2 (-O3) | 0 to 1.1 (-O2), -6.1 to 13.5 (-O3) | -25.2 to -18.2 (-O2), -3.7 to -2.1 (-O3) | -3.6 to 4.2 (-O2), 1.2 to 2.1 (-O3) |
 
 | Short ball vectors, one operation per unit, many vectors: the check with its report cold, ns per operation (minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5362,11 +5723,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | -0.006 to 0.007 (-O2), -0.099 to -0.062 (-O3) | -0.018 to -0.01 (-O2), 0.156 to 0.158 (-O3) | 2.21 to 2.44 (-O2), 2.2 to 2.36 (-O3) | 2.41 to 2.5 |
 | `scale`, 1 limb, N = 18 | -0.165 to 0.217 (-O2), -0.207 to 0.18 (-O3) | 0.114 to 0.127 (-O2), 0.113 to 0.114 (-O3) | 2.22 to 2.32 (-O2), 1.87 to 2.06 (-O3) | 2.4 to 2.51 |
 | `scale`, 1 limb, N = 80 | 0.02 to 0.04 (-O2), 0.29 to 0.56 (-O3) | 0.13 to 0.17 (-O2), 0.02 to 0.08 (-O3) | 3.73 to 4.1 (-O2), 1.17 to 1.47 (-O3) | 2.78 to 3.1 (-O2), 2.31 to 17.7 (-O3) |
-| `scale`, 2 limbs, N = 3 | -0.074 to 0.133 (-O2), 0.056 to 0.067 (-O3) | 0.099 to 0.1 (-O2), -0.019 to 0.079 (-O3) | 2.86 to 2.88 (-O2), 1.01 to 1.1 (-O3) | 2.61 to 2.7 |
-| `scale`, 2 limbs, N = 7 | -0.168 to 0.057 (-O2), 0.004 to 0.169 (-O3) | 0.1 to 0.112 (-O2), 0.035 to 0.054 (-O3) | 2.75 to 2.85 (-O2), 1.83 to 2.1 (-O3) | 1.94 to 2.02 (-O2), 1.92 to 2 (-O3) |
-| `scale`, 2 limbs, N = 13 | 0.057 to 0.078 (-O2), -0.234 to 0.275 (-O3) | 0.125 to 0.131 (-O2), 0.029 to 0.037 (-O3) | 2.71 to 2.85 (-O2), 1.86 to 1.99 (-O3) | 2.93 to 2.98 (-O2), 2.84 to 3.15 (-O3) |
-| `scale`, 2 limbs, N = 18 | -0.014 to 0.068 (-O2), -0.056 to -0.021 (-O3) | 0.1 to 0.11 (-O2), -0.074 to -0.071 (-O3) | 2.87 to 2.91 (-O2), 1.52 to 1.71 (-O3) | 1.77 to 1.93 (-O2), 1.72 to 2.18 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.06 to 0.1 (-O2), -0.3 to -0.11 (-O3) | 0 to 0.1 (-O2), -0.04 to -0.03 (-O3) | 3.01 to 3.46 (-O2), 0.16 to 0.89 (-O3) | 1.8 to 2.6 (-O2), 1.27 to 2.44 (-O3) |
+| `scale`, 2 limbs, N = 3 | 0.013 to 0.299 (-O2), -1.14 to 0.081 (-O3) | 0.056 to 0.463 (-O2), 0.006 to 0.147 (-O3) | 2.72 to 2.74 (-O2), 1.22 to 1.26 (-O3) | 2.46 to 2.51 |
+| `scale`, 2 limbs, N = 7 | 0.054 to 0.487 (-O2), -1.58 to 0.277 (-O3) | -0.3 to 0.39 (-O2), -0.153 to 0.041 (-O3) | 2.85 to 2.89 (-O2), 2.14 to 2.19 (-O3) | 1.79 to 1.83 |
+| `scale`, 2 limbs, N = 13 | 0.294 to 0.932 (-O2), -1.91 to 0.095 (-O3) | -0.34 to 0.11 (-O2), -0.326 to 0.391 (-O3) | 2.79 to 2.84 (-O2), 1.82 to 1.85 (-O3) | 2.93 to 3.06 (-O2), 2.86 to 2.92 (-O3) |
+| `scale`, 2 limbs, N = 18 | 0.373 to 0.89 (-O2), -3.02 to 0.35 (-O3) | -0.47 to 0.65 (-O2), -0.49 to 0.47 (-O3) | 2.65 to 2.82 (-O2), 1.64 to 1.74 (-O3) | 1.47 to 1.64 (-O2), 1.67 to 1.81 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.01 to 1.92 (-O2), -13.9 to 0.57 (-O3) | -2.06 to -1.74 (-O2), -1.98 to 1.7 (-O3) | 2.39 to 3.03 (-O2), 0.68 to 0.77 (-O3) | 1.41 to 1.95 (-O2), 1.88 to 2.26 (-O3) |
 | `half`, 1 limb, N = 3 | 0.087 (-O2), 0.087 to 0.092 (-O3) | -0.001 to 0.001 (-O2), -0.025 to -0.022 (-O3) | 2.29 to 2.34 (-O2), 2.69 to 2.77 (-O3) | 2.47 to 2.5 (-O2), 2.36 to 2.51 (-O3) |
 | `half`, 1 limb, N = 7 | 0.088 to 0.091 | 0.004 to 0.007 (-O2), 0 to 0.003 (-O3) | 1.85 to 1.95 (-O2), 1.91 to 2.09 (-O3) | 2.36 to 2.43 (-O2), 2.32 to 2.44 (-O3) |
 | `half`, 1 limb, N = 13 | 0.131 to 0.132 (-O2), 0.158 to 0.267 (-O3) | 0.041 to 0.045 (-O2), 0.062 to 0.063 (-O3) | 2.35 to 2.46 (-O2), 1.43 to 1.64 (-O3) | 2.2 to 2.36 (-O2), 2.11 to 2.16 (-O3) |
@@ -5382,11 +5743,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | -0.56 to 0.16 (-O2), 0.83 to 2.07 (-O3) | 0.3 to 0.4 (-O2), 0.405 to 0.533 (-O3) | 2.15 to 2.74 (-O2), 3.6 to 3.82 (-O3) | -0.55 to 0.51 (-O2), -0.38 to 0.3 (-O3) |
 | the constructor, 1 limb, N = 18 | -1.14 to -0.66 (-O2), -0.88 to 0.93 (-O3) | -0.12 to -0.07 (-O2), 0.19 to 1.15 (-O3) | 4.95 to 5.05 (-O2), 4.66 to 5.65 (-O3) | -0.83 to 0.93 (-O2), 0.17 to 2.28 (-O3) |
 | the constructor, 1 limb, N = 80 | -0.12 to 0.05 (-O2), -0.56 to 0.24 (-O3) | -12.6 to 8.1 (-O2), -13.4 to 0.8 (-O3) | 4.8 to 7.4 (-O2), -0.4 to 0.9 (-O3) | -0.46 to -0.03 (-O2), 2.21 to 11.8 (-O3) |
-| the constructor, 2 limbs, N = 3 | 4.59 to 14.3 (-O2), 2.07 to 6.97 (-O3) | 0.113 to 0.322 (-O2), -0.064 to -0.041 (-O3) | 5.46 to 6.36 (-O2), 5.67 to 6.34 (-O3) | 7.68 to 7.83 (-O2), 7.43 to 7.72 (-O3) |
-| the constructor, 2 limbs, N = 7 | -1.26 to -1.19 (-O2), -2.28 to -1.81 (-O3) | 0.2 to 0.23 (-O2), 0.288 to 0.331 (-O3) | 2.61 to 3.03 (-O2), 6.22 to 6.96 (-O3) | 1.27 to 1.65 (-O2), 0.13 to 1.92 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.16 to 1.53 (-O2), -1.42 to 0.6 (-O3) | 0.01 to 0.07 (-O2), -0.036 to -0.007 (-O3) | 1.08 to 1.58 (-O2), 3.27 to 3.68 (-O3) | 0.73 to 2.2 (-O2), 0.6 to 6.3 (-O3) |
-| the constructor, 2 limbs, N = 18 | -1.73 to -1.42 (-O2), -0.42 to -0.25 (-O3) | 0 to 0.11 (-O2), 0.06 to 1.18 (-O3) | 5.34 to 5.52 (-O2), -11.7 to -11.2 (-O3) | 2.11 to 2.19 (-O2), 1.44 to 4.86 (-O3) |
-| the constructor, 2 limbs, N = 80 | -3.2 to 1.73 (-O2), -1.95 to 4.35 (-O3) | -0.1 to 0 (-O2), -14.1 to 1.3 (-O3) | -18.5 to -11.9 (-O2), -3.5 to 4.9 (-O3) | 5.3 to 6.51 (-O2), 2.1 to 8.53 (-O3) |
+| the constructor, 2 limbs, N = 3 | -2.44 to 0.6 (-O2), 8.44 to 9.6 (-O3) | -0.024 to 0.226 (-O2), 0.184 to 0.278 (-O3) | 7.97 to 8.54 (-O2), 7.49 to 7.77 (-O3) | 0.5 to 4.23 (-O2), 12.5 to 13 (-O3) |
+| the constructor, 2 limbs, N = 7 | -2.72 to -1.8 (-O2), -9.41 to -1.72 (-O3) | -0.88 to 0.18 (-O2), 0.15 to 0.664 (-O3) | 0.75 to 1.53 (-O2), 4.97 to 5.05 (-O3) | -0.12 to 3.02 (-O2), 0.14 to 0.87 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.1 to 0.44 (-O2), -9.22 to 0.4 (-O3) | -1.01 to 1.73 (-O2), -0.2 to 0.29 (-O3) | 0.49 to 0.89 (-O2), 3.78 to 3.9 (-O3) | 1.06 to 2.53 (-O2), -0.01 to 2.07 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.61 to 2.44 (-O2), -9.11 to 1.01 (-O3) | -3.54 to -0.08 (-O2), -0.74 to 2.1 (-O3) | 6.02 to 6.36 (-O2), -15.1 to -8.15 (-O3) | 1.47 to 6.04 (-O2), -2.67 to 0.59 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.67 to 0.8 (-O2), -26.9 to -2 (-O3) | -13.6 to 2.9 (-O2), -14.6 to 13.6 (-O3) | -28.2 to -21.3 (-O2), -2.2 to -1.1 (-O3) | 2.1 to 5.6 (-O2), 0.6 to 2.8 (-O3) |
 
 | Short ball vectors, one operation per unit, many vectors: with the check over without | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5425,11 +5786,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 0.99 to 1.02 | 1.04 to 1.05 (-O2), 1.11 (-O3) | 1.23 to 1.24 (-O2), 1.28 to 1.29 (-O3) | 1.34 to 1.36 |
 | `scale`, 1 limb, N = 18 | 0.95 to 1.02 (-O2), 0.95 to 1.08 (-O3) | 1.05 (-O2), 1.12 (-O3) | 1.15 to 1.20 | 1.33 to 1.35 |
 | `scale`, 1 limb, N = 80 | 1.00 to 1.01 | 1.00 to 1.03 | 1.05 to 1.07 | 1.15 to 1.16 (-O2), 1.18 to 1.24 (-O3) |
-| `scale`, 2 limbs, N = 3 | 1.00 to 1.04 | 1.07 (-O2), 1.12 to 1.16 (-O3) | 1.17 to 1.18 (-O2), 1.25 to 1.27 (-O3) | 1.33 to 1.35 |
-| `scale`, 2 limbs, N = 7 | 1.06 to 1.09 (-O2), 1.05 to 1.11 (-O3) | 1.02 (-O2), 1.08 (-O3) | 1.14 to 1.16 | 1.25 to 1.27 |
-| `scale`, 2 limbs, N = 13 | 1.01 to 1.04 (-O2), 0.97 to 1.04 (-O3) | 1.01 to 1.04 | 1.14 to 1.18 | 1.26 to 1.27 |
-| `scale`, 2 limbs, N = 18 | 0.96 to 1.01 | 1.01 to 1.02 | 1.13 to 1.14 | 1.11 to 1.13 |
-| `scale`, 2 limbs, N = 80 | 0.99 to 1.01 | 1.00 to 1.01 | 1.06 to 1.08 (-O2), 1.01 (-O3) | 1.02 to 1.04 |
+| `scale`, 2 limbs, N = 3 | 1.03 to 1.07 (-O2), 0.98 to 1.07 (-O3) | 1.04 to 1.07 (-O2), 1.13 to 1.18 (-O3) | 1.16 (-O2), 1.29 (-O3) | 1.32 to 1.33 |
+| `scale`, 2 limbs, N = 7 | 1.11 to 1.14 (-O2), 1.02 to 1.13 (-O3) | 1.02 to 1.07 (-O2), 1.03 to 1.08 (-O3) | 1.16 to 1.17 | 1.25 to 1.26 |
+| `scale`, 2 limbs, N = 13 | 0.99 to 1.01 | 1.00 to 1.01 (-O2), 1.00 to 1.08 (-O3) | 1.15 to 1.19 | 1.25 to 1.26 |
+| `scale`, 2 limbs, N = 18 | 1.02 (-O2), 0.97 to 1.05 (-O3) | 0.97 to 1.01 (-O2), 0.99 to 1.08 (-O3) | 1.12 to 1.14 | 1.10 to 1.12 |
+| `scale`, 2 limbs, N = 80 | 1.00 to 1.02 (-O2), 0.95 to 1.03 (-O3) | 0.97 to 1.01 (-O2), 0.97 to 1.05 (-O3) | 1.05 to 1.07 (-O2), 1.01 to 1.02 (-O3) | 1.03 to 1.05 |
 | `half`, 1 limb, N = 3 | 1.09 | 1.06 to 1.10 | 1.15 (-O2), 1.45 to 1.47 (-O3) | 1.37 to 1.39 |
 | `half`, 1 limb, N = 7 | 1.07 | 1.05 to 1.07 | 1.12 (-O2), 1.20 to 1.22 (-O3) | 1.19 to 1.20 |
 | `half`, 1 limb, N = 13 | 1.02 to 1.03 | 1.02 to 1.05 | 1.14 to 1.17 | 1.17 to 1.19 |
@@ -5445,11 +5806,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 0.99 to 1.06 (-O2), 1.04 to 1.07 (-O3) | 1.02 (-O2), 1.19 to 1.22 (-O3) | 1.10 to 1.13 (-O2), 1.16 to 1.18 (-O3) | 0.99 to 1.01 |
 | the constructor, 1 limb, N = 18 | 0.92 to 0.93 (-O2), 1.00 to 1.07 (-O3) | 1.00 (-O2), 1.02 to 1.06 (-O3) | 1.08 to 1.12 | 0.96 to 0.98 (-O2), 1.02 to 1.07 (-O3) |
 | the constructor, 1 limb, N = 80 | 0.95 to 0.97 (-O2), 1.00 to 1.01 (-O3) | 0.94 to 1.04 (-O2), 0.96 to 1.02 (-O3) | 1.02 to 1.05 (-O2), 0.98 to 0.99 (-O3) | 1.03 to 1.04 |
-| the constructor, 2 limbs, N = 3 | 3.06 to 3.82 (-O2), 1.41 to 3.96 (-O3) | 1.04 to 1.06 (-O2), 1.26 (-O3) | 1.50 to 1.63 (-O2), 1.57 to 1.64 (-O3) | 1.30 to 1.86 (-O2), 1.85 to 1.87 (-O3) |
-| the constructor, 2 limbs, N = 7 | 0.97 to 0.98 (-O2), 1.04 to 1.08 (-O3) | 1.02 (-O2), 1.25 (-O3) | 1.14 to 1.16 (-O2), 1.62 to 1.69 (-O3) | 0.95 to 1.08 (-O2), 1.11 to 1.12 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.98 to 1.00 (-O2), 0.96 to 1.03 (-O3) | 1.00 to 1.03 | 1.04 to 1.06 (-O2), 1.29 to 1.32 (-O3) | 1.01 to 1.04 (-O2), 1.03 to 1.09 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.94 to 0.99 | 0.99 to 1.03 | 1.02 to 1.03 (-O2), 0.77 to 0.78 (-O3) | 1.06 to 1.08 (-O2), 1.06 to 1.16 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.01 to 1.02 (-O2), 0.98 to 1.05 (-O3) | 0.99 to 1.00 (-O2), 0.94 to 1.00 (-O3) | 1.02 to 1.03 (-O2), 0.99 to 1.06 (-O3) | 1.03 to 1.07 (-O2), 1.04 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.88 to 1.07 (-O2), 2.62 to 2.94 (-O3) | 1.00 to 1.03 (-O2), 1.46 to 1.51 (-O3) | 1.46 to 1.56 (-O2), 1.25 to 1.39 (-O3) | 0.86 to 1.22 (-O2), 1.66 to 1.92 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.79 to 0.85 (-O2), 0.84 to 0.88 (-O3) | 0.99 to 1.00 (-O2), 1.40 to 1.54 (-O3) | 1.05 to 1.08 (-O2), 1.38 to 1.41 (-O3) | 0.91 to 1.14 (-O2), 0.90 to 0.99 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.00 (-O2), 0.87 to 0.97 (-O3) | 1.00 to 1.01 (-O2), 1.37 to 1.43 (-O3) | 1.00 to 1.01 (-O2), 1.31 to 1.32 (-O3) | 0.98 to 1.10 (-O2), 0.99 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.01 (-O2), 0.98 to 1.05 (-O3) | 0.96 to 1.00 (-O2), 0.98 to 1.05 (-O3) | 1.02 to 1.03 (-O2), 0.71 (-O3) | 1.01 to 1.03 (-O2), 0.88 to 1.00 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 | 1.00 (-O2), 0.98 to 1.04 (-O3) | 0.90 to 0.93 (-O2), 0.98 to 0.99 (-O3) | 0.98 to 1.03 (-O2), 1.01 (-O3) |
 
 | Short ball vectors, one operation per unit, a dependent chain: ns per operation, with the check | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5488,11 +5849,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 12.7 to 13.8 (-O2), 12.6 to 13.8 (-O3) | 5.41 to 5.8 (-O2), 9.84 to 10.2 (-O3) | 12.1 (-O2), 10.9 to 11 (-O3) | 9.49 to 9.57 |
 | `scale`, 1 limb, N = 18 | 8.64 to 8.84 (-O2), 9.23 to 9.69 (-O3) | 6.01 to 6.17 (-O2), 5.45 to 5.7 (-O3) | 13.7 to 13.8 (-O2), 12.3 to 12.4 (-O3) | 10.1 (-O2), 10.1 to 13.7 (-O3) |
 | `scale`, 1 limb, N = 80 | 25.9 to 26.4 | 29.2 to 29.4 (-O2), 24 to 24.4 (-O3) | 24.9 to 25.5 | 19.4 (-O2), 23.1 to 37.9 (-O3) |
-| `scale`, 2 limbs, N = 3 | 15.3 to 15.5 (-O2), 14.6 to 15.4 (-O3) | 6.28 to 6.29 (-O2), 5.95 to 6.18 (-O3) | 19.3 to 19.4 (-O2), 12 (-O3) | 10.7 to 11.2 |
-| `scale`, 2 limbs, N = 7 | 9.64 to 10 (-O2), 8.54 to 10 (-O3) | 7.71 to 7.76 (-O2), 6.5 to 6.65 (-O3) | 21.8 to 21.9 (-O2), 15.2 (-O3) | 13.7 to 13.8 |
-| `scale`, 2 limbs, N = 13 | 8.01 to 10.1 (-O2), 9.9 to 10.1 (-O3) | 9.03 (-O2), 8.04 to 8.05 (-O3) | 24.4 to 24.5 (-O2), 17.6 to 17.7 (-O3) | 17.5 to 17.7 |
-| `scale`, 2 limbs, N = 18 | 10.2 to 10.3 (-O2), 9.77 to 10.3 (-O3) | 10.3 to 10.4 (-O2), 9.3 (-O3) | 24.4 (-O2), 18 (-O3) | 15.4 to 15.5 |
-| `scale`, 2 limbs, N = 80 | 39.2 to 39.8 | 40.3 (-O2), 37.9 to 38 (-O3) | 52.3 to 52.4 (-O2), 47 to 47.1 (-O3) | 43.1 to 43.5 |
+| `scale`, 2 limbs, N = 3 | 15.5 to 17.8 (-O2), 17.1 to 19.9 (-O3) | 7.59 to 8.27 (-O2), 6.89 to 7.13 (-O3) | 19.6 to 19.7 (-O2), 12.2 (-O3) | 11 to 11.2 |
+| `scale`, 2 limbs, N = 7 | 9.08 to 10.9 (-O2), 10.1 to 13.3 (-O3) | 8.66 to 8.81 (-O2), 7.54 to 7.87 (-O3) | 21.9 to 22.4 (-O2), 15.3 (-O3) | 13.8 to 14 |
+| `scale`, 2 limbs, N = 13 | 9.06 to 10.6 (-O2), 10.7 to 12.1 (-O3) | 10.4 to 10.9 (-O2), 9.3 to 9.71 (-O3) | 22.4 (-O2), 15.1 (-O3) | 13.7 to 13.8 |
+| `scale`, 2 limbs, N = 18 | 9.96 to 11.8 (-O2), 11.8 to 13.5 (-O3) | 12.2 to 12.7 (-O2), 10.8 to 11.3 (-O3) | 24.5 to 24.6 (-O2), 18.8 to 18.9 (-O3) | 15.6 |
+| `scale`, 2 limbs, N = 80 | 39.2 to 45.1 (-O2), 46.8 to 51.6 (-O3) | 45.9 to 48 (-O2), 43.8 to 45.5 (-O3) | 52 to 52.1 (-O2), 47.2 to 47.3 (-O3) | 43 |
 | `half`, 1 limb, N = 3 | 14.9 to 15.8 (-O2), 15 to 15.8 (-O3) | 5.08 to 5.78 (-O2), 9.36 to 9.37 (-O3) | 19.5 (-O2), 12.1 to 12.2 (-O3) | 15.9 to 16.1 |
 | `half`, 1 limb, N = 7 | 15 to 15.4 (-O2), 14.8 to 15.8 (-O3) | 5.98 to 5.99 (-O2), 9.49 to 9.5 (-O3) | 20.9 to 21 (-O2), 14.8 to 14.9 (-O3) | 15.7 to 15.9 |
 | `half`, 1 limb, N = 13 | 14.2 to 15.6 (-O2), 14.8 to 15 (-O3) | 7.53 to 7.57 (-O2), 9.52 to 9.54 (-O3) | 19.4 to 19.6 (-O2), 13.8 to 14.8 (-O3) | 15.7 to 19.7 (-O2), 15.7 to 15.8 (-O3) |
@@ -5508,11 +5869,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 24.2 to 25 | 18.2 to 18.3 (-O2), 7.66 to 7.67 (-O3) | 26.5 to 26.6 (-O2), 23.7 (-O3) | 33 to 33.9 |
 | the constructor, 1 limb, N = 18 | 20 to 20.1 (-O2), 20.4 to 26.8 (-O3) | 24.8 to 24.9 | 30.9 to 31.7 | 25.2 to 25.5 (-O2), 36.2 to 37.3 (-O3) |
 | the constructor, 1 limb, N = 80 | 70 to 70.1 (-O2), 74.8 to 74.9 (-O3) | 196 to 209 (-O2), 195 to 209 (-O3) | 148 to 151 | 72 to 75.2 |
-| the constructor, 2 limbs, N = 3 | 13.8 to 18.3 (-O2), 12.7 to 17.2 (-O3) | 6.84 to 7 | 17.4 to 17.8 | 11.9 to 17.8 (-O2), 17.2 to 17.4 (-O3) |
-| the constructor, 2 limbs, N = 7 | 18.6 to 19.6 | 12.5 (-O2), 6.39 to 7.01 (-O3) | 22 to 22.1 (-O2), 20.2 to 21.9 (-O3) | 15.2 to 19 (-O2), 18.7 to 18.9 (-O3) |
-| the constructor, 2 limbs, N = 13 | 21.8 to 23.2 (-O2), 23.2 to 23.5 (-O3) | 26.7 (-O2), 9.81 to 9.98 (-O3) | 40.9 to 42 (-O2), 23.6 to 24 (-O3) | 22.3 to 23.2 |
-| the constructor, 2 limbs, N = 18 | 21.6 to 22.2 | 39.8 to 40.7 (-O2), 35.6 (-O3) | 49.2 to 49.3 (-O2), 33.7 to 34 (-O3) | 34.3 to 36.5 (-O2), 35.8 to 36.2 (-O3) |
-| the constructor, 2 limbs, N = 80 | 91 to 94.2 | 273 to 289 (-O2), 254 to 269 (-O3) | 209 to 212 (-O2), 160 to 161 (-O3) | 100 to 105 |
+| the constructor, 2 limbs, N = 3 | 18.3 to 22.3 (-O2), 21.7 to 21.9 (-O3) | 7.45 to 8.31 (-O2), 6.9 to 8.34 (-O3) | 20.1 to 20.5 (-O2), 23.4 to 23.7 (-O3) | 22.2 to 26.2 (-O2), 22.3 to 26.2 (-O3) |
+| the constructor, 2 limbs, N = 7 | 18.9 to 23.2 (-O2), 19.1 to 27.1 (-O3) | 20.2 to 21.2 (-O2), 8.39 to 8.75 (-O3) | 24.9 to 25.5 (-O2), 22.4 to 22.8 (-O3) | 27.2 to 30.2 (-O2), 27.3 to 29.9 (-O3) |
+| the constructor, 2 limbs, N = 13 | 20 to 23 (-O2), 21.9 to 25.1 (-O3) | 33.9 to 35 (-O2), 15.8 to 16.3 (-O3) | 47.9 to 48.2 (-O2), 32.8 to 33 (-O3) | 32.1 to 35 (-O2), 34.8 to 36.2 (-O3) |
+| the constructor, 2 limbs, N = 18 | 32.9 to 37.8 (-O2), 31.4 to 33.6 (-O3) | 75.8 to 79.3 (-O2), 43.3 to 45.3 (-O3) | 70 to 70.2 (-O2), 39.7 to 40 (-O3) | 49.2 to 52.4 (-O2), 41.6 to 48.2 (-O3) |
+| the constructor, 2 limbs, N = 80 | 92.2 to 106 (-O2), 106 to 117 (-O3) | 332 to 348 (-O2), 309 to 323 (-O3) | 244 to 245 (-O2), 192 (-O3) | 142 to 147 |
 
 | Short ball vectors, one operation per unit, a dependent chain: the check, ns per operation (with minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5551,11 +5912,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 3.26 to 4.68 (-O2), 4.4 to 4.74 (-O3) | 0.036 to 0.462 (-O2), 4.84 to 5.99 (-O3) | 2.1 to 2.11 (-O2), 1.86 to 2.02 (-O3) | 2.46 to 2.57 |
 | `scale`, 1 limb, N = 18 | -0.827 to 0.476 (-O2), -0.217 to 0.249 (-O3) | 0.181 to 0.343 (-O2), 0.07 to 0.352 (-O3) | 2.2 to 2.24 (-O2), 2.18 to 2.37 (-O3) | 2.91 to 2.92 (-O2), 2.84 to 6.46 (-O3) |
 | `scale`, 1 limb, N = 80 | 0.3 to 1.16 (-O2), -0.9 to -0.81 (-O3) | 0.46 to 0.61 (-O2), -0.39 to 0.1 (-O3) | 1.99 to 2.08 (-O2), 3.64 to 4.09 (-O3) | 3.58 to 3.69 (-O2), 1.86 to 16.6 (-O3) |
-| `scale`, 2 limbs, N = 3 | 5.87 to 6.3 (-O2), 5.57 to 7.12 (-O3) | -0.66 to -0.561 (-O2), 0.115 to 0.13 (-O3) | 2.39 to 2.54 (-O2), 1.5 to 1.64 (-O3) | 2.67 to 2.77 (-O2), 0.16 to 2.35 (-O3) |
-| `scale`, 2 limbs, N = 7 | 0.345 to 1.02 (-O2), -1.02 to 0.693 (-O3) | 0.348 to 0.42 (-O2), -0.051 to 0.161 (-O3) | 2.72 to 2.81 (-O2), 0.43 to 0.62 (-O3) | 4.17 to 4.21 (-O2), 3.98 to 4.14 (-O3) |
-| `scale`, 2 limbs, N = 13 | -1.68 to 0.533 (-O2), -0.165 to 1.86 (-O3) | 0.102 to 0.116 (-O2), 0.028 to 0.036 (-O3) | 3.57 to 3.62 (-O2), 2.12 to 2.3 (-O3) | 4.11 to 4.25 |
-| `scale`, 2 limbs, N = 18 | -0.1 to 0.292 (-O2), -0.489 to -0.04 (-O3) | 0.06 to 0.11 (-O2), 0.323 to 0.327 (-O3) | 2.35 to 2.45 (-O2), 0.8 to 1.01 (-O3) | -0.62 to 1.78 (-O2), -0.62 to 1.79 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.82 to 0.86 (-O2), -0.63 to 0.25 (-O3) | 0.2 to 0.33 (-O2), 0.5 to 0.68 (-O3) | 3.74 to 3.93 (-O2), -0.03 to 0.63 (-O3) | 1.36 to 1.72 (-O2), 1.41 to 1.81 (-O3) |
+| `scale`, 2 limbs, N = 3 | 6.67 to 7.14 (-O2), 6.95 to 8.11 (-O3) | -0.088 to 0.855 (-O2), -0.392 to 0.124 (-O3) | 2.59 to 2.72 (-O2), 1.77 to 1.8 (-O3) | 2.78 to 2.79 (-O2), 2.62 to 2.64 (-O3) |
+| `scale`, 2 limbs, N = 7 | -0.512 to 1.26 (-O2), -0.17 to 0.56 (-O3) | 0.073 to 0.291 (-O2), -0.057 to 0.266 (-O3) | 2.76 to 3.26 (-O2), 0.46 to 0.5 (-O3) | 1.63 to 4.32 (-O2), 4.19 to 4.23 (-O3) |
+| `scale`, 2 limbs, N = 13 | -0.89 to 0.792 (-O2), -0.91 to 0.53 (-O3) | -0.01 to 0.03 (-O2), 0.032 to 0.461 (-O3) | 2.83 to 2.88 (-O2), 0.74 to 0.76 (-O3) | 0.84 to 3.35 (-O2), 3.24 to 3.27 (-O3) |
+| `scale`, 2 limbs, N = 18 | -0.375 to 0.01 (-O2), 0 to 0.31 (-O3) | -0.39 to 0.23 (-O2), 0.12 to 0.85 (-O3) | 2.34 to 2.45 (-O2), 1.03 to 1.05 (-O3) | 1.69 to 1.72 |
+| `scale`, 2 limbs, N = 80 | 0.58 to 0.92 (-O2), -0.46 to 0.11 (-O3) | 0.08 to 1.07 (-O2), -0.99 to 2.45 (-O3) | 2.18 to 2.52 (-O2), 0.56 to 0.62 (-O3) | 1.47 to 1.51 (-O2), 1.43 to 1.49 (-O3) |
 | `half`, 1 limb, N = 3 | 0.06 to 1.41 (-O2), 0.48 to 1.3 (-O3) | -0.619 to 0.063 (-O2), 5.17 to 5.46 (-O3) | 2.41 to 2.43 (-O2), 2.9 to 3.1 (-O3) | 1.02 to 1.1 (-O2), 0.91 to 1.16 (-O3) |
 | `half`, 1 limb, N = 7 | 0.36 to 1.21 (-O2), 0.51 to 1.57 (-O3) | 0.134 to 0.212 (-O2), 5.27 to 5.52 (-O3) | 2.44 to 2.48 (-O2), 2.59 to 2.81 (-O3) | 0.36 to 0.47 (-O2), 0.21 to 0.52 (-O3) |
 | `half`, 1 limb, N = 13 | -0.6 to 0.9 (-O2), -0.05 to 0.3 (-O3) | 0.228 to 0.261 (-O2), 3.67 to 3.7 (-O3) | 1.94 to 2.57 (-O2), 2.38 to 3.14 (-O3) | -0.03 to 3.84 (-O2), -0.19 to 0.07 (-O3) |
@@ -5571,11 +5932,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | -1.15 to 1.24 (-O2), 0.25 to 0.7 (-O3) | 0.03 to 0.06 (-O2), 0.355 to 0.46 (-O3) | 2.67 to 2.75 (-O2), 3.5 to 3.73 (-O3) | -0.28 to 0.27 (-O2), 0.11 to 0.62 (-O3) |
 | the constructor, 1 limb, N = 18 | -1.25 to -0.41 (-O2), -5 to 2.11 (-O3) | 0.22 to 0.23 (-O2), 0.3 to 0.31 (-O3) | 2.13 to 2.84 (-O2), 2.34 to 3.05 (-O3) | 0.2 to 0.86 (-O2), 0.51 to 2.45 (-O3) |
 | the constructor, 1 limb, N = 80 | -1.56 to -1.44 (-O2), 0.42 to 0.61 (-O3) | -5.6 to 1.8 (-O2), -4.9 to 0.7 (-O3) | 1.7 to 4.9 (-O2), 1.5 to 3.5 (-O3) | 4.25 to 7.59 (-O2), 3.45 to 7.44 (-O3) |
-| the constructor, 2 limbs, N = 3 | 3.16 to 8.3 (-O2), 2.76 to 7.28 (-O3) | -0.023 to 0.009 (-O2), -0.021 to -0.004 (-O3) | 2.73 to 3 (-O2), 1.87 to 2.66 (-O3) | 3.58 to 9.46 (-O2), 8.98 to 9.14 (-O3) |
-| the constructor, 2 limbs, N = 7 | -1.17 to 0.71 (-O2), -0.07 to 0.22 (-O3) | -0.15 to -0.08 (-O2), -0.408 to -0.027 (-O3) | 0.97 to 3.91 (-O2), 4.8 to 6.76 (-O3) | -1.68 to 3.65 (-O2), 1.85 to 2.98 (-O3) |
-| the constructor, 2 limbs, N = 13 | -1.25 to 0 (-O2), -0.3 to 0.57 (-O3) | 0.09 to 0.14 (-O2), 0.195 to 0.378 (-O3) | 0.7 to 1.48 (-O2), 1.07 to 1.58 (-O3) | 1.14 to 1.35 (-O2), 0.16 to 2.14 (-O3) |
-| the constructor, 2 limbs, N = 18 | -0.94 to -0.53 (-O2), -0.34 to 0.04 (-O3) | -0.53 to -0.02 (-O2), 1.11 to 1.12 (-O3) | 0.97 to 1.79 (-O2), -7.4 to -7.09 (-O3) | 0.24 to 2.23 (-O2), 1.72 to 4.58 (-O3) |
-| the constructor, 2 limbs, N = 80 | 3.23 to 5.02 (-O2), -1.7 to 0.17 (-O3) | -11.8 to 0 (-O2), -10 to 0.6 (-O3) | 20.7 to 25.1 (-O2), -4.6 to -2.2 (-O3) | 0.33 to 4.5 (-O2), 2.6 to 8.94 (-O3) |
+| the constructor, 2 limbs, N = 3 | -0.19 to 1.47 (-O2), 4.49 to 6.23 (-O3) | -1.25 to 0.557 (-O2), -0.538 to 0.499 (-O3) | 5.11 to 5.79 (-O2), 8.67 to 8.96 (-O3) | -4.34 to 4.5 (-O2), 8.16 to 12.1 (-O3) |
+| the constructor, 2 limbs, N = 7 | -2.48 to -0.62 (-O2), -5.37 to -0.16 (-O3) | -0.92 to 0 (-O2), 0.394 to 0.838 (-O3) | 2.39 to 3.14 (-O2), 6.54 to 6.76 (-O3) | -2.96 to 3.11 (-O2), -3.54 to -0.96 (-O3) |
+| the constructor, 2 limbs, N = 13 | -0.15 to 0.09 (-O2), 0.06 to 0.87 (-O3) | 0.07 to 0.52 (-O2), 2.28 to 3.29 (-O3) | 1.95 to 2.6 (-O2), 8.11 to 8.55 (-O3) | -1.32 to 3.87 (-O2), -1.57 to 0.24 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.16 to 0.34 (-O2), 0.14 to 2.52 (-O3) | -0.1 to -0.01 (-O2), -1.73 to 2.08 (-O3) | 0.93 to 1.61 (-O2), -15.8 to -15.5 (-O3) | -2.12 to 4.72 (-O2), -6.35 to 0.33 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.06 to 0.1 (-O2), 0.2 to 3.3 (-O3) | 0 to 3.2 (-O2), -14.6 to 13.3 (-O3) | 24.4 to 26.6 (-O2), 0.4 to 1 (-O3) | -3.7 to 3.3 (-O2), -2.6 to 1.2 (-O3) |
 
 | Short ball vectors, one operation per unit, a dependent chain: the check with its report cold, ns per operation (minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5614,11 +5975,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 4.27 to 5.96 (-O2), 4.58 to 5.43 (-O3) | 0.411 to 0.767 (-O2), 5.24 to 5.84 (-O3) | 1.91 to 2.03 (-O2), 1.83 to 5.28 (-O3) | 2.41 to 2.55 (-O2), 2.36 to 2.47 (-O3) |
 | `scale`, 1 limb, N = 18 | -0.216 to 1.52 (-O2), -0.483 to 0.34 (-O3) | 0.396 to 0.404 (-O2), -0.173 to 0.314 (-O3) | 1.99 to 2.06 (-O2), 2.11 to 2.22 (-O3) | 2.61 to 2.71 |
 | `scale`, 1 limb, N = 80 | 0.34 to 1.16 (-O2), 0.21 to 0.23 (-O3) | 0.18 to 0.25 (-O2), 0.03 to 0.23 (-O3) | 4.49 to 5.34 (-O2), 3.23 to 3.64 (-O3) | 3.42 to 3.5 (-O2), 1.69 to 2.83 (-O3) |
-| `scale`, 2 limbs, N = 3 | 5.89 to 6.37 (-O2), 5.71 to 6.63 (-O3) | -0.116 to 0.528 (-O2), 0.01 to 0.331 (-O3) | 2.21 to 2.42 (-O2), -0.22 to -0.09 (-O3) | 2.89 to 2.91 (-O2), 0.82 to 5.7 (-O3) |
-| `scale`, 2 limbs, N = 7 | 5.66 to 7.08 (-O2), 5.17 to 6.51 (-O3) | -0.074 to -0.008 (-O2), -0.058 to 0.304 (-O3) | 2.48 to 2.73 (-O2), 0.23 to 0.41 (-O3) | 2.06 to 2.17 (-O2), 1.96 to 2.11 (-O3) |
-| `scale`, 2 limbs, N = 13 | -1.69 to 0.22 (-O2), -1.26 to 1.11 (-O3) | 0.001 to 0.031 (-O2), -0.018 to -0.008 (-O3) | 3.94 to 4.12 (-O2), 5.43 to 5.67 (-O3) | 4.61 to 4.67 (-O2), 4.57 to 8.13 (-O3) |
-| `scale`, 2 limbs, N = 18 | 0.05 to 0.352 (-O2), -0.26 to 0.08 (-O3) | 0.1 to 0.15 (-O2), -0.008 to 0.001 (-O3) | 2.29 to 2.39 (-O2), 0.58 to 0.86 (-O3) | -0.55 to 3.93 (-O2), -0.52 to 1.88 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.6 to 0.63 (-O2), -1.07 to 0.15 (-O3) | 0.13 to 0.28 (-O2), 0.37 to 0.56 (-O3) | 3.38 to 3.42 (-O2), 0.07 to 0.65 (-O3) | 1.57 to 1.72 (-O2), 1.39 to 1.9 (-O3) |
+| `scale`, 2 limbs, N = 3 | 6.62 to 7.41 (-O2), 3.95 to 7.88 (-O3) | -0.034 to 0.279 (-O2), 0.025 to 0.426 (-O3) | 2.32 to 2.37 (-O2), 0.02 to 4.8 (-O3) | 2.41 to 2.48 (-O2), 2.54 to 2.59 (-O3) |
+| `scale`, 2 limbs, N = 7 | 6.59 to 8.94 (-O2), 2.95 to 7.47 (-O3) | -0.291 to 0.41 (-O2), 0.054 to 0.32 (-O3) | 2.75 to 2.8 (-O2), 0.39 to 3.34 (-O3) | 1.98 to 4.28 (-O2), 2.03 to 2.08 (-O3) |
+| `scale`, 2 limbs, N = 13 | -0.08 to 0.812 (-O2), -2.78 to 0.77 (-O3) | -0.38 to 0.13 (-O2), -0.03 to 0.413 (-O3) | 2.48 to 2.65 (-O2), 0.24 to 0.28 (-O3) | 1.12 to 3.65 (-O2), 3.63 to 3.67 (-O3) |
+| `scale`, 2 limbs, N = 18 | -0.539 to 0.37 (-O2), -3.14 to 0.64 (-O3) | -0.42 to 0.67 (-O2), -0.13 to 0.66 (-O3) | 2.32 to 2.41 (-O2), 1 to 1.01 (-O3) | 1.83 to 1.89 |
+| `scale`, 2 limbs, N = 80 | 0.64 to 0.94 (-O2), -11.3 to 0 (-O3) | -2 to 2.07 (-O2), -1.16 to 2.51 (-O3) | 2.09 to 2.66 (-O2), 0.59 to 0.67 (-O3) | 1.44 to 1.49 (-O2), 1.89 to 2.04 (-O3) |
 | `half`, 1 limb, N = 3 | -0.24 to 0.75 (-O2), 0.18 to 0.76 (-O3) | -1.03 to 0.067 (-O2), 4.39 to 5.15 (-O3) | 2.26 to 2.32 (-O2), 2.3 to 2.43 (-O3) | 0.45 to 0.48 (-O2), 0.42 to 0.48 (-O3) |
 | `half`, 1 limb, N = 7 | 0.34 to 0.9 (-O2), 0.33 to 0.62 (-O3) | -0.11 to 0.624 (-O2), 4.93 to 5.44 (-O3) | 2.14 to 2.43 (-O2), 2.17 to 2.31 (-O3) | -0.02 to 0.03 (-O2), -0.11 to 0.09 (-O3) |
 | `half`, 1 limb, N = 13 | -0.03 to 0.41 (-O2), -0.78 to 0.4 (-O3) | 0.129 to 0.132 (-O2), 3.88 to 4.42 (-O3) | 1.67 to 2.49 (-O2), 2.1 to 2.57 (-O3) | -0.26 to -0.17 (-O2), -0.33 to -0.28 (-O3) |
@@ -5634,11 +5995,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | -0.55 to 0.06 (-O2), 0.07 to 1.63 (-O3) | -0.01 to 0.04 (-O2), -0.465 to 0.118 (-O3) | 2.96 to 3.05 (-O2), 4.17 to 4.28 (-O3) | 0.38 to 0.8 (-O2), 0.17 to 0.64 (-O3) |
 | the constructor, 1 limb, N = 18 | -1.11 to -0.33 (-O2), 0.44 to 1.27 (-O3) | -0.93 to 0.09 (-O2), -0.49 to 0.15 (-O3) | 4.63 to 4.67 (-O2), 4.64 to 5.03 (-O3) | 0.05 to 1.85 (-O2), -0.04 to 2.59 (-O3) |
 | the constructor, 1 limb, N = 80 | -0.38 to -0.21 (-O2), -0.31 to 0.82 (-O3) | 0 to 5 (-O2), -5.1 to 1 (-O3) | 5.2 to 6.2 (-O2), 1.7 to 3.4 (-O3) | -2.71 to 1.14 (-O2), 2.67 to 7.03 (-O3) |
-| the constructor, 2 limbs, N = 3 | 3.04 to 3.73 (-O2), 2.82 to 3.71 (-O3) | -0.153 to 0.119 (-O2), -0.253 to 0.079 (-O3) | 3.29 to 3.58 (-O2), 1.29 to 2.39 (-O3) | 9.45 to 9.86 |
-| the constructor, 2 limbs, N = 7 | -0.65 to 0.49 (-O2), 0.52 to 0.59 (-O3) | -0.23 to -0.16 (-O2), -0.282 to 0.366 (-O3) | 1.51 to 4.47 (-O2), 4.76 to 5.13 (-O3) | 1.78 to 3.39 (-O2), 1.81 to 3.31 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.18 to 0.39 (-O2), -3.69 to 0.19 (-O3) | -1.05 to 0.13 (-O2), 0.126 to 0.147 (-O3) | 0.18 to 0.73 (-O2), 0.5 to 1.15 (-O3) | 1.46 to 2.1 (-O2), 0.05 to 5.93 (-O3) |
-| the constructor, 2 limbs, N = 18 | -0.61 to -0.45 (-O2), -0.26 to 0.1 (-O3) | 0.09 to 0.32 (-O2), 0.14 to 1.22 (-O3) | 5.28 to 6.1 (-O2), -11.5 to -10.8 (-O3) | 1.52 to 2.22 (-O2), -0.44 to 4.18 (-O3) |
-| the constructor, 2 limbs, N = 80 | 2.32 to 3.98 (-O2), -5.83 to -0.16 (-O3) | -0.1 to 3.3 (-O2), -7.3 to 3.6 (-O3) | -1.4 to 1.1 (-O2), -12.6 to -10.2 (-O3) | 1.2 to 6.6 (-O2), 1.9 to 8.54 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.28 to 1.19 (-O2), 1.09 to 6.14 (-O3) | -0.354 to 0.598 (-O2), -0.068 to 1.07 (-O3) | 5.71 to 6.75 (-O2), 6.59 to 6.62 (-O3) | -0.13 to 4.35 (-O2), 11.8 to 13.1 (-O3) |
+| the constructor, 2 limbs, N = 7 | -4.65 to -1.63 (-O2), -3.91 to 0.12 (-O3) | -0.86 to 0.82 (-O2), -0.218 to 0.056 (-O3) | 4.77 to 5.14 (-O2), 6.58 to 7.01 (-O3) | 0.02 to 2.74 (-O2), -0.97 to 0.2 (-O3) |
+| the constructor, 2 limbs, N = 13 | -0.78 to 0.06 (-O2), -5.83 to 0.38 (-O3) | -1.28 to 1.53 (-O2), -1.09 to 0.06 (-O3) | 2.31 to 3 (-O2), 5.52 to 5.82 (-O3) | 0.37 to 3.01 (-O2), -0.03 to 2.16 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.38 to 2.17 (-O2), -6.62 to 2.73 (-O3) | -3.51 to -0.05 (-O2), -1.8 to 2.13 (-O3) | -2.71 to -1.67 (-O2), -15.5 to -7.72 (-O3) | 1.48 to 5.76 (-O2), -5.33 to 0.68 (-O3) |
+| the constructor, 2 limbs, N = 80 | 2.64 to 3.1 (-O2), -26.7 to -2.5 (-O3) | -15.2 to 4 (-O2), -14.8 to 13.5 (-O3) | 22.7 to 23.8 (-O2), -0.6 to 0 (-O3) | -0.2 to 4.8 (-O2), 0 to 1.3 (-O3) |
 
 | Short ball vectors, one operation per unit, a dependent chain: with the check over without | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5677,11 +6038,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 1.35 to 1.58 (-O2), 1.47 to 1.55 (-O3) | 1.01 to 1.09 (-O2), 1.92 to 2.42 (-O3) | 1.20 to 1.23 | 1.35 to 1.37 |
 | `scale`, 1 limb, N = 18 | 0.91 to 1.06 (-O2), 0.98 to 1.03 (-O3) | 1.03 to 1.06 (-O2), 1.01 to 1.07 (-O3) | 1.19 to 1.24 | 1.40 to 1.41 (-O2), 1.39 to 1.89 (-O3) |
 | `scale`, 1 limb, N = 80 | 1.01 to 1.05 (-O2), 0.97 (-O3) | 0.98 to 1.02 | 1.08 to 1.09 (-O2), 1.17 to 1.20 (-O3) | 1.23 (-O2), 1.09 to 1.78 (-O3) |
-| `scale`, 2 limbs, N = 3 | 1.61 to 1.70 (-O2), 1.60 to 1.86 (-O3) | 0.90 to 0.92 (-O2), 1.02 (-O3) | 1.14 to 1.16 | 1.31 to 1.33 (-O2), 1.02 to 1.28 (-O3) |
-| `scale`, 2 limbs, N = 7 | 1.04 to 1.12 (-O2), 0.89 to 1.08 (-O3) | 1.05 to 1.06 (-O2), 0.99 to 1.03 (-O3) | 1.14 to 1.15 (-O2), 1.03 to 1.04 (-O3) | 1.41 to 1.44 |
-| `scale`, 2 limbs, N = 13 | 0.83 to 1.06 (-O2), 0.98 to 1.22 (-O3) | 1.00 to 1.01 | 1.14 to 1.17 | 1.31 to 1.32 |
-| `scale`, 2 limbs, N = 18 | 0.99 to 1.03 (-O2), 0.95 to 1.00 (-O3) | 1.01 to 1.04 | 1.11 (-O2), 1.05 to 1.06 (-O3) | 0.96 to 1.13 (-O2), 0.96 to 1.13 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.98 to 1.02 | 1.00 to 1.02 | 1.08 (-O2), 1.00 to 1.01 (-O3) | 1.03 to 1.04 |
+| `scale`, 2 limbs, N = 3 | 1.62 to 1.76 (-O2), 1.68 to 1.75 (-O3) | 0.99 to 1.12 (-O2), 0.95 to 1.02 (-O3) | 1.15 to 1.17 | 1.31 to 1.33 |
+| `scale`, 2 limbs, N = 7 | 0.95 to 1.13 (-O2), 0.98 to 1.06 (-O3) | 0.99 to 1.03 | 1.14 to 1.17 (-O2), 1.03 (-O3) | 1.13 to 1.45 (-O2), 1.43 to 1.44 (-O3) |
+| `scale`, 2 limbs, N = 13 | 0.92 to 1.10 (-O2), 0.92 to 1.05 (-O3) | 1.00 (-O2), 1.00 to 1.05 (-O3) | 1.14 to 1.15 (-O2), 1.05 (-O3) | 1.06 to 1.32 (-O2), 1.31 (-O3) |
+| `scale`, 2 limbs, N = 18 | 0.96 to 1.00 (-O2), 1.00 to 1.03 (-O3) | 0.97 to 1.02 (-O2), 1.01 to 1.08 (-O3) | 1.11 (-O2), 1.06 (-O3) | 1.12 |
+| `scale`, 2 limbs, N = 80 | 0.99 to 1.02 | 1.00 to 1.02 (-O2), 0.98 to 1.06 (-O3) | 1.01 to 1.05 | 1.03 to 1.04 |
 | `half`, 1 limb, N = 3 | 1.00 to 1.10 (-O2), 1.03 to 1.09 (-O3) | 0.89 to 1.01 (-O2), 2.23 to 2.40 (-O3) | 1.14 (-O2), 1.32 to 1.34 (-O3) | 1.06 to 1.08 |
 | `half`, 1 limb, N = 7 | 1.02 to 1.09 (-O2), 1.04 to 1.11 (-O3) | 1.02 to 1.04 (-O2), 2.25 to 2.38 (-O3) | 1.13 (-O2), 1.21 to 1.23 (-O3) | 1.01 to 1.03 |
 | `half`, 1 limb, N = 13 | 0.96 to 1.06 (-O2), 1.00 to 1.02 (-O3) | 1.03 to 1.04 (-O2), 1.63 (-O3) | 1.11 to 1.15 (-O2), 1.21 to 1.27 (-O3) | 1.00 to 1.24 (-O2), 0.99 to 1.00 (-O3) |
@@ -5697,11 +6058,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 0.95 to 1.05 (-O2), 1.01 to 1.03 (-O3) | 1.00 (-O2), 1.05 to 1.06 (-O3) | 1.11 to 1.12 (-O2), 1.17 to 1.19 (-O3) | 0.99 to 1.02 |
 | the constructor, 1 limb, N = 18 | 0.94 to 0.98 (-O2), 0.80 to 1.09 (-O3) | 1.01 | 1.07 to 1.11 | 1.01 to 1.03 (-O2), 1.01 to 1.07 (-O3) |
 | the constructor, 1 limb, N = 80 | 0.98 to 1.01 | 0.97 to 1.01 | 1.01 to 1.03 | 1.06 to 1.11 (-O2), 1.05 to 1.12 (-O3) |
-| the constructor, 2 limbs, N = 3 | 1.30 to 1.83 (-O2), 1.28 to 1.73 (-O3) | 1.00 | 1.18 to 1.20 (-O2), 1.12 to 1.18 (-O3) | 1.43 to 2.14 (-O2), 2.09 to 2.10 (-O3) |
-| the constructor, 2 limbs, N = 7 | 0.94 to 1.04 (-O2), 1.00 to 1.01 (-O3) | 0.99 (-O2), 0.94 to 1.00 (-O3) | 1.05 to 1.22 (-O2), 1.31 to 1.45 (-O3) | 0.90 to 1.24 (-O2), 1.11 to 1.19 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.95 to 1.00 (-O2), 0.99 to 1.02 (-O3) | 1.00 to 1.04 | 1.02 to 1.04 (-O2), 1.05 to 1.07 (-O3) | 1.05 to 1.06 (-O2), 1.01 to 1.10 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.96 to 1.00 | 0.99 to 1.03 | 1.02 to 1.04 (-O2), 0.82 to 0.83 (-O3) | 1.01 to 1.07 (-O2), 1.05 to 1.14 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.04 to 1.06 (-O2), 0.98 to 1.00 (-O3) | 0.96 to 1.00 | 1.11 to 1.13 (-O2), 0.97 to 0.99 (-O3) | 1.00 to 1.04 (-O2), 1.03 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.99 to 1.07 (-O2), 1.26 to 1.40 (-O3) | 0.86 to 1.07 (-O2), 0.93 to 1.06 (-O3) | 1.34 to 1.39 (-O2), 1.58 to 1.61 (-O3) | 0.84 to 1.21 (-O2), 1.58 to 1.86 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.90 to 0.97 (-O2), 0.78 to 0.99 (-O3) | 0.96 to 1.00 (-O2), 1.05 to 1.11 (-O3) | 1.11 to 1.14 (-O2), 1.41 to 1.42 (-O3) | 0.90 to 1.11 (-O2), 0.89 to 0.97 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.99 to 1.04 | 1.00 to 1.02 (-O2), 1.17 to 1.25 (-O3) | 1.04 to 1.06 (-O2), 1.33 to 1.35 (-O3) | 0.96 to 1.12 (-O2), 0.96 to 1.01 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 to 1.01 (-O2), 1.00 to 1.09 (-O3) | 1.00 (-O2), 0.96 to 1.05 (-O3) | 1.01 to 1.02 (-O2), 0.72 (-O3) | 0.96 to 1.10 (-O2), 0.87 to 1.01 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.03 | 1.00 to 1.01 (-O2), 0.95 to 1.04 (-O3) | 1.11 to 1.12 (-O2), 1.00 to 1.01 (-O3) | 0.97 to 1.02 |
 
 | Short ball vectors, every size in one unit, many vectors: ns per operation, with the check | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5740,11 +6101,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 4.21 to 4.22 | 6.28 to 6.3 | 16.2 to 16.7 | 9.51 to 9.65 |
 | `scale`, 1 limb, N = 18 | 5.6 to 5.61 (-O2), 5.59 to 6 (-O3) | 7.4 to 7.73 | 17.7 to 18.2 | 10.4 to 10.6 |
 | `scale`, 1 limb, N = 80 | 28.2 (-O2), 26.8 to 26.9 (-O3) | 34.6 (-O2), 28 (-O3) | 32.1 to 32.3 (-O2), 30.3 to 31 (-O3) | 20.3 to 20.4 (-O2), 26.3 to 28.1 (-O3) |
-| `scale`, 2 limbs, N = 3 | 3.12 to 3.13 | 4.71 to 4.86 | 19.6 (-O2), 12 to 12.1 (-O3) | 9.98 to 10.1 |
-| `scale`, 2 limbs, N = 7 | 4.97 to 5.01 | 6.23 to 6.24 (-O2), 6.71 to 6.75 (-O3) | 22.2 (-O2), 15.9 to 16 (-O3) | 13.6 to 13.7 |
-| `scale`, 2 limbs, N = 13 | 7.23 to 7.49 | 8.49 to 8.52 (-O2), 9.31 to 9.41 (-O3) | 22.4 to 22.6 (-O2), 15.8 to 15.9 (-O3) | 13.7 to 13.9 |
-| `scale`, 2 limbs, N = 18 | 9.64 to 9.76 | 10.6 (-O2), 11.3 (-O3) | 25.3 to 25.4 (-O2), 19.2 to 19.4 (-O3) | 16.1 to 16.2 |
-| `scale`, 2 limbs, N = 80 | 39.6 to 39.9 | 40.1 to 40.2 (-O2), 43.1 to 45.1 (-O3) | 55.7 to 57.3 (-O2), 47.4 to 48.5 (-O3) | 43.8 to 44.3 |
+| `scale`, 2 limbs, N = 3 | 3.14 to 3.64 (-O2), 3.61 to 3.99 (-O3) | 5.53 to 6 (-O2), 5.83 to 6.08 (-O3) | 19.5 to 19.6 (-O2), 12.2 (-O3) | 9.96 to 10 |
+| `scale`, 2 limbs, N = 7 | 5.21 to 6 (-O2), 5.99 to 6.61 (-O3) | 7.48 to 7.8 (-O2), 7.99 to 8.32 (-O3) | 22.7 (-O2), 15.9 (-O3) | 13.7 to 13.8 |
+| `scale`, 2 limbs, N = 13 | 7.67 to 8.85 (-O2), 8.56 to 9.4 (-O3) | 10.3 to 10.7 (-O2), 11.5 (-O3) | 22.8 to 22.9 (-O2), 15.9 (-O3) | 13.8 to 13.9 |
+| `scale`, 2 limbs, N = 18 | 9.76 to 11.2 (-O2), 11.2 to 12.5 (-O3) | 12.5 to 13.1 (-O2), 13.6 to 13.9 (-O3) | 25.6 to 25.7 (-O2), 19.4 (-O3) | 16.2 to 16.4 |
+| `scale`, 2 limbs, N = 80 | 39.8 to 45.8 (-O2), 46.1 to 51.2 (-O3) | 46.5 to 48.4 (-O2), 53.5 to 53.6 (-O3) | 55 to 55.2 (-O2), 47.4 to 47.7 (-O3) | 43.7 to 44.7 |
 | `half`, 1 limb, N = 3 | 3.49 to 3.5 | 4.79 | 19.7 to 19.8 (-O2), 18.1 (-O3) | 12.1 to 12.2 |
 | `half`, 1 limb, N = 7 | 4.81 | 5.6 to 5.74 | 20.3 to 21.1 | 14 to 14.2 |
 | `half`, 1 limb, N = 13 | 7.07 to 7.12 | 7.49 (-O2), 7.88 (-O3) | 19.3 to 20.2 | 14.2 |
@@ -5760,11 +6121,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 22.7 to 23.6 | 17.3 to 17.9 | 24.2 to 24.3 (-O2), 25.5 to 25.6 (-O3) | 32.9 to 33.4 |
 | the constructor, 1 limb, N = 18 | 18.2 to 18.3 (-O2), 23.9 to 24.1 (-O3) | 24.3 (-O2), 26.1 (-O3) | 28.9 to 29.7 (-O2), 32.7 to 33.1 (-O3) | 24.4 to 24.8 (-O2), 36 to 37.2 (-O3) |
 | the constructor, 1 limb, N = 80 | 67.8 to 68.5 (-O2), 70.7 to 72.5 (-O3) | 208 | 151 (-O2), 141 to 142 (-O3) | 71.7 to 72.7 |
-| the constructor, 2 limbs, N = 3 | 6.03 to 10 (-O2), 6.01 to 6.03 (-O3) | 3.74 to 3.75 (-O2), 6 to 6.05 (-O3) | 16.1 to 16.3 (-O2), 19.3 to 20.5 (-O3) | 11.2 to 16 (-O2), 15.9 to 16 (-O3) |
-| the constructor, 2 limbs, N = 7 | 19.5 to 19.9 | 12.1 to 12.3 | 20.1 to 20.6 (-O2), 22.7 to 23.4 (-O3) | 15.6 to 17.5 (-O2), 17.7 to 18 (-O3) |
-| the constructor, 2 limbs, N = 13 | 21.2 to 21.9 | 27.1 to 27.2 (-O2), 24.5 to 25.5 (-O3) | 38.3 to 38.4 (-O2), 29.3 to 29.6 (-O3) | 23 to 23.4 (-O2), 23.5 to 24.9 (-O3) |
-| the constructor, 2 limbs, N = 18 | 21.6 to 22.6 (-O2), 20.9 to 21 (-O3) | 41 (-O2), 35.5 (-O3) | 48.6 to 49.1 (-O2), 34.5 to 34.6 (-O3) | 36 to 37 |
-| the constructor, 2 limbs, N = 80 | 90.6 to 91.5 | 290 (-O2), 267 to 270 (-O3) | 207 to 208 (-O2), 169 to 171 (-O3) | 106 to 109 |
+| the constructor, 2 limbs, N = 3 | 14.4 to 17.9 (-O2), 15.9 to 20.1 (-O3) | 5.39 to 5.57 (-O2), 7.39 to 7.42 (-O3) | 19 to 19.4 (-O2), 19.3 to 20.4 (-O3) | 21.9 to 26.3 (-O2), 21.9 to 25.4 (-O3) |
+| the constructor, 2 limbs, N = 7 | 18.4 to 21.8 (-O2), 21.6 to 22.4 (-O3) | 20.4 to 21.2 (-O2), 14 to 14.3 (-O3) | 22.7 to 23.4 | 27.6 to 31.6 (-O2), 27.7 to 30.4 (-O3) |
+| the constructor, 2 limbs, N = 13 | 19.9 to 23.4 (-O2), 22.4 to 25 (-O3) | 33.6 to 35.1 (-O2), 30.7 to 30.8 (-O3) | 45.7 to 46.1 (-O2), 32.5 to 32.8 (-O3) | 32.6 to 34.6 (-O2), 35.4 to 35.5 (-O3) |
+| the constructor, 2 limbs, N = 18 | 32.7 to 38 (-O2), 30.3 to 33.5 (-O3) | 75.9 to 79.3 (-O2), 45.1 to 45.2 (-O3) | 58.8 to 59.2 (-O2), 36.8 to 37.1 (-O3) | 46.8 to 47 (-O2), 37.7 to 42.9 (-O3) |
+| the constructor, 2 limbs, N = 80 | 91.8 to 106 (-O2), 111 to 117 (-O3) | 333 to 348 (-O2), 314 to 324 (-O3) | 228 to 234 (-O2), 195 to 197 (-O3) | 144 to 148 |
 
 | Short ball vectors, every size in one unit, many vectors: the check, ns per operation (with minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5803,11 +6164,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 0.033 to 0.037 (-O2), 0.101 to 0.156 (-O3) | 0.086 to 0.099 (-O2), 0.408 to 0.425 (-O3) | 2.22 to 2.34 (-O2), 2.5 to 2.84 (-O3) | 2.52 to 2.57 (-O2), 2.44 to 2.58 (-O3) |
 | `scale`, 1 limb, N = 18 | 0.121 to 0.134 (-O2), -0.233 to 0.525 (-O3) | 0.081 to 0.117 (-O2), 0.355 to 0.361 (-O3) | 2.1 to 2.17 (-O2), 2.5 to 2.74 (-O3) | 2.7 to 2.75 (-O2), 2.53 to 2.63 (-O3) |
 | `scale`, 1 limb, N = 80 | 0.13 to 0.15 (-O2), -2.27 to 0.33 (-O3) | 0.9 to 0.91 (-O2), 1.05 to 1.06 (-O3) | 4.74 to 4.97 (-O2), 3.72 to 4.98 (-O3) | 2.76 to 2.84 (-O2), 2.08 to 5.56 (-O3) |
-| `scale`, 2 limbs, N = 3 | 0.079 to 0.096 (-O2), 0.089 to 0.099 (-O3) | 0.233 to 0.242 (-O2), 0.258 to 0.282 (-O3) | 2.83 to 2.85 (-O2), -4.09 to -3.9 (-O3) | 2.57 to 2.62 (-O2), 2.43 to 2.53 (-O3) |
-| `scale`, 2 limbs, N = 7 | 0.299 to 0.319 (-O2), 0.271 to 0.308 (-O3) | 0.078 to 0.142 (-O2), 0.218 to 0.268 (-O3) | 2.85 to 2.98 (-O2), -3.54 to -3.25 (-O3) | 2.76 to 2.82 (-O2), 2.63 to 2.77 (-O3) |
-| `scale`, 2 limbs, N = 13 | 0.324 to 0.349 (-O2), -0.193 to 0.304 (-O3) | 0.081 to 0.12 (-O2), 0.272 to 0.383 (-O3) | 2.82 to 2.99 (-O2), -3.63 to -3.41 (-O3) | 2.77 to 2.83 (-O2), 2.71 to 2.92 (-O3) |
-| `scale`, 2 limbs, N = 18 | 0.023 to 0.056 (-O2), 0.063 to 0.105 (-O3) | 0.07 to 0.1 (-O2), 0.24 (-O3) | 2.79 to 2.87 (-O2), -3.02 to -3 (-O3) | 1.49 to 1.73 (-O2), 1.6 to 1.81 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.1 to 0.2 (-O2), -0.1 to 0.17 (-O3) | 0.26 to 0.27 (-O2), 0.52 to 2.42 (-O3) | 5.69 to 7.47 (-O2), -1.7 to -1.37 (-O3) | 1.51 to 1.77 (-O2), 1.47 to 1.89 (-O3) |
+| `scale`, 2 limbs, N = 3 | 0.084 to 0.13 (-O2), -0.119 to 0.275 (-O3) | 0.222 to 0.51 (-O2), 0.391 to 0.877 (-O3) | 2.66 to 2.72 (-O2), -4 to -3.9 (-O3) | 2.42 to 2.47 |
+| `scale`, 2 limbs, N = 7 | 0.561 to 0.628 (-O2), 0.356 to 0.645 (-O3) | -0.144 to 0.443 (-O2), 0.075 to 0.732 (-O3) | 2.99 to 3.08 (-O2), -3.55 to -3.19 (-O3) | 2.64 to 2.68 |
+| `scale`, 2 limbs, N = 13 | -0.216 to 0.096 (-O2), -0.64 to -0.041 (-O3) | -0.24 to 0.22 (-O2), 0.26 to 0.6 (-O3) | 2.87 to 2.89 (-O2), -3.73 to -3.69 (-O3) | 2.81 to 2.92 |
+| `scale`, 2 limbs, N = 18 | -0.04 to 0.12 (-O2), -0.54 to 0.15 (-O3) | -0.11 to 0.65 (-O2), 0.16 to 0.48 (-O3) | 2.78 to 2.79 (-O2), -3.14 to -3.06 (-O3) | 1.5 to 1.59 (-O2), 1.59 to 1.83 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.1 to 0.38 (-O2), -0.32 to 1.9 (-O3) | 0.36 to 1.25 (-O2), -0.61 to 1.16 (-O3) | 3.51 to 4.96 (-O2), -2.29 to -1.15 (-O3) | 1.57 to 2.14 (-O2), 1.87 to 2.59 (-O3) |
 | `half`, 1 limb, N = 3 | 0.29 to 0.293 | 0.264 to 0.265 | 2.46 to 2.55 (-O2), 2.61 to 2.94 (-O3) | 3.35 to 3.46 (-O2), 3.24 to 3.37 (-O3) |
 | `half`, 1 limb, N = 7 | 0.298 | 0.265 to 0.267 (-O2), 0.4 to 0.403 (-O3) | 2.18 to 2.35 (-O2), 2.59 to 2.89 (-O3) | 2.18 to 2.25 (-O2), 2.21 to 2.41 (-O3) |
 | `half`, 1 limb, N = 13 | 0.175 to 0.176 (-O2), 0.131 (-O3) | 0.253 to 0.254 (-O2), 0.644 to 0.645 (-O3) | 2.57 to 2.61 (-O2), 2.43 to 2.85 (-O3) | 2.15 to 2.22 (-O2), 1.99 to 2.19 (-O3) |
@@ -5823,11 +6184,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 0.3 to 1.26 (-O2), 0.84 to 1.39 (-O3) | 0.01 to 0.03 (-O2), 11.5 (-O3) | 2.7 to 2.81 (-O2), 6.5 to 6.75 (-O3) | -0.45 to 0.28 (-O2), -0.44 to 0.24 (-O3) |
 | the constructor, 1 limb, N = 18 | -1.64 to -1.59 (-O2), 0.46 to 0.88 (-O3) | -0.29 to 0.15 (-O2), 2.09 (-O3) | 2.16 to 2.95 (-O2), 5.8 to 6.66 (-O3) | -0.96 to -0.68 (-O2), 0.91 to 2.27 (-O3) |
 | the constructor, 1 limb, N = 80 | -3.12 to -0.48 (-O2), -2 to -0.31 (-O3) | 1.2 to 1.3 (-O2), 0.6 to 0.7 (-O3) | -0.2 to 0 (-O2), -7.8 to -6 (-O3) | 2.41 to 2.8 (-O2), 2.65 to 3.58 (-O3) |
-| the constructor, 2 limbs, N = 3 | 1.58 to 5.58 (-O2), 1.56 to 1.58 (-O3) | 0.176 to 0.225 (-O2), 2.92 to 2.96 (-O3) | 5.44 to 6.32 (-O2), 8.98 to 10.3 (-O3) | 2.58 to 7.48 (-O2), 7.48 to 7.51 (-O3) |
-| the constructor, 2 limbs, N = 7 | 0.66 to 1.6 (-O2), 0.24 to 0.72 (-O3) | 0.19 (-O2), 6.91 to 6.96 (-O3) | 2.51 to 2.95 (-O2), 10.9 to 11.8 (-O3) | -0.84 to 1.25 (-O2), 1.71 to 1.91 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.55 to 0.42 (-O2), -0.19 to 0.32 (-O3) | 0 to 0.07 (-O2), 15.7 to 16.7 (-O3) | -1.15 to -0.98 (-O2), 12 to 12.4 (-O3) | 0.24 to 0.76 (-O2), 0.45 to 2.1 (-O3) |
-| the constructor, 2 limbs, N = 18 | -1.66 to -0.35 (-O2), -1.12 to -1.1 (-O3) | 0.43 to 0.52 (-O2), 1.12 to 1.17 (-O3) | -0.63 to -0.09 (-O2), -5.4 to -4.84 (-O3) | 2.58 to 3.17 (-O2), 1.74 to 5.09 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.18 to 3.51 (-O2), 0.3 to 0.31 (-O3) | -3.4 to -3.2 (-O2), -1.8 to 1.4 (-O3) | -15.4 to -13.6 (-O2), -5.7 to 0.1 (-O3) | 3.4 to 7.19 (-O2), 6 to 8.58 (-O3) |
+| the constructor, 2 limbs, N = 3 | -0.18 to 1.41 (-O2), 9.76 to 12.9 (-O3) | -0.005 to 0.165 (-O2), 4.12 to 4.16 (-O3) | 6.09 to 6.96 (-O2), 6.19 to 8.14 (-O3) | -3.49 to 4.87 (-O2), 8.68 to 12.2 (-O3) |
+| the constructor, 2 limbs, N = 7 | -3.77 to -3.09 (-O2), -5.78 to -3.56 (-O3) | -0.63 to 0.13 (-O2), 8.57 to 9.12 (-O3) | 1 to 1.79 (-O2), 7.43 to 8.01 (-O3) | -2.64 to 3.84 (-O2), -3.15 to -0.39 (-O3) |
+| the constructor, 2 limbs, N = 13 | -0.16 to 0.36 (-O2), -3.37 to -1.41 (-O3) | 0.02 to 0.27 (-O2), 18.4 to 19 (-O3) | 0.18 to 0.66 (-O2), 8.44 to 8.79 (-O3) | -0.57 to 2.8 (-O2), -0.46 to -0.41 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.3 to 0.56 (-O2), -1.99 to 1.35 (-O3) | -3.39 to 3.4 (-O2), 0.17 to 2.11 (-O3) | -0.43 to 0.13 (-O2), -13.5 to -13 (-O3) | 0.62 to 1.16 (-O2), -5.23 to 0.06 (-O3) |
+| the constructor, 2 limbs, N = 80 | -0.03 to 0.3 (-O2), -2.3 to 4.8 (-O3) | -3.6 to -3.1 (-O2), -9.9 to 14.1 (-O3) | -19.2 to -14 (-O2), -2 to 0.6 (-O3) | -2.5 to 3.3 (-O2), 0.7 to 2.5 (-O3) |
 
 | Short ball vectors, every size in one unit, many vectors: the check with its report cold, ns per operation (minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5866,11 +6227,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | -0.055 to -0.048 (-O2), 0.012 to 0.068 (-O3) | 0.039 to 0.155 (-O2), 0.097 to 0.108 (-O3) | 2.46 to 2.91 (-O2), 2.6 to 3 (-O3) | 2.53 to 2.56 (-O2), 2.33 to 2.57 (-O3) |
 | `scale`, 1 limb, N = 18 | 0.238 to 0.241 (-O2), -0.151 to 0.208 (-O3) | 0.175 to 0.212 (-O2), 0.226 to 0.235 (-O3) | 2 to 2.29 (-O2), 2.59 to 2.87 (-O3) | 2.37 to 2.44 (-O2), 2.31 to 2.39 (-O3) |
 | `scale`, 1 limb, N = 80 | -0.02 to 0.01 (-O2), -2.3 to 0.54 (-O3) | 0.19 to 0.26 (-O2), 1 to 1.02 (-O3) | 3.76 to 4.29 (-O2), 3.31 to 3.7 (-O3) | 2.97 to 3.05 (-O2), 1.97 to 17.5 (-O3) |
-| `scale`, 2 limbs, N = 3 | 0.041 to 0.057 (-O2), -0.016 to 0.021 (-O3) | 0.096 to 0.105 (-O2), 0.206 to 0.215 (-O3) | 2.84 to 2.92 (-O2), -5.48 to -5.34 (-O3) | 2.64 to 2.71 (-O2), 2.58 to 2.69 (-O3) |
-| `scale`, 2 limbs, N = 7 | -0.008 to 0.003 (-O2), -0.001 to 0.007 (-O3) | 0.114 to 0.18 (-O2), 0.061 to 0.083 (-O3) | 2.63 to 2.77 (-O2), -3.7 to -3.39 (-O3) | 1.91 to 2.01 (-O2), 1.86 to 1.95 (-O3) |
-| `scale`, 2 limbs, N = 13 | 0.074 to 0.338 (-O2), -0.235 to 0.027 (-O3) | 0.126 to 0.14 (-O2), 0.215 to 0.224 (-O3) | 2.72 to 2.92 (-O2), -4.16 to -3.92 (-O3) | 2.81 to 2.94 (-O2), 2.82 to 3.05 (-O3) |
-| `scale`, 2 limbs, N = 18 | 0.066 to 0.135 (-O2), 0.049 to 0.052 (-O3) | 0.08 to 0.09 (-O2), 0.22 to 0.23 (-O3) | 2.71 to 2.8 (-O2), -3.88 to -3.74 (-O3) | 1.76 to 1.83 (-O2), 1.72 to 2.04 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.35 to 0.44 (-O2), -0.16 to 0.01 (-O3) | 0.03 to 0.05 (-O2), 2.23 to 2.34 (-O3) | 2.9 to 3.64 (-O2), -2.24 to -1.34 (-O3) | 1.81 to 1.9 (-O2), 1.44 to 2 (-O3) |
+| `scale`, 2 limbs, N = 3 | -0.008 to 0.18 (-O2), -1.03 to 0.01 (-O3) | 0.005 to 0.198 (-O2), 0.075 to 0.563 (-O3) | 2.69 to 2.78 (-O2), -5.46 to -5.4 (-O3) | 2.48 to 2.58 |
+| `scale`, 2 limbs, N = 7 | 0.033 to 0.059 (-O2), -1.56 to 0.045 (-O3) | -0.258 to 0.361 (-O2), -0.322 to 0.359 (-O3) | 2.65 to 2.92 (-O2), -3.68 to -3.31 (-O3) | 1.76 to 1.82 (-O2), 1.71 to 1.83 (-O3) |
+| `scale`, 2 limbs, N = 13 | 0.226 to 0.261 (-O2), -2.21 to 0.077 (-O3) | -0.36 to 0.55 (-O2), -0.5 to 0.32 (-O3) | 2.83 to 2.86 (-O2), -4.42 to -4.37 (-O3) | 2.87 to 2.94 |
+| `scale`, 2 limbs, N = 18 | 0.344 to 0.45 (-O2), -2.99 to 0.46 (-O3) | -0.12 to 0.65 (-O2), -0.1 to 0.49 (-O3) | 2.85 to 2.89 (-O2), -3.86 to -3.72 (-O3) | 1.53 to 1.68 (-O2), 1.76 to 1.88 (-O3) |
+| `scale`, 2 limbs, N = 80 | -0.04 to 2.19 (-O2), -10.8 to 0.94 (-O3) | -1.82 to 1.94 (-O2), -2.99 to 0.42 (-O3) | 1.2 to 2.68 (-O2), -2.19 to -1.1 (-O3) | 1.77 to 1.93 (-O2), 1.81 to 2.11 (-O3) |
 | `half`, 1 limb, N = 3 | 0.092 to 0.093 (-O2), 0.089 to 0.175 (-O3) | 0.262 to 0.265 | 2.25 to 2.32 (-O2), 2.33 to 2.61 (-O3) | 2.43 to 2.47 (-O2), 2.35 to 2.51 (-O3) |
 | `half`, 1 limb, N = 7 | 0.086 to 0.09 | 0.002 to 0.003 (-O2), 0 (-O3) | 1.78 to 1.93 (-O2), 2.06 to 2.39 (-O3) | 2.25 to 2.32 (-O2), 2.04 to 2.24 (-O3) |
 | `half`, 1 limb, N = 13 | 0.131 to 0.132 (-O2), 0.349 (-O3) | 0.166 to 0.17 (-O2), 0.251 to 0.255 (-O3) | 2.36 to 2.57 (-O2), 2.34 to 2.81 (-O3) | 2.31 to 2.38 (-O2), 1.97 to 2.16 (-O3) |
@@ -5886,11 +6247,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 0.24 to 0.91 (-O2), 0.58 to 1.64 (-O3) | 0.02 to 0.07 (-O2), 0.146 to 0.177 (-O3) | 2.62 to 2.68 (-O2), 3.57 to 3.8 (-O3) | -0.6 to 0.69 (-O2), -0.37 to 0.23 (-O3) |
 | the constructor, 1 limb, N = 18 | -0.88 to -0.82 (-O2), 0.23 to 1.32 (-O3) | -0.25 to 0.19 (-O2), 0.25 to 0.32 (-O3) | 5.01 to 5.12 (-O2), 5.4 to 5.74 (-O3) | -0.89 to 0.93 (-O2), 0.16 to 2.24 (-O3) |
 | the constructor, 1 limb, N = 80 | -0.2 to 1.76 (-O2), -0.63 to 0.2 (-O3) | -10.7 to 0.6 (-O2), -11 to 0.7 (-O3) | -2.7 to -2.2 (-O2), 0 to 0.9 (-O3) | -1.03 to 1.1 (-O2), 2.52 to 11.9 (-O3) |
-| the constructor, 2 limbs, N = 3 | 1.9 to 1.93 (-O2), 1.77 to 1.79 (-O3) | 0.067 to 0.115 (-O2), -0.049 to -0.008 (-O3) | 5.46 to 6.36 (-O2), 5.63 to 6.28 (-O3) | 7.57 to 7.81 |
-| the constructor, 2 limbs, N = 7 | -2.59 to -1.7 (-O2), -1.94 to -1.82 (-O3) | 0.18 to 0.21 (-O2), 0.296 to 0.316 (-O3) | 2.72 to 2.97 (-O2), 6.07 to 6.91 (-O3) | 1.22 to 1.63 (-O2), -0.13 to 1.93 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.91 to 0.42 (-O2), -1.09 to 0.33 (-O3) | -0.08 to 0.02 (-O2), -0.292 to -0.289 (-O3) | 1.3 to 1.36 (-O2), 3.29 to 3.78 (-O3) | 0.95 to 2.06 (-O2), 0.54 to 6.13 (-O3) |
-| the constructor, 2 limbs, N = 18 | -2.27 to -1.4 (-O2), -0.24 to -0.16 (-O3) | 0.07 to 0.37 (-O2), 0.05 to 1.26 (-O3) | -1.34 to -0.96 (-O2), -11.9 to -11.3 (-O3) | 2.5 to 2.61 (-O2), 1.18 to 4.81 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.74 to 4.11 (-O2), -0.04 to 0 (-O3) | -0.3 (-O2), 0 to 0.6 (-O3) | -0.3 to 1.2 (-O2), -18 to -11 (-O3) | 4 to 8 (-O2), 2.9 to 8.18 (-O3) |
+| the constructor, 2 limbs, N = 3 | -1.03 to -0.89 (-O2), 6.66 to 7.36 (-O3) | -0.051 to 0.222 (-O2), 0.15 to 0.236 (-O3) | 7.77 to 8.41 (-O2), 7.57 to 7.81 (-O3) | 0.47 to 4.3 (-O2), 12.5 to 13 (-O3) |
+| the constructor, 2 limbs, N = 7 | -2.52 to -1.79 (-O2), -6.7 to -2.32 (-O3) | -0.44 to 0.88 (-O2), 0.383 to 0.876 (-O3) | 0.78 to 1.44 (-O2), 4.94 to 5.09 (-O3) | -0.06 to 2.94 (-O2), 0 to 0.84 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.23 to 0.48 (-O2), -8.31 to 0.13 (-O3) | -1.25 to 0.43 (-O2), -0.36 to 0.17 (-O3) | 0.48 to 0.65 (-O2), 3.98 to 4.02 (-O3) | 0.92 to 2.11 (-O2), -0.09 to 1.89 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.57 to 0.99 (-O2), -9.25 to 0 (-O3) | -3.43 to 3.46 (-O2), -1.04 to 2.05 (-O3) | -0.22 to -0.17 (-O2), -15.4 to -8.01 (-O3) | 1.36 to 6.05 (-O2), -2.63 to 0.27 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.64 to 4.8 (-O2), -29.5 to -3 (-O3) | -19.4 to 10.9 (-O2), -14 to 14.5 (-O3) | 0.9 to 6.5 (-O2), 1.8 to 3 (-O3) | 3.8 to 6.4 (-O2), 1.1 to 2.7 (-O3) |
 
 | Short ball vectors, every size in one unit, many vectors: with the check over without | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5929,11 +6290,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 1.01 to 1.04 | 1.01 to 1.02 (-O2), 1.07 (-O3) | 1.15 to 1.16 (-O2), 1.18 to 1.21 (-O3) | 1.34 to 1.37 |
 | `scale`, 1 limb, N = 18 | 1.02 (-O2), 0.96 to 1.10 (-O3) | 1.01 to 1.05 | 1.13 to 1.14 (-O2), 1.16 to 1.18 (-O3) | 1.32 to 1.35 |
 | `scale`, 1 limb, N = 80 | 1.00 to 1.01 (-O2), 0.92 to 1.01 (-O3) | 1.03 to 1.04 | 1.17 to 1.18 (-O2), 1.14 to 1.19 (-O3) | 1.16 (-O2), 1.09 to 1.25 (-O3) |
-| `scale`, 2 limbs, N = 3 | 1.03 | 1.05 to 1.06 | 1.17 (-O2), 0.75 to 0.76 (-O3) | 1.32 to 1.35 |
-| `scale`, 2 limbs, N = 7 | 1.06 to 1.07 | 1.01 to 1.04 | 1.15 to 1.16 (-O2), 0.82 to 0.83 (-O3) | 1.24 to 1.26 |
-| `scale`, 2 limbs, N = 13 | 1.05 (-O2), 0.97 to 1.04 (-O3) | 1.01 to 1.04 | 1.14 to 1.15 (-O2), 0.81 to 0.82 (-O3) | 1.25 to 1.27 |
-| `scale`, 2 limbs, N = 18 | 1.00 to 1.01 | 1.01 to 1.02 | 1.12 to 1.13 (-O2), 0.86 to 0.87 (-O3) | 1.10 to 1.13 |
-| `scale`, 2 limbs, N = 80 | 1.00 to 1.01 | 1.01 (-O2), 1.01 to 1.06 (-O3) | 1.11 to 1.15 (-O2), 0.97 (-O3) | 1.03 to 1.04 |
+| `scale`, 2 limbs, N = 3 | 1.02 to 1.04 (-O2), 0.97 to 1.08 (-O3) | 1.04 to 1.09 (-O2), 1.07 to 1.17 (-O3) | 1.16 (-O2), 0.75 to 0.76 (-O3) | 1.32 to 1.33 |
+| `scale`, 2 limbs, N = 7 | 1.12 (-O2), 1.06 to 1.12 (-O3) | 0.98 to 1.06 (-O2), 1.01 to 1.10 (-O3) | 1.15 to 1.16 (-O2), 0.82 to 0.83 (-O3) | 1.24 |
+| `scale`, 2 limbs, N = 13 | 0.98 to 1.01 (-O2), 0.94 to 1.00 (-O3) | 0.98 to 1.02 (-O2), 1.02 to 1.06 (-O3) | 1.14 (-O2), 0.81 (-O3) | 1.25 to 1.26 |
+| `scale`, 2 limbs, N = 18 | 1.00 to 1.01 (-O2), 0.96 to 1.01 (-O3) | 0.99 to 1.05 (-O2), 1.01 to 1.04 (-O3) | 1.12 (-O2), 0.86 (-O3) | 1.10 to 1.13 |
+| `scale`, 2 limbs, N = 80 | 0.99 to 1.04 | 0.99 to 1.03 | 1.07 to 1.10 (-O2), 0.95 to 0.98 (-O3) | 1.04 to 1.06 |
 | `half`, 1 limb, N = 3 | 1.09 | 1.06 | 1.14 to 1.15 (-O2), 1.17 to 1.19 (-O3) | 1.37 to 1.39 |
 | `half`, 1 limb, N = 7 | 1.07 | 1.05 to 1.08 | 1.12 to 1.13 (-O2), 1.15 to 1.17 (-O3) | 1.18 to 1.20 |
 | `half`, 1 limb, N = 13 | 1.02 to 1.03 | 1.03 to 1.04 (-O2), 1.09 (-O3) | 1.14 to 1.17 | 1.16 to 1.19 |
@@ -5949,11 +6310,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 1.01 to 1.06 (-O2), 1.04 to 1.06 (-O3) | 1.00 (-O2), 2.79 to 2.80 (-O3) | 1.13 (-O2), 1.34 to 1.36 (-O3) | 0.99 to 1.01 |
 | the constructor, 1 limb, N = 18 | 0.92 (-O2), 1.02 to 1.04 (-O3) | 0.99 to 1.01 (-O2), 1.09 (-O3) | 1.08 to 1.11 (-O2), 1.22 to 1.25 (-O3) | 0.96 to 0.97 (-O2), 1.03 to 1.07 (-O3) |
 | the constructor, 1 limb, N = 80 | 0.96 to 1.00 | 1.00 to 1.01 | 1.00 (-O2), 0.95 to 0.96 (-O3) | 1.03 to 1.05 |
-| the constructor, 2 limbs, N = 3 | 1.36 to 2.25 (-O2), 1.35 to 1.36 (-O3) | 1.05 to 1.06 (-O2), 1.94 to 1.96 (-O3) | 1.50 to 1.63 (-O2), 1.86 to 2.01 (-O3) | 1.30 to 1.88 (-O2), 1.88 to 1.89 (-O3) |
-| the constructor, 2 limbs, N = 7 | 1.03 to 1.09 (-O2), 1.01 to 1.04 (-O3) | 1.02 (-O2), 2.34 to 2.35 (-O3) | 1.14 to 1.17 (-O2), 1.93 to 2.02 (-O3) | 0.95 to 1.08 (-O2), 1.11 to 1.12 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.97 to 1.02 | 1.00 (-O2), 2.78 to 2.89 (-O3) | 0.97 to 0.98 (-O2), 1.69 to 1.72 (-O3) | 1.01 to 1.03 (-O2), 1.02 to 1.09 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.93 to 0.98 (-O2), 0.95 (-O3) | 1.01 to 1.03 | 0.99 to 1.00 (-O2), 0.86 to 0.88 (-O3) | 1.08 to 1.09 (-O2), 1.05 to 1.16 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.00 to 1.04 | 0.99 to 1.01 | 0.93 to 0.94 (-O2), 0.97 to 1.00 (-O3) | 1.03 to 1.07 (-O2), 1.06 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.99 to 1.09 (-O2), 2.58 to 2.79 (-O3) | 1.00 to 1.03 (-O2), 2.26 to 2.28 (-O3) | 1.47 to 1.56 (-O2), 1.47 to 1.66 (-O3) | 0.86 to 1.23 (-O2), 1.66 to 1.92 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.85 to 0.88 (-O2), 0.79 to 0.86 (-O3) | 0.97 to 1.01 (-O2), 2.58 to 2.75 (-O3) | 1.05 to 1.08 (-O2), 1.47 to 1.52 (-O3) | 0.91 to 1.14 (-O2), 0.90 to 0.99 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.99 to 1.02 (-O2), 0.88 to 0.94 (-O3) | 1.00 to 1.01 (-O2), 2.50 to 2.61 (-O3) | 1.00 to 1.01 (-O2), 1.35 to 1.37 (-O3) | 0.98 to 1.09 (-O2), 0.99 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.01 (-O2), 0.94 to 1.04 (-O3) | 0.96 to 1.04 (-O2), 1.00 to 1.05 (-O3) | 0.99 to 1.00 (-O2), 0.73 to 0.74 (-O3) | 1.01 to 1.03 (-O2), 0.88 to 1.00 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 (-O2), 0.98 to 1.05 (-O3) | 0.99 (-O2), 0.97 to 1.05 (-O3) | 0.92 to 0.94 (-O2), 0.99 to 1.00 (-O3) | 0.98 to 1.02 |
 
 | Short ball vectors, every size in one unit, a dependent chain: ns per operation, with the check | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -5992,11 +6353,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 12.3 to 12.5 (-O2), 11.7 to 12.5 (-O3) | 6.21 to 6.27 | 16 to 16.5 | 9.58 to 9.69 |
 | `scale`, 1 limb, N = 18 | 8.08 to 8.09 (-O2), 8.37 to 8.68 (-O3) | 7.07 to 7.35 | 17.3 to 17.6 | 10 to 10.2 |
 | `scale`, 1 limb, N = 80 | 25.8 to 26.1 | 33.4 to 33.5 (-O2), 27.9 to 28.2 (-O3) | 28.9 to 30.2 | 19.2 to 19.3 (-O2), 23.2 to 38.5 (-O3) |
-| `scale`, 2 limbs, N = 3 | 13.8 to 14.4 | 5.62 to 5.68 (-O2), 6.98 to 7.06 (-O3) | 19.3 to 19.5 (-O2), 12 (-O3) | 11.1 to 11.2 (-O2), 10.5 to 10.7 (-O3) |
-| `scale`, 2 limbs, N = 7 | 8.71 to 9.07 | 7.63 to 7.93 | 21.8 to 21.9 (-O2), 15.2 (-O3) | 13.7 to 13.8 |
-| `scale`, 2 limbs, N = 13 | 7.98 to 8.28 | 8.99 to 9 (-O2), 10.3 to 10.4 (-O3) | 21.9 to 22 (-O2), 14.8 (-O3) | 13.6 to 13.8 |
-| `scale`, 2 limbs, N = 18 | 9.38 to 9.58 | 10.2 (-O2), 11.1 to 11.5 (-O3) | 24.5 to 24.6 (-O2), 18.1 (-O3) | 15.4 to 15.5 |
-| `scale`, 2 limbs, N = 80 | 38.3 to 39.6 | 39.7 to 39.9 (-O2), 42.6 to 43.3 (-O3) | 51.7 to 51.8 (-O2), 47 to 47.1 (-O3) | 42.9 to 43.2 |
+| `scale`, 2 limbs, N = 3 | 14.8 to 17.8 (-O2), 18.3 to 20.4 (-O3) | 6.89 to 7.17 (-O2), 8.44 (-O3) | 19.6 to 19.7 (-O2), 12.2 to 15.5 (-O3) | 11 to 11.2 |
+| `scale`, 2 limbs, N = 7 | 8.82 to 10.4 (-O2), 10.1 to 12.9 (-O3) | 8.52 to 8.75 (-O2), 9.67 to 9.87 (-O3) | 21.9 (-O2), 15.3 (-O3) | 13.8 to 13.9 |
+| `scale`, 2 limbs, N = 13 | 8.84 to 10.6 (-O2), 10.6 to 11.8 (-O3) | 10.6 to 10.9 (-O2), 12.1 to 12.6 (-O3) | 22.3 (-O2), 15.1 to 16.8 (-O3) | 13.8 to 16.4 (-O2), 13.7 (-O3) |
+| `scale`, 2 limbs, N = 18 | 9.89 to 11.4 (-O2), 11.8 to 12.8 (-O3) | 12.1 to 12.7 (-O2), 12.9 to 13.3 (-O3) | 24.5 to 24.6 (-O2), 18.8 to 18.9 (-O3) | 15.6 |
+| `scale`, 2 limbs, N = 80 | 39 to 45.1 (-O2), 48.5 to 51.5 (-O3) | 45.9 to 47.8 (-O2), 50.9 to 52.5 (-O3) | 52 (-O2), 47.2 to 47.3 (-O3) | 42.9 to 43.1 |
 | `half`, 1 limb, N = 3 | 14.1 to 14.8 (-O2), 14.7 to 14.9 (-O3) | 5.44 to 5.45 (-O2), 4.79 to 4.81 (-O3) | 19.5 to 19.7 | 15.9 to 16.1 |
 | `half`, 1 limb, N = 7 | 14.2 to 14.4 | 6.5 to 6.51 (-O2), 5.98 (-O3) | 20.8 to 21.6 | 15.7 to 15.8 |
 | `half`, 1 limb, N = 13 | 13.6 to 14.2 (-O2), 14.5 to 14.8 (-O3) | 7.96 to 8.1 | 19.8 to 19.9 (-O2), 20.7 to 20.8 (-O3) | 15.6 to 15.8 |
@@ -6012,11 +6373,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 23.4 to 25.2 (-O2), 22.9 to 23.3 (-O3) | 18.3 to 18.6 | 26.6 to 26.7 (-O2), 28.8 to 28.9 (-O3) | 33 to 33.9 |
 | the constructor, 1 limb, N = 18 | 19.8 to 19.9 (-O2), 23.5 to 24.3 (-O3) | 24.6 (-O2), 26.2 to 26.3 (-O3) | 31.1 to 31.8 (-O2), 34.6 to 34.9 (-O3) | 24.8 to 24.9 (-O2), 34.9 to 36 (-O3) |
 | the constructor, 1 limb, N = 80 | 69.1 to 69.2 (-O2), 70.4 to 74.3 (-O3) | 201 to 209 | 150 | 71.7 to 72.5 |
-| the constructor, 2 limbs, N = 3 | 12 to 13.5 (-O2), 11.9 to 12.8 (-O3) | 6.04 to 6.06 | 17.5 to 17.8 (-O2), 21.3 to 22.6 (-O3) | 11.9 to 17.8 (-O2), 17.3 to 17.4 (-O3) |
-| the constructor, 2 limbs, N = 7 | 18.8 to 19 (-O2), 19.8 to 20.1 (-O3) | 12.3 to 12.5 | 22 (-O2), 25.1 to 25.7 (-O3) | 15.5 to 19 (-O2), 18.7 to 18.8 (-O3) |
-| the constructor, 2 limbs, N = 13 | 21.5 to 22.3 (-O2), 18.5 to 22.3 (-O3) | 26.7 (-O2), 25.4 (-O3) | 42.5 to 42.8 (-O2), 31.1 to 31.2 (-O3) | 23.1 (-O2), 23.5 to 25 (-O3) |
-| the constructor, 2 limbs, N = 18 | 21.9 to 22.1 | 40.6 (-O2), 35.5 to 35.6 (-O3) | 51.9 to 52.2 (-O2), 35.5 to 35.8 (-O3) | 34.4 to 36.5 (-O2), 36.1 to 36.3 (-O3) |
-| the constructor, 2 limbs, N = 80 | 91 to 94.3 | 286 to 289 (-O2), 254 to 269 (-O3) | 185 to 187 (-O2), 165 to 167 (-O3) | 100 to 105 |
+| the constructor, 2 limbs, N = 3 | 18.6 to 21.8 (-O2), 18 to 21.7 (-O3) | 6.92 to 7.1 (-O2), 7.38 to 7.39 (-O3) | 19.9 to 20.4 (-O2), 20.8 to 21.9 (-O3) | 22.2 to 26.2 (-O2), 22.2 to 26.2 (-O3) |
+| the constructor, 2 limbs, N = 7 | 19.6 to 24.1 (-O2), 18.1 to 22.2 (-O3) | 20.3 to 21.2 (-O2), 15.3 to 15.9 (-O3) | 24.5 to 25.5 | 27.2 to 30.2 (-O2), 27.3 to 29.9 (-O3) |
+| the constructor, 2 limbs, N = 13 | 20 to 23 (-O2), 22.4 to 24.5 (-O3) | 35.1 to 35.2 (-O2), 29.3 to 30.6 (-O3) | 46.3 to 46.9 (-O2), 34.7 to 38.6 (-O3) | 30.4 to 33 (-O2), 32.6 to 34.3 (-O3) |
+| the constructor, 2 limbs, N = 18 | 32.9 to 38 (-O2), 30.6 to 33.7 (-O3) | 77.8 to 79.3 (-O2), 44 to 45.3 (-O3) | 61.5 to 62.1 (-O2), 37.2 to 37.4 (-O3) | 44.3 to 46.7 (-O2), 35.7 to 43.2 (-O3) |
+| the constructor, 2 limbs, N = 80 | 92.3 to 106 (-O2), 111 to 123 (-O3) | 332 to 347 (-O2), 309 to 323 (-O3) | 245 to 246 (-O2), 194 (-O3) | 144 to 147 |
 
 | Short ball vectors, every size in one unit, a dependent chain: the check, ns per operation (with minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -6055,11 +6416,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 4.4 to 4.55 (-O2), 3.39 to 4.59 (-O3) | 0.144 to 0.149 (-O2), 0.177 to 0.278 (-O3) | 2.75 to 2.8 (-O2), 2.52 to 2.93 (-O3) | -1.51 to 2.59 (-O2), -1.74 to 2.54 (-O3) |
 | `scale`, 1 limb, N = 18 | -0.039 to 0.059 (-O2), 0.33 to 0.702 (-O3) | 0.077 to 0.089 (-O2), 0.26 to 0.406 (-O3) | 2.41 to 2.52 (-O2), 2.71 to 3.1 (-O3) | 2.85 to 2.88 (-O2), 2.77 to 3.08 (-O3) |
 | `scale`, 1 limb, N = 80 | 0.07 to 0.23 (-O2), -0.49 to 0.16 (-O3) | 0.19 (-O2), 0.32 to 0.81 (-O3) | 3.63 to 3.8 (-O2), 3.07 to 3.89 (-O3) | 3.41 to 3.56 (-O2), 1.8 to 17.3 (-O3) |
-| `scale`, 2 limbs, N = 3 | 6.06 to 6.71 (-O2), 5.93 to 6.05 (-O3) | -0.377 to -0.332 (-O2), 1.22 to 1.31 (-O3) | 2.49 to 2.65 (-O2), -4.05 to -3.83 (-O3) | 2.65 to 2.79 (-O2), 2.03 to 2.18 (-O3) |
-| `scale`, 2 limbs, N = 7 | 0.571 to 0.878 (-O2), 0.467 to 0.791 (-O3) | 0.305 to 0.323 (-O2), 0.491 to 0.494 (-O3) | 2.74 to 2.89 (-O2), -4.08 to -3.76 (-O3) | 4.18 to 4.24 (-O2), 3.99 to 4.18 (-O3) |
-| `scale`, 2 limbs, N = 13 | -0.037 to -0.015 (-O2), -0.849 to 0.009 (-O3) | 0.098 (-O2), 0.17 to 0.25 (-O3) | 2.63 to 2.74 (-O2), -4.52 to -4.21 (-O3) | 3.11 to 3.21 (-O2), 2.87 to 3.08 (-O3) |
-| `scale`, 2 limbs, N = 18 | -0.276 to -0.083 (-O2), -0.421 to -0.315 (-O3) | -0.03 to -0.02 (-O2), -0.88 to -0.48 (-O3) | 2.38 to 2.41 (-O2), -5.12 to -3.62 (-O3) | 1.7 to 1.82 (-O2), 1.69 to 1.83 (-O3) |
-| `scale`, 2 limbs, N = 80 | -0.35 to 0.51 (-O2), -0.04 to 0.18 (-O3) | -0.21 to 0.08 (-O2), 0.34 to 0.84 (-O3) | 3.15 to 3.59 (-O2), -0.78 to -0.22 (-O3) | 1.1 to 1.36 (-O2), 0.99 to 1.52 (-O3) |
+| `scale`, 2 limbs, N = 3 | 6.5 to 8.25 (-O2), 8.77 to 9.3 (-O3) | -0.258 to 0.056 (-O2), 0.736 to 2.59 (-O3) | 2.65 to 2.69 (-O2), -4.08 to -0.66 (-O3) | 2.79 to 2.81 (-O2), 2.63 to 2.64 (-O3) |
+| `scale`, 2 limbs, N = 7 | 0.475 to 0.911 (-O2), 0.56 to 0.605 (-O3) | 0.012 to 0.157 (-O2), 0.388 to 0.761 (-O3) | 2.76 to 2.8 (-O2), -3.57 to -3.54 (-O3) | 4.16 to 4.29 |
+| `scale`, 2 limbs, N = 13 | -0.668 to 0.681 (-O2), 0.27 to 1.07 (-O3) | -0.22 to 0.5 (-O2), -0.43 to 0.07 (-O3) | 1.13 to 2.82 (-O2), -4.01 to -2.37 (-O3) | 0.42 to 5.94 (-O2), 3.2 to 3.21 (-O3) |
+| `scale`, 2 limbs, N = 18 | 0.07 to 0.156 (-O2), -1.08 to 0.65 (-O3) | -0.42 to 0.16 (-O2), -1.51 to -0.77 (-O3) | 2.37 to 2.43 (-O2), -3.54 to -2.66 (-O3) | 1.71 to 1.72 (-O2), -0.33 to 1.77 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.35 to 0.8 (-O2), -0.35 to 1.83 (-O3) | -1.7 to 0.4 (-O2), -2.84 to 1.04 (-O3) | 3.1 to 3.14 (-O2), -0.47 to -0.36 (-O3) | 1.36 to 1.48 (-O2), 1.41 to 1.53 (-O3) |
 | `half`, 1 limb, N = 3 | 0.04 to 0.96 (-O2), 1.33 to 1.73 (-O3) | 0.79 to 0.792 (-O2), 0.132 to 0.153 (-O3) | 2.37 to 2.49 (-O2), 4.3 to 4.56 (-O3) | 1.04 to 1.13 (-O2), 0.88 to 1.18 (-O3) |
 | `half`, 1 limb, N = 7 | 0.12 to 0.8 (-O2), 0.21 to 0.97 (-O3) | 0.79 to 0.798 (-O2), 0.265 to 0.267 (-O3) | 2.46 to 2.49 (-O2), 4.17 to 4.54 (-O3) | 0.34 to 0.49 (-O2), 0.14 to 0.49 (-O3) |
 | `half`, 1 limb, N = 13 | -0.44 to -0.22 (-O2), 0.01 to 0.3 (-O3) | 0.788 to 0.792 (-O2), 0.528 to 0.532 (-O3) | 2.69 to 2.76 (-O2), 4.35 to 4.69 (-O3) | -0.17 to -0.02 (-O2), -0.22 to 0.43 (-O3) |
@@ -6075,11 +6436,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 0.39 to 1.9 (-O2), -0.42 to 0.48 (-O3) | 0.05 to 0.1 (-O2), 12.2 (-O3) | 2.75 to 2.87 (-O2), 8.58 to 8.86 (-O3) | -0.14 to 0.23 (-O2), 0.04 to 0.59 (-O3) |
 | the constructor, 1 limb, N = 18 | -0.74 to -0.41 (-O2), -1.96 to 0.56 (-O3) | 0.06 to 0.24 (-O2), 1.66 to 1.85 (-O3) | 2.32 to 2.98 (-O2), 5.53 to 6.14 (-O3) | 0.88 to 1.15 (-O2), 0.43 to 2.04 (-O3) |
 | the constructor, 1 limb, N = 80 | -1.86 to -1.63 (-O2), -3.83 to 1.14 (-O3) | -7.4 to -0.1 (-O2), 0.7 to 3.1 (-O3) | 1.9 to 2.2 (-O2), -2 to 2 (-O3) | 2.92 to 2.97 (-O2), 1.99 to 6.4 (-O3) |
-| the constructor, 2 limbs, N = 3 | 3.01 to 4.09 (-O2), 3.03 to 4.03 (-O3) | -0.611 to -0.556 (-O2), -0.759 to -0.079 (-O3) | 2.7 to 2.97 (-O2), 5.76 to 7.21 (-O3) | 3.6 to 9.48 (-O2), 9.05 to 9.17 (-O3) |
-| the constructor, 2 limbs, N = 7 | -0.04 to 0.64 (-O2), 1 to 1.74 (-O3) | -0.14 to -0.06 (-O2), 5.94 to 6.14 (-O3) | 3.78 to 3.87 (-O2), 9.73 to 10.6 (-O3) | -2.03 to 3.1 (-O2), 1.16 to 2.42 (-O3) |
-| the constructor, 2 limbs, N = 13 | -1.32 to -0.48 (-O2), -4.18 to 0.79 (-O3) | 0.04 to 0.08 (-O2), 15.8 (-O3) | 4.46 to 4.81 (-O2), 8.32 to 8.91 (-O3) | 0.05 to 0.41 (-O2), 0.07 to 2.16 (-O3) |
-| the constructor, 2 limbs, N = 18 | -0.58 to -0.56 (-O2), -0.39 to -0.16 (-O3) | -0.12 to 0.15 (-O2), 1.04 to 1.06 (-O3) | -0.54 to -0.17 (-O2), -6.2 to -5.21 (-O3) | 0.41 to 2.26 (-O2), 1.67 to 5.66 (-O3) |
-| the constructor, 2 limbs, N = 80 | 3.46 to 6.13 (-O2), 0.12 to 0.15 (-O3) | -2.2 to -0.3 (-O2), -14.8 to 0.6 (-O3) | -4 to -1 (-O2), 11 to 13.8 (-O3) | -4 to 5.22 (-O2), 3.7 to 9.38 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.54 to 0.62 (-O2), 0.65 to 6.89 (-O3) | -0.584 to -0.432 (-O2), -0.282 to 0.221 (-O3) | 4.89 to 5.72 (-O2), 5.9 to 7.18 (-O3) | -4.3 to 4.49 (-O2), 8.15 to 12.1 (-O3) |
+| the constructor, 2 limbs, N = 7 | -2.65 to -0.37 (-O2), -8.03 to -3.86 (-O3) | -0.87 to 0.26 (-O2), 7.66 to 8.34 (-O3) | 2.41 to 3.25 (-O2), 8.53 to 9.54 (-O3) | -2.92 to 3.02 (-O2), -3.56 to -0.94 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.04 to 0.1 (-O2), -0.57 to 1.04 (-O3) | 0.17 to 1.74 (-O2), 15.8 to 17 (-O3) | -3.26 to 0.87 (-O2), 10.3 to 14.4 (-O3) | -1.7 to 2.99 (-O2), -2.24 to -0.59 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.31 to 0.42 (-O2), -0.12 to 1.25 (-O3) | -1.48 to -0.02 (-O2), 0.15 to 1.92 (-O3) | 2.83 to 3.65 (-O2), -12.8 to -12.7 (-O3) | -1.1 to 4.72 (-O2), -6.33 to 1.19 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.07 to 0.1 (-O2), -1.5 to 4.9 (-O3) | -15.4 to 0.5 (-O2), -1.2 to 13.4 (-O3) | 1.1 to 2.7 (-O2), -2.4 to -1.3 (-O3) | -2.2 to 3.4 (-O2), -2.1 to 0.9 (-O3) |
 
 | Short ball vectors, every size in one unit, a dependent chain: the check with its report cold, ns per operation (minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -6118,11 +6479,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 4.62 to 5.88 (-O2), 4.71 to 4.9 (-O3) | 0.243 to 0.432 (-O2), -0.146 to 0.032 (-O3) | 2.67 to 2.76 (-O2), 2.55 to 2.87 (-O3) | -1.63 to 2.62 (-O2), -1.86 to 2.47 (-O3) |
 | `scale`, 1 limb, N = 18 | -0.038 to 0.066 (-O2), 0.703 to 0.83 (-O3) | 0.119 to 0.196 (-O2), -0.035 to 0.104 (-O3) | 2.34 to 2.38 (-O2), 2.68 to 2.87 (-O3) | 2.65 to 2.69 (-O2), 2.58 to 2.77 (-O3) |
 | `scale`, 1 limb, N = 80 | 0.15 to 0.2 (-O2), 0.03 to 0.78 (-O3) | 0.07 to 0.11 (-O2), -0.89 to -0.15 (-O3) | 3.79 to 3.94 (-O2), 3.13 to 3.93 (-O3) | 3.38 to 3.53 (-O2), 1.51 to 2.86 (-O3) |
-| `scale`, 2 limbs, N = 3 | 6.17 to 6.28 | -0.299 to 1.04 (-O2), -0.957 to -0.17 (-O3) | 2.61 to 2.64 (-O2), -5.73 to -5.55 (-O3) | 2.84 to 2.9 (-O2), 2.87 to 7.45 (-O3) |
-| `scale`, 2 limbs, N = 7 | 6.7 to 7.01 | -0.102 to -0.007 (-O2), 0.748 to 0.753 (-O3) | 3.02 to 3.32 (-O2), -4.24 to -3.91 (-O3) | 2.07 to 2.16 (-O2), 2 to 2.1 (-O3) |
-| `scale`, 2 limbs, N = 13 | 0.395 to 0.401 (-O2), -1.14 to -0.306 (-O3) | -0.007 to -0.003 (-O2), -0.09 to -0.08 (-O3) | 2.38 to 2.5 (-O2), -4.89 to -4.65 (-O3) | 3.27 to 3.31 (-O2), 3.14 to 3.29 (-O3) |
-| `scale`, 2 limbs, N = 18 | -0.639 to -0.415 (-O2), -0.414 to -0.331 (-O3) | -0.03 to 0.04 (-O2), -1.16 to -1.08 (-O3) | 2.53 to 2.6 (-O2), -5.33 to -3.93 (-O3) | 1.86 to 1.92 |
-| `scale`, 2 limbs, N = 80 | 0.24 to 0.53 (-O2), 0.05 to 0.21 (-O3) | -0.22 to -0.1 (-O2), 0.09 to 0.1 (-O3) | 3.08 to 3.47 (-O2), -0.54 to -0.11 (-O3) | 1.33 to 1.53 (-O2), 1.05 to 1.51 (-O3) |
+| `scale`, 2 limbs, N = 3 | 6.74 to 8.56 (-O2), 4.33 to 9.04 (-O3) | 0.328 to 0.351 (-O2), -0.844 to 1.02 (-O3) | 2.27 to 2.3 (-O2), -5.87 to -5.75 (-O3) | 2.78 to 2.8 (-O2), 2.56 to 2.57 (-O3) |
+| `scale`, 2 limbs, N = 7 | 6.68 to 8.08 (-O2), 3.29 to 8.51 (-O3) | -0.262 to 0.458 (-O2), -0.634 to -0.208 (-O3) | 2.73 to 2.84 (-O2), -3.67 (-O3) | 2.02 to 2.07 |
+| `scale`, 2 limbs, N = 13 | -0.171 to 0.77 (-O2), -2.8 to 1.44 (-O3) | -0.33 to 0.56 (-O2), -0.91 to -0.63 (-O3) | 1.09 to 2.81 (-O2), -4.56 to -4.42 (-O3) | 0.75 to 3.61 (-O2), 3.59 to 3.6 (-O3) |
+| `scale`, 2 limbs, N = 18 | 0.345 to 0.71 (-O2), -3.93 to 0.37 (-O3) | -0.44 to 0.64 (-O2), -1.38 to -0.76 (-O3) | 2.43 to 2.57 (-O2), -2.82 to -2.38 (-O3) | 1.84 to 3.89 (-O2), -0.15 to 1.92 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.17 to 2.44 (-O2), -11.2 to 0.05 (-O3) | -2.07 to 1.01 (-O2), -3.83 to 0.81 (-O3) | 2.78 to 3.07 (-O2), -0.42 to -0.33 (-O3) | 1.35 to 1.37 (-O2), 1.39 to 1.45 (-O3) |
 | `half`, 1 limb, N = 3 | 0.3 to 1.2 (-O2), 0.55 to 1.25 (-O3) | 0.004 to 1.1 (-O2), 0.001 to 0.004 (-O3) | 2.18 to 2.36 (-O2), 2.39 to 2.64 (-O3) | 0.32 to 0.48 (-O2), 0.29 to 0.44 (-O3) |
 | `half`, 1 limb, N = 7 | 0.69 to 1.39 (-O2), 0.13 to 0.74 (-O3) | 0.001 to 0.085 (-O2), -0.003 to -0.002 (-O3) | 2.15 to 2.16 (-O2), 2.53 to 2.75 (-O3) | -0.06 to -0.03 (-O2), -0.13 to 0.05 (-O3) |
 | `half`, 1 limb, N = 13 | -0.3 to 0.53 (-O2), 0.02 to 0.26 (-O3) | 0.129 to 0.132 | 2.31 to 2.47 (-O2), 2.43 to 2.67 (-O3) | -0.28 to -0.13 (-O2), -0.34 to 0.18 (-O3) |
@@ -6138,11 +6499,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 0.45 to 1.35 (-O2), -0.78 to 0.47 (-O3) | -0.08 to -0.02 (-O2), 0.18 to 0.186 (-O3) | 2.97 to 3.13 (-O2), 4.01 to 4.2 (-O3) | 0.21 to 0.76 (-O2), 0.12 to 0.61 (-O3) |
 | the constructor, 1 limb, N = 18 | -0.74 to -0.38 (-O2), -1.27 to 1.19 (-O3) | 0.13 to 0.27 (-O2), 0.03 to 0.3 (-O3) | 4.6 to 4.76 (-O2), 4.27 to 4.69 (-O3) | 0.37 to 1.61 (-O2), -0.04 to 2.13 (-O3) |
 | the constructor, 1 limb, N = 80 | 0.2 to 0.55 (-O2), -0.13 to 0.93 (-O3) | -13.5 to 0.6 (-O2), -1.3 to -0.1 (-O3) | 1.7 to 2.2 (-O2), -1.7 to 2.1 (-O3) | -1.03 to 0.09 (-O2), 3.08 to 6.31 (-O3) |
-| the constructor, 2 limbs, N = 3 | 3.54 to 4.04 (-O2), 4.16 to 4.3 (-O3) | -0.204 to -0.006 (-O2), -0.552 to -0.116 (-O3) | 3.29 to 3.62 (-O2), 1.67 to 2.39 (-O3) | 9.45 to 9.75 |
-| the constructor, 2 limbs, N = 7 | -0.56 to 1.14 (-O2), 0.33 to 1.34 (-O3) | -0.25 to -0.14 (-O2), -0.343 to -0.163 (-O3) | 3.82 to 4.38 (-O2), 4.84 to 5.72 (-O3) | 1.14 to 2.82 (-O2), 1.15 to 2.61 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.89 to -0.66 (-O2), -4.04 to 0.02 (-O3) | 0.02 to 0.08 (-O2), -0.202 to -0.194 (-O3) | 2.93 to 3.04 (-O2), 0.71 to 1.31 (-O3) | 0.64 to 2.19 (-O2), 0.06 to 5.71 (-O3) |
-| the constructor, 2 limbs, N = 18 | -0.8 to -0.76 (-O2), -0.26 to -0.09 (-O3) | -0.06 to 0.56 (-O2), 0.02 to 1.16 (-O3) | -0.3 to 0.76 (-O2), -11.7 to -10.9 (-O3) | 2.18 to 2.47 (-O2), 0.95 to 5.41 (-O3) |
-| the constructor, 2 limbs, N = 80 | 2.36 to 5.04 (-O2), -0.18 to -0.13 (-O3) | -19.6 to 0 (-O2), -0.2 to 0.6 (-O3) | 19.3 to 22.4 (-O2), -0.9 to 1.8 (-O3) | -0.7 to 6.32 (-O2), 3.3 to 8.78 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.21 to 1.44 (-O2), 1.04 to 6.86 (-O3) | -0.017 to 0.57 (-O2), -0.245 to 0.279 (-O3) | 5.72 to 6.6 (-O2), 6.89 to 6.91 (-O3) | -0.11 to 4.41 (-O2), 11.8 to 13.2 (-O3) |
+| the constructor, 2 limbs, N = 7 | -4.52 to -1.51 (-O2), -8.1 to -1.79 (-O3) | -1.01 to 0.8 (-O2), -0.435 to -0.35 (-O3) | 4.77 to 5.07 (-O2), 6.54 to 7.03 (-O3) | 0.01 to 2.67 (-O2), -1.01 to 0.19 (-O3) |
+| the constructor, 2 limbs, N = 13 | -0.88 to 0.1 (-O2), -6.17 to 0.58 (-O3) | -1.23 to 0.59 (-O2), -1.31 to -0.79 (-O3) | -1.91 to 2.94 (-O2), 5.81 to 5.88 (-O3) | 0.3 to 3.13 (-O2), -0.01 to 1.21 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.36 to 2.18 (-O2), -6.96 to 2.51 (-O3) | -3.41 to 0.01 (-O2), 0.19 to 1.93 (-O3) | -0.28 to 0.02 (-O2), -14.5 to -10.2 (-O3) | 1.72 to 4.54 (-O2), -2.48 to 0.83 (-O3) |
+| the constructor, 2 limbs, N = 80 | 2.65 to 6.5 (-O2), -31.6 to 2.7 (-O3) | -11.5 to 3.7 (-O2), -14.4 to 13.5 (-O3) | -22.6 to -20.6 (-O2), -3.3 to -2.6 (-O3) | 0.4 to 4 (-O2), 1.2 to 1.6 (-O3) |
 
 | Short ball vectors, every size in one unit, a dependent chain: with the check over without | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -6181,11 +6542,11 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 13 | 1.54 to 1.59 (-O2), 1.41 to 1.58 (-O3) | 1.02 to 1.05 | 1.19 to 1.22 | 0.86 to 1.37 (-O2), 0.85 to 1.36 (-O3) |
 | `scale`, 1 limb, N = 18 | 1.00 to 1.01 (-O2), 1.04 to 1.09 (-O3) | 1.01 to 1.06 | 1.16 to 1.17 (-O2), 1.19 to 1.21 (-O3) | 1.39 to 1.40 (-O2), 1.38 to 1.43 (-O3) |
 | `scale`, 1 limb, N = 80 | 0.98 to 1.01 | 1.01 to 1.03 | 1.12 to 1.16 | 1.22 to 1.23 (-O2), 1.08 to 1.81 (-O3) |
-| `scale`, 2 limbs, N = 3 | 1.79 to 1.87 (-O2), 1.76 to 1.78 (-O3) | 0.94 (-O2), 1.21 to 1.23 (-O3) | 1.15 to 1.16 (-O2), 0.75 to 0.76 (-O3) | 1.31 to 1.33 (-O2), 1.24 to 1.26 (-O3) |
-| `scale`, 2 limbs, N = 7 | 1.07 to 1.11 (-O2), 1.06 to 1.10 (-O3) | 1.04 to 1.07 | 1.14 to 1.15 (-O2), 0.79 to 0.80 (-O3) | 1.41 to 1.44 |
-| `scale`, 2 limbs, N = 13 | 1.00 (-O2), 0.91 to 1.00 (-O3) | 1.01 to 1.02 | 1.14 (-O2), 0.77 to 0.78 (-O3) | 1.27 to 1.30 |
-| `scale`, 2 limbs, N = 18 | 0.96 to 0.99 | 1.00 (-O2), 0.93 to 0.96 (-O3) | 1.11 (-O2), 0.78 to 0.83 (-O3) | 1.12 to 1.13 |
-| `scale`, 2 limbs, N = 80 | 0.99 to 1.01 | 0.99 to 1.02 | 1.06 to 1.07 (-O2), 0.98 to 1.00 (-O3) | 1.02 to 1.04 |
+| `scale`, 2 limbs, N = 3 | 1.79 to 1.87 (-O2), 1.84 to 1.93 (-O3) | 0.96 to 1.01 (-O2), 1.10 to 1.44 (-O3) | 1.16 (-O2), 0.75 to 0.96 (-O3) | 1.31 to 1.34 |
+| `scale`, 2 limbs, N = 7 | 1.05 to 1.10 (-O2), 1.05 to 1.06 (-O3) | 1.00 to 1.02 (-O2), 1.04 to 1.08 (-O3) | 1.14 to 1.15 (-O2), 0.81 (-O3) | 1.43 to 1.44 |
+| `scale`, 2 limbs, N = 13 | 0.94 to 1.07 (-O2), 1.02 to 1.11 (-O3) | 0.98 to 1.05 (-O2), 0.97 to 1.01 (-O3) | 1.05 to 1.14 (-O2), 0.79 to 0.88 (-O3) | 1.03 to 1.57 (-O2), 1.30 to 1.31 (-O3) |
+| `scale`, 2 limbs, N = 18 | 1.01 to 1.02 (-O2), 0.92 to 1.06 (-O3) | 0.97 to 1.01 (-O2), 0.89 to 0.95 (-O3) | 1.11 (-O2), 0.84 to 0.88 (-O3) | 1.12 (-O2), 0.98 to 1.13 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.99 to 1.04 | 0.96 to 1.01 (-O2), 0.95 to 1.02 (-O3) | 1.06 (-O2), 0.99 (-O3) | 1.03 to 1.04 |
 | `half`, 1 limb, N = 3 | 1.00 to 1.07 (-O2), 1.10 to 1.13 (-O3) | 1.17 (-O2), 1.03 (-O3) | 1.14 to 1.15 (-O2), 1.28 to 1.30 (-O3) | 1.06 to 1.08 |
 | `half`, 1 limb, N = 7 | 1.01 to 1.06 (-O2), 1.01 to 1.07 (-O3) | 1.14 (-O2), 1.05 (-O3) | 1.13 to 1.14 (-O2), 1.24 to 1.27 (-O3) | 1.01 to 1.03 |
 | `half`, 1 limb, N = 13 | 0.97 to 0.98 (-O2), 1.00 to 1.02 (-O3) | 1.07 to 1.11 | 1.16 (-O2), 1.27 to 1.29 (-O3) | 0.99 to 1.03 |
@@ -6201,69 +6562,74 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 1 limb, N = 13 | 1.02 to 1.08 (-O2), 0.98 to 1.02 (-O3) | 1.00 to 1.01 (-O2), 2.90 to 2.91 (-O3) | 1.12 (-O2), 1.42 to 1.44 (-O3) | 1.00 to 1.02 |
 | the constructor, 1 limb, N = 18 | 0.96 to 0.98 (-O2), 0.92 to 1.02 (-O3) | 1.00 to 1.01 (-O2), 1.07 to 1.08 (-O3) | 1.08 to 1.10 (-O2), 1.19 to 1.21 (-O3) | 1.01 to 1.06 |
 | the constructor, 1 limb, N = 80 | 0.97 to 0.98 (-O2), 0.95 to 1.02 (-O3) | 0.96 to 1.00 (-O2), 1.00 to 1.02 (-O3) | 0.99 to 1.01 | 1.04 (-O2), 1.03 to 1.10 (-O3) |
-| the constructor, 2 limbs, N = 3 | 1.34 to 1.44 (-O2), 1.34 to 1.46 (-O3) | 0.91 to 0.92 (-O2), 0.89 to 0.99 (-O3) | 1.18 to 1.20 (-O2), 1.37 to 1.47 (-O3) | 1.43 to 2.14 (-O2), 2.08 to 2.11 (-O3) |
-| the constructor, 2 limbs, N = 7 | 1.00 to 1.04 (-O2), 1.05 to 1.09 (-O3) | 0.99 to 1.00 (-O2), 1.92 to 1.96 (-O3) | 1.21 (-O2), 1.63 to 1.70 (-O3) | 0.88 to 1.19 (-O2), 1.07 to 1.15 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.94 to 0.98 (-O2), 0.82 to 1.04 (-O3) | 1.00 (-O2), 2.65 (-O3) | 1.12 to 1.13 (-O2), 1.36 to 1.40 (-O3) | 1.00 to 1.02 (-O2), 1.00 to 1.09 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.97 to 0.99 | 1.00 to 1.03 | 0.99 to 1.00 (-O2), 0.85 to 0.87 (-O3) | 1.01 to 1.07 (-O2), 1.05 to 1.19 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.04 to 1.07 (-O2), 1.00 (-O3) | 0.99 to 1.00 (-O2), 0.94 to 1.00 (-O3) | 0.98 to 0.99 (-O2), 1.07 to 1.09 (-O3) | 0.96 to 1.05 (-O2), 1.04 to 1.10 (-O3) |
+| the constructor, 2 limbs, N = 3 | 1.03 (-O2), 1.04 to 1.46 (-O3) | 0.92 to 0.94 (-O2), 0.96 to 1.03 (-O3) | 1.33 to 1.39 (-O2), 1.39 to 1.49 (-O3) | 0.84 to 1.21 (-O2), 1.58 to 1.86 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.90 to 0.98 (-O2), 0.72 to 0.85 (-O3) | 0.96 to 1.01 (-O2), 2.01 to 2.11 (-O3) | 1.11 to 1.15 (-O2), 1.53 to 1.60 (-O3) | 0.90 to 1.11 (-O2), 0.88 to 0.97 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.00 (-O2), 0.98 to 1.05 (-O3) | 1.00 to 1.05 (-O2), 2.17 to 2.26 (-O3) | 0.93 to 1.02 (-O2), 1.42 to 1.59 (-O3) | 0.95 to 1.10 (-O2), 0.94 to 0.98 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 to 1.04 | 0.98 to 1.00 (-O2), 1.00 to 1.04 (-O3) | 1.05 to 1.06 (-O2), 0.74 to 0.75 (-O3) | 0.98 to 1.11 (-O2), 0.85 to 1.03 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 (-O2), 0.99 to 1.05 (-O3) | 0.96 to 1.00 (-O2), 1.00 to 1.04 (-O3) | 0.99 to 1.01 | 0.98 to 1.02 |
 
 #### Question 15: the guards
 
 | The guards: the loop with them over the same loop without, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `dot`, one limb (3 operations per term against 1), L1 | 1.02 to 1.09 (-O2), 1.02 to 1.03 (-O3) | 1.02 to 1.10 (-O2), 0.96 to 1.00 (-O3) | 1.01 to 1.02 (-O2), 0.83 to 1.01 (-O3) | 0.99 to 1.00 |
-| `axpy`, one limb (y guarded), L1 | 1.07 | 1.00 to 1.02 | 1.09 to 1.13 | 1.15 to 1.16 |
-| `axpy`, two limbs, a of T (y guarded), L1 | 1.04 to 1.05 | 1.05 to 1.06 | 1.00 | 1.00 |
-| `axpy`, two limbs, a of two limbs (y guarded), L1 | 1.03 | 1.04 to 1.09 | 0.99 to 1.00 | 1.00 |
+| `dot`, one limb (3 operations per term against 1), L1 | 1.02 to 1.03 | 1.00 to 1.05 | 1.02 to 1.03 | 0.99 |
+| `axpy`, one limb (y guarded), L1 | 1.07 | 1.00 to 1.03 | 1.09 to 1.13 | 1.15 to 1.16 |
+| `dot`, two limbs (every limb of both factors guarded), L1 | 1.01 | 1.00 to 1.01 | 1.00 | 0.99 to 1.00 |
+| `axpy`, two limbs, a of T (a, x and y guarded), L1 | 1.11 to 1.12 | 1.13 (-O2), 1.12 to 1.18 (-O3) | 1.13 | 1.14 |
+| `axpy`, two limbs, a of two limbs (a, x and y guarded), L1 | 1.10 to 1.14 | 1.11 to 1.15 | 1.11 to 1.12 | 1.16 to 1.17 |
 | `scale`, two limbs (the limbs and a guarded), L1 | 1.16 | 1.20 | 1.16 | 1.16 |
 | `sum`, one limb (the element guarded), L1 | 1.08 to 1.09 (-O2), 1.04 to 1.16 (-O3) | 1.06 to 1.07 (-O2), 1.09 to 1.15 (-O3) | 1.02 (-O2), 0.97 to 0.99 (-O3) | 1.01 to 1.02 |
 | `sum`, two limbs (the limbs guarded), L1 | 1.02 to 1.09 (-O2), 1.02 (-O3) | 0.99 to 1.01 | 1.01 | 1.01 to 1.02 |
 | `add`, one limb (both guarded), L1 | 1.12 | 1.07 to 1.10 | 1.19 to 1.20 (-O2), 1.19 to 1.45 (-O3) | 1.43 to 1.44 |
 | `add`, two limbs (every limb guarded), L1 | 1.13 to 1.16 | 1.15 to 1.18 | 1.19 | 1.20 to 1.21 |
-| `dot`, one limb (3 operations per term against 1), LLC | 0.97 to 1.00 (-O2), 1.00 to 1.04 (-O3) | 1.00 | 1.00 to 1.01 | 0.99 to 1.00 |
-| `axpy`, one limb (y guarded), LLC | 1.03 | 1.00 | 0.98 to 0.99 | 0.98 to 0.99 |
-| `axpy`, two limbs, a of T (y guarded), LLC | 1.04 to 1.05 | 1.05 | 0.99 to 1.00 | 0.99 to 1.01 |
-| `axpy`, two limbs, a of two limbs (y guarded), LLC | 1.03 to 1.04 | 1.04 to 1.05 | 0.99 to 1.00 | 0.99 to 1.00 |
+| `dot`, one limb (3 operations per term against 1), LLC | 1.00 | 1.00 | 1.00 | 1.00 |
+| `axpy`, one limb (y guarded), LLC | 1.01 to 1.03 | 0.96 to 1.00 | 0.98 to 0.99 | 0.98 |
+| `dot`, two limbs (every limb of both factors guarded), LLC | 1.00 to 1.01 | 1.00 to 1.01 | 1.00 | 0.99 |
+| `axpy`, two limbs, a of T (a, x and y guarded), LLC | 1.10 to 1.13 | 1.08 to 1.14 (-O2), 1.13 (-O3) | 1.12 to 1.13 | 1.13 |
+| `axpy`, two limbs, a of two limbs (a, x and y guarded), LLC | 1.09 to 1.10 (-O2), 1.08 to 1.15 (-O3) | 1.10 to 1.11 | 1.12 | 1.16 to 1.17 |
 | `scale`, two limbs (the limbs and a guarded), LLC | 1.15 to 1.16 | 1.19 to 1.20 | 1.14 to 1.15 | 1.14 to 1.15 |
 | `sum`, one limb (the element guarded), LLC | 1.02 to 1.04 | 0.95 to 1.00 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.01 | 0.99 to 1.00 |
 | `sum`, two limbs (the limbs guarded), LLC | 1.03 to 1.07 | 1.00 (-O2), 0.98 to 1.05 (-O3) | 1.01 to 1.02 | 1.02 to 1.03 |
 | `add`, one limb (both guarded), LLC | 1.04 | 1.00 | 0.96 to 0.97 | 0.97 to 0.98 |
 | `add`, two limbs (every limb guarded), LLC | 1.14 to 1.15 | 1.16 to 1.17 | 1.19 | 1.19 to 1.20 |
-| `conv`, one limb, 16 coefficients (both factors guarded) | 0.99 to 1.00 | 1.00 to 1.01 (-O2), 1.09 to 1.10 (-O3) | 1.06 to 1.10 (-O2), 1.13 to 1.15 (-O3) | 1.02 to 1.03 |
-| `conv`, one limb, 64 coefficients (both factors guarded) | 1.07 to 1.08 | 1.04 to 1.05 | 1.13 to 1.14 (-O2), 0.90 to 1.02 (-O3) | 1.14 to 1.15 |
-| `conv`, one limb, 512 coefficients (both factors guarded) | 1.02 to 1.06 | 1.01 to 1.04 | 1.00 to 1.02 | 1.01 |
+| `conv`, one limb, 16 coefficients (both factors guarded) | 0.97 to 1.01 | 0.98 to 1.02 (-O2), 1.09 (-O3) | 1.27 to 1.29 (-O2), 1.11 to 1.12 (-O3) | 1.02 to 1.03 |
+| `conv`, one limb, 64 coefficients (both factors guarded) | 1.06 to 1.08 (-O2), 1.07 to 1.11 (-O3) | 1.03 to 1.06 | 1.01 to 1.03 | 1.14 to 1.15 |
+| `conv`, one limb, 512 coefficients (both factors guarded) | 1.02 to 1.03 | 1.03 to 1.04 | 1.00 | 1.01 |
+| `conv`, two limbs, 16 coefficients (every limb of both factors guarded) | 1.06 to 1.07 | 1.05 to 1.08 | 1.01 to 1.02 | 1.02 to 1.03 |
+| `conv`, two limbs, 64 coefficients (every limb of both factors guarded) | 1.01 to 1.02 | 1.01 to 1.05 | 1.00 | 1.00 |
+| `conv`, two limbs, 512 coefficients (every limb of both factors guarded) | 1.01 | 1.00 | 0.99 to 1.00 | 0.99 to 1.00 |
 
 | The guards against the control of T, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `dot`, one limb, with the guards, over the plain FMA loop in the same order, L1 | 1.03 to 1.07 (-O2), 1.03 to 1.08 (-O3) | 1.07 to 1.13 (-O2), 0.95 to 0.96 (-O3) | 1.00 to 1.03 (-O2), 0.89 to 0.91 (-O3) | 1.04 to 1.05 |
-| `dot`, one limb, without them, over the same, L1 | 0.98 to 1.03 (-O2), 1.00 to 1.05 (-O3) | 1.02 to 1.05 (-O2), 0.95 to 1.00 (-O3) | 0.99 to 1.01 (-O2), 0.89 to 1.10 (-O3) | 1.05 to 1.06 |
-| `axpy`, one limb, with them, over `a x + y` of T, L1 | 2.67 to 2.70 | 0.88 (-O2), 1.63 (-O3) | 0.66 (-O2), 1.89 to 2.07 (-O3) | 1.65 to 1.67 |
-| `axpy`, one limb, without them, over the same, L1 | 2.49 to 2.52 | 0.86 (-O2), 1.62 to 1.63 (-O3) | 0.59 to 0.60 (-O2), 1.71 to 1.88 (-O3) | 1.43 to 1.44 |
+| `dot`, one limb, with the guards, over the plain FMA loop in the same order, L1 | 0.99 to 1.03 | 1.05 to 1.07 (-O2), 0.96 to 1.00 (-O3) | 1.00 (-O2), 0.90 to 0.91 (-O3) | 1.04 to 1.05 |
+| `dot`, one limb, without them, over the same, L1 | 0.97 to 1.01 | 1.01 to 1.05 (-O2), 0.95 (-O3) | 0.98 to 0.99 (-O2), 0.88 (-O3) | 1.05 |
+| `axpy`, one limb, with them, over `a x + y` of T, L1 | 2.69 to 2.70 (-O2), 2.59 to 2.70 (-O3) | 0.82 to 0.88 (-O2), 1.63 to 1.67 (-O3) | 0.66 (-O2), 1.92 to 1.93 (-O3) | 1.66 to 1.67 |
+| `axpy`, one limb, without them, over the same, L1 | 2.51 to 2.52 (-O2), 2.41 to 2.51 (-O3) | 0.82 to 0.86 (-O2), 1.62 to 1.63 (-O3) | 0.60 (-O2), 1.71 to 1.72 (-O3) | 1.44 to 1.45 |
 | `scale`, two limbs, with them, over `x a` of T, L1 | 5.53 to 5.59 | 1.50 to 1.52 (-O2), 2.78 to 2.79 (-O3) | 1.56 to 1.57 (-O2), 2.88 to 2.96 (-O3) | 5.98 to 6.02 |
 | `scale`, two limbs, without them, over the same, L1 | 4.76 to 4.82 | 1.24 to 1.27 (-O2), 2.32 (-O3) | 1.34 to 1.35 (-O2), 2.49 to 2.54 (-O3) | 5.15 to 5.18 |
-| `dot`, one limb, with the guards, over the plain FMA loop in the same order, LLC | 0.97 to 1.07 (-O2), 1.00 to 1.07 (-O3) | 0.95 to 1.00 (-O2), 0.98 to 1.06 (-O3) | 0.99 to 1.00 | 0.99 to 1.00 |
-| `dot`, one limb, without them, over the same, LLC | 1.00 to 1.07 (-O2), 0.97 to 1.07 (-O3) | 0.94 to 1.00 (-O2), 0.98 to 1.06 (-O3) | 1.00 | 1.00 |
-| `axpy`, one limb, with them, over `a x + y` of T, LLC | 1.29 to 1.74 (-O2), 1.30 to 1.74 (-O3) | 1.00 (-O2), 1.26 to 1.77 (-O3) | 0.72 to 0.73 (-O2), 1.10 to 1.12 (-O3) | 1.08 to 1.11 (-O2), 0.96 to 1.10 (-O3) |
-| `axpy`, one limb, without them, over the same, LLC | 1.26 to 1.69 (-O2), 1.26 to 1.69 (-O3) | 1.00 (-O2), 1.26 to 1.77 (-O3) | 0.73 to 0.74 (-O2), 1.12 to 1.14 (-O3) | 1.11 to 1.13 (-O2), 0.97 to 1.11 (-O3) |
+| `dot`, one limb, with the guards, over the plain FMA loop in the same order, LLC | 1.00 | 1.00 | 0.99 to 1.00 | 1.00 |
+| `dot`, one limb, without them, over the same, LLC | 1.00 | 1.00 | 1.00 | 1.00 |
+| `axpy`, one limb, with them, over `a x + y` of T, LLC | 1.30 to 1.75 (-O2), 1.32 to 1.75 (-O3) | 0.96 to 1.00 (-O2), 1.67 to 1.68 (-O3) | 0.72 to 0.73 (-O2), 0.95 (-O3) | 0.95 to 1.10 (-O2), 0.95 to 1.06 (-O3) |
+| `axpy`, one limb, without them, over the same, LLC | 1.26 to 1.71 (-O2), 1.28 to 1.72 (-O3) | 1.00 (-O2), 1.67 to 1.68 (-O3) | 0.73 to 0.74 (-O2), 0.96 (-O3) | 0.97 to 1.12 (-O2), 0.97 to 1.08 (-O3) |
 | `scale`, two limbs, with them, over `x a` of T, LLC | 3.49 to 5.14 (-O2), 3.45 to 4.97 (-O3) | 1.58 to 1.59 (-O2), 2.99 to 3.01 (-O3) | 0.83 to 1.44 (-O2), 2.41 to 2.42 (-O3) | 2.41 to 2.42 (-O2), 2.41 to 2.91 (-O3) |
 | `scale`, two limbs, without them, over the same, LLC | 3.01 to 4.43 (-O2), 3.00 to 4.28 (-O3) | 1.33 (-O2), 2.50 to 2.52 (-O3) | 0.72 to 1.26 (-O2), 2.11 to 2.12 (-O3) | 2.09 to 2.11 (-O2), 2.10 to 2.53 (-O3) |
-| `conv`, one limb, 16, with them, over the plain FMA loop | 0.99 to 1.01 | 1.08 to 1.11 (-O2), 1.20 (-O3) | 1.20 to 1.25 (-O2), 1.26 to 1.30 (-O3) | 1.16 to 1.17 |
-| `conv`, one limb, 16, without them, over the same | 1.00 to 1.01 | 1.09 to 1.10 | 1.10 to 1.15 | 1.13 to 1.15 |
-| `conv`, one limb, 64, with them, over the plain FMA loop | 1.05 to 1.06 | 1.02 to 1.05 | 1.18 to 1.19 (-O2), 1.06 (-O3) | 1.21 to 1.22 |
-| `conv`, one limb, 64, without them, over the same | 0.98 to 0.99 | 0.97 to 1.01 | 1.04 (-O2), 1.04 to 1.18 (-O3) | 1.06 to 1.07 |
-| `conv`, one limb, 512, with them, over the plain FMA loop | 1.02 to 1.05 | 1.03 to 1.09 (-O2), 1.03 (-O3) | 1.00 to 1.01 | 1.02 |
-| `conv`, one limb, 512, without them, over the same | 0.99 to 1.00 | 1.00 to 1.05 (-O2), 1.00 (-O3) | 1.00 | 1.01 |
+| `conv`, one limb, 16, with them, over the plain FMA loop | 0.98 to 1.01 | 1.08 to 1.12 (-O2), 1.19 (-O3) | 1.43 to 1.46 (-O2), 1.27 (-O3) | 1.16 to 1.19 |
+| `conv`, one limb, 16, without them, over the same | 0.99 to 1.01 | 1.09 to 1.10 | 1.13 to 1.14 | 1.14 to 1.16 |
+| `conv`, one limb, 64, with them, over the plain FMA loop | 1.05 to 1.10 (-O2), 1.08 to 1.13 (-O3) | 1.03 to 1.08 (-O2), 1.02 to 1.04 (-O3) | 1.05 to 1.07 | 1.21 to 1.22 |
+| `conv`, one limb, 64, without them, over the same | 0.97 to 1.02 | 1.00 to 1.03 (-O2), 0.96 to 0.98 (-O3) | 1.03 to 1.04 | 1.06 |
+| `conv`, one limb, 512, with them, over the plain FMA loop | 1.02 to 1.03 | 1.03 to 1.04 | 0.99 to 1.00 | 1.02 |
+| `conv`, one limb, 512, without them, over the same | 1.00 | 1.00 | 0.99 to 1.00 | 1.01 |
 
 | The guards of the accumulator: with over without, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
 | `add_product`, one limb (both factors guarded), L1 | 1.02 to 1.08 (-O2), 1.03 to 1.06 (-O3) | 1.03 to 1.08 (-O2), 1.03 to 1.10 (-O3) | 1.01 | 1.00 |
-| `add_product`, two limbs (every limb guarded), L1 | 0.99 to 1.02 | 1.00 to 1.03 | 1.00 | 1.00 |
+| `add_product`, two limbs (every limb guarded), L1 | 1.00 | 1.00 to 1.01 | 1.00 | 1.00 |
 | `add_product`, one limb, the public member over the kernels without the guards, L1 | 1.02 to 1.08 (-O2), 1.02 to 1.05 (-O3) | 1.03 to 1.07 | 1.03 to 1.04 | 1.00 |
-| `add_product`, two limbs, the same, L1 | 0.96 to 1.02 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.04 | 1.00 | 1.00 |
+| `add_product`, two limbs, the same, L1 | 1.00 | 1.00 to 1.06 (-O2), 1.00 (-O3) | 1.00 | 1.00 |
 | `add_product`, one limb (both factors guarded), LLC | 0.99 to 1.00 | 1.00 to 1.05 (-O2), 0.98 to 1.01 (-O3) | 1.00 | 1.00 |
-| `add_product`, two limbs (every limb guarded), LLC | 0.98 to 1.01 | 1.00 to 1.01 | 1.00 | 1.00 |
+| `add_product`, two limbs (every limb guarded), LLC | 1.00 (-O2), 0.94 to 1.00 (-O3) | 1.00 to 1.03 | 1.00 | 1.00 |
 | `add_product`, one limb, the public member over the kernels without the guards, LLC | 0.96 to 1.04 (-O2), 0.99 to 1.00 (-O3) | 1.02 to 1.05 (-O2), 0.98 to 1.00 (-O3) | 1.00 to 1.01 | 1.00 |
-| `add_product`, two limbs, the same, LLC | 0.98 to 1.00 | 1.00 | 1.00 | 1.00 |
+| `add_product`, two limbs, the same, LLC | 1.00 (-O2), 0.93 to 1.00 (-O3) | 1.00 to 1.04 | 1.00 | 1.00 |
 
 #### Question 16: the accumulator
 
@@ -6272,18 +6638,18 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `add`, one limb, L1 | 0.616 to 0.642 | 0.642 to 0.665 (-O2), 0.606 to 0.675 (-O3) | 1.3 to 1.31 | 0.884 to 0.897 |
 | `add_product`, one limb, L1 | 0.994 to 1.03 | 0.976 to 1.04 (-O2), 0.974 to 1.05 (-O3) | 1.53 | 1.48 to 1.5 |
 | `add`, two limbs, L1 | 7.86 to 8.21 | 7.45 to 7.94 (-O2), 7.43 to 8.29 (-O3) | 10.2 | 10.1 to 10.2 |
-| `add_product`, two limbs, L1 | 7.83 to 8.17 | 7.31 to 8.15 (-O2), 7.27 to 8.13 (-O3) | 10.2 | 10.2 to 10.3 |
+| `add_product`, two limbs, L1 | 7.3 to 9.01 (-O2), 7.32 to 9.01 (-O3) | 8.76 to 9.02 | 10.2 | 10.1 to 10.2 |
 | `add` of a value of T, two limbs, L1 | 7.67 to 7.99 | 7.11 to 7.8 (-O2), 7.33 to 8.19 (-O3) | 10.1 to 10.2 | 10.1 to 10.3 |
-| `add_product` of two values of T, two limbs, L1 | 7.87 to 8.21 | 7.34 to 8.03 (-O2), 7.25 to 8.11 (-O3) | 10.2 | 10.2 to 10.4 |
+| `add_product` of two values of T, two limbs, L1 | 7.33 to 9.05 (-O2), 7.44 to 9.05 (-O3) | 8.32 to 9.05 (-O2), 8.94 (-O3) | 10.2 | 10.2 |
 | `add` into 4 accumulators merged, one limb, L1 | 0.536 to 0.559 | 0.551 to 0.569 (-O2), 0.554 to 0.59 (-O3) | 3.09 to 3.17 | 0.819 to 0.833 |
 | `add` into 16 accumulators merged, two limbs, L1 | 6.38 to 6.55 | 5.92 to 6.41 (-O2), 5.89 to 6.6 (-O3) | 12.2 to 12.3 | 9.98 to 10.1 |
 | `add` into W accumulators in the lane order, two limbs, L1 | 4.01 to 4.18 | 5.89 to 6.34 (-O2), 3.73 to 4.17 (-O3) | 4.82 to 4.83 | 3.99 to 4.05 |
 | `add`, one limb, LLC | 0.643 to 0.671 | 0.755 to 0.766 (-O2), 0.714 to 0.796 (-O3) | 1.3 to 1.31 | 0.901 to 0.919 |
 | `add_product`, one limb, LLC | 1.06 to 1.1 | 1.06 to 1.08 (-O2), 0.988 to 1.1 (-O3) | 1.51 to 1.52 | 1.5 to 1.53 |
 | `add`, two limbs, LLC | 7.96 to 8.34 | 7.39 to 7.85 (-O2), 7.54 to 8.32 (-O3) | 10.2 | 10.1 to 10.3 |
-| `add_product`, two limbs, LLC | 7.92 to 8.26 | 7.35 to 8.16 (-O2), 7.33 to 8.21 (-O3) | 10.2 | 10.2 to 10.4 |
+| `add_product`, two limbs, LLC | 7.38 to 9.1 (-O2), 7.39 to 9.1 (-O3) | 8.76 to 9.07 | 10.2 | 10.2 |
 | `add` of a value of T, two limbs, LLC | 7.75 to 8.02 | 7.15 to 7.87 (-O2), 7.36 to 8.21 (-O3) | 10.2 | 10.2 to 10.3 |
-| `add_product` of two values of T, two limbs, LLC | 7.97 to 8.3 | 7.41 to 8.11 (-O2), 7.32 to 8.19 (-O3) | 10.2 to 10.3 | 10.2 to 10.4 |
+| `add_product` of two values of T, two limbs, LLC | 7.41 to 9.14 (-O2), 7.95 to 9.15 (-O3) | 8.79 to 9.14 (-O2), 8.68 to 9.03 (-O3) | 10.2 | 10.2 |
 | `add` into 4 accumulators merged, one limb, LLC | 0.643 to 0.671 | 0.719 to 0.751 | 3.31 to 3.39 | 0.902 to 0.917 |
 | `add` into 16 accumulators merged, two limbs, LLC | 7.98 to 8.33 | 7.43 to 8.22 (-O2), 7.28 to 7.97 (-O3) | 12.5 | 10.1 to 10.3 |
 | `add` into W accumulators in the lane order, two limbs, LLC | 4.05 to 4.22 | 5.94 to 6.63 (-O2), 3.76 to 4.22 (-O3) | 4.77 to 4.78 | 3.96 to 4.02 |
@@ -6296,10 +6662,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `add_product`, one limb, over `dot`, L1 | 2.45 to 2.51 (-O2), 2.45 to 2.52 (-O3) | 2.45 to 2.54 (-O2), 2.42 to 2.52 (-O3) | 4.32 to 4.37 | 4.57 to 4.58 |
 | `add`, two limbs, over `sum` sequential, L1 | 1.00 to 1.02 | 0.96 to 1.02 (-O2), 0.97 to 1.01 (-O3) | 1.00 | 1.00 |
 | `add`, two limbs, over `sum`, L1 | 2.02 to 2.06 | 1.93 to 1.99 (-O2), 2.03 to 2.04 (-O3) | 3.82 to 3.92 | 3.91 to 3.92 |
-| `add_product`, two limbs, over `dot` sequential, L1 | 1.01 to 1.04 | 0.98 to 1.04 (-O2), 1.00 to 1.04 (-O3) | 1.00 | 0.98 to 0.99 |
-| `add_product`, two limbs, over `dot`, L1 | 2.04 to 2.08 | 1.90 to 2.10 (-O2), 2.02 to 2.06 (-O3) | 3.83 to 3.92 | 3.87 to 3.90 |
+| `add_product`, two limbs, over `dot` sequential, L1 | 0.99 to 1.01 | 1.00 to 1.04 | 1.00 | 0.99 to 1.00 |
+| `add_product`, two limbs, over `dot`, L1 | 1.93 to 2.03 (-O2), 1.98 to 2.03 (-O3) | 1.97 to 2.05 (-O2), 2.02 to 2.05 (-O3) | 3.83 to 3.91 | 3.89 to 3.90 |
 | `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, L1 | 0.95 to 1.01 (-O2), 0.93 to 0.98 (-O3) | 0.97 to 1.00 | 1.00 | 1.00 |
-| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, L1 | 0.98 to 1.02 (-O2), 1.01 to 1.06 (-O3) | 0.97 to 1.04 (-O2), 0.99 to 1.01 (-O3) | 1.00 | 0.99 to 1.00 |
+| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, L1 | 1.01 (-O2), 0.96 to 1.01 (-O3) | 0.97 to 1.01 (-O2), 1.00 to 1.04 (-O3) | 1.00 to 1.01 | 1.00 |
 | 4 accumulators merged over one, one limb, L1 | 0.84 to 0.89 (-O2), 0.85 to 0.89 (-O3) | 0.85 to 0.86 (-O2), 0.87 to 0.91 (-O3) | 2.38 to 2.44 (-O2), 2.37 to 2.43 (-O3) | 0.92 to 0.93 |
 | 16 accumulators merged over one, one limb, L1 | 0.62 to 0.65 | 0.65 to 0.66 (-O2), 0.65 to 0.72 (-O3) | 1.74 to 1.77 | 0.70 to 0.71 |
 | W accumulators in the lane order over one, one limb, L1 | 0.54 to 0.57 | 0.54 to 0.56 (-O2), 0.50 to 0.54 (-O3) | 3.20 to 3.37 (-O2), 0.45 to 0.46 (-O3) | 0.47 |
@@ -6309,17 +6675,17 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | W accumulators in the lane order over one, two limbs, L1 | 0.49 to 0.52 | 0.79 to 0.80 (-O2), 0.50 to 0.51 (-O3) | 0.47 | 0.39 to 0.40 |
 | W accumulators in the lane order over `sum`, two limbs, L1 | 0.99 to 1.06 (-O2), 1.03 (-O3) | 1.52 to 1.59 (-O2), 1.02 to 1.04 (-O3) | 1.80 to 1.85 | 1.54 to 1.56 |
 | the public members over the kernels, `add`, two limbs, L1 | 1.00 to 1.02 | 0.98 to 1.03 (-O2), 0.98 to 1.00 (-O3) | 1.00 | 1.00 |
-| the public members over the kernels, `add_product`, two limbs, L1 | 0.97 to 1.03 (-O2), 0.99 to 1.00 (-O3) | 0.99 to 1.02 | 1.00 | 1.00 |
+| the public members over the kernels, `add_product`, two limbs, L1 | 1.00 | 1.00 to 1.05 | 1.00 | 1.00 |
 | `add`, one limb, over `sum` sequential, LLC | 0.88 to 0.92 | 1.01 to 1.12 (-O2), 1.04 to 1.07 (-O3) | 1.44 to 1.45 | 1.00 |
 | `add`, one limb, over `sum`, LLC | 1.81 to 1.87 (-O2), 1.71 to 1.73 (-O3) | 2.03 to 2.23 (-O2), 2.08 to 2.14 (-O3) | 5.73 to 5.76 | 3.98 to 4.00 |
 | `add_product`, one limb, over `dot` sequential, LLC | 0.96 to 1.02 (-O2), 0.98 to 1.03 (-O3) | 1.02 to 1.07 (-O2), 1.00 (-O3) | 1.00 to 1.01 | 1.00 |
 | `add_product`, one limb, over `dot`, LLC | 1.92 to 2.05 (-O2), 1.94 to 2.07 (-O3) | 2.04 to 2.15 (-O2), 1.96 to 2.00 (-O3) | 3.99 to 4.01 | 3.97 to 3.99 |
 | `add`, two limbs, over `sum` sequential, LLC | 0.99 to 1.04 | 0.96 to 0.98 (-O2), 0.97 to 1.03 (-O3) | 1.00 | 1.00 |
 | `add`, two limbs, over `sum`, LLC | 1.99 to 2.09 (-O2), 1.93 to 1.99 (-O3) | 1.86 to 1.96 (-O2), 1.99 to 2.01 (-O3) | 3.99 to 4.00 | 3.98 to 3.99 |
-| `add_product`, two limbs, over `dot` sequential, LLC | 0.97 to 1.02 | 0.99 to 1.02 | 1.00 | 0.99 to 1.00 |
-| `add_product`, two limbs, over `dot`, LLC | 1.94 to 1.99 (-O2), 2.02 to 2.04 (-O3) | 1.92 to 2.07 (-O2), 1.98 to 2.01 (-O3) | 3.98 to 4.00 | 3.96 to 3.97 |
+| `add_product`, two limbs, over `dot` sequential, LLC | 0.97 to 1.01 (-O2), 0.94 to 1.01 (-O3) | 0.97 to 1.04 (-O2), 1.00 (-O3) | 1.00 | 1.00 |
+| `add_product`, two limbs, over `dot`, LLC | 1.98 to 2.01 (-O2), 1.88 to 2.01 (-O3) | 2.00 to 2.06 (-O2), 2.00 (-O3) | 4.00 to 4.01 | 3.99 to 4.01 |
 | `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, LLC | 0.92 to 0.97 | 0.96 to 0.99 | 1.00 | 1.00 |
-| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, LLC | 1.02 to 1.05 (-O2), 1.00 to 1.06 (-O3) | 1.00 to 1.02 | 1.00 | 0.99 to 1.00 |
+| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, LLC | 1.01 (-O2), 1.01 to 1.08 (-O3) | 0.98 to 1.04 (-O2), 0.96 to 1.00 (-O3) | 1.00 to 1.01 | 1.00 |
 | 4 accumulators merged over one, one limb, LLC | 0.99 to 1.02 | 0.96 to 0.98 (-O2), 0.94 to 1.01 (-O3) | 2.54 to 2.60 | 1.00 |
 | 16 accumulators merged over one, one limb, LLC | 0.98 to 1.02 | 0.94 to 0.97 (-O2), 0.94 to 1.00 (-O3) | 2.56 to 2.57 | 1.00 |
 | W accumulators in the lane order over one, one limb, LLC | 0.56 to 0.59 | 0.46 to 0.48 (-O2), 0.47 to 0.52 (-O3) | 3.17 to 3.34 (-O2), 0.45 (-O3) | 0.45 |
@@ -6329,7 +6695,7 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | W accumulators in the lane order over one, two limbs, LLC | 0.49 to 0.52 | 0.80 to 0.84 (-O2), 0.50 to 0.52 (-O3) | 0.47 | 0.39 |
 | W accumulators in the lane order over `sum`, two limbs, LLC | 1.01 to 1.05 (-O2), 0.98 to 1.02 (-O3) | 1.50 to 1.66 (-O2), 0.99 to 1.03 (-O3) | 1.86 to 1.87 | 1.56 to 1.57 |
 | the public members over the kernels, `add`, two limbs, LLC | 0.98 to 1.01 | 0.98 to 1.02 | 1.00 | 1.00 |
-| the public members over the kernels, `add_product`, two limbs, LLC | 0.98 to 1.00 | 0.99 to 1.00 | 1.00 | 1.00 |
+| the public members over the kernels, `add_product`, two limbs, LLC | 1.00 | 1.00 to 1.03 | 1.00 | 1.00 |
 
 | The accumulator: ns per call | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -6548,10 +6914,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 8 | 3.05 to 3.1 | 4.38 to 4.4 (-O2), 3.31 (-O3) | 11.3 to 11.6 (-O2), 9.96 to 10.2 (-O3) | 9 to 9.17 |
 | `scale`, 1 limb, N = 16 | 4.9 to 4.92 | 5.76 (-O2), 4.77 (-O3) | 13 to 13.2 (-O2), 11.1 to 11.5 (-O3) | 9.48 to 9.74 |
 | `scale`, 1 limb, N = 64 | 20.9 to 21.1 | 25.6 to 25.9 (-O2), 19.4 (-O3) | 26.1 to 26.7 (-O2), 20.9 to 21.5 (-O3) | 18.5 to 18.9 (-O2), 18.4 to 22.5 (-O3) |
-| `scale`, 2 limbs, N = 4 | 3.23 to 3.25 | 5.13 (-O2), 3.29 to 3.32 (-O3) | 17.1 to 17.3 (-O2), 9.99 to 10.2 (-O3) | 8.99 to 9.19 |
-| `scale`, 2 limbs, N = 8 | 5.12 to 5.17 (-O2), 5.61 to 5.64 (-O3) | 6.21 to 6.39 (-O2), 4.82 to 4.89 (-O3) | 18.6 to 19 (-O2), 11.9 to 12.1 (-O3) | 9.92 to 10.1 |
-| `scale`, 2 limbs, N = 16 | 8.27 to 9.93 (-O2), 8.08 to 9.74 (-O3) | 9.85 to 9.89 (-O2), 7.91 to 8 (-O3) | 21.6 to 21.9 (-O2), 14.8 to 15.2 (-O3) | 13 to 13.5 |
-| `scale`, 2 limbs, N = 64 | 31.6 to 32.6 | 32.8 to 33.1 (-O2), 29.7 to 30.3 (-O3) | 45.9 to 46.7 (-O2), 43.3 to 44.1 (-O3) | 37.4 to 38.4 |
+| `scale`, 2 limbs, N = 4 | 3.25 to 3.91 (-O2), 3.26 to 3.91 (-O3) | 5.59 to 5.85 (-O2), 3.78 to 3.95 (-O3) | 17.4 to 17.6 (-O2), 10 to 10.1 (-O3) | 9.2 to 9.3 |
+| `scale`, 2 limbs, N = 8 | 5.25 to 6.31 (-O2), 5.01 to 6.02 (-O3) | 7.53 to 7.86 (-O2), 5.59 to 5.84 (-O3) | 18.6 to 18.7 (-O2), 12.1 (-O3) | 9.95 to 10 |
+| `scale`, 2 limbs, N = 16 | 8.26 to 11.5 (-O2), 8.3 to 9.89 (-O3) | 11.4 to 11.8 (-O2), 9.17 to 9.58 (-O3) | 21.8 to 22.1 (-O2), 14.9 (-O3) | 13.2 to 13.3 |
+| `scale`, 2 limbs, N = 64 | 31.9 to 38.4 (-O2), 32.1 to 38.8 (-O3) | 37.3 to 38.9 (-O2), 34.6 to 36.4 (-O3) | 46 (-O2), 40.1 to 40.3 (-O3) | 37.5 to 37.6 |
 | `axpy`, 1 limb, N = 4 | 5.79 to 5.96 | 5.05 to 5.11 (-O2), 5.62 to 5.69 (-O3) | 18 to 18.7 (-O2), 16.5 to 16.9 (-O3) | 14.1 to 15 (-O2), 14.1 to 14.6 (-O3) |
 | `axpy`, 1 limb, N = 8 | 7.27 to 7.54 | 9.75 to 9.77 (-O2), 6.53 to 6.58 (-O3) | 25.4 to 25.9 (-O2), 18 to 18.4 (-O3) | 15.6 to 16.3 |
 | `axpy`, 1 limb, N = 16 | 11 to 11.4 (-O2), 10.8 to 11.1 (-O3) | 14 to 14.2 (-O2), 9.37 to 9.72 (-O3) | 32.4 to 33.3 (-O2), 22.1 to 22.6 (-O3) | 17.3 to 18.1 (-O2), 18.1 to 18.3 (-O3) |
@@ -6599,10 +6965,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `scale`, 1 limb, N = 8 | 2.04 to 2.07 (-O2), 1.83 to 1.84 (-O3) | 1.29 to 1.32 (-O2), 1.57 to 1.61 (-O3) | 1.45 to 1.46 (-O2), 1.37 to 1.38 (-O3) | 1.35 to 1.36 |
 | `scale`, 1 limb, N = 16 | 2.53 to 2.54 | 1.94 to 1.97 (-O2), 2.23 to 2.24 (-O3) | 2.55 to 2.56 (-O2), 2.44 to 2.47 (-O3) | 2.72 to 2.75 |
 | `scale`, 1 limb, N = 64 | 2.23 to 2.26 (-O2), 2.32 to 2.33 (-O3) | 1.74 to 1.76 (-O2), 2.13 to 2.14 (-O3) | 5.14 to 5.17 (-O2), 5.24 to 5.31 (-O3) | 5.58 to 5.60 (-O2), 4.48 to 5.42 (-O3) |
-| `scale`, 2 limbs, N = 4 | 1.26 to 1.27 (-O2), 1.17 to 1.18 (-O3) | 0.77 to 0.79 (-O2), 1.18 to 1.21 (-O3) | 0.78 to 0.79 (-O2), 1.33 (-O3) | 1.27 to 1.28 |
-| `scale`, 2 limbs, N = 8 | 1.53 to 1.56 (-O2), 1.42 to 1.45 (-O3) | 1.21 to 1.25 (-O2), 1.58 to 1.65 (-O3) | 1.44 (-O2), 1.99 to 2.00 (-O3) | 2.31 to 2.32 |
-| `scale`, 2 limbs, N = 16 | 1.63 to 1.95 (-O2), 1.64 to 2.00 (-O3) | 1.64 to 1.71 (-O2), 2.09 to 2.12 (-O3) | 2.49 to 2.50 (-O2), 3.33 to 3.34 (-O3) | 3.50 to 3.56 |
-| `scale`, 2 limbs, N = 64 | 2.04 to 2.07 (-O2), 1.97 to 2.00 (-O3) | 1.86 to 1.94 (-O2), 2.01 to 2.13 (-O3) | 4.65 to 4.68 (-O2), 4.18 to 4.20 (-O3) | 4.90 to 4.96 |
+| `scale`, 2 limbs, N = 4 | 1.25 to 1.26 (-O2), 1.16 to 1.17 (-O3) | 0.83 to 0.84 (-O2), 1.21 to 1.26 (-O3) | 0.76 to 0.77 (-O2), 1.32 to 1.33 (-O3) | 1.23 to 1.25 |
+| `scale`, 2 limbs, N = 8 | 1.53 to 1.60 (-O2), 1.60 to 1.61 (-O3) | 1.22 (-O2), 1.63 to 1.64 (-O3) | 1.43 to 1.44 (-O2), 1.95 (-O3) | 2.29 to 2.30 |
+| `scale`, 2 limbs, N = 16 | 1.60 to 1.94 (-O2), 1.88 to 1.94 (-O3) | 1.69 to 1.71 (-O2), 2.05 to 2.11 (-O3) | 2.43 to 2.46 (-O2), 3.30 to 3.31 (-O3) | 3.46 to 3.50 |
+| `scale`, 2 limbs, N = 64 | 1.98 to 2.01 (-O2), 1.91 to 2.05 (-O3) | 1.91 to 1.96 (-O2), 2.01 to 2.10 (-O3) | 4.66 to 4.67 (-O2), 4.49 to 4.51 (-O3) | 4.88 to 4.91 |
 | `axpy`, 1 limb, N = 4 | 1.00 to 1.04 | 1.15 to 1.16 (-O2), 0.93 to 0.95 (-O3) | 0.89 to 0.91 (-O2), 0.71 (-O3) | 0.88 to 0.92 |
 | `axpy`, 1 limb, N = 8 | 1.57 to 1.61 (-O2), 1.61 to 1.67 (-O3) | 1.18 to 1.19 (-O2), 1.59 to 1.60 (-O3) | 1.27 to 1.31 | 1.65 to 1.66 (-O2), 1.58 to 1.65 (-O3) |
 | `axpy`, 1 limb, N = 16 | 2.12 to 2.19 (-O2), 2.01 to 2.14 (-O3) | 1.62 to 1.64 (-O2), 2.15 to 2.23 (-O3) | 1.98 to 2.00 (-O2), 2.11 to 2.21 (-O3) | 2.91 to 2.98 (-O2), 2.81 to 2.89 (-O3) |
@@ -6636,8 +7002,8 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `add`, 2 limbs, N = 64 | 1.64 to 1.77 (-O2), 1.63 to 1.80 (-O3) | 2.51 to 2.56 (-O2), 2.54 to 2.63 (-O3) | 3.42 to 3.48 | 3.48 to 3.50 |
 | `scale`, 1 limb, N = 4 | 0.97 to 0.98 | 1.44 to 1.45 (-O2), 1.29 to 1.31 (-O3) | 1.02 | 0.99 to 1.00 |
 | `scale`, 1 limb, N = 64 | 2.34 to 2.39 (-O2), 1.50 to 1.62 (-O3) | 4.80 to 4.83 (-O2), 6.47 to 6.64 (-O3) | 2.82 to 2.86 (-O2), 3.50 to 3.53 (-O3) | 2.45 to 2.46 (-O2), 2.02 to 2.45 (-O3) |
-| `scale`, 2 limbs, N = 4 | 1.22 | 0.94 to 0.95 (-O2), 1.26 to 1.27 (-O3) | 0.80 to 0.81 (-O2), 1.29 to 1.30 (-O3) | 1.26 to 1.27 (-O2), 1.21 to 1.22 (-O3) |
-| `scale`, 2 limbs, N = 64 | 1.32 to 1.36 | 3.85 to 3.90 (-O2), 4.03 to 4.23 (-O3) | 2.93 to 2.95 (-O2), 3.11 to 3.12 (-O3) | 3.22 to 3.25 |
+| `scale`, 2 limbs, N = 4 | 1.22 to 1.27 | 1.00 (-O2), 1.27 (-O3) | 0.78 to 0.79 (-O2), 1.29 (-O3) | 1.20 to 1.22 |
+| `scale`, 2 limbs, N = 64 | 1.33 to 1.35 | 3.91 to 4.02 (-O2), 4.28 to 4.30 (-O3) | 2.93 to 2.94 (-O2), 3.35 to 3.36 (-O3) | 3.21 to 3.24 |
 | `axpy`, 1 limb, N = 4 | 2.19 to 2.32 (-O2), 2.34 to 2.55 (-O3) | 1.57 to 1.59 (-O2), 1.15 to 1.17 (-O3) | 1.00 to 1.01 | 0.92 to 0.96 |
 | `axpy`, 1 limb, N = 64 | 1.49 to 1.63 (-O2), 1.48 to 1.58 (-O3) | 4.73 to 4.86 (-O2), 5.95 to 6.16 (-O3) | 2.85 to 2.86 (-O2), 3.36 to 3.39 (-O3) | 2.45 to 2.46 (-O2), 2.27 to 2.44 (-O3) |
 | `axpy`, 2 limbs, N = 4 | 1.45 to 1.50 | 1.07 to 1.14 (-O2), 1.45 to 1.48 (-O3) | 1.12 to 1.14 (-O2), 1.52 to 1.55 (-O3) | 2.21 to 2.26 (-O2), 2.27 to 2.29 (-O3) |
@@ -6655,8 +7021,8 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `add`, 2 limbs, N = 64 | 1.00 to 1.02 (-O2), 0.96 to 1.07 (-O3) | 0.98 to 1.01 (-O2), 1.02 to 1.06 (-O3) | 1.06 to 1.10 | 1.07 to 1.08 |
 | `scale`, 1 limb, N = 4 | 1.14 to 1.16 (-O2), 1.01 to 1.15 (-O3) | 1.28 (-O2), 1.22 to 1.24 (-O3) | 1.25 (-O2), 1.40 (-O3) | 1.58 to 1.62 (-O2), 1.35 to 1.59 (-O3) |
 | `scale`, 1 limb, N = 64 | 0.99 to 1.01 (-O2), 1.00 to 1.06 (-O3) | 1.12 to 1.14 (-O2), 0.99 to 1.02 (-O3) | 1.04 to 1.05 (-O2), 0.95 to 0.96 (-O3) | 0.92 to 0.95 (-O2), 0.77 to 1.17 (-O3) |
-| `scale`, 2 limbs, N = 4 | 1.03 to 1.04 | 1.46 to 1.48 (-O2), 1.16 to 1.17 (-O3) | 1.81 to 1.84 (-O2), 1.18 to 1.19 (-O3) | 1.38 to 1.40 |
-| `scale`, 2 limbs, N = 64 | 0.99 to 1.03 | 0.99 to 1.02 | 1.10 to 1.15 | 1.05 to 1.07 |
+| `scale`, 2 limbs, N = 4 | 1.04 to 1.05 (-O2), 0.94 to 1.04 (-O3) | 1.38 (-O2), 1.16 to 1.19 (-O3) | 1.83 to 1.85 (-O2), 1.19 to 1.20 (-O3) | 1.39 to 1.41 |
+| `scale`, 2 limbs, N = 64 | 1.00 to 1.04 | 1.07 to 1.10 (-O2), 1.00 to 1.03 (-O3) | 1.14 to 1.15 (-O2), 1.02 to 1.03 (-O3) | 1.05 to 1.07 |
 | `axpy`, 1 limb, N = 4 | 1.11 to 1.14 (-O2), 1.01 to 1.08 (-O3) | 1.10 to 1.12 (-O2), 1.30 to 1.31 (-O3) | 1.12 to 1.13 (-O2), 1.17 to 1.18 (-O3) | 1.25 to 1.30 (-O2), 1.18 to 1.28 (-O3) |
 | `axpy`, 1 limb, N = 64 | 0.97 to 1.02 (-O2), 0.96 to 1.00 (-O3) | 1.08 to 1.10 (-O2), 1.03 to 1.06 (-O3) | 1.00 to 1.07 (-O2), 1.11 to 1.12 (-O3) | 0.96 to 0.97 (-O2), 0.98 to 1.09 (-O3) |
 | `axpy`, 2 limbs, N = 4 | 1.05 to 1.09 | 1.45 to 1.51 (-O2), 1.12 to 1.14 (-O3) | 1.83 to 1.86 (-O2), 1.19 to 1.23 (-O3) | 1.24 to 1.26 (-O2), 1.17 to 1.23 (-O3) |
@@ -6816,53 +7182,53 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 
 | Compile time of the headers, s (minimum wall time; -O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| an empty unit | 0.02; 0.02 | 0.05; 0.05 | 0.01; 0.01 | 0.04; 0.04 |
-| `kairn/kairn.hpp` | 0.14; 0.14 | 0.26; 0.26 | 0.45; 0.45 | 0.70; 0.70 |
-| `kairn/kairn.hpp`, as packed code | 0.14; 0.14 | 0.26; 0.26 | 0.44; 0.44 | 0.70; 0.70 |
-| `kairn/accumulator.hpp` | 0.14; 0.14 | 0.26; 0.26 | 0.44; 0.44 | 0.70; 0.70 |
-| `kairn/batch.hpp`, as packed code | 0.27; 0.27 | 0.54; 0.54 | 1.21; 1.21 | 1.57; 1.57 |
-| `kairn/ball_vector.hpp`, as packed code | 0.40; 0.40 | 0.57; 0.57 | 1.26; 1.26 | 1.66; 1.66 |
-| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 0.28; 0.28 | 0.55; 0.55 | 1.24; 1.23 | 1.61; 1.61 |
-| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 0.40; 0.40 | 0.57; 0.57 | 1.27; 1.26 | 1.66; 1.66 |
+| an empty unit | 0.02; 0.02 | 0.06; 0.06 | 0.01; 0.01 | 0.04; 0.04 |
+| `kairn/kairn.hpp` | 0.17; 0.17 | 0.32; 0.32 | 0.45; 0.46 | 0.71; 0.71 |
+| `kairn/kairn.hpp`, as packed code | 0.17; 0.17 | 0.32; 0.32 | 0.46; 0.46 | 0.72; 0.72 |
+| `kairn/accumulator.hpp` | 0.17; 0.17 | 0.32; 0.32 | 0.46; 0.45 | 0.71; 0.71 |
+| `kairn/batch.hpp`, as packed code | 0.34; 0.33 | 0.66; 0.66 | 1.22; 1.23 | 1.60; 1.59 |
+| `kairn/ball_vector.hpp`, as packed code | 0.48; 0.48 | 0.69; 0.69 | 1.28; 1.28 | 1.68; 1.68 |
+| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 0.34; 0.35 | 0.68; 0.68 | 1.25; 1.25 | 1.64; 1.63 |
+| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 0.49; 0.49 | 0.70; 0.69 | 1.28; 1.29 | 1.68; 1.68 |
 
 | arrays: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| 100, inline | 0.44; 0.72 | 0.86; 0.94 | 1.60; 1.66 | 2.31; 2.52 |
-| 100, calls | 0.07; 0.07 | 0.18; 0.20 | 0.22; 0.22 | 0.23; 0.23 |
-| 1000, inline | 1.45; 4.61 | 2.70; 3.38 | 2.77; 2.85 | 8.85; 12.2 |
-| 1000, calls | 0.50; 0.52 | 2.16; 2.90 | 3.49; 3.48 | 1.56; 1.58 |
+| 100, inline | 0.54; 0.88 | 1.02; 1.13 | 1.59; 1.65 | 2.31; 2.54 |
+| 100, calls | 0.09; 0.09 | 0.22; 0.23 | 0.22; 0.22 | 0.22; 0.22 |
+| 1000, inline | 1.73; 5.59 | 3.26; 4.08 | 2.72; 2.80 | 8.95; 12.3 |
+| 1000, calls | 0.61; 0.64 | 2.58; 3.52 | 3.43; 3.43 | 1.54; 1.55 |
 
 | arrays: peak memory, MB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| 100, inline | 107; 111 | 224; 229 | 245; 247 | 159; 159 |
-| 100, calls | 56; 56 | 41; 42 | 35; 35 | 103; 103 |
-| 1000, inline | 187; 305 | 306; 310 | 304; 305 | 237; 279 |
-| 1000, calls | 133; 133 | 143; 147 | 100; 101 | 129; 129 |
+| 100, inline | 108; 113 | 228; 233 | 247; 249 | 159; 159 |
+| 100, calls | 56; 56 | 41; 41 | 34; 34 | 103; 103 |
+| 1000, inline | 212; 311 | 316; 316 | 304; 306 | 240; 280 |
+| 1000, calls | 139; 133 | 150; 153 | 100; 101 | 129; 129 |
 
 | arrays: object, KB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| 100, inline | 23; 60 | 17; 21 | 28; 28 | 59; 76 |
+| 100, inline | 23; 60 | 18; 21 | 28; 28 | 58; 75 |
 | 100, calls | 5; 5 | 6; 6 | 11; 11 | 13; 13 |
-| 1000, inline | 162; 527 | 56; 61 | 88; 89 | 461; 652 |
+| 1000, inline | 162; 527 | 56; 61 | 88; 89 | 457; 648 |
 | 1000, calls | 44; 44 | 55; 58 | 97; 97 | 111; 111 |
 
 | ballvectors: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| 100, inline | 0.53; 0.53 | 0.83; 0.97 | 1.72; 1.91 | 2.12; 2.12 |
-| 100, calls | 0.03; 0.03 | 0.09; 0.09 | 0.05; 0.05 | 0.06; 0.06 |
-| 1000, inline | 1.28; 1.32 | 1.48; 1.92 | 2.40; 3.12 | 4.37; 4.36 |
-| 1000, calls | 0.09; 0.09 | 0.44; 0.68 | 0.31; 0.31 | 0.21; 0.20 |
+| 100, inline | 0.65; 0.65 | 1.01; 1.18 | 1.68; 1.87 | 2.11; 2.11 |
+| 100, calls | 0.03; 0.03 | 0.10; 0.11 | 0.05; 0.05 | 0.06; 0.06 |
+| 1000, inline | 1.57; 1.62 | 1.81; 2.33 | 2.31; 2.98 | 4.24; 4.24 |
+| 1000, calls | 0.11; 0.11 | 0.53; 0.81 | 0.30; 0.30 | 0.20; 0.20 |
 
 | ballvectors: peak memory, MB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| 100, inline | 136; 136 | 239; 250 | 254; 264 | 164; 164 |
-| 100, calls | 37; 37 | 34; 34 | 28; 29 | 97; 97 |
-| 1000, inline | 184; 185 | 320; 333 | 287; 324 | 202; 202 |
-| 1000, calls | 51; 51 | 88; 91 | 50; 51 | 106; 106 |
+| 100, inline | 140; 140 | 243; 253 | 256; 266 | 165; 165 |
+| 100, calls | 37; 37 | 34; 34 | 28; 28 | 97; 97 |
+| 1000, inline | 194; 187 | 328; 343 | 290; 327 | 202; 202 |
+| 1000, calls | 53; 52 | 94; 92 | 50; 51 | 106; 106 |
 
 | ballvectors: object, KB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| 100, inline | 26; 27 | 18; 24 | 36; 43 | 47; 48 |
+| 100, inline | 26; 28 | 18; 24 | 36; 43 | 47; 48 |
 | 100, calls | 4; 4 | 4; 4 | 7; 7 | 7; 7 |
-| 1000, inline | 169; 172 | 68; 70 | 112; 113 | 268; 276 |
+| 1000, inline | 169; 172 | 68; 69 | 112; 113 | 268; 276 |
 | 1000, calls | 34; 34 | 34; 34 | 51; 51 | 52; 52 |

@@ -1375,8 +1375,9 @@ def guard_tables(arr, acc):
         p = 'm2a/%s/' % s
         rows += [('`dot`, one limb (3 operations per term against 1), %s' % sl, ratio(p + 'dot1/kairn', p + 'dot1/bare')),
                  ('`axpy`, one limb (y guarded), %s' % sl, ratio(p + 'axpy1/kairn', p + 'axpy1/bare')),
-                 ('`axpy`, two limbs, a of T (y guarded), %s' % sl, ratio(p + 'axpy2/kairn', p + 'axpy2/bare')),
-                 ('`axpy`, two limbs, a of two limbs (y guarded), %s' % sl, ratio(p + 'axpy22/kairn', p + 'axpy22/bare')),
+                 ('`dot`, two limbs (every limb of both factors guarded), %s' % sl, ratio(p + 'dot2/kairn', p + 'dot2/bare')),
+                 ('`axpy`, two limbs, a of T (a, x and y guarded), %s' % sl, ratio(p + 'axpy2/kairn', p + 'axpy2/bare')),
+                 ('`axpy`, two limbs, a of two limbs (a, x and y guarded), %s' % sl, ratio(p + 'axpy22/kairn', p + 'axpy22/bare')),
                  ('`scale`, two limbs (the limbs and a guarded), %s' % sl, ratio(p + 'scale2/kairn', p + 'scale2/bare')),
                  ('`sum`, one limb (the element guarded), %s' % sl, ratio(p + 'sum1/kairn', p + 'sum1/bare')),
                  ('`sum`, two limbs (the limbs guarded), %s' % sl, ratio(p + 'sum2/kairn', p + 'sum2/bare')),
@@ -1385,6 +1386,9 @@ def guard_tables(arr, acc):
     for n in (16, 64, 512):
         rows.append(('`conv`, one limb, %d coefficients (both factors guarded)' % n,
                      ratio('m2a/tp/conv1_%d/kairn' % n, 'm2a/tp/conv1_%d/bare' % n)))
+    for n in (16, 64, 512):
+        rows.append(('`conv`, two limbs, %d coefficients (every limb of both factors guarded)' % n,
+                     ratio('m2a/tp/conv2_%d/kairn' % n, 'm2a/tp/conv2_%d/bare' % n)))
     table(arr, 'The guards: the loop with them over the same loop without, double', rows)
     rows = []
     for s, sl in ARRAY_SIZES[:2]:
@@ -1655,6 +1659,7 @@ def configurations3(items):
     for key in keys:
         rs = [r for item in order for r in items.get(item, {}).get(key, [])]
         r = rs[0]
+        rs += [x for item in ('r3_arrays', 'r3_short', 'r3_acc', 'r3_bv', 'r3_entry_raw', 'r3_x_raw') for x in items.get(item, {}).get(key, [])]
         counts = []
         for item in order:
             n = len(items.get(item, {}).get(key, []))
