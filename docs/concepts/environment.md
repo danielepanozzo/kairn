@@ -71,13 +71,15 @@ What Kairn does about it:
   against the oracle, their object code for fused instructions the description did not ask for, and
   each guarded form with the product written in the call against the same operation on the rounded
   product, bit for bit (`api.boundary.*`; [Testing](../developer/testing.md#contraction)).
-- **A factor of a product is not guarded**, since nothing can be fused into a product, with one
-  exception that compilers were measured to take: a compiler that sees the other factor to be 1
-  turns the fused multiply-add into an addition, and fuses the program's product into that. The two
-  places where it was measured, the dot product of one limb and the accumulator's product of one
-  limb, call kernels that guard both factors; the functions on arrays that only multiply their
-  elements are called without a guard, and no compiler measured fuses into them
-  ([Functions on arrays](../reference/batch.md#arrays)).
+- **A factor of a fused multiply-add is guarded too.** Nothing can be fused into a product, but a
+  compiler that sees the other factor to be 1 turns the fused multiply-add into an addition, and
+  fuses the program's product into that: measured with Apple clang 21 and Clang 18 under
+  `-ffp-contract=fast` in the dot product and the accumulator's product of one limb, and with Apple
+  clang 21 in the products of Milestone 1 (`two_prod`, `mul_down`, `mul_up`, `x * a` of two limbs,
+  of `Packed` and of a `Ball`), the convolution of one limb and the scaling of arrays of two limbs.
+  So every value of the program that is a factor of a fused multiply-add whose addend is not zero
+  passes through the guard first, wherever it was measured or not; a factor of a plain product
+  needs none ([Functions on arrays](../reference/batch.md#arrays)).
 
 This program passes a product straight in, and gets the operation on the product rounded:
 

@@ -193,7 +193,7 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    functions that reach it (`build.header_calls`: the function of the public headers whose body
    calls the kernel or the loop, directly or through `KAIRN_DETAIL_BV_LOOP`, the macro with which
    `kairn/ball_vector.hpp` calls its loops). By the owner's decision of 2026-11-21 (the strict rule)
-   an exposed operand is refused, with its operation and route (`rules.factor_rule`): an entry
+   every exposed operand is refused, with its operation and route (`rules.factor_rule`): an entry
    kernel guards each factor it takes from the program, and a kernel that other kernels also call on
    limbs that kernels wrote gets a guarded entry twin instead, whose listing is the unguarded one
    after a guard of each factor and whose proofs reduce to it (the guard is the identity on numbers
@@ -205,18 +205,26 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    of a `Ball<T, 2>` by a `T`), `acc_mul_entry_1` and `acc_mul_entry_2`
    (`Accumulator::add_product`), and `dot_entry_step_1`, the step of `dot_1_entry` (`dot` of one
    limb) and of the coefficients of `conv_1_entry` (`conv` of one limb), and `scale_entry_step_2`,
-   the step of `scale_2_entry` (`scale` of two limbs); `dot_1`, `conv_1` and `scale_2` are on stored
-   arrays (`dot_1` and `conv_1` the loops of the centers of `bv_conv_1`). The kernels they guard for
-   (`two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1`, `mul_2_1_full`, `ball_scale_2`,
-   `ball_scale_2_full`, `acc_mul_1`, `acc_mul_2`, `dot_step_1`) are no longer entry kernels. The
-   objects not closed yet are listed in `rules.FACTOR_PENDING`, each with its reason: the loops over
-   arrays of two limbs (`dot`, `axpy`, `conv`) and the scaling of a ball vector, with their steps,
-   into none of which a compiler was measured to fuse (Apple clang 21 under `-ffp-contract=fast` at
-   `-O2` with `NDEBUG` fused a product of the program through a visible 1 into `conv` of one limb
-   and `scale` of two limbs, every round, before they ran `conv_1_entry` and `scale_entry_step_2`).
-   R3 accepts their exposed operands, and refuses an entry there that has none; `build` prints them
-   as PENDING. The measurements are in [Testing](testing.md#the-functions-on-arrays), "A factor the
-   compiler sees".
+   the step of `scale_2_entry` (`scale` of two limbs), and the loops of two limbs: `dot_entry_step_2`,
+   the step of `dot_2_entry` (`dot`) and of the coefficients of `conv_2_entry` (`conv`), which guards
+   the four limbs of the element; `axpy_entry_step_2` and `axpy_entry_step_2_1`, the steps of
+   `axpy_2_entry` and `axpy_2_1_entry` (`axpy`), which guard every limb of `a`, `x` and `y` and then
+   run `axpy_step_2` and `axpy_step_2_1`; and `bv_scale_step_2` and `bv_scale_radius_entry_2`, the
+   step and the radius of `bv_scale_2_entry` (the scaling of a `BallVector<T, 2, N>` and its `axpy`),
+   which guard `a`, the step once per element, since a fold has no line that guards a scalar once
+   before its loop. `dot_1`, `dot_2`, `conv_1`, `conv_2`, `scale_2`, `axpy_2`, `axpy_2_1` and
+   `bv_scale_2` are on stored operands (`dot_k` and `conv_k` the loops of the centers of
+   `bv_conv_k`, which pay nothing). The kernels they guard for (`two_prod`, `mul_down_1`,
+   `mul_up_1`, `mul_2_1`, `mul_2_1_full`, `ball_scale_2`, `ball_scale_2_full`, `acc_mul_1`,
+   `acc_mul_2`, `dot_step_1`, `dot_step_2`, `scale_step_2`, `axpy_step_2`, `axpy_step_2_1`) are no
+   longer entry kernels. No exposed operand is left in `gen/kernels`, and none is accepted: `build`
+   refuses a description that has one. A compiler was measured to fuse through a visible 1 into the
+   products of Milestone 1, `dot`, `conv` and `add_product` of one limb and `scale` of two limbs
+   before they called guarded forms; into none of the loops of two limbs (`dot`, `axpy`, `conv`,
+   the scaling of a ball vector), with the guards or without them, in the probe matrix of
+   2026-11-22: there the guards are the rule's, not the answer to an observed fault. The
+   measurements are in [Testing](testing.md#the-functions-on-arrays), "A factor the compiler
+   sees".
 
 R3 was added in Milestone 1, after a test of the public headers found the failure it prevents:
 with GCC 13 and 16 at their default setting, with Apple clang on AArch64 under

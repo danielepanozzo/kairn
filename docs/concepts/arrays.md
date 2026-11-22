@@ -131,8 +131,9 @@ A function that returns a number returns a `kairn::Reduction`, the number and a 
 exactly when the number is finite; when it is false the number is the canonical NaN, every limb a
 NaN, never a finite wrong value. A map returns `true` exactly when every element it wrote is finite.
 A map may write in place, into exactly the arrays it reads (`axpy(a, x, y, y)` is
-$y \leftarrow ax + y$); no other overlap is supported. Every value the loops add passes through the
-guard, so arrays the program fills with products in the same function may be passed straight in
+$y \leftarrow ax + y$); no other overlap is supported. Every value the loops add, and every value
+that is a factor of a fused multiply-add, passes through the guard, so arrays the program fills
+with products in the same function may be passed straight in
 ([The floating-point environment](environment.md#contraction-and-fast-math)). **Every function on
 arrays checks the floating-point environment before its loop, in every build**, and by default stops
 the program if it is not the default one ([The checks](environment.md#the-checks)); with

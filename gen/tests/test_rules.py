@@ -468,12 +468,12 @@ class R3Factors(unittest.TestCase):
         self.assertEqual(others, [], body)
         return {(e.name, v): ws for e in rules.exposed_operands(kernels) for v, ws in e.operands.items()}
 
-    def refusals(self, body, *more, pending=None):
+    def refusals(self, body, *more):
         kernels = {}
         for text in (R3.ENTRY + body, R3.ADDS, R3.MULTIPLIES, R3.RETURNS) + more:
             k = ir.parse_kernel(text, 'test')
             kernels[k.name] = k
-        return [(e.kernel, e.value, str(e)) for e in rules.factor_rule(ir.ordered(kernels), pending)]
+        return [(e.kernel, e.value, str(e)) for e in rules.factor_rule(ir.ordered(kernels))]
 
     def test_the_rule_refuses_an_exposed_operand(self):
         # Directly, through neg, abs, select and copy, and through a callee: each named with the
@@ -492,24 +492,19 @@ class R3Factors(unittest.TestCase):
         self.assertEqual([(k, v) for k, v, _ in found], [('k', 'a')])
         self.assertIn('a factor of fma at s in fuses (called for s)', found[0][2])
 
-    def test_the_rule_accepts_prod_a_guard_and_a_pending_object(self):
+    def test_the_rule_accepts_prod_and_a_guard(self):
         self.assertEqual(self.refusals('p = prod(a, x1)\ns = add(p, x0)\n' + self.END), [])
         self.assertEqual(self.refusals('g = guard(a)\np = fma(g, x1, x0)\ns = add(p, x0)\n' + self.END), [])
-        self.assertEqual(self.refusals('p = fma(a, x1, x0)\ns = add(p, x0)\n' + self.END,
-                                       pending={'k': 'the reason'}), [])
-        # A pending entry with nothing exposed is refused.
-        found = self.refusals('p = prod(a, x1)\ns = add(p, x0)\n' + self.END, pending={'k': 'the reason'})
-        self.assertEqual([(k, v) for k, v, _ in found], [('k', '-')])
-        self.assertIn('remove the entry', found[0][2])
+        # There is no list of objects to accept as they are (the pending list of the rule's first
+        # months is closed and gone): every exposed operand is refused.
+        self.assertFalse(hasattr(rules, 'FACTOR_PENDING'))
 
-    def test_what_is_pending(self):
-        # Every exposed object of gen/kernels is pending, and nothing else: the list to close
-        # (EXPOSED), each with its reason.
+    def test_nothing_is_exposed(self):
+        # No object of gen/kernels has an exposed operand (EXPOSED is empty), and build refuses one.
         ks = common.kernels()
-        self.assertEqual(set(rules.FACTOR_PENDING),
-                         {(n if kind == 'kernel' else f'loop {n}') for kind, n, _ in EXPOSED})
+        self.assertEqual(EXPOSED, {})
+        self.assertEqual(rules.exposed_operands(ks), [])
         self.assertEqual(rules.factor_rule(ks), [])
-        self.assertTrue(all(len(r) > 20 for r in rules.FACTOR_PENDING.values()))
 
     END = R3.END
 
@@ -597,7 +592,7 @@ class R3Factors(unittest.TestCase):
 
 
 # The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the
-# kernel analyzed) -> the exposed limbs of that kernel.
+# kernel analyzed) -> the exposed limbs of that kernel. None, since rule R3 refuses them all.
 EXPOSED = {}
 
 
@@ -1221,8 +1216,8 @@ class R3OfTheKernels(unittest.TestCase):
     # The entry kernels the headers of the arrays and of the accumulator call directly (the loops of
     # batch.hpp are folds, not kernels, and are called as F_seq, F_lanes, F_packed): the additions
     # and products of the accumulator, which take what the program adds (acc_add_k guards it;
-    # acc_mul_entry_1 guards both factors, rule R3 on the factors of a fused operation; acc_mul_2
-    # only multiplies them, one of the exposed operands that build lists).
+    # acc_mul_entry_1 and acc_mul_entry_2 guard every limb of both factors, rule R3 on the factors of
+    # a fused operation).
     ARRAYS_CALLED = {'acc_add_1', 'acc_add_2', 'acc_mul_entry_1', 'acc_mul_entry_2'}
     # The building blocks that milestone2.md makes public ("Building blocks on T"): the entry forms
     # of the blocks that add their operands, and of two_prod and the directed products, whose

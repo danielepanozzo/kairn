@@ -1091,8 +1091,9 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   `scale_entry_step_2`, the limbs of each element and $a$ guarded), and `add_product` of two limbs
   calls `acc_mul_entry_2`, which guards the limbs of both factors. With them every form agrees with
   every compiler measured: `--factor none` in `api.boundary.arrays.FORM.S`, a hard failure
-  otherwise. The dot product, `axpy` and `conv` of two limbs take their factors unguarded: they are
-  on the pending list of the factor rule (`rules.FACTOR_PENDING`), and no compiler fused into them. The control
+  otherwise. The dot product, `axpy` and `conv` of two limbs guard their factors too
+  (`dot_2_entry`, `axpy_2_entry`, `axpy_2_1_entry`, `conv_2_entry`), by the rule, though no compiler
+  was measured to fuse into them, with the guards or without (the probe matrix of 2026-11-22). The control
   (`api.boundary.arrays.unguarded.FORM.S`, those guards taken out with the others) requires a
   difference (`--factor some`) where it was measured: Clang 18 on x86-64 under `=fast` in the scalar
   form, Apple clang 21 under `=fast` in the NEON and the scalar forms; it reports elsewhere. The

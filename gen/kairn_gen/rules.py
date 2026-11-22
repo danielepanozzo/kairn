@@ -560,7 +560,7 @@ def r3_report(kernels):
     return pending, through
 
 
-# --- R3 and the factors of a fused operation (a report, not a refusal) ----------------------------
+# --- R3 and the factors of a fused operation ----------------------------------------------------
 #
 # R3 asks no guard of a value of the program that is only multiplied: nothing can be fused into a
 # product. That holds of the product alone, and not of a fused operation whose other factor the
@@ -572,7 +572,7 @@ def r3_report(kernels):
 # does with the product a * b inside it, fma(a * b, 1, +0) fused is RN(a b + 0), the rounding of the
 # product itself, which is what the program's product is. These functions list the exposed
 # operands and refuse nothing; factor_rule (below) refuses each, by the strict rule that the owner
-# decided on 2026-11-21, but those of the objects on FACTOR_PENDING, which are being closed.
+# decided on 2026-11-21.
 FACTORS = {'fma': (0, 1), 'fms': (0, 1), 'fnma': (0, 1), 'muladd': (0, 1)}
 ADDEND = {'fma': 2, 'fms': 2, 'fnma': 2, 'muladd': 2}
 
@@ -705,29 +705,13 @@ def fold_kernels(fd, kernels):
     return names
 
 
-# The objects of gen/kernels whose exposed operands are not closed yet, each with its reason (the
-# owner's decision of 2026-11-21: the strict rule, every exposed operand guarded). R3 refuses an
-# exposed operand of any other object, and an entry here that has none; `build` prints the list.
-# Nothing is left: every object is closed.
-FACTOR_PENDING = {}
-
-
-def _pending_key(e):
-    return e.name if e.kind == 'kernel' else f'loop {e.name}'
-
-
-def factor_rule(kernels, pending=None):
-    """Rule R3 on the factors of a fused operation: an exposed operand (exposed_operands) of an
-    entry kernel or of a loop is refused, naming the operand, the operation and the route, unless
-    the object is in `pending` (FACTOR_PENDING by default); an entry of `pending` without an
-    exposed operand is refused too (remove it). Only the objects of `kernels` are judged."""
-    pending = FACTOR_PENDING if pending is None else pending
-    errs, found = [], set()
+def factor_rule(kernels):
+    """Rule R3 on the factors of a fused operation (the strict rule of 2026-11-21, every exposed
+    operand guarded): an exposed operand (exposed_operands) of an entry kernel or of a loop is
+    refused, naming the operand, the operation and the route. Only the objects of `kernels` are
+    judged."""
+    errs = []
     for e in exposed_operands(kernels):
-        key = _pending_key(e)
-        found.add(key)
-        if key in pending:
-            continue
         where = f'the step {e.kernel}' if e.kind == 'loop' and e.role == 'step' else \
             (f'the {e.role} {e.kernel}' if e.kind == 'loop' else '')
         for v, ws in e.operands.items():
@@ -738,10 +722,6 @@ def factor_rule(kernels, pending=None):
                                   'that sees the other factor to be 1 fuses a product of the program into it '
                                   '(fma(x, 1, s) is x + s). Write g = guard(' + v + ') and use g there; a factor '
                                   'of prod alone needs no guard'))
-    names = set(kernels) | {f'loop {f}' for f in getattr(kernels, 'folds', {})}
-    for key in sorted(set(pending) & names - found):
-        errs.append(RuleError(key, '-', RULE_R3, 'listed in FACTOR_PENDING, but nothing of it is exposed: '
-                                                 'remove the entry'))
     return errs
 
 

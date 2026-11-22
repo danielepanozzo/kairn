@@ -540,7 +540,8 @@ whose bits are the same everywhere. Both have the same statement. A result that 
 infinite or NaN element, an overflow) is the canonical NaN with the flag `finite` false; a map's
 flag is false exactly when an element it wrote is not finite, and those elements are the canonical
 NaN. Arrays that the program fills with products may be passed straight in: the loops guard every
-limb they add ([above](#products-the-program-passes-in)). A map may write in place, an array it
+limb they add, and every limb that is a factor of a fused multiply-add
+([above](#products-the-program-passes-in)). A map may write in place, an array it
 reads exactly; no other overlap is supported. Each function checks the environment before its
 loop, in every build ([below](#the-environment)), and with `KAIRN_CHECKS` the lengths, the arrays
 that alias and its elements.

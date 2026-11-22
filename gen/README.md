@@ -53,8 +53,8 @@ cone, the entry kernels, the guards of rule R3 that are pending, the kernels acc
 through a pending guard, the folds and those of them that are unverified; and then the report of
 rule R3 on the factors of fused operations (`rules.exposed_operands`, below): every entry kernel
 and every loop with an exposed operand, the route to each, its operations today and with a guard
-on each, and the functions of the public headers that reach it (`build.header_calls`), each marked
-PENDING while it is in `rules.FACTOR_PENDING` (R3 refuses every other exposed operand). `proofs/gen`
+on each, and the functions of the public headers that reach it (`build.header_calls`); R3 refuses
+every exposed operand, so the report lists none in `gen/kernels` (`0 objects`). `proofs/gen`
 is mapped to the logical path `Kairn.Gen`, and `proofs/theories` to
 `Kairn`.
 
@@ -534,9 +534,8 @@ rule:
    the operation and the route (`rules.factor_rule` on `rules.exposed_operands`), because a
    compiler that sees the other factor to be 1 rewrites `fma(x, 1, s)` as `x + s` and fuses the
    program's product into it. A factor of `prod`, `fma(a, b, +0)`, is accepted: its fusion is the
-   product's own rounding. `rules.FACTOR_PENDING` names the objects not closed yet, each with its
-   reason; an entry there with nothing exposed is refused (docs/developer/architecture.md, "R3",
-   the factors of a fused operation).
+   product's own rounding (docs/developer/architecture.md, "R3", the factors of a fused
+   operation).
 7. No value is the negation of the result of a fused operation (`fma`, `fms`, `fnma`, `prod`),
    callees inlined: `sub_down_1(x, d)` and `sub_up_1(x, d)` negate `d`. Nor is it the negation of a
    `select` one of whose arms is such a result (or a `select` or `copy` of one, through any number
