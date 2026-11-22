@@ -150,11 +150,15 @@ is written, and tested, often in exact arithmetic:
   bit, tested for equality with the oracle and checked against its specification for every constant
   computed at compile time; and with them, that the ball `Ball<T, k>(q)` of such a constant contains
   the fraction ([Constants from fractions](../reference/rational.md)).
-- **A few compositions of two proved kernels** in the headers: the constructor of an interval of two
-  limbs from a `T`, and the member test of a point of `T` in an interval or a ball of two limbs, each
-  `make_2` (which gives the point exactly) followed by the operation of two limbs
-  ([Compositions](../reference/enclosure.md#compositions)); and, for ball vectors, `axpy` (a scaling,
-  then a sum) and `norm_upper` (the bound of the centers, then the radius added)
+- **A few compositions of proved kernels** in the headers, each argued from the claims of the
+  kernels it composes and not proved as one statement: the constructor of an interval of two limbs
+  from two values of `T` (`Interval<T, 2>(lo, hi)`, and `Interval<T, 2>::from_bounds(lo, hi)`, the
+  same constructor under another name) and the member test of a point of `T` in an interval or a
+  ball of two limbs, each `make_2` (which gives the point exactly) followed by the operation of two
+  limbs ([Compositions](../reference/enclosure.md#compositions)); `from_limbs` of an interval and of
+  a ball, each limb through the guard of `make_2` or `make_2_limbs`
+  ([Limbs](../reference/enclosure.md#limbs)); and, for ball vectors, `axpy` (a scaling, then a sum)
+  and `norm_upper` (the bound of the centers, then the radius added)
   ([Compositions made in the header](../reference/ball_vector.md#compositions-made-in-the-header)).
 - **The integer bookkeeping of the bounds of arrays and of the accumulator**: the count $n$ given to
   the kernels of `traits<X>::sum(n)` and `dot(n)` as the smallest number of `T` not below it; the
@@ -163,14 +167,17 @@ is written, and tested, often in exact arithmetic:
   theorem does not give) ([The bound as a function of the length](../reference/batch.md#the-bound-as-a-function-of-the-length),
   [The accumulator](../reference/accumulator.md#what-the-header-adds-which-is-not-machine-checked)).
 - **Tests of bit patterns written by hand**, with no kernel: `sign`, `isfinite`, `is_normalized`,
-  the states of a ball (`is_finite()`, `is_whole()`, `is_empty()`), and the limbs of a number and the
-  bounds of an interval, read as stored.
+  the states of a ball (`is_finite()`, `is_whole()`, `is_empty()`), `is_finite()` of an interval
+  (both bounds finite, tested on the bit patterns of their leading limbs), and the limbs of a number
+  and the bounds of an interval, read as stored.
 - **Thresholds sharper than those stated**: a condition under which a result is claimed finite is
   proved as stated, and how far it is from where an overflow is first seen is measured, not proved.
-- **The reading of IEEE 1788**: what Kairn takes the standard's semantics to be, a reading of its
-  text and of drafts and public test cases, not machine-checked by design
-  ([Milestone 2 statements](../developer/design/milestone2.md#in-short);
-  [IEEE 1788](../reference/enclosure.md#ieee-1788) says where Kairn departs from it).
+
+One more thing is not machine-checked, by design: that what Kairn states of the functions named
+after IEEE 1788 is the standard's meaning. Each statement is proved as it is written; that it is
+what the standard means is a reading of its text and of drafts and public test cases
+([Milestone 2 statements](../developer/design/milestone2.md#in-short);
+[IEEE 1788](../reference/enclosure.md#ieee-1788) says where Kairn departs from it).
 
 And, for every statement, the links a proof does not cover: that the generator prints the C++ and
 the model faithfully, that the compiler keeps the C++ as written, and that the hardware rounds as
