@@ -1928,6 +1928,84 @@ and one test of a mask (`stmxcsr`, `testl $0xe040`, a branch), the message and t
   report cold and out of line (`environment.hpp`), and the constructors and `make` forced inline
   (`ball_vector.hpp`); it is not made here.
 
+### 15. The guards of supplied factors
+
+What do the guards of rule R3 cost, those of the factors a program supplies in particular
+([Architecture](../architecture.md#the-kernel-ir), "The factors of a fused operation")? Every
+function on arrays calls its loop on supplied arrays, whose steps pass each value they add, and the
+factors of their fused operations, through the guard $a + 0$: `dot` of one limb is three operations
+per term (two guards and the fused multiply-add) where the loop on stored arrays has one; `scale` of
+two limbs guards the two limbs and `a`; `conv` of one limb both factors of each term;
+`Accumulator::add_product` both factors (one limb) or every limb (two). The loops on stored arrays of
+the generated headers are the same steps without the guards (`dot_1`, `scale_2`, `conv_1`, `sum_1`,
+`add_k`, `axpy_k`, the kernels `acc_mul_1`, `acc_mul_2`): this question calls them directly, as a
+control only (variant `bare`; no function of the library calls them), against the loop the public
+function calls (`kairn`, the public function without its check at entry), on the same arrays. Where
+nothing is guarded the two are the same loop: `scale` of one limb, `dot`, `axpy` (but for `y`) and
+`conv` of two limbs, whose factors are on the pending list of the factor rule. The data and the
+sizes are those of question 13.
+
+| The guards: the loop with them over the same loop without, double | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `dot`, one limb (3 operations per term against 1), L1 | 1.01 to 1.02 (-O2), 0.83 to 1.01 (-O3) | 0.99 to 1.00 |
+| `axpy`, one limb (y guarded), L1 | 1.09 to 1.13 | 1.15 to 1.16 |
+| `axpy`, two limbs, a of T (y guarded), L1 | 1.00 | 1.00 |
+| `axpy`, two limbs, a of two limbs (y guarded), L1 | 0.99 to 1.00 | 1.00 |
+| `scale`, two limbs (the limbs and a guarded), L1 | 1.16 | 1.16 |
+| `sum`, one limb (the element guarded), L1 | 1.02 (-O2), 0.97 to 0.99 (-O3) | 1.01 to 1.02 |
+| `sum`, two limbs (the limbs guarded), L1 | 1.01 | 1.01 to 1.02 |
+| `add`, one limb (both guarded), L1 | 1.19 to 1.20 (-O2), 1.19 to 1.45 (-O3) | 1.43 to 1.44 |
+| `add`, two limbs (every limb guarded), L1 | 1.19 | 1.20 to 1.21 |
+| `dot`, one limb (3 operations per term against 1), LLC | 1.00 to 1.01 | 0.99 to 1.00 |
+| `axpy`, one limb (y guarded), LLC | 0.98 to 0.99 | 0.98 to 0.99 |
+| `axpy`, two limbs, a of T (y guarded), LLC | 0.99 to 1.00 | 0.99 to 1.01 |
+| `axpy`, two limbs, a of two limbs (y guarded), LLC | 0.99 to 1.00 | 0.99 to 1.00 |
+| `scale`, two limbs (the limbs and a guarded), LLC | 1.14 to 1.15 | 1.14 to 1.15 |
+| `sum`, one limb (the element guarded), LLC | 1.00 to 1.01 | 0.99 to 1.00 |
+| `sum`, two limbs (the limbs guarded), LLC | 1.01 to 1.02 | 1.02 to 1.03 |
+| `add`, one limb (both guarded), LLC | 0.96 to 0.97 | 0.97 to 0.98 |
+| `add`, two limbs (every limb guarded), LLC | 1.19 | 1.19 to 1.20 |
+| `conv`, one limb, 16 coefficients (both factors guarded) | 1.06 to 1.10 (-O2), 1.13 to 1.15 (-O3) | 1.02 to 1.03 |
+| `conv`, one limb, 64 coefficients (both factors guarded) | 1.13 to 1.14 (-O2), 0.90 to 1.02 (-O3) | 1.14 to 1.15 |
+| `conv`, one limb, 512 coefficients (both factors guarded) | 1.00 to 1.02 | 1.01 |
+
+| The guards against the control of T, double (selection) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `dot`, one limb, with the guards, over the plain FMA loop in the same order, L1 | 1.00 to 1.03 (-O2), 0.89 to 0.91 (-O3) | 1.04 to 1.05 |
+| `dot`, one limb, without them, over the same, L1 | 0.99 to 1.01 (-O2), 0.89 to 1.10 (-O3) | 1.05 to 1.06 |
+| `scale`, two limbs, with them, over `x a` of T, L1 | 1.56 to 1.57 (-O2), 2.88 to 2.96 (-O3) | 5.98 to 6.02 |
+| `scale`, two limbs, without them, over the same, L1 | 1.34 to 1.35 (-O2), 2.49 to 2.54 (-O3) | 5.15 to 5.18 |
+| `conv`, one limb, 16, with them, over the plain FMA loop | 1.20 to 1.25 (-O2), 1.26 to 1.30 (-O3) | 1.16 to 1.17 |
+| `conv`, one limb, 16, without them, over the same | 1.10 to 1.15 | 1.13 to 1.15 |
+
+| The guards of the accumulator: with over without, double | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add_product`, one limb (both factors guarded), L1 | 1.01 | 1.00 |
+| `add_product`, two limbs (every limb guarded), L1 | 1.00 | 1.00 |
+| `add_product`, one limb, the public member over the kernels without the guards, L1 | 1.03 to 1.04 | 1.00 |
+| `add_product`, two limbs, the same, L1 | 1.00 | 1.00 |
+| `add_product`, one limb (both factors guarded), LLC | 1.00 | 1.00 |
+| `add_product`, two limbs (every limb guarded), LLC | 1.00 | 1.00 |
+| `add_product`, one limb, the public member over the kernels without the guards, LLC | 1.00 to 1.01 | 1.00 |
+| `add_product`, two limbs, the same, LLC | 1.00 | 1.00 |
+
+- **The guards of supplied factors cost nothing where the loop waits for a chain, and up to 17%
+  where it is bound by its throughput.** `dot` of one limb, three operations per term where the loop
+  on stored arrays has one, takes 0.98 to 1.02 times that loop on Zen 2: each lane waits for its fused
+  multiply-add, and the two guards are off that chain; `add_product` of the accumulator, one and two
+  limbs, 1.00 to 1.01 for the same reason. `scale` of two limbs, whose loop has no chain, takes 1.14
+  to 1.17 times the loop without the guards; `conv` of one limb 1.02 to 1.15 for polynomials of 16
+  and 64 coefficients and 1.00 to 1.02 for 512, where the coefficients' long chains dominate.
+- **Which of it is the guards**: against the loop of `T`, `scale` of two limbs costs 1.4 to 6.0
+  times `x a` of `double` with its guards and 1.3 to 5.2 without them: the guards are the 14 to 17%
+  between the two, the double-word product and the test of each element the rest; `dot` of one
+  limb costs the plain loop with an FMA in the same order with and without them (0.89 to 1.06).
+- **The guards of the additions** (rule R3 for the values added, not the factors), for comparison:
+  `add` 1.18 to 1.44 in L1, `axpy` 1.08 to 1.16 for one limb and 0.99 to 1.02 for two, `sum` 0.97 to
+  1.03; in the last-level cache, where the maps of one limb wait for the memory, 0.96 to 0.99.
+- Where nothing is guarded the two loops are the same: `scale` of one limb, and `dot`, `axpy` (but
+  for `y`) and `conv` of two limbs, whose factors are on the pending list of the factor rule.
+
 ### What the machine code shows (third part)
 
 The loops of the new timed functions were summarized by `bench/asm_summary.py` as in the earlier
@@ -3487,10 +3565,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 
 | Configuration (third part) | CPU | Compiler | Flags | Runs per item (arrays, short, entry pairs, short ball vectors triplets, acc, bv) | Dates, commits |
 |---|---|---|---|---|---|
-| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 0, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 0, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 0, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 0, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
 
 #### Runs of the third part
 
@@ -3520,6 +3598,18 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `short-linux-gcc-O3-r1.json` | 224, 0 | 1.000, 1.001 | 1.003 | 58.0, 60.4 |
 | `short-linux-gcc-O3-r2.json` | 224, 0 | 1.002, 1.003 | 1.009 | 60.5, 63.4 |
 | `short-linux-gcc-O3-r3.json` | 224, 0 | 1.000, 1.002 | 1.004 | 67.4, 65.4 |
+| `acc-linux-clang-O2-r1.json` | 138, 0 | 1.000, 1.002 | 1.004 | 98.6, 95.8 |
+| `acc-linux-clang-O2-r2.json` | 138, 0 | 1.001, 1.003 | 1.024 | 92.5, 93.8 |
+| `acc-linux-clang-O2-r3.json` | 138, 0 | 1.000, 1.002 | 1.003 | 89.7, 88.6 |
+| `acc-linux-clang-O3-r1.json` | 138, 0 | 1.000, 1.001 | 1.005 | 95.5, 93.8 |
+| `acc-linux-clang-O3-r2.json` | 138, 0 | 1.001, 1.003 | 1.004 | 93.5, 91.8 |
+| `acc-linux-clang-O3-r3.json` | 138, 0 | 1.016, 1.018 | 1.004 | 88.6, 90.6 |
+| `acc-linux-gcc-O2-r1.json` | 138, 0 | 1.002, 1.005 | 1.025 | 99.3, 100.3 |
+| `acc-linux-gcc-O2-r2.json` | 138, 0 | 1.001, 1.004 | 1.005 | 93.3, 92.5 |
+| `acc-linux-gcc-O2-r3.json` | 138, 0 | 1.000, 1.001 | 1.004 | 92.5, 89.9 |
+| `acc-linux-gcc-O3-r1.json` | 138, 0 | 1.002, 1.003 | 1.006 | 100.9, 99.0 |
+| `acc-linux-gcc-O3-r2.json` | 138, 0 | 1.001, 1.003 | 1.004 | 92.5, 91.9 |
+| `acc-linux-gcc-O3-r3.json` | 138, 0 | 1.000, 1.001 | 1.007 | 89.8, 89.6 |
 | `entry-linux-clang-O2-c1-r1.json` | 518, 0 | 1.001, 1.004 | 1.004 | 60.7, 65.7 |
 | `entry-linux-clang-O2-c1-r2.json` | 518, 0 | 1.002, 1.004 | 1.019 | 63.9, 66.3 |
 | `entry-linux-clang-O2-c1-r3.json` | 518, 0 | 1.000, 1.002 | 1.004 | 71.3, 69.2 |
@@ -3591,6 +3681,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | short linux-clang-O3 | 3 | 0.4%, 0.7%, 3.5% | `m2k/tp/ssum1_k2/kairn` |
 | short linux-gcc-O2 | 3 | 0.7%, 0.9%, 3.6% | `m2k/tp/ssum1_k16/kairn` |
 | short linux-gcc-O3 | 3 | 0.2%, 0.4%, 1.7% | `m2k/tp/ssum1_k64/kairn` |
+| acc linux-clang-O2 | 3 | 0.1%, 0.4%, 0.9% | `m2c/tp/acc1part16/op` |
+| acc linux-clang-O3 | 3 | 1.6%, 1.8%, 2.1% | `m2c/tp/acc2ball/kairn` |
+| acc linux-gcc-O2 | 3 | 0.3%, 0.6%, 5.6% | `m2c/llc/acc1lanes/op` |
+| acc linux-gcc-O3 | 3 | 0.2%, 0.4%, 3.1% | `m2a/llc/sum1/textbook` |
 | entry linux-clang-O2 inline | 3 | 0.2%, 0.5%, 8.8% | `m2w/tp/axpy_1_16/op` |
 | entry linux-clang-O2 nocheck | 3 | 0.8%, 1.5%, 5.9% | `m2w/tp/norm_1_16/seq` |
 | entry linux-clang-O3 inline | 3 | 0.5%, 1.1%, 18.9% | `m2w/tp/scale_1_64/op` |
@@ -5339,3 +5433,61 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | the constructor, 2 limbs, N = 13 | 1.12 to 1.13 (-O2), 1.36 to 1.40 (-O3) | 1.00 to 1.02 (-O2), 1.00 to 1.09 (-O3) |
 | the constructor, 2 limbs, N = 18 | 0.99 to 1.00 (-O2), 0.85 to 0.87 (-O3) | 1.01 to 1.07 (-O2), 1.05 to 1.19 (-O3) |
 | the constructor, 2 limbs, N = 80 | 0.98 to 0.99 (-O2), 1.07 to 1.09 (-O3) | 0.96 to 1.05 (-O2), 1.04 to 1.10 (-O3) |
+
+#### Question 15: the guards
+
+| The guards: the loop with them over the same loop without, double | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `dot`, one limb (3 operations per term against 1), L1 | 1.01 to 1.02 (-O2), 0.83 to 1.01 (-O3) | 0.99 to 1.00 |
+| `axpy`, one limb (y guarded), L1 | 1.09 to 1.13 | 1.15 to 1.16 |
+| `axpy`, two limbs, a of T (y guarded), L1 | 1.00 | 1.00 |
+| `axpy`, two limbs, a of two limbs (y guarded), L1 | 0.99 to 1.00 | 1.00 |
+| `scale`, two limbs (the limbs and a guarded), L1 | 1.16 | 1.16 |
+| `sum`, one limb (the element guarded), L1 | 1.02 (-O2), 0.97 to 0.99 (-O3) | 1.01 to 1.02 |
+| `sum`, two limbs (the limbs guarded), L1 | 1.01 | 1.01 to 1.02 |
+| `add`, one limb (both guarded), L1 | 1.19 to 1.20 (-O2), 1.19 to 1.45 (-O3) | 1.43 to 1.44 |
+| `add`, two limbs (every limb guarded), L1 | 1.19 | 1.20 to 1.21 |
+| `dot`, one limb (3 operations per term against 1), LLC | 1.00 to 1.01 | 0.99 to 1.00 |
+| `axpy`, one limb (y guarded), LLC | 0.98 to 0.99 | 0.98 to 0.99 |
+| `axpy`, two limbs, a of T (y guarded), LLC | 0.99 to 1.00 | 0.99 to 1.01 |
+| `axpy`, two limbs, a of two limbs (y guarded), LLC | 0.99 to 1.00 | 0.99 to 1.00 |
+| `scale`, two limbs (the limbs and a guarded), LLC | 1.14 to 1.15 | 1.14 to 1.15 |
+| `sum`, one limb (the element guarded), LLC | 1.00 to 1.01 | 0.99 to 1.00 |
+| `sum`, two limbs (the limbs guarded), LLC | 1.01 to 1.02 | 1.02 to 1.03 |
+| `add`, one limb (both guarded), LLC | 0.96 to 0.97 | 0.97 to 0.98 |
+| `add`, two limbs (every limb guarded), LLC | 1.19 | 1.19 to 1.20 |
+| `conv`, one limb, 16 coefficients (both factors guarded) | 1.06 to 1.10 (-O2), 1.13 to 1.15 (-O3) | 1.02 to 1.03 |
+| `conv`, one limb, 64 coefficients (both factors guarded) | 1.13 to 1.14 (-O2), 0.90 to 1.02 (-O3) | 1.14 to 1.15 |
+| `conv`, one limb, 512 coefficients (both factors guarded) | 1.00 to 1.02 | 1.01 |
+
+| The guards against the control of T, double | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `dot`, one limb, with the guards, over the plain FMA loop in the same order, L1 | 1.00 to 1.03 (-O2), 0.89 to 0.91 (-O3) | 1.04 to 1.05 |
+| `dot`, one limb, without them, over the same, L1 | 0.99 to 1.01 (-O2), 0.89 to 1.10 (-O3) | 1.05 to 1.06 |
+| `axpy`, one limb, with them, over `a x + y` of T, L1 | 0.66 (-O2), 1.89 to 2.07 (-O3) | 1.65 to 1.67 |
+| `axpy`, one limb, without them, over the same, L1 | 0.59 to 0.60 (-O2), 1.71 to 1.88 (-O3) | 1.43 to 1.44 |
+| `scale`, two limbs, with them, over `x a` of T, L1 | 1.56 to 1.57 (-O2), 2.88 to 2.96 (-O3) | 5.98 to 6.02 |
+| `scale`, two limbs, without them, over the same, L1 | 1.34 to 1.35 (-O2), 2.49 to 2.54 (-O3) | 5.15 to 5.18 |
+| `dot`, one limb, with the guards, over the plain FMA loop in the same order, LLC | 0.99 to 1.00 | 0.99 to 1.00 |
+| `dot`, one limb, without them, over the same, LLC | 1.00 | 1.00 |
+| `axpy`, one limb, with them, over `a x + y` of T, LLC | 0.72 to 0.73 (-O2), 1.10 to 1.12 (-O3) | 1.08 to 1.11 (-O2), 0.96 to 1.10 (-O3) |
+| `axpy`, one limb, without them, over the same, LLC | 0.73 to 0.74 (-O2), 1.12 to 1.14 (-O3) | 1.11 to 1.13 (-O2), 0.97 to 1.11 (-O3) |
+| `scale`, two limbs, with them, over `x a` of T, LLC | 0.83 to 1.44 (-O2), 2.41 to 2.42 (-O3) | 2.41 to 2.42 (-O2), 2.41 to 2.91 (-O3) |
+| `scale`, two limbs, without them, over the same, LLC | 0.72 to 1.26 (-O2), 2.11 to 2.12 (-O3) | 2.09 to 2.11 (-O2), 2.10 to 2.53 (-O3) |
+| `conv`, one limb, 16, with them, over the plain FMA loop | 1.20 to 1.25 (-O2), 1.26 to 1.30 (-O3) | 1.16 to 1.17 |
+| `conv`, one limb, 16, without them, over the same | 1.10 to 1.15 | 1.13 to 1.15 |
+| `conv`, one limb, 64, with them, over the plain FMA loop | 1.18 to 1.19 (-O2), 1.06 (-O3) | 1.21 to 1.22 |
+| `conv`, one limb, 64, without them, over the same | 1.04 (-O2), 1.04 to 1.18 (-O3) | 1.06 to 1.07 |
+| `conv`, one limb, 512, with them, over the plain FMA loop | 1.00 to 1.01 | 1.02 |
+| `conv`, one limb, 512, without them, over the same | 1.00 | 1.01 |
+
+| The guards of the accumulator: with over without, double | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add_product`, one limb (both factors guarded), L1 | 1.01 | 1.00 |
+| `add_product`, two limbs (every limb guarded), L1 | 1.00 | 1.00 |
+| `add_product`, one limb, the public member over the kernels without the guards, L1 | 1.03 to 1.04 | 1.00 |
+| `add_product`, two limbs, the same, L1 | 1.00 | 1.00 |
+| `add_product`, one limb (both factors guarded), LLC | 1.00 | 1.00 |
+| `add_product`, two limbs (every limb guarded), LLC | 1.00 | 1.00 |
+| `add_product`, one limb, the public member over the kernels without the guards, LLC | 1.00 to 1.01 | 1.00 |
+| `add_product`, two limbs, the same, LLC | 1.00 | 1.00 |
