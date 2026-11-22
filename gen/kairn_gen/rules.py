@@ -571,7 +571,8 @@ def r3_report(kernels):
 # not passed through guard. A factor of prod, emitted fma(a, b, +0), is safe: whatever a compiler
 # does with the product a * b inside it, fma(a * b, 1, +0) fused is RN(a b + 0), the rounding of the
 # product itself, which is what the program's product is. These functions list the exposed
-# operands; they refuse nothing, and the decision to guard them is the owner's.
+# operands and refuse nothing; factor_rule (below) refuses each, by the strict rule that the owner
+# decided on 2026-11-21, but those of the objects on FACTOR_PENDING, which are being closed.
 FACTORS = {'fma': (0, 1), 'fms': (0, 1), 'fnma': (0, 1), 'muladd': (0, 1)}
 ADDEND = {'fma': 2, 'fms': 2, 'fnma': 2, 'muladd': 2}
 

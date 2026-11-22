@@ -30,7 +30,9 @@
 /// factors of a fused operation: measured with Clang 18 on x86-64 and Apple clang 21 under
 /// -ffp-contract=fast); scale, mul_pow2, the x of axpy, the dot product of two limbs and conv
 /// only multiply their elements and are called without a guard (gen/kairn-gen build lists the
-/// factors that are not guarded, for the owner's decision). The loops on stored arrays (sum_1,
+/// factors that are not guarded; the owner decided on 2026-11-21 that every one is to be guarded,
+/// and those not guarded yet are on the generator's pending list, being closed). The loops on
+/// stored arrays (sum_1,
 /// sum_2, add_2, axpy_2, ...), for containers whose elements only Kairn writes, have no caller here:
 /// no container of this library is such.
 ///

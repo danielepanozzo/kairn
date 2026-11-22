@@ -615,7 +615,8 @@ foreach(_i RANGE 0 ${_last} 2)
   # product. Measured (docs/developer/testing.md, "Products of the program passed into Kairn"): Apple
   # clang 21 on AArch64 with =fast, at -O1 and -O2, in two_prod, mul_down, mul_up and
   # finite::mul(E2, T), whose kernels have no guard on their factors, so that this build fails with
-  # the guard too, a finding kept failing until the owner decides; GCC 13 and 16 and Clang 18 on
+  # the guard too, a finding kept failing until those kernels, on the pending list of the factor
+  # rule (the strict rule, which the owner decided on 2026-11-21), are closed; GCC 13 and 16 and Clang 18 on
   # x86-64 fused none of these forms, at any setting. Elsewhere the copy only reports.
   set(_factor report)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND _variant STREQUAL "contract-fast")

@@ -558,8 +558,9 @@ class R3Factors(unittest.TestCase):
 
     def test_the_kernels(self):
         # Every object of gen/kernels with exposed operands, as the report lists them today: the list
-        # is the evidence for the owner's decision (architecture.md, "R3"), and a kernel or a loop
-        # that joins or leaves it is a change to look at.
+        # is the evidence behind the strict rule, which the owner decided on 2026-11-21
+        # (architecture.md, "R3"), and a kernel or a loop that joins or leaves it is a change to look
+        # at.
         ks = common.kernels()
         found = {(e.kind, e.name, e.kernel): sorted(e.operands) for e in rules.exposed_operands(ks)}
         xy2 = ['x0', 'x1', 'y0', 'y1']

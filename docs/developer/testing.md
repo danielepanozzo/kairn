@@ -1061,8 +1061,11 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   `finite::mul` too): their kernels, `two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1` and
   `mul_2_1_full`, take their factors unguarded and are kernels of Milestone 1 and of the blocks of
   Milestone 2 whose headers that stage did not change. `api.boundary.contract-fast` and
-  `api.boundary.packed.native.contract-fast` (and `.scalar.`) fail with Apple clang until the owner
-  decides; their controls require the difference there, and report elsewhere. GCC 13 and 16 and
+  `api.boundary.packed.native.contract-fast` (and `.scalar.`) fail with Apple clang until these
+  kernels, on the pending list of the factor rule (`rules.FACTOR_PENDING`), are closed: the owner
+  decided the strict rule on 2026-11-21 (every factor that the program supplies to a fused
+  operation with an addend that is not zero is guarded), and the kernels on that list are being
+  closed. Their controls require the difference there, and report elsewhere. GCC 13 and 16 and
   Clang 18 on x86-64 fused none of these forms at any setting, and the scalar `operator*` of
   `Expansion` and the products of a ball by a `T` fused with no compiler.
 - **The bounds as functions of the length** (`traits<X>::sum(n)`, `sum_height(h)`, `dot(n)`, the
