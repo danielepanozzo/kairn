@@ -14,10 +14,10 @@
 # A project that uses Kairn needs CMake 3.18; Kairn's own tests and benchmarks need 3.21.
 cmake_minimum_required(VERSION 3.18...3.21)
 
-# 0.2.0: the development line of Milestone 2, in progress (include/kairn/version.hpp says what it
-# has); not a release.
+# 0.3.0: the development line of Milestone 2, with the whole interface of its statements
+# (include/kairn/version.hpp says what it has); not a release.
 project(kairn
-  VERSION 0.2.0
+  VERSION 0.3.0
   DESCRIPTION "Floating-point expansions with interval and ball arithmetic"
   LANGUAGES CXX)
 

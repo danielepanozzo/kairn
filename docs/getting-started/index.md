@@ -1,7 +1,7 @@
 # Getting started
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is complete
-([report](../developer/results/milestone1.md)), and Milestone 2 is in progress, in version 0.2.0
+([report](../developer/results/milestone1.md)), and Milestone 2 is in progress, in version 0.3.0
 of the development line. Public on `main`: numbers of one and two limbs of type `float` or
 `double`, balls and intervals around them with the [interface the two share](#intervals-and-balls),
 the [building blocks](#building-blocks) on `T`, [constants](#constants-from-fractions) built at
@@ -378,7 +378,10 @@ or `KAIRN_ENCLOSURE_CODE`, can require the version that has them:
 
 The first test is in a group of its own because a version before 0.2.0 has no such macro, and an
 undefined function-like macro in an `#if` does not compile; `KAIRN_VERSION`, which every version
-defines, can also be compared directly (`#if KAIRN_VERSION >= 200`).
+defines, can also be compared directly (`#if KAIRN_VERSION >= 200`). The building blocks are in
+0.2.0; the functions on arrays, the ball vectors, `from_bounds` and `from_limbs` of a set and the
+whole enclosure interface are in 0.3.0 (`KAIRN_VERSION_AT_LEAST(0, 3, 0)`), which `version.hpp`
+lists.
 
 ## What you need
 
@@ -515,7 +518,8 @@ headers, the package under `share/cmake/kairn` and the license as `share/license
 ```
 
 The installed package accepts a request for a version with the same major and minor number that is
-not newer than itself. The development line of Milestone 2 is 0.2.0.
+not newer than itself. The development line of Milestone 2 is 0.3.0: a request for 0.2 is not
+accepted by it (`include/kairn/version.hpp` says what each version has).
 
 Added with `add_subdirectory` or `FetchContent`, Kairn keeps to itself: it adds no install rule,
 so that `cmake --install` of the project installs the project's files and not Kairn's, unless the
