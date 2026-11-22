@@ -228,17 +228,33 @@ be the same: `add(x, x, z)`.
 
 ## Checks
 
+**The environment, in every build.** Every function of this page is a batch entry: before its loop
+it reads the floating-point environment once, as `kairn::environment_ok()` does, with
+`KAIRN_CHECKS` 1 or 0, and if it is not the default one (rounding to nearest, no flush to zero, no
+subnormal operand read as zero) calls `KAIRN_ENVIRONMENT_FAILURE` with the message of a debug build
+(`kairn: the floating-point environment: the rounding mode is not to nearest (MXCSR.RC is not
+zero)`, or `FPCR.RMode`, or flush to zero), which by default prints it and stops the program:
+the default environment is the precondition of every function on arrays, and it is checked
+([the brief](../developer/design/brief.md#floating-point-environment-non-negotiable)). `norm_upper`,
+which computes no sum (magnitudes, comparisons, a step of the bit pattern), leaves the rounding mode
+out and reads flush to zero only, under which its comparisons read a subnormal number as zero. One
+read of the control register per call, whatever the length; measured, under a nanosecond a call on
+an Apple M3 and about 6 nanoseconds on an AMD Zen 2, where reading MXCSR is slow: several times the
+cost of a sum of a few elements of one limb there, and within the noise of the loop from about 64
+elements of one limb, or a few of two
+([Testing](../developer/testing.md#the-checks-of-a-debug-build)). A program whose own
+`KAIRN_ENVIRONMENT_FAILURE` returns gets the function's result, with no guarantee.
+
 With `KAIRN_CHECKS` 1 ([config.hpp](https://github.com/danielepanozzo/kairn/blob/main/include/kairn/config.hpp)),
-every function but `norm_upper` checks the floating-point environment first, the rounding mode
-included, then the lengths (`x` and `y` of `dot` and of the maps the length of `z`; `z` of
+every function then checks the lengths (`x` and `y` of `dot` and of the maps the length of `z`; `z` of
 `conv` $n_x + n_y - 1$ coefficients), the arrays that alias, every element of two limbs
 (canonical), and its scalar (`a` of `axpy` canonical; `c` of `mul_pow2` a positive power of two),
 and stops the program with a message such as `kairn: dot: x and y have different lengths` on the
 first that fails. The lengths and the aliasing are integer comparisons, checked even when a
 program's `KAIRN_ENVIRONMENT_FAILURE` returns; the elements only in the default environment, since
-the test of a canonical pair rounds. `norm_upper` does not round: its check leaves the rounding
-mode out, and tests the elements only under rounding to nearest. Without the checks these are
-requirements, and lengths that differ read or write outside the arrays.
+the test of a canonical pair rounds. `norm_upper` tests the elements only under rounding to
+nearest. Without the checks these are requirements, and lengths that differ read or write outside
+the arrays.
 
 ## Constraints and constant evaluation
 

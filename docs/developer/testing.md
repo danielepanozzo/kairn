@@ -1684,23 +1684,62 @@ does, as the headers are written (`config.hpp` says the same):
 - In constant evaluation the environment is not checked, and an operand that fails a check makes
   the constant expression invalid.
 
+One check is made in every build, `KAIRN_CHECKS` 1 or 0: that of the environment at a *batch
+entry*, a function that runs a loop over arrays (the brief, "Floating-point environment": "at every
+batch-API entry and in debug builds for scalar ops"): every function of `kairn/batch.hpp` and every
+operation of `kairn/ball_vector.hpp` on whole ball vectors, the constructors from centers and a
+radius among them (`detail::check_batch_environment`, `environment.hpp`). It reads the register as
+`environment_ok()` does and calls `KAIRN_ENVIRONMENT_FAILURE` with the message of a debug build;
+`norm_upper` of an array and the negation of a ball vector, which compute no sum, leave the
+rounding mode out; the other checks of those functions stay with `KAIRN_CHECKS`. The scalar
+operations, `Packed` and the accumulator, which take one term at a time, are no batch entries.
+
+Its cost, measured on 2026-11-21 before and after it was added (a program that calls `sum`, `dot`
+and `add` on arrays of `double`, nanoseconds per call, the best of 9 runs of a loop of calls, three
+times each, built against the headers before and after with the same flags; `-O3 -DNDEBUG`; on the
+Linux machine pinned to one core):
+
+| $k$, $n$ | Apple M3, Apple clang 21: `sum` | `dot` | `add` | AMD Zen 2, GCC 13, `-mfma`: `sum` | `dot` | `add` | the same, `-mavx2 -mfma`: `sum` | `dot` | `add` |
+|---|---|---|---|---|---|---|---|---|---|
+| 1, 1 | 0.49, 0.99 | 0.55, 1.01 | 0.88, 1.32 | 1.22, 7.22 | 1.02, 6.92 | 1.80, 7.22 | 3.01, 7.20 | 2.11, 7.50 | 2.10, 7.81 |
+| 1, 8 | 1.52, 1.59 | 2.61, 2.12 | 2.42, 2.47 | 2.70, 8.23 | 5.06, 8.41 | 9.53, 11.77 | 2.70, 7.51 | 2.44, 7.52 | 2.70, 7.81 |
+| 1, 64 | 9.10, 9.23 | 17.41, 13.19 | 17.69, 17.63 | 31.79, 37.97 | 60.88, 67.60 | 70.16, 73.84 | 10.58, 13.08 | 13.75, 16.90 | 12.90, 14.83 |
+| 1, 1024 | 284, 302 | 441, 444 | 277, 275 | 899, 901 | 1504, 1511 | 1111, 1075 | 217, 223 | 354, 360 | 203, 205 |
+| 2, 1 | 3.15, 3.15 | 3.55, 3.55 | 1.93, 2.20 | 4.73, 7.82 | 7.65, 8.72 | 5.93, 8.12 | 4.73, 8.13 | 7.67, 8.77 | 5.72, 8.43 |
+| 2, 8 | 11.39, 11.48 | 14.87, 14.96 | 8.33, 8.41 | 68.67, 69.74 | 74.71, 74.74 | 43.42, 43.54 | 38.59, 38.89 | 43.54, 44.11 | 10.42, 11.04 |
+| 2, 64 | 189, 189 | 196, 196 | 64.0, 64.7 | 641, 641 | 646, 643 | 343, 341 | 182, 182 | 187, 188 | 78.7, 79.5 |
+| 2, 1024 | 3760, 3762 | 3703, 3701 | 1000, 1007 | 10456, 10465 | 10468, 10412 | 5467, 5428 | 2639, 2635 | 2637, 2640 | 1298, 1294 |
+
+Each cell is before, after. On the M3 the check costs 0 to 0.5 ns a call; on the Zen 2 about 6 ns,
+the cost of storing MXCSR there (21 cycles, as the comment of `environment_ok()` says), which is
+several times a sum of a few elements of one limb and within the noise from about 64 elements of
+one limb, or a few of two. It was kept as the brief asks it, whatever its cost.
+
 `tests/api/checks.cpp` runs them, on the cases of `tests/api/checks_cases.hpp`, built as the
 [debug build](#flag-sets) (`api.checks.debug.*`) and with the build's own flags and `KAIRN_CHECKS`
 defined to 1 (`api.checks.release.*`, where an optimizer could move or drop a check), and
+without the checks, with the build's own flags and `KAIRN_CHECKS` 0 (`api.checks.off.default`,
+`.rounding`, `.flush`; `KAIRN_TEST_CHECKS_OFF`): there the batch entries (the cases `batch.*`,
+`bv1.*` and `bv2.*`, 29 of them) keep their kind and must stop the program as with the checks,
+under each directed rounding mode and under flush to zero, and every other function is listed as
+`runs` (149, those that round: under every state they must return, with no message of Kairn's,
+their results not compared, since the state changes them) or `unchecked` (56: the same bits as to
+nearest under a rounding mode, and not run under flush to zero). `default` is the control: every
+function runs in the default environment. Those three are 702 and 176 runs on the Mac.
 `tests/api/checks.cmake` judges each case from the program's exit status and output:
 
 The cases are a table of every public function of the headers, one entry per form that reaches a
-function of its own in `kairn::detail` (131 today), each marked with what the checks do before it:
-`rounds` (93: every operation that rounds, the compound assignments, the functions of
+function of its own in `kairn::detail` (234 today), each marked with what the checks do before it:
+`rounds` (175: every operation that rounds, the compound assignments, the functions of
 `kairn::finite::`, `is_normalized` of two limbs, the constructors whose checks round, and the
 functions of the enclosure interface that compute bounds or centers: the midpoint, the radius
 and the split of an interval, the conversions between an interval and a ball, the ball from an
 interval of two `T`, the bounds of a ball as numbers of `T` and its narrowing),
-`exact` (29: the functions that do not round and are checked without the rounding mode, the
+`exact` (46: the functions that do not round and are checked without the rounding mode, the
 negation, the hull and the intersection of intervals, the bounds of an interval of two limbs as
 numbers of `T` and the constructors of intervals among them) or
-`unchecked` (9: the functions with no check at all, the accessors of an interval and its states
-among them). A function that rounds is run on the operands
+`unchecked` (13: the functions with no check at all, the accessors of an interval, its states and
+its `is_finite()` among them). A function that rounds is run on the operands
 below; one that does not round, on a corpus, for `double` and for `float`: zeros of both signs,
 subnormal numbers, the smallest normal number, the largest finite number, the infinities and NaN,
 alone and in canonical pairs (a zero of either sign in each limb, a subnormal leading limb and a
@@ -1758,7 +1797,10 @@ each state of `rounding` and `flush`, each function of the table that rounds cal
 reason and goes on, and so does `x + y` with an `x` that is not canonical, which stops the
 program in the default environment; under each rounding mode no function that does not round
 calls it, and each gives the same bits as to nearest; under flush to zero each that is checked
-calls it. `api.reject.checks.*` are the constant expressions, and
+calls it. `api.checks.handler.off` is the same program without the checks: there only the batch
+entries call the handler (26 under a rounding mode, and 29 under flush to zero, the three that do
+not round among them), every other function runs without calling it, and `x + y` with an `x` that
+is not canonical does not call it either. `api.reject.checks.*` are the constant expressions, and
 `api.oracle.K.F` judges the debug build's runner: the checks let every canonical case through and
 change no result. On the lines of `ball_make_1` and `ball_make_2` whose radius is negative, about
 40% of their cases, which the checks stop by design, the debug build's runner computes

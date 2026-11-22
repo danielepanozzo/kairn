@@ -613,8 +613,10 @@ constructors from centers and a radius among them) reads the register once befor
 `KAIRN_ENVIRONMENT_FAILURE` with the message of a debug build, which by default prints it and
 stops the program. `norm_upper` of an array and the negation of a ball vector, which compute no
 sum, leave the rounding mode out (flush to zero still changes their comparisons); every other batch
-entry reads it. Measured, the check costs under a nanosecond a call on an Apple M3, and is lost in
-the noise of the loop from a few elements on ([Testing](../developer/testing.md#the-checks-of-a-debug-build)).
+entry reads it. Measured, the check costs under a nanosecond a call on an Apple M3 and about 6
+nanoseconds on an AMD Zen 2, where reading MXCSR is slow; it is within the noise of the loop from
+about 64 elements of one limb, or a few of two
+([Testing](../developer/testing.md#the-checks-of-a-debug-build)).
 The scalar operations, `Packed` and the accumulator, whose operations take one term at a time,
 check the environment in a debug build only, as below. In a build without `NDEBUG`
 (or with `KAIRN_CHECKS` defined to 1), every operation checks the environment, then its operands:

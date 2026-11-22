@@ -104,7 +104,10 @@ program that adds a product of its own writes `acc.add(a * b)`, which guards, or
 
 ## Checks and constant evaluation
 
-With `KAIRN_CHECKS` 1, `add`, `add_product`, `merge`, `error_bound` and `ball` check the
+The accumulator is no batch entry: `add` and `add_product` take one term and `merge` one
+accumulator, as a scalar operation does, so they check the environment in a debug build only, as
+the operations of `Expansion` do (the functions on arrays of [batch.md](batch.md#checks) check it in
+every build). With `KAIRN_CHECKS` 1, `add`, `add_product`, `merge`, `error_bound` and `ball` check the
 floating-point environment, the rounding mode included, then that a two-limb operand is canonical;
 `from_state` does not round, checks the environment without the rounding mode, and then its state;
 `sum()`, `count()`, `magnitudes()` and `running_sum()` check nothing. The constructor, `add`,
