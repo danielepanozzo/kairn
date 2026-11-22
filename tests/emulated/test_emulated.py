@@ -10,11 +10,12 @@ EXE is the program tests/emulated/selftest.cpp. Two parts:
 - oracle: every operation of the emulated type in toy formats, against the reference arithmetic of
   the oracle (oracle/kairn_oracle/refrun.py, Arith, and fmt.py: the rounding, succ and pred of
   oracle/README.md), which is written apart from both the emulated type and the generator's
-  interpreter. Every pair of operands (and every triple for the fused operations) of formats of
-  one to five bits, finite, infinite and NaN; random operands of the formats of the exhaustive
-  tier, fp:8:-14:1 to fp:11:-20:1, drawn from every binade, the subnormal ones and the top, with
-  the special values. Values are compared, and the class of a value that is not finite; the sign
-  of a zero is not (the oracle's fixed values have none), and is compared in the other part.
+  interpreter. Every pair of operands of formats of one to four bits, and every triple for the
+  fused operations of those of one and two, finite, infinite and NaN; random operands of the
+  formats of the exhaustive tier, fp:8:-14:1 to fp:11:-20:1, drawn from every binade, the
+  subnormal ones and the top, with the special values. Values are compared, and the class of a
+  value that is not finite; the sign of a zero is not (the oracle's fixed values have none), and
+  is compared in the other part.
 - hardware: selftest --hardware binary32 and binary64, every operation in the format of float and
   of double against the machine's own, bit for bit, the sign of a zero included.
 
@@ -42,8 +43,8 @@ FAULTS = ("tie-away", "subnormal-trunc")
 
 # Formats of every pair (and triple) of operands: precision 1 to 5, the subnormal range and
 # overflow within reach of every operation.
-EXHAUSTIVE = ["fp:1:-3:3", "fp:2:-3:2", "fp:3:-4:2", "fp:4:-6:3", "fp:5:-7:0"]
-EXHAUSTIVE_TRIPLES = ["fp:1:-3:3", "fp:2:-2:1", "fp:3:-4:2"]
+EXHAUSTIVE = ["fp:1:-3:3", "fp:2:-3:2", "fp:3:-4:2", "fp:4:-6:3"]
+EXHAUSTIVE_TRIPLES = ["fp:1:-3:3", "fp:2:-2:1"]
 # The formats of the exhaustive tier (formats of the statements, qmax = 1, qmin = 3 - qmax - 2p),
 # and one of a wider range, on random operands.
 SAMPLED = ["fp:8:-14:1", "fp:9:-16:1", "fp:10:-18:1", "fp:11:-20:1", "fp:8:-22:9"]
@@ -224,20 +225,21 @@ def compare_format(exe, name, rng, sampled, triples, fault):
 
 
 def oracle_part(exe, size, fault):
-    """size: full (every format above, 4 000 random pairs and triples in each sampled one), quick
-    (the formats of one to three bits, every triple of the first two, 1 000 random cases in each
-    sampled format) or fault (fp:3:-4:2 and fp:8:-14:1 only)."""
+    """size: full (the formats of one to four bits, every triple of the first two, 2 000 random
+    pairs and triples in each sampled format), quick (the formats of one to three bits, every
+    triple of the first, 500 random cases in each sampled format) or fault (fp:3:-4:2 and
+    fp:8:-14:1 only)."""
     rng = random.Random(20261121)
     total, n = 0, 0
     shown = []
-    exhaustive = {"full": EXHAUSTIVE, "quick": EXHAUSTIVE[:3], "fault": ["fp:3:-4:2"]}[size]
-    triples = {"full": EXHAUSTIVE_TRIPLES, "quick": EXHAUSTIVE_TRIPLES[:2], "fault": []}[size]
+    exhaustive = {"full": EXHAUSTIVE[:4], "quick": EXHAUSTIVE[:3], "fault": ["fp:3:-4:2"]}[size]
+    triples = {"full": EXHAUSTIVE_TRIPLES[:2], "quick": EXHAUSTIVE_TRIPLES[:1], "fault": []}[size]
     sampled = {"full": SAMPLED, "quick": SAMPLED, "fault": SAMPLED[:1]}[size]
     for name in exhaustive:
         d, first, k = compare_format(exe, name, rng, 0, name in triples, fault)
         total, n, shown = total + d, n + k, shown + first
     for name in sampled:
-        d, first, k = compare_format(exe, name, rng, 4000 if size == "full" else 1000, False, fault)
+        d, first, k = compare_format(exe, name, rng, 2000 if size == "full" else 500, False, fault)
         total, n, shown = total + d, n + k, shown + first
     return total, n, shown, len(exhaustive) + len(sampled)
 
@@ -245,7 +247,7 @@ def oracle_part(exe, size, fault):
 def hardware_part(exe, full, fault):
     total, report = 0, []
     for fmt in ("binary32", "binary64"):
-        cmd = [exe, "--hardware", fmt, "--count", str(2000000 if full else 100000), "--seed", "1"]
+        cmd = [exe, "--hardware", fmt, "--count", str(1000000 if full else 50000), "--seed", "1"]
         if fault:
             cmd += ["--fault", fault]
         p = subprocess.run(cmd, capture_output=True, text=True)

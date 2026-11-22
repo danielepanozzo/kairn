@@ -33,6 +33,21 @@ REPO = os.path.dirname(TESTS)
 sys.dont_write_bytecode = True
 sys.path.insert(0, TESTS)
 import crosscheck  # noqa: E402
+from kairn_oracle import cli as oracle_cli  # noqa: E402
+
+# The oracle's command line reads the claims file on each command, four fifths of the time of a
+# gen of a hundred requests; here hundreds of gens read the same file, which is read once.
+_read_claims = oracle_cli._claims
+_claims_read = {}
+
+
+def _claims_once(path):
+    if path not in _claims_read:
+        _claims_read[path] = _read_claims(path)
+    return _claims_read[path]
+
+
+oracle_cli._claims = _claims_once
 
 
 def generate(kernel, fmt, seed, count, claims, extra=()):

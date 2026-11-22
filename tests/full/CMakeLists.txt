@@ -284,8 +284,8 @@ endforeach()
 # --- The emulated formats (begin) ---------------------------------------------------------------
 #
 # full.emulated.arith: emulated.arith of tests/CMakeLists.txt at the full tier's sizes (every
-# operand of formats of one to five bits, every triple of the smallest, 4 000 random pairs and
-# triples in each format of the tier, and 2 million stratified cases of every operation against
+# operand of formats of one to four bits, every triple of the two smallest, 2 000 random pairs and
+# triples in each format of the tier, and a million stratified cases of every operation against
 # the machine's float and double), with the planted faults, which it must catch.
 if(_emulated AND Python3_Interpreter_FOUND)
   add_test(NAME full.emulated.arith
@@ -338,6 +338,16 @@ if(_emulated AND Python3_Interpreter_FOUND AND _crosscheck)
       --count "${KAIRN_EMULATED_SAME_CASES}" ${_oracle_claims_arg}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(full.crosscheck.emulated.same_lines PROPERTIES TIMEOUT 900
+    LABELS "full;crosscheck;emulated")
+  # full.crosscheck.emulated.fault: the runner of a fault planted in the printed C++ (the arms of a
+  # select of mul_ext_2_2 swapped, emulated/emitted_fault.py), which the oracle passes, as the quick
+  # tier's binary64 cross-check, where nothing compares it, passes it; beside the interpreter in
+  # fp:8:-14:1 the comparison of the lines fails it.
+  add_test(NAME full.crosscheck.emulated.fault
+    COMMAND "${Python3_EXECUTABLE}" "${_emulated_dir}/emitted_fault.py" check
+      --runner "$<TARGET_FILE:kairn-emulated-runner-fault>" ${_oracle_claims_arg}
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.crosscheck.emulated.fault PROPERTIES TIMEOUT 600
     LABELS "full;crosscheck;emulated")
 endif()
 # --- The emulated formats (end) -----------------------------------------------------------------

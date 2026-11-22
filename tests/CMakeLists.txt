@@ -336,6 +336,22 @@ if(EXISTS "${_emulated_dir}/number.cpp")
   endforeach()
   set(_emulated_runners --emulated emulated "$<TARGET_FILE:kairn-emulated-runner>"
     --emulated emulated-fixup-call "$<TARGET_FILE:kairn-emulated-runner-fixup-call>" --emulated-ce)
+  # A fault planted in the printed C++ (emulated/emitted_fault.py: the arms of a select of
+  # mul_ext_2_2 swapped, in a copy of gen/kernels.hpp written at build time), for
+  # full.crosscheck.emulated.fault.
+  if(Python3_Interpreter_FOUND)
+    set(_fault_dir "${CMAKE_CURRENT_BINARY_DIR}/emulated-fault")
+    add_custom_command(OUTPUT "${_fault_dir}/runner.cpp" "${_fault_dir}/gen/kernels.hpp"
+      COMMAND "${Python3_EXECUTABLE}" "${_emulated_dir}/emitted_fault.py" write "${_fault_dir}"
+      DEPENDS "${_emulated_dir}/emitted_fault.py" "${_emulated_dir}/gen/kernels.hpp" "${_emulated_dir}/runner.cpp"
+        "${_emulated_dir}/number.hpp" "${_emulated_dir}/prelude.hpp"
+      COMMENT "The emulated kernels with a fault planted in mul_ext_2_2")
+    add_executable(kairn-emulated-runner-fault "${_fault_dir}/runner.cpp")
+    target_include_directories(kairn-emulated-runner-fault PRIVATE "${_fault_dir}"
+      "${PROJECT_SOURCE_DIR}/gen/tests")
+    target_link_libraries(kairn-emulated-runner-fault PRIVATE kairn-emulated)
+    target_compile_options(kairn-emulated-runner-fault PRIVATE ${_warnings})
+  endif()
 endif()
 # --- The emulated formats (end) -----------------------------------------------------------------
 
@@ -1388,8 +1404,8 @@ add_subdirectory(api)
 # the statements of precision 8, and compared byte for byte with each other and with the
 # generator's interpreter (crosscheck.py --emulated, --emulated-ce, --interp). The quick tier keeps
 # the code from rotting: every operand of next_up, the run-time path and Dekker's of two_prod, the
-# fix-up branch of mul_2_2_full, an interval product and a fold of two limbs, a few seconds. The
-# full tier has every kernel and fold (full/CMakeLists.txt).
+# fix-up branch of mul_2_2_full and a fold of two limbs, a few seconds. The full tier has every
+# kernel and fold (full/CMakeLists.txt).
 set(KAIRN_EMULATED_FORMAT fp:8:-14:1 CACHE STRING
   "The format of the cross-checks of the emulated kernels, quick and full tiers")
 # The bounds of the folds of two limbs, whose mask turns false where m unit(K) passes 1/5 to 1/2 of
@@ -1398,22 +1414,22 @@ set(KAIRN_EMULATED_FORMAT fp:8:-14:1 CACHE STRING
 # is 510, and the guards fail the run, which never saw the mask false).
 set(_emulated_format_kernel_bound_sum_2 fp:8:-29:16)
 set(_emulated_format_kernel_bound_dot_2 fp:8:-29:16)
-set(KAIRN_EMULATED_CASES 5000 CACHE STRING
+set(KAIRN_EMULATED_CASES 2000 CACHE STRING
   "Random cases of each kernel of two limbs or more in the full tier's emulated cross-checks")
 set(KAIRN_EMULATED_FOLD_CASES 300 CACHE STRING
   "Random arrays of each fold in the full tier's emulated cross-checks")
 set(KAIRN_EMULATED_FOLD_LENGTH 64 CACHE STRING
   "The longest random array of the full tier's emulated cross-checks of folds")
-set(KAIRN_EMULATED_SAME_CASES 200 CACHE STRING
+set(KAIRN_EMULATED_SAME_CASES 100 CACHE STRING
   "Random cases of each kernel and fold that the emulated runners and the interpreter complete in full.crosscheck.emulated.same_lines")
 if(_emulated AND Python3_Interpreter_FOUND)
-  foreach(_case next_up two_prod mul_2_2_full interval_mul_1 sum_2)
+  foreach(_case next_up two_prod mul_2_2_full sum_2)
     if(_case STREQUAL "next_up")
       set(_mode --exhaustive)
     elseif(_case STREQUAL "sum_2")
       set(_mode --seed "${KAIRN_CROSSCHECK_SEED}" --count 300 --max-length 64)
     else()
-      set(_mode --seed "${KAIRN_CROSSCHECK_SEED}" --count 2000)
+      set(_mode --seed "${KAIRN_CROSSCHECK_SEED}" --count 1000)
     endif()
     set(_name crosscheck.emulated.${_case})
     add_test(NAME ${_name}

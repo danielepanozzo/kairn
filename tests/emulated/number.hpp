@@ -58,14 +58,15 @@ public:
     explicit Number(std::size_t n) noexcept;
     Number(const Number&) = default;
     Number& operator=(const Number&) = default;
-    // Copies through a volatile object (the generated ends of the ball vectors).
+    // Copies through a volatile object (the generated ends of the ball vectors). The assignment
+    // returns nothing: the generated code uses it as a statement, and a reference to a volatile
+    // object discarded there is a warning of GCC ("implicit dereference will not access object").
     Number(const volatile Number& o) noexcept : kind_(o.kind_), neg_(o.neg_), m_(o.m_), q_(o.q_) {}
-    volatile Number& operator=(const Number& o) volatile noexcept {
+    void operator=(const Number& o) volatile noexcept {
         kind_ = o.kind_;
         neg_ = o.neg_;
         m_ = o.m_;
         q_ = o.q_;
-        return *this;
     }
     // The integer part of a finite value in [0, 2^64), and 0 for any other (C++ leaves the
     // conversion of such a double undefined; the generated code converts only counts below 2^64).
