@@ -850,14 +850,16 @@ inline void sub(Sequential, const X& x, const Y& y, Z&& z) noexcept {
 
 /// Z = X a, a of T (loop bv_scale_1 or bv_scale_2): each center scaled by a (scale_step_k, the
 /// products mul_1_1 and mul_2_1), the radius that of ball_scale_k at the largest magnitude of a
-/// center written, bv_scale_radius_k(M, rx, a). a is a value of the program: the loop only
-/// multiplies it, which needs no guard. Proved, in the IEEE model, for a canonical X and any a:
-/// canonical (V1); x a is a member for every member x (V2); a finite result has a finite X and a
-/// finite a (V3); it is finite when X is finite, a is finite, |a| rx <= 2^(e_max - 2) and every entry
-/// has (|x_i| + rx) |a| <= 2^(e_max - 2) (V4). An infinite or NaN a gives the whole space. Not
-/// claimed: that the radius equals the largest of the entrywise radii. For a power of two known as
-/// such, ldexp and half keep the result exact; this scaling's radius grows. z may be x (in place).
-/// Rounds; checked as add.
+/// center written, bv_scale_radius_k(M, rx, a). a is a value of the program: for one limb the loop
+/// only rounds its products, which needs no guard; for two limbs a is a factor of the fused
+/// operations of mul_2_1, unguarded (bv_scale_2 is on the generator's pending list of rule R3, the
+/// factors of a fused operation; no compiler was measured to fuse a product of the program into
+/// it). Proved, in the IEEE model, for a canonical X and any a: canonical (V1); x a is a member for
+/// every member x (V2); a finite result has a finite X and a finite a (V3); it is finite when X is
+/// finite, a is finite, |a| rx <= 2^(e_max - 2) and every entry has (|x_i| + rx) |a| <=
+/// 2^(e_max - 2) (V4). An infinite or NaN a gives the whole space. Not claimed: that the radius
+/// equals the largest of the entrywise radii. For a power of two known as such, ldexp and half keep
+/// the result exact; this scaling's radius grows. z may be x (in place). Rounds; checked as add.
 template <class X, class Z>
     requires kairn::detail::bv_unary<X, Z>
 inline void scale(const X& x, std::type_identity_t<kairn::detail::bv_limb_t<X>> a, Z&& z) noexcept {

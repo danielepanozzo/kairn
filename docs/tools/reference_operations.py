@@ -1047,7 +1047,7 @@ KERNELS = {
                          form("scale(x, a, z)", V1, T, W1, result="bool", note=STEP + " (loop `scale_1`)")),
     "scale_step_2": page("maps", "x a of two limbs, a of T, its operands unguarded (the step of `bv_scale_2`)"),
     "scale_entry_step_2": page("maps", "x a of two limbs, a of T, on the guarded limbs and scalar",
-                               form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2`; the "
+                               form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2_entry`; the "
                                     "limbs of each element and a guarded, rule R3 on the factors of a fused "
                                     "operation)")),
     "mul_pow2_step_1": page("maps", "x c of one limb, c a power of two",

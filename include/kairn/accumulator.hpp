@@ -146,11 +146,12 @@ public:
         add(Expansion<T, K>(x));
     }
 
-    /// Adds the product x y (kernel acc_mul_entry_1 or acc_mul_entry_2): for one limb s = fma(x, y, s) on x
-    /// and y guarded, one rounding of the exact product and the sum (the guards keep a product of
-    /// the program out of the fused operation where the compiler sees the other factor to be 1, rule
-    /// R3: measured with Apple clang 21 under -ffp-contract=fast); for two the step of the dot
-    /// product, mul_2_2 then add_2_2, which only multiplies x and y; a = a + |x0| |y0| rounded once.
+    /// Adds the product x y (kernel acc_mul_entry_1 or acc_mul_entry_2): for one limb s = fma(x, y, s)
+    /// on x and y guarded, one rounding of the exact product and the sum (the guards keep a product
+    /// of the program out of the fused operation where the compiler sees the other factor to be 1,
+    /// rule R3: measured with Apple clang 21 under -ffp-contract=fast); for two the step of the dot
+    /// product, mul_2_2 then add_2_2, on the limbs of x and y guarded, for the same reason; a = a +
+    /// |x0| |y0| rounded once.
     /// One more term. Rounds; not constexpr (fused multiply-adds). Requires, with two limbs, x and y
     /// canonical (checked with KAIRN_CHECKS).
     void add_product(const Expansion<T, K>& x, const Expansion<T, K>& y) noexcept

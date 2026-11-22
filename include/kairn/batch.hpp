@@ -24,17 +24,19 @@
 /// addition (rule R3 of docs/developer/architecture.md). So every function calls the loop on
 /// supplied arrays (milestone2.md, "Arrays that the program fills"): the sums and the maps that
 /// add an element are the loops named _entry, whose steps pass each limb that they add through the
-/// guard a + 0 first; the dot product of one limb is the loop dot_1_entry, whose step guards both
-/// factors of its fused operation, because a compiler that sees one of them to be 1 (an array of
-/// ones) rewrites fma(x, 1, s) as x + s and fuses the program's product x into it (rule R3, the
-/// factors of a fused operation: measured with Clang 18 on x86-64 and Apple clang 21 under
-/// -ffp-contract=fast); scale, mul_pow2, the x of axpy, the dot product of two limbs and conv
-/// only multiply their elements and are called without a guard (gen/kairn-gen build lists the
-/// factors that are not guarded; the owner decided on 2026-11-21 that every one is to be guarded,
-/// and those not guarded yet are on the generator's pending list, being closed). The loops on
-/// stored arrays (sum_1,
-/// sum_2, add_2, axpy_2, ...), for containers whose elements only Kairn writes, have no caller here:
-/// no container of this library is such.
+/// guard a + 0 first; the dot product and the convolution of one limb are the loops dot_1_entry and
+/// conv_1_entry, whose step guards both factors of its fused operation, because a compiler that
+/// sees one of them to be 1 (an array of ones) rewrites fma(x, 1, s) as x + s and fuses the
+/// program's product x into it (rule R3, the factors of a fused operation: measured with Clang 18
+/// on x86-64 and Apple clang 21 under -ffp-contract=fast), and the scaling of two limbs is the loop
+/// scale_2_entry, whose step guards the limbs of each element and a, factors of the fused
+/// operations of mul_2_1, for the same reason. The scaling of one limb, mul_pow2 and the x of axpy
+/// of one limb only round products of their elements, which needs no guard; the dot product, axpy
+/// and the convolution of two limbs take their factors unguarded (gen/kairn-gen build lists them;
+/// the owner decided on 2026-11-21 that every one is to be guarded, and these are on the
+/// generator's pending list, being closed). The loops on stored arrays (sum_1, sum_2, add_2,
+/// axpy_2, dot_1, conv_1, scale_2, ...), for containers whose elements only Kairn writes, have no
+/// caller here: no container of this library is such.
 ///
 /// The order of summation. sum, sum_fast and dot are folds whose result depends on the order of its
 /// additions; one theorem bounds every order by the same expression of the length
@@ -514,9 +516,11 @@ bool sub(SoAView<T, K> x, SoAView<U, K> y, SoAView<V, K> z) noexcept {
     return finite;
 }
 
-/// z = x a, element by element, a of T: loop scale_1 for one limb, scale_2 for two (the steps
-/// scale_step_1, the product of T, and scale_step_2, mul_2_1). The elements and a are only
-/// multiplied, and need no guard. Rounds; not constexpr. In place: z may be x.
+/// z = x a, element by element, a of T: loop scale_1 for one limb, scale_2_entry for two (the steps
+/// scale_step_1, the product of T, and scale_entry_step_2, mul_2_1 on the guarded limbs of the
+/// element and the guarded a). One limb: the element and a are only multiplied, and need no guard;
+/// two limbs: they are factors of the fused operations of mul_2_1, and are guarded (rule R3, the
+/// factors of a fused operation). Rounds; not constexpr. In place: z may be x.
 ///
 /// Statement, proved, for every element when it is finite: one limb, z_i = x_i a rounded to nearest,
 /// so |z_i - x_i a| <= u/(1 + u) |x_i a| + eta/2; two limbs, z_i normalized and

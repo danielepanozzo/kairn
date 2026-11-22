@@ -387,12 +387,14 @@ license:       bound: published; proof: MIT
 The folds of this stage are the sums and dot products of the page: `sum_1`, `sum_2` and
 `sum_fast_2` (the fast addition) on stored arrays, their `_entry` forms on supplied ones, whose
 steps (`sum_entry_step_1`, `sum_entry_step_2`, `sum_fast_entry_step_2`) pass each limb of the
-element through `guard`, and `dot_1` (the fused step `dot_step_1`, `t = fma(x, y, s)`) and `dot_2`
-(`dot_step_2`: `p = mul_2_2(x, y); t = add_2_2(s, p)`), whose arrays are supplied and need no
-guard by rule R3: their steps only multiply their elements. `dot_1_entry` is `dot_1` with the
-step `dot_entry_step_1`, which guards both factors before the fused operation (R3, the factors of
-a fused operation, above): the dot product of one limb of `kairn/batch.hpp` calls it. The
-finishes `fold_finish_1` and
+element through `guard`, and `dot_1` (the fused step `dot_step_1`, `t = fma(x, y, s)`) on stored
+arrays and `dot_2` (`dot_step_2`: `p = mul_2_2(x, y); t = add_2_2(s, p)`) on supplied ones, whose
+steps only multiply their elements, which the addition part of rule R3 asks no guard of.
+`dot_1_entry` is `dot_1` with the step `dot_entry_step_1` on supplied arrays, which guards both
+factors before the fused operation (R3, the factors of a fused operation, above): the dot product
+of one limb of `kairn/batch.hpp` calls it; `dot_2`, whose elements are factors of the fused
+operations of `mul_2_2`, unguarded, is on the pending list of that rule (`rules.FACTOR_PENDING`).
+The finishes `fold_finish_1` and
 `fold_finish_2` return the state with the flag true when its leading limb is finite, and
 otherwise the canonical NaN, every limb a NaN, with the flag false
 ([When something is not finite](design/milestone2.md#sum-dot-axpy-convolution)).
@@ -412,7 +414,9 @@ otherwise the canonical NaN, every limb a NaN, with the flag false
    the analysis of an entry kernel, `rules.r3_analysis`, run on the step with exactly those
    limbs as values of the program, finds no addition or FMA addend reached before `guard`, and
    no next state that is such a limb as it is. A limb the step only multiplies or compares needs
-   no guard (`dot_k`). The state is not a value of the program. A stored array is asked nothing.
+   no guard of this analysis (`dot_k`); a factor of a fused operation is the factor rule's (R3,
+   the factors of a fused operation, above). The state is not a value of the program. A stored
+   array is asked nothing.
 4. The zero state, with the combination of the lane order, has the four properties that the
    theorems take as one hypothesis (`zero_identity`, `proofs/theories/Summation.v`):
    (1) it is valid; (2) its value is 0; (3) $0 \oplus x$ has the value of $x$ for every valid
@@ -534,8 +538,12 @@ The maps of this stage are `add_k`, `sub_k` (on stored arrays: `add_1_1`, `sub_1
 `sub_2_2`) and their `_entry` forms on supplied arrays (`add_entry_step_k`, `sub_entry_step_k`,
 which guard every limb of both operands); `axpy_1` ($a$ of `T`, `mul_1_1` then `add_1_1`),
 `axpy_2` ($a$ of two limbs, `mul_2_2` then `add_2_2`) and `axpy_2_1` ($a$ of `T`, `mul_2_1`), with
-`x` supplied (only multiplied, so unguarded) and `y` stored, and their `_entry` forms with `y`
-supplied and guarded; `scale_1` and `scale_2` (by $a$ of `T`: `mul_1_1`, `mul_2_1`); and
+`x` supplied (only multiplied, so unguarded by the addition part of R3; of two limbs, a factor
+of the fused operations of `mul_2_1` and `mul_2_2`, on the pending list of the factor rule) and
+`y` stored, and their `_entry` forms with `y` supplied and guarded; `scale_1` and `scale_2` (by
+$a$ of `T`: `mul_1_1`, `mul_2_1`), `scale_2` on stored arrays and its `_entry` form `scale_2_entry`
+on supplied ones, whose step `scale_entry_step_2` guards the limbs of the element and $a$ (R3,
+the factors of a fused operation); and
 `mul_pow2_map_1`, `mul_pow2_map_2` (by a power of two; the name `mul_pow2_2` is a kernel's). The
 steps of `axpy` claim an error of form `T`, relative to $\lvert a x\rvert + \lvert y\rvert$, the
 form in which the page exports the bound of `axpy`.

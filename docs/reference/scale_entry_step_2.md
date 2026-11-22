@@ -16,7 +16,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $z = z_0 
 
 | Form | Operands | Result | Note |
 |---|---|---|---|
-| `scale(x, a, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | `bool` | the step of the loop the function calls, once per element; not `constexpr`; rounds (loop `scale_2`; the limbs of each element and a guarded, rule R3 on the factors of a fused operation) |
+| `scale(x, a, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | `bool` | the step of the loop the function calls, once per element; not `constexpr`; rounds (loop `scale_2_entry`; the limbs of each element and a guarded, rule R3 on the factors of a fused operation) |
 
 `T` is `float` or `double`; the functions are in namespace `kairn`, header `kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken where the table writes a view of `const T`. They take no marker: a function on arrays compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).
 

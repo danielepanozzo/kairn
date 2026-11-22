@@ -945,8 +945,10 @@ form natively, and on AArch64 NEON.
   as a zero with MSVC. `double` and `float`, 40 000 registers of each per form, in the forms
   `native` (where it has more than one lane), `scalar` and `avx2` (where it applies), at `-O2`
   under each contraction setting of `api.boundary.S`. Products that are only multiplied or
-  compared (`x * a`, `a * x`, `*=`, `kairn::finite::mul`, the comparisons) need no guard and must
-  agree in every build. The control, `api.boundary.packed.unguarded.FORM.S`, builds the test
+  compared (`x * a`, `a * x`, `*=`, `kairn::finite::mul`, the comparisons), with another factor
+  that the compiler does not see, need no guard to agree, and must agree in every build, the copy
+  without the guard included; with a factor it sees they are the third kind of form (`--factor`,
+  [below](#the-functions-on-arrays), "A factor the compiler sees"). The control, `api.boundary.packed.unguarded.FORM.S`, builds the test
   against the copy of the headers without the guard, which also keeps only `a` of every
   `_mm256_add_pd(a, _mm256_setzero_pd())` of `gen/avx2.hpp` and `vaddq_f64(a, vdupq_n_f64(0.0))`
   of `gen/neon.hpp` (and their `float` forms), and requires that some form differ where the
