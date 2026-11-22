@@ -1143,6 +1143,8 @@ endforeach()
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
 _kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")
+_kairn_api_reject(checks.interval_from_limbs_not_canonical 111 "constant|constexpr")
+_kairn_api_reject(checks.ball_from_limbs_not_canonical 112 "constant|constexpr")
 # kairn::rational in a constant expression: a zero denominator, whose message names the function
 # that says so (MSVC's message was not seen yet: there, any failed constant expression); and a
 # result that fails its check, against a copy of the headers in which the flag exact is inverted

@@ -20,7 +20,7 @@ Making numbers and balls, and reading their parts.
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| `Expansion<T, 2>(a)` | `T` | $x = a$ exactly, canonical | [`make_2`](make_2.md) |
+| `Expansion<T, 2>(a)`, `from_limbs(p)` | `T` | $x = a$ exactly, canonical | [`make_2`](make_2.md) |
 | `from_limbs(p)`, `from_limbs_unchecked(p)`, `Expansion<T, 2>(r)` | `T*` | $x = y$ exactly, canonical | [`make_2_limbs`](make_2_limbs.md) |
 | `Ball<T, 1>(c, r)`, `Ball<T, 1>(c)`, `Ball<T, 1>(a)`, `Ball<T, 1>(q)` | `Expansion<T, 1>`, `T` | the ball of center $c$ and radius $r$, canonical | [`ball_make_1`](ball_make_1.md) |
 | `Ball<T, 2>(c, r)`, `Ball<T, 2>(c)`, `Ball<T, 2>(a)`, `Ball<T, 2>(q)` | `Expansion<T, 2>`, `T` | the ball of center $c$ and radius $r$, canonical | [`ball_make_2`](ball_make_2.md) |

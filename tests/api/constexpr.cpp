@@ -868,6 +868,66 @@ struct Enclosure {
     static_assert(B2(x2, T(1)).certainly_positive() && !B2(E2(T(1)), T(1)).certainly_positive() && B2(-x2, T(1)).certainly_negative());
     static_assert(B2().certainly_zero() && !B2::whole().certainly_zero() && !B2::empty().certainly_positive());
     static_assert(B1(T(2), T(1)).mid_rad().midpoint.limb[0] == 2 && B2(x2, u).mid_rad().radius == u && B2(x2, u).mid_rad().midpoint.limb[1] == u / 2);
+
+    // from_limbs of an interval and of a ball: the limbs read through lower(), upper(), center() and
+    // radius(), rebuilt, for every state (finite, a zero -0, the empty set, the whole line, the
+    // half-lines, a second limb -0). In constant evaluation the guard is not applied, so every limb
+    // comes back bit for bit, a -0 and a NaN included; enclosure_run_time checks the run time, where
+    // a -0 may come back +0 and a NaN comes back a NaN.
+    using Bits = decltype(bits(T(0)));
+    template <int K>
+    static constexpr std::array<Bits, 2 * K> limbs_of(const kairn::Interval<T, K>& x) {
+        std::array<Bits, 2 * K> b{};
+        for (int i = 0; i < K; ++i) {
+            b[i] = bits(x.lower().limb[i]);
+            b[K + i] = bits(x.upper().limb[i]);
+        }
+        return b;
+    }
+    template <int K>
+    static constexpr std::array<Bits, K + 1> limbs_of(const kairn::Ball<T, K>& x) {
+        std::array<Bits, K + 1> b{};
+        for (int i = 0; i < K; ++i) b[i] = bits(x.center().limb[i]);
+        b[K] = bits(x.radius());
+        return b;
+    }
+    template <int K>
+    static constexpr kairn::Interval<T, K> rebuilt(const kairn::Interval<T, K>& x) {
+        std::array<T, 2 * K> l{};
+        for (int i = 0; i < K; ++i) {
+            l[i] = x.lower().limb[i];
+            l[K + i] = x.upper().limb[i];
+        }
+        return kairn::Interval<T, K>::from_limbs(l.data());
+    }
+    template <int K>
+    static constexpr kairn::Ball<T, K> rebuilt(const kairn::Ball<T, K>& x) {
+        std::array<T, K + 1> l{};
+        for (int i = 0; i < K; ++i) l[i] = x.center().limb[i];
+        l[K] = x.radius();
+        return kairn::Ball<T, K>::from_limbs(l.data());
+    }
+    template <class X>
+    static constexpr bool round_trip(const X& x) {
+        return limbs_of(rebuilt(x)) == limbs_of(x);
+    }
+    static constexpr T one_minus_zero[2] = {1, -T(0)};
+    static constexpr E2 m0 = E2::from_limbs(one_minus_zero);  // (1, -0): canonical
+    static_assert(m0.limb[1] == 0 && bits(m0.limb[1]) == bits(-T(0)));
+    static_assert(round_trip(I1(T(1), T(2))) && round_trip(I1(-omega, omega)) && round_trip(I1(T(1), inf)) && round_trip(I1(-inf, T(1))));
+    static_assert(round_trip(I1::empty()) && round_trip(I1::whole()) && round_trip(I1(kairn::detail::kernel_result, E1(-T(0)), E1(T(0)))));
+    static_assert(round_trip(I2(x2, E2(T(2)))) && round_trip(I2(E2(T(1)), E2(inf))) && round_trip(I2(E2(-inf), x2)));
+    static_assert(round_trip(I2::empty()) && round_trip(I2::whole()) && round_trip(I2(kairn::detail::kernel_result, m0, x2)));
+    static_assert(round_trip(B1(T(1), T(0.5))) && round_trip(B1::empty()) && round_trip(B1::whole()) && round_trip(-B1::whole()));
+    static_assert(round_trip(B1(kairn::detail::kernel_result, E1(-T(0)), -T(0))) && round_trip(B1(omega, omega)));
+    static_assert(round_trip(B2(x2, u)) && round_trip(B2::empty()) && round_trip(B2::whole()) && round_trip(-B2::whole()));
+    static_assert(round_trip(B2(kairn::detail::kernel_result, m0, T(0.25))) && round_trip(B2()));
+    // The limbs themselves: from_limbs of an interval is the interval of those bounds, of a ball the
+    // ball of that center and radius, the special states included.
+    static_assert(is(I2::from_limbs(std::array<T, 4>{1, u / 2, 2, 0}.data()), 1, u / 2, 2, 0));
+    static_assert(I1::from_limbs(std::array<T, 2>{inf, -inf}.data()).is_empty() && I1::from_limbs(std::array<T, 2>{-inf, inf}.data()).is_whole());
+    static_assert(B1::from_limbs(std::array<T, 2>{nan, nan}.data()).is_empty() && B1::from_limbs(std::array<T, 2>{0, inf}.data()).is_whole());
+    static_assert(B2::from_limbs(std::array<T, 3>{1, u / 2, T(0.25)}.data()).center().limb[1] == u / 2);
 };
 
 template struct Enclosure<double>;
@@ -1297,6 +1357,7 @@ void run_time() {
 template <class T>
 void enclosure_run_time() {
     using C = Enclosure<T>;
+    using E1 = kairn::Expansion<T, 1>;
     using E2 = kairn::Expansion<T, 2>;
     using B1 = kairn::Ball<T, 1>;
     using B2 = kairn::Ball<T, 2>;
@@ -1328,6 +1389,51 @@ void enclosure_run_time() {
             expect("is_finite of an interval of two limbs", s.is_finite() == def && (s.is_finite() || !B2(s).is_finite()));
         }
         expect("is_finite of a ball", B1(one, two).is_finite() && !B1(one, infinity).is_finite() && !B2::empty().is_finite());
+    }
+    // from_limbs at run time, on every state of both types made of values read through volatile
+    // objects: every limb comes back bit for bit, but that a -0 may come back +0 (the guard: -0 + 0
+    // is +0 to nearest) and a NaN comes back a NaN, whose payload is not specified.
+    {
+        volatile T v_zero = 0;
+        const T zero = v_zero, minus_zero = -zero, beyond[2] = {T(v_omega), T(v_omega) * u / 4};
+        const T one_minus_zero[2] = {one, minus_zero};
+        const E2 big2 = E2::from_limbs(beyond), m0 = E2::from_limbs(one_minus_zero);
+        const auto kept = [](T before, T after) {
+            if (before != before) return after != after;
+            return bits(after) == bits(before) || (before == 0 && after == 0 && !std::signbit(after));
+        };
+        const auto check = [&](const char* what, const auto& x) {
+            const auto y = C::rebuilt(x);
+            const auto b = C::limbs_of(x);
+            const auto c = C::limbs_of(y);
+            bool ok = true;
+            for (std::size_t i = 0; i < b.size(); ++i) ok = ok && kept(std::bit_cast<T>(b[i]), std::bit_cast<T>(c[i]));
+            expect(what, ok);
+        };
+        const E1 m1(minus_zero), z1(zero);
+        check("from_limbs of [1, 2]", I1(one, two));
+        check("from_limbs of [-0, +0]", I1(kairn::detail::kernel_result, m1, z1));
+        check("from_limbs of the empty interval", I1(infinity, -infinity));
+        check("from_limbs of the whole line", I1(-infinity, infinity));
+        check("from_limbs of [1, +inf]", I1(one, infinity));
+        check("from_limbs of [-inf, 1]", I1(-infinity, one));
+        check("from_limbs of [-Omega, Omega] of two limbs", I2(-big2, big2));
+        check("from_limbs of [(1, -0), 1 + u/2]", I2(kairn::detail::kernel_result, m0, E2(one) + T(u / 2)));
+        check("from_limbs of the empty interval of two limbs", I2(E2(infinity), E2(-infinity)));
+        check("from_limbs of the whole line of two limbs", I2(E2(-infinity), E2(infinity)));
+        check("from_limbs of a half-line of two limbs", I2(E2(one), E2(infinity)));
+        check("from_limbs of a ball", B1(one, half));
+        check("from_limbs of a ball centered at -0 of radius -0", B1(kairn::detail::kernel_result, m1, minus_zero));
+        check("from_limbs of the empty ball", B1(kairn::detail::kernel_result, E1(nan), nan));
+        check("from_limbs of the whole line as a ball", B1(nan, one));
+        check("from_limbs of the whole line centered at -0", -B1(nan, one));
+        check("from_limbs of a ball of two limbs", B2(big2, quarter));
+        check("from_limbs of a ball of two limbs centered at (1, -0)", B2(kairn::detail::kernel_result, m0, quarter));
+        check("from_limbs of the empty ball of two limbs", B2(kairn::detail::kernel_result, E2(nan), nan));
+        check("from_limbs of the whole line of two limbs", -B2::whole());
+        // The limbs of a product of the program, read back: the guard keeps the value.
+        const T l[3] = {three * quarter, zero, half * quarter};
+        expect("from_limbs of products", B2::from_limbs(l).center().limb[0] == T(0.75) && B2::from_limbs(l).radius() == T(0.125));
     }
     // The constexpr functions, on operands read at run time.
     const I1 x(one, two), y(three, three);

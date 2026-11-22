@@ -379,6 +379,57 @@ public:
         constexpr T inf = std::numeric_limits<T>::infinity();
         return Interval(detail::kernel_result, infinite(-inf), infinite(inf));
     }
+    /// The interval whose bounds have the limbs limbs[0] .. limbs[2K - 1]: the K limbs of the lower
+    /// bound, most significant first, then the K limbs of the upper bound, as lower().limb[i] and
+    /// upper().limb[i] read them (the limbs of an Expansion are public), so that a program can move
+    /// an interval through its own storage, GPU buffers and warp shuffles. Precondition: the limbs
+    /// are those of a canonical interval, as an operation of Kairn returns it: the empty set
+    /// (+inf, -inf), for two limbs each infinity followed by a zero, or bounds lo <= hi, neither a
+    /// NaN, with lo < +inf and hi > -inf, each of two limbs a canonical pair. Nothing is computed but
+    /// the guards: the limbs come from the program, so each passes through the guard of a
+    /// constructor kernel before an operation can add it (rule R3), as those of
+    /// Expansion<T, 2>::from_limbs do (kernel make_2 or make_2_limbs): for one limb each bound
+    /// through make_2, of which this keeps the leading limb, the bound itself by make_2's claim (a
+    /// canonical pair of value a has a as its leading limb, and a NaN gives two NaN); for two limbs
+    /// each bound through make_2_limbs, whose claim is the same limbs for a canonical pair. That the
+    /// result is the interval given is argued from those claims, not machine-checked as one
+    /// statement. The round trip, from_limbs of the limbs read, gives every limb back bit for bit
+    /// but the sign of a zero: a -0 may come back +0 (the guard -0 + 0 is +0 under rounding to
+    /// nearest, upward and toward zero; in constant evaluation the guard is not applied). Checked
+    /// when KAIRN_CHECKS is 1, after the environment as for an operation (config.hpp; for one limb
+    /// without the rounding mode, the test of a canonical interval of one limb not rounding): limbs
+    /// that are not those of a canonical interval fail a constant expression, or print a message
+    /// and call std::abort(). Not checked otherwise: such an interval then gives results with no
+    /// guarantee, and no undefined behavior. No marked form, as for Expansion::from_limbs.
+    /// constexpr.
+    [[nodiscard]] static constexpr Interval from_limbs(const T* limbs) noexcept
+        requires detail::proof_checked<std::conditional_t<K == 1, gen::bounds::make_2<T>, gen::bounds::make_2_limbs<T>>>
+    {
+        Expansion<T, K> lo, hi;
+#if KAIRN_CHECKS
+        for (int i = 0; i < K; ++i) {
+            lo.limb[i] = limbs[i];
+            hi.limb[i] = limbs[K + i];
+        }
+        bool checked = false;
+        if constexpr (K == 1) {
+            checked = detail::check_environment_except_rounding();
+        } else {
+            checked = detail::check_environment();
+        }
+        if (checked && !detail::canonical_interval(lo, hi))
+            detail::fail("from_limbs", "the limbs are not those of a canonical interval (the empty set (+inf, -inf), "
+                                       "or bounds lo <= hi, neither a NaN, with lo < +inf, hi > -inf and each canonical)");
+#endif
+        if constexpr (K == 1) {
+            lo.limb[0] = detail::make<T>(limbs[0]).limb[0];
+            hi.limb[0] = detail::make<T>(limbs[1]).limb[0];
+        } else {
+            lo = detail::make_limbs<T>(limbs[0], limbs[1]);
+            hi = detail::make_limbs<T>(limbs[2], limbs[3]);
+        }
+        return Interval(detail::kernel_result, lo, hi);
+    }
 
     /// The lower bound, a number of K limbs: of a nonempty interval its lower bound (-inf when it is
     /// unbounded below), +inf for the empty set.

@@ -56,10 +56,43 @@ struct OperandCase {
 const char* const not_canonical = "an operand: is not canonical";
 const char* const not_a_pair = "from_limbs: the limbs are not a canonical pair";
 const char* const negative = "a ball: has a negative radius";
+const char* const not_an_interval = "from_limbs: the limbs are not those of a canonical interval";
+const char* const not_a_ball = "from_limbs: the limbs are not those of a canonical ball";
 const OperandCase operand_cases[] = {
     {"from_limbs.unnormalized", not_a_pair, [] { return pair(1.0, v_a).limb[1]; }},
     {"from_limbs.infinity", not_a_pair, [] { return pair(infinity, v_a).limb[1]; }},
     {"from_limbs.nan", not_a_pair, [] { return pair(not_a_number, v_a).limb[1]; }},
+    // The limbs of an interval and of a ball given to from_limbs: reversed bounds, a NaN bound, a
+    // bound of two limbs that is not canonical; a negative radius, a NaN center with a finite
+    // radius, a radius +inf with a center that is not 0, a center of two limbs not canonical.
+    {"interval.from_limbs.reversed", not_an_interval, [] {
+         const double l[2] = {v_c, v_a};
+         return I1::from_limbs(l).lower().limb[0];
+     }},
+    {"interval.from_limbs.nan", not_an_interval, [] {
+         const double l[2] = {not_a_number, v_a};
+         return I1::from_limbs(l).lower().limb[0];
+     }},
+    {"interval2.from_limbs.unnormalized", not_an_interval, [] {
+         const double l[4] = {1.0, v_a, 2.0, 0.0};
+         return I2::from_limbs(l).lower().limb[1];
+     }},
+    {"ball.from_limbs.negative", not_a_ball, [] {
+         const double l[2] = {v_a, -v_r};
+         return B1::from_limbs(l).radius();
+     }},
+    {"ball.from_limbs.nan_center", not_a_ball, [] {
+         const double l[2] = {not_a_number, v_r};
+         return B1::from_limbs(l).radius();
+     }},
+    {"ball.from_limbs.infinite_radius", not_a_ball, [] {
+         const double l[2] = {v_a, infinity};
+         return B1::from_limbs(l).radius();
+     }},
+    {"ball2.from_limbs.center", not_a_ball, [] {
+         const double l[3] = {1.0, v_a, v_r};
+         return B2::from_limbs(l).radius();
+     }},
     {"operator.unnormalized", not_canonical, [] { return (unverified(raw(1.0, double(v_a))) + o.y).limb[1]; }},
     // What a finite core may return after an overflow: given to an operator, refused.
     {"operator.core_result", not_canonical,
@@ -388,6 +421,12 @@ const Accepted accepted[] = {
     {"the hull of the empty ball and the whole line", [] { return B2::empty().hull(B2::whole()).radius(); }},
     {"the split of the whole line", [] { return B1::whole().split().left.radius(); }},
     {"the ball of [NaN, 1]", [] { return B1::from_interval(not_a_number, double(v_a)).radius(); }},
+    {"from_limbs of the empty set, the whole line and a half-line", [] {
+         const double ie[2] = {infinity, -infinity}, iw[4] = {-infinity, 0.0, infinity, 0.0}, ih[2] = {v_a, infinity};
+         const double be[3] = {not_a_number, not_a_number, not_a_number}, bw[2] = {0.0, infinity};
+         return I1::from_limbs(ie).lower().limb[0] + I2::from_limbs(iw).upper().limb[0] + I1::from_limbs(ih).upper().limb[0] +
+                B2::from_limbs(be).radius() + B1::from_limbs(bw).radius();
+     }},
     {"from_bounds of [1, NaN], [2, 1] and [+inf, +inf]", [] {
          return B2::from_bounds(double(v_a), not_a_number).radius() + I2::from_bounds(2 * v_a, double(v_a)).lower().limb[0] +
                 I1::from_bounds(infinity, infinity).upper().limb[0];

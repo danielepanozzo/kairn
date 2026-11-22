@@ -486,6 +486,16 @@ inline const Operation operations[] = {
     {"ball2.make", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.x), v_r)); }},
     {"ball2.make_downward", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.y), v_r)); }},
     {"ball2.center", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.y))); }},
+    // from_limbs of an interval and of a ball of two limbs: the test of a canonical bound or center
+    // rounds.
+    {"interval2.from_limbs", Kind::rounds, [](Bits& b) {
+         const double l[4] = {o.jy.lower().limb[0], o.jy.lower().limb[1], o.jy.upper().limb[0], o.jy.upper().limb[1]};
+         put(b, I2::from_limbs(l));
+     }},
+    {"ball2.from_limbs", Kind::rounds, [](Bits& b) {
+         const double l[3] = {o.bp.center().limb[0], o.bp.center().limb[1], o.bp.radius()};
+         put(b, B2::from_limbs(l));
+     }},
     // The ball of a constant of kairn::rational, two limbs: the test of a canonical center rounds.
     // The constant is integer arithmetic, made here under the state, which does not change it.
     {"ball2.constant", Kind::rounds,
@@ -932,6 +942,27 @@ inline const Operation operations[] = {
              for (const auto& lo : c.two) {
                  put(out, X(unverified(lo)));
                  for (const auto& hi : c.two) put(out, X(unverified(lo), hi));
+             }
+         });
+     }},
+    // from_limbs of an interval and of a ball of one limb: the guards, and a test of the limbs that
+    // does not round; on every interval and ball of the corpus, the same values (zeros without their
+    // sign).
+    {"interval1.from_limbs", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (const auto& x : c.intervals1) {
+                 const T l[2] = {x.lower().limb[0], x.upper().limb[0]};
+                 put_value(out, kairn::Interval<T, 1>::from_limbs(l));
+             }
+         });
+     }},
+    {"ball1.from_limbs", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (const auto& x : c.balls1) {
+                 const T l[2] = {x.center().limb[0], x.radius()};
+                 put_value(out, kairn::Ball<T, 1>::from_limbs(l));
              }
          });
      }},

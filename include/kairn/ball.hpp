@@ -617,6 +617,54 @@ public:
     [[nodiscard]] static constexpr Ball whole() noexcept {
         return Ball(detail::kernel_result, Expansion<T, K>(), std::numeric_limits<T>::infinity());
     }
+    /// The ball whose center has the limbs limbs[0] .. limbs[K - 1], most significant first, and
+    /// whose radius is limbs[K], as center().limb[i] and radius() read them (the limbs of an
+    /// Expansion are public), so that a program can move a ball through its own storage, GPU
+    /// buffers and warp shuffles. Precondition: the limbs are those of a canonical ball, as an
+    /// operation of Kairn returns it: a finite ball (a finite center, canonical for two limbs, and a
+    /// finite radius r >= 0), the whole line (every limb of the center zero, the radius +inf) or the
+    /// empty set (every limb a NaN). Nothing is computed but the guards: the limbs come from the
+    /// program, so each passes through the guard of a constructor kernel before an operation can add
+    /// it (rule R3), as those of Expansion<T, 2>::from_limbs do (kernel make_2 or make_2_limbs): a
+    /// center of one limb and the radius each through make_2, of which this keeps the leading limb,
+    /// the value given by make_2's claim (a canonical pair of value a has a as its leading limb, and
+    /// a NaN gives two NaN); a center of two limbs through make_2_limbs, whose claim is the same
+    /// limbs for a canonical pair. Not through ball_make_1 or ball_make_2, the kernels of
+    /// Ball(c, r), which guard the same limbs but make a NaN radius the whole line, so that the
+    /// empty set would not come back. That the result is the ball given is argued from those
+    /// claims, not machine-checked as one statement. The round trip, from_limbs of the limbs read,
+    /// gives every limb back bit for bit but two: a -0 may come back +0 (the guard -0 + 0 is +0
+    /// under rounding to nearest, upward and toward zero; in constant evaluation the guard is not
+    /// applied), and a NaN limb comes back a NaN whose payload Kairn does not specify. Checked when
+    /// KAIRN_CHECKS is 1, after the environment as for an operation (config.hpp; for one limb
+    /// without the rounding mode, the test of a canonical ball of one limb not rounding): limbs that
+    /// are not those of a canonical ball fail a constant expression, or print a message and call
+    /// std::abort(). Not checked otherwise: such a ball then gives results with no guarantee, and no
+    /// undefined behavior. No marked form, as for Expansion::from_limbs. constexpr.
+    [[nodiscard]] static constexpr Ball from_limbs(const T* limbs) noexcept
+        requires detail::proof_checked<gen::bounds::make_2<T>> &&
+                 (K == 1 || detail::proof_checked<gen::bounds::make_2_limbs<T>>)
+    {
+        Expansion<T, K> c;
+#if KAIRN_CHECKS
+        for (int i = 0; i < K; ++i) c.limb[i] = limbs[i];
+        bool checked = false;
+        if constexpr (K == 1) {
+            checked = detail::check_environment_except_rounding();
+        } else {
+            checked = detail::check_environment();
+        }
+        if (checked && !detail::canonical_ball(c, limbs[K]))
+            detail::fail("from_limbs", "the limbs are not those of a canonical ball (a finite ball with a canonical "
+                                       "center and r >= 0, the whole line or the empty set)");
+#endif
+        if constexpr (K == 1) {
+            c.limb[0] = detail::make<T>(limbs[0]).limb[0];
+        } else {
+            c = detail::make_limbs<T>(limbs[0], limbs[1]);
+        }
+        return Ball(detail::kernel_result, c, detail::make<T>(limbs[K]).limb[0]);
+    }
 
     /// The center: of a finite ball, the center; 0 for the whole line; NaN limbs for the empty set.
     /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).

@@ -42,7 +42,9 @@
 // interval of a point a line whose two bounds are one value, the bounds of an interval of two limbs
 // as numbers of T a line of to_down_2 or to_up_2 whose operand is not a NaN, and the member test
 // of a point of T in an interval or a ball of two limbs a line whose point is a value of T (its
-// second limb zero, or the NaN pair). On the other
+// second limb zero, or the NaN pair), and the limbs given to Interval::from_limbs and
+// Ball::from_limbs a line whose value can be a bound, a center or a radius of a canonical
+// interval or ball (not a NaN bound, not an infinite center, not a negative radius). On the other
 // lines such a form computes the plain operation (written beside it), and it fails at the end of a
 // stream of at least 1000 lines in which it computed none: a pass must mean that the form itself
 // was judged.
@@ -417,6 +419,42 @@ FORM(make_2_from_one, put(out, E2<T>(AS(make_2, one(in)))))
 FORM(make_2_marked, put(out, E2<T>(kairn::unverified(in[0]))))
 FORM(make_2_limbs_from_limbs, put(out, E2<T>::from_limbs(in)))
 FORM(make_2_limbs_from_limbs_unchecked, put(out, E2<T>::from_limbs_unchecked(in)))
+// The limbs of an interval and of a ball given to Interval::from_limbs and Ball::from_limbs, which
+// pass each limb through the guard of make_2 (a value of T, of which they keep the leading limb) or
+// of make_2_limbs (a pair), and read back through lower(), upper(), center() and radius(): the
+// line's value, or pair, in each position where a canonical interval or ball can hold it, beside
+// limbs that make one (a finite bound beside an infinite one, so that every value but a NaN is a
+// bound; a finite center with radius 0, a NaN center with a NaN radius, the empty ball; a radius
+// that is not negative beside the center 0, or a NaN beside a NaN center). make_2's second limb,
+// which these functions do not keep, is completed as make_2's listing gives it: 0 after a number or
+// an infinity, the leading limb itself after a NaN. The plain constructor on the other lines.
+template <class T>
+void put_lead(T* out, T x0) {
+    out[0] = x0;
+    out[1] = x0 == x0 ? T(0) : x0;
+}
+FORM(make_2_interval_from_limbs_lower, if (in[0] != in[0]) { put(out, E2<T>(in[0])); return; } ++reached;
+     const T inf = std::numeric_limits<T>::infinity(); const T l[2] = {in[0], in[0] == inf ? -inf : inf};
+     put_lead(out, I1<T>::from_limbs(l).lower().limb[0]))
+FORM(make_2_interval_from_limbs_upper, if (in[0] != in[0]) { put(out, E2<T>(in[0])); return; } ++reached;
+     const T inf = std::numeric_limits<T>::infinity(); const T l[2] = {in[0] == -inf ? inf : -inf, in[0]};
+     put_lead(out, I1<T>::from_limbs(l).upper().limb[0]))
+FORM(make_2_ball_from_limbs_center, if (in[0] == in[0] && !std::isfinite(in[0])) { put(out, E2<T>(in[0])); return; }
+     ++reached; const T l[2] = {in[0], in[0] == in[0] ? T(0) : in[0]};
+     put_lead(out, B1<T>::from_limbs(l).center().limb[0]))
+FORM(make_2_ball_from_limbs_radius_1, if (in[0] < 0) { put(out, E2<T>(in[0])); return; } ++reached;
+     const T l[2] = {in[0] == in[0] ? T(0) : in[0], in[0]}; put_lead(out, B1<T>::from_limbs(l).radius()))
+FORM(make_2_ball_from_limbs_radius_2, if (in[0] < 0) { put(out, E2<T>(in[0])); return; } ++reached;
+     const T c = in[0] == in[0] ? T(0) : in[0]; const T l[3] = {c, c, in[0]}; put_lead(out, B2<T>::from_limbs(l).radius()))
+FORM(make_2_limbs_interval_from_limbs_lower, if (in[0] != in[0]) { put(out, E2<T>::from_limbs(in)); return; } ++reached;
+     const T inf = std::numeric_limits<T>::infinity(); const T l[4] = {in[0], in[1], in[0] == inf ? -inf : inf, T(0)};
+     put(out, I2<T>::from_limbs(l).lower()))
+FORM(make_2_limbs_interval_from_limbs_upper, if (in[0] != in[0]) { put(out, E2<T>::from_limbs(in)); return; } ++reached;
+     const T inf = std::numeric_limits<T>::infinity(); const T l[4] = {in[0] == -inf ? inf : -inf, T(0), in[0], in[1]};
+     put(out, I2<T>::from_limbs(l).upper()))
+FORM(make_2_limbs_ball_from_limbs_center,
+     if (in[0] == in[0] && !std::isfinite(in[0])) { put(out, E2<T>::from_limbs(in)); return; } ++reached;
+     const T l[3] = {in[0], in[1], in[0] == in[0] ? T(0) : in[0]}; put(out, B2<T>::from_limbs(l).center()))
 
 // Two limbs: arithmetic, the full kernels.
 FORM(add_2_2_full_plus, put(out, AS(add_2_2_full, two(in)) + two(in + 2)))
@@ -1332,6 +1370,14 @@ const Form forms[] = {
     ROW(make_2, marked, "l", "ll")
     ROW(make_2_limbs, from_limbs, "ll", "ll")
     ROW(make_2_limbs, from_limbs_unchecked, "ll", "ll")
+    SOME(make_2, interval_from_limbs_lower, "l", "ll")
+    SOME(make_2, interval_from_limbs_upper, "l", "ll")
+    SOME(make_2, ball_from_limbs_center, "l", "ll")
+    SOME(make_2, ball_from_limbs_radius_1, "l", "ll")
+    SOME(make_2, ball_from_limbs_radius_2, "l", "ll")
+    SOME(make_2_limbs, interval_from_limbs_lower, "ll", "ll")
+    SOME(make_2_limbs, interval_from_limbs_upper, "ll", "ll")
+    SOME(make_2_limbs, ball_from_limbs_center, "ll", "ll")
     ROW(add_2_2_full, plus, "llll", "ll")
     ROW(add_2_2_full, plus_assign, "llll", "ll")
     ROW(add_2_2_full, marked, "llll", "ll")

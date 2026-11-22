@@ -55,8 +55,9 @@
 /// @def KAIRN_CHECKS
 /// 1 to check, before every operation of Expansion, Ball and Interval that rounds and every
 /// building block of blocks.hpp that rounds, and in the constructors that are given limbs, a
-/// center or bounds (Expansion<T, 2>::from_limbs, the narrowing to one limb, the constructors of
-/// Ball and of Interval), first that the floating-point environment is the default one
+/// center or bounds (Expansion<T, 2>::from_limbs, Interval::from_limbs and Ball::from_limbs, the
+/// narrowing to one limb, the constructors of Ball and of Interval), first that the floating-point
+/// environment is the default one
 /// (kairn::environment_ok()), then the operands:
 /// - an operator, and a function of kairn:: such as ldexp or to_down, requires each two-limb
 ///   operand to be canonical: finite and normalized (x0 + x1 == x0 in floating point), (+-inf, 0)
@@ -67,7 +68,8 @@
 ///   and a radius r >= 0, the whole line, or the empty set;
 /// - an Interval operation requires each interval to be canonical: the empty set (+inf, -inf), or
 ///   bounds lo <= hi, neither a NaN, with lo < +inf and hi > -inf, each of two limbs canonical;
-/// - from_limbs requires a canonical pair, a constructor of Ball a canonical center and a radius
+/// - from_limbs requires a canonical pair, Interval::from_limbs and Ball::from_limbs the limbs of a
+///   canonical interval and of a canonical ball, a constructor of Ball a canonical center and a radius
 ///   that is not negative (a NaN radius, which makes the whole line, is accepted), and a
 ///   constructor of Interval canonical bounds of two limbs (bounds of T may be any value: reversed
 ///   ones make the empty set, a NaN the whole line, and neither is reported);
@@ -106,7 +108,8 @@
 ///   Ball<T, 1>(c), Ball<T, 1>(c, r), Ball<T, 1>(q) and Ball<T, 2>(a); and the constructors of an
 ///   Interval, Interval::from_bounds among them: of one limb, and of two from a T, whose only
 ///   rounded operations are the guards; of two limbs from numbers of two limbs, comparisons and
-///   selects. The only rounded operations of
+///   selects; and Interval::from_limbs and Ball::from_limbs of one limb, the guards and a test of
+///   the limbs that does not round. The only rounded operations of
 ///   these are the guards a + 0, whose value is a under every rounding mode; only the sign of a
 ///   zero depends on the mode, and Kairn leaves it unspecified;
 /// - the conversion of a SumAndError (the result of two_sum or fast_two_sum) to Expansion<T, 2>:
@@ -128,7 +131,8 @@
 /// blocks of blocks.hpp but next_up and next_down (two_sum, fast_two_sum, which also checks
 /// |a| >= |b|, two_prod, radd, rmul, and the sums and products rounded down and up, which compute
 /// under rounding to nearest what rounding down or up gives), from_limbs and is_normalized of two
-/// limbs (each tests x0 + x1 == x0), the constructors of Ball<T, 2> from a center or a constant
+/// limbs (each tests x0 + x1 == x0), Interval::from_limbs and Ball::from_limbs of two limbs (the
+/// same test of a bound or a center), the constructors of Ball<T, 2> from a center or a constant
 /// (the test of a canonical center), and the functions of the interface that Ball and Interval
 /// share that compute bounds or centers (milestone2.md, "Functions that do not round", its second
 /// table): the midpoint, the radius, mid_rad and the split of an Interval, the conversions between

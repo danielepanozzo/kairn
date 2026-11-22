@@ -180,6 +180,12 @@ EXACT_INTERVAL = "`constexpr`; does not round"
 ROUNDS_CONSTEXPR = "`constexpr`; rounds, and is preceded by the debug build's check of the rounding mode"
 TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`)"
 CORE = "the finite core: no fix-up of infinities and NaN"
+# The constructors of an interval and of a ball from their limbs, which pass each limb through the
+# guard of make_2 or make_2_limbs ([One enclosure interface](enclosure.md#limbs)).
+FROM_LIMBS = ("`%s::from_limbs(p)`, `p` pointing to the limbs as they were read (the bounds' or the center's, "
+              "then the radius); the limbs of a canonical set, checked when `KAIRN_CHECKS` is 1; the round trip "
+              "gives every limb back but the sign of a zero and the payload of a NaN "
+              "([One enclosure interface](enclosure.md#limbs))")
 # The constructors from two bounds that an interval and a ball share by name (Interval(a, b) is
 # [a, b], Ball(a, b) the ball of center a and radius b: from_bounds is the one spelling of both).
 FROM_BOUNDS_INTERVAL = ("`Interval<T, %s>::from_bounds(lo, hi)`, the same set as `Interval(lo, hi)`, under the name "
@@ -212,6 +218,11 @@ KERNELS = {
         "construction", "A two-limb number from a value of T",
         form("Expansion<T, 2>(a)", T, result=E2, note="implicit"),
         form("Expansion<T, 2>(a)", E1, result=E2, note="implicit; " + ONE),
+        form("from_limbs(p)", "T*", result=I1, note=FROM_LIMBS % "Interval<T, 1>" + "; each bound through `make_2`, "
+             "of which the leading limb is kept, the bound itself; " + EXACT_INTERVAL),
+        form("from_limbs(p)", "T*", result="Ball<T, K>", note=FROM_LIMBS % "Ball<T, K>" + "; the radius, and a center "
+             "of one limb, through `make_2`, of which the leading limb is kept, the value itself; `constexpr`; for one "
+             "limb does not round, for two the test of a canonical center does"),
     ),
     "make_2_limbs": page(
         "construction", "A two-limb number from its limbs",
@@ -219,6 +230,12 @@ KERNELS = {
              note="`Expansion<T, 2>::from_limbs(p)`, with `p` pointing to the two limbs; checked when "
                   "`KAIRN_CHECKS` is 1"),
         form("from_limbs_unchecked(p)", "T*", result=E2, note="the same, never checked"),
+        form("from_limbs(p)", "T*", result=I2, note=FROM_LIMBS % "Interval<T, 2>" + "; each bound through "
+             "`make_2_limbs`; `constexpr`; rounds (the test of a canonical bound), and is preceded by the debug "
+             "build's check of the rounding mode"),
+        form("from_limbs(p)", "T*", result=B2, note=FROM_LIMBS % "Ball<T, 2>" + "; the center through `make_2_limbs`, "
+             "the radius through `make_2`; `constexpr`; rounds (the test of a canonical center), and is preceded by "
+             "the debug build's check of the rounding mode"),
         form("Expansion<T, 2>(r)", "SumAndError<T>", result=E2,
              note="explicit: the result `r` of `two_sum` or `fast_two_sum` as the pair (`r.sum`, `r.error`), "
                   "through `from_limbs_unchecked`; canonical, of value $a + b$ exactly, when both members are "

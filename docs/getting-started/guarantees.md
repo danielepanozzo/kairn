@@ -374,7 +374,12 @@ sums), on both: `two_sum(a * b, c)` would otherwise not be error-free. A limb op
 only multiplies or compares needs none (`x * a`, comparisons, the scaling of a ball, `ldexp`,
 `two_prod`, `rmul`, the directed products, `next_up` and `next_down`). Limbs
 written directly into `limb[]` are not guarded: a limb written that way must not be a product the
-compiler can see being computed; `from_limbs` is the way to build a number from computed values.
+compiler can see being computed; `from_limbs` is the way to build a number from computed values,
+and `Interval<T, k>::from_limbs` and `Ball<T, k>::from_limbs` the way to build a set from limbs
+read out of one, each limb through the guard of `make_2` (a value of `T`, of which they keep the
+leading limb) or `make_2_limbs` (a pair): a composition argued from those claims, not
+machine-checked as one statement ([Limbs](../reference/enclosure.md#limbs)); the limbs come back
+bit for bit but the sign of a zero and the payload of a NaN.
 
 So the program may pass its own products to Kairn under every contraction setting. The test
 `api.boundary.*` checks each guarded form with the product written in the call against the same
@@ -600,7 +605,7 @@ flush-to-zero are in their default state; Kairn never changes them. In a build w
 an operator or a function of `kairn::` requires canonical two-limb operands (finite and
 normalized, $(\pm\infty, 0)$ or (NaN, NaN)), a function of `kairn::finite::` normalized ones or a
 leading limb that is not finite, a `Ball` operation canonical balls, an `Interval` operation
-canonical intervals; `from_limbs` and the constructors of `Ball` and of `Interval` check what they
+canonical intervals; `from_limbs` (of a number, an interval and a ball) and the constructors of `Ball` and of `Interval` check what they
 are given in the same way (reversed bounds and a NaN bound are not reported: they make the empty
 set and the whole line). A failed check stops the
 program with a message, the environment's when the environment is wrong. A program that defines

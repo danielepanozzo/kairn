@@ -6,7 +6,7 @@ an algorithm can be written once and run on either, with one limb or two
 ([One enclosure interface](../developer/design/milestone2.md#one-enclosure-interface); the
 [tutorial on bisection](../tutorials/bisection.md) is such an algorithm). Every function is one
 generated kernel, proved in Rocq and judged by the oracle through the public interface, or one of
-the two compositions said below. What each answer means differs by the type and the number of
+the compositions said below, or one of four tests of stored limbs written by hand. What each answer means differs by the type and the number of
 limbs: for an interval the predicates and comparisons are **exact**; for a ball of one limb the
 predicates are exact, and the comparisons exact when the sum of the radii is at most $\Omega$,
 the largest finite number of `T`; for a ball of two limbs most are only **certain**, an answer
@@ -46,6 +46,7 @@ values of `T` only: no kernel makes a ball of two bounds of two limbs
 | `X.hull(Y)`, `X.intersection(Y)` | [`interval_hull_k`](interval_hull_1.md), [`interval_intersection_k`](interval_intersection_1.md) | [`ball_hull_k`](ball_hull_1.md), [`ball_intersection_k`](ball_intersection_1.md) |
 | `X.split()`: a `Split` | [`interval_split_k`](interval_split_1.md) | [`ball_split_k`](ball_split_1.md) |
 | to the other type, explicit | `Ball<T, k>(X)`: [`interval_to_ball_k`](interval_to_ball_1.md) | `Interval<T, k>(X)`: [`ball_to_interval_k`](ball_to_interval_1.md) |
+| from its limbs, as read through the accessors ([below](#limbs)) | `Interval<T, k>::from_limbs(p)`: [`make_2`](make_2.md) or [`make_2_limbs`](make_2_limbs.md) on each bound | `Ball<T, k>::from_limbs(p)`: the same on the center, `make_2` on the radius |
 | from two bounds, the one spelling of both: `X::from_bounds(lo, hi)` | the interval $[lo, hi]$, the same as `Interval<T, k>(lo, hi)`: [`interval_make_k`](interval_make_1.md), of two values of `T` or two numbers of $k$ limbs | a ball that contains $[lo, hi]$, the same as `Ball<T, k>::from_interval(lo, hi)`: [`ball_from_interval_k`](ball_from_interval_1.md), of two values of `T`, and for one limb of two numbers of one limb |
 | the relations of IEEE 1788: `ieee1788::equal`, `subset`, `interior`, `disjoint` | [`interval_rel_equal_k`](interval_rel_equal_1.md), [`interval_subset_k`](interval_subset_1.md), [`interval_rel_interior_k`](interval_rel_interior_1.md), [`interval_rel_disjoint_k`](interval_rel_disjoint_1.md) | none ([below](#ieee-1788)) |
 
@@ -212,21 +213,66 @@ when $Y$ is the whole line and $X$ is not. When both are special the result is o
 two empty balls can differ in their NaNs and two whole lines in the sign of the zero of their
 centers, so no result could be both as they are.
 
+## Limbs
+
+A program that moves sets through storage of its own (arrays, GPU buffers, warp shuffles) reads
+their limbs and builds the sets again from them:
+
+| | `Interval<T, k>` | `Ball<T, k>` |
+|---|---|---|
+| read | `X.lower().limb[i]` and `X.upper().limb[i]`, $i < k$ | `X.center().limb[i]`, $i < k$, and `X.radius()` |
+| built again | `Interval<T, k>::from_limbs(p)`: `p[0]` to `p[k - 1]` the lower bound, most significant first, then the upper bound | `Ball<T, k>::from_limbs(p)`: `p[0]` to `p[k - 1]` the center, then `p[k]` the radius |
+
+The accessors were there before; `from_limbs` is the counterpart of `Expansion<T, 2>::from_limbs`,
+with its contract.
+
+- **Precondition**: the limbs are those of a canonical set, as an operation of Kairn returns it
+  (an interval: the empty set $(+\infty, -\infty)$, or bounds $lo \le hi$, neither a NaN, $lo <
+  +\infty$, $hi > -\infty$, each of two limbs canonical; a ball: a finite ball with a canonical
+  center and $r \ge 0$, the whole line, center 0 and radius $+\infty$, or the empty set, every limb
+  a NaN). Nothing is checked in a release build. With `KAIRN_CHECKS` 1 the environment is checked
+  (for one limb without the rounding mode: the test of a canonical set of one limb does not round),
+  then the limbs, and limbs that are not those of a canonical set stop the program with
+  `from_limbs: the limbs are not those of a canonical interval` (or `ball`), or make a constant
+  expression invalid.
+- **The guard.** The limbs come from the program, which may have computed them as products, so
+  each passes through the guard of a constructor kernel before an operation can add it
+  ([rule R3](../developer/architecture.md#the-kernel-ir)), as those of `Expansion<T, 2>::from_limbs`
+  do: a value of `T` (a bound or a center of one limb, a radius) through
+  [`make_2`](make_2.md), of which `from_limbs` keeps the leading limb, the value given by its
+  claim (a canonical pair of value $a$ has $a$ as its leading limb, and a NaN gives two NaN); a
+  number of two limbs through [`make_2_limbs`](make_2_limbs.md), whose claim is the same limbs for a
+  canonical pair. Not through `ball_make_1` or `ball_make_2`, the kernels of `Ball(c, r)`, which
+  guard the same limbs but make a NaN radius the whole line: the empty set would not come back.
+  That the result is the set given is argued from these claims, not machine-checked as one
+  statement. Nothing else is computed.
+- **The round trip**, `from_limbs` of the limbs read, gives every limb back bit for bit but two: a
+  $-0$ may come back $+0$ (the guard $-0 + 0$ is $+0$ under rounding to nearest, upward and toward
+  zero; in constant evaluation the guard is not applied, and the $-0$ stays), and a NaN limb (of
+  the empty ball) comes back a NaN whose payload Kairn does not specify.
+
+`from_limbs` has no marked form, as `Expansion::from_limbs` has none: its operand is a pointer.
+`api.boundary.*` passes a product of the program as each kind of limb, `api.constexpr` makes the
+round trip of every state at compile time and at run time, and the oracle judges the guard of each
+limb through `from_limbs` (the forms of `make_2` and `make_2_limbs` in `api.oracle.*`).
+
 ## Compositions
 
-Two functions compose two proved kernels in the header, each argued and not machine-checked as one
+Three functions compose proved kernels in the header, each argued and not machine-checked as one
 statement:
 
 - `X.contains(t)` and `member(t, X)` with a point `t` of `T` and two limbs (an interval or a ball):
   `make_2` makes `t` a number of two limbs, which its claim says is `t` exactly (or $(\pm\infty, 0)$,
   (NaN, NaN)), and the kernel of two limbs answers for that number; so the answer is about `t`.
-  The constructors of two limbs from a `T` compose the same way
-  ([What holds today](../getting-started/guarantees.md#intervals)).
+  The constructors of two limbs from a `T`, `from_bounds` of an interval of two limbs among them,
+  compose the same way ([What holds today](../getting-started/guarantees.md#intervals)).
+- `from_limbs` of an interval and of a ball: the guards of `make_2` and `make_2_limbs` on each limb
+  ([above](#limbs)).
 - `greater`, `greater_equal` and `not_equal` exchange the operands or the answers of one kernel,
   which composes nothing.
 
 No function of this page writes arithmetic of its own: moves, selects on masks (a `Trit` from the
-two masks of a kernel, or from one exact mask) and nothing else. Three tests call no kernel and are
+two masks of a kernel, or from one exact mask) and nothing else. Four tests call no kernel and are
 written by hand in the headers, not machine-checked: `is_empty()`, `is_whole()` and `is_finite()`
 of a ball (the radius a NaN, $+\infty$, finite) and `is_finite()` of an interval (the leading limb
 of each stored bound finite, on its bit pattern).
@@ -297,8 +343,10 @@ a ball the signs. The others round and check it: the member and subset tests and
 balls (exact pairs by `two_sum_ord`, bounds by `add_ball_2_2`), the hull, the intersection and the
 split of balls, the midpoint, radius, split and conversions of intervals, and the ball from an
 interval of two `T` (`from_interval` and `from_bounds` of a ball; `from_bounds` of an interval, its
-constructor under another name, does not round). The states of a ball (`is_empty`, `is_whole`) and `mid_rad()` of a ball, which
-read stored values, check nothing.
+constructor under another name, does not round). `from_limbs` checks the rounding mode for two
+limbs only, where the test of a canonical pair rounds. The states of a ball (`is_empty`,
+`is_whole`, `is_finite`), `is_finite()` of an interval and `mid_rad()` of a ball, which read stored
+values, check nothing.
 
 ## Constant evaluation
 

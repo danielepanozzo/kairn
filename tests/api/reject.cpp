@@ -15,6 +15,8 @@
 //          two-limb one); the control marks the operand
 //   11     a pair that is not canonical given to from_limbs in a constant expression, with
 //          KAIRN_CHECKS (the control turns KAIRN_CHECKS off)
+//   111-112 the same for Interval::from_limbs given reversed bounds and Ball::from_limbs given a
+//          negative radius
 //   15     the same for an operator given a pair that is not canonical, written into its limbs
 //   16     the same for a Ball constructor given a negative radius
 //   17     kairn::rational with a zero denominator in a constant expression (the control: 3)
@@ -91,7 +93,8 @@
 //          on the way (95, 96: the error term is the opposite infinity); each control is the
 //          neighboring operand where it compiles, the largest square or the next number below b,
 //          against the run-time result (api.constexpr checks the same bits at run time)
-#if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
+#if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16 || KAIRN_TEST_CASE == 111 || \
+    KAIRN_TEST_CASE == 112
 #if defined(KAIRN_TEST_CONTROL)
 #define KAIRN_CHECKS 0
 #else
@@ -201,6 +204,16 @@ int main() {
     sink = z.limb[1];
 #elif KAIRN_TEST_CASE == 16
     constexpr B2 z(kairn::unverified(E2(kairn::unverified(1.0))), -0.5);
+    sink = z.radius();
+#elif KAIRN_TEST_CASE == 111
+    // Reversed bounds, which are not those of a canonical interval, given to from_limbs.
+    static constexpr double limbs[2] = {2.0, 1.0};
+    constexpr I1 z = I1::from_limbs(limbs);
+    sink = z.lower().limb[0];
+#elif KAIRN_TEST_CASE == 112
+    // A negative radius, which is not that of a canonical ball, given to from_limbs.
+    static constexpr double limbs[3] = {1.0, 0.0, -0.5};
+    constexpr B2 z = B2::from_limbs(limbs);
     sink = z.radius();
 #elif KAIRN_TEST_CASE == 17
 #if defined(KAIRN_TEST_CONTROL)

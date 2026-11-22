@@ -708,8 +708,9 @@ defined in the example.
 ### When a check of a build without `NDEBUG` fails
 
 In a build without `NDEBUG`, or with `KAIRN_CHECKS` defined to 1 (the same in every file of the
-program), every operation, and every constructor that is given limbs or a center (`from_limbs`,
-the constructors of `Ball`), checks first the environment and then its operands. A failed check
+program), every operation, and every constructor that is given limbs or a center (`from_limbs` of
+a number, an interval or a ball, the constructors of `Ball`), checks first the environment and then
+its operands. A failed check
 prints a line on the standard error and stops the program with `std::abort()`; in a wrong
 environment the line is the environment's, whatever the operands. In constant evaluation only the
 operands are checked, and an operand that fails makes the expression not a constant expression,
@@ -732,7 +733,7 @@ canonical pair, $x_0 + x_1 = x_0$). They are:
 | `Ball<T, 1>(a)`, `Ball<T, 1>(c)`, `Ball<T, 1>(c, r)`, `Ball<T, 1>(q)`, `Ball<T, 2>(a)`: the constructors of a ball from a `T`, a number of one limb or a constant of one limb | their only rounded operations are the guards `a + 0`, whose value is `a` under every rounding mode; only the sign of a zero can differ, which Kairn leaves unspecified anyway |
 | `Expansion<T, 2>(r)` for the result `r` of `two_sum` or `fast_two_sum` | the guards, as above, and a test of the pair that compares and does not round |
 | `-X`, `X.hull(Y)`, `X.intersection(Y)` for an `Interval`, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of two limbs | sign bits, comparisons and selects of bounds; a bound rounded down or up to `T` as `to_down` and `to_up` round it |
-| the constructors of an `Interval`: from two bounds or a point of one limb, from a `T` of two limbs, from numbers of two limbs, and `Interval<T, k>::from_bounds(lo, hi)`, the constructor from two bounds under that name | the guards, as above; for numbers of two limbs comparisons and selects |
+| the constructors of an `Interval`: from two bounds or a point of one limb, from a `T` of two limbs, from numbers of two limbs, and `Interval<T, k>::from_bounds(lo, hi)`, the constructor from two bounds under that name; `Interval<T, 1>::from_limbs` and `Ball<T, 1>::from_limbs` | the guards, as above; for numbers of two limbs comparisons and selects; for `from_limbs` a test of the limbs that does not round |
 | of an `Interval`: `X.is_empty()`, `X.is_whole()`, the signs, `X.contains(t)`, `X.contains(Y)`, `kairn::member`, the three-valued comparisons (`kairn::less` and the others) and the relations `kairn::ieee1788::equal`, `subset`, `interior`, `disjoint` | comparisons and selects of bounds; for a point of `T` of two limbs the guard of `make_2`, as above |
 | `kairn::next_up`, `kairn::next_down` | integer operations on the bit pattern, which no state of the environment changes: they check nothing at all |
 | `kairn::sign`, `kairn::isfinite`, `kairn::is_normalized` of one limb, `X.center()`, `X.radius()`, `X.midpoint()`, `X.mid_rad()`, `X.is_finite()`, `X.is_whole()`, `X.is_empty()` of a `Ball`, `kairn::certainly` and `kairn::possibly` of a `Trit`, `Ball::empty()`, `Ball::whole()`, `Interval()`, `Interval::empty()`, `Interval::whole()`, `X.lower()`, `X.upper()` and `X.is_finite()` of an interval, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of one limb, the constants of `kairn::traits`, `kairn::rational`; the constructors of two limbs from a `T` or a one-limb number and `from_limbs_unchecked` (their guard, as above) | tests of bit patterns, stored values and data, integer arithmetic; these check nothing at all, as before |
@@ -741,7 +742,7 @@ Every other function rounds and checks the rounding mode: the arithmetic, `ldexp
 numbers and of balls), the functions of `kairn::finite::`, the [building blocks](#building-blocks)
 but `next_up` and `next_down` (the directed bounds among them: they compute under rounding to
 nearest what rounding down or up gives), `from_limbs` and `kairn::is_normalized` of two limbs (both
-test $x_0 + x_1 = x_0$), the constructors of `Ball<T, 2>` from a center of two limbs or a
+test $x_0 + x_1 = x_0$; `from_limbs` of an interval or a ball of two limbs too), the constructors of `Ball<T, 2>` from a center of two limbs or a
 constant of two limbs (the test of a canonical center), the arithmetic of intervals, and the
 functions of the interface of `Interval` and `Ball` that compute a bound or a center: the midpoint,
 the radius, `mid_rad()` and the split of an interval, the conversions `Ball<T, k>(X)` and
@@ -777,7 +778,11 @@ these functions says "Does not round".
   constructors, with `from_limbs`, or as results of Kairn's operations, and test a result of
   `kairn::finite::` with `kairn::isfinite` first.
 - `kairn: from_limbs: the limbs are not a canonical pair (finite with x0 + x1 == x0, an infinity and a zero, or two NaN)`.
-  The same, caught when the number is made.
+  The same, caught when the number is made. Likewise
+  `kairn: from_limbs: the limbs are not those of a canonical interval` and
+  `... of a canonical ball` from `Interval::from_limbs` and `Ball::from_limbs`: limbs that were not
+  read from a set of that type (reversed bounds, a negative radius, a NaN center with a finite
+  radius).
 - `kairn: fast_two_sum: |a| < |b|, which its requirement |a| >= |b| excludes (two_sum takes any order)`.
   Without the checks, the sum is still the rounded sum, but the error term need not make it exact:
   use `two_sum`, or put the larger operand first.
