@@ -90,8 +90,13 @@ since the state of 2026-11-21, each with its row in
   products of two limbs by a `T` when the other factor is 1 or −1
   ([Architecture](../architecture.md#the-kernel-ir), rule R3, "The factors of a fused operation"). The public operations
   call guarded entry forms (`two_prod_entry`, `mul_2_1_entry`, ...) proved by reduction to the
-  kernels of this page and of Milestone 1, whose listings and statements are unchanged. Thirteen
-  objects of the two-limb loops are still to close.
+  kernels of this page and of Milestone 1, whose listings and statements are unchanged. The
+  thirteen objects of the two-limb loops that were open on that day were closed later on
+  2026-11-22, with the constructors of a ball vector of two limbs over the program's arrays and
+  `Accumulator::from_state`: the loops of two limbs that the headers call are the guarded forms
+  `dot_2_entry`, `conv_2_entry`, `axpy_2_entry`, `axpy_2_1_entry`, `bv_scale_2_entry` and
+  `bv_make_2_entry`, no factor from the program is left exposed, and the generator refuses one
+  (`rules.factor_rule`; the list of pending objects is gone).
 - **The interface of the sets gained** `from_bounds` on both types, `Interval::is_finite()`, the
   constructors `from_limbs` from stored limbs, and `ldexp` and `half` of two limbs in constant
   expressions; **`kairn::sequential` is the first argument** wherever it appears; **every
@@ -99,10 +104,16 @@ since the state of 2026-11-21, each with its row in
   version is 0.3.0.
 - **The exhaustive tier on emulated formats exists** (the note of this date
   [below](#order-of-implementation)).
-- On this tree `gen/kernels/` holds 233 kernels and 47 loops, the ten kernels and three loops more
-  being the guarded entry forms, and the audits print the assumptions of 1 532 theorems (185, 384
-  and 963). The counts per model above are those of 2026-11-21 and do not include them; an entry
-  form has the statements of its core.
+- On this tree `gen/kernels/` holds 237 kernels and 51 loops, the fourteen kernels and seven loops
+  more being the guarded entry forms, and the audits print the assumptions of 1 563 theorems (194,
+  400 and 969). The counts per model above are those of 2026-11-21 and do not include them; an
+  entry form has the statements of its core. Of the fourteen kernels, two are stated in the IEEE
+  model only (`ball_scale_2_full_entry`, `mul_2_1_full_entry`), three in both models
+  (`mul_down_entry`, `mul_up_entry`, `bv_center_entry_2`), eight in the real model with generated
+  statements of the IEEE model for finite operands (`two_prod_entry`, `mul_2_1_entry`,
+  `acc_mul_entry_1`, `acc_mul_entry_2`, `dot_entry_step_1`, `dot_entry_step_2`,
+  `scale_entry_step_2`, `bv_scale_step_2`), and one in the real model only
+  (`bv_scale_radius_entry_2`, as the other radius kernels of the ball vectors).
 
 How each section reads: two or three plain sentences on what is guaranteed and why it matters;
 the exact statement; the kernel, in the operations of the
