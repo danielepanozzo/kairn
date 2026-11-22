@@ -1,8 +1,8 @@
 # Getting started
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is complete
-([report](../developer/results/milestone1.md)), and Milestone 2 is in progress, in version 0.3.0
-of the development line. In the public headers of this version: numbers of one and two limbs of
+([report](../developer/results/milestone1.md)), and Milestone 2 is complete and in review by the
+owner ([report](../developer/results/milestone2.md)), in version 0.3.0 of the development line. In the public headers of this version: numbers of one and two limbs of
 type `float` or `double`, balls and intervals around them with the
 [interface the two share](#intervals-and-balls), the [building blocks](#building-blocks) on `T`,
 [constants](#constants-from-fractions) built at compile time from an integer or a fraction, and the

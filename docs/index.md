@@ -5,9 +5,9 @@ and ball arithmetic. Its aim is that every error bound it states carries a machi
 and that the code it ships is generated from the same description the proofs are about.
 
 **Status: pre-release. Milestone 1 is complete
-([report](developer/results/milestone1.md)), Milestone 2 is in progress
-([what each milestone adds](developer/design/phase0/plan.md#milestones)), and nothing in this
-repository should be relied on yet.** The public headers of this version have k-numbers of one
+([report](developer/results/milestone1.md)), Milestone 2 is complete and in review by the owner
+([report](developer/results/milestone2.md); [what each milestone adds](developer/design/phase0/plan.md#milestones)),
+and nothing in this repository should be relied on yet.** The public headers of this version have k-numbers of one
 and two limbs, balls and intervals around them with the interface the two share, the building
 blocks on `float` and `double`, constants built at compile time from an integer or a fraction, and
 the accumulator of a sum or a dot product, all included by `kairn/kairn.hpp`; and, in headers of
@@ -95,10 +95,12 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
   for infinities and NaN the operations return IEEE-like results and the special states of a
   ball, which is proved in a model of IEEE 754, with a condition under which a `Ball` operation
   stays finite. The report lists what is open.
-- **Milestone 2**, in progress ([design](developer/design/milestone2.md)): in the headers of this
-  version, `Interval`, the interface intervals and balls share, the building blocks, constants at
-  compile time, `Packed` and the containers, the functions on arrays, the accumulator and
-  `BallVector`.
+- **Milestone 2**, complete and in review by the owner
+  ([report](developer/results/milestone2.md), [design](developer/design/milestone2.md)):
+  `Interval`, the interface intervals and balls share, the building blocks, constants at compile
+  time, `Packed` and the containers, the functions on arrays, the accumulator and `BallVector`.
+  Every kernel and every loop over arrays is proved; the report lists what is open, what was
+  measured, and the rulings that await confirmation.
 - The later milestones are in the [Plan](developer/design/phase0/plan.md#milestones).
 
 ## Where to go next
