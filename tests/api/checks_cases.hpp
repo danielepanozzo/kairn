@@ -685,7 +685,10 @@ inline const Operation operations[] = {
          put(b, kairn::Accumulator<double, 1>::from_state(E1(v_a), 1.5, 3).ball());
      }},
     // and those that do not round: from_state, on the corpus (canonical pairs and magnitudes, among
-    // them +0, -0, subnormal numbers, the infinities and NaN); the accessors, checked for nothing.
+    // them +0, -0, subnormal numbers, the infinities and NaN), whose only rounded operations are the
+    // guards of the values of T it is given (rule R3): the running sum of two limbs, an Expansion, as
+    // it is, bit for bit; the magnitudes, and the running sum of one limb, the same values, zeros
+    // without their sign, as the constructors; the accessors, checked for nothing.
     {"acc.from_state", Kind::exact, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = typename std::decay_t<decltype(c.one)>::value_type;
@@ -693,7 +696,13 @@ inline const Operation operations[] = {
                  for (const T& r : c.radii) {
                      const auto a = kairn::Accumulator<T, 2>::from_state(x, r, 5);
                      put(out, a.running_sum());
-                     put(out, a.magnitudes());
+                     put_value(out, a.magnitudes());
+                 }
+             for (const T& x : c.one)
+                 for (const T& r : c.radii) {
+                     const auto a = kairn::Accumulator<T, 1>::from_state(kairn::Expansion<T, 1>(x), r, 5);
+                     put_value(out, a.running_sum());
+                     put_value(out, a.magnitudes());
                  }
          });
      }},

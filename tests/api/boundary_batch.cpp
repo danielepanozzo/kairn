@@ -1,7 +1,7 @@
 // boundary.cpp for the functions on arrays (batch.hpp) and the accumulator (accumulator.hpp): an
 // array that the program fills with products in the same function and passes straight into a sum,
-// a map or axpy, or a product it computes and adds to an accumulator, must give the same result as
-// the same function on those products rounded first. The loops on arrays of
+// a map or axpy, or a product it computes and adds to an accumulator or gives Accumulator::from_state
+// as its state, must give the same result as the same function on those products rounded first. The loops on arrays of
 // the program are the _entry loops, whose steps guard each limb they add (rule R3: a + 0 in the
 // scalar loops, the form's intrinsic in the packed ones), so that a compiler that inlines the loop
 // and forwards the stores cannot fuse a product into the loop's first addition. Each form is
@@ -267,6 +267,14 @@ FORM(acc_add1, kairn::Accumulator<T, 1> acc; for (int i = 0; i < N / 2; ++i) { a
      put_acc(out, acc);)
 FORM(acc_add2, kairn::Accumulator<T, 2> acc; for (int i = 0; i < N / 2; ++i) { acc.add(M::one(a, b, i)); acc.add(c[i]); }
      put_acc(out, acc);)
+// from_state: a product as the running sum (one limb) and as the sum of magnitudes, which the
+// accumulator's kernels then add to (rule R3: from_state guards them, the leading limb of make_2).
+FORM(acc_from_state1, kairn::Accumulator<T, 1> acc =
+         kairn::Accumulator<T, 1>::from_state(kairn::Expansion<T, 1>(M::one(a, b, 0)), M::one(a, b, 1), 1);
+     acc.add(c[0]); acc.add(c[1]); put_acc(out, acc);)
+FORM(acc_from_state2, kairn::Accumulator<T, 2> acc =
+         kairn::Accumulator<T, 2>::from_state(kairn::Expansion<T, 2>(T(0.75)), M::one(a, b, 0), 1);
+     acc.add(c[0]); acc.add(c[1]); put_acc(out, acc);)
 FORM(acc_product1, kairn::Accumulator<T, 1> acc; const T one = run_time_one<T>();
      for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), one); acc.add(c[i]); } put_acc(out, acc);)
 FORM(acc_product2, kairn::Accumulator<T, 2> acc; const T one = run_time_one<T>();
@@ -348,6 +356,8 @@ void run(const char* type, long rounds, Totals& totals) {
         ROW(axpy2, "axpy(E2(-1), c, {a*b}, z)", true),
         ROW(acc_add1, "acc.add(a*b), 1 limb", true),
         ROW(acc_add2, "acc.add(a*b), 2 limbs", true),
+        ROW(acc_from_state1, "Accumulator<T, 1>::from_state(a*b, c*d, 1), then add", true),
+        ROW(acc_from_state2, "Accumulator<T, 2>::from_state(s, a*b, 1), then add", true),
         ROW(dot1, "dot({a*b, c, ...}, {1})", false),
         ROW(dot1_seq, "dot(sequential, {a*b, c, ...}, {1})", false),
         ROW(dot2, "dot({a*b, c, ...}, {1}), 2 limbs", false),

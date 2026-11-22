@@ -1150,8 +1150,11 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   \Sigma\rvert \le r$ wherever `error_bound()` is finite (with `ball()` that ball), $+\infty$ and
   the whole line wherever the theorem gives nothing, and a finite radius where every value is finite
   and the count well within $m u \le \tfrac12$. `api.accumulator` checks constant evaluation,
-  merges, `from_state` and the same edges in C++; the boundary test adds `acc.add(a * b)` (guarded)
-  and `acc.add_product(a * b, 1)` (with a 1 read at run time, and one the compiler sees); the checks
+  merges, `from_state` and the same edges in C++; the boundary test adds `acc.add(a * b)` (guarded),
+  `from_state` with a product as its running sum or its magnitudes followed by `add` (guarded: on the
+  headers before the guard, Apple clang 21 with `-ffp-contract=fast` and NDEBUG at `-O2` gave another
+  result in about a quarter of 20 000 rounds) and `acc.add_product(a * b, 1)` (with a 1 read at run
+  time, and one the compiler sees); the checks
   have its operations and its operand cases; `api.reject.accumulator.mixed_limb_types`,
   `api.reject.not_constexpr.add_product` and `.error_bound` what must not compile.
 - **What must not compile** (`api.reject.batch.*`): a map and `axpy` writing through a view of

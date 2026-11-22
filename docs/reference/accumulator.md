@@ -34,7 +34,7 @@ Each operation that changes the state is one generated, proved kernel:
 
 A value `add` takes passes through the guard first ([rule R3](../developer/architecture.md#the-kernel-ir)),
 so a product the program computes and adds, `acc.add(a * b)`, is the product rounded; the factors
-of `add_product` of one limb are guarded too (below), those of two limbs only multiplied.
+of `add_product` are guarded too (below), every limb of both.
 `merge(acc)` merges an accumulator with itself.
 
 ## What is proved
@@ -87,7 +87,12 @@ need not be canonical; `sum()` is the canonical form), `magnitudes()` and `count
 and `Accumulator::from_state(s, a, n)` makes an accumulator of a state, so that a program can move
 accumulators through its own storage (a buffer of a device, a message between processes) and merge
 them there. The guarantee of `error_bound()` is that of the history of the accumulator the state
-was read from: a state that no history produced has none. With `KAIRN_CHECKS`, `from_state`
+was read from: a state that no history produced has none. The values of `T` it is given, the
+magnitudes and the limb of a running sum of one limb, pass through the guard $a + 0$ first (the
+leading limb of [`make_2`](make_2.md), as the limbs of `Ball::from_limbs` do), since the kernels of
+`add`, `add_product` and `merge` add to them: a product the program passes in is the product rounded
+(without the guard, GCC 13 at its default setting, Clang 18 and Apple clang 21 with
+`-ffp-contract=fast` were measured fusing it into the next `add`). With `KAIRN_CHECKS`, `from_state`
 requires a canonical sum and magnitudes that are not negative.
 
 ## A product by a factor the compiler knows to be 1
@@ -110,7 +115,8 @@ accumulator, as a scalar operation does, so they check the environment in a debu
 the operations of `Expansion` do (the functions on arrays of [batch.md](batch.md#checks) check it in
 every build). With `KAIRN_CHECKS` 1, `add`, `add_product`, `merge`, `error_bound` and `ball` check the
 floating-point environment, the rounding mode included, then that a two-limb operand is canonical;
-`from_state` does not round, checks the environment without the rounding mode, and then its state;
+`from_state` rounds only in its guards, whose values do not depend on the rounding mode, checks the
+environment without the rounding mode, and then its state;
 `sum()`, `count()`, `magnitudes()` and `running_sum()` check nothing. The constructor, `add`,
 `merge`, `sum`, the accessors and `from_state` are `constexpr`; `add_product`, `error_bound` and
 `ball` are not, since `acc_mul_k` and `acc_radius_k` have fused multiply-adds without a variant
