@@ -636,10 +636,9 @@ public:
     /// gives every limb back bit for bit but two: a -0 may come back +0 (the guard -0 + 0 is +0
     /// under rounding to nearest, upward and toward zero; in constant evaluation the guard is not
     /// applied), and a NaN limb comes back a NaN whose payload Kairn does not specify. Checked when
-    /// KAIRN_CHECKS is 1, after the environment as for an operation (config.hpp; for one limb
-    /// without the rounding mode, the test of a canonical ball of one limb not rounding): limbs that
-    /// are not those of a canonical ball fail a constant expression, or print a message and call
-    /// std::abort(). Not checked otherwise: such a ball then gives results with no guarantee, and no
+    /// KAIRN_CHECKS is 1, after the environment as for an operation, the rounding mode included
+    /// (config.hpp): the guards' zeros depend on it, for one limb too. Limbs that are not those of a
+    /// canonical ball fail a constant expression, or print a message and call std::abort(). Not checked otherwise: such a ball then gives results with no guarantee, and no
     /// undefined behavior. No marked form, as for Expansion::from_limbs. constexpr.
     [[nodiscard]] static constexpr Ball from_limbs(const T* limbs) noexcept
         requires detail::proof_checked<gen::bounds::make_2<T>> &&
@@ -648,13 +647,7 @@ public:
         Expansion<T, K> c;
 #if KAIRN_CHECKS
         for (int i = 0; i < K; ++i) c.limb[i] = limbs[i];
-        bool checked = false;
-        if constexpr (K == 1) {
-            checked = detail::check_environment_except_rounding();
-        } else {
-            checked = detail::check_environment();
-        }
-        if (checked && !detail::canonical_ball(c, limbs[K]))
+        if (detail::check_environment() && !detail::canonical_ball(c, limbs[K]))
             detail::fail("from_limbs", "the limbs are not those of a canonical ball (a finite ball with a canonical "
                                        "center and r >= 0, the whole line or the empty set)");
 #endif

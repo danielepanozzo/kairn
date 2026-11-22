@@ -396,8 +396,8 @@ public:
     /// statement. The round trip, from_limbs of the limbs read, gives every limb back bit for bit
     /// but the sign of a zero: a -0 may come back +0 (the guard -0 + 0 is +0 under rounding to
     /// nearest, upward and toward zero; in constant evaluation the guard is not applied). Checked
-    /// when KAIRN_CHECKS is 1, after the environment as for an operation (config.hpp; for one limb
-    /// without the rounding mode, the test of a canonical interval of one limb not rounding): limbs
+    /// when KAIRN_CHECKS is 1, after the environment as for an operation, the rounding mode included
+    /// (config.hpp): the guards' zeros depend on it, for one limb too. Limbs
     /// that are not those of a canonical interval fail a constant expression, or print a message
     /// and call std::abort(). Not checked otherwise: such an interval then gives results with no
     /// guarantee, and no undefined behavior. No marked form, as for Expansion::from_limbs.
@@ -411,13 +411,7 @@ public:
             lo.limb[i] = limbs[i];
             hi.limb[i] = limbs[K + i];
         }
-        bool checked = false;
-        if constexpr (K == 1) {
-            checked = detail::check_environment_except_rounding();
-        } else {
-            checked = detail::check_environment();
-        }
-        if (checked && !detail::canonical_interval(lo, hi))
+        if (detail::check_environment() && !detail::canonical_interval(lo, hi))
             detail::fail("from_limbs", "the limbs are not those of a canonical interval (the empty set (+inf, -inf), "
                                        "or bounds lo <= hi, neither a NaN, with lo < +inf, hi > -inf and each canonical)");
 #endif

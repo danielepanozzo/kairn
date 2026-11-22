@@ -604,7 +604,19 @@ Including Kairn fails with `#error` under the flags a macro reveals (`-ffast-mat
 ```
 
 `kairn::environment_ok()` reads the control register and says whether the rounding mode and
-flush-to-zero are in their default state; Kairn never changes them. In a build without `NDEBUG`
+flush-to-zero are in their default state; Kairn never changes them. **The default environment is
+the precondition of every function, and the batch entries check it in every build**, with or
+without `NDEBUG`: each function on arrays of `kairn/batch.hpp` (`sum`, `sum_fast`, `dot`, the maps,
+`conv`, `norm_upper`) and each operation on whole ball vectors of `kairn/ball_vector.hpp` (the
+constructors from centers and a radius among them) reads the register once before its loop, as
+`environment_ok()` does, and if the environment is not the default one calls
+`KAIRN_ENVIRONMENT_FAILURE` with the message of a debug build, which by default prints it and
+stops the program. `norm_upper` of an array and the negation of a ball vector, which compute no
+sum, leave the rounding mode out (flush to zero still changes their comparisons); every other batch
+entry reads it. Measured, the check costs under a nanosecond a call on an Apple M3, and is lost in
+the noise of the loop from a few elements on ([Testing](../developer/testing.md#the-checks-of-a-debug-build)).
+The scalar operations, `Packed` and the accumulator, whose operations take one term at a time,
+check the environment in a debug build only, as below. In a build without `NDEBUG`
 (or with `KAIRN_CHECKS` defined to 1), every operation checks the environment, then its operands:
 an operator or a function of `kairn::` requires canonical two-limb operands (finite and
 normalized, $(\pm\infty, 0)$ or (NaN, NaN)), a function of `kairn::finite::` normalized ones or a

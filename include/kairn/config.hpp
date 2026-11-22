@@ -79,7 +79,19 @@
 ///   a NaN with a NaN (blocks.hpp); the other building blocks take any value of T.
 ///
 /// An operand that fails prints a message and calls std::abort(); an environment that fails calls
-/// KAIRN_ENVIRONMENT_FAILURE. 0 for no checks. The default is 1 when NDEBUG is not defined, as for
+/// KAIRN_ENVIRONMENT_FAILURE. 0 for no checks, but one: the batch entries, the functions on arrays of
+/// batch.hpp (sum, sum_fast, dot, add, sub, scale, mul_pow2, axpy, conv, norm_upper) and the
+/// operations of ball_vector.hpp on whole ball vectors (their constructors from centers and a
+/// radius, the negation, the sum, the difference, the scalings, ldexp, half, axpy, the product of
+/// polynomials, norm_upper, and the operators that call them), check the environment in every
+/// build, as this check does it with KAIRN_CHECKS 1, the same reading of the control register and
+/// the same KAIRN_ENVIRONMENT_FAILURE: the default environment is their documented precondition
+/// (docs/developer/design/brief.md, "Floating-point environment": at every batch-API entry; for the
+/// scalar operations, in debug builds). The norm_upper of batch.hpp and the negation of a ball
+/// vector, which compute no sum, leave the rounding mode out; every other batch entry checks it. The
+/// rest of what they check with KAIRN_CHECKS 1 (lengths, arrays that alias, canonical elements)
+/// stays with it. The scalar operations, Packed and the accumulator (whose add, add_product and
+/// merge take one term or one accumulator) are no batch entries. The default is 1 when NDEBUG is not defined, as for
 /// assert(). The checks are skipped in constant evaluation, except that an operand that fails them
 /// makes the constant expression invalid. Define it the same way in every translation unit of a
 /// program.
@@ -152,8 +164,9 @@
 #endif
 
 /// @def KAIRN_ENVIRONMENT_FAILURE(reason)
-/// What a check of KAIRN_CHECKS does when the floating-point environment is not the default one:
-/// by default, prints the reason (a string literal) to the standard error and calls std::abort().
+/// What a check of KAIRN_CHECKS, and the check of a batch entry in every build (KAIRN_CHECKS above),
+/// does when the floating-point environment is not the default one: by default, prints the reason
+/// (a string literal) to the standard error and calls std::abort().
 /// A program may define it, before including Kairn, as any statement. If it returns, the operation
 /// (or the constructor) continues without checking its operands, since those checks compute in
 /// the environment that failed (under a directed rounding mode x0 + x1 == x0 can be false for a

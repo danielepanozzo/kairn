@@ -38,6 +38,18 @@
 /// for bit, a zero center compared as a zero under MSVC (whose packed code drops the guard's +0,
 /// packed.hpp). The product of polynomials has the sequential order only.
 ///
+/// The environment, in every build. Each operation on whole ball vectors, the constructors from
+/// centers and a radius included, is a batch entry: before its loop it reads the floating-point
+/// environment as kairn::environment_ok() does, with KAIRN_CHECKS 1 or 0, and if it is not the
+/// default one calls KAIRN_ENVIRONMENT_FAILURE with the message of the checks of a debug build,
+/// which by default prints it and stops the program (config.hpp): the precondition of every such
+/// operation, checked, one read of the control register per call. What it reads is what a debug
+/// build reads there: the negation, which computes no sum (a change of sign, the radius copied),
+/// leaves the rounding mode out; every other operation reads it too, the constructors of one limb
+/// among them, whose guards and m - m give zeros whose sign depends on the mode. The accessors (center(i), entry(i), radius(), the views), which copy, check nothing.
+/// The other checks of a debug build (canonical operands, lengths, arrays that alias) stay with
+/// KAIRN_CHECKS.
+///
 /// The centers are stored as one array per limb, as the loops read them: limb j of center i is
 /// element i of array j (soa.hpp's layout). In a BallVector the arrays are inside the object; a
 /// BallVectorView refers to arrays and a radius that another owns, a BallVector or the program.
@@ -217,25 +229,28 @@ KAIRN_FORCEINLINE bool canonical_bv(const bv_parts<const T, K>& x) noexcept {
     return true;
 }
 
-// The checks of KAIRN_CHECKS (config.hpp) for an operation that rounds: the environment, the
-// rounding mode included, then every operand canonical, which is not checked when the environment
-// is not the default one and KAIRN_ENVIRONMENT_FAILURE returned.
+// The checks of an operation that rounds: the environment, the rounding mode included, in every
+// build (check_batch_environment, environment.hpp: every operation on whole ball vectors is a
+// batch entry); then, with KAIRN_CHECKS (config.hpp), every operand canonical, which is not checked
+// when the environment is not the default one and KAIRN_ENVIRONMENT_FAILURE returned.
 template <class T, int K, class... More>
 KAIRN_FORCEINLINE void check_bv([[maybe_unused]] const bv_parts<const T, K>& x,
                                 [[maybe_unused]] const More&... more) noexcept {
+    [[maybe_unused]] bool operands = check_batch_environment();
 #if KAIRN_CHECKS
-    if (check_environment() && !(canonical_bv(x) && ... && canonical_bv(more)))
+    if (operands && !(canonical_bv(x) && ... && canonical_bv(more)))
         fail("a ball vector", "is not canonical (finite centers, canonical for two limbs, with a finite radius r >= 0, "
                               "or every center zero with the radius +inf), so no guarantee applies to the result");
 #endif
 }
 // The same for an operation that does not round (the negation): the environment without the
-// rounding mode, then the operand, which for two limbs is tested only when the rounding mode is to
-// nearest, since that test rounds.
+// rounding mode, in every build; then, with KAIRN_CHECKS, the operand, which for two limbs is
+// tested only when the rounding mode is to nearest, since that test rounds.
 template <class T, int K>
 KAIRN_FORCEINLINE void check_bv_exact([[maybe_unused]] const bv_parts<const T, K>& x) noexcept {
+    [[maybe_unused]] bool operand = check_batch_environment(false);
 #if KAIRN_CHECKS
-    if (check_environment_except_rounding() && (K == 1 || rounding_to_nearest()) && !canonical_bv(x))
+    if (operand && (K == 1 || rounding_to_nearest()) && !canonical_bv(x))
         fail("a ball vector", "is not canonical (finite centers, canonical for two limbs, with a finite radius r >= 0, "
                               "or every center zero with the radius +inf), so no guarantee applies to the result");
 #endif
@@ -259,19 +274,23 @@ KAIRN_FORCEINLINE bool overlap(const T* a, std::size_t n, const T* b, std::size_
 // The constructor, in the sequential order in every build, so that BallVector and the views are
 // the same code in every translation unit (the lane order computes the same bits): the centers c
 // and the radius r given, written into the arrays z (which may be those of c, in place) and *rr.
-// Checked with KAIRN_CHECKS: the environment, without the rounding mode for one limb, whose
-// constructor rounds nothing but its guards (c + 0 and r + 0, whose values are c and r under every
-// rounding mode) and m - m (+0 or -0 for a finite m, a NaN otherwise, under every mode); then a
-// negative radius, reported as almost surely a mistake (the constructor makes it the whole space),
-// and for two limbs each center canonical, whose test rounds.
+// Checked in every build, as a batch entry (check_batch_environment, environment.hpp): the
+// environment, the rounding mode included, for one limb too: its only rounded operations are its
+// guards (c + 0 and r + 0) and m - m, whose values do not depend on the mode, but whose zeros do
+// (-0 rounding downward), and a compiler that assumes rounding to nearest may decide the loop's test
+// of the radius's sign on that zero otherwise (clang-cl, rounding downward, made the whole space of
+// finite centers and a zero radius); then with KAIRN_CHECKS a negative radius, reported as almost
+// surely a mistake (the constructor makes it the whole space), and for two limbs each center
+// canonical, whose test rounds.
 template <class T, int K>
 KAIRN_FORCEINLINE void bv_make(const T* const* c, std::size_t n, T r, T* const* z, T* rr) noexcept {
+    [[maybe_unused]] bool operands = check_batch_environment();
 #if KAIRN_CHECKS
     if constexpr (K == 1) {
-        if (check_environment_except_rounding() && 0 > r)
+        if (operands && 0 > r)
             fail("a ball vector", "has a negative radius (it would make the whole space)");
     } else {
-        if (check_environment()) {
+        if (operands) {
             for (std::size_t i = 0; i < n; ++i) {
                 Expansion<T, 2> e;
                 e.limb[0] = c[0][i];

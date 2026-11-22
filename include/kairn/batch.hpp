@@ -12,7 +12,8 @@
 /// `a.view()`. Every view of one call has the same limb type and the same k: a sum of float and
 /// double arrays, or of arrays of one and of two limbs, does not compile.
 ///
-/// Nothing here computes: each function checks what KAIRN_CHECKS checks and calls one loop of the
+/// Nothing here computes: each function checks the environment (in every build, below), and what
+/// KAIRN_CHECKS checks, and calls one loop of the
 /// generated headers (include/kairn/gen/scalar.hpp, gen/avx2.hpp, gen/neon.hpp), a fold of the
 /// generator (docs/developer/architecture.md, "Folds", "Maps", "Folds of maxima",
 /// "Convolutions"), whose claims are in gen/claims.json ("folds") and whose statements are proved
@@ -67,14 +68,23 @@
 /// read, and its limbs overlap each other nowhere. A partial overlap is not supported. The array a
 /// convolution writes overlaps neither array it reads. The arrays read may be the same.
 ///
-/// The checks of a debug build (KAIRN_CHECKS 1, config.hpp): a function that rounds checks the
-/// floating-point environment first, the rounding mode included; then the lengths (dot, the maps,
-/// conv), the arrays that alias, every element of two limbs (canonical) and the scalars (canonical;
-/// a positive power of two for mul_pow2), and stops the program with a message on the first that
-/// fails. norm_upper does not round: its environment check leaves the rounding mode out, and it
-/// checks its elements only when the rounding mode is to nearest (the test of a canonical pair
-/// rounds). In a build without the checks these are requirements: lengths that differ read or
-/// write outside the arrays, and elements that are not canonical have no guarantee.
+/// The environment, in every build. Each function of this header is a batch entry: before its loop
+/// it reads the floating-point environment as kairn::environment_ok() does, with KAIRN_CHECKS 1 or
+/// 0, and if it is not the default one (rounding to nearest, no flush to zero, no denormals read
+/// as zero) calls KAIRN_ENVIRONMENT_FAILURE with the message of the checks of a debug build, which
+/// by default prints it and stops the program (config.hpp). This is the precondition of every
+/// function here, checked: one read of the control register per call, whatever the length.
+/// norm_upper does not round, and its check leaves the rounding mode out: it reads only flush to
+/// zero (under which a comparison reads a subnormal number as zero). A KAIRN_ENVIRONMENT_FAILURE of
+/// the program that returns lets the function go on, with no guarantee for its result.
+///
+/// The checks of a debug build (KAIRN_CHECKS 1, config.hpp), after the environment: the lengths
+/// (dot, the maps, conv), the arrays that alias, every element of two limbs (canonical) and the
+/// scalars (canonical; a positive power of two for mul_pow2), and the program stops with a message
+/// on the first that fails; norm_upper checks its elements only when the rounding mode is to
+/// nearest (the test of a canonical pair rounds). In a build without the checks these are
+/// requirements: lengths that differ read or write outside the arrays, and elements that are not
+/// canonical have no guarantee.
 ///
 /// Not here: constant evaluation (the loops are not constexpr), allocation (the program gives every
 /// array, the one written included, and nothing throws), a product of arrays of two limbs by a
@@ -199,14 +209,13 @@ inline bool positive_power_of_two(T c) noexcept {
     }
 }
 
-// The checks before a function that rounds: the environment (the rounding mode included), then
-// what the function requires. The lengths and the arrays that alias are integer comparisons,
-// checked even when KAIRN_ENVIRONMENT_FAILURE returned; the elements are checked only when the
-// environment is the default one, since the test of a canonical pair rounds.
-inline void check_rounds_start([[maybe_unused]] bool& elements) noexcept {
-#if KAIRN_CHECKS
-    elements = check_environment();
-#endif
+// The checks before a function that rounds: the environment (the rounding mode included), in every
+// build (check_batch_environment, environment.hpp: every function of this header is a batch entry),
+// then, with KAIRN_CHECKS, what the function requires. The lengths and the arrays that alias are
+// integer comparisons, checked even when KAIRN_ENVIRONMENT_FAILURE returned; the elements are
+// checked only when the environment is the default one, since the test of a canonical pair rounds.
+inline void check_rounds_start(bool& elements) noexcept {
+    elements = check_batch_environment();
 }
 inline void check_that([[maybe_unused]] bool ok, [[maybe_unused]] const char* what,
                        [[maybe_unused]] const char* reason) noexcept {
@@ -217,18 +226,18 @@ inline void check_that([[maybe_unused]] bool ok, [[maybe_unused]] const char* wh
 
 template <class T, int K>
 inline void check_reduction([[maybe_unused]] const char* what, [[maybe_unused]] const SoAView<T, K>& x) noexcept {
-#if KAIRN_CHECKS
-    bool elements = true;
+    [[maybe_unused]] bool elements = true;
     check_rounds_start(elements);
+#if KAIRN_CHECKS
     if (elements) check_that(canonical_array(x), what, "an element of x is not canonical (two limbs: finite with x0 + x1 == x0, (+-inf, 0) or (NaN, NaN))");
 #endif
 }
 template <class T, class U, int K>
 inline void check_dot([[maybe_unused]] const char* what, [[maybe_unused]] const SoAView<T, K>& x,
                       [[maybe_unused]] const SoAView<U, K>& y) noexcept {
-#if KAIRN_CHECKS
-    bool elements = true;
+    [[maybe_unused]] bool elements = true;
     check_rounds_start(elements);
+#if KAIRN_CHECKS
     check_that(x.size() == y.size(), what, "x and y have different lengths");
     if (elements) {
         check_that(canonical_array(x), what, "an element of x is not canonical (two limbs: finite with x0 + x1 == x0, (+-inf, 0) or (NaN, NaN))");
@@ -242,8 +251,8 @@ template <class T, class U, int K>
 inline bool check_map([[maybe_unused]] const char* what, [[maybe_unused]] const SoAView<T, K>& x,
                       [[maybe_unused]] const SoAView<U, K>& z) noexcept {
     bool elements = true;
-#if KAIRN_CHECKS
     check_rounds_start(elements);
+#if KAIRN_CHECKS
     check_that(x.size() == z.size(), what, "x and z have different lengths");
     check_that(limbs_apart(z), what, "the limb arrays of z overlap each other");
     check_that(alias_ok(z, x), what,
@@ -267,9 +276,9 @@ inline bool check_map([[maybe_unused]] const char* what, [[maybe_unused]] const 
 template <class T, class U, class V, int K>
 inline void check_conv([[maybe_unused]] const SoAView<T, K>& x, [[maybe_unused]] const SoAView<U, K>& y,
                        [[maybe_unused]] const SoAView<V, K>& z) noexcept {
-#if KAIRN_CHECKS
-    bool elements = true;
+    [[maybe_unused]] bool elements = true;
     check_rounds_start(elements);
+#if KAIRN_CHECKS
     const std::size_t nz = x.size() == 0 || y.size() == 0 ? 0 : x.size() + y.size() - 1;
     check_that(z.size() == nz, "conv", "z does not have the length of the product, x.size() + y.size() - 1 (0 when x or y is empty)");
     check_that(limbs_apart(z), "conv", "the limb arrays of z overlap each other");
@@ -285,12 +294,14 @@ inline void check_conv([[maybe_unused]] const SoAView<T, K>& x, [[maybe_unused]]
     }
 #endif
 }
-// norm_upper does not round: the environment without the rounding mode, then the elements when the
-// rounding mode is to nearest, where their test is exact (config.hpp, "Functions that do not round").
+// norm_upper does not round: the environment without the rounding mode, in every build; then, with
+// KAIRN_CHECKS, the elements when the rounding mode is to nearest, where their test is exact
+// (config.hpp, "Functions that do not round").
 template <class T, int K>
 inline void check_norm([[maybe_unused]] const SoAView<T, K>& x) noexcept {
+    [[maybe_unused]] bool elements = check_batch_environment(false);
 #if KAIRN_CHECKS
-    if (check_environment_except_rounding() && rounding_to_nearest())
+    if (elements && rounding_to_nearest())
         check_that(canonical_array(x), "norm_upper", "an element of x is not canonical (two limbs: finite with x0 + x1 == x0, (+-inf, 0) or (NaN, NaN))");
 #endif
 }
@@ -682,7 +693,8 @@ bool conv(SoAView<T, K> x, SoAView<U, K> y, SoAView<V, K> z) noexcept {
 /// limb, norm_upper_2 for two (a fold of maxima: the step norm_step_1 or norm_step_2 on the leading
 /// limb, the combination norm_combine, the finish norm_finish_1 or norm_finish_2). Every order
 /// computes the same result. Does not round (magnitudes, comparisons, a step of the bit pattern):
-/// not preceded by the debug build's check of the rounding mode (config.hpp). Not constexpr.
+/// its check of the environment, made in every build, leaves the rounding mode out (config.hpp).
+/// Not constexpr.
 /// Returns Reduction<T>.
 ///
 /// Statement, proved, with V = max_i |x_i| (0 for no element), |x_i| the exact magnitude of the

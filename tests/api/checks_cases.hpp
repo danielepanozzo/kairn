@@ -17,6 +17,7 @@
 #include <cfenv>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <type_traits>
 #include <vector>
@@ -946,9 +947,9 @@ inline const Operation operations[] = {
          });
      }},
     // from_limbs of an interval and of a ball of one limb: the guards, and a test of the limbs that
-    // does not round; on every interval and ball of the corpus, the same values (zeros without their
-    // sign).
-    {"interval1.from_limbs", Kind::exact, [](Bits& b) {
+    // does not round, but the guards' zeros depend on the rounding mode, which is checked; on every
+    // interval and ball of the corpus.
+    {"interval1.from_limbs", Kind::rounds, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = std::decay_t<decltype(c.one[0])>;
              for (const auto& x : c.intervals1) {
@@ -957,7 +958,7 @@ inline const Operation operations[] = {
              }
          });
      }},
-    {"ball1.from_limbs", Kind::exact, [](Bits& b) {
+    {"ball1.from_limbs", Kind::rounds, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = std::decay_t<decltype(c.one[0])>;
              for (const auto& x : c.balls1) {
@@ -1085,8 +1086,10 @@ inline const Operation operations[] = {
 
     // Ball vectors: the functions that do not round, each on ball vectors of the corpus: the
     // negation (sign bits, a copy of the radius, and the fold of maxima, which compares), the same
-    // bits; the constructors of one limb, whose only rounded operations are the guards a + 0 and the
-    // loop's m - m (+0 or -0 for a finite m under every rounding mode), the same values.
+    // bits. The constructors of one limb were here too (their only rounded operations are the guards
+    // a + 0 and the loop's m - m, the same values under every mode) until clang-cl returned the
+    // whole space for one of these vectors under rounding downward, where m - m and so the radius
+    // are -0 (2026-11-21): they are of the kind that rounds, and a build with the checks stops them.
     {"bv1.neg", Kind::exact, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              for (const auto& x : c.bvs1) put(out, -x);
@@ -1102,7 +1105,7 @@ inline const Operation operations[] = {
              }
          });
      }},
-    {"bv1.make", Kind::exact, [](Bits& b) {
+    {"bv1.make", Kind::rounds, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = std::decay_t<decltype(c.one[0])>;
              for (std::size_t k = 0; k < c.one.size(); ++k)
@@ -1472,6 +1475,13 @@ inline const State states[] = {
 #endif
 };
 
+// Whether the function is a batch entry (environment.hpp, check_batch_environment: the functions on
+// arrays of batch.hpp, and the operations on whole ball vectors of ball_vector.hpp, their
+// constructors included), whose check of the environment is made in every build: the operations
+// named batch.* and bv1.*, bv2.* here (bv.access, which copies, is none).
+inline bool batch_entry(const char* name) {
+    return std::strncmp(name, "batch.", 6) == 0 || std::strncmp(name, "bv1.", 4) == 0 || std::strncmp(name, "bv2.", 4) == 0;
+}
 inline const char* kind_name(Kind k) {
     return k == Kind::rounds ? "rounds" : k == Kind::exact ? "exact" : "unchecked";
 }

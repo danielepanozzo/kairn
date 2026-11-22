@@ -852,8 +852,18 @@ set(_api_expect_flush OFF)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|aarch64|arm64|ARM64)$")
   set(_api_expect_flush ON)
 endif()
-foreach(_build debug release)
+# Without the checks, KAIRN_CHECKS 0 (api.checks.off.*): the batch entries, the functions on arrays
+# and the operations on whole ball vectors, still check the environment, in every build (the brief,
+# "Floating-point environment"), and must stop the program as with the checks; every other function
+# must run under every state without a report (checks.cpp, KAIRN_TEST_CHECKS_OFF). No operand is
+# checked there, so .operands is not registered.
+_kairn_api_program(kairn-api-checks-off checks.cpp)
+target_compile_definitions(kairn-api-checks-off PRIVATE KAIRN_CHECKS=0 KAIRN_TEST_CHECKS_OFF)
+foreach(_build debug release off)
   foreach(_group default rounding flush operands)
+    if(_build STREQUAL "off" AND _group STREQUAL "operands")
+      continue()
+    endif()
     add_test(NAME api.checks.${_build}.${_group}
       COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-api-checks-${_build}>" "-DGROUP=${_group}"
         "-DEXPECT_FLUSH=${_api_expect_flush}" -P "${CMAKE_CURRENT_SOURCE_DIR}/checks.cmake")
@@ -862,6 +872,11 @@ foreach(_build debug release)
 endforeach()
 add_test(NAME api.checks.handler COMMAND kairn-api-checks-handler)
 set_tests_properties(api.checks.handler PROPERTIES TIMEOUT 120 LABELS "api;checks")
+# The handler without the checks (api.checks.handler.off): the batch entries call it, and nothing else.
+_kairn_api_program(kairn-api-checks-handler-off checks_handler.cpp)
+target_compile_definitions(kairn-api-checks-handler-off PRIVATE KAIRN_CHECKS=0 KAIRN_TEST_CHECKS_OFF)
+add_test(NAME api.checks.handler.off COMMAND kairn-api-checks-handler-off)
+set_tests_properties(api.checks.handler.off PROPERTIES TIMEOUT 120 LABELS "api;checks")
 # The same programs, with the build's own flags and KAIRN_CHECKS 1, in the other settings of
 # KAIRN_ENCLOSURE_CODE (include/kairn/config.hpp), where the checks of the operations of Ball are in
 # functions of their own: outlined, and external, whose definitions are those of definitions.cpp

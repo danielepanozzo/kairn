@@ -23,6 +23,15 @@
 //   checks operand CASE       an operation given an operand that is not canonical, which must stop
 //                             the program
 //
+// Built with KAIRN_TEST_CHECKS_OFF and KAIRN_CHECKS 0, a build without the checks: the batch entries
+// (the functions on arrays of batch.hpp, the operations of ball_vector.hpp on whole ball vectors:
+// the operations named batch.* and bv1.*, bv2.*) check the environment in every build
+// (environment.hpp, check_batch_environment), with the kind they have with the checks, and must
+// stop the program as they do there; every other function checks nothing: --operations lists those
+// that round as "runs" (under a state they must return, without a message: their results are not
+// compared, a directed rounding mode changes them) and the others as "unchecked" (the same bits as
+// to nearest under a rounding mode). No operand is checked there: `operand` is not run.
+//
 // A check that lets the program go on where it must stop, or a function that does not round whose
 // results differ, is reported with a line that starts with FAILED and exit status 1; a stopped
 // program exits through abort(). tests/api/checks.cmake runs every case and tells them apart. Each
@@ -32,7 +41,11 @@
 #error "the debug build of checks.cpp must leave KAIRN_CHECKS to its default, without NDEBUG"
 #endif
 #include <kairn/kairn.hpp>
-#if KAIRN_CHECKS != 1
+#if defined(KAIRN_TEST_CHECKS_OFF)
+#if KAIRN_CHECKS != 0
+#error "checks.cpp built with KAIRN_TEST_CHECKS_OFF tests a build without the checks: KAIRN_CHECKS must be 0"
+#endif
+#elif KAIRN_CHECKS != 1
 #error "checks.cpp tests KAIRN_CHECKS: build it without NDEBUG, or with KAIRN_CHECKS defined to 1"
 #endif
 
@@ -453,6 +466,15 @@ const Accepted accepted[] = {
      }},
 };
 
+// The kind of a function in this build: that of checks_cases.hpp with the checks; without them
+// (KAIRN_TEST_CHECKS_OFF), that kind for a batch entry, and "runs" or "unchecked" for the others.
+const char* kind_here(const Operation& op) {
+#if defined(KAIRN_TEST_CHECKS_OFF)
+    if (!batch_entry(op.name)) return op.kind == Kind::rounds ? "runs" : "unchecked";
+#endif
+    return kind_name(op.kind);
+}
+
 void say(const char* format, const char* a = "", const char* b = "") {
     std::printf(format, a, b);
     std::printf("\n");
@@ -511,8 +533,10 @@ int run_state(const char* state_name, const char* op_name) {
         return 1;
     }
     say("ok: environment_ok() is true in the default environment");
-    // A function that does not round, under a rounding mode: its results to nearest first.
-    const bool same = state->rounding && op->kind != Kind::rounds;
+    // A function that does not round, under a rounding mode: its results to nearest first. A
+    // function that is not checked in this build (KAIRN_TEST_CHECKS_OFF) and rounds: it must return.
+    const bool runs = std::strcmp(kind_here(*op), "runs") == 0;
+    const bool same = state->rounding && op->kind != Kind::rounds && !runs;
     Bits nearest, directed;
     if (same) op->run(nearest);
     if (!state->set()) {
@@ -530,6 +554,16 @@ int run_state(const char* state_name, const char* op_name) {
     op->run(directed);
     const bool still = !kairn::environment_ok();
     state->restore();
+    if (runs) {
+        if (!still) {
+            say("FAILED: %s is no longer set after %s", state_name, op_name);
+            return 1;
+        }
+        std::printf("ok: %s ran under %s, unchecked: a build without the checks checks the environment at "
+                    "the batch entries only\n",
+                    op_name, state_name);
+        return 0;
+    }
     if (!same) {
         say("FAILED: %s returned under %s: no check stopped it", op_name, state_name);
         return 1;
@@ -571,7 +605,7 @@ int main(int argc, char** argv) {
     kairn_test::no_crash_reports();
     make_operands();
     if (argc == 2 && std::strcmp(argv[1], "--operations") == 0) {
-        for (const Operation& op : operations) std::printf("%s\t%s\n", op.name, kind_name(op.kind));
+        for (const Operation& op : operations) std::printf("%s\t%s\n", op.name, kind_here(op));
         return 0;
     }
     if (argc == 2 && std::strcmp(argv[1], "--states") == 0) {
