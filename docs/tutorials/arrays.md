@@ -38,7 +38,8 @@ is never a finite wrong value.
 Without an order argument, `dot` adds in the lane order of the build: the packed loop, which deals
 the elements to the lanes of a register ($W$ = 4 for `double` with AVX2, 2 with NEON, 1 without
 either), sums each lane, then adds the lanes. Its bits depend on the instruction set. With
-`kairn::sequential` it adds element after element, and gives the same bits on every platform; the
+`kairn::sequential` as its first argument, `kairn::dot(kairn::sequential, x, y)`, it adds element
+after element, and gives the same bits on every platform; the
 program prints those. Both have **the same statement**, for every $n$
 ([Functions on arrays](../reference/batch.md#what-each-function-states)): a theorem bounds every
 order of summation by the same expression of $n$.

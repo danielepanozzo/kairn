@@ -7,7 +7,7 @@
 //
 // The order. A public function chooses its order by its own argument, not by the request: the form
 // `sum` calls kairn::sum(x), the lane order of this build's form of Packed (the packed loop), and
-// `sum_sequential` calls kairn::sum(x, kairn::sequential), whatever ORDER the line gives. The claims
+// `sum_sequential` calls kairn::sum(kairn::sequential, x), whatever ORDER the line gives. The claims
 // of every fold are the same in both of its orders (gen/claims.json gives each order the same
 // heights), so the oracle's verdict on a line does not depend on which order computed it; the
 // requests of the tests ask for seq.
@@ -89,17 +89,17 @@ void put_array(ArrayLine<T>& l, const kairn::SoAView<T, K>& z, bool finite) {
 // The forms. Each is a function template of the limb type, instantiated for double and float.
 template <int K, bool Seq, class T>
 void af_sum(ArrayLine<T>& l) {
-    if constexpr (Seq) put_number<K>(l, kairn::sum(in_view<K>(l, 0), kairn::sequential));
+    if constexpr (Seq) put_number<K>(l, kairn::sum(kairn::sequential, in_view<K>(l, 0)));
     else put_number<K>(l, kairn::sum(in_view<K>(l, 0)));
 }
 template <int K, bool Seq, class T>
 void af_sum_fast(ArrayLine<T>& l) {
-    if constexpr (Seq) put_number<K>(l, kairn::sum_fast(in_view<K>(l, 0), kairn::sequential));
+    if constexpr (Seq) put_number<K>(l, kairn::sum_fast(kairn::sequential, in_view<K>(l, 0)));
     else put_number<K>(l, kairn::sum_fast(in_view<K>(l, 0)));
 }
 template <int K, bool Seq, class T>
 void af_dot(ArrayLine<T>& l) {
-    if constexpr (Seq) put_number<K>(l, kairn::dot(in_view<K>(l, 0), in_view<K>(l, 1), kairn::sequential));
+    if constexpr (Seq) put_number<K>(l, kairn::dot(kairn::sequential, in_view<K>(l, 0), in_view<K>(l, 1)));
     else put_number<K>(l, kairn::dot(in_view<K>(l, 0), in_view<K>(l, 1)));
 }
 // The maps, with a view of the arrays written (in place for inplace=I).

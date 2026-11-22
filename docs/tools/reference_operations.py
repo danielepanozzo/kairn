@@ -1021,23 +1021,23 @@ KERNELS = {
                              "multiply-add of the guarded elements",
                              form("dot(x, y)", V1, V1, result=R1, note=STEP_ORDER + " (loop `dot_1_entry`; each "
                                   "factor guarded, rule R3 on the factors of a fused operation)"),
-                             form("dot(x, y, sequential)", V1, V1, SEQ, result=R1)),
+                             form("dot(sequential, x, y)", SEQ, V1, V1, result=R1)),
     "dot_step_2": page("arrays", "The step of a dot product of two limbs",
                        form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2`)"),
-                       form("dot(x, y, sequential)", V2, V2, SEQ, result=R2),
+                       form("dot(sequential, x, y)", SEQ, V2, V2, result=R2),
                        form("conv(x, y, z)", V2, V2, W2, result="bool", note="each coefficient a sequential `dot_2` "
                             "(loop `conv_2`)")),
     "sum_entry_step_1": page("arrays", "The step of a sum of one limb, on an array of the program",
                              form("sum(x)", V1, result=R1, note=STEP_ORDER + " (loop `sum_1_entry`)"),
-                             form("sum(x, sequential)", V1, SEQ, result=R1),
+                             form("sum(sequential, x)", SEQ, V1, result=R1),
                              form("sum_fast(x)", V1, result=R1, note="for one limb, `sum(x)`")),
     "sum_entry_step_2": page("arrays", "The step of a sum of two limbs, on an array of the program",
                              form("sum(x)", V2, result=R2, note=STEP_ORDER + " (loop `sum_2_entry`)"),
-                             form("sum(x, sequential)", V2, SEQ, result=R2)),
+                             form("sum(sequential, x)", SEQ, V2, result=R2)),
     "sum_fast_entry_step_2": page("arrays", "The step of a sum of two limbs with the fast addition, on an array of "
                                             "the program",
                                   form("sum_fast(x)", V2, result=R2, note=STEP_ORDER + " (loop `sum_fast_2_entry`)"),
-                                  form("sum_fast(x, sequential)", V2, SEQ, result=R2)),
+                                  form("sum_fast(sequential, x)", SEQ, V2, result=R2)),
     "fold_finish_1": page("arrays", "The result of a fold of one limb: the state, or NaN",
                           form("A.sum()", A1, result=R1, note="the running sum of an accumulator, canonical; "
                                "the finish of the loops of `kairn/batch.hpp` too")),

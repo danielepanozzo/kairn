@@ -47,8 +47,10 @@
 ///   rest added in order. It is the packed loop, the fast one, and its bits depend on the
 ///   instruction set the translation unit is compiled for (KAIRN_PACKED_FORM); with one lane, and
 ///   with fewer elements than lanes, it is the sequential order;
-/// - with the argument kairn::sequential, the sequential order: element after element, from zero.
-///   Its bits are the same on every platform and in every form.
+/// - with kairn::sequential as the first argument (sum(kairn::sequential, x), as the execution
+///   policies of the standard library are first, and as the operations of ball_vector.hpp take
+///   it), the sequential order: element after element, from zero. Its bits are the same on every
+///   platform and in every form.
 /// The maps write each element from the elements of the same index alone, so their results do not
 /// depend on the order: they are the packed loop, whose elements are those of the scalar loop bit
 /// for bit (a zero can differ in sign). norm_upper computes the same state in every order. conv
@@ -351,7 +353,7 @@ Reduction<Expansion<std::remove_const_t<T>, K>> sum(SoAView<T, K> x) noexcept {
 /// sum_2_entry, element after element; the same statement, and the same bits on every platform.
 template <class T, int K>
     requires detail::sum_loop_proved<std::remove_const_t<T>, K>
-Reduction<Expansion<std::remove_const_t<T>, K>> sum(SoAView<T, K> x, Sequential) noexcept {
+Reduction<Expansion<std::remove_const_t<T>, K>> sum(Sequential, SoAView<T, K> x) noexcept {
     detail::check_reduction("sum", x);
     Reduction<Expansion<std::remove_const_t<T>, K>> r;
     if constexpr (K == 1) {
@@ -390,9 +392,9 @@ Reduction<Expansion<std::remove_const_t<T>, K>> sum_fast(SoAView<T, K> x) noexce
 /// and the same bits on every platform.
 template <class T, int K>
     requires detail::sum_fast_loop_proved<std::remove_const_t<T>, K>
-Reduction<Expansion<std::remove_const_t<T>, K>> sum_fast(SoAView<T, K> x, Sequential) noexcept {
+Reduction<Expansion<std::remove_const_t<T>, K>> sum_fast(Sequential, SoAView<T, K> x) noexcept {
     if constexpr (K == 1) {
-        return kairn::sum(x, sequential);
+        return kairn::sum(sequential, x);
     } else {
         detail::check_reduction("sum_fast", x);
         Reduction<Expansion<std::remove_const_t<T>, K>> r;
@@ -448,7 +450,7 @@ Reduction<Expansion<std::remove_const_t<T>, K>> dot(SoAView<T, K> x, SoAView<U, 
 /// element; the same statement, and the same bits on every platform.
 template <class T, class U, int K>
     requires detail::same_limbs<T, U> && detail::dot_loop_proved<std::remove_const_t<T>, K>
-Reduction<Expansion<std::remove_const_t<T>, K>> dot(SoAView<T, K> x, SoAView<U, K> y, Sequential) noexcept {
+Reduction<Expansion<std::remove_const_t<T>, K>> dot(Sequential, SoAView<T, K> x, SoAView<U, K> y) noexcept {
     detail::check_dot("dot", x, y);
     Reduction<Expansion<std::remove_const_t<T>, K>> r;
     if constexpr (K == 1) {

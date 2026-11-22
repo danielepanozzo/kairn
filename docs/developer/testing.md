@@ -115,8 +115,9 @@ registers each name with its number):
 | 108 | the headers | a ball of two limbs from two bounds of two limbs, `Ball<T, 2>::from_bounds(x, y)`, which no kernel makes (`enclosure.ball_from_two_limb_bounds`; the control is `Ball<T, 2>(Interval<T, 2>(x, y))`) |
 | 109, 110 | a copy in which every kernel is unverified | `from_bounds` of an interval and of a ball written without the marker (`unverified.from_bounds.interval_make_1`, `.ball_from_interval_2`) |
 | 111, 112 | the headers, with `KAIRN_CHECKS` | limbs that are not those of a canonical set given to `Interval::from_limbs` (reversed bounds) and `Ball::from_limbs` (a negative radius) in a constant expression (`checks.interval_from_limbs_not_canonical`, `checks.ball_from_limbs_not_canonical`) |
+| 113 | the headers, `batch.hpp` | `kairn::sequential` as the last argument of `sum`, where it is the first (`batch.order_tag_last`) |
 
-The next case is 113. Cases 19 and 63 to 69 are free.
+The next case is 114. Cases 19 and 63 to 69 are free.
 
 ## The full tier
 

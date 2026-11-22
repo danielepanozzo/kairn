@@ -13,9 +13,9 @@ header adds no arithmetic of its own. `kairn/kairn.hpp` does not include it.
 #include <kairn/batch.hpp>
 
 // x, y: views of k arrays of limbs, kairn::SoAView<const T, k> (or of T); z: a view of T, written.
-Reduction<Expansion<T, k>> sum(x);       sum(x, kairn::sequential);
-Reduction<Expansion<T, k>> sum_fast(x);  sum_fast(x, kairn::sequential);
-Reduction<Expansion<T, k>> dot(x, y);    dot(x, y, kairn::sequential);
+Reduction<Expansion<T, k>> sum(x);       sum(kairn::sequential, x);
+Reduction<Expansion<T, k>> sum_fast(x);  sum_fast(kairn::sequential, x);
+Reduction<Expansion<T, k>> dot(x, y);    dot(kairn::sequential, x, y);
 bool add(x, y, z);                       // z = x + y, element by element
 bool sub(x, y, z);                       // z = x - y
 bool scale(x, a, z);                     // z = x a, a of T
@@ -76,8 +76,10 @@ statement is the same in the two orders the loops are emitted in:
   and the rest is added in order. Its bits depend on the instruction set the translation unit is
   compiled for (`KAIRN_PACKED_FORM`). With one lane, and with fewer elements than lanes, it is the
   sequential order;
-- **`kairn::sequential`**: element after element, from zero. Its bits are the same on every
-  platform and in every form; a program that wants the same result everywhere asks for it.
+- **`kairn::sequential`**, given as the first argument (`sum(kairn::sequential, x)`, as the
+  execution policies of the standard library are given, and as the operations of
+  [ball vectors](ball_vector.md) take it): element after element, from zero. Its bits are the same
+  on every platform and in every form; a program that wants the same result everywhere asks for it.
 
 The maps write each element from the elements of the same index alone, so their results do not
 depend on the order: they are the packed loop, whose elements are those of the scalar loop bit for

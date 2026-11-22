@@ -15,7 +15,7 @@ $$t = \mathrm{RN}(s + x y).$$
 | Form | Operands | Result | Note |
 |---|---|---|---|
 | `dot(x, y)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | `Reduction<Expansion<T, 1>>` | the step of the loop the function calls, once per element; not `constexpr`; rounds; in the lane order of the build, or, with `kairn::sequential`, in the sequential order (loop `dot_1_entry`; each factor guarded, rule R3 on the factors of a fused operation) |
-| `dot(x, y, sequential)` | `SoAView<const T, 1>`, `SoAView<const T, 1>`, `Sequential` | `Reduction<Expansion<T, 1>>` |  |
+| `dot(sequential, x, y)` | `Sequential`, `SoAView<const T, 1>`, `SoAView<const T, 1>` | `Reduction<Expansion<T, 1>>` |  |
 
 `T` is `float` or `double`; the functions are in namespace `kairn`, header `kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken where the table writes a view of `const T`. They take no marker: a function on arrays compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).
 

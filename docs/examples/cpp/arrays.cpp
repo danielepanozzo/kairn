@@ -136,8 +136,8 @@ int main() {
     // --8<-- [start:dot]
     // The dot product, one and two limbs, in the sequential order (the same bits everywhere) and in
     // the lane order of this build (the packed loop, the default); and the bound for n terms.
-    const auto [d1, finite1] = kairn::dot(x1, y1, kairn::sequential);
-    const auto [d2, finite2] = kairn::dot(x2, y2, kairn::sequential);
+    const auto [d1, finite1] = kairn::dot(kairn::sequential, x1, y1);
+    const auto [d2, finite2] = kairn::dot(kairn::sequential, x2, y2);
     const auto fast1 = kairn::dot(x1, y1);
     const auto fast2 = kairn::dot(x2, y2);
     const kairn::Bound<double> b1 = kairn::traits<double>::dot(n);
@@ -161,8 +161,8 @@ int main() {
     // that a product the compiler could still fuse into the loop's first addition is not.
     std::vector<double> p(n);
     for (std::size_t i = 0; i < n; ++i) p[i] = x[i] * y[i];
-    const auto s1 = kairn::sum(kairn::SoAView<const double, 1>(p.data(), n), kairn::sequential);
-    const auto s2 = kairn::sum(kairn::SoAView<const double, 2>(p.data(), zero.data(), n), kairn::sequential);
+    const auto s1 = kairn::sum(kairn::sequential, kairn::SoAView<const double, 1>(p.data(), n));
+    const auto s2 = kairn::sum(kairn::sequential, kairn::SoAView<const double, 2>(p.data(), zero.data(), n));
     const kairn::Bound<double> c1 = kairn::traits<double>::sum(n);
     const kairn::Bound<double> c2 = kairn::traits<kairn::Expansion<double, 2>>::sum(n);
     // Whenever finite: |s - sum p_i| <= c.unit * sum |p_i|, in any order of the n - 1 additions.

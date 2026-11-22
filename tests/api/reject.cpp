@@ -56,6 +56,8 @@
 //          makes one; the control is the ball of the interval, Ball<T, 2>(Interval<T, 2>(x, y))
 //   109-110 an UNVERIFIED from_bounds of an interval and of a ball, written without the marker,
 //          against headers in which every kernel is unverified (as 1-14)
+//   113    kairn::sequential as the last argument of sum: it is the first of every function that
+//          takes it (order.hpp); the control writes it first
 //   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
 //          is not a form, or a form the target does not have (the generated header's #error)
 //   59     a bound as a function of the length that is not given (traits<X>::sum(n) beyond the
@@ -111,7 +113,7 @@
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
 #endif
-#if KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58
+#if (KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58) || KAIRN_TEST_CASE == 113
 #include <kairn/batch.hpp>
 #endif
 #if KAIRN_TEST_CASE >= 60 && KAIRN_TEST_CASE <= 62
@@ -585,6 +587,15 @@ int main() {
     constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.5b8dap+63f, 0x1.7920bcp+64f);
 #endif
     sink = z.error;
+#elif KAIRN_TEST_CASE == 113
+    // The order tag of a function on arrays as its last argument: it is the first, as for the
+    // operations of ball vectors and the execution policies of the standard library.
+    const double ss[2] = {1.0, double(v)};
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::sum(kairn::sequential, kairn::SoAView<const double, 1>(ss, 2)).value.limb[0];
+#else
+    sink = kairn::sum(kairn::SoAView<const double, 1>(ss, 2), kairn::sequential).value.limb[0];
+#endif
 #elif KAIRN_TEST_CASE == 108
     // A ball of two limbs from two bounds of two limbs: no kernel makes one (Ball<T, 2>::from_bounds
     // takes two values of T); the control writes the composition, the ball of the interval.

@@ -273,8 +273,8 @@ const OperandCase operand_cases[] = {
          Arrays a(o.x), c(o.y);
          c.l[15] = v_a;
          c.h[15] = 1.0;
-         return kairn::dot(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
-                           kairn::sequential).value.limb[0];
+         return kairn::dot(kairn::sequential, kairn::SoAView<const double, 2>(a.h, a.l, 16),
+                           kairn::SoAView<const double, 2>(c.h, c.l, 16)).value.limb[0];
      }},
     {"batch.add.lengths", "add: x and z have different lengths", [] {
          const Arrays a(o.x), c(o.y);

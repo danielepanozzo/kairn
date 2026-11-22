@@ -298,11 +298,11 @@ The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batc
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
 | `conv(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>`, `SoAView<T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
-| `dot(x, y)`, `dot(x, y, sequential)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_entry_step_1`](dot_entry_step_1.md) |
-| `dot(x, y)`, `dot(x, y, sequential)`, `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
-| `sum(x)`, `sum(x, sequential)`, `sum_fast(x)` | `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
-| `sum(x)`, `sum(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
-| `sum_fast(x)`, `sum_fast(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |
+| `dot(x, y)`, `dot(sequential, x, y)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_entry_step_1`](dot_entry_step_1.md) |
+| `dot(x, y)`, `dot(sequential, x, y)`, `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
+| `sum(x)`, `sum(sequential, x)`, `sum_fast(x)` | `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
+| `sum(x)`, `sum(sequential, x)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
+| `sum_fast(x)`, `sum_fast(sequential, x)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |
 | `A.sum()` | `Accumulator<T, 1>` | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_1`](fold_finish_1.md) |
 | `A.sum()` | `Accumulator<T, 2>` | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_2`](fold_finish_2.md) |
 | `traits<T>::sum(n)`, `traits<T>::sum_height(h)` | `std::size_t` | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - m \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bound_sum_1`](bound_sum_1.md) |

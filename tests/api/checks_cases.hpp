@@ -579,7 +579,7 @@ inline const Operation operations[] = {
      }},
     {"batch.sum_sequential", Kind::rounds, [](Bits& b) {
          const Arrays a(o.y);
-         put(b, kairn::sum(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::sequential).value);
+         put(b, kairn::sum(kairn::sequential, kairn::SoAView<const double, 2>(a.h, a.l, 16)).value);
      }},
     {"batch.sum_one_limb", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x);
@@ -591,7 +591,7 @@ inline const Operation operations[] = {
      }},
     {"batch.sum_fast_sequential", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x);
-         put(b, kairn::sum_fast(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::sequential).value);
+         put(b, kairn::sum_fast(kairn::sequential, kairn::SoAView<const double, 2>(a.h, a.l, 16)).value);
      }},
     {"batch.dot", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x), c(o.y);
@@ -599,8 +599,8 @@ inline const Operation operations[] = {
      }},
     {"batch.dot_sequential", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x), c(o.y);
-         put(b, kairn::dot(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
-                           kairn::sequential).value);
+         put(b, kairn::dot(kairn::sequential, kairn::SoAView<const double, 2>(a.h, a.l, 16),
+                           kairn::SoAView<const double, 2>(c.h, c.l, 16)).value);
      }},
     {"batch.add", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x), c(o.y);

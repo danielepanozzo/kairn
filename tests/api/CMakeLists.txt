@@ -1066,6 +1066,8 @@ _kairn_api_reject(batch.axpy_into_const 55 "${_api_no_function}")
 _kairn_api_reject(batch.mixed_limb_types 56 "${_api_no_function}")
 _kairn_api_reject(batch.mixed_limbs 57 "${_api_no_function}")
 _kairn_api_reject(batch.scale_by_two_limbs 58 "${_api_no_function}")
+# The order tag is the first argument (order.hpp): sum(x, kairn::sequential) does not compile.
+_kairn_api_reject(batch.order_tag_last 113 "${_api_no_function}")
 # A bound as a function of the length that the kernel does not give, in a constant expression: a
 # compile error (traits.hpp); the control computes it at run time, where it is +infinity.
 _kairn_api_reject(traits.length_beyond 59 "constant|constexpr")
