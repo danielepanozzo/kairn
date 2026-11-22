@@ -819,6 +819,8 @@ def bisect_tables(c):
         for tag, tname in BISECT_TYPES:
             rows.append(('`%s` over `Ball<double, 1>`, width %s' % (tname, wl),
                          ratio('m2r/run/bisect_%s_%s/op' % (tag, w), 'm2r/run/bisect_b1_%s/op' % w)))
+        rows.append(('`Interval<double, 2>` over `Ball<double, 2>`, width %s' % wl,
+                     ratio('m2r/run/bisect_i2_%s/op' % w, 'm2r/run/bisect_b2_%s/op' % w)))
     table(c, 'Bisection: time to solution over that of Ball<double, 1>', rows)
     # The counts do not depend on the compiler: one run's, and a check that every run agrees.
     found, agree, differ = None, 0, []

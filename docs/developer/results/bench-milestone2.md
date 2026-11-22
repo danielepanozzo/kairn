@@ -78,6 +78,13 @@ harness, `BACKEND/KIND/KERNEL/VARIANT`: `m2` for `double` limbs, `m2f` for `floa
   intervals. `midpoint()` and `radius()` together cost 1.0 to 1.6 times `mid_rad()` where the
   compiler inlines them, 2.0 to 2.2 times with Apple clang ([question 9](#9-the-enclosure-interface)).
 
+- **Second part: for a generic client, `Ball<double, 1>`.** The tutorial's bisection finds the four
+  zeros fastest with it on both machines, 3.2 to 8.8 µs to a width of $10^{-6}$; `Interval<double, 1>`
+  takes 1.6 to 3.9 times as long, for final zeros at most six times narrower; `Ball<double, 2>` 3.5
+  to 4.3 times as long as far as it goes, for 30 digits; `Interval<double, 2>` 21 to 31 times, for
+  zeros three to four times narrower than those of `Ball<double, 2>`
+  ([question 10](#10-one-algorithm-over-four-types)).
+
 ## The answers
 
 ### 1. Rounding down and up without a rounding mode
@@ -1156,6 +1163,89 @@ of an interval against $(l + h)/2$, $(h - l)/2$ (`m2/tp/plain_midrad_1` of the f
   the hull of intervals (0.48 to 0.71, but 1.26 to 1.60 with the two Linux compilers for two limbs),
   and Apple clang's `less` of intervals of one limb (0.48) ([float over double](#question-9-the-enclosure-interface)).
 
+### 10. One algorithm over four types
+
+Which enclosure type should a generic client pick, and at which number of limbs? The bisection of
+[Zeros of a polynomial by bisection](../../tutorials/bisection.md), its program
+`docs/examples/cpp/bisection.cpp` compiled into the harness as it is (its `main` renamed;
+`bench/m2_run.cpp`): the zeros of $x^4 - 10x^2 + 1$ in $[-4, 4]$, down to the tutorial's two widths,
+$10^{-6}$ and 0 (as far as each type's test of progress lets it go), with the tutorial's three types
+and `Interval<double, 2>`, which the same template accepts. What it ran is the tutorial's `zeros()`
+and `clusters()`, its vectors and its allocations included; the time is that of one call, to
+solution; before timing, each run is checked by the tutorial's own `verify()` (four zeros, in
+order, each near one of $\pm\sqrt2 \pm\sqrt3$, $p$ not of one sign on any). The tutorial's run
+finishes in 3 to 520 µs, timed in samples of about 4 ms like every function of the harness.
+
+| Bisection: what each type found | Width | Evaluations | Parts kept | Not narrowed by split() | Zeros | Radius of the zeros |
+|---|---|---:|---:|---:|---:|---|
+| `Interval<double, 1>` | 1e-06 | 167 | 4 | 0 | 4 | 9.54e-07 to 9.54e-07 |
+| `Interval<double, 1>` | 0 | 435 | 6 | 6 | 4 | 1.11e-16 to 4.44e-16 |
+| `Interval<double, 2>` | 1e-06 | 167 | 4 | 0 | 4 | 9.54e-07 to 9.54e-07 |
+| `Interval<double, 2>` | 0 | 943 | 44 | 44 | 4 | 3.39e-32 to 2.71e-31 |
+| `Ball<double, 1>` | 1e-06 | 179 | 4 | 0 | 4 | 9.54e-07 to 9.54e-07 |
+| `Ball<double, 1>` | 0 | 443 | 10 | 10 | 4 | 2.78e-16 to 2.67e-15 |
+| `Ball<double, 2>` | 1e-06 | 179 | 4 | 0 | 4 | 9.54e-07 to 9.54e-07 |
+| `Ball<double, 2>` | 0 | 875 | 16 | 16 | 4 | 1.17e-31 to 1.01e-30 |
+
+| Bisection: time to solution, microseconds | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `Interval<double, 1>`, width 1e-6 | 12.5 to 12.8 | 8.36 to 8.37 (-O2), 7.85 to 8.05 (-O3) | 15.6 to 15.9 (-O2), 14.1 to 14.2 (-O3) | 22.3 to 22.9 |
+| `Interval<double, 2>`, width 1e-6 | 45.9 to 49.5 (-O2), 46 to 48.7 (-O3) | 38.6 to 41 (-O2), 37.9 to 40.6 (-O3) | 85.6 to 87.2 | 82 to 84.7 |
+| `Ball<double, 1>`, width 1e-6 | 3.25 to 3.36 (-O2), 3.19 to 3.24 (-O3) | 3.72 to 3.85 (-O2), 3.9 to 3.98 (-O3) | 8.58 to 8.82 | 8.25 to 8.6 |
+| `Ball<double, 2>`, width 1e-6 | 6.67 to 7 (-O2), 6.57 to 6.92 (-O3) | 7.13 to 7.61 (-O2), 6.99 to 7.56 (-O3) | 16.5 to 16.8 | 15.4 to 15.7 |
+| `Interval<double, 1>`, width 0 | 32.2 to 33.2 | 22.2 to 22.3 (-O2), 20.7 to 21.3 (-O3) | 46.8 to 48 (-O2), 42.2 to 42.5 (-O3) | 58.2 to 59.8 |
+| `Interval<double, 2>`, width 0 | 257 to 281 (-O2), 257 to 276 (-O3) | 219 to 235 (-O2), 218 to 229 (-O3) | 506 to 516 | 461 to 476 |
+| `Ball<double, 1>`, width 0 | 9.1 to 9.37 (-O2), 8.83 to 8.88 (-O3) | 9.44 to 10.1 (-O2), 10.3 to 10.4 (-O3) | 22.2 to 22.7 | 21.5 to 21.8 (-O2), 20.7 to 21 (-O3) |
+| `Ball<double, 2>`, width 0 | 35.2 to 37.9 (-O2), 35.1 to 37.8 (-O3) | 36.8 to 39.5 (-O2), 36.1 to 39.5 (-O3) | 84 to 85.5 | 78.3 to 79.8 |
+
+| Bisection: time to solution over that of Ball<double, 1> | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `Interval<double, 1>` over `Ball<double, 1>`, width 1e-6 | 3.80 to 3.90 | 2.17 to 2.25 (-O2), 2.01 to 2.03 (-O3) | 1.81 to 1.83 (-O2), 1.61 to 1.62 (-O3) | 2.63 to 2.64 (-O2), 2.73 (-O3) |
+| `Interval<double, 2>` over `Ball<double, 1>`, width 1e-6 | 14.0 to 14.7 (-O2), 14.4 to 15.0 (-O3) | 10.4 to 11.0 (-O2), 9.7 to 10.2 (-O3) | 9.81 to 9.98 | 9.66 to 9.68 (-O2), 10.1 (-O3) |
+| `Ball<double, 1>` over `Ball<double, 1>`, width 1e-6 | 1.00 | 1.00 | 1.00 | 1.00 |
+| `Ball<double, 2>` over `Ball<double, 1>`, width 1e-6 | 2.05 to 2.08 (-O2), 2.06 to 2.16 (-O3) | 1.91 to 1.98 (-O2), 1.79 to 1.90 (-O3) | 1.88 to 1.94 | 1.82 to 1.87 |
+| `Interval<double, 2>` over `Ball<double, 2>`, width 1e-6 | 6.79 to 7.08 (-O2), 6.77 to 7.05 (-O3) | 5.40 to 5.75 (-O2), 5.36 to 5.43 (-O3) | 5.15 to 5.20 | 5.30 to 5.41 |
+| `Interval<double, 1>` over `Ball<double, 1>`, width 0 | 3.54 to 3.58 (-O2), 3.63 to 3.66 (-O3) | 2.20 to 2.36 (-O2), 2.02 to 2.04 (-O3) | 2.09 to 2.13 (-O2), 1.87 to 1.88 (-O3) | 2.71 (-O2), 2.84 to 2.85 (-O3) |
+| `Interval<double, 2>` over `Ball<double, 1>`, width 0 | 28.2 to 30.0 (-O2), 29.0 to 31.2 (-O3) | 23.2 to 23.3 (-O2), 21.3 to 22.0 (-O3) | 22.6 to 22.9 | 21.5 (-O2), 22.6 to 22.7 (-O3) |
+| `Ball<double, 1>` over `Ball<double, 1>`, width 0 | 1.00 | 1.00 | 1.00 | 1.00 |
+| `Ball<double, 2>` over `Ball<double, 1>`, width 0 | 3.87 to 4.04 (-O2), 3.96 to 4.28 (-O3) | 3.65 to 3.90 (-O2), 3.52 to 3.79 (-O3) | 3.73 to 3.80 | 3.66 to 3.67 (-O2), 3.78 to 3.79 (-O3) |
+| `Interval<double, 2>` over `Ball<double, 2>`, width 0 | 7.24 to 7.43 | 5.96 to 6.38 (-O2), 5.80 to 6.04 (-O3) | 6.01 to 6.08 | 5.85 to 6.00 |
+
+| Bisection: ns per evaluation of p | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `Interval<double, 1>`, width 1e-6 | 74.6 to 76.5 | 50.1 (-O2), 47 to 48.2 (-O3) | 93.3 to 95.4 (-O2), 84.4 to 85.2 (-O3) | 134 to 137 |
+| `Interval<double, 2>`, width 1e-6 | 275 to 297 (-O2), 276 to 291 (-O3) | 231 to 246 (-O2), 227 to 243 (-O3) | 513 to 522 | 491 to 507 |
+| `Ball<double, 1>`, width 1e-6 | 18.2 to 18.8 (-O2), 17.8 to 18.1 (-O3) | 20.8 to 21.5 (-O2), 21.8 to 22.2 (-O3) | 48 to 49.3 | 46.1 to 48.1 |
+| `Ball<double, 2>`, width 1e-6 | 37.3 to 39.1 (-O2), 36.7 to 38.6 (-O3) | 39.8 to 42.5 (-O2), 39 to 42.2 (-O3) | 92.2 to 94 | 86.1 to 87.6 |
+| `Interval<double, 1>`, width 0 | 74.1 to 76.2 | 51.1 to 51.2 (-O2), 47.6 to 49 (-O3) | 107 to 110 (-O2), 97.1 to 97.7 (-O3) | 134 to 137 |
+| `Interval<double, 2>`, width 0 | 273 to 298 (-O2), 273 to 292 (-O3) | 232 to 249 (-O2), 231 to 243 (-O3) | 537 to 548 | 489 to 505 |
+| `Ball<double, 1>`, width 0 | 20.6 to 21.1 (-O2), 19.9 to 20 (-O3) | 21.3 to 22.8 (-O2), 23.2 to 23.6 (-O3) | 50.1 to 51.3 | 48.5 to 49.2 (-O2), 46.6 to 47.3 (-O3) |
+| `Ball<double, 2>`, width 0 | 40.3 to 43.3 (-O2), 40.2 to 43.2 (-O3) | 42 to 45.1 (-O2), 41.3 to 45.2 (-O3) | 96 to 97.7 | 89.5 to 91.2 |
+
+- **`Ball<double, 1>` finds the zeros fastest**, on both machines and at both widths: 3.2 to 8.8 µs
+  to a width of $10^{-6}$ and 8.8 to 23 µs as far as it goes, with 179 and 443 evaluations of $p$
+  against the interval's 167 and 435. `Interval<double, 1>` takes 1.6 to 3.9 times as long: each
+  evaluation costs 1.8 to 4.1 times a ball's (47 to 137 ns against 18 to 51), because a product of
+  intervals is eight directed products ([question 2](#2-intervalt-1)) where a ball's is one product
+  and a radius.
+- **Two limbs**: `Ball<double, 2>` takes 1.8 to 2.2 times `Ball<double, 1>` to a width of $10^{-6}$
+  (the same 179 evaluations, each 1.8 to 2.2 times dearer), and 3.5 to 4.3 times as far as it goes, where it
+  makes 875 evaluations and narrows the zeros to a radius of $1.2 \times 10^{-31}$ to
+  $1.0 \times 10^{-30}$, 30 digits, against $2.8 \times 10^{-16}$ to $2.7 \times 10^{-15}$ for one limb.
+  `Interval<double, 2>` narrows them most, to $3.4 \times 10^{-32}$ to $2.7 \times 10^{-31}$, three to
+  four times the ball's, with 943 evaluations; it costs 5.2 to 7.4 times `Ball<double, 2>`, and 21 to
+  31 times `Ball<double, 1>` as far as each goes (9.7 to 15 times to $10^{-6}$), a product of intervals of two limbs being some four hundred operations.
+- **The answer for a generic client**: `Ball<double, 1>` where `double`'s precision is enough
+  (its zeros are at most six times wider than the interval's at the end, $2.7 \times 10^{-15}$
+  against $4.4 \times 10^{-16}$, and found in a quarter to two thirds of the time); `Ball<double, 2>`
+  for thirty digits at about four times its cost; `Interval<double, 2>` only where enclosures three or
+  four times narrower than the ball's of two limbs are worth five to seven times its time.
+  `Interval<double, 1>` is never the fastest here; what it gives is the tightest enclosure of one
+  limb, and the guarantees an interval has that a ball does not (half-lines, the empty set, exact
+  comparisons). These are one polynomial's figures, with narrow sets near the end of the search; on
+  wide sets the dependency problem sets the width for every type
+  ([question 4](#4-a-polynomial-cost-and-tightness)).
+
 ### What the machine code shows (second part)
 
 The loops of the new timed functions were disassembled on every configuration and summarized by
@@ -1815,14 +1905,14 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 
 | Configuration (second part) | CPU | Compiler | Flags | Runs per item (soa, enc, bisect, checks pairs) | Date, commit |
 |---|---|---|---|---|---|
-| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
-| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
-| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
-| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
-| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
-| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
-| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
-| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
+| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
+| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
+| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
+| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
+| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
+| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
+| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
+| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
 
 #### Checks of the second part
 
@@ -1844,6 +1934,14 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | enc mac-appleclang-O3 | 446, 0; 446, 0; 446, 0 |
 | enc mac-gcc16-O2 | 446, 0; 446, 0; 446, 0 |
 | enc mac-gcc16-O3 | 446, 0; 446, 0; 446, 0 |
+| bisect linux-clang-O2 | 11, 0; 11, 0; 11, 0 |
+| bisect linux-clang-O3 | 11, 0; 11, 0; 11, 0 |
+| bisect linux-gcc-O2 | 11, 0; 11, 0; 11, 0 |
+| bisect linux-gcc-O3 | 11, 0; 11, 0; 11, 0 |
+| bisect mac-appleclang-O2 | 11, 0; 11, 0; 11, 0 |
+| bisect mac-appleclang-O3 | 11, 0; 11, 0; 11, 0 |
+| bisect mac-gcc16-O2 | 11, 0; 11, 0; 11, 0 |
+| bisect mac-gcc16-O3 | 11, 0; 11, 0; 11, 0 |
 
 #### Runs of the second part
 
@@ -1897,6 +1995,30 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `enc-mac-gcc16-O3-r1.json` | 1.000, 1.035 | 1.003 | 3.6, 2.5 |
 | `enc-mac-gcc16-O3-r2.json` | 1.000, 1.005 | 1.002 | 1.5, 2.2 |
 | `enc-mac-gcc16-O3-r3.json` | 1.000, 1.012 | 1.003 | 1.5, 3.9 |
+| `bisect-linux-clang-O2-r1.json` | 1.000, 1.026 | 1.003 | 3.2, 3.1 |
+| `bisect-linux-clang-O2-r2.json` | 1.014, 1.028 | 1.009 | 21.4, 21.4 |
+| `bisect-linux-clang-O2-r3.json` | 1.010, 1.011 | 1.004 | 11.6, 12.1 |
+| `bisect-linux-clang-O3-r1.json` | 1.001, 1.002 | 1.004 | 3.3, 3.3 |
+| `bisect-linux-clang-O3-r2.json` | 1.018, 1.027 | 1.005 | 21.6, 21.7 |
+| `bisect-linux-clang-O3-r3.json` | 1.000, 1.002 | 1.003 | 8.2, 8.2 |
+| `bisect-linux-gcc-O2-r1.json` | 1.000, 1.004 | 1.005 | 4.1, 4.1 |
+| `bisect-linux-gcc-O2-r2.json` | 1.000, 1.006 | 1.005 | 16.3, 15.2 |
+| `bisect-linux-gcc-O2-r3.json` | 1.020, 1.042 | 1.009 | 20.6, 20.6 |
+| `bisect-linux-gcc-O3-r1.json` | 1.000, 1.000 | 1.003 | 2.7, 2.7 |
+| `bisect-linux-gcc-O3-r2.json` | 1.008, 1.011 | 1.008 | 14.8, 14.8 |
+| `bisect-linux-gcc-O3-r3.json` | 1.009, 1.011 | 1.006 | 18.6, 18.6 |
+| `bisect-mac-appleclang-O2-r1.json` | 1.049, 1.084 | 1.026 | 10.1, 10.1 |
+| `bisect-mac-appleclang-O2-r2.json` | 1.001, 1.037 | 1.012 | 1.8, 1.8 |
+| `bisect-mac-appleclang-O2-r3.json` | 1.000, 1.002 | 1.019 | 1.6, 1.8 |
+| `bisect-mac-appleclang-O3-r1.json` | 1.014, 1.073 | 1.009 | 7.4, 7.0 |
+| `bisect-mac-appleclang-O3-r2.json` | 1.003, 1.021 | 1.006 | 1.8, 1.8 |
+| `bisect-mac-appleclang-O3-r3.json` | 1.000, 1.000 | 1.012 | 1.6, 1.6 |
+| `bisect-mac-gcc16-O2-r1.json` | 1.033, 1.073 | 1.002 | 3.2, 3.2 |
+| `bisect-mac-gcc16-O2-r2.json` | 1.003, 1.071 | 1.003 | 1.5, 1.5 |
+| `bisect-mac-gcc16-O2-r3.json` | 1.000, 1.000 | 1.021 | 1.4, 1.4 |
+| `bisect-mac-gcc16-O3-r1.json` | 1.022, 1.063 | 1.004 | 2.5, 2.5 |
+| `bisect-mac-gcc16-O3-r2.json` | 1.000, 1.000 | 1.016 | 2.2, 2.1 |
+| `bisect-mac-gcc16-O3-r3.json` | 1.034, 1.082 | 1.002 | 3.9, 3.8 |
 
 | Spread of (second part) | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |
 |---|---:|---|---|
@@ -1916,6 +2038,14 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | enc mac-appleclang-O3 | 3 | 0.0%, 7.1%, 7.4% | `m2ef/step/i1_intersection/op` |
 | enc mac-gcc16-O2 | 3 | 0.1%, 3.9%, 8.9% | `m2e/tp/i1_split/kairn` |
 | enc mac-gcc16-O3 | 3 | 0.1%, 4.2%, 11.2% | `m2e/tp/b1_hull/op` |
+| bisect linux-clang-O2 | 3 | 1.4%, 2.8%, 4.0% | `m2r/run/self_test_kernels/op` |
+| bisect linux-clang-O3 | 3 | 1.8%, 2.7%, 2.9% | `m2r/run/self_test_kernels/op` |
+| bisect linux-gcc-O2 | 3 | 2.0%, 4.7%, 4.7% | `m2r/run/self_test/op` |
+| bisect linux-gcc-O3 | 3 | 1.0%, 1.1%, 3.7% | `m2r/run/self_test_kernels/op` |
+| bisect mac-appleclang-O2 | 3 | 4.9%, 8.4%, 9.4% | `m2r/run/bisect_i2_w0/op` |
+| bisect mac-appleclang-O3 | 3 | 2.1%, 7.3%, 7.5% | `m2r/run/bisect_b2_w0/op` |
+| bisect mac-gcc16-O2 | 3 | 3.3%, 7.3%, 7.4% | `m2r/run/bisect_b2_w0/op` |
+| bisect mac-gcc16-O3 | 3 | 3.4%, 8.2%, 9.3% | `m2r/run/bisect_b2_w0/op` |
 
 #### Question 8: `Packed` and the containers
 
@@ -2356,3 +2486,51 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `hull`, `Ball<T, 2>` | 0.98 to 1.00 | 0.99 to 1.00 | 0.97 | 0.98 to 0.99 |
 | `split`, `Ball<T, 2>` | 1.01 to 1.02 (-O2), 0.97 to 1.00 (-O3) | 1.04 to 1.05 (-O2), 0.97 to 1.02 (-O3) | 0.94 to 0.97 | 0.91 to 0.92 |
 | `convert`, `Ball<T, 2>` | 0.79 to 0.84 | 0.69 to 0.71 (-O2), 1.06 (-O3) | 0.95 to 0.96 | 0.97 |
+
+#### Question 10: the bisection
+
+| Bisection: time to solution, microseconds | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `Interval<double, 1>`, width 1e-6 | 12.5 to 12.8 | 8.36 to 8.37 (-O2), 7.85 to 8.05 (-O3) | 15.6 to 15.9 (-O2), 14.1 to 14.2 (-O3) | 22.3 to 22.9 |
+| `Interval<double, 2>`, width 1e-6 | 45.9 to 49.5 (-O2), 46 to 48.7 (-O3) | 38.6 to 41 (-O2), 37.9 to 40.6 (-O3) | 85.6 to 87.2 | 82 to 84.7 |
+| `Ball<double, 1>`, width 1e-6 | 3.25 to 3.36 (-O2), 3.19 to 3.24 (-O3) | 3.72 to 3.85 (-O2), 3.9 to 3.98 (-O3) | 8.58 to 8.82 | 8.25 to 8.6 |
+| `Ball<double, 2>`, width 1e-6 | 6.67 to 7 (-O2), 6.57 to 6.92 (-O3) | 7.13 to 7.61 (-O2), 6.99 to 7.56 (-O3) | 16.5 to 16.8 | 15.4 to 15.7 |
+| `Interval<double, 1>`, width 0 | 32.2 to 33.2 | 22.2 to 22.3 (-O2), 20.7 to 21.3 (-O3) | 46.8 to 48 (-O2), 42.2 to 42.5 (-O3) | 58.2 to 59.8 |
+| `Interval<double, 2>`, width 0 | 257 to 281 (-O2), 257 to 276 (-O3) | 219 to 235 (-O2), 218 to 229 (-O3) | 506 to 516 | 461 to 476 |
+| `Ball<double, 1>`, width 0 | 9.1 to 9.37 (-O2), 8.83 to 8.88 (-O3) | 9.44 to 10.1 (-O2), 10.3 to 10.4 (-O3) | 22.2 to 22.7 | 21.5 to 21.8 (-O2), 20.7 to 21 (-O3) |
+| `Ball<double, 2>`, width 0 | 35.2 to 37.9 (-O2), 35.1 to 37.8 (-O3) | 36.8 to 39.5 (-O2), 36.1 to 39.5 (-O3) | 84 to 85.5 | 78.3 to 79.8 |
+
+| Bisection: time to solution over that of Ball<double, 1> | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `Interval<double, 1>` over `Ball<double, 1>`, width 1e-6 | 3.80 to 3.90 | 2.17 to 2.25 (-O2), 2.01 to 2.03 (-O3) | 1.81 to 1.83 (-O2), 1.61 to 1.62 (-O3) | 2.63 to 2.64 (-O2), 2.73 (-O3) |
+| `Interval<double, 2>` over `Ball<double, 1>`, width 1e-6 | 14.0 to 14.7 (-O2), 14.4 to 15.0 (-O3) | 10.4 to 11.0 (-O2), 9.7 to 10.2 (-O3) | 9.81 to 9.98 | 9.66 to 9.68 (-O2), 10.1 (-O3) |
+| `Ball<double, 1>` over `Ball<double, 1>`, width 1e-6 | 1.00 | 1.00 | 1.00 | 1.00 |
+| `Ball<double, 2>` over `Ball<double, 1>`, width 1e-6 | 2.05 to 2.08 (-O2), 2.06 to 2.16 (-O3) | 1.91 to 1.98 (-O2), 1.79 to 1.90 (-O3) | 1.88 to 1.94 | 1.82 to 1.87 |
+| `Interval<double, 2>` over `Ball<double, 2>`, width 1e-6 | 6.79 to 7.08 (-O2), 6.77 to 7.05 (-O3) | 5.40 to 5.75 (-O2), 5.36 to 5.43 (-O3) | 5.15 to 5.20 | 5.30 to 5.41 |
+| `Interval<double, 1>` over `Ball<double, 1>`, width 0 | 3.54 to 3.58 (-O2), 3.63 to 3.66 (-O3) | 2.20 to 2.36 (-O2), 2.02 to 2.04 (-O3) | 2.09 to 2.13 (-O2), 1.87 to 1.88 (-O3) | 2.71 (-O2), 2.84 to 2.85 (-O3) |
+| `Interval<double, 2>` over `Ball<double, 1>`, width 0 | 28.2 to 30.0 (-O2), 29.0 to 31.2 (-O3) | 23.2 to 23.3 (-O2), 21.3 to 22.0 (-O3) | 22.6 to 22.9 | 21.5 (-O2), 22.6 to 22.7 (-O3) |
+| `Ball<double, 1>` over `Ball<double, 1>`, width 0 | 1.00 | 1.00 | 1.00 | 1.00 |
+| `Ball<double, 2>` over `Ball<double, 1>`, width 0 | 3.87 to 4.04 (-O2), 3.96 to 4.28 (-O3) | 3.65 to 3.90 (-O2), 3.52 to 3.79 (-O3) | 3.73 to 3.80 | 3.66 to 3.67 (-O2), 3.78 to 3.79 (-O3) |
+| `Interval<double, 2>` over `Ball<double, 2>`, width 0 | 7.24 to 7.43 | 5.96 to 6.38 (-O2), 5.80 to 6.04 (-O3) | 6.01 to 6.08 | 5.85 to 6.00 |
+
+| Bisection: ns per evaluation of p | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `Interval<double, 1>`, width 1e-6 | 74.6 to 76.5 | 50.1 (-O2), 47 to 48.2 (-O3) | 93.3 to 95.4 (-O2), 84.4 to 85.2 (-O3) | 134 to 137 |
+| `Interval<double, 2>`, width 1e-6 | 275 to 297 (-O2), 276 to 291 (-O3) | 231 to 246 (-O2), 227 to 243 (-O3) | 513 to 522 | 491 to 507 |
+| `Ball<double, 1>`, width 1e-6 | 18.2 to 18.8 (-O2), 17.8 to 18.1 (-O3) | 20.8 to 21.5 (-O2), 21.8 to 22.2 (-O3) | 48 to 49.3 | 46.1 to 48.1 |
+| `Ball<double, 2>`, width 1e-6 | 37.3 to 39.1 (-O2), 36.7 to 38.6 (-O3) | 39.8 to 42.5 (-O2), 39 to 42.2 (-O3) | 92.2 to 94 | 86.1 to 87.6 |
+| `Interval<double, 1>`, width 0 | 74.1 to 76.2 | 51.1 to 51.2 (-O2), 47.6 to 49 (-O3) | 107 to 110 (-O2), 97.1 to 97.7 (-O3) | 134 to 137 |
+| `Interval<double, 2>`, width 0 | 273 to 298 (-O2), 273 to 292 (-O3) | 232 to 249 (-O2), 231 to 243 (-O3) | 537 to 548 | 489 to 505 |
+| `Ball<double, 1>`, width 0 | 20.6 to 21.1 (-O2), 19.9 to 20 (-O3) | 21.3 to 22.8 (-O2), 23.2 to 23.6 (-O3) | 50.1 to 51.3 | 48.5 to 49.2 (-O2), 46.6 to 47.3 (-O3) |
+| `Ball<double, 2>`, width 0 | 40.3 to 43.3 (-O2), 40.2 to 43.2 (-O3) | 42 to 45.1 (-O2), 41.3 to 45.2 (-O3) | 96 to 97.7 | 89.5 to 91.2 |
+
+| Bisection: what each type found | Width | Evaluations | Parts kept | Not narrowed by split() | Zeros | Radius of the zeros |
+|---|---|---:|---:|---:|---:|---|
+| `Interval<double, 1>` | 1e-06 | 167 | 4 | 0 | 4 | 9.54e-07 to 9.54e-07 |
+| `Interval<double, 1>` | 0 | 435 | 6 | 6 | 4 | 1.11e-16 to 4.44e-16 |
+| `Interval<double, 2>` | 1e-06 | 167 | 4 | 0 | 4 | 9.54e-07 to 9.54e-07 |
+| `Interval<double, 2>` | 0 | 943 | 44 | 44 | 4 | 3.39e-32 to 2.71e-31 |
+| `Ball<double, 1>` | 1e-06 | 179 | 4 | 0 | 4 | 9.54e-07 to 9.54e-07 |
+| `Ball<double, 1>` | 0 | 443 | 10 | 10 | 4 | 2.78e-16 to 2.67e-15 |
+| `Ball<double, 2>` | 1e-06 | 179 | 4 | 0 | 4 | 9.54e-07 to 9.54e-07 |
+| `Ball<double, 2>` | 0 | 875 | 16 | 16 | 4 | 1.17e-31 to 1.01e-30 |
