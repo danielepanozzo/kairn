@@ -287,11 +287,15 @@ guard their operands (among them the public constructors and the sums and differ
 `Expansion` that take a `T`), and the full sums and differences, whose fix-ups use `times_inf`.
 They are in `IeeeWith.v` too, with the same theorem: 63 kernels in all, every kernel `constexpr`
 without a variant whose C++ dispatches on constant evaluation, so that none computes otherwise
-in constant evaluation without a proof that the values are the same. The one kernel that
-dispatches and is not among them is `two_prod`, `constexpr` through its variant: in constant
-evaluation it runs another algorithm, Dekker's product (`two_prod_dekker`), whose results are
-not always the values of its run-time form ([The two executions of a
-product](design/milestone2.md#the-two-executions-of-a-product)).
+in constant evaluation without a proof that the values are the same. The two kernels that
+dispatch and are not among them are `two_prod` and its entry form `two_prod_entry` (rule R3, the
+factors of a fused operation), `constexpr` through their variant: in constant evaluation each runs
+another algorithm, Dekker's product (`two_prod_dekker`, on the operands as they are), whose
+results are not always the values of its run-time form ([The two executions of a
+product](design/milestone2.md#the-two-executions-of-a-product)); what is proved of each is a
+theorem written by hand (`two_prod_two_executions_exact`, `two_prod_entry_two_executions_exact`:
+the same values when the error term of constant evaluation is finite and the product is exact),
+audited in `proofs/audit/HandAudit.v`. The other entry forms of the products are not `constexpr`.
 
 C++ emission rules: non-template functions, one overload per limb type; one operation per
 statement; kernels of at most two limbs are force-inlined, but a kernel that says

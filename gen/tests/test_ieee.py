@@ -729,15 +729,23 @@ class WithProduct(unittest.TestCase):
             'sub_2_2_full', 'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2', 'interval_make_1',
             'two_sum_entry', 'fast_two_sum_entry', 'radd_entry'})
         # In the C++: a function that dispatches on constant evaluation is a kernel of IeeeWith.v
-        # (its overloads for double and float) or two_prod (its variant).
+        # (its overloads for double and float) or a kernel with a constant-evaluation variant:
+        # two_prod and its entry form two_prod_entry (rule R3, the factors of a fused operation),
+        # each with the theorem of its two executions written by hand and audited
+        # (K_two_executions_exact of IeeeTwoExecutions.v, in proofs/audit/HandAudit.v).
         scalar = read('include/kairn/gen/scalar.hpp')
         functions = re.findall(r'^(?:KAIRN_GEN_FORCEINLINE|inline) constexpr void (\w+)\(.*?\n\}\n', scalar,
                                flags=re.M | re.S)
         bodies = re.findall(r'^(?:KAIRN_GEN_FORCEINLINE|inline) constexpr void \w+\((.*?)\n\}\n', scalar,
                             flags=re.M | re.S)
         dispatching = {f for f, b in zip(functions, bodies) if '__builtin_is_constant_evaluated()' in b}
-        self.assertEqual(dispatching, set(rule) | {'two_prod'})
-        self.assertEqual([k.name for k in self.ks.values() if k.ce_variant], ['two_prod'])
+        variants = sorted(k.name for k in self.ks.values() if k.ce_variant)
+        self.assertEqual(variants, ['two_prod', 'two_prod_entry'])
+        self.assertEqual(dispatching, set(rule) | set(variants))
+        hand = read('proofs/audit/HandAudit.v')
+        for n in variants:
+            self.assertIn(f'Definition {n}_two_executions_exact_audit : {n}_two_executions_exact_spec :=\n'
+                          f'  {n}_two_executions_exact.\nPrint Assumptions {n}_two_executions_exact.\n', hand)
 
     def test_each_is_the_model_with_the_operations_as_arguments(self):
         rule = {k.name: k for k in ieee.with_kernels(self.ks)}

@@ -3063,6 +3063,8 @@ Variable nan_minus : float -> float -> nan_of.
 Variable nan_opp' : float -> nan_of.
 Variable nan_fma' : float -> float -> float -> nan_of.
 Variable nan_mult : float -> float -> nan_of.
+(* The NaN function of the guard of run time, of two_prod_entry. *)
+Variable nan_plus' : float -> float -> nan_of.
 
 Notation emin := (3 - emax - prec)%Z.
 Notation fexp := (FLT_exp emin prec).
@@ -3233,6 +3235,51 @@ assert (Epp : b2r p' = rp) by (change (b2r p') with (val p'); rewrite Ep', Erp; 
 lra.
 Qed.
 
+(* two_prod_entry, the entry form of two_prod that kairn::two_prod calls (rule R3, the factors
+   of a fused operation), has the variant of two_prod: in constant evaluation Dekker's product
+   on the operands as they are, at run time TwoProd on the guarded operands. The guard keeps the
+   value of a finite operand, so the same holds as of two_prod: when the error term of constant
+   evaluation is finite and the product is exact, both pairs have the same values. The proof is
+   that of two_prod_two_executions_exact, with the run-time statement of two_prod_entry
+   (IeeeEntry.two_prod_entry_ieee_correct) for that of two_prod. *)
+Theorem two_prod_entry_two_executions_exact :
+  (4 <= prec)%Z ->
+  forall a b : float, fin a -> fin b ->
+  let '(p, e) := dekker_ce a b in
+  let '(p', e') := IeeeModel.two_prod_entry prec emax nan_plus' nan_opp' nan_fma' a b in
+  fin e ->
+  (b2r a * b2r b = 0 \/ bpow radix2 (2 * prec - 1) * bpow radix2 emin <= Rabs (b2r a * b2r b)) ->
+  sv p p' /\ sv e e'.
+Proof.
+intros Hp a b Fa Fb.
+assert (Sp : sv (fst (dekker_ce a b))
+                (fst (IeeeModel.two_prod_entry prec emax nan_plus' nan_opp' nan_fma' a b))).
+{ cbv beta iota zeta delta [IeeeWith.two_prod_dekker_with IeeeWith.split_with IeeeModel.two_prod_entry
+    IeeeModel.two_prod fst].
+  apply (same_prod_ce prec emax nan_fma' nan_mult);
+    apply same_sym; apply same_guard_operand; apply same_refl. }
+generalize (dekker_ce_model Hp a b Fa Fb).
+generalize (IeeeEntry.two_prod_entry_ieee_correct prec emax prec_gt_0_ prec_lt_emax_ nan_plus' nan_opp'
+              nan_fma' ltac:(lia) a b Fa Fb).
+generalize (TwoProdDekker.two_prod_dekker_correct emin prec Hp (b2r a) (b2r b)
+              (b2r_format prec emax a) (b2r_format prec emax b)).
+revert Sp.
+destruct (Model.two_prod_dekker emin prec tie_even (b2r a) (b2r b)) as [rp re].
+destruct (dekker_ce a b) as [p e].
+destruct (IeeeModel.two_prod_entry prec emax nan_plus' nan_opp' nan_fma' a b) as [p' e'].
+cbn [fst snd]. intros Sp [_ [_ [Erp [_ Xr]]]] Hrun Hce Fe Big.
+destruct (Hce Fe) as [Fp E]. injection E as Ep Ee.
+assert (Fp' : fin p') by (rewrite <- (same_finite prec emax _ _ Sp); exact Fp).
+destruct (Hrun Fp') as [Fe' [Ep' [_ Xrun]]].
+split; [exact Sp|].
+unfold same_value. rewrite (xval_fin prec emax e Fe), (xval_fin prec emax e' Fe').
+f_equal.
+assert (Hrp : rp + re = b2r a * b2r b) by (apply Xr; exact Big).
+assert (Hrun' : b2r p' + b2r e' = b2r a * b2r b) by (apply Xrun; exact Big).
+assert (Epp : b2r p' = rp) by (change (b2r p') with (val p'); rewrite Ep', Erp; reflexivity).
+lra.
+Qed.
+
 End TwoProdVariant.
 
 (* The statement of two_prod_two_executions_exact, written by hand (two_prod is constexpr
@@ -3248,6 +3295,24 @@ Definition two_prod_two_executions_exact_spec : Prop :=
   let '(p, e) := IeeeWith.two_prod_dekker_with prec emax nan_plus nan_minus
                    (IeeeWith.prod_ce prec emax nan_mult) a b in
   let '(p', e') := IeeeModel.two_prod prec emax nan_opp' nan_fma' a b in
+  finite e ->
+  (val a * val b = 0 \/
+   bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
+  xval p = xval p' /\ xval e = xval e'.
+
+(* The statement of two_prod_entry_two_executions_exact, written by hand for the same reason
+   (two_prod_entry is constexpr through the variant of two_prod): proofs/audit/HandAudit.v
+   checks the theorem against it. *)
+Definition two_prod_entry_two_executions_exact_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp' : nan1 prec emax)
+         (nan_fma' : nan3 prec emax) (nan_mult nan_plus' : nan2 prec emax),
+  (4 <= prec)%Z ->
+  forall a b : binary_float prec emax, finite a -> finite b ->
+  let '(p, e) := IeeeWith.two_prod_dekker_with prec emax nan_plus nan_minus
+                   (IeeeWith.prod_ce prec emax nan_mult) a b in
+  let '(p', e') := IeeeModel.two_prod_entry prec emax nan_plus' nan_opp' nan_fma' a b in
   finite e ->
   (val a * val b = 0 \/
    bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
