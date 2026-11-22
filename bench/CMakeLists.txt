@@ -143,12 +143,25 @@ set_source_files_properties(m2_packed.cpp PROPERTIES COMPILE_OPTIONS "${_packed_
 # in the scalar form of Packed) are compiled as packed code, their scalar loops with them; the
 # enclosure interface (m2_enc.cpp) and the whole computations (m2_run.cpp) as scalar code.
 set_source_files_properties(m2_soa.cpp m2_soa_scalar.cpp PROPERTIES COMPILE_OPTIONS "${_packed_isa}")
+# The third part: the functions on arrays, the accumulator (m2_batch.cpp) and the ball vectors
+# (m2_bv.cpp) are compiled as packed code, as a client's unit that wants their fast order is.
+set_source_files_properties(m2_batch.cpp m2_bv.cpp m2_accuracy.cpp PROPERTIES COMPILE_OPTIONS "${_packed_isa}")
 string(REPLACE ";" " " _rounding_math_text "${_rounding_math}")
 set(_m2_sources m2_main.cpp m2.cpp m2_fenv.cpp m2_packed.cpp m2_fenv_packed.cpp m2_soa.cpp m2_soa_scalar.cpp
-    m2_enc.cpp m2_run.cpp)
+    m2_enc.cpp m2_run.cpp m2_batch.cpp m2_bv.cpp)
+# kairn-bench-m2-nocheck-LEVEL, only when KAIRN_BENCH_NOCHECK_INCLUDE names a directory: the same
+# program compiled against the copy of the headers there, which bench/entry_check.py makes from
+# include/ with the check of the environment of the batch entries compiled out (never committed):
+# what that check costs is the ratio of a function's time in kairn-bench-m2-LEVEL to its time here.
+set(KAIRN_BENCH_NOCHECK_INCLUDE "" CACHE PATH
+    "A copy of include/ made by bench/entry_check.py: builds kairn-bench-m2-nocheck-LEVEL against it")
+set(_m2_codes INLINE OUTLINED EXTERNAL CHECKS)
+if(KAIRN_BENCH_NOCHECK_INCLUDE)
+  list(APPEND _m2_codes NOCHECK)
+endif()
 # kairn-bench-m2-checks-LEVEL: the inline setting with KAIRN_CHECKS 1 in every translation unit, for
 # what the checks cost (bench/README.md, "Milestone 2").
-foreach(_code INLINE OUTLINED EXTERNAL CHECKS)
+foreach(_code IN LISTS _m2_codes)
   string(TOLOWER "${_code}" _name)
   foreach(_level IN LISTS _levels)
     if(_code STREQUAL "INLINE")
@@ -167,6 +180,10 @@ foreach(_code INLINE OUTLINED EXTERNAL CHECKS)
       string(APPEND _flags " -DKAIRN_CHECKS=1")
       set(_setting INLINE)
       target_compile_definitions(${_target} PRIVATE KAIRN_CHECKS=1)
+    elseif(_code STREQUAL "NOCHECK")
+      string(APPEND _flags " (headers: a copy with the check of the environment of the batch entries compiled out)")
+      set(_setting INLINE)
+      target_include_directories(${_target} BEFORE PRIVATE "${KAIRN_BENCH_NOCHECK_INCLUDE}")
     else()
       set(_setting ${_code})
     endif()
@@ -181,6 +198,17 @@ foreach(_code INLINE OUTLINED EXTERNAL CHECKS)
       "KAIRN_BENCH_FENV_FLAGS=\"${_flags} ${_rounding_math_text}\"" "KAIRN_BENCH_SETTING=\"${_name}\""
       KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_${_setting})
   endforeach()
+endforeach()
+
+# kairn-bench-m2-accuracy-LEVEL (bench/m2_accuracy.cpp): the errors of the sums and dot products
+# against the condition number and the stated bounds, third part; nothing timed.
+foreach(_level IN LISTS _levels)
+  add_executable(kairn-bench-m2-accuracy-${_level} m2_accuracy.cpp)
+  target_link_libraries(kairn-bench-m2-accuracy-${_level} PRIVATE kairn::kairn kairn::fma)
+  target_compile_options(kairn-bench-m2-accuracy-${_level} PRIVATE ${_opt_${_level}} ${_no_contract})
+  string(STRIP "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_config}} ${_opt_${_level}} ${_no_contract} ${_fma} ${_packed_isa_text}" _flags)
+  string(REGEX REPLACE " +" " " _flags "${_flags}")
+  target_compile_definitions(kairn-bench-m2-accuracy-${_level} PRIVATE "KAIRN_BENCH_FLAGS=\"${_flags}\"")
 endforeach()
 
 # kairn-bench-m2-modes-LEVEL (bench/m2_modes.cpp): a loop of additions and one of products timed under

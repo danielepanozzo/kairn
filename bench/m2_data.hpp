@@ -124,6 +124,11 @@ extern const Entry m2_enc_entries[];         // m2_enc.cpp: the enclosure interf
 extern const Entry m2_run_entries[];         // m2_run.cpp: the tutorial's bisection and self_test(), m2r
 // The counts of the bisections of m2_run.cpp (evaluations, parts, zeros, radii), as a JSON array.
 std::string m2_run_json();
+// The third part (bench/README.md, "Milestone 2"), each function with its own check:
+extern const Entry m2_batch_entries[];   // m2_batch.cpp: the functions on arrays (m2a, m2af), short arrays (m2k), the accumulator (m2c)
+extern const Entry m2_bv_entries[];      // m2_bv.cpp: BallVector against arrays of Ball (m2w)
+// The widths of ball vectors against arrays of balls (m2_bv.cpp), as a JSON array.
+std::string m2_bv_widths_json();
 
 // The data (m2.cpp).
 void m2_setup(std::uint64_t seed);

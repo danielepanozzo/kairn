@@ -7,7 +7,8 @@
 // 1. Makes the inputs from a fixed seed (m2_setup).
 // 2. Checks every function it will time (every function without --filter) against its reference,
 //    BACKEND/KIND/KERNEL/kairn (m2p against m2s), byte for byte, or by its own check (the functions
-//    of the second part: m2_soa.cpp, m2_enc.cpp, m2_run.cpp); counts, for each rounding-mode prop, how many of its
+//    of the second part: m2_soa.cpp, m2_enc.cpp, m2_run.cpp; of the third: m2_batch.cpp, m2_bv.cpp,
+//    which also compare with exact results, m2_exact.hpp); counts, for each rounding-mode prop, how many of its
 //    results differ from the result rounded to nearest (a prop that ignored the mode would have
 //    returned those); and checks the props of the building blocks against Kairn's on a wide sample
 //    of operands. It refuses to time anything if one check fails.
@@ -67,7 +68,8 @@ Name split(const std::string& s) {
 std::vector<const m2::Entry*> all_entries() {
     std::vector<const m2::Entry*> v;
     for (const m2::Entry* t : {m2::m2_entries, m2::m2_fenv_entries, m2::m2_packed_entries, m2::m2_fenv_packed_entries,
-                               m2::m2_soa_entries, m2::m2_soa_scalar_entries, m2::m2_enc_entries, m2::m2_run_entries})
+                               m2::m2_soa_entries, m2::m2_soa_scalar_entries, m2::m2_enc_entries, m2::m2_run_entries,
+                               m2::m2_batch_entries, m2::m2_bv_entries})
         for (const m2::Entry* e = t; e->name; ++e) v.push_back(e);
     return v;
 }
@@ -410,7 +412,12 @@ int main(int argc, char** argv) {
                ", \"below_p_wider\": " + std::to_string(w.below_p_wider) + ", \"failed\": " + std::to_string(w.failed) +
                ", \"differ_from_nearest\": " + std::to_string(w.differ_from_nearest) + "}";
     }
-    out += "]},\n  \"tightness\": " + tightness + ",\n  \"bisection\": " + m2::m2_run_json() + ",\n  \"results\": [\n";
+    out += "]},\n  \"tightness\": " + tightness + ",\n  \"bisection\": " + m2::m2_run_json() + ",\n";
+    // The widths of the ball vectors (third part), when they are timed.
+    bool bv = false;
+    for (const Bench& b : benches) bv = bv || std::string(b.e->name).rfind("m2w/", 0) == 0;
+    if (bv) out += "  \"ball_vector_widths\": " + m2::m2_bv_widths_json() + ",\n";
+    out += "  \"results\": [\n";
     for (std::size_t i = 0; i < benches.size(); ++i) {
         const Bench& b = benches[i];
         const double mn = *std::min_element(b.ns.begin(), b.ns.end());

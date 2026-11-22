@@ -179,12 +179,165 @@ def source_iface(n, kind, calls=False):
     return '\n'.join(out) + '\n'
 
 
+# Milestone 2, third part (bench-milestone2.md, question 19): calls of the functions on arrays
+# (kairn/batch.hpp) and of the operations of ball vectors (kairn/ball_vector.hpp), one and two limbs
+# of double, in turn; each call on arrays (or ball vectors) of its own, each result stored. Compiled
+# with the flags of packed code (--flags with -mavx2 on x86-64), as a unit that wants their fast
+# order is; KAIRN_ENCLOSURE_CODE changes neither (their functions are ordinary inline functions in
+# every setting), so only the settings inline and calls are meaningful.
+ARRAY_OPS = ['sum1', 'sum2', 'dot1', 'dot2', 'add1', 'add2', 'scale1', 'scale2', 'axpy1', 'axpy2', 'conv1',
+             'conv2', 'norm1', 'norm2']
+BV_OPS = [(op, k) for op in ('add', 'sub', 'scale', 'axpy', 'conv', 'norm') for k in (1, 2)]
+BV_ENTRIES = 8
+
+
+def source_arrays(n, calls=False):
+    """A unit of n calls of the functions on arrays, ARRAY_OPS in turn, on arrays of 64 elements
+    (32 coefficients for conv) that no other call reads: p holds pointers to the input limb arrays,
+    q to the output ones."""
+    out = ['// Written by bench/enclosure_costs.py: %d calls of the functions on arrays in straight-line code, '
+           'each result stored.' % n + (' The same calls without Kairn: functions declared only.' if calls else '')]
+    if calls:
+        out += ['#include <cstddef>', 'namespace k {',
+                'struct V1 { const double* x; std::size_t n; };', 'struct V2 { const double *x, *y; std::size_t n; };',
+                'struct W1 { double* x; std::size_t n; };', 'struct W2 { double *x, *y; std::size_t n; };',
+                'struct R1 { double v; bool f; };', 'struct R2 { double v0, v1; bool f; };',
+                'R1 sum(V1) noexcept;', 'R2 sum(V2) noexcept;', 'R1 dot(V1, V1) noexcept;', 'R2 dot(V2, V2) noexcept;',
+                'bool add(V1, V1, W1) noexcept;', 'bool add(V2, V2, W2) noexcept;',
+                'bool scale(V1, double, W1) noexcept;', 'bool scale(V2, double, W2) noexcept;',
+                'bool axpy(double, V1, V1, W1) noexcept;', 'bool axpy(double, V2, V2, W2) noexcept;',
+                'bool conv(V1, V1, W1) noexcept;', 'bool conv(V2, V2, W2) noexcept;',
+                'R1 norm_upper(V1) noexcept;', 'R1 norm_upper(V2) noexcept;', '}  // namespace k',
+                'using k::V1; using k::V2; using k::W1; using k::W2;']
+        v0, v1, ns = '.v', '.v1', 'k::'
+        first, second = '.v', '.v0'
+    else:
+        out += ['#include <kairn/batch.hpp>', '', 'using V1 = kairn::SoAView<const double, 1>;',
+                'using V2 = kairn::SoAView<const double, 2>;', 'using W1 = kairn::SoAView<double, 1>;',
+                'using W2 = kairn::SoAView<double, 2>;']
+        ns = 'kairn::'
+        first, second, v1 = '.value.limb[0]', '.value.limb[0]', '.value.limb[1]'
+    out += ['', 'void arrays_unit(const double* const* p, double* const* q, double a, double* o, bool* f) {']
+    ip, iq, io, jf = 0, 0, 0, 0
+
+    def v(k, length='64'):
+        nonlocal ip
+        if k == 1:
+            s = 'V1(p[%d], %s)' % (ip, length)
+            ip += 1
+        else:
+            s = 'V2(p[%d], p[%d], %s)' % (ip, ip + 1, length)
+            ip += 2
+        return s
+
+    def w(k, length='64'):
+        nonlocal iq
+        if k == 1:
+            s = 'W1(q[%d], %s)' % (iq, length)
+            iq += 1
+        else:
+            s = 'W2(q[%d], q[%d], %s)' % (iq, iq + 1, length)
+            iq += 2
+        return s
+
+    for i in range(n):
+        op = ARRAY_OPS[i % len(ARRAY_OPS)]
+        k = int(op[-1])
+        name = op[:-1]
+        if name in ('sum', 'dot', 'norm'):
+            args = v(k) if name != 'dot' else '%s, %s' % (v(k), v(k))
+            fn = 'norm_upper' if name == 'norm' else name
+            if name == 'norm':
+                out.append('    o[%d] = %s%s(%s)%s;' % (io, ns, fn, args, '.v' if calls else '.value'))
+                io += 1
+            elif k == 1:
+                out.append('    o[%d] = %s%s(%s)%s;' % (io, ns, fn, args, first))
+                io += 1
+            else:
+                out.append('    { const auto r = %s%s(%s); o[%d] = r%s; o[%d] = r%s; }'
+                           % (ns, fn, args, io, second, io + 1, v1))
+                io += 2
+        elif name == 'conv':
+            out.append('    f[%d] = %sconv(%s, %s, %s);' % (jf, ns, v(k, '32'), v(k, '32'), w(k, '63')))
+            jf += 1
+        elif name == 'add':
+            out.append('    f[%d] = %sadd(%s, %s, %s);' % (jf, ns, v(k), v(k), w(k)))
+            jf += 1
+        elif name == 'scale':
+            out.append('    f[%d] = %sscale(%s, a, %s);' % (jf, ns, v(k), w(k)))
+            jf += 1
+        else:   # axpy
+            out.append('    f[%d] = %saxpy(a, %s, %s, %s);' % (jf, ns, v(k), v(k), w(k)))
+            jf += 1
+    out.append('}')
+    return '\n'.join(out) + '\n'
+
+
+def source_ballvectors(n, calls=False):
+    """A unit of n operations of ball vectors of BV_ENTRIES entries, BV_OPS in turn (one and two
+    limbs), each on operands of its own (elements of input arrays of ball vectors), each result
+    stored."""
+    m = BV_ENTRIES
+    out = ['// Written by bench/enclosure_costs.py: %d operations of ball vectors in straight-line code, each '
+           'result stored.' % n + (' The same calls without Kairn: functions declared only.' if calls else '')]
+    if calls:
+        out += ['#include <cstddef>', 'namespace k {']
+        for kk in (1, 2):
+            out += ['struct B%d { double c[%d]; double r; };' % (kk, kk * m),
+                    'struct C%d { double c[%d]; double r; };' % (kk, kk * (2 * m - 1)),
+                    'void add(const B%d&, const B%d&, B%d&) noexcept;' % (kk, kk, kk),
+                    'void sub(const B%d&, const B%d&, B%d&) noexcept;' % (kk, kk, kk),
+                    'void scale(const B%d&, double, B%d&) noexcept;' % (kk, kk),
+                    'void axpy(double, const B%d&, const B%d&, B%d&) noexcept;' % (kk, kk, kk),
+                    'void convolution(const B%d&, const B%d&, C%d&) noexcept;' % (kk, kk, kk),
+                    'double norm_upper(const B%d&) noexcept;' % kk]
+        out += ['}  // namespace k', 'using k::B1; using k::B2; using k::C1; using k::C2;']
+        ns = 'k::'
+    else:
+        out += ['#include <kairn/ball_vector.hpp>', '']
+        for kk in (1, 2):
+            out += ['using B%d = kairn::BallVector<double, %d, %d>;' % (kk, kk, m),
+                    'using C%d = kairn::BallVector<double, %d, %d>;' % (kk, kk, 2 * m - 1)]
+        ns = 'kairn::'
+    out += ['', 'void ball_vector_unit(const B1* x1, const B2* x2, B1* z1, B2* z2, C1* c1, C2* c2, double a, double* o) {']
+    cnt = {1: 0, 2: 0}
+    zc = {1: 0, 2: 0}
+    cc = {1: 0, 2: 0}
+    io = 0
+    for i in range(n):
+        op, kk = BV_OPS[i % len(BV_OPS)]
+        x, y = 'x%d[%d]' % (kk, cnt[kk]), 'x%d[%d]' % (kk, cnt[kk] + 1)
+        cnt[kk] += 2
+        if op in ('add', 'sub'):
+            out.append('    %s%s(%s, %s, z%d[%d]);' % (ns, op, x, y, kk, zc[kk]))
+            zc[kk] += 1
+        elif op == 'scale':
+            out.append('    %sscale(%s, a, z%d[%d]);' % (ns, x, kk, zc[kk]))
+            zc[kk] += 1
+        elif op == 'axpy':
+            out.append('    %saxpy(a, %s, %s, z%d[%d]);' % (ns, x, y, kk, zc[kk]))
+            zc[kk] += 1
+        elif op == 'conv':
+            out.append('    %sconvolution(%s, %s, c%d[%d]);' % (ns, x, y, kk, cc[kk]))
+            cc[kk] += 1
+        else:
+            out.append('    o[%d] = %snorm_upper(%s);' % (io, ns, x))
+            io += 1
+    out.append('}')
+    return '\n'.join(out) + '\n'
+
+
 def source_kind(n, kind, seed=1, calls=False):
     """A unit of n operations of KIND (interval1, interval2, mixed): each on one of the eight values
     of its type computed last and one of the eight inputs of that type, each result stored. The kinds
-    of the enclosure interface are written by source_iface."""
+    of the enclosure interface are written by source_iface, those of the third part by source_arrays
+    and source_ballvectors."""
     if kind in IFACE_KINDS:
         return source_iface(n, kind, calls=calls)
+    if kind == 'arrays':
+        return source_arrays(n, calls=calls)
+    if kind == 'ballvectors':
+        return source_ballvectors(n, calls=calls)
     rng = random.Random(seed)
     ops = KINDS[kind]
     used = sorted({t for t, _ in ops})
@@ -350,7 +503,7 @@ def cmd_compile(args):
     sizes = [int(x) for x in args.sizes.split(',')]
     configs = args.configs.split(',')
     settings = args.settings.split(',')
-    if args.run and (args.kind == 'ball2' or args.kind in IFACE_KINDS):
+    if args.run and (args.kind in ('ball2', 'arrays', 'ballvectors') or args.kind in IFACE_KINDS):
         raise SystemExit('--run needs --kind interval1, interval2 or mixed: the values of the ball2 unit overflow')
     make = (lambda n, calls=False: source(n, calls=calls)) if args.kind == 'ball2' else \
         (lambda n, calls=False: source_kind(n, args.kind, calls=calls))
@@ -511,12 +664,13 @@ def main():
     sub = p.add_subparsers(dest='cmd', required=True)
     s = sub.add_parser('source')
     s.add_argument('n', type=int)
-    s.add_argument('--kind', default='ball2', choices=['ball2'] + sorted(KINDS) + sorted(IFACE_KINDS))
+    kinds = ['ball2'] + sorted(KINDS) + sorted(IFACE_KINDS) + ['arrays', 'ballvectors']
+    s.add_argument('--kind', default='ball2', choices=kinds)
     c = sub.add_parser('compile')
     c.add_argument('--cxx', required=True)
     c.add_argument('--msvc', action='store_true')
     c.add_argument('--flags', default='')
-    c.add_argument('--kind', default='ball2', choices=['ball2'] + sorted(KINDS) + sorted(IFACE_KINDS))
+    c.add_argument('--kind', default='ball2', choices=kinds)
     c.add_argument('--cpu', type=int)
     c.add_argument('--run', action='store_true')
     c.add_argument('--run-reps', type=int, default=21)
