@@ -149,9 +149,11 @@ int main() {
     ok = finite1 && finite2 && fast1.finite && fast2.finite && ok;
     ok = within(exact, magnitudes, d1.limb, 1, b1, r1) && within(exact, magnitudes, d2.limb, 2, b2, r2) && ok;
     ok = within(exact, magnitudes, fast1.value.limb, 1, b1, rf1) && within(exact, magnitudes, fast2.value.limb, 2, b2, rf2) && ok;
+    // %.13a, not %a: every C library prints the 13 hexadecimal digits of a double then (the Microsoft
+    // runtime always prints 13 for %a, the others the shortest form), so arrays.txt is the same text.
     std::printf("Dot product of %zu pairs, exact value %.17g\n", n, exact.magnitude(false) * (exact.negative() ? -1 : 1));
-    std::printf("  one limb   %a, error / bound %.2g, bound %.3g of the magnitudes\n", d1.limb[0], r1, b1.unit);
-    std::printf("  two limbs  %a + %a, error / bound %.2g, bound %.3g of the magnitudes\n", d2.limb[0], d2.limb[1], r2,
+    std::printf("  one limb   %.13a, error / bound %.2g, bound %.3g of the magnitudes\n", d1.limb[0], r1, b1.unit);
+    std::printf("  two limbs  %.13a + %.13a, error / bound %.2g, bound %.3g of the magnitudes\n", d2.limb[0], d2.limb[1], r2,
                 b2.unit);
     std::fprintf(stderr, "  the lane order: one limb %a (error / bound %.2g), two limbs %a + %a (%.2g)\n",
                  fast1.value.limb[0], rf1, fast2.value.limb[0], fast2.value.limb[1], rf2);
@@ -171,8 +173,8 @@ int main() {
     ok = s1.finite && s2.finite && ok;
     ok = within(exact, magnitudes, s1.value.limb, 1, c1, q1) && within(exact, magnitudes, s2.value.limb, 2, c2, q2) && ok;
     std::printf("Sum of the %zu products\n", n);
-    std::printf("  one limb   %a, error / bound %.2g\n", s1.value.limb[0], q1);
-    std::printf("  two limbs  %a + %a, error / bound %.2g\n", s2.value.limb[0], s2.value.limb[1], q2);
+    std::printf("  one limb   %.13a, error / bound %.2g\n", s1.value.limb[0], q1);
+    std::printf("  two limbs  %.13a + %.13a, error / bound %.2g\n", s2.value.limb[0], s2.value.limb[1], q2);
 
     // --8<-- [start:map]
     // y = 2 x + y, element by element and in place, as two-limb numbers; then a NaN in x, which
