@@ -760,19 +760,22 @@ inline void axpy(T a, const X& x, const Y& y, Z& z) noexcept {
     kairn::detail::check_bv(xp, yp);
     kairn::detail::check_lengths(xp.size == yp.size && xp.size == zp.size);
     if (yp.size > 0 && static_cast<const T*>(zp.limb[0]) == yp.limb[0]) {
-#if KAIRN_CHECKS
-        kairn::detail::fail("axpy", "writes the array of y, which it reads after writing (z must not be y)");
-#endif
+        // The whole space first and the report after it, with no statement after the report: the
+        // default handler does not return, and one compiler (MSVC, C4702) warns of code that
+        // follows a call that does not; with a handler that returns, the result is the whole space.
         constexpr int K = kairn::detail::bv_info_of<X>::limbs;
         const T* in[K];
         for (int j = 0; j < K; ++j) in[j] = zp.limb[j];
         kairn::detail::bv_make<T, K>(in, zp.size, std::numeric_limits<T>::infinity(), zp.limb, zp.radius);
-        return;
+#if KAIRN_CHECKS
+        kairn::detail::fail("axpy", "writes the array of y, which it reads after writing (z must not be y)");
+#endif
+    } else {
+        const T ry = *yp.radius;
+        yp.radius = &ry;
+        bv_scale<Seq>(xp, a, zp);
+        bv_add<Seq, false>(kairn::detail::as_operand(zp), yp, zp);
     }
-    const T ry = *yp.radius;
-    yp.radius = &ry;
-    bv_scale<Seq>(xp, a, zp);
-    bv_add<Seq, false>(kairn::detail::as_operand(zp), yp, zp);
 }
 // The product of polynomials (loop bv_conv_k, the sequential order only).
 template <class X, class Y, class Z>
