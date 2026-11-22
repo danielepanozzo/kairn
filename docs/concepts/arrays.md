@@ -171,8 +171,8 @@ Measured in [the third part of the benchmarks of Milestone 2](../developer/resul
 (2026-11-22): a `sum` or `dot` of one limb costs what the loop of `T` in the same lane order costs;
 of two limbs, an accurate sum of doubles, 1.7 to 1.8 times the compensated Sum2 in the default order
 and about 7 times with `kairn::sequential` on an AMD Zen 2; the sequential order costs about the
-number of lanes; the check of the environment at entry is about 5 to 6 ns a call there, under 5% of
-a call of one limb from 1 024 elements; an accumulator costs what the sequential `sum` and `dot`
+number of lanes; the check of the environment at entry is about 5 to 6 ns a call there (about 0.5 ns on
+an Apple M3), under 5% of a call of one limb from 1 024 elements; an accumulator costs what the sequential `sum` and `dot`
 cost; a ball vector is 2 to 6 times faster than as many balls from 16 entries, and no faster at 4.
 The errors against the condition and the stated bounds, the short ball vectors and the compile
 times are on that page.
