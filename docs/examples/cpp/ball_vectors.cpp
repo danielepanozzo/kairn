@@ -216,14 +216,14 @@ int main() {
     // --8<-- [start:data]
     // The polynomial: Bernstein coefficients known to within 2^-30.
     const Coefficients p({1.5, -0.75, 0.3, 2.0, -1.0}, 0x1p-30);
-    std::printf("p: %zu coefficients in the Bernstein basis, radius %a\n", p.size(), p.radius());
+    std::printf("p: %zu coefficients in the Bernstein basis, radius %.13a\n", p.size(), p.radius());
     // --8<-- [end:data]
 
     // --8<-- [start:subdivide]
     const Halves h = subdivide(p);
-    for (std::size_t j = 1; j <= degree; ++j) std::printf("level %zu: radius %a\n", j, h.level_radius[j]);
-    std::printf("left half:  radius %a, |p| <= %a on [0, 1/2]\n", h.left.radius(), kairn::norm_upper(h.left));
-    std::printf("right half: radius %a, |p| <= %a on [1/2, 1]\n", h.right.radius(), kairn::norm_upper(h.right));
+    for (std::size_t j = 1; j <= degree; ++j) std::printf("level %zu: radius %.13a\n", j, h.level_radius[j]);
+    std::printf("left half:  radius %.13a, |p| <= %.13a on [0, 1/2]\n", h.left.radius(), kairn::norm_upper(h.left));
+    std::printf("right half: radius %.13a, |p| <= %.13a on [1/2, 1]\n", h.right.radius(), kairn::norm_upper(h.right));
     // --8<-- [end:subdivide]
 
     // The check: the exact subdivision of members of p lies in the halves.
@@ -239,7 +239,7 @@ int main() {
 
     // An exact halving: the radius of half(x) is the radius of x halved, exactly.
     const Coefficients q = kairn::half(p);
-    std::printf("half(p): radius %a, exactly half of %a: %s\n", q.radius(), p.radius(),
+    std::printf("half(p): radius %.13a, exactly half of %.13a: %s\n", q.radius(), p.radius(),
                 q.radius() == p.radius() / 2 ? "yes" : "no");
 
     // --8<-- [start:product]
@@ -248,7 +248,7 @@ int main() {
     const kairn::BallVector<double, 1, 3> f({1.0, 2.0, -3.0}, 0x1p-40);
     const kairn::BallVector<double, 1, 2> g({0.5, -1.0}, 0x1p-45);
     const kairn::BallVector<double, 1, 4> fg = kairn::convolution(f, g);
-    std::printf("f g: %zu coefficients, radius %a\n", fg.size(), fg.radius());
+    std::printf("f g: %zu coefficients, radius %.13a\n", fg.size(), fg.radius());
     // --8<-- [end:product]
 
     // The check: the exact product of members of f and g lies in f g.
