@@ -213,8 +213,13 @@ void maps(Random& rnd) {
                     case 3: return kairn::mul_pow2(xx, c, out);
                     case 4: return kairn::axpy(s, xx, yy, out);
                     default:
-                        if constexpr (K == 2) return kairn::axpy(s2, xx, yy, out);
-                        return false;
+                        // Both branches written out: MSVC reports a return after the if constexpr
+                        // as unreachable code (C4702) where K == 2.
+                        if constexpr (K == 2) {
+                            return kairn::axpy(s2, xx, yy, out);
+                        } else {
+                            return false;
+                        }
                     }
                 };
                 fz = run(z.view(), x, y);

@@ -259,16 +259,20 @@ KAIRN_FORCEINLINE bool overlap(const T* a, std::size_t n, const T* b, std::size_
 // The constructor, in the sequential order in every build, so that BallVector and the views are
 // the same code in every translation unit (the lane order computes the same bits): the centers c
 // and the radius r given, written into the arrays z (which may be those of c, in place) and *rr.
-// Checked with KAIRN_CHECKS: the environment, without the rounding mode for one limb, whose
-// constructor rounds nothing but its guards (c + 0 and r + 0, whose values are c and r under every
-// rounding mode) and m - m (+0 or -0 for a finite m, a NaN otherwise, under every mode); then a
+// Checked with KAIRN_CHECKS: the environment, the rounding mode included, for one limb as for
+// two. The constructor of one limb rounds nothing but its guards (c + 0 and r + 0) and m - m,
+// whose values are the same under every rounding mode; but m - m is -0 when rounding downward,
+// which makes the radius -0, and a compiler that assumes rounding to nearest may then decide the
+// kernel's test of the radius's sign otherwise: with clang-cl (2026-11-21) the constructor
+// returned the whole space for finite centers and a zero radius under rounding downward. So its
+// result is not independent of the rounding mode in practice, and the mode is checked. Then a
 // negative radius, reported as almost surely a mistake (the constructor makes it the whole space),
 // and for two limbs each center canonical, whose test rounds.
 template <class T, int K>
 KAIRN_FORCEINLINE void bv_make(const T* const* c, std::size_t n, T r, T* const* z, T* rr) noexcept {
 #if KAIRN_CHECKS
     if constexpr (K == 1) {
-        if (check_environment_except_rounding() && 0 > r)
+        if (check_environment() && 0 > r)
             fail("a ball vector", "has a negative radius (it would make the whole space)");
     } else {
         if (check_environment()) {

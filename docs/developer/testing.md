@@ -1199,9 +1199,12 @@ maxima `norm_upper_k`. What is tested of them:
   bound at least that plus the radius, by an exact TwoSum); the value forms against the views; and the
   exact scaling by a power of two, the steps of `ldexp` beyond the powers of two of `T` included.
 - **The checks of a debug build** (`api.checks.*`): every operation that rounds, the constructors of
-  two limbs and a view's constructor among them, must stop the program under each state of the
-  environment; the negation and the constructors of one limb, which do not round, give the same bits
-  (values for the constructors) under every rounding mode on a corpus of ball vectors; and the operand
+  both numbers of limbs and a view's constructor among them, must stop the program under each state
+  of the environment (the constructors of one limb were tested as not rounding, with the same values
+  under every mode, until clang-cl returned the whole space for a vector under rounding downward,
+  where the loop's $m - m$ and so the radius are $-0$: they are checked like the others since); the
+  negation, which does not round, gives the same bits under every rounding mode on a corpus of ball
+  vectors; and the operand
   cases (a negative radius, a center of two limbs that is not canonical, the arrays of a view written
   by the program after it was made, operands of other lengths, `axpy` writing `y`, a product writing
   an operand) must stop it with their messages; a NaN or infinite radius, a center that is not

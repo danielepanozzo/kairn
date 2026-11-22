@@ -1027,8 +1027,10 @@ inline const Operation operations[] = {
 
     // Ball vectors: the functions that do not round, each on ball vectors of the corpus: the
     // negation (sign bits, a copy of the radius, and the fold of maxima, which compares), the same
-    // bits; the constructors of one limb, whose only rounded operations are the guards a + 0 and the
-    // loop's m - m (+0 or -0 for a finite m under every rounding mode), the same values.
+    // bits. The constructors of one limb were here too (their only rounded operations are the guards
+    // a + 0 and the loop's m - m, the same values under every mode) until clang-cl returned the
+    // whole space for one of these vectors under rounding downward, where m - m and so the radius
+    // are -0 (2026-11-21): they are of the kind that rounds, and a build with the checks stops them.
     {"bv1.neg", Kind::exact, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              for (const auto& x : c.bvs1) put(out, -x);
@@ -1044,7 +1046,7 @@ inline const Operation operations[] = {
              }
          });
      }},
-    {"bv1.make", Kind::exact, [](Bits& b) {
+    {"bv1.make", Kind::rounds, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = std::decay_t<decltype(c.one[0])>;
              for (std::size_t k = 0; k < c.one.size(); ++k)

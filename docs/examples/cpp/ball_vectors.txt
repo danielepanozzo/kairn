@@ -1,4 +1,4 @@
-p: 5 coefficients in the Bernstein basis, radius 0x1p-30
+p: 5 coefficients in the Bernstein basis, radius 0x1.0000000000000p-30
 level 1: radius 0x1.0000024cccccfp-30
 level 2: radius 0x1.000003f333337p-30
 level 3: radius 0x1.0000053ccccd3p-30
@@ -6,7 +6,7 @@ level 4: radius 0x1.000006266666fp-30
 left half:  radius 0x1.000006266666fp-30, |p| <= 0x1.8000000400002p+0 on [0, 1/2]
 right half: radius 0x1.000006266666fp-30, |p| <= 0x1.0000000400002p+0 on [1/2, 1]
 subdivision: 400 exact coefficients of members checked, 0 outside their balls
-half(p): radius 0x1p-31, exactly half of 0x1p-30: yes
+half(p): radius 0x1.0000000000000p-31, exactly half of 0x1.0000000000000p-30: yes
 f g: 4 coefficients, radius 0x1.1830000000084p-39
 product: 2500 exact coefficients of products of members checked, 0 outside their balls
 the check finds a point at 1.5 radii outside: yes
