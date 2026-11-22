@@ -46,7 +46,8 @@
 /// on arrays); a packed or lane-parallel form of the product; operations of a BallVector with a Ball
 /// or a number, but the scaling by a T; dispatch at run time; constant evaluation of any operation
 /// (the generated loops are not constexpr; the accessors are). Every loop called here is proved
-/// (gen/claims.json): no operation needs the kairn::unverified marker. The operations are ordinary
+/// (gen/claims.json): no operation needs the kairn::unverified marker, and each compiles only while
+/// its loop is proved for T (kairn::gen::bounds::loops, as the functions of batch.hpp). The operations are ordinary
 /// inline functions in every setting of KAIRN_ENCLOSURE_CODE: each calls one loop, itself an
 /// ordinary inline function whose end (the radius and the finish) is never inlined.
 ///
@@ -283,8 +284,10 @@ KAIRN_FORCEINLINE void bv_make(const T* const* c, std::size_t n, T r, T* const* 
 #endif
     bool finite_ = false;
     if constexpr (K == 1) {
+        static_assert(::kairn::gen::bounds::loops::bv_make_1<T>::proved, "kairn: the loop bv_make_1 is not proved for this T");
         gen::bv_make_1_seq(c[0], n, r, z[0], *rr, finite_);
     } else {
+        static_assert(::kairn::gen::bounds::loops::bv_make_2<T>::proved, "kairn: the loop bv_make_2 is not proved for this T");
         gen::bv_make_2_seq(c[0], c[1], n, r, z[0], z[1], *rr, finite_);
     }
 }
@@ -562,11 +565,15 @@ namespace packed_detail {
 #else
 #define KAIRN_DETAIL_BV_FAST(NAME) NAME##_packed
 #endif
-#define KAIRN_DETAIL_BV_LOOP(SEQ, NAME, ...)                   \
-    if constexpr (SEQ) {                                        \
-        gen::NAME##_seq(__VA_ARGS__);                           \
-    } else {                                                    \
-        gen::KAIRN_DETAIL_BV_FAST(NAME)(__VA_ARGS__);           \
+// Each call is gated on the loop's proof status for T (gen/bounds.hpp, kairn::gen::bounds::loops:
+// the loop's own statements, its minimum precision and every kernel it runs), as kairn/batch.hpp
+// gates its functions: an operation compiles only while its loop is proved.
+#define KAIRN_DETAIL_BV_LOOP(SEQ, NAME, ...)                                                       \
+    static_assert(::kairn::gen::bounds::loops::NAME<T>::proved, "kairn: the loop " #NAME " is not proved for this T"); \
+    if constexpr (SEQ) {                                                                            \
+        gen::NAME##_seq(__VA_ARGS__);                                                               \
+    } else {                                                                                        \
+        gen::KAIRN_DETAIL_BV_FAST(NAME)(__VA_ARGS__);                                               \
     }
 
 // Each takes the operands' parts, reads every radius by value before the loop writes, and writes
@@ -756,8 +763,10 @@ inline void convolution(const X& x, const Y& y, Z& z) noexcept {
     const T rx = *xp.radius, ry = *yp.radius;
     bool f = false;
     if constexpr (K == 1) {
+        static_assert(::kairn::gen::bounds::loops::bv_conv_1<T>::proved, "kairn: the loop bv_conv_1 is not proved for this T");
         gen::bv_conv_1_seq(xp.limb[0], xp.size, yp.limb[0], yp.size, rx, ry, zp.limb[0], *zp.radius, f);
     } else {
+        static_assert(::kairn::gen::bounds::loops::bv_conv_2<T>::proved, "kairn: the loop bv_conv_2 is not proved for this T");
         gen::bv_conv_2_seq(xp.limb[0], xp.limb[1], xp.size, yp.limb[0], yp.limb[1], yp.size, rx, ry, zp.limb[0],
                            zp.limb[1], *zp.radius, f);
     }
