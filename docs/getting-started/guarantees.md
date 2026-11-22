@@ -405,7 +405,9 @@ needs one does not compile, and the compiler's message names
 `two_prod_overflows_in_constant_evaluation`, or with GCC, which refuses an overflow itself, the
 operation. It is one when $\lvert a\rvert, \lvert b\rvert \le 2^{996}$ and
 $\lvert ab\rvert \le 2^{1023}$ ($2^{115}$ and $2^{127}$ for `float`), a sufficient condition, not
-an exact one (the square of `0x1.ffffffbffffffp+511`, above $2^{1023}$, is one);
+an exact one (the square of `0x1.ffffffbffffffp+511`, above $2^{1023}$, is one; beyond the
+condition a compiler may be stricter than IEEE 754: MSVC refuses in constant evaluation a `float`
+product whose exact value exceeds the largest finite number although it rounds to it);
 `two_prod(0x1.fffffffffffffp+511, 0x1.fffffffffffffp+511)`, whose run-time error term is
 $2^{918}$, is not. A variable of static storage duration that is not `constexpr`, initialized with
 such a call, which the compiler first tries as a constant expression, is then initialized at run

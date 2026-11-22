@@ -386,8 +386,19 @@ struct Blocks {
     static_assert(p_square.product == X::square_product && p_square.error == X::square_error);
     static constexpr kairn::ProductAndError<T> p_split = kairn::two_prod(X::split, X::two_thirds);
     static_assert(p_split.product == X::split_product && p_split.error == X::split_error);
+#if !defined(_MSC_VER) || defined(__clang__)
     static constexpr kairn::ProductAndError<T> p_top = kairn::two_prod(X::top_a, X::top_b);
     static_assert(p_top.product == omega && p_top.error == X::top_error);
+#else
+    // MSVC, for float only: the exact product of these two exceeds the largest finite number and
+    // rounds to it, which is no overflow in IEEE 754 and is one to MSVC's constant evaluation of
+    // a float product (warning C4056, "overflow in floating-point constant arithmetic", then
+    // C2131); the double product is a constant expression there too. The operands are outside
+    // the sufficient condition that the documentation gives, |a b| <= 2^(emax - 1), and
+    // blocks_run_time checks their run-time result with every compiler.
+    static_assert(sizeof(T) == sizeof(float) || (kairn::two_prod(X::top_a, X::top_b).product == omega &&
+                                                 kairn::two_prod(X::top_a, X::top_b).error == X::top_error));
+#endif
     static constexpr kairn::ProductAndError<T> p_low = kairn::two_prod(1 + 2 * u, threshold * (1 + 6 * u));
     static_assert(p_low.product == threshold * (1 + 8 * u) && p_low.error == threshold * 12 * u * u);
     static constexpr kairn::ProductAndError<T> p_low_bits = kairn::two_prod(X::two_thirds, X::low_b);
@@ -886,8 +897,10 @@ void blocks_run_time() {
         same_bits("two_prod, the largest split, product", e2.product, C::p_split.product);
         same_bits("two_prod, the largest split, error", e2.error, C::p_split.error);
         const auto e3 = kairn::two_prod(T(v_top_a), T(v_top_b));
-        same_bits("two_prod, a product of Omega, product", e3.product, C::p_top.product);
-        same_bits("two_prod, a product of Omega, error", e3.error, C::p_top.error);
+        // Against the values that Blocks asserts of p_top where it is a constant expression (not
+        // with MSVC: see there).
+        same_bits("two_prod, a product of Omega, product", e3.product, C::omega);
+        same_bits("two_prod, a product of Omega, error", e3.error, X::top_error);
         const auto e4 = kairn::two_prod(T(v_low_a), T(v_low_c));
         same_bits("two_prod just above 2^(2p-1) eta, product", e4.product, C::p_low.product);
         same_bits("two_prod just above 2^(2p-1) eta, error", e4.error, C::p_low.error);

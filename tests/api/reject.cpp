@@ -456,7 +456,13 @@ int main() {
 #endif
     sink = z.error;
 #elif KAIRN_TEST_CASE == 96
-#if defined(KAIRN_TEST_CONTROL)
+#if defined(KAIRN_TEST_CONTROL) && defined(_MSC_VER) && !defined(__clang__)
+    // MSVC's constant evaluation refuses the float product of the control below, whose exact value
+    // exceeds the largest finite number and rounds to it (C4056): its control is one number lower,
+    // where the exact product is below the largest finite number.
+    constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.5b8dap+63f, 0x1.7920b8p+64f);
+    static_assert(z.product == 0x1.fffffcp+127f && z.error == 0x1.0e58p+100f);
+#elif defined(KAIRN_TEST_CONTROL)
     constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.5b8dap+63f, 0x1.7920bap+64f);
     static_assert(z.product == 0x1.fffffep+127f && z.error == 0x1.b1cc8p+102f);
 #else

@@ -831,8 +831,11 @@ _kairn_api_reject(rational.result_fails_its_check 18 "${_api_fails}"
 # which constant evaluation runs, overflows (blocks.hpp): a partial product while the product is
 # finite, and the product itself; each control is the neighboring operand where it compiles. Clang,
 # which computes an overflow to infinity, reaches the check, whose message names the function that
-# refuses; GCC refuses the overflowing product itself ("... is not a constant expression"); MSVC's
-# message was not seen (there, any failed constant expression).
+# refuses; GCC refuses the overflowing product itself ("... is not a constant expression"); MSVC
+# reaches the check for double and names the function, and for float stops in the kernel, at the
+# product that overflows ("expression did not evaluate to a constant"). MSVC also refuses a float
+# product whose exact value exceeds the largest finite number and rounds to it, so the control of
+# the last case is one number lower there (reject.cpp).
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   set(_api_overflow "two_prod_overflows_in_constant_evaluation|expression did not evaluate to a constant")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
