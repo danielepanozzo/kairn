@@ -1293,7 +1293,7 @@ foreach(_i RANGE 0 ${_last} 2)
   # The examples of the Concepts section (docs/concepts/), the same way: each checks its own results,
   # prints the same text on every platform and under every contraction setting, and its page shows
   # that text (concepts_NAME.txt).
-  foreach(_concept expansions precision enclosures correctness)
+  foreach(_concept expansions precision enclosures correctness environment values arrays)
     _kairn_api_program(kairn-example-concepts-${_concept}${_target_suffix}
       "${PROJECT_SOURCE_DIR}/docs/examples/cpp/concepts_${_concept}.cpp" ${_option})
     add_test(NAME api.example.concepts_${_concept}${_suffix}

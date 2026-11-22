@@ -1,0 +1,12 @@
+the exact sum:                0x1.f4000000003cfp+9 + 0x1.2cp-44
+one limb, sequential order:   0x1.f4000000003cep+9, bound 0x1.f3800000007a1p-44 of the magnitudes
+two limbs, sequential order:  0x1.f4000000003dp+9 - 0x1.a8p-45, bound 0x1.76a0000000006p-95 of the magnitudes
+each order within its bound:  yes
+n = 2      double: 0x1.0000000000003p-53     Expansion<double, 2>: 0x1.8000000000007p-105
+n = 1000   double: 0x1.f3800000007a1p-44     Expansion<double, 2>: 0x1.76a0000000006p-95
+n = 2^20   double: 0x1.ffffe002p-34          Expansion<double, 2>: 0x1.7fffe80000006p-85
+n = 2^40   double: 0x1.000fffffffp-13        Expansion<double, 2>: 0x1.7ffffffffe806p-65
+n = 2^60   double: inf                       Expansion<double, 2>: 0x1.8000000000247p-45
+
+accumulator, four parts:      0x1.f4000000003dp+9 - 0x1.a8p-45, radius 0x1.e848000000781p-85
+its ball contains the exact sum: yes

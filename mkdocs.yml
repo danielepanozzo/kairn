@@ -103,6 +103,9 @@ nav:
       - Precision and magnitude: concepts/precision.md
       - Intervals, balls and ball vectors: concepts/enclosures.md
       - 'What "correct" means here': concepts/correctness.md
+      - The floating-point environment: concepts/environment.md
+      - Values, threads and constant expressions: concepts/values.md
+      - Arrays: concepts/arrays.md
   - Tutorials:
       - Accurate sums and dot products: tutorials/accurate-sums.md
       - The range of a polynomial: tutorials/intervals.md
