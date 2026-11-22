@@ -2352,6 +2352,72 @@ largest and over the median of the balls' radii.
   whose order the compilers choose: GCC and Clang drew different centers of the same distribution,
   and each cell of the width tables is the range over the compilers.
 
+### 19. Compile time of the functions on arrays and the ball vectors
+
+What do the three headers cost a translation unit, alone and beside `kairn/kairn.hpp`, and what does
+a function with many calls of them cost? The include units as question 11 measured `self_test()`
+(`compile_time.py run`, the minimum wall time over seven compilations in rounds, `-O2` and `-O3`; on
+Zen 2 pinned to an idle core of the second socket), each unit nothing but its includes:
+`kairn/accumulator.hpp` alone (scalar code: `kairn/kairn.hpp` includes it), `kairn/batch.hpp` and
+`kairn/ball_vector.hpp` alone and beside `kairn/kairn.hpp`, compiled as packed code (`-mavx2 -mfma`
+on x86-64), as a unit that wants their fast order is, and `kairn/kairn.hpp` alone with the same flags
+for comparison. And units of 100 and 1 000 calls in one function, in straight-line code, as question
+12 measured the enclosure interface (`enclosure_costs.py compile`, the compiler's processor time, the
+median of three compilations, its peak memory and the object): `--kind arrays`, the functions on
+arrays of one and two limbs in turn (`sum`, `dot`, `add`, `scale`, `axpy`, `conv`, `norm_upper`),
+each on arrays of 64 elements (32 coefficients) that no other call reads, each result stored;
+`--kind ballvectors`, the operations of `BallVector<double, k, 8>` of one and two limbs in turn
+(`add`, `sub`, `scale`, `axpy`, `convolution`, `norm_upper`), each on ball vectors of its own; and
+"calls", the same units without Kairn, the views and ball vectors structures of `double`s and the
+functions declared only. The setting `KAIRN_ENCLOSURE_CODE` changes neither header (their functions
+are ordinary inline functions in every setting), so only the inline setting was compiled.
+
+| Compile time of the headers, s (minimum wall time; -O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| an empty unit | 0.01; 0.01 | 0.04; 0.04 |
+| `kairn/kairn.hpp` | 0.45; 0.45 | 0.70; 0.70 |
+| `kairn/kairn.hpp`, as packed code | 0.44; 0.44 | 0.70; 0.70 |
+| `kairn/accumulator.hpp` | 0.44; 0.44 | 0.70; 0.70 |
+| `kairn/batch.hpp`, as packed code | 1.21; 1.21 | 1.57; 1.57 |
+| `kairn/ball_vector.hpp`, as packed code | 1.26; 1.26 | 1.66; 1.66 |
+| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 1.24; 1.23 | 1.61; 1.61 |
+| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 1.27; 1.26 | 1.66; 1.66 |
+
+| arrays: compile time, s of processor time (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| 100, inline | 1.60; 1.66 | 2.31; 2.52 |
+| 100, calls | 0.22; 0.22 | 0.23; 0.23 |
+| 1000, inline | 2.77; 2.85 | 8.85; 12.2 |
+| 1000, calls | 3.49; 3.48 | 1.56; 1.58 |
+
+| ballvectors: compile time, s of processor time (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| 100, inline | 1.72; 1.91 | 2.12; 2.12 |
+| 100, calls | 0.05; 0.05 | 0.06; 0.06 |
+| 1000, inline | 2.40; 3.12 | 4.37; 4.36 |
+| 1000, calls | 0.31; 0.31 | 0.21; 0.20 |
+
+| The functions on arrays: object, KB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| 1000, inline | 88; 89 | 461; 652 |
+| 1000, calls | 97; 97 | 111; 111 |
+
+- **Each of the two headers costs a unit about a second.** On Zen 2 a unit that includes
+  `kairn/batch.hpp` or `kairn/ball_vector.hpp` compiles in 1.21 to 1.27 s with GCC 13 and 1.57 to
+  1.66 s with Clang 18, against 0.44 to 0.45 and 0.70 s for `kairn/kairn.hpp`; beside
+  `kairn/kairn.hpp` they cost the same (1.23 to 1.27, 1.61 to 1.66): what they add is `soa.hpp` and
+  `packed.hpp`, whose packed form includes the generated `gen/avx2.hpp` (1.3 MB; inferred from the
+  includes, that header alone not timed here). `kairn/accumulator.hpp` alone costs what
+  `kairn/kairn.hpp` costs, which includes it.
+- **A function with many calls compiles quickly.** 1 000 calls of the functions on arrays in one
+  function compile in 2.8 to 2.9 s with GCC 13 and 8.9 to 12.2 s with Clang 18 (1.6 to 2.5 s for
+  100), the operations of ball vectors in 2.4 to 3.1 and 4.4 s (1.7 to 2.1 for 100), in 0.2 to 0.3 GB.
+  The functions are ordinary inline functions, and GCC 13 calls them (an object of 88 KB for 1 000
+  calls, about what the unit without Kairn makes) where Clang 18 inlines them (461 to 652 KB).
+  Nothing here approaches the comparisons of enclosures of
+  [question 12](#12-compile-time-of-the-enclosure-interface) (8 to 62 s for 1 000 calls). The
+  unit of 1 000 calls without Kairn took 3.5 s with GCC 13, longer than with it; not investigated.
+
 ### What the machine code shows (third part)
 
 The loops of the new timed functions were summarized by `bench/asm_summary.py` as in the earlier
@@ -6310,3 +6376,58 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | same, 2 limbs | 1 | 1 | 1 | 1 |
 | spread, 1 limb | 1 | 1 | 1 | 1 |
 | spread, 2 limbs | 1 | 1 | 1 | 1 |
+
+#### Question 19: compile time
+
+| Compile time of the headers, s (minimum wall time; -O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| an empty unit | 0.01; 0.01 | 0.04; 0.04 |
+| `kairn/kairn.hpp` | 0.45; 0.45 | 0.70; 0.70 |
+| `kairn/kairn.hpp`, as packed code | 0.44; 0.44 | 0.70; 0.70 |
+| `kairn/accumulator.hpp` | 0.44; 0.44 | 0.70; 0.70 |
+| `kairn/batch.hpp`, as packed code | 1.21; 1.21 | 1.57; 1.57 |
+| `kairn/ball_vector.hpp`, as packed code | 1.26; 1.26 | 1.66; 1.66 |
+| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 1.24; 1.23 | 1.61; 1.61 |
+| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 1.27; 1.26 | 1.66; 1.66 |
+
+| arrays: compile time, s of processor time (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| 100, inline | 1.60; 1.66 | 2.31; 2.52 |
+| 100, calls | 0.22; 0.22 | 0.23; 0.23 |
+| 1000, inline | 2.77; 2.85 | 8.85; 12.2 |
+| 1000, calls | 3.49; 3.48 | 1.56; 1.58 |
+
+| arrays: peak memory, MB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| 100, inline | 245; 247 | 159; 159 |
+| 100, calls | 35; 35 | 103; 103 |
+| 1000, inline | 304; 305 | 237; 279 |
+| 1000, calls | 100; 101 | 129; 129 |
+
+| arrays: object, KB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| 100, inline | 28; 28 | 59; 76 |
+| 100, calls | 11; 11 | 13; 13 |
+| 1000, inline | 88; 89 | 461; 652 |
+| 1000, calls | 97; 97 | 111; 111 |
+
+| ballvectors: compile time, s of processor time (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| 100, inline | 1.72; 1.91 | 2.12; 2.12 |
+| 100, calls | 0.05; 0.05 | 0.06; 0.06 |
+| 1000, inline | 2.40; 3.12 | 4.37; 4.36 |
+| 1000, calls | 0.31; 0.31 | 0.21; 0.20 |
+
+| ballvectors: peak memory, MB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| 100, inline | 254; 264 | 164; 164 |
+| 100, calls | 28; 29 | 97; 97 |
+| 1000, inline | 287; 324 | 202; 202 |
+| 1000, calls | 50; 51 | 106; 106 |
+
+| ballvectors: object, KB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| 100, inline | 36; 43 | 47; 48 |
+| 100, calls | 7; 7 | 7; 7 |
+| 1000, inline | 112; 113 | 268; 276 |
+| 1000, calls | 51; 51 | 52; 52 |
