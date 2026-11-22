@@ -234,8 +234,10 @@ With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](.
   `kairn: a ball vector: is not canonical ...` if not; the negation, which does not round, checks the
   environment without the rounding mode, and its operand under rounding to nearest only for two
   limbs (the test of a canonical pair rounds);
-- the constructors check the environment (without the rounding mode for one limb, whose only
-  rounded operations are the guards and the loop's $m - m$, the same values under every mode), report
+- the constructors check the environment, the rounding mode included (for one limb the only
+  rounded operations are the guards and the loop's $m - m$, whose values do not depend on the mode,
+  but under rounding downward $m - m$ and so the radius are $-0$, and with one compiler, clang-cl,
+  the constructor then returned the whole space: the result is not independent of the mode), report
   a negative radius as almost surely a mistake (`kairn: a ball vector: has a negative radius`), and
   for two limbs a center that is not canonical; a NaN or an infinite radius, which make the whole
   space, are accepted;

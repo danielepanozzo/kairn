@@ -275,12 +275,14 @@ KAIRN_FORCEINLINE bool overlap(const T* a, std::size_t n, const T* b, std::size_
 // the same code in every translation unit (the lane order computes the same bits): the centers c
 // and the radius r given, written into the arrays z (which may be those of c, in place) and *rr.
 // Checked in every build, as a batch entry (check_batch_environment, environment.hpp): the
-// environment, the rounding mode included, for one limb too: its only rounded operations are its
-// guards (c + 0 and r + 0) and m - m, whose values do not depend on the mode, but whose zeros do
-// (-0 rounding downward), and a compiler that assumes rounding to nearest may decide the loop's test
-// of the radius's sign on that zero otherwise (clang-cl, rounding downward, made the whole space of
-// finite centers and a zero radius); then with KAIRN_CHECKS a negative radius, reported as almost
-// surely a mistake (the constructor makes it the whole space), and for two limbs each center
+// environment, the rounding mode included, for one limb as for two. The constructor of one limb
+// rounds nothing but its guards (c + 0 and r + 0) and m - m, whose values are the same under every
+// rounding mode; but m - m is -0 when rounding downward, which makes the radius -0, and a compiler
+// that assumes rounding to nearest may then decide the kernel's test of the radius's sign
+// otherwise: with clang-cl (2026-11-21) the constructor returned the whole space for finite centers
+// and a zero radius under rounding downward. So its result is not independent of the rounding mode
+// in practice, and the mode is checked. Then with KAIRN_CHECKS a negative radius, reported as
+// almost surely a mistake (the constructor makes it the whole space), and for two limbs each center
 // canonical, whose test rounds.
 template <class T, int K>
 KAIRN_FORCEINLINE void bv_make(const T* const* c, std::size_t n, T r, T* const* z, T* rr) noexcept {
