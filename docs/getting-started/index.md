@@ -475,7 +475,7 @@ C++20, and there is nothing to compile. Its headers today:
 
 | Header | Content |
 |---|---|
-| `kairn/kairn.hpp` | All of the following but `kairn/packed.hpp` and `kairn/soa.hpp`. |
+| `kairn/kairn.hpp` | All of the following but `kairn/packed.hpp`, `kairn/soa.hpp`, `kairn/batch.hpp` and `kairn/ball_vector.hpp`, which include the packed kernels of the target and would add their cost to every program ([Compile time](#compile-time-and-the-operations-of-ball)); the accumulator (`kairn/accumulator.hpp`) is included. This is the one list of what it includes. |
 | `kairn/expansion.hpp` | `kairn::Expansion<T, 1>` and `kairn::Expansion<T, 2>`, `T` = `float` or `double`, and their operations. |
 | `kairn/ball.hpp` | `kairn::Ball<T, 1>` and `kairn::Ball<T, 2>`; it includes `interval.hpp`. |
 | `kairn/interval.hpp` | `kairn::Interval<T, 1>` and `kairn::Interval<T, 2>`, the conversions between intervals and balls, and the relations of IEEE 1788 (`kairn::ieee1788`). |
@@ -484,6 +484,10 @@ C++20, and there is nothing to compile. Its headers today:
 | `kairn/rational.hpp` | `kairn::rational`, `kairn::integer` and `kairn::Constant` ([above](#constants-from-fractions)). |
 | `kairn/packed.hpp` | `kairn::Packed<T, k>` and `kairn::PackedMask<T>`, numbers in SIMD registers ([Vector loops](#vector-loops)); not included by `kairn/kairn.hpp`. |
 | `kairn/soa.hpp` | `kairn::SoA<T, k>` and its views, numbers stored as one array per limb ([Vector loops](#vector-loops)); not included by `kairn/kairn.hpp`. |
+| `kairn/batch.hpp` | The functions on arrays: `sum`, `sum_fast`, `dot`, `add`, `sub`, `scale`, `mul_pow2`, `axpy`, `conv`, `norm_upper` ([Functions on arrays](../reference/batch.md)); not included by `kairn/kairn.hpp`. |
+| `kairn/ball_vector.hpp` | `kairn::BallVector<T, k, N>` and `kairn::BallVectorView<T, k>`, N centers and one radius ([Ball vectors](#ball-vectors)); not included by `kairn/kairn.hpp`. |
+| `kairn/accumulator.hpp` | `kairn::Accumulator<T, k>`, a sum or a dot product built term by term, with its error bound ([The accumulator](../reference/accumulator.md)); included by `kairn/kairn.hpp`. |
+| `kairn/reduction.hpp`, `kairn/order.hpp` | `kairn::Reduction<X>`, a number and whether it is finite, and the tag `kairn::sequential`, which the headers above include. |
 | `kairn/traits.hpp` | `kairn::traits<X>`: limb type, number of limbs, precision, and the error constants of the proved operations. |
 | `kairn/environment.hpp` | `kairn::self_test()` and `kairn::environment_ok()`. |
 | `kairn/config.hpp` | The checks of the compiler's flags, the marker `kairn::unverified`, and the macros `KAIRN_CHECKS`, `KAIRN_ENVIRONMENT_FAILURE`, `KAIRN_K1_CONTRACT`, `KAIRN_ENCLOSURE_CODE`. |

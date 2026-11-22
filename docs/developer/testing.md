@@ -85,6 +85,36 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.boundary.arrays.FORM.S`, `api.boundary.arrays.unguarded.FORM.S` | An array the program fills with products in the same function, passed into a sum, a map or `axpy`, gives the result of the same function on the rounded products, at `-O3` under each contraction setting, in each form; the control, against the copy of the headers without the guard, must differ where the compiler was measured to fuse ([below](#the-functions-on-arrays), `tests/api/boundary_batch.cpp`); and every function that takes an array or a value as a factor, with the other factor a constant the compiler sees (`--factor`). |
 | `api.ball_vector.FORM`, `api.boundary.ball_vector.S`, `api.boundary.ball_vector.unguarded.S` | `BallVector` and its views in each form of `Packed`, and the products of the program passed into them under each contraction setting, with the third kind of form of `api.boundary.S` (`--factor`: the scalings and `axpy` with a product of the program beside a factor the compiler sees, 1, -1 or 2, which must agree with the guards and which the copy without them reports) ([Ball vectors](#ball-vectors)). |
 
+The cases of `api.reject.*`: `tests/api/reject.cpp` is compiled once per test with
+`KAIRN_TEST_CASE` set to the test's case (and once more as its control), and each case has one
+number, in one table (the file's comment says the same at length; `tests/api/CMakeLists.txt`
+registers each name with its number):
+
+| Cases | Compiled against | What must not compile (`api.reject.NAME`) |
+|---|---|---|
+| 0 | the headers | the flags `config.hpp` rejects (`fast_math` and the others) and the values of `KAIRN_ENCLOSURE_CODE` that are not one of its three (`enclosure_code.*`) |
+| 1 to 10, 12 to 14 | a copy in which every kernel is unverified | an operation, an error constant of `traits` and a constructor written without the marker (`unverified.*`) |
+| 11, 15, 16 | the headers, with `KAIRN_CHECKS` | a pair that is not canonical given to `from_limbs` and to an operator, a negative radius given to a `Ball`, in a constant expression (`checks.*`) |
+| 17, 18 | the headers; a copy with a wrong result planted | `kairn::rational` with a zero denominator, and with a result its check refuses (`rational.*`) |
+| 20 to 26 | a copy in which one kernel is unverified | the operation through a conversion to another kernel (`unverified_only.*`) |
+| 27, 28 | the headers | `mul_down` and `mul_up` in a constant expression (`not_constexpr.mul_down`, `.mul_up`) |
+| 29 to 31 | a copy in which every kernel is unverified | a building block (`two_sum`, `next_up`) and `half` of a ball written without the marker (`unverified.*`) |
+| 32 to 38 | the headers | the intervals (`interval.*`, `ball.implicit_narrowing`, `not_constexpr.interval_add`) |
+| 39 to 41 | a copy in which every kernel is unverified | an interval operation, constructor and conversion written without the marker (`unverified.interval_*`) |
+| 42 to 47 | the headers, `soa.hpp` | the containers (`soa.*`) |
+| 48 to 51, 53 | the headers, `packed.hpp` | `Packed` (`packed.*`) |
+| 52 | the headers, `packed.hpp` and `soa.hpp` | a `KAIRN_PACKED_FORM` that is not a form or is another target's (`packed_form.*`) |
+| 54 to 58 | the headers, `batch.hpp` | the functions on arrays (`batch.*`) |
+| 59 | the headers | a bound as a function of the length that is not given, in a constant expression (`traits.length_beyond`) |
+| 60 to 62 | the headers, `accumulator.hpp` | the accumulator (`accumulator.mixed_limb_types`, `not_constexpr.add_product`, `.error_bound`) |
+| 70 to 81 | the headers | the enclosure interface (`enclosure.*`) |
+| 82 to 88 | a copy in which every kernel is unverified | its new kinds written without the marker (`unverified.interval_less_1` and six more) |
+| 89 to 92 | a copy in which one kernel is unverified | the member test of a point of `T` through the set of the point (`unverified_only.interval_contains_1.point` and three more) |
+| 93 to 96 | the headers | `two_prod` in a constant expression where Dekker's product overflows (`two_prod.overflows_in_constant_evaluation.*`) |
+| 97 to 107 | the headers, `ball_vector.hpp` | `BallVector` and its views (`ball_vector.*`) |
+
+The next case is 108. Cases 19 and 63 to 69 are free.
+
 ## The full tier
 
 The tests that `ctest --test-dir build/tests/full` runs, by name, each named as the quick tier's

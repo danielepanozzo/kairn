@@ -8,9 +8,10 @@
 /// with its error bound (accumulator.hpp), which costs nothing measurable to include beyond the
 /// rest. Including it checks the compiler's flags (config.hpp); a program should call
 /// kairn::self_test() once at startup (environment.hpp). Not included, so that this one stays cheap
-/// to include: Packed and the containers (packed.hpp, soa.hpp) and the functions on arrays
-/// (batch.hpp), which include the packed kernels of the target and double the time to compile an
-/// empty program. Larger k, vectors and I/O are not written yet, and will be separate headers.
+/// to include: Packed and the containers (packed.hpp, soa.hpp), the functions on arrays (batch.hpp)
+/// and the ball vectors (ball_vector.hpp), which include the packed kernels of the target and double
+/// the time to compile an empty program (docs/getting-started/index.md, "Use it from CMake", lists
+/// what this header includes). Larger k and I/O are not written yet, and will be separate headers.
 #pragma once
 
 #include "version.hpp"
