@@ -97,6 +97,12 @@ nav:
   - Getting started:
       - getting-started/index.md
       - What holds today: getting-started/guarantees.md
+  - Concepts:
+      - concepts/index.md
+      - Numbers of several limbs: concepts/expansions.md
+      - Precision and magnitude: concepts/precision.md
+      - Intervals, balls and ball vectors: concepts/enclosures.md
+      - 'What "correct" means here': concepts/correctness.md
   - Tutorials:
       - Accurate sums and dot products: tutorials/accurate-sums.md
       - The range of a polynomial: tutorials/intervals.md

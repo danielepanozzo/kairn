@@ -1,0 +1,9 @@
+2^100 * 2^100, double:                 0x1p+200
+2^100 * 2^100, Expansion<float, 2>:    inf + 0
+(1 + 2^-60) * 2^-30,   two limbs:      0x1p-30 + 0x1p-90
+(1 + 2^-60) * 2^-1030, two limbs:      0x1p-1030 + 0
+
+double                  53 bits   x + y: 0x1p-53                 x * y: 0x1p-53, 0x1p-1074
+Expansion<double, 2>   106 bits   x + y: 0x1.8000000000004p-105  x * y: 0x1p-104, 0x1p-1073
+float                   24 bits   x + y: 0x1p-24                 x * y: 0x1p-24, 0x1p-149
+Expansion<float, 2>     48 bits   x + y: 0x1.800008p-47          x * y: 0x1p-46, 0x1p-148

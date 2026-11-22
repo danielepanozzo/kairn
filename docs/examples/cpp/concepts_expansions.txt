@@ -1,0 +1,7 @@
+1 + 2^-60 as a double:    0x1p+0
+1 + 2^-60 as two limbs:   0x1p+0 + 0x1p-60
+(1, 2^-53) normalized:            yes
+(1 + 2^-52, -2^-53) normalized:   no
+2^1023 + 2^1023:                  inf + 0
+(inf, 0) - (inf, 0):              nan + nan
+finite::add(2^1023, 2^1023) is finite: no
