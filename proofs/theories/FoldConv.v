@@ -234,6 +234,16 @@ exact (dot_2_seq_correct emin prec Hp (conv_terms xs ys j)
          (conv_terms_Forall _ _ _ _ xs ys j Hx Hy)).
 Qed.
 
+(* conv_2_entry: the coefficients by dot_2_entry, whose step guards the limbs of both factors
+   (rule R3, the factors of a fused operation): its theorem, on the terms, normalized pairs. *)
+Theorem conv_2_entry_correct : conv_2_entry_spec.
+Proof.
+intros emin prec Hp xs ys Hx Hy. unfold conv_2_entry_conv. apply Forall2_map_r.
+apply Forall_forall. intros j _.
+exact (dot_2_entry_seq_correct emin prec Hp (conv_terms xs ys j)
+         (conv_terms_Forall _ _ _ _ xs ys j Hx Hy)).
+Qed.
+
 (** * One exported bound for every coefficient *)
 
 (* The count of the bound kernel of the dot product: at least min (n_x, n_y) is at least
@@ -289,6 +299,30 @@ Proof.
 intros emin prec Hp Hh xs ys m g t Hx Hy Fm Hm Hn Hb. unfold conv_2_conv.
 apply Forall2_map_r. apply Forall_forall. intros j _.
 exact (dot_2_seq_bound emin prec Hp Hh (conv_terms xs ys j) m g t
+         (conv_terms_Forall _ _ _ _ xs ys j Hx Hy) Fm Hm
+         (conv_terms_count_le _ _ xs ys j m Hn) Hb).
+Qed.
+
+(* conv_2_entry, the loop of kairn::conv of two limbs: the same, from dot_2_entry's bound. *)
+Theorem conv_2_entry_bound :
+  forall emin prec : Z, (4 <= prec)%Z -> eta emin <= / 2 ->
+  forall (xs ys : list (R * R)) (m g t : R),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  Forall (fun y => normalized_2 emin prec (fst y) (snd y)) ys ->
+  fmt emin prec m -> (m = 0 \/ 1 <= m) ->
+  INR (Nat.min (length xs) (length ys)) <= m ->
+  bound_dot_2 emin prec tie_even m = (g, t, true) ->
+  Forall2 (fun j s =>
+    let xys := conv_terms xs ys j in
+    normalized_2 emin prec (fst s) (snd s) /\
+    Rabs ((fst s + snd s) -
+          sumR (map (fun xy => (fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy))) xys)) <=
+      g * sumabs (map (fun xy => (fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy))) xys) + t)
+    (seq 0 (conv_length (length xs) (length ys))) (conv_2_entry_conv emin prec tie_even xs ys).
+Proof.
+intros emin prec Hp Hh xs ys m g t Hx Hy Fm Hm Hn Hb. unfold conv_2_entry_conv.
+apply Forall2_map_r. apply Forall_forall. intros j _.
+exact (dot_2_entry_seq_bound emin prec Hp Hh (conv_terms xs ys j) m g t
          (conv_terms_Forall _ _ _ _ xs ys j Hx Hy) Fm Hm
          (conv_terms_count_le _ _ xs ys j m Hn) Hb).
 Qed.

@@ -1316,6 +1316,17 @@ Definition bv_mul_pow2_step_2_spec : Prop :=
    (z0 + z1) = ((x0 + x1) * c)) /\
   (e = true <-> ((x0 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x0 * c)) /\ ((x1 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x1 * c))).
 
+(* dot_entry_step_2: dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. Status: proved. *)
+Definition dot_entry_step_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall s0 s1 x0 x1 y0 y1 : R,
+  normalized_2 emin prec s0 s1 ->
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(t0, t1) := dot_entry_step_2 emin prec tie_even s0 s1 x0 x1 y0 y1 in
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin.
+
 (* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: proved. *)
 Definition mul_ball_2_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->

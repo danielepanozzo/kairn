@@ -431,6 +431,20 @@ Definition conv_2_spec : Prop :=
       (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * ((3 / 2) * eta emin)))
     (seq 0 (conv_length (length xs) (length ys))) (conv_2_conv emin prec tie_even xs ys).
 
+(* conv_2_entry, each coefficient it writes: dot_2_entry on the terms of each coefficient. Status: proved. *)
+Definition conv_2_entry_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall xs ys : list (R * R),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  Forall (fun y => normalized_2 emin prec (fst y) (snd y)) ys ->
+  Forall2 (fun j s =>
+    let xys := conv_terms xs ys j in
+    normalized_2 emin prec (fst s) (snd s) /\
+    Rabs ((fst s + snd s) - sumR (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys)) <=
+      ((1 + (4 * (u prec ^ 2))) * (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) - 1) * sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys) +
+      (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * ((3 / 2) * eta emin)))
+    (seq 0 (conv_length (length xs) (length ys))) (conv_2_entry_conv emin prec tie_even xs ys).
+
 (* dot_1, the sequential order: Higham's bound for summation over any tree, weighted: the fused dot product. Status: proved. *)
 Definition dot_1_seq_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -492,6 +506,28 @@ Definition dot_2_lanes_spec : Prop :=
   forall (W : nat) (xys : list ((R * R) * (R * R))),
   Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\ normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
   let s := dot_2_lanes emin prec tie_even W xys in
+  normalized_2 emin prec (fst s) (snd s) /\
+  Rabs ((fst s + snd s) - sumR (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys)) <=
+    ((1 + (4 * (u prec ^ 2))) * (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) - 1) * sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys) +
+    (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * ((3 / 2) * eta emin)).
+
+(* dot_2_entry, the sequential order: Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22), on the guarded elements. Status: proved. *)
+Definition dot_2_entry_seq_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall xys : list ((R * R) * (R * R)),
+  Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\ normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+  let s := dot_2_entry_seq emin prec tie_even xys in
+  normalized_2 emin prec (fst s) (snd s) /\
+  Rabs ((fst s + snd s) - sumR (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys)) <=
+    ((1 + (4 * (u prec ^ 2))) * (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) - 1) * sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys) +
+    (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * ((3 / 2) * eta emin)).
+
+(* dot_2_entry, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22), on the guarded elements. Status: proved. *)
+Definition dot_2_entry_lanes_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall (W : nat) (xys : list ((R * R) * (R * R))),
+  Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\ normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+  let s := dot_2_entry_lanes emin prec tie_even W xys in
   normalized_2 emin prec (fst s) (snd s) /\
   Rabs ((fst s + snd s) - sumR (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys)) <=
     ((1 + (4 * (u prec ^ 2))) * (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) - 1) * sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys) +

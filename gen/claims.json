@@ -12090,6 +12090,75 @@
       }
     },
     {
+      "name": "dot_entry_step_2",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 2
+        }
+      ],
+      "value": "s+x*y",
+      "requires": [
+        "normalized(s)",
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "t"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "T",
+          "c": "3*(1+4*u*u)/(1-4*u)+4",
+          "k": 2,
+          "t": "2",
+          "when": null
+        }
+      ],
+      "min_precision": 4,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/StepKernels.v",
+        "name": "dot_entry_step_2_correct"
+      },
+      "source": {
+        "cite": "dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 33,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "141976867225561656938833740038147/1645504557321205311404150517105891403140319507492070035382337536",
+            "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "164193714044929/6602345302066533842913591296",
+            "abs": "1/356811923176489970264571492362373784095686656"
+          }
+        ]
+      }
+    },
+    {
       "name": "fold_finish_2",
       "domain": "extended",
       "ieee_only": true,
@@ -17613,12 +17682,12 @@
         {
           "name": "x",
           "limbs": 2,
-          "role": "supplied"
+          "role": "stored"
         },
         {
           "name": "y",
           "limbs": 2,
-          "role": "supplied"
+          "role": "stored"
         }
       ],
       "writes": [
@@ -17664,6 +17733,68 @@
       },
       "source": {
         "cite": "dot_2 on the terms of each coefficient",
+        "license": "bound: published; proof: MIT"
+      }
+    },
+    {
+      "name": "conv_2_entry",
+      "conv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "coefficients",
+          "of": "z",
+          "fold": "dot_2_entry"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential"
+      ],
+      "coefficients": "dot_2_entry",
+      "check": "fold_finish_2",
+      "min_precision": 4,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldConv.v",
+        "name": "conv_2_entry_correct"
+      },
+      "source": {
+        "cite": "dot_2_entry on the terms of each coefficient",
         "license": "bound: published; proof: MIT"
       }
     },
@@ -17878,12 +18009,12 @@
         {
           "name": "x",
           "limbs": 2,
-          "role": "supplied"
+          "role": "stored"
         },
         {
           "name": "y",
           "limbs": 2,
-          "role": "supplied"
+          "role": "stored"
         }
       ],
       "outputs": [
@@ -17961,6 +18092,115 @@
       },
       "source": {
         "cite": "Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22)",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "3/81129638414606645666991986180096",
+            "term": "1/20282409603651670423947251286016",
+            "tau": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "1/93824969867264",
+            "term": "1/70368744177664",
+            "tau": "3/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "dot_2_entry",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "r"
+        },
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "3*u^2/(1-4*u)",
+          "term": "4*u^2",
+          "tau": "3/2*eta",
+          "heights": {
+            "sequential": {
+              "rel": "n-1",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n-1",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "dot_entry_step_2",
+      "combine": "add_2_2",
+      "finish": "fold_finish_2",
+      "min_precision": 4,
+      "status": "proved",
+      "theorems": {
+        "sequential": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "dot_2_entry_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldSums.v",
+          "name": "dot_2_entry_lanes_correct"
+        }
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22), on the guarded elements",
         "license": "bound: published; proof: MIT"
       },
       "instances": {

@@ -130,7 +130,7 @@ concept sum_loop_proved = (K == 1 && loops::sum_1_entry<T>::proved) || (K == 2 &
 template <class T, int K>
 concept sum_fast_loop_proved = (K == 1 && sum_loop_proved<T, 1>) || (K == 2 && loops::sum_fast_2_entry<T>::proved);
 template <class T, int K>
-concept dot_loop_proved = (K == 1 && loops::dot_1_entry<T>::proved) || (K == 2 && loops::dot_2<T>::proved);
+concept dot_loop_proved = (K == 1 && loops::dot_1_entry<T>::proved) || (K == 2 && loops::dot_2_entry<T>::proved);
 template <class T, int K>
 concept add_loop_proved = (K == 1 && loops::add_1_entry<T>::proved) || (K == 2 && loops::add_2_entry<T>::proved);
 template <class T, int K>
@@ -147,7 +147,8 @@ concept axpy_limb_loop_proved =
 template <class T>
 concept axpy_loop_proved = loops::axpy_2_entry<T>::proved;
 template <class T, int K>
-concept conv_loop_proved = (K == 1 && loops::conv_1_entry<T>::proved) || (K == 2 && loops::conv_2<T>::proved);
+concept conv_loop_proved =
+    (K == 1 && loops::conv_1_entry<T>::proved) || (K == 2 && loops::conv_2_entry<T>::proved);
 template <class T, int K>
 concept norm_loop_proved = (K == 1 && loops::norm_upper_1<T>::proved) || (K == 2 && loops::norm_upper_2<T>::proved);
 
@@ -410,8 +411,9 @@ Reduction<Expansion<std::remove_const_t<T>, K>> sum_fast(Sequential, SoAView<T, 
 /// The dot product sum_i x_i y_i of two arrays of the same length, in the lane order of this
 /// translation unit: loop dot_1_entry for one limb (the step dot_entry_step_1, one fused operation
 /// s = fma(x, y, s) on the elements guarded, so that no product is rounded on its own and no
-/// product of the program is fused into it through a factor 1, rule R3), dot_2 for two (the step
-/// dot_step_2: mul_2_2, then add_2_2, which only multiplies the elements). Rounds; not constexpr.
+/// product of the program is fused into it through a factor 1, rule R3), dot_2_entry for two (the
+/// step dot_entry_step_2: mul_2_2, then add_2_2, on the limbs of the elements guarded, factors of
+/// the fused operations of mul_2_2, for the same reason). Rounds; not constexpr.
 /// Returns Reduction<Expansion<T, K>>.
 ///
 /// Statement, proved for every length n, in both orders and for every number of lanes: when
@@ -439,16 +441,16 @@ Reduction<Expansion<std::remove_const_t<T>, K>> dot(SoAView<T, K> x, SoAView<U, 
 #endif
     } else {
 #if KAIRN_DETAIL_BATCH_PACKED
-        gen::dot_2_packed(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0], r.value.limb[1],
-                          r.finite);
+        gen::dot_2_entry_packed(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0],
+                                r.value.limb[1], r.finite);
 #else
-        gen::dot_2_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0], r.value.limb[1],
-                       r.finite);
+        gen::dot_2_entry_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0],
+                             r.value.limb[1], r.finite);
 #endif
     }
     return r;
 }
-/// The dot product in the sequential order: the same loops, dot_1_entry and dot_2, element after
+/// The dot product in the sequential order: the same loops, dot_1_entry and dot_2_entry, element after
 /// element; the same statement, and the same bits on every platform.
 template <class T, class U, int K>
     requires detail::same_limbs<T, U> && detail::dot_loop_proved<std::remove_const_t<T>, K>
@@ -458,8 +460,8 @@ Reduction<Expansion<std::remove_const_t<T>, K>> dot(Sequential, SoAView<T, K> x,
     if constexpr (K == 1) {
         gen::dot_1_entry_seq(x.limb(0), y.limb(0), x.size(), r.value.limb[0], r.finite);
     } else {
-        gen::dot_2_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0], r.value.limb[1],
-                       r.finite);
+        gen::dot_2_entry_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0],
+                             r.value.limb[1], r.finite);
     }
     return r;
 }
@@ -667,10 +669,10 @@ bool axpy(const Expansion<V, 2>& a, SoAView<T, 2> x, SoAView<U, 2> y, SoAView<V,
 
 /// The coefficients of the product of the polynomials x (x.size() coefficients, the constant one
 /// first) and y: z_j = sum_i x_i y_(j-i), for j from 0 to x.size() + y.size() - 2, none when x or y
-/// is empty. Loop conv_1_entry for one limb, conv_2 for two: coefficient j is the dot product
-/// dot_1_entry or dot_2, in its sequential order, of its terms (x_i, y_(j-i)) in increasing i. One limb:
-/// both factors of each term guarded (rule R3, the factors of a fused operation). Sequential only (no
-/// packed loop). Rounds; not constexpr.
+/// is empty. Loop conv_1_entry for one limb, conv_2_entry for two: coefficient j is the dot product
+/// dot_1_entry or dot_2_entry, in its sequential order, of its terms (x_i, y_(j-i)) in increasing i,
+/// every limb of both factors of each term guarded (rule R3, the factors of a fused operation).
+/// Sequential only (no packed loop). Rounds; not constexpr.
 ///
 /// Statement, proved: every coefficient that is finite satisfies the statement of dot (above) for
 /// its own m_j terms, m_j <= min(x.size(), y.size()), so traits<Expansion<T, K>>::dot(min(x.size(),
@@ -689,7 +691,8 @@ bool conv(SoAView<T, K> x, SoAView<U, K> y, SoAView<V, K> z) noexcept {
     if constexpr (K == 1) {
         gen::conv_1_entry_seq(x.limb(0), x.size(), y.limb(0), y.size(), z.limb(0), finite);
     } else {
-        gen::conv_2_seq(x.limb(0), x.limb(1), x.size(), y.limb(0), y.limb(1), y.size(), z.limb(0), z.limb(1), finite);
+        gen::conv_2_entry_seq(x.limb(0), x.limb(1), x.size(), y.limb(0), y.limb(1), y.size(), z.limb(0), z.limb(1),
+                              finite);
     }
     return finite;
 }

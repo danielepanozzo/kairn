@@ -598,6 +598,12 @@ Print Assumptions axpy_step_2_1_ieee_correct.
 Definition bv_mul_pow2_step_2_ieee_audit : bv_mul_pow2_step_2_ieee_spec := bv_mul_pow2_step_2_ieee_correct.
 Print Assumptions bv_mul_pow2_step_2_ieee_correct.
 
+Definition dot_entry_step_2_ieee_bridge_audit : dot_entry_step_2_ieee_bridge_spec := dot_entry_step_2_ieee_bridge.
+Print Assumptions dot_entry_step_2_ieee_bridge.
+
+Definition dot_entry_step_2_ieee_audit : dot_entry_step_2_ieee_spec := dot_entry_step_2_ieee_correct.
+Print Assumptions dot_entry_step_2_ieee_correct.
+
 Definition mul_2_1_entry_ieee_bridge_audit : mul_2_1_entry_ieee_bridge_spec := mul_2_1_entry_ieee_bridge.
 Print Assumptions mul_2_1_entry_ieee_bridge.
 
@@ -715,6 +721,9 @@ Print Assumptions bv_center_2_ieee_lead.
 Definition bv_mul_pow2_step_2_ieee_lead_audit : bv_mul_pow2_step_2_ieee_lead_spec := bv_mul_pow2_step_2_ieee_lead.
 Print Assumptions bv_mul_pow2_step_2_ieee_lead.
 
+Definition dot_entry_step_2_ieee_lead_audit : dot_entry_step_2_ieee_lead_spec := dot_entry_step_2_ieee_lead.
+Print Assumptions dot_entry_step_2_ieee_lead.
+
 Definition mul_pow2_step_2_ieee_lead_audit : mul_pow2_step_2_ieee_lead_spec := mul_pow2_step_2_ieee_lead.
 Print Assumptions mul_pow2_step_2_ieee_lead.
 
@@ -753,6 +762,12 @@ Print Assumptions dot_2_seq_ieee_correct.
 
 Definition dot_2_lanes_ieee_audit : dot_2_lanes_ieee_spec := dot_2_lanes_ieee_correct.
 Print Assumptions dot_2_lanes_ieee_correct.
+
+Definition dot_2_entry_seq_ieee_audit : dot_2_entry_seq_ieee_spec := dot_2_entry_seq_ieee_correct.
+Print Assumptions dot_2_entry_seq_ieee_correct.
+
+Definition dot_2_entry_lanes_ieee_audit : dot_2_entry_lanes_ieee_spec := dot_2_entry_lanes_ieee_correct.
+Print Assumptions dot_2_entry_lanes_ieee_correct.
 
 Definition norm_upper_1_seq_ieee_audit : norm_upper_1_seq_ieee_spec := norm_upper_1_seq_ieee_correct.
 Print Assumptions norm_upper_1_seq_ieee_correct.
@@ -936,6 +951,9 @@ Print Assumptions conv_1_entry_ieee_correct.
 
 Definition conv_2_ieee_audit : conv_2_ieee_spec := conv_2_ieee_correct.
 Print Assumptions conv_2_ieee_correct.
+
+Definition conv_2_entry_ieee_audit : conv_2_entry_ieee_spec := conv_2_entry_ieee_correct.
+Print Assumptions conv_2_entry_ieee_correct.
 
 Definition bv_add_1_seq_ieee_audit : bv_add_1_seq_ieee_spec := bv_add_1_seq_ieee_correct.
 Print Assumptions bv_add_1_seq_ieee_correct.

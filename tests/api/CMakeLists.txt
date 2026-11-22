@@ -97,12 +97,13 @@ set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord ad
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2
   ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2 add_entry_step_1
   add_entry_step_2 sub_entry_step_1 sub_entry_step_2 scale_entry_step_2 mul_pow2_step_1 mul_pow2_step_2
-  axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1)
+  axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1 dot_entry_step_2)
 # The folds that no public function calls (runner_arrays.hpp lists the same, with why): the loops
 # on stored arrays, whose callers here call the loops on supplied arrays instead (kairn/batch.hpp),
-# and dot_1, conv_1 and scale_2, whose callers call dot_1_entry, conv_1_entry and scale_2_entry, the
-# same loops with their factors guarded.
-set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 axpy_2 axpy_2_1 dot_1 conv_1 scale_2)
+# and dot_1, conv_1, scale_2, dot_2 and conv_2, whose callers call dot_1_entry, conv_1_entry,
+# scale_2_entry, dot_2_entry and conv_2_entry, the same loops with their factors guarded.
+set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 axpy_2 axpy_2_1 dot_1 conv_1 scale_2
+  dot_2 conv_2)
 # The loops over arrays that public operations call (kairn/ball_vector.hpp; runner_ball_vector.hpp
 # has their forms), each judged as a kernel is, api.oracle.LOOP.FORMAT, on KAIRN_API_LOOP_QUICK_CASES
 # requests (KAIRN_API_LOOP_CASES in the full tier); those of them that have forms in the fast order,

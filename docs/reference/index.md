@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 233 kernels are proved.
+All 234 kernels are proved.
 
 35 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -305,7 +305,8 @@ The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batc
 |---|---|---|---|
 | none of its own (in the loop `bv_conv_1`) | - | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
 | `dot(x, y)`, `dot(sequential, x, y)`, `conv(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_entry_step_1`](dot_entry_step_1.md) |
-| `dot(x, y)`, `dot(sequential, x, y)`, `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
+| none of its own (in the loop `bv_conv_2`) | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
+| `dot(x, y)`, `dot(sequential, x, y)`, `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_entry_step_2`](dot_entry_step_2.md) |
 | `sum(x)`, `sum(sequential, x)`, `sum_fast(x)` | `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
 | `sum(x)`, `sum(sequential, x)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
 | `sum_fast(x)`, `sum_fast(sequential, x)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |

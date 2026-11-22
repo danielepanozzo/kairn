@@ -37,6 +37,8 @@ PROGRAMS += ['dot_entry_step_1']
 PROGRAMS += ['two_prod_entry', 'mul_2_1_entry']
 # And the step of scale_2, scale_step_2 on its operands guarded (the same rule).
 PROGRAMS += ['scale_entry_step_2']
+# And the step of dot_2_entry, dot_step_2 on its elements guarded (the same rule).
+PROGRAMS += ['dot_entry_step_2']
 # And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
 # Program.v (acc_merge_k: additions; the others guard or take an absolute value).
 PROGRAMS += ['acc_merge_1', 'acc_merge_2']
@@ -513,8 +515,10 @@ class Statements(unittest.TestCase):
         # K_two_executions_spec, whose theorems no description names (30): 351. Then those of the 33
         # kernels without a product that IeeeWith.v has since (33): 384. (None of the entry forms of
         # rule R3 on the factors is among them: two_prod_entry is constexpr through its variant, as
-        # two_prod is, and the others are not constexpr.)
-        self.assertEqual(text.count('Print Assumptions'), 384)
+        # two_prod is, and the others are not constexpr.) Then six with the dot product of two limbs on
+        # its elements guarded: dot_entry_step_2 (bridge, statement, leading limb) and dot_2_entry in
+        # both orders, and conv_2_entry: 390.
+        self.assertEqual(text.count('Print Assumptions'), 390)
         self.assertEqual(text.count('Print Assumptions IeeeTwoExecutions.'), len(ieee.with_kernels(self.ks)))
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
@@ -674,8 +678,10 @@ class CheckedFiles(unittest.TestCase):
     # changed.
     # Then ball_scale_2_full_entry with the fix-up of ball_scale_2_full written out (behind the printer's
     # branch): its definition and the source line of its statement changed, and nothing else.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '44aaa46a4cf110784541124de175f7901d1f25e04c19a79ec87e1a9015a48a6f',
-               'proofs/gen/IeeeStatements.v': '499d30cbb5e908b763f476bbac0c671451f2294f1b4fd0d08d4ed18bc7dcd905'}
+    # Then dot_entry_step_2 (the same rule): its model, program and statements added, nothing else
+    # changed.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '9c9416bd02b1c79d8a68684e2167fad98d6661605b49290f1a749c84f8bead1d',
+               'proofs/gen/IeeeStatements.v': '360b708d524c9a2848c0364debf1596d25f1ee108c9808df80697043c3f165cc'}
 
 
     def test_the_checked_files(self):

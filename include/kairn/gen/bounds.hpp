@@ -2110,6 +2110,21 @@ template <> struct bv_mul_pow2_step_2<float> {
     static constexpr float tiny_computed = 0x1p-149f;
 };
 
+// dot_entry_step_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
+template <class T> struct dot_entry_step_2;
+template <> struct dot_entry_step_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr double unit = 0x1.c000000000002p-104;
+    static constexpr double tiny = 0x1p-1073;
+};
+template <> struct dot_entry_step_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr float unit = 0x1.c00004p-46f;
+    static constexpr float tiny = 0x1p-148f;
+};
+
 // fold_finish_2: proved. Claims: finite_or_nan.
 template <class T> struct fold_finish_2;
 template <> struct fold_finish_2<double> {
@@ -2781,6 +2796,11 @@ template <class T> struct conv_2;
 template <> struct conv_2<double> { static constexpr bool proved = true; };
 template <> struct conv_2<float> { static constexpr bool proved = true; };
 
+// conv_2_entry: proved. Runs add_2_2, dot_entry_step_2, fold_finish_2, the loop dot_2_entry.
+template <class T> struct conv_2_entry;
+template <> struct conv_2_entry<double> { static constexpr bool proved = true; };
+template <> struct conv_2_entry<float> { static constexpr bool proved = true; };
+
 // dot_1: proved. Runs add_1_1, dot_step_1, fold_finish_1.
 template <class T> struct dot_1;
 template <> struct dot_1<double> { static constexpr bool proved = true; };
@@ -2795,6 +2815,11 @@ template <> struct dot_1_entry<float> { static constexpr bool proved = true; };
 template <class T> struct dot_2;
 template <> struct dot_2<double> { static constexpr bool proved = true; };
 template <> struct dot_2<float> { static constexpr bool proved = true; };
+
+// dot_2_entry: proved. Runs add_2_2, dot_entry_step_2, fold_finish_2.
+template <class T> struct dot_2_entry;
+template <> struct dot_2_entry<double> { static constexpr bool proved = true; };
+template <> struct dot_2_entry<float> { static constexpr bool proved = true; };
 
 // mul_pow2_map_1: proved. Runs fold_finish_1, mul_pow2_step_1.
 template <class T> struct mul_pow2_map_1;

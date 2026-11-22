@@ -2892,6 +2892,42 @@ Definition bv_mul_pow2_step_2_ieee_spec : Prop :=
    (val z0 + val z1) = ((val x0 + val x1) * val c)) /\
   (e = true <-> ((val x0 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x0 * val c)) /\ ((val x1 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x1 * val c))).
 
+(* dot_entry_step_2: dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. IEEE-model status: proved. *)
+Definition dot_entry_step_2_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall s0 s1 x0 x1 y0 y1 : binary_float prec emax,
+  finite s0 -> finite s1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(t0, t1) := IeeeModel.dot_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1 in
+  finite t0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.dot_entry_step_2_prog [s0; s1; x0; x1; y0; y1]) /\
+  finite t1 /\
+  (val t0, val t1)
+  = dot_entry_step_2 (ieee_emin prec emax) prec tie_even (val s0) (val s1) (val x0) (val x1) (val y0) (val y1).
+
+(* dot_entry_step_2: dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. IEEE-model status: proved. *)
+Definition dot_entry_step_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall s0 s1 x0 x1 y0 y1 : binary_float prec emax,
+  finite s0 -> finite s1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(t0, t1) := IeeeModel.dot_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1 in
+  finite t0 ->
+  finite t1 /\
+  normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
+  Rabs ((val t0 + val t1) - ((val s0 + val s1) + ((val x0 + val x1) * (val y0 + val y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (val s0 + val s1) + Rabs ((val x0 + val x1) * (val y0 + val y1))) + 2 * eta (ieee_emin prec emax).
+
 (* fold_finish_2: the finish of a fold: the state or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
 Definition fold_finish_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)

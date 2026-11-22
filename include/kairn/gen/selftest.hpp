@@ -5693,6 +5693,34 @@ inline const char* bv_mul_pow2_step_2_float() noexcept {
     return !same(o0, 0x1.a620a8p+0f) || !same(o1, -0x1.b027fep-25f) || !same(o2, true) ? "bv_mul_pow2_step_2 (float)" : nullptr;
 }
 
+// dot_entry_step_2 (double)
+inline const char* dot_entry_step_2_double() noexcept {
+    volatile double i0 = -0x1.290568a787287p+2;
+    volatile double i1 = 0x1.a532d80156bep-52;
+    volatile double i2 = 0x1.0f833ec08fe57p-1;
+    volatile double i3 = -0x1.fd6fbc7d48941p-57;
+    volatile double i4 = 0x1.d1a5d235e7ba9p+2;
+    volatile double i5 = -0x1.69c217ba6c1fcp-54;
+    double o0;
+    double o1;
+    dot_entry_step_2(i0, i1, i2, i3, i4, i5, o0, o1);
+    return !same(o0, -0x1.90b6372405a46p-1) || !same(o1, -0x1.065bb1b22c9dp-55) ? "dot_entry_step_2 (double)" : nullptr;
+}
+
+// dot_entry_step_2 (float)
+inline const char* dot_entry_step_2_float() noexcept {
+    volatile float i0 = 0x1.bec4bep-3f;
+    volatile float i1 = -0x1.350bbcp-31f;
+    volatile float i2 = -0x1.bf6cf2p+0f;
+    volatile float i3 = -0x1.e3a3fp-25f;
+    volatile float i4 = -0x1.c27a3p+3f;
+    volatile float i5 = -0x1.62e032p-22f;
+    float o0;
+    float o1;
+    dot_entry_step_2(i0, i1, i2, i3, i4, i5, o0, o1);
+    return !same(o0, 0x1.8d2712p+4f) || !same(o1, 0x1.0b18ep-21f) ? "dot_entry_step_2 (float)" : nullptr;
+}
+
 // fold_finish_2 (double)
 inline const char* fold_finish_2_double() noexcept {
     volatile double i0 = -0x1.8fe8321fc2152p+1;
@@ -8069,6 +8097,8 @@ inline const char* run() noexcept {
         bv_center_2_float,
         bv_mul_pow2_step_2_double,
         bv_mul_pow2_step_2_float,
+        dot_entry_step_2_double,
+        dot_entry_step_2_float,
         fold_finish_2_double,
         fold_finish_2_nonfinite_double,
         fold_finish_2_float,

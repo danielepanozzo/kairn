@@ -1,13 +1,14 @@
 # The dot product of two arrays of 2-limb numbers (milestone2.md, "sum, dot, axpy, convolution"):
 # the step dot_step_2, p = mul_2_2(x, y); s = add_2_2(s, p), from (0, 0), the lanes combined by
-# add_2_2. The arrays may be the program's: the step only multiplies their elements (rule R3). If
-# every element is canonical and the flag is true, the result is normalized and, with eps the unit
+# add_2_2. Its arrays are stored, written through Kairn (the loop of the coefficients of conv_2, and
+# so of the centers of bv_conv_2): kairn::dot of two limbs calls dot_2_entry, whose step guards the
+# limbs of the elements (rule R3, the factors of a fused operation). If every element is canonical and the flag is true, the result is normalized and, with eps the unit
 # of add_2_2 and 4 u^2 and 3/2 eta the constants of the bound of mul_2_2,
 #   |r - sum x_i y_i| <= ((1 + 4u^2)(1 + eps)^(n-1) - 1) sum |x_i y_i| + (1 + eps)^(n-1) n (3/2) eta
 # in both orders, for every width. Proved in the real model for the steps of SummationKernels.v
 # (dot_2_seq, dot_2_lanes).
 fold:          dot_2
-arrays:        supplied x = x0 x1, supplied y = y0 y1
+arrays:        stored x = x0 x1, stored y = y0 y1
 state:         s = s0 s1
 step:          s = dot_step_2(s, x, y)
 combine:       s = add_2_2(s, s)

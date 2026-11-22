@@ -115,6 +115,17 @@ intros emin prec s x y Fx Fy. unfold dot_entry_step_1, dot_step_1. cbv zeta.
 now rewrite (guard_real_any emin prec tie_even x Fx), (guard_real_any emin prec tie_even y Fy).
 Qed.
 
+Lemma dot_entry_step_2_real :
+  forall (emin prec : Z) (s0 s1 x0 x1 y0 y1 : R),
+  fmt emin prec x0 -> fmt emin prec x1 -> fmt emin prec y0 -> fmt emin prec y1 ->
+  dot_entry_step_2 emin prec tie_even s0 s1 x0 x1 y0 y1 = dot_step_2 emin prec tie_even s0 s1 x0 x1 y0 y1.
+Proof.
+intros emin prec s0 s1 x0 x1 y0 y1 F0 F1 G0 G1. unfold dot_entry_step_2. cbv zeta.
+rewrite (guard_real_any emin prec tie_even x0 F0), (guard_real_any emin prec tie_even x1 F1),
+        (guard_real_any emin prec tie_even y0 G0), (guard_real_any emin prec tie_even y1 G1).
+apply pair_eta.
+Qed.
+
 Section IeeeFolds.
 Variable prec emax : Z.
 Context {prec_gt_0_ : Prec_gt_0 prec}.
@@ -189,6 +200,13 @@ Notation dot_2_seq_ieee :=
   (IeeeFoldModel.dot_2_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const).
 Notation dot_2_lanes_ieee :=
   (IeeeFoldModel.dot_2_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const).
+Notation dot_2_entry_step_ieee :=
+  (IeeeFoldModel.dot_2_entry_step prec emax nan_plus nan_minus nan_opp nan_fma).
+Notation dot_2_entry_combine_ieee := (IeeeFoldModel.dot_2_entry_combine prec emax nan_plus nan_minus).
+Notation dot_2_entry_seq_ieee :=
+  (IeeeFoldModel.dot_2_entry_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const).
+Notation dot_2_entry_lanes_ieee :=
+  (IeeeFoldModel.dot_2_entry_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const).
 
 (* A value of the IEEE format is a number of the real format. *)
 Lemma val_fmt : forall x : float, fmt emin prec (val x).
@@ -868,6 +886,54 @@ unfold FoldModel.dot_2_step, dot_step_2, vals22, vals2. cbn [fst snd].
 rewrite <- Ep. cbv beta iota. symmetry. apply pair_eta.
 Qed.
 
+(* dot_2_entry: dot_step_2 on the guarded limbs of the element (rule R3, the factors of a fused
+   operation). The guard keeps the finiteness and the value of each limb, and in the real model the
+   step on numbers of the format is dot_step_2's (dot_entry_step_2_real). *)
+Definition guard22i (xy : (float * float) * (float * float)) : (float * float) * (float * float) :=
+  (guard2i (fst xy), guard2i (snd xy)).
+
+Lemma dot_2_entry_step_ieee_eq :
+  forall (s : float * float) (xy : (float * float) * (float * float)),
+  dot_2_entry_step_ieee s xy = dot_2_step_ieee s (guard22i xy).
+Proof.
+intros s xy. unfold IeeeFoldModel.dot_2_entry_step, IeeeModel.dot_entry_step_2. cbv zeta.
+etransitivity; [apply pair_eta | reflexivity].
+Qed.
+
+Lemma dot_2_entry_step_ieee_dead :
+  forall (s : float * float) (xy : (float * float) * (float * float)),
+  lead2 (dot_2_entry_step_ieee s xy) -> lead2 s.
+Proof.
+intros s xy. rewrite dot_2_entry_step_ieee_eq. exact (dot_2_step_ieee_dead s (guard22i xy)).
+Qed.
+
+Lemma dot_2_entry_step_ieee_live :
+  (4 <= prec)%Z ->
+  forall (s : float * float) (xy : (float * float) * (float * float)),
+  good2 s -> can22 xy -> lead2 (dot_2_entry_step_ieee s xy) ->
+  good2 (dot_2_entry_step_ieee s xy) /\ good22 xy /\
+  vals2 (dot_2_entry_step_ieee s xy) =
+  FoldModel.dot_2_entry_step emin prec tie_even (vals2 s) (vals22 xy).
+Proof.
+intros Hp s [x y] Gs [Cx Cy]. cbn [fst snd] in Cx, Cy.
+rewrite dot_2_entry_step_ieee_eq. intros L.
+assert (Lg : lead2 (guard2i x) /\ lead2 (guard2i y)).
+{ generalize L. rewrite dot_2_step_ieee_eq. unfold guard22i. cbn [fst snd]. intros L'.
+  destruct (add22i_lead _ _ L') as [_ Lp]. exact (mul22i_lead _ _ Lp). }
+destruct Lg as [Lx Ly].
+pose proof (can2_good x Cx (guard2i_lead x Lx)) as Gx.
+pose proof (can2_good y Cy (guard2i_lead y Ly)) as Gy.
+assert (Cg : can22 (guard22i (x, y))).
+{ unfold can22, guard22i, can2. cbn [fst snd]. split; left.
+  - exact (guard2i_good x Gx).
+  - exact (guard2i_good y Gy). }
+destruct (dot_2_step_ieee_live Hp s (guard22i (x, y)) Gs Cg L) as [Gt [_ V]].
+split. exact Gt. split. { split; assumption. }
+rewrite V. unfold guard22i, vals22. cbn [fst snd]. rewrite (guard2i_vals x), (guard2i_vals y).
+unfold FoldModel.dot_2_step, FoldModel.dot_2_entry_step, vals2. cbn [fst snd].
+symmetry. apply dot_entry_step_2_real; apply val_fmt.
+Qed.
+
 (** * The folds of one limb, with their finish *)
 
 (* sum_1. *)
@@ -1414,6 +1480,79 @@ cbv zeta. split. exact V.
 exact (dot_2_lanes_correct emin prec Hp W (map vals22 xs) (good22_normalized xs Fx)).
 Qed.
 
+(* dot_2_entry: the same, with the step dot_entry_step_2. *)
+Theorem dot_2_entry_seq_ieee_facts :
+  (4 <= prec)%Z ->
+  forall xs : list ((float * float) * (float * float)), Forall can22 xs ->
+  let '(r0, r1, flag) := dot_2_entry_seq_ieee xs in
+  (flag = true ->
+   Forall good22 xs /\ finite r0 /\ finite r1 /\
+   (forall k : nat, good2 (fold_seq dot_2_entry_step_ieee zero2 (firstn k xs))) /\
+   let vs := map vals22 xs in
+   let s := FoldModel.dot_2_entry_seq emin prec tie_even vs in
+   (val r0, val r1) = s /\
+   normalized_2 emin prec (fst s) (snd s) /\
+   Rabs ((fst s + snd s) -
+         sumR (map (fun xy => (fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))
+                 vs)) <=
+     ((1 + 4 * u prec ^ 2) * (1 + 3 * u prec ^ 2 / (1 - 4 * u prec)) ^ (length vs - 1) - 1) *
+     sumabs (map (fun xy => (fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))
+               vs) +
+     (1 + 3 * u prec ^ 2 / (1 - 4 * u prec)) ^ (length vs - 1) *
+     (INR (length vs) * (3 / 2 * eta emin))) /\
+  (flag = false -> nan r0 /\ nan r1).
+Proof.
+intros Hp xs Hx.
+change (dot_2_entry_seq_ieee xs) with (finish2 (fold_seq dot_2_entry_step_ieee zero2 xs)).
+generalize (seq_2 _ _ dot_2_entry_step_ieee (FoldModel.dot_2_entry_step emin prec tie_even)
+              vals22 can22 good22
+              dot_2_entry_step_ieee_dead (dot_2_entry_step_ieee_live Hp) xs Hx).
+destruct (finish2 (fold_seq dot_2_entry_step_ieee zero2 xs)) as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [Fx [[F0 [F1 _]] [V St]]]. cbn [fst snd] in F0, F1.
+split. exact Fx. split. exact F0. split. exact F1. split. exact St.
+cbv zeta. split. exact V.
+exact (dot_2_entry_seq_correct emin prec Hp (map vals22 xs) (good22_normalized xs Fx)).
+Qed.
+
+Theorem dot_2_entry_lanes_ieee_facts :
+  (4 <= prec)%Z ->
+  forall (W : nat) (xs : list ((float * float) * (float * float))), Forall can22 xs ->
+  let '(r0, r1, flag) := dot_2_entry_lanes_ieee W xs in
+  (flag = true ->
+   Forall good22 xs /\ finite r0 /\ finite r1 /\
+   let vs := map vals22 xs in
+   let s := FoldModel.dot_2_entry_lanes emin prec tie_even W vs in
+   (val r0, val r1) = s /\
+   normalized_2 emin prec (fst s) (snd s) /\
+   Rabs ((fst s + snd s) -
+         sumR (map (fun xy => (fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))
+                 vs)) <=
+     ((1 + 4 * u prec ^ 2) * (1 + 3 * u prec ^ 2 / (1 - 4 * u prec)) ^ (length vs - 1) - 1) *
+     sumabs (map (fun xy => (fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))
+               vs) +
+     (1 + 3 * u prec ^ 2 / (1 - 4 * u prec)) ^ (length vs - 1) *
+     (INR (length vs) * (3 / 2 * eta emin))) /\
+  (flag = false -> nan r0 /\ nan r1).
+Proof.
+intros Hp W xs Hx.
+change (dot_2_entry_lanes_ieee W xs)
+  with (finish2 (fold_lanes dot_2_entry_step_ieee dot_2_entry_combine_ieee zero2 W xs)).
+assert (Hp3 : (3 <= prec)%Z) by lia.
+generalize (lanes_2 _ _ dot_2_entry_step_ieee (FoldModel.dot_2_entry_step emin prec tie_even)
+              dot_2_entry_combine_ieee (FoldModel.dot_2_entry_combine emin prec tie_even)
+              vals22 can22 good22
+              dot_2_entry_step_ieee_dead (dot_2_entry_step_ieee_live Hp) add22i_lead (add22i_live Hp3)
+              W xs Hx).
+destruct (finish2 (fold_lanes dot_2_entry_step_ieee dot_2_entry_combine_ieee zero2 W xs))
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [Fx [[F0 [F1 _]] V]]. cbn [fst snd] in F0, F1.
+split. exact Fx. split. exact F0. split. exact F1.
+cbv zeta. split. exact V.
+exact (dot_2_entry_lanes_correct emin prec Hp W (map vals22 xs) (good22_normalized xs Fx)).
+Qed.
+
 (** * The leading limb of the result of a step of two limbs, and those of its operands *)
 
 Lemma sum_2_entry_step_ieee_lead :
@@ -1437,6 +1576,15 @@ Proof.
 intros s xy. rewrite dot_2_step_ieee_eq. intros H.
 destruct (add22i_lead _ _ H) as [Ls Lp]. destruct (mul22i_lead _ _ Lp) as [Lx Ly].
 split. exact Ls. split; assumption.
+Qed.
+
+Lemma dot_2_entry_step_ieee_lead :
+  forall (s : float * float) (xy : (float * float) * (float * float)),
+  lead2 (dot_2_entry_step_ieee s xy) -> lead2 s /\ lead2 (fst xy) /\ lead2 (snd xy).
+Proof.
+intros s xy. rewrite dot_2_entry_step_ieee_eq. intros H.
+destruct (dot_2_step_ieee_lead s (guard22i xy) H) as [Ls [Lx Ly]].
+split. exact Ls. split. exact (guard2i_lead (fst xy) Lx). exact (guard2i_lead (snd xy) Ly).
 Qed.
 
 End IeeeFolds.
@@ -1491,6 +1639,17 @@ generalize (dot_2_step_ieee_lead prec emax nan_plus nan_minus nan_opp nan_fma (s
               ((x0, x1), (y0, y1))).
 unfold IeeeFoldModel.dot_2_step, lead2. cbn [fst snd].
 destruct (IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1)
+  as [t0 t1].
+cbn [fst]. intros H. exact H.
+Qed.
+
+Theorem dot_entry_step_2_ieee_lead : dot_entry_step_2_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1.
+generalize (dot_2_entry_step_ieee_lead prec emax nan_plus nan_minus nan_opp nan_fma (s0, s1)
+              ((x0, x1), (y0, y1))).
+unfold IeeeFoldModel.dot_2_entry_step, lead2. cbn [fst snd].
+destruct (IeeeModel.dot_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1)
   as [t0 t1].
 cbn [fst]. intros H. exact H.
 Qed.
@@ -1732,6 +1891,38 @@ intros prec emax Hg Hl nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp W
 generalize (dot_2_lanes_ieee_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
               Hp W xs Hx).
 destruct (IeeeFoldModel.dot_2_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const W xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 H]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [[A [B _]] [C [D _]]].
+  split; [exact A|split; [exact B|split; [exact C|exact D]]]. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+(* dot_2_entry (rule R3, the factors of a fused operation): the same, from its own facts. *)
+Theorem dot_2_entry_seq_ieee_correct : dot_2_entry_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp xs Hx.
+generalize (dot_2_entry_seq_ieee_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
+              Hp xs Hx).
+destruct (IeeeFoldModel.dot_2_entry_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 [_ H]]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [[A [B _]] [C [D _]]].
+  split; [exact A|split; [exact B|split; [exact C|exact D]]]. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem dot_2_entry_lanes_ieee_correct : dot_2_entry_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp W xs Hx.
+generalize (dot_2_entry_lanes_ieee_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
+              Hp W xs Hx).
+destruct (IeeeFoldModel.dot_2_entry_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
+            W xs)
   as [[r0 r1] flag].
 intros [HT HF]. split; [|exact HF].
 intros E. destruct (HT E) as [G [F0 [F1 H]]].

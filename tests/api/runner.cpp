@@ -1711,7 +1711,7 @@ const NotPublic not_public[] = {
     {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step}, {"scale_entry_step_2", fold_step},
     {"mul_pow2_step_1", fold_step},
     {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},
-    {"axpy_entry_step_2", fold_step},
+    {"axpy_entry_step_2", fold_step}, {"dot_entry_step_2", fold_step},
 };
 // The interval kernels of Milestone 2 are reached by the forms of Interval (interval.hpp) and of
 // the functions of a Ball of the enclosure interface (ball.hpp), and so are the 53 kernels of the

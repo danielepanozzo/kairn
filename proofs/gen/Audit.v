@@ -360,6 +360,9 @@ Print Assumptions bv_center_2_correct.
 Definition bv_mul_pow2_step_2_audit : bv_mul_pow2_step_2_spec := bv_mul_pow2_step_2_correct.
 Print Assumptions bv_mul_pow2_step_2_correct.
 
+Definition dot_entry_step_2_audit : dot_entry_step_2_spec := dot_entry_step_2_correct.
+Print Assumptions dot_entry_step_2_correct.
+
 Definition mul_ball_2_2_audit : mul_ball_2_2_spec := mul_ball_2_2_correct.
 Print Assumptions mul_ball_2_2_correct.
 
@@ -492,6 +495,9 @@ Print Assumptions conv_1_entry_correct.
 Definition conv_2_audit : conv_2_spec := conv_2_correct.
 Print Assumptions conv_2_correct.
 
+Definition conv_2_entry_audit : conv_2_entry_spec := conv_2_entry_correct.
+Print Assumptions conv_2_entry_correct.
+
 Definition dot_1_seq_audit : dot_1_seq_spec := dot_1_seq_correct.
 Print Assumptions dot_1_seq_correct.
 
@@ -509,6 +515,12 @@ Print Assumptions dot_2_seq_correct.
 
 Definition dot_2_lanes_audit : dot_2_lanes_spec := dot_2_lanes_correct.
 Print Assumptions dot_2_lanes_correct.
+
+Definition dot_2_entry_seq_audit : dot_2_entry_seq_spec := dot_2_entry_seq_correct.
+Print Assumptions dot_2_entry_seq_correct.
+
+Definition dot_2_entry_lanes_audit : dot_2_entry_lanes_spec := dot_2_entry_lanes_correct.
+Print Assumptions dot_2_entry_lanes_correct.
 
 Definition mul_pow2_map_1_audit : mul_pow2_map_1_spec := mul_pow2_map_1_correct.
 Print Assumptions mul_pow2_map_1_correct.

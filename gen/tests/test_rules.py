@@ -563,10 +563,8 @@ class R3Factors(unittest.TestCase):
         # at.
         ks = common.kernels()
         found = {(e.kind, e.name, e.kernel): sorted(e.operands) for e in rules.exposed_operands(ks)}
-        xy2 = ['x0', 'x1', 'y0', 'y1']
         ax2 = ['a0', 'a1', 'x0', 'x1']
         self.assertEqual(found, EXPOSED)
-        self.assertEqual(EXPOSED[('kernel', 'dot_step_2', 'dot_step_2')], xy2)
         self.assertEqual(EXPOSED[('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2')], ax2)
 
     def test_build_prints_the_report(self):
@@ -604,7 +602,6 @@ class R3Factors(unittest.TestCase):
 # The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the
 # kernel analyzed) -> the exposed limbs of that kernel.
 EXPOSED = {
-    ('kernel', 'dot_step_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
     ('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('kernel', 'axpy_entry_step_2_1', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
     ('kernel', 'axpy_step_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
@@ -615,8 +612,6 @@ EXPOSED = {
     ('loop', 'axpy_2_1_entry', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
     ('loop', 'axpy_2_entry', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('loop', 'bv_scale_2', 'scale_step_2'): ['a'],
-    ('loop', 'conv_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-    ('loop', 'dot_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
 }
 
 
@@ -1285,14 +1280,15 @@ class R3OfTheKernels(unittest.TestCase):
                       'sub_up_2_2', 'mul_dir_2_2', 'mul_ext_2_2'}
 
     # The steps of the folds whose arrays the program supplies (milestone2.md, "Arrays that the
-    # program fills"): those of the sums guard the element, those of the dot products only multiply
-    # it. The functions on arrays of the public headers, which come later, call them through the folds.
-    FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_2'}
-    # dot_step_1 is not: the step of dot_1, on stored arrays (rule R3, the factors of a fused operation:
-    # kairn::dot and kairn::conv of one limb call dot_1_entry and conv_1_entry).
-    # And the step of dot_1_entry, which guards both factors of its fused operation (rule R3, the
-    # factors of a fused operation: architecture.md).
-    FOLD_STEPS |= {'dot_entry_step_1'}
+    # program fills"): those of the sums guard the element. The functions on arrays of the public
+    # headers call them through the folds.
+    FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2'}
+    # dot_step_1 and dot_step_2 are not: the steps of dot_1 and dot_2, on stored arrays (rule R3, the
+    # factors of a fused operation: kairn::dot and kairn::conv call dot_1_entry, dot_2_entry,
+    # conv_1_entry and conv_2_entry).
+    # And the steps of dot_1_entry and dot_2_entry, which guard every limb of both factors of their
+    # fused operations (rule R3, the factors of a fused operation: architecture.md).
+    FOLD_STEPS |= {'dot_entry_step_1', 'dot_entry_step_2'}
     # And the steps of the maps that read what the program supplies (sub_1_1 reads stored arrays).
     FOLD_STEPS |= MAP_STEPS - {'sub_1_1'}
     # And the kernels of the accumulator that take what the program adds (acc_merge_k takes two
@@ -1400,7 +1396,8 @@ class R3OfTheKernels(unittest.TestCase):
         lines = build.summary(ks)
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2', 'dot_1_entry',
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
-                                         'conv_1', 'conv_2', 'conv_1_entry'} | MAPS |
+                                         'conv_1', 'conv_2', 'conv_1_entry', 'dot_2_entry', 'conv_2_entry'} |
+                         MAPS |
                          {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
                           'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'} |
                          {'bv_conv_1', 'bv_conv_2'})
@@ -1724,6 +1721,8 @@ class TheKernels(unittest.TestCase):
     # And the step of dot_1_entry, dot_step_1 on its factors guarded (rule R3, the factors of a fused
     # operation: architecture.md), proved in StepKernels.v.
     FOLDS_FINITE |= {'dot_entry_step_1'}
+    # And the step of dot_2_entry, dot_step_2 on its factors guarded (the same rule).
+    FOLDS_FINITE |= {'dot_entry_step_2'}
     FOLDS_FINISH = {'fold_finish_1', 'fold_finish_2'}
     # The folds of maxima, norm_upper_k (stage B, part 2): the combination and the steps, of the
     # finite domain, and the finishes, with the IEEE-model statement only.
@@ -1934,7 +1933,8 @@ class TheKernels(unittest.TestCase):
             # the kernels they guard for
             'two_prod_entry': 2, 'mul_down_entry': 2, 'mul_up_entry': 2, 'mul_2_1_entry': 2,
             # the folds' stage: that of the kernels of one limb and of add_2_2, add_fast_2_2, mul_2_2
-            'dot_step_1': 1, 'dot_entry_step_1': 1, 'dot_step_2': 4, 'sum_entry_step_1': 1, 'sum_entry_step_2': 3,
+            'dot_step_1': 1, 'dot_entry_step_1': 1, 'dot_step_2': 4, 'dot_entry_step_2': 4, 'sum_entry_step_1': 1,
+            'sum_entry_step_2': 3,
             'sum_fast_entry_step_2': 2, 'bound_sum_1': 1, 'bound_sum_2': 3, 'bound_dot_1': 1, 'bound_dot_2': 4,
             # the steps of the maps: that of the kernels they call (axpy_step_2_1: mul_2_1 and add_2_2)
             'sub_1_1': 1, 'add_entry_step_1': 1, 'sub_entry_step_1': 1, 'add_entry_step_2': 3,

@@ -1,15 +1,17 @@
 # The step of the dot product of two limbs (milestone2.md, "sum, dot, axpy, convolution"):
 # dot_step_2(s, x, y) is p = mul_2_2(x, y); s = add_2_2(s, p), the step dot_step_2 of
-# proofs/theories/SummationKernels.v. Its elements come from arrays the program supplies; it only
-# multiplies them (mul_2_2 takes its operands as factors), so rule R3 asks no guard of them.
+# proofs/theories/SummationKernels.v. The step of dot_2, on stored arrays (the loop of the
+# coefficients of conv_2, and so of the centers of bv_conv_2): kairn::dot and kairn::conv of two limbs
+# call dot_2_entry and conv_2_entry, whose step dot_entry_step_2 guards the limbs of the elements first
+# (rule R3, the factors of a fused operation). Not an entry kernel.
 #
 # Its own bound, relative to the terms |s| + |x y|: with eps+ = 3u^2/(1-4u) and the bound of mul_2_2,
 #   |t - (s + x y)| <= eps+ |s| + (eps+ (1 + 4u^2) + 4u^2) |x y| + (1 + eps+) (3/2) eta,
 # and (1 + eps+) 3/2 <= 2 from precision 3.
 kernel:        dot_step_2
 input:         s = s0 s1
-input:         supplied x = x0 x1
-input:         supplied y = y0 y1
+input:         x = x0 x1
+input:         y = y0 y1
 output:        t = t0 t1
 value:         s+x*y
 requires:      normalized s
@@ -25,7 +27,6 @@ ieee_lead_theorem: proofs/theories/IeeeFolds.v dot_step_2_ieee_lead
 source:        the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
-entry:         yes
 ieee:          bridge spec
 
 (p0, p1) = mul_2_2(x0, x1, y0, y1)

@@ -712,10 +712,6 @@ def fold_kernels(fd, kernels):
 # and the scaling of a ball vector of two limbs, with their steps; no compiler was measured to fuse
 # a product of the program into any of them (architecture.md, R3, the factors of a fused
 # operation), and each needs new loops or steps with their theorems in both models.
-_DOT = ('the step of the dot product and of the coefficients of the convolution of two limbs: closing it '
-        'takes the loops dot_2_entry (step dot_entry_step_2, the twin guarding x and y) and conv_2_entry (the '
-        'coefficients by dot_2_entry, as conv_1_entry), with their theorems; conv_2 itself is also the loop '
-        'of the centers of bv_conv_2, on stored arrays, which must not pay for guards')
 _SCALE = ('the step of bv_scale_2 (x stored, a supplied), which the scalings and axpy of BallVector<T, 2, N> '
           'call (kairn::scale of arrays calls scale_2_entry): closing it takes a step guarding a only (or a '
           'guard of a once, outside the loop, which a fold cannot express yet), with the theorems of the ball '
@@ -725,14 +721,11 @@ _AXPY = ('the step of the axpy of two limbs: its own guards on a and x, which ch
 _AXPY_STORED = ('the step of a loop that no header calls, whose description says the program supplies a and '
                 'x: its own guards on them, with its theorems and its loop\'s proved again')
 FACTOR_PENDING = {
-    'dot_step_2': 'dot of two limbs calls it; ' + _DOT,
     'scale_step_2': _SCALE, 'axpy_entry_step_2': _AXPY, 'axpy_entry_step_2_1': _AXPY,
     'axpy_step_2': _AXPY_STORED, 'axpy_step_2_1': _AXPY_STORED,
     'loop axpy_2': 'its step: ' + _AXPY_STORED, 'loop axpy_2_1': 'its step: ' + _AXPY_STORED,
     'loop axpy_2_1_entry': 'its step: ' + _AXPY, 'loop axpy_2_entry': 'its step: ' + _AXPY,
     'loop bv_scale_2': 'its step: ' + _SCALE,
-    'loop conv_2': 'its coefficients, dot_2: ' + _DOT,
-    'loop dot_2': 'its step: ' + _DOT,
 }
 
 

@@ -363,7 +363,7 @@ above applies to them as to any kernel. `dot_2` in full:
 
 ```
 fold:          dot_2
-arrays:        supplied x = x0 x1, supplied y = y0 y1
+arrays:        stored x = x0 x1, stored y = y0 y1
 state:         s = s0 s1
 step:          s = dot_step_2(s, x, y)
 combine:       s = add_2_2(s, s)
@@ -407,13 +407,12 @@ license:       bound: published; proof: MIT
 The folds of this stage are the sums and dot products of the page: `sum_1`, `sum_2` and
 `sum_fast_2` (the fast addition) on stored arrays, their `_entry` forms on supplied ones, whose
 steps (`sum_entry_step_1`, `sum_entry_step_2`, `sum_fast_entry_step_2`) pass each limb of the
-element through `guard`, and `dot_1` (the fused step `dot_step_1`, `t = fma(x, y, s)`) on stored
-arrays and `dot_2` (`dot_step_2`: `p = mul_2_2(x, y); t = add_2_2(s, p)`) on supplied ones, whose
-steps only multiply their elements, which the addition part of rule R3 asks no guard of.
-`dot_1_entry` is `dot_1` with the step `dot_entry_step_1` on supplied arrays, which guards both
-factors before the fused operation (R3, the factors of a fused operation, above): the dot product
-of one limb of `kairn/batch.hpp` calls it; `dot_2`, whose elements are factors of the fused
-operations of `mul_2_2`, unguarded, is on the pending list of that rule (`rules.FACTOR_PENDING`).
+element through `guard`, and `dot_1` (the fused step `dot_step_1`, `t = fma(x, y, s)`) and
+`dot_2` (`dot_step_2`: `p = mul_2_2(x, y); t = add_2_2(s, p)`) on stored arrays, whose steps only
+multiply their elements, which the addition part of rule R3 asks no guard of. `dot_1_entry` and
+`dot_2_entry` are `dot_1` and `dot_2` with the steps `dot_entry_step_1` and `dot_entry_step_2` on
+supplied arrays, which guard every limb of both factors first (R3, the factors of a fused
+operation, above): the dot products of `kairn/batch.hpp` call them.
 The finishes `fold_finish_1` and
 `fold_finish_2` return the state with the flag true when its leading limb is finite, and
 otherwise the canonical NaN, every limb a NaN, with the flag false
@@ -781,7 +780,7 @@ centers. `conv_2` in full:
 
 ```
 fold:          conv_2
-arrays:        supplied x = x0 x1, supplied y = y0 y1
+arrays:        stored x = x0 x1, stored y = y0 y1
 coefficients:  dot_2
 state:         mask finite
 combine:       finite = and(finite, finite)
@@ -2509,7 +2508,7 @@ short here):
 ```json
 {
   "name": "dot_2", "domain": "extended",
-  "arrays": [{"name": "x", "limbs": 2, "role": "supplied"}, {"name": "y", "limbs": 2, "role": "supplied"}],
+  "arrays": [{"name": "x", "limbs": 2, "role": "stored"}, {"name": "y", "limbs": 2, "role": "stored"}],
   "outputs": [{"name": "r", "limbs": 2}, {"name": "flag", "limbs": 1, "type": "mask"}],
   "value": "x*y",
   "requires": ["canonical(x)", "canonical(y)"],
@@ -2636,7 +2635,7 @@ true` (and no `"map"`):
 ```json
 {
   "name": "conv_2", "conv": true, "domain": "extended",
-  "arrays": [{"name": "x", "limbs": 2, "role": "supplied"}, {"name": "y", "limbs": 2, "role": "supplied"}],
+  "arrays": [{"name": "x", "limbs": 2, "role": "stored"}, {"name": "y", "limbs": 2, "role": "stored"}],
   "writes": [{"name": "z", "limbs": 2}],
   "outputs": [{"name": "finite", "limbs": 1, "type": "mask"}],
   "value": "x*y",

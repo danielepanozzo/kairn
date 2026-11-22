@@ -458,3 +458,77 @@ intros emin prec Hp W xys Hv s. unfold s. clear s.
 rewrite (dot_1_entry_lanes_eq emin prec W xys Hv).
 exact (SummationKernels.dot_1_lanes emin prec Hp W xys).
 Qed.
+
+(** * dot_2_entry *)
+
+(* dot_2_entry: the step guards the four limbs of the element first (rule R3, the factors of a
+   fused operation), then runs dot_step_2. So the fold is dot_2's over the list of the guarded
+   elements, which is the list itself when every limb is a number of the format, as in a
+   normalized pair (guard22_map); then the theorems of dot_2. *)
+Definition guard22 (emin prec : Z) (xy : (R * R) * (R * R)) : (R * R) * (R * R) :=
+  (guard2 emin prec (fst xy), guard2 emin prec (snd xy)).
+
+Lemma guard22_map :
+  forall (emin prec : Z) (xys : list ((R * R) * (R * R))),
+  Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\
+                    normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+  map (guard22 emin prec) xys = xys.
+Proof.
+intros emin prec xys H. induction H as [|[[x0 x1] [y0 y1]] r [Nx Ny] _ IH]; cbn [map].
+- reflexivity.
+- cbn [fst snd] in Nx, Ny. destruct Nx as [Fx0 [Fx1 _]]. destruct Ny as [Fy0 [Fy1 _]].
+  rewrite IH. unfold guard22, guard2, RN. cbn [fst snd].
+  now rewrite (guard_real_any emin prec tie_even x0 Fx0), (guard_real_any emin prec tie_even x1 Fx1),
+              (guard_real_any emin prec tie_even y0 Fy0), (guard_real_any emin prec tie_even y1 Fy1).
+Qed.
+
+Lemma pair_let_id : forall p : R * R, (let '(a, b) := p in (a, b)) = p.
+Proof. intros [a b]. reflexivity. Qed.
+
+Lemma dot_2_entry_step_eq :
+  forall (emin prec : Z) (s : R * R) (xy : (R * R) * (R * R)),
+  FoldModel.dot_2_entry_step emin prec tie_even s xy =
+  FoldModel.dot_2_step emin prec tie_even s (guard22 emin prec xy).
+Proof.
+intros emin prec s xy. unfold FoldModel.dot_2_entry_step, Model.dot_entry_step_2. cbv zeta.
+etransitivity; [apply pair_let_id | reflexivity].
+Qed.
+
+Lemma dot_2_entry_seq_eq :
+  forall (emin prec : Z) (xys : list ((R * R) * (R * R))),
+  Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\
+                    normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+  FoldModel.dot_2_entry_seq emin prec tie_even xys = FoldModel.dot_2_seq emin prec tie_even xys.
+Proof.
+intros emin prec xys Hv. unfold FoldModel.dot_2_entry_seq, FoldModel.dot_2_seq.
+apply fold_seq_guarded with (g := guard22 emin prec).
+- exact (dot_2_entry_step_eq emin prec).
+- now apply guard22_map.
+Qed.
+
+Lemma dot_2_entry_lanes_eq :
+  forall (emin prec : Z) (W : nat) (xys : list ((R * R) * (R * R))),
+  Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\
+                    normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+  FoldModel.dot_2_entry_lanes emin prec tie_even W xys = FoldModel.dot_2_lanes emin prec tie_even W xys.
+Proof.
+intros emin prec W xys Hv. unfold FoldModel.dot_2_entry_lanes, FoldModel.dot_2_lanes.
+apply fold_lanes_guarded with (g := guard22 emin prec).
+- exact (dot_2_entry_step_eq emin prec).
+- intros a b. reflexivity.
+- now apply guard22_map.
+Qed.
+
+Theorem dot_2_entry_seq_correct : dot_2_entry_seq_spec.
+Proof.
+intros emin prec Hp xys Hv s. unfold s. clear s.
+rewrite (dot_2_entry_seq_eq emin prec xys Hv).
+exact (dot_2_seq_correct emin prec Hp xys Hv).
+Qed.
+
+Theorem dot_2_entry_lanes_correct : dot_2_entry_lanes_spec.
+Proof.
+intros emin prec Hp W xys Hv s. unfold s. clear s.
+rewrite (dot_2_entry_lanes_eq emin prec W xys Hv).
+exact (dot_2_lanes_correct emin prec Hp W xys Hv).
+Qed.

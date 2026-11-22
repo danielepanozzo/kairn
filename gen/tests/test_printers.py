@@ -240,6 +240,8 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR |= {'acc_mul_entry_2'}
     # And the guarded step of scale_2 (the same rule).
     NOT_CONSTEXPR |= {'scale_entry_step_2'}
+    # And the guarded step of dot_2_entry (the same rule).
+    NOT_CONSTEXPR |= {'dot_entry_step_2'}
     # BallVector: the fmas of the radius kernels (bv_add_radius_k, bv_scale_radius_k).
     NOT_CONSTEXPR |= {'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2'}
     # The product of two BallVectors: the fmas of conv_radius.
@@ -1019,9 +1021,11 @@ class Rocq(unittest.TestCase):
     # Then the fold conv_1_entry (the same rule): its audit line added; Model.v and Statements.v the same.
     # Then scale_entry_step_2 and the fold scale_2_entry (the same rule): their models, statements and
     # audit lines added.
-    DIGESTS = {'Model.v': '3ca6be4448165d1bbd30409e3ea95e04b5f121d2aa82d0959cb26738e5bc1fc6',
-               'Statements.v': '84389ef0e14e2d340827e525b7aec24f42e0e8d8bbdd43ea0c9aa0108108af50',
-               'Audit.v': '0ec0002ee720008635422ef3e2faf87205ac23909d7c4456c769011f0de62f1e'}
+    # Then dot_entry_step_2 and the folds dot_2_entry and conv_2_entry (the same rule): their models,
+    # statements and audit lines added.
+    DIGESTS = {'Model.v': 'b61bed066ae7b93c54be090a9b364fc91ad60c304abbc8ae712a193f98569a47',
+               'Statements.v': '3017223947883119da9dd955d757e0576e9dd19fdc06ea9a8e3c9a85a6ae6f5c',
+               'Audit.v': '17de04048e683924170ff3bb2eece7312548bac6367211d29d9f7578004734a3'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -1060,8 +1064,9 @@ class Rocq(unittest.TestCase):
         # negation; and the three of its scaling by a power of two; and conv_radius, of its product;
         # and the two guarded forms of rule R3 on the factors, dot_entry_step_1 and acc_mul_entry_1; and
         # the four entry forms of the products with a real-model statement, two_prod_entry,
-        # mul_down_entry, mul_up_entry and mul_2_1_entry; and acc_mul_entry_2; and scale_entry_step_2.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2 + 4 + 1 + 1)
+        # mul_down_entry, mul_up_entry and mul_2_1_entry; and acc_mul_entry_2; and scale_entry_step_2;
+        # and dot_entry_step_2.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2 + 4 + 1 + 1 + 1)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

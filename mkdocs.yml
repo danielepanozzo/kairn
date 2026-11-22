@@ -308,7 +308,8 @@ nav:
       - Sums and dot products of arrays:
           - "The step of a dot product of one limb, on stored arrays: one fused multiply-add": reference/dot_step_1.md
           - "The step of a dot product of one limb, on arrays of the program: one fused multiply-add of the guarded elements": reference/dot_entry_step_1.md
-          - The step of a dot product of two limbs: reference/dot_step_2.md
+          - "The step of a dot product of two limbs, on stored arrays (the centers of `bv_conv_2`)": reference/dot_step_2.md
+          - "The step of a dot product of two limbs, on arrays of the program: the product and the sum of the guarded elements": reference/dot_entry_step_2.md
           - The step of a sum of one limb, on an array of the program: reference/sum_entry_step_1.md
           - The step of a sum of two limbs, on an array of the program: reference/sum_entry_step_2.md
           - The step of a sum of two limbs with the fast addition, on an array of the program: reference/sum_fast_entry_step_2.md

@@ -1,8 +1,8 @@
 (* The steps of the folds in the IEEE model (proofs/gen/IeeeModel.v), for finite operands
    that satisfy the requirements of the kernel: the generated statements
    K_ieee_bridge_spec of dot_step_1, dot_entry_step_1, sum_entry_step_1, dot_step_2,
-   sum_entry_step_2 and sum_fast_entry_step_2, and K_ieee_spec of the last three
-   (proofs/gen/IeeeStatements.v).
+   dot_entry_step_2, sum_entry_step_2 and sum_fast_entry_step_2, and K_ieee_spec of the last
+   four (proofs/gen/IeeeStatements.v).
 
    1. Bridge (K_ieee_bridge). If the leading limb of the result is finite then every
       value the kernel computes is finite, and the result is, as real numbers, that of
@@ -54,6 +54,19 @@ Lemma sum_entry_step_2_runR :
 Proof.
 intros. cbv [sum_entry_step_2 add_2_2 two_sum fast_two_sum runR run stepR nth app
              IeeeModel.sum_entry_step_2_prog].
+reflexivity.
+Qed.
+
+(* dot_entry_step_2: the guards of the four limbs of the element (rule R3, the factors of a fused
+   operation), then dot_step_2's program. *)
+Lemma dot_entry_step_2_runR :
+  forall emin prec choice s0 s1 x0 x1 y0 y1,
+  dot_entry_step_2 emin prec choice s0 s1 x0 x1 y0 y1 =
+  (nth 36 (runR emin prec choice IeeeModel.dot_entry_step_2_prog [s0; s1; x0; x1; y0; y1]) 0,
+   nth 38 (runR emin prec choice IeeeModel.dot_entry_step_2_prog [s0; s1; x0; x1; y0; y1]) 0).
+Proof.
+intros. cbv [dot_entry_step_2 dot_step_2 mul_2_2 add_2_2 two_prod two_sum fast_two_sum runR run stepR
+             nth app IeeeModel.dot_entry_step_2_prog].
 reflexivity.
 Qed.
 
@@ -147,6 +160,65 @@ destruct (dot_step_2_bridge Hp4 s0 s1 x0 x1 y0 y1 Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx 
 split.
 - now apply nth_fin.
 - rewrite dot_step_2_runR. f_equal; now apply sim_nth.
+Qed.
+
+(** * dot_entry_step_2 *)
+
+Lemma dot_entry_step_2_runB :
+  forall s0 s1 x0 x1 y0 y1 : float,
+  IeeeModel.dot_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1 =
+  (nth 36 (runB IeeeModel.dot_entry_step_2_prog [s0; s1; x0; x1; y0; y1]) d0,
+   nth 38 (runB IeeeModel.dot_entry_step_2_prog [s0; s1; x0; x1; y0; y1]) d0).
+Proof.
+intros. cbv [IeeeModel.dot_entry_step_2 IeeeModel.dot_step_2 IeeeModel.mul_2_2 IeeeModel.add_2_2
+             IeeeModel.two_prod IeeeModel.two_sum IeeeModel.fast_two_sum run stepB nth app
+             IeeeModel.dot_entry_step_2_prog].
+reflexivity.
+Qed.
+
+Theorem dot_entry_step_2_bridge :
+  (4 <= prec)%Z ->
+  forall s0 s1 x0 x1 y0 y1 : float,
+  fin s0 -> fin s1 -> fin x0 -> fin x1 -> fin y0 -> fin y1 ->
+  normalized_2 emin prec (b2r s0) (b2r s1) ->
+  normalized_2 emin prec (b2r x0) (b2r x1) ->
+  normalized_2 emin prec (b2r y0) (b2r y1) ->
+  fin (nth 36 (runB IeeeModel.dot_entry_step_2_prog [s0; s1; x0; x1; y0; y1]) d0) ->
+  finite_all (runB IeeeModel.dot_entry_step_2_prog [s0; s1; x0; x1; y0; y1]) /\
+  map b2r (runB IeeeModel.dot_entry_step_2_prog [s0; s1; x0; x1; y0; y1])
+  = runR IeeeModel.dot_entry_step_2_prog [b2r s0; b2r s1; b2r x0; b2r x1; b2r y0; b2r y1].
+Proof.
+intros Hp4 s0 s1 x0 x1 y0 y1 Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx Ny Hz.
+apply (bridge_f2s_prog prec emax nan_plus nan_minus nan_opp nan_fma
+         IeeeModel.dot_entry_step_2_prog (firstn 30 IeeeModel.dot_entry_step_2_prog) 32%nat 35%nat
+         [s0; s1; x0; x1; y0; y1] 36%nat); trivial.
+- repeat constructor; assumption.
+- generalize (dot_entry_step_2_correct emin prec Hp4 (b2r s0) (b2r s1) (b2r x0) (b2r x1) (b2r y0)
+                (b2r y1) Ns Nx Ny).
+  rewrite dot_entry_step_2_runR. intros [N _]. exact N.
+Qed.
+
+Theorem dot_entry_step_2_values :
+  (4 <= prec)%Z ->
+  forall s0 s1 x0 x1 y0 y1 : float,
+  fin s0 -> fin s1 -> fin x0 -> fin x1 -> fin y0 -> fin y1 ->
+  normalized_2 emin prec (b2r s0) (b2r s1) ->
+  normalized_2 emin prec (b2r x0) (b2r x1) ->
+  normalized_2 emin prec (b2r y0) (b2r y1) ->
+  let '(t0, t1) :=
+    IeeeModel.dot_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1 in
+  fin t0 ->
+  fin t1 /\
+  (b2r t0, b2r t1) =
+  dot_entry_step_2 emin prec tie_even (b2r s0) (b2r s1) (b2r x0) (b2r x1) (b2r y0) (b2r y1).
+Proof.
+intros Hp4 s0 s1 x0 x1 y0 y1 Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx Ny. rewrite dot_entry_step_2_runB.
+intros Hz.
+destruct (dot_entry_step_2_bridge Hp4 s0 s1 x0 x1 y0 y1 Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx Ny Hz)
+  as [F M].
+split.
+- now apply nth_fin.
+- rewrite dot_entry_step_2_runR. f_equal; now apply sim_nth.
 Qed.
 
 (** * sum_entry_step_2 *)
@@ -320,6 +392,32 @@ generalize (dot_step_2_ieee_bridge prec emax Hp He nan_plus nan_minus nan_opp na
            (dot_step_2_correct (ieee_emin prec emax) prec Hp4 (val s0) (val s1) (val x0)
               (val x1) (val y0) (val y1) Ns Nx Ny).
 destruct (IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1)
+  as [t0 t1].
+intros B C Fz. destruct (B Fz) as [_ [Fz1 E]]. rewrite <- E in C. split. exact Fz1. exact C.
+Qed.
+
+Theorem dot_entry_step_2_ieee_bridge : dot_entry_step_2_ieee_bridge_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp4 s0 s1 x0 x1 y0 y1
+  Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx Ny.
+generalize (dot_entry_step_2_bridge prec emax nan_plus nan_minus nan_opp nan_fma Hp4
+              s0 s1 x0 x1 y0 y1 Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx Ny)
+           (dot_entry_step_2_values prec emax nan_plus nan_minus nan_opp nan_fma Hp4
+              s0 s1 x0 x1 y0 y1 Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx Ny).
+rewrite (dot_entry_step_2_runB prec emax nan_plus nan_minus nan_opp nan_fma).
+intros B V Fz. destruct (B Fz) as [F _]. destruct (V Fz) as [Fz1 E].
+split. exact F. split. exact Fz1. exact E.
+Qed.
+
+Theorem dot_entry_step_2_ieee_correct : dot_entry_step_2_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp4 s0 s1 x0 x1 y0 y1
+  Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx Ny.
+generalize (dot_entry_step_2_ieee_bridge prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp4
+              s0 s1 x0 x1 y0 y1 Fs0 Fs1 Fx0 Fx1 Fy0 Fy1 Ns Nx Ny)
+           (dot_entry_step_2_correct (ieee_emin prec emax) prec Hp4 (val s0) (val s1) (val x0)
+              (val x1) (val y0) (val y1) Ns Nx Ny).
+destruct (IeeeModel.dot_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1)
   as [t0 t1].
 intros B C Fz. destruct (B Fz) as [_ [Fz1 E]]. rewrite <- E in C. split. exact Fz1. exact C.
 Qed.

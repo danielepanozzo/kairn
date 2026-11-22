@@ -1052,6 +1052,15 @@ Definition bv_mul_pow2_step_2 (x0 x1 c : R) : R * R * bool :=
   let e := orb bc zc in
   (z0, z1, e).
 
+(* dot_entry_step_2: dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. *)
+Definition dot_entry_step_2 (s0 s1 x0 x1 y0 y1 : R) : R * R :=
+  let gx0 := rnd (x0 + 0) in
+  let gx1 := rnd (x1 + 0) in
+  let gy0 := rnd (y0 + 0) in
+  let gy1 := rnd (y1 + 0) in
+  let '(t0, t1) := dot_step_2 s0 s1 gx0 gx1 gy0 gy1 in
+  (t0, t1).
+
 (* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). *)
 Definition mul_ball_2_2 (x0 x1 y0 y1 : R) : R * R * R :=
   let '(z0, z1) := mul_2_2 x0 x1 y0 y1 in

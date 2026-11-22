@@ -2161,6 +2161,15 @@ Definition bv_mul_pow2_step_2 (x0 x1 c : float) : float * float * bool :=
   let e := orb bc zc in
   (z0, z1, e).
 
+(* dot_entry_step_2: dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. *)
+Definition dot_entry_step_2 (s0 s1 x0 x1 y0 y1 : float) : float * float :=
+  let gx0 := guard x0 in
+  let gx1 := guard x1 in
+  let gy0 := guard y0 in
+  let gy1 := guard y1 in
+  let '(t0, t1) := dot_step_2 s0 s1 gx0 gx1 gy0 gy1 in
+  (t0, t1).
+
 (* fold_finish_2: the finish of a fold: the state or the canonical NaN (milestone2.md). *)
 Definition fold_finish_2 (s0 s1 : float) : float * float * bool :=
   let a := abs s0 in
@@ -3121,6 +3130,43 @@ Definition mul_pow2_2_prog : list instr :=
   ; Iadd 3 4   (*  5 z0 *)
   ; Isub 5 3   (*  6 z0_z *)
   ; Isub 4 6   (*  7 z1 *)
+  ].
+
+(* inputs: 0 s0, 1 s1, 2 x0, 3 x1, 4 y0, 5 y1 *)
+Definition dot_entry_step_2_prog : list instr :=
+  [ Iguard 2     (*  6 gx0 *)
+  ; Iguard 3     (*  7 gx1 *)
+  ; Iguard 4     (*  8 gy0 *)
+  ; Iguard 5     (*  9 gy1 *)
+  ; Iprod 6 8    (* 10 t0_p0_ch *)
+  ; Ifms 6 8 10  (* 11 t0_p0_cl1 *)
+  ; Iprod 7 9    (* 12 t0_p0_tl0 *)
+  ; Ifma 6 9 12  (* 13 t0_p0_tl1 *)
+  ; Ifma 7 8 13  (* 14 t0_p0_cl2 *)
+  ; Iadd 11 14   (* 15 t0_p0_cl3 *)
+  ; Iadd 10 15   (* 16 t0_p0 *)
+  ; Isub 16 10   (* 17 t0_p0_z *)
+  ; Isub 15 17   (* 18 t0_p1 *)
+  ; Iadd 0 16    (* 19 t0_sh *)
+  ; Isub 19 0    (* 20 t0_sh_bb *)
+  ; Isub 19 20   (* 21 t0_sh_t0 *)
+  ; Isub 0 21    (* 22 t0_sh_t1 *)
+  ; Isub 16 20   (* 23 t0_sh_t2 *)
+  ; Iadd 22 23   (* 24 t0_sl *)
+  ; Iadd 1 18    (* 25 t0_th *)
+  ; Isub 25 1    (* 26 t0_th_bb *)
+  ; Isub 25 26   (* 27 t0_th_t0 *)
+  ; Isub 1 27    (* 28 t0_th_t1 *)
+  ; Isub 18 26   (* 29 t0_th_t2 *)
+  ; Iadd 28 29   (* 30 t0_tl *)
+  ; Iadd 24 25   (* 31 t0_c *)
+  ; Iadd 19 31   (* 32 t0_vh *)
+  ; Isub 32 19   (* 33 t0_vh_z *)
+  ; Isub 31 33   (* 34 t0_vl *)
+  ; Iadd 30 34   (* 35 t0_w *)
+  ; Iadd 32 35   (* 36 t0 *)
+  ; Isub 36 32   (* 37 t0_z *)
+  ; Isub 35 37   (* 38 t1 *)
   ].
 
 (* inputs: 0 x0, 1 x1, 2 a *)

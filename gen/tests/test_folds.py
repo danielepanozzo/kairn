@@ -33,14 +33,15 @@ import test_simd as simd_tests
 from kairn_gen import cpp, interp, ir, objcode, rocq, rules
 
 FOLDS = ('sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2', 'sum_fast_2_entry', 'dot_1', 'dot_2')
-# And dot_1 on arrays of the program, its factors guarded (rule R3, the factors of a fused operation).
-FOLDS += ('dot_1_entry',)
+# And dot_1 and dot_2 on arrays of the program, their factors guarded (rule R3, the factors of a fused
+# operation).
+FOLDS += ('dot_1_entry', 'dot_2_entry')
 # The folds of maxima (architecture.md, "Folds of maxima"): a state of a limb and a mask, and an upper
 # bound of the largest magnitude instead of fold_error. ALL: every fold that is not a map.
 MAX_FOLDS = ('norm_upper_1', 'norm_upper_2')
 ALL = FOLDS + MAX_FOLDS
 # The convolutions, which write an array, have tests of their own (test_conv.py).
-CONVS = {'conv_1', 'conv_2', 'conv_1_entry'}
+CONVS = {'conv_1', 'conv_2', 'conv_1_entry', 'conv_2_entry'}
 # The maps, the folds that write an array, have tests of their own (test_maps.py).
 MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 'sub_2', 'sub_2_entry', 'axpy_1',
         'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2', 'scale_2_entry',

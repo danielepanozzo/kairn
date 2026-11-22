@@ -1034,11 +1034,14 @@ KERNELS = {
                              form("dot(sequential, x, y)", SEQ, V1, V1, result=R1),
                              form("conv(x, y, z)", V1, V1, W1, result="bool", note="each coefficient a sequential "
                                   "`dot_1_entry` (loop `conv_1_entry`; each factor guarded)")),
-    "dot_step_2": page("arrays", "The step of a dot product of two limbs",
-                       form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2`)"),
-                       form("dot(sequential, x, y)", SEQ, V2, V2, result=R2),
-                       form("conv(x, y, z)", V2, V2, W2, result="bool", note="each coefficient a sequential `dot_2` "
-                            "(loop `conv_2`)")),
+    "dot_step_2": page("arrays", "The step of a dot product of two limbs, on stored arrays (the centers of `bv_conv_2`)"),
+    "dot_entry_step_2": page("arrays", "The step of a dot product of two limbs, on arrays of the program: the "
+                             "product and the sum of the guarded elements",
+                             form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2_entry`; every "
+                                  "limb of each factor guarded, rule R3 on the factors of a fused operation)"),
+                             form("dot(sequential, x, y)", SEQ, V2, V2, result=R2),
+                             form("conv(x, y, z)", V2, V2, W2, result="bool", note="each coefficient a sequential "
+                                  "`dot_2_entry` (loop `conv_2_entry`; every limb of each factor guarded)")),
     "sum_entry_step_1": page("arrays", "The step of a sum of one limb, on an array of the program",
                              form("sum(x)", V1, result=R1, note=STEP_ORDER + " (loop `sum_1_entry`)"),
                              form("sum(sequential, x)", SEQ, V1, result=R1),

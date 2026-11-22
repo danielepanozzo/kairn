@@ -1,0 +1,31 @@
+# The dot product of two arrays of 2-limb numbers that the program supplies (rule R3, the factors of
+# a fused operation: architecture.md): the dot_2 fold with the limbs of each element passed through
+# guard first (dot_entry_step_2). dot_2's step only multiplies its elements, but mul_2_2 takes them
+# as factors of fused operations whose addends are not zero: where the compiler sees one array to
+# hold ones, fma(x, 1, s) becomes x + s and a product the program stored into the other may be fused
+# into it (measured in the dot product of one limb, never in this one). Four additions more per
+# element, and the bound holds of the values in the arrays whatever the compiler does. Its claims
+# are those of dot_2.
+fold:          dot_2_entry
+arrays:        supplied x = x0 x1, supplied y = y0 y1
+state:         s = s0 s1
+step:          s = dot_entry_step_2(s, x, y)
+combine:       s = add_2_2(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r = r0 r1
+output:        mask flag
+finish:        (r, flag) = fold_finish_2(s)
+value:         x*y
+requires:      canonical x
+requires:      canonical y
+ensures:       normalized r
+ensures:       fold_error r eps=3*u^2/(1-4*u) term=4*u^2 tau=3/2*eta rel=n-1 abs=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 4
+theorem:       proofs/theories/FoldSums.v
+ieee_theorem:  proofs/theories/IeeeFolds.v
+status:        proved
+domain:        extended
+source:        Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22), on the guarded elements
+license:       bound: published; proof: MIT
