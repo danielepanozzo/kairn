@@ -1007,7 +1007,15 @@ a kernel that has one (Dekker's product in `two_prod`), each `prod` a plain prod
 operand, `times_inf` from comparisons; a kernel without that path and every fold are refused, as
 the interpreter's `--ce` refuses them. Of the 223 kernels, 160 have such a path. The loops over
 arrays are covered in both their orders, `F_seq` and `F_lanes`, which the printer writes as scalar
-C++; `F_packed` is intrinsics and has no emulated form.
+C++; `F_packed` is intrinsics and has no emulated form. The kernels are ordinary inline functions
+(`tests/emulated/prelude.hpp`), but a fix-up that is a function of its own and the end of a ball
+vector are never inlined, as in the shipped prelude. With MSVC that is also needed: MSVC 19.52 at
+`/O2` miscompiles the fix-up of `ball_intersection_2` when it inlines it (the first limb of the
+operand returned three times, where the operand is the result), which
+`full.crosscheck.emulated.ball_intersection_2` found by comparing the two runners; a program of 55
+lines with no Kairn code shows it (a struct of a `uint64_t` and an `int` for the limb), and `/O1`,
+`/Od`, `__declspec(noinline)` and `double` limbs are right. The shipped fix-ups, the same functions
+for `double` and `float`, are `__declspec(noinline)` with MSVC.
 
 **Cross-checks.** `tests/crosscheck.py compiled --emulated LABEL EXE` is a runner kind of its own:
 judged by the oracle against `gen/claims.json` as every runner, and its output must be the same
