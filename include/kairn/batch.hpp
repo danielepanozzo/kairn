@@ -125,7 +125,7 @@ concept add_loop_proved = (K == 1 && loops::add_1_entry<T>::proved) || (K == 2 &
 template <class T, int K>
 concept sub_loop_proved = (K == 1 && loops::sub_1_entry<T>::proved) || (K == 2 && loops::sub_2_entry<T>::proved);
 template <class T, int K>
-concept scale_loop_proved = (K == 1 && loops::scale_1<T>::proved) || (K == 2 && loops::scale_2<T>::proved);
+concept scale_loop_proved = (K == 1 && loops::scale_1<T>::proved) || (K == 2 && loops::scale_2_entry<T>::proved);
 template <class T, int K>
 concept mul_pow2_loop_proved =
     (K == 1 && loops::mul_pow2_map_1<T>::proved) || (K == 2 && loops::mul_pow2_map_2<T>::proved);
@@ -542,9 +542,9 @@ bool scale(SoAView<T, K> x, std::type_identity_t<V> a, SoAView<V, K> z) noexcept
 #endif
     } else {
 #if KAIRN_DETAIL_BATCH_PACKED
-        gen::scale_2_packed(x.limb(0), x.limb(1), x.size(), a, z.limb(0), z.limb(1), finite);
+        gen::scale_2_entry_packed(x.limb(0), x.limb(1), x.size(), a, z.limb(0), z.limb(1), finite);
 #else
-        gen::scale_2_seq(x.limb(0), x.limb(1), x.size(), a, z.limb(0), z.limb(1), finite);
+        gen::scale_2_entry_seq(x.limb(0), x.limb(1), x.size(), a, z.limb(0), z.limb(1), finite);
 #endif
     }
     return finite;

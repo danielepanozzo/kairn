@@ -196,7 +196,7 @@ const ArrayForm array_forms[] = {
     AROW(sub_1_entry, sub, 'm', 1, 2, "", true, af_sub, 1)
     AROW(sub_2_entry, sub, 'm', 2, 2, "", true, af_sub, 2)
     AROW(scale_1, scale, 'm', 1, 1, "1", true, af_scale, 1)
-    AROW(scale_2, scale, 'm', 2, 1, "1", true, af_scale, 2)
+    AROW(scale_2_entry, scale, 'm', 2, 1, "1", true, af_scale, 2)
     AROW(mul_pow2_map_1, mul_pow2, 'm', 1, 1, "1", true, af_mul_pow2, 1)
     AROW(mul_pow2_map_2, mul_pow2, 'm', 2, 1, "1", true, af_mul_pow2, 2)
     AROW(axpy_1_entry, axpy, 'm', 1, 2, "1", true, af_axpy, 1)
@@ -223,7 +223,7 @@ const char* const factors_fold = "the loop of one limb on stored arrays, its fac
 const FoldNotPublic folds_not_public[] = {
     {"sum_1", stored_fold},  {"sum_2", stored_fold}, {"sum_fast_2", stored_fold}, {"add_1", stored_fold},
     {"add_2", stored_fold},  {"sub_1", stored_fold}, {"sub_2", stored_fold},      {"axpy_1", stored_fold},
-    {"axpy_2", stored_fold}, {"axpy_2_1", stored_fold}, {"dot_1", factors_fold}, {"conv_1", factors_fold},
+    {"axpy_2", stored_fold}, {"axpy_2_1", stored_fold}, {"dot_1", factors_fold}, {"conv_1", factors_fold}, {"scale_2", stored_fold},
 };
 
 // Whether a form of the array forms is listed by this runner: all of them, but in the runner of the

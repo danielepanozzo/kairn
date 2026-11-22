@@ -333,7 +333,8 @@ nav:
           - "x + y of two limbs, on arrays of the program": reference/add_entry_step_2.md
           - x - y of two limbs, on arrays of the program: reference/sub_entry_step_2.md
           - x a of one limb, a of T: reference/scale_step_1.md
-          - x a of two limbs, a of T: reference/scale_step_2.md
+          - "x a of two limbs, a of T, its operands unguarded (the step of `bv_scale_2`)": reference/scale_step_2.md
+          - x a of two limbs, a of T, on the guarded limbs and scalar: reference/scale_entry_step_2.md
           - x c of one limb, c a power of two: reference/mul_pow2_step_1.md
           - x c of two limbs, c a power of two: reference/mul_pow2_step_2.md
           - "a x + y of one limb, y stored": reference/axpy_step_1.md

@@ -117,7 +117,8 @@ element: `add` and `sub` (steps [`add_entry_step_1`](add_entry_step_1.md),
 [`add_entry_step_2`](add_entry_step_2.md), [`sub_entry_step_1`](sub_entry_step_1.md),
 [`sub_entry_step_2`](sub_entry_step_2.md)) the sum or difference rounded to nearest for one limb,
 and for two a normalized result within $3u^2/(1-4u)$ of it, relative; `scale` (by `a` of `T`,
-[`scale_step_1`](scale_step_1.md), [`scale_step_2`](scale_step_2.md)) the product rounded to
+[`scale_step_1`](scale_step_1.md), [`scale_entry_step_2`](scale_entry_step_2.md), which guards the limbs
+and `a`) the product rounded to
 nearest, or within $2u^2\lvert x_i a\rvert + \eta$; `mul_pow2` (by `c` a positive power of two,
 [`mul_pow2_step_1`](mul_pow2_step_1.md), [`mul_pow2_step_2`](mul_pow2_step_2.md)) the product,
 exact but below the smallest normal number, within $\eta/2$ and $\eta$; `axpy` an error relative to

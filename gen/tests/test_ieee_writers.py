@@ -342,7 +342,8 @@ class Maps(unittest.TestCase):
 
     def test_the_lead_statements(self):
         names = sorted({self.ks.folds[n].step[0] for n in MAPS})
-        self.assertEqual(len(names), 18)
+        # (and scale_entry_step_2, the step of scale_2_entry: rule R3)
+        self.assertEqual(len(names), 19)
         jobs = [(name, p, p + 3) for name in names for p in range(max(self.ks[name].min_precision or 1, 2), 6)]
         jobs += [(name, None, fmt) for name in names for fmt in ('binary64', 'binary32')]
         with ProcessPoolExecutor(max_workers=common.JOBS) as ex:

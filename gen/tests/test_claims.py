@@ -813,7 +813,8 @@ class FoldClaims(unittest.TestCase):
                 'orders', 'packed_lanes', 'step', 'step_args', 'check', 'min_precision', 'status', 'theorem',
                 'source']
         maps = [f for f in self.doc['folds'] if f.get('map')]
-        self.assertEqual(len(maps), 18)
+        # (and scale_2_entry, the scaling of two limbs on its operands guarded: rule R3)
+        self.assertEqual(len(maps), 19)
         kernels = {k['name']: k for k in self.doc['kernels']}
         for f in maps:
             with self.subTest(map=f['name']):

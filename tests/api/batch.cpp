@@ -232,7 +232,7 @@ void maps(Random& rnd) {
                     switch (op) {
                     case 0: kairn::gen::add_2_entry_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), n, o.limb(0), o.limb(1), fr); break;
                     case 1: kairn::gen::sub_2_entry_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), n, o.limb(0), o.limb(1), fr); break;
-                    case 2: kairn::gen::scale_2_seq(x.limb(0), x.limb(1), n, s, o.limb(0), o.limb(1), fr); break;
+                    case 2: kairn::gen::scale_2_entry_seq(x.limb(0), x.limb(1), n, s, o.limb(0), o.limb(1), fr); break;
                     case 3: kairn::gen::mul_pow2_map_2_seq(x.limb(0), x.limb(1), n, c, o.limb(0), o.limb(1), fr); break;
                     case 4: kairn::gen::axpy_2_1_entry_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), n, s, o.limb(0), o.limb(1), fr); break;
                     default: kairn::gen::axpy_2_entry_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), n, s2.limb[0], s2.limb[1], o.limb(0), o.limb(1), fr);

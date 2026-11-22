@@ -167,47 +167,48 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    [D6](design/phase0/decisions.md#d6-one-limb-and-contraction-under-clang): it behaves like `T`,
    contraction included.
 
-   **The factors of a fused operation.** "Nothing can be fused into a
-   product" holds of the product alone. It does not hold of a fused operation whose *other* factor
-   the compiler sees to be 1 or -1 after inlining: LLVM rewrites `fma(x, 1, s)` as `x + s` (and
-   `fma(x, -1, s)` as `s - x`), and a product `x = a * b` that the program computed is then fused
-   into that addition, so that the kernel computes with the exact product. The sound criterion: a
-   value supplied by the program (an input of an entry kernel that is not `stored`, the limbs of a
-   `supplied` input, the elements of a supplied array and a supplied scalar of a loop), reached
-   directly or through a callee and through `neg`, `abs`, `select` and `copy` as for the rule
-   above, is **exposed** where it is a factor of `fma`, `fms`, `fnma` or `muladd` whose addend is
-   not the literal zero of the listing, on a path on which it has not passed through `guard`. A
-   factor of `prod`, emitted `fma(a, b, +0.0)`, is not exposed: whatever a compiler does with the
-   product `a * b` of the program inside it, fused it is $\mathrm{RN}(ab + 0)$, the rounding of the
-   product itself, which is what the program's product is (and the same holds of a fused
-   operation whose addend is the literal zero). A guarded value is a number of the format, the
-   rounded product at most, and nothing is left to fuse. `rules.exposed_operands` lists, for every
-   entry kernel and every loop, its exposed operands with the route to each, and
-   `python3 gen/kairn-gen build` prints the list after its summary, with the operations of each
-   object today and with a guard on each exposed operand, and the header functions that reach it
-   (`build.header_calls`: the function of the public headers whose body calls the kernel or the
-   loop). By the owner's decision of 2026-11-21 (the strict rule) an exposed operand is refused,
-   with its operation and route (`rules.factor_rule`): an entry kernel guards each factor it takes
-   from the program, and a kernel that other kernels also call on limbs that kernels wrote gets a
-   guarded entry twin instead, whose listing is the unguarded one after a guard of each factor and
-   whose proofs reduce to it (the guard is the identity on numbers of the format). The public
-   operations call these entry forms: `two_prod_entry` (`kairn::two_prod`; in constant evaluation
-   the variant `two_prod_dekker` on the operands themselves, as constant evaluation never guards),
-   `mul_down_entry` and `mul_up_entry` (`mul_down`, `mul_up`), `mul_2_1_entry` (`finite::mul(x, a)` of
-   `Expansion<T, 2>` and of `Packed`), `mul_2_1_full_entry` (`x * a`, `a * x`, `x *= a` of both),
-   `ball_scale_2_full_entry` (the scaling of a `Ball<T, 2>` by a `T`), `acc_mul_entry_1` and
-   `acc_mul_entry_2` (`Accumulator::add_product`), and `dot_entry_step_1`, the step of `dot_1_entry`
-   (`dot` of one limb) and of the coefficients of `conv_1_entry` (`conv` of one limb); `dot_1` and
-   `conv_1`, on stored arrays, are the loops of the centers of `bv_conv_1`. The kernels they guard for
-   (`two_prod`, `mul_down_1`, `mul_up_1`, `mul_2_1`, `mul_2_1_full`, `ball_scale_2`,
-   `ball_scale_2_full`, `acc_mul_1`, `acc_mul_2`, `dot_step_1`) are no longer entry kernels. The objects not closed yet are listed in `rules.FACTOR_PENDING`, each with its reason:
-   the loops over arrays of two limbs (`dot`, `axpy`, `scale`, `conv`) and the scaling of a ball
-   vector, with their steps. Of these, Apple clang 21 under `-ffp-contract=fast` at `-O2` with
-   `NDEBUG` was measured to fuse a product of the program through a visible 1 into `scale` of two
-   limbs (every round), as it did into `conv` of one limb before that called `conv_1_entry`; no
-   compiler into the others. R3 accepts their exposed
-   operands, and refuses an entry there that has none; `build` prints them as PENDING. The measurements are in [Testing](testing.md#the-functions-on-arrays), "A factor the
-   compiler sees".
+   **The factors of a fused operation.** "Nothing can be fused into a product" holds of the product
+   alone. It does not hold of a fused operation whose *other* factor the compiler sees to be 1 or -1
+   after inlining: LLVM rewrites `fma(x, 1, s)` as `x + s` (and `fma(x, -1, s)` as `s - x`), and a
+   product `x = a * b` that the program computed is then fused into that addition, so that the
+   kernel computes with the exact product. The sound criterion: a value supplied by the program (an
+   input of an entry kernel that is not `stored`, the limbs of a `supplied` input, the elements of a
+   supplied array and a supplied scalar of a loop), reached directly or through a callee and through
+   `neg`, `abs`, `select` and `copy` as for the rule above, is **exposed** where it is a factor of
+   `fma`, `fms`, `fnma` or `muladd` whose addend is not the literal zero of the listing, on a path
+   on which it has not passed through `guard`. A factor of `prod`, emitted `fma(a, b, +0.0)`, is not
+   exposed: whatever a compiler does with the product `a * b` of the program inside it, fused it is
+   $\mathrm{RN}(ab + 0)$, the rounding of the product itself, which is what the program's product is
+   (and the same holds of a fused operation whose addend is the literal zero). A guarded value is a
+   number of the format, the rounded product at most, and nothing is left to fuse.
+   `rules.exposed_operands` lists, for every entry kernel and every loop, its exposed operands with
+   the route to each, and `python3 gen/kairn-gen build` prints the list after its summary, with the
+   operations of each object today and with a guard on each exposed operand, and the header
+   functions that reach it (`build.header_calls`: the function of the public headers whose body
+   calls the kernel or the loop). By the owner's decision of 2026-11-21 (the strict rule) an exposed
+   operand is refused, with its operation and route (`rules.factor_rule`): an entry kernel guards
+   each factor it takes from the program, and a kernel that other kernels also call on limbs that
+   kernels wrote gets a guarded entry twin instead, whose listing is the unguarded one after a guard
+   of each factor and whose proofs reduce to it (the guard is the identity on numbers of the
+   format). The public operations call these entry forms: `two_prod_entry` (`kairn::two_prod`; in
+   constant evaluation the variant `two_prod_dekker` on the operands themselves, as constant
+   evaluation never guards), `mul_down_entry` and `mul_up_entry` (`mul_down`, `mul_up`),
+   `mul_2_1_entry` (`finite::mul(x, a)` of `Expansion<T, 2>` and of `Packed`), `mul_2_1_full_entry`
+   (`x * a`, `a * x`, `x *= a` of both), `ball_scale_2_full_entry` (the scaling of a `Ball<T, 2>` by
+   a `T`), `acc_mul_entry_1` and `acc_mul_entry_2` (`Accumulator::add_product`), and
+   `dot_entry_step_1`, the step of `dot_1_entry` (`dot` of one limb) and of the coefficients of
+   `conv_1_entry` (`conv` of one limb), and `scale_entry_step_2`, the step of `scale_2_entry`
+   (`scale` of two limbs); `dot_1`, `conv_1` and `scale_2` are on stored arrays (`dot_1` and
+   `conv_1` the loops of the centers of `bv_conv_1`). The kernels they guard for (`two_prod`,
+   `mul_down_1`, `mul_up_1`, `mul_2_1`, `mul_2_1_full`, `ball_scale_2`, `ball_scale_2_full`,
+   `acc_mul_1`, `acc_mul_2`, `dot_step_1`) are no longer entry kernels. The objects not closed yet
+   are listed in `rules.FACTOR_PENDING`, each with its reason: the loops over arrays of two limbs
+   (`dot`, `axpy`, `conv`) and the scaling of a ball vector, with their steps, into none of which a
+   compiler was measured to fuse (Apple clang 21 under `-ffp-contract=fast` at `-O2` with `NDEBUG`
+   fused a product of the program through a visible 1 into `conv` of one limb and `scale` of two
+   limbs, every round, before they ran `conv_1_entry` and `scale_entry_step_2`). R3 accepts their
+   exposed operands, and refuses an entry there that has none; `build` prints them as PENDING. The
+   measurements are in [Testing](testing.md#the-functions-on-arrays), "A factor the compiler sees".
 
 R3 was added in Milestone 1, after a test of the public headers found the failure it prevents:
 with GCC 13 and 16 at their default setting, with Apple clang on AArch64 under

@@ -599,6 +599,19 @@ Definition scale_2_spec : Prop :=
     Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin)
     xs (scale_2_map emin prec tie_even a xs).
 
+(* scale_2_entry, each element it writes: mul_2_1 on each element, its limbs and the scalar guarded (scale_entry_step_2). Status: proved. *)
+Definition scale_2_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall (a : R) (xs : list (R * R)),
+  fmt emin prec a ->
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  Forall2 (fun x w_ =>
+    let '(x0, x1) := x in
+    let '(z0, z1) := w_ in
+    normalized_2 emin prec z0 z1 /\
+    Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin)
+    xs (scale_2_entry_map emin prec tie_even a xs).
+
 (* sub_1, each element it writes: sub_1_1 on each element. Status: proved. *)
 Definition sub_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->

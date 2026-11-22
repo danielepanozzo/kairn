@@ -888,8 +888,11 @@ KERNELS = {
                              form("sub(x, y, z)", V2, V2, W2, result="bool", note=STEP + " (loop `sub_2_entry`)")),
     "scale_step_1": page("maps", "x a of one limb, a of T",
                          form("scale(x, a, z)", V1, T, W1, result="bool", note=STEP + " (loop `scale_1`)")),
-    "scale_step_2": page("maps", "x a of two limbs, a of T",
-                         form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2`)")),
+    "scale_step_2": page("maps", "x a of two limbs, a of T, its operands unguarded (the step of `bv_scale_2`)"),
+    "scale_entry_step_2": page("maps", "x a of two limbs, a of T, on the guarded limbs and scalar",
+                               form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2`; the "
+                                    "limbs of each element and a guarded, rule R3 on the factors of a fused "
+                                    "operation)")),
     "mul_pow2_step_1": page("maps", "x c of one limb, c a power of two",
                             form("mul_pow2(x, c, z)", V1, T, W1, result="bool", note=STEP + " (loop `mul_pow2_map_1`)")),
     "mul_pow2_step_2": page("maps", "x c of two limbs, c a power of two",

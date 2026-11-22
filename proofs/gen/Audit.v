@@ -387,6 +387,9 @@ Print Assumptions norm_step_2_correct.
 Definition scale_step_2_audit : scale_step_2_spec := scale_step_2_correct.
 Print Assumptions scale_step_2_correct.
 
+Definition scale_entry_step_2_audit : scale_entry_step_2_spec := scale_entry_step_2_correct.
+Print Assumptions scale_entry_step_2_correct.
+
 Definition sub_1_2_audit : sub_1_2_spec := sub_1_2_correct.
 Print Assumptions sub_1_2_correct.
 
@@ -530,6 +533,9 @@ Print Assumptions scale_1_correct.
 
 Definition scale_2_audit : scale_2_spec := scale_2_correct.
 Print Assumptions scale_2_correct.
+
+Definition scale_2_entry_audit : scale_2_entry_spec := scale_2_entry_correct.
+Print Assumptions scale_2_entry_correct.
 
 Definition sub_1_audit : sub_1_spec := sub_1_correct.
 Print Assumptions sub_1_correct.

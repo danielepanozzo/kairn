@@ -614,6 +614,12 @@ Print Assumptions scale_step_2_ieee_bridge.
 Definition scale_step_2_ieee_audit : scale_step_2_ieee_spec := scale_step_2_ieee_correct.
 Print Assumptions scale_step_2_ieee_correct.
 
+Definition scale_entry_step_2_ieee_bridge_audit : scale_entry_step_2_ieee_bridge_spec := scale_entry_step_2_ieee_bridge.
+Print Assumptions scale_entry_step_2_ieee_bridge.
+
+Definition scale_entry_step_2_ieee_audit : scale_entry_step_2_ieee_spec := scale_entry_step_2_ieee_correct.
+Print Assumptions scale_entry_step_2_ieee_correct.
+
 Definition sub_entry_step_2_ieee_bridge_audit : sub_entry_step_2_ieee_bridge_spec := sub_entry_step_2_ieee_bridge.
 Print Assumptions sub_entry_step_2_ieee_bridge.
 
@@ -712,6 +718,9 @@ Print Assumptions mul_pow2_step_2_ieee_lead.
 
 Definition scale_step_2_ieee_lead_audit : scale_step_2_ieee_lead_spec := scale_step_2_ieee_lead.
 Print Assumptions scale_step_2_ieee_lead.
+
+Definition scale_entry_step_2_ieee_lead_audit : scale_entry_step_2_ieee_lead_spec := scale_entry_step_2_ieee_lead.
+Print Assumptions scale_entry_step_2_ieee_lead.
 
 Definition sub_2_2_ieee_lead_audit : sub_2_2_ieee_lead_spec := sub_2_2_ieee_lead.
 Print Assumptions sub_2_2_ieee_lead.
@@ -886,6 +895,12 @@ Print Assumptions scale_2_seq_ieee_correct.
 
 Definition scale_2_lanes_ieee_audit : scale_2_lanes_ieee_spec := scale_2_lanes_ieee_correct.
 Print Assumptions scale_2_lanes_ieee_correct.
+
+Definition scale_2_entry_seq_ieee_audit : scale_2_entry_seq_ieee_spec := scale_2_entry_seq_ieee_correct.
+Print Assumptions scale_2_entry_seq_ieee_correct.
+
+Definition scale_2_entry_lanes_ieee_audit : scale_2_entry_lanes_ieee_spec := scale_2_entry_lanes_ieee_correct.
+Print Assumptions scale_2_entry_lanes_ieee_correct.
 
 Definition sub_1_seq_ieee_audit : sub_1_seq_ieee_spec := sub_1_seq_ieee_correct.
 Print Assumptions sub_1_seq_ieee_correct.

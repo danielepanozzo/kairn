@@ -714,9 +714,9 @@ _DOT = ('the step of the dot product and of the coefficients of the convolution 
         'takes the loops dot_2_entry (step dot_entry_step_2, the twin guarding x and y) and conv_2_entry (the '
         'coefficients by dot_2_entry, as conv_1_entry), with their theorems; conv_2 itself is also the loop '
         'of the centers of bv_conv_2, on stored arrays, which must not pay for guards')
-_SCALE = ('the step of scale_2 (x and a supplied) and of bv_scale_2 (x stored, a supplied): closing it takes '
-          'a twin guarding x and a for scale_2 and one guarding a for bv_scale_2, with the theorems of the '
-          'maps and of the ball vector')
+_SCALE = ('the step of bv_scale_2 (x stored, a supplied; kairn::scale calls scale_2_entry): closing it '
+          'takes a step guarding a only (or a guard of a once, outside the loop, which a fold cannot express '
+          'yet), with the theorems of the ball vector; bv_scale_2 is not public on this branch')
 _AXPY = ('the step of the axpy of two limbs: its own guards on a and x, which change its listing, so its '
          'bridge and its theorems in both models and those of its loop are to be proved again')
 _AXPY_STORED = ('the step of a loop that no header calls, whose description says the program supplies a and '
@@ -727,7 +727,7 @@ FACTOR_PENDING = {
     'axpy_step_2': _AXPY_STORED, 'axpy_step_2_1': _AXPY_STORED,
     'loop axpy_2': 'its step: ' + _AXPY_STORED, 'loop axpy_2_1': 'its step: ' + _AXPY_STORED,
     'loop axpy_2_1_entry': 'its step: ' + _AXPY, 'loop axpy_2_entry': 'its step: ' + _AXPY,
-    'loop bv_scale_2': 'its step: ' + _SCALE, 'loop scale_2': 'its step: ' + _SCALE,
+    'loop bv_scale_2': 'its step: ' + _SCALE,
     'loop conv_2': 'its coefficients, dot_2: ' + _DOT,
     'loop dot_2': 'its step: ' + _DOT,
 }

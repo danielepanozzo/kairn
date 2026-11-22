@@ -350,12 +350,19 @@ Definition scale_1_step (a : R) (x : R) : R :=
 Definition scale_1_map (a : R) (xs : list R) : list R :=
   map (scale_1_step a) xs.
 
-(* scale_2: a map; arrays supplied x; scalars supplied a; it writes z by the step scale_step_2. *)
+(* scale_2: a map; arrays stored x; scalars stored a; it writes z by the step scale_step_2. *)
 Definition scale_2_step (a : R) (x : R * R) : R * R :=
   scale_step_2 emin prec choice (fst x) (snd x) a.
 
 Definition scale_2_map (a : R) (xs : list (R * R)) : list (R * R) :=
   map (scale_2_step a) xs.
+
+(* scale_2_entry: a map; arrays supplied x; scalars supplied a; it writes z by the step scale_entry_step_2. *)
+Definition scale_2_entry_step (a : R) (x : R * R) : R * R :=
+  scale_entry_step_2 emin prec choice (fst x) (snd x) a.
+
+Definition scale_2_entry_map (a : R) (xs : list (R * R)) : list (R * R) :=
+  map (scale_2_entry_step a) xs.
 
 (* sub_1: a map; arrays stored x, stored y; it writes z by the step sub_1_1. *)
 Definition sub_1_step (xy : R * R) : R :=

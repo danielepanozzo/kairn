@@ -2580,6 +2580,14 @@ Definition scale_step_2 (x0 x1 a : float) : float * float :=
   let '(z0, z1) := mul_2_1 x0 x1 a in
   (z0, z1).
 
+(* scale_entry_step_2: scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation). *)
+Definition scale_entry_step_2 (x0 x1 a : float) : float * float :=
+  let gx0 := guard x0 in
+  let gx1 := guard x1 in
+  let ga := guard a in
+  let '(z0, z1) := scale_step_2 gx0 gx1 ga in
+  (z0, z1).
+
 (* sub_1_2: add_2_1 (JMP17 Alg. 4) on -y and a. *)
 Definition sub_1_2 (a y0 y1 : float) : float * float :=
   let n0 := neg y0 in
@@ -3132,6 +3140,19 @@ Definition scale_step_2_prog : list instr :=
   ; Iadd 3 5    (*  6 z0 *)
   ; Isub 6 3    (*  7 z0_z *)
   ; Isub 5 7    (*  8 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition scale_entry_step_2_prog : list instr :=
+  [ Iguard 0    (*  3 gx0 *)
+  ; Iguard 1    (*  4 gx1 *)
+  ; Iguard 2    (*  5 ga *)
+  ; Iprod 3 5   (*  6 z0_ch *)
+  ; Ifms 3 5 6  (*  7 z0_cl1 *)
+  ; Ifma 4 5 7  (*  8 z0_cl3 *)
+  ; Iadd 6 8    (*  9 z0 *)
+  ; Isub 9 6    (* 10 z0_z *)
+  ; Isub 8 10   (* 11 z1 *)
   ].
 
 (* inputs: 0 a, 1 y0, 2 y1 *)

@@ -43,7 +43,7 @@ ALL = FOLDS + MAX_FOLDS
 CONVS = {'conv_1', 'conv_2', 'conv_1_entry'}
 # The maps, the folds that write an array, have tests of their own (test_maps.py).
 MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 'sub_2', 'sub_2_entry', 'axpy_1',
-        'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2',
+        'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2', 'scale_2_entry',
         'mul_pow2_map_1', 'mul_pow2_map_2'}
 # The ball vectors, maps of the centers with the state of a fold of maxima (test_bv.py).
 BVS = {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2'}

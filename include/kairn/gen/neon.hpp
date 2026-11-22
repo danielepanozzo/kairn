@@ -14743,6 +14743,42 @@ KAIRN_GEN_FORCEINLINE void scale_step_2(float32x4_t x0, float32x4_t x1, float32x
     z1_out = z1;
 }
 
+// scale_entry_step_2(x = (x0, x1), a) -> z = (z0, z1)
+KAIRN_GEN_FORCEINLINE void scale_entry_step_2(float64x2_t x0, float64x2_t x1, float64x2_t a, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
+    const float64x2_t gx0 = vaddq_f64(x0, vdupq_n_f64(0.0));
+    const float64x2_t gx1 = vaddq_f64(x1, vdupq_n_f64(0.0));
+    const float64x2_t ga = vaddq_f64(a, vdupq_n_f64(0.0));
+    // (z0, z1) = scale_step_2(gx0, gx1, ga)
+    // (z0, z1) = mul_2_1(gx0, gx1, ga)
+    // (z0_ch, z0_cl1) = two_prod(gx0, ga)
+    const float64x2_t z0_ch = vfmaq_f64(vdupq_n_f64(0.0), gx0, ga);
+    const float64x2_t z0_cl1 = vfmaq_f64(vnegq_f64(z0_ch), gx0, ga);
+    const float64x2_t z0_cl3 = vfmaq_f64(z0_cl1, gx1, ga);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float64x2_t z0 = vaddq_f64(z0_ch, z0_cl3);
+    const float64x2_t z0_z = vsubq_f64(z0, z0_ch);
+    const float64x2_t z1 = vsubq_f64(z0_cl3, z0_z);
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void scale_entry_step_2(float32x4_t x0, float32x4_t x1, float32x4_t a, float32x4_t& z0_out, float32x4_t& z1_out) noexcept {
+    const float32x4_t gx0 = vaddq_f32(x0, vdupq_n_f32(0.0f));
+    const float32x4_t gx1 = vaddq_f32(x1, vdupq_n_f32(0.0f));
+    const float32x4_t ga = vaddq_f32(a, vdupq_n_f32(0.0f));
+    // (z0, z1) = scale_step_2(gx0, gx1, ga)
+    // (z0, z1) = mul_2_1(gx0, gx1, ga)
+    // (z0_ch, z0_cl1) = two_prod(gx0, ga)
+    const float32x4_t z0_ch = vfmaq_f32(vdupq_n_f32(0.0f), gx0, ga);
+    const float32x4_t z0_cl1 = vfmaq_f32(vnegq_f32(z0_ch), gx0, ga);
+    const float32x4_t z0_cl3 = vfmaq_f32(z0_cl1, gx1, ga);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float32x4_t z0 = vaddq_f32(z0_ch, z0_cl3);
+    const float32x4_t z0_z = vsubq_f32(z0, z0_ch);
+    const float32x4_t z1 = vsubq_f32(z0_cl3, z0_z);
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // sub_1_2(a, y = (y0, y1)) -> z = (z0, z1)
 KAIRN_GEN_FORCEINLINE void sub_1_2(float64x2_t a, float64x2_t y0, float64x2_t y1, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
     const float64x2_t n0 = vnegq_f64(y0);
@@ -20355,7 +20391,7 @@ inline void scale_1_packed(const float* x_in, std::size_t n, float a, float* z_o
     finite_out = finite;
 }
 
-// map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
+// map scale_2(stored x = (x0, x1), stored a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void scale_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 2;
@@ -20452,6 +20488,146 @@ inline void scale_2_packed(const float* x0_in, const float* x1_in, std::size_t n
         const float step_z0_ch = fma_rn(x0, a, 0.0f);
         const float step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
         const float step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float step_z0 = step_z0_ch + step_z0_cl3;
+        const float step_z0_z = step_z0 - step_z0_ch;
+        const float step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map scale_2_entry(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_entry_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
+inline void scale_2_entry_packed(const double* x0_in, const double* x1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    const float64x2_t a_v_ = vdupq_n_f64(a);
+    uint64x2_t finite_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x0 = vld1q_f64(x0_in + i_);
+        const float64x2_t x1 = vld1q_f64(x1_in + i_);
+        // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a_v_)
+        const float64x2_t step_gx0 = vaddq_f64(x0, vdupq_n_f64(0.0));
+        const float64x2_t step_gx1 = vaddq_f64(x1, vdupq_n_f64(0.0));
+        const float64x2_t step_ga = vaddq_f64(a_v_, vdupq_n_f64(0.0));
+        // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+        const float64x2_t step_z0_ch = vfmaq_f64(vdupq_n_f64(0.0), step_gx0, step_ga);
+        const float64x2_t step_z0_cl1 = vfmaq_f64(vnegq_f64(step_z0_ch), step_gx0, step_ga);
+        const float64x2_t step_z0_cl3 = vfmaq_f64(step_z0_cl1, step_gx1, step_ga);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float64x2_t step_z0 = vaddq_f64(step_z0_ch, step_z0_cl3);
+        const float64x2_t step_z0_z = vsubq_f64(step_z0, step_z0_ch);
+        const float64x2_t step_z1 = vsubq_f64(step_z0_cl3, step_z0_z);
+        vst1q_f64(z0_out + i_, step_z0);
+        vst1q_f64(z1_out + i_, step_z1);
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float64x2_t chk_a = vabsq_f64(step_z0);
+        const uint64x2_t chk_flag = vcltq_f64(chk_a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+        finite_lane_ = vandq_u64(finite_lane_, chk_flag);
+    }
+    bool finite = vminvq_u32(vreinterpretq_u32_u64(finite_lane_)) != 0U;
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a)
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
+        const double step_ga = a + 0.0;
+        // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+        const double step_z0_ch = fma_rn(step_gx0, step_ga, 0.0);
+        const double step_z0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_ch);
+        const double step_z0_cl3 = fma_rn(step_gx1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const double step_z0 = step_z0_ch + step_z0_cl3;
+        const double step_z0_z = step_z0 - step_z0_ch;
+        const double step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
+inline void scale_2_entry_packed(const float* x0_in, const float* x1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    const float32x4_t a_v_ = vdupq_n_f32(a);
+    uint32x4_t finite_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x0 = vld1q_f32(x0_in + i_);
+        const float32x4_t x1 = vld1q_f32(x1_in + i_);
+        // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a_v_)
+        const float32x4_t step_gx0 = vaddq_f32(x0, vdupq_n_f32(0.0f));
+        const float32x4_t step_gx1 = vaddq_f32(x1, vdupq_n_f32(0.0f));
+        const float32x4_t step_ga = vaddq_f32(a_v_, vdupq_n_f32(0.0f));
+        // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+        const float32x4_t step_z0_ch = vfmaq_f32(vdupq_n_f32(0.0f), step_gx0, step_ga);
+        const float32x4_t step_z0_cl1 = vfmaq_f32(vnegq_f32(step_z0_ch), step_gx0, step_ga);
+        const float32x4_t step_z0_cl3 = vfmaq_f32(step_z0_cl1, step_gx1, step_ga);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float32x4_t step_z0 = vaddq_f32(step_z0_ch, step_z0_cl3);
+        const float32x4_t step_z0_z = vsubq_f32(step_z0, step_z0_ch);
+        const float32x4_t step_z1 = vsubq_f32(step_z0_cl3, step_z0_z);
+        vst1q_f32(z0_out + i_, step_z0);
+        vst1q_f32(z1_out + i_, step_z1);
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float32x4_t chk_a = vabsq_f32(step_z0);
+        const uint32x4_t chk_flag = vcltq_f32(chk_a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+        finite_lane_ = vandq_u32(finite_lane_, chk_flag);
+    }
+    bool finite = vminvq_u32(finite_lane_) != 0U;
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_entry_step_2(x0, x1, a)
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
+        const float step_ga = a + 0.0f;
+        // (step_z0, step_z1) = scale_step_2(step_gx0, step_gx1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(step_gx0, step_ga)
+        const float step_z0_ch = fma_rn(step_gx0, step_ga, 0.0f);
+        const float step_z0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_ch);
+        const float step_z0_cl3 = fma_rn(step_gx1, step_ga, step_z0_cl1);
         // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
         const float step_z0 = step_z0_ch + step_z0_cl3;
         const float step_z0_z = step_z0 - step_z0_ch;

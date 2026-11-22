@@ -1416,7 +1416,7 @@ const NotPublic not_public[] = {
     {"sum_entry_step_1", fold_step}, {"sum_entry_step_2", fold_step}, {"sum_fast_entry_step_2", fold_step},
     {"dot_entry_step_1", fold_step}, {"dot_step_2", fold_step}, {"add_entry_step_1", fold_step},
     {"add_entry_step_2", fold_step}, {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step},
-    {"scale_step_1", fold_step}, {"scale_step_2", fold_step}, {"mul_pow2_step_1", fold_step},
+    {"scale_step_1", fold_step}, {"scale_step_2", fold_step}, {"scale_entry_step_2", fold_step}, {"mul_pow2_step_1", fold_step},
     {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},
     {"axpy_entry_step_2", fold_step},
 };

@@ -257,6 +257,15 @@ Definition scale_step_2_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
   finite z0 -> finite x0 /\ finite a.
 
+(* scale_entry_step_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
+Definition scale_entry_step_2_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  forall x0 x1 a : binary_float prec emax,
+  let '(z0, z1) := IeeeModel.scale_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
+  finite z0 -> finite x0 /\ finite a.
+
 (* sub_2_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition sub_2_2_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -1348,6 +1357,48 @@ Definition scale_2_lanes_ieee_spec : Prop :=
     (finite z0 ->
      finite x0 /\ finite x1 /\ finite a /\ finite z1 /\
      (val z0, val z1) = scale_step_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val a) /\
+     normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+     Rabs ((val z0 + val z1) - ((val x0 + val x1) * val a)) <= 2 * u prec ^ 2 * Rabs ((val x0 + val x1) * val a) + 1 * eta (ieee_emin prec emax)) /\
+    (~ finite z0 -> nan z0 /\ nan z1 /\ flag_ = false))
+    xs ws_ /\
+  (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
+
+(* scale_2_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
+Definition scale_2_entry_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (2 <= prec)%Z ->
+  forall (a : binary_float prec emax) (xs : list (binary_float prec emax * binary_float prec emax)),
+  Forall (fun x => canonical_2 (fst x) (snd x)) xs ->
+  let '(ws_, flag_) := IeeeFoldModel.scale_2_entry_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const a xs in
+  Forall2 (fun x w_ =>
+    let '(x0, x1) := x in
+    let '(z0, z1) := w_ in
+    (finite z0 ->
+     finite x0 /\ finite x1 /\ finite a /\ finite z1 /\
+     (val z0, val z1) = scale_entry_step_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val a) /\
+     normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+     Rabs ((val z0 + val z1) - ((val x0 + val x1) * val a)) <= 2 * u prec ^ 2 * Rabs ((val x0 + val x1) * val a) + 1 * eta (ieee_emin prec emax)) /\
+    (~ finite z0 -> nan z0 /\ nan z1 /\ flag_ = false))
+    xs ws_ /\
+  (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
+
+(* scale_2_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
+Definition scale_2_entry_lanes_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (2 <= prec)%Z ->
+  forall (W : nat) (a : binary_float prec emax) (xs : list (binary_float prec emax * binary_float prec emax)),
+  Forall (fun x => canonical_2 (fst x) (snd x)) xs ->
+  let '(ws_, flag_) := IeeeFoldModel.scale_2_entry_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const W a xs in
+  Forall2 (fun x w_ =>
+    let '(x0, x1) := x in
+    let '(z0, z1) := w_ in
+    (finite z0 ->
+     finite x0 /\ finite x1 /\ finite a /\ finite z1 /\
+     (val z0, val z1) = scale_entry_step_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val a) /\
      normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
      Rabs ((val z0 + val z1) - ((val x0 + val x1) * val a)) <= 2 * u prec ^ 2 * Rabs ((val x0 + val x1) * val a) + 1 * eta (ieee_emin prec emax)) /\
     (~ finite z0 -> nan z0 /\ nan z1 /\ flag_ = false))

@@ -37,10 +37,10 @@ def check(*texts):
 # program supplies.
 MAP_STEPS = {'sub_1_1', 'add_entry_step_1', 'sub_entry_step_1', 'add_entry_step_2', 'sub_entry_step_2',
              'scale_step_1', 'scale_step_2', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1',
-             'axpy_entry_step_1', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1'}
+             'axpy_entry_step_1', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1', 'scale_entry_step_2'}
 # The maps (stage B).
 MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 'sub_2', 'sub_2_entry', 'axpy_1',
-        'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2',
+        'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2', 'scale_2_entry',
         'mul_pow2_map_1', 'mul_pow2_map_2'}
 
 
@@ -611,7 +611,6 @@ EXPOSED = {
     ('loop', 'bv_scale_2', 'scale_step_2'): ['a'],
     ('loop', 'conv_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
     ('loop', 'dot_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-    ('loop', 'scale_2', 'scale_step_2'): ['a', 'x0', 'x1'],
 }
 
 
@@ -1932,7 +1931,7 @@ class TheKernels(unittest.TestCase):
             'sum_fast_entry_step_2': 2, 'bound_sum_1': 1, 'bound_sum_2': 3, 'bound_dot_1': 1, 'bound_dot_2': 4,
             # the steps of the maps: that of the kernels they call (axpy_step_2_1: mul_2_1 and add_2_2)
             'sub_1_1': 1, 'add_entry_step_1': 1, 'sub_entry_step_1': 1, 'add_entry_step_2': 3,
-            'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'mul_pow2_step_1': 1,
+            'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'scale_entry_step_2': 2, 'mul_pow2_step_1': 1,
             'mul_pow2_step_2': 2, 'axpy_step_1': 1, 'axpy_entry_step_1': 1, 'axpy_step_2': 4,
             'axpy_entry_step_2': 4, 'axpy_step_2_1': 3, 'axpy_entry_step_2_1': 3,
             # the folds of maxima: comparisons and selects, from one bit on

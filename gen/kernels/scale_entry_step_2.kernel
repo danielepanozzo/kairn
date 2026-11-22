@@ -1,0 +1,30 @@
+# The step of scale_2, z = x a for arrays x and a scalar a that the program supplies (rule R3, the
+# factors of a fused operation: architecture.md): scale_step_2 on the limbs of x and on a guarded.
+# scale_step_2 (mul_2_1) only multiplies them, which R3 alone does not guard; but a compiler that sees
+# the elements of x to be 1 fuses a product a = y z of the program into the fms of mul_2_1's two_prod
+# (Apple clang 21 under -ffp-contract=fast at -O2 with NDEBUG, measured: every round). After the
+# guards each is a number of the format. Its claims are those of scale_step_2: the guard is the
+# identity on numbers of the format. scale_step_2 stays the step of bv_scale_2, whose array is stored.
+kernel:        scale_entry_step_2
+input:         supplied x = x0 x1
+input:         a
+output:        z = z0 z1
+value:         x*a
+requires:      normalized x
+ensures:       normalized z
+ensures:       error z R c=2 k=2 t=1
+min_precision: 2
+theorem:       proofs/theories/MapSteps.v scale_entry_step_2_correct
+ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v scale_entry_step_2_ieee_bridge
+ieee_spec_theorem: proofs/theories/IeeeMapSteps.v scale_entry_step_2_ieee_correct
+ieee_lead_theorem: proofs/theories/IeeeMapSteps.v scale_entry_step_2_ieee_lead
+source:        scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation)
+license:       algorithm: published; proof: MIT
+status:        proved
+entry:         yes
+ieee:          bridge spec
+
+gx0      = guard(x0)
+gx1      = guard(x1)
+ga       = guard(a)
+(z0, z1) = scale_step_2(gx0, gx1, ga)

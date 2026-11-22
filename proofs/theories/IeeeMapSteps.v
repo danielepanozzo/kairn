@@ -936,6 +936,53 @@ exact (scale_step_2_values_correct prec emax nan_plus nan_minus nan_opp nan_fma 
     Nx).
 Qed.
 
+(* scale_step_2 on the limbs of x and on a guarded (rule R3, the factors of a fused operation): the
+   guard of a finite value is finite with the same value, and the values the program computes are
+   the guards, then those of scale_step_2's program on the guarded operands. *)
+Theorem scale_entry_step_2_ieee_bridge : scale_entry_step_2_ieee_bridge_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp' x0 x1 a F0 F1 Fa Nx.
+assert (G0 : finite (IeeeOperations.guard prec emax nan_plus x0)) by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact F0).
+assert (G1 : finite (IeeeOperations.guard prec emax nan_plus x1)) by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact F1).
+assert (Ga : finite (IeeeOperations.guard prec emax nan_plus a)) by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact Fa).
+assert (V0 : val (IeeeOperations.guard prec emax nan_plus x0) = val x0) by exact (guard_val prec emax nan_plus x0).
+assert (V1 : val (IeeeOperations.guard prec emax nan_plus x1) = val x1) by exact (guard_val prec emax nan_plus x1).
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a) by exact (guard_val prec emax nan_plus a).
+assert (Ng := Nx). rewrite <- V0, <- V1 in Ng.
+generalize (scale_step_2_ieee_bridge prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp' _ _ _ G0 G1 Ga Ng).
+unfold IeeeModel.scale_entry_step_2. cbv zeta.
+destruct (IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (IeeeOperations.guard prec emax nan_plus x0) (IeeeOperations.guard prec emax nan_plus x1)
+            (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
+intros B Fz. destruct (B Fz) as [R [Fz1 E]].
+split; [|split; [exact Fz1|]].
+- cbv [run stepB nth app IeeeModel.scale_step_2_prog] in R.
+  cbv [run stepB nth app IeeeModel.scale_entry_step_2_prog].
+  repeat match goal with H : Forall _ (_ :: _) |- _ => apply Forall_cons_iff in H; destruct H end.
+  repeat constructor; assumption.
+- rewrite V0, V1, Va in E. rewrite E. unfold scale_entry_step_2. cbv zeta.
+  rewrite (guard_real_any (ieee_emin prec emax) prec tie_even (val x0) (b2r_format prec emax x0)),
+          (guard_real_any (ieee_emin prec emax) prec tie_even (val x1) (b2r_format prec emax x1)),
+          (guard_real_any (ieee_emin prec emax) prec tie_even (val a) (b2r_format prec emax a)).
+  destruct (scale_step_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val a)). reflexivity.
+Qed.
+
+Theorem scale_entry_step_2_ieee_correct : scale_entry_step_2_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp' x0 x1 a F0 F1 Fa Nx.
+assert (G0 : finite (IeeeOperations.guard prec emax nan_plus x0)) by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact F0).
+assert (G1 : finite (IeeeOperations.guard prec emax nan_plus x1)) by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact F1).
+assert (Ga : finite (IeeeOperations.guard prec emax nan_plus a)) by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact Fa).
+assert (V0 : val (IeeeOperations.guard prec emax nan_plus x0) = val x0) by exact (guard_val prec emax nan_plus x0).
+assert (V1 : val (IeeeOperations.guard prec emax nan_plus x1) = val x1) by exact (guard_val prec emax nan_plus x1).
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a) by exact (guard_val prec emax nan_plus a).
+assert (Ng := Nx). rewrite <- V0, <- V1 in Ng.
+generalize (scale_step_2_ieee_correct prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp' _ _ _ G0 G1 Ga Ng).
+unfold IeeeModel.scale_entry_step_2. cbv zeta.
+destruct (IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (IeeeOperations.guard prec emax nan_plus x0) (IeeeOperations.guard prec emax nan_plus x1)
+            (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
+rewrite V0, V1, Va. intros H. exact H.
+Qed.
+
 Theorem mul_pow2_step_2_ieee_bridge : mul_pow2_step_2_ieee_bridge_spec.
 Proof.
 intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp' x0 x1 c F0 F1 Fc Nx Pc.
@@ -1364,6 +1411,17 @@ split.
 - exact (lead_cone prec emax nan_plus nan_minus nan_opp nan_fma IeeeModel.scale_step_2_prog
     [x0; x1; a] 6 2 eq_refl eq_refl
            ltac:(cbn [length]; lia) Fz).
+Qed.
+
+Theorem scale_entry_step_2_ieee_lead : scale_entry_step_2_ieee_lead_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma x0 x1 a.
+generalize (scale_step_2_ieee_lead prec emax Hp He nan_plus nan_minus nan_opp nan_fma (IeeeOperations.guard prec emax nan_plus x0)
+              (IeeeOperations.guard prec emax nan_plus x1) (IeeeOperations.guard prec emax nan_plus a)).
+unfold IeeeModel.scale_entry_step_2. cbv zeta.
+destruct (IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (IeeeOperations.guard prec emax nan_plus x0) (IeeeOperations.guard prec emax nan_plus x1)
+            (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
+unfold finite. rewrite !(guard_finite prec emax nan_plus). intros H. exact H.
 Qed.
 
 Theorem sub_2_2_ieee_lead : sub_2_2_ieee_lead_spec.

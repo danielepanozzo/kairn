@@ -35,6 +35,8 @@ PROGRAMS += ['dot_entry_step_1']
 # And the entry forms of two_prod and mul_2_1, which guard the factors first (rule R3, the factors of
 # a fused operation).
 PROGRAMS += ['two_prod_entry', 'mul_2_1_entry']
+# And the step of scale_2, scale_step_2 on its operands guarded (the same rule).
+PROGRAMS += ['scale_entry_step_2']
 # And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
 # Program.v (acc_merge_k: additions; the others guard or take an absolute value).
 PROGRAMS += ['acc_merge_1', 'acc_merge_2']
@@ -505,8 +507,10 @@ class Statements(unittest.TestCase):
         # with the entry forms of the products: two_prod_entry, mul_down_entry, mul_up_entry,
         # mul_2_1_entry (bridge and statement) and mul_2_1_full_entry; and one with that of the scaling
         # of a ball of two limbs, ball_scale_2_full_entry; and one with acc_mul_entry_2; and one with
-        # conv_1_entry, the convolution of one limb on its factors guarded.
-        self.assertEqual(text.count('Print Assumptions'), 316)
+        # conv_1_entry, the convolution of one limb on its factors guarded; and five with the scaling of two
+        # limbs on its operands guarded: scale_entry_step_2 (bridge, statement, leading limb) and
+        # scale_2_entry in both orders.
+        self.assertEqual(text.count('Print Assumptions'), 321)
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
         self.assertIn('Definition ball_hull_2_audit : ball_hull_2_spec := ball_hull_2_correct.\n'
@@ -661,8 +665,10 @@ class CheckedFiles(unittest.TestCase):
     # else changed; make -C proofs passed on these files.
     # Then ball_scale_2_full_entry (the same rule): its model and statement added, nothing else changed.
     # Then acc_mul_entry_2 (the same rule): its model and statement added, nothing else changed.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '31d0ea5ce6f572929a1faffeecd0f949eb3b54d3ecf0941b9362b0103c8c8eca',
-               'proofs/gen/IeeeStatements.v': '6c1966fc4bc9f150922f4270ca79e821dcd7c30bd8e4236e80c9724cf7166b19'}
+    # Then scale_entry_step_2 (the same rule): its model, program and statements added, nothing else
+    # changed.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '8e0ab952408dbef10a118be7592e595397b5b98434b8cd86e2b11caae33b96e6',
+               'proofs/gen/IeeeStatements.v': '10e3f8e5b80dd7fd7dde097fe87a573d410a4cd61ca40ae500a7354b4ac51ec4'}
 
 
     def test_the_checked_files(self):

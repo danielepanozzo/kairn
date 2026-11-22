@@ -3,9 +3,11 @@
 # on one element of each array read, and the scalar a, in any order; the mask finite is the and of the
 # tests of the written elements, and when it is false a second pass makes every element that
 # is not finite the canonical NaN ("When something is not finite").
+# Its array and scalar are stored, written through Kairn: kairn::scale of two limbs calls scale_2_entry,
+# whose step guards them (rule R3, the factors of a fused operation).
 fold:          scale_2
-arrays:        supplied x = x0 x1
-scalars:       supplied a
+arrays:        stored x = x0 x1
+scalars:       stored a
 state:         mask finite
 step:          z = scale_step_2(x, a)
 combine:       finite = and(finite, finite)

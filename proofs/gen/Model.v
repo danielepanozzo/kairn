@@ -1113,6 +1113,14 @@ Definition scale_step_2 (x0 x1 a : R) : R * R :=
   let '(z0, z1) := mul_2_1 x0 x1 a in
   (z0, z1).
 
+(* scale_entry_step_2: scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation). *)
+Definition scale_entry_step_2 (x0 x1 a : R) : R * R :=
+  let gx0 := rnd (x0 + 0) in
+  let gx1 := rnd (x1 + 0) in
+  let ga := rnd (a + 0) in
+  let '(z0, z1) := scale_step_2 gx0 gx1 ga in
+  (z0, z1).
+
 (* sub_1_2: add_2_1 (JMP17 Alg. 4) on -y and a. *)
 Definition sub_1_2 (a y0 y1 : R) : R * R :=
   let n0 := - y0 in
