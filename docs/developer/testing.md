@@ -978,7 +978,8 @@ operands of `fp:8:-14:1` to `fp:11:-20:1` and of `fp:8:-22:9`; and each comparis
 of two faults planted in the rounding (`plant_fault`: a tie rounded away from zero, a result in
 the subnormal range truncated), which each must see. At the quick tier's sizes (3 seconds on the
 Mac) that is 256 391 comparisons with the oracle in 8 formats and 1 234 372 and 1 181 323 with the
-machine's `float` and `double` (50 000 cases each); at the full tier's (10 seconds), 762 569 in 9
+machine's `float` and `double` (50 000 cases each; these two counts are the Mac's and differ by a
+few hundred under libstdc++, whose random distributions draw other operands); at the full tier's (10 seconds), 762 569 in 9
 formats and 24 686 741 and 23 624 764 (a million cases each); none different. Planted, the tie
 rounded away gives 1 212 differences in the 80 829 comparisons with the oracle of a fault's run and
 7 202 and 6 982 in the machine's; the truncation 594, 14 564 and 13 298.
@@ -1055,7 +1056,10 @@ three limbs at precision 8 more than 4·10¹⁰. The threshold is what a pipelin
 machine gets through in about ten minutes: a pipeline, `gen | kairn-emulated-runner | check`, two
 busy processes, judged 31 000 indices a second of the enumerations and 20 000 cases a second of
 the random series in the run below, so that 2·10⁷ indices are twenty chunks of 10⁶ and eleven
-minutes of one pipeline. Every night the hosted runner of the enumerations runs a fortieth of the
+minutes of one pipeline. The oracle's `check` is the slow end: alone, under a load of about 20,
+it judged 59 000 lines a second of `two_sum`, 36 000 of `mul_2_2` and 16 000 of `interval_mul_1`
+in `fp:8:-14:1`, where `gen` wrote 480 000, 32 000 and 29 000 and the runner completed 510 000,
+360 000 and 300 000. Every night the hosted runner of the enumerations runs a fortieth of the
 part, the same bin as of the interpreter's.
 
 **The part's run.** On the Linux machine, 2026-11-21, the branch at `37b66b8` (the merge of `main`
