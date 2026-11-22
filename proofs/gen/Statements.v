@@ -1087,7 +1087,18 @@ Definition add_up_2_2_spec : Prop :=
   Rabs ((h0 + h1) - ((x0 + x1) + (y0 + y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs ((x0 + x1) + (y0 + y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 emin prec) * eta emin) + up_ball_add_1_2 emin prec)) + eta emin) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0)) /\
   (((x0 + x1) + (y0 + y1)) = 0 -> (h0 + h1) = ((x0 + x1) + (y0 + y1))).
 
-(* axpy_entry_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. Status: proved. *)
+(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. Status: proved. *)
+Definition axpy_step_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall a0 a1 x0 x1 y0 y1 : R,
+  normalized_2 emin prec a0 a1 ->
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(z0, z1) := axpy_step_2 emin prec tie_even a0 a1 x0 x1 y0 y1 in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - (((a0 + a1) * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((a0 + a1) * (x0 + x1)) + Rabs (y0 + y1)) + 2 * eta emin.
+
+(* axpy_entry_step_2: axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved. *)
 Definition axpy_entry_step_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall a0 a1 x0 x1 y0 y1 : R,
@@ -1108,28 +1119,6 @@ Definition mul_2_1_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
 
-(* axpy_entry_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22. Status: proved. *)
-Definition axpy_entry_step_2_1_spec : Prop :=
-  forall emin prec : Z, (3 <= prec)%Z ->
-  forall a x0 x1 y0 y1 : R,
-  fmt emin prec a ->
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let '(z0, z1) := axpy_entry_step_2_1 emin prec tie_even a x0 x1 y0 y1 in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((a * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((2 * u prec) * u prec))) / (1 - (4 * u prec))) + 2) * u prec ^ 2 * (Rabs (a * (x0 + x1)) + Rabs (y0 + y1)) + (5 / 4) * eta emin.
-
-(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. Status: proved. *)
-Definition axpy_step_2_spec : Prop :=
-  forall emin prec : Z, (4 <= prec)%Z ->
-  forall a0 a1 x0 x1 y0 y1 : R,
-  normalized_2 emin prec a0 a1 ->
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let '(z0, z1) := axpy_step_2 emin prec tie_even a0 a1 x0 x1 y0 y1 in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - (((a0 + a1) * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((a0 + a1) * (x0 + x1)) + Rabs (y0 + y1)) + 2 * eta emin.
-
 (* axpy_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. Status: proved. *)
 Definition axpy_step_2_1_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
@@ -1138,6 +1127,17 @@ Definition axpy_step_2_1_spec : Prop :=
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
   let '(z0, z1) := axpy_step_2_1 emin prec tie_even a x0 x1 y0 y1 in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((a * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((2 * u prec) * u prec))) / (1 - (4 * u prec))) + 2) * u prec ^ 2 * (Rabs (a * (x0 + x1)) + Rabs (y0 + y1)) + (5 / 4) * eta emin.
+
+(* axpy_entry_step_2_1: axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved. *)
+Definition axpy_entry_step_2_1_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall a x0 x1 y0 y1 : R,
+  fmt emin prec a ->
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(z0, z1) := axpy_entry_step_2_1 emin prec tie_even a x0 x1 y0 y1 in
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((a * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((2 * u prec) * u prec))) / (1 - (4 * u prec))) + 2) * u prec ^ 2 * (Rabs (a * (x0 + x1)) + Rabs (y0 + y1)) + (5 / 4) * eta emin.
 

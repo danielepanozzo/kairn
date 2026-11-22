@@ -300,20 +300,20 @@ Print Assumptions add_fast_2_2_correct.
 Definition add_up_2_2_audit : add_up_2_2_spec := add_up_2_2_correct.
 Print Assumptions add_up_2_2_correct.
 
+Definition axpy_step_2_audit : axpy_step_2_spec := axpy_step_2_correct.
+Print Assumptions axpy_step_2_correct.
+
 Definition axpy_entry_step_2_audit : axpy_entry_step_2_spec := axpy_entry_step_2_correct.
 Print Assumptions axpy_entry_step_2_correct.
 
 Definition mul_2_1_audit : mul_2_1_spec := mul_2_1_correct.
 Print Assumptions mul_2_1_correct.
 
-Definition axpy_entry_step_2_1_audit : axpy_entry_step_2_1_spec := axpy_entry_step_2_1_correct.
-Print Assumptions axpy_entry_step_2_1_correct.
-
-Definition axpy_step_2_audit : axpy_step_2_spec := axpy_step_2_correct.
-Print Assumptions axpy_step_2_correct.
-
 Definition axpy_step_2_1_audit : axpy_step_2_1_spec := axpy_step_2_1_correct.
 Print Assumptions axpy_step_2_1_correct.
+
+Definition axpy_entry_step_2_1_audit : axpy_entry_step_2_1_spec := axpy_entry_step_2_1_correct.
+Print Assumptions axpy_entry_step_2_1_correct.
 
 Definition ball_add_2_audit : ball_add_2_spec := ball_add_2_correct.
 Print Assumptions ball_add_2_correct.

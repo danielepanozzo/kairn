@@ -1,5 +1,10 @@
-# The step of axpy_2_1_entry: axpy_step_2_1 on an array y that the program supplies, whose limbs
-# pass through guard before they are added (rule R3).
+# The step of axpy_2_1_entry: axpy_step_2_1 on a scalar a and arrays x and y that the program
+# supplies, each guarded first: the limbs of y before they are added (rule R3), a and the limbs of x
+# because mul_2_1 takes them as factors of fused operations whose addends are not zero, where a
+# compiler that sees the other factor to be 1 rewrites fma(x, 1, s) as x + s and may fuse a product
+# of the program into it (rule R3, the factors of a fused operation: architecture.md; measured in the
+# products of one limb, never in this one). Its claims are those of axpy_step_2_1: the guard is the
+# identity on numbers of the format.
 # Its bound, relative to the terms |a x| + |y|, from those of mul_2_1 (2u^2, eta) and add_2_2, with
 # eps+ = 3u^2/(1-4u): |z - (a x + y)| <= (eps+ (1 + 2u^2) + 2u^2) |a x| + eps+ |y| + (1 + eps+) eta,
 # and 1 + eps+ <= 5/4 from precision 3.
@@ -18,13 +23,15 @@ theorem:       proofs/theories/MapSteps.v axpy_entry_step_2_1_correct
 ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v axpy_entry_step_2_1_ieee_bridge
 ieee_spec_theorem: proofs/theories/IeeeMapSteps.v axpy_entry_step_2_1_ieee_correct
 ieee_lead_theorem: proofs/theories/IeeeMapSteps.v axpy_entry_step_2_1_ieee_lead
-source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22
+source:        axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
 entry:         yes
 ieee:          bridge spec
 
-(p0, p1) = mul_2_1(x0, x1, a)
+ga       = guard(a)
+gx0      = guard(x0)
+gx1      = guard(x1)
 gy0      = guard(y0)
 gy1      = guard(y1)
-(z0, z1) = add_2_2(p0, p1, gy0, gy1)
+(z0, z1) = axpy_step_2_1(ga, gx0, gx1, gy0, gy1)

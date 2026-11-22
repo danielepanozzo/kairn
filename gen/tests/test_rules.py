@@ -563,9 +563,7 @@ class R3Factors(unittest.TestCase):
         # at.
         ks = common.kernels()
         found = {(e.kind, e.name, e.kernel): sorted(e.operands) for e in rules.exposed_operands(ks)}
-        ax2 = ['a0', 'a1', 'x0', 'x1']
         self.assertEqual(found, EXPOSED)
-        self.assertEqual(EXPOSED[('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2')], ax2)
 
     def test_build_prints_the_report(self):
         ks = common.kernels()
@@ -574,10 +572,11 @@ class R3Factors(unittest.TestCase):
         head = [ln for ln in lines if ln.startswith('R3, factors of a fused operation')]
         self.assertEqual(len(head), 1)
         self.assertIn(f'{len(found)} objects with exposed operands', head[0])
-        self.assertIn('  kernel axpy_step_2_1: a: a factor of fms at e in two_prod (called for ch) in mul_2_1 (called '
-                      'for p0), a factor of fma at cl3 in mul_2_1 (called for p0); x0: a factor of fms at e in two_prod '
-                      '(called for ch) in mul_2_1 (called for p0); x1: a factor of fma at cl3 in mul_2_1 (called for p0); '
-                      '26 operations, 29 with the guards; reached by no public header', '\n'.join(lines))
+        self.assertIn('  kernel scale_step_2: a: a factor of fms at e in two_prod (called for ch) in mul_2_1 (called '
+                      'for z0), a factor of fma at cl3 in mul_2_1 (called for z0); x0: a factor of fms at e in two_prod '
+                      '(called for ch) in mul_2_1 (called for z0); x1: a factor of fma at cl3 in mul_2_1 (called for z0); '
+                      '6 operations, 9 with the guards; reached by ball_vector.hpp packed_detail::bv_scale(',
+                      '\n'.join(lines))
         for e in found:
             self.assertTrue(any(ln.startswith(f'  {e.kind} {e.name}') for ln in lines), e.name)
 
@@ -602,15 +601,7 @@ class R3Factors(unittest.TestCase):
 # The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the
 # kernel analyzed) -> the exposed limbs of that kernel.
 EXPOSED = {
-    ('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
-    ('kernel', 'axpy_entry_step_2_1', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
-    ('kernel', 'axpy_step_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
-    ('kernel', 'axpy_step_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
     ('kernel', 'scale_step_2', 'scale_step_2'): ['a', 'x0', 'x1'],
-    ('loop', 'axpy_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
-    ('loop', 'axpy_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
-    ('loop', 'axpy_2_1_entry', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
-    ('loop', 'axpy_2_entry', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
     ('loop', 'bv_scale_2', 'scale_step_2'): ['a'],
 }
 
@@ -1289,8 +1280,11 @@ class R3OfTheKernels(unittest.TestCase):
     # And the steps of dot_1_entry and dot_2_entry, which guard every limb of both factors of their
     # fused operations (rule R3, the factors of a fused operation: architecture.md).
     FOLD_STEPS |= {'dot_entry_step_1', 'dot_entry_step_2'}
-    # And the steps of the maps that read what the program supplies (sub_1_1 reads stored arrays).
-    FOLD_STEPS |= MAP_STEPS - {'sub_1_1'}
+    # And the steps of the maps that read what the program supplies (sub_1_1 reads stored arrays, and
+    # so do axpy_step_2 and axpy_step_2_1, the steps of axpy_2 and axpy_2_1 on stored operands, which
+    # axpy_entry_step_2 and axpy_entry_step_2_1 run after guarding every limb: rule R3, the factors of a
+    # fused operation).
+    FOLD_STEPS |= MAP_STEPS - {'sub_1_1', 'axpy_step_2', 'axpy_step_2_1'}
     # And the kernels of the accumulator that take what the program adds (acc_merge_k takes two
     # accumulators, acc_radius_k a state); acc_mul_entry_1 is acc_mul_1 on its factors guarded.
     # acc_mul_1 and acc_mul_2 are their cores, no longer entry kernels (rule R3, the factors of a fused

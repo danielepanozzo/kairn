@@ -1,5 +1,6 @@
-# z = a x + y, entry by entry (a of two limbs, y supplied). The program supplies a and x, which the
-# step only multiplies; y is supplied, and guarded before it is added (rule R3).
+# z = a x + y, entry by entry (a of two limbs). The program supplies a, x and y; the step guards every
+# limb of each: y before it is added (rule R3), a and x because they are factors of the fused
+# operations of mul_2_2 (rule R3, the factors of a fused operation).
 # A map (milestone2.md, "Folds", "sum, dot, axpy, convolution"): every element of z is the step
 # on one element of each array read, and the scalar a, in any order; the mask finite is the and of the
 # tests of the written elements, and when it is false a second pass makes every element that

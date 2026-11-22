@@ -837,9 +837,9 @@ class FoldClaims(unittest.TestCase):
                                                 'name': f['name'] + '_correct'})
         by = {f['name']: f for f in maps}
         a = by['axpy_2']
-        self.assertEqual(a['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'supplied'},
+        self.assertEqual(a['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'stored'},
                                        {'name': 'y', 'limbs': 2, 'role': 'stored'}])
-        self.assertEqual(a['scalars'], [{'name': 'a', 'limbs': 2, 'role': 'supplied'}])
+        self.assertEqual(a['scalars'], [{'name': 'a', 'limbs': 2, 'role': 'stored'}])
         self.assertEqual(a['writes'], [{'name': 'z', 'limbs': 2}])
         self.assertEqual((a['value'], a['step'], a['step_args']), ('a*x+y', 'axpy_step_2', ['a', 'x', 'y']))
         self.assertEqual(a['requires'], ['canonical(a)', 'canonical(x)', 'canonical(y)'])

@@ -716,15 +716,8 @@ _SCALE = ('the step of bv_scale_2 (x stored, a supplied), which the scalings and
           'call (kairn::scale of arrays calls scale_2_entry): closing it takes a step guarding a only (or a '
           'guard of a once, outside the loop, which a fold cannot express yet), with the theorems of the ball '
           'vector')
-_AXPY = ('the step of the axpy of two limbs: its own guards on a and x, which change its listing, so its '
-         'bridge and its theorems in both models and those of its loop are to be proved again')
-_AXPY_STORED = ('the step of a loop that no header calls, whose description says the program supplies a and '
-                'x: its own guards on them, with its theorems and its loop\'s proved again')
 FACTOR_PENDING = {
-    'scale_step_2': _SCALE, 'axpy_entry_step_2': _AXPY, 'axpy_entry_step_2_1': _AXPY,
-    'axpy_step_2': _AXPY_STORED, 'axpy_step_2_1': _AXPY_STORED,
-    'loop axpy_2': 'its step: ' + _AXPY_STORED, 'loop axpy_2_1': 'its step: ' + _AXPY_STORED,
-    'loop axpy_2_1_entry': 'its step: ' + _AXPY, 'loop axpy_2_entry': 'its step: ' + _AXPY,
+    'scale_step_2': _SCALE,
     'loop bv_scale_2': 'its step: ' + _SCALE,
 }
 

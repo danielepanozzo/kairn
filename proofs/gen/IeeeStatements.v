@@ -2052,7 +2052,43 @@ Definition add_fast_2_2_full_spec : Prop :=
    w0 = infinity prec emax (Rlt_bool ((val x0 + val x1) + (val y0 + val y1)) 0) /\ w1 = pos_zero prec emax) /\
   (~ (finite x0 /\ finite y0) -> canonical_of t w0 w1).
 
-(* axpy_entry_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. IEEE-model status: proved. *)
+(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. IEEE-model status: proved. *)
+Definition axpy_step_2_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall a0 a1 x0 x1 y0 y1 : binary_float prec emax,
+  finite a0 -> finite a1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val a0) (val a1) ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeModel.axpy_step_2 prec emax nan_plus nan_minus nan_opp nan_fma a0 a1 x0 x1 y0 y1 in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.axpy_step_2_prog [a0; a1; x0; x1; y0; y1]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = axpy_step_2 (ieee_emin prec emax) prec tie_even (val a0) (val a1) (val x0) (val x1) (val y0) (val y1).
+
+(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. IEEE-model status: proved. *)
+Definition axpy_step_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall a0 a1 x0 x1 y0 y1 : binary_float prec emax,
+  finite a0 -> finite a1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val a0) (val a1) ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeModel.axpy_step_2 prec emax nan_plus nan_minus nan_opp nan_fma a0 a1 x0 x1 y0 y1 in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - (((val a0 + val a1) * (val x0 + val x1)) + (val y0 + val y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((val a0 + val a1) * (val x0 + val x1)) + Rabs (val y0 + val y1)) + 2 * eta (ieee_emin prec emax).
+
+(* axpy_entry_step_2: axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. IEEE-model status: proved. *)
 Definition axpy_entry_step_2_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2071,7 +2107,7 @@ Definition axpy_entry_step_2_ieee_bridge_spec : Prop :=
   (val z0, val z1)
   = axpy_entry_step_2 (ieee_emin prec emax) prec tie_even (val a0) (val a1) (val x0) (val x1) (val y0) (val y1).
 
-(* axpy_entry_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. IEEE-model status: proved. *)
+(* axpy_entry_step_2: axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. IEEE-model status: proved. *)
 Definition axpy_entry_step_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -2135,76 +2171,6 @@ Definition mul_2_1_ieee_finite_spec : Prop :=
   let '(z0, z1) := IeeeModel.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
   finite z0 /\ finite z1.
 
-(* axpy_entry_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22. IEEE-model status: proved. *)
-Definition axpy_entry_step_2_1_ieee_bridge_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (3 <= prec)%Z ->
-  forall a x0 x1 y0 y1 : binary_float prec emax,
-  finite a -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(z0, z1) := IeeeModel.axpy_entry_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
-  finite z0 ->
-  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
-                     IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) /\
-  finite z1 /\
-  (val z0, val z1)
-  = axpy_entry_step_2_1 (ieee_emin prec emax) prec tie_even (val a) (val x0) (val x1) (val y0) (val y1).
-
-(* axpy_entry_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22. IEEE-model status: proved. *)
-Definition axpy_entry_step_2_1_ieee_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (3 <= prec)%Z ->
-  forall a x0 x1 y0 y1 : binary_float prec emax,
-  finite a -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(z0, z1) := IeeeModel.axpy_entry_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
-  finite z0 ->
-  finite z1 /\
-  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
-  Rabs ((val z0 + val z1) - ((val a * (val x0 + val x1)) + (val y0 + val y1))) <= (((3 * (1 + ((2 * u prec) * u prec))) / (1 - (4 * u prec))) + 2) * u prec ^ 2 * (Rabs (val a * (val x0 + val x1)) + Rabs (val y0 + val y1)) + (5 / 4) * eta (ieee_emin prec emax).
-
-(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. IEEE-model status: proved. *)
-Definition axpy_step_2_ieee_bridge_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (4 <= prec)%Z ->
-  forall a0 a1 x0 x1 y0 y1 : binary_float prec emax,
-  finite a0 -> finite a1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val a0) (val a1) ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(z0, z1) := IeeeModel.axpy_step_2 prec emax nan_plus nan_minus nan_opp nan_fma a0 a1 x0 x1 y0 y1 in
-  finite z0 ->
-  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
-                     IeeeModel.axpy_step_2_prog [a0; a1; x0; x1; y0; y1]) /\
-  finite z1 /\
-  (val z0, val z1)
-  = axpy_step_2 (ieee_emin prec emax) prec tie_even (val a0) (val a1) (val x0) (val x1) (val y0) (val y1).
-
-(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. IEEE-model status: proved. *)
-Definition axpy_step_2_ieee_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (4 <= prec)%Z ->
-  forall a0 a1 x0 x1 y0 y1 : binary_float prec emax,
-  finite a0 -> finite a1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val a0) (val a1) ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(z0, z1) := IeeeModel.axpy_step_2 prec emax nan_plus nan_minus nan_opp nan_fma a0 a1 x0 x1 y0 y1 in
-  finite z0 ->
-  finite z1 /\
-  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
-  Rabs ((val z0 + val z1) - (((val a0 + val a1) * (val x0 + val x1)) + (val y0 + val y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((val a0 + val a1) * (val x0 + val x1)) + Rabs (val y0 + val y1)) + 2 * eta (ieee_emin prec emax).
-
 (* axpy_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. IEEE-model status: proved. *)
 Definition axpy_step_2_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -2234,6 +2200,40 @@ Definition axpy_step_2_1_ieee_spec : Prop :=
   normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
   normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
   let '(z0, z1) := IeeeModel.axpy_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val a * (val x0 + val x1)) + (val y0 + val y1))) <= (((3 * (1 + ((2 * u prec) * u prec))) / (1 - (4 * u prec))) + 2) * u prec ^ 2 * (Rabs (val a * (val x0 + val x1)) + Rabs (val y0 + val y1)) + (5 / 4) * eta (ieee_emin prec emax).
+
+(* axpy_entry_step_2_1: axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. IEEE-model status: proved. *)
+Definition axpy_entry_step_2_1_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall a x0 x1 y0 y1 : binary_float prec emax,
+  finite a -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeModel.axpy_entry_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = axpy_entry_step_2_1 (ieee_emin prec emax) prec tie_even (val a) (val x0) (val x1) (val y0) (val y1).
+
+(* axpy_entry_step_2_1: axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. IEEE-model status: proved. *)
+Definition axpy_entry_step_2_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall a x0 x1 y0 y1 : binary_float prec emax,
+  finite a -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeModel.axpy_entry_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
   finite z0 ->
   finite z1 /\
   normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\

@@ -571,29 +571,29 @@ Print Assumptions add_entry_step_2_ieee_bridge.
 Definition add_entry_step_2_ieee_audit : add_entry_step_2_ieee_spec := add_entry_step_2_ieee_correct.
 Print Assumptions add_entry_step_2_ieee_correct.
 
-Definition axpy_entry_step_2_ieee_bridge_audit : axpy_entry_step_2_ieee_bridge_spec := axpy_entry_step_2_ieee_bridge.
-Print Assumptions axpy_entry_step_2_ieee_bridge.
-
-Definition axpy_entry_step_2_ieee_audit : axpy_entry_step_2_ieee_spec := axpy_entry_step_2_ieee_correct.
-Print Assumptions axpy_entry_step_2_ieee_correct.
-
-Definition axpy_entry_step_2_1_ieee_bridge_audit : axpy_entry_step_2_1_ieee_bridge_spec := axpy_entry_step_2_1_ieee_bridge.
-Print Assumptions axpy_entry_step_2_1_ieee_bridge.
-
-Definition axpy_entry_step_2_1_ieee_audit : axpy_entry_step_2_1_ieee_spec := axpy_entry_step_2_1_ieee_correct.
-Print Assumptions axpy_entry_step_2_1_ieee_correct.
-
 Definition axpy_step_2_ieee_bridge_audit : axpy_step_2_ieee_bridge_spec := axpy_step_2_ieee_bridge.
 Print Assumptions axpy_step_2_ieee_bridge.
 
 Definition axpy_step_2_ieee_audit : axpy_step_2_ieee_spec := axpy_step_2_ieee_correct.
 Print Assumptions axpy_step_2_ieee_correct.
 
+Definition axpy_entry_step_2_ieee_bridge_audit : axpy_entry_step_2_ieee_bridge_spec := axpy_entry_step_2_ieee_bridge.
+Print Assumptions axpy_entry_step_2_ieee_bridge.
+
+Definition axpy_entry_step_2_ieee_audit : axpy_entry_step_2_ieee_spec := axpy_entry_step_2_ieee_correct.
+Print Assumptions axpy_entry_step_2_ieee_correct.
+
 Definition axpy_step_2_1_ieee_bridge_audit : axpy_step_2_1_ieee_bridge_spec := axpy_step_2_1_ieee_bridge.
 Print Assumptions axpy_step_2_1_ieee_bridge.
 
 Definition axpy_step_2_1_ieee_audit : axpy_step_2_1_ieee_spec := axpy_step_2_1_ieee_correct.
 Print Assumptions axpy_step_2_1_ieee_correct.
+
+Definition axpy_entry_step_2_1_ieee_bridge_audit : axpy_entry_step_2_1_ieee_bridge_spec := axpy_entry_step_2_1_ieee_bridge.
+Print Assumptions axpy_entry_step_2_1_ieee_bridge.
+
+Definition axpy_entry_step_2_1_ieee_audit : axpy_entry_step_2_1_ieee_spec := axpy_entry_step_2_1_ieee_correct.
+Print Assumptions axpy_entry_step_2_1_ieee_correct.
 
 Definition bv_mul_pow2_step_2_ieee_audit : bv_mul_pow2_step_2_ieee_spec := bv_mul_pow2_step_2_ieee_correct.
 Print Assumptions bv_mul_pow2_step_2_ieee_correct.
@@ -700,17 +700,17 @@ Print Assumptions add_entry_step_2_ieee_lead.
 Definition add_fast_2_2_ieee_lead_audit : add_fast_2_2_ieee_lead_spec := add_fast_2_2_ieee_lead.
 Print Assumptions add_fast_2_2_ieee_lead.
 
-Definition axpy_entry_step_2_ieee_lead_audit : axpy_entry_step_2_ieee_lead_spec := axpy_entry_step_2_ieee_lead.
-Print Assumptions axpy_entry_step_2_ieee_lead.
-
-Definition axpy_entry_step_2_1_ieee_lead_audit : axpy_entry_step_2_1_ieee_lead_spec := axpy_entry_step_2_1_ieee_lead.
-Print Assumptions axpy_entry_step_2_1_ieee_lead.
-
 Definition axpy_step_2_ieee_lead_audit : axpy_step_2_ieee_lead_spec := axpy_step_2_ieee_lead.
 Print Assumptions axpy_step_2_ieee_lead.
 
+Definition axpy_entry_step_2_ieee_lead_audit : axpy_entry_step_2_ieee_lead_spec := axpy_entry_step_2_ieee_lead.
+Print Assumptions axpy_entry_step_2_ieee_lead.
+
 Definition axpy_step_2_1_ieee_lead_audit : axpy_step_2_1_ieee_lead_spec := axpy_step_2_1_ieee_lead.
 Print Assumptions axpy_step_2_1_ieee_lead.
+
+Definition axpy_entry_step_2_1_ieee_lead_audit : axpy_entry_step_2_1_ieee_lead_spec := axpy_entry_step_2_1_ieee_lead.
+Print Assumptions axpy_entry_step_2_1_ieee_lead.
 
 Definition neg_2_ieee_lead_audit : neg_2_ieee_lead_spec := neg_2_ieee_lead.
 Print Assumptions neg_2_ieee_lead.

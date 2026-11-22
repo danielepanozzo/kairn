@@ -1551,12 +1551,21 @@ Definition add_up_2_2 (x0 x1 y0 y1 : float) : float * float :=
   let '(h0, h1) := two_sum_ord z0 w in
   (h0, h1).
 
-(* axpy_entry_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. *)
-Definition axpy_entry_step_2 (a0 a1 x0 x1 y0 y1 : float) : float * float :=
+(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. *)
+Definition axpy_step_2 (a0 a1 x0 x1 y0 y1 : float) : float * float :=
   let '(p0, p1) := mul_2_2 a0 a1 x0 x1 in
+  let '(z0, z1) := add_2_2 p0 p1 y0 y1 in
+  (z0, z1).
+
+(* axpy_entry_step_2: axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. *)
+Definition axpy_entry_step_2 (a0 a1 x0 x1 y0 y1 : float) : float * float :=
+  let ga0 := guard a0 in
+  let ga1 := guard a1 in
+  let gx0 := guard x0 in
+  let gx1 := guard x1 in
   let gy0 := guard y0 in
   let gy1 := guard y1 in
-  let '(z0, z1) := add_2_2 p0 p1 gy0 gy1 in
+  let '(z0, z1) := axpy_step_2 ga0 ga1 gx0 gx1 gy0 gy1 in
   (z0, z1).
 
 (* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. *)
@@ -1566,24 +1575,20 @@ Definition mul_2_1 (x0 x1 a : float) : float * float :=
   let '(z0, z1) := fast_two_sum ch cl3 in
   (z0, z1).
 
-(* axpy_entry_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22. *)
-Definition axpy_entry_step_2_1 (a x0 x1 y0 y1 : float) : float * float :=
-  let '(p0, p1) := mul_2_1 x0 x1 a in
-  let gy0 := guard y0 in
-  let gy1 := guard y1 in
-  let '(z0, z1) := add_2_2 p0 p1 gy0 gy1 in
-  (z0, z1).
-
-(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. *)
-Definition axpy_step_2 (a0 a1 x0 x1 y0 y1 : float) : float * float :=
-  let '(p0, p1) := mul_2_2 a0 a1 x0 x1 in
-  let '(z0, z1) := add_2_2 p0 p1 y0 y1 in
-  (z0, z1).
-
 (* axpy_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. *)
 Definition axpy_step_2_1 (a x0 x1 y0 y1 : float) : float * float :=
   let '(p0, p1) := mul_2_1 x0 x1 a in
   let '(z0, z1) := add_2_2 p0 p1 y0 y1 in
+  (z0, z1).
+
+(* axpy_entry_step_2_1: axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. *)
+Definition axpy_entry_step_2_1 (a x0 x1 y0 y1 : float) : float * float :=
+  let ga := guard a in
+  let gx0 := guard x0 in
+  let gx1 := guard x1 in
+  let gy0 := guard y0 in
+  let gy1 := guard y1 in
+  let '(z0, z1) := axpy_step_2_1 ga gx0 gx1 gy0 gy1 in
   (z0, z1).
 
 (* ball_add_2: midpoint-radius sum (Milestone 1 listing, second radius design). *)
@@ -2984,83 +2989,6 @@ Definition add_fast_2_2_prog : list instr :=
   ].
 
 (* inputs: 0 a0, 1 a1, 2 x0, 3 x1, 4 y0, 5 y1 *)
-Definition axpy_entry_step_2_prog : list instr :=
-  [ Iprod 0 2   (*  6 p0_ch *)
-  ; Ifms 0 2 6  (*  7 p0_cl1 *)
-  ; Iprod 1 3   (*  8 p0_tl0 *)
-  ; Ifma 0 3 8  (*  9 p0_tl1 *)
-  ; Ifma 1 2 9  (* 10 p0_cl2 *)
-  ; Iadd 7 10   (* 11 p0_cl3 *)
-  ; Iadd 6 11   (* 12 p0 *)
-  ; Isub 12 6   (* 13 p0_z *)
-  ; Isub 11 13  (* 14 p1 *)
-  ; Iguard 4    (* 15 gy0 *)
-  ; Iguard 5    (* 16 gy1 *)
-  ; Iadd 12 15  (* 17 z0_sh *)
-  ; Isub 17 12  (* 18 z0_sh_bb *)
-  ; Isub 17 18  (* 19 z0_sh_t0 *)
-  ; Isub 12 19  (* 20 z0_sh_t1 *)
-  ; Isub 15 18  (* 21 z0_sh_t2 *)
-  ; Iadd 20 21  (* 22 z0_sl *)
-  ; Iadd 14 16  (* 23 z0_th *)
-  ; Isub 23 14  (* 24 z0_th_bb *)
-  ; Isub 23 24  (* 25 z0_th_t0 *)
-  ; Isub 14 25  (* 26 z0_th_t1 *)
-  ; Isub 16 24  (* 27 z0_th_t2 *)
-  ; Iadd 26 27  (* 28 z0_tl *)
-  ; Iadd 22 23  (* 29 z0_c *)
-  ; Iadd 17 29  (* 30 z0_vh *)
-  ; Isub 30 17  (* 31 z0_vh_z *)
-  ; Isub 29 31  (* 32 z0_vl *)
-  ; Iadd 28 32  (* 33 z0_w *)
-  ; Iadd 30 33  (* 34 z0 *)
-  ; Isub 34 30  (* 35 z0_z *)
-  ; Isub 33 35  (* 36 z1 *)
-  ].
-
-(* inputs: 0 x0, 1 x1, 2 a *)
-Definition mul_2_1_prog : list instr :=
-  [ Iprod 0 2   (*  3 ch *)
-  ; Ifms 0 2 3  (*  4 cl1 *)
-  ; Ifma 1 2 4  (*  5 cl3 *)
-  ; Iadd 3 5    (*  6 z0 *)
-  ; Isub 6 3    (*  7 z0_z *)
-  ; Isub 5 7    (*  8 z1 *)
-  ].
-
-(* inputs: 0 a, 1 x0, 2 x1, 3 y0, 4 y1 *)
-Definition axpy_entry_step_2_1_prog : list instr :=
-  [ Iprod 1 0   (*  5 p0_ch *)
-  ; Ifms 1 0 5  (*  6 p0_cl1 *)
-  ; Ifma 2 0 6  (*  7 p0_cl3 *)
-  ; Iadd 5 7    (*  8 p0 *)
-  ; Isub 8 5    (*  9 p0_z *)
-  ; Isub 7 9    (* 10 p1 *)
-  ; Iguard 3    (* 11 gy0 *)
-  ; Iguard 4    (* 12 gy1 *)
-  ; Iadd 8 11   (* 13 z0_sh *)
-  ; Isub 13 8   (* 14 z0_sh_bb *)
-  ; Isub 13 14  (* 15 z0_sh_t0 *)
-  ; Isub 8 15   (* 16 z0_sh_t1 *)
-  ; Isub 11 14  (* 17 z0_sh_t2 *)
-  ; Iadd 16 17  (* 18 z0_sl *)
-  ; Iadd 10 12  (* 19 z0_th *)
-  ; Isub 19 10  (* 20 z0_th_bb *)
-  ; Isub 19 20  (* 21 z0_th_t0 *)
-  ; Isub 10 21  (* 22 z0_th_t1 *)
-  ; Isub 12 20  (* 23 z0_th_t2 *)
-  ; Iadd 22 23  (* 24 z0_tl *)
-  ; Iadd 18 19  (* 25 z0_c *)
-  ; Iadd 13 25  (* 26 z0_vh *)
-  ; Isub 26 13  (* 27 z0_vh_z *)
-  ; Isub 25 27  (* 28 z0_vl *)
-  ; Iadd 24 28  (* 29 z0_w *)
-  ; Iadd 26 29  (* 30 z0 *)
-  ; Isub 30 26  (* 31 z0_z *)
-  ; Isub 29 31  (* 32 z1 *)
-  ].
-
-(* inputs: 0 a0, 1 a1, 2 x0, 3 x1, 4 y0, 5 y1 *)
 Definition axpy_step_2_prog : list instr :=
   [ Iprod 0 2   (*  6 p0_ch *)
   ; Ifms 0 2 6  (*  7 p0_cl1 *)
@@ -3093,6 +3021,55 @@ Definition axpy_step_2_prog : list instr :=
   ; Isub 31 33  (* 34 z1 *)
   ].
 
+(* inputs: 0 a0, 1 a1, 2 x0, 3 x1, 4 y0, 5 y1 *)
+Definition axpy_entry_step_2_prog : list instr :=
+  [ Iguard 0     (*  6 ga0 *)
+  ; Iguard 1     (*  7 ga1 *)
+  ; Iguard 2     (*  8 gx0 *)
+  ; Iguard 3     (*  9 gx1 *)
+  ; Iguard 4     (* 10 gy0 *)
+  ; Iguard 5     (* 11 gy1 *)
+  ; Iprod 6 8    (* 12 z0_p0_ch *)
+  ; Ifms 6 8 12  (* 13 z0_p0_cl1 *)
+  ; Iprod 7 9    (* 14 z0_p0_tl0 *)
+  ; Ifma 6 9 14  (* 15 z0_p0_tl1 *)
+  ; Ifma 7 8 15  (* 16 z0_p0_cl2 *)
+  ; Iadd 13 16   (* 17 z0_p0_cl3 *)
+  ; Iadd 12 17   (* 18 z0_p0 *)
+  ; Isub 18 12   (* 19 z0_p0_z *)
+  ; Isub 17 19   (* 20 z0_p1 *)
+  ; Iadd 18 10   (* 21 z0_sh *)
+  ; Isub 21 18   (* 22 z0_sh_bb *)
+  ; Isub 21 22   (* 23 z0_sh_t0 *)
+  ; Isub 18 23   (* 24 z0_sh_t1 *)
+  ; Isub 10 22   (* 25 z0_sh_t2 *)
+  ; Iadd 24 25   (* 26 z0_sl *)
+  ; Iadd 20 11   (* 27 z0_th *)
+  ; Isub 27 20   (* 28 z0_th_bb *)
+  ; Isub 27 28   (* 29 z0_th_t0 *)
+  ; Isub 20 29   (* 30 z0_th_t1 *)
+  ; Isub 11 28   (* 31 z0_th_t2 *)
+  ; Iadd 30 31   (* 32 z0_tl *)
+  ; Iadd 26 27   (* 33 z0_c *)
+  ; Iadd 21 33   (* 34 z0_vh *)
+  ; Isub 34 21   (* 35 z0_vh_z *)
+  ; Isub 33 35   (* 36 z0_vl *)
+  ; Iadd 32 36   (* 37 z0_w *)
+  ; Iadd 34 37   (* 38 z0 *)
+  ; Isub 38 34   (* 39 z0_z *)
+  ; Isub 37 39   (* 40 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition mul_2_1_prog : list instr :=
+  [ Iprod 0 2   (*  3 ch *)
+  ; Ifms 0 2 3  (*  4 cl1 *)
+  ; Ifma 1 2 4  (*  5 cl3 *)
+  ; Iadd 3 5    (*  6 z0 *)
+  ; Isub 6 3    (*  7 z0_z *)
+  ; Isub 5 7    (*  8 z1 *)
+  ].
+
 (* inputs: 0 a, 1 x0, 2 x1, 3 y0, 4 y1 *)
 Definition axpy_step_2_1_prog : list instr :=
   [ Iprod 1 0   (*  5 p0_ch *)
@@ -3121,6 +3098,41 @@ Definition axpy_step_2_1_prog : list instr :=
   ; Iadd 24 27  (* 28 z0 *)
   ; Isub 28 24  (* 29 z0_z *)
   ; Isub 27 29  (* 30 z1 *)
+  ].
+
+(* inputs: 0 a, 1 x0, 2 x1, 3 y0, 4 y1 *)
+Definition axpy_entry_step_2_1_prog : list instr :=
+  [ Iguard 0     (*  5 ga *)
+  ; Iguard 1     (*  6 gx0 *)
+  ; Iguard 2     (*  7 gx1 *)
+  ; Iguard 3     (*  8 gy0 *)
+  ; Iguard 4     (*  9 gy1 *)
+  ; Iprod 6 5    (* 10 z0_p0_ch *)
+  ; Ifms 6 5 10  (* 11 z0_p0_cl1 *)
+  ; Ifma 7 5 11  (* 12 z0_p0_cl3 *)
+  ; Iadd 10 12   (* 13 z0_p0 *)
+  ; Isub 13 10   (* 14 z0_p0_z *)
+  ; Isub 12 14   (* 15 z0_p1 *)
+  ; Iadd 13 8    (* 16 z0_sh *)
+  ; Isub 16 13   (* 17 z0_sh_bb *)
+  ; Isub 16 17   (* 18 z0_sh_t0 *)
+  ; Isub 13 18   (* 19 z0_sh_t1 *)
+  ; Isub 8 17    (* 20 z0_sh_t2 *)
+  ; Iadd 19 20   (* 21 z0_sl *)
+  ; Iadd 15 9    (* 22 z0_th *)
+  ; Isub 22 15   (* 23 z0_th_bb *)
+  ; Isub 22 23   (* 24 z0_th_t0 *)
+  ; Isub 15 24   (* 25 z0_th_t1 *)
+  ; Isub 9 23    (* 26 z0_th_t2 *)
+  ; Iadd 25 26   (* 27 z0_tl *)
+  ; Iadd 21 22   (* 28 z0_c *)
+  ; Iadd 16 28   (* 29 z0_vh *)
+  ; Isub 29 16   (* 30 z0_vh_z *)
+  ; Isub 28 30   (* 31 z0_vl *)
+  ; Iadd 27 31   (* 32 z0_w *)
+  ; Iadd 29 32   (* 33 z0 *)
+  ; Isub 33 29   (* 34 z0_z *)
+  ; Isub 32 34   (* 35 z1 *)
   ].
 
 (* inputs: 0 x0, 1 x1, 2 c *)

@@ -1098,14 +1098,16 @@ KERNELS = {
     "axpy_entry_step_1": page("maps", "a x + y of one limb, y of the program",
                               form("axpy(a, x, y, z)", T, V1, V1, W1, result="bool", note=STEP + " (loop `axpy_1_entry`)"),
                               traits=["traits<T>::axpy"]),
-    "axpy_step_2": page("maps", "a x + y of two limbs, y stored"),
-    "axpy_entry_step_2": page("maps", "a x + y of two limbs, y of the program",
-                              form("axpy(a, x, y, z)", E2, V2, V2, W2, result="bool", note=STEP + " (loop `axpy_2_entry`)"),
+    "axpy_step_2": page("maps", "a x + y of two limbs, a, x and y stored"),
+    "axpy_entry_step_2": page("maps", "a x + y of two limbs, a, x and y of the program, every limb guarded",
+                              form("axpy(a, x, y, z)", E2, V2, V2, W2, result="bool", note=STEP + " (loop `axpy_2_entry`; "
+                                   "every limb of a, x and y guarded, rule R3 and its factors of a fused operation)"),
                               traits=["traits<Expansion<T, 2>>::axpy"]),
-    "axpy_step_2_1": page("maps", "a x + y of two limbs, a of T, y stored"),
-    "axpy_entry_step_2_1": page("maps", "a x + y of two limbs, a of T, y of the program",
+    "axpy_step_2_1": page("maps", "a x + y of two limbs, a of T, a, x and y stored"),
+    "axpy_entry_step_2_1": page("maps", "a x + y of two limbs, a of T, a, x and y of the program, guarded",
                                 form("axpy(a, x, y, z)", T, V2, V2, W2, result="bool",
-                                     note=STEP + " (loop `axpy_2_1_entry`)"),
+                                     note=STEP + " (loop `axpy_2_1_entry`; a and every limb of x and y guarded, "
+                                     "rule R3 and its factors of a fused operation)"),
                                 traits=["traits<Expansion<T, 2>>::axpy_limb"]),
     # --- Milestone 2, the folds of maxima (norm_upper_k) ---------------------------------------------
     "norm_combine": page("arrays", "The larger of two magnitudes, and the and of two masks"),

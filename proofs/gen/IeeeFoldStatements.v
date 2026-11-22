@@ -177,24 +177,6 @@ Definition add_fast_2_2_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
   finite z0 -> finite x0 /\ finite y0.
 
-(* axpy_entry_step_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
-Definition axpy_entry_step_2_ieee_lead_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  forall a0 a1 x0 x1 y0 y1 : binary_float prec emax,
-  let '(z0, z1) := IeeeModel.axpy_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma a0 a1 x0 x1 y0 y1 in
-  finite z0 -> finite a0 /\ finite x0 /\ finite y0.
-
-(* axpy_entry_step_2_1, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
-Definition axpy_entry_step_2_1_ieee_lead_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  forall a x0 x1 y0 y1 : binary_float prec emax,
-  let '(z0, z1) := IeeeModel.axpy_entry_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
-  finite z0 -> finite a /\ finite x0 /\ finite y0.
-
 (* axpy_step_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition axpy_step_2_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -204,6 +186,15 @@ Definition axpy_step_2_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.axpy_step_2 prec emax nan_plus nan_minus nan_opp nan_fma a0 a1 x0 x1 y0 y1 in
   finite z0 -> finite a0 /\ finite x0 /\ finite y0.
 
+(* axpy_entry_step_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
+Definition axpy_entry_step_2_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  forall a0 a1 x0 x1 y0 y1 : binary_float prec emax,
+  let '(z0, z1) := IeeeModel.axpy_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma a0 a1 x0 x1 y0 y1 in
+  finite z0 -> finite a0 /\ finite x0 /\ finite y0.
+
 (* axpy_step_2_1, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition axpy_step_2_1_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -211,6 +202,15 @@ Definition axpy_step_2_1_ieee_lead_spec : Prop :=
          (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
   forall a x0 x1 y0 y1 : binary_float prec emax,
   let '(z0, z1) := IeeeModel.axpy_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
+  finite z0 -> finite a /\ finite x0 /\ finite y0.
+
+(* axpy_entry_step_2_1, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
+Definition axpy_entry_step_2_1_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  forall a x0 x1 y0 y1 : binary_float prec emax,
+  let '(z0, z1) := IeeeModel.axpy_entry_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
   finite z0 -> finite a /\ finite x0 /\ finite y0.
 
 (* neg_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)

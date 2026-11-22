@@ -1,12 +1,13 @@
-# z = a x + y, entry by entry (a of T, x and y of two limbs). The program supplies a and x, which the
-# step only multiplies; y is stored, written through Kairn.
+# z = a x + y, entry by entry (a of T, x and y of two limbs). Its scalar and arrays are stored,
+# written through Kairn: kairn::axpy calls axpy_2_1_entry, whose step guards a and every limb of x
+# and y (rule R3, the factors of a fused operation).
 # A map (milestone2.md, "Folds", "sum, dot, axpy, convolution"): every element of z is the step
 # on one element of each array read, and the scalar a, in any order; the mask finite is the and of the
 # tests of the written elements, and when it is false a second pass makes every element that
 # is not finite the canonical NaN ("When something is not finite").
 fold:          axpy_2_1
-arrays:        supplied x = x0 x1, stored y = y0 y1
-scalars:       supplied a
+arrays:        stored x = x0 x1, stored y = y0 y1
+scalars:       stored a
 state:         mask finite
 step:          z = axpy_step_2_1(a, x, y)
 combine:       finite = and(finite, finite)

@@ -3935,6 +3935,34 @@ inline const char* add_up_2_2_float() noexcept {
     return !same(o0, -0x1.85a5p+3f) || !same(o1, 0x1.68fab8p-22f) ? "add_up_2_2 (float)" : nullptr;
 }
 
+// axpy_step_2 (double)
+inline const char* axpy_step_2_double() noexcept {
+    volatile double i0 = 0x1.72635216f1f9ap-3;
+    volatile double i1 = -0x1.a3faa3dfa1debp-58;
+    volatile double i2 = -0x1.9c9daa451b8eap+2;
+    volatile double i3 = -0x1.706c203aa2a52p-54;
+    volatile double i4 = 0x1.4be14e1a6fbe4p-3;
+    volatile double i5 = 0x1.39d819e67ae73p-60;
+    double o0;
+    double o1;
+    axpy_step_2(i0, i1, i2, i3, i4, i5, o0, o1);
+    return !same(o0, -0x1.0101d0eccd5bep+0) || !same(o1, -0x1.582039bf2e83ap-57) ? "axpy_step_2 (double)" : nullptr;
+}
+
+// axpy_step_2 (float)
+inline const char* axpy_step_2_float() noexcept {
+    volatile float i0 = 0x1.9c6ae6p-1f;
+    volatile float i1 = -0x1.b6b42ep-28f;
+    volatile float i2 = -0x1.c99dcap+2f;
+    volatile float i3 = -0x1.2be5bp-24f;
+    volatile float i4 = -0x1.60804ep+2f;
+    volatile float i5 = -0x1.43f652p-24f;
+    float o0;
+    float o1;
+    axpy_step_2(i0, i1, i2, i3, i4, i5, o0, o1);
+    return !same(o0, -0x1.688e6ap+3f) || !same(o1, 0x1.daedbp-22f) ? "axpy_step_2 (float)" : nullptr;
+}
+
 // axpy_entry_step_2 (double)
 inline const char* axpy_entry_step_2_double() noexcept {
     volatile double i0 = 0x1.4672df0f231p+3;
@@ -3985,60 +4013,6 @@ inline const char* mul_2_1_float() noexcept {
     return !same(o0, -0x1.b8722cp-3f) || !same(o1, 0x1.314b96p-30f) ? "mul_2_1 (float)" : nullptr;
 }
 
-// axpy_entry_step_2_1 (double)
-inline const char* axpy_entry_step_2_1_double() noexcept {
-    volatile double i0 = -0x1.140a7cc27116dp+0;
-    volatile double i1 = -0x1.2dd3ff1314e05p-3;
-    volatile double i2 = -0x1.74bd6e96e526dp-58;
-    volatile double i3 = 0x1.88fe44ad54dbap-3;
-    volatile double i4 = 0x1.00057ab3fdd06p-61;
-    double o0;
-    double o1;
-    axpy_entry_step_2_1(i0, i1, i2, i3, i4, o0, o1);
-    return !same(o0, 0x1.67399886e6d32p-2) || !same(o1, 0x1.c0a106c589414p-56) ? "axpy_entry_step_2_1 (double)" : nullptr;
-}
-
-// axpy_entry_step_2_1 (float)
-inline const char* axpy_entry_step_2_1_float() noexcept {
-    volatile float i0 = 0x1.1a3c2p-3f;
-    volatile float i1 = 0x1.b3bae6p+0f;
-    volatile float i2 = -0x1.ebbecap-25f;
-    volatile float i3 = -0x1.0ffd78p+1f;
-    volatile float i4 = -0x1.4bd5fcp-28f;
-    float o0;
-    float o1;
-    axpy_entry_step_2_1(i0, i1, i2, i3, i4, o0, o1);
-    return !same(o0, -0x1.e3eeaap+0f) || !same(o1, 0x1.7b11fcp-25f) ? "axpy_entry_step_2_1 (float)" : nullptr;
-}
-
-// axpy_step_2 (double)
-inline const char* axpy_step_2_double() noexcept {
-    volatile double i0 = 0x1.72635216f1f9ap-3;
-    volatile double i1 = -0x1.a3faa3dfa1debp-58;
-    volatile double i2 = -0x1.9c9daa451b8eap+2;
-    volatile double i3 = -0x1.706c203aa2a52p-54;
-    volatile double i4 = 0x1.4be14e1a6fbe4p-3;
-    volatile double i5 = 0x1.39d819e67ae73p-60;
-    double o0;
-    double o1;
-    axpy_step_2(i0, i1, i2, i3, i4, i5, o0, o1);
-    return !same(o0, -0x1.0101d0eccd5bep+0) || !same(o1, -0x1.582039bf2e83ap-57) ? "axpy_step_2 (double)" : nullptr;
-}
-
-// axpy_step_2 (float)
-inline const char* axpy_step_2_float() noexcept {
-    volatile float i0 = 0x1.9c6ae6p-1f;
-    volatile float i1 = -0x1.b6b42ep-28f;
-    volatile float i2 = -0x1.c99dcap+2f;
-    volatile float i3 = -0x1.2be5bp-24f;
-    volatile float i4 = -0x1.60804ep+2f;
-    volatile float i5 = -0x1.43f652p-24f;
-    float o0;
-    float o1;
-    axpy_step_2(i0, i1, i2, i3, i4, i5, o0, o1);
-    return !same(o0, -0x1.688e6ap+3f) || !same(o1, 0x1.daedbp-22f) ? "axpy_step_2 (float)" : nullptr;
-}
-
 // axpy_step_2_1 (double)
 inline const char* axpy_step_2_1_double() noexcept {
     volatile double i0 = 0x1.91888d1a0248p+1;
@@ -4063,6 +4037,32 @@ inline const char* axpy_step_2_1_float() noexcept {
     float o1;
     axpy_step_2_1(i0, i1, i2, i3, i4, o0, o1);
     return !same(o0, 0x1.f1b83ap-2f) || !same(o1, -0x1.becbd2p-27f) ? "axpy_step_2_1 (float)" : nullptr;
+}
+
+// axpy_entry_step_2_1 (double)
+inline const char* axpy_entry_step_2_1_double() noexcept {
+    volatile double i0 = -0x1.140a7cc27116dp+0;
+    volatile double i1 = -0x1.2dd3ff1314e05p-3;
+    volatile double i2 = -0x1.74bd6e96e526dp-58;
+    volatile double i3 = 0x1.88fe44ad54dbap-3;
+    volatile double i4 = 0x1.00057ab3fdd06p-61;
+    double o0;
+    double o1;
+    axpy_entry_step_2_1(i0, i1, i2, i3, i4, o0, o1);
+    return !same(o0, 0x1.67399886e6d32p-2) || !same(o1, 0x1.c0a106c589414p-56) ? "axpy_entry_step_2_1 (double)" : nullptr;
+}
+
+// axpy_entry_step_2_1 (float)
+inline const char* axpy_entry_step_2_1_float() noexcept {
+    volatile float i0 = 0x1.1a3c2p-3f;
+    volatile float i1 = 0x1.b3bae6p+0f;
+    volatile float i2 = -0x1.ebbecap-25f;
+    volatile float i3 = -0x1.0ffd78p+1f;
+    volatile float i4 = -0x1.4bd5fcp-28f;
+    float o0;
+    float o1;
+    axpy_entry_step_2_1(i0, i1, i2, i3, i4, o0, o1);
+    return !same(o0, -0x1.e3eeaap+0f) || !same(o1, 0x1.7b11fcp-25f) ? "axpy_entry_step_2_1 (float)" : nullptr;
 }
 
 // ball_add_2 (double)
@@ -7953,16 +7953,16 @@ inline const char* run() noexcept {
         add_fast_2_2_full_nonfinite_float,
         add_up_2_2_double,
         add_up_2_2_float,
+        axpy_step_2_double,
+        axpy_step_2_float,
         axpy_entry_step_2_double,
         axpy_entry_step_2_float,
         mul_2_1_double,
         mul_2_1_float,
-        axpy_entry_step_2_1_double,
-        axpy_entry_step_2_1_float,
-        axpy_step_2_double,
-        axpy_step_2_float,
         axpy_step_2_1_double,
         axpy_step_2_1_float,
+        axpy_entry_step_2_1_double,
+        axpy_entry_step_2_1_float,
         ball_add_2_double,
         ball_add_2_float,
         ball_add_2_full_double,

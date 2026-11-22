@@ -604,9 +604,10 @@ bool mul_pow2(SoAView<T, K> x, std::type_identity_t<V> c, SoAView<V, K> z) noexc
 
 /// z = a x + y, element by element, a of T: loop axpy_1_entry for one limb (the step
 /// axpy_entry_step_1: the product of T, then the sum), axpy_2_1_entry for two (the step
-/// axpy_entry_step_2_1: mul_2_1, then add_2_2). a and x are only multiplied; y is guarded before it
-/// is added (rule R3). Rounds; not constexpr. In place: z may be x or y (`axpy(a, x, y, y)` is
-/// y = a x + y).
+/// axpy_entry_step_2_1: mul_2_1, then add_2_2). y is guarded before it is added (rule R3); for one
+/// limb a and x are only rounded as a product, for two a and every limb of x are guarded too, since
+/// they are factors of the fused operations of mul_2_1 (rule R3, the factors of a fused operation).
+/// Rounds; not constexpr. In place: z may be x or y (`axpy(a, x, y, y)` is y = a x + y).
 ///
 /// Statement, proved, for every element when it is finite, an error relative to the two terms:
 ///   |z_i - (a x_i + y_i)| <= c u^k (|a x_i| + |y_i|) + t eta,
@@ -639,7 +640,9 @@ bool axpy(std::type_identity_t<V> a, SoAView<T, K> x, SoAView<U, K> y, SoAView<V
     return finite;
 }
 /// z = a x + y, element by element, a of two limbs: loop axpy_2_entry (the step axpy_entry_step_2:
-/// mul_2_2, then add_2_2 on y guarded). Rounds; not constexpr. In place: z may be x or y.
+/// mul_2_2, then add_2_2, on every limb of a, x and y guarded: y before it is added, rule R3, a and x
+/// as factors of the fused operations of mul_2_2, rule R3 on the factors of a fused operation).
+/// Rounds; not constexpr. In place: z may be x or y.
 ///
 /// Statement, proved, for every element when it is finite: z_i normalized and
 ///   |z_i - (a x_i + y_i)| <= c u^2 (|a x_i| + |y_i|) + 2 eta,  c = 3(1 + 4u^2)/(1 - 4u) + 4,

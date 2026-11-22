@@ -679,9 +679,11 @@ class CheckedFiles(unittest.TestCase):
     # Then ball_scale_2_full_entry with the fix-up of ball_scale_2_full written out (behind the printer's
     # branch): its definition and the source line of its statement changed, and nothing else.
     # Then dot_entry_step_2 (the same rule): its model, program and statements added, nothing else
-    # changed.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '9c9416bd02b1c79d8a68684e2167fad98d6661605b49290f1a749c84f8bead1d',
-               'proofs/gen/IeeeStatements.v': '360b708d524c9a2848c0364debf1596d25f1ee108c9808df80697043c3f165cc'}
+    # changed. Then axpy_entry_step_2 and axpy_entry_step_2_1 (the same rule): their models and programs
+    # with every limb of a, x and y guarded and then axpy_step_2 and axpy_step_2_1, printed after them;
+    # every statement the same, but for the source lines of their comments.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'df9723d4c39b99dd06a48f89454ccc8ccd01bb9238d4aa79363655b53abf58ad',
+               'proofs/gen/IeeeStatements.v': '21063dc2ae39d36f0e7ab2c9869436280228ace017be038b2c216e56f3fb68ac'}
 
 
     def test_the_checked_files(self):

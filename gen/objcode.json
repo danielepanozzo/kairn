@@ -709,6 +709,11 @@
    "scalar_call": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
    "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
   },
+  "axpy_step_2": {
+   "scalar": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
+   "scalar_call": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
+   "packed": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]}
+  },
   "axpy_entry_step_2": {
    "scalar": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
    "scalar_call": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
@@ -719,17 +724,12 @@
    "scalar_call": {"double": [3, 3, 0, 0, 0, 0], "float": [3, 3, 0, 0, 0, 0]},
    "packed": {"double": [3, 3, 0, 0, 0, 0], "float": [3, 3, 0, 0, 0, 0]}
   },
-  "axpy_entry_step_2_1": {
+  "axpy_step_2_1": {
    "scalar": {"double": [3, 3, 0, 0, 0, 0], "float": [3, 3, 0, 0, 0, 0]},
    "scalar_call": {"double": [3, 3, 0, 0, 0, 0], "float": [3, 3, 0, 0, 0, 0]},
    "packed": {"double": [3, 3, 0, 0, 0, 0], "float": [3, 3, 0, 0, 0, 0]}
   },
-  "axpy_step_2": {
-   "scalar": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
-   "scalar_call": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
-   "packed": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]}
-  },
-  "axpy_step_2_1": {
+  "axpy_entry_step_2_1": {
    "scalar": {"double": [3, 3, 0, 0, 0, 0], "float": [3, 3, 0, 0, 0, 0]},
    "scalar_call": {"double": [3, 3, 0, 0, 0, 0], "float": [3, 3, 0, 0, 0, 0]},
    "packed": {"double": [3, 3, 0, 0, 0, 0], "float": [3, 3, 0, 0, 0, 0]}

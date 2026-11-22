@@ -367,9 +367,9 @@ The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry 
 | `mul_pow2(x, c, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | $\lvert z - x c\rvert \le \eta$, normalized | [`mul_pow2_step_2`](mul_pow2_step_2.md) |
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{2 + 3u}{(1 + u) (1 + u)}\right) u\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{2}{3}\,\eta$ | [`axpy_step_1`](axpy_step_1.md) |
 | `axpy(a, x, y, z)` | `T`, `SoAView<const T, 1>`, `SoAView<const T, 1>`, `SoAView<T, 1>` | $\lvert z - (a x + y)\rvert \le \left(\frac{2 + 3u}{(1 + u) (1 + u)}\right) u\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{2}{3}\,\eta$ | [`axpy_entry_step_1`](axpy_entry_step_1.md) |
-| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + 2\,\eta$, normalized | [`axpy_step_2`](axpy_step_2.md) |
+| none (internal) | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + 2\,\eta$, normalized | [`axpy_step_2`](axpy_step_2.md) |
 | `axpy(a, x, y, z)` | `Expansion<T, 2>`, `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + 2\,\eta$, normalized | [`axpy_entry_step_2`](axpy_entry_step_2.md) |
-| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_step_2_1`](axpy_step_2_1.md) |
+| none (internal) | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_step_2_1`](axpy_step_2_1.md) |
 | `axpy(a, x, y, z)` | `T`, `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_entry_step_2_1`](axpy_entry_step_2_1.md) |
 
 ## Ball vectors: N centers and one radius

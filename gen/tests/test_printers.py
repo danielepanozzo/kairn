@@ -1022,10 +1022,12 @@ class Rocq(unittest.TestCase):
     # Then scale_entry_step_2 and the fold scale_2_entry (the same rule): their models, statements and
     # audit lines added.
     # Then dot_entry_step_2 and the folds dot_2_entry and conv_2_entry (the same rule): their models,
-    # statements and audit lines added.
-    DIGESTS = {'Model.v': 'b61bed066ae7b93c54be090a9b364fc91ad60c304abbc8ae712a193f98569a47',
-               'Statements.v': '3017223947883119da9dd955d757e0576e9dd19fdc06ea9a8e3c9a85a6ae6f5c',
-               'Audit.v': '17de04048e683924170ff3bb2eece7312548bac6367211d29d9f7578004734a3'}
+    # statements and audit lines added. Then axpy_entry_step_2 and axpy_entry_step_2_1 (the same rule):
+    # their models on every limb guarded, then axpy_step_2 and axpy_step_2_1, printed after them; every
+    # statement the same, but for the source lines of their comments.
+    DIGESTS = {'Model.v': 'd5ee71c2cfa973ba0353a285117ab042d312cef0d7515a4c1390c94c9ee8e82d',
+               'Statements.v': '5b6c481026eb4e33cc15afae8959035ab0464be4f7b2e361950569aa022d8c31',
+               'Audit.v': '84944deb29fa84c1db5428de50d2f273f26c36658cee16ae1873ce6ee116f1b1'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

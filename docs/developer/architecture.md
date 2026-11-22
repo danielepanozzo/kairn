@@ -508,8 +508,8 @@ $z = a\,x + y$ entry by entry for `axpy_2`. `axpy_2` in full:
 
 ```
 fold:          axpy_2
-arrays:        supplied x = x0 x1, stored y = y0 y1
-scalars:       supplied a = a0 a1
+arrays:        stored x = x0 x1, stored y = y0 y1
+scalars:       stored a = a0 a1
 state:         mask finite
 step:          z = axpy_step_2(a, x, y)
 combine:       finite = and(finite, finite)
@@ -555,11 +555,13 @@ domain:        extended
 
 The maps of this stage are `add_k`, `sub_k` (on stored arrays: `add_1_1`, `sub_1_1`, `add_2_2`,
 `sub_2_2`) and their `_entry` forms on supplied arrays (`add_entry_step_k`, `sub_entry_step_k`,
-which guard every limb of both operands); `axpy_1` ($a$ of `T`, `mul_1_1` then `add_1_1`),
-`axpy_2` ($a$ of two limbs, `mul_2_2` then `add_2_2`) and `axpy_2_1` ($a$ of `T`, `mul_2_1`), with
-`x` supplied (only multiplied, so unguarded by the addition part of R3; of two limbs, a factor
-of the fused operations of `mul_2_1` and `mul_2_2`, on the pending list of the factor rule) and
-`y` stored, and their `_entry` forms with `y` supplied and guarded; `scale_1` and `scale_2` (by
+which guard every limb of both operands); `axpy_1` ($a$ of `T`, `mul_1_1` then `add_1_1`), with
+`a` and `x` supplied (only rounded products, so unguarded) and `y` stored, and its `_entry` form
+with `y` supplied and guarded; `axpy_2` ($a$ of two limbs, `mul_2_2` then `add_2_2`) and `axpy_2_1`
+($a$ of `T`, `mul_2_1`) on a stored scalar and stored arrays, and their `_entry` forms on supplied
+ones, whose steps guard every limb of `a`, `x` and `y` and then run the stored step (`x` and `a`
+are factors of the fused operations of `mul_2_2` and `mul_2_1`: R3, the factors of a fused
+operation); `scale_1` and `scale_2` (by
 $a$ of `T`: `mul_1_1`, `mul_2_1`), `scale_2` on stored arrays and its `_entry` form `scale_2_entry`
 on supplied ones, whose step `scale_entry_step_2` guards the limbs of the element and $a$ (R3,
 the factors of a fused operation); and
@@ -2558,8 +2560,8 @@ short here):
 ```json
 {
   "name": "axpy_2", "map": true, "domain": "extended",
-  "arrays": [{"name": "x", "limbs": 2, "role": "supplied"}, {"name": "y", "limbs": 2, "role": "stored"}],
-  "scalars": [{"name": "a", "limbs": 2, "role": "supplied"}],
+  "arrays": [{"name": "x", "limbs": 2, "role": "stored"}, {"name": "y", "limbs": 2, "role": "stored"}],
+  "scalars": [{"name": "a", "limbs": 2, "role": "stored"}],
   "writes": [{"name": "z", "limbs": 2}],
   "outputs": [{"name": "finite", "limbs": 1, "type": "mask"}],
   "value": "a*x+y",

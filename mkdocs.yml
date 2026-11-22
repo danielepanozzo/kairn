@@ -352,10 +352,10 @@ nav:
           - x c of two limbs, c a power of two: reference/mul_pow2_step_2.md
           - "a x + y of one limb, y stored": reference/axpy_step_1.md
           - "a x + y of one limb, y of the program": reference/axpy_entry_step_1.md
-          - "a x + y of two limbs, y stored": reference/axpy_step_2.md
-          - "a x + y of two limbs, y of the program": reference/axpy_entry_step_2.md
-          - "a x + y of two limbs, a of T, y stored": reference/axpy_step_2_1.md
-          - "a x + y of two limbs, a of T, y of the program": reference/axpy_entry_step_2_1.md
+          - "a x + y of two limbs, a, x and y stored": reference/axpy_step_2.md
+          - "a x + y of two limbs, a, x and y of the program, every limb guarded": reference/axpy_entry_step_2.md
+          - "a x + y of two limbs, a of T, a, x and y stored": reference/axpy_step_2_1.md
+          - "a x + y of two limbs, a of T, a, x and y of the program, guarded": reference/axpy_entry_step_2_1.md
       - "Ball vectors: N centers and one radius":
           - The radius of the sum or the difference of two BallVectors of one limb: reference/bv_add_radius_1.md
           - The radius of the sum or the difference of two BallVectors of two limbs: reference/bv_add_radius_2.md

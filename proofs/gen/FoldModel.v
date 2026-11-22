@@ -74,14 +74,14 @@ Definition axpy_1_entry_step (a : R) (xy : R * R) : R :=
 Definition axpy_1_entry_map (a : R) (xys : list (R * R)) : list R :=
   map (axpy_1_entry_step a) xys.
 
-(* axpy_2: a map; arrays supplied x, stored y; scalars supplied a; it writes z by the step axpy_step_2. *)
+(* axpy_2: a map; arrays stored x, stored y; scalars stored a; it writes z by the step axpy_step_2. *)
 Definition axpy_2_step (a : R * R) (xy : (R * R) * (R * R)) : R * R :=
   axpy_step_2 emin prec choice (fst a) (snd a) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
 
 Definition axpy_2_map (a : R * R) (xys : list ((R * R) * (R * R))) : list (R * R) :=
   map (axpy_2_step a) xys.
 
-(* axpy_2_1: a map; arrays supplied x, stored y; scalars supplied a; it writes z by the step axpy_step_2_1. *)
+(* axpy_2_1: a map; arrays stored x, stored y; scalars stored a; it writes z by the step axpy_step_2_1. *)
 Definition axpy_2_1_step (a : R) (xy : (R * R) * (R * R)) : R * R :=
   axpy_step_2_1 emin prec choice a (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
 

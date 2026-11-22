@@ -881,12 +881,21 @@ Definition add_up_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(h0, h1) := two_sum_ord z0 w in
   (h0, h1).
 
-(* axpy_entry_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. *)
-Definition axpy_entry_step_2 (a0 a1 x0 x1 y0 y1 : R) : R * R :=
+(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. *)
+Definition axpy_step_2 (a0 a1 x0 x1 y0 y1 : R) : R * R :=
   let '(p0, p1) := mul_2_2 a0 a1 x0 x1 in
+  let '(z0, z1) := add_2_2 p0 p1 y0 y1 in
+  (z0, z1).
+
+(* axpy_entry_step_2: axpy_step_2 on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. *)
+Definition axpy_entry_step_2 (a0 a1 x0 x1 y0 y1 : R) : R * R :=
+  let ga0 := rnd (a0 + 0) in
+  let ga1 := rnd (a1 + 0) in
+  let gx0 := rnd (x0 + 0) in
+  let gx1 := rnd (x1 + 0) in
   let gy0 := rnd (y0 + 0) in
   let gy1 := rnd (y1 + 0) in
-  let '(z0, z1) := add_2_2 p0 p1 gy0 gy1 in
+  let '(z0, z1) := axpy_step_2 ga0 ga1 gx0 gx1 gy0 gy1 in
   (z0, z1).
 
 (* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. *)
@@ -896,24 +905,20 @@ Definition mul_2_1 (x0 x1 a : R) : R * R :=
   let '(z0, z1) := fast_two_sum ch cl3 in
   (z0, z1).
 
-(* axpy_entry_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22. *)
-Definition axpy_entry_step_2_1 (a x0 x1 y0 y1 : R) : R * R :=
-  let '(p0, p1) := mul_2_1 x0 x1 a in
-  let gy0 := rnd (y0 + 0) in
-  let gy1 := rnd (y1 + 0) in
-  let '(z0, z1) := add_2_2 p0 p1 gy0 gy1 in
-  (z0, z1).
-
-(* axpy_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. *)
-Definition axpy_step_2 (a0 a1 x0 x1 y0 y1 : R) : R * R :=
-  let '(p0, p1) := mul_2_2 a0 a1 x0 x1 in
-  let '(z0, z1) := add_2_2 p0 p1 y0 y1 in
-  (z0, z1).
-
 (* axpy_step_2_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. *)
 Definition axpy_step_2_1 (a x0 x1 y0 y1 : R) : R * R :=
   let '(p0, p1) := mul_2_1 x0 x1 a in
   let '(z0, z1) := add_2_2 p0 p1 y0 y1 in
+  (z0, z1).
+
+(* axpy_entry_step_2_1: axpy_step_2_1 on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. *)
+Definition axpy_entry_step_2_1 (a x0 x1 y0 y1 : R) : R * R :=
+  let ga := rnd (a + 0) in
+  let gx0 := rnd (x0 + 0) in
+  let gx1 := rnd (x1 + 0) in
+  let gy0 := rnd (y0 + 0) in
+  let gy1 := rnd (y1 + 0) in
+  let '(z0, z1) := axpy_step_2_1 ga gx0 gx1 gy0 gy1 in
   (z0, z1).
 
 (* ball_add_2: midpoint-radius sum (Milestone 1 listing, second radius design). *)

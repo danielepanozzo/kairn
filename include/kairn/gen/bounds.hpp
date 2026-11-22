@@ -1610,6 +1610,21 @@ template <> struct add_up_2_2<float> {
     static constexpr bool proved = true;
 };
 
+// axpy_step_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
+template <class T> struct axpy_step_2;
+template <> struct axpy_step_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr double unit = 0x1.c000000000002p-104;
+    static constexpr double tiny = 0x1p-1073;
+};
+template <> struct axpy_step_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr float unit = 0x1.c00004p-46f;
+    static constexpr float tiny = 0x1p-148f;
+};
+
 // axpy_entry_step_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
 template <class T> struct axpy_entry_step_2;
 template <> struct axpy_entry_step_2<double> {
@@ -1644,36 +1659,6 @@ template <> struct mul_2_1<float> {
     static constexpr float tiny_computed = 0x1p-148f;
 };
 
-// axpy_entry_step_2_1: proved. Claims: normalized; error, form T, c = 3*(1+2*u*u)/(1-4*u)+2, k = 2, t = 5/4.
-template <class T> struct axpy_entry_step_2_1;
-template <> struct axpy_entry_step_2_1<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::terms;
-    static constexpr double unit = 0x1.4000000000002p-104;
-    static constexpr double tiny = 0x1p-1073;
-};
-template <> struct axpy_entry_step_2_1<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::terms;
-    static constexpr float unit = 0x1.400004p-46f;
-    static constexpr float tiny = 0x1p-148f;
-};
-
-// axpy_step_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
-template <class T> struct axpy_step_2;
-template <> struct axpy_step_2<double> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::terms;
-    static constexpr double unit = 0x1.c000000000002p-104;
-    static constexpr double tiny = 0x1p-1073;
-};
-template <> struct axpy_step_2<float> {
-    static constexpr bool proved = true;
-    static constexpr Form form = Form::terms;
-    static constexpr float unit = 0x1.c00004p-46f;
-    static constexpr float tiny = 0x1p-148f;
-};
-
 // axpy_step_2_1: proved. Claims: normalized; error, form T, c = 3*(1+2*u*u)/(1-4*u)+2, k = 2, t = 5/4.
 template <class T> struct axpy_step_2_1;
 template <> struct axpy_step_2_1<double> {
@@ -1683,6 +1668,21 @@ template <> struct axpy_step_2_1<double> {
     static constexpr double tiny = 0x1p-1073;
 };
 template <> struct axpy_step_2_1<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr float unit = 0x1.400004p-46f;
+    static constexpr float tiny = 0x1p-148f;
+};
+
+// axpy_entry_step_2_1: proved. Claims: normalized; error, form T, c = 3*(1+2*u*u)/(1-4*u)+2, k = 2, t = 5/4.
+template <class T> struct axpy_entry_step_2_1;
+template <> struct axpy_entry_step_2_1<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr double unit = 0x1.4000000000002p-104;
+    static constexpr double tiny = 0x1p-1073;
+};
+template <> struct axpy_entry_step_2_1<float> {
     static constexpr bool proved = true;
     static constexpr Form form = Form::terms;
     static constexpr float unit = 0x1.400004p-46f;
