@@ -85,6 +85,14 @@ harness, `BACKEND/KIND/KERNEL/VARIANT`: `m2` for `double` limbs, `m2f` for `floa
   zeros three to four times narrower than those of `Ball<double, 2>`
   ([question 10](#10-one-algorithm-over-four-types)).
 
+- **Second part: `self_test()` costs 2.5 to 8.8 µs at startup and 1.2 to 6.5 s to compile.** GCC 13
+  compiles a unit with one call in 6.40 s at `-O2` and 6.50 s at `-O3`, which confirms the 6.6 s a
+  downstream user measured (Milestone 1: 1.08 s); Clang 18 and GCC 16 in 3.9 to 4.0 s, Apple clang
+  in 1.2 s; the generated header it compiles has grown four times. `KAIRN_CHECKS=1` multiplies the
+  cheapest functions most: an interval's `contains(t)` takes 3.8 to 16.6 times as long (7.5 ns
+  instead of 0.5 on Zen 2), a sum of intervals of one limb 2.1 to 3.5 times, a product of two limbs
+  1.1 to 1.2 ([question 11](#11-self_test-and-the-checks)).
+
 ## The answers
 
 ### 1. Rounding down and up without a rounding mode
@@ -1246,6 +1254,98 @@ finishes in 3 to 520 µs, timed in samples of about 4 ms like every function of 
   wide sets the dependency problem sets the width for every type
   ([question 4](#4-a-polynomial-cost-and-tightness)).
 
+### 11. `self_test()` and the checks
+
+What does `kairn::self_test()` cost a program at startup and at compile time, and what do the
+checks of `KAIRN_CHECKS=1` cost the intervals and the enclosure interface? The run time is one
+call, timed by the harness (`m2r/run/self_test/op`), with its two parts: the checks of the
+environment and of the compiler's flags on `T` (`detail::self_test_limb` for both limb types), and
+the generated kernels on their fixed operands (`gen::selftest::run()`, 330 kernels for each limb
+type). The compile time is that of `bench/compile_time/self_test.cpp`, `kairn/kairn.hpp` and one call
+of `self_test()`, as [Compile times and other costs, Milestone 1](costs-milestone1.md#1-compile-times)
+measured it (`compile_time.py run`, the minimum wall time over seven compilations in rounds, with an
+empty unit and the include alone; on Zen 2 pinned). It compiles the generated header
+`kairn/gen/selftest.hpp`, now 310 943 bytes, 7 941 lines, 330 tests per limb type; at the end of
+Milestone 1 (commit `040922c`) it was 76 497 bytes, 2 036 lines, 84 tests per limb type. The checks
+are measured as Milestone 1 measured them (`costs.cpp`): the same functions in two programs, the
+harness with `KAIRN_CHECKS` 0 and `kairn-bench-m2-checks-LEVEL` with 1, run one after the other,
+three pairs per configuration; a ratio is of the two programs' minima in one pair, and the controls
+are generated kernels called directly, which no check reaches.
+
+| self_test(), microseconds per call | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `self_test()` | 2.76 to 2.98 (-O2), 3 to 3.08 (-O3) | 2.53 to 2.59 (-O2), 2.58 to 2.66 (-O3) | 8.38 to 8.78 (-O2), 7.49 to 7.58 (-O3) | 6.76 to 6.95 (-O2), 6.97 to 7.16 (-O3) |
+| the checks of the environment and the flags, both limb types | 0.00838 to 0.00863 (-O2), 0.00899 to 0.009 (-O3) | 0.00899 (-O2), 0.00778 to 0.00836 (-O3) | 0.0603 to 0.0615 (-O2), 0.058 to 0.0586 (-O3) | 0.0418 to 0.0427 |
+| the generated kernels on their fixed operands | 2.71 to 2.93 (-O2), 2.98 to 3.04 (-O3) | 2.54 to 2.63 | 7.99 to 8.36 (-O2), 7.24 to 7.5 (-O3) | 6.47 to 6.73 (-O2), 6.29 to 6.47 (-O3) |
+
+| Compile time, s (minimum wall time; -O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| an empty unit | 0.02; 0.02 | 0.06; 0.05 | 0.02; 0.01 | 0.04; 0.04 |
+| `kairn/kairn.hpp`, nothing used | 0.14; 0.14 | 0.26; 0.26 | 0.43; 0.43 | 0.67; 0.67 |
+| one call of `kairn::self_test()` | 1.19; 1.21 | 3.85; 4.02 | 6.40; 6.50 | 3.88; 3.89 |
+| one call of `kairn::self_test()`, over the include alone | 1.05; 1.07 | 3.59; 3.76 | 5.97; 6.07 | 3.21; 3.21 |
+| peak memory of `self_test`, MB | 143; 143 | 258; 262 | 236; 238 | 151; 151 |
+
+| KAIRN_CHECKS 1 over 0 (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `X + Y`, `Interval<T, 1>`, loop | 2.13 | 2.58 to 2.75 (-O2), 2.56 to 2.60 (-O3) | 2.96 to 3.01 | 3.46 to 3.53 |
+| `X * Y`, `Interval<T, 1>`, loop | 1.33 to 1.36 | 1.12 to 1.15 | 2.19 to 2.22 | 1.26 to 1.29 |
+| `X + Y`, `Interval<T, 2>`, loop | 1.16 to 1.20 | 2.00 (-O2), 1.87 to 1.91 (-O3) | 1.36 to 1.38 | 1.30 to 1.34 |
+| `X * Y`, `Interval<T, 2>`, loop | 1.06 to 1.09 | 1.12 to 1.15 | 1.17 to 1.18 | 1.19 to 1.22 (-O2), 1.18 to 1.24 (-O3) |
+| `S + X`, `Interval<T, 1>`, chain | 0.99 to 1.02 | 1.17 to 1.22 (-O2), 1.10 to 1.13 (-O3) | 1.97 to 2.00 | 2.40 to 2.45 |
+| `P * X`, `Interval<T, 2>`, chain | 1.00 to 1.02 | 1.04 to 1.07 (-O2), 1.00 to 1.01 (-O3) | 1.09 to 1.11 | 1.03 to 1.05 |
+| Horner, `Interval<T, 1>` | 1.05 (-O2), 0.98 to 1.05 (-O3) | 0.95 to 1.01 (-O2), 1.06 to 1.10 (-O3) | 1.52 to 1.56 | 1.72 to 1.75 |
+| Horner, `Interval<T, 2>` | 1.00 to 1.01 | 1.28 to 1.38 (-O2), 1.23 to 1.25 (-O3) | 1.04 to 1.06 | 1.06 to 1.08 |
+| `less`, `Interval<T, 1>` | 4.70 to 4.97 (-O2), 4.83 to 4.84 (-O3) | 3.83 to 3.86 (-O2), 4.08 to 4.15 (-O3) | 4.25 to 4.29 | 6.87 to 7.03 |
+| `contains(t)`, `Interval<T, 1>` | 4.50 to 4.60 | 3.91 to 4.00 (-O2), 3.76 to 3.83 (-O3) | 14.1 to 14.3 | 16.3 to 16.6 (-O2), 15.3 to 16.6 (-O3) |
+| `hull`, `Interval<T, 1>` | 6.20 to 6.32 | 4.40 to 4.44 (-O2), 5.71 to 5.83 (-O3) | 11.1 to 11.3 | 25.3 to 25.7 |
+| `less`, `Ball<T, 1>` | 1.71 to 1.76 | 1.96 (-O2), 2.20 to 2.27 (-O3) | 1.70 to 1.73 | 4.19 to 4.30 |
+| `certainly_positive()`, `Ball<T, 1>` | 7.85 to 8.03 | 9.61 (-O2), 8.56 to 8.57 (-O3) | 22.6 to 22.7 (-O2), 24.3 to 24.5 (-O3) | 12.0 to 13.7 (-O2), 12.4 to 13.4 (-O3) |
+| `less`, `Ball<T, 2>` | 1.36 to 1.39 | 1.86 to 1.97 (-O2), 1.96 to 2.06 (-O3) | 1.74 (-O2), 1.66 to 1.68 (-O3) | 1.24 to 1.28 |
+| `hull`, `Ball<T, 2>` | 1.01 to 1.05 | 1.09 to 1.13 (-O2), 1.05 to 1.08 (-O3) | 1.07 to 1.12 | 1.04 to 1.06 |
+| control: the kernel `interval_mul_1`, loop | 0.97 to 1.00 | 0.98 to 1.02 | 1.00 to 1.01 | 0.99 to 1.01 |
+| control: the kernel `ball_less_2`, loop | 0.97 to 1.00 (-O2), 0.99 to 1.03 (-O3) | 1.00 to 1.06 (-O2), 0.95 to 1.00 (-O3) | 0.99 to 1.00 | 0.99 to 1.01 |
+
+| Times with KAIRN_CHECKS 0; 1 (ns) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `m2/tp/interval_add_1/op` | 1.87; 3.99 (-O2), 1.87; 3.99 (-O3) | 1.74; 4.57 (-O2), 1.76; 4.52 (-O3) | 3.52; 10.5 (-O2), 3.53; 10.6 (-O3) | 4.51; 15.8 (-O2), 4.51; 15.8 (-O3) |
+| `m2/tp/interval_mul_1/op` | 6.07; 8.19 (-O2), 6.03; 8.21 (-O3) | 7.94; 9.04 (-O2), 8.05; 9.02 (-O3) | 9.86; 21.7 (-O2), 9.87; 21.7 (-O3) | 16.9; 21.8 (-O2), 17; 21.8 (-O3) |
+| `m2/tp/interval_add_2/op` | 8.43; 10.2 (-O2), 8.43; 9.76 (-O3) | 7.13; 14.2 (-O2), 7.54; 14.1 (-O3) | 24.3; 33.5 (-O2), 24.3; 33.1 (-O3) | 18.5; 24.4 (-O2), 18.5; 24.4 (-O3) |
+| `m2e/tp/i1_less/op` | 0.644; 3.11 (-O2), 0.662; 3.2 (-O3) | 0.799; 3.08 (-O2), 0.805; 3.3 (-O3) | 1.95; 8.31 (-O2), 1.94; 8.29 (-O3) | 1.99; 13.8 (-O2), 1.99; 13.8 (-O3) |
+| `m2e/tp/i1_contains_t/op` | 0.347; 1.59 (-O2), 0.347; 1.56 (-O3) | 0.333; 1.31 (-O2), 0.35; 1.32 (-O3) | 0.53; 7.5 (-O2), 0.531; 7.5 (-O3) | 0.508; 8.34 (-O2), 0.507; 7.86 (-O3) |
+| `m2e/tp/b2_less/op` | 6.17; 8.61 (-O2), 6.22; 8.61 (-O3) | 4.67; 9.22 (-O2), 5.02; 9.84 (-O3) | 16.3; 28.4 (-O2), 16.2; 27.2 (-O3) | 19.3; 24.4 (-O2), 19.4; 24.4 (-O3) |
+| `m2e/tp/i2_split/op` | 7.32; 11.2 (-O2), 7.85; 10.6 (-O3) | 6.73; 9.32 (-O2), 6.33; 8.8 (-O3) | 16.2; 26.4 (-O2), 23.5; 26.3 (-O3) | 16.4; 18.6 (-O2), 16.4; 18.6 (-O3) |
+| `m2/tp/interval_mul_1/kairn` | 6.34; 6.14 (-O2), 6.31; 6.28 (-O3) | 7.77; 7.91 (-O2), 7.97; 7.92 (-O3) | 9.85; 9.86 (-O2), 9.86; 9.87 (-O3) | 16.9; 17 (-O2), 17; 16.9 (-O3) |
+
+- **At run time `self_test()` costs 2.5 to 3.1 µs on the M3 and 6.8 to 8.8 µs on Zen 2**, once at
+  startup; 8 to 62 ns of it are the checks of the environment and the flags, the rest the 660
+  kernels on their operands.
+- **At compile time it costs 1.2 s (Apple clang) to 6.5 s (GCC 13)**: a unit with one call of
+  `self_test()` compiles in 6.40 s at `-O2` and 6.50 s at `-O3` with GCC 13, which confirms the
+  6.6 s that a downstream user measured at `-O3`; 3.9 s with Clang 18 and GCC 16 (4.0 at `-O3`);
+  1.19 to 1.21 s with Apple clang. At the end of Milestone 1 the same unit took 1.08 s with GCC 13,
+  0.77 s with Clang 18, 0.75 s with GCC 16 and 0.21 s with Apple clang at `-O2`
+  ([Milestone 1](costs-milestone1.md#1-compile-times)): 5.0 to 5.9 times less, the generated header
+  being then a quarter of its size, with a quarter of the tests. `-O3` costs what `-O2` costs (within
+  5%).
+  Beyond the call, the include alone has grown too: `kairn/kairn.hpp` with nothing used takes 0.14 s
+  (Apple clang) to 0.67 s (Clang 18), against 0.06 to 0.23 s in Milestone 1. A program pays this in
+  the one translation unit that calls `self_test()`.
+- **The checks cost most where an operation is cheapest.** With `KAIRN_CHECKS=1` a sum of intervals
+  of one limb takes 2.1 to 3.5 times as long in a loop, a product 1.1 to 2.2 times; with two limbs
+  1.2 to 2.0 and 1.1 to 1.2; in chains 0.95 to 2.5; a Horner evaluation 0.95 to 1.8. Each operation
+  first checks the environment, a read of the control register and three tests, which Milestone 1
+  measured at 0.36 to 0.39 ns on the M3 and 6.2 to 6.5 ns on Zen 2, and then its operands.
+- **The functions that do not round are checked too, and they are the cheapest**: they skip the test
+  of the rounding mode but not the rest of the environment (`config.hpp`, "Functions that do not
+  round"). An interval's `contains(t)` takes 0.35 ns and 1.3 to 1.6 ns with the checks on the M3,
+  0.51 to 0.53 ns and 7.5 to 8.3 ns on Zen 2 (3.8 to 16.6 times); its `less` 3.8 to 7.0 times, its
+  `hull` 4.2 to 26 times, a ball's `certainly_positive()` 6.1 to 24.5 times. A ball's operations
+  that round, dearer to begin with, take 1.1 to 10 times as long for one limb (`contains(t)` most) and
+  1.0 to 2.4 times for two (`less` 1.2 to 2.1; the hull 1.0 to 1.1, its time being its three
+  conversions). The controls, kernels called directly, take 0.98 to
+  1.01 of their time without the checks.
+
 ### What the machine code shows (second part)
 
 The loops of the new timed functions were disassembled on every configuration and summarized by
@@ -1905,14 +2005,14 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 
 | Configuration (second part) | CPU | Compiler | Flags | Runs per item (soa, enc, bisect, checks pairs) | Date, commit |
 |---|---|---|---|---|---|
-| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
-| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
-| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
-| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
-| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
-| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
-| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
-| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 0 | 2026-11-22, `cbe3bb1` |
+| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3 | 2026-11-22, `cbe3bb1` |
+| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3 | 2026-11-22, `cbe3bb1` |
+| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3 | 2026-11-22, `cbe3bb1` |
+| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3 | 2026-11-22, `cbe3bb1` |
+| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3 | 2026-11-22, `cbe3bb1` |
+| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3 | 2026-11-22, `cbe3bb1` |
+| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3 | 2026-11-22, `cbe3bb1` |
+| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3 | 2026-11-22, `cbe3bb1` |
 
 #### Checks of the second part
 
@@ -1942,6 +2042,14 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | bisect mac-appleclang-O3 | 11, 0; 11, 0; 11, 0 |
 | bisect mac-gcc16-O2 | 11, 0; 11, 0; 11, 0 |
 | bisect mac-gcc16-O3 | 11, 0; 11, 0; 11, 0 |
+| checks linux-clang-O2 | 265, 0; 265, 0; 265, 0; 265, 0; 265, 0; 265, 0 |
+| checks linux-clang-O3 | 265, 0; 265, 0; 265, 0; 265, 0; 265, 0; 265, 0 |
+| checks linux-gcc-O2 | 265, 0; 265, 0; 265, 0; 265, 0; 265, 0; 265, 0 |
+| checks linux-gcc-O3 | 265, 0; 265, 0; 265, 0; 265, 0; 265, 0; 265, 0 |
+| checks mac-appleclang-O2 | 265, 0; 265, 0; 265, 0; 265, 0; 265, 0; 265, 0 |
+| checks mac-appleclang-O3 | 265, 0; 265, 0; 265, 0; 265, 0; 265, 0; 265, 0 |
+| checks mac-gcc16-O2 | 265, 0; 265, 0; 265, 0; 265, 0; 265, 0; 265, 0 |
+| checks mac-gcc16-O3 | 265, 0; 265, 0; 265, 0; 265, 0; 265, 0; 265, 0 |
 
 #### Runs of the second part
 
@@ -2019,6 +2127,54 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `bisect-mac-gcc16-O3-r1.json` | 1.022, 1.063 | 1.004 | 2.5, 2.5 |
 | `bisect-mac-gcc16-O3-r2.json` | 1.000, 1.000 | 1.016 | 2.2, 2.1 |
 | `bisect-mac-gcc16-O3-r3.json` | 1.034, 1.082 | 1.002 | 3.9, 3.8 |
+| `checks-linux-clang-O2-c0-r1.json` | 1.001, 1.003 | 1.003 | 3.1, 2.9 |
+| `checks-linux-clang-O2-c0-r2.json` | 1.011, 1.016 | 1.009 | 21.4, 21.7 |
+| `checks-linux-clang-O2-c0-r3.json` | 1.000, 1.003 | 1.004 | 12.1, 10.1 |
+| `checks-linux-clang-O2-c1-r1.json` | 1.000, 1.000 | 1.003 | 2.8, 2.8 |
+| `checks-linux-clang-O2-c1-r2.json` | 1.010, 1.015 | 1.010 | 21.7, 21.6 |
+| `checks-linux-clang-O2-c1-r3.json` | 1.010, 1.012 | 1.006 | 11.2, 14.8 |
+| `checks-linux-clang-O3-c0-r1.json` | 1.011, 1.015 | 1.007 | 3.3, 9.8 |
+| `checks-linux-clang-O3-c0-r2.json` | 1.010, 1.015 | 1.010 | 21.7, 21.8 |
+| `checks-linux-clang-O3-c0-r3.json` | 1.000, 1.000 | 1.004 | 8.2, 6.6 |
+| `checks-linux-clang-O3-c1-r1.json` | 1.000, 1.000 | 1.004 | 9.8, 6.5 |
+| `checks-linux-clang-O3-c1-r2.json` | 1.009, 1.014 | 1.009 | 21.8, 22.0 |
+| `checks-linux-clang-O3-c1-r3.json` | 1.002, 1.010 | 1.011 | 6.6, 10.7 |
+| `checks-linux-gcc-O2-c0-r1.json` | 1.000, 1.003 | 1.003 | 3.9, 3.3 |
+| `checks-linux-gcc-O2-c0-r2.json` | 1.000, 1.003 | 1.004 | 15.2, 10.1 |
+| `checks-linux-gcc-O2-c0-r3.json` | 1.012, 1.018 | 1.011 | 20.5, 21.0 |
+| `checks-linux-gcc-O2-c1-r1.json` | 1.000, 1.004 | 1.003 | 3.2, 3.3 |
+| `checks-linux-gcc-O2-c1-r2.json` | 1.000, 1.004 | 1.004 | 9.5, 6.6 |
+| `checks-linux-gcc-O2-c1-r3.json` | 1.010, 1.014 | 1.006 | 21.0, 21.6 |
+| `checks-linux-gcc-O3-c0-r1.json` | 1.000, 1.000 | 1.003 | 2.7, 3.8 |
+| `checks-linux-gcc-O3-c0-r2.json` | 1.006, 1.009 | 1.010 | 14.8, 16.4 |
+| `checks-linux-gcc-O3-c0-r3.json` | 1.005, 1.008 | 1.009 | 18.5, 18.9 |
+| `checks-linux-gcc-O3-c1-r1.json` | 1.000, 1.002 | 1.003 | 3.6, 3.4 |
+| `checks-linux-gcc-O3-c1-r2.json` | 1.010, 1.015 | 1.009 | 16.4, 18.9 |
+| `checks-linux-gcc-O3-c1-r3.json` | 1.000, 1.002 | 1.004 | 9.5, 7.8 |
+| `checks-mac-appleclang-O2-c0-r1.json` | 1.020, 1.094 | 1.024 | 10.1, 6.7 |
+| `checks-mac-appleclang-O2-c0-r2.json` | 1.000, 1.012 | 1.002 | 1.8, 1.6 |
+| `checks-mac-appleclang-O2-c0-r3.json` | 1.000, 1.007 | 1.001 | 1.8, 2.0 |
+| `checks-mac-appleclang-O2-c1-r1.json` | 1.011, 1.073 | 1.043 | 7.5, 6.2 |
+| `checks-mac-appleclang-O2-c1-r2.json` | 1.000, 1.018 | 1.003 | 1.6, 1.5 |
+| `checks-mac-appleclang-O2-c1-r3.json` | 1.000, 1.009 | 1.002 | 2.0, 2.0 |
+| `checks-mac-appleclang-O3-c0-r1.json` | 1.000, 1.045 | 1.004 | 7.0, 4.7 |
+| `checks-mac-appleclang-O3-c0-r2.json` | 1.000, 1.009 | 1.003 | 1.8, 1.5 |
+| `checks-mac-appleclang-O3-c0-r3.json` | 1.000, 1.016 | 1.002 | 1.6, 1.3 |
+| `checks-mac-appleclang-O3-c1-r1.json` | 1.000, 1.040 | 1.010 | 4.7, 3.9 |
+| `checks-mac-appleclang-O3-c1-r2.json` | 1.000, 1.023 | 1.003 | 1.5, 1.5 |
+| `checks-mac-appleclang-O3-c1-r3.json` | 1.000, 1.009 | 1.002 | 1.3, 2.2 |
+| `checks-mac-gcc16-O2-c0-r1.json` | 1.000, 1.062 | 1.003 | 3.2, 2.8 |
+| `checks-mac-gcc16-O2-c0-r2.json` | 1.000, 1.009 | 1.006 | 1.5, 1.7 |
+| `checks-mac-gcc16-O2-c0-r3.json` | 1.001, 1.039 | 1.004 | 1.4, 1.6 |
+| `checks-mac-gcc16-O2-c1-r1.json` | 1.001, 1.055 | 1.003 | 2.8, 2.5 |
+| `checks-mac-gcc16-O2-c1-r2.json` | 1.000, 1.011 | 1.005 | 1.7, 2.0 |
+| `checks-mac-gcc16-O2-c1-r3.json` | 1.000, 1.037 | 1.004 | 1.6, 1.7 |
+| `checks-mac-gcc16-O3-c0-r1.json` | 1.000, 1.032 | 1.003 | 2.5, 2.0 |
+| `checks-mac-gcc16-O3-c0-r2.json` | 1.000, 1.007 | 1.003 | 2.1, 1.7 |
+| `checks-mac-gcc16-O3-c0-r3.json` | 1.001, 1.073 | 1.020 | 7.0, 4.6 |
+| `checks-mac-gcc16-O3-c1-r1.json` | 1.000, 1.036 | 1.003 | 2.0, 3.3 |
+| `checks-mac-gcc16-O3-c1-r2.json` | 1.000, 1.003 | 1.004 | 1.7, 1.8 |
+| `checks-mac-gcc16-O3-c1-r3.json` | 1.012, 1.075 | 1.024 | 7.4, 6.8 |
 
 | Spread of (second part) | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |
 |---|---:|---|---|
@@ -2046,6 +2202,22 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | bisect mac-appleclang-O3 | 3 | 2.1%, 7.3%, 7.5% | `m2r/run/bisect_b2_w0/op` |
 | bisect mac-gcc16-O2 | 3 | 3.3%, 7.3%, 7.4% | `m2r/run/bisect_b2_w0/op` |
 | bisect mac-gcc16-O3 | 3 | 3.4%, 8.2%, 9.3% | `m2r/run/bisect_b2_w0/op` |
+| checks linux-clang-O2 checks 0 | 3 | 1.1%, 1.7%, 5.5% | `m2e/step/b2_intersection/op` |
+| checks linux-clang-O2 checks 1 | 3 | 1.0%, 1.6%, 16.7% | `m2e/tp/b1_neg/op` |
+| checks linux-clang-O3 checks 0 | 3 | 1.2%, 1.7%, 5.2% | `m2e/tp/i1_whole/plain` |
+| checks linux-clang-O3 checks 1 | 3 | 0.9%, 1.7%, 69.5% | `m2e/tp/b1_split/op` |
+| checks linux-gcc-O2 checks 0 | 3 | 1.2%, 1.8%, 23.1% | `m2e/tp/i1_zero/plain` |
+| checks linux-gcc-O2 checks 1 | 3 | 1.0%, 1.7%, 16.9% | `m2e/tp/b2_zero/op` |
+| checks linux-gcc-O3 checks 0 | 3 | 0.7%, 1.0%, 19.1% | `m2e/tp/i2_neg/op` |
+| checks linux-gcc-O3 checks 1 | 3 | 1.0%, 1.5%, 7.1% | `m2e/tp/i2_whole/op` |
+| checks mac-appleclang-O2 checks 0 | 3 | 2.0%, 9.4%, 9.9% | `m2e/step/i1_intersection/op` |
+| checks mac-appleclang-O2 checks 1 | 3 | 1.1%, 7.3%, 7.6% | `m2/prod/interval_mul_1/fenv_loop` |
+| checks mac-appleclang-O3 checks 0 | 3 | 0.1%, 4.6%, 7.3% | `m2e/tp/b1_equal/kairn` |
+| checks mac-appleclang-O3 checks 1 | 3 | 0.1%, 4.5%, 8.2% | `m2e/tp/i1_rel_equal/plain` |
+| checks mac-gcc16-O2 checks 0 | 3 | 0.4%, 6.2%, 12.3% | `m2/tp/interval_sub_1/csr` |
+| checks mac-gcc16-O2 checks 1 | 3 | 0.3%, 5.9%, 11.8% | `m2e/tp/i2_whole/op` |
+| checks mac-gcc16-O3 checks 0 | 3 | 0.3%, 7.3%, 10.3% | `m2/tp/interval_sub_1/csr` |
+| checks mac-gcc16-O3 checks 1 | 3 | 1.3%, 7.5%, 9.7% | `m2/sum/interval_add_1/csr` |
 
 #### Question 8: `Packed` and the containers
 
@@ -2534,3 +2706,72 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `Ball<double, 1>` | 0 | 443 | 10 | 10 | 4 | 2.78e-16 to 2.67e-15 |
 | `Ball<double, 2>` | 1e-06 | 179 | 4 | 0 | 4 | 9.54e-07 to 9.54e-07 |
 | `Ball<double, 2>` | 0 | 875 | 16 | 16 | 4 | 1.17e-31 to 1.01e-30 |
+
+#### Question 11: `self_test()` and the checks
+
+| self_test(), microseconds per call | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `self_test()` | 2.76 to 2.98 (-O2), 3 to 3.08 (-O3) | 2.53 to 2.59 (-O2), 2.58 to 2.66 (-O3) | 8.38 to 8.78 (-O2), 7.49 to 7.58 (-O3) | 6.76 to 6.95 (-O2), 6.97 to 7.16 (-O3) |
+| the checks of the environment and the flags, both limb types | 0.00838 to 0.00863 (-O2), 0.00899 to 0.009 (-O3) | 0.00899 (-O2), 0.00778 to 0.00836 (-O3) | 0.0603 to 0.0615 (-O2), 0.058 to 0.0586 (-O3) | 0.0418 to 0.0427 |
+| the generated kernels on their fixed operands | 2.71 to 2.93 (-O2), 2.98 to 3.04 (-O3) | 2.54 to 2.63 | 7.99 to 8.36 (-O2), 7.24 to 7.5 (-O3) | 6.47 to 6.73 (-O2), 6.29 to 6.47 (-O3) |
+
+| Compile time, s (minimum wall time; -O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| an empty unit | 0.02; 0.02 | 0.06; 0.05 | 0.02; 0.01 | 0.04; 0.04 |
+| `kairn/kairn.hpp`, nothing used | 0.14; 0.14 | 0.26; 0.26 | 0.43; 0.43 | 0.67; 0.67 |
+| one call of `kairn::self_test()` | 1.19; 1.21 | 3.85; 4.02 | 6.40; 6.50 | 3.88; 3.89 |
+| one call of `kairn::self_test()`, over the include alone | 1.05; 1.07 | 3.59; 3.76 | 5.97; 6.07 | 3.21; 3.21 |
+| peak memory of `self_test`, MB | 143; 143 | 258; 262 | 236; 238 | 151; 151 |
+
+| KAIRN_CHECKS 1 over 0 | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `X + Y`, `Interval<T, 1>`, loop | 2.13 | 2.58 to 2.75 (-O2), 2.56 to 2.60 (-O3) | 2.96 to 3.01 | 3.46 to 3.53 |
+| `X * Y`, `Interval<T, 1>`, loop | 1.33 to 1.36 | 1.12 to 1.15 | 2.19 to 2.22 | 1.26 to 1.29 |
+| `X + Y`, `Interval<T, 2>`, loop | 1.16 to 1.20 | 2.00 (-O2), 1.87 to 1.91 (-O3) | 1.36 to 1.38 | 1.30 to 1.34 |
+| `X * Y`, `Interval<T, 2>`, loop | 1.06 to 1.09 | 1.12 to 1.15 | 1.17 to 1.18 | 1.19 to 1.22 (-O2), 1.18 to 1.24 (-O3) |
+| `S + X`, `Interval<T, 1>`, chain | 0.99 to 1.02 | 1.17 to 1.22 (-O2), 1.10 to 1.13 (-O3) | 1.97 to 2.00 | 2.40 to 2.45 |
+| `P * X`, `Interval<T, 1>`, chain | 1.00 to 1.01 (-O2), 0.95 to 1.02 (-O3) | 1.06 (-O2), 1.04 to 1.10 (-O3) | 1.08 to 1.11 | 1.22 to 1.25 |
+| `S + X`, `Interval<T, 2>`, chain | 1.00 to 1.02 | 1.19 to 1.25 (-O2), 1.21 to 1.25 (-O3) | 1.11 to 1.15 | 1.16 to 1.20 |
+| `P * X`, `Interval<T, 2>`, chain | 1.00 to 1.02 | 1.04 to 1.07 (-O2), 1.00 to 1.01 (-O3) | 1.09 to 1.11 | 1.03 to 1.05 |
+| `hull`, `Interval<T, 1>`, loop | 6.19 to 6.32 (-O2), 6.10 to 6.32 (-O3) | 4.20 to 4.40 (-O2), 5.80 (-O3) | 11.2 (-O2), 11.6 (-O3) | 24.6 to 25.2 |
+| `split()`, `Interval<T, 1>`, loop | 1.20 to 1.23 (-O2), 1.25 to 1.27 (-O3) | 2.10 to 2.14 (-O2), 1.44 to 1.45 (-O3) | 2.02 to 2.03 (-O2), 1.69 (-O3) | 1.59 to 1.61 (-O2), 1.57 to 1.65 (-O3) |
+| Horner, `Interval<T, 1>` | 1.05 (-O2), 0.98 to 1.05 (-O3) | 0.95 to 1.01 (-O2), 1.06 to 1.10 (-O3) | 1.52 to 1.56 | 1.72 to 1.75 |
+| Horner, `Interval<T, 2>` | 1.00 to 1.01 | 1.28 to 1.38 (-O2), 1.23 to 1.25 (-O3) | 1.04 to 1.06 | 1.06 to 1.08 |
+| `less`, `Interval<T, 1>` | 4.70 to 4.97 (-O2), 4.83 to 4.84 (-O3) | 3.83 to 3.86 (-O2), 4.08 to 4.15 (-O3) | 4.25 to 4.29 | 6.87 to 7.03 |
+| `contains(t)`, `Interval<T, 1>` | 4.50 to 4.60 | 3.91 to 4.00 (-O2), 3.76 to 3.83 (-O3) | 14.1 to 14.3 | 16.3 to 16.6 (-O2), 15.3 to 16.6 (-O3) |
+| `certainly_positive()`, `Interval<T, 1>` | 2.72 to 2.75 | 4.01 to 4.03 (-O2), 5.46 to 5.47 (-O3) | 5.47 to 5.49 (-O2), 21.5 to 21.7 (-O3) | 6.25 to 6.48 (-O2), 5.78 to 6.49 (-O3) |
+| `hull`, `Interval<T, 1>` | 6.20 to 6.32 | 4.40 to 4.44 (-O2), 5.71 to 5.83 (-O3) | 11.1 to 11.3 | 25.3 to 25.7 |
+| `split()`, `Interval<T, 1>` | 1.20 to 1.23 (-O2), 1.25 (-O3) | 2.06 to 2.15 (-O2), 1.32 to 1.40 (-O3) | 1.46 to 1.48 (-O2), 1.60 to 1.62 (-O3) | 1.42 to 1.45 |
+| the conversion, `Interval<T, 1>` | 1.10 to 1.12 (-O2), 1.12 to 1.20 (-O3) | 1.58 to 1.69 (-O2), 1.21 to 1.24 (-O3) | 1.59 to 1.63 | 1.20 to 1.22 |
+| `less`, `Interval<T, 2>` | 5.08 to 5.12 (-O2), 4.84 to 5.16 (-O3) | 6.05 to 6.09 | 4.35 to 4.39 (-O2), 4.02 to 4.05 (-O3) | 12.7 to 12.9 |
+| `contains(t)`, `Interval<T, 2>` | 3.28 to 3.34 (-O2), 3.34 to 3.43 (-O3) | 3.52 (-O2), 3.10 (-O3) | 7.16 to 7.18 (-O2), 7.35 to 7.43 (-O3) | 18.5 to 18.9 |
+| `certainly_positive()`, `Interval<T, 2>` | 2.55 to 2.60 | 7.90 to 7.97 (-O2), 6.47 (-O3) | 7.16 to 7.21 (-O2), 7.66 to 7.73 (-O3) | 11.4 to 11.6 (-O2), 11.2 to 11.5 (-O3) |
+| `hull`, `Interval<T, 2>` | 4.17 (-O2), 3.91 to 4.17 (-O3) | 4.38 to 4.39 (-O2), 4.18 to 4.48 (-O3) | 5.37 to 5.44 (-O2), 4.81 to 4.88 (-O3) | 20.0 to 20.5 |
+| `split()`, `Interval<T, 2>` | 1.40 to 1.53 (-O2), 1.34 to 1.42 (-O3) | 1.35 to 1.39 | 1.63 (-O2), 1.12 (-O3) | 1.11 to 1.14 |
+| the conversion, `Interval<T, 2>` | 1.05 to 1.11 (-O2), 1.03 to 1.11 (-O3) | 1.11 to 1.16 | 1.34 (-O2), 1.17 to 1.19 (-O3) | 1.10 to 1.13 |
+| `less`, `Ball<T, 1>` | 1.71 to 1.76 | 1.96 (-O2), 2.20 to 2.27 (-O3) | 1.70 to 1.73 | 4.19 to 4.30 |
+| `contains(t)`, `Ball<T, 1>` | 2.87 to 2.92 (-O2), 2.91 to 3.09 (-O3) | 2.46 to 2.47 (-O2), 2.71 to 2.77 (-O3) | 5.04 to 5.06 (-O2), 5.66 to 5.71 (-O3) | 9.9 to 10.1 |
+| `certainly_positive()`, `Ball<T, 1>` | 7.85 to 8.03 | 9.61 (-O2), 8.56 to 8.57 (-O3) | 22.6 to 22.7 (-O2), 24.3 to 24.5 (-O3) | 12.0 to 13.7 (-O2), 12.4 to 13.4 (-O3) |
+| `hull`, `Ball<T, 1>` | 1.20 to 1.23 | 1.29 to 1.30 (-O2), 1.37 to 1.44 (-O3) | 1.21 (-O2), 1.14 to 1.16 (-O3) | 1.44 to 1.47 |
+| `split()`, `Ball<T, 1>` | 1.10 to 1.14 (-O2), 1.23 to 1.26 (-O3) | 2.15 (-O2), 1.85 (-O3) | 2.29 to 2.31 (-O2), 2.22 to 2.24 (-O3) | 1.60 to 1.62 (-O2), 1.58 to 2.68 (-O3) |
+| the conversion, `Ball<T, 1>` | 1.63 to 1.67 | 2.00 to 2.02 (-O2), 1.86 to 1.92 (-O3) | 2.86 to 2.92 | 2.31 to 2.36 |
+| `less`, `Ball<T, 2>` | 1.36 to 1.39 | 1.86 to 1.97 (-O2), 1.96 to 2.06 (-O3) | 1.74 (-O2), 1.66 to 1.68 (-O3) | 1.24 to 1.28 |
+| `contains(t)`, `Ball<T, 2>` | 1.91 to 1.99 (-O2), 1.99 to 2.00 (-O3) | 1.75 to 1.80 | 1.75 to 1.76 (-O2), 2.37 to 2.40 (-O3) | 1.72 to 1.75 |
+| `certainly_positive()`, `Ball<T, 2>` | 6.62 to 6.75 (-O2), 6.75 to 6.89 (-O3) | 6.14 to 6.48 (-O2), 6.41 (-O3) | 14.0 to 15.8 (-O2), 14.3 to 14.4 (-O3) | 17.1 to 17.3 (-O2), 16.3 to 17.0 (-O3) |
+| `hull`, `Ball<T, 2>` | 1.01 to 1.05 | 1.09 to 1.13 (-O2), 1.05 to 1.08 (-O3) | 1.07 to 1.12 | 1.04 to 1.06 |
+| `split()`, `Ball<T, 2>` | 1.15 to 1.19 (-O2), 1.11 to 1.19 (-O3) | 1.30 to 1.35 (-O2), 1.22 to 1.26 (-O3) | 1.32 (-O2), 1.17 to 1.18 (-O3) | 1.18 to 1.20 |
+| the conversion, `Ball<T, 2>` | 1.07 to 1.15 (-O2), 1.07 to 1.08 (-O3) | 0.84 to 0.88 (-O2), 1.62 to 1.66 (-O3) | 1.07 to 1.09 (-O2), 1.14 to 1.15 (-O3) | 1.07 to 1.09 |
+| control: the kernel `interval_mul_1`, loop | 0.97 to 1.00 | 0.98 to 1.02 | 1.00 to 1.01 | 0.99 to 1.01 |
+| control: the kernel `ball_less_2`, loop | 0.97 to 1.00 (-O2), 0.99 to 1.03 (-O3) | 1.00 to 1.06 (-O2), 0.95 to 1.00 (-O3) | 0.99 to 1.00 | 0.99 to 1.01 |
+| control: the kernel `interval_split_2`, loop | 0.93 to 0.99 (-O2), 0.97 to 0.99 (-O3) | 0.97 to 1.01 | 1.00 | 0.98 to 1.00 |
+
+| Times with KAIRN_CHECKS 0; 1 (ns) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `m2/tp/interval_add_1/op` | 1.87; 3.99 (-O2), 1.87; 3.99 (-O3) | 1.74; 4.57 (-O2), 1.76; 4.52 (-O3) | 3.52; 10.5 (-O2), 3.53; 10.6 (-O3) | 4.51; 15.8 (-O2), 4.51; 15.8 (-O3) |
+| `m2/tp/interval_mul_1/op` | 6.07; 8.19 (-O2), 6.03; 8.21 (-O3) | 7.94; 9.04 (-O2), 8.05; 9.02 (-O3) | 9.86; 21.7 (-O2), 9.87; 21.7 (-O3) | 16.9; 21.8 (-O2), 17; 21.8 (-O3) |
+| `m2/tp/interval_add_2/op` | 8.43; 10.2 (-O2), 8.43; 9.76 (-O3) | 7.13; 14.2 (-O2), 7.54; 14.1 (-O3) | 24.3; 33.5 (-O2), 24.3; 33.1 (-O3) | 18.5; 24.4 (-O2), 18.5; 24.4 (-O3) |
+| `m2e/tp/i1_less/op` | 0.644; 3.11 (-O2), 0.662; 3.2 (-O3) | 0.799; 3.08 (-O2), 0.805; 3.3 (-O3) | 1.95; 8.31 (-O2), 1.94; 8.29 (-O3) | 1.99; 13.8 (-O2), 1.99; 13.8 (-O3) |
+| `m2e/tp/i1_contains_t/op` | 0.347; 1.59 (-O2), 0.347; 1.56 (-O3) | 0.333; 1.31 (-O2), 0.35; 1.32 (-O3) | 0.53; 7.5 (-O2), 0.531; 7.5 (-O3) | 0.508; 8.34 (-O2), 0.507; 7.86 (-O3) |
+| `m2e/tp/b2_less/op` | 6.17; 8.61 (-O2), 6.22; 8.61 (-O3) | 4.67; 9.22 (-O2), 5.02; 9.84 (-O3) | 16.3; 28.4 (-O2), 16.2; 27.2 (-O3) | 19.3; 24.4 (-O2), 19.4; 24.4 (-O3) |
+| `m2e/tp/i2_split/op` | 7.32; 11.2 (-O2), 7.85; 10.6 (-O3) | 6.73; 9.32 (-O2), 6.33; 8.8 (-O3) | 16.2; 26.4 (-O2), 23.5; 26.3 (-O3) | 16.4; 18.6 (-O2), 16.4; 18.6 (-O3) |
+| `m2/tp/interval_mul_1/kairn` | 6.34; 6.14 (-O2), 6.31; 6.28 (-O3) | 7.77; 7.91 (-O2), 7.97; 7.92 (-O3) | 9.85; 9.86 (-O2), 9.86; 9.87 (-O3) | 16.9; 17 (-O2), 17; 16.9 (-O3) |
