@@ -1031,6 +1031,7 @@ def report2(directory):
     if items.get('enc'):
         print('\n## part 2: the enclosure interface')
         enc_tables(items['enc'])
+        enc_tables(items['enc'], 'm2ef')
         enc_overhead(items['enc'])
         float_enc(items['enc'])
     if items.get('bisect'):

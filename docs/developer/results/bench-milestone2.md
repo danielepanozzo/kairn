@@ -70,6 +70,14 @@ harness, `BACKEND/KIND/KERNEL/VARIANT`: `m2` for `double` limbs, `m2f` for `floa
   last-level cache Zen 2's packed loops are bound by memory, about 2.0 ns per element
   ([question 8](#8-packed-and-the-containers)).
 
+- **Second part: a question to a ball costs more than the same question to an interval, and the
+  set operations of balls are dear.** The three-valued comparisons take 0.7 to 3.3 ns for
+  `Interval<double, 1>` and 1.7 to 7.0 for `Ball<double, 1>`, 1.0 to 7.0 and 3.8 to 19.6 with two
+  limbs; the predicates 0.2 to 1.9 ns for every type. The hull and the intersection of balls, two
+  conversions to intervals and one back, take 41 to 104 ns with two limbs, 32 to 55 times those of
+  intervals. `midpoint()` and `radius()` together cost 1.0 to 1.6 times `mid_rad()` where the
+  compiler inlines them, 2.0 to 2.2 times with Apple clang ([question 9](#9-the-enclosure-interface)).
+
 ## The answers
 
 ### 1. Rounding down and up without a rounding mode
@@ -798,6 +806,11 @@ summarized by `bench/asm_summary.py` (the summaries are stored next to the measu
    `include/kairn/config.hpp` says that these functions stay inline in every setting; they are
    inline functions, and the compilers choose to call them. Not changed here: the library is not
    this page's to change.
+   *Note (2026-11-22, second part):* on `main` at `aa168ee`, where `mid_rad()` is public and the
+   kernel's call is forced inline into it, the two together cost 1.05 to 1.63 times `mid_rad()`
+   with GCC 13, GCC 16 and Clang 18, which inline `midpoint()` and drop the radius's part, and 1.96
+   to 2.20 times with Apple clang, which still calls each ([question 9](#9-the-enclosure-interface)).
+   The figures above are those of `dee8ecd`, and stand for it.
 2. **`half(X)` and `ldexp(X, n)` of a ball cost 1.4 to 4.9 times the ordinary scaling by the same
    power of two.** The exact scaling (`ball_mul_pow2_k_full`) tests whether the scaled center and radius are exact
    and takes two steps of the radius otherwise, with its fix-up: 52 to 65 instructions in the loop
@@ -1003,6 +1016,146 @@ generated kernel called on the limbs (`kairn`). Everything is compiled with the 
   more accurate and dearer, 1.45 to 1.98 times the scalar loop of the rounded product on the M3 and
   1.4 to 2.9 times with Clang 18 (0.81 to 0.97 with GCC 13).
 
+### 9. The enclosure interface
+
+What does a question about an interval or a ball cost, the same question for each of the four types
+a generic client may pick, and what do the set operations cost? Each function of the shared
+interface ([One enclosure interface](../../reference/enclosure.md)) in a loop over 256 operands (KIND
+`tp`) for `Interval<T, 1>`, `Interval<T, 2>`, `Ball<T, 1>` and `Ball<T, 2>`, `double` limbs (`float`
+in [the tables](#question-9-the-enclosure-interface)), and in a dependent chain for those that return
+a set (KIND `step`: a running hull, a running intersection, `x = x.split().left` started again every
+32 steps, and the conversion to the other kind and back). The operands make every answer occur: of a
+comparison, yes, no and unknown in turn (Y shifted from X by 6 or 1 half-widths, or not at all); of
+`contains`, a point or a set inside X for half of them. The controls: the generated kernel called on
+the limbs (`kairn`), and, for one limb, the same question in plain arithmetic of `T` (`plain`: a
+comparison of bounds, and $c - r$, $c + r$ rounded to nearest for a ball); the set operations of a
+ball, whose plain forms compute other values, against plain kernels of their own (the hull and the
+intersection of $c \pm r$, the split at the center), and the midpoint, `split()` and the conversions
+of an interval against $(l + h)/2$, $(h - l)/2$ (`m2/tp/plain_midrad_1` of the first part).
+
+| Predicates and comparisons of `Interval<T, 1>`, ns per operation | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `is_empty()` | 0.164 | 0.317 (-O2), 0.179 to 0.18 (-O3) | 1.02 to 1.03 (-O2), 0.225 (-O3) | 0.507 to 0.515 |
+| `is_whole()` | 0.224 to 0.234 | 0.234 (-O2), 0.248 to 0.267 (-O3) | 0.376 to 0.38 | 0.629 to 0.639 |
+| `certainly_positive()` | 0.573 to 0.579 | 0.332 to 0.335 (-O2), 0.236 to 0.246 (-O3) | 1.31 to 1.32 (-O2), 0.334 (-O3) | 1.34 to 1.37 |
+| `certainly_zero()` | 0.234 | 0.227 to 0.234 (-O2), 0.266 (-O3) | 0.375 to 0.379 | 0.629 to 0.639 |
+| `contains(t)` | 0.35 to 0.351 | 0.336 to 0.351 | 0.529 to 0.535 | 0.5 to 0.511 |
+| `contains(Y)` | 0.306 | 0.367 (-O2), 0.333 (-O3) | 0.607 to 0.614 | 0.925 to 0.938 |
+| `less` | 0.662 | 0.801 to 0.811 | 1.94 to 1.97 | 1.99 to 2.01 |
+| `less_equal` | 0.662 | 0.787 to 0.808 | 1.94 to 1.97 | 1.99 to 2.02 |
+| `equal` | 0.827 to 0.83 | 0.937 to 0.939 | 3.28 to 3.32 | 2.17 to 2.2 |
+| `member(t, X)` | 0.368 | 0.306 to 0.31 (-O2), 0.32 to 0.335 (-O3) | 0.493 to 0.498 | 0.505 to 0.512 |
+| `ieee1788::equal` | 0.185 | 0.367 (-O2), 0.333 (-O3) | 0.609 to 0.614 | 0.579 to 0.587 |
+| `ieee1788::interior` | 0.664 | 0.715 to 0.716 (-O2), 0.666 to 0.667 (-O3) | 1.21 to 1.22 | 1.25 to 1.27 |
+| `ieee1788::disjoint` | 0.465 | 0.51 to 0.533 (-O2), 0.467 (-O3) | 0.758 to 0.766 | 1.23 to 1.24 |
+
+| Predicates and comparisons of `Interval<T, 2>`, ns per operation | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `is_empty()` | 0.319 | 0.317 (-O2), 0.345 (-O3) | 0.999 to 1.03 | 0.505 to 0.514 (-O2), 0.488 to 0.497 (-O3) |
+| `is_whole()` | 0.382 to 0.391 | 0.297 (-O2), 0.416 (-O3) | 1.85 to 1.87 (-O2), 0.536 to 0.537 (-O3) | 0.628 to 0.637 |
+| `certainly_positive()` | 1.03 (-O2), 0.961 to 1.03 (-O3) | 0.333 to 0.335 (-O2), 0.412 (-O3) | 1.32 to 1.34 | 1.35 to 1.36 |
+| `certainly_zero()` | 0.38 to 0.39 | 0.298 to 0.299 (-O2), 0.415 to 0.416 (-O3) | 1.39 to 1.4 (-O2), 0.503 to 0.504 (-O3) | 0.627 to 0.638 |
+| `contains(t)` | 0.88 | 0.903 to 0.907 | 1.59 to 1.6 | 0.919 to 0.935 |
+| `contains(Y)` | 0.994 | 0.988 to 0.999 | 2.09 to 2.11 | 2.21 to 2.26 |
+| `less` | 1.09 | 0.988 to 0.996 | 3.87 to 3.92 | 2.43 to 2.47 |
+| `less_equal` | 1.09 | 0.988 to 0.998 | 3.87 to 3.92 | 3.07 to 3.12 |
+| `equal` | 1.66 to 1.74 | 1.84 to 1.86 | 6.9 to 6.98 | 4.73 to 4.84 |
+| `member(t, X)` | 0.904 to 0.905 | 1.06 to 1.08 | 3.61 to 3.66 | 0.905 to 0.917 |
+| `ieee1788::equal` | 0.56 to 0.561 (-O2), 0.522 to 0.56 (-O3) | 0.843 to 0.86 | 1.98 to 2 | 0.5 to 0.51 |
+| `ieee1788::interior` | 1.47 | 1.33 to 1.34 | 2.45 to 2.47 | 3.1 to 3.15 |
+| `ieee1788::disjoint` | 1.07 | 1.12 to 1.14 | 2.24 to 2.26 | 2.68 to 2.72 |
+
+| Predicates and comparisons of `Ball<T, 1>`, ns per operation | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `is_empty()` | 0.16 to 0.164 | 0.309 to 0.313 (-O2), 0.18 (-O3) | 0.629 to 0.635 (-O2), 0.225 to 0.226 (-O3) | 0.496 to 0.51 |
+| `is_whole()` | 0.157 to 0.164 | 0.335 (-O2), 0.173 to 0.18 (-O3) | 1.11 to 1.13 (-O2), 0.225 (-O3) | 0.512 to 0.523 |
+| `certainly_positive()` | 0.167 | 0.167 (-O2), 0.178 to 0.183 (-O3) | 0.318 to 0.322 | 0.605 to 0.615 |
+| `certainly_zero()` | 0.234 | 0.234 (-O2), 0.266 (-O3) | 0.375 to 0.379 | 0.63 to 0.639 |
+| `contains(t)` | 0.705 to 0.731 | 0.823 to 0.864 | 1.74 to 1.76 | 0.897 to 0.907 |
+| `contains(Y)` | 2.01 to 2.13 (-O2), 2 to 2.13 (-O3) | 1.36 to 1.38 | 2.73 to 2.76 | 3.06 to 3.1 |
+| `less` | 2.06 to 2.13 | 2.03 (-O2), 2.37 to 2.38 (-O3) | 6.74 to 6.96 | 4.03 to 4.07 |
+| `less_equal` | 2.13 | 2.07 to 2.09 | 6.32 to 6.48 | 4.08 to 4.13 |
+| `equal` | 2.39 (-O2), 2.24 to 2.39 (-O3) | 1.68 to 1.72 | 5.79 to 5.88 | 3.94 to 3.99 |
+| `member(t, X)` | 0.715 to 0.731 | 0.778 to 0.819 (-O2), 0.814 (-O3) | 1.7 to 1.72 | 0.908 to 0.919 |
+
+| Predicates and comparisons of `Ball<T, 2>`, ns per operation | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `is_empty()` | 0.175 to 0.18 | 0.3 (-O2), 0.196 (-O3) | 0.23 to 0.232 | 0.51 to 0.52 |
+| `is_whole()` | 0.163 to 0.166 | 0.299 (-O2), 0.196 (-O3) | 0.239 to 0.242 | 0.506 to 0.523 |
+| `certainly_positive()` | 0.303 to 0.317 | 0.331 to 0.334 | 0.625 to 0.632 | 0.936 to 0.955 |
+| `certainly_zero()` | 0.304 | 0.33 (-O2), 0.349 (-O3) | 0.586 to 0.593 | 1.33 to 1.35 |
+| `contains(t)` | 2.6 | 2.46 (-O2), 2.24 to 2.25 (-O3) | 8.51 to 8.6 (-O2), 5.55 to 5.56 (-O3) | 7.92 to 8.02 |
+| `contains(Y)` | 4.52 (-O2), 4.11 to 4.26 (-O3) | 3.65 (-O2), 3.13 to 3.14 (-O3) | 14.3 to 14.4 (-O2), 6.93 to 6.94 (-O3) | 15 to 15.2 |
+| `less` | 6.21 to 6.23 | 4.94 to 5.03 | 16.3 to 16.5 | 19.3 to 19.6 |
+| `less_equal` | 6.22 to 6.23 | 4.93 to 5 | 16 to 16.2 | 19.5 to 19.7 |
+| `equal` | 4.78 to 4.94 | 3.76 to 3.77 | 13.3 to 13.6 | 13.1 to 13.3 |
+| `member(t, X)` | 4.2 to 4.21 | 4.09 to 4.2 | 14.5 to 14.7 | 10.9 to 11.1 |
+
+| Ball over interval, two limbs over one (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `contains(t)`, `Ball<T, 1>` over `Interval<T, 1>` | 2.06 to 2.09 (-O2), 2.01 to 2.09 (-O3) | 2.50 to 2.53 (-O2), 2.34 to 2.46 (-O3) | 3.28 to 3.29 | 1.78 to 1.79 |
+| `contains(t)`, `Ball<T, 2>` over `Interval<T, 2>` | 2.95 to 2.96 | 2.71 to 2.72 (-O2), 2.48 (-O3) | 5.36 to 5.37 (-O2), 3.47 to 3.50 (-O3) | 8.57 to 8.62 |
+| `less`, `Ball<T, 1>` over `Interval<T, 1>` | 3.22 (-O2), 3.11 to 3.22 (-O3) | 2.52 to 2.53 (-O2), 2.92 to 2.95 (-O3) | 3.46 to 3.55 | 2.02 to 2.03 |
+| `less`, `Ball<T, 2>` over `Interval<T, 2>` | 5.69 to 5.71 | 4.97 to 5.09 | 4.16 to 4.22 | 7.92 to 7.98 |
+| `less`, `Interval<T, 2>` over `Interval<T, 1>` | 1.65 | 1.22 to 1.24 | 1.99 to 2.02 | 1.22 to 1.23 |
+| `less`, `Ball<T, 2>` over `Ball<T, 1>` | 2.91 to 2.92 (-O2), 2.92 to 3.02 (-O3) | 2.44 (-O2), 2.11 to 2.12 (-O3) | 2.37 to 2.42 | 4.78 to 4.82 |
+| `hull`, `Ball<T, 1>` over `Interval<T, 1>` | 16.6 | 12.9 to 13.5 (-O2), 13.9 to 15.5 (-O3) | 31.1 to 31.5 | 28.0 to 28.2 |
+| `hull`, `Ball<T, 2>` over `Interval<T, 2>` | 33.4 to 33.8 | 32.5 to 34.8 (-O2), 31.9 to 32.1 (-O3) | 32.4 to 34.1 (-O2), 32.3 to 32.6 (-O3) | 54.5 to 54.8 |
+| `split()`, `Ball<T, 1>` over `Interval<T, 1>` | 1.14 (-O2), 1.05 to 1.06 (-O3) | 0.62 to 0.64 (-O2), 0.74 to 0.75 (-O3) | 0.44 to 0.45 (-O2), 0.51 to 0.52 (-O3) | 0.86 to 0.87 |
+| `split()`, `Ball<T, 2>` over `Interval<T, 2>` | 0.91 to 0.95 | 0.71 to 0.75 | 0.87 to 0.88 (-O2), 0.57 (-O3) | 0.85 |
+
+| midpoint() and radius() against mid_rad() (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `Interval<T, 1>`: `midpoint()` over `mid_rad()` | 1.00 to 1.07 (-O2), 1.00 (-O3) | 0.22 to 0.23 (-O2), 0.31 (-O3) | 0.27 to 0.31 | 0.29 |
+| `Interval<T, 1>`: `radius()` over `mid_rad()` | 1.00 to 1.08 (-O2), 0.98 (-O3) | 0.96 to 0.98 | 1.30 to 1.31 (-O2), 1.13 to 1.14 (-O3) | 0.96 |
+| `Interval<T, 1>`: both over `mid_rad()` | 2.05 to 2.20 (-O2), 1.96 (-O3) | 1.05 to 1.06 (-O2), 1.25 (-O3) | 1.61 to 1.63 (-O2), 1.07 (-O3) | 1.22 to 1.23 |
+| `Interval<T, 2>`: `midpoint()` over `mid_rad()` | 0.37 to 0.39 | 0.38 to 0.40 (-O2), 0.22 to 0.23 (-O3) | 0.38 (-O2), 0.18 (-O3) | 0.31 |
+| `Interval<T, 2>`: `radius()` over `mid_rad()` | 0.97 to 1.02 | 0.97 to 1.00 (-O2), 1.00 to 1.08 (-O3) | 0.91 | 0.98 |
+| `Interval<T, 2>`: both over `mid_rad()` | 1.31 to 1.32 | 1.30 to 1.34 (-O2), 1.01 to 1.08 (-O3) | 1.31 to 1.33 | 1.26 to 1.27 |
+
+- **A predicate costs a comparison or two**: `is_empty()`, `is_whole()` and the signs take 0.16 to
+  1.9 ns for every type (for a ball, `is_empty()` and `is_whole()` are tests of the radius, with no
+  kernel), and so does `contains(t)` but for a ball of two limbs, which computes $t - c$ as a
+  two-limb difference (2.2 to 8.6 ns; one limb 0.7 to 1.8, intervals 0.3 to 1.6). Against the same
+  question asked in plain arithmetic of `T`, an interval's exact predicates take 0.37 to 3.5 times as
+  long, and are often faster: the plain forms, written with `&&` and `||`, branch on answers that
+  change from one element to the next, where the kernels compare and select. A ball's tests that
+  need its bounds, $c - r$ and $c + r$ as exact pairs, take 1.9 to 7.4 times their plain forms.
+- **The three-valued comparisons**: `less`, `less_equal` and `equal` take 0.66 to 3.3 ns for
+  `Interval<T, 1>`, 1.0 to 7.0 for `Interval<T, 2>`, 1.7 to 7.0 for `Ball<T, 1>` and 3.8 to 19.6 for
+  `Ball<T, 2>`. A ball costs 1.8 to 3.6 times an interval of the same limbs with one limb and 1.9 to
+  8.0 with two; two limbs cost 1.2 to 2.2 times one for intervals and 2.0 to 4.8 for balls. An
+  interval's comparison is comparisons of bounds, exact; a ball's computes its bounds as exact pairs
+  (one limb) or rounds them outward (two limbs), and for two limbs is only certain.
+- **`hull` and `intersection` of balls are dear**: 5.7 to 24 ns for one limb and 41 to 104 ns for
+  two, 13 to 31 and 32 to 55 times the same operation on intervals (0.40 to 0.82 and 1.2 to 4.2 ns,
+  which take what a min and a max take), and 9 to 29 times the plain hull of $c \pm r$. Their kernel
+  is what the documentation says it is: both balls converted to intervals, the operation, and the
+  result converted back, three conversions; the public function costs what its kernel costs (0.92 to
+  1.14, but 1.70 and 2.26 with Clang 18, which calls it). In a chain, a step of the hull of balls of
+  two limbs takes 66 to 116 ns. `split()` is the other way round: a ball's, two sums of balls,
+  costs 0.44 to 1.14 times an interval's, which computes the midpoint (one limb 1.6 to 10.9 ns, two
+  limbs 4.7 to 23.5).
+- **`midpoint()` and `radius()` each run the kernel of both, as documented, but what each costs
+  depends on whether the compiler inlines it.** GCC 13, GCC 16 and Clang 18 inline `midpoint()`
+  and drop the radius's part: it takes 0.18 to 0.40 of `mid_rad()`; `radius()` takes 0.91 to 1.31 of
+  it, and the two together 1.01 to 1.63 times `mid_rad()`. Apple clang calls
+  `midpoint()` and `radius()`, one call of each per element, and for one limb each call costs the
+  whole kernel: together 1.96 to 2.20 times `mid_rad()` (for two limbs 1.31 to 1.32).
+  `mid_rad()` costs its kernel (0.89 to 1.32). For a ball the three read stored limbs (0.18 to
+  0.94 ns).
+- **The conversions**: an interval to a ball 2.8 to 11 ns (one limb) and 12 to 32 ns (two); a ball
+  to an interval 1.6 to 4.6 and 6.7 to 32 ns.
+- **The public functions cost their kernels**: over every loop of `m2e` that has both, the median
+  ratio is 1.00 in every configuration; the largest, 2.0 to 2.3, are members that a compiler calls
+  rather than inlines in a loop whose kernel it vectorizes or schedules better
+  ([machine code](#what-the-machine-code-shows-second-part)).
+- **`float`** costs about what `double` costs for the comparisons, the splits and the conversions
+  (0.69 to 1.14; GCC's conversion of a ball of one limb 0.49 to 0.50), and about half where a
+  compiler vectorizes the loop with twice the lanes: about half for `contains(t)` (0.44 to 0.57, but 0.76 to 1.00 in three cells) and
+  the hull of intervals (0.48 to 0.71, but 1.26 to 1.60 with the two Linux compilers for two limbs),
+  and Apple clang's `less` of intervals of one limb (0.48) ([float over double](#question-9-the-enclosure-interface)).
+
 ### What the machine code shows (second part)
 
 The loops of the new timed functions were disassembled on every configuration and summarized by
@@ -1020,6 +1173,15 @@ tables:
    128-bit registers per step of two elements, each step waiting for the packed sum before; the
    scalar loop with two sums is 101 instructions per two elements in two independent chains, which
    the M3 overlaps (question 8).
+
+3. **The members of the interface are inline functions, not forced inline, and the compilers often
+   call them.** At `-O2`, the loops of `mid_rad()` and of the conversion of an interval of one limb
+   are 7 to 10 instructions around a call with every compiler (GCC 13 inlines both at `-O3`), and
+   Apple clang's loop of `midpoint()` of an `Interval<double, 1>` calls
+   `kairn::Interval<double, 1>::midpoint()`, which runs the whole kernel. Clang 18's loop of
+   `Ball<double, 2>::intersection` is a call per element, where the kernel called directly is a loop
+   of 809 instructions on 256-bit registers: hence its 2.26 times. The free functions of the
+   interface, `kairn::less` and the others, are forced inline (question 12).
 
 ### How the second part was measured
 
@@ -1653,14 +1815,14 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 
 | Configuration (second part) | CPU | Compiler | Flags | Runs per item (soa, enc, bisect, checks pairs) | Date, commit |
 |---|---|---|---|---|---|
-| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
-| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
-| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
-| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
-| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
-| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
-| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
-| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
+| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
+| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
+| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
+| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
+| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
+| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
+| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
+| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 0, 0 | 2026-11-22, `cbe3bb1` |
 
 #### Checks of the second part
 
@@ -1674,6 +1836,14 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | soa mac-appleclang-O3 | 172, 0; 172, 0; 172, 0 |
 | soa mac-gcc16-O2 | 172, 0; 172, 0; 172, 0 |
 | soa mac-gcc16-O3 | 172, 0; 172, 0; 172, 0 |
+| enc linux-clang-O2 | 446, 0; 446, 0; 446, 0 |
+| enc linux-clang-O3 | 446, 0; 446, 0; 446, 0 |
+| enc linux-gcc-O2 | 446, 0; 446, 0; 446, 0 |
+| enc linux-gcc-O3 | 446, 0; 446, 0; 446, 0 |
+| enc mac-appleclang-O2 | 446, 0; 446, 0; 446, 0 |
+| enc mac-appleclang-O3 | 446, 0; 446, 0; 446, 0 |
+| enc mac-gcc16-O2 | 446, 0; 446, 0; 446, 0 |
+| enc mac-gcc16-O3 | 446, 0; 446, 0; 446, 0 |
 
 #### Runs of the second part
 
@@ -1703,6 +1873,30 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `soa-mac-gcc16-O3-r1.json` | 1.001, 1.060 | 1.006 | 2.7, 3.6 |
 | `soa-mac-gcc16-O3-r2.json` | 1.000, 1.012 | 1.004 | 1.9, 1.5 |
 | `soa-mac-gcc16-O3-r3.json` | 1.001, 1.011 | 1.005 | 1.7, 1.5 |
+| `enc-linux-clang-O2-r1.json` | 1.000, 1.001 | 1.003 | 2.7, 3.2 |
+| `enc-linux-clang-O2-r2.json` | 1.013, 1.019 | 1.009 | 20.9, 21.4 |
+| `enc-linux-clang-O2-r3.json` | 1.000, 1.004 | 1.013 | 5.1, 11.6 |
+| `enc-linux-clang-O3-r1.json` | 1.001, 1.003 | 1.004 | 3.3, 3.3 |
+| `enc-linux-clang-O3-r2.json` | 1.010, 1.015 | 1.010 | 21.4, 21.6 |
+| `enc-linux-clang-O3-r3.json` | 1.000, 1.002 | 1.004 | 9.3, 8.8 |
+| `enc-linux-gcc-O2-r1.json` | 1.000, 1.000 | 1.003 | 5.3, 4.0 |
+| `enc-linux-gcc-O2-r2.json` | 1.004, 1.011 | 1.011 | 12.9, 16.3 |
+| `enc-linux-gcc-O2-r3.json` | 1.010, 1.016 | 1.010 | 19.9, 20.6 |
+| `enc-linux-gcc-O3-r1.json` | 1.000, 1.002 | 1.003 | 2.6, 2.7 |
+| `enc-linux-gcc-O3-r2.json` | 1.001, 1.006 | 1.012 | 10.7, 14.1 |
+| `enc-linux-gcc-O3-r3.json` | 1.001, 1.006 | 1.016 | 19.2, 18.6 |
+| `enc-mac-appleclang-O2-r1.json` | 1.001, 1.073 | 1.024 | 7.2, 6.6 |
+| `enc-mac-appleclang-O2-r2.json` | 1.000, 1.018 | 1.002 | 2.0, 1.8 |
+| `enc-mac-appleclang-O2-r3.json` | 1.000, 1.001 | 1.002 | 1.5, 1.6 |
+| `enc-mac-appleclang-O3-r1.json` | 1.000, 1.071 | 1.020 | 4.9, 7.4 |
+| `enc-mac-appleclang-O3-r2.json` | 1.000, 1.007 | 1.002 | 2.2, 1.8 |
+| `enc-mac-appleclang-O3-r3.json` | 1.000, 1.004 | 1.002 | 1.6, 1.6 |
+| `enc-mac-gcc16-O2-r1.json` | 1.000, 1.030 | 1.003 | 3.8, 3.2 |
+| `enc-mac-gcc16-O2-r2.json` | 1.000, 1.015 | 1.003 | 1.5, 1.5 |
+| `enc-mac-gcc16-O2-r3.json` | 1.000, 1.011 | 1.003 | 2.0, 1.4 |
+| `enc-mac-gcc16-O3-r1.json` | 1.000, 1.035 | 1.003 | 3.6, 2.5 |
+| `enc-mac-gcc16-O3-r2.json` | 1.000, 1.005 | 1.002 | 1.5, 2.2 |
+| `enc-mac-gcc16-O3-r3.json` | 1.000, 1.012 | 1.003 | 1.5, 3.9 |
 
 | Spread of (second part) | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |
 |---|---:|---|---|
@@ -1714,6 +1908,14 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | soa mac-appleclang-O3 | 3 | 0.7%, 7.2%, 12.2% | `m2vf/mem/copy/view` |
 | soa mac-gcc16-O2 | 3 | 0.5%, 6.5%, 10.1% | `m2vf/mem/dot11/plain` |
 | soa mac-gcc16-O3 | 3 | 0.4%, 6.0%, 10.5% | `m2vf/mem/copy/op` |
+| enc linux-clang-O2 | 3 | 1.3%, 1.9%, 27.9% | `m2e/tp/b1_intersection/kairn` |
+| enc linux-clang-O3 | 3 | 1.0%, 1.6%, 15.8% | `m2ef/step/b2_split/op` |
+| enc linux-gcc-O2 | 3 | 1.1%, 1.7%, 18.6% | `m2e/tp/i1_zero/plain` |
+| enc linux-gcc-O3 | 3 | 0.2%, 1.0%, 8.9% | `m2e/tp/i2_neg/op` |
+| enc mac-appleclang-O2 | 3 | 0.1%, 7.3%, 7.6% | `m2e/step/i2_intersection/kairn` |
+| enc mac-appleclang-O3 | 3 | 0.0%, 7.1%, 7.4% | `m2ef/step/i1_intersection/op` |
+| enc mac-gcc16-O2 | 3 | 0.1%, 3.9%, 8.9% | `m2e/tp/i1_split/kairn` |
+| enc mac-gcc16-O3 | 3 | 0.1%, 4.2%, 11.2% | `m2e/tp/b1_hull/op` |
 
 #### Question 8: `Packed` and the containers
 
@@ -1898,3 +2100,259 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `m2vf/mem/mix/packed` | 0.524 to 0.526 | 0.616 to 0.622 (-O2), 0.453 to 0.456 (-O3) | 1.52 to 1.55 (-O2), 1.39 to 1.4 (-O3) | 1.38 to 1.43 |
 | `m2vf/mem/mixp/packed` | 1.05 to 1.07 | 0.969 to 0.977 (-O2), 0.878 to 0.889 (-O3) | 1.79 to 1.83 (-O2), 1.47 to 1.53 (-O3) | 1.38 to 1.5 (-O2), 1.39 to 1.5 (-O3) |
 | `m2vf/mem/copy/kairn` | 0.14 to 0.145 (-O2), 0.132 to 0.139 (-O3) | 0.316 to 0.319 (-O2), 0.132 to 0.143 (-O3) | 0.789 to 0.8 (-O2), 0.706 to 0.709 (-O3) | 0.71 to 0.718 |
+
+#### Question 9: the enclosure interface
+
+| Predicates and comparisons of `Interval<T, 1>`, ns per operation (float) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `is_empty()` | 0.132 | 0.125 (-O2), 0.101 (-O3) | 0.784 to 0.8 (-O2), 0.149 (-O3) | 0.373 to 0.377 |
+| `is_whole()` | 0.101 | 0.113 to 0.117 | 0.198 to 0.2 | 0.649 to 0.667 |
+| `certainly_positive()` | 0.291 to 0.299 | 0.19 to 0.191 (-O2), 0.122 (-O3) | 0.927 to 0.939 (-O2), 0.19 (-O3) | 1.2 to 1.21 |
+| `certainly_zero()` | 0.101 | 0.113 to 0.117 | 0.198 to 0.199 | 0.647 to 0.66 |
+| `contains(t)` | 0.167 | 0.167 (-O2), 0.183 (-O3) | 0.277 to 0.279 | 0.283 to 0.287 |
+| `contains(Y)` | 0.141 | 0.167 | 0.285 to 0.289 | 0.776 to 0.785 |
+| `less` | 0.316 | 0.832 to 0.851 | 1.88 to 1.95 | 1.88 to 1.9 |
+| `less_equal` | 0.316 | 0.842 to 0.85 | 1.87 to 1.96 | 1.86 to 1.91 |
+| `equal` | 0.415 to 0.416 | 0.926 to 0.938 | 3.29 to 3.39 | 2.08 to 2.12 |
+| `member(t, X)` | 0.168 to 0.169 | 0.148 to 0.151 | 0.267 to 0.27 | 0.315 to 0.318 |
+| `ieee1788::equal` | 0.0926 to 0.0928 | 0.167 to 0.168 | 0.286 to 0.289 | 0.477 to 0.483 |
+| `ieee1788::interior` | 0.332 to 0.334 | 0.303 to 0.317 | 0.53 to 0.536 | 1.23 to 1.24 |
+| `ieee1788::disjoint` | 0.234 | 0.233 to 0.234 | 0.361 to 0.364 | 1.23 to 1.24 |
+
+| Predicates and comparisons of `Interval<T, 2>`, ns per operation (float) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `is_empty()` | 0.163 | 0.317 (-O2), 0.171 to 0.173 (-O3) | 0.889 to 0.899 (-O2), 0.21 (-O3) | 0.503 to 0.514 |
+| `is_whole()` | 0.201 to 0.203 | 0.279 to 0.296 (-O2), 0.21 (-O3) | 1.4 to 1.41 (-O2), 0.278 to 0.279 (-O3) | 0.628 to 0.64 |
+| `certainly_positive()` | 0.577 to 0.594 | 0.335 (-O2), 0.206 (-O3) | 1.31 to 1.34 (-O2), 0.247 to 0.248 (-O3) | 1.25 to 1.26 |
+| `certainly_zero()` | 0.193 to 0.202 | 0.298 (-O2), 0.209 (-O3) | 1.38 to 1.39 (-O2), 0.27 to 0.273 (-O3) | 0.628 to 0.636 |
+| `contains(t)` | 0.498 | 0.444 to 0.445 | 0.74 to 0.746 | 0.702 to 0.712 |
+| `contains(Y)` | 0.689 to 0.701 | 0.466 to 0.488 | 1.04 to 1.05 | 2.22 to 2.27 |
+| `less` | 1.1 to 1.11 | 1.01 to 1.03 | 4 to 4.04 | 2.43 to 2.46 |
+| `less_equal` | 1.1 to 1.11 | 1.01 to 1.02 | 3.99 to 4.03 | 3.14 to 3.18 (-O2), 3.39 to 3.42 (-O3) |
+| `equal` | 2 | 1.85 | 6.91 to 6.98 | 4.94 to 5 |
+| `member(t, X)` | 0.515 | 1.08 | 3.59 to 3.64 | 0.713 to 0.723 |
+| `ieee1788::equal` | 0.265 | 0.413 to 0.419 | 0.942 to 0.953 | 0.553 to 0.562 (-O2), 0.478 to 0.481 (-O3) |
+| `ieee1788::interior` | 1.47 | 0.649 to 0.658 | 1.22 to 1.24 | 2.6 to 2.65 |
+| `ieee1788::disjoint` | 1.07 | 0.553 to 0.558 | 1.08 to 1.09 | 2.21 to 2.25 (-O2), 2.13 to 2.15 (-O3) |
+
+| Predicates and comparisons of `Ball<T, 1>`, ns per operation (float) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `is_empty()` | 0.129 to 0.132 | 0.125 (-O2), 0.0985 to 0.101 (-O3) | 0.581 to 0.586 (-O2), 0.148 (-O3) | 0.372 to 0.378 |
+| `is_whole()` | 0.131 to 0.132 | 0.125 (-O2), 0.0994 to 0.101 (-O3) | 0.73 to 0.746 (-O2), 0.149 (-O3) | 0.373 to 0.377 |
+| `certainly_positive()` | 0.0866 to 0.0878 (-O2), 0.0827 (-O3) | 0.0835 to 0.0848 (-O2), 0.1 (-O3) | 0.173 to 0.175 | 0.622 to 0.634 |
+| `certainly_zero()` | 0.101 | 0.113 to 0.117 | 0.197 to 0.2 | 0.636 to 0.658 |
+| `contains(t)` | 0.362 to 0.367 | 0.39 to 0.399 | 0.765 to 0.772 | 0.72 to 0.73 |
+| `contains(Y)` | 2.02 to 2.13 (-O2), 2.02 to 2.13 (-O3) | 0.649 to 0.665 | 1.14 to 1.15 | 3.06 to 3.1 |
+| `less` | 2.1 to 2.13 | 2.23 to 2.24 (-O2), 2.09 to 2.24 (-O3) | 6.6 to 6.77 | 4.07 to 4.13 |
+| `less_equal` | 2.07 to 2.13 | 2.21 to 2.28 | 6.54 to 6.76 | 4.12 to 4.17 |
+| `equal` | 2.4 (-O2), 2.24 to 2.4 (-O3) | 1.71 to 1.72 | 6.27 to 6.34 | 3.78 to 3.83 |
+| `member(t, X)` | 0.365 to 0.367 | 0.382 | 0.742 to 0.749 | 0.741 to 0.749 |
+
+| Predicates and comparisons of `Ball<T, 2>`, ns per operation (float) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `is_empty()` | 0.101 | 0.124 to 0.125 (-O2), 0.101 (-O3) | 0.324 to 0.327 (-O2), 0.21 (-O3) | 0.505 to 0.514 |
+| `is_whole()` | 0.102 | 0.124 to 0.125 (-O2), 0.102 (-O3) | 0.324 to 0.327 (-O2), 0.21 (-O3) | 0.508 to 0.517 |
+| `certainly_positive()` | 0.152 | 0.161 to 0.166 | 0.439 to 0.443 | 0.941 to 0.958 |
+| `certainly_zero()` | 0.148 to 0.152 | 0.163 to 0.166 | 0.441 to 0.445 | 1.33 to 1.35 |
+| `contains(t)` | 1.32 | 1.17 to 1.22 | 8.47 to 8.56 (-O2), 2.7 to 2.71 (-O3) | 3.92 to 3.96 |
+| `contains(Y)` | 4.46 to 4.59 | 3.69 to 3.7 (-O2), 1.51 (-O3) | 14.5 to 14.7 (-O2), 3.46 (-O3) | 14.4 to 14.6 |
+| `less` | 6.49 to 6.65 | 5.03 to 5.12 | 15.7 to 15.9 | 19.4 to 19.7 |
+| `less_equal` | 6.51 to 6.67 | 5 to 5.07 | 15.9 to 16.1 | 19.6 to 19.9 |
+| `equal` | 5.07 to 5.11 | 3.86 to 3.87 | 13.5 to 13.9 | 12.8 to 13.1 |
+| `member(t, X)` | 2.13 | 4.16 to 4.27 | 15.8 to 16 (-O2), 15 to 15.1 (-O3) | 5.59 to 5.66 |
+
+| The questions over the same in plain T | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `is_empty()`, `Interval<T, 1>` | 0.98 | 1.89 to 1.90 (-O2), 0.98 (-O3) | 3.16 to 3.23 (-O2), 0.70 to 0.71 (-O3) | 0.96 to 0.98 |
+| `is_whole()`, `Interval<T, 1>` | 0.63 to 0.65 (-O2), 0.77 (-O3) | 0.42 (-O2), 0.44 to 0.48 (-O3) | 0.57 to 0.59 | 1.13 to 1.15 |
+| `certainly_positive()`, `Interval<T, 1>` | 3.49 to 3.53 | 1.05 to 1.06 (-O2), 1.31 to 1.37 (-O3) | 1.70 to 1.71 (-O2), 1.48 (-O3) | 2.38 to 2.46 (-O2), 2.39 to 2.48 (-O3) |
+| `certainly_zero()`, `Interval<T, 1>` | 0.65 (-O2), 0.75 (-O3) | 0.42 to 0.44 (-O2), 0.47 to 0.51 (-O3) | 0.50 to 0.59 (-O2), 0.59 (-O3) | 0.81 (-O2), 0.99 (-O3) |
+| `contains(t)`, `Interval<T, 1>` | 0.78 to 0.79 | 0.41 to 0.44 (-O2), 0.63 to 0.66 (-O3) | 0.47 (-O2), 0.84 (-O3) | 0.51 |
+| `contains(Y)`, `Interval<T, 1>` | 0.72 to 0.73 (-O2), 0.67 to 0.68 (-O3) | 0.43 to 0.45 (-O2), 0.52 (-O3) | 0.63 to 0.64 (-O2), 0.74 to 0.75 (-O3) | 0.97 to 0.98 (-O2), 1.06 to 1.08 (-O3) |
+| `less`, `Interval<T, 1>` | 1.99 | 1.87 to 1.91 | 0.95 to 0.96 (-O2), 1.88 to 1.89 (-O3) | 1.74 to 1.78 |
+| `less_equal`, `Interval<T, 1>` | 1.99 | 1.85 to 1.88 | 1.79 to 1.80 (-O2), 1.22 to 1.26 (-O3) | 1.33 to 1.34 |
+| `equal`, `Interval<T, 1>` | 1.39 | 1.45 (-O2), 1.65 to 1.66 (-O3) | 2.57 to 2.58 | 1.42 to 1.43 (-O2), 1.26 (-O3) |
+| `member(t, X)`, `Interval<T, 1>` | 0.82 to 0.85 | 0.38 to 0.41 | 0.53 (-O2), 0.40 to 0.41 (-O3) | 0.37 |
+| `ieee1788::equal`, `Interval<T, 1>` | 0.42 to 0.44 (-O2), 0.37 to 0.38 (-O3) | 0.51 to 0.54 | 0.59 to 0.60 (-O2), 0.79 to 0.80 (-O3) | 0.62 to 0.64 (-O2), 0.67 to 0.68 (-O3) |
+| `ieee1788::interior`, `Interval<T, 1>` | 1.27 to 1.30 (-O2), 1.17 to 1.20 (-O3) | 0.80 to 0.86 (-O2), 0.94 to 0.95 (-O3) | 1.36 to 1.37 (-O2), 0.54 (-O3) | 0.96 to 1.02 (-O2), 1.17 to 1.20 (-O3) |
+| `ieee1788::disjoint`, `Interval<T, 1>` | 1.20 to 1.22 (-O2), 1.10 to 1.11 (-O3) | 1.19 to 1.25 (-O2), 1.08 to 1.09 (-O3) | 0.77 to 0.78 (-O2), 0.86 (-O3) | 1.07 |
+| `is_empty()`, `Ball<T, 1>` | 0.90 to 0.92 (-O2), 0.99 to 1.00 (-O3) | 0.94 to 0.95 (-O2), 1.00 (-O3) | 1.00 | 0.97 to 0.99 |
+| `is_whole()`, `Ball<T, 1>` | 1.00 | 1.01 to 1.02 (-O2), 0.96 to 1.00 (-O3) | 1.10 (-O2), 1.00 (-O3) | 1.01 to 1.04 |
+| `certainly_positive()`, `Ball<T, 1>` | 1.00 to 1.01 | 0.77 to 0.79 | 0.93 to 0.94 | 0.96 to 1.01 |
+| `certainly_zero()`, `Ball<T, 1>` | 0.65 (-O2), 0.75 (-O3) | 0.42 (-O2), 0.47 to 0.48 (-O3) | 0.59 | 0.99 to 1.01 |
+| `contains(t)`, `Ball<T, 1>` | 3.33 to 3.37 (-O2), 3.25 to 3.37 (-O3) | 3.58 to 3.85 (-O2), 3.29 to 3.45 (-O3) | 3.78 to 3.79 | 1.89 to 1.90 |
+| `contains(Y)`, `Ball<T, 1>` | 6.96 to 7.40 (-O2), 6.94 to 7.40 (-O3) | 3.72 to 3.80 | 4.47 to 4.48 | 3.28 to 3.30 (-O2), 4.17 to 4.24 (-O3) |
+| `less`, `Ball<T, 1>` | 4.59 to 4.72 (-O2), 4.43 to 4.59 (-O3) | 4.26 to 4.45 (-O2), 4.99 to 5.04 (-O3) | 5.81 to 5.83 (-O2), 6.00 to 6.04 (-O3) | 3.18 to 3.26 |
+| `less_equal`, `Ball<T, 1>` | 4.59 | 4.32 to 4.41 | 5.36 to 5.39 (-O2), 5.67 to 5.71 (-O3) | 3.05 to 3.09 |
+| `equal`, `Ball<T, 1>` | 3.43 to 3.44 (-O2), 3.21 to 3.44 (-O3) | 2.10 to 2.12 | 2.36 to 2.38 | 2.12 to 2.14 |
+| `member(t, X)`, `Ball<T, 1>` | 3.29 to 3.36 | 3.88 to 4.09 (-O2), 4.06 (-O3) | 4.31 to 4.33 | 1.89 to 1.92 |
+
+| Ball over interval, two limbs over one | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `contains(t)`, `Ball<T, 1>` over `Interval<T, 1>` | 2.06 to 2.09 (-O2), 2.01 to 2.09 (-O3) | 2.50 to 2.53 (-O2), 2.34 to 2.46 (-O3) | 3.28 to 3.29 | 1.78 to 1.79 |
+| `contains(t)`, `Ball<T, 2>` over `Interval<T, 2>` | 2.95 to 2.96 | 2.71 to 2.72 (-O2), 2.48 (-O3) | 5.36 to 5.37 (-O2), 3.47 to 3.50 (-O3) | 8.57 to 8.62 |
+| `contains(t)`, `Interval<T, 2>` over `Interval<T, 1>` | 2.51 | 2.70 (-O2), 2.57 (-O3) | 2.99 to 3.02 | 1.82 to 1.84 |
+| `contains(t)`, `Ball<T, 2>` over `Ball<T, 1>` | 3.56 to 3.60 (-O2), 3.56 to 3.69 (-O3) | 2.90 to 2.93 (-O2), 2.60 to 2.73 (-O3) | 4.89 (-O2), 3.19 (-O3) | 8.82 to 8.84 |
+| `contains(Y)`, `Ball<T, 1>` over `Interval<T, 1>` | 6.56 to 6.97 (-O2), 6.53 to 6.97 (-O3) | 3.75 (-O2), 4.09 (-O3) | 4.50 to 4.51 | 3.30 to 3.31 |
+| `contains(Y)`, `Ball<T, 2>` over `Interval<T, 2>` | 4.54 to 4.55 (-O2), 4.13 to 4.28 (-O3) | 3.65 to 3.66 (-O2), 3.17 to 3.18 (-O3) | 6.82 to 6.86 (-O2), 3.31 to 3.32 (-O3) | 6.72 to 6.78 |
+| `contains(Y)`, `Interval<T, 2>` over `Interval<T, 1>` | 3.25 | 2.72 (-O2), 2.97 (-O3) | 3.44 to 3.45 | 2.39 to 2.42 |
+| `contains(Y)`, `Ball<T, 2>` over `Ball<T, 1>` | 2.12 to 2.25 (-O2), 1.97 to 2.05 (-O3) | 2.65 (-O2), 2.30 to 2.31 (-O3) | 5.21 to 5.24 (-O2), 2.53 to 2.54 (-O3) | 4.90 to 4.92 |
+| `less`, `Ball<T, 1>` over `Interval<T, 1>` | 3.22 (-O2), 3.11 to 3.22 (-O3) | 2.52 to 2.53 (-O2), 2.92 to 2.95 (-O3) | 3.46 to 3.55 | 2.02 to 2.03 |
+| `less`, `Ball<T, 2>` over `Interval<T, 2>` | 5.69 to 5.71 | 4.97 to 5.09 | 4.16 to 4.22 | 7.92 to 7.98 |
+| `less`, `Interval<T, 2>` over `Interval<T, 1>` | 1.65 | 1.22 to 1.24 | 1.99 to 2.02 | 1.22 to 1.23 |
+| `less`, `Ball<T, 2>` over `Ball<T, 1>` | 2.91 to 2.92 (-O2), 2.92 to 3.02 (-O3) | 2.44 (-O2), 2.11 to 2.12 (-O3) | 2.37 to 2.42 | 4.78 to 4.82 |
+| `less_equal`, `Ball<T, 1>` over `Interval<T, 1>` | 3.22 | 2.56 to 2.63 | 3.26 to 3.30 | 2.05 to 2.06 |
+| `less_equal`, `Ball<T, 2>` over `Interval<T, 2>` | 5.71 to 5.72 | 4.94 to 5.06 | 4.12 to 4.14 | 6.32 to 6.36 |
+| `less_equal`, `Interval<T, 2>` over `Interval<T, 1>` | 1.65 | 1.22 to 1.27 | 1.99 to 2.02 | 1.54 to 1.55 |
+| `less_equal`, `Ball<T, 2>` over `Ball<T, 1>` | 2.92 | 2.38 to 2.39 | 2.50 to 2.55 | 4.77 to 4.79 |
+| `equal`, `Ball<T, 1>` over `Interval<T, 1>` | 2.89 (-O2), 2.70 to 2.90 (-O3) | 1.79 to 1.83 | 1.76 to 1.77 | 1.81 to 1.82 |
+| `equal`, `Ball<T, 2>` over `Interval<T, 2>` | 2.84 (-O2), 2.75 to 2.94 (-O3) | 2.03 to 2.04 | 1.93 to 1.96 | 2.75 to 2.77 |
+| `equal`, `Interval<T, 2>` over `Interval<T, 1>` | 2.09 (-O2), 2.01 to 2.10 (-O3) | 1.97 to 1.98 | 2.09 to 2.10 | 2.18 to 2.19 |
+| `equal`, `Ball<T, 2>` over `Ball<T, 1>` | 2.06 (-O2), 2.00 to 2.18 (-O3) | 2.19 to 2.25 | 2.28 to 2.34 | 3.32 to 3.34 |
+| `member(t, X)`, `Ball<T, 1>` over `Interval<T, 1>` | 1.94 to 1.98 | 2.54 to 2.64 (-O2), 2.43 to 2.54 (-O3) | 3.45 to 3.46 | 1.80 |
+| `member(t, X)`, `Ball<T, 2>` over `Interval<T, 2>` | 4.64 to 4.65 | 3.78 to 3.79 (-O2), 3.89 to 3.97 (-O3) | 4.00 to 4.05 | 12.0 to 12.1 |
+| `member(t, X)`, `Interval<T, 2>` over `Interval<T, 1>` | 2.46 | 3.49 to 3.54 (-O2), 3.16 to 3.37 (-O3) | 7.29 to 7.35 | 1.79 |
+| `member(t, X)`, `Ball<T, 2>` over `Ball<T, 1>` | 5.75 to 5.88 | 4.99 to 5.27 (-O2), 5.16 (-O3) | 8.50 to 8.59 | 12.0 |
+| `hull`, `Ball<T, 1>` over `Interval<T, 1>` | 16.6 | 12.9 to 13.5 (-O2), 13.9 to 15.5 (-O3) | 31.1 to 31.5 | 28.0 to 28.2 |
+| `hull`, `Ball<T, 2>` over `Interval<T, 2>` | 33.4 to 33.8 | 32.5 to 34.8 (-O2), 31.9 to 32.1 (-O3) | 32.4 to 34.1 (-O2), 32.3 to 32.6 (-O3) | 54.5 to 54.8 |
+| `hull`, `Interval<T, 2>` over `Interval<T, 1>` | 2.74 to 2.75 | 2.30 to 2.33 (-O2), 3.06 to 3.17 (-O3) | 4.02 to 4.21 (-O2), 4.05 to 4.10 (-O3) | 2.50 to 2.51 |
+| `hull`, `Ball<T, 2>` over `Ball<T, 1>` | 5.52 to 5.59 | 5.88 to 5.91 (-O2), 6.39 to 7.08 (-O3) | 4.38 to 4.40 (-O2), 4.20 to 4.23 (-O3) | 4.86 to 4.88 |
+| `split()`, `Ball<T, 1>` over `Interval<T, 1>` | 1.14 (-O2), 1.05 to 1.06 (-O3) | 0.62 to 0.64 (-O2), 0.74 to 0.75 (-O3) | 0.44 to 0.45 (-O2), 0.51 to 0.52 (-O3) | 0.86 to 0.87 |
+| `split()`, `Ball<T, 2>` over `Interval<T, 2>` | 0.91 to 0.95 | 0.71 to 0.75 | 0.87 to 0.88 (-O2), 0.57 (-O3) | 0.85 |
+| `split()`, `Interval<T, 2>` over `Interval<T, 1>` | 2.27 to 2.40 (-O2), 2.40 (-O3) | 2.64 to 2.68 | 1.49 to 1.51 (-O2), 2.73 to 2.76 (-O3) | 2.22 to 2.24 |
+| `split()`, `Ball<T, 2>` over `Ball<T, 1>` | 1.89 to 1.98 (-O2), 2.09 to 2.14 (-O3) | 3.11 to 3.18 (-O2), 2.50 to 2.61 (-O3) | 2.95 to 3.02 | 2.19 to 2.20 |
+
+| Set operations of `Interval<T, 1>`, ns | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `hull` | 0.465 | 0.518 to 0.546 (-O2), 0.401 to 0.414 (-O3) | 0.749 to 0.758 | 0.61 to 0.617 |
+| `intersection` | 0.545 to 0.546 | 0.547 | 0.818 to 0.825 | 0.739 to 0.747 |
+| `split()` | 3.27 | 2.51 | 10.8 to 10.9 (-O2), 8.53 to 8.58 (-O3) | 7.38 to 7.46 |
+| `Ball<T, k>(X)` | 4.25 | 3.44 to 3.49 (-O2), 2.77 (-O3) | 11 to 11.1 (-O2), 8.4 to 8.42 (-O3) | 8.24 to 8.37 |
+| `midpoint()` | 3.24 to 3.26 | 0.781 to 0.811 | 2.01 to 2.04 | 1.88 to 1.91 |
+| `radius()` | 3.2 to 3.25 | 3.4 (-O2), 2.54 (-O3) | 8.32 to 8.72 | 6.21 to 6.3 |
+| `midpoint()` and `radius()` | 6.37 to 6.64 | 3.67 to 3.68 (-O2), 3.3 to 3.31 (-O3) | 10.6 to 10.8 (-O2), 7.81 to 7.86 (-O3) | 7.89 to 8.03 |
+| `mid_rad()` | 3.02 to 3.23 (-O2), 3.26 (-O3) | 3.49 (-O2), 2.63 to 2.64 (-O3) | 6.59 to 6.67 (-O2), 7.33 to 7.37 (-O3) | 6.47 to 6.54 |
+| chain of `hull` | 1.36 to 1.43 | 0.49 to 0.504 (-O2), 0.472 to 0.504 (-O3) | 0.628 to 0.634 (-O2), 0.395 to 0.397 (-O3) | 0.886 to 0.903 |
+| chain of `intersection` | 1.45 to 1.56 (-O2), 1.45 to 1.56 (-O3) | 0.53 to 0.556 (-O2), 0.525 to 0.556 (-O3) | 1.32 to 1.34 | 1.2 to 1.23 |
+| chain of `split().left` | 7.4 to 7.94 (-O2), 7.4 to 7.94 (-O3) | 6.24 to 6.41 | 9.64 to 9.76 (-O2), 6.53 to 6.54 (-O3) | 21.2 to 21.5 |
+| chain of the conversion there and back | 23.4 to 25.1 (-O2), 23.4 to 25.1 (-O3) | 14.7 (-O2), 6.83 to 6.85 (-O3) | 16.4 to 16.6 (-O2), 15.8 to 15.9 (-O3) | 22.9 to 23.2 |
+
+| Set operations of `Interval<T, 2>`, ns | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `hull` | 1.28 | 1.19 to 1.27 (-O2), 1.27 (-O3) | 3.01 to 3.18 (-O2), 3.04 to 3.08 (-O3) | 1.52 to 1.55 |
+| `intersection` | 1.74 | 1.57 to 1.58 | 4.17 to 4.22 | 1.9 to 1.92 |
+| `split()` | 7.43 to 7.85 (-O2), 7.85 (-O3) | 6.62 to 6.73 | 16.2 to 16.3 (-O2), 23.4 to 23.5 (-O3) | 16.5 to 16.7 |
+| `Ball<T, k>(X)` | 15.9 to 17.1 (-O2), 16 to 17.1 (-O3) | 12.9 to 13.4 (-O2), 12.1 to 13 (-O3) | 28.4 to 28.6 | 31.6 to 32.1 |
+| `midpoint()` | 5.14 to 5.44 (-O2), 5.44 (-O3) | 4.79 (-O2), 2.66 (-O3) | 10.6 to 10.8 (-O2), 5.16 to 5.17 (-O3) | 9.37 to 9.58 |
+| `radius()` | 13.5 to 14.5 (-O2), 13.5 to 14.5 (-O3) | 12.1 to 12.3 | 25.6 to 25.8 | 29.8 to 30.1 |
+| `midpoint()` and `radius()` | 18.3 to 19.6 (-O2), 18.3 to 19.6 (-O3) | 15.8 to 16.3 (-O2), 11.5 to 12.4 (-O3) | 36.9 to 37.7 | 38.5 to 39 |
+| `mid_rad()` | 13.9 to 14.9 (-O2), 13.9 to 14.9 (-O3) | 12.1 to 12.5 (-O2), 11.4 to 12.2 (-O3) | 28 to 28.3 | 30.5 to 30.8 |
+| chain of `hull` | 3.66 to 3.91 (-O2), 3.66 to 3.91 (-O3) | 0.896 to 0.915 (-O2), 0.923 to 0.948 (-O3) | 2.5 to 2.55 | 3.1 to 3.15 |
+| chain of `intersection` | 3.81 to 4.09 (-O2), 3.81 to 4.09 (-O3) | 1.51 (-O2), 1.44 to 1.5 (-O3) | 3.65 to 3.77 | 2.22 to 2.25 (-O2), 2.31 to 2.33 (-O3) |
+| chain of `split().left` | 28.7 to 30.8 (-O2), 28.7 to 29.9 (-O3) | 21.9 to 22.1 | 20.5 to 20.7 | 29.2 to 30.1 |
+| chain of the conversion there and back | 65.8 to 70.5 (-O2), 65.8 (-O3) | 59.6 (-O2), 50.5 (-O3) | 75.9 to 77.1 (-O2), 72.9 to 73 (-O3) | 71.4 to 72.5 |
+
+| Set operations of `Ball<T, 1>`, ns | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `hull` | 7.72 to 7.73 | 7.01 to 7.04 (-O2), 5.74 to 6.38 (-O3) | 23.4 to 23.6 | 17.1 to 17.4 |
+| `intersection` | 7.49 to 7.78 | 7.04 to 7.05 (-O2), 6.01 to 6.42 (-O3) | 20.2 to 20.4 | 16.7 to 17 |
+| `split()` | 3.73 (-O2), 3.42 to 3.46 (-O3) | 1.56 to 1.61 (-O2), 1.87 (-O3) | 4.79 to 4.85 (-O2), 4.4 to 4.41 (-O3) | 6.38 to 6.45 |
+| `Interval<T, k>(X)` | 1.61 | 1.64 | 3.57 to 3.62 | 4.53 to 4.6 |
+| `midpoint()` and `radius()` | 0.2 to 0.212 (-O2), 0.199 to 0.2 (-O3) | 0.178 | 0.3 to 0.302 | 0.625 to 0.634 |
+| `mid_rad()` | 0.199 to 0.2 | 0.178 | 0.3 to 0.302 | 0.631 to 0.639 |
+| chain of `hull` | 20.9 to 21.5 | 20.4 to 21.5 (-O2), 16.4 to 17.2 (-O3) | 25.2 to 25.5 | 25.9 to 26.2 |
+| chain of `intersection` | 20.1 to 21.6 (-O2), 20.7 to 21.9 (-O3) | 17.7 to 18.9 (-O2), 13.1 to 14.1 (-O3) | 28.4 to 28.8 (-O2), 30.4 to 30.6 (-O3) | 21.9 to 22.1 |
+| chain of `split().left` | 12.3 to 13.2 (-O2), 8.21 to 8.28 (-O3) | 4.62 to 4.64 | 9.43 to 9.54 | 6.89 to 7 |
+| chain of the conversion there and back | 23.4 to 25.1 (-O2), 23.4 (-O3) | 14.7 (-O2), 10.2 (-O3) | 16 to 16.2 (-O2), 11.4 (-O3) | 28.8 to 29.2 |
+
+| Set operations of `Ball<T, 2>`, ns | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `hull` | 42.6 to 43.2 | 40.6 to 41.4 | 99 to 104 | 83.4 to 84.4 |
+| `intersection` | 40.6 to 43.6 (-O2), 40.6 to 43.6 (-O3) | 39 to 42 (-O2), 38.8 to 41.4 (-O3) | 95.5 to 98.5 | 84.1 to 85.2 |
+| `split()` | 7.05 to 7.39 | 4.97 to 5.05 (-O2), 4.67 to 4.88 (-O3) | 14.1 to 14.3 (-O2), 13.3 (-O3) | 14 to 14.2 |
+| `Interval<T, k>(X)` | 8.7 to 8.71 | 15.2 to 15.3 (-O2), 6.68 (-O3) | 32 to 32.3 (-O2), 25.2 (-O3) | 20.1 to 20.3 |
+| `midpoint()` and `radius()` | 0.256 to 0.265 | 0.284 | 0.675 to 0.682 | 0.917 to 0.934 |
+| `mid_rad()` | 0.265 | 0.284 | 0.906 to 0.915 (-O2), 0.835 to 0.838 (-O3) | 0.61 to 0.633 |
+| chain of `hull` | 67.8 to 71.8 (-O2), 67.5 to 71.9 (-O3) | 66 to 69.1 | 113 to 116 | 97.6 to 98.6 |
+| chain of `intersection` | 66.4 to 71.3 (-O2), 66.4 to 71.2 (-O3) | 63.5 to 63.8 | 112 to 116 | 98.6 to 99.6 (-O2), 93.6 to 99.7 (-O3) |
+| chain of `split().left` | 19.8 to 21.2 (-O2), 19.8 to 21.2 (-O3) | 13.6 (-O2), 11 (-O3) | 26.5 to 30.9 (-O2), 21.4 (-O3) | 24.2 to 28.4 (-O2), 28.1 to 28.4 (-O3) |
+| chain of the conversion there and back | 65.8 to 70.7 (-O2), 65.8 to 66.7 (-O3) | 59.5 (-O2), 50.8 to 50.9 (-O3) | 81.4 to 82.2 (-O2), 73 to 73.1 (-O3) | 71.5 to 74.6 (-O2), 70.3 to 75.5 (-O3) |
+
+| midpoint() and radius() against mid_rad() | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `Interval<T, 1>`: `midpoint()` over `mid_rad()` | 1.00 to 1.07 (-O2), 1.00 (-O3) | 0.22 to 0.23 (-O2), 0.31 (-O3) | 0.27 to 0.31 | 0.29 |
+| `Interval<T, 1>`: `radius()` over `mid_rad()` | 1.00 to 1.08 (-O2), 0.98 (-O3) | 0.96 to 0.98 | 1.30 to 1.31 (-O2), 1.13 to 1.14 (-O3) | 0.96 |
+| `Interval<T, 1>`: both over `mid_rad()` | 2.05 to 2.20 (-O2), 1.96 (-O3) | 1.05 to 1.06 (-O2), 1.25 (-O3) | 1.61 to 1.63 (-O2), 1.07 (-O3) | 1.22 to 1.23 |
+| `Interval<T, 1>`: `mid_rad()` over the kernel | 0.99 to 1.01 (-O2), 1.10 (-O3) | 1.32 (-O2), 0.95 (-O3) | 0.89 (-O2), 0.99 to 1.00 (-O3) | 1.00 |
+| `Interval<T, 1>`: `midpoint()` over the kernel writing the midpoint only | 1.01 (-O2), 1.10 (-O3) | 0.96 to 1.00 | 1.00 | 1.00 |
+| `Interval<T, 2>`: `midpoint()` over `mid_rad()` | 0.37 to 0.39 | 0.38 to 0.40 (-O2), 0.22 to 0.23 (-O3) | 0.38 (-O2), 0.18 (-O3) | 0.31 |
+| `Interval<T, 2>`: `radius()` over `mid_rad()` | 0.97 to 1.02 | 0.97 to 1.00 (-O2), 1.00 to 1.08 (-O3) | 0.91 | 0.98 |
+| `Interval<T, 2>`: both over `mid_rad()` | 1.31 to 1.32 | 1.30 to 1.34 (-O2), 1.01 to 1.08 (-O3) | 1.31 to 1.33 | 1.26 to 1.27 |
+| `Interval<T, 2>`: `mid_rad()` over the kernel | 0.99 to 1.00 | 0.99 to 1.03 | 0.97 | 1.01 |
+| `Interval<T, 2>`: `midpoint()` over the kernel writing the midpoint only | 1.01 to 1.03 | 1.80 (-O2), 1.00 (-O3) | 2.18 to 2.19 (-O2), 1.06 (-O3) | 0.99 to 1.00 |
+| `Ball<T, 1>`: both over `mid_rad()` | 1.00 to 1.06 (-O2), 1.00 (-O3) | 1.00 | 1.00 | 0.99 to 1.00 |
+| `Ball<T, 2>`: both over `mid_rad()` | 0.97 to 1.00 | 1.00 | 0.75 (-O2), 0.81 (-O3) | 1.46 to 1.47 (-O2), 1.52 (-O3) |
+
+| Set operations over the plain forms and the kernels | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `hull`, `Interval<T, 1>`, over a min and a max | 1.00 | 0.97 to 1.00 (-O2), 0.97 to 1.04 (-O3) | 0.93 to 0.94 | 1.00 |
+| `intersection`, `Interval<T, 1>`, over a max, a min and a test | 1.03 | 1.00 to 1.01 | 1.01 | 0.51 to 0.52 |
+| `split()`, `Interval<T, 1>`, over (l + h)/2, (h - l)/2 | 11.1 to 11.3 | 8.48 (-O2), 8.49 to 8.83 (-O3) | 32.3 to 32.8 (-O2), 25.6 to 25.8 (-O3) | 10.9 |
+| `mid_rad()`, `Interval<T, 1>`, over (l + h)/2, (h - l)/2 | 10.4 to 11.0 (-O2), 11.0 to 11.1 (-O3) | 11.8 (-O2), 8.91 to 9.27 (-O3) | 19.8 (-O2), 22.0 to 22.1 (-O3) | 9.54 to 9.58 |
+| `Ball<T, 1>(X)` over (l + h)/2, (h - l)/2 | 14.4 to 14.7 | 11.6 to 11.8 (-O2), 9.37 to 9.74 (-O3) | 32.7 to 33.2 (-O2), 25.2 to 25.3 (-O3) | 12.2 |
+| `hull`, `Ball<T, 1>`, over the plain hull of c - r, c + r | 12.6 | 10.3 to 10.4 (-O2), 9.4 to 10.4 (-O3) | 28.9 to 29.1 | 12.3 to 12.4 |
+| `intersection`, `Ball<T, 1>`, over the plain intersection | 12.2 to 12.3 (-O2), 12.7 (-O3) | 10.4 (-O2), 9.8 to 10.5 (-O3) | 24.9 to 25.0 | 12.0 to 12.1 |
+| `split()`, `Ball<T, 1>`, over c -+ r/2, r/2 | 8.01 to 8.03 (-O2), 7.35 to 7.43 (-O3) | 3.46 to 3.56 (-O2), 4.13 to 4.14 (-O3) | 2.72 (-O2), 2.49 to 2.50 (-O3) | 5.24 to 5.27 |
+| `Interval<T, 1>(B)` over c - r, c + r | 4.83 | 5.79 to 5.87 | 10.8 to 10.9 | 7.16 to 7.37 |
+| `hull`, `Interval<T, 1>`, over the kernel | 1.00 | 0.97 to 1.00 (-O2), 0.99 to 1.02 (-O3) | 1.00 | 0.97 to 0.98 |
+| chain of `hull`, `Interval<T, 1>`, over the kernel | 1.00 to 1.04 | 1.04 to 1.07 (-O2), 1.01 to 1.07 (-O3) | 1.59 to 1.60 (-O2), 0.63 (-O3) | 0.99 to 1.01 |
+| `split()`, `Interval<T, 1>`, over the kernel | 1.00 | 0.97 to 1.06 (-O2), 1.00 (-O3) | 1.28 to 1.29 (-O2), 1.01 (-O3) | 1.07 |
+| chain of `split()`, `Interval<T, 1>`, over the kernel | 1.66 to 1.69 | 0.99 to 1.01 | 1.48 to 1.49 (-O2), 1.00 (-O3) | 3.24 to 3.26 |
+| the conversion, `Interval<T, 1>`, over the kernel | 1.49 to 1.50 | 1.30 to 1.32 (-O2), 1.00 (-O3) | 1.33 to 1.34 (-O2), 1.01 to 1.02 (-O3) | 1.88 |
+| chain of the conversion, `Interval<T, 1>`, over the kernel | 1.38 to 1.41 | 2.17 (-O2), 1.00 (-O3) | 1.00 to 1.05 | 1.24 to 1.25 |
+| `hull`, `Interval<T, 2>`, over the kernel | 1.00 | 0.93 to 1.00 (-O2), 1.00 (-O3) | 0.99 to 1.01 | 1.00 |
+| chain of `hull`, `Interval<T, 2>`, over the kernel | 1.00 to 1.01 (-O2), 1.00 to 1.07 (-O3) | 0.98 to 1.00 (-O2), 1.04 to 1.05 (-O3) | 0.99 to 1.03 | 1.00 |
+| `split()`, `Interval<T, 2>`, over the kernel | 1.01 to 1.02 (-O2), 1.01 to 1.07 (-O3) | 1.00 to 1.03 | 0.68 (-O2), 1.00 (-O3) | 1.13 to 1.14 |
+| chain of `split()`, `Interval<T, 2>`, over the kernel | 1.18 to 1.23 | 1.04 | 1.00 | 1.91 to 1.95 |
+| the conversion, `Interval<T, 2>`, over the kernel | 1.67 to 1.73 (-O2), 1.64 to 1.73 (-O3) | 1.01 to 1.08 (-O2), 1.00 (-O3) | 1.01 | 1.01 to 1.03 |
+| chain of the conversion, `Interval<T, 2>`, over the kernel | 1.06 | 1.18 (-O2), 1.00 (-O3) | 1.03 to 1.07 | 1.06 to 1.07 |
+| `hull`, `Ball<T, 1>`, over the kernel | 0.98 to 1.03 | 1.14 (-O2), 0.92 to 1.02 (-O3) | 1.12 to 1.13 | 1.70 to 1.71 |
+| chain of `hull`, `Ball<T, 1>`, over the kernel | 1.19 to 1.27 (-O2), 1.21 to 1.24 (-O3) | 1.27 to 1.34 (-O2), 0.99 to 1.04 (-O3) | 0.99 to 1.00 | 1.31 to 1.32 |
+| `split()`, `Ball<T, 1>`, over the kernel | 1.08 (-O2), 1.00 to 1.06 (-O3) | 1.00 to 1.01 | 1.09 (-O2), 0.96 (-O3) | 0.99 to 1.00 |
+| chain of `split()`, `Ball<T, 1>`, over the kernel | 1.50 (-O2), 1.00 (-O3) | 1.00 | 1.00 | 1.00 to 1.01 |
+| the conversion, `Ball<T, 1>`, over the kernel | 1.00 | 1.00 | 1.00 | 1.00 |
+| chain of the conversion, `Ball<T, 1>`, over the kernel | 1.38 to 1.41 | 1.44 (-O2), 1.00 (-O3) | 1.35 (-O2), 0.96 to 0.97 (-O3) | 1.58 |
+| `hull`, `Ball<T, 2>`, over the kernel | 1.01 to 1.07 (-O2), 1.00 to 1.07 (-O3) | 1.07 to 1.11 (-O2), 1.05 to 1.06 (-O3) | 1.01 to 1.05 | 2.25 to 2.26 |
+| chain of `hull`, `Ball<T, 2>`, over the kernel | 1.04 to 1.06 (-O2), 1.05 to 1.12 (-O3) | 1.10 to 1.14 (-O2), 1.10 to 1.15 (-O3) | 1.12 to 1.14 | 1.09 to 1.10 |
+| `split()`, `Ball<T, 2>`, over the kernel | 1.08 to 1.13 (-O2), 1.10 to 1.13 (-O3) | 1.01 to 1.03 (-O2), 0.96 to 1.00 (-O3) | 1.06 to 1.07 (-O2), 1.00 (-O3) | 1.20 |
+| chain of `split()`, `Ball<T, 2>`, over the kernel | 1.35 (-O2), 1.35 to 1.45 (-O3) | 1.23 (-O2), 1.00 (-O3) | 1.25 to 1.44 (-O2), 1.01 (-O3) | 1.51 to 1.75 (-O2), 1.76 (-O3) |
+| the conversion, `Ball<T, 2>`, over the kernel | 0.99 | 2.28 to 2.30 (-O2), 1.00 (-O3) | 1.27 (-O2), 1.00 (-O3) | 1.05 |
+| chain of the conversion, `Ball<T, 2>`, over the kernel | 1.13 to 1.15 | 1.17 (-O2), 1.00 (-O3) | 1.24 (-O2), 1.11 (-O3) | 1.14 to 1.21 (-O2), 1.14 to 1.21 (-O3) |
+
+| The public function over the kernel, every loop of m2e | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| -O2: median, largest | 1.00, 2.23 (`i1_midrad2`) | 1.00, 2.28 (`b2_convert`) | 1.00, 2.18 (`i2_midpoint`) | 1.00, 2.27 (`b2_intersection`) |
+| -O3: median, largest | 1.00, 2.00 (`i1_midrad2`) | 1.00, 1.25 (`i1_midrad2`) | 1.00, 1.28 (`i2_midrad2`) | 1.00, 2.26 (`b2_intersection`) |
+
+| The enclosure interface, float over double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `less`, `Interval<T, 1>` | 0.48 | 1.04 to 1.05 | 0.97 to 0.99 | 0.94 |
+| `contains_t`, `Interval<T, 1>` | 0.48 | 0.50 to 0.52 | 0.52 | 0.56 to 0.57 |
+| `hull`, `Interval<T, 1>` | 0.50 | 0.48 to 0.51 | 0.70 to 0.71 | 0.49 to 0.50 |
+| `split`, `Interval<T, 1>` | 0.93 to 1.00 (-O2), 1.00 (-O3) | 1.11 (-O2), 1.06 (-O3) | 1.06 to 1.08 (-O2), 0.80 to 0.81 (-O3) | 0.88 |
+| `convert`, `Interval<T, 1>` | 0.96 to 1.00 | 1.01 to 1.04 | 0.99 to 1.00 (-O2), 0.85 to 0.86 (-O3) | 0.95 |
+| `less`, `Interval<T, 2>` | 1.01 to 1.02 | 1.03 | 1.03 | 1.00 |
+| `contains_t`, `Interval<T, 2>` | 0.57 | 0.49 | 0.46 to 0.47 | 0.76 to 0.77 |
+| `hull`, `Interval<T, 2>` | 0.50 | 0.50 to 0.53 | 1.52 to 1.60 (-O2), 1.58 to 1.59 (-O3) | 1.26 to 1.27 |
+| `split`, `Interval<T, 2>` | 1.03 to 1.09 (-O2), 1.03 (-O3) | 0.94 to 0.99 (-O2), 1.00 (-O3) | 1.10 to 1.11 (-O2), 0.76 (-O3) | 1.00 |
+| `convert`, `Interval<T, 2>` | 1.01 to 1.05 | 0.94 to 1.02 (-O2), 1.00 (-O3) | 0.96 | 0.95 to 0.97 |
+| `less`, `Ball<T, 1>` | 0.98 to 1.03 | 1.10 (-O2), 0.88 to 0.94 (-O3) | 0.96 to 1.00 | 1.01 to 1.02 |
+| `contains_t`, `Ball<T, 1>` | 0.50 to 0.52 | 0.46 to 0.48 | 0.44 | 0.80 |
+| `hull`, `Ball<T, 1>` | 1.00 to 1.02 | 0.97 to 1.00 (-O2), 1.02 to 1.14 (-O3) | 0.93 to 0.95 | 0.94 |
+| `split`, `Ball<T, 1>` | 0.94 (-O2), 0.94 to 1.00 (-O3) | 1.00 to 1.04 (-O2), 0.86 (-O3) | 0.85 (-O2), 0.93 (-O3) | 0.76 |
+| `convert`, `Ball<T, 1>` | 1.08 (-O2), 0.99 to 1.00 (-O3) | 0.50 | 0.49 to 0.50 | 0.99 to 1.00 |
+| `less`, `Ball<T, 2>` | 1.04 to 1.07 | 1.01 to 1.02 | 0.96 to 0.97 | 1.00 to 1.01 |
+| `contains_t`, `Ball<T, 2>` | 0.51 | 0.49 to 0.54 | 0.99 to 1.00 (-O2), 0.49 (-O3) | 0.49 to 0.50 |
+| `hull`, `Ball<T, 2>` | 0.98 to 1.00 | 0.99 to 1.00 | 0.97 | 0.98 to 0.99 |
+| `split`, `Ball<T, 2>` | 1.01 to 1.02 (-O2), 0.97 to 1.00 (-O3) | 1.04 to 1.05 (-O2), 0.97 to 1.02 (-O3) | 0.94 to 0.97 | 0.91 to 0.92 |
+| `convert`, `Ball<T, 2>` | 0.79 to 0.84 | 0.69 to 0.71 (-O2), 1.06 (-O3) | 0.95 to 0.96 | 0.97 |
