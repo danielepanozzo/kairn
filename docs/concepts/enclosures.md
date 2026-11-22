@@ -221,13 +221,22 @@ the radius of the entry $10^6$, about $2^{-33}$. That the one radius of a sum, a
 scaling equals the largest of the radii the entrywise `Ball` operations give is what the loops
 compute and what the tests find in every case they compare, and it is not claimed: what is claimed
 is containment, when the result is finite, and that halving or scaling by a power of two is exact
-when nothing underflows ([Ball vectors](../reference/ball_vector.md#the-operations)). What a
-`BallVector` costs next to $N$ balls has not been measured yet: the benchmarks of the functions on
-arrays, the ball vectors and the accumulator are still to come
-([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#still-to-come)). What is measured is
-compile time: `kairn/ball_vector.hpp`, not included by `kairn/kairn.hpp`, adds to a file 0.02 s
-(GCC 13) to 0.15 s (Apple clang) beyond `kairn/packed.hpp` and `kairn/soa.hpp`, which it includes
-([Compile time](../reference/ball_vector.md#compile-time)).
+when nothing underflows ([Ball vectors](../reference/ball_vector.md#the-operations)).
+
+**What it costs next to $N$ balls**, measured: one radius pays from about 16 entries. A sum, a
+difference, a scaling or an `axpy` of a `BallVector` of 16 entries is 2 to 4 times faster than the
+same on 16 balls on an AMD Zen 2 (AVX2, four lanes) and 1.6 to 2.7 times on an Apple M3 (two lanes),
+of 64 entries 3.3 to 6.2 and 1.7 to 2.6 times, in 0.53 to 0.75 of the bytes; at 4 entries it is no
+faster, the check of the environment at entry and the operations of the radius being then a large
+part of the call. The width is the price: where every entry has the same radius nothing is lost,
+and where the radii differ the one radius is the widest entry's, 1 to 2 times the largest radius the
+balls would have after a sum, 2.4 to 118 times after a product of polynomials, and up to
+$2 \times 10^6$ times the median one
+([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#18-one-radius-for-many-centers)).
+`kairn/ball_vector.hpp`, not included by `kairn/kairn.hpp`, costs a file 1.3 to 1.7 s to compile on
+that Zen 2 and 0.5 to 0.7 s on the M3, against 0.5 to 0.7 and 0.2 to 0.3 s for `kairn/kairn.hpp`
+alone ([Compile time](../reference/ball_vector.md#compile-time),
+[Benchmarks](../developer/results/bench-milestone2.md#19-compile-time-of-the-functions-on-arrays-and-the-ball-vectors)).
 
 ## Which to use
 

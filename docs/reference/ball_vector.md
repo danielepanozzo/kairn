@@ -247,7 +247,13 @@ the operators that call them. Before its loop each reads the floating-point envi
 zero), which by default stops the program: the default environment is the precondition of each,
 checked. The negation, a change of sign and a copy of the radius, leaves the rounding mode out;
 every other operation reads it, the constructors of one limb among them (below). One read of the
-control register per call.
+control register per call: measured on ball vectors of 3 to 18 entries, most operations lose the
+read or less to it (5 to 6 ns on an AMD Zen 2, about half a nanosecond on an Apple M3; `x + y` of
+two limbs takes 1.01 to 1.26 times as long), and a constructor more where the compiler no longer
+inlines it with the check: 18 to 20 ns more for `BallVector<double, 1, 3>` with Clang 18, 6 to 14 ns
+with GCC 13 at `-O3` in a file of many operations; on the M3 a chain of short operations of one limb,
+each on the result of the one before, 3 to 7 ns per operation
+([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#14-short-arrays-and-the-check-at-entry)).
 
 With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](../developer/testing.md#the-checks-of-a-debug-build)), after the environment:
 
