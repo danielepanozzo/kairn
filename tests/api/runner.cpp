@@ -1671,6 +1671,9 @@ const char* const internal[] = {
     // And the products of the accumulator, which add_product reaches through acc_mul_entry_1 and
     // acc_mul_entry_2, which guard the factors first.
     "acc_mul_1", "acc_mul_2",
+    // And the scaling of a center of two limbs, which the scalings of BallVector<T, 2, N> reach
+    // through bv_scale_step_2, which guards the scalar first.
+    "scale_step_2",
     // And the scaling of a ball of two limbs, core and full form, which the operators reach through
     // ball_scale_2_full_entry, which guards the scalar first.
     "ball_scale_2", "ball_scale_2_full",
@@ -1711,7 +1714,7 @@ const NotPublic not_public[] = {
     {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step}, {"scale_entry_step_2", fold_step},
     {"mul_pow2_step_1", fold_step},
     {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},
-    {"axpy_entry_step_2", fold_step}, {"dot_entry_step_2", fold_step},
+    {"axpy_entry_step_2", fold_step}, {"dot_entry_step_2", fold_step}, {"bv_scale_radius_2", fold_step},
 };
 // The interval kernels of Milestone 2 are reached by the forms of Interval (interval.hpp) and of
 // the functions of a Ball of the enclosure interface (ball.hpp), and so are the 53 kernels of the

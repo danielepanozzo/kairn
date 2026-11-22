@@ -3733,3 +3733,90 @@ match goal with |- match ?c with _ => _ end =>
   revert V1 V2 V3 V4; destruct c as [[ws r] flag]; intros V1 V2 V3 V4 end.
 exact (conj (proj1 V1) (conj (proj2 V1) (conj V2 (conj V3 V4)))).
 Qed.
+
+(** * bv_scale_2_entry *)
+
+(* bv_scale_2_entry (rule R3, the factors of a fused operation): its step bv_scale_step_2 and its
+   radius bv_scale_radius_entry_2 are those of bv_scale_2 on the guard of a, so the loop is
+   bv_scale_2 on the guarded a, in both orders, float for float. Its statements follow from those of
+   bv_scale_2 at the guard of a: the guard keeps the value and the finiteness of a, and in the real
+   model the step and the radius on a number of the format are those of bv_scale_2. *)
+Lemma bv_scale_2_entry_seq_eq (prec emax : Z) {prec_gt_0_ : Prec_gt_0 prec}
+    {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}
+    (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax)
+    (nan_const : {x : binary_float prec emax | is_nan prec emax x = true})
+    (rx a : binary_float prec emax) (xs : list (binary_float prec emax * binary_float prec emax)) :
+  IeeeFoldModel.bv_scale_2_entry_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const rx a xs =
+  IeeeFoldModel.bv_scale_2_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const rx
+    (IeeeOperations.guard prec emax nan_plus a) xs.
+Proof.
+unfold IeeeFoldModel.bv_scale_2_entry_seq, IeeeFoldModel.bv_scale_2_seq. cbv zeta.
+assert (E : map (IeeeFoldModel.bv_scale_2_entry_step prec emax nan_plus nan_minus nan_opp nan_fma a) xs =
+            map (IeeeFoldModel.bv_scale_2_step prec emax nan_plus nan_minus nan_opp nan_fma
+                   (IeeeOperations.guard prec emax nan_plus a)) xs).
+{ apply map_ext. intros x. unfold IeeeFoldModel.bv_scale_2_entry_step, IeeeFoldModel.bv_scale_2_step.
+  apply bv_scale_step_2_eq. }
+rewrite E. reflexivity.
+Qed.
+
+Lemma bv_scale_2_entry_lanes_eq (prec emax : Z) {prec_gt_0_ : Prec_gt_0 prec}
+    {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}
+    (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax)
+    (nan_const : {x : binary_float prec emax | is_nan prec emax x = true})
+    (W : nat) (rx a : binary_float prec emax) (xs : list (binary_float prec emax * binary_float prec emax)) :
+  IeeeFoldModel.bv_scale_2_entry_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const W rx a xs =
+  IeeeFoldModel.bv_scale_2_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const W rx
+    (IeeeOperations.guard prec emax nan_plus a) xs.
+Proof.
+unfold IeeeFoldModel.bv_scale_2_entry_lanes, IeeeFoldModel.bv_scale_2_lanes. cbv zeta.
+assert (E : map (IeeeFoldModel.bv_scale_2_entry_step prec emax nan_plus nan_minus nan_opp nan_fma a) xs =
+            map (IeeeFoldModel.bv_scale_2_step prec emax nan_plus nan_minus nan_opp nan_fma
+                   (IeeeOperations.guard prec emax nan_plus a)) xs).
+{ apply map_ext. intros x. unfold IeeeFoldModel.bv_scale_2_entry_step, IeeeFoldModel.bv_scale_2_step.
+  apply bv_scale_step_2_eq. }
+rewrite E. reflexivity.
+Qed.
+
+Theorem bv_scale_2_entry_seq_ieee_correct : bv_scale_2_entry_seq_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hq rx a xs HX.
+rewrite (bv_scale_2_entry_seq_eq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const rx a xs).
+generalize (bv_scale_2_seq_ieee_correct prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+              nan_const Hq rx (IeeeOperations.guard prec emax nan_plus a) xs HX).
+destruct (IeeeFoldModel.bv_scale_2_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const rx
+            (IeeeOperations.guard prec emax nan_plus a) xs) as [[ws r] flag].
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a) by exact (guard_val prec emax nan_plus a).
+assert (Fa : finite (IeeeOperations.guard prec emax nan_plus a) <-> finite a)
+  by (unfold finite; rewrite (guard_finite prec emax nan_plus); tauto).
+cbv beta iota. rewrite Va.
+intros [C [Fl [In [Fin V4]]]].
+split. exact C. split. exact Fl. split. exact In. split.
+- intros Fr. destruct (Fin Fr) as [Frx [Fga [S R]]].
+  split. exact Frx. split. apply Fa. exact Fga. split.
+  + revert S. apply Forall2_impl. intros [x0 x1] [z0 z1] E. cbv beta iota in E |- *. rewrite E.
+    symmetry. apply MapSteps.bv_scale_step_2_real. apply val_format.
+  + rewrite R. symmetry. apply bv_scale_2_entry_radius_eq. apply val_format.
+- intros Frx Fa' H1 H2. apply V4; [exact Frx | apply Fa; exact Fa' | exact H1 | exact H2].
+Qed.
+
+Theorem bv_scale_2_entry_lanes_ieee_correct : bv_scale_2_entry_lanes_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hq W rx a xs HX.
+rewrite (bv_scale_2_entry_lanes_eq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const W rx a xs).
+generalize (bv_scale_2_lanes_ieee_correct prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+              nan_const Hq W rx (IeeeOperations.guard prec emax nan_plus a) xs HX).
+destruct (IeeeFoldModel.bv_scale_2_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const W
+            rx (IeeeOperations.guard prec emax nan_plus a) xs) as [[ws r] flag].
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a) by exact (guard_val prec emax nan_plus a).
+assert (Fa : finite (IeeeOperations.guard prec emax nan_plus a) <-> finite a)
+  by (unfold finite; rewrite (guard_finite prec emax nan_plus); tauto).
+cbv beta iota. rewrite Va.
+intros [C [Fl [In [Fin V4]]]].
+split. exact C. split. exact Fl. split. exact In. split.
+- intros Fr. destruct (Fin Fr) as [Frx [Fga [S R]]].
+  split. exact Frx. split. apply Fa. exact Fga. split.
+  + revert S. apply Forall2_impl. intros [x0 x1] [z0 z1] E. cbv beta iota in E |- *. rewrite E.
+    symmetry. apply MapSteps.bv_scale_step_2_real. apply val_format.
+  + rewrite R. symmetry. apply bv_scale_2_entry_radius_eq. apply val_format.
+- intros Frx Fa' H1 H2. apply V4; [exact Frx | apply Fa; exact Fa' | exact H1 | exact H2].
+Qed.

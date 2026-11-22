@@ -110,7 +110,7 @@ operands, in Flocq's model of IEEE 754 with overflow (`encloses_entries`,
 | `-x`, `neg(x, z)` | `bv_neg_k` | `neg_k`, exact | $r_x$ | always: **exact**, the result is the negated set | `z` = `x` |
 | `x + y`, `add(x, y, z)` | `bv_add_k` | `add_1_1`, `add_2_2` | `bv_add_radius_k`$(M, r_x, r_y)$ | $r_x + r_y$ and every $\lvert x_i + y_i\rvert + r_x + r_y$ within $2^{e_{\max}-2}$ | `z` = `x` or `y` |
 | `x - y`, `sub(x, y, z)` | `bv_sub_k` | `sub_1_1`, `sub_2_2` | the same | the same with $x_i - y_i$ | `z` = `x` or `y` |
-| `x * a`, `scale(x, a, z)` | `bv_scale_k` | `scale_step_k` ($x\,a$) | `bv_scale_radius_k`$(M, r_x, a)$ | $\lvert a\rvert r_x$ and every $(\lvert x_i\rvert + r_x)\lvert a\rvert$ within $2^{e_{\max}-2}$; an infinite or NaN $a$ gives the whole space | `z` = `x` |
+| `x * a`, `scale(x, a, z)` | `bv_scale_k` | `scale_step_1`, `bv_scale_step_2` ($x\,a$; for two limbs on $a$ guarded, a factor of the fused operations of `mul_2_1`) | `bv_scale_radius_k`$(M, r_x, a)$ | $\lvert a\rvert r_x$ and every $(\lvert x_i\rvert + r_x)\lvert a\rvert$ within $2^{e_{\max}-2}$; an infinite or NaN $a$ gives the whole space | `z` = `x` |
 | `ldexp(x, n, z)`, `half(x, z)` | `bv_mul_pow2_k`, $c = 2^n$ | `bv_mul_pow2_step_k`, with a mask of exactness | `bv_mul_pow2_radius`: $c\,r_x$ when every entry and the radius are scaled exactly, otherwise the second number after $\mathrm{RN}(c\,r_x)$ | $c\,r_x$ and every $(\lvert x_i\rvert + r_x)\,c$ within $2^{e_{\max}-2}$ | `z` = `x` |
 | `convolution(x, y, z)` | `bv_conv_k`, sequential only | `conv_k` (each coefficient `dot_k` of its terms) | `conv_radius` | below | none: `z` overlaps neither |
 

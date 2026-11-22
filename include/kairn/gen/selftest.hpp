@@ -2009,6 +2009,26 @@ inline const char* bv_scale_radius_2_float() noexcept {
     return !same(o0, 0x1.658db2p-17f) ? "bv_scale_radius_2 (float)" : nullptr;
 }
 
+// bv_scale_radius_entry_2 (double)
+inline const char* bv_scale_radius_entry_2_double() noexcept {
+    volatile double i0 = 0x1.d27f135364461p-18;
+    volatile double i1 = 0x1.1984786cb8936p-17;
+    volatile double i2 = 0x1.1e21e04064b33p-3;
+    double o0;
+    bv_scale_radius_entry_2(i0, i1, i2, o0);
+    return !same(o0, 0x1.3aa73f37b572ap-20) ? "bv_scale_radius_entry_2 (double)" : nullptr;
+}
+
+// bv_scale_radius_entry_2 (float)
+inline const char* bv_scale_radius_entry_2_float() noexcept {
+    volatile float i0 = 0x1.3f545ap-24f;
+    volatile float i1 = 0x1.059eb4p-18f;
+    volatile float i2 = -0x1.2d525p+3f;
+    float o0;
+    bv_scale_radius_entry_2(i0, i1, i2, o0);
+    return !same(o0, 0x1.33efbcp-15f) ? "bv_scale_radius_entry_2 (float)" : nullptr;
+}
+
 // conv_radius (double)
 inline const char* conv_radius_double() noexcept {
     volatile double i0 = 0x1.8cb900368116ap-18;
@@ -5693,6 +5713,50 @@ inline const char* bv_mul_pow2_step_2_float() noexcept {
     return !same(o0, 0x1.a620a8p+0f) || !same(o1, -0x1.b027fep-25f) || !same(o2, true) ? "bv_mul_pow2_step_2 (float)" : nullptr;
 }
 
+// scale_step_2 (double)
+inline const char* scale_step_2_double() noexcept {
+    volatile double i0 = 0x1.c250cfd28e1a7p-3;
+    volatile double i1 = -0x1.9d6c6351c19f2p-58;
+    volatile double i2 = 0x1.fba5f3ede777cp-2;
+    double o0;
+    double o1;
+    scale_step_2(i0, i1, i2, o0, o1);
+    return !same(o0, 0x1.be7cfb6091b16p-4) || !same(o1, 0x1.7686e89e6baa3p-65) ? "scale_step_2 (double)" : nullptr;
+}
+
+// scale_step_2 (float)
+inline const char* scale_step_2_float() noexcept {
+    volatile float i0 = -0x1.41983p-1f;
+    volatile float i1 = -0x1.a21cb6p-26f;
+    volatile float i2 = 0x1.a9191cp-2f;
+    float o0;
+    float o1;
+    scale_step_2(i0, i1, i2, o0, o1);
+    return !same(o0, -0x1.0b029ap-2f) || !same(o1, -0x1.47a966p-31f) ? "scale_step_2 (float)" : nullptr;
+}
+
+// bv_scale_step_2 (double)
+inline const char* bv_scale_step_2_double() noexcept {
+    volatile double i0 = 0x1.9606dd29940c2p+1;
+    volatile double i1 = -0x1.40ef12036f1bdp-53;
+    volatile double i2 = 0x1.e12c8db0b3fafp+1;
+    double o0;
+    double o1;
+    bv_scale_step_2(i0, i1, i2, o0, o1);
+    return !same(o0, 0x1.7d94c7b996267p+3) || !same(o1, 0x1.fcf1c7b8c0b18p-51) ? "bv_scale_step_2 (double)" : nullptr;
+}
+
+// bv_scale_step_2 (float)
+inline const char* bv_scale_step_2_float() noexcept {
+    volatile float i0 = -0x1.970e32p+0f;
+    volatile float i1 = -0x1.c1595p-27f;
+    volatile float i2 = -0x1.e62b5p+0f;
+    float o0;
+    float o1;
+    bv_scale_step_2(i0, i1, i2, o0, o1);
+    return !same(o0, 0x1.8284e8p+1f) || !same(o1, 0x1.ed8112p-24f) ? "bv_scale_step_2 (float)" : nullptr;
+}
+
 // dot_entry_step_2 (double)
 inline const char* dot_entry_step_2_double() noexcept {
     volatile double i0 = -0x1.290568a787287p+2;
@@ -7231,28 +7295,6 @@ inline const char* norm_step_2_float() noexcept {
     return !same(o0, 0x1.f7ad62p-3f) || !same(o1, false) ? "norm_step_2 (float)" : nullptr;
 }
 
-// scale_step_2 (double)
-inline const char* scale_step_2_double() noexcept {
-    volatile double i0 = 0x1.c250cfd28e1a7p-3;
-    volatile double i1 = -0x1.9d6c6351c19f2p-58;
-    volatile double i2 = 0x1.fba5f3ede777cp-2;
-    double o0;
-    double o1;
-    scale_step_2(i0, i1, i2, o0, o1);
-    return !same(o0, 0x1.be7cfb6091b16p-4) || !same(o1, 0x1.7686e89e6baa3p-65) ? "scale_step_2 (double)" : nullptr;
-}
-
-// scale_step_2 (float)
-inline const char* scale_step_2_float() noexcept {
-    volatile float i0 = -0x1.41983p-1f;
-    volatile float i1 = -0x1.a21cb6p-26f;
-    volatile float i2 = 0x1.a9191cp-2f;
-    float o0;
-    float o1;
-    scale_step_2(i0, i1, i2, o0, o1);
-    return !same(o0, -0x1.0b029ap-2f) || !same(o1, -0x1.47a966p-31f) ? "scale_step_2 (float)" : nullptr;
-}
-
 // scale_entry_step_2 (double)
 inline const char* scale_entry_step_2_double() noexcept {
     volatile double i0 = -0x1.2ebcdaa09bffap+0;
@@ -7763,6 +7805,8 @@ inline const char* run() noexcept {
         bv_scale_radius_1_float,
         bv_scale_radius_2_double,
         bv_scale_radius_2_float,
+        bv_scale_radius_entry_2_double,
+        bv_scale_radius_entry_2_float,
         conv_radius_double,
         conv_radius_float,
         dot_entry_step_1_double,
@@ -8097,6 +8141,10 @@ inline const char* run() noexcept {
         bv_center_2_float,
         bv_mul_pow2_step_2_double,
         bv_mul_pow2_step_2_float,
+        scale_step_2_double,
+        scale_step_2_float,
+        bv_scale_step_2_double,
+        bv_scale_step_2_float,
         dot_entry_step_2_double,
         dot_entry_step_2_float,
         fold_finish_2_double,
@@ -8219,8 +8267,6 @@ inline const char* run() noexcept {
         mul_pow2_step_2_float,
         norm_step_2_double,
         norm_step_2_float,
-        scale_step_2_double,
-        scale_step_2_float,
         scale_entry_step_2_double,
         scale_entry_step_2_float,
         sub_1_2_double,

@@ -870,6 +870,33 @@ Definition bv_scale_2_lanes (W : nat) (rx : float) (a : float) (xs : list (float
   let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
   (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
 
+(* bv_scale_2_entry: a ball vector; step bv_scale_step_2, record norm_step_2, combination norm_combine, radius bv_scale_radius_entry_2, finish norm_finish_1. *)
+Definition bv_scale_2_entry_step (a : float) (x : float * float) : float * float :=
+  IeeeModel.bv_scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst x) (snd x) a.
+
+Definition bv_scale_2_entry_map (a : float) (xs : list (float * float)) : list (float * float) :=
+  map (bv_scale_2_entry_step a) xs.
+
+Definition bv_scale_2_entry_record (mok : float * bool) (w_ : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_scale_2_entry_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_scale_2_entry_seq (rx : float) (a : float) (xs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map (bv_scale_2_entry_step a) xs in
+  let s_ := fold_seq bv_scale_2_entry_record (pzero, true) ws_ in
+  let rz_ := IeeeModel.bv_scale_radius_entry_2 prec emax nan_plus nan_abs nan_fma (fst s_) rx a in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+Definition bv_scale_2_entry_lanes (W : nat) (rx : float) (a : float) (xs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map (bv_scale_2_entry_step a) xs in
+  let s_ := fold_lanes bv_scale_2_entry_record bv_scale_2_entry_combine (pzero, true) W ws_ in
+  let rz_ := IeeeModel.bv_scale_radius_entry_2 prec emax nan_plus nan_abs nan_fma (fst s_) rx a in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
 (* bv_sub_1: a ball vector; step sub_1_1, record norm_step_1, combination norm_combine, radius bv_add_radius_1, finish norm_finish_1. *)
 Definition bv_sub_1_step (xy : float * float) : float :=
   IeeeModel.sub_1_1 prec emax nan_minus (fst xy) (snd xy).

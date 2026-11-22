@@ -33,7 +33,7 @@
 From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core.
 From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Ball2.
+From Kairn Require Import Format Ball2 Guard.
 Open Scope R_scope.
 
 Theorem bv_add_radius_1_correct : bv_add_radius_1_spec.
@@ -142,4 +142,23 @@ apply (radius_2 emin prec (Rabs a * rx) m _ _ _ _ (vq rel tiny));
 assert (uq rel * (1 + u prec) * m <= RU emin prec (uq rel * (1 + u prec)) * m)
   by (apply Rmult_le_compat_r; assumption).
 lra.
+Qed.
+
+(* bv_scale_radius_entry_2, the radius of bv_scale_2_entry: bv_scale_radius_2 on a guarded, the value
+   that its step bv_scale_step_2 takes (rule R3, the factors of a fused operation). A number of the
+   format passes the guard unchanged (guard_real_any), so the statement is that of
+   bv_scale_radius_2. *)
+Lemma bv_scale_radius_entry_2_real :
+  forall (emin prec : Z) (m rx a : R), fmt emin prec a ->
+  bv_scale_radius_entry_2 emin prec tie_even m rx a = bv_scale_radius_2 emin prec tie_even m rx a.
+Proof.
+intros emin prec m rx a Fa. unfold bv_scale_radius_entry_2. cbv zeta.
+now rewrite (guard_real_any emin prec tie_even a Fa).
+Qed.
+
+Theorem bv_scale_radius_entry_2_correct : bv_scale_radius_entry_2_spec.
+Proof.
+intros emin prec Hp m rx a Fm Frx Fa Hm Hrx. cbv zeta.
+rewrite (bv_scale_radius_entry_2_real emin prec m rx a Fa).
+exact (bv_scale_radius_2_correct emin prec Hp m rx a Fm Frx Fa Hm Hrx).
 Qed.

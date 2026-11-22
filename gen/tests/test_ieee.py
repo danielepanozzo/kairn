@@ -39,6 +39,8 @@ PROGRAMS += ['two_prod_entry', 'mul_2_1_entry']
 PROGRAMS += ['scale_entry_step_2']
 # And the step of dot_2_entry, dot_step_2 on its elements guarded (the same rule).
 PROGRAMS += ['dot_entry_step_2']
+# And the step of bv_scale_2_entry, scale_step_2 on its scalar guarded (the same rule).
+PROGRAMS += ['bv_scale_step_2']
 # And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
 # Program.v (acc_merge_k: additions; the others guard or take an absolute value).
 PROGRAMS += ['acc_merge_1', 'acc_merge_2']
@@ -517,8 +519,10 @@ class Statements(unittest.TestCase):
         # rule R3 on the factors is among them: two_prod_entry is constexpr through its variant, as
         # two_prod is, and the others are not constexpr.) Then six with the dot product of two limbs on
         # its elements guarded: dot_entry_step_2 (bridge, statement, leading limb) and dot_2_entry in
-        # both orders, and conv_2_entry: 390.
-        self.assertEqual(text.count('Print Assumptions'), 390)
+        # both orders, and conv_2_entry: 390. Then five with the scaling of a ball vector of two limbs
+        # on its scalar guarded: bv_scale_step_2 (bridge, statement, leading limb) and bv_scale_2_entry
+        # in both orders: 395.
+        self.assertEqual(text.count('Print Assumptions'), 395)
         self.assertEqual(text.count('Print Assumptions IeeeTwoExecutions.'), len(ieee.with_kernels(self.ks)))
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
@@ -682,8 +686,10 @@ class CheckedFiles(unittest.TestCase):
     # changed. Then axpy_entry_step_2 and axpy_entry_step_2_1 (the same rule): their models and programs
     # with every limb of a, x and y guarded and then axpy_step_2 and axpy_step_2_1, printed after them;
     # every statement the same, but for the source lines of their comments.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'df9723d4c39b99dd06a48f89454ccc8ccd01bb9238d4aa79363655b53abf58ad',
-               'proofs/gen/IeeeStatements.v': '21063dc2ae39d36f0e7ab2c9869436280228ace017be038b2c216e56f3fb68ac'}
+    # Then bv_scale_step_2 and bv_scale_radius_entry_2 (the same rule): their models, the program and the
+    # statements of the first added, nothing else changed.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'd16e2e6c109987fdfea0faa040412a83c8ea0b5b770461d3c43027917083c453',
+               'proofs/gen/IeeeStatements.v': '630e25aa1741bbd60d3fc8d4eef2cd2578cc312d1419b4ae2c90aa6d053a0c01'}
 
 
     def test_the_checked_files(self):

@@ -1,0 +1,30 @@
+# The step of bv_scale_2, the centers of a BallVector of two limbs times a number a of T that the
+# program supplies (milestone2.md, "BallVector": bv_scale_k): scale_step_2 (mul_2_1) on the limbs of
+# the center, which are limbs of a ball vector written through Kairn (stored), and on a guarded
+# (rule R3, the factors of a fused operation: architecture.md). mul_2_1 takes a as a factor of fused
+# operations whose addends are not zero, and a compiler that sees the centers to be 1 rewrites
+# fma(x, 1, s) as x + s and may fuse a product of the program into it (measured in the scaling of
+# arrays of two limbs, scale_2_entry, never in this one). One addition more per element: a fold has
+# no line that guards a scalar once, before its loop. Its claims are those of scale_step_2: the
+# guard is the identity on numbers of the format.
+kernel:        bv_scale_step_2
+input:         x = x0 x1
+input:         a
+output:        z = z0 z1
+value:         x*a
+requires:      normalized x
+ensures:       normalized z
+ensures:       error z R c=2 k=2 t=1
+min_precision: 2
+theorem:       proofs/theories/MapSteps.v bv_scale_step_2_correct
+ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v bv_scale_step_2_ieee_bridge
+ieee_spec_theorem: proofs/theories/IeeeMapSteps.v bv_scale_step_2_ieee_correct
+ieee_lead_theorem: proofs/theories/IeeeMapSteps.v bv_scale_step_2_ieee_lead
+source:        scale_step_2 on the guarded a (rule R3, the factors of a fused operation)
+license:       algorithm: published; proof: MIT
+status:        proved
+entry:         yes
+ieee:          bridge spec
+
+ga       = guard(a)
+(z0, z1) = scale_step_2(x0, x1, ga)

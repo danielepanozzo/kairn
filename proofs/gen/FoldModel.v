@@ -225,7 +225,7 @@ Definition bv_scale_1_record (mok : R * bool) (w_ : R) : R * bool :=
 Definition bv_scale_1_radius (rx : R) (a : R) (xs : list R) : R :=
   bv_scale_radius_1 emin prec choice (fst (fold_seq bv_scale_1_record (0, true) (bv_scale_1_map a xs))) rx a.
 
-(* bv_scale_2: a ball vector; arrays stored x; scalars stored rx, supplied a; it writes z by the step scale_step_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_scale_radius_2. *)
+(* bv_scale_2: a ball vector; arrays stored x; scalars stored rx, stored a; it writes z by the step scale_step_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_scale_radius_2. *)
 Definition bv_scale_2_step (a : R) (x : R * R) : R * R :=
   scale_step_2 emin prec choice (fst x) (snd x) a.
 
@@ -237,6 +237,19 @@ Definition bv_scale_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
 
 Definition bv_scale_2_radius (rx : R) (a : R) (xs : list (R * R)) : R :=
   bv_scale_radius_2 emin prec choice (fst (fold_seq bv_scale_2_record (0, true) (bv_scale_2_map a xs))) rx a.
+
+(* bv_scale_2_entry: a ball vector; arrays stored x; scalars stored rx, supplied a; it writes z by the step bv_scale_step_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_scale_radius_entry_2. *)
+Definition bv_scale_2_entry_step (a : R) (x : R * R) : R * R :=
+  bv_scale_step_2 emin prec choice (fst x) (snd x) a.
+
+Definition bv_scale_2_entry_map (a : R) (xs : list (R * R)) : list (R * R) :=
+  map (bv_scale_2_entry_step a) xs.
+
+Definition bv_scale_2_entry_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_scale_2_entry_radius (rx : R) (a : R) (xs : list (R * R)) : R :=
+  bv_scale_radius_entry_2 emin prec choice (fst (fold_seq bv_scale_2_entry_record (0, true) (bv_scale_2_entry_map a xs))) rx a.
 
 (* bv_sub_1: a ball vector; arrays stored x, stored y; scalars stored rx, stored ry; it writes z by the step sub_1_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_add_radius_1. *)
 Definition bv_sub_1_step (xy : R * R) : R :=

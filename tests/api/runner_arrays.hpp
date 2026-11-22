@@ -220,11 +220,14 @@ const char* const stored_fold = "the loop on stored arrays, written through Kair
 const char* const factors_fold = "the loop on stored arrays, its factors unguarded: kairn::dot and kairn::conv "
                                  "call dot_1_entry, dot_2_entry, conv_1_entry and conv_2_entry, which guard every limb "
                                  "of both factors (rule R3, the factors of a fused operation)";
+const char* const scalar_fold = "the scaling of a ball vector of two limbs on a stored scalar: the scalings and axpy "
+                                "of BallVector<T, 2, N> call bv_scale_2_entry, which guards the scalar (rule R3, the "
+                                "factors of a fused operation)";
 const FoldNotPublic folds_not_public[] = {
     {"sum_1", stored_fold},  {"sum_2", stored_fold}, {"sum_fast_2", stored_fold}, {"add_1", stored_fold},
     {"add_2", stored_fold},  {"sub_1", stored_fold}, {"sub_2", stored_fold},      {"axpy_1", stored_fold},
     {"axpy_2", stored_fold}, {"axpy_2_1", stored_fold}, {"dot_1", factors_fold}, {"conv_1", factors_fold}, {"scale_2", stored_fold},
-    {"dot_2", factors_fold}, {"conv_2", factors_fold},
+    {"dot_2", factors_fold}, {"conv_2", factors_fold}, {"bv_scale_2", scalar_fold},
 };
 
 // Whether a form of the array forms is listed by this runner: all of them, but in the runner of the

@@ -563,6 +563,19 @@ Definition bv_scale_radius_2_spec : Prop :=
   fmt emin prec rz /\
   ((((Rabs a) * rx) + (((m * (2 * u prec ^ 2)) / (1 - (2 * u prec ^ 2))) * (1 + u prec))) + ((1 * eta emin) / (1 - (2 * u prec ^ 2)))) <= rz.
 
+(* bv_scale_radius_entry_2: bv_scale_radius_2 on the guarded a (rule R3, the factors of a fused operation). Status: proved. *)
+Definition bv_scale_radius_entry_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall m rx a : R,
+  fmt emin prec m ->
+  fmt emin prec rx ->
+  fmt emin prec a ->
+  0 <= m ->
+  0 <= rx ->
+  let rz := bv_scale_radius_entry_2 emin prec tie_even m rx a in
+  fmt emin prec rz /\
+  ((((Rabs a) * rx) + (((m * (2 * u prec ^ 2)) / (1 - (2 * u prec ^ 2))) * (1 + u prec))) + ((1 * eta emin) / (1 - (2 * u prec ^ 2)))) <= rz.
+
 (* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: proved. *)
 Definition conv_radius_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -1316,6 +1329,26 @@ Definition bv_mul_pow2_step_2_spec : Prop :=
    (z0 + z1) = ((x0 + x1) * c)) /\
   (e = true <-> ((x0 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x0 * c)) /\ ((x1 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x1 * c))).
 
+(* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. Status: proved. *)
+Definition scale_step_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let '(z0, z1) := scale_step_2 emin prec tie_even x0 x1 a in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
+
+(* bv_scale_step_2: scale_step_2 on the guarded a (rule R3, the factors of a fused operation). Status: proved. *)
+Definition bv_scale_step_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let '(z0, z1) := bv_scale_step_2 emin prec tie_even x0 x1 a in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
+
 (* dot_entry_step_2: dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. Status: proved. *)
 Definition dot_entry_step_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
@@ -1417,16 +1450,6 @@ Definition norm_step_2_spec : Prop :=
   let '(r, okr) := norm_step_2 m ok x0 x1 in
   fmt emin prec r /\
   r = Rmax m (Rabs x0).
-
-(* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. Status: proved. *)
-Definition scale_step_2_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall x0 x1 a : R,
-  normalized_2 emin prec x0 x1 ->
-  fmt emin prec a ->
-  let '(z0, z1) := scale_step_2 emin prec tie_even x0 x1 a in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
 
 (* scale_entry_step_2: scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation). Status: proved. *)
 Definition scale_entry_step_2_spec : Prop :=

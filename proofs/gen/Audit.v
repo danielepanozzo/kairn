@@ -165,6 +165,9 @@ Print Assumptions bv_scale_radius_1_correct.
 Definition bv_scale_radius_2_audit : bv_scale_radius_2_spec := bv_scale_radius_2_correct.
 Print Assumptions bv_scale_radius_2_correct.
 
+Definition bv_scale_radius_entry_2_audit : bv_scale_radius_entry_2_spec := bv_scale_radius_entry_2_correct.
+Print Assumptions bv_scale_radius_entry_2_correct.
+
 Definition conv_radius_audit : conv_radius_spec := conv_radius_correct.
 Print Assumptions conv_radius_correct.
 
@@ -360,6 +363,12 @@ Print Assumptions bv_center_2_correct.
 Definition bv_mul_pow2_step_2_audit : bv_mul_pow2_step_2_spec := bv_mul_pow2_step_2_correct.
 Print Assumptions bv_mul_pow2_step_2_correct.
 
+Definition scale_step_2_audit : scale_step_2_spec := scale_step_2_correct.
+Print Assumptions scale_step_2_correct.
+
+Definition bv_scale_step_2_audit : bv_scale_step_2_spec := bv_scale_step_2_correct.
+Print Assumptions bv_scale_step_2_correct.
+
 Definition dot_entry_step_2_audit : dot_entry_step_2_spec := dot_entry_step_2_correct.
 Print Assumptions dot_entry_step_2_correct.
 
@@ -386,9 +395,6 @@ Print Assumptions mul_pow2_step_2_correct.
 
 Definition norm_step_2_audit : norm_step_2_spec := norm_step_2_correct.
 Print Assumptions norm_step_2_correct.
-
-Definition scale_step_2_audit : scale_step_2_spec := scale_step_2_correct.
-Print Assumptions scale_step_2_correct.
 
 Definition scale_entry_step_2_audit : scale_entry_step_2_spec := scale_entry_step_2_correct.
 Print Assumptions scale_entry_step_2_correct.
@@ -479,6 +485,9 @@ Print Assumptions bv_scale_1_correct.
 
 Definition bv_scale_2_audit : bv_scale_2_spec := bv_scale_2_correct.
 Print Assumptions bv_scale_2_correct.
+
+Definition bv_scale_2_entry_audit : bv_scale_2_entry_spec := bv_scale_2_entry_correct.
+Print Assumptions bv_scale_2_entry_correct.
 
 Definition bv_sub_1_audit : bv_sub_1_spec := bv_sub_1_correct.
 Print Assumptions bv_sub_1_correct.

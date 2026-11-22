@@ -907,6 +907,12 @@ Definition bv_scale_radius_2 (m rx a : float) : float :=
   let rz := fma t up_ball_add_1_1 up_ball_scale_2_2 in
   rz.
 
+(* bv_scale_radius_entry_2: bv_scale_radius_2 on the guarded a (rule R3, the factors of a fused operation). *)
+Definition bv_scale_radius_entry_2 (m rx a : float) : float :=
+  let ga := guard a in
+  let rz := bv_scale_radius_2 m rx ga in
+  rz.
+
 (* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). *)
 Definition conv_radius (ma mb rx ry m g t : float) : float :=
   let p := prod rx ry in
@@ -2166,6 +2172,17 @@ Definition bv_mul_pow2_step_2 (x0 x1 c : float) : float * float * bool :=
   let e := orb bc zc in
   (z0, z1, e).
 
+(* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. *)
+Definition scale_step_2 (x0 x1 a : float) : float * float :=
+  let '(z0, z1) := mul_2_1 x0 x1 a in
+  (z0, z1).
+
+(* bv_scale_step_2: scale_step_2 on the guarded a (rule R3, the factors of a fused operation). *)
+Definition bv_scale_step_2 (x0 x1 a : float) : float * float :=
+  let ga := guard a in
+  let '(z0, z1) := scale_step_2 x0 x1 ga in
+  (z0, z1).
+
 (* dot_entry_step_2: dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. *)
 Definition dot_entry_step_2 (s0 s1 x0 x1 y0 y1 : float) : float * float :=
   let gx0 := guard x0 in
@@ -2599,11 +2616,6 @@ Definition mul_pow2_step_2 (x0 x1 c : float) : float * float :=
 Definition norm_step_2 (m : float) (ok : bool) (x0 x1 : float) : float * bool :=
   let '(r, okr) := norm_step_1 m ok x0 in
   (r, okr).
-
-(* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. *)
-Definition scale_step_2 (x0 x1 a : float) : float * float :=
-  let '(z0, z1) := mul_2_1 x0 x1 a in
-  (z0, z1).
 
 (* scale_entry_step_2: scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation). *)
 Definition scale_entry_step_2 (x0 x1 a : float) : float * float :=
@@ -3144,6 +3156,27 @@ Definition mul_pow2_2_prog : list instr :=
   ; Isub 4 6   (*  7 z1 *)
   ].
 
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition scale_step_2_prog : list instr :=
+  [ Iprod 0 2   (*  3 z0_ch *)
+  ; Ifms 0 2 3  (*  4 z0_cl1 *)
+  ; Ifma 1 2 4  (*  5 z0_cl3 *)
+  ; Iadd 3 5    (*  6 z0 *)
+  ; Isub 6 3    (*  7 z0_z *)
+  ; Isub 5 7    (*  8 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition bv_scale_step_2_prog : list instr :=
+  [ Iguard 2    (*  3 ga *)
+  ; Iprod 0 3   (*  4 z0_ch *)
+  ; Ifms 0 3 4  (*  5 z0_cl1 *)
+  ; Ifma 1 3 5  (*  6 z0_cl3 *)
+  ; Iadd 4 6    (*  7 z0 *)
+  ; Isub 7 4    (*  8 z0_z *)
+  ; Isub 6 8    (*  9 z1 *)
+  ].
+
 (* inputs: 0 s0, 1 s1, 2 x0, 3 x1, 4 y0, 5 y1 *)
 Definition dot_entry_step_2_prog : list instr :=
   [ Iguard 2     (*  6 gx0 *)
@@ -3199,16 +3232,6 @@ Definition mul_pow2_step_2_prog : list instr :=
   ; Iadd 3 4   (*  5 z0 *)
   ; Isub 5 3   (*  6 z0_z *)
   ; Isub 4 6   (*  7 z1 *)
-  ].
-
-(* inputs: 0 x0, 1 x1, 2 a *)
-Definition scale_step_2_prog : list instr :=
-  [ Iprod 0 2   (*  3 z0_ch *)
-  ; Ifms 0 2 3  (*  4 z0_cl1 *)
-  ; Ifma 1 2 4  (*  5 z0_cl3 *)
-  ; Iadd 3 5    (*  6 z0 *)
-  ; Isub 6 3    (*  7 z0_z *)
-  ; Isub 5 7    (*  8 z1 *)
   ].
 
 (* inputs: 0 x0, 1 x1, 2 a *)

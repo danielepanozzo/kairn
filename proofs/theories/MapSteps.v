@@ -88,6 +88,25 @@ generalize (scale_step_2_correct emin prec Hp x0 x1 a Nx Fa).
 destruct (scale_step_2 emin prec tie_even x0 x1 a) as [z0 z1]. intros H. exact H.
 Qed.
 
+(* bv_scale_step_2: scale_step_2 on the stored limbs of the center and a guarded (rule R3, the factors
+   of a fused operation): a number of the format passes the guard unchanged (guard_real_any), so the
+   step is scale_step_2 and its statement that of scale_step_2. *)
+Lemma bv_scale_step_2_real :
+  forall (emin prec : Z) (x0 x1 a : R), fmt emin prec a ->
+  bv_scale_step_2 emin prec tie_even x0 x1 a = scale_step_2 emin prec tie_even x0 x1 a.
+Proof.
+intros emin prec x0 x1 a Fa. unfold bv_scale_step_2. cbv zeta.
+rewrite (guard_real_any emin prec tie_even a Fa).
+destruct (scale_step_2 emin prec tie_even x0 x1 a). reflexivity.
+Qed.
+
+Theorem bv_scale_step_2_correct : bv_scale_step_2_spec.
+Proof.
+intros emin prec Hp x0 x1 a Nx Fa.
+rewrite (bv_scale_step_2_real emin prec x0 x1 a Fa).
+exact (scale_step_2_correct emin prec Hp x0 x1 a Nx Fa).
+Qed.
+
 Theorem mul_pow2_step_2_correct : mul_pow2_step_2_spec.
 Proof.
 intros emin prec Hp x0 x1 c Nx Fc Hc.

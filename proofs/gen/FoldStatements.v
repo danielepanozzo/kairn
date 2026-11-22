@@ -353,6 +353,23 @@ Definition bv_scale_2_spec : Prop :=
     forall x_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs ((x_ * a) - (z0 + z1)) <= r_)
     xs (bv_scale_2_map emin prec tie_even a xs).
 
+(* bv_scale_2_entry, each center it writes and its one radius: mul_2_1 on the centers, a guarded (bv_scale_step_2), the radius of ball_scale_2 at the largest center (milestone2.md, BallVector). Status: proved. *)
+Definition bv_scale_2_entry_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall (rx a : R) (xs : list (R * R)),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec a ->
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  let r_ := bv_scale_2_entry_radius emin prec tie_even rx a xs in
+  fmt emin prec r_ /\
+  Forall2 (fun x w_ =>
+    let '(x0, x1) := x in
+    let '(z0, z1) := w_ in
+    normalized_2 emin prec z0 z1 /\
+    forall x_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs ((x_ * a) - (z0 + z1)) <= r_)
+    xs (bv_scale_2_entry_map emin prec tie_even a xs).
+
 (* bv_sub_1, each center it writes and its one radius: sub_1_1 on the centers, the radius of ball_sub_1 at the largest center (milestone2.md, BallVector). Status: proved. *)
 Definition bv_sub_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->

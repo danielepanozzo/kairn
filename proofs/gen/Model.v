@@ -513,6 +513,12 @@ Definition bv_scale_radius_2 (m rx a : R) : R :=
   let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_2_2) in
   rz.
 
+(* bv_scale_radius_entry_2: bv_scale_radius_2 on the guarded a (rule R3, the factors of a fused operation). *)
+Definition bv_scale_radius_entry_2 (m rx a : R) : R :=
+  let ga := rnd (a + 0) in
+  let rz := bv_scale_radius_2 m rx ga in
+  rz.
+
 (* conv_radius: the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). *)
 Definition conv_radius (ma mb rx ry m g t : R) : R :=
   let p := rnd (rx * ry + 0) in
@@ -1057,6 +1063,17 @@ Definition bv_mul_pow2_step_2 (x0 x1 c : R) : R * R * bool :=
   let e := orb bc zc in
   (z0, z1, e).
 
+(* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. *)
+Definition scale_step_2 (x0 x1 a : R) : R * R :=
+  let '(z0, z1) := mul_2_1 x0 x1 a in
+  (z0, z1).
+
+(* bv_scale_step_2: scale_step_2 on the guarded a (rule R3, the factors of a fused operation). *)
+Definition bv_scale_step_2 (x0 x1 a : R) : R * R :=
+  let ga := rnd (a + 0) in
+  let '(z0, z1) := scale_step_2 x0 x1 ga in
+  (z0, z1).
+
 (* dot_entry_step_2: dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. *)
 Definition dot_entry_step_2 (s0 s1 x0 x1 y0 y1 : R) : R * R :=
   let gx0 := rnd (x0 + 0) in
@@ -1121,11 +1138,6 @@ Definition mul_pow2_step_2 (x0 x1 c : R) : R * R :=
 Definition norm_step_2 (m : R) (ok : bool) (x0 x1 : R) : R * bool :=
   let '(r, okr) := norm_step_1 m ok x0 in
   (r, okr).
-
-(* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. *)
-Definition scale_step_2 (x0 x1 a : R) : R * R :=
-  let '(z0, z1) := mul_2_1 x0 x1 a in
-  (z0, z1).
 
 (* scale_entry_step_2: scale_step_2 on the guarded limbs of x and the guarded a (rule R3, the factors of a fused operation). *)
 Definition scale_entry_step_2 (x0 x1 a : R) : R * R :=

@@ -598,6 +598,18 @@ Print Assumptions axpy_entry_step_2_1_ieee_correct.
 Definition bv_mul_pow2_step_2_ieee_audit : bv_mul_pow2_step_2_ieee_spec := bv_mul_pow2_step_2_ieee_correct.
 Print Assumptions bv_mul_pow2_step_2_ieee_correct.
 
+Definition scale_step_2_ieee_bridge_audit : scale_step_2_ieee_bridge_spec := scale_step_2_ieee_bridge.
+Print Assumptions scale_step_2_ieee_bridge.
+
+Definition scale_step_2_ieee_audit : scale_step_2_ieee_spec := scale_step_2_ieee_correct.
+Print Assumptions scale_step_2_ieee_correct.
+
+Definition bv_scale_step_2_ieee_bridge_audit : bv_scale_step_2_ieee_bridge_spec := bv_scale_step_2_ieee_bridge.
+Print Assumptions bv_scale_step_2_ieee_bridge.
+
+Definition bv_scale_step_2_ieee_audit : bv_scale_step_2_ieee_spec := bv_scale_step_2_ieee_correct.
+Print Assumptions bv_scale_step_2_ieee_correct.
+
 Definition dot_entry_step_2_ieee_bridge_audit : dot_entry_step_2_ieee_bridge_spec := dot_entry_step_2_ieee_bridge.
 Print Assumptions dot_entry_step_2_ieee_bridge.
 
@@ -615,12 +627,6 @@ Print Assumptions mul_pow2_step_2_ieee_bridge.
 
 Definition mul_pow2_step_2_ieee_audit : mul_pow2_step_2_ieee_spec := mul_pow2_step_2_ieee_correct.
 Print Assumptions mul_pow2_step_2_ieee_correct.
-
-Definition scale_step_2_ieee_bridge_audit : scale_step_2_ieee_bridge_spec := scale_step_2_ieee_bridge.
-Print Assumptions scale_step_2_ieee_bridge.
-
-Definition scale_step_2_ieee_audit : scale_step_2_ieee_spec := scale_step_2_ieee_correct.
-Print Assumptions scale_step_2_ieee_correct.
 
 Definition scale_entry_step_2_ieee_bridge_audit : scale_entry_step_2_ieee_bridge_spec := scale_entry_step_2_ieee_bridge.
 Print Assumptions scale_entry_step_2_ieee_bridge.
@@ -721,14 +727,17 @@ Print Assumptions bv_center_2_ieee_lead.
 Definition bv_mul_pow2_step_2_ieee_lead_audit : bv_mul_pow2_step_2_ieee_lead_spec := bv_mul_pow2_step_2_ieee_lead.
 Print Assumptions bv_mul_pow2_step_2_ieee_lead.
 
+Definition scale_step_2_ieee_lead_audit : scale_step_2_ieee_lead_spec := scale_step_2_ieee_lead.
+Print Assumptions scale_step_2_ieee_lead.
+
+Definition bv_scale_step_2_ieee_lead_audit : bv_scale_step_2_ieee_lead_spec := bv_scale_step_2_ieee_lead.
+Print Assumptions bv_scale_step_2_ieee_lead.
+
 Definition dot_entry_step_2_ieee_lead_audit : dot_entry_step_2_ieee_lead_spec := dot_entry_step_2_ieee_lead.
 Print Assumptions dot_entry_step_2_ieee_lead.
 
 Definition mul_pow2_step_2_ieee_lead_audit : mul_pow2_step_2_ieee_lead_spec := mul_pow2_step_2_ieee_lead.
 Print Assumptions mul_pow2_step_2_ieee_lead.
-
-Definition scale_step_2_ieee_lead_audit : scale_step_2_ieee_lead_spec := scale_step_2_ieee_lead.
-Print Assumptions scale_step_2_ieee_lead.
 
 Definition scale_entry_step_2_ieee_lead_audit : scale_entry_step_2_ieee_lead_spec := scale_entry_step_2_ieee_lead.
 Print Assumptions scale_entry_step_2_ieee_lead.
@@ -1014,6 +1023,12 @@ Print Assumptions bv_scale_2_seq_ieee_correct.
 
 Definition bv_scale_2_lanes_ieee_audit : bv_scale_2_lanes_ieee_spec := bv_scale_2_lanes_ieee_correct.
 Print Assumptions bv_scale_2_lanes_ieee_correct.
+
+Definition bv_scale_2_entry_seq_ieee_audit : bv_scale_2_entry_seq_ieee_spec := bv_scale_2_entry_seq_ieee_correct.
+Print Assumptions bv_scale_2_entry_seq_ieee_correct.
+
+Definition bv_scale_2_entry_lanes_ieee_audit : bv_scale_2_entry_lanes_ieee_spec := bv_scale_2_entry_lanes_ieee_correct.
+Print Assumptions bv_scale_2_entry_lanes_ieee_correct.
 
 Definition bv_sub_1_seq_ieee_audit : bv_sub_1_seq_ieee_spec := bv_sub_1_seq_ieee_correct.
 Print Assumptions bv_sub_1_seq_ieee_correct.

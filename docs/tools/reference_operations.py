@@ -1085,7 +1085,7 @@ KERNELS = {
                              form("sub(x, y, z)", V2, V2, W2, result="bool", note=STEP + " (loop `sub_2_entry`)")),
     "scale_step_1": page("maps", "x a of one limb, a of T",
                          form("scale(x, a, z)", V1, T, W1, result="bool", note=STEP + " (loop `scale_1`)")),
-    "scale_step_2": page("maps", "x a of two limbs, a of T, its operands unguarded (the step of `bv_scale_2`)"),
+    "scale_step_2": page("maps", "x a of two limbs, a of T, on a stored array and scalar"),
     "scale_entry_step_2": page("maps", "x a of two limbs, a of T, on the guarded limbs and scalar",
                                form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2_entry`; the "
                                     "limbs of each element and a guarded, rule R3 on the factors of a fused "
@@ -1156,8 +1156,11 @@ KERNELS = {
     "bv_add_radius_2": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of two limbs"),
     "bv_scale_radius_1": page("ball-vectors", "The radius of a BallVector of one limb times a number of T"),
     "bv_scale_radius_2": page("ball-vectors", "The radius of a BallVector of two limbs times a number of T"),
+    "bv_scale_radius_entry_2": page("ball-vectors", "The radius of a BallVector of two limbs times a number of T, "
+                                    "the number guarded"),
     "bv_center_entry_1": page("ball-vectors", "A center of one limb given to the constructor of a BallVector"),
     "bv_center_2": page("ball-vectors", "A center of two limbs given to the constructor of a BallVector"),
+    "bv_scale_step_2": page("ball-vectors", "A center of two limbs times a number of T, the number guarded"),
     "bv_make_radius": page("ball-vectors", "The radius given to the constructor of a BallVector"),
     "bv_make_finish": page("ball-vectors", "The result of the constructor of a BallVector: the radius given, or NaN"),
     "neg_1": page("ball-vectors", "The negation of a number of T, the step of the negation of a BallVector"),

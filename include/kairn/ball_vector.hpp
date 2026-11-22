@@ -634,7 +634,8 @@ inline void bv_scale(const kairn::detail::bv_parts<const T, K>& x, T a, const ka
     if constexpr (K == 1) {
         KAIRN_DETAIL_BV_LOOP(Seq, bv_scale_1, x.limb[0], x.size, rx, a, z.limb[0], *z.radius, f)
     } else {
-        KAIRN_DETAIL_BV_LOOP(Seq, bv_scale_2, x.limb[0], x.limb[1], x.size, rx, a, z.limb[0], z.limb[1], *z.radius, f)
+        KAIRN_DETAIL_BV_LOOP(Seq, bv_scale_2_entry, x.limb[0], x.limb[1], x.size, rx, a, z.limb[0], z.limb[1],
+                             *z.radius, f)
     }
 }
 // By c, a positive power of two of T.
@@ -869,13 +870,14 @@ inline void sub(Sequential, const X& x, const Y& y, Z&& z) noexcept {
     packed_detail::add<true, true>(x, y, z);
 }
 
-/// Z = X a, a of T (loop bv_scale_1 or bv_scale_2): each center scaled by a (scale_step_k, the
-/// products mul_1_1 and mul_2_1), the radius that of ball_scale_k at the largest magnitude of a
-/// center written, bv_scale_radius_k(M, rx, a). a is a value of the program: for one limb the loop
-/// only rounds its products, which needs no guard; for two limbs a is a factor of the fused
-/// operations of mul_2_1, unguarded (bv_scale_2 is on the generator's pending list of rule R3, the
-/// factors of a fused operation; no compiler was measured to fuse a product of the program into
-/// it). Proved, in the IEEE model, for a canonical X and any a: canonical (V1); x a is a member for
+/// Z = X a, a of T (loop bv_scale_1 or bv_scale_2_entry): each center scaled by a (scale_step_1,
+/// the product mul_1_1; bv_scale_step_2, mul_2_1 on a guarded), the radius that of ball_scale_k at
+/// the largest magnitude of a center written, bv_scale_radius_k(M, rx, a) (for two limbs
+/// bv_scale_radius_entry_2, on a guarded). a is a value of the program: for one limb the loop only
+/// rounds its products, which needs no guard; for two limbs a is a factor of the fused operations
+/// of mul_2_1, and passes through a guard first, once per entry (rule R3, the factors of a fused
+/// operation; no compiler was measured to fuse a product of the program into it without the
+/// guard). The loop of two limbs is bv_scale_2 on the guarded a, and claims what it claims. Proved, in the IEEE model, for a canonical X and any a: canonical (V1); x a is a member for
 /// every member x (V2); a finite result has a finite X and a finite a (V3); it is finite when X is
 /// finite, a is finite, |a| rx <= 2^(e_max - 2) and every entry has (|x_i| + rx) |a| <=
 /// 2^(e_max - 2) (V4). An infinite or NaN a gives the whole space. Not claimed: that the radius

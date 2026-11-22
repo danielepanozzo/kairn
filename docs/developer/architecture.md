@@ -1090,7 +1090,10 @@ domain:        extended
 ```
 
 - **The arrays** are the centers of the operands, stored (written through Kairn), and **the
-  scalars** their radii, stored too, and any other operand of `T` (`a`, supplied, for `bv_scale_k`).
+  scalars** their radii, stored too, and any other operand of `T` (`a`, supplied, for `bv_scale_1`
+  and `bv_scale_2_entry`; stored for `bv_scale_2`, the same loop on a scalar written through Kairn,
+  beside `bv_scale_2_entry`, whose step `bv_scale_step_2` and radius `bv_scale_radius_entry_2` guard
+  it: R3, the factors of a fused operation).
   Each array is the centers of one BallVector, whose radius is a scalar (`ball_vector ARRAY
   RADIUS`).
 - **The step** writes the center of each entry, as a map's step does: `bv_add_k` is the map `add_k`
@@ -2773,7 +2776,7 @@ precision; otherwise the description must say `finite_from=P`. The precisions:
 | `bv_add_1`, `bv_sub_1`, `bv_scale_1` | 1 | 2 (`finite_from=2`) |
 | `bv_neg_1`, `bv_neg_2` (no constant) | 1 | 1 |
 | `bv_make_1`, `bv_make_2` (`makes_ball_vector`: the whole space exactly when, no constant) | 1 | 1 |
-| `bv_scale_2`, `bv_mul_pow2_1`, `bv_mul_pow2_2` | 2 | 2 |
+| `bv_scale_2`, `bv_scale_2_entry`, `bv_mul_pow2_1`, `bv_mul_pow2_2` | 2 | 2 |
 | `bv_add_2`, `bv_sub_2` | 3 | 3 |
 | `bv_conv_1`, `bv_conv_2` | 4 | 4 |
 

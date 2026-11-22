@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $z = z_0 
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`axpy_step_2_1`](axpy_step_2_1.md), [`ball_scale_2`](ball_scale_2.md), [`mul_2_1_entry`](mul_2_1_entry.md), [`mul_2_1_full`](mul_2_1_full.md), [`scale_step_2`](scale_step_2.md).
+No public operation computes this kernel on its own. It is part of [`axpy_step_2_1`](axpy_step_2_1.md), [`ball_scale_2`](ball_scale_2.md), [`scale_step_2`](scale_step_2.md), [`mul_2_1_entry`](mul_2_1_entry.md), [`mul_2_1_full`](mul_2_1_full.md).
 
 ## Requires
 

@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 234 kernels are proved.
+All 236 kernels are proved.
 
 35 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -382,8 +382,10 @@ The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry 
 | none of its own (in the loops `bv_add_2`, `bv_sub_2`) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - \mathrm{unit}(\mathtt{add\_2\_2})} (1 + u)$ | [`bv_add_radius_2`](bv_add_radius_2.md) |
 | none of its own (in the loop `bv_scale_1`) | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})} + \frac{\mathrm{tiny}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})}$ | [`bv_scale_radius_1`](bv_scale_radius_1.md) |
 | none of its own (in the loop `bv_scale_2`) | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_2`](bv_scale_radius_2.md) |
+| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_entry_2`](bv_scale_radius_entry_2.md) |
 | none of its own (in the loop `bv_make_1`) | - | $z = \mathrm{RN}(c)$ | [`bv_center_entry_1`](bv_center_entry_1.md) |
 | none of its own (in the loop `bv_make_2`) | - | $z = x$ exactly, normalized | [`bv_center_2`](bv_center_2.md) |
+| not yet called by the public headers | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`bv_scale_step_2`](bv_scale_step_2.md) |
 | none of its own (in the loops `bv_make_1`, `bv_make_2`) | - | $r_z = \mathrm{RN}(r)$ | [`bv_make_radius`](bv_make_radius.md) |
 | none of its own (in the loops `bv_make_1`, `bv_make_2`) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_make_finish`](bv_make_finish.md) |
 | none of its own (in the loop `bv_neg_1`) | - | $z = \mathrm{RN}(-x)$ | [`neg_1`](neg_1.md) |

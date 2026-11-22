@@ -572,11 +572,9 @@ class R3Factors(unittest.TestCase):
         head = [ln for ln in lines if ln.startswith('R3, factors of a fused operation')]
         self.assertEqual(len(head), 1)
         self.assertIn(f'{len(found)} objects with exposed operands', head[0])
-        self.assertIn('  kernel scale_step_2: a: a factor of fms at e in two_prod (called for ch) in mul_2_1 (called '
-                      'for z0), a factor of fma at cl3 in mul_2_1 (called for z0); x0: a factor of fms at e in two_prod '
-                      '(called for ch) in mul_2_1 (called for z0); x1: a factor of fma at cl3 in mul_2_1 (called for z0); '
-                      '6 operations, 9 with the guards; reached by ball_vector.hpp packed_detail::bv_scale(',
-                      '\n'.join(lines))
+        # Nothing of gen/kernels is exposed (rule R3 refuses it): the report has its head line only.
+        self.assertIn('0 objects with exposed operands', head[0])
+        self.assertFalse(any(ln.startswith(('  kernel ', '  loop ')) for ln in lines[lines.index(head[0]):]))
         for e in found:
             self.assertTrue(any(ln.startswith(f'  {e.kind} {e.name}') for ln in lines), e.name)
 
@@ -592,18 +590,15 @@ class R3Factors(unittest.TestCase):
                       calls['acc_mul_entry_1'])
         self.assertEqual(calls['sum_1_entry'], ['batch.hpp sum(Sequential, SoAView<T, K> x)', 'batch.hpp sum(SoAView<T, K> x)'])
         # The loops of kairn/ball_vector.hpp, called through its macro KAIRN_DETAIL_BV_LOOP.
-        self.assertTrue(any(c.startswith('ball_vector.hpp ') and 'bv_scale(' in c for c in calls['bv_scale_2']),
-                        calls.get('bv_scale_2'))
+        self.assertTrue(any(c.startswith('ball_vector.hpp ') and 'bv_scale(' in c for c in calls['bv_scale_2_entry']),
+                        calls.get('bv_scale_2_entry'))
         self.assertTrue(all(any(c.startswith('ball_vector.hpp ') for c in calls[f])
                             for f in ('bv_neg_1', 'bv_add_2', 'bv_sub_1', 'bv_mul_pow2_2', 'norm_upper_1')))
 
 
 # The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the
 # kernel analyzed) -> the exposed limbs of that kernel.
-EXPOSED = {
-    ('kernel', 'scale_step_2', 'scale_step_2'): ['a', 'x0', 'x1'],
-    ('loop', 'bv_scale_2', 'scale_step_2'): ['a'],
-}
+EXPOSED = {}
 
 
 class NonFiniteLayer(unittest.TestCase):
@@ -1284,7 +1279,9 @@ class R3OfTheKernels(unittest.TestCase):
     # so do axpy_step_2 and axpy_step_2_1, the steps of axpy_2 and axpy_2_1 on stored operands, which
     # axpy_entry_step_2 and axpy_entry_step_2_1 run after guarding every limb: rule R3, the factors of a
     # fused operation).
-    FOLD_STEPS |= MAP_STEPS - {'sub_1_1', 'axpy_step_2', 'axpy_step_2_1'}
+    FOLD_STEPS |= MAP_STEPS - {'sub_1_1', 'axpy_step_2', 'axpy_step_2_1', 'scale_step_2'}
+    # (scale_step_2 too, the step of scale_2 and of bv_scale_2 on a stored scalar, which
+    # scale_entry_step_2 and bv_scale_step_2 run after their guards.)
     # And the kernels of the accumulator that take what the program adds (acc_merge_k takes two
     # accumulators, acc_radius_k a state); acc_mul_entry_1 is acc_mul_1 on its factors guarded.
     # acc_mul_1 and acc_mul_2 are their cores, no longer entry kernels (rule R3, the factors of a fused
@@ -1293,6 +1290,9 @@ class R3OfTheKernels(unittest.TestCase):
     # And the radius kernels of BallVector that take the scalar the program gives (bv_scale_radius_k;
     # bv_add_radius_k takes radii, limbs of objects, and the largest magnitude of a center).
     FOLD_STEPS |= {'bv_scale_radius_1', 'bv_scale_radius_2'}
+    # And the step and the radius of the scaling of a ball vector of two limbs on its scalar guarded
+    # (rule R3, the factors of a fused operation).
+    FOLD_STEPS |= {'bv_scale_step_2', 'bv_scale_radius_entry_2'}
     # And the step and the radius kernel of the constructor of a BallVector, which take the center and
     # the radius the program gives (bv_center_2 copies the limbs of an Expansion<T, 2>, stored).
     FOLD_STEPS |= {'bv_center_entry_1', 'bv_make_radius'}
@@ -1392,7 +1392,7 @@ class R3OfTheKernels(unittest.TestCase):
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
                                          'conv_1', 'conv_2', 'conv_1_entry', 'dot_2_entry', 'conv_2_entry'} |
                          MAPS |
-                         {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
+                         {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_scale_2_entry',
                           'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'} |
                          {'bv_conv_1', 'bv_conv_2'})
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
@@ -1735,6 +1735,9 @@ class TheKernels(unittest.TestCase):
     ACC |= {'acc_mul_entry_2'}
     # The radius kernels of BallVector (milestone2.md, "BallVector"), of the finite domain.
     BV = {f'bv_{op}_radius_{k}' for op in ('add', 'scale') for k in (1, 2)}
+    # And the step and the radius of bv_scale_2_entry, on the scalar guarded (rule R3, the factors of
+    # a fused operation; finite domain).
+    BV |= {'bv_scale_step_2', 'bv_scale_radius_entry_2'}
     # And the kernels of the constructor of a BallVector: its steps, its radius (finite domain; the copy
     # bv_center_2 of the extended domain with a real-model statement, as neg_2) and its finish.
     BV |= {'bv_center_entry_1', 'bv_center_2', 'bv_make_radius', 'bv_make_finish'}
@@ -1932,7 +1935,7 @@ class TheKernels(unittest.TestCase):
             'sum_fast_entry_step_2': 2, 'bound_sum_1': 1, 'bound_sum_2': 3, 'bound_dot_1': 1, 'bound_dot_2': 4,
             # the steps of the maps: that of the kernels they call (axpy_step_2_1: mul_2_1 and add_2_2)
             'sub_1_1': 1, 'add_entry_step_1': 1, 'sub_entry_step_1': 1, 'add_entry_step_2': 3,
-            'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'scale_entry_step_2': 2, 'mul_pow2_step_1': 1,
+            'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'scale_entry_step_2': 2, 'bv_scale_step_2': 2, 'mul_pow2_step_1': 1,
             'mul_pow2_step_2': 2, 'axpy_step_1': 1, 'axpy_entry_step_1': 1, 'axpy_step_2': 4,
             'axpy_entry_step_2': 4, 'axpy_step_2_1': 3, 'axpy_entry_step_2_1': 3,
             # the folds of maxima: comparisons and selects, from one bit on
@@ -1945,6 +1948,7 @@ class TheKernels(unittest.TestCase):
             # The radius kernels of BallVector, from the precision of the Ball kernel whose radius
             # lines they are.
             'bv_add_radius_1': 1, 'bv_add_radius_2': 3, 'bv_scale_radius_1': 1, 'bv_scale_radius_2': 2,
+            'bv_scale_radius_entry_2': 2,
             # and the kernels of its constructor that have a real-model statement, from 1.
             'bv_center_entry_1': 1, 'bv_center_2': 1, 'bv_make_radius': 1,
             # and of the negation.

@@ -872,7 +872,7 @@ set(_fold_toy_conv_2_2 fp:4:-4:-1 1 fp:4:-7:-3)
 #   bv_add_1, bv_sub_1             fp:2:-2:1, one entry:        36 602 fp:5:-11:4
 #   bv_add_2, bv_sub_2             fp:3:-2:-1, one entry:      121 970 fp:4:-7:2
 #   bv_scale_1                     fp:2:-2:1 up to 2:          163 328 fp:5:-12:5
-#   bv_scale_2                     fp:2:-2:1, one entry:        12 364 fp:4:-8:2
+#   bv_scale_2, bv_scale_2_entry   fp:2:-2:1, one entry:        12 364 fp:4:-8:2
 #   bv_neg_1                       fp:2:-2:1 up to 2:            7 424 fp:5:-11:4
 #   bv_neg_2                       fp:2:-2:1 up to 2:           61 064 fp:4:-7:2
 #   bv_mul_pow2_1                  fp:2:-2:1 up to 2:           37 120 fp:5:-9:2
@@ -886,6 +886,7 @@ set(_fold_toy_kernel_bv_add_2 fp:3:-2:-1 1 fp:4:-7:2)
 set(_fold_toy_kernel_bv_sub_2 fp:3:-2:-1 1 fp:4:-7:2)
 set(_fold_toy_kernel_bv_scale_1 fp:2:-2:1 2 fp:5:-12:5)
 set(_fold_toy_kernel_bv_scale_2 fp:2:-2:1 1 fp:4:-8:2)
+set(_fold_toy_kernel_bv_scale_2_entry fp:2:-2:1 1 fp:4:-8:2)
 set(_fold_toy_kernel_bv_neg_1 fp:2:-2:1 2 fp:5:-11:4)
 set(_fold_toy_kernel_bv_neg_2 fp:2:-2:1 2 fp:4:-7:2)
 set(_fold_toy_kernel_bv_mul_pow2_1 fp:2:-2:1 2 fp:5:-9:2)

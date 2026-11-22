@@ -708,18 +708,8 @@ def fold_kernels(fd, kernels):
 # The objects of gen/kernels whose exposed operands are not closed yet, each with its reason (the
 # owner's decision of 2026-11-21: the strict rule, every exposed operand guarded). R3 refuses an
 # exposed operand of any other object, and an entry here that has none; `build` prints the list.
-# What is left are the loops over arrays of two limbs (the dot product, axpy and the convolution)
-# and the scaling of a ball vector of two limbs, with their steps; no compiler was measured to fuse
-# a product of the program into any of them (architecture.md, R3, the factors of a fused
-# operation), and each needs new loops or steps with their theorems in both models.
-_SCALE = ('the step of bv_scale_2 (x stored, a supplied), which the scalings and axpy of BallVector<T, 2, N> '
-          'call (kairn::scale of arrays calls scale_2_entry): closing it takes a step guarding a only (or a '
-          'guard of a once, outside the loop, which a fold cannot express yet), with the theorems of the ball '
-          'vector')
-FACTOR_PENDING = {
-    'scale_step_2': _SCALE,
-    'loop bv_scale_2': 'its step: ' + _SCALE,
-}
+# Nothing is left: every object is closed.
+FACTOR_PENDING = {}
 
 
 def _pending_key(e):
@@ -2479,9 +2469,12 @@ def _bv_claims(fd, kernels, step, radius, host):
     if pow2 & radii:
         err('requires: a radius is not a power of two')
     masks = {g.name for g in fd.states[2:]}
+    # A scalar the radius takes besides the radii is a value of T: one the program supplies, or a
+    # stored one, written through Kairn (bv_scale_2 on a stored scalar, beside bv_scale_2_entry, which
+    # takes the program's and guards it: rule R3, the factors of a fused operation).
     for a in fd.radius[1][1:]:
-        if a not in masks and a not in radii and fd.roles[a] != 'supplied':
-            err(f'radius: {a} is neither the radius of an operand nor a scalar the program supplies')
+        if a not in masks and a not in radii and fd.roles[a] not in ('supplied', 'stored'):
+            err(f'radius: {a} is neither the radius of an operand nor a scalar of the loop')
     # The step's requirements are what a canonical BallVector gives: a normalized center (two limbs);
     # and the scalars' requirements (power_of_two).
     passed = dict(zip((g.name for g in step.inputs), fd.step[1]))
