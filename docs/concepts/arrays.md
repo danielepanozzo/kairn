@@ -167,13 +167,15 @@ the header's, tested and not machine-checked
 
 ## What they cost
 
-**Not measured yet.** The functions on arrays, the ball vectors and the accumulator have not been
-benchmarked: their benchmarks are still to come
-([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#still-to-come)). What has been
-measured is the operations they are made of ([Precision and magnitude](precision.md),
-[Intervals, balls and ball vectors](enclosures.md#what-they-cost-and-how-wide-they-are)), the
-compile time of the headers (above), and what the check of the environment adds to a call of
-`sum`, `dot` and `add` ([The checks](environment.md#the-checks)).
+Measured in [the third part of the benchmarks of Milestone 2](../developer/results/bench-milestone2.md#the-third-part)
+(2026-11-22): a `sum` or `dot` of one limb costs what the loop of `T` in the same lane order costs;
+of two limbs, an accurate sum of doubles, 1.7 to 1.8 times the compensated Sum2 in the default order
+and about 7 times with `kairn::sequential` on an AMD Zen 2; the sequential order costs about the
+number of lanes; the check of the environment at entry is about 5 to 6 ns a call there, under 5% of
+a call of one limb from 1 024 elements; an accumulator costs what the sequential `sum` and `dot`
+cost; a ball vector is 2 to 6 times faster than as many balls from 16 entries, and no faster at 4.
+The errors against the condition and the stated bounds, the short ball vectors and the compile
+times are on that page.
 
 ## Not provided
 

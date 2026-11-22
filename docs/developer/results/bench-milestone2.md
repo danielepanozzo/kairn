@@ -16,7 +16,9 @@ measurements, one JSON file per run, in
 [`results/milestone2/bench/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/bench).
 It is the first part of the milestone's benchmarks; [the second part](#the-second-part)
 (2026-11-22, commit `cbe3bb1`, the same machines and compilers) measures what reached `main` after it,
-and [what is still to come](#still-to-come) is measured later.
+and [the third part](#the-third-part) (2026-11-22, on the tree of `25cde04`, on Zen 2 with GCC 13 and Clang 18) the
+functions on arrays, the accumulator and the ball vectors, which reached `main` last
+([Still to come](#still-to-come) says what no part measures).
 
 "M3" and "Zen 2" are the two machines ([How it was measured](#how-it-was-measured)). A **loop** is a
 loop of independent operations over arrays in L1, timed per operation; a **chain** is a dependent
@@ -99,6 +101,42 @@ harness, `BACKEND/KIND/KERNEL/VARIANT`: `m2` for `double` limbs, `m2f` for `floa
   comparisons are forced inline and stay so in every setting of `KAIRN_ENCLOSURE_CODE`, which moves
   only the arithmetic; `hull`, `intersection` and `split()` compile in 5 to 25 s at 10 000
   ([question 12](#12-compile-time-of-the-enclosure-interface)).
+
+- **Third part: an accurate sum costs 1.7 to 1.8 times Sum2, in the default order.** On Zen 2 a
+  `sum` or `dot` of two limbs takes 2.6 to 2.9 ns per element; on data of `double` it costs 1.7 to
+  1.8 times Sum2 (1.5 to 1.7 times Dot2), 7 times with `kairn::sequential`, and beyond a condition of
+  $10^{15}$ its error is 4 to 500 times smaller than theirs. One limb costs what the loop of `double`
+  in the same order costs (0.87 to 1.13 times), a quarter of the naive loop of one chain; the
+  sequential order, the same bits on every machine, costs 3.7 to 4.5 times the default for `double`
+  and 7 to 9 for `float` ([question 13](#13-the-functions-on-arrays),
+  [question 17](#17-accuracy-for-the-price)).
+
+- **Third part: the check at entry costs a call of a short array 5 to 6 ns on Zen 2, and a short
+  ball vector more where it changes what the compiler inlines.** It is 64 to 82% of a `sum` or
+  `dot` of one limb up to 8 elements, under 5% from 1 024 elements and under 1% from about 1 500 to
+  2 700 (two limbs: under 5% from 4 to 16 elements). On the short ball vectors of a downstream
+  user's report it costs most operations the read or less (1.01 to 1.26 times for `x + y` of two
+  limbs, where the report has 1.2 to 3.0); more only for constructors whose body the compiler stops
+  inlining with it (Clang 18: +18 to +20 ns, 4 times, for `BallVector<double, 1, 3>`; GCC 13 at
+  `-O3` in a unit of many operations: +7 to +14 ns) or whose loops it places differently. A report
+  of the check out of line and cold removes GCC's excess, and with the constructors forced inline
+  Clang's (tried in a copy of the headers, not made)
+  ([question 14](#14-short-arrays-and-the-check-at-entry)).
+
+- **Third part: the guards of the factors a program supplies cost 0 to 17%**, nothing where the
+  loop waits for a chain (`dot` of one limb 0.98 to 1.02, `add_product` 1.00 to 1.01), 14 to 17% for
+  `scale` of two limbs, up to 15% for the product of short polynomials
+  ([question 15](#15-the-guards-of-supplied-factors)). The accumulator costs what the sequential
+  `sum` and `dot` cost, term by term ([question 16](#16-the-accumulator)).
+
+- **Third part: a ball vector pays from about 16 entries.** At 16 entries an operation on a
+  `BallVector` is 2 to 4 times faster than on as many balls on Zen 2, at 64 3.3 to 6.2 times, in
+  0.53 to 0.75 of the bytes, and as wide where the entries have the same radius; at 4 entries it is
+  no faster. Where the entries' radii differ, the one radius is the worst entry's: 1 to 2 times the
+  largest ball's radius after a sum, up to 118 times after a product, and up to $10^6$ times the
+  median ball's ([question 18](#18-one-radius-for-many-centers)). Each of the three
+  headers costs a unit about a second to compile, and 1 000 calls 2.4 to 12 s
+  ([question 19](#19-compile-time-of-the-functions-on-arrays-and-the-ball-vectors)).
 
 ## The answers
 
@@ -1475,7 +1513,8 @@ tables:
 - **Windows**: this part has no Windows machine; the Windows figures of Milestone 2 are those of the
   first part where it has them (it has none: Windows and MSVC were not measured in Milestone 2).
 - **Not measured in the second part**: Windows and MSVC, Intel processors, AVX-512, GPUs; the
-  functions on arrays, `BallVector` and the accumulator, which are not on `main`; the run time of
+  functions on arrays, `BallVector` and the accumulator, which are not on `main` (2026-11-22: they
+  reached `main` since, and [the third part](#the-third-part) measures them); the run time of
   the units of question 12 (their compile time only), and those units of 10 000 calls at `-O3`;
   `KAIRN_CHECKS` on `Packed` and the containers; a bisection on another polynomial (the tutorial's
   finishes in 3 to 520 µs, which the harness times by repeating it).
@@ -2485,17 +2524,21 @@ the tables:
 
 ## Still to come
 
-This page measures what `main` held at commit `dee8ecd` (the first part) and at `aa168ee` (the
-second part, [above](#the-second-part)). Measured later, with the same harness, which takes them as
-new rows of its tables (`bench/README.md`, "Milestone 2"): what reached `main` on 2026-11-22, after
-these measurements, the functions on arrays (sum, dot product, `axpy`, convolution, norm),
-`BallVector` and the accumulator.
+This page measures what `main` held at commit `dee8ecd` (the first part), at `aa168ee` (the
+second part, [above](#the-second-part)) and on the tree of `25cde04` (the third part,
+[above](#the-third-part)): nothing on `main` on 2026-11-22 is left out. What no part measures, and
+why, is in each part's list of what it did not measure: Windows and MSVC (no Windows machine in
+Milestone 2), Intel processors, AVX-512 and GPUs (none available), threads (the partial
+accumulators of question 16 are made in one thread), and `KAIRN_CHECKS` on `Packed`, the containers
+and the functions on arrays.
 
-(State on 2026-11-22. The paragraph first written here, at `dee8ecd`, listed all of these as not on
-`main` yet; the one of 2026-11-21 listed what had reached `main` since, the predicates and
-comparisons of `Interval` and `Ball`, the midpoint, radius, split and conversions of intervals of
-two limbs, the hull, intersection and split of balls, and `Packed` and the containers, which the
-second part measures.)
+(State on 2026-11-22, the third part. The paragraph first written here, at `dee8ecd`, listed all of
+these as not on `main` yet; the one of 2026-11-21 listed what had reached `main` since, the
+predicates and comparisons of `Interval` and `Ball`, the midpoint, radius, split and conversions of
+intervals of two limbs, the hull, intersection and split of balls, and `Packed` and the containers,
+which the second part measures; the one of the second part, the functions on arrays (sum, dot
+product, `axpy`, convolution, norm), `BallVector` and the accumulator, which the third part
+measures.)
 
 ## How it was measured
 
