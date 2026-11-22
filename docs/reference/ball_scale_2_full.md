@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $c_x = c_{x0} + c_{x1}$, $
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`ball_scale_2_full_entry`](ball_scale_2_full_entry.md).
+No public operation computes this kernel on its own.
 
 ## Requires
 

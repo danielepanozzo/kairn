@@ -667,8 +667,10 @@ class CheckedFiles(unittest.TestCase):
     # Then acc_mul_entry_2 (the same rule): its model and statement added, nothing else changed.
     # Then scale_entry_step_2 (the same rule): its model, program and statements added, nothing else
     # changed.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '8e0ab952408dbef10a118be7592e595397b5b98434b8cd86e2b11caae33b96e6',
-               'proofs/gen/IeeeStatements.v': '10e3f8e5b80dd7fd7dde097fe87a573d410a4cd61ca40ae500a7354b4ac51ec4'}
+    # Then ball_scale_2_full_entry with the fix-up of ball_scale_2_full written out (behind the printer's
+    # branch): its definition and the source line of its statement changed, and nothing else.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '44aaa46a4cf110784541124de175f7901d1f25e04c19a79ec87e1a9015a48a6f',
+               'proofs/gen/IeeeStatements.v': '499d30cbb5e908b763f476bbac0c671451f2294f1b4fd0d08d4ed18bc7dcd905'}
 
 
     def test_the_checked_files(self):

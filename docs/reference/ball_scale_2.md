@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $c_x = c_{x0} + c_{x1}$, $
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`ball_scale_2_full`](ball_scale_2_full.md).
+No public operation computes this kernel on its own. It is part of [`ball_scale_2_full`](ball_scale_2_full.md), [`ball_scale_2_full_entry`](ball_scale_2_full_entry.md).
 
 ## Requires
 
@@ -105,6 +105,6 @@ The slack is how far the returned radius is above the smallest radius that enclo
 
 ## Not claimed
 
-- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`ball_scale_2_full`](ball_scale_2_full.md) states that ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
+- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`ball_scale_2_full`](ball_scale_2_full.md) and [`ball_scale_2_full_entry`](ball_scale_2_full_entry.md) states that ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
 - Anything about an operand that is not normalized, which only limbs given by the program can make: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` written directly.
 

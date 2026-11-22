@@ -11514,7 +11514,7 @@
         "name": "ball_scale_2_full_entry_correct"
       },
       "source": {
-        "cite": "ball_scale_2_full on its guarded scalar (rule R3, the factors of a fused operation)",
+        "cite": "ball_scale_2 on its guarded scalar, then the fix-up of ball_scale_2_full (rule R3, the factors of a fused operation)",
         "license": "core: as ball_scale_2; fix-up: MIT"
       },
       "flops": 10,

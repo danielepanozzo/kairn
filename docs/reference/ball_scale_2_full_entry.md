@@ -56,12 +56,12 @@ Which of them the proof of `ball_scale_2_full_entry_correct` depends on is not c
 
 ## Source
 
-**Algorithm:** ball_scale_2_full on its guarded scalar (rule R3, the factors of a fused operation). **License:** core: as ball_scale_2; fix-up: MIT.
+**Algorithm:** ball_scale_2 on its guarded scalar, then the fix-up of ball_scale_2_full (rule R3, the factors of a fused operation). **License:** core: as ball_scale_2; fix-up: MIT.
 
 ## Listing
 
 From [`gen/kernels/ball_scale_2_full_entry.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/ball_scale_2_full_entry.kernel), the description the C++ and the formal model (`proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
-It calls [`ball_scale_2_full`](ball_scale_2_full.md).
+It calls [`ball_scale_2`](ball_scale_2.md).
 
 ```
 # Ball<T, 2> * T, T * Ball<T, 2> and *= (rule R3, the factors of a fused operation:
@@ -71,12 +71,26 @@ It calls [`ball_scale_2_full`](ball_scale_2_full.md).
 # into the fms of the core's two_prod, as it does in mul_2_1 (Apple clang 21 under
 # -ffp-contract=fast, measured there). The guard is placed here, not in ball_scale_2: the core is
 # reached only through ball_scale_2_full, so one guard either way, and the listings of both, with
-# their theorems of Milestone 1, are kept. rx is the radius of a ball of the library. Its claims are
+# their theorems of Milestone 1, are kept. rx is the radius of a ball of the library. The fix-up of
+# ball_scale_2_full is written out here, not called, so that the printer puts it behind a branch as
+# for every full Ball kernel (cpp.branch takes a kernel's own selects): called, it was computed on
+# every product, 2.6 times the time of a dependent chain with Apple clang (measured). Its claims are
 # those of ball_scale_2_full: they say of a only whether it is finite and its value, which the
 # guard keeps.
 
-ga                = guard(a)
-(cw0, cw1, rw)    = ball_scale_2_full(cx0, cx1, rx, ga)
+ga             = guard(a)
+(cz0, cz1, rz) = ball_scale_2(cx0, cx1, rx, ga)
+e              = eq(rx, rx)
+az             = abs(cz0)
+f1             = lt(az, const inf)
+f2             = lt(rz, const inf)
+f              = and(f1, f2)
+c0             = select(f, cz0, 0)
+c1             = select(f, cz1, 0)
+r              = select(f, rz, const inf)
+cw0            = select(e, c0, rx)
+cw1            = select(e, c1, rx)
+rw             = select(e, r, rx)
 ```
 
 ## Measured

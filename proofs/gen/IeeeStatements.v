@@ -2768,7 +2768,7 @@ Definition ball_scale_2_full_spec : Prop :=
    ball_finite_2 cw0 cw1 rw) /\
   (finite a -> forall x : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cw0 cw1 rw (x * val a)).
 
-(* ball_scale_2_full_entry: ball_scale_2_full on its guarded scalar (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
+(* ball_scale_2_full_entry: ball_scale_2 on its guarded scalar, then the fix-up of ball_scale_2_full (rule R3, the factors of a fused operation). IEEE-model status: proved. *)
 Definition ball_scale_2_full_entry_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

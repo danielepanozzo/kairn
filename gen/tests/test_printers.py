@@ -111,9 +111,9 @@ BRANCHED_M1 = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BAL
 # a NaN radius, the whole line since 2026-11-20, fails the second test only.
 BRANCHED_M1.update({k: ('ok', 'f') for k in ('ball_make_1', 'ball_make_2')})
 BRANCHED = dict(BRANCHED_M1)
-# The entry form of mul_2_1_full (rule R3, the factors of a fused operation): its fix-up on f, as
-# mul_2_1_full's. (That of ball_scale_2_full, whose listing starts with the guard of a, has none.)
-BRANCHED.update(mul_2_1_full_entry=('f',))
+# The entry forms of mul_2_1_full and ball_scale_2_full (rule R3, the factors of a fused operation):
+# their fix-ups, written out in their listings, as those of the kernels they guard for.
+BRANCHED.update(mul_2_1_full_entry=('f',), ball_scale_2_full_entry=('e', 'f'))
 # Milestone 2: the kernels without a real-model statement whose outputs are selects on one mask, the
 # test of empty operands (ne) of the interval kernels, the test of a pair that describes an interval
 # (v) of the constructors from bounds, then whether it is bounded (f), and the test that a ball is
