@@ -2223,6 +2223,135 @@ which the tables give once.
   Sums of two limbs of numbers without cancellation were exact in every trial (the exact sum fits in
   two limbs).
 
+### 18. One radius for many centers
+
+When is one radius per polynomial worth it? `BallVector<double, k, N>` against
+`std::array<Ball<double, k>, N>` for N = 4, 8, 16, 64 and k = 1, 2 (`bench/m2_bv.cpp`): the time of
+`add`, `sub`, `scale` (by a `double` that is not a power of two), `axpy`, the product of polynomials
+(`convolution`, $2N - 1$ coefficients) and `norm_upper`, each applied to $256/N$ ball vectors whose
+operands are in L1, the time per operation on a whole vector; the ball vector by the free functions
+of `ball_vector.hpp`, the result written into a `BallVector`, in the default order and with
+`kairn::sequential`; the balls by the operators of `Ball`, entry by entry (the product as each
+coefficient's sum of products from its first term, the bound of the entries as the largest of
+`max(upper_as(), -lower_as())`); and, as a control, the generated loop of each operation called
+directly on arrays of the same values. Before timing, the ball vector's centers are checked against
+the balls' byte for byte (the product of one limb, whose terms the loop fuses and a product of balls
+rounds, within $8Nu$ times the largest product), and its one radius equal to the largest of the
+balls' radii for `add`, `sub` and `scale` and at least it for `axpy`, which is what
+[Ball vectors](../../reference/ball_vector.md#the-operations) says they compute and not a claim.
+
+The widths (`ball_vector_widths` in the JSON, the same in every run of a compiler): three sets of
+entries, each as one ball vector, whose radius is then the largest of the entries', and as $N$ balls:
+radius 0 (exact data, the radii only rounding), one radius $2^{-22}$ for every entry (the centers
+$\pm[1, 2)\,2^k$, $k \in [-8, 8]$: $2^{-30}$ of the largest), and radii spread from $2^{-50}$ to
+$2^{-20}$ of each center's magnitude, log-uniformly (data known to different accuracies). Then one
+operation, and two chains: Horner-like, $z \leftarrow 0.6875\,z + x$ by `axpy` with $X$ and $Y$ in
+turn, 10 and 100 operations; de Casteljau-like, $z \leftarrow \tfrac12(z + \mathrm{shift}(z))$, each
+entry averaged with its neighbour (the shift a rotation of the centers, exact, the radius kept; a sum
+and a halving are two operations), 10 and 100 operations. The table gives the one radius over the
+largest and over the median of the balls' radii.
+
+| BallVector: ns per operation on the whole vector (selection) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, 1 limb, N = 4 | 9.79 to 9.97 (-O2), 9.37 to 9.57 (-O3) | 8.44 to 8.63 |
+| `add`, 1 limb, N = 64 | 28 to 28.9 (-O2), 20.1 to 20.6 (-O3) | 19.6 to 20 (-O2), 17.8 to 18.1 (-O3) |
+| `add`, 2 limbs, N = 4 | 20.9 to 21.1 (-O2), 13 to 13.3 (-O3) | 10.5 to 10.7 |
+| `add`, 2 limbs, N = 64 | 84.6 to 87.2 | 81.1 to 83.1 |
+| `axpy`, 2 limbs, N = 16 | 56.5 to 57.4 (-O2), 44.9 to 46.1 (-O3) | 36.3 to 37.5 |
+| `conv`, 2 limbs, N = 16 | 2455 to 2509 | 2432 to 2495 |
+| `norm`, 2 limbs, N = 64 | 23.2 to 23.6 (-O2), 15.7 to 16 (-O3) | 15.3 to 15.6 |
+
+| N balls over one BallVector (selection) | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, 1 limb, N = 4 | 0.84 (-O2), 1.54 (-O3) | 0.77 |
+| `add`, 1 limb, N = 16 | 2.50 to 2.51 (-O2), 2.66 to 2.67 (-O3) | 2.99 to 3.02 |
+| `add`, 1 limb, N = 64 | 4.49 to 4.55 (-O2), 5.83 to 5.85 (-O3) | 5.77 to 5.78 (-O2), 6.09 to 6.12 (-O3) |
+| `add`, 2 limbs, N = 4 | 1.15 to 1.16 (-O2), 1.84 to 1.85 (-O3) | 2.05 to 2.09 |
+| `add`, 2 limbs, N = 16 | 3.08 to 3.11 (-O2), 2.70 to 2.71 (-O3) | 3.73 to 3.76 |
+| `add`, 2 limbs, N = 64 | 4.46 to 4.48 (-O2), 4.14 to 4.18 (-O3) | 4.29 to 4.35 |
+| `scale`, 2 limbs, N = 16 | 2.49 to 2.50 (-O2), 3.33 to 3.34 (-O3) | 3.50 to 3.56 |
+| `axpy`, 2 limbs, N = 16 | 2.95 (-O2), 2.55 to 2.56 (-O3) | 4.21 to 4.26 |
+| `conv`, 1 limb, N = 16 | 4.05 to 4.09 (-O2), 5.81 to 5.84 (-O3) | 5.05 to 5.11 |
+| `conv`, 2 limbs, N = 16 | 1.07 to 1.08 | 1.01 to 1.02 |
+| `norm`, 2 limbs, N = 16 | 7.94 to 8.00 (-O2), 8.70 to 8.85 (-O3) | 13.6 |
+
+| Bytes | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---:|---:|---:|---:|
+| `BallVector<double, 1, N>` | 40 | 72 | 136 | 520 |
+| `std::array<Ball<double, 1>, N>` | 64 | 128 | 256 | 1024 |
+| `BallVector<double, 2, N>` | 72 | 136 | 264 | 1032 |
+| `std::array<Ball<double, 2>, N>` | 96 | 192 | 384 | 1536 |
+
+| The one radius over the largest of the balls' radii, exact data (radius 0) | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 2 limbs | 1 | 1 | 1 | 1 |
+| `a x + y`, 2 limbs | 1 to 1.04 | 1 to 1.21 | 1.01 to 1.13 | 1.25 to 1.46 |
+| product, 2 limbs | 6.39 to 6.4 | 15.3 to 36.5 | 29.6 to 118 | 86.7 to 106 |
+| Horner-like, 100, 2 limbs | 1 | 1 to 1.16 | 1 to 1.09 | 1.1 to 1.18 |
+| de Casteljau-like, 100, 2 limbs | 1.05 to 1.06 | 1.65 to 1.75 | 1.49 to 1.8 | 1.31 to 1.48 |
+
+| The one radius over the median of the balls' radii, exact data (radius 0) | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 2 limbs | 22.2 to 579 | 2.85 to 4.43 | 7.97 to 45.7 | 22 to 23.1 |
+| `x a`, 2 limbs | 3.38 to 6.34 | 4.23 to 6.08 | 20.2 to 35.2 | 228 to 579 |
+| product, 2 limbs | 95.4 to 282 | 305 to 1.92e+03 | 808 to 1.74e+03 | 1.81e+03 to 3.37e+03 |
+| de Casteljau-like, 100, 2 limbs | 1.05 to 1.06 | 1.75 to 1.85 | 2.28 to 2.62 | 10.8 to 13.1 |
+
+| The one radius over the largest of the balls' radii, radii spread from 2^-50 to 2^-20 of each center | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 2 limbs | 1 to 1.04 | 1 to 1.66 | 1.01 to 1.83 | 1.14 to 1.33 |
+| `x a`, 2 limbs | 1 | 1 | 1 | 1 |
+| product, 2 limbs | 4 to 4.47 | 9.91 to 10.7 | 16 to 21.2 | 57 to 57.6 |
+| Horner-like, 100, 2 limbs | 1 to 1.06 | 1 to 1.95 | 1.01 to 1.82 | 1.09 to 1.47 |
+| de Casteljau-like, 100, 2 limbs | 3.96 to 4 | 7.69 to 7.7 | 5.74 to 7.7 | 8.21 to 8.77 |
+
+| The one radius over the median of the balls' radii, radii spread from 2^-50 to 2^-20 of each center | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 2 limbs | 45.4 to 69.1 | 2.7e+03 to 1.73e+04 | 1.21e+03 to 4.55e+03 | 5.5e+04 to 1.5e+05 |
+| product, 2 limbs | 51.5 to 3.38e+03 | 1.17e+03 to 5.86e+03 | 553 to 2.43e+03 | 1.86e+03 to 3.17e+03 |
+| Horner-like, 100, 2 limbs | 31.8 to 49.8 | 2.94e+03 to 2.1e+04 | 1.1e+03 to 4.37e+03 | 5.23e+04 to 1.44e+05 |
+| de Casteljau-like, 100, 2 limbs | 3.96 to 4 | 7.99 | 9.09 to 13.8 | 35.8 to 75.5 |
+
+- **Time: one radius pays from about 16 entries, and by four to six times at 64.** On Zen 2, an
+  operation on a whole `BallVector` of 64 entries takes 0.16 to 0.30 of the same operation on 64
+  balls (`add`, `sub`, `scale`, `axpy`: 3.3 to 6.2 times faster), 0.03 to 0.07 for `norm_upper`, and
+  0.18 to 0.22 for the product of one limb; at 16 entries 2 to 4 times faster; at 4 entries the two
+  cost about the same (0.71 to 2.1 times, the balls faster in a third of the configurations), the
+  check at entry and the radius's few operations being then a large part of a vector's operation. The product of two limbs costs the same in both forms (0.85 to 1.09): it is a
+  dot product per coefficient, sequential either way. The fast order gains over `kairn::sequential`
+  only from about 16 entries (2.0 to 4.5 times at 64), and the public operations cost 0.8 to 1.4
+  times their loops at 64 entries, 1.0 to 2.3 times at 4, the check included.
+- **Bytes: 0.53 to 0.63 of the balls' for one limb, 0.67 to 0.75 for two** ($kN + 1$ numbers
+  against $(k + 1)N$).
+- **Width: nothing is lost where the entries have the same radius.** Started from one radius for
+  every entry, the one radius after `add`, `sub`, `scale`, `axpy` and chains of 10 and 100 of them
+  equals the largest and the median of the balls' radii (1.00), every entry's error having grown alike.
+- **Exact data: the one radius is the largest rounding, and the median entry's is smaller.** From
+  radius 0, the one radius equals the largest of the balls' radii after a sum, a difference and a
+  scaling (1.00, as [Ball vectors](../../reference/ball_vector.md#the-operations) says they compute),
+  1.0 to 1.6 times it after `axpy` and Horner-like chains; but it is 2 to 600 times the median
+  entry's, whose center is smaller (the rounding of a center is relative to it, and the centers here
+  span $2^{\pm 8}$).
+- **Spread radii: the one radius is the widest entry's, up to twice it, and thousands of times the
+  median's.** With radii from $2^{-50}$ to $2^{-20}$ of each center, the one radius after a sum or an
+  `axpy` is 1.0 to 2.0 times the largest ball's radius (the two operands' largest radii, from
+  different entries, add) and $30$ to $10^6$ times the median's.
+- **The product of polynomials takes the largest centers for every coefficient**: 5 to 118 times
+  the largest of the balls' radii, and $10^2$ to $10^4$ times the median's, from radius 0; 2.7 to 12
+  times the largest from one radius for all, 4 to 86 times from spread radii. The de Casteljau-like chain averages neighbours: the
+  balls' radii approach their mean while the one radius keeps the largest, 1.1 to 1.8 times the
+  largest ball's after 100 operations from radius 0 and 3.8 to 8.8 times from spread radii.
+  `norm_upper` gives the balls' largest bound in every case (1.00).
+- **When is one radius per polynomial worth it**: when the coefficients are known to about the same
+  accuracy and have comparable magnitudes, as those of a polynomial in the Bernstein basis, from
+  about 16 coefficients (2 to 6 times faster, a third to a half less memory, the same width);
+  not for few coefficients (no faster), nor for coefficients whose errors or magnitudes differ much,
+  nor for products of polynomials whose coefficients differ much in size, where the one radius is
+  that of the worst entry, as the reference page says.
+- The centers of the widths were drawn with two calls of the harness's generator in one expression,
+  whose order the compilers choose: GCC and Clang drew different centers of the same distribution,
+  and each cell of the width tables is the range over the compilers.
+
 ### What the machine code shows (third part)
 
 The loops of the new timed functions were summarized by `bench/asm_summary.py` as in the earlier
@@ -3782,10 +3911,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 
 | Configuration (third part) | CPU | Compiler | Flags | Runs per item (arrays, short, entry pairs, short ball vectors triplets, acc, bv) | Dates, commits |
 |---|---|---|---|---|---|
-| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
+| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
 
 #### Runs of the third part
 
@@ -3827,6 +3956,18 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `acc-linux-gcc-O3-r1.json` | 138, 0 | 1.002, 1.003 | 1.006 | 100.9, 99.0 |
 | `acc-linux-gcc-O3-r2.json` | 138, 0 | 1.001, 1.003 | 1.004 | 92.5, 91.9 |
 | `acc-linux-gcc-O3-r3.json` | 138, 0 | 1.000, 1.001 | 1.007 | 89.8, 89.6 |
+| `bv-linux-clang-O2-r1.json` | 192, 0 | 1.019, 1.023 | 1.006 | 92.1, 92.5 |
+| `bv-linux-clang-O2-r2.json` | 192, 0 | 1.020, 1.025 | 1.008 | 94.6, 94.5 |
+| `bv-linux-clang-O2-r3.json` | 192, 0 | 1.000, 1.000 | 1.005 | 91.2, 91.5 |
+| `bv-linux-clang-O3-r1.json` | 192, 0 | 1.017, 1.020 | 1.009 | 92.5, 91.9 |
+| `bv-linux-clang-O3-r2.json` | 192, 0 | 1.007, 1.013 | 1.021 | 94.5, 95.5 |
+| `bv-linux-clang-O3-r3.json` | 192, 0 | 1.000, 1.000 | 1.005 | 91.5, 90.3 |
+| `bv-linux-gcc-O2-r1.json` | 192, 0 | 1.018, 1.023 | 1.012 | 90.6, 92.0 |
+| `bv-linux-gcc-O2-r2.json` | 192, 0 | 1.000, 1.004 | 1.023 | 91.9, 92.8 |
+| `bv-linux-gcc-O2-r3.json` | 192, 0 | 1.000, 1.006 | 1.024 | 95.5, 93.7 |
+| `bv-linux-gcc-O3-r1.json` | 192, 0 | 1.022, 1.026 | 1.007 | 92.0, 92.1 |
+| `bv-linux-gcc-O3-r2.json` | 192, 0 | 1.020, 1.027 | 1.010 | 92.8, 94.0 |
+| `bv-linux-gcc-O3-r3.json` | 192, 0 | 1.000, 1.000 | 1.007 | 93.7, 91.2 |
 | `entry-linux-clang-O2-c1-r1.json` | 518, 0 | 1.001, 1.004 | 1.004 | 60.7, 65.7 |
 | `entry-linux-clang-O2-c1-r2.json` | 518, 0 | 1.002, 1.004 | 1.019 | 63.9, 66.3 |
 | `entry-linux-clang-O2-c1-r3.json` | 518, 0 | 1.000, 1.002 | 1.004 | 71.3, 69.2 |
@@ -3902,6 +4043,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | acc linux-clang-O3 | 3 | 1.6%, 1.8%, 2.1% | `m2c/tp/acc2ball/kairn` |
 | acc linux-gcc-O2 | 3 | 0.3%, 0.6%, 5.6% | `m2c/llc/acc1lanes/op` |
 | acc linux-gcc-O3 | 3 | 0.2%, 0.4%, 3.1% | `m2a/llc/sum1/textbook` |
+| bv linux-clang-O2 | 3 | 2.1%, 2.6%, 6.5% | `m2w/tp/axpy_1_4/op` |
+| bv linux-clang-O3 | 3 | 1.7%, 2.4%, 119.2% | `m2w/tp/norm_1_64/op` |
+| bv linux-gcc-O2 | 3 | 1.8%, 2.3%, 12.3% | `m2w/tp/sub_1_64/kairn` |
+| bv linux-gcc-O3 | 3 | 2.3%, 2.7%, 4.7% | `m2w/tp/axpy_1_8/kairn` |
 | entry linux-clang-O2 inline | 3 | 0.2%, 0.5%, 8.8% | `m2w/tp/axpy_1_16/op` |
 | entry linux-clang-O2 nocheck | 3 | 0.8%, 1.5%, 5.9% | `m2w/tp/norm_1_16/seq` |
 | entry linux-clang-O3 inline | 3 | 0.5%, 1.1%, 18.9% | `m2w/tp/scale_1_64/op` |
@@ -5877,3 +6022,291 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | condition 1e4 to 1e40, n = 10000 | 1.3e+04 (2.2e+03) | 1.1e+04 (1.8e+03) | 8.7e+04 (9.6e+03) | 6.1e+04 (8.1e+03) | 1.1e+04 (1.8e+03) | 6.1e+04 (8.1e+03) |
 | condition 1e4 to 1e40, n = 100000 | 1.6e+05 (3.2e+04) | 1.5e+05 (3.4e+04) | 7.1e+05 (1.8e+05) | 4.9e+05 (1.3e+05) | 1.5e+05 (3.4e+04) | 4.9e+05 (1.3e+05) |
 | condition 1e4 to 1e40, n = 1000000 | 2.2e+06 (3.1e+05) | 1.3e+06 (2.4e+05) | 7.4e+06 (1.8e+06) | 5.2e+06 (7e+05) | 1.3e+06 (2.4e+05) | 5.2e+06 (7e+05) |
+
+#### Question 18: ball vectors
+
+| BallVector: ns per operation on the whole vector | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, 1 limb, N = 4 | 9.79 to 9.97 (-O2), 9.37 to 9.57 (-O3) | 8.44 to 8.63 |
+| `add`, 1 limb, N = 8 | 10.5 to 10.7 (-O2), 9.91 to 10.1 (-O3) | 8.96 to 9.14 |
+| `add`, 1 limb, N = 16 | 12.8 to 13 (-O2), 11.2 to 11.4 (-O3) | 9.47 to 9.72 |
+| `add`, 1 limb, N = 64 | 28 to 28.9 (-O2), 20.1 to 20.6 (-O3) | 19.6 to 20 (-O2), 17.8 to 18.1 (-O3) |
+| `add`, 2 limbs, N = 4 | 20.9 to 21.1 (-O2), 13 to 13.3 (-O3) | 10.5 to 10.7 |
+| `add`, 2 limbs, N = 8 | 23.1 to 23.6 (-O2), 15.9 to 16.3 (-O3) | 15.2 to 15.5 |
+| `add`, 2 limbs, N = 16 | 31 to 31.7 (-O2), 25.2 to 25.7 (-O3) | 23.2 to 23.9 |
+| `add`, 2 limbs, N = 64 | 84.6 to 87.2 | 81.1 to 83.1 |
+| `sub`, 1 limb, N = 4 | 9.78 to 9.95 (-O2), 9.41 to 9.63 (-O3) | 8.44 to 8.63 |
+| `sub`, 1 limb, N = 8 | 10.4 to 10.6 (-O2), 9.91 to 10.1 (-O3) | 8.96 to 9.17 |
+| `sub`, 1 limb, N = 16 | 12.7 to 12.9 (-O2), 11.1 to 11.4 (-O3) | 9.47 to 9.68 |
+| `sub`, 1 limb, N = 64 | 25.7 to 26 (-O2), 20.2 to 20.6 (-O3) | 19.6 to 20 (-O2), 17.8 to 18.1 (-O3) |
+| `sub`, 2 limbs, N = 4 | 20.8 to 21 (-O2), 13.1 to 13.4 (-O3) | 10.7 to 11 |
+| `sub`, 2 limbs, N = 8 | 23.3 to 23.6 (-O2), 16 to 16.4 (-O3) | 15.7 to 16.1 |
+| `sub`, 2 limbs, N = 16 | 31.4 to 31.9 (-O2), 25.4 to 25.9 (-O3) | 25.7 to 26.2 (-O2), 24.3 to 24.7 (-O3) |
+| `sub`, 2 limbs, N = 64 | 87.4 to 88.9 (-O2), 83.3 to 85.5 (-O3) | 83.1 to 85.3 |
+| `scale`, 1 limb, N = 4 | 9.9 to 10.1 (-O2), 9.37 to 9.59 (-O3) | 8.48 to 8.66 |
+| `scale`, 1 limb, N = 8 | 11.3 to 11.6 (-O2), 9.96 to 10.2 (-O3) | 9 to 9.17 |
+| `scale`, 1 limb, N = 16 | 13 to 13.2 (-O2), 11.1 to 11.5 (-O3) | 9.48 to 9.74 |
+| `scale`, 1 limb, N = 64 | 26.1 to 26.7 (-O2), 20.9 to 21.5 (-O3) | 18.5 to 18.9 (-O2), 18.4 to 22.5 (-O3) |
+| `scale`, 2 limbs, N = 4 | 17.1 to 17.3 (-O2), 9.99 to 10.2 (-O3) | 8.99 to 9.19 |
+| `scale`, 2 limbs, N = 8 | 18.6 to 19 (-O2), 11.9 to 12.1 (-O3) | 9.92 to 10.1 |
+| `scale`, 2 limbs, N = 16 | 21.6 to 21.9 (-O2), 14.8 to 15.2 (-O3) | 13 to 13.5 |
+| `scale`, 2 limbs, N = 64 | 45.9 to 46.7 (-O2), 43.3 to 44.1 (-O3) | 37.4 to 38.4 |
+| `axpy`, 1 limb, N = 4 | 18 to 18.7 (-O2), 16.5 to 16.9 (-O3) | 14.1 to 15 (-O2), 14.1 to 14.6 (-O3) |
+| `axpy`, 1 limb, N = 8 | 25.4 to 25.9 (-O2), 18 to 18.4 (-O3) | 15.6 to 16.3 |
+| `axpy`, 1 limb, N = 16 | 32.4 to 33.3 (-O2), 22.1 to 22.6 (-O3) | 17.3 to 18.1 (-O2), 18.1 to 18.3 (-O3) |
+| `axpy`, 1 limb, N = 64 | 50.3 to 51.3 (-O2), 43 to 44.2 (-O3) | 33.9 to 34.6 (-O2), 34.2 to 36.4 (-O3) |
+| `axpy`, 2 limbs, N = 4 | 41.8 to 42.3 (-O2), 23.6 to 24.2 (-O3) | 20.7 to 21.1 (-O2), 20 to 20.5 (-O3) |
+| `axpy`, 2 limbs, N = 8 | 45.8 to 46.4 (-O2), 31.9 to 32.5 (-O3) | 25.1 to 26.1 |
+| `axpy`, 2 limbs, N = 16 | 56.5 to 57.4 (-O2), 44.9 to 46.1 (-O3) | 36.3 to 37.5 |
+| `axpy`, 2 limbs, N = 64 | 131 to 133 (-O2), 125 to 128 (-O3) | 113 to 116 |
+| `conv`, 1 limb, N = 4 | 33.4 to 33.9 (-O2), 30.5 to 31.2 (-O3) | 41.3 to 42.3 (-O2), 20.2 to 20.4 (-O3) |
+| `conv`, 1 limb, N = 8 | 86.9 to 89.7 (-O2), 62.8 to 64.3 (-O3) | 75.4 to 77.8 |
+| `conv`, 1 limb, N = 16 | 277 to 281 (-O2), 194 to 198 (-O3) | 193 to 198 |
+| `conv`, 1 limb, N = 64 | 3913 to 4036 | 3023 to 3089 |
+| `conv`, 2 limbs, N = 4 | 138 to 143 | 142 to 146 |
+| `conv`, 2 limbs, N = 8 | 575 to 588 | 583 to 597 |
+| `conv`, 2 limbs, N = 16 | 2455 to 2509 | 2432 to 2495 |
+| `conv`, 2 limbs, N = 64 | 41060 to 42030 | 41160 to 42080 |
+| `norm`, 1 limb, N = 4 | 8.43 to 8.65 | 8.46 to 8.66 |
+| `norm`, 1 limb, N = 8 | 8.79 to 9.18 | 8.61 to 8.84 |
+| `norm`, 1 limb, N = 16 | 9.5 to 9.71 (-O2), 9.09 to 9.32 (-O3) | 8.87 to 9.07 |
+| `norm`, 1 limb, N = 64 | 15.1 to 15.3 (-O2), 13.3 to 13.6 (-O3) | 14.3 to 14.7 (-O2), 14.5 to 31.9 (-O3) |
+| `norm`, 2 limbs, N = 4 | 9.41 to 9.57 (-O2), 9.06 to 9.23 (-O3) | 9.4 to 9.62 |
+| `norm`, 2 limbs, N = 8 | 9.41 to 9.74 | 9.4 to 9.6 |
+| `norm`, 2 limbs, N = 16 | 10.9 to 11.1 (-O2), 10 to 10.1 (-O3) | 9.84 to 10.1 |
+| `norm`, 2 limbs, N = 64 | 23.2 to 23.6 (-O2), 15.7 to 16 (-O3) | 15.3 to 15.6 |
+
+| N balls over one BallVector | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, 1 limb, N = 4 | 0.84 (-O2), 1.54 (-O3) | 0.77 |
+| `add`, 1 limb, N = 8 | 1.53 (-O2), 1.47 to 1.50 (-O3) | 1.61 to 1.62 (-O2), 1.44 (-O3) |
+| `add`, 1 limb, N = 16 | 2.50 to 2.51 (-O2), 2.66 to 2.67 (-O3) | 2.99 to 3.02 |
+| `add`, 1 limb, N = 64 | 4.49 to 4.55 (-O2), 5.83 to 5.85 (-O3) | 5.77 to 5.78 (-O2), 6.09 to 6.12 (-O3) |
+| `add`, 2 limbs, N = 4 | 1.15 to 1.16 (-O2), 1.84 to 1.85 (-O3) | 2.05 to 2.09 |
+| `add`, 2 limbs, N = 8 | 2.06 to 2.08 (-O2), 2.78 to 2.80 (-O3) | 2.88 to 2.89 |
+| `add`, 2 limbs, N = 16 | 3.08 to 3.11 (-O2), 2.70 to 2.71 (-O3) | 3.73 to 3.76 |
+| `add`, 2 limbs, N = 64 | 4.46 to 4.48 (-O2), 4.14 to 4.18 (-O3) | 4.29 to 4.35 |
+| `sub`, 1 limb, N = 4 | 0.84 (-O2), 1.54 to 1.55 (-O3) | 0.77 |
+| `sub`, 1 limb, N = 8 | 1.53 to 1.54 (-O2), 1.47 to 1.49 (-O3) | 1.60 to 1.61 (-O2), 1.44 to 1.45 (-O3) |
+| `sub`, 1 limb, N = 16 | 2.51 to 2.52 (-O2), 2.66 to 2.67 (-O3) | 3.00 to 3.03 |
+| `sub`, 1 limb, N = 64 | 4.95 to 4.97 (-O2), 5.86 to 5.89 (-O3) | 5.75 to 5.77 (-O2), 6.18 to 6.19 (-O3) |
+| `sub`, 2 limbs, N = 4 | 1.18 (-O2), 1.86 to 1.87 (-O3) | 2.09 to 2.10 |
+| `sub`, 2 limbs, N = 8 | 2.08 to 2.09 (-O2), 2.41 to 2.45 (-O3) | 2.84 to 2.87 |
+| `sub`, 2 limbs, N = 16 | 3.09 (-O2), 2.69 (-O3) | 3.51 to 3.52 (-O2), 3.70 to 3.71 (-O3) |
+| `sub`, 2 limbs, N = 64 | 4.44 to 4.45 (-O2), 3.29 to 3.30 (-O3) | 4.30 to 4.33 |
+| `scale`, 1 limb, N = 4 | 0.85 (-O2), 1.21 (-O3) | 0.72 |
+| `scale`, 1 limb, N = 8 | 1.45 to 1.46 (-O2), 1.37 to 1.38 (-O3) | 1.35 to 1.36 |
+| `scale`, 1 limb, N = 16 | 2.55 to 2.56 (-O2), 2.44 to 2.47 (-O3) | 2.72 to 2.75 |
+| `scale`, 1 limb, N = 64 | 5.14 to 5.17 (-O2), 5.24 to 5.31 (-O3) | 5.58 to 5.60 (-O2), 4.48 to 5.42 (-O3) |
+| `scale`, 2 limbs, N = 4 | 0.78 to 0.79 (-O2), 1.33 (-O3) | 1.27 to 1.28 |
+| `scale`, 2 limbs, N = 8 | 1.44 (-O2), 1.99 to 2.00 (-O3) | 2.31 to 2.32 |
+| `scale`, 2 limbs, N = 16 | 2.49 to 2.50 (-O2), 3.33 to 3.34 (-O3) | 3.50 to 3.56 |
+| `scale`, 2 limbs, N = 64 | 4.65 to 4.68 (-O2), 4.18 to 4.20 (-O3) | 4.90 to 4.96 |
+| `axpy`, 1 limb, N = 4 | 0.89 to 0.91 (-O2), 0.71 (-O3) | 0.88 to 0.92 |
+| `axpy`, 1 limb, N = 8 | 1.27 to 1.31 | 1.65 to 1.66 (-O2), 1.58 to 1.65 (-O3) |
+| `axpy`, 1 limb, N = 16 | 1.98 to 2.00 (-O2), 2.11 to 2.21 (-O3) | 2.91 to 2.98 (-O2), 2.81 to 2.89 (-O3) |
+| `axpy`, 1 limb, N = 64 | 5.16 to 5.18 (-O2), 4.38 to 4.43 (-O3) | 6.09 to 6.11 (-O2), 5.69 to 6.09 (-O3) |
+| `axpy`, 2 limbs, N = 4 | 0.99 to 1.00 (-O2), 1.19 to 1.23 (-O3) | 1.86 to 1.90 (-O2), 1.92 to 1.93 (-O3) |
+| `axpy`, 2 limbs, N = 8 | 1.81 to 1.82 (-O2), 1.88 to 1.89 (-O3) | 3.03 to 3.09 |
+| `axpy`, 2 limbs, N = 16 | 2.95 (-O2), 2.55 to 2.56 (-O3) | 4.21 to 4.26 |
+| `axpy`, 2 limbs, N = 64 | 5.07 to 5.08 (-O2), 3.76 to 3.77 (-O3) | 5.46 to 5.47 |
+| `conv`, 1 limb, N = 4 | 2.16 to 2.17 (-O2), 2.37 (-O3) | 1.44 to 1.45 (-O2), 2.94 to 2.97 (-O3) |
+| `conv`, 1 limb, N = 8 | 3.20 to 3.36 (-O2), 4.57 to 4.58 (-O3) | 3.14 to 3.18 |
+| `conv`, 1 limb, N = 16 | 4.05 to 4.09 (-O2), 5.81 to 5.84 (-O3) | 5.05 to 5.11 |
+| `conv`, 1 limb, N = 64 | 4.60 to 4.63 | 5.41 to 5.44 |
+| `conv`, 2 limbs, N = 4 | 0.96 to 0.98 | 0.85 to 0.86 |
+| `conv`, 2 limbs, N = 8 | 1.05 to 1.06 | 0.97 |
+| `conv`, 2 limbs, N = 16 | 1.07 to 1.08 | 1.01 to 1.02 |
+| `conv`, 2 limbs, N = 64 | 1.09 | 1.02 to 1.03 |
+| `norm`, 1 limb, N = 4 | 1.67 to 1.71 | 2.08 to 2.09 (-O2), 2.14 to 2.15 (-O3) |
+| `norm`, 1 limb, N = 8 | 3.20 to 3.27 | 3.99 to 4.02 |
+| `norm`, 1 limb, N = 16 | 5.87 to 5.98 (-O2), 6.25 to 6.27 (-O3) | 7.68 to 7.73 |
+| `norm`, 1 limb, N = 64 | 14.6 to 15.2 (-O2), 17.2 to 17.4 (-O3) | 19.4 to 19.5 (-O2), 8.8 to 19.5 (-O3) |
+| `norm`, 2 limbs, N = 4 | 2.35 to 2.36 (-O2), 2.44 to 2.45 (-O3) | 3.59 to 3.61 |
+| `norm`, 2 limbs, N = 8 | 4.55 to 4.63 | 7.11 to 7.18 |
+| `norm`, 2 limbs, N = 16 | 7.94 to 8.00 (-O2), 8.70 to 8.85 (-O3) | 13.6 |
+| `norm`, 2 limbs, N = 64 | 14.7 to 14.9 (-O2), 22.0 to 22.1 (-O3) | 35.2 to 35.6 (-O2), 34.5 to 34.8 (-O3) |
+
+| BallVector: kairn::sequential over the default order | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, 1 limb, N = 4 | 1.00 to 1.03 | 1.07 to 1.11 |
+| `add`, 1 limb, N = 64 | 2.62 to 2.65 (-O2), 3.72 to 3.73 (-O3) | 2.25 to 2.26 (-O2), 2.45 to 2.46 (-O3) |
+| `add`, 2 limbs, N = 4 | 1.11 (-O2), 1.76 (-O3) | 2.44 to 2.46 |
+| `add`, 2 limbs, N = 64 | 3.42 to 3.48 | 3.48 to 3.50 |
+| `scale`, 1 limb, N = 4 | 1.02 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 64 | 2.82 to 2.86 (-O2), 3.50 to 3.53 (-O3) | 2.45 to 2.46 (-O2), 2.02 to 2.45 (-O3) |
+| `scale`, 2 limbs, N = 4 | 0.80 to 0.81 (-O2), 1.29 to 1.30 (-O3) | 1.26 to 1.27 (-O2), 1.21 to 1.22 (-O3) |
+| `scale`, 2 limbs, N = 64 | 2.93 to 2.95 (-O2), 3.11 to 3.12 (-O3) | 3.22 to 3.25 |
+| `axpy`, 1 limb, N = 4 | 1.00 to 1.01 | 0.92 to 0.96 |
+| `axpy`, 1 limb, N = 64 | 2.85 to 2.86 (-O2), 3.36 to 3.39 (-O3) | 2.45 to 2.46 (-O2), 2.27 to 2.44 (-O3) |
+| `axpy`, 2 limbs, N = 4 | 1.12 to 1.14 (-O2), 1.52 to 1.55 (-O3) | 2.21 to 2.26 (-O2), 2.27 to 2.29 (-O3) |
+| `axpy`, 2 limbs, N = 64 | 3.29 (-O2), 3.43 to 3.44 (-O3) | 3.57 to 3.58 |
+| `norm`, 1 limb, N = 4 | 1.04 to 1.06 | 1.00 |
+| `norm`, 1 limb, N = 64 | 3.62 to 3.65 (-O2), 4.35 to 4.52 (-O3) | 2.72 to 2.75 (-O2), 1.21 to 2.66 (-O3) |
+| `norm`, 2 limbs, N = 4 | 1.06 to 1.10 | 1.06 to 1.07 |
+| `norm`, 2 limbs, N = 64 | 2.52 to 2.57 (-O2), 3.98 to 4.03 (-O3) | 2.74 to 2.81 |
+
+| BallVector: the public operation over its generated loop called directly | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|
+| `add`, 1 limb, N = 4 | 1.24 (-O2), 1.37 (-O3) | 1.56 to 1.59 |
+| `add`, 1 limb, N = 64 | 1.08 to 1.17 (-O2), 0.94 to 0.95 (-O3) | 0.95 to 0.99 |
+| `add`, 2 limbs, N = 4 | 1.72 to 1.73 (-O2), 1.21 (-O3) | 1.20 to 1.21 |
+| `add`, 2 limbs, N = 64 | 1.06 to 1.10 | 1.07 to 1.08 |
+| `scale`, 1 limb, N = 4 | 1.25 (-O2), 1.40 (-O3) | 1.58 to 1.62 (-O2), 1.35 to 1.59 (-O3) |
+| `scale`, 1 limb, N = 64 | 1.04 to 1.05 (-O2), 0.95 to 0.96 (-O3) | 0.92 to 0.95 (-O2), 0.77 to 1.17 (-O3) |
+| `scale`, 2 limbs, N = 4 | 1.81 to 1.84 (-O2), 1.18 to 1.19 (-O3) | 1.38 to 1.40 |
+| `scale`, 2 limbs, N = 64 | 1.10 to 1.15 | 1.05 to 1.07 |
+| `axpy`, 1 limb, N = 4 | 1.12 to 1.13 (-O2), 1.17 to 1.18 (-O3) | 1.25 to 1.30 (-O2), 1.18 to 1.28 (-O3) |
+| `axpy`, 1 limb, N = 64 | 1.00 to 1.07 (-O2), 1.11 to 1.12 (-O3) | 0.96 to 0.97 (-O2), 0.98 to 1.09 (-O3) |
+| `axpy`, 2 limbs, N = 4 | 1.83 to 1.86 (-O2), 1.19 to 1.23 (-O3) | 1.24 to 1.26 (-O2), 1.17 to 1.23 (-O3) |
+| `axpy`, 2 limbs, N = 64 | 1.05 to 1.09 | 1.01 to 1.02 |
+| `conv`, 1 limb, N = 4 | 1.20 to 1.22 | 1.11 to 1.12 (-O2), 1.18 to 1.19 (-O3) |
+| `conv`, 1 limb, N = 64 | 0.99 to 1.00 | 1.00 |
+| `conv`, 2 limbs, N = 4 | 1.00 to 1.01 | 1.01 |
+| `conv`, 2 limbs, N = 64 | 1.00 | 1.00 |
+| `norm`, 1 limb, N = 4 | 1.92 to 1.94 (-O2), 2.29 to 2.30 (-O3) | 2.09 to 2.11 |
+| `norm`, 1 limb, N = 64 | 1.03 to 1.08 (-O2), 1.15 (-O3) | 1.16 to 1.17 (-O2), 1.16 to 1.23 (-O3) |
+| `norm`, 2 limbs, N = 4 | 1.43 to 1.44 (-O2), 1.64 to 1.65 (-O3) | 1.41 to 1.42 |
+| `norm`, 2 limbs, N = 64 | 1.43 (-O2), 1.19 to 1.20 (-O3) | 1.20 to 1.23 |
+
+| Bytes | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---:|---:|---:|---:|
+| `BallVector<double, 1, N>` | 40 | 72 | 136 | 520 |
+| `std::array<Ball<double, 1>, N>` | 64 | 128 | 256 | 1024 |
+| `BallVector<double, 2, N>` | 72 | 136 | 264 | 1032 |
+| `std::array<Ball<double, 2>, N>` | 96 | 192 | 384 | 1536 |
+
+| The one radius over the largest of the balls' radii (radius 0) | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 1 limb | 1 | 1 | 1 | 1 |
+| `x - y`, 1 limb | 1 | 1 | 1 | 1 |
+| `x a`, 1 limb | 1 | 1 | 1 | 1 |
+| `a x + y`, 1 limb | 1 | 1.18 to 1.63 | 1 | 1.34 |
+| product, 1 limb | 5.3 to 5.33 | 23 to 32 | 31.6 to 51.2 | 96.4 to 96.5 |
+| Horner-like, 10, 1 limb | 1 | 1.09 to 1.12 | 1 to 1.16 | 1.16 to 1.17 |
+| Horner-like, 100, 1 limb | 1 | 1.01 to 1.15 | 1 to 1.22 | 1.1 |
+| de Casteljau-like, 10, 1 limb | 1.21 to 1.22 | 1.22 to 1.31 | 1.28 to 1.29 | 1.17 to 1.25 |
+| de Casteljau-like, 100, 1 limb | 1.06 | 1.5 to 1.52 | 1.39 to 1.77 | 1.36 to 1.51 |
+| `x + y`, 2 limbs | 1 | 1 | 1 | 1 |
+| `x - y`, 2 limbs | 1 | 1 | 1 | 1 |
+| `x a`, 2 limbs | 1 | 1 | 1 | 1 |
+| `a x + y`, 2 limbs | 1 to 1.04 | 1 to 1.21 | 1.01 to 1.13 | 1.25 to 1.46 |
+| product, 2 limbs | 6.39 to 6.4 | 15.3 to 36.5 | 29.6 to 118 | 86.7 to 106 |
+| Horner-like, 10, 2 limbs | 1 | 1 to 1.12 | 1 to 1.07 | 1.15 to 1.17 |
+| Horner-like, 100, 2 limbs | 1 | 1 to 1.16 | 1 to 1.09 | 1.1 to 1.18 |
+| de Casteljau-like, 10, 2 limbs | 1.21 to 1.23 | 1.32 to 1.37 | 1.24 to 1.34 | 1.1 to 1.11 |
+| de Casteljau-like, 100, 2 limbs | 1.05 to 1.06 | 1.65 to 1.75 | 1.49 to 1.8 | 1.31 to 1.48 |
+
+| The one radius over the median of the balls' radii (radius 0) | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 1 limb | 2.21 to 68.5 | 7.31 to 53.3 | 7.86 to 13.9 | 15.4 to 37.2 |
+| `x - y`, 1 limb | 2.15 to 60.1 | 14 to 56.2 | 11.4 to 107 | 15.2 to 43.2 |
+| `x a`, 1 limb | 2.18 to 3.38 | 104 to 165 | 12.3 to 75.4 | 210 to 308 |
+| `a x + y`, 1 limb | 2.2 to 57.6 | 9.34 to 66 | 13.5 to 16.6 | 19 to 48.7 |
+| product, 1 limb | 140 to 3.93e+03 | 142 to 1.32e+04 | 1.03e+03 to 3.74e+03 | 1.9e+03 to 2.88e+03 |
+| Horner-like, 10, 1 limb | 2.21 to 67.2 | 7.37 to 61.1 | 9.6 to 13.8 | 17.2 to 41.6 |
+| Horner-like, 100, 1 limb | 2.21 to 68.6 | 7.45 to 61.1 | 9.57 to 13.9 | 17.1 to 41.1 |
+| de Casteljau-like, 10, 1 limb | 1.47 to 1.51 | 4 to 4.32 | 3.61 to 4.93 | 4.71 to 19.5 |
+| de Casteljau-like, 100, 1 limb | 1.06 | 1.56 to 1.58 | 2.01 to 2.99 | 2.15 to 6.99 |
+| `x + y`, 2 limbs | 22.2 to 579 | 2.85 to 4.43 | 7.97 to 45.7 | 22 to 23.1 |
+| `x - y`, 2 limbs | 10.8 to 529 | 4.27 to 8.23 | 7.81 to 52.5 | 26.1 to 34.8 |
+| `x a`, 2 limbs | 3.38 to 6.34 | 4.23 to 6.08 | 20.2 to 35.2 | 228 to 579 |
+| `a x + y`, 2 limbs | 14.9 to 513 | 2.97 to 5.37 | 9.64 to 42.7 | 30.8 to 32.8 |
+| product, 2 limbs | 95.4 to 282 | 305 to 1.92e+03 | 808 to 1.74e+03 | 1.81e+03 to 3.37e+03 |
+| Horner-like, 10, 2 limbs | 18.1 to 546 | 2.91 to 4.98 | 8.8 to 44.1 | 25.5 to 28.4 |
+| Horner-like, 100, 2 limbs | 19.9 to 592 | 2.82 to 5.14 | 8.59 to 46.4 | 24.2 to 26.7 |
+| de Casteljau-like, 10, 2 limbs | 1.41 to 1.52 | 1.74 to 3.74 | 3.46 to 4.21 | 18.7 to 20.2 |
+| de Casteljau-like, 100, 2 limbs | 1.05 to 1.06 | 1.75 to 1.85 | 2.28 to 2.62 | 10.8 to 13.1 |
+
+| The one radius over the largest of the balls' radii (one radius 2^-22 for every entry) | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 1 limb | 1 | 1 | 1 | 1 |
+| `x - y`, 1 limb | 1 | 1 | 1 | 1 |
+| `x a`, 1 limb | 1 | 1 | 1 | 1 |
+| `a x + y`, 1 limb | 1 | 1 | 1 | 1 |
+| product, 1 limb | 2.67 to 3.98 | 4.38 to 5.55 | 7.07 to 7.99 | 8.55 to 12.1 |
+| Horner-like, 10, 1 limb | 1 | 1 | 1 | 1 |
+| Horner-like, 100, 1 limb | 1 | 1 | 1 | 1 |
+| de Casteljau-like, 10, 1 limb | 1 | 1 | 1 | 1 |
+| de Casteljau-like, 100, 1 limb | 1 | 1 | 1 | 1 |
+| `x + y`, 2 limbs | 1 | 1 | 1 | 1 |
+| `x - y`, 2 limbs | 1 | 1 | 1 | 1 |
+| `x a`, 2 limbs | 1 | 1 | 1 | 1 |
+| `a x + y`, 2 limbs | 1 | 1 | 1 | 1 |
+| product, 2 limbs | 2.38 to 3.86 | 5.23 to 6.55 | 5.38 to 7.88 | 8.08 to 9.29 |
+| Horner-like, 10, 2 limbs | 1 | 1 | 1 | 1 |
+| Horner-like, 100, 2 limbs | 1 | 1 | 1 | 1 |
+| de Casteljau-like, 10, 2 limbs | 1 | 1 | 1 | 1 |
+| de Casteljau-like, 100, 2 limbs | 1 | 1 | 1 | 1 |
+
+| The one radius over the median of the balls' radii (one radius 2^-22 for every entry) | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 1 limb | 1 | 1 | 1 | 1 |
+| `x - y`, 1 limb | 1 | 1 | 1 | 1 |
+| `x a`, 1 limb | 1 | 1 | 1 | 1 |
+| `a x + y`, 1 limb | 1 | 1 | 1 | 1 |
+| product, 1 limb | 4 to 4.74 | 8.41 to 10.8 | 14 to 14.1 | 16.7 to 23.6 |
+| Horner-like, 10, 1 limb | 1 | 1 | 1 | 1 |
+| Horner-like, 100, 1 limb | 1 | 1 | 1 | 1 |
+| de Casteljau-like, 10, 1 limb | 1 | 1 | 1 | 1 |
+| de Casteljau-like, 100, 1 limb | 1 | 1 | 1 | 1 |
+| `x + y`, 2 limbs | 1 | 1 | 1 | 1 |
+| `x - y`, 2 limbs | 1 | 1 | 1 | 1 |
+| `x a`, 2 limbs | 1 | 1 | 1 | 1 |
+| `a x + y`, 2 limbs | 1 | 1 | 1 | 1 |
+| product, 2 limbs | 4 to 4.17 | 7.29 to 8.56 | 9.1 to 12.4 | 16 to 18.4 |
+| Horner-like, 10, 2 limbs | 1 | 1 | 1 | 1 |
+| Horner-like, 100, 2 limbs | 1 | 1 | 1 | 1 |
+| de Casteljau-like, 10, 2 limbs | 1 | 1 | 1 | 1 |
+| de Casteljau-like, 100, 2 limbs | 1 | 1 | 1 | 1 |
+
+| The one radius over the largest of the balls' radii (radii from 2^-50 to 2^-20 of each center) | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 1 limb | 1 | 1 | 1.09 to 1.28 | 1.04 to 1.49 |
+| `x - y`, 1 limb | 1 | 1 | 1.09 to 1.28 | 1.04 to 1.49 |
+| `x a`, 1 limb | 1 | 1 | 1 | 1 |
+| `a x + y`, 1 limb | 1 | 1 | 1.06 to 1.19 | 1.02 to 1.71 |
+| product, 1 limb | 4 | 8 to 8.28 | 16.8 to 18.6 | 65.6 to 85.6 |
+| Horner-like, 10, 1 limb | 1 | 1 | 1.06 to 1.2 | 1.03 to 1.7 |
+| Horner-like, 100, 1 limb | 1 | 1 | 1.06 to 1.19 | 1.02 to 1.71 |
+| de Casteljau-like, 10, 1 limb | 3.09 to 3.2 | 3.16 to 3.19 | 3.16 to 3.19 | 3.19 |
+| de Casteljau-like, 100, 1 limb | 3.83 to 4 | 7.42 to 7.61 | 8.04 to 8.67 | 8.06 to 8.62 |
+| `x + y`, 2 limbs | 1 to 1.04 | 1 to 1.66 | 1.01 to 1.83 | 1.14 to 1.33 |
+| `x - y`, 2 limbs | 1 to 1.04 | 1 to 1.66 | 1.01 to 1.83 | 1.14 to 1.33 |
+| `x a`, 2 limbs | 1 | 1 | 1 | 1 |
+| `a x + y`, 2 limbs | 1 to 1.06 | 1 to 1.95 | 1.01 to 1.82 | 1.09 to 1.47 |
+| product, 2 limbs | 4 to 4.47 | 9.91 to 10.7 | 16 to 21.2 | 57 to 57.6 |
+| Horner-like, 10, 2 limbs | 1 to 1.06 | 1 to 1.93 | 1.01 to 1.83 | 1.1 to 1.46 |
+| Horner-like, 100, 2 limbs | 1 to 1.06 | 1 to 1.95 | 1.01 to 1.82 | 1.09 to 1.47 |
+| de Casteljau-like, 10, 2 limbs | 3.17 to 3.2 | 3.2 | 2.94 to 3.01 | 2.97 to 3.2 |
+| de Casteljau-like, 100, 2 limbs | 3.96 to 4 | 7.69 to 7.7 | 5.74 to 7.7 | 8.21 to 8.77 |
+
+| The one radius over the median of the balls' radii (radii from 2^-50 to 2^-20 of each center) | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| `x + y`, 1 limb | 47.7 to 3.39e+03 | 1.77e+03 to 1.87e+06 | 5.08e+04 to 1e+05 | 1.05e+04 to 5.59e+04 |
+| `x - y`, 1 limb | 47.7 to 3.39e+03 | 1.77e+03 to 1.87e+06 | 5.08e+04 to 1e+05 | 1.05e+04 to 5.59e+04 |
+| `x a`, 1 limb | 47.8 to 6.12e+03 | 137 to 4.14e+03 | 2.46e+06 to 2.6e+07 | 9.11e+05 to 2.61e+06 |
+| `a x + y`, 1 limb | 47.7 to 2.82e+03 | 1.77e+03 to 1.92e+06 | 4.74e+04 to 1.1e+05 | 9.6e+03 to 7.49e+04 |
+| product, 1 limb | 78.5 to 302 | 1.04e+03 to 3.35e+03 | 2.8e+03 to 8.45e+03 | 1.38e+03 to 5.16e+03 |
+| Horner-like, 10, 1 limb | 47.7 to 2.85e+03 | 1.77e+03 to 1.92e+06 | 4.75e+04 to 1.1e+05 | 9.64e+03 to 7.36e+04 |
+| Horner-like, 100, 1 limb | 47.7 to 2.82e+03 | 1.77e+03 to 1.92e+06 | 4.74e+04 to 1.1e+05 | 9.6e+03 to 7.49e+04 |
+| de Casteljau-like, 10, 1 limb | 3.83 to 4 | 10.1 to 10.4 | 72.9 to 118 | 251 to 283 |
+| de Casteljau-like, 100, 1 limb | 3.83 to 4 | 7.69 to 7.89 | 14.2 to 15.7 | 44.2 to 50.1 |
+| `x + y`, 2 limbs | 45.4 to 69.1 | 2.7e+03 to 1.73e+04 | 1.21e+03 to 4.55e+03 | 5.5e+04 to 1.5e+05 |
+| `x - y`, 2 limbs | 45.4 to 69.1 | 2.7e+03 to 1.73e+04 | 1.21e+03 to 4.55e+03 | 5.5e+04 to 1.5e+05 |
+| `x a`, 2 limbs | 210 to 2.94e+03 | 4.09e+04 to 5.45e+04 | 4.18e+03 to 1.5e+04 | 1.39e+06 to 9.45e+06 |
+| `a x + y`, 2 limbs | 31.8 to 49.8 | 2.94e+03 to 2.1e+04 | 1.1e+03 to 4.37e+03 | 5.23e+04 to 1.44e+05 |
+| product, 2 limbs | 51.5 to 3.38e+03 | 1.17e+03 to 5.86e+03 | 553 to 2.43e+03 | 1.86e+03 to 3.17e+03 |
+| Horner-like, 10, 2 limbs | 32.3 to 50.6 | 2.93e+03 to 2.08e+04 | 1.1e+03 to 4.38e+03 | 5.24e+04 to 1.44e+05 |
+| Horner-like, 100, 2 limbs | 31.8 to 49.8 | 2.94e+03 to 2.1e+04 | 1.1e+03 to 4.37e+03 | 5.23e+04 to 1.44e+05 |
+| de Casteljau-like, 10, 2 limbs | 3.96 to 4 | 10.6 to 10.7 | 22.9 to 158 | 279 to 1.82e+03 |
+| de Casteljau-like, 100, 2 limbs | 3.96 to 4 | 7.99 | 9.09 to 13.8 | 35.8 to 75.5 |
+
+| The bound of every entry, `norm_upper`, over the balls' largest bound | N = 4 | N = 8 | N = 16 | N = 64 |
+|---|---|---|---|---|
+| exact, 1 limb | 1 | 1 | 1 | 1 |
+| exact, 2 limbs | 1 | 1 | 1 | 1 |
+| same, 1 limb | 1 | 1 | 1 | 1 |
+| same, 2 limbs | 1 | 1 | 1 | 1 |
+| spread, 1 limb | 1 | 1 | 1 | 1 |
+| spread, 2 limbs | 1 | 1 | 1 | 1 |
