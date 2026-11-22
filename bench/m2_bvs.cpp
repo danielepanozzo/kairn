@@ -103,7 +103,7 @@ KB_SI void raw_scale(const Raw<K, N>& x, double a, Raw<K, N>& z) {
     if constexpr (K == 1) {
         KB_FAST(bv_scale_1)(x.c[0], N, rx, a, z.c[0], z.r, f);
     } else {
-        KB_FAST(bv_scale_2)(x.c[0], x.c[1], N, rx, a, z.c[0], z.c[1], z.r, f);
+        KB_FAST(bv_scale_2_entry)(x.c[0], x.c[1], N, rx, a, z.c[0], z.c[1], z.r, f);
     }
 }
 template <int K, std::size_t N>
@@ -125,7 +125,7 @@ KB_SI void raw_make(const std::array<E<K>, N>& c, double r, Raw<K, N>& z) {
     if constexpr (K == 1) {
         kg::bv_make_1_seq(in[0], N, r, z.c[0], z.r, f);
     } else {
-        kg::bv_make_2_seq(in[0], in[1], N, r, z.c[0], z.c[1], z.r, f);
+        kg::bv_make_2_entry_seq(in[0], in[1], N, r, z.c[0], z.c[1], z.r, f);
     }
 }
 
