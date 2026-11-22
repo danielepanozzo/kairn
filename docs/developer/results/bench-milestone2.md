@@ -1495,8 +1495,9 @@ tables:
 
 This page measures what `main` held at commit `dee8ecd` (the first part) and at `aa168ee` (the
 second part, [above](#the-second-part)). Measured later, with the same harness, which takes them as
-new rows of its tables (`bench/README.md`, "Milestone 2"): what is not on `main` yet, in review, the
-functions on arrays (sum, dot product, `axpy`, convolution, norm), `BallVector` and the accumulator.
+new rows of its tables (`bench/README.md`, "Milestone 2"): what reached `main` on 2026-11-22, after
+these measurements, the functions on arrays (sum, dot product, `axpy`, convolution, norm),
+`BallVector` and the accumulator.
 
 (State on 2026-11-22. The paragraph first written here, at `dee8ecd`, listed all of these as not on
 `main` yet; the one of 2026-11-21 listed what had reached `main` since, the predicates and
