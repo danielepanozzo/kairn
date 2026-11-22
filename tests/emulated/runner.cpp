@@ -4,6 +4,7 @@
 // formats of the statements of precision 8 to 11), the format of each request taken from its line.
 //
 //   runner [--ce] < requests > completed
+//   runner --ce-paths
 //
 // The same requests as the compiled runner of gen/tests/runner.cpp and the interpreter
 // (python3 gen/kairn-gen interp): kernels, folds, maps (inplace=I included), ball vectors,
@@ -11,6 +12,7 @@
 // --ce runs the path of constant evaluation, as the interpreter's --ce does: a kernel's
 // constant-evaluation variant (two_prod's Dekker product), each prod a plain product, guard its
 // operand, times_inf from comparisons; a kernel that has no such path, or a fold, is refused there.
+// --ce-paths lists the kernels that have that path, each with the kernel whose listing it runs.
 // A request it cannot complete (a format whose constants it does not have, a limb that is not a
 // number of the format, an unknown kernel) stops it with status 2 and the reason, after the lines
 // before it.

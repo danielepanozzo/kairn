@@ -41,10 +41,10 @@ from kairn_oracle import refrun  # noqa: E402
 INF = float("inf")
 FAULTS = ("tie-away", "subnormal-trunc")
 
-# Formats of every pair (and triple) of operands: precision 1 to 5, the subnormal range and
-# overflow within reach of every operation.
+# Formats of every pair (and, of the first two, every triple) of operands: precision 1 to 4, the
+# subnormal range and overflow within reach of every operation.
 EXHAUSTIVE = ["fp:1:-3:3", "fp:2:-3:2", "fp:3:-4:2", "fp:4:-6:3"]
-EXHAUSTIVE_TRIPLES = ["fp:1:-3:3", "fp:2:-2:1"]
+EXHAUSTIVE_TRIPLES = EXHAUSTIVE[:2]
 # The formats of the exhaustive tier (formats of the statements, qmax = 1, qmin = 3 - qmax - 2p),
 # and one of a wider range, on random operands.
 SAMPLED = ["fp:8:-14:1", "fp:9:-16:1", "fp:10:-18:1", "fp:11:-20:1", "fp:8:-22:9"]
