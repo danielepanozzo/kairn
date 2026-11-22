@@ -31,10 +31,48 @@ The value types default-construct to zero: `Expansion()` is 0, `Ball()` the poin
 interval $[0, 0]$, `BallVector()` the point 0 of $N$ entries, `Accumulator()` the empty sum. The
 limbs of a number are public (`x.limb[i]`); a program that writes them must write a canonical pair,
 and `Expansion<T, 2>::from_limbs(p)` builds a number from computed limbs with the guard and, in a
-build with checks, the check ([Numbers of several limbs](expansions.md#normalized-numbers)). A ball
-is rebuilt from its parts with its constructor, `Ball<T, k>(c, r)`, an interval with
-`Interval<T, k>(lo, hi)`, and an accumulator with `Accumulator<T, k>::from_state(s, a, n)`, whose
-bound is that of the history its state was read from.
+build with checks, the check ([Numbers of several limbs](expansions.md#normalized-numbers)).
+
+**A set is rebuilt from the limbs read out of it with `from_limbs`**, for a program that keeps the
+limbs in storage of its own:
+
+```cpp
+--8<-- "docs/examples/cpp/concepts_values.cpp:limbs"
+```
+
+```text
+--8<-- "docs/examples/cpp/concepts_values.txt:2:3"
+```
+
+`Interval<T, k>::from_limbs(p)` takes the $k$ limbs of the lower bound, most significant first, then
+those of the upper bound, as `X.lower().limb[i]` and `X.upper().limb[i]` read them;
+`Ball<T, k>::from_limbs(p)` the $k$ limbs of the center, then the radius, as `X.center().limb[i]`
+and `X.radius()` read them. Its contract is that of `Expansion<T, 2>::from_limbs`
+([Limbs](../reference/enclosure.md#limbs), and the comments of `kairn/interval.hpp` and
+`kairn/ball.hpp`):
+
+- **The limbs must be those of a canonical set**, as an operation of Kairn returns it: for an
+  interval the empty set $(+\infty, -\infty)$ or bounds $lo \le hi$, neither a NaN, with
+  $lo < +\infty$ and $hi > -\infty$, each of two limbs a canonical pair; for a ball a finite ball
+  (a finite center, canonical for two limbs, and a finite radius $r \ge 0$), the whole line or the
+  empty set. In a build with checks (`KAIRN_CHECKS` 1) the environment is checked first, the
+  rounding mode included, then the limbs, and limbs of no canonical set stop the program, or make a
+  constant expression invalid. **In a release build (`KAIRN_CHECKS` 0) nothing is checked**: such
+  limbs give a set with no guarantee for what is computed from it, and no undefined behavior.
+- **Each limb passes through a guard** before an operation can add it, that of `make_2` for a value
+  of `T` and that of `make_2_limbs` for a pair, so the limbs may be products the program computed.
+  That the result is the set given is argued from the claims of those two kernels, not proved as
+  one statement ([What is not machine-checked](correctness.md#what-is-not-machine-checked)).
+- **The round trip**, `from_limbs` of the limbs read, gives every limb back bit for bit but for two
+  things: a $-0$ may come back $+0$ (the guard computes $-0 + 0$, which is $+0$ under rounding to
+  nearest; in constant evaluation the guard is not applied, and the $-0$ stays), and a NaN limb of the
+  empty ball comes back a NaN whose payload Kairn does not specify.
+
+The constructor is not the way back for a ball: `Ball<T, k>(c, r)` of the NaN center and radius of
+the empty set makes the whole line, as it makes of every center that is not finite and every NaN
+radius ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)), and the
+program above shows it. An accumulator is rebuilt with `Accumulator<T, k>::from_state(s, a, n)`,
+whose bound is that of the history its state was read from.
 
 ## Threads
 
@@ -50,8 +88,9 @@ state it of their headers). So:
 - **A sum computed in parallel** is what the accumulator is for: one `kairn::Accumulator` per
   thread, merged at the end in any order; its error bound holds for every history of additions and
   merges, the tree the program made ([The accumulator](../reference/accumulator.md#what-is-proved)).
-- **The floating-point environment is the calling thread's**: `kairn::environment_ok()` and the
-  checks of `KAIRN_CHECKS` read the control register as the thread that calls them sees it. A
+- **The floating-point environment is the calling thread's**: `kairn::environment_ok()`, the check
+  that every function on arrays and every operation on whole ball vectors makes in every build, and
+  the checks of `KAIRN_CHECKS` read the control register as the thread that calls them sees it. A
   program that changes the rounding mode or flush to zero in a thread checks and restores it in that
   thread ([The floating-point environment](environment.md)).
 
@@ -68,29 +107,32 @@ Much of Kairn is `constexpr`, so a program can build its constants at compile ti
 ```
 
 ```text
---8<-- "docs/examples/cpp/concepts_values.txt:2:3"
+--8<-- "docs/examples/cpp/concepts_values.txt:4:5"
 ```
 
 What can be computed at compile time ([Constant evaluation](../getting-started/guarantees.md#constant-evaluation)
 has the complete list):
 
-- **Numbers**: the constructors, the sums and differences of two limbs, negation and absolute value,
-  the comparisons and the conversions, every operation of one limb, and `kairn::finite::add`, `sub`
-  and `add_fast`; `kairn::rational` and `kairn::integer`, which compute with integers only and give
-  the same bits at compile time and at run time.
+- **Numbers**: the constructors, the sums and differences of two limbs, `ldexp` and `half` of two
+  limbs and `kairn::finite::ldexp` (their kernels compute only products that constant evaluation
+  computes with the same values, and the steps beyond the powers of two of `T` are integer
+  bookkeeping), negation and absolute value, the comparisons and the conversions, every operation of
+  one limb, and `kairn::finite::add`, `sub` and `add_fast`; `kairn::rational` and `kairn::integer`,
+  which compute with integers only and give the same bits at compile time and at run time.
 - **Sets**: the constructors and states of intervals and balls, a ball's negation and sign
   predicates, the ball of a constant; of intervals the bounds, the negation, the hull, the
   intersection, the predicates, the member and subset tests, the three-valued comparisons, the
   relations of IEEE 1788 and the split, and of one limb the midpoint, the radius and the
   conversions; of balls the functions of the shared interface, all but the split for one limb, and
-  for two `lower_as`, `upper_as`, `midpoint`, `mid_rad`, the signs, `from_interval` and the narrowing
-  to one limb.
+  for two `lower_as`, `upper_as`, `midpoint`, `mid_rad`, the signs, `from_interval`, `from_bounds`
+  and the narrowing to one limb; and of both types, every number of limbs, `from_bounds`,
+  `from_limbs` and `is_finite()`.
 - **The building blocks** but `mul_down` and `mul_up`; the bounds as functions of the length,
   `kairn::traits<X>::sum(n)` and `dot(n)`, with the same bits as at run time; and of the accumulator
   the constructor, `add`, `merge`, `sum()`, the accessors and `from_state`.
 
-Not at compile time: the products of two limbs, `ldexp` and `half` of two limbs and of balls, the
-arithmetic of balls and intervals, `mul_down` and `mul_up` (by design: their statements are about the
+Not at compile time: the products of two limbs, `ldexp` and `half` of balls, the arithmetic of
+balls and intervals, `mul_down` and `mul_up` (by design: their statements are about the
 fused product), the functions on arrays, the operations of `Packed` and of ball vectors, and the
 accumulator's `add_product`, `error_bound()` and `ball()`. Some special values are not constant
 expressions though their functions are `constexpr` (the midpoint and the split of the empty set, the
@@ -111,7 +153,7 @@ time; in constant evaluation it comes from Dekker's product, another algorithm, 
 ```
 
 ```text
---8<-- "docs/examples/cpp/concepts_values.txt:4:5"
+--8<-- "docs/examples/cpp/concepts_values.txt:6:7"
 ```
 
 - When the product is zero or at least $2^{2p-1}\eta$ in magnitude ($2^{-969}$ for `double`,

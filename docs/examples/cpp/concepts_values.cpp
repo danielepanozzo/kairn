@@ -56,12 +56,40 @@ int main() {
     check(same, "the balls come back as they went");
     check(Number().limb[0] == 0 && B2().radius() == 0 && I2().upper().limb[0] == 0, "default construction is zero");
 
+    // --8<-- [start:limbs]
+    // A set rebuilt from the limbs read out of it, as a program that stores the limbs itself does:
+    // for a ball of two limbs, the center's two limbs, then the radius.
+    const std::array<B2, 3> sets = {balls[0], B2::whole(), B2::empty()};
+    double stored[3][3];
+    for (int s = 0; s < 3; ++s) {
+        stored[s][0] = sets[s].center().limb[0];
+        stored[s][1] = sets[s].center().limb[1];
+        stored[s][2] = sets[s].radius();
+    }
+    const B2 finite_again = B2::from_limbs(stored[0]);  // the same ball, limb for limb
+    const B2 whole_again = B2::from_limbs(stored[1]);   // the whole line
+    const B2 empty_again = B2::from_limbs(stored[2]);   // the empty set
+    // Not the constructor: Ball(c, r) of the NaN center and the NaN radius of the empty set is the
+    // whole line.
+    const B2 from_parts = B2(Number::from_limbs(stored[2]), stored[2][2]);
+    // --8<-- [end:limbs]
+    const bool same_limbs = finite_again.center().limb[0] == stored[0][0] &&
+                            finite_again.center().limb[1] == stored[0][1] && finite_again.radius() == stored[0][2];
+    std::printf("from_limbs of the limbs read: the same ball: %s; the whole line: %s; the empty set: %s\n",
+                same_limbs ? "yes" : "no", whole_again.is_whole() ? "yes" : "no", empty_again.is_empty() ? "yes" : "no");
+    std::printf("Ball(c, r) of the empty set's parts: the whole line: %s\n", from_parts.is_whole() ? "yes" : "no");
+    check(same_limbs && whole_again.is_whole() && empty_again.is_empty(), "the round trip of from_limbs");
+    check(from_parts.is_whole(), "Ball(c, r) of a NaN center is the whole line");
+
     // --8<-- [start:constexpr]
-    // Computed by the compiler: a sum of two limbs, a constant from a fraction, a ball made of it.
+    // Computed by the compiler: a sum of two limbs, its scaling by 2^3, a constant from a fraction,
+    // a ball made of it.
     constexpr Number x = Number(1.0) + 0x1p-60;
+    constexpr Number eight_x = kairn::ldexp(x, 3);
     constexpr kairn::Constant<Number> third = kairn::rational<Number>(1, 3);
     constexpr B2 ball_of_third = B2(third);
     static_assert(x.limb[0] == 1.0 && x.limb[1] == 0x1p-60);
+    static_assert(eight_x.limb[0] == 8.0 && eight_x.limb[1] == 0x1p-57);
     static_assert(!third.exact && ball_of_third.radius() == third.error);
     // --8<-- [end:constexpr]
     std::printf("constexpr 1 + 2^-60:   %s + %s\n", hex(x.limb[0]).c_str(), hex(x.limb[1]).c_str());
