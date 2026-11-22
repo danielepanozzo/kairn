@@ -239,14 +239,55 @@ that of the enclosure interface is `enclosure_costs.py compile --kind compare`, 
 10000`) and `compile-MACHINE-COMPILER-KIND-10000.json` (10 000 calls, `-O2`, one compilation), and
 printed by `m2_report.py` with the first part's compile tables.
 
-**Adding the functions on arrays, `BallVector` and the accumulator.** Add their operands to
-`Raw<T>` (plain arrays) and, as public types, to `Data<T>` in `m2.cpp`; their outputs to `Data<T>`
-with a new `Region` (and its line in `region_of`); then rows to `KB_LIST`: for a function on arrays
-of length `n` a `tp` row whose body is one call over the arrays (set `ops` to the number of
-elements by a row macro of its own, as the table rows set `kN` now), its `kairn` reference the
-generated fold (`kg::sum_2_seq`, `kg::dot_2_lanes`, ...) on the limbs, its `op` the public function,
-and its floors in plain `T` with a `kairn` reference; packed folds go to `KB_PLIST`. The report
-takes a new table as a list of ratios of names (`m2_report.py`).
+**The third part** (the functions on arrays, the accumulator and the ball vectors) adds two files
+to the same program, in the manner of the second part's (each with its own table of functions and
+its own check), a program of its own for the errors, a copy of the headers for the check at
+entry, and units for the compile time:
+
+| File | What it holds |
+|---|---|
+| `m2_batch.cpp` | the functions of `kairn/batch.hpp` (`m2a` for `double`, `m2af` for `float`): `sum`, `sum_fast`, `dot`, `add`, `scale`, `axpy`, `norm_upper` over arrays in L1 (KIND `tp`, 512 elements), in the last-level cache (`llc`, 128 Ki elements of `double`, 256 Ki of `float`) and in no cache (`mem`, 4 Mi and 8 Mi), and `conv` of 16, 64 and 512 coefficients, the time per element (per term for `conv`); short arrays (`m2k`, `double`): 256 calls of `sum` and `dot` on windows of 1 to 1024 elements of one array, independent (`tp`) or each waiting for the one before (`lat`), the length read at run time (kernel `NAME_nN`) or known to the compiler (`NAME_kN`), the time per call; the accumulator (`m2c`): `add` and `add_product` per element, partial accumulators merged, `merge`, `sum()`, `error_bound()` and `ball()` of 256 accumulators. Compiled as packed code: the default order is the lane order of the unit's form of `Packed` |
+| `m2_bv.cpp` | `BallVector<double, k, N>` against `std::array<Ball<double, k>, N>` (`m2w`, kernel `OP_k_N`, N = 4, 8, 16, 64): `add`, `sub`, `scale`, `axpy`, the product of polynomials (`conv`) and `norm_upper` on 256 / N vectors, the time per operation on a whole vector; and the widths (`m2_bv_widths_json`, in the JSON as `ball_vector_widths`): the one radius against the largest and the median of the entries' radii after one operation and after chains of 10 and 100 |
+| `m2_exact.hpp` | exact sums of `double` (a fixed-point accumulator of 2240 bits): the reference of the checks of the two files above and of the errors |
+| `m2_accuracy.cpp` | `kairn-bench-m2-accuracy-LEVEL`: the errors of the sums and dot products of one and two limbs, the naive loop, Sum2 and Dot2 of Ogita, Rump and Oishi, and the accumulators, against the exact result, on data of chosen condition (GenDot of the same authors), and the stated bounds over the errors; nothing is timed |
+| `entry_check.py` | `copy DEST`: a copy of `include/kairn` with the check of the environment at the batch entries compiled out (`detail::check_batch_environment` returns `true`), never committed; with `-DKAIRN_BENCH_NOCHECK_INCLUDE=DEST` CMake builds `kairn-bench-m2-nocheck-LEVEL`, the same program against it |
+| `compile_time/batch.cpp` ... | the include units of `compile_time.py` (`batch`, `ball_vector`, `accumulator`, `kairn_batch`, `kairn_ball_vector`, `include_packed`); `enclosure_costs.py --kind arrays` and `ballvectors`, units of N calls |
+
+Their variants, besides `op`, `kairn` (the generated loop the public function calls, on the limbs:
+the public function without its check at entry) and `plain` (the same loop on `T`, element after
+element; for `dot` and `conv` of one limb with an FMA, as Kairn's step): `seq` (the public function
+with `kairn::sequential`), `kseq` (the generated sequential loop, for a map the loop of one lane),
+`bare` (the generated loop on stored arrays, the same steps without the guards of rule R3: `sum_1`,
+`dot_1`, `add_k`, `scale_2`, `axpy_k`, `conv_1`, the kernels `acc_mul_1` and `acc_mul_2`),
+`plainw` (the plain loop in the lane order of the default), `textbook` (Sum2 and Dot2 for one limb;
+for two limbs the double-word arithmetic of `props.hpp` written out, element after element), and
+for ball vectors `balls` (the operators of `Ball`, entry by entry). Every function is checked
+before it is timed: `op` and `bare` against `kairn`, `seq` and `plain` against `kseq`, `plainw`
+against `kairn`, byte for byte; the references and the textbook loops against the exact result
+within their stated bounds; `balls` against `op` (the same centers; the one radius against the
+entries'). The runs are stored as `ITEM-MACHINE-COMPILER-LEVEL-rN.json`, ITEM `arrays` (filter
+`m2a/,m2af/`), `short` (`m2k/`), `acc` (`m2c/` and the sums and dot products of `m2a/tp/` and
+`m2a/llc/`, for the ratios within one run) and `bv` (`m2w/`); the pairs of the check at entry as
+`entry-MACHINE-COMPILER-LEVEL-cK-rN.json`, K 1 for `kairn-bench-m2-LEVEL` and 0 for
+`kairn-bench-m2-nocheck-LEVEL`, run one after the other with the filter `m2k/,m2w/,m2a/tp/`; the
+errors as `accuracy-MACHINE-COMPILER-LEVEL.json`; the compile times as
+`headers-compile-MACHINE-COMPILER.json` and `compile-MACHINE-COMPILER-arrays.json`,
+`-ballvectors.json`. `m2_report.py --part 3` prints the tables:
+
+```sh
+python3 bench/entry_check.py copy /tmp/nocheck      # then -DKAIRN_BENCH_NOCHECK_INCLUDE=/tmp/nocheck
+taskset -c 50 build-bench/bench/kairn-bench-m2-O2 --cpu 50 --reps 31 --filter m2a/,m2af/ --machine "..." \
+    --commit "$(git rev-parse --short HEAD)" --json results/milestone2/bench/arrays-linux-gcc-O2-r1.json
+F=m2k/,m2w/,m2a/tp/
+taskset -c 50 build-bench/bench/kairn-bench-m2-O2 --cpu 50 --reps 31 --filter $F ... entry-linux-gcc-O2-c1-r1.json
+taskset -c 50 build-bench/bench/kairn-bench-m2-nocheck-O2 --cpu 50 --reps 31 --filter $F ... entry-linux-gcc-O2-c0-r1.json
+build-bench/bench/kairn-bench-m2-accuracy-O2 --machine "..." --commit "..." --json results/milestone2/bench/accuracy-linux-gcc-O2.json
+python3 bench/compile_time.py run --cxx g++ --configs O2,O3 --reps 7 --cpu 40 \
+    --units empty,include,include_packed,accumulator,batch,ball_vector,kairn_batch,kairn_ball_vector ... --json headers-compile-linux-gcc.json
+python3 bench/enclosure_costs.py compile --cxx g++ --flags=-mavx2 --kind arrays --sizes 100,1000 \
+    --settings inline,calls --reps 3 ... --json results/milestone2/bench/compile-linux-gcc-arrays.json
+python3 bench/m2_report.py --part 3 results/milestone2/bench
+```
 
 ## Other costs
 

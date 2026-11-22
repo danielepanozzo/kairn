@@ -1034,15 +1034,27 @@ template <class T, int K> KB_SI void accball_kairn(Set<T>& d) {
 // --- Short arrays -------------------------------------------------------------------------------
 // 256 calls on the windows [j, j + n) of arrays of 1024 + 256 elements. tp: independent calls; lat:
 // the window of call j + 1 starts at j + 1 + (r_j != r_j), r_j the result of call j, always j + 1,
-// but the address waits for the result.
+// but the address waits for the result. The length: with RT (kernel NAME_nN) read from a volatile
+// table, so that the compiler does not know it, as a program's run-time length; without (NAME_kN) the
+// constant N, which a compiler may fold into the loop it inlines.
 
 constexpr int kCalls = 256;
+volatile std::size_t g_short_len[1025];
+template <int N, bool RT>
+KB_SI std::size_t short_len() {
+    if constexpr (RT) {
+        return g_short_len[N];
+    } else {
+        return std::size_t(N);
+    }
+}
 #define KB_SHORT(NAME, K, CALL_OP, CALL_KAIRN)                                                     \
-    template <int N> KB_SI void NAME##_op_tp(Set<double>& d) {                                     \
+    template <int N, bool RT> KB_SI void NAME##_op_tp(Set<double>& d) {                            \
         const double *x0 = d.s0.data(), *x1 = d.s1.data(), *y0 = d.t0.data(), *y1 = d.t1.data();  \
         (void)x1;                                                                                  \
         (void)y0;                                                                                  \
         (void)y1;                                                                                  \
+        const std::size_t len = short_len<N, RT>();                                                \
         double* out = d.sout.data();                                                               \
         for (int j = 0; j < kCalls; ++j) {                                                         \
             const std::size_t o = std::size_t(j);                                                  \
@@ -1051,11 +1063,12 @@ constexpr int kCalls = 256;
             if (K == 2) out[K * j + K - 1] = r.value.limb[K - 1];                                  \
         }                                                                                          \
     }                                                                                              \
-    template <int N> KB_SI void NAME##_op_lat(Set<double>& d) {                                    \
+    template <int N, bool RT> KB_SI void NAME##_op_lat(Set<double>& d) {                           \
         const double *x0 = d.s0.data(), *x1 = d.s1.data(), *y0 = d.t0.data(), *y1 = d.t1.data();  \
         (void)x1;                                                                                  \
         (void)y0;                                                                                  \
         (void)y1;                                                                                  \
+        const std::size_t len = short_len<N, RT>();                                                \
         double* out = d.sout.data();                                                               \
         std::size_t o = 0;                                                                         \
         for (int j = 0; j < kCalls; ++j) {                                                         \
@@ -1065,11 +1078,12 @@ constexpr int kCalls = 256;
             o = std::size_t(j + 1) + std::size_t(r.value.limb[0] != r.value.limb[0]);             \
         }                                                                                          \
     }                                                                                              \
-    template <int N> KB_SI void NAME##_kairn_tp(Set<double>& d) {                                  \
+    template <int N, bool RT> KB_SI void NAME##_kairn_tp(Set<double>& d) {                         \
         const double *x0 = d.s0.data(), *x1 = d.s1.data(), *y0 = d.t0.data(), *y1 = d.t1.data();  \
         (void)x1;                                                                                  \
         (void)y0;                                                                                  \
         (void)y1;                                                                                  \
+        const std::size_t len = short_len<N, RT>();                                                \
         double* out = d.sout.data();                                                               \
         for (int j = 0; j < kCalls; ++j) {                                                         \
             const std::size_t o = std::size_t(j);                                                  \
@@ -1080,11 +1094,12 @@ constexpr int kCalls = 256;
             if (K == 2) out[K * j + K - 1] = v[K - 1];                                             \
         }                                                                                          \
     }                                                                                              \
-    template <int N> KB_SI void NAME##_kairn_lat(Set<double>& d) {                                 \
+    template <int N, bool RT> KB_SI void NAME##_kairn_lat(Set<double>& d) {                        \
         const double *x0 = d.s0.data(), *x1 = d.s1.data(), *y0 = d.t0.data(), *y1 = d.t1.data();  \
         (void)x1;                                                                                  \
         (void)y0;                                                                                  \
         (void)y1;                                                                                  \
+        const std::size_t len = short_len<N, RT>();                                                \
         double* out = d.sout.data();                                                               \
         std::size_t o = 0;                                                                         \
         for (int j = 0; j < kCalls; ++j) {                                                         \
@@ -1096,12 +1111,12 @@ constexpr int kCalls = 256;
             o = std::size_t(j + 1) + std::size_t(v[0] != v[0]);                                    \
         }                                                                                          \
     }
-KB_SHORT(ssum1, 1, kairn::sum(V1<double>(x0 + o, N)), KB_FAST(sum_1_entry)(x0 + o, N, v[0], f))
-KB_SHORT(ssum2, 2, kairn::sum(V2<double>(x0 + o, x1 + o, N)), KB_FAST(sum_2_entry)(x0 + o, x1 + o, N, v[0], v[1], f))
-KB_SHORT(sdot1, 1, kairn::dot(V1<double>(x0 + o, N), V1<double>(y0 + o, N)),
-         KB_FAST(dot_1_entry)(x0 + o, y0 + o, N, v[0], f))
-KB_SHORT(sdot2, 2, kairn::dot(V2<double>(x0 + o, x1 + o, N), V2<double>(y0 + o, y1 + o, N)),
-         KB_FAST(dot_2)(x0 + o, x1 + o, y0 + o, y1 + o, N, v[0], v[1], f))
+KB_SHORT(ssum1, 1, kairn::sum(V1<double>(x0 + o, len)), KB_FAST(sum_1_entry)(x0 + o, len, v[0], f))
+KB_SHORT(ssum2, 2, kairn::sum(V2<double>(x0 + o, x1 + o, len)), KB_FAST(sum_2_entry)(x0 + o, x1 + o, len, v[0], v[1], f))
+KB_SHORT(sdot1, 1, kairn::dot(V1<double>(x0 + o, len), V1<double>(y0 + o, len)),
+         KB_FAST(dot_1_entry)(x0 + o, y0 + o, len, v[0], f))
+KB_SHORT(sdot2, 2, kairn::dot(V2<double>(x0 + o, x1 + o, len), V2<double>(y0 + o, y1 + o, len)),
+         KB_FAST(dot_2)(x0 + o, x1 + o, y0 + o, y1 + o, len, v[0], v[1], f))
 
 }  // namespace
 
@@ -1231,10 +1246,14 @@ KB_SHORT(sdot2, 2, kairn::dot(V2<double>(x0 + o, x1 + o, N), V2<double>(y0 + o, 
     X("m2c", c64, double, tp, 0, acc2ball, kairn, (accball_kairn<double, 2>), O_OUT, 3 * 256, "")
 
 #define KB_SHORTN(X, KERN, K, N)                                                                   \
-    X("m2k", k64, double, tp, 0, KERN##_n##N, op, (KERN##_op_tp<N>), O_SHORT, K * 256, "kairn")    \
-    X("m2k", k64, double, tp, 0, KERN##_n##N, kairn, (KERN##_kairn_tp<N>), O_SHORT, K * 256, "")   \
-    X("m2k", k64, double, lat, 0, KERN##_n##N, op, (KERN##_op_lat<N>), O_SHORT, K * 256, "kairn")  \
-    X("m2k", k64, double, lat, 0, KERN##_n##N, kairn, (KERN##_kairn_lat<N>), O_SHORT, K * 256, "")
+    X("m2k", k64, double, tp, 0, KERN##_n##N, op, (KERN##_op_tp<N, true>), O_SHORT, K * 256, "kairn") \
+    X("m2k", k64, double, tp, 0, KERN##_n##N, kairn, (KERN##_kairn_tp<N, true>), O_SHORT, K * 256, "") \
+    X("m2k", k64, double, lat, 0, KERN##_n##N, op, (KERN##_op_lat<N, true>), O_SHORT, K * 256, "kairn") \
+    X("m2k", k64, double, lat, 0, KERN##_n##N, kairn, (KERN##_kairn_lat<N, true>), O_SHORT, K * 256, "") \
+    X("m2k", k64, double, tp, 0, KERN##_k##N, op, (KERN##_op_tp<N, false>), O_SHORT, K * 256, "kairn") \
+    X("m2k", k64, double, tp, 0, KERN##_k##N, kairn, (KERN##_kairn_tp<N, false>), O_SHORT, K * 256, "") \
+    X("m2k", k64, double, lat, 0, KERN##_k##N, op, (KERN##_op_lat<N, false>), O_SHORT, K * 256, "kairn") \
+    X("m2k", k64, double, lat, 0, KERN##_k##N, kairn, (KERN##_kairn_lat<N, false>), O_SHORT, K * 256, "")
 #define KB_SHORTK(X, KERN, K)                                                                      \
     KB_SHORTN(X, KERN, K, 1) KB_SHORTN(X, KERN, K, 2) KB_SHORTN(X, KERN, K, 4) KB_SHORTN(X, KERN, K, 8) \
     KB_SHORTN(X, KERN, K, 16) KB_SHORTN(X, KERN, K, 64) KB_SHORTN(X, KERN, K, 1024)
@@ -1386,6 +1405,7 @@ void fill(Set<T>& d, std::size_t n, std::uint64_t seed) {
         d.t0[i] = number<T>(g, d.t1[i]);
     }
     d.sout.assign(2 * kCalls, T(0));
+    for (std::size_t i = 0; i < 1025; ++i) g_short_len[i] = i;
 }
 
 template <class T>
@@ -1496,7 +1516,7 @@ bool check_exact(const Entry& e, const Meta& m, const std::vector<T>& v, char* w
     };
     if (name.rfind("m2k/", 0) == 0) {   // the short arrays: each call against its window's exact result
         const bool two = k[4] == '2', dot = k[1] == 'd';
-        const std::size_t N = std::size_t(std::atoi(k.c_str() + k.find("_n") + 2));
+        const std::size_t N = std::size_t(std::atoi(k.c_str() + k.rfind('_') + 2));
         for (int j = 0; j < kCalls; ++j) {
             Exact ex;
             double mag = 0;
