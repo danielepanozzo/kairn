@@ -3,6 +3,8 @@
 
     python3 tests/brute/lengths.py --runner PATH --seed SEED --cases N --out FILE [--jobs J]
         [--folds LIST] [--formats binary64,binary32] [--machine NAME]
+    python3 tests/brute/lengths.py table FILE       # the Markdown table of the results page
+    python3 tests/brute/lengths.py shorten FILE     # an older FILE's attaining lines shortened
 
 The oracle keeps the largest error over its bound of a fold over every array it judged, and the
 count of arrays per length, but not the largest error per length. This runs again the first N
@@ -152,9 +154,34 @@ def rows_of(out, res, fold, fmt, label, title, field, name, sign):
         fold, fmt, title, " | ".join(cells), brute.fmt_int(sum(r["lines"] for r in res.values()))))
 
 
+def shorten(doc):
+    """The attaining lines of a stored file as report shows them (brute.short_line): an array of
+    up to 4 096 elements by its head, its tag and the head of its result. The tag, the seed and
+    the largest length regenerate the case (gen --start INDEX --count 1)."""
+    def fix(v):
+        if isinstance(v, list) and len(v) >= 2 and isinstance(v[1], str):
+            v[1] = brute.short_line(v[1])
+    for ms in doc["folds"].values():
+        for res in ms.values():
+            for c in res.values():
+                if not isinstance(c, dict):
+                    continue
+                for e in c.get("entries", []):
+                    for key in ("max_ratio", "observed_c", "observed_t"):
+                        fix(e.get(key))
+                    for key in ("maxima", "minima"):
+                        for v in e.get(key, {}).values():
+                            fix(v)
+                c["examples"] = [dict(x, line=brute.short_line(x["line"])) for x in c.get("examples", [])]
+    return doc
+
+
 def main(argv=None):
     if argv is None and len(sys.argv) > 2 and sys.argv[1] == "table":
         print(table(brute.read_json(sys.argv[2])))
+        return 0
+    if argv is None and len(sys.argv) > 2 and sys.argv[1] == "shorten":
+        brute.write_json(sys.argv[2], shorten(brute.read_json(sys.argv[2])), compact=True)
         return 0
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--runner", required=True, help="a runner of the line protocol, or interp")
@@ -184,7 +211,7 @@ def main(argv=None):
             out["folds"].setdefault(fold, {})[fmt] = res
             bad = res.get("error") or any(c["problems"] for c in res.values())
             brute.log("%s %s: %s" % (fold, fmt, "PROBLEM" if bad else "%d classes" % len(res)))
-    brute.write_json(a.out, out, compact=True)
+    brute.write_json(a.out, shorten(out), compact=True)
     bad = [(f, m) for f, ms in out["folds"].items() for m, r in ms.items()
            if r.get("error") or any(c["problems"] for c in r.values())]
     return 1 if bad else 0

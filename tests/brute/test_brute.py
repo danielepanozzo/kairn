@@ -389,6 +389,11 @@ class Lengths(unittest.TestCase):
         rows = [r for r in text.splitlines() if r.startswith("| `sum_1` | `fp:5:-7:4` |")]
         self.assertTrue(rows)
         self.assertTrue(all("largest error / bound" in r and r.endswith("| 60 |") for r in rows))
+        # The stored attaining lines are short (an array of up to 4 096 elements by its head).
+        lines = [v[1] for c in res.values() for e in c["entries"]
+                 for v in [e.get("max_ratio")] + list(e.get("maxima", {}).values()) if v]
+        self.assertTrue(lines)
+        self.assertTrue(all(len(x) <= 2 * brute.LINE_SHOWN for x in lines))
         self.assertEqual(lengths.class_range("length 18 to 64"), (18, 64))
         self.assertEqual(lengths.class_range("length 3"), (3, 3))
         self.assertEqual(sum(c["lines"] for c in res.values()), 60)
