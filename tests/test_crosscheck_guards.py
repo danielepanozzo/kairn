@@ -1776,16 +1776,17 @@ class EmulatedGuards(unittest.TestCase):
         self.assertIn("fewer than 1/4", out)
 
     # The driver: an emulated runner (here the interpreter behind a script, with or without one
-    # result changed) beside the interpreter must write its bytes, whatever the oracle says.
+    # result changed) beside the interpreter must write its bytes, whatever the oracle says. The
+    # script passes the interpreter's bytes on as they are, line ends included: on Windows the
+    # interpreter, as every runner, writes CR LF (a stream in text mode), and a script that split
+    # its output at LF and wrote the lines back in text mode would write CR CR LF, other bytes.
     def test_the_driver_compares_the_emulated_runner_with_the_interpreter(self):
         body = """import subprocess, sys
 out = subprocess.run([sys.executable, %r, "interp"], stdin=sys.stdin.buffer,
-                     stdout=subprocess.PIPE, check=True).stdout.decode("ascii")
-lines = out.split("\\n")
-for i, line in enumerate(lines):
-    if CHANGE and " -> 0x1.04p+0" in line:
-        lines[i] = line.replace(" -> 0x1.04p+0", " -> 0x1.06p+0")
-sys.stdout.write("\\n".join(lines))
+                     stdout=subprocess.PIPE, check=True).stdout
+if CHANGE:
+    out = out.replace(b" -> 0x1.04p+0", b" -> 0x1.06p+0")
+sys.stdout.buffer.write(out)
 """ % os.path.join(ROOT, "gen", "kairn-gen")
         with tempfile.TemporaryDirectory() as d:
             def runner(name, change):
