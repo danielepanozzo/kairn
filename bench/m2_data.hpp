@@ -117,6 +117,13 @@ extern const Entry m2_fenv_entries[];     // m2_fenv.cpp
 extern const Entry m2_packed_entries[];   // m2_packed.cpp (empty without a packed backend)
 extern const Entry m2_fenv_packed_entries[];   // m2_fenv_packed.cpp (likewise)
 extern const char* const m2_packed_backend;    // "avx2", "neon" or "none"
+// The second part (bench/README.md, "Milestone 2"), each function with its own check:
+extern const Entry m2_soa_entries[];         // m2_soa.cpp: Packed<T, k> and SoA, backends m2v, m2vf
+extern const Entry m2_soa_scalar_entries[];  // m2_soa_scalar.cpp: the same packed loops, one lane, m2v1, m2vf1
+extern const Entry m2_enc_entries[];         // m2_enc.cpp: the enclosure interface, m2e, m2ef
+extern const Entry m2_run_entries[];         // m2_run.cpp: the tutorial's bisection and self_test(), m2r
+// The counts of the bisections of m2_run.cpp (evaluations, parts, zeros, radii), as a JSON array.
+std::string m2_run_json();
 
 // The data (m2.cpp).
 void m2_setup(std::uint64_t seed);
