@@ -7,24 +7,29 @@ and that the code it ships is generated from the same description the proofs are
 **Status: pre-release. Milestone 1 is complete
 ([report](developer/results/milestone1.md)), Milestone 2 is in progress
 ([what each milestone adds](developer/design/phase0/plan.md#milestones)), and nothing in this
-repository should be relied on yet.** The public headers on `main` have k-numbers of one and two
-limbs, balls and intervals around them with the interface the two share, the building blocks on
-`float` and `double`, constants built at compile time from an integer or a fraction, and, in
-headers of their own, the packed SIMD type `Packed` and containers in structure-of-arrays form.
-The functions on arrays, the accumulator and `BallVector` are in review and not on `main`; the
-rest of the plan is to come. The kernels these operations call have checked proofs of their
+repository should be relied on yet.** The public headers of this version have k-numbers of one
+and two limbs, balls and intervals around them with the interface the two share, the building
+blocks on `float` and `double`, constants built at compile time from an integer or a fraction, and
+the accumulator of a sum or a dot product, all included by `kairn/kairn.hpp`; and, in headers of
+their own that it does not include, the packed SIMD type `Packed` and containers in
+structure-of-arrays form (`kairn/packed.hpp`, `kairn/soa.hpp`), the functions on arrays
+(`kairn/batch.hpp`) and `BallVector` (`kairn/ball_vector.hpp`). The rest of the plan is to come.
+The kernels these operations call have checked proofs of their
 claims: the error bounds, normalization and the containment of ball arithmetic in a model where
 nothing overflows, and in a model of IEEE 754 what they return at overflow and for infinities and
 NaN, results like those of `float` and `double`, and every claim of the intervals and of the
-interface of the sets ([What holds today](getting-started/guarantees.md); the
+interface of the sets; the loops of the functions on arrays and of `BallVector` are proved in both
+models ([What holds today](getting-started/guarantees.md); the
 [reference](reference/index.md) has each statement and its theorem). Not machine-checked: `ldexp`
 by a power of two outside the limb type's range, composed from proved steps by an argument that is
 tested ([`mul_pow2_2_full`](reference/mul_pow2_2_full.md), [`mul_1_1`](reference/mul_1_1.md));
 `kairn::rational` and `kairn::integer`, integer code that is specified exactly and tested, and with
 them that the ball of such a constant contains it
-([Constants from fractions](reference/rational.md)); a few compositions of two proved kernels in
-the headers, argued and not proved as one statement; and the tests of bit patterns written by hand
-(`sign`, `isfinite`, `is_normalized`, the states of a ball).
+([Constants from fractions](reference/rational.md)); a few compositions of proved kernels in the
+headers, argued and not proved as one statement; the integer bookkeeping of the bounds of arrays
+and of the accumulator (the count of terms, its conversion to the limb type); and the tests of bit
+patterns written by hand (`sign`, `isfinite`, `is_normalized`, the states of a ball, `is_finite()`
+of an interval).
 
 ## What it is
 
@@ -90,9 +95,9 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
   for infinities and NaN the operations return IEEE-like results and the special states of a
   ball, which is proved in a model of IEEE 754, with a condition under which a `Ball` operation
   stays finite. The report lists what is open.
-- **Milestone 2**, in progress ([design](developer/design/milestone2.md)): on `main`, `Interval`,
-  the interface intervals and balls share, the building blocks, constants at compile time,
-  `Packed` and the containers; in review, the functions on arrays, the accumulator and
+- **Milestone 2**, in progress ([design](developer/design/milestone2.md)): in the headers of this
+  version, `Interval`, the interface intervals and balls share, the building blocks, constants at
+  compile time, `Packed` and the containers, the functions on arrays, the accumulator and
   `BallVector`.
 - The later milestones are in the [Plan](developer/design/phase0/plan.md#milestones).
 

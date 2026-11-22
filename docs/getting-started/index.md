@@ -2,18 +2,23 @@
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is complete
 ([report](../developer/results/milestone1.md)), and Milestone 2 is in progress, in version 0.3.0
-of the development line. Public on `main`: numbers of one and two limbs of type `float` or
-`double`, balls and intervals around them with the [interface the two share](#intervals-and-balls),
-the [building blocks](#building-blocks) on `T`, [constants](#constants-from-fractions) built at
-compile time from an integer or a fraction, and, in headers of their own, the packed SIMD type and
-containers in structure-of-arrays form ([Vector loops](#vector-loops)). Not yet: the functions on
-arrays, the accumulator and `BallVector`, which are in review, and the later milestones. The
+of the development line. In the public headers of this version: numbers of one and two limbs of
+type `float` or `double`, balls and intervals around them with the
+[interface the two share](#intervals-and-balls), the [building blocks](#building-blocks) on `T`,
+[constants](#constants-from-fractions) built at compile time from an integer or a fraction, and the
+accumulator of a sum or a dot product (`kairn/accumulator.hpp`), all of which `kairn/kairn.hpp`
+includes; and, in headers of their own that it does not include, the packed SIMD type and
+containers in structure-of-arrays form (`kairn/packed.hpp`, `kairn/soa.hpp`:
+[Vector loops](#vector-loops)), the functions on arrays (`kairn/batch.hpp`) and `BallVector`
+(`kairn/ball_vector.hpp`: [Ball vectors](#ball-vectors)). Not yet: the later milestones. The
 kernels these operations call have checked proofs of their claims, in a model of arithmetic where
 nothing overflows and, for what they return at overflow and for infinities and NaN (results like
 those of `float` and `double`; sets: the whole line, the empty set, or an interval with an
-infinite bound) and for the intervals and the interface of the sets, in a model of IEEE 754. Not
-machine-checked: `ldexp` beyond the powers of two of `T`, `rational`, a few compositions of proved
-kernels in the headers, and the tests of bit patterns written by hand. [What holds
+infinite bound) and for the intervals and the interface of the sets, in a model of IEEE 754; the
+loops of the functions on arrays and of `BallVector` are proved in both. Not machine-checked:
+`ldexp` beyond the powers of two of `T`, `rational`, a few compositions of proved kernels in the
+headers, the integer bookkeeping of the bounds of arrays and of the accumulator, and the tests of
+bit patterns written by hand. [What holds
 today](guarantees.md) has the details. This page shows how to write a first program, choose the
 limb type and the number of limbs, compute with intervals and balls, write constants such as 1/10,
 use the building blocks, build and test the repository, use the CMake package, read what Kairn's
