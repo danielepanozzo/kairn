@@ -589,6 +589,11 @@ class R3Factors(unittest.TestCase):
         self.assertIn('accumulator.hpp Accumulator::add_product(const Expansion<T, K>& x, const Expansion<T, K>& y)',
                       calls['acc_mul_entry_1'])
         self.assertEqual(calls['sum_1_entry'], ['batch.hpp sum(SoAView<T, K> x)', 'batch.hpp sum(SoAView<T, K> x, Sequential)'])
+        # The loops of kairn/ball_vector.hpp, called through its macro KAIRN_DETAIL_BV_LOOP.
+        self.assertTrue(any(c.startswith('ball_vector.hpp ') and 'bv_scale(' in c for c in calls['bv_scale_2']),
+                        calls.get('bv_scale_2'))
+        self.assertTrue(all(any(c.startswith('ball_vector.hpp ') for c in calls[f])
+                            for f in ('bv_neg_1', 'bv_add_2', 'bv_sub_1', 'bv_mul_pow2_2', 'norm_upper_1')))
 
 
 # The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the

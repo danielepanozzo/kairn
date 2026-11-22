@@ -191,7 +191,8 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    `python3 gen/kairn-gen build` prints the list after its summary, with the operations of each
    object today and with a guard on each exposed operand, and the header functions that reach it
    (`build.header_calls`: the function of the public headers whose body calls the kernel or the
-   loop). By the owner's decision of 2026-11-21 (the strict rule) an exposed operand is refused,
+   loop, directly or through `KAIRN_DETAIL_BV_LOOP`, the macro with which `kairn/ball_vector.hpp`
+   calls its loops). By the owner's decision of 2026-11-21 (the strict rule) an exposed operand is refused,
    with its operation and route (`rules.factor_rule`): an entry kernel guards each factor it takes
    from the program, and a kernel that other kernels also call on limbs that kernels wrote gets a
    guarded entry twin instead, whose listing is the unguarded one after a guard of each factor and

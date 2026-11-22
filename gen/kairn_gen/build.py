@@ -85,6 +85,10 @@ def _ignored(name):
 
 
 _GEN_CALL = re.compile(r'\bgen::(\w+)\(')
+# The loops of kairn/ball_vector.hpp are called through its macro KAIRN_DETAIL_BV_LOOP(SEQ, NAME,
+# ...), which calls NAME_seq or the fast loop of NAME: a call of the loop NAME (its definition is a
+# preprocessor line, which _strip blanks).
+_BV_LOOP_CALL = re.compile(r'\bKAIRN_DETAIL_BV_LOOP\(\s*\w+\s*,\s*(\w+)\s*,')
 _CONTROL = ('if', 'for', 'while', 'switch', 'else', 'do', 'catch', 'try', 'return')
 _SCOPES = re.compile(r'(?:^|[\s>])(namespace|class|struct|union|enum)\b\s*([A-Za-z_][\w:]*)?[^(){};]*$')
 
@@ -143,7 +147,8 @@ def header_calls(root, kernels):
     """{name of a kernel or of a fold: sorted [header and function]}: where the public headers
     (include/kairn/*.hpp, not the generated ones) call each kernel, and each fold's loops (F_seq,
     F_lanes, F_packed), as `FILE SCOPE::NAME(PARAMETERS)` of the function whose body has the call.
-    A call through a macro (gen::NAME##_2_2) is not seen."""
+    A call through a macro (gen::NAME##_2_2) is not seen, but for the macro through which
+    kairn/ball_vector.hpp calls its loops (_BV_LOOP_CALL)."""
     loops = {f'{f}_{suffix}': f for f in getattr(kernels, 'folds', {}) for suffix in ('seq', 'lanes', 'packed')}
     found = {}
     include = os.path.join(root, 'include', 'kairn')
@@ -153,6 +158,7 @@ def header_calls(root, kernels):
         text = _strip(_read(os.path.join(include, name)))
         stack, last = [], 0   # (kind, scope name or signature)
         events = sorted([(m.start(), 'call', m.group(1)) for m in _GEN_CALL.finditer(text)] +
+                        [(m.start(), 'call', m.group(1) + '_seq') for m in _BV_LOOP_CALL.finditer(text)] +
                         [(i, c, None) for i, c in enumerate(text) if c in '{};'])
         for pos, what, called in events:
             if what == 'call':
