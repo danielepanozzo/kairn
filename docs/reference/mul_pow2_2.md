@@ -16,7 +16,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $z = z_0 
 
 | Form | Operands | Result | Note |
 |---|---|---|---|
-| `finite::ldexp(x, n)` | `Expansion<T, 2>`, `int` | `Expansion<T, 2>` | the finite core: no fix-up of infinities and NaN; $c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, as for `ldexp`, whose composition is argued and tested but not machine-checked ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)) |
+| `finite::ldexp(x, n)` | `Expansion<T, 2>`, `int` | `Expansion<T, 2>` | the finite core: no fix-up of infinities and NaN; $c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, as for `ldexp`, whose composition is argued and tested but not machine-checked ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)); `constexpr`, the steps included, with the same values in constant evaluation ([the rule of the product](../developer/architecture.md#the-kernel-ir)); rounds |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 

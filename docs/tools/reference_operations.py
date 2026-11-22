@@ -180,6 +180,10 @@ EXACT_INTERVAL = "`constexpr`; does not round"
 ROUNDS_CONSTEXPR = "`constexpr`; rounds, and is preceded by the debug build's check of the rounding mode"
 TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`)"
 CORE = "the finite core: no fix-up of infinities and NaN"
+# The scaling of a two-limb number by a power of two in constant evaluation: its kernels compute only
+# opaque products, which constant evaluation computes as plain products with the same values.
+SCALING_CONSTEXPR = ("`constexpr`, the steps included, with the same values in constant evaluation "
+                     "([the rule of the product](../developer/architecture.md#the-kernel-ir)); rounds")
 # The constructors of an interval and of a ball from their limbs, which pass each limb through the
 # guard of make_2 or make_2_limbs ([One enclosure interface](enclosure.md#limbs)).
 FROM_LIMBS = ("`%s::from_limbs(p)`, `p` pointing to the limbs as they were read (the bounds' or the center's, "
@@ -415,7 +419,7 @@ KERNELS = {
         "finite", "Scaling a two-limb number by a power of two, finite core",
         form("finite::ldexp(x, n)", E2, "int", result=E2,
              note=CORE + "; $c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, "
-                         "as for `ldexp`, whose composition is " + COMPOSITION),
+                         "as for `ldexp`, whose composition is " + COMPOSITION + "; " + SCALING_CONSTEXPR),
         traits=["traits<Expansion<T, 2>>::ldexp"],
     ),
     # --- Two limbs: comparisons ----------------------------------------------------------------
@@ -500,8 +504,8 @@ KERNELS = {
         "scaling", "Scaling a two-limb number by a power of two",
         form("ldexp(x, n)", E2, "int", result=E2,
              note="$c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, "
-                  "whose composition is " + COMPOSITION),
-        form("half(x)", E2, result=E2, note="$c = 1/2$"),
+                  "whose composition is " + COMPOSITION + "; " + SCALING_CONSTEXPR),
+        form("half(x)", E2, result=E2, note="$c = 1/2$; " + SCALING_CONSTEXPR),
     ),
     # --- Balls ---------------------------------------------------------------------------------
     "ball_add_1_full": page(

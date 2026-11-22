@@ -6,7 +6,9 @@
 //
 // What is constexpr: construction (make_2, make_2_limbs, ball_make_1, ball_make_2, a ball from a
 // constant of kairn::rational), the sums and differences of two limbs (the full kernels of the
-// additions), negation and absolute value, the comparisons and conversions, everything of one
+// additions), ldexp and half of two limbs and kairn::finite::ldexp (mul_pow2_2_full and mul_pow2_2,
+// whose only fused operations are opaque products, in steps beyond the powers of two of T),
+// negation and absolute value, the comparisons and conversions, everything of one
 // limb, a ball's negation, states, sign predicates and constants, and the building blocks on T
 // but mul_down and mul_up (blocks.hpp), each against values computed by hand, with the same bits at
 // run time where milestone2.md says so ("The two executions of a product") and the same values
@@ -17,9 +19,9 @@
 // intervals (interval.hpp) the constructors, the states, the bounds, the negation, the hull, the
 // intersection, the midpoint, the radius, the split and the conversions, and of a ball the
 // functions of the interface it shares with intervals, the empty set and the whole line through
-// each. Not yet: the products of two limbs, ldexp and half on two limbs and on balls, and the Ball
-// and Interval arithmetic: their kernels have fused operations without a constant-evaluation
-// variant, or their code is where KAIRN_ENCLOSURE_CODE puts it (main() checks the arithmetic of
+// each. Not yet: the products of two limbs, ldexp and half of balls, and the Ball and Interval
+// arithmetic: their kernels have fused operations without a constant-evaluation variant, or their
+// code is where KAIRN_ENCLOSURE_CODE puts it (main() checks the arithmetic of
 // intervals at run time, against values computed by hand). mul_down and mul_up are not constexpr,
 // by design (api.reject.not_constexpr.*); main() checks them at run time.
 // Also: KAIRN_VERSION_AT_LEAST, in #if and in a constant expression; and the bounds as functions
@@ -140,6 +142,26 @@ struct Checks {
     // A sum that overflows is not a constant expression (GCC and Clang refuse an operation that
     // produces an infinity from finite operands, or a NaN): main() computes it at run time.
     static constexpr E2 big = E2(std::numeric_limits<T>::max());
+    // ldexp and half of two limbs (mul_pow2_2_full; kairn::finite::ldexp, the core mul_pow2_2): exact
+    // here, every limb scaled; beyond the powers of two of T in steps, down from the largest finite
+    // number and up from the smallest subnormal one, against the scaling of one limb, which is the
+    // same exact power of two. No step overflows: an overflow is not a constant expression with
+    // GCC and Clang, which run_time() checks.
+    static constexpr int pow2_min = std::numeric_limits<T>::min_exponent - std::numeric_limits<T>::digits;
+    static constexpr int pow2_max = std::numeric_limits<T>::max_exponent - 1;
+    static constexpr T omega = (std::numeric_limits<T>::max)(), eta = std::numeric_limits<T>::denorm_min();
+    static_assert(kairn::half(x).limb[0] == T(0.5) && kairn::half(x).limb[1] == u / 4 && kairn::half(unverified(x)).limb[0] == T(0.5));
+    static_assert(kairn::ldexp(x, 3).limb[0] == 8 && kairn::ldexp(x, 3).limb[1] == 4 * u && kairn::ldexp(x, -1).limb[1] == u / 4);
+    static_assert(kairn::ldexp(unverified(x), 2).limb[1] == 2 * u && kairn::finite::ldexp(x, 2).limb[1] == 2 * u);
+    static_assert(kairn::finite::ldexp(unverified(x), -2).limb[0] == T(0.25) && kairn::ldexp(E2(T(0)), 5000).limb[0] == 0);
+    static constexpr E2 down = kairn::ldexp(E2(omega), pow2_min - 5);  // two steps
+    static_assert(down.limb[0] == kairn::ldexp(E1(omega), pow2_min - 5).limb[0] && down.limb[1] == 0 && down.limb[0] > 0);
+    static constexpr E2 up = kairn::ldexp(E2(eta), pow2_max + 10);  // two steps
+    static_assert(up.limb[0] == kairn::ldexp(E1(eta), pow2_max + 10).limb[0] && up.limb[1] == 0);
+    static_assert(kairn::ldexp(up, -(pow2_max + 10)).limb[0] == eta && kairn::finite::ldexp(E2(eta), pow2_max + 10).limb[0] == up.limb[0]);
+    static constexpr E2 up3 = kairn::ldexp(E2(eta), 2 * pow2_max + 10);  // three steps
+    static_assert(up3.limb[0] == kairn::ldexp(E1(eta), 2 * pow2_max + 10).limb[0] && up3.limb[0] > 1);
+    static_assert(kairn::half(E2(eta)).limb[0] == 0 && kairn::ldexp(E2(T(-0.5)), 3).limb[0] == -4);
     // The finite cores.
     static_assert(kairn::finite::add(x, x).limb[0] == 2 && kairn::finite::sub(y, T(4)).limb[0] == u / 2);
     static_assert(kairn::finite::add(x, E1(T(1))).limb[1] == u / 2 && kairn::finite::add_fast(x, x).limb[0] == 2);
@@ -1346,6 +1368,19 @@ void run_time() {
     same("ldexp k = 2, overflow, second limb", kairn::ldexp(x, big).limb[1], T(0));
     same("ldexp k = 2, underflow", kairn::ldexp(x, -big).limb[0], T(0));
     same("ldexp k = 2, NaN", kairn::ldexp(E2(T(vnan)), big).limb[1], C::nan);
+    // ldexp and half of two limbs, constexpr: the same values at run time, on operands read through
+    // volatile objects, the steps included.
+    volatile int v_steps = C::pow2_min - 5;
+    const int steps_down = v_steps, steps_up = C::pow2_max + 10;
+    volatile T v_omega = C::omega, v_eta = C::eta;
+    same("half k = 2", kairn::half(x).limb[1], kairn::half(C::x).limb[1]);
+    same("ldexp k = 2", kairn::ldexp(x, 3).limb[1], kairn::ldexp(C::x, 3).limb[1]);
+    same("finite::ldexp k = 2", kairn::finite::ldexp(x, 2).limb[1], kairn::finite::ldexp(C::x, 2).limb[1]);
+    same("ldexp k = 2, two steps down", kairn::ldexp(E2(T(v_omega)), steps_down).limb[0], C::down.limb[0]);
+    same("ldexp k = 2, two steps up", kairn::ldexp(E2(T(v_eta)), steps_up).limb[0], C::up.limb[0]);
+    same("half k = 2 of eta", kairn::half(E2(T(v_eta))).limb[0], T(0));
+    volatile int v_three_steps = 2 * C::pow2_max + 10;
+    same("ldexp k = 2, three steps up", kairn::ldexp(E2(T(v_eta)), int(v_three_steps)).limb[0], C::up3.limb[0]);
 }
 
 // The enclosure interface at run time: what is not constexpr (the balls of two limbs, the split of a

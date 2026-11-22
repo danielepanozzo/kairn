@@ -434,8 +434,11 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> add_fast(Expansion<T, 2> x, Expansio
 //   each limb at most once, by at most half a subnormal step, and the bound of one step, eta,
 //   still holds. Below
 //   n = pow2_min - pow2_max - 2 (-2099 for double) every finite x rounds to zero, so n stops there.
+// constexpr: both kernels compute only opaque products (the rule of the product) and the fix-up's
+// times_inf, which constant evaluation computes otherwise with the same values
+// (architecture.md, "The rule of the product"), and the steps are integer bookkeeping.
 template <bool Full, class T>
-KAIRN_FORCEINLINE Expansion<T, 2> scale2(Expansion<T, 2> x, T c) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> scale2(Expansion<T, 2> x, T c) noexcept {
     Expansion<T, 2> z;
     if constexpr (Full) {
         gen::mul_pow2_2_full(x.limb[0], x.limb[1], c, z.limb[0], z.limb[1]);
@@ -445,7 +448,7 @@ KAIRN_FORCEINLINE Expansion<T, 2> scale2(Expansion<T, 2> x, T c) noexcept {
     return z;
 }
 template <bool Full, class T>
-KAIRN_FORCEINLINE Expansion<T, 2> ldexp_steps(Expansion<T, 2> x, int n) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> ldexp_steps(Expansion<T, 2> x, int n) noexcept {
     constexpr int lo = pow2_min<T>, hi = pow2_max<T>;
     constexpr int up = hi + 1 - lo, down = lo - hi - 2;
     if (n > up) n = up;
@@ -461,12 +464,12 @@ KAIRN_FORCEINLINE Expansion<T, 2> ldexp_steps(Expansion<T, 2> x, int n) noexcept
     return scale2<Full>(x, pow2<T>(n));
 }
 template <class T>
-KAIRN_FORCEINLINE Expansion<T, 2> ldexp(Expansion<T, 2> x, int n) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> ldexp(Expansion<T, 2> x, int n) noexcept {
     check(x);
     return ldexp_steps<true>(x, n);
 }
 template <class T>
-KAIRN_FORCEINLINE Expansion<T, 2> half(Expansion<T, 2> x) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> half(Expansion<T, 2> x) noexcept {
     check(x);
     return scale2<true>(x, T(0.5));
 }
@@ -612,7 +615,7 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_add_fast(Expansion<T, 2> x, Exp
     return z;
 }
 template <class T>
-KAIRN_FORCEINLINE Expansion<T, 2> core_ldexp(Expansion<T, 2> x, int n) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_ldexp(Expansion<T, 2> x, int n) noexcept {
     check_core(x);
     return ldexp_steps<false>(x, n);
 }
@@ -1496,7 +1499,7 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(const Expansion<T, 1>& x, int 
     return detail::ldexp(x, n);
 }
 /// x times 2^n, for every n (kernel mul_pow2_2_full: the core mul_pow2_2 and the fix-up, with
-/// c = 2^n). Not usable in constant evaluation yet.
+/// c = 2^n).
 ///
 /// Core: z normalized, |z - 2^n x| <= eta (and, proved as a hand-written statement, exactly 2^n x
 /// when each limb's product is zero or at least 2^(p-1) eta in magnitude). Finite when |2^n x| is
@@ -1505,9 +1508,15 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(const Expansion<T, 1>& x, int 
 /// normalized when finite, by the proved statements of each call. Argued in the design and tested
 /// through the oracle, but not machine-checked: up, every step is exact until one overflows, so
 /// the result is 2^n x exactly or (+-inf, 0); down, |z - 2^n x| <= eta still holds.
+///
+/// constexpr, the steps included: the kernel's only fused operations are opaque products, which
+/// constant evaluation computes as plain products with the same values, proved for both
+/// executions in the IEEE model (architecture.md, "The rule of the product"), and the steps are
+/// integer bookkeeping. GCC and Clang refuse at compile time an operation that overflows or that
+/// computes on an infinity or a NaN, so such a scaling is evaluated only at run time, as a sum is.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_pow2_2_full<T>>
-KAIRN_FORCEINLINE Expansion<T, 2> ldexp(const Expansion<T, 2>& x, int n) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> ldexp(const Expansion<T, 2>& x, int n) noexcept {
     return detail::ldexp(x, n);
 }
 /// x times 2^n with a marked operand (a ball has its own, in ball.hpp).
@@ -1522,11 +1531,10 @@ template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> half(const Expansion<T, 1>& x) noexcept {
     return detail::half(x);
 }
-/// x / 2 (kernel mul_pow2_2_full, with c = 1/2): as ldexp(x, -1). Not usable in constant
-/// evaluation yet.
+/// x / 2 (kernel mul_pow2_2_full, with c = 1/2): as ldexp(x, -1), one call. constexpr, as ldexp.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_pow2_2_full<T>>
-KAIRN_FORCEINLINE Expansion<T, 2> half(const Expansion<T, 2>& x) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> half(const Expansion<T, 2>& x) noexcept {
     return detail::half(x);
 }
 /// x / 2 with a marked operand (a ball has its own, in ball.hpp).
@@ -1767,10 +1775,10 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> add_fast(const Expansion<T, 2>& x, c
     return detail::core_add_fast(x, y);
 }
 /// x times 2^n, the core alone (kernel mul_pow2_2), in the same steps as kairn::ldexp when 2^n is
-/// not a number of T. Not usable in constant evaluation yet.
+/// not a number of T. constexpr, as kairn::ldexp: its only fused operations are opaque products.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_pow2_2<T>>
-KAIRN_FORCEINLINE Expansion<T, 2> ldexp(const Expansion<T, 2>& x, int n) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> ldexp(const Expansion<T, 2>& x, int n) noexcept {
     return detail::core_ldexp(x, n);
 }
 

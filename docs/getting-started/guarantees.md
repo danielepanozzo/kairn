@@ -405,7 +405,11 @@ same flags were measured to break nothing. It is not supported with any compiler
 ## Constant evaluation
 
 `constexpr`: the constructors, the ball of a constant among them, the sums and differences of two
-limbs (their full kernels, whose fix-up evaluates at compile time), negation and absolute value,
+limbs (their full kernels, whose fix-up evaluates at compile time), `ldexp` and `half` of two limbs
+and `kairn::finite::ldexp` (their kernels compute only opaque products, which constant evaluation
+computes as plain products with the same values, and the steps beyond the powers of two of `T` are
+integer bookkeeping; a scaling that overflows is not a constant expression with GCC and Clang, as
+a sum that overflows is not), negation and absolute value,
 the comparisons and conversions, every operation of one limb, a ball's negation, states, sign
 predicates and constants, `kairn::finite::add`, `sub` and `add_fast`, `rational` and `integer`
 (below), and the building blocks on `T` but `mul_down` and `mul_up`: `next_up`, `next_down`,
@@ -433,9 +437,9 @@ and of one limb the midpoint, the radius and the conversions; and of a ball the 
 interface it shares with intervals, of one limb all but the split, of two limbs `lower_as`,
 `upper_as`, `midpoint`, `mid_rad`, the signs, `from_interval`, `from_bounds` and the narrowing
 ([One enclosure interface](../reference/enclosure.md#constant-evaluation)).
-Not yet: the products of two limbs, `ldexp` and `half` on two limbs and on balls, and the Ball and
-Interval arithmetic, whose kernels contain fused operations without a constant-evaluation variant,
-or whose code is where `KAIRN_ENCLOSURE_CODE` puts it (the sum and the difference of intervals of
+Not yet: the products of two limbs, whose kernels contain fused operations without a
+constant-evaluation variant; `ldexp` and `half` of balls and the Ball and Interval arithmetic, whose
+code is where `KAIRN_ENCLOSURE_CODE` puts it, or whose kernels contain such fused operations (the sum and the difference of intervals of
 one limb, whose kernels are `constexpr`, among them); and, by design, `mul_down` and `mul_up`, whose
 statements are about the fused product, which constant evaluation does not have. Some special
 values are not constant expressions, though their functions are `constexpr`: the midpoint, the
