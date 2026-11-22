@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 1214 tests. The full tier, 2027 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 1218 tests. The full tier, 2036 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -2086,11 +2086,12 @@ with its date.
 **The two tiers, tree by tree** (moved here on 2026-11-22 from the table of [the
 tiers](#the-tiers), which now gives the present numbers only; newest first). The quick tier: on
 2026-11-22, on the branch that closes rule R3 on the factors of a fused operation (every exposed
-operand guarded, no pending list), merged with that tree, 1 214 tests and 167 seconds on the Mac
-with Apple clang and 1 215 and 185 with GCC 16 (`--parallel 6`), 1 221 tests and 136 seconds with
-GCC 13 and 1 218 and 138 with Clang 18 on the Linux machine, and with `-mavx2 -mfma` 1 215 and 270
-with GCC 13 and 1 212 and 273 with Clang 18 (`--parallel 10`, beside the branch's other runs, under
-a load average of about 85), every test passing; on 2026-11-22, on the tree that joins the strict rule R3 on the factors of a fused operation to the
+operand guarded, no pending list, the constructors of two limbs guarded too), merged with `main`
+at `bbcce60`, 1 218 tests and 168 seconds on the Mac with Apple clang and 1 219 and 213 with GCC 16
+(`--parallel 6`), 1 225 tests and 257 seconds with GCC 13 and 1 222 and 263 with Clang 18 on the
+Linux machine, and with `-mavx2 -mfma` 1 219 and 266 with GCC 13 and 1 216 and 277 with Clang 18
+(`--parallel 10`, beside the proofs and the generator's suite, under a load average of 70 to 90),
+every test passing; on 2026-11-22, on the tree that joins the strict rule R3 on the factors of a fused operation to the
 functions on arrays, the accumulator and `BallVector` and to the exhaustive tier on emulated
 formats ([Time](#time)), 1 164 tests and 131 seconds on the Mac with Apple clang and 1 165 and 132
 with GCC 16 (`--parallel 6`), 1 171 tests and 81 seconds with GCC 13 and 1 168 and 96 with Clang 18
@@ -2147,10 +2148,10 @@ seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80,
 runner seen ([Time](#each-cross-check-in-one-process)).
 
 The full tier: on 2026-11-22, on the branch that closes rule R3 on the factors of a fused
-operation, 2 027 tests and 30 minutes with GCC 13 on the Linux machine (`--parallel 11`, the tools
-held to one worker, under a load average of about 85), one failing:
-`full.tools.brute.driver.test`, the new loop `bv_scale_2_entry` having no toy formats in
-`tests/brute/brute.py` (since added); on 2026-11-22, on the tree that joins the strict rule R3 on
+operation, merged with `main` at `bbcce60`, 2 036 tests and 32 minutes with GCC 13 on the Linux
+machine (`--parallel 10`, the tools held to one worker, beside the generator's suite), every test
+passing (a first run on the branch, 2 027 tests, had failed `full.tools.brute.driver.test`: the new
+loop `bv_scale_2_entry` had no toy formats in `tests/brute/brute.py`); on 2026-11-22, on the tree that joins the strict rule R3 on
 the factors of a fused operation to the functions on arrays, the accumulator and `BallVector` and to the exhaustive tier
 on emulated formats, 2 000 tests and 20 minutes with GCC 13 on the Linux machine (`--parallel 16`,
 the tools held to one worker); on 2026-11-22, on the branch that completes the public interface, 1
