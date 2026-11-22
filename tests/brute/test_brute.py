@@ -36,6 +36,26 @@ class Plan(unittest.TestCase):
             self.assertIn("--max-length", brute.gen_extra(e))
             self.assertTrue(brute.enum_key(e).endswith("__L%d" % e["maxlen"]))
 
+    def test_the_lengths_of_the_compiled_folds(self):
+        # The random arrays of the compiled part: up to FOLD_LENGTH, but the products of
+        # BallVectors up to PRODUCT_LENGTH, in the stream a unit asks of gen and in the length the
+        # guards of collect hold it to (the same function).
+        folds = brute.load_folds()
+        products = {f["name"] for f in folds if f.get("bv_conv")}
+        self.assertTrue(products)
+        self.assertIn("bv_conv_1", products)
+        for f in folds:
+            want = brute.PRODUCT_LENGTH if f["name"] in products else brute.FOLD_LENGTH
+            self.assertEqual(brute.fold_length(f["name"]), want, f["name"])
+            unit = brute.Unit("/w", f["name"], "binary64", 0, 10, True, "scalar")
+            args = brute.fold_stream_args(unit)
+            self.assertEqual(args[args.index("--max-length") + 1], str(want), f["name"])
+        self.assertEqual(brute.fold_length("conv_2"), brute.FOLD_LENGTH)
+        self.assertLess(brute.PRODUCT_LENGTH, brute.FOLD_LENGTH)
+        packed = brute.Unit("/w", "sum_2", "binary64", 0, 10, True, "avx2", "lanes:4")
+        self.assertEqual(brute.fold_stream_args(packed),
+                         ["--orders", "lanes:4", "--max-length", str(brute.FOLD_LENGTH)])
+
     def test_the_shapes_of_folds(self):
         # The maps, the convolutions and the folds of maxima have shapes of their own, those of
         # tests/CMakeLists.txt (_fold_toy_SHAPE), and the first format of each is the full tier's.
@@ -177,6 +197,37 @@ class EmulatedPlan(unittest.TestCase):
         cmd = brute.emulated_gen(f, "s", 0, 5)
         self.assertEqual(cmd[cmd.index("--seed") + 1], "s")
         self.assertEqual(cmd[-2:], ["--max-length", str(brute.EMULATED_FOLD_LENGTH)])
+
+
+class ReportEmulated(unittest.TestCase):
+    """report prints the emulated part of a summary (collect's "emulated"): per precision and mode,
+    and every entry, an incomplete one marked."""
+
+    def test_tables(self):
+        def entry(kernel, fmt, mode, covered, cases, judged, failed=0, complete=True):
+            return {"kernel": kernel, "format": fmt, "mode": mode, "covered": covered,
+                    "complete": complete, "guards": "ok" if complete else ["not run"],
+                    "seconds": 12.4, "counts": {"cases": cases, "judged": judged,
+                                                "failed": failed}}
+        doc = {"name": "linux-x86-64-emulated", "emulated": {"entries": [
+            entry("two_sum", "fp:8:-14:1", "exhaustive", 18931201, 18931201, 18000000),
+            entry("next_up", "fp:9:-16:1", "exhaustive", 9730, 9730, 9730),
+            entry("mul_2_2", "fp:9:-16:1", "random", 500000, 500000, 400000, complete=False),
+            entry("sum_2", "fp:8:-14:1", "random", 20000, 20000, 15000)]}}
+        out = []
+        brute.report_emulated([doc, {"name": "none"}], out.append)
+        text = "\n".join(out)
+        self.assertIn("| 8 | every operand | 1 | 1 | 18 931 201 | 18 931 201 | 18 000 000 | 0 | 0 | 12 |",
+                      text)
+        self.assertIn("| 9 | random | 1 | 0 | 500 000 |", text)
+        self.assertIn("| all | | 4 | 3 | 19 460 931 | 19 460 931 | 18 424 730 | 0 | 0 | 50 |", text)
+        self.assertIn("| `mul_2_2` | `fp:9:-16:1` | random (**INCOMPLETE or guard failed**) |", text)
+        self.assertIn("| `sum_2` | `fp:8:-14:1` | random | 20 000 | 20 000 | 15 000 | 0.75 | 0 | 12 |",
+                      text)
+        # Nothing for files without an emulated part.
+        out = []
+        brute.report_emulated([{"name": "x", "emulated": {"entries": []}}], out.append)
+        self.assertEqual(out, [])
 
 
 class Runners(unittest.TestCase):

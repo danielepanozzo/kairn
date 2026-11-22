@@ -86,7 +86,10 @@ Two parts:
   and its results are in [testing.md](../../docs/developer/testing.md#the-emulated-formats).
 
 The folds of `gen/claims.json` ("folds") take part in both: in the compiled part, random arrays of
-up to 4 096 elements (`FOLD_LENGTH`) in units of a hundredth of `--chunk`, one stream for the
+up to 4 096 elements (`FOLD_LENGTH`; the products of BallVectors `bv_conv_k` up to 256 coefficients,
+`PRODUCT_LENGTH`, since their judgment grows faster than the product of the two lengths: 200 of up
+to 4 096 took the oracle more than seven minutes on the Linux machine, of up to 256 eight seconds)
+in units of a hundredth of `--chunk`, one stream for the
 scalar runners in every order and one per packed backend in the lane order of its register
 (`packed_lanes` of the fold), each judged and guarded with its orders and length; in the interp
 part, every array of the formats of `FOLD_SHAPES` up to a length, in every order that differs

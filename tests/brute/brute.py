@@ -242,8 +242,9 @@ KERNEL_FORMATS = {
 # The folds (gen/claims.json, "folds"), by their arrays as tests/CMakeLists.txt names them (_1 a
 # sum of one limb, _2 of two, _1_1 and _2_2 dot products): every array of each format up to the
 # length given, in every order that differs (gen --exhaustive --max-length), the quick tier's
-# first; and the compiled runners on random arrays up to FOLD_LENGTH elements, the scalar ones on
-# every order and the packed ones on the lane order of their register.
+# first; and the compiled runners on random arrays up to FOLD_LENGTH elements (PRODUCT_LENGTH for
+# a product of BallVectors, below), the scalar ones on every order and the packed ones on the lane
+# order of their register.
 FOLD_SHAPES = {
     "1": [("fp:3:-3:0", 3), ("fp:4:-4:-1", 3), ("fp:2:-2:1", 4)],
     "2": [("fp:3:-4:1", 2), ("fp:3:-3:0", 2), ("fp:3:-5:2", 2)],
@@ -285,6 +286,23 @@ FOLD_SHAPES = {
 }
 FOLD_LENGTH = 4096
 FOLD_CHUNK_DIVISOR = 100
+# A product of BallVectors (bv_conv_k) is judged in a time that grows faster than the product of
+# its two lengths: on the Linux machine 200 requests of up to 64 coefficients took the oracle's
+# check 0.9 seconds, of up to 256 eight seconds, of up to 4 096 more than seven minutes, so that a
+# unit of the compiled part would pass --task-timeout. Its random requests there are of up to
+# PRODUCT_LENGTH coefficients, four times the full tier's (KAIRN_CROSSCHECK_CONV_LENGTH of
+# tests/CMakeLists.txt); the convolutions of numbers (conv_k), whose check took under a second at
+# 1 024, and every other fold have FOLD_LENGTH.
+PRODUCT_LENGTH = 256
+_FOLD_LENGTHS = {}
+
+
+def fold_length(name):
+    """The largest length of the random arrays of fold NAME in the compiled part."""
+    if not _FOLD_LENGTHS:
+        for f in load_folds():
+            _FOLD_LENGTHS[f["name"]] = PRODUCT_LENGTH if f.get("bv_conv") else FOLD_LENGTH
+    return _FOLD_LENGTHS.get(name, FOLD_LENGTH)
 
 # Precision 1 of the one-limb balls with two operands, in place of the base range. There u = 1/2
 # and the constants of the radius are large against a format of few exponents: the factor
@@ -1558,7 +1576,7 @@ def fold_stream_args(unit):
     if unit.orders:
         out += ["--orders", unit.orders]
     if unit.fold:
-        out += ["--max-length", str(FOLD_LENGTH)]
+        out += ["--max-length", str(fold_length(unit.kernel))]
     return out
 
 
@@ -2239,9 +2257,9 @@ def cmd_collect(a):
                                 count=covered, seed=seed)
         if kernel in fold_names:
             # A fold's stream: every order for the scalar runners, the lane order of the register
-            # for the packed ones; arrays up to FOLD_LENGTH elements.
+            # for the packed ones; arrays up to fold_length() elements.
             rr = next((r for r in runners if r["id"] == rid), {})
-            ns.max_length = str(FOLD_LENGTH)
+            ns.max_length = str(fold_length(kernel))
             ns.orders = (None if rr.get("kind") != "packed" else
                          "lanes:%s" % packed_lanes(kernel, fmt, rr.get("backend")))
         problems = list(guards.problems(s, ns))
@@ -2550,6 +2568,7 @@ def cmd_report(a):
     report_agreement(docs, w)
     report_backends(docs, w)
     report_balls(docs, w)
+    report_emulated(docs, w)
     kernels = []
     for d in docs:
         for k in list(d["compiled"]["kernels"]) + [r["kernel"] for r in
@@ -2953,6 +2972,53 @@ def report_balls(docs, w):
         w("| `%s` | `%s`%s | %s | %s | %s |" % (
             k, f, (", restricted: " + ", ".join("`%s`" % x for x in rs)) if rs else "",
             fmt_int(cases), fmt_int(fin), ("%.1f %%" % (100.0 * fin / cases)) if cases else "-"))
+
+
+def report_emulated(docs, w):
+    """The emulated part (--part emulated) of each file: per precision and mode the entries, the
+    indices or cases covered, the lines judged and failed and the seconds of the pipelines; then
+    every entry, with the share of its lines judged."""
+    rows = [(d["name"], r) for d in docs for r in d.get("emulated", {}).get("entries", [])]
+    if not rows:
+        return
+    groups = {}
+    for _, r in rows:
+        c = r.get("counts", {})
+        g = groups.setdefault((parse_fmt(r["format"])[0], r["mode"]), [0] * 8)
+        for i, v in enumerate((1, r.get("covered", 0), c.get("cases", 0), c.get("judged", 0),
+                               c.get("failed", 0), c.get("invalid", 0),
+                               int(r.get("complete") and r.get("guards") == "ok"),
+                               r.get("seconds", 0))):
+            g[i] += v
+    w("")
+    w("<!-- The emulated part: per precision and mode; covered counts the enumeration indices or "
+      "random cases (arrays for a loop), lines the completed lines the oracle read -->")
+    w("| Precision | Mode | Entries | Complete, guards passed | Indices or cases covered | Lines "
+      "| Judged | Failed | Invalid | Seconds of pipelines |")
+    w("|---|---|---|---|---|---|---|---|---|---|")
+    tot = [0] * 8
+    for (p, mode), g in sorted(groups.items()):
+        tot = [a + b for a, b in zip(tot, g)]
+        w("| %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+            p, "every operand" if mode == "exhaustive" else "random", fmt_int(g[0]), fmt_int(g[6]),
+            fmt_int(g[1]), fmt_int(g[2]), fmt_int(g[3]), fmt_int(g[4]), fmt_int(g[5]),
+            fmt_int(int(round(g[7])))))
+    w("| all | | %s | %s | %s | %s | %s | %s | %s | %s |" % tuple(
+        fmt_int(int(round(v))) for v in (tot[0], tot[6], tot[1], tot[2], tot[3], tot[4], tot[5],
+                                          tot[7])))
+    w("")
+    w("<!-- The emulated part, every entry -->")
+    w("| Kernel | Format | Mode | Covered | Lines | Judged | Share judged | Failed | Seconds |")
+    w("|---|---|---|---|---|---|---|---|---|")
+    for _, r in sorted(rows, key=lambda x: (x[1]["kernel"], parse_fmt(x[1]["format"]), x[1]["mode"])):
+        c = r.get("counts", {})
+        ok = r.get("complete") and r.get("guards") == "ok"
+        w("| `%s` | `%s` | %s%s | %s | %s | %s | %s | %s | %.0f |" % (
+            r["kernel"], r["format"], "every operand" if r["mode"] == "exhaustive" else "random",
+            "" if ok else " (**INCOMPLETE or guard failed**)", fmt_int(r.get("covered", 0)),
+            fmt_int(c.get("cases", 0)), fmt_int(c.get("judged", 0)),
+            ("%.2f" % (c.get("judged", 0) / c["cases"])) if c.get("cases") else "-",
+            fmt_int(c.get("failed", 0)), r.get("seconds", 0)))
 
 
 # --- Plan ------------------------------------------------------------------------------------------
