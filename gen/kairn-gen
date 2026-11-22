@@ -87,8 +87,29 @@ def cmd_test(args):
     if args.skip:
         suite = unittest.TestSuite(t for t in tests(suite)
                                    if not any(fnmatch.fnmatchcase(t.id(), f'*{p}*') for p in args.skip))
-    result = unittest.TextTestRunner(verbosity=2 if args.verbose else 1).run(suite)
+    if args.shard:
+        # Every n-th test of those selected, in their order: the n shards are the selected tests,
+        # each once. The tests of a class stay in their order, so a shard sets a class up once.
+        k, n = args.shard
+        suite = unittest.TestSuite(t for i, t in enumerate(tests(suite)) if i % n == k - 1)
+    options = {'verbosity': 2 if args.verbose else 1}
+    if args.durations is not None:
+        if sys.version_info < (3, 12):
+            sys.exit('kairn-gen test: --durations needs Python 3.12 or later')
+        options['durations'] = args.durations
+    result = unittest.TextTestRunner(**options).run(suite)
     sys.exit(0 if result.wasSuccessful() else 1)
+
+
+def _shard(text):
+    """K/N of --shard, as (k, n), 1 <= k <= n."""
+    try:
+        k, n = (int(x) for x in text.split('/'))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f'{text!r} is not K/N') from None
+    if not 1 <= k <= n:
+        raise argparse.ArgumentTypeError(f'{text!r}: K/N needs 1 <= K <= N')
+    return k, n
 
 
 def cmd_interp(args):
@@ -114,6 +135,11 @@ def main():
     t.add_argument('-k', dest='pattern', action='append', help='only tests whose name contains this')
     t.add_argument('--skip', action='append', metavar='PATTERN',
                    help='leave out the tests whose name contains this')
+    t.add_argument('--shard', type=_shard, metavar='K/N',
+                   help='the K-th of N parts of the tests selected (every N-th test, from the K-th): '
+                        'the N parts are the tests, each once')
+    t.add_argument('--durations', type=int, metavar='N',
+                   help='print the N slowest tests (0: all) with their times; Python 3.12 or later')
     t.add_argument('-v', '--verbose', action='store_true')
     t.set_defaults(run=cmd_test)
     i = sub.add_parser('interp', help='the exact interpreter, as a runner of the line protocol')

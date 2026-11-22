@@ -10,7 +10,8 @@ is tested against the hardware, the compilers and Rocq. The contract it implemen
 ```
 python3 gen/kairn-gen build     # regenerate every generated file
 python3 gen/kairn-gen check     # fail if a committed generated file is stale or was edited by hand
-python3 gen/kairn-gen test      # the tests below; --full for the long sizes
+python3 gen/kairn-gen test      # the tests below; --full for the long sizes; --shard K/N for
+                                # every N-th test from the K-th; --durations N for the slowest
 python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line protocol
 ```
 
