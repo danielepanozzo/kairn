@@ -15,6 +15,8 @@
 //          two-limb one); the control marks the operand
 //   11     a pair that is not canonical given to from_limbs in a constant expression, with
 //          KAIRN_CHECKS (the control turns KAIRN_CHECKS off)
+//   111-112 the same for Interval::from_limbs given reversed bounds and Ball::from_limbs given a
+//          negative radius
 //   15     the same for an operator given a pair that is not canonical, written into its limbs
 //   16     the same for a Ball constructor given a negative radius
 //   17     kairn::rational with a zero denominator in a constant expression (the control: 3)
@@ -50,6 +52,12 @@
 //          expression (the loops are not constexpr), a view made over arrays of const limbs (its
 //          constructor writes them), a part of a view of mutable limbs (an operation that wrote it
 //          would change the radius of every entry); each control writes what compiles instead
+//   108    a ball of two limbs from two bounds of two limbs, Ball<T, 2>::from_bounds(x, y): no kernel
+//          makes one; the control is the ball of the interval, Ball<T, 2>(Interval<T, 2>(x, y))
+//   109-110 an UNVERIFIED from_bounds of an interval and of a ball, written without the marker,
+//          against headers in which every kernel is unverified (as 1-14)
+//   113    kairn::sequential as the last argument of sum: it is the first of every function that
+//          takes it (order.hpp); the control writes it first
 //   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
 //          is not a form, or a form the target does not have (the generated header's #error)
 //   59     a bound as a function of the length that is not given (traits<X>::sum(n) beyond the
@@ -87,7 +95,8 @@
 //          on the way (95, 96: the error term is the opposite infinity); each control is the
 //          neighboring operand where it compiles, the largest square or the next number below b,
 //          against the run-time result (api.constexpr checks the same bits at run time)
-#if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
+#if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16 || KAIRN_TEST_CASE == 111 || \
+    KAIRN_TEST_CASE == 112
 #if defined(KAIRN_TEST_CONTROL)
 #define KAIRN_CHECKS 0
 #else
@@ -104,7 +113,7 @@
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
 #endif
-#if KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58
+#if (KAIRN_TEST_CASE >= 54 && KAIRN_TEST_CASE <= 58) || KAIRN_TEST_CASE == 113
 #include <kairn/batch.hpp>
 #endif
 #if KAIRN_TEST_CASE >= 60 && KAIRN_TEST_CASE <= 62
@@ -197,6 +206,16 @@ int main() {
     sink = z.limb[1];
 #elif KAIRN_TEST_CASE == 16
     constexpr B2 z(kairn::unverified(E2(kairn::unverified(1.0))), -0.5);
+    sink = z.radius();
+#elif KAIRN_TEST_CASE == 111
+    // Reversed bounds, which are not those of a canonical interval, given to from_limbs.
+    static constexpr double limbs[2] = {2.0, 1.0};
+    constexpr I1 z = I1::from_limbs(limbs);
+    sink = z.lower().limb[0];
+#elif KAIRN_TEST_CASE == 112
+    // A negative radius, which is not that of a canonical ball, given to from_limbs.
+    static constexpr double limbs[3] = {1.0, 0.0, -0.5};
+    constexpr B2 z = B2::from_limbs(limbs);
     sink = z.radius();
 #elif KAIRN_TEST_CASE == 17
 #if defined(KAIRN_TEST_CONTROL)
@@ -568,6 +587,27 @@ int main() {
     constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.5b8dap+63f, 0x1.7920bcp+64f);
 #endif
     sink = z.error;
+#elif KAIRN_TEST_CASE == 113
+    // The order tag of a function on arrays as its last argument: it is the first, as for the
+    // operations of ball vectors and the execution policies of the standard library.
+    const double ss[2] = {1.0, double(v)};
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::sum(kairn::sequential, kairn::SoAView<const double, 1>(ss, 2)).value.limb[0];
+#else
+    sink = kairn::sum(kairn::SoAView<const double, 1>(ss, 2), kairn::sequential).value.limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 108
+    // A ball of two limbs from two bounds of two limbs: no kernel makes one (Ball<T, 2>::from_bounds
+    // takes two values of T); the control writes the composition, the ball of the interval.
+#if defined(KAIRN_TEST_CONTROL)
+    sink = B2(kairn::unverified(I2(kairn::unverified(x), y))).radius();
+#else
+    sink = B2::from_bounds(x, y).radius();
+#endif
+#elif KAIRN_TEST_CASE == 109
+    sink = I1::from_bounds(MARK(s), s).lower().limb[0];
+#elif KAIRN_TEST_CASE == 110
+    sink = B2::from_bounds(MARK(s), s).radius();
 #elif KAIRN_TEST_CASE >= 97 && KAIRN_TEST_CASE <= 107
     using BV = kairn::BallVector<double, 1, 3>;
     const BV bx({1.0, 2.0, double(v)}, 0.5);

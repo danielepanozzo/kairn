@@ -20,7 +20,7 @@ Making numbers and balls, and reading their parts.
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| `Expansion<T, 2>(a)` | `T` | $x = a$ exactly, canonical | [`make_2`](make_2.md) |
+| `Expansion<T, 2>(a)`, `from_limbs(p)` | `T` | $x = a$ exactly, canonical | [`make_2`](make_2.md) |
 | `from_limbs(p)`, `from_limbs_unchecked(p)`, `Expansion<T, 2>(r)` | `T*` | $x = y$ exactly, canonical | [`make_2_limbs`](make_2_limbs.md) |
 | `Ball<T, 1>(c, r)`, `Ball<T, 1>(c)`, `Ball<T, 1>(a)`, `Ball<T, 1>(q)` | `Expansion<T, 1>`, `T` | the ball of center $c$ and radius $r$, canonical | [`ball_make_1`](ball_make_1.md) |
 | `Ball<T, 2>(c, r)`, `Ball<T, 2>(c)`, `Ball<T, 2>(a)`, `Ball<T, 2>(q)` | `Expansion<T, 2>`, `T` | the ball of center $c$ and radius $r$, canonical | [`ball_make_2`](ball_make_2.md) |
@@ -153,10 +153,10 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `X.upper_as<T>()`, `X.upper()` | `Ball<T, 1>` | a upper bound of the ball, rounded; $-\infty$ for the empty ball | [`ball_upper_as_1`](ball_upper_as_1.md) |
 | `X.lower_as<T>()` | `Ball<T, 2>` | a lower bound of the ball; $+\infty$ for the empty ball; $\lvert l - (c - r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_lower_as_2`](ball_lower_as_2.md) |
 | `X.upper_as<T>()` | `Ball<T, 2>` | a upper bound of the ball; $-\infty$ for the empty ball; $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_upper_as_2`](ball_upper_as_2.md) |
-| `from_interval(lo, hi)` | `T`, `T` | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_2`](ball_from_interval_2.md) |
+| `from_interval(lo, hi)`, `from_bounds(lo, hi)` | `T`, `T` | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_2`](ball_from_interval_2.md) |
 | `Ball<T, 1>(X)` | `Ball<T, 2>` | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) |
 | `X.lower()`, `X.upper()` | `Ball<T, 2>` | an interval of two limbs that contains the ball, within $A\lvert v\rvert + B$ of its bounds; empty for the empty ball | [`ball_to_interval_2`](ball_to_interval_2.md) |
-| `from_interval(lo, hi)` | `T`, `T` | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_1`](ball_from_interval_1.md) |
+| `from_interval(lo, hi)`, `from_bounds(lo, hi)` | `T`, `T` | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound and for the same infinity twice | [`ball_from_interval_1`](ball_from_interval_1.md) |
 | `X.hull(Y)` | `Ball<T, 2>`, `Ball<T, 2>` | a canonical ball Z that contains the union of the balls; when X is empty, Z is Y as it is (the same limbs); when Y is empty and X is not, Z is X as it is | [`ball_hull_2`](ball_hull_2.md) |
 | `X.intersection(Y)` | `Ball<T, 2>`, `Ball<T, 2>` | a canonical ball Z that contains the intersection of the balls; when X is the whole line, Z is Y as it is (the same limbs); when Y is the whole line and X is not, Z is X as it is | [`ball_intersection_2`](ball_intersection_2.md) |
 | `X.hull(Y)` | `Ball<T, 1>`, `Ball<T, 1>` | a canonical ball Z that contains the union of the balls; when X is empty, Z is Y as it is (the same limbs); when Y is empty and X is not, Z is X as it is | [`ball_hull_1`](ball_hull_1.md) |
@@ -190,7 +190,7 @@ Arithmetic on balls: the result contains every result on points of the operands;
 |---|---|---|---|
 | `X.lower_as<T>()` | `Interval<T, 2>` | $t = \mathrm{RD}(x)$ | [`to_down_2`](to_down_2.md) |
 | `X.upper_as<T>()` | `Interval<T, 2>` | $t = \mathrm{RU}(x)$ | [`to_up_2`](to_up_2.md) |
-| `Interval<T, 1>(lo, hi)`, `Interval<T, 1>(a)` | `Expansion<T, 1>`, `Expansion<T, 1>` | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`interval_make_1`](interval_make_1.md) |
+| `Interval<T, 1>(lo, hi)`, `Interval<T, 1>(a)`, `from_bounds(lo, hi)` | `Expansion<T, 1>`, `Expansion<T, 1>` | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`interval_make_1`](interval_make_1.md) |
 | `-X` | `Interval<T, 1>` | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_1`](interval_neg_1.md) |
 | `X + Y`, `X += Y` | `Interval<T, 1>`, `Interval<T, 1>` | a canonical interval that contains every $x + y$; the range rounded outward | [`interval_add_1`](interval_add_1.md) |
 | `X - Y`, `X -= Y` | `Interval<T, 1>`, `Interval<T, 1>` | a canonical interval that contains every $x - y$; the range rounded outward | [`interval_sub_1`](interval_sub_1.md) |
@@ -198,7 +198,7 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `X + Y`, `X += Y` | `Interval<T, 2>`, `Interval<T, 2>` | a canonical interval that contains every $x + y$; within $A\lvert v\rvert + B$ of the range | [`interval_add_2`](interval_add_2.md) |
 | `-X` | `Interval<T, 2>` | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_2`](interval_neg_2.md) |
 | `X - Y`, `X -= Y` | `Interval<T, 2>`, `Interval<T, 2>` | a canonical interval that contains every $x - y$; within $A\lvert v\rvert + B$ of the range | [`interval_sub_2`](interval_sub_2.md) |
-| `Interval<T, 2>(lo, hi)`, `Interval<T, 2>(a)` | `Expansion<T, 2>`, `Expansion<T, 2>` | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`interval_make_2`](interval_make_2.md) |
+| `Interval<T, 2>(lo, hi)`, `Interval<T, 2>(a)`, `from_bounds(lo, hi)` | `Expansion<T, 2>`, `Expansion<T, 2>` | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`interval_make_2`](interval_make_2.md) |
 | `X * Y`, `X *= Y` | `Interval<T, 2>`, `Interval<T, 2>` | a canonical interval that contains every $x y$; within $A\lvert v\rvert + B$ of the range | [`interval_mul_2`](interval_mul_2.md) |
 | `X.hull(Y)` | `Interval<T, 1>`, `Interval<T, 1>` | the hull of the intervals, exactly | [`interval_hull_1`](interval_hull_1.md) |
 | `X.intersection(Y)` | `Interval<T, 1>`, `Interval<T, 1>` | the intersection of the intervals, exactly | [`interval_intersection_1`](interval_intersection_1.md) |
@@ -241,6 +241,7 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `Interval<T, K>()` | none | the point 0: $[0, 0]$ | none |
 | `Interval<T, K>::empty()` | none | the empty set: $(+\infty, -\infty)$ | none |
 | `Interval<T, K>::whole()` | none | the whole line: $[-\infty, +\infty]$ | none |
+| `X.is_finite()` | `Interval<T, K>` | whether it is a nonempty bounded interval (both bounds finite, tested on the bit patterns of their leading limbs): false for the empty set, the whole line and the half-lines, the meaning of a ball's `is_finite()` | none |
 | `X.lower(), X.upper()` | `Interval<T, K>` | the stored bounds; $+\infty$ and $-\infty$ for the empty set | none |
 | `X.lower_as<T>(), X.upper_as<T>()` | `Interval<T, 1>` | the stored bounds; $+\infty$ and $-\infty$ for the empty set | none |
 
@@ -303,11 +304,11 @@ The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batc
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
 | none of its own (in the loop `bv_conv_1`) | - | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
-| `dot(x, y)`, `dot(x, y, sequential)`, `conv(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_entry_step_1`](dot_entry_step_1.md) |
-| `dot(x, y)`, `dot(x, y, sequential)`, `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
-| `sum(x)`, `sum(x, sequential)`, `sum_fast(x)` | `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
-| `sum(x)`, `sum(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
-| `sum_fast(x)`, `sum_fast(x, sequential)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |
+| `dot(x, y)`, `dot(sequential, x, y)`, `conv(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x y)$ | [`dot_entry_step_1`](dot_entry_step_1.md) |
+| `dot(x, y)`, `dot(sequential, x, y)`, `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
+| `sum(x)`, `sum(sequential, x)`, `sum_fast(x)` | `SoAView<const T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
+| `sum(x)`, `sum(sequential, x)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
+| `sum_fast(x)`, `sum_fast(sequential, x)` | `SoAView<const T, 2>` | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |
 | `A.sum()` | `Accumulator<T, 1>` | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_1`](fold_finish_1.md) |
 | `A.sum()` | `Accumulator<T, 2>` | $s$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`fold_finish_2`](fold_finish_2.md) |
 | `traits<T>::sum(n)`, `traits<T>::sum_height(h)` | `std::size_t` | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - m \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bound_sum_1`](bound_sum_1.md) |

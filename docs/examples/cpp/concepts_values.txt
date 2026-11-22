@@ -1,0 +1,7 @@
+a ball through bytes:  center 0x1p+0 + 0x1p-60, radius 0x1p-80; the whole line stays whole: yes
+from_limbs of the limbs read: the same ball: yes; the whole line: yes; the empty set: yes
+Ball(c, r) of the empty set's parts: the whole line: yes
+constexpr 1 + 2^-60:   0x1p+0 + 0x1p-60
+constexpr 1/3:         0x1.5555555555555p-2 + 0x1.5555555555555p-56, within 0x1.5555555555556p-110
+two_prod above 2^-969: product 0x1.fffffff8p-1, error -0x1p-59, the same at compile time and at run time: yes
+two_prod below 2^-969: the same product, error terms within 2 eta: yes

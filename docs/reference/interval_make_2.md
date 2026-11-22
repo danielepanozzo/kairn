@@ -20,6 +20,8 @@ A number of several limbs stands for their exact sum: $l_o = l_{o0} + l_{o1}$, $
 | `Interval<T, 2>(lo, hi)` | `T`, `T` | `Interval<T, 2>` | each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`); `constexpr`; does not round |
 | `Interval<T, 2>(a)` | `T` | `Interval<T, 2>` | implicit; $l_o = h_i = a$, each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`); `constexpr`; does not round |
 | `Interval<T, 2>(a)` | `Expansion<T, 2>` | `Interval<T, 2>` | implicit; $l_o = h_i = a$; `constexpr`; does not round |
+| `from_bounds(lo, hi)` | `Expansion<T, 2>`, `Expansion<T, 2>` | `Interval<T, 2>` | `Interval<T, 2>::from_bounds(lo, hi)`, the same set as `Interval(lo, hi)`, under the name `Ball` has too ([One enclosure interface](enclosure.md#the-interface)); `constexpr`; does not round |
+| `from_bounds(lo, hi)` | `T`, `T` | `Interval<T, 2>` | `Interval<T, 2>::from_bounds(lo, hi)`, the same set as `Interval(lo, hi)`, under the name `Ball` has too ([One enclosure interface](enclosure.md#the-interface)); each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`); `constexpr`; does not round |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 

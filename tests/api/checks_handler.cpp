@@ -25,8 +25,21 @@ void record(const char* reason) {
 
 #define KAIRN_ENVIRONMENT_FAILURE(reason) record(reason)
 #include "checks_cases.hpp"
-#if KAIRN_CHECKS != 1
+#if defined(KAIRN_TEST_CHECKS_OFF)
+#if KAIRN_CHECKS != 0
+#error "checks_handler.cpp built with KAIRN_TEST_CHECKS_OFF tests a build without the checks: KAIRN_CHECKS must be 0"
+#endif
+#elif KAIRN_CHECKS != 1
 #error "checks_handler.cpp tests a check of KAIRN_CHECKS: build it without NDEBUG"
+#endif
+// Without the checks (KAIRN_TEST_CHECKS_OFF, KAIRN_CHECKS 0), only the batch entries check the
+// environment (environment.hpp, check_batch_environment), in every build: they must call the
+// handler as with the checks; every other function must not, and its results are compared with
+// those to nearest only when it does not round; an operand that is not canonical is not checked.
+#if defined(KAIRN_TEST_CHECKS_OFF)
+constexpr bool checks_on = false;
+#else
+constexpr bool checks_on = true;
 #endif
 
 #include "no_crash_reports.hpp"
@@ -74,10 +87,16 @@ int main() {
             // Which functions call the handler here: every one that rounds; under flush to zero,
             // every one that is checked; under a rounding mode, none that does not round, which
             // must give the same bits as to nearest.
-            const bool must_call = op.kind == Kind::rounds || (!state.rounding && op.kind == Kind::exact);
+            const bool checked_here = checks_on || batch_entry(op.name);
+            const bool must_call =
+                checked_here && (op.kind == Kind::rounds || (!state.rounding && op.kind == Kind::exact));
             if (!state.rounding && op.kind == Kind::unchecked) continue;
+            // Without the checks, a function that is not a batch entry runs unchecked: its results
+            // are not compared where the state can change them, a directed rounding mode for one that
+            // rounds, flush to zero (which reads a subnormal operand as zero) for every one.
+            const bool compare = !must_call && op.kind != Kind::rounds && (checks_on || state.rounding);
             Bits nearest, here;
-            if (!must_call) op.run(nearest);
+            if (compare) op.run(nearest);
             calling(op.name, state.name);
             const int before = calls;
             last_reason = nullptr;
@@ -91,7 +110,7 @@ int main() {
             } else {
                 ++exempt;
                 if (calls != before) ++reported;
-                const long at = first_difference(nearest, here);
+                const long at = compare ? first_difference(nearest, here) : -1;
                 if (at >= 0) {
                     ++differ;
                     std::printf("  %s: the first result that differs is %ld", op.name, at);
@@ -108,10 +127,16 @@ int main() {
         state.set();
         sink = (unverified(raw(1.0, double(v_a))) + o.y).limb[1];
         state.restore();
-        expect(calls > before, "x + y with an x that is not canonical calls the handler, and goes on", state.name);
+        if constexpr (checks_on) {
+            expect(calls > before, "x + y with an x that is not canonical calls the handler, and goes on", state.name);
+        } else {
+            expect(calls == before, "without the checks, x + y does not call the handler", state.name);
+        }
         expect(quiet == 0, "every function that is checked here calls the handler, and goes on", state.name);
         expect(wrong == 0, "the handler is given the reason", state.name);
-        expect(reported == 0, "no function that does not round calls the handler", state.name);
+        expect(reported == 0, checks_on ? "no function that does not round calls the handler"
+                                        : "no function that is not a batch entry, or does not round, calls the handler",
+               state.name);
         expect(differ == 0, "every function that does not round gives the same bits as to nearest", state.name);
         std::printf("under %s: %d functions call the handler, %d that do not round do not\n", state.name, checked,
                     exempt);

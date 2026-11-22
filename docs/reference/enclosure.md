@@ -6,7 +6,7 @@ an algorithm can be written once and run on either, with one limb or two
 ([One enclosure interface](../developer/design/milestone2.md#one-enclosure-interface); the
 [tutorial on bisection](../tutorials/bisection.md) is such an algorithm). Every function is one
 generated kernel, proved in Rocq and judged by the oracle through the public interface, or one of
-the two compositions said below. What each answer means differs by the type and the number of
+the compositions said below, or one of four tests of stored limbs written by hand. What each answer means differs by the type and the number of
 limbs: for an interval the predicates and comparisons are **exact**; for a ball of one limb the
 predicates are exact, and the comparisons exact when the sum of the radii is at most $\Omega$,
 the largest finite number of `T`; for a ball of two limbs most are only **certain**, an answer
@@ -18,6 +18,18 @@ The functions are in `kairn/interval.hpp` and `kairn/ball.hpp`, and the three ty
 includes all three. `T` is `float` or `double`, `X` and `Y` two sets of the same type, `T` and $k$,
 and `t` a point: a value of `T` or a number of $k$ limbs.
 
+**`X(a, b)` is not the same set for an interval and a ball.** `Interval<T, k>(a, b)` is the
+interval $[a, b]$, but `Ball<T, k>(a, b)` is the ball of center $a$ and radius $b$: generic code
+that writes `X(lo, hi)` compiles for both and means two different sets. The one spelling that
+builds either from two bounds is **`X::from_bounds(lo, hi)`**: the interval $[lo, hi]$, or a ball
+that contains it, with the same special cases (a NaN bound, or the same infinity twice, gives the
+whole line; reversed bounds the empty set; and a ball, which cannot be a half-line, is the whole
+line where a bound is infinite). `Interval<T, k>::from_bounds` is
+`Interval<T, k>(lo, hi)` under that name, and `Ball<T, k>::from_bounds` is
+`Ball<T, k>::from_interval(lo, hi)`; the older spellings stay. `Ball<T, 2>::from_bounds` takes two
+values of `T` only: no kernel makes a ball of two bounds of two limbs
+(`Ball<T, 2>(Interval<T, 2>(lo, hi))` composes two, each with its claim).
+
 ## The interface
 
 | Function | `Interval<T, k>` | `Ball<T, k>` |
@@ -26,6 +38,7 @@ and `t` a point: a value of `T` or a number of $k$ limbs.
 | `X.lower_as<T>()`, `X.upper_as<T>()`: bounds of `T` | one limb the bounds; two limbs rounded outward ([`to_down_2`](to_down_2.md), [`to_up_2`](to_up_2.md)) | [`ball_lower_as_k`](ball_lower_as_1.md), [`ball_upper_as_k`](ball_upper_as_1.md) |
 | `X.midpoint()`, `X.radius()`, `X.mid_rad()` | [`interval_mid_rad_k`](interval_mid_rad_1.md), one call for `mid_rad()`, one each for the others | the center and the radius, stored |
 | `X.is_empty()`, `X.is_whole()` | [`interval_empty_k`](interval_empty_1.md), [`interval_entire_k`](interval_entire_1.md) | tests of the radius (a NaN, $+\infty$), no kernel |
+| `X.is_finite()`: a set neither empty nor unbounded | both bounds finite, a test of the leading limbs, no kernel: false for the empty set, the whole line and the half-lines | the radius finite, a test of the radius, no kernel |
 | `X.contains(t)`; `member(t, X)`, a `Trit` | [`interval_contains_k`](interval_contains_1.md) | [`ball_contains_point_k`](ball_contains_point_1.md) |
 | `X.contains(Y)`: $Y \subseteq X$ | [`interval_subset_k`](interval_subset_1.md) | [`ball_contains_ball_k`](ball_contains_ball_1.md) |
 | `X.certainly_positive()`, `X.certainly_negative()`, `X.certainly_zero()` | [`interval_positive_k`](interval_positive_1.md), [`interval_negative_k`](interval_negative_1.md), [`interval_zero_k`](interval_zero_1.md) | [`ball_positive_k`](ball_positive_1.md), [`ball_negative_k`](ball_negative_1.md), [`ball_zero_k`](ball_zero_1.md) |
@@ -33,7 +46,8 @@ and `t` a point: a value of `T` or a number of $k$ limbs.
 | `X.hull(Y)`, `X.intersection(Y)` | [`interval_hull_k`](interval_hull_1.md), [`interval_intersection_k`](interval_intersection_1.md) | [`ball_hull_k`](ball_hull_1.md), [`ball_intersection_k`](ball_intersection_1.md) |
 | `X.split()`: a `Split` | [`interval_split_k`](interval_split_1.md) | [`ball_split_k`](ball_split_1.md) |
 | to the other type, explicit | `Ball<T, k>(X)`: [`interval_to_ball_k`](interval_to_ball_1.md) | `Interval<T, k>(X)`: [`ball_to_interval_k`](ball_to_interval_1.md) |
-| from two values of `T` | `Interval<T, k>(lo, hi)` | `Ball<T, k>::from_interval(lo, hi)`: [`ball_from_interval_k`](ball_from_interval_1.md) |
+| from its limbs, as read through the accessors ([below](#limbs)) | `Interval<T, k>::from_limbs(p)`: [`make_2`](make_2.md) or [`make_2_limbs`](make_2_limbs.md) on each bound | `Ball<T, k>::from_limbs(p)`: the same on the center, `make_2` on the radius |
+| from two bounds, the one spelling of both: `X::from_bounds(lo, hi)` | the interval $[lo, hi]$, the same as `Interval<T, k>(lo, hi)`: [`interval_make_k`](interval_make_1.md), of two values of `T` or two numbers of $k$ limbs | a ball that contains $[lo, hi]$, the same as `Ball<T, k>::from_interval(lo, hi)`: [`ball_from_interval_k`](ball_from_interval_1.md), of two values of `T`, and for one limb of two numbers of one limb |
 | the relations of IEEE 1788: `ieee1788::equal`, `subset`, `interior`, `disjoint` | [`interval_rel_equal_k`](interval_rel_equal_1.md), [`interval_subset_k`](interval_subset_1.md), [`interval_rel_interior_k`](interval_rel_interior_1.md), [`interval_rel_disjoint_k`](interval_rel_disjoint_1.md) | none ([below](#ieee-1788)) |
 
 `greater(X, Y)` is `less(Y, X)` and `greater_equal(X, Y)` is `less_equal(Y, X)`, the same kernels
@@ -56,6 +70,7 @@ exact, of every type.
 | Function | `Interval<T, 1>` | `Interval<T, 2>` | `Ball<T, 1>` | `Ball<T, 2>` |
 |---|---|---|---|---|
 | `is_empty`, `is_whole` | exact | exact | exact (no kernel) | exact (no kernel) |
+| `is_finite` | exact (no kernel) | exact (no kernel) | exact (no kernel) | exact (no kernel) |
 | signs `certainly_*` | exact | exact | exact | exact |
 | `contains(t)`, `member(t, X)` | exact | exact; for `t` of `T` composed with `make_2` | exact, by exact pairs | certain: `contains` true only for a member; `member` yes, no or unknown, which it may be within about $2e + 3G$ of $\lvert t - c\rvert = r$ |
 | `contains(Y)` | exact | exact | exact, by exact pairs | certain: true only if $Y \subseteq X$; may be false within about $2e + 4G$ of the boundary |
@@ -132,6 +147,7 @@ Members are real numbers: $\pm\infty$ is a bound, never a member.
 | `midpoint()` | a NaN (every limb) | $0$ |
 | `radius()` | a NaN | $+\infty$ |
 | `is_empty()`, `is_whole()` | true, false | false, true |
+| `is_finite()` | false | false |
 | `contains(t)` | false | true for a finite $t$; false for $\pm\infty$ and a NaN |
 | `member(t, X)` | no | yes for a finite $t$; no otherwise |
 | `X.contains(Y)` | true exactly when $Y$ is empty | true |
@@ -144,7 +160,12 @@ Members are real numbers: $\pm\infty$ is a bound, never a member.
 | the conversion to the other type | the empty set | the whole line |
 
 For a half-line $[\ell, +\infty]$, which only an interval can be, `midpoint()` is $\Omega$ for
-every finite $\ell$, `radius()` is $+\infty$, and the conversion to a ball is the whole line. A
+every finite $\ell$, `radius()` is $+\infty$, `is_finite()` is false, and the conversion to a ball
+is the whole line. `is_finite()` of an interval means what it means of a ball, a set neither empty
+nor unbounded; a ball has no half-lines, and the one choice made for an interval is that a
+half-line, unbounded, is not finite, so that `X.is_finite()` is `Ball<T, 1>(X).is_finite()` for
+every interval of one limb (for two limbs the ball of a bounded interval near the top of the range
+can be the whole line, as [`interval_to_ball_2`](interval_to_ball_2.md) claims). A
 finite bound of two limbs can exceed $\Omega$, by less than half a gap of `T` (the pair
 $(\Omega, \mathrm{ulp}(\Omega)/4)$, for example): then the midpoint $\Omega$ is not a member of the
 half-line, which is what [`interval_mid_rad_2`](interval_mid_rad_2.md) claims, and `split()` splits
@@ -192,21 +213,69 @@ when $Y$ is the whole line and $X$ is not. When both are special the result is o
 two empty balls can differ in their NaNs and two whole lines in the sign of the zero of their
 centers, so no result could be both as they are.
 
+## Limbs
+
+A program that moves sets through storage of its own (arrays, GPU buffers, warp shuffles) reads
+their limbs and builds the sets again from them:
+
+| | `Interval<T, k>` | `Ball<T, k>` |
+|---|---|---|
+| read | `X.lower().limb[i]` and `X.upper().limb[i]`, $i < k$ | `X.center().limb[i]`, $i < k$, and `X.radius()` |
+| built again | `Interval<T, k>::from_limbs(p)`: `p[0]` to `p[k - 1]` the lower bound, most significant first, then the upper bound | `Ball<T, k>::from_limbs(p)`: `p[0]` to `p[k - 1]` the center, then `p[k]` the radius |
+
+The accessors were there before; `from_limbs` is the counterpart of `Expansion<T, 2>::from_limbs`,
+with its contract.
+
+- **Precondition**: the limbs are those of a canonical set, as an operation of Kairn returns it
+  (an interval: the empty set $(+\infty, -\infty)$, or bounds $lo \le hi$, neither a NaN, $lo <
+  +\infty$, $hi > -\infty$, each of two limbs canonical; a ball: a finite ball with a canonical
+  center and $r \ge 0$, the whole line, center 0 and radius $+\infty$, or the empty set, every limb
+  a NaN). Nothing is checked in a release build. With `KAIRN_CHECKS` 1 the environment is checked
+  (the rounding mode included, for one limb as for two),
+  then the limbs, and limbs that are not those of a canonical set stop the program with
+  `from_limbs: the limbs are not those of a canonical interval` (or `ball`), or make a constant
+  expression invalid.
+- **The guard.** The limbs come from the program, which may have computed them as products, so
+  each passes through the guard of a constructor kernel before an operation can add it
+  ([rule R3](../developer/architecture.md#the-kernel-ir)), as those of `Expansion<T, 2>::from_limbs`
+  do: a value of `T` (a bound or a center of one limb, a radius) through
+  [`make_2`](make_2.md), of which `from_limbs` keeps the leading limb, the value given by its
+  claim (a canonical pair of value $a$ has $a$ as its leading limb, and a NaN gives two NaN); a
+  number of two limbs through [`make_2_limbs`](make_2_limbs.md), whose claim is the same limbs for a
+  canonical pair. Not through `ball_make_1` or `ball_make_2`, the kernels of `Ball(c, r)`, which
+  guard the same limbs but make a NaN radius the whole line: the empty set would not come back.
+  That the result is the set given is argued from these claims, not machine-checked as one
+  statement. Nothing else is computed.
+- **The round trip**, `from_limbs` of the limbs read, gives every limb back bit for bit but two: a
+  $-0$ may come back $+0$ (the guard $-0 + 0$ is $+0$ under rounding to nearest, upward and toward
+  zero; in constant evaluation the guard is not applied, and the $-0$ stays), and a NaN limb (of
+  the empty ball) comes back a NaN whose payload Kairn does not specify.
+
+`from_limbs` has no marked form, as `Expansion::from_limbs` has none: its operand is a pointer.
+`api.boundary.*` passes a product of the program as each kind of limb, `api.constexpr` makes the
+round trip of every state at compile time and at run time, and the oracle judges the guard of each
+limb through `from_limbs` (the forms of `make_2` and `make_2_limbs` in `api.oracle.*`).
+
 ## Compositions
 
-Two functions compose two proved kernels in the header, each argued and not machine-checked as one
+Three functions compose proved kernels in the header, each argued and not machine-checked as one
 statement:
 
 - `X.contains(t)` and `member(t, X)` with a point `t` of `T` and two limbs (an interval or a ball):
   `make_2` makes `t` a number of two limbs, which its claim says is `t` exactly (or $(\pm\infty, 0)$,
   (NaN, NaN)), and the kernel of two limbs answers for that number; so the answer is about `t`.
-  The constructors of two limbs from a `T` compose the same way
-  ([What holds today](../getting-started/guarantees.md#intervals)).
+  The constructors of two limbs from a `T`, `from_bounds` of an interval of two limbs among them,
+  compose the same way ([What holds today](../getting-started/guarantees.md#intervals)).
+- `from_limbs` of an interval and of a ball: the guards of `make_2` and `make_2_limbs` on each limb
+  ([above](#limbs)).
 - `greater`, `greater_equal` and `not_equal` exchange the operands or the answers of one kernel,
   which composes nothing.
 
 No function of this page writes arithmetic of its own: moves, selects on masks (a `Trit` from the
-two masks of a kernel, or from one exact mask) and nothing else.
+two masks of a kernel, or from one exact mask) and nothing else. Four tests call no kernel and are
+written by hand in the headers, not machine-checked: `is_empty()`, `is_whole()` and `is_finite()`
+of a ball (the radius a NaN, $+\infty$, finite) and `is_finite()` of an interval (the leading limb
+of each stored bound finite, on its bit pattern).
 
 ## IEEE 1788
 
@@ -273,16 +342,21 @@ page but the midpoint, the radius, the split and the conversions (comparisons an
 a ball the signs. The others round and check it: the member and subset tests and the comparisons of
 balls (exact pairs by `two_sum_ord`, bounds by `add_ball_2_2`), the hull, the intersection and the
 split of balls, the midpoint, radius, split and conversions of intervals, and the ball from an
-interval of two `T`. The states of a ball (`is_empty`, `is_whole`) and `mid_rad()` of a ball, which
-read stored values, check nothing.
+interval of two `T` (`from_interval` and `from_bounds` of a ball; `from_bounds` of an interval, its
+constructor under another name, does not round). `from_limbs` checks the rounding mode for one
+limb and for two (for two the test of a canonical pair rounds; for one only the guards do). The states of a ball (`is_empty`,
+`is_whole`, `is_finite`), `is_finite()` of an interval and `mid_rad()` of a ball, which read stored
+values, check nothing.
 
 ## Constant evaluation
 
 `constexpr`: every function of this page on intervals of one and two limbs but the midpoint, the
 radius, `mid_rad()` and the conversions of two limbs (the split of two limbs is `constexpr`); on
 balls of one limb every function but the split; on balls of two limbs `lower_as`, `upper_as`,
-`midpoint()`, `mid_rad()`, the signs, the states and `from_interval`, and the narrowing
-`Ball<T, 1>(X)` of a ball of two limbs. The others compute with fused operations that have no
+`midpoint()`, `mid_rad()`, the signs, the states, `from_interval` and `from_bounds`, and the narrowing
+`Ball<T, 1>(X)` of a ball of two limbs; `from_limbs`, `from_bounds` and `is_finite()` of both types,
+every number of limbs (`from_bounds` of a ball of one limb and of two limbs alike). The others
+compute with fused operations that have no
 variant for constant evaluation (`add_ball_2_2`, the sums of balls). On the empty set and the
 whole line the listings of balls compute a NaN or $\infty - \infty$ before the selects that
 return their result, and so do the midpoint, the radius and the split of the empty interval,
@@ -295,11 +369,20 @@ though they are evaluated as stated at run time (`api.constexpr` checks them at 
   the oracle against the kernel's claims on 2 000 random cases of `binary64` and `binary32` in the
   quick tier and 10 000 in the full tier, the empty set, the whole line, half-lines, infinite and
   NaN points among them; a `Trit` as the two masks of its kernel, and `member` on a kernel of one
-  exact mask never *unknown* ([Testing](../developer/testing.md#the-quick-tier)).
+  exact mask never *unknown* ([Testing](../developer/testing.md#the-quick-tier)). `from_bounds` is
+  judged among the forms of `interval_make_k` and `ball_from_interval_k`, and the guard of each limb
+  given to `from_limbs` among those of `make_2` and `make_2_limbs`, in every position a canonical
+  set can hold it.
 - `api.constexpr`: every `constexpr` function against values computed by hand, and the others at
   run time; the types, which exist exactly when their kernel is proved, take sets of one type only,
-  and have no comparison operators.
+  and have no comparison operators; `is_finite()` on every state; the round trip of `from_limbs`
+  on every state, bit for bit in constant evaluation and but the sign of a zero and a NaN's
+  payload at run time; which operand types `from_bounds` takes.
 - `api.reject.enclosure.*`: what must not compile (a `Trit` as a `bool`, a comparison operator,
-  sets of two types or numbers of limbs, a point converted to a set), each with its control.
-- `api.checks.*`, `api.boundary.*`, `api.shadow`: the checks of a debug build, a product the
-  program passes in as a point or as bounds, and the names of the headers.
+  sets of two types or numbers of limbs, a point converted to a set, a ball of two limbs from bounds
+  of two limbs), each with its control; `api.reject.unverified.from_bounds.*`, and
+  `api.reject.checks.interval_from_limbs_not_canonical` and `.ball_from_limbs_not_canonical`, limbs
+  of no canonical set given to `from_limbs` in a constant expression.
+- `api.checks.*`, `api.boundary.*`, `api.shadow`: the checks of a debug build (limbs of no
+  canonical set given to `from_limbs` among them), a product the program passes in as a point, as
+  bounds (`from_interval`, `from_bounds`) or as a limb (`from_limbs`), and the names of the headers.

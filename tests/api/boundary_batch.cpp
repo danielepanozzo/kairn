@@ -146,10 +146,10 @@ ALWAYS_INLINE void put(T* out, const kairn::Reduction<kairn::Expansion<T, K>>& r
 // Sums of an array that holds the products.
 FORM(sum1, MIXED(s, t) put<T, 1>(out, kairn::sum(view<1>(s, t, N)));)
 FORM(sum2, MIXED(s, t) put<T, 2>(out, kairn::sum(view<2>(s, t, N)));)
-FORM(sum1_seq, MIXED(s, t) put<T, 1>(out, kairn::sum(view<1>(s, t, N), kairn::sequential));)
-FORM(sum2_seq, MIXED(s, t) put<T, 2>(out, kairn::sum(view<2>(s, t, N), kairn::sequential));)
+FORM(sum1_seq, MIXED(s, t) put<T, 1>(out, kairn::sum(kairn::sequential, view<1>(s, t, N)));)
+FORM(sum2_seq, MIXED(s, t) put<T, 2>(out, kairn::sum(kairn::sequential, view<2>(s, t, N)));)
 FORM(sum_fast2, MIXED(s, t) put<T, 2>(out, kairn::sum_fast(view<2>(s, t, N)));)
-FORM(sum_fast2_seq, MIXED(s, t) put<T, 2>(out, kairn::sum_fast(view<2>(s, t, N), kairn::sequential));)
+FORM(sum_fast2_seq, MIXED(s, t) put<T, 2>(out, kairn::sum_fast(kairn::sequential, view<2>(s, t, N)));)
 // Maps whose operand that is added holds the products: x of add and sub, y of sub and axpy.
 #define MAP(K, CALL)                                                       \
     PRODUCTS(s, t) [[maybe_unused]] const T zero[N] = {};                  \
@@ -177,7 +177,7 @@ FORM(dot1, MIXED(s, t) const T zero[N] = {}; T ones[N];
      put<T, 1>(out, kairn::dot(view<1>(s, t, N), view<1>(ones, zero, N)));)
 FORM(dot1_seq, MIXED(s, t) const T zero[N] = {}; T ones[N];
      for (int i = 0; i < N; ++i) ones[i] = run_time_one<T>();
-     put<T, 1>(out, kairn::dot(view<1>(s, t, N), view<1>(ones, zero, N), kairn::sequential));)
+     put<T, 1>(out, kairn::dot(kairn::sequential, view<1>(s, t, N), view<1>(ones, zero, N)));)
 FORM(dot2, MIXED(s, t) const T zero[N] = {}; T ones[N];
      for (int i = 0; i < N; ++i) ones[i] = run_time_one<T>();
      put<T, 2>(out, kairn::dot(view<2>(s, t, N), view<2>(ones, zero, N)));)
@@ -233,11 +233,11 @@ FORM(dot2, MIXED(s, t) const T zero[N] = {}; T ones[N];
     }                                                                             \
     out[2 * N + 2] = f ? T(1) : T(0);
 FORMK(dot1_k, ARRAYSK put<T, 1>(out, kairn::dot(view<1>(s, t, N), view<1>(fs, zero, N)));)
-FORMK(dot1_seq_k, ARRAYSK put<T, 1>(out, kairn::dot(view<1>(s, t, N), view<1>(fs, zero, N), kairn::sequential));)
+FORMK(dot1_seq_k, ARRAYSK put<T, 1>(out, kairn::dot(kairn::sequential, view<1>(s, t, N), view<1>(fs, zero, N)));)
 FORMK(dot1_rev_k, ARRAYSK put<T, 1>(out, kairn::dot(view<1>(fs, zero, N), view<1>(s, t, N)));)
-FORMK(dot1_rev_seq_k, ARRAYSK put<T, 1>(out, kairn::dot(view<1>(fs, zero, N), view<1>(s, t, N), kairn::sequential));)
+FORMK(dot1_rev_seq_k, ARRAYSK put<T, 1>(out, kairn::dot(kairn::sequential, view<1>(fs, zero, N), view<1>(s, t, N)));)
 FORMK(dot2_k, ARRAYSK put<T, 2>(out, kairn::dot(view<2>(s, t, N), view<2>(fs, zero, N)));)
-FORMK(dot2_seq_k, ARRAYSK put<T, 2>(out, kairn::dot(view<2>(s, t, N), view<2>(fs, zero, N), kairn::sequential));)
+FORMK(dot2_seq_k, ARRAYSK put<T, 2>(out, kairn::dot(kairn::sequential, view<2>(s, t, N), view<2>(fs, zero, N)));)
 FORMK(dot2_rev_k, ARRAYSK put<T, 2>(out, kairn::dot(view<2>(fs, zero, N), view<2>(s, t, N)));)
 FORMK(conv1_k, CONVK(1, view<1>(r, t, N), view<1>(fl, f0, 2)))
 FORMK(conv1_rev_k, CONVK(1, view<1>(fl, f0, 2), view<1>(r, t, N)))
@@ -333,10 +333,10 @@ void run(const char* type, long rounds, Totals& totals) {
     const Form<T> forms[] = {
         ROW(sum1, "sum(SoAView<T, 1>{a*b, c, ...})", true),
         ROW(sum2, "sum(SoAView<T, 2>{a*b, c, ...}, {0})", true),
-        ROW(sum1_seq, "sum(.. 1 limb .., sequential)", true),
-        ROW(sum2_seq, "sum(.. 2 limbs .., sequential)", true),
+        ROW(sum1_seq, "sum(sequential, .. 1 limb ..)", true),
+        ROW(sum2_seq, "sum(sequential, .. 2 limbs ..)", true),
         ROW(sum_fast2, "sum_fast(.. 2 limbs ..)", true),
-        ROW(sum_fast2_seq, "sum_fast(.. 2 limbs .., sequential)", true),
+        ROW(sum_fast2_seq, "sum_fast(sequential, .. 2 limbs ..)", true),
         ROW(add1, "add({a*b}, c, z)", true),
         ROW(add2, "add({a*b}, c, z), 2 limbs", true),
         ROW(add1_y, "add(c, {a*b}, z)", true),
@@ -349,7 +349,7 @@ void run(const char* type, long rounds, Totals& totals) {
         ROW(acc_add1, "acc.add(a*b), 1 limb", true),
         ROW(acc_add2, "acc.add(a*b), 2 limbs", true),
         ROW(dot1, "dot({a*b, c, ...}, {1})", false),
-        ROW(dot1_seq, "dot({a*b, c, ...}, {1}, sequential)", false),
+        ROW(dot1_seq, "dot(sequential, {a*b, c, ...}, {1})", false),
         ROW(dot2, "dot({a*b, c, ...}, {1}), 2 limbs", false),
         ROW(scale1, "scale({a*b}, 3, z)", false),
         ROW(scale2, "scale({a*b}, 3, z), 2 limbs", false),
@@ -360,11 +360,11 @@ void run(const char* type, long rounds, Totals& totals) {
         ROW(acc_product1, "acc.add_product(a*b, 1), 1 limb", false),
         ROW(acc_product2, "acc.add_product(a*b, 1), 2 limbs", false),
         KNOWN(dot1_k, "dot({a*b, c, ...}, {F})"),
-        KNOWN(dot1_seq_k, "dot({a*b, c, ...}, {F}, sequential)"),
+        KNOWN(dot1_seq_k, "dot(sequential, {a*b, c, ...}, {F})"),
         KNOWN(dot1_rev_k, "dot({F}, {a*b, c, ...})"),
-        KNOWN(dot1_rev_seq_k, "dot({F}, {a*b, c, ...}, sequential)"),
+        KNOWN(dot1_rev_seq_k, "dot(sequential, {F}, {a*b, c, ...})"),
         KNOWN(dot2_k, "dot({a*b, c, ...}, {F}), 2 limbs"),
-        KNOWN(dot2_seq_k, "dot(.., {F}, sequential), 2 limbs"),
+        KNOWN(dot2_seq_k, "dot(sequential, .., {F}), 2 limbs"),
         KNOWN(dot2_rev_k, "dot({F}, {a*b, c, ...}), 2 limbs"),
         KNOWN(conv1_k, "conv({c, a*b, ...}, {F, F}, z)"),
         KNOWN(conv1_rev_k, "conv({F, F}, {c, a*b, ...}, z)"),

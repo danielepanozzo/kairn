@@ -17,7 +17,7 @@ A number of several limbs stands for their exact sum: $s = s_0 + s_1$, $x = x_0 
 | Form | Operands | Result | Note |
 |---|---|---|---|
 | `dot(x, y)` | `SoAView<const T, 2>`, `SoAView<const T, 2>` | `Reduction<Expansion<T, 2>>` | the step of the loop the function calls, once per element; not `constexpr`; rounds; in the lane order of the build, or, with `kairn::sequential`, in the sequential order (loop `dot_2`) |
-| `dot(x, y, sequential)` | `SoAView<const T, 2>`, `SoAView<const T, 2>`, `Sequential` | `Reduction<Expansion<T, 2>>` |  |
+| `dot(sequential, x, y)` | `Sequential`, `SoAView<const T, 2>`, `SoAView<const T, 2>` | `Reduction<Expansion<T, 2>>` |  |
 | `conv(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | `bool` | each coefficient a sequential `dot_2` (loop `conv_2`) |
 
 `T` is `float` or `double`; the functions are in namespace `kairn`, header `kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken where the table writes a view of `const T`. They take no marker: a function on arrays compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).

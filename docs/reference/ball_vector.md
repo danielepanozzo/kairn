@@ -227,7 +227,19 @@ table says so; otherwise it overlaps none of them. A partial overlap is not supp
 
 ## Checks
 
-With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](../developer/testing.md#the-checks-of-a-debug-build)):
+**The environment, in every build.** Every operation on whole ball vectors is a batch entry: the
+constructors from centers and a radius (of a `BallVector` and of a view), the negation, the sum,
+the difference, the scalings, `ldexp`, `half`, `axpy`, the product of polynomials, `norm_upper`, and
+the operators that call them. Before its loop each reads the floating-point environment once, as
+`kairn::environment_ok()` does, with `KAIRN_CHECKS` 1 or 0, and if it is not the default one calls
+`KAIRN_ENVIRONMENT_FAILURE` with the message of a debug build
+(`kairn: the floating-point environment: the rounding mode is not to nearest ...`, or flush to
+zero), which by default stops the program: the default environment is the precondition of each,
+checked. The negation, a change of sign and a copy of the radius, leaves the rounding mode out;
+every other operation reads it, the constructors of one limb among them (below). One read of the
+control register per call.
+
+With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](../developer/testing.md#the-checks-of-a-debug-build)), after the environment:
 
 - every operation that rounds (all but the negation) checks the floating-point environment, the
   rounding mode included, then that every operand is canonical, and stops the program with
@@ -244,8 +256,8 @@ With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](.
 - operands of lengths that do not match (`kairn: ball vectors: of lengths that do not match ...`),
   `axpy` writing the arrays of `y`, and a product writing an array that it reads, stop the program.
 
-With `KAIRN_CHECKS` 0 nothing is checked. The accessors, the whole space, the views and the copy of
-a view check nothing.
+With `KAIRN_CHECKS` 0 nothing but the environment is checked. The accessors, the whole space, the
+views and the copy of a view, which copy limbs, check nothing.
 
 ## Regular type
 

@@ -180,6 +180,23 @@ EXACT_INTERVAL = "`constexpr`; does not round"
 ROUNDS_CONSTEXPR = "`constexpr`; rounds, and is preceded by the debug build's check of the rounding mode"
 TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`)"
 CORE = "the finite core: no fix-up of infinities and NaN"
+# The scaling of a two-limb number by a power of two in constant evaluation: its kernels compute only
+# opaque products, which constant evaluation computes as plain products with the same values.
+SCALING_CONSTEXPR = ("`constexpr`, the steps included, with the same values in constant evaluation "
+                     "([the rule of the product](../developer/architecture.md#the-kernel-ir)); rounds")
+# The constructors of an interval and of a ball from their limbs, which pass each limb through the
+# guard of make_2 or make_2_limbs ([One enclosure interface](enclosure.md#limbs)).
+FROM_LIMBS = ("`%s::from_limbs(p)`, `p` pointing to the limbs as they were read (the bounds' or the center's, "
+              "then the radius); the limbs of a canonical set, checked when `KAIRN_CHECKS` is 1; the round trip "
+              "gives every limb back but the sign of a zero and the payload of a NaN "
+              "([One enclosure interface](enclosure.md#limbs))")
+# The constructors from two bounds that an interval and a ball share by name (Interval(a, b) is
+# [a, b], Ball(a, b) the ball of center a and radius b: from_bounds is the one spelling of both).
+FROM_BOUNDS_INTERVAL = ("`Interval<T, %s>::from_bounds(lo, hi)`, the same set as `Interval(lo, hi)`, under the name "
+                        "`Ball` has too ([One enclosure interface](enclosure.md#the-interface))")
+FROM_BOUNDS_BALL = ("`Ball<T, %s>::from_bounds(lo, hi)`, the same ball as `from_interval(lo, hi)`, under the name "
+                    "`Interval` has too ([One enclosure interface](enclosure.md#the-interface)); the bounds are "
+                    "guarded ([rule R3](../developer/architecture.md#the-kernel-ir))")
 # The notes of the enclosure interface of stage B2 ([One enclosure interface](enclosure.md)).
 ROUNDS = "rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr`"
 WHOLE = "IEEE 1788 calls it `isEntire`; the name is `Ball`'s"
@@ -207,6 +224,12 @@ KERNELS = {
         "construction", "A two-limb number from a value of T",
         form("Expansion<T, 2>(a)", T, result=E2, note="implicit"),
         form("Expansion<T, 2>(a)", E1, result=E2, note="implicit; " + ONE),
+        form("from_limbs(p)", "T*", result=I1, note=FROM_LIMBS % "Interval<T, 1>" + "; each bound through `make_2`, "
+             "of which the leading limb is kept, the bound itself; `constexpr`; checks the rounding mode "
+             "for one limb and for two"),
+        form("from_limbs(p)", "T*", result="Ball<T, K>", note=FROM_LIMBS % "Ball<T, K>" + "; the radius, and a center "
+             "of one limb, through `make_2`, of which the leading limb is kept, the value itself; `constexpr`; checks "
+             "the rounding mode for one limb and for two"),
     ),
     "make_2_limbs": page(
         "construction", "A two-limb number from its limbs",
@@ -214,6 +237,12 @@ KERNELS = {
              note="`Expansion<T, 2>::from_limbs(p)`, with `p` pointing to the two limbs; checked when "
                   "`KAIRN_CHECKS` is 1"),
         form("from_limbs_unchecked(p)", "T*", result=E2, note="the same, never checked"),
+        form("from_limbs(p)", "T*", result=I2, note=FROM_LIMBS % "Interval<T, 2>" + "; each bound through "
+             "`make_2_limbs`; `constexpr`; rounds (the test of a canonical bound), and is preceded by the debug "
+             "build's check of the rounding mode"),
+        form("from_limbs(p)", "T*", result=B2, note=FROM_LIMBS % "Ball<T, 2>" + "; the center through `make_2_limbs`, "
+             "the radius through `make_2`; `constexpr`; rounds (the test of a canonical center), and is preceded by "
+             "the debug build's check of the rounding mode"),
         form("Expansion<T, 2>(r)", "SumAndError<T>", result=E2,
              note="explicit: the result `r` of `two_sum` or `fast_two_sum` as the pair (`r.sum`, `r.error`), "
                   "through `from_limbs_unchecked`; canonical, of value $a + b$ exactly, when both members are "
@@ -392,7 +421,7 @@ KERNELS = {
         "finite", "Scaling a two-limb number by a power of two, finite core",
         form("finite::ldexp(x, n)", E2, "int", result=E2,
              note=CORE + "; $c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, "
-                         "as for `ldexp`, whose composition is " + COMPOSITION),
+                         "as for `ldexp`, whose composition is " + COMPOSITION + "; " + SCALING_CONSTEXPR),
         traits=["traits<Expansion<T, 2>>::ldexp"],
     ),
     # --- Two limbs: comparisons ----------------------------------------------------------------
@@ -477,8 +506,8 @@ KERNELS = {
         "scaling", "Scaling a two-limb number by a power of two",
         form("ldexp(x, n)", E2, "int", result=E2,
              note="$c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, "
-                  "whose composition is " + COMPOSITION),
-        form("half(x)", E2, result=E2, note="$c = 1/2$"),
+                  "whose composition is " + COMPOSITION + "; " + SCALING_CONSTEXPR),
+        form("half(x)", E2, result=E2, note="$c = 1/2$; " + SCALING_CONSTEXPR),
     ),
     # --- Balls ---------------------------------------------------------------------------------
     "ball_add_1_full": page(
@@ -678,6 +707,8 @@ KERNELS = {
              note="each limb converted to `Expansion<T, 1>` first, exactly; " + EXACT_INTERVAL),
         form("Interval<T, 1>(a)", T, result=I1, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
         form("Interval<T, 1>(a)", E1, result=I1, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
+        form("from_bounds(lo, hi)", T, T, result=I1, note=FROM_BOUNDS_INTERVAL % "1" + "; " + EXACT_INTERVAL),
+        form("from_bounds(lo, hi)", E1, E1, result=I1, note=FROM_BOUNDS_INTERVAL % "1" + "; " + EXACT_INTERVAL),
     ),
     "interval_neg_1": page(
         "intervals", "The negation of an interval, one-limb bounds",
@@ -726,6 +757,7 @@ KERNELS = {
         form("from_interval(lo, hi)", T, T, result=B2,
              note="`Ball<T, 2>::from_interval(lo, hi)`; the bounds are guarded "
                   "([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR),
+        form("from_bounds(lo, hi)", T, T, result=B2, note=FROM_BOUNDS_BALL % "2" + "; " + ROUNDS_CONSTEXPR),
     ),
     "ball_narrow_2_1": page(
         "ball", "A ball with a two-limb center as one with a one-limb center",
@@ -748,6 +780,9 @@ KERNELS = {
         form("Interval<T, 2>(lo, hi)", T, T, result=I2, note=TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
         form("Interval<T, 2>(a)", T, result=I2, note="implicit; $l_o = h_i = a$, " + TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
         form("Interval<T, 2>(a)", E2, result=I2, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
+        form("from_bounds(lo, hi)", E2, E2, result=I2, note=FROM_BOUNDS_INTERVAL % "2" + "; " + EXACT_INTERVAL),
+        form("from_bounds(lo, hi)", T, T, result=I2,
+             note=FROM_BOUNDS_INTERVAL % "2" + "; " + TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
     ),
     "interval_mul_2": page(
         "intervals", "Product of intervals, two-limb bounds",
@@ -892,7 +927,9 @@ KERNELS = {
         "ball", "A ball with a one-limb center from an interval of two limbs",
         form("from_interval(lo, hi)", T, T, result=B1,
              note="`Ball<T, 1>::from_interval(lo, hi)`, the ball of `Interval<T, 1>(lo, hi)` in one kernel; the "
-                  "bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR)),
+                  "bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR),
+        form("from_bounds(lo, hi)", T, T, result=B1, note=FROM_BOUNDS_BALL % "1" + "; " + ROUNDS_CONSTEXPR),
+        form("from_bounds(lo, hi)", E1, E1, result=B1, note=FROM_BOUNDS_BALL % "1" + "; " + ROUNDS_CONSTEXPR)),
     "ball_hull_2": page("ball", "A ball that contains two balls, two-limb center",
                         form("X.hull(Y)", B2, B2, result=B2, note=HULL_NOTE + "; " + ROUNDS)),
     "ball_intersection_2": page("ball", "A ball that contains the intersection of two balls, two-limb center",
@@ -994,25 +1031,25 @@ KERNELS = {
                              "multiply-add of the guarded elements",
                              form("dot(x, y)", V1, V1, result=R1, note=STEP_ORDER + " (loop `dot_1_entry`; each "
                                   "factor guarded, rule R3 on the factors of a fused operation)"),
-                             form("dot(x, y, sequential)", V1, V1, SEQ, result=R1),
+                             form("dot(sequential, x, y)", SEQ, V1, V1, result=R1),
                              form("conv(x, y, z)", V1, V1, W1, result="bool", note="each coefficient a sequential "
                                   "`dot_1_entry` (loop `conv_1_entry`; each factor guarded)")),
     "dot_step_2": page("arrays", "The step of a dot product of two limbs",
                        form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2`)"),
-                       form("dot(x, y, sequential)", V2, V2, SEQ, result=R2),
+                       form("dot(sequential, x, y)", SEQ, V2, V2, result=R2),
                        form("conv(x, y, z)", V2, V2, W2, result="bool", note="each coefficient a sequential `dot_2` "
                             "(loop `conv_2`)")),
     "sum_entry_step_1": page("arrays", "The step of a sum of one limb, on an array of the program",
                              form("sum(x)", V1, result=R1, note=STEP_ORDER + " (loop `sum_1_entry`)"),
-                             form("sum(x, sequential)", V1, SEQ, result=R1),
+                             form("sum(sequential, x)", SEQ, V1, result=R1),
                              form("sum_fast(x)", V1, result=R1, note="for one limb, `sum(x)`")),
     "sum_entry_step_2": page("arrays", "The step of a sum of two limbs, on an array of the program",
                              form("sum(x)", V2, result=R2, note=STEP_ORDER + " (loop `sum_2_entry`)"),
-                             form("sum(x, sequential)", V2, SEQ, result=R2)),
+                             form("sum(sequential, x)", SEQ, V2, result=R2)),
     "sum_fast_entry_step_2": page("arrays", "The step of a sum of two limbs with the fast addition, on an array of "
                                             "the program",
                                   form("sum_fast(x)", V2, result=R2, note=STEP_ORDER + " (loop `sum_fast_2_entry`)"),
-                                  form("sum_fast(x, sequential)", V2, SEQ, result=R2)),
+                                  form("sum_fast(sequential, x)", SEQ, V2, result=R2)),
     "fold_finish_1": page("arrays", "The result of a fold of one limb: the state, or NaN",
                           form("A.sum()", A1, result=R1, note="the running sum of an accumulator, canonical; "
                                "the finish of the loops of `kairn/batch.hpp` too")),
@@ -1169,6 +1206,10 @@ EXACT = [
           form("Interval<T, K>::empty()", result="Interval<T, K>")),
     exact("intervals", "the whole line: $[-\\infty, +\\infty]$",
           form("Interval<T, K>::whole()", result="Interval<T, K>")),
+    exact("intervals", "whether it is a nonempty bounded interval (both bounds finite, tested on the bit "
+          "patterns of their leading limbs): false for the empty set, the whole line and the half-lines, "
+          "the meaning of a ball's `is_finite()`",
+          form("X.is_finite()", "Interval<T, K>", result="bool")),
     exact("intervals", "the stored bounds; $+\\infty$ and $-\\infty$ for the empty set",
           form("X.lower(), X.upper()", "Interval<T, K>", result="Expansion<T, K>"),
           form("X.lower_as<T>(), X.upper_as<T>()", I1, result=T)),

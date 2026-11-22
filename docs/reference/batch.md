@@ -13,9 +13,9 @@ header adds no arithmetic of its own. `kairn/kairn.hpp` does not include it.
 #include <kairn/batch.hpp>
 
 // x, y: views of k arrays of limbs, kairn::SoAView<const T, k> (or of T); z: a view of T, written.
-Reduction<Expansion<T, k>> sum(x);       sum(x, kairn::sequential);
-Reduction<Expansion<T, k>> sum_fast(x);  sum_fast(x, kairn::sequential);
-Reduction<Expansion<T, k>> dot(x, y);    dot(x, y, kairn::sequential);
+Reduction<Expansion<T, k>> sum(x);       sum(kairn::sequential, x);
+Reduction<Expansion<T, k>> sum_fast(x);  sum_fast(kairn::sequential, x);
+Reduction<Expansion<T, k>> dot(x, y);    dot(kairn::sequential, x, y);
 bool add(x, y, z);                       // z = x + y, element by element
 bool sub(x, y, z);                       // z = x - y
 bool scale(x, a, z);                     // z = x a, a of T
@@ -76,8 +76,10 @@ statement is the same in the two orders the loops are emitted in:
   and the rest is added in order. Its bits depend on the instruction set the translation unit is
   compiled for (`KAIRN_PACKED_FORM`). With one lane, and with fewer elements than lanes, it is the
   sequential order;
-- **`kairn::sequential`**: element after element, from zero. Its bits are the same on every
-  platform and in every form; a program that wants the same result everywhere asks for it.
+- **`kairn::sequential`**, given as the first argument (`sum(kairn::sequential, x)`, as the
+  execution policies of the standard library are given, and as the operations of
+  [ball vectors](ball_vector.md) take it): element after element, from zero. Its bits are the same
+  on every platform and in every form; a program that wants the same result everywhere asks for it.
 
 The maps write each element from the elements of the same index alone, so their results do not
 depend on the order: they are the packed loop, whose elements are those of the scalar loop bit for
@@ -229,24 +231,43 @@ be the same: `add(x, x, z)`.
 
 ## Checks
 
+**The environment, in every build.** Every function of this page is a batch entry: before its loop
+it reads the floating-point environment once, as `kairn::environment_ok()` does, with
+`KAIRN_CHECKS` 1 or 0, and if it is not the default one (rounding to nearest, no flush to zero, no
+subnormal operand read as zero) calls `KAIRN_ENVIRONMENT_FAILURE` with the message of a debug build
+(`kairn: the floating-point environment: the rounding mode is not to nearest (MXCSR.RC is not
+zero)`, or `FPCR.RMode`, or flush to zero), which by default prints it and stops the program:
+the default environment is the precondition of every function on arrays, and it is checked
+([the brief](../developer/design/brief.md#floating-point-environment-non-negotiable)). `norm_upper`,
+which computes no sum (magnitudes, comparisons, a step of the bit pattern), leaves the rounding mode
+out and reads flush to zero only, under which its comparisons read a subnormal number as zero. One
+read of the control register per call, whatever the length; measured, under a nanosecond a call on
+an Apple M3 and about 6 nanoseconds on an AMD Zen 2, where reading MXCSR is slow: several times the
+cost of a sum of a few elements of one limb there, and within the noise of the loop from about 64
+elements of one limb, or a few of two
+([Testing](../developer/testing.md#the-checks-of-a-debug-build)). A program whose own
+`KAIRN_ENVIRONMENT_FAILURE` returns gets the function's result, with no guarantee.
+
 With `KAIRN_CHECKS` 1 ([config.hpp](https://github.com/danielepanozzo/kairn/blob/main/include/kairn/config.hpp)),
-every function but `norm_upper` checks the floating-point environment first, the rounding mode
-included, then the lengths (`x` and `y` of `dot` and of the maps the length of `z`; `z` of
+every function then checks the lengths (`x` and `y` of `dot` and of the maps the length of `z`; `z` of
 `conv` $n_x + n_y - 1$ coefficients), the arrays that alias, every element of two limbs
 (canonical), and its scalar (`a` of `axpy` canonical; `c` of `mul_pow2` a positive power of two),
 and stops the program with a message such as `kairn: dot: x and y have different lengths` on the
 first that fails. The lengths and the aliasing are integer comparisons, checked even when a
 program's `KAIRN_ENVIRONMENT_FAILURE` returns; the elements only in the default environment, since
-the test of a canonical pair rounds. `norm_upper` does not round: its check leaves the rounding
-mode out, and tests the elements only under rounding to nearest. Without the checks these are
-requirements, and lengths that differ read or write outside the arrays.
+the test of a canonical pair rounds. `norm_upper` tests the elements only under rounding to
+nearest. Without the checks these are requirements, and lengths that differ read or write outside
+the arrays.
 
 ## Constraints and constant evaluation
 
-Each function compiles only while the kernels its loop is made of (its step or check, its
-combination, its finish) are proved; `include/kairn/gen/bounds.hpp` exports their status, and has
-no entry for a loop itself, whose status is in `gen/claims.json`. There is no marked form. None is
-`constexpr`: the loops are not.
+Each function compiles only while the loop it calls is proved: `include/kairn/gen/bounds.hpp`,
+written from `gen/claims.json`, has for each loop `F` and limb type `T` the entry
+`kairn::gen::bounds::loops::F<T>::proved`, true exactly when `gen/claims.json` gives the loop the
+status proved, `T` has at least the loop's minimum precision, and every kernel the loop runs (its
+step or check, its combination, its finish) is proved for `T`, and so is the loop of the
+coefficients of a convolution; `kairn/batch.hpp` gates each function on it. There is no marked
+form. None is `constexpr`: the loops are not.
 
 ## Not provided
 

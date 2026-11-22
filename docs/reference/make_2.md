@@ -16,6 +16,8 @@ $$x = a.$$
 |---|---|---|---|
 | `Expansion<T, 2>(a)` | `T` | `Expansion<T, 2>` | implicit |
 | `Expansion<T, 2>(a)` | `Expansion<T, 1>` | `Expansion<T, 2>` | implicit; the limb of the `Expansion<T, 1>` operand is the limb $a$ |
+| `from_limbs(p)` | `T*` | `Interval<T, 1>` | `Interval<T, 1>::from_limbs(p)`, `p` pointing to the limbs as they were read (the bounds' or the center's, then the radius); the limbs of a canonical set, checked when `KAIRN_CHECKS` is 1; the round trip gives every limb back but the sign of a zero and the payload of a NaN ([One enclosure interface](enclosure.md#limbs)); each bound through `make_2`, of which the leading limb is kept, the bound itself; `constexpr`; checks the rounding mode for one limb and for two |
+| `from_limbs(p)` | `T*` | `Ball<T, K>` | `Ball<T, K>::from_limbs(p)`, `p` pointing to the limbs as they were read (the bounds' or the center's, then the radius); the limbs of a canonical set, checked when `KAIRN_CHECKS` is 1; the round trip gives every limb back but the sign of a zero and the payload of a NaN ([One enclosure interface](enclosure.md#limbs)); the radius, and a center of one limb, through `make_2`, of which the leading limb is kept, the value itself; `constexpr`; checks the rounding mode for one limb and for two |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED (a constructor does not take it).
 

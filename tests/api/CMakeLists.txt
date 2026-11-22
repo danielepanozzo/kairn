@@ -39,7 +39,7 @@
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
 #   api.example.accurate_sums.*, api.example.intervals.*, api.example.bisection.*,
 #   api.example.ball_vectors.* and api.example.packed_dot.* also compare it with the text their
-#   tutorials show.
+#   tutorials show, and api.example.concepts_*.* with the text the pages of Concepts show.
 # - api.ball_vector.FORM, api.boundary.ball_vector.*, api.reject.ball_vector.*: BallVector
 #   (ball_vector.hpp), below; its loops join api.oracle.* as api.oracle.LOOP.FORMAT.
 # - api.packed.FORM, api.soa.FORM, api.example.packed_dot.FORM: Packed (packed.hpp) against the
@@ -862,8 +862,18 @@ set(_api_expect_flush OFF)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|aarch64|arm64|ARM64)$")
   set(_api_expect_flush ON)
 endif()
-foreach(_build debug release)
+# Without the checks, KAIRN_CHECKS 0 (api.checks.off.*): the batch entries, the functions on arrays
+# and the operations on whole ball vectors, still check the environment, in every build (the brief,
+# "Floating-point environment"), and must stop the program as with the checks; every other function
+# must run under every state without a report (checks.cpp, KAIRN_TEST_CHECKS_OFF). No operand is
+# checked there, so .operands is not registered.
+_kairn_api_program(kairn-api-checks-off checks.cpp)
+target_compile_definitions(kairn-api-checks-off PRIVATE KAIRN_CHECKS=0 KAIRN_TEST_CHECKS_OFF)
+foreach(_build debug release off)
   foreach(_group default rounding flush operands)
+    if(_build STREQUAL "off" AND _group STREQUAL "operands")
+      continue()
+    endif()
     add_test(NAME api.checks.${_build}.${_group}
       COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-api-checks-${_build}>" "-DGROUP=${_group}"
         "-DEXPECT_FLUSH=${_api_expect_flush}" -P "${CMAKE_CURRENT_SOURCE_DIR}/checks.cmake")
@@ -872,6 +882,11 @@ foreach(_build debug release)
 endforeach()
 add_test(NAME api.checks.handler COMMAND kairn-api-checks-handler)
 set_tests_properties(api.checks.handler PROPERTIES TIMEOUT 120 LABELS "api;checks")
+# The handler without the checks (api.checks.handler.off): the batch entries call it, and nothing else.
+_kairn_api_program(kairn-api-checks-handler-off checks_handler.cpp)
+target_compile_definitions(kairn-api-checks-handler-off PRIVATE KAIRN_CHECKS=0 KAIRN_TEST_CHECKS_OFF)
+add_test(NAME api.checks.handler.off COMMAND kairn-api-checks-handler-off)
+set_tests_properties(api.checks.handler.off PROPERTIES TIMEOUT 120 LABELS "api;checks")
 # The same programs, with the build's own flags and KAIRN_CHECKS 1, in the other settings of
 # KAIRN_ENCLOSURE_CODE (include/kairn/config.hpp), where the checks of the operations of Ball are in
 # functions of their own: outlined, and external, whose definitions are those of definitions.cpp
@@ -1061,6 +1076,8 @@ _kairn_api_reject(batch.axpy_into_const 55 "${_api_no_function}")
 _kairn_api_reject(batch.mixed_limb_types 56 "${_api_no_function}")
 _kairn_api_reject(batch.mixed_limbs 57 "${_api_no_function}")
 _kairn_api_reject(batch.scale_by_two_limbs 58 "${_api_no_function}")
+# The order tag is the first argument (order.hpp): sum(x, kairn::sequential) does not compile.
+_kairn_api_reject(batch.order_tag_last 113 "${_api_no_function}")
 # A bound as a function of the length that the kernel does not give, in a constant expression: a
 # compile error (traits.hpp); the control computes it at run time, where it is +infinity.
 _kairn_api_reject(traits.length_beyond 59 "constant|constexpr")
@@ -1138,10 +1155,23 @@ foreach(_case_name IN ITEMS 89:interval_contains_1:point 90:interval_contains_2:
     "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/only-${_kernel}-${_what}"
     "-DUNVERIFIED_ONLY=${_kernel}")
 endforeach()
+# from_bounds, the spelling of a set from two bounds that Interval and Ball share (reject.cpp, cases
+# 108 to 110): no ball of two limbs from two bounds of two limbs, which no kernel makes; and the
+# UNVERIFIED forms without the marker, against headers in which every kernel is unverified.
+_kairn_api_reject(enclosure.ball_from_two_limb_bounds 108 "${_api_no_call}")
+foreach(_case_name IN ITEMS 109:interval_make_1 110:ball_from_interval_2)
+  string(REPLACE ":" ";" _pair "${_case_name}")
+  list(GET _pair 0 _case)
+  list(GET _pair 1 _name)
+  _kairn_api_reject(unverified.from_bounds.${_name} ${_case} "${_api_unmarked}"
+    "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/from-bounds-${_name}")
+endforeach()
 # --- The end of the enclosure interface's cases ----------------------------------------------------
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
 _kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")
+_kairn_api_reject(checks.interval_from_limbs_not_canonical 111 "constant|constexpr")
+_kairn_api_reject(checks.ball_from_limbs_not_canonical 112 "constant|constexpr")
 # kairn::rational in a constant expression: a zero denominator, whose message names the function
 # that says so (MSVC's message was not seen yet: there, any failed constant expression); and a
 # result that fails its check, against a copy of the headers in which the flag exact is inverted
@@ -1300,6 +1330,18 @@ foreach(_i RANGE 0 ${_last} 2)
       "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/ball_vectors.txt"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
   set_tests_properties(api.example.ball_vectors${_suffix} PROPERTIES LABELS "api;example;ball_vector")
+  # The examples of the Concepts section (docs/concepts/), the same way: each checks its own results,
+  # prints the same text on every platform and under every contraction setting, and its page shows
+  # that text (concepts_NAME.txt).
+  foreach(_concept expansions precision enclosures correctness environment values arrays)
+    _kairn_api_program(kairn-example-concepts-${_concept}${_target_suffix}
+      "${PROJECT_SOURCE_DIR}/docs/examples/cpp/concepts_${_concept}.cpp" ${_option})
+    add_test(NAME api.example.concepts_${_concept}${_suffix}
+      COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-concepts-${_concept}${_target_suffix}>"
+        "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/concepts_${_concept}.txt"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+    set_tests_properties(api.example.concepts_${_concept}${_suffix} PROPERTIES LABELS "api;example;concepts")
+  endforeach()
 endforeach()
 # The tutorial on a vector loop (docs/tutorials/vector-loop.md), in every form of Packed (above):
 # the same text in each, which the program checks against an exact reference and the bound it

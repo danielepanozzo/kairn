@@ -93,11 +93,12 @@ rounding, which these sums do not come near.
 ## When to use it
 
 `Packed` is for a loop that a program writes itself and wants to run $W$ numbers at a time. For a
-sum, a dot product or an `axpy` over whole arrays, the functions on arrays that Milestone 2 adds
-will be loops of this kind with a bound proved as a function of $n$; until they are in the public
-headers, a loop like this one is the way. A plain loop over `Expansion<double, 2>` gives the same
-guarantee per operation, one number at a time: [Getting started](../getting-started/index.md#vector-loops)
-compares the three.
+sum, a dot product or an `axpy` over whole arrays, the functions on arrays of `kairn/batch.hpp` are
+loops of this kind with a statement proved for every length $n$ and every number of lanes, and a
+bound that `kairn::traits` gives as a function of $n$
+([Sums and dot products of arrays](arrays.md)); `kairn/kairn.hpp` does not include that header. A
+plain loop over `Expansion<double, 2>` gives the same guarantee per operation, one number at a time:
+[Getting started](../getting-started/index.md#vector-loops) compares the three.
 
 ## What the headers do not provide
 

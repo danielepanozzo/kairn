@@ -593,7 +593,7 @@ class R3Factors(unittest.TestCase):
         self.assertEqual({'two_prod', 'mul_down_1', 'mul_up_1', 'mul_2_1', 'mul_2_1_full'} & set(calls), set())
         self.assertIn('accumulator.hpp Accumulator::add_product(const Expansion<T, K>& x, const Expansion<T, K>& y)',
                       calls['acc_mul_entry_1'])
-        self.assertEqual(calls['sum_1_entry'], ['batch.hpp sum(SoAView<T, K> x)', 'batch.hpp sum(SoAView<T, K> x, Sequential)'])
+        self.assertEqual(calls['sum_1_entry'], ['batch.hpp sum(Sequential, SoAView<T, K> x)', 'batch.hpp sum(SoAView<T, K> x)'])
         # The loops of kairn/ball_vector.hpp, called through its macro KAIRN_DETAIL_BV_LOOP.
         self.assertTrue(any(c.startswith('ball_vector.hpp ') and 'bv_scale(' in c for c in calls['bv_scale_2']),
                         calls.get('bv_scale_2'))

@@ -13,7 +13,10 @@
 /// comparisons and the relations of IEEE 1788 of the enclosure interface: interval_empty_k,
 /// interval_entire_k, interval_contains_k, interval_subset_k, interval_positive_k,
 /// interval_negative_k, interval_zero_k, interval_less_k, interval_less_equal_k, interval_equal_k,
-/// interval_rel_equal_k, interval_rel_interior_k and interval_rel_disjoint_k. Like every
+/// interval_rel_equal_k, interval_rel_interior_k and interval_rel_disjoint_k. Besides the
+/// accessors, the default constructor and empty() and whole(), which copy limbs, one function calls
+/// no kernel: is_finite(), a test of the bit patterns of the stored bounds written here, as the
+/// states of a ball are written in ball.hpp, and not machine-checked. Like every
 /// operation, each needs the kairn::unverified marker while gen/claims.json does not mark its
 /// kernel proved. Two kinds of function compose kernels, each documented as such: a constructor of
 /// two limbs from a T builds the two-limb number first (make_2), as Ball<T, 2>(a) does, and so do
@@ -298,6 +301,47 @@ public:
         : Interval(detail::make_interval(lo.value, hi)) {}
     /// The same with a marked lower bound of T.
     constexpr Interval(Unverified<T> lo, T hi) noexcept : Interval(detail::make_interval_pair<T, K>(lo.value, hi)) {}
+    /// The interval [lo, hi] of two values of T (kernel interval_make_1 or interval_make_2, for two
+    /// limbs with each bound made a number of two limbs by make_2 first, which gives it exactly: a
+    /// composition of two proved kernels, argued so and not machine-checked as one statement, as
+    /// for the constructor): the same set as Interval(lo, hi), under the name that
+    /// Ball<T, K>::from_bounds(lo, hi) has too, so that code written once for intervals and balls
+    /// builds either from two bounds with one spelling. X(a, b) is not that spelling: Interval(a, b)
+    /// is [a, b], but Ball(c, r) is the ball of center c and radius r. Proved, in the IEEE model,
+    /// for any two values of T: the result is canonical, and it is, by the first case that
+    /// applies, the whole line when a bound is a NaN, whatever the other bound is, and when both
+    /// bounds are the same infinity; the empty set when lo > hi; otherwise [lo, hi], the half-lines
+    /// and [-inf, +inf] included (the constructor above says why). Does not round (the guards of
+    /// the bounds, whose values are the bounds under every rounding mode, comparisons and
+    /// selects): not preceded by the debug build's check of the rounding mode (config.hpp); every
+    /// pair of values of T is accepted. constexpr.
+    [[nodiscard]] static constexpr Interval from_bounds(T lo, T hi) noexcept
+        requires detail::interval_point_proved<T, K>
+    {
+        return detail::make_interval_pair<T, K>(lo, hi);
+    }
+    /// The same with a marked lower bound: see kairn::Unverified.
+    [[nodiscard]] static constexpr Interval from_bounds(Unverified<T> lo, T hi) noexcept {
+        return detail::make_interval_pair<T, K>(lo.value, hi);
+    }
+    /// The interval of two bounds of K limbs: the same set as Interval(lo, hi) of two numbers
+    /// (kernel interval_make_1 or interval_make_2), with its statement: the whole line when a bound
+    /// is a NaN or both are the same infinity, the empty set when lo > hi, otherwise [lo, hi].
+    /// Does not round (comparisons and selects; for one limb the guards): not preceded by the debug
+    /// build's check of the rounding mode (config.hpp); two-limb bounds must be canonical, which is
+    /// checked when the rounding mode is to nearest. constexpr. Ball<T, 1>::from_bounds takes
+    /// numbers of one limb too; Ball<T, 2>::from_bounds takes no numbers of two limbs, no kernel
+    /// making a ball of two such bounds (Ball<T, 2>(Interval<T, 2>(lo, hi)) is the composition).
+    [[nodiscard]] static constexpr Interval from_bounds(const Expansion<T, K>& lo, const Expansion<T, K>& hi) noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::make>
+    {
+        return detail::make_interval(lo, hi);
+    }
+    /// The same with a marked lower bound.
+    [[nodiscard]] static constexpr Interval from_bounds(const Unverified<Expansion<T, K>>& lo,
+                                                        const Expansion<T, K>& hi) noexcept {
+        return detail::make_interval(lo.value, hi);
+    }
     /// An interval that contains the ball X (kernel ball_to_interval_1 or ball_to_interval_2).
     /// Proved, in the IEEE model, for a canonical ball: the interval is canonical, empty exactly
     /// when X is, and contains every member of X; the whole line gives [-inf, +inf]. For one limb it
@@ -334,6 +378,51 @@ public:
     [[nodiscard]] static constexpr Interval whole() noexcept {
         constexpr T inf = std::numeric_limits<T>::infinity();
         return Interval(detail::kernel_result, infinite(-inf), infinite(inf));
+    }
+    /// The interval whose bounds have the limbs limbs[0] .. limbs[2K - 1]: the K limbs of the lower
+    /// bound, most significant first, then the K limbs of the upper bound, as lower().limb[i] and
+    /// upper().limb[i] read them (the limbs of an Expansion are public), so that a program can move
+    /// an interval through its own storage, GPU buffers and warp shuffles. Precondition: the limbs
+    /// are those of a canonical interval, as an operation of Kairn returns it: the empty set
+    /// (+inf, -inf), for two limbs each infinity followed by a zero, or bounds lo <= hi, neither a
+    /// NaN, with lo < +inf and hi > -inf, each of two limbs a canonical pair. Nothing is computed but
+    /// the guards: the limbs come from the program, so each passes through the guard of a
+    /// constructor kernel before an operation can add it (rule R3), as those of
+    /// Expansion<T, 2>::from_limbs do (kernel make_2 or make_2_limbs): for one limb each bound
+    /// through make_2, of which this keeps the leading limb, the bound itself by make_2's claim (a
+    /// canonical pair of value a has a as its leading limb, and a NaN gives two NaN); for two limbs
+    /// each bound through make_2_limbs, whose claim is the same limbs for a canonical pair. That the
+    /// result is the interval given is argued from those claims, not machine-checked as one
+    /// statement. The round trip, from_limbs of the limbs read, gives every limb back bit for bit
+    /// but the sign of a zero: a -0 may come back +0 (the guard -0 + 0 is +0 under rounding to
+    /// nearest, upward and toward zero; in constant evaluation the guard is not applied). Checked
+    /// when KAIRN_CHECKS is 1, after the environment as for an operation, the rounding mode included
+    /// (config.hpp): the guards' zeros depend on it, for one limb too. Limbs
+    /// that are not those of a canonical interval fail a constant expression, or print a message
+    /// and call std::abort(). Not checked otherwise: such an interval then gives results with no
+    /// guarantee, and no undefined behavior. No marked form, as for Expansion::from_limbs.
+    /// constexpr.
+    [[nodiscard]] static constexpr Interval from_limbs(const T* limbs) noexcept
+        requires detail::proof_checked<std::conditional_t<K == 1, gen::bounds::make_2<T>, gen::bounds::make_2_limbs<T>>>
+    {
+        Expansion<T, K> lo, hi;
+#if KAIRN_CHECKS
+        for (int i = 0; i < K; ++i) {
+            lo.limb[i] = limbs[i];
+            hi.limb[i] = limbs[K + i];
+        }
+        if (detail::check_environment() && !detail::canonical_interval(lo, hi))
+            detail::fail("from_limbs", "the limbs are not those of a canonical interval (the empty set (+inf, -inf), "
+                                       "or bounds lo <= hi, neither a NaN, with lo < +inf, hi > -inf and each canonical)");
+#endif
+        if constexpr (K == 1) {
+            lo.limb[0] = detail::make<T>(limbs[0]).limb[0];
+            hi.limb[0] = detail::make<T>(limbs[1]).limb[0];
+        } else {
+            lo = detail::make_limbs<T>(limbs[0], limbs[1]);
+            hi = detail::make_limbs<T>(limbs[2], limbs[3]);
+        }
+        return Interval(detail::kernel_result, lo, hi);
     }
 
     /// The lower bound, a number of K limbs: of a nonempty interval its lower bound (-inf when it is
@@ -417,6 +506,16 @@ public:
         }
         return m;
     }
+    /// Whether this is a nonempty bounded interval: both bounds finite, so false for the empty
+    /// set, the whole line and the half-lines [l, +inf] and [-inf, h]. The meaning of
+    /// Ball::is_finite(), a set that is neither empty nor unbounded, which for a ball is "its
+    /// radius is finite": a ball has no half-lines, and Ball(X) of a half-line is the whole line.
+    /// For a canonical interval it is decided by the leading limbs of the stored bounds, each tested
+    /// for finiteness on its bit pattern (the empty set (+inf, -inf) has none finite, and a finite
+    /// bound of two limbs has a finite leading limb): a test written here, as the states of a ball
+    /// are, with no kernel, so exact by the reading of the canonical forms and not machine-checked.
+    /// Does not round and checks nothing, as Ball::is_finite() (config.hpp). constexpr.
+    constexpr bool is_finite() const noexcept { return detail::finite(lo_.limb[0]) && detail::finite(hi_.limb[0]); }
 
     /// Whether t, a value of T, is a member (kernel interval_contains_1 or interval_contains_2, for two
     /// limbs with t made a number of two limbs by make_2 first): lo <= t <= hi and t finite. Proved, in the IEEE model, for a canonical

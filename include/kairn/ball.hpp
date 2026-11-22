@@ -617,6 +617,47 @@ public:
     [[nodiscard]] static constexpr Ball whole() noexcept {
         return Ball(detail::kernel_result, Expansion<T, K>(), std::numeric_limits<T>::infinity());
     }
+    /// The ball whose center has the limbs limbs[0] .. limbs[K - 1], most significant first, and
+    /// whose radius is limbs[K], as center().limb[i] and radius() read them (the limbs of an
+    /// Expansion are public), so that a program can move a ball through its own storage, GPU
+    /// buffers and warp shuffles. Precondition: the limbs are those of a canonical ball, as an
+    /// operation of Kairn returns it: a finite ball (a finite center, canonical for two limbs, and a
+    /// finite radius r >= 0), the whole line (every limb of the center zero, the radius +inf) or the
+    /// empty set (every limb a NaN). Nothing is computed but the guards: the limbs come from the
+    /// program, so each passes through the guard of a constructor kernel before an operation can add
+    /// it (rule R3), as those of Expansion<T, 2>::from_limbs do (kernel make_2 or make_2_limbs): a
+    /// center of one limb and the radius each through make_2, of which this keeps the leading limb,
+    /// the value given by make_2's claim (a canonical pair of value a has a as its leading limb, and
+    /// a NaN gives two NaN); a center of two limbs through make_2_limbs, whose claim is the same
+    /// limbs for a canonical pair. Not through ball_make_1 or ball_make_2, the kernels of
+    /// Ball(c, r), which guard the same limbs but make a NaN radius the whole line, so that the
+    /// empty set would not come back. That the result is the ball given is argued from those
+    /// claims, not machine-checked as one statement. The round trip, from_limbs of the limbs read,
+    /// gives every limb back bit for bit but two: a -0 may come back +0 (the guard -0 + 0 is +0
+    /// under rounding to nearest, upward and toward zero; in constant evaluation the guard is not
+    /// applied), and a NaN limb comes back a NaN whose payload Kairn does not specify. Checked when
+    /// KAIRN_CHECKS is 1, after the environment as for an operation, the rounding mode included
+    /// (config.hpp): the guards' zeros depend on it, for one limb too. Limbs that are not those of a
+    /// canonical ball fail a constant expression, or print a message and call std::abort(). Not checked otherwise: such a ball then gives results with no guarantee, and no
+    /// undefined behavior. No marked form, as for Expansion::from_limbs. constexpr.
+    [[nodiscard]] static constexpr Ball from_limbs(const T* limbs) noexcept
+        requires detail::proof_checked<gen::bounds::make_2<T>> &&
+                 (K == 1 || detail::proof_checked<gen::bounds::make_2_limbs<T>>)
+    {
+        Expansion<T, K> c;
+#if KAIRN_CHECKS
+        for (int i = 0; i < K; ++i) c.limb[i] = limbs[i];
+        if (detail::check_environment() && !detail::canonical_ball(c, limbs[K]))
+            detail::fail("from_limbs", "the limbs are not those of a canonical ball (a finite ball with a canonical "
+                                       "center and r >= 0, the whole line or the empty set)");
+#endif
+        if constexpr (K == 1) {
+            c.limb[0] = detail::make<T>(limbs[0]).limb[0];
+        } else {
+            c = detail::make_limbs<T>(limbs[0], limbs[1]);
+        }
+        return Ball(detail::kernel_result, c, detail::make<T>(limbs[K]).limb[0]);
+    }
 
     /// The center: of a finite ball, the center; 0 for the whole line; NaN limbs for the empty set.
     /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
@@ -925,6 +966,46 @@ public:
     /// The same with a marked operand.
     static constexpr Ball from_interval(Unverified<T> lo, T hi) noexcept {
         return detail::ball_from_interval<T, K>(lo.value, hi);
+    }
+    /// A ball that contains the interval [lo, hi] of two values of T (kernel ball_from_interval_1
+    /// or ball_from_interval_2): from_interval(lo, hi), with its statement, under the name that
+    /// Interval<T, K>::from_bounds(lo, hi) has too, so that code written once for intervals and
+    /// balls builds either from two bounds with one spelling. X(a, b) is not that spelling:
+    /// Ball(a, b) is the ball of center a and radius b, where Interval(a, b) is [a, b]. Proved, in
+    /// the IEEE model, for any two values of T: the ball is canonical, and it is, by the first case
+    /// that applies, the whole line when a bound is a NaN, whatever the other, and when both bounds
+    /// are the same infinity; the empty set when lo > hi; the whole line when a bound is infinite
+    /// (a ball cannot be a half-line); and for finite lo <= hi a finite ball that contains
+    /// [lo, hi]. Its center is the exact midpoint (lo + hi)/2 only for two limbs and only when
+    /// lo/2 and hi/2 are numbers of T, and then its radius is the smallest of T for it; for two
+    /// limbs with a halving that is not exact only the containment is claimed; for one limb the
+    /// center is within u |m| + eta of the midpoint m, between the bounds, with the smallest radius
+    /// of T for it (from_interval says each case in full). Rounds, and is checked, as
+    /// from_interval; constexpr.
+    [[nodiscard]] static constexpr Ball from_bounds(T lo, T hi) noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::from_interval>
+    {
+        return detail::ball_from_interval<T, K>(lo, hi);
+    }
+    /// The same with a marked lower bound: see kairn::Unverified.
+    [[nodiscard]] static constexpr Ball from_bounds(Unverified<T> lo, T hi) noexcept {
+        return detail::ball_from_interval<T, K>(lo.value, hi);
+    }
+    /// For one limb, the same of two numbers of one limb, which are values of T (kernel
+    /// ball_from_interval_1), so that code written for bounds of K limbs reads as for an interval.
+    /// A ball of two limbs has no such form: no kernel makes a ball of two bounds of two limbs
+    /// (Ball<T, 2>(Interval<T, 2>(lo, hi)) composes interval_make_2 and interval_to_ball_2).
+    [[nodiscard]] static constexpr Ball from_bounds(const Expansion<T, 1>& lo, const Expansion<T, 1>& hi) noexcept
+        requires(K == 1 && detail::proof_checked<typename detail::ball_kernels<T, K>::from_interval>)
+    {
+        return detail::ball_from_interval<T, K>(lo.limb[0], hi.limb[0]);
+    }
+    /// The same with a marked lower bound.
+    [[nodiscard]] static constexpr Ball from_bounds(const Unverified<Expansion<T, 1>>& lo,
+                                                    const Expansion<T, 1>& hi) noexcept
+        requires(K == 1)
+    {
+        return detail::ball_from_interval<T, K>(lo.value.limb[0], hi.limb[0]);
     }
     /// A ball of one limb that contains the ball X of two limbs (kernel ball_narrow_2_1): the leading
     /// limb of the center, and the radius widened by the second limb, rounded up. Proved, in the

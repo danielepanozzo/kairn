@@ -1,19 +1,24 @@
 # Getting started
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is complete
-([report](../developer/results/milestone1.md)), and Milestone 2 is in progress, in version 0.2.0
-of the development line. Public on `main`: numbers of one and two limbs of type `float` or
-`double`, balls and intervals around them with the [interface the two share](#intervals-and-balls),
-the [building blocks](#building-blocks) on `T`, [constants](#constants-from-fractions) built at
-compile time from an integer or a fraction, and, in headers of their own, the packed SIMD type and
-containers in structure-of-arrays form ([Vector loops](#vector-loops)). Not yet: the functions on
-arrays, the accumulator and `BallVector`, which are in review, and the later milestones. The
+([report](../developer/results/milestone1.md)), and Milestone 2 is in progress, in version 0.3.0
+of the development line. In the public headers of this version: numbers of one and two limbs of
+type `float` or `double`, balls and intervals around them with the
+[interface the two share](#intervals-and-balls), the [building blocks](#building-blocks) on `T`,
+[constants](#constants-from-fractions) built at compile time from an integer or a fraction, and the
+accumulator of a sum or a dot product (`kairn/accumulator.hpp`), all of which `kairn/kairn.hpp`
+includes; and, in headers of their own that it does not include, the packed SIMD type and
+containers in structure-of-arrays form (`kairn/packed.hpp`, `kairn/soa.hpp`:
+[Vector loops](#vector-loops)), the functions on arrays (`kairn/batch.hpp`) and `BallVector`
+(`kairn/ball_vector.hpp`: [Ball vectors](#ball-vectors)). Not yet: the later milestones. The
 kernels these operations call have checked proofs of their claims, in a model of arithmetic where
 nothing overflows and, for what they return at overflow and for infinities and NaN (results like
 those of `float` and `double`; sets: the whole line, the empty set, or an interval with an
-infinite bound) and for the intervals and the interface of the sets, in a model of IEEE 754. Not
-machine-checked: `ldexp` beyond the powers of two of `T`, `rational`, a few compositions of proved
-kernels in the headers, and the tests of bit patterns written by hand. [What holds
+infinite bound) and for the intervals and the interface of the sets, in a model of IEEE 754; the
+loops of the functions on arrays and of `BallVector` are proved in both. Not machine-checked:
+`ldexp` beyond the powers of two of `T`, `rational`, a few compositions of proved kernels in the
+headers, the integer bookkeeping of the bounds of arrays and of the accumulator, and the tests of
+bit patterns written by hand. [What holds
 today](guarantees.md) has the details. This page shows how to write a first program, choose the
 limb type and the number of limbs, compute with intervals and balls, write constants such as 1/10,
 use the building blocks, build and test the repository, use the CMake package, read what Kairn's
@@ -55,7 +60,10 @@ The whole program is
 ctest builds and runs it (`api.example.first_steps`), and it checks the values it prints. To build
 your own program, link `kairn::kairn` and `kairn::fma` ([Use it from CMake](#use-it-from-cmake)).
 Next, the tutorial [Accurate sums and dot products](../tutorials/accurate-sums.md) puts these
-types to work, and the [reference](../reference/index.md) has a page for every operation.
+types to work, the [Concepts](../concepts/index.md) section explains the ideas behind them (what a
+number of two limbs is, its precision at each magnitude, which enclosure to use, what is proved and
+what the environment must be), and the [reference](../reference/index.md) has a page for every
+operation.
 
 ## Choosing T and k
 
@@ -162,14 +170,17 @@ so in what they are good at
   on the same problem.
 
 `Ball<T, k>(X)` and `Interval<T, k>(B)` convert one into the other, each widening the set (so
-both are explicit), and `Ball<T, k>::from_interval(lo, hi)` makes a ball from two numbers of `T`
+both are explicit), and `Ball<T, k>::from_interval(lo, hi)`, also spelled `from_bounds(lo, hi)`,
+makes a ball from two numbers of `T`
 (for two limbs with the exact midpoint for its center when $lo/2$ and $hi/2$ are numbers of `T`;
 when a halving is not exact, a ball that contains $[lo, hi]$ and no more is claimed: with
 $lo = hi = \eta$, the smallest subnormal number, the center is 0). Both types answer the same
 questions under
 the same names, so that an algorithm can be written once for either
 ([One enclosure interface](../reference/enclosure.md); the
-[tutorial on bisection](../tutorials/bisection.md) is such an algorithm): `lower()`, `upper()`,
+[tutorial on bisection](../tutorials/bisection.md) is such an algorithm): `X::from_bounds(lo, hi)`,
+the one spelling that builds either from two bounds (`X(a, b)` is not: it is $[a, b]$ for an
+interval, but the ball of center $a$ and radius $b$ for a ball), `lower()`, `upper()`,
 `midpoint()`, `radius()`, `mid_rad()`, `is_empty()`, `is_whole()`, `contains(t)` and `contains(Y)`,
 the signs `certainly_positive()`, `certainly_negative()`, `certainly_zero()`, `hull`,
 `intersection`, `split`, and the three-valued comparisons `kairn::less`, `less_equal`, `equal`
@@ -375,7 +386,10 @@ or `KAIRN_ENCLOSURE_CODE`, can require the version that has them:
 
 The first test is in a group of its own because a version before 0.2.0 has no such macro, and an
 undefined function-like macro in an `#if` does not compile; `KAIRN_VERSION`, which every version
-defines, can also be compared directly (`#if KAIRN_VERSION >= 200`).
+defines, can also be compared directly (`#if KAIRN_VERSION >= 200`). The building blocks are in
+0.2.0; the functions on arrays, the ball vectors, `from_bounds` and `from_limbs` of a set and the
+whole enclosure interface are in 0.3.0 (`KAIRN_VERSION_AT_LEAST(0, 3, 0)`), which `version.hpp`
+lists.
 
 ## What you need
 
@@ -512,7 +526,8 @@ headers, the package under `share/cmake/kairn` and the license as `share/license
 ```
 
 The installed package accepts a request for a version with the same major and minor number that is
-not newer than itself. The development line of Milestone 2 is 0.2.0.
+not newer than itself. The development line of Milestone 2 is 0.3.0: a request for 0.2 is not
+accepted by it (`include/kairn/version.hpp` says what each version has).
 
 Added with `add_subdirectory` or `FetchContent`, Kairn keeps to itself: it adds no install rule,
 so that `cmake --install` of the project installs the project's files and not Kairn's, unless the
@@ -705,8 +720,9 @@ defined in the example.
 ### When a check of a build without `NDEBUG` fails
 
 In a build without `NDEBUG`, or with `KAIRN_CHECKS` defined to 1 (the same in every file of the
-program), every operation, and every constructor that is given limbs or a center (`from_limbs`,
-the constructors of `Ball`), checks first the environment and then its operands. A failed check
+program), every operation, and every constructor that is given limbs or a center (`from_limbs` of
+a number, an interval or a ball, the constructors of `Ball`), checks first the environment and then
+its operands. A failed check
 prints a line on the standard error and stops the program with `std::abort()`; in a wrong
 environment the line is the environment's, whatever the operands. In constant evaluation only the
 operands are checked, and an operand that fails makes the expression not a constant expression,
@@ -729,20 +745,20 @@ canonical pair, $x_0 + x_1 = x_0$). They are:
 | `Ball<T, 1>(a)`, `Ball<T, 1>(c)`, `Ball<T, 1>(c, r)`, `Ball<T, 1>(q)`, `Ball<T, 2>(a)`: the constructors of a ball from a `T`, a number of one limb or a constant of one limb | their only rounded operations are the guards `a + 0`, whose value is `a` under every rounding mode; only the sign of a zero can differ, which Kairn leaves unspecified anyway |
 | `Expansion<T, 2>(r)` for the result `r` of `two_sum` or `fast_two_sum` | the guards, as above, and a test of the pair that compares and does not round |
 | `-X`, `X.hull(Y)`, `X.intersection(Y)` for an `Interval`, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of two limbs | sign bits, comparisons and selects of bounds; a bound rounded down or up to `T` as `to_down` and `to_up` round it |
-| the constructors of an `Interval`: from two bounds or a point of one limb, from a `T` of two limbs, from numbers of two limbs | the guards, as above; for numbers of two limbs comparisons and selects |
+| the constructors of an `Interval`: from two bounds or a point of one limb, from a `T` of two limbs, from numbers of two limbs, and `Interval<T, k>::from_bounds(lo, hi)`, the constructor from two bounds under that name | the guards, as above; for numbers of two limbs comparisons and selects |
 | of an `Interval`: `X.is_empty()`, `X.is_whole()`, the signs, `X.contains(t)`, `X.contains(Y)`, `kairn::member`, the three-valued comparisons (`kairn::less` and the others) and the relations `kairn::ieee1788::equal`, `subset`, `interior`, `disjoint` | comparisons and selects of bounds; for a point of `T` of two limbs the guard of `make_2`, as above |
 | `kairn::next_up`, `kairn::next_down` | integer operations on the bit pattern, which no state of the environment changes: they check nothing at all |
-| `kairn::sign`, `kairn::isfinite`, `kairn::is_normalized` of one limb, `X.center()`, `X.radius()`, `X.midpoint()`, `X.mid_rad()`, `X.is_finite()`, `X.is_whole()`, `X.is_empty()` of a `Ball`, `kairn::certainly` and `kairn::possibly` of a `Trit`, `Ball::empty()`, `Ball::whole()`, `Interval()`, `Interval::empty()`, `Interval::whole()`, `X.lower()` and `X.upper()` of an interval, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of one limb, the constants of `kairn::traits`, `kairn::rational`; the constructors of two limbs from a `T` or a one-limb number and `from_limbs_unchecked` (their guard, as above) | tests of bit patterns, stored values and data, integer arithmetic; these check nothing at all, as before |
+| `kairn::sign`, `kairn::isfinite`, `kairn::is_normalized` of one limb, `X.center()`, `X.radius()`, `X.midpoint()`, `X.mid_rad()`, `X.is_finite()`, `X.is_whole()`, `X.is_empty()` of a `Ball`, `kairn::certainly` and `kairn::possibly` of a `Trit`, `Ball::empty()`, `Ball::whole()`, `Interval()`, `Interval::empty()`, `Interval::whole()`, `X.lower()`, `X.upper()` and `X.is_finite()` of an interval, and `X.lower_as<T>()`, `X.upper_as<T>()` of an interval of one limb, the constants of `kairn::traits`, `kairn::rational`; the constructors of two limbs from a `T` or a one-limb number and `from_limbs_unchecked` (their guard, as above) | tests of bit patterns, stored values and data, integer arithmetic; these check nothing at all, as before |
 
 Every other function rounds and checks the rounding mode: the arithmetic, `ldexp` and `half` (of
 numbers and of balls), the functions of `kairn::finite::`, the [building blocks](#building-blocks)
 but `next_up` and `next_down` (the directed bounds among them: they compute under rounding to
 nearest what rounding down or up gives), `from_limbs` and `kairn::is_normalized` of two limbs (both
-test $x_0 + x_1 = x_0$), the constructors of `Ball<T, 2>` from a center of two limbs or a
+test $x_0 + x_1 = x_0$), `from_limbs` of an interval or a ball of one limb and of two, the constructors of `Ball<T, 2>` from a center of two limbs or a
 constant of two limbs (the test of a canonical center), the arithmetic of intervals, and the
 functions of the interface of `Interval` and `Ball` that compute a bound or a center: the midpoint,
 the radius, `mid_rad()` and the split of an interval, the conversions `Ball<T, k>(X)` and
-`Interval<T, k>(B)`, `Ball<T, k>::from_interval`, the bounds of a ball and the narrowing of a ball
+`Interval<T, k>(B)`, `Ball<T, k>::from_interval` and `Ball<T, k>::from_bounds`, the bounds of a ball and the narrowing of a ball
 to one limb (sums, halvings and directed sums computed under rounding to nearest); and of a ball
 the member and subset tests, the three-valued comparisons, the hull, the intersection and the
 split (differences of centers by exact pairs or with a bound of their error, and the conversions
@@ -774,7 +790,11 @@ these functions says "Does not round".
   constructors, with `from_limbs`, or as results of Kairn's operations, and test a result of
   `kairn::finite::` with `kairn::isfinite` first.
 - `kairn: from_limbs: the limbs are not a canonical pair (finite with x0 + x1 == x0, an infinity and a zero, or two NaN)`.
-  The same, caught when the number is made.
+  The same, caught when the number is made. Likewise
+  `kairn: from_limbs: the limbs are not those of a canonical interval` and
+  `... of a canonical ball` from `Interval::from_limbs` and `Ball::from_limbs`: limbs that were not
+  read from a set of that type (reversed bounds, a negative radius, a NaN center with a finite
+  radius).
 - `kairn: fast_two_sum: |a| < |b|, which its requirement |a| >= |b| excludes (two_sum takes any order)`.
   Without the checks, the sum is still the rounded sum, but the error term need not make it exact:
   use `two_sum`, or put the larger operand first.

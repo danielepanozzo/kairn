@@ -367,9 +367,9 @@ double use_every_operation(UseT use_a, UseT use_b) {
         const kairn::SoAView<const UseT, 2> use_arr_v2(use_arr_h1, use_arr_l1z, 4), use_arr_w2(use_arr_h2, use_arr_l2z, 4);
         const kairn::SoAView<UseT, 1> use_arr_z1(use_arr_zh, 4);
         const kairn::SoAView<UseT, 2> use_arr_z2(use_arr_zh, use_arr_zl, 4), use_arr_c2(use_arr_zh, use_arr_zl, 7);
-        use_add(kairn::sum(use_arr_v1).value.limb[0] + kairn::sum(use_arr_v2, kairn::sequential).value.limb[0] +
-                kairn::sum_fast(use_arr_v2).value.limb[1] + kairn::sum_fast(use_arr_v1, kairn::sequential).finite +
-                kairn::dot(use_arr_v1, use_arr_w1).value.limb[0] + kairn::dot(use_arr_v2, use_arr_w2, kairn::sequential).value.limb[0] +
+        use_add(kairn::sum(use_arr_v1).value.limb[0] + kairn::sum(kairn::sequential, use_arr_v2).value.limb[0] +
+                kairn::sum_fast(use_arr_v2).value.limb[1] + kairn::sum_fast(kairn::sequential, use_arr_v1).finite +
+                kairn::dot(use_arr_v1, use_arr_w1).value.limb[0] + kairn::dot(kairn::sequential, use_arr_v2, use_arr_w2).value.limb[0] +
                 kairn::norm_upper(use_arr_v2).value + kairn::norm_upper(use_arr_v1).finite);
         use_add(kairn::add(use_arr_v2, use_arr_w2, use_arr_z2) + kairn::sub(use_arr_v1, use_arr_w1, use_arr_z1) +
                 kairn::scale(use_arr_v2, use_a, use_arr_z2) + kairn::mul_pow2(use_arr_v1, UseT(0.5), use_arr_z1) +

@@ -42,7 +42,9 @@
 // interval of a point a line whose two bounds are one value, the bounds of an interval of two limbs
 // as numbers of T a line of to_down_2 or to_up_2 whose operand is not a NaN, and the member test
 // of a point of T in an interval or a ball of two limbs a line whose point is a value of T (its
-// second limb zero, or the NaN pair). On the other
+// second limb zero, or the NaN pair), and the limbs given to Interval::from_limbs and
+// Ball::from_limbs a line whose value can be a bound, a center or a radius of a canonical
+// interval or ball (not a NaN bound, not an infinite center, not a negative radius). On the other
 // lines such a form computes the plain operation (written beside it), and it fails at the end of a
 // stream of at least 1000 lines in which it computed none: a pass must mean that the form itself
 // was judged.
@@ -417,6 +419,42 @@ FORM(make_2_from_one, put(out, E2<T>(AS(make_2, one(in)))))
 FORM(make_2_marked, put(out, E2<T>(kairn::unverified(in[0]))))
 FORM(make_2_limbs_from_limbs, put(out, E2<T>::from_limbs(in)))
 FORM(make_2_limbs_from_limbs_unchecked, put(out, E2<T>::from_limbs_unchecked(in)))
+// The limbs of an interval and of a ball given to Interval::from_limbs and Ball::from_limbs, which
+// pass each limb through the guard of make_2 (a value of T, of which they keep the leading limb) or
+// of make_2_limbs (a pair), and read back through lower(), upper(), center() and radius(): the
+// line's value, or pair, in each position where a canonical interval or ball can hold it, beside
+// limbs that make one (a finite bound beside an infinite one, so that every value but a NaN is a
+// bound; a finite center with radius 0, a NaN center with a NaN radius, the empty ball; a radius
+// that is not negative beside the center 0, or a NaN beside a NaN center). make_2's second limb,
+// which these functions do not keep, is completed as make_2's listing gives it: 0 after a number or
+// an infinity, the leading limb itself after a NaN. The plain constructor on the other lines.
+template <class T>
+void put_lead(T* out, T x0) {
+    out[0] = x0;
+    out[1] = x0 == x0 ? T(0) : x0;
+}
+FORM(make_2_interval_from_limbs_lower, if (in[0] != in[0]) { put(out, E2<T>(in[0])); return; } ++reached;
+     const T inf = std::numeric_limits<T>::infinity(); const T l[2] = {in[0], in[0] == inf ? -inf : inf};
+     put_lead(out, I1<T>::from_limbs(l).lower().limb[0]))
+FORM(make_2_interval_from_limbs_upper, if (in[0] != in[0]) { put(out, E2<T>(in[0])); return; } ++reached;
+     const T inf = std::numeric_limits<T>::infinity(); const T l[2] = {in[0] == -inf ? inf : -inf, in[0]};
+     put_lead(out, I1<T>::from_limbs(l).upper().limb[0]))
+FORM(make_2_ball_from_limbs_center, if (in[0] == in[0] && !std::isfinite(in[0])) { put(out, E2<T>(in[0])); return; }
+     ++reached; const T l[2] = {in[0], in[0] == in[0] ? T(0) : in[0]};
+     put_lead(out, B1<T>::from_limbs(l).center().limb[0]))
+FORM(make_2_ball_from_limbs_radius_1, if (in[0] < 0) { put(out, E2<T>(in[0])); return; } ++reached;
+     const T l[2] = {in[0] == in[0] ? T(0) : in[0], in[0]}; put_lead(out, B1<T>::from_limbs(l).radius()))
+FORM(make_2_ball_from_limbs_radius_2, if (in[0] < 0) { put(out, E2<T>(in[0])); return; } ++reached;
+     const T c = in[0] == in[0] ? T(0) : in[0]; const T l[3] = {c, c, in[0]}; put_lead(out, B2<T>::from_limbs(l).radius()))
+FORM(make_2_limbs_interval_from_limbs_lower, if (in[0] != in[0]) { put(out, E2<T>::from_limbs(in)); return; } ++reached;
+     const T inf = std::numeric_limits<T>::infinity(); const T l[4] = {in[0], in[1], in[0] == inf ? -inf : inf, T(0)};
+     put(out, I2<T>::from_limbs(l).lower()))
+FORM(make_2_limbs_interval_from_limbs_upper, if (in[0] != in[0]) { put(out, E2<T>::from_limbs(in)); return; } ++reached;
+     const T inf = std::numeric_limits<T>::infinity(); const T l[4] = {in[0] == -inf ? inf : -inf, T(0), in[0], in[1]};
+     put(out, I2<T>::from_limbs(l).upper()))
+FORM(make_2_limbs_ball_from_limbs_center,
+     if (in[0] == in[0] && !std::isfinite(in[0])) { put(out, E2<T>::from_limbs(in)); return; } ++reached;
+     const T l[3] = {in[0], in[1], in[0] == in[0] ? T(0) : in[0]}; put(out, B2<T>::from_limbs(l).center()))
 
 // Two limbs: arithmetic, the full kernels.
 FORM(add_2_2_full_plus, put(out, AS(add_2_2_full, two(in)) + two(in + 2)))
@@ -705,6 +743,17 @@ FORM(interval_make_2_point_limb,
      ++reached; put(out, I2<T>(AS(interval_make_2, in[0]))))
 FORM(interval_make_2_limbs, if (!a_limb(in) || !a_limb(in + 2)) { put(out, I2<T>(two(in), two(in + 2))); return; } ++reached;
      put(out, I2<T>(AS(interval_make_2, in[0]), in[2])))
+// The same through Interval::from_bounds, the spelling an interval shares with a ball: of two values
+// of T, of two numbers of K limbs, marked; for two limbs from two values of T on the lines whose
+// bounds are such values, as interval_make_2_limbs.
+FORM(interval_make_1_from_bounds, put(out, I1<T>::from_bounds(AS(interval_make_1, in[0]), in[1])))
+FORM(interval_make_1_from_bounds_one, put(out, I1<T>::from_bounds(AS(interval_make_1, one(in)), one(in + 1))))
+FORM(interval_make_1_from_bounds_marked, put(out, I1<T>::from_bounds(kairn::unverified(in[0]), in[1])))
+FORM(interval_make_2_from_bounds, put(out, I2<T>::from_bounds(AS(interval_make_2, two(in)), two(in + 2))))
+FORM(interval_make_2_from_bounds_marked, put(out, I2<T>::from_bounds(kairn::unverified(two(in)), two(in + 2))))
+FORM(interval_make_2_from_bounds_limbs,
+     if (!a_limb(in) || !a_limb(in + 2)) { put(out, I2<T>(two(in), two(in + 2))); return; } ++reached;
+     put(out, I2<T>::from_bounds(AS(interval_make_2, in[0]), in[2])))
 
 // Intervals: arithmetic, the hull and the intersection.
 #define INTERVAL_FORMS(K, IV)                                                                                       \
@@ -750,6 +799,8 @@ FORM(to_up_2_interval_upper_as, if (in[0] != in[0]) { out[0] = kairn::to_up(two(
 // Balls: the functions of the interface they share with intervals.
 FORM(ball_from_interval_2_from_interval, put(out, B2<T>::from_interval(AS(ball_from_interval_2, in[0]), in[1])))
 FORM(ball_from_interval_2_marked, put(out, B2<T>::from_interval(kairn::unverified(in[0]), in[1])))
+FORM(ball_from_interval_2_from_bounds, put(out, B2<T>::from_bounds(AS(ball_from_interval_2, in[0]), in[1])))
+FORM(ball_from_interval_2_from_bounds_marked, put(out, B2<T>::from_bounds(kairn::unverified(in[0]), in[1])))
 FORM(ball_lower_as_1_lower_as, out[0] = ball1(in).template lower_as<T>())
 FORM(ball_lower_as_1_lower, out[0] = ball1(in).lower().limb[0])
 FORM(ball_upper_as_1_upper_as, out[0] = ball1(in).template upper_as<T>())
@@ -848,6 +899,9 @@ FORM(ball_to_interval_2_marked, put(out, I2<T>(kairn::unverified(ball2(in)))))
 FORM(ball_to_interval_2_lower_upper, const B2<T> x = ball2(in); put(out, x.lower()); put(out + 2, x.upper()))
 FORM(ball_from_interval_1_from_interval, put(out, B1<T>::from_interval(AS(ball_from_interval_1, in[0]), in[1])))
 FORM(ball_from_interval_1_marked, put(out, B1<T>::from_interval(kairn::unverified(in[0]), in[1])))
+FORM(ball_from_interval_1_from_bounds, put(out, B1<T>::from_bounds(AS(ball_from_interval_1, in[0]), in[1])))
+FORM(ball_from_interval_1_from_bounds_one, put(out, B1<T>::from_bounds(AS(ball_from_interval_1, one(in)), one(in + 1))))
+FORM(ball_from_interval_1_from_bounds_marked, put(out, B1<T>::from_bounds(kairn::unverified(in[0]), in[1])))
 // Balls: the subset test, the signs, the comparisons and the set operations. Two balls are
 // (center limbs, radius) twice.
 #define ENCLOSURE_BALL_FORMS(K, BALL, AS_IS)                                                                                \
@@ -1318,6 +1372,14 @@ const Form forms[] = {
     ROW(make_2, marked, "l", "ll")
     ROW(make_2_limbs, from_limbs, "ll", "ll")
     ROW(make_2_limbs, from_limbs_unchecked, "ll", "ll")
+    SOME(make_2, interval_from_limbs_lower, "l", "ll")
+    SOME(make_2, interval_from_limbs_upper, "l", "ll")
+    SOME(make_2, ball_from_limbs_center, "l", "ll")
+    SOME(make_2, ball_from_limbs_radius_1, "l", "ll")
+    SOME(make_2, ball_from_limbs_radius_2, "l", "ll")
+    SOME(make_2_limbs, interval_from_limbs_lower, "ll", "ll")
+    SOME(make_2_limbs, interval_from_limbs_upper, "ll", "ll")
+    SOME(make_2_limbs, ball_from_limbs_center, "ll", "ll")
     ROW(add_2_2_full, plus, "llll", "ll")
     ROW(add_2_2_full, plus_assign, "llll", "ll")
     ROW(add_2_2_full, marked, "llll", "ll")
@@ -1441,6 +1503,12 @@ const Form forms[] = {
     SOME(interval_make_2, point, "llll", "llll")
     SOME(interval_make_2, point_limb, "llll", "llll")
     SOME(interval_make_2, limbs, "llll", "llll")
+    ROW(interval_make_1, from_bounds, "ll", "ll")
+    ROW(interval_make_1, from_bounds_one, "ll", "ll")
+    ROW(interval_make_1, from_bounds_marked, "ll", "ll")
+    ROW(interval_make_2, from_bounds, "llll", "llll")
+    ROW(interval_make_2, from_bounds_marked, "llll", "llll")
+    SOME(interval_make_2, from_bounds_limbs, "llll", "llll")
     INTERVAL_ROWS(1, "ll", "llll")
     INTERVAL_ROWS(2, "llll", "llllllll")
     ROW(interval_mid_rad_1, midpoint_radius, "ll", "ll")
@@ -1453,6 +1521,8 @@ const Form forms[] = {
     SOME(to_up_2, interval_upper_as, "ll", "l")
     ROW(ball_from_interval_2, from_interval, "ll", "lll")
     ROW(ball_from_interval_2, marked, "ll", "lll")
+    ROW(ball_from_interval_2, from_bounds, "ll", "lll")
+    ROW(ball_from_interval_2, from_bounds_marked, "ll", "lll")
     ROW(ball_lower_as_1, lower_as, "ll", "l")
     ROW(ball_lower_as_1, lower, "ll", "l")
     ROW(ball_upper_as_1, upper_as, "ll", "l")
@@ -1485,6 +1555,9 @@ const Form forms[] = {
     ROW(ball_to_interval_2, lower_upper, "lll", "llll")
     ROW(ball_from_interval_1, from_interval, "ll", "ll")
     ROW(ball_from_interval_1, marked, "ll", "ll")
+    ROW(ball_from_interval_1, from_bounds, "ll", "ll")
+    ROW(ball_from_interval_1, from_bounds_one, "ll", "ll")
+    ROW(ball_from_interval_1, from_bounds_marked, "ll", "ll")
     ENCLOSURE_BALL_ROWS(1, "ll", "llll", "llll")
     ENCLOSURE_BALL_ROWS(2, "lll", "llllll", "llllll")
     ROW(ball_contains_point_1, contains, "lll", "m")

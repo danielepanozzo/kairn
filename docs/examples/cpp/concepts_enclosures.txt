@@ -1,0 +1,26 @@
+{1} + {2^-60}:
+  Interval<double, 1>  [0x1p+0, 0x1.0000000000001p+0]
+  Ball<double, 1>      center 0x1p+0, radius 0x1.0000000000002p-53
+  Interval<double, 2>  [0x1p+0 + 0x1.ffffffffffe7fp-61, 0x1p+0 + 0x1.00000000000c1p-60]
+  Ball<double, 2>      center 0x1p+0 + 0x1p-60, radius 0x1.8000000000007p-105
+
+x (1 - x) on [0.25, 0.75]:
+  Interval<double, 1>  [0.0625, 0.5625]  certainly positive: yes
+  Ball<double, 1>      [-0.0625, 0.5625]  certainly positive: no
+  Ball<double, 2>      [-0.0625, 0.5625]  certainly positive: no
+x (1 - x) on [0.49, 0.51]:
+  Interval<double, 1>  [0.2401, 0.2601]  certainly positive: yes
+  Ball<double, 1>      [0.2399, 0.2601]  certainly positive: yes
+  Ball<double, 2>      [0.2399, 0.2601]  certainly positive: yes
+
+{1, 1000, 1e6} + {2^-60, 2^-60, 2^-60}:
+  BallVector<double, 1, 3>  one radius 0x1.e848000000004p-34
+  Ball<double, 1>, entry 0  radius 0x1.0000000000002p-53
+  Ball<double, 1>, entry 1  radius 0x1.f400000000004p-44
+  Ball<double, 1>, entry 2  radius 0x1.e848000000004p-34
+
+X(0.25, 0.75) and X::from_bounds(0.25, 0.75):
+  Interval<double, 1>(0.25, 0.75)           [0.25, 0.75]
+  Ball<double, 1>(0.25, 0.75)               [-0.5, 1]
+  Ball<double, 1>::from_bounds(0.25, 0.75)  center 0.5, radius 0.25: [0.25, 0.75]
+  Ball<double, 2>::from_bounds(0.25, 0.75)  center 0.5 + 0, radius 0.25

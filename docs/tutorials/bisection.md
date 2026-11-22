@@ -85,9 +85,12 @@ about $\pm 0.3178$ and $\pm 3.1463$, searched in $[-4, 4]$:
 --8<-- "docs/examples/cpp/bisection.cpp:main"
 ```
 
-The domain is made from two numbers of the program, as an interval or as a ball:
-`Ball<T, k>::from_interval(lo, hi)` is the ball of the interval $[lo, hi]$, here center 0 and
-radius 4 exactly. The only line that names a type is this one.
+The domain is made from its two bounds, in `run`, with the one spelling that both kinds of set
+have: `X::from_bounds(lo, hi)` is the interval $[lo, hi]$ for an interval, and for a ball a ball
+that contains it, here center 0 and radius 4 exactly. `X(lo, hi)` would not do: it is the interval
+$[-4, 4]$ for an interval, but for a ball the ball of center $-4$ and radius 4
+([One enclosure interface](../reference/enclosure.md#the-interface)). The only lines that name a
+type are the three calls of `run`.
 
 ## Down to a width of $10^{-6}$
 

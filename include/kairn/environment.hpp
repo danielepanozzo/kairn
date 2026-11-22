@@ -102,6 +102,34 @@ KAIRN_FORCEINLINE constexpr bool check_environment_except_rounding() noexcept {
     return ok;
 }
 
+// The environment check of a batch entry, a function that runs a loop over arrays (the functions of
+// batch.hpp, and the operations of ball_vector.hpp on whole ball vectors, their constructors
+// included), made in every build, with KAIRN_CHECKS 1 or 0: docs/developer/design/brief.md,
+// "Floating-point environment", asks it "at every batch-API entry", and of the scalar operations
+// in debug builds only, where check_environment() makes it. The control register is read as
+// environment_ok() reads it, and a state that is not the default one is reported through
+// KAIRN_ENVIRONMENT_FAILURE, with the message of check_environment(): by default the program stops.
+// Whether the environment is the default one: false when KAIRN_ENVIRONMENT_FAILURE returned, and
+// then the checks of the operands of a debug build do not follow. With rounding false, for a
+// function whose result the rounding mode cannot change, the rounding mode is left out, as
+// check_environment_except_rounding() leaves it out. True in constant evaluation, which has no
+// environment to read (no batch entry is constexpr today). One read of the register and two tests
+// per call, whatever the length of the arrays. Its result must not initialize a const local
+// variable (`const bool ok = check_batch_environment();`): the initializer of a const variable of
+// integral type is tried as a constant expression first, where this function returns true without
+// reading anything, and the check would never run (seen with Apple clang 21, at -O0 as at -O2); an
+// assignment, a non-const variable or the condition of an if is evaluated at run time.
+KAIRN_FORCEINLINE constexpr bool check_batch_environment(bool rounding = true) noexcept {
+    bool ok = true;
+    if (!__builtin_is_constant_evaluated()) {
+        if (const char* problem = environment_problem(rounding)) {
+            ok = false;
+            KAIRN_ENVIRONMENT_FAILURE(problem);
+        }
+    }
+    return ok;
+}
+
 // Whether the rounding mode is to nearest, without a report: the checks of the operands of a
 // function that does not round are made only then, when they round themselves (x0 + x1 == x0
 // under a directed rounding mode can be false for a canonical pair). True in constant evaluation.

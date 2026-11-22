@@ -163,24 +163,24 @@ void orders(Random& rnd) {
             bool f = false;
             for (int fast = 0; fast < 2; ++fast) {
                 const auto lane = fast ? kairn::sum_fast(x) : kairn::sum(x);
-                const auto seq = fast ? kairn::sum_fast(x, kairn::sequential) : kairn::sum(x, kairn::sequential);
+                const auto seq = fast ? kairn::sum_fast(kairn::sequential, x) : kairn::sum(kairn::sequential, x);
                 sum_loop<T, K>(x, w, fast, r, f);
                 check(same_number(lane.value, r) && lane.finite == f, fast ? "sum_fast is the lane order" : "sum is the lane order", name_of<T>(), K, n);
                 sum_loop<T, K>(x, 0, fast, r, f);
-                check(same_number(seq.value, r) && seq.finite == f, fast ? "sum_fast(x, sequential) is the sequential order" : "sum(x, sequential) is the sequential order", name_of<T>(), K, n);
+                check(same_number(seq.value, r) && seq.finite == f, fast ? "sum_fast(sequential, x) is the sequential order" : "sum(sequential, x) is the sequential order", name_of<T>(), K, n);
                 if (w == 1) check(same_number(lane.value, r), "with one lane the two orders agree", name_of<T>(), K, n);
             }
             const auto lane = kairn::dot(x, y);
-            const auto seq = kairn::dot(x, y, kairn::sequential);
+            const auto seq = kairn::dot(kairn::sequential, x, y);
             dot_loop<T, K>(x, y, w, r, f);
             check(same_number(lane.value, r) && lane.finite == f, "dot is the lane order", name_of<T>(), K, n);
             dot_loop<T, K>(x, y, 0, r, f);
-            check(same_number(seq.value, r) && seq.finite == f, "dot(x, y, sequential) is the sequential order", name_of<T>(), K, n);
+            check(same_number(seq.value, r) && seq.finite == f, "dot(sequential, x, y) is the sequential order", name_of<T>(), K, n);
             // A view of T (not const) is taken as well, and a view of the arrays of an SoA.
             kairn::SoA<T, K> s(n);
             for (std::size_t i = 0; i < n; ++i) s.set(i, x.get(i));
-            const auto from_soa = kairn::sum(s.view(), kairn::sequential);
-            const auto of_x = kairn::sum(x, kairn::sequential);
+            const auto from_soa = kairn::sum(kairn::sequential, s.view());
+            const auto of_x = kairn::sum(kairn::sequential, x);
             check(same_number(from_soa.value, of_x.value.limb) && from_soa.finite == of_x.finite, "a view of an SoA",
                   name_of<T>(), K, n);
         }
@@ -331,7 +331,7 @@ void not_finite(Random& rnd) {
                 if constexpr (K == 2) a.limb[1][at] = v == v ? T(0) : v;  // canonical: (inf, 0), (NaN, NaN)
                 const auto x = std::as_const(a).view();
                 const auto y = b.view();
-                const auto s = kairn::sum(x), q = kairn::sum(x, kairn::sequential), d = kairn::dot(x, y);
+                const auto s = kairn::sum(x), q = kairn::sum(kairn::sequential, x), d = kairn::dot(x, y);
                 const auto sf = kairn::sum_fast(x);
                 check(!s.finite && canonical_nan(s.value), "a sum with an infinite or NaN element", name_of<T>(), K, n, long(at));
                 check(!q.finite && canonical_nan(q.value), "a sequential sum with an infinite or NaN element", name_of<T>(), K, n, long(at));
@@ -360,7 +360,7 @@ void not_finite(Random& rnd) {
             if constexpr (K == 2) a.limb[1][i] = T(0);
         }
         const auto x = std::as_const(a).view();
-        const auto s = kairn::sum(x), q = kairn::sum(x, kairn::sequential), d = kairn::dot(x, x);
+        const auto s = kairn::sum(x), q = kairn::sum(kairn::sequential, x), d = kairn::dot(x, x);
         check(!s.finite && canonical_nan(s.value) && !q.finite && canonical_nan(q.value), "a sum that overflows", name_of<T>(), K, n);
         check(!d.finite && canonical_nan(d.value), "a dot product that overflows", name_of<T>(), K, n);
         Arrays<T, K> z(n, rnd);

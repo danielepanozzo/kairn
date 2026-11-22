@@ -104,11 +104,14 @@ void print_midpoint(const X& x) {
 
 // --8<-- [start:run]
 // The four zeros of p(x) = x^4 - 10 x^2 + 1, the numbers +-sqrt(2) +- sqrt(3), searched in [-4, 4]
-// with one algorithm and three types.
+// with one algorithm and three types. The domain is made from its two bounds, X::from_bounds(lo, hi),
+// the one spelling that means [lo, hi] for an interval and a ball containing it for a ball: X(lo, hi)
+// would be the interval [lo, hi] but the ball of center lo and radius hi.
 const std::vector<double> p = {1, 0, -10, 0, 1};
 
 template <class X>
-std::vector<X> run(const char* name, const X& domain, double width) {
+std::vector<X> run(const char* name, double width) {
+    const X domain = X::from_bounds(-4.0, 4.0);
     const Zeros<X> z = zeros(p, domain, width);
     const std::vector<X> found = clusters(z.kept);
     std::printf("%s, width %g: %ld evaluations, %zu parts kept (%ld not narrowed by split), %zu zeros\n", name,
@@ -143,9 +146,9 @@ int main() {
     using B1 = kairn::Ball<double, 1>;
     using B2 = kairn::Ball<double, 2>;
     for (double width : {1e-6, 0.0}) {
-        verify(run("Interval<double, 1>", I(-4.0, 4.0), width));
-        verify(run("Ball<double, 1>", B1::from_interval(-4.0, 4.0), width));
-        verify(run("Ball<double, 2>", B2::from_interval(-4.0, 4.0), width));
+        verify(run<I>("Interval<double, 1>", width));
+        verify(run<B1>("Ball<double, 1>", width));
+        verify(run<B2>("Ball<double, 2>", width));
     }
     // --8<-- [end:main]
     return failures ? 1 : 0;

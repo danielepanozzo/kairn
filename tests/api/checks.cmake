@@ -2,6 +2,10 @@
 #
 #   cmake -DPROGRAM=... -DGROUP=default|rounding|flush|operands [-DEXPECT_FLUSH=ON] -P checks.cmake
 #
+# The program may also be the build of checks.cpp without the checks (KAIRN_TEST_CHECKS_OFF), whose
+# batch entries still check the environment: its functions of the kind "runs" (they round and are
+# not checked there) must return under every state, without a message of Kairn's.
+#
 # - default: `PROGRAM default` must exit 0: in the default environment every function runs, as
 #   does every operand the checks must let through.
 # - rounding: for each directed rounding mode and each function the program lists (the
@@ -48,6 +52,7 @@ set(_n 0)
 set(_n_stop 0)       # cases that must stop the program
 set(_n_same 0)       # cases of a function that does not round, which must not
 set(_n_skipped 0)    # functions with no check at all, not run under flush to zero
+set(_n_runs 0)       # without the checks, functions that round and are no batch entry: they must run
 # Runs the program with ARGN; it must stop in WHAT, with MESSAGE (a regular expression) after
 # "kairn: " on the standard error, and with every line of SAYS on the standard output.
 function(_kairn_expect_stop what message says)
@@ -163,11 +168,15 @@ if(GROUP STREQUAL "rounding" OR GROUP STREQUAL "flush")
       endif()
       list(GET _pair 0 _op)
       list(GET _pair 1 _kind)
-      if(NOT _kind MATCHES "^(rounds|exact|unchecked)$")
+      if(NOT _kind MATCHES "^(rounds|exact|unchecked|runs)$")
         message(FATAL_ERROR "checks.cmake: unknown kind '${_kind}' of ${_op}")
       endif()
       set(_says "ok: environment_ok() is true in the default environment;ok: environment_ok() is false under ${_state};calling ${_op} under ${_state}")
-      if(_kind STREQUAL "rounds" OR (GROUP STREQUAL "flush" AND _kind STREQUAL "exact"))
+      if(_kind STREQUAL "runs")
+        math(EXPR _n "${_n} + 1")
+        math(EXPR _n_runs "${_n_runs} + 1")
+        _kairn_expect_same("${_op} under ${_state}" "ok: ${_op} ran under ${_state}, unchecked" "${_state}" "${_op}")
+      elseif(_kind STREQUAL "rounds" OR (GROUP STREQUAL "flush" AND _kind STREQUAL "exact"))
         math(EXPR _n "${_n} + 1")
         math(EXPR _n_stop "${_n_stop} + 1")
         _kairn_expect_stop("${_op} under ${_state}" "${_message}" "${_says}" "${_state}" "${_op}")
@@ -209,6 +218,7 @@ if(GROUP STREQUAL "operands")
   message(STATUS "${GROUP}: all ${_n} cases stopped as they must")
 else()
   message(STATUS "${GROUP}: all ${_n} cases behaved as they must: ${_n_stop} stopped the program, ${_n_same} "
-    "of functions that do not round gave the same bits as to nearest without a report; ${_n_skipped} of functions "
-    "with no check at all not run")
+    "of functions that do not round gave the same bits as to nearest without a report; ${_n_runs} of functions "
+    "that round and are not checked in this build ran without a report; ${_n_skipped} of functions with no check at "
+    "all not run")
 endif()

@@ -17,6 +17,7 @@
 #include <cfenv>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <type_traits>
 #include <vector>
@@ -486,6 +487,16 @@ inline const Operation operations[] = {
     {"ball2.make", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.x), v_r)); }},
     {"ball2.make_downward", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.y), v_r)); }},
     {"ball2.center", Kind::rounds, [](Bits& b) { put(b, B2(unverified(o.y))); }},
+    // from_limbs of an interval and of a ball of two limbs: the test of a canonical bound or center
+    // rounds.
+    {"interval2.from_limbs", Kind::rounds, [](Bits& b) {
+         const double l[4] = {o.jy.lower().limb[0], o.jy.lower().limb[1], o.jy.upper().limb[0], o.jy.upper().limb[1]};
+         put(b, I2::from_limbs(l));
+     }},
+    {"ball2.from_limbs", Kind::rounds, [](Bits& b) {
+         const double l[3] = {o.bp.center().limb[0], o.bp.center().limb[1], o.bp.radius()};
+         put(b, B2::from_limbs(l));
+     }},
     // The ball of a constant of kairn::rational, two limbs: the test of a canonical center rounds.
     // The constant is integer arithmetic, made here under the state, which does not change it.
     {"ball2.constant", Kind::rounds,
@@ -515,6 +526,10 @@ inline const Operation operations[] = {
     {"interval1.to_ball", Kind::rounds, [](Bits& b) { put(b, B1(unverified(o.ix))); }},
     {"ball1.to_interval", Kind::rounds, [](Bits& b) { put(b, I1(unverified(o.p))); }},
     {"ball2.from_interval", Kind::rounds, [](Bits& b) { put(b, B2::from_interval(unverified(double(v_b)), v_a)); }},
+    // from_bounds, the name of from_interval that a ball shares with an interval: the same kernels.
+    {"ball2.from_bounds", Kind::rounds, [](Bits& b) { put(b, B2::from_bounds(unverified(double(v_b)), v_a)); }},
+    {"ball1.from_bounds", Kind::rounds, [](Bits& b) { put(b, B1::from_bounds(double(v_b), v_a)); }},
+    {"ball1.from_bounds_one", Kind::rounds, [](Bits& b) { put(b, B1::from_bounds(unverified(E1(v_b)), E1(v_a))); }},
     {"ball1.lower_as", Kind::rounds, [](Bits& b) { put(b, o.p.lower_as<double>()); }},
     {"ball1.upper_as", Kind::rounds, [](Bits& b) { put(b, o.p.upper_as<double>()); }},
     {"ball1.lower", Kind::rounds, [](Bits& b) { put(b, o.p.lower()); }},
@@ -564,7 +579,7 @@ inline const Operation operations[] = {
      }},
     {"batch.sum_sequential", Kind::rounds, [](Bits& b) {
          const Arrays a(o.y);
-         put(b, kairn::sum(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::sequential).value);
+         put(b, kairn::sum(kairn::sequential, kairn::SoAView<const double, 2>(a.h, a.l, 16)).value);
      }},
     {"batch.sum_one_limb", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x);
@@ -576,7 +591,7 @@ inline const Operation operations[] = {
      }},
     {"batch.sum_fast_sequential", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x);
-         put(b, kairn::sum_fast(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::sequential).value);
+         put(b, kairn::sum_fast(kairn::sequential, kairn::SoAView<const double, 2>(a.h, a.l, 16)).value);
      }},
     {"batch.dot", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x), c(o.y);
@@ -584,8 +599,8 @@ inline const Operation operations[] = {
      }},
     {"batch.dot_sequential", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x), c(o.y);
-         put(b, kairn::dot(kairn::SoAView<const double, 2>(a.h, a.l, 16), kairn::SoAView<const double, 2>(c.h, c.l, 16),
-                           kairn::sequential).value);
+         put(b, kairn::dot(kairn::sequential, kairn::SoAView<const double, 2>(a.h, a.l, 16),
+                           kairn::SoAView<const double, 2>(c.h, c.l, 16)).value);
      }},
     {"batch.add", Kind::rounds, [](Bits& b) {
          const Arrays a(o.x), c(o.y);
@@ -931,6 +946,50 @@ inline const Operation operations[] = {
              }
          });
      }},
+    // from_limbs of an interval and of a ball of one limb: the guards, and a test of the limbs that
+    // does not round, but the guards' zeros depend on the rounding mode, which is checked; on every
+    // interval and ball of the corpus.
+    {"interval1.from_limbs", Kind::rounds, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (const auto& x : c.intervals1) {
+                 const T l[2] = {x.lower().limb[0], x.upper().limb[0]};
+                 put_value(out, kairn::Interval<T, 1>::from_limbs(l));
+             }
+         });
+     }},
+    {"ball1.from_limbs", Kind::rounds, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (const auto& x : c.balls1) {
+                 const T l[2] = {x.center().limb[0], x.radius()};
+                 put_value(out, kairn::Ball<T, 1>::from_limbs(l));
+             }
+         });
+     }},
+    // from_bounds, the constructors from two bounds under the name an interval shares with a ball:
+    // the same kernels, the same values and bits.
+    {"interval1.from_bounds", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             using X = kairn::Interval<T, 1>;
+             for (auto lo : c.one)
+                 for (auto hi : c.one) {
+                     put_value(out, X::from_bounds(lo, hi));
+                     put_value(out, X::from_bounds(unverified(kairn::Expansion<T, 1>(lo)), kairn::Expansion<T, 1>(hi)));
+                 }
+         });
+     }},
+    {"interval2.from_bounds", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             using X = kairn::Interval<T, 2>;
+             for (auto lo : c.one)
+                 for (auto hi : c.one) put_value(out, X::from_bounds(unverified(lo), hi));
+             for (const auto& lo : c.two)
+                 for (const auto& hi : c.two) put(out, X::from_bounds(lo, hi));
+         });
+     }},
     // The conversion of a SumAndError to a two-limb number: its guards, a + 0, as from_limbs_unchecked
     // (the same values, zeros without their sign), and its check of the pair, which does not round.
     {"blocks.to_expansion", Kind::exact, [](Bits& b) {
@@ -1190,10 +1249,12 @@ inline const Operation operations[] = {
                  put(out, x.upper());
                  put(out, x.template lower_as<T>());
                  put(out, x.template upper_as<T>());
+                 put(out, x.is_finite());
              }
              for (const auto& x : c.intervals2) {
                  put(out, x.lower());
                  put(out, x.upper());
+                 put(out, x.is_finite());
              }
              put(out, kairn::Interval<T, 1>());
              put(out, kairn::Interval<T, 2>::empty());
@@ -1414,6 +1475,13 @@ inline const State states[] = {
 #endif
 };
 
+// Whether the function is a batch entry (environment.hpp, check_batch_environment: the functions on
+// arrays of batch.hpp, and the operations on whole ball vectors of ball_vector.hpp, their
+// constructors included), whose check of the environment is made in every build: the operations
+// named batch.* and bv1.*, bv2.* here (bv.access, which copies, is none).
+inline bool batch_entry(const char* name) {
+    return std::strncmp(name, "batch.", 6) == 0 || std::strncmp(name, "bv1.", 4) == 0 || std::strncmp(name, "bv2.", 4) == 0;
+}
 inline const char* kind_name(Kind k) {
     return k == Kind::rounds ? "rounds" : k == Kind::exact ? "exact" : "unchecked";
 }
