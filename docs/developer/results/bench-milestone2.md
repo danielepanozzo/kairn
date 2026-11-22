@@ -2054,16 +2054,16 @@ sizes are those of question 13.
 | `conv`, one limb, 16, with them, over the plain FMA loop | 0.97 to 1.01 (-O2), 0.96 to 1.02 (-O3) | 1.09 to 1.14 (-O2), 1.15 to 1.22 (-O3) | 1.20 to 1.25 (-O2), 1.26 to 1.30 (-O3) | 1.16 to 1.17 |
 | `conv`, one limb, 16, without them, over the same | 1.00 to 1.01 (-O2), 0.97 to 1.03 (-O3) | 1.05 to 1.09 | 1.10 to 1.15 | 1.13 to 1.15 |
 
-| The guards of the accumulator: with over without, double | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add_product`, one limb (both factors guarded), L1 | 1.01 | 1.00 |
-| `add_product`, two limbs (every limb guarded), L1 | 1.00 | 1.00 |
-| `add_product`, one limb, the public member over the kernels without the guards, L1 | 1.03 to 1.04 | 1.00 |
-| `add_product`, two limbs, the same, L1 | 1.00 | 1.00 |
-| `add_product`, one limb (both factors guarded), LLC | 1.00 | 1.00 |
-| `add_product`, two limbs (every limb guarded), LLC | 1.00 | 1.00 |
-| `add_product`, one limb, the public member over the kernels without the guards, LLC | 1.00 to 1.01 | 1.00 |
-| `add_product`, two limbs, the same, LLC | 1.00 | 1.00 |
+| The guards of the accumulator: with over without, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add_product`, one limb (both factors guarded), L1 | 1.02 to 1.08 (-O2), 1.03 to 1.06 (-O3) | 1.03 to 1.08 (-O2), 1.03 to 1.10 (-O3) | 1.01 | 1.00 |
+| `add_product`, two limbs (every limb guarded), L1 | 0.99 to 1.02 | 1.00 to 1.03 | 1.00 | 1.00 |
+| `add_product`, one limb, the public member over the kernels without the guards, L1 | 1.02 to 1.08 (-O2), 1.02 to 1.05 (-O3) | 1.03 to 1.07 | 1.03 to 1.04 | 1.00 |
+| `add_product`, two limbs, the same, L1 | 0.96 to 1.02 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.04 | 1.00 | 1.00 |
+| `add_product`, one limb (both factors guarded), LLC | 0.99 to 1.00 | 1.00 to 1.05 (-O2), 0.98 to 1.01 (-O3) | 1.00 | 1.00 |
+| `add_product`, two limbs (every limb guarded), LLC | 0.98 to 1.01 | 1.00 to 1.01 | 1.00 | 1.00 |
+| `add_product`, one limb, the public member over the kernels without the guards, LLC | 0.96 to 1.04 (-O2), 0.99 to 1.00 (-O3) | 1.02 to 1.05 (-O2), 0.98 to 1.00 (-O3) | 1.00 to 1.01 | 1.00 |
+| `add_product`, two limbs, the same, LLC | 0.98 to 1.00 | 1.00 | 1.00 | 1.00 |
 
 - **The guards of supplied factors cost nothing where the loop waits for a chain, and up to 17%
   where it is bound by its throughput.** `dot` of one limb, three operations per term where the loop
@@ -2098,41 +2098,41 @@ is checked against the generated kernels called directly on a state of plain `T`
 byte for byte, and its running sum against the exact sum of its terms within its own
 `error_bound()`. The sums and dot products it is compared with are in the same runs.
 
-| The accumulator: ns per element (selection) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, one limb, L1 | 1.3 to 1.31 | 0.884 to 0.897 |
-| `add_product`, one limb, L1 | 1.53 | 1.48 to 1.5 |
-| `add`, two limbs, L1 | 10.2 | 10.1 to 10.2 |
-| `add_product`, two limbs, L1 | 10.2 | 10.2 to 10.3 |
-| `add` of a value of T, two limbs, L1 | 10.1 to 10.2 | 10.1 to 10.3 |
-| `add` into 16 accumulators merged, two limbs, L1 | 12.2 to 12.3 | 9.98 to 10.1 |
-| `add` into W accumulators in the lane order, two limbs, L1 | 4.82 to 4.83 | 3.99 to 4.05 |
+| The accumulator: ns per element (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, one limb, L1 | 0.616 to 0.642 | 0.642 to 0.665 (-O2), 0.606 to 0.675 (-O3) | 1.3 to 1.31 | 0.884 to 0.897 |
+| `add_product`, one limb, L1 | 0.994 to 1.03 | 0.976 to 1.04 (-O2), 0.974 to 1.05 (-O3) | 1.53 | 1.48 to 1.5 |
+| `add`, two limbs, L1 | 7.86 to 8.21 | 7.45 to 7.94 (-O2), 7.43 to 8.29 (-O3) | 10.2 | 10.1 to 10.2 |
+| `add_product`, two limbs, L1 | 7.83 to 8.17 | 7.31 to 8.15 (-O2), 7.27 to 8.13 (-O3) | 10.2 | 10.2 to 10.3 |
+| `add` of a value of T, two limbs, L1 | 7.67 to 7.99 | 7.11 to 7.8 (-O2), 7.33 to 8.19 (-O3) | 10.1 to 10.2 | 10.1 to 10.3 |
+| `add` into 16 accumulators merged, two limbs, L1 | 6.38 to 6.55 | 5.92 to 6.41 (-O2), 5.89 to 6.6 (-O3) | 12.2 to 12.3 | 9.98 to 10.1 |
+| `add` into W accumulators in the lane order, two limbs, L1 | 4.01 to 4.18 | 5.89 to 6.34 (-O2), 3.73 to 4.17 (-O3) | 4.82 to 4.83 | 3.99 to 4.05 |
 
-| The accumulator over the functions on arrays (selection) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, one limb, over `sum` sequential, L1 | 1.47 (-O2), 1.52 (-O3) | 1.03 |
-| `add`, one limb, over `sum`, L1 | 5.50 to 5.65 | 4.50 to 4.51 |
-| `add_product`, one limb, over `dot` sequential, L1 | 1.05 | 1.03 |
-| `add`, two limbs, over `sum` sequential, L1 | 1.00 | 1.00 |
-| `add`, two limbs, over `sum`, L1 | 3.82 to 3.92 | 3.91 to 3.92 |
-| `add_product`, two limbs, over `dot` sequential, L1 | 1.00 | 0.98 to 0.99 |
-| `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, L1 | 1.00 | 1.00 |
-| 4 accumulators merged over one, one limb, L1 | 2.38 to 2.44 (-O2), 2.37 to 2.43 (-O3) | 0.92 to 0.93 |
-| 16 accumulators merged over one, two limbs, L1 | 1.20 to 1.21 | 0.99 |
-| W accumulators in the lane order over one, one limb, L1 | 3.20 to 3.37 (-O2), 0.45 to 0.46 (-O3) | 0.47 |
-| W accumulators in the lane order over one, two limbs, L1 | 0.47 | 0.39 to 0.40 |
-| W accumulators in the lane order over `sum`, two limbs, L1 | 1.80 to 1.85 | 1.54 to 1.56 |
+| The accumulator over the functions on arrays (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, one limb, over `sum` sequential, L1 | 1.16 to 1.21 | 1.01 to 1.03 (-O2), 0.99 to 1.08 (-O3) | 1.47 (-O2), 1.52 (-O3) | 1.03 |
+| `add`, one limb, over `sum`, L1 | 2.24 to 2.38 (-O2), 2.31 to 2.35 (-O3) | 2.31 to 2.34 (-O2), 2.18 to 2.34 (-O3) | 5.50 to 5.65 | 4.50 to 4.51 |
+| `add_product`, one limb, over `dot` sequential, L1 | 1.06 to 1.10 | 1.07 to 1.12 | 1.05 | 1.03 |
+| `add`, two limbs, over `sum` sequential, L1 | 1.00 to 1.02 | 0.96 to 1.02 (-O2), 0.97 to 1.01 (-O3) | 1.00 | 1.00 |
+| `add`, two limbs, over `sum`, L1 | 2.02 to 2.06 | 1.93 to 1.99 (-O2), 2.03 to 2.04 (-O3) | 3.82 to 3.92 | 3.91 to 3.92 |
+| `add_product`, two limbs, over `dot` sequential, L1 | 1.01 to 1.04 | 0.98 to 1.04 (-O2), 1.00 to 1.04 (-O3) | 1.00 | 0.98 to 0.99 |
+| `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, L1 | 0.95 to 1.01 (-O2), 0.93 to 0.98 (-O3) | 0.97 to 1.00 | 1.00 | 1.00 |
+| 4 accumulators merged over one, one limb, L1 | 0.84 to 0.89 (-O2), 0.85 to 0.89 (-O3) | 0.85 to 0.86 (-O2), 0.87 to 0.91 (-O3) | 2.38 to 2.44 (-O2), 2.37 to 2.43 (-O3) | 0.92 to 0.93 |
+| 16 accumulators merged over one, two limbs, L1 | 0.78 to 0.82 | 0.79 to 0.81 | 1.20 to 1.21 | 0.99 |
+| W accumulators in the lane order over one, one limb, L1 | 0.54 to 0.57 | 0.54 to 0.56 (-O2), 0.50 to 0.54 (-O3) | 3.20 to 3.37 (-O2), 0.45 to 0.46 (-O3) | 0.47 |
+| W accumulators in the lane order over one, two limbs, L1 | 0.49 to 0.52 | 0.79 to 0.80 (-O2), 0.50 to 0.51 (-O3) | 0.47 | 0.39 to 0.40 |
+| W accumulators in the lane order over `sum`, two limbs, L1 | 0.99 to 1.06 (-O2), 1.03 (-O3) | 1.52 to 1.59 (-O2), 1.02 to 1.04 (-O3) | 1.80 to 1.85 | 1.54 to 1.56 |
 
-| The accumulator: ns per call | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `merge`, 1 limb | 0.902 to 0.91 | 0.811 to 0.825 |
-| `merge`, 2 limbs | 10.2 | 10.1 to 10.3 |
-| `sum()`, 1 limb | 1.21 (-O2), 0.933 to 0.934 (-O3) | 0.826 to 0.843 |
-| `sum()`, 2 limbs | 1.34 (-O2), 1.25 to 1.26 (-O3) | 1.18 to 1.2 |
-| `error_bound()`, 1 limb | 6.35 (-O2), 4.72 (-O3) | 6 to 6.17 |
-| `error_bound()`, 2 limbs | 6.64 to 6.66 (-O2), 5.53 to 5.55 (-O3) | 6.48 to 6.6 |
-| `ball()`, 1 limb | 7.28 to 7.34 (-O2), 6.62 to 6.63 (-O3) | 8.04 to 8.18 |
-| `ball()`, 2 limbs | 7.97 to 7.99 (-O2), 7.29 to 7.32 (-O3) | 8.54 to 8.68 |
+| The accumulator: ns per call | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `merge`, 1 limb | 0.588 to 0.63 (-O2), 0.588 to 0.612 (-O3) | 0.753 to 0.779 (-O2), 0.742 to 0.791 (-O3) | 0.902 to 0.91 | 0.811 to 0.825 |
+| `merge`, 2 limbs | 7.69 to 8.02 | 7.28 to 7.9 (-O2), 7.31 to 8.08 (-O3) | 10.2 | 10.1 to 10.3 |
+| `sum()`, 1 limb | 0.526 to 0.549 | 0.397 to 0.415 | 1.21 (-O2), 0.933 to 0.934 (-O3) | 0.826 to 0.843 |
+| `sum()`, 2 limbs | 0.7 to 0.73 | 0.556 to 0.576 (-O2), 0.676 to 0.705 (-O3) | 1.34 (-O2), 1.25 to 1.26 (-O3) | 1.18 to 1.2 |
+| `error_bound()`, 1 limb | 2.42 to 2.52 | 2.4 to 2.51 (-O2), 1.67 to 1.75 (-O3) | 6.35 (-O2), 4.72 (-O3) | 6 to 6.17 |
+| `error_bound()`, 2 limbs | 3.01 to 3.14 (-O2), 2.44 to 2.54 (-O3) | 2.4 to 2.43 (-O2), 1.72 to 1.78 (-O3) | 6.64 to 6.66 (-O2), 5.53 to 5.55 (-O3) | 6.48 to 6.6 |
+| `ball()`, 1 limb | 3.08 to 3.21 | 2.9 to 2.96 (-O2), 2.5 to 2.6 (-O3) | 7.28 to 7.34 (-O2), 6.62 to 6.63 (-O3) | 8.04 to 8.18 |
+| `ball()`, 2 limbs | 3.83 to 3.84 (-O2), 3.41 to 3.55 (-O3) | 2.95 to 3.08 (-O2), 2.56 to 2.63 (-O3) | 7.97 to 7.99 (-O2), 7.29 to 7.32 (-O3) | 8.54 to 8.68 |
 
 - **An accumulator fed term by term costs what the sequential `sum` and `dot` cost**: on Zen 2 1.00
   to 1.05 times them for two limbs (10.1 to 10.3 ns per term) and for `add_product` of one limb (1.5
@@ -2150,12 +2150,16 @@ byte for byte, and its running sum against the exact sum of its terms within its
   but with GCC 13 at `-O2` 3.2 to 3.4 times one accumulator (17.6 to 19.2 times `sum`): GCC keeps the
   array of accumulators in memory there, each addition loading and storing its running sum, and
   compiles the saturating count into 128-bit integer operations (`vpsubq`, `vpunpcklqdq`); at `-O3`
-  the states stay in registers.
+  the states stay in registers. On the M3, with two lanes, `sum` takes 0.28 to 0.35 ns and `dot` 0.40 to 0.52, 0.94 to 1.11
+  times the plain loop in the same order and about half the loop of one chain.cc2
 - **The results**: a `merge` costs a two-limb addition (10.1 to 10.3 ns in a chain; 0.8 to 0.9 for
   one limb); `sum()` 0.8 to 1.3 ns; `error_bound()` 4.7 to 6.6 ns, the two kernels of the bound and of
-  the radius; `ball()` 6.6 to 8.7 ns, the radius and the constructor of the ball.
-- **The guards of `add_product`** cost nothing (1.00 to 1.01, [question 15](#15-the-guards-of-supplied-factors)),
-  and the public member costs what its kernels without the guards cost (1.00 to 1.04).
+  the radius; `ball()` 6.6 to 8.7 ns, the radius and the constructor of the ball. On the M3, with two lanes, `sum` takes 0.28 to 0.35 ns and `dot` 0.40 to 0.52, 0.94 to 1.11
+  times the plain loop in the same order and about half the loop of one chain.cc3
+- **The guards of `add_product`** cost nothing on Zen 2 (1.00 to 1.01,
+  [question 15](#15-the-guards-of-supplied-factors)),
+  and the public member costs what its kernels without the guards cost (1.00 to 1.04). On the M3, with two lanes, `sum` takes 0.28 to 0.35 ns and `dot` 0.40 to 0.52, 0.94 to 1.11
+  times the plain loop in the same order and about half the loop of one chain.cc4
 
 ### 17. Accuracy for the price
 
@@ -4075,10 +4079,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
 | linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
 | linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 0, 0 | 2026-11-22, `be95dbb` |
-| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 0, 0 | 2026-11-22, `be95dbb` |
-| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 0, 0 | 2026-11-22, `be95dbb` |
-| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 0, 0 | 2026-11-22, `be95dbb` |
+| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `be95dbb` |
+| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `be95dbb` |
+| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `be95dbb` |
+| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `be95dbb` |
 
 #### Runs of the third part
 
@@ -4144,6 +4148,18 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `acc-linux-gcc-O3-r1.json` | 138, 0 | 1.002, 1.003 | 1.006 | 100.9, 99.0 |
 | `acc-linux-gcc-O3-r2.json` | 138, 0 | 1.001, 1.003 | 1.004 | 92.5, 91.9 |
 | `acc-linux-gcc-O3-r3.json` | 138, 0 | 1.000, 1.001 | 1.007 | 89.8, 89.6 |
+| `acc-mac-appleclang-O2-r1.json` | 138, 0 | 1.000, 1.027 | 1.046 | 7.4, 7.3 |
+| `acc-mac-appleclang-O2-r2.json` | 138, 0 | 1.001, 1.029 | 1.049 | 6.9, 8.7 |
+| `acc-mac-appleclang-O2-r3.json` | 138, 0 | 1.037, 1.043 | 1.002 | 5.9, 5.5 |
+| `acc-mac-appleclang-O3-r1.json` | 138, 0 | 1.001, 1.029 | 1.046 | 7.3, 7.3 |
+| `acc-mac-appleclang-O3-r2.json` | 138, 0 | 1.000, 1.029 | 1.054 | 8.7, 8.3 |
+| `acc-mac-appleclang-O3-r3.json` | 138, 0 | 1.042, 1.043 | 1.002 | 5.3, 4.6 |
+| `acc-mac-gcc16-O2-r1.json` | 138, 0 | 1.070, 1.100 | 1.055 | 7.2, 7.2 |
+| `acc-mac-gcc16-O2-r2.json` | 138, 0 | 1.072, 1.107 | 1.040 | 8.3, 7.2 |
+| `acc-mac-gcc16-O2-r3.json` | 138, 0 | 1.000, 1.000 | 1.042 | 4.6, 3.4 |
+| `acc-mac-gcc16-O3-r1.json` | 138, 0 | 1.076, 1.112 | 1.045 | 7.2, 6.9 |
+| `acc-mac-gcc16-O3-r2.json` | 138, 0 | 1.113, 1.119 | 1.005 | 7.2, 5.9 |
+| `acc-mac-gcc16-O3-r3.json` | 138, 0 | 1.000, 1.000 | 1.008 | 3.4, 3.1 |
 | `bv-linux-clang-O2-r1.json` | 192, 0 | 1.019, 1.023 | 1.006 | 92.1, 92.5 |
 | `bv-linux-clang-O2-r2.json` | 192, 0 | 1.020, 1.025 | 1.008 | 94.6, 94.5 |
 | `bv-linux-clang-O2-r3.json` | 192, 0 | 1.000, 1.000 | 1.005 | 91.2, 91.5 |
@@ -4299,6 +4315,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | acc linux-clang-O3 | 3 | 1.6%, 1.8%, 2.1% | `m2c/tp/acc2ball/kairn` |
 | acc linux-gcc-O2 | 3 | 0.3%, 0.6%, 5.6% | `m2c/llc/acc1lanes/op` |
 | acc linux-gcc-O3 | 3 | 0.2%, 0.4%, 3.1% | `m2a/llc/sum1/textbook` |
+| acc mac-appleclang-O2 | 3 | 3.8%, 4.3%, 7.2% | `m2c/tp/acc1merge/op` |
+| acc mac-appleclang-O3 | 3 | 4.2%, 4.3%, 5.3% | `m2a/tp/sum2z/seq` |
+| acc mac-gcc16-O2 | 3 | 7.3%, 11.3%, 12.5% | `m2a/llc/sum1/seq` |
+| acc mac-gcc16-O3 | 3 | 11.4%, 11.9%, 13.2% | `m2a/llc/sum2/seq` |
 | bv linux-clang-O2 | 3 | 2.1%, 2.6%, 6.5% | `m2w/tp/axpy_1_4/op` |
 | bv linux-clang-O3 | 3 | 1.7%, 2.4%, 119.2% | `m2w/tp/norm_1_64/op` |
 | bv linux-gcc-O2 | 3 | 1.8%, 2.3%, 12.3% | `m2w/tp/sub_1_64/kairn` |
@@ -6119,93 +6139,93 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `conv`, one limb, 512, with them, over the plain FMA loop | 1.03 to 1.04 | 1.03 to 1.04 (-O2), 0.98 to 1.04 (-O3) | 1.00 to 1.01 | 1.02 |
 | `conv`, one limb, 512, without them, over the same | 1.00 to 1.03 | 0.97 to 1.00 | 1.00 | 1.01 |
 
-| The guards of the accumulator: with over without, double | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add_product`, one limb (both factors guarded), L1 | 1.01 | 1.00 |
-| `add_product`, two limbs (every limb guarded), L1 | 1.00 | 1.00 |
-| `add_product`, one limb, the public member over the kernels without the guards, L1 | 1.03 to 1.04 | 1.00 |
-| `add_product`, two limbs, the same, L1 | 1.00 | 1.00 |
-| `add_product`, one limb (both factors guarded), LLC | 1.00 | 1.00 |
-| `add_product`, two limbs (every limb guarded), LLC | 1.00 | 1.00 |
-| `add_product`, one limb, the public member over the kernels without the guards, LLC | 1.00 to 1.01 | 1.00 |
-| `add_product`, two limbs, the same, LLC | 1.00 | 1.00 |
+| The guards of the accumulator: with over without, double | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add_product`, one limb (both factors guarded), L1 | 1.02 to 1.08 (-O2), 1.03 to 1.06 (-O3) | 1.03 to 1.08 (-O2), 1.03 to 1.10 (-O3) | 1.01 | 1.00 |
+| `add_product`, two limbs (every limb guarded), L1 | 0.99 to 1.02 | 1.00 to 1.03 | 1.00 | 1.00 |
+| `add_product`, one limb, the public member over the kernels without the guards, L1 | 1.02 to 1.08 (-O2), 1.02 to 1.05 (-O3) | 1.03 to 1.07 | 1.03 to 1.04 | 1.00 |
+| `add_product`, two limbs, the same, L1 | 0.96 to 1.02 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.04 | 1.00 | 1.00 |
+| `add_product`, one limb (both factors guarded), LLC | 0.99 to 1.00 | 1.00 to 1.05 (-O2), 0.98 to 1.01 (-O3) | 1.00 | 1.00 |
+| `add_product`, two limbs (every limb guarded), LLC | 0.98 to 1.01 | 1.00 to 1.01 | 1.00 | 1.00 |
+| `add_product`, one limb, the public member over the kernels without the guards, LLC | 0.96 to 1.04 (-O2), 0.99 to 1.00 (-O3) | 1.02 to 1.05 (-O2), 0.98 to 1.00 (-O3) | 1.00 to 1.01 | 1.00 |
+| `add_product`, two limbs, the same, LLC | 0.98 to 1.00 | 1.00 | 1.00 | 1.00 |
 
 #### Question 16: the accumulator
 
-| The accumulator: ns per element | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, one limb, L1 | 1.3 to 1.31 | 0.884 to 0.897 |
-| `add_product`, one limb, L1 | 1.53 | 1.48 to 1.5 |
-| `add`, two limbs, L1 | 10.2 | 10.1 to 10.2 |
-| `add_product`, two limbs, L1 | 10.2 | 10.2 to 10.3 |
-| `add` of a value of T, two limbs, L1 | 10.1 to 10.2 | 10.1 to 10.3 |
-| `add_product` of two values of T, two limbs, L1 | 10.2 | 10.2 to 10.4 |
-| `add` into 4 accumulators merged, one limb, L1 | 3.09 to 3.17 | 0.819 to 0.833 |
-| `add` into 16 accumulators merged, two limbs, L1 | 12.2 to 12.3 | 9.98 to 10.1 |
-| `add` into W accumulators in the lane order, two limbs, L1 | 4.82 to 4.83 | 3.99 to 4.05 |
-| `add`, one limb, LLC | 1.3 to 1.31 | 0.901 to 0.919 |
-| `add_product`, one limb, LLC | 1.51 to 1.52 | 1.5 to 1.53 |
-| `add`, two limbs, LLC | 10.2 | 10.1 to 10.3 |
-| `add_product`, two limbs, LLC | 10.2 | 10.2 to 10.4 |
-| `add` of a value of T, two limbs, LLC | 10.2 | 10.2 to 10.3 |
-| `add_product` of two values of T, two limbs, LLC | 10.2 to 10.3 | 10.2 to 10.4 |
-| `add` into 4 accumulators merged, one limb, LLC | 3.31 to 3.39 | 0.902 to 0.917 |
-| `add` into 16 accumulators merged, two limbs, LLC | 12.5 | 10.1 to 10.3 |
-| `add` into W accumulators in the lane order, two limbs, LLC | 4.77 to 4.78 | 3.96 to 4.02 |
+| The accumulator: ns per element | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, one limb, L1 | 0.616 to 0.642 | 0.642 to 0.665 (-O2), 0.606 to 0.675 (-O3) | 1.3 to 1.31 | 0.884 to 0.897 |
+| `add_product`, one limb, L1 | 0.994 to 1.03 | 0.976 to 1.04 (-O2), 0.974 to 1.05 (-O3) | 1.53 | 1.48 to 1.5 |
+| `add`, two limbs, L1 | 7.86 to 8.21 | 7.45 to 7.94 (-O2), 7.43 to 8.29 (-O3) | 10.2 | 10.1 to 10.2 |
+| `add_product`, two limbs, L1 | 7.83 to 8.17 | 7.31 to 8.15 (-O2), 7.27 to 8.13 (-O3) | 10.2 | 10.2 to 10.3 |
+| `add` of a value of T, two limbs, L1 | 7.67 to 7.99 | 7.11 to 7.8 (-O2), 7.33 to 8.19 (-O3) | 10.1 to 10.2 | 10.1 to 10.3 |
+| `add_product` of two values of T, two limbs, L1 | 7.87 to 8.21 | 7.34 to 8.03 (-O2), 7.25 to 8.11 (-O3) | 10.2 | 10.2 to 10.4 |
+| `add` into 4 accumulators merged, one limb, L1 | 0.536 to 0.559 | 0.551 to 0.569 (-O2), 0.554 to 0.59 (-O3) | 3.09 to 3.17 | 0.819 to 0.833 |
+| `add` into 16 accumulators merged, two limbs, L1 | 6.38 to 6.55 | 5.92 to 6.41 (-O2), 5.89 to 6.6 (-O3) | 12.2 to 12.3 | 9.98 to 10.1 |
+| `add` into W accumulators in the lane order, two limbs, L1 | 4.01 to 4.18 | 5.89 to 6.34 (-O2), 3.73 to 4.17 (-O3) | 4.82 to 4.83 | 3.99 to 4.05 |
+| `add`, one limb, LLC | 0.643 to 0.671 | 0.755 to 0.766 (-O2), 0.714 to 0.796 (-O3) | 1.3 to 1.31 | 0.901 to 0.919 |
+| `add_product`, one limb, LLC | 1.06 to 1.1 | 1.06 to 1.08 (-O2), 0.988 to 1.1 (-O3) | 1.51 to 1.52 | 1.5 to 1.53 |
+| `add`, two limbs, LLC | 7.96 to 8.34 | 7.39 to 7.85 (-O2), 7.54 to 8.32 (-O3) | 10.2 | 10.1 to 10.3 |
+| `add_product`, two limbs, LLC | 7.92 to 8.26 | 7.35 to 8.16 (-O2), 7.33 to 8.21 (-O3) | 10.2 | 10.2 to 10.4 |
+| `add` of a value of T, two limbs, LLC | 7.75 to 8.02 | 7.15 to 7.87 (-O2), 7.36 to 8.21 (-O3) | 10.2 | 10.2 to 10.3 |
+| `add_product` of two values of T, two limbs, LLC | 7.97 to 8.3 | 7.41 to 8.11 (-O2), 7.32 to 8.19 (-O3) | 10.2 to 10.3 | 10.2 to 10.4 |
+| `add` into 4 accumulators merged, one limb, LLC | 0.643 to 0.671 | 0.719 to 0.751 | 3.31 to 3.39 | 0.902 to 0.917 |
+| `add` into 16 accumulators merged, two limbs, LLC | 7.98 to 8.33 | 7.43 to 8.22 (-O2), 7.28 to 7.97 (-O3) | 12.5 | 10.1 to 10.3 |
+| `add` into W accumulators in the lane order, two limbs, LLC | 4.05 to 4.22 | 5.94 to 6.63 (-O2), 3.76 to 4.22 (-O3) | 4.77 to 4.78 | 3.96 to 4.02 |
 
-| The accumulator over the functions on arrays | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, one limb, over `sum` sequential, L1 | 1.47 (-O2), 1.52 (-O3) | 1.03 |
-| `add`, one limb, over `sum`, L1 | 5.50 to 5.65 | 4.50 to 4.51 |
-| `add_product`, one limb, over `dot` sequential, L1 | 1.05 | 1.03 |
-| `add_product`, one limb, over `dot`, L1 | 4.32 to 4.37 | 4.57 to 4.58 |
-| `add`, two limbs, over `sum` sequential, L1 | 1.00 | 1.00 |
-| `add`, two limbs, over `sum`, L1 | 3.82 to 3.92 | 3.91 to 3.92 |
-| `add_product`, two limbs, over `dot` sequential, L1 | 1.00 | 0.98 to 0.99 |
-| `add_product`, two limbs, over `dot`, L1 | 3.83 to 3.92 | 3.87 to 3.90 |
-| `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, L1 | 1.00 | 1.00 |
-| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, L1 | 1.00 | 0.99 to 1.00 |
-| 4 accumulators merged over one, one limb, L1 | 2.38 to 2.44 (-O2), 2.37 to 2.43 (-O3) | 0.92 to 0.93 |
-| 16 accumulators merged over one, one limb, L1 | 1.74 to 1.77 | 0.70 to 0.71 |
-| W accumulators in the lane order over one, one limb, L1 | 3.20 to 3.37 (-O2), 0.45 to 0.46 (-O3) | 0.47 |
-| W accumulators in the lane order over `sum`, one limb, L1 | 17.6 to 18.6 (-O2), 2.56 (-O3) | 2.11 to 2.12 |
-| 4 accumulators merged over one, two limbs, L1 | 1.21 to 1.22 | 1.00 |
-| 16 accumulators merged over one, two limbs, L1 | 1.20 to 1.21 | 0.99 |
-| W accumulators in the lane order over one, two limbs, L1 | 0.47 | 0.39 to 0.40 |
-| W accumulators in the lane order over `sum`, two limbs, L1 | 1.80 to 1.85 | 1.54 to 1.56 |
-| the public members over the kernels, `add`, two limbs, L1 | 1.00 | 1.00 |
-| the public members over the kernels, `add_product`, two limbs, L1 | 1.00 | 1.00 |
-| `add`, one limb, over `sum` sequential, LLC | 1.44 to 1.45 | 1.00 |
-| `add`, one limb, over `sum`, LLC | 5.73 to 5.76 | 3.98 to 4.00 |
-| `add_product`, one limb, over `dot` sequential, LLC | 1.00 to 1.01 | 1.00 |
-| `add_product`, one limb, over `dot`, LLC | 3.99 to 4.01 | 3.97 to 3.99 |
-| `add`, two limbs, over `sum` sequential, LLC | 1.00 | 1.00 |
-| `add`, two limbs, over `sum`, LLC | 3.99 to 4.00 | 3.98 to 3.99 |
-| `add_product`, two limbs, over `dot` sequential, LLC | 1.00 | 0.99 to 1.00 |
-| `add_product`, two limbs, over `dot`, LLC | 3.98 to 4.00 | 3.96 to 3.97 |
-| `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, LLC | 1.00 | 1.00 |
-| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, LLC | 1.00 | 0.99 to 1.00 |
-| 4 accumulators merged over one, one limb, LLC | 2.54 to 2.60 | 1.00 |
-| 16 accumulators merged over one, one limb, LLC | 2.56 to 2.57 | 1.00 |
-| W accumulators in the lane order over one, one limb, LLC | 3.17 to 3.34 (-O2), 0.45 (-O3) | 0.45 |
-| W accumulators in the lane order over `sum`, one limb, LLC | 18.1 to 19.2 (-O2), 2.60 to 2.61 (-O3) | 1.78 to 1.79 |
-| 4 accumulators merged over one, two limbs, LLC | 1.22 to 1.23 | 1.00 |
-| 16 accumulators merged over one, two limbs, LLC | 1.22 | 1.00 |
-| W accumulators in the lane order over one, two limbs, LLC | 0.47 | 0.39 |
-| W accumulators in the lane order over `sum`, two limbs, LLC | 1.86 to 1.87 | 1.56 to 1.57 |
-| the public members over the kernels, `add`, two limbs, LLC | 1.00 | 1.00 |
-| the public members over the kernels, `add_product`, two limbs, LLC | 1.00 | 1.00 |
+| The accumulator over the functions on arrays | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, one limb, over `sum` sequential, L1 | 1.16 to 1.21 | 1.01 to 1.03 (-O2), 0.99 to 1.08 (-O3) | 1.47 (-O2), 1.52 (-O3) | 1.03 |
+| `add`, one limb, over `sum`, L1 | 2.24 to 2.38 (-O2), 2.31 to 2.35 (-O3) | 2.31 to 2.34 (-O2), 2.18 to 2.34 (-O3) | 5.50 to 5.65 | 4.50 to 4.51 |
+| `add_product`, one limb, over `dot` sequential, L1 | 1.06 to 1.10 | 1.07 to 1.12 | 1.05 | 1.03 |
+| `add_product`, one limb, over `dot`, L1 | 2.45 to 2.51 (-O2), 2.45 to 2.52 (-O3) | 2.45 to 2.54 (-O2), 2.42 to 2.52 (-O3) | 4.32 to 4.37 | 4.57 to 4.58 |
+| `add`, two limbs, over `sum` sequential, L1 | 1.00 to 1.02 | 0.96 to 1.02 (-O2), 0.97 to 1.01 (-O3) | 1.00 | 1.00 |
+| `add`, two limbs, over `sum`, L1 | 2.02 to 2.06 | 1.93 to 1.99 (-O2), 2.03 to 2.04 (-O3) | 3.82 to 3.92 | 3.91 to 3.92 |
+| `add_product`, two limbs, over `dot` sequential, L1 | 1.01 to 1.04 | 0.98 to 1.04 (-O2), 1.00 to 1.04 (-O3) | 1.00 | 0.98 to 0.99 |
+| `add_product`, two limbs, over `dot`, L1 | 2.04 to 2.08 | 1.90 to 2.10 (-O2), 2.02 to 2.06 (-O3) | 3.83 to 3.92 | 3.87 to 3.90 |
+| `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, L1 | 0.95 to 1.01 (-O2), 0.93 to 0.98 (-O3) | 0.97 to 1.00 | 1.00 | 1.00 |
+| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, L1 | 0.98 to 1.02 (-O2), 1.01 to 1.06 (-O3) | 0.97 to 1.04 (-O2), 0.99 to 1.01 (-O3) | 1.00 | 0.99 to 1.00 |
+| 4 accumulators merged over one, one limb, L1 | 0.84 to 0.89 (-O2), 0.85 to 0.89 (-O3) | 0.85 to 0.86 (-O2), 0.87 to 0.91 (-O3) | 2.38 to 2.44 (-O2), 2.37 to 2.43 (-O3) | 0.92 to 0.93 |
+| 16 accumulators merged over one, one limb, L1 | 0.62 to 0.65 | 0.65 to 0.66 (-O2), 0.65 to 0.72 (-O3) | 1.74 to 1.77 | 0.70 to 0.71 |
+| W accumulators in the lane order over one, one limb, L1 | 0.54 to 0.57 | 0.54 to 0.56 (-O2), 0.50 to 0.54 (-O3) | 3.20 to 3.37 (-O2), 0.45 to 0.46 (-O3) | 0.47 |
+| W accumulators in the lane order over `sum`, one limb, L1 | 1.25 to 1.29 (-O2), 1.27 to 1.31 (-O3) | 1.27 to 1.31 (-O2), 1.16 to 1.18 (-O3) | 17.6 to 18.6 (-O2), 2.56 (-O3) | 2.11 to 2.12 |
+| 4 accumulators merged over one, two limbs, L1 | 0.92 to 0.96 (-O2), 0.95 to 0.98 (-O3) | 0.96 to 1.02 (-O2), 0.93 to 0.97 (-O3) | 1.21 to 1.22 | 1.00 |
+| 16 accumulators merged over one, two limbs, L1 | 0.78 to 0.82 | 0.79 to 0.81 | 1.20 to 1.21 | 0.99 |
+| W accumulators in the lane order over one, two limbs, L1 | 0.49 to 0.52 | 0.79 to 0.80 (-O2), 0.50 to 0.51 (-O3) | 0.47 | 0.39 to 0.40 |
+| W accumulators in the lane order over `sum`, two limbs, L1 | 0.99 to 1.06 (-O2), 1.03 (-O3) | 1.52 to 1.59 (-O2), 1.02 to 1.04 (-O3) | 1.80 to 1.85 | 1.54 to 1.56 |
+| the public members over the kernels, `add`, two limbs, L1 | 1.00 to 1.02 | 0.98 to 1.03 (-O2), 0.98 to 1.00 (-O3) | 1.00 | 1.00 |
+| the public members over the kernels, `add_product`, two limbs, L1 | 0.97 to 1.03 (-O2), 0.99 to 1.00 (-O3) | 0.99 to 1.02 | 1.00 | 1.00 |
+| `add`, one limb, over `sum` sequential, LLC | 0.88 to 0.92 | 1.01 to 1.12 (-O2), 1.04 to 1.07 (-O3) | 1.44 to 1.45 | 1.00 |
+| `add`, one limb, over `sum`, LLC | 1.81 to 1.87 (-O2), 1.71 to 1.73 (-O3) | 2.03 to 2.23 (-O2), 2.08 to 2.14 (-O3) | 5.73 to 5.76 | 3.98 to 4.00 |
+| `add_product`, one limb, over `dot` sequential, LLC | 0.96 to 1.02 (-O2), 0.98 to 1.03 (-O3) | 1.02 to 1.07 (-O2), 1.00 (-O3) | 1.00 to 1.01 | 1.00 |
+| `add_product`, one limb, over `dot`, LLC | 1.92 to 2.05 (-O2), 1.94 to 2.07 (-O3) | 2.04 to 2.15 (-O2), 1.96 to 2.00 (-O3) | 3.99 to 4.01 | 3.97 to 3.99 |
+| `add`, two limbs, over `sum` sequential, LLC | 0.99 to 1.04 | 0.96 to 0.98 (-O2), 0.97 to 1.03 (-O3) | 1.00 | 1.00 |
+| `add`, two limbs, over `sum`, LLC | 1.99 to 2.09 (-O2), 1.93 to 1.99 (-O3) | 1.86 to 1.96 (-O2), 1.99 to 2.01 (-O3) | 3.99 to 4.00 | 3.98 to 3.99 |
+| `add_product`, two limbs, over `dot` sequential, LLC | 0.97 to 1.02 | 0.99 to 1.02 | 1.00 | 0.99 to 1.00 |
+| `add_product`, two limbs, over `dot`, LLC | 1.94 to 1.99 (-O2), 2.02 to 2.04 (-O3) | 1.92 to 2.07 (-O2), 1.98 to 2.01 (-O3) | 3.98 to 4.00 | 3.96 to 3.97 |
+| `add` of T into two limbs, over `sum` of two limbs of the same data, sequential, LLC | 0.92 to 0.97 | 0.96 to 0.99 | 1.00 | 1.00 |
+| `add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, LLC | 1.02 to 1.05 (-O2), 1.00 to 1.06 (-O3) | 1.00 to 1.02 | 1.00 | 0.99 to 1.00 |
+| 4 accumulators merged over one, one limb, LLC | 0.99 to 1.02 | 0.96 to 0.98 (-O2), 0.94 to 1.01 (-O3) | 2.54 to 2.60 | 1.00 |
+| 16 accumulators merged over one, one limb, LLC | 0.98 to 1.02 | 0.94 to 0.97 (-O2), 0.94 to 1.00 (-O3) | 2.56 to 2.57 | 1.00 |
+| W accumulators in the lane order over one, one limb, LLC | 0.56 to 0.59 | 0.46 to 0.48 (-O2), 0.47 to 0.52 (-O3) | 3.17 to 3.34 (-O2), 0.45 (-O3) | 0.45 |
+| W accumulators in the lane order over `sum`, one limb, LLC | 1.05 to 1.07 (-O2), 0.99 to 1.02 (-O3) | 0.97 to 1.03 (-O2), 1.00 to 1.09 (-O3) | 18.1 to 19.2 (-O2), 2.60 to 2.61 (-O3) | 1.78 to 1.79 |
+| 4 accumulators merged over one, two limbs, LLC | 0.98 to 1.01 (-O2), 1.00 to 1.05 (-O3) | 1.05 to 1.08 (-O2), 0.98 to 1.03 (-O3) | 1.22 to 1.23 | 1.00 |
+| 16 accumulators merged over one, two limbs, LLC | 0.96 to 0.98 (-O2), 1.01 to 1.05 (-O3) | 1.01 to 1.05 (-O2), 0.96 to 0.98 (-O3) | 1.22 | 1.00 |
+| W accumulators in the lane order over one, two limbs, LLC | 0.49 to 0.52 | 0.80 to 0.84 (-O2), 0.50 to 0.52 (-O3) | 0.47 | 0.39 |
+| W accumulators in the lane order over `sum`, two limbs, LLC | 1.01 to 1.05 (-O2), 0.98 to 1.02 (-O3) | 1.50 to 1.66 (-O2), 0.99 to 1.03 (-O3) | 1.86 to 1.87 | 1.56 to 1.57 |
+| the public members over the kernels, `add`, two limbs, LLC | 0.98 to 1.01 | 0.98 to 1.02 | 1.00 | 1.00 |
+| the public members over the kernels, `add_product`, two limbs, LLC | 0.98 to 1.00 | 0.99 to 1.00 | 1.00 | 1.00 |
 
-| The accumulator: ns per call | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `merge`, 1 limb | 0.902 to 0.91 | 0.811 to 0.825 |
-| `merge`, 2 limbs | 10.2 | 10.1 to 10.3 |
-| `sum()`, 1 limb | 1.21 (-O2), 0.933 to 0.934 (-O3) | 0.826 to 0.843 |
-| `sum()`, 2 limbs | 1.34 (-O2), 1.25 to 1.26 (-O3) | 1.18 to 1.2 |
-| `error_bound()`, 1 limb | 6.35 (-O2), 4.72 (-O3) | 6 to 6.17 |
-| `error_bound()`, 2 limbs | 6.64 to 6.66 (-O2), 5.53 to 5.55 (-O3) | 6.48 to 6.6 |
-| `ball()`, 1 limb | 7.28 to 7.34 (-O2), 6.62 to 6.63 (-O3) | 8.04 to 8.18 |
-| `ball()`, 2 limbs | 7.97 to 7.99 (-O2), 7.29 to 7.32 (-O3) | 8.54 to 8.68 |
+| The accumulator: ns per call | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `merge`, 1 limb | 0.588 to 0.63 (-O2), 0.588 to 0.612 (-O3) | 0.753 to 0.779 (-O2), 0.742 to 0.791 (-O3) | 0.902 to 0.91 | 0.811 to 0.825 |
+| `merge`, 2 limbs | 7.69 to 8.02 | 7.28 to 7.9 (-O2), 7.31 to 8.08 (-O3) | 10.2 | 10.1 to 10.3 |
+| `sum()`, 1 limb | 0.526 to 0.549 | 0.397 to 0.415 | 1.21 (-O2), 0.933 to 0.934 (-O3) | 0.826 to 0.843 |
+| `sum()`, 2 limbs | 0.7 to 0.73 | 0.556 to 0.576 (-O2), 0.676 to 0.705 (-O3) | 1.34 (-O2), 1.25 to 1.26 (-O3) | 1.18 to 1.2 |
+| `error_bound()`, 1 limb | 2.42 to 2.52 | 2.4 to 2.51 (-O2), 1.67 to 1.75 (-O3) | 6.35 (-O2), 4.72 (-O3) | 6 to 6.17 |
+| `error_bound()`, 2 limbs | 3.01 to 3.14 (-O2), 2.44 to 2.54 (-O3) | 2.4 to 2.43 (-O2), 1.72 to 1.78 (-O3) | 6.64 to 6.66 (-O2), 5.53 to 5.55 (-O3) | 6.48 to 6.6 |
+| `ball()`, 1 limb | 3.08 to 3.21 | 2.9 to 2.96 (-O2), 2.5 to 2.6 (-O3) | 7.28 to 7.34 (-O2), 6.62 to 6.63 (-O3) | 8.04 to 8.18 |
+| `ball()`, 2 limbs | 3.83 to 3.84 (-O2), 3.41 to 3.55 (-O3) | 2.95 to 3.08 (-O2), 2.56 to 2.63 (-O3) | 7.97 to 7.99 (-O2), 7.29 to 7.32 (-O3) | 8.54 to 8.68 |
 
 #### Question 17: accuracy
 
