@@ -2188,7 +2188,10 @@ in order. The bounds: `traits<Expansion<double, k>>::sum(n).unit` times $\sum\lv
 dot product `dot(n)`, `unit` times $\sum\lvert x_i y_i\rvert$ plus `tiny`), and the accumulators'
 `error_bound()`. No error made was above its bound, in any trial of any configuration. The errors do
 not depend on the compiler or the level: the four configurations of Zen 2 give the same numbers,
-which the tables give once.
+which the tables give once. On the M3 too the four configurations give the same numbers; the data of the two machines are
+not the same bit for bit (in 389 of 1 872 trials an error of the sequential loops differs), and the
+default order adds in the order of 2 lanes there against 4, so the tables of the two machines differ
+slightly.
 
 | Sums, linux (4 lanes): relative error, median over the trials, by condition | naive loop | Kairn, one limb | Sum2 | Kairn, two limbs | Accumulator, two limbs |
 |---|---|---|---|---|---|
@@ -2280,6 +2283,96 @@ which the tables give once.
 | condition 1e4 to 1e40, n = 100000 | 1.6e+05 (3.2e+04) | 1.5e+05 (3.4e+04) | 7.1e+05 (1.8e+05) | 4.9e+05 (1.3e+05) | 1.5e+05 (3.4e+04) | 4.9e+05 (1.3e+05) |
 | condition 1e4 to 1e40, n = 1000000 | 2.2e+06 (3.1e+05) | 1.3e+06 (2.4e+05) | 7.4e+06 (1.8e+06) | 5.2e+06 (7e+05) | 1.3e+06 (2.4e+05) | 5.2e+06 (7e+05) |
 
+| Sums, mac (2 lanes): relative error, median over the trials, by condition | naive loop | Kairn, one limb | Sum2 | Kairn, two limbs | Accumulator, two limbs |
+|---|---|---|---|---|---|
+| n = 1000, condition 1e0 to 1e3 (40 trials) | 6.8e-16 | 3.2e-16 | 4.2e-17 | 0.0e+00 | 0.0e+00 |
+| n = 1000, condition 1e4 to 1e7 (20 trials) | 1.9e-11 | 2.2e-11 | 3.8e-17 | 1.1e-27 | 1.8e-27 |
+| n = 1000, condition 1e8 to 1e11 (20 trials) | 7.2e-08 | 1.0e-07 | 4.0e-17 | 7.5e-24 | 6.6e-24 |
+| n = 1000, condition 1e12 to 1e15 (20 trials) | 1.1e-03 | 5.9e-04 | 4.0e-17 | 4.0e-20 | 4.1e-20 |
+| n = 1000, condition 1e16 to 1e19 (20 trials) | 8.2e+00 | 8.5e+00 | 4.5e-15 | 4.4e-16 | 3.3e-16 |
+| n = 1000, condition 1e20 to 1e23 (20 trials) | 3.1e+04 | 3.5e+04 | 1.0e-11 | 1.3e-12 | 2.1e-12 |
+| n = 1000, condition 1e24 to 1e27 (20 trials) | 5.7e+08 | 6.9e+08 | 2.9e-07 | 3.8e-08 | 4.8e-08 |
+| n = 1000, condition 1e28 to 1e31 (20 trials) | 5.5e+12 | 9.3e+12 | 1.1e-03 | 4.2e-04 | 4.3e-04 |
+| n = 1000, condition 1e32 to 1e35 (22 trials) | 7.3e+16 | 3.4e+16 | 3.1e+01 | 9.6e+00 | 1.8e+00 |
+| n = 1000, condition 1e36 to 1e39 (20 trials) | 4.8e+20 | 2.9e+20 | 2.4e+05 | 1.5e+04 | 3.7e+04 |
+| n = 1000, condition 1e40 to 1e43 (18 trials) | 2.5e+24 | 3.6e+24 | 1.3e+09 | 3.7e+08 | 1.4e+08 |
+| n = 1000000, condition 1e0 to 1e3 (8 trials) | 4.5e-14 | 1.9e-14 | 2.0e-17 | 0.0e+00 | 0.0e+00 |
+| n = 1000000, condition 1e8 to 1e11 (5 trials) | 2.3e-08 | 1.1e-07 | 2.2e-17 | 1.7e-24 | 1.2e-23 |
+| n = 1000000, condition 1e12 to 1e15 (6 trials) | 2.5e-01 | 3.9e-01 | 5.2e-15 | 1.1e-18 | 2.5e-17 |
+| n = 1000000, condition 1e16 to 1e19 (3 trials) | 1.9e+02 | 7.5e+00 | 4.3e-11 | 2.9e-13 | 3.6e-13 |
+| n = 1000000, condition 1e20 to 1e23 (6 trials) | 4.9e+07 | 2.2e+07 | 1.5e-06 | 1.7e-09 | 5.9e-09 |
+| n = 1000000, condition 1e24 to 1e27 (3 trials) | 4.1e+11 | 2.8e+11 | 9.1e-03 | 5.6e-05 | 4.1e-05 |
+| n = 1000000, condition 1e28 to 1e31 (5 trials) | 4.0e+14 | 1.0e+15 | 5.8e+00 | 1.7e-01 | 1.2e-01 |
+| n = 1000000, condition 1e32 to 1e35 (4 trials) | 5.9e+18 | 4.3e+18 | 8.1e+05 | 2.0e+03 | 1.8e+03 |
+| n = 1000000, condition 1e36 to 1e39 (4 trials) | 1.0e+23 | 6.9e+23 | 2.6e+09 | 1.1e+07 | 4.2e+07 |
+| n = 1000000, condition 1e40 to 1e43 (4 trials) | 1.7e+27 | 1.5e+27 | 9.4e+12 | 7.4e+10 | 1.5e+11 |
+
+| Sums, mac: the stated bound over the error made, median (smallest) over the trials | Kairn, one limb | one limb, sequential | two limbs | two limbs, sequential | Accumulator, one limb | Accumulator, two limbs |
+|---|---|---|---|---|---|---|
+| positive, n = 10 | 22 (9.1), exact in 2 of 20 | 16 (5.5), exact in 1 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 18 (6.1), exact in 1 of 20 | –, exact in 20 of 20 |
+| positive, n = 100 | 1.4e+02 (29) | 64 (15) | –, exact in 20 of 20 | –, exact in 20 of 20 | 65 (15) | –, exact in 20 of 20 |
+| positive, n = 1000 | 4.3e+02 (1.4e+02) | 2.2e+02 (67) | –, exact in 20 of 20 | –, exact in 20 of 20 | 2.2e+02 (67) | –, exact in 20 of 20 |
+| positive, n = 10000 | 2.1e+03 (3.9e+02) | 5.3e+02 (2.5e+02) | –, exact in 10 of 10 | –, exact in 10 of 10 | 5.3e+02 (2.5e+02) | –, exact in 10 of 10 |
+| positive, n = 100000 | 3.6e+03 (1.2e+03) | 3.1e+03 (7.7e+02) | –, exact in 4 of 4 | –, exact in 4 of 4 | 3.1e+03 (7.7e+02) | –, exact in 4 of 4 |
+| positive, n = 1000000 | 1.7e+04 (5.8e+03) | 5.9e+03 (2.4e+03) | –, exact in 4 of 4 | –, exact in 4 of 4 | 5.9e+03 (2.4e+03) | –, exact in 4 of 4 |
+| random signs, n = 10 | 24 (14), exact in 17 of 20 | 24 (13), exact in 15 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 27 (14), exact in 15 of 20 | –, exact in 20 of 20 |
+| random signs, n = 100 | 1.2e+03 (1.8e+02), exact in 1 of 20 | 6.5e+02 (1.5e+02), exact in 1 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 6.5e+02 (1.5e+02), exact in 1 of 20 | –, exact in 20 of 20 |
+| random signs, n = 1000 | 6.8e+03 (1.1e+03) | 3.7e+03 (1.3e+03) | –, exact in 20 of 20 | –, exact in 20 of 20 | 3.7e+03 (1.3e+03) | –, exact in 20 of 20 |
+| random signs, n = 10000 | 6.6e+04 (3e+04) | 5.7e+04 (1.4e+04) | –, exact in 10 of 10 | –, exact in 10 of 10 | 5.7e+04 (1.4e+04) | –, exact in 10 of 10 |
+| random signs, n = 100000 | 9.1e+05 (3.7e+05) | 1.9e+06 (6.7e+05) | –, exact in 4 of 4 | –, exact in 4 of 4 | 1.9e+06 (6.7e+05) | –, exact in 4 of 4 |
+| random signs, n = 1000000 | 9.5e+06 (4.7e+06) | 4.3e+06 (3.6e+06) | –, exact in 4 of 4 | –, exact in 4 of 4 | 4.3e+06 (3.6e+06) | –, exact in 4 of 4 |
+| condition 1e4 to 1e40, n = 10 | 98 (7.2) | 54 (10) | 7.2e+02 (45), exact in 8 of 200 | 6.6e+02 (44), exact in 9 of 200 | 60 (11) | 9.8e+02 (65), exact in 9 of 200 |
+| condition 1e4 to 1e40, n = 100 | 2.9e+02 (39) | 2.6e+02 (41) | 1.3e+03 (1.7e+02) | 1.1e+03 (1.4e+02) | 2.6e+02 (41) | 1.5e+03 (1.9e+02) |
+| condition 1e4 to 1e40, n = 1000 | 1.6e+03 (2.6e+02) | 1.5e+03 (1.8e+02) | 7.1e+03 (9.3e+02) | 7.2e+03 (8.3e+02) | 1.5e+03 (1.8e+02) | 9.6e+03 (1.1e+03) |
+| condition 1e4 to 1e40, n = 10000 | 9.9e+03 (1.8e+03) | 1.3e+04 (1.5e+03) | 4.6e+04 (6.4e+03) | 4.9e+04 (6.7e+03) | 1.3e+04 (1.5e+03) | 6.5e+04 (9e+03) |
+| condition 1e4 to 1e40, n = 100000 | 1e+05 (2.4e+04) | 1.4e+05 (1.9e+04) | 3.6e+05 (7.4e+04) | 4.4e+05 (9e+04) | 1.4e+05 (1.9e+04) | 5.9e+05 (1.2e+05) |
+| condition 1e4 to 1e40, n = 1000000 | 1.3e+06 (2.7e+05) | 1.3e+06 (2.9e+05) | 5.2e+06 (1.2e+06) | 3.5e+06 (8.5e+05) | 1.3e+06 (2.9e+05) | 4.6e+06 (1.1e+06) |
+
+| Dot products, mac (2 lanes): relative error, median over the trials, by condition | naive loop | Kairn, one limb | Dot2 | Kairn, two limbs | Accumulator, two limbs |
+|---|---|---|---|---|---|
+| n = 1000, condition 1e0 to 1e3 (40 trials) | 8.5e-16 | 4.3e-16 | 4.8e-17 | 2.9e-32 | 4.6e-32 |
+| n = 1000, condition 1e4 to 1e7 (20 trials) | 2.8e-11 | 2.8e-11 | 3.3e-17 | 3.4e-27 | 2.5e-27 |
+| n = 1000, condition 1e8 to 1e11 (20 trials) | 2.1e-07 | 2.1e-07 | 5.4e-17 | 1.7e-23 | 1.6e-23 |
+| n = 1000, condition 1e12 to 1e15 (20 trials) | 3.1e-03 | 3.1e-03 | 4.4e-17 | 1.2e-19 | 1.2e-19 |
+| n = 1000, condition 1e16 to 1e19 (20 trials) | 9.6e+00 | 2.1e+01 | 9.1e-15 | 1.5e-15 | 6.3e-16 |
+| n = 1000, condition 1e20 to 1e23 (20 trials) | 8.1e+04 | 9.2e+04 | 6.6e-11 | 5.6e-12 | 9.6e-12 |
+| n = 1000, condition 1e24 to 1e27 (20 trials) | 1.4e+09 | 2.6e+09 | 4.5e-07 | 1.8e-07 | 1.5e-07 |
+| n = 1000, condition 1e28 to 1e31 (20 trials) | 7.4e+12 | 6.7e+12 | 5.7e-03 | 6.6e-04 | 8.7e-04 |
+| n = 1000, condition 1e32 to 1e35 (20 trials) | 6.8e+16 | 7.4e+16 | 3.1e+01 | 4.1e+00 | 8.2e+00 |
+| n = 1000, condition 1e36 to 1e39 (20 trials) | 4.5e+20 | 1.1e+21 | 6.7e+05 | 9.2e+04 | 1.6e+05 |
+| n = 1000, condition 1e40 to 1e43 (20 trials) | 4.0e+24 | 5.6e+24 | 3.7e+09 | 5.3e+08 | 2.2e+08 |
+| n = 1000000, condition 1e0 to 1e3 (8 trials) | 1.8e-14 | 1.7e-14 | 2.8e-17 | 1.7e-30 | 1.8e-30 |
+| n = 1000000, condition 1e8 to 1e11 (5 trials) | 6.3e-08 | 9.8e-08 | 3.7e-17 | 2.0e-24 | 4.7e-24 |
+| n = 1000000, condition 1e12 to 1e15 (5 trials) | 3.3e-04 | 3.7e-04 | 3.3e-17 | 3.6e-20 | 3.6e-20 |
+| n = 1000000, condition 1e16 to 1e19 (4 trials) | 1.0e+03 | 7.3e+02 | 2.4e-10 | 1.6e-13 | 3.3e-13 |
+| n = 1000000, condition 1e20 to 1e23 (3 trials) | 9.6e+04 | 1.9e+05 | 3.3e-09 | 3.0e-12 | 1.9e-12 |
+| n = 1000000, condition 1e24 to 1e27 (6 trials) | 6.8e+10 | 3.6e+10 | 4.0e-03 | 1.5e-05 | 7.7e-06 |
+| n = 1000000, condition 1e28 to 1e31 (3 trials) | 1.6e+15 | 4.7e+14 | 1.4e+01 | 1.5e-01 | 1.8e-01 |
+| n = 1000000, condition 1e32 to 1e35 (6 trials) | 2.3e+19 | 3.9e+19 | 3.7e+05 | 5.2e+03 | 3.6e+03 |
+| n = 1000000, condition 1e36 to 1e39 (4 trials) | 1.9e+23 | 9.8e+22 | 4.3e+09 | 8.2e+07 | 4.2e+07 |
+| n = 1000000, condition 1e40 to 1e43 (4 trials) | 2.7e+27 | 2.7e+27 | 1.1e+14 | 3.5e+11 | 2.6e+11 |
+
+| Dot products, mac: the stated bound over the error made, median (smallest) over the trials | Kairn, one limb | one limb, sequential | two limbs | two limbs, sequential | Accumulator, one limb | Accumulator, two limbs |
+|---|---|---|---|---|---|---|
+| positive, n = 10 | 27 (7.5) | 27 (6.1) | 1.1e+02 (52), exact in 8 of 20 | 98 (35), exact in 3 of 20 | 27 (6.1) | 98 (35), exact in 3 of 20 |
+| positive, n = 100 | 1.7e+02 (44) | 1.2e+02 (16) | 1.3e+03 (3.2e+02), exact in 1 of 20 | 4.7e+02 (1e+02) | 1.2e+02 (16) | 4.7e+02 (1e+02) |
+| positive, n = 1000 | 3.7e+02 (1.2e+02) | 1.9e+02 (50) | 2.2e+03 (1e+03) | 1.2e+03 (3.8e+02) | 1.9e+02 (50) | 1.2e+03 (3.8e+02) |
+| positive, n = 10000 | 1e+03 (4.7e+02) | 5.7e+02 (2.6e+02) | 4.6e+03 (1.5e+03) | 3.9e+03 (8.7e+02) | 5.7e+02 (2.6e+02) | 3.9e+03 (8.7e+02) |
+| positive, n = 100000 | 1.3e+04 (1.6e+03) | 1.8e+03 (1.5e+03) | 2.2e+04 (1.5e+04) | 1.6e+05 (1.1e+04) | 1.8e+03 (1.5e+03) | 1.6e+05 (1.1e+04) |
+| positive, n = 1000000 | 1.1e+04 (5.4e+03) | 9.7e+03 (3.1e+03) | 1.3e+05 (2.3e+04) | 2.8e+04 (2e+04) | 9.7e+03 (3.1e+03) | 2.8e+04 (2e+04) |
+| random signs, n = 10 | 68 (22) | 68 (20) | –, exact in 20 of 20 | –, exact in 20 of 20 | 68 (20) | –, exact in 20 of 20 |
+| random signs, n = 100 | 7.3e+02 (2e+02) | 6.2e+02 (1.2e+02) | –, exact in 20 of 20 | 2.3e+03 (1.3e+03), exact in 15 of 20 | 6.2e+02 (1.2e+02) | 2.3e+03 (1.3e+03), exact in 15 of 20 |
+| random signs, n = 1000 | 9e+03 (2.6e+03) | 5.8e+03 (1.5e+03) | 4.7e+04 (7.6e+03) | 4.9e+04 (6.7e+03), exact in 2 of 20 | 5.8e+03 (1.5e+03) | 4.9e+04 (6.7e+03), exact in 2 of 20 |
+| random signs, n = 10000 | 7.7e+04 (1.1e+04) | 4.1e+04 (7.9e+03) | 3.7e+05 (1.4e+05) | 5.4e+05 (1.5e+05) | 4.1e+04 (7.9e+03) | 5.4e+05 (1.5e+05) |
+| random signs, n = 100000 | 4.3e+05 (1.7e+05) | 4.6e+05 (1e+05) | 2.8e+06 (1.1e+06) | 2e+06 (8.3e+05) | 4.6e+05 (1e+05) | 2e+06 (8.3e+05) |
+| random signs, n = 1000000 | 1.8e+07 (1.7e+06) | 9.4e+06 (2e+06) | 2.8e+07 (1.2e+07) | 5.6e+07 (1.2e+07) | 9.4e+06 (2e+06) | 5.6e+07 (1.2e+07) |
+| condition 1e4 to 1e40, n = 10 | 58 (7.6) | 47 (10) | 4.8e+02 (32) | 3.7e+02 (42) | 47 (10) | 3.7e+02 (42) |
+| condition 1e4 to 1e40, n = 100 | 2.5e+02 (36) | 2.4e+02 (30) | 1.3e+03 (1.3e+02) | 1.2e+03 (1.9e+02) | 2.4e+02 (30) | 1.2e+03 (1.9e+02) |
+| condition 1e4 to 1e40, n = 1000 | 1.2e+03 (1.2e+02) | 1.3e+03 (1.5e+02) | 7e+03 (1.1e+03) | 7.3e+03 (8e+02) | 1.3e+03 (1.5e+02) | 7.3e+03 (8e+02) |
+| condition 1e4 to 1e40, n = 10000 | 1.1e+04 (1.8e+03) | 1.1e+04 (1.8e+03) | 7.2e+04 (1e+04) | 6.2e+04 (9.4e+03) | 1.1e+04 (1.8e+03) | 6.2e+04 (9.4e+03) |
+| condition 1e4 to 1e40, n = 100000 | 1.2e+05 (1.5e+04) | 1.5e+05 (3.4e+04) | 5.5e+05 (7.7e+04) | 5.1e+05 (1.3e+05) | 1.5e+05 (3.4e+04) | 5.1e+05 (1.3e+05) |
+| condition 1e4 to 1e40, n = 1000000 | 1.1e+06 (2.8e+05) | 1.3e+06 (2.4e+05) | 6.3e+06 (8.6e+05) | 5.9e+06 (9.1e+05) | 1.3e+06 (2.4e+05) | 5.9e+06 (9.1e+05) |
+
 - **One limb is as accurate as the naive loop; two limbs move the limit by sixteen digits.** The
   error of `sum` and `dot` of one limb, in either order, is that of the loop of `double`, about the
   condition number times $u$ (a relative error of $6 \times 10^{-8}$ at a condition of $10^8$ to
@@ -2289,16 +2382,16 @@ which the tables give once.
 - **Against Sum2 and Dot2**, whose result is one `double`: they give every digit of a `double` (a
   relative error of about $u/2$) up to a condition of about $10^{15}$ at $10^3$ terms and $10^{11}$
   at $10^6$, as Kairn's two limbs do once rounded; beyond, their error grows with the length faster
-  than Kairn's: at $10^6$ terms and a condition of $10^{16}$ to $10^{31}$ Sum2's is 65 to 500 times
-  that of Kairn's two limbs, at $10^3$ terms 4 to 13 times. Kairn's two limbs take 1.7 to 1.8 times
-  Sum2's time in the default order and 7 times sequentially
-  ([question 13](#13-the-functions-on-arrays)).
+  than Kairn's: at $10^6$ terms and a condition of $10^{16}$ to $10^{31}$ Sum2's is 34 to 900 times
+  that of Kairn's two limbs, at $10^3$ terms 3 to 13 times. Kairn's two limbs take 1.7 to 1.8 times
+  Sum2's time in the default order and 7 times sequentially on Zen 2, 4.4 to 5.2 and 8.8 to 10.7
+  times on the M3 ([question 13](#13-the-functions-on-arrays)).
 - **How far above the error made the stated bound is, as a function of the length**: for positive
   numbers, where the bound is closest, the median ratio of the bound to the error grows from 16 to
   27 at 10 terms to $5.9 \times 10^3$ to $1.3 \times 10^5$ at $10^6$, the smallest seen 5.2 (10
   terms, one limb, the default order); for random signs from 19 to 68 at 10 terms to $4 \times 10^6$
-  to $9 \times 10^7$ at $10^6$; for the conditioned data from 46 to 110 at 10 terms to $1.3$ to
-  $2.2 \times 10^6$ at $10^6$ with one limb, and from 380 to 1 200 to $3.7$ to $7.4 \times 10^6$ with
+  to $9 \times 10^7$ at $10^6$; for the conditioned data from 46 to 110 at 10 terms to $1.1$ to
+  $2.2 \times 10^6$ at $10^6$ with one limb, and from 370 to 1 200 to $3.5$ to $7.4 \times 10^6$ with
   two. The bound grows as the length, $\gamma_{n-1}(e)\sum\lvert x_i\rvert$; the error made grew
   more slowly in every regime. The accumulators' `error_bound()` is within a factor of two of the
   bound of `sum` and `dot` of the same limbs in the sequential order. No error was above its bound.
@@ -2334,29 +2427,29 @@ entry averaged with its neighbour (the shift a rotation of the centers, exact, t
 and a halving are two operations), 10 and 100 operations. The table gives the one radius over the
 largest and over the median of the balls' radii.
 
-| BallVector: ns per operation on the whole vector (selection) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, 1 limb, N = 4 | 9.79 to 9.97 (-O2), 9.37 to 9.57 (-O3) | 8.44 to 8.63 |
-| `add`, 1 limb, N = 64 | 28 to 28.9 (-O2), 20.1 to 20.6 (-O3) | 19.6 to 20 (-O2), 17.8 to 18.1 (-O3) |
-| `add`, 2 limbs, N = 4 | 20.9 to 21.1 (-O2), 13 to 13.3 (-O3) | 10.5 to 10.7 |
-| `add`, 2 limbs, N = 64 | 84.6 to 87.2 | 81.1 to 83.1 |
-| `axpy`, 2 limbs, N = 16 | 56.5 to 57.4 (-O2), 44.9 to 46.1 (-O3) | 36.3 to 37.5 |
-| `conv`, 2 limbs, N = 16 | 2455 to 2509 | 2432 to 2495 |
-| `norm`, 2 limbs, N = 64 | 23.2 to 23.6 (-O2), 15.7 to 16 (-O3) | 15.3 to 15.6 |
+| BallVector: ns per operation on the whole vector (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, 1 limb, N = 4 | 2.52 to 2.53 | 2.99 to 3 (-O2), 2.79 to 2.84 (-O3) | 9.79 to 9.97 (-O2), 9.37 to 9.57 (-O3) | 8.44 to 8.63 |
+| `add`, 1 limb, N = 64 | 22.3 to 22.8 | 26 to 26.3 (-O2), 21 to 21.4 (-O3) | 28 to 28.9 (-O2), 20.1 to 20.6 (-O3) | 19.6 to 20 (-O2), 17.8 to 18.1 (-O3) |
+| `add`, 2 limbs, N = 4 | 4.95 to 5.17 | 6.36 to 6.46 (-O2), 4.78 to 4.92 (-O3) | 20.9 to 21.1 (-O2), 13 to 13.3 (-O3) | 10.5 to 10.7 |
+| `add`, 2 limbs, N = 64 | 60.8 to 62.5 (-O2), 59.5 to 63.2 (-O3) | 61.5 to 63.9 (-O2), 59.9 to 62.8 (-O3) | 84.6 to 87.2 | 81.1 to 83.1 |
+| `axpy`, 2 limbs, N = 16 | 25.5 to 27.1 (-O2), 24.2 to 25.7 (-O3) | 27.1 to 28.5 | 56.5 to 57.4 (-O2), 44.9 to 46.1 (-O3) | 36.3 to 37.5 |
+| `conv`, 2 limbs, N = 16 | 1038 to 1065 (-O2), 1027 to 1097 (-O3) | 1033 to 1079 (-O2), 1012 to 1086 (-O3) | 2455 to 2509 | 2432 to 2495 |
+| `norm`, 2 limbs, N = 64 | 19 to 19.4 (-O2), 18.3 to 19.4 (-O3) | 21.3 to 22.4 (-O2), 18.9 to 20 (-O3) | 23.2 to 23.6 (-O2), 15.7 to 16 (-O3) | 15.3 to 15.6 |
 
-| N balls over one BallVector (selection) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, 1 limb, N = 4 | 0.84 (-O2), 1.54 (-O3) | 0.77 |
-| `add`, 1 limb, N = 16 | 2.50 to 2.51 (-O2), 2.66 to 2.67 (-O3) | 2.99 to 3.02 |
-| `add`, 1 limb, N = 64 | 4.49 to 4.55 (-O2), 5.83 to 5.85 (-O3) | 5.77 to 5.78 (-O2), 6.09 to 6.12 (-O3) |
-| `add`, 2 limbs, N = 4 | 1.15 to 1.16 (-O2), 1.84 to 1.85 (-O3) | 2.05 to 2.09 |
-| `add`, 2 limbs, N = 16 | 3.08 to 3.11 (-O2), 2.70 to 2.71 (-O3) | 3.73 to 3.76 |
-| `add`, 2 limbs, N = 64 | 4.46 to 4.48 (-O2), 4.14 to 4.18 (-O3) | 4.29 to 4.35 |
-| `scale`, 2 limbs, N = 16 | 2.49 to 2.50 (-O2), 3.33 to 3.34 (-O3) | 3.50 to 3.56 |
-| `axpy`, 2 limbs, N = 16 | 2.95 (-O2), 2.55 to 2.56 (-O3) | 4.21 to 4.26 |
-| `conv`, 1 limb, N = 16 | 4.05 to 4.09 (-O2), 5.81 to 5.84 (-O3) | 5.05 to 5.11 |
-| `conv`, 2 limbs, N = 16 | 1.07 to 1.08 | 1.01 to 1.02 |
-| `norm`, 2 limbs, N = 16 | 7.94 to 8.00 (-O2), 8.70 to 8.85 (-O3) | 13.6 |
+| N balls over one BallVector (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, 1 limb, N = 4 | 1.28 to 1.30 | 1.05 (-O2), 0.90 to 0.93 (-O3) | 0.84 (-O2), 1.54 (-O3) | 0.77 |
+| `add`, 1 limb, N = 16 | 2.61 to 2.73 (-O2), 2.66 to 2.71 (-O3) | 2.13 to 2.14 (-O2), 2.53 to 2.55 (-O3) | 2.50 to 2.51 (-O2), 2.66 to 2.67 (-O3) | 2.99 to 3.02 |
+| `add`, 1 limb, N = 64 | 2.44 to 2.47 | 1.78 to 1.85 (-O2), 2.12 to 2.16 (-O3) | 4.49 to 4.55 (-O2), 5.83 to 5.85 (-O3) | 5.77 to 5.78 (-O2), 6.09 to 6.12 (-O3) |
+| `add`, 2 limbs, N = 4 | 1.48 to 1.59 (-O2), 1.46 to 1.52 (-O3) | 1.16 to 1.22 (-O2), 1.61 to 1.66 (-O3) | 1.15 to 1.16 (-O2), 1.84 to 1.85 (-O3) | 2.05 to 2.09 |
+| `add`, 2 limbs, N = 16 | 1.66 to 1.82 (-O2), 1.81 to 1.88 (-O3) | 1.73 to 1.77 (-O2), 1.83 to 1.97 (-O3) | 3.08 to 3.11 (-O2), 2.70 to 2.71 (-O3) | 3.73 to 3.76 |
+| `add`, 2 limbs, N = 64 | 1.98 to 2.05 (-O2), 1.96 to 2.10 (-O3) | 2.03 to 2.11 (-O2), 2.06 to 2.17 (-O3) | 4.46 to 4.48 (-O2), 4.14 to 4.18 (-O3) | 4.29 to 4.35 |
+| `scale`, 2 limbs, N = 16 | 1.63 to 1.95 (-O2), 1.64 to 2.00 (-O3) | 1.64 to 1.71 (-O2), 2.09 to 2.12 (-O3) | 2.49 to 2.50 (-O2), 3.33 to 3.34 (-O3) | 3.50 to 3.56 |
+| `axpy`, 2 limbs, N = 16 | 1.81 to 1.99 (-O2), 1.87 to 2.04 (-O3) | 1.77 to 1.81 (-O2), 1.83 to 1.89 (-O3) | 2.95 (-O2), 2.55 to 2.56 (-O3) | 4.21 to 4.26 |
+| `conv`, 1 limb, N = 16 | 4.50 to 4.55 | 4.21 to 4.34 (-O2), 5.86 to 6.19 (-O3) | 4.05 to 4.09 (-O2), 5.81 to 5.84 (-O3) | 5.05 to 5.11 |
+| `conv`, 2 limbs, N = 16 | 1.12 to 1.16 | 1.14 to 1.20 (-O2), 1.15 to 1.22 (-O3) | 1.07 to 1.08 | 1.01 to 1.02 |
+| `norm`, 2 limbs, N = 16 | 8.6 to 11.1 (-O2), 8.7 to 11.2 (-O3) | 7.10 to 7.19 (-O2), 8.57 to 8.69 (-O3) | 7.94 to 8.00 (-O2), 8.70 to 8.85 (-O3) | 13.6 |
 
 | Bytes | N = 4 | N = 8 | N = 16 | N = 64 |
 |---|---:|---:|---:|---:|
@@ -2423,9 +2516,9 @@ largest and over the median of the balls' radii.
 - **Spread radii: the one radius is the widest entry's, up to twice it, and thousands of times the
   median's.** With radii from $2^{-50}$ to $2^{-20}$ of each center, the one radius after a sum or an
   `axpy` is 1.0 to 2.0 times the largest ball's radius (the two operands' largest radii, from
-  different entries, add) and $30$ to $10^6$ times the median's.
+  different entries, add) and $30$ to $2 \times 10^6$ times the median's.
 - **The product of polynomials takes the largest centers for every coefficient**: 5 to 118 times
-  the largest of the balls' radii, and $10^2$ to $10^4$ times the median's, from radius 0; 2.7 to 12
+  the largest of the balls' radii, and $10^2$ to $10^4$ times the median's, from radius 0; 2.4 to 12
   times the largest from one radius for all, 4 to 86 times from spread radii. The de Casteljau-like chain averages neighbours: the
   balls' radii approach their mean while the one radius keeps the largest, 1.1 to 1.8 times the
   largest ball's after 100 operations from radius 0 and 3.8 to 8.8 times from spread radii.
@@ -2460,50 +2553,51 @@ each on arrays of 64 elements (32 coefficients) that no other call reads, each r
 functions declared only. The setting `KAIRN_ENCLOSURE_CODE` changes neither header (their functions
 are ordinary inline functions in every setting), so only the inline setting was compiled.
 
-| Compile time of the headers, s (minimum wall time; -O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| an empty unit | 0.01; 0.01 | 0.04; 0.04 |
-| `kairn/kairn.hpp` | 0.45; 0.45 | 0.70; 0.70 |
-| `kairn/kairn.hpp`, as packed code | 0.44; 0.44 | 0.70; 0.70 |
-| `kairn/accumulator.hpp` | 0.44; 0.44 | 0.70; 0.70 |
-| `kairn/batch.hpp`, as packed code | 1.21; 1.21 | 1.57; 1.57 |
-| `kairn/ball_vector.hpp`, as packed code | 1.26; 1.26 | 1.66; 1.66 |
-| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 1.24; 1.23 | 1.61; 1.61 |
-| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 1.27; 1.26 | 1.66; 1.66 |
+| Compile time of the headers, s (minimum wall time; -O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| an empty unit | 0.02; 0.02 | 0.05; 0.05 | 0.01; 0.01 | 0.04; 0.04 |
+| `kairn/kairn.hpp` | 0.14; 0.14 | 0.26; 0.26 | 0.45; 0.45 | 0.70; 0.70 |
+| `kairn/kairn.hpp`, as packed code | 0.14; 0.14 | 0.26; 0.26 | 0.44; 0.44 | 0.70; 0.70 |
+| `kairn/accumulator.hpp` | 0.14; 0.14 | 0.26; 0.26 | 0.44; 0.44 | 0.70; 0.70 |
+| `kairn/batch.hpp`, as packed code | 0.27; 0.27 | 0.54; 0.54 | 1.21; 1.21 | 1.57; 1.57 |
+| `kairn/ball_vector.hpp`, as packed code | 0.40; 0.40 | 0.57; 0.57 | 1.26; 1.26 | 1.66; 1.66 |
+| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 0.28; 0.28 | 0.55; 0.55 | 1.24; 1.23 | 1.61; 1.61 |
+| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 0.40; 0.40 | 0.57; 0.57 | 1.27; 1.26 | 1.66; 1.66 |
 
-| arrays: compile time, s of processor time (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| 100, inline | 1.60; 1.66 | 2.31; 2.52 |
-| 100, calls | 0.22; 0.22 | 0.23; 0.23 |
-| 1000, inline | 2.77; 2.85 | 8.85; 12.2 |
-| 1000, calls | 3.49; 3.48 | 1.56; 1.58 |
+| arrays: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 100, inline | 0.44; 0.72 | 0.86; 0.94 | 1.60; 1.66 | 2.31; 2.52 |
+| 100, calls | 0.07; 0.07 | 0.18; 0.20 | 0.22; 0.22 | 0.23; 0.23 |
+| 1000, inline | 1.45; 4.61 | 2.70; 3.38 | 2.77; 2.85 | 8.85; 12.2 |
+| 1000, calls | 0.50; 0.52 | 2.16; 2.90 | 3.49; 3.48 | 1.56; 1.58 |
 
-| ballvectors: compile time, s of processor time (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| 100, inline | 1.72; 1.91 | 2.12; 2.12 |
-| 100, calls | 0.05; 0.05 | 0.06; 0.06 |
-| 1000, inline | 2.40; 3.12 | 4.37; 4.36 |
-| 1000, calls | 0.31; 0.31 | 0.21; 0.20 |
+| ballvectors: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 100, inline | 0.53; 0.53 | 0.83; 0.97 | 1.72; 1.91 | 2.12; 2.12 |
+| 100, calls | 0.03; 0.03 | 0.09; 0.09 | 0.05; 0.05 | 0.06; 0.06 |
+| 1000, inline | 1.28; 1.32 | 1.48; 1.92 | 2.40; 3.12 | 4.37; 4.36 |
+| 1000, calls | 0.09; 0.09 | 0.44; 0.68 | 0.31; 0.31 | 0.21; 0.20 |
 
-| The functions on arrays: object, KB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| 1000, inline | 88; 89 | 461; 652 |
-| 1000, calls | 97; 97 | 111; 111 |
+| The functions on arrays: object, KB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 162; 527 | 56; 61 | 88; 89 | 461; 652 |
+| 1000, calls | 44; 44 | 55; 58 | 97; 97 | 111; 111 |
 
-- **Each of the two headers costs a unit about a second.** On Zen 2 a unit that includes
+- **Each of the two headers costs a unit about a second on Zen 2.** There a unit that includes
   `kairn/batch.hpp` or `kairn/ball_vector.hpp` compiles in 1.21 to 1.27 s with GCC 13 and 1.57 to
   1.66 s with Clang 18, against 0.44 to 0.45 and 0.70 s for `kairn/kairn.hpp`; beside
   `kairn/kairn.hpp` they cost the same (1.23 to 1.27, 1.61 to 1.66): what they add is `soa.hpp` and
   `packed.hpp`, whose packed form includes the generated `gen/avx2.hpp` (1.3 MB; inferred from the
   includes, that header alone not timed here). `kairn/accumulator.hpp` alone costs what
-  `kairn/kairn.hpp` costs, which includes it.
+  `kairn/kairn.hpp` costs, which includes it. On the M3 they cost 0.27 to 0.57 s against 0.14 and 0.26 s for `kairn/kairn.hpp` (Apple clang,
+  GCC 16), the packed form there being `gen/neon.hpp`.
 - **A function with many calls compiles quickly.** 1 000 calls of the functions on arrays in one
   function compile in 2.8 to 2.9 s with GCC 13 and 8.9 to 12.2 s with Clang 18 (1.6 to 2.5 s for
   100), the operations of ball vectors in 2.4 to 3.1 and 4.4 s (1.7 to 2.1 for 100), in 0.2 to 0.3 GB.
-  The functions are ordinary inline functions, and GCC 13 calls them (an object of 88 KB for 1 000
+  The functions are ordinary inline functions; judging by the objects, GCC 13 calls them (an object of 88 KB for 1 000
   calls, about what the unit without Kairn makes) where Clang 18 inlines them (461 to 652 KB).
   Nothing here approaches the comparisons of enclosures of
-  [question 12](#12-compile-time-of-the-enclosure-interface) (8 to 62 s for 1 000 calls). The
+  [question 12](#12-compile-time-of-the-enclosure-interface) (4.5 to 62 s for 1 000 calls). The
   unit of 1 000 calls without Kairn took 3.5 s with GCC 13, longer than with it; not investigated. On the M3 the maps cost 0.23 to 0.35 ns per element of one limb and 0.42 to 1.7 of two in L1,
   0.78 to 2.8 times the loop of `T`, 0.62 to 2.0 times the double-word maps written out; beyond the
   cache 0.27 to 0.36 ns per element of one limb, the M3's memory keeping up.ompile
@@ -4079,10 +4173,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
 | linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
 | linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `9e114bb`, `be95dbb`, `dae16be` |
-| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `be95dbb` |
-| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `be95dbb` |
-| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `be95dbb` |
-| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 0 | 2026-11-22, `be95dbb` |
+| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `be95dbb` |
+| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `be95dbb` |
+| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `be95dbb` |
+| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 3, 3, 3, 3, 3 | 2026-11-22, `be95dbb` |
 
 #### Runs of the third part
 
@@ -4172,6 +4266,18 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `bv-linux-gcc-O3-r1.json` | 192, 0 | 1.022, 1.026 | 1.007 | 92.0, 92.1 |
 | `bv-linux-gcc-O3-r2.json` | 192, 0 | 1.020, 1.027 | 1.010 | 92.8, 94.0 |
 | `bv-linux-gcc-O3-r3.json` | 192, 0 | 1.000, 1.000 | 1.007 | 93.7, 91.2 |
+| `bv-mac-appleclang-O2-r1.json` | 192, 0 | 1.004, 1.045 | 1.007 | 3.1, 2.3 |
+| `bv-mac-appleclang-O2-r2.json` | 192, 0 | 1.001, 1.035 | 1.005 | 3.2, 2.9 |
+| `bv-mac-appleclang-O2-r3.json` | 192, 0 | 1.001, 1.032 | 1.008 | 2.9, 2.4 |
+| `bv-mac-appleclang-O3-r1.json` | 192, 0 | 1.009, 1.071 | 1.005 | 2.3, 1.8 |
+| `bv-mac-appleclang-O3-r2.json` | 192, 0 | 1.000, 1.040 | 1.012 | 2.9, 3.1 |
+| `bv-mac-appleclang-O3-r3.json` | 192, 0 | 1.002, 1.045 | 1.010 | 2.4, 3.3 |
+| `bv-mac-gcc16-O2-r1.json` | 192, 0 | 1.001, 1.031 | 1.010 | 1.8, 4.1 |
+| `bv-mac-gcc16-O2-r2.json` | 192, 0 | 1.000, 1.029 | 1.011 | 3.1, 2.5 |
+| `bv-mac-gcc16-O2-r3.json` | 192, 0 | 1.011, 1.046 | 1.007 | 3.3, 2.7 |
+| `bv-mac-gcc16-O3-r1.json` | 192, 0 | 1.000, 1.022 | 1.010 | 4.1, 3.2 |
+| `bv-mac-gcc16-O3-r2.json` | 192, 0 | 1.001, 1.030 | 1.008 | 2.5, 2.9 |
+| `bv-mac-gcc16-O3-r3.json` | 192, 0 | 1.006, 1.050 | 1.006 | 2.7, 2.3 |
 | `entry-linux-clang-O2-c1-r1.json` | 518, 0 | 1.001, 1.004 | 1.004 | 60.7, 65.7 |
 | `entry-linux-clang-O2-c1-r2.json` | 518, 0 | 1.002, 1.004 | 1.019 | 63.9, 66.3 |
 | `entry-linux-clang-O2-c1-r3.json` | 518, 0 | 1.000, 1.002 | 1.004 | 71.3, 69.2 |
@@ -4323,6 +4429,10 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | bv linux-clang-O3 | 3 | 1.7%, 2.4%, 119.2% | `m2w/tp/norm_1_64/op` |
 | bv linux-gcc-O2 | 3 | 1.8%, 2.3%, 12.3% | `m2w/tp/sub_1_64/kairn` |
 | bv linux-gcc-O3 | 3 | 2.3%, 2.7%, 4.7% | `m2w/tp/axpy_1_8/kairn` |
+| bv mac-appleclang-O2 | 3 | 1.4%, 5.6%, 53.4% | `m2w/tp/axpy_1_8/seq` |
+| bv mac-appleclang-O3 | 3 | 1.7%, 7.5%, 48.7% | `m2w/tp/axpy_1_8/seq` |
+| bv mac-gcc16-O2 | 3 | 1.6%, 5.1%, 8.0% | `m2w/tp/conv_2_4/kairn` |
+| bv mac-gcc16-O3 | 3 | 1.6%, 5.3%, 7.8% | `m2w/tp/add_2_16/balls` |
 | entry linux-clang-O2 inline | 3 | 0.2%, 0.5%, 8.8% | `m2w/tp/axpy_1_16/op` |
 | entry linux-clang-O2 nocheck | 3 | 0.8%, 1.5%, 5.9% | `m2w/tp/norm_1_16/seq` |
 | entry linux-clang-O3 inline | 3 | 0.5%, 1.1%, 18.9% | `m2w/tp/scale_1_64/op` |
@@ -6319,151 +6429,241 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | condition 1e4 to 1e40, n = 100000 | 1.6e+05 (3.2e+04) | 1.5e+05 (3.4e+04) | 7.1e+05 (1.8e+05) | 4.9e+05 (1.3e+05) | 1.5e+05 (3.4e+04) | 4.9e+05 (1.3e+05) |
 | condition 1e4 to 1e40, n = 1000000 | 2.2e+06 (3.1e+05) | 1.3e+06 (2.4e+05) | 7.4e+06 (1.8e+06) | 5.2e+06 (7e+05) | 1.3e+06 (2.4e+05) | 5.2e+06 (7e+05) |
 
+| Sums, mac (2 lanes): relative error, median over the trials, by condition | naive loop | Kairn, one limb | Sum2 | Kairn, two limbs | Accumulator, two limbs |
+|---|---|---|---|---|---|
+| n = 1000, condition 1e0 to 1e3 (40 trials) | 6.8e-16 | 3.2e-16 | 4.2e-17 | 0.0e+00 | 0.0e+00 |
+| n = 1000, condition 1e4 to 1e7 (20 trials) | 1.9e-11 | 2.2e-11 | 3.8e-17 | 1.1e-27 | 1.8e-27 |
+| n = 1000, condition 1e8 to 1e11 (20 trials) | 7.2e-08 | 1.0e-07 | 4.0e-17 | 7.5e-24 | 6.6e-24 |
+| n = 1000, condition 1e12 to 1e15 (20 trials) | 1.1e-03 | 5.9e-04 | 4.0e-17 | 4.0e-20 | 4.1e-20 |
+| n = 1000, condition 1e16 to 1e19 (20 trials) | 8.2e+00 | 8.5e+00 | 4.5e-15 | 4.4e-16 | 3.3e-16 |
+| n = 1000, condition 1e20 to 1e23 (20 trials) | 3.1e+04 | 3.5e+04 | 1.0e-11 | 1.3e-12 | 2.1e-12 |
+| n = 1000, condition 1e24 to 1e27 (20 trials) | 5.7e+08 | 6.9e+08 | 2.9e-07 | 3.8e-08 | 4.8e-08 |
+| n = 1000, condition 1e28 to 1e31 (20 trials) | 5.5e+12 | 9.3e+12 | 1.1e-03 | 4.2e-04 | 4.3e-04 |
+| n = 1000, condition 1e32 to 1e35 (22 trials) | 7.3e+16 | 3.4e+16 | 3.1e+01 | 9.6e+00 | 1.8e+00 |
+| n = 1000, condition 1e36 to 1e39 (20 trials) | 4.8e+20 | 2.9e+20 | 2.4e+05 | 1.5e+04 | 3.7e+04 |
+| n = 1000, condition 1e40 to 1e43 (18 trials) | 2.5e+24 | 3.6e+24 | 1.3e+09 | 3.7e+08 | 1.4e+08 |
+| n = 1000000, condition 1e0 to 1e3 (8 trials) | 4.5e-14 | 1.9e-14 | 2.0e-17 | 0.0e+00 | 0.0e+00 |
+| n = 1000000, condition 1e8 to 1e11 (5 trials) | 2.3e-08 | 1.1e-07 | 2.2e-17 | 1.7e-24 | 1.2e-23 |
+| n = 1000000, condition 1e12 to 1e15 (6 trials) | 2.5e-01 | 3.9e-01 | 5.2e-15 | 1.1e-18 | 2.5e-17 |
+| n = 1000000, condition 1e16 to 1e19 (3 trials) | 1.9e+02 | 7.5e+00 | 4.3e-11 | 2.9e-13 | 3.6e-13 |
+| n = 1000000, condition 1e20 to 1e23 (6 trials) | 4.9e+07 | 2.2e+07 | 1.5e-06 | 1.7e-09 | 5.9e-09 |
+| n = 1000000, condition 1e24 to 1e27 (3 trials) | 4.1e+11 | 2.8e+11 | 9.1e-03 | 5.6e-05 | 4.1e-05 |
+| n = 1000000, condition 1e28 to 1e31 (5 trials) | 4.0e+14 | 1.0e+15 | 5.8e+00 | 1.7e-01 | 1.2e-01 |
+| n = 1000000, condition 1e32 to 1e35 (4 trials) | 5.9e+18 | 4.3e+18 | 8.1e+05 | 2.0e+03 | 1.8e+03 |
+| n = 1000000, condition 1e36 to 1e39 (4 trials) | 1.0e+23 | 6.9e+23 | 2.6e+09 | 1.1e+07 | 4.2e+07 |
+| n = 1000000, condition 1e40 to 1e43 (4 trials) | 1.7e+27 | 1.5e+27 | 9.4e+12 | 7.4e+10 | 1.5e+11 |
+
+| Sums, mac: the stated bound over the error made, median (smallest) over the trials | Kairn, one limb | one limb, sequential | two limbs | two limbs, sequential | Accumulator, one limb | Accumulator, two limbs |
+|---|---|---|---|---|---|---|
+| positive, n = 10 | 22 (9.1), exact in 2 of 20 | 16 (5.5), exact in 1 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 18 (6.1), exact in 1 of 20 | –, exact in 20 of 20 |
+| positive, n = 100 | 1.4e+02 (29) | 64 (15) | –, exact in 20 of 20 | –, exact in 20 of 20 | 65 (15) | –, exact in 20 of 20 |
+| positive, n = 1000 | 4.3e+02 (1.4e+02) | 2.2e+02 (67) | –, exact in 20 of 20 | –, exact in 20 of 20 | 2.2e+02 (67) | –, exact in 20 of 20 |
+| positive, n = 10000 | 2.1e+03 (3.9e+02) | 5.3e+02 (2.5e+02) | –, exact in 10 of 10 | –, exact in 10 of 10 | 5.3e+02 (2.5e+02) | –, exact in 10 of 10 |
+| positive, n = 100000 | 3.6e+03 (1.2e+03) | 3.1e+03 (7.7e+02) | –, exact in 4 of 4 | –, exact in 4 of 4 | 3.1e+03 (7.7e+02) | –, exact in 4 of 4 |
+| positive, n = 1000000 | 1.7e+04 (5.8e+03) | 5.9e+03 (2.4e+03) | –, exact in 4 of 4 | –, exact in 4 of 4 | 5.9e+03 (2.4e+03) | –, exact in 4 of 4 |
+| random signs, n = 10 | 24 (14), exact in 17 of 20 | 24 (13), exact in 15 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 27 (14), exact in 15 of 20 | –, exact in 20 of 20 |
+| random signs, n = 100 | 1.2e+03 (1.8e+02), exact in 1 of 20 | 6.5e+02 (1.5e+02), exact in 1 of 20 | –, exact in 20 of 20 | –, exact in 20 of 20 | 6.5e+02 (1.5e+02), exact in 1 of 20 | –, exact in 20 of 20 |
+| random signs, n = 1000 | 6.8e+03 (1.1e+03) | 3.7e+03 (1.3e+03) | –, exact in 20 of 20 | –, exact in 20 of 20 | 3.7e+03 (1.3e+03) | –, exact in 20 of 20 |
+| random signs, n = 10000 | 6.6e+04 (3e+04) | 5.7e+04 (1.4e+04) | –, exact in 10 of 10 | –, exact in 10 of 10 | 5.7e+04 (1.4e+04) | –, exact in 10 of 10 |
+| random signs, n = 100000 | 9.1e+05 (3.7e+05) | 1.9e+06 (6.7e+05) | –, exact in 4 of 4 | –, exact in 4 of 4 | 1.9e+06 (6.7e+05) | –, exact in 4 of 4 |
+| random signs, n = 1000000 | 9.5e+06 (4.7e+06) | 4.3e+06 (3.6e+06) | –, exact in 4 of 4 | –, exact in 4 of 4 | 4.3e+06 (3.6e+06) | –, exact in 4 of 4 |
+| condition 1e4 to 1e40, n = 10 | 98 (7.2) | 54 (10) | 7.2e+02 (45), exact in 8 of 200 | 6.6e+02 (44), exact in 9 of 200 | 60 (11) | 9.8e+02 (65), exact in 9 of 200 |
+| condition 1e4 to 1e40, n = 100 | 2.9e+02 (39) | 2.6e+02 (41) | 1.3e+03 (1.7e+02) | 1.1e+03 (1.4e+02) | 2.6e+02 (41) | 1.5e+03 (1.9e+02) |
+| condition 1e4 to 1e40, n = 1000 | 1.6e+03 (2.6e+02) | 1.5e+03 (1.8e+02) | 7.1e+03 (9.3e+02) | 7.2e+03 (8.3e+02) | 1.5e+03 (1.8e+02) | 9.6e+03 (1.1e+03) |
+| condition 1e4 to 1e40, n = 10000 | 9.9e+03 (1.8e+03) | 1.3e+04 (1.5e+03) | 4.6e+04 (6.4e+03) | 4.9e+04 (6.7e+03) | 1.3e+04 (1.5e+03) | 6.5e+04 (9e+03) |
+| condition 1e4 to 1e40, n = 100000 | 1e+05 (2.4e+04) | 1.4e+05 (1.9e+04) | 3.6e+05 (7.4e+04) | 4.4e+05 (9e+04) | 1.4e+05 (1.9e+04) | 5.9e+05 (1.2e+05) |
+| condition 1e4 to 1e40, n = 1000000 | 1.3e+06 (2.7e+05) | 1.3e+06 (2.9e+05) | 5.2e+06 (1.2e+06) | 3.5e+06 (8.5e+05) | 1.3e+06 (2.9e+05) | 4.6e+06 (1.1e+06) |
+
+| Dot products, mac (2 lanes): relative error, median over the trials, by condition | naive loop | Kairn, one limb | Dot2 | Kairn, two limbs | Accumulator, two limbs |
+|---|---|---|---|---|---|
+| n = 1000, condition 1e0 to 1e3 (40 trials) | 8.5e-16 | 4.3e-16 | 4.8e-17 | 2.9e-32 | 4.6e-32 |
+| n = 1000, condition 1e4 to 1e7 (20 trials) | 2.8e-11 | 2.8e-11 | 3.3e-17 | 3.4e-27 | 2.5e-27 |
+| n = 1000, condition 1e8 to 1e11 (20 trials) | 2.1e-07 | 2.1e-07 | 5.4e-17 | 1.7e-23 | 1.6e-23 |
+| n = 1000, condition 1e12 to 1e15 (20 trials) | 3.1e-03 | 3.1e-03 | 4.4e-17 | 1.2e-19 | 1.2e-19 |
+| n = 1000, condition 1e16 to 1e19 (20 trials) | 9.6e+00 | 2.1e+01 | 9.1e-15 | 1.5e-15 | 6.3e-16 |
+| n = 1000, condition 1e20 to 1e23 (20 trials) | 8.1e+04 | 9.2e+04 | 6.6e-11 | 5.6e-12 | 9.6e-12 |
+| n = 1000, condition 1e24 to 1e27 (20 trials) | 1.4e+09 | 2.6e+09 | 4.5e-07 | 1.8e-07 | 1.5e-07 |
+| n = 1000, condition 1e28 to 1e31 (20 trials) | 7.4e+12 | 6.7e+12 | 5.7e-03 | 6.6e-04 | 8.7e-04 |
+| n = 1000, condition 1e32 to 1e35 (20 trials) | 6.8e+16 | 7.4e+16 | 3.1e+01 | 4.1e+00 | 8.2e+00 |
+| n = 1000, condition 1e36 to 1e39 (20 trials) | 4.5e+20 | 1.1e+21 | 6.7e+05 | 9.2e+04 | 1.6e+05 |
+| n = 1000, condition 1e40 to 1e43 (20 trials) | 4.0e+24 | 5.6e+24 | 3.7e+09 | 5.3e+08 | 2.2e+08 |
+| n = 1000000, condition 1e0 to 1e3 (8 trials) | 1.8e-14 | 1.7e-14 | 2.8e-17 | 1.7e-30 | 1.8e-30 |
+| n = 1000000, condition 1e8 to 1e11 (5 trials) | 6.3e-08 | 9.8e-08 | 3.7e-17 | 2.0e-24 | 4.7e-24 |
+| n = 1000000, condition 1e12 to 1e15 (5 trials) | 3.3e-04 | 3.7e-04 | 3.3e-17 | 3.6e-20 | 3.6e-20 |
+| n = 1000000, condition 1e16 to 1e19 (4 trials) | 1.0e+03 | 7.3e+02 | 2.4e-10 | 1.6e-13 | 3.3e-13 |
+| n = 1000000, condition 1e20 to 1e23 (3 trials) | 9.6e+04 | 1.9e+05 | 3.3e-09 | 3.0e-12 | 1.9e-12 |
+| n = 1000000, condition 1e24 to 1e27 (6 trials) | 6.8e+10 | 3.6e+10 | 4.0e-03 | 1.5e-05 | 7.7e-06 |
+| n = 1000000, condition 1e28 to 1e31 (3 trials) | 1.6e+15 | 4.7e+14 | 1.4e+01 | 1.5e-01 | 1.8e-01 |
+| n = 1000000, condition 1e32 to 1e35 (6 trials) | 2.3e+19 | 3.9e+19 | 3.7e+05 | 5.2e+03 | 3.6e+03 |
+| n = 1000000, condition 1e36 to 1e39 (4 trials) | 1.9e+23 | 9.8e+22 | 4.3e+09 | 8.2e+07 | 4.2e+07 |
+| n = 1000000, condition 1e40 to 1e43 (4 trials) | 2.7e+27 | 2.7e+27 | 1.1e+14 | 3.5e+11 | 2.6e+11 |
+
+| Dot products, mac: the stated bound over the error made, median (smallest) over the trials | Kairn, one limb | one limb, sequential | two limbs | two limbs, sequential | Accumulator, one limb | Accumulator, two limbs |
+|---|---|---|---|---|---|---|
+| positive, n = 10 | 27 (7.5) | 27 (6.1) | 1.1e+02 (52), exact in 8 of 20 | 98 (35), exact in 3 of 20 | 27 (6.1) | 98 (35), exact in 3 of 20 |
+| positive, n = 100 | 1.7e+02 (44) | 1.2e+02 (16) | 1.3e+03 (3.2e+02), exact in 1 of 20 | 4.7e+02 (1e+02) | 1.2e+02 (16) | 4.7e+02 (1e+02) |
+| positive, n = 1000 | 3.7e+02 (1.2e+02) | 1.9e+02 (50) | 2.2e+03 (1e+03) | 1.2e+03 (3.8e+02) | 1.9e+02 (50) | 1.2e+03 (3.8e+02) |
+| positive, n = 10000 | 1e+03 (4.7e+02) | 5.7e+02 (2.6e+02) | 4.6e+03 (1.5e+03) | 3.9e+03 (8.7e+02) | 5.7e+02 (2.6e+02) | 3.9e+03 (8.7e+02) |
+| positive, n = 100000 | 1.3e+04 (1.6e+03) | 1.8e+03 (1.5e+03) | 2.2e+04 (1.5e+04) | 1.6e+05 (1.1e+04) | 1.8e+03 (1.5e+03) | 1.6e+05 (1.1e+04) |
+| positive, n = 1000000 | 1.1e+04 (5.4e+03) | 9.7e+03 (3.1e+03) | 1.3e+05 (2.3e+04) | 2.8e+04 (2e+04) | 9.7e+03 (3.1e+03) | 2.8e+04 (2e+04) |
+| random signs, n = 10 | 68 (22) | 68 (20) | –, exact in 20 of 20 | –, exact in 20 of 20 | 68 (20) | –, exact in 20 of 20 |
+| random signs, n = 100 | 7.3e+02 (2e+02) | 6.2e+02 (1.2e+02) | –, exact in 20 of 20 | 2.3e+03 (1.3e+03), exact in 15 of 20 | 6.2e+02 (1.2e+02) | 2.3e+03 (1.3e+03), exact in 15 of 20 |
+| random signs, n = 1000 | 9e+03 (2.6e+03) | 5.8e+03 (1.5e+03) | 4.7e+04 (7.6e+03) | 4.9e+04 (6.7e+03), exact in 2 of 20 | 5.8e+03 (1.5e+03) | 4.9e+04 (6.7e+03), exact in 2 of 20 |
+| random signs, n = 10000 | 7.7e+04 (1.1e+04) | 4.1e+04 (7.9e+03) | 3.7e+05 (1.4e+05) | 5.4e+05 (1.5e+05) | 4.1e+04 (7.9e+03) | 5.4e+05 (1.5e+05) |
+| random signs, n = 100000 | 4.3e+05 (1.7e+05) | 4.6e+05 (1e+05) | 2.8e+06 (1.1e+06) | 2e+06 (8.3e+05) | 4.6e+05 (1e+05) | 2e+06 (8.3e+05) |
+| random signs, n = 1000000 | 1.8e+07 (1.7e+06) | 9.4e+06 (2e+06) | 2.8e+07 (1.2e+07) | 5.6e+07 (1.2e+07) | 9.4e+06 (2e+06) | 5.6e+07 (1.2e+07) |
+| condition 1e4 to 1e40, n = 10 | 58 (7.6) | 47 (10) | 4.8e+02 (32) | 3.7e+02 (42) | 47 (10) | 3.7e+02 (42) |
+| condition 1e4 to 1e40, n = 100 | 2.5e+02 (36) | 2.4e+02 (30) | 1.3e+03 (1.3e+02) | 1.2e+03 (1.9e+02) | 2.4e+02 (30) | 1.2e+03 (1.9e+02) |
+| condition 1e4 to 1e40, n = 1000 | 1.2e+03 (1.2e+02) | 1.3e+03 (1.5e+02) | 7e+03 (1.1e+03) | 7.3e+03 (8e+02) | 1.3e+03 (1.5e+02) | 7.3e+03 (8e+02) |
+| condition 1e4 to 1e40, n = 10000 | 1.1e+04 (1.8e+03) | 1.1e+04 (1.8e+03) | 7.2e+04 (1e+04) | 6.2e+04 (9.4e+03) | 1.1e+04 (1.8e+03) | 6.2e+04 (9.4e+03) |
+| condition 1e4 to 1e40, n = 100000 | 1.2e+05 (1.5e+04) | 1.5e+05 (3.4e+04) | 5.5e+05 (7.7e+04) | 5.1e+05 (1.3e+05) | 1.5e+05 (3.4e+04) | 5.1e+05 (1.3e+05) |
+| condition 1e4 to 1e40, n = 1000000 | 1.1e+06 (2.8e+05) | 1.3e+06 (2.4e+05) | 6.3e+06 (8.6e+05) | 5.9e+06 (9.1e+05) | 1.3e+06 (2.4e+05) | 5.9e+06 (9.1e+05) |
+
 #### Question 18: ball vectors
 
-| BallVector: ns per operation on the whole vector | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, 1 limb, N = 4 | 9.79 to 9.97 (-O2), 9.37 to 9.57 (-O3) | 8.44 to 8.63 |
-| `add`, 1 limb, N = 8 | 10.5 to 10.7 (-O2), 9.91 to 10.1 (-O3) | 8.96 to 9.14 |
-| `add`, 1 limb, N = 16 | 12.8 to 13 (-O2), 11.2 to 11.4 (-O3) | 9.47 to 9.72 |
-| `add`, 1 limb, N = 64 | 28 to 28.9 (-O2), 20.1 to 20.6 (-O3) | 19.6 to 20 (-O2), 17.8 to 18.1 (-O3) |
-| `add`, 2 limbs, N = 4 | 20.9 to 21.1 (-O2), 13 to 13.3 (-O3) | 10.5 to 10.7 |
-| `add`, 2 limbs, N = 8 | 23.1 to 23.6 (-O2), 15.9 to 16.3 (-O3) | 15.2 to 15.5 |
-| `add`, 2 limbs, N = 16 | 31 to 31.7 (-O2), 25.2 to 25.7 (-O3) | 23.2 to 23.9 |
-| `add`, 2 limbs, N = 64 | 84.6 to 87.2 | 81.1 to 83.1 |
-| `sub`, 1 limb, N = 4 | 9.78 to 9.95 (-O2), 9.41 to 9.63 (-O3) | 8.44 to 8.63 |
-| `sub`, 1 limb, N = 8 | 10.4 to 10.6 (-O2), 9.91 to 10.1 (-O3) | 8.96 to 9.17 |
-| `sub`, 1 limb, N = 16 | 12.7 to 12.9 (-O2), 11.1 to 11.4 (-O3) | 9.47 to 9.68 |
-| `sub`, 1 limb, N = 64 | 25.7 to 26 (-O2), 20.2 to 20.6 (-O3) | 19.6 to 20 (-O2), 17.8 to 18.1 (-O3) |
-| `sub`, 2 limbs, N = 4 | 20.8 to 21 (-O2), 13.1 to 13.4 (-O3) | 10.7 to 11 |
-| `sub`, 2 limbs, N = 8 | 23.3 to 23.6 (-O2), 16 to 16.4 (-O3) | 15.7 to 16.1 |
-| `sub`, 2 limbs, N = 16 | 31.4 to 31.9 (-O2), 25.4 to 25.9 (-O3) | 25.7 to 26.2 (-O2), 24.3 to 24.7 (-O3) |
-| `sub`, 2 limbs, N = 64 | 87.4 to 88.9 (-O2), 83.3 to 85.5 (-O3) | 83.1 to 85.3 |
-| `scale`, 1 limb, N = 4 | 9.9 to 10.1 (-O2), 9.37 to 9.59 (-O3) | 8.48 to 8.66 |
-| `scale`, 1 limb, N = 8 | 11.3 to 11.6 (-O2), 9.96 to 10.2 (-O3) | 9 to 9.17 |
-| `scale`, 1 limb, N = 16 | 13 to 13.2 (-O2), 11.1 to 11.5 (-O3) | 9.48 to 9.74 |
-| `scale`, 1 limb, N = 64 | 26.1 to 26.7 (-O2), 20.9 to 21.5 (-O3) | 18.5 to 18.9 (-O2), 18.4 to 22.5 (-O3) |
-| `scale`, 2 limbs, N = 4 | 17.1 to 17.3 (-O2), 9.99 to 10.2 (-O3) | 8.99 to 9.19 |
-| `scale`, 2 limbs, N = 8 | 18.6 to 19 (-O2), 11.9 to 12.1 (-O3) | 9.92 to 10.1 |
-| `scale`, 2 limbs, N = 16 | 21.6 to 21.9 (-O2), 14.8 to 15.2 (-O3) | 13 to 13.5 |
-| `scale`, 2 limbs, N = 64 | 45.9 to 46.7 (-O2), 43.3 to 44.1 (-O3) | 37.4 to 38.4 |
-| `axpy`, 1 limb, N = 4 | 18 to 18.7 (-O2), 16.5 to 16.9 (-O3) | 14.1 to 15 (-O2), 14.1 to 14.6 (-O3) |
-| `axpy`, 1 limb, N = 8 | 25.4 to 25.9 (-O2), 18 to 18.4 (-O3) | 15.6 to 16.3 |
-| `axpy`, 1 limb, N = 16 | 32.4 to 33.3 (-O2), 22.1 to 22.6 (-O3) | 17.3 to 18.1 (-O2), 18.1 to 18.3 (-O3) |
-| `axpy`, 1 limb, N = 64 | 50.3 to 51.3 (-O2), 43 to 44.2 (-O3) | 33.9 to 34.6 (-O2), 34.2 to 36.4 (-O3) |
-| `axpy`, 2 limbs, N = 4 | 41.8 to 42.3 (-O2), 23.6 to 24.2 (-O3) | 20.7 to 21.1 (-O2), 20 to 20.5 (-O3) |
-| `axpy`, 2 limbs, N = 8 | 45.8 to 46.4 (-O2), 31.9 to 32.5 (-O3) | 25.1 to 26.1 |
-| `axpy`, 2 limbs, N = 16 | 56.5 to 57.4 (-O2), 44.9 to 46.1 (-O3) | 36.3 to 37.5 |
-| `axpy`, 2 limbs, N = 64 | 131 to 133 (-O2), 125 to 128 (-O3) | 113 to 116 |
-| `conv`, 1 limb, N = 4 | 33.4 to 33.9 (-O2), 30.5 to 31.2 (-O3) | 41.3 to 42.3 (-O2), 20.2 to 20.4 (-O3) |
-| `conv`, 1 limb, N = 8 | 86.9 to 89.7 (-O2), 62.8 to 64.3 (-O3) | 75.4 to 77.8 |
-| `conv`, 1 limb, N = 16 | 277 to 281 (-O2), 194 to 198 (-O3) | 193 to 198 |
-| `conv`, 1 limb, N = 64 | 3913 to 4036 | 3023 to 3089 |
-| `conv`, 2 limbs, N = 4 | 138 to 143 | 142 to 146 |
-| `conv`, 2 limbs, N = 8 | 575 to 588 | 583 to 597 |
-| `conv`, 2 limbs, N = 16 | 2455 to 2509 | 2432 to 2495 |
-| `conv`, 2 limbs, N = 64 | 41060 to 42030 | 41160 to 42080 |
-| `norm`, 1 limb, N = 4 | 8.43 to 8.65 | 8.46 to 8.66 |
-| `norm`, 1 limb, N = 8 | 8.79 to 9.18 | 8.61 to 8.84 |
-| `norm`, 1 limb, N = 16 | 9.5 to 9.71 (-O2), 9.09 to 9.32 (-O3) | 8.87 to 9.07 |
-| `norm`, 1 limb, N = 64 | 15.1 to 15.3 (-O2), 13.3 to 13.6 (-O3) | 14.3 to 14.7 (-O2), 14.5 to 31.9 (-O3) |
-| `norm`, 2 limbs, N = 4 | 9.41 to 9.57 (-O2), 9.06 to 9.23 (-O3) | 9.4 to 9.62 |
-| `norm`, 2 limbs, N = 8 | 9.41 to 9.74 | 9.4 to 9.6 |
-| `norm`, 2 limbs, N = 16 | 10.9 to 11.1 (-O2), 10 to 10.1 (-O3) | 9.84 to 10.1 |
-| `norm`, 2 limbs, N = 64 | 23.2 to 23.6 (-O2), 15.7 to 16 (-O3) | 15.3 to 15.6 |
+| BallVector: ns per operation on the whole vector | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, 1 limb, N = 4 | 2.52 to 2.53 | 2.99 to 3 (-O2), 2.79 to 2.84 (-O3) | 9.79 to 9.97 (-O2), 9.37 to 9.57 (-O3) | 8.44 to 8.63 |
+| `add`, 1 limb, N = 8 | 3.05 to 3.13 | 4.37 to 4.4 (-O2), 3.5 to 3.52 (-O3) | 10.5 to 10.7 (-O2), 9.91 to 10.1 (-O3) | 8.96 to 9.14 |
+| `add`, 1 limb, N = 16 | 5.23 to 5.46 | 5.71 to 5.75 (-O2), 4.8 to 4.85 (-O3) | 12.8 to 13 (-O2), 11.2 to 11.4 (-O3) | 9.47 to 9.72 |
+| `add`, 1 limb, N = 64 | 22.3 to 22.8 | 26 to 26.3 (-O2), 21 to 21.4 (-O3) | 28 to 28.9 (-O2), 20.1 to 20.6 (-O3) | 19.6 to 20 (-O2), 17.8 to 18.1 (-O3) |
+| `add`, 2 limbs, N = 4 | 4.95 to 5.17 | 6.36 to 6.46 (-O2), 4.78 to 4.92 (-O3) | 20.9 to 21.1 (-O2), 13 to 13.3 (-O3) | 10.5 to 10.7 |
+| `add`, 2 limbs, N = 8 | 9.29 to 9.33 (-O2), 9.39 to 9.76 (-O3) | 10.5 to 10.9 (-O2), 8.91 to 9.32 (-O3) | 23.1 to 23.6 (-O2), 15.9 to 16.3 (-O3) | 15.2 to 15.5 |
+| `add`, 2 limbs, N = 16 | 17.2 to 18 (-O2), 16.7 to 17.4 (-O3) | 18.4 to 19 (-O2), 17.1 to 17.2 (-O3) | 31 to 31.7 (-O2), 25.2 to 25.7 (-O3) | 23.2 to 23.9 |
+| `add`, 2 limbs, N = 64 | 60.8 to 62.5 (-O2), 59.5 to 63.2 (-O3) | 61.5 to 63.9 (-O2), 59.9 to 62.8 (-O3) | 84.6 to 87.2 | 81.1 to 83.1 |
+| `sub`, 1 limb, N = 4 | 2.5 to 2.52 | 2.99 (-O2), 2.8 to 2.85 (-O3) | 9.78 to 9.95 (-O2), 9.41 to 9.63 (-O3) | 8.44 to 8.63 |
+| `sub`, 1 limb, N = 8 | 3.11 to 3.13 | 4.34 to 4.41 (-O2), 3.48 to 3.5 (-O3) | 10.4 to 10.6 (-O2), 9.91 to 10.1 (-O3) | 8.96 to 9.17 |
+| `sub`, 1 limb, N = 16 | 5.31 to 5.49 | 5.75 to 5.76 (-O2), 4.8 to 4.82 (-O3) | 12.7 to 12.9 (-O2), 11.1 to 11.4 (-O3) | 9.47 to 9.68 |
+| `sub`, 1 limb, N = 64 | 22.3 to 22.4 (-O2), 21.1 to 22.4 (-O3) | 26.3 (-O2), 21.3 to 21.4 (-O3) | 25.7 to 26 (-O2), 20.2 to 20.6 (-O3) | 19.6 to 20 (-O2), 17.8 to 18.1 (-O3) |
+| `sub`, 2 limbs, N = 4 | 5.54 to 5.58 | 6.44 to 6.55 (-O2), 4.9 to 5.13 (-O3) | 20.8 to 21 (-O2), 13.1 to 13.4 (-O3) | 10.7 to 11 |
+| `sub`, 2 limbs, N = 8 | 10.1 (-O2), 10.6 (-O3) | 11 to 11.3 (-O2), 9.66 to 9.77 (-O3) | 23.3 to 23.6 (-O2), 16 to 16.4 (-O3) | 15.7 to 16.1 |
+| `sub`, 2 limbs, N = 16 | 18.6 to 19.4 (-O2), 17.5 to 18.6 (-O3) | 19.2 to 19.9 (-O2), 17.6 to 18 (-O3) | 31.4 to 31.9 (-O2), 25.4 to 25.9 (-O3) | 25.7 to 26.2 (-O2), 24.3 to 24.7 (-O3) |
+| `sub`, 2 limbs, N = 64 | 66.7 to 67 (-O2), 63.5 to 66.5 (-O3) | 65.4 to 67.4 (-O2), 62.4 to 62.5 (-O3) | 87.4 to 88.9 (-O2), 83.3 to 85.5 (-O3) | 83.1 to 85.3 |
+| `scale`, 1 limb, N = 4 | 2.52 | 2.99 (-O2), 2.8 to 2.84 (-O3) | 9.9 to 10.1 (-O2), 9.37 to 9.59 (-O3) | 8.48 to 8.66 |
+| `scale`, 1 limb, N = 8 | 3.05 to 3.1 | 4.38 to 4.4 (-O2), 3.31 (-O3) | 11.3 to 11.6 (-O2), 9.96 to 10.2 (-O3) | 9 to 9.17 |
+| `scale`, 1 limb, N = 16 | 4.9 to 4.92 | 5.76 (-O2), 4.77 (-O3) | 13 to 13.2 (-O2), 11.1 to 11.5 (-O3) | 9.48 to 9.74 |
+| `scale`, 1 limb, N = 64 | 20.9 to 21.1 | 25.6 to 25.9 (-O2), 19.4 (-O3) | 26.1 to 26.7 (-O2), 20.9 to 21.5 (-O3) | 18.5 to 18.9 (-O2), 18.4 to 22.5 (-O3) |
+| `scale`, 2 limbs, N = 4 | 3.23 to 3.25 | 5.13 (-O2), 3.29 to 3.32 (-O3) | 17.1 to 17.3 (-O2), 9.99 to 10.2 (-O3) | 8.99 to 9.19 |
+| `scale`, 2 limbs, N = 8 | 5.12 to 5.17 (-O2), 5.61 to 5.64 (-O3) | 6.21 to 6.39 (-O2), 4.82 to 4.89 (-O3) | 18.6 to 19 (-O2), 11.9 to 12.1 (-O3) | 9.92 to 10.1 |
+| `scale`, 2 limbs, N = 16 | 8.27 to 9.93 (-O2), 8.08 to 9.74 (-O3) | 9.85 to 9.89 (-O2), 7.91 to 8 (-O3) | 21.6 to 21.9 (-O2), 14.8 to 15.2 (-O3) | 13 to 13.5 |
+| `scale`, 2 limbs, N = 64 | 31.6 to 32.6 | 32.8 to 33.1 (-O2), 29.7 to 30.3 (-O3) | 45.9 to 46.7 (-O2), 43.3 to 44.1 (-O3) | 37.4 to 38.4 |
+| `axpy`, 1 limb, N = 4 | 5.79 to 5.96 | 5.05 to 5.11 (-O2), 5.62 to 5.69 (-O3) | 18 to 18.7 (-O2), 16.5 to 16.9 (-O3) | 14.1 to 15 (-O2), 14.1 to 14.6 (-O3) |
+| `axpy`, 1 limb, N = 8 | 7.27 to 7.54 | 9.75 to 9.77 (-O2), 6.53 to 6.58 (-O3) | 25.4 to 25.9 (-O2), 18 to 18.4 (-O3) | 15.6 to 16.3 |
+| `axpy`, 1 limb, N = 16 | 11 to 11.4 (-O2), 10.8 to 11.1 (-O3) | 14 to 14.2 (-O2), 9.37 to 9.72 (-O3) | 32.4 to 33.3 (-O2), 22.1 to 22.6 (-O3) | 17.3 to 18.1 (-O2), 18.1 to 18.3 (-O3) |
+| `axpy`, 1 limb, N = 64 | 41.4 to 43.3 | 51.1 to 51.5 (-O2), 40.9 to 41.1 (-O3) | 50.3 to 51.3 (-O2), 43 to 44.2 (-O3) | 33.9 to 34.6 (-O2), 34.2 to 36.4 (-O3) |
+| `axpy`, 2 limbs, N = 4 | 9.15 to 9.17 | 12.4 to 12.9 (-O2), 8.78 to 8.83 (-O3) | 41.8 to 42.3 (-O2), 23.6 to 24.2 (-O3) | 20.7 to 21.1 (-O2), 20 to 20.5 (-O3) |
+| `axpy`, 2 limbs, N = 8 | 13.8 to 14.2 (-O2), 14.9 (-O3) | 18.6 (-O2), 14.1 to 14.4 (-O3) | 45.8 to 46.4 (-O2), 31.9 to 32.5 (-O3) | 25.1 to 26.1 |
+| `axpy`, 2 limbs, N = 16 | 25.5 to 27.1 (-O2), 24.2 to 25.7 (-O3) | 27.1 to 28.5 | 56.5 to 57.4 (-O2), 44.9 to 46.1 (-O3) | 36.3 to 37.5 |
+| `axpy`, 2 limbs, N = 64 | 94.1 to 98 | 95.3 to 96.3 (-O2), 97.9 to 102 (-O3) | 131 to 133 (-O2), 125 to 128 (-O3) | 113 to 116 |
+| `conv`, 1 limb, N = 4 | 7.67 to 7.73 | 17.7 (-O2), 7.11 to 7.12 (-O3) | 33.4 to 33.9 (-O2), 30.5 to 31.2 (-O3) | 41.3 to 42.3 (-O2), 20.2 to 20.4 (-O3) |
+| `conv`, 1 limb, N = 8 | 30.7 to 31.2 | 42.6 to 43.8 (-O2), 28.4 to 28.9 (-O3) | 86.9 to 89.7 (-O2), 62.8 to 64.3 (-O3) | 75.4 to 77.8 |
+| `conv`, 1 limb, N = 16 | 107 to 108 | 116 to 120 (-O2), 79.8 to 84.3 (-O3) | 277 to 281 (-O2), 194 to 198 (-O3) | 193 to 198 |
+| `conv`, 1 limb, N = 64 | 1772 to 1845 | 1769 to 1882 (-O2), 1777 to 1781 (-O3) | 3913 to 4036 | 3023 to 3089 |
+| `conv`, 2 limbs, N = 4 | 49.9 to 53.3 (-O2), 49.8 to 52.5 (-O3) | 52 to 54 (-O2), 47.8 to 49.4 (-O3) | 138 to 143 | 142 to 146 |
+| `conv`, 2 limbs, N = 8 | 208 to 223 (-O2), 208 to 223 (-O3) | 224 to 226 (-O2), 204 (-O3) | 575 to 588 | 583 to 597 |
+| `conv`, 2 limbs, N = 16 | 1038 to 1065 (-O2), 1027 to 1097 (-O3) | 1033 to 1079 (-O2), 1012 to 1086 (-O3) | 2455 to 2509 | 2432 to 2495 |
+| `conv`, 2 limbs, N = 64 | 25060 to 25540 (-O2), 24800 to 26080 (-O3) | 24810 to 25240 | 41060 to 42030 | 41160 to 42080 |
+| `norm`, 1 limb, N = 4 | 1.98 to 1.99 | 1.67 (-O2), 1.75 to 1.77 (-O3) | 8.43 to 8.65 | 8.46 to 8.66 |
+| `norm`, 1 limb, N = 8 | 2.86 to 2.93 | 2.77 to 2.82 (-O2), 2.37 to 2.44 (-O3) | 8.79 to 9.18 | 8.61 to 8.84 |
+| `norm`, 1 limb, N = 16 | 4.18 to 4.3 | 4.42 to 4.45 (-O2), 3.7 to 3.77 (-O3) | 9.5 to 9.71 (-O2), 9.09 to 9.32 (-O3) | 8.87 to 9.07 |
+| `norm`, 1 limb, N = 64 | 17.8 to 18.1 (-O2), 16.9 to 18.1 (-O3) | 19.3 to 20.5 (-O2), 17.8 to 18.5 (-O3) | 15.1 to 15.3 (-O2), 13.3 to 13.6 (-O3) | 14.3 to 14.7 (-O2), 14.5 to 31.9 (-O3) |
+| `norm`, 2 limbs, N = 4 | 2.44 to 2.46 | 1.98 to 1.99 (-O2), 2.06 to 2.1 (-O3) | 9.41 to 9.57 (-O2), 9.06 to 9.23 (-O3) | 9.4 to 9.62 |
+| `norm`, 2 limbs, N = 8 | 3.04 to 3.12 | 3.35 to 3.39 (-O2), 2.53 to 2.54 (-O3) | 9.41 to 9.74 | 9.4 to 9.6 |
+| `norm`, 2 limbs, N = 16 | 4.54 to 5.88 (-O2), 4.51 to 5.89 (-O3) | 4.64 to 4.69 (-O2), 3.81 to 3.85 (-O3) | 10.9 to 11.1 (-O2), 10 to 10.1 (-O3) | 9.84 to 10.1 |
+| `norm`, 2 limbs, N = 64 | 19 to 19.4 (-O2), 18.3 to 19.4 (-O3) | 21.3 to 22.4 (-O2), 18.9 to 20 (-O3) | 23.2 to 23.6 (-O2), 15.7 to 16 (-O3) | 15.3 to 15.6 |
 
-| N balls over one BallVector | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, 1 limb, N = 4 | 0.84 (-O2), 1.54 (-O3) | 0.77 |
-| `add`, 1 limb, N = 8 | 1.53 (-O2), 1.47 to 1.50 (-O3) | 1.61 to 1.62 (-O2), 1.44 (-O3) |
-| `add`, 1 limb, N = 16 | 2.50 to 2.51 (-O2), 2.66 to 2.67 (-O3) | 2.99 to 3.02 |
-| `add`, 1 limb, N = 64 | 4.49 to 4.55 (-O2), 5.83 to 5.85 (-O3) | 5.77 to 5.78 (-O2), 6.09 to 6.12 (-O3) |
-| `add`, 2 limbs, N = 4 | 1.15 to 1.16 (-O2), 1.84 to 1.85 (-O3) | 2.05 to 2.09 |
-| `add`, 2 limbs, N = 8 | 2.06 to 2.08 (-O2), 2.78 to 2.80 (-O3) | 2.88 to 2.89 |
-| `add`, 2 limbs, N = 16 | 3.08 to 3.11 (-O2), 2.70 to 2.71 (-O3) | 3.73 to 3.76 |
-| `add`, 2 limbs, N = 64 | 4.46 to 4.48 (-O2), 4.14 to 4.18 (-O3) | 4.29 to 4.35 |
-| `sub`, 1 limb, N = 4 | 0.84 (-O2), 1.54 to 1.55 (-O3) | 0.77 |
-| `sub`, 1 limb, N = 8 | 1.53 to 1.54 (-O2), 1.47 to 1.49 (-O3) | 1.60 to 1.61 (-O2), 1.44 to 1.45 (-O3) |
-| `sub`, 1 limb, N = 16 | 2.51 to 2.52 (-O2), 2.66 to 2.67 (-O3) | 3.00 to 3.03 |
-| `sub`, 1 limb, N = 64 | 4.95 to 4.97 (-O2), 5.86 to 5.89 (-O3) | 5.75 to 5.77 (-O2), 6.18 to 6.19 (-O3) |
-| `sub`, 2 limbs, N = 4 | 1.18 (-O2), 1.86 to 1.87 (-O3) | 2.09 to 2.10 |
-| `sub`, 2 limbs, N = 8 | 2.08 to 2.09 (-O2), 2.41 to 2.45 (-O3) | 2.84 to 2.87 |
-| `sub`, 2 limbs, N = 16 | 3.09 (-O2), 2.69 (-O3) | 3.51 to 3.52 (-O2), 3.70 to 3.71 (-O3) |
-| `sub`, 2 limbs, N = 64 | 4.44 to 4.45 (-O2), 3.29 to 3.30 (-O3) | 4.30 to 4.33 |
-| `scale`, 1 limb, N = 4 | 0.85 (-O2), 1.21 (-O3) | 0.72 |
-| `scale`, 1 limb, N = 8 | 1.45 to 1.46 (-O2), 1.37 to 1.38 (-O3) | 1.35 to 1.36 |
-| `scale`, 1 limb, N = 16 | 2.55 to 2.56 (-O2), 2.44 to 2.47 (-O3) | 2.72 to 2.75 |
-| `scale`, 1 limb, N = 64 | 5.14 to 5.17 (-O2), 5.24 to 5.31 (-O3) | 5.58 to 5.60 (-O2), 4.48 to 5.42 (-O3) |
-| `scale`, 2 limbs, N = 4 | 0.78 to 0.79 (-O2), 1.33 (-O3) | 1.27 to 1.28 |
-| `scale`, 2 limbs, N = 8 | 1.44 (-O2), 1.99 to 2.00 (-O3) | 2.31 to 2.32 |
-| `scale`, 2 limbs, N = 16 | 2.49 to 2.50 (-O2), 3.33 to 3.34 (-O3) | 3.50 to 3.56 |
-| `scale`, 2 limbs, N = 64 | 4.65 to 4.68 (-O2), 4.18 to 4.20 (-O3) | 4.90 to 4.96 |
-| `axpy`, 1 limb, N = 4 | 0.89 to 0.91 (-O2), 0.71 (-O3) | 0.88 to 0.92 |
-| `axpy`, 1 limb, N = 8 | 1.27 to 1.31 | 1.65 to 1.66 (-O2), 1.58 to 1.65 (-O3) |
-| `axpy`, 1 limb, N = 16 | 1.98 to 2.00 (-O2), 2.11 to 2.21 (-O3) | 2.91 to 2.98 (-O2), 2.81 to 2.89 (-O3) |
-| `axpy`, 1 limb, N = 64 | 5.16 to 5.18 (-O2), 4.38 to 4.43 (-O3) | 6.09 to 6.11 (-O2), 5.69 to 6.09 (-O3) |
-| `axpy`, 2 limbs, N = 4 | 0.99 to 1.00 (-O2), 1.19 to 1.23 (-O3) | 1.86 to 1.90 (-O2), 1.92 to 1.93 (-O3) |
-| `axpy`, 2 limbs, N = 8 | 1.81 to 1.82 (-O2), 1.88 to 1.89 (-O3) | 3.03 to 3.09 |
-| `axpy`, 2 limbs, N = 16 | 2.95 (-O2), 2.55 to 2.56 (-O3) | 4.21 to 4.26 |
-| `axpy`, 2 limbs, N = 64 | 5.07 to 5.08 (-O2), 3.76 to 3.77 (-O3) | 5.46 to 5.47 |
-| `conv`, 1 limb, N = 4 | 2.16 to 2.17 (-O2), 2.37 (-O3) | 1.44 to 1.45 (-O2), 2.94 to 2.97 (-O3) |
-| `conv`, 1 limb, N = 8 | 3.20 to 3.36 (-O2), 4.57 to 4.58 (-O3) | 3.14 to 3.18 |
-| `conv`, 1 limb, N = 16 | 4.05 to 4.09 (-O2), 5.81 to 5.84 (-O3) | 5.05 to 5.11 |
-| `conv`, 1 limb, N = 64 | 4.60 to 4.63 | 5.41 to 5.44 |
-| `conv`, 2 limbs, N = 4 | 0.96 to 0.98 | 0.85 to 0.86 |
-| `conv`, 2 limbs, N = 8 | 1.05 to 1.06 | 0.97 |
-| `conv`, 2 limbs, N = 16 | 1.07 to 1.08 | 1.01 to 1.02 |
-| `conv`, 2 limbs, N = 64 | 1.09 | 1.02 to 1.03 |
-| `norm`, 1 limb, N = 4 | 1.67 to 1.71 | 2.08 to 2.09 (-O2), 2.14 to 2.15 (-O3) |
-| `norm`, 1 limb, N = 8 | 3.20 to 3.27 | 3.99 to 4.02 |
-| `norm`, 1 limb, N = 16 | 5.87 to 5.98 (-O2), 6.25 to 6.27 (-O3) | 7.68 to 7.73 |
-| `norm`, 1 limb, N = 64 | 14.6 to 15.2 (-O2), 17.2 to 17.4 (-O3) | 19.4 to 19.5 (-O2), 8.8 to 19.5 (-O3) |
-| `norm`, 2 limbs, N = 4 | 2.35 to 2.36 (-O2), 2.44 to 2.45 (-O3) | 3.59 to 3.61 |
-| `norm`, 2 limbs, N = 8 | 4.55 to 4.63 | 7.11 to 7.18 |
-| `norm`, 2 limbs, N = 16 | 7.94 to 8.00 (-O2), 8.70 to 8.85 (-O3) | 13.6 |
-| `norm`, 2 limbs, N = 64 | 14.7 to 14.9 (-O2), 22.0 to 22.1 (-O3) | 35.2 to 35.6 (-O2), 34.5 to 34.8 (-O3) |
+| N balls over one BallVector | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, 1 limb, N = 4 | 1.28 to 1.30 | 1.05 (-O2), 0.90 to 0.93 (-O3) | 0.84 (-O2), 1.54 (-O3) | 0.77 |
+| `add`, 1 limb, N = 8 | 2.38 to 2.45 (-O2), 2.04 to 2.08 (-O3) | 1.40 to 1.41 (-O2), 1.74 to 1.75 (-O3) | 1.53 (-O2), 1.47 to 1.50 (-O3) | 1.61 to 1.62 (-O2), 1.44 (-O3) |
+| `add`, 1 limb, N = 16 | 2.61 to 2.73 (-O2), 2.66 to 2.71 (-O3) | 2.13 to 2.14 (-O2), 2.53 to 2.55 (-O3) | 2.50 to 2.51 (-O2), 2.66 to 2.67 (-O3) | 2.99 to 3.02 |
+| `add`, 1 limb, N = 64 | 2.44 to 2.47 | 1.78 to 1.85 (-O2), 2.12 to 2.16 (-O3) | 4.49 to 4.55 (-O2), 5.83 to 5.85 (-O3) | 5.77 to 5.78 (-O2), 6.09 to 6.12 (-O3) |
+| `add`, 2 limbs, N = 4 | 1.48 to 1.59 (-O2), 1.46 to 1.52 (-O3) | 1.16 to 1.22 (-O2), 1.61 to 1.66 (-O3) | 1.15 to 1.16 (-O2), 1.84 to 1.85 (-O3) | 2.05 to 2.09 |
+| `add`, 2 limbs, N = 8 | 1.68 to 1.69 (-O2), 1.59 to 1.62 (-O3) | 1.47 to 1.54 (-O2), 1.73 to 1.83 (-O3) | 2.06 to 2.08 (-O2), 2.78 to 2.80 (-O3) | 2.88 to 2.89 |
+| `add`, 2 limbs, N = 16 | 1.66 to 1.82 (-O2), 1.81 to 1.88 (-O3) | 1.73 to 1.77 (-O2), 1.83 to 1.97 (-O3) | 3.08 to 3.11 (-O2), 2.70 to 2.71 (-O3) | 3.73 to 3.76 |
+| `add`, 2 limbs, N = 64 | 1.98 to 2.05 (-O2), 1.96 to 2.10 (-O3) | 2.03 to 2.11 (-O2), 2.06 to 2.17 (-O3) | 4.46 to 4.48 (-O2), 4.14 to 4.18 (-O3) | 4.29 to 4.35 |
+| `sub`, 1 limb, N = 4 | 1.28 to 1.29 | 1.05 (-O2), 0.92 to 0.93 (-O3) | 0.84 (-O2), 1.54 to 1.55 (-O3) | 0.77 |
+| `sub`, 1 limb, N = 8 | 2.33 (-O2), 2.09 to 2.10 (-O3) | 1.40 to 1.42 (-O2), 1.75 to 1.76 (-O3) | 1.53 to 1.54 (-O2), 1.47 to 1.49 (-O3) | 1.60 to 1.61 (-O2), 1.44 to 1.45 (-O3) |
+| `sub`, 1 limb, N = 16 | 2.61 to 2.68 (-O2), 2.59 to 2.61 (-O3) | 2.12 to 2.13 (-O2), 2.54 to 2.55 (-O3) | 2.51 to 2.52 (-O2), 2.66 to 2.67 (-O3) | 3.00 to 3.03 |
+| `sub`, 1 limb, N = 64 | 2.46 to 2.47 (-O2), 2.46 to 2.60 (-O3) | 1.85 to 1.93 (-O2), 2.13 to 2.15 (-O3) | 4.95 to 4.97 (-O2), 5.86 to 5.89 (-O3) | 5.75 to 5.77 (-O2), 6.18 to 6.19 (-O3) |
+| `sub`, 2 limbs, N = 4 | 1.49 to 1.50 (-O2), 1.42 to 1.45 (-O3) | 1.23 to 1.29 (-O2), 1.64 to 1.68 (-O3) | 1.18 (-O2), 1.86 to 1.87 (-O3) | 2.09 to 2.10 |
+| `sub`, 2 limbs, N = 8 | 1.58 to 1.65 (-O2), 1.52 to 1.56 (-O3) | 1.45 to 1.53 (-O2), 1.68 to 1.77 (-O3) | 2.08 to 2.09 (-O2), 2.41 to 2.45 (-O3) | 2.84 to 2.87 |
+| `sub`, 2 limbs, N = 16 | 1.70 to 1.78 (-O2), 1.79 to 1.84 (-O3) | 1.76 to 1.84 (-O2), 1.88 to 2.01 (-O3) | 3.09 (-O2), 2.69 (-O3) | 3.51 to 3.52 (-O2), 3.70 to 3.71 (-O3) |
+| `sub`, 2 limbs, N = 64 | 1.97 to 2.01 (-O2), 1.96 to 2.03 (-O3) | 1.89 to 2.08 (-O2), 2.13 to 2.18 (-O3) | 4.44 to 4.45 (-O2), 3.29 to 3.30 (-O3) | 4.30 to 4.33 |
+| `scale`, 1 limb, N = 4 | 1.15 | 0.99 (-O2), 0.91 to 0.92 (-O3) | 0.85 (-O2), 1.21 (-O3) | 0.72 |
+| `scale`, 1 limb, N = 8 | 2.04 to 2.07 (-O2), 1.83 to 1.84 (-O3) | 1.29 to 1.32 (-O2), 1.57 to 1.61 (-O3) | 1.45 to 1.46 (-O2), 1.37 to 1.38 (-O3) | 1.35 to 1.36 |
+| `scale`, 1 limb, N = 16 | 2.53 to 2.54 | 1.94 to 1.97 (-O2), 2.23 to 2.24 (-O3) | 2.55 to 2.56 (-O2), 2.44 to 2.47 (-O3) | 2.72 to 2.75 |
+| `scale`, 1 limb, N = 64 | 2.23 to 2.26 (-O2), 2.32 to 2.33 (-O3) | 1.74 to 1.76 (-O2), 2.13 to 2.14 (-O3) | 5.14 to 5.17 (-O2), 5.24 to 5.31 (-O3) | 5.58 to 5.60 (-O2), 4.48 to 5.42 (-O3) |
+| `scale`, 2 limbs, N = 4 | 1.26 to 1.27 (-O2), 1.17 to 1.18 (-O3) | 0.77 to 0.79 (-O2), 1.18 to 1.21 (-O3) | 0.78 to 0.79 (-O2), 1.33 (-O3) | 1.27 to 1.28 |
+| `scale`, 2 limbs, N = 8 | 1.53 to 1.56 (-O2), 1.42 to 1.45 (-O3) | 1.21 to 1.25 (-O2), 1.58 to 1.65 (-O3) | 1.44 (-O2), 1.99 to 2.00 (-O3) | 2.31 to 2.32 |
+| `scale`, 2 limbs, N = 16 | 1.63 to 1.95 (-O2), 1.64 to 2.00 (-O3) | 1.64 to 1.71 (-O2), 2.09 to 2.12 (-O3) | 2.49 to 2.50 (-O2), 3.33 to 3.34 (-O3) | 3.50 to 3.56 |
+| `scale`, 2 limbs, N = 64 | 2.04 to 2.07 (-O2), 1.97 to 2.00 (-O3) | 1.86 to 1.94 (-O2), 2.01 to 2.13 (-O3) | 4.65 to 4.68 (-O2), 4.18 to 4.20 (-O3) | 4.90 to 4.96 |
+| `axpy`, 1 limb, N = 4 | 1.00 to 1.04 | 1.15 to 1.16 (-O2), 0.93 to 0.95 (-O3) | 0.89 to 0.91 (-O2), 0.71 (-O3) | 0.88 to 0.92 |
+| `axpy`, 1 limb, N = 8 | 1.57 to 1.61 (-O2), 1.61 to 1.67 (-O3) | 1.18 to 1.19 (-O2), 1.59 to 1.60 (-O3) | 1.27 to 1.31 | 1.65 to 1.66 (-O2), 1.58 to 1.65 (-O3) |
+| `axpy`, 1 limb, N = 16 | 2.12 to 2.19 (-O2), 2.01 to 2.14 (-O3) | 1.62 to 1.64 (-O2), 2.15 to 2.23 (-O3) | 1.98 to 2.00 (-O2), 2.11 to 2.21 (-O3) | 2.91 to 2.98 (-O2), 2.81 to 2.89 (-O3) |
+| `axpy`, 1 limb, N = 64 | 2.13 to 2.25 (-O2), 2.18 to 2.28 (-O3) | 1.70 to 1.79 (-O2), 2.01 to 2.02 (-O3) | 5.16 to 5.18 (-O2), 4.38 to 4.43 (-O3) | 6.09 to 6.11 (-O2), 5.69 to 6.09 (-O3) |
+| `axpy`, 2 limbs, N = 4 | 1.35 to 1.37 (-O2), 1.31 to 1.35 (-O3) | 0.98 to 1.02 (-O2), 1.43 (-O3) | 0.99 to 1.00 (-O2), 1.19 to 1.23 (-O3) | 1.86 to 1.90 (-O2), 1.92 to 1.93 (-O3) |
+| `axpy`, 2 limbs, N = 8 | 1.67 to 1.79 (-O2), 1.66 to 1.70 (-O3) | 1.35 (-O2), 1.64 to 1.75 (-O3) | 1.81 to 1.82 (-O2), 1.88 to 1.89 (-O3) | 3.03 to 3.09 |
+| `axpy`, 2 limbs, N = 16 | 1.81 to 1.99 (-O2), 1.87 to 2.04 (-O3) | 1.77 to 1.81 (-O2), 1.83 to 1.89 (-O3) | 2.95 (-O2), 2.55 to 2.56 (-O3) | 4.21 to 4.26 |
+| `axpy`, 2 limbs, N = 64 | 2.04 to 2.09 (-O2), 2.02 to 2.08 (-O3) | 2.08 to 2.11 (-O2), 1.98 to 2.03 (-O3) | 5.07 to 5.08 (-O2), 3.76 to 3.77 (-O3) | 5.46 to 5.47 |
+| `conv`, 1 limb, N = 4 | 3.39 to 3.42 (-O2), 3.31 to 3.39 (-O3) | 1.55 (-O2), 3.74 to 3.85 (-O3) | 2.16 to 2.17 (-O2), 2.37 (-O3) | 1.44 to 1.45 (-O2), 2.94 to 2.97 (-O3) |
+| `conv`, 1 limb, N = 8 | 3.68 to 3.74 | 2.49 to 2.74 (-O2), 3.89 to 4.07 (-O3) | 3.20 to 3.36 (-O2), 4.57 to 4.58 (-O3) | 3.14 to 3.18 |
+| `conv`, 1 limb, N = 16 | 4.50 to 4.55 | 4.21 to 4.34 (-O2), 5.86 to 6.19 (-O3) | 4.05 to 4.09 (-O2), 5.81 to 5.84 (-O3) | 5.05 to 5.11 |
+| `conv`, 1 limb, N = 64 | 5.18 to 5.48 (-O2), 5.29 to 5.35 (-O3) | 5.24 to 5.57 (-O2), 5.44 to 5.71 (-O3) | 4.60 to 4.63 | 5.41 to 5.44 |
+| `conv`, 2 limbs, N = 4 | 0.93 to 0.96 (-O2), 0.93 to 1.02 (-O3) | 0.98 to 1.00 (-O2), 1.01 to 1.11 (-O3) | 0.96 to 0.98 | 0.85 to 0.86 |
+| `conv`, 2 limbs, N = 8 | 1.09 to 1.14 | 1.09 to 1.17 (-O2), 1.19 to 1.26 (-O3) | 1.05 to 1.06 | 0.97 |
+| `conv`, 2 limbs, N = 16 | 1.12 to 1.16 | 1.14 to 1.20 (-O2), 1.15 to 1.22 (-O3) | 1.07 to 1.08 | 1.01 to 1.02 |
+| `conv`, 2 limbs, N = 64 | 1.05 to 1.07 (-O2), 1.02 to 1.08 (-O3) | 1.06 to 1.08 | 1.09 | 1.02 to 1.03 |
+| `norm`, 1 limb, N = 4 | 4.23 to 4.31 | 3.53 to 3.54 (-O2), 3.33 to 3.49 (-O3) | 1.67 to 1.71 | 2.08 to 2.09 (-O2), 2.14 to 2.15 (-O3) |
+| `norm`, 1 limb, N = 8 | 5.79 to 5.86 | 4.41 to 4.56 (-O2), 4.85 to 4.98 (-O3) | 3.20 to 3.27 | 3.99 to 4.02 |
+| `norm`, 1 limb, N = 16 | 7.60 to 8.02 (-O2), 7.81 to 8.19 (-O3) | 4.96 to 5.29 (-O2), 5.95 to 6.27 (-O3) | 5.87 to 5.98 (-O2), 6.25 to 6.27 (-O3) | 7.68 to 7.73 |
+| `norm`, 1 limb, N = 64 | 7.31 to 7.62 (-O2), 7.99 to 8.44 (-O3) | 4.54 to 4.67 (-O2), 5.26 to 5.55 (-O3) | 14.6 to 15.2 (-O2), 17.2 to 17.4 (-O3) | 19.4 to 19.5 (-O2), 8.8 to 19.5 (-O3) |
+| `norm`, 2 limbs, N = 4 | 5.17 to 5.27 | 4.13 (-O2), 4.02 to 4.17 (-O3) | 2.35 to 2.36 (-O2), 2.44 to 2.45 (-O3) | 3.59 to 3.61 |
+| `norm`, 2 limbs, N = 8 | 8.16 to 8.35 (-O2), 8.38 to 8.58 (-O3) | 4.74 to 4.90 (-O2), 6.16 to 6.46 (-O3) | 4.55 to 4.63 | 7.11 to 7.18 |
+| `norm`, 2 limbs, N = 16 | 8.6 to 11.1 (-O2), 8.7 to 11.2 (-O3) | 7.10 to 7.19 (-O2), 8.57 to 8.69 (-O3) | 7.94 to 8.00 (-O2), 8.70 to 8.85 (-O3) | 13.6 |
+| `norm`, 2 limbs, N = 64 | 10.1 to 10.6 (-O2), 10.3 to 11.0 (-O3) | 5.82 to 6.07 (-O2), 6.50 to 6.54 (-O3) | 14.7 to 14.9 (-O2), 22.0 to 22.1 (-O3) | 35.2 to 35.6 (-O2), 34.5 to 34.8 (-O3) |
 
-| BallVector: kairn::sequential over the default order | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, 1 limb, N = 4 | 1.00 to 1.03 | 1.07 to 1.11 |
-| `add`, 1 limb, N = 64 | 2.62 to 2.65 (-O2), 3.72 to 3.73 (-O3) | 2.25 to 2.26 (-O2), 2.45 to 2.46 (-O3) |
-| `add`, 2 limbs, N = 4 | 1.11 (-O2), 1.76 (-O3) | 2.44 to 2.46 |
-| `add`, 2 limbs, N = 64 | 3.42 to 3.48 | 3.48 to 3.50 |
-| `scale`, 1 limb, N = 4 | 1.02 | 0.99 to 1.00 |
-| `scale`, 1 limb, N = 64 | 2.82 to 2.86 (-O2), 3.50 to 3.53 (-O3) | 2.45 to 2.46 (-O2), 2.02 to 2.45 (-O3) |
-| `scale`, 2 limbs, N = 4 | 0.80 to 0.81 (-O2), 1.29 to 1.30 (-O3) | 1.26 to 1.27 (-O2), 1.21 to 1.22 (-O3) |
-| `scale`, 2 limbs, N = 64 | 2.93 to 2.95 (-O2), 3.11 to 3.12 (-O3) | 3.22 to 3.25 |
-| `axpy`, 1 limb, N = 4 | 1.00 to 1.01 | 0.92 to 0.96 |
-| `axpy`, 1 limb, N = 64 | 2.85 to 2.86 (-O2), 3.36 to 3.39 (-O3) | 2.45 to 2.46 (-O2), 2.27 to 2.44 (-O3) |
-| `axpy`, 2 limbs, N = 4 | 1.12 to 1.14 (-O2), 1.52 to 1.55 (-O3) | 2.21 to 2.26 (-O2), 2.27 to 2.29 (-O3) |
-| `axpy`, 2 limbs, N = 64 | 3.29 (-O2), 3.43 to 3.44 (-O3) | 3.57 to 3.58 |
-| `norm`, 1 limb, N = 4 | 1.04 to 1.06 | 1.00 |
-| `norm`, 1 limb, N = 64 | 3.62 to 3.65 (-O2), 4.35 to 4.52 (-O3) | 2.72 to 2.75 (-O2), 1.21 to 2.66 (-O3) |
-| `norm`, 2 limbs, N = 4 | 1.06 to 1.10 | 1.06 to 1.07 |
-| `norm`, 2 limbs, N = 64 | 2.52 to 2.57 (-O2), 3.98 to 4.03 (-O3) | 2.74 to 2.81 |
+| BallVector: kairn::sequential over the default order | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, 1 limb, N = 4 | 1.17 to 1.19 | 1.42 to 1.44 (-O2), 1.29 to 1.33 (-O3) | 1.00 to 1.03 | 1.07 to 1.11 |
+| `add`, 1 limb, N = 64 | 1.51 to 1.54 (-O2), 1.44 to 1.51 (-O3) | 4.70 to 4.83 (-O2), 5.75 to 5.98 (-O3) | 2.62 to 2.65 (-O2), 3.72 to 3.73 (-O3) | 2.25 to 2.26 (-O2), 2.45 to 2.46 (-O3) |
+| `add`, 2 limbs, N = 4 | 1.72 to 1.81 (-O2), 1.74 to 1.79 (-O3) | 1.15 to 1.20 (-O2), 1.58 to 1.59 (-O3) | 1.11 (-O2), 1.76 (-O3) | 2.44 to 2.46 |
+| `add`, 2 limbs, N = 64 | 1.64 to 1.77 (-O2), 1.63 to 1.80 (-O3) | 2.51 to 2.56 (-O2), 2.54 to 2.63 (-O3) | 3.42 to 3.48 | 3.48 to 3.50 |
+| `scale`, 1 limb, N = 4 | 0.97 to 0.98 | 1.44 to 1.45 (-O2), 1.29 to 1.31 (-O3) | 1.02 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 64 | 2.34 to 2.39 (-O2), 1.50 to 1.62 (-O3) | 4.80 to 4.83 (-O2), 6.47 to 6.64 (-O3) | 2.82 to 2.86 (-O2), 3.50 to 3.53 (-O3) | 2.45 to 2.46 (-O2), 2.02 to 2.45 (-O3) |
+| `scale`, 2 limbs, N = 4 | 1.22 | 0.94 to 0.95 (-O2), 1.26 to 1.27 (-O3) | 0.80 to 0.81 (-O2), 1.29 to 1.30 (-O3) | 1.26 to 1.27 (-O2), 1.21 to 1.22 (-O3) |
+| `scale`, 2 limbs, N = 64 | 1.32 to 1.36 | 3.85 to 3.90 (-O2), 4.03 to 4.23 (-O3) | 2.93 to 2.95 (-O2), 3.11 to 3.12 (-O3) | 3.22 to 3.25 |
+| `axpy`, 1 limb, N = 4 | 2.19 to 2.32 (-O2), 2.34 to 2.55 (-O3) | 1.57 to 1.59 (-O2), 1.15 to 1.17 (-O3) | 1.00 to 1.01 | 0.92 to 0.96 |
+| `axpy`, 1 limb, N = 64 | 1.49 to 1.63 (-O2), 1.48 to 1.58 (-O3) | 4.73 to 4.86 (-O2), 5.95 to 6.16 (-O3) | 2.85 to 2.86 (-O2), 3.36 to 3.39 (-O3) | 2.45 to 2.46 (-O2), 2.27 to 2.44 (-O3) |
+| `axpy`, 2 limbs, N = 4 | 1.45 to 1.50 | 1.07 to 1.14 (-O2), 1.45 to 1.48 (-O3) | 1.12 to 1.14 (-O2), 1.52 to 1.55 (-O3) | 2.21 to 2.26 (-O2), 2.27 to 2.29 (-O3) |
+| `axpy`, 2 limbs, N = 64 | 1.56 to 1.61 (-O2), 1.55 to 1.58 (-O3) | 3.08 to 3.18 (-O2), 3.01 to 3.17 (-O3) | 3.29 (-O2), 3.43 to 3.44 (-O3) | 3.57 to 3.58 |
+| `norm`, 1 limb, N = 4 | 0.95 to 0.96 (-O2), 1.07 (-O3) | 2.04 to 2.06 (-O2), 1.16 to 1.18 (-O3) | 1.04 to 1.06 | 1.00 |
+| `norm`, 1 limb, N = 64 | 1.71 to 1.77 (-O2), 1.64 to 1.78 (-O3) | 6.10 to 6.47 (-O2), 6.76 to 7.04 (-O3) | 3.62 to 3.65 (-O2), 4.35 to 4.52 (-O3) | 2.72 to 2.75 (-O2), 1.21 to 2.66 (-O3) |
+| `norm`, 2 limbs, N = 4 | 1.09 to 1.10 | 1.97 (-O2), 1.28 to 1.30 (-O3) | 1.06 to 1.10 | 1.06 to 1.07 |
+| `norm`, 2 limbs, N = 64 | 1.67 to 1.76 (-O2), 1.70 to 1.78 (-O3) | 5.69 to 5.90 (-O2), 6.28 to 6.64 (-O3) | 2.52 to 2.57 (-O2), 3.98 to 4.03 (-O3) | 2.74 to 2.81 |
 
-| BallVector: the public operation over its generated loop called directly | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| `add`, 1 limb, N = 4 | 1.24 (-O2), 1.37 (-O3) | 1.56 to 1.59 |
-| `add`, 1 limb, N = 64 | 1.08 to 1.17 (-O2), 0.94 to 0.95 (-O3) | 0.95 to 0.99 |
-| `add`, 2 limbs, N = 4 | 1.72 to 1.73 (-O2), 1.21 (-O3) | 1.20 to 1.21 |
-| `add`, 2 limbs, N = 64 | 1.06 to 1.10 | 1.07 to 1.08 |
-| `scale`, 1 limb, N = 4 | 1.25 (-O2), 1.40 (-O3) | 1.58 to 1.62 (-O2), 1.35 to 1.59 (-O3) |
-| `scale`, 1 limb, N = 64 | 1.04 to 1.05 (-O2), 0.95 to 0.96 (-O3) | 0.92 to 0.95 (-O2), 0.77 to 1.17 (-O3) |
-| `scale`, 2 limbs, N = 4 | 1.81 to 1.84 (-O2), 1.18 to 1.19 (-O3) | 1.38 to 1.40 |
-| `scale`, 2 limbs, N = 64 | 1.10 to 1.15 | 1.05 to 1.07 |
-| `axpy`, 1 limb, N = 4 | 1.12 to 1.13 (-O2), 1.17 to 1.18 (-O3) | 1.25 to 1.30 (-O2), 1.18 to 1.28 (-O3) |
-| `axpy`, 1 limb, N = 64 | 1.00 to 1.07 (-O2), 1.11 to 1.12 (-O3) | 0.96 to 0.97 (-O2), 0.98 to 1.09 (-O3) |
-| `axpy`, 2 limbs, N = 4 | 1.83 to 1.86 (-O2), 1.19 to 1.23 (-O3) | 1.24 to 1.26 (-O2), 1.17 to 1.23 (-O3) |
-| `axpy`, 2 limbs, N = 64 | 1.05 to 1.09 | 1.01 to 1.02 |
-| `conv`, 1 limb, N = 4 | 1.20 to 1.22 | 1.11 to 1.12 (-O2), 1.18 to 1.19 (-O3) |
-| `conv`, 1 limb, N = 64 | 0.99 to 1.00 | 1.00 |
-| `conv`, 2 limbs, N = 4 | 1.00 to 1.01 | 1.01 |
-| `conv`, 2 limbs, N = 64 | 1.00 | 1.00 |
-| `norm`, 1 limb, N = 4 | 1.92 to 1.94 (-O2), 2.29 to 2.30 (-O3) | 2.09 to 2.11 |
-| `norm`, 1 limb, N = 64 | 1.03 to 1.08 (-O2), 1.15 (-O3) | 1.16 to 1.17 (-O2), 1.16 to 1.23 (-O3) |
-| `norm`, 2 limbs, N = 4 | 1.43 to 1.44 (-O2), 1.64 to 1.65 (-O3) | 1.41 to 1.42 |
-| `norm`, 2 limbs, N = 64 | 1.43 (-O2), 1.19 to 1.20 (-O3) | 1.20 to 1.23 |
+| BallVector: the public operation over its generated loop called directly | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add`, 1 limb, N = 4 | 1.12 to 1.14 (-O2), 1.02 to 1.13 (-O3) | 1.33 to 1.34 (-O2), 1.27 to 1.29 (-O3) | 1.24 (-O2), 1.37 (-O3) | 1.56 to 1.59 |
+| `add`, 1 limb, N = 64 | 0.99 to 1.03 | 1.08 to 1.09 (-O2), 1.04 to 1.06 (-O3) | 1.08 to 1.17 (-O2), 0.94 to 0.95 (-O3) | 0.95 to 0.99 |
+| `add`, 2 limbs, N = 4 | 1.02 (-O2), 0.99 to 1.05 (-O3) | 1.31 to 1.32 (-O2), 1.04 to 1.06 (-O3) | 1.72 to 1.73 (-O2), 1.21 (-O3) | 1.20 to 1.21 |
+| `add`, 2 limbs, N = 64 | 1.00 to 1.02 (-O2), 0.96 to 1.07 (-O3) | 0.98 to 1.01 (-O2), 1.02 to 1.06 (-O3) | 1.06 to 1.10 | 1.07 to 1.08 |
+| `scale`, 1 limb, N = 4 | 1.14 to 1.16 (-O2), 1.01 to 1.15 (-O3) | 1.28 (-O2), 1.22 to 1.24 (-O3) | 1.25 (-O2), 1.40 (-O3) | 1.58 to 1.62 (-O2), 1.35 to 1.59 (-O3) |
+| `scale`, 1 limb, N = 64 | 0.99 to 1.01 (-O2), 1.00 to 1.06 (-O3) | 1.12 to 1.14 (-O2), 0.99 to 1.02 (-O3) | 1.04 to 1.05 (-O2), 0.95 to 0.96 (-O3) | 0.92 to 0.95 (-O2), 0.77 to 1.17 (-O3) |
+| `scale`, 2 limbs, N = 4 | 1.03 to 1.04 | 1.46 to 1.48 (-O2), 1.16 to 1.17 (-O3) | 1.81 to 1.84 (-O2), 1.18 to 1.19 (-O3) | 1.38 to 1.40 |
+| `scale`, 2 limbs, N = 64 | 0.99 to 1.03 | 0.99 to 1.02 | 1.10 to 1.15 | 1.05 to 1.07 |
+| `axpy`, 1 limb, N = 4 | 1.11 to 1.14 (-O2), 1.01 to 1.08 (-O3) | 1.10 to 1.12 (-O2), 1.30 to 1.31 (-O3) | 1.12 to 1.13 (-O2), 1.17 to 1.18 (-O3) | 1.25 to 1.30 (-O2), 1.18 to 1.28 (-O3) |
+| `axpy`, 1 limb, N = 64 | 0.97 to 1.02 (-O2), 0.96 to 1.00 (-O3) | 1.08 to 1.10 (-O2), 1.03 to 1.06 (-O3) | 1.00 to 1.07 (-O2), 1.11 to 1.12 (-O3) | 0.96 to 0.97 (-O2), 0.98 to 1.09 (-O3) |
+| `axpy`, 2 limbs, N = 4 | 1.05 to 1.09 | 1.45 to 1.51 (-O2), 1.12 to 1.14 (-O3) | 1.83 to 1.86 (-O2), 1.19 to 1.23 (-O3) | 1.24 to 1.26 (-O2), 1.17 to 1.23 (-O3) |
+| `axpy`, 2 limbs, N = 64 | 0.99 to 1.06 (-O2), 0.98 to 1.05 (-O3) | 0.98 (-O2), 1.08 to 1.11 (-O3) | 1.05 to 1.09 | 1.01 to 1.02 |
+| `conv`, 1 limb, N = 4 | 1.08 to 1.09 (-O2), 0.99 to 1.09 (-O3) | 0.98 to 1.01 (-O2), 1.14 (-O3) | 1.20 to 1.22 | 1.11 to 1.12 (-O2), 1.18 to 1.19 (-O3) |
+| `conv`, 1 limb, N = 64 | 0.99 to 1.04 (-O2), 1.02 to 1.09 (-O3) | 0.96 to 1.07 (-O2), 1.00 to 1.05 (-O3) | 0.99 to 1.00 | 1.00 |
+| `conv`, 2 limbs, N = 4 | 0.97 to 1.05 (-O2), 1.00 to 1.03 (-O3) | 1.00 to 1.04 (-O2), 0.97 to 1.05 (-O3) | 1.00 to 1.01 | 1.01 |
+| `conv`, 2 limbs, N = 64 | 1.01 to 1.03 (-O2), 1.00 to 1.05 (-O3) | 1.00 to 1.02 | 1.00 | 1.00 |
+| `norm`, 1 limb, N = 4 | 1.05 (-O2), 0.95 to 1.05 (-O3) | 1.00 to 1.03 (-O2), 1.05 to 1.06 (-O3) | 1.92 to 1.94 (-O2), 2.29 to 2.30 (-O3) | 2.09 to 2.11 |
+| `norm`, 1 limb, N = 64 | 1.01 (-O2), 1.05 to 1.07 (-O3) | 1.01 to 1.05 (-O2), 0.99 to 1.02 (-O3) | 1.03 to 1.08 (-O2), 1.15 (-O3) | 1.16 to 1.17 (-O2), 1.16 to 1.23 (-O3) |
+| `norm`, 2 limbs, N = 4 | 1.07 to 1.08 (-O2), 0.99 to 1.00 (-O3) | 1.13 (-O2), 1.17 to 1.21 (-O3) | 1.43 to 1.44 (-O2), 1.64 to 1.65 (-O3) | 1.41 to 1.42 |
+| `norm`, 2 limbs, N = 64 | 1.05 to 1.08 (-O2), 1.01 to 1.10 (-O3) | 0.96 to 0.97 (-O2), 1.10 to 1.13 (-O3) | 1.43 (-O2), 1.19 to 1.20 (-O3) | 1.20 to 1.23 |
 
 | Bytes | N = 4 | N = 8 | N = 16 | N = 64 |
 |---|---:|---:|---:|---:|
@@ -6609,55 +6809,55 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 
 #### Question 19: compile time
 
-| Compile time of the headers, s (minimum wall time; -O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| an empty unit | 0.01; 0.01 | 0.04; 0.04 |
-| `kairn/kairn.hpp` | 0.45; 0.45 | 0.70; 0.70 |
-| `kairn/kairn.hpp`, as packed code | 0.44; 0.44 | 0.70; 0.70 |
-| `kairn/accumulator.hpp` | 0.44; 0.44 | 0.70; 0.70 |
-| `kairn/batch.hpp`, as packed code | 1.21; 1.21 | 1.57; 1.57 |
-| `kairn/ball_vector.hpp`, as packed code | 1.26; 1.26 | 1.66; 1.66 |
-| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 1.24; 1.23 | 1.61; 1.61 |
-| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 1.27; 1.26 | 1.66; 1.66 |
+| Compile time of the headers, s (minimum wall time; -O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| an empty unit | 0.02; 0.02 | 0.05; 0.05 | 0.01; 0.01 | 0.04; 0.04 |
+| `kairn/kairn.hpp` | 0.14; 0.14 | 0.26; 0.26 | 0.45; 0.45 | 0.70; 0.70 |
+| `kairn/kairn.hpp`, as packed code | 0.14; 0.14 | 0.26; 0.26 | 0.44; 0.44 | 0.70; 0.70 |
+| `kairn/accumulator.hpp` | 0.14; 0.14 | 0.26; 0.26 | 0.44; 0.44 | 0.70; 0.70 |
+| `kairn/batch.hpp`, as packed code | 0.27; 0.27 | 0.54; 0.54 | 1.21; 1.21 | 1.57; 1.57 |
+| `kairn/ball_vector.hpp`, as packed code | 0.40; 0.40 | 0.57; 0.57 | 1.26; 1.26 | 1.66; 1.66 |
+| `kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code | 0.28; 0.28 | 0.55; 0.55 | 1.24; 1.23 | 1.61; 1.61 |
+| `kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code | 0.40; 0.40 | 0.57; 0.57 | 1.27; 1.26 | 1.66; 1.66 |
 
-| arrays: compile time, s of processor time (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| 100, inline | 1.60; 1.66 | 2.31; 2.52 |
-| 100, calls | 0.22; 0.22 | 0.23; 0.23 |
-| 1000, inline | 2.77; 2.85 | 8.85; 12.2 |
-| 1000, calls | 3.49; 3.48 | 1.56; 1.58 |
+| arrays: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 100, inline | 0.44; 0.72 | 0.86; 0.94 | 1.60; 1.66 | 2.31; 2.52 |
+| 100, calls | 0.07; 0.07 | 0.18; 0.20 | 0.22; 0.22 | 0.23; 0.23 |
+| 1000, inline | 1.45; 4.61 | 2.70; 3.38 | 2.77; 2.85 | 8.85; 12.2 |
+| 1000, calls | 0.50; 0.52 | 2.16; 2.90 | 3.49; 3.48 | 1.56; 1.58 |
 
-| arrays: peak memory, MB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| 100, inline | 245; 247 | 159; 159 |
-| 100, calls | 35; 35 | 103; 103 |
-| 1000, inline | 304; 305 | 237; 279 |
-| 1000, calls | 100; 101 | 129; 129 |
+| arrays: peak memory, MB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 100, inline | 107; 111 | 224; 229 | 245; 247 | 159; 159 |
+| 100, calls | 56; 56 | 41; 42 | 35; 35 | 103; 103 |
+| 1000, inline | 187; 305 | 306; 310 | 304; 305 | 237; 279 |
+| 1000, calls | 133; 133 | 143; 147 | 100; 101 | 129; 129 |
 
-| arrays: object, KB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| 100, inline | 28; 28 | 59; 76 |
-| 100, calls | 11; 11 | 13; 13 |
-| 1000, inline | 88; 89 | 461; 652 |
-| 1000, calls | 97; 97 | 111; 111 |
+| arrays: object, KB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 100, inline | 23; 60 | 17; 21 | 28; 28 | 59; 76 |
+| 100, calls | 5; 5 | 6; 6 | 11; 11 | 13; 13 |
+| 1000, inline | 162; 527 | 56; 61 | 88; 89 | 461; 652 |
+| 1000, calls | 44; 44 | 55; 58 | 97; 97 | 111; 111 |
 
-| ballvectors: compile time, s of processor time (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| 100, inline | 1.72; 1.91 | 2.12; 2.12 |
-| 100, calls | 0.05; 0.05 | 0.06; 0.06 |
-| 1000, inline | 2.40; 3.12 | 4.37; 4.36 |
-| 1000, calls | 0.31; 0.31 | 0.21; 0.20 |
+| ballvectors: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 100, inline | 0.53; 0.53 | 0.83; 0.97 | 1.72; 1.91 | 2.12; 2.12 |
+| 100, calls | 0.03; 0.03 | 0.09; 0.09 | 0.05; 0.05 | 0.06; 0.06 |
+| 1000, inline | 1.28; 1.32 | 1.48; 1.92 | 2.40; 3.12 | 4.37; 4.36 |
+| 1000, calls | 0.09; 0.09 | 0.44; 0.68 | 0.31; 0.31 | 0.21; 0.20 |
 
-| ballvectors: peak memory, MB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| 100, inline | 254; 264 | 164; 164 |
-| 100, calls | 28; 29 | 97; 97 |
-| 1000, inline | 287; 324 | 202; 202 |
-| 1000, calls | 50; 51 | 106; 106 |
+| ballvectors: peak memory, MB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 100, inline | 136; 136 | 239; 250 | 254; 264 | 164; 164 |
+| 100, calls | 37; 37 | 34; 34 | 28; 29 | 97; 97 |
+| 1000, inline | 184; 185 | 320; 333 | 287; 324 | 202; 202 |
+| 1000, calls | 51; 51 | 88; 91 | 50; 51 | 106; 106 |
 
-| ballvectors: object, KB (-O2; -O3) | Zen 2, GCC 13 | Zen 2, Clang 18 |
-|---|---|---|
-| 100, inline | 36; 43 | 47; 48 |
-| 100, calls | 7; 7 | 7; 7 |
-| 1000, inline | 112; 113 | 268; 276 |
-| 1000, calls | 51; 51 | 52; 52 |
+| ballvectors: object, KB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 100, inline | 26; 27 | 18; 24 | 36; 43 | 47; 48 |
+| 100, calls | 4; 4 | 4; 4 | 7; 7 | 7; 7 |
+| 1000, inline | 169; 172 | 68; 70 | 112; 113 | 268; 276 |
+| 1000, calls | 34; 34 | 34; 34 | 51; 51 | 52; 52 |

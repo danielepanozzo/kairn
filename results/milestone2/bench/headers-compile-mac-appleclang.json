@@ -1,0 +1,616 @@
+{
+ "schema": 1,
+ "what": "run",
+ "date": "2026-11-22",
+ "commit": "be95dbb",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity); shared with other jobs",
+  "cpu": "Apple M3 Max",
+  "os": "Darwin",
+  "arch": "arm64"
+ },
+ "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+ "cxx": "c++",
+ "family": "gnu",
+ "flags": "",
+ "pinning": "not pinned",
+ "reps": 7,
+ "configs": {
+  "O2": [
+   "-O2",
+   "-DNDEBUG"
+  ],
+  "O3": [
+   "-O3",
+   "-DNDEBUG"
+  ]
+ },
+ "units": {
+  "empty": {
+   "source": "bench/compile_time/empty.cpp",
+   "packed": false,
+   "description": "an empty translation unit"
+  },
+  "include": {
+   "source": "bench/compile_time/include.cpp",
+   "packed": false,
+   "description": "kairn/kairn.hpp alone"
+  },
+  "include_packed": {
+   "source": "bench/compile_time/include.cpp",
+   "packed": true,
+   "description": "kairn/kairn.hpp alone, compiled as packed code"
+  },
+  "accumulator": {
+   "source": "bench/compile_time/accumulator.cpp",
+   "packed": false,
+   "description": "kairn/accumulator.hpp alone"
+  },
+  "batch": {
+   "source": "bench/compile_time/batch.cpp",
+   "packed": true,
+   "description": "kairn/batch.hpp alone, as packed code"
+  },
+  "ball_vector": {
+   "source": "bench/compile_time/ball_vector.cpp",
+   "packed": true,
+   "description": "kairn/ball_vector.hpp alone, as packed code"
+  },
+  "kairn_batch": {
+   "source": "bench/compile_time/kairn_batch.cpp",
+   "packed": true,
+   "description": "kairn/kairn.hpp and kairn/batch.hpp, as packed code"
+  },
+  "kairn_ball_vector": {
+   "source": "bench/compile_time/kairn_ball_vector.cpp",
+   "packed": true,
+   "description": "kairn/kairn.hpp and kairn/ball_vector.hpp, as packed code"
+  }
+ },
+ "common_flags": {
+  "scalar": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests"
+  ],
+  "packed": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests"
+  ]
+ },
+ "results": [
+  {
+   "unit": "empty",
+   "config": "O2",
+   "wall_s": [
+    0.0199,
+    0.0198,
+    0.02,
+    0.02,
+    0.0209,
+    0.0192,
+    0.0199
+   ],
+   "cpu_s": [
+    0.0168,
+    0.0169,
+    0.017,
+    0.0169,
+    0.0176,
+    0.0161,
+    0.0167
+   ],
+   "peak_mb": [
+    23.7,
+    23.7,
+    23.7,
+    23.7,
+    23.7,
+    23.7,
+    23.8
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-appleclang/empty-O2.o"
+  },
+  {
+   "unit": "empty",
+   "config": "O3",
+   "wall_s": [
+    0.0187,
+    0.0192,
+    0.0188,
+    0.0191,
+    0.0186,
+    0.0179,
+    0.0178
+   ],
+   "cpu_s": [
+    0.016,
+    0.0166,
+    0.0161,
+    0.0163,
+    0.0161,
+    0.0153,
+    0.0152
+   ],
+   "peak_mb": [
+    23.8,
+    23.8,
+    23.8,
+    23.8,
+    23.8,
+    23.8,
+    23.7
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-appleclang/empty-O3.o"
+  },
+  {
+   "unit": "include",
+   "config": "O2",
+   "wall_s": [
+    0.1432,
+    0.1445,
+    0.1436,
+    0.1448,
+    0.1429,
+    0.1384,
+    0.139
+   ],
+   "cpu_s": [
+    0.1404,
+    0.1414,
+    0.1406,
+    0.1415,
+    0.1399,
+    0.1355,
+    0.1361
+   ],
+   "peak_mb": [
+    57.0,
+    57.0,
+    56.9,
+    56.9,
+    56.7,
+    56.8,
+    56.9
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-appleclang/include-O2.o"
+  },
+  {
+   "unit": "include",
+   "config": "O3",
+   "wall_s": [
+    0.1442,
+    0.1443,
+    0.1442,
+    0.1442,
+    0.142,
+    0.1393,
+    0.1418
+   ],
+   "cpu_s": [
+    0.1413,
+    0.1414,
+    0.1405,
+    0.141,
+    0.1385,
+    0.1357,
+    0.1382
+   ],
+   "peak_mb": [
+    57.0,
+    56.9,
+    57.0,
+    57.0,
+    57.1,
+    57.1,
+    56.9
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-appleclang/include-O3.o"
+  },
+  {
+   "unit": "include_packed",
+   "config": "O2",
+   "wall_s": [
+    0.1452,
+    0.1449,
+    0.1439,
+    0.1466,
+    0.1429,
+    0.141,
+    0.14
+   ],
+   "cpu_s": [
+    0.1416,
+    0.1413,
+    0.1406,
+    0.143,
+    0.1393,
+    0.1374,
+    0.1364
+   ],
+   "peak_mb": [
+    57.0,
+    56.8,
+    57.0,
+    57.0,
+    56.9,
+    57.0,
+    56.7
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-appleclang/include_packed-O2.o"
+  },
+  {
+   "unit": "include_packed",
+   "config": "O3",
+   "wall_s": [
+    0.1448,
+    0.1447,
+    0.1456,
+    0.1454,
+    0.1411,
+    0.1407,
+    0.1423
+   ],
+   "cpu_s": [
+    0.1414,
+    0.1412,
+    0.142,
+    0.1419,
+    0.1375,
+    0.137,
+    0.1387
+   ],
+   "peak_mb": [
+    56.8,
+    56.9,
+    57.0,
+    56.9,
+    56.8,
+    57.0,
+    56.8
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-appleclang/include_packed-O3.o"
+  },
+  {
+   "unit": "accumulator",
+   "config": "O2",
+   "wall_s": [
+    0.1442,
+    0.148,
+    0.1438,
+    0.1435,
+    0.1402,
+    0.1408,
+    0.1398
+   ],
+   "cpu_s": [
+    0.1413,
+    0.1443,
+    0.1409,
+    0.1398,
+    0.1366,
+    0.1373,
+    0.1361
+   ],
+   "peak_mb": [
+    56.7,
+    56.8,
+    56.8,
+    56.8,
+    56.6,
+    56.7,
+    56.7
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/accumulator.cpp -o WORK/ct-appleclang/accumulator-O2.o"
+  },
+  {
+   "unit": "accumulator",
+   "config": "O3",
+   "wall_s": [
+    0.1434,
+    0.1461,
+    0.1443,
+    0.1425,
+    0.141,
+    0.1413,
+    0.1413
+   ],
+   "cpu_s": [
+    0.14,
+    0.1425,
+    0.1406,
+    0.1391,
+    0.1373,
+    0.1378,
+    0.138
+   ],
+   "peak_mb": [
+    56.8,
+    56.9,
+    56.8,
+    56.8,
+    56.8,
+    56.8,
+    56.8
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/accumulator.cpp -o WORK/ct-appleclang/accumulator-O3.o"
+  },
+  {
+   "unit": "batch",
+   "config": "O2",
+   "wall_s": [
+    0.2835,
+    0.2823,
+    0.2866,
+    0.2835,
+    0.2785,
+    0.2721,
+    0.2792
+   ],
+   "cpu_s": [
+    0.2802,
+    0.2788,
+    0.2826,
+    0.2796,
+    0.2748,
+    0.2687,
+    0.2755
+   ],
+   "peak_mb": [
+    85.0,
+    84.9,
+    85.0,
+    84.9,
+    84.8,
+    84.7,
+    84.8
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/batch.cpp -o WORK/ct-appleclang/batch-O2.o"
+  },
+  {
+   "unit": "batch",
+   "config": "O3",
+   "wall_s": [
+    0.29,
+    0.2823,
+    0.2818,
+    0.2869,
+    0.2792,
+    0.2742,
+    0.2758
+   ],
+   "cpu_s": [
+    0.286,
+    0.2788,
+    0.2781,
+    0.283,
+    0.2754,
+    0.271,
+    0.2729
+   ],
+   "peak_mb": [
+    85.0,
+    84.9,
+    85.0,
+    84.8,
+    85.1,
+    84.9,
+    85.0
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/batch.cpp -o WORK/ct-appleclang/batch-O3.o"
+  },
+  {
+   "unit": "ball_vector",
+   "config": "O2",
+   "wall_s": [
+    0.4195,
+    0.4217,
+    0.4172,
+    0.3984,
+    0.3989,
+    0.4055,
+    0.4028
+   ],
+   "cpu_s": [
+    0.4154,
+    0.4178,
+    0.4133,
+    0.3943,
+    0.3947,
+    0.4014,
+    0.3986
+   ],
+   "peak_mb": [
+    116.5,
+    116.8,
+    116.8,
+    116.6,
+    116.5,
+    116.5,
+    116.4
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/ball_vector.cpp -o WORK/ct-appleclang/ball_vector-O2.o"
+  },
+  {
+   "unit": "ball_vector",
+   "config": "O3",
+   "wall_s": [
+    0.4127,
+    0.4191,
+    0.4131,
+    0.4063,
+    0.4005,
+    0.4115,
+    0.4039
+   ],
+   "cpu_s": [
+    0.4085,
+    0.4149,
+    0.4091,
+    0.4021,
+    0.3965,
+    0.4072,
+    0.3998
+   ],
+   "peak_mb": [
+    117.1,
+    116.7,
+    116.6,
+    116.6,
+    116.7,
+    116.7,
+    116.8
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/ball_vector.cpp -o WORK/ct-appleclang/ball_vector-O3.o"
+  },
+  {
+   "unit": "kairn_batch",
+   "config": "O2",
+   "wall_s": [
+    0.2912,
+    0.2916,
+    0.291,
+    0.2845,
+    0.2859,
+    0.2837,
+    0.2842
+   ],
+   "cpu_s": [
+    0.2882,
+    0.2878,
+    0.2872,
+    0.2799,
+    0.2819,
+    0.2797,
+    0.2803
+   ],
+   "peak_mb": [
+    87.4,
+    87.3,
+    87.2,
+    87.1,
+    87.0,
+    87.2,
+    87.4
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/kairn_batch.cpp -o WORK/ct-appleclang/kairn_batch-O2.o"
+  },
+  {
+   "unit": "kairn_batch",
+   "config": "O3",
+   "wall_s": [
+    0.2918,
+    0.296,
+    0.2904,
+    0.2867,
+    0.2809,
+    0.2819,
+    0.2831
+   ],
+   "cpu_s": [
+    0.2876,
+    0.292,
+    0.2872,
+    0.2828,
+    0.277,
+    0.2782,
+    0.2793
+   ],
+   "peak_mb": [
+    87.4,
+    87.4,
+    87.3,
+    87.1,
+    87.3,
+    87.1,
+    87.0
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/kairn_batch.cpp -o WORK/ct-appleclang/kairn_batch-O3.o"
+  },
+  {
+   "unit": "kairn_ball_vector",
+   "config": "O2",
+   "wall_s": [
+    0.4315,
+    0.4152,
+    0.4226,
+    0.4025,
+    0.3982,
+    0.4007,
+    0.402
+   ],
+   "cpu_s": [
+    0.4271,
+    0.411,
+    0.4121,
+    0.3984,
+    0.3941,
+    0.3966,
+    0.3985
+   ],
+   "peak_mb": [
+    117.1,
+    116.8,
+    116.7,
+    116.8,
+    116.9,
+    116.9,
+    116.6
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/kairn_ball_vector.cpp -o WORK/ct-appleclang/kairn_ball_vector-O2.o"
+  },
+  {
+   "unit": "kairn_ball_vector",
+   "config": "O3",
+   "wall_s": [
+    0.439,
+    0.4193,
+    0.416,
+    0.4102,
+    0.399,
+    0.399,
+    0.4192
+   ],
+   "cpu_s": [
+    0.4342,
+    0.4151,
+    0.4125,
+    0.406,
+    0.3948,
+    0.3949,
+    0.415
+   ],
+   "peak_mb": [
+    116.9,
+    116.6,
+    116.7,
+    116.7,
+    116.7,
+    116.9,
+    116.8
+   ],
+   "object_bytes": 336,
+   "command": "c++ -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/kairn_ball_vector.cpp -o WORK/ct-appleclang/kairn_ball_vector-O3.o"
+  }
+ ]
+}
