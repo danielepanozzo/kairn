@@ -2247,7 +2247,10 @@ with 258 done, and are three jobs of a third each since. The compiled runners' j
 takes 22 to 38 minutes on the hosted Linux and macOS runners and did not finish in 60 on the
 Windows ones, where a cross-check takes 18 seconds against 7 on Linux and the oracle's self-test
 17 minutes against 9: each Windows compiler runs it as three jobs of a third each, every one
-with its own build.) The one tier
+with its own build. On 2026-11-22, with the 2 000 tests of the tree that has the functions on
+arrays, the ball vectors and the exhaustive tier, that job took 40 minutes with Clang on Linux
+x86-64, was cancelled at 60 with GCC there, and took 55 on macOS: those three are two jobs of a
+half each since, and Linux arm64, 29 to 31 minutes, is still one.) The one tier
 suggests the rule is cautious indeed: it took 1 040 seconds with GCC on a hosted Linux runner
 against 948 on 4 threads of the Linux machine, a ratio of 1.1, which would make the quick tier
 about 75 seconds there and the compiled runners' job about 100; and 1 011 seconds on a hosted
