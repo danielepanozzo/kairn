@@ -16,6 +16,7 @@
 // 4. Times every function whose name contains one of the --filter texts (all without --filter):
 //    calibrates a sample of about --sample-ms, then takes --reps samples of each, in rounds over all
 //    functions, and reports the minimum, median and maximum time per operation.
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -45,6 +46,10 @@ constexpr int kChecks = 0;
 #endif
 
 namespace m2 = kairn_bench::m2;
+
+namespace kairn_bench::m2 {
+TableLink* m2_extra_tables = nullptr;   // constant-initialized: before any unit registers its table
+}
 namespace u = kairn_bench::util;
 
 namespace {
@@ -71,6 +76,13 @@ std::vector<const m2::Entry*> all_entries() {
                                m2::m2_soa_entries, m2::m2_soa_scalar_entries, m2::m2_enc_entries, m2::m2_run_entries,
                                m2::m2_batch_entries, m2::m2_bv_entries, m2::m2_bvs_entries})
         for (const m2::Entry* e = t; e->name; ++e) v.push_back(e);
+    // The tables that registered themselves, in the order of their names (their units' order of
+    // initialization is not fixed).
+    std::vector<const m2::Entry*> extra;
+    for (const m2::TableLink* l = m2::m2_extra_tables; l; l = l->next)
+        for (const m2::Entry* e = l->table; e->name; ++e) extra.push_back(e);
+    std::sort(extra.begin(), extra.end(), [](const m2::Entry* a, const m2::Entry* b) { return std::strcmp(a->name, b->name) < 0; });
+    v.insert(v.end(), extra.begin(), extra.end());
     return v;
 }
 const m2::Entry* find(const std::vector<const m2::Entry*>& v, const std::string& name) {

@@ -231,6 +231,17 @@ template <int K, std::size_t N> KB_SI void make_lat_kairn(SSet<K, N>& d) {
 
 }  // namespace
 
+#if defined(KB_BVS_ONE)
+// One operation of one size in a unit of its own (backend m2y; bench/CMakeLists.txt writes one such
+// unit per operation, limb count and size), as a client's file holds a few: a compiler that has the
+// whole unit to itself may inline the loop, which GCC does not do in the unit of every size (m2x),
+// where it reaches its limit of the growth of a unit. The table registers itself with the driver.
+#define KB_BACKEND "m2y"
+#define KB_XLIST(X)                                                                                \
+    X(KB_BVS_K, KB_BVS_N, KB_BVS_OP, tp, op) X(KB_BVS_K, KB_BVS_N, KB_BVS_OP, tp, kairn)            \
+    X(KB_BVS_K, KB_BVS_N, KB_BVS_OP, lat, op) X(KB_BVS_K, KB_BVS_N, KB_BVS_OP, lat, kairn)
+#else
+#define KB_BACKEND "m2x"
 #define KB_XOPS(X, K, N)                                                                           \
     X(K, N, add, tp, op) X(K, N, add, tp, kairn) X(K, N, addop, tp, op) X(K, N, sub, tp, op)       \
     X(K, N, sub, tp, kairn) X(K, N, scale, tp, op) X(K, N, scale, tp, kairn) X(K, N, half, tp, op) \
@@ -241,27 +252,53 @@ template <int K, std::size_t N> KB_SI void make_lat_kairn(SSet<K, N>& d) {
 #define KB_XLIST(X)                                                                                \
     KB_XOPS(X, 1, 3) KB_XOPS(X, 1, 7) KB_XOPS(X, 1, 13) KB_XOPS(X, 1, 18) KB_XOPS(X, 1, 80)        \
     KB_XOPS(X, 2, 3) KB_XOPS(X, 2, 7) KB_XOPS(X, 2, 13) KB_XOPS(X, 2, 18) KB_XOPS(X, 2, 80)
+#endif
 
-#define KB_XDEF(K, N, OP, KIND, VAR)                                                               \
-    extern "C" KB_NOINLINE void kb_m2_x64_##KIND##_##OP##_##K##_##N##__##VAR(void*) {              \
-        OP##_##KIND##_##VAR<K, N>(sset<K, N>());                                                   \
-    }
+#if defined(KB_BVS_ONE)
+#define KB_XNAME_(KIND, OP, K, N, VAR) kb_m2_y64_##KIND##_##OP##_##K##_##N##__##VAR
+#else
+#define KB_XNAME_(KIND, OP, K, N, VAR) kb_m2_x64_##KIND##_##OP##_##K##_##N##__##VAR
+#endif
+#define KB_XNAME(KIND, OP, K, N, VAR) KB_XNAME_(KIND, OP, K, N, VAR)
+#define KB_XDEF_(K, N, OP, KIND, VAR)                                                              \
+    extern "C" KB_NOINLINE void KB_XNAME(KIND, OP, K, N, VAR)(void*) { OP##_##KIND##_##VAR<K, N>(sset<K, N>()); }
+#define KB_XDEF(K, N, OP, KIND, VAR) KB_XDEF_(K, N, OP, KIND, VAR)
 KB_XLIST(KB_XDEF)
 
-namespace kairn_bench::m2x {
-bool check(const kairn_bench::m2::Entry& e, char* why, std::size_t size);
+namespace {
+bool check_one(const kairn_bench::m2::Entry& e, char* why, std::size_t size);
 }
 
-#define KB_XROW(K, N, OP, KIND, VAR)                                                               \
-    {"m2x/" #KIND "/" #OP "_" #K "_" #N "/" #VAR, kb_m2_x64_##KIND##_##OP##_##K##_##N##__##VAR, 64, 1,  \
-     std::string(#KIND) == "tp" ? vectors<N>() : kSteps, K * 1000 + N, 0, &kairn_bench::m2x::check},
+#define KB_XROW_(K, N, OP, KIND, VAR)                                                              \
+    {KB_BACKEND "/" #KIND "/" #OP "_" #K "_" #N "/" #VAR, KB_XNAME(KIND, OP, K, N, VAR), 64, 1,     \
+     std::string(#KIND) == "tp" ? vectors<N>() : kSteps, K * 1000 + N, 0, &check_one},
+#define KB_XROW(K, N, OP, KIND, VAR) KB_XROW_(K, N, OP, KIND, VAR)
 
+#if defined(KB_BVS_ONE)
+namespace {
+const Entry table_one[] = {
+    KB_XLIST(KB_XROW)
+    {nullptr, nullptr, 0, 0, 0, 0, 0, nullptr},
+};
+kairn_bench::m2::TableLink link_one{table_one, nullptr};
+const bool registered_one = (link_one.next = kairn_bench::m2::m2_extra_tables,
+                             kairn_bench::m2::m2_extra_tables = &link_one, true);
+const Entry* own_table() {
+    (void)registered_one;
+    return table_one;
+}
+}  // namespace
+#else
 namespace kairn_bench::m2 {
 const Entry m2_bvs_entries[] = {
     KB_XLIST(KB_XROW)
     {nullptr, nullptr, 0, 0, 0, 0, 0, nullptr},
 };
 }  // namespace kairn_bench::m2
+namespace {
+const Entry* own_table() { return kairn_bench::m2::m2_bvs_entries; }
+}  // namespace
+#endif
 
 // --- The data and the checks --------------------------------------------------------------------
 
@@ -323,6 +360,9 @@ void make(std::uint64_t seed) {
 }
 
 void make_all() {
+#if defined(KB_BVS_ONE)
+    make<KB_BVS_K, KB_BVS_N>(500 + 10 * KB_BVS_K + KB_BVS_N);
+#else
     make<1, 3>(501);
     make<1, 7>(502);
     make<1, 13>(503);
@@ -333,6 +373,7 @@ void make_all() {
     make<2, 13>(508);
     make<2, 18>(509);
     make<2, 80>(510);
+#endif
 }
 
 template <int K, std::size_t N>
@@ -369,7 +410,7 @@ void clear(SSet<K, N>& d) {
 }
 
 const Entry* find_entry(const std::string& name) {
-    for (const Entry* e = kairn_bench::m2::m2_bvs_entries; e->name; ++e)
+    for (const Entry* e = own_table(); e->name; ++e)
         if (name == e->name) return e;
     return nullptr;
 }
@@ -378,7 +419,7 @@ template <int K, std::size_t N>
 bool check_kn(const Entry& e, char* why, std::size_t size) {
     SSet<K, N>& d = sset<K, N>();
     const std::string name = e.name;   // m2x/KIND/OP_K_N/VAR
-    const bool lat = name.rfind("m2x/lat/", 0) == 0;
+    const bool lat = name.find("/lat/") != std::string::npos;
     const bool raw = name.substr(name.rfind('/') + 1) == "kairn";
     clear(d);
     e.fn(nullptr);
@@ -391,8 +432,10 @@ bool check_kn(const Entry& e, char* why, std::size_t size) {
     if (raw) return true;   // the reference
     // The reference: the same kernel's kairn variant (addop's is add's).
     std::string stem = name.substr(0, name.rfind('/'));
+#if !defined(KB_BVS_ONE)
     const std::size_t at = stem.find("/addop_");
     if (at != std::string::npos) stem.replace(at, 7, "/add_");
+#endif
     const Entry* r = find_entry(stem + "/kairn");
     if (!r) {
         std::snprintf(why, size, "no reference %s/kairn", stem.c_str());
@@ -410,10 +453,13 @@ bool check_kn(const Entry& e, char* why, std::size_t size) {
 
 }  // namespace
 
-namespace kairn_bench::m2x {
+namespace {
 
-bool check(const kairn_bench::m2::Entry& e, char* why, std::size_t size) {
+bool check_one(const kairn_bench::m2::Entry& e, char* why, std::size_t size) {
     make_all();
+#if defined(KB_BVS_ONE)
+    return check_kn<KB_BVS_K, KB_BVS_N>(e, why, size);
+#else
     switch (e.region) {
         case 1003: return check_kn<1, 3>(e, why, size);
         case 1007: return check_kn<1, 7>(e, why, size);
@@ -426,6 +472,7 @@ bool check(const kairn_bench::m2::Entry& e, char* why, std::size_t size) {
         case 2018: return check_kn<2, 18>(e, why, size);
         default: return check_kn<2, 80>(e, why, size);
     }
+#endif
 }
 
-}  // namespace kairn_bench::m2x
+}  // namespace

@@ -149,6 +149,21 @@ set_source_files_properties(m2_batch.cpp m2_bv.cpp m2_bvs.cpp m2_accuracy.cpp PR
 string(REPLACE ";" " " _rounding_math_text "${_rounding_math}")
 set(_m2_sources m2_main.cpp m2.cpp m2_fenv.cpp m2_packed.cpp m2_fenv_packed.cpp m2_soa.cpp m2_soa_scalar.cpp
     m2_enc.cpp m2_run.cpp m2_batch.cpp m2_bv.cpp m2_bvs.cpp)
+# m2_bvs.cpp again, one operation of one size per unit (backend m2y), as a client's file holds a few:
+# the units are written here into the build directory, each defining KB_BVS_ONE and including it.
+foreach(_op IN ITEMS add addop sub scale half make)
+  foreach(_k IN ITEMS 1 2)
+    foreach(_n IN ITEMS 3 7 13 18 80)
+      set(_unit "${CMAKE_CURRENT_BINARY_DIR}/m2y/m2_bvs_${_op}_${_k}_${_n}.cpp")
+      file(WRITE "${_unit}.in" "// Written by bench/CMakeLists.txt: one unit of m2_bvs.cpp.\n#define KB_BVS_ONE 1\n"
+           "#define KB_BVS_OP ${_op}\n#define KB_BVS_K ${_k}\n#define KB_BVS_N ${_n}\n"
+           "#include \"${CMAKE_CURRENT_SOURCE_DIR}/m2_bvs.cpp\"\n")
+      configure_file("${_unit}.in" "${_unit}" COPYONLY)
+      set_source_files_properties("${_unit}" PROPERTIES COMPILE_OPTIONS "${_packed_isa}")
+      list(APPEND _m2_sources "${_unit}")
+    endforeach()
+  endforeach()
+endforeach()
 # kairn-bench-m2-nocheck-LEVEL, only when KAIRN_BENCH_NOCHECK_INCLUDE names a directory: the same
 # program compiled against the copy of the headers there, which bench/entry_check.py makes from
 # include/ with the check of the environment of the batch entries compiled out (never committed):
