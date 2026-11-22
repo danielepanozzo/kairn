@@ -274,6 +274,8 @@ FOLD_SHAPES = {
     "kernel_bv_sub_2": [("fp:3:-2:-1", 1), ("fp:3:-4:1", 1)],
     "kernel_bv_scale_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_scale_2": [("fp:2:-2:1", 1), ("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    # bv_scale_2 on its scalar guarded (rule R3, the factors of a fused operation): the same formats.
+    "kernel_bv_scale_2_entry": [("fp:2:-2:1", 1), ("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_neg_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 2), ("fp:2:-3:2", 3)],
     "kernel_bv_neg_2": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_mul_pow2_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 2)],

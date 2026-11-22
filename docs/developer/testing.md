@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 1202 tests. The full tier, 2000 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 1214 tests. The full tier, 2027 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -1291,18 +1291,18 @@ rounded away gives 1 212 differences in the 80 829 comparisons with the oracle o
 **The kernels for it** are `tests/emulated/gen/kernels.hpp`, printed by the printer of
 `include/kairn/gen/scalar.hpp` with the type as its limb type
 ([Architecture](architecture.md#the-kernel-ir), "A limb type of a format chosen at run time"):
-every kernel (233) and every fold (47) in its sequential and lane orders, both forms of the
+every kernel (236) and every fold (50) in its sequential and lane orders, both forms of the
 fix-ups; a literal is the constant's value in the run-time format, from tables for `binary64`,
 `binary32` and 32 formats of the statements of precision 8 to 11 (`qmax` 1 to 16,
 $q_{\min} = 3 - q_{\max} - 2p$). `gen/tests/test_emulated.py` shows that it is the same emission: with the type's
-name replaced by `double`, the listing is the double listing token for token, 110 090 tokens,
+name replaced by `double`, the listing is the double listing token for token, 114 146 tokens,
 each literal the same constant in the same place (its value at `binary64`, and at float's format
 against the float listing), the test of constant evaluation in the same 155 places; and a select's
 arms swapped, a constant replaced, a value inlined from the wrong operand and a statement added
 after a branch are each seen. On the Mac the emulated kernels at `binary64` and `binary32` gave the
 lines of the compiled double and float kernels (`gen/tests/runner.cpp`, Apple clang), byte for
 byte, on 267 535 and 534 535 requests of every kernel and fold (of the 223 kernels and 44 folds
-when the tier was written; the trees joined since add ten kernels and three folds, the entry forms
+when the tier was written; the trees joined since add thirteen kernels and six folds, the entry forms
 of rule R3 on the factors of a fused operation).
 
 **The runner** `tests/emulated/runner.cpp` (`kairn-emulated-runner`, the fix-ups inline, and
@@ -1311,7 +1311,7 @@ each request from its line: kernels, folds in every order, maps in place, ball v
 convolutions, products of BallVectors. `--ce` runs the path of constant evaluation: the variant of
 a kernel that has one (Dekker's product in `two_prod` and `two_prod_entry`), each `prod` a plain product, `guard` its
 operand, `times_inf` from comparisons; a kernel without that path and every fold are refused, as
-the interpreter's `--ce` refuses them. Of the 233 kernels, 161 have such a path. The loops over
+the interpreter's `--ce` refuses them. Of the 236 kernels, 161 have such a path. The loops over
 arrays are covered in both their orders, `F_seq` and `F_lanes`, which the printer writes as scalar
 C++; `F_packed` is intrinsics and has no emulated form. The kernels are ordinary inline functions
 (`tests/emulated/prelude.hpp`), but a fix-up that is a function of its own and the end of a ball
@@ -1680,7 +1680,8 @@ The vectorization control compiles the unit once more, in the first optimized co
 the quick tier, *with* the compiler's own vectorization, and judges every function of it by the
 same rule. It records what the check then finds, per compiler and version measured: with Clang 18
 on x86-64, the packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for
-`double`, and the scalar functions of `acc_mul_1`, `ball_from_interval_2`, `interval_add_2`,
+`double`, and `F_lanes` of `axpy_2_entry` since its step guards every limb of `a`, `x` and `y`
+(rule R3, the factors of a fused operation), and the scalar functions of `acc_mul_1`, `ball_from_interval_2`, `interval_add_2`,
 `interval_mul_1` and `interval_sub_2` (those the packing control finds), and of the kernels of
 stage B2 of the intervals that make the bounds of a ball of two limbs by the directed sums
 (`ball_to_interval_2`, `ball_hull_2`, `ball_intersection_2`), the midpoint and radius of two limbs
@@ -2075,7 +2076,12 @@ with its date.
 
 **The two tiers, tree by tree** (moved here on 2026-11-22 from the table of [the
 tiers](#the-tiers), which now gives the present numbers only; newest first). The quick tier: on
-2026-11-22, on the tree that joins the strict rule R3 on the factors of a fused operation to the
+2026-11-22, on the branch that closes rule R3 on the factors of a fused operation (every exposed
+operand guarded, no pending list), merged with that tree, 1 214 tests and 167 seconds on the Mac
+with Apple clang and 1 215 and 185 with GCC 16 (`--parallel 6`), 1 221 tests and 136 seconds with
+GCC 13 and 1 218 and 138 with Clang 18 on the Linux machine, and with `-mavx2 -mfma` 1 215 and 270
+with GCC 13 and 1 212 and 273 with Clang 18 (`--parallel 10`, beside the branch's other runs, under
+a load average of about 85), every test passing; on 2026-11-22, on the tree that joins the strict rule R3 on the factors of a fused operation to the
 functions on arrays, the accumulator and `BallVector` and to the exhaustive tier on emulated
 formats ([Time](#time)), 1 164 tests and 131 seconds on the Mac with Apple clang and 1 165 and 132
 with GCC 16 (`--parallel 6`), 1 171 tests and 81 seconds with GCC 13 and 1 168 and 96 with Clang 18
@@ -2131,8 +2137,12 @@ processors); on the hosted runners, measured before each cross-check ran in one 
 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest
 runner seen ([Time](#each-cross-check-in-one-process)).
 
-The full tier: on 2026-11-22, on the tree that joins the strict rule R3 on the factors of a fused
-operation to the functions on arrays, the accumulator and `BallVector` and to the exhaustive tier
+The full tier: on 2026-11-22, on the branch that closes rule R3 on the factors of a fused
+operation, 2 027 tests and 30 minutes with GCC 13 on the Linux machine (`--parallel 11`, the tools
+held to one worker, under a load average of about 85), one failing:
+`full.tools.brute.driver.test`, the new loop `bv_scale_2_entry` having no toy formats in
+`tests/brute/brute.py` (since added); on 2026-11-22, on the tree that joins the strict rule R3 on
+the factors of a fused operation to the functions on arrays, the accumulator and `BallVector` and to the exhaustive tier
 on emulated formats, 2 000 tests and 20 minutes with GCC 13 on the Linux machine (`--parallel 16`,
 the tools held to one worker); on 2026-11-22, on the branch that completes the public interface, 1
 683 tests and 20 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one

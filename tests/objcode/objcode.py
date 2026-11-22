@@ -752,7 +752,10 @@ def control_counts(tools, workdir, expected, limb_types, folds=None):
 # compiler. Clang on x86-64 vectorizes the loop of axpy_2 and axpy_2_entry (double) and, in its
 # scalar rest, packs two of the step's five independent FMAs into one 128-bit vfmadd231pd: nine
 # fused instructions in F_seq, fourteen in F_packed (whose rest is a loop too), which no number of
-# copies of the step makes, with the same operations. The other compilers seen (GCC 13 on x86-64,
+# copies of the step makes, with the same operations; and, since the step of axpy_2_entry guards
+# every limb of a, x and y (rule R3, the factors of a fused operation), F_lanes of axpy_2_entry too,
+# fourteen fused instructions (measured with Clang 18 when those guards were added). The other
+# compilers seen (GCC 13 on x86-64,
 # Apple clang and GCC 16 on AArch64) vectorize these loops in whole copies of the step, which the
 # rule counts as copies. Clang on x86-64 also packs two independent FMAs of the scalar code of four
 # interval kernels into one instruction, for double and float (control_packing: interval_mul_1
@@ -799,6 +802,7 @@ def vectorized_failures(tools, packed):
             return None
         forms = ['seq'] + (['packed'] if packed else [])
         return sorted([f'fold {fold} {form} double' for fold in ('axpy_2', 'axpy_2_entry') for form in forms]
+                      + ['fold axpy_2_entry lanes double']
                       + [f'scalar {t} {k} (scalar)' for k in VECTORIZED_SCALAR['clang x86-64']
                          for t in ('double', 'float')])
     if tools.apple and machine in ('arm64', 'aarch64'):
