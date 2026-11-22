@@ -1,0 +1,30 @@
+# The step of bv_make_2_entry, the constructor of a BallVector with 2-limb centers that the program
+# supplies, as two arrays of limbs or as Expansion<T, 2> objects whose limbs it may have written
+# (milestone2.md, "BallVector", "Values"): each limb guarded (rule R3: the program may have written
+# a product there, as for one limb, bv_center_entry_1), then copied (bv_center_2). A center must be
+# canonical: the guard is the identity on a canonical pair as a value (a zero limb made +0, an
+# infinity or a NaN staying what it is), so its claims are those of bv_center_2. A pair that is not
+# normalized is not covered: its step would be make_2_limbs, which has no real-model statement.
+kernel:        bv_center_entry_2
+input:         supplied c = c0 c1
+output:        z = z0 z1
+value:         c
+requires:      canonical c
+ensures:       normalized z
+ensures:       error z R c=0 k=2 t=0
+ensures:       represents z
+min_precision: 1
+theorem:       proofs/theories/BvNegMake.v bv_center_entry_2_correct
+source:        bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBvNegMake.v bv_center_entry_2_ieee_correct
+ieee_lead_theorem: proofs/theories/IeeeBvNegMake.v bv_center_entry_2_ieee_lead
+entry:         yes
+cone_exempt:   z1 is the guard of c1, which does not reach z0; the guard keeps a limb finite exactly when it is, and a non-finite c1 beside a finite c0 is not a canonical operand, so the finish of the constructor, which reads z0, stands in for the check
+
+g0       = guard(c0)
+g1       = guard(c1)
+(z0, z1) = bv_center_2(g0, g1)

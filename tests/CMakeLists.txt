@@ -792,7 +792,7 @@ set(KAIRN_NOT_PUBLIC_YET axpy_step_1 axpy_step_2 axpy_step_2_1)
 #   1        sum_1, sum_1_entry            fp:3:-3:0 up to 3 elements: 225 835 fp:5:-7:4
 #   2        sum_2, sum_fast_2, entries    fp:3:-4:1 up to 2:          363 379 fp:4:-7:2
 #   1 1      dot_1                         fp:2:-1:0 up to 2:           77 029 fp:5:-12:-1
-#   2 2      dot_2                         fp:4:-4:-1, one element:     62 501 fp:4:-7:-3
+#   2 2      dot_2, dot_2_entry            fp:4:-4:-1, one element:     62 501 fp:4:-7:-3
 #
 # (each format of the shape qmin + qmax = 3 - 2p of the extended domain, which every fold has, and
 # at least the fold's min_precision).
@@ -836,7 +836,7 @@ set(KAIRN_CROSSCHECK_FOLD_LENGTH 4096 CACHE STRING
 #   max 1        norm_upper_1                   fp:3:-3:0 up to 3:     225 835  fp:5:-7:4
 #   max 2        norm_upper_2                   fp:3:-4:1 up to 2:     363 379  fp:4:-7:2
 #   conv 1 1     conv_1                         fp:2:-1:0 up to 2, 2:   44 521  fp:5:-12:-1
-#   conv 2 2     conv_2                         fp:4:-4:-1 up to 1, 1:  63 001  fp:4:-7:-3
+#   conv 2 2     conv_2, conv_2_entry           fp:4:-4:-1 up to 1, 1:  63 001  fp:4:-7:-3
 #
 # Two elements of the maps of pairs, and of axpy, are more than ten million arrays in any format of
 # their precision: their single elements are every case of the step (with every flag and second
@@ -872,13 +872,13 @@ set(_fold_toy_conv_2_2 fp:4:-4:-1 1 fp:4:-7:-3)
 #   bv_add_1, bv_sub_1             fp:2:-2:1, one entry:        36 602 fp:5:-11:4
 #   bv_add_2, bv_sub_2             fp:3:-2:-1, one entry:      121 970 fp:4:-7:2
 #   bv_scale_1                     fp:2:-2:1 up to 2:          163 328 fp:5:-12:5
-#   bv_scale_2                     fp:2:-2:1, one entry:        12 364 fp:4:-8:2
+#   bv_scale_2, bv_scale_2_entry   fp:2:-2:1, one entry:        12 364 fp:4:-8:2
 #   bv_neg_1                       fp:2:-2:1 up to 2:            7 424 fp:5:-11:4
 #   bv_neg_2                       fp:2:-2:1 up to 2:           61 064 fp:4:-7:2
 #   bv_mul_pow2_1                  fp:2:-2:1 up to 2:           37 120 fp:5:-9:2
 #   bv_mul_pow2_2                  fp:2:-2:1 up to 2:          305 320 fp:5:-9:2
 #   bv_make_1                      fp:2:-2:1 up to 2:           21 802 fp:5:-11:4
-#   bv_make_2                      fp:2:-2:1 up to 2:          149 314 fp:4:-7:2
+#   bv_make_2, bv_make_2_entry     fp:2:-2:1 up to 2:          149 314 fp:4:-7:2
 #   bv_conv_1, bv_conv_2           -                                   fp:5:-12:5
 set(_fold_toy_kernel_bv_add_1 fp:2:-2:1 1 fp:5:-11:4)
 set(_fold_toy_kernel_bv_sub_1 fp:2:-2:1 1 fp:5:-11:4)
@@ -886,12 +886,14 @@ set(_fold_toy_kernel_bv_add_2 fp:3:-2:-1 1 fp:4:-7:2)
 set(_fold_toy_kernel_bv_sub_2 fp:3:-2:-1 1 fp:4:-7:2)
 set(_fold_toy_kernel_bv_scale_1 fp:2:-2:1 2 fp:5:-12:5)
 set(_fold_toy_kernel_bv_scale_2 fp:2:-2:1 1 fp:4:-8:2)
+set(_fold_toy_kernel_bv_scale_2_entry fp:2:-2:1 1 fp:4:-8:2)
 set(_fold_toy_kernel_bv_neg_1 fp:2:-2:1 2 fp:5:-11:4)
 set(_fold_toy_kernel_bv_neg_2 fp:2:-2:1 2 fp:4:-7:2)
 set(_fold_toy_kernel_bv_mul_pow2_1 fp:2:-2:1 2 fp:5:-9:2)
 set(_fold_toy_kernel_bv_mul_pow2_2 fp:2:-2:1 2 fp:5:-9:2)
 set(_fold_toy_kernel_bv_make_1 fp:2:-2:1 2 fp:5:-11:4)
 set(_fold_toy_kernel_bv_make_2 fp:2:-2:1 2 fp:4:-7:2)
+set(_fold_toy_kernel_bv_make_2_entry fp:2:-2:1 2 fp:4:-7:2)
 set(_fold_toy_kernel_bv_conv_1 - 0 fp:5:-12:5)
 set(_fold_toy_kernel_bv_conv_2 - 0 fp:5:-12:5)
 set(KAIRN_CROSSCHECK_MAP_QUICK_CASES 100 CACHE STRING

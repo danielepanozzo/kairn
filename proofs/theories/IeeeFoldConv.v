@@ -172,3 +172,57 @@ match goal with |- context [forallb ?t (map ?f ?l)] => destruct (forallb t (map 
     * intros Fw. exfalso. exact (nan_1_not_finite _ _ w0 N0 Fw).
     * intros _. split. exact N0. split. exact N1. reflexivity.
 Qed.
+
+(* conv_2_entry: conv_2 with the coefficients by dot_2_entry, whose step guards the limbs of both
+   factors (rule R3, the factors of a fused operation): the same proof, with dot_2_entry's theorem. *)
+Theorem conv_2_entry_ieee_correct : conv_2_entry_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp4 xs ys Hx Hy.
+(* A coefficient whose leading limb is finite. *)
+assert (Good : forall (j : nat) (z0 z1 : binary_float prec emax),
+  fold_seq (IeeeFoldModel.dot_2_entry_step prec emax nan_plus nan_minus nan_opp nan_fma)
+    (IeeeOperations.pzero prec emax, IeeeOperations.pzero prec emax) (conv_terms xs ys j) =
+    (z0, z1) -> finite z0 ->
+  let xys := conv_terms xs ys j in
+  Forall (fun xy => finite (fst (fst xy)) /\ finite (snd (fst xy)) /\ finite (fst (snd xy)) /\
+                    finite (snd (snd xy))) xys /\
+  finite z1 /\
+  let vs := map (fun xy => ((val (fst (fst xy)), val (snd (fst xy))),
+                            (val (fst (snd xy)), val (snd (snd xy))))) xys in
+  let s := FoldModel.dot_2_entry_seq (ieee_emin prec emax) prec tie_even vs in
+  (val z0, val z1) = s /\
+  normalized_2 (ieee_emin prec emax) prec (fst s) (snd s) /\
+  Rabs ((fst s + snd s) - sumR (map (fun xy => ((fst (fst xy) + snd (fst xy)) *
+                                               (fst (snd xy) + snd (snd xy)))) vs)) <=
+     ((1 + (4 * (u prec ^ 2))) *
+        (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) - 1) *
+       sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) vs) +
+     (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) *
+       (INR (length vs) * ((3 / 2) * eta (ieee_emin prec emax)))).
+{ intros j z0 z1 Ew Fz.
+  generalize (dot_2_entry_seq_ieee_correct prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma
+                nan_const Hp4 (conv_terms xs ys j)
+                (conv_terms_Forall _ _ (fun x => canonical_2 (fst x) (snd x))
+                   (fun y => canonical_2 (fst y) (snd y)) xs ys j Hx Hy)).
+  unfold IeeeFoldModel.dot_2_entry_seq. cbv zeta. rewrite Ew. cbn [fst snd].
+  generalize (fold_finish_2_correct prec emax Hp He nan_abs nan_const z0 z1).
+  destruct (IeeeModel.fold_finish_2 prec emax nan_abs nan_const z0 z1) as [[r0 r1] flag].
+  intros [F1 [F2 _]] [H1 _].
+  assert (Ef : flag = true) by (apply F1; exact Fz).
+  specialize (H1 Ef). destruct (F2 Ef) as [E0 E1]. rewrite E0, E1 in H1.
+  destruct H1 as [HF [_ [Fz1 R]]]. split. exact HF. split. exact Fz1. exact R. }
+unfold IeeeFoldModel.conv_2_entry_conv. cbv zeta. rewrite fold_seq_and.
+match goal with |- context [forallb ?t (map ?f ?l)] => destruct (forallb t (map f l)) eqn:? end;
+  cbv beta iota.
+- eapply map_2_true; try exact (Forall_True _ _); try eassumption.
+  intros j [z0 z1] _ Ew Fz. cbv beta iota zeta. cbn [fst snd] in *. split.
+  + intros _. exact (Good j z0 z1 Ew Fz).
+  + intros N. contradiction.
+- eapply map_2_false; try exact (Forall_True _ _); try eassumption.
+  + intros j [z0 z1] _ Ew Fz. cbv beta iota zeta. cbn [fst snd] in *. split.
+    * intros _. exact (Good j z0 z1 Ew Fz).
+    * intros N. contradiction.
+  + intros j [w0 w1] _ _ [N0 N1]. cbv beta iota zeta. cbn [fst snd] in *. split.
+    * intros Fw. exfalso. exact (nan_1_not_finite _ _ w0 N0 Fw).
+    * intros _. split. exact N0. split. exact N1. reflexivity.
+Qed.

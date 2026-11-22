@@ -547,7 +547,8 @@ whose bits are the same everywhere. Both have the same statement. A result that 
 infinite or NaN element, an overflow) is the canonical NaN with the flag `finite` false; a map's
 flag is false exactly when an element it wrote is not finite, and those elements are the canonical
 NaN. Arrays that the program fills with products may be passed straight in: the loops guard every
-limb they add ([above](#products-the-program-passes-in)). A map may write in place, an array it
+limb they add, and every limb that is a factor of a fused multiply-add
+([above](#products-the-program-passes-in)). A map may write in place, an array it
 reads exactly; no other overlap is supported. Each function checks the environment before its
 loop, in every build ([below](#the-environment)), and with `KAIRN_CHECKS` the lengths, the arrays
 that alias and its elements.
@@ -579,7 +580,7 @@ an integer of the header that saturates at $2^{64} - 1$ (no bound then), its con
 (rounded up; exact wherever a radius is given), and what is returned when a mask is false or a
 value is not finite: `error_bound()` $+\infty$ and `ball()` the whole line, never a finite ball the
 theorem does not give. A radius is given up to about $2^{22}$ terms of `float` and $2^{51}$ of
-`double`, for one and two limbs, since the magnitudes are summed in `T`.
+`double` with one limb, and twice as many with two, since the magnitudes are summed in `T`.
 
 ## Ball vectors
 

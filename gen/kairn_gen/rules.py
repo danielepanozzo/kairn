@@ -560,7 +560,7 @@ def r3_report(kernels):
     return pending, through
 
 
-# --- R3 and the factors of a fused operation (a report, not a refusal) ----------------------------
+# --- R3 and the factors of a fused operation ----------------------------------------------------
 #
 # R3 asks no guard of a value of the program that is only multiplied: nothing can be fused into a
 # product. That holds of the product alone, and not of a fused operation whose other factor the
@@ -572,7 +572,7 @@ def r3_report(kernels):
 # does with the product a * b inside it, fma(a * b, 1, +0) fused is RN(a b + 0), the rounding of the
 # product itself, which is what the program's product is. These functions list the exposed
 # operands and refuse nothing; factor_rule (below) refuses each, by the strict rule that the owner
-# decided on 2026-11-21, but those of the objects on FACTOR_PENDING, which are being closed.
+# decided on 2026-11-21.
 FACTORS = {'fma': (0, 1), 'fms': (0, 1), 'fnma': (0, 1), 'muladd': (0, 1)}
 ADDEND = {'fma': 2, 'fms': 2, 'fnma': 2, 'muladd': 2}
 
@@ -705,53 +705,13 @@ def fold_kernels(fd, kernels):
     return names
 
 
-# The objects of gen/kernels whose exposed operands are not closed yet, each with its reason (the
-# owner's decision of 2026-11-21: the strict rule, every exposed operand guarded). R3 refuses an
-# exposed operand of any other object, and an entry here that has none; `build` prints the list.
-# What is left are the loops over arrays of two limbs (the dot product, axpy and the convolution)
-# and the scaling of a ball vector of two limbs, with their steps; no compiler was measured to fuse
-# a product of the program into any of them (architecture.md, R3, the factors of a fused
-# operation), and each needs new loops or steps with their theorems in both models.
-_DOT = ('the step of the dot product and of the coefficients of the convolution of two limbs: closing it '
-        'takes the loops dot_2_entry (step dot_entry_step_2, the twin guarding x and y) and conv_2_entry (the '
-        'coefficients by dot_2_entry, as conv_1_entry), with their theorems; conv_2 itself is also the loop '
-        'of the centers of bv_conv_2, on stored arrays, which must not pay for guards')
-_SCALE = ('the step of bv_scale_2 (x stored, a supplied), which the scalings and axpy of BallVector<T, 2, N> '
-          'call (kairn::scale of arrays calls scale_2_entry): closing it takes a step guarding a only (or a '
-          'guard of a once, outside the loop, which a fold cannot express yet), with the theorems of the ball '
-          'vector')
-_AXPY = ('the step of the axpy of two limbs: its own guards on a and x, which change its listing, so its '
-         'bridge and its theorems in both models and those of its loop are to be proved again')
-_AXPY_STORED = ('the step of a loop that no header calls, whose description says the program supplies a and '
-                'x: its own guards on them, with its theorems and its loop\'s proved again')
-FACTOR_PENDING = {
-    'dot_step_2': 'dot of two limbs calls it; ' + _DOT,
-    'scale_step_2': _SCALE, 'axpy_entry_step_2': _AXPY, 'axpy_entry_step_2_1': _AXPY,
-    'axpy_step_2': _AXPY_STORED, 'axpy_step_2_1': _AXPY_STORED,
-    'loop axpy_2': 'its step: ' + _AXPY_STORED, 'loop axpy_2_1': 'its step: ' + _AXPY_STORED,
-    'loop axpy_2_1_entry': 'its step: ' + _AXPY, 'loop axpy_2_entry': 'its step: ' + _AXPY,
-    'loop bv_scale_2': 'its step: ' + _SCALE,
-    'loop conv_2': 'its coefficients, dot_2: ' + _DOT,
-    'loop dot_2': 'its step: ' + _DOT,
-}
-
-
-def _pending_key(e):
-    return e.name if e.kind == 'kernel' else f'loop {e.name}'
-
-
-def factor_rule(kernels, pending=None):
-    """Rule R3 on the factors of a fused operation: an exposed operand (exposed_operands) of an
-    entry kernel or of a loop is refused, naming the operand, the operation and the route, unless
-    the object is in `pending` (FACTOR_PENDING by default); an entry of `pending` without an
-    exposed operand is refused too (remove it). Only the objects of `kernels` are judged."""
-    pending = FACTOR_PENDING if pending is None else pending
-    errs, found = [], set()
+def factor_rule(kernels):
+    """Rule R3 on the factors of a fused operation (the strict rule of 2026-11-21, every exposed
+    operand guarded): an exposed operand (exposed_operands) of an entry kernel or of a loop is
+    refused, naming the operand, the operation and the route. Only the objects of `kernels` are
+    judged."""
+    errs = []
     for e in exposed_operands(kernels):
-        key = _pending_key(e)
-        found.add(key)
-        if key in pending:
-            continue
         where = f'the step {e.kernel}' if e.kind == 'loop' and e.role == 'step' else \
             (f'the {e.role} {e.kernel}' if e.kind == 'loop' else '')
         for v, ws in e.operands.items():
@@ -762,10 +722,6 @@ def factor_rule(kernels, pending=None):
                                   'that sees the other factor to be 1 fuses a product of the program into it '
                                   '(fma(x, 1, s) is x + s). Write g = guard(' + v + ') and use g there; a factor '
                                   'of prod alone needs no guard'))
-    names = set(kernels) | {f'loop {f}' for f in getattr(kernels, 'folds', {})}
-    for key in sorted(set(pending) & names - found):
-        errs.append(RuleError(key, '-', RULE_R3, 'listed in FACTOR_PENDING, but nothing of it is exposed: '
-                                                 'remove the entry'))
     return errs
 
 
@@ -2493,9 +2449,12 @@ def _bv_claims(fd, kernels, step, radius, host):
     if pow2 & radii:
         err('requires: a radius is not a power of two')
     masks = {g.name for g in fd.states[2:]}
+    # A scalar the radius takes besides the radii is a value of T: one the program supplies, or a
+    # stored one, written through Kairn (bv_scale_2 on a stored scalar, beside bv_scale_2_entry, which
+    # takes the program's and guards it: rule R3, the factors of a fused operation).
     for a in fd.radius[1][1:]:
-        if a not in masks and a not in radii and fd.roles[a] != 'supplied':
-            err(f'radius: {a} is neither the radius of an operand nor a scalar the program supplies')
+        if a not in masks and a not in radii and fd.roles[a] not in ('supplied', 'stored'):
+            err(f'radius: {a} is neither the radius of an operand nor a scalar of the loop')
     # The step's requirements are what a canonical BallVector gives: a normalized center (two limbs);
     # and the scalars' requirements (power_of_two).
     passed = dict(zip((g.name for g in step.inputs), fd.step[1]))

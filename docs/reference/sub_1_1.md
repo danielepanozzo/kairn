@@ -67,7 +67,7 @@ Which of them the proof of `sub_1_1_correct` depends on is not copied here: only
 
 ## Source
 
-**Algorithm:** one rounding to nearest. **License:** bound: published; proof: MIT.
+**Algorithm:** one rounding to nearest, the bound u/(1+u) of [JR18](../developer/design/phase0/references.md#jr18). **License:** bound: published; proof: MIT.
 
 ## Listing
 

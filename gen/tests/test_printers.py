@@ -240,6 +240,10 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR |= {'acc_mul_entry_2'}
     # And the guarded step of scale_2 (the same rule).
     NOT_CONSTEXPR |= {'scale_entry_step_2'}
+    # And the guarded step of dot_2_entry (the same rule).
+    NOT_CONSTEXPR |= {'dot_entry_step_2'}
+    # And the step and the radius of bv_scale_2_entry, on its scalar guarded (the same rule).
+    NOT_CONSTEXPR |= {'bv_scale_step_2', 'bv_scale_radius_entry_2'}
     # BallVector: the fmas of the radius kernels (bv_add_radius_k, bv_scale_radius_k).
     NOT_CONSTEXPR |= {'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2'}
     # The product of two BallVectors: the fmas of conv_radius.
@@ -810,11 +814,13 @@ class Rocq(unittest.TestCase):
         # of conv_radius, of the product of two BallVectors. And the guarded forms of rule R3 on the
         # factors of a fused operation: t of dot_entry_step_1, t and b of acc_mul_entry_1, 3 limbs in
         # 2 kernels; and p and e of two_prod_entry and r of mul_down_entry and mul_up_entry, 4 limbs in
-        # 3 kernels (mul_2_1_entry is normalized); and b of acc_mul_entry_2, 1 limb in 1 kernel.
+        # 3 kernels (mul_2_1_entry is normalized); and b of acc_mul_entry_2, 1 limb in 1 kernel; and rz
+        # of bv_scale_radius_entry_2, 1 limb in 1 kernel (dot_entry_step_2 and bv_scale_step_2 are
+        # normalized).
         self.assertEqual(sum(uncovered[n] for n in self.ks),
-                         49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1 + 3 + 4 + 1)
+                         49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2 + 1 + 3 + 4 + 1 + 1)
         self.assertEqual(sum(1 for n in self.ks if uncovered[n]),
-                         38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1 + 2 + 3 + 1)
+                         38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2 + 1 + 2 + 3 + 1 + 1)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -1019,9 +1025,18 @@ class Rocq(unittest.TestCase):
     # Then the fold conv_1_entry (the same rule): its audit line added; Model.v and Statements.v the same.
     # Then scale_entry_step_2 and the fold scale_2_entry (the same rule): their models, statements and
     # audit lines added.
-    DIGESTS = {'Model.v': '3ca6be4448165d1bbd30409e3ea95e04b5f121d2aa82d0959cb26738e5bc1fc6',
-               'Statements.v': '84389ef0e14e2d340827e525b7aec24f42e0e8d8bbdd43ea0c9aa0108108af50',
-               'Audit.v': '0ec0002ee720008635422ef3e2faf87205ac23909d7c4456c769011f0de62f1e'}
+    # Then dot_entry_step_2 and the folds dot_2_entry and conv_2_entry (the same rule): their models,
+    # statements and audit lines added. Then axpy_entry_step_2 and axpy_entry_step_2_1 (the same rule):
+    # their models on every limb guarded, then axpy_step_2 and axpy_step_2_1, printed after them; every
+    # statement the same, but for the source lines of their comments.
+    # Then bv_scale_step_2, bv_scale_radius_entry_2 and the fold bv_scale_2_entry (the same rule): their
+    # models, statements and audit lines added. Then the source fields that cite their publications
+    # (JR18, JMP17, Dekker, Knuth and Moller): the comments of Model.v and Statements.v only. Then
+    # bv_center_entry_2 and the fold bv_make_2_entry (the same rule): their models, statements and
+    # audit lines added.
+    DIGESTS = {'Model.v': 'ba9387f5dddf7286b534e79bdace65db14e81b7c73029f1d4c951060668ab43b',
+               'Statements.v': 'a7b30e41e8c83632303ec5ef808e54ba574b2df381aaf819559ae7ee458fbeb7',
+               'Audit.v': 'c9dc64fc88b4a6b20f4d297f8afd2dc1af4cf94882e1fb066658c98d586b5711'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -1060,8 +1075,9 @@ class Rocq(unittest.TestCase):
         # negation; and the three of its scaling by a power of two; and conv_radius, of its product;
         # and the two guarded forms of rule R3 on the factors, dot_entry_step_1 and acc_mul_entry_1; and
         # the four entry forms of the products with a real-model statement, two_prod_entry,
-        # mul_down_entry, mul_up_entry and mul_2_1_entry; and acc_mul_entry_2; and scale_entry_step_2.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2 + 4 + 1 + 1)
+        # mul_down_entry, mul_up_entry and mul_2_1_entry; and acc_mul_entry_2; and scale_entry_step_2;
+        # and dot_entry_step_2; and bv_scale_step_2 and bv_scale_radius_entry_2; and bv_center_entry_2.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2 + 4 + 1 + 1 + 1 + 2 + 1)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

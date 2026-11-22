@@ -34,23 +34,38 @@ jobs:
     # With all the kernels of Milestone 2 the macOS job took 58 minutes and was cancelled at 60
     # in the next run, with 35 to 44 on the other runners: it is two jobs, each every second test
     # (kairn-gen test --shard K/2: the two are the suite, each test once).
+    # On 2026-11-22, with the entry forms of rule R3, the job of GCC on Linux x86-64 took 33 to 59
+    # minutes from one run to the next and was cancelled at 60 in a third: the four Linux jobs
+    # are two jobs each too.
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Linux x86-64, GCC (scalar and AVX2)
+          - name: Linux x86-64, GCC (scalar and AVX2), 1 of 2
             os: ubuntu-24.04
-            tests: --cxx g++
-          - name: Linux x86-64, Clang (scalar and AVX2)
+            tests: --cxx g++ --shard 1/2
+          - name: Linux x86-64, GCC (scalar and AVX2), 2 of 2
             os: ubuntu-24.04
-            tests: --cxx clang++
-          - name: Linux arm64, GCC (scalar and NEON)
+            tests: --cxx g++ --shard 2/2
+          - name: Linux x86-64, Clang (scalar and AVX2), 1 of 2
+            os: ubuntu-24.04
+            tests: --cxx clang++ --shard 1/2
+          - name: Linux x86-64, Clang (scalar and AVX2), 2 of 2
+            os: ubuntu-24.04
+            tests: --cxx clang++ --shard 2/2
+          - name: Linux arm64, GCC (scalar and NEON), 1 of 2
             os: ubuntu-24.04-arm
-            tests: --cxx g++
-          - name: Linux arm64, Clang (scalar and NEON)
+            tests: --cxx g++ --shard 1/2
+          - name: Linux arm64, GCC (scalar and NEON), 2 of 2
             os: ubuntu-24.04-arm
-            tests: --cxx clang++
+            tests: --cxx g++ --shard 2/2
+          - name: Linux arm64, Clang (scalar and NEON), 1 of 2
+            os: ubuntu-24.04-arm
+            tests: --cxx clang++ --shard 1/2
+          - name: Linux arm64, Clang (scalar and NEON), 2 of 2
+            os: ubuntu-24.04-arm
+            tests: --cxx clang++ --shard 2/2
           - name: macOS arm64, Apple clang (scalar and NEON), 1 of 2
             os: macos-15
             tests: --cxx c++ --shard 1/2

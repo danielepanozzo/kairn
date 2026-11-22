@@ -1,0 +1,32 @@
+# The constructor of a BallVector with 2-limb centers that the program supplies, as two arrays of
+# limbs (BallVectorView over the program's arrays, BallVector(SoAView<const T, 2>, r)) or as
+# Expansion<T, 2> objects (BallVector(std::array<Expansion<T, 2>, N>, r)), and the program's radius
+# (milestone2.md, "BallVector", "Values"): bv_make_2 with the step bv_center_entry_2, which guards
+# each limb of each center before it is copied (rule R3: the program may have written a product
+# there, as for one limb). Two additions per entry. The centers must be canonical pairs; the guard
+# is the identity on one as a value, so the claims are those of bv_make_2: a center that is
+# (+-inf, +-0) or a NaN, or a radius that is negative, a NaN or +infinity, gives the whole space;
+# otherwise the centers and the radius are those given (a zero made +0).
+fold:          bv_make_2_entry
+arrays:        supplied c = c0 c1
+scalars:       supplied r
+state:         m, mask ok
+step:          z = bv_center_entry_2(c)
+record:        (m, ok) = norm_step_2(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_make_radius(m, r)
+finish:        (rr, finite) = bv_make_finish(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        rr
+output:        mask finite
+value:         c
+requires:      canonical c
+ensures:       makes_ball_vector z rr from=c,r flag=finite
+min_precision: 1
+theorem:       proofs/theories/BvNegMake.v
+ieee_theorem:  proofs/theories/IeeeBvNegMake.v
+status:        proved
+domain:        extended
+source:        the constructor of a BallVector, bv_make_2 on the guarded limbs of the centers: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values)
+license:       algorithm and proof: MIT

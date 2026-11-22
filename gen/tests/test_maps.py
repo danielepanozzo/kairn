@@ -106,8 +106,10 @@ class Rules(unittest.TestCase):
                      'canonical ARRAY or SCALAR of more than one limb')
         self.refused(BASE.replace('status:        unverified', 'status:        proved'),
                      'not marked unverified and names no theorem')
-        two = BASE.replace('supplied x, stored y', 'supplied x = x0 x1, stored y = y0 y1').replace(
-            'supplied a', 'supplied a = a0 a1').replace('axpy_step_1', 'axpy_step_2').replace(
+        # (axpy_step_2 is the step of axpy_2, on a stored scalar and stored arrays: rule R3, the
+        # factors of a fused operation.)
+        two = BASE.replace('supplied x, stored y', 'stored x = x0 x1, stored y = y0 y1').replace(
+            'supplied a', 'stored a = a0 a1').replace('axpy_step_1', 'axpy_step_2').replace(
             'writes:        z', 'writes:        z = z0 z1').replace('fold_finish_1', 'fold_finish_2')
         self.refused(two.replace('min_precision: 1', 'min_precision: 4'),
                      'the step axpy_step_2 requires normalized a, so the map requires canonical a')

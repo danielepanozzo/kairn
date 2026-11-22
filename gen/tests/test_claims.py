@@ -711,12 +711,13 @@ class FoldClaims(unittest.TestCase):
     def test_the_folds(self):
         maps = {name for name, fd in self.ks.folds.items() if fd.is_map}
         convs = {name for name, fd in self.ks.folds.items() if fd.is_conv}
-        self.assertEqual(convs, {'conv_1', 'conv_2', 'conv_1_entry'})
+        self.assertEqual(convs, {'conv_1', 'conv_2', 'conv_1_entry', 'conv_2_entry'})
         self.assertTrue(all(self.by[n]['conv'] is True and 'map' not in self.by[n] for n in convs))
         # The ball vectors (test_bv.py), with "bv": true.
         bvs = {name for name, fd in self.ks.folds.items() if fd.is_bv}
-        self.assertEqual(bvs, {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
-                               'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'})
+        self.assertEqual(bvs, {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_scale_2_entry',
+                               'bv_make_1', 'bv_make_2', 'bv_make_2_entry', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1',
+                               'bv_mul_pow2_2'})
         self.assertTrue(all(self.by[n]['bv'] is True and 'map' not in self.by[n] for n in bvs))
         # The products of two BallVectors (test_bv_conv.py), with "bv_conv": true.
         products = {name for name, fd in self.ks.folds.items() if fd.is_bv_conv}
@@ -724,8 +725,8 @@ class FoldClaims(unittest.TestCase):
         self.assertTrue(all(self.by[n]['bv_conv'] is True and not ({'map', 'conv', 'bv'} & set(self.by[n]))
                             for n in products))
         self.assertEqual(set(self.by) - maps - convs - bvs - products, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
-                                                      'sum_fast_2_entry', 'dot_1', 'dot_1_entry', 'dot_2', 'norm_upper_1',
-                                                      'norm_upper_2'})
+                                                      'sum_fast_2_entry', 'dot_1', 'dot_1_entry', 'dot_2', 'dot_2_entry',
+                                                      'norm_upper_1', 'norm_upper_2'})
         self.assertEqual(list(self.doc), ['schema', 'kernels', 'folds'])
         # Without folds the file has the shape it had: the test kernels have none.
         self.assertEqual(list(json.loads(claims.claims(common.kernels(common.TEST_KERNELS)))), ['schema', 'kernels'])
@@ -778,8 +779,8 @@ class FoldClaims(unittest.TestCase):
 
     def test_the_example_of_architecture_md(self):
         f = self.by['dot_2']
-        self.assertEqual(f['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'supplied'},
-                                       {'name': 'y', 'limbs': 2, 'role': 'supplied'}])
+        self.assertEqual(f['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'stored'},
+                                       {'name': 'y', 'limbs': 2, 'role': 'stored'}])
         self.assertEqual(f['outputs'], [{'name': 'r', 'limbs': 2}, {'name': 'flag', 'limbs': 1, 'type': 'mask'}])
         self.assertEqual(f['value'], 'x*y')
         self.assertEqual(f['requires'], ['canonical(x)', 'canonical(y)'])
@@ -837,9 +838,9 @@ class FoldClaims(unittest.TestCase):
                                                 'name': f['name'] + '_correct'})
         by = {f['name']: f for f in maps}
         a = by['axpy_2']
-        self.assertEqual(a['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'supplied'},
+        self.assertEqual(a['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'stored'},
                                        {'name': 'y', 'limbs': 2, 'role': 'stored'}])
-        self.assertEqual(a['scalars'], [{'name': 'a', 'limbs': 2, 'role': 'supplied'}])
+        self.assertEqual(a['scalars'], [{'name': 'a', 'limbs': 2, 'role': 'stored'}])
         self.assertEqual(a['writes'], [{'name': 'z', 'limbs': 2}])
         self.assertEqual((a['value'], a['step'], a['step_args']), ('a*x+y', 'axpy_step_2', ['a', 'x', 'y']))
         self.assertEqual(a['requires'], ['canonical(a)', 'canonical(x)', 'canonical(y)'])

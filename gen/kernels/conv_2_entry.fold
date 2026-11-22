@@ -1,0 +1,31 @@
+# The coefficients of the product of two polynomials of 2-limb coefficients that the program
+# supplies (milestone2.md, "sum, dot, axpy, convolution": conv_k): conv_2 with the coefficients by
+# dot_2_entry, whose step guards the limbs of both factors (rule R3, the factors of a fused
+# operation: architecture.md). conv_2's step only multiplies the coefficients, but mul_2_2 takes
+# them as factors of fused operations whose addends are not zero: a compiler that sees one
+# polynomial to hold ones may fuse a product the program stored into the other into them (measured
+# in the convolution of one limb, never in this one). Four additions more per term, and the
+# statement of conv_2 holds of the values in the arrays whatever the compiler does. Its claims are
+# those of conv_2.
+fold:          conv_2_entry
+arrays:        supplied x = x0 x1, supplied y = y0 y1
+coefficients:  dot_2_entry
+state:         mask finite
+combine:       finite = and(finite, finite)
+orders:        sequential
+writes:        z = z0 z1
+check:         fold_finish_2
+finish:        none
+value:         x*y
+requires:      canonical x
+requires:      canonical y
+ensures:       coefficients z
+ensures:       finite_or_nan z flag=finite
+min_precision: 4
+theorem:       proofs/theories/FoldConv.v
+ieee_theorem:  proofs/theories/IeeeFoldConv.v
+terms_theorem: proofs/theories/FoldConv.v
+status:        proved
+domain:        extended
+source:        dot_2_entry on the terms of each coefficient: Higham's bound for summation over any tree, through dot_2_entry
+license:       bound: published; proof: MIT

@@ -1220,6 +1220,8 @@ Print Assumptions dot_1_entry_seq_bound.
 Print Assumptions dot_1_entry_lanes_bound.
 Print Assumptions dot_2_seq_bound.
 Print Assumptions dot_2_lanes_bound.
+Print Assumptions dot_2_entry_seq_bound.
+Print Assumptions dot_2_entry_lanes_bound.
 
 (* What theories/IeeeFolds.v proves beyond the generated statements of the folds in the IEEE
    model, written by hand about the same generated models. (The theorems of the generated
@@ -1246,6 +1248,8 @@ Print Assumptions sum_2_entry_step_ieee_live.
 Print Assumptions sum_fast_2_entry_step_ieee_live.
 Print Assumptions dot_2_step_ieee_dead.
 Print Assumptions dot_2_step_ieee_live.
+Print Assumptions dot_2_entry_step_ieee_dead.
+Print Assumptions dot_2_entry_step_ieee_live.
 
 (* A fold of such steps with its finish, for one and two limbs and both orders. *)
 Print Assumptions seq_1.
@@ -1264,6 +1268,7 @@ Print Assumptions sum_2_entry_seq_ieee_facts.
 Print Assumptions sum_fast_2_seq_ieee_facts.
 Print Assumptions sum_fast_2_entry_seq_ieee_facts.
 Print Assumptions dot_2_seq_ieee_facts.
+Print Assumptions dot_2_entry_seq_ieee_facts.
 
 (* The steps of the maps (theories/MapSteps.v): the theorems of their generated statements
    are listed by proofs/gen/Audit.v; these are the lemmas beside them. A product within
@@ -1347,6 +1352,7 @@ Print Assumptions conv_terms_eq.
 Print Assumptions Forall2_seq_nth.
 Print Assumptions conv_1_bound.
 Print Assumptions conv_2_bound.
+Print Assumptions conv_2_entry_bound.
 
 (* The accumulator (theories/AccKernels.v, IeeeAccKernels.v, Accumulator.v,
    IeeeAccumulator.v). The theorems of the generated statements of its eight kernels are

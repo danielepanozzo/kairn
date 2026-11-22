@@ -88,21 +88,27 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 # mul_up_1, mul_2_1 and mul_2_1_full, and the scaling of a ball of two limbs, ball_scale_2 and
 # ball_scale_2_full, which the operators reach through ball_scale_2_full_entry; and the products of
 # the accumulator, acc_mul_1 and acc_mul_2, which add_product reaches through acc_mul_entry_1 and
-# acc_mul_entry_2.
+# acc_mul_entry_2; and scale_step_2, which the scalings of BallVector<T, 2, N> reach through
+# bv_scale_step_2, which guards the scalar first; and bv_center_2, which the constructors of
+# BallVector<T, 2, N> reach through bv_center_entry_2, which guards the limbs first.
 set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
   sub_up_1 mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2
   mul_ext_2_2 fold_finish_1 fold_finish_2 norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
   acc_radius_1 acc_radius_2 two_prod mul_down_1 mul_up_1 mul_2_1 mul_2_1_full ball_scale_2 ball_scale_2_full
-  acc_mul_1 acc_mul_2)
+  acc_mul_1 acc_mul_2 scale_step_2 bv_center_2)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2
   ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2 add_entry_step_1
   add_entry_step_2 sub_entry_step_1 sub_entry_step_2 scale_entry_step_2 mul_pow2_step_1 mul_pow2_step_2
-  axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1)
+  axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1 dot_entry_step_2
+  bv_scale_radius_2)
 # The folds that no public function calls (runner_arrays.hpp lists the same, with why): the loops
 # on stored arrays, whose callers here call the loops on supplied arrays instead (kairn/batch.hpp),
-# and dot_1, conv_1 and scale_2, whose callers call dot_1_entry, conv_1_entry and scale_2_entry, the
-# same loops with their factors guarded.
-set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 axpy_2 axpy_2_1 dot_1 conv_1 scale_2)
+# and dot_1, conv_1, scale_2, dot_2 and conv_2, whose callers call dot_1_entry, conv_1_entry,
+# scale_2_entry, dot_2_entry and conv_2_entry, the same loops with their factors guarded; and the
+# loops of ball vectors on stored operands, bv_scale_2 and bv_make_2, whose callers call
+# bv_scale_2_entry and bv_make_2_entry.
+set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 axpy_2 axpy_2_1 dot_1 conv_1 scale_2
+  dot_2 conv_2 bv_scale_2 bv_make_2)
 # The loops over arrays that public operations call (kairn/ball_vector.hpp; runner_ball_vector.hpp
 # has their forms), each judged as a kernel is, api.oracle.LOOP.FORMAT, on KAIRN_API_LOOP_QUICK_CASES
 # requests (KAIRN_API_LOOP_CASES in the full tier); those of them that have forms in the fast order,
@@ -111,16 +117,16 @@ set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 
 # judged through the loops' forms and, on their own, by the kernels' cross-checks. norm_upper_1 and
 # norm_upper_2, which kairn/batch.hpp calls too, are registered here once, with the forms of both
 # headers. A kernel that the parts of these loops and the lists above both name is in one list: the
-# steps of the scalings and of the dot products (scale_step_k, dot_step_k) are parts of the loops of
-# ball_vector.hpp; the kernels of the folds of maxima and the finishes of the folds are building
-# blocks (_api_internal), as kairn/batch.hpp has them; bound_dot_k has a public form,
-# traits<X>::dot(n).
-set(_api_loops bv_make_1 bv_make_2 bv_neg_1 bv_neg_2 bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2
+# steps of the scalings and of the dot products (scale_step_1, bv_scale_step_2, dot_step_k) are
+# parts of the loops of ball_vector.hpp; the kernels of the folds of maxima and the finishes of the
+# folds are building blocks (_api_internal), as kairn/batch.hpp has them; bound_dot_k has a public
+# form, traits<X>::dot(n).
+set(_api_loops bv_make_1 bv_make_2_entry bv_neg_1 bv_neg_2 bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2_entry
   bv_mul_pow2_1 bv_mul_pow2_2 bv_conv_1 bv_conv_2 norm_upper_1 norm_upper_2)
-set(_api_loops_fast bv_neg_1 bv_neg_2 bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2 bv_mul_pow2_1
+set(_api_loops_fast bv_neg_1 bv_neg_2 bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2_entry bv_mul_pow2_1
   bv_mul_pow2_2 norm_upper_1 norm_upper_2)
-set(_api_loop_parts bv_center_entry_1 bv_center_2 bv_make_radius bv_make_finish neg_1 bv_neg_radius sub_1_1
-  bv_add_radius_1 bv_add_radius_2 scale_step_1 scale_step_2 bv_scale_radius_1 bv_scale_radius_2
+set(_api_loop_parts bv_center_entry_1 bv_center_entry_2 bv_make_radius bv_make_finish neg_1 bv_neg_radius sub_1_1
+  bv_add_radius_1 bv_add_radius_2 scale_step_1 bv_scale_step_2 bv_scale_radius_1 bv_scale_radius_entry_2
   bv_mul_pow2_step_1 bv_mul_pow2_step_2 bv_mul_pow2_radius conv_radius bv_conv_finish dot_step_1 dot_step_2)
 set(KAIRN_API_LOOP_CASES 4000 CACHE STRING
   "Random requests per loop, format and form of the public interface judged by the oracle, in the full tier")

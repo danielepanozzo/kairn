@@ -216,15 +216,13 @@ def exposed_report(kernels, root=None):
 
     lines = [f'R3, factors of a fused operation (rules.exposed_operands): {len(found)} objects with exposed '
              'operands (a value of the program that is a factor of fma, fms, fnma or muladd whose addend is '
-             'not the literal zero, unguarded on that path), each accepted only while it is pending '
-             '(rules.FACTOR_PENDING)']
+             'not the literal zero, unguarded on that path), each refused (rules.factor_rule)']
     for e in found:
         what = f'{e.kind} {e.name}' + (f' ({e.role} {e.kernel})' if e.kind == 'loop' else '')
         ops = '; '.join(f'{v}: ' + ', '.join(ws) for v, ws in e.operands.items())
         per = ' per element' if e.kind == 'loop' else ''
-        pending = rules.FACTOR_PENDING.get(rules._pending_key(e))
         lines.append(f'  {what}: {ops}; {e.ops} operations{per}, {e.guarded} with the guards; reached by '
-                     f'{reached(e)}' + (f'; PENDING: {pending}' if pending else ''))
+                     f'{reached(e)}')
     return lines
 
 

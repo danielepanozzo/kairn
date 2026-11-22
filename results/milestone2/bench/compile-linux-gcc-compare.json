@@ -1,0 +1,290 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-22",
+ "commit": "e2f497c",
+ "machine": {
+  "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU, its SMT sibling idle; shared with other jobs",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "pinning": "pinned to logical CPU 32"
+ },
+ "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+ "cxx": "g++",
+ "flags": "",
+ "kind": "compare",
+ "timeout": 1800,
+ "reps": 3,
+ "run_reps": 0,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    62.274,
+    62.558,
+    62.415
+   ],
+   "cpu": [
+    62.197,
+    62.469,
+    62.333
+   ],
+   "peak_mb": [
+    583.2,
+    582.3,
+    583.3
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 396632
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    62.519,
+    62.654,
+    62.469
+   ],
+   "cpu": [
+    62.446,
+    62.583,
+    62.373
+   ],
+   "peak_mb": [
+    581.7,
+    582.4,
+    582.2
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 396632
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    63.02,
+    62.424,
+    64.326
+   ],
+   "cpu": [
+    62.94,
+    62.344,
+    64.239
+   ],
+   "peak_mb": [
+    582.5,
+    582.0,
+    582.3
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 396632
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "calls",
+   "wall": [
+    0.334,
+    0.334,
+    0.334
+   ],
+   "cpu": [
+    0.331,
+    0.331,
+    0.33
+   ],
+   "peak_mb": [
+    52.1,
+    53.1,
+    52.7
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 54432
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    62.47,
+    62.866,
+    62.75
+   ],
+   "cpu": [
+    62.384,
+    62.78,
+    62.655
+   ],
+   "peak_mb": [
+    583.0,
+    583.6,
+    583.1
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 396632
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    62.451,
+    62.529,
+    62.64
+   ],
+   "cpu": [
+    62.384,
+    62.443,
+    62.54
+   ],
+   "peak_mb": [
+    582.1,
+    582.6,
+    582.1
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 396632
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    62.604,
+    62.329,
+    62.799
+   ],
+   "cpu": [
+    62.523,
+    62.245,
+    62.698
+   ],
+   "peak_mb": [
+    581.8,
+    582.3,
+    582.0
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 396632
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "calls",
+   "wall": [
+    0.335,
+    0.335,
+    0.335
+   ],
+   "cpu": [
+    0.333,
+    0.332,
+    0.333
+   ],
+   "peak_mb": [
+    52.1,
+    53.1,
+    52.5
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 54432
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.991,
+    0.989,
+    0.996
+   ],
+   "cpu": [
+    0.988,
+    0.985,
+    0.992
+   ],
+   "peak_mb": [
+    106.3,
+    106.3,
+    106.3
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 44888
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    1.002,
+    0.996,
+    0.996
+   ],
+   "cpu": [
+    0.997,
+    0.992,
+    0.992
+   ],
+   "peak_mb": [
+    106.3,
+    106.3,
+    106.3
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 44888
+  }
+ ]
+}

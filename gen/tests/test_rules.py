@@ -468,12 +468,12 @@ class R3Factors(unittest.TestCase):
         self.assertEqual(others, [], body)
         return {(e.name, v): ws for e in rules.exposed_operands(kernels) for v, ws in e.operands.items()}
 
-    def refusals(self, body, *more, pending=None):
+    def refusals(self, body, *more):
         kernels = {}
         for text in (R3.ENTRY + body, R3.ADDS, R3.MULTIPLIES, R3.RETURNS) + more:
             k = ir.parse_kernel(text, 'test')
             kernels[k.name] = k
-        return [(e.kernel, e.value, str(e)) for e in rules.factor_rule(ir.ordered(kernels), pending)]
+        return [(e.kernel, e.value, str(e)) for e in rules.factor_rule(ir.ordered(kernels))]
 
     def test_the_rule_refuses_an_exposed_operand(self):
         # Directly, through neg, abs, select and copy, and through a callee: each named with the
@@ -492,24 +492,19 @@ class R3Factors(unittest.TestCase):
         self.assertEqual([(k, v) for k, v, _ in found], [('k', 'a')])
         self.assertIn('a factor of fma at s in fuses (called for s)', found[0][2])
 
-    def test_the_rule_accepts_prod_a_guard_and_a_pending_object(self):
+    def test_the_rule_accepts_prod_and_a_guard(self):
         self.assertEqual(self.refusals('p = prod(a, x1)\ns = add(p, x0)\n' + self.END), [])
         self.assertEqual(self.refusals('g = guard(a)\np = fma(g, x1, x0)\ns = add(p, x0)\n' + self.END), [])
-        self.assertEqual(self.refusals('p = fma(a, x1, x0)\ns = add(p, x0)\n' + self.END,
-                                       pending={'k': 'the reason'}), [])
-        # A pending entry with nothing exposed is refused.
-        found = self.refusals('p = prod(a, x1)\ns = add(p, x0)\n' + self.END, pending={'k': 'the reason'})
-        self.assertEqual([(k, v) for k, v, _ in found], [('k', '-')])
-        self.assertIn('remove the entry', found[0][2])
+        # There is no list of objects to accept as they are (the pending list of the rule's first
+        # months is closed and gone): every exposed operand is refused.
+        self.assertFalse(hasattr(rules, 'FACTOR_PENDING'))
 
-    def test_what_is_pending(self):
-        # Every exposed object of gen/kernels is pending, and nothing else: the list to close
-        # (EXPOSED), each with its reason.
+    def test_nothing_is_exposed(self):
+        # No object of gen/kernels has an exposed operand (EXPOSED is empty), and build refuses one.
         ks = common.kernels()
-        self.assertEqual(set(rules.FACTOR_PENDING),
-                         {(n if kind == 'kernel' else f'loop {n}') for kind, n, _ in EXPOSED})
+        self.assertEqual(EXPOSED, {})
+        self.assertEqual(rules.exposed_operands(ks), [])
         self.assertEqual(rules.factor_rule(ks), [])
-        self.assertTrue(all(len(r) > 20 for r in rules.FACTOR_PENDING.values()))
 
     END = R3.END
 
@@ -563,11 +558,7 @@ class R3Factors(unittest.TestCase):
         # at.
         ks = common.kernels()
         found = {(e.kind, e.name, e.kernel): sorted(e.operands) for e in rules.exposed_operands(ks)}
-        xy2 = ['x0', 'x1', 'y0', 'y1']
-        ax2 = ['a0', 'a1', 'x0', 'x1']
         self.assertEqual(found, EXPOSED)
-        self.assertEqual(EXPOSED[('kernel', 'dot_step_2', 'dot_step_2')], xy2)
-        self.assertEqual(EXPOSED[('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2')], ax2)
 
     def test_build_prints_the_report(self):
         ks = common.kernels()
@@ -576,10 +567,9 @@ class R3Factors(unittest.TestCase):
         head = [ln for ln in lines if ln.startswith('R3, factors of a fused operation')]
         self.assertEqual(len(head), 1)
         self.assertIn(f'{len(found)} objects with exposed operands', head[0])
-        self.assertIn('  kernel axpy_step_2_1: a: a factor of fms at e in two_prod (called for ch) in mul_2_1 (called '
-                      'for p0), a factor of fma at cl3 in mul_2_1 (called for p0); x0: a factor of fms at e in two_prod '
-                      '(called for ch) in mul_2_1 (called for p0); x1: a factor of fma at cl3 in mul_2_1 (called for p0); '
-                      '26 operations, 29 with the guards; reached by no public header', '\n'.join(lines))
+        # Nothing of gen/kernels is exposed (rule R3 refuses it): the report has its head line only.
+        self.assertIn('0 objects with exposed operands', head[0])
+        self.assertFalse(any(ln.startswith(('  kernel ', '  loop ')) for ln in lines[lines.index(head[0]):]))
         for e in found:
             self.assertTrue(any(ln.startswith(f'  {e.kind} {e.name}') for ln in lines), e.name)
 
@@ -595,29 +585,15 @@ class R3Factors(unittest.TestCase):
                       calls['acc_mul_entry_1'])
         self.assertEqual(calls['sum_1_entry'], ['batch.hpp sum(Sequential, SoAView<T, K> x)', 'batch.hpp sum(SoAView<T, K> x)'])
         # The loops of kairn/ball_vector.hpp, called through its macro KAIRN_DETAIL_BV_LOOP.
-        self.assertTrue(any(c.startswith('ball_vector.hpp ') and 'bv_scale(' in c for c in calls['bv_scale_2']),
-                        calls.get('bv_scale_2'))
+        self.assertTrue(any(c.startswith('ball_vector.hpp ') and 'bv_scale(' in c for c in calls['bv_scale_2_entry']),
+                        calls.get('bv_scale_2_entry'))
         self.assertTrue(all(any(c.startswith('ball_vector.hpp ') for c in calls[f])
                             for f in ('bv_neg_1', 'bv_add_2', 'bv_sub_1', 'bv_mul_pow2_2', 'norm_upper_1')))
 
 
 # The objects of gen/kernels with exposed operands (R3Factors.test_the_kernels): (kind, name, the
-# kernel analyzed) -> the exposed limbs of that kernel.
-EXPOSED = {
-    ('kernel', 'dot_step_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-    ('kernel', 'axpy_entry_step_2', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
-    ('kernel', 'axpy_entry_step_2_1', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
-    ('kernel', 'axpy_step_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
-    ('kernel', 'axpy_step_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
-    ('kernel', 'scale_step_2', 'scale_step_2'): ['a', 'x0', 'x1'],
-    ('loop', 'axpy_2', 'axpy_step_2'): ['a0', 'a1', 'x0', 'x1'],
-    ('loop', 'axpy_2_1', 'axpy_step_2_1'): ['a', 'x0', 'x1'],
-    ('loop', 'axpy_2_1_entry', 'axpy_entry_step_2_1'): ['a', 'x0', 'x1'],
-    ('loop', 'axpy_2_entry', 'axpy_entry_step_2'): ['a0', 'a1', 'x0', 'x1'],
-    ('loop', 'bv_scale_2', 'scale_step_2'): ['a'],
-    ('loop', 'conv_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-    ('loop', 'dot_2', 'dot_step_2'): ['x0', 'x1', 'y0', 'y1'],
-}
+# kernel analyzed) -> the exposed limbs of that kernel. None, since rule R3 refuses them all.
+EXPOSED = {}
 
 
 class NonFiniteLayer(unittest.TestCase):
@@ -1240,8 +1216,8 @@ class R3OfTheKernels(unittest.TestCase):
     # The entry kernels the headers of the arrays and of the accumulator call directly (the loops of
     # batch.hpp are folds, not kernels, and are called as F_seq, F_lanes, F_packed): the additions
     # and products of the accumulator, which take what the program adds (acc_add_k guards it;
-    # acc_mul_entry_1 guards both factors, rule R3 on the factors of a fused operation; acc_mul_2
-    # only multiplies them, one of the exposed operands that build lists).
+    # acc_mul_entry_1 and acc_mul_entry_2 guard every limb of both factors, rule R3 on the factors of
+    # a fused operation).
     ARRAYS_CALLED = {'acc_add_1', 'acc_add_2', 'acc_mul_entry_1', 'acc_mul_entry_2'}
     # The building blocks that milestone2.md makes public ("Building blocks on T"): the entry forms
     # of the blocks that add their operands, and of two_prod and the directed products, whose
@@ -1285,16 +1261,22 @@ class R3OfTheKernels(unittest.TestCase):
                       'sub_up_2_2', 'mul_dir_2_2', 'mul_ext_2_2'}
 
     # The steps of the folds whose arrays the program supplies (milestone2.md, "Arrays that the
-    # program fills"): those of the sums guard the element, those of the dot products only multiply
-    # it. The functions on arrays of the public headers, which come later, call them through the folds.
-    FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_2'}
-    # dot_step_1 is not: the step of dot_1, on stored arrays (rule R3, the factors of a fused operation:
-    # kairn::dot and kairn::conv of one limb call dot_1_entry and conv_1_entry).
-    # And the step of dot_1_entry, which guards both factors of its fused operation (rule R3, the
-    # factors of a fused operation: architecture.md).
-    FOLD_STEPS |= {'dot_entry_step_1'}
-    # And the steps of the maps that read what the program supplies (sub_1_1 reads stored arrays).
-    FOLD_STEPS |= MAP_STEPS - {'sub_1_1'}
+    # program fills"): those of the sums guard the element. The functions on arrays of the public
+    # headers call them through the folds.
+    FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2'}
+    # dot_step_1 and dot_step_2 are not: the steps of dot_1 and dot_2, on stored arrays (rule R3, the
+    # factors of a fused operation: kairn::dot and kairn::conv call dot_1_entry, dot_2_entry,
+    # conv_1_entry and conv_2_entry).
+    # And the steps of dot_1_entry and dot_2_entry, which guard every limb of both factors of their
+    # fused operations (rule R3, the factors of a fused operation: architecture.md).
+    FOLD_STEPS |= {'dot_entry_step_1', 'dot_entry_step_2'}
+    # And the steps of the maps that read what the program supplies (sub_1_1 reads stored arrays, and
+    # so do axpy_step_2 and axpy_step_2_1, the steps of axpy_2 and axpy_2_1 on stored operands, which
+    # axpy_entry_step_2 and axpy_entry_step_2_1 run after guarding every limb: rule R3, the factors of a
+    # fused operation).
+    FOLD_STEPS |= MAP_STEPS - {'sub_1_1', 'axpy_step_2', 'axpy_step_2_1', 'scale_step_2'}
+    # (scale_step_2 too, the step of scale_2 and of bv_scale_2 on a stored scalar, which
+    # scale_entry_step_2 and bv_scale_step_2 run after their guards.)
     # And the kernels of the accumulator that take what the program adds (acc_merge_k takes two
     # accumulators, acc_radius_k a state); acc_mul_entry_1 is acc_mul_1 on its factors guarded.
     # acc_mul_1 and acc_mul_2 are their cores, no longer entry kernels (rule R3, the factors of a fused
@@ -1303,9 +1285,13 @@ class R3OfTheKernels(unittest.TestCase):
     # And the radius kernels of BallVector that take the scalar the program gives (bv_scale_radius_k;
     # bv_add_radius_k takes radii, limbs of objects, and the largest magnitude of a center).
     FOLD_STEPS |= {'bv_scale_radius_1', 'bv_scale_radius_2'}
-    # And the step and the radius kernel of the constructor of a BallVector, which take the center and
-    # the radius the program gives (bv_center_2 copies the limbs of an Expansion<T, 2>, stored).
-    FOLD_STEPS |= {'bv_center_entry_1', 'bv_make_radius'}
+    # And the step and the radius of the scaling of a ball vector of two limbs on its scalar guarded
+    # (rule R3, the factors of a fused operation).
+    FOLD_STEPS |= {'bv_scale_step_2', 'bv_scale_radius_entry_2'}
+    # And the steps and the radius kernel of the constructor of a BallVector, which take the center and
+    # the radius the program gives (bv_center_entry_2 guards each limb; bv_center_2, the copy it calls,
+    # is the step of bv_make_2, on stored centers).
+    FOLD_STEPS |= {'bv_center_entry_1', 'bv_center_entry_2', 'bv_make_radius'}
     # And the steps and the radius of the scaling of a BallVector by a power of two, which take the power
     # of two the program gives (only multiplied).
     FOLD_STEPS |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
@@ -1400,9 +1386,11 @@ class R3OfTheKernels(unittest.TestCase):
         lines = build.summary(ks)
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2', 'dot_1_entry',
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
-                                         'conv_1', 'conv_2', 'conv_1_entry'} | MAPS |
-                         {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
-                          'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'} |
+                                         'conv_1', 'conv_2', 'conv_1_entry', 'dot_2_entry', 'conv_2_entry'} |
+                         MAPS |
+                         {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_scale_2_entry',
+                          'bv_make_1', 'bv_make_2', 'bv_make_2_entry', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1',
+                          'bv_mul_pow2_2'} |
                          {'bv_conv_1', 'bv_conv_2'})
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
@@ -1724,6 +1712,8 @@ class TheKernels(unittest.TestCase):
     # And the step of dot_1_entry, dot_step_1 on its factors guarded (rule R3, the factors of a fused
     # operation: architecture.md), proved in StepKernels.v.
     FOLDS_FINITE |= {'dot_entry_step_1'}
+    # And the step of dot_2_entry, dot_step_2 on its factors guarded (the same rule).
+    FOLDS_FINITE |= {'dot_entry_step_2'}
     FOLDS_FINISH = {'fold_finish_1', 'fold_finish_2'}
     # The folds of maxima, norm_upper_k (stage B, part 2): the combination and the steps, of the
     # finite domain, and the finishes, with the IEEE-model statement only.
@@ -1742,9 +1732,15 @@ class TheKernels(unittest.TestCase):
     ACC |= {'acc_mul_entry_2'}
     # The radius kernels of BallVector (milestone2.md, "BallVector"), of the finite domain.
     BV = {f'bv_{op}_radius_{k}' for op in ('add', 'scale') for k in (1, 2)}
+    # And the step and the radius of bv_scale_2_entry, on the scalar guarded (rule R3, the factors of
+    # a fused operation; finite domain).
+    BV |= {'bv_scale_step_2', 'bv_scale_radius_entry_2'}
     # And the kernels of the constructor of a BallVector: its steps, its radius (finite domain; the copy
     # bv_center_2 of the extended domain with a real-model statement, as neg_2) and its finish.
     BV |= {'bv_center_entry_1', 'bv_center_2', 'bv_make_radius', 'bv_make_finish'}
+    # And the step of the constructor of two limbs that guards each limb (rule R3), of the extended
+    # domain with a real-model statement, as bv_center_2.
+    BV |= {'bv_center_entry_2'}
     # And the step of one limb and the radius of the negation of a BallVector (finite domain).
     BV |= {'neg_1', 'bv_neg_radius'}
     # And the steps and the radius of the scaling of a BallVector by a power of two (finite domain).
@@ -1886,13 +1882,15 @@ class TheKernels(unittest.TestCase):
                          self.FACTOR_ENTRY_IEEE_ONLY)
         self.assertEqual({name for name, k in ks.items() if k.extended},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL |
-                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'} | {'bv_center_2'} |
+                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'} |
+                         {'bv_center_2', 'bv_center_entry_2'} |
                          self.FACTOR_ENTRY_EXTENDED)
-        # (bv_center_2, the copy of the constructor of a BallVector, has both statements, as neg_2.)
+        # (bv_center_2, the copy of the constructor of a BallVector, has both statements, as neg_2, and
+        # so has bv_center_entry_2, the same copy on the guarded limbs.)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
                                             | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.FOLDS_FINISH
-                                            | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
+                                            | ((self.NORM_FINISH | {'bv_center_2', 'bv_center_entry_2'}) - self.BV_IEEE_UNVERIFIED)
                                             | (self.WAVE_2_PROVED - self.WAVE_2_CORES)
                                             | self.FACTOR_ENTRY_EXTENDED, 'proved'),
                               **dict.fromkeys(((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED)
@@ -1903,7 +1901,7 @@ class TheKernels(unittest.TestCase):
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
                          | self.WAVE_1_FULL | self.FOLDS_FINISH
-                         | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
+                         | ((self.NORM_FINISH | {'bv_center_2', 'bv_center_entry_2'}) - self.BV_IEEE_UNVERIFIED)
                          | (self.WAVE_2_PROVED - self.WAVE_2_CORES) | self.FACTOR_ENTRY_EXTENDED)
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
@@ -1934,11 +1932,12 @@ class TheKernels(unittest.TestCase):
             # the kernels they guard for
             'two_prod_entry': 2, 'mul_down_entry': 2, 'mul_up_entry': 2, 'mul_2_1_entry': 2,
             # the folds' stage: that of the kernels of one limb and of add_2_2, add_fast_2_2, mul_2_2
-            'dot_step_1': 1, 'dot_entry_step_1': 1, 'dot_step_2': 4, 'sum_entry_step_1': 1, 'sum_entry_step_2': 3,
+            'dot_step_1': 1, 'dot_entry_step_1': 1, 'dot_step_2': 4, 'dot_entry_step_2': 4, 'sum_entry_step_1': 1,
+            'sum_entry_step_2': 3,
             'sum_fast_entry_step_2': 2, 'bound_sum_1': 1, 'bound_sum_2': 3, 'bound_dot_1': 1, 'bound_dot_2': 4,
             # the steps of the maps: that of the kernels they call (axpy_step_2_1: mul_2_1 and add_2_2)
             'sub_1_1': 1, 'add_entry_step_1': 1, 'sub_entry_step_1': 1, 'add_entry_step_2': 3,
-            'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'scale_entry_step_2': 2, 'mul_pow2_step_1': 1,
+            'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'scale_entry_step_2': 2, 'bv_scale_step_2': 2, 'mul_pow2_step_1': 1,
             'mul_pow2_step_2': 2, 'axpy_step_1': 1, 'axpy_entry_step_1': 1, 'axpy_step_2': 4,
             'axpy_entry_step_2': 4, 'axpy_step_2_1': 3, 'axpy_entry_step_2_1': 3,
             # the folds of maxima: comparisons and selects, from one bit on
@@ -1951,8 +1950,9 @@ class TheKernels(unittest.TestCase):
             # The radius kernels of BallVector, from the precision of the Ball kernel whose radius
             # lines they are.
             'bv_add_radius_1': 1, 'bv_add_radius_2': 3, 'bv_scale_radius_1': 1, 'bv_scale_radius_2': 2,
+            'bv_scale_radius_entry_2': 2,
             # and the kernels of its constructor that have a real-model statement, from 1.
-            'bv_center_entry_1': 1, 'bv_center_2': 1, 'bv_make_radius': 1,
+            'bv_center_entry_1': 1, 'bv_center_2': 1, 'bv_center_entry_2': 1, 'bv_make_radius': 1,
             # and of the negation.
             'neg_1': 1, 'bv_neg_radius': 1,
             # and of the scaling by a power of two: the step of one limb from 1 (mul_pow2_step_1's), the

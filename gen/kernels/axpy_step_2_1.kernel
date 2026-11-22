@@ -1,12 +1,14 @@
 # The step of axpy_2_1: z = (x a) + y with a scalar a of T, mul_2_1 then add_2_2 (milestone2.md:
-# mul_2_1 when the scalar of axpy is a T). The program supplies a and x, which mul_2_1 only
-# multiplies (rule R3 asks no guard of them); y is a stored array, written through Kairn.
+# mul_2_1 when the scalar of axpy is a T). The step of axpy_2_1, on a stored scalar and stored
+# arrays, written through Kairn: kairn::axpy calls axpy_2_1_entry, whose step axpy_entry_step_2_1
+# guards a and every limb of x and y and then runs this one (rule R3, the factors of a fused
+# operation). Not an entry kernel.
 # Its bound, relative to the terms |a x| + |y|, from those of mul_2_1 (2u^2, eta) and add_2_2, with
 # eps+ = 3u^2/(1-4u): |z - (a x + y)| <= (eps+ (1 + 2u^2) + 2u^2) |a x| + eps+ |y| + (1 + eps+) eta,
 # and 1 + eps+ <= 5/4 from precision 3.
 kernel:        axpy_step_2_1
 input:         a
-input:         supplied x = x0 x1
+input:         x = x0 x1
 input:         y = y0 y1
 output:        z = z0 z1
 value:         a*x+y
@@ -19,10 +21,9 @@ theorem:       proofs/theories/MapSteps.v axpy_step_2_1_correct
 ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v axpy_step_2_1_ieee_bridge
 ieee_spec_theorem: proofs/theories/IeeeMapSteps.v axpy_step_2_1_ieee_correct
 ieee_lead_theorem: proofs/theories/IeeeMapSteps.v axpy_step_2_1_ieee_lead
-source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22
+source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6); bounds from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
-entry:         yes
 ieee:          bridge spec
 
 (p0, p1) = mul_2_1(x0, x1, a)

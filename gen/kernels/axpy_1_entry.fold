@@ -22,5 +22,5 @@ theorem:       proofs/theories/FoldMaps.v
 ieee_theorem:  proofs/theories/IeeeFoldMaps.v
 status:        proved
 domain:        extended
-source:        axpy_entry_step_1 on each element
+source:        axpy_entry_step_1 on each element: mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18
 license:       algorithm: published; proof: MIT

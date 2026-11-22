@@ -105,6 +105,21 @@ apply dot_step_2_arith with (P := p0 + p1).
 - exact Et.
 Qed.
 
+(** * dot_entry_step_2 *)
+
+(* dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation):
+   the limbs of a normalized pair are numbers of the format and pass the guard unchanged
+   (guard_real_any), so the statement is that of dot_step_2. *)
+Theorem dot_entry_step_2_correct : dot_entry_step_2_spec.
+Proof.
+intros emin prec Hp s0 s1 x0 x1 y0 y1 Ns Nx Ny. unfold dot_entry_step_2. cbv zeta.
+pose proof Nx as [Fx0 [Fx1 _]]. pose proof Ny as [Fy0 [Fy1 _]].
+rewrite (guard_real_any emin prec tie_even x0 Fx0), (guard_real_any emin prec tie_even x1 Fx1),
+        (guard_real_any emin prec tie_even y0 Fy0), (guard_real_any emin prec tie_even y1 Fy1).
+generalize (dot_step_2_correct emin prec Hp s0 s1 x0 x1 y0 y1 Ns Nx Ny).
+destruct (dot_step_2 emin prec tie_even s0 s1 x0 x1 y0 y1) as [t0 t1]. intros H. exact H.
+Qed.
+
 (** * The entry steps of the sums *)
 
 Theorem sum_entry_step_1_correct : sum_entry_step_1_spec.

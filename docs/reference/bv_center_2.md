@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $z = z_0 
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of the loop `bv_make_2`, called by the constructors of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
+No public operation computes this kernel on its own. It is part of [`bv_center_entry_2`](bv_center_entry_2.md).
 
 ## Requires
 
@@ -86,9 +86,10 @@ From [`gen/kernels/bv_center_2.kernel`](https://github.com/danielepanozzo/kairn/
 # The step of bv_make_2, the constructor of a BallVector with 2-limb centers (milestone2.md,
 # "BallVector", "Values"): a center given as an Expansion<T, 2>, canonical already (finite and
 # normalized, (+-inf, +-0) or two NaN), copied limb for limb. Its limbs were written through Kairn
-# (stored), so rule R3 asks no guard. A center given as two arrays of limbs of the program's own,
-# which need not be normalized, is not covered: its step would be make_2_limbs, which has no
-# real-model statement, and the step of a ball vector needs one.
+# (stored), so rule R3 asks no guard; the constructors of kairn/ball_vector.hpp, whose centers the
+# program supplies, call bv_center_entry_2, which guards each limb first. A center given as two
+# arrays of limbs of the program's own that is not normalized is not covered: its step would be
+# make_2_limbs, which has no real-model statement, and the step of a ball vector needs one.
 
 z0 = copy(x0)
 z1 = copy(x1)

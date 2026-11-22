@@ -330,3 +330,31 @@ assert (Hz : Rabs (z0 + z1) <= (1 + u prec) * m).
 generalize (entry_error rel tiny (1 + u prec) m _ _ Hrel Htiny ltac:(lra) B Hz). intros E.
 generalize (enclose_scale x_ a (x0 + x1) (z0 + z1) rx _ H1 E). lra.
 Qed.
+
+(* bv_scale_2_entry: bv_scale_2 with the step bv_scale_step_2 and the radius bv_scale_radius_entry_2,
+   which guard a (rule R3, the factors of a fused operation). On a number of the format both are
+   those of bv_scale_2, so the loop is bv_scale_2 and its statement that of bv_scale_2. *)
+Lemma bv_scale_2_entry_map_eq :
+  forall (emin prec : Z) (a : R) (xs : list (R * R)), fmt emin prec a ->
+  bv_scale_2_entry_map emin prec tie_even a xs = bv_scale_2_map emin prec tie_even a xs.
+Proof.
+intros emin prec a xs Fa. unfold bv_scale_2_entry_map, bv_scale_2_map. apply map_ext. intros [x0 x1].
+unfold bv_scale_2_entry_step, bv_scale_2_step. cbn [fst snd].
+exact (bv_scale_step_2_real emin prec x0 x1 a Fa).
+Qed.
+
+Lemma bv_scale_2_entry_radius_eq :
+  forall (emin prec : Z) (rx a : R) (xs : list (R * R)), fmt emin prec a ->
+  bv_scale_2_entry_radius emin prec tie_even rx a xs = bv_scale_2_radius emin prec tie_even rx a xs.
+Proof.
+intros emin prec rx a xs Fa. unfold bv_scale_2_entry_radius, bv_scale_2_radius.
+rewrite (bv_scale_2_entry_map_eq emin prec a xs Fa), (bv_scale_radius_entry_2_real emin prec _ rx a Fa).
+reflexivity.
+Qed.
+
+Theorem bv_scale_2_entry_correct : bv_scale_2_entry_spec.
+Proof.
+intros emin prec Hp rx a xs Frx Hrx Fa H. cbv zeta.
+rewrite (bv_scale_2_entry_radius_eq emin prec rx a xs Fa), (bv_scale_2_entry_map_eq emin prec a xs Fa).
+exact (bv_scale_2_correct emin prec Hp rx a xs Frx Hrx Fa H).
+Qed.

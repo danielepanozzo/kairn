@@ -56,6 +56,18 @@ intros emin prec Hp x0 x1 H. unfold bv_center_2. cbv beta iota zeta.
 split. exact H. reflexivity.
 Qed.
 
+(* bv_center_entry_2: bv_center_2 on the guarded limbs (rule R3). The guard of a number of the
+   format is that number, and the limbs of a normalized pair are numbers of the format, so it is
+   bv_center_2 on the pair given. *)
+Theorem bv_center_entry_2_correct : bv_center_entry_2_spec.
+Proof.
+intros emin prec Hp c0 c1 H. unfold bv_center_entry_2. cbv zeta.
+destruct H as [F0 [F1 E]].
+rewrite (guard_real_any emin prec tie_even c0 F0), (guard_real_any emin prec tie_even c1 F1).
+unfold bv_center_2. cbv beta iota zeta.
+split. exact (conj F0 (conj F1 E)). reflexivity.
+Qed.
+
 (* The radius kernel of the constructor returns the radius given, whatever m is. *)
 Lemma bv_make_radius_value :
   forall (emin prec : Z) (choice : Z -> bool) (m r : R), (1 <= prec)%Z ->
@@ -128,5 +140,19 @@ intros emin prec Hp r cs Fr H.
 unfold bv_make_2_radius. rewrite (bv_make_radius_value emin prec tie_even _ r Hp Fr).
 split. reflexivity.
 unfold bv_make_2_map. apply Forall2_map_r. apply Forall_forall. intros [c0 c1] _.
+reflexivity.
+Qed.
+
+(* bv_make_2_entry: bv_make_2 with the step bv_center_entry_2, whose guards are the identity on
+   the limbs of normalized pairs (numbers of the format). *)
+Theorem bv_make_2_entry_correct : bv_make_2_entry_spec.
+Proof.
+intros emin prec Hp r cs Fr H.
+unfold bv_make_2_entry_radius. rewrite (bv_make_radius_value emin prec tie_even _ r Hp Fr).
+split. reflexivity.
+unfold bv_make_2_entry_map. apply Forall2_map_r. revert H. apply Forall_impl. intros [c0 c1] N.
+cbn [fst snd] in N. destruct N as [F0 [F1 _]].
+unfold bv_make_2_entry_step, bv_center_entry_2. cbn [fst snd]. cbv zeta.
+rewrite (guard_real_any emin prec tie_even c0 F0), (guard_real_any emin prec tie_even c1 F1).
 reflexivity.
 Qed.

@@ -31,10 +31,12 @@ from kairn_gen import claims, consts, cpp, expr, interp, ir, objcode, rocq, rule
 
 BVS = ('bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_neg_1', 'bv_neg_2',
        'bv_mul_pow2_1', 'bv_mul_pow2_2')
+# And bv_scale_2 on its scalar guarded (rule R3, the factors of a fused operation).
+BVS += ('bv_scale_2_entry',)
 # The Ball kernel each one applies entry by entry, whose radius the one radius is the largest of.
 BALL = {'bv_add_1': 'ball_add_1', 'bv_add_2': 'ball_add_2', 'bv_sub_1': 'ball_sub_1', 'bv_sub_2': 'ball_sub_2',
         'bv_scale_1': 'ball_scale_1', 'bv_scale_2': 'ball_scale_2', 'bv_neg_1': 'ball_neg_1', 'bv_neg_2': 'ball_neg_2',
-        'bv_mul_pow2_1': 'ball_mul_pow2_1', 'bv_mul_pow2_2': 'ball_mul_pow2_2'}
+        'bv_mul_pow2_1': 'ball_mul_pow2_1', 'bv_mul_pow2_2': 'ball_mul_pow2_2', 'bv_scale_2_entry': 'ball_scale_2'}
 # The ball vectors exact under conditions (exact_when with conditions: the scalings by a power of two).
 EXACTS = ('bv_mul_pow2_1', 'bv_mul_pow2_2')
 ZERO = (interp.NUM, False, 0, 0)

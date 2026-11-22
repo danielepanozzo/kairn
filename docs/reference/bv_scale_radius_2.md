@@ -12,7 +12,7 @@ $$r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \m
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of the loop `bv_scale_2`, called by `x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
+**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`bv_scale_radius_entry_2`](bv_scale_radius_entry_2.md).
 
 ## Requires
 

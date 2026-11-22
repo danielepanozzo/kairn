@@ -25,19 +25,20 @@
 /// addition (rule R3 of docs/developer/architecture.md). So every function calls the loop on
 /// supplied arrays (milestone2.md, "Arrays that the program fills"): the sums and the maps that
 /// add an element are the loops named _entry, whose steps pass each limb that they add through the
-/// guard a + 0 first; the dot product and the convolution of one limb are the loops dot_1_entry and
-/// conv_1_entry, whose step guards both factors of its fused operation, because a compiler that
-/// sees one of them to be 1 (an array of ones) rewrites fma(x, 1, s) as x + s and fuses the
-/// program's product x into it (rule R3, the factors of a fused operation: measured with Clang 18
-/// on x86-64 and Apple clang 21 under -ffp-contract=fast), and the scaling of two limbs is the loop
-/// scale_2_entry, whose step guards the limbs of each element and a, factors of the fused
-/// operations of mul_2_1, for the same reason. The scaling of one limb, mul_pow2 and the x of axpy
-/// of one limb only round products of their elements, which needs no guard; the dot product, axpy
-/// and the convolution of two limbs take their factors unguarded (gen/kairn-gen build lists them;
-/// the owner decided on 2026-11-21 that every one is to be guarded, and these are on the
-/// generator's pending list, being closed). The loops on stored arrays (sum_1, sum_2, add_2,
-/// axpy_2, dot_1, conv_1, scale_2, ...), for containers whose elements only Kairn writes, have no
-/// caller here: no container of this library is such.
+/// guard a + 0 first; and every value of the program that is a factor of a fused operation whose
+/// addend is not zero is guarded too, because a compiler that sees the other factor to be 1 (an
+/// array of ones) rewrites fma(x, 1, s) as x + s and fuses the program's product x into it (rule
+/// R3, the factors of a fused operation: measured with Clang 18 on x86-64 and Apple clang 21 under
+/// -ffp-contract=fast in the dot product of one limb, and with Apple clang 21 in the convolution of
+/// one limb and the scaling of two limbs). So the dot product and the convolution are the loops
+/// dot_1_entry, dot_2_entry, conv_1_entry and conv_2_entry, whose steps guard every limb of both
+/// factors; the scaling of two limbs is scale_2_entry, whose step guards the limbs of each element
+/// and a; axpy of two limbs is axpy_2_entry or axpy_2_1_entry, whose steps guard every limb of a, x
+/// and y (the strict rule of 2026-11-21: gen/kairn-gen build refuses an exposed factor). The
+/// scaling of one limb, mul_pow2 and the a and x of axpy of one limb only round products of their
+/// elements, or multiply by a power of two, which needs no guard. The loops on stored arrays
+/// (sum_1, sum_2, add_2, axpy_2, dot_1, dot_2, conv_1, conv_2, scale_2, ...), for containers whose
+/// elements only Kairn writes, have no caller here: no container of this library is such.
 ///
 /// The order of summation. sum, sum_fast and dot are folds whose result depends on the order of its
 /// additions; one theorem bounds every order by the same expression of the length
@@ -130,7 +131,7 @@ concept sum_loop_proved = (K == 1 && loops::sum_1_entry<T>::proved) || (K == 2 &
 template <class T, int K>
 concept sum_fast_loop_proved = (K == 1 && sum_loop_proved<T, 1>) || (K == 2 && loops::sum_fast_2_entry<T>::proved);
 template <class T, int K>
-concept dot_loop_proved = (K == 1 && loops::dot_1_entry<T>::proved) || (K == 2 && loops::dot_2<T>::proved);
+concept dot_loop_proved = (K == 1 && loops::dot_1_entry<T>::proved) || (K == 2 && loops::dot_2_entry<T>::proved);
 template <class T, int K>
 concept add_loop_proved = (K == 1 && loops::add_1_entry<T>::proved) || (K == 2 && loops::add_2_entry<T>::proved);
 template <class T, int K>
@@ -147,7 +148,8 @@ concept axpy_limb_loop_proved =
 template <class T>
 concept axpy_loop_proved = loops::axpy_2_entry<T>::proved;
 template <class T, int K>
-concept conv_loop_proved = (K == 1 && loops::conv_1_entry<T>::proved) || (K == 2 && loops::conv_2<T>::proved);
+concept conv_loop_proved =
+    (K == 1 && loops::conv_1_entry<T>::proved) || (K == 2 && loops::conv_2_entry<T>::proved);
 template <class T, int K>
 concept norm_loop_proved = (K == 1 && loops::norm_upper_1<T>::proved) || (K == 2 && loops::norm_upper_2<T>::proved);
 
@@ -410,8 +412,9 @@ Reduction<Expansion<std::remove_const_t<T>, K>> sum_fast(Sequential, SoAView<T, 
 /// The dot product sum_i x_i y_i of two arrays of the same length, in the lane order of this
 /// translation unit: loop dot_1_entry for one limb (the step dot_entry_step_1, one fused operation
 /// s = fma(x, y, s) on the elements guarded, so that no product is rounded on its own and no
-/// product of the program is fused into it through a factor 1, rule R3), dot_2 for two (the step
-/// dot_step_2: mul_2_2, then add_2_2, which only multiplies the elements). Rounds; not constexpr.
+/// product of the program is fused into it through a factor 1, rule R3), dot_2_entry for two (the
+/// step dot_entry_step_2: mul_2_2, then add_2_2, on the limbs of the elements guarded, factors of
+/// the fused operations of mul_2_2, for the same reason). Rounds; not constexpr.
 /// Returns Reduction<Expansion<T, K>>.
 ///
 /// Statement, proved for every length n, in both orders and for every number of lanes: when
@@ -439,16 +442,16 @@ Reduction<Expansion<std::remove_const_t<T>, K>> dot(SoAView<T, K> x, SoAView<U, 
 #endif
     } else {
 #if KAIRN_DETAIL_BATCH_PACKED
-        gen::dot_2_packed(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0], r.value.limb[1],
-                          r.finite);
+        gen::dot_2_entry_packed(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0],
+                                r.value.limb[1], r.finite);
 #else
-        gen::dot_2_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0], r.value.limb[1],
-                       r.finite);
+        gen::dot_2_entry_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0],
+                             r.value.limb[1], r.finite);
 #endif
     }
     return r;
 }
-/// The dot product in the sequential order: the same loops, dot_1_entry and dot_2, element after
+/// The dot product in the sequential order: the same loops, dot_1_entry and dot_2_entry, element after
 /// element; the same statement, and the same bits on every platform.
 template <class T, class U, int K>
     requires detail::same_limbs<T, U> && detail::dot_loop_proved<std::remove_const_t<T>, K>
@@ -458,8 +461,8 @@ Reduction<Expansion<std::remove_const_t<T>, K>> dot(Sequential, SoAView<T, K> x,
     if constexpr (K == 1) {
         gen::dot_1_entry_seq(x.limb(0), y.limb(0), x.size(), r.value.limb[0], r.finite);
     } else {
-        gen::dot_2_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0], r.value.limb[1],
-                       r.finite);
+        gen::dot_2_entry_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r.value.limb[0],
+                             r.value.limb[1], r.finite);
     }
     return r;
 }
@@ -602,9 +605,10 @@ bool mul_pow2(SoAView<T, K> x, std::type_identity_t<V> c, SoAView<V, K> z) noexc
 
 /// z = a x + y, element by element, a of T: loop axpy_1_entry for one limb (the step
 /// axpy_entry_step_1: the product of T, then the sum), axpy_2_1_entry for two (the step
-/// axpy_entry_step_2_1: mul_2_1, then add_2_2). a and x are only multiplied; y is guarded before it
-/// is added (rule R3). Rounds; not constexpr. In place: z may be x or y (`axpy(a, x, y, y)` is
-/// y = a x + y).
+/// axpy_entry_step_2_1: mul_2_1, then add_2_2). y is guarded before it is added (rule R3); for one
+/// limb a and x are only rounded as a product, for two a and every limb of x are guarded too, since
+/// they are factors of the fused operations of mul_2_1 (rule R3, the factors of a fused operation).
+/// Rounds; not constexpr. In place: z may be x or y (`axpy(a, x, y, y)` is y = a x + y).
 ///
 /// Statement, proved, for every element when it is finite, an error relative to the two terms:
 ///   |z_i - (a x_i + y_i)| <= c u^k (|a x_i| + |y_i|) + t eta,
@@ -637,7 +641,9 @@ bool axpy(std::type_identity_t<V> a, SoAView<T, K> x, SoAView<U, K> y, SoAView<V
     return finite;
 }
 /// z = a x + y, element by element, a of two limbs: loop axpy_2_entry (the step axpy_entry_step_2:
-/// mul_2_2, then add_2_2 on y guarded). Rounds; not constexpr. In place: z may be x or y.
+/// mul_2_2, then add_2_2, on every limb of a, x and y guarded: y before it is added, rule R3, a and x
+/// as factors of the fused operations of mul_2_2, rule R3 on the factors of a fused operation).
+/// Rounds; not constexpr. In place: z may be x or y.
 ///
 /// Statement, proved, for every element when it is finite: z_i normalized and
 ///   |z_i - (a x_i + y_i)| <= c u^2 (|a x_i| + |y_i|) + 2 eta,  c = 3(1 + 4u^2)/(1 - 4u) + 4,
@@ -667,10 +673,10 @@ bool axpy(const Expansion<V, 2>& a, SoAView<T, 2> x, SoAView<U, 2> y, SoAView<V,
 
 /// The coefficients of the product of the polynomials x (x.size() coefficients, the constant one
 /// first) and y: z_j = sum_i x_i y_(j-i), for j from 0 to x.size() + y.size() - 2, none when x or y
-/// is empty. Loop conv_1_entry for one limb, conv_2 for two: coefficient j is the dot product
-/// dot_1_entry or dot_2, in its sequential order, of its terms (x_i, y_(j-i)) in increasing i. One limb:
-/// both factors of each term guarded (rule R3, the factors of a fused operation). Sequential only (no
-/// packed loop). Rounds; not constexpr.
+/// is empty. Loop conv_1_entry for one limb, conv_2_entry for two: coefficient j is the dot product
+/// dot_1_entry or dot_2_entry, in its sequential order, of its terms (x_i, y_(j-i)) in increasing i,
+/// every limb of both factors of each term guarded (rule R3, the factors of a fused operation).
+/// Sequential only (no packed loop). Rounds; not constexpr.
 ///
 /// Statement, proved: every coefficient that is finite satisfies the statement of dot (above) for
 /// its own m_j terms, m_j <= min(x.size(), y.size()), so traits<Expansion<T, K>>::dot(min(x.size(),
@@ -689,7 +695,8 @@ bool conv(SoAView<T, K> x, SoAView<U, K> y, SoAView<V, K> z) noexcept {
     if constexpr (K == 1) {
         gen::conv_1_entry_seq(x.limb(0), x.size(), y.limb(0), y.size(), z.limb(0), finite);
     } else {
-        gen::conv_2_seq(x.limb(0), x.limb(1), x.size(), y.limb(0), y.limb(1), y.size(), z.limb(0), z.limb(1), finite);
+        gen::conv_2_entry_seq(x.limb(0), x.limb(1), x.size(), y.limb(0), y.limb(1), y.size(), z.limb(0), z.limb(1),
+                              finite);
     }
     return finite;
 }

@@ -145,8 +145,9 @@ void dot_loop(const kairn::SoAView<const T, K>& x, const kairn::SoAView<const T,
         if (lanes) kairn::gen::dot_1_entry_lanes(x.limb(0), y.limb(0), x.size(), lanes, r[0], f);
         else kairn::gen::dot_1_entry_seq(x.limb(0), y.limb(0), x.size(), r[0], f);
     } else {
-        if (lanes) kairn::gen::dot_2_lanes(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), lanes, r[0], r[1], f);
-        else kairn::gen::dot_2_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r[0], r[1], f);
+        if (lanes)
+            kairn::gen::dot_2_entry_lanes(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), lanes, r[0], r[1], f);
+        else kairn::gen::dot_2_entry_seq(x.limb(0), x.limb(1), y.limb(0), y.limb(1), x.size(), r[0], r[1], f);
     }
 }
 
@@ -285,8 +286,8 @@ void convolutions_and_norms(Random& rnd) {
             if constexpr (K == 1) {
                 kairn::gen::conv_1_entry_seq(a.limb[0].data(), nx, b.limb[0].data(), ny, ref.limb[0].data(), fr);
             } else {
-                kairn::gen::conv_2_seq(a.limb[0].data(), a.limb[1].data(), nx, b.limb[0].data(), b.limb[1].data(), ny,
-                                       ref.limb[0].data(), ref.limb[1].data(), fr);
+                kairn::gen::conv_2_entry_seq(a.limb[0].data(), a.limb[1].data(), nx, b.limb[0].data(), b.limb[1].data(),
+                                             ny, ref.limb[0].data(), ref.limb[1].data(), fr);
             }
             bool eq = f == fr && f;
             for (int j = 0; j < K; ++j)

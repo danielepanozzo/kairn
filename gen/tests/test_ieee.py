@@ -37,6 +37,10 @@ PROGRAMS += ['dot_entry_step_1']
 PROGRAMS += ['two_prod_entry', 'mul_2_1_entry']
 # And the step of scale_2, scale_step_2 on its operands guarded (the same rule).
 PROGRAMS += ['scale_entry_step_2']
+# And the step of dot_2_entry, dot_step_2 on its elements guarded (the same rule).
+PROGRAMS += ['dot_entry_step_2']
+# And the step of bv_scale_2_entry, scale_step_2 on its scalar guarded (the same rule).
+PROGRAMS += ['bv_scale_step_2']
 # And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
 # Program.v (acc_merge_k: additions; the others guard or take an absolute value).
 PROGRAMS += ['acc_merge_1', 'acc_merge_2']
@@ -513,8 +517,14 @@ class Statements(unittest.TestCase):
         # K_two_executions_spec, whose theorems no description names (30): 351. Then those of the 33
         # kernels without a product that IeeeWith.v has since (33): 384. (None of the entry forms of
         # rule R3 on the factors is among them: two_prod_entry is constexpr through its variant, as
-        # two_prod is, and the others are not constexpr.)
-        self.assertEqual(text.count('Print Assumptions'), 384)
+        # two_prod is, and the others are not constexpr.) Then six with the dot product of two limbs on
+        # its elements guarded: dot_entry_step_2 (bridge, statement, leading limb) and dot_2_entry in
+        # both orders, and conv_2_entry: 390. Then five with the scaling of a ball vector of two limbs
+        # on its scalar guarded: bv_scale_step_2 (bridge, statement, leading limb) and bv_scale_2_entry
+        # in both orders: 395. Then five with the constructor of a ball vector of two limbs on the limbs
+        # of its centers guarded: bv_center_entry_2 (statement of the extended domain, leading limb,
+        # its two executions: it computes guard) and bv_make_2_entry in both orders: 400.
+        self.assertEqual(text.count('Print Assumptions'), 400)
         self.assertEqual(text.count('Print Assumptions IeeeTwoExecutions.'), len(ieee.with_kernels(self.ks)))
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
@@ -674,8 +684,17 @@ class CheckedFiles(unittest.TestCase):
     # changed.
     # Then ball_scale_2_full_entry with the fix-up of ball_scale_2_full written out (behind the printer's
     # branch): its definition and the source line of its statement changed, and nothing else.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '44aaa46a4cf110784541124de175f7901d1f25e04c19a79ec87e1a9015a48a6f',
-               'proofs/gen/IeeeStatements.v': '499d30cbb5e908b763f476bbac0c671451f2294f1b4fd0d08d4ed18bc7dcd905'}
+    # Then dot_entry_step_2 (the same rule): its model, program and statements added, nothing else
+    # changed. Then axpy_entry_step_2 and axpy_entry_step_2_1 (the same rule): their models and programs
+    # with every limb of a, x and y guarded and then axpy_step_2 and axpy_step_2_1, printed after them;
+    # every statement the same, but for the source lines of their comments.
+    # Then bv_scale_step_2 and bv_scale_radius_entry_2 (the same rule): their models, the program and the
+    # statements of the first added, nothing else changed. Then the source fields that cite their
+    # publications (JR18, JMP17, Dekker, Knuth and Moller): the comments only. Then bv_center_entry_2
+    # (the same rule, the constructor of a ball vector of two limbs): its model and its statement
+    # added, nothing else changed.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '631829a8281ce0c2c0d1d1ea00047b7875e209d24825718300e7ce70bccacc4c',
+               'proofs/gen/IeeeStatements.v': 'fdead34e21e554a5233b746d67488021b5f9a58dbc59ed81661c7934c0a82eb8'}
 
 
     def test_the_checked_files(self):
@@ -722,7 +741,7 @@ class WithProduct(unittest.TestCase):
         line = next(x for x in build.summary(self.ks) if x.startswith('constexpr by the rule of the product'))
         self.assertEqual(sorted(line.split(': ', 1)[1].split(', ')), sorted(product))
         self.assertEqual(len(product), 30)
-        self.assertEqual(len(rule), 63)
+        self.assertEqual(len(rule), 64)
         self.assertLessEqual(set(product), set(rule))
         self.assertGreaterEqual(set(rule) - set(product), {
             'add_2_1', 'add_2_1_full', 'add_2_2_full', 'add_fast_2_2_full', 'sub_1_2_full', 'sub_2_1_full',
@@ -791,7 +810,7 @@ class WithProduct(unittest.TestCase):
                          ['axpy_entry_step_1', 'ball_from_interval_1', 'ball_from_interval_2'])
         self.assertEqual([n for n in took['times_inf'] if n in product], ['mul_pow2_2_full'])
         self.assertEqual(took['prod'], product)
-        self.assertEqual(len(took['guard']), 33)
+        self.assertEqual(len(took['guard']), 34)
         self.assertEqual(sorted(took['times_inf']), ['add_2_1_full', 'add_2_2_full', 'add_fast_2_2_full',
                                                      'mul_pow2_2_full', 'sub_1_2_full', 'sub_2_1_full',
                                                      'sub_2_2_full'])

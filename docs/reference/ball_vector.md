@@ -30,7 +30,7 @@ by the oracle through the public interface.** The header adds no arithmetic; two
 ```cpp
 template <class T, int K, std::size_t N> class BallVector {
     BallVector();                                     // every center 0, the radius 0
-    BallVector(const std::array<Expansion<T, K>, N>& c, T r);  // loop bv_make_k
+    BallVector(const std::array<Expansion<T, K>, N>& c, T r);  // loop bv_make_1 or bv_make_2_entry
     BallVector(SoAView<const T, K> c, T r);           // the same from arrays, c.size() == N
     explicit BallVector(BallVectorView<const T, K> v);  // a copy, v.size() == N
     static BallVector whole();
@@ -67,10 +67,11 @@ an overflow anywhere.
 ## Construction
 
 `BallVector(c, r)`, `BallVector(SoAView, r)` and `BallVectorView(SoAView, r)` call the loop
-`bv_make_1` or `bv_make_2`, in the sequential order in every build (so that the class is the same in
-every translation unit; the lane order computes the same bits). For one limb each center is
-guarded (rule R3: the program may have written a product there), for two limbs the centers are
-`Expansion<T, 2>` made by Kairn and are copied; the radius is guarded. Proved, in the IEEE model,
+`bv_make_1` or `bv_make_2_entry`, in the sequential order in every build (so that the class is the
+same in every translation unit; the lane order computes the same bits). Each center is guarded,
+each limb of it for two limbs, whether it comes from arrays or from `Expansion<T, 2>` objects of
+the program (rule R3: the program may have written a product there); the radius is guarded. Two
+limbs need canonical pairs, on which the guards are the identity as values. Proved, in the IEEE model,
 for any radius and any centers (canonical pairs for two limbs), the claim `makes_ball_vector`:
 
 - the result is canonical;
@@ -80,7 +81,11 @@ for any radius and any centers (canonical pairs for two limbs), the claim `makes
   other sign).
 
 `BallVectorView(c, r)` is how arrays of the program's become a ball vector: it makes them one in
-place, writing the whole space into them where the values say so, and sees them. A program that
+place, writing the whole space into them where the values say so, and sees them. Its loop guards
+each limb it reads, for one limb and for two, as `BallVector(SoAView<const T, 2>, r)`'s does, so a
+product the program computed in the same function is rounded before it is a limb of the ball
+vector (`api.boundary.ball_vector`); for two limbs the pairs must be canonical (a pair the program
+computed that is not normalized is not covered). A program that
 writes the arrays or the radius of a view afterwards must make the view again: nothing else
 guards what it wrote, and with `KAIRN_CHECKS` 1 every operation checks that its operands are
 canonical. The copy of a view, `BallVector(v)`, copies limbs and radius as they are. The default
@@ -110,7 +115,7 @@ operands, in Flocq's model of IEEE 754 with overflow (`encloses_entries`,
 | `-x`, `neg(x, z)` | `bv_neg_k` | `neg_k`, exact | $r_x$ | always: **exact**, the result is the negated set | `z` = `x` |
 | `x + y`, `add(x, y, z)` | `bv_add_k` | `add_1_1`, `add_2_2` | `bv_add_radius_k`$(M, r_x, r_y)$ | $r_x + r_y$ and every $\lvert x_i + y_i\rvert + r_x + r_y$ within $2^{e_{\max}-2}$ | `z` = `x` or `y` |
 | `x - y`, `sub(x, y, z)` | `bv_sub_k` | `sub_1_1`, `sub_2_2` | the same | the same with $x_i - y_i$ | `z` = `x` or `y` |
-| `x * a`, `scale(x, a, z)` | `bv_scale_k` | `scale_step_k` ($x\,a$) | `bv_scale_radius_k`$(M, r_x, a)$ | $\lvert a\rvert r_x$ and every $(\lvert x_i\rvert + r_x)\lvert a\rvert$ within $2^{e_{\max}-2}$; an infinite or NaN $a$ gives the whole space | `z` = `x` |
+| `x * a`, `scale(x, a, z)` | `bv_scale_1`, `bv_scale_2_entry` | `scale_step_1`, `bv_scale_step_2` ($x\,a$; for two limbs on $a$ guarded, a factor of the fused operations of `mul_2_1`) | `bv_scale_radius_k`$(M, r_x, a)$ | $\lvert a\rvert r_x$ and every $(\lvert x_i\rvert + r_x)\lvert a\rvert$ within $2^{e_{\max}-2}$; an infinite or NaN $a$ gives the whole space | `z` = `x` |
 | `ldexp(x, n, z)`, `half(x, z)` | `bv_mul_pow2_k`, $c = 2^n$ | `bv_mul_pow2_step_k`, with a mask of exactness | `bv_mul_pow2_radius`: $c\,r_x$ when every entry and the radius are scaled exactly, otherwise the second number after $\mathrm{RN}(c\,r_x)$ | $c\,r_x$ and every $(\lvert x_i\rvert + r_x)\,c$ within $2^{e_{\max}-2}$ | `z` = `x` |
 | `convolution(x, y, z)` | `bv_conv_k`, sequential only | `conv_k` (each coefficient `dot_k` of its terms) | `conv_radius` | below | none: `z` overlaps neither |
 
@@ -170,8 +175,13 @@ composed. The compositions themselves are not machine-checked.
   finite $Z$ has finite $X$, $a$ and $Y$. When it is finite is the V4 of each loop in turn, the
   second on the computed $S$: it is not stated once of $X$, $Y$ and $a$. Its radius is at least the
   largest of the entrywise radii of a `Ball` axpy, and equal when one entry has both largest
-  magnitudes (of the scaled centers and of the results); not claimed. `z` may be exactly `x`, not
-  `y` (the scaling would overwrite `y` before the sum reads it), which `KAIRN_CHECKS` checks. The
+  magnitudes (of the scaled centers and of the results); not claimed. `z` may be exactly `x`. It
+  must not be `y`: the scaling would overwrite `y` before the sum reads it. Given the arrays of `y`
+  as `z`, a debug build stops (`KAIRN_CHECKS`), and every build returns the whole space, which
+  contains the result, never a finite ball vector that does not. This differs from the functions on
+  arrays, where `kairn::axpy(a, x, y, y)` is the in-place form ([Functions on arrays](batch.md)):
+  writing $aX + Y$ into $Y$ itself needs a loop that computes each entry in one pass, which the
+  ball vectors do not have yet. The
   tests find `axpy` bit for bit the two calls in both orders, and the oracle judges `axpy(1, X, Y)`
   against the claims of `bv_add_k`, `axpy(-1, Y, X)` against those of `bv_sub_k` and `axpy(a, X, 0)`
   against those of `bv_scale_k`.
@@ -254,7 +264,8 @@ With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](.
   for two limbs a center that is not canonical; a NaN or an infinite radius, which make the whole
   space, are accepted;
 - operands of lengths that do not match (`kairn: ball vectors: of lengths that do not match ...`),
-  `axpy` writing the arrays of `y`, and a product writing an array that it reads, stop the program.
+  `axpy` writing the arrays of `y`, and a product writing an array that it reads, stop the program
+  (without the checks, such an `axpy` returns the whole space; such a product is not told).
 
 With `KAIRN_CHECKS` 0 nothing but the environment is checked. The accessors, the whole space, the
 views and the copy of a view, which copy limbs, check nothing.
@@ -292,8 +303,8 @@ include `kairn/packed.hpp` and `kairn/soa.hpp`: a program includes `kairn/ball_v
 ## What is tested
 
 - **Against the oracle, through the public interface.** Each of the sixteen loops this header calls
-  (`bv_make_k`, `bv_neg_k`, `bv_add_k`, `bv_sub_k`, `bv_scale_k`, `bv_mul_pow2_k`, `bv_conv_k`,
-  `norm_upper_k`) has forms in the runner of the public interface
+  (`bv_make_1` and `bv_make_2_entry`, `bv_neg_k`, `bv_add_k`, `bv_sub_k`, `bv_scale_1` and
+  `bv_scale_2_entry`, `bv_mul_pow2_k`, `bv_conv_k`, `norm_upper_k`) has forms in the runner of the public interface
   (`tests/api/runner_ball_vector.hpp`): its request lines, with arrays of every length class (0, 1,
   below, at and above the lanes, up to 64 in the quick tier and 256 in the full tier, 64 for the
   product in both) and every stratum of the oracle (the whole space,

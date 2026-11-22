@@ -48,8 +48,9 @@
 ///
 /// The checks of a debug build (KAIRN_CHECKS 1): add, add_product, merge, error_bound and ball round,
 /// and check the environment first, the rounding mode included, then that a two-limb operand is
-/// canonical. from_state does not round: it checks the environment without the rounding mode, then
-/// its state (magnitudes not negative and, under rounding to nearest, a canonical sum). sum(),
+/// canonical. from_state rounds only in its guards, whose values do not depend on the rounding mode:
+/// it checks the environment without the rounding mode, then its state (magnitudes not negative
+/// and, under rounding to nearest, a canonical sum). sum(),
 /// running_sum(), magnitudes() and count() do not round and check nothing.
 ///
 /// constexpr: the constructor, add, merge, sum, the accessors and from_state (their kernels have no
@@ -209,11 +210,12 @@ public:
     /// result r is finite, |s - Sigma| <= r (kernels bound_dot_1 or bound_dot_2 of the count m, then
     /// acc_radius_1 or acc_radius_2 of (a, m, g, t)). m is the count as the smallest number of T not
     /// below it. +infinity, which claims nothing, when the count saturated, a mask of the two kernels
-    /// is false (a sum of magnitudes that is +inf or a NaN; a count m with m u above about 1/4 to
-    /// 1/2, u the unit roundoff of T: the sum of magnitudes is held in T for one and for two limbs,
-    /// and acc_radius_k bounds counts up to m u <= 1/2, about 2^22 terms of float and 2^51 of
-    /// double), the running sum is not finite, or the radius is not. The empty accumulator has a
-    /// radius of a few times the smallest normal number. Rounds; not constexpr.
+    /// is false (a sum of magnitudes that is +inf or a NaN; a count m that is too large: the sum of
+    /// magnitudes is held in T for one and for two limbs, and with u the unit roundoff of T the
+    /// masks are true for m u < 1/4 with one limb, fewer than 2^22 terms of float and 2^51 of double
+    /// (bound_dot_1), and for m u < 1/2 with two, fewer than 2^23 and 2^52 (acc_radius_2)), the
+    /// running sum is not finite, or the radius is not. The empty accumulator has a radius just
+    /// above the smallest normal number. Rounds; not constexpr.
     T error_bound() const noexcept
         requires detail::acc_radius_proved<T, K>
     {
@@ -263,12 +265,27 @@ public:
     /// count(): a program moves accumulators through its own storage (a buffer of a device, a
     /// message) and back. Unchecked but for KAIRN_CHECKS: the guarantee of error_bound() is that of
     /// the history of the accumulator the state was read from, and holds only for such a state. With
-    /// KAIRN_CHECKS, s must be canonical and a not negative. Does not round; constexpr.
-    static constexpr Accumulator from_state(const Expansion<T, K>& s, T a, std::uint64_t n) noexcept {
+    /// KAIRN_CHECKS, s must be canonical and a not negative. The values of T given, a and the limb of
+    /// a running sum of one limb, come from the program, and the kernels of add, add_product and
+    /// merge add to them: each passes through a guard first (rule R3), as the limbs of
+    /// Ball::from_limbs do, the leading limb of make_2, whose claim makes it the value given (a NaN
+    /// stays a NaN, a -0 may become +0); so a product the program passes in is the product rounded
+    /// (measured to be fused otherwise: GCC 13 at its default setting, Clang 18 and Apple clang 21
+    /// under -ffp-contract=fast). A running sum of two limbs is an Expansion<T, 2>, whose limbs its
+    /// constructors and from_limbs guarded already. Its only rounded operations are the guards,
+    /// a + 0, whose value is a under every rounding mode (only the sign of a zero depends on the
+    /// mode): not preceded by the debug build's check of the rounding mode. constexpr.
+    static constexpr Accumulator from_state(const Expansion<T, K>& s, T a, std::uint64_t n) noexcept
+        requires detail::proof_checked<gen::bounds::make_2<T>>
+    {
         detail::check_acc_state(s, a);
         Accumulator acc;
-        acc.s_ = s;
-        acc.a_ = a;
+        if constexpr (K == 1) {
+            acc.s_.limb[0] = detail::make<T>(s.limb[0]).limb[0];
+        } else {
+            acc.s_ = s;
+        }
+        acc.a_ = detail::make<T>(a).limb[0];
         acc.n_ = n;
         return acc;
     }

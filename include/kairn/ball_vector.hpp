@@ -274,6 +274,9 @@ KAIRN_FORCEINLINE bool overlap(const T* a, std::size_t n, const T* b, std::size_
 // The constructor, in the sequential order in every build, so that BallVector and the views are
 // the same code in every translation unit (the lane order computes the same bits): the centers c
 // and the radius r given, written into the arrays z (which may be those of c, in place) and *rr.
+// Its callers are the constructors, whose centers the program supplies, so each one is guarded
+// (rule R3): loop bv_make_1 for one limb, bv_make_2_entry for two, which guards each limb
+// (bv_center_entry_2); and axpy into y, which makes the whole space of z with it.
 // Checked in every build, as a batch entry (check_batch_environment, environment.hpp): the
 // environment, the rounding mode included, for one limb as for two. The constructor of one limb
 // rounds nothing but its guards (c + 0 and r + 0) and m - m, whose values are the same under every
@@ -308,8 +311,9 @@ KAIRN_FORCEINLINE void bv_make(const T* const* c, std::size_t n, T r, T* const* 
         static_assert(::kairn::gen::bounds::loops::bv_make_1<T>::proved, "kairn: the loop bv_make_1 is not proved for this T");
         gen::bv_make_1_seq(c[0], n, r, z[0], *rr, finite_);
     } else {
-        static_assert(::kairn::gen::bounds::loops::bv_make_2<T>::proved, "kairn: the loop bv_make_2 is not proved for this T");
-        gen::bv_make_2_seq(c[0], c[1], n, r, z[0], z[1], *rr, finite_);
+        static_assert(::kairn::gen::bounds::loops::bv_make_2_entry<T>::proved,
+                      "kairn: the loop bv_make_2_entry is not proved for this T");
+        gen::bv_make_2_entry_seq(c[0], c[1], n, r, z[0], z[1], *rr, finite_);
     }
 }
 
@@ -346,17 +350,17 @@ public:
     static constexpr int limbs = K;
 
     /// The program's arrays as a ball vector: makes them one in place, then sees them (loop bv_make_1
-    /// or bv_make_2, sequential order). c sees the n centers given, and radius is the radius given;
-    /// afterwards c's arrays hold the centers and radius the radius of a canonical ball vector,
-    /// which this view sees. For one limb each center is guarded (rule R3: the program may have
-    /// written a product there). For two limbs the centers must be canonical pairs (written as
-    /// Expansion<T, 2>, through SoAView::set for instance; limbs of the program's own, not normalized,
-    /// are not covered). Proved, in the IEEE model, for any radius and any centers (canonical pairs
-    /// for two limbs): the result is canonical; it is the whole space (every center zero, the radius
-    /// +inf) exactly when the radius given is negative, a NaN or +inf, or the leading limb of a
-    /// center is not finite; otherwise the centers and the radius are the values given (a zero may
-    /// come back with the other sign). Checked with KAIRN_CHECKS as BallVector's constructor.
-    /// Not constexpr.
+    /// or bv_make_2_entry, sequential order). c sees the n centers given, and radius is the radius
+    /// given; afterwards c's arrays hold the centers and radius the radius of a canonical ball
+    /// vector, which this view sees. Each center is guarded, each limb of it for two limbs (rule R3:
+    /// the program may have written a product there). For two limbs the centers must be canonical
+    /// pairs (a pair the program computed that is not normalized is not covered). Proved, in the
+    /// IEEE model, for any radius and any centers (canonical pairs for two limbs): the result is
+    /// canonical; it is the whole space (every center zero, the radius +inf) exactly when the radius
+    /// given is negative, a NaN or +inf, or the leading limb of a center is not finite; otherwise the
+    /// centers and the radius are the values given (a zero may come back with the other sign).
+    /// Checked as BallVector's constructor: the environment in every build, the radius and the
+    /// centers with KAIRN_CHECKS. Not constexpr.
     BallVectorView(SoAView<V, K> c, V& radius) noexcept
         requires(!std::is_const_v<T>)
         : size_(c.size()), radius_(&radius) {
@@ -469,19 +473,21 @@ public:
 
     /// The point 0 of N entries: every center 0, the radius 0. Does not round.
     constexpr BallVector() noexcept = default;
-    /// The ball vector of the centers c and the radius r (loop bv_make_1 or bv_make_2, in the
-    /// sequential order in every build), each value guarded where the loop adds it (rule R3). For one
-    /// limb any centers; for two, canonical ones (Expansion<T, 2> made by Kairn). Proved, in the IEEE
+    /// The ball vector of the centers c and the radius r (loop bv_make_1 or bv_make_2_entry, in the
+    /// sequential order in every build), each value guarded (rule R3), each limb of a center of two
+    /// limbs too: the program may have written a product into an Expansion<T, 2> it holds. For one
+    /// limb any centers; for two, canonical ones. Proved, in the IEEE
     /// model: the result is canonical; it is the whole space exactly when r is negative (-inf
     /// included), a NaN or +inf, or the leading limb of a center is not finite; otherwise the centers
     /// are c and the radius r, as values (a zero may come back with the other sign). So the
     /// constructor never makes an empty set: a NaN or a negative radius says that something failed
     /// upstream, and the whole space is what is always true.
-    /// When KAIRN_CHECKS is 1, the environment is checked first, without the rounding mode for one
-    /// limb (whose only rounded operations are the guards, c + 0 and r + 0, and the loop's m - m,
-    /// whose values are the same under every rounding mode), with it for two limbs, whose test of a
-    /// canonical center rounds; then a negative r is reported (it is almost surely a mistake) and,
-    /// for two limbs, a center that is not canonical. Not constexpr.
+    /// The environment is checked first, in every build, the rounding mode included, for one limb
+    /// as for two (a batch entry: the top of this file; for one limb the only rounded operations
+    /// are the guards, c + 0 and r + 0, and the loop's m - m, whose values are the same under every
+    /// rounding mode, but the sign of whose zeros is not). Then, when KAIRN_CHECKS is 1, a negative
+    /// r is reported (it is almost surely a mistake) and, for two limbs, a center that is not
+    /// canonical. Not constexpr.
     BallVector(const std::array<center_type, N>& c, T r) noexcept {
         for (int j = 0; j < K; ++j)
             for (std::size_t i = 0; i < N; ++i) c_[j][i] = c[i].limb[j];
@@ -634,7 +640,8 @@ inline void bv_scale(const kairn::detail::bv_parts<const T, K>& x, T a, const ka
     if constexpr (K == 1) {
         KAIRN_DETAIL_BV_LOOP(Seq, bv_scale_1, x.limb[0], x.size, rx, a, z.limb[0], *z.radius, f)
     } else {
-        KAIRN_DETAIL_BV_LOOP(Seq, bv_scale_2, x.limb[0], x.limb[1], x.size, rx, a, z.limb[0], z.limb[1], *z.radius, f)
+        KAIRN_DETAIL_BV_LOOP(Seq, bv_scale_2_entry, x.limb[0], x.limb[1], x.size, rx, a, z.limb[0], z.limb[1],
+                             *z.radius, f)
     }
 }
 // By c, a positive power of two of T.
@@ -746,7 +753,12 @@ inline void half(const X& x, Z& z) noexcept {
 // a X + Y as the composition of two loops (architecture.md, "axpy of ball vectors"): S = bv_scale_k(X,
 // a) written into z, then bv_add_k(S, Y) into z, in place. Y's radius is read before the first loop
 // writes z's, which may be the same object; z's arrays may be exactly those of x, not those of y,
-// which the first loop would overwrite before the second reads them (checked with KAIRN_CHECKS).
+// which the first loop would overwrite before the second reads them: the result would then be a
+// finite ball vector around 2 a X, which does not contain a X + Y. That case is told in every
+// build, by one comparison of pointers: a debug build reports it (KAIRN_CHECKS), and the result is
+// the whole space, which contains everything: the constructor's loop on z's own arrays with a
+// radius of +infinity (bv_make_1 or bv_make_2_entry makes the whole space of such a radius, whatever
+// the centers).
 template <bool Seq, class X, class Y, class Z, class T>
 inline void axpy(T a, const X& x, const Y& y, Z& z) noexcept {
     const auto xp = kairn::detail::bv_access::read(x);
@@ -754,14 +766,23 @@ inline void axpy(T a, const X& x, const Y& y, Z& z) noexcept {
     const auto zp = kairn::detail::bv_access::write(z);
     kairn::detail::check_bv(xp, yp);
     kairn::detail::check_lengths(xp.size == yp.size && xp.size == zp.size);
+    if (yp.size > 0 && static_cast<const T*>(zp.limb[0]) == yp.limb[0]) {
+        // The whole space first and the report after it, with no statement after the report: the
+        // default handler does not return, and one compiler (MSVC, C4702) warns of code that
+        // follows a call that does not; with a handler that returns, the result is the whole space.
+        constexpr int K = kairn::detail::bv_info_of<X>::limbs;
+        const T* in[K];
+        for (int j = 0; j < K; ++j) in[j] = zp.limb[j];
+        kairn::detail::bv_make<T, K>(in, zp.size, std::numeric_limits<T>::infinity(), zp.limb, zp.radius);
 #if KAIRN_CHECKS
-    if (yp.size > 0 && static_cast<const T*>(zp.limb[0]) == yp.limb[0])
         kairn::detail::fail("axpy", "writes the array of y, which it reads after writing (z must not be y)");
 #endif
-    const T ry = *yp.radius;
-    yp.radius = &ry;
-    bv_scale<Seq>(xp, a, zp);
-    bv_add<Seq, false>(kairn::detail::as_operand(zp), yp, zp);
+    } else {
+        const T ry = *yp.radius;
+        yp.radius = &ry;
+        bv_scale<Seq>(xp, a, zp);
+        bv_add<Seq, false>(kairn::detail::as_operand(zp), yp, zp);
+    }
 }
 // The product of polynomials (loop bv_conv_k, the sequential order only).
 template <class X, class Y, class Z>
@@ -869,13 +890,14 @@ inline void sub(Sequential, const X& x, const Y& y, Z&& z) noexcept {
     packed_detail::add<true, true>(x, y, z);
 }
 
-/// Z = X a, a of T (loop bv_scale_1 or bv_scale_2): each center scaled by a (scale_step_k, the
-/// products mul_1_1 and mul_2_1), the radius that of ball_scale_k at the largest magnitude of a
-/// center written, bv_scale_radius_k(M, rx, a). a is a value of the program: for one limb the loop
-/// only rounds its products, which needs no guard; for two limbs a is a factor of the fused
-/// operations of mul_2_1, unguarded (bv_scale_2 is on the generator's pending list of rule R3, the
-/// factors of a fused operation; no compiler was measured to fuse a product of the program into
-/// it). Proved, in the IEEE model, for a canonical X and any a: canonical (V1); x a is a member for
+/// Z = X a, a of T (loop bv_scale_1 or bv_scale_2_entry): each center scaled by a (scale_step_1,
+/// the product mul_1_1; bv_scale_step_2, mul_2_1 on a guarded), the radius that of ball_scale_k at
+/// the largest magnitude of a center written, bv_scale_radius_k(M, rx, a) (for two limbs
+/// bv_scale_radius_entry_2, on a guarded). a is a value of the program: for one limb the loop only
+/// rounds its products, which needs no guard; for two limbs a is a factor of the fused operations
+/// of mul_2_1, and passes through a guard first, once per entry (rule R3, the factors of a fused
+/// operation; no compiler was measured to fuse a product of the program into it without the
+/// guard). The loop of two limbs is bv_scale_2 on the guarded a, and claims what it claims. Proved, in the IEEE model, for a canonical X and any a: canonical (V1); x a is a member for
 /// every member x (V2); a finite result has a finite X and a finite a (V3); it is finite when X is
 /// finite, a is finite, |a| rx <= 2^(e_max - 2) and every entry has (|x_i| + rx) |a| <=
 /// 2^(e_max - 2) (V4). An infinite or NaN a gives the whole space. Not claimed: that the radius
@@ -941,9 +963,12 @@ inline void half(Sequential, const X& x, Z&& z) noexcept {
 /// second on the computed S: (|x_i| + rx) |a| and |a| rx within 2^(e_max - 2), then |s_i + y_i| +
 /// r_S + ry and r_S + ry within it; it is not stated once of X, Y and a. Not claimed: that the radius
 /// is the largest of the entrywise radii of a Ball axpy (it is at least that, and equal when one
-/// entry has both largest magnitudes, of the scaled centers and of the results). z may be exactly x,
-/// not y (the scaling would overwrite y before the sum reads it): checked with KAIRN_CHECKS, not
-/// otherwise. Rounds; checked as add.
+/// entry has both largest magnitudes, of the scaled centers and of the results). z may be exactly x.
+/// It must not be y: the scaling would overwrite y before the sum reads it. When z's arrays are
+/// those of y, a debug build reports it (KAIRN_CHECKS) and every build returns the whole space,
+/// which contains the result, never a finite ball vector that does not; a X + Y written into Y
+/// itself needs a loop that computes each entry in one pass, which does not exist yet (the
+/// functions on arrays have one: kairn::axpy of batch.hpp accepts z = y). Rounds; checked as add.
 template <class X, class Y, class Z>
     requires kairn::detail::bv_binary<X, Y, Z>
 inline void axpy(std::type_identity_t<kairn::detail::bv_limb_t<X>> a, const X& x, const Y& y, Z&& z) noexcept {

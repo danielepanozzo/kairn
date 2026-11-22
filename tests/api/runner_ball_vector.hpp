@@ -8,8 +8,8 @@
 // RX RY LIMB..., completed with its N_X + N_Y - 1 coefficients, the radius and the flag; a fold of
 // maxima, FOLD FORMAT ORDER N LIMB..., with its bound and flag. Each form builds its operands as a
 // program does, through the public constructors: the line's arrays copied into arrays of the form's
-// own and made a ball vector by BallVectorView's constructor (loop bv_make_k, which guards what it is
-// given), or a BallVector made by its constructor from an std::array of numbers, from_limbs for two
+// own and made a ball vector by BallVectorView's constructor (loop bv_make_1 or bv_make_2_entry, which
+// guard what they are given), or a BallVector made by its constructor from an std::array of numbers, from_limbs for two
 // limbs. The flag is is_finite() of the result.
 //
 // The order. A line names one (seq, or lanes:W for any W); the public interface has two, the fast
@@ -154,16 +154,16 @@ bool whole_if_stopped(Line<T>& l, T r) {
     l.flag = false;
     return true;
 }
-#define BV_MAKE_FORMS(K)                                                                                    \
-    BV_FORM(bv_make_##K##_view, if (whole_if_stopped<T, K>(l, l.sc[0])) return; Held<T, K> c(l, 0, l.sc[0]); \
+#define BV_MAKE_FORMS(K, LOOP)                                                                              \
+    BV_FORM(LOOP##_view, if (whole_if_stopped<T, K>(l, l.sc[0])) return; Held<T, K> c(l, 0, l.sc[0]); \
             put(l, c.view()))                                                                            \
-    BV_FORM(bv_make_##K##_value, if (whole_if_stopped<T, K>(l, l.sc[0])) return;                         \
+    BV_FORM(LOOP##_value, if (whole_if_stopped<T, K>(l, l.sc[0])) return;                         \
             if (!with_length(l.n, [&](auto n) { put(l, value<T, K, NV(n)>(l, 0, l.sc[0])); })) {             \
                 Held<T, K> c(l, 0, l.sc[0]);                                                             \
                 put(l, c.view());                                                                        \
                 return;                                                                                  \
             } ++reached)                                                                                 \
-    BV_FORM(bv_make_##K##_value_from_view, if (whole_if_stopped<T, K>(l, l.sc[0])) return;               \
+    BV_FORM(LOOP##_value_from_view, if (whole_if_stopped<T, K>(l, l.sc[0])) return;               \
             Held<T, K> c(l, 0, T(0));                                                                    \
             if (!with_length(l.n, [&](auto n) {                                                          \
                     put(l, kairn::BallVector<T, K, NV(n)>(kairn::SoAView<const T, K>(c.soa()), l.sc[0]));     \
@@ -172,8 +172,10 @@ bool whole_if_stopped(Line<T>& l, T r) {
                 put(l, d.view());                                                                        \
                 return;                                                                                  \
             } ++reached)
-BV_MAKE_FORMS(1)
-BV_MAKE_FORMS(2)
+BV_MAKE_FORMS(1, bv_make_1)
+// Two limbs: bv_make_2_entry, bv_make_2 on each limb of each center guarded (rule R3), which every
+// constructor of BallVector<T, 2, N> and of its views calls.
+BV_MAKE_FORMS(2, bv_make_2_entry)
 
 // --- The negation: bv_neg_k (x, rx) -----------------------------------------------------------------
 #define BV_NEG_FORMS(K)                                                                                     \
@@ -239,35 +241,37 @@ BV_SUM_FORMS(1, bv_sub_1, sub, minus, -, minus_assign, -=, axpy_minus_one, false
 BV_SUM_FORMS(2, bv_sub_2, sub, minus, -, minus_assign, -=, axpy_minus_one, false)
 
 // --- The scaling by a T: bv_scale_k (x, rx, a) ----------------------------------------------------
-#define BV_SCALE_FORMS(K)                                                                                   \
-    BV_FORM(bv_scale_##K##_scale, Held<T, K> x(l, 0, l.sc[0]); Held<T, K> z(l.n); auto zv = z.view();    \
+#define BV_SCALE_FORMS(K, LOOP)                                                                                   \
+    BV_FORM(LOOP##_scale, Held<T, K> x(l, 0, l.sc[0]); Held<T, K> z(l.n); auto zv = z.view();    \
             kairn::scale(x.view(), l.sc[1], zv); put(l, zv))                                             \
-    BV_FORM(bv_scale_##K##_scale_sequential, Held<T, K> x(l, 0, l.sc[0]); Held<T, K> z(l.n);            \
+    BV_FORM(LOOP##_scale_sequential, Held<T, K> x(l, 0, l.sc[0]); Held<T, K> z(l.n);            \
             auto zv = z.view(); kairn::scale(kairn::sequential, x.view(), l.sc[1], zv); put(l, zv))      \
-    BV_FORM(bv_scale_##K##_scale_in_place_x, Held<T, K> x(l, 0, l.sc[0]); auto xv = x.view();            \
+    BV_FORM(LOOP##_scale_in_place_x, Held<T, K> x(l, 0, l.sc[0]); auto xv = x.view();            \
             kairn::scale(xv, l.sc[1], xv); put(l, xv))                                                   \
-    BV_FORM(bv_scale_##K##_times, if (!with_length(l.n, [&](auto n) { put(l, value<T, K, NV(n)>(l, 0, l.sc[0]) * l.sc[1]); })) { \
-                bv_scale_##K##_scale(l);                                                                 \
+    BV_FORM(LOOP##_times, if (!with_length(l.n, [&](auto n) { put(l, value<T, K, NV(n)>(l, 0, l.sc[0]) * l.sc[1]); })) { \
+                LOOP##_scale(l);                                                                 \
                 return;                                                                                  \
             } ++reached)                                                                                 \
-    BV_FORM(bv_scale_##K##_times_rev, if (!with_length(l.n, [&](auto n) { put(l, l.sc[1] * value<T, K, NV(n)>(l, 0, l.sc[0])); })) { \
-                bv_scale_##K##_scale(l);                                                                 \
+    BV_FORM(LOOP##_times_rev, if (!with_length(l.n, [&](auto n) { put(l, l.sc[1] * value<T, K, NV(n)>(l, 0, l.sc[0])); })) { \
+                LOOP##_scale(l);                                                                 \
                 return;                                                                                  \
             } ++reached)                                                                                 \
-    BV_FORM(bv_scale_##K##_times_assign, if (!with_length(l.n, [&](auto n) {                             \
+    BV_FORM(LOOP##_times_assign, if (!with_length(l.n, [&](auto n) {                             \
                     auto x = value<T, K, NV(n)>(l, 0, l.sc[0]);                                              \
                     x *= l.sc[1];                                                                        \
                     put(l, x);                                                                           \
                 })) {                                                                                    \
-                bv_scale_##K##_scale(l);                                                                 \
+                LOOP##_scale(l);                                                                 \
                 return;                                                                                  \
             } ++reached)                                                                                 \
-    BV_FORM(bv_scale_##K##_axpy_zero_y, Held<T, K> x(l, 0, l.sc[0]); Held<T, K> y(l.n); Held<T, K> z(l.n); \
+    BV_FORM(LOOP##_axpy_zero_y, Held<T, K> x(l, 0, l.sc[0]); Held<T, K> y(l.n); Held<T, K> z(l.n); \
             auto zv = z.view(); kairn::axpy(l.sc[1], x.view(), y.view(), zv); put(l, zv))                \
-    BV_FORM(bv_scale_##K##_axpy_in_place_x, Held<T, K> x(l, 0, l.sc[0]); Held<T, K> y(l.n);              \
+    BV_FORM(LOOP##_axpy_in_place_x, Held<T, K> x(l, 0, l.sc[0]); Held<T, K> y(l.n);              \
             auto xv = x.view(); kairn::axpy(kairn::sequential, l.sc[1], xv, y.view(), xv); put(l, xv))
-BV_SCALE_FORMS(1)
-BV_SCALE_FORMS(2)
+BV_SCALE_FORMS(1, bv_scale_1)
+// Two limbs: bv_scale_2_entry, bv_scale_2 on the scalar guarded (rule R3, the factors of a fused
+// operation), which the scalings and axpy of BallVector<T, 2, N> call.
+BV_SCALE_FORMS(2, bv_scale_2_entry)
 
 // --- The scaling by a power of two: bv_mul_pow2_k (x, rx, c) -------------------------------------
 // c is a positive power of two of T, 2^m with m = ilogb(c), so that ldexp(X, m) calls the loop once on
@@ -413,24 +417,24 @@ struct FoldForm {
     FROW(LOOP, OP, ball_vector, K, 2, 2, true, true)                   \
     FROW(LOOP, OP_ASSIGN, ball_vector, K, 2, 2, true, true)            \
     FROW(LOOP, A, ball_vector, K, 2, 2, false, true)
-#define K_ROWS(K)                                                                    \
-    FROW(bv_make_##K, view, ball_vector, K, 1, 1, false, false)                      \
-    FROW(bv_make_##K, value, ball_vector, K, 1, 1, true, false)                      \
-    FROW(bv_make_##K, value_from_view, ball_vector, K, 1, 1, true, false)            \
+#define K_ROWS(K, SCALE, MAKE)                                                                    \
+    FROW(MAKE, view, ball_vector, K, 1, 1, false, false)                             \
+    FROW(MAKE, value, ball_vector, K, 1, 1, true, false)                             \
+    FROW(MAKE, value_from_view, ball_vector, K, 1, 1, true, false)                   \
     FROW(bv_neg_##K, neg, ball_vector, K, 1, 1, false, true)                         \
     FROW(bv_neg_##K, neg_sequential, ball_vector, K, 1, 1, false, false)             \
     FROW(bv_neg_##K, neg_in_place_x, ball_vector, K, 1, 1, false, true)              \
     FROW(bv_neg_##K, negate, ball_vector, K, 1, 1, true, true)                       \
     SUM_ROWS(bv_add_##K, K, add, plus, plus_assign, axpy_unit)                       \
     SUM_ROWS(bv_sub_##K, K, sub, minus, minus_assign, axpy_minus_one)                \
-    FROW(bv_scale_##K, scale, ball_vector, K, 1, 2, false, true)                     \
-    FROW(bv_scale_##K, scale_sequential, ball_vector, K, 1, 2, false, false)         \
-    FROW(bv_scale_##K, scale_in_place_x, ball_vector, K, 1, 2, false, true)          \
-    FROW(bv_scale_##K, times, ball_vector, K, 1, 2, true, true)                      \
-    FROW(bv_scale_##K, times_rev, ball_vector, K, 1, 2, true, true)                  \
-    FROW(bv_scale_##K, times_assign, ball_vector, K, 1, 2, true, true)               \
-    FROW(bv_scale_##K, axpy_zero_y, ball_vector, K, 1, 2, false, true)               \
-    FROW(bv_scale_##K, axpy_in_place_x, ball_vector, K, 1, 2, false, false)          \
+    FROW(SCALE, scale, ball_vector, K, 1, 2, false, true)                     \
+    FROW(SCALE, scale_sequential, ball_vector, K, 1, 2, false, false)         \
+    FROW(SCALE, scale_in_place_x, ball_vector, K, 1, 2, false, true)          \
+    FROW(SCALE, times, ball_vector, K, 1, 2, true, true)                      \
+    FROW(SCALE, times_rev, ball_vector, K, 1, 2, true, true)                  \
+    FROW(SCALE, times_assign, ball_vector, K, 1, 2, true, true)               \
+    FROW(SCALE, axpy_zero_y, ball_vector, K, 1, 2, false, true)               \
+    FROW(SCALE, axpy_in_place_x, ball_vector, K, 1, 2, false, false)          \
     FROW(bv_mul_pow2_##K, ldexp, ball_vector, K, 1, 2, false, true)                  \
     FROW(bv_mul_pow2_##K, ldexp_sequential, ball_vector, K, 1, 2, false, false)      \
     FROW(bv_mul_pow2_##K, ldexp_in_place_x, ball_vector, K, 1, 2, false, true)       \
@@ -444,7 +448,7 @@ struct FoldForm {
     FROW(norm_upper_##K, ball_vector_norm_upper, maxima, K, 1, 0, false, true)       \
     FROW(norm_upper_##K, ball_vector_norm_upper_sequential, maxima, K, 1, 0, false, false)
 // The first form of each loop is its canonical one (the debug build's runner runs that one only).
-const FoldForm fold_forms[] = {K_ROWS(1) K_ROWS(2)};
+const FoldForm fold_forms[] = {K_ROWS(1, bv_scale_1, bv_make_1) K_ROWS(2, bv_scale_2_entry, bv_make_2_entry)};
 #undef K_ROWS
 #undef SUM_ROWS
 #undef FROW
@@ -459,11 +463,11 @@ struct LoopPart {
     const char* loop;
 };
 const LoopPart loop_parts[] = {
-    {"bv_center_entry_1", "bv_make_1"}, {"bv_center_2", "bv_make_2"}, {"bv_make_radius", "bv_make_1"},
+    {"bv_center_entry_1", "bv_make_1"}, {"bv_center_entry_2", "bv_make_2_entry"}, {"bv_make_radius", "bv_make_1"},
     {"bv_make_finish", "bv_make_1"}, {"neg_1", "bv_neg_1"}, {"bv_neg_radius", "bv_neg_1"},
     {"sub_1_1", "bv_sub_1"}, {"bv_add_radius_1", "bv_add_1"}, {"bv_add_radius_2", "bv_add_2"},
-    {"scale_step_1", "bv_scale_1"}, {"scale_step_2", "bv_scale_2"}, {"bv_scale_radius_1", "bv_scale_1"},
-    {"bv_scale_radius_2", "bv_scale_2"}, {"bv_mul_pow2_step_1", "bv_mul_pow2_1"},
+    {"scale_step_1", "bv_scale_1"}, {"bv_scale_step_2", "bv_scale_2_entry"}, {"bv_scale_radius_1", "bv_scale_1"},
+    {"bv_scale_radius_entry_2", "bv_scale_2_entry"}, {"bv_mul_pow2_step_1", "bv_mul_pow2_1"},
     {"bv_mul_pow2_step_2", "bv_mul_pow2_2"}, {"bv_mul_pow2_radius", "bv_mul_pow2_1"},
     {"conv_radius", "bv_conv_1"}, {"bv_conv_finish", "bv_conv_1"}, {"dot_step_1", "bv_conv_1"},
     {"dot_step_2", "bv_conv_2"},

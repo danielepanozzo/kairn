@@ -88,6 +88,25 @@ generalize (scale_step_2_correct emin prec Hp x0 x1 a Nx Fa).
 destruct (scale_step_2 emin prec tie_even x0 x1 a) as [z0 z1]. intros H. exact H.
 Qed.
 
+(* bv_scale_step_2: scale_step_2 on the stored limbs of the center and a guarded (rule R3, the factors
+   of a fused operation): a number of the format passes the guard unchanged (guard_real_any), so the
+   step is scale_step_2 and its statement that of scale_step_2. *)
+Lemma bv_scale_step_2_real :
+  forall (emin prec : Z) (x0 x1 a : R), fmt emin prec a ->
+  bv_scale_step_2 emin prec tie_even x0 x1 a = scale_step_2 emin prec tie_even x0 x1 a.
+Proof.
+intros emin prec x0 x1 a Fa. unfold bv_scale_step_2. cbv zeta.
+rewrite (guard_real_any emin prec tie_even a Fa).
+destruct (scale_step_2 emin prec tie_even x0 x1 a). reflexivity.
+Qed.
+
+Theorem bv_scale_step_2_correct : bv_scale_step_2_spec.
+Proof.
+intros emin prec Hp x0 x1 a Nx Fa.
+rewrite (bv_scale_step_2_real emin prec x0 x1 a Fa).
+exact (scale_step_2_correct emin prec Hp x0 x1 a Nx Fa).
+Qed.
+
 Theorem mul_pow2_step_2_correct : mul_pow2_step_2_spec.
 Proof.
 intros emin prec Hp x0 x1 c Nx Fc Hc.
@@ -323,7 +342,9 @@ Qed.
 
 (** * The entry steps of axpy *)
 
-(* y passes through the guard before the sum; a and x are only multiplied. *)
+(* y passes through the guard before the sum; a and x are only multiplied (one limb), or every limb
+   of a, x and y passes through the guard and the stored step follows (two limbs: rule R3, the
+   factors of a fused operation). A number of the format passes the guard unchanged. *)
 Theorem axpy_entry_step_1_correct : axpy_entry_step_1_spec.
 Proof.
 intros emin prec Hp a x y Fa Fx Fy z. unfold z, axpy_entry_step_1. clear z. cbv zeta.
@@ -335,18 +356,22 @@ Theorem axpy_entry_step_2_correct : axpy_entry_step_2_spec.
 Proof.
 intros emin prec Hp a0 a1 x0 x1 y0 y1 Na Nx Ny.
 unfold axpy_entry_step_2. cbv zeta.
-assert (Fy0 : fmt emin prec y0) by apply Ny.
-assert (Fy1 : fmt emin prec y1) by apply Ny.
-rewrite (guard_real_any emin prec tie_even y0 Fy0), (guard_real_any emin prec tie_even y1 Fy1).
-exact (axpy_step_2_correct emin prec Hp a0 a1 x0 x1 y0 y1 Na Nx Ny).
+pose proof Na as [Fa0 [Fa1 _]]. pose proof Nx as [Fx0 [Fx1 _]]. pose proof Ny as [Fy0 [Fy1 _]].
+rewrite (guard_real_any emin prec tie_even a0 Fa0), (guard_real_any emin prec tie_even a1 Fa1),
+        (guard_real_any emin prec tie_even x0 Fx0), (guard_real_any emin prec tie_even x1 Fx1),
+        (guard_real_any emin prec tie_even y0 Fy0), (guard_real_any emin prec tie_even y1 Fy1).
+generalize (axpy_step_2_correct emin prec Hp a0 a1 x0 x1 y0 y1 Na Nx Ny).
+destruct (axpy_step_2 emin prec tie_even a0 a1 x0 x1 y0 y1) as [z0 z1]. intros H. exact H.
 Qed.
 
 Theorem axpy_entry_step_2_1_correct : axpy_entry_step_2_1_spec.
 Proof.
 intros emin prec Hp a x0 x1 y0 y1 Fa Nx Ny.
 unfold axpy_entry_step_2_1. cbv zeta.
-assert (Fy0 : fmt emin prec y0) by apply Ny.
-assert (Fy1 : fmt emin prec y1) by apply Ny.
-rewrite (guard_real_any emin prec tie_even y0 Fy0), (guard_real_any emin prec tie_even y1 Fy1).
-exact (axpy_step_2_1_correct emin prec Hp a x0 x1 y0 y1 Fa Nx Ny).
+pose proof Nx as [Fx0 [Fx1 _]]. pose proof Ny as [Fy0 [Fy1 _]].
+rewrite (guard_real_any emin prec tie_even a Fa),
+        (guard_real_any emin prec tie_even x0 Fx0), (guard_real_any emin prec tie_even x1 Fx1),
+        (guard_real_any emin prec tie_even y0 Fy0), (guard_real_any emin prec tie_even y1 Fy1).
+generalize (axpy_step_2_1_correct emin prec Hp a x0 x1 y0 y1 Fa Nx Ny).
+destruct (axpy_step_2_1 emin prec tie_even a x0 x1 y0 y1) as [z0 z1]. intros H. exact H.
 Qed.

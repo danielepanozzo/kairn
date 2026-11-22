@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_down_entry, mul_up_1, mul_up_entry, mul_2_2, dot_step_2, acc_mul_2, acc_mul_entry_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_scale_2_full_entry, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_entry, mul_2_1_full, mul_2_1_full_entry, mul_2_2_full, scale_step_2, scale_entry_step_2.
+// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, bv_scale_radius_entry_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_down_entry, mul_up_1, mul_up_entry, mul_2_2, dot_step_2, acc_mul_2, acc_mul_entry_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_step_2, axpy_entry_step_2, mul_2_1, axpy_step_2_1, axpy_entry_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_scale_2_full_entry, ball_split_2, ball_sub_2, ball_sub_2_full, scale_step_2, bv_scale_step_2, dot_entry_step_2, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_entry, mul_2_1_full, mul_2_1_full_entry, mul_2_2_full, scale_entry_step_2.
 #pragma once
 
 #include <cstddef>
@@ -168,7 +168,7 @@ KAIRN_GEN_FORCEINLINE void acc_radius_2(float a, float m, float g, float t, floa
 }
 
 // add_1_1(a, b) -> s
-// one rounding to nearest. Status: proved; constexpr.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_1_1(double a, double b, double& s_out) noexcept {
     const double s = a + b;
     s_out = s;
@@ -301,7 +301,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_down_entry(float a, float b, float& r_o
 }
 
 // add_entry_step_1(x, y) -> z
-// add_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved; constexpr.
+// add_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_entry_step_1(double x, double y, double& z_out) noexcept {
     const double gx = __builtin_is_constant_evaluated() ? x : x + 0.0;
     const double gy = __builtin_is_constant_evaluated() ? y : y + 0.0;
@@ -394,7 +394,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_up_entry(float a, float b, float& r_out
 }
 
 // mul_1_1(a, b) -> p
-// one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(double a, double b, double& p_out) noexcept {
     const double p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0);
     p_out = p;
@@ -405,7 +405,7 @@ KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(float a, float b, float& p_out) noe
 }
 
 // axpy_entry_step_1(a, x, y) -> z
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void axpy_entry_step_1(double a, double x, double y, double& z_out) noexcept {
     // (p) = mul_1_1(a, x)
     const double p = __builtin_is_constant_evaluated() ? a * x : fma_rn(a, x, 0.0);
@@ -424,7 +424,7 @@ KAIRN_GEN_FORCEINLINE constexpr void axpy_entry_step_1(float a, float x, float y
 }
 
 // axpy_step_1(a, x, y) -> z
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void axpy_step_1(double a, double x, double y, double& z_out) noexcept {
     // (p) = mul_1_1(a, x)
     const double p = __builtin_is_constant_evaluated() ? a * x : fma_rn(a, x, 0.0);
@@ -3880,6 +3880,27 @@ KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(float m, float rx, float a, float& 
     rz_out = rz;
 }
 
+// bv_scale_radius_entry_2(m, rx, a) -> rz
+// bv_scale_radius_2 on the guarded a (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void bv_scale_radius_entry_2(double m, double rx, double a, double& rz_out) noexcept {
+    const double ga = a + 0.0;
+    // (rz) = bv_scale_radius_2(m, rx, ga)
+    const double rz_aa = abs_bits(ga);
+    const double rz_p = fma_rn(rz_aa, rx, 0.0);
+    const double rz_t = fma_rn(m, 0x1.0000000000001p-105, rz_p);
+    const double rz = fma_rn(rz_t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void bv_scale_radius_entry_2(float m, float rx, float a, float& rz_out) noexcept {
+    const float ga = a + 0.0f;
+    // (rz) = bv_scale_radius_2(m, rx, ga)
+    const float rz_aa = abs_bits(ga);
+    const float rz_p = fma_rn(rz_aa, rx, 0.0f);
+    const float rz_t = fma_rn(m, 0x1.000002p-47f, rz_p);
+    const float rz = fma_rn(rz_t, 0x1.000004p+0f, 0x1.000006p-126f);
+    rz_out = rz;
+}
+
 // conv_radius(ma, mb, rx, ry, m, g, t) -> rz
 // the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void conv_radius(double ma, double mb, double rx, double ry, double m, double g, double t, double& rz_out) noexcept {
@@ -3932,7 +3953,7 @@ KAIRN_GEN_FORCEINLINE void dot_step_1(float s, float x, float y, float& t_out) n
 }
 
 // fast_two_sum_entry(a, b) -> r = (s, e)
-// fast_two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
+// Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -5474,7 +5495,7 @@ KAIRN_GEN_FORCEINLINE constexpr void rmul(float a, float b, float& r_out) noexce
 }
 
 // scale_step_1(x, a) -> z
-// mul_1_1, one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void scale_step_1(double x, double a, double& z_out) noexcept {
     // (z) = mul_1_1(x, a)
     const double z = __builtin_is_constant_evaluated() ? x * a : fma_rn(x, a, 0.0);
@@ -5506,7 +5527,7 @@ KAIRN_GEN_FORCEINLINE constexpr void split(float a, float& ah_out, float& al_out
 }
 
 // sub_1_1(a, b) -> s
-// one rounding to nearest. Status: proved; constexpr.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_1_1(double a, double b, double& s_out) noexcept {
     const double s = a - b;
     s_out = s;
@@ -5562,7 +5583,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_down_entry(float a, float b, float& r_o
 }
 
 // sub_entry_step_1(x, y) -> z
-// sub_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved; constexpr.
+// sub_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_entry_step_1(double x, double y, double& z_out) noexcept {
     const double gx = __builtin_is_constant_evaluated() ? x : x + 0.0;
     const double gy = __builtin_is_constant_evaluated() ? y : y + 0.0;
@@ -5780,7 +5801,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum(float a, float b, float& s_out, flo
 }
 
 // two_sum_entry(a, b) -> r = (s, e)
-// two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
+// TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -7146,207 +7167,8 @@ KAIRN_GEN_FORCEINLINE void add_up_2_2(float x0, float x1, float y0, float y1, fl
     h1_out = h1;
 }
 
-// axpy_entry_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(double a0, double a1, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
-    // (p0, p1) = mul_2_2(a0, a1, x0, x1)
-    // (p0_ch, p0_cl1) = two_prod(a0, x0)
-    const double p0_ch = fma_rn(a0, x0, 0.0);
-    const double p0_cl1 = fma_rn(a0, x0, -p0_ch);
-    const double p0_tl0 = fma_rn(a1, x1, 0.0);
-    const double p0_tl1 = fma_rn(a0, x1, p0_tl0);
-    const double p0_cl2 = fma_rn(a1, x0, p0_tl1);
-    const double p0_cl3 = p0_cl1 + p0_cl2;
-    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
-    const double p0 = p0_ch + p0_cl3;
-    const double p0_z = p0 - p0_ch;
-    const double p1 = p0_cl3 - p0_z;
-    const double gy0 = y0 + 0.0;
-    const double gy1 = y1 + 0.0;
-    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
-    // (z0_sh, z0_sl) = two_sum(p0, gy0)
-    const double z0_sh = p0 + gy0;
-    const double z0_sh_bb = z0_sh - p0;
-    const double z0_sh_t0 = z0_sh - z0_sh_bb;
-    const double z0_sh_t1 = p0 - z0_sh_t0;
-    const double z0_sh_t2 = gy0 - z0_sh_bb;
-    const double z0_sl = z0_sh_t1 + z0_sh_t2;
-    // (z0_th, z0_tl) = two_sum(p1, gy1)
-    const double z0_th = p1 + gy1;
-    const double z0_th_bb = z0_th - p1;
-    const double z0_th_t0 = z0_th - z0_th_bb;
-    const double z0_th_t1 = p1 - z0_th_t0;
-    const double z0_th_t2 = gy1 - z0_th_bb;
-    const double z0_tl = z0_th_t1 + z0_th_t2;
-    const double z0_c = z0_sl + z0_th;
-    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
-    const double z0_vh = z0_sh + z0_c;
-    const double z0_vh_z = z0_vh - z0_sh;
-    const double z0_vl = z0_c - z0_vh_z;
-    const double z0_w = z0_tl + z0_vl;
-    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
-    const double z0 = z0_vh + z0_w;
-    const double z0_z = z0 - z0_vh;
-    const double z1 = z0_w - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(float a0, float a1, float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
-    // (p0, p1) = mul_2_2(a0, a1, x0, x1)
-    // (p0_ch, p0_cl1) = two_prod(a0, x0)
-    const float p0_ch = fma_rn(a0, x0, 0.0f);
-    const float p0_cl1 = fma_rn(a0, x0, -p0_ch);
-    const float p0_tl0 = fma_rn(a1, x1, 0.0f);
-    const float p0_tl1 = fma_rn(a0, x1, p0_tl0);
-    const float p0_cl2 = fma_rn(a1, x0, p0_tl1);
-    const float p0_cl3 = p0_cl1 + p0_cl2;
-    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
-    const float p0 = p0_ch + p0_cl3;
-    const float p0_z = p0 - p0_ch;
-    const float p1 = p0_cl3 - p0_z;
-    const float gy0 = y0 + 0.0f;
-    const float gy1 = y1 + 0.0f;
-    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
-    // (z0_sh, z0_sl) = two_sum(p0, gy0)
-    const float z0_sh = p0 + gy0;
-    const float z0_sh_bb = z0_sh - p0;
-    const float z0_sh_t0 = z0_sh - z0_sh_bb;
-    const float z0_sh_t1 = p0 - z0_sh_t0;
-    const float z0_sh_t2 = gy0 - z0_sh_bb;
-    const float z0_sl = z0_sh_t1 + z0_sh_t2;
-    // (z0_th, z0_tl) = two_sum(p1, gy1)
-    const float z0_th = p1 + gy1;
-    const float z0_th_bb = z0_th - p1;
-    const float z0_th_t0 = z0_th - z0_th_bb;
-    const float z0_th_t1 = p1 - z0_th_t0;
-    const float z0_th_t2 = gy1 - z0_th_bb;
-    const float z0_tl = z0_th_t1 + z0_th_t2;
-    const float z0_c = z0_sl + z0_th;
-    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
-    const float z0_vh = z0_sh + z0_c;
-    const float z0_vh_z = z0_vh - z0_sh;
-    const float z0_vl = z0_c - z0_vh_z;
-    const float z0_w = z0_tl + z0_vl;
-    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
-    const float z0 = z0_vh + z0_w;
-    const float z0_z = z0 - z0_vh;
-    const float z1 = z0_w - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-
-// mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
-// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void mul_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, a)
-    const double ch = fma_rn(x0, a, 0.0);
-    const double cl1 = fma_rn(x0, a, -ch);
-    const double cl3 = fma_rn(x1, a, cl1);
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const double z0 = ch + cl3;
-    const double z0_z = z0 - ch;
-    const double z1 = cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, a)
-    const float ch = fma_rn(x0, a, 0.0f);
-    const float cl1 = fma_rn(x0, a, -ch);
-    const float cl3 = fma_rn(x1, a, cl1);
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const float z0 = ch + cl3;
-    const float z0_z = z0 - ch;
-    const float z1 = cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-
-// axpy_entry_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(double a, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
-    // (p0, p1) = mul_2_1(x0, x1, a)
-    // (p0_ch, p0_cl1) = two_prod(x0, a)
-    const double p0_ch = fma_rn(x0, a, 0.0);
-    const double p0_cl1 = fma_rn(x0, a, -p0_ch);
-    const double p0_cl3 = fma_rn(x1, a, p0_cl1);
-    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
-    const double p0 = p0_ch + p0_cl3;
-    const double p0_z = p0 - p0_ch;
-    const double p1 = p0_cl3 - p0_z;
-    const double gy0 = y0 + 0.0;
-    const double gy1 = y1 + 0.0;
-    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
-    // (z0_sh, z0_sl) = two_sum(p0, gy0)
-    const double z0_sh = p0 + gy0;
-    const double z0_sh_bb = z0_sh - p0;
-    const double z0_sh_t0 = z0_sh - z0_sh_bb;
-    const double z0_sh_t1 = p0 - z0_sh_t0;
-    const double z0_sh_t2 = gy0 - z0_sh_bb;
-    const double z0_sl = z0_sh_t1 + z0_sh_t2;
-    // (z0_th, z0_tl) = two_sum(p1, gy1)
-    const double z0_th = p1 + gy1;
-    const double z0_th_bb = z0_th - p1;
-    const double z0_th_t0 = z0_th - z0_th_bb;
-    const double z0_th_t1 = p1 - z0_th_t0;
-    const double z0_th_t2 = gy1 - z0_th_bb;
-    const double z0_tl = z0_th_t1 + z0_th_t2;
-    const double z0_c = z0_sl + z0_th;
-    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
-    const double z0_vh = z0_sh + z0_c;
-    const double z0_vh_z = z0_vh - z0_sh;
-    const double z0_vl = z0_c - z0_vh_z;
-    const double z0_w = z0_tl + z0_vl;
-    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
-    const double z0 = z0_vh + z0_w;
-    const double z0_z = z0 - z0_vh;
-    const double z1 = z0_w - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(float a, float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
-    // (p0, p1) = mul_2_1(x0, x1, a)
-    // (p0_ch, p0_cl1) = two_prod(x0, a)
-    const float p0_ch = fma_rn(x0, a, 0.0f);
-    const float p0_cl1 = fma_rn(x0, a, -p0_ch);
-    const float p0_cl3 = fma_rn(x1, a, p0_cl1);
-    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
-    const float p0 = p0_ch + p0_cl3;
-    const float p0_z = p0 - p0_ch;
-    const float p1 = p0_cl3 - p0_z;
-    const float gy0 = y0 + 0.0f;
-    const float gy1 = y1 + 0.0f;
-    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
-    // (z0_sh, z0_sl) = two_sum(p0, gy0)
-    const float z0_sh = p0 + gy0;
-    const float z0_sh_bb = z0_sh - p0;
-    const float z0_sh_t0 = z0_sh - z0_sh_bb;
-    const float z0_sh_t1 = p0 - z0_sh_t0;
-    const float z0_sh_t2 = gy0 - z0_sh_bb;
-    const float z0_sl = z0_sh_t1 + z0_sh_t2;
-    // (z0_th, z0_tl) = two_sum(p1, gy1)
-    const float z0_th = p1 + gy1;
-    const float z0_th_bb = z0_th - p1;
-    const float z0_th_t0 = z0_th - z0_th_bb;
-    const float z0_th_t1 = p1 - z0_th_t0;
-    const float z0_th_t2 = gy1 - z0_th_bb;
-    const float z0_tl = z0_th_t1 + z0_th_t2;
-    const float z0_c = z0_sl + z0_th;
-    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
-    const float z0_vh = z0_sh + z0_c;
-    const float z0_vh_z = z0_vh - z0_sh;
-    const float z0_vl = z0_c - z0_vh_z;
-    const float z0_w = z0_tl + z0_vl;
-    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
-    const float z0 = z0_vh + z0_w;
-    const float z0_z = z0 - z0_vh;
-    const float z1 = z0_w - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-
 // axpy_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_step_2(double a0, double a1, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     // (p0, p1) = mul_2_2(a0, a1, x0, x1)
     // (p0_ch, p0_cl1) = two_prod(a0, x0)
@@ -7430,8 +7252,134 @@ KAIRN_GEN_FORCEINLINE void axpy_step_2(float a0, float a1, float x0, float x1, f
     z1_out = z1;
 }
 
+// axpy_entry_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// axpy_step_2, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(double a0, double a1, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    const double ga0 = a0 + 0.0;
+    const double ga1 = a1 + 0.0;
+    const double gx0 = x0 + 0.0;
+    const double gx1 = x1 + 0.0;
+    const double gy0 = y0 + 0.0;
+    const double gy1 = y1 + 0.0;
+    // (z0, z1) = axpy_step_2(ga0, ga1, gx0, gx1, gy0, gy1)
+    // (z0_p0, z0_p1) = mul_2_2(ga0, ga1, gx0, gx1)
+    // (z0_p0_ch, z0_p0_cl1) = two_prod(ga0, gx0)
+    const double z0_p0_ch = fma_rn(ga0, gx0, 0.0);
+    const double z0_p0_cl1 = fma_rn(ga0, gx0, -z0_p0_ch);
+    const double z0_p0_tl0 = fma_rn(ga1, gx1, 0.0);
+    const double z0_p0_tl1 = fma_rn(ga0, gx1, z0_p0_tl0);
+    const double z0_p0_cl2 = fma_rn(ga1, gx0, z0_p0_tl1);
+    const double z0_p0_cl3 = z0_p0_cl1 + z0_p0_cl2;
+    // (z0_p0, z0_p1) = fast_two_sum(z0_p0_ch, z0_p0_cl3)
+    const double z0_p0 = z0_p0_ch + z0_p0_cl3;
+    const double z0_p0_z = z0_p0 - z0_p0_ch;
+    const double z0_p1 = z0_p0_cl3 - z0_p0_z;
+    // (z0, z1) = add_2_2(z0_p0, z0_p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(z0_p0, gy0)
+    const double z0_sh = z0_p0 + gy0;
+    const double z0_sh_bb = z0_sh - z0_p0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = z0_p0 - z0_sh_t0;
+    const double z0_sh_t2 = gy0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(z0_p1, gy1)
+    const double z0_th = z0_p1 + gy1;
+    const double z0_th_bb = z0_th - z0_p1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = z0_p1 - z0_th_t0;
+    const double z0_th_t2 = gy1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(float a0, float a1, float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    const float ga0 = a0 + 0.0f;
+    const float ga1 = a1 + 0.0f;
+    const float gx0 = x0 + 0.0f;
+    const float gx1 = x1 + 0.0f;
+    const float gy0 = y0 + 0.0f;
+    const float gy1 = y1 + 0.0f;
+    // (z0, z1) = axpy_step_2(ga0, ga1, gx0, gx1, gy0, gy1)
+    // (z0_p0, z0_p1) = mul_2_2(ga0, ga1, gx0, gx1)
+    // (z0_p0_ch, z0_p0_cl1) = two_prod(ga0, gx0)
+    const float z0_p0_ch = fma_rn(ga0, gx0, 0.0f);
+    const float z0_p0_cl1 = fma_rn(ga0, gx0, -z0_p0_ch);
+    const float z0_p0_tl0 = fma_rn(ga1, gx1, 0.0f);
+    const float z0_p0_tl1 = fma_rn(ga0, gx1, z0_p0_tl0);
+    const float z0_p0_cl2 = fma_rn(ga1, gx0, z0_p0_tl1);
+    const float z0_p0_cl3 = z0_p0_cl1 + z0_p0_cl2;
+    // (z0_p0, z0_p1) = fast_two_sum(z0_p0_ch, z0_p0_cl3)
+    const float z0_p0 = z0_p0_ch + z0_p0_cl3;
+    const float z0_p0_z = z0_p0 - z0_p0_ch;
+    const float z0_p1 = z0_p0_cl3 - z0_p0_z;
+    // (z0, z1) = add_2_2(z0_p0, z0_p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(z0_p0, gy0)
+    const float z0_sh = z0_p0 + gy0;
+    const float z0_sh_bb = z0_sh - z0_p0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = z0_p0 - z0_sh_t0;
+    const float z0_sh_t2 = gy0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(z0_p1, gy1)
+    const float z0_th = z0_p1 + gy1;
+    const float z0_th_bb = z0_th - z0_p1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = z0_p1 - z0_th_t0;
+    const float z0_th_t2 = gy1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
+// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, a)
+    const double ch = fma_rn(x0, a, 0.0);
+    const double cl1 = fma_rn(x0, a, -ch);
+    const double cl3 = fma_rn(x1, a, cl1);
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const double z0 = ch + cl3;
+    const double z0_z = z0 - ch;
+    const double z1 = cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, a)
+    const float ch = fma_rn(x0, a, 0.0f);
+    const float cl1 = fma_rn(x0, a, -ch);
+    const float cl3 = fma_rn(x1, a, cl1);
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const float z0 = ch + cl3;
+    const float z0_z = z0 - ch;
+    const float z1 = cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // axpy_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_step_2_1(double a, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     // (p0, p1) = mul_2_1(x0, x1, a)
     // (p0_ch, p0_cl1) = two_prod(x0, a)
@@ -7494,6 +7442,97 @@ KAIRN_GEN_FORCEINLINE void axpy_step_2_1(float a, float x0, float x1, float y0, 
     const float z0_th_t0 = z0_th - z0_th_bb;
     const float z0_th_t1 = p1 - z0_th_t0;
     const float z0_th_t2 = y1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// axpy_entry_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// axpy_step_2_1, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(double a, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    const double ga = a + 0.0;
+    const double gx0 = x0 + 0.0;
+    const double gx1 = x1 + 0.0;
+    const double gy0 = y0 + 0.0;
+    const double gy1 = y1 + 0.0;
+    // (z0, z1) = axpy_step_2_1(ga, gx0, gx1, gy0, gy1)
+    // (z0_p0, z0_p1) = mul_2_1(gx0, gx1, ga)
+    // (z0_p0_ch, z0_p0_cl1) = two_prod(gx0, ga)
+    const double z0_p0_ch = fma_rn(gx0, ga, 0.0);
+    const double z0_p0_cl1 = fma_rn(gx0, ga, -z0_p0_ch);
+    const double z0_p0_cl3 = fma_rn(gx1, ga, z0_p0_cl1);
+    // (z0_p0, z0_p1) = fast_two_sum(z0_p0_ch, z0_p0_cl3)
+    const double z0_p0 = z0_p0_ch + z0_p0_cl3;
+    const double z0_p0_z = z0_p0 - z0_p0_ch;
+    const double z0_p1 = z0_p0_cl3 - z0_p0_z;
+    // (z0, z1) = add_2_2(z0_p0, z0_p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(z0_p0, gy0)
+    const double z0_sh = z0_p0 + gy0;
+    const double z0_sh_bb = z0_sh - z0_p0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = z0_p0 - z0_sh_t0;
+    const double z0_sh_t2 = gy0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(z0_p1, gy1)
+    const double z0_th = z0_p1 + gy1;
+    const double z0_th_bb = z0_th - z0_p1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = z0_p1 - z0_th_t0;
+    const double z0_th_t2 = gy1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(float a, float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    const float ga = a + 0.0f;
+    const float gx0 = x0 + 0.0f;
+    const float gx1 = x1 + 0.0f;
+    const float gy0 = y0 + 0.0f;
+    const float gy1 = y1 + 0.0f;
+    // (z0, z1) = axpy_step_2_1(ga, gx0, gx1, gy0, gy1)
+    // (z0_p0, z0_p1) = mul_2_1(gx0, gx1, ga)
+    // (z0_p0_ch, z0_p0_cl1) = two_prod(gx0, ga)
+    const float z0_p0_ch = fma_rn(gx0, ga, 0.0f);
+    const float z0_p0_cl1 = fma_rn(gx0, ga, -z0_p0_ch);
+    const float z0_p0_cl3 = fma_rn(gx1, ga, z0_p0_cl1);
+    // (z0_p0, z0_p1) = fast_two_sum(z0_p0_ch, z0_p0_cl3)
+    const float z0_p0 = z0_p0_ch + z0_p0_cl3;
+    const float z0_p0_z = z0_p0 - z0_p0_ch;
+    const float z0_p1 = z0_p0_cl3 - z0_p0_z;
+    // (z0, z1) = add_2_2(z0_p0, z0_p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(z0_p0, gy0)
+    const float z0_sh = z0_p0 + gy0;
+    const float z0_sh_bb = z0_sh - z0_p0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = z0_p0 - z0_sh_t0;
+    const float z0_sh_t2 = gy0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(z0_p1, gy1)
+    const float z0_th = z0_p1 + gy1;
+    const float z0_th_bb = z0_th - z0_p1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = z0_p1 - z0_th_t0;
+    const float z0_th_t2 = gy1 - z0_th_bb;
     const float z0_tl = z0_th_t1 + z0_th_t2;
     const float z0_c = z0_sl + z0_th;
     // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
@@ -13399,6 +13438,27 @@ KAIRN_GEN_FORCEINLINE constexpr void bv_center_2(float x0, float x1, float& z0_o
     z1_out = z1;
 }
 
+// bv_center_entry_2(c = (c0, c1)) -> z = (z0, z1)
+// bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). Status: proved (real model), proved (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void bv_center_entry_2(double c0, double c1, double& z0_out, double& z1_out) noexcept {
+    const double g0 = __builtin_is_constant_evaluated() ? c0 : c0 + 0.0;
+    const double g1 = __builtin_is_constant_evaluated() ? c1 : c1 + 0.0;
+    // (z0, z1) = bv_center_2(g0, g1)
+    const double z0 = g0;
+    const double z1 = g1;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_center_entry_2(float c0, float c1, float& z0_out, float& z1_out) noexcept {
+    const float g0 = __builtin_is_constant_evaluated() ? c0 : c0 + 0.0f;
+    const float g1 = __builtin_is_constant_evaluated() ? c1 : c1 + 0.0f;
+    // (z0, z1) = bv_center_2(g0, g1)
+    const float z0 = g0;
+    const float z1 = g1;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // bv_mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1), mask e
 // mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_2(double x0, double x1, double c, double& z0_out, double& z1_out, bool& e_out) noexcept {
@@ -13434,6 +13494,163 @@ KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_2(float x0, float x1, floa
     z0_out = z0;
     z1_out = z1;
     e_out = e;
+}
+
+// scale_step_2(x = (x0, x1), a) -> z = (z0, z1)
+// mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void scale_step_2(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    // (z0, z1) = mul_2_1(x0, x1, a)
+    // (z0_ch, z0_cl1) = two_prod(x0, a)
+    const double z0_ch = fma_rn(x0, a, 0.0);
+    const double z0_cl1 = fma_rn(x0, a, -z0_ch);
+    const double z0_cl3 = fma_rn(x1, a, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const double z0 = z0_ch + z0_cl3;
+    const double z0_z = z0 - z0_ch;
+    const double z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void scale_step_2(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    // (z0, z1) = mul_2_1(x0, x1, a)
+    // (z0_ch, z0_cl1) = two_prod(x0, a)
+    const float z0_ch = fma_rn(x0, a, 0.0f);
+    const float z0_cl1 = fma_rn(x0, a, -z0_ch);
+    const float z0_cl3 = fma_rn(x1, a, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float z0 = z0_ch + z0_cl3;
+    const float z0_z = z0 - z0_ch;
+    const float z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// bv_scale_step_2(x = (x0, x1), a) -> z = (z0, z1)
+// scale_step_2 on the guarded a (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void bv_scale_step_2(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    const double ga = a + 0.0;
+    // (z0, z1) = scale_step_2(x0, x1, ga)
+    // (z0, z1) = mul_2_1(x0, x1, ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, ga)
+    const double z0_ch = fma_rn(x0, ga, 0.0);
+    const double z0_cl1 = fma_rn(x0, ga, -z0_ch);
+    const double z0_cl3 = fma_rn(x1, ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const double z0 = z0_ch + z0_cl3;
+    const double z0_z = z0 - z0_ch;
+    const double z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void bv_scale_step_2(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    const float ga = a + 0.0f;
+    // (z0, z1) = scale_step_2(x0, x1, ga)
+    // (z0, z1) = mul_2_1(x0, x1, ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, ga)
+    const float z0_ch = fma_rn(x0, ga, 0.0f);
+    const float z0_cl1 = fma_rn(x0, ga, -z0_ch);
+    const float z0_cl3 = fma_rn(x1, ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float z0 = z0_ch + z0_cl3;
+    const float z0_z = z0 - z0_ch;
+    const float z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// dot_entry_step_2(s = (s0, s1), x = (x0, x1), y = (y0, y1)) -> t = (t0, t1)
+// dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void dot_entry_step_2(double s0, double s1, double x0, double x1, double y0, double y1, double& t0_out, double& t1_out) noexcept {
+    const double gx0 = x0 + 0.0;
+    const double gx1 = x1 + 0.0;
+    const double gy0 = y0 + 0.0;
+    const double gy1 = y1 + 0.0;
+    // (t0, t1) = dot_step_2(s0, s1, gx0, gx1, gy0, gy1)
+    // (t0_p0, t0_p1) = mul_2_2(gx0, gx1, gy0, gy1)
+    // (t0_p0_ch, t0_p0_cl1) = two_prod(gx0, gy0)
+    const double t0_p0_ch = fma_rn(gx0, gy0, 0.0);
+    const double t0_p0_cl1 = fma_rn(gx0, gy0, -t0_p0_ch);
+    const double t0_p0_tl0 = fma_rn(gx1, gy1, 0.0);
+    const double t0_p0_tl1 = fma_rn(gx0, gy1, t0_p0_tl0);
+    const double t0_p0_cl2 = fma_rn(gx1, gy0, t0_p0_tl1);
+    const double t0_p0_cl3 = t0_p0_cl1 + t0_p0_cl2;
+    // (t0_p0, t0_p1) = fast_two_sum(t0_p0_ch, t0_p0_cl3)
+    const double t0_p0 = t0_p0_ch + t0_p0_cl3;
+    const double t0_p0_z = t0_p0 - t0_p0_ch;
+    const double t0_p1 = t0_p0_cl3 - t0_p0_z;
+    // (t0, t1) = add_2_2(s0, s1, t0_p0, t0_p1)
+    // (t0_sh, t0_sl) = two_sum(s0, t0_p0)
+    const double t0_sh = s0 + t0_p0;
+    const double t0_sh_bb = t0_sh - s0;
+    const double t0_sh_t0 = t0_sh - t0_sh_bb;
+    const double t0_sh_t1 = s0 - t0_sh_t0;
+    const double t0_sh_t2 = t0_p0 - t0_sh_bb;
+    const double t0_sl = t0_sh_t1 + t0_sh_t2;
+    // (t0_th, t0_tl) = two_sum(s1, t0_p1)
+    const double t0_th = s1 + t0_p1;
+    const double t0_th_bb = t0_th - s1;
+    const double t0_th_t0 = t0_th - t0_th_bb;
+    const double t0_th_t1 = s1 - t0_th_t0;
+    const double t0_th_t2 = t0_p1 - t0_th_bb;
+    const double t0_tl = t0_th_t1 + t0_th_t2;
+    const double t0_c = t0_sl + t0_th;
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const double t0_vh = t0_sh + t0_c;
+    const double t0_vh_z = t0_vh - t0_sh;
+    const double t0_vl = t0_c - t0_vh_z;
+    const double t0_w = t0_tl + t0_vl;
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const double t0 = t0_vh + t0_w;
+    const double t0_z = t0 - t0_vh;
+    const double t1 = t0_w - t0_z;
+    t0_out = t0;
+    t1_out = t1;
+}
+KAIRN_GEN_FORCEINLINE void dot_entry_step_2(float s0, float s1, float x0, float x1, float y0, float y1, float& t0_out, float& t1_out) noexcept {
+    const float gx0 = x0 + 0.0f;
+    const float gx1 = x1 + 0.0f;
+    const float gy0 = y0 + 0.0f;
+    const float gy1 = y1 + 0.0f;
+    // (t0, t1) = dot_step_2(s0, s1, gx0, gx1, gy0, gy1)
+    // (t0_p0, t0_p1) = mul_2_2(gx0, gx1, gy0, gy1)
+    // (t0_p0_ch, t0_p0_cl1) = two_prod(gx0, gy0)
+    const float t0_p0_ch = fma_rn(gx0, gy0, 0.0f);
+    const float t0_p0_cl1 = fma_rn(gx0, gy0, -t0_p0_ch);
+    const float t0_p0_tl0 = fma_rn(gx1, gy1, 0.0f);
+    const float t0_p0_tl1 = fma_rn(gx0, gy1, t0_p0_tl0);
+    const float t0_p0_cl2 = fma_rn(gx1, gy0, t0_p0_tl1);
+    const float t0_p0_cl3 = t0_p0_cl1 + t0_p0_cl2;
+    // (t0_p0, t0_p1) = fast_two_sum(t0_p0_ch, t0_p0_cl3)
+    const float t0_p0 = t0_p0_ch + t0_p0_cl3;
+    const float t0_p0_z = t0_p0 - t0_p0_ch;
+    const float t0_p1 = t0_p0_cl3 - t0_p0_z;
+    // (t0, t1) = add_2_2(s0, s1, t0_p0, t0_p1)
+    // (t0_sh, t0_sl) = two_sum(s0, t0_p0)
+    const float t0_sh = s0 + t0_p0;
+    const float t0_sh_bb = t0_sh - s0;
+    const float t0_sh_t0 = t0_sh - t0_sh_bb;
+    const float t0_sh_t1 = s0 - t0_sh_t0;
+    const float t0_sh_t2 = t0_p0 - t0_sh_bb;
+    const float t0_sl = t0_sh_t1 + t0_sh_t2;
+    // (t0_th, t0_tl) = two_sum(s1, t0_p1)
+    const float t0_th = s1 + t0_p1;
+    const float t0_th_bb = t0_th - s1;
+    const float t0_th_t0 = t0_th - t0_th_bb;
+    const float t0_th_t1 = s1 - t0_th_t0;
+    const float t0_th_t2 = t0_p1 - t0_th_bb;
+    const float t0_tl = t0_th_t1 + t0_th_t2;
+    const float t0_c = t0_sl + t0_th;
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float t0_vh = t0_sh + t0_c;
+    const float t0_vh_z = t0_vh - t0_sh;
+    const float t0_vl = t0_c - t0_vh_z;
+    const float t0_w = t0_tl + t0_vl;
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float t0 = t0_vh + t0_w;
+    const float t0_z = t0 - t0_vh;
+    const float t1 = t0_w - t0_z;
+    t0_out = t0;
+    t1_out = t1;
 }
 
 // fold_finish_2(s = (s0, s1)) -> r = (r0, r1), mask flag
@@ -17005,7 +17222,7 @@ KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_2_full(float x0, float x1, float c
 }
 
 // mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1)
-// mul_pow2_2, the two limbs scaled and renormalized. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_step_2(double x0, double x1, double c, double& z0_out, double& z1_out) noexcept {
     // (z0, z1) = mul_pow2_2(x0, x1, c)
     const double z0_h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);
@@ -17052,35 +17269,6 @@ KAIRN_GEN_FORCEINLINE constexpr void norm_step_2(float m, bool ok, float x0, [[m
     const bool okr = ok & r_e;
     r_out = r;
     okr_out = okr;
-}
-
-// scale_step_2(x = (x0, x1), a) -> z = (z0, z1)
-// mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void scale_step_2(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
-    // (z0, z1) = mul_2_1(x0, x1, a)
-    // (z0_ch, z0_cl1) = two_prod(x0, a)
-    const double z0_ch = fma_rn(x0, a, 0.0);
-    const double z0_cl1 = fma_rn(x0, a, -z0_ch);
-    const double z0_cl3 = fma_rn(x1, a, z0_cl1);
-    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
-    const double z0 = z0_ch + z0_cl3;
-    const double z0_z = z0 - z0_ch;
-    const double z1 = z0_cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void scale_step_2(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
-    // (z0, z1) = mul_2_1(x0, x1, a)
-    // (z0_ch, z0_cl1) = two_prod(x0, a)
-    const float z0_ch = fma_rn(x0, a, 0.0f);
-    const float z0_cl1 = fma_rn(x0, a, -z0_ch);
-    const float z0_cl3 = fma_rn(x1, a, z0_cl1);
-    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
-    const float z0 = z0_ch + z0_cl3;
-    const float z0_z = z0 - z0_ch;
-    const float z1 = z0_cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
 }
 
 // scale_entry_step_2(x = (x0, x1), a) -> z = (z0, z1)
@@ -19077,7 +19265,7 @@ inline void axpy_1_entry_lanes(const float* x_in, const float* y_in, std::size_t
     finite_out = finite;
 }
 
-// map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// map axpy_2(stored x = (x0, x1), stored y = (y0, y1), stored a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: element after element. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
@@ -19215,7 +19403,7 @@ inline void axpy_2_seq(const float* x0_in, const float* x1_in, const float* y0_i
     finite_out = finite;
 }
 
-// map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// map axpy_2(stored x = (x0, x1), stored y = (y0, y1), stored a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
@@ -19463,7 +19651,7 @@ inline void axpy_2_lanes(const float* x0_in, const float* x1_in, const float* y0
     finite_out = finite;
 }
 
-// map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
+// map axpy_2_1(stored x = (x0, x1), stored y = (y0, y1), stored a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
@@ -19595,7 +19783,7 @@ inline void axpy_2_1_seq(const float* x0_in, const float* x1_in, const float* y0
     finite_out = finite;
 }
 
-// map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// map axpy_2_1(stored x = (x0, x1), stored y = (y0, y1), stored a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
@@ -19841,30 +20029,34 @@ inline void axpy_2_1_entry_seq(const double* x0_in, const double* x1_in, const d
         const double y0 = y0_in[i_];
         const double y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
-        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
-        const double step_p0_ch = fma_rn(x0, a, 0.0);
-        const double step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
-        const double step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const double step_p0 = step_p0_ch + step_p0_cl3;
-        const double step_p0_z = step_p0 - step_p0_ch;
-        const double step_p1 = step_p0_cl3 - step_p0_z;
+        const double step_ga = a + 0.0;
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
         const double step_gy0 = y0 + 0.0;
         const double step_gy1 = y1 + 0.0;
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const double step_z0_sh = step_p0 + step_gy0;
-        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2_1(step_ga, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_gx0, step_ga)
+        const double step_z0_p0_ch = fma_rn(step_gx0, step_ga, 0.0);
+        const double step_z0_p0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_p0_ch);
+        const double step_z0_p0_cl3 = fma_rn(step_gx1, step_ga, step_z0_p0_cl1);
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const double step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const double step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const double step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const double step_z0_sh = step_z0_p0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const double step_z0_th = step_p1 + step_gy1;
-        const double step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const double step_z0_th = step_z0_p1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_z0_p1;
         const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const double step_z0_c = step_z0_sl + step_z0_th;
@@ -19908,30 +20100,34 @@ inline void axpy_2_1_entry_seq(const float* x0_in, const float* x1_in, const flo
         const float y0 = y0_in[i_];
         const float y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
-        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
-        const float step_p0_ch = fma_rn(x0, a, 0.0f);
-        const float step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
-        const float step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const float step_p0 = step_p0_ch + step_p0_cl3;
-        const float step_p0_z = step_p0 - step_p0_ch;
-        const float step_p1 = step_p0_cl3 - step_p0_z;
+        const float step_ga = a + 0.0f;
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
         const float step_gy0 = y0 + 0.0f;
         const float step_gy1 = y1 + 0.0f;
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const float step_z0_sh = step_p0 + step_gy0;
-        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2_1(step_ga, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_gx0, step_ga)
+        const float step_z0_p0_ch = fma_rn(step_gx0, step_ga, 0.0f);
+        const float step_z0_p0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_p0_ch);
+        const float step_z0_p0_cl3 = fma_rn(step_gx1, step_ga, step_z0_p0_cl1);
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const float step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const float step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const float step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const float step_z0_sh = step_z0_p0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const float step_z0_th = step_p1 + step_gy1;
-        const float step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const float step_z0_th = step_z0_p1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_z0_p1;
         const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const float step_z0_c = step_z0_sl + step_z0_th;
@@ -19980,30 +20176,34 @@ inline void axpy_2_1_entry_lanes(const double* x0_in, const double* x1_in, const
             const double y0 = y0_in[i_];
             const double y1 = y1_in[i_];
             // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
-            // (step_p0, step_p1) = mul_2_1(x0, x1, a)
-            // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
-            const double step_p0_ch = fma_rn(x0, a, 0.0);
-            const double step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
-            const double step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
-            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-            const double step_p0 = step_p0_ch + step_p0_cl3;
-            const double step_p0_z = step_p0 - step_p0_ch;
-            const double step_p1 = step_p0_cl3 - step_p0_z;
+            const double step_ga = a + 0.0;
+            const double step_gx0 = x0 + 0.0;
+            const double step_gx1 = x1 + 0.0;
             const double step_gy0 = y0 + 0.0;
             const double step_gy1 = y1 + 0.0;
-            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-            const double step_z0_sh = step_p0 + step_gy0;
-            const double step_z0_sh_bb = step_z0_sh - step_p0;
+            // (step_z0, step_z1) = axpy_step_2_1(step_ga, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_z0_p0, step_z0_p1) = mul_2_1(step_gx0, step_gx1, step_ga)
+            // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_gx0, step_ga)
+            const double step_z0_p0_ch = fma_rn(step_gx0, step_ga, 0.0);
+            const double step_z0_p0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_p0_ch);
+            const double step_z0_p0_cl3 = fma_rn(step_gx1, step_ga, step_z0_p0_cl1);
+            // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+            const double step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+            const double step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+            const double step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+            const double step_z0_sh = step_z0_p0 + step_gy0;
+            const double step_z0_sh_bb = step_z0_sh - step_z0_p0;
             const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-            const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const double step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
             const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
             const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-            const double step_z0_th = step_p1 + step_gy1;
-            const double step_z0_th_bb = step_z0_th - step_p1;
+            // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+            const double step_z0_th = step_z0_p1 + step_gy1;
+            const double step_z0_th_bb = step_z0_th - step_z0_p1;
             const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-            const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const double step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
             const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
             const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
             const double step_z0_c = step_z0_sl + step_z0_th;
@@ -20031,30 +20231,34 @@ inline void axpy_2_1_entry_lanes(const double* x0_in, const double* x1_in, const
         const double y0 = y0_in[i_];
         const double y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
-        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
-        const double step_p0_ch = fma_rn(x0, a, 0.0);
-        const double step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
-        const double step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const double step_p0 = step_p0_ch + step_p0_cl3;
-        const double step_p0_z = step_p0 - step_p0_ch;
-        const double step_p1 = step_p0_cl3 - step_p0_z;
+        const double step_ga = a + 0.0;
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
         const double step_gy0 = y0 + 0.0;
         const double step_gy1 = y1 + 0.0;
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const double step_z0_sh = step_p0 + step_gy0;
-        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2_1(step_ga, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_gx0, step_ga)
+        const double step_z0_p0_ch = fma_rn(step_gx0, step_ga, 0.0);
+        const double step_z0_p0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_p0_ch);
+        const double step_z0_p0_cl3 = fma_rn(step_gx1, step_ga, step_z0_p0_cl1);
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const double step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const double step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const double step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const double step_z0_sh = step_z0_p0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const double step_z0_th = step_p1 + step_gy1;
-        const double step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const double step_z0_th = step_z0_p1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_z0_p1;
         const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const double step_z0_c = step_z0_sl + step_z0_th;
@@ -20101,30 +20305,34 @@ inline void axpy_2_1_entry_lanes(const float* x0_in, const float* x1_in, const f
             const float y0 = y0_in[i_];
             const float y1 = y1_in[i_];
             // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
-            // (step_p0, step_p1) = mul_2_1(x0, x1, a)
-            // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
-            const float step_p0_ch = fma_rn(x0, a, 0.0f);
-            const float step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
-            const float step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
-            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-            const float step_p0 = step_p0_ch + step_p0_cl3;
-            const float step_p0_z = step_p0 - step_p0_ch;
-            const float step_p1 = step_p0_cl3 - step_p0_z;
+            const float step_ga = a + 0.0f;
+            const float step_gx0 = x0 + 0.0f;
+            const float step_gx1 = x1 + 0.0f;
             const float step_gy0 = y0 + 0.0f;
             const float step_gy1 = y1 + 0.0f;
-            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-            const float step_z0_sh = step_p0 + step_gy0;
-            const float step_z0_sh_bb = step_z0_sh - step_p0;
+            // (step_z0, step_z1) = axpy_step_2_1(step_ga, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_z0_p0, step_z0_p1) = mul_2_1(step_gx0, step_gx1, step_ga)
+            // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_gx0, step_ga)
+            const float step_z0_p0_ch = fma_rn(step_gx0, step_ga, 0.0f);
+            const float step_z0_p0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_p0_ch);
+            const float step_z0_p0_cl3 = fma_rn(step_gx1, step_ga, step_z0_p0_cl1);
+            // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+            const float step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+            const float step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+            const float step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+            const float step_z0_sh = step_z0_p0 + step_gy0;
+            const float step_z0_sh_bb = step_z0_sh - step_z0_p0;
             const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-            const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const float step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
             const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
             const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-            const float step_z0_th = step_p1 + step_gy1;
-            const float step_z0_th_bb = step_z0_th - step_p1;
+            // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+            const float step_z0_th = step_z0_p1 + step_gy1;
+            const float step_z0_th_bb = step_z0_th - step_z0_p1;
             const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-            const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const float step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
             const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
             const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
             const float step_z0_c = step_z0_sl + step_z0_th;
@@ -20152,30 +20360,34 @@ inline void axpy_2_1_entry_lanes(const float* x0_in, const float* x1_in, const f
         const float y0 = y0_in[i_];
         const float y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
-        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
-        const float step_p0_ch = fma_rn(x0, a, 0.0f);
-        const float step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
-        const float step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const float step_p0 = step_p0_ch + step_p0_cl3;
-        const float step_p0_z = step_p0 - step_p0_ch;
-        const float step_p1 = step_p0_cl3 - step_p0_z;
+        const float step_ga = a + 0.0f;
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
         const float step_gy0 = y0 + 0.0f;
         const float step_gy1 = y1 + 0.0f;
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const float step_z0_sh = step_p0 + step_gy0;
-        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2_1(step_ga, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_gx0, step_ga)
+        const float step_z0_p0_ch = fma_rn(step_gx0, step_ga, 0.0f);
+        const float step_z0_p0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_p0_ch);
+        const float step_z0_p0_cl3 = fma_rn(step_gx1, step_ga, step_z0_p0_cl1);
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const float step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const float step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const float step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const float step_z0_sh = step_z0_p0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const float step_z0_th = step_p1 + step_gy1;
-        const float step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const float step_z0_th = step_z0_p1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_z0_p1;
         const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const float step_z0_c = step_z0_sl + step_z0_th;
@@ -20221,33 +20433,38 @@ inline void axpy_2_entry_seq(const double* x0_in, const double* x1_in, const dou
         const double y0 = y0_in[i_];
         const double y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
-        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
-        const double step_p0_ch = fma_rn(a0, x0, 0.0);
-        const double step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
-        const double step_p0_tl0 = fma_rn(a1, x1, 0.0);
-        const double step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
-        const double step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
-        const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const double step_p0 = step_p0_ch + step_p0_cl3;
-        const double step_p0_z = step_p0 - step_p0_ch;
-        const double step_p1 = step_p0_cl3 - step_p0_z;
+        const double step_ga0 = a0 + 0.0;
+        const double step_ga1 = a1 + 0.0;
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
         const double step_gy0 = y0 + 0.0;
         const double step_gy1 = y1 + 0.0;
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const double step_z0_sh = step_p0 + step_gy0;
-        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2(step_ga0, step_ga1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_2(step_ga0, step_ga1, step_gx0, step_gx1)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_ga0, step_gx0)
+        const double step_z0_p0_ch = fma_rn(step_ga0, step_gx0, 0.0);
+        const double step_z0_p0_cl1 = fma_rn(step_ga0, step_gx0, -step_z0_p0_ch);
+        const double step_z0_p0_tl0 = fma_rn(step_ga1, step_gx1, 0.0);
+        const double step_z0_p0_tl1 = fma_rn(step_ga0, step_gx1, step_z0_p0_tl0);
+        const double step_z0_p0_cl2 = fma_rn(step_ga1, step_gx0, step_z0_p0_tl1);
+        const double step_z0_p0_cl3 = step_z0_p0_cl1 + step_z0_p0_cl2;
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const double step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const double step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const double step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const double step_z0_sh = step_z0_p0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const double step_z0_th = step_p1 + step_gy1;
-        const double step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const double step_z0_th = step_z0_p1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_z0_p1;
         const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const double step_z0_c = step_z0_sl + step_z0_th;
@@ -20291,33 +20508,38 @@ inline void axpy_2_entry_seq(const float* x0_in, const float* x1_in, const float
         const float y0 = y0_in[i_];
         const float y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
-        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
-        const float step_p0_ch = fma_rn(a0, x0, 0.0f);
-        const float step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
-        const float step_p0_tl0 = fma_rn(a1, x1, 0.0f);
-        const float step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
-        const float step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
-        const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const float step_p0 = step_p0_ch + step_p0_cl3;
-        const float step_p0_z = step_p0 - step_p0_ch;
-        const float step_p1 = step_p0_cl3 - step_p0_z;
+        const float step_ga0 = a0 + 0.0f;
+        const float step_ga1 = a1 + 0.0f;
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
         const float step_gy0 = y0 + 0.0f;
         const float step_gy1 = y1 + 0.0f;
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const float step_z0_sh = step_p0 + step_gy0;
-        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2(step_ga0, step_ga1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_2(step_ga0, step_ga1, step_gx0, step_gx1)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_ga0, step_gx0)
+        const float step_z0_p0_ch = fma_rn(step_ga0, step_gx0, 0.0f);
+        const float step_z0_p0_cl1 = fma_rn(step_ga0, step_gx0, -step_z0_p0_ch);
+        const float step_z0_p0_tl0 = fma_rn(step_ga1, step_gx1, 0.0f);
+        const float step_z0_p0_tl1 = fma_rn(step_ga0, step_gx1, step_z0_p0_tl0);
+        const float step_z0_p0_cl2 = fma_rn(step_ga1, step_gx0, step_z0_p0_tl1);
+        const float step_z0_p0_cl3 = step_z0_p0_cl1 + step_z0_p0_cl2;
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const float step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const float step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const float step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const float step_z0_sh = step_z0_p0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const float step_z0_th = step_p1 + step_gy1;
-        const float step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const float step_z0_th = step_z0_p1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_z0_p1;
         const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const float step_z0_c = step_z0_sl + step_z0_th;
@@ -20366,33 +20588,38 @@ inline void axpy_2_entry_lanes(const double* x0_in, const double* x1_in, const d
             const double y0 = y0_in[i_];
             const double y1 = y1_in[i_];
             // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
-            // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
-            // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
-            const double step_p0_ch = fma_rn(a0, x0, 0.0);
-            const double step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
-            const double step_p0_tl0 = fma_rn(a1, x1, 0.0);
-            const double step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
-            const double step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
-            const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
-            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-            const double step_p0 = step_p0_ch + step_p0_cl3;
-            const double step_p0_z = step_p0 - step_p0_ch;
-            const double step_p1 = step_p0_cl3 - step_p0_z;
+            const double step_ga0 = a0 + 0.0;
+            const double step_ga1 = a1 + 0.0;
+            const double step_gx0 = x0 + 0.0;
+            const double step_gx1 = x1 + 0.0;
             const double step_gy0 = y0 + 0.0;
             const double step_gy1 = y1 + 0.0;
-            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-            const double step_z0_sh = step_p0 + step_gy0;
-            const double step_z0_sh_bb = step_z0_sh - step_p0;
+            // (step_z0, step_z1) = axpy_step_2(step_ga0, step_ga1, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_z0_p0, step_z0_p1) = mul_2_2(step_ga0, step_ga1, step_gx0, step_gx1)
+            // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_ga0, step_gx0)
+            const double step_z0_p0_ch = fma_rn(step_ga0, step_gx0, 0.0);
+            const double step_z0_p0_cl1 = fma_rn(step_ga0, step_gx0, -step_z0_p0_ch);
+            const double step_z0_p0_tl0 = fma_rn(step_ga1, step_gx1, 0.0);
+            const double step_z0_p0_tl1 = fma_rn(step_ga0, step_gx1, step_z0_p0_tl0);
+            const double step_z0_p0_cl2 = fma_rn(step_ga1, step_gx0, step_z0_p0_tl1);
+            const double step_z0_p0_cl3 = step_z0_p0_cl1 + step_z0_p0_cl2;
+            // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+            const double step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+            const double step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+            const double step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+            const double step_z0_sh = step_z0_p0 + step_gy0;
+            const double step_z0_sh_bb = step_z0_sh - step_z0_p0;
             const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-            const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const double step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
             const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
             const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-            const double step_z0_th = step_p1 + step_gy1;
-            const double step_z0_th_bb = step_z0_th - step_p1;
+            // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+            const double step_z0_th = step_z0_p1 + step_gy1;
+            const double step_z0_th_bb = step_z0_th - step_z0_p1;
             const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-            const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const double step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
             const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
             const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
             const double step_z0_c = step_z0_sl + step_z0_th;
@@ -20420,33 +20647,38 @@ inline void axpy_2_entry_lanes(const double* x0_in, const double* x1_in, const d
         const double y0 = y0_in[i_];
         const double y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
-        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
-        const double step_p0_ch = fma_rn(a0, x0, 0.0);
-        const double step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
-        const double step_p0_tl0 = fma_rn(a1, x1, 0.0);
-        const double step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
-        const double step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
-        const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const double step_p0 = step_p0_ch + step_p0_cl3;
-        const double step_p0_z = step_p0 - step_p0_ch;
-        const double step_p1 = step_p0_cl3 - step_p0_z;
+        const double step_ga0 = a0 + 0.0;
+        const double step_ga1 = a1 + 0.0;
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
         const double step_gy0 = y0 + 0.0;
         const double step_gy1 = y1 + 0.0;
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const double step_z0_sh = step_p0 + step_gy0;
-        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2(step_ga0, step_ga1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_2(step_ga0, step_ga1, step_gx0, step_gx1)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_ga0, step_gx0)
+        const double step_z0_p0_ch = fma_rn(step_ga0, step_gx0, 0.0);
+        const double step_z0_p0_cl1 = fma_rn(step_ga0, step_gx0, -step_z0_p0_ch);
+        const double step_z0_p0_tl0 = fma_rn(step_ga1, step_gx1, 0.0);
+        const double step_z0_p0_tl1 = fma_rn(step_ga0, step_gx1, step_z0_p0_tl0);
+        const double step_z0_p0_cl2 = fma_rn(step_ga1, step_gx0, step_z0_p0_tl1);
+        const double step_z0_p0_cl3 = step_z0_p0_cl1 + step_z0_p0_cl2;
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const double step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const double step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const double step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const double step_z0_sh = step_z0_p0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const double step_z0_th = step_p1 + step_gy1;
-        const double step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const double step_z0_th = step_z0_p1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_z0_p1;
         const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const double step_z0_c = step_z0_sl + step_z0_th;
@@ -20493,33 +20725,38 @@ inline void axpy_2_entry_lanes(const float* x0_in, const float* x1_in, const flo
             const float y0 = y0_in[i_];
             const float y1 = y1_in[i_];
             // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
-            // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
-            // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
-            const float step_p0_ch = fma_rn(a0, x0, 0.0f);
-            const float step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
-            const float step_p0_tl0 = fma_rn(a1, x1, 0.0f);
-            const float step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
-            const float step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
-            const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
-            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-            const float step_p0 = step_p0_ch + step_p0_cl3;
-            const float step_p0_z = step_p0 - step_p0_ch;
-            const float step_p1 = step_p0_cl3 - step_p0_z;
+            const float step_ga0 = a0 + 0.0f;
+            const float step_ga1 = a1 + 0.0f;
+            const float step_gx0 = x0 + 0.0f;
+            const float step_gx1 = x1 + 0.0f;
             const float step_gy0 = y0 + 0.0f;
             const float step_gy1 = y1 + 0.0f;
-            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-            const float step_z0_sh = step_p0 + step_gy0;
-            const float step_z0_sh_bb = step_z0_sh - step_p0;
+            // (step_z0, step_z1) = axpy_step_2(step_ga0, step_ga1, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_z0_p0, step_z0_p1) = mul_2_2(step_ga0, step_ga1, step_gx0, step_gx1)
+            // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_ga0, step_gx0)
+            const float step_z0_p0_ch = fma_rn(step_ga0, step_gx0, 0.0f);
+            const float step_z0_p0_cl1 = fma_rn(step_ga0, step_gx0, -step_z0_p0_ch);
+            const float step_z0_p0_tl0 = fma_rn(step_ga1, step_gx1, 0.0f);
+            const float step_z0_p0_tl1 = fma_rn(step_ga0, step_gx1, step_z0_p0_tl0);
+            const float step_z0_p0_cl2 = fma_rn(step_ga1, step_gx0, step_z0_p0_tl1);
+            const float step_z0_p0_cl3 = step_z0_p0_cl1 + step_z0_p0_cl2;
+            // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+            const float step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+            const float step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+            const float step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+            const float step_z0_sh = step_z0_p0 + step_gy0;
+            const float step_z0_sh_bb = step_z0_sh - step_z0_p0;
             const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-            const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const float step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
             const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
             const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-            const float step_z0_th = step_p1 + step_gy1;
-            const float step_z0_th_bb = step_z0_th - step_p1;
+            // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+            const float step_z0_th = step_z0_p1 + step_gy1;
+            const float step_z0_th_bb = step_z0_th - step_z0_p1;
             const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-            const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const float step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
             const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
             const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
             const float step_z0_c = step_z0_sl + step_z0_th;
@@ -20547,33 +20784,38 @@ inline void axpy_2_entry_lanes(const float* x0_in, const float* x1_in, const flo
         const float y0 = y0_in[i_];
         const float y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
-        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
-        const float step_p0_ch = fma_rn(a0, x0, 0.0f);
-        const float step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
-        const float step_p0_tl0 = fma_rn(a1, x1, 0.0f);
-        const float step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
-        const float step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
-        const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const float step_p0 = step_p0_ch + step_p0_cl3;
-        const float step_p0_z = step_p0 - step_p0_ch;
-        const float step_p1 = step_p0_cl3 - step_p0_z;
+        const float step_ga0 = a0 + 0.0f;
+        const float step_ga1 = a1 + 0.0f;
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
         const float step_gy0 = y0 + 0.0f;
         const float step_gy1 = y1 + 0.0f;
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const float step_z0_sh = step_p0 + step_gy0;
-        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2(step_ga0, step_ga1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_2(step_ga0, step_ga1, step_gx0, step_gx1)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_ga0, step_gx0)
+        const float step_z0_p0_ch = fma_rn(step_ga0, step_gx0, 0.0f);
+        const float step_z0_p0_cl1 = fma_rn(step_ga0, step_gx0, -step_z0_p0_ch);
+        const float step_z0_p0_tl0 = fma_rn(step_ga1, step_gx1, 0.0f);
+        const float step_z0_p0_tl1 = fma_rn(step_ga0, step_gx1, step_z0_p0_tl0);
+        const float step_z0_p0_cl2 = fma_rn(step_ga1, step_gx0, step_z0_p0_tl1);
+        const float step_z0_p0_cl3 = step_z0_p0_cl1 + step_z0_p0_cl2;
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const float step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const float step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const float step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const float step_z0_sh = step_z0_p0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const float step_z0_th = step_p1 + step_gy1;
-        const float step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const float step_z0_th = step_z0_p1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_z0_p1;
         const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const float step_z0_c = step_z0_sl + step_z0_th;
@@ -22217,6 +22459,282 @@ inline void bv_make_2_lanes(const float* c0_in, const float* c1_in, std::size_t 
     finite_out = rad_f_;
 }
 
+// The end of ball vector bv_make_2_entry: its radius bv_make_radius and its finish bv_make_finish.
+KAIRN_GEN_NOINLINE void bv_make_2_entry_end(double m, bool ok, double r, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const double rad_g = r + 0.0;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_make_2_entry_end(float m, bool ok, float r, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const float rad_g = r + 0.0f;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0f;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_make_2_entry(supplied c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_entry_2, record norm_step_2, radius bv_make_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_seq(const double* c0_in, const double* c1_in, std::size_t n, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double c0 = c0_in[i_];
+        const double c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const double step_g0 = c0 + 0.0;
+        const double step_g1 = c1 + 0.0;
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const double step_z0 = step_g0;
+        const double step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_seq(const float* c0_in, const float* c1_in, std::size_t n, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float c0 = c0_in[i_];
+        const float c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const float step_g0 = c0 + 0.0f;
+        const float step_g1 = c1 + 0.0f;
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const float step_z0 = step_g0;
+        const float step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_make_2_entry(supplied c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_entry_2, record norm_step_2, radius bv_make_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_lanes(const double* c0_in, const double* c1_in, std::size_t n, std::size_t lanes, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double c0 = c0_in[i_];
+            const double c1 = c1_in[i_];
+            // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+            const double step_g0 = c0 + 0.0;
+            const double step_g1 = c1 + 0.0;
+            // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+            const double step_z0 = step_g0;
+            const double step_z1 = step_g1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const double rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double c0 = c0_in[i_];
+        const double c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const double step_g0 = c0 + 0.0;
+        const double step_g1 = c1 + 0.0;
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const double step_z0 = step_g0;
+        const double step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_lanes(const float* c0_in, const float* c1_in, std::size_t n, std::size_t lanes, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float c0 = c0_in[i_];
+            const float c1 = c1_in[i_];
+            // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+            const float step_g0 = c0 + 0.0f;
+            const float step_g1 = c1 + 0.0f;
+            // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+            const float step_z0 = step_g0;
+            const float step_z1 = step_g1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const float rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float c0 = c0_in[i_];
+        const float c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const float step_g0 = c0 + 0.0f;
+        const float step_g1 = c1 + 0.0f;
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const float step_z0 = step_g0;
+        const float step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
 // The end of ball vector bv_mul_pow2_1: its radius bv_mul_pow2_radius and its finish norm_finish_1.
 KAIRN_GEN_NOINLINE void bv_mul_pow2_1_end(double m, bool ok, bool ex, double rx, double c, double& rad_out_, bool& fin_out_) noexcept {
     volatile double m_v_ = m;
@@ -23573,7 +24091,7 @@ KAIRN_GEN_NOINLINE void bv_scale_2_end(float m, bool ok, float rx, float a, floa
     fin_out_ = fin_flag;
 }
 
-// ball vector bv_scale_2(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: element after element.
+// ball vector bv_scale_2(stored x = (x0, x1), stored rx, stored a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
 // of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_scale_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double rx, double a, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
@@ -23661,7 +24179,7 @@ inline void bv_scale_2_seq(const float* x0_in, const float* x1_in, std::size_t n
     finite_out = rad_f_;
 }
 
-// ball vector bv_scale_2(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: in the lane order with `lanes` lanes, one lane after another.
+// ball vector bv_scale_2(stored x = (x0, x1), stored rx, stored a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
 // of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_scale_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double rx, double a, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
@@ -23823,6 +24341,318 @@ inline void bv_scale_2_lanes(const float* x0_in, const float* x1_in, std::size_t
     float rad_r_;
     bool rad_f_;
     bv_scale_2_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_scale_2_entry: its radius bv_scale_radius_entry_2 and its finish norm_finish_1.
+KAIRN_GEN_NOINLINE void bv_scale_2_entry_end(double m, bool ok, double rx, double a, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_scale_radius_entry_2(m_e_, rx, a)
+    const double rad_ga = a + 0.0;
+    // (rad_rz) = bv_scale_radius_2(m_e_, rx, rad_ga)
+    const double rad_rz_aa = abs_bits(rad_ga);
+    const double rad_rz_p = fma_rn(rad_rz_aa, rx, 0.0);
+    const double rad_rz_t = fma_rn(m_e_, 0x1.0000000000001p-105, rad_rz_p);
+    const double rad_rz = fma_rn(rad_rz_t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_scale_2_entry_end(float m, bool ok, float rx, float a, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_scale_radius_entry_2(m_e_, rx, a)
+    const float rad_ga = a + 0.0f;
+    // (rad_rz) = bv_scale_radius_2(m_e_, rx, rad_ga)
+    const float rad_rz_aa = abs_bits(rad_ga);
+    const float rad_rz_p = fma_rn(rad_rz_aa, rx, 0.0f);
+    const float rad_rz_t = fma_rn(m_e_, 0x1.000002p-47f, rad_rz_p);
+    const float rad_rz = fma_rn(rad_rz_t, 0x1.000004p+0f, 0x1.000006p-126f);
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_scale_2_entry(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step bv_scale_step_2, record norm_step_2, radius bv_scale_radius_entry_2: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_scale_2_entry_seq(const double* x0_in, const double* x1_in, std::size_t n, double rx, double a, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = bv_scale_step_2(x0, x1, a)
+        const double step_ga = a + 0.0;
+        // (step_z0, step_z1) = scale_step_2(x0, x1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, step_ga)
+        const double step_z0_ch = fma_rn(x0, step_ga, 0.0);
+        const double step_z0_cl1 = fma_rn(x0, step_ga, -step_z0_ch);
+        const double step_z0_cl3 = fma_rn(x1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const double step_z0 = step_z0_ch + step_z0_cl3;
+        const double step_z0_z = step_z0 - step_z0_ch;
+        const double step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_scale_2_entry_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_scale_2_entry_seq(const float* x0_in, const float* x1_in, std::size_t n, float rx, float a, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = bv_scale_step_2(x0, x1, a)
+        const float step_ga = a + 0.0f;
+        // (step_z0, step_z1) = scale_step_2(x0, x1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, step_ga)
+        const float step_z0_ch = fma_rn(x0, step_ga, 0.0f);
+        const float step_z0_cl1 = fma_rn(x0, step_ga, -step_z0_ch);
+        const float step_z0_cl3 = fma_rn(x1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float step_z0 = step_z0_ch + step_z0_cl3;
+        const float step_z0_z = step_z0 - step_z0_ch;
+        const float step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_scale_2_entry_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_scale_2_entry(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step bv_scale_step_2, record norm_step_2, radius bv_scale_radius_entry_2: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_scale_2_entry_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double rx, double a, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_z0, step_z1) = bv_scale_step_2(x0, x1, a)
+            const double step_ga = a + 0.0;
+            // (step_z0, step_z1) = scale_step_2(x0, x1, step_ga)
+            // (step_z0, step_z1) = mul_2_1(x0, x1, step_ga)
+            // (step_z0_ch, step_z0_cl1) = two_prod(x0, step_ga)
+            const double step_z0_ch = fma_rn(x0, step_ga, 0.0);
+            const double step_z0_cl1 = fma_rn(x0, step_ga, -step_z0_ch);
+            const double step_z0_cl3 = fma_rn(x1, step_ga, step_z0_cl1);
+            // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+            const double step_z0 = step_z0_ch + step_z0_cl3;
+            const double step_z0_z = step_z0 - step_z0_ch;
+            const double step_z1 = step_z0_cl3 - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const double rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = bv_scale_step_2(x0, x1, a)
+        const double step_ga = a + 0.0;
+        // (step_z0, step_z1) = scale_step_2(x0, x1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, step_ga)
+        const double step_z0_ch = fma_rn(x0, step_ga, 0.0);
+        const double step_z0_cl1 = fma_rn(x0, step_ga, -step_z0_ch);
+        const double step_z0_cl3 = fma_rn(x1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const double step_z0 = step_z0_ch + step_z0_cl3;
+        const double step_z0_z = step_z0 - step_z0_ch;
+        const double step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_scale_2_entry_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_scale_2_entry_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float rx, float a, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_z0, step_z1) = bv_scale_step_2(x0, x1, a)
+            const float step_ga = a + 0.0f;
+            // (step_z0, step_z1) = scale_step_2(x0, x1, step_ga)
+            // (step_z0, step_z1) = mul_2_1(x0, x1, step_ga)
+            // (step_z0_ch, step_z0_cl1) = two_prod(x0, step_ga)
+            const float step_z0_ch = fma_rn(x0, step_ga, 0.0f);
+            const float step_z0_cl1 = fma_rn(x0, step_ga, -step_z0_ch);
+            const float step_z0_cl3 = fma_rn(x1, step_ga, step_z0_cl1);
+            // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+            const float step_z0 = step_z0_ch + step_z0_cl3;
+            const float step_z0_z = step_z0 - step_z0_ch;
+            const float step_z1 = step_z0_cl3 - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const float rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = bv_scale_step_2(x0, x1, a)
+        const float step_ga = a + 0.0f;
+        // (step_z0, step_z1) = scale_step_2(x0, x1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, step_ga)
+        const float step_z0_ch = fma_rn(x0, step_ga, 0.0f);
+        const float step_z0_cl1 = fma_rn(x0, step_ga, -step_z0_ch);
+        const float step_z0_cl3 = fma_rn(x1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float step_z0 = step_z0_ch + step_z0_cl3;
+        const float step_z0_z = step_z0 - step_z0_ch;
+        const float step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_scale_2_entry_end(m, ok, rx, a, rad_r_, rad_f_);
     if (!rad_f_) {
         for (std::size_t i_ = 0; i_ < n; ++i_) {
             static_cast<volatile float*>(z0_out)[i_] = 0.0f;
@@ -24621,7 +25451,7 @@ inline void conv_1_entry_seq(const float* x_in, std::size_t n_x, const float* y_
     finite_out = finite;
 }
 
-// convolution conv_2(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1): coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_2 in its
+// convolution conv_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1): coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_2 in its
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
 // overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
 inline void conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x, const double* y0_in, const double* y1_in, std::size_t n_y, double* z0_out, double* z1_out, bool& finite_out) noexcept {
@@ -24742,6 +25572,174 @@ inline void conv_2_seq(const float* x0_in, const float* x1_in, std::size_t n_x, 
             const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
             const float step_t0_th_t1 = s1 - step_t0_th_t0;
             const float step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const float step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const float step_t0_vh = step_t0_sh + step_t0_c;
+            const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const float step_t0_vl = step_t0_c - step_t0_vh_z;
+            const float step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const float step_t0 = step_t0_vh + step_t0_w;
+            const float step_t0_z = step_t0 - step_t0_vh;
+            const float step_t1 = step_t0_w - step_t0_z;
+            s0 = step_t0;
+            s1 = step_t1;
+        }
+        z0_out[j_] = s0;
+        z1_out[j_] = s1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(s0, s1)
+        const float chk_a = abs_bits(s0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// convolution conv_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1): coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_2_entry in its
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
+inline void conv_2_entry_seq(const double* x0_in, const double* x1_in, std::size_t n_x, const double* y0_in, const double* y1_in, std::size_t n_y, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        double s0 = 0.0;
+        double s1 = 0.0;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[j_ - i_];
+            const double y1 = y1_in[j_ - i_];
+            // (step_t0, step_t1) = dot_entry_step_2(s0, s1, x0, x1, y0, y1)
+            const double step_gx0 = x0 + 0.0;
+            const double step_gx1 = x1 + 0.0;
+            const double step_gy0 = y0 + 0.0;
+            const double step_gy1 = y1 + 0.0;
+            // (step_t0, step_t1) = dot_step_2(s0, s1, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+            const double step_t0_p0_ch = fma_rn(step_gx0, step_gy0, 0.0);
+            const double step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+            const double step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, 0.0);
+            const double step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+            const double step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+            const double step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+            // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+            const double step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+            const double step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+            const double step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0, s1, step_t0_p0, step_t0_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0, step_t0_p0)
+            const double step_t0_sh = s0 + step_t0_p0;
+            const double step_t0_sh_bb = step_t0_sh - s0;
+            const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+            const double step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+            const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1, step_t0_p1)
+            const double step_t0_th = s1 + step_t0_p1;
+            const double step_t0_th_bb = step_t0_th - s1;
+            const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const double step_t0_th_t1 = s1 - step_t0_th_t0;
+            const double step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
+            const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const double step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const double step_t0_vh = step_t0_sh + step_t0_c;
+            const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const double step_t0_vl = step_t0_c - step_t0_vh_z;
+            const double step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const double step_t0 = step_t0_vh + step_t0_w;
+            const double step_t0_z = step_t0 - step_t0_vh;
+            const double step_t1 = step_t0_w - step_t0_z;
+            s0 = step_t0;
+            s1 = step_t1;
+        }
+        z0_out[j_] = s0;
+        z1_out[j_] = s1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(s0, s1)
+        const double chk_a = abs_bits(s0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
+inline void conv_2_entry_seq(const float* x0_in, const float* x1_in, std::size_t n_x, const float* y0_in, const float* y1_in, std::size_t n_y, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        float s0 = 0.0f;
+        float s1 = 0.0f;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[j_ - i_];
+            const float y1 = y1_in[j_ - i_];
+            // (step_t0, step_t1) = dot_entry_step_2(s0, s1, x0, x1, y0, y1)
+            const float step_gx0 = x0 + 0.0f;
+            const float step_gx1 = x1 + 0.0f;
+            const float step_gy0 = y0 + 0.0f;
+            const float step_gy1 = y1 + 0.0f;
+            // (step_t0, step_t1) = dot_step_2(s0, s1, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+            const float step_t0_p0_ch = fma_rn(step_gx0, step_gy0, 0.0f);
+            const float step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+            const float step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, 0.0f);
+            const float step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+            const float step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+            const float step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+            // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+            const float step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+            const float step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+            const float step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0, s1, step_t0_p0, step_t0_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0, step_t0_p0)
+            const float step_t0_sh = s0 + step_t0_p0;
+            const float step_t0_sh_bb = step_t0_sh - s0;
+            const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+            const float step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+            const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1, step_t0_p1)
+            const float step_t0_th = s1 + step_t0_p1;
+            const float step_t0_th_bb = step_t0_th - s1;
+            const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const float step_t0_th_t1 = s1 - step_t0_th_t0;
+            const float step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
             const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
             const float step_t0_c = step_t0_sl + step_t0_th;
             // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
@@ -24999,7 +25997,7 @@ inline void dot_1_entry_lanes(const float* x_in, const float* y_in, std::size_t 
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
+// fold dot_2(stored x = (x0, x1), stored y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void dot_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     double s0 = 0.0;
     double s1 = 0.0;
@@ -25117,7 +26115,7 @@ inline void dot_2_seq(const float* x0_in, const float* x1_in, const float* y0_in
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
+// fold dot_2(stored x = (x0, x1), stored y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void dot_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double s0 = 0.0;
@@ -25377,6 +26375,438 @@ inline void dot_2_lanes(const float* x0_in, const float* x1_in, const float* y0_
         const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
         const float step_t0_th_t1 = s1 - step_t0_th_t0;
         const float step_t0_th_t2 = step_p1 - step_t0_th_bb;
+        const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const float step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const float step_t0_vh = step_t0_sh + step_t0_c;
+        const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const float step_t0_vl = step_t0_c - step_t0_vh_z;
+        const float step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const float step_t0 = step_t0_vh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_vh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold dot_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_entry_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
+inline void dot_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_entry_step_2(s0, s1, x0, x1, y0, y1)
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_t0, step_t1) = dot_step_2(s0, s1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+        const double step_t0_p0_ch = fma_rn(step_gx0, step_gy0, 0.0);
+        const double step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+        const double step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, 0.0);
+        const double step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+        const double step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+        const double step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+        // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+        const double step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+        const double step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+        const double step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_t0_p0, step_t0_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_t0_p0)
+        const double step_t0_sh = s0 + step_t0_p0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_t0_p1)
+        const double step_t0_th = s1 + step_t0_p1;
+        const double step_t0_th_bb = step_t0_th - s1;
+        const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const double step_t0_th_t1 = s1 - step_t0_th_t0;
+        const double step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
+        const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const double step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const double step_t0_vh = step_t0_sh + step_t0_c;
+        const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const double step_t0_vl = step_t0_c - step_t0_vh_z;
+        const double step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const double step_t0 = step_t0_vh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_vh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void dot_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_entry_step_2(s0, s1, x0, x1, y0, y1)
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_t0, step_t1) = dot_step_2(s0, s1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+        const float step_t0_p0_ch = fma_rn(step_gx0, step_gy0, 0.0f);
+        const float step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+        const float step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, 0.0f);
+        const float step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+        const float step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+        const float step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+        // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+        const float step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+        const float step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+        const float step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_t0_p0, step_t0_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_t0_p0)
+        const float step_t0_sh = s0 + step_t0_p0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_t0_p1)
+        const float step_t0_th = s1 + step_t0_p1;
+        const float step_t0_th_bb = step_t0_th - s1;
+        const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const float step_t0_th_t1 = s1 - step_t0_th_t0;
+        const float step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
+        const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const float step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const float step_t0_vh = step_t0_sh + step_t0_c;
+        const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const float step_t0_vl = step_t0_c - step_t0_vh_z;
+        const float step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const float step_t0 = step_t0_vh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_vh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold dot_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
+inline void dot_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s0_lane_ = 0.0;
+        double s1_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_t0, step_t1) = dot_entry_step_2(s0_lane_, s1_lane_, x0, x1, y0, y1)
+            const double step_gx0 = x0 + 0.0;
+            const double step_gx1 = x1 + 0.0;
+            const double step_gy0 = y0 + 0.0;
+            const double step_gy1 = y1 + 0.0;
+            // (step_t0, step_t1) = dot_step_2(s0_lane_, s1_lane_, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+            const double step_t0_p0_ch = fma_rn(step_gx0, step_gy0, 0.0);
+            const double step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+            const double step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, 0.0);
+            const double step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+            const double step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+            const double step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+            // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+            const double step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+            const double step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+            const double step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_t0_p0, step_t0_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_t0_p0)
+            const double step_t0_sh = s0_lane_ + step_t0_p0;
+            const double step_t0_sh_bb = step_t0_sh - s0_lane_;
+            const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const double step_t0_sh_t1 = s0_lane_ - step_t0_sh_t0;
+            const double step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+            const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_t0_p1)
+            const double step_t0_th = s1_lane_ + step_t0_p1;
+            const double step_t0_th_bb = step_t0_th - s1_lane_;
+            const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const double step_t0_th_t1 = s1_lane_ - step_t0_th_t0;
+            const double step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
+            const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const double step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const double step_t0_vh = step_t0_sh + step_t0_c;
+            const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const double step_t0_vl = step_t0_c - step_t0_vh_z;
+            const double step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const double step_t0 = step_t0_vh + step_t0_w;
+            const double step_t0_z = step_t0 - step_t0_vh;
+            const double step_t1 = step_t0_w - step_t0_z;
+            s0_lane_ = step_t0;
+            s1_lane_ = step_t1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const double comb_sh = s0 + s0_lane_;
+            const double comb_sh_bb = comb_sh - s0;
+            const double comb_sh_t0 = comb_sh - comb_sh_bb;
+            const double comb_sh_t1 = s0 - comb_sh_t0;
+            const double comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const double comb_sl = comb_sh_t1 + comb_sh_t2;
+            // (comb_th, comb_tl) = two_sum(s1, s1_lane_)
+            const double comb_th = s1 + s1_lane_;
+            const double comb_th_bb = comb_th - s1;
+            const double comb_th_t0 = comb_th - comb_th_bb;
+            const double comb_th_t1 = s1 - comb_th_t0;
+            const double comb_th_t2 = s1_lane_ - comb_th_bb;
+            const double comb_tl = comb_th_t1 + comb_th_t2;
+            const double comb_c = comb_sl + comb_th;
+            // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+            const double comb_vh = comb_sh + comb_c;
+            const double comb_vh_z = comb_vh - comb_sh;
+            const double comb_vl = comb_c - comb_vh_z;
+            const double comb_w = comb_tl + comb_vl;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+            const double comb_z0 = comb_vh + comb_w;
+            const double comb_z0_z = comb_z0 - comb_vh;
+            const double comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_entry_step_2(s0, s1, x0, x1, y0, y1)
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_t0, step_t1) = dot_step_2(s0, s1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+        const double step_t0_p0_ch = fma_rn(step_gx0, step_gy0, 0.0);
+        const double step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+        const double step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, 0.0);
+        const double step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+        const double step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+        const double step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+        // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+        const double step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+        const double step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+        const double step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_t0_p0, step_t0_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_t0_p0)
+        const double step_t0_sh = s0 + step_t0_p0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_t0_p1)
+        const double step_t0_th = s1 + step_t0_p1;
+        const double step_t0_th_bb = step_t0_th - s1;
+        const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const double step_t0_th_t1 = s1 - step_t0_th_t0;
+        const double step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
+        const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const double step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const double step_t0_vh = step_t0_sh + step_t0_c;
+        const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const double step_t0_vl = step_t0_c - step_t0_vh_z;
+        const double step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const double step_t0 = step_t0_vh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_vh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void dot_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s0_lane_ = 0.0f;
+        float s1_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_t0, step_t1) = dot_entry_step_2(s0_lane_, s1_lane_, x0, x1, y0, y1)
+            const float step_gx0 = x0 + 0.0f;
+            const float step_gx1 = x1 + 0.0f;
+            const float step_gy0 = y0 + 0.0f;
+            const float step_gy1 = y1 + 0.0f;
+            // (step_t0, step_t1) = dot_step_2(s0_lane_, s1_lane_, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+            const float step_t0_p0_ch = fma_rn(step_gx0, step_gy0, 0.0f);
+            const float step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+            const float step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, 0.0f);
+            const float step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+            const float step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+            const float step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+            // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+            const float step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+            const float step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+            const float step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_t0_p0, step_t0_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_t0_p0)
+            const float step_t0_sh = s0_lane_ + step_t0_p0;
+            const float step_t0_sh_bb = step_t0_sh - s0_lane_;
+            const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const float step_t0_sh_t1 = s0_lane_ - step_t0_sh_t0;
+            const float step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+            const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_t0_p1)
+            const float step_t0_th = s1_lane_ + step_t0_p1;
+            const float step_t0_th_bb = step_t0_th - s1_lane_;
+            const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const float step_t0_th_t1 = s1_lane_ - step_t0_th_t0;
+            const float step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
+            const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const float step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const float step_t0_vh = step_t0_sh + step_t0_c;
+            const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const float step_t0_vl = step_t0_c - step_t0_vh_z;
+            const float step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const float step_t0 = step_t0_vh + step_t0_w;
+            const float step_t0_z = step_t0 - step_t0_vh;
+            const float step_t1 = step_t0_w - step_t0_z;
+            s0_lane_ = step_t0;
+            s1_lane_ = step_t1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const float comb_sh = s0 + s0_lane_;
+            const float comb_sh_bb = comb_sh - s0;
+            const float comb_sh_t0 = comb_sh - comb_sh_bb;
+            const float comb_sh_t1 = s0 - comb_sh_t0;
+            const float comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const float comb_sl = comb_sh_t1 + comb_sh_t2;
+            // (comb_th, comb_tl) = two_sum(s1, s1_lane_)
+            const float comb_th = s1 + s1_lane_;
+            const float comb_th_bb = comb_th - s1;
+            const float comb_th_t0 = comb_th - comb_th_bb;
+            const float comb_th_t1 = s1 - comb_th_t0;
+            const float comb_th_t2 = s1_lane_ - comb_th_bb;
+            const float comb_tl = comb_th_t1 + comb_th_t2;
+            const float comb_c = comb_sl + comb_th;
+            // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+            const float comb_vh = comb_sh + comb_c;
+            const float comb_vh_z = comb_vh - comb_sh;
+            const float comb_vl = comb_c - comb_vh_z;
+            const float comb_w = comb_tl + comb_vl;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+            const float comb_z0 = comb_vh + comb_w;
+            const float comb_z0_z = comb_z0 - comb_vh;
+            const float comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_entry_step_2(s0, s1, x0, x1, y0, y1)
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_t0, step_t1) = dot_step_2(s0, s1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+        const float step_t0_p0_ch = fma_rn(step_gx0, step_gy0, 0.0f);
+        const float step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+        const float step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, 0.0f);
+        const float step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+        const float step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+        const float step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+        // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+        const float step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+        const float step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+        const float step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_t0_p0, step_t0_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_t0_p0)
+        const float step_t0_sh = s0 + step_t0_p0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_t0_p1)
+        const float step_t0_th = s1 + step_t0_p1;
+        const float step_t0_th_bb = step_t0_th - s1;
+        const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const float step_t0_th_t1 = s1 - step_t0_th_t0;
+        const float step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
         const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
         const float step_t0_c = step_t0_sl + step_t0_th;
         // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)

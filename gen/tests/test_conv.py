@@ -26,11 +26,11 @@ import test_cxx as cxx
 import test_folds as folds_tests
 from kairn_gen import claims, consts, cpp, expr, interp, ir, objcode, rocq, rules
 
-CONVS = ('conv_1', 'conv_2', 'conv_1_entry')
+CONVS = ('conv_1', 'conv_2', 'conv_1_entry', 'conv_2_entry')
 
 BASE = '''
 fold:          tc
-arrays:        supplied x = x0 x1, supplied y = y0 y1
+arrays:        stored x = x0 x1, stored y = y0 y1
 coefficients:  dot_2
 state:         mask finite
 combine:       finite = and(finite, finite)
@@ -81,7 +81,7 @@ class Rules(unittest.TestCase):
         self.refused(BASE.replace('writes:        z = z0 z1', 'writes:        z'), 'of the shape of the state of dot_2')
         self.refused(BASE.replace('mask finite', 'finite').replace('flag=finite', 'flag=finite'),
                      'the state of a convolution is one mask')
-        self.refused(BASE.replace('supplied y = y0 y1', 'stored y = y0 y1'), 'with their names, limbs and roles')
+        self.refused(BASE.replace('stored y = y0 y1', 'supplied y = y0 y1'), 'with their names, limbs and roles')
         self.refused(BASE.replace('z = z0 z1', 's = z0 z1'), 'a name of the state of dot_2')
         with self.assertRaises(ir.DescriptionError):            # without coefficients, a step is needed
             ir.parse_fold(BASE.replace('coefficients:  dot_2\n', ''), 'tc.fold')
@@ -390,8 +390,8 @@ class Printers(unittest.TestCase):
         import copy
         ks = copy.deepcopy(self.ks)
         # (and the products of two BallVectors, proved too, BvConv.v, whose names contain conv_1, and
-        # conv_1_entry, the convolution of one limb on its factors guarded, rule R3)
-        for name in ('conv_1', 'conv_2', 'bv_conv_1', 'bv_conv_2', 'conv_1_entry'):
+        # conv_1_entry and conv_2_entry, the convolutions on their factors guarded, rule R3)
+        for name in ('conv_1', 'conv_2', 'bv_conv_1', 'bv_conv_2', 'conv_1_entry', 'conv_2_entry'):
             ks.folds[name].status, ks.folds[name].theorem = 'unverified', None
         self.assertNotIn('conv_1', rocq.audit(ks))
         ks.folds['conv_1'].status, ks.folds['conv_1'].theorem = 'proved', 'proofs/theories/FoldConv.v'

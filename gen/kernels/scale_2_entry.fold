@@ -23,5 +23,5 @@ theorem:       proofs/theories/FoldMaps.v
 ieee_theorem:  proofs/theories/IeeeFoldMaps.v
 status:        proved
 domain:        extended
-source:        mul_2_1 on each element, its limbs and the scalar guarded (scale_entry_step_2)
+source:        mul_2_1 (JMP17 Alg. 9, bound from MR22) on each element, its limbs and the scalar guarded (scale_entry_step_2)
 license:       algorithm: published; proof: MIT

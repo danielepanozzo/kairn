@@ -34,7 +34,7 @@ Each operation that changes the state is one generated, proved kernel:
 
 A value `add` takes passes through the guard first ([rule R3](../developer/architecture.md#the-kernel-ir)),
 so a product the program computes and adds, `acc.add(a * b)`, is the product rounded; the factors
-of `add_product` of one limb are guarded too (below), those of two limbs only multiplied.
+of `add_product` are guarded too (below), every limb of both.
 `merge(acc)` merges an accumulator with itself.
 
 ## What is proved
@@ -54,9 +54,12 @@ $\sum_i\lvert x_i y_i\rvert \le (1 + u)^{n+2}(a + \tfrac12 n\eta)$ (the exponent
 the sum of magnitudes being rounded $n$ times. Proved in the real model and in the IEEE model
 (`proofs/theories/Accumulator.v`, `IeeeAccumulator.v`, `AccKernels.v`, `IeeeAccKernels.v`).
 
-The radius is given while $m u \le \tfrac12$, $u$ the unit roundoff of `T`, for one and for two
-limbs alike, since the magnitudes are summed in `T`: about $2^{22}$ terms of `float` and $2^{51}$ of
-`double`. Beyond, `error_bound()` is $+\infty$.
+The radius is given up to a count of terms that depends on `T` and not on the precision of the
+sum, since the magnitudes are summed in `T`: with one limb for fewer than $2^{22}$ terms of `float`
+and $2^{51}$ of `double` (while $m u < \tfrac14$, $u$ the unit roundoff of `T`: where the mask of
+`bound_dot_1` is true), and with two limbs for fewer than $2^{23}$ and $2^{52}$ (while
+$m u < \tfrac12$: the mask of `acc_radius_2`). Beyond, `error_bound()` is $+\infty$. (Corrected on
+2026-11-22: this paragraph gave $m u \le \tfrac12$ and the first pair of counts for both.)
 
 ## What the header adds, which is not machine-checked
 
@@ -87,7 +90,12 @@ need not be canonical; `sum()` is the canonical form), `magnitudes()` and `count
 and `Accumulator::from_state(s, a, n)` makes an accumulator of a state, so that a program can move
 accumulators through its own storage (a buffer of a device, a message between processes) and merge
 them there. The guarantee of `error_bound()` is that of the history of the accumulator the state
-was read from: a state that no history produced has none. With `KAIRN_CHECKS`, `from_state`
+was read from: a state that no history produced has none. The values of `T` it is given, the
+magnitudes and the limb of a running sum of one limb, pass through the guard $a + 0$ first (the
+leading limb of [`make_2`](make_2.md), as the limbs of `Ball::from_limbs` do), since the kernels of
+`add`, `add_product` and `merge` add to them: a product the program passes in is the product rounded
+(without the guard, GCC 13 at its default setting, Clang 18 and Apple clang 21 with
+`-ffp-contract=fast` were measured fusing it into the next `add`). With `KAIRN_CHECKS`, `from_state`
 requires a canonical sum and magnitudes that are not negative.
 
 ## A product by a factor the compiler knows to be 1
@@ -110,7 +118,8 @@ accumulator, as a scalar operation does, so they check the environment in a debu
 the operations of `Expansion` do (the functions on arrays of [batch.md](batch.md#checks) check it in
 every build). With `KAIRN_CHECKS` 1, `add`, `add_product`, `merge`, `error_bound` and `ball` check the
 floating-point environment, the rounding mode included, then that a two-limb operand is canonical;
-`from_state` does not round, checks the environment without the rounding mode, and then its state;
+`from_state` rounds only in its guards, whose values do not depend on the rounding mode, checks the
+environment without the rounding mode, and then its state;
 `sum()`, `count()`, `magnitudes()` and `running_sum()` check nothing. The constructor, `add`,
 `merge`, `sum`, the accessors and `from_state` are `constexpr`; `add_product`, `error_bound` and
 `ball` are not, since `acc_mul_k` and `acc_radius_k` have fused multiply-adds without a variant

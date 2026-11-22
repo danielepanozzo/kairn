@@ -66,7 +66,7 @@ Which of them the proof of `axpy_step_1_correct` depends on is not copied here: 
 
 ## Source
 
-**Algorithm:** the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. **License:** algorithm: published; proof: MIT.
+**Algorithm:** the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of [JR18](../developer/design/phase0/references.md#jr18). **License:** algorithm: published; proof: MIT.
 
 ## Listing
 

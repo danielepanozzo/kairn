@@ -77,6 +77,21 @@ Definition dot_2_lanes (W : nat) (xys : list ((float * float) * (float * float))
   let s := fold_lanes dot_2_step dot_2_combine (pzero, pzero) W xys in
   IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst s) (snd s).
 
+(* dot_2_entry: step dot_entry_step_2, combination add_2_2, finish fold_finish_2. *)
+Definition dot_2_entry_step (s : float * float) (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.dot_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst s) (snd s) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition dot_2_entry_combine (a b : float * float) : float * float :=
+  IeeeModel.add_2_2 prec emax nan_plus nan_minus (fst a) (snd a) (fst b) (snd b).
+
+Definition dot_2_entry_seq (xys : list ((float * float) * (float * float))) : float * float * bool :=
+  let s := fold_seq dot_2_entry_step (pzero, pzero) xys in
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst s) (snd s).
+
+Definition dot_2_entry_lanes (W : nat) (xys : list ((float * float) * (float * float))) : float * float * bool :=
+  let s := fold_lanes dot_2_entry_step dot_2_entry_combine (pzero, pzero) W xys in
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst s) (snd s).
+
 (* norm_upper_1: step norm_step_1, combination norm_combine, finish norm_finish_1. *)
 Definition norm_upper_1_step (mok : float * bool) (x : float) : float * bool :=
   IeeeModel.norm_step_1 prec emax nan_abs (fst mok) (snd mok) x.
@@ -559,6 +574,16 @@ Definition conv_2_conv (xs : list (float * float)) (ys : list (float * float)) :
   let m_ := fold_seq (fun m_ w_ => andb m_ (snd (conv_2_check w_))) true ws_ in
   (if m_ then ws_ else map (fun w_ => fst (conv_2_check w_)) ws_, m_).
 
+(* conv_2_entry: a convolution; coefficient j is dot_2_entry in the sequential order on the terms FoldModel.conv_terms xs ys j, checked by fold_finish_2. *)
+Definition conv_2_entry_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition conv_2_entry_conv (xs : list (float * float)) (ys : list (float * float)) : list (float * float) * bool :=
+  let ws_ := map (fun j => fold_seq dot_2_entry_step (pzero, pzero) (FoldModel.conv_terms xs ys j))
+                 (seq 0 (FoldModel.conv_length (length xs) (length ys))) in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (conv_2_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (conv_2_entry_check w_)) ws_, m_).
+
 (* The ball vectors (architecture.md, "Ball vectors"): F_step and F_map are a map's, the centers
    written; F_record, the step of a fold of maxima, updates the state, the largest magnitude of a
    leading limb written and the mask that none was a NaN, from each center written, and F_combine
@@ -671,6 +696,33 @@ Definition bv_make_2_seq (r : float) (cs : list (float * float)) : list (float *
 Definition bv_make_2_lanes (W : nat) (r : float) (cs : list (float * float)) : list (float * float) * float * bool :=
   let ws_ := map bv_make_2_step cs in
   let s_ := fold_lanes bv_make_2_record bv_make_2_combine (pzero, true) W ws_ in
+  let rz_ := IeeeModel.bv_make_radius prec emax nan_plus nan_minus (fst s_) r in
+  let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+(* bv_make_2_entry: a ball vector; step bv_center_entry_2, record norm_step_2, combination norm_combine, radius bv_make_radius, finish bv_make_finish. *)
+Definition bv_make_2_entry_step (c : float * float) : float * float :=
+  IeeeModel.bv_center_entry_2 prec emax nan_plus (fst c) (snd c).
+
+Definition bv_make_2_entry_map (cs : list (float * float)) : list (float * float) :=
+  map bv_make_2_entry_step cs.
+
+Definition bv_make_2_entry_record (mok : float * bool) (w_ : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_make_2_entry_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_make_2_entry_seq (r : float) (cs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map bv_make_2_entry_step cs in
+  let s_ := fold_seq bv_make_2_entry_record (pzero, true) ws_ in
+  let rz_ := IeeeModel.bv_make_radius prec emax nan_plus nan_minus (fst s_) r in
+  let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+Definition bv_make_2_entry_lanes (W : nat) (r : float) (cs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map bv_make_2_entry_step cs in
+  let s_ := fold_lanes bv_make_2_entry_record bv_make_2_entry_combine (pzero, true) W ws_ in
   let rz_ := IeeeModel.bv_make_radius prec emax nan_plus nan_minus (fst s_) r in
   let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
   (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
@@ -842,6 +894,33 @@ Definition bv_scale_2_lanes (W : nat) (rx : float) (a : float) (xs : list (float
   let ws_ := map (bv_scale_2_step a) xs in
   let s_ := fold_lanes bv_scale_2_record bv_scale_2_combine (pzero, true) W ws_ in
   let rz_ := IeeeModel.bv_scale_radius_2 prec emax nan_abs nan_fma (fst s_) rx a in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+(* bv_scale_2_entry: a ball vector; step bv_scale_step_2, record norm_step_2, combination norm_combine, radius bv_scale_radius_entry_2, finish norm_finish_1. *)
+Definition bv_scale_2_entry_step (a : float) (x : float * float) : float * float :=
+  IeeeModel.bv_scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst x) (snd x) a.
+
+Definition bv_scale_2_entry_map (a : float) (xs : list (float * float)) : list (float * float) :=
+  map (bv_scale_2_entry_step a) xs.
+
+Definition bv_scale_2_entry_record (mok : float * bool) (w_ : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_scale_2_entry_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_scale_2_entry_seq (rx : float) (a : float) (xs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map (bv_scale_2_entry_step a) xs in
+  let s_ := fold_seq bv_scale_2_entry_record (pzero, true) ws_ in
+  let rz_ := IeeeModel.bv_scale_radius_entry_2 prec emax nan_plus nan_abs nan_fma (fst s_) rx a in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+Definition bv_scale_2_entry_lanes (W : nat) (rx : float) (a : float) (xs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map (bv_scale_2_entry_step a) xs in
+  let s_ := fold_lanes bv_scale_2_entry_record bv_scale_2_entry_combine (pzero, true) W ws_ in
+  let rz_ := IeeeModel.bv_scale_radius_entry_2 prec emax nan_plus nan_abs nan_fma (fst s_) rx a in
   let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
   (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
 

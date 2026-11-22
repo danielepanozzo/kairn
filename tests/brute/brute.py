@@ -283,12 +283,16 @@ FOLD_SHAPES = {
     "kernel_bv_sub_2": [("fp:3:-2:-1", 1), ("fp:3:-4:1", 1)],
     "kernel_bv_scale_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_scale_2": [("fp:2:-2:1", 1), ("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    # bv_scale_2 on its scalar guarded (rule R3, the factors of a fused operation): the same formats.
+    "kernel_bv_scale_2_entry": [("fp:2:-2:1", 1), ("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_neg_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 2), ("fp:2:-3:2", 3)],
     "kernel_bv_neg_2": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_mul_pow2_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 2)],
     "kernel_bv_mul_pow2_2": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_make_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 2), ("fp:2:-2:1", 3)],
     "kernel_bv_make_2": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    # bv_make_2 on each limb of each center guarded (rule R3): the same formats.
+    "kernel_bv_make_2_entry": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_conv_1": [("-", 0), ("fp:4:-3:-2", 1), ("fp:4:-4:-1", 1)],
     "kernel_bv_conv_2": [("-", 0), ("fp:4:-3:-2", 1), ("fp:4:-4:-1", 1)],
 }

@@ -49,14 +49,17 @@ into the loop's first addition, and the sum would not be that of the numbers in 
 ([rule R3](../developer/architecture.md#the-kernel-ir)). So every function calls the loop on
 *supplied* arrays: the sums and the maps that add an element are the loops named `_entry`, whose
 steps pass each limb they add through the guard $a + 0$ first. A product is fused only into an
-addition, so a factor needs no guard, except where the compiler sees the *other* factor to be 1:
+addition, but a fused multiply-add becomes one where the compiler sees the *other* factor to be 1:
 when one array of a dot product of one limb holds ones filled in the same function, Clang 18 on
 x86-64 and Apple clang 21 with `-ffp-contract=fast` remove the multiplication, `fma(x, 1, s)`
-becoming `x + s`, and fuse the program's product into that addition. So `dot` of one limb calls
-the loop `dot_1_entry`, whose step guards both factors of its fused operation; `scale`,
-`mul_pow2`, the `x` of `axpy`, `dot` of two limbs and `conv` only multiply their elements and are
-called without a guard, and no compiler measured fuses into them with a factor it sees
-([rule R3](../developer/architecture.md#the-kernel-ir), the factors of a fused operation). With the
+becoming `x + s`, and fuse the program's product into that addition (Apple clang 21 did the same in
+`conv` of one limb and `scale` of two limbs). So every value of the program that is a factor of a
+fused operation is guarded too ([rule R3](../developer/architecture.md#the-kernel-ir), the factors
+of a fused operation): `dot` and `conv` guard every limb of both factors (loops `dot_1_entry`,
+`dot_2_entry`, `conv_1_entry`, `conv_2_entry`), `scale` of two limbs every limb of `x` and `a`
+(`scale_2_entry`), and `axpy` of two limbs every limb of `a`, `x` and `y` (`axpy_2_1_entry`,
+`axpy_2_entry`). `scale` of one limb, `mul_pow2`, and the `a` and `x` of `axpy` of one limb only
+round products of their elements, or multiply by a power of two, which needs no guard. With the
 guard taken out, GCC 16 at `-O3`, Apple clang 21 and Clang 18 with `-ffp-contract=fast` do fuse
 such products into the sum of one limb and its difference, and Clang 18 and Apple clang 21 into the
 dot product of one limb with a factor 1; with it, no form differs (`api.boundary.arrays.*`,
@@ -104,9 +107,9 @@ $(n-1)e < 1$. No underflow term. **`sum_fast(x)`**: the same with the fast addit
 (loop `sum_fast_2_entry`, step [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md)), $e = 3u^2$,
 which is below the $e$ of `sum`; for one limb it is `sum`.
 
-**`dot(x, y)`** (loops `dot_1_entry`, `dot_2`; step [`dot_entry_step_1`](dot_entry_step_1.md),
+**`dot(x, y)`** (loops `dot_1_entry`, `dot_2_entry`; step [`dot_entry_step_1`](dot_entry_step_1.md),
 one fused multiply-add $s \leftarrow \mathrm{RN}(x_i y_i + s)$ of the guarded elements, and
-[`dot_step_2`](dot_step_2.md)). When
+[`dot_entry_step_2`](dot_entry_step_2.md), the product and the sum of the guarded elements). When
 `finite`, `value` is finite, normalized for two limbs, and
 
 - one limb: $\lvert\mathit{value} - \sum x_i y_i\rvert \le ((1+e)^n - 1)\sum\lvert x_i y_i\rvert
@@ -131,7 +134,7 @@ limbs and `a` of `T` ([`axpy_entry_step_2_1`](axpy_entry_step_2_1.md)), and
 $c = 3(1+4u^2)/(1-4u) + 4$, $t = 2$ for a two-limb `a`
 ([`axpy_entry_step_2`](axpy_entry_step_2.md)).
 
-**`conv(x, y, z)`** (loops `conv_1_entry`, `conv_2`; the coefficients of one limb by `dot_1_entry`, which guards both factors) writes the $n_x + n_y - 1$ coefficients of the
+**`conv(x, y, z)`** (loops `conv_1_entry`, `conv_2_entry`; the coefficients by `dot_1_entry` and `dot_2_entry`, which guard every limb of both factors) writes the $n_x + n_y - 1$ coefficients of the
 product of the polynomials $x$ and $y$, none when either is empty: coefficient $j$ is `dot`, in its
 sequential order, of the terms $(x_i, y_{j-i})$ in increasing $i$, and satisfies the statement of
 `dot` for its own $m_j \le \min(n_x, n_y)$ terms.
@@ -156,7 +159,7 @@ a number of `T` that is certainly at least it, computed by a generated, proved k
 ```cpp
 using X = kairn::Expansion<double, 2>;
 const kairn::Bound<double> s = kairn::traits<X>::sum(n);         // a sum of n numbers
-const kairn::Bound<double> h = kairn::traits<X>::sum_height(h);  // a summation tree of height h
+const kairn::Bound<double> t = kairn::traits<X>::sum_height(h);  // a summation tree of height h
 const kairn::Bound<double> d = kairn::traits<X>::dot(n);         // a dot product of n terms
 kairn::traits<X>::axpy;  kairn::traits<X>::axpy_limb;            // one element of axpy (constants)
 ```

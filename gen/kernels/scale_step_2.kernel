@@ -1,8 +1,10 @@
 # The step of the map scale_2, an array of two limbs times a scalar of T: mul_2_1 (milestone2.md:
-# mul_2_1 when the scalar of scale is a T). Both come from the program; mul_2_1 only multiplies
-# them, so rule R3 asks no guard. Its claims are those of mul_2_1.
+# mul_2_1 when the scalar of scale is a T), on a stored array and scalar. scale_entry_step_2 (the step
+# of scale_2_entry, kairn::scale) and bv_scale_step_2 (the step of bv_scale_2, the scaling of a ball
+# vector) run it after guarding what the program supplies (rule R3, the factors of a fused
+# operation). Not an entry kernel. Its claims are those of mul_2_1.
 kernel:        scale_step_2
-input:         supplied x = x0 x1
+input:         x = x0 x1
 input:         a
 output:        z = z0 z1
 value:         x*a
@@ -17,7 +19,6 @@ ieee_lead_theorem: proofs/theories/IeeeMapSteps.v scale_step_2_ieee_lead
 source:        mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
-entry:         yes
 ieee:          bridge spec
 
 (z0, z1) = mul_2_1(x0, x1, a)

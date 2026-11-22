@@ -173,11 +173,11 @@ Qed.
 Lemma axpy_entry_step_2_runR :
   forall emin prec choice a0 a1 x0 x1 y0 y1,
   axpy_entry_step_2 emin prec choice a0 a1 x0 x1 y0 y1 =
-  (nth 34 (runR emin prec choice IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) 0,
-   nth 36 (runR emin prec choice IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) 0).
+  (nth 38 (runR emin prec choice IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) 0,
+   nth 40 (runR emin prec choice IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) 0).
 Proof.
-intros. cbv [axpy_entry_step_2 mul_2_2 two_prod add_2_2 two_sum fast_two_sum runR run stepR
-             nth app IeeeModel.axpy_entry_step_2_prog].
+intros. cbv [axpy_entry_step_2 axpy_step_2 mul_2_2 two_prod add_2_2 two_sum fast_two_sum runR run
+             stepR nth app IeeeModel.axpy_entry_step_2_prog].
 reflexivity.
 Qed.
 
@@ -195,11 +195,11 @@ Qed.
 Lemma axpy_entry_step_2_1_runR :
   forall emin prec choice a x0 x1 y0 y1,
   axpy_entry_step_2_1 emin prec choice a x0 x1 y0 y1 =
-  (nth 30 (runR emin prec choice IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) 0,
-   nth 32 (runR emin prec choice IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) 0).
+  (nth 33 (runR emin prec choice IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) 0,
+   nth 35 (runR emin prec choice IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) 0).
 Proof.
-intros. cbv [axpy_entry_step_2_1 mul_2_1 two_prod add_2_2 two_sum fast_two_sum runR run stepR
-             nth app IeeeModel.axpy_entry_step_2_1_prog].
+intros. cbv [axpy_entry_step_2_1 axpy_step_2_1 mul_2_1 two_prod add_2_2 two_sum fast_two_sum runR
+             run stepR nth app IeeeModel.axpy_entry_step_2_1_prog].
 reflexivity.
 Qed.
 
@@ -384,10 +384,11 @@ Qed.
 Lemma axpy_entry_step_2_runB :
   forall a0 a1 x0 x1 y0 y1 : float,
   IeeeModel.axpy_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma a0 a1 x0 x1 y0 y1 =
-  (nth 34 (runB IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) d0,
-   nth 36 (runB IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) d0).
+  (nth 38 (runB IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) d0,
+   nth 40 (runB IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) d0).
 Proof.
-intros. cbv [IeeeModel.axpy_entry_step_2 IeeeModel.mul_2_2 IeeeModel.two_prod IeeeModel.add_2_2
+intros. cbv [IeeeModel.axpy_entry_step_2 IeeeModel.axpy_step_2 IeeeModel.mul_2_2 IeeeModel.two_prod
+             IeeeModel.add_2_2
              IeeeModel.two_sum IeeeModel.fast_two_sum run stepB nth app
              IeeeModel.axpy_entry_step_2_prog].
 reflexivity.
@@ -408,10 +409,10 @@ Qed.
 Lemma axpy_entry_step_2_1_runB :
   forall a x0 x1 y0 y1 : float,
   IeeeModel.axpy_entry_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 =
-  (nth 30 (runB IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) d0,
-   nth 32 (runB IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) d0).
+  (nth 33 (runB IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) d0,
+   nth 35 (runB IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) d0).
 Proof.
-intros. cbv [IeeeModel.axpy_entry_step_2_1 IeeeModel.mul_2_1 IeeeModel.two_prod
+intros. cbv [IeeeModel.axpy_entry_step_2_1 IeeeModel.axpy_step_2_1 IeeeModel.mul_2_1 IeeeModel.two_prod
              IeeeModel.add_2_2 IeeeModel.two_sum IeeeModel.fast_two_sum run stepB nth app
              IeeeModel.axpy_entry_step_2_1_prog].
 reflexivity.
@@ -698,15 +699,15 @@ Theorem axpy_entry_step_2_bridge :
   forall a0 a1 x0 x1 y0 y1 : float, fin a0 -> fin a1 -> fin x0 -> fin x1 -> fin y0 -> fin y1 ->
   normalized_2 emin prec (b2r a0) (b2r a1) ->
   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
-  fin (nth 34 (runB IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) d0) ->
+  fin (nth 38 (runB IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) d0) ->
   finite_all (runB IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) /\
   map b2r (runB IeeeModel.axpy_entry_step_2_prog [a0; a1; x0; x1; y0; y1]) = runR
     IeeeModel.axpy_entry_step_2_prog [b2r a0; b2r a1; b2r x0; b2r x1; b2r y0; b2r y1].
 Proof.
 intros Hp a0 a1 x0 x1 y0 y1 A0 A1 F0 F1 G0 G1 Na Nx Ny Hz.
 apply (bridge_f2s_prog prec emax nan_plus nan_minus nan_opp nan_fma
-         IeeeModel.axpy_entry_step_2_prog (firstn 28 IeeeModel.axpy_entry_step_2_prog) 30%nat 33%nat
-         [a0; a1; x0; x1; y0; y1] 34%nat); trivial.
+         IeeeModel.axpy_entry_step_2_prog (firstn 32 IeeeModel.axpy_entry_step_2_prog) 34%nat 37%nat
+         [a0; a1; x0; x1; y0; y1] 38%nat); trivial.
 - repeat constructor; assumption.
 - generalize
     (axpy_entry_step_2_correct emin prec Hp (b2r a0) (b2r a1) (b2r x0) (b2r x1) (b2r y0) (b2r y1) Na
@@ -819,16 +820,16 @@ Theorem axpy_entry_step_2_1_bridge :
   (3 <= prec)%Z ->
   forall a x0 x1 y0 y1 : float, fin a -> fin x0 -> fin x1 -> fin y0 -> fin y1 ->
   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
-  fin (nth 30 (runB IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) d0) ->
+  fin (nth 33 (runB IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) d0) ->
   finite_all (runB IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) /\
   map b2r (runB IeeeModel.axpy_entry_step_2_1_prog [a; x0; x1; y0; y1]) = runR
     IeeeModel.axpy_entry_step_2_1_prog [b2r a; b2r x0; b2r x1; b2r y0; b2r y1].
 Proof.
 intros Hp a x0 x1 y0 y1 Fa F0 F1 G0 G1 Nx Ny Hz.
 apply (bridge_f2s_prog prec emax nan_plus nan_minus nan_opp nan_fma
-         IeeeModel.axpy_entry_step_2_1_prog (firstn 25 IeeeModel.axpy_entry_step_2_1_prog) 26%nat
-           29%nat
-         [a; x0; x1; y0; y1] 30%nat); trivial.
+         IeeeModel.axpy_entry_step_2_1_prog (firstn 28 IeeeModel.axpy_entry_step_2_1_prog) 29%nat
+           32%nat
+         [a; x0; x1; y0; y1] 33%nat); trivial.
 - repeat constructor; assumption.
 - generalize
     (axpy_entry_step_2_1_correct emin prec Hp (b2r a) (b2r x0) (b2r x1) (b2r y0) (b2r y1)
@@ -981,6 +982,55 @@ unfold IeeeModel.scale_entry_step_2. cbv zeta.
 destruct (IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (IeeeOperations.guard prec emax nan_plus x0) (IeeeOperations.guard prec emax nan_plus x1)
             (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
 rewrite V0, V1, Va. intros H. exact H.
+Qed.
+
+(* bv_scale_step_2: scale_step_2 on the limbs of the center as they are and on a guarded (rule R3, the
+   factors of a fused operation): the guard of a finite value is finite with the same value, and the
+   values the program computes are the guard, then those of scale_step_2's program. *)
+Lemma bv_scale_step_2_eq (prec emax : Z) {prec_gt_0_ : Prec_gt_0 prec}
+    {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}
+    (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax)
+    (x0 x1 a : binary_float prec emax) :
+  IeeeModel.bv_scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a =
+  IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1
+    (IeeeOperations.guard prec emax nan_plus a).
+Proof.
+unfold IeeeModel.bv_scale_step_2. cbv zeta.
+destruct (IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1
+            (IeeeOperations.guard prec emax nan_plus a)).
+reflexivity.
+Qed.
+
+Theorem bv_scale_step_2_ieee_bridge : bv_scale_step_2_ieee_bridge_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp' x0 x1 a F0 F1 Fa Nx.
+assert (Ga : finite (IeeeOperations.guard prec emax nan_plus a)) by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact Fa).
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a) by exact (guard_val prec emax nan_plus a).
+generalize (scale_step_2_ieee_bridge prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp' x0 x1 _ F0 F1 Ga Nx).
+rewrite (bv_scale_step_2_eq prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a).
+destruct (IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1
+            (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
+intros B Fz. destruct (B Fz) as [R [Fz1 E]].
+split; [|split; [exact Fz1|]].
+- cbv [run stepB nth app IeeeModel.scale_step_2_prog] in R.
+  cbv [run stepB nth app IeeeModel.bv_scale_step_2_prog].
+  repeat match goal with H : Forall _ (_ :: _) |- _ => apply Forall_cons_iff in H; destruct H end.
+  repeat constructor; assumption.
+- rewrite Va in E. rewrite E.
+  rewrite (bv_scale_step_2_real (ieee_emin prec emax) prec (val x0) (val x1) (val a) (b2r_format prec emax a)).
+  reflexivity.
+Qed.
+
+Theorem bv_scale_step_2_ieee_correct : bv_scale_step_2_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp' x0 x1 a F0 F1 Fa Nx.
+assert (Ga : finite (IeeeOperations.guard prec emax nan_plus a)) by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact Fa).
+assert (Va : val (IeeeOperations.guard prec emax nan_plus a) = val a) by exact (guard_val prec emax nan_plus a).
+generalize (scale_step_2_ieee_correct prec emax Hp He nan_plus nan_minus nan_opp nan_fma Hp' x0 x1 _ F0 F1 Ga Nx).
+rewrite (bv_scale_step_2_eq prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a).
+destruct (IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1
+            (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
+rewrite Va. intros H. exact H.
 Qed.
 
 Theorem mul_pow2_step_2_ieee_bridge : mul_pow2_step_2_ieee_bridge_spec.
@@ -1324,13 +1374,13 @@ intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma a0 a1 x0 x1 y0 y1. rew
 intros Fz.
 split; [|split].
 - exact (lead_cone prec emax nan_plus nan_minus nan_opp nan_fma IeeeModel.axpy_entry_step_2_prog
-    [a0; a1; x0; x1; y0; y1] 34 0 eq_refl eq_refl
+    [a0; a1; x0; x1; y0; y1] 38 0 eq_refl eq_refl
            ltac:(cbn [length]; lia) Fz).
 - exact (lead_cone prec emax nan_plus nan_minus nan_opp nan_fma IeeeModel.axpy_entry_step_2_prog
-    [a0; a1; x0; x1; y0; y1] 34 2 eq_refl eq_refl
+    [a0; a1; x0; x1; y0; y1] 38 2 eq_refl eq_refl
            ltac:(cbn [length]; lia) Fz).
 - exact (lead_cone prec emax nan_plus nan_minus nan_opp nan_fma IeeeModel.axpy_entry_step_2_prog
-    [a0; a1; x0; x1; y0; y1] 34 4 eq_refl eq_refl
+    [a0; a1; x0; x1; y0; y1] 38 4 eq_refl eq_refl
            ltac:(cbn [length]; lia) Fz).
 Qed.
 
@@ -1341,13 +1391,13 @@ intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1. rewrite
 intros Fz.
 split; [|split].
 - exact (lead_cone prec emax nan_plus nan_minus nan_opp nan_fma IeeeModel.axpy_entry_step_2_1_prog
-    [a; x0; x1; y0; y1] 30 0 eq_refl eq_refl
+    [a; x0; x1; y0; y1] 33 0 eq_refl eq_refl
            ltac:(cbn [length]; lia) Fz).
 - exact (lead_cone prec emax nan_plus nan_minus nan_opp nan_fma IeeeModel.axpy_entry_step_2_1_prog
-    [a; x0; x1; y0; y1] 30 1 eq_refl eq_refl
+    [a; x0; x1; y0; y1] 33 1 eq_refl eq_refl
            ltac:(cbn [length]; lia) Fz).
 - exact (lead_cone prec emax nan_plus nan_minus nan_opp nan_fma IeeeModel.axpy_entry_step_2_1_prog
-    [a; x0; x1; y0; y1] 30 3 eq_refl eq_refl
+    [a; x0; x1; y0; y1] 33 3 eq_refl eq_refl
            ltac:(cbn [length]; lia) Fz).
 Qed.
 
@@ -1420,6 +1470,17 @@ generalize (scale_step_2_ieee_lead prec emax Hp He nan_plus nan_minus nan_opp na
               (IeeeOperations.guard prec emax nan_plus x1) (IeeeOperations.guard prec emax nan_plus a)).
 unfold IeeeModel.scale_entry_step_2. cbv zeta.
 destruct (IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (IeeeOperations.guard prec emax nan_plus x0) (IeeeOperations.guard prec emax nan_plus x1)
+            (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
+unfold finite. rewrite !(guard_finite prec emax nan_plus). intros H. exact H.
+Qed.
+
+Theorem bv_scale_step_2_ieee_lead : bv_scale_step_2_ieee_lead_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_fma x0 x1 a.
+generalize (scale_step_2_ieee_lead prec emax Hp He nan_plus nan_minus nan_opp nan_fma x0 x1
+              (IeeeOperations.guard prec emax nan_plus a)).
+rewrite (bv_scale_step_2_eq prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a).
+destruct (IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1
             (IeeeOperations.guard prec emax nan_plus a)) as [z0 z1].
 unfold finite. rewrite !(guard_finite prec emax nan_plus). intros H. exact H.
 Qed.

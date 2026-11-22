@@ -3,10 +3,12 @@
 # centers written; the one radius bv_scale_radius_2 at the largest magnitude, the largest of the
 # radii of ball_scale_2 entry by entry; norm_finish_1 tests that it is finite. When it is not (the
 # operand is the whole space, a is not finite, or something overflowed), every center written is
-# zero and the radius +infinity: the whole space.
+# zero and the radius +infinity: the whole space. Its scalar is stored, written through Kairn: the
+# scalings and axpy of BallVector<T, 2, N> call bv_scale_2_entry, whose step guards a, a factor of
+# the fused operations of mul_2_1 (rule R3, the factors of a fused operation).
 fold:          bv_scale_2
 arrays:        stored x = x0 x1
-scalars:       stored rx, supplied a
+scalars:       stored rx, stored a
 state:         m, mask ok
 step:          z = scale_step_2(x, a)
 record:        (m, ok) = norm_step_2(m, ok, z)

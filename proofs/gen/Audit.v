@@ -165,6 +165,9 @@ Print Assumptions bv_scale_radius_1_correct.
 Definition bv_scale_radius_2_audit : bv_scale_radius_2_spec := bv_scale_radius_2_correct.
 Print Assumptions bv_scale_radius_2_correct.
 
+Definition bv_scale_radius_entry_2_audit : bv_scale_radius_entry_2_spec := bv_scale_radius_entry_2_correct.
+Print Assumptions bv_scale_radius_entry_2_correct.
+
 Definition conv_radius_audit : conv_radius_spec := conv_radius_correct.
 Print Assumptions conv_radius_correct.
 
@@ -300,20 +303,20 @@ Print Assumptions add_fast_2_2_correct.
 Definition add_up_2_2_audit : add_up_2_2_spec := add_up_2_2_correct.
 Print Assumptions add_up_2_2_correct.
 
+Definition axpy_step_2_audit : axpy_step_2_spec := axpy_step_2_correct.
+Print Assumptions axpy_step_2_correct.
+
 Definition axpy_entry_step_2_audit : axpy_entry_step_2_spec := axpy_entry_step_2_correct.
 Print Assumptions axpy_entry_step_2_correct.
 
 Definition mul_2_1_audit : mul_2_1_spec := mul_2_1_correct.
 Print Assumptions mul_2_1_correct.
 
-Definition axpy_entry_step_2_1_audit : axpy_entry_step_2_1_spec := axpy_entry_step_2_1_correct.
-Print Assumptions axpy_entry_step_2_1_correct.
-
-Definition axpy_step_2_audit : axpy_step_2_spec := axpy_step_2_correct.
-Print Assumptions axpy_step_2_correct.
-
 Definition axpy_step_2_1_audit : axpy_step_2_1_spec := axpy_step_2_1_correct.
 Print Assumptions axpy_step_2_1_correct.
+
+Definition axpy_entry_step_2_1_audit : axpy_entry_step_2_1_spec := axpy_entry_step_2_1_correct.
+Print Assumptions axpy_entry_step_2_1_correct.
 
 Definition ball_add_2_audit : ball_add_2_spec := ball_add_2_correct.
 Print Assumptions ball_add_2_correct.
@@ -357,8 +360,20 @@ Print Assumptions eq_2_1_correct.
 Definition bv_center_2_audit : bv_center_2_spec := bv_center_2_correct.
 Print Assumptions bv_center_2_correct.
 
+Definition bv_center_entry_2_audit : bv_center_entry_2_spec := bv_center_entry_2_correct.
+Print Assumptions bv_center_entry_2_correct.
+
 Definition bv_mul_pow2_step_2_audit : bv_mul_pow2_step_2_spec := bv_mul_pow2_step_2_correct.
 Print Assumptions bv_mul_pow2_step_2_correct.
+
+Definition scale_step_2_audit : scale_step_2_spec := scale_step_2_correct.
+Print Assumptions scale_step_2_correct.
+
+Definition bv_scale_step_2_audit : bv_scale_step_2_spec := bv_scale_step_2_correct.
+Print Assumptions bv_scale_step_2_correct.
+
+Definition dot_entry_step_2_audit : dot_entry_step_2_spec := dot_entry_step_2_correct.
+Print Assumptions dot_entry_step_2_correct.
 
 Definition mul_ball_2_2_audit : mul_ball_2_2_spec := mul_ball_2_2_correct.
 Print Assumptions mul_ball_2_2_correct.
@@ -383,9 +398,6 @@ Print Assumptions mul_pow2_step_2_correct.
 
 Definition norm_step_2_audit : norm_step_2_spec := norm_step_2_correct.
 Print Assumptions norm_step_2_correct.
-
-Definition scale_step_2_audit : scale_step_2_spec := scale_step_2_correct.
-Print Assumptions scale_step_2_correct.
 
 Definition scale_entry_step_2_audit : scale_entry_step_2_spec := scale_entry_step_2_correct.
 Print Assumptions scale_entry_step_2_correct.
@@ -459,6 +471,9 @@ Print Assumptions bv_make_1_correct.
 Definition bv_make_2_audit : bv_make_2_spec := bv_make_2_correct.
 Print Assumptions bv_make_2_correct.
 
+Definition bv_make_2_entry_audit : bv_make_2_entry_spec := bv_make_2_entry_correct.
+Print Assumptions bv_make_2_entry_correct.
+
 Definition bv_mul_pow2_1_audit : bv_mul_pow2_1_spec := bv_mul_pow2_1_correct.
 Print Assumptions bv_mul_pow2_1_correct.
 
@@ -477,6 +492,9 @@ Print Assumptions bv_scale_1_correct.
 Definition bv_scale_2_audit : bv_scale_2_spec := bv_scale_2_correct.
 Print Assumptions bv_scale_2_correct.
 
+Definition bv_scale_2_entry_audit : bv_scale_2_entry_spec := bv_scale_2_entry_correct.
+Print Assumptions bv_scale_2_entry_correct.
+
 Definition bv_sub_1_audit : bv_sub_1_spec := bv_sub_1_correct.
 Print Assumptions bv_sub_1_correct.
 
@@ -491,6 +509,9 @@ Print Assumptions conv_1_entry_correct.
 
 Definition conv_2_audit : conv_2_spec := conv_2_correct.
 Print Assumptions conv_2_correct.
+
+Definition conv_2_entry_audit : conv_2_entry_spec := conv_2_entry_correct.
+Print Assumptions conv_2_entry_correct.
 
 Definition dot_1_seq_audit : dot_1_seq_spec := dot_1_seq_correct.
 Print Assumptions dot_1_seq_correct.
@@ -509,6 +530,12 @@ Print Assumptions dot_2_seq_correct.
 
 Definition dot_2_lanes_audit : dot_2_lanes_spec := dot_2_lanes_correct.
 Print Assumptions dot_2_lanes_correct.
+
+Definition dot_2_entry_seq_audit : dot_2_entry_seq_spec := dot_2_entry_seq_correct.
+Print Assumptions dot_2_entry_seq_correct.
+
+Definition dot_2_entry_lanes_audit : dot_2_entry_lanes_spec := dot_2_entry_lanes_correct.
+Print Assumptions dot_2_entry_lanes_correct.
 
 Definition mul_pow2_map_1_audit : mul_pow2_map_1_spec := mul_pow2_map_1_correct.
 Print Assumptions mul_pow2_map_1_correct.

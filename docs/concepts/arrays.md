@@ -131,8 +131,9 @@ A function that returns a number returns a `kairn::Reduction`, the number and a 
 exactly when the number is finite; when it is false the number is the canonical NaN, every limb a
 NaN, never a finite wrong value. A map returns `true` exactly when every element it wrote is finite.
 A map may write in place, into exactly the arrays it reads (`axpy(a, x, y, y)` is
-$y \leftarrow ax + y$); no other overlap is supported. Every value the loops add passes through the
-guard, so arrays the program fills with products in the same function may be passed straight in
+$y \leftarrow ax + y$); no other overlap is supported. Every value the loops add, and every value
+that is a factor of a fused multiply-add, passes through the guard, so arrays the program fills
+with products in the same function may be passed straight in
 ([The floating-point environment](environment.md#contraction-and-fast-math)). **Every function on
 arrays checks the floating-point environment before its loop, in every build**, and by default stops
 the program if it is not the default one ([The checks](environment.md#the-checks)); with
@@ -158,7 +159,8 @@ sum is finite and the masks of the kernels of the radius are true, the sum is wi
 of the exact sum of what was added, whatever the order, and `ball()` is the ball of the two
 ([What is proved](../reference/accumulator.md#what-is-proved)). So a program can sum in parallel,
 one accumulator per thread, and merge at the end. A radius is given up to about $2^{22}$ terms of
-`float` and $2^{51}$ of `double`, for one limb and two, since the magnitudes are summed in `T`;
+`float` and $2^{51}$ of `double` with one limb, and twice as many with two, since the magnitudes are
+summed in `T`;
 beyond, and when something is not finite, `error_bound()` is $+\infty$ and `ball()` the whole line,
 never a finite ball the theorem does not give. The count, its conversion to `T` and those returns are
 the header's, tested and not machine-checked

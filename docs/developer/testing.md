@@ -8,7 +8,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | on 2026-11-22, on the tree with the functions on arrays, the ball vectors, the strict rule for the factors of a fused operation and the exhaustive tier, 1 202 tests with Apple clang, none failing, in 192 seconds on the Mac with `ctest --parallel 4`; on the Linux machine, on that tree before the additions to the interface of the sets and the Concepts pages (1 162 to 1 171 tests), 81 to 96 seconds with GCC 13 and Clang 18, with and without `-mavx2 -mfma` (`--parallel 16`); on the hosted runners of the CI, on 2026-11-21 with 984 to 988 tests, 3 to 4 minutes on Linux and macOS and 8 to 10 on Windows ([Time](#time) has the measurements, tree by tree; on the hosted runners the tier is over the two minutes the brief asks: [deviation 24](design/phase0/decisions.md#deviations-from-the-brief-flagged)) |
+| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | on 2026-11-22, on the tree with the functions on arrays, the ball vectors, the strict rule for the factors of a fused operation and the exhaustive tier, 1 202 tests with Apple clang, none failing, in 192 seconds on the Mac with `ctest --parallel 4`; on the Linux machine, on that tree before the additions to the interface of the sets and the Concepts pages (1 162 to 1 171 tests), 81 to 96 seconds with GCC 13 and Clang 18, with and without `-mavx2 -mfma` (`--parallel 16`); on the hosted runners of the CI, the same day (`main` at `5f597fb`, 1 198 to 1 202 tests), 228 to 317 seconds on Linux and macOS and 727 to 746 on Windows ([Time](#time) has the measurements, tree by tree; on the hosted runners the tier is over the two minutes the brief asks: [deviation 24](design/phase0/decisions.md#deviations-from-the-brief-flagged)) |
 | Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, the kernels printed for the emulated limb type in `fp:8:-14:1` ([below](#the-emulated-formats)), and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | on 2026-11-22, on the same tree, 2 000 tests (Apple clang); on that tree before the additions to the interface of the sets, 2 000 tests with GCC 13 on the Linux machine in 20 minutes (`--parallel 16`, the tools held to one worker) ([Time](#time)); it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 1202 tests. The full tier, 2000 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 1218 tests. The full tier, 2036 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -1091,8 +1091,9 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   `scale_entry_step_2`, the limbs of each element and $a$ guarded), and `add_product` of two limbs
   calls `acc_mul_entry_2`, which guards the limbs of both factors. With them every form agrees with
   every compiler measured: `--factor none` in `api.boundary.arrays.FORM.S`, a hard failure
-  otherwise. The dot product, `axpy` and `conv` of two limbs take their factors unguarded: they are
-  on the pending list of the factor rule (`rules.FACTOR_PENDING`), and no compiler fused into them. The control
+  otherwise. The dot product, `axpy` and `conv` of two limbs guard their factors too
+  (`dot_2_entry`, `axpy_2_entry`, `axpy_2_1_entry`, `conv_2_entry`), by the rule, though no compiler
+  was measured to fuse into them, with the guards or without (the probe matrix of 2026-11-22). The control
   (`api.boundary.arrays.unguarded.FORM.S`, those guards taken out with the others) requires a
   difference (`--factor some`) where it was measured: Clang 18 on x86-64 under `=fast` in the scalar
   form, Apple clang 21 under `=fast` in the NEON and the scalar forms; it reports elsewhere. The
@@ -1150,8 +1151,11 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   \Sigma\rvert \le r$ wherever `error_bound()` is finite (with `ball()` that ball), $+\infty$ and
   the whole line wherever the theorem gives nothing, and a finite radius where every value is finite
   and the count well within $m u \le \tfrac12$. `api.accumulator` checks constant evaluation,
-  merges, `from_state` and the same edges in C++; the boundary test adds `acc.add(a * b)` (guarded)
-  and `acc.add_product(a * b, 1)` (with a 1 read at run time, and one the compiler sees); the checks
+  merges, `from_state` and the same edges in C++; the boundary test adds `acc.add(a * b)` (guarded),
+  `from_state` with a product as its running sum or its magnitudes followed by `add` (guarded: on the
+  headers before the guard, Apple clang 21 with `-ffp-contract=fast` and NDEBUG at `-O2` gave another
+  result in about a quarter of 20 000 rounds) and `acc.add_product(a * b, 1)` (with a 1 read at run
+  time, and one the compiler sees); the checks
   have its operations and its operand cases; `api.reject.accumulator.mixed_limb_types`,
   `api.reject.not_constexpr.add_product` and `.error_bound` what must not compile.
 - **What must not compile** (`api.reject.batch.*`): a map and `axpy` writing through a view of
@@ -1229,7 +1233,13 @@ maxima `norm_upper_k`. What is tested of them:
   of the same with the rounded products. Against the copy of the headers without the guards no
   compiler measured fused a product into a ball vector (GCC 13 and 16, Apple clang 21, Clang 18, each
   contraction setting): the constructors' loops and the operations are calls of their own, and the
-  unguarded build only reports.
+  unguarded build only reports. Two forms of two limbs over arrays the program fills in the same
+  function, `BallVectorView<T, 2>` and `BallVector(SoAView<const T, 2>, r)` on pairs $(ab, 0)$, then a
+  sum: the constructor guards each limb (`bv_make_2_entry`, its step `bv_center_entry_2`), and in the
+  copy without the guards it copies the limbs as they are, which makes that copy their control.
+  Neither form differed in the probe matrix of 2026-11-22, with the guards or without them (GCC 13
+  and 16, Clang 18, Apple clang 21, `-O1` to `-O3`, each contraction setting, with and without
+  `NDEBUG`): the guards there are the rule's, not the answer to an observed fault.
 - **What must not compile** (`api.reject.ball_vector.*`): writing a const `BallVector` or a view of
   `const T`, lengths that the types fix and that differ, two limb types, a view of mutable limbs made
   of one of `const T` or over arrays of `const T`, the implicit conversion of a view to a
@@ -1282,18 +1292,18 @@ rounded away gives 1 212 differences in the 80 829 comparisons with the oracle o
 **The kernels for it** are `tests/emulated/gen/kernels.hpp`, printed by the printer of
 `include/kairn/gen/scalar.hpp` with the type as its limb type
 ([Architecture](architecture.md#the-kernel-ir), "A limb type of a format chosen at run time"):
-every kernel (233) and every fold (47) in its sequential and lane orders, both forms of the
+every kernel (237) and every fold (51) in its sequential and lane orders, both forms of the
 fix-ups; a literal is the constant's value in the run-time format, from tables for `binary64`,
 `binary32` and 32 formats of the statements of precision 8 to 11 (`qmax` 1 to 16,
 $q_{\min} = 3 - q_{\max} - 2p$). `gen/tests/test_emulated.py` shows that it is the same emission: with the type's
-name replaced by `double`, the listing is the double listing token for token, 110 090 tokens,
+name replaced by `double`, the listing is the double listing token for token, 115 144 tokens,
 each literal the same constant in the same place (its value at `binary64`, and at float's format
-against the float listing), the test of constant evaluation in the same 155 places; and a select's
+against the float listing), the test of constant evaluation in the same 157 places; and a select's
 arms swapped, a constant replaced, a value inlined from the wrong operand and a statement added
 after a branch are each seen. On the Mac the emulated kernels at `binary64` and `binary32` gave the
 lines of the compiled double and float kernels (`gen/tests/runner.cpp`, Apple clang), byte for
 byte, on 267 535 and 534 535 requests of every kernel and fold (of the 223 kernels and 44 folds
-when the tier was written; the trees joined since add ten kernels and three folds, the entry forms
+when the tier was written; the trees joined since add fourteen kernels and seven folds, the entry forms
 of rule R3 on the factors of a fused operation).
 
 **The runner** `tests/emulated/runner.cpp` (`kairn-emulated-runner`, the fix-ups inline, and
@@ -1302,7 +1312,7 @@ each request from its line: kernels, folds in every order, maps in place, ball v
 convolutions, products of BallVectors. `--ce` runs the path of constant evaluation: the variant of
 a kernel that has one (Dekker's product in `two_prod` and `two_prod_entry`), each `prod` a plain product, `guard` its
 operand, `times_inf` from comparisons; a kernel without that path and every fold are refused, as
-the interpreter's `--ce` refuses them. Of the 233 kernels, 161 have such a path. The loops over
+the interpreter's `--ce` refuses them. Of the 237 kernels, 162 have such a path. The loops over
 arrays are covered in both their orders, `F_seq` and `F_lanes`, which the printer writes as scalar
 C++; `F_packed` is intrinsics and has no emulated form. The kernels are ordinary inline functions
 (`tests/emulated/prelude.hpp`), but a fix-up that is a function of its own and the end of a ball
@@ -1671,7 +1681,8 @@ The vectorization control compiles the unit once more, in the first optimized co
 the quick tier, *with* the compiler's own vectorization, and judges every function of it by the
 same rule. It records what the check then finds, per compiler and version measured: with Clang 18
 on x86-64, the packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for
-`double`, and the scalar functions of `acc_mul_1`, `ball_from_interval_2`, `interval_add_2`,
+`double`, and `F_lanes` of `axpy_2_entry` since its step guards every limb of `a`, `x` and `y`
+(rule R3, the factors of a fused operation), and the scalar functions of `acc_mul_1`, `ball_from_interval_2`, `interval_add_2`,
 `interval_mul_1` and `interval_sub_2` (those the packing control finds), and of the kernels of
 stage B2 of the intervals that make the bounds of a ball of two limbs by the directed sums
 (`ball_to_interval_2`, `ball_hull_2`, `ball_intersection_2`), the midpoint and radius of two limbs
@@ -2047,6 +2058,14 @@ Clang) or `/arch:AVX2` (MSVC and clang-cl) when the build's flags do not already
 
 ## Time
 
+**The quick tier on 2026-11-22** (`main` at `5f597fb`, 1 198 to 1 202 tests by platform: with the
+functions on arrays, the ball vectors, the entry forms of rule R3 and the examples of the Concepts
+pages). On the hosted runners the test step, `ctest --parallel 4`, took 292 s with GCC and 293 s with
+Clang on Linux x86-64, 228 s and 232 s on Linux arm64, 317 s on macOS arm64, and 746 s with MSVC and
+727 s with clang-cl on Windows (the times of the CI's logs of that commit), from 1.9 to 6.2 times
+the two minutes of the brief. On the test machines: 192 s on the Mac with Apple clang and
+`--parallel 4`, and 301 s with MSVC on the Windows machine with `--parallel 8`.
+
 **The quick tier at the end of Milestone 2** (`main` at `7e12621`, 2026-11-21, 984 to 988 tests
 by platform). On the hosted runners of the CI the test step of the quick tier,
 `ctest --parallel 4`, took 227 s with GCC and 233 s with Clang on Linux x86-64, 174 s and 183 s
@@ -2066,7 +2085,13 @@ with its date.
 
 **The two tiers, tree by tree** (moved here on 2026-11-22 from the table of [the
 tiers](#the-tiers), which now gives the present numbers only; newest first). The quick tier: on
-2026-11-22, on the tree that joins the strict rule R3 on the factors of a fused operation to the
+2026-11-22, on the branch that closes rule R3 on the factors of a fused operation (every exposed
+operand guarded, no pending list, the constructors of two limbs guarded too), merged with `main`
+at `bbcce60`, 1 218 tests and 168 seconds on the Mac with Apple clang and 1 219 and 213 with GCC 16
+(`--parallel 6`), 1 225 tests and 257 seconds with GCC 13 and 1 222 and 263 with Clang 18 on the
+Linux machine, and with `-mavx2 -mfma` 1 219 and 266 with GCC 13 and 1 216 and 277 with Clang 18
+(`--parallel 10`, beside the proofs and the generator's suite, under a load average of 70 to 90),
+every test passing; on 2026-11-22, on the tree that joins the strict rule R3 on the factors of a fused operation to the
 functions on arrays, the accumulator and `BallVector` and to the exhaustive tier on emulated
 formats ([Time](#time)), 1 164 tests and 131 seconds on the Mac with Apple clang and 1 165 and 132
 with GCC 16 (`--parallel 6`), 1 171 tests and 81 seconds with GCC 13 and 1 168 and 96 with Clang 18
@@ -2122,8 +2147,12 @@ processors); on the hosted runners, measured before each cross-check ran in one 
 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest
 runner seen ([Time](#each-cross-check-in-one-process)).
 
-The full tier: on 2026-11-22, on the tree that joins the strict rule R3 on the factors of a fused
-operation to the functions on arrays, the accumulator and `BallVector` and to the exhaustive tier
+The full tier: on 2026-11-22, on the branch that closes rule R3 on the factors of a fused
+operation, merged with `main` at `bbcce60`, 2 036 tests and 32 minutes with GCC 13 on the Linux
+machine (`--parallel 10`, the tools held to one worker, beside the generator's suite), every test
+passing (a first run on the branch, 2 027 tests, had failed `full.tools.brute.driver.test`: the new
+loop `bv_scale_2_entry` had no toy formats in `tests/brute/brute.py`); on 2026-11-22, on the tree that joins the strict rule R3 on
+the factors of a fused operation to the functions on arrays, the accumulator and `BallVector` and to the exhaustive tier
 on emulated formats, 2 000 tests and 20 minutes with GCC 13 on the Linux machine (`--parallel 16`,
 the tools held to one worker); on 2026-11-22, on the branch that completes the public interface, 1
 683 tests and 20 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one
@@ -2239,7 +2268,10 @@ with 258 done, and are three jobs of a third each since. The compiled runners' j
 takes 22 to 38 minutes on the hosted Linux and macOS runners and did not finish in 60 on the
 Windows ones, where a cross-check takes 18 seconds against 7 on Linux and the oracle's self-test
 17 minutes against 9: each Windows compiler runs it as three jobs of a third each, every one
-with its own build.) The one tier
+with its own build. On 2026-11-22, with the 2 000 tests of the tree that has the functions on
+arrays, the ball vectors and the exhaustive tier, that job took 40 minutes with Clang on Linux
+x86-64, was cancelled at 60 with GCC there, and took 55 on macOS: those three are two jobs of a
+half each since, and Linux arm64, 29 to 31 minutes, is still one.) The one tier
 suggests the rule is cautious indeed: it took 1 040 seconds with GCC on a hosted Linux runner
 against 948 on 4 threads of the Linux machine, a ratio of 1.1, which would make the quick tier
 about 75 seconds there and the compiled runners' job about 100; and 1 011 seconds on a hosted
@@ -3493,7 +3525,7 @@ driver:
 |---|---|
 | `build.yml`, "Build and test" | The quick tier: configure, build and `ctest` with Ninja, `Release` and warnings as errors, on Linux x86-64 with GCC and with Clang (packed: AVX2), Linux arm64 with GCC and with Clang (NEON), macOS arm64 with Apple clang (NEON), and Windows x64 with MSVC and with clang-cl (AVX2) |
 | `full.yml`, "Full tier" | The full tier's tests that depend on the compiler, and the tools' own tests but the generator's (`ctest --test-dir build/tests/full` with `-LE` of the labels `python` and `generator`: the compiled runners' cross-checks and the public interface on more cases, the [flag sets](#flag-sets), the object code on the whole flag matrix, the adversarial search, and the tests labelled `tools`), on the same seven platforms and compilers, configured and built as in `build.yml`; and those in exact arithmetic (`-L python`), once, on Linux, configured but not built, in two jobs: the interpreter's enumerations (`-L interp`) and the oracle's (`-L python -LE interp`) |
-| `generator.yml`, "Generator's full suite" | `python gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 and Linux arm64 with GCC and with Clang, and macOS arm64 with Apple clang, there as two jobs of every second test (`--shard 1/2`, `--shard 2/2`: as one job it took 58 of its 60 minutes on the hosted runner at the end of Milestone 2, and was cancelled once); and `--no-cxx` on Windows x64. It contains the full tier's `full.kairn-gen.test` and `full.tools.kairn-gen.test` (label `generator`), which `full.yml` leaves out |
+| `generator.yml`, "Generator's full suite" | `python gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 and Linux arm64 with GCC and with Clang, and macOS arm64 with Apple clang, each as two jobs of every second test (`--shard 1/2`, `--shard 2/2`: as one job the suite took 58 of its 60 minutes on the hosted macOS runner at the end of Milestone 2 and was cancelled once, and on 2026-11-22 the job of GCC on Linux x86-64 took 33 to 59 minutes from one run to the next and was cancelled in a third), each job printing its 25 slowest tests (`--durations 25`); and `--no-cxx` on Windows x64. It contains the full tier's `full.kairn-gen.test` and `full.tools.kairn-gen.test` (label `generator`), which `full.yml` leaves out |
 | `proofs.yml`, "Proofs" | `make -C proofs` in the Rocq team's image `rocq/rocq-prover:9.0` (Rocq 9.0.1), with Flocq 4.2.2 from opam, cached between runs; what the audit printed is kept as the run's artifact `proof-audit` |
 | `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `docs/tools/reference.py --check` and its tests, `mkdocs build --strict`, Doxygen 1.18.0 on `docs/Doxyfile` with warnings as errors into the site's `api/`, `docs/tools/check_links.py`; the built site is kept as the run's artifact `site`, and on a push to `main` published at <https://danielepanozzo.github.io/kairn/> |
 | `nightly.yml`, "Nightly brute force" | Every night, not on a push: `tests/brute/brute.py` for 100 minutes per job on Linux x86-64 and arm64 (GCC and Clang), macOS arm64 (Apple clang) and Windows x64 (MSVC and clang-cl), every kernel on new random cases (the seed is the number of the run) through every runner of the quick tier, and one job that enumerates one fortieth of the toy-format domains of the plan, a different one each night, and runs the same fortieth of the plan's emulated part (it builds `kairn-emulated-runner` alone, [The emulated formats](#the-emulated-formats)); each job fails on a violated claim or a failed guard and keeps its summary as an artifact. A pull request that changes the workflow or the driver runs it for a few minutes on a few kernels |

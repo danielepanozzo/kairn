@@ -1,0 +1,36 @@
+# The step of dot_2_entry, the dot product of two limbs of arrays the program supplies: dot_step_2,
+# p = mul_2_2(x, y); s = add_2_2(s, p), on the limbs of the elements guarded (rule R3, the factors
+# of a fused operation: architecture.md). dot_step_2 only multiplies its elements, which R3 alone
+# does not guard; but mul_2_2 takes them as factors of fused operations whose addends are not zero,
+# and a compiler that sees the other factor to be 1 rewrites fma(x, 1, s) as x + s and may fuse a
+# product the program stored into the array into that addition (seen in the dot product of one
+# limb, not measured in this one). After the guards each limb is a number of the format, the
+# rounded product at most. Its claims are those of dot_step_2: the guard is the identity on numbers
+# of the format.
+kernel:        dot_entry_step_2
+input:         s = s0 s1
+input:         supplied x = x0 x1
+input:         supplied y = y0 y1
+output:        t = t0 t1
+value:         s+x*y
+requires:      normalized s
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized t
+ensures:       error t T c=3*(1+4*u*u)/(1-4*u)+4 k=2 t=2
+min_precision: 4
+theorem:       proofs/theories/StepKernels.v dot_entry_step_2_correct
+ieee_bridge_theorem: proofs/theories/IeeeSteps.v dot_entry_step_2_ieee_bridge
+ieee_spec_theorem: proofs/theories/IeeeSteps.v dot_entry_step_2_ieee_correct
+ieee_lead_theorem: proofs/theories/IeeeFolds.v dot_entry_step_2_ieee_lead
+source:        dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22
+license:       algorithm: published; proof: MIT
+status:        proved
+entry:         yes
+ieee:          bridge spec
+
+gx0      = guard(x0)
+gx1      = guard(x1)
+gy0      = guard(y0)
+gy1      = guard(y1)
+(t0, t1) = dot_step_2(s0, s1, gx0, gx1, gy0, gy1)

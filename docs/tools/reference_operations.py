@@ -133,7 +133,7 @@ GROUPS = [
 BV_OPS = "of `BallVector<T, %s, N>` and `BallVectorView<T, %s>` ([Ball vectors](ball_vector.md))"
 LOOPS = {
     "bv_make_1": "the constructors " + BV_OPS % (1, 1),
-    "bv_make_2": "the constructors " + BV_OPS % (2, 2),
+    "bv_make_2_entry": "the constructors " + BV_OPS % (2, 2),
     "bv_neg_1": "`-x` and `neg(x, z)` " + BV_OPS % (1, 1),
     "bv_neg_2": "`-x` and `neg(x, z)` " + BV_OPS % (2, 2),
     "bv_add_1": "`x + y`, `x += y`, `add(x, y, z)` and `axpy` " + BV_OPS % (1, 1),
@@ -141,7 +141,7 @@ LOOPS = {
     "bv_sub_1": "`x - y`, `x -= y` and `sub(x, y, z)` " + BV_OPS % (1, 1),
     "bv_sub_2": "`x - y`, `x -= y` and `sub(x, y, z)` " + BV_OPS % (2, 2),
     "bv_scale_1": "`x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` " + BV_OPS % (1, 1),
-    "bv_scale_2": "`x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` " + BV_OPS % (2, 2),
+    "bv_scale_2_entry": "`x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` " + BV_OPS % (2, 2),
     "bv_mul_pow2_1": "`ldexp` and `half` " + BV_OPS % (1, 1),
     "bv_mul_pow2_2": "`ldexp` and `half` " + BV_OPS % (2, 2),
     "bv_conv_1": "`convolution`, the product of polynomials, " + BV_OPS % (1, 1),
@@ -753,7 +753,7 @@ KERNELS = {
         form("X.upper_as<T>()", B2, result=T, note=ROUNDS_CONSTEXPR),
     ),
     "ball_from_interval_2": page(
-        "ball", "A ball with a two-limb center from an interval of two limbs",
+        "ball", "A ball with a two-limb center from an interval given as two values of T",
         form("from_interval(lo, hi)", T, T, result=B2,
              note="`Ball<T, 2>::from_interval(lo, hi)`; the bounds are guarded "
                   "([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR),
@@ -924,7 +924,7 @@ KERNELS = {
         form("X.lower()", B2, result=E2, note="$z_l$; the kernel computes both bounds; " + ROUNDS),
         form("X.upper()", B2, result=E2, note="$z_u$; the kernel computes both bounds; " + ROUNDS)),
     "ball_from_interval_1": page(
-        "ball", "A ball with a one-limb center from an interval of two limbs",
+        "ball", "A ball with a one-limb center from an interval given as two values of T",
         form("from_interval(lo, hi)", T, T, result=B1,
              note="`Ball<T, 1>::from_interval(lo, hi)`, the ball of `Interval<T, 1>(lo, hi)` in one kernel; the "
                   "bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR),
@@ -1034,11 +1034,14 @@ KERNELS = {
                              form("dot(sequential, x, y)", SEQ, V1, V1, result=R1),
                              form("conv(x, y, z)", V1, V1, W1, result="bool", note="each coefficient a sequential "
                                   "`dot_1_entry` (loop `conv_1_entry`; each factor guarded)")),
-    "dot_step_2": page("arrays", "The step of a dot product of two limbs",
-                       form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2`)"),
-                       form("dot(sequential, x, y)", SEQ, V2, V2, result=R2),
-                       form("conv(x, y, z)", V2, V2, W2, result="bool", note="each coefficient a sequential `dot_2` "
-                            "(loop `conv_2`)")),
+    "dot_step_2": page("arrays", "The step of a dot product of two limbs, on stored arrays (the centers of `bv_conv_2`)"),
+    "dot_entry_step_2": page("arrays", "The step of a dot product of two limbs, on arrays of the program: the "
+                             "product and the sum of the guarded elements",
+                             form("dot(x, y)", V2, V2, result=R2, note=STEP_ORDER + " (loop `dot_2_entry`; every "
+                                  "limb of each factor guarded, rule R3 on the factors of a fused operation)"),
+                             form("dot(sequential, x, y)", SEQ, V2, V2, result=R2),
+                             form("conv(x, y, z)", V2, V2, W2, result="bool", note="each coefficient a sequential "
+                                  "`dot_2_entry` (loop `conv_2_entry`; every limb of each factor guarded)")),
     "sum_entry_step_1": page("arrays", "The step of a sum of one limb, on an array of the program",
                              form("sum(x)", V1, result=R1, note=STEP_ORDER + " (loop `sum_1_entry`)"),
                              form("sum(sequential, x)", SEQ, V1, result=R1),
@@ -1082,7 +1085,7 @@ KERNELS = {
                              form("sub(x, y, z)", V2, V2, W2, result="bool", note=STEP + " (loop `sub_2_entry`)")),
     "scale_step_1": page("maps", "x a of one limb, a of T",
                          form("scale(x, a, z)", V1, T, W1, result="bool", note=STEP + " (loop `scale_1`)")),
-    "scale_step_2": page("maps", "x a of two limbs, a of T, its operands unguarded (the step of `bv_scale_2`)"),
+    "scale_step_2": page("maps", "x a of two limbs, a of T, on a stored array and scalar"),
     "scale_entry_step_2": page("maps", "x a of two limbs, a of T, on the guarded limbs and scalar",
                                form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2_entry`; the "
                                     "limbs of each element and a guarded, rule R3 on the factors of a fused "
@@ -1095,14 +1098,16 @@ KERNELS = {
     "axpy_entry_step_1": page("maps", "a x + y of one limb, y of the program",
                               form("axpy(a, x, y, z)", T, V1, V1, W1, result="bool", note=STEP + " (loop `axpy_1_entry`)"),
                               traits=["traits<T>::axpy"]),
-    "axpy_step_2": page("maps", "a x + y of two limbs, y stored"),
-    "axpy_entry_step_2": page("maps", "a x + y of two limbs, y of the program",
-                              form("axpy(a, x, y, z)", E2, V2, V2, W2, result="bool", note=STEP + " (loop `axpy_2_entry`)"),
+    "axpy_step_2": page("maps", "a x + y of two limbs, a, x and y stored"),
+    "axpy_entry_step_2": page("maps", "a x + y of two limbs, a, x and y of the program, every limb guarded",
+                              form("axpy(a, x, y, z)", E2, V2, V2, W2, result="bool", note=STEP + " (loop `axpy_2_entry`; "
+                                   "every limb of a, x and y guarded, rule R3 and its factors of a fused operation)"),
                               traits=["traits<Expansion<T, 2>>::axpy"]),
-    "axpy_step_2_1": page("maps", "a x + y of two limbs, a of T, y stored"),
-    "axpy_entry_step_2_1": page("maps", "a x + y of two limbs, a of T, y of the program",
+    "axpy_step_2_1": page("maps", "a x + y of two limbs, a of T, a, x and y stored"),
+    "axpy_entry_step_2_1": page("maps", "a x + y of two limbs, a of T, a, x and y of the program, guarded",
                                 form("axpy(a, x, y, z)", T, V2, V2, W2, result="bool",
-                                     note=STEP + " (loop `axpy_2_1_entry`)"),
+                                     note=STEP + " (loop `axpy_2_1_entry`; a and every limb of x and y guarded, "
+                                     "rule R3 and its factors of a fused operation)"),
                                 traits=["traits<Expansion<T, 2>>::axpy_limb"]),
     # --- Milestone 2, the folds of maxima (norm_upper_k) ---------------------------------------------
     "norm_combine": page("arrays", "The larger of two magnitudes, and the and of two masks"),
@@ -1151,8 +1156,13 @@ KERNELS = {
     "bv_add_radius_2": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of two limbs"),
     "bv_scale_radius_1": page("ball-vectors", "The radius of a BallVector of one limb times a number of T"),
     "bv_scale_radius_2": page("ball-vectors", "The radius of a BallVector of two limbs times a number of T"),
+    "bv_scale_radius_entry_2": page("ball-vectors", "The radius of a BallVector of two limbs times a number of T, "
+                                    "the number guarded"),
     "bv_center_entry_1": page("ball-vectors", "A center of one limb given to the constructor of a BallVector"),
     "bv_center_2": page("ball-vectors", "A center of two limbs given to the constructor of a BallVector"),
+    "bv_center_entry_2": page("ball-vectors", "A center of two limbs given to the constructor of a BallVector, "
+                              "each limb guarded"),
+    "bv_scale_step_2": page("ball-vectors", "A center of two limbs times a number of T, the number guarded"),
     "bv_make_radius": page("ball-vectors", "The radius given to the constructor of a BallVector"),
     "bv_make_finish": page("ball-vectors", "The result of the constructor of a BallVector: the radius given, or NaN"),
     "neg_1": page("ball-vectors", "The negation of a number of T, the step of the negation of a BallVector"),

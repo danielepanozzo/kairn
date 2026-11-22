@@ -196,6 +196,49 @@ The options are those of `kairn-bench` (`--filter` takes several texts, separate
 timing, the checks (with the counts against rounding to nearest and the wide sample) and the
 tightness.
 
+**The second part** (the second part of the results page) adds four files to the same program, each
+with its own table of functions and its own check, which runs the function and its reference on the
+file's own arrays and compares their bytes:
+
+| File | What it holds |
+|---|---|
+| `m2_soa.cpp` | `Packed<T, 2>`, `Packed<T, 1>` and the containers of `soa.hpp`, `double` (backend `m2v`) and `float` (`m2vf`): loops over arrays in structure-of-arrays form, in L1 (KIND `tp`, 512 elements) and in arrays that do not fit the last-level cache (KIND `mem`, 4 Mi elements of `double`, 8 Mi of `float`), time per element; compiled with the flags of packed code, its scalar loops too |
+| `m2_soa_scalar.cpp` | the packed loops of `m2_soa.cpp` again in the scalar form of `Packed`, one lane (`m2v1`, `m2vf1`), checked against `m2v` and `m2vf` |
+| `m2_enc.cpp` | the enclosure interface of `Interval<T, k>` and `Ball<T, k>` (`m2e`, `m2ef`; the kernel's name starts with the type, `i1_`, `i2_`, `b1_`, `b2_`): predicates, member and subset tests, three-valued comparisons, the relations of IEEE 1788, hull, intersection, split, the midpoint and the radius, the conversions; loops (`tp`) and, for the operations that return a set, chains (`step`) |
+| `m2_run.cpp` | whole computations, time per call (`m2r`, KIND `run`): the bisection of `docs/tutorials/bisection.md` (its program included as it is) on four types and its two widths, and `kairn::self_test()` with its two parts |
+
+Their variants, besides `kairn`, `op` and `plain`: `view`, the operation through `SoAView` and its
+element proxy; `packed`, `Packed<T, 2>` loaded and stored through `SoAView`; `aos`, an array of
+`Expansion<T, 2>`. The JSON has, in `bisection`, what each bisection found (evaluations, parts kept,
+parts `split()` did not narrow, zeros, their radii), and `kairn_checks` and, with `--filter`, the
+filter. With `--filter` the driver checks the functions it will time; without, every function.
+
+`kairn-bench-m2-checks-LEVEL` is the same program, inline setting, with `KAIRN_CHECKS` 1 in every
+translation unit: the cost of the checks is the ratio of a function's time in it to its time in
+`kairn-bench-m2-LEVEL`, both run alternately with one filter (the method of `costs.cpp`). The runs of
+the second part are stored as `ITEM-MACHINE-COMPILER-LEVEL-rN.json`, ITEM `soa`, `enc`, `bisect`,
+and `checks-...-cK-rN.json` for the two programs, and printed by `m2_report.py --part 2`:
+
+```sh
+taskset -c 50 build-bench/bench/kairn-bench-m2-O2 --cpu 50 --reps 31 --filter m2v --machine "..." \
+    --commit "$(git rev-parse --short HEAD)" --json results/milestone2/bench/soa-linux-gcc-O2-r1.json
+taskset -c 50 build-bench/bench/kairn-bench-m2-O2 --cpu 50 --reps 31 \
+    --filter m2e,m2/tp/plain_midrad_1/,m2/tp/plain_bounds_1/,m2f/tp/plain_midrad_1/,m2f/tp/plain_bounds_1/ ... enc-...
+taskset -c 50 build-bench/bench/kairn-bench-m2-O2 --cpu 50 --reps 31 --filter m2r/ ... bisect-...
+F=m2/tp/interval_,m2/sum/interval_,m2/prod/interval_,m2/tp/horner_i,m2e/
+taskset -c 50 build-bench/bench/kairn-bench-m2-O2 --cpu 50 --reps 31 --filter $F ... checks-linux-gcc-O2-c0-r1.json
+taskset -c 50 build-bench/bench/kairn-bench-m2-checks-O2 --cpu 50 --reps 31 --filter $F ... checks-linux-gcc-O2-c1-r1.json
+python3 bench/m2_report.py --part 2 results/milestone2/bench
+```
+
+The compile time of `kairn::self_test()` is `compile_time.py run --units empty,include,self_test`;
+that of the enclosure interface is `enclosure_costs.py compile --kind compare`, `contains` or
+`setops` (calls of the three-valued comparisons; of `contains` of a point and of a set; of `hull`,
+`intersection` and `split`; on the four types in turn, each call on operands of its own), stored as
+`compile-MACHINE-COMPILER-KIND.json` (1 000 calls, three compilations of each unit, `--once-from
+10000`) and `compile-MACHINE-COMPILER-KIND-10000.json` (10 000 calls, `-O2`, one compilation), and
+printed by `m2_report.py` with the first part's compile tables.
+
 **Adding the functions on arrays, `BallVector` and the accumulator.** Add their operands to
 `Raw<T>` (plain arrays) and, as public types, to `Data<T>` in `m2.cpp`; their outputs to `Data<T>`
 with a new `Region` (and its line in `region_of`); then rows to `KB_LIST`: for a function on arrays

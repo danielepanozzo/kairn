@@ -15,7 +15,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_down_entry, mul_up_1, mul_up_entry, mul_2_2, dot_step_2, acc_mul_2, acc_mul_entry_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_scale_2_full_entry, ball_split_2, ball_sub_2, ball_sub_2_full, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_entry, mul_2_1_full, mul_2_1_full_entry, mul_2_2_full, scale_step_2, scale_entry_step_2.
+// Not constexpr: acc_mul_1, acc_mul_entry_1, acc_radius_1, acc_radius_2, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_split_1, ball_sub_1, ball_sub_1_full, bv_add_radius_1, bv_add_radius_2, bv_scale_radius_1, bv_scale_radius_2, bv_scale_radius_entry_2, conv_radius, dot_entry_step_1, dot_step_1, mul_dir_1, interval_mul_1, mul_down_1, mul_down_entry, mul_up_1, mul_up_entry, mul_2_2, dot_step_2, acc_mul_2, acc_mul_entry_2, add_ball_2_2, add_down_2_2, add_up_2_2, axpy_step_2, axpy_entry_step_2, mul_2_1, axpy_step_2_1, axpy_entry_step_2_1, ball_add_2, ball_add_2_full, ball_contains_ball_2, ball_contains_point_2, ball_equal_2, ball_to_interval_2, interval_mid_rad_2, interval_to_ball_2, ball_hull_2, ball_intersection_2, ball_less_2, ball_less_equal_2, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_scale_2_full_entry, ball_split_2, ball_sub_2, ball_sub_2_full, scale_step_2, bv_scale_step_2, dot_entry_step_2, interval_add_2, mul_ball_2_2, mul_dir_2_2, mul_ext_2_2, interval_mul_2, sub_down_2_2, sub_up_2_2, interval_sub_2, mul_2_1_entry, mul_2_1_full, mul_2_1_full_entry, mul_2_2_full, scale_entry_step_2.
 #pragma once
 
 #include <cstddef>
@@ -109,7 +109,7 @@ KAIRN_GEN_FORCEINLINE void acc_radius_2(kairn::emulated::Number a, kairn::emulat
 }
 
 // add_1_1(a, b) -> s
-// one rounding to nearest. Status: proved; constexpr.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void add_1_1(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& s_out) noexcept {
     const kairn::emulated::Number s = a + b;
     s_out = s;
@@ -183,7 +183,7 @@ KAIRN_GEN_FORCEINLINE void add_down_entry(kairn::emulated::Number a, kairn::emul
 }
 
 // add_entry_step_1(x, y) -> z
-// add_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved; constexpr.
+// add_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void add_entry_step_1(kairn::emulated::Number x, kairn::emulated::Number y, kairn::emulated::Number& z_out) noexcept {
     const kairn::emulated::Number gx = kairn::emulated::constant_evaluation() ? x : x + kairn::emulated::constant(0);
     const kairn::emulated::Number gy = kairn::emulated::constant_evaluation() ? y : y + kairn::emulated::constant(0);
@@ -234,14 +234,14 @@ KAIRN_GEN_FORCEINLINE void add_up_entry(kairn::emulated::Number a, kairn::emulat
 }
 
 // mul_1_1(a, b) -> p
-// one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void mul_1_1(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& p_out) noexcept {
     const kairn::emulated::Number p = kairn::emulated::constant_evaluation() ? a * b : fma_rn(a, b, kairn::emulated::constant(0));
     p_out = p;
 }
 
 // axpy_entry_step_1(a, x, y) -> z
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void axpy_entry_step_1(kairn::emulated::Number a, kairn::emulated::Number x, kairn::emulated::Number y, kairn::emulated::Number& z_out) noexcept {
     // (p) = mul_1_1(a, x)
     const kairn::emulated::Number p = kairn::emulated::constant_evaluation() ? a * x : fma_rn(a, x, kairn::emulated::constant(0));
@@ -252,7 +252,7 @@ KAIRN_GEN_FORCEINLINE void axpy_entry_step_1(kairn::emulated::Number a, kairn::e
 }
 
 // axpy_step_1(a, x, y) -> z
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1, each one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void axpy_step_1(kairn::emulated::Number a, kairn::emulated::Number x, kairn::emulated::Number y, kairn::emulated::Number& z_out) noexcept {
     // (p) = mul_1_1(a, x)
     const kairn::emulated::Number p = kairn::emulated::constant_evaluation() ? a * x : fma_rn(a, x, kairn::emulated::constant(0));
@@ -2092,6 +2092,18 @@ KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(kairn::emulated::Number m, kairn::e
     rz_out = rz;
 }
 
+// bv_scale_radius_entry_2(m, rx, a) -> rz
+// bv_scale_radius_2 on the guarded a (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void bv_scale_radius_entry_2(kairn::emulated::Number m, kairn::emulated::Number rx, kairn::emulated::Number a, kairn::emulated::Number& rz_out) noexcept {
+    const kairn::emulated::Number ga = a + kairn::emulated::constant(0);
+    // (rz) = bv_scale_radius_2(m, rx, ga)
+    const kairn::emulated::Number rz_aa = abs_bits(ga);
+    const kairn::emulated::Number rz_p = fma_rn(rz_aa, rx, kairn::emulated::constant(0));
+    const kairn::emulated::Number rz_t = fma_rn(m, kairn::emulated::constant(35), rz_p);
+    const kairn::emulated::Number rz = fma_rn(rz_t, kairn::emulated::constant(18), kairn::emulated::constant(4));
+    rz_out = rz;
+}
+
 // conv_radius(ma, mb, rx, ry, m, g, t) -> rz
 // the radius of the product of polynomials of BallVector (milestone2.md, conv_radius). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void conv_radius(kairn::emulated::Number ma, kairn::emulated::Number mb, kairn::emulated::Number rx, kairn::emulated::Number ry, kairn::emulated::Number m, kairn::emulated::Number g, kairn::emulated::Number t, kairn::emulated::Number& rz_out) noexcept {
@@ -2123,7 +2135,7 @@ KAIRN_GEN_FORCEINLINE void dot_step_1(kairn::emulated::Number s, kairn::emulated
 }
 
 // fast_two_sum_entry(a, b) -> r = (s, e)
-// fast_two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
+// Fast2Sum (Dekker 1971) on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void fast_two_sum_entry(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& s_out, kairn::emulated::Number& e_out) noexcept {
     const kairn::emulated::Number ga = kairn::emulated::constant_evaluation() ? a : a + kairn::emulated::constant(0);
     const kairn::emulated::Number gb = kairn::emulated::constant_evaluation() ? b : b + kairn::emulated::constant(0);
@@ -2961,7 +2973,7 @@ KAIRN_GEN_FORCEINLINE void rmul(kairn::emulated::Number a, kairn::emulated::Numb
 }
 
 // scale_step_1(x, a) -> z
-// mul_1_1, one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// mul_1_1, one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void scale_step_1(kairn::emulated::Number x, kairn::emulated::Number a, kairn::emulated::Number& z_out) noexcept {
     // (z) = mul_1_1(x, a)
     const kairn::emulated::Number z = kairn::emulated::constant_evaluation() ? x * a : fma_rn(x, a, kairn::emulated::constant(0));
@@ -2980,7 +2992,7 @@ KAIRN_GEN_FORCEINLINE void split(kairn::emulated::Number a, kairn::emulated::Num
 }
 
 // sub_1_1(a, b) -> s
-// one rounding to nearest. Status: proved; constexpr.
+// one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void sub_1_1(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& s_out) noexcept {
     const kairn::emulated::Number s = a - b;
     s_out = s;
@@ -3011,7 +3023,7 @@ KAIRN_GEN_FORCEINLINE void sub_down_entry(kairn::emulated::Number a, kairn::emul
 }
 
 // sub_entry_step_1(x, y) -> z
-// sub_1_1 on guarded operands (rule R3); one rounding to nearest. Status: proved; constexpr.
+// sub_1_1 on guarded operands (rule R3); one rounding to nearest, the bound u/(1+u) of JR18. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void sub_entry_step_1(kairn::emulated::Number x, kairn::emulated::Number y, kairn::emulated::Number& z_out) noexcept {
     const kairn::emulated::Number gx = kairn::emulated::constant_evaluation() ? x : x + kairn::emulated::constant(0);
     const kairn::emulated::Number gy = kairn::emulated::constant_evaluation() ? y : y + kairn::emulated::constant(0);
@@ -3129,7 +3141,7 @@ KAIRN_GEN_FORCEINLINE void two_sum(kairn::emulated::Number a, kairn::emulated::N
 }
 
 // two_sum_entry(a, b) -> r = (s, e)
-// two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
+// TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965) on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE void two_sum_entry(kairn::emulated::Number a, kairn::emulated::Number b, kairn::emulated::Number& s_out, kairn::emulated::Number& e_out) noexcept {
     const kairn::emulated::Number ga = kairn::emulated::constant_evaluation() ? a : a + kairn::emulated::constant(0);
     const kairn::emulated::Number gb = kairn::emulated::constant_evaluation() ? b : b + kairn::emulated::constant(0);
@@ -3846,112 +3858,8 @@ KAIRN_GEN_FORCEINLINE void add_up_2_2(kairn::emulated::Number x0, kairn::emulate
     h1_out = h1;
 }
 
-// axpy_entry_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(kairn::emulated::Number a0, kairn::emulated::Number a1, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
-    // (p0, p1) = mul_2_2(a0, a1, x0, x1)
-    // (p0_ch, p0_cl1) = two_prod(a0, x0)
-    const kairn::emulated::Number p0_ch = fma_rn(a0, x0, kairn::emulated::constant(0));
-    const kairn::emulated::Number p0_cl1 = fma_rn(a0, x0, -p0_ch);
-    const kairn::emulated::Number p0_tl0 = fma_rn(a1, x1, kairn::emulated::constant(0));
-    const kairn::emulated::Number p0_tl1 = fma_rn(a0, x1, p0_tl0);
-    const kairn::emulated::Number p0_cl2 = fma_rn(a1, x0, p0_tl1);
-    const kairn::emulated::Number p0_cl3 = p0_cl1 + p0_cl2;
-    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
-    const kairn::emulated::Number p0 = p0_ch + p0_cl3;
-    const kairn::emulated::Number p0_z = p0 - p0_ch;
-    const kairn::emulated::Number p1 = p0_cl3 - p0_z;
-    const kairn::emulated::Number gy0 = y0 + kairn::emulated::constant(0);
-    const kairn::emulated::Number gy1 = y1 + kairn::emulated::constant(0);
-    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
-    // (z0_sh, z0_sl) = two_sum(p0, gy0)
-    const kairn::emulated::Number z0_sh = p0 + gy0;
-    const kairn::emulated::Number z0_sh_bb = z0_sh - p0;
-    const kairn::emulated::Number z0_sh_t0 = z0_sh - z0_sh_bb;
-    const kairn::emulated::Number z0_sh_t1 = p0 - z0_sh_t0;
-    const kairn::emulated::Number z0_sh_t2 = gy0 - z0_sh_bb;
-    const kairn::emulated::Number z0_sl = z0_sh_t1 + z0_sh_t2;
-    // (z0_th, z0_tl) = two_sum(p1, gy1)
-    const kairn::emulated::Number z0_th = p1 + gy1;
-    const kairn::emulated::Number z0_th_bb = z0_th - p1;
-    const kairn::emulated::Number z0_th_t0 = z0_th - z0_th_bb;
-    const kairn::emulated::Number z0_th_t1 = p1 - z0_th_t0;
-    const kairn::emulated::Number z0_th_t2 = gy1 - z0_th_bb;
-    const kairn::emulated::Number z0_tl = z0_th_t1 + z0_th_t2;
-    const kairn::emulated::Number z0_c = z0_sl + z0_th;
-    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
-    const kairn::emulated::Number z0_vh = z0_sh + z0_c;
-    const kairn::emulated::Number z0_vh_z = z0_vh - z0_sh;
-    const kairn::emulated::Number z0_vl = z0_c - z0_vh_z;
-    const kairn::emulated::Number z0_w = z0_tl + z0_vl;
-    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
-    const kairn::emulated::Number z0 = z0_vh + z0_w;
-    const kairn::emulated::Number z0_z = z0 - z0_vh;
-    const kairn::emulated::Number z1 = z0_w - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-
-// mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
-// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void mul_2_1(kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number a, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, a)
-    const kairn::emulated::Number ch = fma_rn(x0, a, kairn::emulated::constant(0));
-    const kairn::emulated::Number cl1 = fma_rn(x0, a, -ch);
-    const kairn::emulated::Number cl3 = fma_rn(x1, a, cl1);
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const kairn::emulated::Number z0 = ch + cl3;
-    const kairn::emulated::Number z0_z = z0 - ch;
-    const kairn::emulated::Number z1 = cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-
-// axpy_entry_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(kairn::emulated::Number a, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
-    // (p0, p1) = mul_2_1(x0, x1, a)
-    // (p0_ch, p0_cl1) = two_prod(x0, a)
-    const kairn::emulated::Number p0_ch = fma_rn(x0, a, kairn::emulated::constant(0));
-    const kairn::emulated::Number p0_cl1 = fma_rn(x0, a, -p0_ch);
-    const kairn::emulated::Number p0_cl3 = fma_rn(x1, a, p0_cl1);
-    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
-    const kairn::emulated::Number p0 = p0_ch + p0_cl3;
-    const kairn::emulated::Number p0_z = p0 - p0_ch;
-    const kairn::emulated::Number p1 = p0_cl3 - p0_z;
-    const kairn::emulated::Number gy0 = y0 + kairn::emulated::constant(0);
-    const kairn::emulated::Number gy1 = y1 + kairn::emulated::constant(0);
-    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
-    // (z0_sh, z0_sl) = two_sum(p0, gy0)
-    const kairn::emulated::Number z0_sh = p0 + gy0;
-    const kairn::emulated::Number z0_sh_bb = z0_sh - p0;
-    const kairn::emulated::Number z0_sh_t0 = z0_sh - z0_sh_bb;
-    const kairn::emulated::Number z0_sh_t1 = p0 - z0_sh_t0;
-    const kairn::emulated::Number z0_sh_t2 = gy0 - z0_sh_bb;
-    const kairn::emulated::Number z0_sl = z0_sh_t1 + z0_sh_t2;
-    // (z0_th, z0_tl) = two_sum(p1, gy1)
-    const kairn::emulated::Number z0_th = p1 + gy1;
-    const kairn::emulated::Number z0_th_bb = z0_th - p1;
-    const kairn::emulated::Number z0_th_t0 = z0_th - z0_th_bb;
-    const kairn::emulated::Number z0_th_t1 = p1 - z0_th_t0;
-    const kairn::emulated::Number z0_th_t2 = gy1 - z0_th_bb;
-    const kairn::emulated::Number z0_tl = z0_th_t1 + z0_th_t2;
-    const kairn::emulated::Number z0_c = z0_sl + z0_th;
-    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
-    const kairn::emulated::Number z0_vh = z0_sh + z0_c;
-    const kairn::emulated::Number z0_vh_z = z0_vh - z0_sh;
-    const kairn::emulated::Number z0_vl = z0_c - z0_vh_z;
-    const kairn::emulated::Number z0_w = z0_tl + z0_vl;
-    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
-    const kairn::emulated::Number z0 = z0_vh + z0_w;
-    const kairn::emulated::Number z0_z = z0 - z0_vh;
-    const kairn::emulated::Number z1 = z0_w - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-
 // axpy_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_step_2(kairn::emulated::Number a0, kairn::emulated::Number a1, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
     // (p0, p1) = mul_2_2(a0, a1, x0, x1)
     // (p0_ch, p0_cl1) = two_prod(a0, x0)
@@ -3994,8 +3902,74 @@ KAIRN_GEN_FORCEINLINE void axpy_step_2(kairn::emulated::Number a0, kairn::emulat
     z1_out = z1;
 }
 
+// axpy_entry_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// axpy_step_2, mul_2_2 (JMP17 Alg. 12) then add_2_2 (JMP17 Alg. 6), on the guarded limbs of a, x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(kairn::emulated::Number a0, kairn::emulated::Number a1, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
+    const kairn::emulated::Number ga0 = a0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number ga1 = a1 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gx0 = x0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gx1 = x1 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gy0 = y0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gy1 = y1 + kairn::emulated::constant(0);
+    // (z0, z1) = axpy_step_2(ga0, ga1, gx0, gx1, gy0, gy1)
+    // (z0_p0, z0_p1) = mul_2_2(ga0, ga1, gx0, gx1)
+    // (z0_p0_ch, z0_p0_cl1) = two_prod(ga0, gx0)
+    const kairn::emulated::Number z0_p0_ch = fma_rn(ga0, gx0, kairn::emulated::constant(0));
+    const kairn::emulated::Number z0_p0_cl1 = fma_rn(ga0, gx0, -z0_p0_ch);
+    const kairn::emulated::Number z0_p0_tl0 = fma_rn(ga1, gx1, kairn::emulated::constant(0));
+    const kairn::emulated::Number z0_p0_tl1 = fma_rn(ga0, gx1, z0_p0_tl0);
+    const kairn::emulated::Number z0_p0_cl2 = fma_rn(ga1, gx0, z0_p0_tl1);
+    const kairn::emulated::Number z0_p0_cl3 = z0_p0_cl1 + z0_p0_cl2;
+    // (z0_p0, z0_p1) = fast_two_sum(z0_p0_ch, z0_p0_cl3)
+    const kairn::emulated::Number z0_p0 = z0_p0_ch + z0_p0_cl3;
+    const kairn::emulated::Number z0_p0_z = z0_p0 - z0_p0_ch;
+    const kairn::emulated::Number z0_p1 = z0_p0_cl3 - z0_p0_z;
+    // (z0, z1) = add_2_2(z0_p0, z0_p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(z0_p0, gy0)
+    const kairn::emulated::Number z0_sh = z0_p0 + gy0;
+    const kairn::emulated::Number z0_sh_bb = z0_sh - z0_p0;
+    const kairn::emulated::Number z0_sh_t0 = z0_sh - z0_sh_bb;
+    const kairn::emulated::Number z0_sh_t1 = z0_p0 - z0_sh_t0;
+    const kairn::emulated::Number z0_sh_t2 = gy0 - z0_sh_bb;
+    const kairn::emulated::Number z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(z0_p1, gy1)
+    const kairn::emulated::Number z0_th = z0_p1 + gy1;
+    const kairn::emulated::Number z0_th_bb = z0_th - z0_p1;
+    const kairn::emulated::Number z0_th_t0 = z0_th - z0_th_bb;
+    const kairn::emulated::Number z0_th_t1 = z0_p1 - z0_th_t0;
+    const kairn::emulated::Number z0_th_t2 = gy1 - z0_th_bb;
+    const kairn::emulated::Number z0_tl = z0_th_t1 + z0_th_t2;
+    const kairn::emulated::Number z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const kairn::emulated::Number z0_vh = z0_sh + z0_c;
+    const kairn::emulated::Number z0_vh_z = z0_vh - z0_sh;
+    const kairn::emulated::Number z0_vl = z0_c - z0_vh_z;
+    const kairn::emulated::Number z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const kairn::emulated::Number z0 = z0_vh + z0_w;
+    const kairn::emulated::Number z0_z = z0 - z0_vh;
+    const kairn::emulated::Number z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
+// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_2_1(kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number a, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, a)
+    const kairn::emulated::Number ch = fma_rn(x0, a, kairn::emulated::constant(0));
+    const kairn::emulated::Number cl1 = fma_rn(x0, a, -ch);
+    const kairn::emulated::Number cl3 = fma_rn(x1, a, cl1);
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const kairn::emulated::Number z0 = ch + cl3;
+    const kairn::emulated::Number z0_z = z0 - ch;
+    const kairn::emulated::Number z1 = cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // axpy_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void axpy_step_2_1(kairn::emulated::Number a, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
     // (p0, p1) = mul_2_1(x0, x1, a)
     // (p0_ch, p0_cl1) = two_prod(x0, a)
@@ -4020,6 +3994,53 @@ KAIRN_GEN_FORCEINLINE void axpy_step_2_1(kairn::emulated::Number a, kairn::emula
     const kairn::emulated::Number z0_th_t0 = z0_th - z0_th_bb;
     const kairn::emulated::Number z0_th_t1 = p1 - z0_th_t0;
     const kairn::emulated::Number z0_th_t2 = y1 - z0_th_bb;
+    const kairn::emulated::Number z0_tl = z0_th_t1 + z0_th_t2;
+    const kairn::emulated::Number z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const kairn::emulated::Number z0_vh = z0_sh + z0_c;
+    const kairn::emulated::Number z0_vh_z = z0_vh - z0_sh;
+    const kairn::emulated::Number z0_vl = z0_c - z0_vh_z;
+    const kairn::emulated::Number z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const kairn::emulated::Number z0 = z0_vh + z0_w;
+    const kairn::emulated::Number z0_z = z0 - z0_vh;
+    const kairn::emulated::Number z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// axpy_entry_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// axpy_step_2_1, mul_2_1 (JMP17 Alg. 9) then add_2_2 (JMP17 Alg. 6), on the guarded a and limbs of x and y (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(kairn::emulated::Number a, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
+    const kairn::emulated::Number ga = a + kairn::emulated::constant(0);
+    const kairn::emulated::Number gx0 = x0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gx1 = x1 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gy0 = y0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gy1 = y1 + kairn::emulated::constant(0);
+    // (z0, z1) = axpy_step_2_1(ga, gx0, gx1, gy0, gy1)
+    // (z0_p0, z0_p1) = mul_2_1(gx0, gx1, ga)
+    // (z0_p0_ch, z0_p0_cl1) = two_prod(gx0, ga)
+    const kairn::emulated::Number z0_p0_ch = fma_rn(gx0, ga, kairn::emulated::constant(0));
+    const kairn::emulated::Number z0_p0_cl1 = fma_rn(gx0, ga, -z0_p0_ch);
+    const kairn::emulated::Number z0_p0_cl3 = fma_rn(gx1, ga, z0_p0_cl1);
+    // (z0_p0, z0_p1) = fast_two_sum(z0_p0_ch, z0_p0_cl3)
+    const kairn::emulated::Number z0_p0 = z0_p0_ch + z0_p0_cl3;
+    const kairn::emulated::Number z0_p0_z = z0_p0 - z0_p0_ch;
+    const kairn::emulated::Number z0_p1 = z0_p0_cl3 - z0_p0_z;
+    // (z0, z1) = add_2_2(z0_p0, z0_p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(z0_p0, gy0)
+    const kairn::emulated::Number z0_sh = z0_p0 + gy0;
+    const kairn::emulated::Number z0_sh_bb = z0_sh - z0_p0;
+    const kairn::emulated::Number z0_sh_t0 = z0_sh - z0_sh_bb;
+    const kairn::emulated::Number z0_sh_t1 = z0_p0 - z0_sh_t0;
+    const kairn::emulated::Number z0_sh_t2 = gy0 - z0_sh_bb;
+    const kairn::emulated::Number z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(z0_p1, gy1)
+    const kairn::emulated::Number z0_th = z0_p1 + gy1;
+    const kairn::emulated::Number z0_th_bb = z0_th - z0_p1;
+    const kairn::emulated::Number z0_th_t0 = z0_th - z0_th_bb;
+    const kairn::emulated::Number z0_th_t1 = z0_p1 - z0_th_t0;
+    const kairn::emulated::Number z0_th_t2 = gy1 - z0_th_bb;
     const kairn::emulated::Number z0_tl = z0_th_t1 + z0_th_t2;
     const kairn::emulated::Number z0_c = z0_sl + z0_th;
     // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
@@ -7070,6 +7091,18 @@ KAIRN_GEN_FORCEINLINE void bv_center_2(kairn::emulated::Number x0, kairn::emulat
     z1_out = z1;
 }
 
+// bv_center_entry_2(c = (c0, c1)) -> z = (z0, z1)
+// bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). Status: proved (real model), proved (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE void bv_center_entry_2(kairn::emulated::Number c0, kairn::emulated::Number c1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
+    const kairn::emulated::Number g0 = kairn::emulated::constant_evaluation() ? c0 : c0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number g1 = kairn::emulated::constant_evaluation() ? c1 : c1 + kairn::emulated::constant(0);
+    // (z0, z1) = bv_center_2(g0, g1)
+    const kairn::emulated::Number z0 = g0;
+    const kairn::emulated::Number z1 = g1;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // bv_mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1), mask e
 // mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void bv_mul_pow2_step_2(kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number c, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out, bool& e_out) noexcept {
@@ -7088,6 +7121,89 @@ KAIRN_GEN_FORCEINLINE void bv_mul_pow2_step_2(kairn::emulated::Number x0, kairn:
     z0_out = z0;
     z1_out = z1;
     e_out = e;
+}
+
+// scale_step_2(x = (x0, x1), a) -> z = (z0, z1)
+// mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void scale_step_2(kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number a, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
+    // (z0, z1) = mul_2_1(x0, x1, a)
+    // (z0_ch, z0_cl1) = two_prod(x0, a)
+    const kairn::emulated::Number z0_ch = fma_rn(x0, a, kairn::emulated::constant(0));
+    const kairn::emulated::Number z0_cl1 = fma_rn(x0, a, -z0_ch);
+    const kairn::emulated::Number z0_cl3 = fma_rn(x1, a, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const kairn::emulated::Number z0 = z0_ch + z0_cl3;
+    const kairn::emulated::Number z0_z = z0 - z0_ch;
+    const kairn::emulated::Number z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// bv_scale_step_2(x = (x0, x1), a) -> z = (z0, z1)
+// scale_step_2 on the guarded a (rule R3, the factors of a fused operation). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void bv_scale_step_2(kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number a, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
+    const kairn::emulated::Number ga = a + kairn::emulated::constant(0);
+    // (z0, z1) = scale_step_2(x0, x1, ga)
+    // (z0, z1) = mul_2_1(x0, x1, ga)
+    // (z0_ch, z0_cl1) = two_prod(x0, ga)
+    const kairn::emulated::Number z0_ch = fma_rn(x0, ga, kairn::emulated::constant(0));
+    const kairn::emulated::Number z0_cl1 = fma_rn(x0, ga, -z0_ch);
+    const kairn::emulated::Number z0_cl3 = fma_rn(x1, ga, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const kairn::emulated::Number z0 = z0_ch + z0_cl3;
+    const kairn::emulated::Number z0_z = z0 - z0_ch;
+    const kairn::emulated::Number z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// dot_entry_step_2(s = (s0, s1), x = (x0, x1), y = (y0, y1)) -> t = (t0, t1)
+// dot_step_2 on the guarded limbs of the elements (rule R3, the factors of a fused operation); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void dot_entry_step_2(kairn::emulated::Number s0, kairn::emulated::Number s1, kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number y0, kairn::emulated::Number y1, kairn::emulated::Number& t0_out, kairn::emulated::Number& t1_out) noexcept {
+    const kairn::emulated::Number gx0 = x0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gx1 = x1 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gy0 = y0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gy1 = y1 + kairn::emulated::constant(0);
+    // (t0, t1) = dot_step_2(s0, s1, gx0, gx1, gy0, gy1)
+    // (t0_p0, t0_p1) = mul_2_2(gx0, gx1, gy0, gy1)
+    // (t0_p0_ch, t0_p0_cl1) = two_prod(gx0, gy0)
+    const kairn::emulated::Number t0_p0_ch = fma_rn(gx0, gy0, kairn::emulated::constant(0));
+    const kairn::emulated::Number t0_p0_cl1 = fma_rn(gx0, gy0, -t0_p0_ch);
+    const kairn::emulated::Number t0_p0_tl0 = fma_rn(gx1, gy1, kairn::emulated::constant(0));
+    const kairn::emulated::Number t0_p0_tl1 = fma_rn(gx0, gy1, t0_p0_tl0);
+    const kairn::emulated::Number t0_p0_cl2 = fma_rn(gx1, gy0, t0_p0_tl1);
+    const kairn::emulated::Number t0_p0_cl3 = t0_p0_cl1 + t0_p0_cl2;
+    // (t0_p0, t0_p1) = fast_two_sum(t0_p0_ch, t0_p0_cl3)
+    const kairn::emulated::Number t0_p0 = t0_p0_ch + t0_p0_cl3;
+    const kairn::emulated::Number t0_p0_z = t0_p0 - t0_p0_ch;
+    const kairn::emulated::Number t0_p1 = t0_p0_cl3 - t0_p0_z;
+    // (t0, t1) = add_2_2(s0, s1, t0_p0, t0_p1)
+    // (t0_sh, t0_sl) = two_sum(s0, t0_p0)
+    const kairn::emulated::Number t0_sh = s0 + t0_p0;
+    const kairn::emulated::Number t0_sh_bb = t0_sh - s0;
+    const kairn::emulated::Number t0_sh_t0 = t0_sh - t0_sh_bb;
+    const kairn::emulated::Number t0_sh_t1 = s0 - t0_sh_t0;
+    const kairn::emulated::Number t0_sh_t2 = t0_p0 - t0_sh_bb;
+    const kairn::emulated::Number t0_sl = t0_sh_t1 + t0_sh_t2;
+    // (t0_th, t0_tl) = two_sum(s1, t0_p1)
+    const kairn::emulated::Number t0_th = s1 + t0_p1;
+    const kairn::emulated::Number t0_th_bb = t0_th - s1;
+    const kairn::emulated::Number t0_th_t0 = t0_th - t0_th_bb;
+    const kairn::emulated::Number t0_th_t1 = s1 - t0_th_t0;
+    const kairn::emulated::Number t0_th_t2 = t0_p1 - t0_th_bb;
+    const kairn::emulated::Number t0_tl = t0_th_t1 + t0_th_t2;
+    const kairn::emulated::Number t0_c = t0_sl + t0_th;
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const kairn::emulated::Number t0_vh = t0_sh + t0_c;
+    const kairn::emulated::Number t0_vh_z = t0_vh - t0_sh;
+    const kairn::emulated::Number t0_vl = t0_c - t0_vh_z;
+    const kairn::emulated::Number t0_w = t0_tl + t0_vl;
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const kairn::emulated::Number t0 = t0_vh + t0_w;
+    const kairn::emulated::Number t0_z = t0 - t0_vh;
+    const kairn::emulated::Number t1 = t0_w - t0_z;
+    t0_out = t0;
+    t1_out = t1;
 }
 
 // fold_finish_2(s = (s0, s1)) -> r = (r0, r1), mask flag
@@ -8941,7 +9057,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(kairn::emulated::Number x0, kairn::em
 }
 
 // mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1)
-// mul_pow2_2, the two limbs scaled and renormalized. Status: proved; constexpr, each prod a plain product in constant evaluation.
+// as mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void mul_pow2_step_2(kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number c, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
     // (z0, z1) = mul_pow2_2(x0, x1, c)
     const kairn::emulated::Number z0_h = kairn::emulated::constant_evaluation() ? x0 * c : fma_rn(x0, c, kairn::emulated::constant(0));
@@ -8966,22 +9082,6 @@ KAIRN_GEN_FORCEINLINE void norm_step_2(kairn::emulated::Number m, bool ok, kairn
     const bool okr = ok & r_e;
     r_out = r;
     okr_out = okr;
-}
-
-// scale_step_2(x = (x0, x1), a) -> z = (z0, z1)
-// mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void scale_step_2(kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number a, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
-    // (z0, z1) = mul_2_1(x0, x1, a)
-    // (z0_ch, z0_cl1) = two_prod(x0, a)
-    const kairn::emulated::Number z0_ch = fma_rn(x0, a, kairn::emulated::constant(0));
-    const kairn::emulated::Number z0_cl1 = fma_rn(x0, a, -z0_ch);
-    const kairn::emulated::Number z0_cl3 = fma_rn(x1, a, z0_cl1);
-    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
-    const kairn::emulated::Number z0 = z0_ch + z0_cl3;
-    const kairn::emulated::Number z0_z = z0 - z0_ch;
-    const kairn::emulated::Number z1 = z0_cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
 }
 
 // scale_entry_step_2(x = (x0, x1), a) -> z = (z0, z1)
@@ -10018,7 +10118,7 @@ inline void axpy_1_entry_lanes(const kairn::emulated::Number* x_in, const kairn:
     finite_out = finite;
 }
 
-// map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// map axpy_2(stored x = (x0, x1), stored y = (y0, y1), stored a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: element after element. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_seq(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n, kairn::emulated::Number a0, kairn::emulated::Number a1, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, bool& finite_out) noexcept {
     bool finite = true;
@@ -10088,7 +10188,7 @@ inline void axpy_2_seq(const kairn::emulated::Number* x0_in, const kairn::emulat
     finite_out = finite;
 }
 
-// map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// map axpy_2(stored x = (x0, x1), stored y = (y0, y1), stored a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_lanes(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n, std::size_t lanes, kairn::emulated::Number a0, kairn::emulated::Number a1, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
@@ -10213,7 +10313,7 @@ inline void axpy_2_lanes(const kairn::emulated::Number* x0_in, const kairn::emul
     finite_out = finite;
 }
 
-// map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
+// map axpy_2_1(stored x = (x0, x1), stored y = (y0, y1), stored a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_seq(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n, kairn::emulated::Number a, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, bool& finite_out) noexcept {
     bool finite = true;
@@ -10280,7 +10380,7 @@ inline void axpy_2_1_seq(const kairn::emulated::Number* x0_in, const kairn::emul
     finite_out = finite;
 }
 
-// map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// map axpy_2_1(stored x = (x0, x1), stored y = (y0, y1), stored a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
 // arrays read (in place) or overlaps none of them, nor another written one. Status: proved (real model), proved (IEEE model).
 inline void axpy_2_1_lanes(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n, std::size_t lanes, kairn::emulated::Number a, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
@@ -10409,30 +10509,34 @@ inline void axpy_2_1_entry_seq(const kairn::emulated::Number* x0_in, const kairn
         const kairn::emulated::Number y0 = y0_in[i_];
         const kairn::emulated::Number y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
-        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
-        const kairn::emulated::Number step_p0_ch = fma_rn(x0, a, kairn::emulated::constant(0));
-        const kairn::emulated::Number step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
-        const kairn::emulated::Number step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const kairn::emulated::Number step_p0 = step_p0_ch + step_p0_cl3;
-        const kairn::emulated::Number step_p0_z = step_p0 - step_p0_ch;
-        const kairn::emulated::Number step_p1 = step_p0_cl3 - step_p0_z;
+        const kairn::emulated::Number step_ga = a + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
         const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
         const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const kairn::emulated::Number step_z0_sh = step_p0 + step_gy0;
-        const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2_1(step_ga, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_gx0, step_ga)
+        const kairn::emulated::Number step_z0_p0_ch = fma_rn(step_gx0, step_ga, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_z0_p0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_p0_ch);
+        const kairn::emulated::Number step_z0_p0_cl3 = fma_rn(step_gx1, step_ga, step_z0_p0_cl1);
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const kairn::emulated::Number step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const kairn::emulated::Number step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const kairn::emulated::Number step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const kairn::emulated::Number step_z0_sh = step_z0_p0 + step_gy0;
+        const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const kairn::emulated::Number step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const kairn::emulated::Number step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const kairn::emulated::Number step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const kairn::emulated::Number step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const kairn::emulated::Number step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const kairn::emulated::Number step_z0_th = step_p1 + step_gy1;
-        const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const kairn::emulated::Number step_z0_th = step_z0_p1 + step_gy1;
+        const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_z0_p1;
         const kairn::emulated::Number step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const kairn::emulated::Number step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const kairn::emulated::Number step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const kairn::emulated::Number step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const kairn::emulated::Number step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const kairn::emulated::Number step_z0_c = step_z0_sl + step_z0_th;
@@ -10481,30 +10585,34 @@ inline void axpy_2_1_entry_lanes(const kairn::emulated::Number* x0_in, const kai
             const kairn::emulated::Number y0 = y0_in[i_];
             const kairn::emulated::Number y1 = y1_in[i_];
             // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
-            // (step_p0, step_p1) = mul_2_1(x0, x1, a)
-            // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
-            const kairn::emulated::Number step_p0_ch = fma_rn(x0, a, kairn::emulated::constant(0));
-            const kairn::emulated::Number step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
-            const kairn::emulated::Number step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
-            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-            const kairn::emulated::Number step_p0 = step_p0_ch + step_p0_cl3;
-            const kairn::emulated::Number step_p0_z = step_p0 - step_p0_ch;
-            const kairn::emulated::Number step_p1 = step_p0_cl3 - step_p0_z;
+            const kairn::emulated::Number step_ga = a + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
             const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
             const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
-            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-            const kairn::emulated::Number step_z0_sh = step_p0 + step_gy0;
-            const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_p0;
+            // (step_z0, step_z1) = axpy_step_2_1(step_ga, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_z0_p0, step_z0_p1) = mul_2_1(step_gx0, step_gx1, step_ga)
+            // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_gx0, step_ga)
+            const kairn::emulated::Number step_z0_p0_ch = fma_rn(step_gx0, step_ga, kairn::emulated::constant(0));
+            const kairn::emulated::Number step_z0_p0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_p0_ch);
+            const kairn::emulated::Number step_z0_p0_cl3 = fma_rn(step_gx1, step_ga, step_z0_p0_cl1);
+            // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+            const kairn::emulated::Number step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+            const kairn::emulated::Number step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+            const kairn::emulated::Number step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+            const kairn::emulated::Number step_z0_sh = step_z0_p0 + step_gy0;
+            const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_z0_p0;
             const kairn::emulated::Number step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-            const kairn::emulated::Number step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const kairn::emulated::Number step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
             const kairn::emulated::Number step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
             const kairn::emulated::Number step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-            const kairn::emulated::Number step_z0_th = step_p1 + step_gy1;
-            const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_p1;
+            // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+            const kairn::emulated::Number step_z0_th = step_z0_p1 + step_gy1;
+            const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_z0_p1;
             const kairn::emulated::Number step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-            const kairn::emulated::Number step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const kairn::emulated::Number step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
             const kairn::emulated::Number step_z0_th_t2 = step_gy1 - step_z0_th_bb;
             const kairn::emulated::Number step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
             const kairn::emulated::Number step_z0_c = step_z0_sl + step_z0_th;
@@ -10532,30 +10640,34 @@ inline void axpy_2_1_entry_lanes(const kairn::emulated::Number* x0_in, const kai
         const kairn::emulated::Number y0 = y0_in[i_];
         const kairn::emulated::Number y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
-        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
-        const kairn::emulated::Number step_p0_ch = fma_rn(x0, a, kairn::emulated::constant(0));
-        const kairn::emulated::Number step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
-        const kairn::emulated::Number step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const kairn::emulated::Number step_p0 = step_p0_ch + step_p0_cl3;
-        const kairn::emulated::Number step_p0_z = step_p0 - step_p0_ch;
-        const kairn::emulated::Number step_p1 = step_p0_cl3 - step_p0_z;
+        const kairn::emulated::Number step_ga = a + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
         const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
         const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const kairn::emulated::Number step_z0_sh = step_p0 + step_gy0;
-        const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2_1(step_ga, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_1(step_gx0, step_gx1, step_ga)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_gx0, step_ga)
+        const kairn::emulated::Number step_z0_p0_ch = fma_rn(step_gx0, step_ga, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_z0_p0_cl1 = fma_rn(step_gx0, step_ga, -step_z0_p0_ch);
+        const kairn::emulated::Number step_z0_p0_cl3 = fma_rn(step_gx1, step_ga, step_z0_p0_cl1);
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const kairn::emulated::Number step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const kairn::emulated::Number step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const kairn::emulated::Number step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const kairn::emulated::Number step_z0_sh = step_z0_p0 + step_gy0;
+        const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const kairn::emulated::Number step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const kairn::emulated::Number step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const kairn::emulated::Number step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const kairn::emulated::Number step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const kairn::emulated::Number step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const kairn::emulated::Number step_z0_th = step_p1 + step_gy1;
-        const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const kairn::emulated::Number step_z0_th = step_z0_p1 + step_gy1;
+        const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_z0_p1;
         const kairn::emulated::Number step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const kairn::emulated::Number step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const kairn::emulated::Number step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const kairn::emulated::Number step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const kairn::emulated::Number step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const kairn::emulated::Number step_z0_c = step_z0_sl + step_z0_th;
@@ -10601,33 +10713,38 @@ inline void axpy_2_entry_seq(const kairn::emulated::Number* x0_in, const kairn::
         const kairn::emulated::Number y0 = y0_in[i_];
         const kairn::emulated::Number y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
-        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
-        const kairn::emulated::Number step_p0_ch = fma_rn(a0, x0, kairn::emulated::constant(0));
-        const kairn::emulated::Number step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
-        const kairn::emulated::Number step_p0_tl0 = fma_rn(a1, x1, kairn::emulated::constant(0));
-        const kairn::emulated::Number step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
-        const kairn::emulated::Number step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
-        const kairn::emulated::Number step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const kairn::emulated::Number step_p0 = step_p0_ch + step_p0_cl3;
-        const kairn::emulated::Number step_p0_z = step_p0 - step_p0_ch;
-        const kairn::emulated::Number step_p1 = step_p0_cl3 - step_p0_z;
+        const kairn::emulated::Number step_ga0 = a0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_ga1 = a1 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
         const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
         const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const kairn::emulated::Number step_z0_sh = step_p0 + step_gy0;
-        const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2(step_ga0, step_ga1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_2(step_ga0, step_ga1, step_gx0, step_gx1)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_ga0, step_gx0)
+        const kairn::emulated::Number step_z0_p0_ch = fma_rn(step_ga0, step_gx0, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_z0_p0_cl1 = fma_rn(step_ga0, step_gx0, -step_z0_p0_ch);
+        const kairn::emulated::Number step_z0_p0_tl0 = fma_rn(step_ga1, step_gx1, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_z0_p0_tl1 = fma_rn(step_ga0, step_gx1, step_z0_p0_tl0);
+        const kairn::emulated::Number step_z0_p0_cl2 = fma_rn(step_ga1, step_gx0, step_z0_p0_tl1);
+        const kairn::emulated::Number step_z0_p0_cl3 = step_z0_p0_cl1 + step_z0_p0_cl2;
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const kairn::emulated::Number step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const kairn::emulated::Number step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const kairn::emulated::Number step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const kairn::emulated::Number step_z0_sh = step_z0_p0 + step_gy0;
+        const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const kairn::emulated::Number step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const kairn::emulated::Number step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const kairn::emulated::Number step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const kairn::emulated::Number step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const kairn::emulated::Number step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const kairn::emulated::Number step_z0_th = step_p1 + step_gy1;
-        const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const kairn::emulated::Number step_z0_th = step_z0_p1 + step_gy1;
+        const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_z0_p1;
         const kairn::emulated::Number step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const kairn::emulated::Number step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const kairn::emulated::Number step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const kairn::emulated::Number step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const kairn::emulated::Number step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const kairn::emulated::Number step_z0_c = step_z0_sl + step_z0_th;
@@ -10676,33 +10793,38 @@ inline void axpy_2_entry_lanes(const kairn::emulated::Number* x0_in, const kairn
             const kairn::emulated::Number y0 = y0_in[i_];
             const kairn::emulated::Number y1 = y1_in[i_];
             // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
-            // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
-            // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
-            const kairn::emulated::Number step_p0_ch = fma_rn(a0, x0, kairn::emulated::constant(0));
-            const kairn::emulated::Number step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
-            const kairn::emulated::Number step_p0_tl0 = fma_rn(a1, x1, kairn::emulated::constant(0));
-            const kairn::emulated::Number step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
-            const kairn::emulated::Number step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
-            const kairn::emulated::Number step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
-            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-            const kairn::emulated::Number step_p0 = step_p0_ch + step_p0_cl3;
-            const kairn::emulated::Number step_p0_z = step_p0 - step_p0_ch;
-            const kairn::emulated::Number step_p1 = step_p0_cl3 - step_p0_z;
+            const kairn::emulated::Number step_ga0 = a0 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_ga1 = a1 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
             const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
             const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
-            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-            const kairn::emulated::Number step_z0_sh = step_p0 + step_gy0;
-            const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_p0;
+            // (step_z0, step_z1) = axpy_step_2(step_ga0, step_ga1, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_z0_p0, step_z0_p1) = mul_2_2(step_ga0, step_ga1, step_gx0, step_gx1)
+            // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_ga0, step_gx0)
+            const kairn::emulated::Number step_z0_p0_ch = fma_rn(step_ga0, step_gx0, kairn::emulated::constant(0));
+            const kairn::emulated::Number step_z0_p0_cl1 = fma_rn(step_ga0, step_gx0, -step_z0_p0_ch);
+            const kairn::emulated::Number step_z0_p0_tl0 = fma_rn(step_ga1, step_gx1, kairn::emulated::constant(0));
+            const kairn::emulated::Number step_z0_p0_tl1 = fma_rn(step_ga0, step_gx1, step_z0_p0_tl0);
+            const kairn::emulated::Number step_z0_p0_cl2 = fma_rn(step_ga1, step_gx0, step_z0_p0_tl1);
+            const kairn::emulated::Number step_z0_p0_cl3 = step_z0_p0_cl1 + step_z0_p0_cl2;
+            // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+            const kairn::emulated::Number step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+            const kairn::emulated::Number step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+            const kairn::emulated::Number step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+            const kairn::emulated::Number step_z0_sh = step_z0_p0 + step_gy0;
+            const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_z0_p0;
             const kairn::emulated::Number step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-            const kairn::emulated::Number step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const kairn::emulated::Number step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
             const kairn::emulated::Number step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
             const kairn::emulated::Number step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-            const kairn::emulated::Number step_z0_th = step_p1 + step_gy1;
-            const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_p1;
+            // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+            const kairn::emulated::Number step_z0_th = step_z0_p1 + step_gy1;
+            const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_z0_p1;
             const kairn::emulated::Number step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-            const kairn::emulated::Number step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const kairn::emulated::Number step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
             const kairn::emulated::Number step_z0_th_t2 = step_gy1 - step_z0_th_bb;
             const kairn::emulated::Number step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
             const kairn::emulated::Number step_z0_c = step_z0_sl + step_z0_th;
@@ -10730,33 +10852,38 @@ inline void axpy_2_entry_lanes(const kairn::emulated::Number* x0_in, const kairn
         const kairn::emulated::Number y0 = y0_in[i_];
         const kairn::emulated::Number y1 = y1_in[i_];
         // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
-        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
-        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
-        const kairn::emulated::Number step_p0_ch = fma_rn(a0, x0, kairn::emulated::constant(0));
-        const kairn::emulated::Number step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
-        const kairn::emulated::Number step_p0_tl0 = fma_rn(a1, x1, kairn::emulated::constant(0));
-        const kairn::emulated::Number step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
-        const kairn::emulated::Number step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
-        const kairn::emulated::Number step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
-        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
-        const kairn::emulated::Number step_p0 = step_p0_ch + step_p0_cl3;
-        const kairn::emulated::Number step_p0_z = step_p0 - step_p0_ch;
-        const kairn::emulated::Number step_p1 = step_p0_cl3 - step_p0_z;
+        const kairn::emulated::Number step_ga0 = a0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_ga1 = a1 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
         const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
         const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
-        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
-        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
-        const kairn::emulated::Number step_z0_sh = step_p0 + step_gy0;
-        const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_p0;
+        // (step_z0, step_z1) = axpy_step_2(step_ga0, step_ga1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_p0, step_z0_p1) = mul_2_2(step_ga0, step_ga1, step_gx0, step_gx1)
+        // (step_z0_p0_ch, step_z0_p0_cl1) = two_prod(step_ga0, step_gx0)
+        const kairn::emulated::Number step_z0_p0_ch = fma_rn(step_ga0, step_gx0, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_z0_p0_cl1 = fma_rn(step_ga0, step_gx0, -step_z0_p0_ch);
+        const kairn::emulated::Number step_z0_p0_tl0 = fma_rn(step_ga1, step_gx1, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_z0_p0_tl1 = fma_rn(step_ga0, step_gx1, step_z0_p0_tl0);
+        const kairn::emulated::Number step_z0_p0_cl2 = fma_rn(step_ga1, step_gx0, step_z0_p0_tl1);
+        const kairn::emulated::Number step_z0_p0_cl3 = step_z0_p0_cl1 + step_z0_p0_cl2;
+        // (step_z0_p0, step_z0_p1) = fast_two_sum(step_z0_p0_ch, step_z0_p0_cl3)
+        const kairn::emulated::Number step_z0_p0 = step_z0_p0_ch + step_z0_p0_cl3;
+        const kairn::emulated::Number step_z0_p0_z = step_z0_p0 - step_z0_p0_ch;
+        const kairn::emulated::Number step_z0_p1 = step_z0_p0_cl3 - step_z0_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_z0_p0, step_z0_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_z0_p0, step_gy0)
+        const kairn::emulated::Number step_z0_sh = step_z0_p0 + step_gy0;
+        const kairn::emulated::Number step_z0_sh_bb = step_z0_sh - step_z0_p0;
         const kairn::emulated::Number step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
-        const kairn::emulated::Number step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const kairn::emulated::Number step_z0_sh_t1 = step_z0_p0 - step_z0_sh_t0;
         const kairn::emulated::Number step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
         const kairn::emulated::Number step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
-        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
-        const kairn::emulated::Number step_z0_th = step_p1 + step_gy1;
-        const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_p1;
+        // (step_z0_th, step_z0_tl) = two_sum(step_z0_p1, step_gy1)
+        const kairn::emulated::Number step_z0_th = step_z0_p1 + step_gy1;
+        const kairn::emulated::Number step_z0_th_bb = step_z0_th - step_z0_p1;
         const kairn::emulated::Number step_z0_th_t0 = step_z0_th - step_z0_th_bb;
-        const kairn::emulated::Number step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const kairn::emulated::Number step_z0_th_t1 = step_z0_p1 - step_z0_th_t0;
         const kairn::emulated::Number step_z0_th_t2 = step_gy1 - step_z0_th_bb;
         const kairn::emulated::Number step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
         const kairn::emulated::Number step_z0_c = step_z0_sl + step_z0_th;
@@ -11615,6 +11742,147 @@ inline void bv_make_2_lanes(const kairn::emulated::Number* c0_in, const kairn::e
     finite_out = rad_f_;
 }
 
+// The end of ball vector bv_make_2_entry: its radius bv_make_radius and its finish bv_make_finish.
+KAIRN_GEN_NOINLINE void bv_make_2_entry_end(kairn::emulated::Number m, bool ok, kairn::emulated::Number r, kairn::emulated::Number& rad_out_, bool& fin_out_) noexcept {
+    volatile kairn::emulated::Number m_v_ = m;
+    const kairn::emulated::Number m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const kairn::emulated::Number rad_g = r + kairn::emulated::constant(0);
+    const kairn::emulated::Number rad_d = m_e_ - m_e_;
+    const kairn::emulated::Number rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= kairn::emulated::constant(0);
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const kairn::emulated::Number fin_r_t = fin_q ? rad_rz : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const kairn::emulated::Number fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<kairn::emulated::Number>::infinity() > fin_r_a;
+    const kairn::emulated::Number fin_r = fin_flag ? fin_r_t : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_make_2_entry(supplied c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_entry_2, record norm_step_2, radius bv_make_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_seq(const kairn::emulated::Number* c0_in, const kairn::emulated::Number* c1_in, std::size_t n, kairn::emulated::Number r, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, kairn::emulated::Number& rr_out, bool& finite_out) noexcept {
+    kairn::emulated::Number m = kairn::emulated::constant(0);
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const kairn::emulated::Number c0 = c0_in[i_];
+        const kairn::emulated::Number c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const kairn::emulated::Number step_g0 = c0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_g1 = c1 + kairn::emulated::constant(0);
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const kairn::emulated::Number step_z0 = step_g0;
+        const kairn::emulated::Number step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const kairn::emulated::Number rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const kairn::emulated::Number rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    kairn::emulated::Number rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile kairn::emulated::Number*>(z0_out)[i_] = kairn::emulated::constant(0);
+            static_cast<volatile kairn::emulated::Number*>(z1_out)[i_] = kairn::emulated::constant(0);
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<kairn::emulated::Number>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_make_2_entry(supplied c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_entry_2, record norm_step_2, radius bv_make_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_lanes(const kairn::emulated::Number* c0_in, const kairn::emulated::Number* c1_in, std::size_t n, std::size_t lanes, kairn::emulated::Number r, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, kairn::emulated::Number& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    kairn::emulated::Number m = kairn::emulated::constant(0);
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        kairn::emulated::Number m_lane_ = kairn::emulated::constant(0);
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const kairn::emulated::Number c0 = c0_in[i_];
+            const kairn::emulated::Number c1 = c1_in[i_];
+            // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+            const kairn::emulated::Number step_g0 = c0 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_g1 = c1 + kairn::emulated::constant(0);
+            // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+            const kairn::emulated::Number step_z0 = step_g0;
+            const kairn::emulated::Number step_z1 = step_g1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const kairn::emulated::Number rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const kairn::emulated::Number rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const kairn::emulated::Number comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const kairn::emulated::Number c0 = c0_in[i_];
+        const kairn::emulated::Number c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const kairn::emulated::Number step_g0 = c0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_g1 = c1 + kairn::emulated::constant(0);
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const kairn::emulated::Number step_z0 = step_g0;
+        const kairn::emulated::Number step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const kairn::emulated::Number rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const kairn::emulated::Number rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    kairn::emulated::Number rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile kairn::emulated::Number*>(z0_out)[i_] = kairn::emulated::constant(0);
+            static_cast<volatile kairn::emulated::Number*>(z1_out)[i_] = kairn::emulated::constant(0);
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<kairn::emulated::Number>::infinity();
+    finite_out = rad_f_;
+}
+
 // The end of ball vector bv_mul_pow2_1: its radius bv_mul_pow2_radius and its finish norm_finish_1.
 KAIRN_GEN_NOINLINE void bv_mul_pow2_1_end(kairn::emulated::Number m, bool ok, bool ex, kairn::emulated::Number rx, kairn::emulated::Number c, kairn::emulated::Number& rad_out_, bool& fin_out_) noexcept {
     volatile kairn::emulated::Number m_v_ = m;
@@ -12309,7 +12577,7 @@ KAIRN_GEN_NOINLINE void bv_scale_2_end(kairn::emulated::Number m, bool ok, kairn
     fin_out_ = fin_flag;
 }
 
-// ball vector bv_scale_2(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: element after element.
+// ball vector bv_scale_2(stored x = (x0, x1), stored rx, stored a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: element after element.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
 // of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_scale_2_seq(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, std::size_t n, kairn::emulated::Number rx, kairn::emulated::Number a, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, kairn::emulated::Number& r_out, bool& finite_out) noexcept {
@@ -12354,7 +12622,7 @@ inline void bv_scale_2_seq(const kairn::emulated::Number* x0_in, const kairn::em
     finite_out = rad_f_;
 }
 
-// ball vector bv_scale_2(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: in the lane order with `lanes` lanes, one lane after another.
+// ball vector bv_scale_2(stored x = (x0, x1), stored rx, stored a) -> z = (z0, z1), r, finite: step scale_step_2, record norm_step_2, radius bv_scale_radius_2: in the lane order with `lanes` lanes, one lane after another.
 // The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
 // of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
 inline void bv_scale_2_lanes(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, std::size_t n, std::size_t lanes, kairn::emulated::Number rx, kairn::emulated::Number a, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, kairn::emulated::Number& r_out, bool& finite_out) noexcept {
@@ -12431,6 +12699,165 @@ inline void bv_scale_2_lanes(const kairn::emulated::Number* x0_in, const kairn::
     kairn::emulated::Number rad_r_;
     bool rad_f_;
     bv_scale_2_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile kairn::emulated::Number*>(z0_out)[i_] = kairn::emulated::constant(0);
+            static_cast<volatile kairn::emulated::Number*>(z1_out)[i_] = kairn::emulated::constant(0);
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<kairn::emulated::Number>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_scale_2_entry: its radius bv_scale_radius_entry_2 and its finish norm_finish_1.
+KAIRN_GEN_NOINLINE void bv_scale_2_entry_end(kairn::emulated::Number m, bool ok, kairn::emulated::Number rx, kairn::emulated::Number a, kairn::emulated::Number& rad_out_, bool& fin_out_) noexcept {
+    volatile kairn::emulated::Number m_v_ = m;
+    const kairn::emulated::Number m_e_ = m_v_;
+    // (rad_rz) = bv_scale_radius_entry_2(m_e_, rx, a)
+    const kairn::emulated::Number rad_ga = a + kairn::emulated::constant(0);
+    // (rad_rz) = bv_scale_radius_2(m_e_, rx, rad_ga)
+    const kairn::emulated::Number rad_rz_aa = abs_bits(rad_ga);
+    const kairn::emulated::Number rad_rz_p = fma_rn(rad_rz_aa, rx, kairn::emulated::constant(0));
+    const kairn::emulated::Number rad_rz_t = fma_rn(m_e_, kairn::emulated::constant(35), rad_rz_p);
+    const kairn::emulated::Number rad_rz = fma_rn(rad_rz_t, kairn::emulated::constant(18), kairn::emulated::constant(4));
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const kairn::emulated::Number fin_t = ok ? rad_rz : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const kairn::emulated::Number fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<kairn::emulated::Number>::infinity() > fin_r_a;
+    const kairn::emulated::Number fin_r = fin_flag ? fin_t : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_scale_2_entry(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step bv_scale_step_2, record norm_step_2, radius bv_scale_radius_entry_2: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_scale_2_entry_seq(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, std::size_t n, kairn::emulated::Number rx, kairn::emulated::Number a, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, kairn::emulated::Number& r_out, bool& finite_out) noexcept {
+    kairn::emulated::Number m = kairn::emulated::constant(0);
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const kairn::emulated::Number x0 = x0_in[i_];
+        const kairn::emulated::Number x1 = x1_in[i_];
+        // (step_z0, step_z1) = bv_scale_step_2(x0, x1, a)
+        const kairn::emulated::Number step_ga = a + kairn::emulated::constant(0);
+        // (step_z0, step_z1) = scale_step_2(x0, x1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, step_ga)
+        const kairn::emulated::Number step_z0_ch = fma_rn(x0, step_ga, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_z0_cl1 = fma_rn(x0, step_ga, -step_z0_ch);
+        const kairn::emulated::Number step_z0_cl3 = fma_rn(x1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const kairn::emulated::Number step_z0 = step_z0_ch + step_z0_cl3;
+        const kairn::emulated::Number step_z0_z = step_z0 - step_z0_ch;
+        const kairn::emulated::Number step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const kairn::emulated::Number rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const kairn::emulated::Number rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    kairn::emulated::Number rad_r_;
+    bool rad_f_;
+    bv_scale_2_entry_end(m, ok, rx, a, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile kairn::emulated::Number*>(z0_out)[i_] = kairn::emulated::constant(0);
+            static_cast<volatile kairn::emulated::Number*>(z1_out)[i_] = kairn::emulated::constant(0);
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<kairn::emulated::Number>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_scale_2_entry(stored x = (x0, x1), stored rx, supplied a) -> z = (z0, z1), r, finite: step bv_scale_step_2, record norm_step_2, radius bv_scale_radius_entry_2: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_scale_2_entry_lanes(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, std::size_t n, std::size_t lanes, kairn::emulated::Number rx, kairn::emulated::Number a, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, kairn::emulated::Number& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    kairn::emulated::Number m = kairn::emulated::constant(0);
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        kairn::emulated::Number m_lane_ = kairn::emulated::constant(0);
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const kairn::emulated::Number x0 = x0_in[i_];
+            const kairn::emulated::Number x1 = x1_in[i_];
+            // (step_z0, step_z1) = bv_scale_step_2(x0, x1, a)
+            const kairn::emulated::Number step_ga = a + kairn::emulated::constant(0);
+            // (step_z0, step_z1) = scale_step_2(x0, x1, step_ga)
+            // (step_z0, step_z1) = mul_2_1(x0, x1, step_ga)
+            // (step_z0_ch, step_z0_cl1) = two_prod(x0, step_ga)
+            const kairn::emulated::Number step_z0_ch = fma_rn(x0, step_ga, kairn::emulated::constant(0));
+            const kairn::emulated::Number step_z0_cl1 = fma_rn(x0, step_ga, -step_z0_ch);
+            const kairn::emulated::Number step_z0_cl3 = fma_rn(x1, step_ga, step_z0_cl1);
+            // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+            const kairn::emulated::Number step_z0 = step_z0_ch + step_z0_cl3;
+            const kairn::emulated::Number step_z0_z = step_z0 - step_z0_ch;
+            const kairn::emulated::Number step_z1 = step_z0_cl3 - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const kairn::emulated::Number rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const kairn::emulated::Number rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const kairn::emulated::Number comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const kairn::emulated::Number x0 = x0_in[i_];
+        const kairn::emulated::Number x1 = x1_in[i_];
+        // (step_z0, step_z1) = bv_scale_step_2(x0, x1, a)
+        const kairn::emulated::Number step_ga = a + kairn::emulated::constant(0);
+        // (step_z0, step_z1) = scale_step_2(x0, x1, step_ga)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, step_ga)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, step_ga)
+        const kairn::emulated::Number step_z0_ch = fma_rn(x0, step_ga, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_z0_cl1 = fma_rn(x0, step_ga, -step_z0_ch);
+        const kairn::emulated::Number step_z0_cl3 = fma_rn(x1, step_ga, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const kairn::emulated::Number step_z0 = step_z0_ch + step_z0_cl3;
+        const kairn::emulated::Number step_z0_z = step_z0 - step_z0_ch;
+        const kairn::emulated::Number step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const kairn::emulated::Number rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const kairn::emulated::Number rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    kairn::emulated::Number rad_r_;
+    bool rad_f_;
+    bv_scale_2_entry_end(m, ok, rx, a, rad_r_, rad_f_);
     if (!rad_f_) {
         for (std::size_t i_ = 0; i_ < n; ++i_) {
             static_cast<volatile kairn::emulated::Number*>(z0_out)[i_] = kairn::emulated::constant(0);
@@ -12843,7 +13270,7 @@ inline void conv_1_entry_seq(const kairn::emulated::Number* x_in, std::size_t n_
     finite_out = finite;
 }
 
-// convolution conv_2(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1): coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_2 in its
+// convolution conv_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1): coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_2 in its
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
 // overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
 inline void conv_2_seq(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, std::size_t n_x, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n_y, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, bool& finite_out) noexcept {
@@ -12886,6 +13313,91 @@ inline void conv_2_seq(const kairn::emulated::Number* x0_in, const kairn::emulat
             const kairn::emulated::Number step_t0_th_t0 = step_t0_th - step_t0_th_bb;
             const kairn::emulated::Number step_t0_th_t1 = s1 - step_t0_th_t0;
             const kairn::emulated::Number step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const kairn::emulated::Number step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const kairn::emulated::Number step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const kairn::emulated::Number step_t0_vh = step_t0_sh + step_t0_c;
+            const kairn::emulated::Number step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const kairn::emulated::Number step_t0_vl = step_t0_c - step_t0_vh_z;
+            const kairn::emulated::Number step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const kairn::emulated::Number step_t0 = step_t0_vh + step_t0_w;
+            const kairn::emulated::Number step_t0_z = step_t0 - step_t0_vh;
+            const kairn::emulated::Number step_t1 = step_t0_w - step_t0_z;
+            s0 = step_t0;
+            s1 = step_t1;
+        }
+        z0_out[j_] = s0;
+        z1_out[j_] = s1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(s0, s1)
+        const kairn::emulated::Number chk_a = abs_bits(s0);
+        const bool chk_flag = std::numeric_limits<kairn::emulated::Number>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const kairn::emulated::Number z0 = z0_out[i_];
+            const kairn::emulated::Number z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const kairn::emulated::Number chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<kairn::emulated::Number>::infinity() > chk_a;
+            const kairn::emulated::Number chk_r0 = chk_flag ? z0 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+            const kairn::emulated::Number chk_r1 = chk_flag ? z1 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// convolution conv_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1): coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_2_entry in its
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
+// overlaps neither x nor y. Status: proved (real model), proved (IEEE model).
+inline void conv_2_entry_seq(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, std::size_t n_x, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n_y, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        kairn::emulated::Number s0 = kairn::emulated::constant(0);
+        kairn::emulated::Number s1 = kairn::emulated::constant(0);
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const kairn::emulated::Number x0 = x0_in[i_];
+            const kairn::emulated::Number x1 = x1_in[i_];
+            const kairn::emulated::Number y0 = y0_in[j_ - i_];
+            const kairn::emulated::Number y1 = y1_in[j_ - i_];
+            // (step_t0, step_t1) = dot_entry_step_2(s0, s1, x0, x1, y0, y1)
+            const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
+            // (step_t0, step_t1) = dot_step_2(s0, s1, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+            const kairn::emulated::Number step_t0_p0_ch = fma_rn(step_gx0, step_gy0, kairn::emulated::constant(0));
+            const kairn::emulated::Number step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+            const kairn::emulated::Number step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, kairn::emulated::constant(0));
+            const kairn::emulated::Number step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+            const kairn::emulated::Number step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+            const kairn::emulated::Number step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+            // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+            const kairn::emulated::Number step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+            const kairn::emulated::Number step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+            const kairn::emulated::Number step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0, s1, step_t0_p0, step_t0_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0, step_t0_p0)
+            const kairn::emulated::Number step_t0_sh = s0 + step_t0_p0;
+            const kairn::emulated::Number step_t0_sh_bb = step_t0_sh - s0;
+            const kairn::emulated::Number step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const kairn::emulated::Number step_t0_sh_t1 = s0 - step_t0_sh_t0;
+            const kairn::emulated::Number step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+            const kairn::emulated::Number step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1, step_t0_p1)
+            const kairn::emulated::Number step_t0_th = s1 + step_t0_p1;
+            const kairn::emulated::Number step_t0_th_bb = step_t0_th - s1;
+            const kairn::emulated::Number step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const kairn::emulated::Number step_t0_th_t1 = s1 - step_t0_th_t0;
+            const kairn::emulated::Number step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
             const kairn::emulated::Number step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
             const kairn::emulated::Number step_t0_c = step_t0_sl + step_t0_th;
             // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
@@ -13037,7 +13549,7 @@ inline void dot_1_entry_lanes(const kairn::emulated::Number* x_in, const kairn::
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
+// fold dot_2(stored x = (x0, x1), stored y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
 inline void dot_2_seq(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n, kairn::emulated::Number& r0_out, kairn::emulated::Number& r1_out, bool& flag_out) noexcept {
     kairn::emulated::Number s0 = kairn::emulated::constant(0);
     kairn::emulated::Number s1 = kairn::emulated::constant(0);
@@ -13097,7 +13609,7 @@ inline void dot_2_seq(const kairn::emulated::Number* x0_in, const kairn::emulate
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
+// fold dot_2(stored x = (x0, x1), stored y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
 inline void dot_2_lanes(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n, std::size_t lanes, kairn::emulated::Number& r0_out, kairn::emulated::Number& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     kairn::emulated::Number s0 = kairn::emulated::constant(0);
@@ -13216,6 +13728,224 @@ inline void dot_2_lanes(const kairn::emulated::Number* x0_in, const kairn::emula
         const kairn::emulated::Number step_t0_th_t0 = step_t0_th - step_t0_th_bb;
         const kairn::emulated::Number step_t0_th_t1 = s1 - step_t0_th_t0;
         const kairn::emulated::Number step_t0_th_t2 = step_p1 - step_t0_th_bb;
+        const kairn::emulated::Number step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const kairn::emulated::Number step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const kairn::emulated::Number step_t0_vh = step_t0_sh + step_t0_c;
+        const kairn::emulated::Number step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const kairn::emulated::Number step_t0_vl = step_t0_c - step_t0_vh_z;
+        const kairn::emulated::Number step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const kairn::emulated::Number step_t0 = step_t0_vh + step_t0_w;
+        const kairn::emulated::Number step_t0_z = step_t0 - step_t0_vh;
+        const kairn::emulated::Number step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const kairn::emulated::Number fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<kairn::emulated::Number>::infinity() > fin_a;
+    const kairn::emulated::Number fin_r0 = fin_flag ? s0 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    const kairn::emulated::Number fin_r1 = fin_flag ? s1 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold dot_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_entry_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved (real model), proved (IEEE model).
+inline void dot_2_entry_seq(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n, kairn::emulated::Number& r0_out, kairn::emulated::Number& r1_out, bool& flag_out) noexcept {
+    kairn::emulated::Number s0 = kairn::emulated::constant(0);
+    kairn::emulated::Number s1 = kairn::emulated::constant(0);
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const kairn::emulated::Number x0 = x0_in[i_];
+        const kairn::emulated::Number x1 = x1_in[i_];
+        const kairn::emulated::Number y0 = y0_in[i_];
+        const kairn::emulated::Number y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_entry_step_2(s0, s1, x0, x1, y0, y1)
+        const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
+        // (step_t0, step_t1) = dot_step_2(s0, s1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+        const kairn::emulated::Number step_t0_p0_ch = fma_rn(step_gx0, step_gy0, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+        const kairn::emulated::Number step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+        const kairn::emulated::Number step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+        const kairn::emulated::Number step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+        // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+        const kairn::emulated::Number step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+        const kairn::emulated::Number step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+        const kairn::emulated::Number step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_t0_p0, step_t0_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_t0_p0)
+        const kairn::emulated::Number step_t0_sh = s0 + step_t0_p0;
+        const kairn::emulated::Number step_t0_sh_bb = step_t0_sh - s0;
+        const kairn::emulated::Number step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const kairn::emulated::Number step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const kairn::emulated::Number step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+        const kairn::emulated::Number step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_t0_p1)
+        const kairn::emulated::Number step_t0_th = s1 + step_t0_p1;
+        const kairn::emulated::Number step_t0_th_bb = step_t0_th - s1;
+        const kairn::emulated::Number step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const kairn::emulated::Number step_t0_th_t1 = s1 - step_t0_th_t0;
+        const kairn::emulated::Number step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
+        const kairn::emulated::Number step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const kairn::emulated::Number step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const kairn::emulated::Number step_t0_vh = step_t0_sh + step_t0_c;
+        const kairn::emulated::Number step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const kairn::emulated::Number step_t0_vl = step_t0_c - step_t0_vh_z;
+        const kairn::emulated::Number step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const kairn::emulated::Number step_t0 = step_t0_vh + step_t0_w;
+        const kairn::emulated::Number step_t0_z = step_t0 - step_t0_vh;
+        const kairn::emulated::Number step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const kairn::emulated::Number fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<kairn::emulated::Number>::infinity() > fin_a;
+    const kairn::emulated::Number fin_r0 = fin_flag ? s0 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    const kairn::emulated::Number fin_r1 = fin_flag ? s1 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold dot_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved (real model), proved (IEEE model).
+inline void dot_2_entry_lanes(const kairn::emulated::Number* x0_in, const kairn::emulated::Number* x1_in, const kairn::emulated::Number* y0_in, const kairn::emulated::Number* y1_in, std::size_t n, std::size_t lanes, kairn::emulated::Number& r0_out, kairn::emulated::Number& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    kairn::emulated::Number s0 = kairn::emulated::constant(0);
+    kairn::emulated::Number s1 = kairn::emulated::constant(0);
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        kairn::emulated::Number s0_lane_ = kairn::emulated::constant(0);
+        kairn::emulated::Number s1_lane_ = kairn::emulated::constant(0);
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const kairn::emulated::Number x0 = x0_in[i_];
+            const kairn::emulated::Number x1 = x1_in[i_];
+            const kairn::emulated::Number y0 = y0_in[i_];
+            const kairn::emulated::Number y1 = y1_in[i_];
+            // (step_t0, step_t1) = dot_entry_step_2(s0_lane_, s1_lane_, x0, x1, y0, y1)
+            const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
+            // (step_t0, step_t1) = dot_step_2(s0_lane_, s1_lane_, step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+            const kairn::emulated::Number step_t0_p0_ch = fma_rn(step_gx0, step_gy0, kairn::emulated::constant(0));
+            const kairn::emulated::Number step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+            const kairn::emulated::Number step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, kairn::emulated::constant(0));
+            const kairn::emulated::Number step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+            const kairn::emulated::Number step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+            const kairn::emulated::Number step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+            // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+            const kairn::emulated::Number step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+            const kairn::emulated::Number step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+            const kairn::emulated::Number step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_t0_p0, step_t0_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_t0_p0)
+            const kairn::emulated::Number step_t0_sh = s0_lane_ + step_t0_p0;
+            const kairn::emulated::Number step_t0_sh_bb = step_t0_sh - s0_lane_;
+            const kairn::emulated::Number step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const kairn::emulated::Number step_t0_sh_t1 = s0_lane_ - step_t0_sh_t0;
+            const kairn::emulated::Number step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+            const kairn::emulated::Number step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_t0_p1)
+            const kairn::emulated::Number step_t0_th = s1_lane_ + step_t0_p1;
+            const kairn::emulated::Number step_t0_th_bb = step_t0_th - s1_lane_;
+            const kairn::emulated::Number step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const kairn::emulated::Number step_t0_th_t1 = s1_lane_ - step_t0_th_t0;
+            const kairn::emulated::Number step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
+            const kairn::emulated::Number step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const kairn::emulated::Number step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const kairn::emulated::Number step_t0_vh = step_t0_sh + step_t0_c;
+            const kairn::emulated::Number step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const kairn::emulated::Number step_t0_vl = step_t0_c - step_t0_vh_z;
+            const kairn::emulated::Number step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const kairn::emulated::Number step_t0 = step_t0_vh + step_t0_w;
+            const kairn::emulated::Number step_t0_z = step_t0 - step_t0_vh;
+            const kairn::emulated::Number step_t1 = step_t0_w - step_t0_z;
+            s0_lane_ = step_t0;
+            s1_lane_ = step_t1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const kairn::emulated::Number comb_sh = s0 + s0_lane_;
+            const kairn::emulated::Number comb_sh_bb = comb_sh - s0;
+            const kairn::emulated::Number comb_sh_t0 = comb_sh - comb_sh_bb;
+            const kairn::emulated::Number comb_sh_t1 = s0 - comb_sh_t0;
+            const kairn::emulated::Number comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const kairn::emulated::Number comb_sl = comb_sh_t1 + comb_sh_t2;
+            // (comb_th, comb_tl) = two_sum(s1, s1_lane_)
+            const kairn::emulated::Number comb_th = s1 + s1_lane_;
+            const kairn::emulated::Number comb_th_bb = comb_th - s1;
+            const kairn::emulated::Number comb_th_t0 = comb_th - comb_th_bb;
+            const kairn::emulated::Number comb_th_t1 = s1 - comb_th_t0;
+            const kairn::emulated::Number comb_th_t2 = s1_lane_ - comb_th_bb;
+            const kairn::emulated::Number comb_tl = comb_th_t1 + comb_th_t2;
+            const kairn::emulated::Number comb_c = comb_sl + comb_th;
+            // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+            const kairn::emulated::Number comb_vh = comb_sh + comb_c;
+            const kairn::emulated::Number comb_vh_z = comb_vh - comb_sh;
+            const kairn::emulated::Number comb_vl = comb_c - comb_vh_z;
+            const kairn::emulated::Number comb_w = comb_tl + comb_vl;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+            const kairn::emulated::Number comb_z0 = comb_vh + comb_w;
+            const kairn::emulated::Number comb_z0_z = comb_z0 - comb_vh;
+            const kairn::emulated::Number comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const kairn::emulated::Number x0 = x0_in[i_];
+        const kairn::emulated::Number x1 = x1_in[i_];
+        const kairn::emulated::Number y0 = y0_in[i_];
+        const kairn::emulated::Number y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_entry_step_2(s0, s1, x0, x1, y0, y1)
+        const kairn::emulated::Number step_gx0 = x0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gx1 = x1 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gy0 = y0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_gy1 = y1 + kairn::emulated::constant(0);
+        // (step_t0, step_t1) = dot_step_2(s0, s1, step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0, step_t0_p1) = mul_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_t0_p0_ch, step_t0_p0_cl1) = two_prod(step_gx0, step_gy0)
+        const kairn::emulated::Number step_t0_p0_ch = fma_rn(step_gx0, step_gy0, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_t0_p0_cl1 = fma_rn(step_gx0, step_gy0, -step_t0_p0_ch);
+        const kairn::emulated::Number step_t0_p0_tl0 = fma_rn(step_gx1, step_gy1, kairn::emulated::constant(0));
+        const kairn::emulated::Number step_t0_p0_tl1 = fma_rn(step_gx0, step_gy1, step_t0_p0_tl0);
+        const kairn::emulated::Number step_t0_p0_cl2 = fma_rn(step_gx1, step_gy0, step_t0_p0_tl1);
+        const kairn::emulated::Number step_t0_p0_cl3 = step_t0_p0_cl1 + step_t0_p0_cl2;
+        // (step_t0_p0, step_t0_p1) = fast_two_sum(step_t0_p0_ch, step_t0_p0_cl3)
+        const kairn::emulated::Number step_t0_p0 = step_t0_p0_ch + step_t0_p0_cl3;
+        const kairn::emulated::Number step_t0_p0_z = step_t0_p0 - step_t0_p0_ch;
+        const kairn::emulated::Number step_t0_p1 = step_t0_p0_cl3 - step_t0_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_t0_p0, step_t0_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_t0_p0)
+        const kairn::emulated::Number step_t0_sh = s0 + step_t0_p0;
+        const kairn::emulated::Number step_t0_sh_bb = step_t0_sh - s0;
+        const kairn::emulated::Number step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const kairn::emulated::Number step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const kairn::emulated::Number step_t0_sh_t2 = step_t0_p0 - step_t0_sh_bb;
+        const kairn::emulated::Number step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_t0_p1)
+        const kairn::emulated::Number step_t0_th = s1 + step_t0_p1;
+        const kairn::emulated::Number step_t0_th_bb = step_t0_th - s1;
+        const kairn::emulated::Number step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const kairn::emulated::Number step_t0_th_t1 = s1 - step_t0_th_t0;
+        const kairn::emulated::Number step_t0_th_t2 = step_t0_p1 - step_t0_th_bb;
         const kairn::emulated::Number step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
         const kairn::emulated::Number step_t0_c = step_t0_sl + step_t0_th;
         // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
@@ -16420,7 +17150,7 @@ inline constexpr FormatConstants formats[format_count] = {
 // The kernels that have no path of constant evaluation (a fused operation other than prod
 // and no constant-evaluation variant): the runner refuses them with --ce, as the
 // interpreter does with --ce, and every fold.
-inline constexpr int not_constexpr_count = 72;
+inline constexpr int not_constexpr_count = 75;
 inline constexpr const char* not_constexpr[not_constexpr_count + 1] = {
     "acc_mul_1",
     "acc_mul_entry_1",
@@ -16439,6 +17169,7 @@ inline constexpr const char* not_constexpr[not_constexpr_count + 1] = {
     "bv_add_radius_2",
     "bv_scale_radius_1",
     "bv_scale_radius_2",
+    "bv_scale_radius_entry_2",
     "conv_radius",
     "dot_entry_step_1",
     "dot_step_1",
@@ -16455,11 +17186,11 @@ inline constexpr const char* not_constexpr[not_constexpr_count + 1] = {
     "add_ball_2_2",
     "add_down_2_2",
     "add_up_2_2",
+    "axpy_step_2",
     "axpy_entry_step_2",
     "mul_2_1",
-    "axpy_entry_step_2_1",
-    "axpy_step_2",
     "axpy_step_2_1",
+    "axpy_entry_step_2_1",
     "ball_add_2",
     "ball_add_2_full",
     "ball_contains_ball_2",
@@ -16480,6 +17211,9 @@ inline constexpr const char* not_constexpr[not_constexpr_count + 1] = {
     "ball_split_2",
     "ball_sub_2",
     "ball_sub_2_full",
+    "scale_step_2",
+    "bv_scale_step_2",
+    "dot_entry_step_2",
     "interval_add_2",
     "mul_ball_2_2",
     "mul_dir_2_2",
@@ -16492,7 +17226,6 @@ inline constexpr const char* not_constexpr[not_constexpr_count + 1] = {
     "mul_2_1_full",
     "mul_2_1_full_entry",
     "mul_2_2_full",
-    "scale_step_2",
     "scale_entry_step_2",
     nullptr,
 };
