@@ -260,10 +260,13 @@ the arrays.
 
 ## Constraints and constant evaluation
 
-Each function compiles only while the kernels its loop is made of (its step or check, its
-combination, its finish) are proved; `include/kairn/gen/bounds.hpp` exports their status, and has
-no entry for a loop itself, whose status is in `gen/claims.json`. There is no marked form. None is
-`constexpr`: the loops are not.
+Each function compiles only while the loop it calls is proved: `include/kairn/gen/bounds.hpp`,
+written from `gen/claims.json`, has for each loop `F` and limb type `T` the entry
+`kairn::gen::bounds::loops::F<T>::proved`, true exactly when `gen/claims.json` gives the loop the
+status proved, `T` has at least the loop's minimum precision, and every kernel the loop runs (its
+step or check, its combination, its finish) is proved for `T`, and so is the loop of the
+coefficients of a convolution; `kairn/batch.hpp` gates each function on it. There is no marked
+form. None is `constexpr`: the loops are not.
 
 ## Not provided
 
