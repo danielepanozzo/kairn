@@ -10,7 +10,8 @@ is tested against the hardware, the compilers and Rocq. The contract it implemen
 ```
 python3 gen/kairn-gen build     # regenerate every generated file
 python3 gen/kairn-gen check     # fail if a committed generated file is stale or was edited by hand
-python3 gen/kairn-gen test      # the tests below; --full for the long sizes
+python3 gen/kairn-gen test      # the tests below; --full for the long sizes; --shard K/N for
+                                # every N-th test from the K-th; --durations N for the slowest
 python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line protocol
 ```
 
@@ -23,10 +24,10 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/Audit.v` | For each kernel not marked unverified, checks `K_correct : K_spec` and prints its assumptions |
 | `proofs/gen/IeeeModel.v` | One Rocq `Definition` per kernel that has an IEEE-model statement, over Flocq's binary floating-point numbers (signed zeros, infinities, NaN), each operation the one of `proofs/theories/IeeeOperations.v` |
 | `proofs/gen/IeeeStatements.v` | `Definition K_ieee_spec : Prop` (and the finite-domain forms) per such kernel, from its claims, in the vocabulary of `proofs/theories/IeeeVocabulary.v` |
-| `proofs/gen/IeeeAudit.v` | For each kernel whose IEEE-model status is not unverified, checks that its theorem has the generated statement as its type and prints its assumptions |
+| `proofs/gen/IeeeAudit.v` | For each kernel whose IEEE-model status is not unverified, checks that its theorem has the generated statement as its type and prints its assumptions; then the same for the statement of the two executions of each kernel of `IeeeWith.v`, against its theorem `IeeeTwoExecutions.K_two_executions` |
 | `proofs/gen/IeeeFoldModel.v` | Per fold, its step and combination over tuples of floats (the IEEE models of IeeeModel.v) and its two orders with the finish, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v`; per map, its step, its check and its two orders (`map` of the step, the mask, the second pass); per convolution, its check and `F_conv` |
 | `proofs/gen/IeeeFoldStatements.v` | `F_seq_ieee_spec` and `F_lanes_ieee_spec` per fold (the flag, and the real model's result when it is true) and per map (element by element, and the mask), `F_ieee_spec` per convolution (coefficient by coefficient, and the mask), and `K_ieee_lead_spec` per step and combination of a fold and per step of a map |
-| `proofs/gen/IeeeWith.v` | Per kernel `constexpr` by the rule of the product, `K_with p_`: its IEEE-model definition with the product as an argument (`ieee.with_model`), for the theorems of its two executions |
+| `proofs/gen/IeeeWith.v` | Per kernel whose C++ dispatches on constant evaluation without a variant (`ieee.with_kernels`: those `constexpr` by the rule of the product, and those without a product that compute a `guard` or `times_inf`, 63), `K_with`: its IEEE-model definition with the operations that constant evaluation runs differently as arguments, `p_` for `prod`, and `g_` for `guard` and `t_` for `times_inf` where the kernel computes them, and those three operations as constant evaluation computes them, `prod_ce`, `guard_ce` and `times_inf_ce` (`ieee.with_model`); and per such kernel `K_two_executions_spec`, the statement of its two executions: on all operands and for any NaN in either, `K_with` at the operations of constant evaluation and `IeeeModel.K` return limbs of the same extended real values (`xval`) and the same masks (`ieee.two_executions_statement`) |
 | `proofs/gen/FoldModel.v` | Per fold, its step and combination over tuples of reals and its two orders, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v` |
 | `proofs/gen/FoldStatements.v` | `Definition F_seq_spec : Prop` and `F_lanes_spec` per fold, from its claims; the proofs `F_seq_correct` and `F_lanes_correct` must have these types |
 | `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up_bits`, `next_down_bits`, the form of the scalar fix-ups per compiler (`KAIRN_GEN_FIXUP_CALL`), the pragmas that every header puts around its declarations so that a program's globals of the same names raise no warning (`KAIRN_GEN_PUSH_WARNINGS`, `KAIRN_GEN_POP_WARNINGS`); refuses x86 without hardware FMA |
@@ -574,7 +575,15 @@ statement uses too is `Model.v`'s, under one name: the doubling of `ball_from_in
   constexpr by the rule of the product gives in constant evaluation the bits it gives at run time,
   or, for those whose outputs can be an exact zero product (`mul_pow2_2`, the scalings of a ball,
   `mul_1_1`, `two_prod_dekker`), the same values, on the corpus of the interpreter's comparison with
-  the host;
+  the host; and `proofs/gen/IeeeWith.v` (`test_ieee.py`, `WithProduct`): each listing is the
+  generated model with its arguments written back as the operations of run time, line for line;
+  the arguments are exactly the operations whose C++ dispatches on constant evaluation, and a
+  kernel with a guard (or `times_inf`) has it as an argument; a callee outside the file that
+  computes one is refused; the kernels of the file are those whose C++ dispatches on constant
+  evaluation without a variant (63: the 30 of the rule of the product and 33 without a product),
+  and every function of `scalar.hpp` that dispatches is one of theirs or `two_prod`'s; the
+  statements of the two executions are one per kernel of the file, in its order, each checked by
+  `IeeeAudit.v` (a kernel added gets both), and the shape of one is pinned;
 - the branch over a fix-up (`test_printers.py`, `FixupBranch`): the kernels it applies to and the
   masks it tests, each case of the rule on the toy kernel `ops_branch` and on variants of it (one
   mask, two, an arm that is no select, outputs on different masks, a kernel with a real-model

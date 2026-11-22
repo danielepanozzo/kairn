@@ -718,6 +718,11 @@ def iv_needs(kernel, e, a):
         need += IV_X
         if kind == "ball_of_interval":
             need.append(IV_ODD)
+        # The midpoint of a bounded interval (ieee1788) and the parts of a split that rest on it,
+        # in a format of no statement: the judge's count that they are not claimed there (the
+        # second ruling of 2026-11-21).
+        if outside_statements(a) and (kind == "splits" or e.get("special") == "ieee1788"):
+            need.append(IV_SPLIT_RANGE if kind == "splits" else IV_CENTER_RANGE)
         if e.get("finite_when"):
             # finite_when (the conversions of two limbs): each condition holding and failing, and
             # the radius +inf (the whole line, for a ball) of a bounded interval; in a format of
@@ -743,6 +748,10 @@ IV_FW_RANGE = ("finite_when not claimed: a format of no statement (e_max <= p, o
                "binary_float's)")
 IV_I5_RANGE = ("bounded_when not claimed: a format of no statement (e_max <= p, or eta above "
                "binary_float's)")
+IV_CENTER_RANGE = ("a finite center not claimed: a format of no statement (e_max <= p, or eta "
+                   "above binary_float's)")
+IV_SPLIT_RANGE = ("a split at a point of X not claimed: a format of no statement (e_max <= p, or "
+                  "eta above binary_float's)")
 
 
 def outside_statements(a):

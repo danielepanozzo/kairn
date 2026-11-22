@@ -47,9 +47,12 @@ lists:
   function of Flocq's binary floating-point numbers, where operations overflow and operands may
   be infinite or NaN, and its statements there;
 - `proofs/gen/IeeeWith.v`, generated too: each kernel that is `constexpr` by the rule of the
-  product, in the same model with the product as an argument, so that the same listing stands
-  for its execution at run time (the fused product) and in constant evaluation (the plain
-  product);
+  product, in the same model with the operations that constant evaluation computes otherwise as
+  arguments (the product, and the guard and the multiplication by infinity of a fix-up where the
+  kernel has them), so that the same listing stands for its execution at run time (the fused
+  product, the guard that adds $+0$, the multiplication) and in constant evaluation (the plain
+  product, the guard that returns its operand, the comparisons of `times_inf_ce`, defined there
+  from the C++);
 - `proofs/gen/FoldModel.v` and `proofs/gen/FoldStatements.v`, generated too: each fold (a loop
   of kernels along arrays: the sums, the dot products and the largest magnitude) as a function
   on lists, in the two orders in which the library runs it, and its statement in each order;
@@ -71,11 +74,17 @@ lists:
   ball by a power of two over the real numbers (`BallPow2.v`) and, with the special states of a
   ball, with overflow, infinities and NaN (`IeeeBallPow2.v`), the lemma that the product of two
   intervals rests on (`Rectangle.v`), the comparison of the two ways a product is executed
-  (`IeeeProduct.v`), with what follows for the thirty kernels whose only fused operations are
-  products, which are `constexpr`: on all operands each listing with the plain product of
-  constant evaluation returns outputs of the same values, and the same masks, as the kernel with
-  the fused product of run time (`IeeeTwoExecutions.v`, one theorem `K_two_executions` per kernel
-  `K` of `IeeeWith.v`), the interval kernels with bounds of one limb, on all values:
+  (`IeeeProduct.v`), with what follows for the 63 kernels whose C++ computes an operation
+  otherwise in constant evaluation (the thirty whose only fused operations are products, and 33
+  without a product that guard an operand or fix up with `times_inf`), which are `constexpr`: on
+  all operands each listing as constant evaluation runs it
+  (the plain product, the guard that returns its operand, `times_inf` from comparisons) returns
+  outputs of the same values, and the same masks, as the kernel of run time (the fused product,
+  the guard that adds $+0$, the multiplication by infinity) (`IeeeTwoExecutions.v`, one theorem
+  `K_two_executions` per kernel `K` of `IeeeWith.v`; and for `two_prod`, `constexpr` through
+  Dekker's product, the same values only when the error term of constant evaluation is finite and
+  the product is exact, `two_prod_two_executions_exact`), the interval kernels with bounds of one
+  limb, on all values:
   the constructor, the negation, the sum, the difference and the product (`IeeeInterval1.v`,
   with the definitions their statements use in `IeeeIntervalVocabulary.v`), and the bounds of
   two limbs over the real numbers: a sum, a difference and a product of two 2-limb numbers,
@@ -175,8 +184,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    and of the hull and the intersection of balls (the tests of the radii, and that the ball of
    a canonical interval contains its members)
    beside their generated
-   statements, those about the two executions of a product and of the kernels `constexpr` by
-   its rule, on the listings of `proofs/gen/IeeeWith.v`, the theorems about the folds, the
+   statements, those about the two executions of a product and the lemmas of the two
+   executions of the kernels `constexpr` by its rule, on the listings of
+   `proofs/gen/IeeeWith.v`, the theorems about the folds, the
    largest magnitude and the product of polynomials whose statements are written by hand
    ([below](#sums-and-dot-products-of-arrays)),
    the lemmas of the radius of the accumulator and what a user of it relies on
@@ -190,7 +200,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    the folds and of the steps of the maps (and of the two steps of the extended domain that
    have one, `neg_2` and `bv_center_2`), of the folds and the maps in their two orders, of the
    two statements more of the folds of maxima, of the convolutions and of the products of two
-   BallVectors.
+   BallVectors; and last, for each kernel whose C++ dispatches on constant evaluation (63), the theorem
+   of its two executions (`IeeeTwoExecutions.v`) against the statement the generator prints
+   for it in `proofs/gen/IeeeWith.v`, `K_two_executions_spec`, which no description names.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 

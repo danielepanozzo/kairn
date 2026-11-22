@@ -1,17 +1,23 @@
 # Getting started
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is complete
-([report](../developer/results/milestone1.md)): the first public headers exist, for numbers of one and two limbs of type `float` or
-`double` and for balls around them. The claims of all their operations have checked proofs in a
-model of arithmetic where nothing overflows, and at overflow and for infinities and NaN they
-return results like those of `float` and `double` (balls: the whole line, or the empty set), which
-is proved in a model of IEEE 754; [What holds today](guarantees.md) has the details and what is
-not proved yet. Milestone 2 is in progress: its first public functions, the building blocks on
-`T`, the exact scaling of a ball, a ball from a constant and the signs of a ball, are in version
-0.2.0 of the development line. This page shows how to write a first program, choose the limb type
-and the number of limbs, write constants such as 1/10, use the building blocks, build and test the
-repository, use the CMake package, read what Kairn's checks report when something is wrong, and
-build this site.
+([report](../developer/results/milestone1.md)), and Milestone 2 is in progress, in version 0.2.0
+of the development line. Public on `main`: numbers of one and two limbs of type `float` or
+`double`, balls and intervals around them with the [interface the two share](#intervals-and-balls),
+the [building blocks](#building-blocks) on `T`, [constants](#constants-from-fractions) built at
+compile time from an integer or a fraction, and, in headers of their own, the packed SIMD type and
+containers in structure-of-arrays form ([Vector loops](#vector-loops)). Not yet: the functions on
+arrays, the accumulator and `BallVector`, which are in review, and the later milestones. The
+kernels these operations call have checked proofs of their claims, in a model of arithmetic where
+nothing overflows and, for what they return at overflow and for infinities and NaN (results like
+those of `float` and `double`; sets: the whole line, the empty set, or an interval with an
+infinite bound) and for the intervals and the interface of the sets, in a model of IEEE 754. Not
+machine-checked: `ldexp` beyond the powers of two of `T`, `rational`, a few compositions of proved
+kernels in the headers, and the tests of bit patterns written by hand. [What holds
+today](guarantees.md) has the details. This page shows how to write a first program, choose the
+limb type and the number of limbs, compute with intervals and balls, write constants such as 1/10,
+use the building blocks, build and test the repository, use the CMake package, read what Kairn's
+checks report when something is wrong, and build this site.
 
 ## A first program
 
@@ -157,7 +163,10 @@ so in what they are good at
 
 `Ball<T, k>(X)` and `Interval<T, k>(B)` convert one into the other, each widening the set (so
 both are explicit), and `Ball<T, k>::from_interval(lo, hi)` makes a ball from two numbers of `T`
-(for two limbs with the exact midpoint for its center). Both types answer the same questions under
+(for two limbs with the exact midpoint for its center when $lo/2$ and $hi/2$ are numbers of `T`;
+when a halving is not exact, a ball that contains $[lo, hi]$ and no more is claimed: with
+$lo = hi = \eta$, the smallest subnormal number, the center is 0). Both types answer the same
+questions under
 the same names, so that an algorithm can be written once for either
 ([One enclosure interface](../reference/enclosure.md); the
 [tutorial on bisection](../tutorials/bisection.md) is such an algorithm): `lower()`, `upper()`,
@@ -165,9 +174,12 @@ the same names, so that an algorithm can be written once for either
 the signs `certainly_positive()`, `certainly_negative()`, `certainly_zero()`, `hull`,
 `intersection`, `split`, and the three-valued comparisons `kairn::less`, `less_equal`, `equal`
 and their mirrors, whose answer, a `kairn::Trit`, is *yes*, *no* or *unknown* and converts to no
-`bool`. For an interval and a ball of one limb the answers are exact; for a ball of two limbs the
-comparisons and the member tests are only *certain*, right when given and possibly not given near
-the boundary. What each function guarantees is in [What holds today](guarantees.md#intervals).
+`bool`. For an interval the answers are exact. For a ball of one limb the member and subset tests
+are exact, and the comparisons are exact when the sum of the two radii is at most the largest
+finite number of `T`; beyond, they can answer *unknown* where the answer is known, never a wrong
+one. For a ball of two limbs the signs are exact, and the comparisons and the member and subset
+tests are only *certain*, right when given and possibly not given near the boundary. What each
+function guarantees is in [What holds today](guarantees.md#intervals).
 
 ## Vector loops
 
@@ -287,9 +299,13 @@ of two:
 ```
 
 **A ball from a constant.** `Ball<T, k>(q)`, for `q` a result of `kairn::rational` or
-`kairn::integer` of $k$ limbs, is the ball of center `q.value` and radius `q.error`, which
-contains the fraction. It is how a program multiplies a ball by $1/s$, for an integer $s$, and
-keeps an enclosure, until Kairn has a division:
+`kairn::integer` of $k$ limbs, is the ball of center `q.value` and radius `q.error`, made by the
+proved constructor of a ball. It contains the fraction when `q` is what `rational` specifies,
+which rests on `rational` itself: tested for equality and, by default, checked for every constant
+computed at compile time, but not machine-checked ([above](#constants-from-fractions)). It is how
+a program
+multiplies a ball by $1/s$, for an integer $s$, and keeps an enclosure, until Kairn has a
+division:
 
 ```cpp
 --8<-- "docs/examples/cpp/building_blocks.cpp:rational"
@@ -341,11 +357,15 @@ ctest --test-dir build --output-on-failure
 Built on its own, Kairn defaults to a `Release` build, because its contraction tests check what an
 optimizing compiler does. With a multi-configuration generator (Visual Studio, Xcode), name the
 configuration instead: `cmake --build build --config Release` and `ctest --test-dir build -C
-Release --output-on-failure`. Add `--parallel N` to both of the last two commands to use N cores;
-with four, the tests took 31 to 41 seconds on an Apple M3 Max, 47 to 54 on 16 threads of a 2019
-x86-64 server and 63 to 71 on a Windows machine with 8 logical processors, and without, 133
-seconds on the first and 189 on the second
-([Time](../developer/testing.md#the-tools-tests-leave-the-quick-tier)).
+Release --output-on-failure`. Add `--parallel N` to both of the last two commands to use N cores.
+With the tests of Milestone 1, on 2026-11-19, with four, they took 31 to 41 seconds on an Apple M3
+Max, 47 to 54 on 16 threads of a 2019 x86-64 server and 63 to 71 on a Windows machine with 8
+logical processors, and without, 133 seconds on the first and 189 on the second
+([Time](../developer/testing.md#the-tools-tests-leave-the-quick-tier)). Milestone 2 more than
+tripled the tests: at its end, with four, their test step took 174 to 599 seconds on the hosted
+runners of the CI, and on the test machines 81 to 85 seconds with eight on the Mac and 67 to 108
+with sixteen on the Linux machine; no time with four on a test machine is recorded for them
+([Time](../developer/testing.md#time)).
 
 These commands run the quick tier, the tests of the library with your compiler and flags, and
 ctest says so when it starts and when it ends. The full tier, everything that left the quick tier
@@ -357,9 +377,11 @@ is one more command after the same build:
 ctest --test-dir build/tests/full --output-on-failure
 ```
 
-With `--parallel 4` it took five to six minutes on the Mac, nine and a half on the Linux machine
-and eleven on the Windows machine. [Testing](../developer/testing.md#the-full-tier) lists its
-tests, and the CI runs both tiers on every push and pull request.
+With the tests of Milestone 1, on 2026-11-19, with `--parallel 4`, it took five to six minutes on
+the Mac, nine and a half on the Linux machine and eleven on the Windows machine; with those of
+Milestone 2, longer ([Time](../developer/testing.md#time)).
+[Testing](../developer/testing.md#the-full-tier) lists its tests, and the CI runs both tiers on
+every push and pull request.
 
 The tests of the quick tier:
 
@@ -409,19 +431,21 @@ C++20, and there is nothing to compile. Its headers today:
 
 | Header | Content |
 |---|---|
-| `kairn/kairn.hpp` | All of the following. |
+| `kairn/kairn.hpp` | All of the following but `kairn/packed.hpp` and `kairn/soa.hpp`. |
 | `kairn/expansion.hpp` | `kairn::Expansion<T, 1>` and `kairn::Expansion<T, 2>`, `T` = `float` or `double`, and their operations. |
 | `kairn/ball.hpp` | `kairn::Ball<T, 1>` and `kairn::Ball<T, 2>`; it includes `interval.hpp`. |
 | `kairn/interval.hpp` | `kairn::Interval<T, 1>` and `kairn::Interval<T, 2>`, the conversions between intervals and balls, and the relations of IEEE 1788 (`kairn::ieee1788`). |
 | `kairn/enclosure.hpp` | The types the two share: `kairn::Trit` with `kairn::certainly` and `kairn::possibly`, `kairn::Split` and `kairn::MidRad` ([One enclosure interface](../reference/enclosure.md)). |
 | `kairn/blocks.hpp` | The [building blocks](#building-blocks) on `T`: `two_sum`, `fast_two_sum`, `two_prod`, `next_up`, `next_down`, `radd`, `rmul`, the sums and products rounded down and up. |
 | `kairn/rational.hpp` | `kairn::rational`, `kairn::integer` and `kairn::Constant` ([above](#constants-from-fractions)). |
+| `kairn/packed.hpp` | `kairn::Packed<T, k>` and `kairn::PackedMask<T>`, numbers in SIMD registers ([Vector loops](#vector-loops)); not included by `kairn/kairn.hpp`. |
+| `kairn/soa.hpp` | `kairn::SoA<T, k>` and its views, numbers stored as one array per limb ([Vector loops](#vector-loops)); not included by `kairn/kairn.hpp`. |
 | `kairn/traits.hpp` | `kairn::traits<X>`: limb type, number of limbs, precision, and the error constants of the proved operations. |
 | `kairn/environment.hpp` | `kairn::self_test()` and `kairn::environment_ok()`. |
 | `kairn/config.hpp` | The checks of the compiler's flags, the marker `kairn::unverified`, and the macros `KAIRN_CHECKS`, `KAIRN_ENVIRONMENT_FAILURE`, `KAIRN_K1_CONTRACT`, `KAIRN_ENCLOSURE_CODE`. |
 | `kairn/version.hpp` | `KAIRN_VERSION_MAJOR`, `KAIRN_VERSION_MINOR`, `KAIRN_VERSION_PATCH`, `KAIRN_VERSION_STRING` and `KAIRN_VERSION` (configuring fails if they disagree with the version in `CMakeLists.txt`), and `KAIRN_VERSION_AT_LEAST(major, minor, patch)` ([above](#building-blocks)). |
 | `kairn/definitions.hpp` | The definitions of the operations of `Ball`, for one file of a program built with `KAIRN_ENCLOSURE_CODE_EXTERNAL` ([below](#compile-time-and-the-operations-of-ball)); nothing in the other settings. |
-| `kairn/ball_operations.hpp`, `kairn/gen/` | The operations of `Ball` that `ball.hpp` and `definitions.hpp` include, and the generated kernels and data the headers above use; not an interface to call directly. |
+| `kairn/ball_operations.hpp`, `kairn/interval_operations.hpp`, `kairn/gen/` | The operations of `Ball` and of `Interval` that round, which `ball.hpp`, `interval.hpp` and `definitions.hpp` include, and the generated kernels and data the headers above use; not an interface to call directly. |
 
 A project can add the source tree (directly, or through `FetchContent`), as the
 `consume.add_subdirectory` test does, with `KAIRN_SOURCE_DIR` the path of the checkout:
@@ -467,16 +491,11 @@ is:
 | `KAIRN_ENCLOSURE_CODE_OUTLINED` | ordinary functions that the compiler is asked not to inline: each file compiles each operation once, whatever the number of its calls | a file with many ball operations in a few functions compiles too slowly or uses too much memory, and the build stays as simple as it is; with Clang it saves as much as external |
 | `KAIRN_ENCLOSURE_CODE_EXTERNAL` | declared only; one file of the program defines them | the same, when many files use balls and the program would rather compile the operations once in all; with GCC, which compiled an external unit 1.1 to 2.4 times as fast as an outlined one |
 
-```cpp
-// In every file of the program, or with -DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL:
-#define KAIRN_ENCLOSURE_CODE KAIRN_ENCLOSURE_CODE_EXTERNAL
-#include <kairn/kairn.hpp>
-
-// And in exactly one file, compiled with the same settings as the others:
-#include <kairn/definitions.hpp>
-```
-
-With CMake, the definition can go on the targets
+For the external setting, every file of the program defines `KAIRN_ENCLOSURE_CODE` as
+`KAIRN_ENCLOSURE_CODE_EXTERNAL` before it includes `kairn/kairn.hpp` (or is compiled with
+`-DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL`), and exactly one file, compiled with the
+same settings as the others, includes `kairn/definitions.hpp`, as Kairn's own tests do
+(`tests/api/definitions.cpp`). With CMake, the definition can go on the targets
 (`target_compile_definitions(app PRIVATE KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL)`), and the
 one file into one of them. `kairn::kairn` builds nothing: the file is the program's own, so that it
 is compiled with the program's compiler and flags, `KAIRN_CHECKS` and `KAIRN_ENVIRONMENT_FAILURE`

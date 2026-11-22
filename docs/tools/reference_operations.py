@@ -64,8 +64,8 @@ GROUPS = [
     ("ball", "Ball operations", "Arithmetic on balls: the result contains every result on points of the operands; "
      "and the interface a ball shares with an interval ([One enclosure interface](enclosure.md)): its bounds, the "
      "member and subset tests, the signs, the three-valued comparisons, the hull, the intersection, the split and "
-     "the conversions. Of one limb the predicates and the comparisons are exact; of two they are certain but the "
-     "signs, which are exact."),
+     "the conversions. Of one limb the predicates are exact, and the comparisons exact when the sum of the radii "
+     "is at most the largest finite number of `T`; of two they are certain but the signs, which are exact."),
     ("intervals", "Interval operations",
      "`Interval<T, k>` (`kairn/interval.hpp`): its constructors, the arithmetic of intervals of numbers of `T` and "
      "of two limbs, whose result contains every result on members of the operands, unbounded and empty intervals "
@@ -551,8 +551,13 @@ KERNELS = {
         "blocks", "TwoProd: an exact product as two limbs",
         form("two_prod(a, b)", T, T, result="ProductAndError<T>",
              note="`constexpr`, through Dekker's product ([`two_prod_dekker`](two_prod_dekker.md)) in constant "
-                  "evaluation: the same values when the product is exact, each its own error term below the "
-                  "threshold; rounds; `r.product` is $p$ and `r.error` is $e$"),
+                  "evaluation; not a constant expression on finite operands on which an operation of Dekker's "
+                  "product overflows (a program that needs one does not compile; the message names "
+                  "`two_prod_overflows_in_constant_evaluation`, or with GCC the operation): it is one when "
+                  "$\\lvert a\\rvert, \\lvert b\\rvert \\le 2^{996}$ and $\\lvert ab\\rvert \\le 2^{1023}$ "
+                  "($2^{115}$ and $2^{127}$ for `float`), a sufficient condition, not an exact one; where it is "
+                  "one, the same values when the product is exact, each its own error term below the threshold; "
+                  "rounds; `r.product` is $p$ and `r.error` is $e$"),
     ),
     "next_up": page(
         "blocks", "The next number of T above a value",

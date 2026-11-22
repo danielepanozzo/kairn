@@ -10,15 +10,18 @@
 // limb, a ball's negation, states, sign predicates and constants, and the building blocks on T
 // but mul_down and mul_up (blocks.hpp), each against values computed by hand, with the same bits at
 // run time where milestone2.md says so ("The two executions of a product") and the same values
-// where a zero can differ in sign; and of intervals (interval.hpp) the constructors, the states,
-// the bounds, the negation, the hull, the intersection, the midpoint, the radius, the split and
-// the conversions, and of a ball the functions of the interface it shares with intervals, the
-// empty set and the whole line through each. Not yet: the products of two limbs, ldexp and half on
-// two limbs and on balls, and the Ball and Interval arithmetic: their kernels have fused operations
-// without a constant-evaluation variant, or their code is where KAIRN_ENCLOSURE_CODE puts it
-// (main() checks the arithmetic of intervals at run time, against values computed by hand).
-// mul_down and mul_up are not constexpr, by design (api.reject.not_constexpr.*); main() checks them
-// at run time.
+// where a zero can differ in sign (two_prod also at the largest operands on which constant
+// evaluation computes it, and just above 2^(2p-1) eta, with the same bits; where an operation of
+// Dekker's product overflows it is not a constant expression, api.reject.two_prod.*, and run time
+// gives the finite error term, also to a static initialization tried at compile time); and of
+// intervals (interval.hpp) the constructors, the states, the bounds, the negation, the hull, the
+// intersection, the midpoint, the radius, the split and the conversions, and of a ball the
+// functions of the interface it shares with intervals, the empty set and the whole line through
+// each. Not yet: the products of two limbs, ldexp and half on two limbs and on balls, and the Ball
+// and Interval arithmetic: their kernels have fused operations without a constant-evaluation
+// variant, or their code is where KAIRN_ENCLOSURE_CODE puts it (main() checks the arithmetic of
+// intervals at run time, against values computed by hand). mul_down and mul_up are not constexpr,
+// by design (api.reject.not_constexpr.*); main() checks them at run time.
 // Also: KAIRN_VERSION_AT_LEAST, in #if and in a constant expression.
 //
 // The comparisons are evaluated with NaN operands too: one compiler's constant evaluator takes
@@ -263,6 +266,44 @@ concept can_two_sum = requires(X x, Y y) { kairn::two_sum(x, y); };
 template <class X>
 concept can_next_up = requires(X x) { kairn::next_up(x); };
 
+// The operands of two_prod at the edges of its constant evaluation, which runs Dekker's product
+// (blocks.hpp), and the run-time results, computed at run time by both algorithms. Veltkamp's
+// split of a has a leading half ah of floor(p/2) bits; Dekker's product computes a b and ah bh,
+// and the latter overflows first when ah is a rounded up.
+template <class T>
+struct ProductEdges;
+template <>
+struct ProductEdges<double> {
+    // The largest a whose square is a constant expression: the split of the next number,
+    // 0x1.ffffffcp+511, is 2^512, whose square overflows.
+    static constexpr double square = 0x1.ffffffbffffffp+511;
+    static constexpr double square_product = 0x1.ffffff7ffffffp+1023, square_error = -0x1.fffffeffffffep+969;
+    // The largest a whose split does not overflow, times 2/3 rounded.
+    static constexpr double split = 0x1.ffffffbffffffp+996, two_thirds = 0x1.5555555555555p-1;
+    static constexpr double split_product = 0x1.5555552aaaaaap+996, split_error = -0x1.5555552aaaaaap+942;
+    // A product of Omega: top_a times the largest b for which it does not overflow.
+    static constexpr double top_a = 0x1.b07b6cd0ef55p+511, top_b = 0x1.2f11b5230d0c3p+512;
+    static constexpr double top_error = 0x1.34eafe2d76fcp+969;
+    // Just above 2^(2p-1) eta, an error term of p bits: 2/3 times 3/2 (1 + 2u) times 2^-969.
+    static constexpr double low_b = 0x1.8000000000001p-969, low_error = 0x1.aaaaaaaaaaaaap-1023;
+    // The operands of api.reject.two_prod.overflows_in_constant_evaluation.double, where ah bh
+    // overflows and a b does not, and the run-time result.
+    static constexpr double over = 0x1.fffffffffffffp+511;
+    static constexpr double over_product = 0x1.ffffffffffffep+1023, over_error = 0x1p+918;
+};
+template <>
+struct ProductEdges<float> {
+    static constexpr float square = 0x1.ffeffep+63f;  // the next number, 0x1.fffp+63, splits as 2^64
+    static constexpr float square_product = 0x1.ffdffcp+127f, square_error = 0x1.004004p+102f;
+    static constexpr float split = 0x1.ffep+115f, two_thirds = 0x1.555556p-1f;
+    static constexpr float split_product = 0x1.554p+115f, split_error = 0x1.554p+90f;
+    static constexpr float top_a = 0x1.5b8dap+63f, top_b = 0x1.7920bap+64f;
+    static constexpr float top_error = 0x1.b1cc8p+102f;
+    static constexpr float low_b = 0x1.800002p-102f, low_error = -0x1.55555p-129f;
+    static constexpr float over = 0x1.fffffep+63f;
+    static constexpr float over_product = 0x1.fffffcp+127f, over_error = 0x1p+80f;
+};
+
 // The building blocks on T (blocks.hpp), the scaling, the predicates and the constant of a ball.
 // Every expected value is written in terms of u = 2^-p, eta and Omega, computed by hand.
 template <class T>
@@ -335,6 +376,34 @@ struct Blocks {
     static_assert(p2.product == 1 + 4 * u && p2.error == 4 * u * u);
     static_assert(kairn::two_prod(T(3), T(0.5)).product == T(1.5) && kairn::two_prod(T(3), T(0.5)).error == 0);
     static_assert(kairn::two_prod(kairn::unverified(T(0)), T(5)).product == 0);
+    // At the edges: the largest operands on which no operation of Dekker's product overflows
+    // (where one does, two_prod is not a constant expression: api.reject.two_prod.*), and just
+    // above 2^(2p-1) eta; each the run-time result, with the same bits at run time
+    // (blocks_run_time).
+    using X = ProductEdges<T>;
+    static constexpr T threshold = eta / (2 * u * u);  // 2^(2p-1) eta
+    static constexpr kairn::ProductAndError<T> p_square = kairn::two_prod(X::square, X::square);
+    static_assert(p_square.product == X::square_product && p_square.error == X::square_error);
+    static constexpr kairn::ProductAndError<T> p_split = kairn::two_prod(X::split, X::two_thirds);
+    static_assert(p_split.product == X::split_product && p_split.error == X::split_error);
+#if !defined(_MSC_VER) || defined(__clang__)
+    static constexpr kairn::ProductAndError<T> p_top = kairn::two_prod(X::top_a, X::top_b);
+    static_assert(p_top.product == omega && p_top.error == X::top_error);
+#else
+    // MSVC, for float only: the exact product of these two exceeds the largest finite number and
+    // rounds to it, which is no overflow in IEEE 754 and is one to MSVC's constant evaluation of
+    // a float product (warning C4056, "overflow in floating-point constant arithmetic", then
+    // C2131); the double product is a constant expression there too. The operands are outside
+    // the sufficient condition that the documentation gives, |a b| <= 2^(emax - 1), and
+    // blocks_run_time checks their run-time result with every compiler.
+    static_assert(sizeof(T) == sizeof(float) || (kairn::two_prod(X::top_a, X::top_b).product == omega &&
+                                                 kairn::two_prod(X::top_a, X::top_b).error == X::top_error));
+#endif
+    static constexpr kairn::ProductAndError<T> p_low = kairn::two_prod(1 + 2 * u, threshold * (1 + 6 * u));
+    static_assert(p_low.product == threshold * (1 + 8 * u) && p_low.error == threshold * 12 * u * u);
+    static constexpr kairn::ProductAndError<T> p_low_bits = kairn::two_prod(X::two_thirds, X::low_b);
+    static_assert(p_low_bits.error == X::low_error);  // and a b >= 2^(2p-1) eta:
+    static_assert(p_low_bits.product > threshold || (p_low_bits.product == threshold && p_low_bits.error > 0));
 
     // next_up and next_down: every row of milestone2.md's table, on the bit pattern.
     static_assert(bits(kairn::next_up(one)) == bits(T(1 + 2 * u)) && bits(kairn::next_down(one)) == bits(T(1 - u)));
@@ -720,6 +789,27 @@ template struct Enclosure<float>;
 
 int failures = 0;
 
+// kairn::two_prod in the initialization of a variable of static storage duration that is not
+// constexpr, on operands where a partial product of Dekker's overflows: the initializer is first
+// tried as a constant expression, which the check of two_prod refuses, so the variable is
+// initialized at run time, with the run-time result (before the check, Clang initialized it with an
+// infinite error term). Not with MSVC, with which this test was not run: there constant folding
+// that overflows is a warning (C4756), an error under /WX.
+#if !defined(_MSC_VER) || defined(__clang__)
+const kairn::ProductAndError<double> static_over_double =
+    kairn::two_prod(ProductEdges<double>::over, ProductEdges<double>::over);
+const kairn::ProductAndError<float> static_over_float =
+    kairn::two_prod(ProductEdges<float>::over, ProductEdges<float>::over);
+template <class T>
+const kairn::ProductAndError<T>& static_over() {
+    if constexpr (sizeof(T) == 8) {
+        return static_over_double;
+    } else {
+        return static_over_float;
+    }
+}
+#endif
+
 template <class T>
 void same(const char* what, T run_time, T compile_time) {
     if (!(run_time == compile_time || (run_time != run_time && compile_time != compile_time))) {
@@ -796,6 +886,40 @@ void blocks_run_time() {
         expect("two_prod below the threshold: error terms within 2 eta", d <= 2 * eta && -d <= 2 * eta);
         const auto o = kairn::two_prod(T(v_omega), T(v_three));
         expect("two_prod that overflows: +inf and -inf", o.product == inf && o.error == -inf);
+        // The edges of constant evaluation (Blocks): the same bits at run time.
+        using X = ProductEdges<T>;
+        volatile T v_square = X::square, v_split = X::split, v_two_thirds = X::two_thirds, v_top_a = X::top_a;
+        volatile T v_top_b = X::top_b, v_low_b = X::low_b, v_low_a = 1 + 2 * u, v_low_c = C::threshold * (1 + 6 * u);
+        const auto e1 = kairn::two_prod(T(v_square), T(v_square));
+        same_bits("two_prod, the largest square, product", e1.product, C::p_square.product);
+        same_bits("two_prod, the largest square, error", e1.error, C::p_square.error);
+        const auto e2 = kairn::two_prod(T(v_split), T(v_two_thirds));
+        same_bits("two_prod, the largest split, product", e2.product, C::p_split.product);
+        same_bits("two_prod, the largest split, error", e2.error, C::p_split.error);
+        const auto e3 = kairn::two_prod(T(v_top_a), T(v_top_b));
+        // Against the values that Blocks asserts of p_top where it is a constant expression (not
+        // with MSVC: see there).
+        same_bits("two_prod, a product of Omega, product", e3.product, C::omega);
+        same_bits("two_prod, a product of Omega, error", e3.error, X::top_error);
+        const auto e4 = kairn::two_prod(T(v_low_a), T(v_low_c));
+        same_bits("two_prod just above 2^(2p-1) eta, product", e4.product, C::p_low.product);
+        same_bits("two_prod just above 2^(2p-1) eta, error", e4.error, C::p_low.error);
+        const auto e5 = kairn::two_prod(T(v_two_thirds), T(v_low_b));
+        same_bits("two_prod just above 2^(2p-1) eta, p bits, product", e5.product, C::p_low_bits.product);
+        same_bits("two_prod just above 2^(2p-1) eta, p bits, error", e5.error, C::p_low_bits.error);
+        // Where a partial product of Dekker's overflows, which constant evaluation refuses
+        // (api.reject.two_prod.*): at run time the finite error term, and in the initialization of
+        // a variable of static storage duration that is not constexpr, the same.
+        volatile T v_over = X::over;
+        const auto e6 = kairn::two_prod(T(v_over), T(v_over));
+        same_bits("two_prod, ah bh overflows, product", e6.product, X::over_product);
+        same_bits("two_prod, ah bh overflows, error", e6.error, X::over_error);
+#if !defined(_MSC_VER) || defined(__clang__)
+        same_bits("two_prod, ah bh overflows, static initialization, product", static_over<T>().product,
+                  X::over_product);
+        same_bits("two_prod, ah bh overflows, static initialization, error", static_over<T>().error,
+                  X::over_error);
+#endif
     }
     // next_up, next_down, radd, rmul: the same bits.
     same_bits("next_up(1)", kairn::next_up(one), kairn::next_up(T(1)));

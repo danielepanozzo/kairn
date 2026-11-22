@@ -157,8 +157,11 @@ p(1/10) = -0.19:
   Interval<double, 1>    [-0.19000000000000006, -0.18999999999999997]
 ```
 
-Both contain $p(1/10) = -0.19$ exactly, which the program checks by subtracting the enclosure of
-$-19/100$ from each and finding 0 in the difference. The interval of one limb has the precision of
+Both contain $p(1/10) = -0.19$ if the enclosures of $1/10$ made from `kairn::rational` contain
+$1/10$, which rests on `rational`: tested and checked, not machine-checked
+([Constants from fractions](../reference/rational.md)). The program checks that each result has a
+point in common with the enclosure of $-19/100$: their difference contains 0. The interval of one
+limb has the precision of
 `double`; the ball of two limbs about 30 digits. An interval of two limbs would be about as
 precise, at more than twice the cost: a sum of balls of two limbs is about 23 rounded operations,
 a sum of intervals of two limbs about 56

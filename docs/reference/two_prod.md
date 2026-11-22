@@ -14,7 +14,7 @@ $$p + e \approx a b.$$
 
 | Form | Operands | Result | Note |
 |---|---|---|---|
-| `two_prod(a, b)` | `T`, `T` | `ProductAndError<T>` | `constexpr`, through Dekker's product ([`two_prod_dekker`](two_prod_dekker.md)) in constant evaluation: the same values when the product is exact, each its own error term below the threshold; rounds; `r.product` is $p$ and `r.error` is $e$ |
+| `two_prod(a, b)` | `T`, `T` | `ProductAndError<T>` | `constexpr`, through Dekker's product ([`two_prod_dekker`](two_prod_dekker.md)) in constant evaluation; not a constant expression on finite operands on which an operation of Dekker's product overflows (a program that needs one does not compile; the message names `two_prod_overflows_in_constant_evaluation`, or with GCC the operation): it is one when $\lvert a\rvert, \lvert b\rvert \le 2^{996}$ and $\lvert ab\rvert \le 2^{1023}$ ($2^{115}$ and $2^{127}$ for `float`), a sufficient condition, not an exact one; where it is one, the same values when the product is exact, each its own error term below the threshold; rounds; `r.product` is $p$ and `r.error` is $e$ |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 

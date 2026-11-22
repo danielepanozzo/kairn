@@ -29,12 +29,39 @@ wrong, never a proof of it. Where a point is not settled it is in the
 
 **State at the end of the milestone, 2026-11-21.** The paragraph above is the state in which the
 page was reviewed. Since, every kernel and every loop over arrays of this page has been generated
-and proved, in the real model and in the IEEE model, with three exceptions that are not generated
-and say so where they are: `bv_axpy_k` and `bv_norm_upper_k`, which are compositions of generated
-kernels ([BallVector](#ballvector)), and the conversions between limb types, which moved to
-Milestone 3 ([Limbs of another type](#limbs-of-another-type)). `gen/kernels/` holds 223 kernels
-and 44 loops over arrays, of which 160 kernels and the 44 loops are of this milestone, all with
-the status `proved`, and the audits print the assumptions of 1 299 theorems. The truth of what
+and proved, with three exceptions that are not generated and say so where they are: `bv_axpy_k`
+and `bv_norm_upper_k`, which are compositions of generated kernels ([BallVector](#ballvector)),
+and the conversions between limb types, which moved to Milestone 3
+([Limbs of another type](#limbs-of-another-type)). `gen/kernels/` holds 223 kernels and 44 loops
+over arrays, of which 160 kernels and the 44 loops are of this milestone, all with the status
+`proved`, and the audits print the assumptions of 1 378 theorems (the `Print Assumptions` lines of
+`proofs/gen/Audit.v`, `proofs/gen/IeeeAudit.v` and `proofs/audit/HandAudit.v`: 173, 302 and 903).
+In which model, for the 160 kernels of this milestone:
+
+- **101 have the generated statement of their claims in the IEEE model**, with overflow,
+  infinities and NaN (`ieee_status: proved` in `gen/claims.json`). 86 are stated in that model
+  only: the interval kernels, the kernels of the enclosure interface of a ball, the full kernels of
+  the exact scaling of a ball, `mul_ext_2_2` and the finishes of the loops. 15 have a statement
+  in the real model too: the sums and products of one limb rounded down and up and their entry
+  forms, `mul_dir_1`, `next_up`, `next_down`, `radd_entry` and `bv_center_2`.
+- **59 are stated in the real model**, and in the IEEE model as follows. 34 have generated
+  statements for finite operands, proved (that the result is the real model's when it is finite,
+  the claims, that the leading limb of the result is finite only if those of the operands are):
+  the steps of the loops (`sub_1_1`, `neg_1` and `bv_center_entry_1` among them), the eight
+  kernels of the accumulator, `two_sum_ord` and `fast_two_sum_entry`. 9 have theorems written by
+  hand and no generated statement: the bounds of two limbs on which the interval kernels rest,
+  `add_ball_2_2`, `add_down_2_2`, `add_up_2_2`, `sub_down_2_2`, `sub_up_2_2`, `mul_ball_2_2` and
+  `mul_dir_2_2` (their values when finite, and thresholds below which they are finite), and
+  `bound_dot_1`, `bound_dot_2` (the real model's values when finite). 5 have only the theorems of
+  the two executions of a product: `bound_sum_1`, `bound_sum_2`, `ball_mul_pow2_1`,
+  `ball_mul_pow2_2` and `bv_mul_pow2_radius`. 11 have no IEEE-model theorem of their own: the
+  radius kernels of the ball vectors, `conv_radius`, the steps and the combination of the loop of
+  maxima, whose models the IEEE-model theorems of the loops that contain them use, and
+  `two_sum_entry`, the kernel of the public `two_sum`, which is stated for finite operands.
+- **Every one of the 44 loops** has its generated statements in both models, proved.
+
+(Corrected on 2026-11-21: this note first said that every kernel was proved in the real model and
+in the IEEE model, and gave 1 299 theorems, the count at commit `7372767`.) The truth of what
 each kernel computes and claims is its description in `gen/kernels/`, `gen/claims.json` and the
 generated statements of `proofs/gen/`, read as
 [the architecture page](../architecture.md#claims-of-milestone-2) says. Many listings and
@@ -43,8 +70,10 @@ duplicated an operation, or a rule of the generator refused a form; each change 
 it is, with its date, and the first text is kept where it is part of the record. Where this page
 asks more than is claimed, a note headed **Claimed less than this page asks** says what is
 claimed and proved, and the owner rules on each. The public headers of this tree are those of
-`Interval`, `Ball`, the building blocks and `rational`: no public function calls the folds, the
-bounds as functions of $n$, the accumulator or the ball vectors yet (the list
+`Interval`, `Ball`, the building blocks and `rational`, and those of `Packed` and the containers
+(`kairn/packed.hpp`, `kairn/soa.hpp`, [Packed type and containers](#packed-type-and-containers)):
+no public function calls the folds, the bounds as functions of $n$, the accumulator or the ball
+vectors yet (the list
 `KAIRN_NOT_PUBLIC_YET` of `tests/CMakeLists.txt`), so what this page says of those headers is
 still a design.
 
@@ -80,8 +109,13 @@ not claimed.
   covers every order of summation, and it is proved, with the bounds of the sums and dot
   products that follow from it; the bound is exported as a function of $n$ that is itself to
   be a generated, proved kernel. `BallVector` is built on top of them. *As built (2026-11-21):*
-  the folds, the maps, the convolutions, the bounds `bound_sum_k` and `bound_dot_k`, the
-  kernels of the accumulator and the ball vectors are generated and proved in both models.
+  the folds, the maps, the convolutions and the ball vectors, the loops, are generated and proved
+  in both models. The bounds `bound_sum_k` and `bound_dot_k` and the kernels of the accumulator
+  are generated and proved in the real model; in the IEEE model the accumulator's kernels have
+  generated statements for finite operands, proved, `bound_dot_k` a theorem written by hand
+  (its values are the real model's when finite), and `bound_sum_k` only the theorems of the two
+  executions of a product (the state at the end of the milestone, at the top of this page).
+  (Corrected on 2026-11-21: this note first said all of them were proved in both models.)
 - **Three things are not machine-checked by design** and are recorded as such: the integer code
   of `rational`, the compositions the headers make of proved kernels where this page says so,
   and the semantics of IEEE 1788, which are a reading: of the text of IEEE Std 1788.1-2017 for
@@ -530,12 +564,55 @@ returned is unspecified in both.
   was written (`split`, `two_prod_dekker`, `mul_pow2_2`, `mul_pow2_2_full`, `ball_mul_pow2_k`
   and their full forms); for the kernels the rule made `constexpr` since, named above, the two
   executions are compared by the generator's tests only (`test_interp.py`,
-  `TwoExecutionsOfAProduct`). This is a lemma and a printer rule, not the "variant kernels with proofs of their
+  `TwoExecutionsOfAProduct`). (That was the state when this note was written; the two executions
+  are proved since for every such kernel, thirty of this rule among 63: see the state below.)
+  This is a lemma and a printer rule, not the "variant kernels with proofs of their
   own" of [deviation 14](phase0/decisions.md#deviations-from-the-brief-flagged); those remain
   necessary for every kernel with an FMA whose addend is not zero: `two_prod` has one, and the
   two-limb products and the radius of a `Ball` operation need theirs.
 - `next_up`, `next_down` and `radd` are `constexpr` today, with the same bits, which the
   generator's tests assert for every kernel without a fused operation.
+
+**State on 2026-11-21.** Proved now, in the IEEE model, for every kernel whose C++ computes an
+operation otherwise in constant evaluation than at run time, 63 kernels: the thirty that the rule
+makes `constexpr` (the ten named above, the bound kernels of the folds, the steps of `axpy` and of
+the scalings, and the conversions of intervals and balls that halve with `prod`), and 33 that are
+`constexpr` without any product but guard an operand or fix up a non-finite result (the entry
+kernels and steps, the constructors of `Expansion`, `Ball` and `Interval`, the sums and
+differences of a pair and a `T`, and the full sums and differences): on every operand, finite,
+infinite or NaN, and for every choice of NaN in each execution, the listing as constant evaluation
+runs it and the generated model of run time return outputs of the same value and the same masks,
+with no hypothesis (`IeeeTwoExecutions.v`, one theorem `K_two_executions` per kernel). The model
+of constant evaluation covers the three operations whose C++ differs there, not the product
+alone: the plain product; the guard, which returns its operand where run time adds $+0$; and
+`times_inf`, which compares instead of multiplying (`times_inf_ce`). `IeeeWith.v` takes the three
+as arguments and defines their forms of constant evaluation from the C++, and each is proved to
+give the value of its form of run time on every operand. Each theorem has as its type a statement
+the generator prints, `K_two_executions_spec`, which the generated audit checks, so that a kernel
+whose C++ comes to dispatch without its theorem fails the proofs build: no kernel `constexpr`
+without a variant is left with a difference and without a theorem. Still resting on the generator
+and its tests rather than on a proof: that the compiled C++ is the listing (one listing prints
+both), and that the compiler evaluates constant expressions as IEEE 754 does. The exception is
+`two_prod`, `constexpr` through its variant: constant evaluation runs Dekker's product
+(`two_prod_dekker`), another algorithm, which gives the values of the run-time form only when no
+operation of it overflows and the product is not below $2^{2p-1}\eta$; below that threshold its
+error term is another, within $\tfrac{13}{8}\eta$ instead of $\eta/2$, and where a partial
+product overflows Clang computed an infinite error term at compile time (GCC refused the
+program).
+
+*As built (2026-11-21), the overflow.* `kairn::two_prod` is not a constant expression on finite
+operands where an operation of Dekker's product overflows: after the kernel, in constant
+evaluation only, finite operands with an error term that is not finite reach a function that is
+not `constexpr`, so the program does not compile with any compiler, instead of getting at compile
+time an infinite error term where run time gives a finite one. A variable of static storage
+duration that is not `constexpr` is then initialized at run time, with the run-time value. It is
+a test of bits after the kernel; no arithmetic is added and the run-time code is unchanged. A
+sufficient condition for a constant expression: $\lvert a\rvert, \lvert b\rvert \le 2^{996}$
+and $\lvert ab\rvert \le 2^{1023}$ ($2^{115}$ and $2^{127}$ for `float`). Where it is one and
+the product is zero or at least $2^{2p-1}\eta$ in magnitude, the values are those of run time
+(`two_prod_two_executions_exact`). The documentation had said that the two executions give the
+same values; it now says this
+([the decisions log](phase0/decisions.md#decisions-log), 2026-11-21).
 
 *Risk: low.*
 
@@ -1130,7 +1207,8 @@ the split of an interval (below) and `lower_as` of a `Ball<T, 2>` (in the table)
 the intersection of balls return an operand as it is in a conditional form, the first form being
 false ([Hull, intersection and split of balls](#hull-intersection-and-split-of-balls)). The predicate of the whole
 line is `is_whole()` on both types (the ruling of 2026-11-21); its kernels keep the name
-`interval_entire_k`. On this tree the public headers have the part of the interface that
+`interval_entire_k`. On this tree (the state before the public interface was completed, later on
+2026-11-21: see the note below) the public headers have the part of the interface that
 `Interval` and `Ball` had headers for when they were written: for `Interval`, the bounds,
 `lower_as` and `upper_as`, the hull and the intersection, and for one limb the midpoint, the
 radius, the split and the conversions; for `Ball`, `lower_as`, `upper_as`, the midpoint, the
@@ -1410,7 +1488,9 @@ away from a NaN and from $+\infty - \infty$, so that the ball of every pair is a
 expression. Its claim is `makes_ball` with `rel` $u$, `abs` $\eta$ and `smallest_radius`: the
 cases above, and for finite $lo \le hi$ a center within $u\lvert m\rvert + \eta$ of the midpoint
 $m$, between the bounds, with the smallest radius for it. Proved (`IeeeBallSets.v`); from
-precision 2. No public function calls it yet.
+precision 2. No public function calls it yet (the state before the public interface was
+completed on 2026-11-21: `Ball<T, 1>::from_interval` calls it since, [One enclosure
+interface](#one-enclosure-interface)).
 
 **A ball of one limb from a ball of two.** `ball_narrow_2_1`, which the first version of this page
 did not list, is the narrowing that `Ball<T, 1>(Ball<T, 2>)` makes:
@@ -1615,7 +1695,8 @@ fact and not by a claim). `greater`,
 The four relations that only the full standard has, `less`, `precedes`, `strict_less` and
 `strict_precedes`, are not kernels of this milestone: their rows above were to be checked against
 the cases of ITF1788 first, and those are not in the repository ([question 18](#open-questions)).
-No public function and no namespace `kairn::rel` exist yet. The smallest precisions are 1 for
+No public function and no namespace `kairn::rel` exist yet (the state before the public interface
+was completed on 2026-11-21: see the note below). The smallest precisions are 1 for
 every kernel of an interval, 2 for the balls of one limb and 3 for those of two, and 1 for the
 signs of a ball.
 
@@ -2329,7 +2410,11 @@ overflow threshold for each, the negation's condition being met by every finite 
 smallest precisions: `bv_neg_k`, `bv_make_k`, `bv_add_1`, `bv_sub_1`, `bv_scale_1` 1;
 `bv_scale_2`, `bv_mul_pow2_k` 2; `bv_add_2`, `bv_sub_2` 3; `bv_conv_k` 4. Every kernel is proved
 in both models, in both orders (`BvReal.v`, `BvNegMake.v`, `BvPow2.v`, `BvConv.v`, and
-`IeeeBv.v`, `IeeeBvNegMake.v`, `IeeeBvPow2.v`, `IeeeBvConvFinite.v`, `IeeeBvConvFinite2.v`).
+`IeeeBv.v`, `IeeeBvNegMake.v`, `IeeeBvPow2.v`, `IeeeBvConvFinite.v`, `IeeeBvConvFinite2.v`):
+every one of these loops, that is; their radius kernels (`bv_add_radius_k`, `bv_scale_radius_k`,
+`bv_neg_radius`, `bv_make_radius`, `conv_radius`) are stated in the real model only, and
+`bv_mul_pow2_radius` has in the IEEE model only the theorems of the two executions of a product
+(the state at the end of the milestone, at the top of this page; noted on 2026-11-21).
 
 | Kernel | Centers | Radius | Against the entrywise `Ball` operation |
 |---|---|---|---|
@@ -2755,8 +2840,15 @@ it at compile time, and may prefer the kernels as ordinary functions. The rules 
   that is not on a critical path.
 - *As built (2026-11-21), two exceptions to forced inlining that the compilers asked for.*
   `interval_mul_2`, the largest kernel (366 operations after inlining), is an ordinary inline
-  function (`ordinary_inline:` in its description): a function that calls it 1 000 times
-  compiled in 1.8 s with GCC 16 against 212 s forced. And the end of every ball-vector loop, its
+  function (`ordinary_inline:` in its description), for the compile time of the functions that
+  call it. (Corrected on 2026-11-21: this note gave "a function that calls it 1 000 times
+  compiled in 1.8 s with GCC 16 against 212 s forced", and no stored measurement has those
+  figures: the compile times stored in `results/milestone2/` are those of the three settings of
+  `KAIRN_ENCLOSURE_CODE`, on units of balls and on units with intervals of two limbs in which
+  the kernel is already an ordinary inline function, none with it forced inline, and 212 s is the
+  time of another unit, 10 000 operations of `Ball<double, 2>` inline at `-O3` with GCC 16
+  ([Costs, Milestone 2](../results/costs-milestone2.md)). The figures are withdrawn.) And the end
+  of every ball-vector loop, its
   radius and its finish, is a function of its own that is never inlined (`KAIRN_GEN_NOINLINE`):
   inline, compilers duplicated it into the paths that leave the loop and folded or hoisted part of
   a copy, so that the fused instructions of the loop were no number of whole copies of its parts,
@@ -2998,7 +3090,8 @@ and the accumulator's radius are all proved. Wave by wave, on this tree:
   and its full form, `ldexp` and `half` of a `Ball`); 1.4 (`rational`); 1.6 (the tree theorem).
   Of 1.5, the kernels of the interface of `Ball` are generated and proved, and the public
   functions are `lower_as`, `upper_as`, the midpoint and the signs; `contains`, the comparisons
-  and `split` of a `Ball` have no public function yet. The functions that do not round lost the
+  and `split` of a `Ball` have no public function yet (the state before the public interface was
+  completed: see the note after this list). The functions that do not round lost the
   check of the rounding mode, as decided on 2026-11-20.
 - **Wave 2.** Done: 2.1 (`Interval<T, 1>`, public; the cases of ITF1788 are not converted,
   [question 18](#open-questions)), 2.2 and 2.3 (the cores of two limbs, the sums, differences and
@@ -3006,14 +3099,16 @@ and the accumulator's radius are all proved. Wave by wave, on this tree:
   (the conversions, the hull, the intersection, the midpoint and the radius, the predicates, the
   comparisons, three relations of IEEE 1788 and the subset, `ball_from_interval_k`); public are
   the hull and the intersection, and for one limb the midpoint, the radius, the split and the
-  conversions. The four relations of the full standard were not made
+  conversions (the state before the public interface was completed: see the note after this
+  list). The four relations of the full standard were not made
   ([Comparisons](#comparisons)).
 - **Wave 3.** Done: 3.1, the folds in the generator, both orders in scalar code and the lane order
   in packed code, and four more kinds of loop (maps, folds of maxima, convolutions, ball vectors);
   3.2 for the proofs: every statement of the folds, the maps and the convolutions in both models,
   and the bound kernels; the kernels and the theorem of the accumulator (3.3). Not done: the
   public functions on arrays, `traits<X>::sum(n)` and `dot(n)`, the accumulator's class and the
-  public `Packed`, `SoA` and views ([Packed type and containers](#packed-type-and-containers)).
+  public `Packed`, `SoA` and views ([Packed type and containers](#packed-type-and-containers);
+  `Packed`, `SoA` and the views are public since: see the note after this list).
 - **Wave 4.** The kernels of `BallVector` are generated and proved, V1 to V4 with the conditions
   of [BallVector](#ballvector); `bv_axpy_k` and `bv_norm_upper_k` are compositions, not kernels.
   The public `BallVector` is not on this tree.
@@ -3023,6 +3118,19 @@ and the accumulator's radius are all proved. Wave by wave, on this tree:
   (`docs/tutorials/intervals.md`), and the reference pages are generated for every kernel. No
   record of a run of the brute-force tier on the kernels of this milestone, no benchmarks and no
   report of the milestone are on this tree.
+
+*State on 2026-11-21, later the same day.* Since the list above was written, on `main`: the
+public interface of `Interval` and `Ball` is complete, every function of the table of
+[One enclosure interface](#one-enclosure-interface) for one limb and two (`contains`, the
+comparisons and `split` of a `Ball`, and the midpoint, the radius, the split and the conversions
+of an interval of two limbs, among them); `Packed`, `SoA` and the views are public
+([Packed type and containers](#packed-type-and-containers)); two more tutorials are written, on
+bisection (`docs/tutorials/bisection.md`) and on a vector loop (`docs/tutorials/vector-loop.md`);
+and the first part of the milestone's benchmarks is recorded
+([Benchmarks, Milestone 2](../results/bench-milestone2.md)). Still not on `main`: the public
+functions on arrays, `traits<X>::sum(n)` and `dot(n)`, the accumulator's class and the public
+`BallVector`. Still no record of a run of the brute-force tier on the kernels of this milestone,
+and no report of the milestone.
 
 ## Open questions
 

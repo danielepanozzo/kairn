@@ -14,7 +14,7 @@ theorem:       proofs/theories/TwoProdDekker.v two_prod_dekker_correct
 source:        Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11
 license:       algorithm: published; proof: MIT
 status:        proved
-cone_exempt:   the splits of a and b can overflow while p = RN(ab) is finite, which is why the kernel requires that no intermediate overflows; it runs in constant evaluation, where an overflow or a NaN is not a constant expression (GCC and Clang reject the program)
+cone_exempt:   the splits of a and b and the partial product ah bh can overflow while p = RN(ab) is finite (the error term is then infinite or a NaN), which is why the kernel requires that no intermediate overflows; it runs in constant evaluation, inside kairn::two_prod, which refuses there finite operands whose error term is not finite (GCC refuses an overflow and a NaN itself, Clang only a NaN: it computes an overflow to infinity)
 
 (ah, al) = split(a)
 (bh, bl) = split(b)

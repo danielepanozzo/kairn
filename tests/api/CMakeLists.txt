@@ -827,6 +827,29 @@ endif()
 _kairn_api_reject(rational.denominator_zero 17 "${_api_zero}")
 _kairn_api_reject(rational.result_fails_its_check 18 "${_api_fails}"
   "-DRATIONAL_FAULT_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/rational-fault-fixture")
+# kairn::two_prod in a constant expression on finite operands where an operation of Dekker's product,
+# which constant evaluation runs, overflows (blocks.hpp): a partial product while the product is
+# finite, and the product itself; each control is the neighboring operand where it compiles. Clang,
+# which computes an overflow to infinity, reaches the check, whose message names the function that
+# refuses; GCC refuses the overflowing product itself ("... is not a constant expression"); MSVC
+# reaches the check for double and names the function, and for float stops in the kernel, at the
+# product that overflows ("expression did not evaluate to a constant"). MSVC also refuses a float
+# product whose exact value exceeds the largest finite number and rounds to it, so the control of
+# the last case is one number lower there (reject.cpp).
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(_api_overflow "two_prod_overflows_in_constant_evaluation|expression did not evaluate to a constant")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(_api_overflow "two_prod_overflows_in_constant_evaluation|is not a constant expression")
+else()
+  set(_api_overflow "two_prod_overflows_in_constant_evaluation")
+endif()
+foreach(_case_name IN ITEMS 93:partial_product.double 94:partial_product.float 95:product.double
+                            96:product.float)
+  string(REPLACE ":" ";" _pair "${_case_name}")
+  list(GET _pair 0 _case)
+  list(GET _pair 1 _name)
+  _kairn_api_reject(two_prod.overflows_in_constant_evaluation.${_name} ${_case} "${_api_overflow}")
+endforeach()
 
 # --- The program's names ------------------------------------------------------------------------
 #

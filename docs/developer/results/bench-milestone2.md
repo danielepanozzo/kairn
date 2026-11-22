@@ -15,7 +15,7 @@ against `Ball`. Two machines, four compilers, `-O2` and `-O3`, three runs of eac
 measurements, one JSON file per run, in
 [`results/milestone2/bench/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/bench).
 It is the first part of the milestone's benchmarks: [what is still to come](#still-to-come) is
-measured on the branch that has it.
+measured later.
 
 "M3" and "Zen 2" are the two machines ([How it was measured](#how-it-was-measured)). A **loop** is a
 loop of independent operations over arrays in L1, timed per operation; a **chain** is a dependent
@@ -390,7 +390,8 @@ instead, the exact range being one point); a value known to a few units in its l
 (half-width $2^{-50}$ relative for `double`, $2^{-21}$ for `float`); the narrow sets of the timing;
 and wide sets of half-width $1/32$, as a search has. Every enclosure is the same set of arguments:
 `Interval<T, 1>` and `Interval<T, 2>` of the two bounds, `Ball<T, 1>(X)` of the interval of one
-limb, and `Ball<T, 2>::from_interval`, whose center is the exact midpoint. The width of a ball is
+limb, and `Ball<T, 2>::from_interval`, whose center is the exact midpoint when $lo/2$ and $hi/2$
+are numbers of `T` (that is the condition of its claim). The width of a ball is
 its diameter $2r$. These numbers do not depend on the compiler: every configuration gives the same
 ones, and every enclosure contained the exact range.
 
@@ -491,9 +492,10 @@ the operator of Milestone 1, which rounds the radius up); and plain floors.
 - **`lower_as` and `upper_as`** of a ball of one limb, the exact roundings $\mathrm{RD}(c - r)$ and
   $\mathrm{RU}(c + r)$, cost 1.6 to 4.4 ns for the pair, 5.5 to 11 times $c - r$ and $c + r$ in plain
   arithmetic; of a ball of two limbs, the center rounded to `T` and then the radius, 2.5 to 8.4 ns.
-- **`Ball<T, 2>::from_interval(lo, hi)`**, the ball whose center is the exact midpoint, costs 2.4 to
-  11.9 ns, 8 to 35 times the plain midpoint and half-width; **the narrowing** `Ball<T, 1>(X)` of a
-  ball of two limbs 0.68 to 2.8 ns, 1.8 to 4.3 times its plain form.
+- **`Ball<T, 2>::from_interval(lo, hi)`**, the ball whose center is the exact midpoint when both
+  halvings are exact, costs 2.4 to 11.9 ns, 8 to 35 times the plain midpoint and half-width;
+  **the narrowing** `Ball<T, 1>(X)` of a ball of two limbs 0.68 to 2.8 ns, 1.8 to 4.3 times its
+  plain form.
 - **`half(X)` costs 2.4 to 3.4 times `X * 0.5` for one limb and 1.4 to 2.2 times for two**, and
   `ldexp(X, n)` 3.1 to 4.9 and 2.1 to 3.6 times `X * 2^n`, in a loop. The exact scaling tests whether
   nothing underflowed and steps the radius twice otherwise, which the ordinary scaling, a product of
@@ -863,13 +865,18 @@ the same operands under two modes into one. Three things prevent that, and one c
 
 ## Still to come
 
-This page measures what `main` holds today. The functions of Milestone 2 that are not on `main`
-yet are measured later, on the branch that has them, with the same harness: the functions on
-arrays (sum, dot product, `axpy`, convolution, norm), `BallVector`, the accumulator, the predicates
-and comparisons of `Interval` and `Ball` (`is_empty`, `contains`, the signs, the three-valued
-comparisons, the relations of IEEE 1788), the midpoint, radius, split and conversions of intervals
-of two limbs, the hull, intersection and split of balls, and `Packed` and the containers. The
-harness takes them as new rows of its tables (`bench/README.md`, "Milestone 2").
+This page measures what `main` held at commit `dee8ecd`. Measured later, with the same harness,
+which takes them as new rows of its tables (`bench/README.md`, "Milestone 2"):
+
+- what reached `main` after that commit and is not measured here: the predicates and comparisons
+  of `Interval` and `Ball` (`is_empty`, `contains`, the signs, the three-valued comparisons, the
+  relations of IEEE 1788), the midpoint, radius, split and conversions of intervals of two limbs,
+  the hull, intersection and split of balls, and `Packed` and the containers;
+- what is not on `main` yet, in review: the functions on arrays (sum, dot product, `axpy`,
+  convolution, norm), `BallVector` and the accumulator.
+
+(State on 2026-11-21. The paragraph first written here, at `dee8ecd`, listed all of these as not
+on `main` yet.)
 
 ## How it was measured
 

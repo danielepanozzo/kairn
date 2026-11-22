@@ -525,7 +525,9 @@ public:
     /// [l, h], a finite m with l <= m <= h and, for one limb, |m - (l + h)/2| <= u |(l + h)/2| + eta,
     /// for two limbs a normalized pair with |m - (l + h)/2| <= 3u^2/(1 - 4u) |(l + h)/2| + 2 eta;
     /// 0 for the whole line; Omega, the largest finite number of T, for [l, +inf] with l finite, and
-    /// -Omega for [-inf, h]; a NaN (every limb) for the empty set. These are the values of mid in
+    /// -Omega for [-inf, h] (a finite bound of two limbs can lie beyond Omega, by less than half a
+    /// gap of T, and then this midpoint is not a member of the half-line; split() splits it at the
+    /// bound); a NaN (every limb) for the empty set. These are the values of mid in
     /// IEEE 1788, but for a bounded interval of one limb with a bound that is an odd multiple of
     /// eta, where the result is within eta and one rounding of the midpoint and need not be the
     /// midpoint rounded to nearest; for two limbs the midpoint is a canonical number in every case.

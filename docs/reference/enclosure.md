@@ -7,10 +7,11 @@ an algorithm can be written once and run on either, with one limb or two
 [tutorial on bisection](../tutorials/bisection.md) is such an algorithm). Every function is one
 generated kernel, proved in Rocq and judged by the oracle through the public interface, or one of
 the two compositions said below. What each answer means differs by the type and the number of
-limbs: for an interval and a ball of one limb the predicates and comparisons are **exact**; for a
-ball of two limbs most are only **certain**, an answer that is right when it is given and that may
-not be given near the boundary. This page says which, function by function, and what is not
-claimed. Each kernel's own page has its statement in full.
+limbs: for an interval the predicates and comparisons are **exact**; for a ball of one limb the
+predicates are exact, and the comparisons exact when the sum of the radii is at most $\Omega$,
+the largest finite number of `T`; for a ball of two limbs most are only **certain**, an answer
+that is right when it is given and that may not be given near the boundary. This page says which,
+function by function, and what is not claimed. Each kernel's own page has its statement in full.
 
 The functions are in `kairn/interval.hpp` and `kairn/ball.hpp`, and the three types they share
 (`kairn::Trit`, `kairn::Split`, `kairn::MidRad`) in `kairn/enclosure.hpp`; `kairn/kairn.hpp`
@@ -142,8 +143,12 @@ Members are real numbers: $\pm\infty$ is a bound, never a member.
 | `split()` | the empty set, twice | `Interval`: $[-\infty, p]$ and $[p, +\infty]$; `Ball`: the whole line, twice |
 | the conversion to the other type | the empty set | the whole line |
 
-For a half-line $[\ell, +\infty]$, which only an interval can be, `midpoint()` is $\Omega$ (for
-$\ell \le \Omega$), `radius()` is $+\infty$, and the conversion to a ball is the whole line.
+For a half-line $[\ell, +\infty]$, which only an interval can be, `midpoint()` is $\Omega$ for
+every finite $\ell$, `radius()` is $+\infty$, and the conversion to a ball is the whole line. A
+finite bound of two limbs can exceed $\Omega$, by less than half a gap of `T` (the pair
+$(\Omega, \mathrm{ulp}(\Omega)/4)$, for example): then the midpoint $\Omega$ is not a member of the
+half-line, which is what [`interval_mid_rad_2`](interval_mid_rad_2.md) claims, and `split()` splits
+it at $\ell$ itself.
 `certainly_positive()` is false on the empty set although "every member is positive" is vacuously
 true of it: a query about nothing answers no, and `is_empty()` is the query to make first. The
 relations of IEEE 1788 keep the standard's vacuous readings instead ([below](#ieee-1788)).
@@ -219,7 +224,7 @@ and functions Kairn does not have, and its one interval type has bounds of `bina
   $\pm\Omega$ and $+\infty$ for a half-line, NaN for the empty set); the radius of one limb the
   smallest for Kairn's midpoint;
 - the predicates `isEmpty` and `isEntire`, which are `is_empty()` and `is_whole()` here (the name
-  of `Ball::is_whole()`, public since 0.2.0, for both types);
+  of `Ball::is_whole()`, public since Milestone 1, in version 0.0.0, for both types);
 - the four relations of IEEE Std 1788.1-2017, under the standard's names in the namespace
   `kairn::ieee1788`, each returning a `bool` with the standard's readings of the empty set (it is a
   subset of every interval, interior to every interval, disjoint from every interval, and equal to
@@ -275,13 +280,14 @@ read stored values, check nothing.
 
 `constexpr`: every function of this page on intervals of one and two limbs but the midpoint, the
 radius, `mid_rad()` and the conversions of two limbs (the split of two limbs is `constexpr`); on
-balls of one limb every function but the split; on balls of two limbs the signs, the states,
-`mid_rad()` and `from_interval`. The others compute with fused operations that have no variant for
-constant evaluation (`add_ball_2_2`, the sums of balls). On the empty set and the whole line the
-listings of balls compute a NaN or $\infty - \infty$ before the selects that return their result,
-and so do the midpoint, the radius and the split of the empty interval, which GCC and Clang refuse
-in constant evaluation: those calls are not constant expressions, though they are evaluated as
-stated at run time (`api.constexpr` checks them at run time).
+balls of one limb every function but the split; on balls of two limbs `lower_as`, `upper_as`,
+`midpoint()`, `mid_rad()`, the signs, the states and `from_interval`, and the narrowing
+`Ball<T, 1>(X)` of a ball of two limbs. The others compute with fused operations that have no
+variant for constant evaluation (`add_ball_2_2`, the sums of balls). On the empty set and the
+whole line the listings of balls compute a NaN or $\infty - \infty$ before the selects that
+return their result, and so do the midpoint, the radius and the split of the empty interval,
+which GCC and Clang refuse in constant evaluation: those calls are not constant expressions,
+though they are evaluated as stated at run time (`api.constexpr` checks them at run time).
 
 ## What is tested
 

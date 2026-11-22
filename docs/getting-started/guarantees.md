@@ -194,7 +194,9 @@ kernel's page in the [reference](../reference/index.md) gives its theorem).
 
 **Not proved yet.** The two statements about `ldexp` when $2^n$ is not a number of `T`, above,
 the one about `ldexp` on one limb, and the end of the steps of `ldexp` of a ball; `rational`
-([below](#constants-from-fractions)).
+([below](#constants-from-fractions)), and with it that the ball of a constant, `Ball<T, k>(q)`
+for a result `q` of `rational` or `integer`, contains the fraction: its constructor is a proved
+kernel, but the center and the radius it is given are those of `rational`.
 And thresholds sharper than those stated. For the two-limb arithmetic, exhaustive runs on small
 formats first see an overflow at 0.55 of the overflow threshold or above for the additions and
 0.86 or above for the products, where the proved conditions are a quarter and a half of it
@@ -395,7 +397,23 @@ the comparisons and conversions, every operation of one limb, a ball's negation,
 predicates and constants, `kairn::finite::add`, `sub` and `add_fast`, `rational` and `integer`
 (below), and the building blocks on `T` but `mul_down` and `mul_up`: `next_up`, `next_down`,
 `radd` and `rmul` with the same bits as at run time, the others with the same values (`two_prod`
-through Dekker's product, the same values when its product is exact). Of intervals: the
+through Dekker's product: the same values when its product is exact, each its own error term
+below the threshold). `two_prod` is a constant expression only where Dekker's product computes
+the run-time result: on finite operands on which a split or one of its products overflows (the
+product of the leading halves can overflow where $ab$ does not) it is not one, a program that
+needs one does not compile, and the compiler's message names
+`two_prod_overflows_in_constant_evaluation`, or with GCC, which refuses an overflow itself, the
+operation. It is one when $\lvert a\rvert, \lvert b\rvert \le 2^{996}$ and
+$\lvert ab\rvert \le 2^{1023}$ ($2^{115}$ and $2^{127}$ for `float`), a sufficient condition, not
+an exact one (the square of `0x1.ffffffbffffffp+511`, above $2^{1023}$, is one; beyond the
+condition a compiler may be stricter than IEEE 754: MSVC refuses in constant evaluation a `float`
+product whose exact value exceeds the largest finite number although it rounds to it);
+`two_prod(0x1.fffffffffffffp+511, 0x1.fffffffffffffp+511)`, whose run-time error term is
+$2^{918}$, is not. A variable of static storage duration that is not `constexpr`, initialized with
+such a call, which the compiler first tries as a constant expression, is then initialized at run
+time, with the run-time result. A product that overflows is not one either, nor, with GCC or
+Clang, an infinite operand; a NaN operand is not with Clang and gives two NaN with GCC, as at run
+time. Of intervals: the
 constructors and states, the bounds, the negation, the hull, the intersection, the predicates, the
 member and subset tests, the three-valued comparisons and the relations of IEEE 1788, the split,
 and of one limb the midpoint, the radius and the conversions; and of a ball the functions of the
