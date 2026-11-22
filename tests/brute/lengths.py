@@ -96,7 +96,66 @@ def class_key(c):
     return (nums[0] + (1 if "above" in c else 0)) if nums else 1 << 30
 
 
+GROUPS = [("0 to 1", 0, 1), ("2 to 17", 2, 17), ("18 to 64", 18, 64), ("65 to 256", 65, 256),
+          ("257 to 1 024", 257, 1024), ("1 025 to 4 096", 1025, 4096)]
+
+
+def class_range(c):
+    """(lo, hi) of a length class of the oracle."""
+    nums = [int(t) for t in c.split() if t.isdigit()]
+    if "above" in c:
+        return nums[0] + 1, 1 << 62
+    return (nums[0], nums[-1]) if nums else (0, 0)
+
+
+def table(doc):
+    """Markdown: per loop and format, the statistic of its first claim that has one (as report
+    reads it: brute.entry_headlines), the closest over each group of lengths, and the lines."""
+    out = ["| Loop | Format | Quantity | " + " | ".join("length " + g[0] for g in GROUPS) + " | Arrays |",
+           "|---|---|---|" + "---|" * (len(GROUPS) + 1)]
+    for fold in sorted(doc["folds"]):
+        for fmt, res in sorted(doc["folds"][fold].items()):
+            if res.get("error"):
+                out.append("| `%s` | `%s` | %s |" % (fold, fmt, res["error"]))
+                continue
+            # Every claim with a statistic in some class, in the order of the claims; for each,
+            # the statistics of the class that holds the most of them.
+            heads = {}
+            for c in res.values():
+                for e in c["entries"]:
+                    h = brute.entry_headlines(e)
+                    if len(h) > len(heads.get(e["label"], [])):
+                        heads[e["label"]] = h
+            order = [e["label"] for c in res.values() for e in c["entries"]]
+            for label in sorted(heads, key=order.index):
+                for _, title, field, name, sign in heads[label]:
+                    rows_of(out, res, fold, fmt, label, title, field, name, sign)
+    return "\n".join(out)
+
+
+def rows_of(out, res, fold, fmt, label, title, field, name, sign):
+    """One row of the table: the closest value of one statistic over each group of lengths."""
+    cells = []
+    for _, lo, hi in GROUPS:
+        best = None
+        for c, r in res.items():
+            a, b = class_range(c)
+            if b < lo or a > hi:
+                continue
+            e = next((x for x in r["entries"] if x["label"] == label), None)
+            v = e and brute.col_value(e, field, name)
+            if v and (best is None or
+                      sign * (brute.decimal.Decimal(v[0]) - brute.decimal.Decimal(best[0])) > 0):
+                best = v
+        cells.append(brute.short(best[0]) if best else "-")
+    out.append("| `%s` | `%s` | %s | %s | %s |" % (
+        fold, fmt, title, " | ".join(cells), brute.fmt_int(sum(r["lines"] for r in res.values()))))
+
+
 def main(argv=None):
+    if argv is None and len(sys.argv) > 2 and sys.argv[1] == "table":
+        print(table(brute.read_json(sys.argv[2])))
+        return 0
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--runner", required=True, help="a runner of the line protocol, or interp")
     ap.add_argument("--seed", required=True)

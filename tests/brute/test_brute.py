@@ -325,8 +325,16 @@ class Lengths(unittest.TestCase):
                                "--folds", "sum_1", "--formats", "fp:5:-7:4", "--out", out,
                                "--jobs", "1"])
             with open(out, encoding="utf-8") as f:
-                res = json.load(f)["folds"]["sum_1"]["fp:5:-7:4"]
+                doc = json.load(f)
+            res = doc["folds"]["sum_1"]["fp:5:-7:4"]
+            text = lengths.table(doc)
         self.assertEqual(rc, 0)
+        # The table: a row per statistic of the fold's error, per order, with the arrays judged.
+        rows = [r for r in text.splitlines() if r.startswith("| `sum_1` | `fp:5:-7:4` |")]
+        self.assertTrue(rows)
+        self.assertTrue(all("largest error / bound" in r and r.endswith("| 60 |") for r in rows))
+        self.assertEqual(lengths.class_range("length 18 to 64"), (18, 64))
+        self.assertEqual(lengths.class_range("length 3"), (3, 3))
         self.assertEqual(sum(c["lines"] for c in res.values()), 60)
         self.assertTrue(all(c["problems"] == [] and c["counts"]["cases"] == c["lines"]
                             for c in res.values()))
