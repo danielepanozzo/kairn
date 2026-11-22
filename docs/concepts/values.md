@@ -137,8 +137,11 @@ fused product), the functions on arrays, the operations of `Packed` and of ball 
 accumulator's `add_product`, `error_bound()` and `ball()`. Some special values are not constant
 expressions though their functions are `constexpr` (the midpoint and the split of the empty set, the
 bounds of the empty ball and of the whole line, whose listings compute a NaN or $\infty - \infty$
-before selecting their result), and GCC and Clang refuse at compile time an operation that produces
-an infinity from finite operands, or a NaN, which is evaluated as stated at run time.
+before selecting their result), and an operation of two limbs that overflows, or one of an
+infinity, is not a constant expression with GCC or with Clang, though it is evaluated as stated at
+run time (GCC refuses an operation that produces an infinity, and both one that produces a NaN,
+which the kernel computes on the way:
+[What holds today](../getting-started/guarantees.md#constant-evaluation)).
 
 **Where the value at compile time can differ.** "The same values" means the result of run time but
 for the sign of a zero: in constant evaluation the guard is not applied, since nothing is fused

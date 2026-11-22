@@ -1513,8 +1513,10 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(const Expansion<T, 1>& x, int 
 /// constexpr, the steps included: the kernel's only fused operations are opaque products, which
 /// constant evaluation computes as plain products with the same values, proved for both
 /// executions in the IEEE model (architecture.md, "The rule of the product"), and the steps are
-/// integer bookkeeping. GCC and Clang refuse at compile time an operation that overflows or that
-/// computes on an infinity or a NaN, so such a scaling is evaluated only at run time, as a sum is.
+/// integer bookkeeping. A scaling that overflows, or of an infinity, is not a constant expression
+/// with GCC or Clang (GCC refuses an operation that produces an infinity; both refuse the NaN that
+/// the kernel computes before it selects its result), nor is one of a NaN with Clang: it is
+/// evaluated at run time, as such a sum of two limbs is.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_pow2_2_full<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> ldexp(const Expansion<T, 2>& x, int n) noexcept {

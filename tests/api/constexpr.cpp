@@ -784,7 +784,16 @@ struct Enclosure {
     // is_finite: a set neither empty nor unbounded. For an interval both bounds finite: false for the
     // empty set, the whole line and both half-lines, which no ball is; for a ball the radius finite.
     // Every state, for one limb and two (a finite bound of two limbs can lie beyond Omega: bounded).
+#if !defined(_MSC_VER) || defined(__clang__)
     static constexpr T beyond[2] = {omega, omega * u / 4};
+#else
+    // MSVC, for float only: the checks of a debug build test such a pair with x0 + x1 == x0, a sum
+    // whose exact value exceeds the largest finite number and rounds to it, which is no overflow in
+    // IEEE 754 and is one to MSVC's constant evaluation of a float sum (warning C4056, then C2131,
+    // as for the product p_top above). With this compiler the float pair is just below Omega here;
+    // the run-time cases of the same states, below, take the pair beyond Omega for both limb types.
+    static constexpr T beyond[2] = {omega, sizeof(T) == sizeof(float) ? -(omega * u / 4) : omega * u / 4};
+#endif
     static constexpr E2 big2 = E2::from_limbs(beyond);
     static_assert(I1(T(1), T(2)).is_finite() && I1().is_finite() && I1(-omega, omega).is_finite() && I1(T(3)).is_finite());
     static_assert(!I1::empty().is_finite() && !I1::whole().is_finite() && !I1(T(1), inf).is_finite() && !I1(-inf, T(1)).is_finite());
