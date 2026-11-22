@@ -277,7 +277,7 @@ def rational(c, b='m2'):
     table(c, 'kairn::rational, ns per call', [(label, time('%s/tp/%s' % (b, n))) for label, n in names], kind='time')
 
 
-COMPILE = re.compile(r'^compile-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<kind>mixed|interval2|interval1|compare|contains|setops)'
+COMPILE = re.compile(r'^compile-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<kind>mixed|interval2|interval1|compare|contains|setops|arrays|ballvectors)'
                      r'(?:-(?P<size>\d+))?(?:-r(?P<run>\d+))?$')
 
 
@@ -314,7 +314,7 @@ def compile_tables(directory):
                     cell['run_first'].append(r['run']['ns_per_op_min'])
             elif 'run' in r:
                 cell['run'].append(r['run']['ns_per_op_min'])
-    for kind in ('mixed', 'interval2', 'interval1', 'compare', 'contains', 'setops'):
+    for kind in ('mixed', 'interval2', 'interval1', 'compare', 'contains', 'setops', 'arrays', 'ballvectors'):
         present = [col for col in COLUMNS if (col[0], col[1], kind) in data]
         if not present:
             continue
@@ -1046,6 +1046,657 @@ def report2(directory):
     selftest_compile(directory)
 
 
+# --- The third part -------------------------------------------------------------------------------
+# ITEM-MACHINE-COMPILER-LEVEL-rN.json (ITEM arrays, short, acc, bv), entry-MACHINE-COMPILER-LEVEL-cK-rN.json
+# (K 1: kairn-bench-m2-LEVEL, 0: kairn-bench-m2-nocheck-LEVEL, the same program against a copy of the
+# headers without the check of the environment at entry), accuracy-MACHINE-COMPILER-LEVEL.json,
+# headers-compile-MACHINE-COMPILER.json (compile_time.py run) and compile-MACHINE-COMPILER-arrays.json,
+# -ballvectors.json (enclosure_costs.py compile).
+
+NAME3 = re.compile(r'^(?P<item>arrays|short|acc|bv)-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<level>O[23])'
+                   r'-r(?P<run>\d+)$')
+ENTRY3 = re.compile(r'^entry-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<level>O[23])-c(?P<c>[01])'
+                    r'-r(?P<run>\d+)$')
+ACC3 = re.compile(r'^accuracy-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<level>O[23])$')
+ENTRYX = re.compile(r'^entryx-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<level>O[23])-c(?P<c>[01v])'
+                    r'-r(?P<run>\d+)$')
+
+
+def load3(directory):
+    """{item: {(machine, compiler, 'inline', level): [run, ...]}}; 'entry': the runs of the ratio of each
+    function's minimum with the check to its minimum without, 'entry_diff' their difference in ns, the
+    two programs of one run index paired; 'entry_raw' the runs themselves; 'accuracy' the files of
+    kairn-bench-m2-accuracy."""
+    items, pairs, acc, triples = {}, {}, {}, {}
+    for path in sorted(glob.glob(os.path.join(directory, '*.json'))):
+        stem = os.path.basename(path)[:-len('.json')]
+        m, k, a, x = NAME3.match(stem), ENTRY3.match(stem), ACC3.match(stem), ENTRYX.match(stem)
+        if not (m or k or a or x):
+            continue
+        d = json.load(open(path))
+        d['path'] = os.path.basename(path)
+        if a:
+            acc[(a.group('machine'), a.group('compiler'), 'inline', a.group('level'))] = d
+            continue
+        d['ns'] = {r['name']: r['ns_min'] for r in d['results']}
+        if x:
+            key = (x.group('machine'), x.group('compiler'), 'inline', x.group('level'))
+            triples.setdefault(key, {}).setdefault(x.group('run'), {})[x.group('c')] = d
+            continue
+        if m:
+            key = (m.group('machine'), m.group('compiler'), 'inline', m.group('level'))
+            items.setdefault(m.group('item'), {}).setdefault(key, []).append(d)
+        else:
+            key = (k.group('machine'), k.group('compiler'), 'inline', k.group('level'))
+            pairs.setdefault(key, {}).setdefault(k.group('run'), {})[int(k.group('c'))] = d
+    ratio_, diff_, raw = {}, {}, {}
+    for key, runs_ in pairs.items():
+        for run, both in sorted(runs_.items()):
+            if 0 in both and 1 in both:
+                common = [n for n in both[1]['ns'] if n in both[0]['ns']]
+                ratio_.setdefault(key, []).append({'ns': {n: both[1]['ns'][n] / both[0]['ns'][n] for n in common}})
+                diff_.setdefault(key, []).append({'ns': {n: both[1]['ns'][n] - both[0]['ns'][n] for n in common}})
+                raw.setdefault(key, []).extend([both[1], both[0]])
+    items['entry'] = ratio_
+    items['entry_diff'] = diff_
+    items['entry_raw'] = raw
+    items['accuracy'] = acc
+    # The short ball vectors: with the check (1), without (0), and with the cold report (v), by run.
+    for name in ('x_with', 'x_diff', 'x_cold', 'x_ratio', 'x_raw'):
+        items[name] = {}
+    for key, runs_ in triples.items():
+        for run, three in sorted(runs_.items()):
+            if '1' in three and '0' in three:
+                c1, c0 = three['1']['ns'], three['0']['ns']
+                common = [n for n in c1 if n in c0]
+                items['x_with'].setdefault(key, []).append({'ns': c1})
+                items['x_diff'].setdefault(key, []).append({'ns': {n: c1[n] - c0[n] for n in common}})
+                items['x_ratio'].setdefault(key, []).append({'ns': {n: c1[n] / c0[n] for n in common}})
+                if 'v' in three:
+                    cv = three['v']['ns']
+                    items['x_cold'].setdefault(key, []).append({'ns': {n: cv[n] - c0[n] for n in common if n in cv}})
+            items['x_raw'].setdefault(key, []).extend(three.values())
+    return items
+
+
+def present_of(c):
+    return [col for col in COLUMNS if any(k[0] == col[0] and k[1] == col[1] for k in c)]
+
+
+ARRAY_SIZES = [('tp', 'L1'), ('llc', 'LLC'), ('mem', 'memory')]
+
+
+def arrays_tables(c, b='m2a'):
+    t = 'double' if b == 'm2a' else 'float'
+    rows = []
+    for k, label in (('sum1', '`sum`, one limb'), ('sum2', '`sum`, two limbs'), ('sumf2', '`sum_fast`, two limbs'),
+                     ('dot1', '`dot`, one limb'), ('dot2', '`dot`, two limbs'), ('add1', '`add`, one limb'),
+                     ('add2', '`add`, two limbs'), ('scale1', '`scale`, one limb'), ('scale2', '`scale`, two limbs'),
+                     ('axpy1', '`axpy`, one limb'), ('axpy2', '`axpy`, two limbs, a of T'),
+                     ('axpy22', '`axpy`, two limbs, a of two limbs'), ('norm1', '`norm_upper`, one limb'),
+                     ('norm2', '`norm_upper`, two limbs')):
+        for s, sl in ARRAY_SIZES:
+            rows.append(('%s, %s' % (label, sl), time('%s/%s/%s/op' % (b, s, k))))
+    for k, label in (('sum1', 'a plain sum of T, one chain'), ('dot1', 'a plain dot product of T (FMA), one chain'),
+                     ('add1', 'a plain `x + y` of T'), ('scale1', 'a plain `x a` of T'), ('axpy1', 'a plain `a x + y` of T')):
+        for s, sl in ARRAY_SIZES:
+            rows.append(('%s, %s' % (label, sl), time('%s/%s/%s/plain' % (b, s, k))))
+    for k, label in (('sum1', 'the plain sum of T in the lane order'), ('dot1', 'the plain dot product of T in the lane order')):
+        for s, sl in ARRAY_SIZES:
+            rows.append(('%s, %s' % (label, sl), time('%s/%s/%s/plainw' % (b, s, k))))
+    table(c, 'The functions on arrays, %s: ns per element' % t, rows, kind='time')
+    rows = []
+    for s, sl in ARRAY_SIZES:
+        p = '%s/%s/' % (b, s)
+        rows += [('`sum`, one limb, over the plain sum in the same order, %s' % sl, ratio(p + 'sum1/op', p + 'sum1/plainw')),
+                 ('`sum`, one limb, over the plain sum, one chain, %s' % sl, ratio(p + 'sum1/op', p + 'sum1/plain')),
+                 ('`sum`, two limbs, over the plain sum of T in the same order, %s' % sl, ratio(p + 'sum2/op', p + 'sum1/plainw')),
+                 ('`dot`, one limb, over the plain dot product in the same order, %s' % sl, ratio(p + 'dot1/op', p + 'dot1/plainw')),
+                 ('`dot`, two limbs, over the plain dot product of T in the same order, %s' % sl, ratio(p + 'dot2/op', p + 'dot1/plainw')),
+                 ('`add`, one limb, over `x + y` of T, %s' % sl, ratio(p + 'add1/op', p + 'add1/plain')),
+                 ('`add`, two limbs, over `x + y` of T, %s' % sl, ratio(p + 'add2/op', p + 'add1/plain')),
+                 ('`scale`, one limb, over `x a` of T, %s' % sl, ratio(p + 'scale1/op', p + 'scale1/plain')),
+                 ('`scale`, two limbs, over `x a` of T, %s' % sl, ratio(p + 'scale2/op', p + 'scale1/plain')),
+                 ('`axpy`, one limb, over `a x + y` of T, %s' % sl, ratio(p + 'axpy1/op', p + 'axpy1/plain')),
+                 ('`axpy`, two limbs, over `a x + y` of T, %s' % sl, ratio(p + 'axpy2/op', p + 'axpy1/plain')),
+                 ('`norm_upper`, one limb, over a plain largest magnitude, %s' % sl, ratio(p + 'norm1/op', p + 'norm1/plain'))]
+    table(c, 'The functions on arrays over the same loop of T, %s' % t, rows)
+    rows = []
+    for s, sl in ARRAY_SIZES:
+        p = '%s/%s/' % (b, s)
+        rows += [('`sum` of two limbs of one-limb data, sequential, over Sum2, %s' % sl, ratio(p + 'sum2z/seq', p + 'sum1/textbook')),
+                 ('`sum` of two limbs of one-limb data, default, over Sum2, %s' % sl, ratio(p + 'sum2z/op', p + 'sum1/textbook')),
+                 ('`dot` of two limbs of one-limb data, sequential, over Dot2, %s' % sl, ratio(p + 'dot2z/seq', p + 'dot1/textbook')),
+                 ('`dot` of two limbs of one-limb data, default, over Dot2, %s' % sl, ratio(p + 'dot2z/op', p + 'dot1/textbook')),
+                 ('`sum`, two limbs, sequential, over double-word sums written out, %s' % sl, ratio(p + 'sum2/seq', p + 'sum2/textbook')),
+                 ('`sum`, two limbs, default, over double-word sums written out, %s' % sl, ratio(p + 'sum2/op', p + 'sum2/textbook')),
+                 ('`sum_fast`, sequential, over SloppyDWPlusDW written out, %s' % sl, ratio(p + 'sumf2/seq', p + 'sumf2/textbook')),
+                 ('`dot`, two limbs, sequential, over the double-word dot product written out, %s' % sl, ratio(p + 'dot2/seq', p + 'dot2/textbook')),
+                 ('`dot`, two limbs, default, over the double-word dot product written out, %s' % sl, ratio(p + 'dot2/op', p + 'dot2/textbook')),
+                 ('`add`, two limbs, over AccurateDWPlusDW written out, %s' % sl, ratio(p + 'add2/op', p + 'add2/textbook')),
+                 ('`scale`, two limbs, over DWTimesFP3 written out, %s' % sl, ratio(p + 'scale2/op', p + 'scale2/textbook')),
+                 ('`axpy`, two limbs, a of T, over the same written out, %s' % sl, ratio(p + 'axpy2/op', p + 'axpy2/textbook')),
+                 ('`axpy`, two limbs, a of two limbs, over the same written out, %s' % sl, ratio(p + 'axpy22/op', p + 'axpy22/textbook'))]
+    table(c, 'The functions on arrays over the textbook code, %s' % t, rows)
+    rows = []
+    for s, sl in ARRAY_SIZES:
+        p = '%s/%s/' % (b, s)
+        rows += [('`sum`, one limb, %s' % sl, ratio(p + 'sum1/seq', p + 'sum1/op')),
+                 ('`sum`, two limbs, %s' % sl, ratio(p + 'sum2/seq', p + 'sum2/op')),
+                 ('`sum_fast`, two limbs, %s' % sl, ratio(p + 'sumf2/seq', p + 'sumf2/op')),
+                 ('`dot`, one limb, %s' % sl, ratio(p + 'dot1/seq', p + 'dot1/op')),
+                 ('`dot`, two limbs, %s' % sl, ratio(p + 'dot2/seq', p + 'dot2/op')),
+                 ('`add`, one limb, one lane over the default, %s' % sl, ratio(p + 'add1/kseq', p + 'add1/kairn')),
+                 ('`add`, two limbs, one lane over the default, %s' % sl, ratio(p + 'add2/kseq', p + 'add2/kairn')),
+                 ('`scale`, two limbs, one lane over the default, %s' % sl, ratio(p + 'scale2/kseq', p + 'scale2/kairn')),
+                 ('`axpy`, one limb, one lane over the default, %s' % sl, ratio(p + 'axpy1/kseq', p + 'axpy1/kairn')),
+                 ('`axpy`, two limbs, one lane over the default, %s' % sl, ratio(p + 'axpy2/kseq', p + 'axpy2/kairn')),
+                 ('`norm_upper`, two limbs, one lane over the default, %s' % sl, ratio(p + 'norm2/kseq', p + 'norm2/kairn'))]
+    table(c, 'kairn::sequential over the default order, %s' % t, rows)
+    rows = []
+    for n in (16, 64, 512):
+        p = '%s/tp/' % b
+        rows += [('`conv`, one limb, %d coefficients: ns per term' % n, time(p + 'conv1_%d/op' % n)),
+                 ('`conv`, two limbs, %d coefficients: ns per term' % n, time(p + 'conv2_%d/op' % n)),
+                 ('`conv`, one limb, %d, over the plain loop of T (FMA)' % n, ratio(p + 'conv1_%d/op' % n, p + 'conv1_%d/plain' % n)),
+                 ('`conv`, two limbs, %d, over the plain loop of T (FMA)' % n, ratio(p + 'conv2_%d/op' % n, p + 'conv1_%d/plain' % n)),
+                 ('`conv`, two limbs, %d, over the double-word loop written out' % n, ratio(p + 'conv2_%d/op' % n, p + 'conv2_%d/textbook' % n))]
+    table(c, 'The product of polynomials, %s' % t, rows, kind='ratio')
+
+
+def short_tables(c):
+    rows = []
+    for k, label in (('ssum1', '`sum`, one limb'), ('ssum2', '`sum`, two limbs'), ('sdot1', '`dot`, one limb'),
+                     ('sdot2', '`dot`, two limbs')):
+        for n in (1, 2, 4, 8, 16, 64, 1024):
+            rows.append(('%s, n = %d' % (label, n), time('m2k/tp/%s_n%d/op' % (k, n))))
+    table(c, 'Short arrays, independent calls: ns per call', rows, kind='time')
+    rows = []
+    for k, label in (('ssum1', '`sum`, one limb'), ('ssum2', '`sum`, two limbs'), ('sdot1', '`dot`, one limb'),
+                     ('sdot2', '`dot`, two limbs')):
+        for n in (1, 2, 4, 8, 16, 64, 1024):
+            rows.append(('%s, n = %d' % (label, n), time('m2k/lat/%s_n%d/op' % (k, n))))
+    table(c, 'Short arrays, dependent calls: ns per call', rows, kind='time')
+    rows = []
+    for k, label in (('ssum1', '`sum`, one limb'), ('ssum2', '`sum`, two limbs'), ('sdot1', '`dot`, one limb'),
+                     ('sdot2', '`dot`, two limbs')):
+        for n in (1, 2, 4, 8, 16, 64, 1024):
+            rows.append(('%s, n = %d' % (label, n), ratio('m2k/tp/%s_k%d/op' % (k, n), 'm2k/tp/%s_n%d/op' % (k, n))))
+    table(c, 'Short arrays, independent calls: the length known to the compiler over read at run time', rows)
+    rows = []
+    for kind in ('tp', 'lat'):
+        for k, label in (('ssum1', '`sum`, one limb'), ('ssum2', '`sum`, two limbs'), ('sdot1', '`dot`, one limb'),
+                         ('sdot2', '`dot`, two limbs')):
+            for n in (1, 16, 1024):
+                rows.append(('%s, n = %d, %s' % (label, n, 'independent' if kind == 'tp' else 'dependent'),
+                             lambda ns, kind=kind, k=k, n=n: ns['m2k/%s/%s_n%d/op' % (kind, k, n)] - ns['m2k/%s/%s_n%d/kairn' % (kind, k, n)]))
+    table(c, 'The public function minus the generated loop called directly, ns per call', rows, kind='time')
+
+
+def entry_tables(items):
+    r, dif, raw = items.get('entry', {}), items.get('entry_diff', {}), items.get('entry_raw', {})
+    if not r:
+        return
+    names = [('ssum1', '`sum`, one limb'), ('ssum2', '`sum`, two limbs'), ('sdot1', '`dot`, one limb'),
+             ('sdot2', '`dot`, two limbs')]
+    for kind, kl in (('tp', 'independent calls'), ('lat', 'dependent calls')):
+        rows = []
+        for k, label in names:
+            for n in (1, 2, 4, 8, 16, 64, 1024):
+                rows.append(('%s, n = %d' % (label, n), time('m2k/%s/%s_n%d/op' % (kind, k, n))))
+        table(dif, 'The check at entry, %s: ns per call (with the check minus without)' % kl, rows, kind='time')
+        rows = []
+        for k, label in names:
+            for n in (1, 2, 4, 8, 16, 64, 1024):
+                rows.append(('%s, n = %d' % (label, n), lambda ns, kind=kind, k=k, n=n:
+                             1 - 1 / ns['m2k/%s/%s_n%d/op' % (kind, k, n)]))
+        table(r, 'The check at entry, %s: its share of the call (1 - without over with)' % kl, rows)
+    rows = [('control: the generated loop of `sum`, one limb, n = %d, with over without' % n,
+             time('m2k/tp/ssum1_n%d/kairn' % n)) for n in (1, 16, 1024)]
+    rows += [('control: the generated loop of `dot`, two limbs, n = %d, with over without' % n,
+              time('m2k/tp/sdot2_n%d/kairn' % n)) for n in (1, 16, 1024)]
+    for k, lab in (('sum1', '`sum`, one limb'), ('sum2', '`sum`, two limbs'), ('dot1', '`dot`, one limb'),
+                   ('dot2', '`dot`, two limbs'), ('add1', '`add`, one limb'), ('add2', '`add`, two limbs'),
+                   ('axpy2', '`axpy`, two limbs')):
+        rows.append(('%s, 512 elements, with over without' % lab, time('m2a/tp/%s/op' % k)))
+    for op in ('add', 'scale', 'axpy', 'conv', 'norm'):
+        for kk in (1, 2):
+            for n in (4, 64):
+                rows.append(('ball vectors: `%s`, %d limb%s, %d entries, with over without' % (op, kk, 's' if kk == 2 else '', n),
+                             time('m2w/tp/%s_%d_%d/op' % (op, kk, n))))
+    table(r, 'The check at entry: with over without (selection)', rows, kind='ratio')
+    rows = []
+    for op in ('add', 'scale', 'axpy', 'conv', 'norm'):
+        for kk in (1, 2):
+            for n in (4, 64):
+                rows.append(('ball vectors: `%s`, %d limb%s, %d entries' % (op, kk, 's' if kk == 2 else '', n),
+                             time('m2w/tp/%s_%d_%d/op' % (op, kk, n))))
+    table(dif, 'The check at entry of a ball vector operation: ns per operation (with minus without)', rows, kind='time')
+    # From which length the check is under 5% and under 1% of the call, per configuration: the
+    # shortest n of the table from which every longer one is under it in every pair of runs.
+    present = present_of(r)
+    print('\n| The check at entry is under 5%%; 1%% of the call from n = | %s |' % ' | '.join(col[2] for col in present))
+    print('|---' * (len(present) + 1) + '|')
+    for kind, kl in (('tp', 'independent'), ('lat', 'dependent')):
+        for k, label in names:
+            cells = []
+            for col in present:
+                parts = []
+                for level in ('O2', 'O3'):
+                    rs = r.get((col[0], col[1], 'inline', level), [])
+                    if not rs:
+                        continue
+                    out = []
+                    for lim in (0.05, 0.01):
+                        ok = None
+                        for n in reversed((1, 2, 4, 8, 16, 64, 1024)):
+                            name = 'm2k/%s/%s_n%d/op' % (kind, k, n)
+                            if all(name in x['ns'] and 1 - 1 / x['ns'][name] < lim for x in rs):
+                                ok = n
+                            else:
+                                break
+                        out.append(str(ok) if ok else '> 1024')
+                    parts.append('%s (-%s)' % ('; '.join(out), level))
+                cells.append(', '.join(parts))
+            print('| %s, %s | %s |' % (label, kl, ' | '.join(cells)))
+
+
+BVS_OPS = [('add', '`add(x, y, z)`'), ('addop', '`z = x + y`'), ('sub', '`sub`'), ('scale', '`scale`'),
+           ('half', '`half`'), ('make', 'the constructor')]
+
+
+def bvs_tables(items):
+    """The short ball vectors of fixed length (m2x) with the check, and what the check and the cold
+    variant of it add to the same program without the check."""
+    if not items.get('x_with'):
+        return
+    for b, bl in (('m2y', 'one operation per unit'), ('m2x', 'every size in one unit')):
+        for kind, kl in (('tp', 'many vectors'), ('lat', 'a dependent chain')):
+            for name, title, kd in (('x_with', 'Short ball vectors, %s, %s: ns per operation, with the check' % (bl, kl), 'time'),
+                                    ('x_diff', 'Short ball vectors, %s, %s: the check, ns per operation (with minus without)' % (bl, kl), 'time'),
+                                    ('x_cold', 'Short ball vectors, %s, %s: the check with its report cold, ns per operation (minus without)' % (bl, kl), 'time'),
+                                    ('x_ratio', 'Short ball vectors, %s, %s: with the check over without' % (bl, kl), 'ratio')):
+                rows = []
+                for op, ol in BVS_OPS:
+                    for kk in (1, 2):
+                        for n in (3, 7, 13, 18, 80):
+                            rows.append(('%s, %d limb%s, N = %d' % (ol, kk, 's' if kk == 2 else '', n),
+                                         time('%s/%s/%s_%d_%d/op' % (b, kind, op, kk, n))))
+                table(items[name], title, rows, kind=kd)
+
+
+def guard_tables(arr, acc):
+    rows = []
+    for s, sl in ARRAY_SIZES[:2]:
+        p = 'm2a/%s/' % s
+        rows += [('`dot`, one limb (3 operations per term against 1), %s' % sl, ratio(p + 'dot1/kairn', p + 'dot1/bare')),
+                 ('`axpy`, one limb (y guarded), %s' % sl, ratio(p + 'axpy1/kairn', p + 'axpy1/bare')),
+                 ('`axpy`, two limbs, a of T (y guarded), %s' % sl, ratio(p + 'axpy2/kairn', p + 'axpy2/bare')),
+                 ('`axpy`, two limbs, a of two limbs (y guarded), %s' % sl, ratio(p + 'axpy22/kairn', p + 'axpy22/bare')),
+                 ('`scale`, two limbs (the limbs and a guarded), %s' % sl, ratio(p + 'scale2/kairn', p + 'scale2/bare')),
+                 ('`sum`, one limb (the element guarded), %s' % sl, ratio(p + 'sum1/kairn', p + 'sum1/bare')),
+                 ('`sum`, two limbs (the limbs guarded), %s' % sl, ratio(p + 'sum2/kairn', p + 'sum2/bare')),
+                 ('`add`, one limb (both guarded), %s' % sl, ratio(p + 'add1/kairn', p + 'add1/bare')),
+                 ('`add`, two limbs (every limb guarded), %s' % sl, ratio(p + 'add2/kairn', p + 'add2/bare'))]
+    for n in (16, 64, 512):
+        rows.append(('`conv`, one limb, %d coefficients (both factors guarded)' % n,
+                     ratio('m2a/tp/conv1_%d/kairn' % n, 'm2a/tp/conv1_%d/bare' % n)))
+    table(arr, 'The guards: the loop with them over the same loop without, double', rows)
+    rows = []
+    for s, sl in ARRAY_SIZES[:2]:
+        p = 'm2a/%s/' % s
+        rows += [('`dot`, one limb, with the guards, over the plain FMA loop in the same order, %s' % sl, ratio(p + 'dot1/kairn', p + 'dot1/plainw')),
+                 ('`dot`, one limb, without them, over the same, %s' % sl, ratio(p + 'dot1/bare', p + 'dot1/plainw')),
+                 ('`axpy`, one limb, with them, over `a x + y` of T, %s' % sl, ratio(p + 'axpy1/kairn', p + 'axpy1/plain')),
+                 ('`axpy`, one limb, without them, over the same, %s' % sl, ratio(p + 'axpy1/bare', p + 'axpy1/plain')),
+                 ('`scale`, two limbs, with them, over `x a` of T, %s' % sl, ratio(p + 'scale2/kairn', p + 'scale1/plain')),
+                 ('`scale`, two limbs, without them, over the same, %s' % sl, ratio(p + 'scale2/bare', p + 'scale1/plain'))]
+    for n in (16, 64, 512):
+        rows += [('`conv`, one limb, %d, with them, over the plain FMA loop' % n, ratio('m2a/tp/conv1_%d/kairn' % n, 'm2a/tp/conv1_%d/plain' % n)),
+                 ('`conv`, one limb, %d, without them, over the same' % n, ratio('m2a/tp/conv1_%d/bare' % n, 'm2a/tp/conv1_%d/plain' % n))]
+    table(arr, 'The guards against the control of T, double', rows)
+    rows = []
+    for s, sl in ARRAY_SIZES[:2]:
+        p = 'm2c/%s/' % s
+        rows += [('`add_product`, one limb (both factors guarded), %s' % sl, ratio(p + 'acc1prod/kairn', p + 'acc1prod/bare')),
+                 ('`add_product`, two limbs (every limb guarded), %s' % sl, ratio(p + 'acc2prod/kairn', p + 'acc2prod/bare')),
+                 ('`add_product`, one limb, the public member over the kernels without the guards, %s' % sl, ratio(p + 'acc1prod/op', p + 'acc1prod/bare')),
+                 ('`add_product`, two limbs, the same, %s' % sl, ratio(p + 'acc2prod/op', p + 'acc2prod/bare'))]
+    table(acc, 'The guards of the accumulator: with over without, double', rows)
+
+
+def acc_tables(c):
+    rows = []
+    for s, sl in ARRAY_SIZES[:2]:
+        p, q = 'm2c/%s/' % s, 'm2a/%s/' % s
+        rows += [('`add`, one limb, %s' % sl, time(p + 'acc1add/op')),
+                 ('`add_product`, one limb, %s' % sl, time(p + 'acc1prod/op')),
+                 ('`add`, two limbs, %s' % sl, time(p + 'acc2add/op')),
+                 ('`add_product`, two limbs, %s' % sl, time(p + 'acc2prod/op')),
+                 ('`add` of a value of T, two limbs, %s' % sl, time(p + 'acc2addd/op')),
+                 ('`add_product` of two values of T, two limbs, %s' % sl, time(p + 'acc2prodd/op')),
+                 ('`add` into 4 accumulators merged, one limb, %s' % sl, time(p + 'acc1part4/op')),
+                 ('`add` into 16 accumulators merged, two limbs, %s' % sl, time(p + 'acc2part16/op')),
+                 ('`add` into W accumulators in the lane order, two limbs, %s' % sl, time(p + 'acc2lanes/op'))]
+    table(c, 'The accumulator: ns per element', rows, kind='time')
+    rows = []
+    for s, sl in ARRAY_SIZES[:2]:
+        p, q = 'm2c/%s/' % s, 'm2a/%s/' % s
+        rows += [('`add`, one limb, over `sum` sequential, %s' % sl, ratio(p + 'acc1add/op', q + 'sum1/seq')),
+                 ('`add`, one limb, over `sum`, %s' % sl, ratio(p + 'acc1add/op', q + 'sum1/op')),
+                 ('`add_product`, one limb, over `dot` sequential, %s' % sl, ratio(p + 'acc1prod/op', q + 'dot1/seq')),
+                 ('`add_product`, one limb, over `dot`, %s' % sl, ratio(p + 'acc1prod/op', q + 'dot1/op')),
+                 ('`add`, two limbs, over `sum` sequential, %s' % sl, ratio(p + 'acc2add/op', q + 'sum2/seq')),
+                 ('`add`, two limbs, over `sum`, %s' % sl, ratio(p + 'acc2add/op', q + 'sum2/op')),
+                 ('`add_product`, two limbs, over `dot` sequential, %s' % sl, ratio(p + 'acc2prod/op', q + 'dot2/seq')),
+                 ('`add_product`, two limbs, over `dot`, %s' % sl, ratio(p + 'acc2prod/op', q + 'dot2/op')),
+                 ('`add` of T into two limbs, over `sum` of two limbs of the same data, sequential, %s' % sl, ratio(p + 'acc2addd/op', q + 'sum2z/seq')),
+                 ('`add_product` of T into two limbs, over `dot` of two limbs of the same data, sequential, %s' % sl, ratio(p + 'acc2prodd/op', q + 'dot2z/seq')),
+                 ('4 accumulators merged over one, one limb, %s' % sl, ratio(p + 'acc1part4/op', p + 'acc1add/op')),
+                 ('16 accumulators merged over one, one limb, %s' % sl, ratio(p + 'acc1part16/op', p + 'acc1add/op')),
+                 ('W accumulators in the lane order over one, one limb, %s' % sl, ratio(p + 'acc1lanes/op', p + 'acc1add/op')),
+                 ('W accumulators in the lane order over `sum`, one limb, %s' % sl, ratio(p + 'acc1lanes/op', q + 'sum1/op')),
+                 ('4 accumulators merged over one, two limbs, %s' % sl, ratio(p + 'acc2part4/op', p + 'acc2add/op')),
+                 ('16 accumulators merged over one, two limbs, %s' % sl, ratio(p + 'acc2part16/op', p + 'acc2add/op')),
+                 ('W accumulators in the lane order over one, two limbs, %s' % sl, ratio(p + 'acc2lanes/op', p + 'acc2add/op')),
+                 ('W accumulators in the lane order over `sum`, two limbs, %s' % sl, ratio(p + 'acc2lanes/op', q + 'sum2/op')),
+                 ('the public members over the kernels, `add`, two limbs, %s' % sl, ratio(p + 'acc2add/op', p + 'acc2add/kairn')),
+                 ('the public members over the kernels, `add_product`, two limbs, %s' % sl, ratio(p + 'acc2prod/op', p + 'acc2prod/kairn'))]
+    table(c, 'The accumulator over the functions on arrays', rows)
+    rows = []
+    for k, lab in (('merge', '`merge`'), ('sum', '`sum()`'), ('bound', '`error_bound()`'), ('ball', '`ball()`')):
+        for kk in (1, 2):
+            rows.append(('%s, %d limb%s' % (lab, kk, 's' if kk == 2 else ''), time('m2c/tp/acc%d%s/op' % (kk, k))))
+    table(c, 'The accumulator: ns per call', rows, kind='time')
+
+
+def bv_tables(c):
+    rows = []
+    for op in ('add', 'sub', 'scale', 'axpy', 'conv', 'norm'):
+        for kk in (1, 2):
+            for n in (4, 8, 16, 64):
+                rows.append(('`%s`, %d limb%s, N = %d' % (op, kk, 's' if kk == 2 else '', n), time('m2w/tp/%s_%d_%d/op' % (op, kk, n))))
+    table(c, 'BallVector: ns per operation on the whole vector', rows, kind='time')
+    rows = []
+    for op in ('add', 'sub', 'scale', 'axpy', 'conv', 'norm'):
+        for kk in (1, 2):
+            for n in (4, 8, 16, 64):
+                rows.append(('`%s`, %d limb%s, N = %d' % (op, kk, 's' if kk == 2 else '', n),
+                             ratio('m2w/tp/%s_%d_%d/balls' % (op, kk, n), 'm2w/tp/%s_%d_%d/op' % (op, kk, n))))
+    table(c, 'N balls over one BallVector', rows)
+    rows = []
+    for op in ('add', 'scale', 'axpy', 'norm'):
+        for kk in (1, 2):
+            for n in (4, 64):
+                rows.append(('`%s`, %d limb%s, N = %d' % (op, kk, 's' if kk == 2 else '', n),
+                             ratio('m2w/tp/%s_%d_%d/seq' % (op, kk, n), 'm2w/tp/%s_%d_%d/op' % (op, kk, n))))
+    table(c, 'BallVector: kairn::sequential over the default order', rows)
+    rows = []
+    for op in ('add', 'scale', 'axpy', 'conv', 'norm'):
+        for kk in (1, 2):
+            for n in (4, 64):
+                rows.append(('`%s`, %d limb%s, N = %d' % (op, kk, 's' if kk == 2 else '', n),
+                             ratio('m2w/tp/%s_%d_%d/op' % (op, kk, n), 'm2w/tp/%s_%d_%d/kairn' % (op, kk, n))))
+    table(c, 'BallVector: the public operation over its generated loop called directly', rows)
+
+
+def bv_widths(c):
+    """The widths of ball vectors (ball_vector_widths in the runs of the item bv). They do not depend
+    on the run or the level; they do on the compiler, because the harness draws the centers with two
+    calls of its generator in one expression (m2_bv.cpp, center()), whose order of evaluation the
+    compilers choose: so each cell is the range over one run of each compiler of each machine."""
+    sets = {}
+    for key in sorted(c):
+        for r in c[key]:
+            w = r.get('ball_vector_widths')
+            if w is None:
+                continue
+            k = (key[0], key[1])
+            if k in sets and sets[k] != w:
+                print('\n(the widths of %s differ from another run of the same compiler)' % r['path'])
+            sets.setdefault(k, w)
+    if not sets:
+        return
+    print('\n(the widths: one set of centers per compiler: %s)' % ', '.join('%s-%s' % k for k in sorted(sets)))
+    ws = list(sets.values())
+    w0 = ws[0]
+
+    def cells(kk, regime):
+        out = {}
+        for w in ws:
+            for x in w:
+                if x['limbs'] == kk and x['regime'] == regime:
+                    out.setdefault(x['entries'], []).append(x)
+        return out
+
+    def rng(v, fmt='%.3g'):
+        lo, hi = fmt % min(v), fmt % max(v)
+        return lo if lo == hi else '%s to %s' % (lo, hi)
+
+    print('\n| Bytes | N = 4 | N = 8 | N = 16 | N = 64 |')
+    print('|---|---:|---:|---:|---:|')
+    for kk in (1, 2):
+        cl = {x['entries']: x for x in w0 if x['limbs'] == kk and x['regime'] == 'same'}
+        print('| `BallVector<double, %d, N>` | %s |' % (kk, ' | '.join(str(cl[n]['bytes_ball_vector']) for n in (4, 8, 16, 64))))
+        print('| `std::array<Ball<double, %d>, N>` | %s |' % (kk, ' | '.join(str(cl[n]['bytes_balls']) for n in (4, 8, 16, 64))))
+    ops = [('add', '`x + y`'), ('sub', '`x - y`'), ('scale', '`x a`'), ('axpy', '`a x + y`'), ('conv', 'product'),
+           ('horner10', 'Horner-like, 10'), ('horner100', 'Horner-like, 100'), ('casteljau10', 'de Casteljau-like, 10'),
+           ('casteljau100', 'de Casteljau-like, 100')]
+    for regime, rl in (('exact', 'radius 0'), ('same', 'one radius 2^-22 for every entry'),
+                       ('spread', 'radii from 2^-50 to 2^-20 of each center')):
+        for what, wl in (('largest', 'the largest'), ('median', 'the median')):
+            print('\n| The one radius over %s of the balls\' radii (%s) | N = 4 | N = 8 | N = 16 | N = 64 |' % (wl, rl))
+            print('|---|---|---|---|---|')
+            for kk in (1, 2):
+                cl = cells(kk, regime)
+                for op, ol in ops:
+                    vals = []
+                    for n in (4, 8, 16, 64):
+                        v = []
+                        for x in cl[n]:
+                            e = next(y for y in x['widths'] if y['op'] == op)
+                            v.append(e['one'] / e[what] if e[what] else float('inf'))
+                        vals.append(rng(v))
+                    print('| %s, %d limb%s | %s |' % (ol, kk, 's' if kk == 2 else '', ' | '.join(vals)))
+    print('\n| The bound of every entry, `norm_upper`, over the balls\' largest bound | N = 4 | N = 8 | N = 16 | N = 64 |')
+    print('|---|---|---|---|---|')
+    for regime in ('exact', 'same', 'spread'):
+        for kk in (1, 2):
+            cl = cells(kk, regime)
+            vals = []
+            for n in (4, 8, 16, 64):
+                v = []
+                for x in cl[n]:
+                    e = next(y for y in x['widths'] if y['op'] == 'norm')
+                    v.append(e['one'] / e['largest'])
+                vals.append(rng(v, '%.6g'))
+            print('| %s, %d limb%s | %s |' % (regime, kk, 's' if kk == 2 else '', ' | '.join(vals)))
+
+
+def accuracy_tables(acc):
+    """From accuracy-*.json: the error of each method relative to the exact result, the median over
+    the trials whose condition is in each decade; and the stated bound over the error made, by length."""
+    if not acc:
+        return
+    key = sorted(acc)[0]
+    d = acc[key]
+    # Every configuration of one machine gives the same errors (the same data and bits): checked.
+    for k2 in sorted(acc):
+        if k2[0] == key[0] and acc[k2]['records'] != d['records']:
+            print('\n(the accuracy of %s differs from that of %s)' % (acc[k2]['path'], d['path']))
+    import math
+    for machine in sorted({k[0] for k in acc}):
+        dm = acc[sorted(k for k in acc if k[0] == machine)[0]]
+        for kind in ('sum', 'dot'):
+            meths = [('naive', 'naive loop'), ('k1', 'Kairn, one limb'), ('textbook', 'Sum2' if kind == 'sum' else 'Dot2'),
+                     ('k2', 'Kairn, two limbs'), ('acc2', 'Accumulator, two limbs')]
+            print('\n| %s, %s (%s lanes): relative error, median over the trials, by condition | %s |'
+                  % ('Sums' if kind == 'sum' else 'Dot products', machine, dm['lanes'], ' | '.join(m[1] for m in meths)))
+            print('|---' * (len(meths) + 1) + '|')
+            buckets = {}
+            for r in dm['records']:
+                if r['kind'] != kind or r['n'] not in (1000, 1000000):
+                    continue
+                for t in r['trials']:
+                    dec = int(math.floor(math.log10(t['cond']))) if t['cond'] >= 1 else 0
+                    dec = dec // 4 * 4
+                    buckets.setdefault((r['n'], dec), []).append(t)
+            for (n, dec) in sorted(buckets):
+                ts = buckets[(n, dec)]
+                vals = []
+                for m, _ in meths:
+                    v = sorted(t['err'][m] / abs(t['exact']) for t in ts)
+                    vals.append('%.1e' % v[len(v) // 2])
+                print('| n = %d, condition 1e%d to 1e%d (%d trials) | %s |' % (n, dec, dec + 3, len(ts), ' | '.join(vals)))
+            print('\n| %s, %s: the stated bound over the error made, median (smallest) over the trials | %s |'
+                  % ('Sums' if kind == 'sum' else 'Dot products', machine,
+                     ' | '.join(l for _, l in (('k1', 'Kairn, one limb'), ('k1seq', 'one limb, sequential'),
+                                               ('k2', 'two limbs'), ('k2seq', 'two limbs, sequential'),
+                                               ('acc1', 'Accumulator, one limb'), ('acc2', 'Accumulator, two limbs')))))
+            print('|---' * 7 + '|')
+            for regime, rl in (('positive', 'positive'), ('random', 'random signs'), ('cond', 'condition 1e4 to 1e40')):
+                for n in (10, 100, 1000, 10000, 100000, 1000000):
+                    ts = [t for r in dm['records'] if r['kind'] == kind and r['n'] == n and r['regime'] == regime
+                          for t in r['trials']]
+                    vals = []
+                    for m in ('k1', 'k1seq', 'k2', 'k2seq', 'acc1', 'acc2'):
+                        v = sorted(t['bound'][m] / t['err'][m] for t in ts if t['err'][m] > 0)
+                        zeros = sum(1 for t in ts if t['err'][m] == 0)
+                        cellv = '%.2g (%.2g)' % (v[len(v) // 2], v[0]) if v else '–'
+                        if zeros:
+                            cellv += ', exact in %d of %d' % (zeros, len(ts))
+                        vals.append(cellv)
+                    print('| %s, n = %d | %s |' % (rl, n, ' | '.join(vals)))
+
+
+HEADERS = re.compile(r'^headers-compile-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)$')
+
+
+def headers_compile(directory):
+    """headers-compile-MACHINE-COMPILER.json, written by compile_time.py run: the minimum wall time over
+    the compilations of each unit, seconds, at -O2 and -O3."""
+    data = {}
+    for path in sorted(glob.glob(os.path.join(directory, 'headers-compile-*.json'))):
+        m = HEADERS.match(os.path.basename(path)[:-len('.json')])
+        if m:
+            d = json.load(open(path))
+            res = {}
+            for r in d['results']:
+                res.setdefault(r['unit'], {})[r['config']] = {'wall': r['wall_s'], 'peak_mb': r['peak_mb']}
+            data[(m.group('machine'), m.group('compiler'))] = res
+    if not data:
+        return
+    present = [col for col in COLUMNS if (col[0], col[1]) in data]
+    print('\n| Compile time of the headers, s (minimum wall time; -O2; -O3) | %s |' % ' | '.join(col[2] for col in present))
+    print('|---' * (len(present) + 1) + '|')
+    for u, label in (('empty', 'an empty unit'), ('include', '`kairn/kairn.hpp`'),
+                     ('include_packed', '`kairn/kairn.hpp`, as packed code'), ('accumulator', '`kairn/accumulator.hpp`'),
+                     ('batch', '`kairn/batch.hpp`, as packed code'), ('ball_vector', '`kairn/ball_vector.hpp`, as packed code'),
+                     ('kairn_batch', '`kairn/kairn.hpp` and `kairn/batch.hpp`, as packed code'),
+                     ('kairn_ball_vector', '`kairn/kairn.hpp` and `kairn/ball_vector.hpp`, as packed code')):
+        cells = []
+        for col in present:
+            r = data[(col[0], col[1])].get(u, {})
+            cells.append('; '.join('%.2f' % min(r[c]['wall']) if c in r else '–' for c in ('O2', 'O3')))
+        print('| %s | %s |' % (label, ' | '.join(cells)))
+
+
+def configurations3(items):
+    """The configurations of the third part: compiler, flags, the runs of each item (the check at
+    entry: pairs and triplets of programs) and the dates and commits of the files."""
+    order = ('arrays', 'short', 'entry_raw', 'x_raw', 'acc', 'bv')
+    print('\n| Configuration (third part) | CPU | Compiler | Flags | Runs per item (arrays, short, entry pairs, short ball vectors triplets, acc, bv) | Dates, commits |')
+    print('|---|---|---|---|---|---|')
+    keys = sorted({k for item in order for k in items.get(item, {})})
+    for key in keys:
+        rs = [r for item in order for r in items.get(item, {}).get(key, [])]
+        r = rs[0]
+        counts = []
+        for item in order:
+            n = len(items.get(item, {}).get(key, []))
+            counts.append(str(n // 2 if item == 'entry_raw' else n // 3 if item == 'x_raw' else n))
+        dates = sorted({x['date'] for x in rs})
+        commits = sorted({x['commit'] for x in rs})
+        print('| %s | %s; %s | %s | `%s` | %s | %s, %s |' % ('-'.join(key), r['machine']['cpu'], r['machine']['pinning'],
+                                                           r['compiler'], r['flags'], ', '.join(counts), ', '.join(dates),
+                                                           ', '.join('`%s`' % c for c in commits)))
+
+
+def report3(directory):
+    items = load3(directory)
+    print('\n## part 3: configurations')
+    configurations3(items)
+    print('\n## part 3: runs')
+    runs3(items)
+    if items.get('arrays'):
+        print('\n## part 3: the functions on arrays')
+        arrays_tables(items['arrays'])
+        arrays_tables(items['arrays'], 'm2af')
+    if items.get('short'):
+        print('\n## part 3: short arrays')
+        short_tables(items['short'])
+    entry_tables(items)
+    bvs_tables(items)
+    if items.get('arrays'):
+        print('\n## part 3: the guards')
+        guard_tables(items['arrays'], items.get('acc', {}))
+    if items.get('acc'):
+        print('\n## part 3: the accumulator')
+        acc_tables(items['acc'])
+    print('\n## part 3: accuracy')
+    accuracy_tables(items.get('accuracy', {}))
+    if items.get('bv'):
+        print('\n## part 3: ball vectors')
+        bv_tables(items['bv'])
+        bv_widths(items['bv'])
+    print('\n## part 3: compile time')
+    headers_compile(directory)
+
+
+def runs3(items):
+    """Each timed run of the third part: its spread within and against the fastest run of its
+    configuration, the load average, and the checks; then the spread of each item."""
+    print('\n| Run (third part) | Functions checked, failed | Over the fastest run: median, 90th percentile | Median over minimum within the run (median function) | Load average (1 min) at start, end |')
+    print('|---|---|---|---|---|')
+    for item in ('arrays', 'short', 'acc', 'bv', 'entry_raw', 'x_raw'):
+        c = items.get(item, {})
+        for key in sorted(c):
+            groups = {}
+            for r in c[key]:
+                groups.setdefault(r.get('setting', 'inline'), []).append(r)
+            for g in groups.values():
+                names = set(g[0]['ns'])
+                for r in g[1:]:
+                    names &= set(r['ns'])
+                best = {n: min(r['ns'][n] for r in g) for n in names}
+                for r in g:
+                    rel = sorted(r['ns'][n] / best[n] for n in names)
+                    within = sorted(x['ns_median'] / x['ns_min'] for x in r['results'])
+                    la = r['load_average']
+                    print('| `%s` | %d, %d | %.3f, %.3f | %.3f | %.1f, %.1f |' % (
+                        r['path'], r['checks']['compared'], r['checks']['failed'], rel[len(rel) // 2],
+                        rel[int(0.9 * (len(rel) - 1))], within[len(within) // 2], la['start'][0], la['end'][0]))
+    print('\n| Spread of (third part) | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |')
+    print('|---|---:|---|---|')
+    for item in ('arrays', 'short', 'acc', 'bv', 'entry_raw', 'x_raw'):
+        c = items.get(item, {})
+        for key in sorted(c):
+            groups = {}
+            for r in c[key]:
+                groups.setdefault(r.get('setting', 'inline'), []).append(r)
+            for setting, runs_ in sorted(groups.items()):
+                if len(runs_) < 2:
+                    continue
+                names = set(runs_[0]['ns'])
+                for r in runs_[1:]:
+                    names &= set(r['ns'])
+                sp = sorted((max(r['ns'][n] for r in runs_) / min(r['ns'][n] for r in runs_) - 1, n) for n in names)
+                label = '%s %s%s' % (item.replace('_raw', '').replace('x', 'entryx'), '-'.join(x for x in key if x != 'inline'),
+                                     (' %s' % setting) if item in ('entry_raw', 'x_raw') else '')
+                print('| %s | %d | %.1f%%, %.1f%%, %.1f%% | `%s` |' % (label, len(runs_), 100 * sp[len(sp) // 2][0],
+                                                                    100 * sp[int(0.9 * (len(sp) - 1))][0], 100 * sp[-1][0], sp[-1][1]))
+
+
 def report(directory, sections):
     c = load(directory)
     inline = {k: v for k, v in c.items() if k[2] == 'inline'}
@@ -1059,6 +1710,8 @@ def report(directory, sections):
             modes(directory)
         elif name == 'part2':
             report2(directory)
+        elif name == 'part3':
+            report3(directory)
         else:
             SECTIONS[name](c if name == 'settings' else inline)
 
@@ -1075,7 +1728,7 @@ def fill(directory, template, out):
     import io
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2'])
+        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3'])
     tables, current = {}, None
     for line in buf.getvalue().splitlines():
         if line.startswith('| ') and current is None:
@@ -1123,15 +1776,18 @@ def fill(directory, template, out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('dir')
-    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2'], action='append')
+    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3'], action='append')
     ap.add_argument('--fill', nargs=2, metavar=('TEMPLATE', 'OUT'))
-    ap.add_argument('--part', type=int, choices=[1, 2], help='the tables of one part only (default: the first part)')
+    ap.add_argument('--part', type=int, choices=[1, 2, 3], help='the tables of one part only (default: the first part)')
     a = ap.parse_args()
     if a.fill:
         fill(a.dir, a.fill[0], a.fill[1])
         return 0
     if a.part == 2:
         report2(a.dir)
+        return 0
+    if a.part == 3:
+        report3(a.dir)
         return 0
     report(a.dir, a.section or list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes'])
     return 0

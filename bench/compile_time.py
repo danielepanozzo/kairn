@@ -63,6 +63,16 @@ UNITS = {
                'gen/tests/runner.cpp, the scalar runner of the quick tier'),
     'packed_runner': (os.path.join('gen', 'tests', 'packed_runner.cpp'), True,
                       'gen/tests/packed_runner.cpp, the packed runner of the quick tier'),
+    # Milestone 2, third part: the headers of the functions on arrays, the accumulator and the ball
+    # vectors, alone and beside kairn/kairn.hpp (which includes accumulator.hpp), the packed ones with
+    # the flags of packed code, and kairn/kairn.hpp alone with those flags for comparison.
+    'include_packed': (os.path.join(CT, 'include.cpp'), True, 'kairn/kairn.hpp alone, compiled as packed code'),
+    'accumulator': (os.path.join(CT, 'accumulator.cpp'), False, 'kairn/accumulator.hpp alone'),
+    'batch': (os.path.join(CT, 'batch.cpp'), True, 'kairn/batch.hpp alone, as packed code'),
+    'ball_vector': (os.path.join(CT, 'ball_vector.cpp'), True, 'kairn/ball_vector.hpp alone, as packed code'),
+    'kairn_batch': (os.path.join(CT, 'kairn_batch.cpp'), True, 'kairn/kairn.hpp and kairn/batch.hpp, as packed code'),
+    'kairn_ball_vector': (os.path.join(CT, 'kairn_ball_vector.cpp'), True,
+                          'kairn/kairn.hpp and kairn/ball_vector.hpp, as packed code'),
 }
 
 # Configurations: the optimization level, with NDEBUG (so KAIRN_CHECKS is 0), and a debug build

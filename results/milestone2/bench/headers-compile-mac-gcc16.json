@@ -1,0 +1,616 @@
+{
+ "schema": 1,
+ "what": "run",
+ "date": "2026-11-22",
+ "commit": "be95dbb",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity); shared with other jobs",
+  "cpu": "Apple M3 Max",
+  "os": "Darwin",
+  "arch": "arm64"
+ },
+ "compiler": "g++-16 (Homebrew GCC 16.2.0) 16.2.0",
+ "cxx": "g++-16",
+ "family": "gnu",
+ "flags": "",
+ "pinning": "not pinned",
+ "reps": 7,
+ "configs": {
+  "O2": [
+   "-O2",
+   "-DNDEBUG"
+  ],
+  "O3": [
+   "-O3",
+   "-DNDEBUG"
+  ]
+ },
+ "units": {
+  "empty": {
+   "source": "bench/compile_time/empty.cpp",
+   "packed": false,
+   "description": "an empty translation unit"
+  },
+  "include": {
+   "source": "bench/compile_time/include.cpp",
+   "packed": false,
+   "description": "kairn/kairn.hpp alone"
+  },
+  "include_packed": {
+   "source": "bench/compile_time/include.cpp",
+   "packed": true,
+   "description": "kairn/kairn.hpp alone, compiled as packed code"
+  },
+  "accumulator": {
+   "source": "bench/compile_time/accumulator.cpp",
+   "packed": false,
+   "description": "kairn/accumulator.hpp alone"
+  },
+  "batch": {
+   "source": "bench/compile_time/batch.cpp",
+   "packed": true,
+   "description": "kairn/batch.hpp alone, as packed code"
+  },
+  "ball_vector": {
+   "source": "bench/compile_time/ball_vector.cpp",
+   "packed": true,
+   "description": "kairn/ball_vector.hpp alone, as packed code"
+  },
+  "kairn_batch": {
+   "source": "bench/compile_time/kairn_batch.cpp",
+   "packed": true,
+   "description": "kairn/kairn.hpp and kairn/batch.hpp, as packed code"
+  },
+  "kairn_ball_vector": {
+   "source": "bench/compile_time/kairn_ball_vector.cpp",
+   "packed": true,
+   "description": "kairn/kairn.hpp and kairn/ball_vector.hpp, as packed code"
+  }
+ },
+ "common_flags": {
+  "scalar": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests"
+  ],
+  "packed": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests"
+  ]
+ },
+ "results": [
+  {
+   "unit": "empty",
+   "config": "O2",
+   "wall_s": [
+    0.0548,
+    0.0578,
+    0.0561,
+    0.055,
+    0.0558,
+    0.0544,
+    0.0547
+   ],
+   "cpu_s": [
+    0.0484,
+    0.051,
+    0.0492,
+    0.0486,
+    0.0491,
+    0.0479,
+    0.0483
+   ],
+   "peak_mb": [
+    19.8,
+    19.8,
+    19.8,
+    19.8,
+    19.8,
+    19.8,
+    19.8
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-gcc16/empty-O2.o"
+  },
+  {
+   "unit": "empty",
+   "config": "O3",
+   "wall_s": [
+    0.054,
+    0.0541,
+    0.0557,
+    0.0565,
+    0.0547,
+    0.0542,
+    0.0559
+   ],
+   "cpu_s": [
+    0.0476,
+    0.0475,
+    0.049,
+    0.0498,
+    0.048,
+    0.0479,
+    0.0493
+   ],
+   "peak_mb": [
+    19.8,
+    19.7,
+    19.8,
+    19.8,
+    19.8,
+    19.7,
+    19.7
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-gcc16/empty-O3.o"
+  },
+  {
+   "unit": "include",
+   "config": "O2",
+   "wall_s": [
+    0.2628,
+    0.2672,
+    0.2632,
+    0.2629,
+    0.2666,
+    0.2612,
+    0.262
+   ],
+   "cpu_s": [
+    0.2555,
+    0.2595,
+    0.2551,
+    0.2552,
+    0.2593,
+    0.2543,
+    0.2547
+   ],
+   "peak_mb": [
+    100.6,
+    100.5,
+    100.9,
+    100.5,
+    100.6,
+    100.5,
+    100.7
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-gcc16/include-O2.o"
+  },
+  {
+   "unit": "include",
+   "config": "O3",
+   "wall_s": [
+    0.2611,
+    0.2625,
+    0.2622,
+    0.2839,
+    0.2644,
+    0.2622,
+    0.2607
+   ],
+   "cpu_s": [
+    0.2533,
+    0.2548,
+    0.2542,
+    0.2746,
+    0.2567,
+    0.2544,
+    0.2531
+   ],
+   "peak_mb": [
+    100.5,
+    100.7,
+    100.7,
+    101.8,
+    100.7,
+    100.5,
+    100.5
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-gcc16/include-O3.o"
+  },
+  {
+   "unit": "include_packed",
+   "config": "O2",
+   "wall_s": [
+    0.2626,
+    0.2653,
+    0.263,
+    0.2808,
+    0.2649,
+    0.262,
+    0.2606
+   ],
+   "cpu_s": [
+    0.255,
+    0.2576,
+    0.2554,
+    0.2703,
+    0.2561,
+    0.2548,
+    0.2532
+   ],
+   "peak_mb": [
+    100.6,
+    100.7,
+    100.7,
+    100.7,
+    100.7,
+    100.9,
+    100.6
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-gcc16/include_packed-O2.o"
+  },
+  {
+   "unit": "include_packed",
+   "config": "O3",
+   "wall_s": [
+    0.2605,
+    0.262,
+    0.2614,
+    0.2647,
+    0.2658,
+    0.2605,
+    0.2619
+   ],
+   "cpu_s": [
+    0.2527,
+    0.2548,
+    0.2545,
+    0.2571,
+    0.2577,
+    0.2532,
+    0.2545
+   ],
+   "peak_mb": [
+    100.5,
+    100.6,
+    100.7,
+    100.7,
+    100.7,
+    100.6,
+    100.6
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-gcc16/include_packed-O3.o"
+  },
+  {
+   "unit": "accumulator",
+   "config": "O2",
+   "wall_s": [
+    0.2586,
+    0.2628,
+    0.2601,
+    0.2613,
+    0.2626,
+    0.2607,
+    0.2596
+   ],
+   "cpu_s": [
+    0.2511,
+    0.2553,
+    0.2526,
+    0.2536,
+    0.2553,
+    0.2531,
+    0.2521
+   ],
+   "peak_mb": [
+    100.5,
+    100.5,
+    100.5,
+    100.4,
+    100.5,
+    100.5,
+    100.6
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/accumulator.cpp -o WORK/ct-gcc16/accumulator-O2.o"
+  },
+  {
+   "unit": "accumulator",
+   "config": "O3",
+   "wall_s": [
+    0.2605,
+    0.2632,
+    0.2654,
+    0.2654,
+    0.2609,
+    0.264,
+    0.2595
+   ],
+   "cpu_s": [
+    0.2527,
+    0.2558,
+    0.2562,
+    0.2574,
+    0.2534,
+    0.2559,
+    0.2515
+   ],
+   "peak_mb": [
+    100.5,
+    100.5,
+    100.5,
+    100.6,
+    100.5,
+    100.5,
+    100.6
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/accumulator.cpp -o WORK/ct-gcc16/accumulator-O3.o"
+  },
+  {
+   "unit": "batch",
+   "config": "O2",
+   "wall_s": [
+    0.5436,
+    0.5471,
+    0.5644,
+    0.544,
+    0.5497,
+    0.5462,
+    0.5452
+   ],
+   "cpu_s": [
+    0.5349,
+    0.5388,
+    0.5561,
+    0.5359,
+    0.5413,
+    0.5379,
+    0.5369
+   ],
+   "peak_mb": [
+    195.9,
+    196.0,
+    196.1,
+    196.0,
+    196.1,
+    196.0,
+    196.3
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/batch.cpp -o WORK/ct-gcc16/batch-O2.o"
+  },
+  {
+   "unit": "batch",
+   "config": "O3",
+   "wall_s": [
+    0.5435,
+    0.5501,
+    0.5461,
+    0.5502,
+    0.5478,
+    0.5457,
+    0.5439
+   ],
+   "cpu_s": [
+    0.5355,
+    0.542,
+    0.5377,
+    0.5422,
+    0.5395,
+    0.5375,
+    0.5354
+   ],
+   "peak_mb": [
+    196.1,
+    196.0,
+    196.0,
+    196.0,
+    196.1,
+    196.1,
+    196.0
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/batch.cpp -o WORK/ct-gcc16/batch-O3.o"
+  },
+  {
+   "unit": "ball_vector",
+   "config": "O2",
+   "wall_s": [
+    0.5695,
+    0.5703,
+    0.5708,
+    0.5714,
+    0.5728,
+    0.5735,
+    0.5778
+   ],
+   "cpu_s": [
+    0.5621,
+    0.562,
+    0.5627,
+    0.5633,
+    0.5656,
+    0.5652,
+    0.5696
+   ],
+   "peak_mb": [
+    207.3,
+    207.5,
+    207.3,
+    207.4,
+    207.4,
+    207.5,
+    207.5
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/ball_vector.cpp -o WORK/ct-gcc16/ball_vector-O2.o"
+  },
+  {
+   "unit": "ball_vector",
+   "config": "O3",
+   "wall_s": [
+    0.5694,
+    0.5669,
+    0.5739,
+    0.571,
+    0.5797,
+    0.591,
+    0.577
+   ],
+   "cpu_s": [
+    0.5606,
+    0.559,
+    0.5655,
+    0.5627,
+    0.5656,
+    0.5825,
+    0.5691
+   ],
+   "peak_mb": [
+    207.3,
+    207.4,
+    207.4,
+    207.4,
+    207.3,
+    207.5,
+    207.6
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/ball_vector.cpp -o WORK/ct-gcc16/ball_vector-O3.o"
+  },
+  {
+   "unit": "kairn_batch",
+   "config": "O2",
+   "wall_s": [
+    0.5554,
+    0.554,
+    0.5621,
+    0.5555,
+    0.561,
+    0.5598,
+    0.5617
+   ],
+   "cpu_s": [
+    0.5472,
+    0.5462,
+    0.5539,
+    0.5471,
+    0.5533,
+    0.5515,
+    0.5535
+   ],
+   "peak_mb": [
+    200.4,
+    200.6,
+    200.4,
+    200.4,
+    200.6,
+    200.4,
+    200.5
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/kairn_batch.cpp -o WORK/ct-gcc16/kairn_batch-O2.o"
+  },
+  {
+   "unit": "kairn_batch",
+   "config": "O3",
+   "wall_s": [
+    0.5549,
+    0.5546,
+    0.565,
+    0.5529,
+    0.5641,
+    0.5528,
+    0.5604
+   ],
+   "cpu_s": [
+    0.5468,
+    0.5464,
+    0.5569,
+    0.5447,
+    0.5557,
+    0.5444,
+    0.5532
+   ],
+   "peak_mb": [
+    200.4,
+    200.4,
+    200.7,
+    200.4,
+    200.3,
+    200.5,
+    200.4
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/kairn_batch.cpp -o WORK/ct-gcc16/kairn_batch-O3.o"
+  },
+  {
+   "unit": "kairn_ball_vector",
+   "config": "O2",
+   "wall_s": [
+    0.5755,
+    0.5706,
+    0.581,
+    0.574,
+    0.5739,
+    0.5745,
+    0.5761
+   ],
+   "cpu_s": [
+    0.5672,
+    0.5627,
+    0.5724,
+    0.5653,
+    0.5661,
+    0.5662,
+    0.5676
+   ],
+   "peak_mb": [
+    207.6,
+    207.7,
+    207.8,
+    207.7,
+    207.5,
+    207.6,
+    207.6
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/kairn_ball_vector.cpp -o WORK/ct-gcc16/kairn_ball_vector-O2.o"
+  },
+  {
+   "unit": "kairn_ball_vector",
+   "config": "O3",
+   "wall_s": [
+    0.5692,
+    0.5795,
+    0.5885,
+    0.5778,
+    0.5778,
+    0.5717,
+    0.5782
+   ],
+   "cpu_s": [
+    0.5608,
+    0.5711,
+    0.5806,
+    0.5692,
+    0.5696,
+    0.5632,
+    0.5704
+   ],
+   "peak_mb": [
+    207.6,
+    207.6,
+    208.1,
+    207.5,
+    207.7,
+    207.6,
+    207.6
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/kairn_ball_vector.cpp -o WORK/ct-gcc16/kairn_ball_vector-O3.o"
+  }
+ ]
+}

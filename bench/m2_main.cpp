@@ -7,7 +7,8 @@
 // 1. Makes the inputs from a fixed seed (m2_setup).
 // 2. Checks every function it will time (every function without --filter) against its reference,
 //    BACKEND/KIND/KERNEL/kairn (m2p against m2s), byte for byte, or by its own check (the functions
-//    of the second part: m2_soa.cpp, m2_enc.cpp, m2_run.cpp); counts, for each rounding-mode prop, how many of its
+//    of the second part: m2_soa.cpp, m2_enc.cpp, m2_run.cpp; of the third: m2_batch.cpp, m2_bv.cpp, m2_bvs.cpp,
+//    which also compare with exact results, m2_exact.hpp); counts, for each rounding-mode prop, how many of its
 //    results differ from the result rounded to nearest (a prop that ignored the mode would have
 //    returned those); and checks the props of the building blocks against Kairn's on a wide sample
 //    of operands. It refuses to time anything if one check fails.
@@ -15,6 +16,7 @@
 // 4. Times every function whose name contains one of the --filter texts (all without --filter):
 //    calibrates a sample of about --sample-ms, then takes --reps samples of each, in rounds over all
 //    functions, and reports the minimum, median and maximum time per operation.
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -44,6 +46,10 @@ constexpr int kChecks = 0;
 #endif
 
 namespace m2 = kairn_bench::m2;
+
+namespace kairn_bench::m2 {
+TableLink* m2_extra_tables = nullptr;   // constant-initialized: before any unit registers its table
+}
 namespace u = kairn_bench::util;
 
 namespace {
@@ -67,8 +73,16 @@ Name split(const std::string& s) {
 std::vector<const m2::Entry*> all_entries() {
     std::vector<const m2::Entry*> v;
     for (const m2::Entry* t : {m2::m2_entries, m2::m2_fenv_entries, m2::m2_packed_entries, m2::m2_fenv_packed_entries,
-                               m2::m2_soa_entries, m2::m2_soa_scalar_entries, m2::m2_enc_entries, m2::m2_run_entries})
+                               m2::m2_soa_entries, m2::m2_soa_scalar_entries, m2::m2_enc_entries, m2::m2_run_entries,
+                               m2::m2_batch_entries, m2::m2_bv_entries, m2::m2_bvs_entries})
         for (const m2::Entry* e = t; e->name; ++e) v.push_back(e);
+    // The tables that registered themselves, in the order of their names (their units' order of
+    // initialization is not fixed).
+    std::vector<const m2::Entry*> extra;
+    for (const m2::TableLink* l = m2::m2_extra_tables; l; l = l->next)
+        for (const m2::Entry* e = l->table; e->name; ++e) extra.push_back(e);
+    std::sort(extra.begin(), extra.end(), [](const m2::Entry* a, const m2::Entry* b) { return std::strcmp(a->name, b->name) < 0; });
+    v.insert(v.end(), extra.begin(), extra.end());
     return v;
 }
 const m2::Entry* find(const std::vector<const m2::Entry*>& v, const std::string& name) {
@@ -410,7 +424,12 @@ int main(int argc, char** argv) {
                ", \"below_p_wider\": " + std::to_string(w.below_p_wider) + ", \"failed\": " + std::to_string(w.failed) +
                ", \"differ_from_nearest\": " + std::to_string(w.differ_from_nearest) + "}";
     }
-    out += "]},\n  \"tightness\": " + tightness + ",\n  \"bisection\": " + m2::m2_run_json() + ",\n  \"results\": [\n";
+    out += "]},\n  \"tightness\": " + tightness + ",\n  \"bisection\": " + m2::m2_run_json() + ",\n";
+    // The widths of the ball vectors (third part), when they are timed.
+    bool bv = false;
+    for (const Bench& b : benches) bv = bv || std::string(b.e->name).rfind("m2w/", 0) == 0;
+    if (bv) out += "  \"ball_vector_widths\": " + m2::m2_bv_widths_json() + ",\n";
+    out += "  \"results\": [\n";
     for (std::size_t i = 0; i < benches.size(); ++i) {
         const Bench& b = benches[i];
         const double mn = *std::min_element(b.ns.begin(), b.ns.end());

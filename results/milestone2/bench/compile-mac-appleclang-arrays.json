@@ -1,0 +1,204 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-22",
+ "commit": "be95dbb",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity); shared with other jobs",
+  "cpu": "Apple M3 Max",
+  "pinning": "not pinned"
+ },
+ "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+ "cxx": "c++",
+ "flags": "",
+ "kind": "arrays",
+ "timeout": 1800,
+ "reps": 3,
+ "run_reps": 0,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    0.454,
+    0.445,
+    0.441
+   ],
+   "cpu": [
+    0.449,
+    0.441,
+    0.437
+   ],
+   "peak_mb": [
+    106.9,
+    106.8,
+    106.8
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 23720
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "calls",
+   "wall": [
+    0.075,
+    0.079,
+    0.077
+   ],
+   "cpu": [
+    0.072,
+    0.076,
+    0.072
+   ],
+   "peak_mb": [
+    55.6,
+    55.7,
+    55.7
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 5528
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    0.729,
+    0.731,
+    0.728
+   ],
+   "cpu": [
+    0.725,
+    0.728,
+    0.724
+   ],
+   "peak_mb": [
+    111.0,
+    110.8,
+    111.2
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 61728
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "calls",
+   "wall": [
+    0.077,
+    0.077,
+    0.078
+   ],
+   "cpu": [
+    0.073,
+    0.073,
+    0.073
+   ],
+   "peak_mb": [
+    55.6,
+    55.6,
+    55.8
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 5528
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    1.451
+   ],
+   "cpu": [
+    1.446
+   ],
+   "peak_mb": [
+    187.2
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 165920
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "calls",
+   "wall": [
+    0.508
+   ],
+   "cpu": [
+    0.504
+   ],
+   "peak_mb": [
+    132.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 45504
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    4.613
+   ],
+   "cpu": [
+    4.608
+   ],
+   "peak_mb": [
+    305.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 539848
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "calls",
+   "wall": [
+    0.519
+   ],
+   "cpu": [
+    0.515
+   ],
+   "peak_mb": [
+    132.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 45504
+  }
+ ]
+}
