@@ -1315,6 +1315,15 @@ Definition bv_center_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   (z0 + z1) = (x0 + x1).
 
+(* bv_center_entry_2: bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). Status: proved. *)
+Definition bv_center_entry_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall c0 c1 : R,
+  normalized_2 emin prec c0 c1 ->
+  let '(z0, z1) := bv_center_entry_2 emin prec tie_even c0 c1 in
+  normalized_2 emin prec z0 z1 /\
+  (z0 + z1) = (c0 + c1).
+
 (* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: proved. *)
 Definition bv_mul_pow2_step_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->

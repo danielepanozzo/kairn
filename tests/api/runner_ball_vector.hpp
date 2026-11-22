@@ -8,8 +8,8 @@
 // RX RY LIMB..., completed with its N_X + N_Y - 1 coefficients, the radius and the flag; a fold of
 // maxima, FOLD FORMAT ORDER N LIMB..., with its bound and flag. Each form builds its operands as a
 // program does, through the public constructors: the line's arrays copied into arrays of the form's
-// own and made a ball vector by BallVectorView's constructor (loop bv_make_k, which guards what it is
-// given), or a BallVector made by its constructor from an std::array of numbers, from_limbs for two
+// own and made a ball vector by BallVectorView's constructor (loop bv_make_1 or bv_make_2_entry, which
+// guard what they are given), or a BallVector made by its constructor from an std::array of numbers, from_limbs for two
 // limbs. The flag is is_finite() of the result.
 //
 // The order. A line names one (seq, or lanes:W for any W); the public interface has two, the fast
@@ -154,16 +154,16 @@ bool whole_if_stopped(Line<T>& l, T r) {
     l.flag = false;
     return true;
 }
-#define BV_MAKE_FORMS(K)                                                                                    \
-    BV_FORM(bv_make_##K##_view, if (whole_if_stopped<T, K>(l, l.sc[0])) return; Held<T, K> c(l, 0, l.sc[0]); \
+#define BV_MAKE_FORMS(K, LOOP)                                                                              \
+    BV_FORM(LOOP##_view, if (whole_if_stopped<T, K>(l, l.sc[0])) return; Held<T, K> c(l, 0, l.sc[0]); \
             put(l, c.view()))                                                                            \
-    BV_FORM(bv_make_##K##_value, if (whole_if_stopped<T, K>(l, l.sc[0])) return;                         \
+    BV_FORM(LOOP##_value, if (whole_if_stopped<T, K>(l, l.sc[0])) return;                         \
             if (!with_length(l.n, [&](auto n) { put(l, value<T, K, NV(n)>(l, 0, l.sc[0])); })) {             \
                 Held<T, K> c(l, 0, l.sc[0]);                                                             \
                 put(l, c.view());                                                                        \
                 return;                                                                                  \
             } ++reached)                                                                                 \
-    BV_FORM(bv_make_##K##_value_from_view, if (whole_if_stopped<T, K>(l, l.sc[0])) return;               \
+    BV_FORM(LOOP##_value_from_view, if (whole_if_stopped<T, K>(l, l.sc[0])) return;               \
             Held<T, K> c(l, 0, T(0));                                                                    \
             if (!with_length(l.n, [&](auto n) {                                                          \
                     put(l, kairn::BallVector<T, K, NV(n)>(kairn::SoAView<const T, K>(c.soa()), l.sc[0]));     \
@@ -172,8 +172,10 @@ bool whole_if_stopped(Line<T>& l, T r) {
                 put(l, d.view());                                                                        \
                 return;                                                                                  \
             } ++reached)
-BV_MAKE_FORMS(1)
-BV_MAKE_FORMS(2)
+BV_MAKE_FORMS(1, bv_make_1)
+// Two limbs: bv_make_2_entry, bv_make_2 on each limb of each center guarded (rule R3), which every
+// constructor of BallVector<T, 2, N> and of its views calls.
+BV_MAKE_FORMS(2, bv_make_2_entry)
 
 // --- The negation: bv_neg_k (x, rx) -----------------------------------------------------------------
 #define BV_NEG_FORMS(K)                                                                                     \
@@ -415,10 +417,10 @@ struct FoldForm {
     FROW(LOOP, OP, ball_vector, K, 2, 2, true, true)                   \
     FROW(LOOP, OP_ASSIGN, ball_vector, K, 2, 2, true, true)            \
     FROW(LOOP, A, ball_vector, K, 2, 2, false, true)
-#define K_ROWS(K, SCALE)                                                                    \
-    FROW(bv_make_##K, view, ball_vector, K, 1, 1, false, false)                      \
-    FROW(bv_make_##K, value, ball_vector, K, 1, 1, true, false)                      \
-    FROW(bv_make_##K, value_from_view, ball_vector, K, 1, 1, true, false)            \
+#define K_ROWS(K, SCALE, MAKE)                                                                    \
+    FROW(MAKE, view, ball_vector, K, 1, 1, false, false)                             \
+    FROW(MAKE, value, ball_vector, K, 1, 1, true, false)                             \
+    FROW(MAKE, value_from_view, ball_vector, K, 1, 1, true, false)                   \
     FROW(bv_neg_##K, neg, ball_vector, K, 1, 1, false, true)                         \
     FROW(bv_neg_##K, neg_sequential, ball_vector, K, 1, 1, false, false)             \
     FROW(bv_neg_##K, neg_in_place_x, ball_vector, K, 1, 1, false, true)              \
@@ -446,7 +448,7 @@ struct FoldForm {
     FROW(norm_upper_##K, ball_vector_norm_upper, maxima, K, 1, 0, false, true)       \
     FROW(norm_upper_##K, ball_vector_norm_upper_sequential, maxima, K, 1, 0, false, false)
 // The first form of each loop is its canonical one (the debug build's runner runs that one only).
-const FoldForm fold_forms[] = {K_ROWS(1, bv_scale_1) K_ROWS(2, bv_scale_2_entry)};
+const FoldForm fold_forms[] = {K_ROWS(1, bv_scale_1, bv_make_1) K_ROWS(2, bv_scale_2_entry, bv_make_2_entry)};
 #undef K_ROWS
 #undef SUM_ROWS
 #undef FROW
@@ -461,7 +463,7 @@ struct LoopPart {
     const char* loop;
 };
 const LoopPart loop_parts[] = {
-    {"bv_center_entry_1", "bv_make_1"}, {"bv_center_2", "bv_make_2"}, {"bv_make_radius", "bv_make_1"},
+    {"bv_center_entry_1", "bv_make_1"}, {"bv_center_entry_2", "bv_make_2_entry"}, {"bv_make_radius", "bv_make_1"},
     {"bv_make_finish", "bv_make_1"}, {"neg_1", "bv_neg_1"}, {"bv_neg_radius", "bv_neg_1"},
     {"sub_1_1", "bv_sub_1"}, {"bv_add_radius_1", "bv_add_1"}, {"bv_add_radius_2", "bv_add_2"},
     {"scale_step_1", "bv_scale_1"}, {"bv_scale_step_2", "bv_scale_2_entry"}, {"bv_scale_radius_1", "bv_scale_1"},

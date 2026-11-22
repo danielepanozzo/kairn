@@ -9,7 +9,7 @@
    and a + 0 at run time, and `times_inf t`, which there compares t with zero (times_inf_ce of
    the C++ prelude) and at run time multiplies it by +infinity. This file compares the two
    executions of a whole kernel, with all three, for every kernel that computes one of them:
-   the 63 of proofs/gen/IeeeWith.v.
+   the 64 of proofs/gen/IeeeWith.v.
 
    The thirty that the rule of the product makes constexpr are the products and scalings
    mul_1_1, rmul, mul_pow2_step_1, scale_step_1, mul_pow2_2, mul_pow2_2_full,
@@ -21,12 +21,12 @@
    interval_mid_rad_1, interval_to_ball_1, interval_split_1, interval_split_2,
    ball_from_interval_1, ball_from_interval_2, ball_hull_1 and ball_intersection_1.
 
-   The 33 without a product guard an operand or fix up a non-finite result: the entry
+   The 34 without a product guard an operand or fix up a non-finite result: the entry
    kernels and steps that guard what the program supplies (add_down_entry, add_up_entry,
    sub_down_entry, sub_up_entry, add_entry_step_1, sub_entry_step_1, sum_entry_step_1,
    add_entry_step_2, sub_entry_step_2, sum_entry_step_2, sum_fast_entry_step_2,
    fast_two_sum_entry, two_sum_entry, radd_entry, acc_add_1, acc_add_2, bv_center_entry_1,
-   bv_make_radius, ball_contains_point_1), the constructors (make_2, make_2_limbs,
+   bv_center_entry_2, bv_make_radius, ball_contains_point_1), the constructors (make_2, make_2_limbs,
    ball_make_1, ball_make_2, interval_make_1), the sums and differences of a number and a
    pair (add_2_1, sub_1_2, sub_2_1, each with a guard), and the full sums and differences,
    whose fix-ups use times_inf (add_2_1_full, sub_1_2_full, sub_2_1_full with a guard too,
@@ -1168,6 +1168,12 @@ Lemma make_2_limbs_with_prod :
   = IeeeModel.make_2_limbs prec emax nan_plus h l.
 Proof. reflexivity. Qed.
 
+Lemma bv_center_entry_2_with_prod :
+  forall c0 c1 : float,
+  IeeeWith.bv_center_entry_2_with prec emax guard c0 c1
+  = IeeeModel.bv_center_entry_2 prec emax nan_plus c0 c1.
+Proof. reflexivity. Qed.
+
 Lemma sub_1_2_with_prod :
   forall a y0 y1 : float,
   IeeeWith.sub_1_2_with prec emax nan_plus nan_minus nan_opp guard a y0 y1
@@ -1428,6 +1434,7 @@ Notation w_add_fast_2_2_full' := (IeeeWith.add_fast_2_2_full_with prec emax nan_
 Notation w_ball_make_2 := (IeeeWith.ball_make_2_with prec emax nan_abs nan_const).
 Notation w_ball_make_2' := (IeeeWith.ball_make_2_with prec emax nan_abs' nan_const').
 Notation w_make_2_limbs := (IeeeWith.make_2_limbs_with prec emax).
+Notation w_bv_center_entry_2 := (IeeeWith.bv_center_entry_2_with prec emax).
 Notation w_sub_1_2 := (IeeeWith.sub_1_2_with prec emax nan_plus nan_minus nan_opp).
 Notation w_sub_1_2' := (IeeeWith.sub_1_2_with prec emax nan_plus' nan_minus' nan_opp').
 Notation w_sub_1_2_full := (IeeeWith.sub_1_2_full_with prec emax nan_plus nan_minus nan_opp
@@ -2216,6 +2223,17 @@ intros g g' Hg h h' l l' Hh Hl. cbv beta delta [IeeeWith.make_2_limbs_with].
 lockstep fail.
 Qed.
 
+(* bv_center_entry_2: the guard of each limb, then the copy bv_center_2. *)
+Lemma bv_center_entry_2_same :
+  forall g g' : float -> float, same_un g g' ->
+  forall c0 c0' c1 c1' : float, sv c0 c0' -> sv c1 c1' ->
+  same_pair (w_bv_center_entry_2 g c0 c1) (w_bv_center_entry_2 g' c0' c1').
+Proof.
+intros g g' Hg c0 c0' c1 c1' Hc0 Hc1.
+cbv beta zeta iota delta [IeeeWith.bv_center_entry_2_with IeeeModel.bv_center_2 same_pair].
+split; apply Hg; assumption.
+Qed.
+
 Lemma sub_1_2_same :
   forall g g' : float -> float, same_un g g' ->
   forall a a' y0 y0' y1 y1' : float, sv a a' -> sv y0 y0' -> sv y1 y1' ->
@@ -2934,6 +2952,17 @@ Proof.
 intros h l. rewrite <- make_2_limbs_with_prod.
 exact (make_2_limbs_same guard_ce guard' Hgc h h l l (same_refl prec emax h) (same_refl prec emax
        l)).
+Qed.
+
+Theorem bv_center_entry_2_two_executions :
+  forall c0 c1 : float,
+  let '(z0, z1) := w_bv_center_entry_2 guard_ce c0 c1 in
+  let '(z0', z1') := IeeeModel.bv_center_entry_2 prec emax nan_plus' c0 c1 in
+  sv z0 z0' /\ sv z1 z1'.
+Proof.
+intros c0 c1. rewrite <- bv_center_entry_2_with_prod.
+exact (bv_center_entry_2_same guard_ce guard' Hgc c0 c0 c1 c1 (same_refl prec emax c0)
+       (same_refl prec emax c1)).
 Qed.
 
 Theorem sub_1_2_two_executions :

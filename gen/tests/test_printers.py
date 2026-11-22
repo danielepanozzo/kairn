@@ -1031,10 +1031,12 @@ class Rocq(unittest.TestCase):
     # statement the same, but for the source lines of their comments.
     # Then bv_scale_step_2, bv_scale_radius_entry_2 and the fold bv_scale_2_entry (the same rule): their
     # models, statements and audit lines added. Then the source fields that cite their publications
-    # (JR18, JMP17, Dekker, Knuth and Moller): the comments of Model.v and Statements.v only.
-    DIGESTS = {'Model.v': '4356a111790d3db2452f380ea4ebbf62848d156d11c812a4620991e7928ceaa4',
-               'Statements.v': '8e544365965bc867bf9133ed2f21e241d9ae10b258a8622e3fb9532f1a828dc2',
-               'Audit.v': '40a725805d38fa6e90561f26a36c293fe5b7a2a12bb7bdf1a258bde4f0ebbd47'}
+    # (JR18, JMP17, Dekker, Knuth and Moller): the comments of Model.v and Statements.v only. Then
+    # bv_center_entry_2 and the fold bv_make_2_entry (the same rule): their models, statements and
+    # audit lines added.
+    DIGESTS = {'Model.v': 'ba9387f5dddf7286b534e79bdace65db14e81b7c73029f1d4c951060668ab43b',
+               'Statements.v': 'a7b30e41e8c83632303ec5ef808e54ba574b2df381aaf819559ae7ee458fbeb7',
+               'Audit.v': 'c9dc64fc88b4a6b20f4d297f8afd2dc1af4cf94882e1fb066658c98d586b5711'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -1074,8 +1076,8 @@ class Rocq(unittest.TestCase):
         # and the two guarded forms of rule R3 on the factors, dot_entry_step_1 and acc_mul_entry_1; and
         # the four entry forms of the products with a real-model statement, two_prod_entry,
         # mul_down_entry, mul_up_entry and mul_2_1_entry; and acc_mul_entry_2; and scale_entry_step_2;
-        # and dot_entry_step_2; and bv_scale_step_2 and bv_scale_radius_entry_2.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2 + 4 + 1 + 1 + 1 + 2)
+        # and dot_entry_step_2; and bv_scale_step_2 and bv_scale_radius_entry_2; and bv_center_entry_2.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3 + 1 + 2 + 4 + 1 + 1 + 1 + 2 + 1)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

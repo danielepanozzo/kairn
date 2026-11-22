@@ -105,6 +105,7 @@ Local Notation sub_1_1 := (IeeeModel.sub_1_1 prec emax nan_minus).
 Local Notation two_sum := (IeeeModel.two_sum prec emax nan_plus nan_minus).
 Local Notation add_2_2 := (IeeeModel.add_2_2 prec emax nan_plus nan_minus).
 Local Notation add_fast_2_2 := (IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus).
+Local Notation bv_center_2 := (IeeeModel.bv_center_2 prec emax).
 Local Notation lt_2_2 := (IeeeModel.lt_2_2 prec emax).
 Local Notation sub_2_2 := (IeeeModel.sub_2_2 prec emax nan_plus nan_minus nan_opp).
 
@@ -680,6 +681,13 @@ Definition ball_mul_pow2_2_full_with (p_ : float -> float -> float) (cx0 cx1 rx 
   let cw1 := if e then c1 else rx in
   let rw := if e then r else rx in
   (cw0, cw1, rw).
+
+(* bv_center_entry_2: bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). *)
+Definition bv_center_entry_2_with (g_ : float -> float) (c0 c1 : float) : float * float :=
+  let g0 := g_ c0 in
+  let g1 := g_ c1 in
+  let '(z0, z1) := bv_center_2 g0 g1 in
+  (z0, z1).
 
 (* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). *)
 Definition bv_mul_pow2_step_2_with (p_ : float -> float -> float) (x0 x1 c : float) : float * float * bool :=
@@ -1313,6 +1321,16 @@ Definition ball_mul_pow2_2_full_two_executions_spec : Prop :=
   let '(cw0, cw1, rw) := ball_mul_pow2_2_full_with prec emax nan_plus nan_minus nan_abs (prod_ce prec emax nan_mult) cx0 cx1 rx c in
   let '(cw0', cw1', rw') := IeeeModel.ball_mul_pow2_2_full prec emax nan_plus' nan_minus' nan_abs' nan_fma' cx0 cx1 rx c in
   xval cw0 = xval cw0' /\ xval cw1 = xval cw1' /\ xval rw = xval rw'.
+
+(* bv_center_entry_2: bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). The two executions. *)
+Definition bv_center_entry_2_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus' : nan2 prec emax),
+  forall c0 c1 : binary_float prec emax,
+  let '(z0, z1) := bv_center_entry_2_with prec emax (guard_ce prec emax) c0 c1 in
+  let '(z0', z1') := IeeeModel.bv_center_entry_2 prec emax nan_plus' c0 c1 in
+  xval z0 = xval z0' /\ xval z1 = xval z1'.
 
 (* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). The two executions. *)
 Definition bv_mul_pow2_step_2_two_executions_spec : Prop :=

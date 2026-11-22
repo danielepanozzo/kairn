@@ -117,6 +117,60 @@ intros prec emax Hp He x0 x1. unfold IeeeModel.bv_center_2. cbv beta iota zeta.
 exact (fun F => F).
 Qed.
 
+(* The guard of each limb of a canonical pair (rule R3, bv_center_entry_2): a finite limb keeps
+   its value, an infinity stays itself, a zero becomes +0 and a NaN stays a NaN, so the pair stays
+   canonical and stands for the same extended real number. *)
+Lemma guard_canonical_2 (prec emax : Z) {prec_gt_0_ : Prec_gt_0 prec}
+    {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax} (nan_plus : nan2 prec emax)
+    (c0 c1 : binary_float prec emax) :
+  canonical_2 c0 c1 ->
+  canonical_2 (IeeeOperations.guard prec emax nan_plus c0) (IeeeOperations.guard prec emax nan_plus c1) /\
+  xval_2 (IeeeOperations.guard prec emax nan_plus c0) (IeeeOperations.guard prec emax nan_plus c1) =
+  xval_2 c0 c1.
+Proof.
+intros [[F0 [F1 N]]|[[[s Ei] [s' Ez]]|[N0 N1]]].
+- assert (G0 : finite (IeeeOperations.guard prec emax nan_plus c0))
+    by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact F0).
+  assert (G1 : finite (IeeeOperations.guard prec emax nan_plus c1))
+    by (unfold finite; rewrite (guard_finite prec emax nan_plus); exact F1).
+  assert (V0 : val (IeeeOperations.guard prec emax nan_plus c0) = val c0)
+    by exact (guard_val prec emax nan_plus c0).
+  assert (V1 : val (IeeeOperations.guard prec emax nan_plus c1) = val c1)
+    by exact (guard_val prec emax nan_plus c1).
+  split.
+  + left. split. exact G0. split. exact G1. rewrite V0, V1. exact N.
+  + unfold xval_2. unfold finite in F0, G0. rewrite G0, F0, V0, V1. reflexivity.
+- subst c0 c1. unfold infinity.
+  rewrite (guard_inf prec emax nan_plus s), (guard_zero prec emax nan_plus s').
+  split; [|reflexivity]. right. left. split. exists s. reflexivity. exists false. reflexivity.
+- unfold nan in N0, N1.
+  assert (G0 : is_nan prec emax (IeeeOperations.guard prec emax nan_plus c0) = true)
+    by (rewrite (guard_nan prec emax nan_plus); exact N0).
+  assert (G1 : is_nan prec emax (IeeeOperations.guard prec emax nan_plus c1) = true)
+    by (rewrite (guard_nan prec emax nan_plus); exact N1).
+  split.
+  + right. right. split. exact G0. exact G1.
+  + unfold xval_2. rewrite (nan_not_finite prec emax _ G0), (nan_not_finite prec emax _ N0), G0, N0.
+    reflexivity.
+Qed.
+
+(* bv_center_entry_2: bv_center_2 on the guarded limbs (rule R3), of the extended domain. *)
+Theorem bv_center_entry_2_ieee_correct : bv_center_entry_2_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus Hp1 c0 c1 H.
+unfold IeeeModel.bv_center_entry_2, IeeeModel.bv_center_2. cbv beta iota zeta.
+destruct (guard_canonical_2 prec emax nan_plus c0 c1 H) as [C X].
+split. exact C. split. exact X.
+intros _. split; apply (guard_val prec emax nan_plus).
+Qed.
+
+Theorem bv_center_entry_2_ieee_lead : bv_center_entry_2_ieee_lead_spec.
+Proof.
+intros prec emax Hp He nan_plus c0 c1.
+unfold IeeeModel.bv_center_entry_2, IeeeModel.bv_center_2. cbv beta iota zeta.
+unfold finite. rewrite (guard_finite prec emax nan_plus). exact (fun F => F).
+Qed.
+
 Theorem bv_make_finish_correct : bv_make_finish_spec.
 Proof.
 intros prec emax Hp He nan_abs nan_const rz ok. unfold IeeeModel.bv_make_finish. cbv zeta.
@@ -643,4 +697,104 @@ intros prec emax Hp He nan_plus nan_minus nan_abs nan_const Hp1 W r cs Hc.
 rewrite (bv_make_2_lanes_seq_ieee prec emax Hp He nan_plus nan_minus nan_abs nan_const W r
   cs).
 exact (bv_make_2_seq_ieee_correct prec emax Hp He nan_plus nan_minus nan_abs nan_const Hp1 r cs Hc).
+Qed.
+
+(** * The constructor of a ball vector on the guarded limbs of its centers *)
+
+(* bv_make_2_entry (rule R3): its step bv_center_entry_2 is bv_center_2 on the guarded limbs, so
+   the loop is bv_make_2 on the centers guarded limb by limb, in both orders, float for float. Its
+   statements follow from those of bv_make_2 there: a guarded canonical pair is canonical, finite
+   exactly when the pair is, with the same values (guard_canonical_2). *)
+Definition guard_pair (prec emax : Z) {prec_gt_0_ : Prec_gt_0 prec}
+    {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax} (nan_plus : nan2 prec emax)
+    (c : binary_float prec emax * binary_float prec emax) : binary_float prec emax * binary_float prec emax :=
+  (IeeeOperations.guard prec emax nan_plus (fst c), IeeeOperations.guard prec emax nan_plus (snd c)).
+
+Lemma bv_make_2_entry_seq_eq (prec emax : Z) {prec_gt_0_ : Prec_gt_0 prec}
+    {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}
+    (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax)
+    (nan_const : {x : binary_float prec emax | is_nan prec emax x = true})
+    (r : binary_float prec emax) (cs : list (binary_float prec emax * binary_float prec emax)) :
+  IeeeFoldModel.bv_make_2_entry_seq prec emax nan_plus nan_minus nan_abs nan_const r cs =
+  IeeeFoldModel.bv_make_2_seq prec emax nan_plus nan_minus nan_abs nan_const r
+    (map (guard_pair prec emax nan_plus) cs).
+Proof.
+unfold IeeeFoldModel.bv_make_2_entry_seq, IeeeFoldModel.bv_make_2_seq. cbv zeta.
+assert (E : map (IeeeFoldModel.bv_make_2_entry_step prec emax nan_plus) cs =
+            map (IeeeFoldModel.bv_make_2_step prec emax) (map (guard_pair prec emax nan_plus) cs)).
+{ rewrite map_map. apply map_ext. intros [c0 c1]. reflexivity. }
+rewrite E. reflexivity.
+Qed.
+
+Lemma bv_make_2_entry_lanes_eq (prec emax : Z) {prec_gt_0_ : Prec_gt_0 prec}
+    {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}
+    (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax)
+    (nan_const : {x : binary_float prec emax | is_nan prec emax x = true})
+    (W : nat) (r : binary_float prec emax) (cs : list (binary_float prec emax * binary_float prec emax)) :
+  IeeeFoldModel.bv_make_2_entry_lanes prec emax nan_plus nan_minus nan_abs nan_const W r cs =
+  IeeeFoldModel.bv_make_2_lanes prec emax nan_plus nan_minus nan_abs nan_const W r
+    (map (guard_pair prec emax nan_plus) cs).
+Proof.
+unfold IeeeFoldModel.bv_make_2_entry_lanes, IeeeFoldModel.bv_make_2_lanes. cbv zeta.
+assert (E : map (IeeeFoldModel.bv_make_2_entry_step prec emax nan_plus) cs =
+            map (IeeeFoldModel.bv_make_2_step prec emax) (map (guard_pair prec emax nan_plus) cs)).
+{ rewrite map_map. apply map_ext. intros [c0 c1]. reflexivity. }
+rewrite E. reflexivity.
+Qed.
+
+Lemma Forall2_map_l_inv {A B C : Type} (f : A -> C) (P : C -> B -> Prop) (l : list A) (l' : list B) :
+  Forall2 P (map f l) l' -> Forall2 (fun x y => P (f x) y) l l'.
+Proof.
+revert l'. induction l as [|a l IH]; intros l' H; cbn in H.
+- inversion H. constructor.
+- inversion H; subst. constructor. assumption. apply IH. assumption.
+Qed.
+
+Lemma guard_pair_finite_fst (prec emax : Z) {prec_gt_0_ : Prec_gt_0 prec}
+    {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax} (nan_plus : nan2 prec emax)
+    (cs : list (binary_float prec emax * binary_float prec emax)) :
+  Forall (fun c => finite (fst c)) (map (guard_pair prec emax nan_plus) cs) <->
+  Forall (fun c => finite (fst c)) cs.
+Proof.
+induction cs as [|[c0 c1] cs IH]; cbn [map].
+- split; intros _; constructor.
+- split; intros G; inversion G as [|x l Hx Hl]; subst; constructor.
+  + unfold guard_pair, finite in Hx. cbn [fst snd] in Hx |- *.
+    rewrite (guard_finite prec emax nan_plus) in Hx. exact Hx.
+  + apply IH. exact Hl.
+  + unfold guard_pair, finite. cbn [fst snd]. rewrite (guard_finite prec emax nan_plus). exact Hx.
+  + apply IH. exact Hl.
+Qed.
+
+Theorem bv_make_2_entry_seq_ieee_correct : bv_make_2_entry_seq_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_const Hp1 r cs Hc.
+rewrite (bv_make_2_entry_seq_eq prec emax nan_plus nan_minus nan_abs nan_const r cs).
+assert (Hg : Forall (fun c => canonical_2 (fst c) (snd c)) (map (guard_pair prec emax nan_plus) cs)).
+{ apply Forall_map. revert Hc. apply Forall_impl. intros [c0 c1] C. cbn [fst snd] in C |- *.
+  unfold guard_pair. cbn [fst snd]. exact (proj1 (guard_canonical_2 prec emax nan_plus c0 c1 C)). }
+generalize (bv_make_2_seq_ieee_correct prec emax Hp He nan_plus nan_minus nan_abs nan_const Hp1 r
+              (map (guard_pair prec emax nan_plus) cs) Hg).
+destruct (IeeeFoldModel.bv_make_2_seq prec emax nan_plus nan_minus nan_abs nan_const r
+            (map (guard_pair prec emax nan_plus) cs)) as [[ws r_] flag].
+intros [A [B [C [D E]]]].
+pose proof (guard_pair_finite_fst prec emax nan_plus cs) as Fg.
+split. exact A. split. exact B. split.
+- split.
+  + intros Hf. destruct (proj1 C Hf) as [X [Y Z]]. split. exact X. split. exact Y. apply Fg. exact Z.
+  + intros [X [Y Z]]. apply (proj2 C). split. exact X. split. exact Y. apply Fg. exact Z.
+- split; [|exact E].
+  apply Forall2_map_l_inv in D. revert D. apply Forall2_impl. intros [c0 c1] [z0 z1] H Hf.
+  unfold guard_pair in H. cbn [fst snd] in H. destruct (H Hf) as [V0 V1].
+  rewrite V0, V1. split; apply (guard_val prec emax nan_plus).
+Qed.
+
+Theorem bv_make_2_entry_lanes_ieee_correct : bv_make_2_entry_lanes_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_const Hp1 W r cs Hc.
+rewrite (bv_make_2_entry_lanes_eq prec emax nan_plus nan_minus nan_abs nan_const W r cs).
+rewrite (bv_make_2_lanes_seq_ieee prec emax Hp He nan_plus nan_minus nan_abs nan_const W r
+  (map (guard_pair prec emax nan_plus) cs)).
+rewrite <- (bv_make_2_entry_seq_eq prec emax nan_plus nan_minus nan_abs nan_const r cs).
+exact (bv_make_2_entry_seq_ieee_correct prec emax Hp He nan_plus nan_minus nan_abs nan_const Hp1 r cs Hc).
 Qed.

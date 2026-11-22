@@ -716,7 +716,8 @@ class FoldClaims(unittest.TestCase):
         # The ball vectors (test_bv.py), with "bv": true.
         bvs = {name for name, fd in self.ks.folds.items() if fd.is_bv}
         self.assertEqual(bvs, {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_scale_2_entry',
-                               'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'})
+                               'bv_make_1', 'bv_make_2', 'bv_make_2_entry', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1',
+                               'bv_mul_pow2_2'})
         self.assertTrue(all(self.by[n]['bv'] is True and 'map' not in self.by[n] for n in bvs))
         # The products of two BallVectors (test_bv_conv.py), with "bv_conv": true.
         products = {name for name, fd in self.ks.folds.items() if fd.is_bv_conv}

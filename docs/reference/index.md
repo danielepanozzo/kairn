@@ -6,9 +6,9 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 236 kernels are proved.
+All 237 kernels are proved.
 
-35 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
+36 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
 No public operation calls an UNVERIFIED kernel, so none needs the marker `kairn::unverified`.
 
@@ -316,10 +316,10 @@ The kernels of the loops over arrays (the folds of Milestone 2) that `kairn/batc
 | `traits<Expansion<T, 2>>::sum(n)`, `traits<Expansion<T, 2>>::sum_height(h)` | `std::size_t` | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - m \mathrm{unit}(\mathtt{add\_2\_2})}$ | [`bound_sum_2`](bound_sum_2.md) |
 | `traits<T>::dot(n)` | `std::size_t` | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - m \mathrm{unit}(\mathtt{mul\_1\_1})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_1\_1}) (1 + g)$ | [`bound_dot_1`](bound_dot_1.md) |
 | `traits<Expansion<T, 2>>::dot(n)` | `std::size_t` | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_2\_2})}{1 - m \mathrm{unit}(\mathtt{mul\_2\_2})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_2\_2}) (1 + g)$ | [`bound_dot_2`](bound_dot_2.md) |
-| none of its own (in the loops `bv_make_1`, `bv_make_2`, `bv_neg_1`, `bv_neg_2`, `bv_add_1`, `bv_add_2`, `bv_sub_1`, `bv_sub_2`, `bv_scale_1`, `bv_scale_2`, `bv_mul_pow2_1`, `bv_mul_pow2_2`, `norm_upper_1`, `norm_upper_2`) | - | $r = \max(m, n)$ | [`norm_combine`](norm_combine.md) |
+| none of its own (in the loops `bv_make_1`, `bv_make_2_entry`, `bv_neg_1`, `bv_neg_2`, `bv_add_1`, `bv_add_2`, `bv_sub_1`, `bv_sub_2`, `bv_scale_1`, `bv_scale_2_entry`, `bv_mul_pow2_1`, `bv_mul_pow2_2`, `norm_upper_1`, `norm_upper_2`) | - | $r = \max(m, n)$ | [`norm_combine`](norm_combine.md) |
 | none of its own (in the loops `bv_make_1`, `bv_neg_1`, `bv_add_1`, `bv_sub_1`, `bv_scale_1`, `bv_mul_pow2_1`, `bv_conv_1`, `norm_upper_1`) | - | $r = \max(m, \lvert x\rvert)$ | [`norm_step_1`](norm_step_1.md) |
-| none of its own (in the loops `bv_make_2`, `bv_neg_2`, `bv_add_2`, `bv_sub_2`, `bv_scale_2`, `bv_mul_pow2_2`, `bv_conv_2`, `norm_upper_2`) | - | $r = \max(m, \lvert x_0\rvert)$ | [`norm_step_2`](norm_step_2.md) |
-| none of its own (in the loops `bv_neg_1`, `bv_neg_2`, `bv_add_1`, `bv_add_2`, `bv_sub_1`, `bv_sub_2`, `bv_scale_1`, `bv_scale_2`, `bv_mul_pow2_1`, `bv_mul_pow2_2`, `norm_upper_1`) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_1`](norm_finish_1.md) |
+| none of its own (in the loops `bv_make_2_entry`, `bv_neg_2`, `bv_add_2`, `bv_sub_2`, `bv_scale_2_entry`, `bv_mul_pow2_2`, `bv_conv_2`, `norm_upper_2`) | - | $r = \max(m, \lvert x_0\rvert)$ | [`norm_step_2`](norm_step_2.md) |
+| none of its own (in the loops `bv_neg_1`, `bv_neg_2`, `bv_add_1`, `bv_add_2`, `bv_sub_1`, `bv_sub_2`, `bv_scale_1`, `bv_scale_2_entry`, `bv_mul_pow2_1`, `bv_mul_pow2_2`, `norm_upper_1`) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_1`](norm_finish_1.md) |
 | none of its own (in the loop `norm_upper_2`) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_2`](norm_finish_2.md) |
 | `A.add(x)`, `A.add(a)` | `Accumulator<T, 1>`, `Expansion<T, 1>` | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x\rvert)$ | [`acc_add_1`](acc_add_1.md) |
 | `A.add(x)`, `A.add(a)` | `Accumulator<T, 2>`, `Expansion<T, 2>` | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x_0\rvert)$, normalized | [`acc_add_2`](acc_add_2.md) |
@@ -361,7 +361,7 @@ The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry 
 | `add(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$, normalized | [`add_entry_step_2`](add_entry_step_2.md) |
 | `sub(x, y, z)` | `SoAView<const T, 2>`, `SoAView<const T, 2>`, `SoAView<T, 2>` | $\lvert z - (x - y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x - y\rvert$, normalized | [`sub_entry_step_2`](sub_entry_step_2.md) |
 | `scale(x, a, z)` | `SoAView<const T, 1>`, `T`, `SoAView<T, 1>` | $z = \mathrm{RN}(x a)$; $\lvert z - x a\rvert \le \frac{u}{1 + u}\,\lvert x a\rvert + \tfrac{1}{2}\,\eta$ | [`scale_step_1`](scale_step_1.md) |
-| none of its own (in the loop `bv_scale_2`) | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_step_2`](scale_step_2.md) |
+| none (internal) | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_step_2`](scale_step_2.md) |
 | `scale(x, a, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_entry_step_2`](scale_entry_step_2.md) |
 | `mul_pow2(x, c, z)` | `SoAView<const T, 1>`, `T`, `SoAView<T, 1>` | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`mul_pow2_step_1`](mul_pow2_step_1.md) |
 | `mul_pow2(x, c, z)` | `SoAView<const T, 2>`, `T`, `SoAView<T, 2>` | $\lvert z - x c\rvert \le \eta$, normalized | [`mul_pow2_step_2`](mul_pow2_step_2.md) |
@@ -381,13 +381,14 @@ The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry 
 | none of its own (in the loops `bv_add_1`, `bv_sub_1`) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bv_add_radius_1`](bv_add_radius_1.md) |
 | none of its own (in the loops `bv_add_2`, `bv_sub_2`) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - \mathrm{unit}(\mathtt{add\_2\_2})} (1 + u)$ | [`bv_add_radius_2`](bv_add_radius_2.md) |
 | none of its own (in the loop `bv_scale_1`) | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})} + \frac{\mathrm{tiny}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})}$ | [`bv_scale_radius_1`](bv_scale_radius_1.md) |
-| none of its own (in the loop `bv_scale_2`) | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_2`](bv_scale_radius_2.md) |
-| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_entry_2`](bv_scale_radius_entry_2.md) |
+| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_2`](bv_scale_radius_2.md) |
+| none of its own (in the loop `bv_scale_2_entry`) | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_entry_2`](bv_scale_radius_entry_2.md) |
 | none of its own (in the loop `bv_make_1`) | - | $z = \mathrm{RN}(c)$ | [`bv_center_entry_1`](bv_center_entry_1.md) |
-| none of its own (in the loop `bv_make_2`) | - | $z = x$ exactly, normalized | [`bv_center_2`](bv_center_2.md) |
-| not yet called by the public headers | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`bv_scale_step_2`](bv_scale_step_2.md) |
-| none of its own (in the loops `bv_make_1`, `bv_make_2`) | - | $r_z = \mathrm{RN}(r)$ | [`bv_make_radius`](bv_make_radius.md) |
-| none of its own (in the loops `bv_make_1`, `bv_make_2`) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_make_finish`](bv_make_finish.md) |
+| none (internal) | - | $z = x$ exactly, normalized | [`bv_center_2`](bv_center_2.md) |
+| none of its own (in the loop `bv_make_2_entry`) | - | $z = c$ exactly, normalized | [`bv_center_entry_2`](bv_center_entry_2.md) |
+| none of its own (in the loop `bv_scale_2_entry`) | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`bv_scale_step_2`](bv_scale_step_2.md) |
+| none of its own (in the loops `bv_make_1`, `bv_make_2_entry`) | - | $r_z = \mathrm{RN}(r)$ | [`bv_make_radius`](bv_make_radius.md) |
+| none of its own (in the loops `bv_make_1`, `bv_make_2_entry`) | - | $r_z$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`bv_make_finish`](bv_make_finish.md) |
 | none of its own (in the loop `bv_neg_1`) | - | $z = \mathrm{RN}(-x)$ | [`neg_1`](neg_1.md) |
 | none of its own (in the loops `bv_neg_1`, `bv_neg_2`) | - | $r_z = \mathrm{RN}(r_x)$ | [`bv_neg_radius`](bv_neg_radius.md) |
 | none of its own (in the loop `bv_mul_pow2_1`) | - | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`bv_mul_pow2_step_1`](bv_mul_pow2_step_1.md) |

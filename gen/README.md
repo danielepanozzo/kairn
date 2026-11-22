@@ -506,7 +506,7 @@ rule:
    FILE K_ieee_correct` (with `ieee: spec`), `ieee_lead_theorem: FILE K_ieee_lead` (the step or
    the combination of a fold, or the step of a map); `ieee_lead_theorem` is also that of a kernel
    of the extended domain that has a leading-limb statement, the step of a fold (`neg_2`,
-   `bv_center_2`), whose other IEEE-model theorem is its `ieee_theorem`. A fold or a map names
+   `bv_center_2`, `bv_center_entry_2`), whose other IEEE-model theorem is its `ieee_theorem`. A fold or a map names
    `ieee_theorem: FILE`, the file of `F_seq_ieee_correct` and `F_lanes_ieee_correct` (and, for a
    fold of maxima in both orders, of `F_orders_ieee_correct` and `F_flag_ieee_correct`, the
    theorems of its two statements more), and a convolution or a product of two BallVectors, which

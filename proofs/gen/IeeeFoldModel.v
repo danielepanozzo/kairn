@@ -700,6 +700,33 @@ Definition bv_make_2_lanes (W : nat) (r : float) (cs : list (float * float)) : l
   let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
   (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
 
+(* bv_make_2_entry: a ball vector; step bv_center_entry_2, record norm_step_2, combination norm_combine, radius bv_make_radius, finish bv_make_finish. *)
+Definition bv_make_2_entry_step (c : float * float) : float * float :=
+  IeeeModel.bv_center_entry_2 prec emax nan_plus (fst c) (snd c).
+
+Definition bv_make_2_entry_map (cs : list (float * float)) : list (float * float) :=
+  map bv_make_2_entry_step cs.
+
+Definition bv_make_2_entry_record (mok : float * bool) (w_ : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_make_2_entry_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition bv_make_2_entry_seq (r : float) (cs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map bv_make_2_entry_step cs in
+  let s_ := fold_seq bv_make_2_entry_record (pzero, true) ws_ in
+  let rz_ := IeeeModel.bv_make_radius prec emax nan_plus nan_minus (fst s_) r in
+  let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
+Definition bv_make_2_entry_lanes (W : nat) (r : float) (cs : list (float * float)) : list (float * float) * float * bool :=
+  let ws_ := map bv_make_2_entry_step cs in
+  let s_ := fold_lanes bv_make_2_entry_record bv_make_2_entry_combine (pzero, true) W ws_ in
+  let rz_ := IeeeModel.bv_make_radius prec emax nan_plus nan_minus (fst s_) r in
+  let f_ := IeeeModel.bv_make_finish prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+
 (* bv_mul_pow2_1: a ball vector; step bv_mul_pow2_step_1, record norm_step_1, combination norm_combine, radius bv_mul_pow2_radius, finish norm_finish_1, the and of the step's masks of exactness. *)
 Definition bv_mul_pow2_1_step (c : float) (x : float) : float * bool :=
   IeeeModel.bv_mul_pow2_step_1 prec emax nan_abs nan_fma x c.

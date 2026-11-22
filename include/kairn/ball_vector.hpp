@@ -274,6 +274,8 @@ KAIRN_FORCEINLINE bool overlap(const T* a, std::size_t n, const T* b, std::size_
 // The constructor, in the sequential order in every build, so that BallVector and the views are
 // the same code in every translation unit (the lane order computes the same bits): the centers c
 // and the radius r given, written into the arrays z (which may be those of c, in place) and *rr.
+// Every caller passes centers that the program supplies, so each one is guarded (rule R3): loop
+// bv_make_1 for one limb, bv_make_2_entry for two, which guards each limb (bv_center_entry_2).
 // Checked in every build, as a batch entry (check_batch_environment, environment.hpp): the
 // environment, the rounding mode included, for one limb as for two. The constructor of one limb
 // rounds nothing but its guards (c + 0 and r + 0) and m - m, whose values are the same under every
@@ -308,8 +310,9 @@ KAIRN_FORCEINLINE void bv_make(const T* const* c, std::size_t n, T r, T* const* 
         static_assert(::kairn::gen::bounds::loops::bv_make_1<T>::proved, "kairn: the loop bv_make_1 is not proved for this T");
         gen::bv_make_1_seq(c[0], n, r, z[0], *rr, finite_);
     } else {
-        static_assert(::kairn::gen::bounds::loops::bv_make_2<T>::proved, "kairn: the loop bv_make_2 is not proved for this T");
-        gen::bv_make_2_seq(c[0], c[1], n, r, z[0], z[1], *rr, finite_);
+        static_assert(::kairn::gen::bounds::loops::bv_make_2_entry<T>::proved,
+                      "kairn: the loop bv_make_2_entry is not proved for this T");
+        gen::bv_make_2_entry_seq(c[0], c[1], n, r, z[0], z[1], *rr, finite_);
     }
 }
 
@@ -346,19 +349,16 @@ public:
     static constexpr int limbs = K;
 
     /// The program's arrays as a ball vector: makes them one in place, then sees them (loop bv_make_1
-    /// or bv_make_2, sequential order). c sees the n centers given, and radius is the radius given;
-    /// afterwards c's arrays hold the centers and radius the radius of a canonical ball vector,
-    /// which this view sees. For one limb each center is guarded (rule R3: the program may have
-    /// written a product there). For two limbs the centers must be canonical pairs whose limbs are
-    /// stored values, written through Kairn (as Expansion<T, 2>, through SoAView::set for instance):
-    /// the loop copies them unguarded, so limbs the program computed in the same function (a
-    /// product, a pair not normalized) are not covered; no compiler was measured to fuse a product of
-    /// the program through them (api.boundary.ball_vector). Proved, in the IEEE model, for any radius and any centers (canonical pairs
-    /// for two limbs): the result is canonical; it is the whole space (every center zero, the radius
-    /// +inf) exactly when the radius given is negative, a NaN or +inf, or the leading limb of a
-    /// center is not finite; otherwise the centers and the radius are the values given (a zero may
-    /// come back with the other sign). Checked with KAIRN_CHECKS as BallVector's constructor.
-    /// Not constexpr.
+    /// or bv_make_2_entry, sequential order). c sees the n centers given, and radius is the radius
+    /// given; afterwards c's arrays hold the centers and radius the radius of a canonical ball
+    /// vector, which this view sees. Each center is guarded, each limb of it for two limbs (rule R3:
+    /// the program may have written a product there). For two limbs the centers must be canonical
+    /// pairs (a pair the program computed that is not normalized is not covered). Proved, in the
+    /// IEEE model, for any radius and any centers (canonical pairs for two limbs): the result is
+    /// canonical; it is the whole space (every center zero, the radius +inf) exactly when the radius
+    /// given is negative, a NaN or +inf, or the leading limb of a center is not finite; otherwise the
+    /// centers and the radius are the values given (a zero may come back with the other sign).
+    /// Checked with KAIRN_CHECKS as BallVector's constructor. Not constexpr.
     BallVectorView(SoAView<V, K> c, V& radius) noexcept
         requires(!std::is_const_v<T>)
         : size_(c.size()), radius_(&radius) {
@@ -471,9 +471,10 @@ public:
 
     /// The point 0 of N entries: every center 0, the radius 0. Does not round.
     constexpr BallVector() noexcept = default;
-    /// The ball vector of the centers c and the radius r (loop bv_make_1 or bv_make_2, in the
-    /// sequential order in every build), each value guarded where the loop adds it (rule R3). For one
-    /// limb any centers; for two, canonical ones (Expansion<T, 2> made by Kairn). Proved, in the IEEE
+    /// The ball vector of the centers c and the radius r (loop bv_make_1 or bv_make_2_entry, in the
+    /// sequential order in every build), each value guarded (rule R3), each limb of a center of two
+    /// limbs too: the program may have written a product into an Expansion<T, 2> it holds. For one
+    /// limb any centers; for two, canonical ones. Proved, in the IEEE
     /// model: the result is canonical; it is the whole space exactly when r is negative (-inf
     /// included), a NaN or +inf, or the leading limb of a center is not finite; otherwise the centers
     /// are c and the radius r, as values (a zero may come back with the other sign). So the

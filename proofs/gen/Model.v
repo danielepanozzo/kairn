@@ -1050,6 +1050,13 @@ Definition bv_center_2 (x0 x1 : R) : R * R :=
   let z1 := x1 in
   (z0, z1).
 
+(* bv_center_entry_2: bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). *)
+Definition bv_center_entry_2 (c0 c1 : R) : R * R :=
+  let g0 := rnd (c0 + 0) in
+  let g1 := rnd (c1 + 0) in
+  let '(z0, z1) := bv_center_2 g0 g1 in
+  (z0, z1).
+
 (* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). *)
 Definition bv_mul_pow2_step_2 (x0 x1 c : R) : R * R * bool :=
   let h := rnd (x0 * c + 0) in

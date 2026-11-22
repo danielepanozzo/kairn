@@ -2159,6 +2159,13 @@ Definition bv_center_2 (x0 x1 : float) : float * float :=
   let z1 := x1 in
   (z0, z1).
 
+(* bv_center_entry_2: bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). *)
+Definition bv_center_entry_2 (c0 c1 : float) : float * float :=
+  let g0 := guard c0 in
+  let g1 := guard c1 in
+  let '(z0, z1) := bv_center_2 g0 g1 in
+  (z0, z1).
+
 (* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). *)
 Definition bv_mul_pow2_step_2 (x0 x1 c : float) : float * float * bool :=
   let h := prod x0 c in

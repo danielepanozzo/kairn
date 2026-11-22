@@ -223,11 +223,14 @@ const char* const factors_fold = "the loop on stored arrays, its factors unguard
 const char* const scalar_fold = "the scaling of a ball vector of two limbs on a stored scalar: the scalings and axpy "
                                 "of BallVector<T, 2, N> call bv_scale_2_entry, which guards the scalar (rule R3, the "
                                 "factors of a fused operation)";
+const char* const centers_fold = "the constructor of a ball vector of two limbs on stored centers: every constructor of "
+                                 "BallVector<T, 2, N> and of its views calls bv_make_2_entry, which guards each limb of "
+                                 "each center (rule R3)";
 const FoldNotPublic folds_not_public[] = {
     {"sum_1", stored_fold},  {"sum_2", stored_fold}, {"sum_fast_2", stored_fold}, {"add_1", stored_fold},
     {"add_2", stored_fold},  {"sub_1", stored_fold}, {"sub_2", stored_fold},      {"axpy_1", stored_fold},
     {"axpy_2", stored_fold}, {"axpy_2_1", stored_fold}, {"dot_1", factors_fold}, {"conv_1", factors_fold}, {"scale_2", stored_fold},
-    {"dot_2", factors_fold}, {"conv_2", factors_fold}, {"bv_scale_2", scalar_fold},
+    {"dot_2", factors_fold}, {"conv_2", factors_fold}, {"bv_scale_2", scalar_fold}, {"bv_make_2", centers_fold},
 };
 
 // Whether a form of the array forms is listed by this runner: all of them, but in the runner of the

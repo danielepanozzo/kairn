@@ -12059,6 +12059,75 @@
       }
     },
     {
+      "name": "bv_center_entry_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "c",
+      "requires": [
+        "canonical(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "represents",
+          "of": "z"
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_center_entry_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBvNegMake.v",
+        "name": "bv_center_entry_2_ieee_correct"
+      },
+      "source": {
+        "cite": "bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
       "name": "bv_mul_pow2_step_2",
       "inputs": [
         {
@@ -16739,6 +16808,94 @@
       },
       "source": {
         "cite": "the constructor of a BallVector: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_make_2_entry",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "c",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "r",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rr",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "c",
+      "requires": [
+        "canonical(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "makes_ball_vector",
+          "center": "z",
+          "radius": "rr",
+          "flag": "finite",
+          "from": {
+            "center": "c",
+            "radius": "r"
+          }
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "bv_center_entry_2",
+      "step_args": [
+        "c"
+      ],
+      "record": "norm_step_2",
+      "combine": "norm_combine",
+      "radius": "bv_make_radius",
+      "radius_args": [
+        "m",
+        "r"
+      ],
+      "finish": "bv_make_finish",
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvNegMake.v",
+        "name": "bv_make_2_entry_correct"
+      },
+      "source": {
+        "cite": "the constructor of a BallVector, bv_make_2 on the guarded limbs of the centers: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values)",
         "license": "algorithm and proof: MIT"
       }
     },

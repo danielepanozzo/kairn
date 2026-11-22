@@ -1288,9 +1288,10 @@ class R3OfTheKernels(unittest.TestCase):
     # And the step and the radius of the scaling of a ball vector of two limbs on its scalar guarded
     # (rule R3, the factors of a fused operation).
     FOLD_STEPS |= {'bv_scale_step_2', 'bv_scale_radius_entry_2'}
-    # And the step and the radius kernel of the constructor of a BallVector, which take the center and
-    # the radius the program gives (bv_center_2 copies the limbs of an Expansion<T, 2>, stored).
-    FOLD_STEPS |= {'bv_center_entry_1', 'bv_make_radius'}
+    # And the steps and the radius kernel of the constructor of a BallVector, which take the center and
+    # the radius the program gives (bv_center_entry_2 guards each limb; bv_center_2, the copy it calls,
+    # is the step of bv_make_2, on stored centers).
+    FOLD_STEPS |= {'bv_center_entry_1', 'bv_center_entry_2', 'bv_make_radius'}
     # And the steps and the radius of the scaling of a BallVector by a power of two, which take the power
     # of two the program gives (only multiplied).
     FOLD_STEPS |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
@@ -1388,7 +1389,8 @@ class R3OfTheKernels(unittest.TestCase):
                                          'conv_1', 'conv_2', 'conv_1_entry', 'dot_2_entry', 'conv_2_entry'} |
                          MAPS |
                          {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_scale_2_entry',
-                          'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'} |
+                          'bv_make_1', 'bv_make_2', 'bv_make_2_entry', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1',
+                          'bv_mul_pow2_2'} |
                          {'bv_conv_1', 'bv_conv_2'})
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
@@ -1736,6 +1738,9 @@ class TheKernels(unittest.TestCase):
     # And the kernels of the constructor of a BallVector: its steps, its radius (finite domain; the copy
     # bv_center_2 of the extended domain with a real-model statement, as neg_2) and its finish.
     BV |= {'bv_center_entry_1', 'bv_center_2', 'bv_make_radius', 'bv_make_finish'}
+    # And the step of the constructor of two limbs that guards each limb (rule R3), of the extended
+    # domain with a real-model statement, as bv_center_2.
+    BV |= {'bv_center_entry_2'}
     # And the step of one limb and the radius of the negation of a BallVector (finite domain).
     BV |= {'neg_1', 'bv_neg_radius'}
     # And the steps and the radius of the scaling of a BallVector by a power of two (finite domain).
@@ -1877,13 +1882,15 @@ class TheKernels(unittest.TestCase):
                          self.FACTOR_ENTRY_IEEE_ONLY)
         self.assertEqual({name for name, k in ks.items() if k.extended},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL |
-                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'} | {'bv_center_2'} |
+                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'} |
+                         {'bv_center_2', 'bv_center_entry_2'} |
                          self.FACTOR_ENTRY_EXTENDED)
-        # (bv_center_2, the copy of the constructor of a BallVector, has both statements, as neg_2.)
+        # (bv_center_2, the copy of the constructor of a BallVector, has both statements, as neg_2, and
+        # so has bv_center_entry_2, the same copy on the guarded limbs.)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
                                             | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.FOLDS_FINISH
-                                            | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
+                                            | ((self.NORM_FINISH | {'bv_center_2', 'bv_center_entry_2'}) - self.BV_IEEE_UNVERIFIED)
                                             | (self.WAVE_2_PROVED - self.WAVE_2_CORES)
                                             | self.FACTOR_ENTRY_EXTENDED, 'proved'),
                               **dict.fromkeys(((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED)
@@ -1894,7 +1901,7 @@ class TheKernels(unittest.TestCase):
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
                          | self.WAVE_1_FULL | self.FOLDS_FINISH
-                         | ((self.NORM_FINISH | {'bv_center_2'}) - self.BV_IEEE_UNVERIFIED)
+                         | ((self.NORM_FINISH | {'bv_center_2', 'bv_center_entry_2'}) - self.BV_IEEE_UNVERIFIED)
                          | (self.WAVE_2_PROVED - self.WAVE_2_CORES) | self.FACTOR_ENTRY_EXTENDED)
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
@@ -1945,7 +1952,7 @@ class TheKernels(unittest.TestCase):
             'bv_add_radius_1': 1, 'bv_add_radius_2': 3, 'bv_scale_radius_1': 1, 'bv_scale_radius_2': 2,
             'bv_scale_radius_entry_2': 2,
             # and the kernels of its constructor that have a real-model statement, from 1.
-            'bv_center_entry_1': 1, 'bv_center_2': 1, 'bv_make_radius': 1,
+            'bv_center_entry_1': 1, 'bv_center_2': 1, 'bv_center_entry_2': 1, 'bv_make_radius': 1,
             # and of the negation.
             'neg_1': 1, 'bv_neg_radius': 1,
             # and of the scaling by a power of two: the step of one limb from 1 (mul_pow2_step_1's), the

@@ -133,7 +133,7 @@ GROUPS = [
 BV_OPS = "of `BallVector<T, %s, N>` and `BallVectorView<T, %s>` ([Ball vectors](ball_vector.md))"
 LOOPS = {
     "bv_make_1": "the constructors " + BV_OPS % (1, 1),
-    "bv_make_2": "the constructors " + BV_OPS % (2, 2),
+    "bv_make_2_entry": "the constructors " + BV_OPS % (2, 2),
     "bv_neg_1": "`-x` and `neg(x, z)` " + BV_OPS % (1, 1),
     "bv_neg_2": "`-x` and `neg(x, z)` " + BV_OPS % (2, 2),
     "bv_add_1": "`x + y`, `x += y`, `add(x, y, z)` and `axpy` " + BV_OPS % (1, 1),
@@ -141,7 +141,7 @@ LOOPS = {
     "bv_sub_1": "`x - y`, `x -= y` and `sub(x, y, z)` " + BV_OPS % (1, 1),
     "bv_sub_2": "`x - y`, `x -= y` and `sub(x, y, z)` " + BV_OPS % (2, 2),
     "bv_scale_1": "`x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` " + BV_OPS % (1, 1),
-    "bv_scale_2": "`x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` " + BV_OPS % (2, 2),
+    "bv_scale_2_entry": "`x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` " + BV_OPS % (2, 2),
     "bv_mul_pow2_1": "`ldexp` and `half` " + BV_OPS % (1, 1),
     "bv_mul_pow2_2": "`ldexp` and `half` " + BV_OPS % (2, 2),
     "bv_conv_1": "`convolution`, the product of polynomials, " + BV_OPS % (1, 1),
@@ -1160,6 +1160,8 @@ KERNELS = {
                                     "the number guarded"),
     "bv_center_entry_1": page("ball-vectors", "A center of one limb given to the constructor of a BallVector"),
     "bv_center_2": page("ball-vectors", "A center of two limbs given to the constructor of a BallVector"),
+    "bv_center_entry_2": page("ball-vectors", "A center of two limbs given to the constructor of a BallVector, "
+                              "each limb guarded"),
     "bv_scale_step_2": page("ball-vectors", "A center of two limbs times a number of T, the number guarded"),
     "bv_make_radius": page("ball-vectors", "The radius given to the constructor of a BallVector"),
     "bv_make_finish": page("ball-vectors", "The result of the constructor of a BallVector: the radius given, or NaN"),

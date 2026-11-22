@@ -13438,6 +13438,27 @@ KAIRN_GEN_FORCEINLINE constexpr void bv_center_2(float x0, float x1, float& z0_o
     z1_out = z1;
 }
 
+// bv_center_entry_2(c = (c0, c1)) -> z = (z0, z1)
+// bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). Status: proved (real model), proved (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void bv_center_entry_2(double c0, double c1, double& z0_out, double& z1_out) noexcept {
+    const double g0 = __builtin_is_constant_evaluated() ? c0 : c0 + 0.0;
+    const double g1 = __builtin_is_constant_evaluated() ? c1 : c1 + 0.0;
+    // (z0, z1) = bv_center_2(g0, g1)
+    const double z0 = g0;
+    const double z1 = g1;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_center_entry_2(float c0, float c1, float& z0_out, float& z1_out) noexcept {
+    const float g0 = __builtin_is_constant_evaluated() ? c0 : c0 + 0.0f;
+    const float g1 = __builtin_is_constant_evaluated() ? c1 : c1 + 0.0f;
+    // (z0, z1) = bv_center_2(g0, g1)
+    const float z0 = g0;
+    const float z1 = g1;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // bv_mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1), mask e
 // mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_2(double x0, double x1, double c, double& z0_out, double& z1_out, bool& e_out) noexcept {
@@ -22428,6 +22449,282 @@ inline void bv_make_2_lanes(const float* c0_in, const float* c1_in, std::size_t 
     float rad_r_;
     bool rad_f_;
     bv_make_2_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_make_2_entry: its radius bv_make_radius and its finish bv_make_finish.
+KAIRN_GEN_NOINLINE void bv_make_2_entry_end(double m, bool ok, double r, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const double rad_g = r + 0.0;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_make_2_entry_end(float m, bool ok, float r, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const float rad_g = r + 0.0f;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0f;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_make_2_entry(supplied c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_entry_2, record norm_step_2, radius bv_make_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_seq(const double* c0_in, const double* c1_in, std::size_t n, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double c0 = c0_in[i_];
+        const double c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const double step_g0 = c0 + 0.0;
+        const double step_g1 = c1 + 0.0;
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const double step_z0 = step_g0;
+        const double step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_seq(const float* c0_in, const float* c1_in, std::size_t n, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float c0 = c0_in[i_];
+        const float c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const float step_g0 = c0 + 0.0f;
+        const float step_g1 = c1 + 0.0f;
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const float step_z0 = step_g0;
+        const float step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_make_2_entry(supplied c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_entry_2, record norm_step_2, radius bv_make_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_lanes(const double* c0_in, const double* c1_in, std::size_t n, std::size_t lanes, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double c0 = c0_in[i_];
+            const double c1 = c1_in[i_];
+            // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+            const double step_g0 = c0 + 0.0;
+            const double step_g1 = c1 + 0.0;
+            // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+            const double step_z0 = step_g0;
+            const double step_z1 = step_g1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const double rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double c0 = c0_in[i_];
+        const double c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const double step_g0 = c0 + 0.0;
+        const double step_g1 = c1 + 0.0;
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const double step_z0 = step_g0;
+        const double step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_lanes(const float* c0_in, const float* c1_in, std::size_t n, std::size_t lanes, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float c0 = c0_in[i_];
+            const float c1 = c1_in[i_];
+            // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+            const float step_g0 = c0 + 0.0f;
+            const float step_g1 = c1 + 0.0f;
+            // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+            const float step_z0 = step_g0;
+            const float step_z1 = step_g1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const float rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float c0 = c0_in[i_];
+        const float c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const float step_g0 = c0 + 0.0f;
+        const float step_g1 = c1 + 0.0f;
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const float step_z0 = step_g0;
+        const float step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
     if (!rad_f_) {
         for (std::size_t i_ = 0; i_ < n; ++i_) {
             static_cast<volatile float*>(z0_out)[i_] = 0.0f;

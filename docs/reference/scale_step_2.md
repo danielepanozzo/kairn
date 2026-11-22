@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $z = z_0 
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`bv_scale_step_2`](bv_scale_step_2.md), [`scale_entry_step_2`](scale_entry_step_2.md). It is part of the loop `bv_scale_2`, called by `x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
+No public operation computes this kernel on its own. It is part of [`bv_scale_step_2`](bv_scale_step_2.md), [`scale_entry_step_2`](scale_entry_step_2.md).
 
 ## Requires
 

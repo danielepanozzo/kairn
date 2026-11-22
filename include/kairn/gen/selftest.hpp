@@ -5689,6 +5689,26 @@ inline const char* bv_center_2_float() noexcept {
     return !same(o0, 0x1.310b72p+1f) || !same(o1, -0x1.566e8ap-28f) ? "bv_center_2 (float)" : nullptr;
 }
 
+// bv_center_entry_2 (double)
+inline const char* bv_center_entry_2_double() noexcept {
+    volatile double i0 = -0x1.ee263539c404ap+0;
+    volatile double i1 = 0x1.1553d417c265ap-54;
+    double o0;
+    double o1;
+    bv_center_entry_2(i0, i1, o0, o1);
+    return !same(o0, -0x1.ee263539c404ap+0) || !same(o1, 0x1.1553d417c265ap-54) ? "bv_center_entry_2 (double)" : nullptr;
+}
+
+// bv_center_entry_2 (float)
+inline const char* bv_center_entry_2_float() noexcept {
+    volatile float i0 = -0x1.8dcb6p+1f;
+    volatile float i1 = 0x1.680ed2p-25f;
+    float o0;
+    float o1;
+    bv_center_entry_2(i0, i1, o0, o1);
+    return !same(o0, -0x1.8dcb6p+1f) || !same(o1, 0x1.680ed2p-25f) ? "bv_center_entry_2 (float)" : nullptr;
+}
+
 // bv_mul_pow2_step_2 (double)
 inline const char* bv_mul_pow2_step_2_double() noexcept {
     volatile double i0 = -0x1.47e86a42bb71bp-1;
@@ -8139,6 +8159,8 @@ inline const char* run() noexcept {
         ball_zero_2_nonfinite_float,
         bv_center_2_double,
         bv_center_2_float,
+        bv_center_entry_2_double,
+        bv_center_entry_2_float,
         bv_mul_pow2_step_2_double,
         bv_mul_pow2_step_2_float,
         scale_step_2_double,

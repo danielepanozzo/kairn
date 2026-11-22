@@ -360,6 +360,9 @@ Print Assumptions eq_2_1_correct.
 Definition bv_center_2_audit : bv_center_2_spec := bv_center_2_correct.
 Print Assumptions bv_center_2_correct.
 
+Definition bv_center_entry_2_audit : bv_center_entry_2_spec := bv_center_entry_2_correct.
+Print Assumptions bv_center_entry_2_correct.
+
 Definition bv_mul_pow2_step_2_audit : bv_mul_pow2_step_2_spec := bv_mul_pow2_step_2_correct.
 Print Assumptions bv_mul_pow2_step_2_correct.
 
@@ -467,6 +470,9 @@ Print Assumptions bv_make_1_correct.
 
 Definition bv_make_2_audit : bv_make_2_spec := bv_make_2_correct.
 Print Assumptions bv_make_2_correct.
+
+Definition bv_make_2_entry_audit : bv_make_2_entry_spec := bv_make_2_entry_correct.
+Print Assumptions bv_make_2_entry_correct.
 
 Definition bv_mul_pow2_1_audit : bv_mul_pow2_1_spec := bv_mul_pow2_1_correct.
 Print Assumptions bv_mul_pow2_1_correct.

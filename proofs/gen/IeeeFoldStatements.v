@@ -230,6 +230,15 @@ Definition bv_center_2_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.bv_center_2 prec emax x0 x1 in
   finite z0 -> finite x0.
 
+(* bv_center_entry_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
+Definition bv_center_entry_2_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax),
+  forall c0 c1 : binary_float prec emax,
+  let '(z0, z1) := IeeeModel.bv_center_entry_2 prec emax nan_plus c0 c1 in
+  finite z0 -> finite c0.
+
 (* bv_mul_pow2_step_2, the leading limb of its result: finite only if those of its operands are. IEEE-model status: proved. *)
 Definition bv_mul_pow2_step_2_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -1925,6 +1934,44 @@ Definition bv_make_2_lanes_ieee_spec : Prop :=
   forall (W : nat) (r : binary_float prec emax) (cs : list (binary_float prec emax * binary_float prec emax)),
   Forall (fun c => canonical_2 (fst c) (snd c)) cs ->
   let '(ws_, r_, flag_) := IeeeFoldModel.bv_make_2_lanes prec emax nan_plus nan_minus nan_abs nan_const W r cs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  (flag_ = true <-> finite r /\ 0 <= val r /\ Forall (fun c => finite (fst c)) cs) /\
+  Forall2 (fun c w_ =>
+    let '(c0, c1) := c in
+    let '(z0, z1) := w_ in
+    flag_ = true -> val z0 = val c0 /\ val z1 = val c1) cs ws_ /\
+  (flag_ = true -> val r_ = val r).
+
+(* bv_make_2_entry, the sequential order, in the IEEE model: the constructor of a BallVector (a canonical result; the whole space exactly when the radius given is negative, a NaN or +infinity or a center given is not finite; otherwise the centers and the radius given). Status: proved. *)
+Definition bv_make_2_entry_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (r : binary_float prec emax) (cs : list (binary_float prec emax * binary_float prec emax)),
+  Forall (fun c => canonical_2 (fst c) (snd c)) cs ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_make_2_entry_seq prec emax nan_plus nan_minus nan_abs nan_const r cs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  (flag_ = true <-> finite r /\ 0 <= val r /\ Forall (fun c => finite (fst c)) cs) /\
+  Forall2 (fun c w_ =>
+    let '(c0, c1) := c in
+    let '(z0, z1) := w_ in
+    flag_ = true -> val z0 = val c0 /\ val z1 = val c1) cs ws_ /\
+  (flag_ = true -> val r_ = val r).
+
+(* bv_make_2_entry, the lane order, for every number of lanes W, in the IEEE model: the constructor of a BallVector (a canonical result; the whole space exactly when the radius given is negative, a NaN or +infinity or a center given is not finite; otherwise the centers and the radius given). Status: proved. *)
+Definition bv_make_2_entry_lanes_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (W : nat) (r : binary_float prec emax) (cs : list (binary_float prec emax * binary_float prec emax)),
+  Forall (fun c => canonical_2 (fst c) (snd c)) cs ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_make_2_entry_lanes prec emax nan_plus nan_minus nan_abs nan_const W r cs in
   ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
    (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
   (flag_ = true <-> finite r_) /\

@@ -2873,6 +2873,19 @@ Definition bv_center_2_ieee_spec : Prop :=
   xval_2 z0 z1 = xval_2 x0 x1 /\
   (finite x0 -> val z0 = val x0 /\ val z1 = val x1).
 
+(* bv_center_entry_2: bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). IEEE-model status: proved. *)
+Definition bv_center_entry_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax),
+  (1 <= prec)%Z ->
+  forall c0 c1 : binary_float prec emax,
+  canonical_2 c0 c1 ->
+  let '(z0, z1) := IeeeModel.bv_center_entry_2 prec emax nan_plus c0 c1 in
+  canonical_2 z0 z1 /\
+  xval_2 z0 z1 = xval_2 c0 c1 /\
+  (finite c0 -> val z0 = val c0 /\ val z1 = val c1).
+
 (* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). IEEE-model status: proved. *)
 Definition bv_mul_pow2_step_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)

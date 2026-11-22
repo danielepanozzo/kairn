@@ -1235,10 +1235,11 @@ maxima `norm_upper_k`. What is tested of them:
   contraction setting): the constructors' loops and the operations are calls of their own, and the
   unguarded build only reports. Two forms of two limbs over arrays the program fills in the same
   function, `BallVectorView<T, 2>` and `BallVector(SoAView<const T, 2>, r)` on pairs $(ab, 0)$, then a
-  sum: the constructor copies these limbs unguarded (they must be stored values), so the forms must
-  agree in every build, the copy without the guards included; none differed in the probe matrix of
-  2026-11-22 (GCC 13 and 16, Clang 18, Apple clang 21, `-O1` to `-O3`, each contraction setting, with
-  and without `NDEBUG`).
+  sum: the constructor guards each limb (`bv_make_2_entry`, its step `bv_center_entry_2`), and in the
+  copy without the guards it copies the limbs as they are, which makes that copy their control.
+  Neither form differed in the probe matrix of 2026-11-22, with the guards or without them (GCC 13
+  and 16, Clang 18, Apple clang 21, `-O1` to `-O3`, each contraction setting, with and without
+  `NDEBUG`): the guards there are the rule's, not the answer to an observed fault.
 - **What must not compile** (`api.reject.ball_vector.*`): writing a const `BallVector` or a view of
   `const T`, lengths that the types fix and that differ, two limb types, a view of mutable limbs made
   of one of `const T` or over arrays of `const T`, the implicit conversion of a view to a
@@ -1291,18 +1292,18 @@ rounded away gives 1 212 differences in the 80 829 comparisons with the oracle o
 **The kernels for it** are `tests/emulated/gen/kernels.hpp`, printed by the printer of
 `include/kairn/gen/scalar.hpp` with the type as its limb type
 ([Architecture](architecture.md#the-kernel-ir), "A limb type of a format chosen at run time"):
-every kernel (236) and every fold (50) in its sequential and lane orders, both forms of the
+every kernel (237) and every fold (51) in its sequential and lane orders, both forms of the
 fix-ups; a literal is the constant's value in the run-time format, from tables for `binary64`,
 `binary32` and 32 formats of the statements of precision 8 to 11 (`qmax` 1 to 16,
 $q_{\min} = 3 - q_{\max} - 2p$). `gen/tests/test_emulated.py` shows that it is the same emission: with the type's
-name replaced by `double`, the listing is the double listing token for token, 114 146 tokens,
+name replaced by `double`, the listing is the double listing token for token, 115 144 tokens,
 each literal the same constant in the same place (its value at `binary64`, and at float's format
-against the float listing), the test of constant evaluation in the same 155 places; and a select's
+against the float listing), the test of constant evaluation in the same 157 places; and a select's
 arms swapped, a constant replaced, a value inlined from the wrong operand and a statement added
 after a branch are each seen. On the Mac the emulated kernels at `binary64` and `binary32` gave the
 lines of the compiled double and float kernels (`gen/tests/runner.cpp`, Apple clang), byte for
 byte, on 267 535 and 534 535 requests of every kernel and fold (of the 223 kernels and 44 folds
-when the tier was written; the trees joined since add thirteen kernels and six folds, the entry forms
+when the tier was written; the trees joined since add fourteen kernels and seven folds, the entry forms
 of rule R3 on the factors of a fused operation).
 
 **The runner** `tests/emulated/runner.cpp` (`kairn-emulated-runner`, the fix-ups inline, and
@@ -1311,7 +1312,7 @@ each request from its line: kernels, folds in every order, maps in place, ball v
 convolutions, products of BallVectors. `--ce` runs the path of constant evaluation: the variant of
 a kernel that has one (Dekker's product in `two_prod` and `two_prod_entry`), each `prod` a plain product, `guard` its
 operand, `times_inf` from comparisons; a kernel without that path and every fold are refused, as
-the interpreter's `--ce` refuses them. Of the 236 kernels, 161 have such a path. The loops over
+the interpreter's `--ce` refuses them. Of the 237 kernels, 162 have such a path. The loops over
 arrays are covered in both their orders, `F_seq` and `F_lanes`, which the printer writes as scalar
 C++; `F_packed` is intrinsics and has no emulated form. The kernels are ordinary inline functions
 (`tests/emulated/prelude.hpp`), but a fix-up that is a function of its own and the end of a ball

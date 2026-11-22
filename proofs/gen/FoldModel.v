@@ -154,6 +154,19 @@ Definition bv_make_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
 Definition bv_make_2_radius (r : R) (cs : list (R * R)) : R :=
   bv_make_radius emin prec choice (fst (fold_seq bv_make_2_record (0, true) (bv_make_2_map cs))) r.
 
+(* bv_make_2_entry: a ball vector; arrays supplied c; scalars supplied r; it writes z by the step bv_center_entry_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_make_radius. *)
+Definition bv_make_2_entry_step (c : R * R) : R * R :=
+  bv_center_entry_2 emin prec choice (fst c) (snd c).
+
+Definition bv_make_2_entry_map (cs : list (R * R)) : list (R * R) :=
+  map bv_make_2_entry_step cs.
+
+Definition bv_make_2_entry_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_make_2_entry_radius (r : R) (cs : list (R * R)) : R :=
+  bv_make_radius emin prec choice (fst (fold_seq bv_make_2_entry_record (0, true) (bv_make_2_entry_map cs))) r.
+
 (* bv_mul_pow2_1: a ball vector; arrays stored x; scalars stored rx, supplied c; it writes z by the step bv_mul_pow2_step_1, records the largest magnitude of a center by norm_step_1 and the exactness of every entry by the step's mask, and gives the radius by bv_mul_pow2_radius. *)
 Definition bv_mul_pow2_1_step (c : R) (x : R) : R * bool :=
   bv_mul_pow2_step_1 emin prec choice x c.

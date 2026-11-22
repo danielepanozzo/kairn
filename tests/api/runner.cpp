@@ -1674,6 +1674,9 @@ const char* const internal[] = {
     // And the scaling of a center of two limbs, which the scalings of BallVector<T, 2, N> reach
     // through bv_scale_step_2, which guards the scalar first.
     "scale_step_2",
+    // And the copy of a center of two limbs, which the constructors of BallVector<T, 2, N> reach
+    // through bv_center_entry_2, which guards the limbs first.
+    "bv_center_2",
     // And the scaling of a ball of two limbs, core and full form, which the operators reach through
     // ball_scale_2_full_entry, which guards the scalar first.
     "ball_scale_2", "ball_scale_2_full",

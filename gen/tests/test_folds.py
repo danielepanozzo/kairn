@@ -49,7 +49,7 @@ MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 
 # The ball vectors, maps of the centers with the state of a fold of maxima (test_bv.py).
 BVS = {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_scale_2_entry'}
 # And the constructors of a BallVector (test_bv.py).
-BVS |= {'bv_make_1', 'bv_make_2'}
+BVS |= {'bv_make_1', 'bv_make_2', 'bv_make_2_entry'}
 # And the negations.
 BVS |= {'bv_neg_1', 'bv_neg_2'}
 # And the scalings by a power of two, exact under conditions.

@@ -521,8 +521,10 @@ class Statements(unittest.TestCase):
         # its elements guarded: dot_entry_step_2 (bridge, statement, leading limb) and dot_2_entry in
         # both orders, and conv_2_entry: 390. Then five with the scaling of a ball vector of two limbs
         # on its scalar guarded: bv_scale_step_2 (bridge, statement, leading limb) and bv_scale_2_entry
-        # in both orders: 395.
-        self.assertEqual(text.count('Print Assumptions'), 395)
+        # in both orders: 395. Then five with the constructor of a ball vector of two limbs on the limbs
+        # of its centers guarded: bv_center_entry_2 (statement of the extended domain, leading limb,
+        # its two executions: it computes guard) and bv_make_2_entry in both orders: 400.
+        self.assertEqual(text.count('Print Assumptions'), 400)
         self.assertEqual(text.count('Print Assumptions IeeeTwoExecutions.'), len(ieee.with_kernels(self.ks)))
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
@@ -688,9 +690,11 @@ class CheckedFiles(unittest.TestCase):
     # every statement the same, but for the source lines of their comments.
     # Then bv_scale_step_2 and bv_scale_radius_entry_2 (the same rule): their models, the program and the
     # statements of the first added, nothing else changed. Then the source fields that cite their
-    # publications (JR18, JMP17, Dekker, Knuth and Moller): the comments only.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '28c333d258cf35ebb82c5eecdbfd8dd44788aff98031fd87679de0ee1690f134',
-               'proofs/gen/IeeeStatements.v': 'ef4b2daefbcf5e3b7f8fc74f19f1e8b26208839418093ff7dab58812d95e3fa2'}
+    # publications (JR18, JMP17, Dekker, Knuth and Moller): the comments only. Then bv_center_entry_2
+    # (the same rule, the constructor of a ball vector of two limbs): its model and its statement
+    # added, nothing else changed.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '631829a8281ce0c2c0d1d1ea00047b7875e209d24825718300e7ce70bccacc4c',
+               'proofs/gen/IeeeStatements.v': 'fdead34e21e554a5233b746d67488021b5f9a58dbc59ed81661c7934c0a82eb8'}
 
 
     def test_the_checked_files(self):
@@ -737,7 +741,7 @@ class WithProduct(unittest.TestCase):
         line = next(x for x in build.summary(self.ks) if x.startswith('constexpr by the rule of the product'))
         self.assertEqual(sorted(line.split(': ', 1)[1].split(', ')), sorted(product))
         self.assertEqual(len(product), 30)
-        self.assertEqual(len(rule), 63)
+        self.assertEqual(len(rule), 64)
         self.assertLessEqual(set(product), set(rule))
         self.assertGreaterEqual(set(rule) - set(product), {
             'add_2_1', 'add_2_1_full', 'add_2_2_full', 'add_fast_2_2_full', 'sub_1_2_full', 'sub_2_1_full',
@@ -806,7 +810,7 @@ class WithProduct(unittest.TestCase):
                          ['axpy_entry_step_1', 'ball_from_interval_1', 'ball_from_interval_2'])
         self.assertEqual([n for n in took['times_inf'] if n in product], ['mul_pow2_2_full'])
         self.assertEqual(took['prod'], product)
-        self.assertEqual(len(took['guard']), 33)
+        self.assertEqual(len(took['guard']), 34)
         self.assertEqual(sorted(took['times_inf']), ['add_2_1_full', 'add_2_2_full', 'add_fast_2_2_full',
                                                      'mul_pow2_2_full', 'sub_1_2_full', 'sub_2_1_full',
                                                      'sub_2_2_full'])

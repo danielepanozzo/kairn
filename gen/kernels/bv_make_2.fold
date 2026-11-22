@@ -2,11 +2,10 @@
 # canonical already, and the program's radius (milestone2.md, "BallVector", "Values"): bv_make_1 with
 # each center copied (bv_center_2) and the state of norm_upper_2. A center that is (+-inf, +-0) or a
 # NaN, or a radius that is negative, a NaN or +infinity, gives the whole space; otherwise the centers
-# and the radius are those given. The limbs of the centers are stored values, written through Kairn
-# (an Expansion<T, 2>, or SoAView::set): the step copies them unguarded, so limbs the program
-# computed in the same function (a product, a pair not normalized) are not covered
-# (bv_center_2.kernel); no compiler was measured to fuse a product of the program through them
-# (api.boundary.ball_vector).
+# and the radius are those given. The step copies the limbs unguarded: they must be stored values,
+# written through Kairn. The constructors of kairn/ball_vector.hpp, whose centers the program
+# supplies, call bv_make_2_entry, this loop with each limb guarded (rule R3); this one is the loop on
+# stored centers, which no public function calls.
 fold:          bv_make_2
 arrays:        stored c = c0 c1
 scalars:       supplied r

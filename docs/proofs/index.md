@@ -200,9 +200,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    generated `proofs/gen/IeeeAudit.v`, like step 2; then, in the same file, every other
    IEEE-model theorem that a description names: those of the steps and the combinations of
    the folds and of the steps of the maps (and of the two steps of the extended domain that
-   have one, `neg_2` and `bv_center_2`), of the folds and the maps in their two orders, of the
+   have one, `neg_2`, `bv_center_2` and `bv_center_entry_2`), of the folds and the maps in their two orders, of the
    two statements more of the folds of maxima, of the convolutions and of the products of two
-   BallVectors; and last, for each kernel whose C++ dispatches on constant evaluation (63), the theorem
+   BallVectors; and last, for each kernel whose C++ dispatches on constant evaluation (64), the theorem
    of its two executions (`IeeeTwoExecutions.v`) against the statement the generator prints
    for it in `proofs/gen/IeeeWith.v`, `K_two_executions_spec`, which no description names.
 
@@ -611,8 +611,8 @@ kernel $(r + 0) + (m - m)$ is $r$ for a finite largest magnitude $m$), and the w
 exactly when the radius is negative, a NaN or $+\infty$ or a center (its leading limb) is not
 finite: the radius kernel is finite only from a finite $m$ and a finite $r$, $m$ is finite with
 the record's mask true exactly when every center is, and the finish tests the sign of the
-radius (`bv_make_finish`). The leading limbs of `neg_2` and `bv_center_2`, the steps of
-two limbs, are generated statements too, whose theorems their descriptions name
+radius (`bv_make_finish`). The leading limbs of `neg_2`, `bv_center_2` and
+`bv_center_entry_2`, the steps of two limbs, are generated statements too, whose theorems their descriptions name
 (`ieee_lead_theorem`, which a kernel of the extended domain may name when it has a leading-limb
 statement): they are audited in step 5.
 

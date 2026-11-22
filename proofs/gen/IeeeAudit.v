@@ -386,6 +386,9 @@ Print Assumptions ball_zero_2_correct.
 Definition bv_center_2_ieee_audit : bv_center_2_ieee_spec := bv_center_2_ieee_correct.
 Print Assumptions bv_center_2_ieee_correct.
 
+Definition bv_center_entry_2_ieee_audit : bv_center_entry_2_ieee_spec := bv_center_entry_2_ieee_correct.
+Print Assumptions bv_center_entry_2_ieee_correct.
+
 Definition fold_finish_2_audit : fold_finish_2_spec := fold_finish_2_correct.
 Print Assumptions fold_finish_2_correct.
 
@@ -724,6 +727,9 @@ Print Assumptions neg_2_ieee_lead.
 Definition bv_center_2_ieee_lead_audit : bv_center_2_ieee_lead_spec := bv_center_2_ieee_lead.
 Print Assumptions bv_center_2_ieee_lead.
 
+Definition bv_center_entry_2_ieee_lead_audit : bv_center_entry_2_ieee_lead_spec := bv_center_entry_2_ieee_lead.
+Print Assumptions bv_center_entry_2_ieee_lead.
+
 Definition bv_mul_pow2_step_2_ieee_lead_audit : bv_mul_pow2_step_2_ieee_lead_spec := bv_mul_pow2_step_2_ieee_lead.
 Print Assumptions bv_mul_pow2_step_2_ieee_lead.
 
@@ -988,6 +994,12 @@ Print Assumptions bv_make_2_seq_ieee_correct.
 Definition bv_make_2_lanes_ieee_audit : bv_make_2_lanes_ieee_spec := bv_make_2_lanes_ieee_correct.
 Print Assumptions bv_make_2_lanes_ieee_correct.
 
+Definition bv_make_2_entry_seq_ieee_audit : bv_make_2_entry_seq_ieee_spec := bv_make_2_entry_seq_ieee_correct.
+Print Assumptions bv_make_2_entry_seq_ieee_correct.
+
+Definition bv_make_2_entry_lanes_ieee_audit : bv_make_2_entry_lanes_ieee_spec := bv_make_2_entry_lanes_ieee_correct.
+Print Assumptions bv_make_2_entry_lanes_ieee_correct.
+
 Definition bv_mul_pow2_1_seq_ieee_audit : bv_mul_pow2_1_seq_ieee_spec := bv_mul_pow2_1_seq_ieee_correct.
 Print Assumptions bv_mul_pow2_1_seq_ieee_correct.
 
@@ -1201,6 +1213,9 @@ Print Assumptions IeeeTwoExecutions.ball_mul_pow2_2_two_executions.
 
 Definition ball_mul_pow2_2_full_two_executions_audit : ball_mul_pow2_2_full_two_executions_spec := IeeeTwoExecutions.ball_mul_pow2_2_full_two_executions.
 Print Assumptions IeeeTwoExecutions.ball_mul_pow2_2_full_two_executions.
+
+Definition bv_center_entry_2_two_executions_audit : bv_center_entry_2_two_executions_spec := IeeeTwoExecutions.bv_center_entry_2_two_executions.
+Print Assumptions IeeeTwoExecutions.bv_center_entry_2_two_executions.
 
 Definition bv_mul_pow2_step_2_two_executions_audit : bv_mul_pow2_step_2_two_executions_spec := IeeeTwoExecutions.bv_mul_pow2_step_2_two_executions.
 Print Assumptions IeeeTwoExecutions.bv_mul_pow2_step_2_two_executions.

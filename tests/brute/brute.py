@@ -282,6 +282,8 @@ FOLD_SHAPES = {
     "kernel_bv_mul_pow2_2": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_make_1": [("fp:2:-2:1", 2), ("fp:3:-4:1", 2), ("fp:2:-2:1", 3)],
     "kernel_bv_make_2": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
+    # bv_make_2 on each limb of each center guarded (rule R3): the same formats.
+    "kernel_bv_make_2_entry": [("fp:2:-2:1", 2), ("fp:3:-4:1", 1)],
     "kernel_bv_conv_1": [("-", 0), ("fp:4:-3:-2", 1), ("fp:4:-4:-1", 1)],
     "kernel_bv_conv_2": [("-", 0), ("fp:4:-3:-2", 1), ("fp:4:-4:-1", 1)],
 }

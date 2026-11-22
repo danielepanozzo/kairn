@@ -12,7 +12,7 @@ $$r = r_z \ \text{when } \mathit{ok} \text{ is true and } r_z \text{ is finite} 
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of the loop `bv_make_1`, called by the constructors of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_make_2`, called by the constructors of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
+No public operation computes this kernel on its own. It is part of the loop `bv_make_1`, called by the constructors of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_make_2_entry`, called by the constructors of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

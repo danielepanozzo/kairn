@@ -7091,6 +7091,18 @@ KAIRN_GEN_FORCEINLINE void bv_center_2(kairn::emulated::Number x0, kairn::emulat
     z1_out = z1;
 }
 
+// bv_center_entry_2(c = (c0, c1)) -> z = (z0, z1)
+// bv_center_2 on the guarded limbs, a copy of a canonical pair (milestone2.md, BallVector, Values). Status: proved (real model), proved (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE void bv_center_entry_2(kairn::emulated::Number c0, kairn::emulated::Number c1, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out) noexcept {
+    const kairn::emulated::Number g0 = kairn::emulated::constant_evaluation() ? c0 : c0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number g1 = kairn::emulated::constant_evaluation() ? c1 : c1 + kairn::emulated::constant(0);
+    // (z0, z1) = bv_center_2(g0, g1)
+    const kairn::emulated::Number z0 = g0;
+    const kairn::emulated::Number z1 = g1;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // bv_mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1), mask e
 // mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE void bv_mul_pow2_step_2(kairn::emulated::Number x0, kairn::emulated::Number x1, kairn::emulated::Number c, kairn::emulated::Number& z0_out, kairn::emulated::Number& z1_out, bool& e_out) noexcept {
@@ -11720,6 +11732,147 @@ inline void bv_make_2_lanes(const kairn::emulated::Number* c0_in, const kairn::e
     kairn::emulated::Number rad_r_;
     bool rad_f_;
     bv_make_2_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile kairn::emulated::Number*>(z0_out)[i_] = kairn::emulated::constant(0);
+            static_cast<volatile kairn::emulated::Number*>(z1_out)[i_] = kairn::emulated::constant(0);
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<kairn::emulated::Number>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_make_2_entry: its radius bv_make_radius and its finish bv_make_finish.
+KAIRN_GEN_NOINLINE void bv_make_2_entry_end(kairn::emulated::Number m, bool ok, kairn::emulated::Number r, kairn::emulated::Number& rad_out_, bool& fin_out_) noexcept {
+    volatile kairn::emulated::Number m_v_ = m;
+    const kairn::emulated::Number m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const kairn::emulated::Number rad_g = r + kairn::emulated::constant(0);
+    const kairn::emulated::Number rad_d = m_e_ - m_e_;
+    const kairn::emulated::Number rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= kairn::emulated::constant(0);
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const kairn::emulated::Number fin_r_t = fin_q ? rad_rz : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const kairn::emulated::Number fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<kairn::emulated::Number>::infinity() > fin_r_a;
+    const kairn::emulated::Number fin_r = fin_flag ? fin_r_t : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_make_2_entry(supplied c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_entry_2, record norm_step_2, radius bv_make_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_seq(const kairn::emulated::Number* c0_in, const kairn::emulated::Number* c1_in, std::size_t n, kairn::emulated::Number r, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, kairn::emulated::Number& rr_out, bool& finite_out) noexcept {
+    kairn::emulated::Number m = kairn::emulated::constant(0);
+    bool ok = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const kairn::emulated::Number c0 = c0_in[i_];
+        const kairn::emulated::Number c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const kairn::emulated::Number step_g0 = c0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_g1 = c1 + kairn::emulated::constant(0);
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const kairn::emulated::Number step_z0 = step_g0;
+        const kairn::emulated::Number step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const kairn::emulated::Number rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const kairn::emulated::Number rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    kairn::emulated::Number rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile kairn::emulated::Number*>(z0_out)[i_] = kairn::emulated::constant(0);
+            static_cast<volatile kairn::emulated::Number*>(z1_out)[i_] = kairn::emulated::constant(0);
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<kairn::emulated::Number>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_make_2_entry(supplied c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_entry_2, record norm_step_2, radius bv_make_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: proved (real model), proved (IEEE model).
+inline void bv_make_2_entry_lanes(const kairn::emulated::Number* c0_in, const kairn::emulated::Number* c1_in, std::size_t n, std::size_t lanes, kairn::emulated::Number r, kairn::emulated::Number* z0_out, kairn::emulated::Number* z1_out, kairn::emulated::Number& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    kairn::emulated::Number m = kairn::emulated::constant(0);
+    bool ok = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        kairn::emulated::Number m_lane_ = kairn::emulated::constant(0);
+        bool ok_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const kairn::emulated::Number c0 = c0_in[i_];
+            const kairn::emulated::Number c1 = c1_in[i_];
+            // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+            const kairn::emulated::Number step_g0 = c0 + kairn::emulated::constant(0);
+            const kairn::emulated::Number step_g1 = c1 + kairn::emulated::constant(0);
+            // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+            const kairn::emulated::Number step_z0 = step_g0;
+            const kairn::emulated::Number step_z1 = step_g1;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const kairn::emulated::Number rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const kairn::emulated::Number rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const kairn::emulated::Number comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const kairn::emulated::Number c0 = c0_in[i_];
+        const kairn::emulated::Number c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_entry_2(c0, c1)
+        const kairn::emulated::Number step_g0 = c0 + kairn::emulated::constant(0);
+        const kairn::emulated::Number step_g1 = c1 + kairn::emulated::constant(0);
+        // (step_z0, step_z1) = bv_center_2(step_g0, step_g1)
+        const kairn::emulated::Number step_z0 = step_g0;
+        const kairn::emulated::Number step_z1 = step_g1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const kairn::emulated::Number rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const kairn::emulated::Number rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    kairn::emulated::Number rad_r_;
+    bool rad_f_;
+    bv_make_2_entry_end(m, ok, r, rad_r_, rad_f_);
     if (!rad_f_) {
         for (std::size_t i_ = 0; i_ < n; ++i_) {
             static_cast<volatile kairn::emulated::Number*>(z0_out)[i_] = kairn::emulated::constant(0);

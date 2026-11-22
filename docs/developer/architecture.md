@@ -290,11 +290,11 @@ of `bv_mul_pow2_k`; and of Milestone 2, `ball_from_interval_2`, `interval_mid_ra
 kernels that call it, `interval_to_ball_1` and `interval_split_1`, which halve with `prod`, and of
 stage B2, through `interval_to_ball_1`, `ball_hull_1`, `ball_intersection_1` and
 `ball_from_interval_1`, and `interval_split_2`, whose midpoint halves the bounds with `mul_pow2_2`.
-Thirty-three kernels that are `constexpr` without any product compute a `guard` or a `times_inf`,
+Thirty-four kernels that are `constexpr` without any product compute a `guard` or a `times_inf`,
 and so compute it otherwise in constant evaluation too: the entry kernels and constructors that
 guard their operands (among them the public constructors and the sums and differences of
 `Expansion` that take a `T`), and the full sums and differences, whose fix-ups use `times_inf`.
-They are in `IeeeWith.v` too, with the same theorem: 63 kernels in all, every kernel `constexpr`
+They are in `IeeeWith.v` too, with the same theorem: 64 kernels in all, every kernel `constexpr`
 without a variant whose C++ dispatches on constant evaluation, so that none computes otherwise
 in constant evaluation without a proof that the values are the same. The two kernels that
 dispatch and are not among them are `two_prod` and its entry form `two_prod_entry` (rule R3, the
@@ -1281,7 +1281,7 @@ limb of magnitude $\Omega$): there the bound is $+\infty$, which bounds everythi
 $n$ is $0$ (one limb) or $\eta$ (two) and $b = +\infty$. `norm_upper_k` alone bounds the magnitudes of
 the centers, not of the members.
 
-**The constructor**, `bv_make_1` and `bv_make_2` (the page says what a constructor returns and gives no
+**The constructor**, `bv_make_1` and `bv_make_2_entry` (the page says what a constructor returns and gives no
 listing: "a constructor given a radius that is negative or a NaN, or a center that is not finite,
 returns the whole space"), is a ball vector of the same kind, first proposed in
 `experiments/milestone2/kernels/` and checked there by `ballvector.py`, which now runs the generated
@@ -1306,9 +1306,11 @@ value:         c
 ensures:       makes_ball_vector z rr from=c,r flag=finite
 ```
 
-The centers and the radius come from the program (rule R3), so the step and the radius guard them;
-`bv_make_2` takes its centers as `Expansion<T, 2>`, canonical and stored, and copies them
-(`bv_center_2`, the claims of `neg_2` with the value `x`), and requires `canonical c`. A center that is
+The centers and the radius come from the program (rule R3), so the step and the radius guard them:
+`bv_make_2_entry` guards each limb of each center and copies them (`bv_center_entry_2`: the guards,
+then `bv_center_2`, the claims of `neg_2` with the value `x`), and requires `canonical c`, on which
+the guards are the identity as values. `bv_make_2`, the same loop on stored centers, copies them
+unguarded; no public function calls it. A center that is
 not finite makes `m` infinite or the mask false; `m - m` carries an infinite `m` into the radius as a
 NaN; and the finish tests, besides the mask and the finiteness of the radius, its sign: `le(0, rz)` is
 false for a negative radius and for a NaN, true for either zero. That is the one thing a finish of the
@@ -1318,9 +1320,8 @@ $+\infty$ is not finite: the whole space. The rules of a ball vector apply, with
 (`rules._bv_make_claims`): one array and one scalar of one limb, supplied, the radius; the value the
 array's name; `canonical` of the centers for two limbs and nothing for one; the radius kernel requires
 nothing and takes `(m, r)`; the finish claims `nonneg` (and a finish that claims it is refused in any
-other ball vector); the one claim is `makes_ball_vector`. Centers given as two arrays of limbs of the
-program's own, which need not be normalized, are not covered: their step would be `make_2_limbs`, which
-has no real-model statement.
+other ball vector); the one claim is `makes_ball_vector`. Centers of two limbs that are not
+normalized are not covered: their step would be `make_2_limbs`, which has no real-model statement.
 
 In Rocq the model is that of every ball vector. `FoldStatements.v` has `F_spec`: for a radius and
 centers that are numbers of the format (normalized pairs for two limbs), `F_radius r cs = r` and the
@@ -1907,7 +1908,7 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   `ieee_spec_theorem` (`K_ieee_correct`, of `K_ieee_spec`) and `ieee_lead_theorem`
   (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`. A kernel of the extended domain names
   no bridge or spec theorem (its IEEE-model statement is its `ieee_theorem`'s), but one with a lead
-  statement, the step of a fold (`neg_2`, `bv_center_2`), names its `ieee_lead_theorem`. A fold or a
+  statement, the step of a fold (`neg_2`, `bv_center_2`, `bv_center_entry_2`), names its `ieee_lead_theorem`. A fold or a
   map names `ieee_theorem: FILE`, whose theorems are `F_seq_ieee_correct` and
   `F_lanes_ieee_correct` (and `F_orders_ieee_correct` and `F_flag_ieee_correct` for a fold of
   maxima in both orders), and a convolution or a product of two BallVectors the same field, whose
@@ -1926,8 +1927,8 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
 - `IeeeWith.v`: the kernels whose C++ computes an operation otherwise in constant evaluation than
   at run time (`ieee.with_kernels`): every kernel `constexpr` without a variant that computes, in
   its listing or a callee's, an operation whose spelling dispatches on constant evaluation; the
-  thirty that `build` lists as `constexpr` by the rule of the product and 33 without a product,
-  63 in all. They are in the IEEE model with the operations that constant evaluation runs
+  thirty that `build` lists as `constexpr` by the rule of the product and 34 without a product,
+  64 in all. They are in the IEEE model with the operations that constant evaluation runs
   differently as arguments. These
   are the operations whose C++ in a kernel `constexpr` without a variant dispatches on
   `__builtin_is_constant_evaluated()` (`cpp.SPELL_PLAIN`): `prod`, `guard` and `times_inf`
@@ -2783,7 +2784,7 @@ precision; otherwise the description must say `finite_from=P`. The precisions:
 |---|---|---|
 | `bv_add_1`, `bv_sub_1`, `bv_scale_1` | 1 | 2 (`finite_from=2`) |
 | `bv_neg_1`, `bv_neg_2` (no constant) | 1 | 1 |
-| `bv_make_1`, `bv_make_2` (`makes_ball_vector`: the whole space exactly when, no constant) | 1 | 1 |
+| `bv_make_1`, `bv_make_2`, `bv_make_2_entry` (`makes_ball_vector`: the whole space exactly when, no constant) | 1 | 1 |
 | `bv_scale_2`, `bv_scale_2_entry`, `bv_mul_pow2_1`, `bv_mul_pow2_2` | 2 | 2 |
 | `bv_add_2`, `bv_sub_2` | 3 | 3 |
 | `bv_conv_1`, `bv_conv_2` | 4 | 4 |
@@ -2914,9 +2915,10 @@ Two new forms in the entries of their kernels:
   output is then the value; otherwise a NaN. The field is written only where it is, without `if`, `steps`
   or `nonneg`.
 
-**The constructors** `bv_make_1` and `bv_make_2` are ball vectors too (`"bv": true`), with one array of
-the centers given and one scalar, the radius given, both `supplied` for one limb (`bv_make_2` reads its
-centers `stored`: they are `Expansion<T, 2>`), and a claim of a kind of their own:
+**The constructors** `bv_make_1`, `bv_make_2_entry` and `bv_make_2` are ball vectors too (`"bv":
+true`), with one array of the centers given and one scalar, the radius given, both `supplied` (but
+`bv_make_2`, the loop on stored centers, which reads its centers `stored`), and a claim of a kind of
+their own:
 
 ```json
 {"kind": "makes_ball_vector", "center": "z", "radius": "rr", "flag": "finite", "from": {"center": "c", "radius": "r"}}
@@ -2940,7 +2942,7 @@ centers `stored`: they are `Expansion<T, 2>`), and a claim of a kind of their ow
 The other kernels of the constructors claim kinds that exist: `bv_center_entry_1` (`guard(c)`) and
 `bv_make_radius` (`rz = guard(r) + (m - m)`, value `r`) claim `rounded` to nearest of their value,
 which is the value itself, in the finite domain; `bv_center_2` (a copy) claims what `neg_2` claims with
-the value `x`.
+the value `x`, and so does `bv_center_entry_2` (the guard of each limb, then the copy).
 
 The radius kernels are kernels with an entry `upper` with a value of its own, as the bound kernels
 are, whose value may hold `abs( )` of an input (`abs(a)*rx`), now in the language of that value:

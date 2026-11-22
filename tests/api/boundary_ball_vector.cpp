@@ -1,8 +1,9 @@
 // boundary.cpp for BallVector (kairn/ball_vector.hpp): a product the program computes and passes
 // straight in, as a center, a radius, or an array of centers it fills with products, must give the
 // same result as the same operation on the product rounded first. The guards of the constructor
-// loops (rule R3: bv_center_entry_1 guards each center of one limb, bv_make_radius the radius;
-// Expansion<T, 2>(a) is make_2, which guards a) keep a compiler that contracts across statements
+// loops (rule R3: bv_center_entry_1 guards each center of one limb, bv_center_entry_2 each limb of a
+// center of two, bv_make_radius the radius; Expansion<T, 2>(a) is make_2, which guards a) keep a
+// compiler that contracts across statements
 // from fusing the product into the error-free sums of the operation that follows. Each form is
 // computed twice, with the products written in the call, and with honestly rounded products
 // (returned through a volatile by a function that is not inlined), on operands chosen so that the
@@ -103,10 +104,8 @@ NOINLINE BV2 radius2(const Factors& f, const BV2& y) {
 }
 // Two limbs, over arrays the program fills (BallVectorView and BallVector(SoAView<const T, 2>, r)):
 // the centers are pairs (a b, 0), written in the same function, then added to Y. The constructor
-// loop bv_make_2 copies them as limbs of a ball vector (stored, by the precondition that they are
-// canonical pairs written through Kairn), unguarded: these forms are not guarded, and must agree in
-// every build, the copy without the guards included, as the multiplicands do: a difference would be
-// a compiler fusing a product through the arrays of a view.
+// loop bv_make_2_entry guards each limb (bv_center_entry_2) before it is a limb of the ball vector;
+// in the copy of the headers without the guards it copies them as they are.
 NOINLINE BV2 view2(const Factors& f, const BV2& y) {
     double c0[N], c1[N];
     for (std::size_t i = 0; i < N; ++i) {
@@ -294,10 +293,8 @@ int main(int argc, char** argv) {
                                   "BV1(c, a*b) + Y",     "BV2({E2(a*b)}, r) + Y",        "BV2(c, a*b) + Y",
                                   "Y * (a*b) (BV2)",     "axpy(a*b, Y, Y) (BV1)",
                                   "BallVectorView({a*b, 0}, r) + Y", "BV2(SoAView({a*b, 0}), r) + Y"};
-    // The forms that must agree in every build: the multiplicands, and the two of two limbs over
-    // arrays of the program, which nothing guards (above).
-    const bool multiplicand[n_forms] = {false, false, false, false, false, false, true, true, true, true};
-    const bool stored[n_forms] = {false, false, false, false, false, false, false, false, true, true};
+    // The forms that must agree in every build: the multiplicands.
+    const bool multiplicand[n_forms] = {false, false, false, false, false, false, true, true, false, false};
     long differ[n_forms] = {};
     const long cases = 20000;
     for (long k = 0; k < cases; ++k) {
@@ -335,9 +332,7 @@ int main(int argc, char** argv) {
     long guarded = 0, multiplied = 0;
     for (int i = 0; i < n_forms; ++i) {
         std::printf("  %-32s differs in %6ld of %ld%s\n", names[i], differ[i], cases,
-                    stored[i]         ? "   (stored by precondition: unguarded, must agree)"
-                    : multiplicand[i] ? "   (multiplicand: no guard needed)"
-                                      : "");
+                    multiplicand[i] ? "   (multiplicand: no guard needed)" : "");
         (multiplicand[i] ? multiplied : guarded) += differ[i];
     }
     if (std::strcmp(expect, "report") == 0 && guarded == 0)
