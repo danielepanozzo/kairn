@@ -252,6 +252,17 @@ class ReportKinds(unittest.TestCase):
         self.assertEqual(h({"kind": "encloses_entries", "label": "encloses_entries(z, r)",
                             "minima": {brute.SLACK_WORST: ["1.5", "l"]}})[0][0], "encloses")
         self.assertEqual(h({"kind": "certain", "label": "certain(m)"}), [])
+        iv = h({"kind": "encloses_interval", "label": "encloses_interval(zl, zu) x+y", "maxima": {
+            brute.TIGHT % "lower": ["0.6", "l"], brute.TIGHT % "upper": ["0.7", "l"]}})
+        self.assertEqual([(x[0], x[3]) for x in iv], [("tight", brute.TIGHT % "lower"),
+                                                      ("tight", brute.TIGHT % "upper")])
+        self.assertEqual(h({"kind": "outward", "label": "outward(l) below",
+                            "maxima": {brute.OUTWARD: ["0.6", "l"]}})[0][0], "tight")
+        self.assertEqual(h({"kind": "makes_ball", "label": "makes_ball(c, r)",
+                            "maxima": {brute.MIDPOINT: ["1", "l"]}})[0][0], "tight")
+        self.assertEqual(h({"kind": "holds", "label": "holds le(m*unit(add_1_1), 1/2) if ok",
+                            "maxima": {"m*unit(add_1_1) where ok true": ["0.25", "l"]}})[0][:2],
+                         ("holds", "largest m*unit(add_1_1) where ok"))
 
     def test_fold_streams_are_compared_apart(self):
         # Scalar and packed runners of a fold judged different streams: no disagreement; two

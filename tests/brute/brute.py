@@ -2554,7 +2554,24 @@ def entry_headlines(e):
     if kind in ("encloses_entries", "encloses_coefficients"):
         return [("encloses", "smallest radius slack, gaps (the worst entry)", "minima", SLACK_WORST,
                  -1)] if SLACK_WORST in mn else []
+    # The interval kernels and the conversions: a distance from the exact value over the
+    # allowance the claim states (1 is the claim).
+    if kind in ("encloses_interval", "interval_of_ball"):
+        return [("tight", "largest %s-bound distance / allowance" % side, "maxima", TIGHT % side, 1)
+                for side in ("lower", "upper") if TIGHT % side in mx]
+    if kind == "outward" and OUTWARD in mx:
+        return [("tight", "largest |output - value| / allowance", "maxima", OUTWARD, 1)]
+    if kind in ("ball_of_interval", "makes_ball") and MIDPOINT in mx:
+        return [("tight", "largest |center - midpoint| / allowance", "maxima", MIDPOINT, 1)]
+    if kind == "holds":
+        return [("holds", "largest " + n.replace(" where ok true", "") + " where ok", "maxima", n, 1)
+                for n in sorted(mx) if n.endswith("where ok true")]
     return []
+
+
+TIGHT = "%s: distance from the range bound / (rel*|bound| + abs)"
+OUTWARD = "|output - value| / (rel*|value| + abs)"
+MIDPOINT = "|center - midpoint| / (rel*|midpoint| + abs)"
 
 
 def headline_columns(entries):
@@ -2568,7 +2585,7 @@ def headline_columns(entries):
                                                     if several else ""),
                          j, "max_ratio", None, 1))
             cols.append(("observed c", j, "observed_c", None, 1))
-        elif e["kind"] in ("upper", "fold_error", "encloses_entries", "encloses_coefficients"):
+        elif e["kind"] != "encloses" and entry_headlines(e):
             cols += [(title, j, field, name, sign)
                      for _, title, field, name, sign in entry_headlines(e)]
         elif e["kind"] == "encloses":
@@ -2684,7 +2701,12 @@ def cmd_report(a):
             ("stated", "Smallest excess of an upper bound over the value it states, in gaps of "
              "the output", "0 would be the stated value itself; below 0 the claim fails"),
             ("encloses", "Smallest slack of a Ball radius, in gaps of the radius",
-             "below 1, a radius one unit in the last place smaller would not enclose")):
+             "below 1, a radius one unit in the last place smaller would not enclose"),
+            ("tight", "Largest distance from the exact value over the allowance a claim states "
+             "(the bounds of an interval, an outward bound, the center of a ball made from bounds)",
+             "1 is the claim"),
+            ("holds", "Largest m unit(K) where the mask of a bound says it holds",
+             "the claim is at most 1/2")):
         rs = [r for r in rank if r[0] == kind]
         if not rs:
             continue
