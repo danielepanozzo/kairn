@@ -1,0 +1,6 @@
+the bound of x * y:     unit 0x1p-104, tiny 0x1p-1073, relative to the exact result
+x * y:                  0x1.0000000401p+0 + 0x1.0040100000008p-70
+x * y - xy:             -0x1p-170, where the bound is at least 0x1p-104
+the ball of x times y:  center 0x1.0000000401p+0 + 0x1.0040100000008p-70, radius 0x1.0000000401005p-104
+with the marker:        the same bits
+has_sum, two limbs:     yes

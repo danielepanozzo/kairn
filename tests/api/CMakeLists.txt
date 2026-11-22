@@ -39,7 +39,7 @@
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
 #   api.example.accurate_sums.*, api.example.intervals.*, api.example.bisection.*,
 #   api.example.ball_vectors.* and api.example.packed_dot.* also compare it with the text their
-#   tutorials show.
+#   tutorials show, and api.example.concepts_*.* with the text the pages of Concepts show.
 # - api.ball_vector.FORM, api.boundary.ball_vector.*, api.reject.ball_vector.*: BallVector
 #   (ball_vector.hpp), below; its loops join api.oracle.* as api.oracle.LOOP.FORMAT.
 # - api.packed.FORM, api.soa.FORM, api.example.packed_dot.FORM: Packed (packed.hpp) against the
@@ -1320,6 +1320,18 @@ foreach(_i RANGE 0 ${_last} 2)
       "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/ball_vectors.txt"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
   set_tests_properties(api.example.ball_vectors${_suffix} PROPERTIES LABELS "api;example;ball_vector")
+  # The examples of the Concepts section (docs/concepts/), the same way: each checks its own results,
+  # prints the same text on every platform and under every contraction setting, and its page shows
+  # that text (concepts_NAME.txt).
+  foreach(_concept expansions precision enclosures correctness environment values arrays)
+    _kairn_api_program(kairn-example-concepts-${_concept}${_target_suffix}
+      "${PROJECT_SOURCE_DIR}/docs/examples/cpp/concepts_${_concept}.cpp" ${_option})
+    add_test(NAME api.example.concepts_${_concept}${_suffix}
+      COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-concepts-${_concept}${_target_suffix}>"
+        "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/concepts_${_concept}.txt"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+    set_tests_properties(api.example.concepts_${_concept}${_suffix} PROPERTIES LABELS "api;example;concepts")
+  endforeach()
 endforeach()
 # The tutorial on a vector loop (docs/tutorials/vector-loop.md), in every form of Packed (above):
 # the same text in each, which the program checks against an exact reference and the bound it

@@ -1,0 +1,5 @@
+kairn::self_test():      ok
+kairn::environment_ok(): true
+1 + a * b:               0x1p+1 + 0
+1 + (a * b rounded):     0x1p+1 + 0
+the same bits:           yes

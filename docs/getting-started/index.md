@@ -55,7 +55,10 @@ The whole program is
 ctest builds and runs it (`api.example.first_steps`), and it checks the values it prints. To build
 your own program, link `kairn::kairn` and `kairn::fma` ([Use it from CMake](#use-it-from-cmake)).
 Next, the tutorial [Accurate sums and dot products](../tutorials/accurate-sums.md) puts these
-types to work, and the [reference](../reference/index.md) has a page for every operation.
+types to work, the [Concepts](../concepts/index.md) section explains the ideas behind them (what a
+number of two limbs is, its precision at each magnitude, which enclosure to use, what is proved and
+what the environment must be), and the [reference](../reference/index.md) has a page for every
+operation.
 
 ## Choosing T and k
 
