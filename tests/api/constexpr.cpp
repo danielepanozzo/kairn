@@ -661,6 +661,19 @@ struct Intervals {
     static_assert(B2::from_interval(T(2), T(1)).is_empty() && B2::from_interval(unverified(T(1)), T(3)).radius() == 1);
     // [eta, 3 eta]: the halves are not exact; the radius is the number after d, and covers.
     static_assert(B2::from_interval(eta, 3 * eta).radius() >= eta);
+    // from_bounds, the one spelling of a set from two bounds for both types: the interval is the
+    // constructor's, the ball from_interval's; X(a, b) is [a, b] for an interval and the ball of
+    // center a and radius b for a ball.
+    static_assert(is(I1::from_bounds(T(1), T(2)), 1, 2) && empty(I1::from_bounds(T(2), T(1))) && whole(I1::from_bounds(nan, T(1))));
+    static_assert(whole(I1::from_bounds(inf, inf)) && is(I1::from_bounds(T(1), inf), 1, inf) && is(I1::from_bounds(E1(T(-3)), E1(T(5))), -3, 5));
+    static_assert(is(I1::from_bounds(unverified(T(1)), T(2)), 1, 2) && is(I1::from_bounds(unverified(E1(T(1))), E1(T(2))), 1, 2));
+    static_assert(is(I2::from_bounds(T(1), T(2)), 1, 0, 2, 0) && is(I2::from_bounds(x2, E2(T(2))), 1, u / 2, 2, 0));
+    static_assert(empty(I2::from_bounds(T(2), T(1))) && whole(I2::from_bounds(nan, T(1))) && whole(I2::from_bounds(E2(inf), E2(inf))));
+    static_assert(is(I2::from_bounds(unverified(T(1)), T(2)), 1, 0, 2, 0) && is(I2::from_bounds(unverified(x2), E2(T(2))), 1, u / 2, 2, 0));
+    static_assert(B2::from_bounds(T(1), T(3)).radius() == 1 && B2::from_bounds(T(1), T(3)).center().limb[0] == 2);
+    static_assert(B2::from_bounds(T(2), T(1)).is_empty() && B2::from_bounds(unverified(T(1)), T(3)).radius() == 1);
+    static_assert(B2::from_bounds(T(1), T(1) + 2 * u).center().limb[1] == u && B2::from_bounds(T(1), T(1) + 2 * u).radius() == u);
+    static_assert(is(I1(T(1), T(3)), 1, 3) && B1(T(1), T(3)).center().limb[0] == 1 && B1(T(1), T(3)).radius() == 3);
 
     // The bounds of a ball as numbers of T, its midpoint, and the narrowing to one limb.
     static_assert(B1(T(2), T(1)).template lower_as<T>() == 1 && B1(T(2), T(1)).template upper_as<T>() == 3);
@@ -697,6 +710,8 @@ template <class X, class Y>
 concept can_subset = requires(X x, Y y) { kairn::ieee1788::subset(x, y); };
 template <class X>
 concept can_split_ball = requires(X x) { x.split(); };
+template <class X, class Y>
+concept can_from_bounds = requires(Y lo, Y hi) { X::from_bounds(lo, hi); };
 template <class T>
 struct Enclosure {
     using E1 = kairn::Expansion<T, 1>;
@@ -738,6 +753,11 @@ struct Enclosure {
     static_assert(!can_less<I1, I1> && !can_less<B2, B2> && !can_equal<I1, I1> && !can_equal<B1, B1>);
     static_assert(can_subset<I2, I2> && !can_subset<B1, B1> && !can_subset<I1, I2>);
     static_assert(can_split_ball<B1> == bounds::ball_split_1<T>::proved && can_split_ball<B2> == bounds::ball_split_2<T>::proved);
+    // from_bounds: of two values of T for every type; of two numbers of K limbs for an interval and
+    // for a ball of one limb; no kernel makes a ball of two bounds of two limbs.
+    static_assert(can_from_bounds<I1, T> && can_from_bounds<I2, T> && can_from_bounds<B1, T> && can_from_bounds<B2, T>);
+    static_assert(can_from_bounds<I1, E1> && can_from_bounds<I2, E2> && can_from_bounds<B1, E1> && !can_from_bounds<B2, E2>);
+    static_assert(!can_from_bounds<I1, E2> && !can_from_bounds<B1, E2> && !can_from_bounds<B2, E1> && !can_from_bounds<I2, B2>);
 
     // Intervals of one limb. The predicates: exact, false for the empty set but is_empty.
     static_assert(I1::empty().is_empty() && !I1(T(1), T(2)).is_empty() && !I1::whole().is_empty());
@@ -826,6 +846,11 @@ struct Enclosure {
     static_assert(B1::from_interval(T(2), T(1)).is_empty() && B1::from_interval(nan, T(1)).is_whole() && B1::from_interval(inf, inf).is_whole());
     static_assert(B1::from_interval(T(1), inf).is_whole() && B1::from_interval(unverified(T(1)), T(3)).radius() == 1);
     static_assert(B1::from_interval(eta, eta).center().limb[0] == eta && B1::from_interval(eta, eta).radius() == 0);
+    // from_bounds: the same kernel, of two values of T or two numbers of one limb.
+    static_assert(B1::from_bounds(T(1), T(3)).center().limb[0] == 2 && B1::from_bounds(T(1), T(3)).radius() == 1);
+    static_assert(B1::from_bounds(T(2), T(1)).is_empty() && B1::from_bounds(nan, T(1)).is_whole() && B1::from_bounds(inf, inf).is_whole());
+    static_assert(B1::from_bounds(T(1), inf).is_whole() && B1::from_bounds(unverified(T(1)), T(3)).radius() == 1);
+    static_assert(B1::from_bounds(E1(T(1)), E1(T(3))).radius() == 1 && B1::from_bounds(unverified(E1(T(1))), E1(T(3))).radius() == 1);
     // Balls of two limbs: the signs, which are constexpr; the bounds are not (enclosure_run_time).
     static_assert(B2(x2, T(1)).certainly_positive() && !B2(E2(T(1)), T(1)).certainly_positive() && B2(-x2, T(1)).certainly_negative());
     static_assert(B2().certainly_zero() && !B2::whole().certainly_zero() && !B2::empty().certainly_positive());

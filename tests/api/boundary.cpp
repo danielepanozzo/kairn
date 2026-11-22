@@ -91,6 +91,17 @@ PAIR(ball1_from_interval, B1, (B1 y, double a, double b), return B1::from_interv
      return B1::from_interval(a, a) + y)
 PAIR(ball2_from_interval, B2, (B2 y, double a, double b), return B2::from_interval(a * b, a * b) + y,
      return B2::from_interval(a, a) + y)
+// from_bounds, the spelling of a set from two bounds that a ball and an interval share: the ball's
+// is from_interval's kernel, the interval's that of its constructor, which guard the bounds; the
+// interval is then added to an interval at the opposite of the product.
+PAIR(ball1_from_bounds, B1, (B1 y, double a, double b), return B1::from_bounds(a * b, a * b) + y,
+     return B1::from_bounds(a, a) + y)
+PAIR(ball2_from_bounds, B2, (B2 y, double a, double b), return B2::from_bounds(a * b, a * b) + y,
+     return B2::from_bounds(a, a) + y)
+PAIR(interval1_from_bounds, I1, (I1 x, double a, double b), return I1::from_bounds(a * b, a * b) + x,
+     return I1::from_bounds(a, a) + x)
+PAIR(interval2_from_bounds, I2, (I2 x, double a, double b), return I2::from_bounds(a * b, a * b) + x,
+     return I2::from_bounds(a, a) + x)
 // Multiplicands: no guard, and none needed.
 PAIR(times, E2, (E2 x, double a, double b), return x * (a * b), return x * a)
 PAIR(ball2_scale, B2, (B2 y, double a, double b), return y * (a * b), return y * a)
@@ -266,14 +277,16 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "usage: boundary --expect none|some|report --factor none|some|report\n");
         return 2;
     }
-    enum { n_forms = 30 };
+    enum { n_forms = 34 };
     const char* names[n_forms] = {"x + a*b", "a*b + x", "x - a*b", "a*b - x", "x += a*b", "x -= a*b", "E2(a*b) + x",
                                   "from_limbs({a*b, 0}) + x", "E2(E1(a) * E1(b)) + x", "Ball2(a*b) + Y",
                                   "Ball2(E2(a*b), r) + Y", "Ball2(c, a*b) + Y", "Ball1(a*b) + Y",
                                   "Ball1(E1(a) * E1(b), r) + Y", "Ball1(c, a*b) + Y", "x + E1(a*b)", "x - E1(a*b)",
                                   "finite::add(x, a*b)", "finite::sub(a*b, x)", "Y + a*b (Ball2)", "a*b - Y (Ball1)",
                                   "Ball1.contains(a*b)", "Ball2.contains(a*b)", "Ball1::from_interval(a*b, a*b)",
-                                  "Ball2::from_interval(a*b, a*b)", "x * (a*b)", "Ball2 * (a*b)", "Ball1 * (a*b)",
+                                  "Ball2::from_interval(a*b, a*b)", "Ball1::from_bounds(a*b, a*b)",
+                                  "Ball2::from_bounds(a*b, a*b)", "Interval1::from_bounds(a*b, a*b) + X",
+                                  "Interval2::from_bounds(a*b, a*b) + X", "x * (a*b)", "Ball2 * (a*b)", "Ball1 * (a*b)",
                                   "Interval1.contains(a*b)", "Interval2.contains(a*b)"};
     bool multiplicand[n_forms] = {};
     for (int f = n_forms - 5; f < n_forms; ++f) multiplicand[f] = true;
@@ -318,6 +331,12 @@ int main(int argc, char** argv) {
         differ[f++] += !same(ball2_contains_inline(at2, a, b), ball2_contains_ref(at2, p, 1.0));
         differ[f++] += !same(ball1_from_interval_inline(y1, a, b), ball1_from_interval_ref(y1, p, 1.0));
         differ[f++] += !same(ball2_from_interval_inline(y2, a, b), ball2_from_interval_ref(y2, p, 1.0));
+        differ[f++] += !same(ball1_from_bounds_inline(y1, a, b), ball1_from_bounds_ref(y1, p, 1.0));
+        differ[f++] += !same(ball2_from_bounds_inline(y2, a, b), ball2_from_bounds_ref(y2, p, 1.0));
+        const I1 xi1(-p * near);
+        const I2 xi2(E2(-p * near));
+        differ[f++] += !same(interval1_from_bounds_inline(xi1, a, b), interval1_from_bounds_ref(xi1, p, 1.0));
+        differ[f++] += !same(interval2_from_bounds_inline(xi2, a, b), interval2_from_bounds_ref(xi2, p, 1.0));
         differ[f++] += !same(times_inline(xm, a, b), times_ref(xm, p, 1.0));
         differ[f++] += !same(ball2_scale_inline(y2, a, b), ball2_scale_ref(y2, p, 1.0));
         differ[f++] += !same(ball1_scale_inline(y1, a, b), ball1_scale_ref(y1, p, 1.0));

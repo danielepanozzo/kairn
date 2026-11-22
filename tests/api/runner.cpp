@@ -703,6 +703,17 @@ FORM(interval_make_2_point_limb,
      ++reached; put(out, I2<T>(AS(interval_make_2, in[0]))))
 FORM(interval_make_2_limbs, if (!a_limb(in) || !a_limb(in + 2)) { put(out, I2<T>(two(in), two(in + 2))); return; } ++reached;
      put(out, I2<T>(AS(interval_make_2, in[0]), in[2])))
+// The same through Interval::from_bounds, the spelling an interval shares with a ball: of two values
+// of T, of two numbers of K limbs, marked; for two limbs from two values of T on the lines whose
+// bounds are such values, as interval_make_2_limbs.
+FORM(interval_make_1_from_bounds, put(out, I1<T>::from_bounds(AS(interval_make_1, in[0]), in[1])))
+FORM(interval_make_1_from_bounds_one, put(out, I1<T>::from_bounds(AS(interval_make_1, one(in)), one(in + 1))))
+FORM(interval_make_1_from_bounds_marked, put(out, I1<T>::from_bounds(kairn::unverified(in[0]), in[1])))
+FORM(interval_make_2_from_bounds, put(out, I2<T>::from_bounds(AS(interval_make_2, two(in)), two(in + 2))))
+FORM(interval_make_2_from_bounds_marked, put(out, I2<T>::from_bounds(kairn::unverified(two(in)), two(in + 2))))
+FORM(interval_make_2_from_bounds_limbs,
+     if (!a_limb(in) || !a_limb(in + 2)) { put(out, I2<T>(two(in), two(in + 2))); return; } ++reached;
+     put(out, I2<T>::from_bounds(AS(interval_make_2, in[0]), in[2])))
 
 // Intervals: arithmetic, the hull and the intersection.
 #define INTERVAL_FORMS(K, IV)                                                                                       \
@@ -748,6 +759,8 @@ FORM(to_up_2_interval_upper_as, if (in[0] != in[0]) { out[0] = kairn::to_up(two(
 // Balls: the functions of the interface they share with intervals.
 FORM(ball_from_interval_2_from_interval, put(out, B2<T>::from_interval(AS(ball_from_interval_2, in[0]), in[1])))
 FORM(ball_from_interval_2_marked, put(out, B2<T>::from_interval(kairn::unverified(in[0]), in[1])))
+FORM(ball_from_interval_2_from_bounds, put(out, B2<T>::from_bounds(AS(ball_from_interval_2, in[0]), in[1])))
+FORM(ball_from_interval_2_from_bounds_marked, put(out, B2<T>::from_bounds(kairn::unverified(in[0]), in[1])))
 FORM(ball_lower_as_1_lower_as, out[0] = ball1(in).template lower_as<T>())
 FORM(ball_lower_as_1_lower, out[0] = ball1(in).lower().limb[0])
 FORM(ball_upper_as_1_upper_as, out[0] = ball1(in).template upper_as<T>())
@@ -846,6 +859,9 @@ FORM(ball_to_interval_2_marked, put(out, I2<T>(kairn::unverified(ball2(in)))))
 FORM(ball_to_interval_2_lower_upper, const B2<T> x = ball2(in); put(out, x.lower()); put(out + 2, x.upper()))
 FORM(ball_from_interval_1_from_interval, put(out, B1<T>::from_interval(AS(ball_from_interval_1, in[0]), in[1])))
 FORM(ball_from_interval_1_marked, put(out, B1<T>::from_interval(kairn::unverified(in[0]), in[1])))
+FORM(ball_from_interval_1_from_bounds, put(out, B1<T>::from_bounds(AS(ball_from_interval_1, in[0]), in[1])))
+FORM(ball_from_interval_1_from_bounds_one, put(out, B1<T>::from_bounds(AS(ball_from_interval_1, one(in)), one(in + 1))))
+FORM(ball_from_interval_1_from_bounds_marked, put(out, B1<T>::from_bounds(kairn::unverified(in[0]), in[1])))
 // Balls: the subset test, the signs, the comparisons and the set operations. Two balls are
 // (center limbs, radius) twice.
 #define ENCLOSURE_BALL_FORMS(K, BALL, AS_IS)                                                                                \
@@ -1439,6 +1455,12 @@ const Form forms[] = {
     SOME(interval_make_2, point, "llll", "llll")
     SOME(interval_make_2, point_limb, "llll", "llll")
     SOME(interval_make_2, limbs, "llll", "llll")
+    ROW(interval_make_1, from_bounds, "ll", "ll")
+    ROW(interval_make_1, from_bounds_one, "ll", "ll")
+    ROW(interval_make_1, from_bounds_marked, "ll", "ll")
+    ROW(interval_make_2, from_bounds, "llll", "llll")
+    ROW(interval_make_2, from_bounds_marked, "llll", "llll")
+    SOME(interval_make_2, from_bounds_limbs, "llll", "llll")
     INTERVAL_ROWS(1, "ll", "llll")
     INTERVAL_ROWS(2, "llll", "llllllll")
     ROW(interval_mid_rad_1, midpoint_radius, "ll", "ll")
@@ -1451,6 +1473,8 @@ const Form forms[] = {
     SOME(to_up_2, interval_upper_as, "ll", "l")
     ROW(ball_from_interval_2, from_interval, "ll", "lll")
     ROW(ball_from_interval_2, marked, "ll", "lll")
+    ROW(ball_from_interval_2, from_bounds, "ll", "lll")
+    ROW(ball_from_interval_2, from_bounds_marked, "ll", "lll")
     ROW(ball_lower_as_1, lower_as, "ll", "l")
     ROW(ball_lower_as_1, lower, "ll", "l")
     ROW(ball_upper_as_1, upper_as, "ll", "l")
@@ -1483,6 +1507,9 @@ const Form forms[] = {
     ROW(ball_to_interval_2, lower_upper, "lll", "llll")
     ROW(ball_from_interval_1, from_interval, "ll", "ll")
     ROW(ball_from_interval_1, marked, "ll", "ll")
+    ROW(ball_from_interval_1, from_bounds, "ll", "ll")
+    ROW(ball_from_interval_1, from_bounds_one, "ll", "ll")
+    ROW(ball_from_interval_1, from_bounds_marked, "ll", "ll")
     ENCLOSURE_BALL_ROWS(1, "ll", "llll", "llll")
     ENCLOSURE_BALL_ROWS(2, "lll", "llllll", "llllll")
     ROW(ball_contains_point_1, contains, "lll", "m")

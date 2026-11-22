@@ -298,6 +298,47 @@ public:
         : Interval(detail::make_interval(lo.value, hi)) {}
     /// The same with a marked lower bound of T.
     constexpr Interval(Unverified<T> lo, T hi) noexcept : Interval(detail::make_interval_pair<T, K>(lo.value, hi)) {}
+    /// The interval [lo, hi] of two values of T (kernel interval_make_1 or interval_make_2, for two
+    /// limbs with each bound made a number of two limbs by make_2 first, which gives it exactly: a
+    /// composition of two proved kernels, argued so and not machine-checked as one statement, as
+    /// for the constructor): the same set as Interval(lo, hi), under the name that
+    /// Ball<T, K>::from_bounds(lo, hi) has too, so that code written once for intervals and balls
+    /// builds either from two bounds with one spelling. X(a, b) is not that spelling: Interval(a, b)
+    /// is [a, b], but Ball(c, r) is the ball of center c and radius r. Proved, in the IEEE model,
+    /// for any two values of T: the result is canonical, and it is, by the first case that
+    /// applies, the whole line when a bound is a NaN, whatever the other bound is, and when both
+    /// bounds are the same infinity; the empty set when lo > hi; otherwise [lo, hi], the half-lines
+    /// and [-inf, +inf] included (the constructor above says why). Does not round (the guards of
+    /// the bounds, whose values are the bounds under every rounding mode, comparisons and
+    /// selects): not preceded by the debug build's check of the rounding mode (config.hpp); every
+    /// pair of values of T is accepted. constexpr.
+    [[nodiscard]] static constexpr Interval from_bounds(T lo, T hi) noexcept
+        requires detail::interval_point_proved<T, K>
+    {
+        return detail::make_interval_pair<T, K>(lo, hi);
+    }
+    /// The same with a marked lower bound: see kairn::Unverified.
+    [[nodiscard]] static constexpr Interval from_bounds(Unverified<T> lo, T hi) noexcept {
+        return detail::make_interval_pair<T, K>(lo.value, hi);
+    }
+    /// The interval of two bounds of K limbs: the same set as Interval(lo, hi) of two numbers
+    /// (kernel interval_make_1 or interval_make_2), with its statement: the whole line when a bound
+    /// is a NaN or both are the same infinity, the empty set when lo > hi, otherwise [lo, hi].
+    /// Does not round (comparisons and selects; for one limb the guards): not preceded by the debug
+    /// build's check of the rounding mode (config.hpp); two-limb bounds must be canonical, which is
+    /// checked when the rounding mode is to nearest. constexpr. Ball<T, 1>::from_bounds takes
+    /// numbers of one limb too; Ball<T, 2>::from_bounds takes no numbers of two limbs, no kernel
+    /// making a ball of two such bounds (Ball<T, 2>(Interval<T, 2>(lo, hi)) is the composition).
+    [[nodiscard]] static constexpr Interval from_bounds(const Expansion<T, K>& lo, const Expansion<T, K>& hi) noexcept
+        requires detail::proof_checked<typename detail::interval_kernels<T, K>::make>
+    {
+        return detail::make_interval(lo, hi);
+    }
+    /// The same with a marked lower bound.
+    [[nodiscard]] static constexpr Interval from_bounds(const Unverified<Expansion<T, K>>& lo,
+                                                        const Expansion<T, K>& hi) noexcept {
+        return detail::make_interval(lo.value, hi);
+    }
     /// An interval that contains the ball X (kernel ball_to_interval_1 or ball_to_interval_2).
     /// Proved, in the IEEE model, for a canonical ball: the interval is canonical, empty exactly
     /// when X is, and contains every member of X; the whole line gives [-inf, +inf]. For one limb it

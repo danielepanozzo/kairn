@@ -15,6 +15,8 @@ $$Z \supseteq [l_o, h_i].$$
 | Form | Operands | Result | Note |
 |---|---|---|---|
 | `from_interval(lo, hi)` | `T`, `T` | `Ball<T, 1>` | `Ball<T, 1>::from_interval(lo, hi)`, the ball of `Interval<T, 1>(lo, hi)` in one kernel; the bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+| `from_bounds(lo, hi)` | `T`, `T` | `Ball<T, 1>` | `Ball<T, 1>::from_bounds(lo, hi)`, the same ball as `from_interval(lo, hi)`, under the name `Interval` has too ([One enclosure interface](enclosure.md#the-interface)); the bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+| `from_bounds(lo, hi)` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Ball<T, 1>` | `Ball<T, 1>::from_bounds(lo, hi)`, the same ball as `from_interval(lo, hi)`, under the name `Interval` has too ([One enclosure interface](enclosure.md#the-interface)); the bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 

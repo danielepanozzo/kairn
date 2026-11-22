@@ -515,6 +515,10 @@ inline const Operation operations[] = {
     {"interval1.to_ball", Kind::rounds, [](Bits& b) { put(b, B1(unverified(o.ix))); }},
     {"ball1.to_interval", Kind::rounds, [](Bits& b) { put(b, I1(unverified(o.p))); }},
     {"ball2.from_interval", Kind::rounds, [](Bits& b) { put(b, B2::from_interval(unverified(double(v_b)), v_a)); }},
+    // from_bounds, the name of from_interval that a ball shares with an interval: the same kernels.
+    {"ball2.from_bounds", Kind::rounds, [](Bits& b) { put(b, B2::from_bounds(unverified(double(v_b)), v_a)); }},
+    {"ball1.from_bounds", Kind::rounds, [](Bits& b) { put(b, B1::from_bounds(double(v_b), v_a)); }},
+    {"ball1.from_bounds_one", Kind::rounds, [](Bits& b) { put(b, B1::from_bounds(unverified(E1(v_b)), E1(v_a))); }},
     {"ball1.lower_as", Kind::rounds, [](Bits& b) { put(b, o.p.lower_as<double>()); }},
     {"ball1.upper_as", Kind::rounds, [](Bits& b) { put(b, o.p.upper_as<double>()); }},
     {"ball1.lower", Kind::rounds, [](Bits& b) { put(b, o.p.lower()); }},
@@ -929,6 +933,29 @@ inline const Operation operations[] = {
                  put(out, X(unverified(lo)));
                  for (const auto& hi : c.two) put(out, X(unverified(lo), hi));
              }
+         });
+     }},
+    // from_bounds, the constructors from two bounds under the name an interval shares with a ball:
+    // the same kernels, the same values and bits.
+    {"interval1.from_bounds", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             using X = kairn::Interval<T, 1>;
+             for (auto lo : c.one)
+                 for (auto hi : c.one) {
+                     put_value(out, X::from_bounds(lo, hi));
+                     put_value(out, X::from_bounds(unverified(kairn::Expansion<T, 1>(lo)), kairn::Expansion<T, 1>(hi)));
+                 }
+         });
+     }},
+    {"interval2.from_bounds", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             using X = kairn::Interval<T, 2>;
+             for (auto lo : c.one)
+                 for (auto hi : c.one) put_value(out, X::from_bounds(unverified(lo), hi));
+             for (const auto& lo : c.two)
+                 for (const auto& hi : c.two) put(out, X::from_bounds(lo, hi));
          });
      }},
     // The conversion of a SumAndError to a two-limb number: its guards, a + 0, as from_limbs_unchecked

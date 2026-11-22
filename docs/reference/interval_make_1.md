@@ -18,6 +18,8 @@ $$Z = [l_o, h_i].$$
 | `Interval<T, 1>(lo, hi)` | `T`, `T` | `Interval<T, 1>` | each limb converted to `Expansion<T, 1>` first, exactly; `constexpr`; does not round |
 | `Interval<T, 1>(a)` | `T` | `Interval<T, 1>` | implicit; $l_o = h_i = a$; `constexpr`; does not round |
 | `Interval<T, 1>(a)` | `Expansion<T, 1>` | `Interval<T, 1>` | implicit; $l_o = h_i = a$; `constexpr`; does not round |
+| `from_bounds(lo, hi)` | `T`, `T` | `Interval<T, 1>` | `Interval<T, 1>::from_bounds(lo, hi)`, the same set as `Interval(lo, hi)`, under the name `Ball` has too ([One enclosure interface](enclosure.md#the-interface)); `constexpr`; does not round |
+| `from_bounds(lo, hi)` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Interval<T, 1>` | `Interval<T, 1>::from_bounds(lo, hi)`, the same set as `Interval(lo, hi)`, under the name `Ball` has too ([One enclosure interface](enclosure.md#the-interface)); `constexpr`; does not round |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 

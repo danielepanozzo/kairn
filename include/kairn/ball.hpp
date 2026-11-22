@@ -926,6 +926,46 @@ public:
     static constexpr Ball from_interval(Unverified<T> lo, T hi) noexcept {
         return detail::ball_from_interval<T, K>(lo.value, hi);
     }
+    /// A ball that contains the interval [lo, hi] of two values of T (kernel ball_from_interval_1
+    /// or ball_from_interval_2): from_interval(lo, hi), with its statement, under the name that
+    /// Interval<T, K>::from_bounds(lo, hi) has too, so that code written once for intervals and
+    /// balls builds either from two bounds with one spelling. X(a, b) is not that spelling:
+    /// Ball(a, b) is the ball of center a and radius b, where Interval(a, b) is [a, b]. Proved, in
+    /// the IEEE model, for any two values of T: the ball is canonical, and it is, by the first case
+    /// that applies, the whole line when a bound is a NaN, whatever the other, and when both bounds
+    /// are the same infinity; the empty set when lo > hi; the whole line when a bound is infinite
+    /// (a ball cannot be a half-line); and for finite lo <= hi a finite ball that contains
+    /// [lo, hi]. Its center is the exact midpoint (lo + hi)/2 only for two limbs and only when
+    /// lo/2 and hi/2 are numbers of T, and then its radius is the smallest of T for it; for two
+    /// limbs with a halving that is not exact only the containment is claimed; for one limb the
+    /// center is within u |m| + eta of the midpoint m, between the bounds, with the smallest radius
+    /// of T for it (from_interval says each case in full). Rounds, and is checked, as
+    /// from_interval; constexpr.
+    [[nodiscard]] static constexpr Ball from_bounds(T lo, T hi) noexcept
+        requires detail::proof_checked<typename detail::ball_kernels<T, K>::from_interval>
+    {
+        return detail::ball_from_interval<T, K>(lo, hi);
+    }
+    /// The same with a marked lower bound: see kairn::Unverified.
+    [[nodiscard]] static constexpr Ball from_bounds(Unverified<T> lo, T hi) noexcept {
+        return detail::ball_from_interval<T, K>(lo.value, hi);
+    }
+    /// For one limb, the same of two numbers of one limb, which are values of T (kernel
+    /// ball_from_interval_1), so that code written for bounds of K limbs reads as for an interval.
+    /// A ball of two limbs has no such form: no kernel makes a ball of two bounds of two limbs
+    /// (Ball<T, 2>(Interval<T, 2>(lo, hi)) composes interval_make_2 and interval_to_ball_2).
+    [[nodiscard]] static constexpr Ball from_bounds(const Expansion<T, 1>& lo, const Expansion<T, 1>& hi) noexcept
+        requires(K == 1 && detail::proof_checked<typename detail::ball_kernels<T, K>::from_interval>)
+    {
+        return detail::ball_from_interval<T, K>(lo.limb[0], hi.limb[0]);
+    }
+    /// The same with a marked lower bound.
+    [[nodiscard]] static constexpr Ball from_bounds(const Unverified<Expansion<T, 1>>& lo,
+                                                    const Expansion<T, 1>& hi) noexcept
+        requires(K == 1)
+    {
+        return detail::ball_from_interval<T, K>(lo.value.limb[0], hi.limb[0]);
+    }
     /// A ball of one limb that contains the ball X of two limbs (kernel ball_narrow_2_1): the leading
     /// limb of the center, and the radius widened by the second limb, rounded up. Proved, in the
     /// IEEE model, for a canonical X (statements B1 to B4 of milestone1.md, "Ball kernels"): the

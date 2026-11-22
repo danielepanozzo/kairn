@@ -1128,6 +1128,17 @@ foreach(_case_name IN ITEMS 89:interval_contains_1:point 90:interval_contains_2:
     "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/only-${_kernel}-${_what}"
     "-DUNVERIFIED_ONLY=${_kernel}")
 endforeach()
+# from_bounds, the spelling of a set from two bounds that Interval and Ball share (reject.cpp, cases
+# 108 to 110): no ball of two limbs from two bounds of two limbs, which no kernel makes; and the
+# UNVERIFIED forms without the marker, against headers in which every kernel is unverified.
+_kairn_api_reject(enclosure.ball_from_two_limb_bounds 108 "${_api_no_call}")
+foreach(_case_name IN ITEMS 109:interval_make_1 110:ball_from_interval_2)
+  string(REPLACE ":" ";" _pair "${_case_name}")
+  list(GET _pair 0 _case)
+  list(GET _pair 1 _name)
+  _kairn_api_reject(unverified.from_bounds.${_name} ${_case} "${_api_unmarked}"
+    "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/from-bounds-${_name}")
+endforeach()
 # --- The end of the enclosure interface's cases ----------------------------------------------------
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")

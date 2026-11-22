@@ -388,6 +388,10 @@ const Accepted accepted[] = {
     {"the hull of the empty ball and the whole line", [] { return B2::empty().hull(B2::whole()).radius(); }},
     {"the split of the whole line", [] { return B1::whole().split().left.radius(); }},
     {"the ball of [NaN, 1]", [] { return B1::from_interval(not_a_number, double(v_a)).radius(); }},
+    {"from_bounds of [1, NaN], [2, 1] and [+inf, +inf]", [] {
+         return B2::from_bounds(double(v_a), not_a_number).radius() + I2::from_bounds(2 * v_a, double(v_a)).lower().limb[0] +
+                I1::from_bounds(infinity, infinity).upper().limb[0];
+     }},
     {"the midpoint of the empty interval of two limbs", [] { return I2::empty().midpoint().limb[0]; }},
     // Ball vectors: a radius that is a NaN or +inf and a center that is not finite, which make the
     // whole space without a report; the whole space as an operand; views of no entry.

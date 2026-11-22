@@ -50,6 +50,10 @@
 //          expression (the loops are not constexpr), a view made over arrays of const limbs (its
 //          constructor writes them), a part of a view of mutable limbs (an operation that wrote it
 //          would change the radius of every entry); each control writes what compiles instead
+//   108    a ball of two limbs from two bounds of two limbs, Ball<T, 2>::from_bounds(x, y): no kernel
+//          makes one; the control is the ball of the interval, Ball<T, 2>(Interval<T, 2>(x, y))
+//   109-110 an UNVERIFIED from_bounds of an interval and of a ball, written without the marker,
+//          against headers in which every kernel is unverified (as 1-14)
 //   52     nothing but including packed.hpp and soa.hpp, with -DKAIRN_PACKED_FORM= a value that
 //          is not a form, or a form the target does not have (the generated header's #error)
 //   59     a bound as a function of the length that is not given (traits<X>::sum(n) beyond the
@@ -568,6 +572,18 @@ int main() {
     constexpr kairn::ProductAndError<float> z = kairn::two_prod(0x1.5b8dap+63f, 0x1.7920bcp+64f);
 #endif
     sink = z.error;
+#elif KAIRN_TEST_CASE == 108
+    // A ball of two limbs from two bounds of two limbs: no kernel makes one (Ball<T, 2>::from_bounds
+    // takes two values of T); the control writes the composition, the ball of the interval.
+#if defined(KAIRN_TEST_CONTROL)
+    sink = B2(kairn::unverified(I2(kairn::unverified(x), y))).radius();
+#else
+    sink = B2::from_bounds(x, y).radius();
+#endif
+#elif KAIRN_TEST_CASE == 109
+    sink = I1::from_bounds(MARK(s), s).lower().limb[0];
+#elif KAIRN_TEST_CASE == 110
+    sink = B2::from_bounds(MARK(s), s).radius();
 #elif KAIRN_TEST_CASE >= 97 && KAIRN_TEST_CASE <= 107
     using BV = kairn::BallVector<double, 1, 3>;
     const BV bx({1.0, 2.0, double(v)}, 0.5);

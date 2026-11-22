@@ -18,6 +18,18 @@ The functions are in `kairn/interval.hpp` and `kairn/ball.hpp`, and the three ty
 includes all three. `T` is `float` or `double`, `X` and `Y` two sets of the same type, `T` and $k$,
 and `t` a point: a value of `T` or a number of $k$ limbs.
 
+**`X(a, b)` is not the same set for an interval and a ball.** `Interval<T, k>(a, b)` is the
+interval $[a, b]$, but `Ball<T, k>(a, b)` is the ball of center $a$ and radius $b$: generic code
+that writes `X(lo, hi)` compiles for both and means two different sets. The one spelling that
+builds either from two bounds is **`X::from_bounds(lo, hi)`**: the interval $[lo, hi]$, or a ball
+that contains it, with the same special cases (a NaN bound, or the same infinity twice, gives the
+whole line; reversed bounds the empty set; and a ball, which cannot be a half-line, is the whole
+line where a bound is infinite). `Interval<T, k>::from_bounds` is
+`Interval<T, k>(lo, hi)` under that name, and `Ball<T, k>::from_bounds` is
+`Ball<T, k>::from_interval(lo, hi)`; the older spellings stay. `Ball<T, 2>::from_bounds` takes two
+values of `T` only: no kernel makes a ball of two bounds of two limbs
+(`Ball<T, 2>(Interval<T, 2>(lo, hi))` composes two, each with its claim).
+
 ## The interface
 
 | Function | `Interval<T, k>` | `Ball<T, k>` |
@@ -33,7 +45,7 @@ and `t` a point: a value of `T` or a number of $k$ limbs.
 | `X.hull(Y)`, `X.intersection(Y)` | [`interval_hull_k`](interval_hull_1.md), [`interval_intersection_k`](interval_intersection_1.md) | [`ball_hull_k`](ball_hull_1.md), [`ball_intersection_k`](ball_intersection_1.md) |
 | `X.split()`: a `Split` | [`interval_split_k`](interval_split_1.md) | [`ball_split_k`](ball_split_1.md) |
 | to the other type, explicit | `Ball<T, k>(X)`: [`interval_to_ball_k`](interval_to_ball_1.md) | `Interval<T, k>(X)`: [`ball_to_interval_k`](ball_to_interval_1.md) |
-| from two values of `T` | `Interval<T, k>(lo, hi)` | `Ball<T, k>::from_interval(lo, hi)`: [`ball_from_interval_k`](ball_from_interval_1.md) |
+| from two bounds, the one spelling of both: `X::from_bounds(lo, hi)` | the interval $[lo, hi]$, the same as `Interval<T, k>(lo, hi)`: [`interval_make_k`](interval_make_1.md), of two values of `T` or two numbers of $k$ limbs | a ball that contains $[lo, hi]$, the same as `Ball<T, k>::from_interval(lo, hi)`: [`ball_from_interval_k`](ball_from_interval_1.md), of two values of `T`, and for one limb of two numbers of one limb |
 | the relations of IEEE 1788: `ieee1788::equal`, `subset`, `interior`, `disjoint` | [`interval_rel_equal_k`](interval_rel_equal_1.md), [`interval_subset_k`](interval_subset_1.md), [`interval_rel_interior_k`](interval_rel_interior_1.md), [`interval_rel_disjoint_k`](interval_rel_disjoint_1.md) | none ([below](#ieee-1788)) |
 
 `greater(X, Y)` is `less(Y, X)` and `greater_equal(X, Y)` is `less_equal(Y, X)`, the same kernels
@@ -273,7 +285,8 @@ page but the midpoint, the radius, the split and the conversions (comparisons an
 a ball the signs. The others round and check it: the member and subset tests and the comparisons of
 balls (exact pairs by `two_sum_ord`, bounds by `add_ball_2_2`), the hull, the intersection and the
 split of balls, the midpoint, radius, split and conversions of intervals, and the ball from an
-interval of two `T`. The states of a ball (`is_empty`, `is_whole`) and `mid_rad()` of a ball, which
+interval of two `T` (`from_interval` and `from_bounds` of a ball; `from_bounds` of an interval, its
+constructor under another name, does not round). The states of a ball (`is_empty`, `is_whole`) and `mid_rad()` of a ball, which
 read stored values, check nothing.
 
 ## Constant evaluation
@@ -281,7 +294,7 @@ read stored values, check nothing.
 `constexpr`: every function of this page on intervals of one and two limbs but the midpoint, the
 radius, `mid_rad()` and the conversions of two limbs (the split of two limbs is `constexpr`); on
 balls of one limb every function but the split; on balls of two limbs `lower_as`, `upper_as`,
-`midpoint()`, `mid_rad()`, the signs, the states and `from_interval`, and the narrowing
+`midpoint()`, `mid_rad()`, the signs, the states, `from_interval` and `from_bounds`, and the narrowing
 `Ball<T, 1>(X)` of a ball of two limbs. The others compute with fused operations that have no
 variant for constant evaluation (`add_ball_2_2`, the sums of balls). On the empty set and the
 whole line the listings of balls compute a NaN or $\infty - \infty$ before the selects that

@@ -104,8 +104,9 @@
 ///   and the relations of IEEE 1788 (kairn::ieee1788): comparisons and selects;
 /// - the constructors of a Ball from a T or from a number or a constant of one limb: Ball<T, 1>(a),
 ///   Ball<T, 1>(c), Ball<T, 1>(c, r), Ball<T, 1>(q) and Ball<T, 2>(a); and the constructors of an
-///   Interval: of one limb, and of two from a T, whose only rounded operations are the guards; of
-///   two limbs from numbers of two limbs, comparisons and selects. The only rounded operations of
+///   Interval, Interval::from_bounds among them: of one limb, and of two from a T, whose only
+///   rounded operations are the guards; of two limbs from numbers of two limbs, comparisons and
+///   selects. The only rounded operations of
 ///   these are the guards a + 0, whose value is a under every rounding mode; only the sign of a
 ///   zero depends on the mode, and Kairn leaves it unspecified;
 /// - the conversion of a SumAndError (the result of two_sum or fast_two_sum) to Expansion<T, 2>:
@@ -130,7 +131,8 @@
 /// (the test of a canonical center), and the functions of the interface that Ball and Interval
 /// share that compute bounds or centers (milestone2.md, "Functions that do not round", its second
 /// table): the midpoint, the radius, mid_rad and the split of an Interval, the conversions between
-/// Interval and Ball, the ball from an interval of two T, the bounds of a Ball (lower_as,
+/// Interval and Ball, the ball from an interval of two T (Ball::from_interval and
+/// Ball::from_bounds), the bounds of a Ball (lower_as,
 /// upper_as, lower and upper), and the narrowing of a Ball to one limb; of a Ball the member and
 /// subset tests, the three-valued comparisons, the hull, the intersection and the split, which
 /// compute a difference of centers or the conversions to intervals and back; and the functions on

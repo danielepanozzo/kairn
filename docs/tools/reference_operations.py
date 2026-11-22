@@ -180,6 +180,13 @@ EXACT_INTERVAL = "`constexpr`; does not round"
 ROUNDS_CONSTEXPR = "`constexpr`; rounds, and is preceded by the debug build's check of the rounding mode"
 TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`)"
 CORE = "the finite core: no fix-up of infinities and NaN"
+# The constructors from two bounds that an interval and a ball share by name (Interval(a, b) is
+# [a, b], Ball(a, b) the ball of center a and radius b: from_bounds is the one spelling of both).
+FROM_BOUNDS_INTERVAL = ("`Interval<T, %s>::from_bounds(lo, hi)`, the same set as `Interval(lo, hi)`, under the name "
+                        "`Ball` has too ([One enclosure interface](enclosure.md#the-interface))")
+FROM_BOUNDS_BALL = ("`Ball<T, %s>::from_bounds(lo, hi)`, the same ball as `from_interval(lo, hi)`, under the name "
+                    "`Interval` has too ([One enclosure interface](enclosure.md#the-interface)); the bounds are "
+                    "guarded ([rule R3](../developer/architecture.md#the-kernel-ir))")
 # The notes of the enclosure interface of stage B2 ([One enclosure interface](enclosure.md)).
 ROUNDS = "rounds, and is preceded by the debug build's check of the rounding mode; not `constexpr`"
 WHOLE = "IEEE 1788 calls it `isEntire`; the name is `Ball`'s"
@@ -674,6 +681,8 @@ KERNELS = {
              note="each limb converted to `Expansion<T, 1>` first, exactly; " + EXACT_INTERVAL),
         form("Interval<T, 1>(a)", T, result=I1, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
         form("Interval<T, 1>(a)", E1, result=I1, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
+        form("from_bounds(lo, hi)", T, T, result=I1, note=FROM_BOUNDS_INTERVAL % "1" + "; " + EXACT_INTERVAL),
+        form("from_bounds(lo, hi)", E1, E1, result=I1, note=FROM_BOUNDS_INTERVAL % "1" + "; " + EXACT_INTERVAL),
     ),
     "interval_neg_1": page(
         "intervals", "The negation of an interval, one-limb bounds",
@@ -722,6 +731,7 @@ KERNELS = {
         form("from_interval(lo, hi)", T, T, result=B2,
              note="`Ball<T, 2>::from_interval(lo, hi)`; the bounds are guarded "
                   "([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR),
+        form("from_bounds(lo, hi)", T, T, result=B2, note=FROM_BOUNDS_BALL % "2" + "; " + ROUNDS_CONSTEXPR),
     ),
     "ball_narrow_2_1": page(
         "ball", "A ball with a two-limb center as one with a one-limb center",
@@ -744,6 +754,9 @@ KERNELS = {
         form("Interval<T, 2>(lo, hi)", T, T, result=I2, note=TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
         form("Interval<T, 2>(a)", T, result=I2, note="implicit; $l_o = h_i = a$, " + TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
         form("Interval<T, 2>(a)", E2, result=I2, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
+        form("from_bounds(lo, hi)", E2, E2, result=I2, note=FROM_BOUNDS_INTERVAL % "2" + "; " + EXACT_INTERVAL),
+        form("from_bounds(lo, hi)", T, T, result=I2,
+             note=FROM_BOUNDS_INTERVAL % "2" + "; " + TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
     ),
     "interval_mul_2": page(
         "intervals", "Product of intervals, two-limb bounds",
@@ -888,7 +901,9 @@ KERNELS = {
         "ball", "A ball with a one-limb center from an interval of two limbs",
         form("from_interval(lo, hi)", T, T, result=B1,
              note="`Ball<T, 1>::from_interval(lo, hi)`, the ball of `Interval<T, 1>(lo, hi)` in one kernel; the "
-                  "bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR)),
+                  "bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR),
+        form("from_bounds(lo, hi)", T, T, result=B1, note=FROM_BOUNDS_BALL % "1" + "; " + ROUNDS_CONSTEXPR),
+        form("from_bounds(lo, hi)", E1, E1, result=B1, note=FROM_BOUNDS_BALL % "1" + "; " + ROUNDS_CONSTEXPR)),
     "ball_hull_2": page("ball", "A ball that contains two balls, two-limb center",
                         form("X.hull(Y)", B2, B2, result=B2, note=HULL_NOTE + "; " + ROUNDS)),
     "ball_intersection_2": page("ball", "A ball that contains the intersection of two balls, two-limb center",
