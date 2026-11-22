@@ -277,7 +277,7 @@ def rational(c, b='m2'):
     table(c, 'kairn::rational, ns per call', [(label, time('%s/tp/%s' % (b, n))) for label, n in names], kind='time')
 
 
-COMPILE = re.compile(r'^compile-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<kind>mixed|interval2|interval1)'
+COMPILE = re.compile(r'^compile-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<kind>mixed|interval2|interval1|compare|contains|setops)'
                      r'(?:-(?P<size>\d+))?(?:-r(?P<run>\d+))?$')
 
 
@@ -314,7 +314,7 @@ def compile_tables(directory):
                     cell['run_first'].append(r['run']['ns_per_op_min'])
             elif 'run' in r:
                 cell['run'].append(r['run']['ns_per_op_min'])
-    for kind in ('mixed', 'interval2', 'interval1'):
+    for kind in ('mixed', 'interval2', 'interval1', 'compare', 'contains', 'setops'):
         present = [col for col in COLUMNS if (col[0], col[1], kind) in data]
         if not present:
             continue
@@ -597,6 +597,452 @@ SECTIONS = {'configurations': configurations, 'checks': checks, 'discrimination'
             'packed': packed, 'float': floats, 'settings': settings}
 
 
+# --- The second part ------------------------------------------------------------------------------
+# ITEM-MACHINE-COMPILER-LEVEL-rN.json (ITEM soa, enc, bisect) and checks-MACHINE-COMPILER-LEVEL-cK-rN.json,
+# written by kairn-bench-m2 with a filter (bench/README.md, "Milestone 2"); the cells as above.
+
+NAME2 = re.compile(r'^(?P<item>soa|enc|bisect)-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<level>O[23])'
+                   r'-r(?P<run>\d+)$')
+CHECKS2 = re.compile(r'^checks-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<level>O[23])-c(?P<c>[01])'
+                     r'-r(?P<run>\d+)$')
+
+
+def load2(directory):
+    """{item: {(machine, compiler, 'inline', level): [run, ...]}}, and for checks the runs of the ratio
+    of each function's minimum with KAIRN_CHECKS 1 to its minimum with 0, the two programs of one run
+    index paired."""
+    items, pairs = {}, {}
+    for path in sorted(glob.glob(os.path.join(directory, '*.json'))):
+        stem = os.path.basename(path)[:-len('.json')]
+        m, k = NAME2.match(stem), CHECKS2.match(stem)
+        if not m and not k:
+            continue
+        d = json.load(open(path))
+        d['ns'] = {r['name']: r['ns_min'] for r in d['results']}
+        d['path'] = os.path.basename(path)
+        if m:
+            key = (m.group('machine'), m.group('compiler'), 'inline', m.group('level'))
+            items.setdefault(m.group('item'), {}).setdefault(key, []).append(d)
+        else:
+            key = (k.group('machine'), k.group('compiler'), 'inline', k.group('level'))
+            pairs.setdefault(key, {}).setdefault(k.group('run'), {})[int(k.group('c'))] = d
+    checks = {}
+    raw = {}
+    for key, runs_ in pairs.items():
+        for run, both in sorted(runs_.items()):
+            if 0 in both and 1 in both:
+                ns = {n: both[1]['ns'][n] / both[0]['ns'][n] for n in both[0]['ns'] if n in both[1]['ns']}
+                checks.setdefault(key, []).append({'ns': ns, 'pair': (both[0], both[1])})
+                raw.setdefault(key, []).extend([both[0], both[1]])
+    items['checks'] = checks
+    items['checks_raw'] = raw
+    return items
+
+
+def soa_tables(c):
+    rows = []
+    for b, t in (('m2v', 'double'), ('m2vf', 'float')):
+        for k, size in (('tp', 'L1'), ('mem', 'memory')):
+            p = '%s/%s/' % (b, k)
+            rows += [('`x + y`, %s, %s' % (t, size), ratio(p + 'add22/packed', p + 'add22/op')),
+                     ('`x * y`, %s, %s' % (t, size), ratio(p + 'mul22/packed', p + 'mul22/op')),
+                     ('`x * a`, %s, %s' % (t, size), ratio(p + 'mul21/packed', p + 'mul21/op')),
+                     ('dot, W sums, over the same in scalar code, %s, %s' % (t, size), ratio(p + 'dotw/packed', p + 'dotw/op')),
+                     ('dot, W sums, over one sum in scalar code, %s, %s' % (t, size), ratio(p + 'dotw/packed', p + 'dot22/op')),
+                     ('`x + a * b`, two passes, %s, %s' % (t, size), ratio(p + 'mix/packed', p + 'mix/op')),
+                     ('`x + E2(a) * b`, %s, %s' % (t, size), ratio(p + 'mixp/packed', p + 'mixp/op')),
+                     ('`x + E2(a) * b` packed, one pass, over `x + a * b` scalar, %s, %s' % (t, size),
+                      ratio(p + 'mixp/packed', p + 'mix/op')),
+                     ('copy, %s, %s' % (t, size), ratio(p + 'copy/packed', p + 'copy/op'))]
+    table(c, 'Packed over the scalar loop', rows)
+    rows = []
+    for b, b1, t in (('m2v', 'm2v1', 'double'), ('m2vf', 'm2vf1', 'float')):
+        for k, size in (('tp', 'L1'), ('mem', 'memory')):
+            p, q = '%s/%s/' % (b, k), '%s/%s/' % (b1, k)
+            rows += [('`x + y`, %s, %s' % (t, size), ratio(q + 'add22/packed', p + 'add22/op')),
+                     ('`x * y`, %s, %s' % (t, size), ratio(q + 'mul22/packed', p + 'mul22/op')),
+                     ('`x * a`, %s, %s' % (t, size), ratio(q + 'mul21/packed', p + 'mul21/op')),
+                     ('dot, %s, %s' % (t, size), ratio(q + 'dotw/packed', p + 'dot22/op'))]
+    table(c, 'Packed of one lane over the scalar loop', rows)
+    rows = []
+    for b, t in (('m2v', 'double'), ('m2vf', 'float')):
+        p = '%s/tp/' % b
+        rows += [('`x + y`, raw pointers, %s' % t, ratio(p + 'add22/op', p + 'add22/kairn')),
+                 ('`x + y`, view and proxy, %s' % t, ratio(p + 'add22/view', p + 'add22/kairn')),
+                 ('`x + y`, array of Expansion, %s' % t, ratio(p + 'add22/aos', p + 'add22/kairn')),
+                 ('`x * y`, raw pointers, %s' % t, ratio(p + 'mul22/op', p + 'mul22/kairn')),
+                 ('`x * y`, view and proxy, %s' % t, ratio(p + 'mul22/view', p + 'mul22/kairn')),
+                 ('`x * y`, array of Expansion, %s' % t, ratio(p + 'mul22/aos', p + 'mul22/kairn')),
+                 ('`x * a`, raw pointers, %s' % t, ratio(p + 'mul21/op', p + 'mul21/kairn')),
+                 ('`x * a`, view and proxy, %s' % t, ratio(p + 'mul21/view', p + 'mul21/kairn')),
+                 ('copy, raw pointers, %s' % t, ratio(p + 'copy/op', p + 'copy/kairn')),
+                 ('copy, view and proxy, %s' % t, ratio(p + 'copy/view', p + 'copy/kairn')),
+                 ('copy, packed, %s' % t, ratio(p + 'copy/packed', p + 'copy/kairn'))]
+    table(c, 'The interfaces over the kernel on the limbs, L1', rows)
+    rows = []
+    for b, t in (('m2v', 'double'), ('m2vf', 'float')):
+        for k, size in (('tp', 'L1'), ('mem', 'memory')):
+            p = '%s/%s/' % (b, k)
+            rows += [('`x + y` scalar over one `+` of T, %s, %s' % (t, size), ratio(p + 'add22/op', p + 'add11/plain')),
+                     ('`x + y` packed over one `+` of T, %s, %s' % (t, size), ratio(p + 'add22/packed', p + 'add11/plain')),
+                     ('`x * y` scalar over one `*` of T, %s, %s' % (t, size), ratio(p + 'mul22/op', p + 'mul11/plain')),
+                     ('`x * y` packed over one `*` of T, %s, %s' % (t, size), ratio(p + 'mul22/packed', p + 'mul11/plain')),
+                     ('dot, packed, over the dot of T, %s, %s' % (t, size), ratio(p + 'dotw/packed', p + 'dot11/plain'))]
+    table(c, 'Two limbs over plain T', rows)
+    rows = []
+    for b, t in (('m2v', 'double'), ('m2vf', 'float')):
+        for k, v in (('add11', 'plain'), ('copy', 'kairn'), ('add22', 'op'), ('add22', 'packed'), ('mul22', 'op'),
+                     ('mul22', 'packed'), ('dotw', 'packed')):
+            rows.append(('`%s/%s`, %s' % (k, v, t), ratio('%s/mem/%s/%s' % (b, k, v), '%s/tp/%s/%s' % (b, k, v))))
+    table(c, 'Beyond the last-level cache over L1', rows)
+    names = []
+    for b in ('m2v', 'm2vf'):
+        for k in ('tp', 'mem'):
+            names += ['%s/%s/%s' % (b, k, n) for n in ('add11/plain', 'add22/op', 'add22/packed', 'mul22/op', 'mul22/packed',
+                                                         'mul21/op', 'mul21/packed', 'dot22/op', 'dotw/op', 'dotw/packed',
+                                                         'mix/op', 'mix/packed', 'mixp/packed', 'copy/kairn')]
+    table(c, 'Times of Packed and the containers (ns per element)', [('`%s`' % n, time(n)) for n in names], kind='time')
+
+
+ENC_TYPES = [('i1', '`Interval<T, 1>`'), ('i2', '`Interval<T, 2>`'), ('b1', '`Ball<T, 1>`'), ('b2', '`Ball<T, 2>`')]
+ENC_QUESTIONS = [('empty', '`is_empty()`'), ('whole', '`is_whole()`'), ('pos', '`certainly_positive()`'),
+                 ('zero', '`certainly_zero()`'), ('contains_t', '`contains(t)`'), ('contains_set', '`contains(Y)`'),
+                 ('less', '`less`'), ('less_equal', '`less_equal`'), ('equal', '`equal`'), ('member', '`member(t, X)`')]
+
+
+def enc_tables(c, b='m2e'):
+    for tag, tname in ENC_TYPES:
+        rows = [(label, time('%s/tp/%s_%s/op' % (b, tag, op))) for op, label in ENC_QUESTIONS]
+        if tag[0] == 'i':
+            rows += [('`ieee1788::equal`', time('%s/tp/%s_rel_equal/op' % (b, tag))),
+                     ('`ieee1788::interior`', time('%s/tp/%s_rel_interior/op' % (b, tag))),
+                     ('`ieee1788::disjoint`', time('%s/tp/%s_rel_disjoint/op' % (b, tag)))]
+        table(c, 'Predicates and comparisons of %s, ns per operation%s' % (tname, '' if b == 'm2e' else ' (float)'), rows,
+              kind='time')
+    rows = []
+    for tag in ('i1', 'b1'):
+        tname = dict(ENC_TYPES)[tag]
+        for op, label in ENC_QUESTIONS:
+            rows.append(('%s, %s' % (label, tname), ratio('%s/tp/%s_%s/op' % (b, tag, op), '%s/tp/%s_%s/plain' % (b, tag, op))))
+        if tag == 'i1':
+            for op in ('rel_equal', 'rel_interior', 'rel_disjoint'):
+                rows.append(('`ieee1788::%s`, %s' % (op[4:], tname), ratio('%s/tp/i1_%s/op' % (b, op), '%s/tp/i1_%s/plain' % (b, op))))
+    table(c, 'The questions over the same in plain T%s' % ('' if b == 'm2e' else ' (float)'), rows)
+    rows = []
+    for op, label in ENC_QUESTIONS[4:] + [('hull', '`hull`'), ('split', '`split()`')]:
+        rows += [('%s, `Ball<T, 1>` over `Interval<T, 1>`' % label, ratio('%s/tp/b1_%s/op' % (b, op), '%s/tp/i1_%s/op' % (b, op))),
+                 ('%s, `Ball<T, 2>` over `Interval<T, 2>`' % label, ratio('%s/tp/b2_%s/op' % (b, op), '%s/tp/i2_%s/op' % (b, op))),
+                 ('%s, `Interval<T, 2>` over `Interval<T, 1>`' % label, ratio('%s/tp/i2_%s/op' % (b, op), '%s/tp/i1_%s/op' % (b, op))),
+                 ('%s, `Ball<T, 2>` over `Ball<T, 1>`' % label, ratio('%s/tp/b2_%s/op' % (b, op), '%s/tp/b1_%s/op' % (b, op)))]
+    table(c, 'Ball over interval, two limbs over one%s' % ('' if b == 'm2e' else ' (float)'), rows)
+    for tag, tname in ENC_TYPES:
+        rows = [('`hull`', time('%s/tp/%s_hull/op' % (b, tag))), ('`intersection`', time('%s/tp/%s_intersection/op' % (b, tag))),
+                ('`split()`', time('%s/tp/%s_split/op' % (b, tag))),
+                ('`%s(X)`' % ('Ball<T, k>' if tag[0] == 'i' else 'Interval<T, k>'), time('%s/tp/%s_convert/op' % (b, tag)))]
+        if tag[0] == 'i':
+            rows += [('`midpoint()`', time('%s/tp/%s_midpoint/op' % (b, tag))), ('`radius()`', time('%s/tp/%s_radius/op' % (b, tag)))]
+        rows += [('`midpoint()` and `radius()`', time('%s/tp/%s_midrad2/op' % (b, tag))), ('`mid_rad()`', time('%s/tp/%s_midrad/op' % (b, tag))),
+                 ('chain of `hull`', time('%s/step/%s_hull/op' % (b, tag))),
+                 ('chain of `intersection`', time('%s/step/%s_intersection/op' % (b, tag))),
+                 ('chain of `split().left`', time('%s/step/%s_split/op' % (b, tag))),
+                 ('chain of the conversion there and back', time('%s/step/%s_convert/op' % (b, tag)))]
+        table(c, 'Set operations of %s, ns%s' % (tname, '' if b == 'm2e' else ' (float)'), rows, kind='time')
+    rows = []
+    for tag, tname in ENC_TYPES[:2]:
+        rows += [('%s: `midpoint()` over `mid_rad()`' % tname, ratio('%s/tp/%s_midpoint/op' % (b, tag), '%s/tp/%s_midrad/op' % (b, tag))),
+                 ('%s: `radius()` over `mid_rad()`' % tname, ratio('%s/tp/%s_radius/op' % (b, tag), '%s/tp/%s_midrad/op' % (b, tag))),
+                 ('%s: both over `mid_rad()`' % tname, ratio('%s/tp/%s_midrad2/op' % (b, tag), '%s/tp/%s_midrad/op' % (b, tag))),
+                 ('%s: `mid_rad()` over the kernel' % tname, ratio('%s/tp/%s_midrad/op' % (b, tag), '%s/tp/%s_midrad/kairn' % (b, tag))),
+                 ('%s: `midpoint()` over the kernel writing the midpoint only' % tname,
+                  ratio('%s/tp/%s_midpoint/op' % (b, tag), '%s/tp/%s_midpoint/kairn' % (b, tag)))]
+    for tag, tname in ENC_TYPES[2:]:
+        rows.append(('%s: both over `mid_rad()`' % tname, ratio('%s/tp/%s_midrad2/op' % (b, tag), '%s/tp/%s_midrad/op' % (b, tag))))
+    table(c, 'midpoint() and radius() against mid_rad()%s' % ('' if b == 'm2e' else ' (float)'), rows)
+    p = 'm2' if b == 'm2e' else 'm2f'
+    rows = [('`hull`, `Interval<T, 1>`, over a min and a max', ratio('%s/tp/i1_hull/op' % b, '%s/tp/i1_hull/plain' % b)),
+            ('`intersection`, `Interval<T, 1>`, over a max, a min and a test', ratio('%s/tp/i1_intersection/op' % b, '%s/tp/i1_intersection/plain' % b)),
+            ('`split()`, `Interval<T, 1>`, over (l + h)/2, (h - l)/2', ratio('%s/tp/i1_split/op' % b, '%s/tp/plain_midrad_1/plain' % p)),
+            ('`mid_rad()`, `Interval<T, 1>`, over (l + h)/2, (h - l)/2', ratio('%s/tp/i1_midrad/op' % b, '%s/tp/plain_midrad_1/plain' % p)),
+            ('`Ball<T, 1>(X)` over (l + h)/2, (h - l)/2', ratio('%s/tp/i1_convert/op' % b, '%s/tp/plain_midrad_1/plain' % p)),
+            ('`hull`, `Ball<T, 1>`, over the plain hull of c - r, c + r', ratio('%s/tp/b1_hull/op' % b, '%s/tp/b1_phull/plain' % b)),
+            ('`intersection`, `Ball<T, 1>`, over the plain intersection', ratio('%s/tp/b1_intersection/op' % b, '%s/tp/b1_pinter/plain' % b)),
+            ('`split()`, `Ball<T, 1>`, over c -+ r/2, r/2', ratio('%s/tp/b1_split/op' % b, '%s/tp/b1_psplit/plain' % b)),
+            ('`Interval<T, 1>(B)` over c - r, c + r', ratio('%s/tp/b1_convert/op' % b, '%s/tp/plain_bounds_1/plain' % p))]
+    for tag, tname in ENC_TYPES:
+        for op, label in (('hull', '`hull`'), ('split', '`split()`'), ('convert', 'the conversion')):
+            rows.append(('%s, %s, over the kernel' % (label, tname), ratio('%s/tp/%s_%s/op' % (b, tag, op), '%s/tp/%s_%s/kairn' % (b, tag, op))))
+            rows.append(('chain of %s, %s, over the kernel' % (label, tname), ratio('%s/step/%s_%s/op' % (b, tag, op), '%s/step/%s_%s/kairn' % (b, tag, op))))
+    table(c, 'Set operations over the plain forms and the kernels%s' % ('' if b == 'm2e' else ' (float)'), rows)
+
+
+def enc_overhead(c, b='m2e'):
+    """For each configuration, the public function over its kernel on the limbs, over every function
+    of the loops that has both: the median and the largest, and which."""
+    present = [col for col in COLUMNS if any(k[0] == col[0] and k[1] == col[1] for k in c)]
+    print('\n| The public function over the kernel, every loop of %s | %s |' % (b, ' | '.join(col[2] for col in present)))
+    print('|---' * (len(present) + 1) + '|')
+    for level in ('O2', 'O3'):
+        cells = []
+        for col in present:
+            runs_ = c.get((col[0], col[1], 'inline', level), [])
+            if not runs_:
+                cells.append('')
+                continue
+            names = [n for n in runs_[0]['ns'] if n.startswith(b + '/tp/') and n.endswith('/op')
+                     and n[:-3] + '/kairn' in runs_[0]['ns']]
+            best = {n: min(r['ns'][n] for r in runs_) / min(r['ns'][n[:-3] + '/kairn'] for r in runs_) for n in names}
+            v = sorted(best.values())
+            worst = max(best, key=best.get)
+            cells.append('%.2f, %.2f (`%s`)' % (v[len(v) // 2], v[-1], worst.split('/')[2]))
+        print('| -%s: median, largest | %s |' % (level, ' | '.join(cells)))
+
+
+def float_enc(c):
+    rows = []
+    for tag, tname in ENC_TYPES:
+        for op in ('less', 'contains_t', 'hull', 'split', 'convert'):
+            rows.append(('`%s`, %s' % (op, tname), ratio('m2ef/tp/%s_%s/op' % (tag, op), 'm2e/tp/%s_%s/op' % (tag, op))))
+    table(c, 'The enclosure interface, float over double', rows)
+
+
+BISECT_TYPES = [('i1', 'Interval<double, 1>'), ('i2', 'Interval<double, 2>'), ('b1', 'Ball<double, 1>'), ('b2', 'Ball<double, 2>')]
+
+
+def bisect_tables(c):
+    rows = []
+    for w, wl in (('w6', '1e-6'), ('w0', '0')):
+        for tag, tname in BISECT_TYPES:
+            rows.append(('`%s`, width %s' % (tname, wl), lambda ns, n='m2r/run/bisect_%s_%s/op' % (tag, w): ns[n] / 1000))
+    table(c, 'Bisection: time to solution, microseconds', rows, kind='time')
+    rows = []
+    for w, wl in (('w6', '1e-6'), ('w0', '0')):
+        for tag, tname in BISECT_TYPES:
+            rows.append(('`%s` over `Ball<double, 1>`, width %s' % (tname, wl),
+                         ratio('m2r/run/bisect_%s_%s/op' % (tag, w), 'm2r/run/bisect_b1_%s/op' % w)))
+    table(c, 'Bisection: time to solution over that of Ball<double, 1>', rows)
+    # The counts do not depend on the compiler: one run's, and a check that every run agrees.
+    found, agree, differ = None, 0, []
+    for key in sorted(c):
+        for r in c[key]:
+            if found is None:
+                found = r['bisection']
+            elif json.dumps(r['bisection'], sort_keys=True) == json.dumps(found, sort_keys=True):
+                agree += 1
+            else:
+                differ.append(r['path'])
+    if found is None:
+        return
+    evals = {}
+    print('\nBisection counts (one run; %d other runs give the same%s):' % (agree, '; DIFFERENT: ' + ', '.join(differ) if differ else ''))
+    print('\n| Bisection: what each type found | Width | Evaluations | Parts kept | Not narrowed by split() | Zeros | Radius of the zeros |')
+    print('|---|---|---:|---:|---:|---:|---|')
+    for e in found:
+        print('| `%s` | %s | %d | %d | %d | %d | %.3g to %.3g |' % (e['type'], e['width'], e['evaluations'], e['kept'], e['stalled'],
+                                                              e['zeros'], e['radius_min'], e['radius_max']))
+        evals[(e['type'], float(e['width']))] = e['evaluations']
+    rows = []
+    for w, wl, wj in (('w6', '1e-6', '1e-06'), ('w0', '0', '0')):
+        for tag, tname in BISECT_TYPES:
+            n = evals.get((tname, float(wj)))
+            if n:
+                rows.append(('`%s`, width %s' % (tname, wl), lambda ns, k='m2r/run/bisect_%s_%s/op' % (tag, w), n=n: ns[k] / n))
+    table(c, 'Bisection: ns per evaluation of p', rows, kind='time')
+    rows = [('`self_test()`', lambda ns: ns['m2r/run/self_test/op'] / 1000),
+            ('the checks of the environment and the flags, both limb types', lambda ns: ns['m2r/run/self_test_limb/op'] / 1000),
+            ('the generated kernels on their fixed operands', lambda ns: ns['m2r/run/self_test_kernels/op'] / 1000)]
+    table(c, 'self_test(), microseconds per call', rows, kind='time')
+
+
+def checks_tables(c):
+    rows = []
+    for k, label in (('tp/interval_add_1', '`X + Y`, `Interval<T, 1>`, loop'), ('tp/interval_mul_1', '`X * Y`, `Interval<T, 1>`, loop'),
+                     ('tp/interval_add_2', '`X + Y`, `Interval<T, 2>`, loop'), ('tp/interval_mul_2', '`X * Y`, `Interval<T, 2>`, loop'),
+                     ('sum/interval_add_1', '`S + X`, `Interval<T, 1>`, chain'), ('prod/interval_mul_1', '`P * X`, `Interval<T, 1>`, chain'),
+                     ('sum/interval_add_2', '`S + X`, `Interval<T, 2>`, chain'), ('prod/interval_mul_2', '`P * X`, `Interval<T, 2>`, chain'),
+                     ('tp/interval_hull_1', '`hull`, `Interval<T, 1>`, loop'), ('tp/interval_split_1', '`split()`, `Interval<T, 1>`, loop'),
+                     ('tp/horner_i1', 'Horner, `Interval<T, 1>`'), ('tp/horner_i2', 'Horner, `Interval<T, 2>`')):
+        rows.append((label, time('m2/%s/op' % k)))
+    for tag, tname in ENC_TYPES:
+        for op, label in (('less', '`less`'), ('contains_t', '`contains(t)`'), ('pos', '`certainly_positive()`'),
+                          ('hull', '`hull`'), ('split', '`split()`'), ('convert', 'the conversion')):
+            rows.append(('%s, %s' % (label, tname), time('m2e/tp/%s_%s/op' % (tag, op))))
+    rows += [('control: the kernel `interval_mul_1`, loop', time('m2/tp/interval_mul_1/kairn')),
+             ('control: the kernel `ball_less_2`, loop', time('m2e/tp/b2_less/kairn')),
+             ('control: the kernel `interval_split_2`, loop', time('m2e/tp/i2_split/kairn'))]
+    table(c, 'KAIRN_CHECKS 1 over 0', rows)
+    names = ['m2/tp/interval_add_1/op', 'm2/tp/interval_mul_1/op', 'm2e/tp/i1_less/op', 'm2e/tp/b2_less/op',
+             'm2e/tp/i2_split/op']
+    print('\n(The ratio of each pair of runs, the program with KAIRN_CHECKS 1 and that with 0 run one after the other.)')
+    return names
+
+
+def checks_times(raw):
+    names = ['m2/tp/interval_add_1/op', 'm2/tp/interval_mul_1/op', 'm2/tp/interval_add_2/op', 'm2e/tp/i1_less/op',
+             'm2e/tp/i1_contains_t/op', 'm2e/tp/b2_less/op', 'm2e/tp/i2_split/op', 'm2/tp/interval_mul_1/kairn']
+    present = [col for col in COLUMNS if any(k[0] == col[0] and k[1] == col[1] for k in raw)]
+    print('\n| Times with KAIRN_CHECKS 0; 1 (ns) | %s |' % ' | '.join(col[2] for col in present))
+    print('|---' * (len(present) + 1) + '|')
+    for n in names:
+        cells = []
+        for col in present:
+            parts = []
+            for level in ('O2', 'O3'):
+                rs = raw.get((col[0], col[1], 'inline', level), [])
+                v0 = [r['ns'][n] for r in rs if r.get('kairn_checks') == 0 and n in r['ns']]
+                v1 = [r['ns'][n] for r in rs if r.get('kairn_checks') == 1 and n in r['ns']]
+                if v0 and v1:
+                    parts.append('%s; %s (-%s)' % (fmt_ns(min(v0)), fmt_ns(min(v1)), level))
+            cells.append(', '.join(parts))
+        print('| `%s` | %s |' % (n, ' | '.join(cells)))
+
+
+def runs2(items):
+    """Each run of the second part: its spread within (median over minimum at the median function) and
+    against the fastest run of its configuration, and the load average."""
+    print('\n| Run (second part) | Over the fastest run: median, 90th percentile | Median over minimum within the run (median function) | Load average (1 min) at start, end |')
+    print('|---|---|---|---|')
+    for item in ('soa', 'enc', 'bisect', 'checks_raw'):
+        c = items.get(item, {})
+        for key in sorted(c):
+            rs = c[key]
+            groups = {}
+            for r in rs:
+                groups.setdefault(r.get('kairn_checks', 0), []).append(r)
+            for g in groups.values():
+                names = set(g[0]['ns'])
+                for r in g[1:]:
+                    names &= set(r['ns'])
+                best = {n: min(r['ns'][n] for r in g) for n in names}
+                for r in g:
+                    rel = sorted(r['ns'][n] / best[n] for n in names)
+                    within = sorted(x['ns_median'] / x['ns_min'] for x in r['results'])
+                    la = r['load_average']
+                    print('| `%s` | %.3f, %.3f | %.3f | %.1f, %.1f |' % (r['path'], rel[len(rel) // 2], rel[int(0.9 * (len(rel) - 1))],
+                                                                      within[len(within) // 2], la['start'][0], la['end'][0]))
+
+
+def spread2(items):
+    print('\n| Spread of (second part) | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |')
+    print('|---|---:|---|---|')
+    for item in ('soa', 'enc', 'bisect', 'checks_raw'):
+        c = items.get(item, {})
+        for key in sorted(c):
+            groups = {}
+            for r in c[key]:
+                groups.setdefault(r.get('kairn_checks', 0), []).append(r)
+            for k, runs_ in sorted(groups.items()):
+                if len(runs_) < 2:
+                    continue
+                names = set(runs_[0]['ns'])
+                for r in runs_[1:]:
+                    names &= set(r['ns'])
+                sp = sorted((max(r['ns'][n] for r in runs_) / min(r['ns'][n] for r in runs_) - 1, n) for n in names)
+                label = '%s %s%s' % (item.replace('_raw', ''), '-'.join(x for x in key if x != 'inline'),
+                                     (' checks %d' % k) if item == 'checks_raw' else '')
+                print('| %s | %d | %.1f%%, %.1f%%, %.1f%% | `%s` |' % (label, len(runs_), 100 * sp[len(sp) // 2][0],
+                                                                    100 * sp[int(0.9 * (len(sp) - 1))][0], 100 * sp[-1][0], sp[-1][1]))
+
+
+def configurations2(items):
+    print('\n| Configuration (second part) | CPU | Compiler | Flags | Runs per item (soa, enc, bisect, checks pairs) | Date, commit |')
+    print('|---|---|---|---|---|---|')
+    keys = sorted({k for item in ('soa', 'enc', 'bisect', 'checks') for k in items.get(item, {})})
+    for key in keys:
+        r = next(items[i][key][0] if i != 'checks' else items[i][key][0]['pair'][0]
+                 for i in ('soa', 'enc', 'bisect', 'checks') if key in items.get(i, {}))
+        counts = ', '.join(str(len(items.get(i, {}).get(key, []))) for i in ('soa', 'enc', 'bisect', 'checks'))
+        print('| %s | %s; %s | %s | `%s` | %s | %s, `%s` |' % ('-'.join(key), r['machine']['cpu'], r['machine']['pinning'],
+                                                            r['compiler'], r['flags'], counts, r['date'], r['commit']))
+
+
+def checks2(items):
+    print('\n| Checks of (second part) | Functions checked, failed, per run |')
+    print('|---|---|')
+    for item in ('soa', 'enc', 'bisect', 'checks_raw'):
+        for key, rs in sorted(items.get(item, {}).items()):
+            print('| %s %s | %s |' % (item.replace('_raw', ''), '-'.join(x for x in key if x != 'inline'),
+                                     '; '.join('%d, %d' % (r['checks']['compared'], r['checks']['failed']) for r in rs)))
+
+
+SELFTEST = re.compile(r'^selftest-compile-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)$')
+
+
+def selftest_compile(directory):
+    """selftest-compile-MACHINE-COMPILER.json, written by compile_time.py run: the minimum wall time
+    over the compilations of each unit, seconds, at -O2 and -O3, and the peak memory."""
+    data = {}
+    for path in sorted(glob.glob(os.path.join(directory, 'selftest-compile-*.json'))):
+        m = SELFTEST.match(os.path.basename(path)[:-len('.json')])
+        if m:
+            d = json.load(open(path))
+            res = {}
+            for r in d['results']:
+                res.setdefault(r['unit'], {})[r['config']] = {'wall': r['wall_s'], 'peak_mb': r['peak_mb']}
+            d['results'] = res
+            data[(m.group('machine'), m.group('compiler'))] = d
+    if not data:
+        return
+    present = [col for col in COLUMNS if (col[0], col[1]) in data]
+    print('\n| Compile time, s (minimum wall time; -O2; -O3) | %s |' % ' | '.join(col[2] for col in present))
+    print('|---' * (len(present) + 1) + '|')
+    units = [('empty', 'an empty unit'), ('include', '`kairn/kairn.hpp`, nothing used'),
+             ('self_test', 'one call of `kairn::self_test()`')]
+    for u, label in units:
+        cells = []
+        for col in present:
+            d = data[(col[0], col[1])]
+            parts = []
+            for cfg in ('O2', 'O3'):
+                r = d['results'].get(u, {}).get(cfg)
+                parts.append('%.2f' % min(r['wall']) if r else '–')
+            cells.append('; '.join(parts))
+        print('| %s | %s |' % (label, ' | '.join(cells)))
+    for u, label in units[2:]:
+        cells = []
+        for col in present:
+            d = data[(col[0], col[1])]
+            parts = []
+            for cfg in ('O2', 'O3'):
+                r, e = d['results'].get(u, {}).get(cfg), d['results'].get('include', {}).get(cfg)
+                parts.append('%.2f' % (min(r['wall']) - min(e['wall'])) if r and e else '–')
+            cells.append('; '.join(parts))
+        print('| %s, over the include alone | %s |' % (label, ' | '.join(cells)))
+    cells = []
+    for col in present:
+        d = data[(col[0], col[1])]
+        parts = []
+        for cfg in ('O2', 'O3'):
+            r = d['results'].get('self_test', {}).get(cfg)
+            parts.append('%d' % round(min(r['peak_mb'])) if r and r.get('peak_mb') else '–')
+        cells.append('; '.join(parts))
+    print('| peak memory of `self_test`, MB | %s |' % ' | '.join(cells))
+
+
+def report2(directory):
+    items = load2(directory)
+    print('\n## part 2: configurations')
+    configurations2(items)
+    checks2(items)
+    runs2(items)
+    spread2(items)
+    if items.get('soa'):
+        print('\n## part 2: Packed and the containers')
+        soa_tables(items['soa'])
+    if items.get('enc'):
+        print('\n## part 2: the enclosure interface')
+        enc_tables(items['enc'])
+        enc_overhead(items['enc'])
+        float_enc(items['enc'])
+    if items.get('bisect'):
+        print('\n## part 2: the bisection and self_test')
+        bisect_tables(items['bisect'])
+    if items.get('checks'):
+        print('\n## part 2: KAIRN_CHECKS')
+        checks_tables(items['checks'])
+        checks_times(items['checks_raw'])
+    selftest_compile(directory)
+
+
 def report(directory, sections):
     c = load(directory)
     inline = {k: v for k, v in c.items() if k[2] == 'inline'}
@@ -608,6 +1054,8 @@ def report(directory, sections):
             compile_tables(directory)
         elif name == 'modes':
             modes(directory)
+        elif name == 'part2':
+            report2(directory)
         else:
             SECTIONS[name](c if name == 'settings' else inline)
 
@@ -624,7 +1072,7 @@ def fill(directory, template, out):
     import io
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes'])
+        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2'])
     tables, current = {}, None
     for line in buf.getvalue().splitlines():
         if line.startswith('| ') and current is None:
@@ -672,11 +1120,15 @@ def fill(directory, template, out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('dir')
-    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables', 'modes'], action='append')
+    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2'], action='append')
     ap.add_argument('--fill', nargs=2, metavar=('TEMPLATE', 'OUT'))
+    ap.add_argument('--part', type=int, choices=[1, 2], help='the tables of one part only (default: the first part)')
     a = ap.parse_args()
     if a.fill:
         fill(a.dir, a.fill[0], a.fill[1])
+        return 0
+    if a.part == 2:
+        report2(a.dir)
         return 0
     report(a.dir, a.section or list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes'])
     return 0

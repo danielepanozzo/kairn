@@ -14,8 +14,9 @@ against `Ball`. Two machines, four compilers, `-O2` and `-O3`, three runs of eac
 [`bench/`](https://github.com/danielepanozzo/kairn/tree/main/bench) (its README, "Milestone 2"); the
 measurements, one JSON file per run, in
 [`results/milestone2/bench/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/bench).
-It is the first part of the milestone's benchmarks: [what is still to come](#still-to-come) is
-measured later.
+It is the first part of the milestone's benchmarks; [the second part](#the-second-part)
+(2026-11-22, commit `cbe3bb1`, the same machines and compilers) measures what reached `main` after it,
+and [what is still to come](#still-to-come) is measured later.
 
 "M3" and "Zen 2" are the two machines ([How it was measured](#how-it-was-measured)). A **loop** is a
 loop of independent operations over arrays in L1, timed per operation; a **chain** is a dependent
@@ -59,6 +60,15 @@ harness, `BACKEND/KIND/KERNEL/VARIANT`: `m2` for `double` limbs, `m2f` for `floa
   1.2 times inline in a loop with Apple clang, 2 to 4 times where the compiler had vectorized the
   inline loop, 1.1 to 2.8 times in a chain. And a function of 10 000 inlined operations runs twice
   as slow as outlined on Zen 2 (Clang 18): its 5.9 MB of code no longer fits a core's caches.
+
+- **Second part: `Packed` pays where the compiler does not vectorize the scalar loop itself.** A
+  packed sum or product of two-limb `double` takes 0.25 to 0.37 of the scalar loop with GCC 13 on
+  Zen 2 (4 lanes) and 0.59 to 0.89 on the M3 (2 lanes), of `float` 0.12 to 0.45; Clang 18
+  vectorizes the scalar loop over arrays of limbs itself, and the two take the same time. One lane
+  costs nothing, and the views and the element proxy nothing over raw pointers (both read an
+  element through `from_limbs`, whose guards cost 8 to 34% of a loop of the kernel). Beyond the
+  last-level cache Zen 2's packed loops are bound by memory, about 2.0 ns per element
+  ([question 8](#8-packed-and-the-containers)).
 
 ## The answers
 
@@ -863,20 +873,186 @@ the same operands under two modes into one. Three things prevent that, and one c
   beyond the exact rounding, as the statement of `mul_down` allows, and none fails; 820 986 of them
   are not the result rounded to nearest. The same counts on every configuration.
 
+## The second part
+
+What reached `main` after the first part and was not measured there ([Still to
+come](#still-to-come)), at commit `cbe3bb1` (`main` at `aa168ee` and the harness of this part, which
+changes nothing under `include/`), 2026-11-22, on the same two machines and four compilers, `-O2`
+and `-O3`, three runs of each configuration: `Packed` and the containers of `soa.hpp`
+([question 8](#8-packed-and-the-containers)); the interface that `Interval` and `Ball` share
+(question 9); one algorithm, the bisection of the tutorial, over
+four enclosure types (question 10); `kairn::self_test()` and
+the checks of `KAIRN_CHECKS` (question 11); and the compile time of
+the interface (question 12). The harness is that of
+the first part, four files more (`bench/m2_soa.cpp`, `m2_soa_scalar.cpp`, `m2_enc.cpp`,
+`m2_run.cpp`; [bench/README.md](https://github.com/danielepanozzo/kairn/tree/main/bench),
+"Milestone 2"), with the same driver, statistic and checks; the runs are the files
+`soa-*`, `enc-*`, `bisect-*`, `checks-*`, `selftest-compile-*` and `compile-*-{compare,contains,setops}*`
+of [`results/milestone2/bench/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/bench),
+and every table below is printed from them by `python3 bench/m2_report.py --part 2
+results/milestone2/bench` (the compile tables by the same script without `--part`). Names of
+functions are those of the harness: `m2v` and `m2vf` the loops of `Packed` and the containers for
+`double` and `float`, `m2v1` and `m2vf1` the same packed loops in the scalar form of `Packed` (one
+lane), `m2e` and `m2ef` the enclosure interface, `m2r` whole computations; KIND `mem` a loop over
+arrays that do not fit the last-level cache, `run` one call of a whole computation; variants `view`
+(through `SoAView` and its element proxy), `packed` (`Packed<T, 2>` through `SoAView`), `aos` (an
+array of `Expansion<T, 2>`).
+
+### 8. `Packed` and the containers
+
+Is the packed type worth it against the same loop in scalar code, and what do the views and the
+element proxy cost? Loops over arrays of two-limb numbers held as `SoA<T, 2>` holds them, one array
+per limb: $z = x + y$, $z = xy$, $z = xa$ with $a$ of one limb, the dot product of
+[the tutorial](../../tutorials/vector-loop.md) (W sums, the lanes added in order at the end),
+$z = x + ab$ with $a$ and $b$ of one limb, and a copy; in L1 (512 elements) and over arrays that do
+not fit the last-level cache (4 Mi elements of `double`, 8 Mi of `float`: 192 MB for a sum, against
+the 16 MB L3 of a Zen 2 core complex and the caches of the M3 Max); the time per element. The scalar
+loop (`op`) reads each element with `from_limbs` through raw pointers, computes with
+`Expansion<T, 2>` and stores the limbs; `view` is the same through `SoAView` and its element proxy;
+`packed` loads and stores `Packed<T, 2>` through `SoAView`, the tail by `load_partial` and
+`store_partial`. The controls are the same loop on `T` (one `+` or `*` of the leading limbs) and the
+generated kernel called on the limbs (`kairn`). Everything is compiled with the flags of packed code
+(`-mavx2 -mfma` on Zen 2), so that a compiler may vectorize the scalar loops at the same width as
+`Packed`. W, the lanes of `Packed<T, 2>`, is 2 for `double` and 4 for `float` on the M3 (NEON), 4 and
+8 on Zen 2 (AVX2).
+
+| Packed over the scalar loop (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `x + y`, double, L1 | 0.71 to 0.72 | 0.59 to 0.61 | 0.25 | 1.00 to 1.01 |
+| `x * y`, double, L1 | 0.89 | 0.70 to 0.71 | 0.32 | 1.00 to 1.01 |
+| `x * a`, double, L1 | 1.07 to 1.08 | 0.81 | 0.37 | 1.00 |
+| dot, W sums, over one sum in scalar code, double, L1 | 0.59 to 0.63 | 0.57 to 0.61 | 0.30 | 0.28 |
+| dot, W sums, over the same in scalar code, double, L1 | 1.12 to 1.16 | 0.74 to 0.75 (-O2), 1.13 to 1.20 (-O3) | 0.31 | 0.68 (-O2), 0.31 (-O3) |
+| `x + y`, float, L1 | 0.36 | 0.29 to 0.30 | 0.12 to 0.13 | 1.00 |
+| `x * y`, float, L1 | 0.44 to 0.45 | 0.33 to 0.34 | 0.16 to 0.17 | 1.00 to 1.01 |
+| `x + y`, double, memory | 0.70 | 0.59 | 0.36 to 0.37 | 1.00 to 1.01 |
+| `x * y`, double, memory | 0.85 to 0.86 | 0.67 to 0.68 | 0.61 to 0.62 | 1.00 |
+| `x + a * b`, two passes, double, L1 | 0.88 | 0.87 (-O2), 0.75 to 0.78 (-O3) | 0.38 (-O2), 0.31 (-O3) | 1.09 |
+| `x + a * b`, two passes, double, memory | 0.90 | 0.78 to 0.79 (-O2), 0.74 to 0.75 (-O3) | 0.72 to 0.75 (-O2), 0.74 to 0.77 (-O3) | 1.34 to 1.42 (-O2), 1.35 to 1.39 (-O3) |
+| `x + E2(a) * b` packed, one pass, over `x + a * b` scalar, double, L1 | 1.98 | 1.70 to 1.75 (-O2), 1.57 to 1.62 (-O3) | 0.92 (-O2), 0.81 (-O3) | 2.87 |
+
+| Times of Packed and the containers, ns per element (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `m2v/tp/add11/plain` | 0.102 to 0.106 | 0.28 (-O2), 0.151 (-O3) | 0.318 to 0.321 (-O2), 0.0996 to 0.0998 (-O3) | 0.119 to 0.121 |
+| `m2v/tp/add22/op` | 1.7 to 1.71 | 1.77 to 1.79 | 5.37 to 5.41 | 1.31 to 1.33 |
+| `m2v/tp/add22/packed` | 1.22 | 1.06 to 1.09 | 1.35 to 1.36 | 1.32 to 1.33 |
+| `m2v/tp/mul22/op` | 0.953 to 0.954 | 1.02 | 2.91 to 2.93 | 0.825 to 0.835 |
+| `m2v/tp/mul22/packed` | 0.844 to 0.845 | 0.717 to 0.72 | 0.919 to 0.928 | 0.829 to 0.84 |
+| `m2v/tp/dot22/op` | 7.62 to 7.81 | 7.74 to 7.9 | 10.3 to 10.4 | 10.2 to 10.4 |
+| `m2v/tp/dotw/op` | 4.02 to 4.16 | 6.37 (-O2), 3.92 to 4.2 (-O3) | 9.9 to 9.99 | 4.22 to 4.27 (-O2), 9.29 to 9.38 (-O3) |
+| `m2v/tp/dotw/packed` | 4.52 to 4.81 (-O2), 4.8 (-O3) | 4.7 to 4.75 (-O2), 4.45 to 4.75 (-O3) | 3.05 to 3.08 | 2.86 to 2.9 |
+| `m2v/mem/add22/op` | 1.78 | 1.86 | 5.58 to 5.62 | 2.02 to 2.09 |
+| `m2v/mem/add22/packed` | 1.25 | 1.09 to 1.11 | 2.02 to 2.09 | 2.02 to 2.1 |
+| `m2v/mem/copy/kairn` | 0.279 to 0.289 | 1.26 to 1.33 (-O2), 0.278 to 0.29 (-O3) | 1.4 to 1.41 | 1.42 to 1.44 |
+
+| The interfaces over the kernel on the limbs, L1 (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `x + y`, raw pointers, double | 1.17 (-O2), 1.17 to 1.26 (-O3) | 1.16 to 1.17 | 1.21 to 1.22 | 1.18 |
+| `x + y`, view and proxy, double | 1.18 (-O2), 1.18 to 1.27 (-O3) | 1.17 | 1.21 to 1.22 | 1.18 |
+| `x + y`, array of Expansion, double | 1.02 (-O2), 1.02 to 1.10 (-O3) | 0.98 to 0.99 | 1.00 | 3.81 to 3.83 |
+| `x * y`, raw pointers, double | 1.32 to 1.34 | 1.32 | 1.27 | 1.22 to 1.23 |
+| `x * y`, view and proxy, double | 1.32 to 1.34 | 1.32 | 1.27 | 1.22 to 1.23 |
+| `x * y`, array of Expansion, double | 1.01 to 1.06 | 1.00 | 1.00 | 3.01 to 3.05 |
+| copy, view and proxy, double | 1.00 to 1.01 | 1.04 to 1.06 (-O2), 0.99 to 1.00 (-O3) | 1.00 to 1.01 | 1.00 |
+
+- **With GCC and Apple clang the packed type is worth it; with Clang 18 it gains nothing over the
+  scalar loop, which Clang vectorizes itself.** In L1, the packed loop of a sum or a product of
+  `double` takes 0.25 to 0.37 of the scalar loop on Zen 2 with GCC 13 (4 lanes), and 0.59 to 0.89 on
+  the M3 (2 lanes); of `float`, 0.12 to 0.18 and 0.29 to 0.45 (8 and 4 lanes). The product by a
+  number of one limb gains least: 0.37 with GCC 13, 0.81 with GCC 16, and 1.07 to 1.08 with Apple
+  clang, whose scalar loop of that product is short (21 instructions per element) and already fast
+  (0.63 ns). With Clang 18 the packed and the scalar loops take the same time (1.00 to 1.01): Clang
+  vectorizes the scalar loop over the arrays of limbs, 256-bit, the generated kernel and
+  `Expansion`'s operator alike, so a sum of `double` takes 1.3 ns per element in either form, where
+  GCC 13's scalar loop, which stays scalar, takes 5.4 ns. GCC 13, GCC 16 and Apple clang vectorize
+  none of the scalar loops ([machine code](#what-the-machine-code-shows-second-part)).
+- **One lane costs nothing; the gain is the lanes.** `Packed` in its scalar form
+  (`KAIRN_PACKED_FORM_SCALAR`, [Packed of one lane](#question-8-packed-and-the-containers)) takes
+  0.94 to 1.07 of the scalar loop in every configuration. Where the scalar loop is not vectorized,
+  W lanes give 2.7 to 4.0 times on Zen 2 with W = 4 and 5.6 to 8.3 with W = 8 (GCC 13), and 0.93 to 1.7
+  times on the M3 with W = 2 and 1.9 to 3.4 with W = 4.
+- **The tutorial's dot product** takes 0.28 to 0.31 of the scalar loop with one sum on Zen 2 and
+  0.57 to 0.63 on the M3 (`float`: 0.12 to 0.16 and 0.30 to 0.33): W sums break the chain of the
+  one-sum loop, whose step (7.6 to 10.4 ns) waits for the sum before. Against the same W sums written
+  in scalar code, it gains on Zen 2 (0.31; 0.68 with Clang 18 at `-O2`) and **loses on the M3**: 1.12
+  to 1.16 with Apple clang, 1.13 to 1.20 with GCC 16 at `-O3`. There the packed loop is one dependent
+  chain of packed sums, 8.9 to 9.6 ns a step for two elements, longer than the 7.6 to 7.9 ns of a
+  scalar chain for one; and the scalar loop's two chains run side by side, 3.9 to 4.2 ns per element.
+- **Beyond the last-level cache** the M3 stays compute-bound (every loop of two limbs within 1.02 to
+  1.10 of its time in L1), and so do the scalar loops of GCC 13 (1.04 to 1.14). The packed loops of
+  Zen 2 meet the memory: a sum or a product of `double` takes 2.0 to 2.1 ns per element with both
+  compilers, 1.5 to 2.4 times its time in L1, about what one core's stream of 48 bytes per element
+  allows there (a copy of two limbs takes 1.4 ns); packed over scalar becomes 0.36 for the sum and
+  0.61 for the product with GCC 13. A packed copy gains only where the compiler left the scalar copy
+  scalar (GCC at `-O2`).
+- **The views cost nothing over raw pointers; reading an element costs its guards.** A loop through
+  `SoAView` and its proxy takes what the same loop through raw pointers takes, within 1%, and both
+  1.08 to 1.34 times the generated kernel on the limbs: each read of an element is `from_limbs`,
+  which guards each limb (an addition of $+0$, rule R3 of `expansion.hpp`), four additions more per
+  sum of two elements. An array of `Expansion<T, 2>`, whose elements are not read through
+  `from_limbs`, takes 0.98 to 1.10 times the kernel with GCC and Apple clang, and 3.0 to 7.7 times
+  with Clang 18, which does not vectorize that loop. A copy through the proxy costs what a copy of
+  the limbs costs (0.93 to 1.06).
+- **`Packed<T, 1>` has no arithmetic**, and what that costs a loop that mixes one-limb and
+  two-limb data depends on what the loop computes. For $z = x + ab$ with the product rounded to `T`,
+  as `Expansion<T, 1>` computes it, a packed loop computes the products in a plain loop of `T` first
+  and the packed sums after: for `double`, 0.74 to 0.90 of the scalar loop on the M3, 0.31 to 0.38 with GCC 13 in
+  L1 and 0.72 to 0.77 beyond the cache, but 1.08 to 1.10 with Clang 18 in L1 and 1.33 to 1.42 beyond
+  the cache, where the second pass is a second stream through memory. In one pass a packed loop can
+  only make $a$ a number of two limbs, $x + \mathrm{Expansion}(a)\,b$: a product of two limbs by one,
+  more accurate and dearer, 1.45 to 1.98 times the scalar loop of the rounded product on the M3 and
+  1.4 to 2.9 times with Clang 18 (0.81 to 0.97 with GCC 13).
+
+### What the machine code shows (second part)
+
+The loops of the new timed functions were disassembled on every configuration and summarized by
+`bench/asm_summary.py`, as in the first part (`asm2-*.json` beside the runs). What explains the
+tables:
+
+1. **Clang 18 vectorizes the scalar loops over the arrays of limbs, and no other compiler does.**
+   The loop of `kb_m2_v64_tp_add22__op` (a sum of `Expansion<double, 2>` read through raw pointers)
+   is, with Clang 18, 143 instructions on 256-bit registers for four elements, as long as the packed
+   loop's 142; the generated kernel on the limbs (`__kairn`) gives the same loop. The loop over an
+   array of `Expansion<double, 2>` (`__aos`) stays scalar, 33 instructions per element, hence its 3.0
+   to 7.7 times. With GCC 13, GCC 16 and Apple clang every scalar loop of question 8 is scalar, 34
+   to 50 instructions per element for a sum.
+2. **The tutorial's dot product is one chain.** With Apple clang its loop is 67 instructions on
+   128-bit registers per step of two elements, each step waiting for the packed sum before; the
+   scalar loop with two sums is 101 instructions per two elements in two independent chains, which
+   the M3 overlaps (question 8).
+
+### How the second part was measured
+
+| Machine | Configurations | Conditions |
+|---|---|---|
+| M3: macOS 26.6 arm64, Apple M3 Max (12 performance, 4 efficiency cores) | Apple clang 21, GCC 16.2; `-O2` and `-O3`; `Packed` in its NEON form (2 lanes of `double`, 4 of `float`) | no affinity: the thread asks for the user-interactive class; shared with other jobs; a run started only when the 1-minute load average was under 20, and, as in the first part, a run whose median spread (the median over the functions of each one's median over its minimum, the loops of `mem` left out) exceeded 5% was set aside and repeated |
+| Zen 2: Linux x86-64, AMD EPYC 7452, 2 × 32 cores | GCC 13.3, Clang 18.1; `-O2` and `-O3`; `-mfma`, the files of `Packed` and of the containers `-mavx2 -mfma` (`Packed` in its AVX2 form: 4 lanes of `double`, 8 of `float`) | each run pinned to the logical CPU of the second socket whose usage and that of its SMT sibling were the lowest over the 2 s before it (under 2%), `taskset` and `--cpu`; `mpstat` of the CPU and its sibling every 5 s during the run, kept with the runs' logs; one measurement at a time |
+
+- **Commit**: `cbe3bb1`, which adds the harness of the second part to `main` at `aa168ee` and
+  changes nothing under `include/`; recorded in every file.
+- **Flags**: those of the first part; the checks of question 11 with `KAIRN_CHECKS=1` in every
+  translation unit (`kairn-bench-m2-checks-LEVEL`).
+- **Statistic**: as in the first part, the minimum over 41 (M3) or 31 (Zen 2) samples of about 4 ms;
+  a sample of a loop over arrays beyond the last-level cache is one call (10 to 40 ms); ratios are of
+  minima within one run (for question 11, of the two programs' runs made one after the other), and a
+  cell is the lowest and highest value over the three runs of a configuration.
+- **Checks before timing**: every timed function against its reference, byte for byte, in every run
+  ([Checks of the second part](#checks-of-the-second-part)); none failed.
+- **Windows**: this part has no Windows machine; the Windows figures of Milestone 2 are those of the
+  first part where it has them (it has none either: Windows and MSVC were not measured in Milestone 2).
+
 ## Still to come
 
-This page measures what `main` held at commit `dee8ecd`. Measured later, with the same harness,
-which takes them as new rows of its tables (`bench/README.md`, "Milestone 2"):
+This page measures what `main` held at commit `dee8ecd` (the first part) and at `aa168ee` (the
+second part, [above](#the-second-part)). Measured later, with the same harness, which takes them as
+new rows of its tables (`bench/README.md`, "Milestone 2"): what is not on `main` yet, in review, the
+functions on arrays (sum, dot product, `axpy`, convolution, norm), `BallVector` and the accumulator.
 
-- what reached `main` after that commit and is not measured here: the predicates and comparisons
-  of `Interval` and `Ball` (`is_empty`, `contains`, the signs, the three-valued comparisons, the
-  relations of IEEE 1788), the midpoint, radius, split and conversions of intervals of two limbs,
-  the hull, intersection and split of balls, and `Packed` and the containers;
-- what is not on `main` yet, in review: the functions on arrays (sum, dot product, `axpy`,
-  convolution, norm), `BallVector` and the accumulator.
-
-(State on 2026-11-21. The paragraph first written here, at `dee8ecd`, listed all of these as not
-on `main` yet.)
+(State on 2026-11-22. The paragraph first written here, at `dee8ecd`, listed all of these as not on
+`main` yet; the one of 2026-11-21 listed what had reached `main` since, the predicates and
+comparisons of `Interval` and `Ball`, the midpoint, radius, split and conversions of intervals of
+two limbs, the hull, intersection and split of balls, and `Packed` and the containers, which the
+second part measures.)
 
 ## How it was measured
 
@@ -1467,3 +1643,258 @@ stored files, and those of the answers are rows of them, put into this page by t
 | `interval_mul_1`, loop: fenv over Kairn | 5.71 to 5.93 (-O2), 6.07 to 6.11 (-O3) | 4.49 to 4.63 (-O2), 4.61 to 4.64 (-O3) | 7.66 to 7.71 | 2.38 to 2.41 |
 | `interval_mul_1`, loop: Kairn over fenv_loop | 4.38 to 4.51 (-O2), 3.08 to 3.16 (-O3) | 13.2 to 13.5 | 3.31 to 3.34 | 4.54 to 4.58 (-O2), 4.01 to 4.07 (-O3) |
 | `interval_mul_1`, loop: interval over ball | 6.38 to 6.49 (-O2), 6.19 to 6.39 (-O3) | 17.6 to 18.6 (-O2), 18.3 (-O3) | 4.87 to 4.90 | 6.77 to 6.81 |
+
+### Second part
+
+The tables of the second part are printed by `python3 bench/m2_report.py --part 2
+results/milestone2/bench` from the stored files, and those of the answers are rows of them.
+
+#### Configurations of the second part
+
+| Configuration (second part) | CPU | Compiler | Flags | Runs per item (soa, enc, bisect, checks pairs) | Date, commit |
+|---|---|---|---|---|---|
+| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
+| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-Wall -Wextra -Werror --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
+| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
+| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
+| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
+| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
+| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O2 -ffp-contract=off` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
+| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off` | 3, 0, 0, 0 | 2026-11-22, `cbe3bb1` |
+
+#### Checks of the second part
+
+| Checks of (second part) | Functions checked, failed, per run |
+|---|---|
+| soa linux-clang-O2 | 172, 0; 172, 0; 172, 0 |
+| soa linux-clang-O3 | 172, 0; 172, 0; 172, 0 |
+| soa linux-gcc-O2 | 172, 0; 172, 0; 172, 0 |
+| soa linux-gcc-O3 | 172, 0; 172, 0; 172, 0 |
+| soa mac-appleclang-O2 | 172, 0; 172, 0; 172, 0 |
+| soa mac-appleclang-O3 | 172, 0; 172, 0; 172, 0 |
+| soa mac-gcc16-O2 | 172, 0; 172, 0; 172, 0 |
+| soa mac-gcc16-O3 | 172, 0; 172, 0; 172, 0 |
+
+#### Runs of the second part
+
+| Run (second part) | Over the fastest run: median, 90th percentile | Median over minimum within the run (median function) | Load average (1 min) at start, end |
+|---|---|---|---|
+| `soa-linux-clang-O2-r1.json` | 1.000, 1.035 | 1.005 | 3.2, 2.8 |
+| `soa-linux-clang-O2-r2.json` | 1.010, 1.020 | 1.010 | 19.4, 20.9 |
+| `soa-linux-clang-O2-r3.json` | 1.002, 1.042 | 1.006 | 7.3, 5.3 |
+| `soa-linux-clang-O3-r1.json` | 1.001, 1.029 | 1.005 | 2.7, 3.3 |
+| `soa-linux-clang-O3-r2.json` | 1.010, 1.016 | 1.010 | 21.7, 21.6 |
+| `soa-linux-clang-O3-r3.json` | 1.000, 1.024 | 1.005 | 16.8, 9.3 |
+| `soa-linux-gcc-O2-r1.json` | 1.000, 1.001 | 1.005 | 9.8, 5.5 |
+| `soa-linux-gcc-O2-r2.json` | 1.002, 1.017 | 1.011 | 8.9, 12.6 |
+| `soa-linux-gcc-O2-r3.json` | 1.009, 1.016 | 1.008 | 21.8, 19.9 |
+| `soa-linux-gcc-O3-r1.json` | 1.001, 1.012 | 1.004 | 3.2, 2.7 |
+| `soa-linux-gcc-O3-r2.json` | 1.001, 1.012 | 1.006 | 6.7, 10.7 |
+| `soa-linux-gcc-O3-r3.json` | 1.002, 1.016 | 1.005 | 21.3, 19.2 |
+| `soa-mac-appleclang-O2-r1.json` | 1.005, 1.066 | 1.027 | 9.2, 6.3 |
+| `soa-mac-appleclang-O2-r2.json` | 1.000, 1.013 | 1.005 | 3.3, 2.0 |
+| `soa-mac-appleclang-O2-r3.json` | 1.000, 1.006 | 1.005 | 1.7, 1.5 |
+| `soa-mac-appleclang-O3-r1.json` | 1.006, 1.072 | 1.022 | 6.2, 4.9 |
+| `soa-mac-appleclang-O3-r2.json` | 1.000, 1.027 | 1.006 | 1.5, 2.2 |
+| `soa-mac-appleclang-O3-r3.json` | 1.000, 1.005 | 1.006 | 1.9, 1.6 |
+| `soa-mac-gcc16-O2-r1.json` | 1.004, 1.060 | 1.021 | 3.9, 3.8 |
+| `soa-mac-gcc16-O2-r2.json` | 1.000, 1.010 | 1.006 | 1.5, 1.5 |
+| `soa-mac-gcc16-O2-r3.json` | 1.000, 1.010 | 1.006 | 2.1, 2.0 |
+| `soa-mac-gcc16-O3-r1.json` | 1.001, 1.060 | 1.006 | 2.7, 3.6 |
+| `soa-mac-gcc16-O3-r2.json` | 1.000, 1.012 | 1.004 | 1.9, 1.5 |
+| `soa-mac-gcc16-O3-r3.json` | 1.001, 1.011 | 1.005 | 1.7, 1.5 |
+
+| Spread of (second part) | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |
+|---|---:|---|---|
+| soa linux-clang-O2 | 3 | 1.7%, 5.8%, 12.2% | `m2vf/tp/copy/packed` |
+| soa linux-clang-O3 | 3 | 1.2%, 3.6%, 11.8% | `m2v/mem/dot11/plain` |
+| soa linux-gcc-O2 | 3 | 0.9%, 2.0%, 10.4% | `m2v/mem/dot11/plain` |
+| soa linux-gcc-O3 | 3 | 0.4%, 2.3%, 10.1% | `m2v/mem/dot11/plain` |
+| soa mac-appleclang-O2 | 3 | 0.6%, 6.6%, 7.5% | `m2v/mem/dot22/op` |
+| soa mac-appleclang-O3 | 3 | 0.7%, 7.2%, 12.2% | `m2vf/mem/copy/view` |
+| soa mac-gcc16-O2 | 3 | 0.5%, 6.5%, 10.1% | `m2vf/mem/dot11/plain` |
+| soa mac-gcc16-O3 | 3 | 0.4%, 6.0%, 10.5% | `m2vf/mem/copy/op` |
+
+#### Question 8: `Packed` and the containers
+
+| Packed over the scalar loop | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `x + y`, double, L1 | 0.71 to 0.72 | 0.59 to 0.61 | 0.25 | 1.00 to 1.01 |
+| `x * y`, double, L1 | 0.89 | 0.70 to 0.71 | 0.32 | 1.00 to 1.01 |
+| `x * a`, double, L1 | 1.07 to 1.08 | 0.81 | 0.37 | 1.00 |
+| dot, W sums, over the same in scalar code, double, L1 | 1.12 to 1.16 | 0.74 to 0.75 (-O2), 1.13 to 1.20 (-O3) | 0.31 | 0.68 (-O2), 0.31 (-O3) |
+| dot, W sums, over one sum in scalar code, double, L1 | 0.59 to 0.63 | 0.57 to 0.61 | 0.30 | 0.28 |
+| `x + a * b`, two passes, double, L1 | 0.88 | 0.87 (-O2), 0.75 to 0.78 (-O3) | 0.38 (-O2), 0.31 (-O3) | 1.09 |
+| `x + E2(a) * b`, double, L1 | 0.82 to 0.83 | 0.73 to 0.75 (-O2), 0.67 to 0.68 (-O3) | 0.28 to 0.31 | 1.00 |
+| `x + E2(a) * b` packed, one pass, over `x + a * b` scalar, double, L1 | 1.98 | 1.70 to 1.75 (-O2), 1.57 to 1.62 (-O3) | 0.92 (-O2), 0.81 (-O3) | 2.87 |
+| copy, double, L1 | 0.99 to 1.00 | 0.60 (-O2), 1.10 (-O3) | 0.28 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.01 |
+| `x + y`, double, memory | 0.70 | 0.59 | 0.36 to 0.37 | 1.00 to 1.01 |
+| `x * y`, double, memory | 0.85 to 0.86 | 0.67 to 0.68 | 0.61 to 0.62 | 1.00 |
+| `x * a`, double, memory | 1.03 to 1.04 | 0.78 to 0.79 | 0.69 to 0.71 | 0.98 to 0.99 |
+| dot, W sums, over the same in scalar code, double, memory | 1.11 to 1.16 (-O2), 1.10 to 1.17 (-O3) | 0.74 to 0.75 (-O2), 1.09 to 1.14 (-O3) | 0.31 to 0.33 | 0.70 (-O2), 0.32 to 0.33 (-O3) |
+| dot, W sums, over one sum in scalar code, double, memory | 0.61 to 0.65 | 0.60 to 0.61 | 0.30 to 0.31 | 0.29 |
+| `x + a * b`, two passes, double, memory | 0.90 | 0.78 to 0.79 (-O2), 0.74 to 0.75 (-O3) | 0.72 to 0.75 (-O2), 0.74 to 0.77 (-O3) | 1.34 to 1.42 (-O2), 1.35 to 1.39 (-O3) |
+| `x + E2(a) * b`, double, memory | 0.81 to 0.82 | 0.74 (-O2), 0.66 (-O3) | 0.37 (-O2), 0.30 to 0.32 (-O3) | 0.98 to 1.00 |
+| `x + E2(a) * b` packed, one pass, over `x + a * b` scalar, double, memory | 1.82 to 1.84 | 1.62 to 1.64 (-O2), 1.45 to 1.46 (-O3) | 0.97 (-O2), 0.82 to 0.83 (-O3) | 1.38 to 1.45 (-O2), 1.37 to 1.48 (-O3) |
+| copy, double, memory | 0.95 to 1.00 (-O2), 0.98 to 1.00 (-O3) | 0.20 to 0.21 (-O2), 0.97 to 1.00 (-O3) | 1.05 to 1.07 (-O2), 1.00 (-O3) | 1.00 to 1.01 |
+| `x + y`, float, L1 | 0.36 | 0.29 to 0.30 | 0.12 to 0.13 | 1.00 |
+| `x * y`, float, L1 | 0.44 to 0.45 | 0.33 to 0.34 | 0.16 to 0.17 | 1.00 to 1.01 |
+| `x * a`, float, L1 | 0.53 to 0.54 | 0.37 to 0.38 | 0.18 | 0.99 to 1.01 |
+| dot, W sums, over the same in scalar code, float, L1 | 0.72 (-O2), 0.88 to 0.90 (-O3) | 0.68 to 0.71 | 0.17 | 0.16 |
+| dot, W sums, over one sum in scalar code, float, L1 | 0.31 to 0.33 | 0.30 to 0.32 | 0.16 | 0.12 |
+| `x + a * b`, two passes, float, L1 | 0.45 | 0.54 to 0.55 (-O2), 0.36 (-O3) | 0.33 (-O2), 0.16 (-O3) | 1.08 to 1.10 |
+| `x + E2(a) * b`, float, L1 | 0.43 | 0.33 to 0.37 | 0.13 to 0.16 | 1.01 to 1.02 |
+| `x + E2(a) * b` packed, one pass, over `x + a * b` scalar, float, L1 | 1.01 to 1.03 | 0.78 to 0.81 (-O2), 0.75 to 0.76 (-O3) | 0.46 (-O2), 0.39 (-O3) | 2.89 to 2.91 |
+| copy, float, L1 | 1.03 to 1.04 | 0.28 to 0.29 (-O2), 0.99 to 1.00 (-O3) | 0.13 to 0.14 (-O2), 1.05 to 1.06 (-O3) | 1.02 to 1.04 |
+| `x + y`, float, memory | 0.36 | 0.29 to 0.30 | 0.19 | 1.00 |
+| `x * y`, float, memory | 0.45 | 0.34 | 0.34 to 0.35 | 1.00 to 1.05 |
+| `x * a`, float, memory | 0.52 to 0.53 | 0.37 | 0.39 to 0.40 | 0.99 |
+| dot, W sums, over the same in scalar code, float, memory | 0.68 to 0.73 (-O2), 0.86 to 0.90 (-O3) | 0.67 to 0.71 (-O2), 0.68 to 0.72 (-O3) | 0.16 | 0.15 to 0.16 |
+| dot, W sums, over one sum in scalar code, float, memory | 0.31 to 0.33 | 0.30 to 0.32 | 0.15 to 0.16 | 0.12 |
+| `x + a * b`, two passes, float, memory | 0.48 | 0.51 (-O2), 0.37 to 0.38 (-O3) | 0.41 to 0.46 | 1.33 to 1.41 (-O2), 1.34 to 1.40 (-O3) |
+| `x + E2(a) * b`, float, memory | 0.41 to 0.42 | 0.32 to 0.36 | 0.15 to 0.19 | 0.98 to 1.00 |
+| `x + E2(a) * b` packed, one pass, over `x + a * b` scalar, float, memory | 0.96 to 0.98 | 0.80 (-O2), 0.73 to 0.74 (-O3) | 0.53 (-O2), 0.44 to 0.45 (-O3) | 1.40 to 1.45 (-O2), 1.38 to 1.46 (-O3) |
+| copy, float, memory | 0.96 to 1.00 | 0.42 to 0.44 (-O2), 0.98 to 1.00 (-O3) | 0.88 to 0.89 (-O2), 1.00 to 1.01 (-O3) | 0.99 to 1.01 |
+
+| Packed of one lane over the scalar loop | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `x + y`, double, L1 | 1.00 to 1.01 | 1.00 to 1.01 | 1.00 | 1.01 |
+| `x * y`, double, L1 | 1.00 | 1.00 | 1.00 | 1.01 |
+| `x * a`, double, L1 | 1.00 | 1.00 | 1.00 | 1.00 to 1.01 |
+| dot, double, L1 | 1.00 to 1.02 | 0.99 to 1.02 | 1.00 | 1.00 to 1.01 |
+| `x + y`, double, memory | 1.00 | 0.99 to 1.00 | 1.00 | 0.99 to 1.00 |
+| `x * y`, double, memory | 0.99 to 1.00 | 0.99 to 1.01 | 0.99 to 1.01 | 1.00 |
+| `x * a`, double, memory | 0.98 to 0.99 | 1.00 to 1.01 | 1.00 to 1.03 | 0.99 to 1.00 |
+| dot, double, memory | 1.00 to 1.01 | 0.99 to 1.02 | 1.00 to 1.01 | 1.01 |
+| `x + y`, float, L1 | 1.00 (-O2), 0.94 to 1.00 (-O3) | 0.96 to 1.02 (-O2), 0.99 to 1.00 (-O3) | 1.00 | 0.99 to 1.01 |
+| `x * y`, float, L1 | 0.99 to 1.00 | 0.96 to 1.00 | 1.00 to 1.01 | 1.00 |
+| `x * a`, float, L1 | 1.00 | 1.00 | 1.00 | 1.00 to 1.01 |
+| dot, float, L1 | 1.00 to 1.04 (-O2), 1.00 to 1.06 (-O3) | 1.03 to 1.07 (-O2), 1.00 to 1.05 (-O3) | 1.00 | 1.01 |
+| `x + y`, float, memory | 0.98 to 1.01 | 1.00 to 1.02 | 1.00 | 0.98 to 1.00 |
+| `x * y`, float, memory | 0.99 to 1.00 | 1.00 to 1.02 | 1.00 to 1.01 | 1.00 to 1.01 |
+| `x * a`, float, memory | 0.99 to 1.00 | 1.00 | 1.01 to 1.02 | 0.99 to 1.01 |
+| dot, float, memory | 1.00 to 1.01 | 0.99 to 1.03 | 1.00 | 1.00 |
+
+| The interfaces over the kernel on the limbs, L1 | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `x + y`, raw pointers, double | 1.17 (-O2), 1.17 to 1.26 (-O3) | 1.16 to 1.17 | 1.21 to 1.22 | 1.18 |
+| `x + y`, view and proxy, double | 1.18 (-O2), 1.18 to 1.27 (-O3) | 1.17 | 1.21 to 1.22 | 1.18 |
+| `x + y`, array of Expansion, double | 1.02 (-O2), 1.02 to 1.10 (-O3) | 0.98 to 0.99 | 1.00 | 3.81 to 3.83 |
+| `x * y`, raw pointers, double | 1.32 to 1.34 | 1.32 | 1.27 | 1.22 to 1.23 |
+| `x * y`, view and proxy, double | 1.32 to 1.34 | 1.32 | 1.27 | 1.22 to 1.23 |
+| `x * y`, array of Expansion, double | 1.01 to 1.06 | 1.00 | 1.00 | 3.01 to 3.05 |
+| `x * a`, raw pointers, double | 1.12 to 1.13 | 1.13 | 1.08 to 1.09 | 1.12 to 1.13 |
+| `x * a`, view and proxy, double | 1.10 | 1.13 | 1.08 | 1.12 to 1.13 |
+| copy, raw pointers, double | 1.00 to 1.01 | 1.03 to 1.06 (-O2), 0.99 to 1.00 (-O3) | 1.00 | 1.00 |
+| copy, view and proxy, double | 1.00 to 1.01 | 1.04 to 1.06 (-O2), 0.99 to 1.00 (-O3) | 1.00 to 1.01 | 1.00 |
+| copy, packed, double | 1.00 | 0.62 to 0.63 (-O2), 1.09 to 1.10 (-O3) | 0.28 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.01 |
+| `x + y`, raw pointers, float | 1.17 to 1.19 | 1.15 to 1.17 | 1.21 to 1.22 | 1.18 to 1.20 |
+| `x + y`, view and proxy, float | 1.18 to 1.19 | 1.15 to 1.18 | 1.21 to 1.22 | 1.18 to 1.20 |
+| `x + y`, array of Expansion, float | 1.02 to 1.04 | 0.98 to 1.01 | 1.00 | 7.64 to 7.74 |
+| `x * y`, raw pointers, float | 1.34 | 1.30 | 1.32 to 1.33 | 1.22 to 1.23 |
+| `x * y`, view and proxy, float | 1.34 | 1.30 | 1.32 to 1.33 | 1.22 to 1.23 |
+| `x * y`, array of Expansion, float | 1.06 to 1.07 | 0.99 to 1.00 | 0.99 to 1.00 | 7.28 to 7.47 |
+| `x * a`, raw pointers, float | 1.12 to 1.13 | 1.21 to 1.24 | 1.16 | 1.12 |
+| `x * a`, view and proxy, float | 1.10 | 1.21 to 1.24 | 1.16 | 1.12 |
+| copy, raw pointers, float | 0.97 to 0.99 | 1.02 to 1.04 | 1.00 (-O2), 0.93 (-O3) | 0.98 to 1.00 |
+| copy, view and proxy, float | 0.97 to 0.99 | 1.02 to 1.04 | 0.99 (-O2), 0.93 (-O3) | 0.98 to 1.00 |
+| copy, packed, float | 1.00 to 1.02 | 0.29 to 0.30 (-O2), 1.01 (-O3) | 0.13 to 0.14 (-O2), 0.98 (-O3) | 1.01 to 1.04 |
+
+| Two limbs over plain T | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `x + y` scalar over one `+` of T, double, L1 | 16.0 to 16.7 (-O2), 16.6 to 16.7 (-O3) | 6.33 to 6.39 (-O2), 11.8 (-O3) | 16.9 (-O2), 53.8 to 54.0 (-O3) | 10.9 to 11.0 |
+| `x + y` packed over one `+` of T, double, L1 | 11.5 to 11.9 (-O2), 11.9 (-O3) | 3.86 to 3.88 (-O2), 7.01 to 7.13 (-O3) | 4.24 to 4.25 (-O2), 13.6 to 13.7 (-O3) | 11.0 |
+| `x * y` scalar over one `*` of T, double, L1 | 8.96 to 9.37 (-O2), 9.30 to 9.31 (-O3) | 3.63 to 3.64 (-O2), 6.74 to 6.76 (-O3) | 9.07 to 9.14 (-O2), 29.2 to 29.3 (-O3) | 6.90 to 6.93 |
+| `x * y` packed over one `*` of T, double, L1 | 7.94 to 8.30 (-O2), 8.23 to 8.24 (-O3) | 2.57 (-O2), 4.75 to 4.76 (-O3) | 2.87 to 2.88 (-O2), 9.23 to 9.29 (-O3) | 6.93 to 6.95 |
+| dot, packed, over the dot of T, double, L1 | 8.48 to 9.05 (-O2), 8.47 to 9.09 (-O3) | 7.64 to 8.15 (-O2), 7.64 to 8.05 (-O3) | 3.49 to 3.50 (-O2), 3.59 to 3.60 (-O3) | 3.36 to 3.38 |
+| `x + y` scalar over one `+` of T, double, memory | 8.27 to 8.58 (-O2), 8.32 to 8.61 (-O3) | 6.83 to 7.05 (-O2), 8.60 to 8.70 (-O3) | 4.92 to 5.10 (-O2), 5.00 to 5.12 (-O3) | 1.85 to 1.90 |
+| `x + y` packed over one `+` of T, double, memory | 5.81 to 6.01 (-O2), 5.85 to 6.04 (-O3) | 4.06 to 4.19 (-O2), 5.08 to 5.13 (-O3) | 1.81 to 1.85 (-O2), 1.81 to 1.90 (-O3) | 1.85 to 1.89 |
+| `x * y` scalar over one `*` of T, double, memory | 4.84 to 4.98 | 4.02 to 4.10 (-O2), 5.13 to 5.15 (-O3) | 2.88 to 2.95 (-O2), 2.90 to 2.99 (-O3) | 1.78 to 1.81 |
+| `x * y` packed over one `*` of T, double, memory | 4.14 to 4.25 (-O2), 4.13 to 4.27 (-O3) | 2.75 to 2.76 (-O2), 3.47 to 3.49 (-O3) | 1.77 to 1.80 (-O2), 1.77 to 1.83 (-O3) | 1.78 to 1.82 |
+| dot, packed, over the dot of T, double, memory | 6.57 to 6.98 (-O2), 6.60 to 6.68 (-O3) | 6.84 to 6.95 | 2.63 to 2.86 (-O2), 3.07 to 3.24 (-O3) | 2.81 to 3.12 (-O2), 2.77 to 3.05 (-O3) |
+| `x + y` scalar over one `+` of T, float, L1 | 32.6 to 33.8 (-O2), 32.5 to 32.8 (-O3) | 6.46 to 6.71 (-O2), 23.3 to 23.4 (-O3) | 8.72 to 8.75 (-O2), 65.5 to 65.6 (-O3) | 10.4 to 10.5 |
+| `x + y` packed over one `+` of T, float, L1 | 11.8 to 12.2 (-O2), 11.8 to 11.9 (-O3) | 1.95 to 1.96 (-O2), 6.76 to 6.81 (-O3) | 1.09 to 1.10 (-O2), 8.18 to 8.20 (-O3) | 10.3 to 10.4 |
+| `x * y` scalar over one `*` of T, float, L1 | 18.2 to 18.6 | 3.86 to 3.88 (-O2), 13.9 (-O3) | 8.66 to 8.67 (-O2), 33.7 (-O3) | 6.44 to 6.55 |
+| `x * y` packed over one `*` of T, float, L1 | 8.06 to 8.14 (-O2), 8.12 to 8.31 (-O3) | 1.29 to 1.30 (-O2), 4.61 (-O3) | 1.43 (-O2), 5.55 to 5.57 (-O3) | 6.50 to 6.59 |
+| dot, packed, over the dot of T, float, L1 | 4.55 to 4.89 (-O2), 4.61 to 4.95 (-O3) | 3.82 to 4.04 (-O2), 4.66 to 4.99 (-O3) | 1.89 (-O2), 1.95 (-O3) | 1.82 to 1.87 |
+| `x + y` scalar over one `+` of T, float, memory | 16.2 to 16.8 (-O2), 16.7 to 17.2 (-O3) | 6.95 to 6.96 (-O2), 17.5 to 18.0 (-O3) | 7.41 to 7.71 (-O2), 9.73 to 9.96 (-O3) | 1.86 to 1.90 (-O2), 1.85 to 1.88 (-O3) |
+| `x + y` packed over one `+` of T, float, memory | 5.78 to 6.01 (-O2), 6.00 to 6.14 (-O3) | 2.04 to 2.05 (-O2), 5.12 to 5.37 (-O3) | 1.41 to 1.44 (-O2), 1.83 to 1.92 (-O3) | 1.85 to 1.89 |
+| `x * y` scalar over one `*` of T, float, memory | 9.11 to 9.43 (-O2), 9.41 to 9.60 (-O3) | 4.04 to 4.12 (-O2), 10.4 to 10.9 (-O3) | 4.74 to 4.99 (-O2), 5.18 to 5.25 (-O3) | 1.79 to 1.81 |
+| `x * y` packed over one `*` of T, float, memory | 4.09 to 4.25 (-O2), 4.24 to 4.34 (-O3) | 1.39 to 1.40 (-O2), 3.50 to 3.68 (-O3) | 1.68 to 1.74 (-O2), 1.79 to 1.85 (-O3) | 1.79 to 1.89 (-O2), 1.81 to 1.83 (-O3) |
+| dot, packed, over the dot of T, float, memory | 3.39 to 3.59 (-O2), 3.39 to 3.49 (-O3) | 3.40 to 3.52 (-O2), 3.42 to 3.66 (-O3) | 1.57 to 1.60 (-O2), 1.69 to 1.70 (-O3) | 1.56 to 1.61 (-O2), 1.55 to 1.61 (-O3) |
+
+| Beyond the last-level cache over L1 | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `add11/plain`, double | 2.02 to 2.08 | 0.94 to 0.97 (-O2), 1.42 to 1.43 (-O3) | 3.44 to 3.56 (-O2), 11.0 to 11.2 (-O3) | 9.02 to 9.39 (-O2), 9.04 to 9.41 (-O3) |
+| `copy/kairn`, double | 1.58 to 1.64 (-O2), 1.60 to 1.63 (-O3) | 4.26 to 4.47 (-O2), 1.65 to 1.74 (-O3) | 2.29 to 2.32 (-O2), 8.25 to 8.30 (-O3) | 8.99 to 9.21 |
+| `add22/op`, double | 1.04 to 1.05 | 1.04 to 1.05 | 1.04 to 1.05 | 1.54 to 1.59 (-O2), 1.53 to 1.60 (-O3) |
+| `add22/packed`, double | 1.02 to 1.03 | 1.02 to 1.04 | 1.49 to 1.52 (-O2), 1.48 to 1.54 (-O3) | 1.53 to 1.59 (-O2), 1.52 to 1.59 (-O3) |
+| `mul22/op`, double | 1.08 to 1.09 | 1.08 to 1.10 | 1.12 to 1.14 | 2.37 to 2.44 (-O2), 2.37 to 2.43 (-O3) |
+| `mul22/packed`, double | 1.04 | 1.04 | 2.17 to 2.21 (-O2), 2.15 to 2.21 (-O3) | 2.36 to 2.43 (-O2), 2.37 to 2.43 (-O3) |
+| `dotw/packed`, double | 1.00 to 1.01 (-O2), 0.95 to 1.01 (-O3) | 0.95 to 1.01 (-O2), 0.95 to 1.01 (-O3) | 1.02 to 1.07 | 1.04 to 1.07 |
+| `add11/plain`, float | 1.99 to 2.07 (-O2), 1.93 to 2.00 (-O3) | 0.96 to 0.98 (-O2), 1.29 to 1.36 (-O3) | 1.15 to 1.19 (-O2), 6.69 to 6.83 (-O3) | 8.56 to 8.89 (-O2), 8.59 to 8.87 (-O3) |
+| `copy/kairn`, float | 1.52 to 1.58 (-O2), 1.43 to 1.50 (-O3) | 1.07 to 1.08 (-O2), 1.57 to 1.70 (-O3) | 1.29 (-O2), 8.08 to 8.13 (-O3) | 8.09 to 8.85 (-O2), 8.68 to 8.80 (-O3) |
+| `add22/op`, float | 1.01 to 1.03 | 0.99 to 1.03 | 1.01 to 1.02 | 1.55 to 1.60 (-O2), 1.53 to 1.59 (-O3) |
+| `add22/packed`, float | 1.01 | 1.01 to 1.03 | 1.50 to 1.54 (-O2), 1.53 to 1.57 (-O3) | 1.54 to 1.60 (-O2), 1.53 to 1.59 (-O3) |
+| `mul22/op`, float | 1.02 to 1.03 | 1.00 to 1.02 | 1.04 to 1.05 | 2.39 to 2.46 (-O2), 2.40 to 2.45 (-O3) |
+| `mul22/packed`, float | 1.03 to 1.05 | 1.03 to 1.04 | 2.19 to 2.23 | 2.42 to 2.49 (-O2), 2.41 to 2.47 (-O3) |
+| `dotw/packed`, float | 0.95 to 1.00 (-O2), 0.96 to 1.01 (-O3) | 0.96 to 1.01 (-O2), 0.94 to 1.01 (-O3) | 0.95 to 1.00 | 0.94 to 0.99 |
+
+| Times of Packed and the containers (ns per element) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| `m2v/tp/add11/plain` | 0.102 to 0.106 | 0.28 (-O2), 0.151 (-O3) | 0.318 to 0.321 (-O2), 0.0996 to 0.0998 (-O3) | 0.119 to 0.121 |
+| `m2v/tp/add22/op` | 1.7 to 1.71 | 1.77 to 1.79 | 5.37 to 5.41 | 1.31 to 1.33 |
+| `m2v/tp/add22/packed` | 1.22 | 1.06 to 1.09 | 1.35 to 1.36 | 1.32 to 1.33 |
+| `m2v/tp/mul22/op` | 0.953 to 0.954 | 1.02 | 2.91 to 2.93 | 0.825 to 0.835 |
+| `m2v/tp/mul22/packed` | 0.844 to 0.845 | 0.717 to 0.72 | 0.919 to 0.928 | 0.829 to 0.84 |
+| `m2v/tp/mul21/op` | 0.634 to 0.635 | 0.686 to 0.687 | 2 to 2.01 | 0.636 to 0.645 |
+| `m2v/tp/mul21/packed` | 0.682 to 0.684 | 0.553 to 0.556 | 0.732 to 0.74 | 0.635 to 0.644 |
+| `m2v/tp/dot22/op` | 7.62 to 7.81 | 7.74 to 7.9 | 10.3 to 10.4 | 10.2 to 10.4 |
+| `m2v/tp/dotw/op` | 4.02 to 4.16 | 6.37 (-O2), 3.92 to 4.2 (-O3) | 9.9 to 9.99 | 4.22 to 4.27 (-O2), 9.29 to 9.38 (-O3) |
+| `m2v/tp/dotw/packed` | 4.52 to 4.81 (-O2), 4.8 (-O3) | 4.7 to 4.75 (-O2), 4.45 to 4.75 (-O3) | 3.05 to 3.08 | 2.86 to 2.9 |
+| `m2v/tp/mix/op` | 1.04 | 1.08 to 1.12 | 3.24 to 3.28 | 0.884 to 0.898 |
+| `m2v/tp/mix/packed` | 0.912 | 0.969 (-O2), 0.841 (-O3) | 1.23 to 1.25 (-O2), 1 to 1.01 (-O3) | 0.962 to 0.979 |
+| `m2v/tp/mixp/packed` | 2.06 | 1.89 to 1.94 (-O2), 1.75 (-O3) | 2.98 to 3 (-O2), 2.63 to 2.64 (-O3) | 2.54 to 2.58 |
+| `m2v/tp/copy/kairn` | 0.176 to 0.177 | 0.289 to 0.298 (-O2), 0.167 to 0.168 (-O3) | 0.607 to 0.615 (-O2), 0.17 (-O3) | 0.156 to 0.158 |
+| `m2v/mem/add11/plain` | 0.207 to 0.216 | 0.264 to 0.273 (-O2), 0.214 to 0.216 (-O3) | 1.09 to 1.14 | 1.09 to 1.12 |
+| `m2v/mem/add22/op` | 1.78 | 1.86 | 5.58 to 5.62 | 2.02 to 2.09 |
+| `m2v/mem/add22/packed` | 1.25 | 1.09 to 1.11 | 2.02 to 2.09 | 2.02 to 2.1 |
+| `m2v/mem/mul22/op` | 1.03 to 1.04 | 1.1 to 1.12 | 3.25 to 3.31 | 1.98 to 2.01 |
+| `m2v/mem/mul22/packed` | 0.88 to 0.882 | 0.747 to 0.75 | 1.99 to 2.04 | 1.98 to 2.02 |
+| `m2v/mem/mul21/op` | 0.666 to 0.668 | 0.713 to 0.715 | 2.41 to 2.45 (-O2), 2.33 to 2.4 (-O3) | 1.66 to 1.71 |
+| `m2v/mem/mul21/packed` | 0.686 to 0.693 | 0.554 to 0.561 | 1.66 to 1.7 | 1.63 to 1.69 |
+| `m2v/mem/dot22/op` | 7.35 to 7.9 (-O2), 7.35 to 7.92 (-O3) | 7.43 to 7.97 (-O2), 7.43 to 7.93 (-O3) | 10.3 to 10.5 | 10.3 to 10.6 |
+| `m2v/mem/dotw/op` | 4.05 to 4.17 | 6.06 to 6.42 (-O2), 3.98 to 4.2 (-O3) | 9.96 to 10.1 | 4.31 to 4.43 (-O2), 9.35 to 9.44 (-O3) |
+| `m2v/mem/dotw/packed` | 4.52 to 4.84 (-O2), 4.56 to 4.85 (-O3) | 4.47 to 4.8 (-O2), 4.48 to 4.8 (-O3) | 3.12 to 3.26 | 2.98 to 3.11 |
+| `m2v/mem/mix/op` | 1.15 to 1.16 | 1.22 to 1.23 | 3.71 to 3.78 (-O2), 3.58 to 3.75 (-O3) | 1.98 to 2.13 (-O2), 2.03 to 2.12 (-O3) |
+| `m2v/mem/mix/packed` | 1.03 | 0.962 to 0.965 (-O2), 0.903 to 0.911 (-O3) | 2.7 to 2.78 | 2.77 to 2.86 |
+| `m2v/mem/mixp/packed` | 2.1 to 2.12 | 1.99 to 2 (-O2), 1.78 (-O3) | 3.59 to 3.65 (-O2), 2.95 to 3.09 (-O3) | 2.76 to 3 (-O2), 2.78 to 3.03 (-O3) |
+| `m2v/mem/copy/kairn` | 0.279 to 0.289 | 1.26 to 1.33 (-O2), 0.278 to 0.29 (-O3) | 1.4 to 1.41 | 1.42 to 1.44 |
+| `m2vf/tp/add11/plain` | 0.0505 to 0.0525 | 0.276 to 0.28 (-O2), 0.0787 to 0.0788 (-O3) | 0.614 to 0.62 (-O2), 0.082 (-O3) | 0.0631 to 0.0639 |
+| `m2vf/tp/add22/op` | 1.71 | 1.81 to 1.85 | 5.37 to 5.42 | 0.655 to 0.666 |
+| `m2vf/tp/add22/packed` | 0.617 | 0.532 to 0.548 | 0.671 to 0.68 | 0.654 to 0.664 |
+| `m2vf/tp/mul22/op` | 0.953 to 0.954 | 1.08 to 1.09 | 2.76 to 2.79 | 0.408 to 0.413 |
+| `m2vf/tp/mul22/packed` | 0.422 to 0.426 | 0.361 to 0.363 | 0.456 to 0.461 | 0.41 to 0.417 |
+| `m2vf/tp/mul21/op` | 0.634 to 0.636 | 0.746 | 2 to 2.02 | 0.314 to 0.319 |
+| `m2vf/tp/mul21/packed` | 0.34 to 0.341 | 0.276 to 0.281 | 0.365 to 0.369 | 0.312 to 0.319 |
+| `m2vf/tp/dot22/op` | 7.5 to 7.81 (-O2), 7.28 to 7.82 (-O3) | 7.4 to 7.53 (-O2), 7.48 to 7.93 (-O3) | 10.3 to 10.4 | 12.7 to 12.9 |
+| `m2vf/tp/dotw/op` | 3.39 to 3.4 (-O2), 2.69 to 2.73 (-O3) | 3.34 to 3.42 | 9.99 to 10.1 | 9.78 to 10 |
+| `m2vf/tp/dotw/packed` | 2.38 to 2.44 | 2.28 to 2.38 | 1.65 to 1.67 | 1.55 to 1.6 |
+| `m2vf/tp/mix/op` | 1.02 to 1.04 | 1.15 to 1.17 | 3.24 to 3.27 | 0.437 to 0.443 |
+| `m2vf/tp/mix/packed` | 0.464 | 0.632 to 0.633 (-O2), 0.422 to 0.423 (-O3) | 1.06 to 1.07 (-O2), 0.504 to 0.505 (-O3) | 0.471 to 0.484 |
+| `m2vf/tp/mixp/packed` | 1.05 to 1.06 | 0.915 to 0.943 (-O2), 0.879 (-O3) | 1.49 to 1.5 (-O2), 1.26 to 1.27 (-O3) | 1.27 to 1.29 |
+| `m2vf/tp/copy/kairn` | 0.0919 to 0.0931 | 0.295 to 0.296 (-O2), 0.0842 to 0.0843 (-O3) | 0.614 to 0.619 (-O2), 0.0872 to 0.0873 (-O3) | 0.0803 to 0.0881 (-O2), 0.0815 to 0.0821 (-O3) |
+| `m2vf/mem/add11/plain` | 0.104 to 0.108 (-O2), 0.102 to 0.104 (-O3) | 0.269 to 0.27 (-O2), 0.102 to 0.107 (-O3) | 0.707 to 0.736 (-O2), 0.549 to 0.56 (-O3) | 0.545 to 0.562 |
+| `m2vf/mem/add22/op` | 1.73 to 1.75 | 1.83 to 1.88 | 5.45 to 5.49 | 1.01 to 1.05 |
+| `m2vf/mem/add22/packed` | 0.621 to 0.626 | 0.545 to 0.552 | 1.02 to 1.05 | 1.01 to 1.05 |
+| `m2vf/mem/mul22/op` | 0.975 to 0.983 | 1.09 to 1.11 | 2.87 to 2.91 | 0.986 to 1.01 |
+| `m2vf/mem/mul22/packed` | 0.44 to 0.441 | 0.373 to 0.376 | 0.999 to 1.02 | 1 to 1.04 |
+| `m2vf/mem/mul21/op` | 0.636 to 0.638 | 0.748 to 0.752 | 2.11 to 2.13 | 0.829 to 0.855 |
+| `m2vf/mem/mul21/packed` | 0.334 to 0.34 | 0.277 to 0.281 | 0.831 to 0.851 | 0.817 to 0.844 |
+| `m2vf/mem/dot22/op` | 7.36 to 7.91 (-O2), 7.36 to 7.91 (-O3) | 7.46 to 7.77 | 10.4 to 10.5 | 12.8 to 13.1 |
+| `m2vf/mem/dotw/op` | 3.33 to 3.37 (-O2), 2.65 to 2.73 (-O3) | 3.26 to 3.39 | 9.91 to 10 | 9.81 to 10 |
+| `m2vf/mem/dotw/packed` | 2.31 to 2.45 (-O2), 2.32 to 2.46 (-O3) | 2.25 to 2.4 (-O2), 2.24 to 2.4 (-O3) | 1.57 to 1.64 | 1.49 to 1.55 |
+| `m2vf/mem/mix/op` | 1.09 to 1.1 | 1.21 to 1.22 | 3.35 to 3.44 | 0.986 to 1.05 (-O2), 1.01 to 1.06 (-O3) |
+| `m2vf/mem/mix/packed` | 0.524 to 0.526 | 0.616 to 0.622 (-O2), 0.453 to 0.456 (-O3) | 1.52 to 1.55 (-O2), 1.39 to 1.4 (-O3) | 1.38 to 1.43 |
+| `m2vf/mem/mixp/packed` | 1.05 to 1.07 | 0.969 to 0.977 (-O2), 0.878 to 0.889 (-O3) | 1.79 to 1.83 (-O2), 1.47 to 1.53 (-O3) | 1.38 to 1.5 (-O2), 1.39 to 1.5 (-O3) |
+| `m2vf/mem/copy/kairn` | 0.14 to 0.145 (-O2), 0.132 to 0.139 (-O3) | 0.316 to 0.319 (-O2), 0.132 to 0.143 (-O3) | 0.789 to 0.8 (-O2), 0.706 to 0.709 (-O3) | 0.71 to 0.718 |

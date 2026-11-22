@@ -235,7 +235,9 @@ The compile time of `kairn::self_test()` is `compile_time.py run --units empty,i
 that of the enclosure interface is `enclosure_costs.py compile --kind compare`, `contains` or
 `setops` (calls of the three-valued comparisons; of `contains` of a point and of a set; of `hull`,
 `intersection` and `split`; on the four types in turn, each call on operands of its own), stored as
-`compile-MACHINE-COMPILER-KIND.json`.
+`compile-MACHINE-COMPILER-KIND.json` (1 000 calls, three compilations of each unit, `--once-from
+10000`) and `compile-MACHINE-COMPILER-KIND-10000.json` (10 000 calls, `-O2`, one compilation), and
+printed by `m2_report.py` with the first part's compile tables.
 
 **Adding the functions on arrays, `BallVector` and the accumulator.** Add their operands to
 `Raw<T>` (plain arrays) and, as public types, to `Data<T>` in `m2.cpp`; their outputs to `Data<T>`
