@@ -349,9 +349,11 @@ public:
     /// or bv_make_2, sequential order). c sees the n centers given, and radius is the radius given;
     /// afterwards c's arrays hold the centers and radius the radius of a canonical ball vector,
     /// which this view sees. For one limb each center is guarded (rule R3: the program may have
-    /// written a product there). For two limbs the centers must be canonical pairs (written as
-    /// Expansion<T, 2>, through SoAView::set for instance; limbs of the program's own, not normalized,
-    /// are not covered). Proved, in the IEEE model, for any radius and any centers (canonical pairs
+    /// written a product there). For two limbs the centers must be canonical pairs whose limbs are
+    /// stored values, written through Kairn (as Expansion<T, 2>, through SoAView::set for instance):
+    /// the loop copies them unguarded, so limbs the program computed in the same function (a
+    /// product, a pair not normalized) are not covered; no compiler was measured to fuse a product of
+    /// the program through them (api.boundary.ball_vector). Proved, in the IEEE model, for any radius and any centers (canonical pairs
     /// for two limbs): the result is canonical; it is the whole space (every center zero, the radius
     /// +inf) exactly when the radius given is negative, a NaN or +inf, or the leading limb of a
     /// center is not finite; otherwise the centers and the radius are the values given (a zero may

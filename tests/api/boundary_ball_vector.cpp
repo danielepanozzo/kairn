@@ -101,6 +101,32 @@ NOINLINE BV2 radius2(const Factors& f, const BV2& y) {
     for (std::size_t i = 0; i < N; ++i) c[i] = E2(0.75);
     return BV2(c, f.a[0] * f.b[0]) + y;
 }
+// Two limbs, over arrays the program fills (BallVectorView and BallVector(SoAView<const T, 2>, r)):
+// the centers are pairs (a b, 0), written in the same function, then added to Y. The constructor
+// loop bv_make_2 copies them as limbs of a ball vector (stored, by the precondition that they are
+// canonical pairs written through Kairn), unguarded: these forms are not guarded, and must agree in
+// every build, the copy without the guards included, as the multiplicands do: a difference would be
+// a compiler fusing a product through the arrays of a view.
+NOINLINE BV2 view2(const Factors& f, const BV2& y) {
+    double c0[N], c1[N];
+    for (std::size_t i = 0; i < N; ++i) {
+        c0[i] = f.a[i] * f.b[i];
+        c1[i] = 0.0;
+    }
+    double r = 0x1p-40;
+    const kairn::BallVectorView<double, 2> v(kairn::SoAView<double, 2>(c0, c1, N), r);
+    BV2 z;
+    kairn::add(v, y, z);
+    return z;
+}
+NOINLINE BV2 soa2(const Factors& f, const BV2& y) {
+    double c0[N], c1[N];
+    for (std::size_t i = 0; i < N; ++i) {
+        c0[i] = f.a[i] * f.b[i];
+        c1[i] = 0.0;
+    }
+    return BV2(kairn::SoAView<const double, 2>(c0, c1, N), 0x1p-40) + y;
+}
 // Multiplied only: the scaling by a product, and axpy's a.
 NOINLINE BV2 scale2(const Factors& f, const BV2& y) { return y * (f.a[0] * f.b[0]); }
 NOINLINE BV1 axpy1(const Factors& f, const BV1& y) { return kairn::axpy(f.a[1] * f.b[1], y, y); }
@@ -263,11 +289,15 @@ int main(int argc, char** argv) {
 #ifdef KAIRN_TEST_UNGUARDED_COPY
     std::printf("against the copy of the headers without the guard\n");
 #endif
-    enum { n_forms = 8 };
+    enum { n_forms = 10 };
     const char* names[n_forms] = {"BV1({a*b}, r) + Y",   "BallVectorView({a*b}, r) + Y", "BV1(SoAView({a*b}), r) + Y",
                                   "BV1(c, a*b) + Y",     "BV2({E2(a*b)}, r) + Y",        "BV2(c, a*b) + Y",
-                                  "Y * (a*b) (BV2)",     "axpy(a*b, Y, Y) (BV1)"};
-    const bool multiplicand[n_forms] = {false, false, false, false, false, false, true, true};
+                                  "Y * (a*b) (BV2)",     "axpy(a*b, Y, Y) (BV1)",
+                                  "BallVectorView({a*b, 0}, r) + Y", "BV2(SoAView({a*b, 0}), r) + Y"};
+    // The forms that must agree in every build: the multiplicands, and the two of two limbs over
+    // arrays of the program, which nothing guards (above).
+    const bool multiplicand[n_forms] = {false, false, false, false, false, false, true, true, true, true};
+    const bool stored[n_forms] = {false, false, false, false, false, false, false, false, true, true};
     long differ[n_forms] = {};
     const long cases = 20000;
     for (long k = 0; k < cases; ++k) {
@@ -299,11 +329,15 @@ int main(int argc, char** argv) {
         differ[i++] += !same(radius2(f, r2), radius2(p, r2));
         differ[i++] += !same(scale2(f, y2), scale2(p, y2));
         differ[i++] += !same(axpy1(f, y1), axpy1(p, y1));
+        differ[i++] += !same(view2(f, y2), view2(p, y2));
+        differ[i++] += !same(soa2(f, y2), soa2(p, y2));
     }
     long guarded = 0, multiplied = 0;
     for (int i = 0; i < n_forms; ++i) {
         std::printf("  %-32s differs in %6ld of %ld%s\n", names[i], differ[i], cases,
-                    multiplicand[i] ? "   (multiplicand: no guard needed)" : "");
+                    stored[i]         ? "   (stored by precondition: unguarded, must agree)"
+                    : multiplicand[i] ? "   (multiplicand: no guard needed)"
+                                      : "");
         (multiplicand[i] ? multiplied : guarded) += differ[i];
     }
     if (std::strcmp(expect, "report") == 0 && guarded == 0)

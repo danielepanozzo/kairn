@@ -1232,7 +1232,12 @@ maxima `norm_upper_k`. What is tested of them:
   of the same with the rounded products. Against the copy of the headers without the guards no
   compiler measured fused a product into a ball vector (GCC 13 and 16, Apple clang 21, Clang 18, each
   contraction setting): the constructors' loops and the operations are calls of their own, and the
-  unguarded build only reports.
+  unguarded build only reports. Two forms of two limbs over arrays the program fills in the same
+  function, `BallVectorView<T, 2>` and `BallVector(SoAView<const T, 2>, r)` on pairs $(ab, 0)$, then a
+  sum: the constructor copies these limbs unguarded (they must be stored values), so the forms must
+  agree in every build, the copy without the guards included; none differed in the probe matrix of
+  2026-11-22 (GCC 13 and 16, Clang 18, Apple clang 21, `-O1` to `-O3`, each contraction setting, with
+  and without `NDEBUG`).
 - **What must not compile** (`api.reject.ball_vector.*`): writing a const `BallVector` or a view of
   `const T`, lengths that the types fix and that differ, two limb types, a view of mutable limbs made
   of one of `const T` or over arrays of `const T`, the implicit conversion of a view to a

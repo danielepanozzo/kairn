@@ -80,7 +80,12 @@ for any radius and any centers (canonical pairs for two limbs), the claim `makes
   other sign).
 
 `BallVectorView(c, r)` is how arrays of the program's become a ball vector: it makes them one in
-place, writing the whole space into them where the values say so, and sees them. A program that
+place, writing the whole space into them where the values say so, and sees them. For two limbs the
+limbs of the centers must be stored values, canonical pairs written through Kairn (an
+`Expansion<T, 2>`, or `SoAView::set`): the constructor copies them unguarded, so limbs the program
+computed in the same function (a product, a pair not normalized) are not covered, for the view as
+for `BallVector(SoAView<const T, 2>, r)`; no compiler was measured to fuse a product of the program
+through them (`api.boundary.ball_vector`). One limb is guarded. A program that
 writes the arrays or the radius of a view afterwards must make the view again: nothing else
 guards what it wrote, and with `KAIRN_CHECKS` 1 every operation checks that its operands are
 canonical. The copy of a view, `BallVector(v)`, copies limbs and radius as they are. The default
