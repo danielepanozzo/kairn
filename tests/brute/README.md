@@ -61,6 +61,30 @@ Two parts:
   some of them, so that machines can share it; `--interp-match REGEX` keeps only the
   enumerations whose `KERNEL FORMAT` matches.
 
+- **emulated** (`--part emulated`, not in the default `compiled,interp`): the kernels printed for
+  the emulated limb type ([testing.md](../../docs/developer/testing.md#the-emulated-formats),
+  `tests/emulated/`), the C++ of the scalar kernels on an integer arithmetic of the format, through
+  `kairn-emulated-runner` (`--emulated-runner PATH`, or built in the first `--build`), judged by
+  the oracle in the formats of the statements of precision 8 to 11 with the smallest exponent
+  range, `fp:8:-14:1`, `fp:9:-16:1`, `fp:10:-18:1` and `fp:11:-20:1` (`bound_sum_2` and
+  `bound_dot_2`, whose counts must reach about $2^{2p-2}$, in `qmax = 16`). Every operand where
+  the enumeration has at most `EMULATED_EXHAUSTIVE` (2·10⁷) indices: each kernel that reads one
+  limb at every precision, each kernel of two limbs at precision 8 (two numbers: 18 931 201 cases;
+  a pair, an interval or a ball of one limb: 2 to 10 million). Otherwise `EMULATED_CASES` (500 000)
+  random cases of every stratum of the oracle's generator, of the run's seed, and for each fold
+  `EMULATED_FOLD_CASES` (20 000) random arrays of up to `EMULATED_FOLD_LENGTH` (256) elements in
+  every order. A kernel of three limbs or more is not sized: its enumeration at precision 8 has
+  more than 4·10¹⁰ indices. Pipelines of `--emulated-chunk` (10⁶) indices or cases (a hundredth of
+  it for the arrays of a fold), each `gen | kairn-emulated-runner | check`, two busy processes;
+  `--emulated-bins N --emulated-take LIST` and `--emulated-match REGEX` as for the interpreter's.
+  `python3 tests/brute/brute.py plan` prints the part after the enumerations (`--part emulated`
+  alone, which does not size those; `--sizes FILE` keeps the sizes): 1 068 entries, 122
+  enumerations of 802 601 535 indices (77 kernels at precision 8, the 15 of one limb at 9, 10 and
+  11) and 946 random series of 388 520 000 cases or arrays. `collect` holds each entry to the
+  guards with `--emulated` (a format of the statements of precision 8 to 11, a quarter of the cases
+  judged) and writes its counts under `"emulated"`. The part's run on the Linux machine, its rates
+  and its results are in [testing.md](../../docs/developer/testing.md#the-emulated-formats).
+
 The folds of `gen/claims.json` ("folds") take part in both: in the compiled part, random arrays of
 up to 4 096 elements (`FOLD_LENGTH`) in units of a hundredth of `--chunk`, one stream for the
 scalar runners in every order and one per packed backend in the lane order of its register

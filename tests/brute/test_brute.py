@@ -114,6 +114,71 @@ class Plan(unittest.TestCase):
         self.assertEqual(balls - complete, set())
 
 
+class EmulatedPlan(unittest.TestCase):
+    """The emulated part (brute.py, "The plan of the emulated part"), with the sizes of the oracle's
+    gen --total stood in for: one limb a few thousand, two limbs at precision 8 19 million, beyond
+    it more than the threshold."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.kernels = brute.load_claims()
+        cls.folds = brute.load_folds()
+        cls.limbs = {k["name"]: brute.input_limbs(k) for k in cls.kernels}
+        cls.asked = []
+
+        def total(e):
+            cls.asked.append(e)
+            p = brute.parse_fmt(e["format"])[0]
+            return 5000 if cls.limbs[e["kernel"]] == 1 else 19_000_000 if p == 8 else 95_000_000
+        with mock.patch.object(brute, "gen_total", total):
+            cls.plan = brute.emulated_plan(cls.kernels, cls.folds)
+
+    def test_every_kernel_and_fold_at_every_precision(self):
+        want = {(k["name"], p) for k in self.kernels + self.folds for p in brute.EMULATED_PRECISIONS
+                if (k.get("min_precision") or 1) <= p}
+        got = {(e["kernel"], brute.parse_fmt(e["format"])[0]) for e in self.plan}
+        self.assertEqual(got, want)
+        self.assertEqual(len(got), len(self.plan))
+
+    def test_formats_of_the_statements_that_the_runner_has(self):
+        # Every format is one of the statements (qmax >= 1, qmin = 3 - qmax - 2p), qmax 1 but for the
+        # bounds of two-limb folds, and one whose constants the emulated kernels have.
+        with open(os.path.join(brute.REPO, "tests", "emulated", "gen", "kernels.hpp"), encoding="utf-8") as f:
+            known = set(brute.re.findall(r'\{"(fp:[0-9:-]+)", ', f.read()))
+        for e in self.plan:
+            p, qmin, qmax = brute.parse_fmt(e["format"])
+            self.assertEqual(qmax, brute.EMULATED_QMAX.get(e["kernel"], 1), e)
+            self.assertEqual(qmin, 3 - qmax - 2 * p, e)
+            self.assertIn(e["format"], known, e)
+
+    def test_what_is_enumerated(self):
+        # Every kernel of one limb at every precision, of two at precision 8, none of three or more,
+        # and no fold; the sizes asked of the oracle for kernels of at most two limbs only.
+        for e in self.plan:
+            limbs = self.limbs.get(e["kernel"])
+            p = brute.parse_fmt(e["format"])[0]
+            exhaustive = limbs is not None and (limbs == 1 or (limbs == 2 and p == 8))
+            self.assertEqual(e["mode"], "exhaustive" if exhaustive else "random", e)
+            if e["mode"] == "random":
+                self.assertEqual(e["total"], brute.EMULATED_FOLD_CASES if limbs is None else brute.EMULATED_CASES)
+            self.assertEqual("maxlen" in e, limbs is None, e)
+        self.assertTrue(all(self.limbs[e["kernel"]] <= 2 for e in self.asked))
+        self.assertTrue(self.asked)
+
+    def test_keys_and_commands(self):
+        keys = [brute.emu_key(e) for e in self.plan]
+        self.assertEqual(len(set(keys)), len(keys))
+        e = next(x for x in self.plan if x["mode"] == "exhaustive")
+        cmd = brute.emulated_gen(e, "s", 10, 5)
+        self.assertIn("--exhaustive", cmd)
+        self.assertNotIn("--seed", cmd)
+        self.assertEqual(cmd[-4:], ["--start", "10", "--count", "5"])
+        f = next(x for x in self.plan if "maxlen" in x)
+        cmd = brute.emulated_gen(f, "s", 0, 5)
+        self.assertEqual(cmd[cmd.index("--seed") + 1], "s")
+        self.assertEqual(cmd[-2:], ["--max-length", str(brute.EMULATED_FOLD_LENGTH)])
+
+
 class Runners(unittest.TestCase):
     """Which targets of the build are runners of the library (brute.runner_target)."""
 

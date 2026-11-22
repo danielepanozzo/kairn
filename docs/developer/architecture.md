@@ -39,6 +39,7 @@ derived from it or checked against it:
 | `gen/constant_names.json` | Committed, and only added to by `build`: the name of each constant `up(EXPR)` of the Rocq models, which hand-written proofs use and which a new kernel must not change (`gen/README.md`, "The operations"). | — |
 | `gen/objcode.json` | Generated and committed: the fused multiply-adds and plain multiplications that each kernel's code asks for, for the object-code check. | — |
 | `include/kairn/gen/` | Generated and committed C++ kernels. | — |
+| `tests/emulated/gen/` | Generated and committed: the scalar kernels for the emulated limb type of the tests ([below](#the-kernel-ir), "A limb type of a format chosen at run time"), a test file that is not shipped. | — |
 | `include/kairn/` | The hand-written public headers. | `include/kairn/gen/` |
 | `proofs/gen/` | Generated Rocq files: model, statements, audit. | Flocq |
 | `proofs/theories/` | Hand-written Rocq proofs and the lemma library. | `proofs/gen/`, Flocq |
@@ -332,6 +333,25 @@ listing and nothing else, so R1 holds of it as it holds of the listing; an outpu
 path is the first arm of a select of the listing, the result of an addition, a subtraction, a
 fused operation or a guard, or in `ball_make_2` a limb of the center it was given, which R3
 already counts as safe to add.
+
+**A limb type of a format chosen at run time.** The scalar printer writes every kernel and fold
+for one more limb type, used by the tests only: `kairn::emulated::Number`
+(`tests/emulated/number.hpp`), a number of a binary format $(p, q_{\min}, q_{\max})$ set when the
+program runs, computed with integers alone ([Testing](testing.md#the-emulated-formats)). Its
+kernels are `tests/emulated/gen/kernels.hpp`, which `build` writes and `check` compares, in a
+generated directory of its own (`gen/kairn_gen/emulated.py`). They are printed by the functions
+that print `include/kairn/gen/scalar.hpp`, with the limb type as their parameter (`cpp.Limb`):
+the same functions in the same order, the same statements, fix-up branches, inlined calls and
+selects. The type changes only what depends on it: its name; each literal, which for double is
+the constant's value in `binary64` and here is the constant's value in the run-time format,
+`kairn::emulated::constant(i)`, the values of every constant in every format the runner knows
+being tables at the end of the file, computed by `consts.py` as the literals of double and float
+are; the test of constant evaluation, which there is a mode of the runner,
+`kairn::emulated::constant_evaluation()`, since nothing of the type is evaluated at compile time;
+and `constexpr`, which it does not need. The generator's tests compare the two listings token for
+token outside those places (`gen/tests/test_emulated.py`). The formats it knows are `binary64`,
+`binary32` and formats of the statements of precision 8 to 11 (above, "Number formats"); every
+constant of every kernel must be a number of each, or `build` refuses to write the file.
 
 ### Folds
 

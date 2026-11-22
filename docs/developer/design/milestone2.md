@@ -3132,6 +3132,27 @@ functions on arrays, `traits<X>::sum(n)` and `dot(n)`, the accumulator's class a
 `BallVector`. Still no record of a run of the brute-force tier on the kernels of this milestone,
 and no report of the milestone.
 
+*The exhaustive tier on emulated formats (2026-11-22).* The plan lists it in this milestone and
+the brief describes it ("the scalar core instantiated on tiny emulated formats"); until the audit
+of 2026-11-21 it did not exist: only the interpreter enumerated small formats, and the compiled
+C++ was cross-checked in `binary32` and `binary64` alone. As built: the scalar kernels are printed
+a second time, by the printer of `scalar.hpp` with the limb type as a parameter (a test shows the
+two listings equal token for token outside the literals), for a test-only limb type computed with
+integers in a format chosen at run time (`kairn::emulated::Number`, `tests/emulated/`), which
+shares no code with the oracle or the interpreter and is validated against both the oracle's
+rounding and the machine's `float` and `double`. All 223 kernels and 44 loops run in it, in both
+orders and both forms of the fix-up, and the constant-evaluation path of the 160 kernels that have
+one. The oracle judges every operand of 77 kernels at precision 8 and of 15 kernels of one limb
+at precisions 9 to 11, in the formats `fp:p:(2-2p):1` of the statements, and 500 000 random cases
+per stratum, or 20 000 arrays, of every other kernel and loop; and the lines are compared byte for
+byte with the interpreter's. One whole run of the plan on the Linux machine: 1 172 199 035 lines,
+no failure and no difference. A slice runs in the full tier (270 tests) and a fortieth each night.
+Less than the brief asks, in two ways
+([deviation 27](phase0/decisions.md#deviations-from-the-brief-flagged)): gradual underflow only,
+since nothing in the library states anything about flush-to-zero arithmetic yet, so that variant
+goes to Milestone 3 with those statements; and kernels of three or more limbs of input are
+sampled, not enumerated (at precision 8 their enumerations exceed $4 \cdot 10^{10}$ cases).
+
 ## Open questions
 
 Each with the options and what I recommend.

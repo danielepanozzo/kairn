@@ -708,15 +708,141 @@ def sized_plan(plan, cache_path=None):
     return plan
 
 
-def bins_of(plan, n):
+# --- The plan of the emulated part (begin) --------------------------------------------------------
+#
+# The kernels printed for the emulated limb type (tests/emulated/runner.cpp: the C++ of the scalar
+# kernels on an integer arithmetic of the format), judged by the oracle against gen/claims.json in
+# the formats of the statements (architecture.md, "The formats of the statements": qmax >= 1, qmin =
+# 3 - qmax - 2p) of precision 8 to 11 with the smallest exponent range, qmax = 1: fp:8:-14:1,
+# fp:9:-16:1, fp:10:-18:1, fp:11:-20:1 (the bounds of two-limb folds, whose counts must reach the
+# limit of their mask, about 2^(2p-2), in qmax = 16: EMULATED_QMAX). Every operand where the
+# enumeration has at most EMULATED_EXHAUSTIVE indices: every kernel that reads one limb, at every
+# precision; at precision 8 every kernel of two limbs (two numbers, 19 million; a pair, an interval
+# or a ball of one limb, 2 to 10 million). EMULATED_CASES random cases of every stratum of the
+# oracle's generator otherwise (gen --seed), and EMULATED_FOLD_CASES random arrays of up to
+# EMULATED_FOLD_LENGTH elements of each fold, in every order. Only those enumerations are sized
+# (gen --exhaustive --total, which counts the pairs one by one: 11 seconds at precision 8 on the
+# Linux machine, 60 at precision 9, about five times more per bit): two numbers at precision 9 are
+# 95 million cases, a kernel of three limbs at precision 8 more than 4 353^2 x 2 177 = 4 x 10^10.
+# The pairs of precision 9 (12 million) would fit the threshold and are left to random cases, the
+# price of sizing them. The guards of the emulated tier hold every series
+# (crosscheck_guards.py --emulated). The sizes and rates are in docs/developer/testing.md, "The
+# emulated formats".
+EMULATED_PRECISIONS = (8, 9, 10, 11)
+EMULATED_QMAX = {"bound_sum_2": 16, "bound_dot_2": 16}
+EMULATED_EXHAUSTIVE = 20_000_000
+EMULATED_CASES = 500_000
+EMULATED_FOLD_CASES = 20_000
+EMULATED_FOLD_LENGTH = 256
+
+
+def emulated_format(name, p):
+    qmax = EMULATED_QMAX.get(name, 1)
+    return "fp:%d:%d:%d" % (p, 3 - qmax - 2 * p, qmax)
+
+
+def input_limbs(k):
+    """The limbs of a kernel's inputs that are not masks."""
+    return sum(i.get("limbs", 1) for i in k.get("inputs", []) if i.get("type") != "mask")
+
+
+def emulated_plan(kernels, folds, only=None, cache_path=None, match=None):
+    """[{kernel, format, restrict, mode, total, why, domain, part}]: the emulated part, each entry
+    exhaustive (total the enumeration's indices) or random (total its cases), sized with the
+    oracle's gen --exhaustive --total (cached in CACHE_PATH) for the kernels of at most two limbs;
+    with MATCH, only the entries whose 'KERNEL FORMAT' it matches (re.search)."""
+    cache = {}
+    if cache_path and os.path.exists(cache_path):
+        cache = read_json(cache_path)
+    plan = []
+    for k in kernels:
+        name = k["name"]
+        if only and name not in only:
+            continue
+        limbs = input_limbs(k)
+        for p in EMULATED_PRECISIONS:
+            if (k.get("min_precision") or 1) > p:
+                continue
+            fmt = emulated_format(name, p)
+            if match and not re.search(match, "%s %s" % (name, fmt)):
+                continue
+            e = {"part": "emulated", "kernel": name, "format": fmt, "restrict": [],
+                 "domain": k.get("domain") or "finite"}
+            total = None
+            if limbs == 1 or (limbs == 2 and p == EMULATED_PRECISIONS[0]):
+                key = enum_key(e)
+                if key not in cache:
+                    cache[key] = gen_total(e)
+                total = cache[key]
+            if total is not None and total <= EMULATED_EXHAUSTIVE:
+                e.update(mode="exhaustive", total=total, why="every operand (%s)" % (
+                    "one limb" if limbs == 1 else "%s indices" % "{:,}".format(total)))
+            else:
+                e.update(mode="random", total=EMULATED_CASES, why="random cases, every stratum (%s)" % (
+                    "%d limbs" % limbs if total is None else "%s indices" % "{:,}".format(total)))
+            plan.append(e)
+    for f in folds:
+        name = f["name"]
+        if only and name not in only:
+            continue
+        for p in EMULATED_PRECISIONS:
+            if (f.get("min_precision") or 1) > p or (
+                    match and not re.search(match, "%s %s" % (name, emulated_format(name, p)))):
+                continue
+            plan.append({"part": "emulated", "kernel": name, "format": emulated_format(name, p),
+                         "restrict": [], "domain": f.get("domain") or "finite", "mode": "random",
+                         "total": EMULATED_FOLD_CASES, "maxlen": EMULATED_FOLD_LENGTH,
+                         "why": "random arrays up to %d elements, every order" % EMULATED_FOLD_LENGTH})
+    if cache_path:
+        write_json(cache_path, cache)
+    return plan
+
+
+def emu_key(e):
+    """The key of an entry of the emulated part (its directory under WORK/emulated)."""
+    return "emulated__%s__%s" % (enum_key(e), e["mode"])
+
+
+def emulated_gen(e, seed, start, count):
+    """The oracle's gen for a chunk of an entry of the emulated part."""
+    cmd = [PY, ORACLE, "gen", e["kernel"], e["format"]]
+    if e["mode"] == "exhaustive":
+        cmd.append("--exhaustive")
+    else:
+        cmd += ["--seed", seed]
+    cmd += ["--start", str(start), "--count", str(count)]
+    if e.get("maxlen") is not None:
+        cmd += ["--max-length", str(e["maxlen"])]
+    return cmd
+
+
+def emulated_runner(a, work, env):
+    """The emulated runner of a run: --emulated-runner, or kairn-emulated-runner built in the first
+    --build (with the fix-ups inline: the full tier runs both forms and compares their bytes)."""
+    if a.emulated_runner:
+        return os.path.abspath(a.emulated_runner)
+    if not a.build:
+        sys.exit("brute: the emulated part needs --emulated-runner PATH or a --build NAME=COMPILER")
+    name, _, cxx = a.build[0].partition("=")
+    bdir = os.path.join(work, "builds", name)
+    build_one(work, name, bdir, cxx, a.generator, a.cmake_arg or [], a.jobs, env, ["kairn-emulated-runner"])
+    exe = ".exe" if WINDOWS else ""
+    found = sorted(glob.glob(os.path.join(bdir, "tests", "**", "kairn-emulated-runner" + exe), recursive=True))
+    if not found:
+        sys.exit("brute: no kairn-emulated-runner in %s" % bdir)
+    return found[0]
+# --- The plan of the emulated part (end) ----------------------------------------------------------
+
+
+def bins_of(plan, n, key=enum_key):
     """A deterministic split of the enumerations into n bins of about equal size (largest first,
     each into the lightest bin), so that machines can share the plan."""
     load = [0] * n
     out = {}
-    for e in sorted(plan, key=lambda e: (-e["total"], enum_key(e))):
+    for e in sorted(plan, key=lambda e: (-e["total"], key(e))):
         b = min(range(n), key=lambda i: (load[i], i))
         load[b] += e["total"]
-        out[enum_key(e)] = b
+        out[key(e)] = b
     return out, load
 
 
@@ -1292,6 +1418,7 @@ class CheckTask(Task):
 class InterpTask(Task):
     """One chunk of an enumeration through the generator's interpreter."""
     weight = 2
+    part = "interp"
 
     def __init__(self, sched, enum, start, count):
         super().__init__(sched)
@@ -1353,6 +1480,68 @@ class InterpTask(Task):
         return []
 
 
+class EmulatedTask(InterpTask):
+    """One chunk of an entry of the emulated part: the oracle's gen (every operand, or random cases
+    of the run's seed), the emulated runner, the oracle's check."""
+    part = "emulated"
+
+    def start(self):
+        Task.start(self)
+        e = self.e
+        d = os.path.join(self.s.work, "emulated", emu_key(e))
+        os.makedirs(d, exist_ok=True)
+        self.out = os.path.join(d, "c%012d.json" % self.start_i)
+        self.tmp = self.out + ".tmp"
+        if os.path.exists(self.tmp):
+            os.remove(self.tmp)
+        _, err = self.errlog("emulated-%s-%d" % (emu_key(e), self.start_i))
+        check = [PY, ORACLE, "check", "--json", self.tmp, "--quiet"]
+        if fails_on_suspicious(e["kernel"], e["format"]):
+            check.append("--fail-on-suspicious")
+        g = popen(emulated_gen(e, self.s.seed, self.start_i, self.count), stdout=subprocess.PIPE,
+                  stderr=err, cwd=REPO)
+        r = popen([self.s.emulated_runner], stdin=g.stdout, stdout=subprocess.PIPE, stderr=err)
+        g.stdout.close()
+        c = popen(check, stdin=r.stdout, stdout=subprocess.DEVNULL, stderr=err, cwd=REPO)
+        r.stdout.close()
+        self.procs = [g, r, c]
+
+    def finish(self):
+        self.close()
+        rc = [p.returncode for p in self.procs]
+        e = self.e
+        why = []
+        if rc[0] != 0:
+            why.append("gen exited with %d" % rc[0])
+        if rc[1] != 0:
+            why.append("the emulated runner exited with %d" % rc[1])
+        examples = []
+        try:
+            summary = read_json(self.tmp)
+        except (OSError, ValueError) as ex:
+            summary = None
+            why.append("no summary from check (exit %d): %s" % (rc[2], ex))
+        if summary is not None:
+            more, examples, _ = summary_problems(summary, fails_on_suspicious(e["kernel"], e["format"]))
+            why += more
+            if rc[2] not in (0, 1) or (rc[2] == 1 and not more):
+                why.append("check exited with %d" % rc[2])
+        if why:
+            gen = " ".join(emulated_gen(e, self.s.seed, "INDEX", 1)[1:]).replace(ORACLE, "oracle/kairn-oracle")
+            self.s.finding("emulated", why, examples, key=emu_key(e), kernel=e["kernel"],
+                           format=e["format"], mode=e["mode"], start=self.start_i, count=self.count,
+                           reproduce="python3 %s | %s | python3 oracle/kairn-oracle check%s   (INDEX from the "
+                                     "line's tag; RUNNER the emulated runner, kairn-emulated-runner)"
+                                     % (gen, "RUNNER", " --fail-on-suspicious" if fails_on_suspicious(
+                                         e["kernel"], e["format"]) else ""))
+            self.s.stopped_enums.add(emu_key(e))
+            if os.path.exists(self.tmp):
+                os.replace(self.tmp, self.out + ".failed")
+            return why
+        os.replace(self.tmp, self.out)
+        return []
+
+
 def reproduce_random(kernel, fmt, seed, runner, extra=()):
     check = "python3 oracle/kairn-oracle check"
     if fails_on_suspicious(kernel, fmt):
@@ -1400,12 +1589,14 @@ class Unit:
 
 
 class Scheduler:
-    def __init__(self, a, work, runners, enums):
+    def __init__(self, a, work, runners, enums, emus=(), emulated_runner=None):
         self.a = a
         self.work = work
         self.seed = a.seed
         self.runners = runners
         self.enums = enums
+        self.emus = list(emus)
+        self.emulated_runner = emulated_runner
         self.jobs = a.jobs
         self.stopped = set()
         self.stopped_enums = set()
@@ -1421,17 +1612,18 @@ class Scheduler:
                         if x["part"] == "compiled":
                             self.stopped.add((x["kernel"], x["format"], x["runner"]))
                         else:
-                            self.stopped_enums.add(enum_key(x))
+                            self.stopped_enums.add(x.get("key") or enum_key(x))
         self.folds = set(getattr(a, "fold_names", []))
         self.pairs = [(k, f) for k in list(a.kernel_names) + sorted(self.folds)
                       for f in ("binary64", "binary32")]
-        self.stats = {"tasks": 0, "judged_cases": 0, "interp_cases": 0}
+        self.stats = {"tasks": 0, "judged_cases": 0, "interp_cases": 0, "emulated_cases": 0}
 
     def timing(self, t, why):
         """The wall time of a finished pipeline, for the cases per second of the report."""
         x = {"s": round(time.time() - t.t0, 3)}
         if isinstance(t, InterpTask):
-            x.update(part="interp", enum=enum_key(t.e), count=t.count)
+            x.update(part=t.part, enum=emu_key(t.e) if t.part == "emulated" else enum_key(t.e),
+                     count=t.count)
         else:
             x.update(part="gen" if isinstance(t, GenTask) else "check", kernel=t.unit.kernel,
                      format=t.unit.format, count=t.unit.count)
@@ -1515,12 +1707,26 @@ class Scheduler:
                 if os.path.exists(os.path.join(d, "c%012d.json" % s)):
                     continue
                 yield InterpTask(self, e, s, min(self.a.interp_chunk, e["total"] - s))
+        # The emulated part, after the interpreter's enumerations: chunks of --emulated-chunk
+        # indices or cases (a hundredth of it for the arrays of a fold).
+        for e in self.emus:
+            if emu_key(e) in self.stopped_enums:
+                continue
+            d = os.path.join(self.work, "emulated", emu_key(e))
+            chunk = self.a.emulated_chunk if e.get("maxlen") is None else \
+                max(1, self.a.emulated_chunk // FOLD_CHUNK_DIVISOR)
+            for s in range(0, e["total"], chunk):
+                if emu_key(e) in self.stopped_enums:
+                    break
+                if os.path.exists(os.path.join(d, "c%012d.json" % s)):
+                    continue
+                yield EmulatedTask(self, e, s, min(chunk, e["total"] - s))
 
     def run(self, deadline):
         running = []
         used = 0
         unit_iter = self.units() if self.a.compiled else iter(())
-        interp_iter = self.interp_tasks() if self.a.interp else iter(())
+        interp_iter = self.interp_tasks() if self.a.interp or self.a.emulated else iter(())
         next_interp = next(interp_iter, None)
         open_units = []             # generated or generating, with runners pending
         checks = []                 # CheckTasks ready to start
@@ -1541,7 +1747,7 @@ class Scheduler:
                 if isinstance(t, CheckTask):
                     self.stats["judged_cases"] += t.unit.count
                 if isinstance(t, InterpTask):
-                    self.stats["interp_cases"] += t.count
+                    self.stats[t.part + "_cases"] += t.count
                 why = t.finish()
                 self.timing(t, why)
                 if isinstance(t, GenTask):
@@ -1564,10 +1770,11 @@ class Scheduler:
                 used -= t.weight
                 why = ["timed out after %d s" % self.a.task_timeout]
                 if isinstance(t, InterpTask):
-                    self.finding("interp", why, [], kernel=t.e["kernel"], format=t.e["format"],
+                    key = emu_key(t.e) if t.part == "emulated" else enum_key(t.e)
+                    self.finding(t.part, why, [], key=key, kernel=t.e["kernel"], format=t.e["format"],
                                  restrict=t.e["restrict"], start=t.start_i, count=t.count,
-                                 reproduce=reproduce_exhaustive(t.e))
-                    self.stopped_enums.add(enum_key(t.e))
+                                 reproduce="" if t.part == "emulated" else reproduce_exhaustive(t.e))
+                    self.stopped_enums.add(key)
                     continue
                 u = t.unit
                 rid = t.runner["id"] if isinstance(t, CheckTask) else "(gen)"
@@ -1623,9 +1830,10 @@ class Scheduler:
             if time.time() - last_report > self.a.report_every:
                 last_report = time.time()
                 log("%d s: %d pipelines running (%d slots of %d), %d finished; %d unit-runner "
-                    "cases judged, %d enumeration indices; %d findings"
+                    "cases judged, %d enumeration indices, %d emulated cases; %d findings"
                     % (time.time() - t_start, len(running), used, self.jobs, self.stats["tasks"],
-                       self.stats["judged_cases"], self.stats["interp_cases"], self.n_findings))
+                       self.stats["judged_cases"], self.stats["interp_cases"],
+                       self.stats["emulated_cases"], self.n_findings))
             time.sleep(0.1)
         return 0
 
@@ -1633,7 +1841,7 @@ class Scheduler:
 def cmd_run(a):
     work = os.path.abspath(a.work)
     os.makedirs(work, exist_ok=True)
-    for d in ("logs", "streams", "compiled", "interp"):
+    for d in ("logs", "streams", "compiled", "interp", "emulated"):
         os.makedirs(os.path.join(work, d), exist_ok=True)
     # Request files of a previous run are rewritten: the generator is deterministic.
     for f in glob.glob(os.path.join(work, "streams", "*")):
@@ -1653,7 +1861,7 @@ def cmd_run(a):
         os.environ.clear()
         os.environ.update(env)
     parts = set(a.part.split(","))
-    a.compiled, a.interp = "compiled" in parts, "interp" in parts
+    a.compiled, a.interp, a.emulated = "compiled" in parts, "interp" in parts, "emulated" in parts
     code_commit = a.commit or git_commit(CODE_PATHS)
     driver_commit = a.driver_commit or git_commit(DRIVER_PATHS)
     if not code_commit or not driver_commit:
@@ -1695,6 +1903,19 @@ def cmd_run(a):
         enums = plan
         write_json(os.path.join(work, "interp-plan.json"), enums)
         log("%d enumerations, %d indices" % (len(enums), sum(e["total"] for e in enums)))
+    emus, emulated_exe = [], None
+    if a.emulated:
+        emus = emulated_plan(kernels, folds, only, os.path.join(work, "emulated-sizes.json"),
+                             a.emulated_match)
+        if a.emulated_bins:
+            which, _ = bins_of(emus, a.emulated_bins, emu_key)
+            take = parse_ranges(a.emulated_take, a.emulated_bins)
+            emus = [e for e in emus if which[emu_key(e)] in take]
+        emus.sort(key=lambda e: (-e["total"], emu_key(e)))
+        write_json(os.path.join(work, "emulated-plan.json"), emus)
+        emulated_exe = emulated_runner(a, work, env)
+        log("the emulated part: %d entries, %d indices or cases, runner %s"
+            % (len(emus), sum(e["total"] for e in emus), emulated_exe))
     record = {"started": started, "budget": a.budget, "jobs": a.jobs, "parts": sorted(parts),
               "seed": a.seed, "chunk": a.chunk, "interp_chunk": a.interp_chunk,
               "cases_cap": a.cases, "kernels": a.kernel_names + a.fold_names, "cpus": a.cpus,
@@ -1704,12 +1925,15 @@ def cmd_run(a):
               "fixup_forms": a.fixup_forms, "machine": machine_info(a.cpus),
               "interp_bins": a.interp_bins, "interp_take": a.interp_take,
               "interp_match": a.interp_match,
+              "emulated_bins": a.emulated_bins, "emulated_take": a.emulated_take,
+              "emulated_match": a.emulated_match, "emulated_chunk": a.emulated_chunk,
+              "emulated_runner": emulated_exe,
               "builds": [{"name": b, "compiler": compiler_of(os.path.join(work, "builds", b))}
                          for b in sorted({r["build"] for r in runners})]}
     with open(os.path.join(work, "runs.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
     deadline = time.time() + a.budget if a.budget else None
-    sched = Scheduler(a, work, runners, enums)
+    sched = Scheduler(a, work, runners, enums, emus, emulated_exe)
     try:
         status = sched.run(deadline)
     finally:
@@ -1894,8 +2118,8 @@ def read_times(path):
             x = json.loads(line)
             if x.get("failed"):
                 continue
-            if x["part"] == "interp":
-                key = ("interp", x["enum"], None, None)
+            if x["part"] in ("interp", "emulated"):
+                key = (x["part"], x["enum"], None, None)
             else:
                 key = (x["part"], x["kernel"], x["format"], x.get("runner"))
             out[key] = out.get(key, 0.0) + x["s"]
@@ -1984,7 +2208,22 @@ def cmd_collect(a):
         if files:
             merges.append((files, out))
         enum_out.append((e, out, len(files)))
-    log("merging %d series and %d enumerations" % (len(series), len(enum_out)))
+    # The emulated part: each entry's chunks, merged.
+    emu_plan = read_json(os.path.join(work, "emulated-plan.json")) \
+        if os.path.exists(os.path.join(work, "emulated-plan.json")) else []
+    emu_seeds = sorted({r["seed"] for r in starts if "emulated" in r["parts"]})
+    if len(emu_seeds) > 1:
+        sys.exit("brute: the emulated runs in %s used different seeds: %s" % (work, emu_seeds))
+    emu_out = []
+    for e in emu_plan:
+        files = sorted(glob.glob(os.path.join(work, "emulated", emu_key(e), "c*.json")))
+        out = os.path.join(merged_dir, "emulated", emu_key(e) + ".json")
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        if files:
+            merges.append((files, out))
+        emu_out.append((e, out, len(files)))
+    log("merging %d series, %d enumerations and %d entries of the emulated part"
+        % (len(series), len(enum_out), len(emu_out)))
     failed = run_merges(merges, a.jobs)
     if failed:
         sys.exit("brute: merges failed:\n" + "\n".join(failed))
@@ -2077,6 +2316,36 @@ def cmd_collect(a):
         for n, v in rec["counts"].items():
             itotals[n] = itotals.get(n, 0) + v
         interp.append(rec)
+    emulated = []
+    etotals = {}
+    for e, out, nfiles in emu_out:
+        rec = {"kernel": e["kernel"], "format": e["format"], "mode": e["mode"], "why": e["why"],
+               "total": e["total"], "chunks": nfiles, "domain": domain.get(e["kernel"], "unknown"),
+               "seconds": round(times.get(("emulated", emu_key(e), None, None), 0.0), 1)}
+        if not nfiles:
+            rec["guards"] = ["not run"]
+            emulated.append(rec)
+            continue
+        s = read_json(out)
+        keys = [k for k in s["keys"] if (k["kernel"], k["format"]) == (e["kernel"], e["format"])]
+        desc, ranges = coverage_of(s)
+        exhaustive = e["mode"] == "exhaustive"
+        ns = argparse.Namespace(kernel=e["kernel"], format=e["format"], exhaustive=exhaustive,
+                                restrict="", count=None if exhaustive else e["total"],
+                                seed=None if exhaustive else (emu_seeds[0] if emu_seeds else None),
+                                max_length=None if e.get("maxlen") is None else str(e["maxlen"]),
+                                orders=None, emulated=True)
+        problems = list(guards.problems(s, ns)) + list(guards.emulated_problems(s, ns))
+        more, examples, _ = summary_problems(s, fails_on_suspicious(e["kernel"], e["format"]))
+        problems += more
+        rec["covered"] = sum(b - a for a, b in ranges) if ranges else 0
+        rec["complete"] = ranges == [[0, e["total"]]]
+        rec["counts"] = key_counts(keys)
+        rec["entries"] = entry_stats(keys, keys[0]["stats"]["p"]) if keys else []
+        rec["guards"] = problems or "ok"
+        for n, v in rec["counts"].items():
+            etotals[n] = etotals.get(n, 0) + v
+        emulated.append(rec)
     machine = starts[-1]["machine"]
     result = {
         "kairn_brute_summary": 1,
@@ -2107,17 +2376,21 @@ def cmd_collect(a):
         "runner_columns": list(RUNNER_COUNTS) + ["headline per entry"],
         "compiled": {"totals": totals, "kernels": compiled},
         "interp": {"totals": itotals, "enumerations": interp},
+        "emulated": {"totals": etotals, "entries": emulated,
+                     "seed": emu_seeds[0] if emu_seeds else None},
         "findings": findings,
     }
     write_json(a.out, result, compact=True)
     ok_c = all(s["guards"] == "ok" for f in compiled.values() for s in f.values())
     ok_i = all(r["guards"] == "ok" for r in interp)
+    ok_e = all(r["guards"] == "ok" for r in emulated)
     log("wrote %s (%d bytes): compiled %s judged in %d series%s; interp %s cases in %d "
-        "enumerations%s; %d findings"
+        "enumerations%s; emulated %s cases in %d entries%s; %d findings"
         % (a.out, os.path.getsize(a.out), "{:,}".format(totals.get("judged", 0)), len(series),
            "" if ok_c else " (GUARDS FAILED)", "{:,}".format(itotals.get("cases", 0)), len(interp),
-           "" if ok_i else " (GUARDS FAILED or not complete)", len(findings)))
-    return 0 if ok_c and ok_i and not findings else 1
+           "" if ok_i else " (GUARDS FAILED or not complete)", "{:,}".format(etotals.get("cases", 0)),
+           len(emulated), "" if ok_e else " (GUARDS FAILED or not complete)", len(findings)))
+    return 0 if ok_c and ok_i and ok_e and not findings else 1
 
 
 RUNNER_COUNTS = ("cases", "judged", "failed", "invalid", "nonfinite", "suspicious")
@@ -2693,7 +2966,7 @@ def cmd_plan(a):
     errors += ferrors
     for e in errors:
         print("PLAN ERROR: %s" % e)
-    plan = sized_plan(plan)
+    plan = sized_plan(plan, a.sizes) if a.part != "emulated" else []
     which, load = bins_of(plan, a.bins) if a.bins else ({}, [])
     total = 0
     for e in plan:
@@ -2705,6 +2978,25 @@ def cmd_plan(a):
     print("%d enumerations, %s indices" % (len(plan), "{:,}".format(total)))
     if load:
         print("bins: " + ", ".join("%d: %s" % (i, "{:,}".format(n)) for i, n in enumerate(load)))
+    if a.part in ("all", "emulated"):
+        # The emulated part (above, "The plan of the emulated part").
+        emus = emulated_plan(kernels, load_folds(), only, a.sizes)
+        which, load = bins_of(emus, a.bins, emu_key) if a.bins else ({}, [])
+        for e in emus:
+            print("emulated %-16s %-13s %-10s %14s  %s%s" % (
+                e["kernel"], e["format"], e["mode"], "{:,}".format(e["total"]), e["why"],
+                ("  bin %d" % which[emu_key(e)]) if which else ""))
+        ex = [e for e in emus if e["mode"] == "exhaustive"]
+        rn = [e for e in emus if e["mode"] == "random"]
+        print("the emulated part: %d entries, %d enumerations of %s indices (at most %s each), %d random "
+              "series of %s cases or arrays" % (
+                  len(emus), len(ex), "{:,}".format(sum(e["total"] for e in ex)),
+                  "{:,}".format(EMULATED_EXHAUSTIVE), len(rn), "{:,}".format(sum(e["total"] for e in rn))))
+        for p in EMULATED_PRECISIONS:
+            names = sorted(e["kernel"] for e in ex if parse_fmt(e["format"])[0] == p)
+            print("  every operand at precision %d: %d kernels" % (p, len(names)))
+        if load:
+            print("emulated bins: " + ", ".join("%d: %s" % (i, "{:,}".format(n)) for i, n in enumerate(load)))
     return 1 if errors else 0
 
 
@@ -2714,6 +3006,10 @@ def main(argv=None):
     p = sub.add_parser("plan", help="the interpreter's enumerations and their sizes")
     p.add_argument("--bins", type=int, default=0)
     p.add_argument("--kernels")
+    p.add_argument("--part", choices=("all", "interp", "emulated"), default="all",
+                   help="the interpreter's enumerations, the emulated part, or both (default)")
+    p.add_argument("--sizes", help="a JSON file of the sizes of the enumerations, read and written "
+                                   "(the oracle's gen --total of each, which takes minutes in all)")
     p.set_defaults(func=cmd_plan)
 
     r = sub.add_parser("run", help="build, run, and keep the summaries in the work directory")
@@ -2722,7 +3018,17 @@ def main(argv=None):
                    help="seconds: no new pipeline starts after this")
     r.add_argument("--jobs", type=int, required=True,
                    help="busy processes at a time: a compiled pipeline counts 1, an interpreter's 2")
-    r.add_argument("--part", default="compiled,interp", help="compiled, interp, or both")
+    r.add_argument("--part", default="compiled,interp",
+                   help="compiled, interp, emulated, comma-separated (default compiled,interp)")
+    r.add_argument("--emulated-runner", help="the emulated part: the runner of the emulated kernels "
+                                             "(default: kairn-emulated-runner built in the first --build)")
+    r.add_argument("--emulated-chunk", type=int, default=1000000,
+                   help="enumeration indices or random cases per pipeline of the emulated part")
+    r.add_argument("--emulated-bins", type=int, default=0,
+                   help="split the emulated part into this many bins of about equal size ...")
+    r.add_argument("--emulated-take", default="", help="... and run these bins (e.g. 0-6)")
+    r.add_argument("--emulated-match", help="only the entries of the emulated part whose "
+                                            "'KERNEL FORMAT' matches this regular expression")
     r.add_argument("--build", action="append", metavar="NAME=COMPILER",
                    help="a CMake build of the runners with this compiler (repeatable)")
     r.add_argument("--generator", help="CMake generator (default: CMake's)")
@@ -2771,6 +3077,8 @@ def main(argv=None):
     a = ap.parse_args(argv)
     if a.cmd == "run" and (a.interp_bins and not a.interp_take):
         ap.error("--interp-bins needs --interp-take")
+    if a.cmd == "run" and (a.emulated_bins and not a.emulated_take):
+        ap.error("--emulated-bins needs --emulated-take")
     if a.cmd == "run" and (" " in a.seed or "=" in a.seed or not a.seed):
         ap.error("--seed must be non-empty, without spaces or '='")
     return a.func(a)

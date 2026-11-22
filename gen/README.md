@@ -40,6 +40,7 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `gen/constant_names.json` | The names of the constants `up(EXPR)` in the Rocq models, read first and only added to (below, "The operations") |
 | `gen/objcode.json` | Per kernel, form of its C++ (scalar with the fix-up inline, scalar with the fix-up a function of its own, packed) and limb type, the fused multiply-adds and plain multiplications its code asks for; per fold, form and limb type, those of each part of its loop: the expectations of the object-code check (`tests/objcode/`) |
 | `gen/tests/runner_kernels.inc` | The table of kernels and folds of the C++ runners `gen/tests/runner.cpp` and `packed_runner.cpp` |
+| `tests/emulated/gen/kernels.hpp` | Every kernel and fold of `scalar.hpp` for the emulated limb type of the tests, `kairn::emulated::Number` (`tests/emulated/number.hpp`, a format chosen at run time, integer arithmetic), printed by `cpp.scalar` with that type; then the tables of its runner: the constants by index, their exact values in `binary64`, `binary32` and the formats of the statements of precision 8 to 11 (`emulated.FORMATS`), the kernels without a path of constant evaluation, the variants. A test file, not shipped (docs/developer/testing.md, "The emulated formats") |
 
 `Model.v`, `Statements.v` and `Audit.v` are the real model only. The full kernels and the
 constructors of the non-finite layer have no real-model statement and are not in them; a kernel of
@@ -65,7 +66,8 @@ is mapped to the logical path `Kairn.Gen`, and `proofs/theories` to
 | `kairn_gen/expr.py` | The parser of the rational expressions of the claims (`3/(1-4*u)`); nothing is ever `eval`-ed |
 | `kairn_gen/rules.py` | The checks every kernel passes before anything is printed |
 | `kairn_gen/rocq.py` | The Rocq printer (trusted) |
-| `kairn_gen/cpp.py` | The C++ printer (trusted) |
+| `kairn_gen/cpp.py` | The C++ printer (trusted); its functions take the limb type as a parameter: `double`, `float`, or a `cpp.Limb`, a type of a format chosen at run time |
+| `kairn_gen/emulated.py` | `tests/emulated/gen/kernels.hpp`: `cpp.scalar` with the emulated limb type, and the tables of its runner |
 | `kairn_gen/simd.py` | The AVX2 and NEON printers (trusted; tested lane by lane against the scalar code) |
 | `kairn_gen/consts.py` | The exact value of every constant in any format, `unit_computed(K)` and `tiny_computed(K)` included |
 | `kairn_gen/claims.py` | `gen/claims.json` |
@@ -598,6 +600,13 @@ statement uses too is `Model.v`'s, under one name: the doubling of `ball_from_in
   and every function of `scalar.hpp` that dispatches is one of theirs or `two_prod`'s; the
   statements of the two executions are one per kernel of the file, in its order, each checked by
   `IeeeAudit.v` (a kernel added gets both), and the shape of one is pinned;
+- the kernels for the emulated limb type (`test_emulated.py`, five tests, 5 seconds on the Mac):
+  the emulated listing with the type's name replaced by `double` is the double listing token for
+  token (some 106 000 tokens), every literal the same constant in the same place (its value at
+  `binary64`, and at float's format against the float listing), the test of constant evaluation in
+  the same places; a select's arms swapped, a constant replaced by another, a value inlined from
+  the wrong operand and a statement added after a branch are each seen as a difference; the
+  formats of the runner, and a format in which a constant is not a number refused;
 - the branch over a fix-up (`test_printers.py`, `FixupBranch`): the kernels it applies to and the
   masks it tests, each case of the rule on the toy kernel `ops_branch` and on variants of it (one
   mask, two, an arm that is no select, outputs on different masks, a kernel with a real-model

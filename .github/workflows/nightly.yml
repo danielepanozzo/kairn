@@ -8,7 +8,9 @@
 # new random cases every night (the seed is the number of the run), through every runner that the
 # platform's compilers build, judged by the oracle and held to the guards of the cross-checks.
 # One more job enumerates, with the generator's interpreter, every operand of one fortieth of the
-# toy-format domains of the plan, a different fortieth each night. A violated claim, an invalid
+# toy-format domains of the plan, a different fortieth each night, and runs the same fortieth of
+# the plan's emulated part (the kernels printed for the emulated limb type, every operand or random
+# cases of formats of precision 8 to 11, tests/brute/README.md). A violated claim, an invalid
 # case, a suspicious result or a failed guard fails the job; each job keeps its summary and its
 # findings as an artifact.
 #
@@ -132,7 +134,7 @@ jobs:
           if-no-files-found: warn
 
   enumerations:
-    name: Linux, Python only, a fortieth of the enumerations
+    name: Linux, a fortieth of the enumerations and of the emulated part
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
@@ -144,17 +146,27 @@ jobs:
         with:
           python-version: "3.14"
 
+      # The emulated part of the plan (tests/brute/README.md) runs the kernels printed for the
+      # emulated limb type: its runner alone is built, with the image's compiler.
+      - name: Build the runner of the emulated kernels
+        run: |
+          cmake -S . -B "$RUNNER_TEMP/emulated" -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$RUNNER_TEMP/emulated" --parallel 4 --target kairn-emulated-runner
+
       # An enumeration counts only if it is complete, so this job's budget is long: a bin of the
-      # plan is sized to end well inside it. The bin is the day of the year modulo 40.
+      # plan is sized to end well inside it. The bin is the day of the year modulo 40, of the
+      # interpreter's enumerations and of the emulated part alike.
       - name: Run
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            what="--interp-match fp:1:"
+            what="--interp-match fp:1: --emulated-match ^next_up"
           else
-            what="--interp-bins 40 --interp-take $(( 10#$(date -u +%j) % 40 ))"
+            bin=$(( 10#$(date -u +%j) % 40 ))
+            what="--interp-bins 40 --interp-take $bin --emulated-bins 40 --emulated-take $bin"
           fi
           python tests/brute/brute.py run --work "$RUNNER_TEMP/brute" --budget 12000 --jobs 4 \
-            --part interp $what --seed "nightly-${{ github.run_number }}-enumerations" \
+            --part interp,emulated $what --seed "nightly-${{ github.run_number }}-enumerations" \
+            --emulated-runner "$RUNNER_TEMP/emulated/tests/kairn-emulated-runner" \
             --commit "$GITHUB_SHA" --driver-commit "$GITHUB_SHA"
 
       - name: Collect, and hold every enumeration to the guards

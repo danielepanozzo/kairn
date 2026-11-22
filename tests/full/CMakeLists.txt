@@ -282,6 +282,77 @@ foreach(_fold IN LISTS _full_folds)
   endif()
 endforeach()
 
+# --- The emulated formats (begin) ---------------------------------------------------------------
+#
+# full.emulated.arith: emulated.arith of tests/CMakeLists.txt at the full tier's sizes (every
+# operand of formats of one to four bits, every triple of the two smallest, 2 000 random pairs and
+# triples in each format of the tier, and a million stratified cases of every operation against
+# the machine's float and double), with the planted faults, which it must catch.
+if(_emulated AND Python3_Interpreter_FOUND)
+  add_test(NAME full.emulated.arith
+    COMMAND "${Python3_EXECUTABLE}" "${_emulated_dir}/test_emulated.py"
+      --selftest "$<TARGET_FILE:kairn-emulated-selftest>" --full
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.emulated.arith PROPERTIES TIMEOUT 600 LABELS "full;emulated")
+endif()
+# full.crosscheck.emulated.K: every kernel and fold printed for the emulated type, through
+# kairn-emulated-runner and kairn-emulated-runner-fixup-call, on the run-time path and on the path
+# of constant evaluation where it has one, judged by the oracle in KAIRN_EMULATED_FORMAT (a format
+# of the statements of precision 8), the runners' bytes the same: every operand of a kernel that
+# reads one limb (tests/CMakeLists.txt, _full_K_emulated_exhaustive: 4 354 numbers, twice or four
+# times that with masks), KAIRN_EMULATED_CASES random cases of the others, KAIRN_EMULATED_FOLD_CASES
+# random arrays of up to KAIRN_EMULATED_FOLD_LENGTH elements of a fold (a map and a ball vector in
+# place too). full.crosscheck.emulated.same_lines: KAIRN_EMULATED_SAME_CASES requests of every kernel
+# and fold, completed by the generator's interpreter and by both runners, each path, the same bytes
+# (emulated/same_lines.py). The brute-force plan has the enumerations of precision 8 to 11
+# (tests/brute/brute.py, the emulated part).
+if(_emulated AND Python3_Interpreter_FOUND AND _crosscheck)
+  foreach(_kernel IN LISTS _full_kernels)
+    if(_full_${_kernel}_emulated_exhaustive)
+      set(_mode --exhaustive)
+    else()
+      set(_mode --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_EMULATED_CASES}")
+    endif()
+    set(_format "${KAIRN_EMULATED_FORMAT}")
+    if(DEFINED _emulated_format_kernel_${_kernel})
+      set(_format "${_emulated_format_kernel_${_kernel}}")
+    endif()
+    set(_name full.crosscheck.emulated.${_kernel})
+    add_test(NAME ${_name} COMMAND ${_crosscheck} ${_full_${_kernel}_this_compiled}
+      --format "${_format}" ${_mode} --summary "${_summaries}/${_name}.json"
+      ${_emulated_runners})
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;crosscheck;emulated")
+  endforeach()
+  foreach(_fold IN LISTS _full_folds)
+    set(_name full.crosscheck.emulated.${_fold})
+    add_test(NAME ${_name} COMMAND ${_crosscheck} ${_full_fold_${_fold}_compiled}
+      --format "${KAIRN_EMULATED_FORMAT}" --seed "${KAIRN_CROSSCHECK_SEED}"
+      --count "${KAIRN_EMULATED_FOLD_CASES}" --max-length "${KAIRN_EMULATED_FOLD_LENGTH}"
+      --summary "${_summaries}/${_name}.json" ${_emulated_runners})
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;crosscheck;emulated;fold")
+  endforeach()
+  add_test(NAME full.crosscheck.emulated.same_lines
+    COMMAND "${Python3_EXECUTABLE}" "${_emulated_dir}/same_lines.py"
+      --runner emulated "$<TARGET_FILE:kairn-emulated-runner>"
+      --runner emulated-fixup-call "$<TARGET_FILE:kairn-emulated-runner-fixup-call>"
+      --format "${KAIRN_EMULATED_FORMAT}" --seed "${KAIRN_CROSSCHECK_SEED}"
+      --count "${KAIRN_EMULATED_SAME_CASES}" ${_oracle_claims_arg}
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.crosscheck.emulated.same_lines PROPERTIES TIMEOUT 900
+    LABELS "full;crosscheck;emulated")
+  # full.crosscheck.emulated.fault: the runner of a fault planted in the printed C++ (the arms of a
+  # select of mul_ext_2_2 swapped, emulated/emitted_fault.py), which the oracle passes, as the quick
+  # tier's binary64 cross-check, where nothing compares it, passes it; beside the interpreter in
+  # fp:8:-14:1 the comparison of the lines fails it.
+  add_test(NAME full.crosscheck.emulated.fault
+    COMMAND "${Python3_EXECUTABLE}" "${_emulated_dir}/emitted_fault.py" check
+      --runner "$<TARGET_FILE:kairn-emulated-runner-fault>" ${_oracle_claims_arg}
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.crosscheck.emulated.fault PROPERTIES TIMEOUT 600
+    LABELS "full;crosscheck;emulated")
+endif()
+# --- The emulated formats (end) -----------------------------------------------------------------
+
 # --- The object code ----------------------------------------------------------------------------
 #
 # objcode.check and objcode.controls of tests/CMakeLists.txt on every configuration of the

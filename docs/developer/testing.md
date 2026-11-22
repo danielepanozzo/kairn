@@ -9,10 +9,10 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
 | Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | on 2026-11-21, on the tree that joins the functions on arrays, the accumulator, the first part of the fix of rule R3 and `BallVector` to the end of the join of the two executions ([Time](#time)), 1 139 tests and 139 seconds on the Mac with Apple clang (three of them failing there, by design, until the factors of the public products were guarded: [Time](#time)) and 1 140 and 143 with GCC 16 (`--parallel 6`), 1 146 tests and 214 seconds with GCC 13 and 1 143 and 210 with Clang 18 on the Linux machine, and with `-mavx2 -mfma` 1 140 and 275 with GCC 13 and 1 137 and 194 with Clang 18 (`--parallel 16`); before it, on the branch of `BallVector` with its header (against claims without the 53 objects of stage B2), 802 tests and 130 seconds on the Mac with Apple clang (`--parallel 4`; 745 and 118 on its base, measured just before, the 57 new tests 67 seconds of test time) and 803 and 168 with GCC 16, 807 tests and 89 seconds with GCC 13, 803 and 91 with GCC 13 and `-mavx2 -mfma`, 804 and 143 with Clang 18, 800 and 193 with Clang 18 and AVX2 on the Linux machine (`--parallel 16`, under a load average of 40 to 57 from other jobs; its base, under a load of about 15: 749 and 59, 746 and 61, 746 and 57, 743 and 66); with `two_prod` refused in constant evaluation where Dekker's product overflows ([Time](#time)), 988 tests and 91 seconds on the Mac with Apple clang and 989 and 94 with GCC 16 (`--parallel 8`), 992 tests and 68 seconds with GCC 13 and 989 and 74 with Clang 18 on the Linux machine, and with `-mavx2 -mfma` 989 and 74 with GCC 13 and 986 and 108 with Clang 18 (`--parallel 16`); before it, with the public functions of the enclosure interface, 984 tests and 81 seconds on the Mac with Apple clang and 985 and 85 with GCC 16 (`--parallel 8`), 988 tests and 67 seconds with GCC 13 and 985 and 74 with Clang 18 on the Linux machine, and with `-mavx2 -mfma` 985 and 73 with GCC 13 and 982 and 108 with Clang 18, a run with the pauses of ctest that [Time](#time) describes (`--parallel 16`); before them, on the tree that joins the oracle of stage B2 to the join (against `gen/claims.json`, nothing left out), 851 tests and 90 seconds on the Mac with Apple clang and 852 and 99 with GCC 16 (`--parallel 8`, with another session's jobs running), 855 tests and 66 seconds with GCC 13 and 852 and 66 with Clang 18 on the Linux machine, and with `-mavx2 -mfma` 852 and 69 with GCC 13 and 849 and 73 with Clang 18 (`--parallel 16`, under a load average of 20 to 50 from other jobs), the largest summary 0.98 MB (`two_prod_dekker`); before it, on the tree that joins the ball vectors, the lanes of the packed runners assigned by a seeded permutation and `Packed` and the containers (against claims without the 53 objects of stage B2), 745 tests and 119 seconds on the Mac with Apple clang (`--parallel 4`) and 746 and 131 with GCC 16 (with other jobs of ours running), 749 tests and 119 seconds with GCC 13 and 746 and 114 with Clang 18 on the Linux machine (`--parallel 16`, under a load average of about 50 from other jobs); with the ball vectors and the accumulator judged (against claims without the 53 objects of stage B2 of the intervals, `KAIRN_ORACLE_CLAIMS`), 705 tests and 127 seconds on the Mac with Apple clang (`--parallel 4`; 633 tests and 92 seconds before them), 706 tests and 48 seconds with GCC 13 and 703 and 54 with Clang 18 on the Linux machine (`--parallel 16`; 634 tests and 46 seconds before them with GCC 13); with `--parallel 4`, on 2026-11-20 with 571 and 572 tests, 79 seconds on the Mac with Apple clang, 97 with GCC 16 and 125 to 127 on 16 threads of the Linux machine with GCC 13 ([The size of the summaries](#the-size-of-the-summaries)); with 421 to 452 tests, 25 to 34 seconds on the Mac, 37 to 47 on the Linux machine and 52 to 58 on the Windows machine (73 on 4 logical processors); on the hosted runners, measured before each cross-check ran in one process, 31 to 45 seconds on Linux and 69 to 75 on macOS, and on Windows estimated since 56 to 80, 126 on the slowest runner seen ([Time](#each-cross-check-in-one-process)) |
-| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | on 2026-11-21, on the tree that joins the functions on arrays, the accumulator, the first part of the fix of rule R3 and `BallVector` to the end of the join of the two executions, 1 683 tests and 22 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one worker); before it, on the branch of `BallVector` with its header, 1 174 tests and 16 minutes with GCC 13 on the Linux machine (`--parallel 16`, under a load average of about 45; 1 110 tests and 15 minutes on its base, under a load of about 15); with `two_prod` refused in constant evaluation where Dekker's product overflows, the same 1 497 tests and 18 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one worker, the oracle's own quick selftest among the rest); before it, with the public functions of the enclosure interface, 1 497 tests and 18 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one worker, and the oracle's own quick selftest alone after the rest, 4 minutes more; [Time](#time)); before them, on the tree that joins the oracle of stage B2 to the join (against `gen/claims.json`, nothing left out), 1 285 tests and 17 minutes with GCC 13 on the Linux machine (`--parallel 16`, under a load average of about 40 from other jobs), the largest summary 2.7 MB (`mul_pow2_map_1`); before it, on the tree that joins the ball vectors, the lanes of the packed runners and `Packed` and the containers (against claims without the 53 objects of stage B2), 1 110 tests and 17 minutes with GCC 13 on the Linux machine (`--parallel 16`, under a load average of about 50 from other jobs); with the ball vectors and the accumulator judged (against claims without the 53 objects of stage B2 of the intervals), 1 105 tests and 14 minutes with GCC 13 on the Linux machine (`--parallel 16`; 980 tests and 12 minutes before them), the largest summary 2.7 MB (`mul_pow2_map_1`; of the ball vectors 0.9 MB, `bv_neg_2`); with `--parallel 4`, on 2026-11-20 with 884 tests, 20 minutes on the Mac with Apple clang and 32 on 16 threads of the Linux machine with GCC 13; it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
+| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, the kernels printed for the emulated limb type in `fp:8:-14:1` ([below](#the-emulated-formats)), and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | on 2026-11-21, on the tree that joins the functions on arrays, the accumulator, the first part of the fix of rule R3 and `BallVector` to the end of the join of the two executions, 1 683 tests and 22 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one worker); before it, on the branch of `BallVector` with its header, 1 174 tests and 16 minutes with GCC 13 on the Linux machine (`--parallel 16`, under a load average of about 45; 1 110 tests and 15 minutes on its base, under a load of about 15); with `two_prod` refused in constant evaluation where Dekker's product overflows, the same 1 497 tests and 18 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one worker, the oracle's own quick selftest among the rest); before it, with the public functions of the enclosure interface, 1 497 tests and 18 minutes with GCC 13 on the Linux machine (`--parallel 16`, the tools held to one worker, and the oracle's own quick selftest alone after the rest, 4 minutes more; [Time](#time)); before them, on the tree that joins the oracle of stage B2 to the join (against `gen/claims.json`, nothing left out), 1 285 tests and 17 minutes with GCC 13 on the Linux machine (`--parallel 16`, under a load average of about 40 from other jobs), the largest summary 2.7 MB (`mul_pow2_map_1`); before it, on the tree that joins the ball vectors, the lanes of the packed runners and `Packed` and the containers (against claims without the 53 objects of stage B2), 1 110 tests and 17 minutes with GCC 13 on the Linux machine (`--parallel 16`, under a load average of about 50 from other jobs); with the ball vectors and the accumulator judged (against claims without the 53 objects of stage B2 of the intervals), 1 105 tests and 14 minutes with GCC 13 on the Linux machine (`--parallel 16`; 980 tests and 12 minutes before them), the largest summary 2.7 MB (`mul_pow2_map_1`; of the ball vectors 0.9 MB, `bv_neg_2`); with `--parallel 4`, on 2026-11-20 with 884 tests, 20 minutes on the Mac with Apple clang and 32 on 16 threads of the Linux machine with GCC 13; it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
-| Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), and the interpreter on every operand of larger toy formats, with the same guards and a time budget. Many of those formats are of no statement ($q_{\max} < 1$, or $\eta$ above `binary_float`'s: 582 of the plan's 1 239 enumerations, [The formats of the statements](architecture.md#number-formats); 104 more have a wider subnormal range, where such a clause is judged and a failure is a finding), and there a clause that promises a finite result is counted as not claimed (V4 of the ball vectors, the `finite_when` of `ball_of_interval` and the `bounded_when` of `interval_of_ball` of two limbs, the midpoint of a bounded interval of `ball_of_interval` with `ieee1788` and the parts of a split that rest on it; F3, B4 and I5 are judged there too, below): in `fp:4:-4:-1` and `fp:4:-5:0` the sum of the two halves of a bounded interval beside $\pm\Omega$ overflows, and the midpoint of `interval_mid_rad_2` and the point of split of `interval_split_2` are a NaN (12 and 60 lines), counted as not claimed | by hand on the test machines before each milestone report (`tests/brute/README.md`; results in [Brute force, Milestone 1](results/brute-milestone1.md)); and every night on the hosted runners with a smaller budget (`nightly.yml`), on new random cases and one fortieth of the enumerations | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine; a night on the hosted runners, under two hours per platform |
+| Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), the interpreter on every operand of larger toy formats, and the kernels printed for the emulated limb type on every operand, or random cases, of formats of precision 8 to 11 ([below](#the-emulated-formats)), with the same guards and a time budget. Many of those formats are of no statement ($q_{\max} < 1$, or $\eta$ above `binary_float`'s: 582 of the plan's 1 239 enumerations, [The formats of the statements](architecture.md#number-formats); 104 more have a wider subnormal range, where such a clause is judged and a failure is a finding), and there a clause that promises a finite result is counted as not claimed (V4 of the ball vectors, the `finite_when` of `ball_of_interval` and the `bounded_when` of `interval_of_ball` of two limbs, the midpoint of a bounded interval of `ball_of_interval` with `ieee1788` and the parts of a split that rest on it; F3, B4 and I5 are judged there too, below): in `fp:4:-4:-1` and `fp:4:-5:0` the sum of the two halves of a bounded interval beside $\pm\Omega$ overflows, and the midpoint of `interval_mid_rad_2` and the point of split of `interval_split_2` are a NaN (12 and 60 lines), counted as not claimed | by hand on the test machines before each milestone report (`tests/brute/README.md`; results in [Brute force, Milestone 1](results/brute-milestone1.md)); and every night on the hosted runners with a smaller budget (`nightly.yml`), on new random cases and one fortieth of the enumerations | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine; a night on the hosted runners, under two hours per platform |
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
@@ -43,6 +43,7 @@ The tests that `ctest` runs in the build directory, by name:
 | `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum; the packed runners with the requests assigned to the lanes by a seeded permutation, under the guard that the registers mixed kinds, and the one with the build's flags also consecutively ([below](#packed-kernels)). |
 | `crosscheck.lanes.fault.F` | A packed runner with a fault planted in a copy of `mul_2_2_full` (its special-value select reads the mask of the neighboring lane, `tests/lanes/`) passes the cross-check of format F with the consecutive assignment where no register mixes a non-finite operand with finite ones, and fails it, by the oracle's verdict, with the permuted one; the guard refuses the consecutive assignment of the same stream ([below](#packed-kernels)). |
 | `crosscheck.compiled.FOLD.F` | A fold (a sum or a dot product over arrays) compiled likewise: the scalar runners on 300 random arrays of format F, of every length class and in every order, and the packed runners on 200 arrays in the lane order of their register ([below](#cross-checks)). A map, a fold of maxima and a convolution likewise, on 100 arrays of up to 24 elements (pairs of polynomials of up to 20 coefficients for a convolution, which has no packed form). |
+| `emulated.arith`, `crosscheck.emulated.K` | The emulated limb type against the machine's `float` and `double` and the oracle's rounding, with planted faults; the kernels printed for it, on `next_up`, `two_prod`, `mul_2_2_full` and `sum_2` in `fp:8:-14:1`, through both its runners and the interpreter, the same bytes, judged by the oracle ([below](#the-emulated-formats)). |
 | `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)); and in one of them the operations of `Ball` outlined and external, each a call of a function with the counts of its kernel ([below](#the-operations-of-ball-outlined-and-external)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
 | `objcode.test` | The checker's own tests, on stored disassemblies of every format it reads (Python only). |
@@ -135,6 +136,7 @@ front:
 | `full.crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
 | `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum; and the interval kernels whose shape names a sampled format of its own (`_toy_sampled...` of `tests/CMakeLists.txt`), on 20 000 random cases of that format. |
 | `full.crosscheck.compiled.FOLD.F`, `full.crosscheck.interp.FOLD`, `full.crosscheck.interp-sampled.FOLD` | A fold: the compiled runners on 1 000 random arrays of up to 4 096 elements (the packed runners on 500), the flag sets' runners among them; the interpreter on every array of a tiny format up to a small length, in every order that differs, and on 1 000 random arrays of a toy format of up to 1 024 elements ([Cross-checks](#cross-checks)). A map the same on arrays of up to 1 024 elements, a fold of maxima as a fold, a convolution on 300 pairs of polynomials of up to 64 coefficients. |
+| `full.crosscheck.emulated.K`, `full.crosscheck.emulated.same_lines`, `full.crosscheck.emulated.fault`, `full.emulated.arith` | The exhaustive tier on emulated formats: every kernel and fold printed for the emulated limb type, in `fp:8:-14:1` (every operand of a kernel that reads one limb, random cases of the others), both runners and each path, judged by the oracle; the same lines as the interpreter's on every kernel and fold; a fault planted in the printed C++ that the oracle passes, caught by that comparison; the type's own tests at the full sizes ([below](#the-emulated-formats)). |
 | `full.kairn-gen.test` | The four test classes of the generator that `full.tools.kairn-gen.test` leaves out (`-k`): the interpreter against the machine's own arithmetic (Python's float and `math.fma`) on thousands of cases per kernel and format and against every rounding of toy formats, and the statements of the IEEE model and of the non-finite layer on every operand of small formats. With four worker processes. |
 | `full.kairn-oracle.selftest` | The six tests of the oracle that `full.tools.kairn-oracle.selftest` leaves out (`--only`): its Python reference runner, correct and with injected errors, on every case of tiny formats. With four worker processes. |
 | `full.search.compiled` | The adversarial search ([below](#the-adversarial-search)) on every kernel with an `error`, `upper`, `encloses` or `extends` entry, `binary64` and `binary32`, through the scalar runner with the build's flags, 5 000 cases per kernel and format from its seeds; fails on any violated claim. With four worker processes. |
@@ -156,7 +158,7 @@ the label `tools`; but for the generator's, which is labelled `generator` too, t
 compiler, as they did in the quick tier.
 
 Labels select groups in either tier: `-L crosscheck`, `-L compiled`, `-L interp` (with
-`-L restricted` and `-L sampled` among them), `-L api` (with `-L oracle`, `-L reject` and
+`-L restricted` and `-L sampled` among them), `-L emulated`, `-L api` (with `-L oracle`, `-L reject` and
 `-L boundary` among them), `-L objcode`, `-L python`, `-L generator`, `-L tools`; `-R` selects by
 name, for example `ctest --test-dir build -R mul_2_2` for the quick tier's tests of `mul_2_2`.
 
@@ -1232,6 +1234,182 @@ maxima `norm_upper_k`. What is tested of them:
 - **The program's names** (`api.shadow`) and **the platform's macros** (`api.platform_macros`) cover
   every function and operator of the header; the tutorial's program (`api.example.ball_vectors.*`)
   checks its results in exact arithmetic.
+
+## The emulated formats
+
+The exhaustive tier of the brief: the C++ of the generated scalar kernels, compiled, on every
+operand of tiny formats of precision 8 to 11, or on dense samples of them, judged by the oracle.
+The other tiers do not do this: the generator's interpreter enumerates toy formats, but it
+evaluates the kernel IR in Python, not the C++ that the generator prints; and the compiled kernels
+run in `binary64` and `binary32` only, on random and stratified cases. A fault of the printer of
+the C++ (the fix-up branch of a full kernel, the arm of a select, a value inlined from the wrong
+call, the branch of constant evaluation) was caught only if a random `binary64` case reached it.
+
+**The type.** `tests/emulated/number.hpp` (test code: nothing under `include/` uses it) is
+`kairn::emulated::Number`, a number of a binary format $(p, q_{\min}, q_{\max})$ chosen when the
+program runs, radix 2, to nearest with ties to even, gradual underflow, signed zeros,
+infinities and NaN, computed with integers alone (`number.cpp`): every operation forms its exact
+result in as many 64-bit words as it needs and rounds it once. It has what the generated scalar
+code uses on a limb and nothing more: `+`, `-`, `*` (the plain product of constant evaluation),
+the comparisons, `fma_rn`, `abs_bits`, `next_up_bits`, `next_down_bits`, `times_inf_ce`, the
+conversions of a count, copies through a `volatile` object, the text of the line protocol. It is
+written from the definition of a format ([Number formats](architecture.md#number-formats)) and
+shares no code with the oracle or the interpreter: a third implementation of the same
+arithmetic. Its tests (`tests/emulated/test_emulated.py` through `selftest.cpp`; `emulated.arith`
+in the quick tier, 3 seconds on the Mac, `full.emulated.arith` in the full tier): every
+operation against the machine's `float` and `double`, the type at $p = 24$ and $53$ in their
+exponent ranges, bit for bit, the sign of a zero included, on stratified operands (any bits,
+subnormal, the lowest and the top binades, the special values; second operands at ties and
+cancellations of sums, factors whose products reach the top or fall through the subnormal range,
+addends that cancel a product or sit next to it), 25 operations on each case; against the
+oracle's exact rounding (`refrun.Arith`, `fmt.rn`, `succ`, `pred`), values and the class of what
+is not finite, on every pair of operands of formats of one to four bits (one to three in the quick
+tier), every triple of the fused operations in formats of one and two bits (one), and random
+operands of `fp:8:-14:1` to `fp:11:-20:1` and of `fp:8:-22:9`; and each comparison again with each
+of two faults planted in the rounding (`plant_fault`: a tie rounded away from zero, a result in
+the subnormal range truncated), which each must see. At the quick tier's sizes (3 seconds on the
+Mac) that is 256 391 comparisons with the oracle in 8 formats and 1 234 372 and 1 181 323 with the
+machine's `float` and `double` (50 000 cases each; these two counts are the Mac's and differ by a
+few hundred under libstdc++, whose random distributions draw other operands); at the full tier's (10 seconds), 762 569 in 9
+formats and 24 686 741 and 23 624 764 (a million cases each); none different. Planted, the tie
+rounded away gives 1 212 differences in the 80 829 comparisons with the oracle of a fault's run and
+7 202 and 6 982 in the machine's; the truncation 594, 14 564 and 13 298.
+
+**The kernels for it** are `tests/emulated/gen/kernels.hpp`, printed by the printer of
+`include/kairn/gen/scalar.hpp` with the type as its limb type
+([Architecture](architecture.md#the-kernel-ir), "A limb type of a format chosen at run time"):
+every kernel (223) and every fold (44) in its sequential and lane orders, both forms of the
+fix-ups; a literal is the constant's value in the run-time format, from tables for `binary64`,
+`binary32` and 32 formats of the statements of precision 8 to 11 (`qmax` 1 to 16,
+$q_{\min} = 3 - q_{\max} - 2p$). `gen/tests/test_emulated.py` shows that it is the same emission: with the type's
+name replaced by `double`, the listing is the double listing token for token, 106 241 tokens,
+each literal the same constant in the same place (its value at `binary64`, and at float's format
+against the float listing), the test of constant evaluation in the same 154 places; and a select's
+arms swapped, a constant replaced, a value inlined from the wrong operand and a statement added
+after a branch are each seen. On the Mac the emulated kernels at `binary64` and `binary32` gave the
+lines of the compiled double and float kernels (`gen/tests/runner.cpp`, Apple clang), byte for
+byte, on 267 535 and 534 535 requests of every kernel and fold.
+
+**The runner** `tests/emulated/runner.cpp` (`kairn-emulated-runner`, the fix-ups inline, and
+`kairn-emulated-runner-fixup-call`) completes every request of the line protocol, the format of
+each request from its line: kernels, folds in every order, maps in place, ball vectors,
+convolutions, products of BallVectors. `--ce` runs the path of constant evaluation: the variant of
+a kernel that has one (Dekker's product in `two_prod`), each `prod` a plain product, `guard` its
+operand, `times_inf` from comparisons; a kernel without that path and every fold are refused, as
+the interpreter's `--ce` refuses them. Of the 223 kernels, 160 have such a path. The loops over
+arrays are covered in both their orders, `F_seq` and `F_lanes`, which the printer writes as scalar
+C++; `F_packed` is intrinsics and has no emulated form. The kernels are ordinary inline functions
+(`tests/emulated/prelude.hpp`), but a fix-up that is a function of its own and the end of a ball
+vector are never inlined, as in the shipped prelude. With MSVC that is also needed: MSVC 19.52 at
+`/O2` miscompiles the fix-up of `ball_intersection_2` when it inlines it (the first limb of the
+operand returned three times, where the operand is the result), which
+`full.crosscheck.emulated.ball_intersection_2` found by comparing the two runners; a program of 55
+lines with no Kairn code shows it (a struct of a `uint64_t` and an `int` for the limb), and `/O1`,
+`/Od`, `__declspec(noinline)` and `double` limbs are right. The shipped fix-ups, the same functions
+for `double` and `float`, are `__declspec(noinline)` with MSVC.
+
+**Cross-checks.** `tests/crosscheck.py compiled --emulated LABEL EXE` is a runner kind of its own:
+judged by the oracle against `gen/claims.json` as every runner, and its output must be the same
+bytes as every other emulated runner's and, with `--interp`, the interpreter's (a difference
+fails the test with the first line that differs, whatever the oracle says: the C++ printed for
+the type and the interpreter's evaluation of the IR compute the same listing in the same
+arithmetic). `--emulated-ce` adds each runner's `--ce` and the interpreter's `--ce`, the same bytes
+again, judged too, but for `two_prod`, whose path of constant evaluation is `two_prod_dekker`'s
+listing, with claims of its own that are judged on its own requests: that output is compared only
+(judged against `two_prod`'s claims, it fails them in `fp:8:-14:1`, as `two_prod_dekker`'s
+result may, which is why it has its own statement). The guards get `--emulated`
+(`crosscheck_guards.emulated_problems`): a format of the statements of precision 8 to 11, and at
+least a quarter of the cases judged (in `fp:8:-14:1` every kernel and fold has more than half;
+the least, 0.56, `two_prod_dekker`, whose product by the splitter overflows).
+
+| Test | Checks |
+|---|---|
+| `crosscheck.emulated.K` (quick) | Both runners, each path, the interpreter, the same bytes, judged in `KAIRN_EMULATED_FORMAT` (`fp:8:-14:1`): every operand of `next_up`, 1 000 cases of `two_prod` (both paths) and of `mul_2_2_full` (the fix-up branch), 300 arrays of `sum_2` up to 64 elements. |
+| `full.crosscheck.emulated.K` | Every kernel and fold, both runners and each path, the same bytes, judged: every operand of the kernels that read one limb (4 354 numbers, twice or four times that with masks), `KAIRN_EMULATED_CASES` (2 000) random cases of every stratum of the others, `KAIRN_EMULATED_FOLD_CASES` (300) arrays of up to 64 elements of a fold, a map and a ball vector in place too. `bound_sum_2` and `bound_dot_2` are in `fp:8:-29:16`: their mask turns false where $m\,\mathrm{unit}(K)$ passes $\tfrac15$ to $\tfrac12$, at counts near $2^{14}$, beyond the largest number of `fp:8:-14:1` (510), and the guards fail a run that never saw it false. |
+| `full.crosscheck.emulated.same_lines` | `tests/emulated/same_lines.py`: 100 requests of every kernel and fold (about 30 000 lines, maps and ball vectors in place too), completed by the interpreter and by both runners in one process each, then those of the 160 kernels with a path of constant evaluation with `--ce`: the same bytes. |
+| `full.crosscheck.emulated.fault` | `tests/emulated/emitted_fault.py`: a runner built from a copy of the printed C++ with the arms of one select of `mul_ext_2_2` swapped, which the oracle passes on the quick tier's `binary64` cases and in `fp:8:-14:1`, and the comparison with the interpreter fails (below, "Faults planted in the printed C++"). |
+| `full.emulated.arith`, `emulated.arith` | The type's own tests, above. |
+
+The quick tier's five tests took 8 seconds of wall time and 29 of test time on 4 threads of the
+Linux machine (`--parallel 4`, GCC 13); the full tier's first 269 (all but the planted fault's,
+2.4 seconds on the Mac), 76.5 seconds of wall time and 305 of test time there (under a load
+average of 14 to 16 from other users), about five minutes on a hosted Linux runner by the rule of
+[Time](#time). Building the four targets takes 17 seconds with GCC 13 and 6 with Clang 18 there
+(16 jobs), 12 on the Mac (4 jobs), with no warning under the tests' flags
+(`-Wall -Wextra -Wpedantic`).
+
+**The brute force** (`tests/brute/brute.py --part emulated`; `tests/brute/README.md` has the
+options) judges the emulated kernels in the formats of the statements of precision 8 to
+11 with the smallest exponent range, `fp:8:-14:1`, `fp:9:-16:1`, `fp:10:-18:1`, `fp:11:-20:1`
+(`bound_sum_2` and `bound_dot_2` with `qmax = 16`). Every operand where the enumeration has at most
+2·10⁷ indices: at precision 8 the 77 kernels of one or two limbs (two numbers 18 931 201 cases, a
+pair 2 422 786, an interval or a ball of one limb 9.5 million) but `norm_combine` and
+`norm_step_1`, two numbers and two masks or one, 76 and 38 million; at precisions 9 to 11 the 15 kernels of
+one limb (4 354, 9 730, 21 506 and 47 106 numbers at the four precisions). 500 000 random cases of
+every stratum of the oracle's generator for the others, and 20 000 random arrays of up to 256
+elements of each fold in every order. In all 1 068 entries: 122 enumerations of 802 601 535
+indices and 946 random series of 388 520 000 cases or arrays. Only the enumerations are sized
+(`gen --exhaustive --total` counts the pairs one by one, 11 seconds at precision 8 on the Linux
+machine and 60 at precision 9): two numbers at precision 9 are 95 million cases, a kernel of
+three limbs at precision 8 more than 4·10¹⁰. The threshold is what a pipeline of the Linux
+machine gets through in about ten minutes: a pipeline, `gen | kairn-emulated-runner | check`, two
+busy processes, judged 31 000 indices a second of the enumerations and 20 000 cases a second of
+the random series in the run below, so that 2·10⁷ indices are twenty chunks of 10⁶ and eleven
+minutes of one pipeline. The oracle's `check` is the slow end: alone, under a load of about 20,
+it judged 59 000 lines a second of `two_sum`, 36 000 of `mul_2_2` and 16 000 of `interval_mul_1`
+in `fp:8:-14:1`, where `gen` wrote 480 000, 32 000 and 29 000 and the runner completed 510 000,
+360 000 and 300 000. Every night the hosted runner of the enumerations runs a fortieth of the
+part, the same bin as of the interpreter's.
+
+**The part's run.** On the Linux machine, 2026-11-21, the branch at `37b66b8` (the merge of `main`
+after it changed neither the emulated kernels nor the claims, and the oracle only in formats of no
+statement), seed `m2-emulated-linux`, `--jobs 10` (five pipelines), GCC 13, on a machine shared with
+other users (a load average of 8 to 50): every entry complete, 1 191 121 535 indices and cases
+covered, 802 601 535 of them in the 122 enumerations; 1 172 199 035 lines (the enumerations of
+`fast_two_sum` and `fast_two_sum_entry` keep the 9 469 951 pairs of their precondition
+$\lvert a\rvert \ge \lvert b\rvert$ of the 18 931 201), 1 145 215 335 of them judged and passed,
+none failed, none invalid; the guards passed on all 1 068 entries (the least share judged, 0.52,
+`two_prod_dekker` in `fp:9:-16:1`); no finding. 8 883 seconds of wall time, 2 001 pipelines,
+132 000 lines a second together; 44 407 seconds of pipelines, 25 768 for the enumerations and
+18 639 for the random series.
+
+**Faults planted in the printed C++.** Two kinds of mutants of `tests/emulated/gen/kernels.hpp`,
+each one line of one kernel: the arms of a select swapped, and an operand that is a value inlined
+from a call taken from another call site (`SITE_V` replaced by `OTHER_V`). The emulated kernels at
+`binary64` being the compiled double kernels bit for bit, a mutant run in `binary64` stands for the
+same fault in `scalar.hpp`. Of 299 mutants of the 31 kernels of at most two limbs that have one,
+the oracle failed 237 on the quick tier's `binary64` sample (seed 0, 6 000 cases, 2 000 for the
+interval kernels); of the other 62 it failed none in `fp:8:-14:1` on 20 000 random cases either:
+51 gave the interpreter's lines there (the value from the other call site is the same value: the
+two halves of a midpoint computed alike), and 11, of `ball_split_1`, other lines that the claim
+allows (a half that is the whole line encloses the half). So no mutant was found that an
+enumeration of precision 8 catches and the quick tier's `binary64` sample misses. Where the tier
+adds: (1) the comparison of the lines with the interpreter catches faults that the oracle cannot,
+whose results still satisfy a claim with room (`mul_ext_2_2`, `ball_split_1`, `ball_hull_1`,
+`ball_intersection_1`): `full.crosscheck.emulated.fault` is one, the arms of a select of
+`mul_ext_2_2` swapped, which the quick tier's `binary64` cross-check passes; (2) the path of
+constant evaluation, which no compiled cross-check runs (it is constant evaluation): mutants of
+`two_prod`'s branch of Dekker's product (a split of $b$ from $a$'s) are caught by the comparison of
+`--ce` with the interpreter's `--ce`; (3) dense samples of tiny formats: 13 mutants of
+`ball_contains_ball_1`, `ball_equal_1`, `ball_hull_1` and `ball_intersection_1` (four limbs, never
+enumerated) that the oracle passes on the quick tier's 2 000 `binary64` cases fails in
+`fp:8:-14:1` on 20 000 random cases. Run again on the cases of each tier, all 13 fail on the brute
+force's 500 000 cases of `fp:8:-14:1`, 5 on the full tier's 2 000 there, 10 on the full tier's
+20 000 `binary64` cases; three of `ball_intersection_1` (a comparison of the radius's computation
+that takes a value of the other bound's) pass both `binary64` samples of ctest and fail only on the
+brute force's cases of precision 8.
+
+**Flush to zero.** The tier has gradual underflow only: no statement of the library is about
+arithmetic that flushes subnormal numbers to zero (they come with the GPU work of a later
+milestone), so nothing could judge such a run. Adding it takes: a mode of the type (a result in
+the subnormal range becomes a zero of its sign; an operand in it is read as zero, or not, as the
+target does: `number.cpp`'s rounding and its reading of operands, a few lines, and a run-time
+switch beside `plant_fault`), validated against a machine in that mode (`float` under FTZ and
+DAZ); claims that say what holds there and an oracle that reads them; the interpreter's
+evaluation in that mode, for the comparison of lines; then a runner option and a guard that names
+the mode. Nothing of the format tables, the printer or the runner's protocol
+changes: the format stays `(p, qmin, qmax)` and the mode is chosen on the command line, as the
+path of constant evaluation is.
 
 ## Contraction
 
@@ -3130,7 +3308,7 @@ driver:
 | `generator.yml`, "Generator's full suite" | `python gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 and Linux arm64 with GCC and with Clang, and macOS arm64 with Apple clang, there as two jobs of every second test (`--shard 1/2`, `--shard 2/2`: as one job it took 58 of its 60 minutes on the hosted runner at the end of Milestone 2, and was cancelled once); and `--no-cxx` on Windows x64. It contains the full tier's `full.kairn-gen.test` and `full.tools.kairn-gen.test` (label `generator`), which `full.yml` leaves out |
 | `proofs.yml`, "Proofs" | `make -C proofs` in the Rocq team's image `rocq/rocq-prover:9.0` (Rocq 9.0.1), with Flocq 4.2.2 from opam, cached between runs; what the audit printed is kept as the run's artifact `proof-audit` |
 | `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `docs/tools/reference.py --check` and its tests, `mkdocs build --strict`, Doxygen 1.18.0 on `docs/Doxyfile` with warnings as errors into the site's `api/`, `docs/tools/check_links.py`; the built site is kept as the run's artifact `site`, and on a push to `main` published at <https://danielepanozzo.github.io/kairn/> |
-| `nightly.yml`, "Nightly brute force" | Every night, not on a push: `tests/brute/brute.py` for 100 minutes per job on Linux x86-64 and arm64 (GCC and Clang), macOS arm64 (Apple clang) and Windows x64 (MSVC and clang-cl), every kernel on new random cases (the seed is the number of the run) through every runner of the quick tier, and one job that enumerates one fortieth of the toy-format domains of the plan, a different one each night; each job fails on a violated claim or a failed guard and keeps its summary as an artifact. A pull request that changes the workflow or the driver runs it for a few minutes on a few kernels |
+| `nightly.yml`, "Nightly brute force" | Every night, not on a push: `tests/brute/brute.py` for 100 minutes per job on Linux x86-64 and arm64 (GCC and Clang), macOS arm64 (Apple clang) and Windows x64 (MSVC and clang-cl), every kernel on new random cases (the seed is the number of the run) through every runner of the quick tier, and one job that enumerates one fortieth of the toy-format domains of the plan, a different one each night, and runs the same fortieth of the plan's emulated part (it builds `kairn-emulated-runner` alone, [The emulated formats](#the-emulated-formats)); each job fails on a violated claim or a failed guard and keeps its summary as an artifact. A pull request that changes the workflow or the driver runs it for a few minutes on a few kernels |
 
 Every test of the full tier thus runs on every push and pull request: a test that depends on the
 compiler with every compiler, a test in exact arithmetic once, and the generator's tests, which
