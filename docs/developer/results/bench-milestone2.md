@@ -93,6 +93,13 @@ harness, `BACKEND/KIND/KERNEL/VARIANT`: `m2` for `double` limbs, `m2f` for `floa
   instead of 0.5 on Zen 2), a sum of intervals of one limb 2.1 to 3.5 times, a product of two limbs
   1.1 to 1.2 ([question 11](#11-self_test-and-the-checks)).
 
+- **Second part: a function with thousands of comparisons of enclosures compiles slowly in every
+  setting.** 1 000 calls of the three-valued comparisons take 4.5 s (Apple clang) to 62 s (GCC 13);
+  10 000 take 134 s (GCC 16) to 26 minutes (Clang 18), and more than 30 minutes with GCC 13. The
+  comparisons are forced inline and stay so in every setting of `KAIRN_ENCLOSURE_CODE`, which moves
+  only the arithmetic; `hull`, `intersection` and `split()` compile in 5 to 25 s at 10 000
+  ([question 12](#12-compile-time-of-the-enclosure-interface)).
+
 ## The answers
 
 ### 1. Rounding down and up without a rounding mode
@@ -908,10 +915,10 @@ come](#still-to-come)), at commit `cbe3bb1` (`main` at `aa168ee` and the harness
 changes nothing under `include/`), 2026-11-22, on the same two machines and four compilers, `-O2`
 and `-O3`, three runs of each configuration: `Packed` and the containers of `soa.hpp`
 ([question 8](#8-packed-and-the-containers)); the interface that `Interval` and `Ball` share
-(question 9); one algorithm, the bisection of the tutorial, over
-four enclosure types (question 10); `kairn::self_test()` and
-the checks of `KAIRN_CHECKS` (question 11); and the compile time of
-the interface (question 12). The harness is that of
+([question 9](#9-the-enclosure-interface)); one algorithm, the bisection of the tutorial, over
+four enclosure types ([question 10](#10-one-algorithm-over-four-types)); `kairn::self_test()` and
+the checks of `KAIRN_CHECKS` ([question 11](#11-self_test-and-the-checks)); and the compile time of
+the interface ([question 12](#12-compile-time-of-the-enclosure-interface)). The harness is that of
 the first part, four files more (`bench/m2_soa.cpp`, `m2_soa_scalar.cpp`, `m2_enc.cpp`,
 `m2_run.cpp`; [bench/README.md](https://github.com/danielepanozzo/kairn/tree/main/bench),
 "Milestone 2"), with the same driver, statistic and checks; the runs are the files
@@ -1346,6 +1353,79 @@ are generated kernels called directly, which no check reaches.
   conversions). The controls, kernels called directly, take 0.98 to
   1.01 of their time without the checks.
 
+### 12. Compile time of the enclosure interface
+
+What does a large function full of the interface's calls cost the compiler, and does
+`KAIRN_ENCLOSURE_CODE` change it? A translation unit of 1 000 or 10 000 calls in one function, in
+straight-line code (`bench/enclosure_costs.py`, `--kind compare`, `contains` or `setops`): the
+three-valued comparisons `less`, `less_equal`, `equal`; `contains` of a point and of a set; `hull`,
+`intersection`, `split()`; each on `Interval<double, 1>`, `Interval<double, 2>`, `Ball<double, 1>`
+and `Ball<double, 2>` in turn, each call on operands of its own (elements of input arrays that no
+other call reads, so that no call can be merged with another) and each result stored. Compiled in
+the three settings the first part measured for the arithmetic ([question 7](#7-the-settings-of-kairn_enclosure_code)),
+and as "calls", the same unit without Kairn, the types structures of `double`s and the functions
+declared only. The units of 1 000 calls three times in rounds at `-O2` and `-O3`, those of 10 000
+once at `-O2` (as the first part did for GCC 16's largest units), with a limit of 30 minutes; the
+compiler's processor time, as in the first part, and its peak memory and object.
+
+| The comparisons: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 4.50; 4.56 | 5.54; 8.41 | 62.3; 62.7 | 8.05; 8.15 |
+| 1000, outlined | 4.41; 4.50 | 5.54; 8.42 | 62.4; 62.4 | 8.04; 8.04 |
+| 1000, external | 4.47; 4.49 | 5.52; 8.38 | 62.9; 62.5 | 8.00; 7.97 |
+| 1000, calls | 0.08; 0.08 | 0.33; 0.67 | 0.33; 0.33 | 0.38; 0.38 |
+| 10000, inline | 730; – | 140; – | stopped at 1800; – | 1435; – |
+| 10000, outlined | 681; – | 143; – | stopped at 1800; – | 1513; – |
+| 10000, external | 673; – | 134; – | stopped at 1800; – | 1579; – |
+| 10000, calls | 2.68; – | 3.80; – | 4.49; – | 12.2; – |
+
+| contains: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 0.53; 1.77 | 1.54; 1.96 | 2.67; 2.77 | 2.37; 2.37 |
+| 1000, calls | 0.10; 0.10 | 0.32; 0.66 | 0.35; 0.36 | 0.40; 0.40 |
+| 10000, inline | 9.35; – | 22.3; – | 107; – | 72.1; – |
+| 10000, calls | 2.36; – | 4.08; – | 5.30; – | 10.8; – |
+
+| hull, intersection, split: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 0.47; 0.54 | 2.06; 2.71 | 2.99; 3.13 | 1.75; 1.75 |
+| 1000, calls | 0.22; 0.22 | 0.50; 1.04 | 0.55; 0.56 | 0.45; 0.45 |
+| 10000, inline | 5.31; – | 14.2; – | 24.4; – | 17.8; – |
+| 10000, calls | 6.85; – | 6.43; – | 8.49; – | 16.4; – |
+
+| The comparisons: peak memory, MB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 426; 432 | 558; 582 | 583; 583 | 209; 209 |
+| 10000, inline | 3283; – | 4334; – |  | 1090; – |
+
+- **The setting changes nothing here, as the design says**: the comparisons, `contains`, `hull`,
+  `intersection` and `split()` stay inline in every setting of `KAIRN_ENCLOSURE_CODE`
+  (`config.hpp`), so the three settings compile the same code: every object has the same size to
+  the byte in the three, and the medians of the times agree within 2% for the units of 1 000 calls (7% for Apple clang's
+  shortest, half a second), within 9% (Apple clang) and 10% (Clang 18, while the machine's load rose from 3 to 76) for the single
+  compilations of 10 000. A large function of these calls compiles as slowly in the outlined and
+  external settings as inline.
+- **The comparisons are what is slow, and they are slow with every compiler at 10 000.** A function
+  with 1 000 calls of `less`, `less_equal` and `equal` takes 4.5 s with Apple clang, 5.5 s with
+  GCC 16 (8.4 at `-O3`), 8.0 s with Clang 18 and 62 s with GCC 13, against 0.08 to 0.67 s for the
+  same calls without Kairn; with 10 000 calls, 134 to 143 s with GCC 16 (4.3 GB), 673 to 730 s with
+  Apple clang (3.3 GB), 1 435 to 1 579 s with Clang 18 (1.1 GB), and GCC 13 had not finished after
+  30 minutes in any setting, where the measurement stops it. The same function with `contains` takes
+  0.5 to 2.8 s and 8.6 to 108 s, with `hull`, `intersection` and `split()` 0.5 to 3.2 s and 5.3 to
+  24.5 s.
+- **Why the comparisons**: `kairn::less` and its kin are free functions forced inline
+  (`KAIRN_FORCEINLINE`), so each of the calls becomes its kernel in the function, where `hull`,
+  `intersection` and `split()` are ordinary inline members that Apple clang and GCC 13 emit once and
+  call (the objects define `Ball<double, 2>::hull`, `intersection`, `split` and `Interval::split`);
+  the comparison unit's object is 2.2 to 3.4 MB at 10 000 calls. Where the time goes differs by
+  compiler: Apple clang spends 70% of a unit of 3 000 comparisons in its SLP vectorizer and 13% in
+  instruction scheduling, both of which grow faster than the function; GCC 13 spends 58% of a unit
+  of 1 000 in its inlining heuristics and 18% in partial redundancy elimination, a cost GCC 16 does
+  not have (5.5 s against 62).
+- **What a program should do**: keep the comparisons of enclosures in functions of modest size (a
+  thousand calls compile in 4.5 to 62 s); the setting of `KAIRN_ENCLOSURE_CODE` does not help, since
+  it moves the arithmetic only.
+
 ### What the machine code shows (second part)
 
 The loops of the new timed functions were disassembled on every configuration and summarized by
@@ -1371,7 +1451,7 @@ tables:
    `kairn::Interval<double, 1>::midpoint()`, which runs the whole kernel. Clang 18's loop of
    `Ball<double, 2>::intersection` is a call per element, where the kernel called directly is a loop
    of 809 instructions on 256-bit registers: hence its 2.26 times. The free functions of the
-   interface, `kairn::less` and the others, are forced inline (question 12).
+   interface, `kairn::less` and the others, are forced inline ([question 12](#12-compile-time-of-the-enclosure-interface)).
 
 ### How the second part was measured
 
@@ -1381,7 +1461,9 @@ tables:
 | Zen 2: Linux x86-64, AMD EPYC 7452, 2 × 32 cores | GCC 13.3, Clang 18.1; `-O2` and `-O3`; `-mfma`, the files of `Packed` and of the containers `-mavx2 -mfma` (`Packed` in its AVX2 form: 4 lanes of `double`, 8 of `float`) | each run pinned to the logical CPU of the second socket whose usage and that of its SMT sibling were the lowest over the 2 s before it (under 2%), `taskset` and `--cpu`; `mpstat` of the CPU and its sibling every 5 s during the run, kept with the runs' logs; one measurement at a time |
 
 - **Commit**: `cbe3bb1`, which adds the harness of the second part to `main` at `aa168ee` and
-  changes nothing under `include/`; recorded in every file.
+  changes nothing under `include/`; the compile measurements of questions 11 and 12 at `e2f497c`,
+  which adds an option to `enclosure_costs.py` (`--once-from`) and changes nothing else; recorded in
+  every file.
 - **Flags**: those of the first part; the checks of question 11 with `KAIRN_CHECKS=1` in every
   translation unit (`kairn-bench-m2-checks-LEVEL`).
 - **Statistic**: as in the first part, the minimum over 41 (M3) or 31 (Zen 2) samples of about 4 ms;
@@ -1391,7 +1473,23 @@ tables:
 - **Checks before timing**: every timed function against its reference, byte for byte, in every run
   ([Checks of the second part](#checks-of-the-second-part)); none failed.
 - **Windows**: this part has no Windows machine; the Windows figures of Milestone 2 are those of the
-  first part where it has them (it has none either: Windows and MSVC were not measured in Milestone 2).
+  first part where it has them (it has none: Windows and MSVC were not measured in Milestone 2).
+- **Not measured in the second part**: Windows and MSVC, Intel processors, AVX-512, GPUs; the
+  functions on arrays, `BallVector` and the accumulator, which are not on `main`; the run time of
+  the units of question 12 (their compile time only), and those units of 10 000 calls at `-O3`;
+  `KAIRN_CHECKS` on `Packed` and the containers; a bisection on another polynomial (the tutorial's
+  finishes in 3 to 520 µs, which the harness times by repeating it).
+- **Noise**: on Zen 2 a function's spread over the three runs of a configuration is 0.2 to 2.0% at
+  the median function and 1.0 to 5.8% at the 90th percentile; on the M3 0.0 to 4.9% and 3.9 to 9.4%,
+  a whole M3 run being a few percent faster or slower than another, which moves times and not ratios
+  within a run ([Runs of the second part](#runs-of-the-second-part)). The loops beyond the last-level
+  cache are left out of the 5% rule of the M3 runs: their spread is that of the memory system, not
+  of a disturbance. Of 21 M3 runs set aside by the rule, one (GCC 16, `-O3`, with the checks, third
+  round) passed at its sixth attempt, five having had a median spread of 5.4 to 5.7%. On Zen 2 five
+  runs whose SMT sibling was busy for 1 to 4 samples of 5 s were kept, being within 1.0% of their
+  configuration's fastest run at the median function and 1.6% at the 90th percentile; the runs of
+  2 s (the bisections) are shorter than `mpstat`'s interval and have no sample. A cell's range
+  includes this noise; differences within it are not differences.
 
 ## Still to come
 
@@ -2775,3 +2873,104 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 | `m2e/tp/b2_less/op` | 6.17; 8.61 (-O2), 6.22; 8.61 (-O3) | 4.67; 9.22 (-O2), 5.02; 9.84 (-O3) | 16.3; 28.4 (-O2), 16.2; 27.2 (-O3) | 19.3; 24.4 (-O2), 19.4; 24.4 (-O3) |
 | `m2e/tp/i2_split/op` | 7.32; 11.2 (-O2), 7.85; 10.6 (-O3) | 6.73; 9.32 (-O2), 6.33; 8.8 (-O3) | 16.2; 26.4 (-O2), 23.5; 26.3 (-O3) | 16.4; 18.6 (-O2), 16.4; 18.6 (-O3) |
 | `m2/tp/interval_mul_1/kairn` | 6.34; 6.14 (-O2), 6.31; 6.28 (-O3) | 7.77; 7.91 (-O2), 7.97; 7.92 (-O3) | 9.85; 9.86 (-O2), 9.86; 9.87 (-O3) | 16.9; 17 (-O2), 17; 16.9 (-O3) |
+
+#### Question 12: compile time of the enclosure interface
+
+| compare: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 4.50; 4.56 | 5.54; 8.41 | 62.3; 62.7 | 8.05; 8.15 |
+| 1000, outlined | 4.41; 4.50 | 5.54; 8.42 | 62.4; 62.4 | 8.04; 8.04 |
+| 1000, external | 4.47; 4.49 | 5.52; 8.38 | 62.9; 62.5 | 8.00; 7.97 |
+| 1000, calls | 0.08; 0.08 | 0.33; 0.67 | 0.33; 0.33 | 0.38; 0.38 |
+| 10000, inline | 730; – | 140; – | stopped at 1800; – | 1435; – |
+| 10000, outlined | 681; – | 143; – | stopped at 1800; – | 1513; – |
+| 10000, external | 673; – | 134; – | stopped at 1800; – | 1579; – |
+| 10000, calls | 2.68; – | 3.80; – | 4.49; – | 12.2; – |
+
+| compare: peak memory, MB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 426; 432 | 558; 582 | 583; 583 | 209; 209 |
+| 1000, outlined | 430; 423 | 556; 583 | 582; 582 | 209; 210 |
+| 1000, external | 430; 419 | 558; 584 | 582; 582 | 209; 209 |
+| 1000, calls | 47; 47 | 66; 67 | 53; 52 | 107; 107 |
+| 10000, inline | 3283; – | 4334; – |  | 1090; – |
+| 10000, outlined | 3269; – | 4292; – |  | 1090; – |
+| 10000, external | 3298; – | 4336; – |  | 1090; – |
+| 10000, calls | 184; – | 503; – | 300; – | 214; – |
+
+| compare: object, KB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 212; 212 | 255; 256 | 387; 387 | 325; 325 |
+| 1000, outlined | 212; 212 | 255; 256 | 387; 387 | 325; 325 |
+| 1000, external | 212; 212 | 255; 256 | 387; 387 | 325; 325 |
+| 1000, calls | 25; 25 | 25; 29 | 53; 53 | 56; 56 |
+| 10000, inline | 2111; – | 2638; – |  | 3332; – |
+| 10000, outlined | 2111; – | 2638; – |  | 3332; – |
+| 10000, external | 2111; – | 2638; – |  | 3332; – |
+| 10000, calls | 285; – | 270; – | 519; – | 548; – |
+
+| contains: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 0.53; 1.77 | 1.54; 1.96 | 2.67; 2.77 | 2.37; 2.37 |
+| 1000, outlined | 0.57; 1.77 | 1.55; 1.97 | 2.67; 2.77 | 2.37; 2.37 |
+| 1000, external | 0.54; 1.77 | 1.55; 1.96 | 2.67; 2.77 | 2.37; 2.37 |
+| 1000, calls | 0.10; 0.10 | 0.32; 0.66 | 0.35; 0.36 | 0.40; 0.40 |
+| 10000, inline | 9.35; – | 22.3; – | 107; – | 72.1; – |
+| 10000, outlined | 8.99; – | 22.1; – | 108; – | 71.0; – |
+| 10000, external | 8.60; – | 22.3; – | 106; – | 71.2; – |
+| 10000, calls | 2.36; – | 4.08; – | 5.30; – | 10.8; – |
+
+| contains: peak memory, MB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 118; 349 | 260; 256 | 176; 174 | 152; 152 |
+| 1000, outlined | 121; 354 | 262; 277 | 177; 174 | 152; 152 |
+| 1000, external | 119; 351 | 273; 256 | 176; 174 | 152; 152 |
+| 1000, calls | 53; 53 | 75; 82 | 54; 55 | 107; 106 |
+| 10000, inline | 622; – | 1848; – | 916; – | 552; – |
+| 10000, outlined | 604; – | 1847; – | 915; – | 552; – |
+| 10000, external | 613; – | 1713; – | 916; – | 552; – |
+| 10000, calls | 221; – | 649; – | 308; – | 216; – |
+
+| contains: object, KB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 103; 139 | 60; 59 | 119; 117 | 171; 171 |
+| 1000, outlined | 103; 139 | 60; 59 | 119; 117 | 171; 171 |
+| 1000, external | 103; 139 | 60; 59 | 119; 117 | 171; 171 |
+| 1000, calls | 25; 25 | 25; 29 | 53; 53 | 55; 55 |
+| 10000, inline | 1032; – | 397; – | 832; – | 1860; – |
+| 10000, outlined | 1032; – | 397; – | 832; – | 1860; – |
+| 10000, external | 1032; – | 397; – | 832; – | 1860; – |
+| 10000, calls | 282; – | 295; – | 516; – | 539; – |
+
+| setops: compile time, s of processor time (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 0.47; 0.54 | 2.06; 2.71 | 2.99; 3.13 | 1.75; 1.75 |
+| 1000, outlined | 0.47; 0.54 | 2.04; 2.66 | 2.98; 3.13 | 1.75; 1.75 |
+| 1000, external | 0.47; 0.54 | 1.99; 2.69 | 2.98; 3.16 | 1.75; 1.75 |
+| 1000, calls | 0.22; 0.22 | 0.50; 1.04 | 0.55; 0.56 | 0.45; 0.45 |
+| 10000, inline | 5.31; – | 14.2; – | 24.4; – | 17.8; – |
+| 10000, outlined | 5.88; – | 14.3; – | 24.5; – | 17.7; – |
+| 10000, external | 5.78; – | 14.3; – | 24.5; – | 17.8; – |
+| 10000, calls | 6.85; – | 6.43; – | 8.49; – | 16.4; – |
+
+| setops: peak memory, MB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 92; 98 | 286; 298 | 196; 200 | 133; 133 |
+| 1000, outlined | 92; 99 | 277; 300 | 195; 200 | 133; 133 |
+| 1000, external | 92; 106 | 283; 291 | 196; 182 | 133; 133 |
+| 1000, calls | 68; 68 | 93; 100 | 69; 69 | 113; 113 |
+| 10000, inline | 469; – | 1204; – | 619; – | 381; – |
+| 10000, outlined | 447; – | 1204; – | 616; – | 381; – |
+| 10000, external | 460; – | 1202; – | 614; – | 382; – |
+| 10000, calls | 339; – | 841; – | 451; – | 266; – |
+
+| setops: object, KB (-O2; -O3) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1000, inline | 68; 92 | 68; 68 | 139; 138 | 155; 156 |
+| 1000, outlined | 68; 92 | 68; 68 | 139; 138 | 155; 156 |
+| 1000, external | 68; 92 | 68; 68 | 139; 138 | 155; 156 |
+| 1000, calls | 39; 39 | 36; 36 | 80; 80 | 77; 77 |
+| 10000, inline | 623; – | 628; – | 1057; – | 1369; – |
+| 10000, outlined | 623; – | 628; – | 1057; – | 1369; – |
+| 10000, external | 623; – | 628; – | 1057; – | 1369; – |
+| 10000, calls | 416; – | 374; – | 781; – | 753; – |

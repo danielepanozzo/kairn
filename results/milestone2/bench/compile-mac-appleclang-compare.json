@@ -1,0 +1,290 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-22",
+ "commit": "e2f497c",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity); shared with other jobs",
+  "cpu": "Apple M3 Max",
+  "pinning": "not pinned"
+ },
+ "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+ "cxx": "c++",
+ "flags": "",
+ "kind": "compare",
+ "timeout": 1800,
+ "reps": 3,
+ "run_reps": 0,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    4.505,
+    4.32,
+    4.512
+   ],
+   "cpu": [
+    4.5,
+    4.315,
+    4.507
+   ],
+   "peak_mb": [
+    414.4,
+    426.0,
+    431.3
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 216688
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    4.514,
+    4.374,
+    4.416
+   ],
+   "cpu": [
+    4.508,
+    4.369,
+    4.412
+   ],
+   "peak_mb": [
+    431.5,
+    429.8,
+    416.1
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 216688
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    4.473,
+    4.476,
+    4.552
+   ],
+   "cpu": [
+    4.468,
+    4.471,
+    4.547
+   ],
+   "peak_mb": [
+    431.5,
+    426.1,
+    430.0
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 216688
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "calls",
+   "wall": [
+    0.079,
+    0.082,
+    0.083
+   ],
+   "cpu": [
+    0.076,
+    0.079,
+    0.079
+   ],
+   "peak_mb": [
+    47.4,
+    47.3,
+    47.2
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 25896
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    4.362,
+    4.636,
+    4.568
+   ],
+   "cpu": [
+    4.357,
+    4.633,
+    4.563
+   ],
+   "peak_mb": [
+    411.9,
+    432.1,
+    432.3
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 216688
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    4.561,
+    4.506,
+    4.436
+   ],
+   "cpu": [
+    4.556,
+    4.501,
+    4.431
+   ],
+   "peak_mb": [
+    432.1,
+    422.3,
+    423.0
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 216688
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    4.539,
+    4.477,
+    4.498
+   ],
+   "cpu": [
+    4.534,
+    4.472,
+    4.493
+   ],
+   "peak_mb": [
+    432.5,
+    418.9,
+    415.2
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 216688
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "calls",
+   "wall": [
+    0.086,
+    0.084,
+    0.085
+   ],
+   "cpu": [
+    0.083,
+    0.081,
+    0.082
+   ],
+   "peak_mb": [
+    47.3,
+    47.3,
+    47.2
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 25896
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.295,
+    0.289,
+    0.285
+   ],
+   "cpu": [
+    0.291,
+    0.286,
+    0.281
+   ],
+   "peak_mb": [
+    77.1,
+    77.2,
+    77.0
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 23024
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.288,
+    0.286,
+    0.278
+   ],
+   "cpu": [
+    0.284,
+    0.282,
+    0.275
+   ],
+   "peak_mb": [
+    76.8,
+    77.0,
+    77.0
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 23024
+  }
+ ]
+}
