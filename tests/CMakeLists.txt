@@ -690,30 +690,26 @@ set(_toy_ext_b2_2_sum fp:3:-3:0)
 set(KAIRN_NOT_YET_CROSS_CHECKED)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
 # The folds that no public function calls yet and that the public interface's runner lists in none
-# of its lists (api/coverage.cmake): those of BallVector (architecture.md, "Ball vectors"), whose
-# header comes later. Cross-checked like every fold; the public interface has no form of them.
-set(KAIRN_NOT_PUBLIC_YET_FOLDS
-  bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2 bv_neg_1 bv_neg_2 bv_mul_pow2_1 bv_mul_pow2_2
-  bv_make_1 bv_make_2 bv_conv_1 bv_conv_2)
+# of its lists (api/coverage.cmake): none. Those of BallVector (architecture.md, "Ball vectors") left
+# it with include/kairn/ball_vector.hpp, whose forms reach each (api/CMakeLists.txt, _api_loops).
+set(KAIRN_NOT_PUBLIC_YET_FOLDS)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the steps of the maps on stored
 # arrays, which no public function calls (include/kairn/batch.hpp calls the maps on supplied
-# arrays: sub_1_1 is the step of sub_1, axpy_step_k of axpy_k); and the kernels of the ball vectors
-# (architecture.md, "Ball vectors"), which only the folds of BallVector call. They are cross-checked like every kernel; the public interface has no form of
-# them. (The interval kernels left this list with include/kairn/interval.hpp; the steps, finishes
-# and kernels of the folds of maxima that kairn/batch.hpp calls with it, the public interface
-# reaching each through its fold, which api.oracle.FOLD.FORMAT judges, and listing it as a
-# building block or as not public on its own; the bounds as functions of n with
-# kairn::traits<X>::sum(n), sum_height(h) and dot(n), the forms of api.oracle.bound_*; the kernels
-# of the accumulator with include/kairn/accumulator.hpp, acc_radius_k as a building block; and the
-# 53 kernels of the enclosure interface of stage B2, _enclosure_kernels above, with the functions
-# of interval.hpp and ball.hpp that call them: predicates, comparisons, relations of IEEE 1788, set
-# operations of a ball, conversions of two limbs; runner.cpp maps a public form to each.)
-set(KAIRN_NOT_PUBLIC_YET
-  sub_1_1 axpy_step_1 axpy_step_2 axpy_step_2_1
-  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2 bv_center_entry_1 bv_center_2
-  bv_make_radius bv_make_finish neg_1 bv_neg_radius bv_mul_pow2_step_1 bv_mul_pow2_step_2
-  bv_mul_pow2_radius conv_radius bv_conv_finish)
+# arrays: axpy_step_k is the step of axpy_k). They are cross-checked like every kernel; the public
+# interface has no form of them. (The interval kernels left this list with
+# include/kairn/interval.hpp; the steps, finishes and kernels of the folds of maxima that
+# kairn/batch.hpp calls with it, the public interface reaching each through its fold, which
+# api.oracle.FOLD.FORMAT judges, and listing it as a building block or as not public on its own;
+# the bounds as functions of n with kairn::traits<X>::sum(n), sum_height(h) and dot(n), the forms of
+# api.oracle.bound_*; the kernels of the accumulator with include/kairn/accumulator.hpp,
+# acc_radius_k as a building block; the 53 kernels of the enclosure interface of stage B2,
+# _enclosure_kernels above, with the functions of interval.hpp and ball.hpp that call them:
+# predicates, comparisons, relations of IEEE 1788, set operations of a ball, conversions of two
+# limbs, runner.cpp mapping a public form to each; and the kernels of the ball vectors with
+# include/kairn/ball_vector.hpp: they are parts of the loops its operations call, judged through
+# those loops' forms, api/CMakeLists.txt, _api_loop_parts, sub_1_1 and neg_1 among them.)
+set(KAIRN_NOT_PUBLIC_YET axpy_step_1 axpy_step_2 axpy_step_2_1)
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than

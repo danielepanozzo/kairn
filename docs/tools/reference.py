@@ -628,6 +628,27 @@ def load_operations(root):
     return module
 
 
+def fold_kernels(root, fold, seen=()):
+    """The names that gen/kernels/FOLD.fold calls in its step, records, combinations, radius, bound and
+    finish, its check, and those of the folds it names as its centers or coefficients, in order."""
+    path = os.path.join(root, "gen", "kernels", fold + ".fold")
+    if fold in seen or not os.path.exists(path):
+        return []
+    out = []
+    for line in read(path).split("\n"):
+        m = re.match(r"(step|record|combine|radius|bound|finish|check|centers|coefficients):\s+(.*)", line)
+        if not m:
+            continue
+        if m.group(1) in ("centers", "coefficients"):
+            names = fold_kernels(root, m.group(2).strip(), seen + (fold,))
+        elif m.group(1) == "check":
+            names = [m.group(2).strip()]
+        else:
+            names = re.findall(r"=\s*([a-z][a-z0-9_]*)\(", m.group(2))
+        out += [n for n in names if n not in out]
+    return out
+
+
 def natural_key(text):
     return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", text)]
 
@@ -1553,6 +1574,14 @@ class Site:
         for k in self.kernels.values():
             for callee in k.calls(self.all_names):
                 self.callers.setdefault(callee, []).append(k.name)
+        # The loops that public operations call (reference_operations.LOOPS), and for each kernel the
+        # loops whose descriptions name it.
+        self.loops = dict(getattr(ops, "LOOPS", {}))
+        self.loops_of = {}
+        for loop in self.loops:
+            for name in fold_kernels(root, loop):
+                if name in self.all_names and loop not in self.loops_of.get(name, []):
+                    self.loops_of.setdefault(name, []).append(loop)
         self.ce_of = {k.listing["fields"]["ce_variant"]: k.name for k in self.kernels.values()
                       if k.listing["fields"].get("ce_variant")}
         # The cores of full kernels, and the full kernels that build on a finite kernel.
@@ -1583,8 +1612,15 @@ class Site:
         return "`%s`" % name
 
     def not_called(self, name):
-        """An entry kernel with no form in the table: one the public headers do not call yet."""
-        return not self.ops.KERNELS[name]["forms"] and self.kernels[name].listing["fields"].get("entry") == "yes"
+        """An entry kernel with no form in the table and in no loop that public operations call: one the
+        public headers do not call yet."""
+        return (not self.ops.KERNELS[name]["forms"] and name not in self.loops_of
+                and self.kernels[name].listing["fields"].get("entry") == "yes")
+
+    def in_loops(self, name):
+        """The sentence of a kernel that is part of loops that public operations call."""
+        return " It is part of %s." % "; and of ".join(
+            "the loop `%s`, called by %s" % (l, self.loops[l]) for l in self.loops_of[name])
 
     # One page per kernel.
     def page(self, name):
@@ -1813,6 +1849,8 @@ class Site:
         text = "No public operation computes this kernel on its own."
         if callers:
             text += " It is part of %s." % ", ".join(self.link(c) for c in callers)
+        if name in self.loops_of:
+            text += self.in_loops(name)
         if name in self.ce_of:
             text += " It replaces %s in constant evaluation, where there is no fused multiply-add." % (
                 self.link(self.ce_of[name]))
@@ -3288,6 +3326,10 @@ class Site:
                     ops = ", ".join("`%s`" % c for c in codes)
                 elif self.not_called(name):
                     ops = NOT_CALLED
+                elif name in self.loops_of:
+                    ops = "none of its own (in the loop%s %s)" % (
+                        "s" if len(self.loops_of[name]) > 1 else "",
+                        ", ".join("`%s`" % l for l in self.loops_of[name]))
                 else:
                     ops = "none (internal)"
                 operands = operand_types(forms[0]) if forms else "-"

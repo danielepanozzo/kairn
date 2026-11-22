@@ -9,7 +9,8 @@
 #
 # - none: the build's compiler. full.crosscheck.compiled.KERNEL.FORMAT, every compiled runner on
 #   KAIRN_CROSSCHECK_CASES cases, full.api.oracle.KERNEL.FORMAT, every public form on
-#   KAIRN_API_CASES cases (api/CMakeLists.txt), and full.objcode.check and full.objcode.controls,
+#   KAIRN_API_CASES cases (api/CMakeLists.txt; a loop of kairn/ball_vector.hpp, LOOP in place of
+#   KERNEL, on KAIRN_API_LOOP_CASES), and full.objcode.check and full.objcode.controls,
 #   the object code on the whole flag matrix (label objcode): on every platform and compiler of the
 #   CI.
 # - python: Python alone, in exact arithmetic (the interpreter, the oracle and its Python runner
@@ -365,6 +366,25 @@ foreach(_fold IN LISTS _api_oracle_folds)
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle;flags;arrays")
   endforeach()
 endforeach()
+# The loops over arrays that public operations call (kairn/ball_vector.hpp), the same way, on
+# KAIRN_API_LOOP_CASES requests; the runner of the packed forms alone on those that have forms in the
+# fast order.
+foreach(_loop IN LISTS _api_oracle_loops)
+  set(_extra "")
+  if(_loop IN_LIST _api_loops_fast)
+    set(_extra ${_api_packed_runner})
+  endif()
+  if(_loop IN_LIST _api_loops_product)
+    list(APPEND _extra --max-length ${KAIRN_API_LOOP_PRODUCT_LENGTH})
+  endif()
+  foreach(_format binary64 binary32)
+    set(_name full.api.oracle.${_loop}.${_format})
+    add_test(NAME ${_name}
+      COMMAND ${_crosscheck} api --kernel ${_loop} --format ${_format} --count ${KAIRN_API_LOOP_CASES}
+        --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-oracle" ${_api_full_common} ${_extra})
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 900 LABELS "full;api;oracle")
+  endforeach()
+endforeach()
 
 # --- The flag sets (api/flags/) -----------------------------------------------------------------
 #
@@ -382,6 +402,20 @@ foreach(_kernel IN LISTS _api_oracle_kernels)
         --count ${KAIRN_API_QUICK_CASES} --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-flags"
         ${_api_flags_common})
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle;flags")
+  endforeach()
+endforeach()
+foreach(_loop IN LISTS _api_oracle_loops)
+  set(_extra "")
+  if(_loop IN_LIST _api_loops_product)
+    set(_extra --max-length ${KAIRN_API_LOOP_PRODUCT_LENGTH})
+  endif()
+  foreach(_format binary64 binary32)
+    set(_name full.api.flags.oracle.${_loop}.${_format})
+    add_test(NAME ${_name}
+      COMMAND ${_crosscheck} api --kernel ${_loop} --format ${_format}
+        --count ${KAIRN_API_LOOP_QUICK_CASES} --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-flags"
+        ${_api_flags_common} ${_extra})
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 900 LABELS "full;api;oracle;flags")
   endforeach()
 endforeach()
 foreach(_set IN LISTS _flags_names)

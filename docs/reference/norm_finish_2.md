@@ -12,7 +12,7 @@ $$r = \mathrm{succ}(m) \ \text{when } \mathit{ok} \text{ is true and } \mathrm{s
 
 ## C++
 
-No public operation computes this kernel on its own.
+No public operation computes this kernel on its own. It is part of the loop `norm_upper_2`, called by `norm_upper` of `SoAView<const T, 2>` ([Functions on arrays](batch.md)) and of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

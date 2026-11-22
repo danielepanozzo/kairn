@@ -255,7 +255,12 @@ class Table(unittest.TestCase):
         entry = [k for k, p in self.ops.KERNELS.items() if not p["forms"] and reference.load_listing(
             ROOT, k)["fields"].get("entry") == "yes"]
         self.assertIn("ball_add_2", entry)
-        used = [k for k in entry if k in named | called]
+        # A kernel that a loop of reference_operations.LOOPS names (the loops of kairn/ball_vector.hpp,
+        # whose steps the program's arrays enter, bv_center_entry_1 among them) has a page that says
+        # which loop and which operations call it: not "no header calls it".
+        parts = {n for loop in getattr(self.ops, "LOOPS", {}) for n in reference.fold_kernels(ROOT, loop)}
+        self.assertIn("bv_center_entry_1", parts)
+        used = [k for k in entry if k in named | called and k not in parts]
         self.assertEqual(used, [], "kernels the headers name or call, listed in the table without forms "
                                    "(their pages would say that no header calls them)")
 

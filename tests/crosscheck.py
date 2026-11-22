@@ -72,7 +72,8 @@ output, if an output has no case of a stratum the generator's header announced, 
 exceeds the guards' bound (crosscheck_guards.SUMMARY_BYTES); and, for each
 --same-as LABEL OTHER, if a form of runner LABEL wrote other bytes than the same form of runner
 OTHER (the settings of KAIRN_ENCLOSURE_CODE, which must compute the same bits). K may be a fold
-whose requests carry arrays (the functions of kairn/batch.hpp): --orders and --max-length go to
+whose requests carry arrays (the functions of kairn/batch.hpp, the forms of kairn/ball_vector.hpp):
+--orders and --max-length go to
 the oracle's gen, and --inplace, for a map, adds a second stream whose requests are in place (gen
 --inplace), through every form, judged as the first, its outputs and summaries named K.F.inplace.
 

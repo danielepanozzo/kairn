@@ -34,6 +34,7 @@
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
+#include <kairn/ball_vector.hpp>
 
 #include <cstdio>
 
@@ -91,6 +92,16 @@ static int run() {
     const kairn::Packed<T, 2> px = arr.load(0) * kairn::Packed<T, 1>::broadcast(E1(T(2)));
     arr.store(0, px);
     if (arr.get(0).limb[0] != T(3) || !kairn::all(px == kairn::Packed<T, 2>::broadcast(E2(T(3))))) ++failures;
+    // Ball vectors, whose names are none of the macros' either.
+    using BV = kairn::BallVector<T, 2, 3>;
+    const BV bx({x, y, z}, T(0.5));
+    const BV by = kairn::half(bx + bx) - kairn::axpy(T(2), bx, bx) * T(0.25);
+    T cs[3] = {T(1), T(2), T(4)}, cr = T(0);
+    const kairn::BallVectorView<T, 1> bv(kairn::SoAView<T, 1>(cs, 3), cr);
+    kairn::ldexp(bv, -1, bv);
+    if (!by.is_finite() || cs[2] != T(2) || cr != T(0) ||
+        kairn::convolution(bx, BV::whole()).is_finite() || !(kairn::norm_upper(bx) >= T(12)))
+        ++failures;
     if (y.limb[0] != T(0.75) || y.limb[1] != T(0)) ++failures;
     if (a.limb[0] != T(0.75)) ++failures;
     if (z.limb[0] != T(12) || z.limb[1] != T(0)) ++failures;

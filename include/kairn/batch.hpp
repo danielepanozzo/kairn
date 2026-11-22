@@ -82,6 +82,7 @@
 /// docs/reference/batch.md, states what a program may write with them.
 #pragma once
 
+#include "order.hpp"
 #include "reduction.hpp"
 #include "soa.hpp"
 #include "traits.hpp"
@@ -98,15 +99,9 @@
 KAIRN_GEN_PUSH_WARNINGS
 namespace kairn {
 
-/// The type of kairn::sequential.
-struct Sequential {
-    /// Only kairn::sequential is meant to be one.
-    explicit constexpr Sequential() noexcept = default;
-};
-/// Asks sum, sum_fast and dot for the sequential order: element after element, from zero, the same
-/// bits on every platform and in every form of Packed. Without it they use the lane order of the
-/// translation unit's form, the packed loop.
-inline constexpr Sequential sequential{};
+// kairn::sequential, which asks sum, sum_fast and dot for the sequential order (element after
+// element, from zero, the same bits on every platform and in every form of Packed), is defined in
+// order.hpp, with the operations of BallVector's.
 
 namespace detail {
 

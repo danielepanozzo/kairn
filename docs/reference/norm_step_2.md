@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$.
 
 ## C++
 
-No public operation computes this kernel on its own.
+No public operation computes this kernel on its own. It is part of the loop `bv_make_2`, called by the constructors of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)); and of the loop `bv_neg_2`, called by `-x` and `neg(x, z)` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)); and of the loop `bv_add_2`, called by `x + y`, `x += y`, `add(x, y, z)` and `axpy` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)); and of the loop `bv_sub_2`, called by `x - y`, `x -= y` and `sub(x, y, z)` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)); and of the loop `bv_scale_2`, called by `x * a`, `a * x`, `x *= a`, `scale(x, a, z)` and `axpy` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)); and of the loop `bv_mul_pow2_2`, called by `ldexp` and `half` of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)); and of the loop `bv_conv_2`, called by `convolution`, the product of polynomials, of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)); and of the loop `norm_upper_2`, called by `norm_upper` of `SoAView<const T, 2>` ([Functions on arrays](batch.md)) and of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

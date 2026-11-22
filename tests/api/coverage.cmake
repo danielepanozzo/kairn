@@ -6,25 +6,37 @@
 # by a public form or it is on the short list. A kernel added to the generator fails here until
 # someone decides which it is. The kernels of NOT_CHECKED, the lists KAIRN_NOT_YET_CROSS_CHECKED
 # (the kernels the oracle does not judge yet) and KAIRN_NOT_PUBLIC_YET (kernels judged by the
-# oracle whose public functions come later: those of the ball vectors, and the steps of the maps on
-# stored arrays) of tests/CMakeLists.txt, are in none of the runner's lists, and no public
-# operation calls them yet.
+# oracle that no public function calls: the steps of the maps on stored arrays) of
+# tests/CMakeLists.txt, are in none of the runner's lists, and no public operation calls them yet.
 #
 # With -DPACKED_HEADER=include/kairn/packed.hpp, also: the kernels that header calls (gen::NAME(
 # with NAME a kernel of the claims) are exactly those that the runner's packed forms map to
 # (runner --packed-list), and each is reached by a scalar public form too: every operation of
 # Packed is judged, and judged against the claims of a kernel the scalar interface has.
 #
-# And every fold of gen/claims.json is reached by a form of the functions on arrays (runner
-# --fold-list), or has no public caller, with the reason (runner --folds-not-public, the list
-# FOLDS_NOT_PUBLIC), or is one of FOLDS_NOT_CHECKED: exactly one.
+# And every fold of gen/claims.json is reached by a form of the public functions on arrays (runner
+# --fold-list, the functions of kairn/batch.hpp, or runner --loops, those of kairn/ball_vector.hpp;
+# norm_upper_k by both), or has no public caller, with the reason (runner --folds-not-public, the
+# list FOLDS_NOT_PUBLIC), or is one of FOLDS_NOT_CHECKED: exactly one of the three.
+#
+# The loops over arrays (the folds of gen/claims.json) that the operations of BallVector call: the
+# runner lists those it has forms of (runner --loops), which must be the LOOPS of
+# tests/api/CMakeLists.txt, each a fold of the claims; and the kernels that are parts of them and
+# that no public operation calls on its own (runner --loop-parts, each with its loop), which must be
+# the LOOP_PARTS there. A kernel that is a loop part counts as a fourth list beside the three above,
+# and may be an entry kernel (a step of a loop whose arrays the program supplies, judged through the
+# loop's forms). Each loop part is named by its loop's description (gen/kernels/LOOP.fold, its step,
+# records, combinations, radius, bound, finish or check, or those of the folds it names as its
+# centers or coefficients), and every kernel that a listed loop names that way is public: reached by
+# a form, a building block, or a loop part.
 #
 #   cmake -DRUNNER=... -DCLAIMS=gen/claims.json -DKERNELS=gen/kernels "-DINTERNAL=a;b"
 #         "-DNOT_PUBLIC=c;d" "-DNOT_CHECKED=e;f" "-DFOLDS_NOT_PUBLIC=g;h" "-DFOLDS_NOT_CHECKED=i;j"
+#         "-DLOOPS=k;l" "-DLOOP_PARTS=m;n"
 #         [-DPACKED_HEADER=...] -P coverage.cmake
 cmake_minimum_required(VERSION 3.21)
 
-set(_whats list internal not-public)
+set(_whats list internal not-public loops loop-parts)
 if(PACKED_HEADER)
   list(APPEND _whats packed-list)
 endif()
@@ -40,6 +52,12 @@ foreach(_what IN LISTS _whats)
     string(REGEX REPLACE "\t.*" "" _name "${_line}")
     if(_what STREQUAL "not-public" AND _name STREQUAL _line)
       message(FATAL_ERROR "runner --not-public: ${_name} has no reason beside it")
+    endif()
+    if(_what STREQUAL "loop-parts")
+      if(_name STREQUAL _line)
+        message(FATAL_ERROR "runner --loop-parts: ${_name} has no loop beside it")
+      endif()
+      string(REGEX REPLACE "^[^\t]*\t" "" _loop_of_${_name} "${_line}")
     endif()
     list(APPEND _names "${_name}")
   endforeach()
@@ -81,14 +99,75 @@ endif()
 set(_problems "")
 set(_internal ${INTERNAL})
 set(_not_public ${NOT_PUBLIC})
+set(_loops ${LOOPS})
+set(_loop_parts ${LOOP_PARTS})
 list(SORT _internal)
 list(SORT _not_public)
+list(SORT _loops)
+list(SORT _loop_parts)
 if(NOT _runner_internal STREQUAL _internal)
   list(APPEND _problems "internal in tests/api/CMakeLists.txt: ${_internal}; in tests/api/runner.cpp: ${_runner_internal}")
 endif()
 if(NOT _runner_not_public STREQUAL _not_public)
   list(APPEND _problems "not public in tests/api/CMakeLists.txt: ${_not_public}; in tests/api/runner.cpp: ${_runner_not_public}")
 endif()
+if(NOT _runner_loops STREQUAL _loops)
+  list(APPEND _problems "loops in tests/api/CMakeLists.txt: ${_loops}; in tests/api/runner.cpp: ${_runner_loops}")
+endif()
+if(NOT _runner_loop_parts STREQUAL _loop_parts)
+  list(APPEND _problems "loop parts in tests/api/CMakeLists.txt: ${_loop_parts}; in tests/api/runner.cpp: ${_runner_loop_parts}")
+endif()
+
+# The folds of the claims, and the kernels each fold names (its own lines, and those of the folds it
+# names as its centers or coefficients), from gen/kernels/FOLD.fold.
+string(JSON _n_folds LENGTH "${_json}" folds)
+math(EXPR _last_fold "${_n_folds} - 1")
+set(_claim_folds "")
+foreach(_i RANGE ${_last_fold})
+  string(JSON _f GET "${_json}" folds ${_i} name)
+  list(APPEND _claim_folds ${_f})
+endforeach()
+function(_fold_kernels fold out)
+  set(_found "")
+  set(_file "${KERNELS}/${fold}.fold")
+  if(NOT EXISTS "${_file}")
+    set(${out} "" PARENT_SCOPE)
+    return()
+  endif()
+  file(STRINGS "${_file}" _lines REGEX "^(step|record|combine|radius|bound|finish|check|centers|coefficients):")
+  foreach(_line IN LISTS _lines)
+    if(_line MATCHES "^(check|centers|coefficients):[ \t]+([a-z0-9_]+)")
+      set(_named "${CMAKE_MATCH_2}")
+      if(CMAKE_MATCH_1 STREQUAL "check")
+        list(APPEND _found ${_named})
+      else()
+        _fold_kernels(${_named} _inner)
+        list(APPEND _found ${_inner})
+      endif()
+    elseif(_line MATCHES "= *([a-z0-9_]+)\\(")
+      list(APPEND _found "${CMAKE_MATCH_1}")
+    endif()
+  endforeach()
+  set(${out} ${_found} PARENT_SCOPE)
+endfunction()
+foreach(_loop IN LISTS _runner_loops)
+  if(NOT _loop IN_LIST _claim_folds)
+    list(APPEND _problems "${_loop}, in the runner's loops, is not a fold of ${CLAIMS}")
+    continue()
+  endif()
+  _fold_kernels(${_loop} _named_${_loop})
+  if(NOT _named_${_loop})
+    list(APPEND _problems "${_loop}: its description names no kernel (${KERNELS}/${_loop}.fold): the scan is broken")
+  endif()
+endforeach()
+foreach(_k IN LISTS _runner_loop_parts)
+  set(_loop "${_loop_of_${_k}}")
+  if(NOT _loop IN_LIST _runner_loops)
+    list(APPEND _problems "${_k} is a part of ${_loop}, which is not among the runner's loops")
+  elseif(NOT _k IN_LIST _named_${_loop})
+    list(APPEND _problems "${_k} is listed as a part of ${_loop}, whose description does not name it")
+  endif()
+endforeach()
 set(_not_checked ${NOT_CHECKED})
 foreach(_k IN LISTS _not_checked)
   if(NOT _k IN_LIST _claims)
@@ -97,7 +176,7 @@ foreach(_k IN LISTS _not_checked)
 endforeach()
 foreach(_k IN LISTS _claims)
   set(_n 0)
-  foreach(_group list internal not_public)
+  foreach(_group list internal not_public loop_parts)
     if(_k IN_LIST _runner_${_group})
       math(EXPR _n "${_n} + 1")
     endif()
@@ -109,10 +188,21 @@ foreach(_k IN LISTS _claims)
     continue()
   endif()
   if(NOT _n EQUAL 1)
-    list(APPEND _problems "${_k} is in ${_n} of the runner's lists (public forms, internal, not public), not in one")
+    list(APPEND _problems "${_k} is in ${_n} of the runner's lists (public forms, internal, not public, loop parts), not in one")
   endif()
 endforeach()
-foreach(_group list internal not_public)
+# Every kernel that a public loop names is public: a form, a building block, or a loop part.
+foreach(_loop IN LISTS _runner_loops)
+  foreach(_k IN LISTS _named_${_loop})
+    if(NOT _k IN_LIST _claims)
+      continue()        # an operation of the IR (and, select), not a kernel
+    endif()
+    if(NOT _k IN_LIST _runner_list AND NOT _k IN_LIST _runner_internal AND NOT _k IN_LIST _runner_loop_parts)
+      list(APPEND _problems "${_k} is named by the public loop ${_loop} but is in none of the runner's lists of public kernels")
+    endif()
+  endforeach()
+endforeach()
+foreach(_group list internal not_public loop_parts)
   foreach(_k IN LISTS _runner_${_group})
     if(NOT _k IN_LIST _claims)
       list(APPEND _problems "${_k}, in the runner's ${_group}, is not a kernel of ${CLAIMS}")
@@ -125,8 +215,8 @@ foreach(_k IN LISTS _entry)
   endif()
   if(_k IN_LIST _runner_internal)
     list(APPEND _problems "${_k} is an entry kernel, but the runner lists it as a building block")
-  elseif(NOT _k IN_LIST _runner_list AND NOT _k IN_LIST _runner_not_public)
-    list(APPEND _problems "${_k} is an entry kernel that no public form reaches and that is not listed as not public yet")
+  elseif(NOT _k IN_LIST _runner_list AND NOT _k IN_LIST _runner_not_public AND NOT _k IN_LIST _runner_loop_parts)
+    list(APPEND _problems "${_k} is an entry kernel that no public form or loop reaches and that is not listed as not public yet")
   endif()
 endforeach()
 foreach(_k IN LISTS _runner_not_public)
@@ -134,10 +224,11 @@ foreach(_k IN LISTS _runner_not_public)
     list(APPEND _problems "${_k} is listed as not public yet, but it is not an entry kernel")
   endif()
 endforeach()
-# The folds (gen/claims.json, "folds"): each is reached by a form of the functions on arrays
-# (runner --fold-list), or listed with why no public function calls it (runner --folds-not-public,
-# the same list as FOLDS_NOT_PUBLIC), or is one of FOLDS_NOT_CHECKED (KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
-# and KAIRN_NOT_PUBLIC_YET_FOLDS of tests/CMakeLists.txt): exactly one of the three.
+# The folds (gen/claims.json, "folds"): each is reached by a public form (runner --fold-list, the
+# functions on arrays, or runner --loops, the operations of BallVector, or both, as norm_upper_k
+# is), or listed with why no public function calls it (runner --folds-not-public, the same list as
+# FOLDS_NOT_PUBLIC), or is one of FOLDS_NOT_CHECKED (KAIRN_NOT_YET_CROSS_CHECKED_FOLDS and
+# KAIRN_NOT_PUBLIC_YET_FOLDS of tests/CMakeLists.txt): exactly one of the three.
 foreach(_what fold-list folds-not-public)
   execute_process(COMMAND "${RUNNER}" --${_what} OUTPUT_VARIABLE _out RESULT_VARIABLE _status)
   if(NOT _status STREQUAL "0")
@@ -174,11 +265,12 @@ endif()
 set(_folds_not_checked ${FOLDS_NOT_CHECKED})
 foreach(_f IN LISTS _claim_folds)
   set(_n 0)
-  foreach(_group fold_list folds_not_public)
-    if(_f IN_LIST _runner_${_group})
-      math(EXPR _n "${_n} + 1")
-    endif()
-  endforeach()
+  if(_f IN_LIST _runner_fold_list OR _f IN_LIST _runner_loops)
+    math(EXPR _n "${_n} + 1")
+  endif()
+  if(_f IN_LIST _runner_folds_not_public)
+    math(EXPR _n "${_n} + 1")
+  endif()
   if(_f IN_LIST _folds_not_checked)
     math(EXPR _n "${_n} + 1")
   endif()
@@ -229,7 +321,10 @@ list(LENGTH _runner_internal _m)
 list(LENGTH _runner_not_public _p)
 list(LENGTH _entry _e)
 list(LENGTH _not_checked _q)
+list(LENGTH _runner_loops _l)
+list(LENGTH _runner_loop_parts _lp)
 message(STATUS "${_n} kernels reached by public forms, ${_m} building blocks, ${_p} entry kernels not public yet "
   "(${_e} entry kernels in all), ${_q} kernels in none of the runner's lists (not cross-checked "
   "or not public yet)${_packed_message}; ${_fold_forms_n} folds reached by the functions on arrays, "
-  "${_folds_np_n} with no public caller")
+  "${_folds_np_n} with no public caller; ${_l} loops reached by the forms of BallVector and ${_lp} kernels "
+  "that are parts of them")

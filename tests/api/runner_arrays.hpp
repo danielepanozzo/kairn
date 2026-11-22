@@ -17,9 +17,9 @@
 //
 // The loops on stored arrays (sum_1, sum_2, sum_fast_2, add_k, sub_k, axpy_1, axpy_2, axpy_2_1) have
 // no public caller (batch.hpp says why) and are listed with the reason (--folds-not-public); the
-// folds of BallVector are on KAIRN_NOT_PUBLIC_YET_FOLDS of tests/CMakeLists.txt until a public
-// header calls them. api/coverage.cmake checks that every fold of gen/claims.json is in one of
-// these. Included once, by runner.cpp: its names are in an unnamed namespace.
+// folds of BallVector have the forms of runner_ball_vector.hpp (--loops), and norm_upper_k the forms
+// of both files. api/coverage.cmake checks that every fold of gen/claims.json is in one of these.
+// Included once, by runner.cpp: its names are in an unnamed namespace.
 #pragma once
 
 #include <kairn/batch.hpp>

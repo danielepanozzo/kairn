@@ -12,7 +12,7 @@ $$r_z \ge m ((1 + u) m_a r_y + (1 + u) m_b r_x + r_x r_y) + g m (1 + u)^{2} m_a 
 
 ## C++
 
-No public operation computes this kernel on its own.
+No public operation computes this kernel on its own. It is part of the loop `bv_conv_1`, called by `convolution`, the product of polynomials, of `BallVector<T, 1, N>` and `BallVectorView<T, 1>` ([Ball vectors](ball_vector.md)); and of the loop `bv_conv_2`, called by `convolution`, the product of polynomials, of `BallVector<T, 2, N>` and `BallVectorView<T, 2>` ([Ball vectors](ball_vector.md)).
 
 ## Requires
 

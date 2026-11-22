@@ -73,6 +73,7 @@
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
+#include <kairn/ball_vector.hpp>
 #if defined(KAIRN_TEST_CHECKS) && KAIRN_CHECKS != 1
 #error "built with KAIRN_TEST_CHECKS, the runner must have KAIRN_CHECKS 1: build it without NDEBUG"
 #endif
@@ -82,6 +83,7 @@
 // through them.
 #include "runner_arrays.hpp"
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -90,6 +92,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -1621,9 +1624,8 @@ const NotPublic not_public[] = {
     {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core}, {"ball_scale_2", ball_core},
     {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
     {"sum_entry_step_1", fold_step}, {"sum_entry_step_2", fold_step}, {"sum_fast_entry_step_2", fold_step},
-    {"dot_step_1", fold_step}, {"dot_entry_step_1", fold_step}, {"dot_step_2", fold_step}, {"add_entry_step_1", fold_step},
-    {"add_entry_step_2", fold_step}, {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step},
-    {"scale_step_1", fold_step}, {"scale_step_2", fold_step}, {"mul_pow2_step_1", fold_step},
+    {"dot_entry_step_1", fold_step}, {"add_entry_step_1", fold_step}, {"add_entry_step_2", fold_step},
+    {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step}, {"mul_pow2_step_1", fold_step},
     {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},
     {"axpy_entry_step_2", fold_step}, {"acc_mul_1", factors_unguarded},
 };
@@ -1631,9 +1633,11 @@ const NotPublic not_public[] = {
 // the functions of a Ball of the enclosure interface (ball.hpp), and so are the 53 kernels of the
 // enclosure interface of stage B2 (predicates, comparisons, relations of IEEE 1788, set operations
 // of a ball, conversions of two limbs); their building blocks are in `internal` above. The kernels
-// of the loops over arrays that kairn/batch.hpp calls are in the two lists above; those that no
-// public operation calls yet (the steps of the maps on stored arrays, the bounds as functions of
-// n, the accumulator, the ball vectors) are in none of these lists (KAIRN_NOT_PUBLIC_YET of
+// of the loops over arrays that kairn/batch.hpp calls are in the two lists above, but the steps of
+// the scalings and of the dot products (scale_step_k, dot_step_k), which the loops of
+// kairn/ball_vector.hpp call too, and the other parts of those loops, which are on its list of loop
+// parts (runner_ball_vector.hpp, loop_parts). Those that no public operation calls (the steps of
+// the maps on stored arrays) are in none of these lists (KAIRN_NOT_PUBLIC_YET of
 // tests/CMakeLists.txt, coverage.cmake).
 
 constexpr int max_limbs = 16;
@@ -1673,10 +1677,14 @@ void put_limb(double v, std::string& out) {
     }
 }
 
+// The loops of kairn/ball_vector.hpp: their forms (the lines of a loop name the loop, not a kernel),
+// and the kernels that are parts of them (runner_ball_vector.hpp).
+#include "runner_ball_vector.hpp"
+
 int usage() {
     std::fprintf(stderr,
                  "usage: runner [--form NAME] | --forms KERNEL | --list | --packed-list | --internal | --not-public | "
-                 "--fold-list | --folds-not-public | --self-test\n");
+                 "--fold-list | --folds-not-public | --loops | --loop-parts | --self-test\n");
     return 2;
 }
 
@@ -1870,6 +1878,14 @@ int main(int argc, char** argv) {
             if (std::strcmp(f.kernel, argv[2]) == 0) std::printf("%s\n", f.name);
         for (const ArrayForm& f : array_forms)
             if (array_form_listed(f) && std::strcmp(f.fold, argv[2]) == 0) std::printf("%s\n", f.name);
+        // The forms of a loop of kairn/ball_vector.hpp; in the runner of the packed forms alone,
+        // those of the fast order, which compute with its packed loops.
+        for (const bv_forms::FoldForm& f : bv_forms::fold_forms) {
+#if defined(KAIRN_TEST_PACKED_ONLY)
+            if (!f.fast) continue;
+#endif
+            if (std::strcmp(f.loop, argv[2]) == 0) std::printf("%s\n", f.name);
+        }
         return 0;
     }
     if (argc == 2 && std::strcmp(argv[1], "--fold-list") == 0) {
@@ -1884,8 +1900,26 @@ int main(int argc, char** argv) {
         }
         return 0;
     }
+    // The loops that some form maps to, and the kernels that are parts of them (kernel, a tab, the
+    // loop): api.oracle.coverage checks both against gen/claims.json and gen/kernels.
+    if (argc == 2 && std::strcmp(argv[1], "--loops") == 0) {
+        std::vector<std::string> seen;
+        for (const bv_forms::FoldForm& f : bv_forms::fold_forms) {
+            bool known = false;
+            for (const std::string& s : seen) known = known || s == f.loop;
+            if (!known) {
+                seen.push_back(f.loop);
+                std::printf("%s\n", f.loop);
+            }
+        }
+        return 0;
+    }
     if (argc == 2 && std::strcmp(argv[1], "--folds-not-public") == 0) {
         for (const FoldNotPublic& k : folds_not_public) std::printf("%s\t%s\n", k.fold, k.why);
+        return 0;
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--loop-parts") == 0) {
+        for (const bv_forms::LoopPart& p : bv_forms::loop_parts) std::printf("%s\t%s\n", p.kernel, p.loop);
         return 0;
     }
     if (argc == 2 && std::strcmp(argv[1], "--list") == 0) {
@@ -1932,6 +1966,7 @@ int main(int argc, char** argv) {
     long lines = 0;
     const Form* conditional = nullptr;
     const PackedForm* packed_conditional = nullptr;
+    const bv_forms::FoldForm* fold_conditional = nullptr;
     Batches batch;
     while (std::getline(std::cin, line)) {
         ++lineno;
@@ -1974,6 +2009,27 @@ int main(int argc, char** argv) {
                                         ? complete_array_line<double>(*af, fields, out, parse, put_limb)
                                         : complete_array_line<float>(*af, fields, out, parse, put_limb);
             if (!why.empty()) fail(why);
+            out += '\n';
+            std::fwrite(out.data(), 1, out.size(), stdout);
+            continue;
+        }
+        // A line of a loop of kairn/ball_vector.hpp: completed now, by its form.
+        const bv_forms::FoldForm* fk = nullptr;
+        for (const bv_forms::FoldForm& f : bv_forms::fold_forms) {
+            if (fields[0] != f.loop) continue;
+            if (form_name ? std::strcmp(form_name, f.name) == 0 : fk == nullptr) fk = &f;
+        }
+        if (fk) {
+            if (batch.active) fail("a packed form's stream has lines of packed forms only");
+            ++lines;
+            if (fk->conditional) fold_conditional = fk;
+            if (fields[1] == "binary64") {
+                bv_forms::complete<double>(*fk, fields, out, fk->binary64);
+            } else if (fields[1] == "binary32") {
+                bv_forms::complete<float>(*fk, fields, out, fk->binary32);
+            } else {
+                fail("this runner knows binary64 and binary32, not " + fields[1]);
+            }
             out += '\n';
             std::fwrite(out.data(), 1, out.size(), stdout);
             continue;
@@ -2053,9 +2109,14 @@ int main(int argc, char** argv) {
     if (stopped > 0)
         std::fprintf(stderr, "runner: KAIRN_CHECKS stops a negative radius: Ball::empty() on %ld of %ld lines\n",
                      stopped, lines);
-    const char* cond_name = conditional ? conditional->name : packed_conditional ? packed_conditional->name : nullptr;
-    const char* cond_kernel =
-        conditional ? conditional->kernel : packed_conditional ? packed_conditional->kernel : nullptr;
+    const char* cond_name = conditional          ? conditional->name
+                            : packed_conditional ? packed_conditional->name
+                            : fold_conditional   ? fold_conditional->name
+                                                 : nullptr;
+    const char* cond_kernel = conditional          ? conditional->kernel
+                              : packed_conditional ? packed_conditional->kernel
+                              : fold_conditional   ? fold_conditional->loop
+                                                   : nullptr;
     if (cond_name) {
         std::fprintf(stderr, "runner: form %s of %s computed its own operation on %ld of %ld lines\n", cond_name,
                      cond_kernel, reached, lines);
