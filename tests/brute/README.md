@@ -52,11 +52,16 @@ Two parts:
   `--fail-on-suspicious` as in the compiled part, and not for `ball_mul_1` at precision 1 either
   (`RADIUS_OVERFLOW`): the oracle shows a non-finite result as suspicious when the operands and
   the exact set are within a quarter of the largest number, and with a factor of 8 the radius of
-  such a set can be beyond the largest number in any exponent range. `widen.py KERNEL FORMAT`
-  is the exact test in its place: every operand of the format through the interpreter, in the
-  format and in one with more exponents above, where nothing overflows; the result must be
-  non-finite exactly when the wide one exceeds the format's largest number, and equal to it
-  otherwise.
+  such a set can be beyond the largest number in any exponent range; nor for `acc_radius_1` and
+  `acc_radius_2` at precision 2, whose radius $\mathrm{RN}(sK + C)$ has the factor
+  $K = \mathrm{up}((1+u)^8) = 6$ at $u = 1/4$, the largest number of their format of the plan
+  (the run of Milestone 2 stopped on them: [its page](../../docs/developer/results/brute-milestone2.md)).
+  `widen.py KERNEL FORMAT` is the exact test in its place: every operand of the format through
+  the interpreter, in the format and in one with more exponents above, where nothing overflows;
+  the result must be non-finite exactly when the wide one exceeds the format's largest number,
+  and equal to it otherwise. An output that every claim of the kernel conditions on a mask
+  (`if` in `gen/claims.json`, the radius of an accumulator under `ok`) is compared only where
+  that mask is true.
   `--interp-bins N --interp-take LIST` splits the plan into N bins of about equal size and runs
   some of them, so that machines can share it; `--interp-match REGEX` keeps only the
   enumerations whose `KERNEL FORMAT` matches.
@@ -86,7 +91,10 @@ Two parts:
   and its results are in [testing.md](../../docs/developer/testing.md#the-emulated-formats).
 
 The folds of `gen/claims.json` ("folds") take part in both: in the compiled part, random arrays of
-up to 4 096 elements (`FOLD_LENGTH`) in units of a hundredth of `--chunk`, one stream for the
+up to 4 096 elements (`FOLD_LENGTH`; the products of BallVectors `bv_conv_k` up to 256 coefficients,
+`PRODUCT_LENGTH`, since their judgment grows faster than the product of the two lengths: 200 of up
+to 4 096 took the oracle more than seven minutes on the Linux machine, of up to 256 eight seconds)
+in units of a hundredth of `--chunk`, one stream for the
 scalar runners in every order and one per packed backend in the lane order of its register
 (`packed_lanes` of the fold), each judged and guarded with its orders and length; in the interp
 part, every array of the formats of `FOLD_SHAPES` up to a length, in every order that differs
@@ -275,4 +283,204 @@ python3 tests/brute/widen.py ball_add_1 fp:1:-5:5
 python3 tests/brute/widen.py ball_sub_1 fp:1:-5:5
 python3 tests/brute/widen.py ball_mul_1 fp:1:-6:5
 python3 tests/brute/widen.py ball_scale_1 fp:1:-3:2
+```
+
+## The runs of Milestone 2
+
+From copies of the tree made with `git archive` of commit
+`1b370800e7e31c5bf85126a6ff0c215805dd83c9` (`DRIVER`), whose kernels, generator, claims and
+oracle are those of `5f597fbcf2a7f5b077671e115487bc9515c0bb24` (`CODE`; the copy differs from it
+in `tests/brute` alone), with `WORK` a directory outside it and `CLANG` the `clang++` above. The
+Mac's first twenty minutes of enumerations ran from a copy of `CODE` itself, with the driver of
+`346d2837ff7d4351be004c05897fd5e36956cec0`, whose enumerations are the same. The results are in
+`results/milestone2/brute/` and
+[docs/developer/results/brute-milestone2.md](../../docs/developer/results/brute-milestone2.md).
+
+Each machine ran two phases in one work directory, with one seed. **Phase A**, every kernel and
+loop and the machine's share of the enumerations (which a run does first), until every kernel
+and format has one unit of random cases (`--cases` one `--chunk`). On the Linux machine, with 64
+jobs while the emulated part below ran beside it and 80 after:
+
+```sh
+python3 tests/brute/brute.py run --work WORK --budget 36000 --jobs 80 --nice 10 \
+    --cpus 0-31,64-95 --generator Ninja --build gcc13=g++ --build clang18=CLANG \
+    --seed m2r1-linux --chunk 100000 --part compiled,interp --interp-bins 20 --interp-take 0-10 \
+    --cases 100000 --commit CODE --driver-commit DRIVER
+```
+
+It was restarted on the same work directory as the rates were measured: with bins 0 to 12 for
+the first twelve minutes, then 0 to 9, then 0 to 10 and `--cases 200000` (two units), at 64 and
+then 80 jobs, and at last with `--cases 100000` above when the throughput under the machine's
+load made a second unit of every pair too long; every restart keeps the pipelines finished, and
+the units of a second round already finished count. On the Mac:
+
+```sh
+python3 tests/brute/brute.py run --work WORK --budget 21600 --jobs 8 --nice 10 \
+    --build clang=c++ --build gcc16=g++-16 --seed m2r1-mac --chunk 50000 \
+    --part compiled,interp --interp-bins 20 --interp-take 11-19 --cases 50000 \
+    --commit CODE --driver-commit DRIVER
+```
+
+restarted likewise with bins 13 to 19, 13, 13 to 16 and 10 to 19 (with `--chunk 100000`, before
+any unit of random cases) before the bins above. On Windows, started through WMI:
+
+```bat
+python tests\brute\brute.py run --work WORK --budget 10800 --jobs 8 --nice 1 --cpus 0-7 ^
+    --generator Ninja --build msvc=cl --seed m2r1-windows --chunk 50000 --part compiled ^
+    --env-script VCVARS --commit CODE --driver-commit DRIVER
+```
+
+with `VCVARS` "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat".
+
+**The exhaustive tier on emulated formats**, the whole emulated part, on the Linux machine beside
+phase A (`BUILD` the build `gcc13` above, `WORKE` a directory of its own):
+
+```sh
+python3 tests/brute/brute.py run --work WORKE --budget 36000 --jobs 16 --nice 10 \
+    --cpus 0-31,64-95 --part emulated --seed m2r1-emulated-linux \
+    --emulated-runner BUILD/tests/kairn-emulated-runner --commit CODE --driver-commit DRIVER
+```
+
+**Phase B**, the aim of $10^8$ results per kernel and format for the kernels `F` (below), with the
+compiled part alone: a run whose parts include the interpreter's writes the plan of the
+enumerations of its work directory again, and `--kernels` would restrict it. The same commands
+as above (the same work directory and seed) with, in place of `--part compiled,interp ...
+--cases N`: on the Linux machine `--part compiled --kernels F --cases 2200000` (`--budget
+19000`), then `--part compiled --kernels FX --cases 2400000` (`--budget 1800`), then
+`--part compiled --kernels S --cases 2300000` (`--budget 3600`), one unit more for the kernels
+of the Windows machine, which did not reach its cap; on the Mac `--part compiled --kernels F
+--cases 350000` (`--budget 6000`); on Windows `--kernels S --cases 500000` (`--budget 10500`).
+`F` (116 kernels):
+
+```
+abs_upper_2,acc_add_1,acc_merge_1,acc_mul_1,acc_mul_entry_1,add_down_1,add_down_entry,
+add_entry_step_1,add_entry_step_2,add_up_1,add_up_entry,axpy_entry_step_1,axpy_step_1,
+ball_contains_ball_1,ball_contains_point_1,ball_contains_point_2,ball_equal_1,ball_equal_2,
+ball_from_interval_1,ball_from_interval_2,ball_less_1,ball_less_equal_1,ball_lower_as_1,
+ball_make_1,ball_make_2,ball_mul_pow2_1,ball_narrow_2_1,ball_negative_1,ball_negative_2,
+ball_positive_1,ball_positive_2,ball_scale_1_full,ball_split_1,ball_to_interval_1,ball_upper_as_1,
+ball_zero_1,ball_zero_2,bv_center_2,bv_center_entry_1,bv_conv_finish,bv_make_finish,
+bv_make_radius,bv_mul_pow2_step_1,bv_neg_radius,dot_entry_step_1,dot_step_1,fast_two_sum_entry,
+fold_finish_1,fold_finish_2,interval_contains_1,interval_empty_1,interval_empty_2,
+interval_entire_1,interval_entire_2,interval_equal_1,interval_intersection_1,interval_less_1,
+interval_less_equal_1,interval_make_1,interval_mid_rad_1,interval_neg_1,interval_negative_1,
+interval_negative_2,interval_positive_1,interval_positive_2,interval_rel_disjoint_1,
+interval_rel_equal_1,interval_rel_interior_1,interval_split_1,interval_subset_1,
+interval_to_ball_1,interval_zero_1,interval_zero_2,mul_1_1,mul_2_1_entry,mul_dir_1,mul_down_1,
+mul_down_entry,mul_pow2_2,mul_pow2_2_full,mul_pow2_step_1,mul_pow2_step_2,mul_up_1,mul_up_entry,
+neg_1,next_down,next_up,norm_combine,norm_finish_1,norm_finish_2,norm_step_1,norm_step_2,radd,
+radd_entry,rmul,scale_entry_step_2,scale_step_1,scale_step_2,split,sub_1_1,sub_down_1,
+sub_down_entry,sub_entry_step_1,sub_entry_step_2,sub_up_1,sub_up_entry,sum_entry_step_1,
+sum_entry_step_2,sum_fast_entry_step_2,to_down_2,to_nearest_2,to_up_2,two_prod_dekker,
+two_prod_entry,two_sum_entry,two_sum_ord
+```
+
+`S` (107 kernels, the first set, which the Windows machine ran) is `F` but `FX`, the nine
+kernels `acc_merge_1`, `ball_mul_pow2_1`, `interval_mid_rad_1`, `mul_pow2_step_2`,
+`scale_entry_step_2`, `scale_step_2`, `sub_entry_step_2`, `sum_entry_step_2` and
+`sum_fast_entry_step_2`.
+
+Then, on each machine, with the driver of this commit:
+
+```sh
+python3 tests/brute/brute.py collect --work WORK --name NAME --out NAME.json --jobs N \
+    [--cpus ... --nice ...]
+```
+
+with NAME `linux-x86-64`, `macos-arm64` and `windows-x64` (and `linux-x86-64-emulated` for
+`WORKE`, stored as `results/milestone2/brute/emulated/linux-x86-64.json`), and from the files:
+
+```sh
+python3 tests/brute/brute.py report results/milestone2/brute/*.json
+python3 tests/brute/brute.py report results/milestone2/brute/emulated/linux-x86-64.json
+```
+
+### The runs of Milestone 2: the radius of an accumulator at precision 2
+
+The two enumerations the run stopped on (the results page has the finding) were run again on
+the Mac from the repository at commit `0716b84248084f57dc6199268c82641c4240df0d`, which adds them
+to `RADIUS_OVERFLOW`:
+
+```sh
+python3 tests/brute/brute.py run --work WORKR --budget 900 --jobs 2 --nice 10 --part interp \
+    --interp-match '^acc_radius_[12] fp:2:-1:1$' --seed m2r1radius-mac
+python3 tests/brute/brute.py collect --work WORKR --name macos-arm64-radius \
+    --out results/milestone2/brute/supplementary/macos-arm64-radius.json --jobs 2
+python3 tests/brute/widen.py acc_radius_1 fp:2:-1:1
+python3 tests/brute/widen.py acc_radius_2 fp:2:-1:1
+```
+
+### The supplementary run: the close of rule R3
+
+The twelve kernels and loops that the close of rule R3 added or changed (`R3`), from copies made
+with `git archive` of the merge `76ebf33c60905d7e0ca811ad7d6dddd60f00135e` (`DRIVER3`), whose
+code is that of `8ee5ed9d506489eb2e6b6549dbd1fc18e20fc586` (`CODE3`), each machine in a work
+directory of its own (`WORK3`), the caps of phase B:
+
+```
+bv_center_entry_2,bv_make_2_entry,bv_scale_2_entry,bv_scale_radius_entry_2,bv_scale_step_2,
+conv_2_entry,dot_2_entry,dot_entry_step_2,axpy_entry_step_2,axpy_entry_step_2_1,axpy_2_entry,
+axpy_2_1_entry
+```
+
+On the Linux machine, compiled (new build trees, the code having changed), the six kernels of
+`R3` (`R3K`: `bv_center_entry_2`, `bv_scale_radius_entry_2`, `bv_scale_step_2`,
+`dot_entry_step_2`, `axpy_entry_step_2`, `axpy_entry_step_2_1`) to the aim, then its six loops
+(`R3L`) to two units:
+
+```sh
+python3 tests/brute/brute.py run --work WORK3 --budget 5400 --jobs 80 --nice 10 \
+    --cpus 0-31,64-95 --generator Ninja --build gcc13=g++ --build clang18=CLANG \
+    --seed m2r1r3-linux --chunk 100000 --part compiled --kernels R3K --cases 2200000 \
+    --commit CODE3 --driver-commit DRIVER3
+```
+
+and the same with `--kernels R3L --cases 200000`.
+
+On the Mac, compiled, the interpreter's enumerations of the twelve (37, 46 931 460 indices) and
+their entries of the emulated part (48):
+
+```sh
+python3 tests/brute/brute.py run --work WORK3 --budget 5400 --jobs 8 --nice 10 \
+    --build clang=c++ --build gcc16=g++-16 --seed m2r1r3-mac --chunk 50000 \
+    --part compiled,interp,emulated --kernels R3 --cases 350000 \
+    --commit CODE3 --driver-commit DRIVER3
+```
+
+On Windows, started through WMI:
+
+```bat
+python tests\brute\brute.py run --work WORK3 --budget 5400 --jobs 8 --nice 1 --cpus 0-7 ^
+    --generator Ninja --build msvc=cl --seed m2r1r3-windows --chunk 50000 --part compiled ^
+    --env-script VCVARS --kernels R3 --cases 500000 --commit CODE3 --driver-commit DRIVER3
+```
+
+each collected as above with NAME `linux-x86-64-r3`, `macos-arm64-r3` and `windows-x64-r3` into
+`results/milestone2/brute/supplementary/`, and reported apart:
+
+```sh
+python3 tests/brute/brute.py report results/milestone2/brute/supplementary/*-r3.json
+```
+
+### The runs of Milestone 2: four enumerations replaced, the loops by length
+
+The four enumerations whose guards failed, in the formats the plan gives them since commit
+`68da628c33837d4696eabbd7a621a3f9d3f01100`, from the repository at that commit (whose code of
+these kernels is that of `CODE`), on the Mac:
+
+```sh
+python3 tests/brute/brute.py run --work WORKG --budget 3000 --jobs 4 --nice 10 --part interp \
+    --interp-match '^(bound_sum_2|bound_dot_2) fp:16:-50:14$|^acc_merge_2 fp:(3:-3:-1|4:-3:-1)$' \
+    --seed m2r1guards-mac --commit 8ee5ed9d506489eb2e6b6549dbd1fc18e20fc586
+python3 tests/brute/brute.py collect --work WORKG --name macos-arm64-guards \
+    --out results/milestone2/brute/supplementary/macos-arm64-guards.json --jobs 4
+```
+
+and the loops by the length of their arrays (`L` the 47 loops of `CODE`, `RUNNER` the scalar
+runner `kairn-gen-runner` of the Mac's Apple clang build above):
+
+```sh
+python3 tests/brute/lengths.py --runner RUNNER --seed m2r1-mac --cases 5000 --folds L \
+    --jobs 6 --out results/milestone2/brute/lengths/macos-arm64.json
+python3 tests/brute/lengths.py table results/milestone2/brute/lengths/macos-arm64.json
 ```

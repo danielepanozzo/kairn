@@ -47,8 +47,33 @@ def outputs(line):
             for t in line.split("->")[1].split()]
 
 
+def conditional(kernel):
+    """{output index: mask index} for the outputs of the kernel whose every claim holds only
+    where a mask output is true (`if` the mask in gen/claims.json): where that mask is false the
+    kernel claims nothing of them, and they are not compared. The indices are those of the
+    completed line's outputs (one per limb, in the order of the outputs)."""
+    import json
+    with open(os.path.join(REPO, "gen", "claims.json"), encoding="utf-8") as f:
+        k = next(x for x in json.load(f)["kernels"] if x["name"] == kernel)
+    index, i = {}, 0
+    for o in k["outputs"]:
+        index[o["name"]] = list(range(i, i + o.get("limbs", 1)))
+        i += o.get("limbs", 1)
+    masks = {o["name"] for o in k["outputs"] if o.get("type") == "mask"}
+    out = {}
+    for o in k["outputs"]:
+        if o["name"] in masks:
+            continue
+        conds = {e.get("if") for e in k.get("ensures", []) if e.get("of") == o["name"]}
+        if len(conds) == 1 and next(iter(conds)) in masks:
+            for j in index[o["name"]]:
+                out[j] = index[next(iter(conds))][0]
+    return out
+
+
 def compare(kernel, fmt, more):
-    """(cases, finite and equal, non-finite, wide format, bad lines)."""
+    """(cases, finite and equal, non-finite, wide format, bad lines, cases where an output's mask
+    is false and it is not compared)."""
     p, qmin, qmax = (int(x) for x in fmt.split(":")[1:])
     wide = "fp:%d:%d:%d" % (p, qmin, qmax + more)
     omega = Fraction(2 ** p - 1) * Fraction(2) ** qmax
@@ -59,10 +84,16 @@ def compare(kernel, fmt, more):
     widened = interp([line.replace(" %s " % fmt, " %s " % wide, 1) for line in lines])
     if not len(lines) == len(narrow) == len(widened):
         raise SystemExit("widen.py: the interpreter did not answer every line")
-    equal = nonfinite = 0
+    equal = nonfinite = masked = 0
     bad = []
+    cond = conditional(kernel)
     for a, b in zip(narrow, widened):
         za, zb = outputs(a), outputs(b)
+        off = {j for j, m in cond.items() if za[m] == 0}
+        if off:
+            masked += 1
+            za = [v for j, v in enumerate(za) if j not in off]
+            zb = [v for j, v in enumerate(zb) if j not in off]
         if any(isinstance(v, str) for v in zb):
             bad.append("the wide result is not finite (more exponents needed): %s" % b)
             continue
@@ -75,7 +106,7 @@ def compare(kernel, fmt, more):
             equal += 1
             if beyond or za != zb:
                 bad.append("finite and not the wide result: %s | %s" % (a, b))
-    return len(lines), equal, nonfinite, wide, bad
+    return len(lines), equal, nonfinite, wide, bad, masked
 
 
 def main():
@@ -85,13 +116,14 @@ def main():
     ap.add_argument("--more", type=int, help="exponents added above (default |QMAX| + 12)")
     a = ap.parse_args()
     more = a.more if a.more is not None else abs(int(a.format.split(":")[3])) + 12
-    cases, equal, nonfinite, wide, bad = compare(a.kernel, a.format, more)
+    cases, equal, nonfinite, wide, bad, masked = compare(a.kernel, a.format, more)
     for line in bad[:20]:
         print("BAD: " + line)
     print("%s %s against %s: %d cases, %d finite and equal to the wide result, %d non-finite "
-          "with a wide result beyond the largest number, %d that are neither"
+          "with a wide result beyond the largest number, %d that are neither%s"
           % (a.kernel, a.format, wide, cases, equal, nonfinite - sum("non-finite" in b for b in bad),
-             len(bad)))
+             len(bad), "; in %d a mask was false and the outputs it conditions were not compared"
+             % masked if masked else ""))
     return 1 if bad else 0
 
 

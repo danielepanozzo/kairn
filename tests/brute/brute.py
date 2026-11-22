@@ -78,7 +78,15 @@ INTERMEDIATE_OVERFLOW = ("split", "two_prod_dekker")
 # number is then no sign of a fault, in any exponent range, and the run does not fail on it;
 # tests/brute/widen.py is the exact test in its place (the result is infinite exactly when the
 # same computation in a wider exponent range exceeds the largest number).
-RADIUS_OVERFLOW = {("ball_mul_1", 1)}
+#
+# And the radius of an accumulator at precision 2 (the brute-force run of Milestone 2 stopped on
+# it): r = RN(s K + C) with K = up((1+u)^8), which at u = 1/4 is 6, the largest number of the
+# plan's fp:2:-1:1 (fp:2:-2:0 replaced, where it is not a number); with a factor of 6, above the 4
+# of the oracle's test, any s near a quarter of the largest number overflows in any exponent
+# range, and the claim (an upper bound, where the mask ok is true) says nothing of finiteness.
+# widen.py, which compares an output claimed only under a mask where that mask is true, is the
+# test in its place.
+RADIUS_OVERFLOW = {("ball_mul_1", 1), ("acc_radius_1", 2), ("acc_radius_2", 2)}
 
 
 def fails_on_suspicious(kernel, fmt):
@@ -191,6 +199,7 @@ SHAPES = {
 # (tests/CMakeLists.txt, _toy_kernel_acc_merge_2): the running sums every pair, the sums of
 # magnitudes a few values.
 _R_ACC_A = "a.in=0x0p+0/0x1p-2/0x1.4p+0/0x1.8p+0"
+_R_ACC_A4 = "a.in=0x0p+0/0x1p-2/0x1.2p+0/0x1.4p+0/0x1.8p+0"
 _R_ACC_C = "c.in=0x0p+0/0x1p-1/0x1.4p+0/0x1.cp+0/0x1.4p+2"
 _R_ACC_MUL = "a.in=0x0p+0/0x1p-1/0x1.8p+0"
 # conv_radius (seven operands; by the ruling of 2026-11-21 its claim is of finite results,
@@ -232,18 +241,39 @@ KERNEL_FORMATS = {
         ("fp:4:-3:-2", [_R_ACC_MUL, "s.lead=-1:0"]),
         ("fp:3:-2:-1", []),
     ]),
+    # The run of Milestone 2 found that two of these could not pass the guards: with two exponents
+    # (fp:3:-2:-1) every sum of magnitudes a + c is exact, a tie or beyond the largest number, and
+    # at precision 4 every sum of the values of _R_ACC_A and _R_ACC_C is exact or a tie (5/4 + 5),
+    # so that the rounding to nearest of b never met an inexact case. Three exponents complete
+    # (891 136 cases), and 9/8 among the values of a at precision 4 (9/8 + 5 is a quarter of the
+    # way from 6 to 13/2): 378 225.
     "acc_merge_2": ("fp:3:-2:0", [
         ("fp:3:-2:0", [_R_ACC_A, _R_ACC_C]),
-        ("fp:3:-2:-1", []),
-        ("fp:4:-3:-1", [_R_ACC_A, _R_ACC_C]),
+        ("fp:3:-3:-1", []),
+        ("fp:4:-3:-1", [_R_ACC_A4, _R_ACC_C]),
+    ]),
+    # The bounds of two limbs: m unit(K) (unit(K) about 3 u^2 or 4 u^2) must cross 1/5 and 1/4
+    # with the mask true, and the mask's test a = RN(m up((1+u)(unit(K) + eta/2))) <= up(1/4)
+    # adds eta/2 per count. The shape "n" gives fp:16:-30:14, whose eta = 2^-30 is about unit(K)
+    # there: the mask turns false near m unit(K) = 1/6, and the guards, which ask for a case with
+    # the mask true in (1/5, 1/4], failed the run of Milestone 2. Every other format of the shape,
+    # and fp:16:-50:14 in its place (eta 2^-20 of unit(K)), as these lists give them.
+    "bound_sum_2": ("fp:12:-30:12", [
+        ("fp:3:-30:12", []), ("fp:4:-30:12", []), ("fp:13:-30:12", []),
+        ("fp:16:-50:14", []), ("fp:20:-50:20", []),
+    ]),
+    "bound_dot_2": ("fp:12:-30:12", [
+        ("fp:4:-30:12", []), ("fp:5:-30:12", []), ("fp:13:-30:12", []),
+        ("fp:16:-50:14", []), ("fp:20:-50:20", []),
     ]),
 }
 
 # The folds (gen/claims.json, "folds"), by their arrays as tests/CMakeLists.txt names them (_1 a
 # sum of one limb, _2 of two, _1_1 and _2_2 dot products): every array of each format up to the
 # length given, in every order that differs (gen --exhaustive --max-length), the quick tier's
-# first; and the compiled runners on random arrays up to FOLD_LENGTH elements, the scalar ones on
-# every order and the packed ones on the lane order of their register.
+# first; and the compiled runners on random arrays up to FOLD_LENGTH elements (PRODUCT_LENGTH for
+# a product of BallVectors, below), the scalar ones on every order and the packed ones on the lane
+# order of their register.
 FOLD_SHAPES = {
     "1": [("fp:3:-3:0", 3), ("fp:4:-4:-1", 3), ("fp:2:-2:1", 4)],
     "2": [("fp:3:-4:1", 2), ("fp:3:-3:0", 2), ("fp:3:-5:2", 2)],
@@ -289,6 +319,23 @@ FOLD_SHAPES = {
 }
 FOLD_LENGTH = 4096
 FOLD_CHUNK_DIVISOR = 100
+# A product of BallVectors (bv_conv_k) is judged in a time that grows faster than the product of
+# its two lengths: on the Linux machine 200 requests of up to 64 coefficients took the oracle's
+# check 0.9 seconds, of up to 256 eight seconds, of up to 4 096 more than seven minutes, so that a
+# unit of the compiled part would pass --task-timeout. Its random requests there are of up to
+# PRODUCT_LENGTH coefficients, four times the full tier's (KAIRN_CROSSCHECK_CONV_LENGTH of
+# tests/CMakeLists.txt); the convolutions of numbers (conv_k), whose check took under a second at
+# 1 024, and every other fold have FOLD_LENGTH.
+PRODUCT_LENGTH = 256
+_FOLD_LENGTHS = {}
+
+
+def fold_length(name):
+    """The largest length of the random arrays of fold NAME in the compiled part."""
+    if not _FOLD_LENGTHS:
+        for f in load_folds():
+            _FOLD_LENGTHS[f["name"]] = PRODUCT_LENGTH if f.get("bv_conv") else FOLD_LENGTH
+    return _FOLD_LENGTHS.get(name, FOLD_LENGTH)
 
 # Precision 1 of the one-limb balls with two operands, in place of the base range. There u = 1/2
 # and the constants of the radius are large against a format of few exponents: the factor
@@ -1562,7 +1609,7 @@ def fold_stream_args(unit):
     if unit.orders:
         out += ["--orders", unit.orders]
     if unit.fold:
-        out += ["--max-length", str(FOLD_LENGTH)]
+        out += ["--max-length", str(fold_length(unit.kernel))]
     return out
 
 
@@ -2243,9 +2290,9 @@ def cmd_collect(a):
                                 count=covered, seed=seed)
         if kernel in fold_names:
             # A fold's stream: every order for the scalar runners, the lane order of the register
-            # for the packed ones; arrays up to FOLD_LENGTH elements.
+            # for the packed ones; arrays up to fold_length() elements.
             rr = next((r for r in runners if r["id"] == rid), {})
-            ns.max_length = str(FOLD_LENGTH)
+            ns.max_length = str(fold_length(kernel))
             ns.orders = (None if rr.get("kind") != "packed" else
                          "lanes:%s" % packed_lanes(kernel, fmt, rr.get("backend")))
         problems = list(guards.problems(s, ns))
@@ -2461,6 +2508,35 @@ def short(dec, digits=6):
     return text
 
 
+LINE_SHOWN = 400
+
+
+def short_line(line):
+    """A line as the report shows it: whole when short; else (a fold's array of up to 4 096
+    elements) its head, the number of words left out, its tag, and the head of its result. The
+    stored summary keeps the whole line, and the tag with the machine's seed regenerates it."""
+    if len(line) <= LINE_SHOWN:
+        return line
+    req, _, res = line.partition(" -> ")
+    words = req.split()
+    tag = words[-1] if words and words[-1].startswith("#") else ""
+    body = words[:-1] if tag else words
+    head = []
+    for w in body:
+        if len(" ".join(head + [w])) > LINE_SHOWN // 2:
+            break
+        head.append(w)
+    rw = res.split()
+    rhead = []
+    for w in rw:
+        if len(" ".join(rhead + [w])) > LINE_SHOWN // 4:
+            break
+        rhead.append(w)
+    return "%s ... (%d more) %s -> %s%s" % (
+        " ".join(head), len(body) - len(head), tag, " ".join(rhead),
+        " ... (%d more)" % (len(rw) - len(rhead)) if len(rw) > len(rhead) else "")
+
+
 def near_one(dec, attains):
     """A ratio that rounds to 1 at ten digits without being 1: say so rather than print 1."""
     return (not attains and dec is not None and decimal.Decimal(dec) <= 1
@@ -2468,6 +2544,67 @@ def near_one(dec, attains):
 
 
 B4_APPLIES = "B4 applies: finite operands, every finite_when condition holds"
+
+
+SLACK = "slack in gaps of the radius"
+SLACK_WORST = "slack in gaps of the radius (the worst entry)"
+STATED_EXCESS = "excess over a positive stated value, in gaps of the output"
+STEPS_ABOVE = "steps above RU(V)"
+FOLD_RATIO = "error / allowed, order "
+
+
+def entry_headlines(e):
+    """[(table, column title, field, name, sign)]: the statistics of an entry of the oracle that say
+    how close its claim came, best first (sign 1: larger is closer; -1: smaller is), by the kind
+    of the entry and the statistics its summary holds; [] for an entry with no such statistic.
+    The table groups the entries that measure the same thing: the error over its bound (a kernel's
+    `error`, a fold's `fold_error` per order), the excess of an `upper` bound in gaps of the
+    result (`gaps=`), the steps of a fold of maxima above RU(V), the excess of an upper bound over
+    a stated value (the bounds of the folds and the radii of the ball vectors: 0 would be the
+    value itself), and the slack of a radius (a ball, or the worst entry of a ball vector)."""
+    lab, kind = e["label"], e["kind"]
+    mx, mn = e.get("maxima", {}), e.get("minima", {})
+    if kind == "error":
+        return [("error", "largest error / bound", "max_ratio", None, 1)]
+    if kind == "fold_error":
+        return [("error", "largest error / bound, order " + n[len(FOLD_RATIO):], "maxima", n, 1)
+                for n in sorted(mx) if n.startswith(FOLD_RATIO)]
+    if kind == "upper":
+        g = re.search(r"\bgaps=(\S+)", lab)
+        s = re.search(r"\bsteps=(\S+)", lab)
+        if g:
+            return [("upper", "largest excess, gaps (claim %s)" % g.group(1), "maxima",
+                     "excess in gaps", 1)]
+        if s or STEPS_ABOVE in mx:
+            return [("steps", "largest steps above RU(V) (claim %s)" % (s.group(1) if s else "-"),
+                     "maxima", STEPS_ABOVE, 1)]
+        if STATED_EXCESS in mn:
+            return [("stated", "smallest excess over the stated value, gaps", "minima",
+                     STATED_EXCESS, -1)]
+        return []
+    if kind == "encloses":
+        return [("encloses", "smallest radius slack, gaps", "minima", SLACK, -1)]
+    if kind in ("encloses_entries", "encloses_coefficients"):
+        return [("encloses", "smallest radius slack, gaps (the worst entry)", "minima", SLACK_WORST,
+                 -1)] if SLACK_WORST in mn else []
+    # The interval kernels and the conversions: a distance from the exact value over the
+    # allowance the claim states (1 is the claim).
+    if kind in ("encloses_interval", "interval_of_ball"):
+        return [("tight", "largest %s-bound distance / allowance" % side, "maxima", TIGHT % side, 1)
+                for side in ("lower", "upper") if TIGHT % side in mx]
+    if kind == "outward" and OUTWARD in mx:
+        return [("tight", "largest |output - value| / allowance", "maxima", OUTWARD, 1)]
+    if kind in ("ball_of_interval", "makes_ball") and MIDPOINT in mx:
+        return [("tight", "largest |center - midpoint| / allowance", "maxima", MIDPOINT, 1)]
+    if kind == "holds":
+        return [("holds", "largest " + n.replace(" where ok true", "") + " where ok", "maxima", n, 1)
+                for n in sorted(mx) if n.endswith("where ok true")]
+    return []
+
+
+TIGHT = "%s: distance from the range bound / (rel*|bound| + abs)"
+OUTWARD = "|output - value| / (rel*|value| + abs)"
+MIDPOINT = "|center - midpoint| / (rel*|midpoint| + abs)"
 
 
 def headline_columns(entries):
@@ -2481,9 +2618,9 @@ def headline_columns(entries):
                                                     if several else ""),
                          j, "max_ratio", None, 1))
             cols.append(("observed c", j, "observed_c", None, 1))
-        elif e["kind"] == "upper":
-            cols.append(("largest excess, gaps (claim %s)" % lab.split("gaps=")[1].split()[0],
-                         j, "maxima", "excess in gaps", 1))
+        elif e["kind"] != "encloses" and entry_headlines(e):
+            cols += [(title, j, field, name, sign)
+                     for _, title, field, name, sign in entry_headlines(e)]
         elif e["kind"] == "encloses":
             cols.append(("smallest radius slack, gaps", j, "minima",
                          "slack in gaps of the radius", -1))
@@ -2554,6 +2691,7 @@ def cmd_report(a):
     report_agreement(docs, w)
     report_backends(docs, w)
     report_balls(docs, w)
+    report_emulated(docs, w)
     kernels = []
     for d in docs:
         for k in list(d["compiled"]["kernels"]) + [r["kernel"] for r in
@@ -2575,29 +2713,37 @@ def cmd_report(a):
                         per.setdefault(e["label"], {"kind": e["kind"], "c": [], "i": []})[
                             "i"].append(dict(e, _fmt=r["format"]))
         for label, x in per.items():
-            if x["kind"] == "error":
-                get, sign = (lambda e: e.get("max_ratio")), 1
-            elif x["kind"] == "upper":
-                get, sign = (lambda e: e.get("maxima", {}).get("excess in gaps")), 1
-            elif x["kind"] == "encloses":
-                get, sign = (lambda e: e.get("minima", {}).get("slack in gaps of the radius")), -1
-            else:
-                continue
-            c = best_of([get(e) for e in x["c"]], sign)
-            i = best_of([get(e) and get(e)[:2] + [e["_fmt"]] for e in x["i"]], sign)
-            ca = any(e.get("attains_claim") for e in x["c"])
-            ia = any(e.get("attains_claim") for e in x["i"])
-            rank.append((x["kind"], k, label, c and c + [ca], i and i + [ia]))
+            # Every statistic of the entry that says how close it came (a fold's error per
+            # order), from whichever of its rows holds the most of them.
+            heads = max((entry_headlines(e) for e in x["c"] + x["i"]), key=len, default=[])
+            for table, title, field, name, sign in heads:
+                def get(e, field=field, name=name):
+                    return col_value(e, field, name)
+                c = best_of([get(e) for e in x["c"]], sign)
+                i = best_of([get(e) and get(e)[:2] + [e["_fmt"]] for e in x["i"]], sign)
+                ca = any(e.get("attains_claim") for e in x["c"])
+                ia = any(e.get("attains_claim") for e in x["i"])
+                shown = label if len(heads) == 1 else "%s (%s)" % (label, title.rsplit(", ", 1)[-1])
+                rank.append((table, k, shown, c and c + [ca], i and i + [ia]))
     for kind, title, note in (
             ("error", "Largest error over its bound", "1 is the bound"),
             ("upper", "Largest excess of an upper bound, in gaps",
              "the claim is the `gaps=` of the entry"),
+            ("steps", "Largest steps of a fold of maxima above RU(V)",
+             "the claim is the `steps=` of the entry"),
+            ("stated", "Smallest excess of an upper bound over the value it states, in gaps of "
+             "the output", "0 would be the stated value itself; below 0 the claim fails"),
             ("encloses", "Smallest slack of a Ball radius, in gaps of the radius",
-             "below 1, a radius one unit in the last place smaller would not enclose")):
+             "below 1, a radius one unit in the last place smaller would not enclose"),
+            ("tight", "Largest distance from the exact value over the allowance a claim states "
+             "(the bounds of an interval, an outward bound, the center of a ball made from bounds)",
+             "1 is the claim"),
+            ("holds", "Largest m unit(K) where the mask of a bound says it holds",
+             "the claim is at most 1/2")):
         rs = [r for r in rank if r[0] == kind]
         if not rs:
             continue
-        sign = -1 if kind == "encloses" else 1
+        sign = -1 if kind in ("encloses", "stated") else 1
         rs.sort(key=lambda r: -sign * max(
             [decimal.Decimal(v[0]) * sign for v in (r[3], r[4]) if v] or [decimal.Decimal(0)]))
         w("")
@@ -2759,7 +2905,7 @@ def cmd_report(a):
                     value = "1 - ε, ε < 10⁻⁹"
                 w("%s, %s %s%s:" % (name, "compiled" if compiled else "interpreter", value,
                                     where))
-                w("  " + v[1])
+                w("  " + short_line(v[1]))
             w("```")
     print("\n".join(out))
     return 0
@@ -2844,17 +2990,25 @@ def report_agreement(docs, w):
     format; the exceptions."""
     diff = []
     n = 0
+    folds = {f["name"] for f in load_folds()}
     for d in docs:
         for k, fmts in sorted(d["compiled"]["kernels"].items()):
             for fmt, s in sorted(fmts.items()):
                 n += 1
-                rows = {rid: (tuple(v[:len(RUNNER_COUNTS)]), json.dumps(v[-1]))
-                        for rid, v in s["runners"].items()}
-                if len(set(rows.values())) > 1:
-                    groups = {}
-                    for rid, v in sorted(rows.items()):
-                        groups.setdefault(v, []).append(rid)
-                    diff.append((d["name"], k, fmt, groups))
+                # A fold's scalar runners judge one stream and its packed runners of each backend
+                # another (the lane order of their register): each group is compared within.
+                streams = {}
+                for rid, v in s["runners"].items():
+                    r = d["runners"].get(rid, {})
+                    group = r.get("backend", "scalar") if k in folds else ""
+                    streams.setdefault(group, {})[rid] = (tuple(v[:len(RUNNER_COUNTS)]),
+                                                          json.dumps(v[-1]))
+                for rows in streams.values():
+                    if len(set(rows.values())) > 1:
+                        groups = {}
+                        for rid, v in sorted(rows.items()):
+                            groups.setdefault(v, []).append(rid)
+                        diff.append((d["name"], k, fmt, groups))
     w("")
     w("<!-- Agreement of the runners of a machine (they judge the same cases) -->")
     if not diff:
@@ -2957,6 +3111,53 @@ def report_balls(docs, w):
         w("| `%s` | `%s`%s | %s | %s | %s |" % (
             k, f, (", restricted: " + ", ".join("`%s`" % x for x in rs)) if rs else "",
             fmt_int(cases), fmt_int(fin), ("%.1f %%" % (100.0 * fin / cases)) if cases else "-"))
+
+
+def report_emulated(docs, w):
+    """The emulated part (--part emulated) of each file: per precision and mode the entries, the
+    indices or cases covered, the lines judged and failed and the seconds of the pipelines; then
+    every entry, with the share of its lines judged."""
+    rows = [(d["name"], r) for d in docs for r in d.get("emulated", {}).get("entries", [])]
+    if not rows:
+        return
+    groups = {}
+    for _, r in rows:
+        c = r.get("counts", {})
+        g = groups.setdefault((parse_fmt(r["format"])[0], r["mode"]), [0] * 8)
+        for i, v in enumerate((1, r.get("covered", 0), c.get("cases", 0), c.get("judged", 0),
+                               c.get("failed", 0), c.get("invalid", 0),
+                               int(r.get("complete") and r.get("guards") == "ok"),
+                               r.get("seconds", 0))):
+            g[i] += v
+    w("")
+    w("<!-- The emulated part: per precision and mode; covered counts the enumeration indices or "
+      "random cases (arrays for a loop), lines the completed lines the oracle read -->")
+    w("| Precision | Mode | Entries | Complete, guards passed | Indices or cases covered | Lines "
+      "| Judged | Failed | Invalid | Seconds of pipelines |")
+    w("|---|---|---|---|---|---|---|---|---|---|")
+    tot = [0] * 8
+    for (p, mode), g in sorted(groups.items()):
+        tot = [a + b for a, b in zip(tot, g)]
+        w("| %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+            p, "every operand" if mode == "exhaustive" else "random", fmt_int(g[0]), fmt_int(g[6]),
+            fmt_int(g[1]), fmt_int(g[2]), fmt_int(g[3]), fmt_int(g[4]), fmt_int(g[5]),
+            fmt_int(int(round(g[7])))))
+    w("| all | | %s | %s | %s | %s | %s | %s | %s | %s |" % tuple(
+        fmt_int(int(round(v))) for v in (tot[0], tot[6], tot[1], tot[2], tot[3], tot[4], tot[5],
+                                          tot[7])))
+    w("")
+    w("<!-- The emulated part, every entry -->")
+    w("| Kernel | Format | Mode | Covered | Lines | Judged | Share judged | Failed | Seconds |")
+    w("|---|---|---|---|---|---|---|---|---|")
+    for _, r in sorted(rows, key=lambda x: (x[1]["kernel"], parse_fmt(x[1]["format"]), x[1]["mode"])):
+        c = r.get("counts", {})
+        ok = r.get("complete") and r.get("guards") == "ok"
+        w("| `%s` | `%s` | %s%s | %s | %s | %s | %s | %s | %.0f |" % (
+            r["kernel"], r["format"], "every operand" if r["mode"] == "exhaustive" else "random",
+            "" if ok else " (**INCOMPLETE or guard failed**)", fmt_int(r.get("covered", 0)),
+            fmt_int(c.get("cases", 0)), fmt_int(c.get("judged", 0)),
+            ("%.2f" % (c.get("judged", 0) / c["cases"])) if c.get("cases") else "-",
+            fmt_int(c.get("failed", 0)), r.get("seconds", 0)))
 
 
 # --- Plan ------------------------------------------------------------------------------------------

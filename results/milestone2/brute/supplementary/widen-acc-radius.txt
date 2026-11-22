@@ -1,0 +1,2 @@
+acc_radius_1 fp:2:-1:1 against fp:2:-1:14: 3584 cases, 3106 finite and equal to the wide result, 478 non-finite with a wide result beyond the largest number, 0 that are neither; in 3072 a mask was false and the outputs it conditions were not compared
+acc_radius_2 fp:2:-1:1 against fp:2:-1:14: 3584 cases, 3106 finite and equal to the wide result, 478 non-finite with a wide result beyond the largest number, 0 that are neither; in 3072 a mask was false and the outputs it conditions were not compared

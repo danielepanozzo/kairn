@@ -36,6 +36,26 @@ class Plan(unittest.TestCase):
             self.assertIn("--max-length", brute.gen_extra(e))
             self.assertTrue(brute.enum_key(e).endswith("__L%d" % e["maxlen"]))
 
+    def test_the_lengths_of_the_compiled_folds(self):
+        # The random arrays of the compiled part: up to FOLD_LENGTH, but the products of
+        # BallVectors up to PRODUCT_LENGTH, in the stream a unit asks of gen and in the length the
+        # guards of collect hold it to (the same function).
+        folds = brute.load_folds()
+        products = {f["name"] for f in folds if f.get("bv_conv")}
+        self.assertTrue(products)
+        self.assertIn("bv_conv_1", products)
+        for f in folds:
+            want = brute.PRODUCT_LENGTH if f["name"] in products else brute.FOLD_LENGTH
+            self.assertEqual(brute.fold_length(f["name"]), want, f["name"])
+            unit = brute.Unit("/w", f["name"], "binary64", 0, 10, True, "scalar")
+            args = brute.fold_stream_args(unit)
+            self.assertEqual(args[args.index("--max-length") + 1], str(want), f["name"])
+        self.assertEqual(brute.fold_length("conv_2"), brute.FOLD_LENGTH)
+        self.assertLess(brute.PRODUCT_LENGTH, brute.FOLD_LENGTH)
+        packed = brute.Unit("/w", "sum_2", "binary64", 0, 10, True, "avx2", "lanes:4")
+        self.assertEqual(brute.fold_stream_args(packed),
+                         ["--orders", "lanes:4", "--max-length", str(brute.FOLD_LENGTH)])
+
     def test_the_shapes_of_folds(self):
         # The maps, the convolutions and the folds of maxima have shapes of their own, those of
         # tests/CMakeLists.txt (_fold_toy_SHAPE), and the first format of each is the full tier's.
@@ -106,6 +126,62 @@ class Plan(unittest.TestCase):
             if e["domain"] == "extended":
                 p, qmin, qmax = brute.parse_fmt(e["format"])
                 self.assertEqual(qmin + qmax, 3 - 2 * p, e)
+
+    def test_the_bounds_can_be_true_where_the_guards_look(self):
+        # The guards ask a bound's mask to be true somewhere in 1/5 < m unit(K) <= 1/4. The mask's
+        # test adds eta/2 per count to unit(K) (about c u^k, k the limbs of K), so every format of
+        # the plan has eta at most a sixteenth of u^k (the run of Milestone 2 failed on
+        # fp:16:-30:14 for the bounds of two limbs, where eta is about unit(K)).
+        limbs = {k["name"]: max(o.get("limbs", 1) for o in k["outputs"]) for k in self.kernels}
+        seen = 0
+        for k in self.kernels:
+            for e in k.get("ensures", []):
+                m = brute.re.search(r"unit\((\w+)\)", " ".join(map(str, e.get("args", []))))
+                if e["kind"] != "holds" or not m:
+                    continue
+                kk = limbs[m.group(1)]
+                for p in self.plan:
+                    if p["kernel"] == k["name"]:
+                        prec, qmin, _ = brute.parse_fmt(p["format"])
+                        self.assertLessEqual(qmin, -kk * prec - 4, (k["name"], p["format"]))
+                        seen += 1
+        self.assertGreater(seen, 0)
+
+    def test_a_rounding_to_nearest_of_the_accumulator_meets_an_inexact_case(self):
+        # Every enumeration of acc_merge_2 has magnitudes a, c whose sum rounds to nearest
+        # inexactly, not at a tie, below the largest number (the guards ask for such a case; with
+        # two exponents, and at precision 4 with the quick tier's values, there was none).
+        from fractions import Fraction as Q
+
+        def numbers(p, qmin, qmax):
+            out = {Q(m) * Q(2) ** qmin for m in range(2 ** p)}
+            for q in range(qmin + 1, qmax + 1):
+                out |= {Q(m) * Q(2) ** q for m in range(2 ** (p - 1), 2 ** p)}
+            return sorted(out)
+
+        mine = [e for e in self.plan if e["kernel"] == "acc_merge_2"]
+        self.assertTrue(mine)
+        for e in mine:
+            p, qmin, qmax = brute.parse_fmt(e["format"])
+            nums = numbers(p, qmin, qmax)
+            dom = {"a": nums, "c": nums}
+            for r in e["restrict"]:
+                name, _, vals = r.partition(".in=")
+                dom[name] = [Q(float.fromhex(v)) for v in vals.split("/")]
+            found = False
+            for a in dom["a"]:
+                for c in dom["c"]:
+                    s = a + c
+                    if s > nums[-1] or s in nums:
+                        continue
+                    lo = max(x for x in nums if x < s)
+                    hi = min(x for x in nums if x > s)
+                    if 2 * s != lo + hi:
+                        found = True
+                        break
+                if found:
+                    break
+            self.assertTrue(found, e)
 
     def test_every_ball_kernel_with_a_claim_of_containment_has_a_complete_enumeration(self):
         balls = {k["name"] for k in self.kernels if any(x["kind"] == "encloses"
@@ -179,6 +255,153 @@ class EmulatedPlan(unittest.TestCase):
         self.assertEqual(cmd[-2:], ["--max-length", str(brute.EMULATED_FOLD_LENGTH)])
 
 
+class ReportEmulated(unittest.TestCase):
+    """report prints the emulated part of a summary (collect's "emulated"): per precision and mode,
+    and every entry, an incomplete one marked."""
+
+    def test_tables(self):
+        def entry(kernel, fmt, mode, covered, cases, judged, failed=0, complete=True):
+            return {"kernel": kernel, "format": fmt, "mode": mode, "covered": covered,
+                    "complete": complete, "guards": "ok" if complete else ["not run"],
+                    "seconds": 12.4, "counts": {"cases": cases, "judged": judged,
+                                                "failed": failed}}
+        doc = {"name": "linux-x86-64-emulated", "emulated": {"entries": [
+            entry("two_sum", "fp:8:-14:1", "exhaustive", 18931201, 18931201, 18000000),
+            entry("next_up", "fp:9:-16:1", "exhaustive", 9730, 9730, 9730),
+            entry("mul_2_2", "fp:9:-16:1", "random", 500000, 500000, 400000, complete=False),
+            entry("sum_2", "fp:8:-14:1", "random", 20000, 20000, 15000)]}}
+        out = []
+        brute.report_emulated([doc, {"name": "none"}], out.append)
+        text = "\n".join(out)
+        self.assertIn("| 8 | every operand | 1 | 1 | 18 931 201 | 18 931 201 | 18 000 000 | 0 | 0 | 12 |",
+                      text)
+        self.assertIn("| 9 | random | 1 | 0 | 500 000 |", text)
+        self.assertIn("| all | | 4 | 3 | 19 460 931 | 19 460 931 | 18 424 730 | 0 | 0 | 50 |", text)
+        self.assertIn("| `mul_2_2` | `fp:9:-16:1` | random (**INCOMPLETE or guard failed**) |", text)
+        self.assertIn("| `sum_2` | `fp:8:-14:1` | random | 20 000 | 20 000 | 15 000 | 0.75 | 0 | 12 |",
+                      text)
+        # Nothing for files without an emulated part.
+        out = []
+        brute.report_emulated([{"name": "x", "emulated": {"entries": []}}], out.append)
+        self.assertEqual(out, [])
+
+
+class ReportKinds(unittest.TestCase):
+    """report on the entries of Milestone 2: an upper bound without gaps= (the radius of a ball
+    vector, the bounds of the folds), the steps of a fold of maxima, a fold's error per order, the
+    worst entry of a ball vector; the runners of a fold compared within their streams; the long
+    lines of a fold shortened."""
+
+    def test_headlines(self):
+        h = brute.entry_headlines
+        self.assertEqual(h({"kind": "upper", "label": "upper(r) gaps=3/2", "maxima": {}})[0][:2],
+                         ("upper", "largest excess, gaps (claim 3/2)"))
+        self.assertEqual(h({"kind": "upper", "label": "upper(r) over max, steps=0",
+                            "maxima": {brute.STEPS_ABOVE: ["0", "l"]}})[0][3], brute.STEPS_ABOVE)
+        self.assertEqual(h({"kind": "upper", "label": "V3, radius bv_add_radius_2: upper(rz) >= rx",
+                            "minima": {brute.STATED_EXCESS: ["1.5", "l"]}})[0][0], "stated")
+        self.assertEqual(h({"kind": "upper", "label": "upper(g) >= gamma", "maxima": {}}), [])
+        fe = h({"kind": "fold_error", "label": "fold_error(r)", "maxima": {
+            "error / allowed, order lanes": ["0.1", "l"], "error / allowed, order sequential": ["0.2", "l"]}})
+        self.assertEqual([x[1] for x in fe], ["largest error / bound, order lanes",
+                                              "largest error / bound, order sequential"])
+        self.assertEqual(h({"kind": "encloses_entries", "label": "encloses_entries(z, r)",
+                            "minima": {brute.SLACK_WORST: ["1.5", "l"]}})[0][0], "encloses")
+        self.assertEqual(h({"kind": "certain", "label": "certain(m)"}), [])
+        iv = h({"kind": "encloses_interval", "label": "encloses_interval(zl, zu) x+y", "maxima": {
+            brute.TIGHT % "lower": ["0.6", "l"], brute.TIGHT % "upper": ["0.7", "l"]}})
+        self.assertEqual([(x[0], x[3]) for x in iv], [("tight", brute.TIGHT % "lower"),
+                                                      ("tight", brute.TIGHT % "upper")])
+        self.assertEqual(h({"kind": "outward", "label": "outward(l) below",
+                            "maxima": {brute.OUTWARD: ["0.6", "l"]}})[0][0], "tight")
+        self.assertEqual(h({"kind": "makes_ball", "label": "makes_ball(c, r)",
+                            "maxima": {brute.MIDPOINT: ["1", "l"]}})[0][0], "tight")
+        self.assertEqual(h({"kind": "holds", "label": "holds le(m*unit(add_1_1), 1/2) if ok",
+                            "maxima": {"m*unit(add_1_1) where ok true": ["0.25", "l"]}})[0][:2],
+                         ("holds", "largest m*unit(add_1_1) where ok"))
+
+    def test_fold_streams_are_compared_apart(self):
+        # Scalar and packed runners of a fold judged different streams: no disagreement; two
+        # scalar runners that differ are reported.
+        fold = brute.load_folds()[0]["name"]
+        head = [None, None]
+        doc = {"name": "m", "runners": {"a/cxx": {"kind": "scalar", "backend": "scalar"},
+                                        "b/cxx": {"kind": "scalar", "backend": "scalar"},
+                                        "a/avx2": {"kind": "packed", "backend": "avx2"}},
+               "compiled": {"kernels": {fold: {"binary64": {"runners": {
+                   "a/cxx": [100, 100, 0, 0, 0, 0, head], "b/cxx": [100, 100, 0, 0, 0, 0, head],
+                   "a/avx2": [100, 99, 0, 0, 1, 0, head]}}}}}}
+        out = []
+        brute.report_agreement([doc], out.append)
+        self.assertIn("every runner gave the same counts", "\n".join(out))
+        doc["compiled"]["kernels"][fold]["binary64"]["runners"]["b/cxx"][1] = 98
+        out = []
+        brute.report_agreement([doc], out.append)
+        self.assertIn("disagree", "\n".join(out))
+
+    def test_short_line(self):
+        self.assertEqual(brute.short_line("a b #t:1 -> c"), "a b #t:1 -> c")
+        long = "sum_2 binary64 seq 4096 " + " ".join(["0x1.fffffffffffffp+1023"] * 8192) + \
+            " #one:7 -> " + " ".join(["0x1p+0"] * 3)
+        s = brute.short_line(long)
+        self.assertLess(len(s), brute.LINE_SHOWN)
+        self.assertIn("#one:7 -> 0x1p+0 0x1p+0 0x1p+0", s)
+        self.assertTrue(s.startswith("sum_2 binary64 seq 4096 0x1.f"))
+        self.assertIn("more) #one:7", s)
+
+
+class Lengths(unittest.TestCase):
+    """lengths.py: a run's arrays of a fold, judged apart by the oracle's length class."""
+
+    def test_split(self):
+        import lengths
+        lengths.CONV.update({"conv_2"})
+        text = ("# kairn-oracle gen event=begin kernel=sum_2 format=binary64 mode=random seed=s\n"
+                "sum_2 binary64 seq 0 #one:0 -> 0x0p+0 0x0p+0 1\n"
+                "sum_2 binary64 lanes:2 2 0x1p+0 0x0p+0 0x1p+0 0x0p+0 #wide:1 -> 0x1p+1 0x0p+0 1\n"
+                "sum_2 binary64 seq 40 #wide:2 -> 0x0p+0 0x0p+0 1\n"
+                "# kairn-oracle gen event=end lines=3\n")
+        head, groups = lengths.split(text)
+        self.assertEqual(len(head), 1)
+        self.assertEqual(sorted(groups), ["length 0", "length 18 to 64", "length 2"])
+        self.assertEqual(lengths.length_of("conv_2 binary64 seq 9 3 #x:0"), "length 3")
+        self.assertEqual(sorted(["length above 4096", "length 18 to 64", "length 3", "length 17"],
+                                key=lengths.class_key),
+                         ["length 3", "length 17", "length 18 to 64", "length above 4096"])
+
+    def test_a_run_through_the_interpreter(self):
+        # Random arrays of a toy format, the interpreter, every class judged with no problem; the
+        # classes together are the arrays asked for.
+        import json
+        import tempfile
+        import lengths
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "l.json")
+            rc = lengths.main(["--runner", "interp", "--seed", "t", "--cases", "60",
+                               "--folds", "sum_1", "--formats", "fp:5:-7:4", "--out", out,
+                               "--jobs", "1"])
+            with open(out, encoding="utf-8") as f:
+                doc = json.load(f)
+            res = doc["folds"]["sum_1"]["fp:5:-7:4"]
+            text = lengths.table(doc)
+        self.assertEqual(rc, 0)
+        # The table: a row per statistic of the fold's error, per order, with the arrays judged.
+        rows = [r for r in text.splitlines() if r.startswith("| `sum_1` | `fp:5:-7:4` |")]
+        self.assertTrue(rows)
+        self.assertTrue(all("largest error / bound" in r and r.endswith("| 60 |") for r in rows))
+        # The stored attaining lines are short (an array of up to 4 096 elements by its head).
+        lines = [v[1] for c in res.values() for e in c["entries"]
+                 for v in [e.get("max_ratio")] + list(e.get("maxima", {}).values()) if v]
+        self.assertTrue(lines)
+        self.assertTrue(all(len(x) <= 2 * brute.LINE_SHOWN for x in lines))
+        self.assertEqual(lengths.class_range("length 18 to 64"), (18, 64))
+        self.assertEqual(lengths.class_range("length 3"), (3, 3))
+        self.assertEqual(sum(c["lines"] for c in res.values()), 60)
+        self.assertTrue(all(c["problems"] == [] and c["counts"]["cases"] == c["lines"]
+                            for c in res.values()))
+        self.assertIn("length 0", res)
+
+
 class Runners(unittest.TestCase):
     """Which targets of the build are runners of the library (brute.runner_target)."""
 
@@ -246,11 +469,26 @@ class Widen(unittest.TestCase):
         # A small format of the kernel the oracle's suspicious test does not apply to: every
         # infinite radius is that of a computation that exceeds the largest number.
         import widen
-        cases, equal, nonfinite, wide, bad = widen.compare("ball_mul_1", "fp:1:-2:3", 15)
-        self.assertEqual((cases, wide, bad), (8281, "fp:1:-2:18", []))
+        cases, equal, nonfinite, wide, bad, masked = widen.compare("ball_mul_1", "fp:1:-2:3", 15)
+        self.assertEqual((cases, wide, bad, masked), (8281, "fp:1:-2:18", [], 0))
         self.assertEqual(equal + nonfinite, cases)
         self.assertGreater(equal, 0)
         self.assertGreater(nonfinite, 0)
+
+    def test_the_radius_of_an_accumulator_at_precision_2(self):
+        # r = RN(s K + C), K = up((1+u)^8) = 6 = the largest number of fp:2:-1:1: every infinite
+        # radius where the mask ok is true is an overflow; where ok is false the claim says
+        # nothing of r, which is a NaN in some cases (0 times the infinite product of the count).
+        import widen
+        self.assertEqual(widen.conditional("acc_radius_1"), {0: 1})
+        self.assertEqual(widen.conditional("ball_mul_1"), {})
+        cases, equal, nonfinite, wide, bad, masked = widen.compare("acc_radius_1", "fp:2:-1:1", 13)
+        self.assertEqual((cases, nonfinite, bad, masked), (3584, 478, [], 3072))
+        self.assertEqual(equal + nonfinite, cases)
+        for k in ("acc_radius_1", "acc_radius_2"):
+            self.assertFalse(brute.fails_on_suspicious(k, "fp:2:-1:1"))
+            self.assertTrue(brute.fails_on_suspicious(k, "fp:3:-2:0"))
+            self.assertTrue(brute.fails_on_suspicious(k, "binary64"))
 
 
 class FixupForms(unittest.TestCase):
