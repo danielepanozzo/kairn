@@ -54,9 +54,12 @@ $\sum_i\lvert x_i y_i\rvert \le (1 + u)^{n+2}(a + \tfrac12 n\eta)$ (the exponent
 the sum of magnitudes being rounded $n$ times. Proved in the real model and in the IEEE model
 (`proofs/theories/Accumulator.v`, `IeeeAccumulator.v`, `AccKernels.v`, `IeeeAccKernels.v`).
 
-The radius is given while $m u \le \tfrac12$, $u$ the unit roundoff of `T`, for one and for two
-limbs alike, since the magnitudes are summed in `T`: about $2^{22}$ terms of `float` and $2^{51}$ of
-`double`. Beyond, `error_bound()` is $+\infty$.
+The radius is given up to a count of terms that depends on `T` and not on the precision of the
+sum, since the magnitudes are summed in `T`: with one limb for fewer than $2^{22}$ terms of `float`
+and $2^{51}$ of `double` (while $m u < \tfrac14$, $u$ the unit roundoff of `T`: where the mask of
+`bound_dot_1` is true), and with two limbs for fewer than $2^{23}$ and $2^{52}$ (while
+$m u < \tfrac12$: the mask of `acc_radius_2`). Beyond, `error_bound()` is $+\infty$. (Corrected on
+2026-11-22: this paragraph gave $m u \le \tfrac12$ and the first pair of counts for both.)
 
 ## What the header adds, which is not machine-checked
 

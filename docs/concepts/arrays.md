@@ -158,7 +158,8 @@ sum is finite and the masks of the kernels of the radius are true, the sum is wi
 of the exact sum of what was added, whatever the order, and `ball()` is the ball of the two
 ([What is proved](../reference/accumulator.md#what-is-proved)). So a program can sum in parallel,
 one accumulator per thread, and merge at the end. A radius is given up to about $2^{22}$ terms of
-`float` and $2^{51}$ of `double`, for one limb and two, since the magnitudes are summed in `T`;
+`float` and $2^{51}$ of `double` with one limb, and twice as many with two, since the magnitudes are
+summed in `T`;
 beyond, and when something is not finite, `error_bound()` is $+\infty$ and `ball()` the whole line,
 never a finite ball the theorem does not give. The count, its conversion to `T` and those returns are
 the header's, tested and not machine-checked

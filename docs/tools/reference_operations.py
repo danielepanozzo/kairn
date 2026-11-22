@@ -753,7 +753,7 @@ KERNELS = {
         form("X.upper_as<T>()", B2, result=T, note=ROUNDS_CONSTEXPR),
     ),
     "ball_from_interval_2": page(
-        "ball", "A ball with a two-limb center from an interval of two limbs",
+        "ball", "A ball with a two-limb center from an interval given as two values of T",
         form("from_interval(lo, hi)", T, T, result=B2,
              note="`Ball<T, 2>::from_interval(lo, hi)`; the bounds are guarded "
                   "([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR),
@@ -924,7 +924,7 @@ KERNELS = {
         form("X.lower()", B2, result=E2, note="$z_l$; the kernel computes both bounds; " + ROUNDS),
         form("X.upper()", B2, result=E2, note="$z_u$; the kernel computes both bounds; " + ROUNDS)),
     "ball_from_interval_1": page(
-        "ball", "A ball with a one-limb center from an interval of two limbs",
+        "ball", "A ball with a one-limb center from an interval given as two values of T",
         form("from_interval(lo, hi)", T, T, result=B1,
              note="`Ball<T, 1>::from_interval(lo, hi)`, the ball of `Interval<T, 1>(lo, hi)` in one kernel; the "
                   "bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); " + ROUNDS_CONSTEXPR),

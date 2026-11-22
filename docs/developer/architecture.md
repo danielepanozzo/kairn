@@ -1645,6 +1645,15 @@ wrote and $Y$, in place (the centers written may be exactly one of the arrays re
 scaled centers into the array of the result, then their sum with $Y$ into that same array, or into the
 array of $Y$ when $Y$ is the one to overwrite. No kernel of the generator is `axpy` of ball vectors.
 
+*As built (2026-11-22).* The header writes the scaled centers into the array of the result, which
+may be the array of $X$ and must not be that of $Y$: the scaling would overwrite $Y$ before the sum
+reads it, and the two loops would return a finite ball vector around $2aX$, which does not contain
+$aX + Y$. The header tells that case by one comparison of pointers, in every build: a debug build
+reports it, and the result is the whole space, from the constructor's loop with a radius of
+$+\infty$. Until 2026-11-22 a build without the checks returned the wrong finite ball vector, where
+the same call of the functions on arrays, `axpy(a, x, y, y)`, is the documented in-place form: an
+audit found it. Writing $aX + Y$ into $Y$ is what the one-pass kernel below would allow.
+
 **What is claimed of it** is the two kernels' claims, composed, and nothing of its own: $S$ =
 `bv_scale_k(X, a)` (`encloses_entries` of `x*a`: V1 to V4 with `finite_when=abs_le((abs(x)+rx)*a,-2)`
 and `radii_when=abs_le(rx*a,-2)`), then $Z$ = `bv_add_k(S, Y)` (`encloses_entries` of `x+y`, its V4 with

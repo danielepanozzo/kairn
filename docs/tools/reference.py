@@ -2703,10 +2703,13 @@ class Site:
         if "makes_ball" in kinds and "lower" in next(x for x in e["ensures"] if x["kind"] == "makes_ball")["from"]:
             x = next(x for x in e["ensures"] if x["kind"] == "makes_ball")
             lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+            # Only a claim with midpoint_when (the center of two limbs) says the center is the exact
+            # midpoint; a center of one limb is within the bound its page gives of it.
+            exact = ", with the exact midpoint for its center when halving is exact" if "midpoint_when" in x else ""
             return ("A ball $Z$, of center $%s$ and radius $%s$, that contains the interval $[%s, %s]$ of two values "
-                    "of `T`, with the exact midpoint for its center when halving is exact; or the whole line, or the "
+                    "of `T`%s; or the whole line, or the "
                     "empty set:\n\n$$Z \\supseteq [%s, %s].$$" % (
-                        name_tex(x["center"]), name_tex(x["radius"]), lo, hi, lo, hi))
+                        name_tex(x["center"]), name_tex(x["radius"]), lo, hi, exact, lo, hi))
         if "outward" in kinds:
             xs = [x for x in e["ensures"] if x["kind"] == "outward"]
             parts = " \\le ".join([k.out_tex(x["of"]) for x in xs if x["side"] == "below"] + [v] +
