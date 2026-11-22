@@ -244,11 +244,14 @@ the default environment is the precondition of every function on arrays, and it 
 ([the brief](../developer/design/brief.md#floating-point-environment-non-negotiable)). `norm_upper`,
 which computes no sum (magnitudes, comparisons, a step of the bit pattern), leaves the rounding mode
 out and reads flush to zero only, under which its comparisons read a subnormal number as zero. One
-read of the control register per call, whatever the length; measured, under a nanosecond a call on
-an Apple M3 and about 6 nanoseconds on an AMD Zen 2, where reading MXCSR is slow: several times the
-cost of a sum of a few elements of one limb there, and within the noise of the loop from about 64
-elements of one limb, or a few of two
-([Testing](../developer/testing.md#the-checks-of-a-debug-build)). A program whose own
+read of the control register per call, whatever the length; measured, about half a nanosecond a call
+on an Apple M3 and 5 to 6 nanoseconds on an AMD Zen 2, where reading MXCSR is slow. On the Zen 2 that
+is 64 to 82% of a `sum` or `dot` of up to 8 elements of one limb, 7 to 29% at 64 elements, and under
+5% from 1 024 elements of one limb or from 4 to 16 of two; on the M3 36 to 48% of a call of one
+element and under 5% from 64
+([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#14-short-arrays-and-the-check-at-entry);
+the first measurement, before and after the check was added, is in
+[Testing](../developer/testing.md#the-checks-of-a-debug-build)). A program whose own
 `KAIRN_ENVIRONMENT_FAILURE` returns gets the function's result, with no guarantee.
 
 With `KAIRN_CHECKS` 1 ([config.hpp](https://github.com/danielepanozzo/kairn/blob/main/include/kairn/config.hpp)),

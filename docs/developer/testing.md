@@ -1910,8 +1910,15 @@ Linux machine pinned to one core):
 
 Each cell is before, after. On the M3 the check costs 0 to 0.5 ns a call; on the Zen 2 about 6 ns,
 the cost of storing MXCSR there (21 cycles, as the comment of `environment_ok()` says), which is
-several times a sum of a few elements of one limb and within the noise from about 64 elements of
-one limb, or a few of two. It was kept as the brief asks it, whatever its cost.
+several times a sum of a few elements of one limb, and at 64 elements of one limb still 1.9 to 6.7
+ns, 5 to 19% of the call with it (this paragraph first said "within the noise from about 64 elements
+of one limb", which the table does not show); at 1 024 elements of one limb it is within 3% either
+way, and from 8 elements of two limbs at most 1.1 ns (6% of the shortest call, 1 to 2% of the
+others). The benchmarks of the milestone measured it again, on more lengths, in independent and in
+dependent calls and on short ball vectors: on the Zen 2 64 to 82% of a `sum` or `dot` of up to 8
+elements of one limb, 7 to 29% at 64, under 5% from 1 024
+([Benchmarks, Milestone 2](results/bench-milestone2.md#14-short-arrays-and-the-check-at-entry)).
+It was kept as the brief asks it, whatever its cost.
 
 `tests/api/checks.cpp` runs them, on the cases of `tests/api/checks_cases.hpp`, built as the
 [debug build](#flag-sets) (`api.checks.debug.*`) and with the build's own flags and `KAIRN_CHECKS`
