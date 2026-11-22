@@ -113,7 +113,7 @@ KB_SI void raw_scale(const Raw<K, N>& x, double a, Raw<K, N>& z) {
     if constexpr (K == 1) {
         KB_FAST(bv_scale_1)(x.c[0], N, x.r, a, z.c[0], z.r, f);
     } else {
-        KB_FAST(bv_scale_2)(x.c[0], x.c[1], N, x.r, a, z.c[0], z.c[1], z.r, f);
+        KB_FAST(bv_scale_2_entry)(x.c[0], x.c[1], N, x.r, a, z.c[0], z.c[1], z.r, f);
     }
 }
 

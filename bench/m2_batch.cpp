@@ -357,13 +357,19 @@ template <class T> KB_SI void dot1_textbook(Set<T>& d) {
     template <class T> KB_SI void NAME##_kairn(Set<T>& d) {                                        \
         const P<T> r(d);                                                                           \
         bool f = false;                                                                            \
-        KB_FAST(dot_2)(r.x0, X1, r.y0, Y1, r.n, d.cout[0], d.cout[1], f);                          \
+        KB_FAST(dot_2_entry)(r.x0, X1, r.y0, Y1, r.n, d.cout[0], d.cout[1], f);                    \
         d.cout[3] = T(f);                                                                          \
     }                                                                                              \
     template <class T> KB_SI void NAME##_kseq(Set<T>& d) {                                         \
         const P<T> r(d);                                                                           \
         bool f = false;                                                                            \
-        kg::dot_2_seq(r.x0, X1, r.y0, Y1, r.n, d.cout[0], d.cout[1], f);                           \
+        kg::dot_2_entry_seq(r.x0, X1, r.y0, Y1, r.n, d.cout[0], d.cout[1], f);                     \
+        d.cout[3] = T(f);                                                                          \
+    }                                                                                              \
+    template <class T> KB_SI void NAME##_bare(Set<T>& d) {                                         \
+        const P<T> r(d);                                                                           \
+        bool f = false;                                                                            \
+        KB_FAST(dot_2)(r.x0, X1, r.y0, Y1, r.n, d.cout[0], d.cout[1], f);                          \
         d.cout[3] = T(f);                                                                          \
     }
 KB_DOT2(dot2, r.x1, r.y1)
@@ -668,6 +674,12 @@ template <class T, std::size_t N> KB_SI void conv2_op(Set<T>& d) {
     d.cout[3] = T(kairn::conv(V2<T>(r.x0, r.x1, N), V2<T>(r.y0, r.y1, N), W2<T>(r.c0, r.c1, 2 * N - 1)));
 }
 template <class T, std::size_t N> KB_SI void conv2_kairn(Set<T>& d) {
+    const P<T> r(d);
+    bool f = false;
+    kg::conv_2_entry_seq(r.x0, r.x1, N, r.y0, r.y1, N, r.c0, r.c1, f);
+    d.cout[3] = T(f);
+}
+template <class T, std::size_t N> KB_SI void conv2_bare(Set<T>& d) {
     const P<T> r(d);
     bool f = false;
     kg::conv_2_seq(r.x0, r.x1, N, r.y0, r.y1, N, r.c0, r.c1, f);
@@ -1116,7 +1128,7 @@ KB_SHORT(ssum2, 2, kairn::sum(V2<double>(x0 + o, x1 + o, len)), KB_FAST(sum_2_en
 KB_SHORT(sdot1, 1, kairn::dot(V1<double>(x0 + o, len), V1<double>(y0 + o, len)),
          KB_FAST(dot_1_entry)(x0 + o, y0 + o, len, v[0], f))
 KB_SHORT(sdot2, 2, kairn::dot(V2<double>(x0 + o, x1 + o, len), V2<double>(y0 + o, y1 + o, len)),
-         KB_FAST(dot_2)(x0 + o, x1 + o, y0 + o, y1 + o, len, v[0], v[1], f))
+         KB_FAST(dot_2_entry)(x0 + o, x1 + o, y0 + o, y1 + o, len, v[0], v[1], f))
 
 }  // namespace
 
@@ -1160,6 +1172,7 @@ KB_SHORT(sdot2, 2, kairn::dot(V2<double>(x0 + o, x1 + o, len), V2<double>(y0 + o
     X(B, SUF, T, KIND, SZ, dot1, plainw, dot1_plainw<T>, O_C1, 1, "kairn")                         \
     X(B, SUF, T, KIND, SZ, dot1, textbook, dot1_textbook<T>, O_C1, 1, "exact")                     \
     KB_RED2(X, B, SUF, T, KIND, SZ, dot2)                                                          \
+    X(B, SUF, T, KIND, SZ, dot2, bare, dot2_bare<T>, O_C2, 2, "kairn")                             \
     X(B, SUF, T, KIND, SZ, dot2, textbook, dot2_textbook<T>, O_C2, 2, "exact")                     \
     KB_RED2(X, B, SUF, T, KIND, SZ, dot2z)                                                         \
     KB_MAP(X, B, SUF, T, KIND, SZ, add1, O_Z1)                                                     \
@@ -1197,6 +1210,7 @@ KB_SHORT(sdot2, 2, kairn::dot(V2<double>(x0 + o, x1 + o, len), V2<double>(y0 + o
     X(B, SUF, T, tp, 0, conv1_##N, plain, (conv1_plain<T, N>), O_ZC1, 2 * N - 1, "")              \
     X(B, SUF, T, tp, 0, conv2_##N, op, (conv2_op<T, N>), O_ZC2, 2 * (2 * N - 1), "kairn")         \
     X(B, SUF, T, tp, 0, conv2_##N, kairn, (conv2_kairn<T, N>), O_ZC2, 2 * (2 * N - 1), "")        \
+    X(B, SUF, T, tp, 0, conv2_##N, bare, (conv2_bare<T, N>), O_ZC2, 2 * (2 * N - 1), "kairn")     \
     X(B, SUF, T, tp, 0, conv2_##N, textbook, (conv2_textbook<T, N>), O_ZC2, 2 * (2 * N - 1), "exact")
 
 #define KB_ACC(X, KIND, SZ)                                                                        \

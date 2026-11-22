@@ -1066,37 +1066,79 @@ def load3(directory):
     """{item: {(machine, compiler, 'inline', level): [run, ...]}}; 'entry': the runs of the ratio of each
     function's minimum with the check to its minimum without, 'entry_diff' their difference in ns, the
     two programs of one run index paired; 'entry_raw' the runs themselves; 'accuracy' the files of
-    kairn-bench-m2-accuracy."""
+    kairn-bench-m2-accuracy.
+
+    Files named r3-ITEM-...: runs made again, at a later tree, of the functions whose code changed
+    (the close of rule R3 on the factors of a fused operation), with the functions their ratios
+    divide by. Each replaces, in the run of the same index of its configuration (and in both or
+    all three programs of a pair or a triplet), the functions it measured; the others stay those of
+    the earlier run. 'r3_ITEM' holds them as they are, for the table of the runs."""
     items, pairs, acc, triples = {}, {}, {}, {}
+    ov_items, ov_pairs, ov_triples = {}, {}, {}
     for path in sorted(glob.glob(os.path.join(directory, '*.json'))):
         stem = os.path.basename(path)[:-len('.json')]
+        r3 = stem.startswith('r3-')
+        if r3:
+            stem = stem[len('r3-'):]
         m, k, a, x = NAME3.match(stem), ENTRY3.match(stem), ACC3.match(stem), ENTRYX.match(stem)
         if not (m or k or a or x):
             continue
         d = json.load(open(path))
         d['path'] = os.path.basename(path)
         if a:
-            acc[(a.group('machine'), a.group('compiler'), 'inline', a.group('level'))] = d
+            if not r3:
+                acc[(a.group('machine'), a.group('compiler'), 'inline', a.group('level'))] = d
             continue
         d['ns'] = {r['name']: r['ns_min'] for r in d['results']}
+        tr, pa, it = (ov_triples, ov_pairs, ov_items) if r3 else (triples, pairs, items)
         if x:
             key = (x.group('machine'), x.group('compiler'), 'inline', x.group('level'))
-            triples.setdefault(key, {}).setdefault(x.group('run'), {})[x.group('c')] = d
+            tr.setdefault(key, {}).setdefault(x.group('run'), {})[x.group('c')] = d
             continue
         if m:
             key = (m.group('machine'), m.group('compiler'), 'inline', m.group('level'))
-            items.setdefault(m.group('item'), {}).setdefault(key, []).append(d)
+            it.setdefault(m.group('item'), {}).setdefault(key, []).append(d)
         else:
             key = (k.group('machine'), k.group('compiler'), 'inline', k.group('level'))
-            pairs.setdefault(key, {}).setdefault(k.group('run'), {})[int(k.group('c'))] = d
+            pa.setdefault(key, {}).setdefault(k.group('run'), {})[int(k.group('c'))] = d
+
+    def over(old, new):
+        o = dict(old)
+        o['ns'] = dict(old['ns'])
+        o['ns'].update(new['ns'])
+        o['overlay'] = new['path']
+        return o
+
+    for item, by in ov_items.items():
+        items['r3_' + item] = by
+        for key, new in by.items():
+            old = items.get(item, {}).get(key, [])
+            items.setdefault('raw_' + item, {})[key] = list(old)
+            for i, nd in enumerate(new):
+                if i < len(old):
+                    old[i] = over(old[i], nd)
+    raw_pairs = {key: {run: dict(both) for run, both in runs_.items()} for key, runs_ in pairs.items()}
+    raw_triples = {key: {run: dict(three) for run, three in runs_.items()} for key, runs_ in triples.items()}
+    for src, dst in ((ov_pairs, pairs), (ov_triples, triples)):
+        for key, runs_ in src.items():
+            for run, progs in runs_.items():
+                for c, nd in progs.items():
+                    if c in dst.get(key, {}).get(run, {}):
+                        dst[key][run][c] = over(dst[key][run][c], nd)
+    items['r3_entry_raw'] = {key: [d for run in sorted(r) for d in (r[run].get(1), r[run].get(0)) if d]
+                             for key, r in ov_pairs.items()}
+    items['r3_x_raw'] = {key: [d for run in sorted(r) for d in r[run].values()] for key, r in ov_triples.items()}
     ratio_, diff_, raw = {}, {}, {}
+    for key, runs_ in raw_pairs.items():
+        for run, both in sorted(runs_.items()):
+            if 0 in both and 1 in both:
+                raw.setdefault(key, []).extend([both[1], both[0]])
     for key, runs_ in pairs.items():
         for run, both in sorted(runs_.items()):
             if 0 in both and 1 in both:
                 common = [n for n in both[1]['ns'] if n in both[0]['ns']]
                 ratio_.setdefault(key, []).append({'ns': {n: both[1]['ns'][n] / both[0]['ns'][n] for n in common}})
                 diff_.setdefault(key, []).append({'ns': {n: both[1]['ns'][n] - both[0]['ns'][n] for n in common}})
-                raw.setdefault(key, []).extend([both[1], both[0]])
     items['entry'] = ratio_
     items['entry_diff'] = diff_
     items['entry_raw'] = raw
@@ -1115,6 +1157,8 @@ def load3(directory):
                 if 'v' in three:
                     cv = three['v']['ns']
                     items['x_cold'].setdefault(key, []).append({'ns': {n: cv[n] - c0[n] for n in common if n in cv}})
+    for key, runs_ in raw_triples.items():
+        for run, three in sorted(runs_.items()):
             items['x_raw'].setdefault(key, []).extend(three.values())
     return items
 
@@ -1653,13 +1697,17 @@ def report3(directory):
     headers_compile(directory)
 
 
+RUNS3_ITEMS = ('arrays', 'short', 'acc', 'bv', 'entry_raw', 'x_raw',
+               'r3_arrays', 'r3_short', 'r3_acc', 'r3_bv', 'r3_entry_raw', 'r3_x_raw')
+
+
 def runs3(items):
     """Each timed run of the third part: its spread within and against the fastest run of its
     configuration, the load average, and the checks; then the spread of each item."""
     print('\n| Run (third part) | Functions checked, failed | Over the fastest run: median, 90th percentile | Median over minimum within the run (median function) | Load average (1 min) at start, end |')
     print('|---|---|---|---|---|')
-    for item in ('arrays', 'short', 'acc', 'bv', 'entry_raw', 'x_raw'):
-        c = items.get(item, {})
+    for item in RUNS3_ITEMS:
+        c = items.get('raw_' + item, items.get(item, {}))
         for key in sorted(c):
             groups = {}
             for r in c[key]:
@@ -1678,8 +1726,8 @@ def runs3(items):
                         rel[int(0.9 * (len(rel) - 1))], within[len(within) // 2], la['start'][0], la['end'][0]))
     print('\n| Spread of (third part) | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |')
     print('|---|---:|---|---|')
-    for item in ('arrays', 'short', 'acc', 'bv', 'entry_raw', 'x_raw'):
-        c = items.get(item, {})
+    for item in RUNS3_ITEMS:
+        c = items.get('raw_' + item, items.get(item, {}))
         for key in sorted(c):
             groups = {}
             for r in c[key]:
@@ -1691,8 +1739,10 @@ def runs3(items):
                 for r in runs_[1:]:
                     names &= set(r['ns'])
                 sp = sorted((max(r['ns'][n] for r in runs_) / min(r['ns'][n] for r in runs_) - 1, n) for n in names)
-                label = '%s %s%s' % (item.replace('_raw', '').replace('x', 'entryx'), '-'.join(x for x in key if x != 'inline'),
-                                     (' %s' % setting) if item in ('entry_raw', 'x_raw') else '')
+                label = '%s %s%s' % (item.replace('_raw', '').replace('_x', '_entryx').replace('r3_', 'r3-').replace('x', 'entryx') if item == 'x_raw'
+                                     else item.replace('_raw', '').replace('_x', '_entryx').replace('r3_', 'r3-'),
+                                     '-'.join(x for x in key if x != 'inline'),
+                                     (' %s' % setting) if item.endswith(('entry_raw', 'x_raw')) else '')
                 print('| %s | %d | %.1f%%, %.1f%%, %.1f%% | `%s` |' % (label, len(runs_), 100 * sp[len(sp) // 2][0],
                                                                     100 * sp[int(0.9 * (len(sp) - 1))][0], 100 * sp[-1][0], sp[-1][1]))
 
