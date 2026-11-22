@@ -68,9 +68,10 @@ for two, $3u^2$ for `sum_fast`. The bound is relative to $\sum_i\lvert x_i\rvert
 where the terms cancel, the error relative to the sum itself is larger by the condition number
 $\sum_i\lvert x_i\rvert / \lvert\sum_i x_i\rvert$, which [Accurate sums](../tutorials/accurate-sums.md)
 shows on a sum that `double` gets entirely wrong. A dot product has its own statement, of the same
-shape with $\sum_i\lvert x_i y_i\rvert$ and an underflow term of $\tfrac12\eta$ (one limb) or $\tfrac32\eta$
-(two limbs) per term; `axpy` and the other maps claim, of each element, the bound of the operation on
-one element.
+shape with $\sum_i\lvert x_i y_i\rvert$ and an underflow term of $(1+e)^{n-1}\,n\,\tau$, about $\tau$
+per term, $\tau = \tfrac12\eta$ for one limb and $\tfrac32\eta$ for two (the loops `dot_1_entry` and
+`dot_2` of `gen/claims.json`); `axpy` and the other maps claim, of each element, the bound of the
+operation on one element.
 
 **A program gets the bound as numbers of `T`** from `kairn::traits<X>`: `sum(n)` for a sum of $n$
 numbers in any tree of additions, `sum_height(h)` for a tree of height $h$, and `dot(n)` for a dot
@@ -114,13 +115,15 @@ by the same expression of the length.
   and in every form of `Packed`, so a program that needs the same result everywhere asks for it.
 
 The program above prints only the results of the sequential order, which ctest compares on every
-platform; it checks those of the lane order against the bound too. In this version the tag is the
-last argument of `sum`, `sum_fast` and `dot`, `kairn::sum(x, kairn::sequential)`, and the first of an
-operation of ball vectors, `kairn::add(kairn::sequential, x, y, z)` (`kairn/order.hpp`). The maps write
-each element from the elements of the same index alone, so their results do not depend on the order;
-`norm_upper` computes the same result in every order; `conv` has the sequential order only. What is
-claimed of the two orders is the statement, not the bits: that they agree where they do is not
-claimed.
+platform; it checks those of the lane order against the bound too. The tag is the first argument of
+every function that takes it, as the execution policies of the standard library are:
+`kairn::sum(kairn::sequential, x)`, `kairn::dot(kairn::sequential, x, y)`, and for an operation of
+ball vectors `kairn::add(kairn::sequential, x, y, z)` (`kairn/order.hpp`). Written last,
+`kairn::sum(x, kairn::sequential)` does not compile (the test `api.reject.batch.order_tag_last`).
+The maps write each element from the elements of the same index alone, so their results do not
+depend on the order; `norm_upper` computes the same result in every order; `conv` has the sequential
+order only. What is claimed of the two orders is the statement, not the bits: that they agree where
+they do is not claimed.
 
 ## Finite results, and arrays in place
 
@@ -130,8 +133,10 @@ NaN, never a finite wrong value. A map returns `true` exactly when every element
 A map may write in place, into exactly the arrays it reads (`axpy(a, x, y, y)` is
 $y \leftarrow ax + y$); no other overlap is supported. Every value the loops add passes through the
 guard, so arrays the program fills with products in the same function may be passed straight in
-([The floating-point environment](environment.md#contraction-and-fast-math)). With `KAIRN_CHECKS`
-each function checks the environment, the lengths, the arrays that alias and its elements
+([The floating-point environment](environment.md#contraction-and-fast-math)). **Every function on
+arrays checks the floating-point environment before its loop, in every build**, and by default stops
+the program if it is not the default one ([The checks](environment.md#the-checks)); with
+`KAIRN_CHECKS` it also checks the lengths, the arrays that alias and its elements
 ([Functions on arrays](../reference/batch.md#checks)).
 
 ## The accumulator
@@ -165,8 +170,9 @@ the header's, tested and not machine-checked
 benchmarked: their benchmarks are still to come
 ([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#still-to-come)). What has been
 measured is the operations they are made of ([Precision and magnitude](precision.md),
-[Intervals, balls and ball vectors](enclosures.md#what-they-cost-and-how-wide-they-are)) and the
-compile time of the headers (above).
+[Intervals, balls and ball vectors](enclosures.md#what-they-cost-and-how-wide-they-are)), the
+compile time of the headers (above), and what the check of the environment adds to a call of
+`sum`, `dot` and `add` ([The checks](environment.md#the-checks)).
 
 ## Not provided
 

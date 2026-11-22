@@ -61,12 +61,12 @@ int main() {
 
     // --8<-- [start:sum]
     const kairn::Reduction<kairn::Expansion<double, 1>> s1 = kairn::sum(one);        // the lanes' order
-    const kairn::Reduction<Number> s2 = kairn::sum(two, kairn::sequential);          // element after element
+    const kairn::Reduction<Number> s2 = kairn::sum(kairn::sequential, two);          // element after element
     // With b = traits<X>::sum(n): |s - sum of x_i| <= b.unit * sum of |x_i|, in either order.
     const kairn::Bound<double> b1 = kairn::traits<double>::sum(n);
     const kairn::Bound<double> b2 = kairn::traits<Number>::sum(n);
     // --8<-- [end:sum]
-    const kairn::Reduction<kairn::Expansion<double, 1>> s1_seq = kairn::sum(one, kairn::sequential);
+    const kairn::Reduction<kairn::Expansion<double, 1>> s1_seq = kairn::sum(kairn::sequential, one);
     const kairn::Reduction<Number> s2_lanes = kairn::sum(two);
     std::printf("the exact sum:                %s\n", limbs(exact0, exact1).c_str());
     std::printf("one limb, sequential order:   %s, bound %s of the magnitudes\n", hex(s1_seq.value.limb[0]).c_str(),
