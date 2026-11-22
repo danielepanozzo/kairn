@@ -2317,7 +2317,8 @@ time when $n$ is a constant". `traits<X>::axpy` is a constant, like the bounds o
 A bound of the sum for a known height, `sum_height(h)`, is the same kernel and is offered for an
 order that the program knows. *State on 2026-11-21:* the four kernels are generated and proved
 (`BoundKernels.v`), and no public function calls them yet (`KAIRN_NOT_PUBLIC_YET` of
-`tests/CMakeLists.txt`): this paragraph is the design of their header.
+`tests/CMakeLists.txt`): this paragraph is the design of their header. *Since (2026-11-22):* `kairn::traits<X>::sum(n)`,
+`sum_height(h)` and `dot(n)` call them ([Functions on arrays](../../reference/batch.md)).
 
 *Not claimed:* the smallest number of `T` above the real bound; a bound when
 $n\varepsilon$ exceeds about $\tfrac14$, where it would be a third of the sum of magnitudes
@@ -3183,7 +3184,8 @@ a second time, by the printer of `scalar.hpp` with the limb type as a parameter 
 two listings equal token for token outside the literals), for a test-only limb type computed with
 integers in a format chosen at run time (`kairn::emulated::Number`, `tests/emulated/`), which
 shares no code with the oracle or the interpreter and is validated against both the oracle's
-rounding and the machine's `float` and `double`. All 223 kernels and 44 loops run in it, in both
+rounding and the machine's `float` and `double`. All 223 kernels and 44 loops of that day (233 and 47
+since the entry forms of rule R3 joined: the tier's plan is built from the claims file) run in it, in both
 orders and both forms of the fix-up, and the constant-evaluation path of the 160 kernels that have
 one. The oracle judges every operand of 77 kernels at precision 8 and of 15 kernels of one limb
 at precisions 9 to 11, in the formats `fp:p:(2-2p):1` of the statements, and 500 000 random cases
@@ -3333,7 +3335,9 @@ on 2026-11-20, below; 17 is the first form, the lemma being proved at the bounda
     *State on 2026-11-21:* (a) is built: the loops over supplied arrays that add their elements
     are folds of their own, `sum_1_entry` and the others named `_entry`, whose steps guard
     ([Folds](#folds-the-extension-of-the-ir)). No public function calls them yet, and no
-    measurement of the guard's cost is recorded on this tree.
+    measurement of the guard's cost is recorded on this tree. *Since (2026-11-22):* the functions of
+    `kairn/batch.hpp` call them; the cost of the guards is in the row of 2026-11-21 of
+    [the decisions log](phase0/decisions.md#decisions-log) on the strict rule.
 
 ## Experiments
 

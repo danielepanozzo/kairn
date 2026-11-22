@@ -131,7 +131,7 @@ instead, 5 have only the theorems that the computation at compile time gives the
 computation at run time, and 11 have no theorem of their own in the IEEE model (`two_sum_entry`,
 the kernel of the public `two_sum`, stated for finite operands, and parts of loops whose theorems in
 that model use them); and every loop is proved in both models. The tree has grown since the note
-was counted: `gen/claims.json` now has 225 kernels and 45 loops, every one with the status `proved`
+was counted: `gen/claims.json` now has 237 kernels and 51 loops, every one with the status `proved`
 ([the reference](../reference/index.md) counts them).
 
 ## What is not machine-checked

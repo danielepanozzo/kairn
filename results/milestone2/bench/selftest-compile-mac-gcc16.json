@@ -1,0 +1,261 @@
+{
+ "schema": 1,
+ "what": "run",
+ "date": "2026-11-22",
+ "commit": "e2f497c",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity); shared with other jobs",
+  "cpu": "Apple M3 Max",
+  "os": "Darwin",
+  "arch": "arm64"
+ },
+ "compiler": "g++-16 (Homebrew GCC 16.2.0) 16.2.0",
+ "cxx": "g++-16",
+ "family": "gnu",
+ "flags": "",
+ "pinning": "not pinned",
+ "reps": 7,
+ "configs": {
+  "O2": [
+   "-O2",
+   "-DNDEBUG"
+  ],
+  "O3": [
+   "-O3",
+   "-DNDEBUG"
+  ]
+ },
+ "units": {
+  "empty": {
+   "source": "bench/compile_time/empty.cpp",
+   "packed": false,
+   "description": "an empty translation unit"
+  },
+  "include": {
+   "source": "bench/compile_time/include.cpp",
+   "packed": false,
+   "description": "kairn/kairn.hpp alone"
+  },
+  "self_test": {
+   "source": "bench/compile_time/self_test.cpp",
+   "packed": false,
+   "description": "kairn.hpp and one call of kairn::self_test()"
+  }
+ },
+ "common_flags": {
+  "scalar": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests"
+  ],
+  "packed": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests"
+  ]
+ },
+ "results": [
+  {
+   "unit": "empty",
+   "config": "O2",
+   "wall_s": [
+    0.0572,
+    0.0569,
+    0.0576,
+    0.0571,
+    0.0577,
+    0.057,
+    0.0572
+   ],
+   "cpu_s": [
+    0.0504,
+    0.0498,
+    0.0504,
+    0.0501,
+    0.0505,
+    0.05,
+    0.0503
+   ],
+   "peak_mb": [
+    19.8,
+    19.8,
+    19.7,
+    19.8,
+    19.8,
+    19.8,
+    19.8
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-gcc16/empty-O2.o"
+  },
+  {
+   "unit": "empty",
+   "config": "O3",
+   "wall_s": [
+    0.0551,
+    0.0549,
+    0.0553,
+    0.0553,
+    0.0549,
+    0.0564,
+    0.055
+   ],
+   "cpu_s": [
+    0.049,
+    0.0485,
+    0.0486,
+    0.0491,
+    0.0485,
+    0.0496,
+    0.0487
+   ],
+   "peak_mb": [
+    19.7,
+    19.8,
+    19.7,
+    19.8,
+    19.8,
+    19.7,
+    19.8
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-gcc16/empty-O3.o"
+  },
+  {
+   "unit": "include",
+   "config": "O2",
+   "wall_s": [
+    0.2587,
+    0.2575,
+    0.258,
+    0.2591,
+    0.2643,
+    0.2578,
+    0.2575
+   ],
+   "cpu_s": [
+    0.2512,
+    0.2499,
+    0.2507,
+    0.2517,
+    0.2565,
+    0.2501,
+    0.2501
+   ],
+   "peak_mb": [
+    98.8,
+    98.7,
+    98.9,
+    98.9,
+    98.9,
+    98.7,
+    98.7
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-gcc16/include-O2.o"
+  },
+  {
+   "unit": "include",
+   "config": "O3",
+   "wall_s": [
+    0.259,
+    0.2581,
+    0.2608,
+    0.2579,
+    0.2599,
+    0.2579,
+    0.2576
+   ],
+   "cpu_s": [
+    0.2516,
+    0.2507,
+    0.2532,
+    0.2505,
+    0.2523,
+    0.2502,
+    0.2503
+   ],
+   "peak_mb": [
+    98.8,
+    98.9,
+    98.9,
+    98.7,
+    98.7,
+    98.8,
+    98.9
+   ],
+   "object_bytes": 336,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-gcc16/include-O3.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "O2",
+   "wall_s": [
+    3.8642,
+    3.8574,
+    3.8623,
+    3.8523,
+    3.8638,
+    3.8475,
+    4.0221
+   ],
+   "cpu_s": [
+    3.8552,
+    3.8481,
+    3.8534,
+    3.8416,
+    3.8547,
+    3.8382,
+    4.0121
+   ],
+   "peak_mb": [
+    259.0,
+    258.6,
+    257.7,
+    259.2,
+    258.2,
+    259.2,
+    259.1
+   ],
+   "object_bytes": 405024,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O2 -DNDEBUG -c bench/compile_time/self_test.cpp -o WORK/ct-gcc16/self_test-O2.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "O3",
+   "wall_s": [
+    4.0247,
+    4.0187,
+    4.016,
+    4.0205,
+    4.0219,
+    4.0251,
+    4.1887
+   ],
+   "cpu_s": [
+    4.0155,
+    4.0095,
+    4.0066,
+    4.0115,
+    4.0134,
+    4.016,
+    4.1646
+   ],
+   "peak_mb": [
+    262.2,
+    263.3,
+    262.2,
+    261.9,
+    262.1,
+    263.5,
+    263.8
+   ],
+   "object_bytes": 405000,
+   "command": "g++-16 -std=c++20 -I include -I gen/tests -O3 -DNDEBUG -c bench/compile_time/self_test.cpp -o WORK/ct-gcc16/self_test-O3.o"
+  }
+ ]
+}

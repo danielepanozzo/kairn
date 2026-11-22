@@ -1,0 +1,115 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-22",
+ "commit": "e2f497c",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity); shared with other jobs",
+  "cpu": "Apple M3 Max",
+  "pinning": "not pinned"
+ },
+ "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+ "cxx": "c++",
+ "flags": "",
+ "kind": "setops",
+ "timeout": 1800,
+ "reps": 1,
+ "run_reps": 0,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    5.321
+   ],
+   "cpu": [
+    5.314
+   ],
+   "peak_mb": [
+    468.9
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 637720
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    5.896
+   ],
+   "cpu": [
+    5.883
+   ],
+   "peak_mb": [
+    447.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 637720
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    5.782
+   ],
+   "cpu": [
+    5.775
+   ],
+   "peak_mb": [
+    460.2
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 637720
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "calls",
+   "wall": [
+    6.852
+   ],
+   "cpu": [
+    6.846
+   ],
+   "peak_mb": [
+    338.9
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 426232
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.244
+   ],
+   "cpu": [
+    0.24
+   ],
+   "peak_mb": [
+    77.2
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 23024
+  }
+ ]
+}

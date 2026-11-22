@@ -404,6 +404,23 @@ void value_forms(int e, long id) {
     expect(same(kairn::half(x), zv) && same(kairn::half(kairn::sequential, x), zv), "half(x)", id);
     kairn::axpy(a, xv, yv, zv);
     expect(same(kairn::axpy(a, x, y), zv) && same(kairn::axpy(kairn::sequential, a, x, y), zv), "axpy(a, x, y)", id);
+    // axpy written into y itself is not supported (the scaling would overwrite y before the sum reads
+    // it): with the checks off, as here, the result is the whole space in both orders, which contains
+    // a x + y, and never the finite ball vector around 2 a x that the two loops would compute.
+    {
+        auto w1 = y, w2 = y;
+        kairn::axpy(a, x, w1, w1);
+        kairn::axpy(kairn::sequential, a, x, w2, w2);
+        expect(w1.is_whole() && w2.is_whole(), "axpy(a, x, y, y): the whole space", id);
+        auto v1 = y;
+        const auto view = v1.view();
+        kairn::axpy(a, xv, view, view);
+        expect(v1.is_whole(), "axpy(a, x, y, y) through views: the whole space", id);
+        // Written into x itself it is supported, and is the result written elsewhere.
+        auto v2 = x;
+        kairn::axpy(a, v2, y, v2);
+        expect(same(v2, zv), "axpy(a, x, y, x): in place in x", id);
+    }
     expect(same_limb(kairn::norm_upper(x), kairn::norm_upper(xv)), "norm_upper(x)", id);
     // x + x in place: the bits of x + x.
     w = x;

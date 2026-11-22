@@ -190,11 +190,11 @@ nav:
           - The upper bound of a ball as a limb, one-limb center: reference/ball_upper_as_1.md
           - A lower bound of a ball as a limb, two-limb center: reference/ball_lower_as_2.md
           - An upper bound of a ball as a limb, two-limb center: reference/ball_upper_as_2.md
-          - A ball with a two-limb center from an interval of two limbs: reference/ball_from_interval_2.md
+          - A ball with a two-limb center from an interval given as two values of T: reference/ball_from_interval_2.md
           - A ball with a two-limb center as one with a one-limb center: reference/ball_narrow_2_1.md
           - The smallest interval that contains a ball, one-limb center: reference/ball_to_interval_1.md
           - An interval that contains a ball, two-limb center: reference/ball_to_interval_2.md
-          - A ball with a one-limb center from an interval of two limbs: reference/ball_from_interval_1.md
+          - A ball with a one-limb center from an interval given as two values of T: reference/ball_from_interval_1.md
           - A ball that contains two balls, two-limb center: reference/ball_hull_2.md
           - A ball that contains the intersection of two balls, two-limb center: reference/ball_intersection_2.md
           - A ball that contains two balls, one-limb center: reference/ball_hull_1.md

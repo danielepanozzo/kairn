@@ -159,7 +159,7 @@ a number of `T` that is certainly at least it, computed by a generated, proved k
 ```cpp
 using X = kairn::Expansion<double, 2>;
 const kairn::Bound<double> s = kairn::traits<X>::sum(n);         // a sum of n numbers
-const kairn::Bound<double> h = kairn::traits<X>::sum_height(h);  // a summation tree of height h
+const kairn::Bound<double> t = kairn::traits<X>::sum_height(h);  // a summation tree of height h
 const kairn::Bound<double> d = kairn::traits<X>::dot(n);         // a dot product of n terms
 kairn::traits<X>::axpy;  kairn::traits<X>::axpy_limb;            // one element of axpy (constants)
 ```

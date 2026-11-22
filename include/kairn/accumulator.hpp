@@ -210,11 +210,12 @@ public:
     /// result r is finite, |s - Sigma| <= r (kernels bound_dot_1 or bound_dot_2 of the count m, then
     /// acc_radius_1 or acc_radius_2 of (a, m, g, t)). m is the count as the smallest number of T not
     /// below it. +infinity, which claims nothing, when the count saturated, a mask of the two kernels
-    /// is false (a sum of magnitudes that is +inf or a NaN; a count m with m u above about 1/4 to
-    /// 1/2, u the unit roundoff of T: the sum of magnitudes is held in T for one and for two limbs,
-    /// and acc_radius_k bounds counts up to m u <= 1/2, about 2^22 terms of float and 2^51 of
-    /// double), the running sum is not finite, or the radius is not. The empty accumulator has a
-    /// radius of a few times the smallest normal number. Rounds; not constexpr.
+    /// is false (a sum of magnitudes that is +inf or a NaN; a count m that is too large: the sum of
+    /// magnitudes is held in T for one and for two limbs, and with u the unit roundoff of T the
+    /// masks are true for m u < 1/4 with one limb, fewer than 2^22 terms of float and 2^51 of double
+    /// (bound_dot_1), and for m u < 1/2 with two, fewer than 2^23 and 2^52 (acc_radius_2)), the
+    /// running sum is not finite, or the radius is not. The empty accumulator has a radius just
+    /// above the smallest normal number. Rounds; not constexpr.
     T error_bound() const noexcept
         requires detail::acc_radius_proved<T, K>
     {

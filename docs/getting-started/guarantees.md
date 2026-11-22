@@ -580,7 +580,7 @@ an integer of the header that saturates at $2^{64} - 1$ (no bound then), its con
 (rounded up; exact wherever a radius is given), and what is returned when a mask is false or a
 value is not finite: `error_bound()` $+\infty$ and `ball()` the whole line, never a finite ball the
 theorem does not give. A radius is given up to about $2^{22}$ terms of `float` and $2^{51}$ of
-`double`, for one and two limbs, since the magnitudes are summed in `T`.
+`double` with one limb, and twice as many with two, since the magnitudes are summed in `T`.
 
 ## Ball vectors
 

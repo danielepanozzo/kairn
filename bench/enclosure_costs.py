@@ -15,12 +15,12 @@ docs/developer/results/costs-milestone2.md, docs/developer/results/bench-milesto
   enclosure_costs.py compile --cxx CXX [--msvc] [--flags "..."] [--kind KIND] [--cpu N]
                      [--sizes 100,1000,10000] [--configs O2,O3]
                      [--settings inline,outlined,external[,calls]] [--reps R] [--timeout S]
-                     [--run [--run-reps R]]
+                     [--run [--run-reps R]] [--once-from N]
                      --workdir DIR --machine TEXT --commit TEXT --json FILE
       Writes those units into DIR and compiles each (nothing is linked) with each configuration and
-      setting, R times in rounds over all of them (once for the units of the largest size), and
-      records the wall time, the processor time and the peak memory of each compilation, and the
-      size of the object; and the same for bench/definitions.cpp, the translation unit that defines
+      setting, R times in rounds over all of them (once for the units of the largest size, or of N
+      operations or more), and records the wall time, the processor time and the peak memory of
+      each compilation, and the size of the object; and the same for bench/definitions.cpp, the translation unit that defines
       the operations for the external setting, which a program compiles once. The setting calls is
       the same code without Kairn, the types structures of doubles and the operations functions
       declared only: what the calls themselves cost the compiler. With --run (KIND interval1,
@@ -115,9 +115,76 @@ UNIT_SIGNATURE = ('void enclosure_unit(const B* inb, const I* ini, const J* inj,
                   'I* outi, J* outj)')
 
 
+# The kinds of the enclosure interface (the second part of bench-milestone2.md): calls of the
+# three-valued comparisons, of contains, and of hull, intersection and split, on Interval<double, 1>
+# (I), Interval<double, 2> (J), Ball<double, 1> (C) and Ball<double, 2> (B) in turn. None of these
+# returns an operand for the next, so each call takes operands of its own, elements of input arrays,
+# and the compiler can merge none of them; each result is stored.
+IFACE_TYPES = {'I': 'kairn::Interval<double, 1>', 'J': 'kairn::Interval<double, 2>', 'C': 'kairn::Ball<double, 1>',
+               'B': 'kairn::Ball<double, 2>'}
+IFACE_STAND_INS = {'I': 'double lo, hi;', 'J': 'double l0, l1, h0, h1;', 'C': 'double c, r;', 'B': 'double c0, c1, r;'}
+IFACE_KINDS = {'compare': ['less', 'less_equal', 'equal'], 'contains': ['contains_t', 'contains_set'],
+               'setops': ['hull', 'intersection', 'split']}
+
+
+def source_iface(n, kind, calls=False):
+    """A unit of n calls of KIND (compare, contains, setops) in one function, the four types in turn
+    and the operations of the kind in turn for each, each call on elements of the inputs that no other
+    call reads."""
+    ops = [(t, o) for o in IFACE_KINDS[kind] for t in 'IJCB']
+    out = ['// Written by bench/enclosure_costs.py: %d calls (%s) in straight-line code, each result stored.'
+           % (n, kind) + (' The same calls without Kairn: functions declared only.' if calls else '')]
+    if calls:
+        out += ['enum class Trit : signed char { no = -1, unknown = 0, yes = 1 };',
+                'template <class X>', 'struct Split {', '    X left, right;', '};']
+        for t in 'IJCB':
+            out += ['struct %s {' % t, '    ' + IFACE_STAND_INS[t],
+                    '    bool contains(double) const noexcept;', '    bool contains(const %s&) const noexcept;' % t,
+                    '    %s hull(const %s&) const noexcept;' % (t, t),
+                    '    %s intersection(const %s&) const noexcept;' % (t, t),
+                    '    Split<%s> split() const noexcept;' % t, '};']
+            for o in IFACE_KINDS['compare']:
+                out.append('Trit %s(const %s&, const %s&) noexcept;' % (o, t, t))
+        split, ns = 'Split', ''
+    else:
+        out += ['#include <kairn/kairn.hpp>', '']
+        for t in 'IJCB':
+            out.append('using %s = %s;' % (t, IFACE_TYPES[t]))
+        split, ns = 'kairn::Split', 'kairn::'
+    args = ', '.join('const %s* x%s, const %s* y%s' % (t, t.lower(), t, t.lower()) for t in 'IJCB')
+    args += ', const double* t, signed char* o8, ' + ', '.join('%s* o%s' % (t, t.lower()) for t in 'IJCB')
+    args += ', ' + ', '.join('%s<%s>* s%s' % (split, t, t.lower()) for t in 'IJCB')
+    out += ['', 'void enclosure_unit(%s) {' % args]
+    count = {t: 0 for t in 'IJCB'}
+    k8 = 0
+    for i in range(n):
+        t, o = ops[i % len(ops)]
+        c = count[t]
+        x, y = 'x%s[%d]' % (t.lower(), c), 'y%s[%d]' % (t.lower(), c)
+        if o in IFACE_KINDS['compare']:
+            out.append('    o8[%d] = static_cast<signed char>(%s%s(%s, %s));' % (k8, ns, o, x, y))
+            k8 += 1
+        elif o == 'contains_t':
+            out.append('    o8[%d] = %s.contains(t[%d]);' % (k8, x, c))
+            k8 += 1
+        elif o == 'contains_set':
+            out.append('    o8[%d] = %s.contains(%s);' % (k8, x, y))
+            k8 += 1
+        elif o == 'split':
+            out.append('    s%s[%d] = %s.split();' % (t.lower(), c, x))
+        else:
+            out.append('    o%s[%d] = %s.%s(%s);' % (t.lower(), c, x, o, y))
+        count[t] += 1
+    out.append('}')
+    return '\n'.join(out) + '\n'
+
+
 def source_kind(n, kind, seed=1, calls=False):
     """A unit of n operations of KIND (interval1, interval2, mixed): each on one of the eight values
-    of its type computed last and one of the eight inputs of that type, each result stored."""
+    of its type computed last and one of the eight inputs of that type, each result stored. The kinds
+    of the enclosure interface are written by source_iface."""
+    if kind in IFACE_KINDS:
+        return source_iface(n, kind, calls=calls)
     rng = random.Random(seed)
     ops = KINDS[kind]
     used = sorted({t for t, _ in ops})
@@ -283,7 +350,7 @@ def cmd_compile(args):
     sizes = [int(x) for x in args.sizes.split(',')]
     configs = args.configs.split(',')
     settings = args.settings.split(',')
-    if args.run and args.kind == 'ball2':
+    if args.run and (args.kind == 'ball2' or args.kind in IFACE_KINDS):
         raise SystemExit('--run needs --kind interval1, interval2 or mixed: the values of the ball2 unit overflow')
     make = (lambda n, calls=False: source(n, calls=calls)) if args.kind == 'ball2' else \
         (lambda n, calls=False: source_kind(n, args.kind, calls=calls))
@@ -302,10 +369,10 @@ def cmd_compile(args):
         units.append(('definitions', 0, config, 'external', os.path.join(HERE, 'definitions.cpp')))
     results = {}
     run_cache = {}
-    largest = max(sizes)
+    largest = args.once_from or max(sizes)   # units of at least this many operations are compiled once
     for rep in range(args.reps):
         for kind, n, config, setting, path in units:
-            if rep > 0 and n == largest:
+            if rep > 0 and n >= largest:
                 continue
             key = '%s %d %s %s' % (kind, n, config, setting)
             r = results.setdefault(key, {'kind': kind, 'operations': n, 'config': config, 'setting': setting,
@@ -444,12 +511,12 @@ def main():
     sub = p.add_subparsers(dest='cmd', required=True)
     s = sub.add_parser('source')
     s.add_argument('n', type=int)
-    s.add_argument('--kind', default='ball2', choices=['ball2'] + sorted(KINDS))
+    s.add_argument('--kind', default='ball2', choices=['ball2'] + sorted(KINDS) + sorted(IFACE_KINDS))
     c = sub.add_parser('compile')
     c.add_argument('--cxx', required=True)
     c.add_argument('--msvc', action='store_true')
     c.add_argument('--flags', default='')
-    c.add_argument('--kind', default='ball2', choices=['ball2'] + sorted(KINDS))
+    c.add_argument('--kind', default='ball2', choices=['ball2'] + sorted(KINDS) + sorted(IFACE_KINDS))
     c.add_argument('--cpu', type=int)
     c.add_argument('--run', action='store_true')
     c.add_argument('--run-reps', type=int, default=21)
@@ -457,6 +524,7 @@ def main():
     c.add_argument('--configs', default='O2,O3')
     c.add_argument('--settings', default='inline,outlined,external')
     c.add_argument('--reps', type=int, default=3)
+    c.add_argument('--once-from', type=int, help='compile units of at least this many operations once (default: the largest size)')
     c.add_argument('--timeout', type=int, default=3600)
     c.add_argument('--workdir', required=True)
     c.add_argument('--machine', required=True)

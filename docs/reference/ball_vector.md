@@ -175,8 +175,13 @@ composed. The compositions themselves are not machine-checked.
   finite $Z$ has finite $X$, $a$ and $Y$. When it is finite is the V4 of each loop in turn, the
   second on the computed $S$: it is not stated once of $X$, $Y$ and $a$. Its radius is at least the
   largest of the entrywise radii of a `Ball` axpy, and equal when one entry has both largest
-  magnitudes (of the scaled centers and of the results); not claimed. `z` may be exactly `x`, not
-  `y` (the scaling would overwrite `y` before the sum reads it), which `KAIRN_CHECKS` checks. The
+  magnitudes (of the scaled centers and of the results); not claimed. `z` may be exactly `x`. It
+  must not be `y`: the scaling would overwrite `y` before the sum reads it. Given the arrays of `y`
+  as `z`, a debug build stops (`KAIRN_CHECKS`), and every build returns the whole space, which
+  contains the result, never a finite ball vector that does not. This differs from the functions on
+  arrays, where `kairn::axpy(a, x, y, y)` is the in-place form ([Functions on arrays](batch.md)):
+  writing $aX + Y$ into $Y$ itself needs a loop that computes each entry in one pass, which the
+  ball vectors do not have yet. The
   tests find `axpy` bit for bit the two calls in both orders, and the oracle judges `axpy(1, X, Y)`
   against the claims of `bv_add_k`, `axpy(-1, Y, X)` against those of `bv_sub_k` and `axpy(a, X, 0)`
   against those of `bv_scale_k`.
@@ -259,7 +264,8 @@ With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](.
   for two limbs a center that is not canonical; a NaN or an infinite radius, which make the whole
   space, are accepted;
 - operands of lengths that do not match (`kairn: ball vectors: of lengths that do not match ...`),
-  `axpy` writing the arrays of `y`, and a product writing an array that it reads, stop the program.
+  `axpy` writing the arrays of `y`, and a product writing an array that it reads, stop the program
+  (without the checks, such an `axpy` returns the whole space; such a product is not told).
 
 With `KAIRN_CHECKS` 0 nothing but the environment is checked. The accessors, the whole space, the
 views and the copy of a view, which copy limbs, check nothing.
