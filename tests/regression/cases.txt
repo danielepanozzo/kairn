@@ -952,3 +952,2143 @@ two_prod_dekker binary32 0x1.94af2ap-116 0x1.e0d15cp-12 #search:68
 # and format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
 # 1024), from stratum uniform, case 7.
 two_prod_dekker binary64 -0x1.1f0b0d45cbe6fp-243 0x1.e80c72bef5b08p-782 #search:69
+
+# --- The brute-force runs of Milestone 2: the attaining lines of every claim within 2% of its bound ----
+# (the kernels new or changed in Milestone 2; a loop's line, of up to 4 096 elements, is not kept here)
+
+# acc_add_1 binary32, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #exactprod:6925 of seed m2r1-linux).
+acc_add_1 binary32 0x1.000002p-42 0x1.2001p-41 0x1p-42 #brute2:1
+
+# acc_add_1 binary64, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #exactprod:68380 of seed m2r1-linux).
+acc_add_1 binary64 -0x1p-178 0x1.0000000001p-181 -0x1.0000000000001p-178 #brute2:2
+
+# acc_add_1 fp:1:-3:1, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:1:-3:1, case #exhaustive:8).
+acc_add_1 fp:1:-3:1 -0x1p+1 0x0p+0 0x1p-1 #brute2:3
+
+# acc_add_1 fp:2:-3:1, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:2:-3:1, case #exhaustive:17).
+acc_add_1 fp:2:-3:1 -0x1.8p+2 0x0p+0 0x1p+0 #brute2:4
+
+# acc_add_1 fp:3:-3:1, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:3:-3:1, case #exhaustive:40).
+acc_add_1 fp:3:-3:1 -0x1.cp+3 0x0p+0 0x1.4p+2 #brute2:5
+
+# acc_add_1 fp:4:-3:1, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:4:-3:1, case #exhaustive:84).
+acc_add_1 fp:4:-3:1 -0x1.ep+4 0x0p+0 0x1.ap+3 #brute2:6
+
+# acc_add_1 fp:4:-6:3, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:4:-6:3, case #exhaustive:164).
+acc_add_1 fp:4:-6:3 -0x1.ep+6 0x0p+0 0x1.ap+5 #brute2:7
+
+# acc_merge_1 binary32, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #exactprod:26620 of seed m2r1-linux).
+acc_merge_1 binary32 -0x1.8p+54 0x1p+52 -0x1.000004p+53 0x1.008002p+55 #brute2:8
+
+# acc_merge_1 binary64, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #exactprod:45580 of seed m2r1-linux).
+acc_merge_1 binary64 0x1.0000000000001p+469 0x1.04004p+469 0x1p+469 0x1.0001p+471 #brute2:9
+
+# acc_merge_1 fp:1:-5:5, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration
+# of fp:1:-5:5, case #exhaustive:240).
+acc_merge_1 fp:1:-5:5 -0x1p+5 0x0p+0 0x1p+3 0x0p+0 #brute2:10
+
+# acc_merge_1 fp:2:-3:1, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:2:-3:1, case #exhaustive:204).
+acc_merge_1 fp:2:-3:1 -0x1.8p+2 0x0p+0 0x1p+0 0x0p+0 #brute2:11
+
+# acc_merge_1 fp:2:-6:4, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:2:-6:4, case #exhaustive:984).
+acc_merge_1 fp:2:-6:4 -0x1.8p+5 0x0p+0 0x1p+3 0x0p+0 #brute2:12
+
+# acc_merge_1 fp:3:-3:1, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:3:-3:1, case #exhaustive:960).
+acc_merge_1 fp:3:-3:1 -0x1.cp+3 0x0p+0 0x1.4p+2 0x0p+0 #brute2:13
+
+# acc_merge_1 fp:3:-4:2, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:3:-4:2, case #exhaustive:1792).
+acc_merge_1 fp:3:-4:2 -0x1.cp+4 0x0p+0 0x1.4p+3 0x0p+0 #brute2:14
+
+# acc_merge_1 fp:4:-3:1, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:4:-3:1, case #exhaustive:4032).
+acc_merge_1 fp:4:-3:1 -0x1.ep+4 0x0p+0 0x1.ap+3 0x0p+0 #brute2:15
+
+# add_entry_step_1 binary32, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #extreme:46 of seed m2r1-linux).
+add_entry_step_1 binary32 0x1p-126 0x1.000002p-126 #brute2:16
+
+# add_entry_step_1 binary64, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #extreme:110 of seed m2r1-linux).
+add_entry_step_1 binary64 0x1p-1022 0x1.0000000000001p-1022 #brute2:17
+
+# add_entry_step_1 fp:1:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:1:-7:4, case #exhaustive:22).
+add_entry_step_1 fp:1:-7:4 -0x1p+4 0x1p+2 #brute2:18
+
+# add_entry_step_1 fp:2:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:2:-7:4, case #exhaustive:45).
+add_entry_step_1 fp:2:-7:4 -0x1.8p+5 0x1p+3 #brute2:19
+
+# add_entry_step_1 fp:3:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:3:-7:4, case #exhaustive:96).
+add_entry_step_1 fp:3:-7:4 -0x1.cp+6 0x1.4p+5 #brute2:20
+
+# add_entry_step_1 fp:6:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:6:-7:4, case #exhaustive:796).
+add_entry_step_1 fp:6:-7:4 -0x1.f8p+9 0x1.e8p+8 #brute2:21
+
+# add_entry_step_1 fp:7:-14:2, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:7:-14:2, case #exhaustive:2236).
+add_entry_step_1 fp:7:-14:2 -0x1.fcp+8 0x1.f4p+7 #brute2:22
+
+# add_entry_step_1 fp:7:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:7:-7:4, case #exhaustive:1596).
+add_entry_step_1 fp:7:-7:4 -0x1.fcp+10 0x1.f4p+9 #brute2:23
+
+# axpy_entry_step_1 binary32, error(z) form T, c=(2+3*u)/((1+u)*(1+u)), k=1, t=2/3: largest error /
+# bound 0.9999998510, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #tight:38796 of seed
+# m2r1-linux).
+axpy_entry_step_1 binary32 0x1.000002p+11 -0x1.fffffep+111 -0x1p+99 #brute2:24
+
+# axpy_entry_step_1 binary64, error(z) form T, c=(2+3*u)/((1+u)*(1+u)), k=1, t=2/3: largest error /
+# bound 1.00000, the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json;
+# the compiled runners, case #tight:68407 of seed m2r1-linux).
+axpy_entry_step_1 binary64 0x1.0000000000001p+340 0x1.fffffffffffffp+678 0x1p+966 #brute2:25
+
+# axpy_step_1 binary32, error(z) form T, c=(2+3*u)/((1+u)*(1+u)), k=1, t=2/3: largest error / bound
+# 0.9999998510, the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the
+# compiled runners, case #tight:9964 of seed m2r1-linux).
+axpy_step_1 binary32 0x1.000002p+22 -0x1.fffffep+100 -0x1p+99 #brute2:26
+
+# axpy_step_1 binary64, error(z) form T, c=(2+3*u)/((1+u)*(1+u)), k=1, t=2/3: largest error / bound
+# 1.00000, the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the
+# compiled runners, case #tight:70759 of seed m2r1-linux).
+axpy_step_1 binary64 0x1.0000000000001p+38 0x1.fffffffffffffp+980 0x1p+966 #brute2:27
+
+# ball_add_1_full fp:2:-3:2, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite
+# when |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest radius slack, gaps 1, the extreme of the
+# brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:2:-3:2, case #exhaustive:7918).
+ball_add_1_full fp:2:-3:2 -0x1p+3 0x1p+0 0x1.8p+1 0x1p+2 #brute2:28
+
+# ball_add_1_full fp:2:-5:4, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite
+# when |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest radius slack, gaps 1, the extreme of the
+# brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:2:-5:4, case #exhaustive:34982).
+ball_add_1_full fp:2:-5:4 -0x1p+5 0x1p+2 0x1.8p+3 0x1p+4 #brute2:29
+
+# ball_add_1_full fp:3:-4:1, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite
+# when |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest radius slack, gaps 1, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:3:-4:1, case #exhaustive:19872).
+ball_add_1_full fp:3:-4:1 -0x1.cp+3 0x1p+0 0x1.4p+2 0x1p+3 #brute2:30
+
+# ball_from_interval_1 binary32, makes_ball(cw, rw) from the interval of lower lo, upper hi, the
+# center within rel u, abs eta of the midpoint, the smallest radius: largest |center - midpoint| /
+# allowance 0.9999999404, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #extreme:107 of seed
+# m2r1-linux).
+ball_from_interval_1 binary32 -0x1.000002p-126 0x1.fffffcp-127 #brute2:31
+
+# ball_from_interval_1 binary64, makes_ball(cw, rw) from the interval of lower lo, upper hi, the
+# center within rel u, abs eta of the midpoint, the smallest radius: largest |center - midpoint| /
+# allowance 1.00000, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #extreme:1331 of seed
+# m2r1-linux).
+ball_from_interval_1 binary64 -0x1.0000000000001p-1022 0x1.ffffffffffffep-1023 #brute2:32
+
+# ball_from_interval_1 fp:6:-8:-1, makes_ball(cw, rw) from the interval of lower lo, upper hi, the
+# center within rel u, abs eta of the midpoint, the smallest radius: largest |center - midpoint| /
+# allowance 0.984615, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:6:-8:-1, case
+# #exhaustive:129820).
+ball_from_interval_1 fp:6:-8:-1 -0x1.f8p-3 0x1.e8p-3 #brute2:33
+
+# ball_from_interval_1 fp:7:-13:2, makes_ball(cw, rw) from the interval of lower lo, upper hi, the
+# center within rel u, abs eta of the midpoint, the smallest radius: largest |center - midpoint| /
+# allowance 0.992248, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:7:-13:2, case
+# #exhaustive:2092092).
+ball_from_interval_1 fp:7:-13:2 -0x1.fcp-7 0x1.f4p-7 #brute2:34
+
+# ball_from_interval_1 fp:7:-9:-2, makes_ball(cw, rw) from the interval of lower lo, upper hi, the
+# center within rel u, abs eta of the midpoint, the smallest radius: largest |center - midpoint| /
+# allowance 0.992248, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:7:-9:-2, case
+# #exhaustive:517692).
+ball_from_interval_1 fp:7:-9:-2 -0x1.fcp-3 0x1.f4p-3 #brute2:35
+
+# ball_mul_pow2_1 binary32, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #atnormal:1 of seed m2r1-linux).
+ball_mul_pow2_1 binary32 0x1.000002p-79 0x1.5e690ep-58 0x1p-47 #brute2:36
+
+# ball_mul_pow2_1 binary64, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #atnormal:19 of seed m2r1-linux).
+ball_mul_pow2_1 binary64 0x1.0000000000001p-197 0x0p+0 0x1p-825 #brute2:37
+
+# ball_mul_pow2_1 fp:2:-6:1, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:2:-6:1, case #exhaustive:0).
+ball_mul_pow2_1 fp:2:-6:1 -0x1.8p+2 0x0p+0 0x1p-6 #brute2:38
+
+# ball_mul_pow2_1 fp:3:-6:1, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:3:-6:1, case #exhaustive:0).
+ball_mul_pow2_1 fp:3:-6:1 -0x1.cp+3 0x0p+0 0x1p-6 #brute2:39
+
+# ball_mul_pow2_1 fp:4:-9:3, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:4:-9:3, case #exhaustive:0).
+ball_mul_pow2_1 fp:4:-9:3 -0x1.ep+6 0x0p+0 0x1p-9 #brute2:40
+
+# ball_mul_pow2_1 fp:5:-6:1, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:5:-6:1, case #exhaustive:0).
+ball_mul_pow2_1 fp:5:-6:1 -0x1.fp+5 0x0p+0 0x1p-6 #brute2:41
+
+# ball_mul_pow2_1 fp:5:-8:2, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:5:-8:2, case #exhaustive:0).
+ball_mul_pow2_1 fp:5:-8:2 -0x1.fp+6 0x0p+0 0x1p-8 #brute2:42
+
+# ball_mul_pow2_1 fp:6:-6:1, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:6:-6:1, case #exhaustive:0).
+ball_mul_pow2_1 fp:6:-6:1 -0x1.f8p+6 0x0p+0 0x1p-6 #brute2:43
+
+# ball_mul_pow2_1_full binary32, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c
+# = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #atnormal:127 of seed
+# m2r1-linux).
+ball_mul_pow2_1_full binary32 0x1.d5b6dcp+42 0x1.000002p-44 0x1p-82 #brute2:44
+
+# ball_mul_pow2_1_full binary64, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c
+# = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #atnormal:49 of seed
+# m2r1-linux).
+ball_mul_pow2_1_full binary64 0x1.0000000000001p-289 0x1.965f6c133f2b1p+220 0x1p-733 #brute2:45
+
+# ball_mul_pow2_1_full fp:2:-4:3, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c
+# = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:2:-4:3, case
+# #exhaustive:0).
+ball_mul_pow2_1_full fp:2:-4:3 -0x1.8p+4 0x0p+0 0x1p-4 #brute2:46
+
+# ball_mul_pow2_1_full fp:3:-5:2, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c
+# = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:3:-5:2, case
+# #exhaustive:0).
+ball_mul_pow2_1_full fp:3:-5:2 -0x1.cp+4 0x0p+0 0x1p-5 #brute2:47
+
+# ball_mul_pow2_1_full fp:4:-8:3, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c
+# = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:4:-8:3, case
+# #exhaustive:0).
+ball_mul_pow2_1_full fp:4:-8:3 -0x1.ep+6 0x0p+0 0x1p-8 #brute2:48
+
+# ball_mul_pow2_1_full fp:5:-7:0, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c
+# = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:5:-7:0, case
+# #exhaustive:0).
+ball_mul_pow2_1_full fp:5:-7:0 -0x1.fp+4 0x0p+0 0x1p-7 #brute2:49
+
+# ball_mul_pow2_1_full fp:6:-8:-1, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c
+# = 0 or |rx*c| > eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:6:-8:-1, case
+# #exhaustive:1).
+ball_mul_pow2_1_full fp:6:-8:-1 -0x1.f8p+4 0x0p+0 0x1p-7 #brute2:50
+
+# ball_mul_pow2_2 binary32, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #atnormal:25 of seed
+# m2r1-linux).
+ball_mul_pow2_2 binary32 -0x1.127382p+19 0x1.000002p-8 0x1.fffffcp+126 0x1p-118 #brute2:51
+
+# ball_mul_pow2_2 binary64, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #atnormal:16 of seed
+# m2r1-linux).
+ball_mul_pow2_2 binary64 0x1.e252a6ab5cd22p+1022 -0x1.dd8f1980e2613p+555 0x1.0000000000001p-635 0x1p-387 #brute2:52
+
+# ball_mul_pow2_2 fp:2:-4:1, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:2:-4:1, case
+# #exhaustive:2).
+ball_mul_pow2_2 fp:2:-4:1 -0x1.8p+2 -0x1.8p-1 0x0p+0 0x1p-2 #brute2:53
+
+# ball_mul_pow2_2 fp:3:-4:1, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:3:-4:1, case
+# #exhaustive:3).
+ball_mul_pow2_2 fp:3:-4:1 -0x1.cp+3 -0x1.cp-1 0x0p+0 0x1p-1 #brute2:54
+
+# ball_mul_pow2_2 fp:3:-7:3, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:3:-7:3, case
+# #exhaustive:1).
+ball_mul_pow2_2 fp:3:-7:3 -0x1.cp+5 -0x1.cp+1 0x0p+0 0x1p-6 #brute2:55
+
+# ball_mul_pow2_2 fp:4:-4:1, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:4:-4:1, case
+# #exhaustive:4).
+ball_mul_pow2_2 fp:4:-4:1 -0x1.ep+4 -0x1.ep-1 0x0p+0 0x1p+0 #brute2:56
+
+# ball_mul_pow2_2 fp:4:-6:2, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:4:-6:2, case
+# #exhaustive:3).
+ball_mul_pow2_2 fp:4:-6:2 -0x1.ep+5 -0x1.ep+0 0x0p+0 0x1p-3 #brute2:57
+
+# ball_mul_pow2_2 fp:5:-4:1, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest radius slack, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:5:-4:1, case
+# #exhaustive:16800).
+ball_mul_pow2_2 fp:5:-4:1 -0x1.fp+5 0x0p+0 0x0p+0 0x1p-4 #brute2:58
+
+# ball_mul_pow2_2_full binary32, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx[0]*c = 0 or |cx[0]*c| > eta/(2*u)) and
+# (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius
+# slack, gaps 0, the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json;
+# the compiled runners, case #atnormal:28 of seed m2r1-linux).
+ball_mul_pow2_2_full binary32 0x1.000002p-44 0x0p+0 0x1.30b3cep-15 0x1p-82 #brute2:59
+
+# ball_mul_pow2_2_full binary64, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx[0]*c = 0 or |cx[0]*c| > eta/(2*u)) and
+# (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius
+# slack, gaps 0, the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json;
+# the compiled runners, case #atnormal:52 of seed m2r1-linux).
+ball_mul_pow2_2_full binary64 -0x1.d52e520475cafp-972 0x1.000000000004p-1028 0x0p+0 0x1p+6 #brute2:60
+
+# ball_mul_pow2_2_full fp:2:-3:2, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx[0]*c = 0 or |cx[0]*c| > eta/(2*u)) and
+# (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius
+# slack, gaps 0, the extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the
+# interpreter's enumeration of fp:2:-3:2, case #exhaustive:1).
+ball_mul_pow2_2_full fp:2:-3:2 -0x1.8p+3 -0x1.8p+0 0x0p+0 0x1p-2 #brute2:61
+
+# ball_mul_pow2_2_full fp:3:-4:1, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx[0]*c = 0 or |cx[0]*c| > eta/(2*u)) and
+# (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius
+# slack, gaps 0, the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json;
+# the interpreter's enumeration of fp:3:-4:1, case #exhaustive:3).
+ball_mul_pow2_2_full fp:3:-4:1 -0x1.cp+3 -0x1.cp-1 0x0p+0 0x1p-1 #brute2:62
+
+# ball_mul_pow2_2_full fp:3:-6:3, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx[0]*c = 0 or |cx[0]*c| > eta/(2*u)) and
+# (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius
+# slack, gaps 0, the extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the
+# interpreter's enumeration of fp:3:-6:3, case #exhaustive:1).
+ball_mul_pow2_2_full fp:3:-6:3 -0x1.cp+5 -0x1.cp+1 0x0p+0 0x1p-5 #brute2:63
+
+# ball_mul_pow2_2_full fp:4:-5:0, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx[0]*c = 0 or |cx[0]*c| > eta/(2*u)) and
+# (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius
+# slack, gaps 0, the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json;
+# the interpreter's enumeration of fp:4:-5:0, case #exhaustive:5).
+ball_mul_pow2_2_full fp:4:-5:0 -0x1.ep+3 -0x1.ep-2 0x0p+0 0x1p+0 #brute2:64
+
+# ball_mul_pow2_2_full fp:5:-6:-1, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx[0]*c = 0 or |cx[0]*c| > eta/(2*u)) and
+# (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest radius
+# slack, gaps 0, the extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the
+# interpreter's enumeration of fp:5:-6:-1, case #exhaustive:16801).
+ball_mul_pow2_2_full fp:5:-6:-1 -0x1.fp+3 0x0p+0 0x0p+0 0x1p-5 #brute2:65
+
+# ball_narrow_2_1 binary32, encloses(cz, rz) x over x=[c +- r], B1-B4, finite when |abs(c)+r| <=
+# 2^(qmax+p-2): smallest radius slack, gaps 0.5, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #ballstates:385 of seed
+# m2r1-linux).
+ball_narrow_2_1 binary32 0x1.fffffcp+127 0x1p+103 0x1p+127 #brute2:66
+
+# ball_narrow_2_1 binary64, encloses(cz, rz) x over x=[c +- r], B1-B4, finite when |abs(c)+r| <=
+# 2^(qmax+p-2): smallest radius slack, gaps 0.5, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #ballstates:2133 of seed
+# m2r1-linux).
+ball_narrow_2_1 binary64 -0x1.fffffffffffffp+1023 0x1p+969 0x1p+916 #brute2:67
+
+# ball_narrow_2_1 fp:2:-4:3, encloses(cz, rz) x over x=[c +- r], B1-B4, finite when |abs(c)+r| <=
+# 2^(qmax+p-2): smallest radius slack, gaps 0.5, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:2:-4:3, case
+# #exhaustive:10).
+ball_narrow_2_1 fp:2:-4:3 -0x1.8p+4 -0x1.8p+1 0x1p+1 #brute2:68
+
+# ball_narrow_2_1 fp:3:-5:2, encloses(cz, rz) x over x=[c +- r], B1-B4, finite when |abs(c)+r| <=
+# 2^(qmax+p-2): smallest radius slack, gaps 0.5, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:3:-5:2, case
+# #exhaustive:12).
+ball_narrow_2_1 fp:3:-5:2 -0x1.cp+4 -0x1.cp+0 0x1p-1 #brute2:69
+
+# ball_narrow_2_1 fp:4:-8:3, encloses(cz, rz) x over x=[c +- r], B1-B4, finite when |abs(c)+r| <=
+# 2^(qmax+p-2): smallest radius slack, gaps 0.5, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:4:-8:3, case
+# #exhaustive:40).
+ball_narrow_2_1 fp:4:-8:3 -0x1.ep+6 -0x1.ep+1 0x1p-1 #brute2:70
+
+# ball_narrow_2_1 fp:5:-7:0, encloses(cz, rz) x over x=[c +- r], B1-B4, finite when |abs(c)+r| <=
+# 2^(qmax+p-2): smallest radius slack, gaps 0.5, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:5:-7:0, case
+# #exhaustive:4).
+ball_narrow_2_1 fp:5:-7:0 -0x1.fp+4 -0x1.fp-2 0x1p-5 #brute2:71
+
+# ball_narrow_2_1 fp:6:-8:-1, encloses(cz, rz) x over x=[c +- r], B1-B4, finite when |abs(c)+r| <=
+# 2^(qmax+p-2): smallest radius slack, gaps 0.5, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:6:-8:-1, case
+# #exhaustive:2).
+ball_narrow_2_1 fp:6:-8:-1 -0x1.f8p+4 -0x1.f8p-3 0x1p-7 #brute2:72
+
+# ball_scale_1_full binary32, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest radius slack, gaps 1.000000119, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #ballstates:1793095 of seed m2r1-linux).
+ball_scale_1_full binary32 -0x1.fffffep+127 0x1.fffffep+127 -0x1.000002p-49 #brute2:73
+
+# ball_scale_1_full binary64, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest radius slack, gaps 1.00000, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #ballstates:236319 of seed m2r1-linux).
+ball_scale_1_full binary64 0x1.fffffffffffffp+1023 0x1.fffffffffffffp+1023 0x1.0000000000001p-1022 #brute2:74
+
+# ball_scale_1_full fp:3:-4:1, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest radius slack, gaps 1, the extreme of the brute-force
+# runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:3:-4:1, case
+# #exhaustive:3149).
+ball_scale_1_full fp:3:-4:1 -0x1.8p+3 0x1.8p+3 -0x1.8p-1 #brute2:75
+
+# ball_scale_1_full fp:3:-6:3, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest radius slack, gaps 1, the extreme of the brute-force
+# runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:3:-6:3, case
+# #exhaustive:7765).
+ball_scale_1_full fp:3:-6:3 -0x1.8p+5 0x1.8p+5 -0x1.8p-1 #brute2:76
+
+# ball_sub_1_full binary32, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest radius slack, gaps 1, the extreme of the brute-force
+# runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #hugeradius:16121 of
+# seed m2r1-linux).
+ball_sub_1_full binary32 0x1.fffffap+126 0x1.fffffcp+126 0x1.fffffep+127 0x1.616618p+124 #brute2:77
+
+# ball_sub_1_full fp:2:-3:2, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite
+# when |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest radius slack, gaps 1, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:2:-3:2, case #exhaustive:7666).
+ball_sub_1_full fp:2:-3:2 -0x1p+3 0x1p+0 -0x1.8p+1 0x1p+2 #brute2:78
+
+# ball_sub_1_full fp:2:-5:4, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite
+# when |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest radius slack, gaps 1, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:2:-5:4, case #exhaustive:34234).
+ball_sub_1_full fp:2:-5:4 -0x1p+5 0x1p+2 -0x1.8p+3 0x1p+4 #brute2:79
+
+# ball_sub_1_full fp:3:-4:1, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite
+# when |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest radius slack, gaps 1, the extreme of the
+# brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:3:-4:1, case #exhaustive:18696).
+ball_sub_1_full fp:3:-4:1 -0x1.cp+3 0x1p+0 -0x1.4p+2 0x1p+3 #brute2:80
+
+# bv_mul_pow2_radius binary32, upper(rz) >= rx*c, exactly when ex true and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest excess over the stated value, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #atnormal:31 of seed
+# m2r1-linux).
+bv_mul_pow2_radius binary32 0x1.ebbb76p+51 1 0x1.000002p-115 0x1p-11 #brute2:81
+
+# bv_mul_pow2_radius binary64, upper(rz) >= rx*c, exactly when ex true and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest excess over the stated value, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #atnormal:59 of seed
+# m2r1-linux).
+bv_mul_pow2_radius binary64 0x1.0080000000002p-923 1 0x1.2p-1071 0x1p+49 #brute2:82
+
+# bv_mul_pow2_radius fp:2:-4:2, upper(rz) >= rx*c, exactly when ex true and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest excess over the stated value, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:2:-4:2, case
+# #exhaustive:142).
+bv_mul_pow2_radius fp:2:-4:2 0x0p+0 1 0x1p-4 0x1p+2 #brute2:83
+
+# bv_mul_pow2_radius fp:3:-4:2, upper(rz) >= rx*c, exactly when ex true and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest excess over the stated value, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:3:-4:2, case
+# #exhaustive:304).
+bv_mul_pow2_radius fp:3:-4:2 0x0p+0 1 0x1p-4 0x1p+3 #brute2:84
+
+# bv_mul_pow2_radius fp:5:-4:2, upper(rz) >= rx*c, exactly when ex true and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest excess over the stated value, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:5:-4:2, case
+# #exhaustive:1428).
+bv_mul_pow2_radius fp:5:-4:2 0x0p+0 1 0x1p-4 0x1p+5 #brute2:85
+
+# bv_mul_pow2_radius fp:5:-8:4, upper(rz) >= rx*c, exactly when ex true and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest excess over the stated value, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:5:-8:4, case
+# #exhaustive:3838).
+bv_mul_pow2_radius fp:5:-8:4 0x0p+0 1 0x1p-8 0x1p+5 #brute2:86
+
+# bv_mul_pow2_step_1 binary32, error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| >
+# eta/(2*u)), exact_flag e: largest error / bound 1, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #extreme:3298 of seed
+# m2r1-linux).
+bv_mul_pow2_step_1 binary32 -0x1.fffffcp-127 0x1p-1 #brute2:87
+
+# bv_mul_pow2_step_1 binary64, error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| >
+# eta/(2*u)), exact_flag e: largest error / bound 1, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #extreme:93575 of seed
+# m2r1-linux).
+bv_mul_pow2_step_1 binary64 0x1p-1074 0x1p-1 #brute2:88
+
+# bv_mul_pow2_step_1 fp:1:-14:6, error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| >
+# eta/(2*u)), exact_flag e: largest error / bound 1, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:1:-14:6, case
+# #exhaustive:147).
+bv_mul_pow2_step_1 fp:1:-14:6 -0x1p-1 0x1p-14 #brute2:89
+
+# bv_mul_pow2_step_1 fp:2:-14:6, error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| >
+# eta/(2*u)), exact_flag e: largest error / bound 1, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:2:-14:6, case
+# #exhaustive:308).
+bv_mul_pow2_step_1 fp:2:-14:6 -0x1.8p+0 0x1p-14 #brute2:90
+
+# bv_mul_pow2_step_1 fp:3:-14:6, error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| >
+# eta/(2*u)), exact_flag e: largest error / bound 1, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:3:-14:6, case
+# #exhaustive:644).
+bv_mul_pow2_step_1 fp:3:-14:6 -0x1.cp+1 0x1p-14 #brute2:91
+
+# bv_mul_pow2_step_1 fp:7:-20:10, error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| >
+# eta/(2*u)), exact_flag e: largest error / bound 1, the extreme of the brute-force runs
+# (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of fp:7:-20:10, case
+# #exhaustive:26048).
+bv_mul_pow2_step_1 fp:7:-20:10 -0x1.fcp+5 0x1p-20 #brute2:92
+
+# bv_mul_pow2_step_1 fp:8:-14:6, error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| >
+# eta/(2*u)), exact_flag e: largest error / bound 1, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of fp:8:-14:6, case
+# #exhaustive:25088).
+bv_mul_pow2_step_1 fp:8:-14:6 -0x1.fep+6 0x1p-14 #brute2:93
+
+# bv_scale_step_2 binary32, error(z) form R, c=2, k=2, t=1: largest error / bound 0.9999998808, the
+# extreme of the brute-force runs (results/milestone2/brute/supplementary/linux-x86-64-r3.json; the
+# compiled runners, case #extreme:744654 of seed m2r1r3-linux).
+bv_scale_step_2 binary32 0x1.8p+0 0x1.fffffep-25 0x1.000002p-126 #brute2:94
+
+# bv_scale_step_2 binary64, error(z) form R, c=2, k=2, t=1: largest error / bound 1.00000, the
+# extreme of the brute-force runs (results/milestone2/brute/supplementary/linux-x86-64-r3.json; the
+# compiled runners, case #extreme:1710894 of seed m2r1r3-linux).
+bv_scale_step_2 binary64 -0x1.8p+0 -0x1p-53 0x1.ffffffffffffep-1023 #brute2:95
+
+# conv_radius binary32, upper(rz) >= m*((1+u)*ma*ry+(1+u)*mb*rx+rx*ry)+g*m*(1+u)^2*ma*mb+t: smallest
+# excess over the stated value, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #zero:318 of seed
+# m2r1-linux).
+conv_radius binary32 0x0p+0 -0x0p+0 0x1.fffffcp-127 -0x0p+0 -0x0p+0 -0x0p+0 0x1p-149 #brute2:96
+
+# conv_radius binary64, upper(rz) >= m*((1+u)*ma*ry+(1+u)*mb*rx+rx*ry)+g*m*(1+u)^2*ma*mb+t: smallest
+# excess over the stated value, gaps 0, the extreme of the brute-force runs
+# (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #zero:94 of seed
+# m2r1-linux).
+conv_radius binary64 0x1p-1022 -0x0p+0 0x0p+0 0x1.ffffffffffffep-1023 -0x0p+0 0x0p+0 0x1p-1074 #brute2:97
+
+# interval_mid_rad_1 binary32, ball_of_interval(m, r) of [xl, xu], special ieee1788, rel u, abs eta,
+# the smallest radius: largest |center - midpoint| / allowance 0.9999999404, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:895 of seed m2r1-linux).
+interval_mid_rad_1 binary32 -0x1.000002p-126 0x1.fffffcp-127 #brute2:98
+
+# interval_mid_rad_1 binary64, ball_of_interval(m, r) of [xl, xu], special ieee1788, rel u, abs eta,
+# the smallest radius: largest |center - midpoint| / allowance 1.00000, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:511 of seed m2r1-linux).
+interval_mid_rad_1 binary64 -0x1.ffffffffffffep-1023 0x1.0000000000001p-1022 #brute2:99
+
+# interval_mid_rad_1 fp:6:-10:1, ball_of_interval(m, r) of [xl, xu], special ieee1788, rel u, abs
+# eta, the smallest radius: largest |center - midpoint| / allowance 0.984615, the extreme of the
+# brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:6:-10:1, case #exhaustive:232045).
+interval_mid_rad_1 fp:6:-10:1 -0x1.f8p-5 0x1.e8p-5 #brute2:100
+
+# interval_to_ball_1 binary32, ball_of_interval(c, r) of [xl, xu], special ball, rel u, abs eta, the
+# smallest radius: largest |center - midpoint| / allowance 0.9999999404, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:47 of seed m2r1-linux).
+interval_to_ball_1 binary32 -0x1.000002p-126 0x1.fffffcp-127 #brute2:101
+
+# interval_to_ball_1 binary64, ball_of_interval(c, r) of [xl, xu], special ball, rel u, abs eta, the
+# smallest radius: largest |center - midpoint| / allowance 1.00000, the extreme of the brute-force
+# runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #extreme:655 of seed
+# m2r1-linux).
+interval_to_ball_1 binary64 -0x1.ffffffffffffep-1023 0x1.0000000000001p-1022 #brute2:102
+
+# interval_to_ball_1 fp:6:-10:1, ball_of_interval(c, r) of [xl, xu], special ball, rel u, abs eta,
+# the smallest radius: largest |center - midpoint| / allowance 0.984615, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:6:-10:1, case #exhaustive:232045).
+interval_to_ball_1 fp:6:-10:1 -0x1.f8p-5 0x1.e8p-5 #brute2:103
+
+# mul_1_1 binary32, error(p) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.9999999404, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #halfgap:824233 of seed m2r1-linux).
+mul_1_1 binary32 0x1p-149 0x1p-1 #brute2:104
+
+# mul_1_1 binary64, error(p) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 1.00000, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #pow2:63570 of seed m2r1-linux).
+mul_1_1 binary64 0x1p-201 0x1p-874 #brute2:105
+
+# mul_1_1 fp:3:-12:-1, error(p) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999512, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:3:-12:-1, case #exhaustive:112).
+mul_1_1 fp:3:-12:-1 -0x1.8p+1 -0x1.8p-1 #brute2:106
+
+# mul_1_1 fp:6:-12:-1, error(p) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999512, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:6:-12:-1, case #exhaustive:9324).
+mul_1_1 fp:6:-12:-1 -0x1.ap+4 -0x1.4p-1 #brute2:107
+
+# mul_1_1 fp:7:-12:-1, error(p) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999512, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:7:-12:-1, case #exhaustive:51978).
+mul_1_1 fp:7:-12:-1 -0x1.8p+5 -0x1.58p-1 #brute2:108
+
+# mul_1_1 fp:7:-20:-6, error(p) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999939, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:7:-20:-6, case #exhaustive:63562).
+mul_1_1 fp:7:-20:-6 -0x1.8p+0 -0x1.58p-1 #brute2:109
+
+# mul_1_1 fp:7:-8:4, error(p) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999756, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:7:-8:4, case #exhaustive:56266).
+mul_1_1 fp:7:-8:4 -0x1.8p+10 -0x1.58p-1 #brute2:110
+
+# mul_2_1_entry binary32, error(z) form R, c=2, k=2, t=1: largest error / bound 0.9999998808, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #extreme:703134 of seed m2r1-linux).
+mul_2_1_entry binary32 -0x1.8p+0 -0x1.fffffep-25 0x1.000002p-126 #brute2:111
+
+# mul_2_1_entry binary64, error(z) form R, c=2, k=2, t=1: largest error / bound 0.9999999998, the
+# extreme of the brute-force runs (results/milestone2/brute/windows-x64.json; the compiled runners,
+# case #extreme:87366 of seed m2r1-windows).
+mul_2_1_entry binary64 0x1.80000001p+0 0x1.fffffffffffffp-54 0x1.0000000000001p-1022 #brute2:112
+
+# mul_2_1_full_entry binary32, F2, core mul_2_1_entry: error(z) form R, c=2, k=2, t=1: largest error
+# / bound 0.991020, the extreme of the brute-force runs (results/milestone2/brute/windows-x64.json;
+# the compiled runners, case #extreme:34486 of seed m2r1-windows).
+mul_2_1_full_entry binary32 0x1.824c84p+0 0x1p-24 -0x1.000002p-126 #brute2:113
+
+# mul_2_1_full_entry binary64, F2, core mul_2_1_entry: error(z) form R, c=2, k=2, t=1: largest error
+# / bound 0.991667, the extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json;
+# the compiled runners, case #underflow:44183 of seed m2r1-mac).
+mul_2_1_full_entry binary64 -0x1.a54f32f125a25p-179 0x1.0200000000008p-248 0x1.0b7514d079378p-813 #brute2:114
+
+# mul_pow2_step_1 binary32, error(z) form R, c=0, k=1, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:405 of seed m2r1-linux).
+mul_pow2_step_1 binary32 0x1.000002p-126 0x1p-1 #brute2:115
+
+# mul_pow2_step_1 binary64, error(z) form R, c=0, k=1, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:16487 of seed m2r1-linux).
+mul_pow2_step_1 binary64 0x1p-1022 0x1p-53 #brute2:116
+
+# mul_pow2_step_1 fp:1:-14:6, error(z) form R, c=0, k=1, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:1:-14:6, case #exhaustive:147).
+mul_pow2_step_1 fp:1:-14:6 -0x1p-1 0x1p-14 #brute2:117
+
+# mul_pow2_step_1 fp:2:-14:6, error(z) form R, c=0, k=1, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration
+# of fp:2:-14:6, case #exhaustive:308).
+mul_pow2_step_1 fp:2:-14:6 -0x1.8p+0 0x1p-14 #brute2:118
+
+# mul_pow2_step_1 fp:3:-14:6, error(z) form R, c=0, k=1, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:3:-14:6, case #exhaustive:644).
+mul_pow2_step_1 fp:3:-14:6 -0x1.cp+1 0x1p-14 #brute2:119
+
+# mul_pow2_step_1 fp:7:-20:10, error(z) form R, c=0, k=1, t=1/2: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:7:-20:10, case #exhaustive:26048).
+mul_pow2_step_1 fp:7:-20:10 -0x1.fcp+5 0x1p-20 #brute2:120
+
+# mul_pow2_step_1 fp:8:-14:6, error(z) form R, c=0, k=1, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration
+# of fp:8:-14:6, case #exhaustive:25088).
+mul_pow2_step_1 fp:8:-14:6 -0x1.fep+6 0x1p-14 #brute2:121
+
+# radd binary32, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #close:81
+# of seed m2r1-linux).
+radd binary32 0x1.b32feep+101 0x1.3d7d6p+101 #brute2:122
+
+# radd binary64, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #close:4072 of seed m2r1-linux).
+radd binary64 0x1.35e1a7c6d393ep-63 0x1.5ba49efcfec91p-63 #brute2:123
+
+# radd fp:3:-7:4, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:3:-7:4, case #exhaustive:63).
+radd fp:3:-7:4 0x1p-7 0x1.4p-4 #brute2:124
+
+# radd fp:7:-11:0, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:7:-11:0, case #exhaustive:963).
+radd fp:7:-11:0 0x1p-11 0x1.04p-4 #brute2:125
+
+# radd fp:8:-12:-1, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:8:-12:-1, case #exhaustive:1923).
+radd fp:8:-12:-1 0x1p-12 0x1.02p-4 #brute2:126
+
+# radd fp:8:-16:3, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:8:-16:3, case #exhaustive:2947).
+radd fp:8:-16:3 0x1p-16 0x1.02p-8 #brute2:127
+
+# radd_entry binary32, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #close:497 of seed m2r1-linux).
+radd_entry binary32 0x1.cbd034p+100 0x1.65b83p+96 #brute2:128
+
+# radd_entry binary64, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case #close:81
+# of seed m2r1-linux).
+radd_entry binary64 0x1.2de42f32a6b16p-741 0x1.06497099876b4p-739 #brute2:129
+
+# radd_entry fp:3:-7:4, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:3:-7:4, case #exhaustive:63).
+radd_entry fp:3:-7:4 0x1p-7 0x1.4p-4 #brute2:130
+
+# radd_entry fp:7:-11:0, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:7:-11:0, case #exhaustive:963).
+radd_entry fp:7:-11:0 0x1p-11 0x1.04p-4 #brute2:131
+
+# radd_entry fp:8:-12:-1, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:8:-12:-1, case #exhaustive:1923).
+radd_entry fp:8:-12:-1 0x1p-12 0x1.02p-4 #brute2:132
+
+# radd_entry fp:8:-16:3, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:8:-16:3, case #exhaustive:2947).
+radd_entry fp:8:-16:3 0x1p-16 0x1.02p-8 #brute2:133
+
+# rmul binary32, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #close:74838 of seed m2r1-linux).
+rmul binary32 0x1.4d94eap+96 0x1.8p-148 #brute2:134
+
+# rmul binary64, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #close:245268 of seed m2r1-linux).
+rmul binary64 0x1.cp-1070 0x1.c6be648583824p+257 #brute2:135
+
+# rmul fp:2:-6:5, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:2:-6:5, case #exhaustive:41).
+rmul fp:2:-6:5 0x1p-6 0x1.8p+0 #brute2:136
+
+# rmul fp:3:-7:4, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:3:-7:4, case #exhaustive:80).
+rmul fp:3:-7:4 0x1p-7 0x1.8p+0 #brute2:137
+
+# rmul fp:7:-11:0, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:7:-11:0, case #exhaustive:1250).
+rmul fp:7:-11:0 0x1p-11 0x1.8p+0 #brute2:138
+
+# rmul fp:8:-12:-1, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:8:-12:-1, case #exhaustive:2498).
+rmul fp:8:-12:-1 0x1p-12 0x1.8p+0 #brute2:139
+
+# rmul fp:8:-16:3, upper(r) gaps=3/2: largest excess, gaps (claim 3/2) 1.5, the extreme of the
+# brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:8:-16:3, case #exhaustive:4034).
+rmul fp:8:-16:3 0x1p-16 0x1.8p+0 #brute2:140
+
+# scale_entry_step_2 binary32, error(z) form R, c=2, k=2, t=1: largest error / bound 0.9999998510,
+# the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled
+# runners, case #extreme:280458 of seed m2r1-linux).
+scale_entry_step_2 binary32 -0x1.8p+0 -0x1p-24 0x1.000002p-126 #brute2:141
+
+# scale_entry_step_2 binary64, error(z) form R, c=2, k=2, t=1: largest error / bound 1.00000, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #extreme:923586 of seed m2r1-linux).
+scale_entry_step_2 binary64 -0x1.8p+0 -0x1p-53 -0x1.ffffffffffffep-1023 #brute2:142
+
+# scale_step_1 binary32, error(z) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.9999999404,
+# the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled
+# runners, case #pow2:2498 of seed m2r1-linux).
+scale_step_1 binary32 0x1p-6 0x1p-144 #brute2:143
+
+# scale_step_1 binary64, error(z) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 1.00000, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #pow2:19554 of seed m2r1-linux).
+scale_step_1 binary64 -0x1p-934 0x1p-141 #brute2:144
+
+# scale_step_1 fp:3:-12:-1, error(z) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999512,
+# the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:3:-12:-1, case #exhaustive:112).
+scale_step_1 fp:3:-12:-1 -0x1.8p+1 -0x1.8p-1 #brute2:145
+
+# scale_step_1 fp:6:-12:-1, error(z) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999512,
+# the extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:6:-12:-1, case #exhaustive:9324).
+scale_step_1 fp:6:-12:-1 -0x1.ap+4 -0x1.4p-1 #brute2:146
+
+# scale_step_1 fp:7:-12:-1, error(z) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999512,
+# the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:7:-12:-1, case #exhaustive:51978).
+scale_step_1 fp:7:-12:-1 -0x1.8p+5 -0x1.58p-1 #brute2:147
+
+# scale_step_1 fp:7:-20:-6, error(z) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999939,
+# the extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:7:-20:-6, case #exhaustive:63562).
+scale_step_1 fp:7:-20:-6 -0x1.8p+0 -0x1.58p-1 #brute2:148
+
+# scale_step_1 fp:7:-8:4, error(z) form R, c=1/(1+u), k=1, t=1/2: largest error / bound 0.999756,
+# the extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:7:-8:4, case #exhaustive:56266).
+scale_step_1 fp:7:-8:4 -0x1.8p+10 -0x1.58p-1 #brute2:149
+
+# scale_step_2 binary32, error(z) form R, c=2, k=2, t=1: largest error / bound 0.9999998212, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #extreme:1127982 of seed m2r1-linux).
+scale_step_2 binary32 0x1.8p+0 0x1.fffffep-25 -0x1.fffffcp-127 #brute2:150
+
+# scale_step_2 binary64, error(z) form R, c=2, k=2, t=1: largest error / bound 1.00000, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:2266206 of seed m2r1-linux).
+scale_step_2 binary64 0x1.8p+0 0x1.fffffffffffffp-54 0x1.0000000000001p-1022 #brute2:151
+
+# sub_1_1 binary32, error(s) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:158 of seed m2r1-linux).
+sub_1_1 binary32 -0x1.000002p-126 0x1p-126 #brute2:152
+
+# sub_1_1 binary64, error(s) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:622 of seed m2r1-linux).
+sub_1_1 binary64 0x1.0000000000001p-1022 -0x1p-1022 #brute2:153
+
+# sub_1_1 fp:1:-7:4, error(s) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:1:-7:4, case #exhaustive:2).
+sub_1_1 fp:1:-7:4 -0x1p+4 -0x1p+2 #brute2:154
+
+# sub_1_1 fp:2:-7:4, error(s) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:2:-7:4, case #exhaustive:5).
+sub_1_1 fp:2:-7:4 -0x1.8p+5 -0x1p+3 #brute2:155
+
+# sub_1_1 fp:3:-7:4, error(s) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:3:-7:4, case #exhaustive:6).
+sub_1_1 fp:3:-7:4 -0x1.cp+6 -0x1.4p+5 #brute2:156
+
+# sub_1_1 fp:6:-7:4, error(s) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration of
+# fp:6:-7:4, case #exhaustive:34).
+sub_1_1 fp:6:-7:4 -0x1.f8p+9 -0x1.e8p+8 #brute2:157
+
+# sub_1_1 fp:7:-14:2, error(s) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:7:-14:2, case #exhaustive:66).
+sub_1_1 fp:7:-14:2 -0x1.fcp+8 -0x1.f4p+7 #brute2:158
+
+# sub_1_1 fp:7:-7:4, error(s) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration of
+# fp:7:-7:4, case #exhaustive:66).
+sub_1_1 fp:7:-7:4 -0x1.fcp+10 -0x1.f4p+9 #brute2:159
+
+# sub_entry_step_1 binary32, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #extreme:174 of seed m2r1-linux).
+sub_entry_step_1 binary32 0x1.000002p-126 -0x1p-126 #brute2:160
+
+# sub_entry_step_1 binary64, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #extreme:30 of seed m2r1-linux).
+sub_entry_step_1 binary64 -0x1.0000000000001p-1022 0x1p-1022 #brute2:161
+
+# sub_entry_step_1 fp:1:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:1:-7:4, case #exhaustive:2).
+sub_entry_step_1 fp:1:-7:4 -0x1p+4 -0x1p+2 #brute2:162
+
+# sub_entry_step_1 fp:2:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:2:-7:4, case #exhaustive:5).
+sub_entry_step_1 fp:2:-7:4 -0x1.8p+5 -0x1p+3 #brute2:163
+
+# sub_entry_step_1 fp:3:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:3:-7:4, case #exhaustive:6).
+sub_entry_step_1 fp:3:-7:4 -0x1.cp+6 -0x1.4p+5 #brute2:164
+
+# sub_entry_step_1 fp:6:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:6:-7:4, case #exhaustive:34).
+sub_entry_step_1 fp:6:-7:4 -0x1.f8p+9 -0x1.e8p+8 #brute2:165
+
+# sub_entry_step_1 fp:7:-14:2, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:7:-14:2, case #exhaustive:66).
+sub_entry_step_1 fp:7:-14:2 -0x1.fcp+8 -0x1.f4p+7 #brute2:166
+
+# sub_entry_step_1 fp:7:-7:4, error(z) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's
+# enumeration of fp:7:-7:4, case #exhaustive:66).
+sub_entry_step_1 fp:7:-7:4 -0x1.fcp+10 -0x1.f4p+9 #brute2:167
+
+# sum_entry_step_1 binary32, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #extreme:30 of seed m2r1-linux).
+sum_entry_step_1 binary32 -0x1p-126 -0x1.000002p-126 #brute2:168
+
+# sum_entry_step_1 binary64, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners,
+# case #extreme:438 of seed m2r1-linux).
+sum_entry_step_1 binary64 0x1.0000000000001p-1022 0x1p-1022 #brute2:169
+
+# sum_entry_step_1 fp:1:-7:4, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:1:-7:4, case #exhaustive:22).
+sum_entry_step_1 fp:1:-7:4 -0x1p+4 0x1p+2 #brute2:170
+
+# sum_entry_step_1 fp:2:-7:4, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:2:-7:4, case #exhaustive:45).
+sum_entry_step_1 fp:2:-7:4 -0x1.8p+5 0x1p+3 #brute2:171
+
+# sum_entry_step_1 fp:3:-7:4, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:3:-7:4, case #exhaustive:96).
+sum_entry_step_1 fp:3:-7:4 -0x1.cp+6 0x1.4p+5 #brute2:172
+
+# sum_entry_step_1 fp:6:-7:4, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:6:-7:4, case #exhaustive:796).
+sum_entry_step_1 fp:6:-7:4 -0x1.f8p+9 0x1.e8p+8 #brute2:173
+
+# sum_entry_step_1 fp:7:-14:2, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:7:-14:2, case #exhaustive:2236).
+sum_entry_step_1 fp:7:-14:2 -0x1.fcp+8 0x1.f4p+7 #brute2:174
+
+# sum_entry_step_1 fp:7:-7:4, error(t) form R, c=1/(1+u), k=1, t=0: largest error / bound 1, the
+# extreme of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's
+# enumeration of fp:7:-7:4, case #exhaustive:1596).
+sum_entry_step_1 fp:7:-7:4 -0x1.fcp+10 0x1.f4p+9 #brute2:175
+
+# two_prod_entry binary32, error(r) form R, c=0, k=2, t=1/2: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:10242 of seed m2r1-linux).
+two_prod_entry binary32 0x1p-149 0x1.8p+0 #brute2:176
+
+# two_prod_entry binary64, error(r) form R, c=0, k=2, t=1/2: largest error / bound 1, the extreme of
+# the brute-force runs (results/milestone2/brute/linux-x86-64.json; the compiled runners, case
+# #extreme:21942 of seed m2r1-linux).
+two_prod_entry binary64 0x1.0000000000001p-1022 0x1.8p+0 #brute2:177
+
+# two_prod_entry fp:2:-12:-1, error(r) form R, c=0, k=2, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration
+# of fp:2:-12:-1, case #exhaustive:22).
+two_prod_entry fp:2:-12:-1 -0x1.8p+0 -0x1.8p-11 #brute2:178
+
+# two_prod_entry fp:3:-12:-1, error(r) form R, c=0, k=2, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:3:-12:-1, case #exhaustive:44).
+two_prod_entry fp:3:-12:-1 -0x1.cp+1 -0x1.cp-10 #brute2:179
+
+# two_prod_entry fp:6:-12:-1, error(r) form R, c=0, k=2, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:6:-12:-1, case #exhaustive:352).
+two_prod_entry fp:6:-12:-1 -0x1.f8p+4 -0x1.f8p-7 #brute2:180
+
+# two_prod_entry fp:7:-12:-1, error(r) form R, c=0, k=2, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:7:-12:-1, case #exhaustive:704).
+two_prod_entry fp:7:-12:-1 -0x1.fcp+5 -0x1.fcp-6 #brute2:181
+
+# two_prod_entry fp:7:-20:-6, error(r) form R, c=0, k=2, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/linux-x86-64.json; the interpreter's enumeration
+# of fp:7:-20:-6, case #exhaustive:576).
+two_prod_entry fp:7:-20:-6 -0x1.fcp+0 -0x1.fcp-9 #brute2:182
+
+# two_prod_entry fp:7:-8:4, error(r) form R, c=0, k=2, t=1/2: largest error / bound 1, the extreme
+# of the brute-force runs (results/milestone2/brute/macos-arm64.json; the interpreter's enumeration
+# of fp:7:-8:4, case #exhaustive:573888).
+two_prod_entry fp:7:-8:4 -0x1.fcp+5 -0x1.fcp-2 #brute2:183
+
+# --- The adversarial search of Milestone 2: its best lines that came at least as close as the brute force
+
+# acc_add_1 binary32, error(t) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the brute-force
+# runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: acc_add_1 binary32 -0x1p-77 0x1p-75
+# -0x1.000002p-77 #exactprod:1946545.
+acc_add_1 binary32 -0x1p-77 0x1p-75 -0x1.000002p-77 #search2:1
+
+# acc_add_1 binary64, error(t) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the brute-force
+# runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: acc_add_1 binary64 -0x1p-178
+# 0x1.0000000001p-181 -0x1.0000000000001p-178 #exactprod:68380.
+acc_add_1 binary64 -0x1p-178 0x1.0000000001p-181 -0x1.0000000000001p-178 #search2:2
+
+# acc_add_2 binary32, error(t) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 0.9999994238;
+# the brute-force runs: 0.6666664268. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), search from a line of results/milestone2/brute/macos-arm64.json:
+# acc_add_2 binary32 -0x1.fffffep+125 -0x1.50d364p-68 0x1.fffffcp+127 0x1p+127 0x1.fffffep+102
+# #overflow:29379.
+acc_add_2 binary32 -0x1.fffffep+123 0x1.c00002p+78 0x1p+116 0x1p+125 0x1.fffff6p+100 #search2:3
+
+# acc_add_2 binary64, error(t) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 0.8333333333;
+# the brute-force runs: 0.5660174981. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), search from a line of results/milestone2/brute/linux-x86-64.json:
+# acc_add_2 binary64 0x1.a4f4caa14df77p+1021 -0x1.32500d8aa18dep-830 0x1p+1023 -0x1p+1023
+# -0x1.5b4ede058a429p+969 #overflow:11019.
+acc_add_2 binary64 0x1.fffffffffffffp-548 -0x1.a404ddfeefeefp-602 0x1.0000000000008p+284 -0x1p-546 -0x1.17405c00081f3p-600 #search2:4
+
+# acc_merge_1 binary32, error(t) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: acc_merge_1 binary32 -0x1.8p+54
+# 0x1p+52 -0x1.000004p+53 0x1.008002p+55 #exactprod:26620.
+acc_merge_1 binary32 -0x1.8p+54 0x1p+52 -0x1.000004p+53 0x1.008002p+55 #search2:5
+
+# acc_merge_1 binary64, error(t) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: acc_merge_1 binary64
+# 0x1.0000000000001p+469 0x1.04004p+469 0x1p+469 0x1.0001p+471 #exactprod:45580.
+acc_merge_1 binary64 0x1.0000000000001p+469 0x1.04004p+469 0x1p+469 0x1.0001p+471 #search2:6
+
+# acc_merge_2 binary32, error(t) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 0.6666559380;
+# the brute-force runs: 0.6297694807. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), search from a line of results/milestone2/brute/linux-x86-64.json:
+# acc_merge_2 binary32 -0x1.3d47bp-21 0x1.59a55ap-48 0x1.5b1e82p+26 0x1.50abd4p-17 0x1p-41
+# 0x1.eafc4cp-56 #apart:87994.
+acc_merge_2 binary32 -0x1.500104p-60 -0x1p-84 0x1.2409a6p+125 0x1.3fffecp-62 -0x1.000002p-108 0x1.cd99ccp-56 #search2:7
+
+# acc_merge_2 binary64, error(t) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 1.000000000;
+# the brute-force runs: 0.6666666667. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), search from a line of results/milestone2/brute/windows-x64.json:
+# acc_merge_2 binary64 0x1p+1023 -0x1p+969 0x1p+1023 -0x1.f3497cde63435p+1021
+# -0x1.97c30e63f958ep+965 0x1.ffffffffffffep+1023 #overflow:61749.
+acc_merge_2 binary64 0x1.fffffffffffffp-881 0x1.fffffffffffffp-987 0x1.ffffffffffffep+37 -0x1p-879 -0x1.fffffffffffffp-933 0x1.edacd6cc0f011p+258 #search2:8
+
+# acc_mul_2 binary32, error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest error/allowed
+# 0.7455577879; the brute-force runs: 0.6079333. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: acc_mul_2 binary32 -0x1.1e73fap+55 0x1.7399cep+8
+# 0x1.fffffep+127 -0x1.fffffep+125 -0x1.fffffep+100 -0x1.002928p-8 -0x1p-32 #atop:89708.
+acc_mul_2 binary32 0x0p+0 0x0p+0 0x1.f9a532p-8 -0x1.326cfep-59 0x1.7fe78p-85 0x1.901d4ep-60 -0x1.e18798p-89 #search2:9
+
+# acc_mul_2 binary64, error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest error/allowed
+# 0.5153531252; the brute-force runs: 0.3959714805. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: acc_mul_2 binary64 0x1.c8a4b1a382314p-164
+# -0x1.ce242d67e42cap-726 0x1.cbdb39f37a487p-8 0x1.24bacafffd2bap+540 0x1p+487
+# 0x1.d103d2184e928p-196 0x1p-249 #cancel:19066.
+acc_mul_2 binary64 0x1p+354 0x1p+301 0x1.d62c0df798dap-228 -0x1.158e87ddc17bep+218 -0x1.ff7ffffcp+164 -0x1.dbba7a943df2cp+243 -0x1p+190 #search2:10
+
+# acc_mul_entry_2 binary32, error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest
+# error/allowed 0.7417910390; the brute-force runs: 0.4999998398. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: acc_mul_entry_2 binary32 -0x1.fffffcp-127 0x0p+0 0x1p+0
+# 0x1.fffffcp-127 0x0p+0 -0x1.8p+0 -0x1p-24 #extreme:42958.
+acc_mul_entry_2 binary32 -0x0p+0 -0x0p+0 0x1.2e8bcep-28 0x1.9c3e2p-75 -0x1p-99 0x1.411fp-40 -0x1.dcdfdap-75 #search2:11
+
+# acc_mul_entry_2 binary64, error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest
+# error/allowed 0.7265063064; the brute-force runs: 0.4789341532. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: acc_mul_entry_2 binary64 0x1.263a59407ed8ep-863
+# -0x1p-916 0x1.fffffffffffffp+1023 -0x1.fffffffffffffp+1023 -0x1.fffffffffffffp+969
+# 0x1.0a1d20cc6566cp-628 0x1p-681 #atop:3993.
+acc_mul_entry_2 binary64 0x1p-1066 -0x0p+0 0x1.4d3p-1061 -0x1.e6ab48119549cp-65 0x1.fd7cf878c099fp-135 -0x1.0000400000a08p-911 -0x1.a5214a181f8p-1007 #search2:12
+
+# acc_radius_1 binary32, upper(r) >= g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if ok: smallest
+# excess over the stated value in gaps 2.370952055; the brute-force runs: 2.954078889. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: acc_radius_1 binary32 0x1.010f44p+4 0x1.bcp+7
+# 0x1.158p-16 0x1.bcp-142 #integer:31123.
+acc_radius_1 binary32 0x1.011f44p+4 0x1.bc0abp+7 0x1.15a01cp-23 0x1.0002p-28 #search2:13
+
+# acc_radius_1 binary64, upper(r) >= g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if ok: smallest
+# excess over the stated value in gaps 2.401895282; the brute-force runs: 2.97499023. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: acc_radius_1 binary64 0x1.fffffffffffffp-6
+# 0x1.ff56d38p+25 0x1.fffffffffffffp-6 0x0p+0 #extreme:30000.
+acc_radius_1 binary64 0x1.191f9280aad32p-362 0x1.8ddb78000797cp+21 0x1.fffdfffffefebp-32 0x1p-446 #search2:14
+
+# acc_radius_2 binary32, upper(r) >= g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if ok: smallest
+# excess over the stated value in gaps 2.394759338; the brute-force runs: 2.906763721. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), search from stratum
+# uniform, case 4.
+acc_radius_2 binary32 0x1.127768p+92 0x1.0004p+9 0x1.05fffcp-42 0x1p+26 #search2:15
+
+# acc_radius_2 binary64, upper(r) >= g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if ok: smallest
+# excess over the stated value in gaps 2.438553052; the brute-force runs: 2.852979389. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: acc_radius_2 binary64 0x1.1p-4 0x1.ddp+8
+# 0x1.0792f71f884fp+1019 0x1.fffffffffffep-1027 #extreme:59988.
+acc_radius_2 binary64 0x1.0904cbd379897p+920 0x1.5bb804209bf76p+13 0x1.04cap-137 0x1.6aedfffed08p+771 #search2:16
+
+# add_ball_2_2 binary32, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 0.8333328863;
+# the brute-force runs: 0.6666664283. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), search from a line of results/milestone2/brute/macos-arm64.json:
+# add_ball_2_2 binary32 0x1p+127 -0x1.fffffep+101 -0x1.fffffap+125 -0x1.b831e8p+82 #overflow:33868.
+add_ball_2_2 binary32 0x1.000002p+113 -0x1.edf5fcp+88 -0x1.fffffap+111 -0x1.1fff98p+84 #search2:17
+
+# add_ball_2_2 binary32, encloses(z, d) x+y over : smallest slack in gaps of the radius 2097164; the
+# brute-force runs: 4194313. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of results/milestone2/brute/linux-x86-64.json:
+# add_ball_2_2 binary32 -0x1.fffffap+125 -0x1.0bed04p+90 0x1p+127 -0x1p+102 #overflow:53564.
+add_ball_2_2 binary32 -0x1.fffffap+125 -0x1.fc573p+97 0x1.000002p+127 -0x1.ec9164p+102 #search2:18
+
+# add_ball_2_2 binary64, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 0.8333333333;
+# the brute-force runs: 0.6666666667. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), search from a line of results/milestone2/brute/windows-x64.json:
+# add_ball_2_2 binary64 -0x1.fffffffffffffp+1023 -0x1.fffffffffffffp+969 0x1.ffffffffffffdp+1022
+# -0x1.1eb7297760093p+929 #overflow:20588.
+add_ball_2_2 binary64 -0x1.fffffffffffffp+1021 -0x1.fdff4538199a8p+964 0x1p+1023 0x1.9de5f0b7fff64p+969 #search2:19
+
+# add_ball_2_2 binary64, encloses(z, d) x+y over : smallest slack in gaps of the radius
+# 1.125899907e+15; the brute-force runs: 2.251799814e+15. Found by kairn-oracle search (seed 0,
+# 20000 cases per kernel and format, every seed), search from stratum, generation 8.
+add_ball_2_2 binary64 -0x1.fffffffffffffp+1021 -0x1.e9661430149a8p+964 0x1p+1023 0x1p+970 #search2:20
+
+# add_entry_step_1 binary32, error(z) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: add_entry_step_1 binary32
+# -0x1p-16 -0x1p-40 #add_1_entry:exact:150:element:701.
+add_entry_step_1 binary32 -0x1p-16 -0x1p-40 #search2:21
+
+# add_entry_step_1 binary64, error(z) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: add_entry_step_1 binary64
+# -0x1.0000000000001p-900 0x1p-953 #add_1_entry:exact:192:element:1937.
+add_entry_step_1 binary64 -0x1.0000000000001p-900 0x1p-953 #search2:22
+
+# add_entry_step_2 binary32, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed
+# 0.9999995629; the brute-force runs: 0.6764561442. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: add_entry_step_2 binary32 -0x1p+8 -0x1.fffffep-17
+# 0x1.fffffep+6 0x1.fffffcp-42 #add_2_entry:tight:1:element:0.
+add_entry_step_2 binary32 -0x1p+8 -0x1.fffffep-17 0x1.fffffep+6 0x1.fffffep-42 #search2:23
+
+# add_entry_step_2 binary64, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed
+# 1.000000000; the brute-force runs: 0.6666666667. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: add_entry_step_2 binary64 0x1p+0 0x1.fffffffffffffp-54
+# -0x1.fffffffffffffp-2 -0x1.ffffffffffffep-108 #add_2_entry:tight:14:element:142.
+add_entry_step_2 binary64 0x1p+0 0x1.fffffffffffffp-54 -0x1.fffffffffffffp-2 -0x1.fffffffffffffp-108 #search2:24
+
+# axpy_entry_step_1 binary32, error(z) form T, c=(2+3*u)/((1+u)*(1+u)), k=1, t=2/3: largest
+# error/allowed 0.9999998510; the brute-force runs: 0.999999851. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: axpy_entry_step_1 binary32 -0x1.000002p+9
+# 0x1.fffffep+114 -0x1p+100 #axpy_1_entry:tight:113:element:138.
+axpy_entry_step_1 binary32 -0x1.000002p+12 0x1.fffffep+114 -0x1p+103 #search2:25
+
+# axpy_entry_step_1 binary64, error(z) form T, c=(2+3*u)/((1+u)*(1+u)), k=1, t=2/3: largest
+# error/allowed 1.000000000; the brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: axpy_entry_step_1 binary64 -0x1.0000000000001p-1
+# 0x1.fffffffffffffp+1020 -0x1p+967 #axpy_1_entry:tight:99:element:661.
+axpy_entry_step_1 binary64 -0x1.fffffffffffffp+1020 -0x1.0000000000001p+1 0x1p+969 #search2:26
+
+# axpy_entry_step_2 binary32, error(z) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest
+# error/allowed 0.7391420474; the brute-force runs: 0.7007543785. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: axpy_entry_step_2 binary32 -0x1.4a7146p+15
+# 0x1.1dc916p-19 0x1.096374p+21 0x1.99e97cp-4 0x1.72c23ap+22 -0x1.71f854p-5
+# #axpy_2_entry:one:450:element:776.
+axpy_entry_step_2 binary32 -0x1.0030bep-9 0x1.ffa0c8p-35 -0x1.904b54p-112 -0x1.efap-137 0x1.18p-142 0x0p+0 #search2:27
+
+# axpy_entry_step_2 binary64, error(z) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest
+# error/allowed 0.7732391741; the brute-force runs: 0.7155734824. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/supplementary/windows-x64-r3.json: axpy_entry_step_2 binary64
+# -0x1.0000001779156p+19 -0x1.ffffffcebcea3p-35 0x1.00d6f6015bcb1p+574 0x1.97650f0af2ed4p+520
+# -0x1.4783d4d420503p+574 -0x1.9a6f5e94ef083p+511 #axpy_2_entry:tight:1561:element:466.
+axpy_entry_step_2 binary64 0x1.00d6f601dbcbep+574 0x1.9d97f39a8ca84p+520 -0x1.0000001779153p+19 -0x1.ffffff0ebcea3p-35 -0x1.4783a5d422521p+574 0x1.792235d9b05bdp+509 #search2:28
+
+# axpy_entry_step_2_1 binary32, error(z) form T, c=3*(1+2*u*u)/(1-4*u)+2, k=2, t=5/4: largest
+# error/allowed 0.7999998569; the brute-force runs: 0.7999997854. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/supplementary/linux-x86-64-r3.json: axpy_entry_step_2_1 binary32
+# 0x1.88p-144 -0x1.4ec6dep+22 0x1.3974dp-3 0x1.5e444p-128 0x0p+0
+# #axpy_2_1_entry:underflow:1085:element:234.
+axpy_entry_step_2_1 binary32 0x1.000002p-126 -0x1.8p+0 0x1.fffffcp-25 0x0p+0 -0x0p+0 #search2:29
+
+# axpy_entry_step_2_1 binary64, error(z) form T, c=3*(1+2*u*u)/(1-4*u)+2, k=2, t=5/4: largest
+# error/allowed 0.8000000000; the brute-force runs: 0.8. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/supplementary/macos-arm64-r3.json: axpy_entry_step_2_1 binary64
+# -0x1.0000000000001p-1022 0x1.8p+0 0x1.fffffffffffffp-54 0x1p-1073 0x0p+0 #extreme:51758.
+axpy_entry_step_2_1 binary64 -0x1.0000000000009p-1022 0x1.8p+0 0x1.fffffffffffefp-54 0x0p+0 0x0p+0 #search2:30
+
+# axpy_step_1 binary32, error(z) form T, c=(2+3*u)/((1+u)*(1+u)), k=1, t=2/3: largest error/allowed
+# 0.9999998510; the brute-force runs: 0.999999851. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, every seed), a line of results/milestone2/brute/linux-x86-64.json:
+# axpy_step_1 binary32 -0x1.000002p+3 0x1.fffffep+120 -0x1p+100 #axpy_1:tight:127:element:250.
+axpy_step_1 binary32 -0x1.000002p+3 0x1.fffffep+120 -0x1p+100 #search2:31
+
+# axpy_step_1 binary64, error(z) form T, c=(2+3*u)/((1+u)*(1+u)), k=1, t=2/3: largest error/allowed
+# 1.000000000; the brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), search from a line of results/milestone2/brute/linux-x86-64.json:
+# axpy_step_1 binary64 -0x1.0000000000001p+40 -0x1.fffffffffffffp+979 0x1p+967
+# #axpy_1:tight:133:element:1572.
+axpy_step_1 binary64 -0x1.fffffffffffffp+982 -0x1.0000000000001p+40 0x1p+970 #search2:32
+
+# axpy_step_2 binary32, error(z) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest error/allowed
+# 0.7166503253; the brute-force runs: 0.7008509705. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: axpy_step_2 binary32 -0x1.24375ep+85 0x1.038bfap+53
+# -0x1.0caf76p-7 -0x1.f078fep-32 -0x1.0a26f8p+9 0x1.f9e5d8p-34 #tight:22098.
+axpy_step_2 binary32 0x1.3033ccp-41 0x1.abaa66p-66 -0x1.5ed222p-69 -0x1.4111b8p-94 -0x0p+0 0x0p+0 #search2:33
+
+# axpy_step_2 binary64, error(z) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest error/allowed
+# 0.7409976216; the brute-force runs: 0.6315004675. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: axpy_step_2 binary64 0x1.65e13cf1f27a4p-978
+# 0x1.1754d07a9ep-1035 -0x1.315471513990ep-20 0x1.17f98580a7b98p-75 0x1.ffffffffffffep-1023 0x0p+0
+# #axpy_2:underflow:215:element:4080.
+axpy_step_2 binary64 0x1.26bee11ce5059p+2 -0x1.4760d8a37ad1bp-79 -0x1.255ad4b5d4fa1p-981 -0x1.fffffffdfep-1035 0x1.4p-1032 0x0p+0 #search2:34
+
+# axpy_step_2_1 binary32, error(z) form T, c=3*(1+2*u*u)/(1-4*u)+2, k=2, t=5/4: largest
+# error/allowed 0.7999998331; the brute-force runs: 0.7999997139. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: axpy_step_2_1 binary32 0x1.cf8434p-32 0x1.1f1ebp+50
+# -0x1p+25 -0x1.9d96dp-10 0x1.e9e804p-35 #tight:27564.
+axpy_step_2_1 binary32 0x1.000022p-126 0x1.8p+0 0x1.ffffbep-25 0x0p+0 -0x0p+0 #search2:35
+
+# axpy_step_2_1 binary64, error(z) form T, c=3*(1+2*u*u)/(1-4*u)+2, k=2, t=5/4: largest
+# error/allowed 0.8000000000; the brute-force runs: 0.8. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: axpy_step_2_1 binary64 -0x1.0071b6cbca09p+160
+# 0x1.10d651a9907b4p+326 -0x1.f0fa0bf8e6b64p+270 -0x1.db268370856ep+445 0x1.08b0e6ec441a1p+379
+# #axpy_2_1:tight:322:element:2889.
+axpy_step_2_1 binary64 -0x1.0000000000001p-1022 -0x1.8p+0 -0x1.fffffffffffffp-54 -0x0p+0 -0x0p+0 #search2:36
+
+# ball_add_1_full binary32, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
+# 1.25. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line
+# of results/milestone1/brute/linux-x86-64.json: ball_add_1_full binary32 0x1.fffffap+125
+# 0x1.6f24bap+125 -0x1.fffffep+126 0x1p+125 #hugeradius:919651.
+ball_add_1_full binary32 0x1.fffffap+125 0x1.6f24bap+125 -0x1.fffffep+126 0x1p+125 #search2:37
+
+# ball_add_1_full binary64, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
+# 1.25. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line
+# of results/milestone1/brute/linux-x86-64.json: ball_add_1_full binary64 -0x1.fffffffffffffp+1023
+# 0x1p+1022 0x1.ffffffffffffdp+1022 0x1.549103e54ff75p+1022 #hugeradius:315167.
+ball_add_1_full binary64 -0x1.fffffffffffffp+1023 0x1p+1022 0x1.ffffffffffffdp+1022 0x1.549103e54ff75p+1022 #search2:38
+
+# ball_add_2_full binary32, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.109375015; the
+# brute-force runs: 1.250261545. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of tests/regression/cases.txt: ball_add_2_full binary32
+# -0x1.082014p+53 -0x1.fffffep+28 0x1.fffffep+8 0x1.65478p+55 -0x1.fffffep+30 0x1.fffffep+33
+# #search:19.
+ball_add_2_full binary32 -0x1.082014p+53 -0x1.fffffep+28 0x1.fffffep+8 0x1.65478p+55 -0x1.fffffep+30 0x1.fffffep+33 #search2:39
+
+# ball_add_2_full binary64, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.156311035; the
+# brute-force runs: 1.304655708. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of tests/regression/cases.txt: ball_add_2_full binary64
+# 0x1.dcbdcf9c1e06bp-505 -0x1.fffffff000002p-559 0x1.fffffffffffffp-609 0x1.4c439655577a1p-508
+# -0x1.6d6599bbca601p-568 0x1.fffffffffffffp-555 #search:20.
+ball_add_2_full binary64 0x1.dcbdcf9c1e06bp-505 -0x1.fffffff000002p-559 0x1.fffffffffffffp-609 0x1.4c439655577a1p-508 -0x1.6d6599bbca601p-568 0x1.fffffffffffffp-555 #search2:40
+
+# ball_lower_as_2 binary32, error(l) form A, c=5, k=1, t=3: largest error/allowed 0.8000000000; the
+# brute-force runs: 0.8. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), search from a line of results/milestone2/brute/macos-arm64.json: ball_lower_as_2
+# binary32 -0x1p+121 -0x1p-149 0x1p-149 #pow2:39790.
+ball_lower_as_2 binary32 -0x1p+127 -0x1p-149 0x1p-149 #search2:41
+
+# ball_lower_as_2 binary64, error(l) form A, c=5, k=1, t=3: largest error/allowed 0.8000000000; the
+# brute-force runs: 0.8. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), search from a line of results/milestone2/brute/windows-x64.json: ball_lower_as_2
+# binary64 -0x1p+998 -0x1p-1074 0x1p-1074 #pow2:12062.
+ball_lower_as_2 binary64 -0x1p+1023 -0x1p-1074 0x1p-1074 #search2:42
+
+# ball_mul_1_full binary32, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-4): smallest slack in gaps of the radius 1.500000149; the
+# brute-force runs: 1.773909532. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of tests/regression/cases.txt: ball_mul_1_full binary32 0x1p-15
+# 0x1.000002p+9 -0x1.ffbffcp-101 0x1.fffffep-88 #search:23.
+ball_mul_1_full binary32 0x1p-15 0x1.000002p+9 -0x1.ffbffcp-101 0x1.fffffep-88 #search2:43
+
+# ball_mul_1_full binary64, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-4): smallest slack in gaps of the radius 1.501176320; the
+# brute-force runs: 1.67532942. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of tests/regression/cases.txt: ball_mul_1_full binary64
+# 0x1.0000000029014p-411 0x1.4e155e4p-385 0x1.10420ap-556 0x1.9eb6163fbd92dp-553 #search:24.
+ball_mul_1_full binary64 0x1.0000000029014p-411 0x1.4e155e4p-385 0x1.10420ap-556 0x1.9eb6163fbd92dp-553 #search2:44
+
+# ball_mul_2_full binary32, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-2): smallest slack in gaps of the radius 2.449999815; the
+# brute-force runs: 2.749958053. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of tests/regression/cases.txt: ball_mul_2_full binary32 -0x1.2p+29
+# -0x1.fffffcp+4 0x1p+26 -0x1.000004p+98 -0x1p+74 0x1.99988p+91 #search:27.
+ball_mul_2_full binary32 -0x1.2p+29 -0x1.fffffcp+4 0x1p+26 -0x1.000004p+98 -0x1p+74 0x1.99988p+91 #search2:45
+
+# ball_mul_2_full binary64, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-2): smallest slack in gaps of the radius 2.438605979; the
+# brute-force runs: 2.567587505. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of tests/regression/cases.txt: ball_mul_2_full binary64
+# 0x1.1f6f098344d9bp+868 0x1.ffffffffffffcp+814 0x1.1f6f098344d9cp+868 0x1p+154 0x1p+101
+# 0x1.c801f90acfbf9p+100 #search:28.
+ball_mul_2_full binary64 0x1.1f6f098344d9bp+868 0x1.ffffffffffffcp+814 0x1.1f6f098344d9cp+868 0x1p+154 0x1p+101 0x1.c801f90acfbf9p+100 #search2:46
+
+# ball_mul_pow2_1 binary32, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest slack in gaps of the radius
+# 0; the brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of results/milestone2/brute/linux-x86-64.json: ball_mul_pow2_1
+# binary32 0x1.000002p-79 0x1.5e690ep-58 0x1p-47 #atnormal:1.
+ball_mul_pow2_1 binary32 0x1.000002p-79 0x1.5e690ep-58 0x1p-47 #search2:47
+
+# ball_mul_pow2_1 binary64, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0
+# or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest slack in gaps of the radius
+# 0; the brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of results/milestone2/brute/linux-x86-64.json: ball_mul_pow2_1
+# binary64 0x1.0000000000001p-197 0x0p+0 0x1p-825 #atnormal:19.
+ball_mul_pow2_1 binary64 0x1.0000000000001p-197 0x0p+0 0x1p-825 #search2:48
+
+# ball_mul_pow2_1_full binary32, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c
+# = 0 or |rx*c| > eta/(2*u)): smallest slack in gaps of the radius 0; the brute-force runs: 0. Found
+# by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: ball_mul_pow2_1_full binary32 0x1.d5b6dcp+42
+# 0x1.000002p-44 0x1p-82 #atnormal:127.
+ball_mul_pow2_1_full binary32 0x1.d5b6dcp+42 0x1.000002p-44 0x1p-82 #search2:49
+
+# ball_mul_pow2_1_full binary64, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c
+# = 0 or |rx*c| > eta/(2*u)): smallest slack in gaps of the radius 0; the brute-force runs: 0. Found
+# by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: ball_mul_pow2_1_full binary64 0x1.0000000000001p-289
+# 0x1.965f6c133f2b1p+220 0x1p-733 #atnormal:49.
+ball_mul_pow2_1_full binary64 0x1.0000000000001p-289 0x1.965f6c133f2b1p+220 0x1p-733 #search2:50
+
+# ball_mul_pow2_2 binary32, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest slack in gaps of the radius 0; the brute-force runs: 0. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: ball_mul_pow2_2 binary32 -0x1.127382p+19 0x1.000002p-8
+# 0x1.fffffcp+126 0x1p-118 #atnormal:25.
+ball_mul_pow2_2 binary32 -0x1.127382p+19 0x1.000002p-8 0x1.fffffcp+126 0x1p-118 #search2:51
+
+# ball_mul_pow2_2 binary64, encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx[0]*c =
+# 0 or |cx[0]*c| > eta/(2*u)) and (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest slack in gaps of the radius 0; the brute-force runs: 0. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: ball_mul_pow2_2 binary64 0x1.e252a6ab5cd22p+1022
+# -0x1.dd8f1980e2613p+555 0x1.0000000000001p-635 0x1p-387 #atnormal:16.
+ball_mul_pow2_2 binary64 0x1.e252a6ab5cd22p+1022 -0x1.dd8f1980e2613p+555 0x1.0000000000001p-635 0x1p-387 #search2:52
+
+# ball_mul_pow2_2_full binary32, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx[0]*c = 0 or |cx[0]*c| > eta/(2*u)) and
+# (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest slack in
+# gaps of the radius 0; the brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, every seed), a line of results/milestone2/brute/linux-x86-64.json:
+# ball_mul_pow2_2_full binary32 0x1.000002p-27 -0x0p+0 0x1.fffffep+127 0x1p-99 #atnormal:847.
+ball_mul_pow2_2_full binary32 0x1.000002p-27 -0x0p+0 0x1.fffffep+127 0x1p-99 #search2:53
+
+# ball_mul_pow2_2_full binary64, encloses(cw, rw) x*c over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*c| <= 2^(qmax+p-2), exactly the set when (cx[0]*c = 0 or |cx[0]*c| > eta/(2*u)) and
+# (cx[1]*c = 0 or |cx[1]*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u)): smallest slack in
+# gaps of the radius 0; the brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, every seed), a line of results/milestone2/brute/linux-x86-64.json:
+# ball_mul_pow2_2_full binary64 -0x1.0791aa24e3a3bp+14 -0x1.cea69647438c5p-40 0x1.0000000000001p-733
+# 0x1p-289 #atnormal:79.
+ball_mul_pow2_2_full binary64 -0x1.0791aa24e3a3bp+14 -0x1.cea69647438c5p-40 0x1.0000000000001p-733 0x1p-289 #search2:54
+
+# ball_narrow_2_1 binary32, encloses(cz, rz) x over x=[c +- r], B1-B4, finite when |abs(c)+r| <=
+# 2^(qmax+p-2): smallest slack in gaps of the radius 0.5; the brute-force runs: 0.5. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: ball_narrow_2_1 binary32 0x1.fffffcp+127 0x1p+103
+# 0x1p+127 #ballstates:385.
+ball_narrow_2_1 binary32 0x1.fffffcp+127 0x1p+103 0x1p+127 #search2:55
+
+# ball_narrow_2_1 binary64, encloses(cz, rz) x over x=[c +- r], B1-B4, finite when |abs(c)+r| <=
+# 2^(qmax+p-2): smallest slack in gaps of the radius 0.5; the brute-force runs: 0.5. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: ball_narrow_2_1 binary64 -0x1.fffffffffffffp+1023
+# 0x1p+969 0x1p+916 #ballstates:2133.
+ball_narrow_2_1 binary64 -0x1.fffffffffffffp+1023 0x1p+969 0x1p+916 #search2:56
+
+# ball_scale_1_full binary32, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.000000119; the
+# brute-force runs: 1.000000119. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of results/milestone1/brute/linux-x86-64.json: ball_scale_1_full
+# binary32 0x1.fffffep+127 0x1.fffffep+127 0x1.000002p-126 #ballstates:1441612.
+ball_scale_1_full binary32 0x1.fffffep+127 0x1.fffffep+127 0x1.000002p-126 #search2:57
+
+# ball_scale_1_full binary64, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.000000000; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone1/brute/linux-x86-64.json: ball_scale_1_full binary64
+# 0x1.fffffffffffffp+1023 0x1.fffffffffffffp+1023 0x1.0000000000001p-1022 #extreme:23287.
+ball_scale_1_full binary64 0x1.fffffffffffffp+1023 0x1.fffffffffffffp+1023 0x1.0000000000001p-1022 #search2:58
+
+# ball_scale_2_full binary32, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.250231862; the
+# brute-force runs: 1.4375. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of tests/regression/cases.txt: ball_scale_2_full binary32 0x1.13eb44p-81
+# 0x1.d8c6dp-106 0x1.a85e8ap-104 -0x1.4633d4p+9 #search:35.
+ball_scale_2_full binary32 0x1.13eb44p-81 0x1.d8c6dp-106 0x1.a85e8ap-104 -0x1.4633d4p+9 #search2:59
+
+# ball_scale_2_full binary64, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.25; the brute-force runs:
+# 1.375000015. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed),
+# a line of tests/regression/cases.txt: ball_scale_2_full binary64 -0x1.47dac86a8f00bp-2
+# -0x1.ffffffffffffcp-56 0x1.96f10e04f0a5ep-54 -0x1.8p-54 #search:36.
+ball_scale_2_full binary64 -0x1.47dac86a8f00bp-2 -0x1.ffffffffffffcp-56 0x1.96f10e04f0a5ep-54 -0x1.8p-54 #search2:60
+
+# ball_scale_2_full_entry binary32, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.375009775; the
+# brute-force runs: 1.479570389. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of results/milestone2/brute/windows-x64.json:
+# ball_scale_2_full_entry binary32 -0x1.06361p-32 -0x1.bb6d98p-60 0x1.11ab9p-54 0x1.041p+58
+# #radii:15676.
+ball_scale_2_full_entry binary32 0x1.053212p+88 -0x1.8p+63 0x1.02f42ep+66 0x1.000104p+39 #search2:61
+
+# ball_scale_2_full_entry binary64, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.251738747; the
+# brute-force runs: 1.41014063. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of results/milestone2/brute/windows-x64.json:
+# ball_scale_2_full_entry binary64 0x1.af7daf26708f3p+219 -0x1.1df6a54dc6b7p+163
+# 0x1.b006d7b797fa3p+168 -0x1.35c99e7fc0952p+292 #radii:72051.
+ball_scale_2_full_entry binary64 0x1.080e6a0e04552p-295 0x1p-348 0x1.d30a013272a72p-347 0x1.574553bd5fcc1p-7 #search2:62
+
+# ball_sub_1_full binary32, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
+# 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone1/brute/linux-x86-64.json: ball_sub_1_full binary32 -0x1.fffffap+126
+# 0x1.d7bc68p+126 -0x1.fffffep+127 0x1.a35d48p+124 #hugeradius:361304.
+ball_sub_1_full binary32 -0x1.fffffap+126 0x1.d7bc68p+126 -0x1.fffffep+127 0x1.a35d48p+124 #search2:63
+
+# ball_sub_1_full binary64, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
+# 1.25. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line
+# of results/milestone1/brute/linux-x86-64.json: ball_sub_1_full binary64 0x1.fffffffffffffp+1023
+# 0x1p+1021 0x1.ffffffffffffdp+1022 0x1.ffffffffffffdp+1022 #ballstates:78073.
+ball_sub_1_full binary64 0x1.fffffffffffffp+1023 0x1p+1021 0x1.ffffffffffffdp+1022 0x1.ffffffffffffdp+1022 #search2:64
+
+# ball_sub_2_full binary32, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.109375015; the
+# brute-force runs: 1.262729004. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of tests/regression/cases.txt: ball_sub_2_full binary32
+# -0x1.024814p-56 -0x1.fffffep-81 0x1.fffffep-76 0x1.024814p-54 0x1.fffffep-79 0x1.fffffep-101
+# #search:42.
+ball_sub_2_full binary32 -0x1.024814p-56 -0x1.fffffep-81 0x1.fffffep-76 0x1.024814p-54 0x1.fffffep-79 0x1.fffffep-101 #search2:65
+
+# ball_sub_2_full binary64, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.156250000; the
+# brute-force runs: 1.360481292. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of tests/regression/cases.txt: ball_sub_2_full binary64
+# 0x1.fffffbfbfffep+361 -0x1p+308 0x1.fffffffffffffp+311 -0x1.1e9cc84c549b2p+357
+# 0x1.4000000000001p+257 0x1.fffffffffffffp+257 #search:43.
+ball_sub_2_full binary64 0x1.fffffbfbfffep+361 -0x1p+308 0x1.fffffffffffffp+311 -0x1.1e9cc84c549b2p+357 0x1.4000000000001p+257 0x1.fffffffffffffp+257 #search2:66
+
+# ball_upper_as_2 binary32, error(h) form A, c=5, k=1, t=3: largest error/allowed 0.8000000000; the
+# brute-force runs: 0.8. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), search from a line of results/milestone2/brute/macos-arm64.json: ball_upper_as_2
+# binary32 0x1p+121 0x1p-149 0x1.5938p-135 #pow2:18382.
+ball_upper_as_2 binary32 0x1p+127 0x1p-149 0x1p-149 #search2:67
+
+# ball_upper_as_2 binary64, error(h) form A, c=5, k=1, t=3: largest error/allowed 0.8000000000; the
+# brute-force runs: 0.8. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), search from a line of results/milestone2/brute/linux-x86-64.json: ball_upper_as_2
+# binary64 0x1p+1019 0x1p-1074 0x1p-1074 #pow2:70638.
+ball_upper_as_2 binary64 0x1p+1023 0x1p-1074 0x1p-1074 #search2:68
+
+# bound_dot_1 binary32, upper(g) >= m*unit(mul_1_1)/(1-m*unit(mul_1_1)) if ok: smallest excess over
+# the stated value in gaps 2.843750087; the brute-force runs: 2.843846728. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from stratum underflow,
+# case 1.
+bound_dot_1 binary32 0x1.3ffffep+0 #search2:69
+
+# bound_dot_1 binary32, upper(t) >= m*tiny(mul_1_1)*(1+g) if ok: smallest excess over the stated
+# value in gaps 8388608.500; the brute-force runs: 8388611.5. Found by kairn-oracle search (seed 0,
+# 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: bound_dot_1 binary32 0x1.402d36p+0 #fraction:98255.
+bound_dot_1 binary32 0x1.fffff6p+0 #search2:70
+
+# bound_dot_1 binary64, upper(g) >= m*unit(mul_1_1)/(1-m*unit(mul_1_1)) if ok: smallest excess over
+# the stated value in gaps 2.843750000; the brute-force runs: 2.843936895. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: bound_dot_1 binary64 0x1.3f3e5a58a6215p+0
+# #fraction:90737.
+bound_dot_1 binary64 0x1.3ffffffffffffp+0 #search2:71
+
+# bound_dot_2 binary32, upper(g) >= m*unit(mul_2_2)/(1-m*unit(mul_2_2)) if ok: smallest excess over
+# the stated value in gaps 2.250000082; the brute-force runs: 2.804927927. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: bound_dot_2 binary32 0x1p+21 #pow2:2811.
+bound_dot_2 binary32 0x1.fffffap+20 #search2:72
+
+# bound_dot_2 binary32, upper(t) >= m*tiny(mul_2_2)*(1+g) if ok: smallest excess over the stated
+# value in gaps 8388607.500; the brute-force runs: 8388610.5. Found by kairn-oracle search (seed 0,
+# 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: bound_dot_2 binary32 0x1p+21 #pow2:2811.
+bound_dot_2 binary32 0x1.fffff6p+20 #search2:73
+
+# bound_dot_2 binary64, upper(g) >= m*unit(mul_2_2)/(1-m*unit(mul_2_2)) if ok: smallest excess over
+# the stated value in gaps 2.250000000; the brute-force runs: 2.805085095. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: bound_dot_2 binary64 0x1.3a044674bca13p+49
+# #fraction:37145.
+bound_dot_2 binary64 0x1.ffffffffffffdp+49 #search2:74
+
+# bound_sum_1 binary32, upper(g) >= m*unit(add_1_1)/(1-m*unit(add_1_1)) if ok: smallest excess over
+# the stated value in gaps 2.843750087; the brute-force runs: 2.843908405. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: bound_sum_1 binary32 0x1.3f7f24p+0 #fraction:42493.
+bound_sum_1 binary32 0x1.3ffffep+0 #search2:75
+
+# bound_sum_1 binary64, upper(g) >= m*unit(add_1_1)/(1-m*unit(add_1_1)) if ok: smallest excess over
+# the stated value in gaps 2.843750000; the brute-force runs: 2.845620119. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: bound_sum_1 binary64 0x1.3e93f64ad8874p+0
+# #fraction:48639.
+bound_sum_1 binary64 0x1.3ffffffffffffp+0 #search2:76
+
+# bound_sum_2 binary32, upper(g) >= m*unit(add_2_2)/(1-m*unit(add_2_2)) if ok: smallest excess over
+# the stated value in gaps 1.762187579; the brute-force runs: 1.762352641. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: bound_sum_2 binary32 0x1.6624dp+20 #integer:15670.
+bound_sum_2 binary32 0x1.66666p+20 #search2:77
+
+# bound_sum_2 binary64, upper(g) >= m*unit(add_2_2)/(1-m*unit(add_2_2)) if ok: smallest excess over
+# the stated value in gaps 1.762187500; the brute-force runs: 1.765607903. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: bound_sum_2 binary64 0x1.6495d5a022998p+49
+# #integer:89097.
+bound_sum_2 binary64 0x1.666666666646cp+49 #search2:78
+
+# bv_add_radius_1 binary32, upper(rz) >= rx+ry+m*unit(add_1_1)/(1-unit(add_1_1)): smallest excess
+# over the stated value in gaps 1; the brute-force runs: 1. Found by kairn-oracle search (seed 0,
+# 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: bv_add_radius_1 binary32 0x1p+127 0x1.6f5a3p+126
+# 0x1.f8e5b4p+125 #huge:7604.
+bv_add_radius_1 binary32 0x1p+127 0x1.6f5a3p+126 0x1.f8e5b4p+125 #search2:79
+
+# bv_add_radius_1 binary64, upper(rz) >= rx+ry+m*unit(add_1_1)/(1-unit(add_1_1)): smallest excess
+# over the stated value in gaps 1; the brute-force runs: 1. Found by kairn-oracle search (seed 0,
+# 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: bv_add_radius_1 binary64 0x1p+1023
+# 0x1.31e45c90e18dap+1022 0x1.ffffffffffffep+1021 #overflow:5958.
+bv_add_radius_1 binary64 0x1p+1023 0x1.31e45c90e18dap+1022 0x1.ffffffffffffep+1021 #search2:80
+
+# bv_add_radius_2 binary32, upper(rz) >= rx+ry+m*unit(add_2_2)/(1-unit(add_2_2))*(1+u): smallest
+# excess over the stated value in gaps 1.000000805; the brute-force runs: 1.003229112. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: bv_add_radius_2 binary32 0x1.bfdcb2p-2 0x1.2e59ep-31
+# 0x1.f2f312p-29 #mixed:25005.
+bv_add_radius_2 binary32 0x1.5ffff8p-1 0x1.2ed9ep-31 0x1.f2f312p-29 #search2:81
+
+# bv_add_radius_2 binary64, upper(rz) >= rx+ry+m*unit(add_2_2)/(1-unit(add_2_2))*(1+u): smallest
+# excess over the stated value in gaps 1.000000238; the brute-force runs: 1.053163124. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: bv_add_radius_2 binary64 0x1.77f9b72e8eddp+140
+# 0x1.1b15d54eecff4p+42 0x1.aa1b624ea4fcp+17 #mixed:13455.
+bv_add_radius_2 binary64 0x1.f55554fffffe4p+328 0x1.1d4fbf52b1731p+272 0x1.dfeefffp+247 #search2:82
+
+# bv_center_2 binary32, error(z) form R, c=0, k=2, t=0: largest error/allowed 0; the brute-force
+# runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: bv_center_2 binary32 -0x1.2c476cp-77 -0x1p-101
+# #extreme:8596.
+bv_center_2 binary32 -0x1.2c476cp-77 -0x1p-101 #search2:83
+
+# bv_center_2 binary64, error(z) form R, c=0, k=2, t=0: largest error/allowed 0; the brute-force
+# runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: bv_center_2 binary64 -0x1p-1074 0x0p+0
+# #extreme:6.
+bv_center_2 binary64 -0x1p-1074 0x0p+0 #search2:84
+
+# bv_center_entry_2 binary32, error(z) form R, c=0, k=2, t=0: largest error/allowed 0; the
+# brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/supplementary/linux-x86-64-r3.json:
+# bv_center_entry_2 binary32 -0x1.baa2f6p-77 0x1.333p-137 #extreme:2186.
+bv_center_entry_2 binary32 -0x1.baa2f6p-77 0x1.333p-137 #search2:85
+
+# bv_center_entry_2 binary64, error(z) form R, c=0, k=2, t=0: largest error/allowed 0; the
+# brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/supplementary/linux-x86-64-r3.json:
+# bv_center_entry_2 binary64 -0x1.76df44557dff6p-915 0x0p+0 #extreme:1096.
+bv_center_entry_2 binary64 -0x1.76df44557dff6p-915 0x0p+0 #search2:86
+
+# bv_mul_pow2_radius binary32, upper(rz) >= rx*c, exactly when ex true and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest excess over the stated value in gaps 0; the brute-force runs: 0. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: bv_mul_pow2_radius binary32 0x1.ebbb76p+51 1
+# 0x1.000002p-115 0x1p-11 #atnormal:31.
+bv_mul_pow2_radius binary32 0x1.ebbb76p+51 1 0x1.000002p-115 0x1p-11 #search2:87
+
+# bv_mul_pow2_radius binary32, upper(rz) >= rx*c+eta unless ex: smallest excess over the stated
+# value in gaps 0.5; the brute-force runs: 0.5. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, every seed), a line of results/milestone2/brute/linux-x86-64.json:
+# bv_mul_pow2_radius binary32 0x1.fffffcp-127 0 0x1.202p+0 0x1p-139 #extreme:23952.
+bv_mul_pow2_radius binary32 0x1.fffffcp-127 0 0x1.202p+0 0x1p-139 #search2:88
+
+# bv_mul_pow2_radius binary64, upper(rz) >= rx*c, exactly when ex true and (rx*c = 0 or |rx*c| >
+# eta/(2*u)): smallest excess over the stated value in gaps 0; the brute-force runs: 0. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: bv_mul_pow2_radius binary64 0x1.0080000000002p-923 1
+# 0x1.2p-1071 0x1p+49 #atnormal:59.
+bv_mul_pow2_radius binary64 0x1.0080000000002p-923 1 0x1.2p-1071 0x1p+49 #search2:89
+
+# bv_mul_pow2_radius binary64, upper(rz) >= rx*c+eta unless ex: smallest excess over the stated
+# value in gaps 0.5; the brute-force runs: 0.5. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, every seed), a line of results/milestone2/brute/linux-x86-64.json:
+# bv_mul_pow2_radius binary64 0x1.fffffffffffffp+1023 0 0x1p-1074 0x1p-1 #extreme:84222.
+bv_mul_pow2_radius binary64 0x1.fffffffffffffp+1023 0 0x1p-1074 0x1p-1 #search2:90
+
+# bv_mul_pow2_step_1 binary32, error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| >
+# eta/(2*u)), exact_flag e: largest error/allowed 1; the brute-force runs: 1. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: bv_mul_pow2_step_1 binary32 -0x1.fffffcp-127 0x1p-1
+# #extreme:3298.
+bv_mul_pow2_step_1 binary32 -0x1.fffffcp-127 0x1p-1 #search2:91
+
+# bv_mul_pow2_step_1 binary64, error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| >
+# eta/(2*u)), exact_flag e: largest error/allowed 1; the brute-force runs: 1. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: bv_mul_pow2_step_1 binary64 -0x1.fffffffffffffp-985
+# 0x1p-38 #bv_mul_pow2_1:exact:9:entry:0.
+bv_mul_pow2_step_1 binary64 -0x1.fffffffffffffp-985 0x1p-38 #search2:92
+
+# bv_mul_pow2_step_2 binary32, error(z) form R, c=0, k=2, t=1, exact when (x[0]*c = 0 or |x[0]*c| >
+# eta/(2*u)) and (x[1]*c = 0 or |x[1]*c| > eta/(2*u)), exact_flag e: largest error/allowed
+# 0.7499990463; the brute-force runs: 0.7163782567. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: bv_mul_pow2_step_2 binary32 0x1.89da22p+11
+# 0x1.bb2486p-14 0x1p-138 #uniform:72028.
+bv_mul_pow2_step_2 binary32 0x1.aae5f2p-107 0x1.ffff8p-132 0x1p-20 #search2:93
+
+# bv_mul_pow2_step_2 binary64, error(z) form R, c=0, k=2, t=1, exact when (x[0]*c = 0 or |x[0]*c| >
+# eta/(2*u)) and (x[1]*c = 0 or |x[1]*c| > eta/(2*u)), exact_flag e: largest error/allowed
+# 0.7500000000; the brute-force runs: 0.6641080401. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: bv_mul_pow2_step_2 binary64 0x1.eef491371cb47p-961
+# -0x1.c6e2b6374ba95p-1015 0x1p-62 #bv_mul_pow2_2:underflow:36:entry:1777.
+bv_mul_pow2_step_2 binary64 0x1.eef491371cb47p-961 -0x1.fffffffffffffp-1015 0x1p-62 #search2:94
+
+# bv_scale_radius_1 binary32, upper(rz) >=
+# abs(a)*rx+m*unit(mul_1_1)/(1-unit(mul_1_1))+tiny(mul_1_1)/(1-unit(mul_1_1)): smallest excess over
+# the stated value in gaps 1.000000000; the brute-force runs: 1.001205444. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: bv_scale_radius_1 binary32 0x1.83736ap-41
+# 0x1.cf839ep-43 -0x1.60448cp-8 #mixed:24011.
+bv_scale_radius_1 binary32 0x1.004p-42 0x1.8p-43 0x1.6045acp-10 #search2:95
+
+# bv_scale_radius_1 binary64, upper(rz) >=
+# abs(a)*rx+m*unit(mul_1_1)/(1-unit(mul_1_1))+tiny(mul_1_1)/(1-unit(mul_1_1)): smallest excess over
+# the stated value in gaps 1.000397804; the brute-force runs: 1.052932896. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: bv_scale_radius_1 binary64 0x1.c7c94608ceee3p+125
+# 0x1.34e144895ec8p+70 -0x1.c107b55c31b4ap+55 #mixed:13557.
+bv_scale_radius_1 binary64 0x1p+126 0x1.34c144895ac02p+70 0x1.c987b55c31bcap+55 #search2:96
+
+# bv_scale_radius_2 binary32, upper(rz) >=
+# abs(a)*rx+m*unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)+tiny(mul_2_1)/(1-unit(mul_2_1)): smallest excess
+# over the stated value in gaps 1.000122100; the brute-force runs: 1.008576364. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: bv_scale_radius_2 binary32 0x1.24ab7ap+1 0x1.65803ap+7
+# -0x1.8ae36ap-47 #uniform:65170.
+bv_scale_radius_2 binary32 0x1.ffdffcp+50 0x1.02802p-107 -0x1.08p+123 #search2:97
+
+# bv_scale_radius_2 binary64, upper(rz) >=
+# abs(a)*rx+m*unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)+tiny(mul_2_1)/(1-unit(mul_2_1)): smallest excess
+# over the stated value in gaps 1.000000092; the brute-force runs: 1.068387183. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: bv_scale_radius_2 binary64 0x1.83e833c525dp-87
+# 0x1.6973acbc031a2p-862 -0x1.7312797d0b923p+716 #atnormal:10923.
+bv_scale_radius_2 binary64 0x1.fdebdbfffff39p+51 0x1.a53a977735e76p-474 -0x1.8p+450 #search2:98
+
+# bv_scale_radius_entry_2 binary32, upper(rz) >=
+# abs(a)*rx+m*unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)+tiny(mul_2_1)/(1-unit(mul_2_1)): smallest excess
+# over the stated value in gaps 1.000007659; the brute-force runs: 1.00013122. Found by kairn-oracle
+# search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/supplementary/linux-x86-64-r3.json: bv_scale_radius_entry_2 binary32
+# 0x1.b33ffap+40 0x1.d3a29p-59 -0x1.2p+65 #atnormal:1832705.
+bv_scale_radius_entry_2 binary32 0x1.fdfffcp+37 0x1.d3e29p-59 0x1.2p+65 #search2:99
+
+# bv_scale_radius_entry_2 binary64, upper(rz) >=
+# abs(a)*rx+m*unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)+tiny(mul_2_1)/(1-unit(mul_2_1)): smallest excess
+# over the stated value in gaps 1.000000000; the brute-force runs: 1.009808163. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/supplementary/windows-x64-r3.json: bv_scale_radius_entry_2 binary64
+# 0x1.881df23b33ac4p+358 0x1.eb8e9824412c9p-314 0x1.1a2cd89b0e52cp+608 #atnormal:187677.
+bv_scale_radius_entry_2 binary64 0x1.bfffffffdd8bap-76 0x1.fffffffffffffp-109 0x1.0000000000002p-22 #search2:100
+
+# bv_scale_step_2 binary32, error(z) form R, c=2, k=2, t=1: largest error/allowed 0.9999999106; the
+# brute-force runs: 0.9999998808. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of
+# results/milestone2/brute/supplementary/linux-x86-64-r3.json: bv_scale_step_2 binary32 0x1.8p+0
+# 0x1.fffffep-25 0x1.000002p-126 #extreme:744654.
+bv_scale_step_2 binary32 0x1.8p+0 -0x1.fffffcp-25 -0x1.000002p-126 #search2:101
+
+# bv_scale_step_2 binary64, error(z) form R, c=2, k=2, t=1: largest error/allowed 1.000000000; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), search from a line of results/milestone2/brute/supplementary/linux-x86-64-r3.json:
+# bv_scale_step_2 binary64 -0x1.8p+0 -0x1p-53 0x1.ffffffffffffep-1023 #extreme:1710894.
+bv_scale_step_2 binary64 -0x1.8p+0 0x1.ffffffffffffep-54 0x1.0000000000001p-1022 #search2:102
+
+# conv_radius binary32, upper(rz) >= m*((1+u)*ma*ry+(1+u)*mb*rx+rx*ry)+g*m*(1+u)^2*ma*mb+t: smallest
+# excess over the stated value in gaps 0; the brute-force runs: 0. Found by kairn-oracle search
+# (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: conv_radius binary32 0x0p+0 -0x0p+0 0x1.fffffcp-127
+# -0x0p+0 -0x0p+0 -0x0p+0 0x1p-149 #zero:318.
+conv_radius binary32 0x0p+0 -0x0p+0 0x1.fffffcp-127 -0x0p+0 -0x0p+0 -0x0p+0 0x1p-149 #search2:103
+
+# conv_radius binary64, upper(rz) >= m*((1+u)*ma*ry+(1+u)*mb*rx+rx*ry)+g*m*(1+u)^2*ma*mb+t: smallest
+# excess over the stated value in gaps 0; the brute-force runs: 0. Found by kairn-oracle search
+# (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: conv_radius binary64 0x1p-1022 -0x0p+0 0x0p+0
+# 0x1.ffffffffffffep-1023 -0x0p+0 0x0p+0 0x1p-1074 #zero:94.
+conv_radius binary64 0x1p-1022 -0x0p+0 0x0p+0 0x1.ffffffffffffep-1023 -0x0p+0 0x0p+0 0x1p-1074 #search2:104
+
+# dot_entry_step_2 binary32, error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest
+# error/allowed 0.7365104146; the brute-force runs: 0.7220912421. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/supplementary/windows-x64-r3.json: dot_entry_step_2 binary32
+# -0x1.39ab9p-129 -0x0p+0 -0x1.211d02p+6 -0x1.000404p-28 -0x1.36c3f6p-117 -0x1.38p-142
+# #underflow:464765.
+dot_entry_step_2 binary32 -0x1.6p-139 -0x0p+0 -0x1.e68ffap-50 -0x1.4a3de8p-78 -0x1.4259p-69 -0x1.69efecp-96 #search2:105
+
+# dot_entry_step_2 binary64, error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest
+# error/allowed 0.7463074715; the brute-force runs: 0.6999236119. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/supplementary/macos-arm64-r3.json: dot_entry_step_2 binary64
+# -0x1.55ef00cbca0eap-1006 0x1p-1059 0x1.1089693212889p-910 0x1.81c46cf6ea68cp-964
+# 0x1.1d65fdd7b85e4p-72 -0x1.5a0613d82e4acp-154 #underflow:199857.
+dot_entry_step_2 binary64 0x0p+0 0x0p+0 0x1.1089490002881p-910 0x1.81446cf6ea69p-964 -0x1.1d65fdd7b85e4p-72 0x1.5a0610c82e061p-154 #search2:106
+
+# dot_step_2 binary32, error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest error/allowed
+# 0.7481834917; the brute-force runs: 0.6727713789. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: dot_step_2 binary32 -0x1.00402p-64 -0x1.fffffep-89
+# -0x1.02p+27 -0x1p+3 0x1.05ed22p-65 0x1.fffffep-90 #extreme:9560.
+dot_step_2 binary32 -0x1.008p-132 -0x0p+0 0x1.024a4ep-62 0x1.7dp-87 -0x1.024a4ap-62 -0x1.7d0faap-87 #search2:107
+
+# dot_step_2 binary64, error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2: largest error/allowed
+# 0.7464056178; the brute-force runs: 0.690770817. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: dot_step_2 binary64 -0x1.3958ad38p-1042 0x0p+0
+# 0x1.c10d7754ea7e1p-216 -0x1.b7350dba7e4d4p-282 0x1.23142e9104b16p-788 -0x1.b91267b1618ap-842
+# #underflow:27013.
+dot_step_2 binary64 0x0p+0 -0x0p+0 -0x1.ffffffffffffep-233 0x1.ad8fef6fcfbfdp-289 0x1.93145b0fff7fep-763 -0x1.5822997ffe1fbp-818 #search2:108
+
+# fast_two_sum_entry binary32, error(r) form R, c=0, k=2, t=0: largest error/allowed 0; the
+# brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: fast_two_sum_entry binary32
+# 0x1.04efbep+63 -0x1.04efb8p+63 #cancel:2.
+fast_two_sum_entry binary32 0x1.04efbep+63 -0x1.04efb8p+63 #search2:109
+
+# fast_two_sum_entry binary64, error(r) form R, c=0, k=2, t=0: largest error/allowed 0; the
+# brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: fast_two_sum_entry binary64
+# 0x1.186f2e25d88b4p+630 -0x1.186f2e25d88b3p+630 #cancel:2.
+fast_two_sum_entry binary64 0x1.186f2e25d88b4p+630 -0x1.186f2e25d88b3p+630 #search2:110
+
+# mul_1_1 binary32, error(p) form R, c=1/(1+u), k=1, t=1/2: largest error/allowed 0.9999999404; the
+# brute-force runs: 0.9999999404. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of results/milestone1/brute/linux-x86-64.json: mul_1_1 binary32 0x1p-2
+# -0x1p-148 #halfgap:814649.
+mul_1_1 binary32 0x1p-2 -0x1p-148 #search2:111
+
+# mul_1_1 binary64, error(p) form R, c=1/(1+u), k=1, t=1/2: largest error/allowed 1.000000000; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone1/brute/linux-x86-64.json: mul_1_1 binary64 -0x1p-872
+# 0x1p-203 #pow2:26890.
+mul_1_1 binary64 -0x1p-872 0x1p-203 #search2:112
+
+# mul_2_1_entry binary32, error(z) form R, c=2, k=2, t=1: largest error/allowed 0.9999999106; the
+# brute-force runs: 0.9999998808. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of results/milestone2/brute/linux-x86-64.json:
+# mul_2_1_entry binary32 -0x1.8p+0 -0x1.fffffep-25 0x1.000002p-126 #extreme:703134.
+mul_2_1_entry binary32 -0x1.8p+0 0x1.fffffcp-25 0x1.000002p-126 #search2:113
+
+# mul_2_1_entry binary64, error(z) form R, c=2, k=2, t=1: largest error/allowed 1.000000000; the
+# brute-force runs: 0.9999999998. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of results/milestone2/brute/windows-x64.json:
+# mul_2_1_entry binary64 0x1.80000001p+0 0x1.fffffffffffffp-54 0x1.0000000000001p-1022
+# #extreme:87366.
+mul_2_1_entry binary64 0x1.8p+0 -0x1.ffffffffffffep-54 -0x1.0000000000001p-1022 #search2:114
+
+# mul_2_1_full_entry binary32, F2, core mul_2_1_entry: error(z) form R, c=2, k=2, t=1: largest
+# error/allowed 0.9999999106; the brute-force runs: 0.9910198155. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: mul_2_1_full_entry binary32 0x1.824c84p+0 0x1p-24
+# -0x1.000002p-126 #extreme:34486.
+mul_2_1_full_entry binary32 -0x1.8p+0 0x1.fffffcp-25 -0x1.000002p-126 #search2:115
+
+# mul_2_1_full_entry binary64, F2, core mul_2_1_entry: error(z) form R, c=2, k=2, t=1: largest
+# error/allowed 0.9994080895; the brute-force runs: 0.9916667855. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: mul_2_1_full_entry binary64 -0x1.a54f32f125a25p-179
+# 0x1.0200000000008p-248 0x1.0b7514d079378p-813 #underflow:44183.
+mul_2_1_full_entry binary64 0x1.a54f30f125a25p-179 -0x1.02000032ac83fp-248 0x1.ff75156479371p-813 #search2:116
+
+# mul_ball_2_2 binary32, error(z) form R, c=4, k=2, t=3/2: largest error/allowed 0.9925484932; the
+# brute-force runs: 0.9420749284. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of results/milestone2/brute/macos-arm64.json: mul_ball_2_2
+# binary32 0x1.e55fc6p-50 0x1.4e6ef6p-76 -0x1.3e5564p-63 -0x1.ea461cp-88 #uniform:38192.
+mul_ball_2_2 binary32 -0x1.d1609p-17 -0x1.16dde4p-45 -0x1.d484b2p-106 -0x1.199cp-134 #search2:117
+
+# mul_ball_2_2 binary32, encloses(z, d) x*y over : smallest slack in gaps of the radius 1315113.251;
+# the brute-force runs: 2571991.562. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), search from a line of results/milestone2/brute/windows-x64.json:
+# mul_ball_2_2 binary32 -0x1.aae3b4p-41 -0x1.794948p-69 -0x1.d2ba6cp-77 0x1.c095aap-103 #tiny:77718.
+mul_ball_2_2 binary32 0x1.49b4c8p-56 0x1.fffff6p-81 0x1.91bc9ep+20 0x1.feffeep-5 #search2:118
+
+# mul_ball_2_2 binary64, error(z) form R, c=4, k=2, t=3/2: largest error/allowed 0.9930555630; the
+# brute-force runs: 0.9497078356. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of results/milestone2/brute/windows-x64.json: mul_ball_2_2
+# binary64 0x1.7c9064b770f6ap-831 -0x1.882ab9791d1b2p-885 0x1.710d2abf7a36bp-2
+# -0x1.f19e2cc44d9dep-56 #close:73837.
+mul_ball_2_2 binary64 -0x1.ef0b3d76f67e7p-554 0x1.000000400003ap-623 -0x1.f411ff8023f5p-437 0x1.02996a70ec33p-506 #search2:119
+
+# mul_ball_2_2 binary64, encloses(z, d) x*y over : smallest slack in gaps of the radius
+# 9.234466049e+14; the brute-force runs: 2.126680622e+15. Found by kairn-oracle search (seed 0,
+# 20000 cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: mul_ball_2_2 binary64 0x1.7c9064b770f6ap-831
+# -0x1.882ab9791d1b2p-885 0x1.710d2abf7a36bp-2 -0x1.f19e2cc44d9dep-56 #close:73837.
+mul_ball_2_2 binary64 0x1.710d2abf7a36bp-2 -0x1.f19e2dc44d9dep-56 0x1.7c9064b770f6ap-3 -0x1.882ab1791d1b2p-57 #search2:120
+
+# mul_pow2_2 binary32, error(z) form R, c=0, k=2, t=1: largest error/allowed 0.7499999851; the
+# brute-force runs: 0.7499999851. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of results/milestone1/brute/linux-x86-64.json: mul_pow2_2 binary32
+# -0x1.6f0f42p-38 -0x1.fffffep-63 0x1p-89 #extreme:938111.
+mul_pow2_2 binary32 -0x1.6f0f42p-38 -0x1.fffffep-63 0x1p-89 #search2:121
+
+# mul_pow2_2 binary64, error(z) form R, c=0, k=2, t=1: largest error/allowed 0.7500000000; the
+# brute-force runs: 0.75. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: mul_pow2_2 binary64
+# -0x1.2909e8940c869p-85 -0x1.fffffffffffffp-139 0x1p-938 #extreme:322419.
+mul_pow2_2 binary64 -0x1.2909e8940c869p-85 -0x1.fffffffffffffp-139 0x1p-938 #search2:122
+
+# mul_pow2_2_full binary32, F2, core mul_pow2_2: error(z) form R, c=0, k=2, t=1: largest
+# error/allowed 0.7499999851; the brute-force runs: 0.7499999851. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone1/brute/linux-x86-64.json: mul_pow2_2_full binary32 -0x1.a0c816p-54
+# 0x1.fffffep-79 0x1p-73 #extreme:210738.
+mul_pow2_2_full binary32 -0x1.a0c816p-54 0x1.fffffep-79 0x1p-73 #search2:123
+
+# mul_pow2_2_full binary64, F2, core mul_pow2_2: error(z) form R, c=0, k=2, t=1: largest
+# error/allowed 0.7500000000; the brute-force runs: 0.7477759719. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, every seed), a line of tests/regression/cases.txt:
+# mul_pow2_2_full binary64 0x1.54a8fcb432a93p-356 -0x1.fffffffffffffp-410 0x1p-667 #search:55.
+mul_pow2_2_full binary64 0x1.54a8fcb432a93p-356 -0x1.fffffffffffffp-410 0x1p-667 #search2:124
+
+# mul_pow2_step_1 binary32, error(z) form R, c=0, k=1, t=1/2: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: mul_pow2_step_1 binary32
+# -0x1.ace10ap-118 0x1p-9 #mul_pow2_map_1:nonfinite:48:element:573.
+mul_pow2_step_1 binary32 -0x1.ace10ap-118 0x1p-9 #search2:125
+
+# mul_pow2_step_1 binary64, error(z) form R, c=0, k=1, t=1/2: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: mul_pow2_step_1 binary64
+# 0x1.ccp-340 0x1p-729 #mul_pow2_map_1:tight:7:element:0.
+mul_pow2_step_1 binary64 0x1.ccp-340 0x1p-729 #search2:126
+
+# mul_pow2_step_2 binary32, error(z) form R, c=0, k=2, t=1: largest error/allowed 0.7499999851; the
+# brute-force runs: 0.7499999851. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of results/milestone2/brute/linux-x86-64.json: mul_pow2_step_2
+# binary32 -0x1.b1b24ep-19 0x1.fffffep-44 0x1p-108 #extreme:189341.
+mul_pow2_step_2 binary32 -0x1.b1b24ep-19 0x1.fffffep-44 0x1p-108 #search2:127
+
+# mul_pow2_step_2 binary64, error(z) form R, c=0, k=2, t=1: largest error/allowed 0.7500000000; the
+# brute-force runs: 0.7293576145. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of results/milestone2/brute/linux-x86-64.json: mul_pow2_step_2
+# binary64 -0x1.6f20789c0febbp-526 0x1.fffffffffffffp-580 0x1p-497
+# #mul_pow2_map_2:tight:31:element:858.
+mul_pow2_step_2 binary64 -0x1.6f20789c0febbp-526 0x1.fffffffffffffp-580 0x1p-497 #search2:128
+
+# radd binary32, upper(r) gaps=3/2: largest excess in gaps 1.5; the brute-force runs: 1.5. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone1/brute/linux-x86-64.json: radd binary32 0x1.18d4ap+122 0x1.0878dep+127
+# #close:1758.
+radd binary32 0x1.18d4ap+122 0x1.0878dep+127 #search2:129
+
+# radd binary64, upper(r) gaps=3/2: largest excess in gaps 1.5; the brute-force runs: 1.5. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone1/brute/linux-x86-64.json: radd binary64 0x1.2601b201f1cdcp+831
+# 0x1.dbb4535e2c909p+832 #close:4631.
+radd binary64 0x1.2601b201f1cdcp+831 0x1.dbb4535e2c909p+832 #search2:130
+
+# radd_entry binary32, upper(r) gaps=3/2: largest excess in gaps 1.5; the brute-force runs: 1.5.
+# Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: radd_entry binary32 0x1.cbd034p+100 0x1.65b83p+96
+# #close:497.
+radd_entry binary32 0x1.cbd034p+100 0x1.65b83p+96 #search2:131
+
+# radd_entry binary64, upper(r) gaps=3/2: largest excess in gaps 1.5; the brute-force runs: 1.5.
+# Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone2/brute/linux-x86-64.json: radd_entry binary64 0x1.2de42f32a6b16p-741
+# 0x1.06497099876b4p-739 #close:81.
+radd_entry binary64 0x1.2de42f32a6b16p-741 0x1.06497099876b4p-739 #search2:132
+
+# rmul binary32, upper(r) gaps=3/2: largest excess in gaps 1.5; the brute-force runs: 1.5. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone1/brute/linux-x86-64.json: rmul binary32 0x1.0f7d64p+109 0x1.cp-146 #close:20823.
+rmul binary32 0x1.0f7d64p+109 0x1.cp-146 #search2:133
+
+# rmul binary64, upper(r) gaps=3/2: largest excess in gaps 1.5; the brute-force runs: 1.5. Found by
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone1/brute/linux-x86-64.json: rmul binary64 0x1.78d96588ea2d8p+432 0x1.5p-1069
+# #close:111483.
+rmul binary64 0x1.78d96588ea2d8p+432 0x1.5p-1069 #search2:134
+
+# scale_entry_step_2 binary32, error(z) form R, c=2, k=2, t=1: largest error/allowed 0.9999999106;
+# the brute-force runs: 0.999999851. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), search from a line of results/milestone2/brute/linux-x86-64.json:
+# scale_entry_step_2 binary32 -0x1.8p+0 -0x1p-24 0x1.000002p-126 #extreme:280458.
+scale_entry_step_2 binary32 0x1.8p+0 -0x1.fffffcp-25 0x1.000002p-126 #search2:135
+
+# scale_entry_step_2 binary64, error(z) form R, c=2, k=2, t=1: largest error/allowed 1.000000000;
+# the brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), search from a line of results/milestone2/brute/windows-x64.json: scale_entry_step_2
+# binary64 0x1.fe169f240443ep-4 0x1.4b854c234c802p-58 0x1.7d1fad5d1f508p-996
+# #scale_2_entry:underflow:50:element:1850.
+scale_entry_step_2 binary64 -0x1.8p+0 0x1.ffffffffffffep-54 -0x1.0000000000001p-1022 #search2:136
+
+# scale_step_1 binary32, error(z) form R, c=1/(1+u), k=1, t=1/2: largest error/allowed 0.9999999404;
+# the brute-force runs: 0.9999999404. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), a line of results/milestone2/brute/linux-x86-64.json: scale_step_1
+# binary32 0x1p-6 0x1p-144 #pow2:2498.
+scale_step_1 binary32 0x1p-6 0x1p-144 #search2:137
+
+# scale_step_1 binary64, error(z) form R, c=1/(1+u), k=1, t=1/2: largest error/allowed 1.000000000;
+# the brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: scale_step_1 binary64 -0x1p-934
+# 0x1p-141 #pow2:19554.
+scale_step_1 binary64 -0x1p-934 0x1p-141 #search2:138
+
+# scale_step_2 binary32, error(z) form R, c=2, k=2, t=1: largest error/allowed 0.9999999106; the
+# brute-force runs: 0.9999998212. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of results/milestone2/brute/linux-x86-64.json:
+# scale_step_2 binary32 0x1.8p+0 0x1.fffffep-25 -0x1.fffffcp-127 #extreme:1127982.
+scale_step_2 binary32 0x1.8p+0 -0x1.fffffcp-25 -0x1.000002p-126 #search2:139
+
+# scale_step_2 binary64, error(z) form R, c=2, k=2, t=1: largest error/allowed 1.000000000; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), search from a line of results/milestone2/brute/linux-x86-64.json: scale_step_2
+# binary64 0x1.8p+0 0x1.fffffffffffffp-54 0x1.0000000000001p-1022 #extreme:2266206.
+scale_step_2 binary64 0x1.8p+0 -0x1.ffffffffffffep-54 -0x1.0000000000001p-1022 #search2:140
+
+# split binary32, error(r) form R, c=0, k=2, t=0: largest error/allowed 0; the brute-force runs: 0.
+# Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone1/brute/linux-x86-64.json: split binary32 0x1.aab352p+1 #cancel:2.
+split binary32 0x1.aab352p+1 #search2:141
+
+# split binary64, error(r) form R, c=0, k=2, t=0: largest error/allowed 0; the brute-force runs: 0.
+# Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a line of
+# results/milestone1/brute/linux-x86-64.json: split binary64 0x1.319310cfaffbap-915 #cancel:17599.
+split binary64 0x1.319310cfaffbap-915 #search2:142
+
+# sub_1_1 binary32, error(s) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the brute-force
+# runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: sub_1_1 binary32 -0x1.000002p-126 0x1p-126
+# #extreme:158.
+sub_1_1 binary32 -0x1.000002p-126 0x1p-126 #search2:143
+
+# sub_1_1 binary64, error(s) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the brute-force
+# runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: sub_1_1 binary64 -0x1p+0 0x1.0000000000001p+0
+# #extreme:194174.
+sub_1_1 binary64 -0x1p+0 0x1.0000000000001p+0 #search2:144
+
+# sub_entry_step_1 binary32, error(z) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: sub_entry_step_1 binary32
+# -0x1.000002p+0 0x1p+0 #extreme:3190.
+sub_entry_step_1 binary32 -0x1.000002p+0 0x1p+0 #search2:145
+
+# sub_entry_step_1 binary64, error(z) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: sub_entry_step_1 binary64
+# -0x1.0000000000001p-1022 0x1p-1022 #extreme:30.
+sub_entry_step_1 binary64 -0x1.0000000000001p-1022 0x1p-1022 #search2:146
+
+# sub_entry_step_2 binary32, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed
+# 0.9999995629; the brute-force runs: 0.7876150294. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: sub_entry_step_2 binary32 0x1p+0 0x1.fffffep-25
+# 0x1.fffffep-2 0x1.fffffcp-50 #sub_2_entry:tight:14:element:83.
+sub_entry_step_2 binary32 0x1p+0 0x1.fffffep-25 0x1.fffffep-2 0x1.fffffep-50 #search2:147
+
+# sub_entry_step_2 binary64, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed
+# 1.000000000; the brute-force runs: 0.620576113. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: sub_entry_step_2 binary64 0x1p+0 0x1.fffffffffffffp-54
+# 0x1.fffffffffffffp-2 0x1.ffffffffffffep-108 #sub_2_entry:tight:14:element:1504.
+sub_entry_step_2 binary64 0x1p+0 0x1.fffffffffffffp-54 0x1.fffffffffffffp-2 0x1.fffffffffffffp-108 #search2:148
+
+# sum_entry_step_1 binary32, error(t) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: sum_entry_step_1 binary32
+# -0x1p-126 -0x1.000002p-126 #extreme:30.
+sum_entry_step_1 binary32 -0x1p-126 -0x1.000002p-126 #search2:149
+
+# sum_entry_step_1 binary64, error(t) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: sum_entry_step_1 binary64
+# 0x1.0000000000001p+0 0x1p+0 #extreme:38702.
+sum_entry_step_1 binary64 0x1.0000000000001p+0 0x1p+0 #search2:150
+
+# sum_entry_step_2 binary32, error(t) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed
+# 0.8333328863; the brute-force runs: 0.6666664219. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/linux-x86-64.json: sum_entry_step_2 binary32 -0x1.fffffep+127
+# -0x1.eae94ep+102 0x1.fffffap+126 -0x1.9c86d4p+100 #overflow:1828462.
+sum_entry_step_2 binary32 -0x1.000002p-75 0x1.ff08c4p-100 0x1.fffffap-77 0x1.ee6dp-109 #search2:151
+
+# sum_entry_step_2 binary64, error(t) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed
+# 0.6666666673; the brute-force runs: 0.6611878234. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/macos-arm64.json: sum_entry_step_2 binary64 -0x1.a692f152572bap+846
+# -0x1.e06c35c1c2f5ap+792 0x1.08e8b63f2d6dfp+845 -0x1.045327e33151p+790 #close:215644.
+sum_entry_step_2 binary64 -0x1.00000008fa28ep-235 0x1.fffffffffffffp-289 0x1.1d64a9p-264 0x1.fffffffffffffp-318 #search2:152
+
+# sum_fast_entry_step_2 binary32, error(t) form A, c=3, k=2, t=0: largest error/allowed
+# 0.9999995629; the brute-force runs: 0.7078718147. Found by kairn-oracle search (seed 0, 20000
+# cases per kernel and format, every seed), search from a line of
+# results/milestone2/brute/windows-x64.json: sum_fast_entry_step_2 binary32 0x1p+7 0x1.c5ef06p-18
+# 0x1.4p-15 -0x1.e3f1fp-43 #pow2:95717.
+sum_fast_entry_step_2 binary32 0x1p+42 0x1.fffffep+17 0x1.4p+20 0x1.fffffep-5 #search2:153
+
+# sum_fast_entry_step_2 binary64, error(t) form A, c=3, k=2, t=0: largest error/allowed 1.000000000;
+# the brute-force runs: 0.5. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), search from a line of results/milestone2/brute/windows-x64.json:
+# sum_fast_entry_step_2 binary64 -0x1.00000006p-196 0x1.ebd7cea9518a4p-250 0x1.4p-247
+# 0x1.7ff77e4751fap-302 #pow2:43829.
+sum_fast_entry_step_2 binary64 0x1.4p+971 0x1.fffffffffffffp+917 0x1p+1022 0x1.fffffffffffffp+968 #search2:154
+
+# two_prod_dekker binary32, error(r) form R, c=0, k=2, t=13/8: largest error/allowed 0.9855052141;
+# the brute-force runs: 0.9472198486. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), a line of tests/regression/cases.txt: two_prod_dekker binary32
+# 0x1.94af2ap-116 0x1.e0d15cp-12 #search:68.
+two_prod_dekker binary32 0x1.94af2ap-116 0x1.e0d15cp-12 #search2:155
+
+# two_prod_dekker binary32, error(r) form R, c=0, k=2, t=0, when product_large: largest
+# error/allowed 0; the brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per
+# kernel and format, every seed), a line of results/milestone1/brute/linux-x86-64.json:
+# two_prod_dekker binary32 -0x1.8d8e02p-122 0x1.d0fcp+44 #cancel:278.
+two_prod_dekker binary32 -0x1.8d8e02p-122 0x1.d0fcp+44 #search2:156
+
+# two_prod_dekker binary64, error(r) form R, c=0, k=2, t=13/8: largest error/allowed 0.9915889567;
+# the brute-force runs: 0.9232319876. Found by kairn-oracle search (seed 0, 20000 cases per kernel
+# and format, every seed), a line of tests/regression/cases.txt: two_prod_dekker binary64
+# -0x1.1f0b0d45cbe6fp-243 0x1.e80c72bef5b08p-782 #search:69.
+two_prod_dekker binary64 -0x1.1f0b0d45cbe6fp-243 0x1.e80c72bef5b08p-782 #search2:157
+
+# two_prod_dekker binary64, error(r) form R, c=0, k=2, t=0, when product_large: largest
+# error/allowed 0; the brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per
+# kernel and format, every seed), a line of results/milestone1/brute/linux-x86-64.json:
+# two_prod_dekker binary64 -0x1.db8721a9f6bbdp+339 -0x1.525a5ab08b19dp+150 #cancel:2.
+two_prod_dekker binary64 -0x1.db8721a9f6bbdp+339 -0x1.525a5ab08b19dp+150 #search2:158
+
+# two_prod_entry binary32, error(r) form R, c=0, k=2, t=1/2: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: two_prod_entry binary32
+# 0x1p-149 0x1.8p+0 #extreme:10242.
+two_prod_entry binary32 0x1p-149 0x1.8p+0 #search2:159
+
+# two_prod_entry binary32, error(r) form R, c=0, k=2, t=0, when product_large: largest error/allowed
+# 0; the brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of results/milestone2/brute/linux-x86-64.json: two_prod_entry binary32
+# -0x1.81376cp+25 -0x1.352c78p-102 #cancel:31.
+two_prod_entry binary32 -0x1.81376cp+25 -0x1.352c78p-102 #search2:160
+
+# two_prod_entry binary64, error(r) form R, c=0, k=2, t=1/2: largest error/allowed 1; the
+# brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# every seed), a line of results/milestone2/brute/linux-x86-64.json: two_prod_entry binary64
+# 0x1.0000000000001p-1022 0x1.8p+0 #extreme:21942.
+two_prod_entry binary64 0x1.0000000000001p-1022 0x1.8p+0 #search2:161
+
+# two_prod_entry binary64, error(r) form R, c=0, k=2, t=0, when product_large: largest error/allowed
+# 0; the brute-force runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, every seed), a line of results/milestone2/brute/linux-x86-64.json: two_prod_entry binary64
+# 0x1.746f04c58b43ep-796 0x1.7ac5f7c9f7b31p-120 #cancel:5654.
+two_prod_entry binary64 0x1.746f04c58b43ep-796 0x1.7ac5f7c9f7b31p-120 #search2:162
+
+# two_sum_entry binary32, error(r) form R, c=0, k=2, t=0: largest error/allowed 0; the brute-force
+# runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: two_sum_entry binary32 -0x1.0ad80cp-28
+# 0x1.0ad806p-28 #cancel:2.
+two_sum_entry binary32 -0x1.0ad80cp-28 0x1.0ad806p-28 #search2:163
+
+# two_sum_entry binary64, error(r) form R, c=0, k=2, t=0: largest error/allowed 0; the brute-force
+# runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: two_sum_entry binary64 -0x1.5800d80c12b12p-863
+# 0x1.5800d80c12b13p-863 #cancel:3338.
+two_sum_entry binary64 -0x1.5800d80c12b12p-863 0x1.5800d80c12b13p-863 #search2:164
+
+# two_sum_ord binary32, error(r) form R, c=0, k=2, t=0: largest error/allowed 0; the brute-force
+# runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: two_sum_ord binary32 -0x1.2de5aep-54
+# 0x1.2de5bp-54 #cancel:746.
+two_sum_ord binary32 -0x1.2de5aep-54 0x1.2de5bp-54 #search2:165
+
+# two_sum_ord binary64, error(r) form R, c=0, k=2, t=0: largest error/allowed 0; the brute-force
+# runs: 0. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, every seed), a
+# line of results/milestone2/brute/linux-x86-64.json: two_sum_ord binary64 -0x1.7da03c084b892p-864
+# 0x1.7da03c084b88fp-864 #cancel:15794.
+two_sum_ord binary64 -0x1.7da03c084b892p-864 0x1.7da03c084b88fp-864 #search2:166
