@@ -13,7 +13,10 @@
 /// comparisons and the relations of IEEE 1788 of the enclosure interface: interval_empty_k,
 /// interval_entire_k, interval_contains_k, interval_subset_k, interval_positive_k,
 /// interval_negative_k, interval_zero_k, interval_less_k, interval_less_equal_k, interval_equal_k,
-/// interval_rel_equal_k, interval_rel_interior_k and interval_rel_disjoint_k. Like every
+/// interval_rel_equal_k, interval_rel_interior_k and interval_rel_disjoint_k. Besides the
+/// accessors, the default constructor and empty() and whole(), which copy limbs, one function calls
+/// no kernel: is_finite(), a test of the bit patterns of the stored bounds written here, as the
+/// states of a ball are written in ball.hpp, and not machine-checked. Like every
 /// operation, each needs the kairn::unverified marker while gen/claims.json does not mark its
 /// kernel proved. Two kinds of function compose kernels, each documented as such: a constructor of
 /// two limbs from a T builds the two-limb number first (make_2), as Ball<T, 2>(a) does, and so do
@@ -458,6 +461,16 @@ public:
         }
         return m;
     }
+    /// Whether this is a nonempty bounded interval: both bounds finite, so false for the empty
+    /// set, the whole line and the half-lines [l, +inf] and [-inf, h]. The meaning of
+    /// Ball::is_finite(), a set that is neither empty nor unbounded, which for a ball is "its
+    /// radius is finite": a ball has no half-lines, and Ball(X) of a half-line is the whole line.
+    /// For a canonical interval it is decided by the leading limbs of the stored bounds, each tested
+    /// for finiteness on its bit pattern (the empty set (+inf, -inf) has none finite, and a finite
+    /// bound of two limbs has a finite leading limb): a test written here, as the states of a ball
+    /// are, with no kernel, so exact by the reading of the canonical forms and not machine-checked.
+    /// Does not round and checks nothing, as Ball::is_finite() (config.hpp). constexpr.
+    constexpr bool is_finite() const noexcept { return detail::finite(lo_.limb[0]) && detail::finite(hi_.limb[0]); }
 
     /// Whether t, a value of T, is a member (kernel interval_contains_1 or interval_contains_2, for two
     /// limbs with t made a number of two limbs by make_2 first): lo <= t <= hi and t finite. Proved, in the IEEE model, for a canonical

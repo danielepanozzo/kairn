@@ -38,6 +38,7 @@ values of `T` only: no kernel makes a ball of two bounds of two limbs
 | `X.lower_as<T>()`, `X.upper_as<T>()`: bounds of `T` | one limb the bounds; two limbs rounded outward ([`to_down_2`](to_down_2.md), [`to_up_2`](to_up_2.md)) | [`ball_lower_as_k`](ball_lower_as_1.md), [`ball_upper_as_k`](ball_upper_as_1.md) |
 | `X.midpoint()`, `X.radius()`, `X.mid_rad()` | [`interval_mid_rad_k`](interval_mid_rad_1.md), one call for `mid_rad()`, one each for the others | the center and the radius, stored |
 | `X.is_empty()`, `X.is_whole()` | [`interval_empty_k`](interval_empty_1.md), [`interval_entire_k`](interval_entire_1.md) | tests of the radius (a NaN, $+\infty$), no kernel |
+| `X.is_finite()`: a set neither empty nor unbounded | both bounds finite, a test of the leading limbs, no kernel: false for the empty set, the whole line and the half-lines | the radius finite, a test of the radius, no kernel |
 | `X.contains(t)`; `member(t, X)`, a `Trit` | [`interval_contains_k`](interval_contains_1.md) | [`ball_contains_point_k`](ball_contains_point_1.md) |
 | `X.contains(Y)`: $Y \subseteq X$ | [`interval_subset_k`](interval_subset_1.md) | [`ball_contains_ball_k`](ball_contains_ball_1.md) |
 | `X.certainly_positive()`, `X.certainly_negative()`, `X.certainly_zero()` | [`interval_positive_k`](interval_positive_1.md), [`interval_negative_k`](interval_negative_1.md), [`interval_zero_k`](interval_zero_1.md) | [`ball_positive_k`](ball_positive_1.md), [`ball_negative_k`](ball_negative_1.md), [`ball_zero_k`](ball_zero_1.md) |
@@ -68,6 +69,7 @@ exact, of every type.
 | Function | `Interval<T, 1>` | `Interval<T, 2>` | `Ball<T, 1>` | `Ball<T, 2>` |
 |---|---|---|---|---|
 | `is_empty`, `is_whole` | exact | exact | exact (no kernel) | exact (no kernel) |
+| `is_finite` | exact (no kernel) | exact (no kernel) | exact (no kernel) | exact (no kernel) |
 | signs `certainly_*` | exact | exact | exact | exact |
 | `contains(t)`, `member(t, X)` | exact | exact; for `t` of `T` composed with `make_2` | exact, by exact pairs | certain: `contains` true only for a member; `member` yes, no or unknown, which it may be within about $2e + 3G$ of $\lvert t - c\rvert = r$ |
 | `contains(Y)` | exact | exact | exact, by exact pairs | certain: true only if $Y \subseteq X$; may be false within about $2e + 4G$ of the boundary |
@@ -144,6 +146,7 @@ Members are real numbers: $\pm\infty$ is a bound, never a member.
 | `midpoint()` | a NaN (every limb) | $0$ |
 | `radius()` | a NaN | $+\infty$ |
 | `is_empty()`, `is_whole()` | true, false | false, true |
+| `is_finite()` | false | false |
 | `contains(t)` | false | true for a finite $t$; false for $\pm\infty$ and a NaN |
 | `member(t, X)` | no | yes for a finite $t$; no otherwise |
 | `X.contains(Y)` | true exactly when $Y$ is empty | true |
@@ -156,7 +159,12 @@ Members are real numbers: $\pm\infty$ is a bound, never a member.
 | the conversion to the other type | the empty set | the whole line |
 
 For a half-line $[\ell, +\infty]$, which only an interval can be, `midpoint()` is $\Omega$ for
-every finite $\ell$, `radius()` is $+\infty$, and the conversion to a ball is the whole line. A
+every finite $\ell$, `radius()` is $+\infty$, `is_finite()` is false, and the conversion to a ball
+is the whole line. `is_finite()` of an interval means what it means of a ball, a set neither empty
+nor unbounded; a ball has no half-lines, and the one choice made for an interval is that a
+half-line, unbounded, is not finite, so that `X.is_finite()` is `Ball<T, 1>(X).is_finite()` for
+every interval of one limb (for two limbs the ball of a bounded interval near the top of the range
+can be the whole line, as [`interval_to_ball_2`](interval_to_ball_2.md) claims). A
 finite bound of two limbs can exceed $\Omega$, by less than half a gap of `T` (the pair
 $(\Omega, \mathrm{ulp}(\Omega)/4)$, for example): then the midpoint $\Omega$ is not a member of the
 half-line, which is what [`interval_mid_rad_2`](interval_mid_rad_2.md) claims, and `split()` splits
@@ -218,7 +226,10 @@ statement:
   which composes nothing.
 
 No function of this page writes arithmetic of its own: moves, selects on masks (a `Trit` from the
-two masks of a kernel, or from one exact mask) and nothing else.
+two masks of a kernel, or from one exact mask) and nothing else. Three tests call no kernel and are
+written by hand in the headers, not machine-checked: `is_empty()`, `is_whole()` and `is_finite()`
+of a ball (the radius a NaN, $+\infty$, finite) and `is_finite()` of an interval (the leading limb
+of each stored bound finite, on its bit pattern).
 
 ## IEEE 1788
 

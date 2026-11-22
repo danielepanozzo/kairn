@@ -1215,10 +1215,12 @@ inline const Operation operations[] = {
                  put(out, x.upper());
                  put(out, x.template lower_as<T>());
                  put(out, x.template upper_as<T>());
+                 put(out, x.is_finite());
              }
              for (const auto& x : c.intervals2) {
                  put(out, x.lower());
                  put(out, x.upper());
+                 put(out, x.is_finite());
              }
              put(out, kairn::Interval<T, 1>());
              put(out, kairn::Interval<T, 2>::empty());

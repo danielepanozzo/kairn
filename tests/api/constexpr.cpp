@@ -759,6 +759,19 @@ struct Enclosure {
     static_assert(can_from_bounds<I1, E1> && can_from_bounds<I2, E2> && can_from_bounds<B1, E1> && !can_from_bounds<B2, E2>);
     static_assert(!can_from_bounds<I1, E2> && !can_from_bounds<B1, E2> && !can_from_bounds<B2, E1> && !can_from_bounds<I2, B2>);
 
+    // is_finite: a set neither empty nor unbounded. For an interval both bounds finite: false for the
+    // empty set, the whole line and both half-lines, which no ball is; for a ball the radius finite.
+    // Every state, for one limb and two (a finite bound of two limbs can lie beyond Omega: bounded).
+    static constexpr T beyond[2] = {omega, omega * u / 4};
+    static constexpr E2 big2 = E2::from_limbs(beyond);
+    static_assert(I1(T(1), T(2)).is_finite() && I1().is_finite() && I1(-omega, omega).is_finite() && I1(T(3)).is_finite());
+    static_assert(!I1::empty().is_finite() && !I1::whole().is_finite() && !I1(T(1), inf).is_finite() && !I1(-inf, T(1)).is_finite());
+    static_assert(!I1(nan, T(1)).is_finite() && !I1(inf, inf).is_finite() && !I1(T(2), T(1)).is_finite() && !I1(inf).is_finite());
+    static_assert(I2(T(1), T(2)).is_finite() && I2().is_finite() && I2(-big2, big2).is_finite() && I2(big2, E2(inf)).is_finite() == false);
+    static_assert(!I2::empty().is_finite() && !I2::whole().is_finite() && !I2(E2(T(1)), E2(inf)).is_finite() && !I2(E2(-inf), E2(T(1))).is_finite());
+    static_assert(!I2(nan).is_finite() && !I2(T(2), T(1)).is_finite() && I2(E2(T(1)), big2).is_finite());
+    static_assert(B1(T(1), T(2)).is_finite() && !B1::whole().is_finite() && !B1::empty().is_finite() && B2(big2, omega).is_finite());
+
     // Intervals of one limb. The predicates: exact, false for the empty set but is_empty.
     static_assert(I1::empty().is_empty() && !I1(T(1), T(2)).is_empty() && !I1::whole().is_empty());
     static_assert(I1::whole().is_whole() && !I1(T(1), inf).is_whole() && !I1::empty().is_whole() && I1(nan).is_whole());
@@ -1295,6 +1308,27 @@ void enclosure_run_time() {
                v_omega = omega;
     const T one = v_one, two = v_two, three = v_three, half = v_half, quarter = v_quarter, nan = v_nan;
     const T infinity = v_inf;
+    // is_finite over every state, against its definition (nonempty, both bounds finite) and, for one
+    // limb, the ball of the interval, of which an interval of one limb that is finite is a finite ball.
+    {
+        const T beyond[2] = {T(v_omega), T(v_omega) * u / 4};
+        const E2 big2 = E2::from_limbs(beyond);
+        const I1 states1[] = {I1(one, two), I1(), I1(-T(v_omega), T(v_omega)), I1(three), I1::empty(), I1::whole(),
+                              I1(one, infinity), I1(-infinity, one), I1(nan, one), I1(infinity), I1(two, one)};
+        for (const I1& s : states1) {
+            const bool def = !s.is_empty() && s.lower().limb[0] > -infinity && infinity > s.upper().limb[0];
+            expect("is_finite of an interval of one limb", s.is_finite() == def && s.is_finite() == B1(s).is_finite());
+        }
+        const I2 states2[] = {I2(one, two), I2(), I2(-big2, big2), I2(E2(one), big2), I2(three), I2::empty(),
+                              I2::whole(), I2(E2(one), E2(infinity)), I2(E2(-infinity), E2(one)), I2(big2, E2(infinity)),
+                              I2(nan), I2(E2(two), E2(one))};
+        for (const I2& s : states2) {
+            const bool def = !s.is_empty() && s.lower().limb[0] > -infinity && infinity > s.upper().limb[0];
+            // A ball of two limbs of a bounded interval is the whole line where its radius overflows.
+            expect("is_finite of an interval of two limbs", s.is_finite() == def && (s.is_finite() || !B2(s).is_finite()));
+        }
+        expect("is_finite of a ball", B1(one, two).is_finite() && !B1(one, infinity).is_finite() && !B2::empty().is_finite());
+    }
     // The constexpr functions, on operands read at run time.
     const I1 x(one, two), y(three, three);
     expect("predicates of an interval", !x.is_empty() && I1(infinity, -infinity).is_empty() && I1(nan, one).is_whole() &&

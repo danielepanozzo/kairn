@@ -119,7 +119,8 @@
 ///   Expansion<T, 1>::from_limbs), Ball::empty(), Ball::whole(), the accessors center(), radius(),
 ///   midpoint() and mid_rad() and the tests is_finite(), is_whole(), is_empty() of a Ball,
 ///   kairn::certainly and kairn::possibly of a Trit, Interval(),
-///   Interval::empty(), Interval::whole(), the accessors lower() and upper() of an Interval and,
+///   Interval::empty(), Interval::whole(), the accessors lower() and upper() and the test
+///   is_finite() of an Interval and,
 ///   for one limb, lower_as and upper_as, the constants of kairn::traits, and kairn::rational
 ///   (rational.hpp).
 /// Every other function rounds and is checked as above: the arithmetic, ldexp and half (of numbers

@@ -1166,6 +1166,10 @@ EXACT = [
           form("Interval<T, K>::empty()", result="Interval<T, K>")),
     exact("intervals", "the whole line: $[-\\infty, +\\infty]$",
           form("Interval<T, K>::whole()", result="Interval<T, K>")),
+    exact("intervals", "whether it is a nonempty bounded interval (both bounds finite, tested on the bit "
+          "patterns of their leading limbs): false for the empty set, the whole line and the half-lines, "
+          "the meaning of a ball's `is_finite()`",
+          form("X.is_finite()", "Interval<T, K>", result="bool")),
     exact("intervals", "the stored bounds; $+\\infty$ and $-\\infty$ for the empty set",
           form("X.lower(), X.upper()", "Interval<T, K>", result="Expansion<T, K>"),
           form("X.lower_as<T>(), X.upper_as<T>()", I1, result=T)),

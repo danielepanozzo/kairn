@@ -241,6 +241,7 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `Interval<T, K>()` | none | the point 0: $[0, 0]$ | none |
 | `Interval<T, K>::empty()` | none | the empty set: $(+\infty, -\infty)$ | none |
 | `Interval<T, K>::whole()` | none | the whole line: $[-\infty, +\infty]$ | none |
+| `X.is_finite()` | `Interval<T, K>` | whether it is a nonempty bounded interval (both bounds finite, tested on the bit patterns of their leading limbs): false for the empty set, the whole line and the half-lines, the meaning of a ball's `is_finite()` | none |
 | `X.lower(), X.upper()` | `Interval<T, K>` | the stored bounds; $+\infty$ and $-\infty$ for the empty set | none |
 | `X.lower_as<T>(), X.upper_as<T>()` | `Interval<T, 1>` | the stored bounds; $+\infty$ and $-\infty$ for the empty set | none |
 
