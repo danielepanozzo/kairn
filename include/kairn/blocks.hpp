@@ -15,6 +15,9 @@
 /// kernel, which guards each operand (a + 0) before adding it (rule R3 of
 /// docs/developer/architecture.md), so that a product the program computes and passes in, as in
 /// two_sum(a * b, c), is not fused into the block's first addition by a compiler that contracts.
+/// One exception, documented and not repaired: a square, two_sum(a * a, c), with Clang under
+/// -ffp-contract=fast, which proves a square is never -0, removes the guard and fuses it
+/// (docs/getting-started/guarantees.md, "The exception: a square").
 /// The guard has the value of its operand; only the sign of a zero result can change, and the sign
 /// of a zero is not part of any statement.
 ///

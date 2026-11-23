@@ -245,7 +245,10 @@ x86-64 under `-ffp-contract=fast` left those three forms alone. With the first h
 radius and the one-limb center given to a `Ball` instead; since the constructors are generated
 kernels, it fuses nothing even without the guard (measured; no cause is claimed), and its control
 only reports. The guard relies on what the opaque product
-already relies on: the compiler honors the sign of zero, so it may not remove `a + 0`. The
+already relies on: the compiler honors the sign of zero, so it may not remove `a + 0` unless it
+proves that `a` is never $-0$. Clang does prove it of a square, and under `-ffp-contract=fast`
+then fuses the square into the kernel's addition: a limitation found on 2026-11-23, documented and
+not repaired ([The exception: a square](../getting-started/guarantees.md#the-exception-a-square)). The
 generator emits every guard and checks the rule; the public headers contain none of their own.
 
 One compiler does not fit that description. With the hand-written guard of the first headers,

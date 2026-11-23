@@ -366,7 +366,8 @@ So every value of type `T` that the program supplies passes through a *guard*, a
 $+0$, before any kernel adds it: rule R3 of the
 [kernel IR](../developer/architecture.md#the-kernel-ir), which the generator enforces. A product
 plus $+0$ is at most fused into one FMA that rounds the product, and its result is a sum, which
-nothing later can fuse; a compiler that honors signed zeros cannot remove the addition. The guard
+nothing later can fuse; a compiler that honors signed zeros can remove the addition only where it
+proves that the value is never $-0$, which is the [exception below](#the-exception-a-square). The guard
 is in the kernels that receive such a value: `add_2_1` (and through it `sub_2_1`, `sub_1_2` and
 their full kernels) on its limb operand, the constructors `make_2`, `make_2_limbs`,
 `ball_make_1`, `ball_make_2_entry`, `interval_make_1` and `interval_make_2_entry` and the ball
@@ -398,7 +399,8 @@ leading limb) or `make_2_limbs` (a pair): a composition argued from those claims
 machine-checked as one statement ([Limbs](../reference/enclosure.md#limbs)); the limbs come back
 bit for bit but the sign of a zero and the payload of a NaN.
 
-So the program may pass its own products to Kairn under every contraction setting. The test
+So the program may pass its own products to Kairn under every contraction setting, with one
+exception: a square, with Clang under `-ffp-contract=fast` ([below](#the-exception-a-square)). The test
 `api.boundary.*` checks each guarded form with the product written in the call against the same
 operation on the rounded product, bit for bit, under each contraction setting of the compiler, and
 `api.boundary.unguarded.*` builds the same test against a copy of the headers with the guard taken
@@ -409,20 +411,59 @@ guard of the packed kernels taken out of the copy as well
 ([Testing](../developer/testing.md#packed-and-the-containers)). A guarded $-0$
 enters as $+0$; Kairn leaves the sign of a zero unspecified anyway.
 
-**Except a square, with Clang under `-ffp-contract=fast` (a finding of 2026-11-23, not
-repaired).** The guard rests on the compiler's keeping `a + 0`, which differs from `a` for
-$a = -0$ only. A compiler that proves a value is never $-0$ may drop the addition, and a square
-`a * a` is never $-0$: Clang under `-ffp-contract=fast` drops the guard of a square the program
-passes straight in and fuses the square into the kernel's first addition, so that the operation
-computes with the exact square. Measured with Apple clang 21 on AArch64: `kairn::two_sum(c, a * a)`
-at `-O2` (the sum and the error term come out equal, neither the claimed one), `x + a * a` of
-`Packed<T, 2>` and `Packed<T, 1>`, and `kairn::sum` of an array that holds squares, in the scalar
-form; with Clang 18 on x86-64: `x + a * a` of `Packed<T, 1>`, in the AVX2 and the scalar forms,
-`Accumulator<T, 1>::add(a * a)` (six rounds in ten) and `kairn::sum` in the scalar form at `-O3`.
-Not with GCC 13 or 16, not under the other contraction settings, and not for a product of two
-factors that the compiler cannot see to be equal. `api.boundary.packed.*` prints the forms `x + a*a`
-and does not fail on them. A guard that no compiler drops would repair it in every kernel at once;
-which one is not decided.
+### The exception: a square
+
+**A square passed straight in, with Clang under `-ffp-contract=fast`, is not rounded first: a known
+limitation, found on 2026-11-23, documented and not repaired by the owner's decision of that
+date.** The guard rests on the compiler's keeping `a + 0`, which differs from `a` only for
+$a = -0$. A compiler that proves a value is never $-0$ may drop the addition, and LLVM proves it
+of a square. So with Clang under `-ffp-contract=fast` the guard of `a * a`, of `pow(a, 2)` or of
+`(a - b) * (a - b)` that the program passes straight in is dropped, and the square is fused into
+the kernel's first addition, which then computes with the exact square. Giving the square a name
+first changes nothing (`p = a * a; two_sum(c, p)` is fused alike).
+
+*Where.* Measured with Apple clang 21 on AArch64 at `-O1` and `-O2`, at `-O3` for the sum of
+`Packed<T, 1>` and the functions on arrays, and at `-O3` everywhere with link-time optimization;
+and with Clang 18 on x86-64 where the square has one use (the sum of `Packed<T, 1>`, `add` and
+`axpy` over arrays, the one-limb `sum` and `dot`, `Accumulator<T, 1>::add`). Not with GCC 13 or
+16. Not with MSVC 19.52 under `/fp:precise` or `/fp:contract`. Not under Clang's default
+contraction setting (`on`) or under `off`, with or without link-time optimization. Of fourteen
+kinds of expression tried, only the three above lose the guard: not a product of two absolute
+values, of two values the compiler knows to be positive, of two conversions from integers or of
+two square roots, not `(a * a) * b`, and not a product of two factors that the compiler cannot
+see to be equal.
+
+*What is then wrong* (each case judged in exact arithmetic): the pairs of `two_sum`,
+`fast_two_sum` and `two_prod` are not exact (for `two_sum(c, a * a)` the sum and the error term
+come out equal, neither the claimed one); `add_down` and `add_up` round to the wrong side; every
+operation of a two-limb number with such a `T` (`+`, `+=`, `finite::add`, the constructor,
+`from_limbs`, `Expansion<T, 2>(1) * (a * a)`); the sum of `Packed<T, 1>` and the mixed sum of
+`Packed`; `add` and `axpy` over arrays; and two enclosures, `Ball<T, 2>(1) * (a * a)` and the
+ball of an `Accumulator<T, 2>` that was given squares, which then need not contain the result.
+The bits differ, and the claim held in every case judged (which proves nothing), for
+`Accumulator<T, 1>`, `add_product(a * a, 1)` and the one-limb `sum` and `dot`. Never fused:
+`x - a * a` of two limbs, the constructors of an interval and of a ball, a ball plus a square,
+the ball vectors and the two-limb `sum`.
+
+*What a program does about it.* Compiled with Clang under `-ffp-contract=fast`, it must not pass
+a square straight into Kairn. Either the files that call Kairn are compiled under another
+contraction setting (Clang's default is not affected), or the square is rounded where the
+compiler cannot fuse it: `kairn::two_prod(a, a).product` is the rounded square and was measured
+not to be fused (Apple clang 21, with and without link-time optimization), and a `volatile`
+variable does it by the rules of the language; or the square is kept exact, as
+`Expansion<T, 2>(a) * a`. `kairn::self_test()` does not report this limitation.
+
+*Related.* `-fno-signed-zeros`, which Kairn supports with no compiler
+([Environment](../concepts/environment.md)), is accepted by Clang without a macro that the
+headers could refuse; with `-ffp-contract=fast` it then drops the guard of every product, not
+only of a square. `kairn::self_test()` reports that combination with Apple clang and was measured
+not to report it with Clang 18.
+
+The probes, their results, and three repairs that were built and measured and not made (a
+barrier in the generated guard, a barrier in the public headers, a guard that reads its zero
+from memory) are in
+[`experiments/milestone2/square/`](https://github.com/danielepanozzo/kairn/tree/main/experiments/milestone2/square).
+`api.boundary.packed.*` prints the forms `x + a*a` and does not fail on them.
 
 One-limb values themselves are not guarded: they behave like `T`, contraction included, so an
 expression such as `p * q + r` on `Expansion<double, 1>` may be evaluated with one rounding where

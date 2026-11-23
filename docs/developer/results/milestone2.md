@@ -532,6 +532,7 @@ Full text in [the list](../design/phase0/decisions.md#deviations-from-the-brief-
 | 26 | A tightness bound per operation | None for the hull, intersection and split of balls, the radius of a two-limb interval, and two conversions |
 | 27 | Exhaustive tier with gradual and flush-to-zero variants | Gradual only; the other proposed for Milestone 3, with the flush-to-zero proofs, and so decided by the owner (2026-11-23) |
 | 28 | The environment checked at every batch-API entry | The functions on arrays and the ball vectors check in every build; the accumulator's operations, called once per element, only in a debug build. Confirmed by the owner (2026-11-23) |
+| 29 | Every header correct under any client flags, contraction included | Found on 2026-11-23, after this report: with Clang under `-ffp-contract=fast` a square the program passes straight in is not rounded first. Documented and not repaired, by the owner's decision ([below](#found-after-the-review-a-square-loses-its-guard)) |
 | (plan) | Conversions between limb types in Milestone 2 | Moved to Milestone 3 with the device pass they serve (README, plan and log say so) |
 
 ## Open issues
@@ -799,5 +800,83 @@ and a recommendation, everything it put to them. Each answer is a row of
 | Brute-force coverage below $10^8$ for 75 new or changed kernels ([open issue 15](#open-issues)) | No further runs; the reference pages show every stored run of unchanged code | the nine more hours, and the pages |
 | The 21 [rulings of the authors](#rulings-taken-without-the-owner-for-confirmation) | 20 confirmed. Reversed: `Packed<T, 1>` gets `+`, `-` and `*` now, before Milestone 3 ([open issue 10](#open-issues)) | all 21 confirmed |
 | When the changes are made | Now, as a follow-up of this milestone; then one commit on each of the client's pull requests moves its pin. Milestone 3 is not started | the same |
+| A square the program passes straight in loses its guard with Clang under `-ffp-contract=fast` ([found after the review](#found-after-the-review-a-square-loses-its-guard)) | Documented, not repaired; the four changes land first | a barrier in the generated guard, under Clang |
 
 The open issues the review did not decide stay open as listed.
+
+### What changed after the review
+
+Version 0.3.1. Kernels: 239 (237 at the report). Theorems checked by Rocq: 1 574 (1 563): 194
+generated in the real model, 404 generated in the IEEE model, 976 by hand; the same four axioms,
+nothing admitted.
+
+- **The check of the environment at a batch entry** ([open issue 2](#open-issues)) is one read of
+  the control register and one test of a mask at the place of the check, and the report is one
+  function that is never inlined; the checks of a debug build share it. With Clang the
+  constructors of a ball vector from centers and a radius are forced inline while the centers
+  have at most 14 limbs; with other compilers never. `KAIRN_ENVIRONMENT_FAILURE` must now be
+  defined the same way in every translation unit of a program, or in none. Measured again on both
+  machines ([benchmarks](bench-milestone2.md)): Clang 18's constructor of a ball vector of three
+  entries of one limb takes 9.0 ns where it took 24 (6.0 without the check), Apple clang's 4.4
+  where it took 5 to 13; on the Mac a `sum` of one element takes 0.59 ns where it took 1.10. On
+  the x86-64 machine a short array still pays the read itself, 4.6 to 5.7 ns, which is 62 to 82%
+  of a `sum` or `dot` of one limb up to 8 elements, as before: only the tag or the macro that the
+  owner did not choose would remove it. Over the 240 functions of ball vectors measured, the
+  median time is 0.98 to 1.00 of what it was.
+- **`Ball(Expansion<T, 2>, r)` guards its center** ([open issue 12](#open-issues)), through
+  `ball_make_2_entry`, proved by reduction to `ball_make_2`, which stays for centers that a
+  kernel wrote. Its statement gives the center of a finite ball as the values given, where
+  `ball_make_2` gives the limbs themselves: a limb $-0$ comes back $+0$. By a choice of the
+  authors the constructors of an interval from numbers of two limbs guard their limbs the same
+  way (`interval_make_2_entry`, whose statement is `interval_make_2`'s word for word), and
+  `Accumulator::from_state` of two limbs guards its running sum. Cost: 0 to 14% of a
+  construction of a ball (under 0.1 ns), up to 15% of an interval's (0.33 ns). No compiler was
+  seen to fuse through these constructors: the copy without the guards gave the same results in
+  200 000 cases with each of the four compilers. The guards are there by the rule.
+- **`Packed<T, 1>` has `+`, `-`, `*` and their compound forms** ([open issue 10](#open-issues)).
+  They call the steps of the functions on arrays (`add_entry_step_1`, `sub_entry_step_1`,
+  `scale_step_1`), which were proved in both models already: no kernel, claim or theorem was
+  added. Unlike `Expansion<T, 1>`, whose operators are those of `T`, a sum guards its operands,
+  so `x * y + z` is two roundings under every contraction setting, and a sum of two $-0$ is $+0$.
+  In a loop the operators cost what the bare instruction costs (0.97 to 1.02); in a dependent
+  chain a sum costs up to 2.2 times as much with GCC, which keeps the guard of the running value.
+- **The reference page of a kernel shows every stored brute-force run of its code as it is now**
+  ([open issue 15](#open-issues)): 51 kernels show the runs of both milestones, 186 those of this
+  milestone only, and the two kernels added after the review say that no stored run has judged
+  them (the quick and the full tier, the exhaustive tier on emulated formats and the nightly runs
+  do). 34 pages had said that a run judged other claims when the claims had not changed; they
+  understated, and are corrected.
+
+Slower than before, and not explained: with GCC 13 at `-O3` the constructor of a ball vector of
+three entries of two limbs takes 20.7 to 22.1 ns alone in a translation unit where it took 16.4
+to 17.1 (19.3 to 20.8 in a unit of many operations), from the code GCC makes around the new form
+of the check, while the other sizes measured with GCC 13 are 3 to 14% faster; on the M3 with
+Apple clang, chains of `add` and `sub` of ball vectors of 13 entries of one limb take 12 to 15 ns
+where they took 8.3 to 9.6, with and without the check. Both are on the benchmarks page.
+
+Also found, and open: Clang accepts `p - p.limb[0]`, a `Packed` minus a register of its form, as
+an operation of its own vector types, where GCC refuses it; and `-fno-signed-zeros`, which Kairn
+does not support and Clang accepts without a macro, is reported by `kairn::self_test()` with
+Apple clang and not with Clang 18 when it is combined with `-ffp-contract=fast`.
+
+### Found after the review: a square loses its guard
+
+One guarantee of this report is false as it was stated: that a product the program computes and
+passes straight in is rounded first under every contraction setting
+([a hole in a guarantee of Milestone 1](#a-hole-in-a-guarantee-of-milestone-1) describes the
+guard). With Clang under `-ffp-contract=fast`, a square is not: LLVM proves that `a * a` is never
+$-0$, removes the guard `a * a + 0`, and fuses the square into the kernel's first addition. It was
+found on 2026-11-23 by the author of the operators of `Packed<T, 1>`, whose tests pass a square,
+and reproduced: `kairn::two_sum(c, a * a)` returned a pair that is not the error-free sum of
+anything. The pairs of `two_sum`, `fast_two_sum` and `two_prod`, the directed sums, the
+operations of two limbs with such a `T`, and two enclosures were measured wrong; GCC 13 and 16,
+MSVC 19.52 in the modes the headers accept, and Clang under its default setting do not do it.
+The theorems are not concerned: they are about the value a kernel receives, and what fails is
+that the compiled program hands it that value.
+
+The owner decided on 2026-11-23 that the limitation is documented and not repaired (deviation
+29): [The exception: a square](../../getting-started/guarantees.md#the-exception-a-square) says
+where it happens, what is then wrong and what a program does about it, and the probes with their
+results are in `experiments/milestone2/square/`. Three repairs were built as patches and
+measured, and not made; the log has what each costs. `kairn::self_test()` is to get a probe that
+reports the limitation for the file that calls it.

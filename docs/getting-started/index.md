@@ -1,8 +1,8 @@
 # Getting started
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is complete
-([report](../developer/results/milestone1.md)), and Milestone 2 is complete and in review by the
-owner ([report](../developer/results/milestone2.md)), in version 0.3.0 of the development line. In the public headers of this version: numbers of one and two limbs of
+([report](../developer/results/milestone1.md)), and Milestone 2 is complete and was reviewed by the
+owner on 2026-11-23 ([report](../developer/results/milestone2.md#the-owners-review)), in version 0.3.1 of the development line. In the public headers of this version: numbers of one and two limbs of
 type `float` or `double`, balls and intervals around them with the
 [interface the two share](#intervals-and-balls), the [building blocks](#building-blocks) on `T`,
 [constants](#constants-from-fractions) built at compile time from an integer or a fraction, and the
@@ -390,8 +390,9 @@ The first test is in a group of its own because a version before 0.2.0 has no su
 undefined function-like macro in an `#if` does not compile; `KAIRN_VERSION`, which every version
 defines, can also be compared directly (`#if KAIRN_VERSION >= 200`). The building blocks are in
 0.2.0; the functions on arrays, the ball vectors, `from_bounds` and `from_limbs` of a set and the
-whole enclosure interface are in 0.3.0 (`KAIRN_VERSION_AT_LEAST(0, 3, 0)`), which `version.hpp`
-lists.
+whole enclosure interface are in 0.3.0 (`KAIRN_VERSION_AT_LEAST(0, 3, 0)`); the operators of
+`Packed<T, 1>` and the guards of the constructors of two limbs are in 0.3.1; `version.hpp`
+lists what each version has.
 
 ## What you need
 
@@ -528,7 +529,7 @@ headers, the package under `share/cmake/kairn` and the license as `share/license
 ```
 
 The installed package accepts a request for a version with the same major and minor number that is
-not newer than itself. The development line of Milestone 2 is 0.3.0: a request for 0.2 is not
+not newer than itself. The development line of Milestone 2 is 0.3.0 and 0.3.1: a request for 0.2 is not
 accepted by it (`include/kairn/version.hpp` says what each version has).
 
 Added with `add_subdirectory` or `FetchContent`, Kairn keeps to itself: it adds no install rule,
@@ -819,7 +820,10 @@ these functions says "Does not round".
   not break a two-limb operation: the kernels are written so that no compiler can fuse a product
   into one of their additions, and a product that the program passes in is guarded
   ([Products the program passes in](guarantees.md#products-the-program-passes-in)); the tests
-  check both under every contraction setting. A one-limb number behaves like `T`, contraction
+  check both under every contraction setting. One exception is documented and not repaired: a
+  square (`a * a`) passed straight in when Clang compiles with `-ffp-contract=fast` loses its
+  guard, and the operation, or an enclosure built on it, can then be wrong
+  ([The exception: a square](guarantees.md#the-exception-a-square)). A one-limb number behaves like `T`, contraction
   included, so `a * b + c` on `Expansion<double, 1>` can differ from the same on `double` under
   Clang's default; `KAIRN_K1_CONTRACT` makes them agree ([One limb](guarantees.md#one-limb)). And
   in `x += a * b` with `a` and `b` of type `double`, the product is rounded to `double` before

@@ -5,6 +5,13 @@
 /// What each version has. Until 1.0 a minor version may change the interface, and a version names
 /// what a tree has, not a release.
 ///
+/// - 0.3.1, the changes decided at the owner's review of Milestone 2 (2026-11-23): the operators
+///   +, -, * and their compound forms of Packed<T, 1>; the constructors of a Ball and of an
+///   Interval from numbers of two limbs guard every limb they are given, and
+///   Accumulator::from_state of two limbs guards its running sum (of the values given, a limb -0
+///   comes back +0; 0.3.0 kept those limbs bit for bit); the check of the environment at a batch
+///   entry reports through one function that is never inlined, so KAIRN_ENVIRONMENT_FAILURE is
+///   defined the same way in every translation unit of a program, or in none.
 /// - 0.3.0, the development line of Milestone 2 with the whole interface of its statements:
 ///   everything of 0.2.0 below, the interval and the enclosure interface whole (Interval of
 ///   interval.hpp, with Interval::is_finite(); the types of enclosure.hpp; the predicates, member
@@ -30,10 +37,10 @@
 /// The minor version.
 #define KAIRN_VERSION_MINOR 3
 /// The patch version.
-#define KAIRN_VERSION_PATCH 0
+#define KAIRN_VERSION_PATCH 1
 
 /// "MAJOR.MINOR.PATCH", as a string literal.
-#define KAIRN_VERSION_STRING "0.3.0"
+#define KAIRN_VERSION_STRING "0.3.1"
 
 /// MAJOR * 10000 + MINOR * 100 + PATCH, for comparisons in `#if`.
 #define KAIRN_VERSION (KAIRN_VERSION_MAJOR * 10000 + KAIRN_VERSION_MINOR * 100 + KAIRN_VERSION_PATCH)

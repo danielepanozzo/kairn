@@ -67,6 +67,9 @@ What Kairn does about it:
   passes through a *guard*, an addition of $+0$, before any kernel adds it: a product plus $+0$ is
   at most fused into one FMA that rounds the product
   ([Products the program passes in](../getting-started/guarantees.md#products-the-program-passes-in)).
+  One exception, documented and not repaired: with Clang under `-ffp-contract=fast` a square
+  loses its guard, because the compiler proves that a square is never $-0$
+  ([The exception: a square](../getting-started/guarantees.md#the-exception-a-square)).
 - **The tests check both** under every contraction setting of each compiler: the kernels' results
   against the oracle, their object code for fused instructions the description did not ask for, and
   each guarded form with the product written in the call against the same operation on the rounded
@@ -91,10 +94,14 @@ This program passes a product straight in, and gets the operation on the product
 --8<-- "docs/examples/cpp/concepts_environment.txt:3:5"
 ```
 
-So **a program need not do anything about contraction**: it may compile with any contraction
+So **a program need do almost nothing about contraction**: it may compile with any contraction
 setting and pass its own products to Kairn ([What is not an error](../getting-started/index.md#what-is-not-an-error)).
-Three things remain the program's:
+Four things remain the program's:
 
+- **A square is not rounded first by Clang under `-ffp-contract=fast`.** There `two_sum(c, a * a)`
+  computes with the exact square, and its result is wrong; so can an enclosure be. Compile the
+  files that call Kairn under Clang's default setting, or pass `kairn::two_prod(a, a).product`
+  ([The exception: a square](../getting-started/guarantees.md#the-exception-a-square)).
 - **A product of two `double`s is a `double`.** In `x += a * b` with `a` and `b` of type `double`,
   the product is rounded before Kairn sees it; to keep its error, make one factor a two-limb number.
 - **One-limb numbers behave like `T`**, contraction included: they are not guarded, so `p * q + r` on
