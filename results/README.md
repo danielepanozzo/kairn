@@ -14,6 +14,16 @@ is an input of the library, of the generator, or of the proofs.
 - `milestone2/brute/`: the same for Milestone 2, with `supplementary/`; `emulated/` (the
   exhaustive tier on emulated formats) and `lengths/` (`tests/brute/lengths.py`), which the
   reference pages do not show.
+- `milestone2/bench/`: benchmark measurements of Milestone 2, one JSON file per run of a harness
+  of `bench/`, named by what was measured, the machine, the compiler and the optimization level;
+  `bench/m2_report.py` prints the tables of `docs/developer/results/bench-milestone2.md` from them.
+- `milestone2/costs/`: compile times and run times of the operations of `Ball` in each setting of
+  `KAIRN_ENCLOSURE_CODE` (`bench/enclosure_costs.py`), which
+  `docs/developer/results/costs-milestone2.md` reports.
+- `milestone2/search/`: the adversarial search after the runs (`oracle/kairn-oracle search`), per
+  kernel and format the best line of every quantity with its value, one file per run: from the
+  strata alone, and with every seed through the interpreter and through a compiled runner;
+  `docs/developer/results/brute-milestone2.md` reports it ("The adversarial search").
 - `brute-code.json`: for every commit that a summary under `*/brute/` names as the code of its
   runs, the SHA-256 of the code and of the claims of every kernel and loop at that commit, written
   from the repository's history by `docs/tools/brute_code.py`. A kernel's reference page shows the
