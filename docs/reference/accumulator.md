@@ -102,7 +102,8 @@ and Apple clang 21 with `-ffp-contract=fast` were measured fusing one given as t
 a running sum of one limb into the next `add`; none was seen to fuse one written into a limb of a
 running sum of two limbs, `api.boundary.arrays.*`). A state saved and restored keeps its values: every
 limb comes back bit for bit but a $-0$, which comes back $+0$ (the guard computes $-0 + 0$, $+0$
-when rounding to nearest), and a NaN, which comes back a NaN; in constant evaluation the guard is not
+when rounding to nearest; with MSVC it may stay $-0$: the compiler removes the addition of zero
+where it packs two guards; the value is unchanged), and a NaN, which comes back a NaN; in constant evaluation the guard is not
 applied, and every limb comes back bit for bit. With `KAIRN_CHECKS`, `from_state` requires a
 canonical sum and magnitudes that are not negative.
 

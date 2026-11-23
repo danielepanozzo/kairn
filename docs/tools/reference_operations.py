@@ -191,7 +191,9 @@ TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly 
 # (ball_make_2_entry, interval_make_2_entry: rule R3, the owner's decision of 2026-11-23 for the ball).
 LIMBS_GUARDED = ("every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): of the values "
                  "given, a limb $-0$ coming back $+0$, but in constant evaluation, where the guard is not "
-                 "applied; since 0.3.1 (0.3.0 kept the limbs as given, bit for bit)")
+                 "applied (with MSVC it may stay $-0$: the compiler removes the addition of zero where it "
+                 "packs two guards; the value is unchanged); since 0.3.1 (0.3.0 kept the limbs as given, "
+                 "bit for bit)")
 CORE = "the finite core: no fix-up of infinities and NaN"
 # The scaling of a two-limb number by a power of two in constant evaluation: its kernels compute only
 # opaque products, which constant evaluation computes as plain products with the same values.

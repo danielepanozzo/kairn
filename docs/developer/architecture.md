@@ -255,11 +255,19 @@ One compiler does not fit that description. With the hand-written guard of the f
 MSVC 19.52 removed the addition of zero for some operands under `/O2`: a guarded $-0$ stayed $-0$
 (values are unaffected, and the sign of a zero is unspecified). With the generated guard, a $-0$
 given to a constructor, to `x + a` and to a `Ball` entered as $+0$ under `/O2`, `/Od`,
-`/fp:contract` and `/fp:strict`, so the addition was kept in those cases. In every test so far
-MSVC kept the program's product out of the kernel under `/fp:contract`, the one MSVC setting that
-contracts, which is not its default: no case differs with the guard and all of them without it.
-Since this compiler has been seen to remove such an addition, on MSVC the guard rests on those
-tests, which run on every change, and not on a rule of the language.
+`/fp:contract` and `/fp:strict`, so the addition was kept in those cases. It is removed again where
+MSVC moves two guarded values as one register: on 2026-11-23, with MSVC 19.52 at `/O2` under
+`/fp:precise` and `/fp:contract`, a $-0$ given to `Ball<T, 2>(c, r)`, `Ball<T, 2>(Constant)`,
+`from_limbs` of two limbs and `Accumulator<T, 2>::from_state` stayed $-0$, depending on the code
+around them, as it does in packed code; so with MSVC a limb $-0$ may stay $-0$: the compiler removes
+the addition of zero where it packs two guards; the value is unchanged
+(`experiments/milestone2/msvc/`). In every test so far MSVC kept the program's product out of the
+kernel under `/fp:contract`, the one MSVC setting that contracts, which is not its default: no case
+differs with the guard and all of them without it. Those of that day wrote the product where the
+addition was seen to go, in 16 forms of 200 000 cases each: none differs with the guard, the six
+forms of `from_limbs` differ in every case without it, and MSVC multiplies the product on its own
+before it drops the addition. Since this compiler has been seen to remove such an addition, on
+MSVC the guard rests on those tests, which run on every change, and not on a rule of the language.
 
 A kernel may name a second kernel as its **constant-evaluation variant**. The emitted C++
 function then dispatches on `__builtin_is_constant_evaluated()`. Inside such a variant, `prod` is
@@ -2954,7 +2962,9 @@ their own:
   $+\infty$, the flag false) exactly when the radius given is negative, a NaN or $+\infty$ (so $-\infty$
   too), or the leading limb of a center given is not finite. Otherwise the centers written are those
   given, limb for limb, and the radius is the radius given, as values: the sign of a zero is not part
-  of the claim (a center or a radius of $-0$ comes out as $+0$ for one limb, through the guard).
+  of the claim (a center or a radius of $-0$ comes out as $+0$ for one limb, through the guard; with
+  MSVC it may stay $-0$: the compiler removes the addition of zero where it packs two guards; the
+  value is unchanged).
 - **`finite_or_nan` with `nonneg`**, `{"kind": "finite_or_nan", "of": "r", "flag": "flag", "if": "ok",
   "nonneg": true}`, of `bv_make_finish`: as `finite_or_nan` with `if`, and the value must also not be
   negative: the flag is true exactly when the mask `if` is true, the value is finite and it is not below
